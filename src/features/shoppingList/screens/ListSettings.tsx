@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Switch, ScrollView } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { View, ScrollView } from 'react-native';
+import { Pressable } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import { Icon } from '#utils/iconUtils';
+import { BaseSwitch } from '#components/base/BaseSwitch';
 import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { commonStyles } from '#/styles/commonStyles';
 import { ScreenHeader } from '#components/molecules/ScreenHeader';
 import { InfoRow } from '#components/molecules/InfoRow';
@@ -66,7 +67,6 @@ export const ListSettings: React.FC<
     | undefined
   >
 > = ({ route }) => {
-  const { theme } = useUnistyles();
   const listId = route.params?.listId;
   const { navigate, goBack } = useAppNavigation();
   const setSelectedShoppingListId = useAppStore(
@@ -434,11 +434,7 @@ export const ListSettings: React.FC<
                   Make this your default shopping list
                 </Text>
               </View>
-              <Switch
-                value={isDefault}
-                onValueChange={setIsDefault}
-                trackColor={{ true: theme.colors.primary }}
-              />
+              <BaseSwitch value={isDefault} onValueChange={setIsDefault} />
             </View>
           </View>
         )}

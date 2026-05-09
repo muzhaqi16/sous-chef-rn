@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, ScrollView } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Pressable } from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
 import { DateRange } from '#/graphql/generated/schemaTypes';
 import { Text } from '#components/atoms/Text';
 
@@ -22,12 +22,32 @@ interface DateRangeFilterProps {
   onSelect: (range: DateRange) => void;
 }
 
+function DateRangeChip({
+  option,
+  isSelected,
+  onPress,
+}: {
+  option: DateRangeOption;
+  isSelected: boolean;
+  onPress: () => void;
+}) {
+  styles.useVariants({ selected: isSelected });
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [styles.chip, pressed && styles.pressed]}
+    >
+      <Text size="sm" weight="medium" style={styles.chipText}>
+        {option.label}
+      </Text>
+    </Pressable>
+  );
+}
+
 export const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
   selected,
   onSelect,
 }) => {
-  const { theme } = useUnistyles();
-
   return (
     <View style={styles.container}>
       <ScrollView
@@ -35,36 +55,14 @@ export const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {DATE_RANGE_OPTIONS.map(option => {
-          const isSelected = selected === option.value;
-          return (
-            <Pressable
-              key={option.value}
-              onPress={() => onSelect(option.value)}
-              style={({ pressed }) => [
-                styles.chip,
-                {
-                  backgroundColor: isSelected
-                    ? theme.colors.primary
-                    : theme.colors.chipBackground,
-                },
-                pressed && styles.pressed,
-              ]}
-            >
-              <Text
-                size="sm"
-                weight="medium"
-                style={{
-                  color: isSelected
-                    ? theme.colors.white
-                    : theme.colors.chipText,
-                }}
-              >
-                {option.label}
-              </Text>
-            </Pressable>
-          );
-        })}
+        {DATE_RANGE_OPTIONS.map(option => (
+          <DateRangeChip
+            key={option.value}
+            option={option}
+            isSelected={selected === option.value}
+            onPress={() => onSelect(option.value)}
+          />
+        ))}
       </ScrollView>
     </View>
   );
@@ -82,6 +80,20 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.sm,
     borderRadius: theme.radii.full,
+    backgroundColor: theme.colors.chipBackground,
+    variants: {
+      selected: {
+        true: { backgroundColor: theme.colors.primary },
+      },
+    },
+  },
+  chipText: {
+    color: theme.colors.chipText,
+    variants: {
+      selected: {
+        true: { color: theme.colors.white },
+      },
+    },
   },
   pressed: {
     opacity: theme.opacity.pressed,

@@ -1,17 +1,22 @@
 import React from 'react';
 
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import Animated, {
   useAnimatedStyle,
   interpolate,
   Extrapolation,
   type SharedValue,
 } from 'react-native-reanimated';
+import { withUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { styles } from './styles';
-import { useUnistyles } from 'react-native-unistyles';
 import { ActionButtonProps } from './types';
 import { Text } from '#components/atoms/Text';
+
+const ThemedIcon = withUnistyles(Icon, theme => ({
+  color: theme.colors.white,
+  size: theme.fonts.size.xl,
+}));
 
 interface AnimatedActionButtonProps extends ActionButtonProps {
   progress?: SharedValue<number>;
@@ -29,19 +34,14 @@ const AnimatedActionButtonComponent: React.FC<AnimatedActionButtonProps> = ({
   progress,
   index = 0,
 }) => {
-  const { theme } = useUnistyles();
-
   const buttonStyle = circular
     ? styles.circularActionButton
     : styles.actionButton;
-  const iconColor = theme.colors.white;
-  const iconSize = theme.fonts.size.xl;
 
   // Calculate stagger thresholds - buttons reveal sequentially as swipe progresses
   // First button starts appearing at 0.1, fully visible at 0.3
   // Second button starts at 0.25, fully visible at 0.5
   // Third button starts at 0.4, fully visible at 0.7
-  // PERFORMANCE: Memoize to avoid recalculating on every render
   const start = 0.1 + index * 0.15;
   const { startThreshold, endThreshold } = {
     startThreshold: start,
@@ -74,18 +74,17 @@ const AnimatedActionButtonComponent: React.FC<AnimatedActionButtonProps> = ({
     };
   }, [progress, startThreshold, endThreshold]);
 
-  // PERFORMANCE: Memoize the press handler
   const handlePress = () => {
     onPress();
   };
 
-  // PERFORMANCE: Use Pressable instead of GestureDetector + Gesture.Tap()
-  // Pressable is lighter weight and sufficient for simple tap actions
-  // The parent Swipeable already handles gesture coordination
+  // Pressable instead of GestureDetector + Gesture.Tap() — lighter weight and
+  // sufficient for simple tap actions. The parent Swipeable already handles
+  // gesture coordination.
   return (
     <Pressable onPress={handlePress} style={buttonStyle} testID={testID}>
       <Animated.View style={animatedStyle}>
-        <Icon name={icon} size={iconSize} color={iconColor} library={library} />
+        <ThemedIcon name={icon} library={library} />
         {label ? (
           <Text size="xs" weight="semibold" style={styles.deleteText}>
             {label}

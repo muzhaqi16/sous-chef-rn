@@ -1,9 +1,8 @@
 import React, { useState, type RefObject } from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
-import { Ionicons } from '@react-native-vector-icons/ionicons';
-import { useUnistyles, StyleSheet } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetAction } from '#components/templates/BottomSheetAction';
 import { Icon } from '#/utils/iconUtils';
 import type { RecipeFilters } from '#features/recipes/hooks/useRecipeScreen';
@@ -76,8 +75,6 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
   onSheetChange,
   isIngredientSearch = false,
 }) => {
-  const { theme } = useUnistyles();
-
   // Lazy mount: don't render filter content until sheet opens for the first time
   const [mounted, setMounted] = useState(false);
 
@@ -149,11 +146,7 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
           {isIngredientSearch ? (
             <View style={styles.infoBanner}>
               <View style={styles.infoBannerIconCircle}>
-                <Ionicons
-                  name="information-circle"
-                  size={16}
-                  color={theme.colors.white}
-                />
+                <Icon name="information-circle" size={16} tone="white" />
               </View>
               <Text size="sm" weight="semibold" style={styles.infoBannerTitle}>
                 Filters only apply to text search
@@ -243,14 +236,10 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
                         }))
                       }
                     >
-                      <Ionicons
+                      <Icon
                         name={isSelected ? 'checkbox' : 'square-outline'}
                         size={24}
-                        color={
-                          isSelected
-                            ? theme.colors.primary
-                            : theme.colors.textSecondary
-                        }
+                        tone={isSelected ? 'primary' : 'textSecondary'}
                       />
                       <Text size="sm" style={styles.checkboxText}>
                         {intolerance.label}

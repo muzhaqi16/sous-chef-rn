@@ -12,8 +12,9 @@ import Animated, {
   FadeIn,
   FadeOut,
 } from 'react-native-reanimated';
-import { Pressable, ScrollView } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { ScrollView } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
 import { commonStyles } from '#/styles/commonStyles';
 import { StorageState } from '#/graphql/generated/schemaTypes';
 import { FormTextArea } from '#components/molecules/FormTextArea';
@@ -98,7 +99,6 @@ export const StorageLocationForm = forwardRef<
     },
     ref,
   ) => {
-    const { theme } = useUnistyles();
     const [advancedExpanded, setAdvancedExpanded] = useState(false);
     const chevronRotation = useSharedValue(0);
 
@@ -219,7 +219,7 @@ export const StorageLocationForm = forwardRef<
                     formData.type === type.value
                       ? styles.typeButtonSelected
                       : styles.typeButton,
-                    pressed && { opacity: theme.opacity.pressed },
+                    pressed && styles.pressed,
                   ]}
                   onPress={() =>
                     setFormData({
@@ -264,7 +264,7 @@ export const StorageLocationForm = forwardRef<
                     !formData.parentLocationId
                       ? styles.parentButtonSelected
                       : styles.parentButton,
-                    pressed && { opacity: theme.opacity.pressed },
+                    pressed && styles.pressed,
                   ]}
                   onPress={() =>
                     setFormData({ ...formData, parentLocationId: undefined })
@@ -289,7 +289,7 @@ export const StorageLocationForm = forwardRef<
                       formData.parentLocationId === location.id
                         ? styles.parentButtonSelected
                         : styles.parentButton,
-                      pressed && { opacity: theme.opacity.pressed },
+                      pressed && styles.pressed,
                     ]}
                     onPress={() =>
                       setFormData({
@@ -351,7 +351,7 @@ export const StorageLocationForm = forwardRef<
                     formData.temperature === option.value
                       ? styles.parentButtonSelected
                       : styles.parentButton,
-                    pressed && { opacity: theme.opacity.pressed },
+                    pressed && styles.pressed,
                   ]}
                   onPress={() =>
                     setFormData({ ...formData, temperature: option.value })
@@ -393,7 +393,7 @@ export const StorageLocationForm = forwardRef<
                   !formData.color
                     ? styles.colorSwatchNoneSelected
                     : styles.colorSwatchNone,
-                  pressed && { opacity: theme.opacity.pressed },
+                  pressed && styles.pressed,
                 ]}
                 onPress={() => setFormData({ ...formData, color: null })}
               >
@@ -409,7 +409,7 @@ export const StorageLocationForm = forwardRef<
                       ? styles.colorSwatchSelected
                       : styles.colorSwatch,
                     { backgroundColor: preset.value },
-                    pressed && { opacity: theme.opacity.pressed },
+                    pressed && styles.pressed,
                   ]}
                   onPress={() =>
                     setFormData({ ...formData, color: preset.value })
@@ -425,7 +425,7 @@ export const StorageLocationForm = forwardRef<
         <Pressable
           style={({ pressed }) => [
             styles.advancedHeader,
-            pressed && { opacity: theme.opacity.pressed },
+            pressed && styles.pressed,
           ]}
           onPress={() => setAdvancedExpanded(!advancedExpanded)}
         >
@@ -492,7 +492,7 @@ export const StorageLocationForm = forwardRef<
               style={({ pressed }) => [
                 commonStyles.button,
                 commonStyles.buttonSecondary,
-                pressed && { opacity: theme.opacity.pressed },
+                pressed && styles.pressed,
               ]}
               onPress={onCancel}
               disabled={isSubmitting}
@@ -503,7 +503,7 @@ export const StorageLocationForm = forwardRef<
               style={({ pressed }) => [
                 commonStyles.button,
                 commonStyles.buttonPrimary,
-                pressed && { opacity: theme.opacity.pressed },
+                pressed && styles.pressed,
               ]}
               onPress={handleSubmit}
               disabled={isSubmitting || !formData.name.trim()}
@@ -667,5 +667,8 @@ const styles = StyleSheet.create(theme => ({
     ...commonStyles.row,
     gap: theme.spacing.sm,
     marginTop: theme.spacing.md,
+  },
+  pressed: {
+    opacity: theme.opacity.pressed,
   },
 }));

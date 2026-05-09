@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useUnistyles, UnistylesRuntime } from 'react-native-unistyles';
 import { useIsHydrated, usePreferences } from '#/store/useAppStore';
+import { storeApi } from '#/store';
 import { ThemePreference } from '#/store/slices/preferencesSlice';
 
 export const useTheme = () => {
@@ -11,22 +12,28 @@ export const useTheme = () => {
 
   const systemColorScheme = rt.colorScheme;
 
+  // After the persisted store hydrates, sync Unistyles to the rehydrated user
+  // preference *once*. In-app preference changes are handled by
+  // `preferencesSlice.setTheme`, which writes to `UnistylesRuntime`
+  // synchronously before notifying subscribers — re-running this effect on
+  // every preference change would be a redundant second write. Depending only
+  // on `isHydrated` (which transitions false → true exactly once) keeps it
+  // one-shot, and reading the preference via `getState()` avoids a stale
+  // closure without subscribing to it.
   useEffect(() => {
-    // Don't touch Unistyles until the store has loaded the user's real preference.
-    // Before hydration, userThemePreference is the slice default (e.g. 'LIGHT'),
-    // which stomps the correct adaptive theme Unistyles already set from the system.
     if (!isHydrated) return;
+    const pref = storeApi.getState().theme;
 
-    if (userThemePreference === 'SYSTEM') {
+    if (pref === ThemePreference.SYSTEM) {
       UnistylesRuntime.setAdaptiveThemes(true);
     } else {
       UnistylesRuntime.setAdaptiveThemes(false);
-      const targetTheme = userThemePreference === 'DARK' ? 'dark' : 'light';
+      const targetTheme = pref === ThemePreference.DARK ? 'dark' : 'light';
       if (UnistylesRuntime.themeName !== targetTheme) {
         UnistylesRuntime.setTheme(targetTheme);
       }
     }
-  }, [userThemePreference, isHydrated]);
+  }, [isHydrated]);
 
   const effectiveTheme = (rt.themeName || rt.colorScheme || 'light') as
     | 'light'

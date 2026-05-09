@@ -1,7 +1,11 @@
 import React from 'react';
 import { View, ActivityIndicator } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
+
+const ThemedActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
+  color: theme.colors.textSecondary,
+}));
 
 interface ConversionPreviewProps {
   previewText: string | null;
@@ -14,8 +18,6 @@ export const ConversionPreview: React.FC<ConversionPreviewProps> = ({
   loading,
   confidence,
 }) => {
-  const { theme } = useUnistyles();
-
   if (!previewText && !loading) return null;
 
   const isApproximate = confidence != null && confidence < 0.8;
@@ -23,7 +25,7 @@ export const ConversionPreview: React.FC<ConversionPreviewProps> = ({
   return (
     <View style={styles.container}>
       {loading ? (
-        <ActivityIndicator size="small" color={theme.colors.textSecondary} />
+        <ThemedActivityIndicator size="small" />
       ) : (
         <Text size="sm" tone="secondary" style={styles.text}>
           {previewText}

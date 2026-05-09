@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, ScrollView } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import { StyleSheet } from 'react-native-unistyles';
 import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';

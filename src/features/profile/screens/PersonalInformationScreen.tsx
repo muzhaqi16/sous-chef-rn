@@ -22,7 +22,12 @@ import {
   executeMutation,
   executeRefreshWithFinally,
 } from '#/utils/compilerSafeWrappers';
-import { useUnistyles } from 'react-native-unistyles';
+import { withUnistyles } from 'react-native-unistyles';
+
+const ThemedRefreshControl = withUnistyles(RefreshControl, theme => ({
+  colors: [theme.colors.primary],
+  tintColor: theme.colors.primary,
+}));
 
 /** Module-level function for profile updates with optimistic cache.
  *  Extracted to avoid try-catch inside component body (React Compiler bailout). */
@@ -69,7 +74,6 @@ export const PersonalInformationScreen: React.FC = () => {
   const { profile, refetch } = useProfileData();
   const user = useUser();
   const client = useApolloClient();
-  const { theme } = useUnistyles();
   const [updateProfileMutation] = useMutation(UpdateUserProfileDocument);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -193,11 +197,9 @@ export const PersonalInformationScreen: React.FC = () => {
     <ProfileScreenWrapper
       title="Personal Information"
       refreshControl={
-        <RefreshControl
+        <ThemedRefreshControl
           refreshing={refreshing}
           onRefresh={handleRefresh}
-          tintColor={theme.colors.primary}
-          colors={[theme.colors.primary]}
         />
       }
     >

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import type { CardRightSlotProps } from './types';
@@ -32,7 +32,7 @@ const MetaSlot: React.FC<
 );
 
 /**
- * Interactive slot — needs useUnistyles for Icon colors
+ * Interactive slot — uses Icon `tone` for theme-reactive colors
  */
 const InteractiveSlot: React.FC<CardRightSlotProps> = ({
   type,

@@ -1,9 +1,11 @@
 import React from 'react';
 import { View } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { Icon, IconName, IconLibrary } from '#utils/iconUtils';
 import { commonStyles } from '#/styles/commonStyles';
 import { Text } from '#components/atoms/Text';
+
+const ThemedIcon = withUnistyles(Icon);
 
 interface AnalyticsSummaryCardProps {
   title: string;
@@ -16,6 +18,17 @@ interface AnalyticsSummaryCardProps {
   trendValue?: string;
 }
 
+const trendIconName = (trend?: 'up' | 'down' | 'neutral'): IconName => {
+  switch (trend) {
+    case 'up':
+      return 'trending-up';
+    case 'down':
+      return 'trending-down';
+    default:
+      return 'remove-outline';
+  }
+};
+
 export const AnalyticsSummaryCard: React.FC<AnalyticsSummaryCardProps> = ({
   title,
   value,
@@ -26,30 +39,7 @@ export const AnalyticsSummaryCard: React.FC<AnalyticsSummaryCardProps> = ({
   trend,
   trendValue,
 }) => {
-  const { theme } = useUnistyles();
-  const cardColor = color || theme.colors.primary;
-
-  const getTrendColor = () => {
-    switch (trend) {
-      case 'up':
-        return theme.colors.success;
-      case 'down':
-        return theme.colors.error;
-      default:
-        return theme.colors.textSecondary;
-    }
-  };
-
-  const getTrendIcon = (): IconName => {
-    switch (trend) {
-      case 'up':
-        return 'trending-up';
-      case 'down':
-        return 'trending-down';
-      default:
-        return 'remove-outline';
-    }
-  };
+  styles.useVariants({ trend });
 
   return (
     <View style={[commonStyles.shadow, styles.card]}>
@@ -58,14 +48,14 @@ export const AnalyticsSummaryCard: React.FC<AnalyticsSummaryCardProps> = ({
           <View
             style={[
               styles.iconContainer,
-              { backgroundColor: cardColor + '20' },
+              !!color && { backgroundColor: color + '20' },
             ]}
           >
-            <Icon
+            <ThemedIcon
               name={icon}
               size={20}
-              color={cardColor}
               library={iconLibrary}
+              uniProps={t => ({ color: color ?? t.colors.primary })}
             />
           </View>
         )}
@@ -90,8 +80,18 @@ export const AnalyticsSummaryCard: React.FC<AnalyticsSummaryCardProps> = ({
         )}
         {!!trend && !!trendValue && (
           <View style={styles.trendContainer}>
-            <Icon name={getTrendIcon()} size={14} color={getTrendColor()} />
-            <Text size="xs" weight="medium" style={{ color: getTrendColor() }}>
+            <Icon
+              name={trendIconName(trend)}
+              size={14}
+              tone={
+                trend === 'up'
+                  ? 'success'
+                  : trend === 'down'
+                  ? 'error'
+                  : 'textSecondary'
+              }
+            />
+            <Text size="xs" weight="medium" style={styles.trendText}>
               {trendValue}
             </Text>
           </View>
@@ -121,6 +121,7 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: theme.spacing.sm,
+    backgroundColor: theme.colors.primary + '20',
   },
   title: {
     flex: 1,
@@ -135,5 +136,14 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 2,
+  },
+  trendText: {
+    variants: {
+      trend: {
+        up: { color: theme.colors.success },
+        down: { color: theme.colors.error },
+        neutral: { color: theme.colors.textSecondary },
+      },
+    },
   },
 }));

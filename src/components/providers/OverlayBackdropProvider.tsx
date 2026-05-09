@@ -13,7 +13,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import { SHEET } from '#constants/animations';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import { navigationRef } from '#services/NavigationService';
 
 export interface BackdropClaimOptions {

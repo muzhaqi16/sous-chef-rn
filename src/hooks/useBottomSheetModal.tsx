@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { BottomSheetModal } from '@gorhom/bottom-sheet';
+import { type BottomSheetModalRef } from '#hooks/useStandardBottomSheet';
 
 /**
  * Lightweight wrapper that exposes a `BottomSheetModal` ref plus `open()` /
@@ -14,7 +14,7 @@ import { BottomSheetModal } from '@gorhom/bottom-sheet';
  * BottomSheetModal is rendered manually with custom props.
  */
 export const useBottomSheetModal = () => {
-  const ref = useRef<BottomSheetModal>(null);
+  const ref = useRef<BottomSheetModalRef>(null);
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {

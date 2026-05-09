@@ -1,14 +1,28 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Pressable } from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
-import {
-  formatInviteStatus,
-  getInviteStatusColor,
-} from '#/utils/formatters/inviteFormatters';
+import { formatInviteStatus } from '#/utils/formatters/inviteFormatters';
 import { Text } from '#components/atoms/Text';
 import { InviteStatus } from '#/graphql/generated/schemaTypes';
+
+type StatusKey = 'pending' | 'accepted' | 'declined' | 'expired';
+
+function getStatusKey(status: string): StatusKey {
+  switch (status) {
+    case 'PENDING':
+      return 'pending';
+    case 'ACCEPTED':
+      return 'accepted';
+    case 'DECLINED':
+      return 'declined';
+    case 'EXPIRED':
+    case 'REVOKED':
+    default:
+      return 'expired';
+  }
+}
 
 interface Invite {
   id: string;
@@ -33,12 +47,12 @@ export const HomeInviteCard: React.FC<HomeInviteCardProps> = ({
   canRevoke,
   onRevoke,
 }) => {
-  const { theme } = useUnistyles();
   const statusText = formatInviteStatus(invite.status);
-  const statusColor = getInviteStatusColor(invite.status, theme);
+  const statusKey = getStatusKey(invite.status);
+  styles.useVariants({ status: statusKey });
 
   return (
-    <View style={[styles.inviteCard, { borderColor: statusColor }]}>
+    <View style={styles.inviteCard}>
       <View style={styles.inviteInfo}>
         <Text size="md" weight="medium" style={styles.inviteName}>
           {displayName}
@@ -48,13 +62,8 @@ export const HomeInviteCard: React.FC<HomeInviteCardProps> = ({
         </Text>
       </View>
       <View style={styles.inviteActions}>
-        <View
-          style={[
-            styles.inviteStatusBadge,
-            { backgroundColor: statusColor + '20' },
-          ]}
-        >
-          <Text size="xs" weight="semibold" style={{ color: statusColor }}>
+        <View style={styles.inviteStatusBadge}>
+          <Text size="xs" weight="semibold" style={styles.inviteStatusText}>
             {statusText}
           </Text>
         </View>
@@ -84,8 +93,15 @@ const styles = StyleSheet.create(theme => ({
     marginVertical: theme.spacing.xs,
     borderWidth: 1,
     borderStyle: 'dashed',
-    // borderColor applied dynamically based on status
     backgroundColor: theme.colors.surface,
+    variants: {
+      status: {
+        pending: { borderColor: theme.colors.status.pending },
+        accepted: { borderColor: theme.colors.status.accepted },
+        declined: { borderColor: theme.colors.status.declined },
+        expired: { borderColor: theme.colors.status.expired },
+      },
+    },
   },
   inviteInfo: {
     flex: 1,
@@ -102,7 +118,24 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.xs,
     borderRadius: theme.radii.sm,
-    // backgroundColor applied dynamically based on status
+    variants: {
+      status: {
+        pending: { backgroundColor: theme.colors.status.pending + '20' },
+        accepted: { backgroundColor: theme.colors.status.accepted + '20' },
+        declined: { backgroundColor: theme.colors.status.declined + '20' },
+        expired: { backgroundColor: theme.colors.status.expired + '20' },
+      },
+    },
+  },
+  inviteStatusText: {
+    variants: {
+      status: {
+        pending: { color: theme.colors.status.pending },
+        accepted: { color: theme.colors.status.accepted },
+        declined: { color: theme.colors.status.declined },
+        expired: { color: theme.colors.status.expired },
+      },
+    },
   },
   revokeButton: {
     padding: theme.spacing.xs,

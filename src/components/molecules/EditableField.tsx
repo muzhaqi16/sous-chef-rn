@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, ActivityIndicator } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Pressable } from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { FormInput } from './FormInput';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
@@ -28,7 +28,6 @@ export const EditableField: React.FC<EditableFieldProps> = ({
   validation,
   readOnly,
 }) => {
-  const { theme } = useUnistyles();
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(value);
   const [saving, setSaving] = useState(false);
@@ -85,7 +84,7 @@ export const EditableField: React.FC<EditableFieldProps> = ({
           <Pressable
             style={({ pressed }) => [
               styles.cancelButton,
-              pressed && { opacity: theme.opacity.pressed },
+              pressed && styles.pressed,
             ]}
             onPress={handleCancel}
             disabled={saving}
@@ -97,7 +96,7 @@ export const EditableField: React.FC<EditableFieldProps> = ({
           <Pressable
             style={({ pressed }) => [
               styles.saveButton,
-              pressed && { opacity: theme.opacity.pressed },
+              pressed && styles.pressed,
             ]}
             onPress={handleSave}
             disabled={saving}
@@ -129,7 +128,7 @@ export const EditableField: React.FC<EditableFieldProps> = ({
         <Pressable
           style={({ pressed }) => [
             styles.editIconButton,
-            pressed && { opacity: theme.opacity.pressed },
+            pressed && styles.pressed,
           ]}
           onPress={handleStartEdit}
         >
@@ -183,5 +182,8 @@ const styles = StyleSheet.create(theme => ({
   },
   saveButtonText: {
     color: theme.colors.neutral[0],
+  },
+  pressed: {
+    opacity: theme.opacity.pressed,
   },
 }));

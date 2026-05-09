@@ -1,6 +1,7 @@
 import React, { forwardRef, useImperativeHandle, useState } from 'react';
 import { StyleSheet } from 'react-native-unistyles';
-import { BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
+import { BottomSheetView } from '@gorhom/bottom-sheet';
+import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { FormTextArea } from '#components/molecules/FormTextArea';
 import { Header } from '#components/molecules/Header';
 import { generateId } from '#/utils/generateId';

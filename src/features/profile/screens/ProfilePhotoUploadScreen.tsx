@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Image, Dimensions, Platform } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, CommonActions } from '@react-navigation/native';
@@ -16,7 +16,7 @@ import {
   ImageLibraryOptions,
 } from 'react-native-image-picker';
 import { request, PERMISSIONS, RESULTS } from 'react-native-permissions';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import {
   validateImageFile,
   ImageValidationError,
@@ -31,6 +31,10 @@ import {
   executeMutation,
 } from '#/utils/compilerSafeWrappers';
 import { Text } from '#components/atoms/Text';
+
+const ThemedBackButton = withUnistyles(BackButton, theme => ({
+  color: theme.colors.textPrimary,
+}));
 
 const DEFAULT_OPTIONS: CameraOptions | ImageLibraryOptions = {
   mediaType: 'photo' as MediaType,
@@ -96,7 +100,6 @@ async function requestCameraAndLaunch(
 
 export const ProfilePhotoUploadScreen: React.FC = () => {
   const { navigation, goBack } = useSafeNavigation();
-  const { theme } = useUnistyles();
   const { uploadProfileImage, updateProfileAvatarUrl } = useImageUpload();
 
   const [selectedImage, setSelectedImage] = useState<ImageFile | null>(null);
@@ -205,16 +208,12 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
-      edges={['left', 'right']}
-    >
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
       <View style={styles.content}>
         <View style={styles.header}>
-          <BackButton
+          <ThemedBackButton
             onPress={goBack}
             style={styles.headerBack}
-            color={theme.colors.textPrimary}
             disabled={isUploading}
           />
           <Text size="3xl" weight="bold" align="center" style={styles.title}>
@@ -231,15 +230,7 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
         </Text>
 
         <View style={styles.avatar}>
-          <View
-            style={[
-              styles.avatarPreview,
-              {
-                backgroundColor: theme.colors.surface,
-                borderColor: theme.colors.primary,
-              },
-            ]}
-          >
+          <View style={styles.avatarPreview}>
             {croppedImage || selectedImage ? (
               <Image
                 source={{ uri: croppedImage?.uri || selectedImage?.uri }}
@@ -257,7 +248,6 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
               onPress={handleCropImage}
               style={({ pressed }) => [
                 styles.cropIconButton,
-                { backgroundColor: theme.colors.primary },
                 pressed && styles.pressed,
               ]}
               disabled={isUploading}
@@ -271,18 +261,14 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
           <View style={styles.buttonContainer}>
             <Pressable
               onPress={handleUpload}
-              style={({ pressed }) => [
-                styles.btn,
-                { backgroundColor: theme.colors.primary },
-                pressed && styles.pressed,
-              ]}
+              style={({ pressed }) => [styles.btn, pressed && styles.pressed]}
               disabled={isUploading}
             >
               <Text
                 size="lg"
                 lineHeight="relaxed"
                 weight="semibold"
-                style={{ color: theme.colors.background }}
+                style={styles.btnText}
               >
                 {isUploading ? 'Uploading...' : 'Upload Photo'}
               </Text>
@@ -292,7 +278,6 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
               onPress={handleRetake}
               style={({ pressed }) => [
                 styles.btnSecondary,
-                { borderColor: theme.colors.primary },
                 pressed && styles.pressed,
               ]}
               disabled={isUploading}
@@ -312,18 +297,14 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
           <View style={styles.buttonContainer}>
             <Pressable
               onPress={handleTakePhoto}
-              style={({ pressed }) => [
-                styles.btn,
-                { backgroundColor: theme.colors.primary },
-                pressed && styles.pressed,
-              ]}
+              style={({ pressed }) => [styles.btn, pressed && styles.pressed]}
               disabled={isUploading}
             >
               <Text
                 size="lg"
                 lineHeight="relaxed"
                 weight="semibold"
-                style={{ color: theme.colors.background }}
+                style={styles.btnText}
               >
                 Take Photo
               </Text>
@@ -333,7 +314,6 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
               onPress={handleSelectPhoto}
               style={({ pressed }) => [
                 styles.btnSecondary,
-                { borderColor: theme.colors.primary },
                 pressed && styles.pressed,
               ]}
               disabled={isUploading}
@@ -357,6 +337,7 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
+    backgroundColor: theme.colors.background,
   },
   content: {
     flexGrow: 1,
@@ -400,6 +381,8 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: 2,
     borderStyle: 'dashed',
     overflow: 'hidden',
+    backgroundColor: theme.colors.surface,
+    borderColor: theme.colors.primary,
   },
   avatarImage: {
     width: '100%',
@@ -413,6 +396,7 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.full,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: theme.colors.primary,
     ...theme.shadows.md,
   },
   buttonContainer: {
@@ -426,6 +410,10 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.sm + 2,
     paddingHorizontal: theme.spacing.lg,
     borderWidth: 1,
+    backgroundColor: theme.colors.primary,
+  },
+  btnText: {
+    color: theme.colors.background,
   },
   btnSecondary: {
     flexDirection: 'row',
@@ -436,6 +424,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.lg,
     borderWidth: 2,
     backgroundColor: 'transparent',
+    borderColor: theme.colors.primary,
   },
   btnSecondaryText: {
     color: theme.colors.secondary,

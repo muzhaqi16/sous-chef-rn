@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { BottomSheetModal } from '@gorhom/bottom-sheet';
+import { Pressable } from '#components/atoms/themedComponents';
+import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import PagerView from 'react-native-pager-view';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { usePantryItemSubmission } from '#features/pantry/hooks/usePantryItemSubmission';
 import {
@@ -28,51 +28,45 @@ interface AddDetailsSheetProps {
   onSuccess: () => void;
 }
 
-// Page Indicator Component
+// Page Indicator Components
+function PageIndicatorItem({
+  label,
+  isActive,
+  onPress,
+}: {
+  label: string;
+  isActive: boolean;
+  onPress: () => void;
+}) {
+  indicatorStyles.useVariants({ active: isActive });
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        indicatorStyles.item,
+        pressed && indicatorStyles.pressed,
+      ]}
+    >
+      <View style={indicatorStyles.dot} />
+      <Text style={indicatorStyles.label}>{label}</Text>
+    </Pressable>
+  );
+}
+
 const PageIndicator: React.FC<{
   pages: readonly string[];
   currentPage: number;
   onPagePress: (index: number) => void;
 }> = ({ pages, currentPage, onPagePress }) => {
-  const { theme } = useUnistyles();
-
   return (
     <View style={indicatorStyles.container}>
       {pages.map((label, index) => (
-        <Pressable
+        <PageIndicatorItem
           key={label}
+          label={label}
+          isActive={currentPage === index}
           onPress={() => onPagePress(index)}
-          style={({ pressed }) => [
-            indicatorStyles.item,
-            pressed && indicatorStyles.pressed,
-          ]}
-        >
-          <View
-            style={[
-              indicatorStyles.dot,
-              {
-                backgroundColor:
-                  currentPage === index
-                    ? theme.colors.primary
-                    : theme.colors.border,
-              },
-            ]}
-          />
-          <Text
-            style={[
-              indicatorStyles.label,
-              {
-                color:
-                  currentPage === index
-                    ? theme.colors.primary
-                    : theme.colors.textSecondary,
-                fontWeight: currentPage === index ? '600' : '400',
-              },
-            ]}
-          >
-            {label}
-          </Text>
-        </Pressable>
+        />
       ))}
     </View>
   );
@@ -96,9 +90,25 @@ const indicatorStyles = StyleSheet.create(theme => ({
     width: 8,
     height: 8,
     borderRadius: theme.radii.full,
+    backgroundColor: theme.colors.border,
+    variants: {
+      active: {
+        true: { backgroundColor: theme.colors.primary },
+      },
+    },
   },
   label: {
     fontSize: theme.fonts.size.sm,
+    fontWeight: '400',
+    color: theme.colors.textSecondary,
+    variants: {
+      active: {
+        true: {
+          color: theme.colors.primary,
+          fontWeight: '600',
+        },
+      },
+    },
   },
   pressed: {
     opacity: theme.opacity.pressed,

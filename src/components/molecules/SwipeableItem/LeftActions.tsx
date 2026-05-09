@@ -1,6 +1,5 @@
 import React from 'react';
 import Animated from 'react-native-reanimated';
-import { useUnistyles } from 'react-native-unistyles';
 import { HapticService } from '#/services/haptic/HapticService';
 import { AnimatedActionButton } from './AnimatedActionButton';
 import { styles } from './styles';
@@ -26,8 +25,6 @@ const LeftActionsComponent: React.FC<SwipeActionsProps> = ({
   onEdit,
   onActionPress,
 }) => {
-  const { theme } = useUnistyles();
-
   // Shopping mode: Show Edit button on left swipe
   if (swipeMode === 'shopping' && onEdit) {
     const handleEditPress = () => {
@@ -44,7 +41,6 @@ const LeftActionsComponent: React.FC<SwipeActionsProps> = ({
         <AnimatedActionButton
           onPress={handleEditPress}
           icon="create-outline"
-          backgroundColor={theme.colors.info}
           circular={true}
           progress={progress}
           index={0}
@@ -77,7 +73,6 @@ const LeftActionsComponent: React.FC<SwipeActionsProps> = ({
         <AnimatedActionButton
           onPress={handleConsumePress}
           icon="restaurant-outline"
-          backgroundColor={theme.colors.consumeAction}
           circular={true}
           progress={progress}
           index={0}
@@ -85,7 +80,6 @@ const LeftActionsComponent: React.FC<SwipeActionsProps> = ({
         <AnimatedActionButton
           onPress={handleWastePress}
           icon="warning-outline"
-          backgroundColor={theme.colors.wasteAction}
           circular={true}
           progress={progress}
           index={1}
@@ -93,7 +87,6 @@ const LeftActionsComponent: React.FC<SwipeActionsProps> = ({
         <AnimatedActionButton
           onPress={handleRestockPress}
           icon="add-circle-outline"
-          backgroundColor={theme.colors.restockAction}
           circular={true}
           progress={progress}
           index={2}
@@ -122,7 +115,6 @@ const LeftActionsComponent: React.FC<SwipeActionsProps> = ({
         <AnimatedActionButton
           onPress={handleConsumePress}
           icon="restaurant-outline"
-          backgroundColor={theme.colors.consumeAction}
           circular={true}
           progress={progress}
           index={0}
@@ -130,7 +122,6 @@ const LeftActionsComponent: React.FC<SwipeActionsProps> = ({
         <AnimatedActionButton
           onPress={handleWastePress}
           icon="warning-outline"
-          backgroundColor={theme.colors.wasteAction}
           circular={true}
           progress={progress}
           index={1}
@@ -156,7 +147,6 @@ const LeftActionsComponent: React.FC<SwipeActionsProps> = ({
         <AnimatedActionButton
           onPress={handleConsumePress}
           icon="restaurant-outline"
-          backgroundColor={theme.colors.consumeAction}
           circular={true}
           progress={progress}
           index={0}
@@ -180,7 +170,6 @@ const LeftActionsComponent: React.FC<SwipeActionsProps> = ({
         <AnimatedActionButton
           onPress={handleWastePress}
           icon="warning-outline"
-          backgroundColor={theme.colors.wasteAction}
           circular={true}
           progress={progress}
           index={0}
@@ -194,11 +183,8 @@ const LeftActionsComponent: React.FC<SwipeActionsProps> = ({
     return null;
   }
 
-  // Dynamic styling based on actual purchase status from props
+  // Dynamic icon based on actual purchase status from props
   const iconName = isPurchased ? 'close-circle' : 'checkmark-circle';
-  const bgColor = isPurchased
-    ? theme.colors.unpurchaseAction
-    : theme.colors.purchaseAction;
 
   const handlePress = () => {
     // Provide haptic feedback for purchase toggle
@@ -218,7 +204,6 @@ const LeftActionsComponent: React.FC<SwipeActionsProps> = ({
       <AnimatedActionButton
         onPress={handlePress}
         icon={iconName}
-        backgroundColor={bgColor}
         circular={true}
         progress={progress}
         index={0}

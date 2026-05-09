@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { View, type LayoutChangeEvent } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Pressable } from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
+import { useAnimatedTheme } from 'react-native-unistyles/reanimated';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -46,7 +47,7 @@ const SegmentedTab = <T extends string>({
   indicatorX,
   tabWidth,
 }: SegmentedTabProps<T>) => {
-  const { theme } = useUnistyles();
+  const animatedTheme = useAnimatedTheme();
 
   const textAnimatedStyle = useAnimatedStyle(() => {
     const tabCenter = index * tabWidth + tabWidth / 2;
@@ -58,18 +59,19 @@ const SegmentedTab = <T extends string>({
       color: interpolateColor(
         progress,
         [0, 0.5],
-        [theme.colors.white, theme.colors.textPrimary],
+        [
+          animatedTheme.get().colors.white,
+          animatedTheme.get().colors.textPrimary,
+        ],
       ),
     };
   });
 
+  styles.useVariants({ compact: isCompact });
+
   return (
     <Pressable
-      style={({ pressed }) => [
-        styles.segment,
-        isCompact && styles.segmentCompact,
-        pressed && styles.pressed,
-      ]}
+      style={({ pressed }) => [styles.segment, pressed && styles.pressed]}
       onPress={onPress}
     >
       <Animated.Text
@@ -129,11 +131,10 @@ export const SegmentedControl = <T extends string>({
     setContentWidth(event.nativeEvent.layout.width - 2);
   };
 
+  styles.useVariants({ compact: isCompact });
+
   return (
-    <View
-      style={[styles.container, isCompact && styles.containerCompact]}
-      testID={testID}
-    >
+    <View style={styles.container} testID={testID}>
       {label ? <Label required={required}>{label}</Label> : null}
       <View style={styles.segmentedControl} onLayout={handleLayout}>
         {contentWidth > 0 && (
@@ -162,9 +163,11 @@ export const SegmentedControl = <T extends string>({
 const styles = StyleSheet.create(theme => ({
   container: {
     marginBottom: theme.spacing.lg,
-  },
-  containerCompact: {
-    marginBottom: theme.spacing.sm,
+    variants: {
+      compact: {
+        true: { marginBottom: theme.spacing.sm },
+      },
+    },
   },
   segmentedControl: {
     flexDirection: 'row',
@@ -189,9 +192,11 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'transparent',
-  },
-  segmentCompact: {
-    paddingVertical: theme.spacing.sm,
+    variants: {
+      compact: {
+        true: { paddingVertical: theme.spacing.sm },
+      },
+    },
   },
   segmentText: {
     fontSize: theme.fonts.size.sm,

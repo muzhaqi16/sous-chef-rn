@@ -34,14 +34,17 @@ describe('useStandardBottomSheet', () => {
     snapPoints: ['50%'],
   };
 
-  it('returns ref, modalProps, contentContainerStyle, theme, and insets', () => {
+  it('returns ref, modalProps, contentContainerStyle, insets, and imperative helpers', () => {
     const { result } = renderHook(() => useStandardBottomSheet(defaultOptions));
 
     expect(result.current.ref).toBeDefined();
     expect(result.current.modalProps).toBeDefined();
     expect(result.current.contentContainerStyle).toBeDefined();
-    expect(result.current.theme).toBeDefined();
     expect(result.current.insets).toBeDefined();
+    expect(typeof result.current.present).toBe('function');
+    expect(typeof result.current.dismiss).toBe('function');
+    expect(typeof result.current.close).toBe('function');
+    expect(typeof result.current.snapToIndex).toBe('function');
   });
 
   it('includes snap points in modalProps', () => {
@@ -99,16 +102,9 @@ describe('useStandardBottomSheet', () => {
     });
   });
 
-  it('applies theme colors to background and handle indicator styles', () => {
-    const { result } = renderHook(() => useStandardBottomSheet(defaultOptions));
-
-    expect(result.current.modalProps.backgroundStyle).toEqual({
-      backgroundColor: expect.any(String),
-    });
-    expect(result.current.modalProps.handleIndicatorStyle).toEqual({
-      backgroundColor: expect.any(String),
-    });
-  });
+  // Theme-derived background/handle indicator styles are now applied by the
+  // exported `withUnistyles`-wrapped `BottomSheetModal` (not by modalProps),
+  // so they don't appear in the hook's return value anymore.
 
   it('includes paddingBottom in contentContainerStyle from insets', () => {
     const { result } = renderHook(() => useStandardBottomSheet(defaultOptions));

@@ -25,6 +25,7 @@ jest.mock('#hooks/useStandardBottomSheet', () => ({
       spacing: { xs: 2, sm: 4, md: 8, lg: 16 },
     },
   })),
+  BottomSheetModal: ({ children }: any) => children,
 }));
 
 describe('ImagePickerSheet', () => {

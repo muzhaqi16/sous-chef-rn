@@ -9,7 +9,7 @@ import { Icon } from '#utils/iconUtils';
 import { HapticService } from '#services/haptic/HapticService';
 import { SPRING } from '#/constants/animations';
 import type { AddButtonProps } from './types';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 

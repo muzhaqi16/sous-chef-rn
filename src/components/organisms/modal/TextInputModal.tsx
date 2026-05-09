@@ -9,10 +9,18 @@ import {
   ActivityIndicator,
   Pressable,
 } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 
 import { TextInputModalProps } from './types';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+
+const ThemedActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
+  color: theme.colors.white,
+}));
+
+const ThemedTextInput = withUnistyles(TextInput, theme => ({
+  placeholderTextColor: theme.colors.textSecondary,
+}));
 
 /** Module-level helper to initialize text input modal state */
 function initTextInputModal(
@@ -40,12 +48,17 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
   textInputProps = {},
   multiline = false,
 }) => {
-  const { theme } = useUnistyles();
-  const resolvedPrimaryColor = primaryColor ?? theme.colors.primary;
-  const resolvedErrorColor = errorColor ?? theme.colors.error;
   const [text, setText] = useState(initialValue);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const errorOverrideStyle = errorColor ? { color: errorColor } : undefined;
+  const errorBorderOverrideStyle = errorColor
+    ? { borderColor: errorColor }
+    : undefined;
+  const primaryOverrideStyle = primaryColor
+    ? { backgroundColor: primaryColor }
+    : undefined;
+  styles.useVariants({ hasError: !!error });
 
   useEffect(() => {
     if (visible) {
@@ -117,13 +130,12 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
         <View style={styles.modalView}>
           <Text style={styles.title}>{title}</Text>
 
-          <TextInput
+          <ThemedTextInput
             style={[
               multiline ? styles.multilineInput : styles.input,
-              error ? { borderColor: resolvedErrorColor } : {},
+              errorBorderOverrideStyle,
             ]}
             placeholder={placeholder}
-            placeholderTextColor={styles.inputPlaceholder.color}
             value={text}
             onChangeText={newText => {
               setText(newText);
@@ -137,16 +149,14 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
           />
 
           {error ? (
-            <Text style={[styles.errorText, { color: resolvedErrorColor }]}>
-              {error}
-            </Text>
+            <Text style={[styles.errorText, errorOverrideStyle]}>{error}</Text>
           ) : null}
 
           <View style={styles.buttonContainer}>
             <Pressable
               style={({ pressed }) => [
                 styles.cancelButton,
-                pressed && { opacity: theme.opacity.pressed },
+                pressed && styles.pressed,
               ]}
               onPress={handleClose}
               disabled={isSubmitting}
@@ -157,18 +167,15 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
             <Pressable
               style={({ pressed }) => [
                 styles.submitButton,
-                { backgroundColor: resolvedPrimaryColor },
+                primaryOverrideStyle,
                 isSubmitting && styles.disabledButton,
-                pressed && { opacity: theme.opacity.pressed },
+                pressed && styles.pressed,
               ]}
               onPress={handleSubmit}
               disabled={isSubmitting || loading}
             >
               {isSubmitting || loading ? (
-                <ActivityIndicator
-                  size="small"
-                  color={styles.submitButtonText.color}
-                />
+                <ThemedActivityIndicator size="small" />
               ) : (
                 <Text style={styles.submitButtonText}>{submitText}</Text>
               )}
@@ -213,20 +220,21 @@ const styles = StyleSheet.create(theme => ({
   },
   input: {
     borderWidth: 1,
-    borderColor: theme.colors.border,
     borderRadius: theme.radii.md,
     padding: theme.spacing['3'],
     fontSize: theme.typography.fontSize.base,
     marginBottom: theme.spacing.sm,
     color: theme.colors.textPrimary,
     backgroundColor: theme.colors.background,
-  },
-  inputPlaceholder: {
-    color: theme.colors.textSecondary,
+    variants: {
+      hasError: {
+        true: { borderColor: theme.colors.error },
+        false: { borderColor: theme.colors.border },
+      },
+    },
   },
   multilineInput: {
     borderWidth: 1,
-    borderColor: theme.colors.border,
     borderRadius: theme.radii.md,
     padding: theme.spacing['3'],
     fontSize: theme.typography.fontSize.base,
@@ -235,10 +243,17 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.background,
     minHeight: theme.spacing['2xl'] + theme.spacing.xl,
     maxHeight: theme.spacing['3xl'] * 2,
+    variants: {
+      hasError: {
+        true: { borderColor: theme.colors.error },
+        false: { borderColor: theme.colors.border },
+      },
+    },
   },
   errorText: {
     fontSize: theme.typography.fontSize.xs,
     marginBottom: theme.spacing['3'],
+    color: theme.colors.error,
   },
   buttonContainer: {
     flexDirection: 'row',
@@ -263,9 +278,13 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     minHeight: theme.sizes.button.md,
     marginLeft: theme.spacing.sm,
+    backgroundColor: theme.colors.primary,
   },
   disabledButton: {
     opacity: theme.opacity.disabled,
+  },
+  pressed: {
+    opacity: theme.opacity.pressed,
   },
   cancelButtonText: {
     color: theme.colors.textSecondary,

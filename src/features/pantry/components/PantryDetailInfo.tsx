@@ -1,8 +1,10 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Pressable } from '#components/atoms/themedComponents';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { InfoRow } from '#components/molecules/InfoRow';
+
+const ThemedConditionInfoRow = withUnistyles(InfoRow);
 import { Icon } from '#/utils/iconUtils';
 import { getUnitDisplayText } from '#utils/formatQuantity';
 import { type GetPantryItemQuery } from '#features/pantry/graphql/pantry.generated';
@@ -39,7 +41,8 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
   shelfLifeOpenedDays,
   onCorrectWeight,
 }) => {
-  const { theme } = useUnistyles();
+  const isCriticalCondition =
+    item.condition === 'SPOILED' || item.condition === 'EXPIRED';
 
   return (
     <>
@@ -185,18 +188,15 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
 
       {/* Condition Row - only show if not GOOD */}
       {!!formatCondition(item.condition) && (
-        <InfoRow
+        <ThemedConditionInfoRow
           label="Condition"
           value={formatCondition(item.condition)}
           icon="fitness-outline"
-          iconColor={
-            item.condition === 'SPOILED' || item.condition === 'EXPIRED'
-              ? theme.colors.error
-              : theme.colors.warning
-          }
+          uniProps={t => ({
+            iconColor: isCriticalCondition ? t.colors.error : t.colors.warning,
+          })}
           valueStyle={[
-            (item.condition === 'SPOILED' || item.condition === 'EXPIRED') &&
-              styles.valueError,
+            isCriticalCondition && styles.valueError,
             item.condition === 'FAIR' && styles.valueWarning,
           ]}
           showColon={false}

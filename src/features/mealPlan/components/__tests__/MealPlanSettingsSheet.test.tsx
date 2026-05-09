@@ -9,6 +9,7 @@ jest.mock('#hooks/useStandardBottomSheet', () => ({
     modalProps: {},
     contentContainerStyle: {},
   })),
+  BottomSheetModal: ({ children }: any) => children,
 }));
 
 jest.mock('#/utils/iconUtils', () => ({

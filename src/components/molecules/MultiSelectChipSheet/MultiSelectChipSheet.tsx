@@ -1,13 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import {
-  BottomSheetModal,
-  BottomSheetTextInput,
-  BottomSheetView,
-  BottomSheetScrollView,
-} from '@gorhom/bottom-sheet';
+import { Pressable } from '#components/atoms/themedComponents';
+import { BottomSheetView, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
+import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
 import { BottomSheetHeader } from '#/components/atoms/BottomSheetHeader';
 import { AnimatedChip } from '#/components/atoms/AnimatedChip';
 import { Icon } from '#utils/iconUtils';
@@ -40,12 +37,11 @@ export function MultiSelectChipSheet<T extends string = string>({
   onDone,
   loading = false,
 }: MultiSelectChipSheetProps<T>) {
-  const { ref, modalProps, contentContainerStyle, theme } =
-    useStandardBottomSheet({
-      onDismiss: onClose,
-      snapPoints: ['60%', '80%'],
-      keyboardBehavior: 'interactive',
-    });
+  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
+    onDismiss: onClose,
+    snapPoints: ['60%', '80%'],
+    keyboardBehavior: 'interactive',
+  });
   const [searchQuery, setSearchQuery] = useState('');
 
   // Reset search query when sheet opens (render-time state update)
@@ -103,10 +99,9 @@ export function MultiSelectChipSheet<T extends string = string>({
         {!!showSearch && (
           <View style={styles.searchContainer}>
             <Icon name="search" size={18} tone="textSecondary" />
-            <BottomSheetTextInput
+            <ThemedBottomSheetTextInput
               style={styles.searchInput}
               placeholder="Search..."
-              placeholderTextColor={theme.colors.textSecondary}
               defaultValue={searchQuery}
               onChangeText={setSearchQuery}
               autoCapitalize="none"

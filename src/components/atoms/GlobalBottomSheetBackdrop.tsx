@@ -4,7 +4,7 @@ import { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
 import { useAnimatedReaction } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 import { useBackdropClaim } from '../providers/OverlayBackdropProvider';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 
 interface GlobalBottomSheetBackdropProps extends BottomSheetBackdropProps {
   /** Index at which backdrop appears (default: 0) */

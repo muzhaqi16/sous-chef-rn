@@ -1,18 +1,21 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import Animated, {
   useAnimatedStyle,
   interpolate,
   Extrapolation,
   type SharedValue,
 } from 'react-native-reanimated';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { IconButton } from '../atoms/IconButton';
 import { BackButton } from '../atoms/BackButton';
 import { Icon } from '#/utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { Text } from '#components/atoms/Text';
+
+const ThemedBackButton = withUnistyles(BackButton);
+const ThemedIconButton = withUnistyles(IconButton);
 
 const AVATAR_SIZE = 80;
 const AVATAR_SCALE_MIN = 0.55; // 80 * 0.55 = 44
@@ -38,8 +41,6 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   onAvatarPress,
   progress,
 }) => {
-  const { theme } = useUnistyles();
-
   // Avatar: scale from 1 → 0.55 (GPU composited, no layout recalc)
   const avatarScaleStyle = useAnimatedStyle(() => {
     if (!progress) return {};
@@ -102,12 +103,15 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   return (
     <View>
       <View style={styles.header}>
-        <BackButton onPress={onBack} color={theme.colors.textPrimary} />
+        <ThemedBackButton
+          onPress={onBack}
+          uniProps={t => ({ color: t.colors.textPrimary })}
+        />
         <Pressable
           onPress={onAvatarPress}
           style={({ pressed }) => [
             styles.avatarContainer,
-            pressed && { opacity: theme.opacity.pressed },
+            pressed && styles.pressed,
           ]}
         >
           <Animated.View
@@ -138,10 +142,10 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             <Icon tone="iconOnPrimary" name="create" size={15} />
           </Animated.View>
         </Pressable>
-        <IconButton
+        <ThemedIconButton
           name="ellipsis-vertical"
           onPress={onMore}
-          color={theme.colors.textPrimary}
+          uniProps={t => ({ color: t.colors.textPrimary })}
           accessibilityLabel="More options"
         />
       </View>
@@ -225,5 +229,8 @@ const styles = StyleSheet.create(theme => ({
   },
   subtitleText: {
     marginTop: 2,
+  },
+  pressed: {
+    opacity: theme.opacity.pressed,
   },
 }));

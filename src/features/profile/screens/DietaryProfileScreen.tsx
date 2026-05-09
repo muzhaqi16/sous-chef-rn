@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
 import { TIMING } from '#constants/animations';
 import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
@@ -19,6 +19,10 @@ import { Icon } from '#/utils/iconUtils';
 import { StringArrayManager } from '#/components/organisms/StringArrayManager/StringArrayManager';
 import { NumberInputSheet } from '#/components/modals/NumberInputSheet/NumberInputSheet';
 import { InfoRow } from '#/components/molecules/InfoRow';
+
+const ThemedInfoRow = withUnistyles(InfoRow, theme => ({
+  iconColor: theme.colors.primary,
+}));
 import { CuisineSelector } from '#/components/organisms/CuisineSelector';
 import { DietaryRestrictionSelector } from '#/components/organisms/DietaryRestrictionSelector';
 import { CookingPreferencesSheet } from '#/components/modals/CookingPreferencesSheet/CookingPreferencesSheet';
@@ -27,7 +31,6 @@ import { errorService } from '#/services/errorService';
 import { Text } from '#components/atoms/Text';
 
 export const DietaryProfileScreen: React.FC = () => {
-  const { theme } = useUnistyles();
   const {
     profile,
     loading,
@@ -187,11 +190,6 @@ export const DietaryProfileScreen: React.FC = () => {
     return await updateDietaryProfile({ snacksPerDay: value });
   };
 
-  // Memoize container style
-  const favoriteContainerStyle = { marginTop: theme.spacing.md };
-
-  const dislikedContainerStyle = { marginTop: theme.spacing.md };
-
   if (loading) {
     return (
       <View style={commonStyles.loadingContainer}>
@@ -251,7 +249,7 @@ export const DietaryProfileScreen: React.FC = () => {
             inputPlaceholder="e.g., Garlic, Basil, Chicken"
             addButtonLabel="Add Favorite Ingredient"
             emptyMessage="No favorite ingredients added yet"
-            containerStyle={favoriteContainerStyle}
+            containerStyle={styles.ingredientsContainer}
           />
 
           <StringArrayManager
@@ -262,7 +260,7 @@ export const DietaryProfileScreen: React.FC = () => {
             inputPlaceholder="e.g., Cilantro, Mushrooms, Olives"
             addButtonLabel="Add Disliked Ingredient"
             emptyMessage="No disliked ingredients added yet"
-            containerStyle={dislikedContainerStyle}
+            containerStyle={styles.ingredientsContainer}
           />
         </View>
       </Animated.View>
@@ -279,23 +277,21 @@ export const DietaryProfileScreen: React.FC = () => {
             style={({ pressed }) => pressed && styles.pressed}
             onPress={handleOpenMeals}
           >
-            <InfoRow
+            <ThemedInfoRow
               label="Meals per day"
               value={profile.mealsPerDay}
               icon="create-outline"
-              iconColor={theme.colors.primary}
             />
           </Pressable>
           <Pressable
             style={({ pressed }) => pressed && styles.pressed}
             onPress={handleOpenSnacks}
           >
-            <InfoRow
+            <ThemedInfoRow
               label="Snacks per day"
               value={profile.snacksPerDay}
               showBorder={false}
               icon="create-outline"
-              iconColor={theme.colors.primary}
             />
           </Pressable>
         </View>
@@ -477,6 +473,9 @@ const styles = StyleSheet.create(theme => ({
   },
   pressed: {
     opacity: theme.opacity.pressed,
+  },
+  ingredientsContainer: {
+    marginTop: theme.spacing.md,
   },
 }));
 

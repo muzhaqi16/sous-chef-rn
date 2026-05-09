@@ -1,15 +1,21 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, ActivityIndicator } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import {
-  BottomSheetModal,
-  BottomSheetTextInput,
   BottomSheetView,
   useBottomSheetScrollableCreator,
 } from '@gorhom/bottom-sheet';
+import {
+  BottomSheetModal,
+  type BottomSheetModalRef,
+} from '#hooks/useStandardBottomSheet';
 import { FlashList } from '@shopify/flash-list';
 import { StyleSheet } from 'react-native-unistyles';
+import {
+  ThemedActivityIndicator,
+  ThemedBottomSheetTextInput,
+} from '#components/atoms/themedComponents';
 import { Icon } from '#utils/iconUtils';
 import { toastService } from '#/services/toastService';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
@@ -55,7 +61,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
   // Per CLAUDE.md: never call present()/dismiss() outside an effect.
   // Drive the manage sub-sheet visibility via state and an effect.
   const [manageVisible, setManageVisible] = useState(false);
-  const manageSheetRef = useRef<BottomSheetModal>(null);
+  const manageSheetRef = useRef<BottomSheetModalRef>(null);
   useEffect(() => {
     if (manageVisible) {
       manageSheetRef.current?.present();
@@ -68,7 +74,6 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
     ref: folderPickerRef,
     modalProps,
     contentContainerStyle,
-    theme,
   } = useStandardBottomSheet({
     visible,
     onDismiss: () => {
@@ -274,10 +279,9 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
           {folders.length > 5 && (
             <View style={styles.searchContainer}>
               <Icon name="search" size={18} tone="textSecondary" />
-              <BottomSheetTextInput
+              <ThemedBottomSheetTextInput
                 style={styles.searchInput}
                 placeholder="Search folders..."
-                placeholderTextColor={theme.colors.textSecondary}
                 defaultValue={searchQuery}
                 onChangeText={setSearchQuery}
                 autoCapitalize="none"
@@ -319,10 +323,9 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
           {!!allowCreate &&
             (showNewFolder ? (
               <View style={styles.newFolderContainer}>
-                <BottomSheetTextInput
+                <ThemedBottomSheetTextInput
                   style={styles.newFolderInput}
                   placeholder="Enter folder name..."
-                  placeholderTextColor={theme.colors.textSecondary}
                   defaultValue={newFolderName}
                   onChangeText={setNewFolderName}
                   autoFocus
@@ -405,7 +408,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
           {/* Loading overlay */}
           {!!folderActionLoading && (
             <View style={styles.loadingOverlay}>
-              <ActivityIndicator size="large" color={theme.colors.primary} />
+              <ThemedActivityIndicator size="large" />
             </View>
           )}
         </BottomSheetView>
@@ -492,10 +495,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
                   disabled={folderActionLoading}
                 >
                   {folderActionLoading ? (
-                    <ActivityIndicator
-                      size="small"
-                      color={theme.colors.white}
-                    />
+                    <ActivityIndicator size="small" color="#FFFFFF" />
                   ) : (
                     <Text
                       size="base"
@@ -522,12 +522,11 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
                     Rename
                   </Text>
                   <View style={styles.renameInputRow}>
-                    <BottomSheetTextInput
+                    <ThemedBottomSheetTextInput
                       style={styles.renameInput}
                       defaultValue={renameValue}
                       onChangeText={setRenameValue}
                       placeholder="Enter new folder name..."
-                      placeholderTextColor={theme.colors.textSecondary}
                       autoCapitalize="words"
                       onSubmitEditing={handleRenameConfirm}
                       editable={!folderActionLoading}
@@ -548,10 +547,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
                       }
                     >
                       {folderActionLoading ? (
-                        <ActivityIndicator
-                          size="small"
-                          color={theme.colors.white}
-                        />
+                        <ActivityIndicator size="small" color="#FFFFFF" />
                       ) : (
                         <Text
                           size="base"

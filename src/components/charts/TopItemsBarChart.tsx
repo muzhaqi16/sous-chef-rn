@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
 
 interface DataItem {
@@ -27,9 +27,6 @@ export const TopItemsBarChart: React.FC<TopItemsBarChartProps> = ({
   showSecondaryValue = false,
   secondaryValuePrefix = '$',
 }) => {
-  const { theme } = useUnistyles();
-  const barColor = color || theme.colors.primary;
-
   if (!data || data.length === 0) {
     return (
       <View style={[styles.container, { minHeight: height }]}>
@@ -71,7 +68,8 @@ export const TopItemsBarChart: React.FC<TopItemsBarChartProps> = ({
                   <View
                     style={[
                       styles.bar,
-                      { width: `${barWidth}%`, backgroundColor: barColor },
+                      { width: `${barWidth}%` },
+                      !!color && { backgroundColor: color },
                     ]}
                   />
                 </View>
@@ -131,6 +129,7 @@ const styles = StyleSheet.create(theme => ({
     height: 20,
     borderRadius: theme.radii.sm,
     minWidth: 4,
+    backgroundColor: theme.colors.primary,
   },
   barValue: {
     flexShrink: 0,

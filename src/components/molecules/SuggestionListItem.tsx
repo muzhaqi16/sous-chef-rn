@@ -1,6 +1,6 @@
 import React, { useEffect, useLayoutEffect, useRef } from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import Animated, {
   useSharedValue,
@@ -27,11 +27,6 @@ export interface SuggestionListItemProps {
   isExiting?: boolean;
   /** Called after exit animation completes */
   onExitComplete?: () => void;
-  /** Theme colors passed from parent to avoid per-item useUnistyles */
-  themeColors?: {
-    primary: string;
-    textTertiary: string;
-  };
   /** When false, always show placeholder icon regardless of imageUrl */
   showImage?: boolean;
 }
@@ -56,7 +51,6 @@ export const SuggestionListItem = ({
   testID,
   isExiting = false,
   onExitComplete,
-  themeColors,
   showImage = true,
 }: SuggestionListItemProps) => {
   const translateX = useSharedValue(0);
@@ -134,10 +128,7 @@ export const SuggestionListItem = ({
                 <Icon
                   name={placeholderIcon}
                   size={20}
-                  color={
-                    themeColors?.primary ??
-                    styles.quickAddButton.backgroundColor
-                  }
+                  tone="primary"
                   library={placeholderIconLibrary}
                 />
               </View>
@@ -172,11 +163,7 @@ export const SuggestionListItem = ({
             <Icon
               name="add"
               size={20}
-              color={
-                disabled
-                  ? themeColors?.textTertiary ?? '#999'
-                  : themeColors?.primary ?? '#007AFF'
-              }
+              tone={disabled ? 'iconDisabled' : 'primary'}
             />
           </Pressable>
         )}

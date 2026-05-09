@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Pressable } from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
 import { useAnimatedTheme } from 'react-native-unistyles/reanimated';
 import { CachedImage } from '#components/atoms/CachedImage';
 import Animated, {
@@ -52,7 +52,6 @@ export const AnimatedChip: React.FC<AnimatedChipProps> = ({
   disabled = false,
   imageUrl,
 }) => {
-  const { theme } = useUnistyles();
   const animatedTheme = useAnimatedTheme();
 
   // Drive selection animations via shared value — only animates when selected truly changes
@@ -110,7 +109,9 @@ export const AnimatedChip: React.FC<AnimatedChipProps> = ({
     };
   }, [selectedProgress]);
 
-  // SVG checkmark draw-on animation driven by same shared value
+  // SVG checkmark draw-on animation driven by same shared value.
+  // Stroke color is read from animatedTheme so it stays reactive without a
+  // useUnistyles() subscription on the parent.
   const checkmarkAnimatedProps = useAnimatedProps(() => {
     return {
       strokeDashoffset: interpolate(
@@ -118,6 +119,7 @@ export const AnimatedChip: React.FC<AnimatedChipProps> = ({
         [0, 1],
         [CHECKMARK_LENGTH, 0],
       ),
+      stroke: animatedTheme.get().colors.primary,
     };
   }, [selectedProgress]);
 
@@ -150,7 +152,6 @@ export const AnimatedChip: React.FC<AnimatedChipProps> = ({
               <Svg width={14} height={14} viewBox="0 0 14 14">
                 <AnimatedPath
                   d={CHECKMARK_PATH}
-                  stroke={theme.colors.primary}
                   strokeWidth={2}
                   strokeLinecap="round"
                   strokeLinejoin="round"

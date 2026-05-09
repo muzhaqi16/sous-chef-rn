@@ -1,12 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, RefreshControl } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
 import { alertService } from '#/services/alertService';
 import { FlashList } from '@shopify/flash-list';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { differenceInCalendarDays } from 'date-fns';
+
+const ThemedRefreshControl = withUnistyles(RefreshControl, theme => ({
+  colors: [theme.colors.primary],
+  tintColor: theme.colors.primary,
+}));
 
 import { Icon } from '#utils/iconUtils';
 import { SwipeableItem } from '#components/molecules/SwipeableItem/SwipeableItem';
@@ -238,7 +243,6 @@ export const FilteredPantryItems: React.FC<
 > = ({ route }) => {
   const mode = route.params?.mode ?? 'lowStock';
   const config = MODE_CONFIG[mode];
-  const { theme } = useUnistyles();
 
   const { goBack, navigateTo } = useAppNavigation();
 
@@ -350,11 +354,9 @@ export const FilteredPantryItems: React.FC<
           {...FLASHLIST_DEFAULTS.fullScreen}
           getItemType={getItemType}
           refreshControl={
-            <RefreshControl
+            <ThemedRefreshControl
               refreshing={refreshing}
               onRefresh={handleRefresh}
-              colors={[theme.colors.primary]}
-              tintColor={theme.colors.primary}
             />
           }
           ListEmptyComponent={

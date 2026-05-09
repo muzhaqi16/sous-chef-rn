@@ -6,7 +6,7 @@ import {
   Linking,
   ScrollView,
 } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import { FlashList, type ListRenderItemInfo } from '@shopify/flash-list';
 import Animated, {
   useAnimatedScrollHandler,
@@ -16,7 +16,7 @@ import Animated, {
   Extrapolation,
 } from 'react-native-reanimated';
 import TurboImage from 'react-native-turbo-image';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { BackButton } from '#components/atoms/BackButton';
 
@@ -24,6 +24,25 @@ import {
   BottomSheetTextInput,
   useBottomSheetScrollableCreator,
 } from '@gorhom/bottom-sheet';
+
+const FavoriteActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
+  color: theme.colors.favorite,
+}));
+const SuccessActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
+  color: theme.colors.success,
+}));
+const OnPrimaryActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
+  color: theme.colors.onPrimary,
+}));
+const ThemedBackButton = withUnistyles(BackButton, theme => ({
+  color: theme.colors.textPrimary,
+}));
+const ThemedBottomSheetTextInput = withUnistyles(
+  BottomSheetTextInput,
+  theme => ({
+    placeholderTextColor: theme.colors.textSecondary,
+  }),
+);
 import { BottomSheetAction } from '#components/templates/BottomSheetAction';
 import { FolderPicker } from '#components/molecules/FolderPicker';
 import { RecipeDetailErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
@@ -53,6 +72,37 @@ const AnimatedTurboImage = Animated.createAnimatedComponent(TurboImage);
 
 const IngredientSeparator = () => <View style={{ width: 12 }} />;
 
+function ShoppingListOption({
+  iconName,
+  title,
+  description,
+  onPress,
+  withBorder,
+}: {
+  iconName: string;
+  title: string;
+  description: string;
+  onPress: () => void;
+  withBorder?: boolean;
+}) {
+  styles.useVariants({ withBorder: withBorder ?? false });
+  return (
+    <Pressable
+      style={({ pressed }) => [
+        styles.optionButton,
+        pressed && { opacity: 0.7 },
+      ]}
+      onPress={onPress}
+    >
+      <Icon name={iconName} size={24} tone="primary" />
+      <View style={styles.optionTextContainer}>
+        <Text style={styles.optionTitle}>{title}</Text>
+        <Text style={styles.optionDescription}>{description}</Text>
+      </View>
+    </Pressable>
+  );
+}
+
 // --- Module-scope FlashList infrastructure for selectable ingredients ---
 
 interface SelectableIngredientItemProps {
@@ -67,11 +117,10 @@ interface SelectableIngredientItemProps {
 // Module-scope keyExtractor — zero runtime overhead
 const ingredientKeyExtractor = (item: { id: string }) => item.id;
 
-// Bridge component — reads selection state from context and theme colors internally
+// Bridge component — reads selection state from context, uses Icon `tone` for theme-reactive color
 const SelectableIngredientItem: React.FC<
   ListRenderItemInfo<SelectableIngredientItemProps['item']>
 > = ({ item }) => {
-  const { theme } = useUnistyles();
   const { selectedIngredients, toggleIngredient } = useSelectableIngredients();
   const isSelected = selectedIngredients.has(item.id);
 
@@ -86,7 +135,7 @@ const SelectableIngredientItem: React.FC<
       <Icon
         name={isSelected ? 'checkbox' : 'square-outline'}
         size={24}
-        color={isSelected ? theme.colors.primary : theme.colors.textSecondary}
+        tone={isSelected ? 'primary' : 'textSecondary'}
       />
       <View style={styles.ingredientInfo}>
         <Text style={styles.ingredientName}>{item.name}</Text>
@@ -109,7 +158,6 @@ const renderSelectableIngredientItem = (
 
 const RecipeDetailScreen: React.FC = () => {
   useScreenTransition('RecipeDetail');
-  const { theme } = useUnistyles();
 
   const { navigate } = useAppNavigation();
   const user = useUser();
@@ -264,17 +312,8 @@ const RecipeDetailScreen: React.FC = () => {
         <Text style={styles.listPickerCount}>{item.totalItems ?? 0} items</Text>
       </View>
       {!!item.isDefault && (
-        <View
-          style={[
-            styles.defaultBadge,
-            { backgroundColor: theme.colors.primary + '20' },
-          ]}
-        >
-          <Text
-            style={[styles.defaultBadgeText, { color: theme.colors.primary }]}
-          >
-            Default
-          </Text>
+        <View style={styles.defaultBadge}>
+          <Text style={styles.defaultBadgeText}>Default</Text>
         </View>
       )}
       <Icon name="chevron-forward" size={20} tone="textSecondary" />
@@ -351,11 +390,7 @@ const RecipeDetailScreen: React.FC = () => {
                 externalId ? `recipe-image-${externalId}` : undefined
               }
             />
-            <BackButton
-              onPress={goBack}
-              color={theme.colors.textPrimary}
-              style={styles.backButton}
-            />
+            <ThemedBackButton onPress={goBack} style={styles.backButton} />
             {/* Right side buttons container */}
             <View style={styles.rightButtons}>
               {/* Meal plan button - shown when recipe exists in backend */}
@@ -411,10 +446,7 @@ const RecipeDetailScreen: React.FC = () => {
                   disabled={saving || updatingFolderTags}
                 >
                   {saving || updatingFolderTags ? (
-                    <ActivityIndicator
-                      size="small"
-                      color={theme.colors.favorite}
-                    />
+                    <FavoriteActivityIndicator size="small" />
                   ) : (
                     <Icon
                       name={isInFavorites ? 'heart' : 'heart-outline'}
@@ -428,9 +460,7 @@ const RecipeDetailScreen: React.FC = () => {
           </View>
         )}
         {!displayData.image && (
-          <View
-            style={[styles.noImageHeader, { paddingTop: theme.spacing.sm }]}
-          >
+          <View style={styles.noImageHeader}>
             <BackButton onPress={goBack} />
             <View style={styles.noImageRightButtons}>
               {!!recipeId && (
@@ -482,10 +512,7 @@ const RecipeDetailScreen: React.FC = () => {
                   disabled={saving || updatingFolderTags}
                 >
                   {saving || updatingFolderTags ? (
-                    <ActivityIndicator
-                      size="small"
-                      color={theme.colors.favorite}
-                    />
+                    <FavoriteActivityIndicator size="small" />
                   ) : (
                     <Icon
                       name={isInFavorites ? 'heart' : 'heart-outline'}
@@ -531,10 +558,7 @@ const RecipeDetailScreen: React.FC = () => {
                 disabled={markingAsCooked}
               >
                 {markingAsCooked ? (
-                  <ActivityIndicator
-                    size="small"
-                    color={theme.colors.success}
-                  />
+                  <SuccessActivityIndicator size="small" />
                 ) : (
                   <>
                     <Icon
@@ -544,16 +568,12 @@ const RecipeDetailScreen: React.FC = () => {
                           : 'checkmark-circle-outline'
                       }
                       size={14}
-                      color={
-                        cookedCount > 0
-                          ? theme.colors.success
-                          : theme.colors.textSecondary
-                      }
+                      tone={cookedCount > 0 ? 'success' : 'textSecondary'}
                     />
                     <Text
                       style={[
                         styles.metadataText,
-                        cookedCount > 0 && { color: theme.colors.success },
+                        cookedCount > 0 && styles.metadataTextSuccess,
                       ]}
                     >
                       {cookedCount > 0
@@ -589,10 +609,10 @@ const RecipeDetailScreen: React.FC = () => {
                             : 'star-outline'
                         }
                         size={18}
-                        color={
+                        tone={
                           savedRating !== null && star <= savedRating
-                            ? theme.colors.rating
-                            : theme.colors.textSecondary
+                            ? 'rating'
+                            : 'textSecondary'
                         }
                       />
                     </Pressable>
@@ -606,17 +626,13 @@ const RecipeDetailScreen: React.FC = () => {
                 <View style={styles.detailValue}>
                   <Icon
                     name="folder"
-                    size={theme.fonts.size.sm}
-                    color={
-                      savedFolder
-                        ? theme.colors.primary
-                        : theme.colors.textSecondary
-                    }
+                    size={14}
+                    tone={savedFolder ? 'primary' : 'textSecondary'}
                   />
                   <Text
                     style={[
                       styles.detailValueText,
-                      savedFolder && { color: theme.colors.primary },
+                      savedFolder && styles.detailValueTextActive,
                     ]}
                   >
                     {savedFolder || 'None'}
@@ -837,37 +853,19 @@ const RecipeDetailScreen: React.FC = () => {
         onDismiss={handleSheetDismiss}
       >
         <View style={styles.shoppingListOptions}>
-          <Pressable
-            style={({ pressed }) => [
-              styles.optionButton,
-              { borderBottomWidth: 1, borderBottomColor: theme.colors.border },
-              pressed && { opacity: 0.7 },
-            ]}
+          <ShoppingListOption
+            withBorder
+            iconName="list"
+            title="Add All Ingredients"
+            description="Add all recipe ingredients to your shopping list"
             onPress={handleAddAllIngredients}
-          >
-            <Icon name="list" size={24} tone="primary" />
-            <View style={styles.optionTextContainer}>
-              <Text style={styles.optionTitle}>Add All Ingredients</Text>
-              <Text style={styles.optionDescription}>
-                Add all recipe ingredients to your shopping list
-              </Text>
-            </View>
-          </Pressable>
-          <Pressable
-            style={({ pressed }) => [
-              styles.optionButton,
-              pressed && { opacity: 0.7 },
-            ]}
+          />
+          <ShoppingListOption
+            iconName="checkmark-circle-outline"
+            title="Select Ingredients"
+            description="Choose specific ingredients to add"
             onPress={openIngredientSelector}
-          >
-            <Icon name="checkmark-circle-outline" size={24} tone="primary" />
-            <View style={styles.optionTextContainer}>
-              <Text style={styles.optionTitle}>Select Ingredients</Text>
-              <Text style={styles.optionDescription}>
-                Choose specific ingredients to add
-              </Text>
-            </View>
-          </Pressable>
+          />
         </View>
       </BottomSheetAction>
 
@@ -898,14 +896,13 @@ const RecipeDetailScreen: React.FC = () => {
         <Pressable
           style={({ pressed }) => [
             styles.addSelectedButton,
-            { backgroundColor: theme.colors.primary },
             pressed && { opacity: 0.7 },
           ]}
           onPress={handleAddSelectedIngredients}
           disabled={selectedIngredients.size === 0 || addingToList}
         >
           {addingToList ? (
-            <ActivityIndicator color={theme.colors.onPrimary} />
+            <OnPrimaryActivityIndicator />
           ) : (
             <Text style={styles.addSelectedButtonText}>
               Add {selectedIngredients.size} ingredient
@@ -930,28 +927,17 @@ const RecipeDetailScreen: React.FC = () => {
           renderScrollComponent={BottomSheetScrollable}
           data={shoppingLists}
           keyExtractor={(item: (typeof shoppingLists)[number]) => item.id}
-          style={{ flex: 1 }}
-          contentContainerStyle={{
-            paddingHorizontal: theme.spacing.md,
-            paddingBottom: theme.spacing['2xl'],
-          }}
+          style={styles.shoppingListFlashList}
+          contentContainerStyle={styles.shoppingListContent}
           renderItem={renderShoppingListItem}
           ListFooterComponent={
             <View style={styles.createListFooter}>
               <View style={styles.createListInputRow}>
-                <BottomSheetTextInput
-                  style={[
-                    styles.createListInput,
-                    {
-                      borderColor: theme.colors.border,
-                      color: theme.colors.textPrimary,
-                      backgroundColor: theme.colors.surface,
-                    },
-                  ]}
+                <ThemedBottomSheetTextInput
+                  style={styles.createListInput}
                   value={newListName}
                   onChangeText={setNewListName}
                   placeholder="New list name"
-                  placeholderTextColor={theme.colors.textSecondary}
                   autoCapitalize="words"
                   maxLength={100}
                 />
@@ -971,7 +957,6 @@ const RecipeDetailScreen: React.FC = () => {
               <Pressable
                 style={({ pressed }) => [
                   styles.createListButton,
-                  { backgroundColor: theme.colors.primary },
                   pressed && { opacity: 0.7 },
                   !newListName.trim() && { opacity: 0.5 },
                 ]}
@@ -979,7 +964,7 @@ const RecipeDetailScreen: React.FC = () => {
                 disabled={!newListName.trim() || creatingList}
               >
                 {creatingList ? (
-                  <ActivityIndicator color={theme.colors.onPrimary} />
+                  <OnPrimaryActivityIndicator />
                 ) : (
                   <Text style={styles.createListButtonText}>
                     Create & Add Ingredients
@@ -1160,6 +1145,7 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: theme.spacing.md,
+    paddingTop: theme.spacing.sm,
   },
   noImageRightButtons: {
     flexDirection: 'row',
@@ -1186,6 +1172,9 @@ const styles = StyleSheet.create(theme => ({
   metadataText: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
+  },
+  metadataTextSuccess: {
+    color: theme.colors.success,
   },
   cookedMetadata: {
     flexDirection: 'row',
@@ -1214,6 +1203,9 @@ const styles = StyleSheet.create(theme => ({
   detailValueText: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
+  },
+  detailValueTextActive: {
+    color: theme.colors.primary,
   },
   ratingStars: {
     flexDirection: 'row',
@@ -1355,6 +1347,14 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     padding: theme.spacing.lg,
     gap: theme.spacing.md,
+    variants: {
+      withBorder: {
+        true: {
+          borderBottomWidth: 1,
+          borderBottomColor: theme.colors.border,
+        },
+      },
+    },
   },
   optionTextContainer: {
     flex: 1,
@@ -1403,6 +1403,7 @@ const styles = StyleSheet.create(theme => ({
     marginHorizontal: theme.spacing.md,
     minHeight: 48,
     justifyContent: 'center',
+    backgroundColor: theme.colors.primary,
   },
   addSelectedButtonText: {
     color: theme.colors.onPrimary,
@@ -1435,10 +1436,12 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.xs,
     borderRadius: theme.radii.sm,
+    backgroundColor: theme.colors.primary + '20',
   },
   defaultBadgeText: {
     fontSize: theme.fonts.size.xs,
     fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.primary,
   },
   emptyListPicker: {
     padding: theme.spacing.xl,
@@ -1466,6 +1469,9 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.sm,
     borderRadius: theme.radii.md,
     borderWidth: 1,
+    borderColor: theme.colors.border,
+    color: theme.colors.textPrimary,
+    backgroundColor: theme.colors.surface,
   },
   clearNameButton: {
     padding: theme.spacing.xs,
@@ -1477,6 +1483,14 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     minHeight: 44,
     justifyContent: 'center',
+    backgroundColor: theme.colors.primary,
+  },
+  shoppingListFlashList: {
+    flex: 1,
+  },
+  shoppingListContent: {
+    paddingHorizontal: theme.spacing.md,
+    paddingBottom: theme.spacing['2xl'],
   },
   createListButtonText: {
     color: theme.colors.onPrimary,

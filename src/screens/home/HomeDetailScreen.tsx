@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { alertService } from '#/services/alertService';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import {
@@ -15,6 +15,10 @@ import { DetailTemplate } from '#components/templates/DetailTemplate';
 import { ModalPicker } from '#components/molecules/ModalPicker';
 import { EditableField } from '#components/molecules/EditableField';
 import { NavigationRow } from '#components/molecules/NavigationRow';
+
+const ThemedNavigationRow = withUnistyles(NavigationRow, theme => ({
+  iconColor: theme.colors.primary,
+}));
 import { HomeMembersSection } from '#components/organisms/home/HomeMembersSection';
 import { SettingSwitch } from '#components/settings/SettingSwitch';
 import { useUser } from '#store/useAppStore';
@@ -37,7 +41,6 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
   const { homeId } = route.params;
   // PERFORMANCE: Use selective selector instead of full store subscription
   const currentUser = useUser();
-  const { theme } = useUnistyles();
 
   const [copied, setCopied] = useState(false);
   const [joinCodeLoading, setJoinCodeLoading] = useState(false);
@@ -223,9 +226,8 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
     {
       title: 'Storage',
       content: (
-        <NavigationRow
+        <ThemedNavigationRow
           icon="folder-open"
-          iconColor={theme.colors.primary}
           title="Storage Locations"
           subtitle="Manage where items are stored"
           onPress={() => navigate('StorageLocations', { homeId })}

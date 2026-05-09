@@ -16,8 +16,8 @@ import {
   Gesture,
   GestureDetector,
   GestureHandlerRootView,
-  Pressable,
 } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import {
   Canvas,
   Group,

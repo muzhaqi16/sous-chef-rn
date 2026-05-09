@@ -1,8 +1,16 @@
 import React from 'react';
 import { View } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
+import { radii } from '#/theme/foundations/radii';
+import { sizes } from '#/theme/foundations/sizes';
 import { SkeletonLine } from './SkeletonLine';
 import { SkeletonRectangle } from './SkeletonRectangle';
+
+// Theme foundations (radii, sizes) are mode-invariant — they live in
+// `commonTheme` and don't change between light/dark. Read them at module
+// scope so this skeleton no longer needs `useUnistyles()`.
+const IMAGE_SIZE = sizes.itemCard.compact.image;
+const IMAGE_RADIUS = radii.md;
 
 interface PantryItemSkeletonProps {
   /** Whether to show shimmer animation */
@@ -26,17 +34,14 @@ interface PantryItemSkeletonProps {
 export const PantryItemSkeleton: React.FC<PantryItemSkeletonProps> = ({
   animated = true,
 }) => {
-  const { theme } = useUnistyles();
-  const imageSize = theme.sizes.itemCard.compact.image;
-
   return (
     <View style={styles.wrapper}>
       <View style={styles.container}>
         <View style={styles.image}>
           <SkeletonRectangle
-            width={imageSize}
-            height={imageSize}
-            borderRadius={theme.radii.md}
+            width={IMAGE_SIZE}
+            height={IMAGE_SIZE}
+            borderRadius={IMAGE_RADIUS}
             animated={animated}
           />
         </View>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, ScrollView } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { NotificationCategory } from '#/graphql/generated/schemaTypes';
 import { NOTIFICATION_CATEGORIES } from '#store/slices/notificationSlice';

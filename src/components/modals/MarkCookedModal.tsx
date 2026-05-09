@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { View, Switch } from 'react-native';
-import { BottomSheetModal } from '@gorhom/bottom-sheet';
+import { View } from 'react-native';
+import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
+import { BaseSwitch } from '#components/base/BaseSwitch';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/molecules/FormInput';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
@@ -32,13 +33,12 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
   onConfirm,
   hasPantry = false,
 }) => {
-  const { ref, modalProps, contentContainerStyle, theme } =
-    useStandardBottomSheet({
-      visible,
-      onDismiss: onClose,
-      snapPoints: ['55%'],
-      keyboardAware: true,
-    });
+  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
+    visible,
+    onDismiss: onClose,
+    snapPoints: ['55%'],
+    keyboardAware: true,
+  });
 
   // Form state
   const [servingsInput, setServingsInput] = useState('');
@@ -123,14 +123,9 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
               Automatically reduce ingredient quantities in your pantry
             </Text>
           </View>
-          <Switch
+          <BaseSwitch
             value={deductFromPantry}
             onValueChange={setDeductFromPantry}
-            trackColor={{
-              false: theme.colors.border,
-              true: theme.colors.primary,
-            }}
-            thumbColor={theme.colors.white}
           />
         </View>
 
@@ -145,14 +140,9 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
                 Review and adjust ingredient quantities before deducting
               </Text>
             </View>
-            <Switch
+            <BaseSwitch
               value={useGranularDeduction}
               onValueChange={setUseGranularDeduction}
-              trackColor={{
-                false: theme.colors.border,
-                true: theme.colors.primary,
-              }}
-              thumbColor={theme.colors.white}
             />
           </View>
         )}

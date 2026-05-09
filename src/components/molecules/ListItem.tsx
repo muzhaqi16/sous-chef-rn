@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, TextStyle } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import { Icon } from '#utils/iconUtils';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { Badge } from '../base/Badge';
 import type { SortableListThemeColors } from '#features/shoppingList/components/SortableShoppingList/SortableListThemeContext';
 import { Text } from '#components/atoms/Text';
@@ -23,9 +23,12 @@ interface ListItemProps {
   checkboxElement?: React.ReactNode; // Optional checkbox before leftElement (for shopping list)
   dragHandleElement?: React.ReactNode; // Optional drag handle before checkbox (for reordering)
   isPurchased?: boolean; // For strikethrough styling
-  // PERFORMANCE: Optional theme colors passed from parent to avoid useUnistyles call
+  // Optional theme override forwarded to `withUnistyles(Icon)` via uniProps;
+  // when null, the wrapped Icon falls back to its theme-reactive default.
   themeColors?: SortableListThemeColors | null;
 }
+
+const ThemedIcon = withUnistyles(Icon);
 
 const ListItemComponent: React.FC<ListItemProps> = ({
   children,
@@ -42,10 +45,7 @@ const ListItemComponent: React.FC<ListItemProps> = ({
   isPurchased = false,
   themeColors,
 }) => {
-  // PERFORMANCE: Only call useUnistyles if themeColors not provided
-  // When used in shopping list, parent provides colors to avoid repeated hook calls
-  const { theme } = useUnistyles();
-  const iconColor = themeColors?.textSecondary ?? theme.colors.textSecondary;
+  const overrideIconColor = themeColors?.textSecondary;
 
   // Select variants based on purchased state
   styles.useVariants({ purchased: isPurchased });
@@ -69,7 +69,13 @@ const ListItemComponent: React.FC<ListItemProps> = ({
       {leftElement}
       {!!leftIcon && (
         <View style={styles.leftIcon}>
-          <Icon name={leftIcon} size={24} color={iconColor} />
+          <ThemedIcon
+            name={leftIcon}
+            size={24}
+            uniProps={t => ({
+              color: overrideIconColor ?? t.colors.textSecondary,
+            })}
+          />
         </View>
       )}
       <View style={styles.content}>
@@ -92,7 +98,13 @@ const ListItemComponent: React.FC<ListItemProps> = ({
       {!!badge && <Badge variant={badge.variant}>{badge.text}</Badge>}
       {rightElement}
       {!!rightIcon && !rightElement && (
-        <Icon name={rightIcon} size={24} color={iconColor} />
+        <ThemedIcon
+          name={rightIcon}
+          size={24}
+          uniProps={t => ({
+            color: overrideIconColor ?? t.colors.textSecondary,
+          })}
+        />
       )}
       {/* Optional drag handle element (for reordering) - on right side */}
       {dragHandleElement}

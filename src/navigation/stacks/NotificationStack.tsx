@@ -14,6 +14,7 @@ export const NotificationStack = createNativeStackNavigator({
     animationDuration: 200,
     fullScreenGestureEnabled: true,
     contentStyle: { backgroundColor: theme.colors.background },
+    inactiveBehavior: 'none',
   }),
   screens: {
     NotificationList: createNativeStackScreen({

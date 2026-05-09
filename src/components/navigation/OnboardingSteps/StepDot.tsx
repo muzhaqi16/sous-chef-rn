@@ -9,7 +9,7 @@ import { useAnimatedTheme } from 'react-native-unistyles/reanimated';
 import { TIMING } from '#constants/animations';
 import { Icon } from '#/utils/iconUtils';
 import type { StepDotProps } from './types';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 

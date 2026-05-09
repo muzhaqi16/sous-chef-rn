@@ -1,8 +1,12 @@
 import React from 'react';
 import { View, ActivityIndicator } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
+
+const PrimaryActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
+  color: theme.colors.primary,
+}));
 
 interface ChartSectionProps {
   title: string;
@@ -21,13 +25,11 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
   emptyMessage = 'No data available',
   isEmpty = false,
 }) => {
-  const { theme } = useUnistyles();
-
   const renderContent = () => {
     if (loading) {
       return (
         <View style={styles.stateContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <PrimaryActivityIndicator size="large" />
         </View>
       );
     }
@@ -58,7 +60,7 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.surface }]}>
+    <View style={styles.container}>
       <Text size="lg" weight="semibold" style={styles.title}>
         {title}
       </Text>
@@ -72,6 +74,7 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.md,
     padding: theme.spacing.md,
     marginBottom: theme.spacing.md,
+    backgroundColor: theme.colors.surface,
   },
   title: {
     marginBottom: theme.spacing.md,

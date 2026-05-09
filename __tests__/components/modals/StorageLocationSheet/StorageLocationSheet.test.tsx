@@ -12,15 +12,8 @@ jest.mock('../../../../src/hooks/useStandardBottomSheet', () => ({
     ref: { current: null },
     modalProps: {},
     contentContainerStyle: {},
-    theme: {
-      colors: {
-        textPrimary: '#000',
-        textSecondary: '#666',
-        primary: '#007AFF',
-        border: '#ddd',
-      },
-    },
   }),
+  BottomSheetModal: ({ children }: any) => children,
 }));
 jest.mock('../../../../src/components/organisms/storageLocation/StorageLocationForm', () => {
   const { forwardRef } = require('react');

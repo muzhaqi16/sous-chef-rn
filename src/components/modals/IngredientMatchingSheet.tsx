@@ -1,12 +1,12 @@
 import React from 'react';
 import { View, ActivityIndicator } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import { FlashList, type ListRenderItemInfo } from '@shopify/flash-list';
 import {
-  BottomSheetModal,
   BottomSheetView,
   useBottomSheetScrollableCreator,
 } from '@gorhom/bottom-sheet';
+import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
 
@@ -77,12 +77,11 @@ export const IngredientMatchingSheet: React.FC<
   onClose,
   confirmLoading,
 }) => {
-  const { ref, modalProps, contentContainerStyle, theme } =
-    useStandardBottomSheet({
-      visible,
-      onDismiss: onClose,
-      snapPoints: ['80%'],
-    });
+  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
+    visible,
+    onDismiss: onClose,
+    snapPoints: ['80%'],
+  });
   const BottomSheetScrollable = useBottomSheetScrollableCreator();
 
   return (
@@ -102,17 +101,17 @@ export const IngredientMatchingSheet: React.FC<
           <SummaryPill
             label="Available"
             count={matchSummary.available}
-            color={theme.colors.success}
+            tone="success"
           />
           <SummaryPill
             label="Partial"
             count={matchSummary.partial}
-            color={theme.colors.warning}
+            tone="warning"
           />
           <SummaryPill
             label="Missing"
             count={matchSummary.missing}
-            color={theme.colors.error}
+            tone="error"
           />
           <Text size="xs" tone="secondary" style={styles.includedText}>
             {matchSummary.included}/{matchSummary.total} included
@@ -157,7 +156,7 @@ export const IngredientMatchingSheet: React.FC<
             ]}
           >
             {confirmLoading ? (
-              <ActivityIndicator size="small" color={theme.colors.white} />
+              <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
               <Text size="base" weight="semibold" style={styles.confirmText}>
                 Confirm & Deduct ({matchSummary.included})
@@ -170,17 +169,22 @@ export const IngredientMatchingSheet: React.FC<
   );
 };
 
+type SummaryTone = 'success' | 'warning' | 'error';
+
 const SummaryPill: React.FC<{
   label: string;
   count: number;
-  color: string;
-}> = ({ label, count, color }) => (
-  <View style={[styles.pill, { backgroundColor: color + '20' }]}>
-    <Text size="xs" weight="semibold" style={{ color }}>
-      {count} {label}
-    </Text>
-  </View>
-);
+  tone: SummaryTone;
+}> = ({ label, count, tone }) => {
+  styles.useVariants({ tone });
+  return (
+    <View style={styles.pill}>
+      <Text size="xs" weight="semibold" style={styles.pillText}>
+        {count} {label}
+      </Text>
+    </View>
+  );
+};
 
 const styles = StyleSheet.create(theme => ({
   container: {
@@ -198,6 +202,22 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: 3,
     borderRadius: theme.radii.sm,
+    variants: {
+      tone: {
+        success: { backgroundColor: theme.colors.success + '20' },
+        warning: { backgroundColor: theme.colors.warning + '20' },
+        error: { backgroundColor: theme.colors.error + '20' },
+      },
+    },
+  },
+  pillText: {
+    variants: {
+      tone: {
+        success: { color: theme.colors.success },
+        warning: { color: theme.colors.warning },
+        error: { color: theme.colors.error },
+      },
+    },
   },
   includedText: {
     marginLeft: 'auto',

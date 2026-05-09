@@ -1,9 +1,20 @@
 import React from 'react';
 import { TextInput, TextInputProps, ViewStyle } from 'react-native';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { FormFieldWrapper } from '../atoms/FormFieldWrapper';
 import { useIsBottomSheetInput } from '#context/BottomSheetInputContext';
+
+const ThemedTextInput = withUnistyles(TextInput, theme => ({
+  placeholderTextColor: theme.colors.textSecondary,
+}));
+
+const ThemedBottomSheetTextInput = withUnistyles(
+  BottomSheetTextInput,
+  theme => ({
+    placeholderTextColor: theme.colors.textSecondary,
+  }),
+);
 
 interface FormTextAreaProps
   extends Omit<TextInputProps, 'style' | 'multiline'> {
@@ -29,8 +40,11 @@ export const FormTextArea: React.FC<FormTextAreaProps> = ({
 }) => {
   const contextValue = useIsBottomSheetInput();
   const InputComponent =
-    useBottomSheetInput || contextValue ? BottomSheetTextInput : TextInput;
-  const { theme } = useUnistyles();
+    useBottomSheetInput || contextValue
+      ? ThemedBottomSheetTextInput
+      : ThemedTextInput;
+
+  styles.useVariants({ error: !!error });
 
   // Calculate height based on number of lines
   const inputHeight = numberOfLines * 24 + 24;
@@ -43,13 +57,7 @@ export const FormTextArea: React.FC<FormTextAreaProps> = ({
       containerStyle={containerStyle}
     >
       <InputComponent
-        style={[
-          styles.input,
-          { height: inputHeight },
-          error && styles.inputError,
-          inputStyle,
-        ]}
-        placeholderTextColor={theme.colors.textSecondary}
+        style={[styles.input, { height: inputHeight }, inputStyle]}
         multiline
         numberOfLines={numberOfLines}
         textAlignVertical="top"
@@ -70,8 +78,10 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surface,
     color: theme.colors.textPrimary,
     textAlignVertical: 'top',
-  },
-  inputError: {
-    borderColor: theme.colors.error,
+    variants: {
+      error: {
+        true: { borderColor: theme.colors.error },
+      },
+    },
   },
 }));

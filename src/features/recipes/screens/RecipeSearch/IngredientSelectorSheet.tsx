@@ -1,12 +1,10 @@
 import React, { forwardRef, useImperativeHandle, useRef } from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import {
-  BottomSheetModal,
-  useBottomSheetScrollableCreator,
-} from '@gorhom/bottom-sheet';
+import { Pressable } from '#components/atoms/themedComponents';
+import { useBottomSheetScrollableCreator } from '@gorhom/bottom-sheet';
+import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { FlashList } from '@shopify/flash-list';
-import { useUnistyles, StyleSheet } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { Title } from '#components/atoms/Title';
 import {
@@ -39,7 +37,6 @@ export const IngredientSelectorSheet = forwardRef<
   IngredientSelectorSheetRef,
   IngredientSelectorSheetProps
 >(({ screen, onSheetChange }, ref) => {
-  const { theme } = useUnistyles();
   const BottomSheetScrollable = useBottomSheetScrollableCreator();
   const ingredientSearchBarRef = useRef<BottomSheetSearchBarRef>(null);
 
@@ -83,7 +80,6 @@ export const IngredientSelectorSheet = forwardRef<
           <Pressable
             style={({ pressed }) => [
               styles.searchButton,
-              { backgroundColor: theme.colors.primary },
               screen.selectedIngredients.size === 0 &&
                 styles.searchButtonDisabled,
               pressed && styles.pressed,
@@ -194,6 +190,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
     borderRadius: theme.radii.full,
+    backgroundColor: theme.colors.primary,
   },
   searchButtonDisabled: { opacity: theme.opacity.disabled },
   searchButtonText: {

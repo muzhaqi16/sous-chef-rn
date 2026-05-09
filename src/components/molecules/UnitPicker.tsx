@@ -1,6 +1,6 @@
 import React, { useState, useLayoutEffect } from 'react';
 import { View, ActivityIndicator } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -8,8 +8,12 @@ import Animated, {
   FadeIn,
   FadeOut,
 } from 'react-native-reanimated';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { Icon } from '#/utils/iconUtils';
+
+const ThemedActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
+  color: theme.colors.textSecondary,
+}));
 import { commonStyles } from '#/styles/commonStyles';
 import { SPRING, TIMING } from '#/constants/animations';
 import { Text } from '#components/atoms/Text';
@@ -48,7 +52,6 @@ export const UnitPicker: React.FC<UnitPickerProps> = ({
   onSelect,
   loading,
 }) => {
-  const { theme } = useUnistyles();
   const [expanded, setExpanded] = useState(false);
 
   // Reset collapsed state when groups change (new item loaded)
@@ -99,7 +102,7 @@ export const UnitPicker: React.FC<UnitPickerProps> = ({
       <View style={commonStyles.bottomSheetSection}>
         <View style={styles.collapsedRow}>
           <Text style={commonStyles.bottomSheetSectionLabel}>{label}</Text>
-          <ActivityIndicator size="small" color={theme.colors.textSecondary} />
+          <ThemedActivityIndicator size="small" />
         </View>
       </View>
     );

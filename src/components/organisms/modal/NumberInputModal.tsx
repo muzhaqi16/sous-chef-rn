@@ -7,9 +7,13 @@ import {
   ActivityIndicator,
   Pressable,
 } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { commonStyles } from '#/styles/commonStyles';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+
+const ThemedActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
+  color: theme.colors.onPrimary,
+}));
 
 export interface NumberInputModalProps {
   /**
@@ -179,7 +183,6 @@ export const NumberInputModal: React.FC<NumberInputModalProps> = ({
   saveButtonLabel = 'Save',
   cancelButtonLabel = 'Cancel',
 }) => {
-  const { theme } = useUnistyles();
   const [inputValue, setInputValue] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -345,7 +348,7 @@ export const NumberInputModal: React.FC<NumberInputModalProps> = ({
               disabled={loading}
             >
               {loading ? (
-                <ActivityIndicator color={theme.colors.onPrimary} />
+                <ThemedActivityIndicator />
               ) : (
                 <Text
                   style={[

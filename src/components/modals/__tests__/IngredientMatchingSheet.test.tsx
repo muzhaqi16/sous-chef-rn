@@ -18,6 +18,7 @@ jest.mock('#hooks/useStandardBottomSheet', () => ({
       },
     },
   })),
+  BottomSheetModal: ({ children }: any) => children,
 }));
 
 jest.mock('#components/atoms/BottomSheetHeader', () => ({

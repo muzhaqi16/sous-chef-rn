@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { View, ActivityIndicator } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import {
-  BottomSheetModal,
-  BottomSheetTextInput,
-  BottomSheetView,
-} from '@gorhom/bottom-sheet';
+import { View } from 'react-native';
+import { Pressable } from '#components/atoms/themedComponents';
+import { BottomSheetView } from '@gorhom/bottom-sheet';
+import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
+import {
+  OnPrimaryActivityIndicator,
+  ThemedBottomSheetTextInput,
+} from '#components/atoms/themedComponents';
 import { StarRatingInput } from './StarRatingInput';
 import { type RecipeReviewFragment } from '#features/recipes/graphql/recipeFragments.generated';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
@@ -27,13 +28,12 @@ export const WriteReviewSheet: React.FC<WriteReviewSheetProps> = ({
   onClose,
   submitting,
 }) => {
-  const { ref, modalProps, contentContainerStyle, theme } =
-    useStandardBottomSheet({
-      visible,
-      onDismiss: onClose,
-      snapPoints: ['55%'],
-      keyboardBehavior: 'interactive',
-    });
+  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
+    visible,
+    onDismiss: onClose,
+    snapPoints: ['55%'],
+    keyboardBehavior: 'interactive',
+  });
 
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
@@ -83,11 +83,10 @@ export const WriteReviewSheet: React.FC<WriteReviewSheetProps> = ({
           <Text size="sm" weight="medium" tone="secondary">
             Comment (optional)
           </Text>
-          <BottomSheetTextInput
+          <ThemedBottomSheetTextInput
             defaultValue={comment}
             onChangeText={setComment}
             placeholder="Share your thoughts about this recipe..."
-            placeholderTextColor={theme.colors.textSecondary}
             multiline
             numberOfLines={4}
             style={styles.textInput}
@@ -106,7 +105,7 @@ export const WriteReviewSheet: React.FC<WriteReviewSheetProps> = ({
           ]}
         >
           {submitting ? (
-            <ActivityIndicator color={theme.colors.onPrimary} />
+            <OnPrimaryActivityIndicator />
           ) : (
             <Text size="md" weight="semibold" style={styles.submitText}>
               {isEditing ? 'Update Review' : 'Submit Review'}

@@ -8,7 +8,7 @@ import {
   Circle,
   Skia,
 } from '@shopify/react-native-skia';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import {
   useSharedValue,
   useDerivedValue,
@@ -152,8 +152,8 @@ export const SousChefLoader: React.FC<SousChefLoaderProps> = ({
   message = 'Please Wait',
   showBrand = true,
 }) => {
-  const { theme } = useUnistyles();
   const config = SIZES[size];
+  componentStyles.useVariants({ size });
 
   // Animation shared values for each item
   const baguetteY = useSharedValue(0);
@@ -346,17 +346,7 @@ export const SousChefLoader: React.FC<SousChefLoaderProps> = ({
           },
         ]}
       >
-        <Text
-          weight="bold"
-          align="center"
-          style={[
-            componentStyles.bannerText,
-            {
-              fontSize: theme.typography.fontSize['2xs'] * scale,
-              color: COLORS.bannerText,
-            },
-          ]}
-        >
+        <Text weight="bold" align="center" style={componentStyles.bannerText}>
           {message.toUpperCase()}
         </Text>
       </View>
@@ -402,5 +392,19 @@ const componentStyles = StyleSheet.create(theme => ({
   },
   bannerText: {
     letterSpacing: 3,
+    color: COLORS.bannerText,
+    variants: {
+      size: {
+        small: {
+          fontSize: theme.typography.fontSize['2xs'] * SIZES.small.scale,
+        },
+        medium: {
+          fontSize: theme.typography.fontSize['2xs'] * SIZES.medium.scale,
+        },
+        large: {
+          fontSize: theme.typography.fontSize['2xs'] * SIZES.large.scale,
+        },
+      },
+    },
   },
 }));

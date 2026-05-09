@@ -1,6 +1,6 @@
 import React from 'react';
 import { ActivityIndicator, ScrollView } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import Animated, {
   FadeIn,
   FadeInUp,
@@ -12,15 +12,18 @@ import { ActionButtons } from './ActionButtons';
 import type { SelectorConfig, SelectableItem } from './types';
 import { Text } from '#components/atoms/Text';
 
+const ThemedActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
+  color: theme.colors.primary,
+}));
+
 interface SelectorContentProps<T extends SelectableItem> {
   config: SelectorConfig<T>;
 }
 
 const LoadingState = () => {
-  const { theme } = useUnistyles();
   return (
     <Animated.View entering={FadeIn} style={styles.loadingContainer}>
-      <ActivityIndicator size="large" color={theme.colors.primary} />
+      <ThemedActivityIndicator size="large" />
       <Text size="md" tone="secondary" style={styles.loadingText}>
         Loading...
       </Text>
@@ -68,7 +71,8 @@ export const SelectorContent = <T extends SelectableItem>({
         <Text
           size="md"
           weight={isSelected ? 'semibold' : 'medium'}
-          style={[styles.defaultItemText, isSelected && styles.selectedText]}
+          tone={isSelected ? 'accent' : undefined}
+          style={styles.defaultItemText}
         >
           {String(item[displayProperty])}
         </Text>
@@ -154,8 +158,5 @@ const styles = StyleSheet.create(theme => ({
   },
   defaultItemText: {
     flex: 1,
-  },
-  selectedText: {
-    color: theme.colors.primary,
   },
 }));

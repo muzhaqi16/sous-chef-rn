@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import Animated, {
   useSharedValue,
   useAnimatedScrollHandler,
@@ -11,7 +11,7 @@ import {
   SafeAreaView,
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { ProfileHeader } from '#components/organisms/ProfileHeader';
 import { SettingsSection } from '#components/organisms/SettingsSection';
 import { useProfileData } from '#features/profile/hooks/useProfileData';
@@ -40,7 +40,6 @@ export const ProfileScreen = () => {
   const { profile, user, loading } = useProfileData();
   const { sections, BiometricModal } = useConfigurableSettings(profile);
   const { bottom: safeBottom } = useSafeAreaInsets();
-  const { theme } = useUnistyles();
   const actionTrayRef = useRef<ActionTrayRef>(null);
   const headerProgress = useSharedValue(0);
   const scrollHandler = useAnimatedScrollHandler({
@@ -110,7 +109,7 @@ export const ProfileScreen = () => {
   }
   return (
     <SafeAreaView
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      style={styles.container}
       edges={['left', 'right']}
       testID="profile-screen"
     >

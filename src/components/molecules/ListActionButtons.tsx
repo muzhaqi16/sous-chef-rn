@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Pressable } from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon, IconLibrary } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 
@@ -20,8 +20,6 @@ interface ListActionButtonsProps {
 export const ListActionButtons: React.FC<ListActionButtonsProps> = ({
   actions,
 }) => {
-  const { theme } = useUnistyles();
-
   return (
     <View style={styles.container}>
       {actions.map((action, index) => (
@@ -40,16 +38,24 @@ export const ListActionButtons: React.FC<ListActionButtonsProps> = ({
             tone="primary"
             library={action.iconLibrary}
           />
-          <Text
-            size="md"
-            weight="medium"
-            style={[
-              styles.actionButtonText,
-              { color: action.color || theme.colors.primary },
-            ]}
-          >
-            {action.label}
-          </Text>
+          {action.color ? (
+            <Text
+              size="md"
+              weight="medium"
+              style={[styles.actionButtonText, { color: action.color }]}
+            >
+              {action.label}
+            </Text>
+          ) : (
+            <Text
+              size="md"
+              weight="medium"
+              tone="accent"
+              style={styles.actionButtonText}
+            >
+              {action.label}
+            </Text>
+          )}
         </Pressable>
       ))}
     </View>

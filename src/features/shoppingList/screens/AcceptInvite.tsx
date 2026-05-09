@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
 import { View, ActivityIndicator } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import { Icon } from '#utils/iconUtils';
 import { Header } from '#components/molecules/Header';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+
+const WhiteActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
+  color: theme.colors.white,
+}));
 import { useMutation, useQuery } from '@apollo/client/react';
 import {
   MyShoppingListInvitesDocument,
@@ -31,7 +35,6 @@ export const AcceptInvite: React.FC = () => {
     token?: string;
     inviteId?: string;
   };
-  const { theme } = useUnistyles();
 
   const [processing, setProcessing] = useState(false);
 
@@ -175,11 +178,7 @@ export const AcceptInvite: React.FC = () => {
   if (!shoppingListInvite && !homeInvite) {
     return (
       <View style={styles.loadingContainer}>
-        <Text
-          size="md"
-          align="center"
-          style={[styles.inviteText, { color: theme.colors.error }]}
-        >
+        <Text size="md" align="center" tone="error" style={styles.inviteText}>
           {invitationType === 'unknown'
             ? 'Invitation not found or expired'
             : 'Loading invitation details...'}
@@ -305,7 +304,7 @@ export const AcceptInvite: React.FC = () => {
             disabled={processing}
           >
             {processing ? (
-              <ActivityIndicator size="small" color="white" />
+              <WhiteActivityIndicator size="small" />
             ) : (
               <Text size="md" weight="semibold" style={styles.acceptButtonText}>
                 Accept

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { MultiSelectChipSheet } from '#components/molecules/MultiSelectChipSheet/MultiSelectChipSheet';
 import { Text } from '#components/atoms/Text';

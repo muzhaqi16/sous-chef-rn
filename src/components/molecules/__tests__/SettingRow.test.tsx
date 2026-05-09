@@ -10,6 +10,7 @@ jest.mock('#hooks/useStandardBottomSheet', () => ({
     contentContainerStyle: {},
     theme: require('../../../theme/themes').lightTheme,
   })),
+  BottomSheetModal: ({ children }: any) => children,
 }));
 
 jest.mock(

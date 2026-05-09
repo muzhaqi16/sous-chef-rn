@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
-import { View, ActivityIndicator } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { BottomSheetModal, BottomSheetTextInput } from '@gorhom/bottom-sheet';
+import { View } from 'react-native';
+import { Pressable } from '#components/atoms/themedComponents';
+import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
 import { StyleSheet } from 'react-native-unistyles';
+import {
+  ThemedActivityIndicator,
+  ThemedBottomSheetTextInput,
+} from '#components/atoms/themedComponents';
 import { Icon } from '#utils/iconUtils';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { TagInput } from '#components/molecules/TagInput';
@@ -44,12 +48,11 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
   updating = false,
   recipeName,
 }) => {
-  const { ref, modalProps, contentContainerStyle, theme } =
-    useStandardBottomSheet({
-      visible,
-      onDismiss: onClose,
-      snapPoints: ['85%', '95%'],
-    });
+  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
+    visible,
+    onDismiss: onClose,
+    snapPoints: ['85%', '95%'],
+  });
 
   // Local state for editing
   const [selectedFolder, setSelectedFolder] = useState<string | null>(
@@ -190,7 +193,7 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
         {/* Loading indicator */}
         {!!updating && (
           <View style={styles.updatingBanner}>
-            <ActivityIndicator size="small" color={theme.colors.primary} />
+            <ThemedActivityIndicator size="small" />
             <Text size="sm" weight="medium" tone="accent">
               Updating...
             </Text>
@@ -221,9 +224,12 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
                 }
                 size={32}
                 color={
+                  rating !== null && star <= rating ? '#FFB800' : undefined
+                }
+                tone={
                   rating !== null && star <= rating
-                    ? '#FFB800'
-                    : theme.colors.textSecondary
+                    ? undefined
+                    : 'textSecondary'
                 }
               />
             </Pressable>
@@ -263,11 +269,7 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
                 <Icon
                   name={isNoFolder ? 'folder-outline' : 'folder'}
                   size={18}
-                  color={
-                    isSelected
-                      ? theme.colors.primary
-                      : theme.colors.textSecondary
-                  }
+                  tone={isSelected ? 'primary' : 'textSecondary'}
                 />
                 <Text
                   style={[
@@ -288,10 +290,9 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
         {/* Create New Folder */}
         {showNewFolder ? (
           <View style={styles.newFolderContainer}>
-            <BottomSheetTextInput
+            <ThemedBottomSheetTextInput
               style={styles.newFolderInput}
               placeholder="Enter folder name..."
-              placeholderTextColor={theme.colors.textSecondary}
               value={newFolderName}
               onChangeText={setNewFolderName}
               autoFocus
@@ -360,10 +361,9 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
         >
           Notes
         </Text>
-        <BottomSheetTextInput
+        <ThemedBottomSheetTextInput
           style={styles.notesInput}
           placeholder="Add any notes about this recipe..."
-          placeholderTextColor={theme.colors.textSecondary}
           value={notes}
           onChangeText={setNotes}
           onBlur={handleNotesBlur}

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Modal, ActivityIndicator, Pressable } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { alertService } from '#/services/alertService';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import type { ApolloCache } from '@apollo/client';
@@ -21,6 +21,14 @@ import {
 import { createAddToQueryFieldUpdater } from '#/apollo/utils/cacheUpdaters';
 import { executeAsyncWithCleanup } from '#/utils/compilerSafeWrappers';
 import { Text } from '#components/atoms/Text';
+
+const ErrorActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
+  color: theme.colors.error,
+}));
+
+const WhiteActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
+  color: theme.colors.white,
+}));
 
 /** Module-level cache updater to keep try-catch out of the component body (React Compiler). */
 function updateShoppingListCache(cache: ApolloCache, collaborator: any): void {
@@ -72,7 +80,6 @@ const INVITATION_UNAVAILABLE_MSG =
 export const InvitationAcceptanceModal: React.FC<
   InvitationAcceptanceModalProps
 > = ({ visible, invitation, onClose, onAccept, onReject, onInvalidate }) => {
-  const { theme } = useUnistyles();
   const client = useApolloClient();
   const [accepting, setAccepting] = useState(false);
   const [rejecting, setRejecting] = useState(false);
@@ -315,7 +322,7 @@ export const InvitationAcceptanceModal: React.FC<
             <Pressable
               style={({ pressed }) => [
                 styles.closeButton,
-                pressed && { opacity: theme.opacity.pressed },
+                pressed && styles.pressed,
               ]}
               onPress={onClose}
             >
@@ -360,13 +367,13 @@ export const InvitationAcceptanceModal: React.FC<
             <Pressable
               style={({ pressed }) => [
                 styles.rejectButton,
-                pressed && { opacity: theme.opacity.pressed },
+                pressed && styles.pressed,
               ]}
               onPress={handleReject}
               disabled={accepting || rejecting}
             >
               {rejecting ? (
-                <ActivityIndicator color={theme.colors.error} />
+                <ErrorActivityIndicator />
               ) : (
                 <>
                   <Icon name="close" size={20} tone="error" />
@@ -380,13 +387,13 @@ export const InvitationAcceptanceModal: React.FC<
             <Pressable
               style={({ pressed }) => [
                 styles.acceptButton,
-                pressed && { opacity: theme.opacity.pressed },
+                pressed && styles.pressed,
               ]}
               onPress={handleAccept}
               disabled={accepting || rejecting}
             >
               {accepting ? (
-                <ActivityIndicator color={theme.colors.white} />
+                <WhiteActivityIndicator />
               ) : (
                 <>
                   <Icon name="checkmark" size={20} tone="white" />
@@ -504,5 +511,8 @@ const styles = StyleSheet.create(theme => ({
   },
   acceptText: {
     color: theme.colors.white,
+  },
+  pressed: {
+    opacity: theme.opacity.pressed,
   },
 }));

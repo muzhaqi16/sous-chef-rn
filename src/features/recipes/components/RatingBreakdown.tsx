@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Ionicons } from '@react-native-vector-icons/ionicons';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
+import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 
 interface RatingBreakdownProps {
@@ -23,7 +23,6 @@ export const RatingBreakdown: React.FC<RatingBreakdownProps> = ({
   rating4Count,
   rating5Count,
 }) => {
-  const { theme } = useUnistyles();
   const counts = [
     rating5Count,
     rating4Count,
@@ -42,11 +41,11 @@ export const RatingBreakdown: React.FC<RatingBreakdownProps> = ({
         </Text>
         <View style={styles.starsRow}>
           {[1, 2, 3, 4, 5].map(star => (
-            <Ionicons
+            <Icon
               key={star}
               name={star <= Math.round(averageRating) ? 'star' : 'star-outline'}
               size={14}
-              color={theme.colors.rating}
+              tone="rating"
             />
           ))}
         </View>
@@ -71,15 +70,7 @@ export const RatingBreakdown: React.FC<RatingBreakdownProps> = ({
                 {starLevel}
               </Text>
               <View style={styles.barTrack}>
-                <View
-                  style={[
-                    styles.barFill,
-                    {
-                      width: `${ratio * 100}%`,
-                      backgroundColor: theme.colors.rating,
-                    },
-                  ]}
-                />
+                <View style={[styles.barFill, { width: `${ratio * 100}%` }]} />
               </View>
               <Text
                 size="xs"
@@ -135,6 +126,7 @@ const styles = StyleSheet.create(theme => ({
   barFill: {
     height: '100%',
     borderRadius: theme.radii.sm,
+    backgroundColor: theme.colors.rating,
   },
   barCount: {
     width: 24,

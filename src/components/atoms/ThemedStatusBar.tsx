@@ -4,7 +4,6 @@ import { UnistylesRuntime, useUnistyles } from 'react-native-unistyles';
 import { useAppStore, useIsHydrated } from '#store/useAppStore';
 import { Telemetry } from '#services/telemetry';
 import { WindowBackground } from '#/native/WindowBackground';
-import { lightTheme, darkTheme } from '#/theme/themes';
 import { ThemePreference } from '#/store/slices/preferencesSlice';
 
 export const ThemedStatusBar = () => {
@@ -26,10 +25,11 @@ export const ThemedStatusBar = () => {
 
   const barStyle = resolvedTheme === 'dark' ? 'light' : 'dark';
 
-  const bgColor =
-    resolvedTheme === 'dark'
-      ? darkTheme.colors.background
-      : lightTheme.colors.background;
+  // Read from the *registered* Unistyles theme so any runtime overrides
+  // applied by `useAppearance` (e.g. high-contrast text or a future
+  // background tweak) flow through. Static module imports would snapshot
+  // the original `themes.ts` exports and skip live overrides.
+  const bgColor = UnistylesRuntime.getTheme(resolvedTheme).colors.background;
 
   // Sync native theme: root view background (cross-platform) and iOS system UI style.
   // Skip before hydration to preserve AppDelegate's setup.

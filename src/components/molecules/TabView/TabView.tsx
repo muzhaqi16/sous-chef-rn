@@ -7,7 +7,7 @@ import {
   NavigationState,
   Route,
 } from 'react-native-tab-view';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
 
 export interface TabRoute extends Route {
@@ -29,12 +29,30 @@ export interface TabViewProps {
   swipeEnabled?: boolean;
 }
 
-const DefaultLazyPlaceholder: React.FC<{ route: TabRoute }> = ({ route }) => {
-  const { theme } = useUnistyles();
+const ThemedActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
+  color: theme.colors.primary,
+}));
 
+const ThemedTabBar = withUnistyles(TabBar<TabRoute>, theme => ({
+  indicatorStyle: {
+    backgroundColor: theme.colors.primary,
+    height: 3,
+  },
+  style: {
+    backgroundColor: theme.colors.surface,
+    elevation: 0,
+    boxShadow: [],
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  activeColor: theme.colors.primary,
+  inactiveColor: theme.colors.textSecondary,
+}));
+
+const DefaultLazyPlaceholder: React.FC<{ route: TabRoute }> = ({ route }) => {
   return (
     <View style={styles.placeholder}>
-      <ActivityIndicator size="large" color={theme.colors.primary} />
+      <ThemedActivityIndicator size="large" />
       <Text size="md" tone="secondary">
         Loading {route.title}...
       </Text>
@@ -52,7 +70,6 @@ export const TabView: React.FC<TabViewProps> = ({
   renderLazyPlaceholder,
   swipeEnabled = true,
 }) => {
-  const { theme } = useUnistyles();
   const layout = useWindowDimensions();
   const [index, setIndex] = useState(initialTabIndex);
 
@@ -77,29 +94,16 @@ export const TabView: React.FC<TabViewProps> = ({
 
     return (
       <View style={styles.tabBarContainer}>
-        <TabBar
+        <ThemedTabBar
           {...props}
           navigationState={{
             ...props.navigationState,
             routes: routesWithLabels,
           }}
-          indicatorStyle={{
-            backgroundColor: theme.colors.primary,
-            height: 3,
-          }}
           scrollEnabled={false}
           tabStyle={{
             flex: 1,
           }}
-          style={{
-            backgroundColor: theme.colors.surface,
-            elevation: 0,
-            boxShadow: [],
-            borderBottomWidth: 1,
-            borderBottomColor: theme.colors.border,
-          }}
-          activeColor={theme.colors.primary}
-          inactiveColor={theme.colors.textSecondary}
         />
       </View>
     );

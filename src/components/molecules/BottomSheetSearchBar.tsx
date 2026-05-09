@@ -5,10 +5,21 @@ import React, {
   useEffect,
 } from 'react';
 import { View, ActivityIndicator } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { Icon, type IconLibrary } from '#utils/iconUtils';
+
+const ThemedBottomSheetTextInput = withUnistyles(
+  BottomSheetTextInput,
+  theme => ({
+    placeholderTextColor: theme.colors.textSecondary,
+  }),
+);
+
+const ThemedActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
+  color: theme.colors.primary,
+}));
 
 export interface BottomSheetSearchBarAction {
   icon: string;
@@ -73,8 +84,6 @@ export const BottomSheetSearchBar = forwardRef<
     },
     ref,
   ) => {
-    const { theme } = useUnistyles();
-
     // Internal refs for uncontrolled input (fixes cursor jumping)
     const inputRef =
       useRef<React.ComponentRef<typeof BottomSheetTextInput>>(null);
@@ -180,11 +189,10 @@ export const BottomSheetSearchBar = forwardRef<
     return (
       <View style={styles.container}>
         <Icon name="search" size={20} tone="textSecondary" />
-        <BottomSheetTextInput
+        <ThemedBottomSheetTextInput
           ref={inputRef}
           style={styles.input}
           placeholder={placeholder}
-          placeholderTextColor={theme.colors.textSecondary}
           onChangeText={handleChangeText}
           returnKeyType={returnKeyType}
           autoCapitalize={autoCapitalize}
@@ -192,9 +200,8 @@ export const BottomSheetSearchBar = forwardRef<
           testID={testID}
         />
         {!!isLoading && (
-          <ActivityIndicator
+          <ThemedActivityIndicator
             size="small"
-            color={theme.colors.primary}
             style={styles.loadingIndicator}
           />
         )}

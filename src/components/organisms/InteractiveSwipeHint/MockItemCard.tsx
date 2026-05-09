@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Pressable } from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 
@@ -28,7 +28,6 @@ export const MockItemCard: React.FC<MockItemCardProps> = ({
   mode,
   onCheckboxPress,
 }) => {
-  const { theme } = useUnistyles();
   const data = MOCK_DATA[mode];
   const [checked, setChecked] = useState(false);
 
@@ -37,40 +36,25 @@ export const MockItemCard: React.FC<MockItemCardProps> = ({
     onCheckboxPress?.();
   };
 
+  styles.useVariants({ checked });
+
   return (
     <View style={styles.container}>
       {/* Checkbox for shopping mode — tappable when onCheckboxPress provided */}
       {mode === 'shopping' ? (
         onCheckboxPress ? (
           <Pressable onPress={handleCheckboxPress} hitSlop={8}>
-            <View
-              style={[
-                styles.checkbox,
-                checked
-                  ? {
-                      backgroundColor: theme.colors.primary,
-                      borderColor: theme.colors.primary,
-                    }
-                  : { borderColor: theme.colors.border },
-              ]}
-            >
+            <View style={styles.checkbox}>
               {checked ? (
                 <Icon name="checkmark" size={18} color="white" />
               ) : null}
             </View>
           </Pressable>
         ) : (
-          <View
-            style={[styles.checkbox, { borderColor: theme.colors.border }]}
-          />
+          <View style={styles.checkbox} />
         )
       ) : null}
-      <View
-        style={[
-          styles.emojiCircle,
-          { backgroundColor: theme.colors.primaryLight },
-        ]}
-      >
+      <View style={styles.emojiCircle}>
         <Text size="xl">{data.emoji}</Text>
       </View>
       <View style={styles.content}>
@@ -113,6 +97,17 @@ const styles = StyleSheet.create(theme => ({
     flexShrink: 0,
     justifyContent: 'center',
     alignItems: 'center',
+    variants: {
+      checked: {
+        true: {
+          backgroundColor: theme.colors.primary,
+          borderColor: theme.colors.primary,
+        },
+        false: {
+          borderColor: theme.colors.border,
+        },
+      },
+    },
   },
   // Matches listItemImageContainerCompact from listStyles.ts
   emojiCircle: {
@@ -125,6 +120,7 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.primaryLight,
     flexShrink: 0,
   },
   content: {

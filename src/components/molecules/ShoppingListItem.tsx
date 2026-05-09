@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, TextStyle } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import Animated from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import { SwipeableItem } from './SwipeableItem/SwipeableItem';

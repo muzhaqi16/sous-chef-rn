@@ -7,10 +7,14 @@ import {
   StyleProp,
   ViewStyle,
 } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { useUnistyles } from 'react-native-unistyles';
+import { Pressable } from '#components/atoms/themedComponents';
+import { withUnistyles } from 'react-native-unistyles';
 import styles from './BaseInput.styles';
 import { Icon } from '#/utils/iconUtils';
+
+const ThemedTextInput = withUnistyles(TextInput, theme => ({
+  placeholderTextColor: theme.colors.inputPlaceholder,
+}));
 
 export interface BaseInputProps extends TextInputProps {
   label?: string;
@@ -37,7 +41,6 @@ export const BaseInput: React.FC<BaseInputProps> = ({
   multiline,
   ...textInputProps
 }) => {
-  const { theme } = useUnistyles();
   const [isFocused, setIsFocused] = useState(false);
   const hasError = Boolean(errorMessage);
   const showClear = showClearIcon && Boolean(value && value.length > 0);
@@ -72,14 +75,13 @@ export const BaseInput: React.FC<BaseInputProps> = ({
         {leftIcon != null && (
           <View style={styles.leftIconWrapper}>{leftIcon}</View>
         )}
-        <TextInput
+        <ThemedTextInput
           style={[
             styles.input,
             multiline && styles.inputMultiline,
             rightIcon != null && styles.inputWithRightIcon,
             style,
           ]}
-          placeholderTextColor={theme.colors.inputPlaceholder}
           onFocus={handleFocus}
           onBlur={handleBlur}
           value={value}

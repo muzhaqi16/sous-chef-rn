@@ -2,10 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useForm, type Resolver } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { View, ActivityIndicator } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 import { alertService } from '#/services/alertService';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+
+const WhiteActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
+  color: theme.colors.white,
+}));
 import { formatRole } from '#utils/formatters/roleFormatters';
 import { type InviteCard_InviteFragment } from './CreateHomeScreen.generated';
 import {
@@ -189,7 +193,6 @@ function syncExistingResources(
 const InviteCard: React.FC<{ invite: InviteCard_InviteFragment }> = ({
   invite,
 }) => {
-  const { theme } = useUnistyles();
   const { handleAcceptInvite, handleDeclineInvite, accepting } =
     useInviteActions();
 
@@ -230,7 +233,7 @@ const InviteCard: React.FC<{ invite: InviteCard_InviteFragment }> = ({
         <Pressable
           style={({ pressed }) => [
             styles.inviteDeclineButton,
-            pressed && { opacity: theme.opacity.pressed },
+            pressed && styles.pressed,
           ]}
           onPress={() => handleDeclineInvite(invite.token, inviteHomeName)}
           disabled={accepting}
@@ -242,13 +245,13 @@ const InviteCard: React.FC<{ invite: InviteCard_InviteFragment }> = ({
         <Pressable
           style={({ pressed }) => [
             styles.inviteAcceptButton,
-            pressed && { opacity: theme.opacity.pressed },
+            pressed && styles.pressed,
           ]}
           onPress={() => handleAcceptInvite(invite.token)}
           disabled={accepting}
         >
           {accepting ? (
-            <ActivityIndicator size="small" color={theme.colors.white} />
+            <WhiteActivityIndicator size="small" />
           ) : (
             <Text
               size="sm"
@@ -782,5 +785,8 @@ const styles = StyleSheet.create(theme => ({
   },
   dividerText: {
     paddingHorizontal: theme.spacing.md,
+  },
+  pressed: {
+    opacity: theme.opacity.pressed,
   },
 }));

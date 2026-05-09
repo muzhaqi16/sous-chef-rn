@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, RefreshControl, ScrollView } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Pressable } from '#components/atoms/themedComponents';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { commonStyles } from '#/styles/commonStyles';
 import { Header } from '#components/molecules/Header';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -16,6 +16,15 @@ import { TopItemsBarChart } from '#components/charts/TopItemsBarChart';
 import { PeriodGranularity } from '#/graphql/generated/schemaTypes';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { Text } from '#components/atoms/Text';
+
+const ThemedRefreshControl = withUnistyles(RefreshControl, theme => ({
+  colors: [theme.colors.primary],
+  tintColor: theme.colors.primary,
+}));
+
+const ThemedTrendLineChart = withUnistyles(TrendLineChart);
+const ThemedTopItemsBarChart = withUnistyles(TopItemsBarChart);
+const ThemedAnalyticsSummaryCard = withUnistyles(AnalyticsSummaryCard);
 
 type PantryAnalyticsProps = StaticScreenProps<{
   pantryId: string;
@@ -66,10 +75,41 @@ function formatReason(reason: string): string {
   return map[reason] || reason;
 }
 
+/**
+ * Granularity selector button. Extracted so `styles.useVariants({ active })`
+ * is called per-instance with a consistent variant snapshot — calling
+ * `useVariants` inside a `.map` iteration in the parent would mutate shared
+ * style state between iterations.
+ */
+const GranularityButton: React.FC<{
+  label: string;
+  isActive: boolean;
+  onPress: () => void;
+}> = ({ label, isActive, onPress }) => {
+  styles.useVariants({ active: isActive });
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.granularityButton,
+        pressed && styles.pressed,
+      ]}
+    >
+      <Text
+        size="xs"
+        weight="medium"
+        tone={isActive ? undefined : 'secondary'}
+        style={isActive ? styles.granularityButtonTextActive : undefined}
+      >
+        {label}
+      </Text>
+    </Pressable>
+  );
+};
+
 export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
   const { pantryId } = route.params;
   const { goBack } = useAppNavigation();
-  const { theme } = useUnistyles();
 
   const {
     usageData,
@@ -160,11 +200,9 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
       style={styles.tabContent}
       contentContainerStyle={styles.tabScrollContent}
       refreshControl={
-        <RefreshControl
+        <ThemedRefreshControl
           refreshing={refreshing}
           onRefresh={handleRefresh}
-          colors={[theme.colors.primary]}
-          tintColor={theme.colors.primary}
         />
       }
     >
@@ -191,10 +229,10 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
         error={usageError?.message}
         isEmpty={!usageData?.usageTrend?.length}
       >
-        <TrendLineChart
+        <ThemedTrendLineChart
           data={usageData?.usageTrend ?? []}
           height={200}
-          color={theme.colors.primary}
+          uniProps={t => ({ color: t.colors.primary })}
           subtitle="Items used over time"
         />
       </ChartSection>
@@ -230,9 +268,9 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
         error={usageError?.message}
         isEmpty={!topUsedItemsData.length}
       >
-        <TopItemsBarChart
+        <ThemedTopItemsBarChart
           data={topUsedItemsData}
-          color={theme.colors.primary}
+          uniProps={t => ({ color: t.colors.primary })}
         />
       </ChartSection>
     </ScrollView>
@@ -243,54 +281,52 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
       style={styles.tabContent}
       contentContainerStyle={styles.tabScrollContent}
       refreshControl={
-        <RefreshControl
+        <ThemedRefreshControl
           refreshing={refreshing}
           onRefresh={handleRefresh}
-          colors={[theme.colors.primary]}
-          tintColor={theme.colors.primary}
         />
       }
     >
       {/* Summary Cards */}
       <View style={styles.summaryRow}>
-        <AnalyticsSummaryCard
+        <ThemedAnalyticsSummaryCard
           title="Total Waste"
           value={wasteData?.totalWasteCount ?? 0}
           icon="trash-outline"
-          color={theme.colors.error}
+          uniProps={t => ({ color: t.colors.error })}
           subtitle="items wasted"
         />
-        <AnalyticsSummaryCard
+        <ThemedAnalyticsSummaryCard
           title="Waste Rate"
           value={`${(wasteData?.wasteRate ?? 0).toFixed(1)}%`}
           icon="pie-chart"
-          color={theme.colors.warning}
+          uniProps={t => ({ color: t.colors.warning })}
           subtitle="of total"
         />
       </View>
 
       <View style={styles.summaryRow}>
-        <AnalyticsSummaryCard
+        <ThemedAnalyticsSummaryCard
           title="Est. Value Lost"
           value={`$${(wasteData?.totalWasteValue ?? 0).toFixed(2)}`}
           icon="cash-outline"
-          color={theme.colors.error}
+          uniProps={t => ({ color: t.colors.error })}
         />
       </View>
 
       <View style={styles.summaryRow}>
-        <AnalyticsSummaryCard
+        <ThemedAnalyticsSummaryCard
           title="Composted"
           value={(wasteData?.composted ?? 0).toFixed(1)}
           icon="leaf-outline"
-          color={theme.colors.success}
+          uniProps={t => ({ color: t.colors.success })}
           subtitle="units"
         />
-        <AnalyticsSummaryCard
+        <ThemedAnalyticsSummaryCard
           title="Recycled"
           value={(wasteData?.recycled ?? 0).toFixed(1)}
           icon="refresh-outline"
-          color={theme.colors.info}
+          uniProps={t => ({ color: t.colors.info })}
           subtitle="units"
         />
       </View>
@@ -302,10 +338,10 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
         error={wasteError?.message}
         isEmpty={!wasteData?.wasteTrend?.length}
       >
-        <TrendLineChart
+        <ThemedTrendLineChart
           data={wasteData?.wasteTrend ?? []}
           height={200}
-          color={theme.colors.error}
+          uniProps={t => ({ color: t.colors.error })}
           subtitle="Items wasted over time"
         />
       </ChartSection>
@@ -331,9 +367,9 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
         error={wasteError?.message}
         isEmpty={!topWastedItemsData.length}
       >
-        <TopItemsBarChart
+        <ThemedTopItemsBarChart
           data={topWastedItemsData}
-          color={theme.colors.error}
+          uniProps={t => ({ color: t.colors.error })}
           showSecondaryValue
           secondaryValuePrefix="$"
         />
@@ -346,11 +382,9 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
       style={styles.tabContent}
       contentContainerStyle={styles.tabScrollContent}
       refreshControl={
-        <RefreshControl
+        <ThemedRefreshControl
           refreshing={refreshing}
           onRefresh={handleRefresh}
-          colors={[theme.colors.primary]}
-          tintColor={theme.colors.primary}
         />
       }
     >
@@ -360,71 +394,53 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
           Period:
         </Text>
         <View style={styles.granularityButtons}>
-          {granularityOptions.map(option => {
-            const isActive = ledgerGranularity === option.value;
-            return (
-              <Pressable
-                key={option.value}
-                onPress={() => setLedgerGranularity(option.value)}
-                style={({ pressed }) => [
-                  styles.granularityButton,
-                  isActive
-                    ? styles.granularityButtonActive
-                    : styles.granularityButtonInactive,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <Text
-                  size="xs"
-                  weight="medium"
-                  tone={isActive ? undefined : 'secondary'}
-                  style={
-                    isActive ? styles.granularityButtonTextActive : undefined
-                  }
-                >
-                  {option.label}
-                </Text>
-              </Pressable>
-            );
-          })}
+          {granularityOptions.map(option => (
+            <GranularityButton
+              key={option.value}
+              label={option.label}
+              isActive={ledgerGranularity === option.value}
+              onPress={() => setLedgerGranularity(option.value)}
+            />
+          ))}
         </View>
       </View>
 
       {/* Summary Cards */}
       <View style={styles.summaryRow}>
-        <AnalyticsSummaryCard
+        <ThemedAnalyticsSummaryCard
           title="Added"
           value={ledgerData?.summary?.totalAdded ?? 0}
           icon="add-circle-outline"
-          color={theme.colors.success}
+          uniProps={t => ({ color: t.colors.success })}
           subtitle="total quantity"
         />
-        <AnalyticsSummaryCard
+        <ThemedAnalyticsSummaryCard
           title="Consumed"
           value={ledgerData?.summary?.totalConsumed ?? 0}
           icon="restaurant"
-          color={theme.colors.primary}
+          uniProps={t => ({ color: t.colors.primary })}
           subtitle="total quantity"
         />
       </View>
 
       <View style={styles.summaryRow}>
-        <AnalyticsSummaryCard
+        <ThemedAnalyticsSummaryCard
           title="Wasted"
           value={ledgerData?.summary?.totalWasted ?? 0}
           icon="trash-outline"
-          color={theme.colors.error}
+          uniProps={t => ({ color: t.colors.error })}
           subtitle="total quantity"
         />
-        <AnalyticsSummaryCard
+        <ThemedAnalyticsSummaryCard
           title="Net Change"
           value={ledgerData?.summary?.netQuantity ?? 0}
           icon="trending-up"
-          color={
-            (ledgerData?.summary?.netQuantity ?? 0) >= 0
-              ? theme.colors.success
-              : theme.colors.error
-          }
+          uniProps={t => ({
+            color:
+              (ledgerData?.summary?.netQuantity ?? 0) >= 0
+                ? t.colors.success
+                : t.colors.error,
+          })}
           subtitle="added - used - wasted"
         />
       </View>
@@ -448,19 +464,19 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
       {/* Cost Analytics */}
       {!!ledgerData?.costAnalytics && (
         <View style={styles.summaryRow}>
-          <AnalyticsSummaryCard
+          <ThemedAnalyticsSummaryCard
             title="Total Spent"
             value={`$${(ledgerData.costAnalytics.totalSpent ?? 0).toFixed(2)}`}
             icon="cash-outline"
-            color={theme.colors.warning}
+            uniProps={t => ({ color: t.colors.warning })}
           />
-          <AnalyticsSummaryCard
+          <ThemedAnalyticsSummaryCard
             title="Avg Cost/Unit"
             value={`$${(
               ledgerData.costAnalytics.averageCostPerUnit ?? 0
             ).toFixed(2)}`}
             icon="calculator-outline"
-            color={theme.colors.warning}
+            uniProps={t => ({ color: t.colors.warning })}
           />
         </View>
       )}
@@ -474,34 +490,19 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
       >
         <View style={styles.periodLegend}>
           <View style={styles.legendItem}>
-            <View
-              style={[
-                styles.legendDot,
-                { backgroundColor: theme.colors.success },
-              ]}
-            />
+            <View style={styles.legendDotSuccess} />
             <Text size="xs" tone="secondary">
               Added
             </Text>
           </View>
           <View style={styles.legendItem}>
-            <View
-              style={[
-                styles.legendDot,
-                { backgroundColor: theme.colors.primary },
-              ]}
-            />
+            <View style={styles.legendDotPrimary} />
             <Text size="xs" tone="secondary">
               Consumed
             </Text>
           </View>
           <View style={styles.legendItem}>
-            <View
-              style={[
-                styles.legendDot,
-                { backgroundColor: theme.colors.error },
-              ]}
-            />
+            <View style={styles.legendDotError} />
             <Text size="xs" tone="secondary">
               Wasted
             </Text>
@@ -610,9 +611,9 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
         error={ledgerError?.message}
         isEmpty={!topRestockedItemsData.length}
       >
-        <TopItemsBarChart
+        <ThemedTopItemsBarChart
           data={topRestockedItemsData}
-          color={theme.colors.success}
+          uniProps={t => ({ color: t.colors.success })}
         />
       </ChartSection>
     </ScrollView>
@@ -671,12 +672,12 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.xs,
     borderRadius: theme.radii.full,
-  },
-  granularityButtonActive: {
-    backgroundColor: theme.colors.primary,
-  },
-  granularityButtonInactive: {
-    backgroundColor: theme.colors.surface,
+    variants: {
+      active: {
+        true: { backgroundColor: theme.colors.primary },
+        false: { backgroundColor: theme.colors.surface },
+      },
+    },
   },
   granularityButtonTextActive: {
     color: theme.colors.white,
@@ -695,10 +696,23 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     gap: theme.spacing.xs,
   },
-  legendDot: {
+  legendDotSuccess: {
     width: 8,
     height: 8,
     borderRadius: theme.radii.full,
+    backgroundColor: theme.colors.success,
+  },
+  legendDotPrimary: {
+    width: 8,
+    height: 8,
+    borderRadius: theme.radii.full,
+    backgroundColor: theme.colors.primary,
+  },
+  legendDotError: {
+    width: 8,
+    height: 8,
+    borderRadius: theme.radii.full,
+    backgroundColor: theme.colors.error,
   },
   periodDataList: {
     gap: theme.spacing.sm,

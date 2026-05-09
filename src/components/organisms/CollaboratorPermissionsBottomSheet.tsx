@@ -1,9 +1,10 @@
 import React, { useState, forwardRef, useImperativeHandle } from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { alertService } from '#/services/alertService';
-import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { Icon } from '#utils/iconUtils';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { useMutation } from '@apollo/client/react';
@@ -26,6 +27,40 @@ export interface CollaboratorPermissionsBottomSheetRef {
   close: () => void;
 }
 
+/** Role card with selected-state styling driven by Unistyles variants. */
+function RoleCard({
+  isSelected,
+  isSubmitting,
+  onSelect,
+  children,
+}: {
+  isSelected: boolean;
+  isSubmitting: boolean;
+  onSelect: () => void;
+  children: React.ReactNode;
+}) {
+  styles.useVariants({ selected: isSelected });
+  return (
+    <Pressable
+      style={({ pressed }) => [styles.roleCard, pressed && styles.pressed]}
+      onPress={onSelect}
+      disabled={isSubmitting}
+    >
+      {children}
+    </Pressable>
+  );
+}
+
+/** Radio outer + inner circle, selected state via Unistyles variants. */
+function RadioMarker({ isSelected }: { isSelected: boolean }) {
+  styles.useVariants({ selected: isSelected });
+  return (
+    <View style={styles.radioOuter}>
+      {!!isSelected && <View style={styles.radioInner} />}
+    </View>
+  );
+}
+
 const CollaboratorPermissionsBottomSheet = forwardRef<
   CollaboratorPermissionsBottomSheetRef,
   CollaboratorPermissionsBottomSheetProps
@@ -42,7 +77,6 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
     ref: bottomSheetRef,
     modalProps,
     contentContainerStyle,
-    theme,
   } = useStandardBottomSheet({
     visible: isVisible,
     onDismiss: () => setIsVisible(false),
@@ -146,18 +180,11 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
             const isSelected = selectedRole === role;
 
             return (
-              <Pressable
+              <RoleCard
                 key={role}
-                style={({ pressed }) => [
-                  styles.roleCard,
-                  isSelected && {
-                    borderColor: theme.colors.primary,
-                    backgroundColor: theme.colors.primary + '10',
-                  },
-                  pressed && styles.pressed,
-                ]}
-                onPress={() => setSelectedRole(role)}
-                disabled={isSubmitting}
+                isSelected={isSelected}
+                isSubmitting={isSubmitting}
+                onSelect={() => setSelectedRole(role)}
               >
                 <View style={styles.roleHeader}>
                   <View style={styles.roleTitle}>
@@ -175,23 +202,7 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
                       </Text>
                     </View>
                   </View>
-                  <View
-                    style={[
-                      styles.radioOuter,
-                      isSelected && {
-                        borderColor: theme.colors.primary,
-                      },
-                    ]}
-                  >
-                    {!!isSelected && (
-                      <View
-                        style={[
-                          styles.radioInner,
-                          { backgroundColor: theme.colors.primary },
-                        ]}
-                      />
-                    )}
-                  </View>
+                  <RadioMarker isSelected={isSelected} />
                 </View>
 
                 {/* Show permissions preview for selected role */}
@@ -227,7 +238,7 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
                     </View>
                   </View>
                 )}
-              </Pressable>
+              </RoleCard>
             );
           })}
         </View>
@@ -259,6 +270,14 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.md,
     padding: theme.spacing.md,
     backgroundColor: theme.colors.surface,
+    variants: {
+      selected: {
+        true: {
+          borderColor: theme.colors.primary,
+          backgroundColor: theme.colors.primary + '10',
+        },
+      },
+    },
   },
   roleHeader: {
     flexDirection: 'row',
@@ -282,11 +301,17 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.border,
     justifyContent: 'center',
     alignItems: 'center',
+    variants: {
+      selected: {
+        true: { borderColor: theme.colors.primary },
+      },
+    },
   },
   radioInner: {
     width: 10,
     height: 10,
     borderRadius: theme.radii.full,
+    backgroundColor: theme.colors.primary,
   },
   permissionsContainer: {
     marginTop: theme.spacing.md,

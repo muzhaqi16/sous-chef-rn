@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Modal, Pressable } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 
@@ -10,8 +10,6 @@ export const RememberMeModal: React.FC<{
   onDecline: () => void;
   email: string;
 }> = ({ visible, onAccept, onDecline, email }) => {
-  const { theme } = useUnistyles();
-
   return (
     <Modal
       visible={visible}
@@ -43,7 +41,7 @@ export const RememberMeModal: React.FC<{
             <Pressable
               style={({ pressed }) => [
                 styles.modalButtonSecondary,
-                pressed && { opacity: theme.opacity.pressed },
+                pressed && styles.pressed,
               ]}
               onPress={onDecline}
             >
@@ -55,7 +53,7 @@ export const RememberMeModal: React.FC<{
             <Pressable
               style={({ pressed }) => [
                 styles.modalButtonPrimary,
-                pressed && { opacity: theme.opacity.pressed },
+                pressed && styles.pressed,
               ]}
               onPress={onAccept}
             >
@@ -120,5 +118,8 @@ const styles = StyleSheet.create(theme => ({
   },
   modalButtonPrimaryText: {
     color: theme.colors.white,
+  },
+  pressed: {
+    opacity: theme.opacity.pressed,
   },
 }));

@@ -1,8 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { View, RefreshControl, ScrollView } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+
+const ThemedRefreshControl = withUnistyles(RefreshControl, theme => ({
+  colors: [theme.colors.primary],
+  tintColor: theme.colors.primary,
+}));
 import { SettingSwitch } from '#components/settings/SettingSwitch';
 import { SettingSection } from '#components/settings/SettingSection';
 import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
@@ -22,7 +27,6 @@ import { Text } from '#components/atoms/Text';
  * table sorts and IIFE recomputations.
  */
 const FPSSection: React.FC = () => {
-  const { theme } = useUnistyles();
   const { fps, isLowFPS, stats: fpsStats } = useFPSMonitor();
 
   return (
@@ -41,7 +45,7 @@ const FPSSection: React.FC = () => {
           <Text
             size="md"
             weight="semibold"
-            style={isLowFPS ? { color: theme.colors.error } : undefined}
+            tone={isLowFPS ? 'error' : undefined}
           >
             {fps}
           </Text>
@@ -61,11 +65,7 @@ const FPSSection: React.FC = () => {
           <Text
             size="md"
             weight="semibold"
-            style={
-              fpsStats.lowFPSCount > 0
-                ? { color: theme.colors.warning }
-                : undefined
-            }
+            tone={fpsStats.lowFPSCount > 0 ? 'warning' : undefined}
           >
             {fpsStats.lowFPSCount}
           </Text>
@@ -75,9 +75,39 @@ const FPSSection: React.FC = () => {
   );
 };
 
-export const PerformanceDashboard: React.FC = () => {
-  const { theme } = useUnistyles();
+/**
+ * Alternating-row container for tables. Uses variants so the alt-row
+ * background color stays in the stylesheet (parent does not need useUnistyles).
+ */
+const ZebraTableRow: React.FC<{
+  alt: boolean;
+  children: React.ReactNode;
+}> = ({ alt, children }) => {
+  styles.useVariants({ alt });
+  return <View style={styles.tableRow}>{children}</View>;
+};
 
+/**
+ * Threshold-colored text used by the memory rows. Variants encapsulate the
+ * theme reads so the parent screen does not need useUnistyles.
+ */
+const ThresholdText: React.FC<{
+  children: React.ReactNode;
+  usagePercent: number;
+  size?: 'md';
+  weight?: 'semibold' | 'bold';
+  baseStyle?: any;
+}> = ({ children, usagePercent, weight = 'semibold', baseStyle }) => {
+  const tone =
+    usagePercent > 95 ? 'error' : usagePercent > 80 ? 'warning' : undefined;
+  return (
+    <Text size="md" weight={weight} tone={tone} style={baseStyle}>
+      {children}
+    </Text>
+  );
+};
+
+export const PerformanceDashboard: React.FC = () => {
   // Performance state (from isolated performance store)
   const isEnabled = usePerformanceStore(state => state.isEnabled);
   const trackRenders = usePerformanceStore(state => state.trackRenders);
@@ -245,11 +275,9 @@ export const PerformanceDashboard: React.FC = () => {
       <ScrollView
         style={styles.scrollView}
         refreshControl={
-          <RefreshControl
+          <ThemedRefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor={theme.colors.primary}
-            colors={[theme.colors.primary]}
           />
         }
       >
@@ -358,14 +386,9 @@ export const PerformanceDashboard: React.FC = () => {
                 </Text>
               </View>
               {recentHttpRequests.map((req, index) => (
-                <View
+                <ZebraTableRow
                   key={`${req.url}-${index}`}
-                  style={[
-                    styles.tableRow,
-                    index % 2 === 0 && {
-                      backgroundColor: theme.colors.backgroundSecondary,
-                    },
-                  ]}
+                  alt={index % 2 === 0}
                 >
                   <Text
                     size="sm"
@@ -377,7 +400,7 @@ export const PerformanceDashboard: React.FC = () => {
                   <Text size="sm" align="right" style={styles.tableCellAvg}>
                     {formatTime(req.duration)}
                   </Text>
-                </View>
+                </ZebraTableRow>
               ))}
             </View>
           </View>
@@ -440,15 +463,7 @@ export const PerformanceDashboard: React.FC = () => {
                 </Text>
               </View>
               {slowestComponents.map((metric, index) => (
-                <View
-                  key={metric.componentName}
-                  style={[
-                    styles.tableRow,
-                    index % 2 === 0 && {
-                      backgroundColor: theme.colors.backgroundSecondary,
-                    },
-                  ]}
-                >
+                <ZebraTableRow key={metric.componentName} alt={index % 2 === 0}>
                   <Text
                     size="sm"
                     style={styles.tableCellName}
@@ -468,7 +483,7 @@ export const PerformanceDashboard: React.FC = () => {
                   <Text size="sm" align="right" style={styles.tableCellCount}>
                     {metric.renderCount}
                   </Text>
-                </View>
+                </ZebraTableRow>
               ))}
             </View>
           </View>
@@ -522,15 +537,7 @@ export const PerformanceDashboard: React.FC = () => {
                 </Text>
               </View>
               {slowestScreens.map((metric, index) => (
-                <View
-                  key={metric.screenName}
-                  style={[
-                    styles.tableRow,
-                    index % 2 === 0 && {
-                      backgroundColor: theme.colors.backgroundSecondary,
-                    },
-                  ]}
-                >
+                <ZebraTableRow key={metric.screenName} alt={index % 2 === 0}>
                   <Text
                     size="sm"
                     style={styles.tableCellName}
@@ -547,7 +554,7 @@ export const PerformanceDashboard: React.FC = () => {
                   <Text size="sm" align="right" style={styles.tableCellCount}>
                     {metric.transitionCount}
                   </Text>
-                </View>
+                </ZebraTableRow>
               ))}
             </View>
           </View>
@@ -569,41 +576,23 @@ export const PerformanceDashboard: React.FC = () => {
                     <Text size="sm" tone="secondary">
                       Used
                     </Text>
-                    <Text
-                      size="md"
-                      weight="semibold"
-                      style={[
-                        latestMemorySnapshot.usagePercent > 80 && {
-                          color: theme.colors.warning,
-                        },
-                        latestMemorySnapshot.usagePercent > 95 && {
-                          color: theme.colors.error,
-                        },
-                      ]}
+                    <ThresholdText
+                      usagePercent={latestMemorySnapshot.usagePercent}
                     >
                       {formatMemory(latestMemorySnapshot.usedBytes)}
                       {!!latestMemorySnapshot.limitBytes &&
                         ` / ${formatMemory(latestMemorySnapshot.limitBytes)}`}
-                    </Text>
+                    </ThresholdText>
                   </View>
                   <View style={styles.startupRow}>
                     <Text size="sm" tone="secondary">
                       Usage
                     </Text>
-                    <Text
-                      size="md"
-                      weight="semibold"
-                      style={[
-                        latestMemorySnapshot.usagePercent > 80 && {
-                          color: theme.colors.warning,
-                        },
-                        latestMemorySnapshot.usagePercent > 95 && {
-                          color: theme.colors.error,
-                        },
-                      ]}
+                    <ThresholdText
+                      usagePercent={latestMemorySnapshot.usagePercent}
                     >
                       {latestMemorySnapshot.usagePercent.toFixed(1)}%
-                    </Text>
+                    </ThresholdText>
                   </View>
                 </View>
               </>
@@ -626,21 +615,13 @@ export const PerformanceDashboard: React.FC = () => {
                         <Text size="sm" weight="semibold">
                           {formatTimestamp(snapshot.timestamp)}
                         </Text>
-                        <Text
-                          size="md"
+                        <ThresholdText
+                          usagePercent={snapshot.usagePercent}
                           weight="bold"
-                          style={[
-                            styles.memoryUsage,
-                            snapshot.usagePercent > 80 && {
-                              color: theme.colors.warning,
-                            },
-                            snapshot.usagePercent > 95 && {
-                              color: theme.colors.error,
-                            },
-                          ]}
+                          baseStyle={styles.memoryUsage}
                         >
                           {snapshot.usagePercent.toFixed(1)}%
-                        </Text>
+                        </ThresholdText>
                       </View>
                       <Text size="xs" tone="secondary">
                         {formatMemory(snapshot.usedBytes)}
@@ -689,7 +670,7 @@ export const PerformanceDashboard: React.FC = () => {
           <Pressable
             style={({ pressed }) => [
               styles.clearButton,
-              pressed && { opacity: theme.opacity.pressed },
+              pressed && styles.pressed,
             ]}
             onPress={handleClearData}
           >
@@ -768,6 +749,12 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing['3'],
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
+    variants: {
+      alt: {
+        true: { backgroundColor: theme.colors.backgroundSecondary },
+        false: {},
+      },
+    },
   },
   tableCellName: {
     flex: 2,
@@ -827,6 +814,9 @@ const styles = StyleSheet.create(theme => ({
   },
   clearButtonText: {
     color: theme.colors.white,
+  },
+  pressed: {
+    opacity: theme.opacity.pressed,
   },
   startupCard: {
     backgroundColor: theme.colors.backgroundSecondary,

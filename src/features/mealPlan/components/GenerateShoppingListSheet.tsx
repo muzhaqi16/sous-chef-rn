@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
 import { View, ActivityIndicator } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { BottomSheetModal } from '@gorhom/bottom-sheet';
+import { Pressable } from '#components/atoms/themedComponents';
+import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+
+const PrimaryActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
+  color: theme.colors.primary,
+}));
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { BaseSwitch } from '#components/base/BaseSwitch';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
@@ -28,7 +32,6 @@ interface GenerateShoppingListSheetProps {
 export const GenerateShoppingListSheet: React.FC<
   GenerateShoppingListSheetProps
 > = ({ visible, onClose, onGenerate, loading, homeName }) => {
-  const { theme } = useUnistyles();
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible,
     onDismiss: onClose,
@@ -227,7 +230,7 @@ export const GenerateShoppingListSheet: React.FC<
 
         {!!loading && (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="small" color={theme.colors.primary} />
+            <PrimaryActivityIndicator size="small" />
             <Text size="sm" tone="secondary">
               Generating shopping list...
             </Text>

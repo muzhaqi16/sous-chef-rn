@@ -1,9 +1,9 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Pressable } from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
 import { CachedImage } from '#components/atoms/CachedImage';
-import { Ionicons } from '@react-native-vector-icons/ionicons';
+import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 
 interface Item {
@@ -38,7 +38,6 @@ export const ItemCard: React.FC<ItemCardProps> = ({
   onCreateVariant,
 }) => {
   const showActions = !!onEditItem || !!onCreateVariant;
-  const { theme } = useUnistyles();
 
   return (
     <View style={styles.itemCard}>
@@ -88,11 +87,7 @@ export const ItemCard: React.FC<ItemCardProps> = ({
         <View style={styles.actionsRow}>
           {!!onEditItem && (
             <Pressable style={styles.actionLink} onPress={onEditItem}>
-              <Ionicons
-                name="create-outline"
-                size={16}
-                color={theme.colors.primary}
-              />
+              <Icon name="create-outline" size={16} tone="primary" />
               <Text size="sm" weight="medium" tone="accent">
                 Suggest Edit
               </Text>
@@ -105,11 +100,7 @@ export const ItemCard: React.FC<ItemCardProps> = ({
           )}
           {!!onCreateVariant && (
             <Pressable style={styles.actionLink} onPress={onCreateVariant}>
-              <Ionicons
-                name="add-circle-outline"
-                size={16}
-                color={theme.colors.primary}
-              />
+              <Icon name="add-circle-outline" size={16} tone="primary" />
               <Text size="sm" weight="medium" tone="accent">
                 New Version
               </Text>

@@ -1,14 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, TextInput } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { View } from 'react-native';
+import { Pressable } from '#components/atoms/themedComponents';
 import {
-  BottomSheetModal,
-  BottomSheetTextInput,
   BottomSheetView,
   useBottomSheetScrollableCreator,
 } from '@gorhom/bottom-sheet';
+import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { FlashList } from '@shopify/flash-list';
 import { StyleSheet } from 'react-native-unistyles';
+import {
+  ThemedBottomSheetTextInput,
+  ThemedTextInput,
+} from '#components/atoms/themedComponents';
 import { FormFieldWrapper } from '#components/atoms/FormFieldWrapper';
 import { useAppStore } from '#store/useAppStore';
 import { Icon } from '#utils/iconUtils';
@@ -106,11 +109,7 @@ export function BottomSheetAutocompleteInput<T>({
     onModalClose?.();
   };
 
-  const {
-    ref: bottomSheetRef,
-    modalProps,
-    theme,
-  } = useStandardBottomSheet({
+  const { ref: bottomSheetRef, modalProps } = useStandardBottomSheet({
     onDismiss: handleDismiss,
     snapPoints: [snapPoint],
   });
@@ -234,9 +233,7 @@ export function BottomSheetAutocompleteInput<T>({
   const renderAutocompleteItem = ({ item }: { item: T }) => (
     <Pressable
       onPress={() => handleSelectItem(item)}
-      style={({ pressed }) => ({
-        opacity: pressed ? theme.opacity.pressed : 1,
-      })}
+      style={({ pressed }) => pressed && styles.pressed}
     >
       {renderItem(item)}
     </Pressable>
@@ -252,12 +249,11 @@ export function BottomSheetAutocompleteInput<T>({
 
   return (
     <FormFieldWrapper label={label || ''} error={error} required={required}>
-      <TextInput
+      <ThemedTextInput
         style={[styles.fieldInput, error && styles.fieldInputError]}
         value={value}
         onChangeText={handleTextChange}
         placeholder={placeholder}
-        placeholderTextColor={theme.colors.textSecondary}
         testID={testID}
         autoCapitalize={autoCapitalize}
       />
@@ -267,8 +263,6 @@ export function BottomSheetAutocompleteInput<T>({
         {...modalProps}
         keyboardBlurBehavior="none"
         enableContentPanningGesture={false}
-        handleIndicatorStyle={{ backgroundColor: theme.colors.border }}
-        backgroundStyle={{ backgroundColor: theme.colors.surface }}
       >
         <BottomSheetView style={{ flex: 1 }}>
           <View style={styles.headerSection}>
@@ -281,7 +275,7 @@ export function BottomSheetAutocompleteInput<T>({
               {title}
             </Text>
 
-            <BottomSheetTextInput
+            <ThemedBottomSheetTextInput
               style={styles.bottomSheetInput}
               defaultValue={searchTerm}
               onChangeText={handleBottomSheetTextChange}
@@ -366,5 +360,8 @@ const styles = StyleSheet.create(theme => ({
   },
   emptyText: {
     marginBottom: theme.spacing.sm,
+  },
+  pressed: {
+    opacity: theme.opacity.pressed,
   },
 }));

@@ -1,8 +1,8 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarSetters } from '#/context/TabBarActionsContext';
 import { Icon } from '#utils/iconUtils';
@@ -66,9 +66,6 @@ export function useShoppingListSelectorModal({
 }: UseShoppingListSelectorOptions) {
   const { navigate } = useAppNavigation();
   const { setOverlayOpen } = useTabBarSetters();
-  const {
-    theme: { colors },
-  } = useUnistyles();
 
   const selectorRef = useRef<ItemSelectorRef>(null);
 
@@ -225,7 +222,7 @@ export function useShoppingListSelectorModal({
           <Icon
             name="trash-outline"
             size={16}
-            color={hasSelection ? colors.error : colors.textSecondary}
+            tone={hasSelection ? 'error' : 'textSecondary'}
           />
         </Pressable>
         <Pressable onPress={exitDeleteMode}>
@@ -291,7 +288,7 @@ export function useShoppingListSelectorModal({
           <Icon
             name={item.title === 'Personal Lists' ? 'person' : 'home'}
             size={14}
-            color={colors.textTertiary}
+            tone="textTertiary"
           />
           <Text
             size="xs"
@@ -329,7 +326,7 @@ export function useShoppingListSelectorModal({
           <Icon
             name={isSelectedForDelete ? 'checkbox' : 'square-outline'}
             size={20}
-            color={isSelectedForDelete ? colors.error : colors.textSecondary}
+            tone={isSelectedForDelete ? 'error' : 'textSecondary'}
           />
           <ShoppingListAvatar list={list} size={32} />
           <View style={styles.selectorItemInfo}>

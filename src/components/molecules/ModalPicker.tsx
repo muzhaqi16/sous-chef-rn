@@ -5,7 +5,7 @@ import { Icon } from '#/utils/iconUtils';
 import { Button } from '#components/base/Button';
 import { ActionTray } from '#components/templates/ActionTray/ActionTray';
 import type { ActionTrayRef } from '#components/templates/ActionTray/types';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 
 export interface ModalPickerProps {

@@ -1,12 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, ActivityIndicator } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import {
-  BottomSheetModal,
-  BottomSheetTextInput,
-  BottomSheetView,
-} from '@gorhom/bottom-sheet';
+import { View } from 'react-native';
+import { Pressable } from '#components/atoms/themedComponents';
+import { BottomSheetTextInput, BottomSheetView } from '@gorhom/bottom-sheet';
+import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
+import {
+  ThemedActivityIndicator,
+  ThemedBottomSheetTextInput,
+} from '#components/atoms/themedComponents';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { StorageType } from '#/graphql/generated/schemaTypes';
 import { Text } from '#components/atoms/Text';
@@ -46,13 +47,12 @@ interface AddStorageLocationSheetProps {
 export const AddStorageLocationSheet: React.FC<
   AddStorageLocationSheetProps
 > = ({ visible, onClose, onCreateLocation, creating = false }) => {
-  const { ref, modalProps, contentContainerStyle, theme } =
-    useStandardBottomSheet({
-      visible,
-      onDismiss: onClose,
-      snapPoints: ['35%'],
-      keyboardBehavior: 'interactive',
-    });
+  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
+    visible,
+    onDismiss: onClose,
+    snapPoints: ['35%'],
+    keyboardBehavior: 'interactive',
+  });
   const inputRef =
     useRef<React.ComponentRef<typeof BottomSheetTextInput>>(null);
 
@@ -113,6 +113,8 @@ export const AddStorageLocationSheet: React.FC<
 
   const isCreateDisabled = creating || name.trim().length < 2;
 
+  styles.useVariants({ error: !!error });
+
   return (
     <BottomSheetModal ref={ref} {...modalProps} index={0}>
       <BottomSheetView style={[styles.content, contentContainerStyle]}>
@@ -147,17 +149,13 @@ export const AddStorageLocationSheet: React.FC<
             disabled={isCreateDisabled}
           >
             {creating ? (
-              <ActivityIndicator size="small" color={theme.colors.primary} />
+              <ThemedActivityIndicator size="small" />
             ) : (
               <Text
                 size="md"
                 weight="semibold"
                 align="right"
-                style={{
-                  color: isCreateDisabled
-                    ? theme.colors.textTertiary
-                    : theme.colors.primary,
-                }}
+                tone={isCreateDisabled ? 'tertiary' : 'accent'}
               >
                 Create
               </Text>
@@ -166,9 +164,7 @@ export const AddStorageLocationSheet: React.FC<
         </View>
 
         {/* Divider */}
-        <View
-          style={[styles.divider, { backgroundColor: theme.colors.border }]}
-        />
+        <View style={styles.divider} />
 
         {/* Input Field */}
         <View style={styles.inputContainer}>
@@ -176,20 +172,12 @@ export const AddStorageLocationSheet: React.FC<
             Location Name
           </Text>
 
-          <BottomSheetTextInput
+          <ThemedBottomSheetTextInput
             ref={inputRef}
-            style={[
-              styles.input,
-              {
-                color: theme.colors.textPrimary,
-                backgroundColor: theme.colors.surfaceVariant,
-                borderColor: error ? theme.colors.error : theme.colors.border,
-              },
-            ]}
+            style={styles.input}
             defaultValue={name}
             onChangeText={handleNameChange}
             placeholder="e.g., Kitchen Cabinet, Garage Shelf"
-            placeholderTextColor={theme.colors.textTertiary}
             autoCapitalize="words"
             autoCorrect={false}
             maxLength={50}
@@ -232,6 +220,7 @@ const styles = StyleSheet.create(theme => ({
   divider: {
     height: 1,
     marginBottom: theme.spacing.lg,
+    backgroundColor: theme.colors.border,
   },
   inputContainer: {
     marginBottom: theme.spacing.md,
@@ -245,6 +234,14 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.md,
     borderRadius: theme.radii.md,
     borderWidth: 1,
+    color: theme.colors.textPrimary,
+    backgroundColor: theme.colors.surfaceVariant,
+    borderColor: theme.colors.border,
+    variants: {
+      error: {
+        true: { borderColor: theme.colors.error },
+      },
+    },
   },
   errorText: {
     marginTop: theme.spacing.xs,

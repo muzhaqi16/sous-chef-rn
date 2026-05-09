@@ -1,10 +1,19 @@
 import React, { useState } from 'react';
 import { View, ActivityIndicator } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { Pressable } from '#components/atoms/themedComponents';
+import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+
+const PrimaryActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
+  color: theme.colors.primary,
+}));
+
+const WhiteActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
+  color: theme.colors.white,
+}));
 import { Icon } from '#utils/iconUtils';
 import { FormInput } from '#components/molecules/FormInput';
 import { DatePickerField } from '#components/molecules/DatePickerField';
@@ -33,7 +42,6 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
   onConfirm,
   confirmLoading,
 }) => {
-  const { theme } = useUnistyles();
   const insets = useSafeAreaInsets();
 
   // Standard bottom-sheet boilerplate handled by useStandardBottomSheet.
@@ -141,7 +149,7 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
             Preview
           </Text>
           {loading ? (
-            <ActivityIndicator size="small" color={theme.colors.primary} />
+            <PrimaryActivityIndicator size="small" />
           ) : groupedByDay.length === 0 ? (
             <Text
               size="sm"
@@ -194,7 +202,7 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
           ]}
         >
           {confirmLoading ? (
-            <ActivityIndicator size="small" color={theme.colors.white} />
+            <WhiteActivityIndicator size="small" />
           ) : (
             <>
               <Icon name="calendar-outline" size={20} tone="white" />

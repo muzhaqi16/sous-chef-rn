@@ -5,7 +5,7 @@ import React, {
   useImperativeHandle,
 } from 'react';
 import { View, RefreshControl } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import {
   FlashList,
   type FlashListRef,
@@ -126,6 +126,9 @@ export const PantryContent = React.forwardRef<
     ref,
   ) => {
     useRenderTime('PantryContent', { slowThreshold: 1000 });
+    // KEEP useUnistyles: theme colors flow into computeDisplayMap data — not
+    // stylesheets — so the values are passed through to per-item ExpirationText
+    // via `style={{ color }}`. They cannot be expressed as stylesheet variants.
     const { theme } = useUnistyles();
     const { bottom: safeBottom } = useSafeAreaInsets();
     const flashListRef = useRef<FlashListRef<PantryListItem>>(null);

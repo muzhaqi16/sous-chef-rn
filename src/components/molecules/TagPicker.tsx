@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import {
-  BottomSheetModal,
-  BottomSheetTextInput,
   BottomSheetView,
   useBottomSheetScrollableCreator,
 } from '@gorhom/bottom-sheet';
+import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { FlashList } from '@shopify/flash-list';
 import { StyleSheet } from 'react-native-unistyles';
+import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
 import { Icon } from '#utils/iconUtils';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { Text } from '#components/atoms/Text';
@@ -33,12 +33,11 @@ export const TagPicker: React.FC<TagPickerProps> = ({
   loading = false,
 }) => {
   const BottomSheetScrollable = useBottomSheetScrollableCreator();
-  const { ref, modalProps, contentContainerStyle, theme } =
-    useStandardBottomSheet({
-      onDismiss: onCancel,
-      snapPoints: ['55%', '70%'],
-      keyboardBehavior: 'interactive',
-    });
+  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
+    onDismiss: onCancel,
+    snapPoints: ['55%', '70%'],
+    keyboardBehavior: 'interactive',
+  });
   const [searchQuery, setSearchQuery] = useState('');
 
   // Reset search query when sheet opens (render-time state update)
@@ -121,10 +120,9 @@ export const TagPicker: React.FC<TagPickerProps> = ({
         {tags.length > 5 && (
           <View style={styles.searchContainer}>
             <Icon name="search" size={18} tone="textSecondary" />
-            <BottomSheetTextInput
+            <ThemedBottomSheetTextInput
               style={styles.searchInput}
               placeholder="Search tags..."
-              placeholderTextColor={theme.colors.textSecondary}
               defaultValue={searchQuery}
               onChangeText={setSearchQuery}
               autoCapitalize="none"

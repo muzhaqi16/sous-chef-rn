@@ -1,10 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Keyboard, ScrollView } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
+
+const ThemedBottomSheetTextInput = withUnistyles(
+  BottomSheetTextInput,
+  theme => ({
+    placeholderTextColor: theme.colors.textSecondary,
+  }),
+);
 
 export interface TagInputProps {
   tags: string[];
@@ -23,7 +30,6 @@ export const TagInput: React.FC<TagInputProps> = ({
   maxTags = 10,
   editable = true,
 }) => {
-  const { theme } = useUnistyles();
   const [inputValue, setInputValue] = useState('');
   const [inputKey, setInputKey] = useState(0);
   const [isFocused, setIsFocused] = useState(false);
@@ -99,13 +105,12 @@ export const TagInput: React.FC<TagInputProps> = ({
 
         {/* Input field */}
         {!!editable && tags.length < maxTags && (
-          <BottomSheetTextInput
+          <ThemedBottomSheetTextInput
             key={inputKey}
             style={styles.input}
             defaultValue={inputValue}
             onChangeText={setInputValue}
             placeholder={tags.length === 0 ? placeholder : ''}
-            placeholderTextColor={theme.colors.textSecondary}
             onSubmitEditing={handleSubmit}
             onFocus={() => setIsFocused(true)}
             onBlur={() => {

@@ -25,6 +25,7 @@ export const BarcodeStack = createNativeStackNavigator({
     headerShown: false,
     presentation: 'modal',
     contentStyle: { backgroundColor: theme.colors.background },
+    inactiveBehavior: 'none',
   }),
   screens: {
     BarcodeScanner: createNativeStackScreen({

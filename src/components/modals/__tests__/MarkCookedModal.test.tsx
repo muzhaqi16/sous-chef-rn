@@ -21,6 +21,7 @@ jest.mock('#hooks/useStandardBottomSheet', () => ({
       spacing: { xs: 2, sm: 4, md: 8, lg: 16, xl: 24 },
     },
   })),
+  BottomSheetModal: ({ children }: any) => children,
 }));
 
 jest.mock('#components/atoms/BottomSheetFormScrollView', () => {

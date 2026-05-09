@@ -1,14 +1,25 @@
 import React from 'react';
 import { View, ActivityIndicator } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import { FlashList } from '@shopify/flash-list';
 import {
-  BottomSheetModal,
   BottomSheetTextInput,
   BottomSheetView,
   useBottomSheetScrollableCreator,
 } from '@gorhom/bottom-sheet';
-import { StyleSheet } from 'react-native-unistyles';
+import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+
+const PrimaryActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
+  color: theme.colors.primary,
+}));
+
+const ThemedBottomSheetTextInput = withUnistyles(
+  BottomSheetTextInput,
+  theme => ({
+    placeholderTextColor: theme.colors.textTertiary,
+  }),
+);
 import { Icon } from '#utils/iconUtils';
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 import { TemplateCard } from './TemplateCard';
@@ -66,12 +77,11 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
   onClose,
   onSelectTemplate,
 }) => {
-  const { ref, modalProps, contentContainerStyle, theme } =
-    useStandardBottomSheet({
-      visible,
-      onDismiss: onClose,
-      snapPoints: ['85%'],
-    });
+  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
+    visible,
+    onDismiss: onClose,
+    snapPoints: ['85%'],
+  });
   const BottomSheetScrollable = useBottomSheetScrollableCreator();
 
   const {
@@ -95,10 +105,9 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
         {/* Search bar */}
         <View style={styles.searchContainer}>
           <Icon name="search" size={18} tone="textTertiary" />
-          <BottomSheetTextInput
+          <ThemedBottomSheetTextInput
             style={styles.searchInput}
             placeholder="Search templates..."
-            placeholderTextColor={theme.colors.textTertiary}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
@@ -116,7 +125,7 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
         {/* Template list */}
         {loading && templates.length === 0 ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={theme.colors.primary} />
+            <PrimaryActivityIndicator size="large" />
           </View>
         ) : templates.length === 0 ? (
           <View style={styles.emptyContainer}>

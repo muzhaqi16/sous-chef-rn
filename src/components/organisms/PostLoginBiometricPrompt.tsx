@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Modal, Pressable } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { authService } from '#/services/authService';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
@@ -19,7 +19,6 @@ export const PostLoginBiometricPrompt = ({
   userEmail,
   userPassword,
 }: PostLoginBiometricPromptProps) => {
-  const { theme } = useUnistyles();
   const [biometricInfo, setBiometricInfo] = useState<{
     isAvailable: boolean;
     biometryType: string | null;
@@ -125,7 +124,7 @@ export const PostLoginBiometricPrompt = ({
             <Pressable
               style={({ pressed }) => [
                 styles.primaryButton,
-                pressed && { opacity: theme.opacity.pressed },
+                pressed && styles.pressed,
               ]}
               onPress={handleEnableNow}
               disabled={isEnabling}
@@ -144,7 +143,7 @@ export const PostLoginBiometricPrompt = ({
             <Pressable
               style={({ pressed }) => [
                 styles.secondaryButton,
-                pressed && { opacity: theme.opacity.pressed },
+                pressed && styles.pressed,
               ]}
               onPress={handleDecline}
               disabled={isEnabling}
@@ -244,5 +243,8 @@ const styles = StyleSheet.create(theme => ({
   },
   primaryButtonText: {
     color: theme.colors.background,
+  },
+  pressed: {
+    opacity: theme.opacity.pressed,
   },
 }));

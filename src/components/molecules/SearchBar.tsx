@@ -1,6 +1,10 @@
-import { useRef, type FC, type ReactNode } from 'react';
+import { useEffect, useRef, type FC, type ReactNode } from 'react';
 import { View, StyleProp, ViewStyle, TextInputProps } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import {
+  StyleSheet,
+  useUnistyles,
+  withUnistyles,
+} from 'react-native-unistyles';
 import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
 import { ActionButton } from './ActionButton';
 import { AnimatedActionButton } from '../atoms/AnimatedActionButton';
@@ -45,6 +49,9 @@ type SearchBarProps = Omit<TextInputProps, 'style'> & {
   innerRightIcon?: ReactNode;
 };
 
+const ThemedActionButton = withUnistyles(ActionButton);
+const ThemedAnimatedActionButton = withUnistyles(AnimatedActionButton);
+
 /**
  * Wrapper that measures an action button's screen position for spotlight tutorials.
  * ActionButton has marginLeft which shifts the visual button right of the layout
@@ -61,27 +68,50 @@ const MeasuredAction: FC<{
   children: ReactNode;
 }> = ({ onButtonLayout, children }) => {
   const ref = useRef<View>(null);
+  // Subscribe to theme changes so the reported rect stays in sync with the
+  // density/spacing override applied by `useAppearance`. Reading
+  // `theme.spacing.sm` here (a) makes the dependency explicit to the React
+  // Compiler / Unistyles tracker and (b) gives us a stable closure value
+  // for the effect that triggers a fresh measure when spacing shifts.
   const { theme } = useUnistyles();
-  const margin = theme.spacing.sm; // matches ActionButton's marginLeft
-  return (
-    <View
-      ref={ref}
-      collapsable={false}
-      onLayout={() => {
-        requestAnimationFrame(() => {
-          ref.current?.measure((_x, _y, w, h, pageX, pageY) => {
-            if (w > 0 && h > 0) {
-              onButtonLayout({
-                x: pageX + margin,
-                y: pageY,
-                width: w - margin,
-                height: h,
-              });
-            }
+  const margin = theme.spacing.sm;
+
+  const handleLayout = () => {
+    requestAnimationFrame(() => {
+      ref.current?.measure((_x, _y, w, h, pageX, pageY) => {
+        if (w > 0 && h > 0) {
+          onButtonLayout({
+            x: pageX + margin,
+            y: pageY,
+            width: w - margin,
+            height: h,
           });
-        });
-      }}
-    >
+        }
+      });
+    });
+  };
+
+  // Force a re-measure whenever spacing changes — the inner button's
+  // dimensions usually shift along with theme spacing and re-fire onLayout
+  // naturally, but this guarantees the rect stays correct even when they
+  // don't (e.g. high-contrast toggle that only changes colors).
+  useEffect(() => {
+    requestAnimationFrame(() => {
+      ref.current?.measure((_x, _y, w, h, pageX, pageY) => {
+        if (w > 0 && h > 0) {
+          onButtonLayout({
+            x: pageX + margin,
+            y: pageY,
+            width: w - margin,
+            height: h,
+          });
+        }
+      });
+    });
+  }, [margin, onButtonLayout]);
+
+  return (
+    <View ref={ref} collapsable={false} onLayout={handleLayout}>
       {children}
     </View>
   );
@@ -99,7 +129,6 @@ export const SearchBar: FC<SearchBarProps> = ({
   innerRightIcon,
   ...textInputProps
 }) => {
-  const { theme } = useUnistyles();
   // Handle legacy props by converting them to action arrays
 
   const renderActionButtons = (
@@ -109,22 +138,19 @@ export const SearchBar: FC<SearchBarProps> = ({
     if (actions.length === 0) return null;
 
     return (
-      <View style={[styles.actionsContainer]}>
+      <View style={styles.actionsContainer}>
         {actions.map((action, index) => {
           const key = `${side}-${index}-${action.icon}`;
           const button = action.animated ? (
-            <AnimatedActionButton
+            <ThemedAnimatedActionButton
               key={key}
               name={action.icon}
               onPress={action.onPress}
-              style={[
-                {
-                  ...commonStyles.shadow,
-                },
-                action.style,
-              ]}
-              color={action.color || theme.colors.white}
-              backgroundColor={action.backgroundColor || theme.colors.primary}
+              style={[{ ...commonStyles.shadow }, action.style]}
+              uniProps={t => ({
+                color: action.color ?? t.colors.white,
+                backgroundColor: action.backgroundColor ?? t.colors.primary,
+              })}
               size={action.size}
               accessibilityLabel={
                 action.accessibilityLabel || `${action.icon} button`
@@ -133,19 +159,20 @@ export const SearchBar: FC<SearchBarProps> = ({
               testID={action.testID}
             />
           ) : (
-            <ActionButton
+            <ThemedActionButton
               key={key}
               name={action.icon}
               onPress={action.onPress}
-              style={[
-                {
-                  backgroundColor:
-                    action.backgroundColor || theme.colors.primary,
-                  ...commonStyles.shadow,
-                },
-                action.style,
-              ]}
-              color={action.color || theme.colors.white}
+              uniProps={t => ({
+                style: [
+                  {
+                    backgroundColor: action.backgroundColor ?? t.colors.primary,
+                    ...commonStyles.shadow,
+                  },
+                  action.style,
+                ],
+                color: action.color ?? t.colors.white,
+              })}
               size={action.size}
               accessibilityLabel={
                 action.accessibilityLabel || `${action.icon} button`

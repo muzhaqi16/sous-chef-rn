@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Pressable } from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
 
 export interface PageIndicatorItem {
@@ -23,47 +23,55 @@ const normalize = (
   return { label: page.label, hasError: !!page.hasError };
 };
 
+type DotState = 'error' | 'selected' | 'idle';
+
+const PageIndicatorItemRow: React.FC<{
+  label: string;
+  selected: boolean;
+  hasError: boolean;
+  onPress: () => void;
+}> = ({ label, selected, hasError, onPress }) => {
+  const state: DotState = hasError ? 'error' : selected ? 'selected' : 'idle';
+  styles.useVariants({ state });
+
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="tab"
+      accessibilityLabel={label}
+      accessibilityState={{ selected }}
+      style={({ pressed }) => [styles.item, pressed && styles.pressed]}
+    >
+      <View style={styles.dot} />
+      <Text
+        size="sm"
+        weight={selected ? 'semibold' : 'regular'}
+        style={styles.label}
+      >
+        {label}
+      </Text>
+    </Pressable>
+  );
+};
+
 export const PageIndicator: React.FC<PageIndicatorProps> = ({
   pages,
   currentPage,
   onPagePress,
 }) => {
-  const { theme } = useUnistyles();
-
   return (
     <View style={styles.container} accessibilityRole="tablist">
       {pages.map((raw, index) => {
         const { label, hasError } = normalize(raw);
         const selected = currentPage === index;
-        const dotColor = hasError
-          ? theme.colors.error
-          : selected
-          ? theme.colors.primary
-          : theme.colors.border;
-        const labelColor = hasError
-          ? theme.colors.error
-          : selected
-          ? theme.colors.primary
-          : theme.colors.textSecondary;
-
         return (
-          <Pressable
+          <PageIndicatorItemRow
             key={label}
+            label={label}
+            selected={selected}
+            hasError={hasError}
             onPress={() => onPagePress(index)}
-            accessibilityRole="tab"
-            accessibilityLabel={label}
-            accessibilityState={{ selected }}
-            style={({ pressed }) => [styles.item, pressed && styles.pressed]}
-          >
-            <View style={[styles.dot, { backgroundColor: dotColor }]} />
-            <Text
-              size="sm"
-              weight={selected ? 'semibold' : 'regular'}
-              style={{ color: labelColor }}
-            >
-              {label}
-            </Text>
-          </Pressable>
+          />
         );
       })}
     </View>
@@ -88,6 +96,22 @@ const styles = StyleSheet.create(theme => ({
     width: 8,
     height: 8,
     borderRadius: theme.radii.full,
+    variants: {
+      state: {
+        error: { backgroundColor: theme.colors.error },
+        selected: { backgroundColor: theme.colors.primary },
+        idle: { backgroundColor: theme.colors.border },
+      },
+    },
+  },
+  label: {
+    variants: {
+      state: {
+        error: { color: theme.colors.error },
+        selected: { color: theme.colors.primary },
+        idle: { color: theme.colors.textSecondary },
+      },
+    },
   },
   pressed: {
     opacity: theme.opacity.pressed,

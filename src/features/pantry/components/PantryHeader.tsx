@@ -1,10 +1,14 @@
 import React, { useRef } from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Pressable } from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { Text } from '#components/atoms/Text';
+
+// Matches theme.typography.fontSize.lg (18). Inlined so the component does not
+// need useUnistyles — the theme value is module-static.
+const ICON_SIZE_LG = 18;
 
 interface PantryHeaderProps {
   /** User's display name */
@@ -48,7 +52,6 @@ export const PantryHeader: React.FC<PantryHeaderProps> = ({
   onNotificationPress,
   onHomeBadgeLayout,
 }) => {
-  const { theme } = useUnistyles();
   const badgeRef = useRef<View>(null);
 
   return (
@@ -85,7 +88,7 @@ export const PantryHeader: React.FC<PantryHeaderProps> = ({
             }}
           >
             <Icon
-              size={theme.typography.fontSize.lg}
+              size={ICON_SIZE_LG}
               name="swap-horizontal-outline"
               tone="primary"
             />
@@ -94,7 +97,7 @@ export const PantryHeader: React.FC<PantryHeaderProps> = ({
             </Text>
             <Icon
               name="chevron-forward"
-              size={theme.typography.fontSize.lg}
+              size={ICON_SIZE_LG}
               tone="textTertiary"
             />
           </View>

@@ -1,13 +1,17 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import { alertService } from '#/services/alertService';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { SettingSwitch } from '#components/settings/SettingSwitch';
 import { SettingSection } from '#components/settings/SettingSection';
 import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
 import { useAppSettings } from '#features/profile/hooks/useAppSettings';
 import { UnitSystem } from '#/graphql/generated/schemaTypes';
 import { Picker } from '@react-native-picker/picker';
+
+const ThemedPickerItem = withUnistyles(Picker.Item, theme => ({
+  color: theme.colors.textPrimary,
+}));
 import { commonStyles } from '#/styles/commonStyles';
 import { useAppStore } from '#/store/useAppStore';
 import { useStore } from '#store/index';
@@ -18,9 +22,6 @@ import { Telemetry } from '#services/telemetry';
 import { Text } from '#components/atoms/Text';
 
 export const AppSettingsScreen: React.FC = () => {
-  // useUnistyles subscribes the screen to theme/brand-color changes so inline
-  // theme reads below stay in sync without waiting for a re-mount.
-  const { theme } = useUnistyles();
   const [updating, setUpdating] = useState<string | null>(null);
 
   const { settings, loading, updateAppSetting, resetToDefaults } =
@@ -130,20 +131,17 @@ export const AppSettingsScreen: React.FC = () => {
             }
             style={styles.picker}
           >
-            <Picker.Item
+            <ThemedPickerItem
               label="Metric (kg, g, L, mL)"
               value={UnitSystem.Metric}
-              color={theme.colors.textPrimary}
             />
-            <Picker.Item
+            <ThemedPickerItem
               label="Imperial (lb, oz, gal, fl oz)"
               value={UnitSystem.Imperial}
-              color={theme.colors.textPrimary}
             />
-            <Picker.Item
+            <ThemedPickerItem
               label="System Default"
               value={UnitSystem.System}
-              color={theme.colors.textPrimary}
             />
           </Picker>
         </View>

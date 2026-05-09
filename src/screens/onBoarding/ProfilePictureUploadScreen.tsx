@@ -10,13 +10,17 @@ import {
   Linking,
 } from 'react-native';
 import { getWebAppUrl } from '#utils/environment';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
 import { Button } from '#components/base/Button';
 import { Link } from '#components/atoms/Link';
 import { Icon } from '#utils/iconUtils';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+
+const PrimaryActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
+  color: theme.colors.primary,
+}));
 import {
   launchCamera,
   launchImageLibrary,
@@ -89,7 +93,6 @@ const AVATAR_SIZE = Math.min(screenWidth * 0.4, 200);
 export const ProfilePictureUploadScreen = () => {
   useScreenTransition('ProfilePictureUploadScreen');
   const { navigateTo } = useAppNavigation();
-  const { theme } = useUnistyles();
   const { uploadProfileImage, updateProfileAvatarUrl } = useImageUpload();
   const { navigateToNextStep, navigateToPreviousStep, skipToStep } =
     useOnboardingNavigation();
@@ -278,7 +281,7 @@ export const ProfilePictureUploadScreen = () => {
             </>
           ) : profileLoading ? (
             <View style={styles.avatarPlaceholder}>
-              <ActivityIndicator size="large" color={theme.colors.primary} />
+              <PrimaryActivityIndicator size="large" />
             </View>
           ) : (
             <View style={styles.avatarPlaceholder}>
@@ -293,20 +296,13 @@ export const ProfilePictureUploadScreen = () => {
               onPress={handleCropImage}
               style={({ pressed }) => [
                 styles.cropButton,
-                { backgroundColor: theme.colors.primary },
                 pressed && styles.pressed,
               ]}
               disabled={isUploading}
             >
-              <Text
-                style={[styles.cropButtonText, { color: theme.colors.white }]}
-              >
-                Crop & Center
-              </Text>
+              <Text style={styles.cropButtonText}>Crop & Center</Text>
             </Pressable>
-            <Text
-              style={[styles.cropHint, { color: theme.colors.textSecondary }]}
-            >
+            <Text style={styles.cropHint}>
               Recommended to optimize your photo
             </Text>
           </View>
@@ -327,21 +323,11 @@ export const ProfilePictureUploadScreen = () => {
               </View>
 
               <View style={styles.uploadOptionContent}>
-                <Text
-                  style={[
-                    styles.uploadOptionLabel,
-                    { color: theme.colors.textPrimary },
-                  ]}
-                >
+                <Text style={styles.uploadOptionLabel}>
                   Choose from Gallery
                 </Text>
 
-                <Text
-                  style={[
-                    styles.uploadOptionDescription,
-                    { color: theme.colors.textSecondary },
-                  ]}
-                >
+                <Text style={styles.uploadOptionDescription}>
                   Select a photo from your device
                 </Text>
               </View>
@@ -362,21 +348,9 @@ export const ProfilePictureUploadScreen = () => {
               </View>
 
               <View style={styles.uploadOptionContent}>
-                <Text
-                  style={[
-                    styles.uploadOptionLabel,
-                    { color: theme.colors.textPrimary },
-                  ]}
-                >
-                  Take a Photo
-                </Text>
+                <Text style={styles.uploadOptionLabel}>Take a Photo</Text>
 
-                <Text
-                  style={[
-                    styles.uploadOptionDescription,
-                    { color: theme.colors.textSecondary },
-                  ]}
-                >
+                <Text style={styles.uploadOptionDescription}>
                   Use your camera to take a new photo
                 </Text>
               </View>
@@ -387,12 +361,7 @@ export const ProfilePictureUploadScreen = () => {
         )}
 
         <View style={styles.formFooter}>
-          <Text
-            style={[
-              styles.formFooterText,
-              { color: theme.colors.textSecondary },
-            ]}
-          >
+          <Text style={styles.formFooterText}>
             By continuing you agree to our
           </Text>
 
@@ -409,12 +378,7 @@ export const ProfilePictureUploadScreen = () => {
               Terms of Service
             </Link>
 
-            <Text
-              style={[
-                styles.formFooterText,
-                { color: theme.colors.textSecondary },
-              ]}
-            >
+            <Text style={styles.formFooterText}>
               {' '}
               and
               {'   '}
@@ -505,14 +469,17 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing['3'],
     borderRadius: theme.radii.sm,
     marginBottom: theme.spacing.sm,
+    backgroundColor: theme.colors.primary,
   },
   cropButtonText: {
     fontSize: theme.typography.fontSize.md,
     fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.white,
   },
   cropHint: {
     fontSize: theme.typography.fontSize.xs,
     fontStyle: 'italic',
+    color: theme.colors.textSecondary,
   },
   formAction: {
     marginVertical: theme.spacing.sm,
@@ -544,11 +511,13 @@ const styles = StyleSheet.create(theme => ({
     lineHeight: theme.typography.lineHeight.normal,
     fontWeight: theme.fonts.weight.semibold,
     marginBottom: theme.spacing.xs,
+    color: theme.colors.textPrimary,
   },
   uploadOptionDescription: {
     fontSize: theme.typography.fontSize.sm - 1,
     lineHeight: theme.typography.lineHeight.tight,
     letterSpacing: 0.16,
+    color: theme.colors.textSecondary,
   },
   formFooter: {
     marginTop: 'auto',
@@ -563,6 +532,7 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.sm - 1,
     lineHeight: theme.typography.lineHeight.tight,
     textAlign: 'center',
+    color: theme.colors.textSecondary,
   },
   formFooterLinks: {
     flexDirection: 'row',

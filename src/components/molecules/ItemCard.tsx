@@ -4,7 +4,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Counter } from './Counter';
 import { useRenderTime } from '#hooks/performance/useRenderTime';
 import { CachedImage } from '#components/atoms/CachedImage';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import { RIPPLE } from '#constants/ripple';
 import { Text } from '#components/atoms/Text';
 

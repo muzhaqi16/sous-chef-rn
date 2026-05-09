@@ -16,6 +16,7 @@ export const AuthStack = createNativeStackNavigator({
     animationDuration: 250,
     fullScreenGestureEnabled: true,
     contentStyle: { backgroundColor: theme.colors.background },
+    inactiveBehavior: 'none',
   }),
   screens: {
     LandingAuth: createNativeStackScreen({

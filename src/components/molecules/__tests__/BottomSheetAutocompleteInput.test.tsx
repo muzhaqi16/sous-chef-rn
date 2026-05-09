@@ -106,6 +106,7 @@ jest.mock('#hooks/useStandardBottomSheet', () => ({
       opacity: { pressed: 0.7 },
     },
   })),
+  BottomSheetModal: ({ children }: any) => children,
 }));
 
 // Mock useAppStore

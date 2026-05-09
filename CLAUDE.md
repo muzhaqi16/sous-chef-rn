@@ -19,8 +19,13 @@
 
 ### Pressable & Modal Convention
 
-- **Use `Pressable` from `react-native-gesture-handler`** as the default across the app.
-  RNGH's Pressable integrates properly with the gesture system and is preferred.
+- **Use `Pressable` from `#components/atoms/themedComponents`** as the default across
+  the app. That export is `withUnistyles(GHPressable)` — it integrates with the RNGH
+  gesture system *and* keeps the underlying View's style proxies in sync with theme
+  changes. Importing `Pressable` directly from `react-native-gesture-handler` works
+  for gestures but its child View does **not** repaint on theme change until a
+  remount (unistyles#1109), which is why theme switches appeared partial until the
+  app was reopened.
 - **Exception: inside RN's `<Modal>`**, always use `Pressable` from `react-native`.
   React Native's `Modal` renders in a separate native window that has **no
   `GestureHandlerRootView` ancestor**. RNGH components (Pressable, RectButton,
@@ -31,6 +36,66 @@
   container has RNGH gesture components inside it (Swipeable, GestureDetector, pan
   gestures). For plain forms, settings, and display screens, use `ScrollView` from
   `react-native`.
+
+### Unistyles Convention
+
+The app uses `react-native-unistyles@3` with the React Compiler. Unistyles' value
+prop is **ShadowTree updates without React re-renders** — but that only works
+when styles are declared via `StyleSheet.create(theme => ...)` and theme reads
+happen inside that factory.
+
+- **Prefer `StyleSheet.create(theme => ...)` for RN primitives.** Theme changes
+  are pushed to native via the C++ ShadowTree binding — no React work needed.
+  Use `styles.useVariants({ disabled, active, … })` for runtime-flag-driven
+  styling instead of conditional theme reads.
+- **Use `withUnistyles(Component)` for third-party components** that take
+  theme-derived props (icon `color`, `<BottomSheetModal backgroundStyle>`,
+  `<SystemBars style>`, etc.). Wrapping with `withUnistyles` lets the wrapper
+  re-render only when its declared dependencies change, instead of re-rendering
+  the parent on every theme tick.
+- **Shared themed wrappers live in `src/components/atoms/themedComponents.tsx`.**
+  Use `ThemedBottomSheetTextInput`, `ThemedActivityIndicator`, and
+  `OnPrimaryActivityIndicator` from there instead of recreating per-file
+  `withUnistyles(...)` wrappers. The pattern is established — add new ones to
+  this module when a third-party component needs to be theme-reactive.
+- **For Switches, use `BaseSwitch`** from `src/components/base/BaseSwitch.tsx`
+  instead of RN's `<Switch trackColor=... thumbColor=...>` with theme reads.
+  `BaseSwitch` is already wrapped with `withUnistyles` and has the standard
+  on/off colors built in.
+- **For icons with theme-derived colors, use `<Icon tone="X" />`** from
+  `src/utils/iconUtils.tsx`. It internally uses `withUnistyles(Ionicons)` so
+  the icon re-renders independently of the parent on theme change.
+- **Use `useUnistyles()` only for runtime metadata** — `rt.colorScheme`,
+  `rt.themeName`, `rt.insets`. Reading `theme.*` via this hook re-renders the
+  entire calling component on every theme change and loses the ShadowTree
+  optimization. Legitimate exceptions:
+  - `useTheme` / `ThemedStatusBar` — need `rt.colorScheme` / `rt.themeName`.
+  - `RootNavigator.Navigation` — builds a React Navigation `Theme` object
+    from Unistyles theme; the `theme` prop on `<StaticNavigation>` is what
+    drives RN Navigation's color scheme. This cross-library hand-off is the
+    intended use of `useUnistyles()`.
+  - `TrendLineChart` — Skia primitives don't accept Unistyles styles; theme
+    colors flow into Skia draw calls.
+  - `RecipeMain`, `SortableShoppingList` — theme colors flow into data
+    structures (`SearchBarAction[]`, the sortable theme context provider).
+- **Merging a `style` prop with themed styles is supported.** Unistyles'
+  [official "Merging styles" guide](https://www.unistyl.es/v3/guides/merging-styles/)
+  recommends `<View style={[styles.x, callerStyle]} />`, and the React
+  Compiler interaction bug ([unistyles#368](https://github.com/jpudysz/react-native-unistyles/issues/368),
+  fixed in [PR #672](https://github.com/jpudysz/react-native-unistyles/pull/672))
+  was resolved upstream — the babel plugin now parses variants on
+  `Program.enter` so the React Compiler's auto-memoization no longer hides
+  theme deps. Just use the array merge pattern; no wrapper or `'use no memo'`
+  directive is needed.
+- **Navigators must use `inactiveBehavior: 'none'`** in `screenOptions`. The
+  default `'pause'` behavior in `@react-navigation/native-stack` v8 and
+  `@react-navigation/bottom-tabs` v8 freezes inactive screens, preventing
+  Unistyles ShadowTree updates from reaching them — the visible symptom is a
+  theme change that only applies after navigating back. See
+  [react-native-unistyles#1183](https://github.com/jpudysz/react-native-unistyles/issues/1183).
+
+The Unistyles babel plugin must run **before** `babel-plugin-react-compiler`
+(see `babel.config.js`); reversing the order produces compile errors.
 
 ### React Compiler Conventions
 

@@ -6,7 +6,7 @@ import {
   ActivityIndicator,
   ScrollView,
 } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import Animated from 'react-native-reanimated';
 import { useMutation, useQuery } from '@apollo/client/react';
@@ -21,8 +21,12 @@ import {
 } from '#store/useAppStore';
 import { removeFromPantryItemsCache } from '#hooks/home/pantry/utils';
 import { useRecipeSuggestionsStore } from '#store/useRecipeSuggestionsStore';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+
+const ThemedActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
+  color: theme.colors.primary,
+}));
 import type { StaticScreenProps } from '@react-navigation/native';
 import { resolveImageUrl, parseImages, hasImages } from '#utils/imageUtils';
 import {
@@ -63,6 +67,21 @@ import {
 import { SousChefLoader } from '#/components/base/SousChefLoader';
 import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
 
+/**
+ * Expiry column text. Extracted so `styles.useVariants` is called once per
+ * instance — combining `styles.X` references in an array would violate the
+ * project's no-restricted-syntax rule.
+ */
+const ExpiryColumnText: React.FC<{
+  text: string;
+  isUrgent: boolean;
+  isExpired: boolean;
+}> = ({ text, isUrgent, isExpired }) => {
+  const status = isExpired ? 'expired' : isUrgent ? 'urgent' : 'normal';
+  styles.useVariants({ expiryStatus: status });
+  return <Text style={styles.infoColumnValue}>{text}</Text>;
+};
+
 /** Module-level helper to sync suggested recipes from cache */
 function syncSuggestedRecipesFromCache(
   cachedRecipes: RecipeInformation[],
@@ -79,7 +98,6 @@ export const PantryItemDetail: React.FC<
   useScreenTransition('PantryItemDetail');
   const itemId = route.params.itemId;
   const { goBack, navigateTo, navigate } = useAppNavigation();
-  const { theme } = useUnistyles();
   const insets = useSafeAreaInsets();
   const selectedShoppingListId = useSelectedShoppingListId();
   const selectedPantryId = useSelectedPantryId();
@@ -555,15 +573,11 @@ export const PantryItemDetail: React.FC<
           </View>
           <View style={styles.infoColumn}>
             <Text style={styles.infoColumnLabel}>Expiring</Text>
-            <Text
-              style={[
-                styles.infoColumnValue,
-                expiryInfo?.isUrgent && styles.expiryColumnUrgent,
-                expiryInfo?.isExpired && styles.expiryColumnExpired,
-              ]}
-            >
-              {expiryInfo?.text || 'No expiry'}
-            </Text>
+            <ExpiryColumnText
+              text={expiryInfo?.text || 'No expiry'}
+              isUrgent={!!expiryInfo?.isUrgent}
+              isExpired={!!expiryInfo?.isExpired}
+            />
           </View>
           <View style={styles.infoColumn}>
             <Text style={styles.infoColumnLabel}>Amount</Text>
@@ -628,9 +642,8 @@ export const PantryItemDetail: React.FC<
         <View style={styles.recipesSection}>
           <Text style={styles.sectionTitle}>Recipes to try</Text>
           {loadingRecipes ? (
-            <ActivityIndicator
+            <ThemedActivityIndicator
               size="small"
-              color={theme.colors.primary}
               style={styles.recipesLoading}
             />
           ) : suggestedRecipes.length > 0 ? (
@@ -767,12 +780,13 @@ const styles = StyleSheet.create(theme => ({
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     textAlign: 'center',
-  },
-  expiryColumnUrgent: {
-    color: theme.colors.warning,
-  },
-  expiryColumnExpired: {
-    color: theme.colors.error,
+    variants: {
+      expiryStatus: {
+        normal: {},
+        urgent: { color: theme.colors.warning },
+        expired: { color: theme.colors.error },
+      },
+    },
   },
   nutritionSection: {
     paddingHorizontal: theme.spacing.lg,

@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { Header } from '#components/molecules/Header';
 import { useUser, useAppStore } from '#store/useAppStore';
@@ -101,7 +101,6 @@ async function performVerificationImpl(
 export const EmailVerificationDeepLinkScreen: React.FC = () => {
   const route = useRoute();
   const { goBack } = useNavigation();
-  const { theme } = useUnistyles();
   const user = useUser();
   const updateUser = useAppStore(state => state.updateUser);
   const toast = useToast();
@@ -225,7 +224,7 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
               <Pressable
                 style={({ pressed }) => [
                   styles.retryButton,
-                  pressed && { opacity: theme.opacity.pressed },
+                  pressed && styles.pressed,
                 ]}
                 onPress={performVerification}
               >
@@ -278,5 +277,8 @@ const styles = StyleSheet.create(theme => ({
   },
   retryButtonText: {
     color: theme.colors.white,
+  },
+  pressed: {
+    opacity: theme.opacity.pressed,
   },
 }));

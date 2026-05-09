@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Image, ActivityIndicator } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Pressable } from '#components/atoms/themedComponents';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { ImagePicker, ImageFile } from './ImagePicker';
 import { useImageUpload } from '#hooks/useImageUpload';
@@ -9,6 +9,14 @@ import { commonStyles } from '#/styles/commonStyles';
 import { ImageUploadPurpose } from '#/graphql/generated/schemaTypes';
 import { executeAsyncWithCleanup } from '#/utils/compilerSafeWrappers';
 import { Text } from '#components/atoms/Text';
+
+const WhiteActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
+  color: theme.colors.white,
+}));
+
+const PrimaryActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
+  color: theme.colors.primary,
+}));
 
 interface ImageUploadFieldProps {
   label?: string;
@@ -35,11 +43,12 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
   required = false,
   placeholder = 'No image selected',
 }) => {
-  const { theme } = useUnistyles();
   const [selectedImage, setSelectedImage] = useState<ImageFile | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
 
   const { uploading, uploadProfileImage, uploadItemImage } = useImageUpload();
+
+  styles.useVariants({ required, profile: isProfile });
 
   const handleImageSelected = (image: ImageFile) => {
     setSelectedImage(image);
@@ -94,7 +103,7 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
   return (
     <View style={commonStyles.inputGroup}>
       {!!label && (
-        <Text style={[commonStyles.label, required && styles.requiredLabel]}>
+        <Text style={[commonStyles.label, styles.requiredLabelOverlay]}>
           {label}
           {required ? ' *' : null}
         </Text>
@@ -105,16 +114,13 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
           <View style={styles.imageContainer}>
             <Image
               source={{ uri: currentImageUri }}
-              style={[
-                styles.imagePreview,
-                isProfile && styles.profileImagePreview,
-              ]}
+              style={styles.imagePreview}
               resizeMode="cover"
             />
 
             {!!uploading && (
               <View style={styles.uploadOverlay}>
-                <ActivityIndicator size="large" color={theme.colors.white} />
+                <WhiteActivityIndicator size="large" />
                 <Text size="sm" weight="medium" style={styles.progressText}>
                   {uploadProgress > 0
                     ? `${Math.round(uploadProgress)}%`
@@ -163,10 +169,7 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
               </Text>
               {!!uploading && (
                 <View style={styles.progressContainer}>
-                  <ActivityIndicator
-                    size="small"
-                    color={theme.colors.primary}
-                  />
+                  <PrimaryActivityIndicator size="small" />
                   <Text size="sm" weight="medium" style={styles.progressText}>
                     {uploadProgress > 0 ? `${Math.round(uploadProgress)}%` : ''}
                   </Text>
@@ -184,8 +187,12 @@ const styles = StyleSheet.create(theme => ({
   container: {
     minHeight: 120,
   },
-  requiredLabel: {
-    color: theme.colors.error,
+  requiredLabelOverlay: {
+    variants: {
+      required: {
+        true: { color: theme.colors.error },
+      },
+    },
   },
   imageContainer: {
     position: 'relative',
@@ -196,9 +203,11 @@ const styles = StyleSheet.create(theme => ({
     width: '100%',
     height: 200,
     backgroundColor: theme.colors.surfaceVariant,
-  },
-  profileImagePreview: {
-    height: 120,
+    variants: {
+      profile: {
+        true: { height: 120 },
+      },
+    },
   },
   uploadOverlay: {
     ...StyleSheet.absoluteFillObject,

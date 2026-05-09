@@ -1,16 +1,21 @@
 import React from 'react';
 import { RefreshControl } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import Animated, {
   type useAnimatedScrollHandler,
 } from 'react-native-reanimated';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { MealTypeSection } from './MealTypeSection';
 import { EmptyDayState } from './EmptyDayState';
 import { Text } from '#components/atoms/Text';
 import type { MealTypeGroup } from '#features/mealPlan/hooks/useDailyMeals';
 import { type MealType } from '#/graphql/generated/schemaTypes';
+
+const ThemedRefreshControl = withUnistyles(RefreshControl, theme => ({
+  tintColor: theme.colors.primary,
+  colors: [theme.colors.primary],
+}));
 
 interface DayMealListProps {
   selectedDate: Date;
@@ -43,8 +48,6 @@ export const DayMealList: React.FC<DayMealListProps> = ({
   refreshing = false,
   onRefresh,
 }) => {
-  const { theme } = useUnistyles();
-
   return (
     <Animated.ScrollView
       style={styles.container}
@@ -54,12 +57,7 @@ export const DayMealList: React.FC<DayMealListProps> = ({
       showsVerticalScrollIndicator={false}
       refreshControl={
         onRefresh ? (
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={theme.colors.primary}
-            colors={[theme.colors.primary]}
-          />
+          <ThemedRefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         ) : undefined
       }
     >
@@ -94,11 +92,7 @@ export const DayMealList: React.FC<DayMealListProps> = ({
                 pressed && styles.pressed,
               ]}
             >
-              <Icon
-                name="add-circle-outline"
-                size={20}
-                color={styles.addMealIcon.color}
-              />
+              <Icon name="add-circle-outline" size={20} tone="primary" />
               <Text
                 size="md"
                 weight="medium"
@@ -141,9 +135,6 @@ const styles = StyleSheet.create(theme => ({
   },
   pressed: {
     opacity: theme.opacity.pressed,
-  },
-  addMealIcon: {
-    color: theme.colors.primary,
   },
   addMealText: {
     marginLeft: theme.spacing.sm,

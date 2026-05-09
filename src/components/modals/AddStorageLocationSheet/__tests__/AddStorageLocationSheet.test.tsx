@@ -20,6 +20,7 @@ jest.mock('#hooks/useStandardBottomSheet', () => ({
       },
     },
   })),
+  BottomSheetModal: ({ children }: any) => children,
 }));
 
 // requestIdleCallback is not available in the test environment

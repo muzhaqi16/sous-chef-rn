@@ -6,7 +6,7 @@ import React, {
   forwardRef,
 } from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAnimatedReaction } from 'react-native-reanimated';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
@@ -85,6 +85,10 @@ const RecipeSearchInput = forwardRef<
   RecipeSearchInputProps
 >(({ onSearch, extraActions }, ref) => {
   const [inputQuery, setInputQuery] = useState('');
+  // `useUnistyles()` is intentional: theme colors are constructed into the
+  // dynamic `SearchBarAction[]` prop array passed to `<SearchBar>`. The action
+  // shape carries `color`/`backgroundColor` strings, so a `withUnistyles`
+  // wrap on SearchBar would require redesigning the SearchBarAction type.
   const { theme } = useUnistyles();
 
   useImperativeHandle(ref, () => ({
@@ -122,6 +126,9 @@ const RecipeSearchInput = forwardRef<
 const RecipeMainInner: React.FC = () => {
   useRenderTime('RecipeMain');
   const { navigate } = useAppNavigation();
+  // `useUnistyles()` is intentional: same `SearchBarAction[]` construction
+  // pattern as `RecipeSearchInput` above — theme strings flow into a runtime
+  // prop array that can't move into a stylesheet.
   const { theme } = useUnistyles();
 
   // Single facade hook for all data + state

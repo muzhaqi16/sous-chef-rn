@@ -13,6 +13,12 @@
       "skillPath": "skills/react-native-best-practices/SKILL.md",
       "computedHash": "37bd8599a1d4a8ee8bd0e3a6f416f32c7a1f26491a8142d7acab0a9e995e4f1a"
     },
+    "react-native-unistyles-v3": {
+      "source": "jpudysz/react-native-unistyles",
+      "sourceType": "github",
+      "skillPath": "skills/react-native-unistyles-v3/SKILL.md",
+      "computedHash": "75c83b0ca99ab986087778cbb069331104b5baf8a6238d7f9f822a6a8c0ebb91"
+    },
     "vercel-react-native-skills": {
       "source": "vercel-labs/agent-skills",
       "sourceType": "github",

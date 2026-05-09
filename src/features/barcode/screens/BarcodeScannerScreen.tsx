@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Dimensions, Platform } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { Camera, useCameraDevices } from 'react-native-vision-camera';
 import { useBarcodeScannerOutput } from 'react-native-vision-camera-barcode-scanner';
 import { useFocusEffect } from '@react-navigation/native';
@@ -10,6 +10,11 @@ import type { StaticScreenProps } from '@react-navigation/native';
 import { useBarcodeScanner } from '../hooks/useBarcodeScanner';
 import { usePermission } from '#hooks/permissions/usePermission';
 import BarcodeMask from '#components/organisms/BarcodeMask';
+
+const ThemedBarcodeMask = withUnistyles(BarcodeMask, theme => ({
+  edgeColor: theme.colors.primary,
+  backgroundColor: theme.colors.overlay,
+}));
 import { Button } from '#components/base/Button';
 import { IconButton } from '#components/atoms/IconButton';
 import { HapticService } from '#services/haptic/HapticService';
@@ -36,8 +41,6 @@ export const BarcodeScannerScreen: React.FC<
   const { source, pantryId, shoppingListId, returnTo } = route?.params || {};
   const devices = useCameraDevices();
   const device = devices.find(d => d.position === 'back');
-
-  const { theme } = useUnistyles();
 
   const {
     isGranted: hasPermission,
@@ -210,11 +213,9 @@ export const BarcodeScannerScreen: React.FC<
         enableNativeZoomGesture
       />
 
-      <BarcodeMask
+      <ThemedBarcodeMask
         width={280}
         height={200}
-        edgeColor={theme.colors.primary}
-        backgroundColor={theme.colors.overlay}
         showAnimatedLine={!!isScanning && !hasScanned}
         lineAnimationDuration={2000}
       />

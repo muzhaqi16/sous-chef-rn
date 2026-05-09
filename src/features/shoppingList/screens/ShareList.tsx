@@ -6,7 +6,7 @@ import {
   ActivityIndicator,
   ScrollView,
 } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import { Icon } from '#utils/iconUtils';
 import { EmailInput } from '#components/atoms/EmailInput';
@@ -14,7 +14,11 @@ import { useNavigation } from '@react-navigation/native';
 import { Header } from '#components/molecules/Header';
 import { LoadingInline } from '#components/base/Loading';
 import type { StaticScreenProps } from '@react-navigation/native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+
+const PrimaryActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
+  color: theme.colors.primary,
+}));
 import Clipboard from '@react-native-clipboard/clipboard';
 import { useMutation } from '@apollo/client/react';
 import {
@@ -60,30 +64,37 @@ const ROLE_OPTIONS = INVITE_ROLES.map(role => ({
   label: `${ROLE_PERMISSIONS[role].icon} ${ROLE_PERMISSIONS[role].label}`,
 }));
 
-// PERFORMANCE: Helper functions moved outside component to avoid recreation on every render
-const getStatusColor = (
-  status: string,
-  colors: {
-    success: string;
-    warning: string;
-    error: string;
-    textTertiary: string;
-  },
-): string => {
+type StatusVariant = 'active' | 'pending' | 'declined' | 'expired';
+
+const getStatusVariant = (status: string): StatusVariant => {
   switch (status?.toUpperCase()) {
     case 'ACCEPTED':
     case 'ACTIVE':
-      return colors.success;
+      return 'active';
     case 'PENDING':
-      return colors.warning;
+      return 'pending';
     case 'DECLINED':
-      return colors.error;
+      return 'declined';
     case 'EXPIRED':
-      return colors.textTertiary;
     default:
-      return colors.textTertiary;
+      return 'expired';
   }
 };
+
+function StatusBadge({
+  variant,
+  text,
+}: {
+  variant: StatusVariant;
+  text: string;
+}) {
+  styles.useVariants({ status: variant });
+  return (
+    <View style={styles.statusBadge}>
+      <Text style={styles.statusText}>{text}</Text>
+    </View>
+  );
+}
 
 const formatStatus = (status: string) => {
   switch (status?.toUpperCase()) {
@@ -104,7 +115,6 @@ const formatStatus = (status: string) => {
 export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
   route,
 }) => {
-  const { theme } = useUnistyles();
   const { goBack } = useNavigation();
   const { navigate } = useAppNavigation();
   const { listId } = route.params;
@@ -409,10 +419,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
                   </Animated.View>
                   <View style={styles.toggleSlot}>
                     {togglingShareCode ? (
-                      <ActivityIndicator
-                        size="small"
-                        color={theme.colors.primary}
-                      />
+                      <PrimaryActivityIndicator size="small" />
                     ) : (
                       <View
                         style={[
@@ -449,7 +456,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
                         <Text
                           style={[
                             styles.copyText,
-                            copied && { color: theme.colors.success },
+                            copied && styles.copyTextCopied,
                           ]}
                         >
                           {copied ? 'Copied' : 'Copy'}
@@ -479,7 +486,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
                     {sharing ? (
                       <ActivityIndicator size="small" color="white" />
                     ) : (
-                      <Icon name="send" size={20} color="white" />
+                      <Icon name="send" size={20} tone="white" />
                     )}
                   </Pressable>
                 </View>
@@ -500,7 +507,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
             <View style={styles.membersSection}>
               <Text style={styles.sectionTitle}>Current Members</Text>
               {activeCollaborators.map(member => {
-                const statusColor = getStatusColor(member.status, theme.colors);
+                const statusVariant = getStatusVariant(member.status);
                 const statusText = formatStatus(member.status);
                 const displayName = getCollaboratorDisplayName(
                   member,
@@ -533,24 +540,10 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
                           <Text style={styles.memberEmail}>{memberEmail}</Text>
                         ) : null}
                         <View style={styles.statusContainer}>
-                          <View
-                            style={[
-                              styles.statusBadge,
-                              {
-                                backgroundColor: statusColor + '20',
-                                borderColor: statusColor,
-                              },
-                            ]}
-                          >
-                            <Text
-                              style={[
-                                styles.statusText,
-                                { color: statusColor },
-                              ]}
-                            >
-                              {statusText}
-                            </Text>
-                          </View>
+                          <StatusBadge
+                            variant={statusVariant}
+                            text={statusText}
+                          />
                           {!!member.invitedAt && (
                             <Text style={styles.invitedText}>
                               Invited{' '}
@@ -744,6 +737,9 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.primary,
     fontWeight: theme.fonts.weight.medium,
   },
+  copyTextCopied: {
+    color: theme.colors.success,
+  },
   membersSection: {
     padding: theme.spacing.md,
   },
@@ -800,10 +796,38 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.xs,
     borderRadius: theme.radii.pill,
     borderWidth: 1,
+    variants: {
+      status: {
+        active: {
+          backgroundColor: theme.colors.success + '20',
+          borderColor: theme.colors.success,
+        },
+        pending: {
+          backgroundColor: theme.colors.warning + '20',
+          borderColor: theme.colors.warning,
+        },
+        declined: {
+          backgroundColor: theme.colors.error + '20',
+          borderColor: theme.colors.error,
+        },
+        expired: {
+          backgroundColor: theme.colors.textTertiary + '20',
+          borderColor: theme.colors.textTertiary,
+        },
+      },
+    },
   },
   statusText: {
     fontSize: theme.typography.fontSize.xs,
     fontWeight: theme.fonts.weight.semibold,
+    variants: {
+      status: {
+        active: { color: theme.colors.success },
+        pending: { color: theme.colors.warning },
+        declined: { color: theme.colors.error },
+        expired: { color: theme.colors.textTertiary },
+      },
+    },
   },
   invitedText: {
     fontSize: theme.typography.fontSize.xs,

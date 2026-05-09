@@ -1,9 +1,14 @@
 import React, { useEffect, useRef } from 'react';
 import { View, ActivityIndicator } from 'react-native';
-import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+
+const PrimaryActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
+  color: theme.colors.primary,
+}));
 import { ItemSuggestion } from '#/graphql/generated/schemaTypes';
 import { ItemSuggestionsList } from '#components/molecules/ItemSuggestionsList';
 import {
@@ -52,7 +57,6 @@ export function AddItemSheet({
   tutorialHint,
   children,
 }: AddItemSheetProps) {
-  const { theme } = useUnistyles();
   const insets = useSafeAreaInsets();
   const searchBarRef = useRef<BottomSheetSearchBarRef>(null);
 
@@ -124,12 +128,6 @@ export function AddItemSheet({
     resetAutocomplete();
   };
 
-  // Stable theme colors reference for SuggestionListItem (avoids per-item useUnistyles)
-  const themeColors = {
-    primary: theme.colors.primary,
-    textTertiary: theme.colors.textTertiary,
-  };
-
   // Render a suggestion item with exit animation support
   const renderSuggestionItem = (item: BaseSuggestionItem) => {
     const itemId = item.itemId;
@@ -148,7 +146,6 @@ export function AddItemSheet({
         onExitComplete={
           onExitComplete ? () => onExitComplete(itemId) : undefined
         }
-        themeColors={themeColors}
         showImage={showImages}
       />
     );
@@ -264,10 +261,7 @@ export function AddItemSheet({
               <>
                 {suggestions.loading && !suggestions.hasSuggestions ? (
                   <View style={styles.loadingContainer}>
-                    <ActivityIndicator
-                      size="small"
-                      color={theme.colors.primary}
-                    />
+                    <PrimaryActivityIndicator size="small" />
                   </View>
                 ) : !suggestions.hasSuggestions ? (
                   <View style={styles.emptyContainer}>

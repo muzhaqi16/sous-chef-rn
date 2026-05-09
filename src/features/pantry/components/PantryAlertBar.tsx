@@ -1,11 +1,15 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Pressable } from '#components/atoms/themedComponents';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import GroceryBasket from '#assets/icons/svg/grocery-basket.svg';
 import { type PantryStats } from '#/graphql/generated/schemaTypes';
 import { Text } from '#components/atoms/Text';
+
+const ThemedGroceryBasket = withUnistyles(GroceryBasket, theme => ({
+  color: theme.colors.textSecondary,
+}));
 
 interface PantryAlertBarProps {
   stats: Pick<PantryStats, 'totalItems' | 'expiringCount' | 'lowStockCount'>;
@@ -24,17 +28,11 @@ export const PantryAlertBar: React.FC<PantryAlertBarProps> = ({
   sortLabel,
   onSortPress,
 }) => {
-  const { theme } = useUnistyles();
-
   return (
     <View style={styles.container}>
       {/* Left: item count */}
       <View style={styles.statLink}>
-        <GroceryBasket
-          width={16}
-          height={16}
-          color={theme.colors.textSecondary}
-        />
+        <ThemedGroceryBasket width={16} height={16} />
         <Text size="sm" weight="medium" tone="secondary">
           {stats.totalItems} {stats.totalItems === 1 ? 'item' : 'items'}
         </Text>
@@ -62,11 +60,7 @@ export const PantryAlertBar: React.FC<PantryAlertBarProps> = ({
               style={styles.statLink}
             >
               <Icon name="trending-down-outline" size={14} tone="danger" />
-              <Text
-                size="sm"
-                weight="medium"
-                style={{ color: theme.colors.danger }}
-              >
+              <Text size="sm" weight="medium" style={styles.lowStockText}>
                 {stats.lowStockCount} low stock
               </Text>
             </Pressable>
@@ -129,5 +123,8 @@ const styles = StyleSheet.create(theme => ({
   },
   sortLabel: {
     color: theme.colors.sectionHeader.actionText,
+  },
+  lowStockText: {
+    color: theme.colors.danger,
   },
 }));

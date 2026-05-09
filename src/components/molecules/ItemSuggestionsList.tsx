@@ -1,6 +1,6 @@
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Pressable } from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { resolveImageUrl } from '#utils/imageUtils';
@@ -36,7 +36,6 @@ interface SuggestionRowProps {
   onSelectSuggestion: (item: ItemSuggestion) => void;
   quickAddDisabled: boolean;
   placeholderIcon: 'cube-outline' | 'cart-outline';
-  primaryColor: string;
   showBrands: boolean;
   showImages: boolean;
 }
@@ -47,22 +46,23 @@ const SuggestionRow = ({
   onSelectSuggestion,
   quickAddDisabled,
   placeholderIcon,
-  primaryColor,
   showBrands,
   showImages,
 }: SuggestionRowProps) => {
   const imageUrl = resolveImageUrl(item);
   const handlePress = () => onSelectSuggestion(item);
 
+  styles.useVariants({ withBorder: !isLast, disabled: quickAddDisabled });
+
   return (
-    <View style={[styles.suggestionItem, !isLast && styles.itemBorder]}>
+    <View style={styles.suggestionItem}>
       {!!showImages && (
         <View style={styles.imageContainer}>
           {imageUrl ? (
             <CachedImage uri={imageUrl} style={styles.image} displaySize={40} />
           ) : (
             <View style={styles.imagePlaceholder}>
-              <Icon name={placeholderIcon} size={20} color={primaryColor} />
+              <Icon name={placeholderIcon} size={20} tone="primary" />
             </View>
           )}
         </View>
@@ -85,15 +85,48 @@ const SuggestionRow = ({
       <Pressable
         style={({ pressed }) => [
           styles.quickAddButton,
-          quickAddDisabled && styles.quickAddButtonDisabled,
           pressed && styles.pressed,
         ]}
         onPress={handlePress}
         disabled={quickAddDisabled}
       >
-        <Icon name="add" size={20} color={primaryColor} />
+        <Icon name="add" size={20} tone="primary" />
       </Pressable>
     </View>
+  );
+};
+
+interface AddManuallyOptionProps {
+  isLast: boolean;
+  hasResults: boolean;
+  searchQuery: string;
+  onPress: () => void;
+}
+
+const AddManuallyOption = ({
+  isLast,
+  hasResults,
+  searchQuery,
+  onPress,
+}: AddManuallyOptionProps) => {
+  styles.useVariants({ withBorder: !isLast, disabled: false });
+
+  return (
+    <Pressable
+      key="add-manually"
+      style={({ pressed }) => [
+        styles.addManuallyOption,
+        pressed && styles.pressed,
+      ]}
+      onPress={onPress}
+    >
+      <Icon name="add-circle-outline" size={20} tone="primary" />
+      <Text size="base" tone="accent" weight="medium">
+        {hasResults
+          ? `Add "${searchQuery}" manually`
+          : `No matches. Add "${searchQuery}" manually`}
+      </Text>
+    </Pressable>
   );
 };
 
@@ -108,29 +141,19 @@ export const ItemSuggestionsList = ({
   showBrands = true,
   showImages = true,
 }: ItemSuggestionsListProps) => {
-  const { theme } = useUnistyles();
-
   const hasResults = suggestions.length > 0;
 
   // Render "Add manually" option
-  const renderAddManually = (isLast: boolean) => (
-    <Pressable
-      key="add-manually"
-      style={({ pressed }) => [
-        styles.addManuallyOption,
-        !isLast && styles.itemBorder,
-        pressed && styles.pressed,
-      ]}
-      onPress={onAddManually}
-    >
-      <Icon name="add-circle-outline" size={20} tone="primary" />
-      <Text size="base" tone="accent" weight="medium">
-        {hasResults
-          ? `Add "${searchQuery}" manually`
-          : `No matches. Add "${searchQuery}" manually`}
-      </Text>
-    </Pressable>
-  );
+  const renderAddManually = (isLast: boolean) => {
+    return (
+      <AddManuallyOption
+        isLast={isLast}
+        hasResults={hasResults}
+        searchQuery={searchQuery}
+        onPress={onAddManually}
+      />
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -146,7 +169,6 @@ export const ItemSuggestionsList = ({
             onSelectSuggestion={onSelectSuggestion}
             quickAddDisabled={quickAddDisabled}
             placeholderIcon={placeholderIcon}
-            primaryColor={theme.colors.primary}
             showBrands={showBrands}
             showImages={showImages}
           />
@@ -166,14 +188,18 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
-  itemBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
   suggestionItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: theme.spacing.md,
+    variants: {
+      withBorder: {
+        true: {
+          borderBottomWidth: 1,
+          borderBottomColor: theme.colors.border,
+        },
+      },
+    },
   },
   imageContainer: {
     width: 40,
@@ -207,15 +233,25 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  quickAddButtonDisabled: {
-    opacity: theme.opacity.disabled,
+    variants: {
+      disabled: {
+        true: { opacity: theme.opacity.disabled },
+      },
+    },
   },
   addManuallyOption: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: theme.spacing.md,
     gap: theme.spacing.sm,
+    variants: {
+      withBorder: {
+        true: {
+          borderBottomWidth: 1,
+          borderBottomColor: theme.colors.border,
+        },
+      },
+    },
   },
   pressed: {
     opacity: theme.opacity.pressed,

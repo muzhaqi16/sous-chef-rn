@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { useUnistyles, StyleSheet } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { QuantityDisplay } from '#/components/molecules/QuantityDisplay';
 import { DisplayFormat } from '#/graphql/generated/schemaTypes';
 import { Text } from '#components/atoms/Text';
@@ -30,8 +30,6 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
   unitSymbol,
   additionalInfo,
 }) => {
-  const { theme } = useUnistyles();
-
   // Check if this is a partially consumed single item
   // When initialQuantity is 1 and 0 < quantity < 1, display as "1" with remaining weight
   const isPartialSingleItem =
@@ -83,7 +81,7 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
           displayFormat={displayFormat}
           displayAsFraction={displayAsFraction}
           showUnit={false}
-          style={[styles.quantity, { color: theme.colors.textPrimary }]}
+          style={styles.quantity}
         />
         <Text size="sm" tone="secondary">
           {' × '}
@@ -116,7 +114,7 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
           displayFormat={displayFormat}
           unitSymbol={unitSymbol}
           displayAsFraction={displayAsFraction}
-          style={[styles.quantity, { color: theme.colors.textPrimary }]}
+          style={styles.quantity}
         />
         {!!isPartialSingleItem && (
           <Text size="sm" tone="secondary">
@@ -169,7 +167,7 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
           displayFormat={displayFormat}
           displayAsFraction={displayAsFraction}
           showUnit={false}
-          style={[styles.quantity, { color: theme.colors.textPrimary }]}
+          style={styles.quantity}
         />
         {!!isPartialSingleItem && (
           <Text size="sm" tone="secondary">
@@ -215,5 +213,6 @@ const styles = StyleSheet.create(theme => ({
   quantity: {
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.textPrimary,
   },
 }));

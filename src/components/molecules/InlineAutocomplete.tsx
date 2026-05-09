@@ -1,10 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, ActivityIndicator } from 'react-native';
-import { Pressable, ScrollView } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { ScrollView } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { Label } from '#components/atoms/Label';
 import { Text } from '#components/atoms/Text';
+
+const ThemedActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
+  color: theme.colors.primary,
+}));
 
 export interface InlineAutocompleteProps<T> {
   // Core
@@ -62,8 +67,6 @@ export function InlineAutocomplete<T>({
   footerComponent,
   autoCapitalize = 'none',
 }: InlineAutocompleteProps<T>) {
-  const { theme } = useUnistyles();
-
   // Track internal search term for visibility logic
   const [searchTerm, setSearchTerm] = useState(value);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -142,12 +145,14 @@ export function InlineAutocomplete<T>({
     }
   };
 
+  styles.useVariants({ error: !!error });
+
   return (
     <View style={styles.container}>
       {label ? <Label required={required}>{label}</Label> : null}
       <View style={styles.inputContainer}>
         <BottomSheetTextInput
-          style={[styles.input, error && styles.inputError]}
+          style={styles.input}
           value={searchTerm}
           onChangeText={handleTextChange}
           placeholder={placeholder}
@@ -157,9 +162,8 @@ export function InlineAutocomplete<T>({
           testID={testID}
         />
         {!!loading && !!hasSearchQuery && (
-          <ActivityIndicator
+          <ThemedActivityIndicator
             size="small"
-            color={theme.colors.primary}
             style={styles.loadingIndicator}
           />
         )}
@@ -183,9 +187,10 @@ export function InlineAutocomplete<T>({
                 <React.Fragment key={keyExtractor(item)}>
                   <Pressable
                     onPress={() => handleSelect(item)}
-                    style={({ pressed }) => ({
-                      opacity: pressed ? theme.opacity.pressed : 1,
-                    })}
+                    style={({ pressed }) => [
+                      styles.suggestion,
+                      pressed && styles.pressed,
+                    ]}
                   >
                     {renderItem(item, index)}
                   </Pressable>
@@ -223,9 +228,11 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: 1,
     borderColor: theme.colors.border,
     color: theme.colors.inputText,
-  },
-  inputError: {
-    borderColor: theme.colors.error,
+    variants: {
+      error: {
+        true: { borderColor: theme.colors.error },
+      },
+    },
   },
   errorText: {
     marginTop: theme.spacing.xs,
@@ -252,8 +259,12 @@ const styles = StyleSheet.create(theme => ({
   scrollView: {
     flex: 1,
   },
+  suggestion: {},
   separator: {
     height: 1,
     backgroundColor: theme.colors.borderLight,
+  },
+  pressed: {
+    opacity: theme.opacity.pressed,
   },
 }));

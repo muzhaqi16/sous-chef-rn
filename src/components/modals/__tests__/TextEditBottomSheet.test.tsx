@@ -22,6 +22,7 @@ jest.mock('#hooks/useStandardBottomSheet', () => ({
       spacing: { sm: 4, md: 8, lg: 16, xs: 2 },
     },
   })),
+  BottomSheetModal: ({ children }: any) => children,
 }));
 
 describe('TextEditBottomSheet', () => {

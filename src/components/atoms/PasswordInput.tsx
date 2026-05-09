@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { StyleSheet } from 'react-native-unistyles';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { BaseInput, BaseInputProps } from './BaseInput/BaseInput';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 
 export interface PasswordInputProps
   extends Omit<BaseInputProps, 'secureTextEntry'> {

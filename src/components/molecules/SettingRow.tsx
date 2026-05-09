@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View } from 'react-native';
 import { BaseSwitch } from '#components/base/BaseSwitch';
-import { BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
-import Ionicons from '@react-native-vector-icons/ionicons';
+import { BottomSheetView } from '@gorhom/bottom-sheet';
+import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { ValueText } from '../atoms/ValueText';
 import {
@@ -13,7 +13,7 @@ import { getValidationSchemaForField } from '#/utils/validation/profile';
 import { Icon } from '#/utils/iconUtils';
 import { TextEditBottomSheet } from '#/components/modals/TextEditBottomSheet/TextEditBottomSheet';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import { RIPPLE } from '#constants/ripple';
 import { Text } from '#components/atoms/Text';
 
@@ -31,12 +31,11 @@ export const SettingRow: React.FC<SettingRowProps> = ({
   const [modalVisible, setModalVisible] = useState(false);
   const [textEditVisible, setTextEditVisible] = useState(false);
 
-  const { ref, modalProps, contentContainerStyle, theme } =
-    useStandardBottomSheet({
-      onDismiss: () => setModalVisible(false),
-      snapPoints: [],
-      enableDynamicSizing: true,
-    });
+  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
+    onDismiss: () => setModalVisible(false),
+    snapPoints: [],
+    enableDynamicSizing: true,
+  });
 
   // Sync bottom sheet visibility with state (complex: checks item.type)
   useEffect(() => {
@@ -163,18 +162,14 @@ export const SettingRow: React.FC<SettingRowProps> = ({
           )}
 
           {item.type === 'radio' && !!item.options && (
-            <Ionicons
+            <Icon
               name={
                 item.selected === item.value
                   ? 'radio-button-on'
                   : 'radio-button-off'
               }
               size={20}
-              color={
-                item.selected === item.value
-                  ? theme.colors.primary
-                  : theme.colors.textSecondary
-              }
+              tone={item.selected === item.value ? 'primary' : 'textSecondary'}
             />
           )}
 
@@ -221,11 +216,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
 
       {/* Selection Bottom Sheet */}
       {item.type === 'modal' && !!item.options && (
-        <BottomSheetModal
-          ref={ref}
-          {...modalProps}
-          handleIndicatorStyle={{ backgroundColor: theme.colors.border }}
-        >
+        <BottomSheetModal ref={ref} {...modalProps}>
           <BottomSheetView style={[styles.sheetContent, contentContainerStyle]}>
             <Text
               size="lg"

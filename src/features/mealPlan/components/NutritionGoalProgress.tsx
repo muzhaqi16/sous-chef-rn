@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
 import { GoalStatus, type GoalProgress } from '#/graphql/generated/schemaTypes';
 
@@ -12,13 +12,10 @@ interface NutritionGoalProgressProps {
   fatProgress: GoalProgress | null | undefined;
 }
 
-const STATUS_CONFIG: Record<
-  GoalStatus,
-  { label: string; colorKey: 'success' | 'warning' | 'error' }
-> = {
-  [GoalStatus.OnTarget]: { label: 'On Target', colorKey: 'success' },
-  [GoalStatus.UnderTarget]: { label: 'Under', colorKey: 'warning' },
-  [GoalStatus.OverTarget]: { label: 'Over', colorKey: 'error' },
+const STATUS_LABELS: Record<GoalStatus, string> = {
+  [GoalStatus.OnTarget]: 'On Target',
+  [GoalStatus.UnderTarget]: 'Under',
+  [GoalStatus.OverTarget]: 'Over',
 };
 
 function MacroProgressBar({
@@ -28,12 +25,9 @@ function MacroProgressBar({
   label: string;
   progress: GoalProgress | null | undefined;
 }) {
-  const { theme } = useUnistyles();
-
+  barStyles.useVariants({ status: progress?.status });
   if (!progress) return null;
 
-  const config = STATUS_CONFIG[progress.status];
-  const barColor = theme.colors[config.colorKey];
   const percentage = Math.min(progress.percentage, 100);
 
   return (
@@ -42,17 +36,12 @@ function MacroProgressBar({
         <Text size="sm" weight="medium">
           {label}
         </Text>
-        <Text size="xs" weight="semibold" style={{ color: barColor }}>
-          {config.label}
+        <Text size="xs" weight="semibold" style={barStyles.statusLabel}>
+          {STATUS_LABELS[progress.status]}
         </Text>
       </View>
       <View style={barStyles.barBackground}>
-        <View
-          style={[
-            barStyles.barFill,
-            { width: `${percentage}%`, backgroundColor: barColor },
-          ]}
-        />
+        <View style={[barStyles.barFill, { width: `${percentage}%` }]} />
       </View>
       <View style={barStyles.valueRow}>
         <Text size="xs" tone="secondary">
@@ -128,6 +117,22 @@ const barStyles = StyleSheet.create(theme => ({
   barFill: {
     height: '100%',
     borderRadius: 3,
+    variants: {
+      status: {
+        [GoalStatus.OnTarget]: { backgroundColor: theme.colors.success },
+        [GoalStatus.UnderTarget]: { backgroundColor: theme.colors.warning },
+        [GoalStatus.OverTarget]: { backgroundColor: theme.colors.error },
+      },
+    },
+  },
+  statusLabel: {
+    variants: {
+      status: {
+        [GoalStatus.OnTarget]: { color: theme.colors.success },
+        [GoalStatus.UnderTarget]: { color: theme.colors.warning },
+        [GoalStatus.OverTarget]: { color: theme.colors.error },
+      },
+    },
   },
   valueRow: {
     flexDirection: 'row',

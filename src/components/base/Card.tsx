@@ -9,8 +9,8 @@ import {
   TextStyle,
   ImageSourcePropType,
 } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Pressable } from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
 import { Badge } from './Badge';
 
 export interface CardProps {
@@ -104,11 +104,10 @@ export const Card: React.FC<CardProps> = ({
   accessibilityLabel,
   accessibilityHint,
 }) => {
-  const { theme } = useUnistyles();
-
   styles.useVariants({
     layout,
     disabled,
+    variant,
   });
 
   const renderImage = () => {
@@ -132,12 +131,7 @@ export const Card: React.FC<CardProps> = ({
 
     if (imagePlaceholder && layout === 'vertical') {
       return (
-        <View
-          style={[
-            styles.imagePlaceholder,
-            { backgroundColor: theme.colors.backgroundSecondary },
-          ]}
-        >
+        <View style={styles.imagePlaceholder}>
           <Text style={styles.placeholderText}>{imagePlaceholder}</Text>
         </View>
       );
@@ -154,53 +148,33 @@ export const Card: React.FC<CardProps> = ({
         </Badge>
       )}
       {!!title && (
-        <Text
-          style={[
-            styles.title,
-            { color: theme.colors.textPrimary },
-            titleStyle,
-          ]}
-          numberOfLines={2}
-        >
+        <Text style={[styles.title, titleStyle]} numberOfLines={2}>
           {title}
         </Text>
       )}
       {!!subtitle && (
-        <Text
-          style={[styles.subtitle, { color: theme.colors.textSecondary }]}
-          numberOfLines={1}
-        >
+        <Text style={styles.subtitle} numberOfLines={1}>
           {subtitle}
         </Text>
       )}
       {!!description && (
-        <Text
-          style={[styles.description, { color: theme.colors.textSecondary }]}
-          numberOfLines={2}
-        >
+        <Text style={styles.description} numberOfLines={2}>
           {description}
         </Text>
       )}
       {price !== undefined && (
-        <Text style={[styles.price, { color: theme.colors.success }]}>
-          ${price.toFixed(2)}
-        </Text>
+        <Text style={styles.price}>${price.toFixed(2)}</Text>
       )}
       {!!meta && (
         <View style={styles.metaContainer}>
           {Array.isArray(meta) ? (
             meta.map((m, i) => (
-              <Text
-                key={i}
-                style={[styles.meta, { color: theme.colors.textTertiary }]}
-              >
+              <Text key={i} style={styles.meta}>
                 {m}
               </Text>
             ))
           ) : (
-            <Text style={[styles.meta, { color: theme.colors.textTertiary }]}>
-              {meta}
-            </Text>
+            <Text style={styles.meta}>{meta}</Text>
           )}
         </View>
       )}
@@ -208,25 +182,7 @@ export const Card: React.FC<CardProps> = ({
   );
 
   const cardContent = (
-    <View
-      style={[
-        styles.card,
-        variant === 'elevated' && {
-          ...theme.shadows.md,
-          backgroundColor: theme.colors.surface,
-        },
-        variant === 'flat' && {
-          backgroundColor: theme.colors.surface,
-        },
-        variant === 'outlined' && {
-          backgroundColor: theme.colors.surface,
-          borderWidth: 1,
-          borderColor: theme.colors.border,
-        },
-        style,
-      ]}
-      testID={testID}
-    >
+    <View style={[styles.card, style]} testID={testID}>
       {layout === 'horizontal' ? (
         <>
           {leftElement || renderImage()}
@@ -279,6 +235,7 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     borderRadius: theme.radii.lg,
     overflow: 'hidden',
+    backgroundColor: theme.colors.surface,
     variants: {
       layout: {
         horizontal: {},
@@ -287,6 +244,11 @@ const styles = StyleSheet.create(theme => ({
       disabled: {
         true: { opacity: theme.opacity.disabled },
         false: {},
+      },
+      variant: {
+        elevated: { ...theme.shadows.md },
+        flat: {},
+        outlined: { borderWidth: 1, borderColor: theme.colors.border },
       },
     },
   },
@@ -314,6 +276,7 @@ const styles = StyleSheet.create(theme => ({
     borderTopRightRadius: theme.radii.lg,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: theme.colors.backgroundSecondary,
   },
 
   placeholderText: {
@@ -342,22 +305,26 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.md,
     fontWeight: theme.fonts.weight.semibold,
     lineHeight: theme.typography.lineHeight.normal,
+    color: theme.colors.textPrimary,
   },
 
   subtitle: {
     fontSize: theme.typography.fontSize.sm,
     lineHeight: theme.typography.lineHeight.tight,
+    color: theme.colors.textSecondary,
   },
 
   description: {
     fontSize: theme.typography.fontSize.sm,
     lineHeight: theme.typography.lineHeight.tight,
+    color: theme.colors.textSecondary,
   },
 
   price: {
     fontSize: theme.typography.fontSize.xl,
     fontWeight: theme.fonts.weight.semibold,
     marginTop: theme.spacing.xs,
+    color: theme.colors.success,
   },
 
   metaContainer: {
@@ -368,6 +335,7 @@ const styles = StyleSheet.create(theme => ({
   meta: {
     fontSize: theme.typography.fontSize.xs,
     fontFamily: 'monospace',
+    color: theme.colors.textTertiary,
   },
 
   // Section styles

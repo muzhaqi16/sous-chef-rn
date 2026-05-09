@@ -1,12 +1,10 @@
 import React, { useEffect } from 'react';
 import { View } from 'react-native';
-import {
-  BottomSheetModal,
-  BottomSheetTextInput,
-  BottomSheetView,
-} from '@gorhom/bottom-sheet';
+import { BottomSheetView } from '@gorhom/bottom-sheet';
+import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
+import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
 import { Controller, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { object, string, type AnyObjectSchema } from 'yup';
@@ -56,13 +54,12 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
   maxLength,
   keyboardType = 'default',
 }) => {
-  const { ref, modalProps, contentContainerStyle, theme } =
-    useStandardBottomSheet({
-      visible,
-      onDismiss: onClose,
-      snapPoints: ['30%'],
-      keyboardBehavior: 'interactive',
-    });
+  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
+    visible,
+    onDismiss: onClose,
+    snapPoints: ['30%'],
+    keyboardBehavior: 'interactive',
+  });
 
   // Default schema if none provided
   const schema = validationSchema || object({ [fieldKey]: string() });
@@ -88,6 +85,9 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
     form.reset();
     onClose();
   };
+
+  const fieldError = form.formState.errors[fieldKey];
+  styles.useVariants({ multiline, error: !!fieldError });
 
   return (
     <BottomSheetModal ref={ref} {...modalProps} index={0}>
@@ -118,9 +118,7 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
         </View>
 
         {/* Divider */}
-        <View
-          style={[styles.divider, { backgroundColor: theme.colors.border }]}
-        />
+        <View style={styles.divider} />
 
         {/* Input Field */}
         <View style={styles.inputContainer}>
@@ -140,23 +138,12 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
             name={fieldKey}
             render={({ field, fieldState }) => (
               <View>
-                <BottomSheetTextInput
-                  style={[
-                    styles.input,
-                    multiline && styles.inputMultiline,
-                    {
-                      color: theme.colors.textPrimary,
-                      backgroundColor: theme.colors.surfaceVariant,
-                      borderColor: fieldState.error
-                        ? theme.colors.error
-                        : theme.colors.border,
-                    },
-                  ]}
+                <ThemedBottomSheetTextInput
+                  style={styles.input}
                   value={field.value}
                   onChangeText={field.onChange}
                   onBlur={field.onBlur}
                   placeholder={placeholder}
-                  placeholderTextColor={theme.colors.textTertiary}
                   autoFocus
                   multiline={multiline}
                   maxLength={maxLength}
@@ -193,6 +180,7 @@ const styles = StyleSheet.create(theme => ({
   divider: {
     height: 1,
     marginBottom: theme.spacing.lg,
+    backgroundColor: theme.colors.border,
   },
   inputContainer: {
     marginBottom: theme.spacing.md,
@@ -206,10 +194,20 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.md,
     borderRadius: theme.radii.md,
     borderWidth: 1,
-  },
-  inputMultiline: {
-    minHeight: 100,
-    paddingTop: theme.spacing.md,
+    color: theme.colors.textPrimary,
+    backgroundColor: theme.colors.surfaceVariant,
+    borderColor: theme.colors.border,
+    variants: {
+      multiline: {
+        true: {
+          minHeight: 100,
+          paddingTop: theme.spacing.md,
+        },
+      },
+      error: {
+        true: { borderColor: theme.colors.error },
+      },
+    },
   },
   errorText: {
     marginTop: theme.spacing.xs,

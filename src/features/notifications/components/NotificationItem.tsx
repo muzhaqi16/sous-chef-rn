@@ -7,7 +7,7 @@ import { NotificationItem as NotificationType } from '#store/slices/notification
 import { getNotificationIcon } from '#utils/notifications/notificationHelpers';
 import { safeParseDate } from '#utils/dateUtils';
 
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 
 interface NotificationItemProps {

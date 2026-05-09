@@ -3,7 +3,7 @@ import { StyleProp, ViewStyle } from 'react-native';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { IconLibrary, Icon } from '#/utils/iconUtils';
 import { HapticService } from '#services/haptic/HapticService';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import { borderlessRipple } from '#constants/ripple';
 
 const UniIcon = withUnistyles(Icon);

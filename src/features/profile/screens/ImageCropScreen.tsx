@@ -2,11 +2,8 @@ import React, { useState } from 'react';
 import { View, Image, Dimensions } from 'react-native';
 import { alertService } from '#/services/alertService';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import {
-  Gesture,
-  GestureDetector,
-  Pressable,
-} from 'react-native-gesture-handler';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -16,7 +13,7 @@ import Animated, {
 import type { StaticScreenProps } from '@react-navigation/native';
 import { useSafeNavigation } from '#hooks/navigation/useSafeNavigation';
 import { Icon } from '#utils/iconUtils';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { Header } from '#components/molecules/Header';
 import { MAX_PROFILE_SIZE } from '#utils/imageValidation';
 import ImageEditor from '@react-native-community/image-editor';
@@ -34,7 +31,6 @@ export const ImageCropScreen: React.FC<
 > = ({ route }) => {
   const { goBack } = useSafeNavigation();
   const { imageFile } = route.params;
-  const { theme } = useUnistyles();
 
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
   const [originalSize, setOriginalSize] = useState({ width: 0, height: 0 });
@@ -322,10 +318,7 @@ export const ImageCropScreen: React.FC<
   };
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
-      edges={['left', 'right']}
-    >
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
       <Header
         title="Crop Photo"
         onBack={goBack}
@@ -354,16 +347,7 @@ export const ImageCropScreen: React.FC<
 
         <View style={styles.cropContainer}>
           {/* Crop overlay */}
-          <View
-            style={[
-              styles.cropOverlay,
-              {
-                width: CROP_SIZE,
-                height: CROP_SIZE,
-                borderColor: theme.colors.primary,
-              },
-            ]}
-          />
+          <View style={styles.cropOverlay} />
 
           {/* Image container with gesture detection */}
           <View style={styles.imageContainer}>
@@ -407,16 +391,11 @@ export const ImageCropScreen: React.FC<
             onPress={handleCrop}
             style={({ pressed }) => [
               styles.cropButton,
-              { backgroundColor: theme.colors.primary },
               pressed && styles.pressed,
             ]}
             disabled={isCropping || !imageLoaded}
           >
-            <Text
-              size="md"
-              weight="semibold"
-              style={{ color: theme.colors.background }}
-            >
+            <Text size="md" weight="semibold" style={styles.cropButtonText}>
               {isCropping ? 'Cropping...' : 'Crop Photo'}
             </Text>
           </Pressable>
@@ -429,6 +408,7 @@ export const ImageCropScreen: React.FC<
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
+    backgroundColor: theme.colors.background,
   },
   content: {
     flex: 1,
@@ -448,6 +428,9 @@ const styles = StyleSheet.create(theme => ({
   },
   cropOverlay: {
     position: 'absolute',
+    width: CROP_SIZE,
+    height: CROP_SIZE,
+    borderColor: theme.colors.primary,
     borderWidth: 2,
     borderRadius: CROP_SIZE / 2,
     zIndex: 2,
@@ -494,6 +477,10 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.md,
     borderRadius: theme.radii.sm,
     alignItems: 'center',
+    backgroundColor: theme.colors.primary,
+  },
+  cropButtonText: {
+    color: theme.colors.background,
   },
   pressed: {
     opacity: theme.opacity.pressed,

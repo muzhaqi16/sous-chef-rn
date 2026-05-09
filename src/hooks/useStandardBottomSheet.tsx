@@ -1,15 +1,37 @@
 import { useRef, useEffect, useState } from 'react';
 import { Keyboard } from 'react-native';
-import type {
-  BottomSheetModal,
-  BottomSheetModalProps,
+import {
+  BottomSheetModal as GorhomBottomSheetModal,
+  type BottomSheetModalProps,
 } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useUnistyles } from 'react-native-unistyles';
+import { withUnistyles } from 'react-native-unistyles';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
 import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
 import { DismissBackdrop } from '#components/atoms/DismissBackdrop';
+
+/**
+ * Theme-reactive `BottomSheetModal` — applies `backgroundStyle` and
+ * `handleIndicatorStyle` defaults from the theme via `withUnistyles`. Re-exported
+ * as `BottomSheetModal` so callers swap their import source from
+ * `@gorhom/bottom-sheet` to `#hooks/useStandardBottomSheet` without other code
+ * changes. The wrap means theme updates flow through the C++ ShadowTree —
+ * callers don't need to re-render to see the new colors.
+ */
+const ThemedBottomSheetModal = withUnistyles(GorhomBottomSheetModal, theme => ({
+  backgroundStyle: { backgroundColor: theme.colors.surface },
+  handleIndicatorStyle: { backgroundColor: theme.colors.textSecondary },
+}));
+
+export { ThemedBottomSheetModal as BottomSheetModal };
+
+/**
+ * Type re-export for `useRef<BottomSheetModal>(null)` callsites — points at the
+ * underlying gorhom class, since the wrapped component's value type isn't a
+ * usable type position.
+ */
+export type BottomSheetModalRef = GorhomBottomSheetModal;
 
 interface UseStandardBottomSheetOptions {
   /** When provided, auto-manages present/dismiss. Omit to manage presentation manually via ref. */
@@ -72,9 +94,8 @@ export function useStandardBottomSheet({
   keyboardAware = false,
   dismissOnBlur = true,
 }: UseStandardBottomSheetOptions) {
-  const { theme } = useUnistyles();
   const insets = useSafeAreaInsets();
-  const ref = useRef<BottomSheetModal>(null);
+  const ref = useRef<GorhomBottomSheetModal>(null);
   const animationConfigs = useSharedBottomSheetConfigs();
   useBottomSheetBackHandler(ref, visible ?? false);
 
@@ -142,7 +163,9 @@ export function useStandardBottomSheet({
     return () => sub.remove();
   }, [keyboardAware]);
 
-  // All standard BottomSheetModal props as a spread-ready object
+  // All standard BottomSheetModal props as a spread-ready object.
+  // Theme-derived `backgroundStyle` / `handleIndicatorStyle` come from the
+  // wrapped `BottomSheetModal` re-exported above — no theme reads here.
   const modalProps: Partial<BottomSheetModalProps> = {
     snapPoints: finalSnapPoints,
     enablePanDownToClose: true,
@@ -150,8 +173,6 @@ export function useStandardBottomSheet({
     topInset: insets.top,
     onDismiss,
     animationConfigs,
-    backgroundStyle: { backgroundColor: theme.colors.surface },
-    handleIndicatorStyle: { backgroundColor: theme.colors.textSecondary },
     keyboardBehavior: resolvedKeyboardBehavior,
     keyboardBlurBehavior: 'restore',
     android_keyboardInputMode: 'adjustPan',
@@ -161,5 +182,23 @@ export function useStandardBottomSheet({
   // Standard content container padding
   const contentContainerStyle = { paddingBottom: insets.bottom + 16 };
 
-  return { ref, modalProps, contentContainerStyle, theme, insets };
+  // Imperative helpers — prefer these over `ref.current?.dismiss()` etc.
+  // For state-driven control, pass the `visible` option above and let the
+  // hook handle present/dismiss for you. These helpers are for cases where
+  // an event handler (e.g. an onPress) needs to imperatively close the sheet.
+  const present = () => ref.current?.present();
+  const dismiss = () => ref.current?.dismiss();
+  const close = () => ref.current?.close();
+  const snapToIndex = (index: number) => ref.current?.snapToIndex(index);
+
+  return {
+    ref,
+    modalProps,
+    contentContainerStyle,
+    insets,
+    present,
+    dismiss,
+    close,
+    snapToIndex,
+  };
 }

@@ -75,6 +75,7 @@ jest.mock('react-native-unistyles', () => {
         return Object.assign(result, { useVariants: () => {} });
       },
     },
+    withUnistyles: jest.fn((component: any) => component),
   };
 });
 

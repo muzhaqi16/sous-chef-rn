@@ -1,6 +1,10 @@
 import React from 'react';
 import { View, ActivityIndicator } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+
+const ThemedActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
+  color: theme.colors.primary,
+}));
 
 export interface PaginationFooterProps {
   /** Whether there are more items to load */
@@ -26,8 +30,6 @@ export const PaginationFooter: React.FC<PaginationFooterProps> = ({
   skeletonCount = 3,
   SkeletonComponent,
 }) => {
-  const { theme } = useUnistyles();
-
   if (!hasMore || itemCount <= 0) {
     return null;
   }
@@ -44,7 +46,7 @@ export const PaginationFooter: React.FC<PaginationFooterProps> = ({
 
   return (
     <View style={styles.footerLoader}>
-      <ActivityIndicator size="small" color={theme.colors.primary} />
+      <ThemedActivityIndicator size="small" />
     </View>
   );
 };

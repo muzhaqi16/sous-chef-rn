@@ -10,7 +10,7 @@ import {
   Dimensions,
   TextInput,
 } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import {
   Camera,
   useCameraDevices,
@@ -26,6 +26,15 @@ import { useHiddenStatusBar } from '#hooks/useHiddenStatusBar';
 import { Button } from '#components/base/Button';
 import { IconButton } from '#components/atoms/IconButton';
 import BarcodeMask from '#components/organisms/BarcodeMask';
+
+const ThemedBarcodeMask = withUnistyles(BarcodeMask, theme => ({
+  edgeColor: theme.colors.primary,
+  backgroundColor: theme.colors.overlay,
+}));
+
+const ThemedTextInput = withUnistyles(TextInput, theme => ({
+  placeholderTextColor: theme.colors.textTertiary,
+}));
 import { HapticService } from '#services/haptic/HapticService';
 import { Telemetry } from '#services/telemetry';
 import { executeQuery } from '#/utils/compilerSafeWrappers';
@@ -58,8 +67,6 @@ export const IdentifyItemScreen: React.FC<
 > = ({ route }) => {
   const { goBack, navigation, navigateTo } = useAppNavigation();
   const { source, pantryId, shoppingListId } = route?.params || {};
-
-  const { theme } = useUnistyles();
 
   const devices = useCameraDevices();
   const device = devices.find(d => d.position === 'back');
@@ -239,11 +246,9 @@ export const IdentifyItemScreen: React.FC<
             isActive={isActive}
             outputs={[photoOutput]}
           />
-          <BarcodeMask
+          <ThemedBarcodeMask
             width={FRAME_WIDTH}
             height={FRAME_HEIGHT}
-            edgeColor={theme.colors.primary}
-            backgroundColor={theme.colors.overlay}
             showAnimatedLine={false}
           />
         </>
@@ -420,14 +425,12 @@ const PickerInput: React.FC<PickerInputProps> = ({
   onChangeText,
   placeholder,
 }) => {
-  const { theme } = useUnistyles();
   return (
     <View style={styles.pickerInputRow}>
-      <TextInput
+      <ThemedTextInput
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor={theme.colors.textTertiary}
         style={styles.pickerInput}
         autoCapitalize="words"
         autoCorrect={false}

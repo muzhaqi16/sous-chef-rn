@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Pressable } from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
 import { alertService } from '#/services/alertService';
-import { Ionicons } from '@react-native-vector-icons/ionicons';
+import { Icon } from '#utils/iconUtils';
 import { RatingBreakdown } from './RatingBreakdown';
 import { ReviewCard } from './ReviewCard';
 import { WriteReviewSheet } from './WriteReviewSheet';
@@ -52,7 +52,6 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
   hasVotedHelpful,
   submitting,
 }) => {
-  const { theme } = useUnistyles();
   const [sheetVisible, setSheetVisible] = useState(false);
 
   // Other reviews (excluding user's own)
@@ -131,11 +130,7 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
             pressed && styles.pressed,
           ]}
         >
-          <Ionicons
-            name="create-outline"
-            size={18}
-            color={theme.colors.primary}
-          />
+          <Icon name="create-outline" size={18} tone="primary" />
           <Text size="sm" weight="semibold" tone="accent">
             Write a Review
           </Text>

@@ -6,7 +6,7 @@ import {
   RefreshControl,
   ScrollView,
 } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import Animated, {
   LinearTransition,
   FadeInDown,
@@ -16,7 +16,16 @@ import { TIMING } from '#constants/animations';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Header } from '#components/molecules/Header';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+
+const PrimaryActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
+  color: theme.colors.primary,
+}));
+
+const ThemedRefreshControl = withUnistyles(RefreshControl, theme => ({
+  tintColor: theme.colors.primary,
+  colors: [theme.colors.primary],
+}));
 import { useHomeManagement } from '#hooks/home/hooks/useHomeManagement';
 import { useInviteUserModal } from '#/hooks/useInviteUserModal';
 import { BaseInput } from '#/components/atoms/BaseInput/BaseInput';
@@ -42,7 +51,6 @@ export const HomeManagement: React.FC = () => {
   useScreenTransition('HomeManagement');
   const { goBack, navigate } = useAppNavigation();
   const insets = useSafeAreaInsets();
-  const { theme } = useUnistyles();
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [mode, setMode] = useState<'create' | 'join'>('create');
@@ -314,9 +322,8 @@ export const HomeManagement: React.FC = () => {
 
                 {/* Preview - only shows when code is validated */}
                 {!!loadingPreview && (
-                  <ActivityIndicator
+                  <PrimaryActivityIndicator
                     size="small"
-                    color={theme.colors.primary}
                     style={styles.previewLoader}
                   />
                 )}
@@ -363,11 +370,9 @@ export const HomeManagement: React.FC = () => {
             keyboardDismissMode="on-drag"
             contentContainerStyle={{ flexGrow: 1 }}
             refreshControl={
-              <RefreshControl
+              <ThemedRefreshControl
                 refreshing={refreshing}
                 onRefresh={handleRefresh}
-                tintColor={theme.colors.primary}
-                colors={[theme.colors.primary]}
               />
             }
           >

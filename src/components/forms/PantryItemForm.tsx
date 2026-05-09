@@ -11,7 +11,11 @@ import { alertService } from '#/services/alertService';
 import { useForm, useWatch, Controller, type Resolver } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { object, string } from 'yup';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+
+const PrimaryActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
+  color: theme.colors.primary,
+}));
 import { useNavigation } from '@react-navigation/native';
 import { commonStyles } from '#/styles/commonStyles';
 import { useSelectedPantryId, useSelectedHomeId } from '#store/useAppStore';
@@ -144,7 +148,6 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   itemId,
   onSuccess,
 }) => {
-  const { theme } = useUnistyles();
   const { goBack } = useNavigation();
 
   // Consolidated unit state using UnitSelection type
@@ -555,7 +558,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   if (mode === 'edit' && itemLoading) {
     return (
       <View style={[commonStyles.container, commonStyles.center]}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <PrimaryActivityIndicator size="large" />
       </View>
     );
   }

@@ -6,13 +6,10 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import {
-  Gesture,
-  GestureDetector,
-  Pressable,
-} from 'react-native-gesture-handler';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import { scheduleOnRN } from 'react-native-worklets';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { ToastContext } from '../../hooks/useToast';
@@ -37,6 +34,11 @@ const TOAST_ICONS: Partial<Record<ToastType, string>> = {
   info: 'information-circle-outline',
 };
 
+// Theme-reactive Ionicons. uniProps captures the runtime `type` from the
+// surrounding closure (per-render mapper) and resolves the matching alert
+// banner color, falling back to textInverse.
+const ThemedToastIcon = withUnistyles(Ionicons);
+
 type ToastQueueState = {
   current: ToastOptions | null;
   queue: ToastOptions[];
@@ -49,7 +51,6 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
   const insets = useSafeAreaInsets();
-  const { theme } = useUnistyles();
 
   // Updater pattern lets two synchronous showToast() calls coordinate — the
   // second updater sees the first's result, no need for refs.
@@ -173,11 +174,6 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
   const type = current?.type ?? 'default';
   const iconName = TOAST_ICONS[type];
   styles.useVariants({ type: type === 'default' ? undefined : type });
-  const toastIconColor =
-    type !== 'default' && type in theme.colors.alertBanner
-      ? theme.colors.alertBanner[type as keyof typeof theme.colors.alertBanner]
-          .text
-      : theme.colors.textInverse;
 
   return (
     <ToastContext.Provider value={showToast}>
@@ -189,11 +185,18 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
           style={[styles.toastContainer, animatedStyle]}
         >
           {iconName ? (
-            <Ionicons
+            <ThemedToastIcon
               name={iconName as any}
               size={18}
-              color={toastIconColor}
               style={styles.icon}
+              uniProps={t => ({
+                color:
+                  type !== 'default' && type in t.colors.alertBanner
+                    ? t.colors.alertBanner[
+                        type as keyof typeof t.colors.alertBanner
+                      ].text
+                    : t.colors.textInverse,
+              })}
             />
           ) : null}
           <Text

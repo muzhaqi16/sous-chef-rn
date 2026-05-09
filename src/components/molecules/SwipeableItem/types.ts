@@ -38,7 +38,8 @@ export interface SwipeableItemProps {
 export interface ActionButtonProps {
   onPress: () => void;
   icon: React.ComponentProps<typeof Icon>['name'];
-  backgroundColor: string;
+  /** @deprecated The button is rendered as an outlined circle; backgroundColor is ignored. */
+  backgroundColor?: string;
   label?: string;
   circular?: boolean;
   library?: string;

@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
 import { View, TextInput } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import { Icon } from '#utils/iconUtils';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { Label } from '#components/atoms/Label';
+
+const ThemedTextInput = withUnistyles(TextInput, theme => ({
+  placeholderTextColor: theme.colors.textSecondary,
+}));
 
 interface EditableCounterProps {
   label?: string;
@@ -43,8 +47,9 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
   required = false,
   testID,
 }) => {
-  const { theme } = useUnistyles();
   const [isFocused, setIsFocused] = useState(false);
+
+  styles.useVariants({ focused: isFocused, disabled });
 
   const handleIncrement = (e: any) => {
     e?.stopPropagation?.();
@@ -66,11 +71,7 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
     <View style={styles.wrapper}>
       {label ? <Label required={required}>{label}</Label> : null}
       <View
-        style={[
-          styles.container,
-          isFocused && styles.containerFocused,
-          disabled && styles.containerDisabled,
-        ]}
+        style={styles.container}
         accessible
         accessibilityRole="adjustable"
         accessibilityLabel={`${label || 'Quantity'}, ${value}`}
@@ -110,20 +111,19 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
         >
           <Icon
             name="remove-outline"
-            size={theme.fonts.size.md}
+            size={16}
             tone={disabled ? 'iconDisabled' : 'white'}
           />
         </Pressable>
 
         {/* Editable Number Input */}
-        <TextInput
-          style={[styles.input, disabled && styles.inputDisabled]}
+        <ThemedTextInput
+          style={styles.input}
           value={value}
           onChangeText={onChangeText}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           placeholder={placeholder}
-          placeholderTextColor={theme.colors.textSecondary}
           keyboardType="numbers-and-punctuation"
           editable={!disabled}
           selectTextOnFocus
@@ -150,7 +150,7 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
         >
           <Icon
             name="add"
-            size={theme.fonts.size.md}
+            size={16}
             tone={disabled ? 'iconDisabled' : 'white'}
           />
         </Pressable>
@@ -173,13 +173,19 @@ const styles = StyleSheet.create(theme => ({
     borderStyle: 'solid',
     borderRadius: theme.radii.md,
     paddingHorizontal: theme.spacing.xs,
-  },
-  containerFocused: {
-    borderColor: theme.colors.primary,
-    borderWidth: 2,
-  },
-  containerDisabled: {
-    borderColor: theme.colors.border,
+    variants: {
+      focused: {
+        true: {
+          borderColor: theme.colors.primary,
+          borderWidth: 2,
+        },
+      },
+      disabled: {
+        true: {
+          borderColor: theme.colors.border,
+        },
+      },
+    },
   },
   button: {
     zIndex: 9,
@@ -200,8 +206,10 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
-  },
-  inputDisabled: {
-    color: theme.colors.iconDisabled,
+    variants: {
+      disabled: {
+        true: { color: theme.colors.iconDisabled },
+      },
+    },
   },
 }));

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Switch, ScrollView } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { View, ScrollView } from 'react-native';
+import { Pressable } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import { Icon } from '#/utils/iconUtils';
 import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { BaseSwitch } from '#components/base/BaseSwitch';
+import { StyleSheet } from 'react-native-unistyles';
 import { commonStyles } from '#/styles/commonStyles';
 import { ScreenHeader } from '#components/molecules/ScreenHeader';
 import { LoadingInline } from '#components/base/Loading';
@@ -191,7 +192,6 @@ export const PantrySettings: React.FC<
   >
 > = ({ route }) => {
   const { goBack } = useAppNavigation();
-  const { theme } = useUnistyles();
   const pantryId = route.params?.pantryId;
 
   const selectedHomeId = useSelectedHomeId();
@@ -442,11 +442,7 @@ export const PantrySettings: React.FC<
                 Make this your default pantry for this home
               </Text>
             </View>
-            <Switch
-              value={isDefault}
-              onValueChange={handleToggleDefault}
-              trackColor={{ true: theme.colors.primary }}
-            />
+            <BaseSwitch value={isDefault} onValueChange={handleToggleDefault} />
           </View>
         </View>
 

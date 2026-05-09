@@ -1,7 +1,6 @@
 import React from 'react';
 import Animated from 'react-native-reanimated';
 import { AnimatedActionButton } from './AnimatedActionButton';
-import { useUnistyles } from 'react-native-unistyles';
 import { HapticService } from '#/services/haptic/HapticService';
 import { styles } from './styles';
 import { SwipeActionsProps } from './types';
@@ -21,8 +20,6 @@ const RightActionsComponent: React.FC<SwipeActionsProps> = ({
   progress,
   swipeMode,
 }) => {
-  const { theme } = useUnistyles();
-
   // Shopping mode: Only show delete on right (edit is on left swipe)
   if (swipeMode === 'shopping') {
     if (!onDelete) return null;
@@ -40,7 +37,6 @@ const RightActionsComponent: React.FC<SwipeActionsProps> = ({
         <AnimatedActionButton
           onPress={handleDeletePress}
           icon="trash-outline"
-          backgroundColor={theme.colors.danger}
           circular={true}
           testID={testIDPrefix ? `${testIDPrefix}-delete` : undefined}
           progress={progress}
@@ -79,7 +75,6 @@ const RightActionsComponent: React.FC<SwipeActionsProps> = ({
         <AnimatedActionButton
           onPress={handleEditPress}
           icon="create-outline"
-          backgroundColor={theme.colors.info}
           circular={true}
           testID={testIDPrefix ? `${testIDPrefix}-edit` : undefined}
           progress={progress}
@@ -90,7 +85,6 @@ const RightActionsComponent: React.FC<SwipeActionsProps> = ({
         <AnimatedActionButton
           onPress={handleDeletePress}
           icon="trash-outline"
-          backgroundColor={theme.colors.danger}
           circular={true}
           testID={testIDPrefix ? `${testIDPrefix}-delete` : undefined}
           progress={progress}
