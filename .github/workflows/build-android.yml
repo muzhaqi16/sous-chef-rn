@@ -131,8 +131,8 @@ jobs:
           rm -rf "$TMPDIR/metro-"* "$TMPDIR/haste-map-"* /tmp/metro-* /tmp/haste-map-*
           echo "Cleared Metro caches"
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Install dependencies and generate GraphQL types
+        uses: ./.github/actions/setup-deps
 
       - name: Setup Play Store keystore
         if: env.IS_PLAYSTORE == 'true'
@@ -396,8 +396,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Install dependencies and generate GraphQL types
+        uses: ./.github/actions/setup-deps
 
       - name: Setup Play Store keystore
         if: env.IS_PLAYSTORE == 'true'
