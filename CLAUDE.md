@@ -211,7 +211,14 @@ and bypasses the real cache, missing the very integration bugs tests should catc
 
 ```ts
 // ✅ Correct — schema-backed cache, type-safe mocks
-import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+//
+// Import `MockedResponse` from the helper, NOT from '@apollo/client/testing'
+// (the flat import there is deprecated; the helper re-exports the canonical
+// MockLink.MockedResponse type).
+import {
+  renderHookWithApollo,
+  type MockedResponse,
+} from '#/test-utils/apolloMockProvider';
 
 const operationMocks: MockedResponse[] = [
   { request: { query: GetItemDoc, variables: { id: '1' } },

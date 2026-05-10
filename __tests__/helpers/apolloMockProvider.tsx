@@ -8,7 +8,15 @@ import {
 import { InMemoryCache } from '@apollo/client';
 import { SchemaLink } from '@apollo/client/link/schema';
 import { MockedProvider } from '@apollo/client/testing/react';
-import type { MockedResponse } from '@apollo/client/testing';
+import { MockLink } from '@apollo/client/testing';
+// Re-export the non-deprecated mocked-response type so consumers can write
+// `MockedResponse[]` without reaching into the `MockLink` namespace. The
+// flat `MockedResponse` import from `@apollo/client/testing` is deprecated
+// in Apollo Client 4.x.
+export type MockedResponse<
+  TData = Record<string, unknown>,
+  TVariables extends Record<string, unknown> = Record<string, unknown>,
+> = MockLink.MockedResponse<TData, TVariables>;
 import { makeExecutableSchema } from '@graphql-tools/schema';
 import {
   addMocksToSchema,

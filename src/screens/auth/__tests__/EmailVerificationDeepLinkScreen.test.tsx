@@ -1,6 +1,6 @@
 import React from 'react';
 import { screen, fireEvent, waitFor } from '@testing-library/react-native';
-import type { MockedResponse } from '@apollo/client/testing';
+import type { MockedResponse } from '#/test-utils/apolloMockProvider';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { VerifyEmailDocument } from '#operations/auth/auth.generated';
 import { EmailVerificationDeepLinkScreen } from '../EmailVerificationDeepLinkScreen';

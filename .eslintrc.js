@@ -24,15 +24,21 @@ module.exports = {
   overrides: [
     {
       // Apply to TypeScript source files only (not test files or config files)
-      // These files must be included in tsconfig.json for type-checked rules
-      files: ['src/**/*.ts', 'src/**/*.tsx', 'App.tsx'],
-      excludedFiles: ['**/*.test.ts', '**/*.test.tsx'],
+      // These files must be included in tsconfig.json for type-checked rules.
+      // Tests are intentionally INCLUDED so deprecation warnings catch e.g.
+      // `MockedResponse from @apollo/client/testing` (deprecated; use
+      // `MockedResponse` re-exported from `__tests__/helpers/apolloMockProvider`).
+      files: [
+        'src/**/*.ts',
+        'src/**/*.tsx',
+        'App.tsx',
+        '__tests__/**/*.ts',
+        '__tests__/**/*.tsx',
+      ],
       parserOptions: {
         project: './tsconfig.json',
       },
       rules: {
-        // Warn on deprecated API usage (runOnJS, etc.)
-        // Requires type information - only works on TS files in tsconfig
         '@typescript-eslint/no-deprecated': 'warn',
       },
     },

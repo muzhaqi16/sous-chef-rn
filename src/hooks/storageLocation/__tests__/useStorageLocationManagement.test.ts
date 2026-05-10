@@ -5,7 +5,7 @@
 (globalThis as any).cancelIdleCallback = (id: number) => clearTimeout(id);
 
 import { act, waitFor } from '@testing-library/react-native';
-import type { MockedResponse } from '@apollo/client/testing';
+import type { MockedResponse } from '#/test-utils/apolloMockProvider';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import {
   GetStorageLocationsDocument,

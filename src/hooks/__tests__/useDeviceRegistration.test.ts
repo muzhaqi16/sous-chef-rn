@@ -1,5 +1,5 @@
 import { act } from '@testing-library/react-native';
-import type { MockedResponse } from '@apollo/client/testing';
+import type { MockedResponse } from '#/test-utils/apolloMockProvider';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { RegisterDeviceDocument } from '#operations/auth/device.generated';
 import { useDeviceRegistration } from '../useDeviceRegistration';

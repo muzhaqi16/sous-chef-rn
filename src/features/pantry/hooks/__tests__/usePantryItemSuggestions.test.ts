@@ -1,7 +1,7 @@
 import React, { type ReactNode } from 'react';
 import { renderHook, waitFor } from '@testing-library/react-native';
 import { MockedProvider } from '@apollo/client/testing/react';
-import type { MockedResponse } from '@apollo/client/testing';
+import type { MockedResponse } from '#/test-utils/apolloMockProvider';
 import { GetPantryItemSuggestionsDocument } from '#features/pantry/graphql/pantry.generated';
 import { PantrySuggestionSource } from '#/graphql/generated/schemaTypes';
 import { usePantryItemSuggestions } from '../usePantryItemSuggestions';

@@ -1,5 +1,5 @@
 import { act, waitFor } from '@testing-library/react-native';
-import type { MockedResponse } from '@apollo/client/testing';
+import type { MockedResponse } from '#/test-utils/apolloMockProvider';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { GetRecipeReviewsDocument } from '#features/recipes/graphql/recipe.generated';
 import {

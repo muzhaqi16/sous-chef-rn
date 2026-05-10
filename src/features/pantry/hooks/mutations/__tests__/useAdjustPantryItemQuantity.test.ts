@@ -1,5 +1,5 @@
 import { renderHook, act, waitFor } from '@testing-library/react-native';
-import type { MockedResponse } from '@apollo/client/testing';
+import type { MockedResponse } from '#/test-utils/apolloMockProvider';
 import { alertService } from '#/services/alertService';
 import { AdjustPantryItemQuantityDocument } from '#features/pantry/graphql/pantry.generated';
 import { createApolloWrapper } from '#/test-utils/apolloMockProvider';

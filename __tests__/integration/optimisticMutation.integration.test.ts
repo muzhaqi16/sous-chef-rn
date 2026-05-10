@@ -35,7 +35,7 @@ import type { ReactNode } from 'react';
 import React from 'react';
 import { ApolloClient, InMemoryCache } from '@apollo/client';
 import { ApolloProvider } from '@apollo/client/react';
-import type { MockedResponse } from '@apollo/client/testing';
+import type { MockedResponse } from '#/test-utils/apolloMockProvider';
 import { MockLink } from '@apollo/client/testing';
 import {
   ToggleShoppingListItemPurchasedDocument,

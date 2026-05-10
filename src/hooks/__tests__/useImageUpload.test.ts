@@ -1,7 +1,7 @@
 'use no memo';
 
 import { act } from '@testing-library/react-native';
-import type { MockedResponse } from '@apollo/client/testing';
+import type { MockedResponse } from '#/test-utils/apolloMockProvider';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { UpdateUserProfileDocument } from '#operations/auth/user.generated';
 import { UpdateItemImageDocument } from '#operations/image/imageUpload.generated';

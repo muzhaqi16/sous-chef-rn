@@ -1,5 +1,5 @@
 import { waitFor } from '@testing-library/react-native';
-import type { MockedResponse } from '@apollo/client/testing';
+import type { MockedResponse } from '#/test-utils/apolloMockProvider';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { GetShoppingListDetailsDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';

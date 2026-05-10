@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { fireEvent, waitFor } from '@testing-library/react-native';
-import type { MockedResponse } from '@apollo/client/testing';
+import type { MockedResponse } from '#/test-utils/apolloMockProvider';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import {
   GetHomesDocument,
