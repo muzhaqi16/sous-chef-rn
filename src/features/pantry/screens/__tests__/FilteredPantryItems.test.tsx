@@ -1,7 +1,8 @@
 'use no memo';
 
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { screen } from '@testing-library/react-native';
+import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { FilteredPantryItems } from '../FilteredPantryItems';
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -105,16 +106,6 @@ jest.mock('#hooks/home/pantry/usePantryManagement', () => ({
   }),
 }));
 
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useMutation: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'AddItemToShoppingList')
-      return [jest.fn(), { loading: false }];
-    return [jest.fn(), {}];
-  }),
-}));
-
 jest.mock('#components/molecules/Header', () => ({
   Header: ({ title, rightActions }: any) => {
     const { View, Text } = require('react-native');
@@ -162,30 +153,30 @@ describe('FilteredPantryItems', () => {
 
   describe('lowStock mode', () => {
     it('renders the title', () => {
-      render(<FilteredPantryItems route={makeRoute('lowStock')} />);
+      renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
       expect(screen.getByText('Low Stock Items')).toBeTruthy();
     });
 
     it('shows add-all button in header', () => {
-      render(<FilteredPantryItems route={makeRoute('lowStock')} />);
+      renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
       expect(screen.getByTestId('add-all-low-stock')).toBeTruthy();
     });
 
     it('renders low stock item names', () => {
-      render(<FilteredPantryItems route={makeRoute('lowStock')} />);
+      renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
       expect(screen.getByText('Eggs')).toBeTruthy();
       expect(screen.getByText('Butter')).toBeTruthy();
     });
 
     it('shows remaining quantities', () => {
-      render(<FilteredPantryItems route={makeRoute('lowStock')} />);
+      renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
       expect(screen.getByText('2 pcs remaining')).toBeTruthy();
       expect(screen.getByText('1 stk remaining')).toBeTruthy();
     });
 
     it('shows empty state when all items are stocked', () => {
       mockAllItems = [];
-      render(<FilteredPantryItems route={makeRoute('lowStock')} />);
+      renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
       expect(
         screen.getByText('All items are above minimum stock levels'),
       ).toBeTruthy();
@@ -194,12 +185,12 @@ describe('FilteredPantryItems', () => {
     it('renders without crashing during loading', () => {
       mockLoading = true;
       mockAllItems = null;
-      render(<FilteredPantryItems route={makeRoute('lowStock')} />);
+      renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
       expect(screen.getByText('Low Stock Items')).toBeTruthy();
     });
 
     it('defaults to lowStock mode when no params', () => {
-      render(<FilteredPantryItems route={makeRoute()} />);
+      renderWithApollo(<FilteredPantryItems route={makeRoute()} />);
       expect(screen.getByText('Low Stock Items')).toBeTruthy();
     });
   });
@@ -210,29 +201,29 @@ describe('FilteredPantryItems', () => {
     });
 
     it('renders the title', () => {
-      render(<FilteredPantryItems route={makeRoute('expiring')} />);
+      renderWithApollo(<FilteredPantryItems route={makeRoute('expiring')} />);
       expect(screen.getByText('Expiring Items')).toBeTruthy();
     });
 
     it('does not show add-all button in header', () => {
-      render(<FilteredPantryItems route={makeRoute('expiring')} />);
+      renderWithApollo(<FilteredPantryItems route={makeRoute('expiring')} />);
       expect(screen.queryByTestId('add-all-low-stock')).toBeNull();
     });
 
     it('renders expiring item names', () => {
-      render(<FilteredPantryItems route={makeRoute('expiring')} />);
+      renderWithApollo(<FilteredPantryItems route={makeRoute('expiring')} />);
       expect(screen.getByText('Milk')).toBeTruthy();
       expect(screen.getByText('Yogurt')).toBeTruthy();
     });
 
     it('shows expiry subtitle', () => {
-      render(<FilteredPantryItems route={makeRoute('expiring')} />);
+      renderWithApollo(<FilteredPantryItems route={makeRoute('expiring')} />);
       expect(screen.getByText('Expires tomorrow')).toBeTruthy();
     });
 
     it('shows empty state when no items are expiring', () => {
       mockAllItems = [];
-      render(<FilteredPantryItems route={makeRoute('expiring')} />);
+      renderWithApollo(<FilteredPantryItems route={makeRoute('expiring')} />);
       expect(screen.getByText('No items are expiring soon')).toBeTruthy();
     });
   });
