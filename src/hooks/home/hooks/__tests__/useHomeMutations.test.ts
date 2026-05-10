@@ -1,24 +1,14 @@
-import { renderHook, act } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
+import {
+  recordMock,
+  renderHookWithApollo,
+} from '#/test-utils/apolloMockProvider';
+import {
+  CreateHomeDocument,
+  UpdateHomeDocument,
+} from '#operations/home/home.generated';
 import { alertService } from '#/services/alertService';
 import { useHomeMutations } from '../useHomeMutations';
-
-const mockCreateHomeMutation = jest.fn();
-const mockUpdateHomeMutation = jest.fn();
-const mockDeleteHomeMutation = jest.fn();
-
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useMutation: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'CreateHome')
-      return [mockCreateHomeMutation, { loading: false }];
-    if (opName === 'UpdateHome')
-      return [mockUpdateHomeMutation, { loading: false }];
-    if (opName === 'DeleteHome')
-      return [mockDeleteHomeMutation, { loading: false }];
-    return [jest.fn(), {}];
-  }),
-}));
 
 const mockStoreState = {
   selectedHomeId: 'home-1' as string | null,
@@ -53,15 +43,11 @@ jest.mock('#/utils/connectionUtils', () => ({
   normalizeHome: jest.fn((home: any) => home),
 }));
 
-// mockCreateAddOperation and mockCreateRemoveOperation capture config for assertions
 const mockCreateAddOperation = jest.fn((config: any) => {
   return async (input: any) => {
-    const {
-      alertService: mockAlertService,
-    } = require('#/services/alertService');
     const validation = config.validateInput?.(input);
     if (typeof validation === 'string') {
-      mockAlertService.alert('Validation Error', validation);
+      alertService.alert('Validation Error', validation);
       return false;
     }
     const transformedInput = config.transformInput
@@ -80,11 +66,8 @@ const mockCreateAddOperation = jest.fn((config: any) => {
 
 const mockCreateRemoveOperation = jest.fn((config: any) => {
   return async () => {
-    const {
-      alertService: mockAlertService,
-    } = require('#/services/alertService');
     return new Promise(resolve => {
-      mockAlertService.alert(config.operationName, 'Confirm?', [
+      alertService.alert(config.operationName, 'Confirm?', [
         { text: 'Cancel', onPress: () => resolve(false) },
         {
           text: 'Delete',
@@ -137,9 +120,41 @@ beforeEach(() => {
   mockStoreState.selectedHomeId = 'home-1';
 });
 
+function createHomeMock(home: { id: string; name: string }) {
+  return recordMock(CreateHomeDocument, {
+    data: {
+      createHome: {
+        __typename: 'CreateHomePayload',
+        success: true,
+        message: '',
+        code: 'SUCCESS',
+        home: { __typename: 'Home', id: home.id, name: home.name },
+      },
+    },
+  });
+}
+
+function updateHomeMock(home: { id: string; name?: string } | null) {
+  return recordMock(UpdateHomeDocument, {
+    data: {
+      updateHome: {
+        __typename: 'UpdateHomePayload',
+        success: home != null,
+        message: '',
+        code: home != null ? 'SUCCESS' : 'NOT_FOUND',
+        home: home
+          ? { __typename: 'Home', id: home.id, name: home.name ?? null }
+          : null,
+      },
+    },
+  });
+}
+
 describe('useHomeMutations', () => {
   it('returns mutation functions and loading states', () => {
-    const { result } = renderHook(() => useHomeMutations(createOptions()));
+    const { result } = renderHookWithApollo(() =>
+      useHomeMutations(createOptions()),
+    );
 
     expect(typeof result.current.createHome).toBe('function');
     expect(typeof result.current.updateHome).toBe('function');
@@ -151,37 +166,31 @@ describe('useHomeMutations', () => {
 
   describe('createHome', () => {
     it('creates home with string name', async () => {
-      mockCreateHomeMutation.mockResolvedValue({
-        data: {
-          createHome: {
-            home: { id: 'new-home', name: 'My Home', pantries: [] },
-          },
-        },
-      });
-
-      const { result } = renderHook(() => useHomeMutations(createOptions()));
+      const m = createHomeMock({ id: 'new-home', name: 'My Home' });
+      const { result } = renderHookWithApollo(
+        () => useHomeMutations(createOptions()),
+        { operationMocks: [m.mock] },
+      );
 
       await act(async () => {
         await result.current.createHome('My Home');
       });
 
-      expect(mockCreateHomeMutation).toHaveBeenCalledWith({
-        variables: {
-          input: {
-            name: 'My Home',
-            createDefaultPantry: true,
-            allowJoinCode: true,
-          },
+      expect(m.fired).toContainEqual({
+        input: {
+          name: 'My Home',
+          createDefaultPantry: true,
+          allowJoinCode: true,
         },
       });
     });
 
     it('creates home with options object', async () => {
-      mockCreateHomeMutation.mockResolvedValue({
-        data: { createHome: { home: { id: 'new-home', name: 'Test' } } },
-      });
-
-      const { result } = renderHook(() => useHomeMutations(createOptions()));
+      const m = createHomeMock({ id: 'new-home', name: 'Test' });
+      const { result } = renderHookWithApollo(
+        () => useHomeMutations(createOptions()),
+        { operationMocks: [m.mock] },
+      );
 
       await act(async () => {
         await result.current.createHome({
@@ -191,19 +200,19 @@ describe('useHomeMutations', () => {
         });
       });
 
-      expect(mockCreateHomeMutation).toHaveBeenCalledWith({
-        variables: {
-          input: {
-            name: 'Test',
-            createDefaultPantry: false,
-            allowJoinCode: false,
-          },
+      expect(m.fired).toContainEqual({
+        input: {
+          name: 'Test',
+          createDefaultPantry: false,
+          allowJoinCode: false,
         },
       });
     });
 
     it('shows validation error for empty name', async () => {
-      const { result } = renderHook(() => useHomeMutations(createOptions()));
+      const { result } = renderHookWithApollo(() =>
+        useHomeMutations(createOptions()),
+      );
 
       let returnValue: any;
       await act(async () => {
@@ -220,30 +229,25 @@ describe('useHomeMutations', () => {
 
   describe('updateHome', () => {
     it('updates home name', async () => {
-      mockUpdateHomeMutation.mockResolvedValue({
-        data: {
-          updateHome: { home: { id: 'home-1', name: 'Updated Name' } },
-        },
-      });
-
-      const { result } = renderHook(() => useHomeMutations(createOptions()));
+      const m = updateHomeMock({ id: 'home-1', name: 'Updated Name' });
+      const { result } = renderHookWithApollo(
+        () => useHomeMutations(createOptions()),
+        { operationMocks: [m.mock] },
+      );
 
       await act(async () => {
         await result.current.updateHome('home-1', { name: 'Updated Name' });
       });
 
-      expect(mockUpdateHomeMutation).toHaveBeenCalledWith({
-        variables: {
-          id: 'home-1',
-          input: { name: 'Updated Name' },
-        },
+      expect(m.fired).toContainEqual({
+        id: 'home-1',
+        input: { name: 'Updated Name' },
       });
     });
 
     it('handles isDefault update by calling setDefaultHome', async () => {
       const options = createOptions();
-
-      const { result } = renderHook(() => useHomeMutations(options));
+      const { result } = renderHookWithApollo(() => useHomeMutations(options));
 
       await act(async () => {
         await result.current.updateHome('home-2', { isDefault: true });
@@ -252,28 +256,12 @@ describe('useHomeMutations', () => {
       expect(options.setDefaultHome).toHaveBeenCalledWith('home-2');
     });
 
-    it('returns true when only isDefault changes and no other updates', async () => {
-      const options = createOptions();
-
-      const { result } = renderHook(() => useHomeMutations(options));
-
-      let returnValue: any;
-      await act(async () => {
-        returnValue = await result.current.updateHome('home-1', {
-          isDefault: true,
-        });
-      });
-
-      expect(returnValue).toBe(true);
-      expect(mockUpdateHomeMutation).not.toHaveBeenCalled();
-    });
-
     it('returns false on mutation failure', async () => {
-      mockUpdateHomeMutation.mockResolvedValue({
-        data: { updateHome: { home: null } },
-      });
-
-      const { result } = renderHook(() => useHomeMutations(createOptions()));
+      const m = updateHomeMock(null);
+      const { result } = renderHookWithApollo(
+        () => useHomeMutations(createOptions()),
+        { operationMocks: [m.mock] },
+      );
 
       let returnValue: any;
       await act(async () => {
@@ -284,13 +272,32 @@ describe('useHomeMutations', () => {
 
       expect(returnValue).toBe(false);
     });
+
+    it('returns true when only isDefault changes and no other updates', async () => {
+      const options = createOptions();
+      const m = updateHomeMock({ id: 'home-1' });
+      const { result } = renderHookWithApollo(() => useHomeMutations(options), {
+        operationMocks: [m.mock],
+      });
+
+      let returnValue: any;
+      await act(async () => {
+        returnValue = await result.current.updateHome('home-1', {
+          isDefault: true,
+        });
+      });
+
+      expect(returnValue).toBe(true);
+      expect(m.fired).toEqual([]);
+    });
   });
 
   describe('deleteHome', () => {
     it('calls deleteHomeMutation with confirmation dialog', async () => {
-      const { result } = renderHook(() => useHomeMutations(createOptions()));
+      const { result } = renderHookWithApollo(() =>
+        useHomeMutations(createOptions()),
+      );
 
-      // This triggers alertService.alert with confirmation
       act(() => {
         result.current.deleteHome('home-2', 'Home 2');
       });
