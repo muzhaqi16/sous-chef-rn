@@ -44,16 +44,6 @@ jest.mock('#components/atoms/GlobalBottomSheetBackdrop', () => ({
   GlobalBottomSheetBackdrop: () => null,
 }));
 
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useMutation: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'UpdateCollaboratorRole')
-      return [jest.fn(), { loading: false }];
-    return [jest.fn(), {}];
-  }),
-}));
-
 jest.mock('#/utils/compilerSafeWrappers');
 
 describe('CollaboratorPermissionsBottomSheet', () => {

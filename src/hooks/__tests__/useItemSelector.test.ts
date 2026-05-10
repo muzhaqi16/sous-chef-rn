@@ -2,34 +2,7 @@ import { renderHook, act } from '@testing-library/react-native';
 import { createApolloTestWrapper } from '#/test-utils/apolloMockProvider';
 import { useItemSelector } from '../useItemSelector';
 
-// All tests in this file use type: 'custom', so every GraphQL query is skipped.
-// The MockedProvider wrapper supplies the Apollo client context so useQuery
-// hooks don't throw "no client" errors even though they never fire a request.
 const wrapper = createApolloTestWrapper();
-
-// Legacy non-pantry hooks (shopping list, home) still come through #generated
-// during incremental migration. Their queries are skipped by type:'custom' too.
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useQuery: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'GetShoppingListsLite')
-      return {
-        data: undefined,
-        loading: false,
-        error: undefined,
-        refetch: jest.fn(),
-      };
-    if (opName === 'GetHomes')
-      return {
-        data: undefined,
-        loading: false,
-        error: undefined,
-        refetch: jest.fn(),
-      };
-    return { data: undefined, loading: false, error: undefined };
-  }),
-}));
 
 jest.mock('#hooks/apollo/usePreservedQueryData', () => ({
   usePreservedArrayData: <T>(data: T[] | undefined | null) => data ?? [],
