@@ -1,25 +1,17 @@
 import React from 'react';
-import { View, ActivityIndicator } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { View } from 'react-native';
+import {
+  Pressable,
+  PrimaryActivityIndicator,
+  ThemedBottomSheetTextInput,
+} from '#components/atoms/themedComponents';
 import { FlashList } from '@shopify/flash-list';
 import {
-  BottomSheetTextInput,
   BottomSheetView,
   useBottomSheetScrollableCreator,
 } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
-
-const PrimaryActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
-  color: theme.colors.primary,
-}));
-
-const ThemedBottomSheetTextInput = withUnistyles(
-  BottomSheetTextInput,
-  theme => ({
-    placeholderTextColor: theme.colors.textTertiary,
-  }),
-);
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 import { TemplateCard } from './TemplateCard';
@@ -146,7 +138,6 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
               style={styles.list}
               showsVerticalScrollIndicator={false}
               onEndReached={hasMore ? loadMore : undefined}
-              onEndReachedThreshold={0.5}
             />
           </TemplateBrowserProvider>
         )}

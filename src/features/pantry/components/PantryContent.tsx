@@ -15,7 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { getTabBarBottomPadding } from '#constants/layout';
 import { Icon } from '#utils/iconUtils';
-import { LocationFilter } from '#utils/pantryFilters';
+import { LocationFilter } from '#features/pantry/utils/pantryFilters';
 import { SearchBar } from '#components/molecules/SearchBar';
 import { FilterTabs } from '#components/molecules/FilterTabs/FilterTabs';
 import { PantryHeader } from './PantryHeader';
@@ -40,6 +40,7 @@ import {
   isStickyHeaderSentinel,
   STICKY_HEADER_INDICES,
   STICKY_HEADER_CONFIG,
+  FLASHLIST_DEFAULTS,
 } from '#utils/flashListDefaults';
 
 // Extracted modules
@@ -456,7 +457,10 @@ export const PantryContent = React.forwardRef<
                     )
                   }
                   onEndReached={onEndReached}
-                  onEndReachedThreshold={0.8}
+                  onEndReachedThreshold={
+                    FLASHLIST_DEFAULTS.analyticsHeavyFullScreen
+                      .onEndReachedThreshold
+                  }
                   onLoad={perfCallbacks.onLoad}
                   onViewableItemsChanged={perfCallbacks.onViewableItemsChanged}
                   maintainVisibleContentPosition={MVCP_DISABLED}

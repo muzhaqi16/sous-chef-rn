@@ -1,12 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, RefreshControl, ScrollView } from 'react-native';
 import {
-  View,
-  Text,
-  RefreshControl,
-  ActivityIndicator,
-  ScrollView,
-} from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+  Pressable,
+  PrimaryActivityIndicator,
+  WhiteActivityIndicator,
+} from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import { Icon } from '#utils/iconUtils';
 import { EmailInput } from '#components/atoms/EmailInput';
@@ -14,11 +12,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Header } from '#components/molecules/Header';
 import { LoadingInline } from '#components/base/Loading';
 import type { StaticScreenProps } from '@react-navigation/native';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
-
-const PrimaryActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
-  color: theme.colors.primary,
-}));
+import { StyleSheet } from 'react-native-unistyles';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { useMutation } from '@apollo/client/react';
 import {
@@ -484,7 +478,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
                     disabled={sharing}
                   >
                     {sharing ? (
-                      <ActivityIndicator size="small" color="white" />
+                      <WhiteActivityIndicator size="small" />
                     ) : (
                       <Icon name="send" size={20} tone="white" />
                     )}

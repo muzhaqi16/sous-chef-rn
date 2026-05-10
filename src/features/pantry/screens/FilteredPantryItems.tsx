@@ -1,17 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, RefreshControl } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { View } from 'react-native';
+import {
+  Pressable,
+  ThemedRefreshControl,
+} from '#components/atoms/themedComponents';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
 import { alertService } from '#/services/alertService';
 import { FlashList } from '@shopify/flash-list';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { differenceInCalendarDays } from 'date-fns';
-
-const ThemedRefreshControl = withUnistyles(RefreshControl, theme => ({
-  colors: [theme.colors.primary],
-  tintColor: theme.colors.primary,
-}));
 
 import { Icon } from '#utils/iconUtils';
 import { SwipeableItem } from '#components/molecules/SwipeableItem/SwipeableItem';

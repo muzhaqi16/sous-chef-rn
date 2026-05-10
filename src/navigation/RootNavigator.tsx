@@ -79,6 +79,7 @@ import {
   useIsMainApp,
 } from '#hooks/navigation/useNavigationGuards';
 import { navigationRef } from '#services/NavigationService';
+import { Telemetry } from '#services/telemetry';
 import { SousChefLoader } from '#/components/base/SousChefLoader';
 import { appConfig } from '#/config/appConfig';
 
@@ -291,6 +292,22 @@ export function Navigation() {
     setNavigationState('main_app');
     setPostLoginCredentials(null);
   };
+
+  // Track focused-route changes for screen-view analytics + crash breadcrumbs.
+  // Only emits when the route name actually changes; intermediate state ticks
+  // (animation, gesture, params-only updates) are filtered out.
+  useEffect(() => {
+    let lastRouteName: string | undefined;
+    const unsubscribe = navigationRef.addListener('state', () => {
+      if (!navigationRef.isReady()) return;
+      const route = navigationRef.getCurrentRoute();
+      if (route && route.name !== lastRouteName) {
+        lastRouteName = route.name;
+        Telemetry.trackScreen(route.name);
+      }
+    });
+    return unsubscribe;
+  }, []);
 
   // Track initialization
   const hasInitialized = useRef(false);

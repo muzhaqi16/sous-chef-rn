@@ -5,6 +5,17 @@ import { makeCache } from './cache';
 import { apolloCachePersistence } from './offline/ApolloCachePersistence';
 import packageJson from '../../package.json';
 
+// Lazy histogram emit — defers loading of the telemetry singleton (which
+// touches Environment + device ID at module init) so this module remains
+// cheap to import in tests + cold start. Fire-and-forget.
+const emitHistogram = (name: string, value: number): void => {
+  import('#services/telemetry')
+    .then(({ Telemetry }) => Telemetry.histogram(name, value))
+    .catch(() => {
+      // Telemetry is best-effort; never block startup on failures.
+    });
+};
+
 // Load Apollo dev messages in development for better error reporting
 if (__DEV__) {
   import('@apollo/client/dev')
@@ -34,16 +45,26 @@ function initializeClient() {
   //   PantryItem, ShoppingListItem, Recipe, etc. — loaded when JS thread is idle.
   // This reduces JS blocking at startup. If the deferred phase hasn't fired when
   // PantryMain mounts, the cache miss means network returns only 20 items (fast render).
+  const criticalT0 = performance.now();
   const criticalCache = apolloCachePersistence.loadCritical();
   if (criticalCache) {
     logger.info('📦 Apollo: Restoring critical cache from storage');
     cache.restore(criticalCache);
+    emitHistogram(
+      'app_apollo_critical_restore_ms',
+      performance.now() - criticalT0,
+    );
 
     // Phase 2: Deferred bulk restore
     requestIdleCallback(() => {
+      const deferredT0 = performance.now();
       const deferred = apolloCachePersistence.loadDeferred();
       if (deferred) {
         cache.restore(deferred);
+        emitHistogram(
+          'app_apollo_deferred_restore_ms',
+          performance.now() - deferredT0,
+        );
         logger.info('📦 Apollo: Deferred cache restore complete');
       }
     });
@@ -53,6 +74,10 @@ function initializeClient() {
     if (persistedCache) {
       logger.info('📦 Apollo: Restoring cache from legacy storage');
       cache.restore(persistedCache);
+      emitHistogram(
+        'app_apollo_legacy_restore_ms',
+        performance.now() - criticalT0,
+      );
     }
   }
 

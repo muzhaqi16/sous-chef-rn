@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Modal, ActivityIndicator, Pressable } from 'react-native';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+import { WhiteActivityIndicator } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import type { ApolloCache } from '@apollo/client';
@@ -24,10 +25,6 @@ import { Text } from '#components/atoms/Text';
 
 const ErrorActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
   color: theme.colors.error,
-}));
-
-const WhiteActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
-  color: theme.colors.white,
 }));
 
 /** Module-level cache updater to keep try-catch out of the component body (React Compiler). */

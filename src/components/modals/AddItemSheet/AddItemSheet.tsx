@@ -1,14 +1,11 @@
 import React, { useEffect, useRef } from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { View } from 'react-native';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
-
-const PrimaryActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
-  color: theme.colors.primary,
-}));
+import { StyleSheet } from 'react-native-unistyles';
+import { PrimaryActivityIndicator } from '#components/atoms/themedComponents';
 import { ItemSuggestion } from '#/graphql/generated/schemaTypes';
 import { ItemSuggestionsList } from '#components/molecules/ItemSuggestionsList';
 import {

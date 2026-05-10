@@ -49,6 +49,14 @@ const selectSetHomeAndPantry = (state: RootState) => state.setHomeAndPantry;
 // Network
 const selectIsOnline = (state: RootState) => state.isOnline;
 
+// Auth navigation state machine (atomic — used by guards and conditional UI)
+const selectNavigationState = (state: RootState) => state.navigationState;
+
+// Preferences (atomic)
+const selectTheme = (state: RootState) => state.theme;
+const selectShowNavigationLabels = (state: RootState) =>
+  state.showNavigationLabels;
+
 // Grouped selectors (return object literals — always consumed via useShallow)
 const selectAuthTokens = (state: RootState) => ({
   user: state.user,
@@ -130,6 +138,22 @@ const selectSearchState = (state: RootState) => ({
   addToRecentlyScanned: state.addToRecentlyScanned,
 });
 
+const selectHapticSettings = (state: RootState) => ({
+  hapticFeedbackEnabled: state.hapticFeedbackEnabled,
+  setHapticFeedbackEnabled: state.setHapticFeedbackEnabled,
+});
+
+const selectThemePreferences = (state: RootState) => ({
+  primaryColorOverride: state.primaryColorOverride,
+  densityPreference: state.densityPreference,
+  fontScalePreference: state.fontScalePreference,
+  highContrast: state.highContrast,
+  setPrimaryColorOverride: state.setPrimaryColorOverride,
+  setDensityPreference: state.setDensityPreference,
+  setFontScalePreference: state.setFontScalePreference,
+  setHighContrast: state.setHighContrast,
+});
+
 // ─── Atomic hooks ────────────────────────────────────────────────────────────
 
 export const useUser = () => useAppStore(selectUser);
@@ -149,6 +173,10 @@ export const useSetIsHomeSelectionReady = () =>
 export const useSetIsPantryQueryComplete = () =>
   useAppStore(selectSetIsPantryQueryComplete);
 export const useSetHomeAndPantry = () => useAppStore(selectSetHomeAndPantry);
+export const useNavigationState = () => useAppStore(selectNavigationState);
+export const useTheme = () => useAppStore(selectTheme);
+export const useShowNavigationLabels = () =>
+  useAppStore(selectShowNavigationLabels);
 
 // ─── Grouped hooks (useShallow baked in) ─────────────────────────────────────
 // Grouped selectors return fresh object literals on every call. useShallow
@@ -169,3 +197,7 @@ export const usePreferences = () => useAppStore(useShallow(selectPreferences));
 export const useNavigationUtils = () =>
   useAppStore(useShallow(selectNavigationUtils));
 export const useSearchState = () => useAppStore(useShallow(selectSearchState));
+export const useHapticSettings = () =>
+  useAppStore(useShallow(selectHapticSettings));
+export const useThemePreferences = () =>
+  useAppStore(useShallow(selectThemePreferences));

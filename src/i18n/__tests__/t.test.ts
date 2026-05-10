@@ -1,7 +1,7 @@
 import { t } from '../t';
 
 describe('t()', () => {
-  it('resolves a dot-path key from MESSAGES', () => {
+  it('resolves a dot-path key from the configured locale', () => {
     expect(t('errors.addItemFailed')).toBe('Failed to add item');
   });
 
@@ -18,7 +18,8 @@ describe('t()', () => {
   });
 
   it('returns the key when path resolves to non-string', () => {
-    // 'errors' is an object, not a string
+    // 'errors' is an object, not a leaf string. With returnObjects disabled,
+    // i18next falls back to the default value (the key itself).
     expect(t('errors')).toBe('errors');
   });
 });

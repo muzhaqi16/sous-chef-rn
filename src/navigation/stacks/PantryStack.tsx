@@ -41,11 +41,22 @@ export const PantryStack = createNativeStackNavigator({
       screen: PantryItemDetail,
       linking: 'pantry/detail/:itemId',
     }),
-    FilteredPantryItems: FilteredPantryItems,
-    PantrySettings: PantrySettings,
-    PantryAnalytics: PantryAnalytics,
-    NutritionScreen: NutritionScreen,
-    RecipeDetail: RecipeDetail,
+    FilteredPantryItems: createNativeStackScreen({
+      screen: FilteredPantryItems,
+    }),
+    PantrySettings: createNativeStackScreen({
+      screen: PantrySettings,
+      linking: 'pantry/settings',
+    }),
+    PantryAnalytics: createNativeStackScreen({
+      screen: PantryAnalytics,
+    }),
+    NutritionScreen: createNativeStackScreen({
+      screen: NutritionScreen,
+    }),
+    RecipeDetail: createNativeStackScreen({
+      screen: RecipeDetail,
+    }),
   },
 });
 

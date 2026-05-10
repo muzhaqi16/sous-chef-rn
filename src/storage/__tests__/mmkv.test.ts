@@ -1,4 +1,10 @@
-import { STORAGE_KEY, storage, zustandStorage, getStorage } from '../mmkv';
+import {
+  STORAGE_KEY,
+  storage,
+  zustandStorage,
+  getStorage,
+  initializeSecureStorage,
+} from '../mmkv';
 
 // Mock DeviceKeyManager
 jest.mock('#/utils/security/deviceKey', () => ({
@@ -16,7 +22,7 @@ describe('mmkv storage', () => {
     });
   });
 
-  describe('storage (legacy synchronous instance)', () => {
+  describe('storage (encrypted synchronous proxy)', () => {
     it('is an MMKV instance with expected methods', () => {
       expect(typeof storage.set).toBe('function');
       expect(typeof storage.getString).toBe('function');
@@ -53,6 +59,24 @@ describe('mmkv storage', () => {
       const first = await getStorage();
       const second = await getStorage();
       expect(first).toBe(second);
+    });
+  });
+
+  describe('initializeSecureStorage', () => {
+    it('returns an MMKV instance', async () => {
+      const instance = await initializeSecureStorage();
+      expect(instance).toBeDefined();
+      expect(typeof instance.set).toBe('function');
+    });
+
+    it('is idempotent across concurrent and serial calls', async () => {
+      const [a, b] = await Promise.all([
+        initializeSecureStorage(),
+        initializeSecureStorage(),
+      ]);
+      const c = await initializeSecureStorage();
+      expect(a).toBe(b);
+      expect(b).toBe(c);
     });
   });
 

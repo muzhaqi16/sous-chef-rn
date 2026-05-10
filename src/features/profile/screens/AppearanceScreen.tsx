@@ -1,10 +1,14 @@
 import React from 'react';
-import { View, ScrollView, Switch } from 'react-native';
+import { View, ScrollView } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
+import { BaseSwitch } from '#components/base/BaseSwitch';
 import { Header } from '#components/molecules/Header';
 import { useSafeNavigation } from '#hooks/navigation/useSafeNavigation';
-import { useAppStore } from '#store/useAppStore';
+import {
+  useTheme as useThemePreference,
+  useThemePreferences,
+} from '#store/useAppStore';
 import { useTheme } from '#hooks/useTheme';
 import { ThemePreference } from '#store/slices/preferencesSlice';
 import type {
@@ -72,17 +76,18 @@ export default function AppearanceScreen() {
   const { navigation } = useSafeNavigation();
   const { setLightTheme, setDarkTheme, setSystemTheme } = useTheme();
 
-  const primaryColorOverride = useAppStore(s => s.primaryColorOverride);
-  const densityPreference = useAppStore(s => s.densityPreference);
-  const fontScalePreference = useAppStore(s => s.fontScalePreference);
-  const highContrast = useAppStore(s => s.highContrast);
+  const {
+    primaryColorOverride,
+    densityPreference,
+    fontScalePreference,
+    highContrast,
+    setPrimaryColorOverride,
+    setDensityPreference,
+    setFontScalePreference,
+    setHighContrast,
+  } = useThemePreferences();
 
-  const setPrimaryColorOverride = useAppStore(s => s.setPrimaryColorOverride);
-  const setDensityPreference = useAppStore(s => s.setDensityPreference);
-  const setFontScalePreference = useAppStore(s => s.setFontScalePreference);
-  const setHighContrast = useAppStore(s => s.setHighContrast);
-
-  const userThemePreference = useAppStore(s => s.theme);
+  const userThemePreference = useThemePreference();
 
   return (
     <View style={styles.container}>
@@ -155,7 +160,7 @@ export default function AppearanceScreen() {
               Increases text and border contrast for accessibility
             </Text>
           </View>
-          <Switch value={highContrast} onValueChange={setHighContrast} />
+          <BaseSwitch value={highContrast} onValueChange={setHighContrast} />
         </View>
       </ScrollView>
     </View>

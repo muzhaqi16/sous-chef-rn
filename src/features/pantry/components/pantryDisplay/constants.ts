@@ -1,5 +1,5 @@
 import { Dimensions } from 'react-native';
-import type { LocationFilter } from '#utils/pantryFilters';
+import type { LocationFilter } from '#features/pantry/utils/pantryFilters';
 import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
 
 // Screen-relative draw distance: 2× viewport gives ~17 items of buffer at

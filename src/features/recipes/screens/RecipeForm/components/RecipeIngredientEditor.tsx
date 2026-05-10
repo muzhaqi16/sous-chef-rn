@@ -5,9 +5,10 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { View, Switch } from 'react-native';
+import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { BaseSwitch } from '#components/base/BaseSwitch';
 import { DismissBackdrop } from '#components/atoms/DismissBackdrop';
 import { ItemAutocompleteField } from '#components/molecules/AutocompleteField/ItemAutocompleteField';
 import { UnitAutocompleteField } from '#components/molecules/AutocompleteField/UnitAutocompleteField';
@@ -212,7 +213,7 @@ export const RecipeIngredientEditor = forwardRef<
 
         <View style={styles.switchRow}>
           <Text size="md">Optional</Text>
-          <Switch value={isOptional} onValueChange={setIsOptional} />
+          <BaseSwitch value={isOptional} onValueChange={setIsOptional} />
         </View>
       </BottomSheetScrollView>
     </BottomSheetModal>

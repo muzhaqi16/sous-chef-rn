@@ -3,7 +3,6 @@ import {
   View,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
   Text,
   ScrollView,
 } from 'react-native';
@@ -11,11 +10,8 @@ import { alertService } from '#/services/alertService';
 import { useForm, useWatch, Controller, type Resolver } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { object, string } from 'yup';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
-
-const PrimaryActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
-  color: theme.colors.primary,
-}));
+import { StyleSheet } from 'react-native-unistyles';
+import { PrimaryActivityIndicator } from '#components/atoms/themedComponents';
 import { useNavigation } from '@react-navigation/native';
 import { commonStyles } from '#/styles/commonStyles';
 import { useSelectedPantryId, useSelectedHomeId } from '#store/useAppStore';

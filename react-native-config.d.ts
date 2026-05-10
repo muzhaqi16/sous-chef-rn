@@ -12,6 +12,7 @@ declare module 'react-native-config' {
     OTLP_LOGS_ENDPOINT?: string;
     OTLP_LOGS_AUTH_USERNAME?: string;
     OTLP_LOGS_AUTH_PASSWORD?: string;
+    GRAPHQL_BATCH_ENABLED?: string;
   }
 
   export const Config: NativeConfig;

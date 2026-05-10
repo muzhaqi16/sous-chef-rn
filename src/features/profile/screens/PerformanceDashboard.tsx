@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, RefreshControl, ScrollView } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { View, ScrollView } from 'react-native';
+import {
+  Pressable,
+  ThemedRefreshControl,
+} from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
-
-const ThemedRefreshControl = withUnistyles(RefreshControl, theme => ({
-  colors: [theme.colors.primary],
-  tintColor: theme.colors.primary,
-}));
+import { StyleSheet } from 'react-native-unistyles';
 import { SettingSwitch } from '#components/settings/SettingSwitch';
 import { SettingSection } from '#components/settings/SettingSection';
 import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';

@@ -3,8 +3,12 @@ import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { useMappingHelper } from '@shopify/flash-list';
+import { useFragment } from '@apollo/client/react';
 import { Icon } from '#utils/iconUtils';
-import { type MealTemplateDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
+import {
+  MealTemplateDisplayFragmentDoc,
+  type MealTemplateDisplayFragment,
+} from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import { Text } from '#components/atoms/Text';
 
 interface TemplateCardProps {
@@ -13,9 +17,23 @@ interface TemplateCardProps {
 }
 
 const TemplateCardComponent: React.FC<TemplateCardProps> = ({
-  template,
+  template: templateSource,
   onPress,
 }) => {
+  // Per-entity cache subscription: re-renders only when this template's
+  // MealTemplateDisplay fields change. Falls back to the source prop on cache
+  // miss (e.g., entity evicted, or a test that doesn't seed the cache) so we
+  // never blank out a list item.
+  const fragmentResult = useFragment({
+    fragment: MealTemplateDisplayFragmentDoc,
+    fragmentName: 'MealTemplateDisplay',
+    from: templateSource,
+  });
+  const template =
+    fragmentResult.complete && fragmentResult.data
+      ? fragmentResult.data
+      : templateSource;
+
   const { getMappingKey } = useMappingHelper();
   return (
     <Pressable

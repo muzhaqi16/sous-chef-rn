@@ -1,4 +1,4 @@
-import { ActivityIndicator, TextInput } from 'react-native';
+import { ActivityIndicator, RefreshControl, TextInput } from 'react-native';
 import { Pressable as GHPressable } from 'react-native-gesture-handler';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { withUnistyles } from 'react-native-unistyles';
@@ -42,3 +42,26 @@ export const OnPrimaryActivityIndicator = withUnistyles(
     color: theme.colors.onPrimary,
   }),
 );
+
+/** Brand-primary spinner. Equivalent to `ThemedActivityIndicator`, kept under
+ * a more semantic name so screens can choose intent over historical naming. */
+export const PrimaryActivityIndicator = withUnistyles(
+  ActivityIndicator,
+  theme => ({
+    color: theme.colors.primary,
+  }),
+);
+
+/** Spinner colored white — for use on dark / colored backgrounds. */
+export const WhiteActivityIndicator = withUnistyles(
+  ActivityIndicator,
+  theme => ({
+    color: theme.colors.white,
+  }),
+);
+
+/** RefreshControl with brand-primary spinner + tint. */
+export const ThemedRefreshControl = withUnistyles(RefreshControl, theme => ({
+  colors: [theme.colors.primary],
+  tintColor: theme.colors.primary,
+}));

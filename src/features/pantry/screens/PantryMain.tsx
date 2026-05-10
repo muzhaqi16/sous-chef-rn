@@ -34,7 +34,7 @@ import { AnimatedItemSelector } from '#components/organisms/AnimatedItemSelector
 import { PantryContent } from '#features/pantry/components/PantryContent';
 import type { PantryContentRef } from '#features/pantry/components/pantryDisplay/types';
 import type { ItemSelectorRef } from '#components/organisms/AnimatedItemSelector/types';
-import type { LocationFilter } from '#/utils/pantryFilters';
+import type { LocationFilter } from '#features/pantry/utils/pantryFilters';
 import { PantryErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
 import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
 import { DeferredScreen } from '#components/performance/DeferredScreen';

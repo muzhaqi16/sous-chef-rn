@@ -14,8 +14,6 @@ import {
 import { SetDefaultHomeDocument } from '#operations/home/userSettings.generated';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import { t } from '#/i18n/t';
-
-import { MESSAGES } from '#/constants/messages';
 import { normalizeHome } from '#/utils/connectionUtils';
 import {
   createRemoveFromParentConnectionUpdater,
@@ -88,7 +86,7 @@ export function useHomeDetailManagement(homeId: string) {
       onError: error => {
         alertService.alert(
           'Error',
-          error.message || MESSAGES.errors.updateHomeNameFailed,
+          error.message || t('errors.updateHomeNameFailed'),
         );
       },
     },

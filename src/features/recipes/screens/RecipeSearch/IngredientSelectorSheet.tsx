@@ -5,6 +5,7 @@ import { useBottomSheetScrollableCreator } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { FlashList } from '@shopify/flash-list';
 import { StyleSheet } from 'react-native-unistyles';
+import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { Title } from '#components/atoms/Title';
 import {
@@ -134,7 +135,9 @@ export const IngredientSelectorSheet = forwardRef<
           onEndReached={
             screen.pantryHasMore ? screen.loadMorePantryItems : undefined
           }
-          onEndReachedThreshold={0.5}
+          onEndReachedThreshold={
+            FLASHLIST_DEFAULTS.bottomSheet.onEndReachedThreshold
+          }
           ListEmptyComponent={
             screen.ingredientSearchQuery ? (
               <Text

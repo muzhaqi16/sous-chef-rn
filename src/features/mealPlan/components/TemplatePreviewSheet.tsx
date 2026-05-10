@@ -1,19 +1,15 @@
 import React, { useState } from 'react';
-import { View, ActivityIndicator } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { View } from 'react-native';
+import {
+  Pressable,
+  PrimaryActivityIndicator,
+  WhiteActivityIndicator,
+} from '#components/atoms/themedComponents';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
-
-const PrimaryActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
-  color: theme.colors.primary,
-}));
-
-const WhiteActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
-  color: theme.colors.white,
-}));
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { FormInput } from '#components/molecules/FormInput';
 import { DatePickerField } from '#components/molecules/DatePickerField';

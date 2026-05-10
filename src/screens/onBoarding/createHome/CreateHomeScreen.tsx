@@ -1,15 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useForm, type Resolver } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { View, ActivityIndicator } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { View } from 'react-native';
+import {
+  Pressable,
+  WhiteActivityIndicator,
+} from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 import { alertService } from '#/services/alertService';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
-
-const WhiteActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
-  color: theme.colors.white,
-}));
+import { StyleSheet } from 'react-native-unistyles';
 import { formatRole } from '#utils/formatters/roleFormatters';
 import { type InviteCard_InviteFragment } from './CreateHomeScreen.generated';
 import {

@@ -20,6 +20,11 @@ import { useUserPreferences } from '#hooks/settings/useUserPreferences';
 import { executeAsyncWithCleanup } from '#/utils/compilerSafeWrappers';
 import { Telemetry } from '#services/telemetry';
 import { Text } from '#components/atoms/Text';
+import {
+  SUPPORTED_LANGUAGES,
+  changeLanguage,
+  type SupportedLanguage,
+} from '#/i18n/config';
 
 export const AppSettingsScreen: React.FC = () => {
   const [updating, setUpdating] = useState<string | null>(null);
@@ -49,6 +54,17 @@ export const AppSettingsScreen: React.FC = () => {
   // Telemetry consent
   const userConsent = useAppStore(state => state.userConsent);
   const setUserConsent = useAppStore(state => state.setUserConsent);
+
+  // UI language — value matches an i18next resource key in src/i18n/locales/.
+  const language = useAppStore(state => state.language) ?? 'en';
+  const setLanguage = useAppStore(state => state.setLanguage);
+
+  const handleLanguageChange = (value: string) => {
+    const lang = value as SupportedLanguage;
+    setLanguage(lang);
+    void changeLanguage(lang);
+    Telemetry.trackEvent('language_changed', { language: lang });
+  };
 
   const handleConsentChange = (consent: boolean) => {
     setUserConsent(consent);
@@ -120,6 +136,26 @@ export const AppSettingsScreen: React.FC = () => {
 
   return (
     <ProfileScreenWrapper title="App Settings" testID="settings-screen">
+      <SettingSection title="Language">
+        <View style={styles.pickerContainer}>
+          <Text style={commonStyles.subtitle}>Display Language</Text>
+          <Picker
+            testID="settings-language-picker"
+            selectedValue={language}
+            onValueChange={handleLanguageChange}
+            style={styles.picker}
+          >
+            {SUPPORTED_LANGUAGES.map(opt => (
+              <ThemedPickerItem
+                key={opt.value}
+                label={opt.label}
+                value={opt.value}
+              />
+            ))}
+          </Picker>
+        </View>
+      </SettingSection>
+
       <SettingSection title="Units & Measurements">
         <View style={styles.pickerContainer}>
           <Text style={commonStyles.subtitle}>Preferred Unit System</Text>

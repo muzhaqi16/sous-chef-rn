@@ -1,30 +1,32 @@
 import React, { useState } from 'react';
-import { View, RefreshControl, ScrollView } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { View, ScrollView } from 'react-native';
+import {
+  Pressable,
+  ThemedRefreshControl,
+} from '#components/atoms/themedComponents';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { commonStyles } from '#/styles/commonStyles';
 import { Header } from '#components/molecules/Header';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { usePantryAnalytics } from '#features/pantry/hooks/usePantryAnalytics';
 import { TabView, TabRoute } from '#components/molecules/TabView/TabView';
+import { AnalyticsSummaryCard as BaseAnalyticsSummaryCard } from '#components/analytics/AnalyticsSummaryCard';
 import { DateRangeFilter } from '#components/analytics/DateRangeFilter';
-import { AnalyticsSummaryCard } from '#components/analytics/AnalyticsSummaryCard';
 import { ChartSection } from '#components/analytics/ChartSection';
-import { TrendLineChart } from '#components/charts/TrendLineChart';
+import { TrendLineChart as BaseTrendLineChart } from '#components/charts/TrendLineChart';
 import { BreakdownPieChart } from '#components/charts/BreakdownPieChart';
-import { TopItemsBarChart } from '#components/charts/TopItemsBarChart';
+import { TopItemsBarChart as BaseTopItemsBarChart } from '#components/charts/TopItemsBarChart';
 import { PeriodGranularity } from '#/graphql/generated/schemaTypes';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { Text } from '#components/atoms/Text';
 
-const ThemedRefreshControl = withUnistyles(RefreshControl, theme => ({
-  colors: [theme.colors.primary],
-  tintColor: theme.colors.primary,
-}));
-
-const ThemedTrendLineChart = withUnistyles(TrendLineChart);
-const ThemedTopItemsBarChart = withUnistyles(TopItemsBarChart);
-const ThemedAnalyticsSummaryCard = withUnistyles(AnalyticsSummaryCard);
+// Wrap chart primitives with withUnistyles so the per-call `uniProps` prop
+// (used at consumer sites for theme-derived colors) is recognized at the type
+// level. The wrappers themselves declare no static theme mapping — all theme
+// reads happen at the call site via `uniProps={t => ({ … })}`.
+const TrendLineChart = withUnistyles(BaseTrendLineChart);
+const TopItemsBarChart = withUnistyles(BaseTopItemsBarChart);
+const AnalyticsSummaryCard = withUnistyles(BaseAnalyticsSummaryCard);
 
 type PantryAnalyticsProps = StaticScreenProps<{
   pantryId: string;
@@ -229,7 +231,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
         error={usageError?.message}
         isEmpty={!usageData?.usageTrend?.length}
       >
-        <ThemedTrendLineChart
+        <TrendLineChart
           data={usageData?.usageTrend ?? []}
           height={200}
           uniProps={t => ({ color: t.colors.primary })}
@@ -268,7 +270,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
         error={usageError?.message}
         isEmpty={!topUsedItemsData.length}
       >
-        <ThemedTopItemsBarChart
+        <TopItemsBarChart
           data={topUsedItemsData}
           uniProps={t => ({ color: t.colors.primary })}
         />
@@ -289,14 +291,14 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
     >
       {/* Summary Cards */}
       <View style={styles.summaryRow}>
-        <ThemedAnalyticsSummaryCard
+        <AnalyticsSummaryCard
           title="Total Waste"
           value={wasteData?.totalWasteCount ?? 0}
           icon="trash-outline"
           uniProps={t => ({ color: t.colors.error })}
           subtitle="items wasted"
         />
-        <ThemedAnalyticsSummaryCard
+        <AnalyticsSummaryCard
           title="Waste Rate"
           value={`${(wasteData?.wasteRate ?? 0).toFixed(1)}%`}
           icon="pie-chart"
@@ -306,7 +308,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
       </View>
 
       <View style={styles.summaryRow}>
-        <ThemedAnalyticsSummaryCard
+        <AnalyticsSummaryCard
           title="Est. Value Lost"
           value={`$${(wasteData?.totalWasteValue ?? 0).toFixed(2)}`}
           icon="cash-outline"
@@ -315,14 +317,14 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
       </View>
 
       <View style={styles.summaryRow}>
-        <ThemedAnalyticsSummaryCard
+        <AnalyticsSummaryCard
           title="Composted"
           value={(wasteData?.composted ?? 0).toFixed(1)}
           icon="leaf-outline"
           uniProps={t => ({ color: t.colors.success })}
           subtitle="units"
         />
-        <ThemedAnalyticsSummaryCard
+        <AnalyticsSummaryCard
           title="Recycled"
           value={(wasteData?.recycled ?? 0).toFixed(1)}
           icon="refresh-outline"
@@ -338,7 +340,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
         error={wasteError?.message}
         isEmpty={!wasteData?.wasteTrend?.length}
       >
-        <ThemedTrendLineChart
+        <TrendLineChart
           data={wasteData?.wasteTrend ?? []}
           height={200}
           uniProps={t => ({ color: t.colors.error })}
@@ -367,7 +369,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
         error={wasteError?.message}
         isEmpty={!topWastedItemsData.length}
       >
-        <ThemedTopItemsBarChart
+        <TopItemsBarChart
           data={topWastedItemsData}
           uniProps={t => ({ color: t.colors.error })}
           showSecondaryValue
@@ -407,14 +409,14 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
 
       {/* Summary Cards */}
       <View style={styles.summaryRow}>
-        <ThemedAnalyticsSummaryCard
+        <AnalyticsSummaryCard
           title="Added"
           value={ledgerData?.summary?.totalAdded ?? 0}
           icon="add-circle-outline"
           uniProps={t => ({ color: t.colors.success })}
           subtitle="total quantity"
         />
-        <ThemedAnalyticsSummaryCard
+        <AnalyticsSummaryCard
           title="Consumed"
           value={ledgerData?.summary?.totalConsumed ?? 0}
           icon="restaurant"
@@ -424,14 +426,14 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
       </View>
 
       <View style={styles.summaryRow}>
-        <ThemedAnalyticsSummaryCard
+        <AnalyticsSummaryCard
           title="Wasted"
           value={ledgerData?.summary?.totalWasted ?? 0}
           icon="trash-outline"
           uniProps={t => ({ color: t.colors.error })}
           subtitle="total quantity"
         />
-        <ThemedAnalyticsSummaryCard
+        <AnalyticsSummaryCard
           title="Net Change"
           value={ledgerData?.summary?.netQuantity ?? 0}
           icon="trending-up"
@@ -464,13 +466,13 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
       {/* Cost Analytics */}
       {!!ledgerData?.costAnalytics && (
         <View style={styles.summaryRow}>
-          <ThemedAnalyticsSummaryCard
+          <AnalyticsSummaryCard
             title="Total Spent"
             value={`$${(ledgerData.costAnalytics.totalSpent ?? 0).toFixed(2)}`}
             icon="cash-outline"
             uniProps={t => ({ color: t.colors.warning })}
           />
-          <ThemedAnalyticsSummaryCard
+          <AnalyticsSummaryCard
             title="Avg Cost/Unit"
             value={`$${(
               ledgerData.costAnalytics.averageCostPerUnit ?? 0
@@ -611,7 +613,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
         error={ledgerError?.message}
         isEmpty={!topRestockedItemsData.length}
       >
-        <ThemedTopItemsBarChart
+        <TopItemsBarChart
           data={topRestockedItemsData}
           uniProps={t => ({ color: t.colors.success })}
         />

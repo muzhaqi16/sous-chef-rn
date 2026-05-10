@@ -16,7 +16,7 @@ import {
   type LocationFilter,
   locationFilterToQueryFilter,
   sortOptionToOrderBy,
-} from '#/utils/pantryFilters';
+} from '#features/pantry/utils/pantryFilters';
 import { PAGE_SIZE } from '#/constants/pagination';
 import { pantryItemSearch } from '#/utils/searchUtils';
 import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';

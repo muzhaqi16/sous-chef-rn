@@ -27,6 +27,7 @@ import { getTabBarBottomPadding } from '#constants/layout';
 import { useRenderTime } from '#hooks/performance/useRenderTime';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
 import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
+import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 
 // Screen-relative draw distance: 2× viewport gives ~17 items of buffer at
 // ~95px/item. Provides better scroll coverage while keeping pagination cost
@@ -62,7 +63,7 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
   canMarkPurchased = true,
   canReorderItems = false,
   onEndReached,
-  onEndReachedThreshold = 0.5,
+  onEndReachedThreshold = FLASHLIST_DEFAULTS.fullScreen.onEndReachedThreshold,
   ListEmptyComponent,
   onScroll,
   onScrollEndDrag,

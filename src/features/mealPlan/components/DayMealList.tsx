@@ -1,21 +1,18 @@
 import React from 'react';
-import { RefreshControl } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import {
+  Pressable,
+  ThemedRefreshControl,
+} from '#components/atoms/themedComponents';
 import Animated, {
   type useAnimatedScrollHandler,
 } from 'react-native-reanimated';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { MealTypeSection } from './MealTypeSection';
 import { EmptyDayState } from './EmptyDayState';
 import { Text } from '#components/atoms/Text';
 import type { MealTypeGroup } from '#features/mealPlan/hooks/useDailyMeals';
 import { type MealType } from '#/graphql/generated/schemaTypes';
-
-const ThemedRefreshControl = withUnistyles(RefreshControl, theme => ({
-  tintColor: theme.colors.primary,
-  colors: [theme.colors.primary],
-}));
 
 interface DayMealListProps {
   selectedDate: Date;

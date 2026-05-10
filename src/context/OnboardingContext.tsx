@@ -8,6 +8,18 @@ import type { SharedValue } from 'react-native-reanimated';
  * Split into Actions + State contexts (TabBarActionsContext pattern).
  * Consumers that only need callbacks (goToNextStep, etc.) subscribe to
  * OnboardingActionsContext and won't re-render when step index changes.
+ *
+ * State separation from `navigationSlice.onBoardingStep`:
+ *   - `navigationSlice.onBoardingStep` (Zustand): persistent navigation state.
+ *     Source of truth for "which onboarding screen is current". Survives app
+ *     restarts; used by post-login flow + deep linking to resume mid-onboarding.
+ *   - `OnboardingContext.activeStepIndex` (SharedValue) and `currentIndex`
+ *     (state): session-only animation driver + UI derivations (canGoBack,
+ *     isFirstStep, etc.). Reset on provider remount.
+ *
+ * Both update together via `useOnboardingNavigation`. If you change one, change
+ * the other — they share a logical "current step" concept but live in different
+ * runtime tiers (persistent vs animation/UI).
  */
 
 interface OnboardingActionsContextType {

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Pressable } from '#components/atoms/themedComponents';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { alertService } from '#/services/alertService';
@@ -37,6 +38,7 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
   route,
 }) => {
   useScreenTransition('HomeDetailScreen');
+  const { t } = useTranslation();
   const { goBack, navigate } = useAppNavigation();
   const { homeId } = route.params;
   // PERFORMANCE: Use selective selector instead of full store subscription
@@ -104,7 +106,7 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
       alertService.alert(
         'Cannot Leave',
         'Owners cannot leave the home. Please transfer ownership to another member or delete the home.',
-        [{ text: 'OK' }],
+        [{ text: t('labels.ok') }],
       );
       return;
     }
@@ -138,7 +140,7 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
                 />
                 {!loading && !!error && (
                   <Button
-                    title="Retry"
+                    title={t('labels.retry')}
                     onPress={() => refetch()}
                     variant="secondary"
                     style={styles.retryButton}
@@ -280,7 +282,7 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
         selected={rolePickerState.currentRole}
         onSelect={handleRoleSelect}
         onCancel={closeRolePicker}
-        confirmLabel="Save"
+        confirmLabel={t('labels.save')}
       />
     </>
   );

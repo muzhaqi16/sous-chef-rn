@@ -1,13 +1,20 @@
 'use no memo';
 
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react-native';
+import { fireEvent } from '@testing-library/react-native';
+import { renderWithProviders } from '../../helpers/renderWithProviders';
 import { TemplateCard } from '../../../src/features/mealPlan/components/TemplateCard';
 
 jest.mock('../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../src/apollo/links/refreshToken');
 
+// TemplateCard uses useFragment to subscribe to per-entity cache updates.
+// Wrapping with MockedProvider lets the hook's useApolloClient() resolve;
+// the in-test cache miss is expected (renderer falls back to source prop).
+const render = renderWithProviders;
+
 const makeTemplate = (overrides = {}) => ({
+  __typename: 'MealTemplate',
   id: 't1',
   name: 'Weekly Dinner Plan',
   description: 'A balanced dinner plan',
