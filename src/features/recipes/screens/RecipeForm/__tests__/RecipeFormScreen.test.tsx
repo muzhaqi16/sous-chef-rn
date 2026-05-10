@@ -1,7 +1,9 @@
 'use no memo';
 
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react-native';
+import { fireEvent } from '@testing-library/react-native';
+import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { CreateRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import { alertService } from '#/services/alertService';
 import { RecipeFormScreen } from '../index';
 
@@ -9,36 +11,6 @@ jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 
 jest.mock('#hooks/navigation/useAppNavigation');
-
-const mockCreateRecipe = jest
-  .fn()
-  .mockResolvedValue({ data: { createRecipe: { success: true } } });
-const mockUpdateRecipe = jest
-  .fn()
-  .mockResolvedValue({ data: { updateRecipe: { success: true } } });
-
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useQuery: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'GetRecipe')
-      return {
-        data: undefined,
-        loading: false,
-        error: undefined,
-        refetch: jest.fn(),
-      };
-    return { data: undefined, loading: false, error: undefined };
-  }),
-  useMutation: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'CreateRecipe') return [mockCreateRecipe, {}];
-    if (opName === 'UpdateRecipe') return [mockUpdateRecipe, {}];
-    if (opName === 'UpdateRecipeIngredients')
-      return [jest.fn(), { loading: false }];
-    return [jest.fn(), {}];
-  }),
-}));
 
 jest.mock('#/utils/compilerSafeWrappers');
 
@@ -92,18 +64,22 @@ describe('RecipeFormScreen', () => {
   } as any;
 
   it('renders in create mode', () => {
-    const { getByText } = render(<RecipeFormScreen {...defaultProps} />);
+    const { getByText } = renderWithApollo(
+      <RecipeFormScreen {...defaultProps} />,
+    );
     expect(getByText('Create Recipe')).toBeTruthy();
   });
 
   it('renders in edit mode with recipeId', () => {
     const props = { route: { params: { recipeId: 'recipe-1' } } } as any;
-    const { getByText } = render(<RecipeFormScreen {...props} />);
+    const { getByText } = renderWithApollo(<RecipeFormScreen {...props} />);
     expect(getByText('Edit Recipe')).toBeTruthy();
   });
 
   it('shows validation error on save with empty form', () => {
-    const { getByTestId } = render(<RecipeFormScreen {...defaultProps} />);
+    const { getByTestId } = renderWithApollo(
+      <RecipeFormScreen {...defaultProps} />,
+    );
 
     fireEvent.press(getByTestId('save-button'));
 
@@ -114,15 +90,28 @@ describe('RecipeFormScreen', () => {
   });
 
   it('renders with test ID', () => {
-    const { getByTestId } = render(<RecipeFormScreen {...defaultProps} />);
+    const { getByTestId } = renderWithApollo(
+      <RecipeFormScreen {...defaultProps} />,
+    );
     expect(getByTestId('recipe-form-screen')).toBeTruthy();
   });
 
   it('does not call create mutation when validation fails', () => {
-    const { getByTestId } = render(<RecipeFormScreen {...defaultProps} />);
+    const create = recordMock(CreateRecipeDocument, {
+      data: {
+        createRecipe: {
+          __typename: 'CreateRecipePayload',
+          success: true,
+        },
+      },
+    });
+    const { getByTestId } = renderWithApollo(
+      <RecipeFormScreen {...defaultProps} />,
+      { operationMocks: [create.mock] },
+    );
 
     fireEvent.press(getByTestId('save-button'));
 
-    expect(mockCreateRecipe).not.toHaveBeenCalled();
+    expect(create.fired).toEqual([]);
   });
 });

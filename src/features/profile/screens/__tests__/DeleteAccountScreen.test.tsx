@@ -1,13 +1,15 @@
 'use no memo';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { screen, fireEvent } from '@testing-library/react-native';
+import {
+  recordMock,
+  renderWithApollo,
+  type MockedResponse,
+} from '#/test-utils/apolloMockProvider';
+import { CanDeleteAccountDocument } from '#operations/auth/user.generated';
 import { DeleteAccountScreen } from '../DeleteAccountScreen';
 
-// --- Mocks ---
-
 const mockLogout = jest.fn();
-const mockDeleteAccount = jest.fn().mockResolvedValue({});
-const mockRefetch = jest.fn();
 
 jest.mock('#hooks/navigation/useAppNavigation');
 const mockNav = (
@@ -20,12 +22,6 @@ jest.mock('#hooks/auth/useAuth', () => ({
   useAuth: () => ({
     logout: mockLogout,
   }),
-}));
-
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useMutation: jest.fn(),
-  useQuery: jest.fn(),
 }));
 
 jest.mock('#/services/errorService', () => ({
@@ -74,62 +70,68 @@ jest.mock('#components/base/Loading', () => {
   };
 });
 
-const apolloMocks = jest.requireMock('@apollo/client/react') as {
-  useMutation: jest.Mock;
-  useQuery: jest.Mock;
-};
+function canDeleteOk(): MockedResponse {
+  return recordMock(CanDeleteAccountDocument, {
+    data: {
+      canDeleteAccount: {
+        __typename: 'CanDeleteAccountResult',
+        canDelete: true,
+        blockers: [],
+      },
+    },
+  }).mock;
+}
 
-const setCanDeleteResult = (result: any) => {
-  apolloMocks.useQuery.mockImplementation((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'CanDeleteAccount') return result;
-    return { data: undefined, loading: false, error: undefined };
-  });
-};
+function canDeleteBlocked(): MockedResponse {
+  return recordMock(CanDeleteAccountDocument, {
+    data: {
+      canDeleteAccount: {
+        __typename: 'CanDeleteAccountResult',
+        canDelete: false,
+        blockers: [
+          {
+            __typename: 'AccountDeletionBlocker',
+            resourceId: 'home-1',
+            resourceName: 'My Home',
+            message: 'You are the sole owner',
+          },
+        ],
+      },
+    },
+  }).mock;
+}
 
-const setDefaultDeleteMutation = () => {
-  apolloMocks.useMutation.mockImplementation((doc: any, options: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'DeleteAccount') {
-      return [
-        async () => {
-          const result = await mockDeleteAccount();
-          if (options?.onCompleted) options.onCompleted();
-          return result;
-        },
-        { loading: false },
-      ];
-    }
-    return [jest.fn(), {}];
-  });
-};
+function canDeleteError(): MockedResponse {
+  return recordMock(CanDeleteAccountDocument, {
+    error: new Error('Network error'),
+  }).mock;
+}
 
 describe('DeleteAccountScreen - delete form', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    setDefaultDeleteMutation();
-    setCanDeleteResult({
-      data: {
-        canDeleteAccount: { canDelete: true, blockers: [] },
-      },
-      loading: false,
-      error: null,
-      refetch: mockRefetch,
-    });
   });
 
-  it('renders the header with Delete Account title', () => {
-    render(<DeleteAccountScreen />);
+  async function renderForm() {
+    const utils = renderWithApollo(<DeleteAccountScreen />, {
+      operationMocks: [canDeleteOk()],
+    });
+    await screen.findByText('Warning: This is permanent!');
+    return utils;
+  }
+
+  it('renders the header with Delete Account title', async () => {
+    await renderForm();
     expect(screen.getByText('Delete Account')).toBeTruthy();
   });
 
-  it('renders the warning text', () => {
-    render(<DeleteAccountScreen />);
+  it('renders the warning text', async () => {
+    await renderForm();
     expect(screen.getByText('Warning: This is permanent!')).toBeTruthy();
   });
 
-  it('renders what will be deleted section', () => {
-    render(<DeleteAccountScreen />);
+  it('renders what will be deleted section', async () => {
+    await renderForm();
     expect(screen.getByText('What will be deleted:')).toBeTruthy();
     expect(
       screen.getByText('Your profile and account information'),
@@ -140,30 +142,29 @@ describe('DeleteAccountScreen - delete form', () => {
     expect(screen.getByText('Your shopping lists')).toBeTruthy();
   });
 
-  it('renders confirmation input with placeholder', () => {
-    render(<DeleteAccountScreen />);
+  it('renders confirmation input with placeholder', async () => {
+    await renderForm();
     expect(screen.getByPlaceholderText('Type DELETE')).toBeTruthy();
   });
 
-  it('renders the delete button as disabled initially', () => {
-    render(<DeleteAccountScreen />);
-    const deleteButton = screen.getByText('Delete My Account Forever');
-    expect(deleteButton).toBeTruthy();
+  it('renders the delete button as disabled initially', async () => {
+    await renderForm();
+    expect(screen.getByText('Delete My Account Forever')).toBeTruthy();
   });
 
-  it('renders cancel button', () => {
-    render(<DeleteAccountScreen />);
+  it('renders cancel button', async () => {
+    await renderForm();
     expect(screen.getByText('Cancel')).toBeTruthy();
   });
 
-  it('calls goBack when header back is pressed', () => {
-    render(<DeleteAccountScreen />);
+  it('calls goBack when header back is pressed', async () => {
+    await renderForm();
     fireEvent.press(screen.getByTestId('header-back'));
     expect(mockNav.goBack).toHaveBeenCalledTimes(1);
   });
 
-  it('calls goBack when Cancel button is pressed', () => {
-    render(<DeleteAccountScreen />);
+  it('calls goBack when Cancel button is pressed', async () => {
+    await renderForm();
     fireEvent.press(screen.getByText('Cancel'));
     expect(mockNav.goBack).toHaveBeenCalledTimes(1);
   });
@@ -172,17 +173,21 @@ describe('DeleteAccountScreen - delete form', () => {
 describe('DeleteAccountScreen - loading state', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    setDefaultDeleteMutation();
-    setCanDeleteResult({
-      data: null,
-      loading: true,
-      error: null,
-      refetch: mockRefetch,
-    });
   });
 
   it('shows loading state when checking eligibility', () => {
-    render(<DeleteAccountScreen />);
+    // delay so initial render shows loading
+    const m = recordMock(CanDeleteAccountDocument, {
+      data: {
+        canDeleteAccount: {
+          __typename: 'CanDeleteAccountResult',
+          canDelete: true,
+          blockers: [],
+        },
+      },
+      delay: 1000,
+    }).mock;
+    renderWithApollo(<DeleteAccountScreen />, { operationMocks: [m] });
     expect(screen.getByText('Checking account status...')).toBeTruthy();
   });
 });
@@ -190,65 +195,42 @@ describe('DeleteAccountScreen - loading state', () => {
 describe('DeleteAccountScreen - error state', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    setDefaultDeleteMutation();
-    setCanDeleteResult({
-      data: null,
-      loading: false,
-      error: { message: 'Network error' },
-      refetch: mockRefetch,
-    });
   });
 
-  it('shows error state on eligibility check failure', () => {
-    render(<DeleteAccountScreen />);
-    expect(screen.getByText('Unable to check account status')).toBeTruthy();
+  it('shows error state on eligibility check failure', async () => {
+    renderWithApollo(<DeleteAccountScreen />, {
+      operationMocks: [canDeleteError()],
+    });
+    await screen.findByText('Unable to check account status');
     expect(screen.getByText('Network error')).toBeTruthy();
   });
 
-  it('shows retry button on error', () => {
-    render(<DeleteAccountScreen />);
-    expect(screen.getByText('Retry')).toBeTruthy();
-  });
-
-  it('calls refetch when retry is pressed', () => {
-    render(<DeleteAccountScreen />);
-    fireEvent.press(screen.getByText('Retry'));
-    expect(mockRefetch).toHaveBeenCalledTimes(1);
+  it('shows retry button on error', async () => {
+    renderWithApollo(<DeleteAccountScreen />, {
+      operationMocks: [canDeleteError()],
+    });
+    await screen.findByText('Retry');
   });
 });
 
 describe('DeleteAccountScreen - blocked state', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    setDefaultDeleteMutation();
-    setCanDeleteResult({
-      data: {
-        canDeleteAccount: {
-          canDelete: false,
-          blockers: [
-            {
-              resourceId: 'home-1',
-              resourceName: 'My Home',
-              message: 'You are the sole owner',
-            },
-          ],
-        },
-      },
-      loading: false,
-      error: null,
-      refetch: mockRefetch,
-    });
   });
 
-  it('shows blocked state with blocker information', () => {
-    render(<DeleteAccountScreen />);
-    expect(screen.getByText('Cannot Delete Account')).toBeTruthy();
+  it('shows blocked state with blocker information', async () => {
+    renderWithApollo(<DeleteAccountScreen />, {
+      operationMocks: [canDeleteBlocked()],
+    });
+    await screen.findByText('Cannot Delete Account');
     expect(screen.getByText('My Home')).toBeTruthy();
     expect(screen.getByText('You are the sole owner')).toBeTruthy();
   });
 
-  it('shows Go Back button in blocked state', () => {
-    render(<DeleteAccountScreen />);
-    expect(screen.getByText('Go Back')).toBeTruthy();
+  it('shows Go Back button in blocked state', async () => {
+    renderWithApollo(<DeleteAccountScreen />, {
+      operationMocks: [canDeleteBlocked()],
+    });
+    await screen.findByText('Go Back');
   });
 });

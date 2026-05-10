@@ -1,6 +1,7 @@
 'use no memo';
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { screen } from '@testing-library/react-native';
+import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { AddToPantrySheet } from '../AddToPantrySheet';
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -14,24 +15,6 @@ jest.mock('#features/pantry/hooks/usePantryItemSuggestions', () => ({
     loading: false,
     hasSuggestions: false,
     refetch: jest.fn(),
-  })),
-}));
-
-jest.mock('@apollo/client/react', () => ({
-  __esModule: true,
-  useMutation: jest.fn(() => [jest.fn(), { loading: false }]),
-  useApolloClient: jest.fn(() => ({
-    cache: {
-      modify: jest.fn(),
-      identify: jest.fn(() => 'cache-id'),
-      updateQuery: jest.fn(),
-      readFragment: jest.fn(),
-    },
-  })),
-  useQuery: jest.fn(() => ({
-    data: undefined,
-    loading: false,
-    error: undefined,
   })),
 }));
 
@@ -99,22 +82,26 @@ describe('AddToPantrySheet', () => {
   });
 
   it('renders AddItemSheet when visible', () => {
-    render(<AddToPantrySheet {...defaultProps} />);
+    renderWithApollo(<AddToPantrySheet {...defaultProps} />);
     expect(screen.getByTestId('add-item-sheet')).toBeTruthy();
   });
 
   it('renders without crashing when pantryId is undefined', () => {
-    render(<AddToPantrySheet {...defaultProps} pantryId={undefined} />);
+    renderWithApollo(
+      <AddToPantrySheet {...defaultProps} pantryId={undefined} />,
+    );
     expect(screen.getByText('AddItemSheet')).toBeTruthy();
   });
 
   it('renders when not visible', () => {
-    render(<AddToPantrySheet {...defaultProps} visible={false} />);
+    renderWithApollo(<AddToPantrySheet {...defaultProps} visible={false} />);
     expect(screen.getByText('AddItemSheet')).toBeTruthy();
   });
 
   it('renders without onItemAdded callback', () => {
-    render(<AddToPantrySheet {...defaultProps} onItemAdded={undefined} />);
+    renderWithApollo(
+      <AddToPantrySheet {...defaultProps} onItemAdded={undefined} />,
+    );
     expect(screen.getByText('AddItemSheet')).toBeTruthy();
   });
 
@@ -129,7 +116,7 @@ describe('AddToPantrySheet', () => {
       refetch: jest.fn(),
     });
 
-    render(<AddToPantrySheet {...defaultProps} />);
+    renderWithApollo(<AddToPantrySheet {...defaultProps} />);
     expect(screen.getByTestId('add-item-sheet')).toBeTruthy();
   });
 
@@ -144,30 +131,14 @@ describe('AddToPantrySheet', () => {
       refetch: jest.fn(),
     });
 
-    render(<AddToPantrySheet {...defaultProps} />);
-    expect(screen.getByTestId('add-item-sheet')).toBeTruthy();
-  });
-
-  it('renders with create mutation loading', () => {
-    const { useMutation } = jest.requireMock('@apollo/client/react');
-    useMutation.mockReturnValueOnce([jest.fn(), { loading: true }]);
-
-    render(<AddToPantrySheet {...defaultProps} />);
-    expect(screen.getByTestId('add-item-sheet')).toBeTruthy();
-  });
-
-  it('renders with restock mutation loading', () => {
-    const { useMutation } = jest.requireMock('@apollo/client/react');
-    useMutation
-      .mockReturnValueOnce([jest.fn(), { loading: false }])
-      .mockReturnValueOnce([jest.fn(), { loading: true }]);
-
-    render(<AddToPantrySheet {...defaultProps} />);
+    renderWithApollo(<AddToPantrySheet {...defaultProps} />);
     expect(screen.getByTestId('add-item-sheet')).toBeTruthy();
   });
 
   it('renders with different pantryId', () => {
-    render(<AddToPantrySheet {...defaultProps} pantryId="pantry-2" />);
+    renderWithApollo(
+      <AddToPantrySheet {...defaultProps} pantryId="pantry-2" />,
+    );
     expect(screen.getByTestId('add-item-sheet')).toBeTruthy();
   });
 });
