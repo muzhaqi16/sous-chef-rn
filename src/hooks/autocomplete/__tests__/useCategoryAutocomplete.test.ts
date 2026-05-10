@@ -1,4 +1,9 @@
-import { renderHook, act } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
+import {
+  renderHookWithApollo,
+  type MockedResponse,
+} from '#/test-utils/apolloMockProvider';
+import { AutocompleteCategoriesDocument } from '#operations/item/item.generated';
 import { useCategoryAutocomplete } from '../useCategoryAutocomplete';
 
 jest.mock('../../../apollo/links/tokenScheduler');
@@ -10,17 +15,25 @@ jest.mock('#store/useAppStore', () => ({
     selector({ isOnline: mockIsOnline }),
 }));
 
-const mockSearchCategories = jest.fn();
-
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useLazyQuery: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'AutocompleteCategories')
-      return [mockSearchCategories, { loading: false }];
-    return { data: undefined, loading: false, error: undefined };
-  }),
-}));
+/**
+ * Per CLAUDE.md "Apollo Test Patterns": fire-spy assertions like
+ * `mockSearchCategories.toHaveBeenCalledWith(...)` are replaced by a
+ * `variables: () => true` matcher that records each invocation into a
+ * closure array.
+ */
+function createMock(recorded: Array<Record<string, unknown>>): MockedResponse {
+  return {
+    request: {
+      query: AutocompleteCategoriesDocument,
+      variables: vars => {
+        recorded.push(vars);
+        return true;
+      },
+    },
+    maxUsageCount: Number.POSITIVE_INFINITY,
+    result: { data: { autocompleteCategories: [] } },
+  };
+}
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -34,19 +47,19 @@ afterEach(() => {
 
 describe('useCategoryAutocomplete', () => {
   it('returns empty displayItems initially', () => {
-    const { result } = renderHook(() => useCategoryAutocomplete());
+    const { result } = renderHookWithApollo(() => useCategoryAutocomplete());
 
     expect(result.current.displayItems).toEqual([]);
   });
 
   it('returns empty searchTerm initially', () => {
-    const { result } = renderHook(() => useCategoryAutocomplete());
+    const { result } = renderHookWithApollo(() => useCategoryAutocomplete());
 
     expect(result.current.searchTerm).toBe('');
   });
 
   it('updates searchTerm via handleSearchTermChange', () => {
-    const { result } = renderHook(() => useCategoryAutocomplete());
+    const { result } = renderHookWithApollo(() => useCategoryAutocomplete());
 
     act(() => {
       result.current.handleSearchTermChange('dairy');
@@ -56,7 +69,10 @@ describe('useCategoryAutocomplete', () => {
   });
 
   it('triggers lazy query after debounce when term meets minChars', () => {
-    const { result } = renderHook(() => useCategoryAutocomplete());
+    const recorded: Array<Record<string, unknown>> = [];
+    const { result } = renderHookWithApollo(() => useCategoryAutocomplete(), {
+      operationMocks: [createMock(recorded)],
+    });
 
     act(() => {
       result.current.handleSearchTermChange('da');
@@ -66,20 +82,16 @@ describe('useCategoryAutocomplete', () => {
       jest.advanceTimersByTime(300);
     });
 
-    expect(mockSearchCategories).toHaveBeenCalledWith({
-      variables: {
-        input: {
-          query: 'da',
-          limit: 5,
-          type: 'GENERAL',
-        },
-      },
+    expect(recorded).toContainEqual({
+      input: { query: 'da', limit: 5, type: 'GENERAL' },
     });
   });
 
   it('uses custom categoryType when provided', () => {
-    const { result } = renderHook(() =>
-      useCategoryAutocomplete({ categoryType: 'CUISINE' as any }),
+    const recorded: Array<Record<string, unknown>> = [];
+    const { result } = renderHookWithApollo(
+      () => useCategoryAutocomplete({ categoryType: 'CUISINE' as any }),
+      { operationMocks: [createMock(recorded)] },
     );
 
     act(() => {
@@ -90,19 +102,16 @@ describe('useCategoryAutocomplete', () => {
       jest.advanceTimersByTime(300);
     });
 
-    expect(mockSearchCategories).toHaveBeenCalledWith({
-      variables: {
-        input: {
-          query: 'ital',
-          limit: 5,
-          type: 'CUISINE',
-        },
-      },
+    expect(recorded).toContainEqual({
+      input: { query: 'ital', limit: 5, type: 'CUISINE' },
     });
   });
 
   it('does not trigger search when term is below minChars', () => {
-    const { result } = renderHook(() => useCategoryAutocomplete());
+    const recorded: Array<Record<string, unknown>> = [];
+    const { result } = renderHookWithApollo(() => useCategoryAutocomplete(), {
+      operationMocks: [createMock(recorded)],
+    });
 
     act(() => {
       result.current.handleSearchTermChange('d');
@@ -112,11 +121,11 @@ describe('useCategoryAutocomplete', () => {
       jest.advanceTimersByTime(500);
     });
 
-    expect(mockSearchCategories).not.toHaveBeenCalled();
+    expect(recorded).toEqual([]);
   });
 
   it('sets shouldSearch to true when searchTerm meets minChars and is online', () => {
-    const { result } = renderHook(() => useCategoryAutocomplete());
+    const { result } = renderHookWithApollo(() => useCategoryAutocomplete());
 
     act(() => {
       result.current.handleSearchTermChange('ab');
@@ -127,7 +136,7 @@ describe('useCategoryAutocomplete', () => {
 
   it('sets shouldSearch to false when offline', () => {
     mockIsOnline = false;
-    const { result } = renderHook(() => useCategoryAutocomplete());
+    const { result } = renderHookWithApollo(() => useCategoryAutocomplete());
 
     act(() => {
       result.current.handleSearchTermChange('dairy');
@@ -137,7 +146,7 @@ describe('useCategoryAutocomplete', () => {
   });
 
   it('resets state when reset is called', () => {
-    const { result } = renderHook(() => useCategoryAutocomplete());
+    const { result } = renderHookWithApollo(() => useCategoryAutocomplete());
 
     act(() => {
       result.current.handleSearchTermChange('test');
@@ -153,7 +162,7 @@ describe('useCategoryAutocomplete', () => {
   });
 
   it('returns isLoading false when query is not loading', () => {
-    const { result } = renderHook(() => useCategoryAutocomplete());
+    const { result } = renderHookWithApollo(() => useCategoryAutocomplete());
 
     expect(result.current.isLoading).toBe(false);
   });
