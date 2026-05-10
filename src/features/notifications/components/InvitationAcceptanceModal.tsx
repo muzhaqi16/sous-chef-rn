@@ -17,7 +17,7 @@ import {
   DeclineShoppingListInviteDocument,
   MyShoppingListInvitesDocument,
   type MyShoppingListInvitesQuery,
-} from '#features/shoppingList/graphql/collaboration.generated';
+} from './InvitationAcceptanceModal.generated';
 import { createAddToQueryFieldUpdater } from '#/apollo/utils/cacheUpdaters';
 import { executeAsyncWithCleanup } from '#/utils/compilerSafeWrappers';
 import { Text } from '#components/atoms/Text';

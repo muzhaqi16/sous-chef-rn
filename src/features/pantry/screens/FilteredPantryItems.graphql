@@ -1,0 +1,12 @@
+# Local copy of AddItemToShoppingList per the Feature API Boundary Convention.
+# The shoppingList feature's graphql/ folder is internal.
+mutation AddItemToShoppingList($input: CreateShoppingListItemInput!) {
+  addItemToShoppingList(input: $input) {
+    success
+    message
+    code
+    shoppingListItem {
+      ...ShoppingListItemDisplayFragment
+    }
+  }
+}
