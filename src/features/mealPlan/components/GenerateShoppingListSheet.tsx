@@ -12,7 +12,7 @@ import { BaseSwitch } from '#components/base/BaseSwitch';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { FormInput } from '#components/molecules/FormInput';
 import { useQuery } from '@apollo/client/react';
-import { GetShoppingListsLiteDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { GetShoppingListsLiteDocument } from './GenerateShoppingListSheet.generated';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 

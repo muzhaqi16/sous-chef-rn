@@ -21,7 +21,7 @@ import {
   AddItemsToShoppingListDocument,
   GetShoppingListsLiteDocument,
   CreateShoppingListDocument,
-} from '#features/shoppingList/graphql/shoppingList.generated';
+} from './useRecipeDetail.generated';
 import { type BatchAddShoppingListItemInput } from '#/graphql/generated/schemaTypes';
 import { useAppStore, useSelectedShoppingListId } from '#store/useAppStore';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';

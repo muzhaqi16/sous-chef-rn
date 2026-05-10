@@ -10,7 +10,7 @@ import { Pressable } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import Animated from 'react-native-reanimated';
 import { useMutation, useQuery } from '@apollo/client/react';
-import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { AddItemToShoppingListDocument } from './PantryItemDetail.generated';
 import {
   GetPantryItemDocument,
   DeletePantryItemDocument,

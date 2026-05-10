@@ -1,5 +1,5 @@
 import { useMutation } from '@apollo/client/react';
-import { MovePurchasedItemsToPantryDocument } from '#features/pantry/graphql/pantry.generated';
+import { MovePurchasedItemsToPantryDocument } from './useBatchMoveToPantry.generated';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
 import {

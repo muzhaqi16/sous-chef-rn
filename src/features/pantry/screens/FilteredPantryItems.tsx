@@ -19,7 +19,7 @@ import { SpotlightCoachMark } from '#/components/organisms/SpotlightCoachMark/Sp
 import { usePantryManagement } from '#hooks/home/pantry/usePantryManagement';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useMutation } from '@apollo/client/react';
-import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { AddItemToShoppingListDocument } from './FilteredPantryItems.generated';
 import { useCurrentPantry } from '#features/pantry/hooks/useCurrentPantry';
 import { useAddLowStockToShoppingList } from '#features/pantry/hooks/useAddLowStockToShoppingList';
 import {
