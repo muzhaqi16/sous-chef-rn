@@ -1,7 +1,8 @@
 'use no memo';
 
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { screen, fireEvent } from '@testing-library/react-native';
+import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { alertService } from '#/services/alertService';
 import { InviteMemberScreen } from '../InviteMemberScreen';
 
@@ -32,20 +33,6 @@ jest.mock('#store/useAppStore', () => {
     useUser: jest.fn(() => ({ id: 'u1', email: 'me@test.com' })),
   };
 });
-
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useMutation: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'InviteToHome') {
-      return [jest.fn(() => Promise.resolve()), { loading: false }];
-    }
-    if (opName === 'AddCollaborator') {
-      return [jest.fn(() => Promise.resolve()), { loading: false }];
-    }
-    return [jest.fn(), {}];
-  }),
-}));
 
 jest.mock('#hooks/performance/useScreenTransition');
 jest.mock('#/utils/compilerSafeWrappers');
@@ -91,48 +78,48 @@ describe('InviteMemberScreen', () => {
   });
 
   it('renders invite title', () => {
-    render(<InviteMemberScreen />);
+    renderWithApollo(<InviteMemberScreen />);
     expect(screen.getByText('Invite family & friends')).toBeTruthy();
   });
 
   it('shows subtitle for both resources', () => {
-    render(<InviteMemberScreen />);
+    renderWithApollo(<InviteMemberScreen />);
     expect(
       screen.getByText(/Invite others to your home and shopping lists/),
     ).toBeTruthy();
   });
 
   it('shows email input', () => {
-    render(<InviteMemberScreen />);
+    renderWithApollo(<InviteMemberScreen />);
     expect(screen.getByPlaceholderText('Enter email address')).toBeTruthy();
   });
 
   it('shows empty invites message initially', () => {
-    render(<InviteMemberScreen />);
+    renderWithApollo(<InviteMemberScreen />);
     expect(screen.getByText('No invitations added yet')).toBeTruthy();
   });
 
   it('shows tip text', () => {
-    render(<InviteMemberScreen />);
+    renderWithApollo(<InviteMemberScreen />);
     expect(
       screen.getByText(/You can always invite more people later/),
     ).toBeTruthy();
   });
 
   it('shows send invites button disabled initially', () => {
-    render(<InviteMemberScreen />);
+    renderWithApollo(<InviteMemberScreen />);
     expect(screen.getByText('Send Invites')).toBeTruthy();
   });
 
   it('shows nothing-to-share state when neither resource exists', () => {
     mockSelectedHomeId = null;
     mockSelectedShoppingListId = null;
-    render(<InviteMemberScreen />);
+    renderWithApollo(<InviteMemberScreen />);
     expect(screen.getByText('Nothing to share yet')).toBeTruthy();
   });
 
   it('adds an invite when valid email is entered', () => {
-    render(<InviteMemberScreen />);
+    renderWithApollo(<InviteMemberScreen />);
     const input = screen.getByPlaceholderText('Enter email address');
     fireEvent.changeText(input, 'friend@test.com');
     fireEvent.press(screen.getByText('Add'));
@@ -141,7 +128,7 @@ describe('InviteMemberScreen', () => {
   });
 
   it('shows alert for invalid email', () => {
-    render(<InviteMemberScreen />);
+    renderWithApollo(<InviteMemberScreen />);
     const input = screen.getByPlaceholderText('Enter email address');
     fireEvent.changeText(input, 'not-an-email');
     fireEvent.press(screen.getByText('Add'));
@@ -152,7 +139,7 @@ describe('InviteMemberScreen', () => {
   });
 
   it('shows alert for duplicate email', () => {
-    render(<InviteMemberScreen />);
+    renderWithApollo(<InviteMemberScreen />);
     const input = screen.getByPlaceholderText('Enter email address');
     fireEvent.changeText(input, 'friend@test.com');
     fireEvent.press(screen.getByText('Add'));
@@ -165,7 +152,7 @@ describe('InviteMemberScreen', () => {
   });
 
   it('shows alert when inviting yourself', () => {
-    render(<InviteMemberScreen />);
+    renderWithApollo(<InviteMemberScreen />);
     const input = screen.getByPlaceholderText('Enter email address');
     fireEvent.changeText(input, 'me@test.com');
     fireEvent.press(screen.getByText('Add'));
@@ -176,25 +163,25 @@ describe('InviteMemberScreen', () => {
   });
 
   it('removes an invite when remove button pressed', () => {
-    render(<InviteMemberScreen />);
+    renderWithApollo(<InviteMemberScreen />);
     const input = screen.getByPlaceholderText('Enter email address');
     fireEvent.changeText(input, 'friend@test.com');
     fireEvent.press(screen.getByText('Add'));
     expect(screen.getByText('friend@test.com')).toBeTruthy();
     // Press the remove button (X)
-    fireEvent.press(screen.getByText('\u2715'));
+    fireEvent.press(screen.getByText('✕'));
     expect(screen.getByText('No invitations added yet')).toBeTruthy();
   });
 
   it('shows subtitle when only home available', () => {
     mockSelectedShoppingListId = null;
-    render(<InviteMemberScreen />);
+    renderWithApollo(<InviteMemberScreen />);
     expect(screen.getByText(/Invite others to your home/)).toBeTruthy();
   });
 
   it('shows subtitle when only shopping list available', () => {
     mockSelectedHomeId = null;
-    render(<InviteMemberScreen />);
+    renderWithApollo(<InviteMemberScreen />);
     expect(
       screen.getByText(/Invite others to your shopping list/),
     ).toBeTruthy();
@@ -203,14 +190,14 @@ describe('InviteMemberScreen', () => {
   it('shows subtitle when neither resource exists', () => {
     mockSelectedHomeId = null;
     mockSelectedShoppingListId = null;
-    render(<InviteMemberScreen />);
+    renderWithApollo(<InviteMemberScreen />);
     expect(
       screen.getByText(/Create a home or shopping list first/),
     ).toBeTruthy();
   });
 
-  it('sends invites and navigates on success when invites exist', async () => {
-    render(<InviteMemberScreen />);
+  it('sends invites and navigates on success when invites exist', () => {
+    renderWithApollo(<InviteMemberScreen />);
     const input = screen.getByPlaceholderText('Enter email address');
     fireEvent.changeText(input, 'friend@test.com');
     fireEvent.press(screen.getByText('Add'));
@@ -223,7 +210,7 @@ describe('InviteMemberScreen', () => {
   });
 
   it('send button is disabled when no invites to send', () => {
-    render(<InviteMemberScreen />);
+    renderWithApollo(<InviteMemberScreen />);
     // Button renders "Send Invites" but is disabled when no invites are added
     expect(screen.getByText(/Send.*Invite/)).toBeTruthy();
   });
@@ -231,20 +218,20 @@ describe('InviteMemberScreen', () => {
   it('shows "Continue" button in nothing-to-share state', () => {
     mockSelectedHomeId = null;
     mockSelectedShoppingListId = null;
-    render(<InviteMemberScreen />);
+    renderWithApollo(<InviteMemberScreen />);
     expect(screen.getByText('Continue')).toBeTruthy();
   });
 
   it('navigates from nothing-to-share when Continue is pressed', () => {
     mockSelectedHomeId = null;
     mockSelectedShoppingListId = null;
-    render(<InviteMemberScreen />);
+    renderWithApollo(<InviteMemberScreen />);
     fireEvent.press(screen.getByText('Continue'));
     expect(mockNavigateToNextStep).toHaveBeenCalledWith('InviteMembers');
   });
 
   it('shows "people" plural text when multiple invites added', () => {
-    render(<InviteMemberScreen />);
+    renderWithApollo(<InviteMemberScreen />);
     const input = screen.getByPlaceholderText('Enter email address');
     fireEvent.changeText(input, 'a@test.com');
     fireEvent.press(screen.getByText('Add'));
@@ -254,7 +241,7 @@ describe('InviteMemberScreen', () => {
   });
 
   it('clears email input after adding invite', () => {
-    render(<InviteMemberScreen />);
+    renderWithApollo(<InviteMemberScreen />);
     const input = screen.getByPlaceholderText('Enter email address');
     fireEvent.changeText(input, 'friend@test.com');
     fireEvent.press(screen.getByText('Add'));
@@ -263,7 +250,7 @@ describe('InviteMemberScreen', () => {
   });
 
   it('adds invite on submit editing (keyboard return)', () => {
-    render(<InviteMemberScreen />);
+    renderWithApollo(<InviteMemberScreen />);
     const input = screen.getByPlaceholderText('Enter email address');
     fireEvent.changeText(input, 'friend@test.com');
     fireEvent(input, 'submitEditing');
@@ -272,24 +259,17 @@ describe('InviteMemberScreen', () => {
 
   it('does not show tap to change hint when only one resource', () => {
     mockSelectedShoppingListId = null;
-    render(<InviteMemberScreen />);
+    renderWithApollo(<InviteMemberScreen />);
     const input = screen.getByPlaceholderText('Enter email address');
     fireEvent.changeText(input, 'friend@test.com');
     fireEvent.press(screen.getByText('Add'));
     expect(screen.queryByText(/(tap to change)/)).toBeNull();
   });
 
-  it('sends home invite for home-type invites', async () => {
-    const mockInviteToHome = jest.fn().mockResolvedValue({});
-    const { useMutation } = require('@apollo/client/react');
-    (useMutation as jest.Mock).mockReturnValueOnce([
-      mockInviteToHome,
-      { loading: false },
-    ]);
-
+  it('sends home invite for home-type invites', () => {
     mockSelectedShoppingListId = null;
 
-    render(<InviteMemberScreen />);
+    renderWithApollo(<InviteMemberScreen />);
     const input = screen.getByPlaceholderText('Enter email address');
     fireEvent.changeText(input, 'friend@test.com');
     fireEvent.press(screen.getByText('Add'));
@@ -302,7 +282,7 @@ describe('InviteMemberScreen', () => {
   it('shows empty state description in nothing-to-share view', () => {
     mockSelectedHomeId = null;
     mockSelectedShoppingListId = null;
-    render(<InviteMemberScreen />);
+    renderWithApollo(<InviteMemberScreen />);
     expect(
       screen.getByText(/You need to create a home or shopping list first/),
     ).toBeTruthy();

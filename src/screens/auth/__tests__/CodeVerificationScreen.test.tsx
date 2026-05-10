@@ -1,13 +1,15 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { screen, fireEvent, waitFor } from '@testing-library/react-native';
+import type { MockedResponse } from '@apollo/client/testing';
+import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  VerifyEmailDocument,
+  ResendVerificationEmailDocument,
+} from '#operations/auth/auth.generated';
 import { CodeVerificationScreen } from '../CodeVerificationScreen';
 
 // --- Mocks ---
 
-const mockVerifyEmail = jest.fn().mockResolvedValue({
-  data: { verifyEmail: { success: true, message: '' } },
-});
-const mockResendVerificationEmail = jest.fn().mockResolvedValue({});
 const mockUpdateUser = jest.fn();
 const mockToast = jest.fn();
 
@@ -23,17 +25,6 @@ jest.mock('#store/useAppStore', () => ({
 
 jest.mock('#/hooks/useToast', () => ({
   useToast: () => mockToast,
-}));
-
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useMutation: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'VerifyEmail') return [mockVerifyEmail, { loading: false }];
-    if (opName === 'ResendVerificationEmail')
-      return [mockResendVerificationEmail, { loading: false }];
-    return [jest.fn(), {}];
-  }),
 }));
 
 jest.mock('#/services/errorService', () => ({
@@ -112,37 +103,82 @@ jest.mock('#/components/base/SousChefLoader', () => ({
   SousChefLoader: 'SousChefLoader',
 }));
 
+function buildResendMock(
+  recordedVariables: Record<string, unknown>[],
+): MockedResponse {
+  return {
+    request: {
+      query: ResendVerificationEmailDocument,
+      variables: variables => {
+        recordedVariables.push(variables);
+        return true;
+      },
+    },
+    result: {
+      data: {
+        resendVerificationEmail: {
+          __typename: 'UserPayload',
+          success: true,
+          message: 'OK',
+          code: 'OK',
+        },
+      },
+    },
+  };
+}
+
+// Verify mock kept available for potential extension; use a generic accept-all mock
+function buildVerifyMock(): MockedResponse {
+  return {
+    request: { query: VerifyEmailDocument, variables: () => true },
+    result: {
+      data: {
+        verifyEmail: {
+          __typename: 'UserPayload',
+          success: true,
+          message: 'OK',
+          code: 'OK',
+          user: null,
+        },
+      },
+    },
+  };
+}
+
 describe('CodeVerificationScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   it('renders the enter code title', () => {
-    render(<CodeVerificationScreen />);
+    renderWithApollo(<CodeVerificationScreen />);
     expect(screen.getByText('Enter Code')).toBeTruthy();
   });
 
   it('renders the user email in the subtitle', () => {
-    render(<CodeVerificationScreen />);
+    renderWithApollo(<CodeVerificationScreen />);
     expect(screen.getByText('test@example.com')).toBeTruthy();
   });
 
   it('renders the submit button', () => {
-    render(<CodeVerificationScreen />);
+    renderWithApollo(<CodeVerificationScreen />);
     expect(screen.getByText('Submit')).toBeTruthy();
   });
 
   it('renders the resend code footer', () => {
-    render(<CodeVerificationScreen />);
+    renderWithApollo(<CodeVerificationScreen />);
     expect(screen.getByText("Didn't get the email?")).toBeTruthy();
     expect(screen.getByText('Resend code')).toBeTruthy();
   });
 
-  it('fires resend when footer link is pressed', () => {
-    render(<CodeVerificationScreen />);
+  it('fires resend when footer link is pressed', async () => {
+    const recordedVariables: Record<string, unknown>[] = [];
+    renderWithApollo(<CodeVerificationScreen />, {
+      operationMocks: [buildResendMock(recordedVariables), buildVerifyMock()],
+    });
     fireEvent.press(screen.getByTestId('footer-link'));
-    expect(mockResendVerificationEmail).toHaveBeenCalledWith({
-      variables: { email: 'test@example.com' },
+    await waitFor(() => {
+      expect(recordedVariables).toContainEqual({ email: 'test@example.com' });
     });
   });
 
@@ -157,7 +193,7 @@ describe('CodeVerificationScreen', () => {
         return selector(state);
       });
 
-    const { toJSON } = render(<CodeVerificationScreen />);
+    const { toJSON } = renderWithApollo(<CodeVerificationScreen />);
     expect(toJSON()).toBeNull();
   });
 
@@ -172,7 +208,7 @@ describe('CodeVerificationScreen', () => {
         return selector(state);
       });
 
-    const { toJSON } = render(<CodeVerificationScreen />);
+    const { toJSON } = renderWithApollo(<CodeVerificationScreen />);
     expect(toJSON()).toBeNull();
   });
 });

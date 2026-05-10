@@ -1,18 +1,13 @@
 import React from 'react';
-import {
-  render,
-  screen,
-  fireEvent,
-  waitFor,
-} from '@testing-library/react-native';
+import { screen, fireEvent, waitFor } from '@testing-library/react-native';
+import type { MockedResponse } from '@apollo/client/testing';
+import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { VerifyEmailDocument } from '#operations/auth/auth.generated';
 import { EmailVerificationDeepLinkScreen } from '../EmailVerificationDeepLinkScreen';
 
 // --- Mocks ---
 
 const mockGoBack = jest.fn();
-const mockVerifyEmail = jest.fn().mockResolvedValue({
-  data: { verifyEmail: { success: true, message: '' } },
-});
 const mockUpdateUser = jest.fn();
 const mockToast = jest.fn();
 
@@ -32,25 +27,18 @@ jest.mock('@react-navigation/native', () => ({
   }),
 }));
 
+const mockUserObject = {
+  id: '1',
+  email: 'test@example.com',
+  onBoarded: true,
+};
+
 jest.mock('#store/useAppStore', () => ({
   useAppStore: (selector: any) =>
     selector({
       updateUser: mockUpdateUser,
     }),
-  useUser: jest.fn(() => ({
-    id: '1',
-    email: 'test@example.com',
-    onBoarded: true,
-  })),
-}));
-
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useMutation: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'VerifyEmail') return [mockVerifyEmail, { loading: false }];
-    return [jest.fn(), {}];
-  }),
+  useUser: jest.fn(() => mockUserObject),
 }));
 
 jest.mock('#/hooks/useToast', () => ({
@@ -96,47 +84,108 @@ jest.mock('#/components/base/SousChefLoader', () => {
   };
 });
 
+function buildVerifyMock(
+  recordedVariables: Record<string, unknown>[] = [],
+): MockedResponse {
+  return {
+    request: {
+      query: VerifyEmailDocument,
+      variables: variables => {
+        recordedVariables.push(variables);
+        return true;
+      },
+    },
+    result: {
+      data: {
+        verifyEmail: {
+          __typename: 'UserPayload',
+          success: true,
+          message: 'OK',
+          code: 'OK',
+          user: {
+            __typename: 'User',
+            id: '1',
+            email: 'test@example.com',
+            emailVerified: true,
+            role: 'USER' as any,
+            canAccessDevTools: false,
+            onBoarded: true,
+            createdAt: '2025-01-01T00:00:00.000Z',
+            updatedAt: '2025-01-01T00:00:00.000Z',
+            timezone: 'UTC',
+            defaultHomeId: null,
+            defaultShoppingListId: null,
+            defaultHome: null,
+            profile: {
+              __typename: 'UserProfile',
+              id: 'p1',
+              displayName: 'Test',
+              avatar: null,
+            },
+            settings: {
+              __typename: 'UserSettings',
+              id: 's1',
+              theme: 'LIGHT' as any,
+            },
+          },
+        },
+      },
+    },
+  };
+}
+
 describe('EmailVerificationDeepLinkScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   it('renders the verification screen', () => {
-    render(<EmailVerificationDeepLinkScreen />);
+    renderWithApollo(<EmailVerificationDeepLinkScreen />, {
+      operationMocks: [buildVerifyMock()],
+    });
     // The screen should render at least the header
     expect(screen.getByTestId('header')).toBeTruthy();
   });
 
   it('shows a loading state initially', () => {
-    render(<EmailVerificationDeepLinkScreen />);
+    renderWithApollo(<EmailVerificationDeepLinkScreen />, {
+      operationMocks: [buildVerifyMock()],
+    });
     expect(screen.getByTestId('loader')).toBeTruthy();
     expect(screen.getByText('Verifying your email...')).toBeTruthy();
   });
 
   it('calls verifyEmail on mount', async () => {
-    render(<EmailVerificationDeepLinkScreen />);
+    const recordedVariables: Record<string, unknown>[] = [];
+    renderWithApollo(<EmailVerificationDeepLinkScreen />, {
+      operationMocks: [buildVerifyMock(recordedVariables)],
+    });
     await waitFor(() => {
-      expect(mockVerifyEmail).toHaveBeenCalledWith({
-        variables: { code: 'abc123def456' },
-      });
+      expect(recordedVariables).toContainEqual({ code: 'abc123def456' });
     });
   });
 
   it('calls goBack when header close button is pressed', () => {
-    render(<EmailVerificationDeepLinkScreen />);
+    renderWithApollo(<EmailVerificationDeepLinkScreen />, {
+      operationMocks: [buildVerifyMock()],
+    });
     fireEvent.press(screen.getByTestId('header-close'));
     expect(mockGoBack).toHaveBeenCalledTimes(1);
   });
 
   it('shows success state after successful verification', async () => {
-    render(<EmailVerificationDeepLinkScreen />);
+    renderWithApollo(<EmailVerificationDeepLinkScreen />, {
+      operationMocks: [buildVerifyMock()],
+    });
     await waitFor(() => {
       expect(screen.getByText('Email Verified!')).toBeTruthy();
     });
   });
 
   it('updates user after successful verification', async () => {
-    render(<EmailVerificationDeepLinkScreen />);
+    renderWithApollo(<EmailVerificationDeepLinkScreen />, {
+      operationMocks: [buildVerifyMock()],
+    });
     await waitFor(() => {
       expect(mockUpdateUser).toHaveBeenCalledWith(
         expect.objectContaining({ emailVerified: true }),
@@ -157,14 +206,14 @@ describe('EmailVerificationDeepLinkScreen - no token', () => {
   });
 
   it('shows error state when token is missing', async () => {
-    render(<EmailVerificationDeepLinkScreen />);
+    renderWithApollo(<EmailVerificationDeepLinkScreen />);
     await waitFor(() => {
       expect(screen.getByText('Verification Failed')).toBeTruthy();
     });
   });
 
   it('shows Try Again button when token is missing', async () => {
-    render(<EmailVerificationDeepLinkScreen />);
+    renderWithApollo(<EmailVerificationDeepLinkScreen />);
     await waitFor(() => {
       expect(screen.getByText('Try Again')).toBeTruthy();
     });
