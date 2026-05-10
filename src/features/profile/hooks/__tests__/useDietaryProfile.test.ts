@@ -66,7 +66,7 @@ const mockProfileData = {
       diet: Diet.Vegan,
       intolerance: null,
       healthGoal: null,
-      severity: RestrictionSeverity.Strict,
+      severity: RestrictionSeverity.Allergy,
       notes: 'test',
       appliesToHomeId: null,
       createdAt: '2025-01-01T00:00:00.000Z',
@@ -130,7 +130,7 @@ function buildAddRestrictionMock(): MockedResponse {
             diet: Diet.Vegan,
             intolerance: null,
             healthGoal: null,
-            severity: RestrictionSeverity.Strict,
+            severity: RestrictionSeverity.Allergy,
             notes: 'No animal products',
             appliesToHomeId: null,
             createdAt: '2025-01-01T00:00:00.000Z',
@@ -160,7 +160,7 @@ function buildUpdateRestrictionMock(): MockedResponse {
             diet: Diet.Vegan,
             intolerance: null,
             healthGoal: null,
-            severity: RestrictionSeverity.Moderate,
+            severity: RestrictionSeverity.Preference,
             notes: 'test',
             appliesToHomeId: null,
             createdAt: '2025-01-01T00:00:00.000Z',
@@ -245,7 +245,7 @@ describe('useDietaryProfile', () => {
 
     expect(restriction?.id).toBe('r1');
     expect(restriction?.diet).toBe(Diet.Vegan);
-    expect(restriction?.severity).toBe(RestrictionSeverity.Strict);
+    expect(restriction?.severity).toBe(RestrictionSeverity.Allergy);
     expect(restriction?.notes).toBe('test');
   });
 
@@ -282,7 +282,7 @@ describe('useDietaryProfile', () => {
     await act(async () => {
       success = await result.current.addDietaryRestriction(
         { diet: Diet.Vegan },
-        RestrictionSeverity.Strict,
+        RestrictionSeverity.Allergy,
         'No animal products',
       );
     });
@@ -302,7 +302,7 @@ describe('useDietaryProfile', () => {
     let success: boolean = false;
     await act(async () => {
       success = await result.current.updateDietaryRestriction('r1', {
-        severity: RestrictionSeverity.Moderate,
+        severity: RestrictionSeverity.Preference,
       });
     });
 

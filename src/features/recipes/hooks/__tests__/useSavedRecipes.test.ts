@@ -38,7 +38,7 @@ function buildRecipe(
     difficulty: Difficulty.Easy,
     category: RecipeCategory.MainCourse,
     cuisine: null,
-    status: RecipeStatus.Active,
+    status: RecipeStatus.Published,
     isExternal: false,
     externalSource: null,
     externalId: null,
