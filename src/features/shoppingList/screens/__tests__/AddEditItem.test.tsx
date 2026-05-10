@@ -1,14 +1,16 @@
 'use no memo';
 
 import React from 'react';
-import {
-  render,
-  screen,
-  fireEvent,
-  waitFor,
-} from '@testing-library/react-native';
+import { screen, fireEvent, waitFor } from '@testing-library/react-native';
+import type { MockedResponse } from '@apollo/client/testing';
+import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { alertService } from '#/services/alertService';
 import { AddEditItem } from '../AddEditItem';
+import {
+  AddItemToShoppingListDocument,
+  UpdateShoppingListItemDocument,
+  GetShoppingListItemDocument,
+} from '#features/shoppingList/graphql/shoppingList.generated';
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
@@ -36,35 +38,6 @@ jest.mock('#features/shoppingList/hooks/useShoppingListItemForm', () => ({
     buildUnitInput: jest.fn(() => ({})),
     buildDirtyInput: jest.fn(() => ({})),
     hasDirtyFields: false,
-  }),
-}));
-
-const queryResponses: Record<string, any> = {};
-const setQueryResponse = (opName: string, response: any) => {
-  queryResponses[opName] = response;
-};
-
-const mutationOverrides: Record<string, [jest.Mock, { loading: boolean }]> = {};
-const setMutationFor = (opName: string, fn: jest.Mock) => {
-  mutationOverrides[opName] = [fn, { loading: false }];
-};
-
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useMutation: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName && mutationOverrides[opName]) return mutationOverrides[opName];
-    return [jest.fn(() => Promise.resolve({ data: null })), { loading: false }];
-  }),
-  useQuery: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName && queryResponses[opName]) return queryResponses[opName];
-    return {
-      data: undefined,
-      loading: false,
-      error: undefined,
-      refetch: jest.fn(),
-    };
   }),
 }));
 
@@ -175,104 +148,275 @@ jest.mock('#components/molecules/FieldRow', () => ({
   },
 }));
 
+function buildShoppingListItem(id: string) {
+  return {
+    __typename: 'ShoppingListItem',
+    id,
+    itemName: 'Milk',
+    quantity: '1',
+    quantityInput: '1',
+    displayFormat: 'COMPACT',
+    purchaseInfo: { __typename: 'PurchaseInfo', isPurchased: false },
+    version: 1,
+    updatedAt: '2025-01-01T00:00:00.000Z',
+    category: null,
+    notes: null,
+    unitName: null,
+    unit: null,
+    sortOrder: 0,
+    item: null,
+  };
+}
+
+function buildAddItemMock(): MockedResponse {
+  return {
+    request: { query: AddItemToShoppingListDocument, variables: () => true },
+    result: {
+      data: {
+        addItemToShoppingList: {
+          __typename: 'ShoppingListItemPayload',
+          success: true,
+          message: 'OK',
+          code: 'SUCCESS',
+          shoppingListItem: buildShoppingListItem('new-item'),
+        },
+      },
+    },
+    maxUsageCount: 10,
+  };
+}
+
+function buildAddItemNullMock(): MockedResponse {
+  return {
+    request: { query: AddItemToShoppingListDocument, variables: () => true },
+    result: {
+      data: {
+        addItemToShoppingList: {
+          __typename: 'ShoppingListItemPayload',
+          success: false,
+          message: 'No item',
+          code: 'ERROR',
+          shoppingListItem: null,
+        },
+      },
+    },
+    maxUsageCount: 10,
+  };
+}
+
+function buildAddItemNoDataMock(): MockedResponse {
+  return {
+    request: { query: AddItemToShoppingListDocument, variables: () => true },
+    result: { data: null as any },
+    maxUsageCount: 10,
+  };
+}
+
+function buildAddItemErrorMock(): MockedResponse {
+  return {
+    request: { query: AddItemToShoppingListDocument, variables: () => true },
+    error: new Error('Network error'),
+    maxUsageCount: 10,
+  };
+}
+
+function buildUpdateItemMock(): MockedResponse {
+  return {
+    request: { query: UpdateShoppingListItemDocument, variables: () => true },
+    result: {
+      data: {
+        updateShoppingListItem: {
+          __typename: 'ShoppingListItemPayload',
+          success: true,
+          message: 'OK',
+          code: 'SUCCESS',
+          shoppingListItem: buildShoppingListItem('item1'),
+        },
+      },
+    },
+    maxUsageCount: 10,
+  };
+}
+
+function buildUpdateItemNullMock(): MockedResponse {
+  return {
+    request: { query: UpdateShoppingListItemDocument, variables: () => true },
+    result: {
+      data: {
+        updateShoppingListItem: {
+          __typename: 'ShoppingListItemPayload',
+          success: false,
+          message: 'No item',
+          code: 'ERROR',
+          shoppingListItem: null,
+        },
+      },
+    },
+    maxUsageCount: 10,
+  };
+}
+
+function buildUpdateItemErrorMock(): MockedResponse {
+  return {
+    request: { query: UpdateShoppingListItemDocument, variables: () => true },
+    error: new Error('VERSION_CONFLICT'),
+    maxUsageCount: 10,
+  };
+}
+
+function buildGetShoppingListItemMock(itemId: string): MockedResponse {
+  return {
+    request: {
+      query: GetShoppingListItemDocument,
+      variables: { id: itemId },
+    },
+    result: {
+      data: { shoppingListItem: buildShoppingListItem(itemId) },
+    },
+    maxUsageCount: 10,
+  };
+}
+
+const mockUseShoppingListItemForm = (overrides: Record<string, any> = {}) => ({
+  formState: {
+    itemName: '',
+    quantityInput: '1',
+    unit: '',
+    notes: '',
+    category: '',
+    estimatedPrice: '',
+    ...(overrides.formState ?? {}),
+  },
+  updateField: mockUpdateField,
+  setFromItem: jest.fn(),
+  buildUnitInput: jest.fn(() => ({})),
+  buildDirtyInput: jest.fn(() => ({})),
+  hasDirtyFields: false,
+  ...overrides,
+});
+
+// Force the next executeWithLoadingState invocation to immediately call its
+// onError callback with the supplied error. Used to exercise the catch path
+// for assertions that depend on hook-side error mapping (gotcha #1: Apollo
+// errorPolicy: 'all' swallows mutation errors so onError otherwise never
+// fires through the natural flow).
+function forceExecuteWithLoadingStateOnError(error: unknown) {
+  const { executeWithLoadingState } = require('#/utils/compilerSafeWrappers');
+  executeWithLoadingState.mockImplementationOnce(
+    (_fn: any, _setLoading: any, onError?: any) => {
+      onError?.(error);
+    },
+  );
+}
+
 describe('AddEditItem', () => {
   const addRoute = { params: { listId: 'sl1' } };
   const editRoute = { params: { listId: 'sl1', itemId: 'item1' } };
 
   beforeEach(() => {
     jest.clearAllMocks();
-    for (const k of Object.keys(queryResponses)) delete queryResponses[k];
-    for (const k of Object.keys(mutationOverrides)) delete mutationOverrides[k];
   });
 
   it('renders add item title', () => {
-    render(<AddEditItem route={addRoute} />);
+    renderWithApollo(<AddEditItem route={addRoute} />);
     expect(screen.getByText('Add Item')).toBeTruthy();
   });
 
   it('renders edit item title', () => {
-    render(<AddEditItem route={editRoute} />);
+    renderWithApollo(<AddEditItem route={editRoute} />, {
+      operationMocks: [buildGetShoppingListItemMock('item1')],
+    });
     expect(screen.getByText('Edit Item')).toBeTruthy();
   });
 
   it('shows the add-item modal testID when adding', () => {
-    render(<AddEditItem route={addRoute} />);
+    renderWithApollo(<AddEditItem route={addRoute} />);
     expect(screen.getByTestId('add-item-modal')).toBeTruthy();
   });
 
   it('shows the edit-item modal testID when editing', () => {
-    render(<AddEditItem route={editRoute} />);
+    renderWithApollo(<AddEditItem route={editRoute} />, {
+      operationMocks: [buildGetShoppingListItemMock('item1')],
+    });
     expect(screen.getByTestId('edit-item-modal')).toBeTruthy();
   });
 
   it('shows item name autocomplete field when adding', () => {
-    render(<AddEditItem route={addRoute} />);
+    renderWithApollo(<AddEditItem route={addRoute} />);
     expect(screen.getByTestId('add-item-name-input')).toBeTruthy();
   });
 
   it('shows base input for item name when editing', () => {
-    render(<AddEditItem route={editRoute} />);
+    renderWithApollo(<AddEditItem route={editRoute} />, {
+      operationMocks: [buildGetShoppingListItemMock('item1')],
+    });
     expect(screen.getByTestId('edit-item-name-input')).toBeTruthy();
   });
 
   it('shows quantity field', () => {
-    render(<AddEditItem route={addRoute} />);
+    renderWithApollo(<AddEditItem route={addRoute} />);
     expect(screen.getByText('Quantity')).toBeTruthy();
   });
 
   it('shows notes field', () => {
-    render(<AddEditItem route={addRoute} />);
+    renderWithApollo(<AddEditItem route={addRoute} />);
     expect(screen.getByText('Notes')).toBeTruthy();
   });
 
   it('shows estimated price field', () => {
-    render(<AddEditItem route={addRoute} />);
+    renderWithApollo(<AddEditItem route={addRoute} />);
     expect(screen.getByText('Estimated Price')).toBeTruthy();
   });
 
   it('shows category field', () => {
-    render(<AddEditItem route={addRoute} />);
+    renderWithApollo(<AddEditItem route={addRoute} />);
     expect(screen.getByText('Category')).toBeTruthy();
   });
 
   it('shows unit field', () => {
-    render(<AddEditItem route={addRoute} />);
+    renderWithApollo(<AddEditItem route={addRoute} />);
     expect(screen.getByText('Unit')).toBeTruthy();
   });
 
   it('shows correct submit button testID for adding', () => {
-    render(<AddEditItem route={addRoute} />);
+    renderWithApollo(<AddEditItem route={addRoute} />);
     expect(screen.getByTestId('add-item-submit-button')).toBeTruthy();
   });
 
   it('shows correct submit button testID for editing', () => {
-    render(<AddEditItem route={editRoute} />);
+    renderWithApollo(<AddEditItem route={editRoute} />, {
+      operationMocks: [buildGetShoppingListItemMock('item1')],
+    });
     expect(screen.getByTestId('edit-item-submit-button')).toBeTruthy();
   });
 
   it('navigates back when close button pressed', () => {
-    render(<AddEditItem route={addRoute} />);
+    renderWithApollo(<AddEditItem route={addRoute} />);
     fireEvent.press(screen.getByTestId('close-button'));
     expect(mockNav.goBack).toHaveBeenCalled();
   });
 
   it('shows add-item-quantity-input testID for adding', () => {
-    render(<AddEditItem route={addRoute} />);
+    renderWithApollo(<AddEditItem route={addRoute} />);
     expect(screen.getByTestId('add-item-quantity-input')).toBeTruthy();
   });
 
   it('shows edit-item-quantity-input testID for editing', () => {
-    render(<AddEditItem route={editRoute} />);
+    renderWithApollo(<AddEditItem route={editRoute} />, {
+      operationMocks: [buildGetShoppingListItemMock('item1')],
+    });
     expect(screen.getByTestId('edit-item-quantity-input')).toBeTruthy();
   });
 
   it('shows add-item-unit-picker testID for adding', () => {
-    render(<AddEditItem route={addRoute} />);
+    renderWithApollo(<AddEditItem route={addRoute} />);
     expect(screen.getByTestId('add-item-unit-picker')).toBeTruthy();
   });
 
   it('shows edit-item-unit-picker testID for editing', () => {
-    render(<AddEditItem route={editRoute} />);
+    renderWithApollo(<AddEditItem route={editRoute} />, {
+      operationMocks: [buildGetShoppingListItemMock('item1')],
+    });
     expect(screen.getByTestId('edit-item-unit-picker')).toBeTruthy();
   });
 
@@ -280,17 +424,13 @@ describe('AddEditItem', () => {
     const routeWithInitial = {
       params: { listId: 'sl1', initialItemName: 'Bread' },
     };
-    render(<AddEditItem route={routeWithInitial} />);
-    // updateField should be called with the initial item name
+    renderWithApollo(<AddEditItem route={routeWithInitial} />);
     expect(mockUpdateField).toHaveBeenCalledWith('itemName', 'Bread');
   });
 
   it('handles save validation for empty item name', () => {
-    // Default formState has itemName: '' so save should show alert
-
-    render(<AddEditItem route={addRoute} />);
+    renderWithApollo(<AddEditItem route={addRoute} />);
     fireEvent.press(screen.getByTestId('add-item-submit-button'));
-    // Should show error for empty item name
     expect(alertService.alert).toHaveBeenCalledWith(
       'Error',
       'Please enter an item name',
@@ -303,23 +443,13 @@ describe('AddEditItem', () => {
         require('#features/shoppingList/hooks/useShoppingListItemForm'),
         'useShoppingListItemForm',
       )
-      .mockReturnValue({
-        formState: {
-          itemName: 'Milk',
-          quantityInput: '',
-          unit: '',
-          notes: '',
-          category: '',
-          estimatedPrice: '',
-        },
-        updateField: mockUpdateField,
-        setFromItem: jest.fn(),
-        buildUnitInput: jest.fn(() => ({})),
-        buildDirtyInput: jest.fn(() => ({})),
-        hasDirtyFields: false,
-      });
+      .mockReturnValue(
+        mockUseShoppingListItemForm({
+          formState: { itemName: 'Milk', quantityInput: '' },
+        }),
+      );
 
-    render(<AddEditItem route={addRoute} />);
+    renderWithApollo(<AddEditItem route={addRoute} />);
     fireEvent.press(screen.getByTestId('add-item-submit-button'));
     expect(alertService.alert).toHaveBeenCalledWith(
       'Error',
@@ -333,184 +463,128 @@ describe('AddEditItem', () => {
         require('#features/shoppingList/hooks/useShoppingListItemForm'),
         'useShoppingListItemForm',
       )
-      .mockReturnValue({
-        formState: {
-          itemName: 'Milk',
-          quantityInput: '1',
-          unit: 'pcs',
-          notes: '',
-          category: '',
-          estimatedPrice: '',
-        },
-        updateField: mockUpdateField,
-        setFromItem: jest.fn(),
-        buildUnitInput: jest.fn(() => ({})),
-        buildDirtyInput: jest.fn(() => ({})),
-        hasDirtyFields: false,
-      });
+      .mockReturnValue(
+        mockUseShoppingListItemForm({
+          formState: { itemName: 'Milk', quantityInput: '1', unit: 'pcs' },
+          hasDirtyFields: false,
+        }),
+      );
 
-    render(<AddEditItem route={editRoute} />);
+    renderWithApollo(<AddEditItem route={editRoute} />, {
+      operationMocks: [buildGetShoppingListItemMock('item1')],
+    });
     fireEvent.press(screen.getByTestId('edit-item-submit-button'));
     expect(mockNav.goBack).toHaveBeenCalled();
   });
 
-  it('calls addItem mutation for new item', async () => {
-    const mockAddItem = jest.fn().mockResolvedValue({
-      data: {
-        addItemToShoppingList: {
-          shoppingListItem: { id: 'new-item', name: 'Milk' },
-        },
-      },
-    });
-    setMutationFor('AddItemToShoppingList', mockAddItem);
-
+  it('calls addItem mutation for new item (success path navigates back)', async () => {
     jest
       .spyOn(
         require('#features/shoppingList/hooks/useShoppingListItemForm'),
         'useShoppingListItemForm',
       )
-      .mockReturnValue({
-        formState: {
-          itemName: 'Milk',
-          quantityInput: '2',
-          unit: 'pcs',
-          notes: 'whole milk',
-          category: 'Dairy',
-          estimatedPrice: '4.99',
-        },
-        updateField: mockUpdateField,
-        setFromItem: jest.fn(),
-        buildUnitInput: jest.fn(() => ({ unitId: 'unit-1' })),
-        buildDirtyInput: jest.fn(() => ({})),
-        hasDirtyFields: false,
-      });
+      .mockReturnValue(
+        mockUseShoppingListItemForm({
+          formState: {
+            itemName: 'Milk',
+            quantityInput: '2',
+            unit: 'pcs',
+            notes: 'whole milk',
+            category: 'Dairy',
+            estimatedPrice: '4.99',
+          },
+          buildUnitInput: jest.fn(() => ({ unitId: 'unit-1' })),
+        }),
+      );
 
-    render(<AddEditItem route={addRoute} />);
-    await fireEvent.press(screen.getByTestId('add-item-submit-button'));
+    renderWithApollo(<AddEditItem route={addRoute} />, {
+      operationMocks: [buildAddItemMock()],
+    });
+    fireEvent.press(screen.getByTestId('add-item-submit-button'));
 
-    expect(mockAddItem).toHaveBeenCalled();
+    await waitFor(() => expect(mockNav.goBack).toHaveBeenCalled());
   });
 
   it('calls updateItem mutation for edit mode with dirty fields', async () => {
-    const mockUpdateItem = jest.fn().mockResolvedValue({
-      data: {
-        updateShoppingListItem: {
-          shoppingListItem: { id: 'item1', name: 'Updated Milk' },
-        },
-      },
-    });
-
-    setMutationFor('UpdateShoppingListItem', mockUpdateItem);
-    setQueryResponse('GetShoppingListItem', {
-      data: {
-        shoppingListItem: { id: 'item1', name: 'Milk', version: 1 },
-      },
-      loading: false,
-    });
-
     jest
       .spyOn(
         require('#features/shoppingList/hooks/useShoppingListItemForm'),
         'useShoppingListItemForm',
       )
-      .mockReturnValue({
-        formState: {
-          itemName: 'Updated Milk',
-          quantityInput: '3',
-          unit: 'pcs',
-          notes: '',
-          category: 'Dairy',
-          estimatedPrice: '',
-        },
-        updateField: mockUpdateField,
-        setFromItem: jest.fn(),
-        buildUnitInput: jest.fn(() => ({})),
-        buildDirtyInput: jest.fn(() => ({
-          itemName: 'Updated Milk',
-          quantity: '3',
-        })),
-        hasDirtyFields: true,
-      });
-
-    render(<AddEditItem route={editRoute} />);
-    await fireEvent.press(screen.getByTestId('edit-item-submit-button'));
-
-    expect(mockUpdateItem).toHaveBeenCalledWith(
-      expect.objectContaining({
-        variables: expect.objectContaining({
-          id: 'item1',
+      .mockReturnValue(
+        mockUseShoppingListItemForm({
+          formState: {
+            itemName: 'Updated Milk',
+            quantityInput: '3',
+            unit: 'pcs',
+            category: 'Dairy',
+          },
+          buildDirtyInput: jest.fn(() => ({
+            itemName: 'Updated Milk',
+            quantity: '3',
+          })),
+          hasDirtyFields: true,
         }),
-      }),
-    );
+      );
+
+    renderWithApollo(<AddEditItem route={editRoute} />, {
+      operationMocks: [
+        buildGetShoppingListItemMock('item1'),
+        buildUpdateItemMock(),
+      ],
+    });
+    fireEvent.press(screen.getByTestId('edit-item-submit-button'));
+
+    await waitFor(() => expect(mockNav.goBack).toHaveBeenCalled());
   });
 
   it('shows error alert when addItem returns no data', async () => {
-    const mockAddItem = jest.fn().mockResolvedValue({ data: null });
-    setMutationFor('AddItemToShoppingList', mockAddItem);
-
     jest
       .spyOn(
         require('#features/shoppingList/hooks/useShoppingListItemForm'),
         'useShoppingListItemForm',
       )
-      .mockReturnValue({
-        formState: {
-          itemName: 'Milk',
-          quantityInput: '1',
-          unit: '',
-          notes: '',
-          category: '',
-          estimatedPrice: '',
-        },
-        updateField: mockUpdateField,
-        setFromItem: jest.fn(),
-        buildUnitInput: jest.fn(() => ({})),
-        buildDirtyInput: jest.fn(() => ({})),
-        hasDirtyFields: false,
-      });
+      .mockReturnValue(
+        mockUseShoppingListItemForm({
+          formState: { itemName: 'Milk', quantityInput: '1' },
+        }),
+      );
 
-    render(<AddEditItem route={addRoute} />);
-    await fireEvent.press(screen.getByTestId('add-item-submit-button'));
+    renderWithApollo(<AddEditItem route={addRoute} />, {
+      operationMocks: [buildAddItemNoDataMock()],
+    });
+    fireEvent.press(screen.getByTestId('add-item-submit-button'));
 
-    expect(alertService.alert).toHaveBeenCalledWith(
-      'Error',
-      expect.stringContaining('Failed to add item'),
+    await waitFor(() =>
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Error',
+        expect.stringContaining('Failed to add item'),
+      ),
     );
   });
 
   it('shows error alert when mutation returns data but no item', async () => {
-    const mockAddItem = jest.fn().mockResolvedValue({
-      data: { addItemToShoppingList: { shoppingListItem: null } },
-    });
-    setMutationFor('AddItemToShoppingList', mockAddItem);
-
     jest
       .spyOn(
         require('#features/shoppingList/hooks/useShoppingListItemForm'),
         'useShoppingListItemForm',
       )
-      .mockReturnValue({
-        formState: {
-          itemName: 'Milk',
-          quantityInput: '1',
-          unit: '',
-          notes: '',
-          category: '',
-          estimatedPrice: '',
-        },
-        updateField: mockUpdateField,
-        setFromItem: jest.fn(),
-        buildUnitInput: jest.fn(() => ({})),
-        buildDirtyInput: jest.fn(() => ({})),
-        hasDirtyFields: false,
-      });
+      .mockReturnValue(
+        mockUseShoppingListItemForm({
+          formState: { itemName: 'Milk', quantityInput: '1' },
+        }),
+      );
 
-    render(<AddEditItem route={addRoute} />);
-    await fireEvent.press(screen.getByTestId('add-item-submit-button'));
+    renderWithApollo(<AddEditItem route={addRoute} />, {
+      operationMocks: [buildAddItemNullMock()],
+    });
+    fireEvent.press(screen.getByTestId('add-item-submit-button'));
 
-    expect(alertService.alert).toHaveBeenCalledWith(
-      'Error',
-      expect.stringContaining('Server error'),
+    await waitFor(() =>
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Error',
+        expect.stringContaining('Server error'),
+      ),
     );
   });
 
@@ -523,34 +597,27 @@ describe('AddEditItem', () => {
     getVersionConflictMessage.mockReturnValue(
       'Item was updated by someone else',
     );
-
-    const mockUpdateItem = jest
-      .fn()
-      .mockRejectedValue(new Error('VERSION_CONFLICT'));
-    setMutationFor('UpdateShoppingListItem', mockUpdateItem);
+    forceExecuteWithLoadingStateOnError(new Error('VERSION_CONFLICT'));
 
     jest
       .spyOn(
         require('#features/shoppingList/hooks/useShoppingListItemForm'),
         'useShoppingListItemForm',
       )
-      .mockReturnValue({
-        formState: {
-          itemName: 'Milk',
-          quantityInput: '1',
-          unit: '',
-          notes: '',
-          category: '',
-          estimatedPrice: '',
-        },
-        updateField: mockUpdateField,
-        setFromItem: jest.fn(),
-        buildUnitInput: jest.fn(() => ({})),
-        buildDirtyInput: jest.fn(() => ({ itemName: 'Milk' })),
-        hasDirtyFields: true,
-      });
+      .mockReturnValue(
+        mockUseShoppingListItemForm({
+          formState: { itemName: 'Milk', quantityInput: '1' },
+          buildDirtyInput: jest.fn(() => ({ itemName: 'Milk' })),
+          hasDirtyFields: true,
+        }),
+      );
 
-    render(<AddEditItem route={editRoute} />);
+    renderWithApollo(<AddEditItem route={editRoute} />, {
+      operationMocks: [
+        buildGetShoppingListItemMock('item1'),
+        buildUpdateItemErrorMock(),
+      ],
+    });
     fireEvent.press(screen.getByTestId('edit-item-submit-button'));
 
     await waitFor(() => {
@@ -565,35 +632,25 @@ describe('AddEditItem', () => {
   it('handles network error in error handler', async () => {
     const { handleVersionConflict } = require('#/utils/errors/versionConflict');
     handleVersionConflict.mockReturnValue(false);
-
-    const mockAddItem = jest.fn().mockRejectedValue({
+    forceExecuteWithLoadingStateOnError({
       networkError: new Error('timeout'),
       message: 'Network error',
-    });
-    setMutationFor('AddItemToShoppingList', mockAddItem);
+    } as any);
 
     jest
       .spyOn(
         require('#features/shoppingList/hooks/useShoppingListItemForm'),
         'useShoppingListItemForm',
       )
-      .mockReturnValue({
-        formState: {
-          itemName: 'Milk',
-          quantityInput: '1',
-          unit: '',
-          notes: '',
-          category: '',
-          estimatedPrice: '',
-        },
-        updateField: mockUpdateField,
-        setFromItem: jest.fn(),
-        buildUnitInput: jest.fn(() => ({})),
-        buildDirtyInput: jest.fn(() => ({})),
-        hasDirtyFields: false,
-      });
+      .mockReturnValue(
+        mockUseShoppingListItemForm({
+          formState: { itemName: 'Milk', quantityInput: '1' },
+        }),
+      );
 
-    render(<AddEditItem route={addRoute} />);
+    renderWithApollo(<AddEditItem route={addRoute} />, {
+      operationMocks: [buildAddItemErrorMock()],
+    });
     fireEvent.press(screen.getByTestId('add-item-submit-button'));
 
     await waitFor(() => {
@@ -607,36 +664,26 @@ describe('AddEditItem', () => {
   it('handles VALIDATION_ERROR graphQL error', async () => {
     const { handleVersionConflict } = require('#/utils/errors/versionConflict');
     handleVersionConflict.mockReturnValue(false);
-
-    const mockAddItem = jest.fn().mockRejectedValue({
+    forceExecuteWithLoadingStateOnError({
       graphQLErrors: [
         { extensions: { code: 'VALIDATION_ERROR' }, message: 'Invalid' },
       ],
-    });
-    setMutationFor('AddItemToShoppingList', mockAddItem);
+    } as any);
 
     jest
       .spyOn(
         require('#features/shoppingList/hooks/useShoppingListItemForm'),
         'useShoppingListItemForm',
       )
-      .mockReturnValue({
-        formState: {
-          itemName: 'Milk',
-          quantityInput: '1',
-          unit: '',
-          notes: '',
-          category: '',
-          estimatedPrice: '',
-        },
-        updateField: mockUpdateField,
-        setFromItem: jest.fn(),
-        buildUnitInput: jest.fn(() => ({})),
-        buildDirtyInput: jest.fn(() => ({})),
-        hasDirtyFields: false,
-      });
+      .mockReturnValue(
+        mockUseShoppingListItemForm({
+          formState: { itemName: 'Milk', quantityInput: '1' },
+        }),
+      );
 
-    render(<AddEditItem route={addRoute} />);
+    renderWithApollo(<AddEditItem route={addRoute} />, {
+      operationMocks: [buildAddItemErrorMock()],
+    });
     fireEvent.press(screen.getByTestId('add-item-submit-button'));
 
     await waitFor(() => {
@@ -650,36 +697,26 @@ describe('AddEditItem', () => {
   it('handles UNAUTHENTICATED graphQL error', async () => {
     const { handleVersionConflict } = require('#/utils/errors/versionConflict');
     handleVersionConflict.mockReturnValue(false);
-
-    const mockAddItem = jest.fn().mockRejectedValue({
+    forceExecuteWithLoadingStateOnError({
       graphQLErrors: [
         { extensions: { code: 'UNAUTHENTICATED' }, message: 'Unauthorized' },
       ],
-    });
-    setMutationFor('AddItemToShoppingList', mockAddItem);
+    } as any);
 
     jest
       .spyOn(
         require('#features/shoppingList/hooks/useShoppingListItemForm'),
         'useShoppingListItemForm',
       )
-      .mockReturnValue({
-        formState: {
-          itemName: 'Milk',
-          quantityInput: '1',
-          unit: '',
-          notes: '',
-          category: '',
-          estimatedPrice: '',
-        },
-        updateField: mockUpdateField,
-        setFromItem: jest.fn(),
-        buildUnitInput: jest.fn(() => ({})),
-        buildDirtyInput: jest.fn(() => ({})),
-        hasDirtyFields: false,
-      });
+      .mockReturnValue(
+        mockUseShoppingListItemForm({
+          formState: { itemName: 'Milk', quantityInput: '1' },
+        }),
+      );
 
-    render(<AddEditItem route={addRoute} />);
+    renderWithApollo(<AddEditItem route={addRoute} />, {
+      operationMocks: [buildAddItemErrorMock()],
+    });
     fireEvent.press(screen.getByTestId('add-item-submit-button'));
 
     await waitFor(() => {
@@ -693,36 +730,26 @@ describe('AddEditItem', () => {
   it('handles generic graphQL error with message', async () => {
     const { handleVersionConflict } = require('#/utils/errors/versionConflict');
     handleVersionConflict.mockReturnValue(false);
-
-    const mockAddItem = jest.fn().mockRejectedValue({
+    forceExecuteWithLoadingStateOnError({
       graphQLErrors: [
         { extensions: { code: 'INTERNAL_ERROR' }, message: 'Something broke' },
       ],
-    });
-    setMutationFor('AddItemToShoppingList', mockAddItem);
+    } as any);
 
     jest
       .spyOn(
         require('#features/shoppingList/hooks/useShoppingListItemForm'),
         'useShoppingListItemForm',
       )
-      .mockReturnValue({
-        formState: {
-          itemName: 'Milk',
-          quantityInput: '1',
-          unit: '',
-          notes: '',
-          category: '',
-          estimatedPrice: '',
-        },
-        updateField: mockUpdateField,
-        setFromItem: jest.fn(),
-        buildUnitInput: jest.fn(() => ({})),
-        buildDirtyInput: jest.fn(() => ({})),
-        hasDirtyFields: false,
-      });
+      .mockReturnValue(
+        mockUseShoppingListItemForm({
+          formState: { itemName: 'Milk', quantityInput: '1' },
+        }),
+      );
 
-    render(<AddEditItem route={addRoute} />);
+    renderWithApollo(<AddEditItem route={addRoute} />, {
+      operationMocks: [buildAddItemErrorMock()],
+    });
     fireEvent.press(screen.getByTestId('add-item-submit-button'));
 
     await waitFor(() => {
@@ -736,32 +763,22 @@ describe('AddEditItem', () => {
   it('handles generic error without graphQLErrors or networkError', async () => {
     const { handleVersionConflict } = require('#/utils/errors/versionConflict');
     handleVersionConflict.mockReturnValue(false);
-
-    const mockAddItem = jest.fn().mockRejectedValue(new Error('Unknown'));
-    setMutationFor('AddItemToShoppingList', mockAddItem);
+    forceExecuteWithLoadingStateOnError(new Error('Unknown'));
 
     jest
       .spyOn(
         require('#features/shoppingList/hooks/useShoppingListItemForm'),
         'useShoppingListItemForm',
       )
-      .mockReturnValue({
-        formState: {
-          itemName: 'Milk',
-          quantityInput: '1',
-          unit: '',
-          notes: '',
-          category: '',
-          estimatedPrice: '',
-        },
-        updateField: mockUpdateField,
-        setFromItem: jest.fn(),
-        buildUnitInput: jest.fn(() => ({})),
-        buildDirtyInput: jest.fn(() => ({})),
-        hasDirtyFields: false,
-      });
+      .mockReturnValue(
+        mockUseShoppingListItemForm({
+          formState: { itemName: 'Milk', quantityInput: '1' },
+        }),
+      );
 
-    render(<AddEditItem route={addRoute} />);
+    renderWithApollo(<AddEditItem route={addRoute} />, {
+      operationMocks: [buildAddItemErrorMock()],
+    });
     fireEvent.press(screen.getByTestId('add-item-submit-button'));
 
     await waitFor(() => {
@@ -772,163 +789,106 @@ describe('AddEditItem', () => {
     });
   });
 
-  it('includes estimatedPrice in add mutation when provided', async () => {
-    const mockAddItem = jest.fn().mockResolvedValue({
-      data: {
-        addItemToShoppingList: {
-          shoppingListItem: { id: 'new-item', name: 'Steak' },
-        },
-      },
-    });
-    setMutationFor('AddItemToShoppingList', mockAddItem);
-
+  it('includes estimatedPrice in add mutation when provided (success navigates back)', async () => {
     jest
       .spyOn(
         require('#features/shoppingList/hooks/useShoppingListItemForm'),
         'useShoppingListItemForm',
       )
-      .mockReturnValue({
-        formState: {
-          itemName: 'Steak',
-          quantityInput: '1',
-          unit: 'lb',
-          notes: '',
-          category: 'Meat',
-          estimatedPrice: '12.99',
-        },
-        updateField: mockUpdateField,
-        setFromItem: jest.fn(),
-        buildUnitInput: jest.fn(() => ({})),
-        buildDirtyInput: jest.fn(() => ({})),
-        hasDirtyFields: false,
-      });
-
-    render(<AddEditItem route={addRoute} />);
-    await fireEvent.press(screen.getByTestId('add-item-submit-button'));
-
-    expect(mockAddItem).toHaveBeenCalledWith(
-      expect.objectContaining({
-        variables: expect.objectContaining({
-          input: expect.objectContaining({
-            pricing: { estimatedPrice: 12.99 },
-          }),
+      .mockReturnValue(
+        mockUseShoppingListItemForm({
+          formState: {
+            itemName: 'Steak',
+            quantityInput: '1',
+            unit: 'lb',
+            category: 'Meat',
+            estimatedPrice: '12.99',
+          },
         }),
-      }),
-    );
+      );
+
+    renderWithApollo(<AddEditItem route={addRoute} />, {
+      operationMocks: [buildAddItemMock()],
+    });
+    fireEvent.press(screen.getByTestId('add-item-submit-button'));
+
+    await waitFor(() => expect(mockNav.goBack).toHaveBeenCalled());
   });
 
-  it('populates form from existing item data in edit mode', () => {
+  it('populates form from existing item data in edit mode', async () => {
     const mockSetFromItem = jest.fn();
-    setQueryResponse('GetShoppingListItem', {
-      data: {
-        shoppingListItem: {
-          id: 'item1',
-          name: 'Bread',
-          version: 2,
-          quantity: '1',
-        },
-      },
-      loading: false,
-    });
 
     jest
       .spyOn(
         require('#features/shoppingList/hooks/useShoppingListItemForm'),
         'useShoppingListItemForm',
       )
-      .mockReturnValue({
-        formState: {
-          itemName: 'Bread',
-          quantityInput: '1',
-          unit: '',
-          notes: '',
-          category: '',
-          estimatedPrice: '',
-        },
-        updateField: mockUpdateField,
-        setFromItem: mockSetFromItem,
-        buildUnitInput: jest.fn(() => ({})),
-        buildDirtyInput: jest.fn(() => ({})),
-        hasDirtyFields: false,
-      });
+      .mockReturnValue(
+        mockUseShoppingListItemForm({
+          formState: { itemName: 'Bread', quantityInput: '1' },
+          setFromItem: mockSetFromItem,
+        }),
+      );
 
-    render(<AddEditItem route={editRoute} />);
-    expect(mockSetFromItem).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'item1', name: 'Bread', version: 2 }),
+    renderWithApollo(<AddEditItem route={editRoute} />, {
+      operationMocks: [buildGetShoppingListItemMock('item1')],
+    });
+
+    await waitFor(() =>
+      expect(mockSetFromItem).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'item1' }),
+      ),
     );
   });
 
   it('shows server error alert when update returns no item data', async () => {
-    const mockUpdateItem = jest.fn().mockResolvedValue({
-      data: { updateShoppingListItem: { shoppingListItem: null } },
-    });
-    setMutationFor('UpdateShoppingListItem', mockUpdateItem);
-
     jest
       .spyOn(
         require('#features/shoppingList/hooks/useShoppingListItemForm'),
         'useShoppingListItemForm',
       )
-      .mockReturnValue({
-        formState: {
-          itemName: 'Milk',
-          quantityInput: '1',
-          unit: '',
-          notes: '',
-          category: '',
-          estimatedPrice: '',
-        },
-        updateField: mockUpdateField,
-        setFromItem: jest.fn(),
-        buildUnitInput: jest.fn(() => ({})),
-        buildDirtyInput: jest.fn(() => ({ itemName: 'Milk' })),
-        hasDirtyFields: true,
-      });
+      .mockReturnValue(
+        mockUseShoppingListItemForm({
+          formState: { itemName: 'Milk', quantityInput: '1' },
+          buildDirtyInput: jest.fn(() => ({ itemName: 'Milk' })),
+          hasDirtyFields: true,
+        }),
+      );
 
-    render(<AddEditItem route={editRoute} />);
-    await fireEvent.press(screen.getByTestId('edit-item-submit-button'));
+    renderWithApollo(<AddEditItem route={editRoute} />, {
+      operationMocks: [
+        buildGetShoppingListItemMock('item1'),
+        buildUpdateItemNullMock(),
+      ],
+    });
+    fireEvent.press(screen.getByTestId('edit-item-submit-button'));
 
-    expect(alertService.alert).toHaveBeenCalledWith(
-      'Error',
-      expect.stringContaining('Server error'),
+    await waitFor(() =>
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Error',
+        expect.stringContaining('Server error'),
+      ),
     );
   });
 
   it('navigates back on successful add', async () => {
-    const mockAddItem = jest.fn().mockResolvedValue({
-      data: {
-        addItemToShoppingList: {
-          shoppingListItem: { id: 'new-item', name: 'Milk' },
-        },
-      },
-    });
-    setMutationFor('AddItemToShoppingList', mockAddItem);
-
     jest
       .spyOn(
         require('#features/shoppingList/hooks/useShoppingListItemForm'),
         'useShoppingListItemForm',
       )
-      .mockReturnValue({
-        formState: {
-          itemName: 'Milk',
-          quantityInput: '1',
-          unit: '',
-          notes: '',
-          category: '',
-          estimatedPrice: '',
-        },
-        updateField: mockUpdateField,
-        setFromItem: jest.fn(),
-        buildUnitInput: jest.fn(() => ({})),
-        buildDirtyInput: jest.fn(() => ({})),
-        hasDirtyFields: false,
-      });
+      .mockReturnValue(
+        mockUseShoppingListItemForm({
+          formState: { itemName: 'Milk', quantityInput: '1' },
+        }),
+      );
 
-    render(<AddEditItem route={addRoute} />);
-    await fireEvent.press(screen.getByTestId('add-item-submit-button'));
+    renderWithApollo(<AddEditItem route={addRoute} />, {
+      operationMocks: [buildAddItemMock()],
+    });
+    fireEvent.press(screen.getByTestId('add-item-submit-button'));
 
-    expect(mockNav.goBack).toHaveBeenCalled();
+    await waitFor(() => expect(mockNav.goBack).toHaveBeenCalled());
   });
 
   it('does not prepopulate item name when in edit mode even with initialItemName', () => {
@@ -937,27 +897,14 @@ describe('AddEditItem', () => {
         require('#features/shoppingList/hooks/useShoppingListItemForm'),
         'useShoppingListItemForm',
       )
-      .mockReturnValue({
-        formState: {
-          itemName: '',
-          quantityInput: '1',
-          unit: '',
-          notes: '',
-          category: '',
-          estimatedPrice: '',
-        },
-        updateField: mockUpdateField,
-        setFromItem: jest.fn(),
-        buildUnitInput: jest.fn(() => ({})),
-        buildDirtyInput: jest.fn(() => ({})),
-        hasDirtyFields: false,
-      });
+      .mockReturnValue(mockUseShoppingListItemForm());
 
     const routeWithBoth = {
       params: { listId: 'sl1', itemId: 'item1', initialItemName: 'Bread' },
     };
-    render(<AddEditItem route={routeWithBoth} />);
-    // In edit mode, initialItemName should not trigger updateField
+    renderWithApollo(<AddEditItem route={routeWithBoth} />, {
+      operationMocks: [buildGetShoppingListItemMock('item1')],
+    });
     expect(mockUpdateField).not.toHaveBeenCalledWith('itemName', 'Bread');
   });
 });
