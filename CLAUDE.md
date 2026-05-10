@@ -285,6 +285,19 @@ For mutation tests: assert on the cache after the mutation, not on the mock func
    automatically; literal `operationMocks` must include it explicitly. Use the
    generated TypeScript types as a structural reference.
 
+**Helper shortcuts (`__tests__/helpers/apolloMockProvider`):**
+
+- **`recordMock(query, { data, error?, delay?, maxUsageCount? })`** — replaces
+  the legacy variables-spy pattern. Returns `{ mock, fired }`: `mock` goes
+  into `operationMocks`; `fired` is an array of every variables payload Apollo
+  observed for that operation, in order. Assert via
+  `expect(fired).toContainEqual({ … })`.
+
+- **`seedCache(entries)`** — pre-writes entities into a fresh
+  `InMemoryCache` so hooks that call `useApolloClient().cache.readFragment(…)`
+  find them. Each entry needs `__typename` + `id` and any fields the hook
+  reads. Pass the returned cache as `{ cache }` to `renderHookWithApollo`.
+
 ### Apollo Mutation Patterns
 
 Pick the cache-update pattern based on what the mutation changes:
