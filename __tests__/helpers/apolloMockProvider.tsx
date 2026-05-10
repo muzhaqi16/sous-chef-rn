@@ -193,10 +193,10 @@ export function renderHookWithApollo<TResult, TProps>(
   callback: (props: TProps) => TResult,
   options: ApolloTestOptions & Omit<RenderHookOptions<TProps>, 'wrapper'> = {},
 ) {
-  const { mocks, resolvers, operationMocks, ...rest } = options as ApolloTestOptions &
+  const { mocks, resolvers, operationMocks, cache, ...rest } = options as ApolloTestOptions &
     Omit<RenderHookOptions<TProps>, 'wrapper'>;
   return renderHook(callback, {
-    wrapper: createApolloTestWrapper({ mocks, resolvers, operationMocks }),
+    wrapper: createApolloTestWrapper({ mocks, resolvers, operationMocks, cache }),
     ...rest,
   });
 }
@@ -208,9 +208,9 @@ export function renderWithApollo(
   ui: React.ReactElement,
   options: ApolloTestOptions & Omit<RenderOptions, 'wrapper'> = {},
 ) {
-  const { mocks, resolvers, operationMocks, ...rest } = options;
+  const { mocks, resolvers, operationMocks, cache, ...rest } = options;
   return render(ui, {
-    wrapper: createApolloTestWrapper({ mocks, resolvers, operationMocks }),
+    wrapper: createApolloTestWrapper({ mocks, resolvers, operationMocks, cache }),
     ...rest,
   });
 }
