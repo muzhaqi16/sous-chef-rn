@@ -1,22 +1,14 @@
-import { renderHook, act } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
+import type { MockedResponse } from '@apollo/client/testing';
+import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import { RegisterDeviceDocument } from '#operations/auth/device.generated';
 import { useDeviceRegistration } from '../useDeviceRegistration';
 
-const mockRegisterDeviceMutation = jest.fn();
 const mockHandleApolloError = jest.fn(() => ({
   message: 'Registration failed',
 }));
 const mockCollectDeviceInformation = jest.fn();
 const mockValidateDeviceInformation = jest.fn();
-
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useMutation: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'RegisterDevice')
-      return [mockRegisterDeviceMutation, { loading: false }];
-    return [jest.fn(), {}];
-  }),
-}));
 
 jest.mock('#/services/errorService', () => ({
   useErrorService: jest.fn(() => ({
@@ -41,8 +33,108 @@ jest.mock('#/utils/environment', () => ({
 
 jest.mock('#/utils/compilerSafeWrappers');
 
-// Break circular dependency
-jest.mock('../../apollo/links/tokenScheduler');
+// Build a full DeviceRegistrationInput from a partial deviceInfo, mirroring
+// the transform inside `registerDeviceImpl`. We need this so the
+// `MockedResponse` variables match exactly what the hook sends to Apollo.
+function buildDeviceInput(deviceInfo: any) {
+  return {
+    deviceId: deviceInfo.deviceId,
+    deviceName: deviceInfo.deviceName,
+    deviceType: deviceInfo.deviceType,
+    platform: deviceInfo.platform,
+    appVersion: deviceInfo.appVersion,
+    pushToken: undefined,
+    details: {
+      browserOs: {
+        osName: deviceInfo.osName,
+        osVersion: deviceInfo.osVersion,
+        userAgent: deviceInfo.userAgent,
+        browserName: deviceInfo.browserName,
+        browserVersion: deviceInfo.browserVersion,
+        screenResolution: deviceInfo.screenResolution,
+      },
+      characteristics: {
+        hasNotch: deviceInfo.hasNotch,
+        hasDynamicIsland: deviceInfo.hasDynamicIsland,
+        isEmulator: deviceInfo.isEmulator,
+        isTablet: deviceInfo.isTablet,
+      },
+      identification: {
+        manufacturer: deviceInfo.manufacturer,
+        model: deviceInfo.model,
+        brand: deviceInfo.brand,
+        androidId: deviceInfo.androidId,
+        instanceId: deviceInfo.instanceId,
+        apiLevel: deviceInfo.apiLevel,
+        deviceFingerprint: deviceInfo.deviceFingerprint,
+        iosVendorId: deviceInfo.iosVendorId,
+        securityPatch: deviceInfo.securityPatch,
+        firstInstallTime: deviceInfo.firstInstallTime,
+        lastUpdateTime: deviceInfo.lastUpdateTime,
+        systemVersion: deviceInfo.systemVersion,
+        readableVersion: deviceInfo.readableVersion,
+        buildNumber: deviceInfo.buildNumber,
+        bundleId: deviceInfo.bundleId,
+      },
+      hardware: {
+        totalMemory: deviceInfo.totalMemory,
+        usedMemory: deviceInfo.usedMemory,
+        maxMemory: deviceInfo.maxMemory,
+        totalDiskCapacity: deviceInfo.totalDiskCapacity,
+        freeDiskStorage: deviceInfo.freeDiskStorage,
+        supportedAbis: deviceInfo.supportedAbis,
+      },
+      connectivity: {
+        carrier: deviceInfo.carrier,
+        isAirplaneMode: deviceInfo.isAirplaneMode,
+        isLocationEnabled: deviceInfo.isLocationEnabled,
+      },
+      power: {
+        batteryLevel: deviceInfo.batteryLevel,
+        isBatteryCharging: deviceInfo.isBatteryCharging,
+        powerState: deviceInfo.powerState
+          ? JSON.parse(deviceInfo.powerState)
+          : undefined,
+      },
+      peripherals: {
+        isHeadphonesConnected: deviceInfo.isHeadphonesConnected,
+        isKeyboardConnected: deviceInfo.isKeyboardConnected,
+        isMouseConnected: deviceInfo.isMouseConnected,
+      },
+      availableLocationProviders: deviceInfo.availableLocationProviders,
+      hostNames: deviceInfo.hostNames,
+      supportedMediaTypes: deviceInfo.supportedMediaTypes,
+    },
+    location: {
+      ipAddress: deviceInfo.deviceIpAddress,
+      ipCountry: deviceInfo.country,
+      timezone: deviceInfo.timezone,
+      language: deviceInfo.language,
+    },
+  };
+}
+
+function buildRegisterDeviceMock(
+  deviceInfo: any,
+  success: boolean = true,
+): MockedResponse {
+  return {
+    request: {
+      query: RegisterDeviceDocument,
+      variables: { input: buildDeviceInput(deviceInfo) },
+    },
+    result: {
+      data: {
+        registerDevice: {
+          __typename: 'DevicePayload',
+          success,
+          message: success ? 'OK' : 'Failed',
+          code: success ? 'OK' : 'ERROR',
+        },
+      },
+    },
+  };
+}
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -50,7 +142,7 @@ beforeEach(() => {
 
 describe('useDeviceRegistration', () => {
   it('starts with default state', () => {
-    const { result } = renderHook(() => useDeviceRegistration());
+    const { result } = renderHookWithApollo(() => useDeviceRegistration());
 
     expect(result.current.isRegistering).toBe(false);
     expect(result.current.lastRegisteredDevice).toBeNull();
@@ -68,11 +160,10 @@ describe('useDeviceRegistration', () => {
 
     mockCollectDeviceInformation.mockResolvedValue(deviceInfo);
     mockValidateDeviceInformation.mockReturnValue(true);
-    mockRegisterDeviceMutation.mockResolvedValue({
-      data: { registerDevice: { success: true } },
-    });
 
-    const { result } = renderHook(() => useDeviceRegistration());
+    const { result } = renderHookWithApollo(() => useDeviceRegistration(), {
+      operationMocks: [buildRegisterDeviceMock(deviceInfo, true)],
+    });
 
     let success: boolean | undefined;
     await act(async () => {
@@ -90,7 +181,7 @@ describe('useDeviceRegistration', () => {
     mockCollectDeviceInformation.mockResolvedValue(deviceInfo);
     mockValidateDeviceInformation.mockReturnValue(false);
 
-    const { result } = renderHook(() => useDeviceRegistration());
+    const { result } = renderHookWithApollo(() => useDeviceRegistration());
 
     let success: boolean | undefined;
     await act(async () => {
@@ -110,11 +201,10 @@ describe('useDeviceRegistration', () => {
     };
     mockCollectDeviceInformation.mockResolvedValue(deviceInfo);
     mockValidateDeviceInformation.mockReturnValue(true);
-    mockRegisterDeviceMutation.mockResolvedValue({
-      data: { registerDevice: { success: true } },
-    });
 
-    const { result } = renderHook(() => useDeviceRegistration());
+    const { result } = renderHookWithApollo(() => useDeviceRegistration(), {
+      operationMocks: [buildRegisterDeviceMock(deviceInfo, true)],
+    });
 
     await act(async () => {
       await result.current.registerDevice();
@@ -136,7 +226,7 @@ describe('useDeviceRegistration', () => {
     mockCollectDeviceInformation.mockResolvedValue(deviceInfo);
     mockValidateDeviceInformation.mockReturnValue(true);
 
-    const { result } = renderHook(() => useDeviceRegistration());
+    const { result } = renderHookWithApollo(() => useDeviceRegistration());
 
     let info: any;
     await act(async () => {
@@ -151,7 +241,7 @@ describe('useDeviceRegistration', () => {
     mockCollectDeviceInformation.mockResolvedValue(deviceInfo);
     mockValidateDeviceInformation.mockReturnValue(false);
 
-    const { result } = renderHook(() => useDeviceRegistration());
+    const { result } = renderHookWithApollo(() => useDeviceRegistration());
 
     let info: any;
     await act(async () => {

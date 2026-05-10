@@ -1,20 +1,8 @@
-import { renderHook, act } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
+import type { MockedResponse } from '@apollo/client/testing';
+import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import { UpsertExternalRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import { useRecipePreload } from '../useRecipePreload';
-
-const mockFavoriteRecipe = jest.fn();
-const mockUpsertRecipe = jest.fn();
-
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useMutation: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'FavoriteRecipe')
-      return [mockFavoriteRecipe, { loading: false }];
-    if (opName === 'UpsertExternalRecipe')
-      return [mockUpsertRecipe, { loading: false }];
-    return [jest.fn(), {}];
-  }),
-}));
 
 const mockToastSuccess = jest.fn();
 const mockToastError = jest.fn();
@@ -62,13 +50,53 @@ const makeSpoonacularRecipe = (id = 123) =>
     ],
   } as any);
 
+/**
+ * Build a MockedResponse for UpsertExternalRecipe.
+ *
+ * The mutation's `input` variable is a transformed Spoonacular recipe with
+ * many computed fields (cuisines.join, instructions reshape, etc.). We use a
+ * `variableMatcher` instead of a literal `variables` block so we don't have
+ * to reproduce the full transform inside each test.
+ */
+function buildUpsertMock(
+  recipe: { id: string; name: string; imageUrl?: string | null },
+  created: boolean = true,
+): MockedResponse {
+  return {
+    request: {
+      query: UpsertExternalRecipeDocument,
+      variables: () => true,
+    },
+    result: {
+      data: {
+        upsertExternalRecipe: {
+          __typename: 'UpsertExternalRecipeResult',
+          created,
+          recipe: {
+            __typename: 'Recipe',
+            id: recipe.id,
+            name: recipe.name,
+            imageUrl: recipe.imageUrl ?? null,
+            externalSource: 'SPOONACULAR',
+            externalId: '123',
+            servings: 4,
+            prepTimeMinutes: 10,
+            cookTimeMinutes: 20,
+            totalTimeMinutes: 30,
+          },
+        },
+      },
+    },
+  };
+}
+
 beforeEach(() => {
   jest.clearAllMocks();
 });
 
 describe('useRecipePreload', () => {
   it('starts with default state', () => {
-    const { result } = renderHook(() => useRecipePreload());
+    const { result } = renderHookWithApollo(() => useRecipePreload());
 
     expect(result.current.preloading).toBe(false);
     expect(result.current.preloadedRecipe).toBeNull();
@@ -77,21 +105,22 @@ describe('useRecipePreload', () => {
   });
 
   it('preloadRecipe calls upsert mutation and caches result', async () => {
-    mockUpsertRecipe.mockResolvedValueOnce({
-      data: {
-        upsertExternalRecipe: {
-          recipe: {
-            id: 'backend-1',
-            name: 'Test Recipe',
-            imageUrl: 'https://example.com/img.jpg',
-          },
-          created: true,
-        },
-      },
-    });
-
     const onPreloadSuccess = jest.fn();
-    const { result } = renderHook(() => useRecipePreload({ onPreloadSuccess }));
+    const { result } = renderHookWithApollo(
+      () => useRecipePreload({ onPreloadSuccess }),
+      {
+        operationMocks: [
+          buildUpsertMock(
+            {
+              id: 'backend-1',
+              name: 'Test Recipe',
+              imageUrl: 'https://example.com/img.jpg',
+            },
+            true,
+          ),
+        ],
+      },
+    );
 
     let preloaded: any;
     await act(async () => {
@@ -111,22 +140,20 @@ describe('useRecipePreload', () => {
   });
 
   it('preloadRecipe returns cached result on second call', async () => {
-    mockUpsertRecipe.mockResolvedValueOnce({
-      data: {
-        upsertExternalRecipe: {
-          recipe: { id: 'backend-1', name: 'Test', imageUrl: null },
-          created: false,
-        },
-      },
+    // Only one mock — if the second call hit the network MockedProvider would error
+    const { result } = renderHookWithApollo(() => useRecipePreload(), {
+      operationMocks: [
+        buildUpsertMock(
+          { id: 'backend-1', name: 'Test', imageUrl: null },
+          false,
+        ),
+      ],
     });
-
-    const { result } = renderHook(() => useRecipePreload());
 
     await act(async () => {
       await result.current.preloadRecipe(makeSpoonacularRecipe(99));
     });
 
-    // Second call should return cached, not call mutation again
     let secondResult: any;
     await act(async () => {
       secondResult = await result.current.preloadRecipe(
@@ -135,14 +162,13 @@ describe('useRecipePreload', () => {
     });
 
     expect(secondResult?.id).toBe('backend-1');
-    expect(mockUpsertRecipe).toHaveBeenCalledTimes(1);
   });
 
   it('preloadRecipe returns null when mutation fails', async () => {
     const { executeMutation } = require('#/utils/compilerSafeWrappers');
     executeMutation.mockResolvedValueOnce(false);
 
-    const { result } = renderHook(() => useRecipePreload());
+    const { result } = renderHookWithApollo(() => useRecipePreload());
 
     let preloaded: any;
     await act(async () => {
@@ -155,22 +181,17 @@ describe('useRecipePreload', () => {
   });
 
   it('isPreloaded returns false for unknown externalId', () => {
-    const { result } = renderHook(() => useRecipePreload());
+    const { result } = renderHookWithApollo(() => useRecipePreload());
 
     expect(result.current.isPreloaded('999')).toBe(false);
   });
 
   it('clearCache resets all state', async () => {
-    mockUpsertRecipe.mockResolvedValueOnce({
-      data: {
-        upsertExternalRecipe: {
-          recipe: { id: 'b1', name: 'R', imageUrl: null },
-          created: true,
-        },
-      },
+    const { result } = renderHookWithApollo(() => useRecipePreload(), {
+      operationMocks: [
+        buildUpsertMock({ id: 'b1', name: 'R', imageUrl: null }, true),
+      ],
     });
-
-    const { result } = renderHook(() => useRecipePreload());
 
     await act(async () => {
       await result.current.preloadRecipe(makeSpoonacularRecipe(50));

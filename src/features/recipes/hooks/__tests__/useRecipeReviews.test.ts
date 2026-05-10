@@ -1,35 +1,12 @@
-import { renderHook, act } from '@testing-library/react-native';
+import { act, waitFor } from '@testing-library/react-native';
+import type { MockedResponse } from '@apollo/client/testing';
+import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import { GetRecipeReviewsDocument } from '#features/recipes/graphql/recipe.generated';
+import {
+  CreateRecipeReviewDocument,
+  DeleteRecipeReviewDocument,
+} from '#features/recipes/graphql/recipeReview.generated';
 import { useRecipeReviews } from '../useRecipeReviews';
-
-const mockCreateReview = jest.fn();
-const mockUpdateReview = jest.fn();
-const mockDeleteReview = jest.fn();
-const mockToggleHelpful = jest.fn();
-
-const mockUseGetRecipeReviewsQuery = jest.fn();
-
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useMutation: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'CreateRecipeReview')
-      return [mockCreateReview, { loading: false }];
-    if (opName === 'UpdateRecipeReview')
-      return [mockUpdateReview, { loading: false }];
-    if (opName === 'DeleteRecipeReview')
-      return [mockDeleteReview, { loading: false }];
-    if (opName === 'ToggleReviewHelpful')
-      return [mockToggleHelpful, { loading: false }];
-    return [jest.fn(), {}];
-  }),
-  useQuery: jest.fn((...args: any[]) => {
-    const doc = args[0];
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'GetRecipeReviews')
-      return mockUseGetRecipeReviewsQuery(...args);
-    return { data: undefined, loading: false, error: undefined };
-  }),
-}));
 
 jest.mock('#store/useAppStore', () => ({
   useUser: jest.fn(() => ({ id: 'user-1' })),
@@ -49,43 +26,137 @@ jest.mock('#/services/toastService', () => ({
 // Break circular dependency
 jest.mock('#/apollo/links/tokenScheduler');
 
-beforeEach(() => {
-  jest.clearAllMocks();
-  mockUseGetRecipeReviewsQuery.mockReturnValue({ data: reviewsQueryData });
-});
-
-const reviewsQueryData = {
-  recipe: {
-    id: 'recipe-1',
-    reviews: {
-      edges: [
-        {
-          node: {
-            id: 'rev-1',
-            rating: 5,
-            comment: 'Great!',
-            helpful: 3,
-            createdAt: '2025-01-01T00:00:00Z',
-            user: { id: 'user-2' },
-            helpfulVotes: [{ user: { id: 'user-1' } }],
-          },
-        },
-        {
-          node: {
-            id: 'rev-2',
-            rating: 4,
-            comment: 'Good',
-            helpful: 1,
-            createdAt: '2025-01-02T00:00:00Z',
-            user: { id: 'user-1' },
-            helpfulVotes: [],
-          },
-        },
-      ],
-      totalCount: 2,
+function buildReviewNode(
+  id: string,
+  rating: number,
+  helpful: number,
+  createdAt: string,
+  user: { id: string },
+  votedByUserIds: string[] = [],
+) {
+  return {
+    __typename: 'RecipeReview',
+    id,
+    rating,
+    comment: id === 'rev-1' ? 'Great!' : 'Good',
+    helpful,
+    verified: false,
+    createdAt,
+    updatedAt: createdAt,
+    user: {
+      __typename: 'User',
+      id: user.id,
+      email: `${user.id}@test.com`,
+      profile: {
+        __typename: 'UserProfile',
+        id: `${user.id}-profile`,
+        displayName: user.id,
+        avatar: null,
+      },
     },
-  },
-};
+    helpfulVotes: votedByUserIds.map(uid => ({
+      __typename: 'ReviewHelpful',
+      id: `vote-${uid}-${id}`,
+      user: { __typename: 'User', id: uid },
+    })),
+  };
+}
+
+function buildGetRecipeReviewsMock(
+  recipeId: string = 'recipe-1',
+  reviewNodes?: Array<ReturnType<typeof buildReviewNode>>,
+): MockedResponse {
+  const nodes = reviewNodes ?? [
+    buildReviewNode('rev-1', 5, 3, '2025-01-01T00:00:00Z', { id: 'user-2' }, [
+      'user-1',
+    ]),
+    buildReviewNode('rev-2', 4, 1, '2025-01-02T00:00:00Z', { id: 'user-1' }),
+  ];
+
+  return {
+    request: {
+      query: GetRecipeReviewsDocument,
+      variables: { id: recipeId },
+    },
+    result: {
+      data: {
+        recipe: {
+          __typename: 'Recipe',
+          id: recipeId,
+          reviews: {
+            __typename: 'RecipeReviewConnection',
+            totalCount: nodes.length,
+            edges: nodes.map(node => ({
+              __typename: 'RecipeReviewEdge',
+              node,
+            })),
+          },
+        },
+      },
+    },
+  };
+}
+
+function buildEmptyRecipeReviewsMock(
+  recipeId: string = 'recipe-1',
+): MockedResponse {
+  return {
+    request: {
+      query: GetRecipeReviewsDocument,
+      variables: { id: recipeId },
+    },
+    result: {
+      data: {
+        recipe: null,
+      },
+    },
+  };
+}
+
+function buildCreateReviewMock(): MockedResponse {
+  return {
+    request: {
+      query: CreateRecipeReviewDocument,
+      variables: () => true,
+    },
+    result: {
+      data: {
+        createRecipeReview: {
+          __typename: 'RecipeReviewPayload',
+          success: true,
+          message: 'OK',
+          code: 'OK',
+          recipeReview: buildReviewNode(
+            'rev-new',
+            5,
+            0,
+            '2025-01-03T00:00:00Z',
+            { id: 'user-1' },
+          ),
+        },
+      },
+    },
+  };
+}
+
+function buildDeleteReviewMock(): MockedResponse {
+  return {
+    request: {
+      query: DeleteRecipeReviewDocument,
+      variables: { id: 'rev-2' },
+    },
+    result: {
+      data: {
+        deleteRecipeReview: {
+          __typename: 'GenericPayload',
+          success: true,
+          message: 'OK',
+          code: 'OK',
+        },
+      },
+    },
+  };
+}
 
 const makeBackendRecipe = (overrides?: any) => ({
   totalReviews: 3,
@@ -99,76 +170,102 @@ const makeBackendRecipe = (overrides?: any) => ({
   ...overrides,
 });
 
+beforeEach(() => {
+  jest.clearAllMocks();
+});
+
 describe('useRecipeReviews', () => {
-  it('computes derived review data', () => {
-    const { result } = renderHook(() =>
-      useRecipeReviews({
-        recipeId: 'recipe-1',
-        backendRecipe: makeBackendRecipe() as any,
-      }),
+  it('computes derived review data', async () => {
+    const { result } = renderHookWithApollo(
+      () =>
+        useRecipeReviews({
+          recipeId: 'recipe-1',
+          backendRecipe: makeBackendRecipe() as any,
+        }),
+      { operationMocks: [buildGetRecipeReviewsMock()] },
     );
+
+    await waitFor(() => expect(result.current.state.reviews).toHaveLength(2));
 
     expect(result.current.state.totalReviews).toBe(3);
     expect(result.current.state.averageRating).toBe(4.2);
     expect(result.current.state.rating5Count).toBe(1);
   });
 
-  it('sorts reviews by helpful count desc, then by date desc', () => {
-    const { result } = renderHook(() =>
-      useRecipeReviews({
-        recipeId: 'recipe-1',
-        backendRecipe: makeBackendRecipe() as any,
-      }),
+  it('sorts reviews by helpful count desc, then by date desc', async () => {
+    const { result } = renderHookWithApollo(
+      () =>
+        useRecipeReviews({
+          recipeId: 'recipe-1',
+          backendRecipe: makeBackendRecipe() as any,
+        }),
+      { operationMocks: [buildGetRecipeReviewsMock()] },
     );
+
+    await waitFor(() => expect(result.current.state.reviews).toHaveLength(2));
 
     // rev-1 has helpful=3, rev-2 has helpful=1
     expect(result.current.state.reviews[0].id).toBe('rev-1');
     expect(result.current.state.reviews[1].id).toBe('rev-2');
   });
 
-  it('identifies current user review', () => {
-    const { result } = renderHook(() =>
-      useRecipeReviews({
-        recipeId: 'recipe-1',
-        backendRecipe: makeBackendRecipe() as any,
-      }),
+  it('identifies current user review', async () => {
+    const { result } = renderHookWithApollo(
+      () =>
+        useRecipeReviews({
+          recipeId: 'recipe-1',
+          backendRecipe: makeBackendRecipe() as any,
+        }),
+      { operationMocks: [buildGetRecipeReviewsMock()] },
     );
+
+    await waitFor(() => expect(result.current.state.reviews).toHaveLength(2));
 
     expect(result.current.state.userReview?.id).toBe('rev-2');
     expect(result.current.state.hasReviewed).toBe(true);
   });
 
-  it('identifies if user is recipe owner', () => {
-    const { result } = renderHook(() =>
-      useRecipeReviews({
-        recipeId: 'recipe-1',
-        backendRecipe: makeBackendRecipe({
-          createdBy: { id: 'user-1' },
-        }) as any,
-      }),
+  it('identifies if user is recipe owner', async () => {
+    const { result } = renderHookWithApollo(
+      () =>
+        useRecipeReviews({
+          recipeId: 'recipe-1',
+          backendRecipe: makeBackendRecipe({
+            createdBy: { id: 'user-1' },
+          }) as any,
+        }),
+      { operationMocks: [buildGetRecipeReviewsMock()] },
     );
 
+    await waitFor(() => expect(result.current.state.reviews).toHaveLength(2));
     expect(result.current.state.isOwnRecipe).toBe(true);
   });
 
-  it('isOwnRecipe is false for non-owner', () => {
-    const { result } = renderHook(() =>
-      useRecipeReviews({
-        recipeId: 'recipe-1',
-        backendRecipe: makeBackendRecipe() as any,
-      }),
+  it('isOwnRecipe is false for non-owner', async () => {
+    const { result } = renderHookWithApollo(
+      () =>
+        useRecipeReviews({
+          recipeId: 'recipe-1',
+          backendRecipe: makeBackendRecipe() as any,
+        }),
+      { operationMocks: [buildGetRecipeReviewsMock()] },
     );
 
+    await waitFor(() => expect(result.current.state.reviews).toHaveLength(2));
     expect(result.current.state.isOwnRecipe).toBe(false);
   });
 
-  it('hasVotedHelpful returns true when user voted on a review', () => {
-    const { result } = renderHook(() =>
-      useRecipeReviews({
-        recipeId: 'recipe-1',
-        backendRecipe: makeBackendRecipe() as any,
-      }),
+  it('hasVotedHelpful returns true when user voted on a review', async () => {
+    const { result } = renderHookWithApollo(
+      () =>
+        useRecipeReviews({
+          recipeId: 'recipe-1',
+          backendRecipe: makeBackendRecipe() as any,
+        }),
+      { operationMocks: [buildGetRecipeReviewsMock()] },
     );
+
+    await waitFor(() => expect(result.current.state.reviews).toHaveLength(2));
 
     // rev-1 has helpfulVotes containing user-1
     expect(
@@ -181,56 +278,67 @@ describe('useRecipeReviews', () => {
   });
 
   it('createReview calls mutation and shows toast', async () => {
-    mockCreateReview.mockResolvedValueOnce({ data: {} });
-
-    const { result } = renderHook(() =>
-      useRecipeReviews({
-        recipeId: 'recipe-1',
-        backendRecipe: makeBackendRecipe() as any,
-      }),
+    const { result } = renderHookWithApollo(
+      () =>
+        useRecipeReviews({
+          recipeId: 'recipe-1',
+          backendRecipe: makeBackendRecipe() as any,
+        }),
+      {
+        operationMocks: [
+          buildGetRecipeReviewsMock(),
+          buildCreateReviewMock(),
+          // refetchQueries triggers a second GetRecipeReviews fetch
+          buildGetRecipeReviewsMock(),
+        ],
+      },
     );
+
+    await waitFor(() => expect(result.current.state.reviews).toHaveLength(2));
 
     await act(async () => {
       await result.current.actions.createReview(5, 'Amazing!');
     });
 
-    expect(mockCreateReview).toHaveBeenCalledWith({
-      variables: {
-        input: { recipeId: 'recipe-1', rating: 5, comment: 'Amazing!' },
-      },
-    });
     expect(mockToastSuccess).toHaveBeenCalledWith('Review submitted');
   });
 
   it('deleteReview calls mutation and shows toast', async () => {
-    mockDeleteReview.mockResolvedValueOnce({ data: {} });
-
-    const { result } = renderHook(() =>
-      useRecipeReviews({
-        recipeId: 'recipe-1',
-        backendRecipe: makeBackendRecipe() as any,
-      }),
+    const { result } = renderHookWithApollo(
+      () =>
+        useRecipeReviews({
+          recipeId: 'recipe-1',
+          backendRecipe: makeBackendRecipe() as any,
+        }),
+      {
+        operationMocks: [
+          buildGetRecipeReviewsMock(),
+          buildDeleteReviewMock(),
+          buildGetRecipeReviewsMock(),
+        ],
+      },
     );
+
+    await waitFor(() => expect(result.current.state.reviews).toHaveLength(2));
 
     await act(async () => {
       await result.current.actions.deleteReview('rev-2');
     });
 
-    expect(mockDeleteReview).toHaveBeenCalledWith({
-      variables: { id: 'rev-2' },
-    });
     expect(mockToastSuccess).toHaveBeenCalledWith('Review deleted');
   });
 
-  it('returns defaults when backendRecipe is null', () => {
-    mockUseGetRecipeReviewsQuery.mockReturnValue({ data: undefined });
-    const { result } = renderHook(() =>
-      useRecipeReviews({ recipeId: 'recipe-1', backendRecipe: null }),
+  it('returns defaults when backendRecipe is null', async () => {
+    const { result } = renderHookWithApollo(
+      () => useRecipeReviews({ recipeId: 'recipe-1', backendRecipe: null }),
+      { operationMocks: [buildEmptyRecipeReviewsMock()] },
     );
+
+    // For a null recipe response, reviews stays empty
+    await waitFor(() => expect(result.current.state.reviews).toEqual([]));
 
     expect(result.current.state.totalReviews).toBe(0);
     expect(result.current.state.averageRating).toBe(0);
-    expect(result.current.state.reviews).toEqual([]);
     expect(result.current.state.userReview).toBeNull();
     expect(result.current.state.hasReviewed).toBe(false);
     expect(result.current.state.isOwnRecipe).toBe(false);

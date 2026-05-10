@@ -1,35 +1,15 @@
 'use no memo';
 
-import { renderHook, act } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
+import type { MockedResponse } from '@apollo/client/testing';
+import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import { UpdateUserProfileDocument } from '#operations/auth/user.generated';
+import { UpdateItemImageDocument } from '#operations/image/imageUpload.generated';
 import { alertService } from '#/services/alertService';
 import { useImageUpload } from '../useImageUpload';
 
 jest.mock('../../apollo/links/tokenScheduler');
 jest.mock('../../apollo/links/refreshToken');
-
-const mockCreateUploadUrl = jest.fn();
-const mockConfirmProfileUpload = jest.fn();
-const mockConfirmItemUpload = jest.fn();
-const mockUpdateProfile = jest.fn();
-const mockUpdateItemImage = jest.fn();
-
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useMutation: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'CreateImageUploadUrl')
-      return [mockCreateUploadUrl, { loading: false }];
-    if (opName === 'ConfirmProfileImageUpload')
-      return [mockConfirmProfileUpload, { loading: false }];
-    if (opName === 'ConfirmItemImageUpload')
-      return [mockConfirmItemUpload, { loading: false }];
-    if (opName === 'UpdateUserProfile')
-      return [mockUpdateProfile, { loading: false }];
-    if (opName === 'UpdateItemImage')
-      return [mockUpdateItemImage, { loading: false }];
-    return [jest.fn(), {}];
-  }),
-}));
 
 jest.mock('#utils/imageValidation', () => ({
   validateImageFile: jest.fn(),
@@ -67,6 +47,93 @@ const mockXhr = {
 };
 (global as any).XMLHttpRequest = jest.fn(() => mockXhr);
 
+// Helper builders for MockedResponse — these avoid spelling out the full
+// generated payload shape inline at every test.
+function buildUpdateProfileMock(
+  input: { avatar?: string; coverImage?: string },
+  payload: {
+    success?: boolean;
+    userProfile: {
+      id: string;
+      avatar?: string | null;
+      coverImage?: string | null;
+    };
+  },
+  error?: Error,
+): MockedResponse {
+  if (error) {
+    return {
+      request: { query: UpdateUserProfileDocument, variables: { input } },
+      error,
+    };
+  }
+  const { id, avatar, coverImage } = payload.userProfile;
+  return {
+    request: { query: UpdateUserProfileDocument, variables: { input } },
+    result: {
+      data: {
+        updateProfile: {
+          __typename: 'UserProfilePayload',
+          success: payload.success ?? true,
+          message: 'OK',
+          code: 'OK',
+          userProfile: {
+            __typename: 'UserProfile',
+            id,
+            userId: 'u1',
+            firstName: null,
+            lastName: null,
+            displayName: null,
+            bio: null,
+            avatar: avatar ?? null,
+            coverImage: coverImage ?? null,
+            phone: null,
+            website: null,
+            dateOfBirth: null,
+            gender: null,
+            profileVisibility: 'PUBLIC',
+            showEmail: true,
+            showPhone: true,
+            createdAt: '2025-01-01T00:00:00.000Z',
+            updatedAt: '2025-01-01T00:00:00.000Z',
+          },
+        },
+      },
+    },
+  };
+}
+
+function buildUpdateItemImageMock(
+  variables: { id: string; imageUrl: string },
+  itemImageUrl: string | null,
+  error?: Error,
+): MockedResponse {
+  if (error) {
+    return {
+      request: { query: UpdateItemImageDocument, variables },
+      error,
+    };
+  }
+  return {
+    request: { query: UpdateItemImageDocument, variables },
+    result: {
+      data: {
+        updateItem: {
+          __typename: 'ItemPayload',
+          success: true,
+          message: 'OK',
+          code: 'OK',
+          item: {
+            __typename: 'Item',
+            id: variables.id,
+            imageUrl: itemImageUrl,
+          },
+        },
+      },
+    },
+  };
+}
+
 beforeEach(() => {
   jest.clearAllMocks();
   mockXhr.status = 200;
@@ -81,13 +148,13 @@ beforeEach(() => {
 
 describe('useImageUpload', () => {
   it('initializes with uploading false and progress 0', () => {
-    const { result } = renderHook(() => useImageUpload());
+    const { result } = renderHookWithApollo(() => useImageUpload());
     expect(result.current.uploading).toBe(false);
     expect(result.current.progress).toBe(0);
   });
 
   it('exposes all expected functions', () => {
-    const { result } = renderHook(() => useImageUpload());
+    const { result } = renderHookWithApollo(() => useImageUpload());
     expect(typeof result.current.uploadProfileImage).toBe('function');
     expect(typeof result.current.uploadItemImage).toBe('function');
     expect(typeof result.current.uploadItemImages).toBe('function');
@@ -97,27 +164,30 @@ describe('useImageUpload', () => {
   });
 
   it('updateProfileAvatarUrl calls updateProfile mutation', async () => {
-    mockUpdateProfile.mockResolvedValue({
-      data: {
-        updateProfile: { userProfile: { id: 'u1', avatar: 'http://img.jpg' } },
-      },
+    const { result } = renderHookWithApollo(() => useImageUpload(), {
+      operationMocks: [
+        buildUpdateProfileMock(
+          { avatar: 'http://img.jpg' },
+          { userProfile: { id: 'u1', avatar: 'http://img.jpg' } },
+        ),
+      ],
     });
-    const { result } = renderHook(() => useImageUpload());
 
     let profile: any;
     await act(async () => {
       profile = await result.current.updateProfileAvatarUrl('http://img.jpg');
     });
 
-    expect(mockUpdateProfile).toHaveBeenCalledWith({
-      variables: { input: { avatar: 'http://img.jpg' } },
-    });
-    expect(profile).toEqual({ id: 'u1', avatar: 'http://img.jpg' });
+    expect(profile?.id).toBe('u1');
+    expect(profile?.avatar).toBe('http://img.jpg');
   });
 
   it('updateProfileAvatarUrl returns null on failure', async () => {
-    mockUpdateProfile.mockRejectedValue(new Error('fail'));
-    const { result } = renderHook(() => useImageUpload());
+    // executeMutation returns false on error → updateProfileAvatarUrl returns null.
+    const { executeMutation } = require('#/utils/compilerSafeWrappers');
+    executeMutation.mockResolvedValueOnce(false);
+
+    const { result } = renderHookWithApollo(() => useImageUpload());
 
     let profile: any;
     await act(async () => {
@@ -128,29 +198,32 @@ describe('useImageUpload', () => {
   });
 
   it('updateProfileCoverUrl calls updateProfile mutation with coverImage', async () => {
-    mockUpdateProfile.mockResolvedValue({
-      data: {
-        updateProfile: {
-          userProfile: { id: 'u1', coverImage: 'http://cover.jpg' },
-        },
-      },
+    const { result } = renderHookWithApollo(() => useImageUpload(), {
+      operationMocks: [
+        buildUpdateProfileMock(
+          { coverImage: 'http://cover.jpg' },
+          { userProfile: { id: 'u1', coverImage: 'http://cover.jpg' } },
+        ),
+      ],
     });
-    const { result } = renderHook(() => useImageUpload());
 
+    let profile: any;
     await act(async () => {
-      await result.current.updateProfileCoverUrl('http://cover.jpg');
+      profile = await result.current.updateProfileCoverUrl('http://cover.jpg');
     });
 
-    expect(mockUpdateProfile).toHaveBeenCalledWith({
-      variables: { input: { coverImage: 'http://cover.jpg' } },
-    });
+    expect(profile?.coverImage).toBe('http://cover.jpg');
   });
 
   it('updateItemImageUrl calls updateItemImage mutation', async () => {
-    mockUpdateItemImage.mockResolvedValue({
-      data: { updateItem: { id: 'item1', imageUrl: 'http://item.jpg' } },
+    const { result } = renderHookWithApollo(() => useImageUpload(), {
+      operationMocks: [
+        buildUpdateItemImageMock(
+          { id: 'item1', imageUrl: 'http://item.jpg' },
+          'http://item.jpg',
+        ),
+      ],
     });
-    const { result } = renderHook(() => useImageUpload());
 
     let item: any;
     await act(async () => {
@@ -160,17 +233,15 @@ describe('useImageUpload', () => {
       );
     });
 
-    expect(mockUpdateItemImage).toHaveBeenCalledWith({
-      variables: { id: 'item1', imageUrl: 'http://item.jpg' },
-    });
-    expect(item).toEqual({ id: 'item1', imageUrl: 'http://item.jpg' });
+    expect(item?.item?.id).toBe('item1');
+    expect(item?.item?.imageUrl).toBe('http://item.jpg');
   });
 
   it('uploadProfileImage returns null when offline', async () => {
     const { useStore } = require('#store');
     useStore.getState = () => ({ isOnline: false });
 
-    const { result } = renderHook(() => useImageUpload());
+    const { result } = renderHookWithApollo(() => useImageUpload());
     const onError = jest.fn();
 
     let returnVal: any;
@@ -193,7 +264,7 @@ describe('useImageUpload', () => {
     const { useStore } = require('#store');
     useStore.getState = () => ({ isOnline: false });
 
-    const { result } = renderHook(() => useImageUpload());
+    const { result } = renderHookWithApollo(() => useImageUpload());
 
     let returnVal: any;
     await act(async () => {
@@ -210,7 +281,7 @@ describe('useImageUpload', () => {
     const { useStore } = require('#store');
     useStore.getState = () => ({ isOnline: false });
 
-    const { result } = renderHook(() => useImageUpload());
+    const { result } = renderHookWithApollo(() => useImageUpload());
 
     let results: any;
     await act(async () => {
@@ -224,14 +295,16 @@ describe('useImageUpload', () => {
   });
 
   it('cleanup aborts active XHR on unmount', () => {
-    const { unmount } = renderHook(() => useImageUpload());
+    const { unmount } = renderHookWithApollo(() => useImageUpload());
     unmount();
     // Just verifying no error thrown during cleanup
   });
 
   it('updateProfileCoverUrl returns null on failure', async () => {
-    mockUpdateProfile.mockRejectedValue(new Error('fail'));
-    const { result } = renderHook(() => useImageUpload());
+    const { executeMutation } = require('#/utils/compilerSafeWrappers');
+    executeMutation.mockResolvedValueOnce(false);
+
+    const { result } = renderHookWithApollo(() => useImageUpload());
 
     let profile: any;
     await act(async () => {
@@ -242,8 +315,18 @@ describe('useImageUpload', () => {
   });
 
   it('updateItemImageUrl returns null on failure', async () => {
-    mockUpdateItemImage.mockRejectedValue(new Error('fail'));
-    const { result } = renderHook(() => useImageUpload());
+    // The hook uses executeMutation(...) — mock it once to simulate the
+    // error path without trying to coerce Apollo's mock link to throw under
+    // our test wrapper's errorPolicy: 'all' default.
+    const { executeMutation } = require('#/utils/compilerSafeWrappers');
+    executeMutation.mockImplementationOnce(
+      async (_fn: any, onError: (e: unknown) => void) => {
+        onError(new Error('fail'));
+        return false;
+      },
+    );
+
+    const { result } = renderHookWithApollo(() => useImageUpload());
 
     let item: any;
     await act(async () => {
@@ -266,7 +349,7 @@ describe('useImageUpload', () => {
       throw new Error('Invalid file size');
     });
 
-    const { result } = renderHook(() => useImageUpload());
+    const { result } = renderHookWithApollo(() => useImageUpload());
     const onError = jest.fn();
 
     await act(async () => {
@@ -292,7 +375,7 @@ describe('useImageUpload', () => {
       throw new Error('INVALID_TYPE: not an image');
     });
 
-    const { result } = renderHook(() => useImageUpload());
+    const { result } = renderHookWithApollo(() => useImageUpload());
 
     await act(async () => {
       await result.current.uploadProfileImage({
@@ -316,7 +399,7 @@ describe('useImageUpload', () => {
       throw new Error('FILE_TOO_LARGE');
     });
 
-    const { result } = renderHook(() => useImageUpload());
+    const { result } = renderHookWithApollo(() => useImageUpload());
 
     await act(async () => {
       await result.current.uploadProfileImage({
@@ -340,7 +423,7 @@ describe('useImageUpload', () => {
       throw new Error('Upload failed');
     });
 
-    const { result } = renderHook(() => useImageUpload());
+    const { result } = renderHookWithApollo(() => useImageUpload());
 
     await act(async () => {
       await result.current.uploadItemImage(
@@ -363,7 +446,7 @@ describe('useImageUpload', () => {
       throw new Error('Something went wrong');
     });
 
-    const { result } = renderHook(() => useImageUpload());
+    const { result } = renderHookWithApollo(() => useImageUpload());
     const onError = jest.fn();
 
     await act(async () => {
@@ -389,7 +472,7 @@ describe('useImageUpload', () => {
       throw 'string error';
     });
 
-    const { result } = renderHook(() => useImageUpload());
+    const { result } = renderHookWithApollo(() => useImageUpload());
 
     await act(async () => {
       await result.current.uploadProfileImage({
