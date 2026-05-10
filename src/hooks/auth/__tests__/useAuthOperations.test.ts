@@ -1,4 +1,10 @@
-import { renderHook, act } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
+import type { MockLink } from '@apollo/client/testing';
+import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  LoginDocument,
+  RegisterDocument,
+} from '#operations/auth/auth.generated';
 import { useAuthOperations } from '../useAuthOperations';
 
 // Break circular dependency chain
@@ -34,20 +40,6 @@ jest.mock('#/hooks/navigation/useUserPreferences', () => ({
     clearRegistrationPreferences: mockClearRegistrationPreferences,
     trackCredentialPromptShown: mockTrackCredentialPromptShown,
     trackLogout: mockTrackLogout,
-  }),
-}));
-
-// Mock GraphQL mutations
-const mockLoginMutationFn = jest.fn();
-const mockRegisterMutationFn = jest.fn();
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useMutation: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'Login') return [mockLoginMutationFn, { loading: false }];
-    if (opName === 'Register')
-      return [mockRegisterMutationFn, { loading: false }];
-    return [jest.fn(), {}];
   }),
 }));
 
@@ -154,8 +146,6 @@ beforeEach(() => {
   mockOnCredentialLoad.mockResolvedValue(null);
   mockOnCredentialStore.mockResolvedValue(true);
   mockOnCredentialRemove.mockResolvedValue(true);
-  mockLoginMutationFn.mockResolvedValue({ data: null, error: null });
-  mockRegisterMutationFn.mockResolvedValue({ data: null, error: null });
   mockShouldShowPostLoginBiometricPrompt.mockResolvedValue({
     shouldShow: false,
   });
@@ -167,15 +157,91 @@ beforeEach(() => {
   });
 });
 
+interface AuthPayloadInput {
+  userId?: string;
+  email?: string;
+  emailVerified?: boolean;
+  onBoarded?: boolean;
+  accessToken?: string;
+  refreshToken?: string;
+}
+
+function buildAuthPayload(input: AuthPayloadInput = {}) {
+  return {
+    __typename: 'AuthPayload',
+    accessToken: input.accessToken ?? 'at',
+    refreshToken: input.refreshToken ?? 'rt',
+    user: {
+      __typename: 'User',
+      id: input.userId ?? 'u1',
+      email: input.email ?? 'test@test.com',
+      emailVerified: input.emailVerified ?? true,
+      onBoarded: input.onBoarded ?? true,
+    } as any,
+  };
+}
+
+function buildLoginMock(
+  email: string,
+  password: string,
+  payload: ReturnType<typeof buildAuthPayload>,
+): MockLink.MockedResponse {
+  return {
+    request: {
+      query: LoginDocument,
+      variables: { input: { email, password } },
+    },
+    result: { data: { login: payload as any } },
+    maxUsageCount: 10,
+  };
+}
+
+function buildLoginErrorMock(
+  email: string,
+  password: string,
+  error: Error,
+): MockLink.MockedResponse {
+  return {
+    request: {
+      query: LoginDocument,
+      variables: { input: { email, password } },
+    },
+    error,
+    maxUsageCount: 10,
+  };
+}
+
+function buildRegisterMock(
+  payload: ReturnType<typeof buildAuthPayload>,
+): MockLink.MockedResponse {
+  return {
+    request: { query: RegisterDocument, variables: () => true },
+    result: { data: { register: payload as any } },
+    maxUsageCount: 10,
+  };
+}
+
+function buildRegisterErrorMock(error: Error): MockLink.MockedResponse {
+  return {
+    request: { query: RegisterDocument, variables: () => true },
+    error,
+    maxUsageCount: 10,
+  };
+}
+
 describe('useAuthOperations', () => {
   it('initializes with isLoading false', () => {
-    const { result } = renderHook(() => useAuthOperations(defaultProps));
+    const { result } = renderHookWithApollo(() =>
+      useAuthOperations(defaultProps),
+    );
 
     expect(result.current.isLoading).toBe(false);
   });
 
   it('exposes all expected functions', () => {
-    const { result } = renderHook(() => useAuthOperations(defaultProps));
+    const { result } = renderHookWithApollo(() =>
+      useAuthOperations(defaultProps),
+    );
 
     expect(typeof result.current.login).toBe('function');
     expect(typeof result.current.register).toBe('function');
@@ -189,7 +255,9 @@ describe('useAuthOperations', () => {
   });
 
   it('handleLogin sets auth state on successful login response', async () => {
-    const { result } = renderHook(() => useAuthOperations(defaultProps));
+    const { result } = renderHookWithApollo(() =>
+      useAuthOperations(defaultProps),
+    );
 
     const loginResponse = {
       user: {
@@ -218,70 +286,81 @@ describe('useAuthOperations', () => {
   });
 
   it('handleLogin navigates to verification when email not verified', async () => {
-    const { result } = renderHook(() => useAuthOperations(defaultProps));
-
-    const loginResponse = {
-      user: {
-        id: 'u1',
-        email: 'test@test.com',
-        emailVerified: false,
-        onBoarded: false,
-      },
-      accessToken: 'at',
-      refreshToken: 'rt',
-    };
+    const { result } = renderHookWithApollo(() =>
+      useAuthOperations(defaultProps),
+    );
 
     await act(async () => {
-      await result.current.handleLogin(loginResponse, true);
+      await result.current.handleLogin(
+        {
+          user: {
+            id: 'u1',
+            email: 'test@test.com',
+            emailVerified: false,
+            onBoarded: false,
+          },
+          accessToken: 'at',
+          refreshToken: 'rt',
+        },
+        true,
+      );
     });
 
     expect(mockOnNavigate).toHaveBeenCalledWith('verification');
   });
 
   it('handleLogin navigates to onboarding when not onboarded', async () => {
-    const { result } = renderHook(() => useAuthOperations(defaultProps));
-
-    const loginResponse = {
-      user: {
-        id: 'u1',
-        email: 'test@test.com',
-        emailVerified: true,
-        onBoarded: false,
-      },
-      accessToken: 'at',
-      refreshToken: 'rt',
-    };
+    const { result } = renderHookWithApollo(() =>
+      useAuthOperations(defaultProps),
+    );
 
     await act(async () => {
-      await result.current.handleLogin(loginResponse, true);
+      await result.current.handleLogin(
+        {
+          user: {
+            id: 'u1',
+            email: 'test@test.com',
+            emailVerified: true,
+            onBoarded: false,
+          },
+          accessToken: 'at',
+          refreshToken: 'rt',
+        },
+        true,
+      );
     });
 
     expect(mockOnNavigate).toHaveBeenCalledWith('onboarding');
   });
 
   it('handleLogin navigates to main_app for fully authenticated user', async () => {
-    const { result } = renderHook(() => useAuthOperations(defaultProps));
-
-    const loginResponse = {
-      user: {
-        id: 'u1',
-        email: 'test@test.com',
-        emailVerified: true,
-        onBoarded: true,
-      },
-      accessToken: 'at',
-      refreshToken: 'rt',
-    };
+    const { result } = renderHookWithApollo(() =>
+      useAuthOperations(defaultProps),
+    );
 
     await act(async () => {
-      await result.current.handleLogin(loginResponse, true);
+      await result.current.handleLogin(
+        {
+          user: {
+            id: 'u1',
+            email: 'test@test.com',
+            emailVerified: true,
+            onBoarded: true,
+          },
+          accessToken: 'at',
+          refreshToken: 'rt',
+        },
+        true,
+      );
     });
 
     expect(mockOnNavigate).toHaveBeenCalledWith('main_app');
   });
 
   it('handleLogin returns false when loginResponse has no user', async () => {
-    const { result } = renderHook(() => useAuthOperations(defaultProps));
+    const { result } = renderHookWithApollo(() =>
+      useAuthOperations(defaultProps),
+    );
 
     let returnVal: boolean = true;
     await act(async () => {
@@ -293,7 +372,9 @@ describe('useAuthOperations', () => {
   });
 
   it('handleRegistration sets auth state and marks as new user', async () => {
-    const { result } = renderHook(() => useAuthOperations(defaultProps));
+    const { result } = renderHookWithApollo(() =>
+      useAuthOperations(defaultProps),
+    );
 
     const registerResponse = {
       user: {
@@ -326,7 +407,9 @@ describe('useAuthOperations', () => {
   });
 
   it('clearRegistrationPassword calls onClearRegistrationPassword', () => {
-    const { result } = renderHook(() => useAuthOperations(defaultProps));
+    const { result } = renderHookWithApollo(() =>
+      useAuthOperations(defaultProps),
+    );
 
     result.current.clearRegistrationPassword();
 
@@ -334,7 +417,9 @@ describe('useAuthOperations', () => {
   });
 
   it('handleAuthSuccess does not throw', () => {
-    const { result } = renderHook(() => useAuthOperations(defaultProps));
+    const { result } = renderHookWithApollo(() =>
+      useAuthOperations(defaultProps),
+    );
 
     expect(() => {
       result.current.handleAuthSuccess('Login successful');
@@ -342,37 +427,38 @@ describe('useAuthOperations', () => {
   });
 
   it('logout clears auth and navigates to auth screen', async () => {
-    const { result } = renderHook(() => useAuthOperations(defaultProps));
-
-    const mockUserObj = { id: 'u1', email: 'test@test.com' };
+    const { result } = renderHookWithApollo(() =>
+      useAuthOperations(defaultProps),
+    );
 
     await act(async () => {
-      await result.current.logout(mockUserObj, false);
+      await result.current.logout({ id: 'u1', email: 'test@test.com' }, false);
     });
 
     expect(mockOnClearAuth).toHaveBeenCalled();
     expect(mockOnNavigate).toHaveBeenCalledWith('auth');
   });
 
-  // Additional tests for uncovered branches
-
   it('login calls loginMutation and handles successful response', async () => {
-    mockLoginMutationFn.mockResolvedValue({
-      data: {
-        login: {
-          user: {
-            id: 'u1',
-            email: 'test@test.com',
-            emailVerified: true,
-            onBoarded: true,
-          },
-          accessToken: 'at',
-          refreshToken: 'rt',
-        },
+    const { result } = renderHookWithApollo(
+      () => useAuthOperations(defaultProps),
+      {
+        operationMocks: [
+          buildLoginMock(
+            'test@test.com',
+            'pass123',
+            buildAuthPayload({
+              userId: 'u1',
+              email: 'test@test.com',
+              emailVerified: true,
+              onBoarded: true,
+              accessToken: 'at',
+              refreshToken: 'rt',
+            }),
+          ),
+        ],
       },
-    });
-
-    const { result } = renderHook(() => useAuthOperations(defaultProps));
+    );
 
     let success: boolean = false;
     await act(async () => {
@@ -383,18 +469,22 @@ describe('useAuthOperations', () => {
     });
 
     expect(success).toBe(true);
-    expect(mockLoginMutationFn).toHaveBeenCalledWith({
-      variables: { input: { email: 'test@test.com', password: 'pass123' } },
-    });
+    expect(mockOnSetAuth).toHaveBeenCalled();
   });
 
   it('login handles mutation error', async () => {
-    mockLoginMutationFn.mockResolvedValue({
-      data: null,
-      error: new Error('Invalid credentials'),
-    });
-
-    const { result } = renderHook(() => useAuthOperations(defaultProps));
+    const { result } = renderHookWithApollo(
+      () => useAuthOperations(defaultProps),
+      {
+        operationMocks: [
+          buildLoginErrorMock(
+            'test@test.com',
+            'wrong',
+            new Error('Invalid credentials'),
+          ),
+        ],
+      },
+    );
 
     let success: boolean = true;
     await act(async () => {
@@ -408,24 +498,28 @@ describe('useAuthOperations', () => {
   });
 
   it('login shows remember me prompt when conditions met', async () => {
-    mockLoginMutationFn.mockResolvedValue({
-      data: {
-        login: {
-          user: {
-            id: 'u1',
-            email: 'test@test.com',
-            emailVerified: true,
-            onBoarded: true,
-          },
-          accessToken: 'at',
-          refreshToken: 'rt',
-        },
-      },
-    });
     mockOnCredentialCheck.mockResolvedValue(false);
     mockShouldShowCredentialPrompt.mockReturnValue(true);
 
-    const { result } = renderHook(() => useAuthOperations(defaultProps));
+    const { result } = renderHookWithApollo(
+      () => useAuthOperations(defaultProps),
+      {
+        operationMocks: [
+          buildLoginMock(
+            'test@test.com',
+            'pass123',
+            buildAuthPayload({
+              userId: 'u1',
+              email: 'test@test.com',
+              emailVerified: true,
+              onBoarded: true,
+              accessToken: 'at',
+              refreshToken: 'rt',
+            }),
+          ),
+        ],
+      },
+    );
 
     await act(async () => {
       await result.current.login(
@@ -439,22 +533,23 @@ describe('useAuthOperations', () => {
   });
 
   it('register calls registerMutation and handles success', async () => {
-    mockRegisterMutationFn.mockResolvedValue({
-      data: {
-        register: {
-          user: {
-            id: 'u2',
-            email: 'new@test.com',
-            emailVerified: false,
-            onBoarded: false,
-          },
-          accessToken: 'at2',
-          refreshToken: 'rt2',
-        },
+    const { result } = renderHookWithApollo(
+      () => useAuthOperations(defaultProps),
+      {
+        operationMocks: [
+          buildRegisterMock(
+            buildAuthPayload({
+              userId: 'u2',
+              email: 'new@test.com',
+              emailVerified: false,
+              onBoarded: false,
+              accessToken: 'at2',
+              refreshToken: 'rt2',
+            }),
+          ),
+        ],
       },
-    });
-
-    const { result } = renderHook(() => useAuthOperations(defaultProps));
+    );
 
     let success: boolean = false;
     await act(async () => {
@@ -470,12 +565,14 @@ describe('useAuthOperations', () => {
   });
 
   it('register handles mutation error', async () => {
-    mockRegisterMutationFn.mockResolvedValue({
-      data: null,
-      error: new Error('Email already exists'),
-    });
-
-    const { result } = renderHook(() => useAuthOperations(defaultProps));
+    const { result } = renderHookWithApollo(
+      () => useAuthOperations(defaultProps),
+      {
+        operationMocks: [
+          buildRegisterErrorMock(new Error('Email already exists')),
+        ],
+      },
+    );
 
     let success: boolean = true;
     await act(async () => {
@@ -492,7 +589,9 @@ describe('useAuthOperations', () => {
   it('autoLogin returns false when no stored credentials', async () => {
     mockOnCredentialCheck.mockResolvedValue(false);
 
-    const { result } = renderHook(() => useAuthOperations(defaultProps));
+    const { result } = renderHookWithApollo(() =>
+      useAuthOperations(defaultProps),
+    );
 
     let success: boolean = true;
     await act(async () => {
@@ -508,22 +607,26 @@ describe('useAuthOperations', () => {
       email: 'stored@test.com',
       password: 'stored-pass',
     });
-    mockLoginMutationFn.mockResolvedValue({
-      data: {
-        login: {
-          user: {
-            id: 'u1',
-            email: 'stored@test.com',
-            emailVerified: true,
-            onBoarded: true,
-          },
-          accessToken: 'at',
-          refreshToken: 'rt',
-        },
-      },
-    });
 
-    const { result } = renderHook(() => useAuthOperations(defaultProps));
+    const { result } = renderHookWithApollo(
+      () => useAuthOperations(defaultProps),
+      {
+        operationMocks: [
+          buildLoginMock(
+            'stored@test.com',
+            'stored-pass',
+            buildAuthPayload({
+              userId: 'u1',
+              email: 'stored@test.com',
+              emailVerified: true,
+              onBoarded: true,
+              accessToken: 'at',
+              refreshToken: 'rt',
+            }),
+          ),
+        ],
+      },
+    );
 
     let success: boolean = false;
     await act(async () => {
@@ -531,15 +634,13 @@ describe('useAuthOperations', () => {
     });
 
     expect(success).toBe(true);
-    expect(mockLoginMutationFn).toHaveBeenCalledWith({
-      variables: {
-        input: { email: 'stored@test.com', password: 'stored-pass' },
-      },
-    });
+    expect(mockOnSetAuth).toHaveBeenCalled();
   });
 
   it('logout with clearAllCredentials removes all credentials', async () => {
-    const { result } = renderHook(() => useAuthOperations(defaultProps));
+    const { result } = renderHookWithApollo(() =>
+      useAuthOperations(defaultProps),
+    );
 
     await act(async () => {
       await result.current.logout({ id: 'u1', email: 'test@test.com' }, true);
@@ -553,24 +654,25 @@ describe('useAuthOperations', () => {
       shouldShow: true,
     });
 
-    const { result } = renderHook(() => useAuthOperations(defaultProps));
+    const { result } = renderHookWithApollo(() =>
+      useAuthOperations(defaultProps),
+    );
 
-    const loginResponse = {
-      user: {
-        id: 'u1',
-        email: 'test@test.com',
-        emailVerified: true,
-        onBoarded: true,
-      },
-      accessToken: 'at',
-      refreshToken: 'rt',
-    };
     const credentials = { email: 'test@test.com', password: 'pass123' };
 
     let returnVal: boolean = false;
     await act(async () => {
       returnVal = await result.current.handleLogin(
-        loginResponse,
+        {
+          user: {
+            id: 'u1',
+            email: 'test@test.com',
+            emailVerified: true,
+            onBoarded: true,
+          },
+          accessToken: 'at',
+          refreshToken: 'rt',
+        },
         true,
         credentials,
       );
@@ -581,28 +683,30 @@ describe('useAuthOperations', () => {
   });
 
   it('handleRegistration navigates to main_app for verified+onboarded user', async () => {
-    const { result } = renderHook(() => useAuthOperations(defaultProps));
-
-    const response = {
-      user: {
-        id: 'u3',
-        email: 'user@test.com',
-        emailVerified: true,
-        onBoarded: true,
-      },
-      accessToken: 'at3',
-      refreshToken: 'rt3',
-    };
+    const { result } = renderHookWithApollo(() =>
+      useAuthOperations(defaultProps),
+    );
 
     await act(async () => {
-      await result.current.handleRegistration(response);
+      await result.current.handleRegistration({
+        user: {
+          id: 'u3',
+          email: 'user@test.com',
+          emailVerified: true,
+          onBoarded: true,
+        },
+        accessToken: 'at3',
+        refreshToken: 'rt3',
+      });
     });
 
     expect(mockOnNavigate).toHaveBeenCalledWith('main_app');
   });
 
   it('handleRegistration does nothing when response has no user', async () => {
-    const { result } = renderHook(() => useAuthOperations(defaultProps));
+    const { result } = renderHookWithApollo(() =>
+      useAuthOperations(defaultProps),
+    );
 
     await act(async () => {
       await result.current.handleRegistration(null);

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { screen, waitFor } from '@testing-library/react-native';
-import type { MockedResponse } from '@apollo/client/testing';
+import type { MockLink } from '@apollo/client/testing';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { ShoppingListItemDetail } from '../ItemDetail';
 import { GetShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
@@ -110,7 +110,10 @@ function buildShoppingListItem(overrides: Partial<Record<string, any>> = {}) {
   };
 }
 
-function buildItemMock(itemId: string, item: any | null): MockedResponse {
+function buildItemMock(
+  itemId: string,
+  item: any | null,
+): MockLink.MockedResponse {
   return {
     request: { query: GetShoppingListItemDocument, variables: { id: itemId } },
     result: { data: { shoppingListItem: item } },
