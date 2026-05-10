@@ -1,7 +1,11 @@
 'use no memo';
 
-import { renderHook, act } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
+import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { useShoppingListSelectorModal } from '../useShoppingListSelectorModal';
+
+const renderHook = <TResult, TProps>(callback: (props: TProps) => TResult) =>
+  renderHookWithApollo(callback);
 
 // Mock token scheduler / refreshToken
 jest.mock('#/apollo/links/tokenScheduler');
@@ -93,19 +97,6 @@ jest.mock('#utils/iconUtils', () => ({
 
 jest.mock('#components/atoms/ShoppingListAvatar', () => ({
   ShoppingListAvatar: 'ShoppingListAvatar',
-}));
-
-const mockDeleteList = jest.fn().mockResolvedValue({
-  data: { deleteShoppingList: { shoppingList: { id: 'list-1' } } },
-});
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useMutation: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'DeleteShoppingList')
-      return [mockDeleteList, { loading: false }];
-    return [jest.fn(), {}];
-  }),
 }));
 
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
