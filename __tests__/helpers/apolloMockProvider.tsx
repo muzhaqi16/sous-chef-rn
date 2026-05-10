@@ -5,7 +5,7 @@ import {
   type RenderHookOptions,
   type RenderOptions,
 } from '@testing-library/react-native';
-import { InMemoryCache } from '@apollo/client';
+import { gql, InMemoryCache } from '@apollo/client';
 import { SchemaLink } from '@apollo/client/link/schema';
 import { MockedProvider } from '@apollo/client/testing/react';
 import { MockLink } from '@apollo/client/testing';
@@ -98,6 +98,12 @@ export interface ApolloTestOptions {
    * `mocks={[…]}` array.
    */
   operationMocks?: ReadonlyArray<MockedResponse>;
+  /**
+   * Pre-seeded `InMemoryCache` (typically built via `seedCache(entries)`).
+   * Use when the hook reads via `useApolloClient().cache.readFragment(...)`
+   * — without a seed, those reads return `null` and the hook bails out.
+   */
+  cache?: InMemoryCache;
 }
 
 function buildSchemaLink(options: Pick<ApolloTestOptions, 'mocks' | 'resolvers'>) {
@@ -131,13 +137,15 @@ const TEST_DEFAULT_OPTIONS: DefaultOptions = {
 };
 
 export function createApolloTestWrapper(options: ApolloTestOptions = {}) {
-  const { operationMocks, mocks, resolvers } = options;
+  const { operationMocks, mocks, resolvers, cache: providedCache } = options;
+  const cache = providedCache ?? new InMemoryCache();
 
   if (operationMocks && operationMocks.length > 0) {
     return function Wrapper({ children }: { children: ReactNode }) {
       return (
         <MockedProvider
           mocks={[...operationMocks]}
+          cache={cache}
           showWarnings={false}
           defaultOptions={TEST_DEFAULT_OPTIONS}
         >
@@ -148,7 +156,6 @@ export function createApolloTestWrapper(options: ApolloTestOptions = {}) {
   }
 
   const link = buildSchemaLink({ mocks, resolvers });
-  const cache = new InMemoryCache();
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
       <MockedProvider
@@ -206,4 +213,133 @@ export function renderWithApollo(
     wrapper: createApolloTestWrapper({ mocks, resolvers, operationMocks }),
     ...rest,
   });
+}
+
+import type { DocumentNode } from 'graphql';
+
+export interface RecordedMock<TData = Record<string, unknown>> {
+  /** MockedResponse to feed into `operationMocks`. */
+  mock: MockedResponse<TData>;
+  /** Variables observed for each invocation, in order. */
+  fired: Array<Record<string, unknown>>;
+}
+
+export interface RecordMockOptions<TData = Record<string, unknown>> {
+  /** Static response data, OR a function of variables → data. */
+  data?: TData | ((vars: Record<string, unknown>) => TData);
+  /** Simulate a network error instead of returning data. */
+  error?: Error;
+  /** Delay (ms) before resolving — useful for in-flight assertions. */
+  delay?: number;
+  /** Cap on how many times this mock can match. Default: unbounded. */
+  maxUsageCount?: number;
+}
+
+/**
+ * Build a `MockedResponse` that records every invocation's variables. Use to
+ * replace the legacy `mockMutation.toHaveBeenCalledWith({ variables: ... })`
+ * pattern: pass `mock` to `operationMocks`, then assert on `fired`.
+ *
+ * @example
+ *   const update = recordMock(UpdateShoppingListItemDocument, {
+ *     data: { updateShoppingListItem: { __typename: 'Payload', success: true } },
+ *   });
+ *
+ *   const { result } = renderHookWithApollo(
+ *     () => useUpdateShoppingItem({ listId: 'l1', refetch }),
+ *     { operationMocks: [update.mock] },
+ *   );
+ *
+ *   await act(async () => {
+ *     await result.current.updateItem('item-1', { quantity: 5 });
+ *   });
+ *
+ *   expect(update.fired).toContainEqual({ id: 'item-1', input: { quantity: 5 } });
+ */
+export function recordMock<TData = Record<string, unknown>>(
+  query: DocumentNode,
+  options: RecordMockOptions<TData> = {},
+): RecordedMock<TData> {
+  const fired: Array<Record<string, unknown>> = [];
+  const { data, error, delay, maxUsageCount } = options;
+
+  const result = data
+    ? typeof data === 'function'
+      ? (vars: Record<string, unknown>) => ({
+          data: (data as (v: Record<string, unknown>) => TData)(vars),
+        })
+      : { data }
+    : undefined;
+
+  const mock: MockedResponse<TData> = {
+    request: {
+      query,
+      variables: vars => {
+        fired.push(vars);
+        return true;
+      },
+    },
+    maxUsageCount: maxUsageCount ?? Number.POSITIVE_INFINITY,
+    ...(delay !== undefined ? { delay } : {}),
+    ...(error
+      ? { error }
+      : { result: result as MockedResponse<TData>['result'] }),
+  };
+
+  return { fired, mock };
+}
+
+/**
+ * Pre-write entities into a fresh `InMemoryCache` and return the cache. Use
+ * with `createApolloTestWrapper({ cache })` (or pass to MockedProvider's
+ * `cache` prop directly) to support hooks that call
+ * `useApolloClient().cache.readFragment(...)`.
+ *
+ * Each entry must include `__typename` + `id` so the cache can normalize it.
+ *
+ * @example
+ *   const cache = seedCache([
+ *     { __typename: 'ShoppingListItem', id: 'item-1', purchaseInfo: { __typename: 'ShoppingListItemPurchaseInfo', isPurchased: false }, version: 1 },
+ *   ]);
+ */
+export function seedCache(
+  entries: Array<Record<string, unknown> & { __typename: string; id: string }>,
+): InMemoryCache {
+  const cache = new InMemoryCache();
+  for (const entry of entries) {
+    const identified = cache.identify(entry as Parameters<InMemoryCache['identify']>[0]);
+    cache.writeFragment({
+      id: identified ?? `${entry.__typename}:${entry.id}`,
+      fragment: buildFullFragment(entry),
+      data: entry,
+    });
+  }
+  return cache;
+}
+
+// Build a fragment selecting every top-level scalar + nested-object key on
+// the given entry. Sufficient for tests that just need readFragment to find
+// the entity — production fragment selections happen via the codegen'd docs.
+function buildFullFragment(
+  entry: Record<string, unknown> & { __typename: string },
+): DocumentNode {
+  const fields = Object.keys(entry).filter(k => k !== '__typename');
+  const selectionSet = fields
+    .map(f => {
+      const value = entry[f];
+      if (
+        value &&
+        typeof value === 'object' &&
+        !Array.isArray(value) &&
+        '__typename' in value
+      ) {
+        const nested = Object.keys(value).filter(k => k !== '__typename');
+        return `${f} { __typename ${nested.join(' ')} }`;
+      }
+      return f;
+    })
+    .join(' ');
+  return gql([
+    `fragment Test_${entry.__typename}_${String(entry.id).replace(/[^a-zA-Z0-9]/g, '_')} on ${entry.__typename} { __typename ${selectionSet} }`,
+  ] as unknown as TemplateStringsArray);
 }
