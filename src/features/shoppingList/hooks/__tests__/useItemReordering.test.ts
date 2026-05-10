@@ -45,7 +45,7 @@ const items = [
   { id: 'item-3', sortOrder: 'eee', version: 1 },
 ];
 
-function moveMock(): ReturnType<typeof recordMock> {
+function moveMock() {
   return recordMock(MoveShoppingListItemDocument, {
     data: {
       moveShoppingListItem: {
