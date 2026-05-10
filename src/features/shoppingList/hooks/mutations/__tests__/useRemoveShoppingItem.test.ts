@@ -1,30 +1,11 @@
-import { renderHook, act } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
+import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { useRemoveShoppingItem } from '../useRemoveShoppingItem';
 
-// --- Mocks ---
-
-const mockRemoveItemMutation = jest.fn();
 const mockHandleApolloError = jest.fn(() => ({
   message: 'Something went wrong',
 }));
 const mockCreateRemoveOperation = jest.fn();
-
-jest.mock('@apollo/client/react', () => ({
-  useMutation: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'RemoveItemFromShoppingList')
-      return [mockRemoveItemMutation, { loading: false }];
-    return [jest.fn(), {}];
-  }),
-  useQuery: jest.fn(() => ({
-    data: undefined,
-    loading: false,
-    error: undefined,
-  })),
-  useApolloClient: jest.fn(() => ({
-    cache: { modify: jest.fn(), identify: jest.fn(() => 'cache-id') },
-  })),
-}));
 
 jest.mock('#/services/errorService', () => ({
   useErrorService: () => ({
@@ -44,11 +25,6 @@ jest.mock('../utils', () => ({
   removeFromShoppingListItemsCache: jest.fn(),
 }));
 
-// Mock gql (needed for fragment definition in the hook)
-jest.mock('@apollo/client', () => ({
-  gql: jest.fn((strings: TemplateStringsArray) => strings.join('')),
-}));
-
 beforeEach(() => {
   jest.clearAllMocks();
 });
@@ -60,7 +36,7 @@ describe('useRemoveShoppingItem', () => {
     const mockRemoveFn = jest.fn().mockResolvedValue(undefined);
     mockCreateRemoveOperation.mockReturnValue(mockRemoveFn);
 
-    const { result } = renderHook(() =>
+    const { result } = renderHookWithApollo(() =>
       useRemoveShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
     );
 
@@ -71,7 +47,7 @@ describe('useRemoveShoppingItem', () => {
     const mockRemoveFn = jest.fn().mockResolvedValue(true);
     mockCreateRemoveOperation.mockReturnValue(mockRemoveFn);
 
-    const { result } = renderHook(() =>
+    const { result } = renderHookWithApollo(() =>
       useRemoveShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
     );
 
@@ -81,7 +57,7 @@ describe('useRemoveShoppingItem', () => {
 
     expect(mockCreateRemoveOperation).toHaveBeenCalledWith(
       expect.objectContaining({
-        mutation: mockRemoveItemMutation,
+        mutation: expect.any(Function),
         parentId: 'list-1',
         itemId: 'item-123',
         operationName: 'Delete Shopping List Item',
@@ -93,7 +69,7 @@ describe('useRemoveShoppingItem', () => {
     const mockRemoveFn = jest.fn().mockResolvedValue(true);
     mockCreateRemoveOperation.mockReturnValue(mockRemoveFn);
 
-    const { result } = renderHook(() =>
+    const { result } = renderHookWithApollo(() =>
       useRemoveShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
     );
 
@@ -108,7 +84,7 @@ describe('useRemoveShoppingItem', () => {
     const mockRemoveFn = jest.fn().mockResolvedValue(true);
     mockCreateRemoveOperation.mockReturnValue(mockRemoveFn);
 
-    const { result } = renderHook(() =>
+    const { result } = renderHookWithApollo(() =>
       useRemoveShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
     );
 
