@@ -20,7 +20,7 @@ const mockRecipeDataReturn = {
   isBackendRecipe: false,
   externalRecipe: null,
 };
-const mockUseRecipeData = jest.fn(() => mockRecipeDataReturn);
+const mockUseRecipeData = jest.fn<typeof mockRecipeDataReturn, any[]>(() => mockRecipeDataReturn);
 jest.mock('../useRecipeData', () => ({
   useRecipeData: (...args: any[]) => mockUseRecipeData(...args),
 }));
@@ -28,15 +28,14 @@ jest.mock('../useRecipeData', () => ({
 const mockFavoriteStateReturn = {
   isSaved: false,
   saving: false,
-  savedFolderLocal: null,
+  savedFolderLocal: null as string | null,
   handleSaveRecipe: jest.fn(),
   setRecipeSaved: jest.fn(),
   setSavedFolderLocal: jest.fn(),
 };
-const mockUseRecipeFavoriteState = jest.fn(() => mockFavoriteStateReturn);
+const mockUseRecipeFavoriteState = jest.fn<typeof mockFavoriteStateReturn, any[]>(() => mockFavoriteStateReturn);
 jest.mock('../useRecipeFavoriteState', () => ({
-  useRecipeFavoriteState: (...args: any[]) =>
-    mockUseRecipeFavoriteState(...args),
+  useRecipeFavoriteState: (...args: any[]) => mockUseRecipeFavoriteState(...args),
 }));
 
 const mockPreloadReturn = {
@@ -46,22 +45,21 @@ const mockPreloadReturn = {
   saveRecipeToFavorites: jest.fn(),
   savingToFavorites: false,
 };
-const mockUseRecipePreload = jest.fn(() => mockPreloadReturn);
+const mockUseRecipePreload = jest.fn<typeof mockPreloadReturn, any[]>(() => mockPreloadReturn);
 jest.mock('#features/recipes/hooks/useRecipePreload', () => ({
   useRecipePreload: (...args: any[]) => mockUseRecipePreload(...args),
 }));
 
 const mockShoppingListReturn = { shoppingListSpecific: 'shopping' };
-const mockUseRecipeShoppingList = jest.fn(() => mockShoppingListReturn);
+const mockUseRecipeShoppingList = jest.fn<typeof mockShoppingListReturn, any[]>(() => mockShoppingListReturn);
 jest.mock('../useRecipeShoppingList', () => ({
   useRecipeShoppingList: (...args: any[]) => mockUseRecipeShoppingList(...args),
 }));
 
 const mockCookingActionsReturn = { cookingSpecific: 'cooking' };
-const mockUseRecipeCookingActions = jest.fn(() => mockCookingActionsReturn);
+const mockUseRecipeCookingActions = jest.fn<typeof mockCookingActionsReturn, any[]>(() => mockCookingActionsReturn);
 jest.mock('../useRecipeCookingActions', () => ({
-  useRecipeCookingActions: (...args: any[]) =>
-    mockUseRecipeCookingActions(...args),
+  useRecipeCookingActions: (...args: any[]) => mockUseRecipeCookingActions(...args),
 }));
 
 const mockSavedMetadataReturn = {
@@ -74,10 +72,9 @@ const mockSavedMetadataReturn = {
   handleUpdateRating: jest.fn(),
   handleUnfavoriteRecipe: jest.fn(),
 };
-const mockUseRecipeSavedMetadata = jest.fn(() => mockSavedMetadataReturn);
+const mockUseRecipeSavedMetadata = jest.fn<typeof mockSavedMetadataReturn, any[]>(() => mockSavedMetadataReturn);
 jest.mock('../useRecipeSavedMetadata', () => ({
-  useRecipeSavedMetadata: (...args: any[]) =>
-    mockUseRecipeSavedMetadata(...args),
+  useRecipeSavedMetadata: (...args: any[]) => mockUseRecipeSavedMetadata(...args),
 }));
 
 const { useRoute } = jest.requireMock('@react-navigation/native') as {

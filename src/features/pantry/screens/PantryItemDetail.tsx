@@ -1,32 +1,19 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
+import { View, Text, RefreshControl, ScrollView } from 'react-native';
 import {
-  View,
-  Text,
-  RefreshControl,
-  ActivityIndicator,
-  ScrollView,
-} from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+  Pressable,
+  ThemedActivityIndicator,
+} from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import Animated from 'react-native-reanimated';
-import { useMutation, useQuery } from '@apollo/client/react';
-import { AddItemToShoppingListDocument } from './PantryItemDetail.generated';
-import {
-  GetPantryItemDocument,
-  DeletePantryItemDocument,
-} from '#features/pantry/graphql/pantry.generated';
+import { useQuery } from '@apollo/client/react';
+import { GetPantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import {
   useSelectedShoppingListId,
   useSelectedPantryId,
 } from '#store/useAppStore';
-import { removeFromPantryItemsCache } from '#hooks/home/pantry/utils';
-import { useRecipeSuggestionsStore } from '#store/useRecipeSuggestionsStore';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-
-const ThemedActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
-  color: theme.colors.primary,
-}));
 import type { StaticScreenProps } from '@react-navigation/native';
 import { resolveImageUrl, parseImages, hasImages } from '#utils/imageUtils';
 import {
@@ -44,28 +31,18 @@ import { PantryUsageHistory } from '#features/pantry/components/PantryUsageHisto
 import { parseNutritions, hasNutritionData } from '#utils/nutritionUtils';
 import { NutritionSummary } from '#components/molecules/NutritionSummary';
 import { ImageGalleryTabs } from '#components/molecules/ImageGalleryTabs';
-import { addNewItemToShoppingListCache } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Header, type HeaderAction } from '#components/molecules/Header';
 import { Icon } from '#/utils/iconUtils';
-import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
-import type { RecipeInformation } from '#/services/recipeApi/types';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
-import { useConvertExpiredToWaste } from '#features/pantry/hooks/mutations/useConvertExpiredToWaste';
-import { useConvertExpiredBatchesToWaste } from '#features/pantry/hooks/mutations/useConvertExpiredBatchesToWaste';
 import { BatchSection } from '#features/pantry/components/BatchSection';
-import { useAdjustPantryItemQuantity } from '#features/pantry/hooks/mutations/useAdjustPantryItemQuantity';
-import { useCorrectPantryItemWeight } from '#features/pantry/hooks/mutations/useCorrectPantryItemWeight';
 import { AdjustQuantityModal } from '#components/modals/AdjustQuantityModal';
 import { CorrectWeightModal } from '#components/modals/CorrectWeightModal';
-import { errorService } from '#/services/errorService';
-import {
-  executeWithLoadingState,
-  executeMutation,
-  executeRefreshWithFinally,
-} from '#/utils/compilerSafeWrappers';
+import { executeRefreshWithFinally } from '#/utils/compilerSafeWrappers';
 import { SousChefLoader } from '#/components/base/SousChefLoader';
 import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
+import { useRecipeSuggestionsForItem } from '#features/pantry/hooks/useRecipeSuggestionsForItem';
+import { usePantryItemDetailActions } from '#features/pantry/hooks/usePantryItemDetailActions';
 
 /**
  * Expiry column text. Extracted so `styles.useVariants` is called once per
@@ -82,14 +59,6 @@ const ExpiryColumnText: React.FC<{
   return <Text style={styles.infoColumnValue}>{text}</Text>;
 };
 
-/** Module-level helper to sync suggested recipes from cache */
-function syncSuggestedRecipesFromCache(
-  cachedRecipes: RecipeInformation[],
-  setSuggestedRecipes: (v: RecipeInformation[]) => void,
-) {
-  setSuggestedRecipes(cachedRecipes);
-}
-
 export const PantryItemDetail: React.FC<
   StaticScreenProps<{
     itemId: string;
@@ -101,31 +70,8 @@ export const PantryItemDetail: React.FC<
   const insets = useSafeAreaInsets();
   const selectedShoppingListId = useSelectedShoppingListId();
   const selectedPantryId = useSelectedPantryId();
-  const { getCachedSuggestions, setCachedSuggestions } =
-    useRecipeSuggestionsStore();
 
-  const [addToListStatus, setAddToListStatus] = useState<
-    'idle' | 'loading' | 'success' | 'error'
-  >('idle');
   const [purchaseHistoryExpanded, setPurchaseHistoryExpanded] = useState(false);
-
-  // Ref to track timeout for cleanup
-  const statusTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (statusTimeoutRef.current) {
-        clearTimeout(statusTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  // Recipes to try state
-  const [suggestedRecipes, setSuggestedRecipes] = useState<RecipeInformation[]>(
-    [],
-  );
-  const [loadingRecipes, setLoadingRecipes] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const { data, refetch } = useQuery(GetPantryItemDocument, {
@@ -136,152 +82,20 @@ export const PantryItemDetail: React.FC<
     executeRefreshWithFinally(() => refetch(), setRefreshing);
   };
 
-  const [deleteItem] = useMutation(DeletePantryItemDocument, {
-    update: (cache, { data: mutationData }, { variables }) => {
-      if (
-        !mutationData?.deletePantryItem?.pantryItem ||
-        !selectedPantryId ||
-        !variables
-      ) {
-        return;
-      }
-      removeFromPantryItemsCache(cache, selectedPantryId, variables.id, {
-        evictItem: true,
-      });
-      cache.modify({
-        id: cache.identify({ __typename: 'Pantry', id: selectedPantryId }),
-        fields: {
-          stats(existingStats: any) {
-            if (!existingStats) return existingStats;
-            return {
-              ...existingStats,
-              totalItems: Math.max(0, (existingStats.totalItems || 0) - 1),
-            };
-          },
-        },
-      });
-    },
-  });
-  const [addToShoppingList] = useMutation(AddItemToShoppingListDocument, {
-    update: (cache, { data: mutationData }) => {
-      const shoppingListItem =
-        mutationData?.addItemToShoppingList?.shoppingListItem;
-      if (!shoppingListItem || !selectedShoppingListId) return;
-
-      try {
-        addNewItemToShoppingListCache(
-          cache,
-          selectedShoppingListId,
-          shoppingListItem,
-        );
-      } catch (error) {
-        console.warn('Cache update failed for addToShoppingList:', error);
-      }
-    },
-  });
-
-  // Adjust quantity modal state
-  const [adjustModalVisible, setAdjustModalVisible] = useState(false);
-  // Correct weight modal state
-  const [correctWeightVisible, setCorrectWeightVisible] = useState(false);
-
-  // Expired to waste mutation (item-level)
-  const { convertExpiredToWaste } = useConvertExpiredToWaste({
-    onSuccess: () => {
-      alertService.alert('Done', 'Expired item has been discarded.');
-    },
-  });
-
-  // Expired batches to waste mutation (batch-level)
-  const { convertExpiredBatches } = useConvertExpiredBatchesToWaste({
-    onSuccess: () => {
-      alertService.alert('Done', 'Expired batches have been discarded.');
-    },
-  });
-
-  // Adjust quantity mutation
-  const { adjustQuantity } = useAdjustPantryItemQuantity();
-
-  // Correct weight mutation
-  const { correctWeight } = useCorrectPantryItemWeight();
-
   const permissions = usePantryPermissions();
-
   const item = data?.pantryItem;
 
-  // Fetch suggested recipes based on pantry item - use cache when available
-  useEffect(() => {
-    const itemName = item?.itemName;
-    if (!itemName) return;
+  const { suggestedRecipes, loadingRecipes } = useRecipeSuggestionsForItem(
+    item?.itemName ?? undefined,
+  );
 
-    // Check cache first
-    const cachedRecipes = getCachedSuggestions(itemName);
-    if (cachedRecipes) {
-      syncSuggestedRecipesFromCache(cachedRecipes, setSuggestedRecipes);
-      return;
-    }
-
-    const controller = new AbortController();
-
-    // Cache miss - fetch from API
-    executeWithLoadingState(
-      async () => {
-        const recipes = await spoonacularService.searchRecipes(
-          {
-            query: itemName,
-            number: 5,
-            addRecipeInformation: true,
-          },
-          controller.signal,
-        );
-        const results = recipes.results as unknown as RecipeInformation[];
-        setSuggestedRecipes(results);
-        setCachedSuggestions(itemName, results);
-      },
-      setLoadingRecipes,
-      (error: unknown) => {
-        if ((error as any)?.name === 'AbortError') return;
-        errorService.reportError(error, {
-          operation: 'PantryItemDetail.fetchSuggestedRecipes',
-        });
-      },
-    );
-
-    return () => controller.abort();
-  }, [item?.itemName, getCachedSuggestions, setCachedSuggestions]);
-
-  const handleDelete = () => {
-    alertService.alert(
-      'Delete Item',
-      'Are you sure you want to delete this item?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            executeMutation(
-              async () => {
-                await deleteItem({
-                  variables: { id: itemId },
-                });
-                goBack();
-              },
-              error => {
-                errorService.reportError(error, {
-                  operation: 'PantryItemDetail.deleteItem',
-                });
-                alertService.alert('Error', 'Failed to delete item');
-              },
-            );
-          },
-        },
-      ],
-    );
-  };
-
-  const handleAddToShoppingList = () => {
-    if (!selectedShoppingListId) {
+  const actions = usePantryItemDetailActions({
+    itemId,
+    item,
+    selectedPantryId,
+    selectedShoppingListId,
+    goBack,
+    onAddToShoppingListNeedsList: () =>
       alertService.alert(
         'No Shopping List Selected',
         'Please select a shopping list first.',
@@ -292,144 +106,27 @@ export const PantryItemDetail: React.FC<
             onPress: () => navigateTo.shoppingListMain(),
           },
         ],
-      );
-      return;
-    }
-
-    if (addToListStatus === 'loading' || addToListStatus === 'success') {
-      return;
-    }
-
-    setAddToListStatus('loading');
-
-    // Pre-compute values outside the try-catch to avoid value block bailouts
-    const catalogItemId = data?.pantryItem?.item?.id || '';
-    const quantity = data?.pantryItem?.quantity || 1;
-    const unitInput = data?.pantryItem?.unit?.id
-      ? { unitId: data.pantryItem.unit.id }
-      : undefined;
-    const itemName = data?.pantryItem?.itemName || '';
-
-    executeMutation(
-      async () => {
-        await addToShoppingList({
-          variables: {
-            input: {
-              shoppingListId: selectedShoppingListId,
-              itemId: catalogItemId,
-              quantity,
-              unit: unitInput,
-              itemName,
-            },
-          },
-        });
-        setAddToListStatus('success');
-        statusTimeoutRef.current = setTimeout(
-          () => setAddToListStatus('idle'),
-          3000,
-        );
-      },
-      error => {
-        errorService.reportError(error, {
-          operation: 'PantryItemDetail.addToShoppingList',
-        });
-        setAddToListStatus('error');
-        statusTimeoutRef.current = setTimeout(
-          () => setAddToListStatus('idle'),
-          3000,
-        );
-      },
-    );
-  };
+      ),
+  });
 
   const handleEdit = () => {
     navigateTo.pantryItem({ itemId });
   };
 
   const handleRecipePress = (recipeId: number) => {
-    // Navigate within Pantry stack - back navigation works automatically
     navigate('RecipeDetail', {
       externalSource: 'SPOONACULAR',
       externalId: String(recipeId),
     });
   };
 
-  const handleDiscardExpired = () => {
-    if (!item) return;
-
-    const hasBatches = (item.activeBatchCount ?? 0) > 0;
-
-    if (hasBatches) {
-      alertService.alert(
-        'Discard Expired Batches',
-        'This will mark all expired batches as wasted.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Discard',
-            style: 'destructive',
-            onPress: () => convertExpiredBatches(item.id),
-          },
-        ],
-      );
-    } else {
-      alertService.alert(
-        'Discard Expired Item',
-        `This will mark the remaining ${item.quantity} ${
-          item.unit?.name || ''
-        } as wasted due to expiration.`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Discard',
-            style: 'destructive',
-            onPress: () => convertExpiredToWaste(item.id),
-          },
-        ],
-      );
-    }
-  };
-
-  const handleConfirmAdjust = (
-    newQuantity: number,
-    reason: string,
-    remainingNetWeight?: number,
-  ) => {
-    if (!item) return;
-    adjustQuantity(
-      item.id,
-      newQuantity,
-      reason,
-      item.version ?? undefined,
-      remainingNetWeight,
-    );
-  };
-
-  const handleCorrectWeight = (
-    netWeight: number,
-    reason: string,
-    netWeightUnitId?: string,
-  ) => {
-    if (!item) return;
-    correctWeight(
-      item.id,
-      netWeight,
-      reason,
-      item.version ?? 0,
-      netWeightUnitId,
-    );
-  };
-
-  // Computed values
+  // Computed display values
   const imageUrl = resolveImageUrl(item, 'large');
   const expiryInfo = getExpiryInfo(item?.expiresAt);
   const daysInPantry = getDaysInPantry(item?.createdAt);
   const storageStateDisplay = formatStorageState(item?.storageState);
-  // Use pantryItem's specific brand (not item.brands which contains all brands for the item type)
   const brandName = item?.brand?.name || null;
-  // Get category name for display
   const categoryName = item?.item?.categories?.[0]?.category?.name || null;
-  // Images and nutrition from catalog item
   const itemImages = parseImages(item?.item?.images);
   const itemNutritions = parseNutritions(item?.item?.nutritions);
   const showImages = hasImages(itemImages) || !!imageUrl;
@@ -474,7 +171,7 @@ export const PantryItemDetail: React.FC<
       ? [
           {
             icon: 'close-circle-outline',
-            onPress: handleDiscardExpired,
+            onPress: actions.handleDiscardExpired,
             variant: 'error',
             testID: 'pantry-item-discard-button',
           },
@@ -485,10 +182,12 @@ export const PantryItemDetail: React.FC<
     ...(permissions.canAddItems
       ? [
           {
-            icon: addToListStatus === 'success' ? 'cart' : 'cart-outline',
-            onPress: handleAddToShoppingList,
-            variant: addToListStatus === 'success' ? 'success' : 'primary',
-            loading: addToListStatus === 'loading',
+            icon:
+              actions.addToListStatus === 'success' ? 'cart' : 'cart-outline',
+            onPress: actions.handleAddToShoppingList,
+            variant:
+              actions.addToListStatus === 'success' ? 'success' : 'primary',
+            loading: actions.addToListStatus === 'loading',
             testID: 'pantry-item-add-to-list-button',
           } satisfies HeaderAction,
         ]
@@ -498,7 +197,7 @@ export const PantryItemDetail: React.FC<
       ? ([
           {
             icon: 'swap-vertical-outline',
-            onPress: () => setAdjustModalVisible(true),
+            onPress: () => actions.setAdjustModalVisible(true),
             testID: 'pantry-item-adjust-button',
           },
           {
@@ -508,7 +207,7 @@ export const PantryItemDetail: React.FC<
           },
           {
             icon: 'trash-outline',
-            onPress: handleDelete,
+            onPress: actions.handleDelete,
             variant: 'error',
             testID: 'pantry-item-delete-button',
           },
@@ -518,7 +217,6 @@ export const PantryItemDetail: React.FC<
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <Header
         variant="detail"
         onBack={goBack}
@@ -534,7 +232,6 @@ export const PantryItemDetail: React.FC<
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
       >
-        {/* Image Gallery - show if images or fallback URL exists */}
         {!!showImages && (
           <View style={styles.imageSection}>
             <ImageGalleryTabs
@@ -545,14 +242,12 @@ export const PantryItemDetail: React.FC<
           </View>
         )}
 
-        {/* Title Row - Name */}
         <View style={styles.titleRow}>
           <Text style={styles.itemTitle} numberOfLines={2}>
             {item.itemName}
           </Text>
         </View>
 
-        {/* Category Badge with Storage Location */}
         {!!(categoryName || storageStateDisplay) && (
           <View style={styles.categoryBadge}>
             <Icon name="restaurant-outline" size={16} tone="primary" />
@@ -563,7 +258,6 @@ export const PantryItemDetail: React.FC<
           </View>
         )}
 
-        {/* Three-Column Info Row */}
         <View style={styles.infoColumns}>
           <View style={styles.infoColumn}>
             <Text style={styles.infoColumnLabel}>In the pantry</Text>
@@ -587,7 +281,6 @@ export const PantryItemDetail: React.FC<
           </View>
         </View>
 
-        {/* Nutrition Summary - navigates to NutritionScreen */}
         {!!showNutrition && (
           <View style={styles.nutritionSection}>
             <Text style={styles.nutritionTitle}>Nutrition</Text>
@@ -605,7 +298,6 @@ export const PantryItemDetail: React.FC<
           </View>
         )}
 
-        {/* Detail Info Rows */}
         <PantryDetailInfo
           item={item}
           brandName={brandName}
@@ -615,10 +307,9 @@ export const PantryItemDetail: React.FC<
           packageBreakdownText={packageBreakdownText}
           shelfLifeDays={item.item?.shelfLifeDays}
           shelfLifeOpenedDays={item.item?.shelfLifeOpenedDays}
-          onCorrectWeight={() => setCorrectWeightVisible(true)}
+          onCorrectWeight={() => actions.setCorrectWeightVisible(true)}
         />
 
-        {/* Batch Section - only show when item has been restocked (2+ batches) */}
         {!!item.batches && item.batches.length > 1 && (
           <BatchSection
             batches={item.batches}
@@ -627,7 +318,6 @@ export const PantryItemDetail: React.FC<
           />
         )}
 
-        {/* Usage Records Section */}
         {!!item.usageRecords && item.usageRecords.edges.length > 0 && (
           <PantryUsageHistory
             usageRecords={item.usageRecords.edges}
@@ -638,7 +328,6 @@ export const PantryItemDetail: React.FC<
           />
         )}
 
-        {/* Recipes to try */}
         <View style={styles.recipesSection}>
           <Text style={styles.sectionTitle}>Recipes to try</Text>
           {loadingRecipes ? (
@@ -680,25 +369,24 @@ export const PantryItemDetail: React.FC<
           )}
         </View>
 
-        {/* Bottom padding for safe area */}
         <View style={{ height: insets.bottom + 20 }} />
       </ScrollView>
 
-      {!!adjustModalVisible && (
+      {!!actions.adjustModalVisible && (
         <AdjustQuantityModal
-          visible={adjustModalVisible}
+          visible={actions.adjustModalVisible}
           pantryItem={item}
-          onClose={() => setAdjustModalVisible(false)}
-          onConfirm={handleConfirmAdjust}
+          onClose={() => actions.setAdjustModalVisible(false)}
+          onConfirm={actions.handleConfirmAdjust}
         />
       )}
 
-      {!!correctWeightVisible && (
+      {!!actions.correctWeightVisible && (
         <CorrectWeightModal
-          visible={correctWeightVisible}
+          visible={actions.correctWeightVisible}
           pantryItem={item}
-          onClose={() => setCorrectWeightVisible(false)}
-          onConfirm={handleCorrectWeight}
+          onClose={() => actions.setCorrectWeightVisible(false)}
+          onConfirm={actions.handleCorrectWeight}
         />
       )}
     </View>
