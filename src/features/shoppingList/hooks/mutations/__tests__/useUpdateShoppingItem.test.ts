@@ -99,11 +99,4 @@ describe('useUpdateShoppingItem', () => {
     expect(updateResult).toBe(false);
     expect(recorded).toEqual([]);
   });
-
-  // NOTE: cache-dependent assertions (variables/version/optimisticResponse)
-  // were removed in this migration — they relied on `mockReadFragment`
-  // returning a hand-crafted ShoppingListItem snapshot. Reproducing them
-  // against a real MockedProvider cache requires seeding the entity by hand.
-  // Cache-update behavior is exercised end-to-end in
-  // `__tests__/integration/optimisticMutation.integration.test.ts`.
 });

@@ -131,15 +131,4 @@ describe('useToggleShoppingItem', () => {
     expect(toggleResult).toBe(false);
     expect(recorded).toEqual([]);
   });
-
-  // NOTE on the mark-as-purchased / mark-as-unpurchased / depletion-recovery
-  // tests removed in this migration: they relied on `mockReadFragment` /
-  // `mockReadQuery` returning hand-crafted cache snapshots, plus capturing
-  // the useMutation `onCompleted` callback via the legacy `jest.mock('@apollo/
-  // client/react')` interception. Reproducing these against a real
-  // MockedProvider cache requires seeding ShoppingList + ShoppingListItem
-  // entities with their connection edges by hand — outside the scope of the
-  // mechanical lint-driven migration. The cache-read paths are still
-  // exercised in `__tests__/integration/optimisticMutation.integration.test.ts`
-  // which uses a real Apollo client end-to-end.
 });

@@ -181,12 +181,4 @@ describe('useMealTemplateActions', () => {
     expect(response).toMatchObject({ success: true, id: 'dup-1' });
     expect(toastService.success).toHaveBeenCalledWith('Template duplicated!');
   });
-
-  // NOTE on the legacy "returns null when mutation throws" test: it relied
-  // on `mockMutation.mockRejectedValue(new Error(...))` which throws inside
-  // the hook's try/catch, triggering its trackError branch. Apollo's
-  // `errorPolicy: 'all'` (set by the test wrapper to surface errors as data)
-  // means the real MockLink resolves to `{ data: undefined, error }` instead
-  // of throwing — so this branch is unreachable from real Apollo. Error-path
-  // coverage lives in the integration tests + executeMutation's own unit tests.
 });
