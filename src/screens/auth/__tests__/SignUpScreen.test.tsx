@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { SignUpScreen } from '../SignUpScreen';
 
 // --- Mocks ---
@@ -127,9 +127,10 @@ describe('SignUpScreen', () => {
     expect(screen.getByTestId('back-button')).toBeTruthy();
   });
 
-  it('calls goBack when back button is pressed', () => {
+  it('calls goBack when back button is pressed', async () => {
+    const user = userEvent.setup();
     render(<SignUpScreen />);
-    fireEvent.press(screen.getByTestId('back-button'));
+    await user.press(screen.getByTestId('back-button'));
     expect(mockGoBack).toHaveBeenCalledTimes(1);
   });
 
@@ -139,9 +140,10 @@ describe('SignUpScreen', () => {
     expect(screen.getByText('Sign In')).toBeTruthy();
   });
 
-  it('navigates to login when footer link is pressed', () => {
+  it('navigates to login when footer link is pressed', async () => {
+    const user = userEvent.setup();
     render(<SignUpScreen />);
-    fireEvent.press(screen.getByTestId('signup-login-link'));
+    await user.press(screen.getByTestId('signup-login-link'));
     expect(mockNavigateToLogin).toHaveBeenCalledTimes(1);
   });
 });

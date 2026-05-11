@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Pressable } from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
 
 interface BottomSheetHeaderProps {
@@ -31,21 +31,7 @@ export const BottomSheetHeader: React.FC<BottomSheetHeaderProps> = ({
   confirmDisabled = false,
   confirmColor = 'primary',
 }) => {
-  const { theme } = useUnistyles();
-
-  const getConfirmColor = () => {
-    if (confirmDisabled) return theme.colors.textTertiary;
-    switch (confirmColor) {
-      case 'success':
-        return theme.colors.success;
-      case 'warning':
-        return theme.colors.warning;
-      case 'error':
-        return theme.colors.error;
-      default:
-        return theme.colors.primary;
-    }
-  };
+  styles.useVariants({ confirmColor, confirmDisabled });
 
   return (
     <View style={styles.container}>
@@ -56,7 +42,7 @@ export const BottomSheetHeader: React.FC<BottomSheetHeaderProps> = ({
           accessibilityRole="button"
           accessibilityLabel={cancelLabel}
         >
-          <Text size="md" style={{ color: theme.colors.textSecondary }}>
+          <Text size="md" tone="secondary">
             {cancelLabel}
           </Text>
         </Pressable>
@@ -65,7 +51,7 @@ export const BottomSheetHeader: React.FC<BottomSheetHeaderProps> = ({
           size="lg"
           weight="semibold"
           align="center"
-          style={[styles.title, { color: theme.colors.textPrimary }]}
+          style={styles.title}
           numberOfLines={1}
         >
           {title}
@@ -83,15 +69,13 @@ export const BottomSheetHeader: React.FC<BottomSheetHeaderProps> = ({
             size="md"
             weight="semibold"
             align="right"
-            style={{ color: getConfirmColor() }}
+            style={styles.confirmText}
           >
             {confirmLabel}
           </Text>
         </Pressable>
       </View>
-      <View
-        style={[styles.divider, { backgroundColor: theme.colors.border }]}
-      />
+      <View style={styles.divider} />
     </View>
   );
 };
@@ -115,9 +99,23 @@ const styles = StyleSheet.create(theme => ({
   title: {
     flex: 1,
   },
+  confirmText: {
+    variants: {
+      confirmColor: {
+        primary: { color: theme.colors.primary },
+        success: { color: theme.colors.success },
+        warning: { color: theme.colors.warning },
+        error: { color: theme.colors.error },
+      },
+      confirmDisabled: {
+        true: { color: theme.colors.textTertiary },
+      },
+    },
+  },
   divider: {
     height: 1,
     marginTop: theme.spacing.sm,
+    backgroundColor: theme.colors.border,
   },
   pressed: {
     opacity: theme.opacity.pressed,

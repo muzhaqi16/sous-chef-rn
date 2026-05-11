@@ -29,7 +29,8 @@ describe('usePantrySelectorConfig', () => {
         toggle: jest.fn(),
       },
     },
-    navigate: jest.fn(),
+    toPantrySettings: jest.fn(),
+    toPantryAnalytics: jest.fn(),
   };
 
   it('returns config with correct title', () => {

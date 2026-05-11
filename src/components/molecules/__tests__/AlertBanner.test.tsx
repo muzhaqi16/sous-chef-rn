@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { AlertBanner } from '../AlertBanner';
 
 describe('AlertBanner', () => {
@@ -29,10 +29,11 @@ describe('AlertBanner', () => {
     expect(screen.getByText('OK')).toBeTruthy();
   });
 
-  it('calls onPress when banner is pressed', () => {
+  it('calls onPress when banner is pressed', async () => {
+    const user = userEvent.setup();
     const onPress = jest.fn();
     render(<AlertBanner title="Action" onPress={onPress} />);
-    fireEvent.press(screen.getByText('Action'));
+    await user.press(screen.getByText('Action'));
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 

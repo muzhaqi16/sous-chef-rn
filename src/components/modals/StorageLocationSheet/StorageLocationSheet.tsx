@@ -1,8 +1,10 @@
 import React, { useRef } from 'react';
-import { View, ActivityIndicator } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { View } from 'react-native';
+import { Pressable } from '#components/atoms/themedComponents';
+import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
+import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import {
   StorageLocationForm,
@@ -25,11 +27,35 @@ interface StorageLocationData {
 
 import { StorageLocation } from '#/graphql/generated/schemaTypes';
 
+/**
+ * The subset of {@link StorageLocation} fields the sheet actually reads to
+ * populate the form. Narrower than the full schema type so callers (and
+ * tests) don't have to build a full StorageLocation just to seed three
+ * fields.
+ */
+export type StorageLocationInitialData = Partial<
+  Pick<
+    StorageLocation,
+    | 'capacity'
+    | 'capacityUnit'
+    | 'color'
+    | 'description'
+    | 'isClimateControlled'
+    | 'isDefault'
+    | 'parentLocationId'
+    | 'temperature'
+  >
+> & {
+  id: string;
+  name: string;
+  type: StorageLocation['type'];
+};
+
 interface StorageLocationSheetProps {
   visible: boolean;
   onClose: () => void;
   onSubmit: (data: StorageLocationData) => Promise<boolean | void>;
-  initialData?: StorageLocation | null;
+  initialData?: StorageLocationInitialData | null;
   availableLocations: Array<{ id: string; name: string; type: string }>;
   isSubmitting?: boolean;
 }
@@ -42,12 +68,11 @@ export const StorageLocationSheet: React.FC<StorageLocationSheetProps> = ({
   availableLocations,
   isSubmitting = false,
 }) => {
-  const { ref, modalProps, contentContainerStyle, theme } =
-    useStandardBottomSheet({
-      visible,
-      onDismiss: onClose,
-      snapPoints: ['80%', '95%'],
-    });
+  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
+    visible,
+    onDismiss: onClose,
+    snapPoints: ['80%', '95%'],
+  });
   const formRef = useRef<StorageLocationFormRef>(null);
 
   const handleSubmit = async (data: StorageLocationData) => {
@@ -104,7 +129,7 @@ export const StorageLocationSheet: React.FC<StorageLocationSheetProps> = ({
             disabled={isSubmitting}
           >
             {isSubmitting ? (
-              <ActivityIndicator size="small" color={theme.colors.primary} />
+              <ThemedActivityIndicator size="small" />
             ) : (
               <Text size="md" weight="semibold" align="right" tone="accent">
                 {saveText}
@@ -114,9 +139,7 @@ export const StorageLocationSheet: React.FC<StorageLocationSheetProps> = ({
         </View>
 
         {/* Divider */}
-        <View
-          style={[styles.divider, { backgroundColor: theme.colors.border }]}
-        />
+        <View style={styles.divider} />
 
         {/* Form */}
         <StorageLocationForm
@@ -155,6 +178,7 @@ const styles = StyleSheet.create(theme => ({
   divider: {
     height: 1,
     marginBottom: theme.spacing.lg,
+    backgroundColor: theme.colors.border,
   },
   pressed: {
     opacity: theme.opacity.pressed,

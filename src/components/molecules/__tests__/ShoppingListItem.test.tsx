@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 
 // Override the global unistyles mock to add useVariants (needed by ShoppingListItem's style variants)
 jest.mock('react-native-unistyles', () => {
@@ -128,9 +128,10 @@ describe('ShoppingListItem', () => {
     );
   });
 
-  it('calls onToggle when checkbox is pressed', () => {
+  it('calls onToggle when checkbox is pressed', async () => {
+    const user = userEvent.setup();
     render(<ShoppingListItem {...defaultProps} />);
-    fireEvent.press(screen.getByTestId('shopping-item-checkbox-item-1'));
+    await user.press(screen.getByTestId('shopping-item-checkbox-item-1'));
     expect(defaultProps.onToggle).toHaveBeenCalledWith('item-1');
   });
 

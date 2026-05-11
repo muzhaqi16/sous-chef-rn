@@ -1,8 +1,8 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import { Icon } from '#utils/iconUtils';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
 
 interface HomeActionsProps {
@@ -24,8 +24,6 @@ export const HomeActions: React.FC<HomeActionsProps> = ({
   onInvite,
   onDelete,
 }) => {
-  const { theme } = useUnistyles();
-
   const hasVisibleActions = !isDefault || canInvite || canDelete;
   if (!hasVisibleActions) return null;
 
@@ -39,11 +37,7 @@ export const HomeActions: React.FC<HomeActionsProps> = ({
           ]}
           onPress={() => onSetDefault(homeId)}
         >
-          <Icon
-            name="star-outline"
-            size={20}
-            color={theme.colors.textSecondary}
-          />
+          <Icon name="star-outline" size={20} tone="textSecondary" />
           <Text size="sm" tone="secondary" style={styles.actionText}>
             Set Default
           </Text>
@@ -58,11 +52,7 @@ export const HomeActions: React.FC<HomeActionsProps> = ({
           ]}
           onPress={() => onInvite(homeId)}
         >
-          <Icon
-            name="person-add"
-            size={20}
-            color={theme.colors.textSecondary}
-          />
+          <Icon name="person-add" size={20} tone="textSecondary" />
           <Text size="sm" tone="secondary" style={styles.actionText}>
             Invite
           </Text>
@@ -77,11 +67,8 @@ export const HomeActions: React.FC<HomeActionsProps> = ({
           ]}
           onPress={() => onDelete(homeId)}
         >
-          <Icon name="trash-outline" size={20} color={theme.colors.error} />
-          <Text
-            size="sm"
-            style={[styles.actionText, { color: theme.colors.error }]}
-          >
+          <Icon name="trash-outline" size={20} tone="error" />
+          <Text size="sm" tone="error" style={styles.actionText}>
             Delete
           </Text>
         </Pressable>

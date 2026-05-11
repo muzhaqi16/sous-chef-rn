@@ -1,10 +1,15 @@
 import React, { useState } from 'react';
-import { View, ActivityIndicator } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { View } from 'react-native';
+import {
+  Pressable,
+  PrimaryActivityIndicator,
+  WhiteActivityIndicator,
+} from '#components/atoms/themedComponents';
+import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { FormInput } from '#components/molecules/FormInput';
 import { DatePickerField } from '#components/molecules/DatePickerField';
@@ -33,7 +38,6 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
   onConfirm,
   confirmLoading,
 }) => {
-  const { theme } = useUnistyles();
   const insets = useSafeAreaInsets();
 
   // Standard bottom-sheet boilerplate handled by useStandardBottomSheet.
@@ -141,7 +145,7 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
             Preview
           </Text>
           {loading ? (
-            <ActivityIndicator size="small" color={theme.colors.primary} />
+            <PrimaryActivityIndicator size="small" />
           ) : groupedByDay.length === 0 ? (
             <Text
               size="sm"
@@ -194,14 +198,10 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
           ]}
         >
           {confirmLoading ? (
-            <ActivityIndicator size="small" color={theme.colors.white} />
+            <WhiteActivityIndicator size="small" />
           ) : (
             <>
-              <Icon
-                name="calendar-outline"
-                size={20}
-                color={theme.colors.white}
-              />
+              <Icon name="calendar-outline" size={20} tone="white" />
               <Text size="base" weight="semibold" style={styles.confirmText}>
                 Create Meal Plan
               </Text>

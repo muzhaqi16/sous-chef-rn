@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { fireEvent, render, screen, userEvent } from '@testing-library/react-native';
 import { InviteUserModal } from '../InviteUserModal';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
 
@@ -79,9 +79,10 @@ describe('InviteUserModal', () => {
     expect(screen.getByText('Dismiss')).toBeTruthy();
   });
 
-  it('calls onClose when Cancel is pressed', () => {
+  it('calls onClose when Cancel is pressed', async () => {
+    const user = userEvent.setup();
     render(<InviteUserModal {...defaultProps} />);
-    fireEvent.press(screen.getByText('Cancel'));
+    await user.press(screen.getByText('Cancel'));
     expect(defaultProps.onClose).toHaveBeenCalled();
   });
 
@@ -99,17 +100,19 @@ describe('InviteUserModal', () => {
     expect(emailInput.props.value).toBe('test@example.com');
   });
 
-  it('shows error when submitting without email', () => {
+  it('shows error when submitting without email', async () => {
+    const user = userEvent.setup();
     render(<InviteUserModal {...defaultProps} />);
-    fireEvent.press(screen.getByText('Send Invite'));
+    await user.press(screen.getByText('Send Invite'));
     expect(screen.getByText('Please enter an email address')).toBeTruthy();
   });
 
-  it('shows error for invalid email format', () => {
+  it('shows error for invalid email format', async () => {
+    const user = userEvent.setup();
     render(<InviteUserModal {...defaultProps} />);
     const emailInput = screen.getByPlaceholderText('Enter email address');
     fireEvent.changeText(emailInput, 'not-an-email');
-    fireEvent.press(screen.getByText('Send Invite'));
+    await user.press(screen.getByText('Send Invite'));
     expect(screen.getByText('Please enter a valid email address')).toBeTruthy();
   });
 
@@ -124,9 +127,10 @@ describe('InviteUserModal', () => {
     offlineMock.useIsEffectivelyOffline.mockReturnValue(false);
   });
 
-  it('allows selecting a different role', () => {
+  it('allows selecting a different role', async () => {
+    const user = userEvent.setup();
     render(<InviteUserModal {...defaultProps} />);
-    fireEvent.press(screen.getByText('Admin'));
+    await user.press(screen.getByText('Admin'));
     // The Admin role option should now be selected (we verify it doesn't crash)
     expect(screen.getByText('Admin')).toBeTruthy();
   });

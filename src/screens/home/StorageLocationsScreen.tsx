@@ -3,11 +3,12 @@ import { View } from 'react-native';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { alertService } from '#/services/alertService';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { useTranslation } from 'react-i18next';
 import { DetailTemplate } from '#components/templates/DetailTemplate';
 import { useStorageLocationManagement } from '#hooks/storageLocation/useStorageLocationManagement';
 import { StorageLocationCard } from '#components/organisms/storageLocation/StorageLocationCard';
 import { StorageLocationSheet } from '#components/modals/StorageLocationSheet/StorageLocationSheet';
-import { useAppStore } from '#/store/useAppStore';
+import { useSelectedPantryId } from '#store/useAppStore';
 import { commonStyles } from '#/styles/commonStyles';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { executeRefreshWithFinally } from '#/utils/compilerSafeWrappers';
@@ -24,10 +25,11 @@ type RouteParams = {
 export const StorageLocationsScreen: React.FC<
   StaticScreenProps<RouteParams>
 > = ({ route }) => {
+  const { t } = useTranslation();
   useScreenTransition('StorageLocationsScreen');
   const { homeId } = route.params;
   const { goBack } = useAppNavigation();
-  const selectedPantryId = useAppStore(state => state.selectedPantryId);
+  const selectedPantryId = useSelectedPantryId();
   const [sheetVisible, setSheetVisible] = useState(false);
   const [editingLocation, setEditingLocation] = useState<any>(null);
   const [viewMode, setViewMode] = useState<'flat' | 'tree'>('flat');
@@ -105,9 +107,9 @@ export const StorageLocationsScreen: React.FC<
     // Default location cannot be deleted
     if (location.isDefault) {
       alertService.alert(
-        'Cannot Delete Default Location',
-        'Set another location as default first.',
-        [{ text: 'OK' }],
+        t('storageLocations.cantDeleteDefaultTitle'),
+        t('storageLocations.cantDeleteDefaultMessage'),
+        [{ text: t('storageLocations.ok') }],
       );
       return;
     }
@@ -120,28 +122,45 @@ export const StorageLocationsScreen: React.FC<
 
     if (itemCount > 0 || childCount > 0) {
       const parts: string[] = [];
-      if (itemCount > 0)
-        parts.push(`${itemCount} item${itemCount !== 1 ? 's' : ''}`);
-      if (childCount > 0)
-        parts.push(`${childCount} sub-location${childCount !== 1 ? 's' : ''}`);
+      if (itemCount > 0) {
+        parts.push(
+          t(
+            itemCount === 1
+              ? 'storageLocations.itemSingular'
+              : 'storageLocations.itemPlural',
+            { count: itemCount },
+          ),
+        );
+      }
+      if (childCount > 0) {
+        parts.push(
+          t(
+            childCount === 1
+              ? 'storageLocations.subLocationSingular'
+              : 'storageLocations.subLocationPlural',
+            { count: childCount },
+          ),
+        );
+      }
       alertService.alert(
-        'Cannot Delete Location',
-        `"${location.name}" has ${parts.join(
-          ' and ',
-        )}. Move or remove them first.`,
-        [{ text: 'Got It' }],
+        t('storageLocations.cantDeleteTitle'),
+        t('storageLocations.cantDeleteWithItems', {
+          name: location.name,
+          description: parts.join(' & '),
+        }),
+        [{ text: t('storageLocations.gotIt') }],
       );
       return;
     }
 
     // Empty, non-default — normal confirmation
     alertService.alert(
-      'Delete Storage Location',
-      `Are you sure you want to delete "${location.name}"? This cannot be undone.`,
+      t('storageLocations.deleteTitle'),
+      t('storageLocations.deleteConfirm', { name: location.name }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('labels.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('labels.delete'),
           style: 'destructive',
           onPress: async () => {
             await deleteLocation(location.id);
@@ -162,7 +181,7 @@ export const StorageLocationsScreen: React.FC<
   if (initialLoading) {
     return (
       <DetailTemplate
-        title="Storage Locations"
+        title={t('storageLocations.title')}
         onBack={goBack}
         headerActions={[]}
         sections={[
@@ -172,7 +191,7 @@ export const StorageLocationsScreen: React.FC<
                 <SousChefLoader
                   size="small"
                   showBrand={false}
-                  message="Loading storage locations..."
+                  message={t('storageLocations.loading')}
                 />
               </View>
             ),
@@ -193,9 +212,12 @@ export const StorageLocationsScreen: React.FC<
           {!!error && (
             <EmptyState
               icon="alert-circle-outline"
-              title="Something went wrong"
+              title={t('storageLocations.somethingWrong')}
               description={error.message}
-              action={{ label: 'Retry', onPress: handleRefresh }}
+              action={{
+                label: t('storageLocations.retry'),
+                onPress: handleRefresh,
+              }}
             />
           )}
 
@@ -205,17 +227,21 @@ export const StorageLocationsScreen: React.FC<
               options={VIEW_MODES}
               value={viewMode}
               onChange={setViewMode}
-              formatLabel={v => (v === 'flat' ? 'List View' : 'Tree View')}
+              formatLabel={v =>
+                v === 'flat'
+                  ? t('storageLocations.listView')
+                  : t('storageLocations.treeView')
+              }
             />
           )}
 
           {locations.length === 0 ? (
             <EmptyState
               icon="server-outline"
-              title="No Storage Locations"
-              description="Create storage locations to organize your pantry items by where they're stored."
+              title={t('storageLocations.noLocations')}
+              description={t('storageLocations.noLocationsDesc')}
               action={{
-                label: 'Add Location',
+                label: t('storageLocations.addLocation'),
                 onPress: () => {
                   setEditingLocation(null);
                   setSheetVisible(true);
@@ -246,7 +272,7 @@ export const StorageLocationsScreen: React.FC<
   return (
     <>
       <DetailTemplate
-        title="Storage Locations"
+        title={t('storageLocations.title')}
         onBack={goBack}
         headerActions={[
           {

@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
-import { View, ActivityIndicator } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { BottomSheetModal, BottomSheetTextInput } from '@gorhom/bottom-sheet';
+import { View } from 'react-native';
+import { Pressable } from '#components/atoms/themedComponents';
+import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
 import { StyleSheet } from 'react-native-unistyles';
-import { Ionicons } from '@react-native-vector-icons/ionicons';
+import {
+  ThemedActivityIndicator,
+  ThemedBottomSheetTextInput,
+} from '#components/atoms/themedComponents';
+import { Icon } from '#utils/iconUtils';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { TagInput } from '#components/molecules/TagInput';
 import { Text } from '#components/atoms/Text';
@@ -44,12 +48,11 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
   updating = false,
   recipeName,
 }) => {
-  const { ref, modalProps, contentContainerStyle, theme } =
-    useStandardBottomSheet({
-      visible,
-      onDismiss: onClose,
-      snapPoints: ['85%', '95%'],
-    });
+  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
+    visible,
+    onDismiss: onClose,
+    snapPoints: ['85%', '95%'],
+  });
 
   // Local state for editing
   const [selectedFolder, setSelectedFolder] = useState<string | null>(
@@ -175,22 +178,14 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
               disabled={updating}
               style={({ pressed }) => pressed && styles.pressed}
             >
-              <Ionicons
-                name="trash-outline"
-                size={22}
-                color={theme.colors.error}
-              />
+              <Icon name="trash-outline" size={22} tone="error" />
             </Pressable>
             <Pressable
               onPress={onClose}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               style={({ pressed }) => pressed && styles.pressed}
             >
-              <Ionicons
-                name="close"
-                size={24}
-                color={theme.colors.textPrimary}
-              />
+              <Icon name="close" size={24} tone="textPrimary" />
             </Pressable>
           </View>
         </View>
@@ -198,7 +193,7 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
         {/* Loading indicator */}
         {!!updating && (
           <View style={styles.updatingBanner}>
-            <ActivityIndicator size="small" color={theme.colors.primary} />
+            <ThemedActivityIndicator size="small" />
             <Text size="sm" weight="medium" tone="accent">
               Updating...
             </Text>
@@ -223,15 +218,18 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
               disabled={updating}
               style={({ pressed }) => pressed && styles.pressed}
             >
-              <Ionicons
+              <Icon
                 name={
                   rating !== null && star <= rating ? 'star' : 'star-outline'
                 }
                 size={32}
                 color={
+                  rating !== null && star <= rating ? '#FFB800' : undefined
+                }
+                tone={
                   rating !== null && star <= rating
-                    ? '#FFB800'
-                    : theme.colors.textSecondary
+                    ? undefined
+                    : 'textSecondary'
                 }
               />
             </Pressable>
@@ -268,14 +266,10 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
                 onPress={() => handleSelectFolder(folder)}
                 disabled={updating}
               >
-                <Ionicons
+                <Icon
                   name={isNoFolder ? 'folder-outline' : 'folder'}
                   size={18}
-                  color={
-                    isSelected
-                      ? theme.colors.primary
-                      : theme.colors.textSecondary
-                  }
+                  tone={isSelected ? 'primary' : 'textSecondary'}
                 />
                 <Text
                   style={[
@@ -286,11 +280,7 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
                   {isNoFolder ? 'No Folder' : folder}
                 </Text>
                 {!!isSelected && (
-                  <Ionicons
-                    name="checkmark"
-                    size={18}
-                    color={theme.colors.primary}
-                  />
+                  <Icon name="checkmark" size={18} tone="primary" />
                 )}
               </Pressable>
             );
@@ -300,10 +290,9 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
         {/* Create New Folder */}
         {showNewFolder ? (
           <View style={styles.newFolderContainer}>
-            <BottomSheetTextInput
+            <ThemedBottomSheetTextInput
               style={styles.newFolderInput}
               placeholder="Enter folder name..."
-              placeholderTextColor={theme.colors.textSecondary}
               value={newFolderName}
               onChangeText={setNewFolderName}
               autoFocus
@@ -338,7 +327,7 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
             onPress={() => setShowNewFolder(true)}
             disabled={updating}
           >
-            <Ionicons name="add" size={18} color={theme.colors.primary} />
+            <Icon name="add" size={18} tone="primary" />
             <Text size="base" weight="medium" tone="accent">
               Create New Folder
             </Text>
@@ -372,10 +361,9 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
         >
           Notes
         </Text>
-        <BottomSheetTextInput
+        <ThemedBottomSheetTextInput
           style={styles.notesInput}
           placeholder="Add any notes about this recipe..."
-          placeholderTextColor={theme.colors.textSecondary}
           value={notes}
           onChangeText={setNotes}
           onBlur={handleNotesBlur}

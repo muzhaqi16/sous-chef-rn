@@ -40,6 +40,7 @@ jest.mock('#hooks/useStandardBottomSheet', () => ({
     ref: { current: { present: jest.fn(), dismiss: jest.fn() } },
     modalProps: {},
   }),
+  BottomSheetModal: ({ children }: any) => children,
 }));
 
 jest.mock('../../hooks/useSearchResults', () => ({

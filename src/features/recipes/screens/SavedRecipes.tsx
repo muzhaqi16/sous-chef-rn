@@ -29,7 +29,7 @@ import type { IconName } from '#/utils/iconUtils';
 
 export const SavedRecipes: React.FC = () => {
   useScreenTransition('SavedRecipes');
-  const { navigate, goBack } = useAppNavigation();
+  const { toRecipeDetail, goBack } = useAppNavigation();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
@@ -168,7 +168,7 @@ export const SavedRecipes: React.FC = () => {
   };
 
   const handleItemPress = (id: string | number) => {
-    navigate('RecipeDetail', { recipeId: String(id) });
+    toRecipeDetail({ recipeId: String(id) });
   };
 
   // Check if any filters are active

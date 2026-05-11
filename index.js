@@ -22,6 +22,13 @@ configureReanimatedLogger({
 });
 
 /**
+ * Initialize i18next BEFORE any component or service that calls `t()`.
+ * Module-scope `t()` calls (e.g. mutation onError handlers) read from the
+ * configured i18next instance, so it must be ready before App.tsx loads.
+ */
+import './src/i18n/config';
+
+/**
  * Configure Apollo Client memory management
  * Per Apollo docs: Set before loading @apollo/client
  * This must be imported before App.tsx (which imports apollo/client)
@@ -39,7 +46,21 @@ setupNotificationHandlers();
  * @format
  */
 import { AppRegistry } from 'react-native';
+import { enableScreens, enableFreeze } from 'react-native-screens';
 import './src/theme/unistyles';
+import { initializeSecureStorage } from './src/storage/mmkv';
+
+// Activate native screen reuse and inactive-screen freezing.
+// On the New Architecture this is the explicit opt-in for native screen
+// containers + freeze-on-blur behavior.
+enableScreens(true);
+enableFreeze(true);
+
+// Kick off encrypted MMKV initialization before any React code runs.
+// Zustand persist hydration awaits this internally via zustandStorage, and
+// the SplashScreen renders until isHydrated, so no sync `storage.X` access
+// happens until the encrypted instance is ready.
+initializeSecureStorage();
 
 import App from './App';
 

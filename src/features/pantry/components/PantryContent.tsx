@@ -5,7 +5,7 @@ import React, {
   useImperativeHandle,
 } from 'react';
 import { View, RefreshControl } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import {
   FlashList,
   type FlashListRef,
@@ -15,7 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { getTabBarBottomPadding } from '#constants/layout';
 import { Icon } from '#utils/iconUtils';
-import { LocationFilter } from '#utils/pantryFilters';
+import { LocationFilter } from '#features/pantry/utils/pantryFilters';
 import { SearchBar } from '#components/molecules/SearchBar';
 import { FilterTabs } from '#components/molecules/FilterTabs/FilterTabs';
 import { PantryHeader } from './PantryHeader';
@@ -40,6 +40,7 @@ import {
   isStickyHeaderSentinel,
   STICKY_HEADER_INDICES,
   STICKY_HEADER_CONFIG,
+  FLASHLIST_DEFAULTS,
 } from '#utils/flashListDefaults';
 
 // Extracted modules
@@ -114,7 +115,9 @@ export const PantryContent = React.forwardRef<
       loading = false,
       noHomeSelected,
       noHomes,
+      noPantries,
       onSelectHome,
+      onCreatePantry,
       onHomeBadgeLayout,
       onSettingsIconLayout,
       scrollHandler,
@@ -124,6 +127,9 @@ export const PantryContent = React.forwardRef<
     ref,
   ) => {
     useRenderTime('PantryContent', { slowThreshold: 1000 });
+    // KEEP useUnistyles: theme colors flow into computeDisplayMap data — not
+    // stylesheets — so the values are passed through to per-item ExpirationText
+    // via `style={{ color }}`. They cannot be expressed as stylesheet variants.
     const { theme } = useUnistyles();
     const { bottom: safeBottom } = useSafeAreaInsets();
     const flashListRef = useRef<FlashListRef<PantryListItem>>(null);
@@ -404,7 +410,7 @@ export const PantryContent = React.forwardRef<
                                 <Icon
                                   name="settings-outline"
                                   size={18}
-                                  color={theme.colors.textTertiary}
+                                  tone="textTertiary"
                                 />
                               </Pressable>
                             </View>
@@ -436,7 +442,9 @@ export const PantryContent = React.forwardRef<
                         onAddItem={onAddItem}
                         noHomeSelected={noHomeSelected}
                         noHomes={noHomes}
+                        noPantries={noPantries}
                         onSelectHome={onSelectHome}
+                        onCreatePantry={onCreatePantry}
                         overallItemCount={locationCounts.all ?? 0}
                       />
                     ) : (
@@ -449,7 +457,10 @@ export const PantryContent = React.forwardRef<
                     )
                   }
                   onEndReached={onEndReached}
-                  onEndReachedThreshold={0.8}
+                  onEndReachedThreshold={
+                    FLASHLIST_DEFAULTS.analyticsHeavyFullScreen
+                      .onEndReachedThreshold
+                  }
                   onLoad={perfCallbacks.onLoad}
                   onViewableItemsChanged={perfCallbacks.onViewableItemsChanged}
                   maintainVisibleContentPosition={MVCP_DISABLED}

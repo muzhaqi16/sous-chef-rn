@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { fireEvent, render, screen, userEvent } from '@testing-library/react-native';
 import { QuickAddBar } from '../QuickAddBar';
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -30,10 +30,11 @@ describe('QuickAddBar', () => {
     expect(toJSON()).toBeNull();
   });
 
-  it('calls onAddItem when add button pressed with text', () => {
+  it('calls onAddItem when add button pressed with text', async () => {
+    const user = userEvent.setup();
     render(<QuickAddBar onAddItem={onAddItem} />);
     fireEvent.changeText(screen.getByLabelText('Item name'), 'Milk');
-    fireEvent.press(screen.getByLabelText('Add item'));
+    await user.press(screen.getByLabelText('Add item'));
     expect(onAddItem).toHaveBeenCalledWith('Milk', 1);
   });
 });

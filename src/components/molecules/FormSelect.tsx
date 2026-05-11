@@ -7,7 +7,7 @@ import {
   ViewStyle,
   Pressable,
 } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { FormFieldWrapper } from '../atoms/FormFieldWrapper';
 
@@ -37,7 +37,6 @@ export const FormSelect: React.FC<FormSelectProps> = ({
   placeholder = 'Select an option',
   containerStyle,
 }) => {
-  const { theme } = useUnistyles();
   const [modalVisible, setModalVisible] = useState(false);
 
   const selectedOption = options.find(option => option.value === value);
@@ -90,11 +89,7 @@ export const FormSelect: React.FC<FormSelectProps> = ({
         >
           {selectedOption ? selectedOption.label : placeholder}
         </Text>
-        <Icon
-          name="chevron-down"
-          size={24}
-          color={theme.colors.textSecondary}
-        />
+        <Icon name="chevron-down" size={24} tone="textSecondary" />
       </Pressable>
 
       {modalVisible ? (

@@ -1,8 +1,8 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Ionicons } from '@react-native-vector-icons/ionicons';
+import { Pressable } from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
+import { Icon } from '#utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { Text } from '#components/atoms/Text';
 
@@ -17,8 +17,6 @@ export const IngredientCard: React.FC<IngredientCardProps> = ({
   isAdded,
   onPress,
 }) => {
-  const { theme } = useUnistyles();
-
   const ingredientName = ingredient.name || 'Unknown';
   const quantity = ingredient.quantity || ingredient.amount || '';
   const unit =
@@ -39,11 +37,7 @@ export const IngredientCard: React.FC<IngredientCardProps> = ({
         <CachedImage uri={imageUrl} style={styles.image} displaySize={64} />
       ) : (
         <View style={styles.imagePlaceholder}>
-          <Ionicons
-            name="leaf-outline"
-            size={32}
-            color={theme.colors.textSecondary}
-          />
+          <Icon name="leaf-outline" size={32} tone="textSecondary" />
         </View>
       )}
       <Text
@@ -59,11 +53,11 @@ export const IngredientCard: React.FC<IngredientCardProps> = ({
       </Text>
       {isAdded ? (
         <View style={styles.addedBadge}>
-          <Ionicons name="checkmark" size={12} color={theme.colors.onPrimary} />
+          <Icon name="checkmark" size={12} tone="onPrimary" />
         </View>
       ) : (
         <View style={styles.addButton}>
-          <Ionicons name="add" size={16} color={theme.colors.primary} />
+          <Icon name="add" size={16} tone="primary" />
         </View>
       )}
     </Pressable>

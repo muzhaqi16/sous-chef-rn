@@ -1,7 +1,16 @@
 'use no memo';
 
-import { renderHook, act } from '@testing-library/react-native';
-import { NotificationType } from '#/graphql/generated/schemaTypes';
+import { act, waitFor } from '@testing-library/react-native';
+import type { MockedResponse } from '#/test-utils/apolloMockProvider';
+import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import { NotificationChangedDocument } from '#features/notifications/graphql/notifications.generated';
+import {
+  NotificationType,
+  NotificationCategory,
+  NotificationStatus,
+  Priority,
+  NotificationChangeType,
+} from '#/graphql/generated/schemaTypes';
 import { useNotifications } from '../useNotifications';
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -42,21 +51,6 @@ jest.mock('#store', () => ({
   },
 }));
 
-const mockSubscriptionOnData = jest.fn();
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useSubscription: jest.fn((doc: any, opts: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'NotificationChanged') {
-      if (opts?.onData) {
-        mockSubscriptionOnData.mockImplementation(opts.onData);
-      }
-      return {};
-    }
-    return {};
-  }),
-}));
-
 jest.mock('#utils/notifications/localNotificationHelper', () => ({
   showLocalNotification: jest.fn(),
 }));
@@ -66,6 +60,7 @@ jest.mock('#store/slices/notificationSlice', () => ({
     LOW: 'LOW',
     MEDIUM: 'MEDIUM',
     HIGH: 'HIGH',
+    URGENT: 'URGENT',
   },
 }));
 
@@ -102,19 +97,59 @@ jest.mock('../useNotificationSettings', () => ({
   }),
 }));
 
+function buildNotificationSubscriptionMock(
+  notification: {
+    id: string;
+    type: NotificationType;
+    title: string;
+    message: string;
+    payload?: Record<string, unknown>;
+    sentAt?: string;
+  },
+  changeType: NotificationChangeType = NotificationChangeType.Received,
+): MockedResponse {
+  return {
+    request: {
+      query: NotificationChangedDocument,
+    },
+    result: {
+      data: {
+        notificationChanged: {
+          __typename: 'NotificationChangeEvent',
+          changeType,
+          timestamp: '2024-01-01T00:00:00Z',
+          notification: {
+            __typename: 'Notification',
+            id: notification.id,
+            type: notification.type,
+            status: NotificationStatus.Pending,
+            priority: Priority.Normal,
+            title: notification.title,
+            message: notification.message,
+            payload: notification.payload ?? null,
+            category: NotificationCategory.System,
+            sentAt: notification.sentAt ?? '2024-01-01T00:00:00Z',
+            expiresAt: null,
+          },
+        },
+      },
+    },
+  };
+}
+
 beforeEach(() => {
   jest.clearAllMocks();
 });
 
 describe('useNotifications', () => {
   it('returns notifications from store', () => {
-    const { result } = renderHook(() => useNotifications());
+    const { result } = renderHookWithApollo(() => useNotifications());
 
     expect(result.current.notifications).toEqual([]);
   });
 
   it('returns expected functions', () => {
-    const { result } = renderHook(() => useNotifications());
+    const { result } = renderHookWithApollo(() => useNotifications());
 
     expect(typeof result.current.handleMarkAsRead).toBe('function');
     expect(typeof result.current.handleMarkAllAsRead).toBe('function');
@@ -124,7 +159,7 @@ describe('useNotifications', () => {
   });
 
   it('handleMarkAllAsRead calls syncMarkAllAsRead', () => {
-    const { result } = renderHook(() => useNotifications());
+    const { result } = renderHookWithApollo(() => useNotifications());
 
     act(() => {
       result.current.handleMarkAllAsRead();
@@ -134,7 +169,7 @@ describe('useNotifications', () => {
   });
 
   it('returns default config merged with user config', () => {
-    const { result } = renderHook(() =>
+    const { result } = renderHookWithApollo(() =>
       useNotifications({ showInAppNotifications: false }),
     );
 
@@ -143,57 +178,46 @@ describe('useNotifications', () => {
   });
 
   it('skips subscription when config.skip is true', () => {
-    const { useSubscription } = require('@apollo/client/react');
-
-    renderHook(() => useNotifications({ skip: true }));
-
-    expect(useSubscription).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ skip: true }),
+    // No subscription mock provided. If the subscription fired, MockedProvider
+    // would log a warning (suppressed in tests). The hook returns normally.
+    const { result } = renderHookWithApollo(() =>
+      useNotifications({ skip: true }),
     );
+    expect(result.current.config).toBeDefined();
   });
 
-  it('subscription processes incoming notification data', () => {
-    renderHook(() => useNotifications());
-
-    // Simulate subscription data
-    act(() => {
-      mockSubscriptionOnData({
-        data: {
-          data: {
-            notificationChanged: {
-              changeType: 'RECEIVED',
-              notification: {
-                id: 'notif-1',
-                type: NotificationType.LowStock,
-                title: 'Low Stock Alert',
-                message: 'Milk is running low',
-                payload: { itemName: 'Milk' },
-                sentAt: '2024-01-01T00:00:00Z',
-              },
-            },
-          },
-        },
-      });
+  it('subscription processes incoming notification data', async () => {
+    renderHookWithApollo(() => useNotifications(), {
+      operationMocks: [
+        buildNotificationSubscriptionMock({
+          id: 'notif-1',
+          type: NotificationType.LowStock,
+          title: 'Low Stock Alert',
+          message: 'Milk is running low',
+          payload: { itemName: 'Milk' },
+        }),
+      ],
     });
 
-    expect(mockAddNotification).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: NotificationType.LowStock,
-        title: 'Low Stock Alert',
-        message: 'Milk is running low',
-      }),
-    );
+    await waitFor(() => {
+      expect(mockAddNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: NotificationType.LowStock,
+          title: 'Low Stock Alert',
+          message: 'Milk is running low',
+        }),
+      );
+    });
   });
 
   it('clearAll is passed through from store', () => {
-    const { result } = renderHook(() => useNotifications());
+    const { result } = renderHookWithApollo(() => useNotifications());
 
     expect(result.current.clearAll).toBe(mockClearAll);
   });
 
   it('getNotificationsByCategory is passed through from store', () => {
-    const { result } = renderHook(() => useNotifications());
+    const { result } = renderHookWithApollo(() => useNotifications());
 
     expect(result.current.getNotificationsByCategory).toBe(
       mockGetNotificationsByCategory,

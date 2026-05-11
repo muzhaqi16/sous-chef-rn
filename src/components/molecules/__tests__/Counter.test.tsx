@@ -3,7 +3,11 @@ import { render, screen, fireEvent } from '@testing-library/react-native';
 import { Counter } from '../Counter';
 
 // Mock icon and haptic service
-jest.mock('@react-native-vector-icons/ionicons', () => 'Icon');
+jest.mock('@react-native-vector-icons/ionicons', () => ({
+  __esModule: true,
+  default: 'Icon',
+  Ionicons: 'Icon',
+}));
 jest.mock('#services/haptic/HapticService', () => ({
   HapticService: {
     selection: jest.fn(),

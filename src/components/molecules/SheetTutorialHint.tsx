@@ -1,8 +1,8 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 
@@ -30,8 +30,6 @@ export const SheetTutorialHint: React.FC<SheetTutorialHintProps> = ({
   variant,
   onSkip,
 }) => {
-  const { theme } = useUnistyles();
-
   if (variant === 'handle') {
     return (
       <Animated.View
@@ -39,7 +37,7 @@ export const SheetTutorialHint: React.FC<SheetTutorialHintProps> = ({
         exiting={FadeOut.duration(200)}
         style={styles.handleContainer}
       >
-        <Icon name="chevron-down" size={20} color={theme.colors.primary} />
+        <Icon name="chevron-down" size={20} tone="primary" />
         <Text size="sm" weight="medium" tone="accent">
           {text}
         </Text>
@@ -63,7 +61,7 @@ export const SheetTutorialHint: React.FC<SheetTutorialHintProps> = ({
     >
       <View style={styles.inlineContent}>
         <View style={styles.iconCircle}>
-          <Icon name="hand-left-outline" size={16} color={theme.colors.white} />
+          <Icon name="hand-left-outline" size={16} tone="white" />
         </View>
         <Text size="sm" weight="medium" style={styles.inlineText}>
           {text}

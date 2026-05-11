@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { ActionButtons } from '../ActionButtons';
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -31,11 +31,12 @@ describe('ActionButtons', () => {
     expect(screen.getByText('Edit')).toBeTruthy();
   });
 
-  it('calls onPress when button is pressed', () => {
+  it('calls onPress when button is pressed', async () => {
+    const user = userEvent.setup();
     const onPress = jest.fn();
     const actions = [{ icon: 'add', label: 'Create', onPress }];
     render(<ActionButtons actions={actions} />);
-    fireEvent.press(screen.getByText('Create'));
+    await user.press(screen.getByText('Create'));
     expect(onPress).toHaveBeenCalled();
   });
 });

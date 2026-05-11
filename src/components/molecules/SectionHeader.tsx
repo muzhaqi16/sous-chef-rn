@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Pressable } from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
 
 export type SectionHeaderVariant = 'warning' | 'default' | 'info' | 'success';
@@ -45,29 +45,15 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
   onActionPress,
   testID,
 }) => {
-  const { theme } = useUnistyles();
-
-  const getTitleColor = () => {
-    switch (variant) {
-      case 'warning':
-        return theme.colors.sectionHeader.warningText;
-      case 'info':
-        return theme.colors.info;
-      case 'success':
-        return theme.colors.success;
-      default:
-        return theme.colors.sectionHeader.defaultText;
-    }
-  };
+  styles.useVariants({
+    variant: variant === 'default' ? undefined : variant,
+  });
 
   return (
     <View style={styles.container} testID={testID}>
       <View style={styles.leftContent}>
         {icon ? <Text size="sm">{icon}</Text> : null}
-        <Text
-          weight="semibold"
-          style={[styles.title, { color: getTitleColor() }]}
-        >
+        <Text weight="semibold" style={styles.title}>
           {title}
           {count !== undefined ? ` (${count})` : ''}
         </Text>
@@ -102,6 +88,14 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.sm - 1,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+    color: theme.colors.sectionHeader.defaultText,
+    variants: {
+      variant: {
+        warning: { color: theme.colors.sectionHeader.warningText },
+        info: { color: theme.colors.info },
+        success: { color: theme.colors.success },
+      },
+    },
   },
   actionLabel: {
     fontSize: theme.typography.fontSize.sm - 1,

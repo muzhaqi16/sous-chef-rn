@@ -1,7 +1,8 @@
 'use no memo';
 
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { screen } from '@testing-library/react-native';
+import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { CreateHomeScreen } from '../createHome/CreateHomeScreen';
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -32,17 +33,9 @@ jest.mock('#store/useAppStore', () => {
     useAppStore: fn,
     useUser: jest.fn(() => mockState.user),
     useSelectedHomeId: jest.fn(() => mockState.selectedHomeId),
+    useSetSelectedPantryId: jest.fn(() => mockState.setSelectedPantryId),
   };
 });
-
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useMutation: jest.fn(() => [jest.fn(), { loading: false }]),
-  useQuery: jest.fn(() => ({ data: undefined, loading: false })),
-  __esModule: true,
-}));
-
-// CreatePantry is now part of the pantry slice (v4 codegen).
 
 jest.mock('#hooks/performance/useScreenTransition');
 jest.mock('#/utils/validation/onboarding', () => ({
@@ -125,34 +118,49 @@ jest.mock('#components/base/Button', () => ({
   },
 }));
 
+// Schema-driven mocks return empty homes/invites so the screen exits its
+// loading state and shows the create form (no existing home, no invites).
+const noHomesAndNoInvites = {
+  Query: () => ({
+    homes: {
+      totalCount: 0,
+      edges: [],
+      pageInfo: { hasNextPage: false, endCursor: null },
+    },
+    me: { id: 'u1', pendingHomeInvites: [] },
+  }),
+};
+
 describe('CreateHomeScreen', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it('renders the create home form', () => {
-    render(<CreateHomeScreen />);
-    expect(screen.getByText(/set up your home/i)).toBeTruthy();
+  it('renders the create home form', async () => {
+    renderWithApollo(<CreateHomeScreen />, { mocks: noHomesAndNoInvites });
+    expect(await screen.findByText(/set up your home/i)).toBeTruthy();
   });
 
-  it('shows form content for creating home', () => {
-    render(<CreateHomeScreen />);
-    expect(screen.getByTestId('form-content')).toBeTruthy();
+  it('shows form content for creating home', async () => {
+    renderWithApollo(<CreateHomeScreen />, { mocks: noHomesAndNoInvites });
+    expect(await screen.findByTestId('form-content')).toBeTruthy();
   });
 
-  it('shows the submit button', () => {
-    render(<CreateHomeScreen />);
-    expect(screen.getByText('Create')).toBeTruthy();
+  it('shows the submit button', async () => {
+    renderWithApollo(<CreateHomeScreen />, { mocks: noHomesAndNoInvites });
+    expect(await screen.findByText('Create')).toBeTruthy();
   });
 
-  it('shows subtitle text', () => {
-    render(<CreateHomeScreen />);
+  it('shows subtitle text', async () => {
+    renderWithApollo(<CreateHomeScreen />, { mocks: noHomesAndNoInvites });
     expect(
-      screen.getByText('Create your home and pantry to get started'),
+      await screen.findByText('Create your home and pantry to get started'),
     ).toBeTruthy();
   });
 
-  it('wraps in error boundary', () => {
+  it('wraps in error boundary', async () => {
     // This test verifies it renders without crashing (boundary is mocked)
-    render(<CreateHomeScreen />);
-    expect(screen.getByTestId('onboarding-create-home-screen')).toBeTruthy();
+    renderWithApollo(<CreateHomeScreen />, { mocks: noHomesAndNoInvites });
+    expect(
+      await screen.findByTestId('onboarding-create-home-screen'),
+    ).toBeTruthy();
   });
 });

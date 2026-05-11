@@ -1,11 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, RefreshControl } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { View } from 'react-native';
+import {
+  Pressable,
+  ThemedRefreshControl,
+} from '#components/atoms/themedComponents';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
 import { alertService } from '#/services/alertService';
 import { FlashList } from '@shopify/flash-list';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { differenceInCalendarDays } from 'date-fns';
 
 import { Icon } from '#utils/iconUtils';
@@ -16,7 +19,7 @@ import { SpotlightCoachMark } from '#/components/organisms/SpotlightCoachMark/Sp
 import { usePantryManagement } from '#hooks/home/pantry/usePantryManagement';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useMutation } from '@apollo/client/react';
-import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { AddItemToShoppingListDocument } from './FilteredPantryItems.generated';
 import { useCurrentPantry } from '#features/pantry/hooks/useCurrentPantry';
 import { useAddLowStockToShoppingList } from '#features/pantry/hooks/useAddLowStockToShoppingList';
 import {
@@ -132,7 +135,6 @@ type LayoutRect = { x: number; y: number; width: number; height: number };
 
 interface FilteredRenderItemProps {
   item: FilteredItem;
-  primaryColor: string;
   subtitleFn: (item: FilteredItem) => string;
   showCart: boolean;
   onCartMeasure?: (rect: LayoutRect) => void;
@@ -140,7 +142,6 @@ interface FilteredRenderItemProps {
 
 const FilteredRenderItemComponent: React.FC<FilteredRenderItemProps> = ({
   item,
-  primaryColor,
   subtitleFn,
   showCart,
   onCartMeasure,
@@ -157,7 +158,7 @@ const FilteredRenderItemComponent: React.FC<FilteredRenderItemProps> = ({
           pressed && styles.pressed,
         ]}
       >
-        <Icon name="cart-outline" size={20} color={primaryColor} />
+        <Icon name="cart-outline" size={20} tone="primary" />
       </Pressable>
     ) : null;
 
@@ -213,8 +214,6 @@ const FilteredEmpty: React.FC<FilteredEmptyProps> = ({
   icon,
   message,
 }) => {
-  const { theme } = useUnistyles();
-
   if (loading || !hasItems) {
     return (
       <View style={styles.skeletonContainer}>
@@ -227,7 +226,7 @@ const FilteredEmpty: React.FC<FilteredEmptyProps> = ({
 
   return (
     <View style={[commonStyles.center, styles.emptyState]}>
-      <Icon name={icon} size={64} color={theme.colors.success} />
+      <Icon name={icon} size={64} tone="success" />
       <Text align="center" style={[commonStyles.body, styles.emptyText]}>
         {message}
       </Text>
@@ -242,9 +241,8 @@ export const FilteredPantryItems: React.FC<
 > = ({ route }) => {
   const mode = route.params?.mode ?? 'lowStock';
   const config = MODE_CONFIG[mode];
-  const { theme } = useUnistyles();
 
-  const { goBack, navigateTo } = useAppNavigation();
+  const { goBack, toPantryItemDetail } = useAppNavigation();
 
   const [refreshing, setRefreshing] = React.useState(false);
 
@@ -319,8 +317,7 @@ export const FilteredPantryItems: React.FC<
   const showCart = config.showCartAction && permissions.canAddItems;
 
   const actions = {
-    navigateTo: (params: { itemId: string }) =>
-      navigateTo.pantryItemDetail(params),
+    navigateTo: (params: { itemId: string }) => toPantryItemDetail(params),
     ...(showCart && { handleAddToList }),
   };
 
@@ -354,11 +351,9 @@ export const FilteredPantryItems: React.FC<
           {...FLASHLIST_DEFAULTS.fullScreen}
           getItemType={getItemType}
           refreshControl={
-            <RefreshControl
+            <ThemedRefreshControl
               refreshing={refreshing}
               onRefresh={handleRefresh}
-              colors={[theme.colors.primary]}
-              tintColor={theme.colors.primary}
             />
           }
           ListEmptyComponent={
@@ -378,7 +373,6 @@ export const FilteredPantryItems: React.FC<
           }) => (
             <FilteredRenderItem
               item={item}
-              primaryColor={theme.colors.primary}
               subtitleFn={config.subtitle}
               showCart={showCart}
               onCartMeasure={index === 0 ? setItemCartRect : undefined}
@@ -408,7 +402,6 @@ const styles = StyleSheet.create(theme => ({
   },
   scrollContent: {
     padding: theme.spacing.md,
-    gap: theme.spacing.sm,
   },
   emptyState: {
     padding: theme.spacing['2xl'],
@@ -425,7 +418,6 @@ const styles = StyleSheet.create(theme => ({
   },
   itemCard: {
     ...commonStyles.rowSpaceBetween,
-    marginBottom: 0,
   },
   itemInfo: {
     flex: 1,

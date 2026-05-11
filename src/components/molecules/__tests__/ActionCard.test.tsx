@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { ActionCard } from '../ActionCard';
 
 describe('ActionCard', () => {
@@ -18,15 +18,17 @@ describe('ActionCard', () => {
     expect(screen.getByText('Add Item')).toBeTruthy();
   });
 
-  it('calls onPress when pressed', () => {
+  it('calls onPress when pressed', async () => {
+    const user = userEvent.setup();
     render(<ActionCard {...defaultProps} testID="action-card" />);
-    fireEvent.press(screen.getByTestId('action-card'));
+    await user.press(screen.getByTestId('action-card'));
     expect(defaultProps.onPress).toHaveBeenCalledTimes(1);
   });
 
-  it('does not call onPress when disabled', () => {
+  it('does not call onPress when disabled', async () => {
+    const user = userEvent.setup();
     render(<ActionCard {...defaultProps} disabled testID="action-card" />);
-    fireEvent.press(screen.getByTestId('action-card'));
+    await user.press(screen.getByTestId('action-card'));
     expect(defaultProps.onPress).not.toHaveBeenCalled();
   });
 

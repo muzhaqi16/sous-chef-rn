@@ -1,17 +1,17 @@
-import { useAppStore } from '#store/useAppStore';
+import { useNavigationState } from '#store/useAppStore';
 
 export function useIsAuth(): boolean {
-  return useAppStore(state => state.navigationState === 'auth');
+  return useNavigationState() === 'auth';
 }
 
 export function useIsVerification(): boolean {
-  return useAppStore(state => state.navigationState === 'verification');
+  return useNavigationState() === 'verification';
 }
 
 export function useIsOnboarding(): boolean {
-  return useAppStore(state => state.navigationState === 'onboarding');
+  return useNavigationState() === 'onboarding';
 }
 
 export function useIsMainApp(): boolean {
-  return useAppStore(state => state.navigationState === 'main_app');
+  return useNavigationState() === 'main_app';
 }

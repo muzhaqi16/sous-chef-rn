@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { NotificationBanner } from '../Notification';
 
 describe('NotificationBanner', () => {
@@ -45,10 +45,11 @@ describe('NotificationBanner', () => {
     expect(screen.getByText('\u00d7')).toBeTruthy();
   });
 
-  it('hides after pressing close button', () => {
+  it('hides after pressing close button', async () => {
+    const user = userEvent.setup();
     render(<NotificationBanner {...defaultProps} />);
     const closeButton = screen.getByText('\u00d7');
-    fireEvent.press(closeButton);
+    await user.press(closeButton);
     // After pressing, the animation should start; the component sets show=false after animation
     // We just verify pressing doesn't throw
     expect(closeButton).toBeTruthy();

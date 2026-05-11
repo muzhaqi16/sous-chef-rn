@@ -6,6 +6,11 @@ import { matchFont, Circle } from '@shopify/react-native-skia';
 import { type TimeSeriesDataPoint } from '#/graphql/generated/schemaTypes';
 import { Text } from '#components/atoms/Text';
 
+// `useUnistyles()` is intentional here: theme colors feed Skia primitives
+// (Line, Area, Circle) and victory-native's yAxis/frame config — runtime
+// values consumed inside Skia's draw context, which can't move into a
+// StyleSheet.create. See `SpotlightCoachMark.tsx` for the same precedent.
+
 const fontFamily = Platform.select({ ios: 'Helvetica', default: 'sans-serif' });
 const axisFont = matchFont({ fontFamily, fontSize: 10 });
 

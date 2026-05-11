@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { LeftActions } from '../LeftActions';
 
 jest.mock('#/services/haptic/HapticService', () => ({
@@ -70,7 +70,8 @@ describe('LeftActions', () => {
     expect(screen.getByText('close-circle')).toBeTruthy();
   });
 
-  it('calls onTogglePurchase and closes swipeable when purchase button is pressed', () => {
+  it('calls onTogglePurchase and closes swipeable when purchase button is pressed', async () => {
+    const user = userEvent.setup();
     const onTogglePurchase = jest.fn();
     render(
       <LeftActions
@@ -80,7 +81,7 @@ describe('LeftActions', () => {
         progress={mockProgress as any}
       />,
     );
-    fireEvent.press(screen.getByText('checkmark-circle'));
+    await user.press(screen.getByText('checkmark-circle'));
     expect(onTogglePurchase).toHaveBeenCalled();
     expect(mockSwipeableRef.current.close).toHaveBeenCalled();
   });
@@ -135,7 +136,8 @@ describe('LeftActions', () => {
     expect(screen.getByText('add-circle-outline')).toBeTruthy();
   });
 
-  it('calls onConsume and closes swipeable when consume is pressed', () => {
+  it('calls onConsume and closes swipeable when consume is pressed', async () => {
+    const user = userEvent.setup();
     const onConsume = jest.fn();
     render(
       <LeftActions
@@ -144,7 +146,7 @@ describe('LeftActions', () => {
         progress={mockProgress as any}
       />,
     );
-    fireEvent.press(screen.getByText('restaurant-outline'));
+    await user.press(screen.getByText('restaurant-outline'));
     expect(onConsume).toHaveBeenCalled();
     expect(mockSwipeableRef.current.close).toHaveBeenCalled();
   });
@@ -164,7 +166,8 @@ describe('LeftActions', () => {
     expect(screen.getByText('create-outline')).toBeTruthy();
   });
 
-  it('fires edit action and closes swipeable in shopping mode', () => {
+  it('fires edit action and closes swipeable in shopping mode', async () => {
+    const user = userEvent.setup();
     const onEdit = jest.fn();
     const onActionPress = jest.fn();
     render(
@@ -176,7 +179,7 @@ describe('LeftActions', () => {
         progress={mockProgress as any}
       />,
     );
-    fireEvent.press(screen.getByText('create-outline'));
+    await user.press(screen.getByText('create-outline'));
     expect(onActionPress).toHaveBeenCalledWith('edit');
     expect(mockSwipeableRef.current.close).toHaveBeenCalled();
   });

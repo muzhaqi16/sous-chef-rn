@@ -1,12 +1,16 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { Ionicons } from '@react-native-vector-icons/ionicons';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { useFragment } from '@apollo/client/react';
+import { Pressable } from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
 import { formatDistanceToNow } from 'date-fns/formatDistanceToNow';
 import { CachedImage } from '#components/atoms/CachedImage';
+import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
-import { type RecipeReviewFragment } from '#features/recipes/graphql/recipeFragments.generated';
+import {
+  RecipeReviewFragmentDoc,
+  type RecipeReviewFragment,
+} from '#features/recipes/graphql/recipeFragments.generated';
 
 interface ReviewCardProps {
   review: RecipeReviewFragment;
@@ -18,14 +22,24 @@ interface ReviewCardProps {
 }
 
 export const ReviewCard: React.FC<ReviewCardProps> = ({
-  review,
+  review: reviewSource,
   isOwn,
   hasVotedHelpful,
   onToggleHelpful,
   onEdit,
   onDelete,
 }) => {
-  const { theme } = useUnistyles();
+  // Per-entity cache subscription: re-renders only when this review's
+  // RecipeReviewFragment fields change (e.g., helpful count after a
+  // toggleHelpful mutation, or comment/rating after an updateReview).
+  // Falls back to the source prop on cache miss so list cells never blank out.
+  const fragmentResult = useFragment({
+    fragment: RecipeReviewFragmentDoc,
+    fragmentName: 'RecipeReviewFragment',
+    from: reviewSource,
+  });
+  const review = fragmentResult.complete ? fragmentResult.data : reviewSource;
+
   const displayName = review.user.profile?.displayName || review.user.email;
   const avatar = review.user.profile?.avatar;
 
@@ -37,11 +51,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
           <CachedImage uri={avatar} style={styles.avatar} displaySize={36} />
         ) : (
           <View style={styles.avatarPlaceholder}>
-            <Ionicons
-              name="person"
-              size={16}
-              color={theme.colors.textSecondary}
-            />
+            <Icon name="person" size={16} tone="textSecondary" />
           </View>
         )}
         <View style={styles.headerText}>
@@ -50,11 +60,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
               {displayName}
             </Text>
             {!!review.verified && (
-              <Ionicons
-                name="checkmark-circle"
-                size={14}
-                color={theme.colors.success}
-              />
+              <Icon name="checkmark-circle" size={14} tone="success" />
             )}
           </View>
           <Text size="xs" tone="secondary" style={styles.date}>
@@ -70,30 +76,18 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
               <Pressable
                 onPress={onEdit}
                 hitSlop={8}
-                style={({ pressed }) =>
-                  pressed && { opacity: theme.opacity.pressed }
-                }
+                style={({ pressed }) => pressed && styles.pressed}
               >
-                <Ionicons
-                  name="create-outline"
-                  size={18}
-                  color={theme.colors.primary}
-                />
+                <Icon name="create-outline" size={18} tone="primary" />
               </Pressable>
             )}
             {!!onDelete && (
               <Pressable
                 onPress={onDelete}
                 hitSlop={8}
-                style={({ pressed }) =>
-                  pressed && { opacity: theme.opacity.pressed }
-                }
+                style={({ pressed }) => pressed && styles.pressed}
               >
-                <Ionicons
-                  name="trash-outline"
-                  size={18}
-                  color={theme.colors.error}
-                />
+                <Icon name="trash-outline" size={18} tone="error" />
               </Pressable>
             )}
           </View>
@@ -103,11 +97,11 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
       {/* Stars */}
       <View style={styles.starsRow}>
         {[1, 2, 3, 4, 5].map(star => (
-          <Ionicons
+          <Icon
             key={star}
             name={star <= review.rating ? 'star' : 'star-outline'}
             size={14}
-            color={theme.colors.rating}
+            tone="rating"
           />
         ))}
       </View>
@@ -124,15 +118,13 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
         onPress={onToggleHelpful}
         style={({ pressed }) => [
           hasVotedHelpful ? styles.helpfulButtonActive : styles.helpfulButton,
-          pressed && { opacity: theme.opacity.pressed },
+          pressed && styles.pressed,
         ]}
       >
-        <Ionicons
+        <Icon
           name={hasVotedHelpful ? 'thumbs-up' : 'thumbs-up-outline'}
           size={14}
-          color={
-            hasVotedHelpful ? theme.colors.primary : theme.colors.textSecondary
-          }
+          tone={hasVotedHelpful ? 'primary' : 'textSecondary'}
         />
         <Text size="xs" tone={hasVotedHelpful ? 'accent' : 'secondary'}>
           Helpful{review.helpful > 0 ? ` (${review.helpful})` : ''}
@@ -211,5 +203,8 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: 1,
     borderColor: theme.colors.primary,
     backgroundColor: theme.colors.primary + '10',
+  },
+  pressed: {
+    opacity: theme.opacity.pressed,
   },
 }));

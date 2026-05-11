@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { HomeCard } from '../HomeCard';
 import {
   MembershipRole,
@@ -119,15 +119,17 @@ describe('HomeCard', () => {
     expect(screen.queryByText('Default')).toBeNull();
   });
 
-  it('calls onDelete with home id and name', () => {
+  it('calls onDelete with home id and name', async () => {
+    const user = userEvent.setup();
     render(<HomeCard {...defaultProps} />);
-    fireEvent.press(screen.getByTestId('delete-btn'));
+    await user.press(screen.getByTestId('delete-btn'));
     expect(defaultProps.onDelete).toHaveBeenCalledWith('home-1', 'My Kitchen');
   });
 
-  it('calls onInvite with home id', () => {
+  it('calls onInvite with home id', async () => {
+    const user = userEvent.setup();
     render(<HomeCard {...defaultProps} />);
-    fireEvent.press(screen.getByTestId('invite-btn'));
+    await user.press(screen.getByTestId('invite-btn'));
     expect(defaultProps.onInvite).toHaveBeenCalledWith('home-1');
   });
 

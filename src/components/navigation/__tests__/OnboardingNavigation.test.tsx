@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { OnboardingNavigation } from '../OnboardingNavigation/OnboardingNavigation';
 import { NavigationButton } from '../OnboardingNavigation/NavigationButton';
 
@@ -19,10 +19,11 @@ describe('NavigationButton', () => {
     expect(screen.getByText('Continue')).toBeTruthy();
   });
 
-  it('calls onPress when pressed', () => {
+  it('calls onPress when pressed', async () => {
+    const user = userEvent.setup();
     const onPress = jest.fn();
     render(<NavigationButton action={{ ...defaultAction, onPress }} />);
-    fireEvent.press(screen.getByText('Continue'));
+    await user.press(screen.getByText('Continue'));
     expect(onPress).toHaveBeenCalled();
   });
 
@@ -143,7 +144,8 @@ describe('OnboardingNavigation', () => {
     expect(screen.queryByText('Next')).toBeNull();
   });
 
-  it('calls continueAction.onPress when continue is pressed', () => {
+  it('calls continueAction.onPress when continue is pressed', async () => {
+    const user = userEvent.setup();
     render(
       <OnboardingNavigation
         showBackButton={false}
@@ -151,7 +153,7 @@ describe('OnboardingNavigation', () => {
         continueAction={continueAction}
       />,
     );
-    fireEvent.press(screen.getByText('Next'));
+    await user.press(screen.getByText('Next'));
     expect(continueAction.onPress).toHaveBeenCalled();
   });
 

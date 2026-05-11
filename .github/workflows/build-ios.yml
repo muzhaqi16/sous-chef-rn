@@ -60,8 +60,8 @@ jobs:
         run: |
           git clean -ffd -e ios/Pods -e vendor/bundle
 
-      - name: install npm dependencies
-        run: npm install
+      - name: Install dependencies and generate GraphQL types
+        uses: ./.github/actions/setup-deps
 
       - name: Generate .env file
         run: |

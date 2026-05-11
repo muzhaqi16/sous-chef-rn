@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { useAnimatedTheme } from 'react-native-unistyles/reanimated';
 import Animated, {
   useAnimatedStyle,
@@ -10,7 +10,7 @@ import { useRecyclingState } from '@shopify/flash-list';
 import { Icon } from '#utils/iconUtils';
 import { HapticService } from '#services/haptic/HapticService';
 import { standardEasing, TIMING } from '#/constants/animations';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 
 type AnimatedCheckboxProps = {
   checked: boolean;
@@ -29,9 +29,9 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
   disabled = false,
   testID,
 }) => {
-  const { theme } = useUnistyles();
   const animatedTheme = useAnimatedTheme();
   const isPressed = useSharedValue(false);
+  styles.useVariants({ disabled });
 
   // Local state for pending visual state (shows immediately on press)
   // useRecyclingState auto-resets when itemId changes (FlashList view recycling)
@@ -115,7 +115,7 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       disabled={disabled}
-      style={{ opacity: disabled ? theme.opacity.disabled : 1 }}
+      style={styles.pressable}
       testID={testID}
     >
       <Animated.View
@@ -135,7 +135,15 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
   );
 };
 
-const styles = StyleSheet.create(() => ({
+const styles = StyleSheet.create(theme => ({
+  pressable: {
+    variants: {
+      disabled: {
+        true: { opacity: theme.opacity.disabled },
+        false: { opacity: 1 },
+      },
+    },
+  },
   container: {
     borderWidth: 2,
     justifyContent: 'center',

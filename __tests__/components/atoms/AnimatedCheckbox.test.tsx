@@ -1,7 +1,7 @@
 'use no memo';
 
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react-native';
+import { render, userEvent } from '@testing-library/react-native';
 import { AnimatedCheckbox } from '../../../src/components/atoms/AnimatedCheckbox';
 
 jest.mock('../../../src/apollo/links/tokenScheduler');
@@ -27,16 +27,18 @@ describe('AnimatedCheckbox', () => {
     expect(toJSON()).toBeTruthy();
   });
 
-  it('calls onPress when pressed', () => {
+  it('calls onPress when pressed', async () => {
+    const user = userEvent.setup();
     const onPress = jest.fn();
     const { getByTestId } = render(
       <AnimatedCheckbox checked={false} onPress={onPress} testID="checkbox" />,
     );
-    fireEvent.press(getByTestId('checkbox'));
+    await user.press(getByTestId('checkbox'));
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
-  it('does not call onPress when disabled', () => {
+  it('does not call onPress when disabled', async () => {
+    const user = userEvent.setup();
     const onPress = jest.fn();
     const { getByTestId } = render(
       <AnimatedCheckbox
@@ -46,7 +48,7 @@ describe('AnimatedCheckbox', () => {
         testID="checkbox"
       />,
     );
-    fireEvent.press(getByTestId('checkbox'));
+    await user.press(getByTestId('checkbox'));
     expect(onPress).not.toHaveBeenCalled();
   });
 

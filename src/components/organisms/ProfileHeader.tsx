@@ -1,15 +1,17 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import {
+  Pressable,
+  ThemedBackButton,
+  ThemedIconButton,
+} from '#components/atoms/themedComponents';
 import Animated, {
   useAnimatedStyle,
   interpolate,
   Extrapolation,
   type SharedValue,
 } from 'react-native-reanimated';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { IconButton } from '../atoms/IconButton';
-import { BackButton } from '../atoms/BackButton';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#/utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { Text } from '#components/atoms/Text';
@@ -38,8 +40,6 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   onAvatarPress,
   progress,
 }) => {
-  const { theme } = useUnistyles();
-
   // Avatar: scale from 1 → 0.55 (GPU composited, no layout recalc)
   const avatarScaleStyle = useAnimatedStyle(() => {
     if (!progress) return {};
@@ -70,8 +70,8 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
     return { opacity, transform: [{ scale }] };
   });
 
-  // User info: collapse via GPU-composited scaleY + translateY + opacity
-  // (avoids Yoga layout recalculation every scroll frame)
+  // User info: collapse height + scaleY + opacity in a single worklet so the
+  // ScrollView reclaims layout space as the content fades.
   const userInfoStyle = useAnimatedStyle(() => {
     if (!progress) return {};
     const scaleY = interpolate(
@@ -80,33 +80,37 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
       [1, 0],
       Extrapolation.CLAMP,
     );
-    const translateY = interpolate(
-      progress.get(),
-      [0, 1],
-      [0, -USER_INFO_HEIGHT / 2],
-      Extrapolation.CLAMP,
-    );
     const opacity = interpolate(
       progress.get(),
       [0, 0.5],
       [1, 0],
       Extrapolation.CLAMP,
     );
+    const height = interpolate(
+      progress.get(),
+      [0, 1],
+      [USER_INFO_HEIGHT, 0],
+      Extrapolation.CLAMP,
+    );
     return {
-      transform: [{ translateY }, { scaleY }],
+      height,
       opacity,
+      transform: [{ scaleY }],
     };
   });
 
   return (
     <View>
       <View style={styles.header}>
-        <BackButton onPress={onBack} color={theme.colors.textPrimary} />
+        <ThemedBackButton
+          onPress={onBack}
+          uniProps={t => ({ color: t.colors.textPrimary })}
+        />
         <Pressable
           onPress={onAvatarPress}
           style={({ pressed }) => [
             styles.avatarContainer,
-            pressed && { opacity: theme.opacity.pressed },
+            pressed && styles.pressed,
           ]}
         >
           <Animated.View
@@ -126,11 +130,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
               </View>
             ) : (
               <View style={styles.avatarPlaceholder}>
-                <Icon
-                  name="person"
-                  size={32}
-                  color={theme.colors.textSecondary}
-                />
+                <Icon name="person" size={32} tone="textSecondary" />
               </View>
             )}
           </Animated.View>
@@ -138,13 +138,13 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             collapsable={false}
             style={[styles.profileAction, badgeStyle]}
           >
-            <Icon color={theme.colors.iconOnPrimary} name="create" size={15} />
+            <Icon tone="iconOnPrimary" name="create" size={15} />
           </Animated.View>
         </Pressable>
-        <IconButton
+        <ThemedIconButton
           name="ellipsis-vertical"
           onPress={onMore}
-          color={theme.colors.textPrimary}
+          uniProps={t => ({ color: t.colors.textPrimary })}
           accessibilityLabel="More options"
         />
       </View>
@@ -219,7 +219,6 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.primary,
   },
   userInfo: {
-    height: USER_INFO_HEIGHT,
     alignItems: 'center',
     overflow: 'hidden',
     transformOrigin: 'top',
@@ -229,5 +228,8 @@ const styles = StyleSheet.create(theme => ({
   },
   subtitleText: {
     marginTop: 2,
+  },
+  pressed: {
+    opacity: theme.opacity.pressed,
   },
 }));

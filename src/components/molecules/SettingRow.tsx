@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View } from 'react-native';
 import { BaseSwitch } from '#components/base/BaseSwitch';
-import { BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
-import Ionicons from '@react-native-vector-icons/ionicons';
+import { BottomSheetView } from '@gorhom/bottom-sheet';
+import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { ValueText } from '../atoms/ValueText';
 import {
@@ -13,7 +13,8 @@ import { getValidationSchemaForField } from '#/utils/validation/profile';
 import { Icon } from '#/utils/iconUtils';
 import { TextEditBottomSheet } from '#/components/modals/TextEditBottomSheet/TextEditBottomSheet';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
+import { RIPPLE } from '#constants/ripple';
 import { Text } from '#components/atoms/Text';
 
 export interface SettingRowProps {
@@ -30,12 +31,11 @@ export const SettingRow: React.FC<SettingRowProps> = ({
   const [modalVisible, setModalVisible] = useState(false);
   const [textEditVisible, setTextEditVisible] = useState(false);
 
-  const { ref, modalProps, contentContainerStyle, theme } =
-    useStandardBottomSheet({
-      onDismiss: () => setModalVisible(false),
-      snapPoints: [],
-      enableDynamicSizing: true,
-    });
+  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
+    onDismiss: () => setModalVisible(false),
+    snapPoints: [],
+    enableDynamicSizing: true,
+  });
 
   // Sync bottom sheet visibility with state (complex: checks item.type)
   useEffect(() => {
@@ -123,6 +123,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
         testID={item.testID || `profile-${item.key}-button`}
         onPress={item.type === 'info' ? undefined : handlePress}
         disabled={item.type === 'info'}
+        android_ripple={item.type === 'info' ? null : RIPPLE.SUBTLE}
         style={({ pressed }) => [
           styles.rowWrapper,
           isFirst && styles.rowFirst,
@@ -148,11 +149,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
           {item.type === 'text' && (
             <>
               <ValueText>{item.value as string}</ValueText>
-              <Icon
-                name="pencil"
-                size={16}
-                color={theme.colors.textSecondary}
-              />
+              <Icon name="pencil" size={16} tone="textSecondary" />
             </>
           )}
 
@@ -165,18 +162,14 @@ export const SettingRow: React.FC<SettingRowProps> = ({
           )}
 
           {item.type === 'radio' && !!item.options && (
-            <Ionicons
+            <Icon
               name={
                 item.selected === item.value
                   ? 'radio-button-on'
                   : 'radio-button-off'
               }
               size={20}
-              color={
-                item.selected === item.value
-                  ? theme.colors.primary
-                  : theme.colors.textSecondary
-              }
+              tone={item.selected === item.value ? 'primary' : 'textSecondary'}
             />
           )}
 
@@ -191,28 +184,16 @@ export const SettingRow: React.FC<SettingRowProps> = ({
                 {item.options?.find((opt: any) => opt.value === item.value)
                   ?.label || 'Select'}
               </Text>
-              <Icon
-                name="chevron-forward"
-                size={20}
-                color={theme.colors.textSecondary}
-              />
+              <Icon name="chevron-forward" size={20} tone="textSecondary" />
             </View>
           )}
 
           {item.type === 'action' && (
-            <Icon
-              name="chevron-forward"
-              size={20}
-              color={theme.colors.textSecondary}
-            />
+            <Icon name="chevron-forward" size={20} tone="textSecondary" />
           )}
 
           {item.type === 'navigation' && (
-            <Icon
-              name="chevron-forward"
-              size={20}
-              color={theme.colors.textSecondary}
-            />
+            <Icon name="chevron-forward" size={20} tone="textSecondary" />
           )}
         </View>
       </Pressable>
@@ -235,11 +216,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
 
       {/* Selection Bottom Sheet */}
       {item.type === 'modal' && !!item.options && (
-        <BottomSheetModal
-          ref={ref}
-          {...modalProps}
-          handleIndicatorStyle={{ backgroundColor: theme.colors.border }}
-        >
+        <BottomSheetModal ref={ref} {...modalProps}>
           <BottomSheetView style={[styles.sheetContent, contentContainerStyle]}>
             <Text
               size="lg"
@@ -258,6 +235,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
                   pressed && styles.pressed,
                 ]}
                 onPress={handleModalOptionPress(opt.value)}
+                android_ripple={RIPPLE.SUBTLE}
                 accessibilityRole="button"
                 accessibilityLabel={opt.label}
                 accessibilityHint={`Select ${opt.label}`}
@@ -267,11 +245,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
                   {opt.label}
                 </Text>
                 {item.value === opt.value && (
-                  <Icon
-                    name="checkmark"
-                    size={20}
-                    color={theme.colors.primary}
-                  />
+                  <Icon name="checkmark" size={20} tone="primary" />
                 )}
               </Pressable>
             ))}
@@ -284,9 +258,10 @@ export const SettingRow: React.FC<SettingRowProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   rowWrapper: {
-    padding: theme.spacing.md,
+    paddingVertical: theme.spacing['5'],
+    paddingHorizontal: theme.spacing.md,
     borderBottomWidth: 1,
-    borderColor: theme.colors.divider,
+    borderColor: theme.colors.border,
     backgroundColor: theme.colors.surfaceVariant,
   },
   rowFirst: {

@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
-import { View, ViewStyle, ActivityIndicator } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { View, ViewStyle } from 'react-native';
+import {
+  Pressable,
+  ThemedActivityIndicator,
+} from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';
 import type { ItemImage } from '#/types/nutrition';
@@ -32,8 +35,6 @@ export const ImageGalleryTabs: React.FC<ImageGalleryTabsProps> = ({
   style,
   imageHeight = 200,
 }) => {
-  const { theme } = useUnistyles();
-
   const parsedImages = Array.isArray(imagesRaw)
     ? (imagesRaw as ItemImage[])
     : parseImages(imagesRaw);
@@ -78,11 +79,7 @@ export const ImageGalleryTabs: React.FC<ImageGalleryTabsProps> = ({
     return (
       <View style={[styles.container, style]}>
         <View style={[styles.placeholder, { height: imageHeight }]}>
-          <Icon
-            name="image-outline"
-            size={48}
-            color={theme.colors.textTertiary}
-          />
+          <Icon name="image-outline" size={48} tone="textTertiary" />
         </View>
       </View>
     );
@@ -97,17 +94,13 @@ export const ImageGalleryTabs: React.FC<ImageGalleryTabsProps> = ({
       <View style={[styles.imageContainer, { height: imageHeight }]}>
         {!!imageLoading && (
           <View style={styles.loadingOverlay}>
-            <ActivityIndicator size="large" color={theme.colors.primary} />
+            <ThemedActivityIndicator size="large" />
           </View>
         )}
 
         {imageError || !currentImageUrl ? (
           <View style={styles.errorContainer}>
-            <Icon
-              name="image-outline"
-              size={48}
-              color={theme.colors.textTertiary}
-            />
+            <Icon name="image-outline" size={48} tone="textTertiary" />
           </View>
         ) : (
           <CachedImage
@@ -132,23 +125,34 @@ export const ImageGalleryTabs: React.FC<ImageGalleryTabsProps> = ({
       {/* Dot indicators at bottom */}
       {!!showTabs && (
         <View style={styles.dotsContainer}>
-          {tabOptions.map(key => (
-            <Pressable
-              key={key}
-              onPress={() => setSelectedTab(key)}
-              style={({ pressed }) => [
-                styles.dotTouchable,
-                pressed && styles.pressed,
-              ]}
-            >
-              <View
-                style={[styles.dot, selectedTab === key && styles.dotActive]}
+          {tabOptions.map(key => {
+            const isActive = selectedTab === key;
+            return (
+              <DotItem
+                key={key}
+                isActive={isActive}
+                onPress={() => setSelectedTab(key)}
               />
-            </Pressable>
-          ))}
+            );
+          })}
         </View>
       )}
     </View>
+  );
+};
+
+const DotItem: React.FC<{ isActive: boolean; onPress: () => void }> = ({
+  isActive,
+  onPress,
+}) => {
+  styles.useVariants({ active: isActive });
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [styles.dotTouchable, pressed && styles.pressed]}
+    >
+      <View style={styles.dot} />
+    </Pressable>
   );
 };
 
@@ -208,12 +212,16 @@ const styles = StyleSheet.create(theme => ({
     height: 8,
     borderRadius: theme.radii.sm,
     backgroundColor: theme.colors.border,
-  },
-  dotActive: {
-    backgroundColor: theme.colors.primary,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    variants: {
+      active: {
+        true: {
+          backgroundColor: theme.colors.primary,
+          width: 10,
+          height: 10,
+          borderRadius: 5,
+        },
+      },
+    },
   },
   pressed: {
     opacity: theme.opacity.pressed,

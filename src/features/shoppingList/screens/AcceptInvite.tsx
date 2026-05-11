@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
-import { View, ActivityIndicator } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { View } from 'react-native';
+import {
+  Pressable,
+  WhiteActivityIndicator,
+} from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import { Icon } from '#utils/iconUtils';
 import { Header } from '#components/molecules/Header';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { useMutation, useQuery } from '@apollo/client/react';
 import {
   MyShoppingListInvitesDocument,
@@ -25,17 +28,14 @@ import { Text } from '#components/atoms/Text';
 type InvitationType = 'shopping_list' | 'home' | 'unknown';
 
 export const AcceptInvite: React.FC = () => {
-  const navigation = useNavigation();
+  const { goBack } = useNavigation();
   const route = useRoute();
   const { token, inviteId } = (route.params ?? {}) as {
     token?: string;
     inviteId?: string;
   };
-  const { theme } = useUnistyles();
 
   const [processing, setProcessing] = useState(false);
-  const [invitationType, setInvitationType] =
-    useState<InvitationType>('unknown');
 
   // Get shopping list invites
   const { data: shoppingListData, loading: shoppingListLoading } = useQuery(
@@ -74,16 +74,11 @@ export const AcceptInvite: React.FC = () => {
     inviteId ? inv.id === inviteId : false,
   );
 
-  // Determine invitation type
-  React.useEffect(() => {
-    if (shoppingListInvite) {
-      setInvitationType('shopping_list');
-    } else if (homeInvite) {
-      setInvitationType('home');
-    } else if (!loading) {
-      setInvitationType('unknown');
-    }
-  }, [shoppingListInvite, homeInvite, loading]);
+  const invitationType: InvitationType = shoppingListInvite
+    ? 'shopping_list'
+    : homeInvite
+    ? 'home'
+    : 'unknown';
 
   const resolveInviteToken = (): string | undefined => {
     if (invitationType === 'shopping_list' && shoppingListInvite) {
@@ -108,12 +103,12 @@ export const AcceptInvite: React.FC = () => {
         if (invitationType === 'shopping_list') {
           await acceptShoppingListInvite({ variables: { token: inviteToken } });
           alertService.alert('Success', 'Shopping list invitation accepted!', [
-            { text: 'OK', onPress: () => navigation.goBack() },
+            { text: 'OK', onPress: () => goBack() },
           ]);
         } else if (invitationType === 'home') {
           await acceptHomeInvite({ variables: { token: inviteToken } });
           alertService.alert('Success', 'Home invitation accepted!', [
-            { text: 'OK', onPress: () => navigation.goBack() },
+            { text: 'OK', onPress: () => goBack() },
           ]);
         } else {
           alertService.alert('Error', 'Unknown invitation type');
@@ -158,7 +153,7 @@ export const AcceptInvite: React.FC = () => {
                   });
                 }
 
-                navigation.goBack();
+                goBack();
               },
               setProcessing,
               () => {
@@ -182,11 +177,7 @@ export const AcceptInvite: React.FC = () => {
   if (!shoppingListInvite && !homeInvite) {
     return (
       <View style={styles.loadingContainer}>
-        <Text
-          size="md"
-          align="center"
-          style={[styles.inviteText, { color: theme.colors.error }]}
-        >
+        <Text size="md" align="center" tone="error" style={styles.inviteText}>
           {invitationType === 'unknown'
             ? 'Invitation not found or expired'
             : 'Loading invitation details...'}
@@ -196,7 +187,7 @@ export const AcceptInvite: React.FC = () => {
             styles.declineButton,
             pressed && { opacity: 0.7 },
           ]}
-          onPress={() => navigation.goBack()}
+          onPress={() => goBack()}
         >
           <Text size="md" weight="semibold" style={styles.declineButtonText}>
             Go Back
@@ -208,14 +199,14 @@ export const AcceptInvite: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <Header onClose={() => navigation.goBack()} />
+      <Header onClose={() => goBack()} />
 
       <View style={styles.content}>
         <View style={styles.iconContainer}>
           <Icon
             name={invitationType === 'home' ? 'home' : 'shopping-cart'}
             size={64}
-            color={theme.colors.primary}
+            tone="primary"
           />
         </View>
 
@@ -312,7 +303,7 @@ export const AcceptInvite: React.FC = () => {
             disabled={processing}
           >
             {processing ? (
-              <ActivityIndicator size="small" color="white" />
+              <WhiteActivityIndicator size="small" />
             ) : (
               <Text size="md" weight="semibold" style={styles.acceptButtonText}>
                 Accept

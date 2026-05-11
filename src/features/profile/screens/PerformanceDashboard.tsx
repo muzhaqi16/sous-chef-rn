@@ -1,14 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { View, RefreshControl, ScrollView } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { View, ScrollView } from 'react-native';
+import {
+  Pressable,
+  ThemedRefreshControl,
+} from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
+import { useTranslation } from 'react-i18next';
 import { SettingSwitch } from '#components/settings/SettingSwitch';
 import { SettingSection } from '#components/settings/SettingSection';
 import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
 import { usePerformanceStore } from '#/store/performanceStore';
 import { Environment } from '#/utils/environment';
-import { useCanAccessDevTools } from '#/store/useAppStore';
+import { useCanAccessDevTools } from '#store/useAppStore';
 import { MemoryMonitor } from '#/services/performance/MemoryMonitor';
 import { useFPSMonitor } from '#/hooks/performance/useFPSMonitor';
 import { executeRefreshWithFinally } from '#/utils/compilerSafeWrappers';
@@ -22,33 +26,33 @@ import { Text } from '#components/atoms/Text';
  * table sorts and IIFE recomputations.
  */
 const FPSSection: React.FC = () => {
-  const { theme } = useUnistyles();
+  const { t } = useTranslation();
   const { fps, isLowFPS, stats: fpsStats } = useFPSMonitor();
 
   return (
     <View style={styles.metricsSection}>
       <Text size="lg" weight="semibold" style={styles.sectionTitle}>
-        Live FPS
+        {t('performance.liveFps')}
       </Text>
       <Text size="sm" tone="secondary" style={styles.sectionSubtitle}>
-        Frame rate monitor (DEV only)
+        {t('performance.fpsSubtitle')}
       </Text>
       <View style={styles.startupCard}>
         <View style={styles.startupRow}>
           <Text size="sm" tone="secondary">
-            Current FPS
+            {t('performance.currentFps')}
           </Text>
           <Text
             size="md"
             weight="semibold"
-            style={isLowFPS ? { color: theme.colors.error } : undefined}
+            tone={isLowFPS ? 'error' : undefined}
           >
             {fps}
           </Text>
         </View>
         <View style={styles.startupRow}>
           <Text size="sm" tone="secondary">
-            Min / Avg / Max
+            {t('performance.minAvgMax')}
           </Text>
           <Text size="md" weight="semibold">
             {fpsStats.min} / {fpsStats.avg} / {fpsStats.max}
@@ -56,16 +60,12 @@ const FPSSection: React.FC = () => {
         </View>
         <View style={styles.startupRow}>
           <Text size="sm" tone="secondary">
-            Low FPS Events
+            {t('performance.lowFpsEvents')}
           </Text>
           <Text
             size="md"
             weight="semibold"
-            style={
-              fpsStats.lowFPSCount > 0
-                ? { color: theme.colors.warning }
-                : undefined
-            }
+            tone={fpsStats.lowFPSCount > 0 ? 'warning' : undefined}
           >
             {fpsStats.lowFPSCount}
           </Text>
@@ -75,9 +75,40 @@ const FPSSection: React.FC = () => {
   );
 };
 
-export const PerformanceDashboard: React.FC = () => {
-  const { theme } = useUnistyles();
+/**
+ * Alternating-row container for tables. Uses variants so the alt-row
+ * background color stays in the stylesheet (parent does not need useUnistyles).
+ */
+const ZebraTableRow: React.FC<{
+  alt: boolean;
+  children: React.ReactNode;
+}> = ({ alt, children }) => {
+  styles.useVariants({ alt });
+  return <View style={styles.tableRow}>{children}</View>;
+};
 
+/**
+ * Threshold-colored text used by the memory rows. Variants encapsulate the
+ * theme reads so the parent screen does not need useUnistyles.
+ */
+const ThresholdText: React.FC<{
+  children: React.ReactNode;
+  usagePercent: number;
+  size?: 'md';
+  weight?: 'semibold' | 'bold';
+  baseStyle?: any;
+}> = ({ children, usagePercent, weight = 'semibold', baseStyle }) => {
+  const tone =
+    usagePercent > 95 ? 'error' : usagePercent > 80 ? 'warning' : undefined;
+  return (
+    <Text size="md" weight={weight} tone={tone} style={baseStyle}>
+      {children}
+    </Text>
+  );
+};
+
+export const PerformanceDashboard: React.FC = () => {
+  const { t } = useTranslation();
   // Performance state (from isolated performance store)
   const isEnabled = usePerformanceStore(state => state.isEnabled);
   const trackRenders = usePerformanceStore(state => state.trackRenders);
@@ -151,12 +182,12 @@ export const PerformanceDashboard: React.FC = () => {
 
   const handleClearData = () => {
     alertService.alert(
-      'Clear Performance Data',
-      'Are you sure you want to clear all performance metrics?',
+      t('performance.clearData'),
+      t('performance.clearDataConfirm'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('labels.cancel'), style: 'cancel' },
         {
-          text: 'Clear',
+          text: t('performance.clear'),
           style: 'destructive',
           onPress: () => {
             clearPerformanceData();
@@ -230,10 +261,10 @@ export const PerformanceDashboard: React.FC = () => {
 
   if (!Environment.shouldEnableDebugFeatures() && !canAccessDevTools) {
     return (
-      <ProfileScreenWrapper title="Performance Dashboard">
+      <ProfileScreenWrapper title={t('performance.title')}>
         <View style={styles.notAvailableContainer}>
           <Text size="md" tone="secondary" align="center">
-            Performance dashboard is only available to administrators.
+            {t('performance.notAvailable')}
           </Text>
         </View>
       </ProfileScreenWrapper>
@@ -241,49 +272,49 @@ export const PerformanceDashboard: React.FC = () => {
   }
 
   return (
-    <ProfileScreenWrapper title="Performance Dashboard" scrollEnabled={false}>
+    <ProfileScreenWrapper title={t('performance.title')} scrollEnabled={false}>
       <ScrollView
         style={styles.scrollView}
         refreshControl={
-          <RefreshControl
+          <ThemedRefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor={theme.colors.primary}
-            colors={[theme.colors.primary]}
           />
         }
       >
         {/* Last Updated */}
         <View style={styles.lastUpdated}>
           <Text size="xs" tone="tertiary">
-            Last updated: {formatTimestamp(lastUpdated)}
+            {t('performance.lastUpdated', {
+              time: formatTimestamp(lastUpdated),
+            })}
           </Text>
         </View>
 
-        <SettingSection title="Performance Tracking">
+        <SettingSection title={t('performance.tracking')}>
           <SettingSwitch
-            title="Enable Performance Tracking"
-            description="Master switch for all performance monitoring"
+            title={t('performance.enableTracking')}
+            description={t('performance.enableTrackingDesc')}
             value={isEnabled}
             onValueChange={handlePerformanceEnabledChange}
           />
           <SettingSwitch
-            title="Track Component Renders"
-            description="Monitor component render times and counts"
+            title={t('performance.trackRenders')}
+            description={t('performance.trackRendersDesc')}
             value={trackRenders}
             onValueChange={setTrackRenders}
             disabled={!isEnabled}
           />
           <SettingSwitch
-            title="Track Memory Usage"
-            description="Monitor memory consumption over time"
+            title={t('performance.trackMemory')}
+            description={t('performance.trackMemoryDesc')}
             value={trackMemory}
             onValueChange={handleTrackMemoryChange}
             disabled={!isEnabled}
           />
           <SettingSwitch
-            title="Track Screen Transitions"
-            description="Monitor screen navigation performance"
+            title={t('performance.trackScreens')}
+            description={t('performance.trackScreensDesc')}
             value={trackScreens}
             onValueChange={setTrackScreens}
             disabled={!isEnabled}
@@ -298,16 +329,16 @@ export const PerformanceDashboard: React.FC = () => {
           startupMetrics.bundleLoad !== null) && (
           <View style={styles.metricsSection}>
             <Text size="lg" weight="semibold" style={styles.sectionTitle}>
-              Startup Metrics
+              {t('performance.startupMetrics')}
             </Text>
             <Text size="sm" tone="secondary" style={styles.sectionSubtitle}>
-              One-shot timing from app launch
+              {t('performance.startupMetricsSubtitle')}
             </Text>
             <View style={styles.startupCard}>
               {startupMetrics.nativeLaunch !== null && (
                 <View style={styles.startupRow}>
                   <Text size="sm" tone="secondary">
-                    Native Launch
+                    {t('performance.nativeLaunch')}
                   </Text>
                   <Text size="md" weight="semibold">
                     {formatTime(startupMetrics.nativeLaunch)}
@@ -317,7 +348,7 @@ export const PerformanceDashboard: React.FC = () => {
               {startupMetrics.bundleLoad !== null && (
                 <View style={styles.startupRow}>
                   <Text size="sm" tone="secondary">
-                    JS Bundle Load
+                    {t('performance.jsBundleLoad')}
                   </Text>
                   <Text size="md" weight="semibold">
                     {formatTime(startupMetrics.bundleLoad)}
@@ -332,10 +363,12 @@ export const PerformanceDashboard: React.FC = () => {
         {recentHttpRequests.length > 0 && (
           <View style={styles.metricsSection}>
             <Text size="lg" weight="semibold" style={styles.sectionTitle}>
-              HTTP Resource Summary
+              {t('performance.httpSummary')}
             </Text>
             <Text size="sm" tone="secondary" style={styles.sectionSubtitle}>
-              Last {recentHttpRequests.length} HTTP requests
+              {t('performance.httpSummarySubtitle', {
+                count: recentHttpRequests.length,
+              })}
             </Text>
             <View style={styles.table}>
               <View style={styles.tableHeader}>
@@ -345,7 +378,7 @@ export const PerformanceDashboard: React.FC = () => {
                   tone="secondary"
                   style={styles.tableHeaderName}
                 >
-                  Host
+                  {t('performance.host')}
                 </Text>
                 <Text
                   size="xs"
@@ -354,18 +387,13 @@ export const PerformanceDashboard: React.FC = () => {
                   align="right"
                   style={styles.tableHeaderAvg}
                 >
-                  Duration
+                  {t('performance.duration')}
                 </Text>
               </View>
               {recentHttpRequests.map((req, index) => (
-                <View
+                <ZebraTableRow
                   key={`${req.url}-${index}`}
-                  style={[
-                    styles.tableRow,
-                    index % 2 === 0 && {
-                      backgroundColor: theme.colors.backgroundSecondary,
-                    },
-                  ]}
+                  alt={index % 2 === 0}
                 >
                   <Text
                     size="sm"
@@ -377,7 +405,7 @@ export const PerformanceDashboard: React.FC = () => {
                   <Text size="sm" align="right" style={styles.tableCellAvg}>
                     {formatTime(req.duration)}
                   </Text>
-                </View>
+                </ZebraTableRow>
               ))}
             </View>
           </View>
@@ -387,10 +415,10 @@ export const PerformanceDashboard: React.FC = () => {
         {!!trackRenders && slowestComponents.length > 0 && (
           <View style={styles.metricsSection}>
             <Text size="lg" weight="semibold" style={styles.sectionTitle}>
-              Slowest Components
+              {t('performance.slowestComponents')}
             </Text>
             <Text size="sm" tone="secondary" style={styles.sectionSubtitle}>
-              Components with highest average render time
+              {t('performance.slowestComponentsSubtitle')}
             </Text>
             <View style={styles.table}>
               <View style={styles.tableHeader}>
@@ -400,7 +428,7 @@ export const PerformanceDashboard: React.FC = () => {
                   tone="secondary"
                   style={styles.tableHeaderName}
                 >
-                  Component
+                  {t('performance.component')}
                 </Text>
                 <Text
                   size="xs"
@@ -409,7 +437,7 @@ export const PerformanceDashboard: React.FC = () => {
                   align="right"
                   style={styles.tableHeaderAvg}
                 >
-                  Avg
+                  {t('performance.avg')}
                 </Text>
                 <Text
                   size="xs"
@@ -418,7 +446,7 @@ export const PerformanceDashboard: React.FC = () => {
                   align="right"
                   style={styles.tableHeaderMax}
                 >
-                  Max
+                  {t('performance.max')}
                 </Text>
                 <Text
                   size="xs"
@@ -427,7 +455,7 @@ export const PerformanceDashboard: React.FC = () => {
                   align="right"
                   style={styles.tableHeaderTotal}
                 >
-                  Total
+                  {t('performance.total')}
                 </Text>
                 <Text
                   size="xs"
@@ -436,19 +464,11 @@ export const PerformanceDashboard: React.FC = () => {
                   align="right"
                   style={styles.tableHeaderCount}
                 >
-                  Count
+                  {t('performance.count')}
                 </Text>
               </View>
               {slowestComponents.map((metric, index) => (
-                <View
-                  key={metric.componentName}
-                  style={[
-                    styles.tableRow,
-                    index % 2 === 0 && {
-                      backgroundColor: theme.colors.backgroundSecondary,
-                    },
-                  ]}
-                >
+                <ZebraTableRow key={metric.componentName} alt={index % 2 === 0}>
                   <Text
                     size="sm"
                     style={styles.tableCellName}
@@ -468,7 +488,7 @@ export const PerformanceDashboard: React.FC = () => {
                   <Text size="sm" align="right" style={styles.tableCellCount}>
                     {metric.renderCount}
                   </Text>
-                </View>
+                </ZebraTableRow>
               ))}
             </View>
           </View>
@@ -478,10 +498,10 @@ export const PerformanceDashboard: React.FC = () => {
         {!!trackScreens && slowestScreens.length > 0 && (
           <View style={styles.metricsSection}>
             <Text size="lg" weight="semibold" style={styles.sectionTitle}>
-              Slowest Screen Transitions
+              {t('performance.slowestScreens')}
             </Text>
             <Text size="sm" tone="secondary" style={styles.sectionSubtitle}>
-              Screens with highest average interactive time
+              {t('performance.slowestScreensSubtitle')}
             </Text>
             <View style={styles.table}>
               <View style={styles.tableHeader}>
@@ -491,7 +511,7 @@ export const PerformanceDashboard: React.FC = () => {
                   tone="secondary"
                   style={styles.tableHeaderName}
                 >
-                  Screen
+                  {t('performance.screen')}
                 </Text>
                 <Text
                   size="xs"
@@ -500,7 +520,7 @@ export const PerformanceDashboard: React.FC = () => {
                   align="right"
                   style={styles.tableHeaderAvg}
                 >
-                  Avg Mount
+                  {t('performance.avgMount')}
                 </Text>
                 <Text
                   size="xs"
@@ -509,7 +529,7 @@ export const PerformanceDashboard: React.FC = () => {
                   align="right"
                   style={styles.tableHeaderMax}
                 >
-                  Avg Interactive
+                  {t('performance.avgInteractive')}
                 </Text>
                 <Text
                   size="xs"
@@ -518,19 +538,11 @@ export const PerformanceDashboard: React.FC = () => {
                   align="right"
                   style={styles.tableHeaderCount}
                 >
-                  Count
+                  {t('performance.count')}
                 </Text>
               </View>
               {slowestScreens.map((metric, index) => (
-                <View
-                  key={metric.screenName}
-                  style={[
-                    styles.tableRow,
-                    index % 2 === 0 && {
-                      backgroundColor: theme.colors.backgroundSecondary,
-                    },
-                  ]}
-                >
+                <ZebraTableRow key={metric.screenName} alt={index % 2 === 0}>
                   <Text
                     size="sm"
                     style={styles.tableCellName}
@@ -547,7 +559,7 @@ export const PerformanceDashboard: React.FC = () => {
                   <Text size="sm" align="right" style={styles.tableCellCount}>
                     {metric.transitionCount}
                   </Text>
-                </View>
+                </ZebraTableRow>
               ))}
             </View>
           </View>
@@ -557,53 +569,35 @@ export const PerformanceDashboard: React.FC = () => {
         {!!trackMemory && (
           <View style={styles.metricsSection}>
             <Text size="lg" weight="semibold" style={styles.sectionTitle}>
-              Memory Usage
+              {t('performance.memoryUsage')}
             </Text>
             {!!latestMemorySnapshot && (
               <>
                 <Text size="sm" tone="secondary" style={styles.sectionSubtitle}>
-                  Current
+                  {t('performance.current')}
                 </Text>
                 <View style={styles.startupCard}>
                   <View style={styles.startupRow}>
                     <Text size="sm" tone="secondary">
-                      Used
+                      {t('performance.used')}
                     </Text>
-                    <Text
-                      size="md"
-                      weight="semibold"
-                      style={[
-                        latestMemorySnapshot.usagePercent > 80 && {
-                          color: theme.colors.warning,
-                        },
-                        latestMemorySnapshot.usagePercent > 95 && {
-                          color: theme.colors.error,
-                        },
-                      ]}
+                    <ThresholdText
+                      usagePercent={latestMemorySnapshot.usagePercent}
                     >
                       {formatMemory(latestMemorySnapshot.usedBytes)}
                       {!!latestMemorySnapshot.limitBytes &&
                         ` / ${formatMemory(latestMemorySnapshot.limitBytes)}`}
-                    </Text>
+                    </ThresholdText>
                   </View>
                   <View style={styles.startupRow}>
                     <Text size="sm" tone="secondary">
-                      Usage
+                      {t('performance.usage')}
                     </Text>
-                    <Text
-                      size="md"
-                      weight="semibold"
-                      style={[
-                        latestMemorySnapshot.usagePercent > 80 && {
-                          color: theme.colors.warning,
-                        },
-                        latestMemorySnapshot.usagePercent > 95 && {
-                          color: theme.colors.error,
-                        },
-                      ]}
+                    <ThresholdText
+                      usagePercent={latestMemorySnapshot.usagePercent}
                     >
                       {latestMemorySnapshot.usagePercent.toFixed(1)}%
-                    </Text>
+                    </ThresholdText>
                   </View>
                 </View>
               </>
@@ -617,7 +611,7 @@ export const PerformanceDashboard: React.FC = () => {
                   tone="secondary"
                   style={styles.memoryHistorySubtitle}
                 >
-                  Recent History
+                  {t('performance.recentHistory')}
                 </Text>
                 <View style={styles.memoryList}>
                   {recentMemorySnapshots.map(snapshot => (
@@ -626,21 +620,13 @@ export const PerformanceDashboard: React.FC = () => {
                         <Text size="sm" weight="semibold">
                           {formatTimestamp(snapshot.timestamp)}
                         </Text>
-                        <Text
-                          size="md"
+                        <ThresholdText
+                          usagePercent={snapshot.usagePercent}
                           weight="bold"
-                          style={[
-                            styles.memoryUsage,
-                            snapshot.usagePercent > 80 && {
-                              color: theme.colors.warning,
-                            },
-                            snapshot.usagePercent > 95 && {
-                              color: theme.colors.error,
-                            },
-                          ]}
+                          baseStyle={styles.memoryUsage}
                         >
                           {snapshot.usagePercent.toFixed(1)}%
-                        </Text>
+                        </ThresholdText>
                       </View>
                       <Text size="xs" tone="secondary">
                         {formatMemory(snapshot.usedBytes)}
@@ -656,7 +642,7 @@ export const PerformanceDashboard: React.FC = () => {
 
             {!latestMemorySnapshot && (
               <Text size="sm" tone="secondary" style={styles.sectionSubtitle}>
-                Waiting for first memory snapshot...
+                {t('performance.waitingForSnapshot')}
               </Text>
             )}
           </View>
@@ -674,10 +660,10 @@ export const PerformanceDashboard: React.FC = () => {
                 align="center"
                 style={styles.emptyStateText}
               >
-                No performance data collected yet.
+                {t('performance.noDataYet')}
               </Text>
               <Text size="sm" tone="secondary" align="center">
-                Navigate through the app to start collecting metrics.
+                {t('performance.noDataSubtitle')}
               </Text>
             </View>
           )}
@@ -689,12 +675,12 @@ export const PerformanceDashboard: React.FC = () => {
           <Pressable
             style={({ pressed }) => [
               styles.clearButton,
-              pressed && { opacity: theme.opacity.pressed },
+              pressed && styles.pressed,
             ]}
             onPress={handleClearData}
           >
             <Text size="md" weight="semibold" style={styles.clearButtonText}>
-              Clear Performance Data
+              {t('performance.clearData')}
             </Text>
           </Pressable>
         )}
@@ -768,6 +754,12 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing['3'],
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
+    variants: {
+      alt: {
+        true: { backgroundColor: theme.colors.backgroundSecondary },
+        false: {},
+      },
+    },
   },
   tableCellName: {
     flex: 2,
@@ -827,6 +819,9 @@ const styles = StyleSheet.create(theme => ({
   },
   clearButtonText: {
     color: theme.colors.white,
+  },
+  pressed: {
+    opacity: theme.opacity.pressed,
   },
   startupCard: {
     backgroundColor: theme.colors.backgroundSecondary,

@@ -1,10 +1,9 @@
 import React, { useEffect } from 'react';
 import { useDataPreloading } from '#/hooks/useDataPreloading';
 import { useNotificationsOnLaunch } from '#features/notifications/hooks/useNotificationsOnLaunch';
-import { useUser } from '#store/useAppStore';
+import { useIsLoggingOut, useUpdateUser, useUser } from '#store/useAppStore';
 import { useQuery } from '@apollo/client/react';
 import { GetUserProfileDocument } from '#operations/auth/user.generated';
-import { useAppStore } from '#store/useAppStore';
 
 interface DataProviderProps {
   children: React.ReactNode;
@@ -32,8 +31,8 @@ interface DataProviderProps {
  */
 export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   const user = useUser();
-  const isLoggingOut = useAppStore(state => state.isLoggingOut);
-  const updateUser = useAppStore(state => state.updateUser);
+  const isLoggingOut = useIsLoggingOut();
+  const updateUser = useUpdateUser();
 
   // Preload units and other reference data when authenticated
   // The hook handles authentication checking internally

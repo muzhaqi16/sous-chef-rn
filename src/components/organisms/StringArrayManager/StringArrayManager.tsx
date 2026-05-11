@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import {
-  BottomSheetModal,
-  BottomSheetTextInput,
-  BottomSheetView,
-} from '@gorhom/bottom-sheet';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Pressable } from '#components/atoms/themedComponents';
+import { BottomSheetTextInput, BottomSheetView } from '@gorhom/bottom-sheet';
+import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+
+const ThemedSheetTextInput = withUnistyles(BottomSheetTextInput, theme => ({
+  placeholderTextColor: theme.colors.inputPlaceholder,
+}));
 import { Icon } from '#/utils/iconUtils';
 import { commonStyles } from '#/styles/commonStyles';
 import {
@@ -142,7 +143,6 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
   showAddButton = true,
   containerStyle,
 }) => {
-  const { theme } = useUnistyles();
   const [isAddingModal, setIsAddingModal] = useState(false);
   const [newItem, setNewItem] = useState('');
   const [error, setError] = useState('');
@@ -158,7 +158,6 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
     visible: isAddingModal,
     onDismiss: handleCancel,
     snapPoints: ['30%'],
-    keyboardBehavior: 'interactive',
   });
 
   const handleAddPress = () => {
@@ -236,7 +235,7 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
               pressed && styles.pressed,
             ]}
           >
-            <Icon name="add" size={20} color={theme.colors.primary} />
+            <Icon name="add" size={20} tone="primary" />
           </Pressable>
         )}
       </View>
@@ -255,11 +254,7 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
               ]}
               onPress={() => handleRemove(item)}
             >
-              <Icon
-                name="close-circle-outline"
-                size={18}
-                color={theme.colors.error}
-              />
+              <Icon name="close-circle-outline" size={18} tone="error" />
             </Pressable>
           </View>
         ))}
@@ -281,7 +276,7 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
             confirmDisabled={loading}
           />
 
-          <BottomSheetTextInput
+          <ThemedSheetTextInput
             style={[styles.sheetInput, error && styles.inputError]}
             value={newItem}
             onChangeText={text => {
@@ -289,7 +284,6 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
               setError('');
             }}
             placeholder={inputPlaceholder}
-            placeholderTextColor={theme.colors.inputPlaceholder}
             autoFocus
             editable={!loading}
           />

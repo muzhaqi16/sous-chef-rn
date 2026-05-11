@@ -1,7 +1,7 @@
 'use no memo';
 
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react-native';
+import { render, userEvent } from '@testing-library/react-native';
 import { ProfilePhotoUploadScreen } from '../ProfilePhotoUploadScreen';
 
 // Mock token scheduler / refreshToken
@@ -10,10 +10,11 @@ jest.mock('#/apollo/links/refreshToken');
 
 const mockGoBack = jest.fn();
 const mockDispatch = jest.fn();
-jest.mock('#hooks/navigation/useSafeNavigation', () => ({
-  useSafeNavigation: jest.fn(() => ({
+jest.mock('#hooks/navigation/useAppNavigation', () => ({
+  useAppNavigation: jest.fn(() => ({
     navigation: { dispatch: mockDispatch },
     goBack: mockGoBack,
+    toImageCrop: jest.fn(),
   })),
 }));
 
@@ -111,9 +112,10 @@ describe('ProfilePhotoUploadScreen', () => {
     expect(getByTestId('back-button')).toBeTruthy();
   });
 
-  it('calls goBack when back button pressed', () => {
+  it('calls goBack when back button pressed', async () => {
+    const user = userEvent.setup();
     const { getByTestId } = render(<ProfilePhotoUploadScreen />);
-    fireEvent.press(getByTestId('back-button'));
+    await user.press(getByTestId('back-button'));
     expect(mockGoBack).toHaveBeenCalled();
   });
 

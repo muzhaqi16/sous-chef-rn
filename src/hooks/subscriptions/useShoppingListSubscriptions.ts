@@ -11,7 +11,7 @@
 
 import type { ApolloCache } from '@apollo/client';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
-import { useAppStore } from '#store/useAppStore';
+import { useSelectedShoppingListId } from '#store/useAppStore';
 import { useSubscription } from '@apollo/client/react';
 import {
   ShoppingListChangesDocument,
@@ -172,8 +172,7 @@ export function useShoppingListSubscriptions(
 ) {
   // Get selected shopping list from global store
   // This allows subscriptions to follow the user's current context
-  const selectedShoppingListId =
-    useAppStore(state => state.selectedShoppingListId) || undefined;
+  const selectedShoppingListId = useSelectedShoppingListId() || undefined;
 
   //
   // Shopping List Changes Subscription (consolidated)

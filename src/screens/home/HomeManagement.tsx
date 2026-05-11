@@ -1,12 +1,10 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { View, Text, ScrollView } from 'react-native';
 import {
-  View,
-  Text,
-  ActivityIndicator,
-  RefreshControl,
-  ScrollView,
-} from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+  Pressable,
+  PrimaryActivityIndicator,
+  ThemedRefreshControl,
+} from '#components/atoms/themedComponents';
 import Animated, {
   LinearTransition,
   FadeInDown,
@@ -16,7 +14,7 @@ import { TIMING } from '#constants/animations';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Header } from '#components/molecules/Header';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { useHomeManagement } from '#hooks/home/hooks/useHomeManagement';
 import { useInviteUserModal } from '#/hooks/useInviteUserModal';
 import { BaseInput } from '#/components/atoms/BaseInput/BaseInput';
@@ -40,9 +38,8 @@ import { SousChefLoader } from '#/components/base/SousChefLoader';
 
 export const HomeManagement: React.FC = () => {
   useScreenTransition('HomeManagement');
-  const { goBack, navigate } = useAppNavigation();
+  const { goBack, toHomeDetail } = useAppNavigation();
   const insets = useSafeAreaInsets();
-  const { theme } = useUnistyles();
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [mode, setMode] = useState<'create' | 'join'>('create');
@@ -183,7 +180,7 @@ export const HomeManagement: React.FC = () => {
   };
 
   const handleViewHomeDetail = (homeId: string) => {
-    navigate('HomeDetail', { homeId });
+    toHomeDetail({ homeId });
   };
 
   const handleRefresh = () => {
@@ -314,9 +311,8 @@ export const HomeManagement: React.FC = () => {
 
                 {/* Preview - only shows when code is validated */}
                 {!!loadingPreview && (
-                  <ActivityIndicator
+                  <PrimaryActivityIndicator
                     size="small"
-                    color={theme.colors.primary}
                     style={styles.previewLoader}
                   />
                 )}
@@ -363,11 +359,9 @@ export const HomeManagement: React.FC = () => {
             keyboardDismissMode="on-drag"
             contentContainerStyle={{ flexGrow: 1 }}
             refreshControl={
-              <RefreshControl
+              <ThemedRefreshControl
                 refreshing={refreshing}
                 onRefresh={handleRefresh}
-                tintColor={theme.colors.primary}
-                colors={[theme.colors.primary]}
               />
             }
           >

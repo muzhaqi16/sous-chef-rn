@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Pressable } from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
 import Animated, {
   FadeIn,
   FadeOut,
@@ -18,8 +18,6 @@ export const ActionTrayContent: React.FC<ActionTrayContentProps> = ({
   showCloseButton = true,
   onClose,
 }) => {
-  const { theme } = useUnistyles();
-
   return (
     <Animated.View
       layout={LinearTransition}
@@ -44,7 +42,7 @@ export const ActionTrayContent: React.FC<ActionTrayContentProps> = ({
                 pressed && styles.pressed,
               ]}
             >
-              <Icon name="close" size={16} color={theme.colors.textSecondary} />
+              <Icon name="close" size={16} tone="textSecondary" />
             </Pressable>
           )}
         </View>

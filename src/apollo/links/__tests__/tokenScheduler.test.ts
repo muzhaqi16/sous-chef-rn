@@ -17,7 +17,7 @@ import {
   cancelTokenRefresh,
   getScheduleState,
 } from '../tokenScheduler';
-import { useStore } from '../../../store';
+import { useStore } from '#store';
 
 const mockedJwtDecode = jwtDecode as jest.MockedFunction<typeof jwtDecode>;
 const mockedGetState = useStore.getState as jest.MockedFunction<

@@ -4,6 +4,7 @@ import { useAppStore, useIsHydrated } from '#store/useAppStore';
 import { derivePalette } from '#/theme/derivePalette';
 import { spacing as baseSpacing } from '#/theme/foundations/spacing';
 import { typography as baseTypography } from '#/theme/foundations/typography';
+import { lightTheme, darkTheme } from '#/theme/themes';
 import type {
   DensityPreference,
   FontScalePreference,
@@ -34,6 +35,11 @@ function scaleObject<T extends Record<string, number>>(
   return scaled as T;
 }
 
+// Append a 2-digit hex alpha to a #RRGGBB color produced by chroma-js.
+function withAlpha(hex: string, alpha: string): string {
+  return `${hex}${alpha}`;
+}
+
 /**
  * Applies user appearance preferences (brand color, density, font scale,
  * high contrast) to both light and dark themes via UnistylesRuntime.updateTheme.
@@ -53,50 +59,65 @@ export function useAppearance() {
 
     const densityMul = DENSITY_MULTIPLIER[densityPreference ?? 'comfortable'];
     const fontMul = FONT_SCALE_MULTIPLIER[fontScalePreference ?? 'system'];
-    const needsSpacingUpdate = densityMul !== 1.0;
-    const needsFontUpdate = fontMul !== 1.0;
 
     const updateTheme = (themeName: 'light' | 'dark') => {
-      UnistylesRuntime.updateTheme(themeName, currentTheme => {
-        const updated = { ...currentTheme };
+      UnistylesRuntime.updateTheme(themeName, () => {
+        // Always rebuild from the original base theme so reverting an override
+        // (brand color back to default, density to comfortable, etc.) actually
+        // resets — `updateTheme` mutates, so the previous run's overlays would
+        // otherwise stick around until app reload.
+        const base = themeName === 'light' ? lightTheme : darkTheme;
+        const next = {
+          ...base,
+          colors: { ...base.colors },
+          spacing: scaleObject(baseSpacing, densityMul),
+          typography: {
+            ...base.typography,
+            fontSize: scaleObject(baseTypography.fontSize, fontMul),
+          },
+          fonts: {
+            ...base.fonts,
+            size: scaleObject(baseTypography.fontSize, fontMul),
+          },
+        };
 
         // Brand color override
         if (primaryColorOverride) {
           const palette = derivePalette(primaryColorOverride);
-          updated.colors = {
-            ...updated.colors,
+          const isDark = themeName === 'dark';
+          next.colors = {
+            ...next.colors,
             primary: palette['400'],
-            primaryLight:
-              themeName === 'dark' ? palette['400'] + '20' : palette['100'],
-            primaryDark: themeName === 'dark' ? palette['600'] : palette['700'],
-            iconPrimary: themeName === 'dark' ? palette['400'] : palette['500'],
-            chipSelectedBackground:
-              themeName === 'dark' ? palette['400'] : palette['300'],
-          };
-        }
-
-        // Density
-        if (needsSpacingUpdate) {
-          updated.spacing = scaleObject(baseSpacing, densityMul);
-        }
-
-        // Font scale
-        if (needsFontUpdate) {
-          updated.typography = {
-            ...updated.typography,
-            fontSize: scaleObject(baseTypography.fontSize, fontMul),
-          };
-          updated.fonts = {
-            ...updated.fonts,
-            size: scaleObject(baseTypography.fontSize, fontMul),
+            primaryLight: isDark ? palette['400'] + '20' : palette['100'],
+            primaryDark: isDark ? palette['600'] : palette['700'],
+            iconPrimary: isDark ? palette['400'] : palette['500'],
+            chipSelectedBackground: isDark ? palette['400'] : palette['300'],
+            filterTab: {
+              ...next.colors.filterTab,
+              activeBg: palette['500'],
+              filteredBg: isDark
+                ? withAlpha(palette['400'], '26')
+                : palette['50'],
+              filteredText: isDark ? palette['300'] : palette['600'],
+            },
+            sectionHeader: {
+              ...next.colors.sectionHeader,
+              actionText: isDark ? palette['400'] : palette['500'],
+            },
+            avatar: {
+              ...next.colors.avatar,
+              gradientStart: palette['500'],
+              gradientEnd: palette['400'],
+              shadow: withAlpha(palette['500'], '4D'),
+            },
           };
         }
 
         // High contrast — boost text contrast + border visibility
         if (highContrast) {
           if (themeName === 'light') {
-            updated.colors = {
-              ...updated.colors,
+            next.colors = {
+              ...next.colors,
               textPrimary: '#000000',
               textSecondary: '#1A1A1A',
               textTertiary: '#333333',
@@ -104,8 +125,8 @@ export function useAppearance() {
               borderLight: '#999999',
             };
           } else {
-            updated.colors = {
-              ...updated.colors,
+            next.colors = {
+              ...next.colors,
               textPrimary: '#FFFFFF',
               textSecondary: '#E0E0E0',
               textTertiary: '#CCCCCC',
@@ -115,7 +136,7 @@ export function useAppearance() {
           }
         }
 
-        return updated;
+        return next;
       });
     };
 

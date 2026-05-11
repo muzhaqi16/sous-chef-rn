@@ -1,7 +1,7 @@
 'use no memo';
 
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { MealPlanMain } from '../MealPlanMain';
 
 // Mock token scheduler / refreshToken
@@ -136,15 +136,6 @@ jest.mock('#store/useAppStore', () => ({
   useAppStore: jest.fn(() => null),
 }));
 
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useMutation: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'DeleteMealPlan') return [jest.fn(), { loading: false }];
-    return [jest.fn(), {}];
-  }),
-}));
-
 jest.mock('#/services/toastService', () => ({
   toastService: { error: jest.fn(), success: jest.fn(), info: jest.fn() },
 }));
@@ -225,12 +216,12 @@ describe('MealPlanMain', () => {
   });
 
   it('renders with DeferredScreen fallback', () => {
-    const { getByTestId } = render(<MealPlanMain />);
+    const { getByTestId } = renderWithApollo(<MealPlanMain />);
     expect(getByTestId('meal-plan-screen')).toBeTruthy();
   });
 
   it('shows TabScreenHeader in fallback', () => {
-    const tree = render(<MealPlanMain />);
+    const tree = renderWithApollo(<MealPlanMain />);
     expect(tree.getByTestId('meal-plan-screen')).toBeTruthy();
   });
 
@@ -245,7 +236,7 @@ describe('MealPlanMain', () => {
     );
     useMealPlans.mockReturnValue(mockMealPlansState());
 
-    const { getByTestId } = render(<MealPlanMain />);
+    const { getByTestId } = renderWithApollo(<MealPlanMain />);
     expect(getByTestId('meal-plan-screen')).toBeTruthy();
   });
 
@@ -259,7 +250,7 @@ describe('MealPlanMain', () => {
     );
     useMealPlans.mockReturnValue(mockMealPlansState());
 
-    const tree = render(<MealPlanMain />);
+    const tree = renderWithApollo(<MealPlanMain />);
     expect(tree.getByTestId('meal-plan-screen')).toBeTruthy();
   });
 
@@ -278,7 +269,7 @@ describe('MealPlanMain', () => {
       }),
     );
 
-    const tree = render(<MealPlanMain />);
+    const tree = renderWithApollo(<MealPlanMain />);
     expect(tree.getByTestId('meal-plan-screen')).toBeTruthy();
   });
 
@@ -292,7 +283,7 @@ describe('MealPlanMain', () => {
     );
     useMealPlans.mockReturnValue(mockMealPlansState({ loading: true }));
 
-    const tree = render(<MealPlanMain />);
+    const tree = renderWithApollo(<MealPlanMain />);
     expect(tree.getByTestId('meal-plan-screen')).toBeTruthy();
   });
 
@@ -322,7 +313,7 @@ describe('MealPlanMain', () => {
       isEmpty: false,
     });
 
-    const tree = render(<MealPlanMain />);
+    const tree = renderWithApollo(<MealPlanMain />);
     expect(tree.getByTestId('meal-plan-screen')).toBeTruthy();
   });
 
@@ -344,7 +335,7 @@ describe('MealPlanMain', () => {
       }),
     );
 
-    const tree = render(<MealPlanMain />);
+    const tree = renderWithApollo(<MealPlanMain />);
     expect(tree.getByTestId('meal-plan-screen')).toBeTruthy();
   });
 
@@ -380,7 +371,7 @@ describe('MealPlanMain', () => {
       maxDate: undefined,
     });
 
-    const tree = render(<MealPlanMain />);
+    const tree = renderWithApollo(<MealPlanMain />);
     expect(tree.getByTestId('meal-plan-screen')).toBeTruthy();
   });
 
@@ -409,7 +400,7 @@ describe('MealPlanMain', () => {
       refetch: jest.fn().mockResolvedValue({}),
     });
 
-    const tree = render(<MealPlanMain />);
+    const tree = renderWithApollo(<MealPlanMain />);
     expect(tree.getByTestId('meal-plan-screen')).toBeTruthy();
   });
 
@@ -438,7 +429,7 @@ describe('MealPlanMain', () => {
       canSaveAsTemplate: false,
     });
 
-    const tree = render(<MealPlanMain />);
+    const tree = renderWithApollo(<MealPlanMain />);
     expect(tree.getByTestId('meal-plan-screen')).toBeTruthy();
   });
 });

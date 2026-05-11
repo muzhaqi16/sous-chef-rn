@@ -1,53 +1,37 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { screen, userEvent, waitFor } from '@testing-library/react-native';
+import type { MockedResponse } from '#/test-utils/apolloMockProvider';
+import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  VerifyEmailDocument,
+  ResendVerificationEmailDocument,
+} from '#operations/auth/auth.generated';
 import { CodeVerificationScreen } from '../CodeVerificationScreen';
 
 // --- Mocks ---
 
-const mockVerifyEmail = jest.fn().mockResolvedValue({
-  data: { verifyEmail: { success: true, message: '' } },
-});
-const mockResendVerificationEmail = jest.fn().mockResolvedValue({});
 const mockUpdateUser = jest.fn();
 const mockToast = jest.fn();
 
-jest.mock('#store/useAppStore', () => ({
-  useAppStore: (selector: any) => {
-    const state = {
-      user: { id: '1', email: 'test@example.com', emailVerified: false },
-      updateUser: mockUpdateUser,
-    };
-    return selector(state);
-  },
-}));
+jest.mock('#store/useAppStore', () => {
+  const getState = () => ({
+    user: { id: '1', email: 'test@example.com', emailVerified: false },
+    updateUser: mockUpdateUser,
+  });
+  return {
+    useAppStore: (selector: any) => selector(getState()),
+    useUser: () => getState().user,
+    useUpdateUser: () => getState().updateUser,
+  };
+});
 
 jest.mock('#/hooks/useToast', () => ({
   useToast: () => mockToast,
 }));
 
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useMutation: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'VerifyEmail') return [mockVerifyEmail, { loading: false }];
-    if (opName === 'ResendVerificationEmail')
-      return [mockResendVerificationEmail, { loading: false }];
-    return [jest.fn(), {}];
-  }),
-}));
-
 jest.mock('#/services/errorService', () => ({
   errorService: {
     reportError: jest.fn(),
-  },
-}));
-
-jest.mock('#/utils/environment', () => ({
-  logger: {
-    info: jest.fn(),
-    error: jest.fn(),
-    warn: jest.fn(),
-    debug: jest.fn(),
   },
 }));
 
@@ -112,67 +96,114 @@ jest.mock('#/components/base/SousChefLoader', () => ({
   SousChefLoader: 'SousChefLoader',
 }));
 
+function buildResendMock(
+  recordedVariables: Record<string, unknown>[],
+): MockedResponse {
+  return {
+    request: {
+      query: ResendVerificationEmailDocument,
+      variables: variables => {
+        recordedVariables.push(variables);
+        return true;
+      },
+    },
+    result: {
+      data: {
+        resendVerificationEmail: {
+          __typename: 'UserPayload',
+          success: true,
+          message: 'OK',
+          code: 'OK',
+        },
+      },
+    },
+  };
+}
+
+// Verify mock kept available for potential extension; use a generic accept-all mock
+function buildVerifyMock(): MockedResponse {
+  return {
+    request: { query: VerifyEmailDocument, variables: () => true },
+    result: {
+      data: {
+        verifyEmail: {
+          __typename: 'UserPayload',
+          success: true,
+          message: 'OK',
+          code: 'OK',
+          user: null,
+        },
+      },
+    },
+  };
+}
+
 describe('CodeVerificationScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   it('renders the enter code title', () => {
-    render(<CodeVerificationScreen />);
+    renderWithApollo(<CodeVerificationScreen />);
     expect(screen.getByText('Enter Code')).toBeTruthy();
   });
 
   it('renders the user email in the subtitle', () => {
-    render(<CodeVerificationScreen />);
+    renderWithApollo(<CodeVerificationScreen />);
     expect(screen.getByText('test@example.com')).toBeTruthy();
   });
 
   it('renders the submit button', () => {
-    render(<CodeVerificationScreen />);
+    renderWithApollo(<CodeVerificationScreen />);
     expect(screen.getByText('Submit')).toBeTruthy();
   });
 
   it('renders the resend code footer', () => {
-    render(<CodeVerificationScreen />);
+    renderWithApollo(<CodeVerificationScreen />);
     expect(screen.getByText("Didn't get the email?")).toBeTruthy();
     expect(screen.getByText('Resend code')).toBeTruthy();
   });
 
-  it('fires resend when footer link is pressed', () => {
-    render(<CodeVerificationScreen />);
-    fireEvent.press(screen.getByTestId('footer-link'));
-    expect(mockResendVerificationEmail).toHaveBeenCalledWith({
-      variables: { email: 'test@example.com' },
+  it('fires resend when footer link is pressed', async () => {
+    const user = userEvent.setup();
+    const recordedVariables: Record<string, unknown>[] = [];
+    renderWithApollo(<CodeVerificationScreen />, {
+      operationMocks: [buildResendMock(recordedVariables), buildVerifyMock()],
+    });
+    await user.press(screen.getByTestId('footer-link'));
+    await waitFor(() => {
+      expect(recordedVariables).toContainEqual({ email: 'test@example.com' });
     });
   });
 
   it('returns null when user is already verified', () => {
+    const verifiedUser = {
+      id: '1',
+      email: 'test@example.com',
+      emailVerified: true,
+    };
     jest
       .spyOn(require('#store/useAppStore'), 'useAppStore')
-      .mockImplementation((selector: any) => {
-        const state = {
-          user: { id: '1', email: 'test@example.com', emailVerified: true },
-          updateUser: mockUpdateUser,
-        };
-        return selector(state);
-      });
+      .mockImplementation((selector: any) =>
+        selector({ user: verifiedUser, updateUser: mockUpdateUser }),
+      );
+    jest
+      .spyOn(require('#store/useAppStore'), 'useUser')
+      .mockReturnValue(verifiedUser);
 
-    const { toJSON } = render(<CodeVerificationScreen />);
+    const { toJSON } = renderWithApollo(<CodeVerificationScreen />);
     expect(toJSON()).toBeNull();
   });
 
   it('returns null when there is no user', () => {
     jest
       .spyOn(require('#store/useAppStore'), 'useAppStore')
-      .mockImplementation((selector: any) => {
-        const state = {
-          user: null,
-          updateUser: mockUpdateUser,
-        };
-        return selector(state);
-      });
+      .mockImplementation((selector: any) =>
+        selector({ user: null, updateUser: mockUpdateUser }),
+      );
+    jest.spyOn(require('#store/useAppStore'), 'useUser').mockReturnValue(null);
 
-    const { toJSON } = render(<CodeVerificationScreen />);
+    const { toJSON } = renderWithApollo(<CodeVerificationScreen />);
     expect(toJSON()).toBeNull();
   });
 });

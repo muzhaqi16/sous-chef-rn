@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { RefreshControl } from 'react-native';
 import { SettingsSection } from '#components/organisms/SettingsSection';
 import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
 import { useProfileData } from '#features/profile/hooks/useProfileData';
@@ -22,7 +21,7 @@ import {
   executeMutation,
   executeRefreshWithFinally,
 } from '#/utils/compilerSafeWrappers';
-import { useUnistyles } from 'react-native-unistyles';
+import { ThemedRefreshControl } from '#components/atoms/themedComponents';
 
 /** Module-level function for profile updates with optimistic cache.
  *  Extracted to avoid try-catch inside component body (React Compiler bailout). */
@@ -69,7 +68,6 @@ export const PersonalInformationScreen: React.FC = () => {
   const { profile, refetch } = useProfileData();
   const user = useUser();
   const client = useApolloClient();
-  const { theme } = useUnistyles();
   const [updateProfileMutation] = useMutation(UpdateUserProfileDocument);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -193,11 +191,9 @@ export const PersonalInformationScreen: React.FC = () => {
     <ProfileScreenWrapper
       title="Personal Information"
       refreshControl={
-        <RefreshControl
+        <ThemedRefreshControl
           refreshing={refreshing}
           onRefresh={handleRefresh}
-          tintColor={theme.colors.primary}
-          colors={[theme.colors.primary]}
         />
       }
     >

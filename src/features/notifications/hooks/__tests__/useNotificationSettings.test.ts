@@ -1,18 +1,28 @@
 'use no memo';
 
-import { renderHook, act } from '@testing-library/react-native';
+import { act, waitFor } from '@testing-library/react-native';
+import {
+  recordMock,
+  renderHookWithApollo,
+} from '#/test-utils/apolloMockProvider';
+import { UpdateNotificationPreferencesDocument } from '#operations/user/user.generated';
 import { useNotificationSettings } from '../useNotificationSettings';
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 
-jest.mock('#store/useAppStore', () => ({
-  useAppStore: jest.fn((selector: any) => selector({ user: { id: 'user-1' } })),
-}));
-
-const mockUpdatePreferences = jest.fn();
+jest.mock('#store/useAppStore', () => {
+  const getState = () => ({ user: { id: 'user-1' } });
+  return {
+    useAppStore: jest.fn((selector: any) => selector(getState())),
+    useUser: () => (s => s.user)(getState()),
+    useUserId: () => (s => s.user?.id)(getState()),
+  };
+});
 
 const mockPreferencesData = {
+  __typename: 'NotificationPreferences',
+  id: 'pref-1',
   emailEnabled: true,
   pushEnabled: true,
   smsEnabled: false,
@@ -36,36 +46,6 @@ const mockPreferencesData = {
   quietHoursTimezone: 'America/New_York',
 };
 
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useQuery: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'GetNotificationPreferences') {
-      return {
-        data: {
-          me: {
-            notificationPreferences: {
-              __typename: 'NotificationPreferences',
-              id: 'pref-1',
-              ...mockPreferencesData,
-            },
-          },
-        },
-        loading: false,
-        error: undefined,
-        refetch: jest.fn(),
-      };
-    }
-    return { data: undefined, loading: false, error: undefined };
-  }),
-  useMutation: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'UpdateNotificationPreferences')
-      return [mockUpdatePreferences, {}];
-    return [jest.fn(), {}];
-  }),
-}));
-
 jest.mock('#/utils/compilerSafeWrappers');
 
 jest.mock('#/services/errorService', () => ({
@@ -86,42 +66,65 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
-describe('useNotificationSettings', () => {
-  it('returns settings from query data', () => {
-    const { result } = renderHook(() => useNotificationSettings());
+function withPrefs(prefs: typeof mockPreferencesData | null) {
+  return {
+    mocks: {
+      Query: () => ({
+        me: {
+          __typename: 'User',
+          id: 'user-1',
+          notificationPreferences: prefs,
+        },
+      }),
+    },
+  };
+}
 
+describe('useNotificationSettings', () => {
+  it('returns settings from query data', async () => {
+    const { result } = renderHookWithApollo(
+      () => useNotificationSettings(),
+      withPrefs(mockPreferencesData),
+    );
+
+    await waitFor(() =>
+      expect(result.current.settings.expirationDaysThreshold).toBe(5),
+    );
     expect(result.current.settings.emailEnabled).toBe(true);
     expect(result.current.settings.pushEnabled).toBe(true);
     expect(result.current.settings.smsEnabled).toBe(false);
-    expect(result.current.settings.expirationDaysThreshold).toBe(5);
   });
 
-  it('returns defaults when no preferences data', () => {
-    const { useQuery } = require('@apollo/client/react');
-    (useQuery as jest.Mock).mockReturnValueOnce({
-      data: null,
-      loading: false,
-      error: undefined,
-    });
+  it('returns defaults when no preferences data', async () => {
+    const { result } = renderHookWithApollo(
+      () => useNotificationSettings(),
+      withPrefs(null),
+    );
 
-    const { result } = renderHook(() => useNotificationSettings());
-
+    await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.settings.emailEnabled).toBe(true);
     expect(result.current.settings.pushEnabled).toBe(false);
     expect(result.current.settings.expirationDaysThreshold).toBe(3);
   });
 
-  it('returns loading state', () => {
-    const { result } = renderHook(() => useNotificationSettings());
+  it('returns loading state', async () => {
+    const { result } = renderHookWithApollo(
+      () => useNotificationSettings(),
+      withPrefs(mockPreferencesData),
+    );
+    await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.loading).toBe(false);
   });
 
   it('updateNotificationSetting calls mutation with nested input', async () => {
-    mockUpdatePreferences.mockResolvedValue({
+    const update = recordMock(UpdateNotificationPreferencesDocument, {
       data: { updateNotificationPreferences: true },
     });
 
-    const { result } = renderHook(() => useNotificationSettings());
+    const { result } = renderHookWithApollo(() => useNotificationSettings(), {
+      ...withPrefs(mockPreferencesData),
+      operationMocks: [update.mock],
+    });
 
     let success: boolean = false;
     await act(async () => {
@@ -131,38 +134,40 @@ describe('useNotificationSettings', () => {
       );
     });
 
-    expect(mockUpdatePreferences).toHaveBeenCalledWith({
-      variables: {
-        input: { channels: { pushEnabled: true } },
-      },
+    expect(update.fired).toContainEqual({
+      input: { channels: { pushEnabled: true } },
     });
     expect(success).toBe(true);
   });
 
   it('updateNotificationSetting maps feature keys correctly', async () => {
-    mockUpdatePreferences.mockResolvedValue({
+    const update = recordMock(UpdateNotificationPreferencesDocument, {
       data: { updateNotificationPreferences: true },
     });
 
-    const { result } = renderHook(() => useNotificationSettings());
+    const { result } = renderHookWithApollo(() => useNotificationSettings(), {
+      ...withPrefs(mockPreferencesData),
+      operationMocks: [update.mock],
+    });
 
     await act(async () => {
       await result.current.updateNotificationSetting('lowStockAlerts', false);
     });
 
-    expect(mockUpdatePreferences).toHaveBeenCalledWith({
-      variables: {
-        input: { features: { lowStockAlerts: false } },
-      },
+    expect(update.fired).toContainEqual({
+      input: { features: { lowStockAlerts: false } },
     });
   });
 
   it('updateNotificationSetting maps expiration keys correctly', async () => {
-    mockUpdatePreferences.mockResolvedValue({
+    const update = recordMock(UpdateNotificationPreferencesDocument, {
       data: { updateNotificationPreferences: true },
     });
 
-    const { result } = renderHook(() => useNotificationSettings());
+    const { result } = renderHookWithApollo(() => useNotificationSettings(), {
+      ...withPrefs(mockPreferencesData),
+      operationMocks: [update.mock],
+    });
 
     await act(async () => {
       await result.current.updateNotificationSetting(
@@ -171,19 +176,20 @@ describe('useNotificationSettings', () => {
       );
     });
 
-    expect(mockUpdatePreferences).toHaveBeenCalledWith({
-      variables: {
-        input: { expiration: { expirationDaysThreshold: 7 } },
-      },
+    expect(update.fired).toContainEqual({
+      input: { expiration: { expirationDaysThreshold: 7 } },
     });
   });
 
   it('updateMultipleSettings sends batch update', async () => {
-    mockUpdatePreferences.mockResolvedValue({
+    const update = recordMock(UpdateNotificationPreferencesDocument, {
       data: { updateNotificationPreferences: true },
     });
 
-    const { result } = renderHook(() => useNotificationSettings());
+    const { result } = renderHookWithApollo(() => useNotificationSettings(), {
+      ...withPrefs(mockPreferencesData),
+      operationMocks: [update.mock],
+    });
 
     let success: boolean = false;
     await act(async () => {
@@ -193,50 +199,49 @@ describe('useNotificationSettings', () => {
       });
     });
 
-    expect(mockUpdatePreferences).toHaveBeenCalled();
+    expect(update.fired.length).toBeGreaterThan(0);
     expect(success).toBe(true);
   });
 
   it('resetToDefaults sends default values', async () => {
-    mockUpdatePreferences.mockResolvedValue({
+    const update = recordMock(UpdateNotificationPreferencesDocument, {
       data: { updateNotificationPreferences: true },
     });
 
-    const { result } = renderHook(() => useNotificationSettings());
+    const { result } = renderHookWithApollo(() => useNotificationSettings(), {
+      ...withPrefs(mockPreferencesData),
+      operationMocks: [update.mock],
+    });
 
     await act(async () => {
       await result.current.resetToDefaults();
     });
 
-    expect(mockUpdatePreferences).toHaveBeenCalled();
+    expect(update.fired.length).toBeGreaterThan(0);
   });
 
-  it('isQuietTime returns false when quiet hours disabled', () => {
-    const { result } = renderHook(() => useNotificationSettings());
-
+  it('isQuietTime returns false when quiet hours disabled', async () => {
+    const { result } = renderHookWithApollo(
+      () => useNotificationSettings(),
+      withPrefs(mockPreferencesData),
+    );
+    await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.isQuietTime()).toBe(false);
   });
 
-  it('isQuietTime evaluates correctly when enabled', () => {
-    const { useQuery } = require('@apollo/client/react');
-    (useQuery as jest.Mock).mockReturnValueOnce({
-      data: {
-        me: {
-          notificationPreferences: {
-            ...mockPreferencesData,
-            quietHoursEnabled: true,
-            quietHoursStart: '00:00',
-            quietHoursEnd: '23:59',
-          },
-        },
-      },
-      loading: false,
-      error: undefined,
-    });
-
-    const { result } = renderHook(() => useNotificationSettings());
-
-    // With 00:00 to 23:59, any time should be quiet
+  it('isQuietTime evaluates correctly when enabled', async () => {
+    const { result } = renderHookWithApollo(
+      () => useNotificationSettings(),
+      withPrefs({
+        ...mockPreferencesData,
+        quietHoursEnabled: true,
+        quietHoursStart: '00:00',
+        quietHoursEnd: '23:59',
+      }),
+    );
+    await waitFor(() =>
+      expect(result.current.settings.quietHoursEnabled).toBe(true),
+    );
     expect(result.current.isQuietTime()).toBe(true);
   });
 });

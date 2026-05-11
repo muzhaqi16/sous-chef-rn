@@ -3,19 +3,21 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
 import { SelectorContent } from '../../../../src/components/organisms/AnimatedItemSelector/SelectorContent';
+import type { SelectorConfig } from '../../../../src/components/organisms/AnimatedItemSelector/types';
 
 jest.mock('../../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../../src/apollo/links/refreshToken');
 
-jest.mock('../../../../src/components/organisms/AnimatedItemSelector/SelectorItem', () => ({
-  SelectorItem: () => null,
+jest.mock('../../../../src/components/organisms/AnimatedItemSelector/SelectorItemContainer', () => ({
+  SelectorItemContainer: () => null,
 }));
 jest.mock('../../../../src/components/organisms/AnimatedItemSelector/ActionButtons', () => ({
   ActionButtons: () => null,
 }));
 
 describe('SelectorContent', () => {
-  const baseConfig = {
+  type Item = { id: string; name: string };
+  const baseConfig: SelectorConfig<Item> = {
     title: 'Select Item',
     data: [],
     onSelect: jest.fn(),

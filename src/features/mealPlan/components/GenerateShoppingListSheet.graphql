@@ -1,0 +1,39 @@
+# Local copy of GetShoppingListsLite per the Feature API Boundary Convention.
+# The shoppingList feature's graphql/ folder is internal to that feature.
+query GetShoppingListsLite($homeId: ID, $first: Int, $after: String) {
+  shoppingLists(filters: { homeId: $homeId }, first: $first, after: $after) {
+    edges {
+      cursor
+      node {
+        id
+        name
+        isDefault
+        totalItems
+        completedItems
+        homeId
+        home {
+          id
+          name
+        }
+        ownerships {
+          id
+          userId
+          user {
+            id
+            email
+            profile {
+              id
+              displayName
+              avatar
+            }
+          }
+        }
+      }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
+  }
+}

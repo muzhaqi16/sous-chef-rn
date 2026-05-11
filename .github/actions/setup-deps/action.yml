@@ -1,0 +1,38 @@
+name: 'Setup dependencies + GraphQL codegen'
+description: |
+  Restores cached node_modules (keyed on package-lock.json) and the generated
+  GraphQL files (keyed on the .graphql sources + schema + codegen config).
+  Runs `npm ci` and `npm run codegen` only on cache miss.
+
+  Caller is responsible for `actions/checkout` and `actions/setup-node` —
+  this action assumes Node is already on PATH and the repo is checked out.
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Restore node_modules cache
+      id: cache-node-modules
+      uses: actions/cache@v4
+      with:
+        path: node_modules
+        key: ${{ runner.os }}-node-modules-${{ hashFiles('package-lock.json') }}
+
+    - name: Install npm dependencies
+      if: steps.cache-node-modules.outputs.cache-hit != 'true'
+      shell: bash
+      run: npm ci
+
+    - name: Restore generated GraphQL files cache
+      id: cache-codegen
+      uses: actions/cache@v4
+      with:
+        path: |
+          src/**/*.generated.ts
+          src/graphql/generated/schemaTypes.ts
+          src/graphql/generated/fragmentMatcher.json
+        key: ${{ runner.os }}-codegen-${{ hashFiles('src/**/*.graphql', 'src/graphql/generated/schema.graphql', 'codegen.ts') }}
+
+    - name: Generate GraphQL types
+      if: steps.cache-codegen.outputs.cache-hit != 'true'
+      shell: bash
+      run: npm run codegen

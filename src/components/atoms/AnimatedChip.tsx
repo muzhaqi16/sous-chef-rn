@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Pressable } from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
 import { useAnimatedTheme } from 'react-native-unistyles/reanimated';
 import { CachedImage } from '#components/atoms/CachedImage';
 import Animated, {
@@ -23,6 +23,20 @@ const AnimatedPath = Animated.createAnimatedComponent(Path);
 const CHECKMARK_PATH = 'M3 7.5 L6 10.5 L11 4.5';
 const CHECKMARK_LENGTH = 12;
 
+// Layout animation builders defined at module scope to avoid per-render
+// allocation in list contexts. Reanimated docs explicitly recommend this.
+const CHIP_LAYOUT_TRANSITION = LinearTransition.springify()
+  .mass(0.8)
+  .damping(30)
+  .stiffness(250);
+const CHECK_LAYOUT_TRANSITION = LinearTransition;
+const CHECK_ENTERING = FadeIn.duration(TIMING.STANDARD).easing(
+  standardEasing.factory(),
+);
+const CHECK_EXITING = FadeOut.duration(TIMING.FAST).easing(
+  standardEasing.factory(),
+);
+
 type AnimatedChipProps = {
   label: string;
   selected: boolean;
@@ -38,7 +52,6 @@ export const AnimatedChip: React.FC<AnimatedChipProps> = ({
   disabled = false,
   imageUrl,
 }) => {
-  const { theme } = useUnistyles();
   const animatedTheme = useAnimatedTheme();
 
   // Drive selection animations via shared value — only animates when selected truly changes
@@ -96,7 +109,9 @@ export const AnimatedChip: React.FC<AnimatedChipProps> = ({
     };
   }, [selectedProgress]);
 
-  // SVG checkmark draw-on animation driven by same shared value
+  // SVG checkmark draw-on animation driven by same shared value.
+  // Stroke color is read from animatedTheme so it stays reactive without a
+  // useUnistyles() subscription on the parent.
   const checkmarkAnimatedProps = useAnimatedProps(() => {
     return {
       strokeDashoffset: interpolate(
@@ -104,16 +119,14 @@ export const AnimatedChip: React.FC<AnimatedChipProps> = ({
         [0, 1],
         [CHECKMARK_LENGTH, 0],
       ),
+      stroke: animatedTheme.get().colors.primary,
     };
   }, [selectedProgress]);
 
   // UNISTYLES FIX: Wrapper pattern - static Unistyles on outer Animated.View
   // Layout animation on outer container so Pressable doesn't conflict with it
   return (
-    <Animated.View
-      style={styles.container}
-      layout={LinearTransition.springify().mass(0.8).damping(30).stiffness(250)}
-    >
+    <Animated.View style={styles.container} layout={CHIP_LAYOUT_TRANSITION}>
       <Pressable
         onPress={handlePress}
         disabled={disabled}
@@ -132,18 +145,13 @@ export const AnimatedChip: React.FC<AnimatedChipProps> = ({
           {!!selected && (
             <Animated.View
               style={styles.iconContainer}
-              layout={LinearTransition}
-              entering={FadeIn.duration(TIMING.STANDARD).easing(
-                standardEasing.factory(),
-              )}
-              exiting={FadeOut.duration(TIMING.FAST).easing(
-                standardEasing.factory(),
-              )}
+              layout={CHECK_LAYOUT_TRANSITION}
+              entering={CHECK_ENTERING}
+              exiting={CHECK_EXITING}
             >
               <Svg width={14} height={14} viewBox="0 0 14 14">
                 <AnimatedPath
                   d={CHECKMARK_PATH}
-                  stroke={theme.colors.primary}
                   strokeWidth={2}
                   strokeLinecap="round"
                   strokeLinejoin="round"

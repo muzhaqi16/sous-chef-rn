@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { useTranslation } from 'react-i18next';
+import { Pressable } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
 import { TIMING } from '#constants/animations';
 import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
@@ -19,6 +20,10 @@ import { Icon } from '#/utils/iconUtils';
 import { StringArrayManager } from '#/components/organisms/StringArrayManager/StringArrayManager';
 import { NumberInputSheet } from '#/components/modals/NumberInputSheet/NumberInputSheet';
 import { InfoRow } from '#/components/molecules/InfoRow';
+
+const ThemedInfoRow = withUnistyles(InfoRow, theme => ({
+  iconColor: theme.colors.primary,
+}));
 import { CuisineSelector } from '#/components/organisms/CuisineSelector';
 import { DietaryRestrictionSelector } from '#/components/organisms/DietaryRestrictionSelector';
 import { CookingPreferencesSheet } from '#/components/modals/CookingPreferencesSheet/CookingPreferencesSheet';
@@ -27,7 +32,7 @@ import { errorService } from '#/services/errorService';
 import { Text } from '#components/atoms/Text';
 
 export const DietaryProfileScreen: React.FC = () => {
-  const { theme } = useUnistyles();
+  const { t } = useTranslation();
   const {
     profile,
     loading,
@@ -42,20 +47,23 @@ export const DietaryProfileScreen: React.FC = () => {
 
   const handleRemoveRestriction = (id: string) => {
     alertService.alert(
-      'Remove Restriction',
-      'Are you sure you want to remove this dietary restriction?',
+      t('dietary.removeRestrictionTitle'),
+      t('dietary.removeRestrictionConfirm'),
       [
         {
-          text: 'Remove',
+          text: t('labels.remove'),
           style: 'destructive',
           onPress: async () => {
             const success = await removeDietaryRestriction(id);
             if (!success) {
-              alertService.alert('Error', 'Failed to remove restriction');
+              alertService.alert(
+                t('labels.error'),
+                t('dietary.removeRestrictionFailed'),
+              );
             }
           },
         },
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('labels.cancel'), style: 'cancel' },
       ],
     );
   };
@@ -187,15 +195,12 @@ export const DietaryProfileScreen: React.FC = () => {
     return await updateDietaryProfile({ snacksPerDay: value });
   };
 
-  // Memoize container style
-  const favoriteContainerStyle = { marginTop: theme.spacing.md };
-
-  const dislikedContainerStyle = { marginTop: theme.spacing.md };
-
   if (loading) {
     return (
       <View style={commonStyles.loadingContainer}>
-        <Text style={commonStyles.loadingText}>Loading dietary profile...</Text>
+        <Text style={commonStyles.loadingText}>
+          {t('dietary.loadingProfile')}
+        </Text>
       </View>
     );
   }
@@ -203,23 +208,25 @@ export const DietaryProfileScreen: React.FC = () => {
   if (!profile) {
     return (
       <View style={commonStyles.emptyState}>
-        <Text style={commonStyles.emptyStateTitle}>No Dietary Profile</Text>
+        <Text style={commonStyles.emptyStateTitle}>
+          {t('dietary.noProfileTitle')}
+        </Text>
         <Text style={commonStyles.emptyStateText}>
-          Create your dietary profile to get personalized recipe recommendations
+          {t('dietary.noProfileSubtitle')}
         </Text>
       </View>
     );
   }
 
   return (
-    <ProfileScreenWrapper title="Dietary Profile">
+    <ProfileScreenWrapper title={t('dietary.title')}>
       {/* Dietary Restrictions Section */}
       <Animated.View
         entering={FadeIn.duration(TIMING.SLOW)}
         layout={LinearTransition}
         style={styles.sectionContainer}
       >
-        <Text style={commonStyles.subtitle}>Dietary Restrictions</Text>
+        <Text style={commonStyles.subtitle}>{t('dietary.restrictions')}</Text>
         <View style={styles.sectionCard}>
           <DietaryRestrictionSelector
             existingRestrictions={profile.restrictions}
@@ -235,7 +242,9 @@ export const DietaryProfileScreen: React.FC = () => {
         layout={LinearTransition}
         style={styles.sectionContainer}
       >
-        <Text style={commonStyles.subtitle}>Food Preferences</Text>
+        <Text style={commonStyles.subtitle}>
+          {t('dietary.foodPreferences')}
+        </Text>
         <View style={styles.sectionCard}>
           <CuisineSelector
             selectedCuisines={(profile.preferredCuisines || []) as Cuisine[]}
@@ -244,25 +253,25 @@ export const DietaryProfileScreen: React.FC = () => {
           />
 
           <StringArrayManager
-            title="Favorite Ingredients"
+            title={t('dietary.favoriteIngredients')}
             items={profile.favoriteIngredients}
             onAdd={handleAddFavoriteIngredient}
             onRemove={handleRemoveFavoriteIngredient}
-            inputPlaceholder="e.g., Garlic, Basil, Chicken"
-            addButtonLabel="Add Favorite Ingredient"
-            emptyMessage="No favorite ingredients added yet"
-            containerStyle={favoriteContainerStyle}
+            inputPlaceholder={t('dietary.favoriteIngredientsPlaceholder')}
+            addButtonLabel={t('dietary.favoriteIngredientsAdd')}
+            emptyMessage={t('dietary.favoriteIngredientsEmpty')}
+            containerStyle={styles.ingredientsContainer}
           />
 
           <StringArrayManager
-            title="Disliked Ingredients"
+            title={t('dietary.dislikedIngredients')}
             items={profile.dislikedIngredients}
             onAdd={handleAddDislikedIngredient}
             onRemove={handleRemoveDislikedIngredient}
-            inputPlaceholder="e.g., Cilantro, Mushrooms, Olives"
-            addButtonLabel="Add Disliked Ingredient"
-            emptyMessage="No disliked ingredients added yet"
-            containerStyle={dislikedContainerStyle}
+            inputPlaceholder={t('dietary.dislikedIngredientsPlaceholder')}
+            addButtonLabel={t('dietary.dislikedIngredientsAdd')}
+            emptyMessage={t('dietary.dislikedIngredientsEmpty')}
+            containerStyle={styles.ingredientsContainer}
           />
         </View>
       </Animated.View>
@@ -273,29 +282,27 @@ export const DietaryProfileScreen: React.FC = () => {
         layout={LinearTransition}
         style={styles.sectionContainer}
       >
-        <Text style={commonStyles.subtitle}>Nutrition Goals</Text>
+        <Text style={commonStyles.subtitle}>{t('dietary.nutritionGoals')}</Text>
         <View style={styles.sectionCard}>
           <Pressable
             style={({ pressed }) => pressed && styles.pressed}
             onPress={handleOpenMeals}
           >
-            <InfoRow
-              label="Meals per day"
+            <ThemedInfoRow
+              label={t('dietary.mealsPerDay')}
               value={profile.mealsPerDay}
               icon="create-outline"
-              iconColor={theme.colors.primary}
             />
           </Pressable>
           <Pressable
             style={({ pressed }) => pressed && styles.pressed}
             onPress={handleOpenSnacks}
           >
-            <InfoRow
-              label="Snacks per day"
+            <ThemedInfoRow
+              label={t('dietary.snacksPerDay')}
               value={profile.snacksPerDay}
               showBorder={false}
               icon="create-outline"
-              iconColor={theme.colors.primary}
             />
           </Pressable>
         </View>
@@ -309,7 +316,9 @@ export const DietaryProfileScreen: React.FC = () => {
       >
         <View style={styles.sectionCard}>
           <View style={styles.sectionHeaderRow}>
-            <Text style={commonStyles.subtitle}>Cooking Preferences</Text>
+            <Text style={commonStyles.subtitle}>
+              {t('dietary.cookingPreferences')}
+            </Text>
             <Pressable
               onPress={handleOpenCookingPrefs}
               style={({ pressed }) => [
@@ -317,33 +326,32 @@ export const DietaryProfileScreen: React.FC = () => {
                 pressed && styles.pressed,
               ]}
             >
-              <Icon
-                name="create-outline"
-                size={20}
-                color={theme.colors.primary}
-              />
+              <Icon name="create-outline" size={20} tone="primary" />
             </Pressable>
           </View>
           {!!profile.cookingSkillLevel && (
-            <InfoRow label="Skill Level" value={profile.cookingSkillLevel} />
+            <InfoRow
+              label={t('dietary.skillLevel')}
+              value={profile.cookingSkillLevel}
+            />
           )}
           {!!profile.maxPrepTimeMinutes && (
             <InfoRow
-              label="Max Prep Time"
+              label={t('dietary.maxPrepTime')}
               value={profile.maxPrepTimeMinutes}
-              unit="minutes"
+              unit={t('dietary.minutes')}
             />
           )}
           {!!profile.maxCookTimeMinutes && (
             <InfoRow
-              label="Max Cook Time"
+              label={t('dietary.maxCookTime')}
               value={profile.maxCookTimeMinutes}
-              unit="minutes"
+              unit={t('dietary.minutes')}
             />
           )}
           {!!profile.budgetPerMeal && (
             <InfoRow
-              label="Budget per Meal"
+              label={t('dietary.budgetPerMeal')}
               value={profile.budgetPerMeal}
               formatter={val => `$${val}`}
               showBorder={false}
@@ -367,7 +375,7 @@ export const DietaryProfileScreen: React.FC = () => {
           <View style={styles.sectionCard}>
             <View style={styles.sectionHeaderRow}>
               <Text style={commonStyles.subtitle}>
-                Macro Targets (Advanced)
+                {t('dietary.macroTargets')}
               </Text>
               <Pressable
                 onPress={handleOpenMacros}
@@ -376,29 +384,33 @@ export const DietaryProfileScreen: React.FC = () => {
                   pressed && styles.pressed,
                 ]}
               >
-                <Icon
-                  name="create-outline"
-                  size={20}
-                  color={theme.colors.primary}
-                />
+                <Icon name="create-outline" size={20} tone="primary" />
               </Pressable>
             </View>
             {!!profile.calorieTarget && (
               <InfoRow
-                label="Daily Calories"
+                label={t('dietary.dailyCalories')}
                 value={profile.calorieTarget}
                 unit="kcal"
               />
             )}
             {!!profile.proteinTarget && (
-              <InfoRow label="Protein" value={profile.proteinTarget} unit="g" />
+              <InfoRow
+                label={t('dietary.protein')}
+                value={profile.proteinTarget}
+                unit="g"
+              />
             )}
             {!!profile.carbsTarget && (
-              <InfoRow label="Carbs" value={profile.carbsTarget} unit="g" />
+              <InfoRow
+                label={t('dietary.carbs')}
+                value={profile.carbsTarget}
+                unit="g"
+              />
             )}
             {!!profile.fatTarget && (
               <InfoRow
-                label="Fat"
+                label={t('dietary.fat')}
                 value={profile.fatTarget}
                 unit="g"
                 showBorder={false}
@@ -411,24 +423,24 @@ export const DietaryProfileScreen: React.FC = () => {
       {/* Nutrition Goals Sheets */}
       <NumberInputSheet
         visible={editingMeals}
-        title="Meals Per Day"
+        title={t('dietary.mealsPerDayTitle')}
         value={profile.mealsPerDay}
         onSave={handleSaveMeals}
         onClose={handleCloseMeals}
         min={1}
         max={6}
-        placeholder="e.g., 3"
+        placeholder={t('dietary.mealsPlaceholder')}
       />
 
       <NumberInputSheet
         visible={editingSnacks}
-        title="Snacks Per Day"
+        title={t('dietary.snacksPerDayTitle')}
         value={profile.snacksPerDay}
         onSave={handleSaveSnacks}
         onClose={handleCloseSnacks}
         min={0}
         max={5}
-        placeholder="e.g., 2"
+        placeholder={t('dietary.snacksPlaceholder')}
       />
 
       {/* Cooking Preferences Sheet */}
@@ -485,6 +497,9 @@ const styles = StyleSheet.create(theme => ({
   },
   pressed: {
     opacity: theme.opacity.pressed,
+  },
+  ingredientsContainer: {
+    marginTop: theme.spacing.md,
   },
 }));
 

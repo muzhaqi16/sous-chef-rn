@@ -1,48 +1,29 @@
-import { renderHook } from '@testing-library/react-native';
+import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { useAddShoppingItem } from '../useAddShoppingItem';
 
-// --- Mocks ---
-
-const mockAddItemMutation = jest.fn();
 const mockHandleApolloError = jest.fn(() => ({
   message: 'Something went wrong',
 }));
 const mockCreateAddOperation = jest.fn();
 
-// Mock generated Apollo hook
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useMutation: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'AddItemToShoppingList')
-      return [mockAddItemMutation, { loading: false }];
-    return [jest.fn(), {}];
-  }),
-}));
-
-// Mock errorService
 jest.mock('#/services/errorService', () => ({
   useErrorService: () => ({
     handleApolloError: mockHandleApolloError,
   }),
 }));
 
-// Mock useCrudOperations
 jest.mock('#/hooks/utils/useCrudOperations', () => ({
   useCrudOperations: () => ({
     createAddOperation: mockCreateAddOperation,
   }),
 }));
 
-// Mock compilerSafeWrappers
 jest.mock('#/utils/compilerSafeWrappers');
 
-// Mock cache updaters
 jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => ({
   addNewItemToShoppingListCache: jest.fn(),
 }));
 
-// Mock utils
 jest.mock('../utils', () => ({
   createOptimisticShoppingListItem: jest.fn(() => ({
     tempId: 'temp-123',
@@ -65,7 +46,7 @@ describe('useAddShoppingItem', () => {
     const mockAddFn = jest.fn();
     mockCreateAddOperation.mockReturnValue(mockAddFn);
 
-    const { result } = renderHook(() =>
+    const { result } = renderHookWithApollo(() =>
       useAddShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
     );
 
@@ -75,13 +56,13 @@ describe('useAddShoppingItem', () => {
   it('configures createAddOperation with correct params', () => {
     mockCreateAddOperation.mockReturnValue(jest.fn());
 
-    renderHook(() =>
+    renderHookWithApollo(() =>
       useAddShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
     );
 
     expect(mockCreateAddOperation).toHaveBeenCalledWith(
       expect.objectContaining({
-        mutation: mockAddItemMutation,
+        mutation: expect.any(Function),
         operationName: 'Add Shopping List Item',
       }),
     );
@@ -90,7 +71,7 @@ describe('useAddShoppingItem', () => {
   it('transformInput includes shoppingListId and itemName', () => {
     mockCreateAddOperation.mockReturnValue(jest.fn());
 
-    renderHook(() =>
+    renderHookWithApollo(() =>
       useAddShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
     );
 
@@ -112,7 +93,7 @@ describe('useAddShoppingItem', () => {
   it('transformInput defaults quantity to 1 when not provided', () => {
     mockCreateAddOperation.mockReturnValue(jest.fn());
 
-    renderHook(() =>
+    renderHookWithApollo(() =>
       useAddShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
     );
 
@@ -125,7 +106,7 @@ describe('useAddShoppingItem', () => {
   it('transformInput includes optional unitName when provided', () => {
     mockCreateAddOperation.mockReturnValue(jest.fn());
 
-    renderHook(() =>
+    renderHookWithApollo(() =>
       useAddShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
     );
 
@@ -141,7 +122,7 @@ describe('useAddShoppingItem', () => {
   it('transformInput omits optional fields when empty', () => {
     mockCreateAddOperation.mockReturnValue(jest.fn());
 
-    renderHook(() =>
+    renderHookWithApollo(() =>
       useAddShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
     );
 
@@ -158,7 +139,7 @@ describe('useAddShoppingItem', () => {
   it('parentId resolver returns the listId', () => {
     mockCreateAddOperation.mockReturnValue(jest.fn());
 
-    renderHook(() =>
+    renderHookWithApollo(() =>
       useAddShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
     );
 
@@ -170,7 +151,7 @@ describe('useAddShoppingItem', () => {
   it('onSuccess extracts addItemToShoppingList from data', () => {
     mockCreateAddOperation.mockReturnValue(jest.fn());
 
-    renderHook(() =>
+    renderHookWithApollo(() =>
       useAddShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
     );
 

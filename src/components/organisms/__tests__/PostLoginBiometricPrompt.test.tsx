@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { PostLoginBiometricPrompt } from '../PostLoginBiometricPrompt';
 
 jest.mock('#utils/iconUtils', () => ({
@@ -45,9 +45,10 @@ describe('PostLoginBiometricPrompt', () => {
     expect(screen.getByText('Not now')).toBeTruthy();
   });
 
-  it('calls onComplete with false and declined when Not now is pressed', () => {
+  it('calls onComplete with false and declined when Not now is pressed', async () => {
+    const user = userEvent.setup();
     render(<PostLoginBiometricPrompt {...defaultProps} />);
-    fireEvent.press(screen.getByText('Not now'));
+    await user.press(screen.getByText('Not now'));
     expect(defaultProps.onComplete).toHaveBeenCalledWith(false, true);
   });
 

@@ -93,14 +93,15 @@ describe('settingsConfig', () => {
       expect(keys).toContain('changePassword');
     });
 
-    it('has a Theme & Language section with theme and language options', () => {
+    it('has an Appearance & Language section with appearance and language entries', () => {
       const section = PROFILE_SETTINGS_CONFIG.find(
-        s => s.title === 'Theme & Language',
+        s => s.title === 'Appearance & Language',
       );
       expect(section).toBeDefined();
-      const themeItem = section!.items.find(i => i.key === 'theme') as any;
-      expect(themeItem!.type).toBe('modal');
-      expect(themeItem!.options.length).toBe(3);
+      const appearanceItem = section!.items.find(
+        i => i.key === 'appearance',
+      ) as any;
+      expect(appearanceItem!.type).toBe('navigation');
     });
 
     it('has a logout action', () => {

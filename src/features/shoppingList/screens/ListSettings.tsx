@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Switch, ScrollView } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { View, ScrollView } from 'react-native';
+import { Pressable } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import { Icon } from '#utils/iconUtils';
+import { useTranslation } from 'react-i18next';
+import { BaseSwitch } from '#components/base/BaseSwitch';
 import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { commonStyles } from '#/styles/commonStyles';
 import { ScreenHeader } from '#components/molecules/ScreenHeader';
 import { InfoRow } from '#components/molecules/InfoRow';
@@ -66,9 +68,9 @@ export const ListSettings: React.FC<
     | undefined
   >
 > = ({ route }) => {
-  const { theme } = useUnistyles();
+  const { t } = useTranslation();
   const listId = route.params?.listId;
-  const { navigate, goBack } = useAppNavigation();
+  const { toShareList, goBack } = useAppNavigation();
   const setSelectedShoppingListId = useAppStore(
     state => state.setSelectedShoppingListId,
   );
@@ -153,7 +155,7 @@ export const ListSettings: React.FC<
       }
     },
     onError: () => {
-      toastService.error('Failed to create list');
+      toastService.error(t('shoppingListScreens.failedToCreate'));
     },
   });
 
@@ -163,7 +165,7 @@ export const ListSettings: React.FC<
 
   const handleSave = () => {
     if (!name.trim()) {
-      toastService.error('List name cannot be empty');
+      toastService.error(t('shoppingListScreens.listNameEmpty'));
       return;
     }
 
@@ -175,7 +177,7 @@ export const ListSettings: React.FC<
             variables: {
               input: {
                 name: name.trim(),
-                description: 'Created from list settings',
+                description: t('shoppingListScreens.createdFromSettings'),
                 isDefault,
                 tags: ['user-created'],
                 homeId: selectedHomeId || undefined,
@@ -195,7 +197,9 @@ export const ListSettings: React.FC<
       setSaving,
       () => {
         toastService.error(
-          listId ? 'Failed to save settings' : 'Failed to create list',
+          listId
+            ? t('shoppingListScreens.failedToSave')
+            : t('shoppingListScreens.failedToCreate'),
         );
       },
     );
@@ -204,12 +208,12 @@ export const ListSettings: React.FC<
   const handleDelete = () => {
     if (!listId) return; // Should never happen as delete button is hidden
     alertService.alert(
-      'Delete List',
-      'Are you sure you want to delete this list? This action cannot be undone.',
+      t('shoppingListScreens.deleteListConfirmTitle'),
+      t('shoppingListScreens.deleteListConfirmMessage'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('labels.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('labels.delete'),
           style: 'destructive',
           onPress: () => {
             // Register parent deletion to prevent subscription race conditions
@@ -247,18 +251,20 @@ export const ListSettings: React.FC<
 
   const handleLeaveList = () => {
     alertService.alert(
-      'Leave Shopping List',
-      `Are you sure you want to leave "${
-        name || 'this list'
-      }"? You will lose access to all shared items.`,
+      t('shoppingListScreens.leaveListTitle'),
+      t('shoppingListScreens.leaveListMessage', {
+        name: name || t('shoppingListScreens.thisList'),
+      }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('labels.cancel'), style: 'cancel' },
         {
-          text: 'Leave',
+          text: t('shoppingListScreens.leaveList'),
           style: 'destructive',
           onPress: () => {
             if (!currentUserCollaborator?.id) {
-              toastService.error('Could not determine your membership');
+              toastService.error(
+                t('shoppingListScreens.couldNotDetermineMembership'),
+              );
               return;
             }
 
@@ -272,7 +278,7 @@ export const ListSettings: React.FC<
               },
               setLeaving,
               () => {
-                toastService.error('Failed to leave list');
+                toastService.error(t('shoppingListScreens.failedToLeave'));
               },
             );
           },
@@ -285,7 +291,11 @@ export const ListSettings: React.FC<
     <View style={styles.container}>
       <ScreenHeader
         title={
-          !listId ? 'Create New List' : isOwner ? 'List Settings' : 'List Info'
+          !listId
+            ? t('shoppingListScreens.createNewList')
+            : isOwner
+            ? t('shoppingListScreens.listSettings')
+            : t('shoppingListScreens.listInfo')
         }
         onBack={goBack}
         rightElement={
@@ -296,7 +306,11 @@ export const ListSettings: React.FC<
               style={({ pressed }) => pressed && { opacity: 0.7 }}
             >
               <Text size="md" weight="semibold" tone="accent">
-                {saving ? 'Saving...' : !listId ? 'Create' : 'Save'}
+                {saving
+                  ? t('pantrySettings.saving')
+                  : !listId
+                  ? t('pantrySettings.create')
+                  : t('pantrySettings.save')}
               </Text>
             </Pressable>
           ) : undefined
@@ -309,31 +323,42 @@ export const ListSettings: React.FC<
             {/* Read-only view for collaborators */}
             <View style={commonStyles.settingsSection}>
               <Text style={commonStyles.settingsSectionTitle}>
-                List Information
+                {t('shoppingListScreens.listInformation')}
               </Text>
 
-              <InfoRow label="List Name" value={name} />
+              <InfoRow label={t('shoppingListScreens.listName')} value={name} />
 
-              <InfoRow label="Your Role" value={roleDisplay} />
+              <InfoRow
+                label={t('shoppingListScreens.yourRole')}
+                value={roleDisplay}
+              />
 
               {!!ownerInfo && (
                 <InfoRow
-                  label="Owner"
-                  value={ownerInfo.displayName || ownerInfo.email || 'Unknown'}
+                  label={t('shoppingListScreens.owner')}
+                  value={
+                    ownerInfo.displayName ||
+                    ownerInfo.email ||
+                    t('shoppingListScreens.ownerUnknown')
+                  }
                 />
               )}
 
               {!!isShared && (
                 <InfoRow
-                  label="Shared With"
-                  value={`${collaborators.length} members`}
+                  label={t('shoppingListScreens.sharedWith')}
+                  value={t('shoppingListScreens.membersCount', {
+                    count: collaborators.length,
+                  })}
                 />
               )}
             </View>
 
             {/* Leave List section for non-owner collaborators */}
             <View style={commonStyles.settingsSection}>
-              <Text style={commonStyles.settingsSectionTitle}>Leave List</Text>
+              <Text style={commonStyles.settingsSectionTitle}>
+                {t('shoppingListScreens.leaveListSection')}
+              </Text>
 
               {isHomeLinked ? (
                 <>
@@ -341,7 +366,7 @@ export const ListSettings: React.FC<
                     <Icon
                       name="log-out-outline"
                       size={20}
-                      color={theme.colors.textSecondary}
+                      tone="textSecondary"
                     />
                     <Text
                       size="md"
@@ -349,7 +374,7 @@ export const ListSettings: React.FC<
                       tone="secondary"
                       style={styles.disabledButtonText}
                     >
-                      Leave List
+                      {t('shoppingListScreens.leaveList')}
                     </Text>
                   </View>
                   <Text
@@ -357,8 +382,9 @@ export const ListSettings: React.FC<
                     tone="secondary"
                     style={styles.leaveDescription}
                   >
-                    This list is linked to the home "{shoppingList?.home?.name}
-                    ". To leave this list, you must leave the home first.
+                    {t('shoppingListScreens.cantLeaveHomeLinkedMessage', {
+                      name: shoppingList?.home?.name ?? '',
+                    })}
                   </Text>
                 </>
               ) : (
@@ -371,18 +397,16 @@ export const ListSettings: React.FC<
                     onPress={handleLeaveList}
                     disabled={leaving}
                   >
-                    <Icon
-                      name="log-out-outline"
-                      size={20}
-                      color={theme.colors.error}
-                    />
+                    <Icon name="log-out-outline" size={20} tone="error" />
                     <Text
                       size="md"
                       weight="semibold"
                       tone="error"
                       style={styles.deleteButtonText}
                     >
-                      {leaving ? 'Leaving...' : 'Leave List'}
+                      {leaving
+                        ? t('shoppingListScreens.leaving')
+                        : t('shoppingListScreens.leaveList')}
                     </Text>
                   </Pressable>
                   <Text
@@ -390,8 +414,7 @@ export const ListSettings: React.FC<
                     tone="secondary"
                     style={styles.leaveDescription}
                   >
-                    Leaving this list will remove your access to all shared
-                    items.
+                    {t('shoppingListScreens.leaveDescription')}
                   </Text>
                 </>
               )}
@@ -400,20 +423,22 @@ export const ListSettings: React.FC<
         ) : (
           // Editable view for owners
           <View style={commonStyles.settingsSection}>
-            <Text style={commonStyles.settingsSectionTitle}>General</Text>
+            <Text style={commonStyles.settingsSectionTitle}>
+              {t('shoppingListScreens.general')}
+            </Text>
 
             <BaseInput
-              label="List Name"
+              label={t('shoppingListScreens.listName')}
               value={name}
               onChangeText={setName}
-              placeholder="Enter list name"
+              placeholder={t('shoppingListScreens.listNamePlaceholder')}
             />
 
             {/* Home selector - only show for new lists */}
             {!listId && (
               <View style={commonStyles.settingsInputGroup}>
                 <Text style={commonStyles.settingsLabel}>
-                  Link to Home (Optional)
+                  {t('shoppingListScreens.linkToHome')}
                 </Text>
                 <Pressable
                   style={({ pressed }) => [
@@ -424,29 +449,23 @@ export const ListSettings: React.FC<
                 >
                   <Text size="md">
                     {homes?.find(h => h.id === selectedHomeId)?.name ||
-                      'Personal (No Home)'}
+                      t('shoppingListScreens.personalNoHome')}
                   </Text>
-                  <Icon
-                    name="chevron-down"
-                    size={20}
-                    color={theme.colors.textSecondary}
-                  />
+                  <Icon name="chevron-down" size={20} tone="textSecondary" />
                 </Pressable>
               </View>
             )}
 
             <View style={commonStyles.settingsRow}>
               <View style={commonStyles.settingsRowInfo}>
-                <Text style={commonStyles.settingsRowLabel}>Default List</Text>
+                <Text style={commonStyles.settingsRowLabel}>
+                  {t('shoppingListScreens.defaultList')}
+                </Text>
                 <Text style={commonStyles.settingsRowDescription}>
-                  Make this your default shopping list
+                  {t('shoppingListScreens.defaultListDesc')}
                 </Text>
               </View>
-              <Switch
-                value={isDefault}
-                onValueChange={setIsDefault}
-                trackColor={{ true: theme.colors.primary }}
-              />
+              <BaseSwitch value={isDefault} onValueChange={setIsDefault} />
             </View>
           </View>
         )}
@@ -454,29 +473,29 @@ export const ListSettings: React.FC<
         {/* Only show sharing section if editing existing list and user is owner */}
         {!!listId && !!isOwner && (
           <View style={commonStyles.settingsSection}>
-            <Text style={commonStyles.settingsSectionTitle}>Sharing</Text>
+            <Text style={commonStyles.settingsSectionTitle}>
+              {t('shoppingListScreens.sharing')}
+            </Text>
 
             <Pressable
               style={({ pressed }) => [
                 styles.actionRow,
                 pressed && { opacity: 0.7 },
               ]}
-              onPress={() => navigate('ShareList', { listId: listId! })}
+              onPress={() => toShareList({ listId: listId! })}
             >
-              <Icon name="person-add" size={20} color={theme.colors.primary} />
+              <Icon name="person-add" size={20} tone="primary" />
               <Text size="md" tone="accent" style={styles.actionText}>
-                Manage Members
+                {t('shoppingListScreens.manageMembers')}
               </Text>
-              <Icon
-                name="chevron-forward"
-                size={20}
-                color={theme.colors.textSecondary}
-              />
+              <Icon name="chevron-forward" size={20} tone="textSecondary" />
             </Pressable>
 
             {!!isShared && (
               <Text size="sm" tone="secondary" style={styles.sharedInfo}>
-                This list is shared with {collaborators.length} members
+                {t('shoppingListScreens.sharedWithMembers', {
+                  count: collaborators.length,
+                })}
               </Text>
             )}
           </View>
@@ -485,7 +504,9 @@ export const ListSettings: React.FC<
         {/* Only show danger zone if editing existing list and user is owner */}
         {!!listId && !!isOwner && (
           <View style={commonStyles.settingsSection}>
-            <Text style={commonStyles.settingsSectionTitle}>Danger Zone</Text>
+            <Text style={commonStyles.settingsSectionTitle}>
+              {t('shoppingListScreens.dangerZone')}
+            </Text>
 
             <Pressable
               style={({ pressed }) => [
@@ -494,14 +515,14 @@ export const ListSettings: React.FC<
               ]}
               onPress={handleDelete}
             >
-              <Icon name="trash-outline" size={20} color={theme.colors.error} />
+              <Icon name="trash-outline" size={20} tone="error" />
               <Text
                 size="md"
                 weight="semibold"
                 tone="error"
                 style={styles.deleteButtonText}
               >
-                Delete List
+                {t('shoppingListScreens.deleteList')}
               </Text>
             </Pressable>
           </View>
@@ -511,9 +532,9 @@ export const ListSettings: React.FC<
       {/* Home picker modal */}
       <ModalPicker
         visible={showHomePicker}
-        label="Select Home"
+        label={t('shoppingListScreens.selectHome')}
         options={[
-          { label: 'Personal (No Home)', value: '' },
+          { label: t('shoppingListScreens.personalNoHome'), value: '' },
           ...(homes?.map(home => ({
             label: home.name,
             value: home.id,

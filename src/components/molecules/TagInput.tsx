@@ -1,8 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Keyboard, ScrollView } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import {
+  Pressable,
+  ThemedBottomSheetTextInput,
+} from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 
@@ -23,7 +25,6 @@ export const TagInput: React.FC<TagInputProps> = ({
   maxTags = 10,
   editable = true,
 }) => {
-  const { theme } = useUnistyles();
   const [inputValue, setInputValue] = useState('');
   const [inputKey, setInputKey] = useState(0);
   const [isFocused, setIsFocused] = useState(false);
@@ -91,7 +92,7 @@ export const TagInput: React.FC<TagInputProps> = ({
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 style={({ pressed }) => pressed && styles.pressed}
               >
-                <Icon name="close" size={14} color={theme.colors.primary} />
+                <Icon name="close" size={14} tone="primary" />
               </Pressable>
             )}
           </View>
@@ -99,13 +100,12 @@ export const TagInput: React.FC<TagInputProps> = ({
 
         {/* Input field */}
         {!!editable && tags.length < maxTags && (
-          <BottomSheetTextInput
+          <ThemedBottomSheetTextInput
             key={inputKey}
             style={styles.input}
             defaultValue={inputValue}
             onChangeText={setInputValue}
             placeholder={tags.length === 0 ? placeholder : ''}
-            placeholderTextColor={theme.colors.textSecondary}
             onSubmitEditing={handleSubmit}
             onFocus={() => setIsFocused(true)}
             onBlur={() => {

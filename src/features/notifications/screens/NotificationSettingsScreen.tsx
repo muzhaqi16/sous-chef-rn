@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Platform, Linking, AppState } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import { StyleSheet } from 'react-native-unistyles';
+import { useTranslation } from 'react-i18next';
+
+type T = (key: string, opts?: Record<string, unknown>) => string;
 import { useNavigation } from '@react-navigation/native';
 import { SettingSwitch } from '#components/settings/SettingSwitch';
 import { SettingSection } from '#components/settings/SettingSection';
@@ -23,8 +26,8 @@ import { Text } from '#components/atoms/Text';
 
 interface SettingDef {
   key: keyof NotificationSettings;
-  title: string;
-  description: string;
+  titleKey: string;
+  descriptionKey: string;
   getValue?: (
     settings: NotificationSettings,
     hasPermission: boolean | null,
@@ -34,116 +37,143 @@ interface SettingDef {
 const CHANNEL_SETTINGS: SettingDef[] = [
   {
     key: 'pushEnabled',
-    title: 'Push Notifications',
-    description: 'Receive push notifications on your device',
+    titleKey: 'notifications.pushNotifications',
+    descriptionKey: 'notifications.pushNotificationsDesc',
     getValue: (settings, hasPermission) =>
       !!settings.pushEnabled && hasPermission === true,
   },
   {
     key: 'emailEnabled',
-    title: 'Email Notifications',
-    description: 'Receive notifications via email',
+    titleKey: 'notifications.emailNotifications',
+    descriptionKey: 'notifications.emailNotificationsDesc',
   },
   {
     key: 'smsEnabled',
-    title: 'SMS Notifications',
-    description: 'Receive text message notifications',
+    titleKey: 'notifications.smsNotifications',
+    descriptionKey: 'notifications.smsNotificationsDesc',
   },
 ];
 
 const PANTRY_SETTINGS: SettingDef[] = [
   {
     key: 'lowStockAlerts',
-    title: 'Low Stock Alerts',
-    description: 'Get notified when pantry items are running low',
+    titleKey: 'notifications.lowStockAlerts',
+    descriptionKey: 'notifications.lowStockAlertsDesc',
   },
   {
     key: 'pantryChanges',
-    title: 'Pantry Updates',
-    description: 'Get notified when items are added or updated',
+    titleKey: 'notifications.pantryUpdates',
+    descriptionKey: 'notifications.pantryUpdatesDesc',
   },
 ];
 
 const SHOPPING_SETTINGS: SettingDef[] = [
   {
     key: 'shoppingListUpdates',
-    title: 'List Updates',
-    description: 'Get notified when shared lists are updated',
+    titleKey: 'notifications.listUpdates',
+    descriptionKey: 'notifications.listUpdatesDesc',
   },
   {
     key: 'sharedListUpdates',
-    title: 'Shared List Updates',
-    description: 'Get notified about changes in shared lists',
+    titleKey: 'notifications.sharedListUpdates',
+    descriptionKey: 'notifications.sharedListUpdatesDesc',
   },
 ];
 
 const SOCIAL_SETTINGS: SettingDef[] = [
   {
     key: 'collaborationInvites',
-    title: 'Collaboration Invites',
-    description: 'Get notified when invited to collaborate on lists',
+    titleKey: 'notifications.collaborationInvites',
+    descriptionKey: 'notifications.collaborationInvitesDesc',
   },
   {
     key: 'homeInvites',
-    title: 'Home Invitations',
-    description: 'Get notified about invitations to join homes',
+    titleKey: 'notifications.homeInvitations',
+    descriptionKey: 'notifications.homeInvitationsDesc',
   },
 ];
 
 const RECIPE_SETTINGS: SettingDef[] = [
   {
     key: 'recipeRecommendations',
-    title: 'Recipe Recommendations',
-    description: 'Get recipe suggestions based on your pantry items',
+    titleKey: 'notifications.recipeRecommendations',
+    descriptionKey: 'notifications.recipeRecommendationsDesc',
   },
   {
     key: 'mealPlanReminders',
-    title: 'Meal Plan Reminders',
-    description: 'Get reminders about upcoming meals',
+    titleKey: 'notifications.mealPlanReminders',
+    descriptionKey: 'notifications.mealPlanRemindersDesc',
   },
   {
     key: 'cookingReminders',
-    title: 'Cooking Reminders',
-    description: "Get reminders when it's time to start cooking",
+    titleKey: 'notifications.cookingReminders',
+    descriptionKey: 'notifications.cookingRemindersDesc',
   },
 ];
 
 const DIGEST_SETTINGS: SettingDef[] = [
   {
     key: 'weeklyDigest',
-    title: 'Weekly Digest',
-    description: 'Receive a weekly summary of your pantry activity',
+    titleKey: 'notifications.weeklyDigest',
+    descriptionKey: 'notifications.weeklyDigestDesc',
   },
   {
     key: 'monthlyReport',
-    title: 'Monthly Report',
-    description: 'Receive a monthly report with insights and statistics',
+    titleKey: 'notifications.monthlyReport',
+    descriptionKey: 'notifications.monthlyReportDesc',
   },
 ];
 
 const QUIET_HOURS_SETTINGS: SettingDef[] = [
   {
     key: 'quietHoursEnabled',
-    title: 'Enable Quiet Hours',
-    description: 'Mute notifications during specified hours',
+    titleKey: 'notifications.enableQuietHours',
+    descriptionKey: 'notifications.enableQuietHoursDesc',
   },
 ];
 
-const FREQUENCY_OPTIONS = [
-  { label: 'Real-time (as items expire)', value: ExpirationFrequency.RealTime },
-  { label: 'Daily - Morning', value: ExpirationFrequency.DailyMorning },
-  { label: 'Daily - Evening', value: ExpirationFrequency.DailyEvening },
-  { label: 'Weekly Digest', value: ExpirationFrequency.WeeklyDigest },
-  { label: 'Never', value: ExpirationFrequency.Never },
+const getFrequencyOptions = (t: T) => [
+  {
+    label: t('notifications.frequencyRealTime'),
+    value: ExpirationFrequency.RealTime,
+  },
+  {
+    label: t('notifications.frequencyDailyMorning'),
+    value: ExpirationFrequency.DailyMorning,
+  },
+  {
+    label: t('notifications.frequencyDailyEvening'),
+    value: ExpirationFrequency.DailyEvening,
+  },
+  {
+    label: t('notifications.frequencyWeeklyDigest'),
+    value: ExpirationFrequency.WeeklyDigest,
+  },
+  {
+    label: t('notifications.frequencyNever'),
+    value: ExpirationFrequency.Never,
+  },
 ];
 
-const THRESHOLD_OPTIONS = [
-  { label: 'Same day (0 days)', value: '0' },
-  { label: '1 day before', value: '1' },
-  { label: '2 days before', value: '2' },
-  { label: '3 days before', value: '3' },
-  { label: '5 days before', value: '5' },
-  { label: '7 days before', value: '7' },
+const getThresholdOptions = (t: T) => [
+  { label: t('notifications.thresholdSameDay'), value: '0' },
+  { label: t('notifications.thresholdNDaysBefore', { n: 1 }), value: '1' },
+  {
+    label: t('notifications.thresholdNDaysBeforePlural', { n: 2 }),
+    value: '2',
+  },
+  {
+    label: t('notifications.thresholdNDaysBeforePlural', { n: 3 }),
+    value: '3',
+  },
+  {
+    label: t('notifications.thresholdNDaysBeforePlural', { n: 5 }),
+    value: '5',
+  },
+  {
+    label: t('notifications.thresholdNDaysBeforePlural', { n: 7 }),
+    value: '7',
+  },
 ];
 
 const renderSettings = (
@@ -155,12 +185,13 @@ const renderSettings = (
     key: keyof NotificationSettings,
     value: boolean | string | number | ExpirationFrequency,
   ) => void,
+  t: T,
 ) =>
-  defs.map(({ key, title, description, getValue }) => (
+  defs.map(({ key, titleKey, descriptionKey, getValue }) => (
     <SettingSwitch
       key={key}
-      title={title}
-      description={description}
+      title={t(titleKey)}
+      description={t(descriptionKey)}
       value={getValue ? getValue(settings, hasPermission) : !!settings[key]}
       onValueChange={v => handleSettingChange(key, v)}
       loading={updating === key}
@@ -168,7 +199,10 @@ const renderSettings = (
   ));
 
 export const NotificationSettingsScreen: React.FC = () => {
-  const navigation = useNavigation();
+  const { t } = useTranslation();
+  const FREQUENCY_OPTIONS = getFrequencyOptions(t);
+  const THRESHOLD_OPTIONS = getThresholdOptions(t);
+  const { addListener } = useNavigation();
   const [updating, setUpdating] = useState<string | null>(null);
   const [frequencyPickerVisible, setFrequencyPickerVisible] = useState(false);
   const [thresholdPickerVisible, setThresholdPickerVisible] = useState(false);
@@ -187,12 +221,12 @@ export const NotificationSettingsScreen: React.FC = () => {
 
   // Check permission status when screen comes into focus
   useEffect(() => {
-    const checkPermsOnFocus = navigation.addListener('focus', () => {
+    const checkPermsOnFocus = addListener('focus', () => {
       checkPermissions();
     });
 
     return checkPermsOnFocus;
-  }, [navigation, checkPermissions]);
+  }, [addListener, checkPermissions]);
 
   // Re-check permissions when returning from device settings (background -> active)
   useEffect(() => {
@@ -223,12 +257,12 @@ export const NotificationSettingsScreen: React.FC = () => {
 
           if (!granted) {
             alertService.alert(
-              'Notification Permission Required',
-              'To receive push notifications, you need to enable notification permissions in your device settings.\n\nWould you like to open settings now?',
+              t('notifications.permissionRequiredTitle'),
+              t('notifications.permissionRequiredMessage'),
               [
-                { text: 'Cancel', style: 'cancel' },
+                { text: t('labels.cancel'), style: 'cancel' },
                 {
-                  text: 'Open Settings',
+                  text: t('notifications.openSettings'),
                   onPress: () => {
                     if (Platform.OS === 'ios') {
                       Linking.openURL('app-settings:');
@@ -245,8 +279,8 @@ export const NotificationSettingsScreen: React.FC = () => {
           const success = await updateNotificationSetting(key, value);
           if (!success) {
             alertService.alert(
-              'Error',
-              'Failed to update settings. Please try again.',
+              t('labels.error'),
+              t('notifications.updateFailed'),
             );
           }
         },
@@ -254,8 +288,8 @@ export const NotificationSettingsScreen: React.FC = () => {
         error => {
           console.error('Error requesting notification permission:', error);
           alertService.alert(
-            'Permission Error',
-            'Failed to request notification permission. Please try again or check your device settings.',
+            t('notifications.permissionErrorTitle'),
+            t('notifications.permissionErrorMessage'),
           );
         },
       );
@@ -268,8 +302,8 @@ export const NotificationSettingsScreen: React.FC = () => {
         const success = await updateNotificationSetting(key, value);
         if (!success) {
           alertService.alert(
-            'Error',
-            'Failed to update settings. Please try again.',
+            t('labels.error'),
+            t('notifications.updateFailed'),
           );
         }
       },
@@ -279,12 +313,12 @@ export const NotificationSettingsScreen: React.FC = () => {
 
   const handleResetToDefaults = () => {
     alertService.alert(
-      'Reset to Defaults',
-      'Are you sure you want to reset all notification settings to their default values?',
+      t('settings.resetToDefaults'),
+      t('notifications.resetConfirm'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('labels.cancel'), style: 'cancel' },
         {
-          text: 'Reset',
+          text: t('settings.resetSection'),
           style: 'destructive',
           onPress: () => {
             executeRefreshWithFinally(
@@ -292,13 +326,13 @@ export const NotificationSettingsScreen: React.FC = () => {
                 const success = await resetToDefaults();
                 if (success) {
                   alertService.alert(
-                    'Success',
-                    'Settings have been reset to defaults.',
+                    t('settings.resetSuccessTitle'),
+                    t('notifications.resetSuccess'),
                   );
                 } else {
                   alertService.alert(
-                    'Error',
-                    'Failed to reset settings. Please try again.',
+                    t('labels.error'),
+                    t('notifications.resetFailed'),
                   );
                 }
               },
@@ -314,19 +348,19 @@ export const NotificationSettingsScreen: React.FC = () => {
     return (
       <View style={styles.loadingContainer}>
         <Text size="md" tone="secondary">
-          Loading settings...
+          {t('settings.loadingSettings')}
         </Text>
       </View>
     );
   }
 
   return (
-    <ProfileScreenWrapper title="Notification Settings">
+    <ProfileScreenWrapper title={t('notifications.title')}>
       {/* Quiet Hours Status */}
       {isQuietTime() && (
         <View style={styles.quietTimeAlert}>
           <Text size="sm" align="center" style={styles.quietTimeText}>
-            🌙 Quiet hours are active - notifications are muted
+            {t('notifications.quietHoursActive')}
           </Text>
         </View>
       )}
@@ -334,19 +368,19 @@ export const NotificationSettingsScreen: React.FC = () => {
       {/* Permission Status Banner */}
       {hasPermission === false && !!settings.pushEnabled && (
         <AlertBanner
-          title="Notifications Disabled"
-          subtitle="Notification permissions are not enabled. Tap to enable in settings."
+          title={t('notifications.disabledTitle')}
+          subtitle={t('notifications.disabledSubtitle')}
           icon="notifications-off"
           iconLibrary="Ionicons"
           variant="warning"
           onPress={() => {
             alertService.alert(
-              'Enable Notifications',
-              'Notification permissions are required to receive push notifications. Would you like to open settings?',
+              t('notifications.enableTitle'),
+              t('notifications.enableMessage'),
               [
-                { text: 'Cancel', style: 'cancel' },
+                { text: t('labels.cancel'), style: 'cancel' },
                 {
-                  text: 'Open Settings',
+                  text: t('notifications.openSettings'),
                   onPress: () => {
                     if (Platform.OS === 'ios') {
                       Linking.openURL('app-settings:');
@@ -362,20 +396,21 @@ export const NotificationSettingsScreen: React.FC = () => {
         />
       )}
 
-      <SettingSection title="General Notifications">
+      <SettingSection title={t('notifications.general')}>
         {renderSettings(
           CHANNEL_SETTINGS,
           settings,
           hasPermission,
           updating,
           handleSettingChange,
+          t,
         )}
       </SettingSection>
 
-      <SettingSection title="Pantry Notifications">
+      <SettingSection title={t('notifications.pantry')}>
         <SettingSwitch
-          title="Expiration Alerts"
-          description="Get notified when items are about to expire"
+          title={t('notifications.expirationAlerts')}
+          description={t('notifications.expirationAlertsDesc')}
           value={settings.expirationNotifications}
           onValueChange={value =>
             handleSettingChange('expirationNotifications', value)
@@ -390,16 +425,16 @@ export const NotificationSettingsScreen: React.FC = () => {
               onPress={() => setFrequencyPickerVisible(true)}
             >
               <Text size="sm" weight="medium" style={styles.settingLabel}>
-                Notification Frequency
+                {t('notifications.notificationFrequency')}
               </Text>
               <Text size="sm" tone="accent" style={styles.pickerValue}>
                 {FREQUENCY_OPTIONS.find(
                   o => o.value === settings.expirationNotificationFrequency,
-                )?.label ?? 'Select'}
+                )?.label ?? t('notifications.select')}
               </Text>
             </Pressable>
             <ModalPicker
-              label="Notification Frequency"
+              label={t('notifications.notificationFrequency')}
               visible={frequencyPickerVisible}
               options={FREQUENCY_OPTIONS}
               selected={settings.expirationNotificationFrequency}
@@ -415,16 +450,16 @@ export const NotificationSettingsScreen: React.FC = () => {
               onPress={() => setThresholdPickerVisible(true)}
             >
               <Text size="sm" weight="medium" style={styles.settingLabel}>
-                Alert Threshold
+                {t('notifications.alertThreshold')}
               </Text>
               <Text size="sm" tone="accent" style={styles.pickerValue}>
                 {THRESHOLD_OPTIONS.find(
                   o => o.value === String(settings.expirationDaysThreshold),
-                )?.label ?? 'Select'}
+                )?.label ?? t('notifications.select')}
               </Text>
             </Pressable>
             <ModalPicker
-              label="Alert Threshold"
+              label={t('notifications.alertThreshold')}
               visible={thresholdPickerVisible}
               options={THRESHOLD_OPTIONS}
               selected={String(settings.expirationDaysThreshold)}
@@ -443,74 +478,82 @@ export const NotificationSettingsScreen: React.FC = () => {
           hasPermission,
           updating,
           handleSettingChange,
+          t,
         )}
       </SettingSection>
 
-      <SettingSection title="Shopping List Notifications">
+      <SettingSection title={t('notifications.shopping')}>
         {renderSettings(
           SHOPPING_SETTINGS,
           settings,
           hasPermission,
           updating,
           handleSettingChange,
+          t,
         )}
       </SettingSection>
 
-      <SettingSection title="Collaboration & Home">
+      <SettingSection title={t('notifications.social')}>
         {renderSettings(
           SOCIAL_SETTINGS,
           settings,
           hasPermission,
           updating,
           handleSettingChange,
+          t,
         )}
       </SettingSection>
 
-      <SettingSection title="Recipes & Meal Planning">
+      <SettingSection title={t('notifications.recipesMealPlanning')}>
         {renderSettings(
           RECIPE_SETTINGS,
           settings,
           hasPermission,
           updating,
           handleSettingChange,
+          t,
         )}
       </SettingSection>
 
-      <SettingSection title="Digests & Reports">
+      <SettingSection title={t('notifications.digestsReports')}>
         {renderSettings(
           DIGEST_SETTINGS,
           settings,
           hasPermission,
           updating,
           handleSettingChange,
+          t,
         )}
       </SettingSection>
 
-      <SettingSection title="Quiet Hours">
+      <SettingSection title={t('notifications.quietHours')}>
         {renderSettings(
           QUIET_HOURS_SETTINGS,
           settings,
           hasPermission,
           updating,
           handleSettingChange,
+          t,
         )}
         {!!settings.quietHoursEnabled && (
           <View style={styles.quietHoursInfo}>
             <Text size="md" weight="medium" style={styles.quietHoursText}>
-              Quiet hours: {settings.quietHoursStart || '22:00'} -{' '}
-              {settings.quietHoursEnd || '08:00'}
+              {t('notifications.quietHoursLabel', {
+                start: settings.quietHoursStart || '22:00',
+                end: settings.quietHoursEnd || '08:00',
+              })}
             </Text>
             <Text size="sm" tone="secondary">
-              Notifications will be muted during these hours
+              {t('notifications.quietHoursSubtitle')}
             </Text>
           </View>
         )}
       </SettingSection>
 
-      <SettingSection title="Reset">
+      <SettingSection title={t('settings.resetSection')}>
         <SettingSwitch
-          title="Reset to Defaults"
-          description="Reset all notification settings to their default values"
+          title={t('settings.resetToDefaults')}
+          description={t('notifications.resetToDefaultsDesc')}
           value={false}
           onValueChange={handleResetToDefaults}
           loading={updating === 'reset'}

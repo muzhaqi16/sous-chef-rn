@@ -93,3 +93,8 @@ ios/tmp.xcconfig
 openspec/
 artifacts/
 e2e/artifacts/
+
+# GraphQL codegen output (regenerated in CI; schema.graphql is the source of truth and stays tracked)
+**/*.generated.ts
+src/graphql/generated/schemaTypes.ts
+src/graphql/generated/fragmentMatcher.json

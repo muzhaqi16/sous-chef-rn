@@ -37,18 +37,17 @@ jest.mock('react-native-config', () => ({
   API_URL: 'https://api.example.com/graphql',
 }));
 
-jest.mock('#/utils/environment', () => ({
-  Environment: {
-    getApiConfig: jest.fn(() => ({
-      baseUrl: 'https://api.example.com/graphql',
-    })),
-  },
-}));
+// Environment is auto-mocked via jest.setup.js; override `getApiConfig` so
+// the perf-API URL matches the assertions below.
+import { Environment } from '#/utils/environment';
 
 describe('NativePerformanceService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     observers.length = 0;
+    (Environment.getApiConfig as jest.Mock).mockReturnValue({
+      baseUrl: 'https://api.example.com/graphql',
+    });
   });
 
   afterEach(() => {

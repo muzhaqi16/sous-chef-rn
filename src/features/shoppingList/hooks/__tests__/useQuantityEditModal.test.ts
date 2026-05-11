@@ -1,19 +1,24 @@
-import { renderHook, act } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
+import {
+  recordMock,
+  renderHookWithApollo,
+} from '#/test-utils/apolloMockProvider';
+import { UpdateShoppingListItemQuantityDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useQuantityEditModal } from '../useQuantityEditModal';
 
-// --- Mocks ---
-
-const mockUpdateQuantity = jest.fn();
-
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useMutation: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'UpdateShoppingListItemQuantity')
-      return [mockUpdateQuantity, { loading: false }];
-    return [jest.fn(), {}];
-  }),
-}));
+function updateMock() {
+  return recordMock(UpdateShoppingListItemQuantityDocument, {
+    data: {
+      updateShoppingListItemQuantity: {
+        __typename: 'ShoppingListItemPayload',
+        success: true,
+        message: '',
+        code: 'SUCCESS',
+        shoppingListItem: { __typename: 'ShoppingListItem', id: 'item-1' },
+      },
+    },
+  });
+}
 
 jest.mock('#/services/telemetry', () => ({
   Telemetry: {
@@ -50,7 +55,7 @@ function createItem(overrides: Record<string, unknown> = {}) {
 
 describe('useQuantityEditModal', () => {
   it('returns initial state with modal closed', () => {
-    const { result } = renderHook(() =>
+    const { result } = renderHookWithApollo(() =>
       useQuantityEditModal({ items: [createItem()] }),
     );
 
@@ -62,7 +67,9 @@ describe('useQuantityEditModal', () => {
   it('opens modal for an item', () => {
     const items = [createItem()];
 
-    const { result } = renderHook(() => useQuantityEditModal({ items }));
+    const { result } = renderHookWithApollo(() =>
+      useQuantityEditModal({ items }),
+    );
 
     act(() => {
       result.current.openForItem('item-1');
@@ -77,7 +84,9 @@ describe('useQuantityEditModal', () => {
   it('does not open modal when item not found', () => {
     const items = [createItem()];
 
-    const { result } = renderHook(() => useQuantityEditModal({ items }));
+    const { result } = renderHookWithApollo(() =>
+      useQuantityEditModal({ items }),
+    );
 
     act(() => {
       result.current.openForItem('non-existent');
@@ -90,7 +99,9 @@ describe('useQuantityEditModal', () => {
   it('transforms item to QuantityEditItem format', () => {
     const items = [createItem()];
 
-    const { result } = renderHook(() => useQuantityEditModal({ items }));
+    const { result } = renderHookWithApollo(() =>
+      useQuantityEditModal({ items }),
+    );
 
     act(() => {
       result.current.openForItem('item-1');
@@ -109,7 +120,9 @@ describe('useQuantityEditModal', () => {
   it('includes itemUnits when unit exists', () => {
     const items = [createItem()];
 
-    const { result } = renderHook(() => useQuantityEditModal({ items }));
+    const { result } = renderHookWithApollo(() =>
+      useQuantityEditModal({ items }),
+    );
 
     act(() => {
       result.current.openForItem('item-1');
@@ -130,7 +143,9 @@ describe('useQuantityEditModal', () => {
   it('returns empty itemUnits when item has no unit', () => {
     const items = [createItem({ unit: null })];
 
-    const { result } = renderHook(() => useQuantityEditModal({ items }));
+    const { result } = renderHookWithApollo(() =>
+      useQuantityEditModal({ items }),
+    );
 
     act(() => {
       result.current.openForItem('item-1');
@@ -142,7 +157,9 @@ describe('useQuantityEditModal', () => {
   it('closes the modal', () => {
     const items = [createItem()];
 
-    const { result } = renderHook(() => useQuantityEditModal({ items }));
+    const { result } = renderHookWithApollo(() =>
+      useQuantityEditModal({ items }),
+    );
 
     act(() => {
       result.current.openForItem('item-1');
@@ -159,17 +176,13 @@ describe('useQuantityEditModal', () => {
   });
 
   it('saves quantity changes via mutation', async () => {
-    mockUpdateQuantity.mockResolvedValue({
-      data: {
-        updateShoppingListItemQuantity: {
-          shoppingListItem: { id: 'item-1' },
-        },
-      },
-    });
-
+    const m = updateMock();
     const items = [createItem()];
 
-    const { result } = renderHook(() => useQuantityEditModal({ items }));
+    const { result } = renderHookWithApollo(
+      () => useQuantityEditModal({ items }),
+      { operationMocks: [m.mock] },
+    );
 
     act(() => {
       result.current.openForItem('item-1');
@@ -179,28 +192,22 @@ describe('useQuantityEditModal', () => {
       await result.current.save('5', 'gal', 'unit-1');
     });
 
-    expect(mockUpdateQuantity).toHaveBeenCalledWith({
-      variables: {
-        itemId: 'item-1',
-        quantity: '5',
-        unitId: 'unit-1',
-        version: 3,
-      },
+    expect(m.fired).toContainEqual({
+      itemId: 'item-1',
+      quantity: '5',
+      unitId: 'unit-1',
+      version: 3,
     });
   });
 
   it('closes modal after successful save', async () => {
-    mockUpdateQuantity.mockResolvedValue({
-      data: {
-        updateShoppingListItemQuantity: {
-          shoppingListItem: { id: 'item-1' },
-        },
-      },
-    });
-
+    const m = updateMock();
     const items = [createItem()];
 
-    const { result } = renderHook(() => useQuantityEditModal({ items }));
+    const { result } = renderHookWithApollo(
+      () => useQuantityEditModal({ items }),
+      { operationMocks: [m.mock] },
+    );
 
     act(() => {
       result.current.openForItem('item-1');
@@ -215,21 +222,27 @@ describe('useQuantityEditModal', () => {
   });
 
   it('does nothing when save called without selected item', async () => {
+    const m = updateMock();
     const items = [createItem()];
 
-    const { result } = renderHook(() => useQuantityEditModal({ items }));
+    const { result } = renderHookWithApollo(
+      () => useQuantityEditModal({ items }),
+      { operationMocks: [m.mock] },
+    );
 
     await act(async () => {
       await result.current.save('5', null, null);
     });
 
-    expect(mockUpdateQuantity).not.toHaveBeenCalled();
+    expect(m.fired).toEqual([]);
   });
 
   it('defaults quantity to 0 when item.quantity is null', () => {
     const items = [createItem({ quantity: null })];
 
-    const { result } = renderHook(() => useQuantityEditModal({ items }));
+    const { result } = renderHookWithApollo(() =>
+      useQuantityEditModal({ items }),
+    );
 
     act(() => {
       result.current.openForItem('item-1');
@@ -241,7 +254,9 @@ describe('useQuantityEditModal', () => {
   it('defaults itemName to "Item" when missing', () => {
     const items = [createItem({ itemName: '' })];
 
-    const { result } = renderHook(() => useQuantityEditModal({ items }));
+    const { result } = renderHookWithApollo(() =>
+      useQuantityEditModal({ items }),
+    );
 
     act(() => {
       result.current.openForItem('item-1');
@@ -253,7 +268,9 @@ describe('useQuantityEditModal', () => {
   it('uses unitName when unit.symbol is not available', () => {
     const items = [createItem({ unit: null, unitName: 'kilogram' })];
 
-    const { result } = renderHook(() => useQuantityEditModal({ items }));
+    const { result } = renderHookWithApollo(() =>
+      useQuantityEditModal({ items }),
+    );
 
     act(() => {
       result.current.openForItem('item-1');

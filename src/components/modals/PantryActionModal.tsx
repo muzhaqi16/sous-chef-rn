@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View } from 'react-native';
-import { BottomSheetModal } from '@gorhom/bottom-sheet';
+import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { FormattedItemSubtitle } from '#components/atoms/FormattedItemSubtitle';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
@@ -135,6 +135,10 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
       : null);
   const isDualTracked =
     effectiveNetWeight != null && pantryItem?.netWeightUnit != null;
+  // When tracking unit equals net-weight unit, the tracking count is redundant
+  // (e.g. "1 g (100 g remaining)") — collapse the display to just the net weight.
+  const isSingleUnitDualTracked =
+    isDualTracked && pantryItem?.unit?.id === pantryItem?.netWeightUnit?.id;
   const hasContentUnit =
     isDualTracked &&
     pantryItem?.packageBreakdown != null &&
@@ -273,11 +277,23 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
                   {currentQuantityLabel}{' '}
                 </Text>
                 <FormattedItemSubtitle
-                  quantity={pantryItem.quantity}
-                  displayAsFraction={pantryItem.unit?.displayAsFraction}
-                  unitSymbol={pantryItem.unit?.symbol}
+                  quantity={
+                    isSingleUnitDualTracked
+                      ? effectiveNetWeight!
+                      : pantryItem.quantity
+                  }
+                  displayAsFraction={
+                    isSingleUnitDualTracked
+                      ? undefined
+                      : pantryItem.unit?.displayAsFraction
+                  }
+                  unitSymbol={
+                    isSingleUnitDualTracked
+                      ? pantryItem.netWeightUnit?.symbol
+                      : pantryItem.unit?.symbol
+                  }
                 />
-                {!!isDualTracked && (
+                {!!isDualTracked && !isSingleUnitDualTracked && (
                   <Text style={commonStyles.bottomSheetItemLabel}>
                     {' '}
                     (

@@ -14,8 +14,6 @@ import {
 import { SetDefaultHomeDocument } from '#operations/home/userSettings.generated';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import { t } from '#/i18n/t';
-
-import { MESSAGES } from '#/constants/messages';
 import { normalizeHome } from '#/utils/connectionUtils';
 import {
   createRemoveFromParentConnectionUpdater,
@@ -33,8 +31,9 @@ import {
 } from '#/utils/errors/versionConflict';
 import {
   useAppStore,
-  useSelectedHomeId,
   useHomeState,
+  useSelectedHomeId,
+  useSetSelectedPantryId,
 } from '#store/useAppStore';
 
 export interface RolePickerState {
@@ -66,7 +65,7 @@ export function useHomeDetailManagement(homeId: string) {
   // Store state and actions for managing selections after leaving
   const selectedHomeId = useSelectedHomeId();
   const { setSelectedHomeId } = useHomeState();
-  const setSelectedPantryId = useAppStore(state => state.setSelectedPantryId);
+  const setSelectedPantryId = useSetSelectedPantryId();
   const setSelectedShoppingListId = useAppStore(
     state => state.setSelectedShoppingListId,
   );
@@ -88,7 +87,7 @@ export function useHomeDetailManagement(homeId: string) {
       onError: error => {
         alertService.alert(
           'Error',
-          error.message || MESSAGES.errors.updateHomeNameFailed,
+          error.message || t('errors.updateHomeNameFailed'),
         );
       },
     },

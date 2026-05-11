@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import {
   launchCamera,
@@ -10,7 +10,7 @@ import {
   CameraOptions,
   ImageLibraryOptions,
 } from 'react-native-image-picker';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import {
   validateImageFile,
@@ -68,7 +68,6 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
   isProfile = false,
   children,
 }) => {
-  const { theme } = useUnistyles();
   const { ref: sheetRef, open: openSheet } = useBottomSheetModal();
   const {
     request: requestCamera,
@@ -188,7 +187,7 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
         onPress={showImagePicker}
         disabled={disabled}
       >
-        <Icon name="camera-outline" size={24} color={theme.colors.primary} />
+        <Icon name="camera-outline" size={24} tone="primary" />
         <Text size="base" weight="medium" tone="accent">
           Add Photo
         </Text>

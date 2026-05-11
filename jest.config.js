@@ -41,7 +41,12 @@ module.exports = {
     '/__tests__/helpers/',
     '/__tests__/__mocks__/',
     '/__tests__/setup/',
+    // Sub-agents work in `.claude/worktrees/<id>/` (git worktrees from HEAD).
+    // Without this, the host's `npm test` would walk into every worktree and
+    // run a duplicated copy of the suite per agent in flight.
+    '/\\.claude/worktrees/',
   ],
+  modulePathIgnorePatterns: ['/\\.claude/worktrees/'],
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',
     '!src/graphql/generated/**',
@@ -50,12 +55,15 @@ module.exports = {
     '!src/**/index.ts',
     '!src/types/**',
   ],
+  // Thresholds are set ~1pp below current actual coverage so they lock in
+  // existing test coverage and catch regressions, without forcing an immediate
+  // wave of test writing. Bump these as coverage rises.
   coverageThreshold: {
     global: {
-      branches: 4,
-      functions: 7,
-      lines: 9,
-      statements: 9,
+      branches: 54,
+      functions: 52,
+      lines: 72,
+      statements: 72,
     },
   },
   transformIgnorePatterns: [
@@ -72,6 +80,7 @@ module.exports = {
       'react-native-draggable-flatlist|' +
       'react-native-permissions|' +
       'react-native-vision-camera|' +
+      'react-native-vision-camera-barcode-scanner|' +
       'react-native-image-picker|' +
       'react-native-keychain|' +
       'react-native-mmkv|' +

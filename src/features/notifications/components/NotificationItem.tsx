@@ -1,13 +1,13 @@
 import React from 'react';
 import { View } from 'react-native';
 import { Icon } from '#utils/iconUtils';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { formatDistanceToNow } from 'date-fns/formatDistanceToNow';
 import { NotificationItem as NotificationType } from '#store/slices/notificationSlice';
 import { getNotificationIcon } from '#utils/notifications/notificationHelpers';
 import { safeParseDate } from '#utils/dateUtils';
 
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 
 interface NotificationItemProps {
@@ -21,8 +21,6 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
   onPress,
   onDismiss,
 }) => {
-  const { theme } = useUnistyles();
-
   const handlePress = () => {
     onPress(notification);
   };
@@ -54,11 +52,7 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
         <Icon
           name={getNotificationIcon(notification.type)}
           size={24}
-          color={
-            !notification.isRead
-              ? theme.colors.primary
-              : theme.colors.textSecondary
-          }
+          tone={!notification.isRead ? 'primary' : 'textSecondary'}
         />
       </View>
 
@@ -70,15 +64,17 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
         >
           {notification.title}
         </Text>
-        <Text
-          size="sm"
-          tone="secondary"
-          lineHeight="tight"
-          style={styles.message}
-          numberOfLines={2}
-        >
-          {notification.message}
-        </Text>
+        {!!notification.message && (
+          <Text
+            size="sm"
+            tone="secondary"
+            lineHeight="tight"
+            style={styles.message}
+            numberOfLines={2}
+          >
+            {notification.message}
+          </Text>
+        )}
         <Text size="xs" tone="tertiary">
           {formattedTimestamp}
         </Text>
@@ -93,7 +89,7 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
           onPress={handleDismiss}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Icon name="close" size={20} color={theme.colors.textTertiary} />
+          <Icon name="close" size={20} tone="textTertiary" />
         </Pressable>
       )}
     </Pressable>

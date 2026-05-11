@@ -1,25 +1,19 @@
 'use no memo';
 
-import { renderHook, act } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
+import {
+  recordMock,
+  renderHookWithApollo,
+} from '#/test-utils/apolloMockProvider';
+import {
+  CreatePantryItemDocument,
+  UpdatePantryItemDocument,
+  DeletePantryItemDocument,
+} from '#features/pantry/graphql/pantry.generated';
 import { usePantryItemMutations } from '../usePantryItemMutations';
 
 jest.mock('../../../../apollo/links/tokenScheduler');
 jest.mock('../../../../apollo/links/refreshToken');
-
-const mockCreatePantryItem = jest.fn();
-const mockUpdatePantryItem = jest.fn();
-const mockDeletePantryItem = jest.fn();
-
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useMutation: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'CreatePantryItem') return [mockCreatePantryItem, {}];
-    if (opName === 'UpdatePantryItem') return [mockUpdatePantryItem, {}];
-    if (opName === 'DeletePantryItem') return [mockDeletePantryItem, {}];
-    return [jest.fn(), {}];
-  }),
-}));
 
 jest.mock('#/services/errorService', () => ({
   useErrorService: () => ({
@@ -99,9 +93,59 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
+function createMock() {
+  return recordMock(CreatePantryItemDocument, {
+    data: {
+      createPantryItem: {
+        __typename: 'PantryItemPayload',
+        success: true,
+        message: '',
+        code: 'SUCCESS',
+        pantryItem: { __typename: 'PantryItem', id: 'new-1' },
+      },
+    },
+  });
+}
+
+function updateMock() {
+  return recordMock(UpdatePantryItemDocument, {
+    data: {
+      updatePantryItem: {
+        __typename: 'PantryItemPayload',
+        success: true,
+        message: '',
+        code: 'SUCCESS',
+        pantryItem: { __typename: 'PantryItem', id: 'item-1' },
+      },
+    },
+  });
+}
+
+function deleteMock() {
+  return recordMock(DeletePantryItemDocument, {
+    data: {
+      deletePantryItem: {
+        __typename: 'PantryItemPayload',
+        success: true,
+        message: '',
+        code: 'SUCCESS',
+        pantryItem: { __typename: 'PantryItem', id: 'item-1' },
+      },
+    },
+  });
+}
+
+function deleteErrorMock() {
+  return recordMock(DeletePantryItemDocument, {
+    error: new Error('Delete failed'),
+  });
+}
+
 describe('usePantryItemMutations', () => {
   it('returns addItem, updateItem, and removeItem', () => {
-    const { result } = renderHook(() => usePantryItemMutations(defaultOptions));
+    const { result } = renderHookWithApollo(() =>
+      usePantryItemMutations(defaultOptions),
+    );
 
     expect(typeof result.current.addItem).toBe('function');
     expect(typeof result.current.updateItem).toBe('function');
@@ -112,11 +156,12 @@ describe('usePantryItemMutations', () => {
     const {
       subscriptionService,
     } = require('#/services/subscriptions/SubscriptionService');
-    mockDeletePantryItem.mockResolvedValue({
-      data: { deletePantryItem: { pantryItem: { id: 'item-1' } } },
-    });
+    const m = deleteMock();
 
-    const { result } = renderHook(() => usePantryItemMutations(defaultOptions));
+    const { result } = renderHookWithApollo(
+      () => usePantryItemMutations(defaultOptions),
+      { operationMocks: [m.mock] },
+    );
 
     await act(async () => {
       await result.current.removeItem('item-1');
@@ -135,11 +180,12 @@ describe('usePantryItemMutations', () => {
     const {
       subscriptionService,
     } = require('#/services/subscriptions/SubscriptionService');
-    mockDeletePantryItem.mockResolvedValue({
-      data: { deletePantryItem: { pantryItem: { id: 'item-1' } } },
-    });
+    const m = deleteMock();
 
-    const { result } = renderHook(() => usePantryItemMutations(defaultOptions));
+    const { result } = renderHookWithApollo(
+      () => usePantryItemMutations(defaultOptions),
+      { operationMocks: [m.mock] },
+    );
 
     await act(async () => {
       await result.current.removeItem('item-1');
@@ -151,24 +197,33 @@ describe('usePantryItemMutations', () => {
   });
 
   it('removeItem does nothing when pantryId is undefined', async () => {
-    const { result } = renderHook(() =>
-      usePantryItemMutations({ ...defaultOptions, pantryId: undefined }),
+    const m = deleteMock();
+    const { result } = renderHookWithApollo(
+      () =>
+        usePantryItemMutations({
+          ...defaultOptions,
+          pantryId: undefined,
+        }),
+      { operationMocks: [m.mock] },
     );
 
     await act(async () => {
       await result.current.removeItem('item-1');
     });
 
-    expect(mockDeletePantryItem).not.toHaveBeenCalled();
+    expect(m.fired).toEqual([]);
   });
 
   it('removeItem unregisters pending delete on error', async () => {
     const {
       subscriptionService,
     } = require('#/services/subscriptions/SubscriptionService');
-    mockDeletePantryItem.mockRejectedValue(new Error('Delete failed'));
+    const m = deleteErrorMock();
 
-    const { result } = renderHook(() => usePantryItemMutations(defaultOptions));
+    const { result } = renderHookWithApollo(
+      () => usePantryItemMutations(defaultOptions),
+      { operationMocks: [m.mock] },
+    );
 
     await act(async () => {
       try {
@@ -184,11 +239,11 @@ describe('usePantryItemMutations', () => {
   });
 
   it('updateItem calls the update mutation via createUpdateOperation', async () => {
-    mockUpdatePantryItem.mockResolvedValue({
-      data: { updatePantryItem: { pantryItem: { id: 'item-1' } } },
-    });
-
-    const { result } = renderHook(() => usePantryItemMutations(defaultOptions));
+    const m = updateMock();
+    const { result } = renderHookWithApollo(
+      () => usePantryItemMutations(defaultOptions),
+      { operationMocks: [m.mock] },
+    );
 
     await act(async () => {
       await result.current.updateItem('item-1', {
@@ -196,16 +251,15 @@ describe('usePantryItemMutations', () => {
       } as any);
     });
 
-    // The createUpdateOperation mock calls mutation directly
-    expect(mockUpdatePantryItem).toHaveBeenCalled();
+    expect(m.fired.length).toBeGreaterThanOrEqual(1);
   });
 
   it('addItem calls createAddOperation with transformed input', async () => {
-    mockCreatePantryItem.mockResolvedValue({
-      data: { createPantryItem: { pantryItem: { id: 'new-1' } } },
-    });
-
-    const { result } = renderHook(() => usePantryItemMutations(defaultOptions));
+    const m = createMock();
+    const { result } = renderHookWithApollo(
+      () => usePantryItemMutations(defaultOptions),
+      { operationMocks: [m.mock] },
+    );
 
     await act(async () => {
       await result.current.addItem({
@@ -215,6 +269,6 @@ describe('usePantryItemMutations', () => {
       } as any);
     });
 
-    expect(mockCreatePantryItem).toHaveBeenCalled();
+    expect(m.fired.length).toBeGreaterThanOrEqual(1);
   });
 });

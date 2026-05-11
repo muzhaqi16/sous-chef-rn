@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { alertService } from '#/services/alertService';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
@@ -40,7 +41,6 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
     visible,
     onDismiss: onClose,
     snapPoints: ['65%'],
-    keyboardBehavior: 'interactive',
   });
 
   // Form state

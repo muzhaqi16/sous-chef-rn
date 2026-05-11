@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useAppStore } from '#store/useAppStore';
+import { useIsOnline } from '#store/useAppStore';
 
 export interface AutocompleteSearchConfig<TItem> {
   /** Trigger the query (lazy query call or setState for skip-based) */
@@ -66,7 +66,7 @@ export function useAutocompleteSearch<TItem>(
   const [lastResults, setLastResults] = useState<TItem[]>([]);
   const [lastFiredTerm, setLastFiredTerm] = useState('');
 
-  const isOnline = useAppStore(state => state.isOnline);
+  const isOnline = useIsOnline();
   const shouldSearch =
     searchTerm.length >= minChars && (!requiresNetwork || isOnline);
 

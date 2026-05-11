@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { Header } from '#components/molecules/Header';
-import { useUser, useAppStore } from '#store/useAppStore';
+import { useUpdateUser, useUser } from '#store/useAppStore';
 import { useMutation } from '@apollo/client/react';
 import {
   VerifyEmailDocument,
@@ -100,10 +100,9 @@ async function performVerificationImpl(
 
 export const EmailVerificationDeepLinkScreen: React.FC = () => {
   const route = useRoute();
-  const navigation = useNavigation();
-  const { theme } = useUnistyles();
+  const { goBack } = useNavigation();
   const user = useUser();
-  const updateUser = useAppStore(state => state.updateUser);
+  const updateUser = useUpdateUser();
   const toast = useToast();
 
   const { token } = (route.params ??
@@ -143,7 +142,7 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
   }, [token, verifyEmail, user, updateUser, toast]);
 
   const handleGoBack = () => {
-    navigation.goBack();
+    goBack();
   };
 
   return (
@@ -173,11 +172,7 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
         {verificationResult === 'success' && (
           <>
             <View style={styles.iconContainer}>
-              <Icon
-                name="checkmark-circle"
-                size={64}
-                color={theme.colors.success}
-              />
+              <Icon name="checkmark-circle" size={64} tone="success" />
             </View>
             <Text
               size="xl"
@@ -205,11 +200,7 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
         {verificationResult === 'error' && (
           <>
             <View style={styles.iconContainer}>
-              <Icon
-                name="close-circle-outline"
-                size={64}
-                color={theme.colors.error}
-              />
+              <Icon name="close-circle-outline" size={64} tone="error" />
             </View>
             <Text
               size="xl"
@@ -233,7 +224,7 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
               <Pressable
                 style={({ pressed }) => [
                   styles.retryButton,
-                  pressed && { opacity: theme.opacity.pressed },
+                  pressed && styles.pressed,
                 ]}
                 onPress={performVerification}
               >
@@ -286,5 +277,8 @@ const styles = StyleSheet.create(theme => ({
   },
   retryButtonText: {
     color: theme.colors.white,
+  },
+  pressed: {
+    opacity: theme.opacity.pressed,
   },
 }));

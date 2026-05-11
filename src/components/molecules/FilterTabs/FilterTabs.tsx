@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState } from 'react';
 import { View, type LayoutChangeEvent, ScrollView } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Pressable } from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { FilterTabsItem } from './FilterTabsItem';
 import type { FilterTabConfig, FilterTabsProps } from './types';
@@ -51,8 +51,6 @@ function FilterTabsComponent<T extends string = string>({
   actionButton,
   filteredTabIds,
 }: FilterTabsProps<T>): React.ReactElement {
-  const { theme } = useUnistyles();
-
   // ── Auto-scroll to keep active tab visible ──
   const scrollViewRef = useRef<ScrollView>(null);
   const cacheKey = testIDPrefix;
@@ -106,6 +104,11 @@ function FilterTabsComponent<T extends string = string>({
 
   const isCompact = variant === 'compact';
 
+  styles.useVariants({
+    compact: isCompact,
+    actionDisabled: actionButton?.disabled ?? false,
+  });
+
   return (
     <View style={styles.container}>
       <ScrollView
@@ -137,32 +140,19 @@ function FilterTabsComponent<T extends string = string>({
           <Pressable
             onPress={actionButton.disabled ? undefined : actionButton.onPress}
             testID={actionButton.testID || `${testIDPrefix}-action`}
-            style={[
-              styles.tab,
-              isCompact && styles.tabCompact,
-              { backgroundColor: theme.colors.filterTab.inactiveBg },
-              actionButton.disabled && { opacity: 0.4 },
-            ]}
+            style={styles.tab}
             disabled={actionButton.disabled}
           >
             {!!actionButton.icon && (
               <Icon
                 name={actionButton.icon}
                 size={isCompact ? 14 : 16}
-                color={theme.colors.primary}
+                tone="primary"
                 library={actionButton.iconLibrary}
               />
             )}
             {!!actionButton.label && (
-              <Text
-                style={[
-                  styles.tabLabel,
-                  isCompact && styles.tabLabelCompact,
-                  { color: theme.colors.primary },
-                ]}
-              >
-                {actionButton.label}
-              </Text>
+              <Text style={styles.tabLabel}>{actionButton.label}</Text>
             )}
           </Pressable>
         )}
@@ -195,18 +185,29 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.sm,
     borderRadius: theme.radii.xl,
     gap: theme.spacing.xs + 2,
-  },
-  tabCompact: {
-    paddingHorizontal: theme.spacing.sm + 2,
-    paddingVertical: theme.spacing.xs + 2,
-    borderRadius: theme.radii.lg,
-    gap: theme.spacing.xs,
+    backgroundColor: theme.colors.filterTab.inactiveBg,
+    variants: {
+      compact: {
+        true: {
+          paddingHorizontal: theme.spacing.sm + 2,
+          paddingVertical: theme.spacing.xs + 2,
+          borderRadius: theme.radii.lg,
+          gap: theme.spacing.xs,
+        },
+      },
+      actionDisabled: {
+        true: { opacity: 0.4 },
+      },
+    },
   },
   tabLabel: {
     fontSize: theme.typography.fontSize.sm - 1,
     fontWeight: theme.fonts.weight.semibold,
-  },
-  tabLabelCompact: {
-    fontSize: theme.typography.fontSize.xs,
+    color: theme.colors.primary,
+    variants: {
+      compact: {
+        true: { fontSize: theme.typography.fontSize.xs },
+      },
+    },
   },
 }));

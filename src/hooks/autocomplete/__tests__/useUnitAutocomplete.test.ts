@@ -1,4 +1,5 @@
-import { renderHook, act } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
+import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { useUnitAutocomplete, UnitItem } from '../useUnitAutocomplete';
 
 const mockCachedUnits: UnitItem[] = [
@@ -12,80 +13,87 @@ const mockCachedUnits: UnitItem[] = [
 let mockIsOnline = true;
 const mockSetCachedUnits = jest.fn();
 const mockSetLastUnitsFetchedAt = jest.fn();
-jest.mock('#store/useAppStore', () => ({
-  useAppStore: (selector: (state: any) => any) =>
-    selector({
-      isOnline: mockIsOnline,
-      cachedUnits: mockCachedUnits,
-      setCachedUnits: mockSetCachedUnits,
-      lastUnitsFetchedAt: Date.now(), // Fresh cache to skip preload in tests
-      setLastUnitsFetchedAt: mockSetLastUnitsFetchedAt,
-    }),
-}));
+jest.mock('#store/useAppStore', () => {
+  const getState = () => ({
+    isOnline: mockIsOnline,
+    cachedUnits: mockCachedUnits,
+    setCachedUnits: mockSetCachedUnits,
+    lastUnitsFetchedAt: Date.now(),
+    setLastUnitsFetchedAt: mockSetLastUnitsFetchedAt,
+  });
+  return {
+    useAppStore: (selector: (state: any) => any) => selector(getState()),
+    useIsOnline: () => (s => s.isOnline)(getState()),
+  };
+});
 
 jest.mock('../../../apollo/links/tokenScheduler');
 jest.mock('../../../apollo/links/refreshToken');
-
-const mockSearchUnitsData = { searchUnits: [] as UnitItem[] };
-const mockUseSearchUnitsQuery = jest.fn<any, [any]>(() => ({
-  data: mockSearchUnitsData,
-  loading: false,
-}));
-
-const mockFetchCommonUnits = jest.fn().mockResolvedValue({ data: null });
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useQuery: jest.fn((doc: any, options: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'SearchUnits') return mockUseSearchUnitsQuery(options);
-    return { data: undefined, loading: false, error: undefined };
-  }),
-  useLazyQuery: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'GetCommonUnits') return [mockFetchCommonUnits, {}];
-    return { data: undefined, loading: false, error: undefined };
-  }),
-}));
 
 beforeEach(() => {
   jest.clearAllMocks();
   jest.useFakeTimers();
   mockIsOnline = true;
-  mockSearchUnitsData.searchUnits = [];
 });
 
 afterEach(() => {
   jest.useRealTimers();
 });
 
+/**
+ * Per CLAUDE.md "Apollo Test Patterns": tests assert local-state behavior;
+ * the SearchUnits query is gated by `skip` and localFirst, so most paths
+ * never hit the network. Schema-driven `mocks` returning empty searchUnits
+ * matches the original mock behavior without operation-name plumbing.
+ */
+const apolloMocks = {
+  mocks: {
+    Query: () => ({
+      searchUnits: [],
+      units: [],
+    }),
+  },
+};
+
 describe('useUnitAutocomplete', () => {
   it('returns cached units as displayItems initially', () => {
-    const { result } = renderHook(() => useUnitAutocomplete());
+    const { result } = renderHookWithApollo(
+      () => useUnitAutocomplete(),
+      apolloMocks,
+    );
 
     expect(result.current.displayItems).toEqual(mockCachedUnits);
   });
 
   it('returns empty searchTerm initially', () => {
-    const { result } = renderHook(() => useUnitAutocomplete());
+    const { result } = renderHookWithApollo(
+      () => useUnitAutocomplete(),
+      apolloMocks,
+    );
 
     expect(result.current.searchTerm).toBe('');
   });
 
   it('filters cached units locally when typing a short term (below minChars)', () => {
-    const { result } = renderHook(() => useUnitAutocomplete());
+    const { result } = renderHookWithApollo(
+      () => useUnitAutocomplete(),
+      apolloMocks,
+    );
 
     act(() => {
       result.current.handleSearchTermChange('c');
     });
 
-    // 'c' is below minChars=2 but filterFallback runs for partial match
     const names = result.current.displayItems.map(i => i.name);
     expect(names).toContain('Cup');
     expect(names).toContain('Ounce');
   });
 
   it('uses local-first search: matches cached units before API for terms >= minChars', () => {
-    const { result } = renderHook(() => useUnitAutocomplete());
+    const { result } = renderHookWithApollo(
+      () => useUnitAutocomplete(),
+      apolloMocks,
+    );
 
     act(() => {
       result.current.handleSearchTermChange('cup');
@@ -95,21 +103,25 @@ describe('useUnitAutocomplete', () => {
       jest.advanceTimersByTime(500);
     });
 
-    // 'cup' matches locally in cachedUnits, so API should not be triggered
-    // displayItems should contain the local match
     expect(result.current.displayItems).toEqual([
       { id: 'u1', name: 'Cup', symbol: 'cup' },
     ]);
   });
 
   it('shows all cached units when searchTerm is empty', () => {
-    const { result } = renderHook(() => useUnitAutocomplete());
+    const { result } = renderHookWithApollo(
+      () => useUnitAutocomplete(),
+      apolloMocks,
+    );
 
     expect(result.current.displayItems).toHaveLength(5);
   });
 
   it('resets searchTerm and displayItems on reset', () => {
-    const { result } = renderHook(() => useUnitAutocomplete());
+    const { result } = renderHookWithApollo(
+      () => useUnitAutocomplete(),
+      apolloMocks,
+    );
 
     act(() => {
       result.current.handleSearchTermChange('gram');
@@ -124,7 +136,10 @@ describe('useUnitAutocomplete', () => {
   });
 
   it('filters by symbol match', () => {
-    const { result } = renderHook(() => useUnitAutocomplete());
+    const { result } = renderHookWithApollo(
+      () => useUnitAutocomplete(),
+      apolloMocks,
+    );
 
     act(() => {
       result.current.handleSearchTermChange('tbsp');
@@ -135,15 +150,19 @@ describe('useUnitAutocomplete', () => {
   });
 
   it('returns isOnline from the store', () => {
-    const { result } = renderHook(() => useUnitAutocomplete());
+    const { result } = renderHookWithApollo(
+      () => useUnitAutocomplete(),
+      apolloMocks,
+    );
 
     expect(result.current.isOnline).toBe(true);
-
-    // We can't change mockIsOnline mid-render easily, but initial value is checked
   });
 
   it('sets shouldSearch to true when searchTerm meets minChars and is online', () => {
-    const { result } = renderHook(() => useUnitAutocomplete());
+    const { result } = renderHookWithApollo(
+      () => useUnitAutocomplete(),
+      apolloMocks,
+    );
 
     act(() => {
       result.current.handleSearchTermChange('oz');
@@ -153,7 +172,10 @@ describe('useUnitAutocomplete', () => {
   });
 
   it('returns isLoading false when query is not loading', () => {
-    const { result } = renderHook(() => useUnitAutocomplete());
+    const { result } = renderHookWithApollo(
+      () => useUnitAutocomplete(),
+      apolloMocks,
+    );
 
     expect(result.current.isLoading).toBe(false);
   });

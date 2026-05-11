@@ -20,6 +20,7 @@ jest.mock('#hooks/useStandardBottomSheet', () => ({
     insets: { top: 0, bottom: 0, left: 0, right: 0 },
     theme: {},
   }),
+  BottomSheetModal: ({ children }: any) => children,
 }));
 
 describe('BottomSheetAction', () => {

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { commonStyles } from '#/styles/commonStyles';
 import { CachedImage } from '#components/atoms/CachedImage';
@@ -13,24 +13,26 @@ import { Text } from '#components/atoms/Text';
 const ImageSlot: React.FC<{ imageUrl: string; dimmed: boolean }> = ({
   imageUrl,
   dimmed,
-}) => (
-  <View
-    style={[
-      commonStyles.listItemImageContainerCompact,
-      styles.imageContainer,
-      dimmed && styles.dimmed,
-    ]}
-  >
-    <CachedImage
-      uri={imageUrl}
-      style={commonStyles.listItemImageCompact}
-      displaySize={48}
-    />
-  </View>
-);
+}) => {
+  styles.useVariants({ dimmed });
+  return (
+    <View
+      style={[
+        commonStyles.listItemImageContainerCompact,
+        styles.imageContainer,
+      ]}
+    >
+      <CachedImage
+        uri={imageUrl}
+        style={commonStyles.listItemImageCompact}
+        displaySize={48}
+      />
+    </View>
+  );
+};
 
 /**
- * Themed slot — needs useUnistyles for dynamic backgroundColor and icon colors
+ * Themed slot — backgroundColor driven via variants, icon via local Icon tone
  */
 const ThemedSlot: React.FC<CardLeftSlotProps> = ({
   type,
@@ -42,27 +44,10 @@ const ThemedSlot: React.FC<CardLeftSlotProps> = ({
   dimmed = false,
   children,
 }) => {
-  const { theme } = useUnistyles();
-
-  const getBackgroundColor = (): string => {
-    if (backgroundColor) return backgroundColor;
-
-    switch (variant) {
-      case 'warning':
-        return theme.colors.warning + '20';
-      case 'expired':
-        return theme.colors.expiration.expiredIconBg;
-      default:
-        return theme.colors.surfaceVariant;
-    }
-  };
+  styles.useVariants({ variant, dimmed });
 
   if (type === 'custom' && children) {
-    return (
-      <View style={[styles.container, dimmed && styles.dimmed]}>
-        {children}
-      </View>
-    );
+    return <View style={styles.container}>{children}</View>;
   }
 
   if (type === 'icon' && icon) {
@@ -70,16 +55,10 @@ const ThemedSlot: React.FC<CardLeftSlotProps> = ({
       <View
         style={[
           styles.slotContainer,
-          { backgroundColor: getBackgroundColor() },
-          dimmed && styles.dimmed,
+          backgroundColor ? { backgroundColor } : undefined,
         ]}
       >
-        <Icon
-          name={icon}
-          size={theme.sizes.icon.md}
-          color={theme.colors.textPrimary}
-          library={iconLibrary}
-        />
+        <Icon name={icon} size={24} tone="textPrimary" library={iconLibrary} />
       </View>
     );
   }
@@ -89,8 +68,7 @@ const ThemedSlot: React.FC<CardLeftSlotProps> = ({
     <View
       style={[
         styles.slotContainer,
-        { backgroundColor: getBackgroundColor() },
-        dimmed && styles.dimmed,
+        backgroundColor ? { backgroundColor } : undefined,
       ]}
     >
       <Text size="xl">{emoji || '📦'}</Text>
@@ -115,9 +93,20 @@ export const CardLeftSlot: React.FC<CardLeftSlotProps> = props => {
 };
 
 const styles = StyleSheet.create(theme => ({
-  container: {},
+  container: {
+    variants: {
+      dimmed: {
+        true: { opacity: 0.5 },
+      },
+    },
+  },
   imageContainer: {
     overflow: 'hidden',
+    variants: {
+      dimmed: {
+        true: { opacity: 0.5 },
+      },
+    },
   },
   slotContainer: {
     width: theme.sizes.avatar.md,
@@ -126,8 +115,18 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: theme.spacing['3'],
-  },
-  dimmed: {
-    opacity: 0.5,
+    backgroundColor: theme.colors.surfaceVariant,
+    variants: {
+      variant: {
+        warning: { backgroundColor: theme.colors.warning + '20' },
+        expired: { backgroundColor: theme.colors.expiration.expiredIconBg },
+        normal: { backgroundColor: theme.colors.surfaceVariant },
+        success: { backgroundColor: theme.colors.surfaceVariant },
+        dimmed: { backgroundColor: theme.colors.surfaceVariant },
+      },
+      dimmed: {
+        true: { opacity: 0.5 },
+      },
+    },
   },
 }));

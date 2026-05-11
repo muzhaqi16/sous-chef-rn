@@ -3,6 +3,7 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
 import { StorageLocationSheet } from '../../../../src/components/modals/StorageLocationSheet/StorageLocationSheet';
+import { StorageType } from '../../../../src/graphql/generated/schemaTypes';
 
 jest.mock('../../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../../src/apollo/links/refreshToken');
@@ -12,15 +13,8 @@ jest.mock('../../../../src/hooks/useStandardBottomSheet', () => ({
     ref: { current: null },
     modalProps: {},
     contentContainerStyle: {},
-    theme: {
-      colors: {
-        textPrimary: '#000',
-        textSecondary: '#666',
-        primary: '#007AFF',
-        border: '#ddd',
-      },
-    },
   }),
+  BottomSheetModal: ({ children }: any) => children,
 }));
 jest.mock('../../../../src/components/organisms/storageLocation/StorageLocationForm', () => {
   const { forwardRef } = require('react');
@@ -51,7 +45,7 @@ describe('StorageLocationSheet', () => {
     const { getByText } = render(
       <StorageLocationSheet
         {...defaultProps}
-        initialData={{ id: '1', name: 'Fridge', type: 'REFRIGERATOR' }}
+        initialData={{ id: '1', name: 'Fridge', type: StorageType.Refrigerator }}
       />,
     );
     expect(getByText('Edit Storage Location')).toBeTruthy();

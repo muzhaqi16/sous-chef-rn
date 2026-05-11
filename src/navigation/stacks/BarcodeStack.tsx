@@ -25,7 +25,14 @@ export const BarcodeStack = createNativeStackNavigator({
     headerShown: false,
     presentation: 'modal',
     contentStyle: { backgroundColor: theme.colors.background },
+    inactiveBehavior: 'none',
   }),
+  // NOTE on screen freezing: vision-camera screens (BarcodeScanner,
+  // IdentifyItem) would benefit from `inactiveBehavior: 'pause'` to release
+  // camera/ML resources when blurred, but per-screen pause re-introduces the
+  // Unistyles ShadowTree bug that the navigator-level `inactiveBehavior:
+  // 'none'` was set to avoid. Camera lifecycle is instead managed inside the
+  // screens via useFocusEffect → camera.unmountOnBlur.
   screens: {
     BarcodeScanner: createNativeStackScreen({
       screen: BarcodeScannerScreen,

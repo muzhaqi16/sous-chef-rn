@@ -1,10 +1,12 @@
 import React, { useRef } from 'react';
 import { View, ActivityIndicator } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Pressable, ThemedIcon } from '#components/atoms/themedComponents';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { Icon, IconName, IconLibrary } from '#utils/iconUtils';
 import { commonStyles } from '#/styles/commonStyles';
 import { Text } from '#components/atoms/Text';
+
+const ThemedActivityIndicator = withUnistyles(ActivityIndicator);
 
 // ============================================
 // Types
@@ -26,6 +28,38 @@ export type ActionVariant =
  * Header preset variants for common screen patterns
  */
 export type HeaderVariant = 'default' | 'detail' | 'form' | 'modal';
+
+type HeaderTheme = {
+  colors: {
+    textPrimary: string;
+    textSecondary: string;
+    primary: string;
+    success: string;
+    error: string;
+    warning: string;
+  };
+};
+
+function resolveVariantColor(
+  variant: ActionVariant = 'default',
+  t: HeaderTheme,
+): string {
+  switch (variant) {
+    case 'primary':
+      return t.colors.primary;
+    case 'secondary':
+      return t.colors.textSecondary;
+    case 'success':
+      return t.colors.success;
+    case 'error':
+      return t.colors.error;
+    case 'warning':
+      return t.colors.warning;
+    case 'default':
+    default:
+      return t.colors.textPrimary;
+  }
+}
 
 export interface HeaderAction {
   icon: IconName;
@@ -124,22 +158,7 @@ export const Header: React.FC<HeaderProps> = ({
   transparent = false,
   borderless = false,
 }) => {
-  const { theme } = useUnistyles();
-
-  // Variant color mapping
-  const getVariantColor = (
-    actionVariant: ActionVariant = 'default',
-  ): string => {
-    const colorMap: Record<ActionVariant, string> = {
-      default: theme.colors.textPrimary,
-      primary: theme.colors.primary,
-      secondary: theme.colors.textSecondary,
-      success: theme.colors.success,
-      error: theme.colors.error,
-      warning: theme.colors.warning,
-    };
-    return colorMap[actionVariant];
-  };
+  styles.useVariants({ transparent, borderless });
 
   // Apply variant presets
   const shouldCenterTitle =
@@ -150,8 +169,6 @@ export const Header: React.FC<HeaderProps> = ({
 
   // Render a single action button
   const renderAction = (action: HeaderAction, index: number) => {
-    const iconColor = action.color || getVariantColor(action.variant);
-
     const pressable = (
       <Pressable
         key={action.onMeasure ? undefined : index}
@@ -162,13 +179,23 @@ export const Header: React.FC<HeaderProps> = ({
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
         {action.loading ? (
-          <ActivityIndicator size="small" color={iconColor} />
+          <ThemedActivityIndicator
+            size="small"
+            uniProps={t => ({
+              color: action.color ?? resolveVariantColor(action.variant, t),
+            })}
+          />
         ) : (
-          <Icon
+          <ThemedIcon
             name={action.icon}
             size={action.size || 24}
-            color={action.disabled ? theme.colors.textTertiary : iconColor}
             library={action.library}
+            tone={action.disabled ? 'textTertiary' : undefined}
+            uniProps={t => ({
+              color: action.disabled
+                ? undefined
+                : action.color ?? resolveVariantColor(action.variant, t),
+            })}
           />
         )}
         {action.badge !== undefined && action.badge > 0 && (
@@ -191,13 +218,7 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <View
-      style={[
-        commonStyles.header,
-        transparent && styles.transparent,
-        borderless && styles.borderless,
-      ]}
-    >
+    <View style={[commonStyles.header, styles.headerOverrides]}>
       {/* Left side */}
       <View style={styles.actions}>
         {!!showCloseButton && (
@@ -207,7 +228,7 @@ export const Header: React.FC<HeaderProps> = ({
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             testID="header-close-button"
           >
-            <Icon name="close" size={24} color={theme.colors.textPrimary} />
+            <Icon name="close" size={24} tone="textPrimary" />
           </Pressable>
         )}
         {!!showBackButton && (
@@ -217,11 +238,7 @@ export const Header: React.FC<HeaderProps> = ({
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             testID="header-back-button"
           >
-            <Icon
-              name="arrow-back"
-              size={24}
-              color={theme.colors.textPrimary}
-            />
+            <Icon name="arrow-back" size={24} tone="textPrimary" />
           </Pressable>
         )}
         {leftActions.map(renderAction)}
@@ -253,21 +270,28 @@ export const Header: React.FC<HeaderProps> = ({
 // ============================================
 
 const styles = StyleSheet.create(theme => ({
+  headerOverrides: {
+    variants: {
+      transparent: {
+        true: { backgroundColor: 'transparent' },
+      },
+      borderless: {
+        true: { borderBottomWidth: 0 },
+      },
+    },
+  },
   title: {
     flex: 1,
     marginHorizontal: theme.spacing.sm,
   },
-
   titleSpacer: {
     flex: 1,
   },
-
   actions: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.sm,
   },
-
   action: {
     padding: theme.spacing.xs,
     position: 'relative',
@@ -276,7 +300,6 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     alignItems: 'center',
   },
-
   badge: {
     position: 'absolute',
     top: -theme.spacing.xs,
@@ -288,15 +311,6 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     alignItems: 'center',
   },
-
-  transparent: {
-    backgroundColor: 'transparent',
-  },
-
-  borderless: {
-    borderBottomWidth: 0,
-  },
-
   pressed: {
     opacity: theme.opacity.pressed,
   },

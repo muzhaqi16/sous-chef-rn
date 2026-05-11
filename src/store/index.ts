@@ -37,13 +37,14 @@ import {
 enableMapSet();
 import { createAuthSlice, AuthState } from './slices/authSlice';
 import {
+  applyThemePreferenceToRuntime,
   createPreferencesSlice,
   PreferencesState,
 } from './slices/preferencesSlice';
 import {
   BarcodeScannerState,
   createBarcodeScannerSlice,
-} from '#features/barcode/store/barcodeScannerSlice';
+} from './slices/barcodeScannerSlice';
 import { createAppSlice, AppState } from './slices/appSlice';
 import {
   createNotificationSlice,
@@ -61,7 +62,11 @@ import {
   NavigationState,
 } from './slices/navigationSlice';
 import { createTelemetrySlice, TelemetryState } from './slices/telemetrySlice';
-import { createNetworkSlice, NetworkState } from './slices/networkSlice';
+import {
+  createNetworkSlice,
+  hydrateOfflineModeFromStorage,
+  NetworkState,
+} from './slices/networkSlice';
 import { zustandStorage, STORAGE_KEY } from '#/storage/mmkv';
 
 // Add reset manager interface to root state
@@ -175,8 +180,42 @@ export const useStore = create<RootState>()(
             if (error) {
               console.log('An error happened during hydration', error);
             } else {
+              // Sync the rehydrated theme preference to UnistylesRuntime
+              // BEFORE flipping `isHydrated`. This makes the persist layer
+              // the single source of truth for cold-boot theme application,
+              // so React hooks never need a side-effect to "catch up".
+              if (state?.theme) {
+                applyThemePreferenceToRuntime(state.theme);
+              }
+
+              // Sync the rehydrated UI language to i18next BEFORE flipping
+              // `isHydrated`, so the first paint already shows the user's
+              // preferred language instead of the bundled default ('en').
+              // Lazy-imported because i18n/config side-effects on load — we
+              // want to avoid pulling it into the persist closure.
+              if (state?.language && state.language !== 'en') {
+                import('#/i18n/config').then(({ getI18n }) => {
+                  void getI18n().changeLanguage(state.language);
+                });
+              }
+
               // Mark store as hydrated
               state?.setHydrated(true);
+
+              // Cold-start telemetry: time from JS bundle entry to Zustand
+              // hydration callback firing. Captures MMKV decrypt + JSON parse +
+              // store rehydrate cost. Imported lazily to avoid pulling
+              // telemetry into the persist closure during module load.
+              const startTs = (globalThis as { __APP_START_TIMESTAMP?: number })
+                .__APP_START_TIMESTAMP;
+              if (startTs) {
+                import('#services/telemetry').then(({ Telemetry }) => {
+                  Telemetry.histogram(
+                    'app_zustand_hydration_ms',
+                    Date.now() - startTs,
+                  );
+                });
+              }
 
               // Clean up orphaned notifications on app startup
               // This ensures persisted notifications are filtered correctly
@@ -188,6 +227,13 @@ export const useStore = create<RootState>()(
               // for useDefaultHome's effect (which runs after render)
               if (state?.selectedHomeId && state?.selectedPantryId) {
                 state?.setIsHomeSelectionReady(true);
+              }
+
+              // Hydrate offlineModeEnabled from MMKV. Kept outside Zustand
+              // persist (see partialize) so we can read the user's last
+              // setting before the GetUserSettings query resolves.
+              if (state?.setOfflineModeEnabled) {
+                hydrateOfflineModeFromStorage(state.setOfflineModeEnabled);
               }
             }
           };
@@ -207,7 +253,7 @@ export const useStore = create<RootState>()(
             lastOnlineTime,
             lastOfflineTime,
             needsTokenRefresh,
-            offlineModeEnabled, // Initialized from MMKV on startup, not persisted via Zustand
+            offlineModeEnabled, // Hydrated from MMKV in onRehydrateStorage; setter writes through to MMKV
 
             // UI state (temporary, session-only)
             bottomSheetVisible,

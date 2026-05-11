@@ -1,10 +1,14 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { useFragment } from '@apollo/client/react';
+import { Pressable } from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#/utils/iconUtils';
 import { BatchStatus } from '#/graphql/generated/schemaTypes';
-import { type PantryItemBatchFragment } from '#features/pantry/graphql/pantryFragments.generated';
+import {
+  PantryItemBatchFragmentDoc,
+  type PantryItemBatchFragment,
+} from '#features/pantry/graphql/pantryFragments.generated';
 import { formatQuantity } from '#/utils/formatQuantity';
 import { Text } from '#components/atoms/Text';
 
@@ -38,12 +42,22 @@ const formatDate = (dateString: string | null | undefined) => {
 };
 
 const BatchListItemComponent: React.FC<BatchListItemProps> = ({
-  batch,
+  batch: batchSource,
   unitSymbol,
   onOpen,
   onWaste,
 }) => {
-  const { theme } = useUnistyles();
+  // Per-entity cache subscription: re-renders only when this batch's
+  // PantryItemBatchFragment fields change (e.g., status, isOpened, quantity
+  // updated by openBatch / wasteBatch mutations). Falls back to the source
+  // prop on cache miss so the list cell never blanks out.
+  const fragmentResult = useFragment({
+    fragment: PantryItemBatchFragmentDoc,
+    fragmentName: 'PantryItemBatchFragment',
+    from: batchSource,
+  });
+  const batch = fragmentResult.complete ? fragmentResult.data : batchSource;
+
   const expiryInfo = getExpiryText(batch.expiresAt);
   const isActive = batch.status === BatchStatus.Active;
 
@@ -87,11 +101,7 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
               {expiryInfo.text}
             </Text>
             {!!batch.expiresAtIsManual && (
-              <Icon
-                name="lock-closed-outline"
-                size={12}
-                color={theme.colors.textTertiary}
-              />
+              <Icon name="lock-closed-outline" size={12} tone="textTertiary" />
             )}
           </View>
         ) : null}
@@ -137,11 +147,7 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
               ]}
               hitSlop={8}
             >
-              <Icon
-                name="open-outline"
-                size={18}
-                color={theme.colors.primary}
-              />
+              <Icon name="open-outline" size={18} tone="primary" />
             </Pressable>
           )}
           {!!onWaste && (
@@ -153,7 +159,7 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
               ]}
               hitSlop={8}
             >
-              <Icon name="trash-outline" size={18} color={theme.colors.error} />
+              <Icon name="trash-outline" size={18} tone="error" />
             </Pressable>
           )}
         </View>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { useForm } from 'react-hook-form';
 import { AuthFormTemplate } from '../AuthFormTemplate';
 
@@ -99,11 +99,12 @@ describe('AuthFormTemplate', () => {
     expect(screen.getByText('Password')).toBeTruthy();
   });
 
-  it('renders back button when onBackPress is provided', () => {
+  it('renders back button when onBackPress is provided', async () => {
+    const user = userEvent.setup();
     const onBackPress = jest.fn();
     render(<Wrapper onBackPress={onBackPress} />);
     expect(screen.getByTestId('back-button')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('back-button'));
+    await user.press(screen.getByTestId('back-button'));
     expect(onBackPress).toHaveBeenCalledTimes(1);
   });
 
@@ -126,7 +127,8 @@ describe('AuthFormTemplate', () => {
     expect(screen.getByText('Sign Up')).toBeTruthy();
   });
 
-  it('renders link when linkText and onLinkPress provided', () => {
+  it('renders link when linkText and onLinkPress provided', async () => {
+    const user = userEvent.setup();
     const onLinkPress = jest.fn();
     render(
       <Wrapper
@@ -136,7 +138,7 @@ describe('AuthFormTemplate', () => {
       />,
     );
     expect(screen.getByText('Forgot Password?')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('link'));
+    await user.press(screen.getByTestId('link'));
     expect(onLinkPress).toHaveBeenCalledTimes(1);
   });
 });

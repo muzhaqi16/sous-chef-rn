@@ -13,7 +13,9 @@ export function PantryEmptyState({
   onAddItem,
   noHomeSelected,
   noHomes,
+  noPantries,
   onSelectHome,
+  onCreatePantry,
   overallItemCount,
 }: PantryEmptyStateProps) {
   if (showSkeletons) return <PantryScreenSkeleton />;
@@ -46,6 +48,23 @@ export function PantryEmptyState({
         action={
           onSelectHome
             ? { label: 'Go to My Homes', onPress: onSelectHome }
+            : undefined
+        }
+      />
+    );
+  }
+
+  if (noPantries) {
+    return (
+      <EmptyState
+        testID="pantry-empty-state"
+        icon="basket-outline"
+        title="Create a pantry"
+        description="Set up a pantry to start tracking your food"
+        style={{ minHeight: EMPTY_STATE_MIN_HEIGHT }}
+        action={
+          onCreatePantry
+            ? { label: 'Create Pantry', onPress: onCreatePantry }
             : undefined
         }
       />

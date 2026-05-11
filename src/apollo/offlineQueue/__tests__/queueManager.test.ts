@@ -54,15 +54,6 @@ jest.mock('#/utils/generateId', () => ({
 }));
 
 // Mock the logger
-jest.mock('#/utils/environment', () => ({
-  logger: {
-    info: jest.fn(),
-    debug: jest.fn(),
-    error: jest.fn(),
-    warn: jest.fn(),
-  },
-}));
-
 const mockedGetState = useStore.getState as jest.Mock;
 
 /** Build a test QueuedMutation */

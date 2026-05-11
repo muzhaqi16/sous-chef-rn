@@ -1,5 +1,5 @@
 import { jwtDecode } from 'jwt-decode';
-import { useStore } from '../../store';
+import { useStore } from '#store';
 
 interface TokenPayload {
   exp: number;

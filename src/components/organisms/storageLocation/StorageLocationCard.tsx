@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Pressable } from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { StorageLocationIcon } from '#components/atoms/StorageLocationIcon';
 import { commonStyles } from '#/styles/commonStyles';
@@ -31,8 +31,6 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
   onDelete,
   onSetDefault,
 }) => {
-  const { theme } = useUnistyles();
-
   const formatType = (type: string): string => {
     return type
       .split('_')
@@ -59,7 +57,7 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
             onPress={onPress}
             style={({ pressed }) => [
               styles.cardHeader,
-              pressed && onPress && { opacity: theme.opacity.pressed },
+              pressed && onPress && styles.pressed,
             ]}
             disabled={!onPress}
           >
@@ -114,7 +112,7 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
                 style={({ pressed }) => [
                   commonStyles.row,
                   styles.actionButton,
-                  pressed && { opacity: theme.opacity.pressed },
+                  pressed && styles.pressed,
                 ]}
                 onPress={onSetDefault}
               >
@@ -128,7 +126,7 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
               style={({ pressed }) => [
                 commonStyles.row,
                 styles.actionButton,
-                pressed && { opacity: theme.opacity.pressed },
+                pressed && styles.pressed,
               ]}
               onPress={onEdit}
             >
@@ -141,11 +139,11 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
               style={({ pressed }) => [
                 commonStyles.row,
                 styles.deleteActionButton,
-                pressed && { opacity: theme.opacity.pressed },
+                pressed && styles.pressed,
               ]}
               onPress={onDelete}
             >
-              <Icon name="trash-outline" size={18} color={theme.colors.error} />
+              <Icon name="trash-outline" size={18} tone="error" />
               <Text size="sm" weight="medium" tone="error">
                 Delete
               </Text>
@@ -224,5 +222,8 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: 'transparent',
     justifyContent: 'center',
     gap: theme.spacing.xs,
+  },
+  pressed: {
+    opacity: theme.opacity.pressed,
   },
 }));

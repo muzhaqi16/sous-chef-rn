@@ -1,7 +1,7 @@
 'use no memo';
 
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { AddItemSheet, useAddItemSheetRefs } from '../AddItemSheet';
 import { renderHook } from '@testing-library/react-native';
 import type {
@@ -280,25 +280,28 @@ describe('AddItemSheet', () => {
     expect(screen.queryByText('ADD AGAIN')).toBeNull();
   });
 
-  it('calls onAddManually with search value', () => {
+  it('calls onAddManually with search value', async () => {
+    const user = userEvent.setup();
     render(<AddItemSheet {...defaultProps} />);
 
     const addManuallyBtn = screen.getByText('Add Manually');
-    fireEvent.press(addManuallyBtn);
+    await user.press(addManuallyBtn);
 
     expect(defaultProps.onAddManually).toHaveBeenCalledWith('search value');
   });
 
-  it('calls onScanPress when scan button is pressed', () => {
+  it('calls onScanPress when scan button is pressed', async () => {
+    const user = userEvent.setup();
     render(<AddItemSheet {...defaultProps} />);
 
     const scanBtn = screen.getByText('Scan Barcode');
-    fireEvent.press(scanBtn);
+    await user.press(scanBtn);
 
     expect(defaultProps.onScanPress).toHaveBeenCalled();
   });
 
-  it('calls onQuickAddSuggestion when suggestion is pressed', () => {
+  it('calls onQuickAddSuggestion when suggestion is pressed', async () => {
+    const user = userEvent.setup();
     const item: BaseSuggestionItem = {
       id: 's1',
       itemId: 'item-1',
@@ -316,7 +319,7 @@ describe('AddItemSheet', () => {
       />,
     );
 
-    fireEvent.press(screen.getByTestId('suggestion-Milk'));
+    await user.press(screen.getByTestId('suggestion-Milk'));
     expect(defaultProps.onQuickAddSuggestion).toHaveBeenCalledWith(item);
   });
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { EmptyState } from '../EmptyState';
 
 describe('EmptyState', () => {
@@ -23,7 +23,8 @@ describe('EmptyState', () => {
     expect(screen.getByText('📦')).toBeTruthy();
   });
 
-  it('renders action button and handles press', () => {
+  it('renders action button and handles press', async () => {
+    const user = userEvent.setup();
     const mockPress = jest.fn();
     render(
       <EmptyState
@@ -32,7 +33,7 @@ describe('EmptyState', () => {
       />,
     );
     expect(screen.getByText('Add Item')).toBeTruthy();
-    fireEvent.press(screen.getByText('Add Item'));
+    await user.press(screen.getByText('Add Item'));
     expect(mockPress).toHaveBeenCalledTimes(1);
   });
 

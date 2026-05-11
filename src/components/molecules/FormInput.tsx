@@ -1,8 +1,11 @@
 import React from 'react';
-import { TextInput, TextInputProps, View, ViewStyle } from 'react-native';
-import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { TextInputProps, View, ViewStyle } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
 import { FormFieldWrapper } from '../atoms/FormFieldWrapper';
+import {
+  ThemedBottomSheetTextInput,
+  ThemedTextInput,
+} from '../atoms/themedComponents';
 import { useIsBottomSheetInput } from '#context/BottomSheetInputContext';
 
 interface FormInputProps extends Omit<TextInputProps, 'style'> {
@@ -33,8 +36,11 @@ export const FormInput: React.FC<FormInputProps> = ({
 }) => {
   const contextValue = useIsBottomSheetInput();
   const InputComponent =
-    useBottomSheetInput || contextValue ? BottomSheetTextInput : TextInput;
-  const { theme } = useUnistyles();
+    useBottomSheetInput || contextValue
+      ? ThemedBottomSheetTextInput
+      : ThemedTextInput;
+
+  styles.useVariants({ error: !!error, hasTrailing: !!trailing });
 
   // Generate accessibility label with required indicator if needed
   const inputLabel = accessibilityLabel || label;
@@ -54,13 +60,7 @@ export const FormInput: React.FC<FormInputProps> = ({
     >
       <View style={styles.inputContainer}>
         <InputComponent
-          style={[
-            styles.input,
-            error && styles.inputError,
-            !!trailing && styles.inputWithTrailing,
-            inputStyle,
-          ]}
-          placeholderTextColor={theme.colors.textSecondary}
+          style={[styles.input, inputStyle]}
           accessible={true}
           accessibilityLabel={fullLabel}
           accessibilityHint={fullHint}
@@ -88,12 +88,14 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.base,
     backgroundColor: theme.colors.surface,
     color: theme.colors.textPrimary,
-  },
-  inputWithTrailing: {
-    paddingRight: 52,
-  },
-  inputError: {
-    borderColor: theme.colors.error,
+    variants: {
+      error: {
+        true: { borderColor: theme.colors.error },
+      },
+      hasTrailing: {
+        true: { paddingRight: 52 },
+      },
+    },
   },
   trailing: {
     position: 'absolute',

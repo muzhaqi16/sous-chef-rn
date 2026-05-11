@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { IngredientMatchingSheet } from '../IngredientMatchingSheet';
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
@@ -18,6 +18,7 @@ jest.mock('#hooks/useStandardBottomSheet', () => ({
       },
     },
   })),
+  BottomSheetModal: ({ children }: any) => children,
 }));
 
 jest.mock('#components/atoms/BottomSheetHeader', () => ({
@@ -111,15 +112,17 @@ describe('IngredientMatchingSheet', () => {
     expect(screen.getByText('Confirm & Deduct (2)')).toBeTruthy();
   });
 
-  it('calls onSkip when skip is pressed', () => {
+  it('calls onSkip when skip is pressed', async () => {
+    const user = userEvent.setup();
     render(<IngredientMatchingSheet {...defaultProps} />);
-    fireEvent.press(screen.getByText('Skip Review'));
+    await user.press(screen.getByText('Skip Review'));
     expect(defaultProps.onSkip).toHaveBeenCalled();
   });
 
-  it('calls onConfirm when confirm is pressed', () => {
+  it('calls onConfirm when confirm is pressed', async () => {
+    const user = userEvent.setup();
     render(<IngredientMatchingSheet {...defaultProps} />);
-    fireEvent.press(screen.getByText('Confirm & Deduct (2)'));
+    await user.press(screen.getByText('Confirm & Deduct (2)'));
     expect(defaultProps.onConfirm).toHaveBeenCalled();
   });
 });

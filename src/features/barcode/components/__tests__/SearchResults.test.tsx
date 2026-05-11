@@ -7,18 +7,6 @@ import { renderWithProviders } from '#/test-utils/renderWithProviders';
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useMutation: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'CreatePantryItem') return [jest.fn(), { loading: false }];
-    if (opName === 'RestockPantryItem') return [jest.fn(), { loading: false }];
-    if (opName === 'AddItemToShoppingList')
-      return [jest.fn(), { loading: false }];
-    return [jest.fn(), {}];
-  }),
-}));
-
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),
 }));

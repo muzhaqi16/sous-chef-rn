@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import Animated, {
   useSharedValue,
   useAnimatedScrollHandler,
@@ -11,7 +11,7 @@ import {
   SafeAreaView,
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { ProfileHeader } from '#components/organisms/ProfileHeader';
 import { SettingsSection } from '#components/organisms/SettingsSection';
 import { useProfileData } from '#features/profile/hooks/useProfileData';
@@ -25,32 +25,44 @@ import { useEffect } from 'react';
 import { Environment } from '#/utils/environment';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { ProfileSkeleton } from '#components/base/Skeleton/ProfileSkeleton';
-import { useCanAccessDevTools } from '#/store/useAppStore';
+import { useCanAccessDevTools } from '#store/useAppStore';
 import { Text } from '#components/atoms/Text';
+
+const HEADER_TIMING = {
+  duration: 300,
+  easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+};
 
 export const ProfileScreen = () => {
   useScreenTransition('ProfileScreen');
   const canAccessDevTools = useCanAccessDevTools();
-  const { navigate, goBack } = useAppNavigation();
+  const {
+    toProfilePhotoUpload,
+    toDeleteAccount,
+    toPersonalInformation,
+    toAppearance,
+    toNotificationSettings,
+    toDietaryProfile,
+    toAppSettings,
+    toDebugInfo,
+    toPerformanceDashboard,
+    toChangePassword,
+    goBack,
+  } = useAppNavigation();
   const { profile, user, loading } = useProfileData();
   const { sections, BiometricModal } = useConfigurableSettings(profile);
   const { bottom: safeBottom } = useSafeAreaInsets();
-  const { theme } = useUnistyles();
   const actionTrayRef = useRef<ActionTrayRef>(null);
   const headerProgress = useSharedValue(0);
-  const headerTiming = {
-    duration: 300,
-    easing: Easing.bezier(0.25, 0.1, 0.25, 1),
-  };
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: event => {
       const y = event.contentOffset.y;
       // Hysteresis: wide gap (10–40px) prevents oscillation at boundary
       // < 0.5 / > 0.5 checks work during mid-animation (vs === 0/1 which miss)
       if (y > 40 && headerProgress.get() < 0.5) {
-        headerProgress.set(withTiming(1, headerTiming));
+        headerProgress.set(withTiming(1, HEADER_TIMING));
       } else if (y <= 10 && headerProgress.get() > 0.5) {
-        headerProgress.set(withTiming(0, headerTiming));
+        headerProgress.set(withTiming(0, HEADER_TIMING));
       }
     },
   });
@@ -65,7 +77,7 @@ export const ProfileScreen = () => {
 
   const handleAvatarPress = () => {
     Telemetry.trackEvent('avatar_upload_clicked', { source: 'ProfileScreen' });
-    navigate('ProfilePhotoUpload');
+    toProfilePhotoUpload();
   };
 
   const handleLogout = () => {
@@ -89,7 +101,7 @@ export const ProfileScreen = () => {
   const handleDeleteAccount = () => {
     Telemetry.trackEvent('delete_account_clicked');
     actionTrayRef.current?.close();
-    navigate('DeleteAccount');
+    toDeleteAccount();
   };
 
   const handleOverlayOpen = () => {
@@ -109,7 +121,7 @@ export const ProfileScreen = () => {
   }
   return (
     <SafeAreaView
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      style={styles.container}
       edges={['left', 'right']}
       testID="profile-screen"
     >
@@ -165,21 +177,21 @@ export const ProfileScreen = () => {
                     testID: `profile-menu-${item.key}`,
                     onPress: () => {
                       if (item.key === 'personalInformation') {
-                        navigate('PersonalInformation');
+                        toPersonalInformation();
                       } else if (item.key === 'appearance') {
-                        navigate('Appearance');
+                        toAppearance();
                       } else if (item.key === 'notifications') {
-                        navigate('NotificationSettings');
+                        toNotificationSettings();
                       } else if (item.key === 'dietaryProfile') {
-                        navigate('DietaryProfile');
+                        toDietaryProfile();
                       } else if (item.key === 'appSettings') {
-                        navigate('AppSettings');
+                        toAppSettings();
                       } else if (item.key === 'debugInfo') {
-                        navigate('DebugInfo');
+                        toDebugInfo();
                       } else if (item.key === 'performanceDashboard') {
-                        navigate('PerformanceDashboard');
+                        toPerformanceDashboard();
                       } else if (item.key === 'changePassword') {
-                        navigate('ChangePassword');
+                        toChangePassword();
                       }
                     },
                   };
@@ -201,7 +213,7 @@ export const ProfileScreen = () => {
           style={({ pressed }) => [styles.menuItem, pressed && styles.pressed]}
           onPress={handleDeleteAccount}
         >
-          <Icon name="trash-outline" size={20} color={theme.colors.error} />
+          <Icon name="trash-outline" size={20} tone="error" />
           <Text
             size="md"
             weight="semibold"

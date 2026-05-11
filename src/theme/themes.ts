@@ -25,8 +25,9 @@ export const lightTheme = {
   ...commonTheme,
   colors: {
     ...colors,
-    // Primary
-    primary: colors.jaffa[400],
+    // Primary — jaffa[500] (#f76818) is the brand orange shown in the app
+    // icon and in the AppearanceScreen "Default" swatch. Keep all three in sync.
+    primary: colors.jaffa[500],
     primaryLight: colors.jaffa[100],
     primaryDark: colors.jaffa[700],
     onPrimary: colors.neutral[0],
@@ -124,8 +125,10 @@ export const darkTheme = {
   ...commonTheme,
   colors: {
     ...colors,
-    // Primary
-    primary: colors.jaffa[400],
+    // Primary — jaffa[500] (#f76818) for brand consistency with light mode.
+    // primaryLight uses jaffa[400] @ 20% for a slightly brighter accent surface
+    // since the deeper hue can swallow itself on dark backgrounds.
+    primary: colors.jaffa[500],
     primaryLight: colors.jaffa[400] + '20',
     primaryDark: colors.jaffa[600],
     onPrimary: colors.neutral[900],

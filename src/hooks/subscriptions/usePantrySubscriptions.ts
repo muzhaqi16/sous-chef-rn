@@ -12,7 +12,11 @@
  */
 
 import { useSubscription } from '@apollo/client/react';
-import { useAppStore } from '#store/useAppStore';
+import {
+  useAppStore,
+  useIsHomeSelectionReady,
+  useSelectedPantryId,
+} from '#store/useAppStore';
 import {
   PantryChangesDocument,
   PantryAlertsDocument,
@@ -60,9 +64,8 @@ const removeFromPantryItemsConnection = createRemoveFromParentConnectionUpdater(
  */
 export function usePantrySubscriptions(userId?: string) {
   // Get selected pantry from global store
-  const selectedPantryId =
-    useAppStore(state => state.selectedPantryId) || undefined;
-  const isHomeSelectionReady = useAppStore(state => state.isHomeSelectionReady);
+  const selectedPantryId = useSelectedPantryId() || undefined;
+  const isHomeSelectionReady = useIsHomeSelectionReady();
 
   //
   // Pantry Changes Subscription (consolidated)

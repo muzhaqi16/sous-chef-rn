@@ -1,14 +1,10 @@
 import React, { useState } from 'react';
+import { Modal, View, Text, ScrollView, Pressable } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
 import {
-  Modal,
-  View,
-  Text,
-  TextInput,
-  ActivityIndicator,
-  ScrollView,
-  Pressable,
-} from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+  ThemedTextInput,
+  WhiteActivityIndicator as ThemedActivityIndicator,
+} from '#components/atoms/themedComponents';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import { useIsEffectivelyOffline } from '#hooks/settings/useOfflineMode';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
@@ -51,6 +47,49 @@ const ROLE_OPTIONS = [
   },
 ];
 
+interface RoleOptionProps {
+  role: (typeof ROLE_OPTIONS)[number];
+  selected: boolean;
+  onPress: () => void;
+  disabled: boolean;
+}
+
+const RoleOption: React.FC<RoleOptionProps> = ({
+  role,
+  selected,
+  onPress,
+  disabled,
+}) => {
+  styles.useVariants({ selected });
+  return (
+    <Pressable
+      style={({ pressed }) => [styles.roleOption, pressed && styles.pressed]}
+      onPress={onPress}
+      disabled={disabled}
+    >
+      <View style={styles.roleOptionContent}>
+        <View style={styles.roleHeader}>
+          <View style={styles.roleHeaderLeft}>
+            <Text style={styles.roleIcon}>{role.icon}</Text>
+            <Text style={styles.roleOptionLabel}>{role.label}</Text>
+          </View>
+          <View style={styles.radioContainer}>
+            <View style={styles.radioOuter}>
+              {selected ? <View style={styles.radioInner} /> : null}
+            </View>
+          </View>
+        </View>
+        <Text style={styles.roleDescription}>{role.description}</Text>
+        {!!role.warning && selected ? (
+          <Text style={styles.warningText}>
+            {'⚠️ Owners have full control'}
+          </Text>
+        ) : null}
+      </View>
+    </Pressable>
+  );
+};
+
 export const InviteUserModal: React.FC<InviteUserModalProps> = ({
   visible,
   onClose,
@@ -81,8 +120,9 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { theme } = useUnistyles();
   const isOffline = useIsEffectivelyOffline();
+
+  styles.useVariants({ hasError: !!error });
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -160,13 +200,9 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
 
             {/* Email Input */}
             <Text style={styles.label}>Email Address</Text>
-            <TextInput
-              style={[
-                styles.input,
-                error ? { borderColor: theme.colors.error } : {},
-              ]}
+            <ThemedTextInput
+              style={styles.input}
               placeholder="Enter email address"
-              placeholderTextColor={theme.colors.textSecondary}
               value={email}
               onChangeText={text => {
                 setEmail(text);
@@ -181,75 +217,24 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
             {/* Role Selection */}
             <Text style={styles.roleSectionLabel}>Select Role</Text>
             {availableRoleOptions.map(role => (
-              <Pressable
+              <RoleOption
                 key={role.value}
-                style={({ pressed }) => [
-                  styles.roleOption,
-                  { borderColor: theme.colors.border },
-                  selectedRole === role.value && {
-                    borderColor: theme.colors.primary,
-                    backgroundColor: `${theme.colors.primary}10`,
-                  },
-                  pressed && { opacity: theme.opacity.pressed },
-                ]}
+                role={role}
+                selected={selectedRole === role.value}
                 onPress={() => setSelectedRole(role.value)}
                 disabled={isSubmitting}
-              >
-                <View style={styles.roleOptionContent}>
-                  <View style={styles.roleHeader}>
-                    <View style={styles.roleHeaderLeft}>
-                      <Text style={styles.roleIcon}>{role.icon}</Text>
-                      <Text style={styles.roleOptionLabel}>{role.label}</Text>
-                    </View>
-                    <View style={styles.radioContainer}>
-                      <View
-                        style={[
-                          styles.radioOuter,
-                          { borderColor: theme.colors.border },
-                          selectedRole === role.value && {
-                            borderColor: theme.colors.primary,
-                          },
-                        ]}
-                      >
-                        {selectedRole === role.value && (
-                          <View
-                            style={[
-                              styles.radioInner,
-                              { backgroundColor: theme.colors.primary },
-                            ]}
-                          />
-                        )}
-                      </View>
-                    </View>
-                  </View>
-                  <Text style={styles.roleDescription}>{role.description}</Text>
-                  {!!role.warning && selectedRole === role.value && (
-                    <Text
-                      style={[
-                        styles.warningText,
-                        { color: theme.colors.warning },
-                      ]}
-                    >
-                      ⚠️ Owners have full control
-                    </Text>
-                  )}
-                </View>
-              </Pressable>
+              />
             ))}
 
             {/* Error Message */}
-            {error ? (
-              <Text style={[styles.errorText, { color: theme.colors.error }]}>
-                {error}
-              </Text>
-            ) : null}
+            {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
             {/* Action Buttons */}
             <View style={styles.buttonContainer}>
               <Pressable
                 style={({ pressed }) => [
                   styles.cancelButton,
-                  pressed && { opacity: theme.opacity.pressed },
+                  pressed && styles.pressed,
                 ]}
                 onPress={handleClose}
                 disabled={isSubmitting}
@@ -260,15 +245,14 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
               <Pressable
                 style={({ pressed }) => [
                   styles.submitButton,
-                  { backgroundColor: theme.colors.primary },
                   (isSubmitting || isOffline) && styles.disabledButton,
-                  pressed && { opacity: theme.opacity.pressed },
+                  pressed && styles.pressed,
                 ]}
                 onPress={handleSubmit}
                 disabled={isSubmitting || isOffline}
               >
                 {isSubmitting ? (
-                  <ActivityIndicator size="small" color={theme.colors.white} />
+                  <ThemedActivityIndicator size="small" />
                 ) : (
                   <Text style={styles.submitButtonText}>{submitText}</Text>
                 )}
@@ -319,20 +303,36 @@ const styles = StyleSheet.create(theme => ({
   },
   input: {
     borderWidth: 1,
-    borderColor: theme.colors.border,
     borderRadius: theme.radii.sm,
     padding: theme.spacing['3'],
     fontSize: theme.typography.fontSize.md,
     marginBottom: theme.spacing.sm,
     color: theme.colors.textPrimary,
     backgroundColor: theme.colors.inputBackground,
+    variants: {
+      hasError: {
+        true: { borderColor: theme.colors.error },
+        false: { borderColor: theme.colors.border },
+      },
+    },
   },
   roleOption: {
     borderWidth: 2,
     borderRadius: theme.radii.md,
     padding: theme.spacing['3'],
     marginBottom: theme.spacing['3'],
-    backgroundColor: theme.colors.inputBackground,
+    variants: {
+      selected: {
+        true: {
+          borderColor: theme.colors.primary,
+          backgroundColor: theme.colors.primary + '10',
+        },
+        false: {
+          borderColor: theme.colors.border,
+          backgroundColor: theme.colors.inputBackground,
+        },
+      },
+    },
   },
   roleOptionContent: {
     position: 'relative',
@@ -354,11 +354,18 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
+    variants: {
+      selected: {
+        true: { borderColor: theme.colors.primary },
+        false: { borderColor: theme.colors.border },
+      },
+    },
   },
   radioInner: {
     width: theme.sizes.icon.sm,
     height: theme.sizes.icon.sm,
     borderRadius: theme.radii.full,
+    backgroundColor: theme.colors.primary,
   },
   roleHeaderLeft: {
     flexDirection: 'row',
@@ -379,11 +386,13 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.xs,
     marginTop: theme.spacing.xs + 2,
     fontWeight: theme.fonts.weight.medium,
+    color: theme.colors.warning,
   },
   errorText: {
     fontSize: theme.typography.fontSize.xs,
     marginBottom: theme.spacing['3'],
     marginTop: theme.spacing.xs,
+    color: theme.colors.error,
   },
   buttonContainer: {
     flexDirection: 'row',
@@ -408,9 +417,13 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     minHeight: theme.sizes.input.md,
     marginLeft: theme.spacing.sm,
+    backgroundColor: theme.colors.primary,
   },
   disabledButton: {
     opacity: theme.opacity.disabled,
+  },
+  pressed: {
+    opacity: theme.opacity.pressed,
   },
   cancelButtonText: {
     color: theme.colors.textPrimary,

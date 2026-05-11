@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Pressable } from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
 import type { SortableListThemeColors } from '#features/shoppingList/components/SortableShoppingList/SortableListThemeContext';
 import { formatQuantity } from '#/utils/formatQuantity';
 import { Text } from '#components/atoms/Text';
@@ -13,7 +13,8 @@ interface QuantityBadgeProps {
   onPress: () => void;
   disabled?: boolean;
   isPurchased?: boolean;
-  // PERFORMANCE: Optional theme colors passed from parent to avoid useUnistyles call
+  // Optional theme override applied as inline style on top of the variant-based
+  // stylesheet defaults (the stylesheet already gives theme-reactive colors).
   themeColors?: SortableListThemeColors | null;
 }
 
@@ -37,15 +38,6 @@ export const QuantityBadge: React.FC<QuantityBadgeProps> = ({
   isPurchased = false,
   themeColors,
 }) => {
-  // PERFORMANCE: Only call useUnistyles if themeColors not provided
-  // When used in shopping list, parent provides colors to avoid repeated hook calls
-  const { theme } = useUnistyles();
-  const colors = {
-    surfaceVariant: themeColors?.surfaceVariant ?? theme.colors.surfaceVariant,
-    textPrimary: themeColors?.textPrimary ?? theme.colors.textPrimary,
-    textSecondary: themeColors?.textSecondary ?? theme.colors.textSecondary,
-  };
-
   // Prefer quantityInput (user's original input like "1/4") over formatted numeric quantity
   const formattedQuantity = quantityInput || formatQuantity(quantity);
   const accessibilityText = unit
@@ -54,6 +46,24 @@ export const QuantityBadge: React.FC<QuantityBadgeProps> = ({
 
   const isDisabled = disabled || isPurchased;
   const isInlineUnit = unit ? unit.length <= 3 : false;
+
+  styles.useVariants({
+    inline: isInlineUnit,
+    disabled: isDisabled,
+    purchased: isPurchased,
+  });
+
+  // Optional per-instance color overrides from parent (shopping list passes these
+  // via context to share a single theme read across many items).
+  const containerOverride = themeColors
+    ? { backgroundColor: themeColors.surfaceVariant }
+    : null;
+  const quantityOverride = themeColors
+    ? { color: themeColors.textPrimary }
+    : null;
+  const unitOverride = themeColors
+    ? { color: themeColors.textSecondary }
+    : null;
 
   return (
     <Pressable
@@ -64,24 +74,13 @@ export const QuantityBadge: React.FC<QuantityBadgeProps> = ({
       accessibilityHint="Opens quantity editor"
       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
     >
-      <View
-        style={[
-          styles.container,
-          { backgroundColor: colors.surfaceVariant },
-          isInlineUnit && styles.containerInline,
-          isDisabled && styles.disabled,
-        ]}
-      >
+      <View style={[styles.container, containerOverride]}>
         <Text
           size="sm"
           weight="semibold"
           align="center"
           maxFontSizeMultiplier={1.5}
-          style={[
-            styles.quantityText,
-            { color: colors.textPrimary },
-            isPurchased && styles.purchasedText,
-          ]}
+          style={[styles.quantityText, quantityOverride]}
         >
           {formattedQuantity}
         </Text>
@@ -91,11 +90,7 @@ export const QuantityBadge: React.FC<QuantityBadgeProps> = ({
             weight="medium"
             align="center"
             maxFontSizeMultiplier={1.5}
-            style={[
-              isInlineUnit ? styles.unitTextInline : styles.unitText,
-              { color: colors.textSecondary },
-              isPurchased && styles.purchasedText,
-            ]}
+            style={[styles.unitText, unitOverride]}
           >
             {unit}
           </Text>
@@ -113,24 +108,44 @@ const styles = StyleSheet.create(theme => ({
     minWidth: 40,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  containerInline: {
-    flexDirection: 'row',
-    gap: 2,
+    backgroundColor: theme.colors.surfaceVariant,
+    variants: {
+      inline: {
+        true: { flexDirection: 'row', gap: 2 },
+        false: {},
+      },
+      disabled: {
+        true: { opacity: theme.opacity.disabled },
+        false: {},
+      },
+      purchased: {
+        true: {},
+        false: {},
+      },
+    },
   },
   quantityText: {
     lineHeight: 16,
+    color: theme.colors.textPrimary,
+    variants: {
+      purchased: {
+        true: { textDecorationLine: 'line-through' },
+        false: {},
+      },
+    },
   },
   unitText: {
     lineHeight: 13,
-  },
-  unitTextInline: {
-    lineHeight: 16,
-  },
-  disabled: {
-    opacity: theme.opacity.disabled,
-  },
-  purchasedText: {
-    textDecorationLine: 'line-through',
+    color: theme.colors.textSecondary,
+    variants: {
+      inline: {
+        true: { lineHeight: 16 },
+        false: {},
+      },
+      purchased: {
+        true: { textDecorationLine: 'line-through' },
+        false: {},
+      },
+    },
   },
 }));

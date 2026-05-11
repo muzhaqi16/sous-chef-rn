@@ -4,17 +4,21 @@ import {
   Text,
   Image,
   Dimensions,
-  ActivityIndicator,
   Platform,
   ScrollView,
+  Linking,
 } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { getWebAppUrl } from '#utils/environment';
+import {
+  Pressable,
+  PrimaryActivityIndicator,
+} from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
 import { Button } from '#components/base/Button';
 import { Link } from '#components/atoms/Link';
 import { Icon } from '#utils/iconUtils';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import {
   launchCamera,
   launchImageLibrary,
@@ -86,8 +90,7 @@ const AVATAR_SIZE = Math.min(screenWidth * 0.4, 200);
 
 export const ProfilePictureUploadScreen = () => {
   useScreenTransition('ProfilePictureUploadScreen');
-  const { navigateTo } = useAppNavigation();
-  const { theme } = useUnistyles();
+  const { toImageCrop } = useAppNavigation();
   const { uploadProfileImage, updateProfileAvatarUrl } = useImageUpload();
   const { navigateToNextStep, navigateToPreviousStep, skipToStep } =
     useOnboardingNavigation();
@@ -184,7 +187,7 @@ export const ProfilePictureUploadScreen = () => {
   const handleCropImage = () => {
     if (!selectedImage) return;
 
-    navigateTo.imageCrop({
+    toImageCrop({
       imageFile: selectedImage,
     });
   };
@@ -254,11 +257,7 @@ export const ProfilePictureUploadScreen = () => {
                 ]}
                 disabled={isUploading}
               >
-                <Icon
-                  color={theme.colors.error}
-                  name="close-circle"
-                  size={24}
-                />
+                <Icon tone="error" name="close-circle" size={24} />
               </Pressable>
             </>
           ) : hasExistingAvatar ? (
@@ -275,24 +274,16 @@ export const ProfilePictureUploadScreen = () => {
                   pressed && styles.pressed,
                 ]}
               >
-                <Icon
-                  color={theme.colors.error}
-                  name="close-circle"
-                  size={24}
-                />
+                <Icon tone="error" name="close-circle" size={24} />
               </Pressable>
             </>
           ) : profileLoading ? (
             <View style={styles.avatarPlaceholder}>
-              <ActivityIndicator size="large" color={theme.colors.primary} />
+              <PrimaryActivityIndicator size="large" />
             </View>
           ) : (
             <View style={styles.avatarPlaceholder}>
-              <Icon
-                color={theme.colors.textSecondary}
-                name="person"
-                size={52}
-              />
+              <Icon tone="textSecondary" name="person" size={52} />
             </View>
           )}
         </View>
@@ -303,20 +294,13 @@ export const ProfilePictureUploadScreen = () => {
               onPress={handleCropImage}
               style={({ pressed }) => [
                 styles.cropButton,
-                { backgroundColor: theme.colors.primary },
                 pressed && styles.pressed,
               ]}
               disabled={isUploading}
             >
-              <Text
-                style={[styles.cropButtonText, { color: theme.colors.white }]}
-              >
-                Crop & Center
-              </Text>
+              <Text style={styles.cropButtonText}>Crop & Center</Text>
             </Pressable>
-            <Text
-              style={[styles.cropHint, { color: theme.colors.textSecondary }]}
-            >
+            <Text style={styles.cropHint}>
               Recommended to optimize your photo
             </Text>
           </View>
@@ -333,34 +317,20 @@ export const ProfilePictureUploadScreen = () => {
               disabled={isUploading}
             >
               <View style={styles.uploadOptionIcon}>
-                <Icon color={theme.colors.primary} name="images" size={24} />
+                <Icon tone="primary" name="images" size={24} />
               </View>
 
               <View style={styles.uploadOptionContent}>
-                <Text
-                  style={[
-                    styles.uploadOptionLabel,
-                    { color: theme.colors.textPrimary },
-                  ]}
-                >
+                <Text style={styles.uploadOptionLabel}>
                   Choose from Gallery
                 </Text>
 
-                <Text
-                  style={[
-                    styles.uploadOptionDescription,
-                    { color: theme.colors.textSecondary },
-                  ]}
-                >
+                <Text style={styles.uploadOptionDescription}>
                   Select a photo from your device
                 </Text>
               </View>
 
-              <Icon
-                color={theme.colors.textSecondary}
-                name="chevron-forward"
-                size={20}
-              />
+              <Icon tone="textSecondary" name="chevron-forward" size={20} />
             </Pressable>
 
             <Pressable
@@ -372,73 +342,53 @@ export const ProfilePictureUploadScreen = () => {
               disabled={isUploading}
             >
               <View style={styles.uploadOptionIcon}>
-                <Icon color={theme.colors.primary} name="camera" size={24} />
+                <Icon tone="primary" name="camera" size={24} />
               </View>
 
               <View style={styles.uploadOptionContent}>
-                <Text
-                  style={[
-                    styles.uploadOptionLabel,
-                    { color: theme.colors.textPrimary },
-                  ]}
-                >
-                  Take a Photo
-                </Text>
+                <Text style={styles.uploadOptionLabel}>Take a Photo</Text>
 
-                <Text
-                  style={[
-                    styles.uploadOptionDescription,
-                    { color: theme.colors.textSecondary },
-                  ]}
-                >
+                <Text style={styles.uploadOptionDescription}>
                   Use your camera to take a new photo
                 </Text>
               </View>
 
-              <Icon
-                color={theme.colors.textSecondary}
-                name="chevron-forward"
-                size={20}
-              />
+              <Icon tone="textSecondary" name="chevron-forward" size={20} />
             </Pressable>
           </View>
         )}
 
         <View style={styles.formFooter}>
-          <Text
-            style={[
-              styles.formFooterText,
-              { color: theme.colors.textSecondary },
-            ]}
-          >
+          <Text style={styles.formFooterText}>
             By continuing you agree to our
           </Text>
 
           <View style={styles.formFooterLinks}>
             <Link
-              onPress={() => {
-                // handle onPress
-              }}
+              variant="subtle"
+              onPress={() =>
+                Linking.openURL(getWebAppUrl('/terms-of-service')).catch(err =>
+                  console.error('Failed to open URL:', err),
+                )
+              }
               style={styles.formFooterLinkText}
             >
               Terms of Service
             </Link>
 
-            <Text
-              style={[
-                styles.formFooterText,
-                { color: theme.colors.textSecondary },
-              ]}
-            >
+            <Text style={styles.formFooterText}>
               {' '}
               and
               {'   '}
             </Text>
 
             <Link
-              onPress={() => {
-                // handle onPress
-              }}
+              variant="subtle"
+              onPress={() =>
+                Linking.openURL(getWebAppUrl('/privacy-policy')).catch(err =>
+                  console.error('Failed to open URL:', err),
+                )
+              }
               style={styles.formFooterLinkText}
             >
               Privacy Policy
@@ -517,14 +467,17 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing['3'],
     borderRadius: theme.radii.sm,
     marginBottom: theme.spacing.sm,
+    backgroundColor: theme.colors.primary,
   },
   cropButtonText: {
     fontSize: theme.typography.fontSize.md,
     fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.white,
   },
   cropHint: {
     fontSize: theme.typography.fontSize.xs,
     fontStyle: 'italic',
+    color: theme.colors.textSecondary,
   },
   formAction: {
     marginVertical: theme.spacing.sm,
@@ -556,11 +509,13 @@ const styles = StyleSheet.create(theme => ({
     lineHeight: theme.typography.lineHeight.normal,
     fontWeight: theme.fonts.weight.semibold,
     marginBottom: theme.spacing.xs,
+    color: theme.colors.textPrimary,
   },
   uploadOptionDescription: {
     fontSize: theme.typography.fontSize.sm - 1,
     lineHeight: theme.typography.lineHeight.tight,
     letterSpacing: 0.16,
+    color: theme.colors.textSecondary,
   },
   formFooter: {
     marginTop: 'auto',
@@ -575,6 +530,7 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.sm - 1,
     lineHeight: theme.typography.lineHeight.tight,
     textAlign: 'center',
+    color: theme.colors.textSecondary,
   },
   formFooterLinks: {
     flexDirection: 'row',

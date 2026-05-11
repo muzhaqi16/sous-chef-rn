@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, RefreshControl, ScrollView } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '#utils/iconUtils';
 import { Header, HeaderAction, HeaderVariant } from '../molecules/Header';
@@ -42,8 +42,10 @@ export const DetailTemplate: React.FC<DetailTemplateProps> = ({
   refreshing,
   onRefresh,
 }) => {
-  const { theme } = useUnistyles();
   const insets = useSafeAreaInsets();
+  const scrollContentStyle = insets.bottom
+    ? [styles.scrollContent, { paddingBottom: insets.bottom }]
+    : styles.scrollContent;
   return (
     <View style={styles.container}>
       <Header
@@ -55,11 +57,7 @@ export const DetailTemplate: React.FC<DetailTemplateProps> = ({
       />
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{
-          flexGrow: 1,
-          paddingVertical: theme.spacing.sm,
-          paddingBottom: insets.bottom || theme.spacing.sm,
-        }}
+        contentContainerStyle={scrollContentStyle}
         refreshControl={
           onRefresh ? (
             <RefreshControl
@@ -111,6 +109,11 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingVertical: theme.spacing.sm,
+    paddingBottom: theme.spacing.sm,
   },
   section: {
     backgroundColor: theme.colors.surface,

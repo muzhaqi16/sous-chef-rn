@@ -1,8 +1,8 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarSetters } from '#/context/TabBarActionsContext';
 import { Icon } from '#utils/iconUtils';
@@ -24,6 +24,7 @@ import type {
   SelectorConfig,
   ItemSelectorRef,
 } from '#components/organisms/AnimatedItemSelector/types';
+import { SelectorItemContainer } from '#components/organisms/AnimatedItemSelector/SelectorItemContainer';
 import type { ShoppingListFromQuery } from './useShoppingListsQuery';
 import { Text } from '#components/atoms/Text';
 
@@ -63,11 +64,8 @@ export function useShoppingListSelectorModal({
   listDataWithOwnership,
   currentListId,
 }: UseShoppingListSelectorOptions) {
-  const { navigate } = useAppNavigation();
+  const { toListSettings, toShareList } = useAppNavigation();
   const { setOverlayOpen } = useTabBarSetters();
-  const {
-    theme: { colors },
-  } = useUnistyles();
 
   const selectorRef = useRef<ItemSelectorRef>(null);
 
@@ -224,7 +222,7 @@ export function useShoppingListSelectorModal({
           <Icon
             name="trash-outline"
             size={16}
-            color={hasSelection ? colors.error : colors.textSecondary}
+            tone={hasSelection ? 'error' : 'textSecondary'}
           />
         </Pressable>
         <Pressable onPress={exitDeleteMode}>
@@ -290,7 +288,7 @@ export function useShoppingListSelectorModal({
           <Icon
             name={item.title === 'Personal Lists' ? 'person' : 'home'}
             size={14}
-            color={colors.textTertiary}
+            tone="textTertiary"
           />
           <Text
             size="xs"
@@ -313,20 +311,22 @@ export function useShoppingListSelectorModal({
       const canDelete = !!list._isOwner;
 
       return (
-        <Pressable
-          style={({ pressed }) => [
-            styles.selectorItemContainer,
-            isSelectedForDelete && styles.selectorItemDeleteSelected,
-            !canDelete && styles.selectorItemDisabled,
-            pressed && canDelete && styles.pressed,
-          ]}
+        <SelectorItemContainer
+          state={
+            isSelectedForDelete
+              ? 'delete-selected'
+              : !canDelete
+              ? 'disabled'
+              : 'default'
+          }
+          compact
           onPress={() => toggleDeleteSelection(list)}
           disabled={!canDelete}
         >
           <Icon
             name={isSelectedForDelete ? 'checkbox' : 'square-outline'}
             size={20}
-            color={isSelectedForDelete ? colors.error : colors.textSecondary}
+            tone={isSelectedForDelete ? 'error' : 'textSecondary'}
           />
           <ShoppingListAvatar list={list} size={32} />
           <View style={styles.selectorItemInfo}>
@@ -339,18 +339,15 @@ export function useShoppingListSelectorModal({
               </Text>
             )}
           </View>
-        </Pressable>
+        </SelectorItemContainer>
       );
     }
 
     // Normal mode rendering
     return (
-      <Pressable
-        style={({ pressed }) => [
-          styles.selectorItemContainer,
-          isSelected && styles.selectorItemSelected,
-          pressed && styles.pressed,
-        ]}
+      <SelectorItemContainer
+        state={isSelected ? 'selected' : 'default'}
+        compact
         onPress={onPress}
         onLongPress={() => handleLongPress(list)}
       >
@@ -374,10 +371,8 @@ export function useShoppingListSelectorModal({
             {list.totalItems - list.completedItems} of {list.totalItems}
           </Text>
         )}
-        {!!isSelected && (
-          <Icon name="checkmark" size={20} color={colors.primary} />
-        )}
-      </Pressable>
+        {!!isSelected && <Icon name="checkmark" size={20} tone="primary" />}
+      </SelectorItemContainer>
     );
   };
 
@@ -390,7 +385,7 @@ export function useShoppingListSelectorModal({
       onPress: () => {
         setOverlayOpen(false);
         selectorRef.current?.close();
-        navigate('ListSettings');
+        toListSettings();
       },
       iconLibrary: 'Ionicons' as IconLibrary,
     },
@@ -402,7 +397,7 @@ export function useShoppingListSelectorModal({
             onPress: () => {
               setOverlayOpen(false);
               selectorRef.current?.close();
-              navigate('ShareList', { listId: currentListId });
+              toShareList({ listId: currentListId });
             },
             iconLibrary: 'Ionicons' as IconLibrary,
           },
@@ -412,7 +407,7 @@ export function useShoppingListSelectorModal({
             onPress: () => {
               setOverlayOpen(false);
               selectorRef.current?.close();
-              navigate('ListSettings', { listId: currentListId });
+              toListSettings({ listId: currentListId });
             },
             iconLibrary: 'Ionicons' as IconLibrary,
           },
@@ -462,30 +457,6 @@ export function useShoppingListSelectorModal({
 
 // Styles for the selector items
 const styles = StyleSheet.create(theme => ({
-  selectorItemContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 48,
-    paddingVertical: theme.spacing.xs,
-    paddingHorizontal: theme.spacing.md,
-    gap: theme.spacing.sm,
-    borderRadius: theme.radii.md,
-    marginBottom: theme.spacing.sm,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  selectorItemSelected: {
-    backgroundColor: theme.colors.primaryLight,
-    borderColor: theme.colors.primary,
-  },
-  selectorItemDeleteSelected: {
-    backgroundColor: theme.colors.errorLight,
-    borderColor: theme.colors.error,
-  },
-  selectorItemDisabled: {
-    opacity: 0.5,
-  },
   selectorItemInfo: {
     flex: 1,
     gap: 2,
@@ -495,7 +466,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     gap: theme.spacing.xs,
     paddingVertical: theme.spacing.xs,
-    paddingHorizontal: theme.spacing.md,
+    paddingHorizontal: theme.spacing.xs,
     marginTop: theme.spacing.xs,
   },
   sectionHeaderText: {
@@ -522,8 +493,5 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

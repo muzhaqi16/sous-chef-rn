@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { Header } from '../Header';
 
 describe('Header', () => {
@@ -21,10 +21,11 @@ describe('Header', () => {
     expect(backButton).toBeTruthy();
   });
 
-  it('calls onBack when back button is pressed', () => {
+  it('calls onBack when back button is pressed', async () => {
+    const user = userEvent.setup();
     const onBack = jest.fn();
     render(<Header title="Detail" onBack={onBack} />);
-    fireEvent.press(screen.getByTestId('header-back-button'));
+    await user.press(screen.getByTestId('header-back-button'));
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 
@@ -35,10 +36,11 @@ describe('Header', () => {
     expect(closeButton).toBeTruthy();
   });
 
-  it('calls onClose when close button is pressed', () => {
+  it('calls onClose when close button is pressed', async () => {
+    const user = userEvent.setup();
     const onClose = jest.fn();
     render(<Header title="Modal" onClose={onClose} />);
-    fireEvent.press(screen.getByTestId('header-close-button'));
+    await user.press(screen.getByTestId('header-close-button'));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
@@ -48,7 +50,8 @@ describe('Header', () => {
     expect(screen.queryByTestId('header-back-button')).toBeNull();
   });
 
-  it('renders right actions with testIDs', () => {
+  it('renders right actions with testIDs', async () => {
+    const user = userEvent.setup();
     const onAction = jest.fn();
     render(
       <Header
@@ -60,7 +63,7 @@ describe('Header', () => {
     );
     const actionBtn = screen.getByTestId('settings-btn');
     expect(actionBtn).toBeTruthy();
-    fireEvent.press(actionBtn);
+    await user.press(actionBtn);
     expect(onAction).toHaveBeenCalledTimes(1);
   });
 

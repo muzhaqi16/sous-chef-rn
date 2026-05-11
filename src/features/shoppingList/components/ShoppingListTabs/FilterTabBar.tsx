@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, ScrollView } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Pressable } from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import type { NavigationState, Route } from 'react-native-tab-view';
 import type { FilterTabActionButton } from '#components/molecules/FilterTabs/types';
@@ -37,8 +37,6 @@ const FilterTabBarComponent: React.FC<FilterTabBarProps> = ({
   onTabMeasure,
   measureTabKeys,
 }) => {
-  const { theme } = useUnistyles();
-
   const handleTabPress = (key: string) => {
     jumpTo(key);
   };
@@ -89,7 +87,7 @@ const FilterTabBarComponent: React.FC<FilterTabBarProps> = ({
                 <Icon
                   name={btn.icon}
                   size={20}
-                  color={theme.colors.primary}
+                  tone="primary"
                   library={btn.iconLibrary}
                 />
               ) : null}

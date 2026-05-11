@@ -1,15 +1,14 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
-import { CommonActions } from '@react-navigation/native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { LandingAuthScreen } from '../LandingAuthScreen';
 
-const mockDispatch = jest.fn();
+const mockToLogin = jest.fn();
+const mockToSignUp = jest.fn();
 
-jest.mock('#hooks/navigation/useSafeNavigation', () => ({
-  useSafeNavigation: () => ({
-    navigation: { dispatch: mockDispatch },
-    canGoBack: true,
-    goBack: jest.fn(),
+jest.mock('#hooks/navigation/useAppNavigation', () => ({
+  useAppNavigation: () => ({
+    toLogin: mockToLogin,
+    toSignUp: mockToSignUp,
   }),
 }));
 
@@ -33,9 +32,14 @@ jest.mock('#components/base/Button', () => {
   };
 });
 
-jest.mock('#utils/environment', () => ({
-  getWebAppUrl: (path: string) => `https://app.example.com${path}`,
-}));
+// Environment is auto-mocked via jest.setup.js. Override `getWebAppUrl` so the
+// deep-link assertions resolve to `https://app.example.com/...`.
+import { getWebAppUrl } from '#utils/environment';
+beforeAll(() => {
+  (getWebAppUrl as jest.Mock).mockImplementation(
+    (path: string) => `https://app.example.com${path}`,
+  );
+});
 
 describe('LandingAuthScreen', () => {
   beforeEach(() => {
@@ -73,18 +77,18 @@ describe('LandingAuthScreen', () => {
     expect(screen.getByText('Sign Up')).toBeTruthy();
   });
 
-  it('navigates to Login when Log In button is pressed', () => {
+  it('navigates to Login when Log In button is pressed', async () => {
+    const user = userEvent.setup();
     render(<LandingAuthScreen />);
-    fireEvent.press(screen.getByTestId('landing-login-button'));
-    expect(CommonActions.navigate).toHaveBeenCalledWith('Login');
-    expect(mockDispatch).toHaveBeenCalledTimes(1);
+    await user.press(screen.getByTestId('landing-login-button'));
+    expect(mockToLogin).toHaveBeenCalledTimes(1);
   });
 
-  it('navigates to SignUp when Sign Up button is pressed', () => {
+  it('navigates to SignUp when Sign Up button is pressed', async () => {
+    const user = userEvent.setup();
     render(<LandingAuthScreen />);
-    fireEvent.press(screen.getByTestId('landing-signup-button'));
-    expect(CommonActions.navigate).toHaveBeenCalledWith('SignUp');
-    expect(mockDispatch).toHaveBeenCalledTimes(1);
+    await user.press(screen.getByTestId('landing-signup-button'));
+    expect(mockToSignUp).toHaveBeenCalledTimes(1);
   });
 
   it('renders the footer legal text', () => {

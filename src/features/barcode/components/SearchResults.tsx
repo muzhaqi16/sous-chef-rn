@@ -4,11 +4,11 @@ import { alertService } from '#/services/alertService';
 import { ItemCard } from './ItemCard';
 import { ActionButtons } from './ActionButtons';
 import { StyleSheet } from 'react-native-unistyles';
-import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
+  AddItemToShoppingListDocument,
   CreatePantryItemDocument,
   RestockPantryItemDocument,
-} from '#features/pantry/graphql/pantry.generated';
+} from './SearchResults.generated';
 import type { PantryItemDisplayFragment } from '#features/pantry/graphql/pantryFragments.generated';
 import type { CreatePantryItemInput } from '#/graphql/generated/schemaTypes';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
@@ -19,7 +19,7 @@ import {
 } from '#/utils/errors/pantryItemDuplicate';
 import { useAppStore } from '#store/useAppStore';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
-import type { ScannedItem } from '../store/barcodeScannerSlice';
+import type { ScannedItem } from '#store/slices/barcodeScannerSlice';
 import type { BarcodeSource } from '#/types/navigation';
 import { ScrollView } from 'react-native';
 

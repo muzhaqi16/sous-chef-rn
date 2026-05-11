@@ -19,9 +19,12 @@ jest.mock('@shopify/react-native-skia', () => ({
         cubicTo: jest.fn().mockReturnThis(),
         close: jest.fn().mockReturnThis(),
         addCircle: jest.fn().mockReturnThis(),
+        addRRect: jest.fn().mockReturnThis(),
         reset: jest.fn().mockReturnThis(),
       }),
     },
     Color: jest.fn(c => c),
+    RRectXY: jest.fn((rect, rx, ry) => ({ rect, rx, ry })),
+    XYWHRect: jest.fn((x, y, w, h) => ({ x, y, w, h })),
   },
 }));

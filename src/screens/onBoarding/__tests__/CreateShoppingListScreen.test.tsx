@@ -1,7 +1,8 @@
 'use no memo';
 
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { screen } from '@testing-library/react-native';
+import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { CreateShoppingListScreen } from '../CreateShoppingListScreen';
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -32,30 +33,6 @@ jest.mock('#store/useAppStore', () => {
     useSelectedHomeId: jest.fn(() => mockState.selectedHomeId),
   };
 });
-
-let mockListsData: any = { shoppingLists: { edges: [] } };
-let mockListsLoading = false;
-
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useMutation: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'CreateShoppingList') return [jest.fn(), { loading: false }];
-    return [jest.fn(), {}];
-  }),
-  useQuery: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'GetShoppingListsLite') {
-      return {
-        data: mockListsData,
-        loading: mockListsLoading,
-        error: undefined,
-        refetch: jest.fn(),
-      };
-    }
-    return { data: undefined, loading: false, error: undefined };
-  }),
-}));
 
 jest.mock('#/utils/connectionUtils', () => ({
   extractNodes: jest.fn(c => c?.edges?.map((e: any) => e.node) || []),
@@ -115,55 +92,77 @@ jest.mock('#/components/base/SousChefLoader', () => ({
   },
 }));
 
+// Schema-driven mock helpers — return shopping lists shape (with or without
+// existing list) so the screen exits its "checking existing" state.
+const noExistingList = {
+  Query: () => ({
+    shoppingLists: {
+      totalCount: 0,
+      edges: [],
+      pageInfo: { hasNextPage: false, endCursor: null },
+    },
+  }),
+};
+
+const oneExistingList = {
+  Query: () => ({
+    shoppingLists: {
+      totalCount: 1,
+      edges: [
+        {
+          cursor: 'c1',
+          node: {
+            id: 'sl1',
+            name: 'Weekly Groceries',
+            isDefault: true,
+            totalItems: 0,
+            completedItems: 0,
+            homeId: null,
+            home: null,
+            ownerships: [],
+          },
+        },
+      ],
+      pageInfo: { hasNextPage: false, endCursor: null },
+    },
+  }),
+};
+
 describe('CreateShoppingListScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockListsData = { shoppingLists: { edges: [] } };
-    mockListsLoading = false;
   });
 
-  it('renders create form when no existing list', () => {
-    render(<CreateShoppingListScreen />);
-    expect(screen.getByText('Create your shopping list')).toBeTruthy();
+  it('renders create form when no existing list', async () => {
+    renderWithApollo(<CreateShoppingListScreen />, { mocks: noExistingList });
+    expect(await screen.findByText('Create your shopping list')).toBeTruthy();
   });
 
-  it('shows form fields for list creation', () => {
-    render(<CreateShoppingListScreen />);
-    expect(screen.getByTestId('form-fields')).toBeTruthy();
+  it('shows form fields for list creation', async () => {
+    renderWithApollo(<CreateShoppingListScreen />, { mocks: noExistingList });
+    expect(await screen.findByTestId('form-fields')).toBeTruthy();
   });
 
-  it('shows create list button', () => {
-    render(<CreateShoppingListScreen />);
-    expect(screen.getByText('Create List')).toBeTruthy();
+  it('shows create list button', async () => {
+    renderWithApollo(<CreateShoppingListScreen />, { mocks: noExistingList });
+    expect(await screen.findByText('Create List')).toBeTruthy();
   });
 
-  it('shows subtitle', () => {
-    render(<CreateShoppingListScreen />);
-    expect(screen.getByText('You can add items to it later')).toBeTruthy();
+  it('shows subtitle', async () => {
+    renderWithApollo(<CreateShoppingListScreen />, { mocks: noExistingList });
+    expect(
+      await screen.findByText('You can add items to it later'),
+    ).toBeTruthy();
   });
 
-  it('shows existing list view when list exists', () => {
-    mockListsData = {
-      shoppingLists: {
-        edges: [
-          { node: { id: 'sl1', name: 'Weekly Groceries', isDefault: true } },
-        ],
-      },
-    };
-    render(<CreateShoppingListScreen />);
-    expect(screen.getByText("You're all set!")).toBeTruthy();
-    expect(screen.getByText('Weekly Groceries')).toBeTruthy();
+  it('shows existing list view when list exists', async () => {
+    renderWithApollo(<CreateShoppingListScreen />, { mocks: oneExistingList });
+    expect(await screen.findByText("You're all set!")).toBeTruthy();
+    expect(await screen.findByText('Weekly Groceries')).toBeTruthy();
   });
 
-  it('shows continue button when list exists', () => {
-    mockListsData = {
-      shoppingLists: {
-        edges: [
-          { node: { id: 'sl1', name: 'Weekly Groceries', isDefault: true } },
-        ],
-      },
-    };
-    render(<CreateShoppingListScreen />);
-    expect(screen.getByText('Continue')).toBeTruthy();
+  it('shows continue button when list exists', async () => {
+    renderWithApollo(<CreateShoppingListScreen />, { mocks: oneExistingList });
+    expect(await screen.findByText('Continue')).toBeTruthy();
   });
 });

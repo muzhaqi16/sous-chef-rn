@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { QuantityBadge } from '../QuantityBadge';
 
 describe('QuantityBadge', () => {
@@ -31,21 +31,24 @@ describe('QuantityBadge', () => {
     expect(screen.getByText('1/4')).toBeTruthy();
   });
 
-  it('calls onPress when pressed', () => {
+  it('calls onPress when pressed', async () => {
+    const user = userEvent.setup();
     render(<QuantityBadge quantity={1} onPress={mockOnPress} />);
-    fireEvent.press(screen.getByRole('button'));
+    await user.press(screen.getByRole('button'));
     expect(mockOnPress).toHaveBeenCalledTimes(1);
   });
 
-  it('does not call onPress when disabled', () => {
+  it('does not call onPress when disabled', async () => {
+    const user = userEvent.setup();
     render(<QuantityBadge quantity={1} onPress={mockOnPress} disabled />);
-    fireEvent.press(screen.getByRole('button'));
+    await user.press(screen.getByRole('button'));
     expect(mockOnPress).not.toHaveBeenCalled();
   });
 
-  it('does not call onPress when isPurchased', () => {
+  it('does not call onPress when isPurchased', async () => {
+    const user = userEvent.setup();
     render(<QuantityBadge quantity={1} onPress={mockOnPress} isPurchased />);
-    fireEvent.press(screen.getByRole('button'));
+    await user.press(screen.getByRole('button'));
     expect(mockOnPress).not.toHaveBeenCalled();
   });
 

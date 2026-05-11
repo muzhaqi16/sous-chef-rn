@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleProp, ViewStyle } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { Button } from './Button';
 import { IconName, Icon } from '#/utils/iconUtils';
 import { Text } from '#components/atoms/Text';
@@ -64,8 +64,6 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   style,
   testID,
 }) => {
-  const { theme } = useUnistyles();
-
   const renderIcon = () => {
     if (!icon) return null;
 
@@ -86,7 +84,8 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       <Icon
         name={icon as IconName}
         size={iconSize}
-        color={iconColor || theme.colors.textSecondary}
+        color={iconColor}
+        tone="textSecondary"
         library={iconLibrary}
       />
     );

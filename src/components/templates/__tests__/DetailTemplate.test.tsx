@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { Text } from 'react-native';
 import { DetailTemplate } from '../DetailTemplate';
 
@@ -71,13 +71,15 @@ describe('DetailTemplate', () => {
     expect(screen.getByText('Section without title')).toBeTruthy();
   });
 
-  it('calls onBack when back is pressed', () => {
+  it('calls onBack when back is pressed', async () => {
+    const user = userEvent.setup();
     render(<DetailTemplate {...defaultProps} />);
-    fireEvent.press(screen.getByTestId('header-back'));
+    await user.press(screen.getByTestId('header-back'));
     expect(defaultProps.onBack).toHaveBeenCalledTimes(1);
   });
 
-  it('renders primary action button when provided', () => {
+  it('renders primary action button when provided', async () => {
+    const user = userEvent.setup();
     const onPress = jest.fn();
     render(
       <DetailTemplate
@@ -86,7 +88,7 @@ describe('DetailTemplate', () => {
       />,
     );
     expect(screen.getByText('Save')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('primary-action-button'));
+    await user.press(screen.getByTestId('primary-action-button'));
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
@@ -95,10 +97,11 @@ describe('DetailTemplate', () => {
     expect(screen.queryByTestId('primary-action-button')).toBeNull();
   });
 
-  it('renders header actions', () => {
+  it('renders header actions', async () => {
+    const user = userEvent.setup();
     const headerAction = { icon: 'edit' as any, onPress: jest.fn() };
     render(<DetailTemplate {...defaultProps} headerActions={[headerAction]} />);
-    fireEvent.press(screen.getByTestId('header-action-0'));
+    await user.press(screen.getByTestId('header-action-0'));
     expect(headerAction.onPress).toHaveBeenCalledTimes(1);
   });
 });

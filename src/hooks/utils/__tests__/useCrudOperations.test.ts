@@ -1,21 +1,11 @@
 'use no memo';
 
-import { renderHook } from '@testing-library/react-native';
+import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { alertService } from '#/services/alertService';
 import { useCrudOperations } from '../useCrudOperations';
 
-const mockClient = {
-  readFragment: jest.fn(),
-  writeFragment: jest.fn(),
-  cache: { identify: jest.fn() },
-};
-
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
-}));
-
-jest.mock('@apollo/client/react', () => ({
-  useApolloClient: jest.fn(() => mockClient),
 }));
 
 jest.mock('#/services/errorService', () => ({
@@ -42,7 +32,7 @@ describe('useCrudOperations', () => {
         .mockResolvedValue({ data: { id: '1', name: 'Item' } });
       const onSuccess = jest.fn();
 
-      const { result } = renderHook(() => useCrudOperations());
+      const { result } = renderHookWithApollo(() => useCrudOperations());
 
       const addOp = result.current.createAddOperation({
         mutation: mockMutation,
@@ -62,7 +52,7 @@ describe('useCrudOperations', () => {
     it('transforms input before calling mutation', async () => {
       const mockMutation = jest.fn().mockResolvedValue({ data: { id: '1' } });
 
-      const { result } = renderHook(() => useCrudOperations());
+      const { result } = renderHookWithApollo(() => useCrudOperations());
 
       const addOp = result.current.createAddOperation({
         mutation: mockMutation,
@@ -82,7 +72,7 @@ describe('useCrudOperations', () => {
     it('validates input and rejects with string message', async () => {
       const mockMutation = jest.fn();
 
-      const { result } = renderHook(() => useCrudOperations());
+      const { result } = renderHookWithApollo(() => useCrudOperations());
 
       const addOp = result.current.createAddOperation({
         mutation: mockMutation,
@@ -103,7 +93,7 @@ describe('useCrudOperations', () => {
     it('validates input and rejects with boolean false', async () => {
       const mockMutation = jest.fn();
 
-      const { result } = renderHook(() => useCrudOperations());
+      const { result } = renderHookWithApollo(() => useCrudOperations());
 
       const addOp = result.current.createAddOperation({
         mutation: mockMutation,
@@ -123,7 +113,7 @@ describe('useCrudOperations', () => {
     it('returns false when parentId is required but null', async () => {
       const mockMutation = jest.fn();
 
-      const { result } = renderHook(() => useCrudOperations());
+      const { result } = renderHookWithApollo(() => useCrudOperations());
 
       const addOp = result.current.createAddOperation({
         mutation: mockMutation,
@@ -143,7 +133,7 @@ describe('useCrudOperations', () => {
     it('returns false when parentId function resolves to undefined', async () => {
       const mockMutation = jest.fn();
 
-      const { result } = renderHook(() => useCrudOperations());
+      const { result } = renderHookWithApollo(() => useCrudOperations());
 
       const addOp = result.current.createAddOperation({
         mutation: mockMutation,
@@ -163,7 +153,7 @@ describe('useCrudOperations', () => {
     it('resolves parentId from function', async () => {
       const mockMutation = jest.fn().mockResolvedValue({ data: { id: '1' } });
 
-      const { result } = renderHook(() => useCrudOperations());
+      const { result } = renderHookWithApollo(() => useCrudOperations());
 
       const addOp = result.current.createAddOperation({
         mutation: mockMutation,
@@ -181,7 +171,7 @@ describe('useCrudOperations', () => {
         errors: [{ message: 'Duplicate entry' }],
       });
 
-      const { result } = renderHook(() => useCrudOperations());
+      const { result } = renderHookWithApollo(() => useCrudOperations());
 
       const addOp = result.current.createAddOperation({
         mutation: mockMutation,
@@ -199,7 +189,7 @@ describe('useCrudOperations', () => {
     it('shows error when result has no data', async () => {
       const mockMutation = jest.fn().mockResolvedValue({});
 
-      const { result } = renderHook(() => useCrudOperations());
+      const { result } = renderHookWithApollo(() => useCrudOperations());
 
       const addOp = result.current.createAddOperation({
         mutation: mockMutation,
@@ -223,7 +213,7 @@ describe('useCrudOperations', () => {
         .mockResolvedValue({ data: { id: '1', name: 'Updated' } });
       const onSuccess = jest.fn();
 
-      const { result } = renderHook(() => useCrudOperations());
+      const { result } = renderHookWithApollo(() => useCrudOperations());
 
       const updateOp = result.current.createUpdateOperation({
         mutation: mockMutation,
@@ -244,7 +234,7 @@ describe('useCrudOperations', () => {
       const mockMutation = jest.fn().mockResolvedValue({ data: { id: '1' } });
       const getFragmentData = jest.fn().mockReturnValue({ version: 5 });
 
-      const { result } = renderHook(() => useCrudOperations());
+      const { result } = renderHookWithApollo(() => useCrudOperations());
 
       const updateOp = result.current.createUpdateOperation({
         mutation: mockMutation,
@@ -263,7 +253,7 @@ describe('useCrudOperations', () => {
     it('validates input and rejects invalid', async () => {
       const mockMutation = jest.fn();
 
-      const { result } = renderHook(() => useCrudOperations());
+      const { result } = renderHookWithApollo(() => useCrudOperations());
 
       const updateOp = result.current.createUpdateOperation({
         mutation: mockMutation,
@@ -289,7 +279,7 @@ describe('useCrudOperations', () => {
         .mockResolvedValue({ data: { id: '1', deleted: true } });
       const onSuccess = jest.fn();
 
-      const { result } = renderHook(() => useCrudOperations());
+      const { result } = renderHookWithApollo(() => useCrudOperations());
 
       const removeOp = result.current.createRemoveOperation({
         mutation: mockMutation,
@@ -309,7 +299,7 @@ describe('useCrudOperations', () => {
     it('shows confirmation dialog when confirmMessage is provided', async () => {
       const mockMutation = jest.fn().mockResolvedValue({ data: { id: '1' } });
 
-      const { result } = renderHook(() => useCrudOperations());
+      const { result } = renderHookWithApollo(() => useCrudOperations());
 
       const removeOp = result.current.createRemoveOperation({
         mutation: mockMutation,
@@ -348,7 +338,7 @@ describe('useCrudOperations', () => {
     it('returns false when parentId is required but empty string', async () => {
       const mockMutation = jest.fn();
 
-      const { result } = renderHook(() => useCrudOperations());
+      const { result } = renderHookWithApollo(() => useCrudOperations());
 
       const removeOp = result.current.createRemoveOperation({
         mutation: mockMutation,
@@ -374,7 +364,7 @@ describe('useCrudOperations', () => {
         .mockResolvedValue({ data: { result: 'done' } });
       const onSuccess = jest.fn();
 
-      const { result } = renderHook(() => useCrudOperations());
+      const { result } = renderHookWithApollo(() => useCrudOperations());
 
       const simpleOp = result.current.createSimpleOperation({
         operation: mockOperation,
@@ -391,7 +381,7 @@ describe('useCrudOperations', () => {
     it('validates and rejects with string message', async () => {
       const mockOperation = jest.fn();
 
-      const { result } = renderHook(() => useCrudOperations());
+      const { result } = renderHookWithApollo(() => useCrudOperations());
 
       const simpleOp = result.current.createSimpleOperation({
         operation: mockOperation,
@@ -411,7 +401,7 @@ describe('useCrudOperations', () => {
     it('validates and rejects with boolean false', async () => {
       const mockOperation = jest.fn();
 
-      const { result } = renderHook(() => useCrudOperations());
+      const { result } = renderHookWithApollo(() => useCrudOperations());
 
       const simpleOp = result.current.createSimpleOperation<[string], unknown>({
         operation: mockOperation,
@@ -430,7 +420,7 @@ describe('useCrudOperations', () => {
     it('returns false when operation returns no data', async () => {
       const mockOperation = jest.fn().mockResolvedValue({});
 
-      const { result } = renderHook(() => useCrudOperations());
+      const { result } = renderHookWithApollo(() => useCrudOperations());
 
       const simpleOp = result.current.createSimpleOperation({
         operation: mockOperation,

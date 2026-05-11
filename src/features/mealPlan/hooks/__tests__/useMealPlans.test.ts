@@ -1,24 +1,18 @@
 'use no memo';
-import { renderHook } from '@testing-library/react-native';
+import { waitFor } from '@testing-library/react-native';
+import {
+  recordMock,
+  renderHookWithApollo,
+  type MockedResponse,
+} from '#/test-utils/apolloMockProvider';
+import { GetMealPlansDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 import { useMealPlans } from '../useMealPlans';
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 
-const mockUseGetMealPlansQuery = jest.fn();
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useQuery: jest.fn((...args: any[]) => {
-    const [doc] = args;
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'GetMealPlans')
-      return mockUseGetMealPlansQuery(doc, ...args);
-    return { data: undefined, loading: false, error: undefined };
-  }),
-}));
-
-jest.mock('#hooks/auth/useAuth', () => ({
-  useAuth: () => ({ isLoggedOut: false }),
+jest.mock('#hooks/auth/useIsLoggedOut', () => ({
+  useIsLoggedOut: () => false,
 }));
 jest.mock('#hooks/apollo/useApolloErrorLogger', () => ({
   useApolloErrorLogger: jest.fn(),
@@ -38,50 +32,68 @@ jest.mock('#hooks/utils/usePagination', () => ({
   })),
 }));
 
-describe('useMealPlans', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
+beforeEach(() => {
+  jest.clearAllMocks();
+});
 
-  it('returns empty mealPlans when no data', () => {
-    mockUseGetMealPlansQuery.mockReturnValue({
-      data: null,
-      loading: false,
-      error: undefined,
-      refetch: jest.fn(),
-      fetchMore: jest.fn(),
+function planData(
+  plans: Array<{ id: string; startDate: string; endDate: string }>,
+): MockedResponse {
+  return recordMock(GetMealPlansDocument, {
+    data: {
+      mealPlans: {
+        __typename: 'MealPlanConnection',
+        edges: plans.map(p => ({
+          __typename: 'MealPlanEdge',
+          cursor: p.id,
+          node: {
+            __typename: 'MealPlan',
+            ...p,
+          },
+        })),
+        totalCount: plans.length,
+        pageInfo: {
+          __typename: 'PageInfo',
+          hasNextPage: false,
+          endCursor: null,
+        },
+      },
+    },
+  }).mock;
+}
+
+function emptyMock(): MockedResponse {
+  return recordMock(GetMealPlansDocument, {
+    data: { mealPlans: null },
+  }).mock;
+}
+
+describe('useMealPlans', () => {
+  it('returns empty mealPlans when no data', async () => {
+    const { result } = renderHookWithApollo(() => useMealPlans(), {
+      operationMocks: [emptyMock()],
     });
-    const { result } = renderHook(() => useMealPlans());
+    await waitFor(() => expect(result.current.state.loading).toBe(false));
     expect(result.current.state.mealPlans).toEqual([]);
     expect(result.current.state.totalCount).toBeUndefined();
   });
 
-  it('returns mealPlans from query data', () => {
+  it('returns mealPlans from query data', async () => {
     const now = new Date();
     const plan = {
       id: '1',
       startDate: now.toISOString(),
       endDate: now.toISOString(),
     };
-    mockUseGetMealPlansQuery.mockReturnValue({
-      data: {
-        mealPlans: {
-          edges: [{ node: plan }],
-          totalCount: 1,
-          pageInfo: { hasNextPage: false, endCursor: null },
-        },
-      },
-      loading: false,
-      error: undefined,
-      refetch: jest.fn(),
-      fetchMore: jest.fn(),
+    const { result } = renderHookWithApollo(() => useMealPlans(), {
+      operationMocks: [planData([plan])],
     });
-    const { result } = renderHook(() => useMealPlans());
-    expect(result.current.state.mealPlans).toEqual([plan]);
+    await waitFor(() => expect(result.current.state.mealPlans).toHaveLength(1));
+    expect(result.current.state.mealPlans[0].id).toBe('1');
     expect(result.current.state.totalCount).toBe(1);
   });
 
-  it('identifies active plan as current', () => {
+  it('identifies active plan as current', async () => {
     const now = new Date();
     const yesterday = new Date(now.getTime() - 86400000);
     const tomorrow = new Date(now.getTime() + 86400000);
@@ -90,20 +102,11 @@ describe('useMealPlans', () => {
       startDate: yesterday.toISOString(),
       endDate: tomorrow.toISOString(),
     };
-    mockUseGetMealPlansQuery.mockReturnValue({
-      data: {
-        mealPlans: {
-          edges: [{ node: activePlan }],
-          totalCount: 1,
-          pageInfo: { hasNextPage: false, endCursor: null },
-        },
-      },
-      loading: false,
-      error: undefined,
-      refetch: jest.fn(),
-      fetchMore: jest.fn(),
+    const { result } = renderHookWithApollo(() => useMealPlans(), {
+      operationMocks: [planData([activePlan])],
     });
-    const { result } = renderHook(() => useMealPlans());
-    expect(result.current.state.currentPlan?.id).toBe('active');
+    await waitFor(() =>
+      expect(result.current.state.currentPlan?.id).toBe('active'),
+    );
   });
 });

@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { View, Platform } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import DateTimePicker, {
   DateTimePickerEvent,
 } from '@react-native-community/datetimepicker';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { Label } from '#components/atoms/Label';
 import { Text } from '#components/atoms/Text';
@@ -36,7 +36,6 @@ export const DatePickerField: React.FC<DatePickerFieldProps> = ({
   error,
   testID,
 }) => {
-  const { theme } = useUnistyles();
   const [showPicker, setShowPicker] = useState(false);
 
   const handleDateChange = (
@@ -80,11 +79,7 @@ export const DatePickerField: React.FC<DatePickerFieldProps> = ({
         ]}
         onPress={handlePress}
       >
-        <Icon
-          name="calendar-outline"
-          size={20}
-          color={theme.colors.textSecondary}
-        />
+        <Icon name="calendar-outline" size={20} tone="textSecondary" />
         <Text size="md" style={[styles.dateText, !value && styles.placeholder]}>
           {value ? formatDate(value) : placeholder}
         </Text>

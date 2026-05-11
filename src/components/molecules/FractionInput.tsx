@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { TextInput } from 'react-native';
-import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { FormFieldWrapper } from '#components/atoms/FormFieldWrapper';
+import {
+  ThemedBottomSheetTextInput,
+  ThemedTextInput,
+} from '#components/atoms/themedComponents';
 import { useIsBottomSheetInput } from '#context/BottomSheetInputContext';
 import { Text } from '#components/atoms/Text';
 
@@ -49,8 +51,9 @@ export const FractionInput: React.FC<FractionInputProps> = ({
 }) => {
   const contextValue = useIsBottomSheetInput();
   const InputComponent =
-    useBottomSheetInput || contextValue ? BottomSheetTextInput : TextInput;
-  const { theme } = useUnistyles();
+    useBottomSheetInput || contextValue
+      ? ThemedBottomSheetTextInput
+      : ThemedTextInput;
   const [isFocused, setIsFocused] = useState(false);
 
   // Validation regex for fraction input
@@ -67,7 +70,13 @@ export const FractionInput: React.FC<FractionInputProps> = ({
     onChangeText(text);
   };
 
-  const hasError = error || (value && !isValidFormat(value));
+  const hasError = !!(error || (value && !isValidFormat(value)));
+
+  styles.useVariants({
+    focused: isFocused,
+    error: hasError,
+    disabled,
+  });
 
   return (
     <FormFieldWrapper
@@ -76,18 +85,12 @@ export const FractionInput: React.FC<FractionInputProps> = ({
       required={required}
     >
       <InputComponent
-        style={[
-          styles.input,
-          isFocused && styles.inputFocused,
-          hasError && styles.inputError,
-          disabled && styles.inputDisabled,
-        ]}
+        style={styles.input}
         value={value}
         onChangeText={handleChangeText}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
         placeholder={placeholder}
-        placeholderTextColor={theme.colors.textSecondary}
         keyboardType={keyboardType}
         editable={!disabled}
         selectTextOnFocus
@@ -112,17 +115,23 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.base,
     color: theme.colors.textPrimary,
     backgroundColor: theme.colors.surface,
-  },
-  inputFocused: {
-    borderColor: theme.colors.primary,
-    borderWidth: 2,
-  },
-  inputError: {
-    borderColor: theme.colors.error,
-  },
-  inputDisabled: {
-    backgroundColor: theme.colors.surfaceVariant,
-    opacity: theme.opacity.disabled,
+    variants: {
+      focused: {
+        true: {
+          borderColor: theme.colors.primary,
+          borderWidth: 2,
+        },
+      },
+      error: {
+        true: { borderColor: theme.colors.error },
+      },
+      disabled: {
+        true: {
+          backgroundColor: theme.colors.surfaceVariant,
+          opacity: theme.opacity.disabled,
+        },
+      },
+    },
   },
   hintText: {
     marginTop: theme.spacing.xs,

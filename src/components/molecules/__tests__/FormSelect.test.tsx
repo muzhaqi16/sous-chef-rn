@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { FormSelect } from '../FormSelect';
 
 jest.mock('#utils/iconUtils', () => ({
@@ -50,9 +50,10 @@ describe('FormSelect', () => {
     expect(screen.getByText('Please select')).toBeTruthy();
   });
 
-  it('opens modal and shows options when pressed', () => {
+  it('opens modal and shows options when pressed', async () => {
+    const user = userEvent.setup();
     render(<FormSelect {...defaultProps} />);
-    fireEvent.press(screen.getByText('Select an option'));
+    await user.press(screen.getByText('Select an option'));
     // Modal should now show the label as title and the options
     expect(screen.getByText('Option A')).toBeTruthy();
     expect(screen.getByText('Option B')).toBeTruthy();

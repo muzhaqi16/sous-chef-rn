@@ -31,8 +31,3 @@ export const TAB_FEATURES = FEATURE_REGISTRY.filter(
   (f): f is FeatureManifest & { tab: NonNullable<FeatureManifest['tab']> } =>
     !!f.tab,
 ).sort((a, b) => a.tab.order - b.tab.order);
-
-/** All deep-link screens contributed by features. */
-export const FEATURE_DEEP_LINK_SCREENS = FEATURE_REGISTRY.flatMap(f =>
-  Object.entries(f.deepLinkScreens ?? {}),
-).map(([name, config]) => ({ name, ...config }));

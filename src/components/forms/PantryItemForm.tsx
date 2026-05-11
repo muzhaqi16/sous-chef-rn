@@ -3,15 +3,14 @@ import {
   View,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
   Text,
   ScrollView,
 } from 'react-native';
-import { alertService } from '#/services/alertService';
 import { useForm, useWatch, Controller, type Resolver } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { object, string } from 'yup';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
+import { PrimaryActivityIndicator } from '#components/atoms/themedComponents';
 import { useNavigation } from '@react-navigation/native';
 import { commonStyles } from '#/styles/commonStyles';
 import { useSelectedPantryId, useSelectedHomeId } from '#store/useAppStore';
@@ -34,7 +33,6 @@ import {
   emptyUnitSelection,
   type UnitSelection,
 } from '#features/pantry/hooks/mutations/types';
-import { parseFractionalInput as parseQuantityInput } from '#/utils/fractionUtils';
 import {
   DynamicFormFields,
   FieldDef,
@@ -48,7 +46,7 @@ import { CollapsibleSection } from '#components/molecules/CollapsibleSection';
 import { ItemInformationSection } from './ItemInformationSection';
 import { QuantitySection } from './QuantitySection';
 import { StorageDetailsSection } from './StorageDetailsSection';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
+import { usePantryItemFormSubmit } from './usePantryItemFormSubmit';
 
 type PageName = 'Basics' | 'Product' | 'Storage' | 'Inventory';
 const PAGES: readonly PageName[] = [
@@ -144,8 +142,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   itemId,
   onSuccess,
 }) => {
-  const { theme } = useUnistyles();
-  const navigation = useNavigation();
+  const { goBack } = useNavigation();
 
   // Consolidated unit state using UnitSelection type
   const [trackingUnit, setTrackingUnit] =
@@ -427,135 +424,34 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     setNetWeightUnitId(unitId);
   };
 
-  const handleSave = (data: PantryItemFormData) => {
-    // Validate quantity input
-    const quantityValue = parseQuantityInput(data.quantityInput || '');
-    if (!quantityValue || quantityValue <= 0) {
-      alertService.alert('Error', 'Please enter a valid quantity');
-      return;
-    }
+  const item = existingItemData?.pantryItem;
+  const isWeightLocked = mode === 'edit' && !!item?.lastUsedAt;
 
-    if (!currentPantryId) {
-      alertService.alert(
-        'Error',
-        'No pantry selected. Please select a pantry first.',
-      );
-      return;
-    }
-
-    executeMutation(
-      async () => {
-        // Resolve unit ID from symbol if needed
-        const unitId =
-          trackingUnit.id ?? (await resolveUnitId(null, data.unit));
-
-        // Resolve net weight unit from symbol text if needed (skip if weight locked)
-        const netWeightUnitText = (data.netWeightUnit || '').trim();
-        if (!isWeightLocked && netWeightUnitText) {
-          const resolvedNetWeightUnitId =
-            netWeightUnitId ?? (await resolveUnitId(null, netWeightUnitText));
-          if (resolvedNetWeightUnitId) {
-            data.netWeightUnitId = resolvedNetWeightUnitId;
-          }
-        }
-
-        if (mode === 'add') {
-          await createPantryItem({
-            input: data,
-            pantryId: currentPantryId,
-            quantityValue,
-            unitId,
-            selectedLocationId,
-            selectedCategoryId,
-          });
-        } else {
-          const currentItem = existingItemData?.pantryItem;
-          if (!currentItem || !itemId) {
-            alertService.alert('Error', 'Item not found');
-            return;
-          }
-
-          const dirtyFieldsRecord = { ...dirtyFields } as Record<
-            string,
-            boolean
-          >;
-
-          // Strip weight fields when locked — weight changes must go through correctPantryItemWeight
-          if (isWeightLocked) {
-            delete dirtyFieldsRecord.netWeight;
-            delete dirtyFieldsRecord.netWeightUnitId;
-          }
-
-          // Detect unit change even if dirtyFields missed it (e.g. typed without autocomplete)
-          const currentUnitSymbol = currentItem.unit?.symbol || '';
-          const typedUnit = (data.unit || '').trim();
-          if (typedUnit && typedUnit !== currentUnitSymbol) {
-            dirtyFieldsRecord.unit = true;
-          }
-
-          const quantityChanged = !!dirtyFieldsRecord.quantityInput;
-          const unitChanged = !!dirtyFieldsRecord.unit;
-          const unitChangedWithoutId = unitChanged && !unitId;
-
-          const hasNonQuantityChanges = Object.keys(dirtyFieldsRecord).some(
-            k => k !== 'quantityInput' && k !== 'unit' && dirtyFieldsRecord[k],
-          );
-
-          // Handle quantity/unit changes with dedicated mutation
-          // Skip unit via this path when unitId is null — route through updatePantryItemFields instead
-          if (quantityChanged || (unitChanged && !unitChangedWithoutId)) {
-            updateQuantity({
-              itemId,
-              quantityInput: data.quantityInput || quantityValue.toString(),
-              quantityValue,
-              unitId: unitChangedWithoutId ? null : unitId,
-              unitSymbol: data.unit,
-              trackingUnit,
-              currentItem,
-            });
-          }
-
-          // Handle non-quantity field updates
-          // Also route unit changes here when unitId is null (UnitSpecInput supports unitSymbol)
-          if (hasNonQuantityChanges || unitChangedWithoutId) {
-            updatePantryItemFields({
-              itemId,
-              input: data,
-              currentItem,
-              dirtyFields: dirtyFieldsRecord,
-              selectedLocationId,
-              selectedBrandId,
-              trackingUnit:
-                quantityChanged || unitChanged ? trackingUnit : undefined,
-              selectedStorageLocation,
-              unitSymbol: unitChangedWithoutId ? data.unit : undefined,
-            });
-          } else if (!quantityChanged && !unitChanged) {
-            // Nothing changed — still dismiss the form
-            onSuccess?.();
-          }
-        }
-      },
-      error => {
-        console.error(
-          `${mode === 'add' ? 'Add' : 'Update'} pantry item error:`,
-          error,
-        );
-        alertService.alert(
-          'Error',
-          `Failed to ${
-            mode === 'add' ? 'add' : 'update'
-          } pantry item. Please try again.`,
-        );
-      },
-    );
-  };
+  const { handleSave } = usePantryItemFormSubmit({
+    mode,
+    itemId,
+    currentPantryId,
+    isWeightLocked,
+    existingItemData,
+    dirtyFields: dirtyFields as Record<string, unknown>,
+    trackingUnit,
+    netWeightUnitId,
+    selectedLocationId,
+    selectedBrandId,
+    selectedCategoryId,
+    selectedStorageLocation,
+    createPantryItem,
+    updatePantryItemFields,
+    updateQuantity,
+    resolveUnitId,
+    onSuccess,
+  });
 
   // Show loading for edit mode
   if (mode === 'edit' && itemLoading) {
     return (
       <View style={[commonStyles.container, commonStyles.center]}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <PrimaryActivityIndicator size="large" />
       </View>
     );
   }
@@ -568,9 +464,6 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
       </View>
     );
   }
-
-  const item = existingItemData?.pantryItem;
-  const isWeightLocked = mode === 'edit' && !!item?.lastUsedAt;
 
   // Tags section fields (edit mode only)
   const tagsFields: FieldDef<PantryItemFormData>[] = [
@@ -626,7 +519,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
         <Header
           variant="form"
           title={mode === 'add' ? 'Add Pantry Item' : 'Edit Pantry Item'}
-          onClose={() => navigation.goBack()}
+          onClose={() => goBack()}
           rightActions={[
             {
               icon: 'checkmark',

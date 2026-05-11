@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Pressable } from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { commonStyles } from '#/styles/commonStyles';
 import { Text } from '#components/atoms/Text';
@@ -26,8 +26,6 @@ export const RestrictionSection: React.FC<RestrictionSectionProps> = ({
   onAddPress,
   emptyMessage = 'None added yet',
 }) => {
-  const { theme } = useUnistyles();
-
   return (
     <View style={styles.container}>
       {/* Header with title and add button */}
@@ -37,7 +35,7 @@ export const RestrictionSection: React.FC<RestrictionSectionProps> = ({
           onPress={onAddPress}
           style={({ pressed }) => [styles.addButton, pressed && styles.pressed]}
         >
-          <Icon name="add" size={18} color={theme.colors.primary} />
+          <Icon name="add" size={18} tone="primary" />
         </Pressable>
       </View>
 
@@ -56,11 +54,7 @@ export const RestrictionSection: React.FC<RestrictionSectionProps> = ({
                 ]}
                 onPress={() => onRemove(item.id)}
               >
-                <Icon
-                  name="close-circle-outline"
-                  size={18}
-                  color={theme.colors.error}
-                />
+                <Icon name="close-circle-outline" size={18} tone="error" />
               </Pressable>
             </View>
           ))}

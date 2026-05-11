@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, ActivityIndicator } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { View } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import { PrimaryActivityIndicator } from '#components/atoms/themedComponents';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 
@@ -21,13 +22,11 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
   emptyMessage = 'No data available',
   isEmpty = false,
 }) => {
-  const { theme } = useUnistyles();
-
   const renderContent = () => {
     if (loading) {
       return (
         <View style={styles.stateContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <PrimaryActivityIndicator size="large" />
         </View>
       );
     }
@@ -35,11 +34,7 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
     if (error) {
       return (
         <View style={styles.stateContainer}>
-          <Icon
-            name="alert-circle-outline"
-            size={40}
-            color={theme.colors.error}
-          />
+          <Icon name="alert-circle-outline" size={40} tone="error" />
           <Text size="sm" align="center" tone="error">
             {error}
           </Text>
@@ -50,11 +45,7 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
     if (isEmpty) {
       return (
         <View style={styles.stateContainer}>
-          <Icon
-            name="bar-chart-outline"
-            size={40}
-            color={theme.colors.textSecondary}
-          />
+          <Icon name="bar-chart-outline" size={40} tone="textSecondary" />
           <Text size="sm" align="center" tone="secondary">
             {emptyMessage}
           </Text>
@@ -66,7 +57,7 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.surface }]}>
+    <View style={styles.container}>
       <Text size="lg" weight="semibold" style={styles.title}>
         {title}
       </Text>
@@ -80,6 +71,7 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.md,
     padding: theme.spacing.md,
     marginBottom: theme.spacing.md,
+    backgroundColor: theme.colors.surface,
   },
   title: {
     marginBottom: theme.spacing.md,

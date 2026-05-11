@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
+import { useTranslation } from 'react-i18next';
 import { MultiSelectChipSheet } from '#components/molecules/MultiSelectChipSheet/MultiSelectChipSheet';
 import { Text } from '#components/atoms/Text';
 import { Diet, HealthGoal, Intolerance } from '#/graphql/generated/schemaTypes';
@@ -34,6 +35,7 @@ export const RecipeTagsSection: React.FC<RecipeTagsSectionProps> = ({
   onHealthGoalsChange,
   onIntolerancesChange,
 }) => {
+  const { t } = useTranslation();
   const [showDiets, setShowDiets] = useState(false);
   const [showHealthGoals, setShowHealthGoals] = useState(false);
   const [showIntolerances, setShowIntolerances] = useState(false);
@@ -41,12 +43,12 @@ export const RecipeTagsSection: React.FC<RecipeTagsSectionProps> = ({
   return (
     <View style={styles.container}>
       <Text size="lg" weight="semibold" style={styles.sectionTitle}>
-        Tags & Dietary Info
+        {t('recipes.tagsTitle')}
       </Text>
 
       {/* Diets */}
       <ChipGroup
-        label="Diets"
+        label={t('recipes.diets')}
         items={diets}
         formatLabel={formatEnumLabel}
         onPress={() => setShowDiets(true)}
@@ -54,7 +56,7 @@ export const RecipeTagsSection: React.FC<RecipeTagsSectionProps> = ({
 
       {/* Health Goals */}
       <ChipGroup
-        label="Health Goals"
+        label={t('recipes.healthGoals')}
         items={healthGoals}
         formatLabel={formatEnumLabel}
         onPress={() => setShowHealthGoals(true)}
@@ -62,7 +64,7 @@ export const RecipeTagsSection: React.FC<RecipeTagsSectionProps> = ({
 
       {/* Intolerances */}
       <ChipGroup
-        label="Intolerances"
+        label={t('recipes.intolerances')}
         items={intolerances}
         formatLabel={formatEnumLabel}
         onPress={() => setShowIntolerances(true)}
@@ -70,7 +72,7 @@ export const RecipeTagsSection: React.FC<RecipeTagsSectionProps> = ({
 
       <MultiSelectChipSheet<Diet>
         visible={showDiets}
-        title="Diets"
+        title={t('recipes.diets')}
         items={ALL_DIETS.map(d => ({ id: d, label: formatEnumLabel(d) }))}
         selectedItems={diets}
         onSelect={onDietsChange}
@@ -80,7 +82,7 @@ export const RecipeTagsSection: React.FC<RecipeTagsSectionProps> = ({
 
       <MultiSelectChipSheet<HealthGoal>
         visible={showHealthGoals}
-        title="Health Goals"
+        title={t('recipes.healthGoals')}
         items={ALL_HEALTH_GOALS.map(g => ({
           id: g,
           label: formatEnumLabel(g),
@@ -93,7 +95,7 @@ export const RecipeTagsSection: React.FC<RecipeTagsSectionProps> = ({
 
       <MultiSelectChipSheet<Intolerance>
         visible={showIntolerances}
-        title="Intolerances"
+        title={t('recipes.intolerances')}
         items={ALL_INTOLERANCES.map(i => ({
           id: i,
           label: formatEnumLabel(i),
@@ -119,36 +121,39 @@ const ChipGroup: React.FC<ChipGroupProps> = ({
   items,
   formatLabel,
   onPress,
-}) => (
-  <Pressable
-    onPress={onPress}
-    style={({ pressed }) => [styles.chipGroup, pressed && styles.pressed]}
-  >
-    <Text
-      size="sm"
-      weight="medium"
-      tone="secondary"
-      style={styles.chipGroupLabel}
+}) => {
+  const { t } = useTranslation();
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [styles.chipGroup, pressed && styles.pressed]}
     >
-      {label}
-    </Text>
-    <View style={styles.chipsRow}>
-      {items.length > 0 ? (
-        items.map(item => (
-          <View key={item} style={styles.chip}>
-            <Text size="sm" tone="accent">
-              {formatLabel(item)}
-            </Text>
-          </View>
-        ))
-      ) : (
-        <Text size="sm" tone="tertiary">
-          Tap to select...
-        </Text>
-      )}
-    </View>
-  </Pressable>
-);
+      <Text
+        size="sm"
+        weight="medium"
+        tone="secondary"
+        style={styles.chipGroupLabel}
+      >
+        {label}
+      </Text>
+      <View style={styles.chipsRow}>
+        {items.length > 0 ? (
+          items.map(item => (
+            <View key={item} style={styles.chip}>
+              <Text size="sm" tone="accent">
+                {formatLabel(item)}
+              </Text>
+            </View>
+          ))
+        ) : (
+          <Text size="sm" tone="tertiary">
+            {t('recipes.tapToSelect')}
+          </Text>
+        )}
+      </View>
+    </Pressable>
+  );
+};
 
 const styles = StyleSheet.create(theme => ({
   container: {

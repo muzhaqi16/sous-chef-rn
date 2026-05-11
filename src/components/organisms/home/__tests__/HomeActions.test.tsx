@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { HomeActions } from '../HomeActions';
 
 jest.mock('#utils/iconUtils', () => ({
@@ -49,21 +49,24 @@ describe('HomeActions', () => {
     expect(screen.queryByText('Delete')).toBeNull();
   });
 
-  it('calls onSetDefault with homeId when pressed', () => {
+  it('calls onSetDefault with homeId when pressed', async () => {
+    const user = userEvent.setup();
     render(<HomeActions {...defaultProps} />);
-    fireEvent.press(screen.getByText('Set Default'));
+    await user.press(screen.getByText('Set Default'));
     expect(defaultProps.onSetDefault).toHaveBeenCalledWith('home-1');
   });
 
-  it('calls onInvite with homeId when pressed', () => {
+  it('calls onInvite with homeId when pressed', async () => {
+    const user = userEvent.setup();
     render(<HomeActions {...defaultProps} />);
-    fireEvent.press(screen.getByText('Invite'));
+    await user.press(screen.getByText('Invite'));
     expect(defaultProps.onInvite).toHaveBeenCalledWith('home-1');
   });
 
-  it('calls onDelete with homeId when pressed', () => {
+  it('calls onDelete with homeId when pressed', async () => {
+    const user = userEvent.setup();
     render(<HomeActions {...defaultProps} />);
-    fireEvent.press(screen.getByText('Delete'));
+    await user.press(screen.getByText('Delete'));
     expect(defaultProps.onDelete).toHaveBeenCalledWith('home-1');
   });
 });

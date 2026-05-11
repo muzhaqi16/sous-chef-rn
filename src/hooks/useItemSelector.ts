@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@apollo/client/react';
 import { GetShoppingListsLiteDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { GetHomesDocument } from '#operations/home/home.generated';
@@ -26,10 +26,15 @@ export const useItemSelector = ({
     initialSelected,
   );
 
-  // Sync with the initialSelected when it changes
-  useEffect(() => {
+  // "Adjusting state during render" — sync selectedId with initialSelected
+  // by comparing the previous prop to the current one in the render body.
+  // setState-in-useEffect would trip react-hooks/set-state-in-effect.
+  const [prevInitialSelected, setPrevInitialSelected] =
+    useState(initialSelected);
+  if (prevInitialSelected !== initialSelected) {
+    setPrevInitialSelected(initialSelected);
     setSelectedId(initialSelected);
-  }, [initialSelected]);
+  }
 
   // Get selectedHomeId from Zustand store directly (without triggering GraphQL queries)
   // This prevents cascade: useDefaultHome uses cache-and-network which always fires network requests

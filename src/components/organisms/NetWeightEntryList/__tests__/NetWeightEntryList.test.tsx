@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { NetWeightEntryList, NetWeightEntry } from '../NetWeightEntryList';
 
 jest.mock('#utils/iconUtils', () => ({
@@ -93,9 +93,10 @@ describe('NetWeightEntryList', () => {
     expect(screen.getByText('Add Net Weight')).toBeTruthy();
   });
 
-  it('calls onEntriesChanged when adding new entry', () => {
+  it('calls onEntriesChanged when adding new entry', async () => {
+    const user = userEvent.setup();
     render(<NetWeightEntryList {...defaultProps} />);
-    fireEvent.press(screen.getByText('Add Net Weight'));
+    await user.press(screen.getByText('Add Net Weight'));
     expect(defaultProps.onEntriesChanged).toHaveBeenCalledWith(
       expect.arrayContaining([
         expect.objectContaining({ id: 'e1' }),

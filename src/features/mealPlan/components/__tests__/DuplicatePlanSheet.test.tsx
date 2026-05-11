@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { DuplicatePlanSheet } from '../DuplicatePlanSheet';
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
@@ -9,6 +9,7 @@ jest.mock('#hooks/useStandardBottomSheet', () => ({
     modalProps: {},
     contentContainerStyle: {},
   })),
+  BottomSheetModal: ({ children }: any) => children,
 }));
 
 jest.mock('#components/atoms/BottomSheetFormScrollView', () => {
@@ -147,19 +148,21 @@ describe('DuplicatePlanSheet', () => {
     expect(screen.getByText('Duplicate')).toBeTruthy();
   });
 
-  it('calls onClose when cancel is pressed', () => {
+  it('calls onClose when cancel is pressed', async () => {
+    const user = userEvent.setup();
     render(<DuplicatePlanSheet {...defaultProps} />);
-    fireEvent.press(screen.getByTestId('cancel-button'));
+    await user.press(screen.getByTestId('cancel-button'));
     expect(defaultProps.onClose).toHaveBeenCalled();
   });
 
-  it('calls onDuplicate with correct data when confirm is pressed after entering name', () => {
+  it('calls onDuplicate with correct data when confirm is pressed after entering name', async () => {
+    const user = userEvent.setup();
     const { rerender } = render(
       <DuplicatePlanSheet {...defaultProps} visible={false} />,
     );
     // Transition to visible to trigger render-time state reset
     rerender(<DuplicatePlanSheet {...defaultProps} visible={true} />);
-    fireEvent.press(screen.getByTestId('confirm-button'));
+    await user.press(screen.getByTestId('confirm-button'));
     expect(defaultProps.onDuplicate).toHaveBeenCalledWith(
       expect.objectContaining({
         mealPlanId: 'mp-1',
@@ -176,9 +179,10 @@ describe('DuplicatePlanSheet', () => {
     expect(screen.getByTestId('icon-chevron-forward')).toBeTruthy();
   });
 
-  it('does not call onDuplicate when mealPlan is null', () => {
+  it('does not call onDuplicate when mealPlan is null', async () => {
+    const user = userEvent.setup();
     render(<DuplicatePlanSheet {...defaultProps} mealPlan={null} />);
-    fireEvent.press(screen.getByTestId('confirm-button'));
+    await user.press(screen.getByTestId('confirm-button'));
     expect(defaultProps.onDuplicate).not.toHaveBeenCalled();
   });
 });

@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { fireEvent, render, screen, userEvent } from '@testing-library/react-native';
 import { TextInputModal } from '../TextInputModal';
 
 jest.mock('#/utils/compilerSafeWrappers');
@@ -46,23 +46,26 @@ describe('TextInputModal', () => {
     expect(screen.getByText('Dismiss')).toBeTruthy();
   });
 
-  it('calls onClose when cancel button is pressed', () => {
+  it('calls onClose when cancel button is pressed', async () => {
+    const user = userEvent.setup();
     render(<TextInputModal {...defaultProps} />);
-    fireEvent.press(screen.getByText('Cancel'));
+    await user.press(screen.getByText('Cancel'));
     expect(defaultProps.onClose).toHaveBeenCalled();
   });
 
-  it('shows required validation error for empty input', () => {
+  it('shows required validation error for empty input', async () => {
+    const user = userEvent.setup();
     render(<TextInputModal {...defaultProps} />);
     const input = screen.getByPlaceholderText('Type your name');
     fireEvent.changeText(input, '');
-    fireEvent.press(screen.getByText('Submit'));
+    await user.press(screen.getByText('Submit'));
     expect(screen.getByText('This field is required')).toBeTruthy();
   });
 
-  it('clears error when user types', () => {
+  it('clears error when user types', async () => {
+    const user = userEvent.setup();
     render(<TextInputModal {...defaultProps} />);
-    fireEvent.press(screen.getByText('Submit'));
+    await user.press(screen.getByText('Submit'));
     expect(screen.getByText('This field is required')).toBeTruthy();
     const input = screen.getByPlaceholderText('Type your name');
     fireEvent.changeText(input, 'Hello');

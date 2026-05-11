@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { fireEvent, render, screen} from '@testing-library/react-native';
 import { AddMealSheet } from '../AddMealSheet';
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
@@ -9,6 +9,7 @@ jest.mock('#hooks/useStandardBottomSheet', () => ({
     modalProps: {},
     contentContainerStyle: {},
   })),
+  BottomSheetModal: ({ children }: any) => children,
 }));
 
 jest.mock('#/utils/iconUtils', () => ({

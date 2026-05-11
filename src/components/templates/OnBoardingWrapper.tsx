@@ -8,12 +8,18 @@ import {
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { OnboardingSteps } from '#components/navigation/OnboardingSteps/OnboardingSteps';
 import { OnboardingNavigation } from '#components/navigation/OnboardingNavigation/OnboardingNavigation';
 import { useOnboardingContextSafe } from '#/context/OnboardingContext';
 import type { NavigationAction } from '#components/navigation/OnboardingNavigation/types';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
+
+const ThemedBackButton = withUnistyles(BackButton, theme => ({
+  color: theme.colors.primary,
+}));
+
+const ThemedOnboardingNavigation = withUnistyles(OnboardingNavigation);
 
 interface OnboardingWrapperProps {
   children: ReactNode;
@@ -48,7 +54,6 @@ export const OnBoardingWrapper = ({
   allowStepNavigation = false,
   testID,
 }: OnboardingWrapperProps) => {
-  const { theme } = useUnistyles();
   const progress = step && totalSteps ? (step / totalSteps) * 100 : 0;
 
   // Always call the hook, but handle if context is not provided
@@ -62,10 +67,9 @@ export const OnBoardingWrapper = ({
     <SafeAreaView style={styles.safeArea} testID={testID}>
       <View style={styles.headerContainer}>
         {onBack ? (
-          <BackButton
+          <ThemedBackButton
             onPress={onBack}
             style={styles.iconButton}
-            color={theme.colors.primary}
             testID={testID ? `${testID}-back-button` : undefined}
           />
         ) : (
@@ -108,26 +112,26 @@ export const OnBoardingWrapper = ({
       </KeyboardAvoidingView>
       {/* Enhanced Navigation or Legacy Bottom Navigation */}
       {showNavigation && !isLegacyMode && onboardingContext ? (
-        <OnboardingNavigation
+        <ThemedOnboardingNavigation
           showBackButton={onboardingContext.canGoBack}
           showContinueButton={
             onboardingContext.canGoNext || onboardingContext.isLastStep
           }
           showSkipButton={!!skipAction}
-          backAction={{
-            label: 'Back',
-            onPress: onboardingContext.goToPreviousStep,
-            backgroundColor: theme.colors.surface,
-            labelColor: theme.colors.textPrimary,
-          }}
-          continueAction={
-            continueAction || {
+          uniProps={t => ({
+            backAction: {
+              label: 'Back',
+              onPress: onboardingContext.goToPreviousStep,
+              backgroundColor: t.colors.surface,
+              labelColor: t.colors.textPrimary,
+            },
+            continueAction: continueAction || {
               label: 'Continue',
               onPress: onboardingContext.goToNextStep,
-              backgroundColor: theme.colors.primary,
-              labelColor: theme.colors.background,
-            }
-          }
+              backgroundColor: t.colors.primary,
+              labelColor: t.colors.background,
+            },
+          })}
           skipAction={skipAction}
           isLastStep={onboardingContext.isLastStep}
         />

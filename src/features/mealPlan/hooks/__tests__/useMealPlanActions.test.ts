@@ -1,25 +1,15 @@
-import { renderHook, act } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
+import {
+  recordMock,
+  renderHookWithApollo,
+} from '#/test-utils/apolloMockProvider';
+import {
+  CreateMealPlanDocument,
+  UpdateMealPlanDocument,
+  DeleteMealPlanDocument,
+} from '#features/mealPlan/graphql/mealPlan.generated';
 import { useMealPlanActions } from '../useMealPlanActions';
 
-const mockCreateMutation = jest.fn();
-const mockUpdateMutation = jest.fn();
-const mockDeleteMutation = jest.fn();
-
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useMutation: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'CreateMealPlan')
-      return [mockCreateMutation, { loading: false }];
-    if (opName === 'UpdateMealPlan')
-      return [mockUpdateMutation, { loading: false }];
-    if (opName === 'DeleteMealPlan')
-      return [mockDeleteMutation, { loading: false }];
-    return [jest.fn(), {}];
-  }),
-}));
-
-// Break circular dependency
 jest.mock('#/apollo/links/tokenScheduler');
 
 beforeEach(() => {
@@ -28,7 +18,7 @@ beforeEach(() => {
 
 describe('useMealPlanActions', () => {
   it('returns loading states all false initially', () => {
-    const { result } = renderHook(() => useMealPlanActions());
+    const { result } = renderHookWithApollo(() => useMealPlanActions());
 
     expect(result.current.loading).toBe(false);
     expect(result.current.creating).toBe(false);
@@ -37,12 +27,18 @@ describe('useMealPlanActions', () => {
   });
 
   it('createMealPlan calls mutation and returns data', async () => {
-    const expectedPlan = { id: 'plan-1', name: 'Week Plan' };
-    mockCreateMutation.mockResolvedValueOnce({
+    const expectedPlan = {
+      __typename: 'MealPlan',
+      id: 'plan-1',
+      name: 'Week Plan',
+    };
+    const create = recordMock(CreateMealPlanDocument, {
       data: { createMealPlan: expectedPlan },
     });
 
-    const { result } = renderHook(() => useMealPlanActions());
+    const { result } = renderHookWithApollo(() => useMealPlanActions(), {
+      operationMocks: [create.mock],
+    });
 
     let created: any;
     await act(async () => {
@@ -54,23 +50,23 @@ describe('useMealPlanActions', () => {
     });
 
     expect(created).toEqual(expectedPlan);
-    expect(mockCreateMutation).toHaveBeenCalledWith({
-      variables: {
-        input: {
-          name: 'Week Plan',
-          startDate: '2025-06-01',
-          endDate: '2025-06-07',
-        },
+    expect(create.fired).toContainEqual({
+      input: {
+        name: 'Week Plan',
+        startDate: '2025-06-01',
+        endDate: '2025-06-07',
       },
     });
   });
 
   it('createMealPlan returns null when mutation returns no data', async () => {
-    mockCreateMutation.mockResolvedValueOnce({
+    const create = recordMock(CreateMealPlanDocument, {
       data: { createMealPlan: null },
     });
 
-    const { result } = renderHook(() => useMealPlanActions());
+    const { result } = renderHookWithApollo(() => useMealPlanActions(), {
+      operationMocks: [create.mock],
+    });
 
     let created: any;
     await act(async () => {
@@ -85,11 +81,19 @@ describe('useMealPlanActions', () => {
   });
 
   it('updateMealPlan calls mutation with id and input', async () => {
-    mockUpdateMutation.mockResolvedValueOnce({
-      data: { updateMealPlan: { id: 'plan-1', name: 'Updated' } },
+    const update = recordMock(UpdateMealPlanDocument, {
+      data: {
+        updateMealPlan: {
+          __typename: 'MealPlan',
+          id: 'plan-1',
+          name: 'Updated',
+        },
+      },
     });
 
-    const { result } = renderHook(() => useMealPlanActions());
+    const { result } = renderHookWithApollo(() => useMealPlanActions(), {
+      operationMocks: [update.mock],
+    });
 
     let updated: any;
     await act(async () => {
@@ -98,18 +102,21 @@ describe('useMealPlanActions', () => {
       } as any);
     });
 
-    expect(updated).toEqual({ id: 'plan-1', name: 'Updated' });
-    expect(mockUpdateMutation).toHaveBeenCalledWith({
-      variables: { id: 'plan-1', input: { name: 'Updated' } },
+    expect(updated).toMatchObject({ id: 'plan-1', name: 'Updated' });
+    expect(update.fired).toContainEqual({
+      id: 'plan-1',
+      input: { name: 'Updated' },
     });
   });
 
   it('deleteMealPlan returns true on success', async () => {
-    mockDeleteMutation.mockResolvedValueOnce({
-      data: { deleteMealPlan: { success: true } },
+    const del = recordMock(DeleteMealPlanDocument, {
+      data: { deleteMealPlan: { __typename: 'BasicPayload', success: true } },
     });
 
-    const { result } = renderHook(() => useMealPlanActions());
+    const { result } = renderHookWithApollo(() => useMealPlanActions(), {
+      operationMocks: [del.mock],
+    });
 
     let deleted: boolean | undefined;
     await act(async () => {
@@ -117,17 +124,17 @@ describe('useMealPlanActions', () => {
     });
 
     expect(deleted).toBe(true);
-    expect(mockDeleteMutation).toHaveBeenCalledWith({
-      variables: { id: 'plan-1' },
-    });
+    expect(del.fired).toContainEqual({ id: 'plan-1' });
   });
 
   it('deleteMealPlan returns false on failure', async () => {
-    mockDeleteMutation.mockResolvedValueOnce({
-      data: { deleteMealPlan: { success: false } },
+    const del = recordMock(DeleteMealPlanDocument, {
+      data: { deleteMealPlan: { __typename: 'BasicPayload', success: false } },
     });
 
-    const { result } = renderHook(() => useMealPlanActions());
+    const { result } = renderHookWithApollo(() => useMealPlanActions(), {
+      operationMocks: [del.mock],
+    });
 
     let deleted: boolean | undefined;
     await act(async () => {

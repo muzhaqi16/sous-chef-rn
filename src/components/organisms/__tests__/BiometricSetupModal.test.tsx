@@ -3,7 +3,7 @@ import React from 'react';
 import {
   render,
   screen,
-  fireEvent,
+  userEvent,
   waitFor,
 } from '@testing-library/react-native';
 import { BiometricSetupModal } from '../BiometricSetupModal';
@@ -143,24 +143,26 @@ describe('BiometricSetupModal', () => {
   });
 
   it('calls onComplete(false) when Set up later is pressed', async () => {
+    const user = userEvent.setup();
     render(<BiometricSetupModal {...defaultProps} />);
 
     await waitFor(() => {
       expect(screen.getByText('Set up later')).toBeTruthy();
     });
 
-    fireEvent.press(screen.getByText('Set up later'));
+    await user.press(screen.getByText('Set up later'));
     expect(defaultProps.onComplete).toHaveBeenCalledWith(false);
   });
 
   it('calls onComplete(true) when Enable Now succeeds', async () => {
+    const user = userEvent.setup();
     render(<BiometricSetupModal {...defaultProps} />);
 
     await waitFor(() => {
       expect(screen.getByText('Enable Now')).toBeTruthy();
     });
 
-    fireEvent.press(screen.getByText('Enable Now'));
+    await user.press(screen.getByText('Enable Now'));
 
     await waitFor(() => {
       expect(mockStoreCredentials).toHaveBeenCalledWith(

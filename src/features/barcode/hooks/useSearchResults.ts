@@ -10,7 +10,7 @@ import {
 } from '#operations/item/item.generated';
 import { UpcFormat } from '#/graphql/generated/schemaTypes';
 import { useSearchState, useBottomSheetState } from '#store/useAppStore';
-import { ScannedItem } from '../store/barcodeScannerSlice';
+import { ScannedItem } from '#store/slices/barcodeScannerSlice';
 import { alertService } from '#/services/alertService';
 import { useImageUpload } from '#hooks/useImageUpload';
 import { storage } from '#/storage/mmkv';
@@ -22,7 +22,11 @@ import {
   cleanupPendingImageStorage as sharedCleanupPendingImageStorage,
 } from '#/utils/items/createItemMapping';
 
-// Map Vision Camera barcode format to GraphQL UpcFormat enum
+// Map Vision Camera barcode format to GraphQL UpcFormat enum.
+// Source: react-native-vision-camera-barcode-scanner's BarcodeFormat
+// ('ean-13' | 'ean-8' | 'upc-a' | 'upc-e' | 'qr-code' | …). BarcodeScannerScreen
+// normalizes 'qr-code' → 'qr' before forwarding, so non-UPC formats fall through
+// to the default branch and let the API auto-detect.
 const mapVisionCameraFormatToUpcFormat = (
   format?: string,
 ): UpcFormat | undefined => {

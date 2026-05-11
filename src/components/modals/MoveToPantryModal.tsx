@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Switch } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { BottomSheetModal } from '@gorhom/bottom-sheet';
+import { View } from 'react-native';
+import { Pressable } from '#components/atoms/themedComponents';
+import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { alertService } from '#/services/alertService';
 import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { StyleSheet } from 'react-native-unistyles';
+import { BaseSwitch } from '#components/base/BaseSwitch';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { FractionInput } from '#components/molecules/FractionInput';
@@ -45,12 +46,11 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   onClose,
   onConfirm,
 }) => {
-  const { ref, modalProps, contentContainerStyle, theme } =
-    useStandardBottomSheet({
-      onDismiss: onClose,
-      snapPoints: ['75%', '95%'],
-      keyboardAware: true,
-    });
+  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
+    onDismiss: onClose,
+    snapPoints: ['75%', '95%'],
+    keyboardAware: true,
+  });
 
   // Form state
   const [quantityInput, setQuantityInput] = useState('');
@@ -217,10 +217,8 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                       <Icon
                         name="cube-outline"
                         size={20}
-                        color={
-                          pantryId === pantry.id
-                            ? theme.colors.white
-                            : theme.colors.textSecondary
+                        tone={
+                          pantryId === pantry.id ? 'white' : 'textSecondary'
                         }
                       />
                       <Text
@@ -332,7 +330,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                   <Icon
                     name="calendar-outline"
                     size={20}
-                    color={theme.colors.textSecondary}
+                    tone="textSecondary"
                   />
                   <Text style={styles.dateText}>
                     {expirationDate
@@ -348,11 +346,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                     ]}
                     onPress={clearExpirationDate}
                   >
-                    <Icon
-                      name="close"
-                      size={20}
-                      color={theme.colors.textSecondary}
-                    />
+                    <Icon name="close" size={20} tone="textSecondary" />
                   </Pressable>
                 )}
               </View>
@@ -403,14 +397,9 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                   Turn off to keep the item in your shopping list
                 </Text>
               </View>
-              <Switch
+              <BaseSwitch
                 value={removeFromList}
                 onValueChange={setRemoveFromList}
-                trackColor={{
-                  false: theme.colors.border,
-                  true: theme.colors.primary,
-                }}
-                thumbColor={theme.colors.white}
               />
             </View>
           </>

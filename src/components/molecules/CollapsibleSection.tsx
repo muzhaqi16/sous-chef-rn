@@ -1,7 +1,7 @@
 import React from 'react';
 
-import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Pressable } from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#/utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 
@@ -20,8 +20,6 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
   onToggle,
   children,
 }) => {
-  const { theme } = useUnistyles();
-
   return (
     <>
       <Pressable
@@ -35,7 +33,7 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
         <Icon
           name={expanded ? 'chevron-up' : 'chevron-down'}
           size={20}
-          color={theme.colors.textSecondary}
+          tone="textSecondary"
         />
       </Pressable>
       {!!expanded && children}

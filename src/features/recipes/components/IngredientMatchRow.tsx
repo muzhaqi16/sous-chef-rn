@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Switch, TextInput } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { View, TextInput } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import { BaseSwitch } from '#components/base/BaseSwitch';
 
 import {
   type EditableMatch,
@@ -17,10 +18,9 @@ interface IngredientMatchRowProps {
   ) => void;
 }
 
-const BADGE_CONFIG: Record<
-  string,
-  { label: string; color: 'success' | 'warning' | 'error' }
-> = {
+type BadgeColor = 'success' | 'warning' | 'error';
+
+const BADGE_CONFIG: Record<string, { label: string; color: BadgeColor }> = {
   available: { label: 'Available', color: 'success' },
   partial: { label: 'Partial', color: 'warning' },
   missing: { label: 'Missing', color: 'error' },
@@ -31,11 +31,11 @@ const IngredientMatchRowComponent: React.FC<IngredientMatchRowProps> = ({
   index,
   onUpdate,
 }) => {
-  const { theme } = useUnistyles();
   const { match, adjustedQuantity, isIncluded } = editableMatch;
   const status = getAvailabilityStatus(match);
   const badge = BADGE_CONFIG[status];
   const isOptional = match.ingredient.isOptional;
+  styles.useVariants({ badgeColor: badge.color });
 
   return (
     <View style={[styles.row, !isIncluded && styles.rowExcluded]}>
@@ -49,17 +49,8 @@ const IngredientMatchRowComponent: React.FC<IngredientMatchRowProps> = ({
           >
             {match.ingredient.name}
           </Text>
-          <View
-            style={[
-              styles.badge,
-              { backgroundColor: theme.colors[badge.color] + '20' },
-            ]}
-          >
-            <Text
-              size="xs"
-              weight="semibold"
-              style={{ color: theme.colors[badge.color] }}
-            >
+          <View style={styles.badge}>
+            <Text size="xs" weight="semibold" style={styles.badgeText}>
               {isOptional ? 'Optional' : badge.label}
             </Text>
           </View>
@@ -99,14 +90,9 @@ const IngredientMatchRowComponent: React.FC<IngredientMatchRowProps> = ({
               </Text>
             )}
           </View>
-          <Switch
+          <BaseSwitch
             value={isIncluded}
             onValueChange={value => onUpdate(index, { isIncluded: value })}
-            trackColor={{
-              false: theme.colors.border,
-              true: theme.colors.primary,
-            }}
-            thumbColor={theme.colors.white}
           />
         </View>
       </View>
@@ -145,6 +131,22 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: 2,
     borderRadius: theme.radii.sm,
+    variants: {
+      badgeColor: {
+        success: { backgroundColor: theme.colors.success + '20' },
+        warning: { backgroundColor: theme.colors.warning + '20' },
+        error: { backgroundColor: theme.colors.error + '20' },
+      },
+    },
+  },
+  badgeText: {
+    variants: {
+      badgeColor: {
+        success: { color: theme.colors.success },
+        warning: { color: theme.colors.warning },
+        error: { color: theme.colors.error },
+      },
+    },
   },
   bottomRow: {
     flexDirection: 'row',

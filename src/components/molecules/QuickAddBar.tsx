@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { View, TextInput, Keyboard } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Pressable, ThemedTextInput } from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#/utils/iconUtils';
 
 interface QuickAddBarProps {
@@ -21,7 +21,6 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
   onAddItem,
   visible = true,
 }) => {
-  const { theme } = useUnistyles();
   const nameRef = useRef<TextInput>(null);
   const quantityRef = useRef<TextInput>(null);
   const itemNameRef = useRef('');
@@ -60,26 +59,24 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
   return (
     <View style={styles.container}>
       <View style={styles.inputRow}>
-        <TextInput
+        <ThemedTextInput
           ref={nameRef}
           style={styles.nameInput}
           placeholder="Add item..."
           defaultValue=""
           onChangeText={handleNameChange}
-          placeholderTextColor={theme.colors.textSecondary}
           returnKeyType="done"
           onSubmitEditing={handleAdd}
           accessibilityLabel="Item name"
           accessibilityHint="Enter the name of the item to add"
         />
-        <TextInput
+        <ThemedTextInput
           ref={quantityRef}
           style={styles.quantityInput}
           placeholder="Qty"
           defaultValue="1"
           onChangeText={handleQuantityChange}
           keyboardType="numeric"
-          placeholderTextColor={theme.colors.textSecondary}
           accessibilityLabel="Quantity"
           accessibilityHint="Enter the quantity"
         />

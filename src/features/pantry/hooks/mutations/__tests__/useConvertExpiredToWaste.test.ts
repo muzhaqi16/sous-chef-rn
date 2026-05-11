@@ -1,7 +1,7 @@
 import React, { type ReactNode } from 'react';
 import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { MockedProvider } from '@apollo/client/testing/react';
-import type { MockedResponse } from '@apollo/client/testing';
+import type { MockedResponse } from '#/test-utils/apolloMockProvider';
 import { alertService } from '#/services/alertService';
 import { ConvertExpiredToWasteDocument } from '#features/pantry/graphql/pantry.generated';
 import { useConvertExpiredToWaste } from '../useConvertExpiredToWaste';

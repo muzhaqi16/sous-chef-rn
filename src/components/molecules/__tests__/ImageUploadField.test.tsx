@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { ImageUploadField } from '../ImageUploadField';
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -92,7 +92,8 @@ describe('ImageUploadField', () => {
     expect(screen.getByText('trash-outline')).toBeTruthy();
   });
 
-  it('calls onImageUploaded with empty string when remove is pressed', () => {
+  it('calls onImageUploaded with empty string when remove is pressed', async () => {
+    const user = userEvent.setup();
     const onImageUploaded = jest.fn();
     render(
       <ImageUploadField
@@ -100,7 +101,7 @@ describe('ImageUploadField', () => {
         onImageUploaded={onImageUploaded}
       />,
     );
-    fireEvent.press(screen.getByText('trash-outline'));
+    await user.press(screen.getByText('trash-outline'));
     expect(onImageUploaded).toHaveBeenCalledWith('');
   });
 

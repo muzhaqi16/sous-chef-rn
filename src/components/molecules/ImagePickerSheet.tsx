@@ -1,11 +1,22 @@
 import React, { forwardRef, useRef, useImperativeHandle } from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
-import { StyleSheet } from 'react-native-unistyles';
+import { Pressable } from '#components/atoms/themedComponents';
+import { BottomSheetView } from '@gorhom/bottom-sheet';
+import {
+  BottomSheetModal,
+  type BottomSheetModalRef,
+  useStandardBottomSheet,
+} from '#hooks/useStandardBottomSheet';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
-import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { Text } from '#components/atoms/Text';
+
+// `useStandardBottomSheet`'s `BottomSheetModal` defaults to `theme.colors.surface`;
+// the image picker uses the slightly tinted `surfaceVariant` to read as a layer
+// above the screen content. Override via withUnistyles so the prop is theme-reactive.
+const VariantBottomSheetModal = withUnistyles(BottomSheetModal, theme => ({
+  backgroundStyle: { backgroundColor: theme.colors.surfaceVariant },
+}));
 
 interface ImagePickerSheetProps {
   onCamera: () => void;
@@ -13,10 +24,10 @@ interface ImagePickerSheetProps {
 }
 
 export const ImagePickerSheet = forwardRef<
-  BottomSheetModal,
+  BottomSheetModalRef,
   ImagePickerSheetProps
 >(({ onCamera, onLibrary }, ref) => {
-  const localRef = useRef<BottomSheetModal>(null);
+  const localRef = useRef<BottomSheetModalRef>(null);
   useImperativeHandle(ref, () => localRef.current!, []);
 
   // Pending action to execute after sheet dismisses
@@ -26,7 +37,7 @@ export const ImagePickerSheet = forwardRef<
     localRef.current?.dismiss();
   };
 
-  const { modalProps, contentContainerStyle, theme } = useStandardBottomSheet({
+  const { modalProps, contentContainerStyle } = useStandardBottomSheet({
     onDismiss: () => {
       const action = pendingActionRef.current;
       pendingActionRef.current = null;
@@ -47,11 +58,9 @@ export const ImagePickerSheet = forwardRef<
   };
 
   return (
-    <BottomSheetModal
+    <VariantBottomSheetModal
       ref={localRef}
       {...modalProps}
-      backgroundStyle={{ backgroundColor: theme.colors.surfaceVariant }}
-      handleIndicatorStyle={{ backgroundColor: theme.colors.border }}
       stackBehavior="push"
     >
       <BottomSheetView style={[styles.container, contentContainerStyle]}>
@@ -64,7 +73,7 @@ export const ImagePickerSheet = forwardRef<
             onPress={handleCamera}
           >
             <View style={styles.iconContainer}>
-              <Icon name="camera" size={24} color={theme.colors.primary} />
+              <Icon name="camera" size={24} tone="primary" />
             </View>
             <Text size="md" weight="medium">
               Take Photo
@@ -75,7 +84,7 @@ export const ImagePickerSheet = forwardRef<
             onPress={handleLibrary}
           >
             <View style={styles.iconContainer}>
-              <Icon name="image" size={24} color={theme.colors.primary} />
+              <Icon name="image" size={24} tone="primary" />
             </View>
             <Text size="md" weight="medium">
               Choose from Library
@@ -94,7 +103,7 @@ export const ImagePickerSheet = forwardRef<
           </Text>
         </Pressable>
       </BottomSheetView>
-    </BottomSheetModal>
+    </VariantBottomSheetModal>
   );
 });
 

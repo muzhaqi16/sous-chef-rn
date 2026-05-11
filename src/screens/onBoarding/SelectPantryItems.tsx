@@ -3,6 +3,7 @@ import { View, ScrollView } from 'react-native';
 import { Text } from '#components/atoms/Text';
 import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
 import { StyleSheet } from 'react-native-unistyles';
+import { useTranslation } from 'react-i18next';
 import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigation';
 import { useSelectableItems } from '#hooks/useSelectableItems';
 import { useMutation, useQuery } from '@apollo/client/react';
@@ -22,7 +23,7 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import { extractNodes } from '#/utils/connectionUtils';
 import { removeFromPantryItemsCache } from '#/hooks/home/pantry/utils';
-import { useAppStore } from '#store/useAppStore';
+import { useSelectedPantryId } from '#store/useAppStore';
 import { Button } from '#components/base/Button';
 import { AnimatedChip } from '#components/atoms/AnimatedChip';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
@@ -31,11 +32,12 @@ import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 import { SousChefLoader } from '#/components/base/SousChefLoader';
 
 export const SelectPantryItems = () => {
+  const { t } = useTranslation();
   useScreenTransition('SelectPantryItems');
   const { navigateToNextStep, navigateToPreviousStep } =
     useOnboardingNavigation();
 
-  const selectedPantryId = useAppStore(state => state.selectedPantryId);
+  const selectedPantryId = useSelectedPantryId();
 
   const {
     data,
@@ -104,14 +106,18 @@ export const SelectPantryItems = () => {
   if (loading || pantryLoading) {
     return (
       <OnBoardingWrapper
-        title="Stock your pantry"
-        subtitle="Select items you already have at home"
+        title={t('onBoarding.stockPantryTitle')}
+        subtitle={t('onBoarding.stockPantrySubtitle')}
         step={3}
         totalSteps={7}
         onBack={() => navigateToPreviousStep('CreateShoppingList')}
         onSkip={() => navigateToNextStep('SelectPantryItems')}
       >
-        <SousChefLoader size="small" showBrand={false} message="Loading" />
+        <SousChefLoader
+          size="small"
+          showBrand={false}
+          message={t('loading.loading')}
+        />
       </OnBoardingWrapper>
     );
   }
@@ -119,8 +125,8 @@ export const SelectPantryItems = () => {
   if (queryError) {
     return (
       <OnBoardingWrapper
-        title="Stock your pantry"
-        subtitle="Select items you already have at home"
+        title={t('onBoarding.stockPantryTitle')}
+        subtitle={t('onBoarding.stockPantrySubtitle')}
         step={3}
         totalSteps={7}
         onBack={() => navigateToPreviousStep('CreateShoppingList')}
@@ -128,10 +134,10 @@ export const SelectPantryItems = () => {
       >
         <View style={styles.errorContainer}>
           <Text tone="error" align="center" style={styles.errorText}>
-            Unable to load items. Please try again.
+            {t('onBoarding.loadItemsFailed')}
           </Text>
           <Button onPress={() => refetch()} variant="primary">
-            Try Again
+            {t('onBoarding.tryAgain')}
           </Button>
         </View>
       </OnBoardingWrapper>
@@ -203,8 +209,8 @@ export const SelectPantryItems = () => {
 
   return (
     <OnBoardingWrapper
-      title="Stock your pantry"
-      subtitle="Select items you already have at home (optional)"
+      title={t('onBoarding.stockPantryTitle')}
+      subtitle={t('onBoarding.stockPantrySubtitleOptional')}
       step={3}
       totalSteps={7}
       onBack={() => navigateToPreviousStep('CreateShoppingList')}
@@ -222,7 +228,7 @@ export const SelectPantryItems = () => {
           align="center"
           style={styles.helperText}
         >
-          {selectedItems.length} selected
+          {t('onBoarding.itemsSelected', { count: selectedItems.length })}
         </Text>
         <View style={styles.chipContainer}>
           {items.map(item => (
@@ -241,14 +247,19 @@ export const SelectPantryItems = () => {
       <Button
         title={
           isSaving
-            ? 'Saving...'
+            ? t('onBoarding.saving')
             : isFirstVisit
-            ? `Add ${
-                selectedItems.length > 0 ? selectedItems.length : ''
-              } Item${selectedItems.length === 1 ? '' : 's'}`
+            ? selectedItems.length === 0
+              ? t('onBoarding.addItemsZero')
+              : t(
+                  selectedItems.length === 1
+                    ? 'onBoarding.addItemSingular'
+                    : 'onBoarding.addItemPlural',
+                  { count: selectedItems.length },
+                )
             : hasChanges
-            ? 'Save Changes'
-            : 'Continue'
+            ? t('onBoarding.saveChanges')
+            : t('labels.continue')
         }
         onPress={onNext}
         variant="primary"

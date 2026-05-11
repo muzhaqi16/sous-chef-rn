@@ -1,14 +1,13 @@
 import React, { useState, useRef } from 'react';
 import { View } from 'react-native';
-import { Pressable, TextInput } from 'react-native-gesture-handler';
-import {
-  BottomSheetModal,
-  BottomSheetScrollView,
-  BottomSheetTextInput,
-} from '@gorhom/bottom-sheet';
+import { TextInput } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
+import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { Header } from '#/components/molecules/Header';
 import { StyleSheet } from 'react-native-unistyles';
+import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
 import { UnitAutocompleteField } from '#/components/molecules/AutocompleteField/UnitAutocompleteField';
 import Chip from '#/components/atoms/Chip';
 import { Icon } from '#utils/iconUtils';
@@ -99,7 +98,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
   onSave,
   loading = false,
 }) => {
-  const { ref, modalProps, theme } = useStandardBottomSheet({
+  const { ref, modalProps } = useStandardBottomSheet({
     visible: visible && !!item,
     onDismiss: onClose,
     snapPoints: ['55%'],
@@ -232,6 +231,10 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
     item &&
     (quantityInput !== originalQuantityInput || unitName !== item.unitName);
 
+  const decrementDisabled = (parseFractionInput(quantityInput) ?? 0) <= 0;
+
+  styles.useVariants({ editing: isEditing });
+
   return (
     <BottomSheetModal ref={ref} {...modalProps}>
       <Header
@@ -271,23 +274,15 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
             <Pressable
               style={({ pressed }) => [
                 styles.counterButton,
-                {
-                  backgroundColor: theme.colors.surface,
-                  borderColor: theme.colors.border,
-                },
-                pressed && { opacity: theme.opacity.pressed },
+                pressed && styles.pressed,
               ]}
               onPress={handleDecrement}
-              disabled={(parseFractionInput(quantityInput) ?? 0) <= 0}
+              disabled={decrementDisabled}
             >
               <Icon
                 name="remove-outline"
                 size={24}
-                color={
-                  (parseFractionInput(quantityInput) ?? 0) <= 0
-                    ? theme.colors.textTertiary
-                    : theme.colors.textPrimary
-                }
+                tone={decrementDisabled ? 'textTertiary' : 'textPrimary'}
               />
             </Pressable>
 
@@ -295,24 +290,14 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
             <Pressable
               style={({ pressed }) => [
                 styles.quantityDisplay,
-                isEditing && {
-                  borderWidth: 2,
-                  borderRadius: theme.radii.md,
-                  paddingVertical: theme.spacing.xs,
-                  marginHorizontal: theme.spacing.md,
-                  borderColor: theme.colors.primary,
-                },
-                pressed && { opacity: theme.opacity.pressed },
+                pressed && styles.pressed,
               ]}
               onPress={handleQuantityPress}
             >
               {isEditing ? (
-                <BottomSheetTextInput
+                <ThemedBottomSheetTextInput
                   ref={inputRef}
-                  style={[
-                    styles.quantityInput,
-                    { color: theme.colors.textPrimary },
-                  ]}
+                  style={styles.quantityInput}
                   value={inputValue}
                   onChangeText={handleInputChange}
                   onBlur={handleInputBlur}
@@ -331,12 +316,11 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
             <Pressable
               style={({ pressed }) => [
                 styles.incrementButton,
-                { backgroundColor: theme.colors.primary },
-                pressed && { opacity: theme.opacity.pressed },
+                pressed && styles.pressed,
               ]}
               onPress={handleIncrement}
             >
-              <Icon name="add" size={24} color={theme.colors.white} />
+              <Icon name="add" size={24} tone="white" />
             </Pressable>
           </View>
         </View>
@@ -431,6 +415,8 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
+    backgroundColor: theme.colors.surface,
+    borderColor: theme.colors.border,
   },
   incrementButton: {
     width: 56,
@@ -438,12 +424,24 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.md,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: theme.colors.primary,
   },
   quantityDisplay: {
     minWidth: 80,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: theme.spacing.lg,
+    variants: {
+      editing: {
+        true: {
+          borderWidth: 2,
+          borderRadius: theme.radii.md,
+          paddingVertical: theme.spacing.xs,
+          marginHorizontal: theme.spacing.md,
+          borderColor: theme.colors.primary,
+        },
+      },
+    },
   },
   quantityInput: {
     fontSize: theme.typography.fontSize['5xl'],
@@ -451,5 +449,9 @@ const styles = StyleSheet.create(theme => ({
     textAlign: 'center',
     minWidth: 80,
     padding: 0,
+    color: theme.colors.textPrimary,
+  },
+  pressed: {
+    opacity: theme.opacity.pressed,
   },
 }));

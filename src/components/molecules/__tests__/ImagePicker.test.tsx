@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { ImagePicker } from '../ImagePicker';
 
 jest.mock('#utils/iconUtils', () => ({
@@ -56,7 +56,8 @@ describe('ImagePicker', () => {
     expect(screen.queryByText('Add Photo')).toBeNull();
   });
 
-  it('does not trigger picker when disabled', () => {
+  it('does not trigger picker when disabled', async () => {
+    const user = userEvent.setup();
     const openMock = jest.fn();
     const useBottomSheetModal =
       require('#hooks/useBottomSheetModal').useBottomSheetModal;
@@ -66,7 +67,7 @@ describe('ImagePicker', () => {
     });
 
     render(<ImagePicker {...defaultProps} disabled />);
-    fireEvent.press(screen.getByText('Add Photo'));
+    await user.press(screen.getByText('Add Photo'));
     expect(openMock).not.toHaveBeenCalled();
   });
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { AddButton } from '../FloatingTabBar/AddButton';
 import { TabItem } from '../FloatingTabBar/TabItem';
 
@@ -61,10 +61,11 @@ describe('AddButton', () => {
     expect(screen.getByTestId('tab-bar-add-button')).toBeTruthy();
   });
 
-  it('calls onPress when pressed', () => {
+  it('calls onPress when pressed', async () => {
+    const user = userEvent.setup();
     const onPress = jest.fn();
     render(<AddButton onPress={onPress} />);
-    fireEvent.press(screen.getByTestId('tab-bar-add-button'));
+    await user.press(screen.getByTestId('tab-bar-add-button'));
     expect(onPress).toHaveBeenCalled();
   });
 
@@ -118,10 +119,11 @@ describe('TabItem', () => {
     expect(labels.length).toBeLessThanOrEqual(1);
   });
 
-  it('calls onPress when pressed', () => {
+  it('calls onPress when pressed', async () => {
+    const user = userEvent.setup();
     const onPress = jest.fn();
     render(<TabItem {...defaultTabProps} onPress={onPress} />);
-    fireEvent.press(screen.getByTestId('tab-pantry'));
+    await user.press(screen.getByTestId('tab-pantry'));
     expect(onPress).toHaveBeenCalled();
   });
 

@@ -1,5 +1,5 @@
 import { alertService } from '#/services/alertService';
-import { useAppStore } from '#store/useAppStore';
+import { useUser } from '#store/useAppStore';
 import { useMutation, useQuery } from '@apollo/client/react';
 import {
   GetNotificationPreferencesDocument,
@@ -98,7 +98,7 @@ function toNestedInput(
 }
 
 export const useNotificationSettings = (options?: { skip?: boolean }) => {
-  const user = useAppStore(state => state.user);
+  const user = useUser();
   const { handleApolloError } = useErrorService();
 
   // PERFORMANCE: Hardcoded policies prevent query cascade from network status changes

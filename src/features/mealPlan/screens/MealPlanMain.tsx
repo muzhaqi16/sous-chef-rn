@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Pressable } from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
 import { format, parseISO } from 'date-fns';
 import { Icon } from '#utils/iconUtils';
 import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
@@ -92,8 +92,7 @@ export const MealPlanMain: React.FC = () => (
  * Only mounts after isReady is true, so the skeleton paints instantly.
  */
 const MealPlanMainInner: React.FC = () => {
-  const { theme } = useUnistyles();
-  const { navigate } = useAppNavigation();
+  const { toMealPlanRecipeDetail, toCreateMealPlan } = useAppNavigation();
   const { setOverlayOpen } = useTabBarSetters();
 
   // Plan selector state
@@ -320,7 +319,7 @@ const MealPlanMainInner: React.FC = () => {
       | undefined;
     if (!item) return;
     if (item.recipe?.id) {
-      navigate('RecipeDetail', { recipeId: item.recipe.id });
+      toMealPlanRecipeDetail({ recipeId: item.recipe.id });
     } else if (item.customMealName && permissions.canEdit) {
       setEditingCustomItem(item);
       setEditCustomMealVisible(true);
@@ -335,7 +334,7 @@ const MealPlanMainInner: React.FC = () => {
   };
 
   const handleCreatePlan = () => {
-    navigate('CreateMealPlan');
+    toCreateMealPlan();
   };
 
   const handleSaveAsTemplate = () => {
@@ -366,7 +365,7 @@ const MealPlanMainInner: React.FC = () => {
     loading: plansLoading,
     setSelectedMealPlanId: (id: string) => setSelectedMealPlanId(id),
     selectorRef,
-    navigate,
+    toCreateMealPlan,
     onCreateFromTemplate: handleOpenTemplateBrowser,
   });
 
@@ -470,11 +469,7 @@ const MealPlanMainInner: React.FC = () => {
             title={activeMealPlan?.name ?? 'Meal Plan'}
             onTitlePress={handleOpenSelector}
             titleAccessory={
-              <Icon
-                name="chevron-down"
-                size={20}
-                color={theme.colors.textPrimary}
-              />
+              <Icon name="chevron-down" size={20} tone="textPrimary" />
             }
           />
         </View>
@@ -487,11 +482,7 @@ const MealPlanMainInner: React.FC = () => {
                 style={styles.headerActionButton}
                 accessibilityLabel="Generate shopping list"
               >
-                <Icon
-                  name="cart-outline"
-                  size={22}
-                  color={theme.colors.primary}
-                />
+                <Icon name="cart-outline" size={22} tone="primary" />
               </Pressable>
             ) : null}
             {permissions.canSaveAsTemplate ? (
@@ -501,11 +492,7 @@ const MealPlanMainInner: React.FC = () => {
                 style={styles.headerActionButton}
                 accessibilityLabel="Save as template"
               >
-                <Icon
-                  name="bookmark-outline"
-                  size={22}
-                  color={theme.colors.primary}
-                />
+                <Icon name="bookmark-outline" size={22} tone="primary" />
               </Pressable>
             ) : null}
             <Pressable
@@ -514,11 +501,7 @@ const MealPlanMainInner: React.FC = () => {
               style={styles.headerActionButton}
               accessibilityLabel="Plan settings"
             >
-              <Icon
-                name="ellipsis-vertical"
-                size={22}
-                color={theme.colors.textSecondary}
-              />
+              <Icon name="ellipsis-vertical" size={22} tone="textSecondary" />
             </Pressable>
           </View>
         )}

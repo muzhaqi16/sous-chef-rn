@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useAppStore } from '#/store/useAppStore';
+import { useAppStore, useShowNavigationLabels } from '#store/useAppStore';
 import { useAppSettings } from '#features/profile/hooks/useAppSettings';
 import { storage } from '#/storage/mmkv';
 import { useTutorialResetSignal } from '#hooks/ui/useTutorialResetSignal';
@@ -70,7 +70,7 @@ export const useSettings = () => {
   const setHapticFeedbackEnabled = useAppStore(
     state => state.setHapticFeedbackEnabled,
   );
-  const showNavigationLabels = useAppStore(state => state.showNavigationLabels);
+  const showNavigationLabels = useShowNavigationLabels();
   const setShowNavigationLabels = useAppStore(
     state => state.setShowNavigationLabels,
   );
@@ -138,12 +138,4 @@ export const useShowTutorials = (): boolean => {
     setValue(storage.getBoolean('user_show_tutorials') ?? true);
   }
   return value;
-};
-
-/**
- * Selector hook for just the showNavigationLabels setting
- * Use this when you only need to check if navigation labels are enabled
- */
-export const useShowNavigationLabels = (): boolean => {
-  return useAppStore(state => state.showNavigationLabels);
 };

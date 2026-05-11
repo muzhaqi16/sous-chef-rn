@@ -6,10 +6,11 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
+import { useTranslation } from 'react-i18next';
 import { Icon } from '#/utils/iconUtils';
 import { Header } from '#components/molecules/Header';
 import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
@@ -47,8 +48,8 @@ async function performDeleteAccount(
 }
 
 export const DeleteAccountScreen: React.FC = () => {
+  const { t } = useTranslation();
   const { goBack } = useAppNavigation();
-  const { theme } = useUnistyles();
 
   const [confirmText, setConfirmText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
@@ -69,27 +70,33 @@ export const DeleteAccountScreen: React.FC = () => {
   const [deleteAccountMutation] = useMutation(DeleteAccountDocument, {
     onCompleted: () => authService.logout(),
     onError: error => {
-      alertService.alert('Error', `Failed to delete account: ${error.message}`);
+      alertService.alert(
+        t('labels.error'),
+        t('account.deleteFailedAlert', { error: error.message }),
+      );
       setIsDeleting(false);
     },
   });
 
   const handleDeleteAccount = async () => {
     if (confirmText.trim().toUpperCase() !== 'DELETE') {
-      alertService.alert('Error', 'Please type DELETE to confirm');
+      alertService.alert(
+        t('labels.error'),
+        t('account.deleteTypeConfirmError'),
+      );
       return;
     }
 
     alertService.alert(
-      'Final Confirmation',
-      'Are you absolutely sure? This action cannot be undone and all your data will be permanently deleted.',
+      t('account.deleteFinalConfirmTitle'),
+      t('account.deleteFinalConfirmMessage'),
       [
         {
-          text: 'Cancel',
+          text: t('labels.cancel'),
           style: 'cancel',
         },
         {
-          text: 'Delete Forever',
+          text: t('account.deleteForeverButton'),
           style: 'destructive',
           onPress: () =>
             performDeleteAccount(deleteAccountMutation, setIsDeleting),
@@ -99,21 +106,21 @@ export const DeleteAccountScreen: React.FC = () => {
   };
 
   const renderLoadingState = () => (
-    <LoadingInline message="Checking account status..." />
+    <LoadingInline message={t('account.deleteCheckingStatus')} />
   );
 
   const renderErrorState = () => (
     <View style={styles.centerContainer}>
-      <Icon name="alert-circle-outline" size={48} color={theme.colors.error} />
-      <Text style={styles.errorTitle}>Unable to check account status</Text>
+      <Icon name="alert-circle-outline" size={48} tone="error" />
+      <Text style={styles.errorTitle}>{t('account.deleteUnableToCheck')}</Text>
       <Text style={styles.errorText}>
-        {eligibilityError?.message || 'An error occurred. Please try again.'}
+        {eligibilityError?.message || t('account.deleteGenericError')}
       </Text>
       <Pressable
         style={({ pressed }) => [styles.retryButton, pressed && styles.pressed]}
         onPress={() => refetchEligibility()}
       >
-        <Text style={styles.retryButtonText}>Retry</Text>
+        <Text style={styles.retryButtonText}>{t('account.deleteRetry')}</Text>
       </Pressable>
     </View>
   );
@@ -124,36 +131,38 @@ export const DeleteAccountScreen: React.FC = () => {
       contentContainerStyle={styles.contentContainer}
     >
       <View style={styles.blockedWarningContainer}>
-        <Icon
-          name="alert-circle-outline"
-          size={48}
-          color={theme.colors.warning}
-        />
-        <Text style={styles.blockedWarningTitle}>Cannot Delete Account</Text>
+        <Icon name="alert-circle-outline" size={48} tone="warning" />
+        <Text style={styles.blockedWarningTitle}>
+          {t('account.deleteBlockedTitle')}
+        </Text>
       </View>
 
       <Text style={styles.blockedDescription}>
-        Your account cannot be deleted until you resolve the following:
+        {t('account.deleteBlockedSubtitle')}
       </Text>
 
       {blockers.map((blocker, index) => (
         <View key={blocker.resourceId || index} style={styles.blockerCard}>
           <View style={styles.blockerHeader}>
-            <Icon name="home-outline" size={20} color={theme.colors.primary} />
+            <Icon name="home-outline" size={20} tone="primary" />
             <Text style={styles.blockerResourceName}>
               {blocker.resourceName}
             </Text>
           </View>
           <Text style={styles.blockerMessage}>{blocker.message}</Text>
           <View style={styles.resolutionSection}>
-            <Text style={styles.resolutionTitle}>To resolve:</Text>
-            <Text style={styles.resolutionOption}>
-              • Transfer ownership to another member
+            <Text style={styles.resolutionTitle}>
+              {t('account.deleteResolveTitle')}
             </Text>
             <Text style={styles.resolutionOption}>
-              • Remove all members from the home
+              {t('account.deleteResolveTransfer')}
             </Text>
-            <Text style={styles.resolutionOption}>• Delete the home</Text>
+            <Text style={styles.resolutionOption}>
+              {t('account.deleteResolveRemoveMembers')}
+            </Text>
+            <Text style={styles.resolutionOption}>
+              {t('account.deleteResolveDeleteHome')}
+            </Text>
           </View>
         </View>
       ))}
@@ -165,7 +174,7 @@ export const DeleteAccountScreen: React.FC = () => {
         ]}
         onPress={goBack}
       >
-        <Text style={styles.goBackButtonText}>Go Back</Text>
+        <Text style={styles.goBackButtonText}>{t('account.deleteGoBack')}</Text>
       </Pressable>
     </ScrollView>
   );
@@ -180,71 +189,63 @@ export const DeleteAccountScreen: React.FC = () => {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.warningContainer}>
-          <Icon name="warning-outline" size={48} color={theme.colors.error} />
-          <Text style={styles.warningTitle}>Warning: This is permanent!</Text>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>What will be deleted:</Text>
-          <View style={styles.bulletPoint}>
-            <Icon
-              name="close-circle-outline"
-              size={20}
-              color={theme.colors.error}
-            />
-            <Text style={styles.bulletText}>
-              Your profile and account information
-            </Text>
-          </View>
-          <View style={styles.bulletPoint}>
-            <Icon
-              name="close-circle-outline"
-              size={20}
-              color={theme.colors.error}
-            />
-            <Text style={styles.bulletText}>
-              All your pantry items and inventory
-            </Text>
-          </View>
-          <View style={styles.bulletPoint}>
-            <Icon
-              name="close-circle-outline"
-              size={20}
-              color={theme.colors.error}
-            />
-            <Text style={styles.bulletText}>Your shopping lists</Text>
-          </View>
-          <View style={styles.bulletPoint}>
-            <Icon
-              name="close-circle-outline"
-              size={20}
-              color={theme.colors.error}
-            />
-            <Text style={styles.bulletText}>
-              All associated data and preferences
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Before you proceed:</Text>
-          <Text style={styles.text}>
-            • This action is <Text style={styles.bold}>irreversible</Text>
+          <Icon name="warning-outline" size={48} tone="error" />
+          <Text style={styles.warningTitle}>
+            {t('account.deleteWarningTitle')}
           </Text>
-          <Text style={styles.text}>• You will be immediately logged out</Text>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>
+            {t('account.deleteWhatWillBeDeleted')}
+          </Text>
+          <View style={styles.bulletPoint}>
+            <Icon name="close-circle-outline" size={20} tone="error" />
+            <Text style={styles.bulletText}>
+              {t('account.deleteWipeProfile')}
+            </Text>
+          </View>
+          <View style={styles.bulletPoint}>
+            <Icon name="close-circle-outline" size={20} tone="error" />
+            <Text style={styles.bulletText}>
+              {t('account.deleteWipePantry')}
+            </Text>
+          </View>
+          <View style={styles.bulletPoint}>
+            <Icon name="close-circle-outline" size={20} tone="error" />
+            <Text style={styles.bulletText}>
+              {t('account.deleteWipeShoppingLists')}
+            </Text>
+          </View>
+          <View style={styles.bulletPoint}>
+            <Icon name="close-circle-outline" size={20} tone="error" />
+            <Text style={styles.bulletText}>
+              {t('account.deleteWipePreferences')}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>
+            {t('account.deleteBeforeYouProceed')}
+          </Text>
           <Text style={styles.text}>
-            • You cannot recover your account or data after deletion
+            • {t('account.deleteProceedIrreversible')}
+          </Text>
+          <Text style={styles.text}>• {t('account.deleteProceedLogout')}</Text>
+          <Text style={styles.text}>
+            • {t('account.deleteProceedNoRecovery')}
           </Text>
         </View>
 
         <View style={styles.confirmationSection}>
           <Text style={styles.confirmationLabel}>
-            Type <Text style={styles.bold}>DELETE</Text> to confirm:
+            {t('account.deleteTypeConfirm')}
           </Text>
           <BaseInput
             value={confirmText}
             onChangeText={setConfirmText}
-            placeholder="Type DELETE"
+            placeholder={t('account.deleteTypePlaceholder')}
             autoCapitalize="characters"
             autoCorrect={false}
             editable={!isDeleting}
@@ -262,7 +263,9 @@ export const DeleteAccountScreen: React.FC = () => {
           disabled={confirmText.trim().toUpperCase() !== 'DELETE' || isDeleting}
         >
           <Text style={styles.deleteButtonText}>
-            {isDeleting ? 'Deleting Account...' : 'Delete My Account Forever'}
+            {isDeleting
+              ? t('account.deleteInProgress')
+              : t('account.deleteForever')}
           </Text>
         </Pressable>
 
@@ -274,7 +277,7 @@ export const DeleteAccountScreen: React.FC = () => {
           onPress={goBack}
           disabled={isDeleting}
         >
-          <Text style={styles.cancelButtonText}>Cancel</Text>
+          <Text style={styles.cancelButtonText}>{t('labels.cancel')}</Text>
         </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -298,7 +301,7 @@ export const DeleteAccountScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
-      <Header title="Delete Account" onBack={goBack} centerTitle />
+      <Header title={t('account.deleteTitle')} onBack={goBack} centerTitle />
 
       {renderContent()}
     </SafeAreaView>

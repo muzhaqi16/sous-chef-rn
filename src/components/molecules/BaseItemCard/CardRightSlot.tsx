@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Pressable } from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import type { CardRightSlotProps } from './types';
 import { Text } from '#components/atoms/Text';
@@ -32,7 +32,7 @@ const MetaSlot: React.FC<
 );
 
 /**
- * Interactive slot — needs useUnistyles for Icon colors
+ * Interactive slot — uses Icon `tone` for theme-reactive colors
  */
 const InteractiveSlot: React.FC<CardRightSlotProps> = ({
   type,
@@ -44,8 +44,6 @@ const InteractiveSlot: React.FC<CardRightSlotProps> = ({
   onDrag,
   children,
 }) => {
-  const { theme } = useUnistyles();
-
   if (type === 'custom' && children) {
     return <View style={styles.container}>{children}</View>;
   }
@@ -53,11 +51,7 @@ const InteractiveSlot: React.FC<CardRightSlotProps> = ({
   if (type === 'dragHandle' && onDrag) {
     return (
       <Pressable onLongPress={onDrag} style={styles.dragHandle}>
-        <Icon
-          name="reorder-three"
-          size={24}
-          color={theme.colors.textTertiary}
-        />
+        <Icon name="reorder-three" size={24} tone="textTertiary" />
       </Pressable>
     );
   }
@@ -76,11 +70,7 @@ const InteractiveSlot: React.FC<CardRightSlotProps> = ({
         <Icon
           name="remove-outline"
           size={18}
-          color={
-            disabled || quantity === 0
-              ? theme.colors.textTertiary
-              : theme.colors.primary
-          }
+          tone={disabled || quantity === 0 ? 'textTertiary' : 'primary'}
         />
       </Pressable>
       <View style={styles.counterValue}>
@@ -101,7 +91,7 @@ const InteractiveSlot: React.FC<CardRightSlotProps> = ({
         <Icon
           name="add"
           size={18}
-          color={disabled ? theme.colors.textTertiary : theme.colors.primary}
+          tone={disabled ? 'textTertiary' : 'primary'}
         />
       </Pressable>
     </View>

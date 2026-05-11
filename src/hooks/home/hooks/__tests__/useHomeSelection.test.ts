@@ -1,20 +1,12 @@
-import { renderHook, act } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
+import {
+  recordMock,
+  renderHookWithApollo,
+} from '#/test-utils/apolloMockProvider';
+import { SetDefaultHomeDocument } from '#operations/home/userSettings.generated';
 import { alertService } from '#/services/alertService';
 import { useHomeSelection } from '../useHomeSelection';
 
-const mockSetDefaultHomeMutation = jest.fn();
-
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useMutation: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'SetDefaultHome')
-      return [mockSetDefaultHomeMutation, { loading: false }];
-    return [jest.fn(), {}];
-  }),
-}));
-
-// Store mock state
 const mockStoreState = {
   selectedHomeId: null as string | null,
   selectedPantryId: null as string | null,
@@ -27,6 +19,8 @@ const mockStoreState = {
 jest.mock('#store/useAppStore', () => ({
   useAppStore: (selector: (state: any) => any) => selector(mockStoreState),
   useSelectedHomeId: jest.fn(() => mockStoreState.selectedHomeId),
+  useSelectedPantryId: jest.fn(() => mockStoreState.selectedPantryId),
+  useSetSelectedPantryId: jest.fn(() => mockStoreState.setSelectedPantryId),
   useHomeState: jest.fn(() => ({
     selectedHomeId: mockStoreState.selectedHomeId,
     setSelectedHomeId: mockStoreState.setSelectedHomeId,
@@ -69,15 +63,47 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockStoreState.selectedHomeId = null;
   mockStoreState.selectedPantryId = null;
-  // Ensure mutation always returns a promise (useEffect calls it with .catch)
-  mockSetDefaultHomeMutation.mockResolvedValue({
-    data: { setDefaultHome: { success: true, defaultPantry: null } },
-  });
 });
+
+function setDefaultMock(defaultPantryId: string | null = null) {
+  return recordMock(SetDefaultHomeDocument, {
+    data: {
+      setDefaultHome: {
+        __typename: 'SetDefaultHomePayload',
+        success: true,
+        message: '',
+        code: 'SUCCESS',
+        defaultPantry: defaultPantryId
+          ? { __typename: 'Pantry', id: defaultPantryId }
+          : null,
+      },
+    },
+  });
+}
+
+function setDefaultFailureMock() {
+  return recordMock(SetDefaultHomeDocument, {
+    data: {
+      setDefaultHome: {
+        __typename: 'SetDefaultHomePayload',
+        success: false,
+        message: '',
+        code: 'FAILED',
+        defaultPantry: null,
+      },
+    },
+  });
+}
+
+function setDefaultErrorMock() {
+  return recordMock(SetDefaultHomeDocument, {
+    error: new Error('Network error'),
+  });
+}
 
 describe('useHomeSelection', () => {
   it('returns selection state', () => {
-    const { result } = renderHook(() =>
+    const { result } = renderHookWithApollo(() =>
       useHomeSelection({
         homes: createHomes(),
         remoteDefaultHomeId: 'home-1',
@@ -93,7 +119,7 @@ describe('useHomeSelection', () => {
   it('computes defaultHome from selectedHomeId', () => {
     mockStoreState.selectedHomeId = 'home-1';
 
-    const { result } = renderHook(() =>
+    const { result } = renderHookWithApollo(() =>
       useHomeSelection({
         homes: createHomes(),
         remoteDefaultHomeId: 'home-1',
@@ -109,7 +135,7 @@ describe('useHomeSelection', () => {
   it('reports isSynced when selectedHomeId matches remoteDefaultHomeId', () => {
     mockStoreState.selectedHomeId = 'home-1';
 
-    const { result } = renderHook(() =>
+    const { result } = renderHookWithApollo(() =>
       useHomeSelection({
         homes: createHomes(),
         remoteDefaultHomeId: 'home-1',
@@ -123,7 +149,7 @@ describe('useHomeSelection', () => {
   it('reports not synced when IDs differ', () => {
     mockStoreState.selectedHomeId = 'home-2';
 
-    const { result } = renderHook(() =>
+    const { result } = renderHookWithApollo(() =>
       useHomeSelection({
         homes: createHomes(),
         remoteDefaultHomeId: 'home-1',
@@ -137,13 +163,16 @@ describe('useHomeSelection', () => {
   describe('setDefaultHome', () => {
     it('returns true early when home is already default both locally and remotely', async () => {
       mockStoreState.selectedHomeId = 'home-1';
+      const m = setDefaultMock();
 
-      const { result } = renderHook(() =>
-        useHomeSelection({
-          homes: createHomes(),
-          remoteDefaultHomeId: 'home-1',
-          loading: false,
-        }),
+      const { result } = renderHookWithApollo(
+        () =>
+          useHomeSelection({
+            homes: createHomes(),
+            remoteDefaultHomeId: 'home-1',
+            loading: false,
+          }),
+        { operationMocks: [m.mock] },
       );
 
       let success: boolean;
@@ -152,16 +181,20 @@ describe('useHomeSelection', () => {
       });
 
       expect(success!).toBe(true);
-      expect(mockSetDefaultHomeMutation).not.toHaveBeenCalled();
+      expect(m.fired).toEqual([]);
     });
 
     it('shows error for empty homeId', async () => {
-      const { result } = renderHook(() =>
-        useHomeSelection({
-          homes: createHomes(),
-          remoteDefaultHomeId: null,
-          loading: false,
-        }),
+      const m = setDefaultMock();
+
+      const { result } = renderHookWithApollo(
+        () =>
+          useHomeSelection({
+            homes: createHomes(),
+            remoteDefaultHomeId: null,
+            loading: false,
+          }),
+        { operationMocks: [m.mock] },
       );
 
       let success: boolean;
@@ -177,12 +210,16 @@ describe('useHomeSelection', () => {
     });
 
     it('shows error when home not found in list', async () => {
-      const { result } = renderHook(() =>
-        useHomeSelection({
-          homes: createHomes(),
-          remoteDefaultHomeId: null,
-          loading: false,
-        }),
+      const m = setDefaultMock();
+
+      const { result } = renderHookWithApollo(
+        () =>
+          useHomeSelection({
+            homes: createHomes(),
+            remoteDefaultHomeId: null,
+            loading: false,
+          }),
+        { operationMocks: [m.mock] },
       );
 
       let success: boolean;
@@ -200,22 +237,16 @@ describe('useHomeSelection', () => {
     it('calls mutation and updates state on success', async () => {
       mockStoreState.selectedHomeId = 'home-1';
       mockStoreState.selectedPantryId = 'pantry-1';
+      const m = setDefaultMock('pantry-3');
 
-      mockSetDefaultHomeMutation.mockResolvedValue({
-        data: {
-          setDefaultHome: {
-            success: true,
-            defaultPantry: { id: 'pantry-3' },
-          },
-        },
-      });
-
-      const { result } = renderHook(() =>
-        useHomeSelection({
-          homes: createHomes(),
-          remoteDefaultHomeId: 'home-1',
-          loading: false,
-        }),
+      const { result } = renderHookWithApollo(
+        () =>
+          useHomeSelection({
+            homes: createHomes(),
+            remoteDefaultHomeId: 'home-1',
+            loading: false,
+          }),
+        { operationMocks: [m.mock] },
       );
 
       let success: boolean;
@@ -240,14 +271,14 @@ describe('useHomeSelection', () => {
       mockStoreState.selectedHomeId = 'home-1';
       mockStoreState.selectedPantryId = 'pantry-1';
 
-      mockSetDefaultHomeMutation.mockRejectedValue(new Error('Network error'));
-
-      const { result } = renderHook(() =>
-        useHomeSelection({
-          homes: createHomes(),
-          remoteDefaultHomeId: null,
-          loading: false,
-        }),
+      const { result } = renderHookWithApollo(
+        () =>
+          useHomeSelection({
+            homes: createHomes(),
+            remoteDefaultHomeId: null,
+            loading: false,
+          }),
+        { operationMocks: [setDefaultErrorMock().mock] },
       );
 
       let success: boolean;
@@ -256,27 +287,25 @@ describe('useHomeSelection', () => {
       });
 
       expect(success!).toBe(false);
-      // Rollback: setHomeAndPantry called with previous values
       expect(mockStoreState.setHomeAndPantry).toHaveBeenCalledWith(
         'home-1',
         'pantry-1',
       );
     });
 
-    it('rolls back when mutation returns no data', async () => {
+    it('rolls back when mutation returns success: false', async () => {
       mockStoreState.selectedHomeId = 'home-1';
       mockStoreState.selectedPantryId = 'pantry-1';
+      const m = setDefaultFailureMock();
 
-      mockSetDefaultHomeMutation.mockResolvedValue({
-        data: { setDefaultHome: { success: false } },
-      });
-
-      const { result } = renderHook(() =>
-        useHomeSelection({
-          homes: createHomes(),
-          remoteDefaultHomeId: null,
-          loading: false,
-        }),
+      const { result } = renderHookWithApollo(
+        () =>
+          useHomeSelection({
+            homes: createHomes(),
+            remoteDefaultHomeId: null,
+            loading: false,
+          }),
+        { operationMocks: [m.mock] },
       );
 
       let success: boolean;
@@ -289,7 +318,7 @@ describe('useHomeSelection', () => {
   });
 
   it('exposes setSelectedHomeId and setSelectedPantryId', () => {
-    const { result } = renderHook(() =>
+    const { result } = renderHookWithApollo(() =>
       useHomeSelection({
         homes: [],
         remoteDefaultHomeId: null,

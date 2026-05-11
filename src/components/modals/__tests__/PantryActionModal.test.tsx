@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { PantryActionModal } from '../PantryActionModal';
 import { type PantryItemFragment } from '#features/pantry/graphql/pantryFragments.generated';
 import { PantryOperation } from '#features/pantry/hooks/useOperationUnits';
@@ -19,6 +19,7 @@ jest.mock('#hooks/useStandardBottomSheet', () => ({
       },
     },
   })),
+  BottomSheetModal: ({ children }: any) => children,
 }));
 
 jest.mock('#components/atoms/BottomSheetKeyboardAwareScrollView', () => {
@@ -174,15 +175,17 @@ describe('PantryActionModal', () => {
     expect(mockRenderActionFields).toHaveBeenCalled();
   });
 
-  it('calls onClose when cancel is pressed', () => {
+  it('calls onClose when cancel is pressed', async () => {
+    const user = userEvent.setup();
     render(<PantryActionModal {...defaultProps} />);
-    fireEvent.press(screen.getByTestId('cancel-button'));
+    await user.press(screen.getByTestId('cancel-button'));
     expect(defaultProps.onClose).toHaveBeenCalled();
   });
 
-  it('calls onConfirm when confirm is pressed', () => {
+  it('calls onConfirm when confirm is pressed', async () => {
+    const user = userEvent.setup();
     render(<PantryActionModal {...defaultProps} />);
-    fireEvent.press(screen.getByTestId('confirm-button'));
+    await user.press(screen.getByTestId('confirm-button'));
     expect(defaultProps.onConfirm).toHaveBeenCalled();
   });
 
@@ -209,9 +212,10 @@ describe('PantryActionModal', () => {
     expect(shared.trackingUnitId).toBe('u1');
   });
 
-  it('returns 0 for trackingQuantity when pantryItem is null', () => {
+  it('returns 0 for trackingQuantity when pantryItem is null', async () => {
+    const user = userEvent.setup();
     render(<PantryActionModal {...defaultProps} pantryItem={null} />);
-    fireEvent.press(screen.getByTestId('confirm-button'));
+    await user.press(screen.getByTestId('confirm-button'));
     const shared = defaultProps.onConfirm.mock.calls[0][0];
     expect(shared.trackingQuantity).toBe(0);
   });

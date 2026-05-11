@@ -1,7 +1,7 @@
 'use no memo';
 
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react-native';
+import { render, userEvent } from '@testing-library/react-native';
 import { alertService } from '#/services/alertService';
 import { StorageLocationsScreen } from '../StorageLocationsScreen';
 
@@ -341,7 +341,8 @@ describe('StorageLocationsScreen', () => {
     expect(getByText('Main Storage')).toBeTruthy();
   });
 
-  it('shows blocking dialog when deleting default location', () => {
+  it('shows blocking dialog when deleting default location', async () => {
+    const user = userEvent.setup();
     const { useStorageLocationManagement } = jest.requireMock(
       '#hooks/storageLocation/useStorageLocationManagement',
     );
@@ -363,7 +364,7 @@ describe('StorageLocationsScreen', () => {
     const { getByTestId } = render(
       <StorageLocationsScreen route={defaultRoute} />,
     );
-    fireEvent.press(getByTestId('delete-loc-1'));
+    await user.press(getByTestId('delete-loc-1'));
 
     expect(alertService.alert).toHaveBeenCalledWith(
       'Cannot Delete Default Location',
@@ -373,7 +374,8 @@ describe('StorageLocationsScreen', () => {
     expect(mockDeleteLocation).not.toHaveBeenCalled();
   });
 
-  it('shows informational dialog when deleting location with items', () => {
+  it('shows informational dialog when deleting location with items', async () => {
+    const user = userEvent.setup();
     const { useStorageLocationManagement } = jest.requireMock(
       '#hooks/storageLocation/useStorageLocationManagement',
     );
@@ -395,7 +397,7 @@ describe('StorageLocationsScreen', () => {
     const { getByTestId } = render(
       <StorageLocationsScreen route={defaultRoute} />,
     );
-    fireEvent.press(getByTestId('delete-loc-1'));
+    await user.press(getByTestId('delete-loc-1'));
 
     expect(alertService.alert).toHaveBeenCalledWith(
       'Cannot Delete Location',
@@ -405,7 +407,8 @@ describe('StorageLocationsScreen', () => {
     expect(mockDeleteLocation).not.toHaveBeenCalled();
   });
 
-  it('shows informational dialog when deleting location with children', () => {
+  it('shows informational dialog when deleting location with children', async () => {
+    const user = userEvent.setup();
     const { useStorageLocationManagement } = jest.requireMock(
       '#hooks/storageLocation/useStorageLocationManagement',
     );
@@ -434,7 +437,7 @@ describe('StorageLocationsScreen', () => {
     const { getByTestId } = render(
       <StorageLocationsScreen route={defaultRoute} />,
     );
-    fireEvent.press(getByTestId('delete-loc-1'));
+    await user.press(getByTestId('delete-loc-1'));
 
     expect(alertService.alert).toHaveBeenCalledWith(
       'Cannot Delete Location',
@@ -444,7 +447,8 @@ describe('StorageLocationsScreen', () => {
     expect(mockDeleteLocation).not.toHaveBeenCalled();
   });
 
-  it('shows normal confirmation when deleting empty non-default location', () => {
+  it('shows normal confirmation when deleting empty non-default location', async () => {
+    const user = userEvent.setup();
     const { useStorageLocationManagement } = jest.requireMock(
       '#hooks/storageLocation/useStorageLocationManagement',
     );
@@ -471,7 +475,7 @@ describe('StorageLocationsScreen', () => {
     const { getByTestId } = render(
       <StorageLocationsScreen route={defaultRoute} />,
     );
-    fireEvent.press(getByTestId('delete-loc-1'));
+    await user.press(getByTestId('delete-loc-1'));
 
     expect(alertService.alert).toHaveBeenCalledWith(
       'Delete Storage Location',

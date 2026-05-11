@@ -61,7 +61,7 @@ export function useScannerSetup(options: UseScannerSetupOptions): void {
   const { enabled = true, homeId, context, onNoHome } = options;
 
   const { setScannerProps } = useTabBarSetters();
-  const { navigate, navigateTo } = useAppNavigation();
+  const { toHomeManagement, toBarcode } = useAppNavigation();
 
   // Use refs to track dynamic values without triggering effect re-runs
   const homeIdRef = useRef(homeId);
@@ -100,7 +100,7 @@ export function useScannerSetup(options: UseScannerSetupOptions): void {
               { text: 'Cancel', style: 'cancel' },
               {
                 text: 'Manage Homes',
-                onPress: () => navigate('HomeManagement'),
+                onPress: () => toHomeManagement(),
                 style: 'default',
               },
             ],
@@ -110,7 +110,7 @@ export function useScannerSetup(options: UseScannerSetupOptions): void {
       }
 
       // Navigate to barcode scanner with context
-      navigateTo.barcode(contextRef.current);
+      toBarcode(contextRef.current);
     };
 
     setScannerProps(handleScanPress, true);
@@ -119,5 +119,5 @@ export function useScannerSetup(options: UseScannerSetupOptions): void {
     return () => {
       setScannerProps(undefined, false);
     };
-  }, [enabled, setScannerProps, navigate, navigateTo]);
+  }, [enabled, setScannerProps, toHomeManagement, toBarcode]);
 }

@@ -1,0 +1,548 @@
+import { useState, useEffect, useRef } from 'react';
+import { useMutation, useQuery } from '@apollo/client/react';
+import { BottomSheetModal } from '@gorhom/bottom-sheet';
+import {
+  CreateShoppingListItemsFromRecipeDocument,
+  CreateShoppingListItemFromRecipeIngredientDocument,
+  type GetRecipeQuery,
+} from '#features/recipes/graphql/recipe.generated';
+import {
+  AddItemToShoppingListDocument,
+  AddItemsToShoppingListDocument,
+  GetShoppingListsLiteDocument,
+  CreateShoppingListDocument,
+} from './useRecipeDetail.generated';
+import { type BatchAddShoppingListItemInput } from '#/graphql/generated/schemaTypes';
+import { useAppStore, useSelectedShoppingListId } from '#store/useAppStore';
+import { extractNodes } from '#/utils/connectionUtils';
+import { addNewItemToShoppingListCache } from '#/apollo/utils/shoppingListCacheUpdaters';
+import { createAddToQueryConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
+import { toastService } from '#/services/toastService';
+import type { RecipeInformation } from '#/services/recipeApi/types';
+import {
+  executeCacheUpdate,
+  executeMutation,
+  executeWithLoadingState,
+} from '#/utils/compilerSafeWrappers';
+
+type BackendRecipe = NonNullable<GetRecipeQuery['recipe']>;
+
+interface UseRecipeShoppingListOptions {
+  recipeId: string | undefined;
+  isBackendRecipe: boolean;
+  backendRecipe: BackendRecipe | null | undefined;
+  externalRecipe: RecipeInformation | null;
+}
+
+type PendingAction =
+  | { type: 'single'; ingredient?: any }
+  | { type: 'all' }
+  | { type: 'selected' };
+
+export function useRecipeShoppingList({
+  recipeId,
+  isBackendRecipe,
+  backendRecipe,
+  externalRecipe,
+}: UseRecipeShoppingListOptions) {
+  const { data: shoppingListsData, loading: shoppingListsLoading } = useQuery(
+    GetShoppingListsLiteDocument,
+    {},
+  );
+  const shoppingLists = extractNodes(shoppingListsData?.shoppingLists);
+
+  const selectedShoppingListId = useSelectedShoppingListId();
+  const setSelectedShoppingListId = useAppStore(
+    state => state.setSelectedShoppingListId,
+  );
+
+  // Priority: user's selected list > default list > first list.
+  const getTargetShoppingList = () => {
+    if (shoppingLists.length === 0) return null;
+    if (selectedShoppingListId) {
+      const selected = shoppingLists.find(l => l.id === selectedShoppingListId);
+      if (selected) return selected;
+    }
+    const defaultList = shoppingLists.find(list => list.isDefault);
+    return defaultList ?? shoppingLists[0];
+  };
+
+  const getShoppingListById = (listId: string) =>
+    shoppingLists.find(list => list.id === listId) || null;
+
+  // State
+  const [selectedIngredients, setSelectedIngredients] = useState<Set<string>>(
+    new Set(),
+  );
+  const [addingToList, setAddingToList] = useState(false);
+  const [addedIngredients, setAddedIngredients] = useState<
+    Set<string | number>
+  >(new Set());
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(
+    null,
+  );
+  const [creatingList, setCreatingList] = useState(false);
+
+  // Sheet refs and visibility state. Per CLAUDE.md, control visibility via
+  // state + effect (never call present()/dismiss() directly from event handlers).
+  const shoppingListOptionsRef = useRef<BottomSheetModal>(null);
+  const ingredientSelectorRef = useRef<BottomSheetModal>(null);
+  const listPickerRef = useRef<BottomSheetModal>(null);
+  const pendingDismissActionRef = useRef<(() => void) | null>(null);
+
+  const [listPickerVisible, setListPickerVisible] = useState(false);
+  const [ingredientSelectorVisible, setIngredientSelectorVisible] =
+    useState(false);
+
+  useEffect(() => {
+    if (listPickerVisible) {
+      listPickerRef.current?.present();
+    } else {
+      listPickerRef.current?.dismiss();
+    }
+  }, [listPickerVisible]);
+
+  useEffect(() => {
+    if (ingredientSelectorVisible) {
+      ingredientSelectorRef.current?.present();
+    } else {
+      ingredientSelectorRef.current?.dismiss();
+    }
+  }, [ingredientSelectorVisible]);
+
+  const openListPicker = (action: PendingAction) => {
+    if (shoppingListsLoading) {
+      toastService.info('Loading shopping lists...');
+      return;
+    }
+    setPendingAction(action);
+    setListPickerVisible(true);
+  };
+
+  // Mutations
+  const addToShoppingListsCache = createAddToQueryConnectionUpdater(
+    'shoppingLists',
+    'ShoppingList',
+  );
+  const [createShoppingListMutation] = useMutation(CreateShoppingListDocument, {
+    update(cache, { data }) {
+      const newList = data?.createShoppingList?.shoppingList;
+      if (newList) {
+        addToShoppingListsCache(cache, newList);
+      }
+    },
+    onError: () => {
+      toastService.error('Failed to create list');
+    },
+  });
+
+  const [addRecipeToShoppingListMutation] = useMutation(
+    CreateShoppingListItemsFromRecipeDocument,
+    {
+      update: (cache, { data }, { variables }) => {
+        if (!data?.createShoppingListItemsFromRecipe || !variables) return;
+        executeCacheUpdate(() => {
+          const result = data.createShoppingListItemsFromRecipe;
+          const shoppingListId = variables.input.shoppingListId;
+          result.addedItems.forEach((item: any) => {
+            addNewItemToShoppingListCache(cache, shoppingListId, item);
+          });
+        }, 'Cache update failed for addRecipeToShoppingList:');
+      },
+      onError: err => {
+        console.error('Add recipe to shopping list error:', err);
+        const errorMessage =
+          err.message || 'Failed to add ingredients to shopping list';
+        toastService.error(`Could not add ingredients: ${errorMessage}`);
+      },
+    },
+  );
+
+  const [addRecipeIngredientMutation] = useMutation(
+    CreateShoppingListItemFromRecipeIngredientDocument,
+    {
+      update: (cache, { data }, { variables }) => {
+        if (!data?.createShoppingListItemFromRecipeIngredient || !variables)
+          return;
+        executeCacheUpdate(() => {
+          const result = data.createShoppingListItemFromRecipeIngredient;
+          const shoppingListId = variables.shoppingListId;
+          if (!result.wasUpdated) {
+            addNewItemToShoppingListCache(
+              cache,
+              shoppingListId,
+              result.shoppingListItem,
+            );
+          }
+        }, 'Cache update failed for addRecipeIngredient:');
+      },
+    },
+  );
+
+  const [addItemToShoppingListMutation] = useMutation(
+    AddItemToShoppingListDocument,
+    {
+      update: (cache, { data }, { variables }) => {
+        if (!data?.addItemToShoppingList?.shoppingListItem || !variables)
+          return;
+        executeCacheUpdate(() => {
+          const item = data.addItemToShoppingList!.shoppingListItem!;
+          const shoppingListId = variables.input.shoppingListId;
+          addNewItemToShoppingListCache(cache, shoppingListId, item);
+        }, 'Cache update failed for addItemToShoppingList:');
+      },
+    },
+  );
+
+  const [addItemsToShoppingListMutation] = useMutation(
+    AddItemsToShoppingListDocument,
+    {
+      update: (cache, { data }, { variables }) => {
+        if (!data?.addItemsToShoppingList || !variables) return;
+        executeCacheUpdate(() => {
+          const { results } = data.addItemsToShoppingList!;
+          const shoppingListId = variables.shoppingListId;
+          results.forEach(result => {
+            if (result.success && result.item) {
+              addNewItemToShoppingListCache(cache, shoppingListId, result.item);
+            }
+          });
+        }, 'Cache update failed for addItemsToShoppingList:');
+      },
+      onError: err => {
+        console.error('Batch add items to shopping list error:', err);
+        const errorMessage =
+          err.message || 'Failed to add ingredients to shopping list';
+        toastService.error(`Could not add ingredients: ${errorMessage}`);
+      },
+    },
+  );
+
+  // Add a single ingredient to the user's default/selected list (no picker).
+  const handleAddSingleIngredient = (ingredient: any) => {
+    const targetList = getTargetShoppingList();
+    if (!targetList) {
+      toastService.error('Please create a shopping list first.');
+      return;
+    }
+
+    executeMutation(
+      async () => {
+        if (isBackendRecipe) {
+          await addRecipeIngredientMutation({
+            variables: {
+              recipeIngredientId: ingredient.id,
+              shoppingListId: targetList.id,
+            },
+          });
+        } else {
+          await addItemToShoppingListMutation({
+            variables: {
+              input: {
+                itemName:
+                  ingredient.name ||
+                  ingredient.originalString ||
+                  'Unknown ingredient',
+                quantity: ingredient.amount || 0,
+                unit: {
+                  unitName:
+                    ingredient.measures?.us?.unitShort ||
+                    ingredient.measures?.metric?.unitShort ||
+                    undefined,
+                },
+                shoppingListId: targetList.id,
+                storePrefs: ingredient.aisle
+                  ? { aisle: ingredient.aisle }
+                  : undefined,
+              },
+            },
+          });
+        }
+
+        setAddedIngredients(prev => new Set(prev).add(ingredient.id));
+        toastService.success(`Added to "${targetList.name}"`);
+      },
+      err => {
+        console.error('Failed to add ingredient:', err);
+        toastService.error('Failed to add ingredient to shopping list.');
+      },
+    );
+  };
+
+  // Adds all ingredients to the picked list. Called after the list picker
+  // resolves. `listName` may be passed for newly-created lists not yet in
+  // the local array.
+  const addAllIngredientsToList = (listId: string, listName?: string) => {
+    const resolvedName = listName ?? getShoppingListById(listId)?.name;
+    if (!resolvedName) {
+      toastService.error('Shopping list not found.');
+      return;
+    }
+
+    executeWithLoadingState(
+      async () => {
+        if (isBackendRecipe && backendRecipe && recipeId) {
+          const result = await addRecipeToShoppingListMutation({
+            variables: {
+              input: {
+                recipeId,
+                shoppingListId: listId,
+                servings: backendRecipe.servings,
+              },
+            },
+          });
+
+          const data = result.data?.createShoppingListItemsFromRecipe;
+          if (data) {
+            const allIngredientIds = backendRecipe.ingredients.map(
+              ing => ing.id,
+            );
+            setAddedIngredients(prev => {
+              const next = new Set(prev);
+              allIngredientIds.forEach(id => next.add(id));
+              return next;
+            });
+            toastService.success(
+              `Added ${data.totalAdded} items to "${resolvedName}"${
+                data.totalUpdated > 0 ? `, updated ${data.totalUpdated}` : ''
+              }`,
+            );
+          }
+        } else if (externalRecipe?.extendedIngredients) {
+          const items: BatchAddShoppingListItemInput[] =
+            externalRecipe.extendedIngredients.map((ingredient, index) => ({
+              clientId: String(ingredient.id || index),
+              itemName:
+                ingredient.name || ingredient.original || 'Unknown ingredient',
+              quantity: ingredient.amount || 0,
+              unit: {
+                unitName:
+                  ingredient.measures?.us?.unitShort ||
+                  ingredient.measures?.metric?.unitShort ||
+                  '',
+              },
+              storePrefs: ingredient.aisle
+                ? { aisle: ingredient.aisle }
+                : undefined,
+            }));
+
+          const result = await addItemsToShoppingListMutation({
+            variables: {
+              shoppingListId: listId,
+              items,
+            },
+          });
+
+          const data = result.data?.addItemsToShoppingList;
+          if (data) {
+            const successfullyAddedIds = data.results
+              .filter(r => r.success)
+              .map(r => Number(r.clientId));
+            setAddedIngredients(prev => {
+              const next = new Set(prev);
+              successfullyAddedIds.forEach(id => next.add(id));
+              return next;
+            });
+            toastService.success(
+              `Added ${data.successCount} items to "${resolvedName}"${
+                data.incrementedCount > 0
+                  ? `, updated ${data.incrementedCount}`
+                  : ''
+              }`,
+            );
+          }
+        } else {
+          toastService.error('No ingredients available to add.');
+        }
+      },
+      setAddingToList,
+      err => {
+        console.error('Failed to add ingredients:', err);
+        toastService.error('Failed to add ingredients to shopping list.');
+      },
+    );
+  };
+
+  // Adds the user-selected subset of ingredients to the picked list.
+  const addSelectedIngredientsToList = (listId: string, listName?: string) => {
+    if (!backendRecipe || !recipeId) return;
+
+    const resolvedName = listName ?? getShoppingListById(listId)?.name;
+    if (!resolvedName) {
+      toastService.error('Shopping list not found.');
+      return;
+    }
+
+    executeWithLoadingState(
+      async () => {
+        let addedCount = 0;
+        let updatedCount = 0;
+
+        for (const ingredientId of selectedIngredients) {
+          const result = await addRecipeIngredientMutation({
+            variables: {
+              recipeIngredientId: ingredientId,
+              shoppingListId: listId,
+            },
+          });
+
+          if (result.data?.createShoppingListItemFromRecipeIngredient) {
+            const wasUpdated =
+              result.data.createShoppingListItemFromRecipeIngredient.wasUpdated;
+            if (wasUpdated) {
+              updatedCount++;
+            } else {
+              addedCount++;
+            }
+          }
+        }
+
+        toastService.success(
+          `Added ${addedCount} items to "${resolvedName}"${
+            updatedCount > 0 ? `, updated ${updatedCount}` : ''
+          }`,
+        );
+        setSelectedIngredients(new Set());
+      },
+      setAddingToList,
+      err => {
+        console.error('Failed to add selected ingredients:', err);
+        toastService.error('Failed to add ingredients to shopping list.');
+      },
+    );
+  };
+
+  // Entry point from the recipe ingredient list "Add All" button.
+  const handleAddAll = () => {
+    openListPicker({ type: 'all' });
+  };
+
+  const handleListSelected = (listId: string) => {
+    setListPickerVisible(false);
+
+    if (pendingAction?.type === 'all') {
+      addAllIngredientsToList(listId);
+    } else if (pendingAction?.type === 'selected') {
+      addSelectedIngredientsToList(listId);
+    }
+
+    setPendingAction(null);
+  };
+
+  // Create a new shopping list and route the pending action into it.
+  const handleCreateListAndAddIngredients = (name: string) => {
+    if (!name.trim()) {
+      toastService.error('List name cannot be empty');
+      return;
+    }
+
+    const currentPendingAction = pendingAction;
+
+    executeWithLoadingState(
+      async () => {
+        const result = await createShoppingListMutation({
+          variables: {
+            input: {
+              name: name.trim(),
+              description: 'Created from recipe',
+              isDefault: false,
+              tags: ['recipe-created'],
+            },
+          },
+        });
+
+        const newList = result.data?.createShoppingList?.shoppingList;
+        if (!newList) {
+          toastService.error('Failed to create shopping list');
+          return;
+        }
+
+        setSelectedShoppingListId(newList.id);
+        setListPickerVisible(false);
+
+        if (currentPendingAction?.type === 'all') {
+          addAllIngredientsToList(newList.id, newList.name);
+        } else if (currentPendingAction?.type === 'selected') {
+          addSelectedIngredientsToList(newList.id, newList.name);
+        }
+        setPendingAction(null);
+      },
+      setCreatingList,
+      err => {
+        console.error('Failed to create list and add ingredients:', err);
+        toastService.error('Failed to create shopping list');
+      },
+    );
+  };
+
+  // Entry point from the shopping-list-options sheet "Add All" row.
+  // Dismisses the options sheet first; the dismiss callback then opens the picker.
+  const handleAddAllFromSheet = () => {
+    if (!backendRecipe || !recipeId) {
+      toastService.error(
+        'Cannot add ingredients from external recipes yet. Please save the recipe first.',
+      );
+      return;
+    }
+    pendingDismissActionRef.current = () => openListPicker({ type: 'all' });
+    shoppingListOptionsRef.current?.dismiss();
+  };
+
+  const openIngredientSelector = () => {
+    pendingDismissActionRef.current = () => setIngredientSelectorVisible(true);
+    shoppingListOptionsRef.current?.dismiss();
+  };
+
+  const toggleIngredient = (ingredientId: string) => {
+    setSelectedIngredients(prev => {
+      const next = new Set(prev);
+      if (next.has(ingredientId)) {
+        next.delete(ingredientId);
+      } else {
+        next.add(ingredientId);
+      }
+      return next;
+    });
+  };
+
+  const handleAddSelectedIngredients = () => {
+    if (!backendRecipe || !recipeId) return;
+    if (selectedIngredients.size === 0) {
+      toastService.error('Please select at least one ingredient.');
+      return;
+    }
+
+    pendingDismissActionRef.current = () =>
+      openListPicker({ type: 'selected' });
+    setIngredientSelectorVisible(false);
+  };
+
+  // Runs after each sheet's dismiss animation; flushes the queued cross-sheet action.
+  const handleSheetDismiss = () => {
+    const action = pendingDismissActionRef.current;
+    pendingDismissActionRef.current = null;
+    action?.();
+  };
+
+  return {
+    shoppingLists,
+    selectedIngredients,
+    addingToList,
+    addedIngredients,
+    creatingList,
+
+    handleAddSingleIngredient,
+    handleAddAll,
+    handleAddAllFromSheet,
+    handleAddSelectedIngredients,
+    handleListSelected,
+    handleCreateListAndAddIngredients,
+    openIngredientSelector,
+    toggleIngredient,
+    handleSheetDismiss,
+
+    shoppingListOptionsRef,
+    ingredientSelectorRef,
+    listPickerRef,
+  };
+}

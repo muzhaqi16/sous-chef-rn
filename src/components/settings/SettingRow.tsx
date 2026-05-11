@@ -1,8 +1,8 @@
 import React from 'react';
 import { View } from 'react-native';
 import { Icon } from '#utils/iconUtils';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Pressable } from 'react-native-gesture-handler';
+import { StyleSheet } from 'react-native-unistyles';
+import { Pressable } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 
 interface SettingRowProps {
@@ -24,7 +24,6 @@ export const SettingRow: React.FC<SettingRowProps> = ({
   showArrow = true,
   disabled = false,
 }) => {
-  const { theme } = useUnistyles();
   return (
     <Pressable
       style={({ pressed }) => [
@@ -37,7 +36,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
     >
       {!!icon && (
         <View style={styles.iconContainer}>
-          <Icon name={icon} size={24} color={theme.colors.textSecondary} />
+          <Icon name={icon} size={24} tone="textSecondary" />
         </View>
       )}
 
@@ -66,11 +65,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
       ) : null}
 
       {!!showArrow && (
-        <Icon
-          name="chevron-right"
-          size={24}
-          color={theme.colors.textTertiary}
-        />
+        <Icon name="chevron-right" size={24} tone="textTertiary" />
       )}
     </Pressable>
   );

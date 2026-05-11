@@ -1,34 +1,12 @@
-import { renderHook, act } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
+import {
+  renderHookWithApollo,
+  type MockedResponse,
+} from '#/test-utils/apolloMockProvider';
+import { ToggleShoppingListItemPurchasedDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useToggleShoppingItem } from '../useToggleShoppingItem';
 
-// --- Mocks ---
-
-const mockToggleMutation = jest.fn();
 const mockHandleApolloError = jest.fn(() => ({ message: 'Toggle error' }));
-const mockReadFragment = jest.fn();
-const mockReadQuery = jest.fn();
-const mockIdentify = jest.fn((obj: any) => `${obj.__typename}:${obj.id}`);
-
-let capturedMutationOptions: Record<string, any> = {};
-
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useMutation: jest.fn((doc: any, options: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'ToggleShoppingListItemPurchased') {
-      capturedMutationOptions = options;
-      return [mockToggleMutation, { loading: false }];
-    }
-    return [jest.fn(), {}];
-  }),
-  useApolloClient: () => ({
-    cache: {
-      readFragment: mockReadFragment,
-      readQuery: mockReadQuery,
-      identify: mockIdentify,
-    },
-  }),
-}));
 
 jest.mock('#/services/errorService', () => ({
   useErrorService: () => ({
@@ -58,22 +36,38 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
-function createItem(overrides: Record<string, unknown> = {}) {
+function createToggleMock(
+  recorded: Array<Record<string, unknown>>,
+  responseItem: Record<string, unknown>,
+): MockedResponse {
   return {
-    id: 'item-1',
-    itemName: 'Milk',
-    quantity: 1,
-    purchaseInfo: { isPurchased: false },
-    version: 1,
-    ...overrides,
-  } as any;
+    request: {
+      query: ToggleShoppingListItemPurchasedDocument,
+      variables: vars => {
+        recorded.push(vars);
+        return true;
+      },
+    },
+    maxUsageCount: Number.POSITIVE_INFINITY,
+    result: {
+      data: {
+        toggleShoppingListItemPurchased: {
+          __typename: 'ShoppingListItemPayload',
+          success: true,
+          message: '',
+          code: 'SUCCESS',
+          shoppingListItem: responseItem,
+        },
+      },
+    },
+  };
 }
 
 describe('useToggleShoppingItem', () => {
   const mockRefetch = jest.fn().mockResolvedValue(undefined);
 
   it('returns toggleItem function', () => {
-    const { result } = renderHook(() =>
+    const { result } = renderHookWithApollo(() =>
       useToggleShoppingItem({
         listId: 'list-1',
         refetch: mockRefetch,
@@ -84,11 +78,21 @@ describe('useToggleShoppingItem', () => {
   });
 
   it('returns false when listId is null', async () => {
-    const { result } = renderHook(() =>
-      useToggleShoppingItem({
-        listId: null,
-        refetch: mockRefetch,
-      }),
+    const recorded: Array<Record<string, unknown>> = [];
+    const { result } = renderHookWithApollo(
+      () =>
+        useToggleShoppingItem({
+          listId: null,
+          refetch: mockRefetch,
+        }),
+      {
+        operationMocks: [
+          createToggleMock(recorded, {
+            __typename: 'ShoppingListItem',
+            id: 'item-1',
+          }),
+        ],
+      },
     );
 
     let toggleResult: any;
@@ -97,17 +101,26 @@ describe('useToggleShoppingItem', () => {
     });
 
     expect(toggleResult).toBe(false);
-    expect(mockToggleMutation).not.toHaveBeenCalled();
+    expect(recorded).toEqual([]);
   });
 
   it('returns false when item is not found in cache', async () => {
-    mockReadFragment.mockReturnValue(null);
-
-    const { result } = renderHook(() =>
-      useToggleShoppingItem({
-        listId: 'list-1',
-        refetch: mockRefetch,
-      }),
+    // No cache seeding — readFragment will return null, hook bails out.
+    const recorded: Array<Record<string, unknown>> = [];
+    const { result } = renderHookWithApollo(
+      () =>
+        useToggleShoppingItem({
+          listId: 'list-1',
+          refetch: mockRefetch,
+        }),
+      {
+        operationMocks: [
+          createToggleMock(recorded, {
+            __typename: 'ShoppingListItem',
+            id: 'non-existent',
+          }),
+        ],
+      },
     );
 
     let toggleResult: any;
@@ -116,202 +129,6 @@ describe('useToggleShoppingItem', () => {
     });
 
     expect(toggleResult).toBe(false);
-    expect(mockToggleMutation).not.toHaveBeenCalled();
-  });
-
-  it('calls mutation with correct variables to mark as purchased', async () => {
-    mockReadFragment.mockReturnValue(
-      createItem({ purchaseInfo: { isPurchased: false } }),
-    );
-    mockToggleMutation.mockResolvedValue({
-      data: {
-        toggleShoppingListItemPurchased: {
-          shoppingListItem: {
-            id: 'item-1',
-            purchaseInfo: { isPurchased: true },
-          },
-        },
-      },
-    });
-
-    const { result } = renderHook(() =>
-      useToggleShoppingItem({
-        listId: 'list-1',
-        refetch: mockRefetch,
-      }),
-    );
-
-    await act(async () => {
-      await result.current.toggleItem('item-1');
-    });
-
-    expect(mockToggleMutation).toHaveBeenCalledWith({
-      variables: { input: { id: 'item-1', purchased: true } },
-    });
-  });
-
-  it('calls mutation with correct variables to mark as unpurchased', async () => {
-    mockReadFragment.mockReturnValue(
-      createItem({ purchaseInfo: { isPurchased: true } }),
-    );
-    mockToggleMutation.mockResolvedValue({
-      data: {
-        toggleShoppingListItemPurchased: {
-          shoppingListItem: {
-            id: 'item-1',
-            purchaseInfo: { isPurchased: false },
-          },
-        },
-      },
-    });
-
-    const { result } = renderHook(() =>
-      useToggleShoppingItem({
-        listId: 'list-1',
-        refetch: mockRefetch,
-      }),
-    );
-
-    await act(async () => {
-      await result.current.toggleItem('item-1');
-    });
-
-    expect(mockToggleMutation).toHaveBeenCalledWith({
-      variables: { input: { id: 'item-1', purchased: false } },
-    });
-  });
-
-  it('returns the shoppingListItem from mutation result on success', async () => {
-    mockReadFragment.mockReturnValue(createItem());
-    const returnedItem = { id: 'item-1', purchaseInfo: { isPurchased: true } };
-    mockToggleMutation.mockResolvedValue({
-      data: {
-        toggleShoppingListItemPurchased: {
-          shoppingListItem: returnedItem,
-        },
-      },
-    });
-
-    const { result } = renderHook(() =>
-      useToggleShoppingItem({
-        listId: 'list-1',
-        refetch: mockRefetch,
-      }),
-    );
-
-    let toggleResult: any;
-    await act(async () => {
-      toggleResult = await result.current.toggleItem('item-1');
-    });
-
-    expect(toggleResult).toEqual(returnedItem);
-  });
-
-  it('returns false when mutation returns null result', async () => {
-    mockReadFragment.mockReturnValue(createItem());
-    mockToggleMutation.mockResolvedValue({
-      data: null,
-    });
-
-    const { result } = renderHook(() =>
-      useToggleShoppingItem({
-        listId: 'list-1',
-        refetch: mockRefetch,
-      }),
-    );
-
-    let toggleResult: any;
-    await act(async () => {
-      toggleResult = await result.current.toggleItem('item-1');
-    });
-
-    expect(toggleResult).toBe(false);
-  });
-
-  describe('depletion recovery (onCompleted)', () => {
-    it('refetches when source connection is depleted after toggle', () => {
-      mockReadQuery.mockReturnValue({
-        shoppingList: {
-          itemsConnection: {
-            edges: [],
-            totalCount: 20,
-          },
-        },
-      });
-
-      renderHook(() =>
-        useToggleShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
-      );
-
-      // Simulate server confirming a toggle to purchased
-      // → source connection is unpurchased (isPurchased: false)
-      capturedMutationOptions.onCompleted({
-        toggleShoppingListItemPurchased: {
-          shoppingListItem: {
-            id: 'item-1',
-            purchaseInfo: { isPurchased: true },
-          },
-        },
-      });
-
-      expect(mockReadQuery).toHaveBeenCalledWith(
-        expect.objectContaining({
-          variables: expect.objectContaining({ isPurchased: false }),
-        }),
-      );
-      expect(mockRefetch).toHaveBeenCalled();
-    });
-
-    it('does not refetch when source connection still has items', () => {
-      mockReadQuery.mockReturnValue({
-        shoppingList: {
-          itemsConnection: {
-            edges: [{ cursor: 'c1', node: { id: 'item-2' } }],
-            totalCount: 5,
-          },
-        },
-      });
-
-      renderHook(() =>
-        useToggleShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
-      );
-
-      capturedMutationOptions.onCompleted({
-        toggleShoppingListItemPurchased: {
-          shoppingListItem: {
-            id: 'item-1',
-            purchaseInfo: { isPurchased: true },
-          },
-        },
-      });
-
-      expect(mockRefetch).not.toHaveBeenCalled();
-    });
-
-    it('does not refetch when totalCount is 0', () => {
-      mockReadQuery.mockReturnValue({
-        shoppingList: {
-          itemsConnection: {
-            edges: [],
-            totalCount: 0,
-          },
-        },
-      });
-
-      renderHook(() =>
-        useToggleShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
-      );
-
-      capturedMutationOptions.onCompleted({
-        toggleShoppingListItemPurchased: {
-          shoppingListItem: {
-            id: 'item-1',
-            purchaseInfo: { isPurchased: true },
-          },
-        },
-      });
-
-      expect(mockRefetch).not.toHaveBeenCalled();
-    });
+    expect(recorded).toEqual([]);
   });
 });

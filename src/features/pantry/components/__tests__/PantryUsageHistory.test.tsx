@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { PantryUsageHistory } from '../PantryUsageHistory';
 
 jest.mock('#features/pantry/hooks/usePantryItemTransformation', () => ({
@@ -123,7 +123,8 @@ describe('PantryUsageHistory', () => {
     expect(screen.getByText('+2 more entries')).toBeTruthy();
   });
 
-  it('calls onToggle when header is pressed', () => {
+  it('calls onToggle when header is pressed', async () => {
+    const user = userEvent.setup();
     const onToggle = jest.fn();
     render(
       <PantryUsageHistory
@@ -132,7 +133,7 @@ describe('PantryUsageHistory', () => {
         usageRecords={[makeRecord('1')]}
       />,
     );
-    fireEvent.press(screen.getByText('Usage History (1)'));
+    await user.press(screen.getByText('Usage History (1)'));
     expect(onToggle).toHaveBeenCalledTimes(1);
   });
 });

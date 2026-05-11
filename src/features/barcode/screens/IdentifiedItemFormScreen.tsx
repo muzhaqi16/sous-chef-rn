@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
-import { BottomSheetModal } from '@gorhom/bottom-sheet';
+import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
 import type { StaticScreenProps } from '@react-navigation/native';
 
@@ -41,10 +41,10 @@ export const IdentifiedItemFormScreen: React.FC<
   }>
 > = ({ route }) => {
   const { name, brandName, netWeights, upc } = route.params;
-  const { goBack, navigation, navigateTo } = useAppNavigation();
+  const { goBack, navigation, toBarcode } = useAppNavigation();
 
   const handleScanUpc = () => {
-    navigateTo.barcode({ returnTo: 'identify-form' });
+    toBarcode({ returnTo: 'identify-form' });
   };
 
   const { uploadItemImage } = useImageUpload();

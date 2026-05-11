@@ -17,7 +17,7 @@ import { useAuthNavigation } from '#hooks/navigation/useAuthNavigation';
 type SignUpValues = RegisterInput & { confirmPassword: string; name: string };
 
 export const SignUpScreen = (): React.JSX.Element => {
-  const navigation = useNavigation();
+  const { goBack } = useNavigation();
   const isRegistering = useAppStore(state => state.authIsLoading);
   const { navigateToLogin } = useAuthNavigation();
 
@@ -47,7 +47,7 @@ export const SignUpScreen = (): React.JSX.Element => {
       <AuthFormTemplate<SignUpValues>
         title="Create account"
         subtitle="Join Sous Chef today"
-        onBackPress={() => navigation.goBack()}
+        onBackPress={() => goBack()}
         fields={[
           {
             name: 'name',

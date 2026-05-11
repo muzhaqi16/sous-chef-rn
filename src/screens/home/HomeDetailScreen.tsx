@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, Pressable } from 'react-native';
+import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { Pressable } from '#components/atoms/themedComponents';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { alertService } from '#/services/alertService';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import {
@@ -14,6 +16,10 @@ import { DetailTemplate } from '#components/templates/DetailTemplate';
 import { ModalPicker } from '#components/molecules/ModalPicker';
 import { EditableField } from '#components/molecules/EditableField';
 import { NavigationRow } from '#components/molecules/NavigationRow';
+
+const ThemedNavigationRow = withUnistyles(NavigationRow, theme => ({
+  iconColor: theme.colors.primary,
+}));
 import { HomeMembersSection } from '#components/organisms/home/HomeMembersSection';
 import { SettingSwitch } from '#components/settings/SettingSwitch';
 import { useUser } from '#store/useAppStore';
@@ -32,11 +38,11 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
   route,
 }) => {
   useScreenTransition('HomeDetailScreen');
-  const { goBack, navigate } = useAppNavigation();
+  const { t } = useTranslation();
+  const { goBack, toStorageLocations } = useAppNavigation();
   const { homeId } = route.params;
   // PERFORMANCE: Use selective selector instead of full store subscription
   const currentUser = useUser();
-  const { theme } = useUnistyles();
 
   const [copied, setCopied] = useState(false);
   const [joinCodeLoading, setJoinCodeLoading] = useState(false);
@@ -100,7 +106,7 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
       alertService.alert(
         'Cannot Leave',
         'Owners cannot leave the home. Please transfer ownership to another member or delete the home.',
-        [{ text: 'OK' }],
+        [{ text: t('labels.ok') }],
       );
       return;
     }
@@ -134,7 +140,7 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
                 />
                 {!loading && !!error && (
                   <Button
-                    title="Retry"
+                    title={t('labels.retry')}
                     onPress={() => refetch()}
                     variant="secondary"
                     style={styles.retryButton}
@@ -197,9 +203,7 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
                 <Icon
                   name={copied ? 'checkmark-circle' : 'copy-outline'}
                   size={20}
-                  color={
-                    copied ? theme.colors.success : theme.colors.textPrimary
-                  }
+                  tone={copied ? 'success' : 'textPrimary'}
                 />
               </Pressable>
             </View>
@@ -224,12 +228,11 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
     {
       title: 'Storage',
       content: (
-        <NavigationRow
+        <ThemedNavigationRow
           icon="folder-open"
-          iconColor={theme.colors.primary}
           title="Storage Locations"
           subtitle="Manage where items are stored"
-          onPress={() => navigate('StorageLocations', { homeId })}
+          onPress={() => toStorageLocations({ homeId })}
         />
       ),
     },
@@ -279,7 +282,7 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
         selected={rolePickerState.currentRole}
         onSelect={handleRoleSelect}
         onCancel={closeRolePicker}
-        confirmLabel="Save"
+        confirmLabel={t('labels.save')}
       />
     </>
   );

@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, ActivityIndicator, Modal } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { View, Modal } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
+import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
 
 interface LoadingOverlayProps {
   visible: boolean;
@@ -18,7 +19,7 @@ export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
   cancelable = false,
   onCancel,
 }) => {
-  const { theme } = useUnistyles();
+  styles.useVariants({ transparent });
 
   if (!visible) return null;
 
@@ -35,34 +36,11 @@ export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
         }
       }}
     >
-      <View
-        style={[
-          styles.overlay,
-          {
-            backgroundColor: transparent
-              ? theme.colors.overlays.light
-              : theme.colors.overlays.medium,
-          },
-        ]}
-      >
-        <View
-          style={[
-            styles.container,
-            { backgroundColor: theme.colors.background },
-          ]}
-        >
-          <ActivityIndicator
-            size="large"
-            color={theme.colors.primary}
-            style={styles.spinner}
-          />
+      <View style={styles.overlay}>
+        <View style={styles.container}>
+          <ThemedActivityIndicator size="large" style={styles.spinner} />
           {!!message && (
-            <Text
-              size="md"
-              weight="medium"
-              align="center"
-              style={{ color: theme.colors.textPrimary }}
-            >
+            <Text size="md" weight="medium" align="center">
               {message}
             </Text>
           )}
@@ -104,12 +82,19 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    variants: {
+      transparent: {
+        true: { backgroundColor: theme.colors.overlays.light },
+        false: { backgroundColor: theme.colors.overlays.medium },
+      },
+    },
   },
   container: {
     padding: theme.spacing.xl + 8,
     borderRadius: theme.radii.md,
     alignItems: 'center',
     minWidth: 150,
+    backgroundColor: theme.colors.background,
     ...theme.shadows.lg,
   },
   spinner: {

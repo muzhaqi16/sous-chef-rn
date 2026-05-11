@@ -4,10 +4,14 @@ import React, {
   useRef,
   useEffect,
 } from 'react';
-import { View, ActivityIndicator } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { View } from 'react-native';
+import {
+  Pressable,
+  ThemedActivityIndicator,
+  ThemedBottomSheetTextInput,
+} from '#components/atoms/themedComponents';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon, type IconLibrary } from '#utils/iconUtils';
 
 export interface BottomSheetSearchBarAction {
@@ -73,8 +77,6 @@ export const BottomSheetSearchBar = forwardRef<
     },
     ref,
   ) => {
-    const { theme } = useUnistyles();
-
     // Internal refs for uncontrolled input (fixes cursor jumping)
     const inputRef =
       useRef<React.ComponentRef<typeof BottomSheetTextInput>>(null);
@@ -179,12 +181,11 @@ export const BottomSheetSearchBar = forwardRef<
 
     return (
       <View style={styles.container}>
-        <Icon name="search" size={20} color={theme.colors.textSecondary} />
-        <BottomSheetTextInput
+        <Icon name="search" size={20} tone="textSecondary" />
+        <ThemedBottomSheetTextInput
           ref={inputRef}
           style={styles.input}
           placeholder={placeholder}
-          placeholderTextColor={theme.colors.textSecondary}
           onChangeText={handleChangeText}
           returnKeyType={returnKeyType}
           autoCapitalize={autoCapitalize}
@@ -192,9 +193,8 @@ export const BottomSheetSearchBar = forwardRef<
           testID={testID}
         />
         {!!isLoading && (
-          <ActivityIndicator
+          <ThemedActivityIndicator
             size="small"
-            color={theme.colors.primary}
             style={styles.loadingIndicator}
           />
         )}
@@ -207,7 +207,7 @@ export const BottomSheetSearchBar = forwardRef<
             onPress={handleClear}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Icon name="close" size={20} color={theme.colors.textSecondary} />
+            <Icon name="close" size={20} tone="textSecondary" />
           </Pressable>
         )}
         {rightActions?.map((action, index) => (
@@ -223,7 +223,8 @@ export const BottomSheetSearchBar = forwardRef<
             <Icon
               name={action.icon}
               size={24}
-              color={action.color || theme.colors.primary}
+              color={action.color}
+              tone="primary"
               library={action.library || 'Ionicons'}
             />
           </Pressable>

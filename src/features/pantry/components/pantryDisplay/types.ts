@@ -3,7 +3,7 @@ import {
   type PantryItem,
   type PantryStats,
 } from '#/graphql/generated/schemaTypes';
-import type { LocationFilter } from '#utils/pantryFilters';
+import type { LocationFilter } from '#features/pantry/utils/pantryFilters';
 import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
 import type { ItemVariant, ExpirationVariant } from '../PantryItemCard';
 
@@ -105,7 +105,9 @@ export interface PantryContentProps {
   // No-home states
   noHomeSelected?: boolean;
   noHomes?: boolean;
+  noPantries?: boolean;
   onSelectHome?: () => void;
+  onCreatePantry?: () => void;
 
   // Pagination
   isLoadingMore?: boolean;
@@ -148,6 +150,8 @@ export interface PantryEmptyStateProps {
   onAddItem?: () => void;
   noHomeSelected?: boolean;
   noHomes?: boolean;
+  noPantries?: boolean;
   onSelectHome?: () => void;
+  onCreatePantry?: () => void;
   overallItemCount: number;
 }

@@ -15,15 +15,19 @@ const mockResetUserPreferences = jest.fn();
 let mockUserId: string | undefined = 'u1';
 let mockUserPreferencesMap: Record<string, any> = {};
 
-jest.mock('#/store/useAppStore', () => ({
-  useAppStore: (selector: (state: any) => any) =>
-    selector({
-      user: mockUserId ? { id: mockUserId } : null,
-      userPreferences: mockUserPreferencesMap,
-      setUserPreference: mockSetUserPreference,
-      resetUserPreferences: mockResetUserPreferences,
-    }),
-}));
+jest.mock('#store/useAppStore', () => {
+  const getState = () => ({
+    user: mockUserId ? { id: mockUserId } : null,
+    userPreferences: mockUserPreferencesMap,
+    setUserPreference: mockSetUserPreference,
+    resetUserPreferences: mockResetUserPreferences,
+  });
+  return {
+    useAppStore: (selector: (state: any) => any) => selector(getState()),
+    useUser: () => (s => s.user)(getState()),
+    useUserId: () => (s => s.user?.id)(getState()),
+  };
+});
 
 beforeEach(() => {
   jest.clearAllMocks();

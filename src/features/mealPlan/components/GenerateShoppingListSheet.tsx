@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
-import { View, ActivityIndicator } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { BottomSheetModal } from '@gorhom/bottom-sheet';
+import { View } from 'react-native';
+import {
+  Pressable,
+  PrimaryActivityIndicator,
+} from '#components/atoms/themedComponents';
+import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { BaseSwitch } from '#components/base/BaseSwitch';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { FormInput } from '#components/molecules/FormInput';
 import { useQuery } from '@apollo/client/react';
-import { GetShoppingListsLiteDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { GetShoppingListsLiteDocument } from './GenerateShoppingListSheet.generated';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 
@@ -28,7 +31,6 @@ interface GenerateShoppingListSheetProps {
 export const GenerateShoppingListSheet: React.FC<
   GenerateShoppingListSheetProps
 > = ({ visible, onClose, onGenerate, loading, homeName }) => {
-  const { theme } = useUnistyles();
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible,
     onDismiss: onClose,
@@ -90,11 +92,7 @@ export const GenerateShoppingListSheet: React.FC<
         {/* Home sharing info */}
         {!!homeName && (
           <View style={styles.infoNote}>
-            <Icon
-              name="information-circle-outline"
-              size={18}
-              color={theme.colors.primary}
-            />
+            <Icon name="information-circle-outline" size={18} tone="primary" />
             <Text size="sm" tone="accent" style={styles.infoNoteText}>
               The shopping list will be shared with {homeName}
             </Text>
@@ -130,11 +128,7 @@ export const GenerateShoppingListSheet: React.FC<
               <Icon
                 name="add-circle-outline"
                 size={20}
-                color={
-                  mode === 'new'
-                    ? theme.colors.white
-                    : theme.colors.textSecondary
-                }
+                tone={mode === 'new' ? 'white' : 'textSecondary'}
               />
               <Text
                 size="sm"
@@ -157,11 +151,7 @@ export const GenerateShoppingListSheet: React.FC<
               <Icon
                 name="list-outline"
                 size={20}
-                color={
-                  mode === 'existing'
-                    ? theme.colors.white
-                    : theme.colors.textSecondary
-                }
+                tone={mode === 'existing' ? 'white' : 'textSecondary'}
               />
               <Text
                 size="sm"
@@ -219,10 +209,8 @@ export const GenerateShoppingListSheet: React.FC<
                         : 'radio-button-off'
                     }
                     size={20}
-                    color={
-                      selectedListId === list.id
-                        ? theme.colors.primary
-                        : theme.colors.textTertiary
+                    tone={
+                      selectedListId === list.id ? 'primary' : 'textTertiary'
                     }
                   />
                   <View style={styles.listItemContent}>
@@ -241,7 +229,7 @@ export const GenerateShoppingListSheet: React.FC<
 
         {!!loading && (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="small" color={theme.colors.primary} />
+            <PrimaryActivityIndicator size="small" />
             <Text size="sm" tone="secondary">
               Generating shopping list...
             </Text>

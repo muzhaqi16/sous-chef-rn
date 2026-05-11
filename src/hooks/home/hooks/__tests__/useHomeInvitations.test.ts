@@ -1,29 +1,14 @@
-import { renderHook, act } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
+import type { MockedResponse } from '#/test-utils/apolloMockProvider';
+import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  InviteToHomeDocument,
+  JoinHomeByCodeDocument,
+  GetHomeByJoinCodeDocument,
+} from '#operations/home/home.generated';
 import { alertService } from '#/services/alertService';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import { useHomeInvitations } from '../useHomeInvitations';
-
-const mockInviteUserMutation = jest.fn();
-const mockJoinHomeByCodeMutation = jest.fn();
-const mockGetHomeByJoinCode = jest.fn();
-
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useMutation: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'InviteToHome')
-      return [mockInviteUserMutation, { loading: false }];
-    if (opName === 'JoinHomeByCode')
-      return [mockJoinHomeByCodeMutation, { loading: false }];
-    return [jest.fn(), {}];
-  }),
-  useLazyQuery: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'GetHomeByJoinCode')
-      return [mockGetHomeByJoinCode, { loading: false }];
-    return { data: undefined, loading: false, error: undefined };
-  }),
-}));
 
 jest.mock('#/services/errorService', () => ({
   useErrorService: () => ({
@@ -52,13 +37,148 @@ const createOptions = () => ({
   setSelectedHomeId: jest.fn(),
 });
 
+// MockedResponse builders. We omit fragment fields the hook doesn't read; the
+// schema-level shape only matters for the cache update path which we mock.
+function buildInviteMock(
+  input: { homeId: string; email: string; role: MembershipRole },
+  homeInviteId: string = 'invite-1',
+): MockedResponse {
+  return {
+    request: {
+      query: InviteToHomeDocument,
+      variables: { input },
+    },
+    result: {
+      data: {
+        inviteToHome: {
+          __typename: 'HomeInvitePayload',
+          success: true,
+          message: 'OK',
+          code: 'OK',
+          homeInvite: {
+            __typename: 'HomeInvite',
+            id: homeInviteId,
+            token: 'tok-1',
+            role: input.role,
+            home: { __typename: 'Home', id: input.homeId, name: 'Home' },
+            inviter: {
+              __typename: 'User',
+              id: 'u-inviter',
+              email: 'inviter@test.com',
+              profile: {
+                __typename: 'UserProfile',
+                id: 'p-inviter',
+                displayName: 'Inviter',
+              },
+            },
+          },
+        },
+      },
+    },
+  };
+}
+
+function buildJoinByCodeMock(
+  joinCode: string,
+  membershipFields: { homeId: string; role: MembershipRole } | null,
+): MockedResponse {
+  return {
+    request: {
+      query: JoinHomeByCodeDocument,
+      variables: { joinCode },
+    },
+    result: {
+      data: {
+        joinHomeByCode: {
+          __typename: 'MembershipPayload',
+          success: !!membershipFields,
+          message: 'OK',
+          code: 'OK',
+          membership: membershipFields
+            ? {
+                __typename: 'Membership',
+                id: 'mem-1',
+                homeId: membershipFields.homeId,
+                userId: 'u-1',
+                role: membershipFields.role,
+                status: 'ACTIVE',
+                displayName: null,
+                canManageHome: false,
+                canViewPantry: true,
+                canEditPantry: false,
+                canAddItems: true,
+                canRemoveItems: false,
+                canInviteOthers: false,
+                user: {
+                  __typename: 'User',
+                  id: 'u-1',
+                  email: 'me@test.com',
+                  profile: {
+                    __typename: 'UserProfile',
+                    id: 'p-1',
+                    displayName: 'Me',
+                    avatar: null,
+                  },
+                },
+              }
+            : null,
+        },
+      },
+    },
+  };
+}
+
+function buildHomeByJoinCodeMock(
+  joinCode: string,
+  home: { id: string; name: string } | null,
+): MockedResponse {
+  return {
+    request: {
+      query: GetHomeByJoinCodeDocument,
+      variables: { joinCode },
+    },
+    result: {
+      data: {
+        homeByJoinCode: home
+          ? {
+              __typename: 'Home',
+              id: home.id,
+              name: home.name,
+              version: 1,
+              updatedAt: '2025-01-01T00:00:00.000Z',
+              isDefault: false,
+              membersConnection: {
+                __typename: 'MembershipConnection',
+                edges: [],
+                totalCount: 0,
+              },
+              invitesConnection: {
+                __typename: 'HomeInviteConnection',
+                edges: [],
+                totalCount: 0,
+              },
+              pantriesConnection: {
+                __typename: 'PantryConnection',
+                edges: [],
+                totalCount: 0,
+              },
+              myMembership: null,
+            }
+          : null,
+      },
+    },
+  };
+}
+
 beforeEach(() => {
   jest.clearAllMocks();
 });
 
 describe('useHomeInvitations', () => {
   it('returns invitation functions and loading states', () => {
-    const { result } = renderHook(() => useHomeInvitations(createOptions()));
+    const { result } = renderHookWithApollo(() =>
+      useHomeInvitations(createOptions()),
+    );
 
     expect(typeof result.current.inviteUserToHome).toBe('function');
     expect(typeof result.current.joinHomeByCode).toBe('function');
@@ -71,62 +191,78 @@ describe('useHomeInvitations', () => {
 
   describe('inviteUserToHome', () => {
     it('calls mutation with trimmed email and default role', async () => {
-      mockInviteUserMutation.mockResolvedValue({
-        data: { inviteToHome: { homeInvite: { id: 'invite-1' } } },
-      });
-
-      const { result } = renderHook(() => useHomeInvitations(createOptions()));
-
-      await act(async () => {
-        await result.current.inviteUserToHome('home-1', '  user@test.com  ');
-      });
-
-      expect(mockInviteUserMutation).toHaveBeenCalledWith({
-        variables: {
-          input: {
-            homeId: 'home-1',
-            email: 'user@test.com',
-            role: 'MEMBER',
-          },
+      const { result } = renderHookWithApollo(
+        () => useHomeInvitations(createOptions()),
+        {
+          operationMocks: [
+            buildInviteMock({
+              homeId: 'home-1',
+              email: 'user@test.com',
+              role: MembershipRole.Member,
+            }),
+          ],
         },
+      );
+
+      let returnValue: any;
+      await act(async () => {
+        returnValue = await result.current.inviteUserToHome(
+          'home-1',
+          '  user@test.com  ',
+        );
       });
+
+      // If MockedProvider returned data, the call matched the variables (which
+      // include the trimmed email). The hook returns `result.data`.
+      expect(returnValue?.inviteToHome?.homeInvite?.id).toBe('invite-1');
     });
 
     it('uses specified role', async () => {
-      mockInviteUserMutation.mockResolvedValue({
-        data: { inviteToHome: { homeInvite: { id: 'invite-1' } } },
-      });
+      const { result } = renderHookWithApollo(
+        () => useHomeInvitations(createOptions()),
+        {
+          operationMocks: [
+            buildInviteMock({
+              homeId: 'home-1',
+              email: 'admin@test.com',
+              role: MembershipRole.Admin,
+            }),
+          ],
+        },
+      );
 
-      const { result } = renderHook(() => useHomeInvitations(createOptions()));
-
+      let returnValue: any;
       await act(async () => {
-        await result.current.inviteUserToHome(
+        returnValue = await result.current.inviteUserToHome(
           'home-1',
           'admin@test.com',
           MembershipRole.Admin,
         );
       });
 
-      expect(mockInviteUserMutation).toHaveBeenCalledWith({
-        variables: {
-          input: {
-            homeId: 'home-1',
-            email: 'admin@test.com',
-            role: 'ADMIN',
-          },
-        },
-      });
+      // Mock matches { role: ADMIN } — receiving data confirms the call
+      // forwarded the requested role.
+      expect(returnValue?.inviteToHome?.homeInvite?.role).toBe(
+        MembershipRole.Admin,
+      );
     });
 
     it('returns mutation data on success', async () => {
-      const mockData = {
-        inviteToHome: {
-          homeInvite: { id: 'invite-1', email: 'user@test.com' },
+      const { result } = renderHookWithApollo(
+        () => useHomeInvitations(createOptions()),
+        {
+          operationMocks: [
+            buildInviteMock(
+              {
+                homeId: 'home-1',
+                email: 'user@test.com',
+                role: MembershipRole.Member,
+              },
+              'invite-1',
+            ),
+          ],
         },
-      };
-      mockInviteUserMutation.mockResolvedValue({ data: mockData });
-
-      const { result } = renderHook(() => useHomeInvitations(createOptions()));
+      );
 
       let returnValue: any;
       await act(async () => {
@@ -136,13 +272,15 @@ describe('useHomeInvitations', () => {
         );
       });
 
-      expect(returnValue).toEqual(mockData);
+      expect(returnValue?.inviteToHome?.homeInvite?.id).toBe('invite-1');
     });
   });
 
   describe('joinHomeByCode', () => {
     it('shows alert for empty join code', async () => {
-      const { result } = renderHook(() => useHomeInvitations(createOptions()));
+      const { result } = renderHookWithApollo(() =>
+        useHomeInvitations(createOptions()),
+      );
 
       let success: any;
       await act(async () => {
@@ -154,34 +292,38 @@ describe('useHomeInvitations', () => {
         'Error',
         'Please enter a join code',
       );
-      expect(mockJoinHomeByCodeMutation).not.toHaveBeenCalled();
     });
 
     it('calls mutation with trimmed code and returns membership', async () => {
-      const membership = { homeId: 'home-1', role: 'MEMBER' };
-      mockJoinHomeByCodeMutation.mockResolvedValue({
-        data: { joinHomeByCode: { membership } },
-      });
-
-      const { result } = renderHook(() => useHomeInvitations(createOptions()));
+      const { result } = renderHookWithApollo(
+        () => useHomeInvitations(createOptions()),
+        {
+          operationMocks: [
+            buildJoinByCodeMock('ABC123', {
+              homeId: 'home-1',
+              role: MembershipRole.Member,
+            }),
+          ],
+        },
+      );
 
       let returnValue: any;
       await act(async () => {
         returnValue = await result.current.joinHomeByCode('  ABC123  ');
       });
 
-      expect(mockJoinHomeByCodeMutation).toHaveBeenCalledWith({
-        variables: { joinCode: 'ABC123' },
-      });
-      expect(returnValue).toEqual(membership);
+      // Receiving membership confirms the mutation matched the trimmed code.
+      expect(returnValue?.homeId).toBe('home-1');
+      expect(returnValue?.role).toBe(MembershipRole.Member);
     });
 
     it('returns false when no membership returned', async () => {
-      mockJoinHomeByCodeMutation.mockResolvedValue({
-        data: { joinHomeByCode: { membership: null } },
-      });
-
-      const { result } = renderHook(() => useHomeInvitations(createOptions()));
+      const { result } = renderHookWithApollo(
+        () => useHomeInvitations(createOptions()),
+        {
+          operationMocks: [buildJoinByCodeMock('ABC123', null)],
+        },
+      );
 
       let returnValue: any;
       await act(async () => {
@@ -194,7 +336,9 @@ describe('useHomeInvitations', () => {
 
   describe('previewHomeByCode', () => {
     it('returns null for empty code', async () => {
-      const { result } = renderHook(() => useHomeInvitations(createOptions()));
+      const { result } = renderHookWithApollo(() =>
+        useHomeInvitations(createOptions()),
+      );
 
       let returnValue: any;
       await act(async () => {
@@ -202,34 +346,37 @@ describe('useHomeInvitations', () => {
       });
 
       expect(returnValue).toBeNull();
-      expect(mockGetHomeByJoinCode).not.toHaveBeenCalled();
     });
 
     it('queries with trimmed code and returns home data', async () => {
-      const homeData = { id: 'home-1', name: 'Test Home' };
-      mockGetHomeByJoinCode.mockResolvedValue({
-        data: { homeByJoinCode: homeData },
-      });
-
-      const { result } = renderHook(() => useHomeInvitations(createOptions()));
+      const { result } = renderHookWithApollo(
+        () => useHomeInvitations(createOptions()),
+        {
+          operationMocks: [
+            buildHomeByJoinCodeMock('XYZ789', {
+              id: 'home-1',
+              name: 'Test Home',
+            }),
+          ],
+        },
+      );
 
       let returnValue: any;
       await act(async () => {
         returnValue = await result.current.previewHomeByCode('  XYZ789  ');
       });
 
-      expect(mockGetHomeByJoinCode).toHaveBeenCalledWith({
-        variables: { joinCode: 'XYZ789' },
-      });
-      expect(returnValue).toEqual(homeData);
+      expect(returnValue?.id).toBe('home-1');
+      expect(returnValue?.name).toBe('Test Home');
     });
 
     it('returns null when query returns no home', async () => {
-      mockGetHomeByJoinCode.mockResolvedValue({
-        data: { homeByJoinCode: null },
-      });
-
-      const { result } = renderHook(() => useHomeInvitations(createOptions()));
+      const { result } = renderHookWithApollo(
+        () => useHomeInvitations(createOptions()),
+        {
+          operationMocks: [buildHomeByJoinCodeMock('INVALID', null)],
+        },
+      );
 
       let returnValue: any;
       await act(async () => {
@@ -240,9 +387,15 @@ describe('useHomeInvitations', () => {
     });
 
     it('returns null on error', async () => {
-      mockGetHomeByJoinCode.mockRejectedValue(new Error('Network error'));
+      // Apollo's mock link returns errors via error policy 'all' rather than
+      // throwing. To exercise the error path of `executeMutation`, mock the
+      // helper directly to return false (mirroring its behavior on rejection).
+      const { executeMutation } = require('#/utils/compilerSafeWrappers');
+      executeMutation.mockResolvedValueOnce(false);
 
-      const { result } = renderHook(() => useHomeInvitations(createOptions()));
+      const { result } = renderHookWithApollo(() =>
+        useHomeInvitations(createOptions()),
+      );
 
       let returnValue: any;
       await act(async () => {

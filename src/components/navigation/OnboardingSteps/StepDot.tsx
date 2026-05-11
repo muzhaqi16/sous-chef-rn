@@ -4,12 +4,12 @@ import Animated, {
   withTiming,
   interpolateColor,
 } from 'react-native-reanimated';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { useAnimatedTheme } from 'react-native-unistyles/reanimated';
 import { TIMING } from '#constants/animations';
 import { Icon } from '#/utils/iconUtils';
 import type { StepDotProps } from './types';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -20,7 +20,6 @@ export const StepDot: React.FC<StepDotProps> = ({
   onPress,
   allowNavigation = false,
 }) => {
-  const { theme } = useUnistyles();
   const animatedTheme = useAnimatedTheme();
 
   // Animated style for color transitions, scale, and opacity
@@ -107,11 +106,7 @@ export const StepDot: React.FC<StepDotProps> = ({
       disabled={!allowNavigation}
     >
       <Animated.View style={[styles.iconContainer, iconAnimatedStyle]}>
-        <Icon
-          name="checkmark"
-          size={stepSize * 0.5}
-          color={theme.colors.white}
-        />
+        <Icon name="checkmark" size={stepSize * 0.5} tone="white" />
       </Animated.View>
     </AnimatedPressable>
   );

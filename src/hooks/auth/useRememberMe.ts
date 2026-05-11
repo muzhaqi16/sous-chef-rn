@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useToast } from '#/hooks/useToast';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
-import { useUserPreferences } from '#/hooks/navigation/useUserPreferences';
+import { useAuthPreferences } from '#/hooks/navigation/useAuthPreferences';
 
 export interface RememberMeCredentials {
   email: string;
@@ -26,7 +26,7 @@ export const useRememberMe = ({ onAccept, onDecline }: RememberMeEvents) => {
 
   // Dependencies
   const toast = useToast();
-  const { markCredentialPromptDeclined } = useUserPreferences();
+  const { markCredentialPromptDeclined } = useAuthPreferences();
 
   const handleRememberMeAccept = async () => {
     if (pendingCredentials) {

@@ -1,8 +1,11 @@
 'use no memo';
 
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { screen } from '@testing-library/react-native';
+import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { ListSettings } from '../ListSettings';
+
+const render = (ui: any) => renderWithApollo(ui);
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
@@ -49,18 +52,6 @@ jest.mock('#/hooks/home/useLazyHomeData', () => ({
 
 jest.mock('#features/shoppingList/hooks/useShoppingListsQuery', () => ({
   useShoppingListsQuery: () => ({ lists: [] }),
-}));
-
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useMutation: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'UpdateShoppingList') return [jest.fn(), { loading: false }];
-    if (opName === 'DeleteShoppingList') return [jest.fn(), { loading: false }];
-    if (opName === 'CreateShoppingList') return [jest.fn(), { loading: false }];
-    if (opName === 'RemoveCollaborator') return [jest.fn(), { loading: false }];
-    return [jest.fn(), {}];
-  }),
 }));
 
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({

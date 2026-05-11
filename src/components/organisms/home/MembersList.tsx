@@ -1,11 +1,10 @@
 import React from 'react';
 import { View } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { useAppStore } from '#store/useAppStore';
+import { StyleSheet } from 'react-native-unistyles';
+import { useUser } from '#store/useAppStore';
 import { formatRole } from '#/utils/formatters/roleFormatters';
 import {
   formatInviteStatus,
-  getInviteStatusColor,
   getInviteDisplayName,
 } from '#/utils/formatters/inviteFormatters';
 import {
@@ -21,6 +20,51 @@ interface ListInvite {
   status: string;
 }
 
+type StatusKey = 'pending' | 'accepted' | 'declined' | 'expired';
+
+function getStatusKey(status: string): StatusKey {
+  switch (status) {
+    case 'PENDING':
+      return 'pending';
+    case 'ACCEPTED':
+      return 'accepted';
+    case 'DECLINED':
+      return 'declined';
+    case 'EXPIRED':
+    case 'REVOKED':
+    default:
+      return 'expired';
+  }
+}
+
+const InviteChip: React.FC<{ invite: ListInvite }> = ({ invite }) => {
+  const statusKey = getStatusKey(invite.status);
+  const displayName = getInviteDisplayName(invite);
+  styles.useVariants({ status: statusKey });
+  return (
+    <View style={styles.inviteChip}>
+      <Text style={styles.inviteChipText}>{displayName}</Text>
+      <Text style={styles.inviteStatus}>
+        {formatInviteStatus(invite.status)}
+      </Text>
+    </View>
+  );
+};
+
+const MemberChip: React.FC<{
+  displayName: string;
+  role: string;
+  isCurrentUser: boolean;
+}> = ({ displayName, role, isCurrentUser }) => {
+  styles.useVariants({ currentUser: isCurrentUser });
+  return (
+    <View style={styles.memberChip}>
+      <Text style={styles.memberChipText}>{displayName}</Text>
+      <Text style={styles.memberRole}>{formatRole(role)}</Text>
+    </View>
+  );
+};
+
 interface MembersListProps {
   members: Member[];
   invites?: ListInvite[];
@@ -30,8 +74,7 @@ export const MembersList: React.FC<MembersListProps> = ({
   members,
   invites = [],
 }) => {
-  const currentUser = useAppStore(state => state.user);
-  const { theme } = useUnistyles();
+  const currentUser = useUser();
 
   // API now only returns pending invites, so no client-side filtering needed
   const pendingInvites = invites;
@@ -56,53 +99,19 @@ export const MembersList: React.FC<MembersListProps> = ({
         {members.map(member => {
           const displayName = getMemberDisplayName(member, currentUser?.id);
           const isCurrentUser = member.user?.id === currentUser?.id;
-
           return (
-            <View
+            <MemberChip
               key={member.id}
-              style={[
-                styles.memberChip,
-                isCurrentUser && styles.currentUserChip,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.memberChipText,
-                  isCurrentUser && styles.currentUserText,
-                ]}
-              >
-                {displayName}
-              </Text>
-              <Text
-                style={[
-                  styles.memberRole,
-                  isCurrentUser && styles.currentUserRole,
-                ]}
-              >
-                {formatRole(member.role)}
-              </Text>
-            </View>
+              displayName={displayName}
+              role={member.role}
+              isCurrentUser={isCurrentUser}
+            />
           );
         })}
 
-        {pendingInvites.map(invite => {
-          const displayName = getInviteDisplayName(invite);
-          const statusColor = getInviteStatusColor(invite.status, theme);
-
-          return (
-            <View
-              key={invite.id}
-              style={[styles.inviteChip, { borderColor: statusColor }]}
-            >
-              <Text style={[styles.inviteChipText, { color: statusColor }]}>
-                {displayName}
-              </Text>
-              <Text style={[styles.inviteStatus, { color: statusColor }]}>
-                {formatInviteStatus(invite.status)}
-              </Text>
-            </View>
-          );
-        })}
+        {pendingInvites.map(invite => (
+          <InviteChip key={invite.id} invite={invite} />
+        ))}
       </View>
     </View>
   );
@@ -124,35 +133,49 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.sm,
   },
   memberChip: {
-    backgroundColor: theme.colors.primary + '20',
     paddingHorizontal: theme.spacing['3'],
     paddingVertical: theme.spacing.sm,
     borderRadius: theme.radii.xl,
     minWidth: theme.spacing['3xl'] - 4,
     alignItems: 'center',
+    variants: {
+      currentUser: {
+        true: {
+          backgroundColor: theme.colors.primary,
+          borderWidth: 1,
+          borderColor: theme.colors.primary,
+        },
+        false: {
+          backgroundColor: theme.colors.primary + '20',
+        },
+      },
+    },
   },
   memberChipText: {
     fontSize: theme.typography.fontSize.sm - 1,
-    color: theme.colors.primary,
     fontWeight: theme.fonts.weight.semibold,
+    variants: {
+      currentUser: {
+        true: {
+          color: theme.colors.white,
+          fontWeight: theme.fonts.weight.bold,
+        },
+        false: {
+          color: theme.colors.primary,
+        },
+      },
+    },
   },
   memberRole: {
     fontSize: theme.typography.fontSize.xs - 2,
-    color: theme.colors.textSecondary,
     marginTop: 2,
     textAlign: 'center',
-  },
-  currentUserChip: {
-    backgroundColor: theme.colors.primary,
-    borderWidth: 1,
-    borderColor: theme.colors.primary,
-  },
-  currentUserText: {
-    color: theme.colors.white,
-    fontWeight: theme.fonts.weight.bold,
-  },
-  currentUserRole: {
-    color: theme.colors.white,
+    variants: {
+      currentUser: {
+        true: { color: theme.colors.white },
+        false: { color: theme.colors.textSecondary },
+      },
+    },
   },
   inviteChip: {
     backgroundColor: theme.colors.transparent,
@@ -163,15 +186,39 @@ const styles = StyleSheet.create(theme => ({
     borderStyle: 'dashed',
     minWidth: theme.spacing['3xl'] - 4,
     alignItems: 'center',
+    variants: {
+      status: {
+        pending: { borderColor: theme.colors.status.pending },
+        accepted: { borderColor: theme.colors.status.accepted },
+        declined: { borderColor: theme.colors.status.declined },
+        expired: { borderColor: theme.colors.status.expired },
+      },
+    },
   },
   inviteChipText: {
     fontSize: theme.typography.fontSize.sm - 1,
     fontWeight: theme.fonts.weight.semibold,
+    variants: {
+      status: {
+        pending: { color: theme.colors.status.pending },
+        accepted: { color: theme.colors.status.accepted },
+        declined: { color: theme.colors.status.declined },
+        expired: { color: theme.colors.status.expired },
+      },
+    },
   },
   inviteStatus: {
     fontSize: theme.typography.fontSize.xs - 2,
     marginTop: 2,
     textAlign: 'center',
     fontWeight: theme.fonts.weight.medium,
+    variants: {
+      status: {
+        pending: { color: theme.colors.status.pending },
+        accepted: { color: theme.colors.status.accepted },
+        declined: { color: theme.colors.status.declined },
+        expired: { color: theme.colors.status.expired },
+      },
+    },
   },
 }));

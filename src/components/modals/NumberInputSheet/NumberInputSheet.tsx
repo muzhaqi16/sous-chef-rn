@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import {
-  BottomSheetModal,
-  BottomSheetTextInput,
-  BottomSheetView,
-} from '@gorhom/bottom-sheet';
+import { BottomSheetView } from '@gorhom/bottom-sheet';
+import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
+import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 import { Text } from '#components/atoms/Text';
@@ -34,12 +32,11 @@ export const NumberInputSheet: React.FC<NumberInputSheetProps> = ({
   placeholder,
   allowDecimals = false,
 }) => {
-  const { ref, modalProps, contentContainerStyle, theme } =
-    useStandardBottomSheet({
-      visible,
-      onDismiss: onClose,
-      snapPoints: ['30%'],
-    });
+  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
+    visible,
+    onDismiss: onClose,
+    snapPoints: ['30%'],
+  });
 
   const [inputValue, setInputValue] = useState('');
   const [error, setError] = useState('');
@@ -100,6 +97,8 @@ export const NumberInputSheet: React.FC<NumberInputSheetProps> = ({
   const rangeText =
     min !== undefined && max !== undefined ? `(${min}-${max})` : '';
 
+  styles.useVariants({ error: !!error });
+
   return (
     <BottomSheetModal ref={ref} {...modalProps} index={0}>
       <BottomSheetView style={[styles.content, contentContainerStyle]}>
@@ -117,15 +116,8 @@ export const NumberInputSheet: React.FC<NumberInputSheetProps> = ({
             </Text>
           )}
 
-          <BottomSheetTextInput
-            style={[
-              styles.input,
-              {
-                color: theme.colors.textPrimary,
-                backgroundColor: theme.colors.surfaceVariant,
-                borderColor: error ? theme.colors.error : theme.colors.border,
-              },
-            ]}
+          <ThemedBottomSheetTextInput
+            style={styles.input}
             value={inputValue}
             onChangeText={text => {
               setInputValue(text);
@@ -133,7 +125,6 @@ export const NumberInputSheet: React.FC<NumberInputSheetProps> = ({
             }}
             keyboardType={allowDecimals ? 'decimal-pad' : 'number-pad'}
             placeholder={placeholder}
-            placeholderTextColor={theme.colors.textTertiary}
             autoFocus
             editable={!loading}
           />
@@ -168,6 +159,14 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.md,
     borderRadius: theme.radii.md,
     borderWidth: 1,
+    color: theme.colors.textPrimary,
+    backgroundColor: theme.colors.surfaceVariant,
+    borderColor: theme.colors.border,
+    variants: {
+      error: {
+        true: { borderColor: theme.colors.error },
+      },
+    },
   },
   errorText: {
     marginTop: theme.spacing.xs,

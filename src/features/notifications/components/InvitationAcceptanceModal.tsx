@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Modal, ActivityIndicator, Pressable } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+import { WhiteActivityIndicator } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import type { ApolloCache } from '@apollo/client';
@@ -17,10 +18,14 @@ import {
   DeclineShoppingListInviteDocument,
   MyShoppingListInvitesDocument,
   type MyShoppingListInvitesQuery,
-} from '#features/shoppingList/graphql/collaboration.generated';
+} from './InvitationAcceptanceModal.generated';
 import { createAddToQueryFieldUpdater } from '#/apollo/utils/cacheUpdaters';
 import { executeAsyncWithCleanup } from '#/utils/compilerSafeWrappers';
 import { Text } from '#components/atoms/Text';
+
+const ErrorActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
+  color: theme.colors.error,
+}));
 
 /** Module-level cache updater to keep try-catch out of the component body (React Compiler). */
 function updateShoppingListCache(cache: ApolloCache, collaborator: any): void {
@@ -63,12 +68,15 @@ interface InvitationAcceptanceModalProps {
   onClose: () => void;
   onAccept?: (invitation: InvitationData) => void;
   onReject?: (invitation: InvitationData) => void;
+  onInvalidate?: (invitation: InvitationData) => void;
 }
+
+const INVITATION_UNAVAILABLE_MSG =
+  'This invitation is no longer available. It may have been used, declined, or expired.';
 
 export const InvitationAcceptanceModal: React.FC<
   InvitationAcceptanceModalProps
-> = ({ visible, invitation, onClose, onAccept, onReject }) => {
-  const { theme } = useUnistyles();
+> = ({ visible, invitation, onClose, onAccept, onReject, onInvalidate }) => {
   const client = useApolloClient();
   const [accepting, setAccepting] = useState(false);
   const [rejecting, setRejecting] = useState(false);
@@ -128,10 +136,9 @@ export const InvitationAcceptanceModal: React.FC<
         const token = await resolveToken();
 
         if (!token) {
+          onInvalidate?.(invitation);
           onClose();
-          toastService.error(
-            'Unable to find invitation. It may have expired or been cancelled.',
-          );
+          toastService.error(INVITATION_UNAVAILABLE_MSG);
           setAccepting(false);
           return;
         }
@@ -222,10 +229,9 @@ export const InvitationAcceptanceModal: React.FC<
                 const token = await resolveToken();
 
                 if (!token) {
+                  onInvalidate?.(invitation);
                   onClose();
-                  toastService.error(
-                    'Unable to find invitation. It may have expired or been cancelled.',
-                  );
+                  toastService.error(INVITATION_UNAVAILABLE_MSG);
                   setRejecting(false);
                   return;
                 }
@@ -262,19 +268,11 @@ export const InvitationAcceptanceModal: React.FC<
                   }
                 }
 
-                alertService.alert(
-                  'Invitation Declined',
-                  `You have declined the invitation to ${invitation.entityName}`,
-                  [
-                    {
-                      text: 'OK',
-                      onPress: () => {
-                        onReject?.(invitation);
-                        onClose();
-                      },
-                    },
-                  ],
+                toastService.success(
+                  `Declined invitation to ${invitation.entityName}`,
                 );
+                onReject?.(invitation);
+                onClose();
               },
               () => setRejecting(false),
               (error: unknown) => {
@@ -312,7 +310,7 @@ export const InvitationAcceptanceModal: React.FC<
               <Icon
                 name={invitation.type === 'HOME_INVITE' ? 'home' : 'cart'}
                 size={32}
-                color={theme.colors.primary}
+                tone="primary"
               />
             </View>
             <Text size="lg" weight="semibold" style={styles.title}>
@@ -321,11 +319,11 @@ export const InvitationAcceptanceModal: React.FC<
             <Pressable
               style={({ pressed }) => [
                 styles.closeButton,
-                pressed && { opacity: theme.opacity.pressed },
+                pressed && styles.pressed,
               ]}
               onPress={onClose}
             >
-              <Icon name="close" size={24} color={theme.colors.textSecondary} />
+              <Icon name="close" size={24} tone="textSecondary" />
             </Pressable>
           </View>
 
@@ -337,11 +335,7 @@ export const InvitationAcceptanceModal: React.FC<
 
             {!!invitation.inviterName && (
               <View style={styles.inviterContainer}>
-                <Icon
-                  name="person"
-                  size={16}
-                  color={theme.colors.textSecondary}
-                />
+                <Icon name="person" size={16} tone="textSecondary" />
                 <Text size="sm" tone="secondary" style={styles.inviterText}>
                   Invited by {invitation.inviterName}
                 </Text>
@@ -352,7 +346,7 @@ export const InvitationAcceptanceModal: React.FC<
               <Icon
                 name={invitation.type === 'HOME_INVITE' ? 'home' : 'cart'}
                 size={16}
-                color={theme.colors.textSecondary}
+                tone="textSecondary"
               />
               <Text
                 size="sm"
@@ -370,16 +364,16 @@ export const InvitationAcceptanceModal: React.FC<
             <Pressable
               style={({ pressed }) => [
                 styles.rejectButton,
-                pressed && { opacity: theme.opacity.pressed },
+                pressed && styles.pressed,
               ]}
               onPress={handleReject}
               disabled={accepting || rejecting}
             >
               {rejecting ? (
-                <ActivityIndicator color={theme.colors.error} />
+                <ErrorActivityIndicator />
               ) : (
                 <>
-                  <Icon name="close" size={20} color={theme.colors.error} />
+                  <Icon name="close" size={20} tone="error" />
                   <Text size="md" weight="semibold" tone="error">
                     Reject
                   </Text>
@@ -390,16 +384,16 @@ export const InvitationAcceptanceModal: React.FC<
             <Pressable
               style={({ pressed }) => [
                 styles.acceptButton,
-                pressed && { opacity: theme.opacity.pressed },
+                pressed && styles.pressed,
               ]}
               onPress={handleAccept}
               disabled={accepting || rejecting}
             >
               {accepting ? (
-                <ActivityIndicator color={theme.colors.white} />
+                <WhiteActivityIndicator />
               ) : (
                 <>
-                  <Icon name="checkmark" size={20} color={theme.colors.white} />
+                  <Icon name="checkmark" size={20} tone="white" />
                   <Text size="md" weight="semibold" style={styles.acceptText}>
                     Accept
                   </Text>
@@ -514,5 +508,8 @@ const styles = StyleSheet.create(theme => ({
   },
   acceptText: {
     color: theme.colors.white,
+  },
+  pressed: {
+    opacity: theme.opacity.pressed,
   },
 }));

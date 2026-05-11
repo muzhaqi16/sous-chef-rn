@@ -1,6 +1,5 @@
 import React, { Suspense, useEffect, useRef } from 'react';
 import { View } from 'react-native';
-import type { ViewStyle } from 'react-native';
 import {
   createStaticNavigation,
   DefaultTheme,
@@ -12,10 +11,10 @@ import {
   createNativeStackNavigator,
   createNativeStackScreen,
 } from '@react-navigation/native-stack';
-import { useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useIsHydrated, useUser, usePostLoginState } from '#store/useAppStore';
 import { useBiometricPrompting } from '#hooks/auth/useBiometricPrompting';
-import { useUserPreferences } from '#hooks/navigation/useUserPreferences';
+import { useAuthPreferences } from '#hooks/navigation/useAuthPreferences';
 import { SplashScreen } from '#screens/SplashScreen';
 import { NotFoundScreen } from '#screens/NotFoundScreen';
 import { AuthStack } from './stacks/AuthStack';
@@ -30,7 +29,8 @@ import { StorageLocationsScreen } from '#screens/home/StorageLocationsScreen';
 import { CodeVerificationScreen } from '#screens/auth/CodeVerificationScreen';
 import { EmailVerificationDeepLinkScreen } from '#screens/auth/EmailVerificationDeepLinkScreen';
 import { ResetPasswordScreen } from '#screens/auth/ResetPasswordScreen';
-import { FEATURE_DEEP_LINK_SCREENS } from '#features/registry';
+import { AcceptInvite } from '#features/shoppingList/screens/AcceptInvite';
+import { JoinByShareCodeScreen } from '#features/shoppingList/screens/JoinByShareCodeScreen';
 
 // Lazy-loaded screens (infrequently visited, reduces cold start JS parsing)
 const ProfilePhotoUploadScreen = React.lazy(
@@ -80,6 +80,7 @@ import {
   useIsMainApp,
 } from '#hooks/navigation/useNavigationGuards';
 import { navigationRef } from '#services/NavigationService';
+import { Telemetry } from '#services/telemetry';
 import { SousChefLoader } from '#/components/base/SousChefLoader';
 import { appConfig } from '#/config/appConfig';
 
@@ -87,14 +88,6 @@ const DEEP_LINK_PREFIXES = [
   `${appConfig.identity.deepLink.scheme}://`,
   ...appConfig.identity.deepLink.hosts.map(h => `https://${h}`),
 ];
-
-// Build deep-link screens from the feature registry (module scope).
-const featureDeepLinkScreens = Object.fromEntries(
-  FEATURE_DEEP_LINK_SCREENS.map(({ name, screen, linking, options }) => [
-    name,
-    createNativeStackScreen({ screen, linking, options }),
-  ]),
-);
 
 function RootLayout({ children }: { children: React.ReactNode }) {
   useDeepLinkRouter();
@@ -107,6 +100,9 @@ const RootStack = createNativeStackNavigator({
     headerShown: false,
     animation: 'slide_from_right',
     animationDuration: 200,
+    // Keep stacked screens active so Unistyles theme updates reach every
+    // mounted screen, not just the top one. See unistyles issue #1183.
+    inactiveBehavior: 'none',
   },
   groups: {
     Auth: {
@@ -231,8 +227,17 @@ const RootStack = createNativeStackNavigator({
           screen: ResetPasswordScreen,
           linking: 'reset-password',
         }),
-        // Feature-contributed deep-link screens (from registry)
-        ...featureDeepLinkScreens,
+        // Feature-contributed deep-link screens. Declared statically so v8's
+        // `StaticParamList` inference picks them up (a runtime spread of the
+        // feature registry would erase their typing).
+        AcceptInvitation: createNativeStackScreen({
+          screen: AcceptInvite,
+          linking: 'accept-invitation',
+        }),
+        JoinByShareCode: createNativeStackScreen({
+          screen: JoinByShareCodeScreen,
+          linking: 'join-list/:shareCode',
+        }),
         // Catch-all (must be last)
         NotFound: createNativeStackScreen({
           screen: NotFoundScreen,
@@ -253,6 +258,11 @@ declare module '@react-navigation/core' {
 const StaticNavigation = createStaticNavigation(RootStack);
 
 export function Navigation() {
+  // `useUnistyles()` is required here because the React Navigation `theme`
+  // prop must be a plain object (not a Unistyles StyleSheet). Read access is
+  // narrowed to `theme.colors.*` so Unistyles' Proxy-tracked subscriptions
+  // only fire on color-token changes, not on every runtime tick (insets,
+  // screen size, IME).
   const { theme } = useUnistyles();
   const isHydrated = useIsHydrated();
   const user = useUser();
@@ -265,7 +275,7 @@ export function Navigation() {
     setPostLoginCredentials,
   } = usePostLoginState();
   const { recordBiometricPromptResponse } = useBiometricPrompting();
-  const { markBiometricDeclined, markBiometricEnabled } = useUserPreferences();
+  const { markBiometricDeclined, markBiometricEnabled } = useAuthPreferences();
 
   const handlePostLoginBiometricComplete = (
     enabled: boolean,
@@ -284,6 +294,22 @@ export function Navigation() {
     setNavigationState('main_app');
     setPostLoginCredentials(null);
   };
+
+  // Track focused-route changes for screen-view analytics + crash breadcrumbs.
+  // Only emits when the route name actually changes; intermediate state ticks
+  // (animation, gesture, params-only updates) are filtered out.
+  useEffect(() => {
+    let lastRouteName: string | undefined;
+    const unsubscribe = navigationRef.addListener('state', () => {
+      if (!navigationRef.isReady()) return;
+      const route = navigationRef.getCurrentRoute();
+      if (route && route.name !== lastRouteName) {
+        lastRouteName = route.name;
+        Telemetry.trackScreen(route.name);
+      }
+    });
+    return unsubscribe;
+  }, []);
 
   // Track initialization
   const hasInitialized = useRef(false);
@@ -329,14 +355,6 @@ export function Navigation() {
     }
   }, [user, isHydrated, setNavigationState]);
 
-  // Stable style object for Suspense fallback
-  const suspenseFallbackStyle: ViewStyle = {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-  };
-
   // Create navigation theme based on current Unistyles theme
   const navigationTheme: Theme = {
     ...(theme.colors.background === '#FFFFFF' ? DefaultTheme : DarkTheme),
@@ -362,7 +380,7 @@ export function Navigation() {
     <NavigationErrorBoundary>
       <Suspense
         fallback={
-          <View style={suspenseFallbackStyle}>
+          <View style={styles.suspenseFallback}>
             <SousChefLoader size="small" showBrand={false} message="Loading" />
           </View>
         }
@@ -388,3 +406,12 @@ export function Navigation() {
     </NavigationErrorBoundary>
   );
 }
+
+const styles = StyleSheet.create(theme => ({
+  suspenseFallback: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+}));

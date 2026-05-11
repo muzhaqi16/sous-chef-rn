@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import Animated, {
   Easing,
   useSharedValue,
@@ -10,7 +10,7 @@ import Animated, {
   withSequence,
   type SharedValue,
 } from 'react-native-reanimated';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { TIMING } from '#constants/animations';
 import { Icon } from '#/utils/iconUtils';
 import type { BottomTabNavigationOptions } from '@react-navigation/bottom-tabs';
@@ -49,7 +49,6 @@ export const TabItem: React.FC<TabItemProps> = ({
   activeTabIndex,
   tabIndex,
 }) => {
-  const { theme } = useUnistyles();
   const iconScale = useSharedValue(isFocused ? 1.2 : 1);
 
   // Drive scale animation from shared value on the UI thread
@@ -84,19 +83,18 @@ export const TabItem: React.FC<TabItemProps> = ({
   }));
 
   const label = options.title || route.name;
-  const iconColor = isFocused
-    ? theme.colors.primary
-    : theme.colors.textTertiary;
   const [activeIcon, inactiveIcon] = TAB_ICON_MAP[route.name] || [
     'help-circle',
     'help-circle',
   ];
 
+  // tone routes through withUnistyles(Ionicons) — only the Icon re-renders on
+  // theme/brand-color changes, not the entire tab.
   const renderIcon = () => (
     <Icon
       name={isFocused ? activeIcon : inactiveIcon}
       size={24}
-      color={iconColor}
+      tone={isFocused ? 'primary' : 'textTertiary'}
     />
   );
 

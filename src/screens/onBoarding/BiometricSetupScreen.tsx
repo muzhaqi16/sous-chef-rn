@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
 import { Icon } from '#utils/iconUtils';
 import { authService } from '#/services/authService';
 import { useTextInputModal } from '#components/organisms/modal/useTextInputModal';
 import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigation';
-import { useUserPreferences } from '#hooks/navigation/useUserPreferences';
+import { useAuthPreferences } from '#hooks/navigation/useAuthPreferences';
 import { useAppStore, useUser } from '#store/useAppStore';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import {
@@ -51,7 +51,6 @@ async function tryLoadTempPassword(email: string): Promise<string | null> {
 
 export const BiometricSetupScreen = () => {
   useScreenTransition('BiometricSetupScreen');
-  const { theme } = useUnistyles();
   const { navigateToNextStep } = useOnboardingNavigation();
   const user = useUser();
   const setUserNavigationState = useAppStore(
@@ -61,7 +60,7 @@ export const BiometricSetupScreen = () => {
   const clearRegistrationPassword = useAppStore(
     state => state.clearRegistrationPassword,
   );
-  const { markBiometricDeclined, markBiometricEnabled } = useUserPreferences();
+  const { markBiometricDeclined, markBiometricEnabled } = useAuthPreferences();
   const { show: showPasswordModal, TextModalComponent } = useTextInputModal();
   const [biometricInfo, setBiometricInfo] = useState<{
     isAvailable: boolean;
@@ -247,11 +246,7 @@ export const BiometricSetupScreen = () => {
         <View style={styles.container} testID="biometric-setup-container">
           <View style={styles.iconContainer}>
             <View style={styles.iconBackground}>
-              <Icon
-                name={getBiometricIcon()}
-                size={48}
-                color={theme.colors.primary}
-              />
+              <Icon name={getBiometricIcon()} size={48} tone="primary" />
             </View>
           </View>
 
@@ -266,31 +261,19 @@ export const BiometricSetupScreen = () => {
 
           <View style={styles.benefits}>
             <View style={styles.benefitItem}>
-              <Icon
-                name="checkmark-circle"
-                size={20}
-                color={theme.colors.success}
-              />
+              <Icon name="checkmark-circle" size={20} tone="success" />
               <Text size="md" style={styles.benefitText}>
                 Quick and secure access
               </Text>
             </View>
             <View style={styles.benefitItem}>
-              <Icon
-                name="checkmark-circle"
-                size={20}
-                color={theme.colors.success}
-              />
+              <Icon name="checkmark-circle" size={20} tone="success" />
               <Text size="md" style={styles.benefitText}>
                 No password required
               </Text>
             </View>
             <View style={styles.benefitItem}>
-              <Icon
-                name="checkmark-circle"
-                size={20}
-                color={theme.colors.success}
-              />
+              <Icon name="checkmark-circle" size={20} tone="success" />
               <Text size="md" style={styles.benefitText}>
                 Enhanced security
               </Text>

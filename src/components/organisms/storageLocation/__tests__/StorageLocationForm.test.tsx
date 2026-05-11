@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { fireEvent, render, screen, userEvent } from '@testing-library/react-native';
 import { StorageLocationForm } from '../StorageLocationForm';
 
 describe('StorageLocationForm', () => {
@@ -57,9 +57,10 @@ describe('StorageLocationForm', () => {
     expect(screen.getByText('Cancel')).toBeTruthy();
   });
 
-  it('calls onCancel when Cancel button is pressed', () => {
+  it('calls onCancel when Cancel button is pressed', async () => {
+    const user = userEvent.setup();
     render(<StorageLocationForm {...defaultProps} />);
-    fireEvent.press(screen.getByText('Cancel'));
+    await user.press(screen.getByText('Cancel'));
     expect(defaultProps.onCancel).toHaveBeenCalled();
   });
 
@@ -111,11 +112,12 @@ describe('StorageLocationForm', () => {
     expect(screen.getByDisplayValue('Garage Shelf')).toBeTruthy();
   });
 
-  it('calls onSubmit with form data when Create is pressed', () => {
+  it('calls onSubmit with form data when Create is pressed', async () => {
+    const user = userEvent.setup();
     render(<StorageLocationForm {...defaultProps} />);
     const nameInput = screen.getByPlaceholderText('e.g., Main Refrigerator');
     fireEvent.changeText(nameInput, 'Test Location');
-    fireEvent.press(screen.getByText('Create'));
+    await user.press(screen.getByText('Create'));
     expect(defaultProps.onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({
         name: 'Test Location',
@@ -124,9 +126,10 @@ describe('StorageLocationForm', () => {
     );
   });
 
-  it('does not call onSubmit when name is empty', () => {
+  it('does not call onSubmit when name is empty', async () => {
+    const user = userEvent.setup();
     render(<StorageLocationForm {...defaultProps} />);
-    fireEvent.press(screen.getByText('Create'));
+    await user.press(screen.getByText('Create'));
     expect(defaultProps.onSubmit).not.toHaveBeenCalled();
   });
 });

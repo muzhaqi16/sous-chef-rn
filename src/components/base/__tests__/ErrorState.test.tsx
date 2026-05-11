@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { ErrorState } from '../ErrorState';
 
 describe('ErrorState', () => {
@@ -28,11 +28,12 @@ describe('ErrorState', () => {
     expect(screen.getByText('⚠️')).toBeTruthy();
   });
 
-  it('renders retry button and handles press', () => {
+  it('renders retry button and handles press', async () => {
+    const user = userEvent.setup();
     const mockRetry = jest.fn();
     render(<ErrorState title="Error" message="Failed" onRetry={mockRetry} />);
     expect(screen.getByText('Try Again')).toBeTruthy();
-    fireEvent.press(screen.getByText('Try Again'));
+    await user.press(screen.getByText('Try Again'));
     expect(mockRetry).toHaveBeenCalledTimes(1);
   });
 

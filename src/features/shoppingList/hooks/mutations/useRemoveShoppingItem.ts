@@ -7,13 +7,16 @@
  * - Error handling with user feedback
  */
 
-import { gql } from '@apollo/client';
 import { alertService } from '#/services/alertService';
 import { useMutation } from '@apollo/client/react';
 import {
   RemoveItemFromShoppingListDocument,
   type RemoveItemFromShoppingListMutation,
 } from '#features/shoppingList/graphql/shoppingList.generated';
+import {
+  ShoppingListItemCoreFragmentDoc,
+  type ShoppingListItemCoreFragment,
+} from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { useErrorService } from '#/services/errorService';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
 import { removeFromShoppingListItemsCache } from './utils';
@@ -65,16 +68,18 @@ export function useRemoveShoppingItem({
         () => {
           const itemId = variables.id;
 
-          // Read isPurchased before eviction so we can update completedItems
-          const itemData = cache.readFragment<{ isPurchased: boolean }>({
+          // Read isPurchased before eviction so we can update completedItems.
+          // Uses the generated ShoppingListItemCore fragment so the field path
+          // (`purchaseInfo.isPurchased`) is type-checked against the schema —
+          // the previous inline gql read `isPurchased` directly on
+          // ShoppingListItem, which doesn't exist there, and silently fell
+          // back to `wasPurchased = false` for every removal.
+          const itemData = cache.readFragment<ShoppingListItemCoreFragment>({
             id: cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
-            fragment: gql`
-              fragment RemovedItemStatus on ShoppingListItem {
-                isPurchased
-              }
-            `,
+            fragment: ShoppingListItemCoreFragmentDoc,
+            fragmentName: 'ShoppingListItemCore',
           });
-          const wasPurchased = itemData ? itemData.isPurchased : false;
+          const wasPurchased = itemData?.purchaseInfo?.isPurchased ?? false;
 
           removeFromShoppingListItemsCache(cache, listId, itemId, {
             evictItem: true,

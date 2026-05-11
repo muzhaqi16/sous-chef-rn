@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { View, ActivityIndicator } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import {
-  BottomSheetModal,
-  BottomSheetScrollView,
-  BottomSheetTextInput,
-} from '@gorhom/bottom-sheet';
+import { View } from 'react-native';
+import { Pressable } from '#components/atoms/themedComponents';
+import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
+import {
+  ThemedActivityIndicator,
+  ThemedBottomSheetTextInput,
+} from '#components/atoms/themedComponents';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { TagInput } from '#components/molecules/TagInput';
 import { Icon } from '#utils/iconUtils';
@@ -35,12 +36,11 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
   saving = false,
   recipeName,
 }) => {
-  const { ref, modalProps, contentContainerStyle, theme } =
-    useStandardBottomSheet({
-      visible,
-      onDismiss: onClose,
-      snapPoints: ['75%', '95%'],
-    });
+  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
+    visible,
+    onDismiss: onClose,
+    snapPoints: ['75%', '95%'],
+  });
 
   // Form state
   const [selectedFolder, setSelectedFolder] = useState<string | null>(
@@ -136,9 +136,9 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
               style={({ pressed }) => pressed && styles.pressed}
             >
               {saving ? (
-                <ActivityIndicator size="small" color={theme.colors.primary} />
+                <ThemedActivityIndicator size="small" />
               ) : (
-                <Icon name="checkmark" size={24} color={theme.colors.primary} />
+                <Icon name="checkmark" size={24} tone="primary" />
               )}
             </Pressable>
             <Pressable
@@ -146,7 +146,7 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               style={({ pressed }) => pressed && styles.pressed}
             >
-              <Icon name="close" size={24} color={theme.colors.textPrimary} />
+              <Icon name="close" size={24} tone="textPrimary" />
             </Pressable>
           </View>
         </View>
@@ -178,11 +178,7 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
                 <Icon
                   name={isNoFolder ? 'folder-outline' : 'folder'}
                   size={18}
-                  color={
-                    isSelected
-                      ? theme.colors.primary
-                      : theme.colors.textSecondary
-                  }
+                  tone={isSelected ? 'primary' : 'textSecondary'}
                 />
                 <Text
                   style={[
@@ -193,11 +189,7 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
                   {isNoFolder ? 'No Folder' : folder}
                 </Text>
                 {!!isSelected && (
-                  <Icon
-                    name="checkmark"
-                    size={18}
-                    color={theme.colors.primary}
-                  />
+                  <Icon name="checkmark" size={18} tone="primary" />
                 )}
               </Pressable>
             );
@@ -207,10 +199,9 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
         {/* Create New Folder */}
         {showNewFolder ? (
           <View style={styles.newFolderContainer}>
-            <BottomSheetTextInput
+            <ThemedBottomSheetTextInput
               style={styles.newFolderInput}
               placeholder="Enter folder name..."
-              placeholderTextColor={theme.colors.textSecondary}
               defaultValue={newFolderName}
               onChangeText={setNewFolderName}
               autoFocus
@@ -244,7 +235,7 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
             ]}
             onPress={() => setShowNewFolder(true)}
           >
-            <Icon name="add" size={18} color={theme.colors.primary} />
+            <Icon name="add" size={18} tone="primary" />
             <Text size="base" weight="medium" tone="accent">
               Create New Folder
             </Text>
@@ -277,10 +268,9 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
         >
           Notes (optional)
         </Text>
-        <BottomSheetTextInput
+        <ThemedBottomSheetTextInput
           style={styles.notesInput}
           placeholder="Add any notes about this recipe..."
-          placeholderTextColor={theme.colors.textSecondary}
           defaultValue={notes}
           onChangeText={setNotes}
           multiline

@@ -15,7 +15,7 @@ import {
   useMoveToPantryModal,
   type UseMoveToPantryModalResult,
 } from '#features/shoppingList/hooks/useMoveToPantryModal';
-import { useShoppingListTutorial } from '#features/shoppingList/context/ShoppingListTutorialContext';
+import { useShoppingListTutorialActions } from '#features/shoppingList/context/ShoppingListTutorialContext';
 
 /**
  * Context value for shopping list modals.
@@ -119,7 +119,7 @@ export function ShoppingListModalsProvider({
   onSearchQueryClear,
   onNavigateToListSettings,
 }: ShoppingListModalsProviderProps) {
-  const tutorial = useShoppingListTutorial();
+  const tutorial = useShoppingListTutorialActions();
 
   // Initialize all modal hooks
   const addItemSheet = useAddItemSheet({

@@ -1,7 +1,6 @@
 import React, { RefObject } from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { format, parseISO } from 'date-fns';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
@@ -9,6 +8,7 @@ import type {
   SelectorConfig,
   ItemSelectorRef,
 } from '#components/organisms/AnimatedItemSelector/types';
+import { SelectorItemContainer } from '#components/organisms/AnimatedItemSelector/SelectorItemContainer';
 import { type MealPlanDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 
 interface UseMealPlanSelectorConfigOptions {
@@ -17,7 +17,7 @@ interface UseMealPlanSelectorConfigOptions {
   loading: boolean;
   setSelectedMealPlanId: (id: string) => void;
   selectorRef: RefObject<ItemSelectorRef | null>;
-  navigate: (screen: string, params?: object) => void;
+  toCreateMealPlan: () => void;
   onCreateFromTemplate: () => void;
 }
 
@@ -40,13 +40,9 @@ export function useMealPlanSelectorConfig(
     loading,
     setSelectedMealPlanId,
     selectorRef,
-    navigate,
+    toCreateMealPlan,
     onCreateFromTemplate,
   } = options;
-
-  const {
-    theme: { colors },
-  } = useUnistyles();
 
   const renderMealPlanItem = (
     item: MealPlanDisplayFragment,
@@ -54,12 +50,8 @@ export function useMealPlanSelectorConfig(
     onPress: () => void,
   ) => {
     return (
-      <Pressable
-        style={({ pressed }) => [
-          styles.itemContainer,
-          isSelected && styles.itemSelected,
-          pressed && styles.pressed,
-        ]}
+      <SelectorItemContainer
+        state={isSelected ? 'selected' : 'default'}
         onPress={onPress}
       >
         <View style={styles.itemContent}>
@@ -72,10 +64,8 @@ export function useMealPlanSelectorConfig(
             {` · ${item.home?.name ?? 'Personal'}`}
           </Text>
         </View>
-        {!!isSelected && (
-          <Icon name="checkmark" size={20} color={colors.primary} />
-        )}
-      </Pressable>
+        {!!isSelected && <Icon name="checkmark" size={20} tone="primary" />}
+      </SelectorItemContainer>
     );
   };
 
@@ -97,7 +87,7 @@ export function useMealPlanSelectorConfig(
         label: 'Create New Plan',
         onPress: () => {
           selectorRef.current?.close();
-          navigate('CreateMealPlan');
+          toCreateMealPlan();
         },
       },
       {
@@ -112,30 +102,11 @@ export function useMealPlanSelectorConfig(
   };
 }
 
-const styles = StyleSheet.create(theme => ({
-  itemContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 56,
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    marginBottom: theme.spacing.sm,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  itemSelected: {
-    backgroundColor: theme.colors.primaryLight,
-    borderColor: theme.colors.primary,
-  },
+const styles = StyleSheet.create(() => ({
   itemContent: {
     flex: 1,
   },
   itemSubtext: {
     marginTop: 2,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

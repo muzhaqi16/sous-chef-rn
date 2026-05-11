@@ -1,13 +1,17 @@
 import React from 'react';
 import { View } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import type { FieldValues, Control, FieldErrors } from 'react-hook-form';
 import { DynamicFormFields, FieldDef } from '../molecules/DynamicFormFields';
 import { Button } from '../base/Button';
 import { BackButton } from '../atoms/BackButton';
 import { Link } from '../atoms/Link';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
+
+const ThemedBackButton = withUnistyles(BackButton, theme => ({
+  color: theme.colors.textOnSurfaceVariant,
+}));
 
 interface Props<T extends FieldValues> {
   title: string;
@@ -51,16 +55,11 @@ export function AuthFormTemplate<T extends FieldValues>({
   onLinkPress,
   isLoading = false,
 }: Props<T>) {
-  const { theme } = useUnistyles();
   return (
     <View style={styles.formContainer}>
       <View>
         {!!onBackPress && (
-          <BackButton
-            onPress={onBackPress}
-            style={styles.headerAction}
-            color={theme.colors.textOnSurfaceVariant}
-          />
+          <ThemedBackButton onPress={onBackPress} style={styles.headerAction} />
         )}
 
         <Text

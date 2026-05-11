@@ -34,7 +34,7 @@ import { AnimatedItemSelector } from '#components/organisms/AnimatedItemSelector
 import { PantryContent } from '#features/pantry/components/PantryContent';
 import type { PantryContentRef } from '#features/pantry/components/pantryDisplay/types';
 import type { ItemSelectorRef } from '#components/organisms/AnimatedItemSelector/types';
-import type { LocationFilter } from '#/utils/pantryFilters';
+import type { LocationFilter } from '#features/pantry/utils/pantryFilters';
 import { PantryErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
 import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
 import { DeferredScreen } from '#components/performance/DeferredScreen';
@@ -72,7 +72,16 @@ const PANTRY_TUTORIAL_STEPS: TutorialStep[] = [
  * Only mounts after DeferredScreen gates rendering, so the skeleton paints instantly.
  */
 const PantryMainInner: React.FC = () => {
-  const { navigate, navigateTo } = useAppNavigation();
+  const {
+    toProfile,
+    toNotifications,
+    toHomeManagement,
+    toPantryAnalytics,
+    toFilteredPantryItems,
+    toPantrySettings,
+    toPantryItem,
+    toPantryItemDetail,
+  } = useAppNavigation();
   const { setOverlayOpen, scrollTabBarHidden } = useTabBarSetters();
 
   // ── Scroll direction tracking (tab bar hide on scroll down) ──
@@ -146,7 +155,8 @@ const PantryMainInner: React.FC = () => {
     loading: screen.loading,
     setSelectedPantryId: screen.setSelectedPantryId,
     selectorRef,
-    navigate,
+    toPantrySettings,
+    toPantryAnalytics,
   });
 
   // Tutorial trigger conditions (passed to usePantryTutorial in PantryMainContent)
@@ -154,24 +164,24 @@ const PantryMainInner: React.FC = () => {
     !!screen.selectedHomeId && !screen.showBiometricSetup;
 
   // ── Navigation callbacks ──
-  const handleItemPress = (id: string) =>
-    navigateTo.pantryItemDetail({ itemId: id });
-  const handleAvatarPress = () => navigate('Profile');
-  const handleNotificationPress = () => navigate('Notifications');
+  const handleItemPress = (id: string) => toPantryItemDetail({ itemId: id });
+  const handleAvatarPress = toProfile;
+  const handleNotificationPress = toNotifications;
   const handleHomePress = () =>
-    navigate('HomeManagement', { homeId: screen.selectedHomeId });
+    toHomeManagement({ selectedHomeId: screen.selectedHomeId ?? undefined });
   const handleAnalyticsPress = () => {
     if (screen.pantry?.id) {
-      navigate('PantryAnalytics', { pantryId: screen.pantry.id });
+      toPantryAnalytics({ pantryId: screen.pantry.id });
     }
   };
   const handleLowStockNavigate = () =>
-    navigate('FilteredPantryItems', { mode: 'lowStock' });
+    toFilteredPantryItems({ mode: 'lowStock' });
   const handleExpiringNavigate = () =>
-    navigate('FilteredPantryItems', { mode: 'expiring' });
-  const handleSelectHome = () => navigate('HomeManagement', {});
+    toFilteredPantryItems({ mode: 'expiring' });
+  const handleSelectHome = () => toHomeManagement();
+  const handleCreatePantry = () => toPantrySettings();
   const stableNavigateTo = {
-    pantryItem: (params: { itemId: string }) => navigateTo.pantryItem(params),
+    pantryItem: (params: { itemId: string }) => toPantryItem(params),
   };
 
   return (
@@ -200,6 +210,7 @@ const PantryMainInner: React.FC = () => {
         onLowStockNavigate={handleLowStockNavigate}
         onExpiringNavigate={handleExpiringNavigate}
         onSelectHome={handleSelectHome}
+        onCreatePantry={handleCreatePantry}
         onOverlayOpen={handleOverlayOpen}
         onOverlayClose={handleOverlayClose}
         canStartTutorial={canStartTutorial}
@@ -230,6 +241,7 @@ interface PantryMainContentProps {
   onLowStockNavigate: () => void;
   onExpiringNavigate: () => void;
   onSelectHome: () => void;
+  onCreatePantry: () => void;
   onOverlayOpen: () => void;
   onOverlayClose: () => void;
   canStartTutorial: boolean;
@@ -256,6 +268,7 @@ function PantryMainContent({
   onLowStockNavigate,
   onExpiringNavigate,
   onSelectHome,
+  onCreatePantry,
   onOverlayOpen,
   onOverlayClose,
   canStartTutorial,
@@ -313,21 +326,23 @@ function PantryMainContent({
     },
   };
 
+  const canAdd =
+    !screen.noHomeSelected &&
+    !screen.noHomes &&
+    !screen.noPantries &&
+    permissions.canAddItems;
+
   // Register add button action via tab bar
   useTabBarAddButton(
-    screen.noHomeSelected || screen.noHomes || !permissions.canAddItems
-      ? undefined
-      : () => {
+    canAdd
+      ? () => {
           Telemetry.trackEvent('add_pantry_item_clicked');
           setAddSheetVisible(true);
-        },
+        }
+      : undefined,
   );
 
-  const handleAddItem = permissions.canAddItems
-    ? () => {
-        setAddSheetVisible(true);
-      }
-    : undefined;
+  const handleAddItem = canAdd ? () => setAddSheetVisible(true) : undefined;
 
   const handleAddLocationPress = () => {
     setAddLocationSheetVisible(true);
@@ -370,7 +385,9 @@ function PantryMainContent({
         totalCount={screen.totalCount}
         noHomeSelected={screen.noHomeSelected}
         noHomes={screen.noHomes}
+        noPantries={screen.noPantries}
         onSelectHome={onSelectHome}
+        onCreatePantry={onCreatePantry}
         onAddItem={handleAddItem}
         onRefresh={screen.handleRefresh}
         onEndReached={

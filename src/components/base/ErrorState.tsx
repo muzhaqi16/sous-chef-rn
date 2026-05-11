@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, StyleProp, ViewStyle } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { Button } from './Button';
-import { IconName, Icon } from '#/utils/iconUtils';
+import { IconName, Icon, IconTone } from '#/utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 
 export interface ErrorStateProps {
@@ -56,13 +56,14 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
   alignment = 'flex-start',
   style,
 }) => {
-  const { theme } = useUnistyles();
+  styles.useVariants({ severity });
 
-  const severityColors = {
-    error: theme.colors.error,
-    warning: theme.colors.warning,
-    info: theme.colors.info,
-  };
+  const severityTone: IconTone =
+    severity === 'error'
+      ? 'error'
+      : severity === 'warning'
+      ? 'warning'
+      : 'info';
 
   const renderIcon = () => {
     // Check if icon is an emoji (single character or emoji sequence)
@@ -73,24 +74,13 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
       return <Text style={[styles.emoji, { fontSize: iconSize }]}>{icon}</Text>;
     }
 
-    return (
-      <Icon
-        name={icon as IconName}
-        size={iconSize}
-        color={severityColors[severity]}
-      />
-    );
+    return <Icon name={icon as IconName} size={iconSize} tone={severityTone} />;
   };
 
   return (
     <View style={[styles.container, { justifyContent: alignment }, style]}>
       {renderIcon()}
-      <Text
-        size="xl"
-        weight="semibold"
-        align="center"
-        style={[styles.title, { color: severityColors[severity] }]}
-      >
+      <Text size="xl" weight="semibold" align="center" style={styles.title}>
         {title}
       </Text>
       <Text
@@ -145,6 +135,13 @@ const styles = StyleSheet.create(theme => ({
 
   title: {
     marginBottom: theme.spacing.xs,
+    variants: {
+      severity: {
+        error: { color: theme.colors.error },
+        warning: { color: theme.colors.warning },
+        info: { color: theme.colors.info },
+      },
+    },
   },
 
   message: {

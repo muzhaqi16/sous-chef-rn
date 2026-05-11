@@ -1,7 +1,7 @@
 import React, { Component, ReactNode } from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Pressable } from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
 import { Telemetry } from '#/services/telemetry';
 import { Text } from '#components/atoms/Text';
 
@@ -24,12 +24,8 @@ const DefaultErrorFallback: React.FC<{
   retry: () => void;
   context?: string;
 }> = ({ error, retry, context }) => {
-  const { theme } = useUnistyles();
-
   return (
-    <View
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
-    >
+    <View style={styles.container}>
       <View style={styles.content}>
         <Text
           size="xl"
@@ -57,16 +53,11 @@ const DefaultErrorFallback: React.FC<{
         <Pressable
           style={({ pressed }) => [
             styles.retryButton,
-            { backgroundColor: theme.colors.primary },
             pressed && styles.pressed,
           ]}
           onPress={retry}
         >
-          <Text
-            size="md"
-            weight="semibold"
-            style={{ color: theme.colors.background }}
-          >
+          <Text size="md" weight="semibold" style={styles.retryButtonText}>
             Try Again
           </Text>
         </Pressable>
@@ -233,6 +224,7 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     alignItems: 'center',
     padding: theme.spacing.lg,
+    backgroundColor: theme.colors.background,
   },
   content: {
     alignItems: 'center',
@@ -253,6 +245,10 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing['3'],
     borderRadius: theme.radii.sm,
     marginTop: theme.spacing.md,
+    backgroundColor: theme.colors.primary,
+  },
+  retryButtonText: {
+    color: theme.colors.background,
   },
   pressed: {
     opacity: theme.opacity.pressed,

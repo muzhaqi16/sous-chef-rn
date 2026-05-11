@@ -29,7 +29,12 @@ jest.mock('#hooks/navigation/useNavigationGuards', () => ({
 
 // Mock navigation service
 jest.mock('#services/NavigationService', () => ({
-  navigationRef: { current: null },
+  navigationRef: {
+    current: null,
+    isReady: jest.fn(() => false),
+    getCurrentRoute: jest.fn(() => null),
+    addListener: jest.fn(() => () => {}),
+  },
 }));
 
 // Mock @react-navigation/native-stack

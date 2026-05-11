@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, ViewStyle, ScrollView } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Pressable } from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import type { NutritionsData, NutritionHighlight } from '#/types/nutrition';
 import {
@@ -29,31 +29,30 @@ interface NutritionSummaryProps {
   style?: ViewStyle;
 }
 
+type MacroTone = 'calories' | 'protein' | 'carbs' | 'fat';
+
 interface MacroCircleProps {
   label: string;
   value: string;
   unit?: string;
-  color: string;
+  tone: MacroTone;
 }
 
 const MacroCircle: React.FC<MacroCircleProps> = ({
   label,
   value,
   unit,
-  color,
+  tone,
 }) => {
+  circleStyles.useVariants({ tone });
   return (
     <View style={circleStyles.container}>
-      <View style={[circleStyles.circle, { borderColor: color }]}>
-        <Text size="md" weight="bold" style={{ color }}>
+      <View style={circleStyles.circle}>
+        <Text size="md" weight="bold" style={circleStyles.value}>
           {value}
         </Text>
         {unit ? (
-          <Text
-            size="xs"
-            weight="medium"
-            style={[circleStyles.unit, { color }]}
-          >
+          <Text size="xs" weight="medium" style={circleStyles.unit}>
             {unit}
           </Text>
         ) : null}
@@ -70,30 +69,22 @@ const MacroCircle: React.FC<MacroCircleProps> = ({
   );
 };
 
+type HighlightVariant = 'positive' | 'caution' | 'neutral';
+
+const toVariant = (type: NutritionHighlight['type']): HighlightVariant =>
+  type === 'positive' ? 'positive' : type === 'caution' ? 'caution' : 'neutral';
+
 interface HighlightBadgeProps {
   highlight: NutritionHighlight;
 }
 
 const HighlightBadge: React.FC<HighlightBadgeProps> = ({ highlight }) => {
-  const { theme } = useUnistyles();
-
-  const backgroundColor =
-    highlight.type === 'positive'
-      ? theme.colors.success + '20'
-      : highlight.type === 'caution'
-      ? theme.colors.warning + '20'
-      : theme.colors.textSecondary + '20';
-
-  const textColor =
-    highlight.type === 'positive'
-      ? theme.colors.success
-      : highlight.type === 'caution'
-      ? theme.colors.warning
-      : theme.colors.textSecondary;
+  const variant = toVariant(highlight.type);
+  badgeStyles.useVariants({ variant });
 
   return (
-    <View style={[badgeStyles.badge, { backgroundColor }]}>
-      <Text size="xs" weight="medium" style={{ color: textColor }}>
+    <View style={badgeStyles.badge}>
+      <Text size="xs" weight="medium" style={badgeStyles.label}>
         {highlight.label}
       </Text>
     </View>
@@ -108,7 +99,7 @@ export const NutritionSummary: React.FC<NutritionSummaryProps> = ({
   onPress,
   style,
 }) => {
-  const { theme } = useUnistyles();
+  styles.useVariants({ compact });
 
   const nutritions =
     typeof nutritionsRaw === 'object' && nutritionsRaw !== null
@@ -124,7 +115,7 @@ export const NutritionSummary: React.FC<NutritionSummaryProps> = ({
   }
 
   const content = (
-    <View style={[styles.container, compact && styles.containerCompact, style]}>
+    <View style={[styles.container, style]}>
       {/* Serving size label */}
       {!!macros.servingSize && (
         <Text
@@ -142,25 +133,25 @@ export const NutritionSummary: React.FC<NutritionSummaryProps> = ({
         <MacroCircle
           label="Calories"
           value={formatCalories(macros.calories)}
-          color={theme.colors.primary}
+          tone="calories"
         />
         <MacroCircle
           label="Protein"
           value={formatNutritionValue(macros.protein, '')}
           unit="g"
-          color={theme.colors.success}
+          tone="protein"
         />
         <MacroCircle
           label="Carbs"
           value={formatNutritionValue(macros.carbs, '')}
           unit="g"
-          color={theme.colors.warning}
+          tone="carbs"
         />
         <MacroCircle
           label="Fat"
           value={formatNutritionValue(macros.fat, '')}
           unit="g"
-          color={theme.colors.error}
+          tone="fat"
         />
       </View>
 
@@ -197,8 +188,8 @@ export const NutritionSummary: React.FC<NutritionSummaryProps> = ({
         android_ripple={null}
         needsOffscreenAlphaCompositing
         style={({ pressed }) => [
-          { borderRadius: theme.radii.lg, overflow: 'hidden' },
-          pressed && { opacity: theme.opacity.pressed },
+          styles.pressableWrapper,
+          pressed && styles.pressed,
         ]}
       >
         {content}
@@ -225,9 +216,11 @@ const styles = StyleSheet.create(theme => ({
         color: 'rgba(0, 0, 0, 0.08)',
       },
     ],
-  },
-  containerCompact: {
-    padding: theme.spacing.sm,
+    variants: {
+      compact: {
+        true: { padding: theme.spacing.sm },
+      },
+    },
   },
   servingSize: {
     marginBottom: theme.spacing.sm,
@@ -254,6 +247,13 @@ const styles = StyleSheet.create(theme => ({
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
   },
+  pressableWrapper: {
+    borderRadius: theme.radii.lg,
+    overflow: 'hidden',
+  },
+  pressed: {
+    opacity: theme.opacity.pressed,
+  },
 }));
 
 const circleStyles = StyleSheet.create(theme => ({
@@ -269,9 +269,35 @@ const circleStyles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: theme.colors.background,
+    variants: {
+      tone: {
+        calories: { borderColor: theme.colors.primary },
+        protein: { borderColor: theme.colors.success },
+        carbs: { borderColor: theme.colors.warning },
+        fat: { borderColor: theme.colors.error },
+      },
+    },
+  },
+  value: {
+    variants: {
+      tone: {
+        calories: { color: theme.colors.primary },
+        protein: { color: theme.colors.success },
+        carbs: { color: theme.colors.warning },
+        fat: { color: theme.colors.error },
+      },
+    },
   },
   unit: {
     marginTop: -2,
+    variants: {
+      tone: {
+        calories: { color: theme.colors.primary },
+        protein: { color: theme.colors.success },
+        carbs: { color: theme.colors.warning },
+        fat: { color: theme.colors.error },
+      },
+    },
   },
   label: {
     marginTop: theme.spacing.xs,
@@ -283,5 +309,21 @@ const badgeStyles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.xs,
     borderRadius: theme.radii.full,
+    variants: {
+      variant: {
+        positive: { backgroundColor: theme.colors.success + '20' },
+        caution: { backgroundColor: theme.colors.warning + '20' },
+        neutral: { backgroundColor: theme.colors.textSecondary + '20' },
+      },
+    },
+  },
+  label: {
+    variants: {
+      variant: {
+        positive: { color: theme.colors.success },
+        caution: { color: theme.colors.warning },
+        neutral: { color: theme.colors.textSecondary },
+      },
+    },
   },
 }));

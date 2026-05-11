@@ -1,6 +1,6 @@
 import React from 'react';
 import { Text } from 'react-native';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import ErrorBoundary, {
   NavigationErrorBoundary,
   AuthErrorBoundary,
@@ -85,7 +85,8 @@ describe('ErrorBoundary', () => {
     );
   });
 
-  it('recovers after pressing Try Again', () => {
+  it('recovers after pressing Try Again', async () => {
+    const user = userEvent.setup();
     let shouldThrow = true;
     const ConditionalThrow: React.FC = () => {
       if (shouldThrow) {
@@ -103,7 +104,7 @@ describe('ErrorBoundary', () => {
     expect(screen.getByText('Something went wrong')).toBeTruthy();
 
     shouldThrow = false;
-    fireEvent.press(screen.getByText('Try Again'));
+    await user.press(screen.getByText('Try Again'));
 
     expect(screen.getByText('Recovered')).toBeTruthy();
   });

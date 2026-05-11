@@ -1,25 +1,15 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { screen, userEvent } from '@testing-library/react-native';
+import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { ForgotPasswordScreen } from '../ForgotPasswordScreen';
 
 // --- Mocks ---
 
 const mockNavigateToLogin = jest.fn();
-const mockForgotPasswordApi = jest.fn().mockResolvedValue({});
 
 jest.mock('#hooks/navigation/useAuthNavigation', () => ({
   useAuthNavigation: () => ({
     navigateToLogin: mockNavigateToLogin,
-  }),
-}));
-
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useMutation: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'ForgotPassword')
-      return [mockForgotPasswordApi, { loading: false }];
-    return [jest.fn(), {}];
   }),
 }));
 
@@ -83,35 +73,36 @@ describe('ForgotPasswordScreen', () => {
   });
 
   it('renders the forgot password screen', () => {
-    render(<ForgotPasswordScreen />);
+    renderWithApollo(<ForgotPasswordScreen />);
     expect(screen.getByTestId('forgot-password-screen')).toBeTruthy();
   });
 
   it('renders the title', () => {
-    render(<ForgotPasswordScreen />);
+    renderWithApollo(<ForgotPasswordScreen />);
     expect(screen.getByText('Forgot password')).toBeTruthy();
   });
 
   it('renders the subtitle', () => {
-    render(<ForgotPasswordScreen />);
+    renderWithApollo(<ForgotPasswordScreen />);
     expect(screen.getByText('Enter your email to reset')).toBeTruthy();
   });
 
   it('renders the submit button', () => {
-    render(<ForgotPasswordScreen />);
+    renderWithApollo(<ForgotPasswordScreen />);
     expect(screen.getByTestId('forgot-password-submit-button')).toBeTruthy();
     expect(screen.getByText('Send Reset Link')).toBeTruthy();
   });
 
   it('renders the footer text and sign in link', () => {
-    render(<ForgotPasswordScreen />);
+    renderWithApollo(<ForgotPasswordScreen />);
     expect(screen.getByText('Remembered it?')).toBeTruthy();
     expect(screen.getByText('Sign In')).toBeTruthy();
   });
 
-  it('navigates to login when Sign In footer link is pressed', () => {
-    render(<ForgotPasswordScreen />);
-    fireEvent.press(screen.getByTestId('forgot-password-login-link'));
+  it('navigates to login when Sign In footer link is pressed', async () => {
+    const user = userEvent.setup();
+    renderWithApollo(<ForgotPasswordScreen />);
+    await user.press(screen.getByTestId('forgot-password-login-link'));
     expect(mockNavigateToLogin).toHaveBeenCalledTimes(1);
   });
 });

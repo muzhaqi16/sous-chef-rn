@@ -1,8 +1,8 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Icon, IconLibrary } from '#utils/iconUtils';
+import { Pressable, ThemedIcon } from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
+import { IconLibrary } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 
 export type AlertBannerVariant = 'error' | 'warning' | 'info' | 'success';
@@ -56,33 +56,18 @@ export const AlertBanner: React.FC<AlertBannerProps> = ({
   showChevron,
   testID,
 }) => {
-  const { theme } = useUnistyles();
+  styles.useVariants({ variant });
 
-  const variantColors = theme.colors.alertBanner[variant];
   const shouldShowChevron = showChevron ?? !!onPress;
 
   const content = (
-    <View
-      style={[
-        styles.container,
-        {
-          backgroundColor: variantColors.bg,
-          borderColor: variantColors.border,
-        },
-      ]}
-      testID={testID}
-    >
-      <View
-        style={[
-          styles.iconContainer,
-          { backgroundColor: variantColors.iconBg },
-        ]}
-      >
+    <View style={styles.container} testID={testID}>
+      <View style={styles.iconContainer}>
         {iconLibrary ? (
-          <Icon
+          <ThemedIcon
             name={icon}
             size={20}
-            color={variantColors.text}
+            uniProps={t => ({ color: t.colors.alertBanner[variant].text })}
             library={iconLibrary}
           />
         ) : (
@@ -91,21 +76,22 @@ export const AlertBanner: React.FC<AlertBannerProps> = ({
       </View>
 
       <View style={styles.content}>
-        <Text size="sm" weight="semibold" style={{ color: variantColors.text }}>
+        <Text size="sm" weight="semibold" style={styles.title}>
           {title}
         </Text>
         {!!subtitle && (
-          <Text
-            size="xs"
-            style={[styles.subtitle, { color: variantColors.text }]}
-          >
+          <Text size="xs" style={styles.subtitle}>
             {subtitle}
           </Text>
         )}
       </View>
 
       {!!shouldShowChevron && (
-        <Icon name="chevron-forward" size={24} color={variantColors.text} />
+        <ThemedIcon
+          name="chevron-forward"
+          size={24}
+          uniProps={t => ({ color: t.colors.alertBanner[variant].text })}
+        />
       )}
     </View>
   );
@@ -128,6 +114,26 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.md,
     borderRadius: theme.radii.lg,
     borderWidth: 1,
+    variants: {
+      variant: {
+        error: {
+          backgroundColor: theme.colors.alertBanner.error.bg,
+          borderColor: theme.colors.alertBanner.error.border,
+        },
+        warning: {
+          backgroundColor: theme.colors.alertBanner.warning.bg,
+          borderColor: theme.colors.alertBanner.warning.border,
+        },
+        info: {
+          backgroundColor: theme.colors.alertBanner.info.bg,
+          borderColor: theme.colors.alertBanner.info.border,
+        },
+        success: {
+          backgroundColor: theme.colors.alertBanner.success.bg,
+          borderColor: theme.colors.alertBanner.success.border,
+        },
+      },
+    },
   },
   iconContainer: {
     width: theme.sizes.icon.lg,
@@ -136,12 +142,38 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: theme.spacing['2.5'],
+    variants: {
+      variant: {
+        error: { backgroundColor: theme.colors.alertBanner.error.iconBg },
+        warning: { backgroundColor: theme.colors.alertBanner.warning.iconBg },
+        info: { backgroundColor: theme.colors.alertBanner.info.iconBg },
+        success: { backgroundColor: theme.colors.alertBanner.success.iconBg },
+      },
+    },
   },
   content: {
     flex: 1,
   },
+  title: {
+    variants: {
+      variant: {
+        error: { color: theme.colors.alertBanner.error.text },
+        warning: { color: theme.colors.alertBanner.warning.text },
+        info: { color: theme.colors.alertBanner.info.text },
+        success: { color: theme.colors.alertBanner.success.text },
+      },
+    },
+  },
   subtitle: {
     marginTop: 1,
     opacity: 0.8,
+    variants: {
+      variant: {
+        error: { color: theme.colors.alertBanner.error.text },
+        warning: { color: theme.colors.alertBanner.warning.text },
+        info: { color: theme.colors.alertBanner.info.text },
+        success: { color: theme.colors.alertBanner.success.text },
+      },
+    },
   },
 }));

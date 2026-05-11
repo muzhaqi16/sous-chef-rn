@@ -1,6 +1,6 @@
 import React from 'react';
 import { Text } from 'react-native';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 
 // Override the global unistyles mock to add useVariants (needed by ListItem's style variants)
 jest.mock('react-native-unistyles', () => {
@@ -84,10 +84,11 @@ describe('ListItem', () => {
     expect(button).toBeTruthy();
   });
 
-  it('calls onPress when pressed', () => {
+  it('calls onPress when pressed', async () => {
+    const user = userEvent.setup();
     const onPress = jest.fn();
     render(<ListItem title="Milk" onPress={onPress} />);
-    fireEvent.press(screen.getByRole('button'));
+    await user.press(screen.getByRole('button'));
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 

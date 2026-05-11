@@ -38,6 +38,18 @@ export class PantryScreen extends BaseScreen {
     return element(by.id(`pantry-item-${index}`));
   }
 
+  private getItemDeleteButtonByIndex(index: number) {
+    return element(by.id(`pantry-item-${index}-delete`));
+  }
+
+  private getItemExpirationByIndex(index: number) {
+    return element(by.id(`pantry-item-${index}-expiration`));
+  }
+
+  private getItemQuantityByIndex(index: number) {
+    return element(by.id(`pantry-item-${index}-quantity`));
+  }
+
   /**
    * Navigate to pantry tab
    */

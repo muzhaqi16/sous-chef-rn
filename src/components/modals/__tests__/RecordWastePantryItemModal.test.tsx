@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { RecordWastePantryItemModal } from '../RecordWastePantryItemModal';
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -101,12 +101,13 @@ describe('RecordWastePantryItemModal', () => {
     expect(screen.getByText('Record Waste')).toBeTruthy();
   });
 
-  it('shows waste reason options when expanded', () => {
+  it('shows waste reason options when expanded', async () => {
+    const user = userEvent.setup();
     render(<RecordWastePantryItemModal {...defaultProps} />);
     // Collapsed by default — only selected value visible in header
     expect(screen.getByText('Expired')).toBeTruthy();
     // Expand the collapsible picker
-    fireEvent.press(screen.getByText('Waste Reason *'));
+    await user.press(screen.getByText('Waste Reason *'));
     expect(screen.getByText('Spoiled')).toBeTruthy();
   });
 

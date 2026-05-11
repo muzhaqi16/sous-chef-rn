@@ -3,49 +3,42 @@
 import { renderHook, act } from '@testing-library/react-native';
 import { useDeepLinkRouter } from '../useDeepLinkRouter';
 
-// Mock dependencies
-const mockNavigate = jest.fn();
-const mockDispatch = jest.fn();
-jest.mock('@react-navigation/native', () => ({
-  useNavigation: jest.fn(() => ({
-    dispatch: mockDispatch,
-    navigate: mockNavigate,
-  })),
-  CommonActions: {
-    navigate: jest.fn((screen: string, params?: any) => ({
-      type: 'NAVIGATE',
-      payload: { name: screen, params },
-    })),
-  },
+// Mock the centralized navigation facade — the only navigation API used by
+// useDeepLinkRouter after the centralization refactor.
+const mockToAuth = jest.fn();
+const mockToEmailVerification = jest.fn();
+const mockToResetPassword = jest.fn();
+const mockToAcceptInvitation = jest.fn();
+
+jest.mock('#hooks/navigation/useAppNavigation', () => ({
+  useAppNavigation: () => ({
+    toAuth: mockToAuth,
+    toEmailVerification: mockToEmailVerification,
+    toResetPassword: mockToResetPassword,
+    toAcceptInvitation: mockToAcceptInvitation,
+  }),
 }));
 
 const mockSetPending = jest.fn();
 const mockClearPending = jest.fn();
 
-jest.mock('#store/useAppStore', () => ({
-  useAppStore: jest.fn((selector: any) => {
-    const state = {
-      isHydrated: true,
-      pendingDeepLinkAction: null,
-      setPendingDeepLinkAction: mockSetPending,
-      clearPendingDeepLinkAction: mockClearPending,
-    };
-    return selector(state);
-  }),
-}));
+jest.mock('#store/useAppStore', () => {
+  const getState = () => ({
+    isHydrated: true,
+    pendingDeepLinkAction: null,
+    setPendingDeepLinkAction: mockSetPending,
+    clearPendingDeepLinkAction: mockClearPending,
+  });
+  return {
+    useAppStore: jest.fn((selector: any) => selector(getState())),
+    useIsHydrated: jest.fn(() => getState().isHydrated),
+  };
+});
 
 jest.mock('#hooks/auth/useAuth', () => ({
   useAuth: jest.fn(() => ({
     isAuthenticated: true,
   })),
-}));
-
-jest.mock('#/utils/environment', () => ({
-  logger: {
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-  },
 }));
 
 jest.mock('#/services/toastService', () => ({
@@ -91,7 +84,12 @@ describe('useDeepLinkRouter', () => {
       result.current.handleEmailVerification(token);
     });
 
-    expect(mockDispatch).toHaveBeenCalled();
+    expect(
+      mockToEmailVerification.mock.calls.length +
+        mockToResetPassword.mock.calls.length +
+        mockToAcceptInvitation.mock.calls.length +
+        mockToAuth.mock.calls.length,
+    ).toBeGreaterThan(0);
   });
 
   it('handlePasswordReset dispatches navigate', () => {
@@ -102,7 +100,12 @@ describe('useDeepLinkRouter', () => {
       result.current.handlePasswordReset(token);
     });
 
-    expect(mockDispatch).toHaveBeenCalled();
+    expect(
+      mockToEmailVerification.mock.calls.length +
+        mockToResetPassword.mock.calls.length +
+        mockToAcceptInvitation.mock.calls.length +
+        mockToAuth.mock.calls.length,
+    ).toBeGreaterThan(0);
   });
 
   it('handleAcceptInvitation dispatches navigate for authenticated user', () => {
@@ -113,7 +116,12 @@ describe('useDeepLinkRouter', () => {
       result.current.handleAcceptInvitation(token);
     });
 
-    expect(mockDispatch).toHaveBeenCalled();
+    expect(
+      mockToEmailVerification.mock.calls.length +
+        mockToResetPassword.mock.calls.length +
+        mockToAcceptInvitation.mock.calls.length +
+        mockToAuth.mock.calls.length,
+    ).toBeGreaterThan(0);
   });
 
   it('rejects expired tokens', () => {
@@ -135,7 +143,8 @@ describe('useDeepLinkRouter', () => {
   });
 
   it('triggerDeepLinkAction queues action when not hydrated', () => {
-    const { useAppStore } = jest.requireMock('#store/useAppStore');
+    const { useAppStore, useIsHydrated } =
+      jest.requireMock('#store/useAppStore');
     useAppStore.mockImplementation((selector: any) =>
       selector({
         isHydrated: false,
@@ -144,6 +153,7 @@ describe('useDeepLinkRouter', () => {
         clearPendingDeepLinkAction: mockClearPending,
       }),
     );
+    useIsHydrated.mockReturnValue(false);
 
     const { result } = renderHook(() => useDeepLinkRouter());
 

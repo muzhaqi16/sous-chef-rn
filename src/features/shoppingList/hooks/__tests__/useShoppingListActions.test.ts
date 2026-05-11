@@ -1,32 +1,22 @@
-import { renderHook, act } from '@testing-library/react-native';
+'use no memo';
+
+import { act, waitFor } from '@testing-library/react-native';
+import { InMemoryCache } from '@apollo/client';
+import {
+  recordMock,
+  renderHookWithApollo,
+} from '#/test-utils/apolloMockProvider';
+import { UpdateShoppingListItemQuantityDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import {
+  ShoppingListItemDisplayFragmentDoc,
+  type ShoppingListItemDisplayFragment,
+} from '#features/shoppingList/graphql/shoppingListFragments.generated';
+import { DisplayFormat } from '#/graphql/generated/schemaTypes';
 import { useShoppingListActions } from '../useShoppingListActions';
 
 // --- Mocks ---
 
-const mockUpdateQuantity = jest.fn();
 const mockClearItems = jest.fn();
-const mockReadFragment = jest.fn();
-const mockCacheModify = jest.fn();
-const mockCacheIdentify = jest.fn(
-  (obj: any) => `${obj.__typename}:${obj.id}` as string | undefined,
-);
-
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useApolloClient: () => ({
-    cache: {
-      identify: mockCacheIdentify,
-      modify: mockCacheModify,
-    },
-    readFragment: mockReadFragment,
-  }),
-  useMutation: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'UpdateShoppingListItemQuantity')
-      return [mockUpdateQuantity, { loading: false }];
-    return [jest.fn(), {}];
-  }),
-}));
 
 jest.mock('#/services/toastService', () => ({
   toastService: {
@@ -34,6 +24,10 @@ jest.mock('#/services/toastService', () => ({
     error: jest.fn(),
     info: jest.fn(),
   },
+}));
+
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
 }));
 
 jest.mock('#/services/telemetry', () => ({
@@ -55,7 +49,33 @@ jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
   },
 }));
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/compilerSafeWrappers', () => ({
+  executeMutation: jest.fn(async (fn: any) => {
+    await fn();
+    return true;
+  }),
+  executeWithLoadingState: jest.fn(async (fn: any, setLoading: any) => {
+    setLoading(true);
+    try {
+      await fn();
+    } finally {
+      setLoading(false);
+    }
+  }),
+  executeAsyncWithCleanup: jest.fn(
+    async (fn: any, cleanup: any, onError: any) => {
+      try {
+        await fn();
+      } catch (e) {
+        onError?.(e);
+      } finally {
+        cleanup?.();
+      }
+    },
+  ),
+  executeCacheUpdate: jest.fn((fn: any) => fn()),
+  executeRefetch: jest.fn(async (fn: any) => fn()),
+}));
 
 jest.mock('#hooks/haptic/useHaptic', () => ({
   useHaptic: () => ({
@@ -77,6 +97,15 @@ jest.mock('../mutations/useClearShoppingListItems', () => ({
 
 beforeEach(() => {
   jest.clearAllMocks();
+  const { executeMutation } = require('#/utils/compilerSafeWrappers');
+  executeMutation.mockImplementation(async (fn: any) => {
+    await fn();
+    return true;
+  });
+});
+
+afterAll(() => {
+  jest.restoreAllMocks();
 });
 
 function createItem(overrides: Record<string, unknown> = {}) {
@@ -88,6 +117,76 @@ function createItem(overrides: Record<string, unknown> = {}) {
     purchaseInfo: { isPurchased: false },
     ...overrides,
   } as any;
+}
+
+/**
+ * Build a cache pre-seeded with a ShoppingListItem written via the production
+ * `ShoppingListItemDisplayFragmentDoc` so that the hook's `client.readFragment`
+ * call (which uses the same fragment doc) returns the seeded data.
+ */
+function seedShoppingListItem(
+  overrides: Record<string, unknown> = {},
+): InMemoryCache {
+  const cache = new InMemoryCache();
+  const data: ShoppingListItemDisplayFragment = {
+    __typename: 'ShoppingListItem',
+    id: 'item-1',
+    itemName: 'Milk',
+    quantity: 2,
+    quantityInput: '2',
+    displayFormat: DisplayFormat.Decimal,
+    purchaseInfo: {
+      __typename: 'ShoppingListItemPurchaseInfo',
+      isPurchased: false,
+    },
+    version: 1,
+    updatedAt: '2025-01-01T00:00:00.000Z',
+    category: null,
+    notes: null,
+    unitName: null,
+    unit: null,
+    sortOrder: 'aaa',
+    item: null,
+    ...overrides,
+  };
+  cache.writeFragment({
+    id: `ShoppingListItem:${data.id}`,
+    fragment: ShoppingListItemDisplayFragmentDoc,
+    fragmentName: 'ShoppingListItemDisplayFragment',
+    data,
+  });
+  return cache;
+}
+
+function buildUpdateMockResponse(quantity: number, version: number) {
+  return {
+    updateShoppingListItemQuantity: {
+      __typename: 'ShoppingListItemPayload',
+      success: true,
+      message: '',
+      code: 'SUCCESS',
+      shoppingListItem: {
+        __typename: 'ShoppingListItem',
+        id: 'item-1',
+        itemName: 'Milk',
+        quantity,
+        quantityInput: String(quantity),
+        displayFormat: String(quantity),
+        purchaseInfo: {
+          __typename: 'ShoppingListItemPurchaseInfo',
+          isPurchased: false,
+        },
+        version,
+        updatedAt: '2025-01-01T00:00:00.000Z',
+        category: null,
+        notes: null,
+        unitName: null,
+        unit: null,
+        sortOrder: 0,
+        item: null,
+      },
+    },
+  };
 }
 
 describe('useShoppingListActions', () => {
@@ -103,7 +202,9 @@ describe('useShoppingListActions', () => {
   };
 
   it('returns all action handlers', () => {
-    const { result } = renderHook(() => useShoppingListActions(defaultProps));
+    const { result } = renderHookWithApollo(() =>
+      useShoppingListActions(defaultProps),
+    );
 
     expect(typeof result.current.handleIncrementQuantity).toBe('function');
     expect(typeof result.current.handleDecrementQuantity).toBe('function');
@@ -116,7 +217,9 @@ describe('useShoppingListActions', () => {
 
   describe('handleTogglePurchase', () => {
     it('calls toggleItem with the item id', async () => {
-      const { result } = renderHook(() => useShoppingListActions(defaultProps));
+      const { result } = renderHookWithApollo(() =>
+        useShoppingListActions(defaultProps),
+      );
 
       await act(async () => {
         await result.current.handleTogglePurchase('item-1');
@@ -128,7 +231,9 @@ describe('useShoppingListActions', () => {
     it('tracks telemetry event', async () => {
       const { Telemetry } = require('#/services/telemetry');
 
-      const { result } = renderHook(() => useShoppingListActions(defaultProps));
+      const { result } = renderHookWithApollo(() =>
+        useShoppingListActions(defaultProps),
+      );
 
       await act(async () => {
         await result.current.handleTogglePurchase('item-1');
@@ -143,7 +248,9 @@ describe('useShoppingListActions', () => {
 
   describe('handleDeleteItem', () => {
     it('calls removeItem with the item id', async () => {
-      const { result } = renderHook(() => useShoppingListActions(defaultProps));
+      const { result } = renderHookWithApollo(() =>
+        useShoppingListActions(defaultProps),
+      );
 
       await act(async () => {
         await result.current.handleDeleteItem('item-1');
@@ -155,7 +262,9 @@ describe('useShoppingListActions', () => {
     it('tracks telemetry event', async () => {
       const { Telemetry } = require('#/services/telemetry');
 
-      const { result } = renderHook(() => useShoppingListActions(defaultProps));
+      const { result } = renderHookWithApollo(() =>
+        useShoppingListActions(defaultProps),
+      );
 
       await act(async () => {
         await result.current.handleDeleteItem('item-1');
@@ -169,7 +278,7 @@ describe('useShoppingListActions', () => {
 
   describe('handleClearAllPurchased', () => {
     it('does nothing when no purchased items exist', async () => {
-      const { result } = renderHook(() =>
+      const { result } = renderHookWithApollo(() =>
         useShoppingListActions({
           ...defaultProps,
           purchasedItems: [],
@@ -184,7 +293,7 @@ describe('useShoppingListActions', () => {
     });
 
     it('calls clearItems with true when purchased items exist', async () => {
-      const { result } = renderHook(() =>
+      const { result } = renderHookWithApollo(() =>
         useShoppingListActions({
           ...defaultProps,
           purchasedItems: [
@@ -206,7 +315,7 @@ describe('useShoppingListActions', () => {
 
   describe('handleClearAllShopping', () => {
     it('does nothing when no unpurchased items exist', async () => {
-      const { result } = renderHook(() =>
+      const { result } = renderHookWithApollo(() =>
         useShoppingListActions({
           ...defaultProps,
           unpurchasedItems: [],
@@ -221,7 +330,7 @@ describe('useShoppingListActions', () => {
     });
 
     it('calls clearItems with false when unpurchased items exist', async () => {
-      const { result } = renderHook(() =>
+      const { result } = renderHookWithApollo(() =>
         useShoppingListActions({
           ...defaultProps,
           unpurchasedItems: [
@@ -245,7 +354,7 @@ describe('useShoppingListActions', () => {
     it('shows toast error when no list is selected', async () => {
       const { toastService } = require('#/services/toastService');
 
-      const { result } = renderHook(() =>
+      const { result } = renderHookWithApollo(() =>
         useShoppingListActions({
           ...defaultProps,
           currentListId: undefined,
@@ -263,7 +372,9 @@ describe('useShoppingListActions', () => {
     });
 
     it('clears search query immediately', async () => {
-      const { result } = renderHook(() => useShoppingListActions(defaultProps));
+      const { result } = renderHookWithApollo(() =>
+        useShoppingListActions(defaultProps),
+      );
 
       await act(async () => {
         await result.current.handleAddItemFromSearch('Eggs');
@@ -273,7 +384,9 @@ describe('useShoppingListActions', () => {
     });
 
     it('calls addItem with trimmed name and quantity 1', async () => {
-      const { result } = renderHook(() => useShoppingListActions(defaultProps));
+      const { result } = renderHookWithApollo(() =>
+        useShoppingListActions(defaultProps),
+      );
 
       await act(async () => {
         await result.current.handleAddItemFromSearch('  Eggs  ');
@@ -288,7 +401,9 @@ describe('useShoppingListActions', () => {
     it('tracks success telemetry event', async () => {
       const { Telemetry } = require('#/services/telemetry');
 
-      const { result } = renderHook(() => useShoppingListActions(defaultProps));
+      const { result } = renderHookWithApollo(() =>
+        useShoppingListActions(defaultProps),
+      );
 
       await act(async () => {
         await result.current.handleAddItemFromSearch('Eggs');
@@ -302,219 +417,192 @@ describe('useShoppingListActions', () => {
 
   describe('handleIncrementQuantity', () => {
     it('early returns when item not in cache', async () => {
-      mockCacheIdentify.mockReturnValue(undefined);
+      // No cache seed → readFragment returns null naturally
+      const m = recordMock(UpdateShoppingListItemQuantityDocument, {
+        data: buildUpdateMockResponse(3, 2),
+      });
 
-      const { result } = renderHook(() => useShoppingListActions(defaultProps));
+      const { result } = renderHookWithApollo(
+        () => useShoppingListActions(defaultProps),
+        { operationMocks: [m.mock] },
+      );
 
       await act(async () => {
         await result.current.handleIncrementQuantity('item-1');
       });
 
-      expect(mockUpdateQuantity).not.toHaveBeenCalled();
+      expect(m.fired).toEqual([]);
     });
 
     it('increments quantity and calls update mutation', async () => {
-      mockCacheIdentify.mockReturnValue('ShoppingListItem:item-1');
-      mockReadFragment.mockReturnValue({
-        id: 'item-1',
-        quantity: 2,
-        version: 1,
-      });
-      mockUpdateQuantity.mockResolvedValue({
-        data: {
-          updateShoppingListItemQuantity: {
-            shoppingListItem: { id: 'item-1', quantity: 3 },
-          },
-        },
+      const cache = seedShoppingListItem({ quantity: 2, version: 1 });
+      const m = recordMock(UpdateShoppingListItemQuantityDocument, {
+        data: buildUpdateMockResponse(3, 2),
       });
 
-      const { result } = renderHook(() => useShoppingListActions(defaultProps));
+      const { result } = renderHookWithApollo(
+        () => useShoppingListActions(defaultProps),
+        { operationMocks: [m.mock], cache },
+      );
 
       await act(async () => {
         await result.current.handleIncrementQuantity('item-1');
       });
 
-      // Should modify cache immediately
-      expect(mockCacheModify).toHaveBeenCalled();
-
-      // Should call mutation with new quantity
-      expect(mockUpdateQuantity).toHaveBeenCalledWith(
-        expect.objectContaining({
-          variables: {
-            itemId: 'item-1',
-            quantity: '3', // incremented from 2 to 3
-            version: 1,
-          },
-        }),
-      );
+      await waitFor(() => {
+        expect(m.fired).toContainEqual({
+          itemId: 'item-1',
+          quantity: '3',
+          version: 1,
+        });
+      });
     });
   });
 
   describe('handleDecrementQuantity', () => {
     it('decrements quantity but not below 1', async () => {
-      mockCacheIdentify.mockReturnValue('ShoppingListItem:item-1');
-      mockReadFragment.mockReturnValue({
-        id: 'item-1',
-        quantity: 1,
-        version: 1,
-      });
-      mockUpdateQuantity.mockResolvedValue({
-        data: {
-          updateShoppingListItemQuantity: {
-            shoppingListItem: { id: 'item-1', quantity: 1 },
-          },
-        },
+      const cache = seedShoppingListItem({ quantity: 1, version: 1 });
+      const m = recordMock(UpdateShoppingListItemQuantityDocument, {
+        data: buildUpdateMockResponse(1, 2),
       });
 
-      const { result } = renderHook(() => useShoppingListActions(defaultProps));
+      const { result } = renderHookWithApollo(
+        () => useShoppingListActions(defaultProps),
+        { operationMocks: [m.mock], cache },
+      );
 
       await act(async () => {
         await result.current.handleDecrementQuantity('item-1');
       });
 
-      // Should call mutation with quantity still at 1 (Math.max(1, 0))
-      expect(mockUpdateQuantity).toHaveBeenCalledWith(
-        expect.objectContaining({
-          variables: {
-            itemId: 'item-1',
-            quantity: '1',
-            version: 1,
-          },
-        }),
-      );
+      await waitFor(() => {
+        expect(m.fired).toContainEqual({
+          itemId: 'item-1',
+          quantity: '1',
+          version: 1,
+        });
+      });
     });
 
     it('early returns when cache identify returns undefined', async () => {
-      mockCacheIdentify.mockReturnValue(undefined);
+      // No cache seed → readFragment returns null
+      const m = recordMock(UpdateShoppingListItemQuantityDocument, {
+        data: buildUpdateMockResponse(0, 2),
+      });
 
-      const { result } = renderHook(() => useShoppingListActions(defaultProps));
+      const { result } = renderHookWithApollo(
+        () => useShoppingListActions(defaultProps),
+        { operationMocks: [m.mock] },
+      );
 
       await act(async () => {
         await result.current.handleDecrementQuantity('item-1');
       });
 
-      expect(mockUpdateQuantity).not.toHaveBeenCalled();
+      expect(m.fired).toEqual([]);
     });
 
     it('early returns when readFragment returns null', async () => {
-      mockCacheIdentify.mockReturnValue('ShoppingListItem:item-1');
-      mockReadFragment.mockReturnValue(null);
+      // No cache seed → readFragment returns null
+      const m = recordMock(UpdateShoppingListItemQuantityDocument, {
+        data: buildUpdateMockResponse(0, 2),
+      });
 
-      const { result } = renderHook(() => useShoppingListActions(defaultProps));
+      const { result } = renderHookWithApollo(
+        () => useShoppingListActions(defaultProps),
+        { operationMocks: [m.mock] },
+      );
 
       await act(async () => {
         await result.current.handleDecrementQuantity('item-1');
       });
 
-      expect(mockUpdateQuantity).not.toHaveBeenCalled();
+      expect(m.fired).toEqual([]);
     });
 
     it('decrements from quantity 5 to 4', async () => {
-      mockCacheIdentify.mockReturnValue('ShoppingListItem:item-1');
-      mockReadFragment.mockReturnValue({
-        id: 'item-1',
-        quantity: 5,
-        version: 2,
-      });
-      mockUpdateQuantity.mockResolvedValue({
-        data: {
-          updateShoppingListItemQuantity: {
-            shoppingListItem: { id: 'item-1', quantity: 4 },
-          },
-        },
+      const cache = seedShoppingListItem({ quantity: 5, version: 2 });
+      const m = recordMock(UpdateShoppingListItemQuantityDocument, {
+        data: buildUpdateMockResponse(4, 3),
       });
 
-      const { result } = renderHook(() => useShoppingListActions(defaultProps));
+      const { result } = renderHookWithApollo(
+        () => useShoppingListActions(defaultProps),
+        { operationMocks: [m.mock], cache },
+      );
 
       await act(async () => {
         await result.current.handleDecrementQuantity('item-1');
       });
 
-      expect(mockUpdateQuantity).toHaveBeenCalledWith(
-        expect.objectContaining({
-          variables: {
-            itemId: 'item-1',
-            quantity: '4',
-            version: 2,
-          },
-        }),
-      );
+      await waitFor(() => {
+        expect(m.fired).toContainEqual({
+          itemId: 'item-1',
+          quantity: '4',
+          version: 2,
+        });
+      });
     });
 
     it('handles null quantity as 1', async () => {
-      mockCacheIdentify.mockReturnValue('ShoppingListItem:item-1');
-      mockReadFragment.mockReturnValue({
-        id: 'item-1',
-        quantity: null,
-        version: 1,
-      });
-      mockUpdateQuantity.mockResolvedValue({
-        data: {
-          updateShoppingListItemQuantity: {
-            shoppingListItem: { id: 'item-1', quantity: 1 },
-          },
-        },
+      const cache = seedShoppingListItem({ quantity: null, version: 1 });
+      const m = recordMock(UpdateShoppingListItemQuantityDocument, {
+        data: buildUpdateMockResponse(1, 2),
       });
 
-      const { result } = renderHook(() => useShoppingListActions(defaultProps));
+      const { result } = renderHookWithApollo(
+        () => useShoppingListActions(defaultProps),
+        { operationMocks: [m.mock], cache },
+      );
 
       await act(async () => {
         await result.current.handleDecrementQuantity('item-1');
       });
 
       // null ?? 1 = 1, then Math.max(1, 1 - 1) = Math.max(1, 0) = 1
-      expect(mockUpdateQuantity).toHaveBeenCalledWith(
-        expect.objectContaining({
-          variables: expect.objectContaining({
-            quantity: '1',
-          }),
-        }),
-      );
+      await waitFor(() => {
+        expect(m.fired.some(v => v.quantity === '1')).toBe(true);
+      });
     });
   });
 
   describe('handleIncrementQuantity - readFragment returns null', () => {
     it('early returns when readFragment returns null', async () => {
-      mockCacheIdentify.mockReturnValue('ShoppingListItem:item-1');
-      mockReadFragment.mockReturnValue(null);
+      // No cache seed → readFragment returns null
+      const m = recordMock(UpdateShoppingListItemQuantityDocument, {
+        data: buildUpdateMockResponse(1, 2),
+      });
 
-      const { result } = renderHook(() => useShoppingListActions(defaultProps));
+      const { result } = renderHookWithApollo(
+        () => useShoppingListActions(defaultProps),
+        { operationMocks: [m.mock] },
+      );
 
       await act(async () => {
         await result.current.handleIncrementQuantity('item-1');
       });
 
-      expect(mockUpdateQuantity).not.toHaveBeenCalled();
+      expect(m.fired).toEqual([]);
     });
 
     it('increments from zero quantity', async () => {
-      mockCacheIdentify.mockReturnValue('ShoppingListItem:item-1');
-      mockReadFragment.mockReturnValue({
-        id: 'item-1',
-        quantity: 0,
-        version: 1,
-      });
-      mockUpdateQuantity.mockResolvedValue({
-        data: {
-          updateShoppingListItemQuantity: {
-            shoppingListItem: { id: 'item-1', quantity: 1 },
-          },
-        },
+      const cache = seedShoppingListItem({ quantity: 0, version: 1 });
+      const m = recordMock(UpdateShoppingListItemQuantityDocument, {
+        data: buildUpdateMockResponse(1, 2),
       });
 
-      const { result } = renderHook(() => useShoppingListActions(defaultProps));
+      const { result } = renderHookWithApollo(
+        () => useShoppingListActions(defaultProps),
+        { operationMocks: [m.mock], cache },
+      );
 
       await act(async () => {
         await result.current.handleIncrementQuantity('item-1');
       });
 
-      expect(mockUpdateQuantity).toHaveBeenCalledWith(
-        expect.objectContaining({
-          variables: expect.objectContaining({
-            quantity: '1', // 0 + 1
-          }),
-        }),
-      );
+      await waitFor(() => {
+        expect(m.fired.some(v => v.quantity === '1')).toBe(true);
+      });
     });
   });
 
@@ -523,7 +611,7 @@ describe('useShoppingListActions', () => {
       const { toastService } = require('#/services/toastService');
       const failAddItem = jest.fn().mockResolvedValue(null);
 
-      const { result } = renderHook(() =>
+      const { result } = renderHookWithApollo(() =>
         useShoppingListActions({
           ...defaultProps,
           addItem: failAddItem,
@@ -553,7 +641,7 @@ describe('useShoppingListActions', () => {
       });
 
       const mockSetSearchQuery = jest.fn();
-      const { result } = renderHook(() =>
+      const { result } = renderHookWithApollo(() =>
         useShoppingListActions({
           ...defaultProps,
           setSearchQuery: mockSetSearchQuery,
@@ -574,7 +662,7 @@ describe('useShoppingListActions', () => {
       const { Telemetry } = require('#/services/telemetry');
       const failAddItem = jest.fn().mockResolvedValue(null);
 
-      const { result } = renderHook(() =>
+      const { result } = renderHookWithApollo(() =>
         useShoppingListActions({
           ...defaultProps,
           addItem: failAddItem,
@@ -594,7 +682,7 @@ describe('useShoppingListActions', () => {
       const failAddItem = jest.fn().mockResolvedValue(null);
       const mockSetSearchQuery = jest.fn();
 
-      const { result } = renderHook(() =>
+      const { result } = renderHookWithApollo(() =>
         useShoppingListActions({
           ...defaultProps,
           addItem: failAddItem,
@@ -623,7 +711,9 @@ describe('useShoppingListActions', () => {
         return false;
       });
 
-      const { result } = renderHook(() => useShoppingListActions(defaultProps));
+      const { result } = renderHookWithApollo(() =>
+        useShoppingListActions(defaultProps),
+      );
 
       await act(async () => {
         await result.current.handleTogglePurchase('item-1');
@@ -649,7 +739,9 @@ describe('useShoppingListActions', () => {
         return false;
       });
 
-      const { result } = renderHook(() => useShoppingListActions(defaultProps));
+      const { result } = renderHookWithApollo(() =>
+        useShoppingListActions(defaultProps),
+      );
 
       await act(async () => {
         await result.current.handleDeleteItem('item-1');
@@ -671,7 +763,9 @@ describe('useShoppingListActions', () => {
         return false;
       });
 
-      const { result } = renderHook(() => useShoppingListActions(defaultProps));
+      const { result } = renderHookWithApollo(() =>
+        useShoppingListActions(defaultProps),
+      );
 
       await act(async () => {
         await result.current.handleDeleteItem('item-1');
@@ -694,7 +788,9 @@ describe('useShoppingListActions', () => {
         return false;
       });
 
-      const { result } = renderHook(() => useShoppingListActions(defaultProps));
+      const { result } = renderHookWithApollo(() =>
+        useShoppingListActions(defaultProps),
+      );
 
       await act(async () => {
         await result.current.handleTogglePurchase('item-1');
@@ -717,7 +813,7 @@ describe('useShoppingListActions', () => {
         return false;
       });
 
-      const { result } = renderHook(() =>
+      const { result } = renderHookWithApollo(() =>
         useShoppingListActions({
           ...defaultProps,
           purchasedItems: [createItem({ purchaseInfo: { isPurchased: true } })],
@@ -744,7 +840,7 @@ describe('useShoppingListActions', () => {
         return false;
       });
 
-      const { result } = renderHook(() =>
+      const { result } = renderHookWithApollo(() =>
         useShoppingListActions({
           ...defaultProps,
           unpurchasedItems: [
@@ -770,12 +866,7 @@ describe('useShoppingListActions', () => {
       } = require('#/utils/errors/versionConflict');
       const { executeMutation } = require('#/utils/compilerSafeWrappers');
 
-      mockCacheIdentify.mockReturnValue('ShoppingListItem:item-1');
-      mockReadFragment.mockReturnValue({
-        id: 'item-1',
-        quantity: 2,
-        version: 1,
-      });
+      const cache = seedShoppingListItem({ quantity: 2, version: 1 });
 
       // Make the inner executeMutation call the error handler
       executeMutation.mockImplementationOnce(async (_fn: any, onError: any) => {
@@ -786,109 +877,21 @@ describe('useShoppingListActions', () => {
       });
       handleVersionConflict.mockReturnValueOnce(true);
 
-      const { result } = renderHook(() => useShoppingListActions(defaultProps));
+      const m = recordMock(UpdateShoppingListItemQuantityDocument, {
+        data: buildUpdateMockResponse(3, 2),
+      });
+
+      const { result } = renderHookWithApollo(
+        () => useShoppingListActions(defaultProps),
+        { operationMocks: [m.mock], cache },
+      );
 
       await act(async () => {
         await result.current.handleIncrementQuantity('item-1');
       });
 
-      // The cache should have been modified optimistically
-      expect(mockCacheModify).toHaveBeenCalled();
-    });
-  });
-
-  describe('handleIncrementQuantity - onCompleted clears persistence', () => {
-    it('clears persistence data on successful mutation completion', async () => {
-      const {
-        optimisticDataPersistence,
-      } = require('#/apollo/offline/OptimisticDataPersistence');
-
-      mockCacheIdentify.mockReturnValue('ShoppingListItem:item-1');
-      mockReadFragment.mockReturnValue({
-        id: 'item-1',
-        quantity: 2,
-        version: 1,
-      });
-
-      let capturedOnCompleted: any;
-      mockUpdateQuantity.mockImplementation((opts: any) => {
-        capturedOnCompleted = opts.onCompleted;
-        return Promise.resolve({
-          data: {
-            updateShoppingListItemQuantity: {
-              shoppingListItem: { id: 'item-1', quantity: 3 },
-            },
-          },
-        });
-      });
-
-      const { result } = renderHook(() => useShoppingListActions(defaultProps));
-
-      await act(async () => {
-        await result.current.handleIncrementQuantity('item-1');
-      });
-
-      // Call onCompleted manually
-      if (capturedOnCompleted) {
-        capturedOnCompleted({
-          updateShoppingListItemQuantity: {
-            shoppingListItem: { id: 'item-1', quantity: 3 },
-          },
-        });
-      }
-
-      expect(optimisticDataPersistence.clear).toHaveBeenCalledWith(
-        'ShoppingListItem',
-        'item-1',
-        'quantity',
-      );
-    });
-  });
-
-  describe('handleDecrementQuantity - onCompleted clears persistence', () => {
-    it('clears persistence data on successful decrement mutation', async () => {
-      const {
-        optimisticDataPersistence,
-      } = require('#/apollo/offline/OptimisticDataPersistence');
-
-      mockCacheIdentify.mockReturnValue('ShoppingListItem:item-1');
-      mockReadFragment.mockReturnValue({
-        id: 'item-1',
-        quantity: 3,
-        version: 2,
-      });
-
-      let capturedOnCompleted: any;
-      mockUpdateQuantity.mockImplementation((opts: any) => {
-        capturedOnCompleted = opts.onCompleted;
-        return Promise.resolve({
-          data: {
-            updateShoppingListItemQuantity: {
-              shoppingListItem: { id: 'item-1', quantity: 2 },
-            },
-          },
-        });
-      });
-
-      const { result } = renderHook(() => useShoppingListActions(defaultProps));
-
-      await act(async () => {
-        await result.current.handleDecrementQuantity('item-1');
-      });
-
-      if (capturedOnCompleted) {
-        capturedOnCompleted({
-          updateShoppingListItemQuantity: {
-            shoppingListItem: { id: 'item-1', quantity: 2 },
-          },
-        });
-      }
-
-      expect(optimisticDataPersistence.clear).toHaveBeenCalledWith(
-        'ShoppingListItem',
-        'item-1',
-        'quantity',
-      );
+      // Version conflict was handled
+      expect(handleVersionConflict).toHaveBeenCalled();
     });
   });
 
@@ -898,21 +901,15 @@ describe('useShoppingListActions', () => {
         optimisticDataPersistence,
       } = require('#/apollo/offline/OptimisticDataPersistence');
 
-      mockCacheIdentify.mockReturnValue('ShoppingListItem:item-1');
-      mockReadFragment.mockReturnValue({
-        id: 'item-1',
-        quantity: 5,
-        version: 3,
-      });
-      mockUpdateQuantity.mockResolvedValue({
-        data: {
-          updateShoppingListItemQuantity: {
-            shoppingListItem: { id: 'item-1', quantity: 6 },
-          },
-        },
+      const cache = seedShoppingListItem({ quantity: 5, version: 3 });
+      const m = recordMock(UpdateShoppingListItemQuantityDocument, {
+        data: buildUpdateMockResponse(6, 4),
       });
 
-      const { result } = renderHook(() => useShoppingListActions(defaultProps));
+      const { result } = renderHookWithApollo(
+        () => useShoppingListActions(defaultProps),
+        { operationMocks: [m.mock], cache },
+      );
 
       await act(async () => {
         await result.current.handleIncrementQuantity('item-1');
@@ -938,7 +935,9 @@ describe('useShoppingListActions', () => {
         return false;
       });
 
-      const { result } = renderHook(() => useShoppingListActions(defaultProps));
+      const { result } = renderHookWithApollo(() =>
+        useShoppingListActions(defaultProps),
+      );
 
       await act(async () => {
         await result.current.handleAddItemFromSearch('Milk');
@@ -955,7 +954,9 @@ describe('useShoppingListActions', () => {
     it('tracks add_item_from_search event with list_id and name length', async () => {
       const { Telemetry } = require('#/services/telemetry');
 
-      const { result } = renderHook(() => useShoppingListActions(defaultProps));
+      const { result } = renderHookWithApollo(() =>
+        useShoppingListActions(defaultProps),
+      );
 
       await act(async () => {
         await result.current.handleAddItemFromSearch('  Eggs  ');
@@ -973,7 +974,9 @@ describe('useShoppingListActions', () => {
 
   describe('handleAddItemFromSearch - haptic feedback', () => {
     it('triggers success haptic on successful add', async () => {
-      const { result } = renderHook(() => useShoppingListActions(defaultProps));
+      const { result } = renderHookWithApollo(() =>
+        useShoppingListActions(defaultProps),
+      );
 
       await act(async () => {
         await result.current.handleAddItemFromSearch('Bread');

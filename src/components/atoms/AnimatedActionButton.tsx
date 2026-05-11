@@ -1,6 +1,6 @@
 import React, { useLayoutEffect } from 'react';
 import { StyleProp, ViewStyle, View } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { useAnimatedTheme } from 'react-native-unistyles/reanimated';
 import Animated, {
   useSharedValue,
@@ -9,7 +9,7 @@ import Animated, {
   withSequence,
   interpolate,
 } from 'react-native-reanimated';
-import IconButton from './IconButton';
+import { ThemedIconButton } from './themedComponents';
 import { standardEasing, TIMING } from '#/constants/animations';
 
 type AnimatedActionButtonProps = {
@@ -35,7 +35,6 @@ export const AnimatedActionButton: React.FC<AnimatedActionButtonProps> = ({
   isHighlighted = false,
   testID,
 }) => {
-  const { theme } = useUnistyles();
   const animatedTheme = useAnimatedTheme();
   const scale = useSharedValue(1);
   const rotation = useSharedValue(0);
@@ -74,14 +73,13 @@ export const AnimatedActionButton: React.FC<AnimatedActionButtonProps> = ({
     };
   });
 
-  // Wrapper pattern: static Unistyles on outer View, animated styles on inner Animated.View
   return (
     <View style={[styles.button, style]} testID={testID}>
       <Animated.View style={[styles.animatedInner, animatedStyle]}>
-        <IconButton
+        <ThemedIconButton
           name={name || 'add'}
           size={size}
-          color={color || theme.colors.primary}
+          uniProps={t => ({ color: color ?? t.colors.primary })}
           onPress={onPress}
           accessibilityLabel={accessibilityLabel || `${name || 'Add'} button`}
         />

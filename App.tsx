@@ -1,6 +1,5 @@
-import React, { useEffect, useRef } from 'react';
-import { AppState } from 'react-native';
-import { StyleSheet, UnistylesRuntime } from 'react-native-unistyles';
+import React from 'react';
+import { StyleSheet } from 'react-native-unistyles';
 import {
   SafeAreaProvider,
   SafeAreaView,
@@ -9,27 +8,17 @@ import {
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { ApolloProvider } from '@apollo/client/react';
-import { useAppStore, useIsHydrated } from '#store/useAppStore';
-import { useStore } from '#store/index';
+import { useIsHydrated } from '#store/useAppStore';
 import { client } from '#/apollo/client';
 import { Navigation } from '#navigation/RootNavigator';
-import { hasCredentials } from '#storage/keychain';
 import { SplashScreen } from '#screens/SplashScreen';
 import { ToastProvider } from '#components/atoms/Toast';
 import { OfflineBanner } from '#components/atoms/OfflineBanner';
 import { ThemedStatusBar } from '#components/atoms/ThemedStatusBar';
-import { Telemetry } from '#services/telemetry';
-import { HapticService } from '#services/haptic/HapticService';
-import { storage } from '#/storage/mmkv';
-import { NativePerformanceService } from '#/services/performance/NativePerformanceService';
-import { MemoryMonitor } from '#/services/performance/MemoryMonitor';
 import { AppErrorBoundary } from '#components/providers/ErrorBoundary';
-import { useNetworkStatus } from '#hooks/useNetworkStatus';
-import { useTheme } from '#hooks/useTheme';
-import { useAppearance } from '#hooks/useAppearance';
+import { useAppLifecycle } from '#hooks/app/useAppLifecycle';
 import { queueManager } from '#/apollo/offlineQueue/queueManager';
 import type { FailedMutationInfo } from '#/apollo/offlineQueue/types';
-import { proactiveTokenRefresh } from '#/apollo/links/refreshToken';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { toastService } from '#/services/toastService';
 import { queueStore } from '#/apollo/offlineQueue/queueStore';
@@ -38,13 +27,7 @@ import { AlertProvider } from '#/components/providers/AlertProvider';
 import { DataProvider } from '#/components/providers/DataProvider';
 import { SubscriptionProvider } from '#/components/providers/SubscriptionProvider';
 import { OverlayBackdropProvider, GlobalBackdrop } from '#/components/providers/OverlayBackdropProvider';
-import {
-  initAppStateTokenRefresh,
-  cleanupAppStateTokenRefresh,
-} from '#store/slices/authSlice';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
-import { initializeDeviceId } from '#/utils/deviceId';
-import { LaunchArguments } from 'react-native-launch-arguments';
 import { setupGlobalErrorHandler } from '#/utils/globalErrorHandler';
 
 // Install global JS exception and promise rejection handlers before any component renders
@@ -86,195 +69,9 @@ function handleFailedMutation(info: FailedMutationInfo): void {
 // Register the failure handler on the singleton queue manager
 queueManager.setFailureHandler(handleFailedMutation);
 
-
-/** Module-level helper: Detox launch argument injection (DEV-only) */
-function injectDetoxLaunchArgs(
-  detoxBackgroundServicesDisabledRef: React.RefObject<boolean>,
-): void {
-  try {
-    const args = LaunchArguments.value<{
-      detoxUserToken?: string;
-      detoxRefreshToken?: string;
-      detoxUser?: string;
-      detoxDisableBackgroundServices?: string;
-    }>();
-    if (args.detoxUserToken && args.detoxRefreshToken && args.detoxUser) {
-      const user = JSON.parse(args.detoxUser);
-      useStore
-        .getState()
-        .setAuth(user, args.detoxUserToken, args.detoxRefreshToken);
-      console.log('[Detox] Auth injected via launchArgs');
-    }
-    if (args.detoxDisableBackgroundServices) {
-      detoxBackgroundServicesDisabledRef.current = true;
-      console.log('[Detox] Background services disabled for E2E tests');
-    }
-  } catch {
-    // No launch args or parse error — normal app startup
-  }
-}
-
 const App = () => {
   const isHydrated = useIsHydrated();
-  const isOnline = useAppStore(state => state.isOnline);
-  const setHasStoredCredentials = useAppStore(
-    state => state.setHasStoredCredentials,
-  );
-  const getTelemetryConfig = useAppStore(state => state.getTelemetryConfig);
-  // PERFORMANCE: Track if hydration init has run to prevent restarting on theme changes
-  const hydrationInitializedRef = useRef(false);
-  // Track if Detox requested background services to be disabled
-  const detoxBackgroundServicesDisabledRef = useRef(false);
-
-  // Sync user theme preference -> UnistylesRuntime adaptive themes
-  useTheme();
-
-  // Apply user appearance overrides (brand color, density, font scale, high contrast)
-  useAppearance();
-
-  // Initialize network monitoring
-  useNetworkStatus();
-
-  // Handle network status changes - trigger queue processing when online
-  // When coming back online, attempt deferred token refresh before replaying queued mutations
-  useEffect(() => {
-    if (isOnline) {
-      const state = useStore.getState();
-      if (state.needsTokenRefresh && state.refreshToken) {
-        proactiveTokenRefresh()
-          .then(newToken => {
-            if (newToken) {
-              useStore.getState().setNeedsTokenRefresh(false);
-            }
-            // Process queue regardless — if refresh failed, queue will handle it
-            queueManager.onOnline();
-          })
-          .catch(() => {
-            // needsTokenRefresh stays true for next online transition
-            queueManager.onOnline();
-          });
-      } else {
-        queueManager.onOnline();
-      }
-    } else {
-      queueManager.onOffline();
-    }
-  }, [isOnline]);
-
-  // PERFORMANCE: One-time hydration init - run only once after hydration completes
-  // This prevents restarting heavy services (telemetry, keychain, memory monitor) on theme changes
-  useEffect(() => {
-    // Capture ref value for use in effect body and cleanup
-    const detoxDisabled = detoxBackgroundServicesDisabledRef.current;
-
-    if (isHydrated && !hydrationInitializedRef.current) {
-      hydrationInitializedRef.current = true;
-
-      // DEV-ONLY: Inject auth tokens from Detox launchArgs to bypass login UI
-      if (__DEV__) {
-        injectDetoxLaunchArgs(detoxBackgroundServicesDisabledRef);
-      }
-
-      // Initialize device ID early - needed for WebSocket subscription self-echo filtering
-      initializeDeviceId();
-
-      // Check for stored credentials
-      hasCredentials().then(result => {
-        setHasStoredCredentials(result);
-      });
-
-      // Initialize offline mode from MMKV (transient Zustand state, not persisted via Zustand)
-      useStore.getState().setOfflineModeEnabled(
-        storage.getBoolean('user_offline_mode') ?? false,
-      );
-
-      // Initialize haptic feedback service (caches user preference from store)
-      HapticService.initialize();
-
-      // Initialize telemetry service
-      const telemetryConfig = getTelemetryConfig();
-      if (detoxDisabled) {
-        // Disable flush timers that create setInterval background tasks
-        telemetryConfig.enableLogs = false;
-        telemetryConfig.enableMetrics = false;
-      }
-      Telemetry.updateConfig(telemetryConfig);
-      Telemetry.initialize();
-
-      // Initialize native performance metrics (startup marks, bundle load, HTTP timing).
-      // Defer to requestIdleCallback so they don't compete with the navigation
-      // mount that follows hydration — these services aren't needed for first
-      // paint and benefit from running on the JS idle queue.
-      if (!detoxDisabled) {
-        requestIdleCallback(() => {
-          NativePerformanceService.initialize();
-          if (!__DEV__) {
-            // Auto-start memory monitoring in production so Overview dashboard
-            // memory gauge populates without requiring manual opt-in.
-            MemoryMonitor.start();
-          }
-        });
-      }
-
-      // Report JS startup duration (time from index.js entry to store hydration)
-      if (global.__APP_START_TIMESTAMP) {
-        const startupDuration = Date.now() - global.__APP_START_TIMESTAMP;
-        Telemetry.histogram('app_startup_duration_ms', startupDuration, {
-          type: 'js_to_hydrated',
-        });
-
-        // Report content appeared timing (full time from native launch to content visible)
-        const contentAppearedDuration = Date.now() - global.__APP_START_TIMESTAMP;
-        Telemetry.histogram('app_content_appeared_ms', contentAppearedDuration, {
-          type: 'full',
-        });
-
-        global.__APP_START_TIMESTAMP = undefined; // Prevent re-reporting on HMR
-      }
-
-      // Track app launch event (captures theme at launch time)
-      Telemetry.trackEvent('app_launched', {
-        theme: UnistylesRuntime.themeName,
-        timestamp: new Date().toISOString(),
-      });
-
-      // Initialize AppState token refresh to handle background resume
-      // This ensures tokens are refreshed before queries fire when app resumes
-      initAppStateTokenRefresh(() => useStore.getState().accessToken);
-    }
-
-    return () => {
-      // Cleanup native performance observers and memory monitor
-      if (!detoxDisabled) {
-        NativePerformanceService.cleanup();
-        MemoryMonitor.stop();
-      }
-      // Cleanup AppState token refresh listener
-      cleanupAppStateTokenRefresh();
-    };
-  }, [isHydrated, setHasStoredCredentials, getTelemetryConfig]);
-
-  useEffect(() => {
-    const handleAppStateChange = (nextAppState: string) => {
-      Telemetry.trackEvent('app_state_change', { state: nextAppState });
-
-      if (nextAppState === 'active') {
-        // Process any queued offline mutations when resuming from background
-        queueManager.processQueue();
-      } else if (nextAppState === 'background') {
-        Telemetry.flush();
-      }
-    };
-
-    const subscription = AppState.addEventListener(
-      'change',
-      handleAppStateChange,
-    );
-
-    return () => {
-      subscription?.remove();
-    };
-  }, []);
+  useAppLifecycle();
 
   if (!isHydrated) {
     return <SplashScreen />;

@@ -1,6 +1,6 @@
 import React, { useState, useLayoutEffect } from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import Animated, {
   useSharedValue,
@@ -9,7 +9,7 @@ import Animated, {
   FadeIn,
   FadeOut,
 } from 'react-native-reanimated';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { SPRING, TIMING } from '#/constants/animations';
 import type { SortableShoppingListItem } from '#features/shoppingList/components/SortableShoppingList/types';
@@ -47,7 +47,6 @@ export const CollapsiblePurchasedSection: React.FC<
   isExpanded: controlledIsExpanded,
   onExpandedChange,
 }) => {
-  const { theme } = useUnistyles();
   // Auto-expand when all items are purchased (no unpurchased items)
   // This prevents the confusing "empty list" appearance when finishing shopping
   const [internalExpanded, setInternalExpanded] = useState(
@@ -127,30 +126,15 @@ export const CollapsiblePurchasedSection: React.FC<
     <View key="collapsible-purchased-section" style={styles.container}>
       {/* Header */}
       <Pressable
-        style={({ pressed }) => [
-          styles.header,
-          {
-            backgroundColor: theme.colors.surface,
-            borderColor: theme.colors.border,
-          },
-          pressed && styles.pressed,
-        ]}
+        style={({ pressed }) => [styles.header, pressed && styles.pressed]}
         onPress={() => {
           console.log('Toggling purchased section:', !expanded);
           setExpanded(!expanded);
         }}
       >
         <View style={styles.headerLeft}>
-          <Icon
-            name="checkmark-circle"
-            size={20}
-            color={theme.colors.success}
-          />
-          <Text
-            size="md"
-            weight="semibold"
-            style={{ color: theme.colors.textPrimary }}
-          >
+          <Icon name="checkmark-circle" size={20} tone="success" />
+          <Text size="md" weight="semibold" tone="primary">
             {purchasedItems.length} Purchased
           </Text>
         </View>
@@ -160,7 +144,6 @@ export const CollapsiblePurchasedSection: React.FC<
             <Pressable
               style={({ pressed }) => [
                 styles.clearButton,
-                { backgroundColor: theme.colors.error + '20' },
                 pressed && styles.pressed,
               ]}
               onPress={() => {
@@ -170,18 +153,15 @@ export const CollapsiblePurchasedSection: React.FC<
               <Text
                 size="sm"
                 weight="semibold"
-                style={{ color: theme.colors.error }}
+                tone="error"
+                style={styles.clearButtonText}
               >
                 Clear All
               </Text>
             </Pressable>
           )}
           <Animated.View style={animatedChevronStyle}>
-            <Icon
-              name="chevron-down"
-              size={24}
-              color={theme.colors.textSecondary}
-            />
+            <Icon name="chevron-down" size={24} tone="textSecondary" />
           </Animated.View>
         </View>
       </Pressable>
@@ -222,6 +202,8 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing['3'],
     borderTopWidth: 1,
     borderBottomWidth: 1,
+    backgroundColor: theme.colors.surface,
+    borderColor: theme.colors.border,
   },
   headerLeft: {
     flexDirection: 'row',
@@ -240,6 +222,10 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing['3'],
     paddingVertical: theme.spacing.xs + 2,
     borderRadius: theme.radii.sm,
+    backgroundColor: theme.colors.error + '20',
+  },
+  clearButtonText: {
+    // text color comes from tone="error" prop
   },
   pressed: {
     opacity: theme.opacity.pressed,

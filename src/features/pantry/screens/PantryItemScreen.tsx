@@ -10,11 +10,11 @@ type PantryItemScreenParams = {
 export const PantryItemScreen: React.FC<
   StaticScreenProps<PantryItemScreenParams | undefined>
 > = ({ route }) => {
-  const navigation = useNavigation();
+  const { goBack } = useNavigation();
   const params = route.params;
 
   const handleSuccess = () => {
-    navigation.goBack();
+    goBack();
   };
 
   // Render the unified form in add or edit mode based on whether itemId is present

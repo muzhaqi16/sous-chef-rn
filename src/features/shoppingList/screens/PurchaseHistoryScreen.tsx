@@ -2,10 +2,10 @@ import React from 'react';
 import { View } from 'react-native';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { FlashList, type ListRenderItemInfo } from '@shopify/flash-list';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { Icon } from '#utils/iconUtils';
-import { BackButton } from '#components/atoms/BackButton';
+import { ThemedBackButton } from '#components/atoms/themedComponents';
 import { commonStyles } from '#/styles/commonStyles';
 
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
@@ -51,14 +51,11 @@ const formatDate = (dateString: string) => {
 
 // --- Module-scope FlashList components ---
 
-type PurchaseHistoryItemProps = ListRenderItemInfo<PurchaseItem> & {
-  iconSecondaryColor: string;
-};
+type PurchaseHistoryItemProps = ListRenderItemInfo<PurchaseItem>;
 
 const PurchaseHistoryItemComponent: React.FC<PurchaseHistoryItemProps> = ({
   item: purchase,
   index,
-  iconSecondaryColor,
 }) => {
   const { totalCount } = usePurchaseHistoryContext();
 
@@ -77,7 +74,7 @@ const PurchaseHistoryItemComponent: React.FC<PurchaseHistoryItemProps> = ({
 
       <View style={styles.purchaseDetails}>
         <View style={styles.purchaseDetailRow}>
-          <Icon name="cube-outline" size={18} color={iconSecondaryColor} />
+          <Icon name="cube-outline" size={18} tone="iconSecondary" />
           <Text size="sm" tone="secondary" style={styles.purchaseDetailLabel}>
             Quantity:
           </Text>
@@ -88,7 +85,7 @@ const PurchaseHistoryItemComponent: React.FC<PurchaseHistoryItemProps> = ({
 
         {!!purchase.user && (
           <View style={styles.purchaseDetailRow}>
-            <Icon name="person-outline" size={18} color={iconSecondaryColor} />
+            <Icon name="person-outline" size={18} tone="iconSecondary" />
             <Text size="sm" tone="secondary" style={styles.purchaseDetailLabel}>
               Purchased by:
             </Text>
@@ -120,15 +117,9 @@ const PurchaseHistoryHeader: React.FC<{ totalCount: number }> = ({
 );
 
 const PurchaseHistoryEmpty: React.FC = () => {
-  const { theme } = useUnistyles();
-
   return (
     <View style={styles.emptyContainer}>
-      <Icon
-        name="receipt-outline"
-        size={64}
-        color={theme.colors.iconDisabled}
-      />
+      <Icon name="receipt-outline" size={64} tone="iconDisabled" />
       <Text size="lg" weight="semibold" style={styles.emptyText}>
         No purchase history
       </Text>
@@ -150,18 +141,13 @@ export const PurchaseHistoryScreen: React.FC<
   StaticScreenProps<RouteParams>
 > = ({ route }) => {
   const { goBack } = useAppNavigation();
-  const { theme } = useUnistyles();
   const { itemName, purchases } = route.params;
 
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <BackButton
-          onPress={goBack}
-          color={theme.colors.textPrimary}
-          style={styles.backButton}
-        />
+        <ThemedBackButton onPress={goBack} style={styles.backButton} />
         <View style={styles.headerContent}>
           <Text size="lg" weight="semibold">
             Purchase History
@@ -179,10 +165,7 @@ export const PurchaseHistoryScreen: React.FC<
           data={purchases}
           keyExtractor={keyExtractor}
           renderItem={(info: ListRenderItemInfo<PurchaseItem>) => (
-            <PurchaseHistoryItem
-              {...info}
-              iconSecondaryColor={theme.colors.iconSecondary}
-            />
+            <PurchaseHistoryItem {...info} />
           )}
           getItemType={getPurchaseItemType}
           {...FLASHLIST_DEFAULTS.fullScreen}

@@ -3,7 +3,7 @@ import {
   GenerateShoppingListFromMealPlanDocument,
   GetMealPlanDocument,
 } from '#features/mealPlan/graphql/mealPlan.generated';
-import { GetShoppingListsLiteDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { GetShoppingListsLiteDocument } from './useGenerateShoppingList.generated';
 import { type GenerateShoppingListFromMealPlanInput } from '#/graphql/generated/schemaTypes';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
@@ -22,7 +22,8 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
       onError: error => {
         toastService.error(error.message || 'Failed to generate shopping list');
       },
-    });
+    },
+  );
 
   const generateShoppingList = async (
     input: Omit<GenerateShoppingListFromMealPlanInput, 'mealPlanId'>,

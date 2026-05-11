@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 
 import { StyleSheet } from 'react-native-unistyles';
-import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { BaseInput, BaseInputProps } from './BaseInput/BaseInput';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
+import { Icon } from '#/utils/iconUtils';
 
 export interface PasswordInputProps
   extends Omit<BaseInputProps, 'secureTextEntry'> {
@@ -42,10 +42,10 @@ export const PasswordInput: React.FC<PasswordInputProps> = ({
             pressed && pressedStyles.pressed,
           ]}
         >
-          <Ionicons
+          <Icon
             name={visible ? 'eye-outline' : 'eye-off-outline'}
             size={20}
-            color={visible ? '#333' : '#999'}
+            tone={visible ? 'textPrimary' : 'textTertiary'}
           />
         </Pressable>
       }

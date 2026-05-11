@@ -1,9 +1,6 @@
 import { useQuery } from '@apollo/client/react';
 import { MyRecipesDocument } from '#features/recipes/graphql/recipe.generated';
-import {
-  RecipeCategory,
-  Difficulty,
-} from '#/graphql/generated/schemaTypes';
+import { RecipeCategory, Difficulty } from '#/graphql/generated/schemaTypes';
 import { useIsLoggedOut } from '#hooks/auth/useIsLoggedOut';
 import { useConnectionData } from '#hooks/utils/useConnectionData';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';

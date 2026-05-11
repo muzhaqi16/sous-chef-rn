@@ -10,13 +10,14 @@ import Animated, {
   withSpring,
   withDelay,
   cancelAnimation,
+  useReducedMotion,
 } from 'react-native-reanimated';
 import {
   Gesture,
   GestureDetector,
   GestureHandlerRootView,
-  Pressable,
 } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import {
   Canvas,
   Group,
@@ -28,6 +29,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { SPRING, TIMING, standardEasing } from '#constants/animations';
 import { Text } from '#components/atoms/Text';
+import { useShowTutorials } from '#hooks/settings/useSettings';
 
 export interface TargetRect {
   x: number;
@@ -77,6 +79,7 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
   allowGesturePassthrough,
   onNext,
 }) => {
+  const tutorialsEnabled = useShowTutorials();
   const { theme } = useUnistyles();
   const { height: screenHeight, width: screenWidth } = useWindowDimensions();
 
@@ -137,6 +140,7 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
   const pulseOpacity = useSharedValue(1);
   const tooltipTranslateY = useSharedValue(showAbove ? 10 : -10);
   const tooltipOpacity = useSharedValue(0);
+  const reducedMotion = useReducedMotion();
 
   // Animated hole geometry for smooth step transitions
   const animHoleTop = useSharedValue(holeTop);
@@ -183,20 +187,22 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
   }
 
   useLayoutEffect(() => {
-    // Pulse ring — gentle opacity breathing
-    pulseOpacity.set(
-      withDelay(
-        TIMING.STANDARD,
-        withRepeat(
-          withSequence(
-            withTiming(0.4, { duration: 800 }),
-            withTiming(1, { duration: 800 }),
+    // Pulse ring — gentle opacity breathing (skipped when reduced motion is on)
+    if (!reducedMotion) {
+      pulseOpacity.set(
+        withDelay(
+          TIMING.STANDARD,
+          withRepeat(
+            withSequence(
+              withTiming(0.4, { duration: 800 }),
+              withTiming(1, { duration: 800 }),
+            ),
+            -1,
+            true,
           ),
-          -1,
-          true,
         ),
-      ),
-    );
+      );
+    }
 
     // Tooltip entry
     tooltipOpacity.set(
@@ -206,8 +212,16 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
 
     return () => {
       cancelAnimation(pulseOpacity);
+      cancelAnimation(tooltipOpacity);
+      cancelAnimation(tooltipTranslateY);
     };
-  }, [pulseOpacity, tooltipTranslateY, tooltipOpacity, showAbove]);
+  }, [
+    pulseOpacity,
+    tooltipTranslateY,
+    tooltipOpacity,
+    showAbove,
+    reducedMotion,
+  ]);
 
   // ── Animated styles ──
 
@@ -435,6 +449,11 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
       </View>
     </GestureDetector>
   );
+
+  // Defense-in-depth: respect the user's "Show Tutorials" preference. Callers
+  // already gate via useFeatureHint / useTutorialSequence, but skipping here
+  // ensures the overlay never renders when tutorials are explicitly disabled.
+  if (!tutorialsEnabled) return null;
 
   if (allowGesturePassthrough) {
     // Wait for the overlay to measure its page offset before showing content

@@ -1,7 +1,8 @@
 import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
+import { RIPPLE } from '#constants/ripple';
 
 interface SwipeableContentProps {
   children: React.ReactNode;
@@ -25,6 +26,7 @@ export const SwipeableContent: React.FC<SwipeableContentProps> = ({
         onLongPress={onLongPress}
         delayLongPress={150}
         style={styles.touchable}
+        android_ripple={RIPPLE.SUBTLE}
         accessibilityRole={onPress ? 'button' : undefined}
         accessibilityLabel={accessibilityLabel}
         accessibilityHint={

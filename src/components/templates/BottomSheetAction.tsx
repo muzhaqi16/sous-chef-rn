@@ -1,6 +1,10 @@
 import React, { ReactNode, Ref } from 'react';
 import { Keyboard, View } from 'react-native';
-import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import {
+  BottomSheetModal,
+  type BottomSheetModalRef,
+} from '#hooks/useStandardBottomSheet';
 import { Title } from '../atoms/Title';
 import { StyleSheet } from 'react-native-unistyles';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
@@ -10,7 +14,7 @@ interface BottomSheetActionProps {
   sheetTitle?: string;
   snapPoints?: string[] | number[];
   /** Optional ref so parent can control this sheet */
-  sheetRef?: Ref<BottomSheetModal>;
+  sheetRef?: Ref<BottomSheetModalRef>;
   /** Whether to wrap content in scrollable view (default: true). Set to false when children contain FlatList/SectionList */
   scrollable?: boolean;
   /** Optional element to render on the right side of the header */

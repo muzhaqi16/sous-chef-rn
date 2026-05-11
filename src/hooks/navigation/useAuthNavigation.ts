@@ -1,9 +1,9 @@
-import { useNavigation, CommonActions } from '@react-navigation/native';
 import { useAppStore } from '#store/useAppStore';
 import { useStore } from '#store';
+import { useAppNavigation } from './useAppNavigation';
 
 export function useAuthNavigation() {
-  const navigation = useNavigation();
+  const { toLogin, toSignUp, toForgotPassword } = useAppNavigation();
   const setAuth = useAppStore(state => state.setAuth);
   const setRememberMe = useAppStore(state => state.setRememberMe);
   const setUserNavigationState = useAppStore(
@@ -62,17 +62,9 @@ export function useAuthNavigation() {
     console.log('Verification navigation handled by conditional groups');
   };
 
-  const navigateToForgotPassword = () => {
-    navigation.dispatch(CommonActions.navigate('ForgotPassword'));
-  };
-
-  const navigateToLogin = () => {
-    navigation.dispatch(CommonActions.navigate('Login'));
-  };
-
-  const navigateToSignUp = () => {
-    navigation.dispatch(CommonActions.navigate('SignUp'));
-  };
+  const navigateToForgotPassword = toForgotPassword;
+  const navigateToLogin = toLogin;
+  const navigateToSignUp = toSignUp;
 
   return {
     handleSuccessfulLogin,

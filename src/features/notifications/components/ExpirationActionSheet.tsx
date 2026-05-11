@@ -11,13 +11,15 @@
 
 import React from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { Pressable } from '#components/atoms/themedComponents';
+import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { ExpirationAction } from '#/graphql/generated/schemaTypes';
 import { NotificationItem } from '#store/slices/notificationSlice';
+import { Icon } from '#utils/iconUtils';
 import { Title } from '#components/atoms/Title';
 import { Text } from '#components/atoms/Text';
 
@@ -80,14 +82,44 @@ const getExpirySubtitle = (
   return `Expires in ${daysUntilExpiry} days`;
 };
 
+function OptionRow({
+  option,
+  isLast,
+  onPress,
+}: {
+  option: (typeof EXPIRATION_ACTIONS)[number];
+  isLast: boolean;
+  onPress: () => void;
+}) {
+  styles.useVariants({
+    notLast: !isLast,
+    destructive: option.destructive ?? false,
+  });
+  return (
+    <Pressable
+      style={({ pressed }) => [styles.optionButton, pressed && styles.pressed]}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={option.label}
+    >
+      <Icon
+        name={option.icon as string}
+        size={24}
+        tone={option.destructive ? 'error' : 'primary'}
+      />
+      <Text size="md" weight="medium" style={styles.optionLabel}>
+        {option.label}
+      </Text>
+    </Pressable>
+  );
+}
+
 export const ExpirationActionSheet: React.FC<ExpirationActionSheetProps> = ({
   visible,
   notification,
   onActionSelected,
   onDismiss,
 }) => {
-  const { theme } = useUnistyles();
-
   // State-driven presentation via visible prop (no manual ref access during render)
   const { ref, modalProps, insets } = useStandardBottomSheet({
     visible,
@@ -121,40 +153,16 @@ export const ExpirationActionSheet: React.FC<ExpirationActionSheetProps> = ({
         </Text>
         <View style={styles.optionsList}>
           {EXPIRATION_ACTIONS.map((option, index) => (
-            <Pressable
+            <OptionRow
               key={option.action}
-              style={({ pressed }) => [
-                styles.optionButton,
-                index < EXPIRATION_ACTIONS.length - 1 && {
-                  borderBottomWidth: 1,
-                  borderBottomColor: theme.colors.border,
-                },
-                pressed && styles.pressed,
-              ]}
-              onPress={() =>
-                notification && onActionSelected(notification, option.action)
-              }
-              accessibilityRole="button"
-              accessibilityLabel={option.label}
-            >
-              <Ionicons
-                name={option.icon}
-                size={24}
-                color={
-                  option.destructive ? theme.colors.error : theme.colors.primary
+              option={option}
+              isLast={index === EXPIRATION_ACTIONS.length - 1}
+              onPress={() => {
+                if (notification) {
+                  onActionSelected(notification, option.action);
                 }
-              />
-              <Text
-                size="md"
-                weight="medium"
-                style={[
-                  styles.optionLabel,
-                  option.destructive && { color: theme.colors.error },
-                ]}
-              >
-                {option.label}
-              </Text>
-            </Pressable>
+              }}
+            />
           ))}
         </View>
       </BottomSheetScrollView>
@@ -187,9 +195,22 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     padding: theme.spacing.lg,
     gap: theme.spacing.md,
+    variants: {
+      notLast: {
+        true: {
+          borderBottomWidth: 1,
+          borderBottomColor: theme.colors.border,
+        },
+      },
+    },
   },
   optionLabel: {
     flex: 1,
+    variants: {
+      destructive: {
+        true: { color: theme.colors.error },
+      },
+    },
   },
   pressed: {
     opacity: 0.6,

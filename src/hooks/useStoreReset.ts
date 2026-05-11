@@ -1,4 +1,4 @@
-import { useAppStore } from '#store/useAppStore';
+import { useAppStore, useUser } from '#store/useAppStore';
 import { RESET_SCENARIOS, ResetOptions } from '#store/resetManager';
 
 export const useStoreReset = () => {
@@ -38,7 +38,7 @@ export const useStoreReset = () => {
 // Alternative: Individual hooks for specific use cases
 export const useAuth = () => {
   const { logout } = useStoreReset();
-  const user = useAppStore(state => state.user);
+  const user = useUser();
   const isAuthenticated = useAppStore(state => state.getIsAuthenticated());
 
   return {

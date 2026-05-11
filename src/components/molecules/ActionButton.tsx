@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleProp, ViewStyle } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import IconButton from '../atoms/IconButton';
+import { StyleSheet } from 'react-native-unistyles';
+import { ThemedIconButton } from '../atoms/themedComponents';
 
 type ActionButtonProps = {
   onPress: () => void;
@@ -21,13 +21,12 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
   accessibilityLabel,
   testID,
 }) => {
-  const { theme } = useUnistyles();
   return (
     <View style={[styles.button, style]} testID={testID}>
-      <IconButton
+      <ThemedIconButton
         name={name || 'add'}
         size={size}
-        color={color || theme.colors.primary}
+        uniProps={t => ({ color: color ?? t.colors.primary })}
         onPress={onPress}
         accessibilityLabel={accessibilityLabel || `${name || 'Add'} button`}
       />

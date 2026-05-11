@@ -12,13 +12,16 @@ jest.mock('../../../apollo/links/refreshToken');
 let mockIsOnline = true;
 let mockOfflineModeEnabled = false;
 
-jest.mock('#store/useAppStore', () => ({
-  useAppStore: (selector: (state: any) => any) =>
-    selector({
-      isOnline: mockIsOnline,
-      offlineModeEnabled: mockOfflineModeEnabled,
-    }),
-}));
+jest.mock('#store/useAppStore', () => {
+  const getState = () => ({
+    isOnline: mockIsOnline,
+    offlineModeEnabled: mockOfflineModeEnabled,
+  });
+  return {
+    useAppStore: (selector: (state: any) => any) => selector(getState()),
+    useIsOnline: () => (s => s.isOnline)(getState()),
+  };
+});
 
 beforeEach(() => {
   jest.clearAllMocks();

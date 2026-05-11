@@ -1,5 +1,5 @@
 import { Vibration, Platform } from 'react-native';
-import { useStore } from '#store/index';
+import { useStore } from '#store';
 
 /**
  * Haptic Feedback Types

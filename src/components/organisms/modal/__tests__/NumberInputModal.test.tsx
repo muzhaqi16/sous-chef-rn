@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { fireEvent, render, screen, userEvent } from '@testing-library/react-native';
 import { NumberInputModal } from '../NumberInputModal';
 
 jest.mock('#/styles/commonStyles', () => ({
@@ -72,25 +72,28 @@ describe('NumberInputModal', () => {
     expect(screen.getByText('How much time')).toBeTruthy();
   });
 
-  it('calls onCancel when cancel button is pressed', () => {
+  it('calls onCancel when cancel button is pressed', async () => {
+    const user = userEvent.setup();
     render(<NumberInputModal {...defaultProps} />);
-    fireEvent.press(screen.getByText('Cancel'));
+    await user.press(screen.getByText('Cancel'));
     expect(defaultProps.onCancel).toHaveBeenCalled();
   });
 
   it('shows validation error for empty required field', async () => {
+    const user = userEvent.setup();
     render(<NumberInputModal {...defaultProps} value={null} required />);
     const input = screen.getByPlaceholderText('Enter meals per day');
     fireEvent.changeText(input, '');
-    fireEvent.press(screen.getByText('Save'));
+    await user.press(screen.getByText('Save'));
     expect(screen.getByText('This field is required')).toBeTruthy();
   });
 
-  it('shows min validation error', () => {
+  it('shows min validation error', async () => {
+    const user = userEvent.setup();
     render(<NumberInputModal {...defaultProps} min={1} max={6} />);
     const input = screen.getByDisplayValue('3');
     fireEvent.changeText(input, '0');
-    fireEvent.press(screen.getByText('Save'));
+    await user.press(screen.getByText('Save'));
     expect(screen.getByText('Value must be at least 1')).toBeTruthy();
   });
 });

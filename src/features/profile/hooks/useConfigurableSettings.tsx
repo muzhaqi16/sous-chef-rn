@@ -6,7 +6,6 @@ import {
   useNavigationUtils,
   usePreferences,
 } from '#store/useAppStore';
-import { useTheme } from '#hooks/useTheme';
 import { useCredentialStorage } from '#hooks/auth/useCredentialStorage';
 import { useMutation } from '@apollo/client/react';
 import {
@@ -15,24 +14,22 @@ import {
   type UpdateUserProfileMutation,
 } from '#operations/auth/user.generated';
 import { ProfileVisibility } from '#/graphql/generated/schemaTypes';
-import { ThemePreference } from '#store/slices/preferencesSlice';
 
 import { PROFILE_SETTINGS_CONFIG } from '#/config/settingsConfig';
 import { dateStringToISO, extractDateString } from '#utils/dateUtils';
 import { BiometricSetupModal } from '#components/organisms/BiometricSetupModal';
 import { executeMutation, executeQuery } from '#/utils/compilerSafeWrappers';
-import { useUserPreferences } from '#hooks/navigation/useUserPreferences';
+import { useAuthPreferences } from '#hooks/navigation/useAuthPreferences';
 
 export const useConfigurableSettings = (profile: any) => {
   const user = useUser();
   const logout = useAppStore(state => state.logout);
   const { getUserNavigationState } = useNavigationUtils();
   const { language, setLanguage } = usePreferences();
-  const { userThemePreference, setTheme } = useTheme();
   const { checkStoredCredentials, getBiometricInfo, removeCredentials } =
     useCredentialStorage();
   const { resetBiometricDeclination, markBiometricEnabled } =
-    useUserPreferences();
+    useAuthPreferences();
   // ===== MUTATION 1: Update User Profile =====
   const [updateProfileMutation] = useMutation(UpdateUserProfileDocument, {
     // Uses automatic normalization - mutation returns full UserProfile fragment
@@ -287,43 +284,6 @@ export const useConfigurableSettings = (profile: any) => {
               updateProfile({ showPhone: !profile?.showPhone } as Partial<
                 Record<any, any>
               >),
-          };
-        }
-        break;
-
-      // Theme & Language settings
-      case 'theme':
-        if (config.type === 'modal') {
-          return {
-            ...baseItem,
-            value: userThemePreference,
-            options: config.options || [
-              { label: '☀️ Light', value: 'LIGHT' },
-              { label: '🌙 Dark', value: 'DARK' },
-              { label: '📱 System', value: 'SYSTEM' },
-            ],
-            onSave: (v: ThemePreference) => {
-              setTheme(v);
-              updateUserPreferences({ ui: { theme: v } });
-            },
-          };
-        }
-        break;
-
-      // Keep backward compatibility with old darkMode setting
-      case 'darkMode':
-        if (config.type === 'switch') {
-          return {
-            ...baseItem,
-            value: userThemePreference === 'DARK',
-            onPress: () => {
-              const newTheme =
-                userThemePreference === ThemePreference.DARK
-                  ? ThemePreference.LIGHT
-                  : ThemePreference.DARK;
-              setTheme(newTheme);
-              updateUserPreferences({ ui: { theme: newTheme } });
-            },
           };
         }
         break;

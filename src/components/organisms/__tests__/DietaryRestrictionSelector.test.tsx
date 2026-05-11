@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { DietaryRestrictionSelector } from '../DietaryRestrictionSelector';
 
 jest.mock('#/utils/compilerSafeWrappers');
@@ -162,7 +162,8 @@ describe('DietaryRestrictionSelector', () => {
     expect(screen.getByTestId('remove-r1')).toBeTruthy();
   });
 
-  it('calls onRemove when remove button is pressed', () => {
+  it('calls onRemove when remove button is pressed', async () => {
+    const user = userEvent.setup();
     const restrictions = [
       {
         id: 'r1',
@@ -177,7 +178,7 @@ describe('DietaryRestrictionSelector', () => {
         existingRestrictions={restrictions}
       />,
     );
-    fireEvent.press(screen.getByTestId('remove-r1'));
+    await user.press(screen.getByTestId('remove-r1'));
     expect(defaultProps.onRemove).toHaveBeenCalledWith('r1');
   });
 });

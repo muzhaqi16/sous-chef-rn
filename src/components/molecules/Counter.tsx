@@ -1,5 +1,5 @@
 import React, { useLayoutEffect } from 'react';
-import Icon from '@react-native-vector-icons/ionicons';
+import { Icon } from '#utils/iconUtils';
 import { View } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -7,10 +7,10 @@ import Animated, {
   withSequence,
   withSpring,
 } from 'react-native-reanimated';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { HapticService } from '#services/haptic/HapticService';
 import { SPRING } from '#/constants/animations';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 
 export const Counter = ({
@@ -26,7 +26,8 @@ export const Counter = ({
   disabled?: boolean;
   label?: string;
 }) => {
-  const { theme } = useUnistyles();
+  styles.useVariants({ disabled });
+
   const countScale = useSharedValue(1);
 
   // Bounce animation when count changes
@@ -57,13 +58,11 @@ export const Counter = ({
     }
   };
 
-  const iconColor = disabled
-    ? theme.colors.textTertiary
-    : theme.colors.textPrimary;
+  const iconTone = disabled ? 'textTertiary' : 'textPrimary';
 
   return (
     <View
-      style={[styles.container, disabled && styles.containerDisabled]}
+      style={styles.container}
       accessible={true}
       accessibilityRole="adjustable"
       accessibilityLabel={`${label}, ${count}`}
@@ -100,7 +99,7 @@ export const Counter = ({
         accessibilityHint={`Current ${label} is ${count}`}
         accessibilityState={{ disabled }}
       >
-        <Icon color={iconColor} name="remove-outline" size={11} />
+        <Icon tone={iconTone} name="remove-outline" size={11} />
       </Pressable>
       <Animated.View style={countAnimatedStyle}>
         <Text
@@ -128,7 +127,7 @@ export const Counter = ({
         accessibilityHint={`Current ${label} is ${count}`}
         accessibilityState={{ disabled }}
       >
-        <Icon color={iconColor} name="add" size={11} />
+        <Icon tone={iconTone} name="add" size={11} />
       </Pressable>
     </View>
   );
@@ -145,6 +144,11 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.borderLight,
     borderStyle: 'solid',
     borderRadius: theme.radii.full,
+    variants: {
+      disabled: {
+        true: { borderColor: theme.colors.border },
+      },
+    },
   },
   counterButton: {
     zIndex: theme.zIndex.base,
@@ -162,8 +166,5 @@ const styles = StyleSheet.create(theme => ({
   pressed: {
     opacity: theme.opacity.pressed,
     transform: [{ scale: 0.92 }],
-  },
-  containerDisabled: {
-    borderColor: theme.colors.border,
   },
 }));

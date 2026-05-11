@@ -3,17 +3,29 @@ import type { FlashListProps } from '@shopify/flash-list';
 
 type FlashListPerformanceProps = Pick<
   FlashListProps<unknown>,
-  'drawDistance' | 'maxItemsInRecyclePool'
+  'drawDistance' | 'maxItemsInRecyclePool' | 'onEndReachedThreshold'
 >;
 
+// onEndReachedThreshold: 0.5 fires pagination when the user is half a viewport
+// away from the end — early enough to hide network latency, late enough to
+// avoid double-fetches on rubber-banding scrolls. The "analyticsHeavy" preset
+// uses 0.8 for screens whose next-page render is expensive (Skia charts) and
+// benefits from earlier prefetch.
 export const FLASHLIST_DEFAULTS: Record<string, FlashListPerformanceProps> = {
   fullScreen: {
     drawDistance: Math.round(Dimensions.get('window').height * 2),
     maxItemsInRecyclePool: 15,
+    onEndReachedThreshold: 0.5,
   },
   bottomSheet: {
     drawDistance: 250,
     maxItemsInRecyclePool: 12,
+    onEndReachedThreshold: 0.5,
+  },
+  analyticsHeavyFullScreen: {
+    drawDistance: Math.round(Dimensions.get('window').height * 2),
+    maxItemsInRecyclePool: 15,
+    onEndReachedThreshold: 0.8,
   },
 };
 

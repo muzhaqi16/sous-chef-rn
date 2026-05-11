@@ -14,11 +14,18 @@ import type { RootState } from '#store/index';
  * ```
  */
 export function mockAppStore(state: Partial<RootState>) {
-  const useAppStore = jest.fn((selector: (s: any) => any) => selector(state));
-  // Attach Zustand store API stubs for code that accesses useAppStore.getState()
-  useAppStore.getState = jest.fn(() => state);
-  useAppStore.setState = jest.fn();
-  useAppStore.subscribe = jest.fn();
+  const useAppStore: jest.Mock & {
+    getState: () => unknown;
+    setState: jest.Mock;
+    subscribe: jest.Mock;
+  } = Object.assign(
+    jest.fn((selector: (s: any) => any) => selector(state)),
+    {
+      getState: jest.fn(() => state),
+      setState: jest.fn(),
+      subscribe: jest.fn(),
+    },
+  );
 
   return {
     useAppStore,

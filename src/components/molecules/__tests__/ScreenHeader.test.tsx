@@ -1,6 +1,6 @@
 import React from 'react';
 import { Text } from 'react-native';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { ScreenHeader } from '../ScreenHeader';
 
 jest.mock('#services/haptic/HapticService', () => ({
@@ -26,10 +26,11 @@ describe('ScreenHeader', () => {
     expect(screen.getByText('Screen Title')).toBeTruthy();
   });
 
-  it('calls onBack when back button is pressed', () => {
+  it('calls onBack when back button is pressed', async () => {
+    const user = userEvent.setup();
     render(<ScreenHeader {...defaultProps} />);
     const backButton = screen.getByLabelText('Go back');
-    fireEvent.press(backButton);
+    await user.press(backButton);
     expect(defaultProps.onBack).toHaveBeenCalledTimes(1);
   });
 

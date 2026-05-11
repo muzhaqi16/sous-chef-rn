@@ -25,30 +25,28 @@ export function validateDeductionQuantity(
     return null;
   }
 
-  if (shared.isConvertedUnit) {
-    if (shared.availableLoading) {
-      alertService.alert(
-        'Please Wait',
-        'Still calculating available quantity...',
-      );
-      return null;
-    }
-    if (
-      shared.availableInSelectedUnit != null &&
-      value > shared.availableInSelectedUnit
-    ) {
-      alertService.alert(
-        'Error',
-        `Cannot ${actionVerb} more than available quantity (${formatQuantity(
-          shared.availableInSelectedUnit,
-        )} ${shared.activeUnitSymbol})`,
-      );
-      return null;
-    }
-  } else if (value > shared.trackingQuantity) {
+  if (shared.isConvertedUnit && shared.availableLoading) {
+    alertService.alert(
+      'Please Wait',
+      'Still calculating available quantity...',
+    );
+    return null;
+  }
+
+  // For dual-tracked items where the tracking unit matches the net-weight unit,
+  // useConvertAvailableQuantity publishes remainingNetWeight as availableInSelectedUnit
+  // even with the tracking unit selected. Prefer the larger of the two so the user
+  // can waste/consume up to the actual remaining amount.
+  const cap = shared.isConvertedUnit
+    ? shared.availableInSelectedUnit ?? shared.trackingQuantity
+    : Math.max(shared.availableInSelectedUnit ?? 0, shared.trackingQuantity);
+
+  if (value > cap) {
     alertService.alert(
       'Error',
-      `Cannot ${actionVerb} more than available quantity (${shared.trackingQuantity} ${shared.activeUnitSymbol})`,
+      `Cannot ${actionVerb} more than available quantity (${formatQuantity(
+        cap,
+      )} ${shared.activeUnitSymbol})`,
     );
     return null;
   }

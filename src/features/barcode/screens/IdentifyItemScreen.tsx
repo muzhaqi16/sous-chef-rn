@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -10,11 +10,11 @@ import {
   Dimensions,
   TextInput,
 } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import {
   Camera,
   useCameraDevices,
-  type PhotoFile,
+  usePhotoOutput,
 } from 'react-native-vision-camera';
 import { useFocusEffect } from '@react-navigation/native';
 import type { StaticScreenProps } from '@react-navigation/native';
@@ -26,6 +26,15 @@ import { useHiddenStatusBar } from '#hooks/useHiddenStatusBar';
 import { Button } from '#components/base/Button';
 import { IconButton } from '#components/atoms/IconButton';
 import BarcodeMask from '#components/organisms/BarcodeMask';
+
+const ThemedBarcodeMask = withUnistyles(BarcodeMask, theme => ({
+  edgeColor: theme.colors.primary,
+  backgroundColor: theme.colors.overlay,
+}));
+
+const ThemedTextInput = withUnistyles(TextInput, theme => ({
+  placeholderTextColor: theme.colors.textTertiary,
+}));
 import { HapticService } from '#services/haptic/HapticService';
 import { Telemetry } from '#services/telemetry';
 import { executeQuery } from '#/utils/compilerSafeWrappers';
@@ -56,13 +65,13 @@ export const IdentifyItemScreen: React.FC<
     | undefined
   >
 > = ({ route }) => {
-  const { goBack, navigation, navigateTo } = useAppNavigation();
+  const { goBack, navigation, toIdentifiedItemForm } = useAppNavigation();
   const { source, pantryId, shoppingListId } = route?.params || {};
-
-  const { theme } = useUnistyles();
 
   const devices = useCameraDevices();
   const device = devices.find(d => d.position === 'back');
+
+  const photoOutput = usePhotoOutput();
 
   const {
     isGranted: hasPermission,
@@ -70,8 +79,6 @@ export const IdentifyItemScreen: React.FC<
     request: requestPermission,
     openSettings,
   } = usePermission('camera');
-
-  const cameraRef = useRef<Camera>(null);
 
   useHiddenStatusBar();
 
@@ -123,18 +130,17 @@ export const IdentifyItemScreen: React.FC<
   };
 
   const handleShutter = async () => {
-    if (!cameraRef.current || isCapturing) return;
+    if (isCapturing) return;
     setIsCapturing(true);
-    // NOTE: vision-camera v4 doesn't expose qualityPrioritization; revisit
-    // after the v5 upgrade to cap capture resolution for faster OCR.
-    const photo = await executeQuery<PhotoFile>(
-      () => cameraRef.current!.takePhoto({ flash: 'off' }),
+    const photo = await executeQuery(
+      () => photoOutput.capturePhotoToFile({ flashMode: 'off' }, {}),
       'IdentifyItemScreen.takePhoto',
     );
     setIsCapturing(false);
     if (!photo) return;
 
-    const uri = Platform.OS === 'android' ? `file://${photo.path}` : photo.path;
+    const uri =
+      Platform.OS === 'android' ? `file://${photo.filePath}` : photo.filePath;
     setPhotoUri(uri);
     setIsActive(false);
     HapticService.success();
@@ -173,7 +179,7 @@ export const IdentifyItemScreen: React.FC<
       hasBrand: !!trimmedBrand,
       netWeightCount: detectedNetWeights.length,
     });
-    navigateTo.identifiedItemForm({
+    toIdentifiedItemForm({
       name: trimmedName,
       brandName: trimmedBrand || undefined,
       netWeights:
@@ -235,17 +241,14 @@ export const IdentifyItemScreen: React.FC<
       ) : (
         <>
           <Camera
-            ref={cameraRef}
             style={styles.camera}
             device={device}
             isActive={isActive}
-            photo
+            outputs={[photoOutput]}
           />
-          <BarcodeMask
+          <ThemedBarcodeMask
             width={FRAME_WIDTH}
             height={FRAME_HEIGHT}
-            edgeColor={theme.colors.primary}
-            backgroundColor={theme.colors.overlay}
             showAnimatedLine={false}
           />
         </>
@@ -422,14 +425,12 @@ const PickerInput: React.FC<PickerInputProps> = ({
   onChangeText,
   placeholder,
 }) => {
-  const { theme } = useUnistyles();
   return (
     <View style={styles.pickerInputRow}>
-      <TextInput
+      <ThemedTextInput
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor={theme.colors.textTertiary}
         style={styles.pickerInput}
         autoCapitalize="words"
         autoCorrect={false}
@@ -505,14 +506,23 @@ const styles = StyleSheet.create(theme => ({
   instructionsContainer: {
     position: 'absolute',
     top: 100,
-    alignSelf: 'center',
-    maxWidth: '90%',
+    left: theme.spacing.lg,
+    right: theme.spacing.lg,
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.md,
     borderRadius: theme.radii.lg,
     backgroundColor: 'rgba(0, 0, 0, 0.55)',
     alignItems: 'center',
     zIndex: 1,
+    boxShadow: [
+      {
+        offsetX: 0,
+        offsetY: 4,
+        blurRadius: 12,
+        spreadDistance: 0,
+        color: 'rgba(0, 0, 0, 0.3)',
+      },
+    ],
   },
   instructionsText: {
     color: theme.colors.white,

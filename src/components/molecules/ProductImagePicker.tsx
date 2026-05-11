@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Image } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Pressable } from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { ImagePicker, ImageFile } from './ImagePicker';
 import { Text } from '#components/atoms/Text';
@@ -25,8 +25,6 @@ export const ProductImagePicker: React.FC<ProductImagePickerProps> = ({
   disabled = false,
   label = 'Product Image',
 }) => {
-  const { theme } = useUnistyles();
-
   return (
     <View style={styles.container}>
       <Text size="base" weight="medium" style={styles.label}>
@@ -43,7 +41,7 @@ export const ProductImagePicker: React.FC<ProductImagePickerProps> = ({
               onPress={onImageRemoved}
               disabled={disabled}
             >
-              <Icon name="close" size={16} color={theme.colors.white} />
+              <Icon name="close" size={16} tone="white" />
             </Pressable>
             <Image
               source={{ uri: selectedImage.uri }}
@@ -59,11 +57,7 @@ export const ProductImagePicker: React.FC<ProductImagePickerProps> = ({
             isProfile={false}
           >
             <View style={styles.placeholderContainer}>
-              <Icon
-                name="camera-outline"
-                size={32}
-                color={theme.colors.textSecondary}
-              />
+              <Icon name="camera-outline" size={32} tone="textSecondary" />
               <Text size="base" tone="secondary" align="center">
                 Take or select a photo
               </Text>

@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Pressable } from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { FormInput } from '#/components/molecules/FormInput';
 import { UnitAutocompleteField } from '#/components/molecules/AutocompleteField/UnitAutocompleteField';
@@ -37,8 +37,6 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
   onEntriesChanged,
   disabled = false,
 }) => {
-  const { theme } = useUnistyles();
-
   const handleAddEntry = () => {
     const isFirst = entries.length === 0;
     onEntriesChanged([...entries, createDefaultEntry(isFirst)]);
@@ -140,7 +138,7 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
                 pressed && styles.pressed,
               ]}
             >
-              <Icon name="trash-outline" size={20} color={theme.colors.error} />
+              <Icon name="trash-outline" size={20} tone="error" />
             </Pressable>
           </View>
           {!!entry.packageSize && parseFloat(entry.packageSize) > 0 && (

@@ -6,10 +6,8 @@ import React, {
   ComponentRef,
 } from 'react';
 import { View, Modal } from 'react-native';
-import {
-  GestureHandlerRootView,
-  Pressable,
-} from 'react-native-gesture-handler';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { type SharedValue } from 'react-native-reanimated';
 import Animated, {
@@ -18,7 +16,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { SPRING, TIMING } from '#constants/animations';
 import { HapticService } from '#/services/haptic/HapticService';
@@ -78,11 +76,15 @@ const noop = () => {};
  * Shopping mode has 3 steps: swipe left, swipe right, tap checkbox.
  * Pantry mode has 2 steps: swipe right, swipe left.
  */
+const StepDot: React.FC<{ active: boolean }> = ({ active }) => {
+  styles.useVariants({ active });
+  return <View style={styles.dot} />;
+};
+
 export const InteractiveSwipeHint: React.FC<InteractiveSwipeHintProps> = ({
   mode,
   onDismiss,
 }) => {
-  const { theme } = useUnistyles();
   const [currentStep, setCurrentStep] = useState(0);
   const [completed, setCompleted] = useState(false);
   const swipeableRef = useRef<ComponentRef<typeof Swipeable>>(null);
@@ -204,11 +206,7 @@ export const InteractiveSwipeHint: React.FC<InteractiveSwipeHintProps> = ({
         <GestureHandlerRootView style={styles.gestureRoot}>
           <View style={styles.overlay}>
             <Animated.View style={[styles.checkContainer, checkAnimatedStyle]}>
-              <Icon
-                name="checkmark-circle"
-                size={64}
-                color={theme.colors.success}
-              />
+              <Icon name="checkmark-circle" size={64} tone="success" />
               <Text size="lg" weight="semibold" style={styles.completedText}>
                 You got it!
               </Text>
@@ -296,18 +294,7 @@ export const InteractiveSwipeHint: React.FC<InteractiveSwipeHintProps> = ({
           {totalSteps > 1 ? (
             <View style={styles.dotsRow}>
               {steps.map((_, i) => (
-                <View
-                  key={i}
-                  style={[
-                    styles.dot,
-                    {
-                      backgroundColor:
-                        i <= currentStep
-                          ? theme.colors.primary
-                          : theme.colors.textTertiary,
-                    },
-                  ]}
-                />
+                <StepDot key={i} active={i <= currentStep} />
               ))}
             </View>
           ) : null}
@@ -352,6 +339,12 @@ const styles = StyleSheet.create(theme => ({
     width: 8,
     height: 8,
     borderRadius: theme.radii.full,
+    variants: {
+      active: {
+        true: { backgroundColor: theme.colors.primary },
+        false: { backgroundColor: theme.colors.textTertiary },
+      },
+    },
   },
   checkContainer: {
     alignItems: 'center',

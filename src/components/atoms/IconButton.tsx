@@ -3,11 +3,12 @@ import { StyleProp, ViewStyle } from 'react-native';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { IconLibrary, Icon } from '#/utils/iconUtils';
 import { HapticService } from '#services/haptic/HapticService';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
+import { borderlessRipple } from '#constants/ripple';
 
 const UniIcon = withUnistyles(Icon);
 
-const BORDERLESS_RIPPLE = { borderless: true, radius: 22 };
+const BORDERLESS_RIPPLE = borderlessRipple(22);
 
 export interface IconButtonProps {
   /** glyph name to render */

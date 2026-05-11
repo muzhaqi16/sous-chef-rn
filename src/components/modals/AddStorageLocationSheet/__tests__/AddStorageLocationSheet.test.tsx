@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { fireEvent, render, screen, userEvent } from '@testing-library/react-native';
 import { AddStorageLocationSheet } from '../AddStorageLocationSheet';
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
@@ -20,6 +20,7 @@ jest.mock('#hooks/useStandardBottomSheet', () => ({
       },
     },
   })),
+  BottomSheetModal: ({ children }: any) => children,
 }));
 
 // requestIdleCallback is not available in the test environment
@@ -65,9 +66,10 @@ describe('AddStorageLocationSheet', () => {
     expect(screen.getByText(/You can edit details later/)).toBeTruthy();
   });
 
-  it('calls onClose when Cancel is pressed', () => {
+  it('calls onClose when Cancel is pressed', async () => {
+    const user = userEvent.setup();
     render(<AddStorageLocationSheet {...defaultProps} />);
-    fireEvent.press(screen.getByText('Cancel'));
+    await user.press(screen.getByText('Cancel'));
     expect(defaultProps.onClose).toHaveBeenCalled();
   });
 
@@ -81,12 +83,13 @@ describe('AddStorageLocationSheet', () => {
   });
 
   it('calls onCreateLocation with valid name', async () => {
+    const user = userEvent.setup();
     render(<AddStorageLocationSheet {...defaultProps} />);
     const input = screen.getByPlaceholderText(
       'e.g., Kitchen Cabinet, Garage Shelf',
     );
     fireEvent.changeText(input, 'Kitchen');
-    fireEvent.press(screen.getByText('Create'));
+    await user.press(screen.getByText('Create'));
     expect(defaultProps.onCreateLocation).toHaveBeenCalledWith({
       name: 'Kitchen',
       type: 'CUSTOM',

@@ -1,10 +1,7 @@
 import { ConsoleTransport } from '../ConsoleTransport';
 import { LogEntry, MetricEntry } from '../../types';
-
-jest.mock('#/utils/environment', () => ({
-  Environment: { isDevelopment: jest.fn() },
-}));
-
+// Environment is auto-mocked via jest.setup.js; we override `isDevelopment`
+// per-test to exercise both dev and prod branches of the transport.
 import { Environment } from '#/utils/environment';
 
 const mockIsDevelopment = Environment.isDevelopment as jest.Mock;

@@ -1,4 +1,4 @@
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 import { useSharedValue } from 'react-native-reanimated';
 import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigation';
 import type { OnboardingStep } from '#components/navigation/OnboardingSteps/types';
@@ -8,6 +8,18 @@ import type { SharedValue } from 'react-native-reanimated';
  * Split into Actions + State contexts (TabBarActionsContext pattern).
  * Consumers that only need callbacks (goToNextStep, etc.) subscribe to
  * OnboardingActionsContext and won't re-render when step index changes.
+ *
+ * State separation from `navigationSlice.onBoardingStep`:
+ *   - `navigationSlice.onBoardingStep` (Zustand): persistent navigation state.
+ *     Source of truth for "which onboarding screen is current". Survives app
+ *     restarts; used by post-login flow + deep linking to resume mid-onboarding.
+ *   - `OnboardingContext.activeStepIndex` (SharedValue) and `currentIndex`
+ *     (state): session-only animation driver + UI derivations (canGoBack,
+ *     isFirstStep, etc.). Reset on provider remount.
+ *
+ * Both update together via `useOnboardingNavigation`. If you change one, change
+ * the other — they share a logical "current step" concept but live in different
+ * runtime tiers (persistent vs animation/UI).
  */
 
 interface OnboardingActionsContextType {
@@ -86,44 +98,45 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
   children,
   initialStepIndex = 0,
 }) => {
+  // SharedValue drives the animated progress bar in <OnboardingSteps>
+  // (consumed inside useAnimatedStyle). React state drives derivations
+  // below (currentStep, canGoBack, etc.) which need re-renders.
   const activeStepIndex = useSharedValue(initialStepIndex);
-  const currentIndex = activeStepIndex.get();
+  const [currentIndex, setCurrentIndex] = useState(initialStepIndex);
   const {
     navigateToNextStep,
     navigateToPreviousStep,
     skipToStep: navigationSkipToStep,
   } = useOnboardingNavigation();
 
-  // Current step calculation
-  const currentStepIndex = Math.floor(currentIndex);
-  const currentStep = ONBOARDING_STEPS[currentStepIndex] || null;
-
-  // Navigation state
+  const currentStep = ONBOARDING_STEPS[currentIndex] || null;
   const isFirstStep = currentIndex <= 0;
   const isLastStep = currentIndex >= ONBOARDING_STEPS.length - 1;
   const canGoBack = !isFirstStep;
   const canGoNext = !isLastStep;
 
-  // Navigation methods
+  const setIndex = (next: number) => {
+    activeStepIndex.set(next);
+    setCurrentIndex(next);
+  };
+
   const goToNextStep = () => {
     if (canGoNext && currentStep) {
-      const nextIndex = activeStepIndex.get() + 1;
-      activeStepIndex.set(nextIndex);
+      setIndex(currentIndex + 1);
       navigateToNextStep(currentStep.id);
     }
   };
 
   const goToPreviousStep = () => {
     if (canGoBack && currentStep) {
-      const prevIndex = activeStepIndex.get() - 1;
-      activeStepIndex.set(prevIndex);
+      setIndex(currentIndex - 1);
       navigateToPreviousStep(currentStep.id);
     }
   };
 
   const goToStep = (stepIndex: number) => {
     if (stepIndex >= 0 && stepIndex < ONBOARDING_STEPS.length) {
-      activeStepIndex.set(stepIndex);
+      setIndex(stepIndex);
       const targetStep = ONBOARDING_STEPS[stepIndex];
       if (targetStep) {
         navigationSkipToStep(targetStep.id);
@@ -138,7 +151,6 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
     }
   };
 
-  // Utility methods
   const getStepByIndex = (index: number): OnboardingStep | null => {
     return ONBOARDING_STEPS[index] || null;
   };

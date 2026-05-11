@@ -2,14 +2,6 @@ jest.mock('react-native-config', () => ({
   SPOONACULAR_API_KEY: 'test-api-key',
 }));
 
-jest.mock('#/utils/environment', () => ({
-  logger: {
-    debug: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-  },
-}));
-
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
 

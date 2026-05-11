@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { Pressable } from '#components/atoms/themedComponents';
+import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { alertService } from '#/services/alertService';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
+import type { IconTone } from '#utils/iconUtils';
 import { format, parseISO } from 'date-fns';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
@@ -29,19 +31,17 @@ function ActionItem({
   label,
   description,
   onPress,
-  color,
+  tone = 'textPrimary',
   disabled,
 }: {
   icon: string;
   label: string;
   description?: string;
   onPress: () => void;
-  color?: string;
+  tone?: IconTone;
   disabled?: boolean;
 }) {
-  const { theme } = useUnistyles();
-  const iconColor = color ?? theme.colors.textPrimary;
-
+  actionStyles.useVariants({ tone: tone === 'error' ? 'error' : undefined });
   return (
     <Pressable
       onPress={onPress}
@@ -51,13 +51,9 @@ function ActionItem({
       ]}
       disabled={disabled}
     >
-      <Icon name={icon} size={22} color={iconColor} />
+      <Icon name={icon} size={22} tone={tone} />
       <View style={actionStyles.content}>
-        <Text
-          size="md"
-          weight="medium"
-          style={[actionStyles.label, color ? { color } : undefined]}
-        >
+        <Text size="md" weight="medium" style={actionStyles.label}>
           {label}
         </Text>
         {!!description && (
@@ -66,11 +62,7 @@ function ActionItem({
           </Text>
         )}
       </View>
-      <Icon
-        name="chevron-forward"
-        size={18}
-        color={theme.colors.textTertiary}
-      />
+      <Icon name="chevron-forward" size={18} tone="textTertiary" />
     </Pressable>
   );
 }
@@ -85,7 +77,6 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
   onDelete,
   deleting,
 }) => {
-  const { theme } = useUnistyles();
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible,
     onDismiss: onClose,
@@ -228,11 +219,7 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
               <View style={styles.actionsCard}>
                 {mealPlan.generatedShoppingLists.map(list => (
                   <View key={list.id} style={styles.listRow}>
-                    <Icon
-                      name="list-outline"
-                      size={18}
-                      color={theme.colors.textSecondary}
-                    />
+                    <Icon name="list-outline" size={18} tone="textSecondary" />
                     <Text size="sm" style={styles.listName}>
                       {list.name}
                     </Text>
@@ -259,7 +246,7 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
                 label={deleting ? 'Deleting...' : 'Delete Plan'}
                 description="Permanently remove this meal plan"
                 onPress={handleDelete}
-                color={theme.colors.error}
+                tone="error"
                 disabled={deleting}
               />
             </View>
@@ -337,6 +324,11 @@ const actionStyles = StyleSheet.create(theme => ({
   },
   label: {
     color: theme.colors.textPrimary,
+    variants: {
+      tone: {
+        error: { color: theme.colors.error },
+      },
+    },
   },
   description: {
     marginTop: 2,

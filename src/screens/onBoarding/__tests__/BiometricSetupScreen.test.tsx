@@ -38,8 +38,8 @@ jest.mock('#/services/authService', () => ({
   },
 }));
 
-jest.mock('#hooks/navigation/useUserPreferences', () => ({
-  useUserPreferences: () => ({
+jest.mock('#hooks/navigation/useAuthPreferences', () => ({
+  useAuthPreferences: () => ({
     markBiometricDeclined: jest.fn(),
     markBiometricEnabled: jest.fn(),
   }),

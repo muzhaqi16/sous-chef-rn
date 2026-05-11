@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { NotificationFilters } from '../NotificationFilters';
 import { NotificationCategory } from '#/graphql/generated/schemaTypes';
 
@@ -29,17 +29,19 @@ describe('NotificationFilters', () => {
     }
   });
 
-  it('calls onCategoryChange with null when All is pressed', () => {
+  it('calls onCategoryChange with null when All is pressed', async () => {
+    const user = userEvent.setup();
     render(<NotificationFilters {...defaultProps} />);
-    fireEvent.press(screen.getByText('All'));
+    await user.press(screen.getByText('All'));
     expect(defaultProps.onCategoryChange).toHaveBeenCalledWith(null);
   });
 
-  it('calls onCategoryChange with category when a category pill is pressed', () => {
+  it('calls onCategoryChange with category when a category pill is pressed', async () => {
+    const user = userEvent.setup();
     render(<NotificationFilters {...defaultProps} />);
     const firstCategory = Object.values(NotificationCategory)[0];
     const displayName = firstCategory.replace('_', ' ');
-    fireEvent.press(screen.getByText(displayName));
+    await user.press(screen.getByText(displayName));
     expect(defaultProps.onCategoryChange).toHaveBeenCalledWith(firstCategory);
   });
 

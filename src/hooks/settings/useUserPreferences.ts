@@ -1,4 +1,4 @@
-import { useAppStore } from '#/store/useAppStore';
+import { useAppStore, useUserId } from '#store/useAppStore';
 import {
   defaultUserPreferences,
   type UserPreferences,
@@ -11,7 +11,7 @@ import {
  * Falls back to defaults when not logged in or when no preferences have been set.
  */
 export const useUserPreferences = () => {
-  const userId = useAppStore(state => state.user?.id);
+  const userId = useUserId();
   const userPreferencesMap = useAppStore(state => state.userPreferences);
   const setUserPreference = useAppStore(state => state.setUserPreference);
   const resetUserPreferences = useAppStore(state => state.resetUserPreferences);
@@ -40,7 +40,7 @@ export const useUserPreferences = () => {
  * Minimizes re-renders by only subscribing to the boolean value.
  */
 export const useShowShoppingListImages = (): boolean => {
-  const userId = useAppStore(state => state.user?.id);
+  const userId = useUserId();
   const userPreferencesMap = useAppStore(state => state.userPreferences);
 
   if (!userId) return defaultUserPreferences.showShoppingListImages;

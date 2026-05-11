@@ -1,36 +1,75 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, Pressable } from 'react-native';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent, act } from '@testing-library/react-native';
 import {
   OverlayBackdropProvider,
   useOverlayBackdrop,
+  useBackdropClaim,
   GlobalBackdrop,
 } from '../OverlayBackdropProvider';
 
 jest.mock('react-native-worklets', () => ({
-  scheduleOnRN: jest.fn((fn: any) => {
-    fn(false);
-    return fn;
-  }),
+  scheduleOnRN: jest.fn((fn: any, ...args: any[]) => fn(...args)),
 }));
 
 jest.mock('#constants/animations', () => ({
   SHEET: { BACKDROP_FADE_IN: 200, BACKDROP_FADE_OUT: 150 },
 }));
 
-// Consumer component to test the context
-const ContextConsumer: React.FC = () => {
-  const { showBackdrop, hideBackdrop } = useOverlayBackdrop();
+const mockListeners: Record<string, Array<() => void>> = {};
+jest.mock('#services/NavigationService', () => ({
+  navigationRef: {
+    addListener: jest.fn((event: string, cb: () => void) => {
+      mockListeners[event] = mockListeners[event] || [];
+      mockListeners[event].push(cb);
+      return () => {
+        const arr = mockListeners[event] || [];
+        const idx = arr.indexOf(cb);
+        if (idx >= 0) arr.splice(idx, 1);
+      };
+    }),
+  },
+}));
+
+const fireNavState = () => {
+  (mockListeners.state || []).forEach(cb => cb());
+};
+
+beforeEach(() => {
+  Object.keys(mockListeners).forEach(k => delete mockListeners[k]);
+});
+
+const ImperativeConsumer: React.FC = () => {
+  const { claim, release } = useOverlayBackdrop();
+  const idRef = React.useRef<string | null>(null);
   return (
     <View>
-      <Pressable onPress={() => showBackdrop()} testID="show-btn">
-        <Text>Show</Text>
+      <Pressable
+        testID="claim-btn"
+        onPress={() => {
+          idRef.current = claim({ opacity: 0.5 });
+        }}
+      >
+        <Text>Claim</Text>
       </Pressable>
-      <Pressable onPress={() => hideBackdrop()} testID="hide-btn">
-        <Text>Hide</Text>
+      <Pressable
+        testID="release-btn"
+        onPress={() => {
+          if (idRef.current) {
+            release(idRef.current);
+            idRef.current = null;
+          }
+        }}
+      >
+        <Text>Release</Text>
       </Pressable>
     </View>
   );
+};
+
+const DeclarativeConsumer: React.FC<{ active: boolean }> = ({ active }) => {
+  useBackdropClaim(active, { opacity: 0.5 });
+  return <Text>declarative</Text>;
 };
 
 describe('OverlayBackdropProvider', () => {
@@ -43,36 +82,169 @@ describe('OverlayBackdropProvider', () => {
     expect(screen.getByText('Child content')).toBeTruthy();
   });
 
-  it('provides showBackdrop and hideBackdrop via context', () => {
+  it('exposes claim/release via context', () => {
     render(
       <OverlayBackdropProvider>
-        <ContextConsumer />
+        <ImperativeConsumer />
       </OverlayBackdropProvider>,
     );
-    expect(screen.getByText('Show')).toBeTruthy();
-    expect(screen.getByText('Hide')).toBeTruthy();
+    expect(screen.getByText('Claim')).toBeTruthy();
+    expect(screen.getByText('Release')).toBeTruthy();
   });
 
-  it('does not throw when showBackdrop is called', () => {
+  it('does not throw when claim/release are called', async () => {
+    const user = userEvent.setup();
     render(
       <OverlayBackdropProvider>
-        <ContextConsumer />
+        <ImperativeConsumer />
       </OverlayBackdropProvider>,
     );
-    expect(() => {
-      fireEvent.press(screen.getByTestId('show-btn'));
-    }).not.toThrow();
+    await expect(
+      (async () => {
+        await user.press(screen.getByTestId('claim-btn'));
+        await user.press(screen.getByTestId('release-btn'));
+      })(),
+    ).resolves.not.toThrow();
   });
 
-  it('does not throw when hideBackdrop is called', () => {
-    render(
+  it('makes the backdrop interactive while a declarative claim is active', () => {
+    const { rerender, UNSAFE_getByType } = render(
       <OverlayBackdropProvider>
-        <ContextConsumer />
+        <DeclarativeConsumer active={false} />
+        <GlobalBackdrop />
       </OverlayBackdropProvider>,
     );
-    expect(() => {
-      fireEvent.press(screen.getByTestId('hide-btn'));
-    }).not.toThrow();
+
+    // active=false → pointerEvents should be 'none'
+    let backdrop = UNSAFE_getByType(
+      require('react-native-reanimated').default.View,
+    );
+    expect(backdrop.props.pointerEvents).toBe('none');
+
+    rerender(
+      <OverlayBackdropProvider>
+        <DeclarativeConsumer active={true} />
+        <GlobalBackdrop />
+      </OverlayBackdropProvider>,
+    );
+
+    backdrop = UNSAFE_getByType(
+      require('react-native-reanimated').default.View,
+    );
+    expect(backdrop.props.pointerEvents).toBe('auto');
+  });
+
+  it('releases when the consumer unmounts (no manual hide call required)', () => {
+    const { rerender, UNSAFE_getByType } = render(
+      <OverlayBackdropProvider>
+        <DeclarativeConsumer active={true} />
+        <GlobalBackdrop />
+      </OverlayBackdropProvider>,
+    );
+
+    let backdrop = UNSAFE_getByType(
+      require('react-native-reanimated').default.View,
+    );
+    expect(backdrop.props.pointerEvents).toBe('auto');
+
+    // Consumer unmounts → effect cleanup → release → backdrop hides.
+    rerender(
+      <OverlayBackdropProvider>
+        <GlobalBackdrop />
+      </OverlayBackdropProvider>,
+    );
+
+    backdrop = UNSAFE_getByType(
+      require('react-native-reanimated').default.View,
+    );
+    expect(backdrop.props.pointerEvents).toBe('none');
+  });
+
+  it('keeps the backdrop active while at least one claim remains', () => {
+    const Two: React.FC<{ a: boolean; b: boolean }> = ({ a, b }) => (
+      <>
+        {!!a && <DeclarativeConsumer active={true} />}
+        {!!b && <DeclarativeConsumer active={true} />}
+      </>
+    );
+
+    const { rerender, UNSAFE_getByType } = render(
+      <OverlayBackdropProvider>
+        <Two a={true} b={true} />
+        <GlobalBackdrop />
+      </OverlayBackdropProvider>,
+    );
+
+    let backdrop = UNSAFE_getByType(
+      require('react-native-reanimated').default.View,
+    );
+    expect(backdrop.props.pointerEvents).toBe('auto');
+
+    // Drop one claim — still one left.
+    rerender(
+      <OverlayBackdropProvider>
+        <Two a={false} b={true} />
+        <GlobalBackdrop />
+      </OverlayBackdropProvider>,
+    );
+    backdrop = UNSAFE_getByType(
+      require('react-native-reanimated').default.View,
+    );
+    expect(backdrop.props.pointerEvents).toBe('auto');
+
+    // Drop the second — backdrop hides.
+    rerender(
+      <OverlayBackdropProvider>
+        <Two a={false} b={false} />
+        <GlobalBackdrop />
+      </OverlayBackdropProvider>,
+    );
+    backdrop = UNSAFE_getByType(
+      require('react-native-reanimated').default.View,
+    );
+    expect(backdrop.props.pointerEvents).toBe('none');
+  });
+
+  it('clears all claims on a navigation state change', () => {
+    render(
+      <OverlayBackdropProvider>
+        <DeclarativeConsumer active={true} />
+        <GlobalBackdrop />
+      </OverlayBackdropProvider>,
+    );
+
+    const reanimated = require('react-native-reanimated').default;
+    let backdrop = screen.UNSAFE_getByType(reanimated.View);
+    expect(backdrop.props.pointerEvents).toBe('auto');
+    expect(mockListeners.state?.length ?? 0).toBeGreaterThan(0);
+
+    // Simulate React Navigation firing a 'state' event (push or pop).
+    act(() => {
+      fireNavState();
+    });
+
+    backdrop = screen.UNSAFE_getByType(reanimated.View);
+    expect(backdrop.props.pointerEvents).toBe('none');
+  });
+
+  it('release is a no-op for unknown ids', () => {
+    let releaseFn: ((id: string) => void) | null = null;
+    const Capture: React.FC = () => {
+      const ctx = useOverlayBackdrop();
+      useEffect(() => {
+        releaseFn = ctx.release;
+      }, [ctx]);
+      return null;
+    };
+
+    render(
+      <OverlayBackdropProvider>
+        <Capture />
+        <GlobalBackdrop />
+      </OverlayBackdropProvider>,
+    );
+
+    expect(() => releaseFn?.('nonexistent-id')).not.toThrow();
   });
 });
 

@@ -1,7 +1,7 @@
 import React, { useLayoutEffect } from 'react';
 import { View } from 'react-native';
 import { Canvas, Group, Path, Circle, Skia } from '@shopify/react-native-skia';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import {
   useSharedValue,
   useDerivedValue,
@@ -9,8 +9,15 @@ import {
   withSequence,
   withTiming,
   cancelAnimation,
+  useReducedMotion,
   Easing,
 } from 'react-native-reanimated';
+
+// Theme-reactive Skia primitives. The mapper takes the consumer-facing
+// `tone` prop and resolves it to the appropriate icon color from the active
+// theme — re-runs only on theme change, not on parent re-renders.
+const ThemedPath = withUnistyles(Path);
+const ThemedCircle = withUnistyles(Circle);
 
 // Size configurations matching SousChefLoader
 const SIZES = {
@@ -67,15 +74,6 @@ interface ShoppingEmptyIllustrationProps {
 export const ShoppingEmptyIllustration: React.FC<
   ShoppingEmptyIllustrationProps
 > = ({ size = 'medium' }) => {
-  const { theme } = useUnistyles();
-
-  // Theme-aware colors
-  const colors = {
-    // Cart - use secondary/tertiary icon colors for theme support
-    cart: theme.colors.iconSecondary,
-    cartOutline: theme.colors.iconTertiary,
-  };
-
   const config = SIZES[size];
   const cx = config.canvas / 2;
   const cy = config.canvas / 2;
@@ -83,9 +81,11 @@ export const ShoppingEmptyIllustration: React.FC<
 
   // Animation shared values
   const bobY = useSharedValue(0);
+  const reducedMotion = useReducedMotion();
 
   // Start bob animation on mount
   useLayoutEffect(() => {
+    if (reducedMotion) return;
     // Gentle continuous bob animation for empty cart
     bobY.set(
       withRepeat(
@@ -101,7 +101,7 @@ export const ShoppingEmptyIllustration: React.FC<
     return () => {
       cancelAnimation(bobY);
     };
-  }, [bobY]);
+  }, [bobY, reducedMotion]);
 
   // Derived transforms
   const bobTransform = useDerivedValue(() => [
@@ -116,59 +116,59 @@ export const ShoppingEmptyIllustration: React.FC<
       <Canvas style={{ width: config.canvas, height: config.canvas }}>
         <Group transform={bobTransform}>
           {/* Cart body outline */}
-          <Path
+          <ThemedPath
             path={cartBodyPath}
-            color={colors.cart}
             style="stroke"
             strokeWidth={4 * scale}
             strokeCap="round"
             strokeJoin="round"
+            uniProps={t => ({ color: t.colors.iconSecondary })}
           />
           {/* Cart handle */}
-          <Path
+          <ThemedPath
             path={cartHandlePath}
-            color={colors.cart}
             style="stroke"
             strokeWidth={4 * scale}
             strokeCap="round"
             strokeJoin="round"
+            uniProps={t => ({ color: t.colors.iconSecondary })}
           />
           {/* Cart grid lines */}
           {cartGridLines.map((linePath, index) => (
-            <Path
+            <ThemedPath
               key={index}
               path={linePath}
-              color={colors.cartOutline}
               style="stroke"
               strokeWidth={2 * scale}
               opacity={0.5}
+              uniProps={t => ({ color: t.colors.iconTertiary })}
             />
           ))}
           {/* Cart wheels */}
-          <Circle
+          <ThemedCircle
             cx={cx - 20 * scale}
             cy={cy + 35 * scale}
             r={6 * scale}
-            color={colors.cart}
+            uniProps={t => ({ color: t.colors.iconSecondary })}
           />
-          <Circle
+          <ThemedCircle
             cx={cx + 20 * scale}
             cy={cy + 35 * scale}
             r={6 * scale}
-            color={colors.cart}
+            uniProps={t => ({ color: t.colors.iconSecondary })}
           />
           {/* Inner wheel circles */}
-          <Circle
+          <ThemedCircle
             cx={cx - 20 * scale}
             cy={cy + 35 * scale}
             r={3 * scale}
-            color={colors.cartOutline}
+            uniProps={t => ({ color: t.colors.iconTertiary })}
           />
-          <Circle
+          <ThemedCircle
             cx={cx + 20 * scale}
             cy={cy + 35 * scale}
             r={3 * scale}
-            color={colors.cartOutline}
+            uniProps={t => ({ color: t.colors.iconTertiary })}
           />
         </Group>
       </Canvas>

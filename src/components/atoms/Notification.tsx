@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { TIMING } from '#constants/animations';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import Animated, {
   cancelAnimation,
   useSharedValue,
@@ -45,6 +45,7 @@ export const NotificationBanner: React.FC<NotificationBannerProps> = ({
         withDelay(
           duration,
           withTiming(-100, { duration: TIMING.SLOW }, finished => {
+            'worklet';
             if (finished) {
               scheduleOnRN(handleAutoDismiss);
             }
@@ -65,6 +66,7 @@ export const NotificationBanner: React.FC<NotificationBannerProps> = ({
     cancelAnimation(slide);
     slide.set(
       withTiming(-100, { duration: TIMING.SLOW }, finished => {
+        'worklet';
         if (finished) {
           scheduleOnRN(handleManualDismiss);
         }

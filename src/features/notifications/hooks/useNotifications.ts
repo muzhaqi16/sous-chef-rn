@@ -10,7 +10,10 @@ import {
 import { useAppStore } from '#store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { showLocalNotification } from '#utils/notifications/localNotificationHelper';
-import { getNotificationAction } from '#utils/notifications/notificationHelpers';
+import {
+  getNotificationAction,
+  getNotificationTitle,
+} from '#utils/notifications/notificationHelpers';
 import { NotificationPriority } from '#store/slices/notificationSlice';
 import {
   handleSubscriptionError,
@@ -128,10 +131,11 @@ export const useNotifications = (config: NotificationConfig = {}) => {
       notification.type,
     );
 
+    const resolvedType = notification.type || NotificationType.HomeJoined;
     const processedNotification = {
       id: notification.id || Date.now().toString(),
-      type: notification.type || NotificationType.HomeJoined,
-      title: notification.title || 'Notification',
+      type: resolvedType,
+      title: notification.title || getNotificationTitle(resolvedType),
       message: notification.message || '',
       category,
       priority: notification.priority ?? NotificationPriority.MEDIUM,
@@ -202,7 +206,9 @@ export const useNotifications = (config: NotificationConfig = {}) => {
             {
               id: rawNotification.id,
               type: rawNotification.type,
-              title: rawNotification.title ?? 'Notification',
+              title:
+                rawNotification.title ??
+                getNotificationTitle(rawNotification.type),
               message: rawNotification.message ?? '',
               priority: mappedPriority,
               payload: rawNotification.payload,

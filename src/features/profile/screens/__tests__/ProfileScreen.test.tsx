@@ -1,16 +1,26 @@
 'use no memo';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { ProfileScreen } from '../ProfileScreen';
 
 // --- Mocks ---
 
-jest.mock('#hooks/navigation/useAppNavigation');
-const mockNav = (
-  jest.requireMock('#hooks/navigation/useAppNavigation') as {
-    useAppNavigation: jest.Mock;
-  }
-).useAppNavigation();
+const mockNav = {
+  goBack: jest.fn(),
+  toProfilePhotoUpload: jest.fn(),
+  toDeleteAccount: jest.fn(),
+  toPersonalInformation: jest.fn(),
+  toAppearance: jest.fn(),
+  toNotificationSettings: jest.fn(),
+  toDietaryProfile: jest.fn(),
+  toAppSettings: jest.fn(),
+  toDebugInfo: jest.fn(),
+  toPerformanceDashboard: jest.fn(),
+  toChangePassword: jest.fn(),
+};
+jest.mock('#hooks/navigation/useAppNavigation', () => ({
+  useAppNavigation: jest.fn(() => mockNav),
+}));
 
 jest.mock('#features/profile/hooks/useProfileData', () => ({
   useProfileData: () => ({
@@ -72,7 +82,7 @@ jest.mock('#features/profile/hooks/useConfigurableSettings', () => ({
   }),
 }));
 
-jest.mock('#/store/useAppStore', () => ({
+jest.mock('#store/useAppStore', () => ({
   useAppStore: (selector: any) => {
     const state = { canAccessDevTools: false };
     return selector(state);
@@ -89,11 +99,13 @@ jest.mock('#/services/telemetry', () => ({
   },
 }));
 
-jest.mock('#/utils/environment', () => ({
-  Environment: {
-    shouldEnableDebugFeatures: () => false,
-  },
-}));
+// Environment is auto-mocked via jest.setup.js. ProfileScreen tests want
+// `shouldEnableDebugFeatures` to return false (debug section hidden in
+// non-dev contexts), so we override it below.
+import { Environment } from '#/utils/environment';
+beforeEach(() => {
+  (Environment.shouldEnableDebugFeatures as jest.Mock).mockReturnValue(false);
+});
 
 jest.mock('#/utils/iconUtils', () => ({
   Icon: 'Icon',
@@ -194,40 +206,46 @@ describe('ProfileScreen', () => {
     expect(screen.getByText('App Settings')).toBeTruthy();
   });
 
-  it('navigates to PersonalInformation on press', () => {
+  it('navigates to PersonalInformation on press', async () => {
+    const user = userEvent.setup();
     render(<ProfileScreen />);
-    fireEvent.press(screen.getByTestId('profile-menu-personalInformation'));
-    expect(mockNav.navigate).toHaveBeenCalledWith('PersonalInformation');
+    await user.press(screen.getByTestId('profile-menu-personalInformation'));
+    expect(mockNav.toPersonalInformation).toHaveBeenCalledTimes(1);
   });
 
-  it('navigates to DietaryProfile on press', () => {
+  it('navigates to DietaryProfile on press', async () => {
+    const user = userEvent.setup();
     render(<ProfileScreen />);
-    fireEvent.press(screen.getByTestId('profile-menu-dietaryProfile'));
-    expect(mockNav.navigate).toHaveBeenCalledWith('DietaryProfile');
+    await user.press(screen.getByTestId('profile-menu-dietaryProfile'));
+    expect(mockNav.toDietaryProfile).toHaveBeenCalledTimes(1);
   });
 
-  it('navigates to AppSettings on press', () => {
+  it('navigates to AppSettings on press', async () => {
+    const user = userEvent.setup();
     render(<ProfileScreen />);
-    fireEvent.press(screen.getByTestId('profile-menu-appSettings'));
-    expect(mockNav.navigate).toHaveBeenCalledWith('AppSettings');
+    await user.press(screen.getByTestId('profile-menu-appSettings'));
+    expect(mockNav.toAppSettings).toHaveBeenCalledTimes(1);
   });
 
-  it('navigates to ChangePassword on press', () => {
+  it('navigates to ChangePassword on press', async () => {
+    const user = userEvent.setup();
     render(<ProfileScreen />);
-    fireEvent.press(screen.getByTestId('profile-menu-changePassword'));
-    expect(mockNav.navigate).toHaveBeenCalledWith('ChangePassword');
+    await user.press(screen.getByTestId('profile-menu-changePassword'));
+    expect(mockNav.toChangePassword).toHaveBeenCalledTimes(1);
   });
 
-  it('calls goBack when back button is pressed', () => {
+  it('calls goBack when back button is pressed', async () => {
+    const user = userEvent.setup();
     render(<ProfileScreen />);
-    fireEvent.press(screen.getByTestId('back-button'));
+    await user.press(screen.getByTestId('back-button'));
     expect(mockNav.goBack).toHaveBeenCalledTimes(1);
   });
 
-  it('navigates to ProfilePhotoUpload when avatar is pressed', () => {
+  it('navigates to ProfilePhotoUpload when avatar is pressed', async () => {
+    const user = userEvent.setup();
     render(<ProfileScreen />);
-    fireEvent.press(screen.getByTestId('avatar-button'));
-    expect(mockNav.navigate).toHaveBeenCalledWith('ProfilePhotoUpload');
+    await user.press(screen.getByTestId('avatar-button'));
+    expect(mockNav.toProfilePhotoUpload).toHaveBeenCalledTimes(1);
   });
 
   it('renders the delete account option in action tray', () => {

@@ -1,7 +1,7 @@
 'use no memo';
 
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react-native';
+import { fireEvent, render} from '@testing-library/react-native';
 import { RecipeBasicFields } from '../RecipeBasicFields';
 import { RecipeStatus } from '#/graphql/generated/schemaTypes';
 

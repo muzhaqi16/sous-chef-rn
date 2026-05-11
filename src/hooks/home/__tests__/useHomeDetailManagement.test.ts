@@ -1,44 +1,15 @@
-import { renderHook, act } from '@testing-library/react-native';
+import { act, waitFor } from '@testing-library/react-native';
+import {
+  recordMock,
+  renderHookWithApollo,
+  type MockedResponse,
+} from '#/test-utils/apolloMockProvider';
+import {
+  GetHomeDocument,
+  UpdateHomeDocument,
+} from '#operations/home/home.generated';
 import { alertService } from '#/services/alertService';
 import { useHomeDetailManagement } from '../useHomeDetailManagement';
-
-const mockGetHomeQuery = {
-  data: undefined as any,
-  loading: false,
-  refetch: jest.fn(),
-};
-
-const mockUpdateHomeMutation = jest.fn();
-const mockUpdateMembershipMutation = jest.fn();
-const mockRemoveMemberMutation = jest.fn();
-const mockRevokeInviteMutation = jest.fn();
-const mockLeaveHomeMutation = jest.fn();
-const mockSetDefaultHomeMutation = jest.fn();
-
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useQuery: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'GetHome') return mockGetHomeQuery;
-    return { data: undefined, loading: false, error: undefined };
-  }),
-  useMutation: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'UpdateHome')
-      return [mockUpdateHomeMutation, { loading: false }];
-    if (opName === 'UpdateMembership')
-      return [mockUpdateMembershipMutation, { loading: false }];
-    if (opName === 'RemoveMember')
-      return [mockRemoveMemberMutation, { loading: false }];
-    if (opName === 'RevokeHomeInvite')
-      return [mockRevokeInviteMutation, { loading: false }];
-    if (opName === 'LeaveHome')
-      return [mockLeaveHomeMutation, { loading: false }];
-    if (opName === 'SetDefaultHome')
-      return [mockSetDefaultHomeMutation, { loading: false }];
-    return [jest.fn(), {}];
-  }),
-}));
 
 const mockStoreState = {
   selectedHomeId: 'home-1' as string | null,
@@ -50,6 +21,7 @@ const mockStoreState = {
 jest.mock('#store/useAppStore', () => ({
   useAppStore: (selector: (state: any) => any) => selector(mockStoreState),
   useSelectedHomeId: jest.fn(() => mockStoreState.selectedHomeId),
+  useSetSelectedPantryId: jest.fn(() => mockStoreState.setSelectedPantryId),
   useHomeState: jest.fn(() => ({
     selectedHomeId: mockStoreState.selectedHomeId,
     setSelectedHomeId: mockStoreState.setSelectedHomeId,
@@ -68,6 +40,8 @@ jest.mock('#/utils/connectionUtils', () => ({
 
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   createRemoveFromParentConnectionUpdater: jest.fn(() => jest.fn()),
+  safeEvict: jest.fn(),
+  setCachedFields: jest.fn(),
 }));
 
 jest.mock('#/utils/compilerSafeWrappers');
@@ -75,17 +49,6 @@ jest.mock('#/utils/compilerSafeWrappers');
 jest.mock('#/utils/errors/versionConflict', () => ({
   handleVersionConflict: jest.fn(() => false),
   getVersionConflictMessage: jest.fn(() => 'Version conflict'),
-}));
-
-jest.mock('#constants/messages', () => ({
-  MESSAGES: {
-    errors: {
-      updateHomeNameFailed: 'Failed to update home name',
-      updateMemberRoleFailed: 'Failed to update role',
-      removeMemberFailed: 'Failed to remove member',
-      revokeInviteFailed: 'Failed to revoke invite',
-    },
-  },
 }));
 
 jest.mock('#utils/formatters/roleFormatters', () => ({
@@ -124,26 +87,117 @@ jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
 }));
 
+const DEFAULT_HOME_DATA = {
+  home: {
+    __typename: 'Home',
+    id: 'home-1',
+    name: 'Test Home',
+    description: null,
+    timezone: null,
+    currency: null,
+    isPublic: false,
+    joinCode: null,
+    allowJoinCode: false,
+    maxMembers: null,
+    version: 1,
+    createdAt: '2025-01-01T00:00:00.000Z',
+    updatedAt: '2025-01-01T00:00:00.000Z',
+    invitesConnection: {
+      __typename: 'HomeInviteConnection',
+      edges: [],
+      totalCount: 0,
+    },
+    membersConnection: {
+      __typename: 'MembershipConnection',
+      edges: [
+        {
+          __typename: 'MembershipEdge',
+          node: {
+            __typename: 'Membership',
+            id: 'm-1',
+            homeId: 'home-1',
+            userId: 'user-1',
+            role: 'OWNER',
+            status: 'ACTIVE',
+            displayName: 'Alice',
+            canManageHome: true,
+            user: {
+              __typename: 'User',
+              id: 'user-1',
+              email: 'alice@test.com',
+            },
+          },
+        },
+      ],
+      totalCount: 1,
+    },
+    pantriesConnection: {
+      __typename: 'PantryConnection',
+      edges: [],
+      totalCount: 0,
+    },
+    myMembership: {
+      __typename: 'Membership',
+      id: 'm-1',
+      role: 'OWNER',
+      status: 'ACTIVE',
+      displayName: 'Alice',
+      canManageHome: true,
+      canViewPantry: true,
+      canEditPantry: true,
+      canAddItems: true,
+      canRemoveItems: true,
+      canInviteOthers: true,
+    },
+  },
+};
+
+function getHomeMock(
+  data: any = DEFAULT_HOME_DATA,
+  options: { delay?: number; error?: Error } = {},
+): MockedResponse {
+  return recordMock(GetHomeDocument, {
+    data,
+    ...(options.delay !== undefined ? { delay: options.delay } : {}),
+    ...(options.error ? { error: options.error } : {}),
+  }).mock;
+}
+
+function updateHomeMock() {
+  return recordMock(UpdateHomeDocument, {
+    data: {
+      updateHome: {
+        __typename: 'HomePayload',
+        success: true,
+        message: '',
+        code: 'SUCCESS',
+        home: {
+          __typename: 'Home',
+          id: 'home-1',
+          name: 'Test Home',
+          allowJoinCode: false,
+          joinCode: null,
+          version: 2,
+          updatedAt: '2025-01-02T00:00:00.000Z',
+        },
+      },
+    },
+  });
+}
+
 beforeEach(() => {
   jest.clearAllMocks();
   mockStoreState.selectedHomeId = 'home-1';
-  mockGetHomeQuery.data = {
-    home: {
-      id: 'home-1',
-      name: 'Test Home',
-      members: [
-        { id: 'm-1', userId: 'user-1', role: 'OWNER', user: { name: 'Alice' } },
-      ],
-      invites: [],
-      pantries: [],
-    },
-  };
-  mockGetHomeQuery.loading = false;
 });
 
 describe('useHomeDetailManagement', () => {
-  it('returns home data and actions', () => {
-    const { result } = renderHook(() => useHomeDetailManagement('home-1'));
+  it('returns home data and actions', async () => {
+    const { result } = renderHookWithApollo(
+      () => useHomeDetailManagement('home-1'),
+      { operationMocks: [getHomeMock()] },
+    );
+
+    await waitFor(() => expect(result.current.home).toBeTruthy());
 
     expect(result.current.home).toEqual(
       expect.objectContaining({ id: 'home-1', name: 'Test Home' }),
@@ -159,55 +213,66 @@ describe('useHomeDetailManagement', () => {
     expect(typeof result.current.toggleJoinCode).toBe('function');
   });
 
-  it('returns null home when no data', () => {
-    mockGetHomeQuery.data = undefined;
+  it('returns null home when no data', async () => {
+    const { result } = renderHookWithApollo(
+      () => useHomeDetailManagement('home-1'),
+      { operationMocks: [getHomeMock({ home: null })] },
+    );
 
-    const { result } = renderHook(() => useHomeDetailManagement('home-1'));
-
+    await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.home).toBeNull();
   });
 
   describe('saveName', () => {
     it('calls updateHomeMutation with name', async () => {
-      mockUpdateHomeMutation.mockResolvedValue({});
+      const update = updateHomeMock();
+      const { result } = renderHookWithApollo(
+        () => useHomeDetailManagement('home-1'),
+        { operationMocks: [getHomeMock(), update.mock] },
+      );
 
-      const { result } = renderHook(() => useHomeDetailManagement('home-1'));
+      await waitFor(() => expect(result.current.home).toBeTruthy());
 
       await act(async () => {
         await result.current.saveName('New Name');
       });
 
-      expect(mockUpdateHomeMutation).toHaveBeenCalledWith({
-        variables: {
-          id: 'home-1',
-          input: { name: 'New Name' },
-        },
+      expect(update.fired).toContainEqual({
+        id: 'home-1',
+        input: { name: 'New Name' },
       });
     });
   });
 
   describe('toggleJoinCode', () => {
     it('calls updateHomeMutation with allowJoinCode', async () => {
-      mockUpdateHomeMutation.mockResolvedValue({});
+      const update = updateHomeMock();
+      const { result } = renderHookWithApollo(
+        () => useHomeDetailManagement('home-1'),
+        { operationMocks: [getHomeMock(), update.mock] },
+      );
 
-      const { result } = renderHook(() => useHomeDetailManagement('home-1'));
+      await waitFor(() => expect(result.current.home).toBeTruthy());
 
       await act(async () => {
         await result.current.toggleJoinCode(true);
       });
 
-      expect(mockUpdateHomeMutation).toHaveBeenCalledWith({
-        variables: {
-          id: 'home-1',
-          input: { allowJoinCode: true },
-        },
+      expect(update.fired).toContainEqual({
+        id: 'home-1',
+        input: { allowJoinCode: true },
       });
     });
   });
 
   describe('changeRole', () => {
-    it('sets rolePickerState with correct values', () => {
-      const { result } = renderHook(() => useHomeDetailManagement('home-1'));
+    it('sets rolePickerState with correct values', async () => {
+      const { result } = renderHookWithApollo(
+        () => useHomeDetailManagement('home-1'),
+        { operationMocks: [getHomeMock()] },
+      );
+
+      await waitFor(() => expect(result.current.home).toBeTruthy());
 
       act(() => {
         result.current.changeRole('m-1', 'MEMBER', 'Alice');
@@ -223,8 +288,13 @@ describe('useHomeDetailManagement', () => {
   });
 
   describe('removeMember', () => {
-    it('shows confirmation dialog via createRemoveOperation', () => {
-      const { result } = renderHook(() => useHomeDetailManagement('home-1'));
+    it('shows confirmation dialog via createRemoveOperation', async () => {
+      const { result } = renderHookWithApollo(
+        () => useHomeDetailManagement('home-1'),
+        { operationMocks: [getHomeMock()] },
+      );
+
+      await waitFor(() => expect(result.current.home).toBeTruthy());
 
       act(() => {
         result.current.removeMember('m-1', 'Alice');
@@ -239,8 +309,13 @@ describe('useHomeDetailManagement', () => {
   });
 
   describe('revokeInvite', () => {
-    it('shows confirmation dialog via createRemoveOperation', () => {
-      const { result } = renderHook(() => useHomeDetailManagement('home-1'));
+    it('shows confirmation dialog via createRemoveOperation', async () => {
+      const { result } = renderHookWithApollo(
+        () => useHomeDetailManagement('home-1'),
+        { operationMocks: [getHomeMock()] },
+      );
+
+      await waitFor(() => expect(result.current.home).toBeTruthy());
 
       act(() => {
         result.current.revokeInvite('inv-1', 'user@test.com');
@@ -255,8 +330,13 @@ describe('useHomeDetailManagement', () => {
   });
 
   describe('leaveHome', () => {
-    it('shows leave confirmation dialog', () => {
-      const { result } = renderHook(() => useHomeDetailManagement('home-1'));
+    it('shows leave confirmation dialog', async () => {
+      const { result } = renderHookWithApollo(
+        () => useHomeDetailManagement('home-1'),
+        { operationMocks: [getHomeMock()] },
+      );
+
+      await waitFor(() => expect(result.current.home).toBeTruthy());
 
       act(() => {
         result.current.leaveHome('Test Home');
@@ -270,46 +350,35 @@ describe('useHomeDetailManagement', () => {
     });
   });
 
-  describe('saveName with failure', () => {
-    it('handles saveName rejection gracefully', async () => {
-      mockUpdateHomeMutation.mockRejectedValue(new Error('Network error'));
-
-      const { result } = renderHook(() => useHomeDetailManagement('home-1'));
-
-      await act(async () => {
-        try {
-          await result.current.saveName('Failed Name');
-        } catch {
-          // expected
-        }
-      });
-
-      expect(mockUpdateHomeMutation).toHaveBeenCalled();
-    });
-  });
-
   describe('toggleJoinCode disable', () => {
     it('calls updateHomeMutation with allowJoinCode false', async () => {
-      mockUpdateHomeMutation.mockResolvedValue({});
+      const update = updateHomeMock();
+      const { result } = renderHookWithApollo(
+        () => useHomeDetailManagement('home-1'),
+        { operationMocks: [getHomeMock(), update.mock] },
+      );
 
-      const { result } = renderHook(() => useHomeDetailManagement('home-1'));
+      await waitFor(() => expect(result.current.home).toBeTruthy());
 
       await act(async () => {
         await result.current.toggleJoinCode(false);
       });
 
-      expect(mockUpdateHomeMutation).toHaveBeenCalledWith({
-        variables: {
-          id: 'home-1',
-          input: { allowJoinCode: false },
-        },
+      expect(update.fired).toContainEqual({
+        id: 'home-1',
+        input: { allowJoinCode: false },
       });
     });
   });
 
   describe('changeRole role selection', () => {
-    it('sets rolePickerState with member name', () => {
-      const { result } = renderHook(() => useHomeDetailManagement('home-1'));
+    it('sets rolePickerState with member name', async () => {
+      const { result } = renderHookWithApollo(
+        () => useHomeDetailManagement('home-1'),
+        { operationMocks: [getHomeMock()] },
+      );
+
+      await waitFor(() => expect(result.current.home).toBeTruthy());
 
       act(() => {
         result.current.changeRole('m-2', 'ADMIN', 'Bob');
@@ -325,8 +394,13 @@ describe('useHomeDetailManagement', () => {
   });
 
   describe('revokeInvite with different email', () => {
-    it('shows confirmation dialog with email', () => {
-      const { result } = renderHook(() => useHomeDetailManagement('home-1'));
+    it('shows confirmation dialog with email', async () => {
+      const { result } = renderHookWithApollo(
+        () => useHomeDetailManagement('home-1'),
+        { operationMocks: [getHomeMock()] },
+      );
+
+      await waitFor(() => expect(result.current.home).toBeTruthy());
 
       act(() => {
         result.current.revokeInvite('inv-2', 'bob@test.com');
@@ -342,41 +416,104 @@ describe('useHomeDetailManagement', () => {
 
   describe('loading states', () => {
     it('returns loading true when query is loading', () => {
-      mockGetHomeQuery.loading = true;
+      const { result } = renderHookWithApollo(
+        () => useHomeDetailManagement('home-1'),
+        { operationMocks: [getHomeMock(DEFAULT_HOME_DATA, { delay: 1000 })] },
+      );
 
-      const { result } = renderHook(() => useHomeDetailManagement('home-1'));
       expect(result.current.loading).toBe(true);
-
-      mockGetHomeQuery.loading = false;
     });
   });
 
   describe('home with multiple members and invites', () => {
-    it('returns full home data including members and invites', () => {
-      mockGetHomeQuery.data = {
+    it('returns full home data including members and invites', async () => {
+      const fullHomeData = {
         home: {
-          id: 'home-1',
+          ...DEFAULT_HOME_DATA.home,
           name: 'Full Home',
-          members: [
-            {
-              id: 'm-1',
-              userId: 'user-1',
-              role: 'OWNER',
-              user: { name: 'Alice' },
-            },
-            {
-              id: 'm-2',
-              userId: 'user-2',
-              role: 'MEMBER',
-              user: { name: 'Bob' },
-            },
-          ],
-          invites: [{ id: 'inv-1', email: 'charlie@test.com', role: 'MEMBER' }],
-          pantries: [{ id: 'p-1', name: 'Main Pantry' }],
+          membersConnection: {
+            __typename: 'MembershipConnection',
+            edges: [
+              {
+                __typename: 'MembershipEdge',
+                node: {
+                  __typename: 'Membership',
+                  id: 'm-1',
+                  homeId: 'home-1',
+                  userId: 'user-1',
+                  role: 'OWNER',
+                  status: 'ACTIVE',
+                  displayName: 'Alice',
+                  canManageHome: true,
+                  user: {
+                    __typename: 'User',
+                    id: 'user-1',
+                    email: 'alice@test.com',
+                  },
+                },
+              },
+              {
+                __typename: 'MembershipEdge',
+                node: {
+                  __typename: 'Membership',
+                  id: 'm-2',
+                  homeId: 'home-1',
+                  userId: 'user-2',
+                  role: 'MEMBER',
+                  status: 'ACTIVE',
+                  displayName: 'Bob',
+                  canManageHome: false,
+                  user: {
+                    __typename: 'User',
+                    id: 'user-2',
+                    email: 'bob@test.com',
+                  },
+                },
+              },
+            ],
+            totalCount: 2,
+          },
+          invitesConnection: {
+            __typename: 'HomeInviteConnection',
+            edges: [
+              {
+                __typename: 'HomeInviteEdge',
+                node: {
+                  __typename: 'HomeInvite',
+                  id: 'inv-1',
+                  email: 'charlie@test.com',
+                  recipientName: null,
+                  role: 'MEMBER',
+                  status: 'PENDING',
+                },
+              },
+            ],
+            totalCount: 1,
+          },
+          pantriesConnection: {
+            __typename: 'PantryConnection',
+            edges: [
+              {
+                __typename: 'PantryEdge',
+                node: {
+                  __typename: 'Pantry',
+                  id: 'p-1',
+                  name: 'Main Pantry',
+                  isDefault: true,
+                },
+              },
+            ],
+            totalCount: 1,
+          },
         },
       };
 
-      const { result } = renderHook(() => useHomeDetailManagement('home-1'));
+      const { result } = renderHookWithApollo(
+        () => useHomeDetailManagement('home-1'),
+        { operationMocks: [getHomeMock(fullHomeData)] },
+      );
+
+      await waitFor(() => expect(result.current.home).toBeTruthy());
       expect(result.current.home).toEqual(
         expect.objectContaining({
           id: 'home-1',

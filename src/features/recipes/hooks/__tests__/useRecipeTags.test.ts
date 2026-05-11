@@ -1,47 +1,44 @@
-import { renderHook } from '@testing-library/react-native';
+import { waitFor } from '@testing-library/react-native';
+import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { useRecipeTags } from '../useRecipeTags';
 
-const mockRefetch = jest.fn();
-
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useQuery: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'MySavedRecipes') {
-      return {
-        data: {
-          me: {
-            savedRecipesConnection: {
-              edges: [
-                { node: { tags: ['Italian', 'Quick'] } },
-                { node: { tags: ['italian', 'Quick'] } },
-                { node: { tags: ['Vegetarian'] } },
-              ],
-            },
-          },
-        },
-        loading: false,
-        error: undefined,
-        refetch: mockRefetch,
-      };
-    }
-    return { data: undefined, loading: false, error: undefined };
-  }),
-}));
-
-// Break circular dependency
 jest.mock('#/apollo/links/tokenScheduler');
 
 beforeEach(() => {
   jest.clearAllMocks();
 });
 
-describe('useRecipeTags', () => {
-  it('extracts unique tags sorted case-insensitively', () => {
-    const { result } = renderHook(() => useRecipeTags());
+function withSavedRecipes(recipeTags: string[][]) {
+  return {
+    mocks: {
+      Query: () => ({
+        me: {
+          __typename: 'User',
+          savedRecipesConnection: {
+            __typename: 'RecipeConnection',
+            edges: recipeTags.map((tags, idx) => ({
+              __typename: 'RecipeEdge',
+              node: { __typename: 'Recipe', id: `r-${idx}`, tags },
+            })),
+          },
+        },
+      }),
+    },
+  };
+}
 
-    // 'Italian', 'italian' are different strings so both appear
-    // Sort is case-insensitive
+describe('useRecipeTags', () => {
+  it('extracts unique tags sorted case-insensitively', async () => {
+    const { result } = renderHookWithApollo(
+      () => useRecipeTags(),
+      withSavedRecipes([
+        ['Italian', 'Quick'],
+        ['italian', 'Quick'],
+        ['Vegetarian'],
+      ]),
+    );
+
+    await waitFor(() => expect(result.current.tags.length).toBeGreaterThan(0));
     expect(result.current.tags).toEqual([
       'Italian',
       'italian',
@@ -50,9 +47,17 @@ describe('useRecipeTags', () => {
     ]);
   });
 
-  it('computes tag counts', () => {
-    const { result } = renderHook(() => useRecipeTags());
+  it('computes tag counts', async () => {
+    const { result } = renderHookWithApollo(
+      () => useRecipeTags(),
+      withSavedRecipes([
+        ['Italian', 'Quick'],
+        ['italian', 'Quick'],
+        ['Vegetarian'],
+      ]),
+    );
 
+    await waitFor(() => expect(result.current.tags.length).toBeGreaterThan(0));
     expect(result.current.tagCounts).toEqual({
       Italian: 1,
       Quick: 2,
@@ -61,25 +66,24 @@ describe('useRecipeTags', () => {
     });
   });
 
-  it('returns empty tags when no saved recipes', () => {
-    const { useQuery } = require('@apollo/client/react');
-    (useQuery as jest.Mock).mockReturnValueOnce({
-      data: undefined,
-      loading: false,
-      error: undefined,
-      refetch: mockRefetch,
-    });
+  it('returns empty tags when no saved recipes', async () => {
+    const { result } = renderHookWithApollo(
+      () => useRecipeTags(),
+      withSavedRecipes([]),
+    );
 
-    const { result } = renderHook(() => useRecipeTags());
-
+    await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.tags).toEqual([]);
     expect(result.current.tagCounts).toEqual({});
   });
 
-  it('exposes loading and refetch', () => {
-    const { result } = renderHook(() => useRecipeTags());
+  it('exposes loading and refetch', async () => {
+    const { result } = renderHookWithApollo(
+      () => useRecipeTags(),
+      withSavedRecipes([]),
+    );
 
-    expect(result.current.loading).toBe(false);
-    expect(result.current.refetch).toBe(mockRefetch);
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(typeof result.current.refetch).toBe('function');
   });
 });

@@ -1,9 +1,6 @@
 import { renderHook, act } from '@testing-library/react-native';
-import {
-  useSettings,
-  useShowTutorials,
-  useShowNavigationLabels,
-} from '../useSettings';
+import { useSettings, useShowTutorials } from '../useSettings';
+import { useShowNavigationLabels } from '#store/useAppStore';
 
 // Break circular dependency chain
 jest.mock('../../../apollo/links/tokenScheduler');
@@ -31,16 +28,19 @@ const mockSetHapticFeedbackEnabled = jest.fn();
 const mockSetShowNavigationLabels = jest.fn();
 const mockResetPreferences = jest.fn();
 
-jest.mock('#/store/useAppStore', () => ({
-  useAppStore: (selector: (state: any) => any) =>
-    selector({
-      hapticFeedbackEnabled: mockHapticFeedbackEnabled,
-      setHapticFeedbackEnabled: mockSetHapticFeedbackEnabled,
-      showNavigationLabels: mockShowNavigationLabelsValue,
-      setShowNavigationLabels: mockSetShowNavigationLabels,
-      resetPreferences: mockResetPreferences,
-    }),
-}));
+jest.mock('#store/useAppStore', () => {
+  const getState = () => ({
+    hapticFeedbackEnabled: mockHapticFeedbackEnabled,
+    setHapticFeedbackEnabled: mockSetHapticFeedbackEnabled,
+    showNavigationLabels: mockShowNavigationLabelsValue,
+    setShowNavigationLabels: mockSetShowNavigationLabels,
+    resetPreferences: mockResetPreferences,
+  });
+  return {
+    useAppStore: (selector: (state: any) => any) => selector(getState()),
+    useShowNavigationLabels: () => (s => s.showNavigationLabels)(getState()),
+  };
+});
 
 let mockShowTutorialsMMKV = true;
 

@@ -1,13 +1,16 @@
 import React from 'react';
-import { View, ActivityIndicator } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { View } from 'react-native';
+import {
+  Pressable,
+  PrimaryActivityIndicator,
+  ThemedBottomSheetTextInput,
+} from '#components/atoms/themedComponents';
 import { FlashList } from '@shopify/flash-list';
 import {
-  BottomSheetModal,
-  BottomSheetTextInput,
   BottomSheetView,
   useBottomSheetScrollableCreator,
 } from '@gorhom/bottom-sheet';
+import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
@@ -66,12 +69,11 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
   onClose,
   onSelectTemplate,
 }) => {
-  const { ref, modalProps, contentContainerStyle, theme } =
-    useStandardBottomSheet({
-      visible,
-      onDismiss: onClose,
-      snapPoints: ['85%'],
-    });
+  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
+    visible,
+    onDismiss: onClose,
+    snapPoints: ['85%'],
+  });
   const BottomSheetScrollable = useBottomSheetScrollableCreator();
 
   const {
@@ -88,17 +90,16 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
             Browse Templates
           </Text>
           <Pressable onPress={onClose} hitSlop={8}>
-            <Icon name="close" size={24} color={theme.colors.textSecondary} />
+            <Icon name="close" size={24} tone="textSecondary" />
           </Pressable>
         </View>
 
         {/* Search bar */}
         <View style={styles.searchContainer}>
-          <Icon name="search" size={18} color={theme.colors.textTertiary} />
-          <BottomSheetTextInput
+          <Icon name="search" size={18} tone="textTertiary" />
+          <ThemedBottomSheetTextInput
             style={styles.searchInput}
             placeholder="Search templates..."
-            placeholderTextColor={theme.colors.textTertiary}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
@@ -116,15 +117,11 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
         {/* Template list */}
         {loading && templates.length === 0 ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={theme.colors.primary} />
+            <PrimaryActivityIndicator size="large" />
           </View>
         ) : templates.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Icon
-              name="document-text-outline"
-              size={48}
-              color={theme.colors.textTertiary}
-            />
+            <Icon name="document-text-outline" size={48} tone="textTertiary" />
             <Text size="base" tone="secondary">
               No templates found
             </Text>
@@ -141,7 +138,6 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
               style={styles.list}
               showsVerticalScrollIndicator={false}
               onEndReached={hasMore ? loadMore : undefined}
-              onEndReachedThreshold={0.5}
             />
           </TemplateBrowserProvider>
         )}

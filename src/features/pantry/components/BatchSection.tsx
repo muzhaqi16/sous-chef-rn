@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Pressable } from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
 import { useLazyQuery } from '@apollo/client/react';
 import { Icon } from '#/utils/iconUtils';
 import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
@@ -23,7 +23,6 @@ export const BatchSection: React.FC<BatchSectionProps> = ({
   pantryItemId,
   unitSymbol,
 }) => {
-  const { theme } = useUnistyles();
   const [expanded, setExpanded] = useState(true);
   const [showAll, setShowAll] = useState(false);
 
@@ -87,7 +86,7 @@ export const BatchSection: React.FC<BatchSectionProps> = ({
         <Icon
           name={expanded ? 'chevron-up' : 'chevron-down'}
           size={20}
-          color={theme.colors.textSecondary}
+          tone="textSecondary"
         />
       </Pressable>
 

@@ -1,21 +1,21 @@
 import { renderHook, act } from '@testing-library/react-native';
-import { CommonActions } from '@react-navigation/native';
 import { useAuthNavigation } from '../useAuthNavigation';
 
 // Break circular dependency chain
 jest.mock('../../../apollo/links/tokenScheduler');
 jest.mock('../../../apollo/links/refreshToken');
 
-const mockDispatch = jest.fn();
-jest.mock('@react-navigation/native', () => {
-  const actual = jest.requireActual('@react-navigation/native');
-  return {
-    ...actual,
-    useNavigation: () => ({
-      dispatch: mockDispatch,
-    }),
-  };
-});
+const mockToLogin = jest.fn();
+const mockToSignUp = jest.fn();
+const mockToForgotPassword = jest.fn();
+
+jest.mock('../useAppNavigation', () => ({
+  useAppNavigation: () => ({
+    toLogin: mockToLogin,
+    toSignUp: mockToSignUp,
+    toForgotPassword: mockToForgotPassword,
+  }),
+}));
 
 const mockSetAuth = jest.fn();
 const mockSetRememberMe = jest.fn();
@@ -186,40 +186,34 @@ describe('useAuthNavigation', () => {
   });
 
   describe('auth stack navigation', () => {
-    it('navigateToForgotPassword dispatches navigate to ForgotPassword', () => {
+    it('navigateToForgotPassword delegates to facade toForgotPassword', () => {
       const { result } = renderHook(() => useAuthNavigation());
 
       act(() => {
         result.current.navigateToForgotPassword();
       });
 
-      expect(mockDispatch).toHaveBeenCalledWith(
-        CommonActions.navigate('ForgotPassword'),
-      );
+      expect(mockToForgotPassword).toHaveBeenCalledTimes(1);
     });
 
-    it('navigateToLogin dispatches navigate to Login', () => {
+    it('navigateToLogin delegates to facade toLogin', () => {
       const { result } = renderHook(() => useAuthNavigation());
 
       act(() => {
         result.current.navigateToLogin();
       });
 
-      expect(mockDispatch).toHaveBeenCalledWith(
-        CommonActions.navigate('Login'),
-      );
+      expect(mockToLogin).toHaveBeenCalledTimes(1);
     });
 
-    it('navigateToSignUp dispatches navigate to SignUp', () => {
+    it('navigateToSignUp delegates to facade toSignUp', () => {
       const { result } = renderHook(() => useAuthNavigation());
 
       act(() => {
         result.current.navigateToSignUp();
       });
 
-      expect(mockDispatch).toHaveBeenCalledWith(
-        CommonActions.navigate('SignUp'),
-      );
+      expect(mockToSignUp).toHaveBeenCalledTimes(1);
     });
 
     it('navigateToVerification logs a message (handled by conditional groups)', () => {

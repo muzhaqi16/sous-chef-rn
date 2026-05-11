@@ -1,6 +1,15 @@
 import React from 'react';
 import { Switch } from 'react-native';
-import { useUnistyles } from 'react-native-unistyles';
+import { withUnistyles } from 'react-native-unistyles';
+
+const ThemedSwitch = withUnistyles(Switch, theme => ({
+  trackColor: {
+    false: theme.colors.border,
+    true: theme.colors.primary,
+  },
+  thumbColor: theme.colors.surface,
+  ios_backgroundColor: theme.colors.border,
+}));
 
 interface BaseSwitchProps {
   value: boolean;
@@ -17,20 +26,12 @@ export const BaseSwitch: React.FC<BaseSwitchProps> = ({
   loading = false,
   testID,
 }) => {
-  const { theme } = useUnistyles();
-
   return (
-    <Switch
+    <ThemedSwitch
       testID={testID}
       value={value}
       onValueChange={onValueChange}
       disabled={disabled || loading}
-      trackColor={{
-        false: theme.colors.border,
-        true: theme.colors.primary,
-      }}
-      thumbColor={theme.colors.surface}
-      ios_backgroundColor={theme.colors.border}
     />
   );
 };

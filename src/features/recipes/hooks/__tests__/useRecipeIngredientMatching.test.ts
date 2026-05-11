@@ -1,28 +1,13 @@
-import { renderHook, act } from '@testing-library/react-native';
+import { act, waitFor } from '@testing-library/react-native';
+import {
+  recordMock,
+  renderHookWithApollo,
+} from '#/test-utils/apolloMockProvider';
+import { MatchRecipeIngredientsToPantryDocument } from '#features/recipes/graphql/recipe.generated';
 import {
   useRecipeIngredientMatching,
   getAvailabilityStatus,
 } from '../useRecipeIngredientMatching';
-
-// --- Mock Apollo hooks ---
-const mockLoadMatchesQuery = jest.fn();
-const mockConfirmMutation = jest.fn();
-
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useLazyQuery: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'MatchRecipeIngredientsToPantry')
-      return [mockLoadMatchesQuery, { loading: false }];
-    return { data: undefined, loading: false, error: undefined };
-  }),
-  useMutation: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'ConfirmRecipeConsumption')
-      return [mockConfirmMutation, { loading: false }];
-    return [jest.fn(), {}];
-  }),
-}));
 
 jest.mock('#store/useAppStore', () => ({
   useAppStore: (selector: (s: any) => any) =>
@@ -48,14 +33,22 @@ jest.mock('#/services/telemetry', () => ({
 
 jest.mock('#/utils/compilerSafeWrappers');
 
-// Break circular dependency
 jest.mock('#/apollo/links/tokenScheduler');
 
 beforeEach(() => {
   jest.clearAllMocks();
 });
 
-// ---------- Pure function tests ----------
+function matchesMock(matches: any[]) {
+  return recordMock(MatchRecipeIngredientsToPantryDocument, {
+    data: {
+      matchRecipeIngredientsToPantry: matches.map(m => ({
+        __typename: 'RecipeIngredientPantryMatch',
+        ...m,
+      })),
+    },
+  });
+}
 
 describe('getAvailabilityStatus', () => {
   it('returns "available" when isAvailable and confidence >= 0.8', () => {
@@ -92,11 +85,9 @@ describe('getAvailabilityStatus', () => {
   });
 });
 
-// ---------- Hook tests ----------
-
 describe('useRecipeIngredientMatching', () => {
   it('returns initial state with hasPantry true when pantryId exists', () => {
-    const { result } = renderHook(() =>
+    const { result } = renderHookWithApollo(() =>
       useRecipeIngredientMatching('recipe-1'),
     );
 
@@ -113,7 +104,9 @@ describe('useRecipeIngredientMatching', () => {
   });
 
   it('loadMatches shows error when recipeId is undefined', async () => {
-    const { result } = renderHook(() => useRecipeIngredientMatching(undefined));
+    const { result } = renderHookWithApollo(() =>
+      useRecipeIngredientMatching(undefined),
+    );
 
     let success: boolean | undefined;
     await act(async () => {
@@ -129,22 +122,25 @@ describe('useRecipeIngredientMatching', () => {
   it('loadMatches populates editableMatches on success', async () => {
     const matches = [
       {
-        ingredient: { id: 'ing-1', isOptional: false, unit: { id: 'u1' } },
+        ingredient: {
+          __typename: 'RecipeIngredient',
+          id: 'ing-1',
+          isOptional: false,
+          unit: { __typename: 'Unit', id: 'u1' },
+        },
         isAvailable: true,
         matchConfidence: 0.95,
-        matchedPantryItem: { id: 'pi-1' },
+        matchedPantryItem: { __typename: 'PantryItem', id: 'pi-1' },
         availableQuantity: 5,
         suggestedQuantity: 2,
-        suggestedUnit: { id: 'su-1' },
+        suggestedUnit: { __typename: 'Unit', id: 'su-1' },
       },
     ];
+    const m = matchesMock(matches);
 
-    mockLoadMatchesQuery.mockResolvedValueOnce({
-      data: { matchRecipeIngredientsToPantry: matches },
-    });
-
-    const { result } = renderHook(() =>
-      useRecipeIngredientMatching('recipe-1'),
+    const { result } = renderHookWithApollo(
+      () => useRecipeIngredientMatching('recipe-1'),
+      { operationMocks: [m.mock] },
     );
 
     let success: boolean | undefined;
@@ -153,7 +149,7 @@ describe('useRecipeIngredientMatching', () => {
     });
 
     expect(success).toBe(true);
-    expect(result.current.editableMatches).toHaveLength(1);
+    await waitFor(() => expect(result.current.editableMatches).toHaveLength(1));
     expect(result.current.editableMatches[0].adjustedQuantity).toBe(2);
     expect(result.current.isSheetVisible).toBe(true);
   });
@@ -161,27 +157,31 @@ describe('useRecipeIngredientMatching', () => {
   it('updateMatch updates a specific match entry', async () => {
     const matches = [
       {
-        ingredient: { id: 'ing-1', isOptional: false, unit: { id: 'u1' } },
+        ingredient: {
+          __typename: 'RecipeIngredient',
+          id: 'ing-1',
+          isOptional: false,
+          unit: { __typename: 'Unit', id: 'u1' },
+        },
         isAvailable: true,
         matchConfidence: 0.9,
-        matchedPantryItem: { id: 'pi-1' },
+        matchedPantryItem: { __typename: 'PantryItem', id: 'pi-1' },
         availableQuantity: 5,
         suggestedQuantity: 2,
-        suggestedUnit: { id: 'su-1' },
+        suggestedUnit: { __typename: 'Unit', id: 'su-1' },
       },
     ];
+    const m = matchesMock(matches);
 
-    mockLoadMatchesQuery.mockResolvedValueOnce({
-      data: { matchRecipeIngredientsToPantry: matches },
-    });
-
-    const { result } = renderHook(() =>
-      useRecipeIngredientMatching('recipe-1'),
+    const { result } = renderHookWithApollo(
+      () => useRecipeIngredientMatching('recipe-1'),
+      { operationMocks: [m.mock] },
     );
 
     await act(async () => {
       await result.current.loadMatches(4);
     });
+    await waitFor(() => expect(result.current.editableMatches).toHaveLength(1));
 
     act(() => {
       result.current.updateMatch(0, { adjustedQuantity: 10 });
@@ -193,29 +193,32 @@ describe('useRecipeIngredientMatching', () => {
   it('closeSheet hides the sheet', async () => {
     const matches = [
       {
-        ingredient: { id: 'ing-1', isOptional: false, unit: { id: 'u1' } },
+        ingredient: {
+          __typename: 'RecipeIngredient',
+          id: 'ing-1',
+          isOptional: false,
+          unit: { __typename: 'Unit', id: 'u1' },
+        },
         isAvailable: true,
         matchConfidence: 0.9,
-        matchedPantryItem: { id: 'pi-1' },
+        matchedPantryItem: { __typename: 'PantryItem', id: 'pi-1' },
         availableQuantity: 5,
         suggestedQuantity: 2,
-        suggestedUnit: { id: 'su-1' },
+        suggestedUnit: { __typename: 'Unit', id: 'su-1' },
       },
     ];
+    const m = matchesMock(matches);
 
-    mockLoadMatchesQuery.mockResolvedValueOnce({
-      data: { matchRecipeIngredientsToPantry: matches },
-    });
-
-    const { result } = renderHook(() =>
-      useRecipeIngredientMatching('recipe-1'),
+    const { result } = renderHookWithApollo(
+      () => useRecipeIngredientMatching('recipe-1'),
+      { operationMocks: [m.mock] },
     );
 
     await act(async () => {
       await result.current.loadMatches(4);
     });
 
-    expect(result.current.isSheetVisible).toBe(true);
+    await waitFor(() => expect(result.current.isSheetVisible).toBe(true));
 
     act(() => {
       result.current.closeSheet();
@@ -227,25 +230,40 @@ describe('useRecipeIngredientMatching', () => {
   it('matchSummary computes counts correctly', async () => {
     const matches = [
       {
-        ingredient: { id: 'ing-1', isOptional: false, unit: { id: 'u1' } },
+        ingredient: {
+          __typename: 'RecipeIngredient',
+          id: 'ing-1',
+          isOptional: false,
+          unit: { __typename: 'Unit', id: 'u1' },
+        },
         isAvailable: true,
         matchConfidence: 0.9,
-        matchedPantryItem: { id: 'pi-1' },
+        matchedPantryItem: { __typename: 'PantryItem', id: 'pi-1' },
         availableQuantity: 5,
         suggestedQuantity: 2,
-        suggestedUnit: { id: 'su-1' },
+        suggestedUnit: { __typename: 'Unit', id: 'su-1' },
       },
       {
-        ingredient: { id: 'ing-2', isOptional: false, unit: { id: 'u2' } },
+        ingredient: {
+          __typename: 'RecipeIngredient',
+          id: 'ing-2',
+          isOptional: false,
+          unit: { __typename: 'Unit', id: 'u2' },
+        },
         isAvailable: false,
         matchConfidence: 0.3,
-        matchedPantryItem: { id: 'pi-2' },
+        matchedPantryItem: { __typename: 'PantryItem', id: 'pi-2' },
         availableQuantity: 1,
         suggestedQuantity: 3,
         suggestedUnit: null,
       },
       {
-        ingredient: { id: 'ing-3', isOptional: true, unit: { id: 'u3' } },
+        ingredient: {
+          __typename: 'RecipeIngredient',
+          id: 'ing-3',
+          isOptional: true,
+          unit: { __typename: 'Unit', id: 'u3' },
+        },
         isAvailable: false,
         matchConfidence: 0,
         matchedPantryItem: null,
@@ -254,25 +272,25 @@ describe('useRecipeIngredientMatching', () => {
         suggestedUnit: null,
       },
     ];
+    const m = matchesMock(matches);
 
-    mockLoadMatchesQuery.mockResolvedValueOnce({
-      data: { matchRecipeIngredientsToPantry: matches },
-    });
-
-    const { result } = renderHook(() =>
-      useRecipeIngredientMatching('recipe-1'),
+    const { result } = renderHookWithApollo(
+      () => useRecipeIngredientMatching('recipe-1'),
+      { operationMocks: [m.mock] },
     );
 
     await act(async () => {
       await result.current.loadMatches(4);
     });
 
-    expect(result.current.matchSummary).toEqual({
-      total: 3,
-      available: 1,
-      partial: 1,
-      missing: 1,
-      included: 2, // ing-1 (not optional, has pantry item), ing-2 (not optional, has pantry item)
-    });
+    await waitFor(() =>
+      expect(result.current.matchSummary).toEqual({
+        total: 3,
+        available: 1,
+        partial: 1,
+        missing: 1,
+        included: 2,
+      }),
+    );
   });
 });

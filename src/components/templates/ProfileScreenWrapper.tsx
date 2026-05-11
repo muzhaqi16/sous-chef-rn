@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, RefreshControlProps, ScrollView } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { Header } from '#components/molecules/Header';
 
@@ -26,13 +26,9 @@ export const ProfileScreenWrapper: React.FC<ProfileScreenWrapperProps> = ({
   refreshControl,
 }) => {
   const { goBack } = useAppNavigation();
-  const { theme } = useUnistyles();
 
   return (
-    <View
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
-      testID={testID}
-    >
+    <View style={styles.container} testID={testID}>
       {!!showBackButton && (
         <Header title={title ?? ''} onBack={goBack} centerTitle />
       )}

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
+import { useTranslation } from 'react-i18next';
 import { Icon } from '#utils/iconUtils';
 
 import { AuthFormTemplate } from '#components/templates/AuthFormTemplate';
@@ -64,7 +65,7 @@ async function loadAuthInfoAsync(
 }
 
 export function LoginScreen(): React.JSX.Element {
-  const { theme } = useUnistyles();
+  const { t } = useTranslation();
   const { navigateToForgotPassword, navigateToSignUp } = useAuthNavigation();
   const isLoggingIn = useAppStore(state => state.authIsLoading);
   const {
@@ -175,38 +176,38 @@ export function LoginScreen(): React.JSX.Element {
 
   // Get biometric button text
   const getBiometricButtonText = () => {
-    if (isBiometricLoading) return 'Authenticating...';
-    if (isLoggingIn) return 'Logging in...';
+    if (isBiometricLoading) return t('loading.authenticating');
+    if (isLoggingIn) return t('auth.loggingIn');
 
     if (biometricInfo.biometryType) {
-      return `Use ${biometricInfo.biometryType}`;
+      return t('auth.useBiometryType', { type: biometricInfo.biometryType });
     }
 
-    return 'Use Biometric Login';
+    return t('auth.useBiometric');
   };
 
   return (
     <AuthWrapper testID="login-screen">
       <AuthFormTemplate<LoginInput>
-        title="Sign in to Sous Chef"
-        subtitle="Access your pantry and more"
+        title={t('auth.loginTitle')}
+        subtitle={t('auth.loginSubtitle')}
         fields={[
           {
             name: 'email',
-            label: 'Email address',
+            label: t('auth.emailAddress'),
             component: EmailInput,
             props: { testID: 'login-email-input' },
           },
           {
             name: 'password',
-            label: 'Password',
+            label: t('auth.password'),
             component: PasswordInput,
             props: { showToggle: true, testID: 'login-password-input' },
           },
         ]}
         control={form.control}
         errors={form.formState.errors}
-        linkText="Forgot password?"
+        linkText={t('auth.forgotPassword')}
         linkTestID="login-forgot-password-link"
         onLinkPress={() => {
           Telemetry.trackEvent('forgot_password_clicked', {
@@ -214,11 +215,11 @@ export function LoginScreen(): React.JSX.Element {
           });
           navigateToForgotPassword();
         }}
-        submitText={isLoggingIn ? 'Logging in…' : 'Log In'}
+        submitText={isLoggingIn ? t('auth.loggingIn') : t('auth.logIn')}
         submitButtonTestID="login-submit-button"
         onSubmit={form.handleSubmit(onSubmit)}
-        footerText="Don't have an account?"
-        footerLinkText="Sign Up"
+        footerText={t('auth.noAccount')}
+        footerLinkText={t('auth.signUp')}
         footerLinkTestID="login-signup-link"
         onFooterLinkPress={() => {
           Telemetry.trackEvent('signup_navigation_clicked', {
@@ -242,7 +243,7 @@ export function LoginScreen(): React.JSX.Element {
             disabled={isBiometricLoading || isLoggingIn}
             accessibilityRole="button"
             accessibilityLabel={getBiometricButtonText()}
-            accessibilityHint="Log in using biometric authentication"
+            accessibilityHint={t('auth.biometricLoginHint')}
             accessibilityState={{
               disabled: isBiometricLoading || isLoggingIn,
               busy: isBiometricLoading,
@@ -251,11 +252,7 @@ export function LoginScreen(): React.JSX.Element {
             <Icon
               name={getBiometricIcon()}
               size={24}
-              color={
-                isBiometricLoading
-                  ? theme.colors.textTertiary
-                  : theme.colors.primary
-              }
+              tone={isBiometricLoading ? 'textTertiary' : 'primary'}
             />
             <Text
               size="md"

@@ -1,14 +1,15 @@
 import React from 'react';
 import {
   View,
-  ActivityIndicator,
   Modal,
   StyleProp,
   ViewStyle,
+  ActivityIndicator,
 } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { SousChefLoader } from './SousChefLoader';
 import { Text } from '#components/atoms/Text';
+import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
 
 export interface LoadingProps {
   /** Primary loading message */
@@ -54,28 +55,23 @@ export const Loading: React.FC<LoadingProps> = ({
   color,
   style,
 }) => {
-  const { theme } = useUnistyles();
+  styles.useVariants({ inline: variant === 'inline', overlayOpacity });
 
   // Don't render if not visible (for overlay/fullscreen variants)
   if ((variant === 'overlay' || variant === 'fullscreen') && !visible) {
     return null;
   }
 
-  const spinnerColor = color || theme.colors.primary;
+  const spinner =
+    color != null ? (
+      <ActivityIndicator size={size} color={color} style={styles.spinner} />
+    ) : (
+      <ThemedActivityIndicator size={size} style={styles.spinner} />
+    );
 
   const renderContent = () => (
-    <View
-      style={[
-        styles.container,
-        variant === 'inline' && styles.containerInline,
-        style,
-      ]}
-    >
-      <ActivityIndicator
-        size={size}
-        color={spinnerColor}
-        style={styles.spinner}
-      />
+    <View style={[styles.container, style]}>
+      {spinner}
       {!!message && (
         <Text
           size="md"
@@ -129,13 +125,6 @@ export const Loading: React.FC<LoadingProps> = ({
   }
 
   // Overlay variant - renders in a modal with backdrop
-  const overlayColors = {
-    light: theme.colors.overlays.light,
-    medium: theme.colors.overlays.medium,
-    dark: theme.colors.overlays.dark,
-    heavy: theme.colors.overlays.heavy,
-  };
-
   return (
     <Modal
       transparent
@@ -149,26 +138,9 @@ export const Loading: React.FC<LoadingProps> = ({
         }
       }}
     >
-      <View
-        style={[
-          styles.overlay,
-          { backgroundColor: overlayColors[overlayOpacity] },
-        ]}
-      >
-        <View
-          style={[
-            styles.card,
-            {
-              backgroundColor: theme.colors.background,
-              ...theme.shadows.md,
-            },
-          ]}
-        >
-          <ActivityIndicator
-            size={size}
-            color={spinnerColor}
-            style={styles.spinner}
-          />
+      <View style={styles.overlay}>
+        <View style={styles.card}>
+          {spinner}
           {!!message && (
             <Text
               size="md"
@@ -218,10 +190,12 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     alignItems: 'center',
     padding: theme.spacing.lg,
-  },
-
-  containerInline: {
-    flex: 1,
+    variants: {
+      inline: {
+        true: { flex: 1 },
+        false: {},
+      },
+    },
   },
 
   // Fullscreen variant styles
@@ -237,6 +211,14 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    variants: {
+      overlayOpacity: {
+        light: { backgroundColor: theme.colors.overlays.light },
+        medium: { backgroundColor: theme.colors.overlays.medium },
+        dark: { backgroundColor: theme.colors.overlays.dark },
+        heavy: { backgroundColor: theme.colors.overlays.heavy },
+      },
+    },
   },
 
   card: {
@@ -244,6 +226,8 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.lg,
     alignItems: 'center',
     minWidth: theme.sizes.modal.sm,
+    backgroundColor: theme.colors.background,
+    ...theme.shadows.md,
   },
 
   spinner: {

@@ -1,15 +1,55 @@
 import React from 'react';
 import { View, type LayoutChangeEvent } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, UnistylesRuntime } from 'react-native-unistyles';
-import { Icon } from '#utils/iconUtils';
+import { Pressable, ThemedIcon } from '#components/atoms/themedComponents';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { HapticService } from '#services/haptic/HapticService';
 import type { FilterTabConfig } from './types';
 import { Text } from '#components/atoms/Text';
 
+type IconColorState = 'action' | 'active' | 'filtered' | 'inactive';
+
+type FilterTabTheme = {
+  colors: {
+    primary: string;
+    filterTab: {
+      activeText: string;
+      filteredText: string;
+      inactiveText: string;
+    };
+  };
+};
+
+function resolveIconColor(state: IconColorState, t: FilterTabTheme): string {
+  switch (state) {
+    case 'action':
+      return t.colors.primary;
+    case 'active':
+      return t.colors.filterTab.activeText;
+    case 'filtered':
+      return t.colors.filterTab.filteredText;
+    case 'inactive':
+    default:
+      return t.colors.filterTab.inactiveText;
+  }
+}
+
+/**
+ * Wraps an externally-provided iconElement and re-clones it with the
+ * theme-correct color. Theme reactivity comes from withUnistyles.
+ */
+const ColoredIconElement = withUnistyles(
+  ({
+    element,
+    color,
+  }: {
+    element: React.ReactElement<{ color?: string }>;
+    color?: string;
+  }) => React.cloneElement(element, { color }),
+);
+
 /** Icon names are ASCII-only (e.g. "snow-outline"); emojis contain non-ASCII. */
 function isEmoji(value: string): boolean {
-  return /[^\u0020-\u007E]/.test(value);
+  return /[^ -~]/.test(value);
 }
 
 interface FilterTabsItemProps<T extends string> {
@@ -24,13 +64,6 @@ interface FilterTabsItemProps<T extends string> {
   onLayout?: (event: LayoutChangeEvent) => void;
 }
 
-function getIconColor(isActive: boolean, isFiltered: boolean): string {
-  const theme = UnistylesRuntime.getTheme();
-  if (isActive) return theme.colors.filterTab.activeText;
-  if (isFiltered) return theme.colors.filterTab.filteredText;
-  return theme.colors.filterTab.inactiveText;
-}
-
 function FilterTabsItemComponent<T extends string>({
   tab,
   isActive,
@@ -43,9 +76,19 @@ function FilterTabsItemComponent<T extends string>({
   onLayout,
 }: FilterTabsItemProps<T>): React.ReactElement {
   const hasCount = showCounts && count !== undefined;
-  const iconColor = tab.isAction
-    ? UnistylesRuntime.getTheme().colors.primary
-    : getIconColor(isActive, isFiltered);
+
+  const iconColorState: IconColorState = tab.isAction
+    ? 'action'
+    : isActive
+    ? 'active'
+    : isFiltered
+    ? 'filtered'
+    : 'inactive';
+
+  styles.useVariants({
+    state: isActive ? 'active' : isFiltered ? 'filtered' : 'inactive',
+    compact: isCompact,
+  });
 
   const handlePress = () => {
     HapticService.selection();
@@ -59,71 +102,51 @@ function FilterTabsItemComponent<T extends string>({
       testID={testID}
       style={[
         styles.tab,
-        isActive && styles.tabActive,
         isActive && tab.activeColor
           ? { backgroundColor: tab.activeColor }
           : undefined,
-        isFiltered && !isActive && styles.tabFiltered,
-        isCompact && styles.tabCompact,
       ]}
     >
-      {tab.iconElement != null
-        ? React.isValidElement(tab.iconElement)
-          ? React.cloneElement(
-              tab.iconElement as React.ReactElement<{ color?: string }>,
-              {
-                color: isActive || isFiltered ? iconColor : undefined,
-              },
-            )
-          : tab.iconElement
-        : !!tab.icon &&
-          (isEmoji(tab.icon) ? (
-            <Text size={isCompact ? 'xs' : 'sm'}>{tab.icon}</Text>
-          ) : (
-            <Icon
-              name={tab.icon}
-              size={tab.isAction ? (isCompact ? 18 : 20) : isCompact ? 14 : 16}
-              color={iconColor}
-              library={tab.iconLibrary}
-            />
-          ))}
+      {tab.iconElement != null ? (
+        React.isValidElement(tab.iconElement) ? (
+          <ColoredIconElement
+            element={tab.iconElement as React.ReactElement<{ color?: string }>}
+            uniProps={t => ({
+              color:
+                isActive || isFiltered
+                  ? resolveIconColor(iconColorState, t)
+                  : undefined,
+            })}
+          />
+        ) : (
+          tab.iconElement
+        )
+      ) : (
+        !!tab.icon &&
+        (isEmoji(tab.icon) ? (
+          <Text size={isCompact ? 'xs' : 'sm'}>{tab.icon}</Text>
+        ) : (
+          <ThemedIcon
+            name={tab.icon}
+            size={tab.isAction ? (isCompact ? 18 : 20) : isCompact ? 14 : 16}
+            uniProps={t => ({ color: resolveIconColor(iconColorState, t) })}
+            library={tab.iconLibrary}
+          />
+        ))
+      )}
       {!(tab.isAction && !tab.label) && (
-        <Text
-          style={[
-            styles.tabLabel,
-            isActive && styles.tabLabelActive,
-            isFiltered && !isActive && styles.tabLabelFiltered,
-            isCompact && styles.tabLabelCompact,
-          ]}
-        >
-          {tab.label}
-        </Text>
+        <Text style={styles.tabLabel}>{tab.label}</Text>
       )}
       {!!hasCount && (
-        <View
-          style={[
-            styles.countBadge,
-            isActive && styles.countBadgeActive,
-            isCompact && styles.countBadgeCompact,
-          ]}
-        >
-          <Text
-            style={[
-              styles.countText,
-              isActive && styles.countTextActive,
-              isFiltered && !isActive && styles.countTextFiltered,
-              isCompact && styles.countTextCompact,
-            ]}
-          >
-            {count}
-          </Text>
+        <View style={styles.countBadge}>
+          <Text style={styles.countText}>{count}</Text>
         </View>
       )}
       {!!tab.showDropdownIndicator && (
-        <Icon
+        <ThemedIcon
           name="chevron-down"
           size={isCompact ? 12 : 14}
-          color={iconColor}
+          uniProps={t => ({ color: resolveIconColor(iconColorState, t) })}
         />
       )}
     </Pressable>
@@ -142,59 +165,70 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.xl,
     gap: theme.spacing.xs + 2,
     backgroundColor: theme.colors.filterTab.inactiveBg,
-  },
-  tabActive: {
-    backgroundColor: theme.colors.filterTab.activeBg,
-  },
-  tabFiltered: {
-    backgroundColor: theme.colors.filterTab.filteredBg,
-  },
-  tabCompact: {
-    paddingHorizontal: theme.spacing.sm + 2,
-    paddingVertical: theme.spacing.xs + 2,
-    borderRadius: theme.radii.lg,
-    gap: theme.spacing.xs,
+    variants: {
+      state: {
+        active: { backgroundColor: theme.colors.filterTab.activeBg },
+        filtered: { backgroundColor: theme.colors.filterTab.filteredBg },
+        inactive: { backgroundColor: theme.colors.filterTab.inactiveBg },
+      },
+      compact: {
+        true: {
+          paddingHorizontal: theme.spacing.sm + 2,
+          paddingVertical: theme.spacing.xs + 2,
+          borderRadius: theme.radii.lg,
+          gap: theme.spacing.xs,
+        },
+      },
+    },
   },
   tabLabel: {
     fontSize: theme.typography.fontSize.sm - 1,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.filterTab.inactiveText,
-  },
-  tabLabelActive: {
-    color: theme.colors.filterTab.activeText,
-  },
-  tabLabelFiltered: {
-    color: theme.colors.filterTab.filteredText,
-  },
-  tabLabelCompact: {
-    fontSize: theme.typography.fontSize.xs,
+    variants: {
+      state: {
+        active: { color: theme.colors.filterTab.activeText },
+        filtered: { color: theme.colors.filterTab.filteredText },
+        inactive: { color: theme.colors.filterTab.inactiveText },
+      },
+      compact: {
+        true: { fontSize: theme.typography.fontSize.xs },
+      },
+    },
   },
   countBadge: {
     paddingHorizontal: theme.spacing.xs + 3,
     paddingVertical: theme.spacing.xs,
     borderRadius: theme.radii.md,
     backgroundColor: theme.colors.filterTab.countBg,
-  },
-  countBadgeActive: {
-    backgroundColor: theme.colors.filterTab.activeCountBg,
-  },
-  countBadgeCompact: {
-    paddingHorizontal: theme.spacing.xs + 1,
-    paddingVertical: 1,
-    borderRadius: theme.radii.sm,
+    variants: {
+      state: {
+        active: { backgroundColor: theme.colors.filterTab.activeCountBg },
+        filtered: {},
+        inactive: {},
+      },
+      compact: {
+        true: {
+          paddingHorizontal: theme.spacing.xs + 1,
+          paddingVertical: 1,
+          borderRadius: theme.radii.sm,
+        },
+      },
+    },
   },
   countText: {
     fontSize: theme.typography.fontSize.xs - 1,
     fontWeight: theme.fonts.weight.bold,
     color: theme.colors.filterTab.countText,
-  },
-  countTextActive: {
-    color: theme.colors.filterTab.activeText,
-  },
-  countTextFiltered: {
-    color: theme.colors.filterTab.filteredText,
-  },
-  countTextCompact: {
-    fontSize: theme.typography.fontSize.xs - 2,
+    variants: {
+      state: {
+        active: { color: theme.colors.filterTab.activeText },
+        filtered: { color: theme.colors.filterTab.filteredText },
+        inactive: {},
+      },
+      compact: {
+        true: { fontSize: theme.typography.fontSize.xs - 2 },
+      },
+    },
   },
 }));

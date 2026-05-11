@@ -15,11 +15,12 @@ import {
   type SetDefaultHomeMutation,
 } from '#operations/home/userSettings.generated';
 import {
-  useAppStore,
-  useSelectedHomeId,
   useHomeState,
+  useSelectedHomeId,
+  useSelectedPantryId,
   useSetHomeAndPantry,
   useSetIsHomeSelectionReady,
+  useSetSelectedPantryId,
 } from '#store/useAppStore';
 import { useErrorService } from '#/services/errorService';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
@@ -54,8 +55,8 @@ export function useHomeSelection({
 }: UseHomeSelectionOptions) {
   const selectedHomeId = useSelectedHomeId();
   const { setSelectedHomeId } = useHomeState();
-  const selectedPantryId = useAppStore(state => state.selectedPantryId);
-  const setSelectedPantryId = useAppStore(state => state.setSelectedPantryId);
+  const selectedPantryId = useSelectedPantryId();
+  const setSelectedPantryId = useSetSelectedPantryId();
   const setHomeAndPantry = useSetHomeAndPantry();
   const setIsHomeSelectionReady = useSetIsHomeSelectionReady();
   const { handleApolloError } = useErrorService();

@@ -1,10 +1,14 @@
 import React, { useRef } from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Pressable } from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { Text } from '#components/atoms/Text';
+
+// Matches theme.typography.fontSize.lg (18). Inlined so the component does not
+// need useUnistyles — the theme value is module-static.
+const ICON_SIZE_LG = 18;
 
 interface PantryHeaderProps {
   /** User's display name */
@@ -48,7 +52,6 @@ export const PantryHeader: React.FC<PantryHeaderProps> = ({
   onNotificationPress,
   onHomeBadgeLayout,
 }) => {
-  const { theme } = useUnistyles();
   const badgeRef = useRef<View>(null);
 
   return (
@@ -56,7 +59,7 @@ export const PantryHeader: React.FC<PantryHeaderProps> = ({
       <View style={styles.greetingContent}>
         <Text weight="bold" style={styles.greeting}>
           Hello,{' '}
-          <Text weight="bold" tone="accent">
+          <Text weight="bold" tone="accent" size="2xl">
             {userName}
           </Text>
           !
@@ -85,17 +88,17 @@ export const PantryHeader: React.FC<PantryHeaderProps> = ({
             }}
           >
             <Icon
-              size={theme.typography.fontSize.lg}
+              size={ICON_SIZE_LG}
               name="swap-horizontal-outline"
-              color={theme.colors.primary}
+              tone="primary"
             />
             <Text size="sm" tone="secondary">
               {householdName}
             </Text>
             <Icon
               name="chevron-forward"
-              size={theme.typography.fontSize.lg}
-              color={theme.colors.textTertiary}
+              size={ICON_SIZE_LG}
+              tone="textTertiary"
             />
           </View>
         </Pressable>
@@ -110,11 +113,7 @@ export const PantryHeader: React.FC<PantryHeaderProps> = ({
           accessibilityRole="button"
           accessibilityLabel="Notifications"
         >
-          <Icon
-            name="notifications-outline"
-            size={24}
-            color={theme.colors.textSecondary}
-          />
+          <Icon name="notifications-outline" size={24} tone="textSecondary" />
           {notificationCount > 0 && <View style={styles.notificationDot} />}
         </Pressable>
       )}
@@ -129,7 +128,7 @@ export const PantryHeader: React.FC<PantryHeaderProps> = ({
           />
         ) : (
           <View style={styles.avatarPlaceholder}>
-            <Icon name="person" size={24} color={theme.colors.textSecondary} />
+            <Icon name="person" size={24} tone="textSecondary" />
           </View>
         )}
       </Pressable>
@@ -151,7 +150,7 @@ const styles = StyleSheet.create(theme => ({
   },
   greeting: {
     fontSize: theme.typography.fontSize['2xl'] + 2,
-    color: theme.colors.secondaryDark,
+    color: theme.colors.textPrimary,
   },
   householdBadge: {
     marginTop: theme.spacing.xs,

@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
-import { useAppStore } from '#store/useAppStore';
-import { useStore } from '#store/index';
+import { useUser } from '#store/useAppStore';
+import { useStore } from '#store';
 import { useMutation, useQuery } from '@apollo/client/react';
 import {
   GetUserSettingsDocument,
@@ -26,7 +26,7 @@ export interface AppSettings {
 }
 
 export const useAppSettings = () => {
-  const user = useAppStore(state => state.user);
+  const user = useUser();
   const { data, loading, refetch } = useQuery(GetUserSettingsDocument, {
     skip: !user?.id,
   });
@@ -117,13 +117,12 @@ export const useAppSettings = () => {
   // PERFORMANCE: Sync settings to MMKV so startup-path hooks can read them
   // without triggering the GetUserSettings GraphQL query at startup.
   // - useShowTutorials reads 'user_show_tutorials' from MMKV
-  // - useOfflineMode reads 'user_offline_mode' from MMKV
+  // - offlineModeEnabled is mirrored to MMKV by networkSlice.setOfflineModeEnabled
   useEffect(() => {
     if (settings?.showTutorials !== undefined) {
       storage.set('user_show_tutorials', settings.showTutorials);
     }
     if (settings?.offlineMode !== undefined) {
-      storage.set('user_offline_mode', settings.offlineMode);
       useStore.getState().setOfflineModeEnabled(settings.offlineMode);
     }
   }, [settings?.showTutorials, settings?.offlineMode]);

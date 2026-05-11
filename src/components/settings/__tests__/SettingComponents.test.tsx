@@ -1,6 +1,11 @@
 import React from 'react';
 import { Text } from 'react-native';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import {
+  render,
+  screen,
+  fireEvent,
+  userEvent,
+} from '@testing-library/react-native';
 import { SettingRow } from '../SettingRow';
 import { SettingSection } from '../SettingSection';
 import { SettingSwitch } from '../SettingSwitch';
@@ -73,9 +78,10 @@ describe('SettingRow', () => {
     expect(screen.queryByTestId('icon-chevron-right')).toBeNull();
   });
 
-  it('calls onPress when pressed', () => {
+  it('calls onPress when pressed', async () => {
+    const user = userEvent.setup();
     render(<SettingRow {...defaultProps} />);
-    fireEvent.press(screen.getByText('Dark Mode'));
+    await user.press(screen.getByText('Dark Mode'));
     expect(defaultProps.onPress).toHaveBeenCalled();
   });
 

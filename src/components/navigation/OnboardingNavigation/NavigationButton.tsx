@@ -1,7 +1,7 @@
 import React from 'react';
 
-import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Pressable } from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
 import Animated, { LinearTransition } from 'react-native-reanimated';
 import { TIMING } from '#constants/animations';
 import type { NavigationButtonProps } from './types';
@@ -17,7 +17,7 @@ export const NavigationButton: React.FC<NavigationButtonProps> = ({
   style,
   textStyle,
 }) => {
-  const { theme } = useUnistyles();
+  styles.useVariants({ disabled: action.disabled ?? false });
 
   return (
     <AnimatedPressable
@@ -25,9 +25,8 @@ export const NavigationButton: React.FC<NavigationButtonProps> = ({
       disabled={action.disabled}
       style={({ pressed }) => [
         styles.button,
-        {
+        !!action.backgroundColor && {
           backgroundColor: action.backgroundColor,
-          opacity: action.disabled ? theme.opacity.disabled : 1,
         },
         style,
         pressed && styles.pressed,
@@ -42,9 +41,7 @@ export const NavigationButton: React.FC<NavigationButtonProps> = ({
         numberOfLines={1}
         style={[
           styles.label,
-          {
-            color: action.labelColor || theme.colors.white,
-          },
+          !!action.labelColor && { color: action.labelColor },
           textStyle,
         ]}
       >
@@ -64,9 +61,16 @@ const styles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
     flexDirection: 'row',
     paddingHorizontal: theme.spacing.xl,
+    variants: {
+      disabled: {
+        true: { opacity: theme.opacity.disabled },
+        false: { opacity: 1 },
+      },
+    },
   },
   label: {
     letterSpacing: 0.5,
+    color: theme.colors.white,
   },
   pressed: {
     opacity: theme.opacity.pressed,

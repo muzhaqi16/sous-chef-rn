@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { SegmentedControl } from '../SegmentedControl';
 
 describe('SegmentedControl', () => {
@@ -32,9 +32,10 @@ describe('SegmentedControl', () => {
     expect(screen.queryByText('Frequency')).toBeNull();
   });
 
-  it('calls onChange with selected option when pressed', () => {
+  it('calls onChange with selected option when pressed', async () => {
+    const user = userEvent.setup();
     render(<SegmentedControl {...defaultProps} />);
-    fireEvent.press(screen.getByText('weekly'));
+    await user.press(screen.getByText('weekly'));
     expect(defaultProps.onChange).toHaveBeenCalledWith('weekly');
   });
 

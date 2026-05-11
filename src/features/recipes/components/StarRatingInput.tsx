@@ -1,8 +1,8 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { Ionicons } from '@react-native-vector-icons/ionicons';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Pressable } from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
+import { Icon } from '#utils/iconUtils';
 
 interface StarRatingInputProps {
   value: number;
@@ -17,8 +17,6 @@ export const StarRatingInput: React.FC<StarRatingInputProps> = ({
   size = 28,
   disabled = false,
 }) => {
-  const { theme } = useUnistyles();
-
   return (
     <View style={styles.container}>
       {[1, 2, 3, 4, 5].map(star => (
@@ -29,12 +27,10 @@ export const StarRatingInput: React.FC<StarRatingInputProps> = ({
           disabled={disabled}
           style={({ pressed }) => pressed && styles.pressed}
         >
-          <Ionicons
+          <Icon
             name={star <= value ? 'star' : 'star-outline'}
             size={size}
-            color={
-              star <= value ? theme.colors.rating : theme.colors.textSecondary
-            }
+            tone={star <= value ? 'rating' : 'textSecondary'}
           />
         </Pressable>
       ))}

@@ -1,12 +1,12 @@
 import React, { RefObject } from 'react';
 
-import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import type {
   SelectorConfig,
   ItemSelectorRef,
 } from '#components/organisms/AnimatedItemSelector/types';
+import { SelectorItemContainer } from '#components/organisms/AnimatedItemSelector/SelectorItemContainer';
 import { Text } from '#components/atoms/Text';
 
 interface UsePantrySelectorConfigOptions {
@@ -15,7 +15,8 @@ interface UsePantrySelectorConfigOptions {
   loading: boolean;
   setSelectedPantryId: (id: string) => void;
   selectorRef: RefObject<ItemSelectorRef | null>;
-  navigate: (screen: string, params?: object) => void;
+  toPantrySettings: (params?: { pantryId?: string }) => void;
+  toPantryAnalytics: (params: { pantryId: string }) => void;
 }
 
 export function usePantrySelectorConfig(
@@ -27,12 +28,9 @@ export function usePantrySelectorConfig(
     loading,
     setSelectedPantryId,
     selectorRef,
-    navigate,
+    toPantrySettings,
+    toPantryAnalytics,
   } = options;
-
-  const {
-    theme: { colors },
-  } = useUnistyles();
 
   const renderPantryItem = (
     item: any,
@@ -40,21 +38,15 @@ export function usePantrySelectorConfig(
     onPress: () => void,
   ) => {
     return (
-      <Pressable
-        style={({ pressed }) => [
-          styles.itemContainer,
-          isSelected && styles.itemSelected,
-          pressed && styles.pressed,
-        ]}
+      <SelectorItemContainer
+        state={isSelected ? 'selected' : 'default'}
         onPress={onPress}
       >
         <Text size="md" weight="semibold" style={styles.itemName}>
           {item.name}
         </Text>
-        {!!isSelected && (
-          <Icon name="checkmark" size={20} color={colors.primary} />
-        )}
-      </Pressable>
+        {!!isSelected && <Icon name="checkmark" size={20} tone="primary" />}
+      </SelectorItemContainer>
     );
   };
 
@@ -76,7 +68,7 @@ export function usePantrySelectorConfig(
         label: 'Create New Pantry',
         onPress: () => {
           selectorRef.current?.close();
-          navigate('PantrySettings', { pantryId: undefined });
+          toPantrySettings();
         },
       },
       {
@@ -85,7 +77,7 @@ export function usePantrySelectorConfig(
         onPress: () => {
           selectorRef.current?.close();
           if (selectedPantryId) {
-            navigate('PantrySettings', { pantryId: selectedPantryId });
+            toPantrySettings({ pantryId: selectedPantryId });
           }
         },
         disabled: !selectedPantryId,
@@ -96,7 +88,7 @@ export function usePantrySelectorConfig(
         onPress: () => {
           selectorRef.current?.close();
           if (selectedPantryId) {
-            navigate('PantryAnalytics', { pantryId: selectedPantryId });
+            toPantryAnalytics({ pantryId: selectedPantryId });
           }
         },
         disabled: !selectedPantryId,
@@ -105,27 +97,8 @@ export function usePantrySelectorConfig(
   };
 }
 
-const styles = StyleSheet.create(theme => ({
-  itemContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 48,
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    marginBottom: theme.spacing.sm,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  itemSelected: {
-    backgroundColor: theme.colors.primaryLight,
-    borderColor: theme.colors.primary,
-  },
+const styles = StyleSheet.create(() => ({
   itemName: {
     flex: 1,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

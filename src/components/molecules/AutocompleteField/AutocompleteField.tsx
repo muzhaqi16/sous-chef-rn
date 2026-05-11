@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { InlineAutocomplete } from '../InlineAutocomplete';
 import { BottomSheetAutocompleteInput } from '../BottomSheetAutocompleteInput';

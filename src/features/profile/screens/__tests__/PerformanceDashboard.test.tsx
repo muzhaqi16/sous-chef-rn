@@ -1,7 +1,7 @@
 'use no memo';
 
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react-native';
+import { render, userEvent } from '@testing-library/react-native';
 import { alertService } from '#/services/alertService';
 import { MemoryMonitor } from '#/services/performance/MemoryMonitor';
 import { PerformanceDashboard } from '../PerformanceDashboard';
@@ -63,13 +63,10 @@ jest.mock('#/store/performanceStore', () => ({
   ),
 }));
 
-jest.mock('#/utils/environment', () => ({
-  Environment: {
-    shouldEnableDebugFeatures: jest.fn().mockReturnValue(true),
-  },
-}));
+// Environment is auto-mocked via jest.setup.js; the default
+// `shouldEnableDebugFeatures` returns true, which is what this suite expects.
 
-jest.mock('#/store/useAppStore', () => ({
+jest.mock('#store/useAppStore', () => ({
   useAppStore: jest.fn((selector: any) =>
     selector({ canAccessDevTools: true }),
   ),
@@ -138,7 +135,7 @@ beforeEach(() => {
   const { Environment } = require('#/utils/environment');
   Environment.shouldEnableDebugFeatures.mockReturnValue(true);
 
-  const { useAppStore } = require('#/store/useAppStore');
+  const { useAppStore } = require('#store/useAppStore');
   useAppStore.mockImplementation((selector: any) =>
     selector({ canAccessDevTools: true }),
   );
@@ -190,7 +187,7 @@ describe('PerformanceDashboard', () => {
     const { Environment } = require('#/utils/environment');
     Environment.shouldEnableDebugFeatures.mockReturnValue(false);
 
-    const storeModule = require('#/store/useAppStore');
+    const storeModule = require('#store/useAppStore');
     storeModule.useAppStore.mockImplementation((selector: any) =>
       selector({ canAccessDevTools: false }),
     );
@@ -271,7 +268,8 @@ describe('PerformanceDashboard', () => {
     expect(getByText('50.00ms')).toBeTruthy();
   });
 
-  it('triggers clear data confirmation alert', () => {
+  it('triggers clear data confirmation alert', async () => {
+    const user = userEvent.setup();
     const { usePerformanceStore } = require('#/store/performanceStore');
     const metrics = new Map();
     metrics.set('Test', {
@@ -300,7 +298,7 @@ describe('PerformanceDashboard', () => {
     );
 
     const { getByText } = render(<PerformanceDashboard />);
-    fireEvent.press(getByText('Clear Performance Data'));
+    await user.press(getByText('Clear Performance Data'));
 
     expect(alertService.alert).toHaveBeenCalledWith(
       'Clear Performance Data',
@@ -309,7 +307,8 @@ describe('PerformanceDashboard', () => {
     );
   });
 
-  it('starts MemoryMonitor when memory toggle is turned on', () => {
+  it('starts MemoryMonitor when memory toggle is turned on', async () => {
+    const user = userEvent.setup();
     const { usePerformanceStore } = require('#/store/performanceStore');
     usePerformanceStore.mockImplementation((selector: any) =>
       selector({
@@ -329,26 +328,28 @@ describe('PerformanceDashboard', () => {
     );
 
     const { getByTestId } = render(<PerformanceDashboard />);
-    fireEvent.press(getByTestId('switch-Track Memory Usage'));
+    await user.press(getByTestId('switch-Track Memory Usage'));
 
     expect(mockSetTrackMemory).toHaveBeenCalledWith(true);
     expect(MemoryMonitor.start).toHaveBeenCalledWith(10000);
   });
 
-  it('stops MemoryMonitor when memory toggle is turned off', () => {
+  it('stops MemoryMonitor when memory toggle is turned off', async () => {
+    const user = userEvent.setup();
     const { getByTestId } = render(<PerformanceDashboard />);
     // trackMemory is true by default, pressing toggles it off
-    fireEvent.press(getByTestId('switch-Track Memory Usage'));
+    await user.press(getByTestId('switch-Track Memory Usage'));
 
     expect(mockSetTrackMemory).toHaveBeenCalledWith(false);
     expect(MemoryMonitor.stop).toHaveBeenCalled();
   });
 
-  it('stops MemoryMonitor when master toggle is disabled', () => {
+  it('stops MemoryMonitor when master toggle is disabled', async () => {
+    const user = userEvent.setup();
     (MemoryMonitor.isEnabled as jest.Mock).mockReturnValue(true);
 
     const { getByTestId } = render(<PerformanceDashboard />);
-    fireEvent.press(getByTestId('switch-Enable Performance Tracking'));
+    await user.press(getByTestId('switch-Enable Performance Tracking'));
 
     expect(mockSetPerformanceEnabled).toHaveBeenCalledWith(false);
     expect(MemoryMonitor.stop).toHaveBeenCalled();

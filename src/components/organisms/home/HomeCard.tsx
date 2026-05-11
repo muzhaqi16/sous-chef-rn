@@ -1,18 +1,17 @@
 import React, { useLayoutEffect } from 'react';
 import { View } from 'react-native';
-import type { ViewStyle } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
   Easing,
 } from 'react-native-reanimated';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { TIMING } from '#constants/animations';
 import { Icon } from '#utils/iconUtils';
 import { HomeActions } from './HomeActions';
 import { MembersList } from './MembersList';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import type { Member } from '#/utils/formatters/memberFormatters';
 import { Text } from '#components/atoms/Text';
 
@@ -57,8 +56,6 @@ export const HomeCard: React.FC<HomeCardProps> = ({
   onInvite,
   onDelete,
 }) => {
-  const { theme } = useUnistyles();
-
   // Animated value for highlight effect
   const highlightOpacity = useSharedValue(0);
 
@@ -71,14 +68,6 @@ export const HomeCard: React.FC<HomeCardProps> = ({
       }),
     );
   }, [isHighlighted, highlightOpacity]);
-
-  // Static card style - backgroundColor doesn't animate
-  const cardStyle: ViewStyle = {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.md,
-    padding: theme.spacing.md,
-    overflow: 'hidden',
-  };
 
   // Animated highlight overlay - only opacity animates
   const animatedHighlightStyle = useAnimatedStyle(() => ({
@@ -93,7 +82,7 @@ export const HomeCard: React.FC<HomeCardProps> = ({
   // static card style with animated highlight overlay for smooth animation
   return (
     <View style={styles.homeCardWrapper}>
-      <View style={cardStyle}>
+      <View style={styles.card}>
         {/* Highlight overlay - only opacity animates, no color interpolation */}
         <Animated.View
           style={[styles.highlightOverlay, animatedHighlightStyle]}
@@ -144,11 +133,7 @@ export const HomeCard: React.FC<HomeCardProps> = ({
             </View>
           )}
           {!!onPress && (
-            <Icon
-              name="chevron-forward"
-              size={20}
-              color={theme.colors.textSecondary}
-            />
+            <Icon name="chevron-forward" size={20} tone="textSecondary" />
           )}
         </Pressable>
 
@@ -172,6 +157,12 @@ export const HomeCard: React.FC<HomeCardProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
+  card: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radii.md,
+    padding: theme.spacing.md,
+    overflow: 'hidden',
+  },
   homeCardWrapper: {
     marginHorizontal: theme.spacing.md,
     marginVertical: theme.spacing.sm,

@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { NavigationRow } from '../NavigationRow';
 
 jest.mock('#services/haptic/HapticService', () => ({
@@ -38,9 +38,10 @@ describe('NavigationRow', () => {
     expect(screen.queryByText('Manage your preferences')).toBeNull();
   });
 
-  it('calls onPress when pressed', () => {
+  it('calls onPress when pressed', async () => {
+    const user = userEvent.setup();
     render(<NavigationRow {...defaultProps} />);
-    fireEvent.press(screen.getByRole('button'));
+    await user.press(screen.getByRole('button'));
     expect(defaultProps.onPress).toHaveBeenCalledTimes(1);
   });
 

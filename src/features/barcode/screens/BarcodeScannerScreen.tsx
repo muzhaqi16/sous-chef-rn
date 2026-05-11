@@ -1,11 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Dimensions, Platform } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import {
-  Camera,
-  useCameraDevices,
-  useCodeScanner,
-} from 'react-native-vision-camera';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+import { Camera, useCameraDevices } from 'react-native-vision-camera';
+import { useBarcodeScannerOutput } from 'react-native-vision-camera-barcode-scanner';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import type { StaticScreenProps } from '@react-navigation/native';
@@ -13,6 +10,11 @@ import type { StaticScreenProps } from '@react-navigation/native';
 import { useBarcodeScanner } from '../hooks/useBarcodeScanner';
 import { usePermission } from '#hooks/permissions/usePermission';
 import BarcodeMask from '#components/organisms/BarcodeMask';
+
+const ThemedBarcodeMask = withUnistyles(BarcodeMask, theme => ({
+  edgeColor: theme.colors.primary,
+  backgroundColor: theme.colors.overlay,
+}));
 import { Button } from '#components/base/Button';
 import { IconButton } from '#components/atoms/IconButton';
 import { HapticService } from '#services/haptic/HapticService';
@@ -35,12 +37,11 @@ export const BarcodeScannerScreen: React.FC<
     | undefined
   >
 > = ({ route }) => {
-  const { navigate, goBack, navigation } = useAppNavigation();
+  const { mergeIdentifiedItemFormUpc, toSearchResults, goBack, navigation } =
+    useAppNavigation();
   const { source, pantryId, shoppingListId, returnTo } = route?.params || {};
   const devices = useCameraDevices();
   const device = devices.find(d => d.position === 'back');
-
-  const { theme } = useUnistyles();
 
   const {
     isGranted: hasPermission,
@@ -87,20 +88,22 @@ export const BarcodeScannerScreen: React.FC<
     };
   });
 
-  // 3) Set up the VisionCamera code‐scanner callback
-  // PERFORMANCE: Limited to most common barcode types for grocery items
-  // QR codes (quick response codes), EAN-13 (European), UPC-A/E (US standard)
-  const codeScanner = useCodeScanner({
-    codeTypes: [
-      'qr', // QR codes - common for product info, coupons
+  // 3) Set up the VisionCamera barcode-scanner output (MLKit on Android, Vision on iOS)
+  // PERFORMANCE: Limited to most common barcode types for grocery items.
+  const barcodeOutput = useBarcodeScannerOutput({
+    barcodeFormats: [
+      'qr-code', // QR codes - common for product info, coupons
       'ean-13', // European Article Number - most common grocery barcode
       'upc-a', // Universal Product Code - US standard
       'upc-e', // UPC compressed format
     ],
-    onCodeScanned: codes => {
-      if (!isActive || hasNavigatedRef.current || !codes.length) return;
+    onBarcodeScanned: barcodes => {
+      if (!isActive || hasNavigatedRef.current || !barcodes.length) return;
 
-      const { value, type } = codes[0];
+      const { rawValue: value, format } = barcodes[0];
+      // Map 'qr-code' back to 'qr' so downstream consumers (UpcFormat mapping,
+      // navigation params) receive the format string they were written for.
+      const type = format === 'qr-code' ? 'qr' : format;
       if (value) {
         hasNavigatedRef.current = true;
         setHasScanned(true);
@@ -113,12 +116,12 @@ export const BarcodeScannerScreen: React.FC<
           // Pop back to the in-progress Identify form with the UPC; merge
           // semantics mean the form stays mounted and existing fields
           // survive the round-trip.
-          navigate('IdentifiedItemForm', { upc: value });
+          mergeIdentifiedItemFormUpc(value);
           return;
         }
 
         setScannedBarcode(value);
-        navigate('SearchResults', {
+        toSearchResults({
           barcode: value,
           format: type,
           source,
@@ -126,6 +129,9 @@ export const BarcodeScannerScreen: React.FC<
           shoppingListId,
         });
       }
+    },
+    onError: error => {
+      console.warn('Barcode scanner error:', error);
     },
   });
 
@@ -203,16 +209,14 @@ export const BarcodeScannerScreen: React.FC<
         style={styles.camera}
         device={device}
         isActive={isActive}
-        codeScanner={codeScanner}
-        torch={flashEnabled ? 'on' : 'off'}
-        enableZoomGesture
+        outputs={[barcodeOutput]}
+        torchMode={flashEnabled ? 'on' : 'off'}
+        enableNativeZoomGesture
       />
 
-      <BarcodeMask
+      <ThemedBarcodeMask
         width={280}
         height={200}
-        edgeColor={theme.colors.primary}
-        backgroundColor={theme.colors.overlay}
         showAnimatedLine={!!isScanning && !hasScanned}
         lineAnimationDuration={2000}
       />
@@ -327,15 +331,29 @@ const styles = StyleSheet.create(theme => ({
     top: screenHeight * 0.25,
     left: theme.spacing.lg,
     right: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
+    borderRadius: theme.radii.lg,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
     alignItems: 'center',
     zIndex: 1,
+    boxShadow: [
+      {
+        offsetX: 0,
+        offsetY: 4,
+        blurRadius: 12,
+        spreadDistance: 0,
+        color: 'rgba(0, 0, 0, 0.3)',
+      },
+    ],
   },
   instructionsText: {
     color: theme.colors.white,
-    marginBottom: theme.spacing.sm,
+    marginBottom: theme.spacing.xs,
   },
   subInstructionsText: {
-    color: theme.colors.overlays.light,
+    color: theme.colors.white,
+    opacity: 0.85,
   },
   bottomControls: {
     position: 'absolute',

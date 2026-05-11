@@ -80,22 +80,35 @@ export function useCurrentPantry() {
     // 2. Fall back to home's default
     if (defaultPantry) return defaultPantry;
 
-    // 3. Minimal object for loading state
-    if (selectedPantryId) {
+    // 3. Minimal object — only while currentHome hasn't loaded yet.
+    //    Once currentHome is defined and the pantry isn't in its list,
+    //    it has been deleted: return null and let the auto-clear effect
+    //    below reset selectedPantryId.
+    if (selectedPantryId && !currentHome) {
       return { id: selectedPantryId, name: 'Pantry', isDefault: false };
     }
 
     return null;
   })();
 
-  // Auto-select default if none selected (only when ready)
+  // Keep selectedPantryId valid for the current home in a single update —
+  // covers both initial auto-select and clearing a stale id when the
+  // selected pantry has been deleted (locally or remotely). Stale → default
+  // (or null) in one render, no intermediate "no pantry" flicker.
   useEffect(() => {
-    if (isHomeSelectionReady && !selectedPantryId && defaultPantry?.id) {
-      setSelectedPantryId(defaultPantry.id);
+    if (!isHomeSelectionReady || !currentHome) return;
+    const isValid =
+      selectedPantryId &&
+      currentHome.pantries?.some((p: any) => p.id === selectedPantryId);
+    if (isValid) return;
+    const next = defaultPantry?.id ?? null;
+    if (next !== selectedPantryId) {
+      setSelectedPantryId(next);
     }
   }, [
     isHomeSelectionReady,
     selectedPantryId,
+    currentHome,
     defaultPantry?.id,
     setSelectedPantryId,
   ]);

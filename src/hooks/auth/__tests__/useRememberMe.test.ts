@@ -11,10 +11,10 @@ jest.mock('#/hooks/useToast', () => ({
   useToast: () => mockToast,
 }));
 
-// Mock useUserPreferences
+// Mock useAuthPreferences
 const mockMarkCredentialPromptDeclined = jest.fn();
-jest.mock('#/hooks/navigation/useUserPreferences', () => ({
-  useUserPreferences: () => ({
+jest.mock('#/hooks/navigation/useAuthPreferences', () => ({
+  useAuthPreferences: () => ({
     markCredentialPromptDeclined: mockMarkCredentialPromptDeclined,
   }),
 }));

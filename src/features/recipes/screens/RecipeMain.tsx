@@ -6,7 +6,7 @@ import React, {
   forwardRef,
 } from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAnimatedReaction } from 'react-native-reanimated';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
@@ -33,6 +33,7 @@ import {
   useTutorialSequence,
   type TutorialStep,
 } from '#hooks/ui/useTutorialSequence';
+import { useTranslation } from 'react-i18next';
 import {
   IngredientSelectorSheet,
   type IngredientSelectorSheetRef,
@@ -41,30 +42,31 @@ import { useRecipeScreen } from '#features/recipes/hooks/useRecipeScreen';
 import { RecipeFilterSheet } from './RecipeFilterSheet';
 import { Text } from '#components/atoms/Text';
 
-// ── Recipe tutorial steps ──
-const RECIPE_TUTORIAL_STEPS: TutorialStep[] = [
+// ── Recipe tutorial steps (titles/subtitles resolved at usage via t()) ──
+type T = (key: string, opts?: Record<string, unknown>) => string;
+const getRecipeTutorialSteps = (t: T): TutorialStep[] => [
   {
     featureId: 'recipe_tutorial_saved',
-    title: 'Saved recipes',
-    subtitle: 'View all your saved and favorited recipes in one place',
+    title: t('recipes.savedRecipes'),
+    subtitle: t('recipes.savedRecipesSubtitle'),
     rectKey: 'savedButton',
   },
   {
     featureId: 'recipe_tutorial_my_recipes',
-    title: 'My recipes',
-    subtitle: 'Create and manage your own custom recipes',
+    title: t('recipes.myRecipes'),
+    subtitle: t('recipes.myRecipesSubtitle'),
     rectKey: 'myRecipesButton',
   },
   {
     featureId: 'recipe_tutorial_dietary',
-    title: 'Dietary restrictions',
-    subtitle: 'Set your dietary preferences to filter recipe results',
+    title: t('recipes.dietaryRestrictions'),
+    subtitle: t('recipes.dietaryRestrictionsSubtitle'),
     rectKey: 'dietaryButton',
   },
   {
     featureId: 'recipe_tutorial_pantry',
-    title: 'Cook with what you have',
-    subtitle: 'Search for recipes based on ingredients in your pantry',
+    title: t('recipes.cookWithPantry'),
+    subtitle: t('recipes.cookWithPantrySubtitle'),
     rectKey: 'pantryButton',
   },
 ];
@@ -84,7 +86,12 @@ const RecipeSearchInput = forwardRef<
   RecipeSearchInputRef,
   RecipeSearchInputProps
 >(({ onSearch, extraActions }, ref) => {
+  const { t } = useTranslation();
   const [inputQuery, setInputQuery] = useState('');
+  // `useUnistyles()` is intentional: theme colors are constructed into the
+  // dynamic `SearchBarAction[]` prop array passed to `<SearchBar>`. The action
+  // shape carries `color`/`backgroundColor` strings, so a `withUnistyles`
+  // wrap on SearchBar would require redesigning the SearchBarAction type.
   const { theme } = useUnistyles();
 
   useImperativeHandle(ref, () => ({
@@ -109,7 +116,7 @@ const RecipeSearchInput = forwardRef<
         onChangeText={setInputQuery}
         onSubmitEditing={() => onSearch(inputQuery)}
         returnKeyType="search"
-        placeholder="Search recipes..."
+        placeholder={t('recipes.searchPlaceholder')}
         rightActions={rightActions}
         testID="recipe-main-search-input"
       />
@@ -120,8 +127,13 @@ const RecipeSearchInput = forwardRef<
 // ── Inner component (thin — delegates to useRecipeScreen facade) ──
 
 const RecipeMainInner: React.FC = () => {
+  const { t } = useTranslation();
   useRenderTime('RecipeMain');
-  const { navigate } = useAppNavigation();
+  const { toRecipeCreate, toRecipeDetail, toSavedRecipes, toMyRecipes } =
+    useAppNavigation();
+  // `useUnistyles()` is intentional: same `SearchBarAction[]` construction
+  // pattern as `RecipeSearchInput` above — theme strings flow into a runtime
+  // prop array that can't move into a stylesheet.
   const { theme } = useUnistyles();
 
   // Single facade hook for all data + state
@@ -200,7 +212,7 @@ const RecipeMainInner: React.FC = () => {
   }, [filterSheetVisible]);
 
   const tutorial = useTutorialSequence({
-    steps: RECIPE_TUTORIAL_STEPS,
+    steps: getRecipeTutorialSteps(t),
     targetRects: {
       savedButton: buttonRects.savedButton ?? null,
       myRecipesButton: buttonRects.myRecipesButton ?? null,
@@ -220,7 +232,7 @@ const RecipeMainInner: React.FC = () => {
     }),
   });
 
-  useTabBarAddButton(() => navigate('RecipeCreate'));
+  useTabBarAddButton(() => toRecipeCreate());
 
   const openIngredientSelector = () => {
     setIngredientSheetVisible(true);
@@ -245,7 +257,7 @@ const RecipeMainInner: React.FC = () => {
     const externalId = idStr.startsWith('spoonacular-')
       ? idStr.replace('spoonacular-', '')
       : idStr;
-    navigate('RecipeDetail', { externalSource: 'SPOONACULAR', externalId });
+    toRecipeDetail({ externalSource: 'SPOONACULAR', externalId });
   };
 
   const hasIngredientSelection = screen.selectedIngredients.size > 0;
@@ -289,16 +301,12 @@ const RecipeMainInner: React.FC = () => {
         }}
       >
         <Pressable
-          onPress={() => navigate('SavedRecipes')}
+          onPress={toSavedRecipes}
           hitSlop={8}
           accessibilityRole="button"
-          accessibilityLabel="Saved recipes"
+          accessibilityLabel={t('recipes.savedRecipes')}
         >
-          <Icon
-            name="bookmark-outline"
-            size={24}
-            color={theme.colors.textSecondary}
-          />
+          <Icon name="bookmark-outline" size={24} tone="textSecondary" />
         </Pressable>
       </View>
       <View
@@ -321,16 +329,12 @@ const RecipeMainInner: React.FC = () => {
         }}
       >
         <Pressable
-          onPress={() => navigate('MyRecipes')}
+          onPress={toMyRecipes}
           hitSlop={8}
           accessibilityRole="button"
-          accessibilityLabel="My recipes"
+          accessibilityLabel={t('recipes.myRecipes')}
         >
-          <Icon
-            name="create-outline"
-            size={24}
-            color={theme.colors.textSecondary}
-          />
+          <Icon name="create-outline" size={24} tone="textSecondary" />
         </Pressable>
       </View>
       <View
@@ -354,16 +358,12 @@ const RecipeMainInner: React.FC = () => {
           onPress={openFilterSheet}
           hitSlop={8}
           accessibilityRole="button"
-          accessibilityLabel="Dietary restrictions"
+          accessibilityLabel={t('recipes.dietaryRestrictions')}
         >
           <Icon
             name="options-outline"
             size={24}
-            color={
-              screen.activeFilterCount > 0
-                ? theme.colors.primary
-                : theme.colors.textSecondary
-            }
+            tone={screen.activeFilterCount > 0 ? 'primary' : 'textSecondary'}
           />
         </Pressable>
       </View>
@@ -377,12 +377,14 @@ const RecipeMainInner: React.FC = () => {
       <View style={styles.suggestedHeader}>
         <View style={styles.suggestedTextContainer}>
           <Text size="lg" weight="semibold">
-            {isPantry ? 'Based on your pantry' : 'Need inspiration?'}
+            {isPantry
+              ? t('recipes.basedOnPantry')
+              : t('recipes.needInspiration')}
           </Text>
           <Text size="sm" tone="secondary" style={styles.suggestedSubtitle}>
             {isPantry
-              ? 'Recipes you can make with your ingredients'
-              : 'Here are some recipe ideas to try'}
+              ? t('recipes.recipesYouCanMake')
+              : t('recipes.recipeIdeasToTry')}
           </Text>
         </View>
         <Pressable
@@ -393,16 +395,12 @@ const RecipeMainInner: React.FC = () => {
           onPress={screen.discovery.refresh}
           disabled={screen.discovery.loading}
           accessibilityRole="button"
-          accessibilityLabel="Refresh recipe suggestions"
+          accessibilityLabel={t('recipes.refreshSuggestions')}
         >
           <Icon
             name="refresh"
             size={20}
-            color={
-              screen.discovery.loading
-                ? theme.colors.textSecondary
-                : theme.colors.primary
-            }
+            tone={screen.discovery.loading ? 'textSecondary' : 'primary'}
           />
         </Pressable>
       </View>
@@ -414,8 +412,12 @@ const RecipeMainInner: React.FC = () => {
     return (
       <View style={styles.searchResultsHeader}>
         <Text size="sm" weight="semibold" tone="secondary">
-          {screen.searchResults.length} result
-          {screen.searchResults.length !== 1 ? 's' : ''}
+          {t(
+            screen.searchResults.length === 1
+              ? 'recipes.resultSingular'
+              : 'recipes.resultPlural',
+            { count: screen.searchResults.length },
+          )}
         </Text>
         <Pressable
           onPress={() => {
@@ -424,9 +426,9 @@ const RecipeMainInner: React.FC = () => {
           }}
           hitSlop={8}
           accessibilityRole="button"
-          accessibilityLabel="Clear search results"
+          accessibilityLabel={t('recipes.clearSearch')}
         >
-          <Icon name="close" size={20} color={theme.colors.textSecondary} />
+          <Icon name="close" size={20} tone="textSecondary" />
         </Pressable>
       </View>
     );
@@ -441,8 +443,8 @@ const RecipeMainInner: React.FC = () => {
   const recipeListHeader = (
     <>
       <TabScreenHeader
-        label="What to cook?"
-        title="Recipes"
+        label={t('recipes.mainSubtitle')}
+        title={t('recipes.mainTitle')}
         headerRight={headerRight}
       />
       <RecipeSearchInput
@@ -526,8 +528,8 @@ const RecipeMainInner: React.FC = () => {
           onNext={tutorial.advanceInPlace}
           onTargetPress={() => {
             const actions: Record<number, () => void> = {
-              0: () => navigate('SavedRecipes'),
-              1: () => navigate('MyRecipes'),
+              0: toSavedRecipes,
+              1: toMyRecipes,
               2: openFilterSheet,
               3: openIngredientSelector,
             };
@@ -542,23 +544,31 @@ const RecipeMainInner: React.FC = () => {
 
 const noop = () => {};
 
+const RecipeMainFallback: React.FC = () => {
+  const { t } = useTranslation();
+  return (
+    <TabMainScreen testID="recipes-screen">
+      <TabScreenHeader
+        label={t('recipes.mainSubtitle')}
+        title={t('recipes.mainTitle')}
+      />
+      <View style={styles.searchBarContainer}>
+        <SearchBar
+          value=""
+          onChangeText={noop}
+          placeholder={t('recipes.searchPlaceholder')}
+          showSearchIcon
+          editable={false}
+        />
+      </View>
+      <RecipeSkeleton />
+    </TabMainScreen>
+  );
+};
+
 export const RecipeMain: React.FC = () => (
   <DeferredScreen
-    fallback={
-      <TabMainScreen testID="recipes-screen">
-        <TabScreenHeader label="What to cook?" title="Recipes" />
-        <View style={styles.searchBarContainer}>
-          <SearchBar
-            value=""
-            onChangeText={noop}
-            placeholder="Search recipes..."
-            showSearchIcon
-            editable={false}
-          />
-        </View>
-        <RecipeSkeleton />
-      </TabMainScreen>
-    }
+    fallback={<RecipeMainFallback />}
     component={RecipeMainInner}
   />
 );

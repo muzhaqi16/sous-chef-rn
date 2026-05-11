@@ -1,7 +1,7 @@
 'use no memo';
 
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react-native';
+import { render, userEvent } from '@testing-library/react-native';
 import { WeekStrip } from '../../../src/features/mealPlan/components/WeekStrip';
 
 jest.mock('../../../src/apollo/links/tokenScheduler');
@@ -41,12 +41,13 @@ describe('WeekStrip', () => {
     expect(getByText('Tue')).toBeTruthy();
   });
 
-  it('calls onSelectDate when a day is pressed', () => {
+  it('calls onSelectDate when a day is pressed', async () => {
+    const user = userEvent.setup();
     const onSelectDate = jest.fn();
     const { getByText } = render(
       <WeekStrip {...defaultProps} onSelectDate={onSelectDate} />,
     );
-    fireEvent.press(getByText('12'));
+    await user.press(getByText('12'));
     expect(onSelectDate).toHaveBeenCalled();
   });
 

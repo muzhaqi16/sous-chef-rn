@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Pressable } from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon, type IconLibrary } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 
@@ -28,8 +28,6 @@ export const ActionCard: React.FC<ActionCardProps> = ({
   disabled = false,
   testID,
 }) => {
-  const { theme } = useUnistyles();
-
   return (
     <Pressable
       style={({ pressed }) => [
@@ -45,7 +43,7 @@ export const ActionCard: React.FC<ActionCardProps> = ({
         <Icon
           name={icon}
           size={32}
-          color={disabled ? theme.colors.textTertiary : theme.colors.primary}
+          tone={disabled ? 'textTertiary' : 'primary'}
           library={iconLibrary}
         />
       </View>

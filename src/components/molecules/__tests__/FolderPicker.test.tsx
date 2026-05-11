@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { fireEvent, render, screen, userEvent } from '@testing-library/react-native';
 import { FolderPicker } from '../FolderPicker';
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
@@ -27,6 +27,7 @@ jest.mock('#hooks/useStandardBottomSheet', () => ({
       },
     },
   })),
+  BottomSheetModal: ({ children }: any) => children,
 }));
 
 jest.mock('#/utils/iconUtils', () => ({
@@ -140,16 +141,18 @@ describe('FolderPicker', () => {
     expect(screen.getByText('Create New Folder')).toBeTruthy();
   });
 
-  it('shows new folder input after pressing Create New Folder', () => {
+  it('shows new folder input after pressing Create New Folder', async () => {
+    const user = userEvent.setup();
     render(<FolderPicker {...defaultProps} />);
-    fireEvent.press(screen.getByText('Create New Folder'));
+    await user.press(screen.getByText('Create New Folder'));
     // After pressing, the input and Create button should appear
     expect(screen.getByText('Create')).toBeTruthy();
   });
 
-  it('calls onSelect with null when No Folder is pressed', () => {
+  it('calls onSelect with null when No Folder is pressed', async () => {
+    const user = userEvent.setup();
     render(<FolderPicker {...defaultProps} />);
-    fireEvent.press(screen.getByText('No Folder'));
+    await user.press(screen.getByText('No Folder'));
     expect(defaultProps.onSelect).toHaveBeenCalledWith(null);
   });
 
@@ -229,38 +232,42 @@ describe('FolderPicker', () => {
 
   // --- Additional branch coverage tests ---
 
-  it('calls handleCreateFolder via submit editing on new folder input', () => {
+  it('calls handleCreateFolder via submit editing on new folder input', async () => {
+    const user = userEvent.setup();
     render(<FolderPicker {...defaultProps} />);
-    fireEvent.press(screen.getByText('Create New Folder'));
+    await user.press(screen.getByText('Create New Folder'));
     const input = screen.getByPlaceholderText('Enter folder name...');
     fireEvent.changeText(input, 'My New Folder');
     fireEvent(input, 'submitEditing');
     expect(defaultProps.onSelect).toHaveBeenCalledWith('My New Folder');
   });
 
-  it('does not create folder when name is empty', () => {
+  it('does not create folder when name is empty', async () => {
+    const user = userEvent.setup();
     render(<FolderPicker {...defaultProps} />);
-    fireEvent.press(screen.getByText('Create New Folder'));
+    await user.press(screen.getByText('Create New Folder'));
     // Create button should exist but pressing with empty name should not call onSelect
-    fireEvent.press(screen.getByText('Create'));
+    await user.press(screen.getByText('Create'));
     expect(defaultProps.onSelect).not.toHaveBeenCalled();
   });
 
-  it('does not create folder when name is only whitespace', () => {
+  it('does not create folder when name is only whitespace', async () => {
+    const user = userEvent.setup();
     render(<FolderPicker {...defaultProps} />);
-    fireEvent.press(screen.getByText('Create New Folder'));
+    await user.press(screen.getByText('Create New Folder'));
     const input = screen.getByPlaceholderText('Enter folder name...');
     fireEvent.changeText(input, '   ');
-    fireEvent.press(screen.getByText('Create'));
+    await user.press(screen.getByText('Create'));
     expect(defaultProps.onSelect).not.toHaveBeenCalled();
   });
 
-  it('creates folder with trimmed name via Create button', () => {
+  it('creates folder with trimmed name via Create button', async () => {
+    const user = userEvent.setup();
     render(<FolderPicker {...defaultProps} />);
-    fireEvent.press(screen.getByText('Create New Folder'));
+    await user.press(screen.getByText('Create New Folder'));
     const input = screen.getByPlaceholderText('Enter folder name...');
     fireEvent.changeText(input, '  Snacks  ');
-    fireEvent.press(screen.getByText('Create'));
+    await user.press(screen.getByText('Create'));
     expect(defaultProps.onSelect).toHaveBeenCalledWith('Snacks');
   });
 

@@ -23,6 +23,7 @@ jest.mock('../../../src/hooks/useStandardBottomSheet', () => ({
       },
     },
   }),
+  BottomSheetModal: ({ children }: any) => children,
 }));
 jest.mock('../../../src/features/mealPlan/hooks/useMealTemplates', () => ({
   useMealTemplates: () => ({

@@ -8,7 +8,7 @@ import {
   ScrollView,
   Pressable,
 } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { alertService } from '#/services/alertService';
 import { Icon } from '#utils/iconUtils';
 import { PasswordInput } from '#components/atoms/PasswordInput';
@@ -38,7 +38,6 @@ export const BiometricSetupModal = ({
   userPassword,
   mode = 'onboarding',
 }: BiometricSetupModalProps) => {
-  const { theme } = useUnistyles();
   const [biometricInfo, setBiometricInfo] = useState<{
     isAvailable: boolean;
     biometryType: string | null;
@@ -239,11 +238,7 @@ export const BiometricSetupModal = ({
             <View style={styles.container}>
               <View style={styles.iconContainer}>
                 <View style={styles.iconBackground}>
-                  <Icon
-                    name={getBiometricIcon()}
-                    size={48}
-                    color={theme.colors.primary}
-                  />
+                  <Icon name={getBiometricIcon()} size={48} tone="primary" />
                 </View>
               </View>
 
@@ -275,7 +270,7 @@ export const BiometricSetupModal = ({
                 <Pressable
                   style={({ pressed }) => [
                     styles.primaryButton,
-                    pressed && { opacity: theme.opacity.pressed },
+                    pressed && styles.pressed,
                   ]}
                   onPress={handleEnableBiometric}
                   disabled={isEnabling}
@@ -288,7 +283,7 @@ export const BiometricSetupModal = ({
                 <Pressable
                   style={({ pressed }) => [
                     styles.secondaryButton,
-                    pressed && { opacity: theme.opacity.pressed },
+                    pressed && styles.pressed,
                   ]}
                   onPress={handleSkip}
                   disabled={isEnabling}
@@ -427,5 +422,8 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.md,
     color: theme.colors.textPrimary,
     backgroundColor: theme.colors.surface,
+  },
+  pressed: {
+    opacity: theme.opacity.pressed,
   },
 }));

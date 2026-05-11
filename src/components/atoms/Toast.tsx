@@ -1,4 +1,4 @@
-import React, { useState, useRef, ReactNode, useEffect } from 'react';
+import React, { useState, ReactNode, useEffect } from 'react';
 
 import Animated, {
   useSharedValue,
@@ -6,24 +6,19 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import {
-  Gesture,
-  GestureDetector,
-  Pressable,
-} from 'react-native-gesture-handler';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { Pressable } from '#components/atoms/themedComponents';
 import { scheduleOnRN } from 'react-native-worklets';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { ToastContext } from '../../hooks/useToast';
-import { toastService } from '#/services/toastService';
+import { _setToastDispatch } from '#/services/toastService';
 import { SPRING, TIMING, TOAST } from '#/constants/animations';
 import { Text } from '#components/atoms/Text';
 
-// Define toast types
 export type ToastType = 'default' | 'success' | 'error' | 'warning' | 'info';
 
-// Options for showing a toast
 export interface ToastOptions {
   message: string;
   duration?: number;
@@ -39,83 +34,41 @@ const TOAST_ICONS: Partial<Record<ToastType, string>> = {
   info: 'information-circle-outline',
 };
 
+// Theme-reactive Ionicons. uniProps captures the runtime `type` from the
+// surrounding closure (per-render mapper) and resolves the matching alert
+// banner color, falling back to textInverse.
+const ThemedToastIcon = withUnistyles(Ionicons);
+
+type ToastQueueState = {
+  current: ToastOptions | null;
+  queue: ToastOptions[];
+};
+
+const sameType = (a: ToastOptions, b: ToastOptions) =>
+  (a.type ?? 'default') === (b.type ?? 'default');
+
 export const ToastProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
   const insets = useSafeAreaInsets();
 
-  const [toastState, setToastState] = useState<{
-    message: string;
-    type: ToastType;
-    action?: { label: string; onPress: () => void };
-  } | null>(null);
-
-  const isShowingRef = useRef(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const queueRef = useRef<ToastOptions[]>([]);
-  const currentToastTypeRef = useRef<ToastType | null>(null);
-  const currentToastHasActionRef = useRef(false);
-
-  const showToastRef = useRef<ToastFn | null>(null);
+  // Updater pattern lets two synchronous showToast() calls coordinate — the
+  // second updater sees the first's result, no need for refs.
+  const [{ current, queue }, setQueue] = useState<ToastQueueState>({
+    current: null,
+    queue: [],
+  });
 
   const translateY = useSharedValue(TOAST.OFFSCREEN_Y);
   const translateX = useSharedValue(0);
   const opacity = useSharedValue(0);
 
-  // Pre-defined RN-scope callbacks for scheduleOnRN (CLAUDE.md convention)
-  const clearTimer = () => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-  };
-
-  const clearContent = () => {
-    setToastState(null);
-    isShowingRef.current = false;
-    currentToastTypeRef.current = null;
-    currentToastHasActionRef.current = false;
-  };
-
-  const processQueue = () => {
-    const next = queueRef.current.shift();
-    if (next) {
-      setTimeout(() => {
-        presentToast(next);
-      }, TOAST.QUEUE_DELAY);
-    }
-  };
-
   const onDismissComplete = () => {
-    clearContent();
-    processQueue();
+    setQueue(prev => ({ ...prev, current: null }));
   };
 
-  const presentToast = (opts: ToastOptions) => {
-    const { message, type = 'default', action } = opts;
-    isShowingRef.current = true;
-    currentToastTypeRef.current = type;
-    currentToastHasActionRef.current = !!action;
-    setToastState({ message, type, action });
-
-    const targetY = insets.top + 16;
-    translateY.set(withSpring(targetY, SPRING.TOAST_ENTER));
-    translateX.set(0);
-    opacity.set(withTiming(1, { duration: TIMING.FAST }));
-
-    // Auto-dismiss
-    clearTimer();
-    const timeout =
-      opts.duration === TOAST.AUTO_DISMISS_LONG
-        ? TOAST.AUTO_DISMISS_LONG
-        : TOAST.AUTO_DISMISS_SHORT;
-    timerRef.current = setTimeout(() => {
-      animateDismiss();
-    }, timeout);
-  };
-
+  // Idempotent — safe to call mid-animation.
   const animateDismiss = () => {
-    clearTimer();
     translateY.set(
       withSpring(TOAST.OFFSCREEN_Y, SPRING.TOAST_DISMISS, finished => {
         'worklet';
@@ -129,83 +82,75 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
   };
 
   const showToast: ToastFn = opts => {
-    if (isShowingRef.current) {
-      const incomingType = opts.type ?? 'default';
+    setQueue(prev => {
+      if (!prev.current) return { ...prev, current: opts };
+      // Replace in-place when nothing has an action and the type matches —
+      // coalesces rapid same-type calls into one toast that ends N seconds
+      // after the *last* call (instead of a sequential parade).
       const canReplace =
-        !currentToastHasActionRef.current &&
-        !opts.action &&
-        currentToastTypeRef.current === incomingType;
-
+        prev.current.action == null &&
+        opts.action == null &&
+        sameType(prev.current, opts);
       if (canReplace) {
-        // Replace in-place: swap message text, reset timer, no animation cycle
-        setToastState({
-          message: opts.message,
-          type: incomingType,
-          action: undefined,
-        });
-        // Flush redundant same-type toasts but keep different-type/action toasts
-        queueRef.current = queueRef.current.filter(
-          q => q.action != null || (q.type ?? 'default') !== incomingType,
-        );
-        clearTimer();
-        const timeout =
-          opts.duration === TOAST.AUTO_DISMISS_LONG
-            ? TOAST.AUTO_DISMISS_LONG
-            : TOAST.AUTO_DISMISS_SHORT;
-        timerRef.current = setTimeout(() => {
-          animateDismiss();
-        }, timeout);
-        return;
+        return {
+          current: { ...opts, action: undefined },
+          queue: prev.queue.filter(q => q.action != null || !sameType(q, opts)),
+        };
       }
-
-      queueRef.current.push(opts);
-      return;
-    }
-    presentToast(opts);
+      return { ...prev, queue: [...prev.queue, opts] };
+    });
   };
 
-  // Keep ref in sync (written in effect, not during render — per CLAUDE.md)
+  // Imperative bridge for non-React-tree callers (toastService).
   useEffect(() => {
-    showToastRef.current = showToast;
+    _setToastDispatch(showToast);
   });
 
-  // Initialize toast service bridge
+  // Animate in + arm auto-dismiss whenever a toast becomes current. Cleanup
+  // cancels the timer on replace, gesture-dismiss, unmount. Re-running on
+  // in-place replace re-targets SharedValues at their current value (no-op
+  // visually) and resets the timer — the spam-coalescing behavior.
   useEffect(() => {
-    toastService.init((message, type, options) => {
-      showToastRef.current?.({ message, type: type ?? 'default', ...options });
-    });
-  }, []);
+    if (!current) return;
+    translateY.set(withSpring(insets.top + 16, SPRING.TOAST_ENTER));
+    translateX.set(0);
+    opacity.set(withTiming(1, { duration: TIMING.FAST }));
+    const ms =
+      current.duration === TOAST.AUTO_DISMISS_LONG
+        ? TOAST.AUTO_DISMISS_LONG
+        : TOAST.AUTO_DISMISS_SHORT;
+    const id = setTimeout(animateDismiss, ms);
+    return () => clearTimeout(id);
+  }, [current]);
 
-  // Cleanup on unmount
+  // After dismissal, give it a beat before popping the next queued toast.
   useEffect(() => {
-    return () => {
-      clearTimer();
-    };
-  }, []);
-
-  // Swipe-to-dismiss gesture
-  const dismissFromGesture = () => {
-    animateDismiss();
-  };
+    if (current || queue.length === 0) return;
+    const id = setTimeout(() => {
+      setQueue(prev => {
+        if (prev.current || prev.queue.length === 0) return prev;
+        const [next, ...rest] = prev.queue;
+        return { current: next, queue: rest };
+      });
+    }, TOAST.QUEUE_DELAY);
+    return () => clearTimeout(id);
+  }, [current, queue.length]);
 
   const panGesture = Gesture.Pan()
+    .minDistance(10)
     .onUpdate(event => {
-      // Allow upward swipe (negative Y) for top-positioned toast
       if (event.translationY < 0) {
         translateY.set(insets.top + 16 + event.translationY);
       }
-      // Allow horizontal swipe
       translateX.set(event.translationX);
     })
     .onEnd(event => {
       const shouldDismiss =
         event.translationY < -TOAST.SWIPE_THRESHOLD ||
         Math.abs(event.translationX) > TOAST.SWIPE_THRESHOLD;
-
       if (shouldDismiss) {
-        scheduleOnRN(dismissFromGesture);
+        scheduleOnRN(animateDismiss);
       } else {
-        // Spring back
         translateY.set(withSpring(insets.top + 16, SPRING.TOAST_ENTER));
         translateX.set(withSpring(0, SPRING.TOAST_ENTER));
       }
@@ -220,22 +165,15 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
   }));
 
   const handleActionPress = () => {
-    if (toastState?.action) {
-      toastState.action.onPress();
+    if (current?.action) {
+      current.action.onPress();
       animateDismiss();
     }
   };
 
-  const { theme } = useUnistyles();
-
-  const type = toastState?.type ?? 'default';
+  const type = current?.type ?? 'default';
   const iconName = TOAST_ICONS[type];
   styles.useVariants({ type: type === 'default' ? undefined : type });
-  const toastIconColor =
-    type !== 'default' && type in theme.colors.alertBanner
-      ? theme.colors.alertBanner[type as keyof typeof theme.colors.alertBanner]
-          .text
-      : theme.colors.textInverse;
 
   return (
     <ToastContext.Provider value={showToast}>
@@ -243,15 +181,22 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
       <GestureDetector gesture={panGesture}>
         <Animated.View
           testID={`toast-${type}`}
-          pointerEvents={toastState ? 'auto' : 'box-none'}
+          pointerEvents={current ? 'auto' : 'box-none'}
           style={[styles.toastContainer, animatedStyle]}
         >
           {iconName ? (
-            <Ionicons
+            <ThemedToastIcon
               name={iconName as any}
               size={18}
-              color={toastIconColor}
               style={styles.icon}
+              uniProps={t => ({
+                color:
+                  type !== 'default' && type in t.colors.alertBanner
+                    ? t.colors.alertBanner[
+                        type as keyof typeof t.colors.alertBanner
+                      ].text
+                    : t.colors.textInverse,
+              })}
             />
           ) : null}
           <Text
@@ -259,11 +204,11 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
             testID="toast-message"
             numberOfLines={2}
           >
-            {toastState?.message}
+            {current?.message}
           </Text>
-          {toastState?.action ? (
+          {current?.action ? (
             <Pressable onPress={handleActionPress} style={styles.actionButton}>
-              <Text style={styles.actionText}>{toastState.action.label}</Text>
+              <Text style={styles.actionText}>{current.action.label}</Text>
             </Pressable>
           ) : null}
         </Animated.View>

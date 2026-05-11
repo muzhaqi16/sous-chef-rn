@@ -14,6 +14,7 @@ jest.mock('../../../src/hooks/useStandardBottomSheet', () => ({
     contentContainerStyle: {},
     theme: { colors: {} },
   }),
+  BottomSheetModal: ({ children }: any) => children,
 }));
 jest.mock('../../../src/components/atoms/BottomSheetFormScrollView', () => ({
   BottomSheetFormScrollView: ({ children }: any) => children,

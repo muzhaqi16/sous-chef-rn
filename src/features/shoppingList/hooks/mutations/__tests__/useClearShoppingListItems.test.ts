@@ -1,27 +1,10 @@
-import { renderHook, act } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
+import {
+  renderHookWithApollo,
+  type MockedResponse,
+} from '#/test-utils/apolloMockProvider';
+import { ClearShoppingListItemsDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useClearShoppingListItems } from '../useClearShoppingListItems';
-
-// --- Mocks ---
-
-const mockClearMutation = jest.fn();
-
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useMutation: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'ClearShoppingListItems')
-      return [mockClearMutation, { loading: false }];
-    return [jest.fn(), {}];
-  }),
-  useApolloClient: () => ({
-    cache: {
-      identify: jest.fn((obj: any) => `${obj.__typename}:${obj.id}`),
-      modify: jest.fn(),
-      evict: jest.fn(),
-      gc: jest.fn(),
-    },
-  }),
-}));
 
 jest.mock('#/utils/compilerSafeWrappers');
 
@@ -48,11 +31,29 @@ function createItem(overrides: Record<string, unknown> = {}) {
   } as any;
 }
 
+function createClearMock(
+  recorded: Array<Record<string, unknown>>,
+  delay = 0,
+): MockedResponse {
+  return {
+    request: {
+      query: ClearShoppingListItemsDocument,
+      variables: vars => {
+        recorded.push(vars);
+        return true;
+      },
+    },
+    maxUsageCount: Number.POSITIVE_INFINITY,
+    delay,
+    result: { data: { clearShoppingListItems: true } },
+  };
+}
+
 describe('useClearShoppingListItems', () => {
   const mockRefetch = jest.fn().mockResolvedValue(undefined);
 
   it('returns clearItems function', () => {
-    const { result } = renderHook(() =>
+    const { result } = renderHookWithApollo(() =>
       useClearShoppingListItems({
         listId: 'list-1',
         unpurchasedItems: [],
@@ -65,153 +66,145 @@ describe('useClearShoppingListItems', () => {
   });
 
   it('does nothing when listId is null', async () => {
-    const { result } = renderHook(() =>
-      useClearShoppingListItems({
-        listId: null,
-        unpurchasedItems: [],
-        purchasedItems: [createItem({ purchaseInfo: { isPurchased: true } })],
-        refetch: mockRefetch,
-      }),
+    const recorded: Array<Record<string, unknown>> = [];
+    const { result } = renderHookWithApollo(
+      () =>
+        useClearShoppingListItems({
+          listId: null,
+          unpurchasedItems: [],
+          purchasedItems: [createItem({ purchaseInfo: { isPurchased: true } })],
+          refetch: mockRefetch,
+        }),
+      { operationMocks: [createClearMock(recorded)] },
     );
 
     await act(async () => {
       await result.current.clearItems(true);
     });
 
-    expect(mockClearMutation).not.toHaveBeenCalled();
+    expect(recorded).toEqual([]);
     expect(mockClearAllPurchased).not.toHaveBeenCalled();
   });
 
   it('does nothing when no target items exist (purchased=true but none purchased)', async () => {
-    const { result } = renderHook(() =>
-      useClearShoppingListItems({
-        listId: 'list-1',
-        unpurchasedItems: [
-          createItem({ purchaseInfo: { isPurchased: false } }),
-        ],
-        purchasedItems: [],
-        refetch: mockRefetch,
-      }),
+    const recorded: Array<Record<string, unknown>> = [];
+    const { result } = renderHookWithApollo(
+      () =>
+        useClearShoppingListItems({
+          listId: 'list-1',
+          unpurchasedItems: [
+            createItem({ purchaseInfo: { isPurchased: false } }),
+          ],
+          purchasedItems: [],
+          refetch: mockRefetch,
+        }),
+      { operationMocks: [createClearMock(recorded)] },
     );
 
     await act(async () => {
       await result.current.clearItems(true);
     });
 
-    expect(mockClearMutation).not.toHaveBeenCalled();
+    expect(recorded).toEqual([]);
     expect(mockClearAllPurchased).not.toHaveBeenCalled();
   });
 
   it('clears purchased items from cache and fires mutation', async () => {
-    mockClearMutation.mockResolvedValue({
-      data: { clearShoppingListItems: true },
-    });
-
-    const { result } = renderHook(() =>
-      useClearShoppingListItems({
-        listId: 'list-1',
-        unpurchasedItems: [
-          createItem({ id: 'item-2', purchaseInfo: { isPurchased: false } }),
-        ],
-        purchasedItems: [
-          createItem({ id: 'item-1', purchaseInfo: { isPurchased: true } }),
-          createItem({ id: 'item-3', purchaseInfo: { isPurchased: true } }),
-        ],
-        refetch: mockRefetch,
-      }),
+    const recorded: Array<Record<string, unknown>> = [];
+    const { result } = renderHookWithApollo(
+      () =>
+        useClearShoppingListItems({
+          listId: 'list-1',
+          unpurchasedItems: [
+            createItem({ id: 'item-2', purchaseInfo: { isPurchased: false } }),
+          ],
+          purchasedItems: [
+            createItem({ id: 'item-1', purchaseInfo: { isPurchased: true } }),
+            createItem({ id: 'item-3', purchaseInfo: { isPurchased: true } }),
+          ],
+          refetch: mockRefetch,
+        }),
+      { operationMocks: [createClearMock(recorded)] },
     );
 
     await act(async () => {
       await result.current.clearItems(true);
     });
 
-    // Should clear purchased items from cache optimistically
     expect(mockClearAllPurchased).toHaveBeenCalledWith(
-      expect.anything(), // cache
+      expect.anything(),
       'list-1',
       ['item-1', 'item-3'],
     );
 
-    // Should fire mutation
-    expect(mockClearMutation).toHaveBeenCalledWith({
-      variables: { shoppingListId: 'list-1', purchased: true },
-      update: expect.any(Function),
+    expect(recorded).toContainEqual({
+      shoppingListId: 'list-1',
+      purchased: true,
     });
   });
 
   it('clears unpurchased items from cache and fires mutation', async () => {
-    mockClearMutation.mockResolvedValue({
-      data: { clearShoppingListItems: true },
-    });
-
-    const { result } = renderHook(() =>
-      useClearShoppingListItems({
-        listId: 'list-1',
-        unpurchasedItems: [
-          createItem({ id: 'item-1', purchaseInfo: { isPurchased: false } }),
-          createItem({ id: 'item-3', purchaseInfo: { isPurchased: false } }),
-        ],
-        purchasedItems: [
-          createItem({ id: 'item-2', purchaseInfo: { isPurchased: true } }),
-        ],
-        refetch: mockRefetch,
-      }),
+    const recorded: Array<Record<string, unknown>> = [];
+    const { result } = renderHookWithApollo(
+      () =>
+        useClearShoppingListItems({
+          listId: 'list-1',
+          unpurchasedItems: [
+            createItem({ id: 'item-1', purchaseInfo: { isPurchased: false } }),
+            createItem({ id: 'item-3', purchaseInfo: { isPurchased: false } }),
+          ],
+          purchasedItems: [
+            createItem({ id: 'item-2', purchaseInfo: { isPurchased: true } }),
+          ],
+          refetch: mockRefetch,
+        }),
+      { operationMocks: [createClearMock(recorded)] },
     );
 
     await act(async () => {
       await result.current.clearItems(false);
     });
 
-    // Should clear unpurchased items from cache
     expect(mockClearAllUnpurchased).toHaveBeenCalledWith(
       expect.anything(),
       'list-1',
       ['item-1', 'item-3'],
     );
 
-    // Should fire mutation with purchased=false
-    expect(mockClearMutation).toHaveBeenCalledWith({
-      variables: { shoppingListId: 'list-1', purchased: false },
-      update: expect.any(Function),
+    expect(recorded).toContainEqual({
+      shoppingListId: 'list-1',
+      purchased: false,
     });
   });
 
   it('prevents concurrent calls via isClearingRef guard', async () => {
-    // First mutation never resolves (simulating slow mutation)
-    let resolveFirst: ((value: any) => void) | undefined;
-    mockClearMutation.mockImplementationOnce(
+    // Use a long delay on the mock so the first call is in flight when the
+    // second call tries to start. The isClearingRef guard should reject the
+    // second call without firing a second mutation.
+    const recorded: Array<Record<string, unknown>> = [];
+    const { result } = renderHookWithApollo(
       () =>
-        new Promise(resolve => {
-          resolveFirst = resolve;
+        useClearShoppingListItems({
+          listId: 'list-1',
+          unpurchasedItems: [],
+          purchasedItems: [
+            createItem({ id: 'item-1', purchaseInfo: { isPurchased: true } }),
+          ],
+          refetch: mockRefetch,
         }),
+      { operationMocks: [createClearMock(recorded, 100)] },
     );
 
-    const { result } = renderHook(() =>
-      useClearShoppingListItems({
-        listId: 'list-1',
-        unpurchasedItems: [],
-        purchasedItems: [
-          createItem({ id: 'item-1', purchaseInfo: { isPurchased: true } }),
-        ],
-        refetch: mockRefetch,
-      }),
-    );
-
-    // Start first call (will hang)
     const firstCall = act(async () => {
       await result.current.clearItems(true);
     });
 
-    // Second call should be a no-op since first is in progress
     await act(async () => {
       await result.current.clearItems(true);
     });
 
-    // Only one mutation call should have been made
-    expect(mockClearMutation).toHaveBeenCalledTimes(1);
-
-    // Resolve first call to clean up
-    resolveFirst?.({ data: { clearShoppingListItems: true } });
     await firstCall;
+
+    expect(recorded).toHaveLength(1);
   });
 });

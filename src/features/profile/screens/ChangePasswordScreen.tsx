@@ -9,7 +9,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
+import { useTranslation } from 'react-i18next';
 import { Icon } from '#utils/iconUtils';
 import { PasswordInput } from '#components/atoms/PasswordInput';
 import { Header } from '#components/molecules/Header';
@@ -41,6 +42,8 @@ async function performChangePassword(
   data: ChangePasswordForm,
   toast: ReturnType<typeof useToast>,
   goBack: () => void,
+  successMessage: string,
+  failedFallback: string,
 ): Promise<void> {
   const result = await changePassword({
     variables: {
@@ -53,7 +56,7 @@ async function performChangePassword(
 
   if (result.data?.changePassword?.success) {
     toast({
-      message: 'Password changed successfully!',
+      message: successMessage,
       type: 'success',
     });
 
@@ -61,15 +64,13 @@ async function performChangePassword(
       goBack();
     }, 1500);
   } else {
-    throw new Error(
-      result.data?.changePassword?.message || 'Failed to change password',
-    );
+    throw new Error(result.data?.changePassword?.message || failedFallback);
   }
 }
 
 export const ChangePasswordScreen: React.FC = () => {
+  const { t } = useTranslation();
   const { goBack } = useAppNavigation();
-  const { theme } = useUnistyles();
   const toast = useToast();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -90,12 +91,19 @@ export const ChangePasswordScreen: React.FC = () => {
 
   const onSubmit = (data: ChangePasswordForm) => {
     executeWithLoadingState(
-      () => performChangePassword(changePassword, data, toast, goBack),
+      () =>
+        performChangePassword(
+          changePassword,
+          data,
+          toast,
+          goBack,
+          t('changePassword.success'),
+          t('changePassword.failed'),
+        ),
       setIsSubmitting,
       (error: unknown) => {
         const errorMessage =
-          (error as any)?.message ||
-          'Failed to change password. Please try again.';
+          (error as any)?.message || t('changePassword.failedFallback');
         toast({
           message: errorMessage,
           type: 'error',
@@ -108,7 +116,7 @@ export const ChangePasswordScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
-      <Header title="Change Password" onBack={goBack} centerTitle />
+      <Header title={t('changePassword.title')} onBack={goBack} centerTitle />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -119,20 +127,16 @@ export const ChangePasswordScreen: React.FC = () => {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.iconContainer}>
-            <Icon
-              name="lock-closed-outline"
-              size={64}
-              color={theme.colors.primary}
-            />
+            <Icon name="lock-closed-outline" size={64} tone="primary" />
           </View>
 
-          <Text style={styles.subtitle}>
-            Enter your current password and choose a new secure password.
-          </Text>
+          <Text style={styles.subtitle}>{t('changePassword.subtitle')}</Text>
 
           <View style={styles.form}>
             <View style={styles.field}>
-              <Text style={styles.label}>Current Password</Text>
+              <Text style={styles.label}>
+                {t('changePassword.currentPassword')}
+              </Text>
               <PasswordInput
                 value={watchedValues.currentPassword}
                 onChangeText={text =>
@@ -140,27 +144,31 @@ export const ChangePasswordScreen: React.FC = () => {
                     shouldValidate: true,
                   })
                 }
-                placeholder="Enter your current password"
+                placeholder={t('changePassword.currentPasswordPlaceholder')}
                 errorMessage={form.formState.errors.currentPassword?.message}
                 editable={!isSubmitting}
               />
             </View>
 
             <View style={styles.field}>
-              <Text style={styles.label}>New Password</Text>
+              <Text style={styles.label}>
+                {t('changePassword.newPassword')}
+              </Text>
               <PasswordInput
                 value={watchedValues.newPassword}
                 onChangeText={text =>
                   form.setValue('newPassword', text, { shouldValidate: true })
                 }
-                placeholder="Enter your new password"
+                placeholder={t('changePassword.newPasswordPlaceholder')}
                 errorMessage={form.formState.errors.newPassword?.message}
                 editable={!isSubmitting}
               />
             </View>
 
             <View style={styles.field}>
-              <Text style={styles.label}>Confirm New Password</Text>
+              <Text style={styles.label}>
+                {t('changePassword.confirmPassword')}
+              </Text>
               <PasswordInput
                 value={watchedValues.confirmPassword}
                 onChangeText={text =>
@@ -168,7 +176,7 @@ export const ChangePasswordScreen: React.FC = () => {
                     shouldValidate: true,
                   })
                 }
-                placeholder="Confirm your new password"
+                placeholder={t('changePassword.confirmPasswordPlaceholder')}
                 errorMessage={form.formState.errors.confirmPassword?.message}
                 editable={!isSubmitting}
               />
@@ -181,7 +189,7 @@ export const ChangePasswordScreen: React.FC = () => {
               loading={isSubmitting}
               style={styles.buttonSpacing}
             >
-              Change Password
+              {t('changePassword.submit')}
             </Button>
           </View>
         </ScrollView>
