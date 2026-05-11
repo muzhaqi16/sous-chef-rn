@@ -2,7 +2,7 @@ name: 'Setup dependencies + GraphQL codegen'
 description: |
   Restores cached node_modules (keyed on package-lock.json) and the generated
   GraphQL files (keyed on the .graphql sources + schema + codegen config).
-  Runs `npm ci` and `npm run codegen:types` only on cache miss.
+  Runs `npm ci` and `npm run codegen` only on cache miss.
 
   Caller is responsible for `actions/checkout` and `actions/setup-node` —
   this action assumes Node is already on PATH and the repo is checked out.
@@ -35,4 +35,4 @@ runs:
     - name: Generate GraphQL types
       if: steps.cache-codegen.outputs.cache-hit != 'true'
       shell: bash
-      run: npm run codegen:types
+      run: npm run codegen
