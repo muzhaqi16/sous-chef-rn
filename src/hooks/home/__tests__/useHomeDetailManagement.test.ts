@@ -50,17 +50,6 @@ jest.mock('#/utils/errors/versionConflict', () => ({
   getVersionConflictMessage: jest.fn(() => 'Version conflict'),
 }));
 
-jest.mock('#constants/messages', () => ({
-  MESSAGES: {
-    errors: {
-      updateHomeNameFailed: 'Failed to update home name',
-      updateMemberRoleFailed: 'Failed to update role',
-      removeMemberFailed: 'Failed to remove member',
-      revokeInviteFailed: 'Failed to revoke invite',
-    },
-  },
-}));
-
 jest.mock('#utils/formatters/roleFormatters', () => ({
   formatRole: jest.fn((role: string) => role),
 }));

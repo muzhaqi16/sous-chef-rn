@@ -11,7 +11,6 @@ import { useConvertExpiredToWaste } from '#features/pantry/hooks/mutations/useCo
 import { useConvertExpiredBatchesToWaste } from '#features/pantry/hooks/mutations/useConvertExpiredBatchesToWaste';
 import { useAdjustPantryItemQuantity } from '#features/pantry/hooks/mutations/useAdjustPantryItemQuantity';
 import { useCorrectPantryItemWeight } from '#features/pantry/hooks/mutations/useCorrectPantryItemWeight';
-import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 
 type PantryItemForActions = {
   id: string;
@@ -69,8 +68,6 @@ export function usePantryItemDetailActions({
   goBack,
   onAddToShoppingListNeedsList,
 }: UsePantryItemDetailActionsParams): UsePantryItemDetailActionsResult {
-  const { navigateTo: _ignoredNavigateTo } = useAppNavigation();
-
   const [addToListStatus, setAddToListStatus] =
     useState<AddToListStatus>('idle');
   const [adjustModalVisible, setAdjustModalVisible] = useState(false);

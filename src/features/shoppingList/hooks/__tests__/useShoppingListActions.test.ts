@@ -7,7 +7,11 @@ import {
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
 import { UpdateShoppingListItemQuantityDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { ShoppingListItemDisplayFragmentDoc } from '#features/shoppingList/graphql/shoppingListFragments.generated';
+import {
+  ShoppingListItemDisplayFragmentDoc,
+  type ShoppingListItemDisplayFragment,
+} from '#features/shoppingList/graphql/shoppingListFragments.generated';
+import { DisplayFormat } from '#/graphql/generated/schemaTypes';
 import { useShoppingListActions } from '../useShoppingListActions';
 
 // --- Mocks ---
@@ -124,13 +128,13 @@ function seedShoppingListItem(
   overrides: Record<string, unknown> = {},
 ): InMemoryCache {
   const cache = new InMemoryCache();
-  const data = {
+  const data: ShoppingListItemDisplayFragment = {
     __typename: 'ShoppingListItem',
     id: 'item-1',
     itemName: 'Milk',
-    quantity: 2 as number | null,
+    quantity: 2,
     quantityInput: '2',
-    displayFormat: '2',
+    displayFormat: DisplayFormat.Decimal,
     purchaseInfo: {
       __typename: 'ShoppingListItemPurchaseInfo',
       isPurchased: false,
@@ -141,7 +145,7 @@ function seedShoppingListItem(
     notes: null,
     unitName: null,
     unit: null,
-    sortOrder: 0,
+    sortOrder: 'aaa',
     item: null,
     ...overrides,
   };

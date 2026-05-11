@@ -6,6 +6,17 @@
  * Defaults emit nullable fields as null; override the few needed for
  * each test.
  */
+import type { GetPantryItemQuery } from '#features/pantry/graphql/pantry.generated';
+import {
+  StorageState,
+  StorageType,
+  ItemCondition,
+  AcquisitionMethod,
+  UnitType,
+} from '#/graphql/generated/schemaTypes';
+
+type PantryItemNode = NonNullable<GetPantryItemQuery['pantryItem']>;
+type UnitData = PantryItemNode['unit'];
 
 export interface PantryItemFixture {
   id?: string;
@@ -25,13 +36,13 @@ export interface PantryItemFixture {
   unitSymbol?: string;
 }
 
-function unit(symbol = 'L', name = 'liters') {
+function unit(symbol = 'L', name = 'liters'): UnitData {
   return {
     __typename: 'Unit',
     id: 'u1',
     name,
     symbol,
-    type: 'VOLUME',
+    type: UnitType.Volume,
     isMetric: true,
     baseUnitId: 'u1',
     conversionFactor: 1,
@@ -43,10 +54,13 @@ function unit(symbol = 'L', name = 'liters') {
 }
 
 /** Build the full GetPantryItem query result. */
-export function pantryItemData(fixture: PantryItemFixture = {}) {
+export function pantryItemData(
+  fixture: PantryItemFixture = {},
+): GetPantryItemQuery {
   const id = fixture.id ?? 'pi1';
   const tags = fixture.tags ?? [];
-  return {
+  const data: GetPantryItemQuery = {
+    __typename: 'Query',
     pantryItem: {
       __typename: 'PantryItem',
       id,
@@ -56,7 +70,9 @@ export function pantryItemData(fixture: PantryItemFixture = {}) {
       quantity: fixture.quantity ?? 2,
       version: 1,
       updatedAt: '2026-01-01T00:00:00Z',
-      storageState: fixture.storageState ?? 'REFRIGERATED',
+      storageState:
+        (fixture.storageState as StorageState | undefined) ??
+        StorageState.Refrigerated,
       expiresAt: fixture.expiresAt ?? null,
       lowStockAlert: false,
       isLowStock: false,
@@ -82,7 +98,7 @@ export function pantryItemData(fixture: PantryItemFixture = {}) {
         categories: fixture.categoryName
           ? [
               {
-                __typename: 'ItemCategoryAssociation',
+                __typename: 'ItemCategory',
                 isPrimary: true,
                 category: {
                   __typename: 'Category',
@@ -101,7 +117,7 @@ export function pantryItemData(fixture: PantryItemFixture = {}) {
             __typename: 'StorageLocation',
             id: 'loc1',
             name: fixture.storageLocationName,
-            type: 'PANTRY',
+            type: StorageType.PantryShelf,
           }
         : null,
       packageBreakdown: null,
@@ -114,16 +130,20 @@ export function pantryItemData(fixture: PantryItemFixture = {}) {
       createdAt: fixture.createdAt ?? '2026-01-01T00:00:00Z',
       restockQuantity: null,
       store: null,
-      condition: fixture.condition ?? 'GOOD',
-      acquisitionMethod: fixture.acquisitionMethod ?? 'PURCHASED',
+      condition:
+        (fixture.condition as ItemCondition | undefined) ?? ItemCondition.Good,
+      acquisitionMethod:
+        (fixture.acquisitionMethod as AcquisitionMethod | undefined) ??
+        AcquisitionMethod.Purchased,
       costPerUnit: null,
       totalCost: null,
       purchase: null,
       usageRecords: {
-        __typename: 'PantryItemUsageRecordConnection',
+        __typename: 'PantryItemUsageConnection',
         edges: [],
       },
       batches: [],
     },
   };
+  return data;
 }

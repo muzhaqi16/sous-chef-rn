@@ -27,11 +27,35 @@ interface StorageLocationData {
 
 import { StorageLocation } from '#/graphql/generated/schemaTypes';
 
+/**
+ * The subset of {@link StorageLocation} fields the sheet actually reads to
+ * populate the form. Narrower than the full schema type so callers (and
+ * tests) don't have to build a full StorageLocation just to seed three
+ * fields.
+ */
+export type StorageLocationInitialData = Partial<
+  Pick<
+    StorageLocation,
+    | 'capacity'
+    | 'capacityUnit'
+    | 'color'
+    | 'description'
+    | 'isClimateControlled'
+    | 'isDefault'
+    | 'parentLocationId'
+    | 'temperature'
+  >
+> & {
+  id: string;
+  name: string;
+  type: StorageLocation['type'];
+};
+
 interface StorageLocationSheetProps {
   visible: boolean;
   onClose: () => void;
   onSubmit: (data: StorageLocationData) => Promise<boolean | void>;
-  initialData?: StorageLocation | null;
+  initialData?: StorageLocationInitialData | null;
   availableLocations: Array<{ id: string; name: string; type: string }>;
   isSubmitting?: boolean;
 }

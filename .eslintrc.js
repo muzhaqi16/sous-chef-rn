@@ -28,15 +28,21 @@ module.exports = {
       // Tests are intentionally INCLUDED so deprecation warnings catch e.g.
       // `MockedResponse from @apollo/client/testing` (deprecated; use
       // `MockedResponse` re-exported from `__tests__/helpers/apolloMockProvider`).
-      files: [
-        'src/**/*.ts',
-        'src/**/*.tsx',
-        'App.tsx',
-        '__tests__/**/*.ts',
-        '__tests__/**/*.tsx',
-      ],
+      files: ['src/**/*.ts', 'src/**/*.tsx', 'App.tsx'],
       parserOptions: {
         project: './tsconfig.json',
+      },
+      rules: {
+        '@typescript-eslint/no-deprecated': 'warn',
+      },
+    },
+    {
+      // Tests live outside the production tsconfig (Metro bundles them
+      // separately). __tests__/tsconfig.json includes them so ESLint's
+      // type-checked rules (no-deprecated, etc.) can still run.
+      files: ['__tests__/**/*.ts', '__tests__/**/*.tsx'],
+      parserOptions: {
+        project: './__tests__/tsconfig.json',
       },
       rules: {
         '@typescript-eslint/no-deprecated': 'warn',

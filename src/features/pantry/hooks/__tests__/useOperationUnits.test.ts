@@ -9,7 +9,7 @@ import {
   UnitRole,
   UnitSource,
 } from '#/graphql/generated/schemaTypes';
-import { createApolloWrapper } from '#/test-utils/apolloMockProvider';
+import { createApolloTestWrapper } from '#/test-utils/apolloMockProvider';
 import { useOperationUnits, PantryOperation } from '../useOperationUnits';
 
 function makeRankedUnit(overrides: Record<string, unknown> = {}) {
@@ -97,7 +97,7 @@ describe('useOperationUnits', () => {
             ...defaultOptions,
             operation: PantryOperation.Consume,
           }),
-        { wrapper: createApolloWrapper([consumptionMock([makeRankedUnit()])]) },
+        { wrapper: createApolloTestWrapper({ operationMocks: [consumptionMock([makeRankedUnit()])] }) },
       );
 
       await waitFor(() => expect(result.current.loading).toBe(false));
@@ -111,7 +111,7 @@ describe('useOperationUnits', () => {
             ...defaultOptions,
             operation: PantryOperation.Waste,
           }),
-        { wrapper: createApolloWrapper([consumptionMock([makeRankedUnit()])]) },
+        { wrapper: createApolloTestWrapper({ operationMocks: [consumptionMock([makeRankedUnit()])] }) },
       );
 
       await waitFor(() => expect(result.current.loading).toBe(false));
@@ -126,9 +126,9 @@ describe('useOperationUnits', () => {
             operation: PantryOperation.Restock,
           }),
         {
-          wrapper: createApolloWrapper([
-            restockMock([makeRankedUnit({ rank: 1 })]),
-          ]),
+          wrapper: createApolloTestWrapper({
+            operationMocks: [restockMock([makeRankedUnit({ rank: 1 })])],
+          }),
         },
       );
 
@@ -145,7 +145,7 @@ describe('useOperationUnits', () => {
             ...defaultOptions,
             operation: PantryOperation.Consume,
           }),
-        { wrapper: createApolloWrapper([consumptionMock([makeRankedUnit()])]) },
+        { wrapper: createApolloTestWrapper({ operationMocks: [consumptionMock([makeRankedUnit()])] }) },
       );
 
       expect(result.current.loading).toBe(true);
@@ -164,7 +164,7 @@ describe('useOperationUnits', () => {
             itemId: undefined,
             operation: PantryOperation.Consume,
           }),
-        { wrapper: createApolloWrapper([]) },
+        { wrapper: createApolloTestWrapper({ operationMocks: [] }) },
       );
 
       expect(result.current.loading).toBe(false);
@@ -179,7 +179,7 @@ describe('useOperationUnits', () => {
             pantryItemId: undefined,
             operation: PantryOperation.Restock,
           }),
-        { wrapper: createApolloWrapper([]) },
+        { wrapper: createApolloTestWrapper({ operationMocks: [] }) },
       );
 
       expect(result.current.loading).toBe(false);
@@ -196,7 +196,7 @@ describe('useOperationUnits', () => {
             operation: PantryOperation.Consume,
           }),
         {
-          wrapper: createApolloWrapper([
+          wrapper: createApolloTestWrapper({ operationMocks: [
             consumptionMock([
               makeRankedUnit({
                 rank: 1,
@@ -251,7 +251,7 @@ describe('useOperationUnits', () => {
                 },
               }),
             ]),
-          ]),
+          ] }),
         },
       );
 
@@ -278,7 +278,7 @@ describe('useOperationUnits', () => {
             operation: PantryOperation.Consume,
           }),
         {
-          wrapper: createApolloWrapper([
+          wrapper: createApolloTestWrapper({ operationMocks: [
             consumptionMock([
               makeRankedUnit({ rank: 1, source: UnitSource.TrackingUnit }),
               makeRankedUnit({
@@ -295,7 +295,7 @@ describe('useOperationUnits', () => {
                 },
               }),
             ]),
-          ]),
+          ] }),
         },
       );
 
@@ -320,7 +320,7 @@ describe('useOperationUnits', () => {
             operation: PantryOperation.Consume,
           }),
         {
-          wrapper: createApolloWrapper([
+          wrapper: createApolloTestWrapper({ operationMocks: [
             consumptionMock([
               makeRankedUnit({
                 rank: 1,
@@ -328,7 +328,7 @@ describe('useOperationUnits', () => {
                 commonFractions: [0.25, 0.5, 0.75],
               }),
             ]),
-          ]),
+          ] }),
         },
       );
 
@@ -345,7 +345,7 @@ describe('useOperationUnits', () => {
             ...defaultOptions,
             operation: PantryOperation.Consume,
           }),
-        { wrapper: createApolloWrapper([consumptionMock([])]) },
+        { wrapper: createApolloTestWrapper({ operationMocks: [consumptionMock([])] }) },
       );
 
       await waitFor(() => expect(result.current.loading).toBe(false));
@@ -364,7 +364,7 @@ describe('useOperationUnits', () => {
             ...defaultOptions,
             operation: PantryOperation.Consume,
           }),
-        { wrapper: createApolloWrapper([consumptionErrorMock()]) },
+        { wrapper: createApolloTestWrapper({ operationMocks: [consumptionErrorMock()] }) },
       );
 
       await waitFor(() => expect(result.current.error).toBeDefined());
@@ -378,7 +378,7 @@ describe('useOperationUnits', () => {
             ...defaultOptions,
             operation: PantryOperation.Restock,
           }),
-        { wrapper: createApolloWrapper([restockErrorMock()]) },
+        { wrapper: createApolloTestWrapper({ operationMocks: [restockErrorMock()] }) },
       );
 
       await waitFor(() => expect(result.current.error).toBeDefined());

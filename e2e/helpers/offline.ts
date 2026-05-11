@@ -17,7 +17,7 @@ export async function simulateOffline(): Promise<void> {
   // On iOS, we can use flight mode to disable network
   // On Android, we use the toggleNetwork capability
   if (device.getPlatform() === 'ios') {
-    await device.setStatusBar({ network: 'wifi', wifiBars: 0 });
+    await device.setStatusBar({ dataNetwork: 'wifi', wifiBars: '0' });
     // Note: This only changes the status bar visually
     // For true offline simulation, the app needs to handle the offline banner
   }
@@ -47,7 +47,7 @@ export async function simulateOnline(): Promise<void> {
 
   // On iOS, restore the status bar
   if (device.getPlatform() === 'ios') {
-    await device.setStatusBar({ network: 'wifi', wifiBars: 3 });
+    await device.setStatusBar({ dataNetwork: 'wifi', wifiBars: '3' });
   }
 
   // Wait for offline banner to disappear

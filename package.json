@@ -1,6 +1,6 @@
 {
   "name": "sous-chef-app",
-  "version": "3.4.9",
+  "version": "3.4.10",
   "private": true,
   "scripts": {
     "android": "react-native run-android",
@@ -47,7 +47,7 @@
     "codegen:schema": "graphql-codegen --config codegen.schema.ts",
     "codegen": "npm run codegen:schema && graphql-codegen --config codegen.ts",
     "codegen:watch": "graphql-codegen --watch --config codegen.ts",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p __tests__/tsconfig.json",
     "typecheck:tests": "tsc --project __tests__/tsconfig.json --noEmit",
     "watchman": "watchman watch-del-all && watchman shutdown-server",
     "test": "jest",

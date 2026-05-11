@@ -124,9 +124,9 @@ function buildSchemaLink(options: Pick<ApolloTestOptions, 'mocks' | 'resolvers'>
  * - With `operationMocks`: per-operation `MockedProvider` mocks.
  * - Don't combine both at once — pick the strategy your test needs.
  */
-import type { DefaultOptions } from '@apollo/client';
+import type { ApolloClient } from '@apollo/client';
 
-const TEST_DEFAULT_OPTIONS: DefaultOptions = {
+const TEST_DEFAULT_OPTIONS: ApolloClient.DefaultOptions = {
   query: { fetchPolicy: 'network-only', errorPolicy: 'all' },
   mutate: { errorPolicy: 'all' },
   watchQuery: {
@@ -168,16 +168,6 @@ export function createApolloTestWrapper(options: ApolloTestOptions = {}) {
       </MockedProvider>
     );
   };
-}
-
-/**
- * Backwards-compat alias: pass an array of `MockedResponse` entries.
- *
- * @deprecated Prefer `createApolloTestWrapper({ operationMocks })` so the
- *   call site documents which strategy is in use.
- */
-export function createApolloWrapper(operationMocks: MockedResponse[] = []) {
-  return createApolloTestWrapper({ operationMocks });
 }
 
 /**

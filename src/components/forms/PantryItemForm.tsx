@@ -6,7 +6,6 @@ import {
   Text,
   ScrollView,
 } from 'react-native';
-import { alertService } from '#/services/alertService';
 import { useForm, useWatch, Controller, type Resolver } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { object, string } from 'yup';
@@ -34,7 +33,6 @@ import {
   emptyUnitSelection,
   type UnitSelection,
 } from '#features/pantry/hooks/mutations/types';
-import { parseFractionalInput as parseQuantityInput } from '#/utils/fractionUtils';
 import {
   DynamicFormFields,
   FieldDef,

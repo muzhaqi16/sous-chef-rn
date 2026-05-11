@@ -2,7 +2,7 @@ import { renderHook, act, waitFor } from '@testing-library/react-native';
 import type { MockedResponse } from '#/test-utils/apolloMockProvider';
 import { alertService } from '#/services/alertService';
 import { AdjustPantryItemQuantityDocument } from '#features/pantry/graphql/pantry.generated';
-import { createApolloWrapper } from '#/test-utils/apolloMockProvider';
+import { createApolloTestWrapper } from '#/test-utils/apolloMockProvider';
 import { useAdjustPantryItemQuantity } from '../useAdjustPantryItemQuantity';
 
 jest.mock('#/services/errorService', () => ({
@@ -81,7 +81,7 @@ beforeEach(() => {
 describe('useAdjustPantryItemQuantity', () => {
   it('returns adjustQuantity function and loading state', () => {
     const { result } = renderHook(() => useAdjustPantryItemQuantity(), {
-      wrapper: createApolloWrapper([]),
+      wrapper: createApolloTestWrapper({ operationMocks: [] }),
     });
 
     expect(typeof result.current.adjustQuantity).toBe('function');
@@ -96,7 +96,7 @@ describe('useAdjustPantryItemQuantity', () => {
     };
     const { result } = renderHook(
       () => useAdjustPantryItemQuantity({ onSuccess }),
-      { wrapper: createApolloWrapper([successMock(variables)]) },
+      { wrapper: createApolloTestWrapper({ operationMocks: [successMock(variables)] }) },
     );
 
     let success: boolean | undefined;
@@ -118,7 +118,7 @@ describe('useAdjustPantryItemQuantity', () => {
       input: { newQuantity: 3, reason: 'Counted', version: 7 },
     };
     const { result } = renderHook(() => useAdjustPantryItemQuantity(), {
-      wrapper: createApolloWrapper([successMock(variables)]),
+      wrapper: createApolloTestWrapper({ operationMocks: [successMock(variables)] }),
     });
 
     let success: boolean | undefined;
@@ -140,7 +140,7 @@ describe('useAdjustPantryItemQuantity', () => {
       },
     };
     const { result } = renderHook(() => useAdjustPantryItemQuantity(), {
-      wrapper: createApolloWrapper([successMock(variables)]),
+      wrapper: createApolloTestWrapper({ operationMocks: [successMock(variables)] }),
     });
 
     let success: boolean | undefined;
@@ -163,7 +163,7 @@ describe('useAdjustPantryItemQuantity', () => {
       input: { newQuantity: 1, reason: 'Adjusted' },
     };
     const { result } = renderHook(() => useAdjustPantryItemQuantity(), {
-      wrapper: createApolloWrapper([successMock(variables)]),
+      wrapper: createApolloTestWrapper({ operationMocks: [successMock(variables)] }),
     });
 
     let success: boolean | undefined;
@@ -181,7 +181,7 @@ describe('useAdjustPantryItemQuantity', () => {
       input: { newQuantity: 5, reason: 'Count' },
     };
     const { result } = renderHook(() => useAdjustPantryItemQuantity(), {
-      wrapper: createApolloWrapper([errorMock(variables)]),
+      wrapper: createApolloTestWrapper({ operationMocks: [errorMock(variables)] }),
     });
 
     let success: boolean | undefined;
@@ -204,7 +204,7 @@ describe('useAdjustPantryItemQuantity', () => {
       input: { newQuantity: 5, reason: 'Count' },
     };
     const { result } = renderHook(() => useAdjustPantryItemQuantity(), {
-      wrapper: createApolloWrapper([errorMock(variables)]),
+      wrapper: createApolloTestWrapper({ operationMocks: [errorMock(variables)] }),
     });
 
     let success: boolean | undefined;
@@ -224,7 +224,7 @@ describe('useAdjustPantryItemQuantity', () => {
       input: { newQuantity: 5, reason: 'Count' },
     };
     const { result } = renderHook(() => useAdjustPantryItemQuantity(), {
-      wrapper: createApolloWrapper([nullPantryItemMock(variables)]),
+      wrapper: createApolloTestWrapper({ operationMocks: [nullPantryItemMock(variables)] }),
     });
 
     let success: boolean | undefined;

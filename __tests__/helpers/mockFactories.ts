@@ -1,6 +1,11 @@
 import { DocumentNode, GraphQLError } from 'graphql';
-import { MockedResponse } from '@apollo/client/testing/react';
-import { MembershipRole, StorageState, StorageType, CollaboratorStatus } from '#generated';
+import type { MockedResponse } from '#/test-utils/apolloMockProvider';
+import {
+  MembershipRole,
+  StorageState,
+  StorageType,
+  CollaboratorStatus,
+} from '#/graphql/generated/schemaTypes';
 
 let idCounter = 0;
 const nextId = () => `test-id-${++idCounter}`;

@@ -6,7 +6,7 @@ import {
   GetPantryLedgerAnalyticsDocument,
 } from '#features/pantry/graphql/pantry.generated';
 import { PeriodGranularity, DateRange } from '#/graphql/generated/schemaTypes';
-import { createApolloWrapper } from '#/test-utils/apolloMockProvider';
+import { createApolloTestWrapper } from '#/test-utils/apolloMockProvider';
 import { usePantryAnalytics } from '../usePantryAnalytics';
 
 jest.mock('#hooks/apollo/useApolloErrorLogger', () => ({
@@ -97,7 +97,7 @@ describe('usePantryAnalytics', () => {
   it('returns analytics data when pantryId is provided', async () => {
     const { result } = renderHook(
       () => usePantryAnalytics({ pantryId: 'pantry-1' }),
-      { wrapper: createApolloWrapper(defaultMocks()) },
+      { wrapper: createApolloTestWrapper({ operationMocks: defaultMocks() }) },
     );
 
     await waitFor(() => expect(result.current.loading).toBe(false));
@@ -109,7 +109,7 @@ describe('usePantryAnalytics', () => {
 
   it('returns null data when pantryId is empty (queries skipped)', () => {
     const { result } = renderHook(() => usePantryAnalytics({ pantryId: '' }), {
-      wrapper: createApolloWrapper([]),
+      wrapper: createApolloTestWrapper({ operationMocks: [] }),
     });
 
     expect(result.current.usageData).toBeNull();
@@ -120,7 +120,7 @@ describe('usePantryAnalytics', () => {
   it('uses LastMonth as default dateRange', () => {
     const { result } = renderHook(
       () => usePantryAnalytics({ pantryId: 'pantry-1' }),
-      { wrapper: createApolloWrapper(defaultMocks()) },
+      { wrapper: createApolloTestWrapper({ operationMocks: defaultMocks() }) },
     );
 
     expect(result.current.dateRange).toBe(DateRange.LastMonth);
@@ -129,7 +129,7 @@ describe('usePantryAnalytics', () => {
   it('uses Weekly as default ledgerGranularity', () => {
     const { result } = renderHook(
       () => usePantryAnalytics({ pantryId: 'pantry-1' }),
-      { wrapper: createApolloWrapper(defaultMocks()) },
+      { wrapper: createApolloTestWrapper({ operationMocks: defaultMocks() }) },
     );
 
     expect(result.current.ledgerGranularity).toBe(PeriodGranularity.Weekly);
@@ -144,13 +144,13 @@ describe('usePantryAnalytics', () => {
           ledgerGranularity: PeriodGranularity.Monthly,
         }),
       {
-        wrapper: createApolloWrapper(
-          defaultMocks(
+        wrapper: createApolloTestWrapper({
+          operationMocks: defaultMocks(
             'pantry-1',
             PeriodGranularity.Monthly,
             DateRange.LastYear,
           ),
-        ),
+        }),
       },
     );
 
@@ -161,7 +161,7 @@ describe('usePantryAnalytics', () => {
   it('allows changing dateRange via setDateRange', () => {
     const { result } = renderHook(
       () => usePantryAnalytics({ pantryId: 'pantry-1' }),
-      { wrapper: createApolloWrapper(defaultMocks()) },
+      { wrapper: createApolloTestWrapper({ operationMocks: defaultMocks() }) },
     );
 
     act(() => {
@@ -174,7 +174,7 @@ describe('usePantryAnalytics', () => {
   it('allows changing ledgerGranularity via setLedgerGranularity', () => {
     const { result } = renderHook(
       () => usePantryAnalytics({ pantryId: 'pantry-1' }),
-      { wrapper: createApolloWrapper(defaultMocks()) },
+      { wrapper: createApolloTestWrapper({ operationMocks: defaultMocks() }) },
     );
 
     act(() => {
@@ -188,7 +188,7 @@ describe('usePantryAnalytics', () => {
     it('starts true and resolves to false once mocks settle', async () => {
       const { result } = renderHook(
         () => usePantryAnalytics({ pantryId: 'pantry-1' }),
-        { wrapper: createApolloWrapper(defaultMocks()) },
+        { wrapper: createApolloTestWrapper({ operationMocks: defaultMocks() }) },
       );
 
       expect(result.current.loading).toBe(true);
@@ -198,7 +198,7 @@ describe('usePantryAnalytics', () => {
     it('is false when pantryId is invalid (queries skipped)', () => {
       const { result } = renderHook(
         () => usePantryAnalytics({ pantryId: '' }),
-        { wrapper: createApolloWrapper([]) },
+        { wrapper: createApolloTestWrapper({ operationMocks: [] }) },
       );
 
       expect(result.current.loading).toBe(false);
@@ -254,7 +254,7 @@ describe('usePantryAnalytics', () => {
 
       const { result } = renderHook(
         () => usePantryAnalytics({ pantryId: 'pantry-1' }),
-        { wrapper: createApolloWrapper(mocks) },
+        { wrapper: createApolloTestWrapper({ operationMocks: mocks }) },
       );
 
       await waitFor(() => expect(result.current.usageError).toBeDefined());
@@ -267,7 +267,7 @@ describe('usePantryAnalytics', () => {
     it('exposes a refetch function', async () => {
       const { result } = renderHook(
         () => usePantryAnalytics({ pantryId: 'pantry-1' }),
-        { wrapper: createApolloWrapper(defaultMocks()) },
+        { wrapper: createApolloTestWrapper({ operationMocks: defaultMocks() }) },
       );
 
       await waitFor(() => expect(result.current.loading).toBe(false));
@@ -280,7 +280,7 @@ describe('usePantryAnalytics', () => {
     it('skips queries when pantryId is undefined (no mocks consumed)', () => {
       const { result } = renderHook(
         () => usePantryAnalytics({ pantryId: undefined }),
-        { wrapper: createApolloWrapper([]) },
+        { wrapper: createApolloTestWrapper({ operationMocks: [] }) },
       );
 
       expect(result.current.loading).toBe(false);
@@ -290,7 +290,7 @@ describe('usePantryAnalytics', () => {
     it('skips queries when pantryId is whitespace-only', () => {
       const { result } = renderHook(
         () => usePantryAnalytics({ pantryId: '   ' }),
-        { wrapper: createApolloWrapper([]) },
+        { wrapper: createApolloTestWrapper({ operationMocks: [] }) },
       );
 
       expect(result.current.loading).toBe(false);
