@@ -50,17 +50,6 @@ interface UseStandardBottomSheetOptions {
    * or a string (e.g. `'85%'`) to specify a custom expanded snap point.
    */
   keyboardAware?: boolean | string;
-  /**
-   * When true (default), dismiss the sheet when the owning screen loses
-   * navigation focus and re-present it on refocus (if `visible` is still
-   * truthy). This keeps the global backdrop's ref-count clean when a sheet
-   * stays "open" across a navigation push — without this, the underlying
-   * BottomSheetModal can be torn down by the navigator while its tracker
-   * in OverlayBackdropProvider still holds a count, leaving the backdrop
-   * painted over the next screen. Pass `false` for sheets that are
-   * intentionally rendered across multiple focus scopes.
-   */
-  dismissOnBlur?: boolean;
 }
 
 /**
@@ -92,20 +81,17 @@ export function useStandardBottomSheet({
   keyboardBehavior,
   enableDynamicSizing = false,
   keyboardAware = false,
-  dismissOnBlur = true,
 }: UseStandardBottomSheetOptions) {
   const insets = useSafeAreaInsets();
   const ref = useRef<GorhomBottomSheetModal>(null);
   const animationConfigs = useSharedBottomSheetConfigs();
   useBottomSheetBackHandler(ref, visible ?? false);
 
-  // Track the latest values for the focus-aware callback below without
-  // rebuilding the callback each render.
+  // Track the latest visible value for the focus-aware callback below
+  // without rebuilding the callback each render.
   const visibleRef = useRef(visible);
-  const dismissOnBlurRef = useRef(dismissOnBlur);
   useEffect(() => {
     visibleRef.current = visible;
-    dismissOnBlurRef.current = dismissOnBlur;
   });
 
   // Compute final snap points: append expanded point when keyboardAware and not already present
@@ -116,9 +102,9 @@ export function useStandardBottomSheet({
       ? [...snapPoints, expandedPoint]
       : snapPoints;
 
-  // Resolve keyboard behavior: keyboardAware defaults to 'interactive'
-  const resolvedKeyboardBehavior =
-    keyboardBehavior ?? (keyboardAware ? 'interactive' : 'extend');
+  // 'interactive' fits the vast majority of input-bearing sheets; callers
+  // can still pass 'extend' or 'fillParent' explicitly when needed.
+  const resolvedKeyboardBehavior = keyboardBehavior ?? 'interactive';
 
   // Auto present/dismiss when visible is provided
   useEffect(() => {
@@ -136,20 +122,12 @@ export function useStandardBottomSheet({
   // (e.g. AddToPantrySheet → BarcodeStack → back). The caller's `visible`
   // state is preserved, so the sheet's inner form state survives the round
   // trip. Short-circuits for manual-presentation callers (visible === undefined)
-  // — they own the full lifecycle — and for callers that explicitly opt out
-  // via dismissOnBlur: false.
+  // — they own the full lifecycle.
   const [onScreenFocus] = useState(() => () => {
-    if (!dismissOnBlurRef.current || visibleRef.current === undefined) {
-      return undefined;
-    }
-    if (visibleRef.current) {
-      ref.current?.present();
-    }
+    if (visibleRef.current === undefined) return undefined;
+    if (visibleRef.current) ref.current?.present();
     return () => {
-      // Only dismiss if the sheet is meant to be open — avoids a redundant
-      // dismiss() on an already-closed sheet.
-      if (!dismissOnBlurRef.current || !visibleRef.current) return;
-      ref.current?.dismiss();
+      if (visibleRef.current) ref.current?.dismiss();
     };
   });
   useFocusEffect(onScreenFocus);

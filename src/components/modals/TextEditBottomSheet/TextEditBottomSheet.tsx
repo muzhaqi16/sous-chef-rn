@@ -58,7 +58,6 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
     visible,
     onDismiss: onClose,
     snapPoints: ['30%'],
-    keyboardBehavior: 'interactive',
   });
 
   // Default schema if none provided

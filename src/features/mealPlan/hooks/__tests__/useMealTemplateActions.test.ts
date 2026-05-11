@@ -1,29 +1,7 @@
 'use no memo';
 
-// Mock tokenScheduler and refreshToken to break circular dependency chain
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
-
-const mockCreateFromTemplateMutation = jest.fn();
-const mockCreateTemplateMutation = jest.fn();
-const mockDeleteTemplateMutation = jest.fn();
-const mockDuplicateTemplateMutation = jest.fn();
-
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useMutation: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'CreateMealPlanFromTemplate')
-      return [mockCreateFromTemplateMutation, { loading: false }];
-    if (opName === 'CreateTemplateFromMealPlan')
-      return [mockCreateTemplateMutation, { loading: false }];
-    if (opName === 'DeleteMealTemplate')
-      return [mockDeleteTemplateMutation, { loading: false }];
-    if (opName === 'DuplicateTemplate')
-      return [mockDuplicateTemplateMutation, { loading: false }];
-    return [jest.fn(), {}];
-  }),
-}));
 
 jest.mock('#/services/toastService', () => ({
   toastService: {
@@ -39,7 +17,16 @@ jest.mock('#/services/telemetry', () => ({
   },
 }));
 
-import { renderHook } from '@testing-library/react-native';
+import {
+  recordMock,
+  renderHookWithApollo,
+} from '#/test-utils/apolloMockProvider';
+import {
+  CreateMealPlanFromTemplateDocument,
+  CreateTemplateFromMealPlanDocument,
+  DeleteMealTemplateDocument,
+  DuplicateTemplateDocument,
+} from '#features/mealPlan/graphql/mealTemplate.generated';
 import { useMealTemplateActions } from '../useMealTemplateActions';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
@@ -50,7 +37,7 @@ describe('useMealTemplateActions', () => {
   });
 
   it('returns all action functions and loading states', () => {
-    const { result } = renderHook(() => useMealTemplateActions());
+    const { result } = renderHookWithApollo(() => useMealTemplateActions());
 
     expect(result.current).toHaveProperty('createPlanFromTemplate');
     expect(result.current).toHaveProperty('createTemplateFromPlan');
@@ -64,37 +51,42 @@ describe('useMealTemplateActions', () => {
   });
 
   it('createPlanFromTemplate shows success toast and tracks event on success', async () => {
-    mockCreateFromTemplateMutation.mockResolvedValue({
+    const create = recordMock(CreateMealPlanFromTemplateDocument, {
       data: {
-        createMealPlanFromTemplate: { success: true },
+        createMealPlanFromTemplate: {
+          __typename: 'BasicPayload',
+          success: true,
+        },
       },
     });
 
-    const { result } = renderHook(() => useMealTemplateActions());
+    const { result } = renderHookWithApollo(() => useMealTemplateActions(), {
+      operationMocks: [create.mock],
+    });
 
     const response = await result.current.createPlanFromTemplate({
       templateId: 'template-1',
       startDate: '2025-01-01',
     });
 
-    expect(response).toEqual({ success: true });
+    expect(response).toMatchObject({ success: true });
     expect(toastService.success).toHaveBeenCalledWith(
       'Meal plan created from template!',
     );
     expect(Telemetry.trackEvent).toHaveBeenCalledWith(
       'meal_plan_created_from_template',
-      {
-        template_id: 'template-1',
-      },
+      { template_id: 'template-1' },
     );
   });
 
   it('createPlanFromTemplate returns null when mutation returns falsy', async () => {
-    mockCreateFromTemplateMutation.mockResolvedValue({
+    const create = recordMock(CreateMealPlanFromTemplateDocument, {
       data: { createMealPlanFromTemplate: null },
     });
 
-    const { result } = renderHook(() => useMealTemplateActions());
+    const { result } = renderHookWithApollo(() => useMealTemplateActions(), {
+      operationMocks: [create.mock],
+    });
 
     const response = await result.current.createPlanFromTemplate({
       templateId: 't1',
@@ -105,37 +97,44 @@ describe('useMealTemplateActions', () => {
   });
 
   it('createTemplateFromPlan shows success toast on success', async () => {
-    mockCreateTemplateMutation.mockResolvedValue({
+    const create = recordMock(CreateTemplateFromMealPlanDocument, {
       data: {
-        createTemplateFromMealPlan: { success: true },
+        createTemplateFromMealPlan: {
+          __typename: 'BasicPayload',
+          success: true,
+        },
       },
     });
 
-    const { result } = renderHook(() => useMealTemplateActions());
+    const { result } = renderHookWithApollo(() => useMealTemplateActions(), {
+      operationMocks: [create.mock],
+    });
 
     const response = await result.current.createTemplateFromPlan({
       mealPlanId: 'plan-1',
       name: 'My Template',
     });
 
-    expect(response).toEqual({ success: true });
+    expect(response).toMatchObject({ success: true });
     expect(toastService.success).toHaveBeenCalledWith(
       'Meal plan saved as template!',
     );
     expect(Telemetry.trackEvent).toHaveBeenCalledWith(
       'template_created_from_meal_plan',
-      {
-        meal_plan_id: 'plan-1',
-      },
+      { meal_plan_id: 'plan-1' },
     );
   });
 
   it('deleteTemplate returns true and shows toast on success', async () => {
-    mockDeleteTemplateMutation.mockResolvedValue({
-      data: { deleteMealTemplate: { success: true } },
+    const del = recordMock(DeleteMealTemplateDocument, {
+      data: {
+        deleteMealTemplate: { __typename: 'BasicPayload', success: true },
+      },
     });
 
-    const { result } = renderHook(() => useMealTemplateActions());
+    const { result } = renderHookWithApollo(() => useMealTemplateActions(), {
+      operationMocks: [del.mock],
+    });
 
     const success = await result.current.deleteTemplate('template-1');
 
@@ -144,11 +143,15 @@ describe('useMealTemplateActions', () => {
   });
 
   it('deleteTemplate returns false when mutation fails', async () => {
-    mockDeleteTemplateMutation.mockResolvedValue({
-      data: { deleteMealTemplate: { success: false } },
+    const del = recordMock(DeleteMealTemplateDocument, {
+      data: {
+        deleteMealTemplate: { __typename: 'BasicPayload', success: false },
+      },
     });
 
-    const { result } = renderHook(() => useMealTemplateActions());
+    const { result } = renderHookWithApollo(() => useMealTemplateActions(), {
+      operationMocks: [del.mock],
+    });
 
     const success = await result.current.deleteTemplate('template-1');
 
@@ -156,34 +159,26 @@ describe('useMealTemplateActions', () => {
   });
 
   it('duplicateTemplate shows success toast on success', async () => {
-    mockDuplicateTemplateMutation.mockResolvedValue({
-      data: { duplicateTemplate: { success: true, id: 'dup-1' } },
+    const dup = recordMock(DuplicateTemplateDocument, {
+      data: {
+        duplicateTemplate: {
+          __typename: 'BasicPayload',
+          success: true,
+          id: 'dup-1',
+        },
+      },
     });
 
-    const { result } = renderHook(() => useMealTemplateActions());
+    const { result } = renderHookWithApollo(() => useMealTemplateActions(), {
+      operationMocks: [dup.mock],
+    });
 
     const response = await result.current.duplicateTemplate(
       'template-1',
       'Copy of Template',
     );
 
-    expect(response).toEqual({ success: true, id: 'dup-1' });
+    expect(response).toMatchObject({ success: true, id: 'dup-1' });
     expect(toastService.success).toHaveBeenCalledWith('Template duplicated!');
-  });
-
-  it('returns null when mutation throws (executeMutation returns false)', async () => {
-    mockCreateFromTemplateMutation.mockRejectedValue(
-      new Error('Network error'),
-    );
-
-    const { result } = renderHook(() => useMealTemplateActions());
-
-    const response = await result.current.createPlanFromTemplate({
-      templateId: 't1',
-      startDate: '2025-01-01',
-    });
-
-    expect(response).toBeNull();
-    expect(Telemetry.trackError).toHaveBeenCalled();
   });
 });

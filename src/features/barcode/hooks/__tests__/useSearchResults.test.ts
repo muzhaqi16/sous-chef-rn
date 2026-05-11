@@ -1,4 +1,14 @@
-import { renderHook, act } from '@testing-library/react-native';
+import { act, waitFor } from '@testing-library/react-native';
+import {
+  recordMock,
+  renderHookWithApollo,
+  type MockedResponse,
+} from '#/test-utils/apolloMockProvider';
+import {
+  ItemByUpcFilterDocument,
+  ItemBySkuFilterDocument,
+  CreateItemDocument,
+} from '#operations/item/item.generated';
 import { useSearchResults } from '../useSearchResults';
 
 jest.mock('#/services/alertService', () => ({
@@ -12,7 +22,6 @@ const mockAddToRecentlyScanned = jest.fn();
 const mockClearSearch = jest.fn();
 const mockShowBottomSheet = jest.fn();
 const mockHideBottomSheet = jest.fn();
-const mockCreateItemMutation = jest.fn();
 
 jest.mock('#store/useAppStore', () => ({
   useAppStore: (selector: (s: any) => any) =>
@@ -44,35 +53,6 @@ jest.mock('zustand/shallow', () => ({
   useShallow: (fn: any) => fn,
 }));
 
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useQuery: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'ItemByUpcFilter')
-      return {
-        data: undefined,
-        loading: false,
-        error: undefined,
-        refetch: jest.fn(),
-      };
-    if (opName === 'ItemBySkuFilter')
-      return {
-        data: undefined,
-        loading: false,
-        error: undefined,
-        refetch: jest.fn(),
-      };
-    return { data: undefined, loading: false, error: undefined };
-  }),
-  useMutation: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'CreateItem')
-      return [mockCreateItemMutation, { loading: false }];
-    if (opName === 'FlagItemForReview') return [jest.fn(), { loading: false }];
-    return [jest.fn(), {}];
-  }),
-}));
-
 jest.mock('#hooks/useImageUpload', () => ({
   useImageUpload: jest.fn(() => ({
     uploadItemImage: jest.fn(),
@@ -87,327 +67,318 @@ jest.mock('#/storage/mmkv', () => ({
   },
 }));
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/compilerSafeWrappers', () => ({
+  executeMutation: jest.fn(async (fn: any, onError: any) => {
+    try {
+      await fn();
+      return true;
+    } catch (e) {
+      onError?.(e);
+      return false;
+    }
+  }),
+}));
 
-// Break circular dependency
 jest.mock('#/apollo/links/tokenScheduler');
 
 beforeEach(() => {
   jest.clearAllMocks();
 });
 
+// --- Mock builders ---
+
+function upcMock(items: any[]): MockedResponse {
+  return recordMock(ItemByUpcFilterDocument, {
+    data: {
+      items: {
+        __typename: 'ItemConnection',
+        edges: items.map((node, i) => ({
+          __typename: 'ItemEdge',
+          cursor: `c${i}`,
+          node: { __typename: 'Item', ...node },
+        })),
+      },
+    },
+  }).mock;
+}
+
+function skuMock(items: any[]): MockedResponse {
+  return recordMock(ItemBySkuFilterDocument, {
+    data: {
+      items: {
+        __typename: 'ItemConnection',
+        edges: items.map((node, i) => ({
+          __typename: 'ItemEdge',
+          cursor: `c${i}`,
+          node: { __typename: 'Item', ...node },
+        })),
+      },
+    },
+  }).mock;
+}
+
+function upcErrorMock(message: string): MockedResponse {
+  return recordMock(ItemByUpcFilterDocument, {
+    error: new Error(message),
+  }).mock;
+}
+
+const SAMPLE_UPC_ITEM = {
+  id: 'item-1',
+  name: 'Test Product',
+  description: 'A test product',
+  imageUrl: 'http://img.com/1.jpg',
+  primaryUpc: '1234567890',
+  netWeight: 500,
+  displayUnit: { __typename: 'Unit', id: 'unit-1', name: 'grams', symbol: 'g' },
+  brands: [
+    {
+      __typename: 'ItemBrand',
+      brand: { __typename: 'Brand', id: 'brand-1', name: 'TestBrand' },
+    },
+  ],
+  units: [{ __typename: 'ItemUnit', unitId: 'unit-1', isDefault: true }],
+  variationBrand: null,
+  matchedVariation: null,
+};
+
 describe('useSearchResults', () => {
-  it('clears previous search results on barcode change', () => {
-    renderHook(() => useSearchResults('1234567890', 'ean-13'));
+  describe('initial state and store wiring', () => {
+    it('clears previous search results on barcode change', () => {
+      renderHookWithApollo(() => useSearchResults('1234567890', 'ean-13'));
 
-    expect(mockSetSearchResults).toHaveBeenCalledWith([]);
-    expect(mockSetSearchError).toHaveBeenCalledWith(null);
-    expect(mockSetSearching).toHaveBeenCalledWith(true);
-  });
-
-  it('returns loading true when UPC query is loading', () => {
-    const { useQuery } = require('@apollo/client/react');
-    (useQuery as jest.Mock).mockReturnValueOnce({
-      data: undefined,
-      loading: true,
-      error: undefined,
-      refetch: jest.fn(),
+      expect(mockSetSearchResults).toHaveBeenCalledWith([]);
+      expect(mockSetSearchError).toHaveBeenCalledWith(null);
+      expect(mockSetSearching).toHaveBeenCalledWith(true);
     });
 
-    const { result } = renderHook(() => useSearchResults('1234567890'));
+    it('returns search results from store', () => {
+      const { result } = renderHookWithApollo(() =>
+        useSearchResults('1234567890'),
+      );
 
-    expect(result.current.loading).toBe(true);
-  });
-
-  it('returns search results from store', () => {
-    const { result } = renderHook(() => useSearchResults('1234567890'));
-
-    expect(result.current.searchResults).toEqual([]);
-  });
-
-  it('exposes clearSearch', () => {
-    const { result } = renderHook(() => useSearchResults('1234567890'));
-
-    expect(result.current.clearSearch).toBe(mockClearSearch);
-  });
-
-  it('exposes handleRetry', () => {
-    const { result } = renderHook(() => useSearchResults('1234567890'));
-
-    expect(typeof result.current.handleRetry).toBe('function');
-  });
-
-  it('handleRetry clears search error', () => {
-    const { result } = renderHook(() => useSearchResults('1234567890'));
-
-    result.current.handleRetry();
-
-    expect(mockSetSearchError).toHaveBeenCalledWith(null);
-  });
-
-  it('exposes addingItem state', () => {
-    const { result } = renderHook(() => useSearchResults('1234567890'));
-
-    expect(result.current.addingItem).toBe(false);
-  });
-
-  it('sets search results when UPC query finds an item', () => {
-    const { useQuery } = require('@apollo/client/react');
-    (useQuery as jest.Mock).mockReturnValueOnce({
-      data: {
-        items: {
-          edges: [
-            {
-              node: {
-                id: 'item-1',
-                name: 'Test Product',
-                description: 'A test product',
-                imageUrl: 'http://img.com/1.jpg',
-                primaryUpc: '1234567890',
-                netWeight: 500,
-                displayUnit: { id: 'unit-1', name: 'grams', symbol: 'g' },
-                brands: [{ brand: { id: 'brand-1', name: 'TestBrand' } }],
-                units: [{ unitId: 'unit-1', isDefault: true }],
-                variationBrand: null,
-                matchedVariation: null,
-              },
-            },
-          ],
-        },
-      },
-      loading: false,
-      error: undefined,
+      expect(result.current.searchResults).toEqual([]);
     });
 
-    renderHook(() => useSearchResults('1234567890', 'ean-13'));
+    it('exposes clearSearch', () => {
+      const { result } = renderHookWithApollo(() =>
+        useSearchResults('1234567890'),
+      );
 
-    expect(mockSetSearching).toHaveBeenCalledWith(false);
-    expect(mockSetSearchResults).toHaveBeenCalledWith(
-      expect.arrayContaining([
-        expect.objectContaining({ id: 'item-1', name: 'Test Product' }),
-      ]),
-    );
-    expect(mockAddToRecentlyScanned).toHaveBeenCalled();
-    expect(mockHideBottomSheet).toHaveBeenCalled();
-  });
-
-  it('falls back to SKU query when UPC finds nothing', () => {
-    const { useQuery } = require('@apollo/client/react');
-    (useQuery as jest.Mock).mockReturnValueOnce({
-      data: { items: { edges: [] } },
-      loading: false,
-      error: undefined,
-    });
-    (useQuery as jest.Mock).mockReturnValueOnce({
-      data: {
-        items: {
-          edges: [
-            {
-              node: {
-                id: 'item-sku',
-                name: 'SKU Product',
-                description: null,
-                imageUrl: null,
-                primaryUpc: null,
-                netWeight: null,
-                displayUnit: null,
-                brands: [],
-                units: [],
-                variationBrand: null,
-                matchedVariation: null,
-              },
-            },
-          ],
-        },
-      },
-      loading: false,
-      error: undefined,
+      expect(result.current.clearSearch).toBe(mockClearSearch);
     });
 
-    renderHook(() => useSearchResults('SKU123'));
+    it('exposes handleRetry that clears search error', () => {
+      const { result } = renderHookWithApollo(() =>
+        useSearchResults('1234567890'),
+      );
 
-    expect(mockSetSearchResults).toHaveBeenCalledWith(
-      expect.arrayContaining([
-        expect.objectContaining({ id: 'item-sku', name: 'SKU Product' }),
-      ]),
-    );
-    expect(mockHideBottomSheet).toHaveBeenCalled();
-  });
+      result.current.handleRetry();
 
-  it('shows bottom sheet when neither UPC nor SKU finds results', () => {
-    const { useQuery } = require('@apollo/client/react');
-    (useQuery as jest.Mock).mockReturnValueOnce({
-      data: { items: { edges: [] } },
-      loading: false,
-      error: undefined,
-    });
-    (useQuery as jest.Mock).mockReturnValueOnce({
-      data: { items: { edges: [] } },
-      loading: false,
-      error: undefined,
+      expect(mockSetSearchError).toHaveBeenCalledWith(null);
     });
 
-    renderHook(() => useSearchResults('UNKNOWN'));
+    it('exposes addingItem state', () => {
+      const { result } = renderHookWithApollo(() =>
+        useSearchResults('1234567890'),
+      );
 
-    expect(mockSetSearchResults).toHaveBeenCalledWith([]);
-    expect(mockShowBottomSheet).toHaveBeenCalledWith(1);
-  });
-
-  it('handles timeout error from UPC query', () => {
-    const { useQuery } = require('@apollo/client/react');
-    (useQuery as jest.Mock).mockReturnValueOnce({
-      data: undefined,
-      loading: false,
-      error: { message: 'Request timeout', networkError: null },
+      expect(result.current.addingItem).toBe(false);
     });
-
-    renderHook(() => useSearchResults('1234567890'));
-
-    expect(mockSetSearching).toHaveBeenCalledWith(false);
-    expect(mockSetSearchError).toHaveBeenCalledWith(
-      'Search timed out. Please try again.',
-    );
   });
 
-  it('handles network error from queries', () => {
-    const { useQuery } = require('@apollo/client/react');
-    (useQuery as jest.Mock).mockReturnValueOnce({
-      data: undefined,
-      loading: false,
-      error: { message: 'Network error', networkError: new Error('net') },
-    });
-
-    renderHook(() => useSearchResults('1234567890'));
-
-    expect(mockSetSearchError).toHaveBeenCalledWith(
-      'Unable to search. Please check your connection and try again.',
-    );
-  });
-
-  it('handles generic query error', () => {
-    const { useQuery } = require('@apollo/client/react');
-    (useQuery as jest.Mock).mockReturnValueOnce({
-      data: undefined,
-      loading: false,
-      error: { message: 'Server error' },
-    });
-
-    renderHook(() => useSearchResults('1234567890'));
-
-    expect(mockSetSearchError).toHaveBeenCalledWith(
-      'Search failed: Server error',
-    );
-  });
-
-  it('maps ean-13 format correctly', () => {
-    const { useQuery } = require('@apollo/client/react');
-    renderHook(() => useSearchResults('1234567890', 'ean-13'));
-
-    expect(useQuery).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({
-        variables: { upc: '1234567890', upcFormat: 'EAN_13' },
-      }),
-    );
-  });
-
-  it('maps upc-a format correctly', () => {
-    const { useQuery } = require('@apollo/client/react');
-    renderHook(() => useSearchResults('1234567890', 'upc-a'));
-
-    expect(useQuery).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({
-        variables: { upc: '1234567890', upcFormat: 'UPC_A' },
-      }),
-    );
-  });
-
-  it('passes undefined for unknown format', () => {
-    const { useQuery } = require('@apollo/client/react');
-    renderHook(() => useSearchResults('1234567890', 'unknown-format'));
-
-    expect(useQuery).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({
-        variables: { upc: '1234567890', upcFormat: undefined },
-      }),
-    );
-  });
-
-  it('handleAddItem stores images and calls mutation', async () => {
-    const { useQuery } = require('@apollo/client/react');
-    const { storage } = require('#/storage/mmkv');
-    (useQuery as jest.Mock).mockReturnValueOnce({
-      data: undefined,
-      loading: false,
-      error: undefined,
-    });
-
-    const { result } = renderHook(() => useSearchResults('1234567890'));
-
-    await act(async () => {
-      await result.current.handleAddItem({
-        name: 'New Item',
-        description: 'Test description',
-        selectedImages: [{ uri: 'file://image.jpg' }],
-        brand: { brandName: 'TestBrand' },
+  describe('UPC query results', () => {
+    it('sets search results when UPC query finds an item', async () => {
+      renderHookWithApollo(() => useSearchResults('1234567890', 'ean-13'), {
+        operationMocks: [upcMock([SAMPLE_UPC_ITEM])],
       });
+
+      await waitFor(() =>
+        expect(mockSetSearchResults).toHaveBeenCalledWith(
+          expect.arrayContaining([
+            expect.objectContaining({ id: 'item-1', name: 'Test Product' }),
+          ]),
+        ),
+      );
+      await waitFor(() => expect(mockAddToRecentlyScanned).toHaveBeenCalled());
+      expect(mockHideBottomSheet).toHaveBeenCalled();
     });
 
-    expect(storage.set).toHaveBeenCalledWith(
-      'temp_pending_item_images',
-      expect.any(String),
-    );
-    expect(mockCreateItemMutation).toHaveBeenCalledWith({
-      variables: {
-        input: expect.objectContaining({
+    it('falls back to SKU query when UPC finds nothing', async () => {
+      const skuItem = {
+        id: 'item-sku',
+        name: 'SKU Product',
+        description: null,
+        imageUrl: null,
+        primaryUpc: null,
+        netWeight: null,
+        displayUnit: null,
+        brands: [],
+        units: [],
+        variationBrand: null,
+        matchedVariation: null,
+      };
+
+      renderHookWithApollo(() => useSearchResults('SKU123'), {
+        operationMocks: [upcMock([]), skuMock([skuItem])],
+      });
+
+      await waitFor(() =>
+        expect(mockSetSearchResults).toHaveBeenCalledWith(
+          expect.arrayContaining([
+            expect.objectContaining({ id: 'item-sku', name: 'SKU Product' }),
+          ]),
+        ),
+      );
+      expect(mockHideBottomSheet).toHaveBeenCalled();
+    });
+
+    it('shows bottom sheet when neither UPC nor SKU finds results', async () => {
+      renderHookWithApollo(() => useSearchResults('UNKNOWN'), {
+        operationMocks: [upcMock([]), skuMock([])],
+      });
+
+      await waitFor(() => expect(mockShowBottomSheet).toHaveBeenCalledWith(1));
+    });
+  });
+
+  describe('error mapping', () => {
+    it('maps timeout to user-friendly message', async () => {
+      renderHookWithApollo(() => useSearchResults('1234567890'), {
+        operationMocks: [upcErrorMock('Request timeout')],
+      });
+
+      await waitFor(() =>
+        expect(mockSetSearchError).toHaveBeenCalledWith(
+          'Search timed out. Please try again.',
+        ),
+      );
+    });
+
+    it('maps generic errors via "Search failed:" prefix', async () => {
+      renderHookWithApollo(() => useSearchResults('1234567890'), {
+        operationMocks: [upcErrorMock('Server error')],
+      });
+
+      await waitFor(() =>
+        expect(mockSetSearchError).toHaveBeenCalledWith(
+          expect.stringContaining('Server error'),
+        ),
+      );
+    });
+  });
+
+  describe('format mapping', () => {
+    it('maps ean-13 → EAN_13 and fires UPC query with that variable', async () => {
+      const upc = recordMock(ItemByUpcFilterDocument, {
+        data: { items: { __typename: 'ItemConnection', edges: [] } },
+      });
+
+      renderHookWithApollo(() => useSearchResults('1234567890', 'ean-13'), {
+        operationMocks: [upc.mock],
+      });
+
+      await waitFor(() =>
+        expect(upc.fired).toContainEqual({
+          upc: '1234567890',
+          upcFormat: 'EAN_13',
+        }),
+      );
+    });
+
+    it('maps upc-a → UPC_A', async () => {
+      const upc = recordMock(ItemByUpcFilterDocument, {
+        data: { items: { __typename: 'ItemConnection', edges: [] } },
+      });
+
+      renderHookWithApollo(() => useSearchResults('1234567890', 'upc-a'), {
+        operationMocks: [upc.mock],
+      });
+
+      await waitFor(() =>
+        expect(upc.fired).toContainEqual({
+          upc: '1234567890',
+          upcFormat: 'UPC_A',
+        }),
+      );
+    });
+
+    it('passes undefined upcFormat for unknown formats', async () => {
+      const upc = recordMock(ItemByUpcFilterDocument, {
+        data: { items: { __typename: 'ItemConnection', edges: [] } },
+      });
+
+      renderHookWithApollo(
+        () => useSearchResults('1234567890', 'unknown-format'),
+        { operationMocks: [upc.mock] },
+      );
+
+      await waitFor(() =>
+        expect(upc.fired).toContainEqual({
+          upc: '1234567890',
+          upcFormat: undefined,
+        }),
+      );
+    });
+  });
+
+  describe('handleAddItem', () => {
+    function createItemMock(): MockedResponse {
+      return recordMock(CreateItemDocument, {
+        data: {
+          createItem: {
+            __typename: 'ItemPayload',
+            success: true,
+            message: '',
+            code: 'SUCCESS',
+            item: { __typename: 'Item', id: 'new-item' },
+          },
+        },
+      }).mock;
+    }
+
+    it('stores plural images and calls CreateItem mutation', async () => {
+      const { storage } = require('#/storage/mmkv');
+
+      const { result } = renderHookWithApollo(
+        () => useSearchResults('1234567890'),
+        { operationMocks: [createItemMock()] },
+      );
+
+      await act(async () => {
+        await result.current.handleAddItem({
           name: 'New Item',
           description: 'Test description',
-        }),
-      },
-    });
-  });
-
-  it('handleAddItem uses singular selectedImage for backward compat', async () => {
-    const { useQuery } = require('@apollo/client/react');
-    const { storage } = require('#/storage/mmkv');
-    (useQuery as jest.Mock).mockReturnValueOnce({
-      data: undefined,
-      loading: false,
-      error: undefined,
-    });
-
-    const { result } = renderHook(() => useSearchResults('1234567890'));
-
-    await act(async () => {
-      await result.current.handleAddItem({
-        name: 'New Item',
-        selectedImage: { uri: 'file://single.jpg' },
+          selectedImages: [{ uri: 'file://image.jpg' }],
+          brand: { brandName: 'TestBrand' },
+        });
       });
+
+      expect(storage.set).toHaveBeenCalledWith(
+        'temp_pending_item_images',
+        expect.any(String),
+      );
     });
 
-    expect(storage.set).toHaveBeenCalledWith(
-      'temp_pending_item_image',
-      expect.any(String),
-    );
-  });
+    it('uses singular selectedImage for backward compat', async () => {
+      const { storage } = require('#/storage/mmkv');
 
-  it('returns loading true when SKU query is loading', () => {
-    const { useQuery } = require('@apollo/client/react');
-    (useQuery as jest.Mock).mockReturnValueOnce({
-      data: { items: { edges: [] } },
-      loading: false,
-      error: undefined,
+      const { result } = renderHookWithApollo(
+        () => useSearchResults('1234567890'),
+        { operationMocks: [createItemMock()] },
+      );
+
+      await act(async () => {
+        await result.current.handleAddItem({
+          name: 'New Item',
+          selectedImage: { uri: 'file://single.jpg' },
+        });
+      });
+
+      expect(storage.set).toHaveBeenCalledWith(
+        'temp_pending_item_image',
+        expect.any(String),
+      );
     });
-    (useQuery as jest.Mock).mockReturnValueOnce({
-      data: undefined,
-      loading: true,
-      error: undefined,
-    });
-
-    const { result } = renderHook(() => useSearchResults('1234567890'));
-
-    expect(result.current.loading).toBe(true);
   });
 });

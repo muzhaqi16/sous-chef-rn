@@ -25,7 +25,6 @@ import {
 } from '../drag';
 import { SKILL_LEVELS, DIETARY_LIMITS } from '../dietary';
 import { LANGUAGE_OPTIONS } from '../languages';
-import { MESSAGES } from '../messages';
 import {
   FRAGMENT_NAMES,
   ICONS,
@@ -125,31 +124,6 @@ describe('dietary constants', () => {
 describe('languages constants', () => {
   it('exports LANGUAGE_OPTIONS', () => {
     expect(LANGUAGE_OPTIONS).toEqual([{ label: 'English', value: 'en' }]);
-  });
-});
-
-describe('messages constants', () => {
-  it('exports MESSAGES with expected sections', () => {
-    expect(MESSAGES.errors).toBeDefined();
-    expect(MESSAGES.success).toBeDefined();
-    expect(MESSAGES.loading).toBeDefined();
-    expect(MESSAGES.confirmations).toBeDefined();
-    expect(MESSAGES.labels).toBeDefined();
-    expect(MESSAGES.instructions).toBeDefined();
-    expect(MESSAGES.status).toBeDefined();
-    expect(MESSAGES.empty).toBeDefined();
-  });
-
-  it('has expected error messages', () => {
-    expect(MESSAGES.errors.networkError).toBe(
-      'Network error. Please check your connection.',
-    );
-    expect(MESSAGES.errors.loginFailed).toContain('Login failed');
-  });
-
-  it('has expected label values', () => {
-    expect(MESSAGES.labels.save).toBe('Save');
-    expect(MESSAGES.labels.cancel).toBe('Cancel');
   });
 });
 

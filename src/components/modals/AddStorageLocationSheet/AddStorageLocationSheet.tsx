@@ -51,7 +51,6 @@ export const AddStorageLocationSheet: React.FC<
     visible,
     onDismiss: onClose,
     snapPoints: ['35%'],
-    keyboardBehavior: 'interactive',
   });
   const inputRef =
     useRef<React.ComponentRef<typeof BottomSheetTextInput>>(null);

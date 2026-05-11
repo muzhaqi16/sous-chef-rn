@@ -1,4 +1,9 @@
-import { renderHook, act } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
+import {
+  renderHookWithApollo,
+  type MockedResponse,
+} from '#/test-utils/apolloMockProvider';
+import { SearchBrandsDocument } from '#operations/item/item.generated';
 import { useBrandAutocomplete } from '../useBrandAutocomplete';
 
 jest.mock('../../../apollo/links/tokenScheduler');
@@ -10,23 +15,36 @@ jest.mock('#store/useAppStore', () => ({
     selector({ isOnline: mockIsOnline }),
 }));
 
-const mockSearchBrands = jest.fn();
-
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useLazyQuery: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'SearchBrands')
-      return [mockSearchBrands, { loading: false }];
-    return { data: undefined, loading: false, error: undefined };
-  }),
-}));
-
 const suggestedBrands = [
   { id: 'b1', name: 'Heinz' },
   { id: 'b2', name: 'Hellmann' },
   { id: 'b3', name: 'Kraft' },
 ];
+
+/**
+ * Per CLAUDE.md "Apollo Test Patterns": fire-spy assertions like
+ * `mockSearchBrands.toHaveBeenCalledWith({ variables: ... })` are replaced by
+ * a `variables: () => true` matcher that records each invocation into a
+ * closure array. The array is then asserted directly. This exercises the real
+ * useLazyQuery → MockLink path instead of stubbing useLazyQuery wholesale.
+ */
+function createSearchBrandsMock(
+  recorded: Array<Record<string, unknown>>,
+): MockedResponse {
+  return {
+    request: {
+      query: SearchBrandsDocument,
+      variables: vars => {
+        recorded.push(vars);
+        return true;
+      },
+    },
+    maxUsageCount: Number.POSITIVE_INFINITY,
+    result: {
+      data: { brands: { __typename: 'BrandConnection', edges: [] } },
+    },
+  };
+}
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -40,7 +58,7 @@ afterEach(() => {
 
 describe('useBrandAutocomplete', () => {
   it('returns suggested brands as displayItems initially when provided', () => {
-    const { result } = renderHook(() =>
+    const { result } = renderHookWithApollo(() =>
       useBrandAutocomplete({ suggestedBrands }),
     );
 
@@ -51,13 +69,13 @@ describe('useBrandAutocomplete', () => {
   });
 
   it('returns empty displayItems when no suggestedBrands and no search', () => {
-    const { result } = renderHook(() => useBrandAutocomplete());
+    const { result } = renderHookWithApollo(() => useBrandAutocomplete());
 
     expect(result.current.displayItems).toEqual([]);
   });
 
   it('filters suggested brands by search term', () => {
-    const { result } = renderHook(() =>
+    const { result } = renderHookWithApollo(() =>
       useBrandAutocomplete({ suggestedBrands }),
     );
 
@@ -65,14 +83,13 @@ describe('useBrandAutocomplete', () => {
       result.current.handleSearchTermChange('hei');
     });
 
-    // Should filter to only Heinz
     const names = result.current.displayItems.map(i => i.name);
     expect(names).toContain('Heinz');
     expect(names).not.toContain('Kraft');
   });
 
   it('returns all suggested brands when search term is empty', () => {
-    const { result } = renderHook(() =>
+    const { result } = renderHookWithApollo(() =>
       useBrandAutocomplete({ suggestedBrands }),
     );
 
@@ -83,7 +100,7 @@ describe('useBrandAutocomplete', () => {
   });
 
   it('returns empty searchTerm initially', () => {
-    const { result } = renderHook(() =>
+    const { result } = renderHookWithApollo(() =>
       useBrandAutocomplete({ suggestedBrands }),
     );
 
@@ -91,7 +108,7 @@ describe('useBrandAutocomplete', () => {
   });
 
   it('updates searchTerm via handleSearchTermChange', () => {
-    const { result } = renderHook(() =>
+    const { result } = renderHookWithApollo(() =>
       useBrandAutocomplete({ suggestedBrands }),
     );
 
@@ -103,10 +120,10 @@ describe('useBrandAutocomplete', () => {
   });
 
   it('triggers lazy query search after debounce when term has no local matches', () => {
-    // localFirst: true skips the network when any suggestedBrand matches.
-    // 'xy' does not match Heinz/Hellmann/Kraft, so the API must fire.
-    const { result } = renderHook(() =>
-      useBrandAutocomplete({ suggestedBrands }),
+    const recordedVariables: Array<Record<string, unknown>> = [];
+    const { result } = renderHookWithApollo(
+      () => useBrandAutocomplete({ suggestedBrands }),
+      { operationMocks: [createSearchBrandsMock(recordedVariables)] },
     );
 
     act(() => {
@@ -117,16 +134,14 @@ describe('useBrandAutocomplete', () => {
       jest.advanceTimersByTime(300);
     });
 
-    expect(mockSearchBrands).toHaveBeenCalledWith({
-      variables: { search: 'xy', limit: 20 },
-    });
+    expect(recordedVariables).toContainEqual({ search: 'xy', limit: 20 });
   });
 
   it('does NOT trigger lazy query when local suggestions match the search term', () => {
-    // 'he' matches Heinz and Hellmann via filterFallback — localFirst should
-    // serve those results instantly without firing the API.
-    const { result } = renderHook(() =>
-      useBrandAutocomplete({ suggestedBrands }),
+    const recordedVariables: Array<Record<string, unknown>> = [];
+    const { result } = renderHookWithApollo(
+      () => useBrandAutocomplete({ suggestedBrands }),
+      { operationMocks: [createSearchBrandsMock(recordedVariables)] },
     );
 
     act(() => {
@@ -137,14 +152,14 @@ describe('useBrandAutocomplete', () => {
       jest.advanceTimersByTime(300);
     });
 
-    expect(mockSearchBrands).not.toHaveBeenCalled();
+    expect(recordedVariables).toEqual([]);
     const names = result.current.displayItems.map(i => i.name);
     expect(names).toContain('Heinz');
     expect(names).toContain('Hellmann');
   });
 
   it('resets state when reset is called', () => {
-    const { result } = renderHook(() =>
+    const { result } = renderHookWithApollo(() =>
       useBrandAutocomplete({ suggestedBrands }),
     );
 
@@ -161,7 +176,7 @@ describe('useBrandAutocomplete', () => {
   });
 
   it('marks suggested brands with isSuggested: true', () => {
-    const { result } = renderHook(() =>
+    const { result } = renderHookWithApollo(() =>
       useBrandAutocomplete({ suggestedBrands }),
     );
 
@@ -171,7 +186,7 @@ describe('useBrandAutocomplete', () => {
   });
 
   it('sets shouldSearch to true when searchTerm meets minChars and is online', () => {
-    const { result } = renderHook(() =>
+    const { result } = renderHookWithApollo(() =>
       useBrandAutocomplete({ suggestedBrands }),
     );
 

@@ -40,7 +40,6 @@ export function MultiSelectChipSheet<T extends string = string>({
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     onDismiss: onClose,
     snapPoints: ['60%', '80%'],
-    keyboardBehavior: 'interactive',
   });
   const [searchQuery, setSearchQuery] = useState('');
 

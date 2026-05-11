@@ -1,21 +1,12 @@
 import React, { useState } from 'react';
-import { TextInput } from 'react-native';
-import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { FormFieldWrapper } from '#components/atoms/FormFieldWrapper';
+import {
+  ThemedBottomSheetTextInput,
+  ThemedTextInput,
+} from '#components/atoms/themedComponents';
 import { useIsBottomSheetInput } from '#context/BottomSheetInputContext';
 import { Text } from '#components/atoms/Text';
-
-const ThemedTextInput = withUnistyles(TextInput, theme => ({
-  placeholderTextColor: theme.colors.textSecondary,
-}));
-
-const ThemedBottomSheetTextInput = withUnistyles(
-  BottomSheetTextInput,
-  theme => ({
-    placeholderTextColor: theme.colors.textSecondary,
-  }),
-);
 
 interface FractionInputProps {
   value: string;

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { alertService } from '#/services/alertService';
 import { useMutation, useQuery } from '@apollo/client/react';
+import { useTranslation } from 'react-i18next';
 import {
   AddItemToShoppingListDocument,
   UpdateShoppingListItemDocument,
@@ -35,6 +36,7 @@ type RouteParams = {
 export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
   route,
 }) => {
+  const { t } = useTranslation();
   const navigation = useAppNavigation();
   const { listId, itemId } = route.params;
   // Extract initialItemName (only present when navigating from AddItem route)
@@ -146,12 +148,18 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
   // Handle form submission
   const handleSave = () => {
     if (!itemName.trim()) {
-      alertService.alert('Error', 'Please enter an item name');
+      alertService.alert(
+        t('labels.error'),
+        t('shoppingListScreens.pleaseEnterItemName'),
+      );
       return;
     }
 
     if (!quantityInput.trim()) {
-      alertService.alert('Error', 'Please enter a quantity');
+      alertService.alert(
+        t('labels.error'),
+        t('shoppingListScreens.pleaseEnterQuantity'),
+      );
       return;
     }
 
@@ -213,19 +221,23 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
           } else {
             // PERFORMANCE: Specific error message - server returned success but no data
             alertService.alert(
-              'Error',
-              `Server error: Item was not ${
-                isEdit ? 'updated' : 'added'
-              }. The server may be experiencing issues. Please try again.`,
+              t('labels.error'),
+              t('shoppingListScreens.serverNotUpdated', {
+                action: isEdit
+                  ? t('shoppingListScreens.updated')
+                  : t('shoppingListScreens.added'),
+              }),
             );
           }
         } else {
           // PERFORMANCE: Specific error message - mutation failed without data
           alertService.alert(
-            'Error',
-            `Failed to ${
-              isEdit ? 'update' : 'add'
-            } item. Check your internet connection and try again.`,
+            t('labels.error'),
+            t('shoppingListScreens.failedToUpdateAdd', {
+              action: isEdit
+                ? t('shoppingListScreens.actionUpdate')
+                : t('shoppingListScreens.actionAdd'),
+            }),
           );
         }
       },
@@ -235,39 +247,51 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
 
         // Handle version conflict errors with user-friendly message
         if (handleVersionConflict(error)) {
-          alertService.alert('Item Updated', getVersionConflictMessage(error), [
-            {
-              text: 'Refresh',
-              onPress: () => {
-                // Navigate back - the query will automatically refetch
-                // when returning to the list view
-                navigation.goBack();
+          alertService.alert(
+            t('shoppingListScreens.itemUpdated'),
+            getVersionConflictMessage(error),
+            [
+              {
+                text: t('shoppingListScreens.refresh'),
+                onPress: () => {
+                  // Navigate back - the query will automatically refetch
+                  // when returning to the list view
+                  navigation.goBack();
+                },
               },
-            },
-            { text: 'Cancel', style: 'cancel' },
-          ]);
+              { text: t('labels.cancel'), style: 'cancel' },
+            ],
+          );
           return; // Don't show generic error alert
         }
 
-        // PERFORMANCE: Specific error messages based on error type
-        let errorMessage = `Failed to ${isEdit ? 'update' : 'add'} item. `;
-
-        if ((error as any).networkError) {
-          errorMessage += 'Network error - check your internet connection.';
-        } else if ((error as any).graphQLErrors?.length) {
-          const graphQLError = (error as any).graphQLErrors[0];
-          if (graphQLError.extensions?.code === 'VALIDATION_ERROR') {
-            errorMessage += 'Invalid input - please check your item details.';
-          } else if (graphQLError.extensions?.code === 'UNAUTHENTICATED') {
-            errorMessage += 'Session expired - please log in again.';
+        // Specific user-facing error mapping. Network → connectivity hint,
+        // VALIDATION_ERROR → field guidance, UNAUTHENTICATED → re-login,
+        // other GraphQL → server-provided message, generic → retry hint.
+        let errorMessage: string;
+        if ((error as { networkError?: unknown }).networkError) {
+          errorMessage = t('shoppingListScreens.errorNetwork');
+        } else if (
+          (error as { graphQLErrors?: ReadonlyArray<unknown> }).graphQLErrors
+            ?.length
+        ) {
+          const graphQLError = (
+            error as { graphQLErrors: Array<{ message?: string; extensions?: { code?: string } }> }
+          ).graphQLErrors[0];
+          const code = graphQLError.extensions?.code;
+          if (code === 'VALIDATION_ERROR') {
+            errorMessage = t('shoppingListScreens.errorInvalidInput');
+          } else if (code === 'UNAUTHENTICATED') {
+            errorMessage = t('shoppingListScreens.errorSessionExpired');
           } else {
-            errorMessage += graphQLError.message || 'Please try again.';
+            errorMessage =
+              graphQLError.message ?? t('shoppingListScreens.errorGeneric');
           }
         } else {
-          errorMessage += 'Please try again.';
+          errorMessage = t('shoppingListScreens.errorGeneric');
         }
 
-        alertService.alert('Error', errorMessage);
+        alertService.alert(t('labels.error'), errorMessage);
       },
     );
   };
@@ -276,7 +300,9 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
 
   return (
     <FormModal
-      title={isEdit ? 'Edit Item' : 'Add Item'}
+      title={
+        isEdit ? t('shoppingListScreens.editItem') : t('shoppingListScreens.addItem')
+      }
       onClose={() => navigation.goBack()}
       onSave={handleSave}
       loading={saving}
@@ -288,21 +314,21 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
       {/* Item Name Field - Use autocomplete for new items only */}
       {isEdit ? (
         <BaseInput
-          label="Item Name *"
+          label={t('shoppingListScreens.itemNameRequired')}
           value={itemName}
           onChangeText={text => updateField('itemName', text)}
-          placeholder="e.g., Milk, Bread"
+          placeholder={t('shoppingListScreens.itemNamePlaceholder')}
           autoFocus
           testID="edit-item-name-input"
         />
       ) : (
         <ItemAutocompleteField
           variant="modal"
-          label="Item Name"
+          label={t('shoppingListScreens.itemName')}
           value={itemName}
           onChangeText={text => updateField('itemName', text)}
           onSelectItem={handleItemSelect}
-          placeholder="e.g., Milk, Bread"
+          placeholder={t('shoppingListScreens.itemNamePlaceholder')}
           required
           autoFocus
           testID="add-item-name-input"
@@ -312,17 +338,17 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
       {/* Category Field */}
       <CategoryAutocompleteField
         variant="modal"
-        label="Category"
+        label={t('shoppingListScreens.category')}
         value={category}
         onChangeText={text => updateField('category', text)}
-        placeholder="e.g., Dairy, Produce"
+        placeholder={t('shoppingListScreens.categoryPlaceholder')}
         categoryType={CategoryType.General}
       />
 
       {/* Quantity + Unit (inline) */}
       <FieldRow>
         <EditableCounter
-          label="Quantity"
+          label={t('shoppingListScreens.quantity')}
           required
           value={quantityInput}
           onChangeText={text => updateField('quantityInput', text)}
@@ -333,30 +359,30 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
         />
         <UnitAutocompleteField
           variant="modal"
-          label="Unit"
+          label={t('shoppingListScreens.unit')}
           value={unit}
           onChangeText={text => updateField('unit', text)}
           onUnitSelected={handleUnitSelect}
-          placeholder="pcs, kg, etc."
+          placeholder={t('shoppingListScreens.unitPlaceholder')}
           testID={isEdit ? 'edit-item-unit-picker' : 'add-item-unit-picker'}
         />
       </FieldRow>
 
       {/* Estimated Price Field */}
       <BaseInput
-        label="Estimated Price"
+        label={t('shoppingListScreens.estimatedPrice')}
         value={estimatedPrice}
         onChangeText={text => updateField('estimatedPrice', text)}
-        placeholder="e.g., 4.99"
+        placeholder={t('shoppingListScreens.estimatedPricePlaceholder')}
         keyboardType="numeric"
       />
 
       {/* Notes Field */}
       <BaseInput
-        label="Notes"
+        label={t('shoppingListScreens.notes')}
         value={notes}
         onChangeText={text => updateField('notes', text)}
-        placeholder="Any special notes..."
+        placeholder={t('shoppingListScreens.notesPlaceholder')}
         multiline
         numberOfLines={3}
       />

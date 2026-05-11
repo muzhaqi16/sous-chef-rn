@@ -1,19 +1,18 @@
 import React, { useState } from 'react';
-import { View, ActivityIndicator } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { View } from 'react-native';
+import {
+  Pressable,
+  PrimaryActivityIndicator,
+} from '#components/atoms/themedComponents';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
-
-const PrimaryActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
-  color: theme.colors.primary,
-}));
+import { StyleSheet } from 'react-native-unistyles';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { BaseSwitch } from '#components/base/BaseSwitch';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { FormInput } from '#components/molecules/FormInput';
 import { useQuery } from '@apollo/client/react';
-import { GetShoppingListsLiteDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { GetShoppingListsLiteDocument } from './GenerateShoppingListSheet.generated';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 

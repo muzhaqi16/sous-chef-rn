@@ -45,7 +45,12 @@ interface UserNavigationState {
 }
 
 export interface NavigationState {
-  // Onboarding
+  // Onboarding navigation state — source of truth for "which onboarding screen
+  // is current". Persisted across app restarts so a user mid-onboarding lands
+  // back on the same step. Distinct from OnboardingContext.activeStepIndex,
+  // which is a session-only Reanimated SharedValue driving the progress-bar
+  // animation. Both update together via useOnboardingNavigation; the store is
+  // the persistent state, the context is the animation driver.
   onBoardingStep: OnBoardingSteps | null;
 
   // Selected resources

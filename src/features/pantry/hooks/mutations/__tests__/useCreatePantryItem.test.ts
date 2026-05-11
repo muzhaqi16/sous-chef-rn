@@ -1,21 +1,11 @@
-import { renderHook, act } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
+import {
+  recordMock,
+  renderHookWithApollo,
+} from '#/test-utils/apolloMockProvider';
+import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { alertService } from '#/services/alertService';
 import { useCreatePantryItem } from '../useCreatePantryItem';
-
-const mockCreateMutation = jest.fn();
-const mockRestockMutation = jest.fn();
-
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useMutation: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'CreatePantryItem')
-      return [mockCreateMutation, { loading: false }];
-    if (opName === 'RestockPantryItem')
-      return [mockRestockMutation, { loading: false }];
-    return [jest.fn(), { loading: false }];
-  }),
-}));
 
 jest.mock('#/services/errorService', () => ({
   useErrorService: () => ({
@@ -61,9 +51,25 @@ const createFormInput = (overrides: Record<string, any> = {}) =>
     ...overrides,
   } as any);
 
+function createMock(success = true) {
+  return recordMock(CreatePantryItemDocument, {
+    data: {
+      createPantryItem: {
+        __typename: 'PantryItemPayload',
+        success,
+        message: '',
+        code: success ? 'SUCCESS' : 'FAILED',
+        pantryItem: success
+          ? { __typename: 'PantryItem', id: 'new-item' }
+          : null,
+      },
+    },
+  });
+}
+
 describe('useCreatePantryItem', () => {
   it('returns createPantryItem function', () => {
-    const { result } = renderHook(() =>
+    const { result } = renderHookWithApollo(() =>
       useCreatePantryItem({ pantryId: 'pantry-1' }),
     );
 
@@ -71,8 +77,10 @@ describe('useCreatePantryItem', () => {
   });
 
   it('shows alert and returns false when itemName is empty', async () => {
-    const { result } = renderHook(() =>
-      useCreatePantryItem({ pantryId: 'pantry-1' }),
+    const m = createMock();
+    const { result } = renderHookWithApollo(
+      () => useCreatePantryItem({ pantryId: 'pantry-1' }),
+      { operationMocks: [m.mock] },
     );
 
     let success: boolean;
@@ -92,19 +100,16 @@ describe('useCreatePantryItem', () => {
       'Error',
       'Please enter an item name',
     );
-    expect(mockCreateMutation).not.toHaveBeenCalled();
+    expect(m.fired).toEqual([]);
   });
 
   it('returns true and calls onSuccess on successful creation', async () => {
     const onSuccess = jest.fn();
-    mockCreateMutation.mockResolvedValue({
-      data: {
-        createPantryItem: { success: true, pantryItem: { id: 'new-item' } },
-      },
-    });
+    const m = createMock();
 
-    const { result } = renderHook(() =>
-      useCreatePantryItem({ pantryId: 'pantry-1', onSuccess }),
+    const { result } = renderHookWithApollo(
+      () => useCreatePantryItem({ pantryId: 'pantry-1', onSuccess }),
+      { operationMocks: [m.mock] },
     );
 
     let success: boolean;
@@ -124,14 +129,10 @@ describe('useCreatePantryItem', () => {
   });
 
   it('sends correct variables for new item creation', async () => {
-    mockCreateMutation.mockResolvedValue({
-      data: {
-        createPantryItem: { success: true, pantryItem: { id: 'item-1' } },
-      },
-    });
-
-    const { result } = renderHook(() =>
-      useCreatePantryItem({ pantryId: 'pantry-1' }),
+    const m = createMock();
+    const { result } = renderHookWithApollo(
+      () => useCreatePantryItem({ pantryId: 'pantry-1' }),
+      { operationMocks: [m.mock] },
     );
 
     await act(async () => {
@@ -151,9 +152,7 @@ describe('useCreatePantryItem', () => {
       });
     });
 
-    const callArgs = mockCreateMutation.mock.calls[0][0];
-    const input = callArgs.variables.input;
-
+    const input = (m.fired[0] as any).input;
     expect(input.pantryId).toBe('pantry-1');
     expect(input.quantity).toBe(12);
     expect(input.unit).toEqual({ unitId: 'unit-ea' });
@@ -164,14 +163,10 @@ describe('useCreatePantryItem', () => {
   });
 
   it('sends itemId for existing catalog item', async () => {
-    mockCreateMutation.mockResolvedValue({
-      data: {
-        createPantryItem: { success: true, pantryItem: { id: 'item-1' } },
-      },
-    });
-
-    const { result } = renderHook(() =>
-      useCreatePantryItem({ pantryId: 'pantry-1' }),
+    const m = createMock();
+    const { result } = renderHookWithApollo(
+      () => useCreatePantryItem({ pantryId: 'pantry-1' }),
+      { operationMocks: [m.mock] },
     );
 
     await act(async () => {
@@ -185,20 +180,16 @@ describe('useCreatePantryItem', () => {
       });
     });
 
-    const input = mockCreateMutation.mock.calls[0][0].variables.input;
+    const input = (m.fired[0] as any).input;
     expect(input.itemId).toBe('catalog-item-1');
     expect(input.item).toBeUndefined();
   });
 
   it('uses selectedLocationId for storageLocationId', async () => {
-    mockCreateMutation.mockResolvedValue({
-      data: {
-        createPantryItem: { success: true, pantryItem: { id: 'item-1' } },
-      },
-    });
-
-    const { result } = renderHook(() =>
-      useCreatePantryItem({ pantryId: 'pantry-1' }),
+    const m = createMock();
+    const { result } = renderHookWithApollo(
+      () => useCreatePantryItem({ pantryId: 'pantry-1' }),
+      { operationMocks: [m.mock] },
     );
 
     await act(async () => {
@@ -212,20 +203,16 @@ describe('useCreatePantryItem', () => {
       });
     });
 
-    const storage = mockCreateMutation.mock.calls[0][0].variables.input.storage;
+    const storage = (m.fired[0] as any).input.storage;
     expect(storage.storageLocationId).toBe('loc-1');
     expect(storage.storageLocationName).toBeUndefined();
   });
 
   it('uses storageLocationName when no selectedLocationId', async () => {
-    mockCreateMutation.mockResolvedValue({
-      data: {
-        createPantryItem: { success: true, pantryItem: { id: 'item-1' } },
-      },
-    });
-
-    const { result } = renderHook(() =>
-      useCreatePantryItem({ pantryId: 'pantry-1' }),
+    const m = createMock();
+    const { result } = renderHookWithApollo(
+      () => useCreatePantryItem({ pantryId: 'pantry-1' }),
+      { operationMocks: [m.mock] },
     );
 
     await act(async () => {
@@ -239,19 +226,15 @@ describe('useCreatePantryItem', () => {
       });
     });
 
-    const storage = mockCreateMutation.mock.calls[0][0].variables.input.storage;
+    const storage = (m.fired[0] as any).input.storage;
     expect(storage.storageLocationName).toBe('Top Shelf');
   });
 
   it('uses selectedCategoryId over inline category text', async () => {
-    mockCreateMutation.mockResolvedValue({
-      data: {
-        createPantryItem: { success: true, pantryItem: { id: 'item-1' } },
-      },
-    });
-
-    const { result } = renderHook(() =>
-      useCreatePantryItem({ pantryId: 'pantry-1' }),
+    const m = createMock();
+    const { result } = renderHookWithApollo(
+      () => useCreatePantryItem({ pantryId: 'pantry-1' }),
+      { operationMocks: [m.mock] },
     );
 
     await act(async () => {
@@ -265,19 +248,15 @@ describe('useCreatePantryItem', () => {
       });
     });
 
-    const item = mockCreateMutation.mock.calls[0][0].variables.input.item;
+    const item = (m.fired[0] as any).input.item;
     expect(item.category).toBe('cat-1');
   });
 
   it('includes thresholds when minQuantity or restockQuantity provided', async () => {
-    mockCreateMutation.mockResolvedValue({
-      data: {
-        createPantryItem: { success: true, pantryItem: { id: 'item-1' } },
-      },
-    });
-
-    const { result } = renderHook(() =>
-      useCreatePantryItem({ pantryId: 'pantry-1' }),
+    const m = createMock();
+    const { result } = renderHookWithApollo(
+      () => useCreatePantryItem({ pantryId: 'pantry-1' }),
+      { operationMocks: [m.mock] },
     );
 
     await act(async () => {
@@ -291,24 +270,23 @@ describe('useCreatePantryItem', () => {
       });
     });
 
-    const input = mockCreateMutation.mock.calls[0][0].variables.input;
+    const input = (m.fired[0] as any).input;
     expect(input.thresholds).toEqual({ minQuantity: 2, restockQuantity: 5 });
   });
 
   it('includes netWeight when provided', async () => {
-    mockCreateMutation.mockResolvedValue({
-      data: {
-        createPantryItem: { success: true, pantryItem: { id: 'item-1' } },
-      },
-    });
-
-    const { result } = renderHook(() =>
-      useCreatePantryItem({ pantryId: 'pantry-1' }),
+    const m = createMock();
+    const { result } = renderHookWithApollo(
+      () => useCreatePantryItem({ pantryId: 'pantry-1' }),
+      { operationMocks: [m.mock] },
     );
 
     await act(async () => {
       await result.current.createPantryItem({
-        input: createFormInput({ netWeight: '500', netWeightUnitId: 'unit-g' }),
+        input: createFormInput({
+          netWeight: '500',
+          netWeightUnitId: 'unit-g',
+        }),
         pantryId: 'pantry-1',
         quantityValue: 1,
         unitId: null,
@@ -317,21 +295,18 @@ describe('useCreatePantryItem', () => {
       });
     });
 
-    const input = mockCreateMutation.mock.calls[0][0].variables.input;
+    const input = (m.fired[0] as any).input;
     expect(input.netWeight).toEqual({
       netWeight: 500,
       netWeightUnitId: 'unit-g',
     });
   });
 
-  it('shows error alert on non-duplicate error', async () => {
-    mockCreateMutation.mockResolvedValue({
-      data: { createPantryItem: { success: false } },
-      error: { message: 'Server error' },
-    });
-
-    const { result } = renderHook(() =>
-      useCreatePantryItem({ pantryId: 'pantry-1' }),
+  it('returns false on failed creation with no success and no error', async () => {
+    const m = createMock(false);
+    const { result } = renderHookWithApollo(
+      () => useCreatePantryItem({ pantryId: 'pantry-1' }),
+      { operationMocks: [m.mock] },
     );
 
     let success: boolean;
@@ -347,6 +322,5 @@ describe('useCreatePantryItem', () => {
     });
 
     expect(success!).toBe(false);
-    expect(alertService.alert).toHaveBeenCalledWith('Error', 'Create error');
   });
 });

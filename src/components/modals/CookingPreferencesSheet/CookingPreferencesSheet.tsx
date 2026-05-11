@@ -40,7 +40,6 @@ export const CookingPreferencesSheet: React.FC<
     visible,
     onDismiss: onClose,
     snapPoints: ['65%'],
-    keyboardBehavior: 'interactive',
   });
 
   // Form state

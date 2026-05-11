@@ -1,6 +1,6 @@
 import React, { useLayoutEffect } from 'react';
 import { StyleProp, ViewStyle, View } from 'react-native';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { useAnimatedTheme } from 'react-native-unistyles/reanimated';
 import Animated, {
   useSharedValue,
@@ -9,10 +9,8 @@ import Animated, {
   withSequence,
   interpolate,
 } from 'react-native-reanimated';
-import IconButton from './IconButton';
+import { ThemedIconButton } from './themedComponents';
 import { standardEasing, TIMING } from '#/constants/animations';
-
-const ThemedIconButton = withUnistyles(IconButton);
 
 type AnimatedActionButtonProps = {
   onPress: () => void;

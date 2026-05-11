@@ -3,7 +3,7 @@ import { useCredentialStorage } from './useCredentialStorage';
 import { useRememberMe, type RememberMeCredentials } from './useRememberMe';
 import { useBiometricPrompting } from './useBiometricPrompting';
 import { useAuthOperations, type LoginCredentials } from './useAuthOperations';
-import { useUserPreferences } from '#/hooks/navigation/useUserPreferences';
+import { useAuthPreferences } from '#/hooks/navigation/useAuthPreferences';
 import { useAppStore } from '#store/useAppStore';
 
 /**
@@ -32,7 +32,7 @@ export const useAuth = () => {
     useBiometricPrompting();
 
   // User preferences for biometric tracking
-  const { markBiometricDeclined, markBiometricEnabled } = useUserPreferences();
+  const { markBiometricDeclined, markBiometricEnabled } = useAuthPreferences();
 
   // Event handlers for RememberMe flow
   const handleRememberMeAccept = async (credentials: RememberMeCredentials) => {

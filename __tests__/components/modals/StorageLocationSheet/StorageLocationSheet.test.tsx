@@ -3,6 +3,7 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
 import { StorageLocationSheet } from '../../../../src/components/modals/StorageLocationSheet/StorageLocationSheet';
+import { StorageType } from '../../../../src/graphql/generated/schemaTypes';
 
 jest.mock('../../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../../src/apollo/links/refreshToken');
@@ -44,7 +45,7 @@ describe('StorageLocationSheet', () => {
     const { getByText } = render(
       <StorageLocationSheet
         {...defaultProps}
-        initialData={{ id: '1', name: 'Fridge', type: 'REFRIGERATOR' }}
+        initialData={{ id: '1', name: 'Fridge', type: StorageType.Refrigerator }}
       />,
     );
     expect(getByText('Edit Storage Location')).toBeTruthy();

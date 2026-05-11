@@ -1,21 +1,20 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import {
+  Pressable,
+  ThemedBackButton,
+  ThemedIconButton,
+} from '#components/atoms/themedComponents';
 import Animated, {
   useAnimatedStyle,
   interpolate,
   Extrapolation,
   type SharedValue,
 } from 'react-native-reanimated';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
-import { IconButton } from '../atoms/IconButton';
-import { BackButton } from '../atoms/BackButton';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#/utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { Text } from '#components/atoms/Text';
-
-const ThemedBackButton = withUnistyles(BackButton);
-const ThemedIconButton = withUnistyles(IconButton);
 
 const AVATAR_SIZE = 80;
 const AVATAR_SCALE_MIN = 0.55; // 80 * 0.55 = 44

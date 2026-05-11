@@ -35,14 +35,6 @@ jest.mock('../offline/OptimisticDataPersistence', () => ({
   },
 }));
 
-jest.mock('#/utils/environment', () => ({
-  logger: {
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-  },
-}));
-
 jest.mock('#store', () => ({
   useStore: {
     getState: jest.fn(() => ({ isLoggingOut: false })),

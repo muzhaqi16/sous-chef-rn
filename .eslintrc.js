@@ -1,7 +1,7 @@
 module.exports = {
   root: true,
-  extends: ['@react-native', 'plugin:react-hooks/recommended'],
-  plugins: ['no-barrel-files', 'react-compiler'],
+  extends: ['@react-native', 'plugin:react-hooks/recommended-latest'],
+  plugins: ['no-barrel-files', 'react-compiler', 'import'],
   ignorePatterns: [
     'e2e/**/*',
     'src/graphql/generated/**/*',
@@ -11,19 +11,40 @@ module.exports = {
   env: {
     jest: true,
   },
+  // Resolve TypeScript path aliases (e.g. #features/*) so that
+  // import/no-restricted-paths can match aliased imports against zone paths.
+  settings: {
+    'import/resolver': {
+      typescript: {
+        project: './tsconfig.json',
+      },
+    },
+  },
   // TypeScript-specific overrides with type-checked rules
   overrides: [
     {
       // Apply to TypeScript source files only (not test files or config files)
-      // These files must be included in tsconfig.json for type-checked rules
+      // These files must be included in tsconfig.json for type-checked rules.
+      // Tests are intentionally INCLUDED so deprecation warnings catch e.g.
+      // `MockedResponse from @apollo/client/testing` (deprecated; use
+      // `MockedResponse` re-exported from `__tests__/helpers/apolloMockProvider`).
       files: ['src/**/*.ts', 'src/**/*.tsx', 'App.tsx'],
-      excludedFiles: ['**/*.test.ts', '**/*.test.tsx'],
       parserOptions: {
         project: './tsconfig.json',
       },
       rules: {
-        // Warn on deprecated API usage (runOnJS, etc.)
-        // Requires type information - only works on TS files in tsconfig
+        '@typescript-eslint/no-deprecated': 'warn',
+      },
+    },
+    {
+      // Tests live outside the production tsconfig (Metro bundles them
+      // separately). __tests__/tsconfig.json includes them so ESLint's
+      // type-checked rules (no-deprecated, etc.) can still run.
+      files: ['__tests__/**/*.ts', '__tests__/**/*.tsx'],
+      parserOptions: {
+        project: './__tests__/tsconfig.json',
+      },
+      rules: {
         '@typescript-eslint/no-deprecated': 'warn',
       },
     },
@@ -65,6 +86,135 @@ module.exports = {
             importNames: ['useMemo', 'useCallback'],
             message:
               'useMemo/useCallback are unnecessary — the React Compiler handles memoization automatically.',
+          },
+        ],
+      },
+    ],
+
+    // Enforce the Feature API Boundary Convention (CLAUDE.md).
+    //
+    // Each feature under src/features/<name>/ exposes a public surface
+    // (screens/, manifest.ts, top-level hooks/) and keeps everything else
+    // private. Reaching across features into another feature's internals
+    // (context/, hooks/mutations/, utils/, graphql/) is blocked here.
+    //
+    // Allowed cross-feature reach: screens, manifest, top-level hooks, and
+    // <feature>Fragments.generated.ts type imports (via the `except` clause).
+    //
+    // One zone is needed per feature because "same feature" cannot be
+    // expressed as a glob — each zone enumerates what's PRIVATE in that
+    // feature and what's allowed to import from it.
+    'import/no-restricted-paths': [
+      'error',
+      {
+        zones: [
+          // pantry
+          {
+            target: './src/features/!(pantry)/**',
+            from: './src/features/pantry/graphql',
+            except: ['./pantryFragments.generated.ts'],
+            message:
+              'Cross-feature import into pantry/graphql/ is not allowed. Use a public hook from src/features/pantry/hooks/, or compose your own GraphQL operation. Type imports from pantryFragments.generated.ts are allowed.',
+          },
+          {
+            target: './src/features/!(pantry)/**',
+            from: [
+              './src/features/pantry/context',
+              './src/features/pantry/hooks/mutations',
+              './src/features/pantry/utils',
+            ],
+            message:
+              'Cross-feature import into pantry internals (context/, hooks/mutations/, utils/) is not allowed. Use a public hook from src/features/pantry/hooks/.',
+          },
+          // shoppingList
+          {
+            target: './src/features/!(shoppingList)/**',
+            from: './src/features/shoppingList/graphql',
+            except: ['./shoppingListFragments.generated.ts'],
+            message:
+              'Cross-feature import into shoppingList/graphql/ is not allowed. Use a public hook from src/features/shoppingList/hooks/, or compose your own GraphQL operation. Type imports from shoppingListFragments.generated.ts are allowed.',
+          },
+          {
+            target: './src/features/!(shoppingList)/**',
+            from: [
+              './src/features/shoppingList/context',
+              './src/features/shoppingList/hooks/mutations',
+              './src/features/shoppingList/utils',
+            ],
+            message:
+              'Cross-feature import into shoppingList internals (context/, hooks/mutations/, utils/) is not allowed. Use a public hook from src/features/shoppingList/hooks/.',
+          },
+          // recipes
+          {
+            target: './src/features/!(recipes)/**',
+            from: './src/features/recipes/graphql',
+            except: ['./recipeFragments.generated.ts'],
+            message:
+              'Cross-feature import into recipes/graphql/ is not allowed. Use a public hook from src/features/recipes/hooks/, or compose your own GraphQL operation. Type imports from recipeFragments.generated.ts are allowed.',
+          },
+          {
+            target: './src/features/!(recipes)/**',
+            from: [
+              './src/features/recipes/context',
+              './src/features/recipes/hooks/mutations',
+              './src/features/recipes/utils',
+            ],
+            message:
+              'Cross-feature import into recipes internals (context/, hooks/mutations/, utils/) is not allowed. Use a public hook from src/features/recipes/hooks/.',
+          },
+          // mealPlan
+          {
+            target: './src/features/!(mealPlan)/**',
+            from: './src/features/mealPlan/graphql',
+            except: ['./mealPlanFragments.generated.ts'],
+            message:
+              'Cross-feature import into mealPlan/graphql/ is not allowed. Use a public hook from src/features/mealPlan/hooks/, or compose your own GraphQL operation. Type imports from mealPlanFragments.generated.ts are allowed.',
+          },
+          {
+            target: './src/features/!(mealPlan)/**',
+            from: [
+              './src/features/mealPlan/context',
+              './src/features/mealPlan/hooks/mutations',
+              './src/features/mealPlan/utils',
+            ],
+            message:
+              'Cross-feature import into mealPlan internals (context/, hooks/mutations/, utils/) is not allowed. Use a public hook from src/features/mealPlan/hooks/.',
+          },
+          // barcode
+          {
+            target: './src/features/!(barcode)/**',
+            from: [
+              './src/features/barcode/context',
+              './src/features/barcode/hooks/mutations',
+              './src/features/barcode/utils',
+              './src/features/barcode/graphql',
+            ],
+            message:
+              'Cross-feature import into barcode internals (context/, hooks/mutations/, utils/, graphql/) is not allowed. Use a public hook from src/features/barcode/hooks/, or compose your own GraphQL operation.',
+          },
+          // notifications
+          {
+            target: './src/features/!(notifications)/**',
+            from: [
+              './src/features/notifications/context',
+              './src/features/notifications/hooks/mutations',
+              './src/features/notifications/utils',
+              './src/features/notifications/graphql',
+            ],
+            message:
+              'Cross-feature import into notifications internals (context/, hooks/mutations/, utils/, graphql/) is not allowed. Use a public hook from src/features/notifications/hooks/, or compose your own GraphQL operation.',
+          },
+          // profile
+          {
+            target: './src/features/!(profile)/**',
+            from: [
+              './src/features/profile/context',
+              './src/features/profile/hooks/mutations',
+              './src/features/profile/utils',
+              './src/features/profile/graphql',
+            ],
+            message:
+              'Cross-feature import into profile internals (context/, hooks/mutations/, utils/, graphql/) is not allowed. Use a public hook from src/features/profile/hooks/, or compose your own GraphQL operation.',
           },
         ],
       },
@@ -177,6 +327,12 @@ module.exports = {
           'ArrayExpression > MemberExpression[object.name="styles"] ~ MemberExpression[object.name="styles"]',
         message:
           "Avoid combining multiple `styles.*` on the same element — Unistyles v3 proxies break when spread by reanimated's StyleSheet.flatten(). Use `styles.useVariants()` instead.",
+      },
+      {
+        selector:
+          'CallExpression[callee.object.name="jest"][callee.property.name="mock"][arguments.0.value="@apollo/client/react"]',
+        message:
+          'Use renderHookWithApollo / renderWithApollo from __tests__/helpers/apolloMockProvider.tsx instead. Direct jest.mock of @apollo/client/react couples tests to operation names, bypasses the real cache, and breaks under refactors. See CLAUDE.md "Apollo Test Patterns" for the migration recipe + 7 gotchas.',
       },
     ],
   },

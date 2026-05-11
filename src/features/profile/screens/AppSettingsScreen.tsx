@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { alertService } from '#/services/alertService';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { SettingSwitch } from '#components/settings/SettingSwitch';
@@ -20,8 +21,14 @@ import { useUserPreferences } from '#hooks/settings/useUserPreferences';
 import { executeAsyncWithCleanup } from '#/utils/compilerSafeWrappers';
 import { Telemetry } from '#services/telemetry';
 import { Text } from '#components/atoms/Text';
+import {
+  SUPPORTED_LANGUAGES,
+  changeLanguage,
+  type SupportedLanguage,
+} from '#/i18n/config';
 
 export const AppSettingsScreen: React.FC = () => {
+  const { t } = useTranslation();
   const [updating, setUpdating] = useState<string | null>(null);
 
   const { settings, loading, updateAppSetting, resetToDefaults } =
@@ -50,6 +57,17 @@ export const AppSettingsScreen: React.FC = () => {
   const userConsent = useAppStore(state => state.userConsent);
   const setUserConsent = useAppStore(state => state.setUserConsent);
 
+  // UI language — value matches an i18next resource key in src/i18n/locales/.
+  const language = useAppStore(state => state.language) ?? 'en';
+  const setLanguage = useAppStore(state => state.setLanguage);
+
+  const handleLanguageChange = (value: string) => {
+    const lang = value as SupportedLanguage;
+    setLanguage(lang);
+    void changeLanguage(lang);
+    Telemetry.trackEvent('language_changed', { language: lang });
+  };
+
   const handleConsentChange = (consent: boolean) => {
     setUserConsent(consent);
     // Immediately update running telemetry service to respect new consent
@@ -63,10 +81,7 @@ export const AppSettingsScreen: React.FC = () => {
       async () => {
         const success = await updateAppSetting(key as any, value);
         if (!success) {
-          alertService.alert(
-            'Error',
-            'Failed to update setting. Please try again.',
-          );
+          alertService.alert(t('labels.error'), t('settings.updateFailed'));
         }
       },
       () => setUpdating(null),
@@ -75,12 +90,12 @@ export const AppSettingsScreen: React.FC = () => {
 
   const handleResetToDefaults = () => {
     alertService.alert(
-      'Reset to Defaults',
-      'Are you sure you want to reset all app settings to their default values? This will also reset all tutorials.',
+      t('settings.resetToDefaults'),
+      t('settings.resetConfirm'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('labels.cancel'), style: 'cancel' },
         {
-          text: 'Reset',
+          text: t('settings.resetSection'),
           style: 'destructive',
           onPress: () => {
             setUpdating('reset');
@@ -92,13 +107,13 @@ export const AppSettingsScreen: React.FC = () => {
                 resetUserPreferences();
                 if (success) {
                   alertService.alert(
-                    'Success',
-                    'Settings and tutorials have been reset to defaults.',
+                    t('settings.resetSuccessTitle'),
+                    t('settings.resetSuccess'),
                   );
                 } else {
                   alertService.alert(
-                    'Error',
-                    'Failed to reset settings. Please try again.',
+                    t('labels.error'),
+                    t('settings.resetFailed'),
                   );
                 }
               },
@@ -113,16 +128,45 @@ export const AppSettingsScreen: React.FC = () => {
   if (loading) {
     return (
       <View style={commonStyles.loadingContainer}>
-        <Text style={commonStyles.loadingText}>Loading settings...</Text>
+        <Text style={commonStyles.loadingText}>
+          {t('settings.loadingSettings')}
+        </Text>
       </View>
     );
   }
 
   return (
-    <ProfileScreenWrapper title="App Settings" testID="settings-screen">
-      <SettingSection title="Units & Measurements">
+    <ProfileScreenWrapper
+      title={t('settings.appSettings')}
+      testID="settings-screen"
+    >
+      <SettingSection title={t('settings.language')}>
         <View style={styles.pickerContainer}>
-          <Text style={commonStyles.subtitle}>Preferred Unit System</Text>
+          <Text style={commonStyles.subtitle}>
+            {t('settings.displayLanguage')}
+          </Text>
+          <Picker
+            testID="settings-language-picker"
+            selectedValue={language}
+            onValueChange={handleLanguageChange}
+            style={styles.picker}
+          >
+            {SUPPORTED_LANGUAGES.map(opt => (
+              <ThemedPickerItem
+                key={opt.value}
+                label={opt.label}
+                value={opt.value}
+              />
+            ))}
+          </Picker>
+        </View>
+      </SettingSection>
+
+      <SettingSection title={t('settings.unitsSection')}>
+        <View style={styles.pickerContainer}>
+          <Text style={commonStyles.subtitle}>
+            {t('settings.preferredUnitSystem')}
+          </Text>
           <Picker
             testID="settings-unit-system-picker"
             selectedValue={settings.preferredUnitSystem}
@@ -132,42 +176,42 @@ export const AppSettingsScreen: React.FC = () => {
             style={styles.picker}
           >
             <ThemedPickerItem
-              label="Metric (kg, g, L, mL)"
+              label={t('settings.unitMetric')}
               value={UnitSystem.Metric}
             />
             <ThemedPickerItem
-              label="Imperial (lb, oz, gal, fl oz)"
+              label={t('settings.unitImperial')}
               value={UnitSystem.Imperial}
             />
             <ThemedPickerItem
-              label="System Default"
+              label={t('settings.unitSystemDefault')}
               value={UnitSystem.System}
             />
           </Picker>
         </View>
       </SettingSection>
 
-      <SettingSection title="Sync & Offline">
+      <SettingSection title={t('settings.syncOffline')}>
         <SettingSwitch
-          title="Auto Sync"
-          description="Automatically sync your data when online"
+          title={t('settings.autoSync')}
+          description={t('settings.autoSyncDesc')}
           value={settings.autoSync}
           onValueChange={value => handleSettingChange('autoSync', value)}
           loading={updating === 'autoSync'}
         />
         <SettingSwitch
-          title="Offline Mode"
-          description="Use cached data only. Disables search and sharing."
+          title={t('settings.offlineMode')}
+          description={t('settings.offlineModeDesc')}
           value={settings.offlineMode}
           onValueChange={value => handleSettingChange('offlineMode', value)}
           loading={updating === 'offlineMode'}
         />
       </SettingSection>
 
-      <SettingSection title="Features">
+      <SettingSection title={t('settings.features')}>
         <SettingSwitch
-          title="Show Tutorials"
-          description="Display helpful tips and tutorials"
+          title={t('settings.showTutorials')}
+          description={t('settings.showTutorialsDesc')}
           value={settings.showTutorials}
           onValueChange={value => handleSettingChange('showTutorials', value)}
           loading={updating === 'showTutorials'}
@@ -175,7 +219,9 @@ export const AppSettingsScreen: React.FC = () => {
 
         {settings.betaFeatures.length > 0 && (
           <View style={styles.betaFeaturesContainer}>
-            <Text style={commonStyles.subtitle}>Beta Features Enabled</Text>
+            <Text style={commonStyles.subtitle}>
+              {t('settings.betaFeaturesEnabled')}
+            </Text>
             <View style={styles.chipContainer}>
               {settings.betaFeatures.map((feature, index) => (
                 <View key={index} style={[commonStyles.chip, styles.betaChip]}>
@@ -187,25 +233,25 @@ export const AppSettingsScreen: React.FC = () => {
         )}
       </SettingSection>
 
-      <SettingSection title="Experience">
+      <SettingSection title={t('settings.experience')}>
         <SettingSwitch
           testID="settings-haptic-feedback-switch"
-          title="Haptic Feedback"
-          description="Vibration feedback for interactions and alerts"
+          title={t('settings.hapticFeedback')}
+          description={t('settings.hapticFeedbackDesc')}
           value={hapticFeedbackEnabled}
           onValueChange={setHapticFeedbackEnabled}
         />
         <SettingSwitch
           testID="settings-navigation-labels-switch"
-          title="Navigation Labels"
-          description="Show text labels below navigation icons"
+          title={t('settings.navigationLabels')}
+          description={t('settings.navigationLabelsDesc')}
           value={showNavigationLabels}
           onValueChange={setShowNavigationLabels}
         />
         <SettingSwitch
           testID="settings-show-shopping-list-images-switch"
-          title="Shopping List Images"
-          description="Show product images in shopping lists"
+          title={t('settings.shoppingListImages')}
+          description={t('settings.shoppingListImagesDesc')}
           value={userPrefs.showShoppingListImages}
           onValueChange={value =>
             updatePreference({ showShoppingListImages: value })
@@ -213,17 +259,17 @@ export const AppSettingsScreen: React.FC = () => {
         />
         <SettingSwitch
           testID="settings-share-usage-data-switch"
-          title="Share Usage Data"
-          description="Help improve Sous Chef by sharing anonymous usage statistics"
+          title={t('settings.shareUsageData')}
+          description={t('settings.shareUsageDataDesc')}
           value={userConsent ?? true}
           onValueChange={handleConsentChange}
         />
       </SettingSection>
 
-      <SettingSection title="Reset">
+      <SettingSection title={t('settings.resetSection')}>
         <SettingSwitch
-          title="Reset to Defaults"
-          description="Reset all app settings to their default values"
+          title={t('settings.resetToDefaults')}
+          description={t('settings.resetToDefaultsDesc')}
           value={false}
           onValueChange={handleResetToDefaults}
           loading={updating === 'reset'}

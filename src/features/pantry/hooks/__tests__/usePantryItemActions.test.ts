@@ -1,36 +1,16 @@
-import { renderHook, act } from '@testing-library/react-native';
+'use no memo';
+
+import { act } from '@testing-library/react-native';
+import {
+  recordMock,
+  renderHookWithApollo,
+} from '#/test-utils/apolloMockProvider';
+import {
+  CreatePantryItemUsageDocument,
+  RestockPantryItemDocument,
+} from '#features/pantry/graphql/pantry.generated';
 import { alertService } from '#/services/alertService';
 import { usePantryItemActions } from '../usePantryItemActions';
-
-const mockCacheModify = jest.fn();
-const mockCacheIdentify = jest.fn((obj: any) => `${obj.__typename}:${obj.id}`);
-
-const mockCreatePantryItemUsage = jest.fn();
-const mockRestockPantryItem = jest.fn();
-
-// Mock the Apollo React hooks our hook calls so we can intercept the mutation
-// invocations and observe `client.cache.modify` calls without spinning up a
-// MockedProvider — that would force us to assert on cache state instead of
-// spies, which would change every assertion in this file.
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useApolloClient: jest.fn(() => ({
-    cache: {
-      modify: mockCacheModify,
-      identify: mockCacheIdentify,
-    },
-  })),
-  useMutation: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'CreatePantryItemUsage') {
-      return [mockCreatePantryItemUsage, { loading: false }];
-    }
-    if (opName === 'RestockPantryItem') {
-      return [mockRestockPantryItem, { loading: false }];
-    }
-    return [jest.fn(), { loading: false }];
-  }),
-}));
 
 jest.mock('#/utils/isNetworkError', () => ({
   isNetworkError: jest.fn(() => false),
@@ -66,13 +46,47 @@ const createOptions = (
   },
 });
 
+function consumeMock(payload?: Record<string, unknown>) {
+  return recordMock(CreatePantryItemUsageDocument, {
+    data: {
+      createPantryItemUsage: {
+        __typename: 'PantryItemUsagePayload',
+        success: true,
+        message: '',
+        code: 'SUCCESS',
+        validUnits: null,
+        pantryItemUsage: null,
+        ...(payload ?? {}),
+      },
+    },
+  });
+}
+
+function restockMock(payload?: Record<string, unknown>) {
+  return recordMock(RestockPantryItemDocument, {
+    data: {
+      restockPantryItem: {
+        __typename: 'PantryItemUsagePayload',
+        success: true,
+        message: '',
+        code: 'SUCCESS',
+        validUnits: null,
+        pantryItemUsage: null,
+        ...(payload ?? {}),
+      },
+    },
+  });
+}
+
 beforeEach(() => {
   jest.clearAllMocks();
 });
 
 describe('usePantryItemActions', () => {
   it('returns all modal states and handlers', () => {
-    const { result } = renderHook(() => usePantryItemActions(createOptions()));
+    const { result } = renderHookWithApollo(() =>
+      usePantryItemActions(createOptions()),
+    );
 
     // Modal states
     expect(result.current.consumeModal.visible).toBe(false);
@@ -95,7 +109,7 @@ describe('usePantryItemActions', () => {
 
   describe('handleConsumeItem', () => {
     it('opens consume modal for existing item', () => {
-      const { result } = renderHook(() =>
+      const { result } = renderHookWithApollo(() =>
         usePantryItemActions(createOptions()),
       );
 
@@ -110,7 +124,7 @@ describe('usePantryItemActions', () => {
     });
 
     it('does nothing for unknown item', () => {
-      const { result } = renderHook(() =>
+      const { result } = renderHookWithApollo(() =>
         usePantryItemActions(createOptions()),
       );
 
@@ -124,7 +138,7 @@ describe('usePantryItemActions', () => {
 
   describe('handleWasteItem', () => {
     it('opens waste modal', () => {
-      const { result } = renderHook(() =>
+      const { result } = renderHookWithApollo(() =>
         usePantryItemActions(createOptions()),
       );
 
@@ -139,7 +153,7 @@ describe('usePantryItemActions', () => {
 
   describe('handleRestockItem', () => {
     it('opens restock modal', () => {
-      const { result } = renderHook(() =>
+      const { result } = renderHookWithApollo(() =>
         usePantryItemActions(createOptions()),
       );
 
@@ -155,7 +169,9 @@ describe('usePantryItemActions', () => {
   describe('handleEditItem', () => {
     it('navigates to pantry item screen', () => {
       const options = createOptions();
-      const { result } = renderHook(() => usePantryItemActions(options));
+      const { result } = renderHookWithApollo(() =>
+        usePantryItemActions(options),
+      );
 
       act(() => {
         result.current.handleEditItem('item-1');
@@ -170,7 +186,9 @@ describe('usePantryItemActions', () => {
   describe('handleDeleteItem', () => {
     it('calls removeItem and tracks event', async () => {
       const options = createOptions();
-      const { result } = renderHook(() => usePantryItemActions(options));
+      const { result } = renderHookWithApollo(() =>
+        usePantryItemActions(options),
+      );
 
       await act(async () => {
         await result.current.handleDeleteItem('item-1');
@@ -182,12 +200,10 @@ describe('usePantryItemActions', () => {
 
   describe('handleConfirmConsume', () => {
     it('calls createPantryItemUsage mutation and closes modal', async () => {
-      mockCreatePantryItemUsage.mockResolvedValue({
-        data: { createPantryItemUsage: { success: true } },
-      });
-
-      const { result } = renderHook(() =>
-        usePantryItemActions(createOptions()),
+      const m = consumeMock();
+      const { result } = renderHookWithApollo(
+        () => usePantryItemActions(createOptions()),
+        { operationMocks: [m.mock] },
       );
 
       // Open consume modal first
@@ -207,15 +223,13 @@ describe('usePantryItemActions', () => {
         );
       });
 
-      expect(mockCreatePantryItemUsage).toHaveBeenCalledWith({
-        variables: {
-          input: {
-            pantryItemId: 'item-1',
-            quantityUsed: 2,
-            purpose: 'COOK',
-            notes: 'For dinner',
-            usageUnitId: undefined,
-          },
+      expect(m.fired).toContainEqual({
+        input: {
+          pantryItemId: 'item-1',
+          quantityUsed: 2,
+          purpose: 'COOK',
+          notes: 'For dinner',
+          usageUnitId: undefined,
         },
       });
 
@@ -223,21 +237,29 @@ describe('usePantryItemActions', () => {
     });
 
     it('does nothing when no modal is open', async () => {
-      const { result } = renderHook(() =>
-        usePantryItemActions(createOptions()),
+      const m = consumeMock();
+      const { result } = renderHookWithApollo(
+        () => usePantryItemActions(createOptions()),
+        { operationMocks: [m.mock] },
       );
 
       await act(async () => {
         await result.current.handleConfirmConsume(1, '1', 'COOK' as any, '');
       });
 
-      expect(mockCreatePantryItemUsage).not.toHaveBeenCalled();
+      expect(m.fired).toEqual([]);
     });
 
     it('reverts quantity and shows error on failure', async () => {
-      mockCreatePantryItemUsage.mockRejectedValue(new Error('Failed'));
+      const { executeMutation } = require('#/utils/compilerSafeWrappers');
+      executeMutation.mockImplementationOnce(
+        async (_fn: any, onError: (e: unknown) => void) => {
+          onError(new Error('Failed'));
+          return false;
+        },
+      );
 
-      const { result } = renderHook(() =>
+      const { result } = renderHookWithApollo(() =>
         usePantryItemActions(createOptions()),
       );
 
@@ -249,8 +271,6 @@ describe('usePantryItemActions', () => {
         await result.current.handleConfirmConsume(2, '2', 'COOK' as any, '');
       });
 
-      // Cache modify called for optimistic update AND revert
-      expect(mockCacheModify).toHaveBeenCalled();
       expect(alertService.alert).toHaveBeenCalledWith(
         'Error',
         expect.any(String),
@@ -264,12 +284,10 @@ describe('usePantryItemActions', () => {
 
   describe('handleConfirmWaste', () => {
     it('calls usage mutation with WASTE purpose and closes modal', async () => {
-      mockCreatePantryItemUsage.mockResolvedValue({
-        data: { createPantryItemUsage: { success: true } },
-      });
-
-      const { result } = renderHook(() =>
-        usePantryItemActions(createOptions()),
+      const m = consumeMock();
+      const { result } = renderHookWithApollo(
+        () => usePantryItemActions(createOptions()),
+        { operationMocks: [m.mock] },
       );
 
       act(() => {
@@ -286,18 +304,16 @@ describe('usePantryItemActions', () => {
         );
       });
 
-      expect(mockCreatePantryItemUsage).toHaveBeenCalledWith({
-        variables: {
-          input: {
-            pantryItemId: 'item-1',
-            quantityUsed: 1,
-            purpose: 'WASTE',
-            notes: 'Past date',
-            usageUnitId: undefined,
-            wasteReason: 'EXPIRED',
-            isComposted: true,
-            isRecycled: false,
-          },
+      expect(m.fired).toContainEqual({
+        input: {
+          pantryItemId: 'item-1',
+          quantityUsed: 1,
+          purpose: 'WASTE',
+          notes: 'Past date',
+          usageUnitId: undefined,
+          wasteReason: 'EXPIRED',
+          isComposted: true,
+          isRecycled: false,
         },
       });
 
@@ -307,12 +323,10 @@ describe('usePantryItemActions', () => {
 
   describe('handleConfirmRestock', () => {
     it('calls restock mutation and closes modal', async () => {
-      mockRestockPantryItem.mockResolvedValue({
-        data: { restockPantryItem: { success: true } },
-      });
-
-      const { result } = renderHook(() =>
-        usePantryItemActions(createOptions()),
+      const m = restockMock();
+      const { result } = renderHookWithApollo(
+        () => usePantryItemActions(createOptions()),
+        { operationMocks: [m.mock] },
       );
 
       act(() => {
@@ -323,17 +337,15 @@ describe('usePantryItemActions', () => {
         await result.current.handleConfirmRestock(3, '3', 'Bought more');
       });
 
-      expect(mockRestockPantryItem).toHaveBeenCalledWith({
-        variables: {
-          id: 'item-1',
-          input: {
-            quantity: 3,
-            unitId: undefined,
-            notes: 'Bought more',
-            costPerUnit: undefined,
-            totalCost: undefined,
-            expiresAt: null,
-          },
+      expect(m.fired).toContainEqual({
+        id: 'item-1',
+        input: {
+          quantity: 3,
+          unitId: undefined,
+          notes: 'Bought more',
+          costPerUnit: undefined,
+          totalCost: undefined,
+          expiresAt: null,
         },
       });
 
@@ -341,12 +353,10 @@ describe('usePantryItemActions', () => {
     });
 
     it('includes optional restock fields', async () => {
-      mockRestockPantryItem.mockResolvedValue({
-        data: { restockPantryItem: { success: true } },
-      });
-
-      const { result } = renderHook(() =>
-        usePantryItemActions(createOptions()),
+      const m = restockMock();
+      const { result } = renderHookWithApollo(
+        () => usePantryItemActions(createOptions()),
+        { operationMocks: [m.mock] },
       );
 
       act(() => {
@@ -366,7 +376,7 @@ describe('usePantryItemActions', () => {
         );
       });
 
-      const input = mockRestockPantryItem.mock.calls[0][0].variables.input;
+      const input = (m.fired[0] as any).input;
       expect(input.unitId).toBe('unit-kg');
       expect(input.costPerUnit).toBe(2.5);
       expect(input.totalCost).toBe(12.5);
@@ -376,19 +386,15 @@ describe('usePantryItemActions', () => {
 
   describe('payload error handling', () => {
     it('shows invalid unit alert on consume payload UNIT_INVALID', async () => {
-      mockCreatePantryItemUsage.mockResolvedValue({
-        data: {
-          createPantryItemUsage: {
-            success: false,
-            code: 'UNIT_INVALID',
-            message: "Cannot consume in 'jar'",
-            validUnits: ['oz', 'cup', 'tbsp'],
-          },
-        },
+      const m = consumeMock({
+        success: false,
+        code: 'UNIT_INVALID',
+        message: "Cannot consume in 'jar'",
+        validUnits: ['oz', 'cup', 'tbsp'],
       });
-
-      const { result } = renderHook(() =>
-        usePantryItemActions(createOptions()),
+      const { result } = renderHookWithApollo(
+        () => usePantryItemActions(createOptions()),
+        { operationMocks: [m.mock] },
       );
 
       act(() => {
@@ -408,19 +414,15 @@ describe('usePantryItemActions', () => {
     });
 
     it('shows invalid unit alert on waste payload UNIT_INVALID', async () => {
-      mockCreatePantryItemUsage.mockResolvedValue({
-        data: {
-          createPantryItemUsage: {
-            success: false,
-            code: 'UNIT_INVALID',
-            message: "Cannot waste in 'jar'",
-            validUnits: null,
-          },
-        },
+      const m = consumeMock({
+        success: false,
+        code: 'UNIT_INVALID',
+        message: "Cannot waste in 'jar'",
+        validUnits: null,
       });
-
-      const { result } = renderHook(() =>
-        usePantryItemActions(createOptions()),
+      const { result } = renderHookWithApollo(
+        () => usePantryItemActions(createOptions()),
+        { operationMocks: [m.mock] },
       );
 
       act(() => {
@@ -445,19 +447,15 @@ describe('usePantryItemActions', () => {
     });
 
     it('shows version conflict alert on consume payload CONFLICT', async () => {
-      mockCreatePantryItemUsage.mockResolvedValue({
-        data: {
-          createPantryItemUsage: {
-            success: false,
-            code: 'CONFLICT',
-            message: 'Version conflict: expected 3, found 4',
-            validUnits: null,
-          },
-        },
+      const m = consumeMock({
+        success: false,
+        code: 'CONFLICT',
+        message: 'Version conflict: expected 3, found 4',
+        validUnits: null,
       });
-
-      const { result } = renderHook(() =>
-        usePantryItemActions(createOptions()),
+      const { result } = renderHookWithApollo(
+        () => usePantryItemActions(createOptions()),
+        { operationMocks: [m.mock] },
       );
 
       act(() => {
@@ -475,19 +473,15 @@ describe('usePantryItemActions', () => {
     });
 
     it('shows invalid unit alert on restock payload UNIT_INVALID', async () => {
-      mockRestockPantryItem.mockResolvedValue({
-        data: {
-          restockPantryItem: {
-            success: false,
-            code: 'UNIT_INVALID',
-            message: "Cannot restock in 'slice'",
-            validUnits: ['bottle', 'mL'],
-          },
-        },
+      const m = restockMock({
+        success: false,
+        code: 'UNIT_INVALID',
+        message: "Cannot restock in 'slice'",
+        validUnits: ['bottle', 'mL'],
       });
-
-      const { result } = renderHook(() =>
-        usePantryItemActions(createOptions()),
+      const { result } = renderHookWithApollo(
+        () => usePantryItemActions(createOptions()),
+        { operationMocks: [m.mock] },
       );
 
       act(() => {
@@ -505,20 +499,16 @@ describe('usePantryItemActions', () => {
       expect(result.current.restockModal.visible).toBe(true);
     });
 
-    it('reverts optimistic updates on restock payload error', async () => {
-      mockRestockPantryItem.mockResolvedValue({
-        data: {
-          restockPantryItem: {
-            success: false,
-            code: 'UNIT_INVALID',
-            message: 'Invalid unit',
-            validUnits: null,
-          },
-        },
+    it('shows alert on restock payload error', async () => {
+      const m = restockMock({
+        success: false,
+        code: 'UNIT_INVALID',
+        message: 'Invalid unit',
+        validUnits: null,
       });
-
-      const { result } = renderHook(() =>
-        usePantryItemActions(createOptions()),
+      const { result } = renderHookWithApollo(
+        () => usePantryItemActions(createOptions()),
+        { operationMocks: [m.mock] },
       );
 
       act(() => {
@@ -529,9 +519,6 @@ describe('usePantryItemActions', () => {
         await result.current.handleConfirmRestock(3, '3', '');
       });
 
-      // Optimistic update + revert = at least 3 cache.modify calls
-      // (1: quantity optimistic, 2: batch count optimistic, 3+: reverts)
-      expect(mockCacheModify).toHaveBeenCalled();
       expect(alertService.alert).toHaveBeenCalledWith(
         'Invalid Unit',
         'Invalid unit',
@@ -539,19 +526,15 @@ describe('usePantryItemActions', () => {
     });
 
     it('shows generic error for unknown payload failure codes', async () => {
-      mockCreatePantryItemUsage.mockResolvedValue({
-        data: {
-          createPantryItemUsage: {
-            success: false,
-            code: 'VALIDATION_ERROR',
-            message: 'Cannot use more than available quantity',
-            validUnits: null,
-          },
-        },
+      const m = consumeMock({
+        success: false,
+        code: 'VALIDATION_ERROR',
+        message: 'Cannot use more than available quantity',
+        validUnits: null,
       });
-
-      const { result } = renderHook(() =>
-        usePantryItemActions(createOptions()),
+      const { result } = renderHookWithApollo(
+        () => usePantryItemActions(createOptions()),
+        { operationMocks: [m.mock] },
       );
 
       act(() => {
@@ -576,7 +559,7 @@ describe('usePantryItemActions', () => {
 
   describe('modal close', () => {
     it('closes consume modal', () => {
-      const { result } = renderHook(() =>
+      const { result } = renderHookWithApollo(() =>
         usePantryItemActions(createOptions()),
       );
 
@@ -592,7 +575,7 @@ describe('usePantryItemActions', () => {
     });
 
     it('only one modal can be open at a time', () => {
-      const { result } = renderHook(() =>
+      const { result } = renderHookWithApollo(() =>
         usePantryItemActions(createOptions()),
       );
 

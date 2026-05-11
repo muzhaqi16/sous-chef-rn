@@ -1,0 +1,173 @@
+import React from 'react';
+import { View, Text } from 'react-native';
+import {
+  OnPrimaryActivityIndicator,
+  Pressable,
+} from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
+import { Icon } from '#utils/iconUtils';
+import { FlashList, type ListRenderItemInfo } from '@shopify/flash-list';
+import type {
+  BottomSheetModal,
+  useBottomSheetScrollableCreator,
+} from '@gorhom/bottom-sheet';
+import { BottomSheetAction } from '#components/templates/BottomSheetAction';
+import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
+import {
+  SelectableIngredientProvider,
+  useSelectableIngredients,
+} from '../SelectableIngredientContext';
+
+interface SelectableIngredient {
+  id: string;
+  name: string;
+  quantity: number;
+  unit: { symbol: string } | null;
+}
+
+const ingredientKeyExtractor = (item: { id: string }) => item.id;
+
+const SelectableIngredientItem: React.FC<
+  ListRenderItemInfo<SelectableIngredient>
+> = ({ item }) => {
+  const { selectedIngredients, toggleIngredient } = useSelectableIngredients();
+  const isSelected = selectedIngredients.has(item.id);
+
+  return (
+    <Pressable
+      style={({ pressed }) => [
+        styles.ingredientItem,
+        pressed && { opacity: 0.7 },
+      ]}
+      onPress={() => toggleIngredient(item.id)}
+    >
+      <Icon
+        name={isSelected ? 'checkbox' : 'square-outline'}
+        size={24}
+        tone={isSelected ? 'primary' : 'textSecondary'}
+      />
+      <View style={styles.ingredientInfo}>
+        <Text style={styles.ingredientName}>{item.name}</Text>
+        <Text style={styles.ingredientAmount}>
+          {item.quantity ?? ''} {item.unit?.symbol || ''}
+        </Text>
+      </View>
+    </Pressable>
+  );
+};
+
+const getItemType = () => 'item';
+
+const renderItem = (info: ListRenderItemInfo<SelectableIngredient>) => (
+  <SelectableIngredientItem {...info} />
+);
+
+interface IngredientSelectorSheetProps {
+  sheetRef: React.RefObject<BottomSheetModal | null>;
+  ingredients: SelectableIngredient[];
+  selectedIngredients: Set<string>;
+  toggleIngredient: (id: string) => void;
+  addingToList: boolean;
+  onAddSelected: () => void;
+  onDismiss: () => void;
+  BottomSheetScrollable: ReturnType<typeof useBottomSheetScrollableCreator>;
+}
+
+export const IngredientSelectorSheet: React.FC<
+  IngredientSelectorSheetProps
+> = ({
+  sheetRef,
+  ingredients,
+  selectedIngredients,
+  toggleIngredient,
+  addingToList,
+  onAddSelected,
+  onDismiss,
+  BottomSheetScrollable,
+}) => (
+  <BottomSheetAction
+    sheetRef={sheetRef}
+    sheetTitle="Select Ingredients"
+    snapPoints={['50%', '75%', '90%']}
+    onDismiss={onDismiss}
+  >
+    <SelectableIngredientProvider
+      selectedIngredients={selectedIngredients}
+      toggleIngredient={toggleIngredient}
+    >
+      <FlashList
+        renderScrollComponent={BottomSheetScrollable}
+        data={ingredients}
+        keyExtractor={ingredientKeyExtractor}
+        renderItem={renderItem}
+        getItemType={getItemType}
+        extraData={selectedIngredients.size}
+        {...FLASHLIST_DEFAULTS.fullScreen}
+        ListEmptyComponent={
+          <Text style={styles.emptyText}>No ingredients available</Text>
+        }
+      />
+    </SelectableIngredientProvider>
+    <Pressable
+      style={({ pressed }) => [
+        styles.addSelectedButton,
+        pressed && { opacity: 0.7 },
+      ]}
+      onPress={onAddSelected}
+      disabled={selectedIngredients.size === 0 || addingToList}
+    >
+      {addingToList ? (
+        <OnPrimaryActivityIndicator />
+      ) : (
+        <Text style={styles.addSelectedButtonText}>
+          Add {selectedIngredients.size} ingredient
+          {selectedIngredients.size !== 1 ? 's' : ''}
+        </Text>
+      )}
+    </Pressable>
+  </BottomSheetAction>
+);
+
+const styles = StyleSheet.create(theme => ({
+  ingredientItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: theme.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+    gap: theme.spacing.md,
+  },
+  ingredientInfo: {
+    flex: 1,
+  },
+  ingredientName: {
+    fontSize: theme.fonts.size.md,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.xs,
+  },
+  ingredientAmount: {
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textSecondary,
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: theme.colors.textSecondary,
+    fontSize: theme.fonts.size.md,
+    marginTop: theme.spacing.xl,
+  },
+  addSelectedButton: {
+    padding: theme.spacing.md,
+    borderRadius: theme.radii.md,
+    alignItems: 'center',
+    marginTop: theme.spacing.md,
+    marginHorizontal: theme.spacing.md,
+    minHeight: 48,
+    justifyContent: 'center',
+    backgroundColor: theme.colors.primary,
+  },
+  addSelectedButtonText: {
+    color: theme.colors.onPrimary,
+    fontSize: theme.fonts.size.md,
+    fontWeight: theme.fonts.weight.semibold,
+  },
+}));

@@ -266,7 +266,7 @@ jest.mock('../hooks/usePantrySorting', () => ({
   })),
 }));
 
-jest.mock('#/utils/pantryFilters', () => ({
+jest.mock('#features/pantry/utils/pantryFilters', () => ({
   LocationFilter: {},
 }));
 

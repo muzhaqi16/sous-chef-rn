@@ -1,11 +1,10 @@
 import React from 'react';
 import { View } from 'react-native';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
+import { ThemedIcon } from '#components/atoms/themedComponents';
 import { Icon, IconName, IconLibrary } from '#utils/iconUtils';
 import { commonStyles } from '#/styles/commonStyles';
 import { Text } from '#components/atoms/Text';
-
-const ThemedIcon = withUnistyles(Icon);
 
 interface AnalyticsSummaryCardProps {
   title: string;

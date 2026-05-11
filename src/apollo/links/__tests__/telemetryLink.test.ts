@@ -14,19 +14,8 @@ jest.mock('#/services/telemetry', () => ({
   },
 }));
 
-jest.mock('#/utils/environment', () => ({
-  Environment: {
-    shouldEnableAnalytics: jest.fn(),
-    isDevelopment: jest.fn(),
-    getApiConfig: jest.fn(() => ({ wsUrl: 'ws://localhost:4000/graphql' })),
-  },
-  logger: {
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    debug: jest.fn(),
-  },
-}));
+// Environment is auto-mocked via jest.setup.js. Tests below override
+// `shouldEnableAnalytics` / `isDevelopment` per-suite via `mockReturnValue`.
 
 jest.mock('#store', () => ({
   useStore: {

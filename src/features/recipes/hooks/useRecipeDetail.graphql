@@ -1,0 +1,96 @@
+# Local copies of shoppingList operations per the Feature API Boundary Convention.
+# The shoppingList feature's graphql/ folder is internal.
+mutation AddItemToShoppingList($input: CreateShoppingListItemInput!) {
+  addItemToShoppingList(input: $input) {
+    success
+    message
+    code
+    shoppingListItem {
+      ...ShoppingListItemDisplayFragment
+    }
+  }
+}
+
+mutation AddItemsToShoppingList(
+  $shoppingListId: ID!
+  $items: [BatchAddShoppingListItemInput!]!
+) {
+  addItemsToShoppingList(shoppingListId: $shoppingListId, items: $items) {
+    results {
+      index
+      clientId
+      success
+      item {
+        ...ShoppingListItemDisplayFragment
+      }
+      quantityIncremented
+      error
+    }
+    successCount
+    failedCount
+    incrementedCount
+  }
+}
+
+query GetShoppingListsLite($homeId: ID, $first: Int, $after: String) {
+  shoppingLists(filters: { homeId: $homeId }, first: $first, after: $after) {
+    edges {
+      cursor
+      node {
+        id
+        name
+        isDefault
+        totalItems
+        completedItems
+        homeId
+        home {
+          id
+          name
+        }
+        ownerships {
+          id
+          userId
+          user {
+            id
+            email
+            profile {
+              id
+              displayName
+              avatar
+            }
+          }
+        }
+      }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
+  }
+}
+
+mutation CreateShoppingList($input: CreateShoppingListInput!) {
+  createShoppingList(input: $input) {
+    success
+    message
+    code
+    shoppingList {
+      id
+      name
+      isDefault
+      totalItems
+      completedItems
+      createdAt
+      updatedAt
+      homeId
+      home {
+        id
+        name
+      }
+      ownerships {
+        ...ShoppingListOwnershipFragment
+      }
+    }
+  }
+}

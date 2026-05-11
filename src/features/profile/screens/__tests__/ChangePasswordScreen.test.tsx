@@ -1,13 +1,9 @@
 'use no memo';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { screen, fireEvent } from '@testing-library/react-native';
+import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { ChangePasswordScreen } from '../ChangePasswordScreen';
 
-// --- Mocks ---
-
-const mockChangePassword = jest.fn().mockResolvedValue({
-  data: { changePassword: { success: true } },
-});
 const mockToast = jest.fn();
 
 jest.mock('#hooks/navigation/useAppNavigation');
@@ -16,16 +12,6 @@ const mockNav = (
     useAppNavigation: jest.Mock;
   }
 ).useAppNavigation();
-
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useMutation: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'ChangePassword')
-      return [mockChangePassword, { loading: false }];
-    return [jest.fn(), {}];
-  }),
-}));
 
 jest.mock('#hooks/useToast', () => ({
   useToast: () => mockToast,
@@ -87,7 +73,7 @@ describe('ChangePasswordScreen', () => {
   });
 
   it('renders the header with title', () => {
-    render(<ChangePasswordScreen />);
+    renderWithApollo(<ChangePasswordScreen />);
     expect(screen.getByTestId('header')).toBeTruthy();
     // Both header and button contain "Change Password" text
     expect(
@@ -96,7 +82,7 @@ describe('ChangePasswordScreen', () => {
   });
 
   it('renders the description text', () => {
-    render(<ChangePasswordScreen />);
+    renderWithApollo(<ChangePasswordScreen />);
     expect(
       screen.getByText(
         /Enter your current password and choose a new secure password/,
@@ -105,35 +91,35 @@ describe('ChangePasswordScreen', () => {
   });
 
   it('renders Current Password field', () => {
-    render(<ChangePasswordScreen />);
+    renderWithApollo(<ChangePasswordScreen />);
     expect(screen.getByText('Current Password')).toBeTruthy();
   });
 
   it('renders New Password field', () => {
-    render(<ChangePasswordScreen />);
+    renderWithApollo(<ChangePasswordScreen />);
     expect(screen.getByText('New Password')).toBeTruthy();
   });
 
   it('renders Confirm New Password field', () => {
-    render(<ChangePasswordScreen />);
+    renderWithApollo(<ChangePasswordScreen />);
     expect(screen.getByText('Confirm New Password')).toBeTruthy();
   });
 
   it('renders the submit button text', () => {
-    render(<ChangePasswordScreen />);
+    renderWithApollo(<ChangePasswordScreen />);
     // "Change Password" appears in both header title and submit button
     const elements = screen.getAllByText('Change Password');
     expect(elements.length).toBe(2);
   });
 
   it('calls goBack when header back button is pressed', () => {
-    render(<ChangePasswordScreen />);
+    renderWithApollo(<ChangePasswordScreen />);
     fireEvent.press(screen.getByTestId('header-back'));
     expect(mockNav.goBack).toHaveBeenCalledTimes(1);
   });
 
   it('renders password input placeholders', () => {
-    render(<ChangePasswordScreen />);
+    renderWithApollo(<ChangePasswordScreen />);
     expect(
       screen.getByPlaceholderText('Enter your current password'),
     ).toBeTruthy();

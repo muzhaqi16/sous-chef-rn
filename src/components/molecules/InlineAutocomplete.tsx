@@ -1,15 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
-import { Pressable } from '#components/atoms/themedComponents';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+import {
+  Pressable,
+  ThemedActivityIndicator,
+} from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { Label } from '#components/atoms/Label';
 import { Text } from '#components/atoms/Text';
-
-const ThemedActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
-  color: theme.colors.primary,
-}));
 
 export interface InlineAutocompleteProps<T> {
   // Core

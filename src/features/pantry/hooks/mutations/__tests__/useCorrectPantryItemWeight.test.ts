@@ -1,8 +1,8 @@
 import { renderHook, act, waitFor } from '@testing-library/react-native';
-import type { MockedResponse } from '@apollo/client/testing';
+import type { MockedResponse } from '#/test-utils/apolloMockProvider';
 import { alertService } from '#/services/alertService';
 import { CorrectPantryItemWeightDocument } from '#features/pantry/graphql/pantry.generated';
-import { createApolloWrapper } from '#/test-utils/apolloMockProvider';
+import { createApolloTestWrapper } from '#/test-utils/apolloMockProvider';
 import { useCorrectPantryItemWeight } from '../useCorrectPantryItemWeight';
 
 jest.mock('#/services/errorService', () => ({
@@ -73,7 +73,7 @@ beforeEach(() => {
 describe('useCorrectPantryItemWeight', () => {
   it('returns correctWeight function and loading state', () => {
     const { result } = renderHook(() => useCorrectPantryItemWeight(), {
-      wrapper: createApolloWrapper([]),
+      wrapper: createApolloTestWrapper({ operationMocks: [] }),
     });
 
     expect(typeof result.current.correctWeight).toBe('function');
@@ -88,7 +88,7 @@ describe('useCorrectPantryItemWeight', () => {
     };
     const { result } = renderHook(
       () => useCorrectPantryItemWeight({ onSuccess }),
-      { wrapper: createApolloWrapper([successMock(variables)]) },
+      { wrapper: createApolloTestWrapper({ operationMocks: [successMock(variables)] }) },
     );
 
     let success: boolean | undefined;
@@ -116,7 +116,7 @@ describe('useCorrectPantryItemWeight', () => {
       },
     };
     const { result } = renderHook(() => useCorrectPantryItemWeight(), {
-      wrapper: createApolloWrapper([successMock(variables)]),
+      wrapper: createApolloTestWrapper({ operationMocks: [successMock(variables)] }),
     });
 
     let success: boolean | undefined;
@@ -141,7 +141,7 @@ describe('useCorrectPantryItemWeight', () => {
       input: { netWeight: 500, reason: 'Reason', version: 1 },
     };
     const { result } = renderHook(() => useCorrectPantryItemWeight(), {
-      wrapper: createApolloWrapper([errorMock(variables)]),
+      wrapper: createApolloTestWrapper({ operationMocks: [errorMock(variables)] }),
     });
 
     let success: boolean | undefined;
@@ -164,7 +164,7 @@ describe('useCorrectPantryItemWeight', () => {
       input: { netWeight: 500, reason: 'Reason', version: 1 },
     };
     const { result } = renderHook(() => useCorrectPantryItemWeight(), {
-      wrapper: createApolloWrapper([errorMock(variables)]),
+      wrapper: createApolloTestWrapper({ operationMocks: [errorMock(variables)] }),
     });
 
     let success: boolean | undefined;
@@ -184,7 +184,7 @@ describe('useCorrectPantryItemWeight', () => {
       input: { netWeight: 500, reason: 'Reason', version: 1 },
     };
     const { result } = renderHook(() => useCorrectPantryItemWeight(), {
-      wrapper: createApolloWrapper([nullPantryItemMock(variables)]),
+      wrapper: createApolloTestWrapper({ operationMocks: [nullPantryItemMock(variables)] }),
     });
 
     let success: boolean | undefined;

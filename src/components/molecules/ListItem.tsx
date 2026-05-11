@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, TextStyle } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { Pressable, ThemedIcon } from '#components/atoms/themedComponents';
 import { Icon } from '#utils/iconUtils';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { Badge } from '../base/Badge';
 import type { SortableListThemeColors } from '#features/shoppingList/components/SortableShoppingList/SortableListThemeContext';
 import { Text } from '#components/atoms/Text';
@@ -27,8 +27,6 @@ interface ListItemProps {
   // when null, the wrapped Icon falls back to its theme-reactive default.
   themeColors?: SortableListThemeColors | null;
 }
-
-const ThemedIcon = withUnistyles(Icon);
 
 const ListItemComponent: React.FC<ListItemProps> = ({
   children,

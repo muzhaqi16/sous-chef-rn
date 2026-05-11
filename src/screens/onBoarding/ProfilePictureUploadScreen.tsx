@@ -4,23 +4,21 @@ import {
   Text,
   Image,
   Dimensions,
-  ActivityIndicator,
   Platform,
   ScrollView,
   Linking,
 } from 'react-native';
 import { getWebAppUrl } from '#utils/environment';
-import { Pressable } from '#components/atoms/themedComponents';
+import {
+  Pressable,
+  PrimaryActivityIndicator,
+} from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
 import { Button } from '#components/base/Button';
 import { Link } from '#components/atoms/Link';
 import { Icon } from '#utils/iconUtils';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
-
-const PrimaryActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
-  color: theme.colors.primary,
-}));
+import { StyleSheet } from 'react-native-unistyles';
 import {
   launchCamera,
   launchImageLibrary,

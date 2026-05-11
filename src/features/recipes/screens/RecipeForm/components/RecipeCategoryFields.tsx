@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { FormInput } from '#components/molecules/FormInput';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
 import { Difficulty, RecipeStatus } from '#/graphql/generated/schemaTypes';
@@ -32,11 +33,12 @@ export const RecipeCategoryFields: React.FC<RecipeCategoryFieldsProps> = ({
   state,
   updateField,
 }) => {
+  const { t } = useTranslation();
   return (
     <>
       {!!state.difficulty && (
         <SegmentedControl
-          label="Difficulty"
+          label={t('recipes.difficulty')}
           options={DIFFICULTIES}
           value={state.difficulty}
           onChange={v => updateField('difficulty', v)}
@@ -45,7 +47,7 @@ export const RecipeCategoryFields: React.FC<RecipeCategoryFieldsProps> = ({
       )}
       {!state.difficulty && (
         <SegmentedControl
-          label="Difficulty"
+          label={t('recipes.difficulty')}
           options={DIFFICULTIES}
           value={Difficulty.Medium}
           onChange={v => updateField('difficulty', v)}
@@ -54,14 +56,14 @@ export const RecipeCategoryFields: React.FC<RecipeCategoryFieldsProps> = ({
       )}
 
       <FormInput
-        label="Cuisine"
+        label={t('recipes.cuisine')}
         value={state.cuisine}
         onChangeText={v => updateField('cuisine', v)}
-        placeholder="e.g., Italian, Mexican, Thai..."
+        placeholder={t('recipes.cuisinePlaceholder')}
       />
 
       <SegmentedControl
-        label="Status"
+        label={t('recipes.status')}
         options={STATUSES}
         value={state.status}
         onChange={v => updateField('status', v)}

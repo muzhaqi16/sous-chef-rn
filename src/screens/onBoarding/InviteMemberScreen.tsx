@@ -6,6 +6,7 @@ import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
 import { Button } from '#components/base/Button';
 import { EmailInput } from '#components/atoms/EmailInput';
 import { StyleSheet } from 'react-native-unistyles';
+import { useTranslation } from 'react-i18next';
 import { useMutation } from '@apollo/client/react';
 import { InviteToHomeDocument } from '#operations/home/home.generated';
 import { AddCollaboratorDocument } from '#features/shoppingList/graphql/shoppingList.generated';
@@ -26,6 +27,7 @@ type InviteEntry = {
 };
 
 export const InviteMemberScreen = () => {
+  const { t } = useTranslation();
   useScreenTransition('InviteMemberScreen');
   const { navigateToNextStep } = useOnboardingNavigation();
   const user = useUser();
@@ -66,20 +68,26 @@ export const InviteMemberScreen = () => {
     const trimmedEmail = currentEmail.trim().toLowerCase();
 
     if (!validateEmail(trimmedEmail)) {
-      alertService.alert('Invalid Email', 'Please enter a valid email address');
+      alertService.alert(
+        t('inviteMembers.invalidEmailTitle'),
+        t('inviteMembers.invalidEmailMessage'),
+      );
       return;
     }
 
     if (invites.some(invite => invite.email === trimmedEmail)) {
       alertService.alert(
-        'Duplicate Email',
-        'This email has already been added',
+        t('inviteMembers.duplicateEmailTitle'),
+        t('inviteMembers.duplicateEmailMessage'),
       );
       return;
     }
 
     if (trimmedEmail === user?.email?.toLowerCase()) {
-      alertService.alert('Invalid Email', "You can't invite yourself");
+      alertService.alert(
+        t('inviteMembers.invalidEmailTitle'),
+        t('inviteMembers.cantInviteSelf'),
+      );
       return;
     }
 
@@ -113,9 +121,9 @@ export const InviteMemberScreen = () => {
                       homeId: selectedHomeId,
                       email: invite.email,
                       role: MembershipRole.Member,
-                      message: `${
-                        user?.email || 'A user'
-                      } has invited you to join their home for managing pantry and shopping lists together!`,
+                      message: t('inviteMembers.inviteHomeMessage', {
+                        name: user?.email || t('labels.someone'),
+                      }),
                     },
                   },
                 }),
@@ -143,11 +151,11 @@ export const InviteMemberScreen = () => {
         error => {
           console.error('Error sending invites:', error);
           alertService.alert(
-            'Partial Success',
-            'Some invitations may have failed. You can invite more members later from settings.',
+            t('inviteMembers.partialSuccessTitle'),
+            t('inviteMembers.partialSuccessMessage'),
             [
               {
-                text: 'Continue',
+                text: t('labels.continue'),
                 onPress: () => navigateToNextStep('InviteMembers'),
               },
             ],
@@ -160,19 +168,17 @@ export const InviteMemberScreen = () => {
   };
 
   const getSubtitle = () => {
-    if (hasNeither)
-      return 'Create a home or shopping list first to invite others';
-    if (hasBoth)
-      return 'Invite others to your home and shopping lists (optional)';
-    if (hasHome) return 'Invite others to your home (optional)';
-    return 'Invite others to your shopping list (optional)';
+    if (hasNeither) return t('inviteMembers.subtitleHasNeither');
+    if (hasBoth) return t('inviteMembers.subtitleHasBoth');
+    if (hasHome) return t('inviteMembers.subtitleHasHome');
+    return t('inviteMembers.subtitleHasList');
   };
 
   // If user has neither home nor shopping list, show message and skip button
   if (hasNeither) {
     return (
       <OnBoardingWrapper
-        title="Invite family & friends"
+        title={t('inviteMembers.title')}
         subtitle={getSubtitle()}
         step={5}
         totalSteps={7}
@@ -181,17 +187,16 @@ export const InviteMemberScreen = () => {
         <View style={styles.container}>
           <View style={styles.emptyState}>
             <Text size="md" tone="secondary" style={styles.emptyStateText}>
-              Nothing to share yet
+              {t('inviteMembers.nothingToShare')}
             </Text>
             <Text size="sm" tone="secondary">
-              You need to create a home or shopping list first to invite others.
-              You can invite people later from settings.
+              {t('inviteMembers.nothingToShareDesc')}
             </Text>
           </View>
         </View>
 
         <Button
-          title="Continue"
+          title={t('labels.continue')}
           onPress={() => navigateToNextStep('InviteMembers')}
           variant="primary"
         />
@@ -201,7 +206,7 @@ export const InviteMemberScreen = () => {
 
   return (
     <OnBoardingWrapper
-      title="Invite family & friends"
+      title={t('inviteMembers.title')}
       subtitle={getSubtitle()}
       step={5}
       totalSteps={7}
@@ -216,7 +221,7 @@ export const InviteMemberScreen = () => {
             onSubmitEditing={addInvite}
           />
           <Button
-            title="Add"
+            title={t('inviteMembers.addButton')}
             onPress={addInvite}
             disabled={!currentEmail.trim()}
             size="medium"
@@ -227,17 +232,21 @@ export const InviteMemberScreen = () => {
           {invites.length === 0 ? (
             <View style={styles.emptyState}>
               <Text size="md" tone="secondary" style={styles.emptyStateText}>
-                No invitations added yet
+                {t('inviteMembers.noInvitesYet')}
               </Text>
               <Text size="sm" tone="secondary">
-                Add email addresses above to invite members
+                {t('inviteMembers.noInvitesYetDesc')}
               </Text>
             </View>
           ) : (
             <>
               <Text size="sm" tone="secondary" style={styles.listHeader}>
-                Inviting {invites.length}{' '}
-                {invites.length === 1 ? 'person' : 'people'}:
+                {t(
+                  invites.length === 1
+                    ? 'inviteMembers.invitingPersonSingular'
+                    : 'inviteMembers.invitingPersonPlural',
+                  { count: invites.length },
+                )}
               </Text>
               {invites.map(invite => (
                 <View key={invite.id} style={styles.inviteItem}>
@@ -268,7 +277,7 @@ export const InviteMemberScreen = () => {
             align="center"
             style={styles.infoText}
           >
-            💡 Tip: You can always invite more people later from your settings
+            {t('inviteMembers.tip')}
           </Text>
         </View>
       </View>
@@ -276,10 +285,15 @@ export const InviteMemberScreen = () => {
       <Button
         title={
           isInviting
-            ? 'Sending Invites...'
-            : `Send ${invites.length > 0 ? invites.length : ''} Invite${
-                invites.length === 1 ? '' : 's'
-              }`
+            ? t('inviteMembers.sending')
+            : invites.length === 0
+            ? t('inviteMembers.sendInviteZero')
+            : t(
+                invites.length === 1
+                  ? 'inviteMembers.sendInviteSingular'
+                  : 'inviteMembers.sendInvitePlural',
+                { count: invites.length },
+              )
         }
         onPress={sendInvites}
         variant="primary"

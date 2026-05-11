@@ -1,17 +1,13 @@
 import React, { useRef, useState } from 'react';
 import { View, TextInput, Keyboard } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+import { Pressable, ThemedTextInput } from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#/utils/iconUtils';
 
 interface QuickAddBarProps {
   onAddItem: (name: string, quantity: number) => void;
   visible?: boolean;
 }
-
-const ThemedTextInput = withUnistyles(TextInput, theme => ({
-  placeholderTextColor: theme.colors.textSecondary,
-}));
 
 /**
  * Lightweight inline add bar.

@@ -43,15 +43,6 @@ jest.mock('../queueManager', () => ({
 }));
 
 // Mock the logger
-jest.mock('#/utils/environment', () => ({
-  logger: {
-    info: jest.fn(),
-    debug: jest.fn(),
-    error: jest.fn(),
-    warn: jest.fn(),
-  },
-}));
-
 // Mock the Apollo client for queueManager imports
 jest.mock('../../client', () => ({
   client: { mutate: jest.fn() },

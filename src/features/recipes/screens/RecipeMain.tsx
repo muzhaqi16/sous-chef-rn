@@ -33,6 +33,7 @@ import {
   useTutorialSequence,
   type TutorialStep,
 } from '#hooks/ui/useTutorialSequence';
+import { useTranslation } from 'react-i18next';
 import {
   IngredientSelectorSheet,
   type IngredientSelectorSheetRef,
@@ -41,30 +42,31 @@ import { useRecipeScreen } from '#features/recipes/hooks/useRecipeScreen';
 import { RecipeFilterSheet } from './RecipeFilterSheet';
 import { Text } from '#components/atoms/Text';
 
-// ── Recipe tutorial steps ──
-const RECIPE_TUTORIAL_STEPS: TutorialStep[] = [
+// ── Recipe tutorial steps (titles/subtitles resolved at usage via t()) ──
+type T = (key: string, opts?: Record<string, unknown>) => string;
+const getRecipeTutorialSteps = (t: T): TutorialStep[] => [
   {
     featureId: 'recipe_tutorial_saved',
-    title: 'Saved recipes',
-    subtitle: 'View all your saved and favorited recipes in one place',
+    title: t('recipes.savedRecipes'),
+    subtitle: t('recipes.savedRecipesSubtitle'),
     rectKey: 'savedButton',
   },
   {
     featureId: 'recipe_tutorial_my_recipes',
-    title: 'My recipes',
-    subtitle: 'Create and manage your own custom recipes',
+    title: t('recipes.myRecipes'),
+    subtitle: t('recipes.myRecipesSubtitle'),
     rectKey: 'myRecipesButton',
   },
   {
     featureId: 'recipe_tutorial_dietary',
-    title: 'Dietary restrictions',
-    subtitle: 'Set your dietary preferences to filter recipe results',
+    title: t('recipes.dietaryRestrictions'),
+    subtitle: t('recipes.dietaryRestrictionsSubtitle'),
     rectKey: 'dietaryButton',
   },
   {
     featureId: 'recipe_tutorial_pantry',
-    title: 'Cook with what you have',
-    subtitle: 'Search for recipes based on ingredients in your pantry',
+    title: t('recipes.cookWithPantry'),
+    subtitle: t('recipes.cookWithPantrySubtitle'),
     rectKey: 'pantryButton',
   },
 ];
@@ -84,6 +86,7 @@ const RecipeSearchInput = forwardRef<
   RecipeSearchInputRef,
   RecipeSearchInputProps
 >(({ onSearch, extraActions }, ref) => {
+  const { t } = useTranslation();
   const [inputQuery, setInputQuery] = useState('');
   // `useUnistyles()` is intentional: theme colors are constructed into the
   // dynamic `SearchBarAction[]` prop array passed to `<SearchBar>`. The action
@@ -113,7 +116,7 @@ const RecipeSearchInput = forwardRef<
         onChangeText={setInputQuery}
         onSubmitEditing={() => onSearch(inputQuery)}
         returnKeyType="search"
-        placeholder="Search recipes..."
+        placeholder={t('recipes.searchPlaceholder')}
         rightActions={rightActions}
         testID="recipe-main-search-input"
       />
@@ -124,6 +127,7 @@ const RecipeSearchInput = forwardRef<
 // ── Inner component (thin — delegates to useRecipeScreen facade) ──
 
 const RecipeMainInner: React.FC = () => {
+  const { t } = useTranslation();
   useRenderTime('RecipeMain');
   const { navigate } = useAppNavigation();
   // `useUnistyles()` is intentional: same `SearchBarAction[]` construction
@@ -207,7 +211,7 @@ const RecipeMainInner: React.FC = () => {
   }, [filterSheetVisible]);
 
   const tutorial = useTutorialSequence({
-    steps: RECIPE_TUTORIAL_STEPS,
+    steps: getRecipeTutorialSteps(t),
     targetRects: {
       savedButton: buttonRects.savedButton ?? null,
       myRecipesButton: buttonRects.myRecipesButton ?? null,
@@ -299,7 +303,7 @@ const RecipeMainInner: React.FC = () => {
           onPress={() => navigate('SavedRecipes')}
           hitSlop={8}
           accessibilityRole="button"
-          accessibilityLabel="Saved recipes"
+          accessibilityLabel={t('recipes.savedRecipes')}
         >
           <Icon name="bookmark-outline" size={24} tone="textSecondary" />
         </Pressable>
@@ -327,7 +331,7 @@ const RecipeMainInner: React.FC = () => {
           onPress={() => navigate('MyRecipes')}
           hitSlop={8}
           accessibilityRole="button"
-          accessibilityLabel="My recipes"
+          accessibilityLabel={t('recipes.myRecipes')}
         >
           <Icon name="create-outline" size={24} tone="textSecondary" />
         </Pressable>
@@ -353,7 +357,7 @@ const RecipeMainInner: React.FC = () => {
           onPress={openFilterSheet}
           hitSlop={8}
           accessibilityRole="button"
-          accessibilityLabel="Dietary restrictions"
+          accessibilityLabel={t('recipes.dietaryRestrictions')}
         >
           <Icon
             name="options-outline"
@@ -372,12 +376,14 @@ const RecipeMainInner: React.FC = () => {
       <View style={styles.suggestedHeader}>
         <View style={styles.suggestedTextContainer}>
           <Text size="lg" weight="semibold">
-            {isPantry ? 'Based on your pantry' : 'Need inspiration?'}
+            {isPantry
+              ? t('recipes.basedOnPantry')
+              : t('recipes.needInspiration')}
           </Text>
           <Text size="sm" tone="secondary" style={styles.suggestedSubtitle}>
             {isPantry
-              ? 'Recipes you can make with your ingredients'
-              : 'Here are some recipe ideas to try'}
+              ? t('recipes.recipesYouCanMake')
+              : t('recipes.recipeIdeasToTry')}
           </Text>
         </View>
         <Pressable
@@ -388,7 +394,7 @@ const RecipeMainInner: React.FC = () => {
           onPress={screen.discovery.refresh}
           disabled={screen.discovery.loading}
           accessibilityRole="button"
-          accessibilityLabel="Refresh recipe suggestions"
+          accessibilityLabel={t('recipes.refreshSuggestions')}
         >
           <Icon
             name="refresh"
@@ -405,8 +411,12 @@ const RecipeMainInner: React.FC = () => {
     return (
       <View style={styles.searchResultsHeader}>
         <Text size="sm" weight="semibold" tone="secondary">
-          {screen.searchResults.length} result
-          {screen.searchResults.length !== 1 ? 's' : ''}
+          {t(
+            screen.searchResults.length === 1
+              ? 'recipes.resultSingular'
+              : 'recipes.resultPlural',
+            { count: screen.searchResults.length },
+          )}
         </Text>
         <Pressable
           onPress={() => {
@@ -415,7 +425,7 @@ const RecipeMainInner: React.FC = () => {
           }}
           hitSlop={8}
           accessibilityRole="button"
-          accessibilityLabel="Clear search results"
+          accessibilityLabel={t('recipes.clearSearch')}
         >
           <Icon name="close" size={20} tone="textSecondary" />
         </Pressable>
@@ -432,8 +442,8 @@ const RecipeMainInner: React.FC = () => {
   const recipeListHeader = (
     <>
       <TabScreenHeader
-        label="What to cook?"
-        title="Recipes"
+        label={t('recipes.mainSubtitle')}
+        title={t('recipes.mainTitle')}
         headerRight={headerRight}
       />
       <RecipeSearchInput
@@ -533,23 +543,31 @@ const RecipeMainInner: React.FC = () => {
 
 const noop = () => {};
 
+const RecipeMainFallback: React.FC = () => {
+  const { t } = useTranslation();
+  return (
+    <TabMainScreen testID="recipes-screen">
+      <TabScreenHeader
+        label={t('recipes.mainSubtitle')}
+        title={t('recipes.mainTitle')}
+      />
+      <View style={styles.searchBarContainer}>
+        <SearchBar
+          value=""
+          onChangeText={noop}
+          placeholder={t('recipes.searchPlaceholder')}
+          showSearchIcon
+          editable={false}
+        />
+      </View>
+      <RecipeSkeleton />
+    </TabMainScreen>
+  );
+};
+
 export const RecipeMain: React.FC = () => (
   <DeferredScreen
-    fallback={
-      <TabMainScreen testID="recipes-screen">
-        <TabScreenHeader label="What to cook?" title="Recipes" />
-        <View style={styles.searchBarContainer}>
-          <SearchBar
-            value=""
-            onChangeText={noop}
-            placeholder="Search recipes..."
-            showSearchIcon
-            editable={false}
-          />
-        </View>
-        <RecipeSkeleton />
-      </TabMainScreen>
-    }
+    fallback={<RecipeMainFallback />}
     component={RecipeMainInner}
   />
 );

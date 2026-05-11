@@ -258,9 +258,10 @@ export const SettingRow: React.FC<SettingRowProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   rowWrapper: {
-    padding: theme.spacing.md,
+    paddingVertical: theme.spacing['5'],
+    paddingHorizontal: theme.spacing.md,
     borderBottomWidth: 1,
-    borderColor: theme.colors.divider,
+    borderColor: theme.colors.border,
     backgroundColor: theme.colors.surfaceVariant,
   },
   rowFirst: {

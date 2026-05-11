@@ -1,0 +1,19 @@
+mutation MovePurchasedItemsToPantry($shoppingListId: ID!) {
+  movePurchasedItemsToPantry(shoppingListId: $shoppingListId) {
+    movedCount
+    movedItems {
+      shoppingListItemId
+      pantryItemId
+      itemName
+      quantity
+    }
+    skippedCount
+    skippedItems {
+      shoppingListItemId
+      itemName
+      reason
+    }
+    targetPantryId
+    targetPantryName
+  }
+}

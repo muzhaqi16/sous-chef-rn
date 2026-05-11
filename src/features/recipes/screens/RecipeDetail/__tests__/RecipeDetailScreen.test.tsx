@@ -30,7 +30,7 @@ jest.mock('#hooks/auth/useAuth', () => ({
 }));
 
 // Mock the hook fully
-jest.mock('../useRecipeDetail', () => ({
+jest.mock('../../../hooks/useRecipeDetail', () => ({
   useRecipeDetail: jest.fn(() => ({
     goBack: jest.fn(),
     recipeId: null,
@@ -175,7 +175,9 @@ describe('RecipeDetail', () => {
   });
 
   it('renders loading state when loading', () => {
-    const { useRecipeDetail } = jest.requireMock('../useRecipeDetail');
+    const { useRecipeDetail } = jest.requireMock(
+      '../../../hooks/useRecipeDetail',
+    );
     useRecipeDetail.mockReturnValue({
       goBack: jest.fn(),
       recipeId: null,
@@ -242,7 +244,9 @@ describe('RecipeDetail', () => {
   });
 
   it('renders recipe content when displayData exists', () => {
-    const { useRecipeDetail } = jest.requireMock('../useRecipeDetail');
+    const { useRecipeDetail } = jest.requireMock(
+      '../../../hooks/useRecipeDetail',
+    );
     useRecipeDetail.mockReturnValue({
       goBack: jest.fn(),
       recipeId: null,
@@ -328,7 +332,9 @@ describe('RecipeDetail', () => {
   });
 
   it('shows servings and time metadata', () => {
-    const { useRecipeDetail } = jest.requireMock('../useRecipeDetail');
+    const { useRecipeDetail } = jest.requireMock(
+      '../../../hooks/useRecipeDetail',
+    );
     useRecipeDetail.mockReturnValue({
       goBack: jest.fn(),
       recipeId: null,
@@ -403,7 +409,9 @@ describe('RecipeDetail', () => {
   // --- Branch coverage tests ---
 
   it('renders backendError details when backendError exists', () => {
-    const { useRecipeDetail } = jest.requireMock('../useRecipeDetail');
+    const { useRecipeDetail } = jest.requireMock(
+      '../../../hooks/useRecipeDetail',
+    );
     useRecipeDetail.mockReturnValue({
       goBack: jest.fn(),
       recipeId: 'r1',
@@ -469,7 +477,9 @@ describe('RecipeDetail', () => {
   });
 
   it('renders "Recipe not found in database" when recipeId but no backendRecipe and no error', () => {
-    const { useRecipeDetail } = jest.requireMock('../useRecipeDetail');
+    const { useRecipeDetail } = jest.requireMock(
+      '../../../hooks/useRecipeDetail',
+    );
     useRecipeDetail.mockReturnValue({
       goBack: jest.fn(),
       recipeId: 'r1',
@@ -535,7 +545,9 @@ describe('RecipeDetail', () => {
   });
 
   it('renders dietary tags for external recipes', () => {
-    const { useRecipeDetail } = jest.requireMock('../useRecipeDetail');
+    const { useRecipeDetail } = jest.requireMock(
+      '../../../hooks/useRecipeDetail',
+    );
     useRecipeDetail.mockReturnValue({
       goBack: jest.fn(),
       recipeId: null,
@@ -618,7 +630,9 @@ describe('RecipeDetail', () => {
   });
 
   it('renders saved recipe folder, tags, and notes for backend recipes', () => {
-    const { useRecipeDetail } = jest.requireMock('../useRecipeDetail');
+    const { useRecipeDetail } = jest.requireMock(
+      '../../../hooks/useRecipeDetail',
+    );
     useRecipeDetail.mockReturnValue({
       goBack: jest.fn(),
       recipeId: 'r1',
@@ -699,7 +713,9 @@ describe('RecipeDetail', () => {
   });
 
   it('renders "Mark cooked" text when cookedCount is 0', () => {
-    const { useRecipeDetail } = jest.requireMock('../useRecipeDetail');
+    const { useRecipeDetail } = jest.requireMock(
+      '../../../hooks/useRecipeDetail',
+    );
     useRecipeDetail.mockReturnValue({
       goBack: jest.fn(),
       recipeId: 'r1',
@@ -771,7 +787,9 @@ describe('RecipeDetail', () => {
   });
 
   it('renders source attribution with sourceName', () => {
-    const { useRecipeDetail } = jest.requireMock('../useRecipeDetail');
+    const { useRecipeDetail } = jest.requireMock(
+      '../../../hooks/useRecipeDetail',
+    );
     useRecipeDetail.mockReturnValue({
       goBack: jest.fn(),
       recipeId: null,
@@ -848,7 +866,9 @@ describe('RecipeDetail', () => {
   });
 
   it('renders "Recipe not found" when no recipeId and no error', () => {
-    const { useRecipeDetail } = jest.requireMock('../useRecipeDetail');
+    const { useRecipeDetail } = jest.requireMock(
+      '../../../hooks/useRecipeDetail',
+    );
     useRecipeDetail.mockReturnValue({
       goBack: jest.fn(),
       recipeId: null,
@@ -914,7 +934,9 @@ describe('RecipeDetail', () => {
   });
 
   it('does not render image section when no image', () => {
-    const { useRecipeDetail } = jest.requireMock('../useRecipeDetail');
+    const { useRecipeDetail } = jest.requireMock(
+      '../../../hooks/useRecipeDetail',
+    );
     useRecipeDetail.mockReturnValue({
       goBack: jest.fn(),
       recipeId: null,
@@ -987,7 +1009,9 @@ describe('RecipeDetail', () => {
   });
 
   it('renders "Adding..." when addingToList is true', () => {
-    const { useRecipeDetail } = jest.requireMock('../useRecipeDetail');
+    const { useRecipeDetail } = jest.requireMock(
+      '../../../hooks/useRecipeDetail',
+    );
     useRecipeDetail.mockReturnValue({
       goBack: jest.fn(),
       recipeId: null,
@@ -1059,7 +1083,9 @@ describe('RecipeDetail', () => {
   });
 
   it('renders "None" for folder when savedFolder is null', () => {
-    const { useRecipeDetail } = jest.requireMock('../useRecipeDetail');
+    const { useRecipeDetail } = jest.requireMock(
+      '../../../hooks/useRecipeDetail',
+    );
     useRecipeDetail.mockReturnValue({
       goBack: jest.fn(),
       recipeId: 'r1',
@@ -1131,7 +1157,9 @@ describe('RecipeDetail', () => {
   });
 
   it('renders with saving state', () => {
-    const { useRecipeDetail } = jest.requireMock('../useRecipeDetail');
+    const { useRecipeDetail } = jest.requireMock(
+      '../../../hooks/useRecipeDetail',
+    );
     useRecipeDetail.mockReturnValue({
       goBack: jest.fn(),
       recipeId: null,
@@ -1204,7 +1232,9 @@ describe('RecipeDetail', () => {
   });
 
   it('renders with preloading state', () => {
-    const { useRecipeDetail } = jest.requireMock('../useRecipeDetail');
+    const { useRecipeDetail } = jest.requireMock(
+      '../../../hooks/useRecipeDetail',
+    );
     useRecipeDetail.mockReturnValue({
       goBack: jest.fn(),
       recipeId: null,
@@ -1270,7 +1300,9 @@ describe('RecipeDetail', () => {
   });
 
   it('renders with instructions present', () => {
-    const { useRecipeDetail } = jest.requireMock('../useRecipeDetail');
+    const { useRecipeDetail } = jest.requireMock(
+      '../../../hooks/useRecipeDetail',
+    );
     useRecipeDetail.mockReturnValue({
       goBack: jest.fn(),
       recipeId: null,
@@ -1347,7 +1379,9 @@ describe('RecipeDetail', () => {
   });
 
   it('renders with added ingredients highlighted', () => {
-    const { useRecipeDetail } = jest.requireMock('../useRecipeDetail');
+    const { useRecipeDetail } = jest.requireMock(
+      '../../../hooks/useRecipeDetail',
+    );
     useRecipeDetail.mockReturnValue({
       goBack: jest.fn(),
       recipeId: null,
@@ -1422,7 +1456,9 @@ describe('RecipeDetail', () => {
   });
 
   it('renders marking as cooked state', () => {
-    const { useRecipeDetail } = jest.requireMock('../useRecipeDetail');
+    const { useRecipeDetail } = jest.requireMock(
+      '../../../hooks/useRecipeDetail',
+    );
     useRecipeDetail.mockReturnValue({
       goBack: jest.fn(),
       recipeId: 'r1',
@@ -1494,7 +1530,9 @@ describe('RecipeDetail', () => {
   });
 
   it('renders backend instructions with step/text format correctly', () => {
-    const { useRecipeDetail } = jest.requireMock('../useRecipeDetail');
+    const { useRecipeDetail } = jest.requireMock(
+      '../../../hooks/useRecipeDetail',
+    );
     useRecipeDetail.mockReturnValue({
       goBack: jest.fn(),
       recipeId: 'r1',
@@ -1571,7 +1609,9 @@ describe('RecipeDetail', () => {
   });
 
   it('renders no-image header with back button when image is missing', () => {
-    const { useRecipeDetail } = jest.requireMock('../useRecipeDetail');
+    const { useRecipeDetail } = jest.requireMock(
+      '../../../hooks/useRecipeDetail',
+    );
     useRecipeDetail.mockReturnValue({
       goBack: jest.fn(),
       recipeId: 'r1',
@@ -1645,7 +1685,9 @@ describe('RecipeDetail', () => {
   });
 
   it('does not show "0 min" when readyInMinutes is 0', () => {
-    const { useRecipeDetail } = jest.requireMock('../useRecipeDetail');
+    const { useRecipeDetail } = jest.requireMock(
+      '../../../hooks/useRecipeDetail',
+    );
     useRecipeDetail.mockReturnValue({
       goBack: jest.fn(),
       recipeId: null,

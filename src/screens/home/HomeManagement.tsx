@@ -1,12 +1,10 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { View, Text, ScrollView } from 'react-native';
 import {
-  View,
-  Text,
-  ActivityIndicator,
-  RefreshControl,
-  ScrollView,
-} from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+  Pressable,
+  PrimaryActivityIndicator,
+  ThemedRefreshControl,
+} from '#components/atoms/themedComponents';
 import Animated, {
   LinearTransition,
   FadeInDown,
@@ -16,16 +14,7 @@ import { TIMING } from '#constants/animations';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Header } from '#components/molecules/Header';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
-
-const PrimaryActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
-  color: theme.colors.primary,
-}));
-
-const ThemedRefreshControl = withUnistyles(RefreshControl, theme => ({
-  tintColor: theme.colors.primary,
-  colors: [theme.colors.primary],
-}));
+import { StyleSheet } from 'react-native-unistyles';
 import { useHomeManagement } from '#hooks/home/hooks/useHomeManagement';
 import { useInviteUserModal } from '#/hooks/useInviteUserModal';
 import { BaseInput } from '#/components/atoms/BaseInput/BaseInput';

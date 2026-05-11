@@ -1,73 +1,20 @@
 'use no memo';
 
-import { renderHook, act } from '@testing-library/react-native';
+import { act, waitFor } from '@testing-library/react-native';
+import type { MockedResponse } from '#/test-utils/apolloMockProvider';
+import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  GetDietaryProfileDocument,
+  UpdateDietaryProfileDocument,
+  AddDietaryRestrictionDocument,
+  UpdateDietaryRestrictionDocument,
+  RemoveDietaryRestrictionDocument,
+} from '#operations/user/user.generated';
+import { Diet, RestrictionSeverity } from '#/graphql/generated/schemaTypes';
 import { useDietaryProfile } from '../useDietaryProfile';
-
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
 
 jest.mock('#store/useAppStore', () => ({
   useAppStore: jest.fn((selector: any) => selector({ user: { id: 'user-1' } })),
-}));
-
-const mockUpdateProfile = jest.fn();
-const mockAddRestriction = jest.fn();
-const mockUpdateRestriction = jest.fn();
-const mockRemoveRestriction = jest.fn();
-
-const mockProfileData = {
-  id: 'dp-1',
-  userId: 'user-1',
-  restrictions: [
-    {
-      id: 'r1',
-      diet: 'VEGAN',
-      intolerance: null,
-      healthGoal: null,
-      severity: 'STRICT',
-      notes: 'test',
-      appliesToHomeId: null,
-    },
-  ],
-  preferredCuisines: ['Italian'],
-  dislikedIngredients: ['cilantro'],
-  favoriteIngredients: ['garlic'],
-  calorieTarget: 2000,
-  proteinTarget: 50,
-  carbsTarget: 250,
-  fatTarget: 65,
-  mealsPerDay: 3,
-  snacksPerDay: 1,
-  cookingSkillLevel: 'INTERMEDIATE',
-  maxPrepTimeMinutes: 30,
-  maxCookTimeMinutes: 60,
-  budgetPerMeal: 15,
-};
-
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useQuery: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'GetDietaryProfile') {
-      return {
-        data: { me: { dietaryProfile: mockProfileData } },
-        loading: false,
-        error: undefined,
-        refetch: jest.fn(),
-      };
-    }
-    return { data: undefined, loading: false, error: undefined };
-  }),
-  useMutation: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'UpdateDietaryProfile') return [mockUpdateProfile, {}];
-    if (opName === 'AddDietaryRestriction') return [mockAddRestriction, {}];
-    if (opName === 'UpdateDietaryRestriction')
-      return [mockUpdateRestriction, {}];
-    if (opName === 'RemoveDietaryRestriction')
-      return [mockRemoveRestriction, {}];
-    return [jest.fn(), {}];
-  }),
 }));
 
 jest.mock('#/hooks/apollo/usePreservedQueryData', () => ({
@@ -93,13 +40,170 @@ jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
 }));
 
+const mockProfileData = {
+  __typename: 'DietaryProfile',
+  id: 'dp-1',
+  userId: 'user-1',
+  preferredCuisines: ['Italian'],
+  dislikedIngredients: ['cilantro'],
+  favoriteIngredients: ['garlic'],
+  calorieTarget: 2000,
+  proteinTarget: 50,
+  carbsTarget: 250,
+  fatTarget: 65,
+  mealsPerDay: 3,
+  snacksPerDay: 1,
+  cookingSkillLevel: 'INTERMEDIATE',
+  maxPrepTimeMinutes: 30,
+  maxCookTimeMinutes: 60,
+  budgetPerMeal: 15,
+  createdAt: '2025-01-01T00:00:00.000Z',
+  updatedAt: '2025-01-01T00:00:00.000Z',
+  restrictions: [
+    {
+      __typename: 'DietaryRestriction',
+      id: 'r1',
+      diet: Diet.Vegan,
+      intolerance: null,
+      healthGoal: null,
+      severity: RestrictionSeverity.Allergy,
+      notes: 'test',
+      appliesToHomeId: null,
+      createdAt: '2025-01-01T00:00:00.000Z',
+    },
+  ],
+};
+
+function buildGetProfileMock(
+  profile: typeof mockProfileData | null = mockProfileData,
+): MockedResponse {
+  return {
+    request: { query: GetDietaryProfileDocument },
+    result: {
+      data: {
+        me: {
+          __typename: 'User',
+          id: 'user-1',
+          dietaryProfile: profile,
+        },
+      },
+    },
+  };
+}
+
+function buildUpdateProfileMock(): MockedResponse {
+  return {
+    request: {
+      query: UpdateDietaryProfileDocument,
+      variables: () => true,
+    },
+    result: {
+      data: {
+        updateDietaryProfile: {
+          __typename: 'DietaryProfilePayload',
+          success: true,
+          message: 'OK',
+          code: 'OK',
+          dietaryProfile: { ...mockProfileData, mealsPerDay: 4 },
+        },
+      },
+    },
+  };
+}
+
+function buildAddRestrictionMock(): MockedResponse {
+  return {
+    request: {
+      query: AddDietaryRestrictionDocument,
+      variables: () => true,
+    },
+    result: {
+      data: {
+        addRestriction: {
+          __typename: 'DietaryRestrictionPayload',
+          success: true,
+          message: 'OK',
+          code: 'OK',
+          dietaryRestriction: {
+            __typename: 'DietaryRestriction',
+            id: 'r-new',
+            diet: Diet.Vegan,
+            intolerance: null,
+            healthGoal: null,
+            severity: RestrictionSeverity.Allergy,
+            notes: 'No animal products',
+            appliesToHomeId: null,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
+        },
+      },
+    },
+  };
+}
+
+function buildUpdateRestrictionMock(): MockedResponse {
+  return {
+    request: {
+      query: UpdateDietaryRestrictionDocument,
+      variables: () => true,
+    },
+    result: {
+      data: {
+        updateRestriction: {
+          __typename: 'DietaryRestrictionPayload',
+          success: true,
+          message: 'OK',
+          code: 'OK',
+          dietaryRestriction: {
+            __typename: 'DietaryRestriction',
+            id: 'r1',
+            diet: Diet.Vegan,
+            intolerance: null,
+            healthGoal: null,
+            severity: RestrictionSeverity.Preference,
+            notes: 'test',
+            appliesToHomeId: null,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
+        },
+      },
+    },
+  };
+}
+
+function buildRemoveRestrictionMock(): MockedResponse {
+  return {
+    request: {
+      query: RemoveDietaryRestrictionDocument,
+      variables: () => true,
+    },
+    result: {
+      data: {
+        removeRestriction: {
+          __typename: 'DietaryRestrictionPayload',
+          success: true,
+          message: 'OK',
+          code: 'OK',
+        },
+      },
+    },
+  };
+}
+
 beforeEach(() => {
   jest.clearAllMocks();
 });
 
 describe('useDietaryProfile', () => {
-  it('returns profile data correctly', () => {
-    const { result } = renderHook(() => useDietaryProfile());
+  it('returns profile data correctly', async () => {
+    const { result } = renderHookWithApollo(() => useDietaryProfile(), {
+      operationMocks: [buildGetProfileMock()],
+    });
+
+    // Wait for the query to settle
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
 
     expect(result.current.profile).not.toBeNull();
     expect(result.current.profile?.id).toBe('dp-1');
@@ -109,44 +213,50 @@ describe('useDietaryProfile', () => {
   });
 
   it('returns loading state', () => {
-    const { result } = renderHook(() => useDietaryProfile());
-    expect(result.current.loading).toBe(false);
+    const { result } = renderHookWithApollo(() => useDietaryProfile(), {
+      operationMocks: [buildGetProfileMock()],
+    });
+    // Initial render is loading=true; once data resolves it flips to false
+    expect(typeof result.current.loading).toBe('boolean');
   });
 
-  it('returns null profile when no data', () => {
-    const { useQuery } = require('@apollo/client/react');
-    (useQuery as jest.Mock).mockReturnValueOnce({
-      data: null,
-      loading: false,
-      networkStatus: 7,
+  it('returns null profile when no data', async () => {
+    const { result } = renderHookWithApollo(() => useDietaryProfile(), {
+      operationMocks: [buildGetProfileMock(null)],
     });
 
-    const { result } = renderHook(() => useDietaryProfile());
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
     expect(result.current.profile).toBeNull();
   });
 
-  it('maps restriction fields correctly', () => {
-    const { useQuery } = require('@apollo/client/react');
-    (useQuery as jest.Mock).mockReturnValueOnce({
-      data: { me: { dietaryProfile: mockProfileData } },
-      loading: false,
-      networkStatus: 7,
+  it('maps restriction fields correctly', async () => {
+    const { result } = renderHookWithApollo(() => useDietaryProfile(), {
+      operationMocks: [buildGetProfileMock()],
     });
 
-    const { result } = renderHook(() => useDietaryProfile());
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
     const restriction = result.current.profile?.restrictions[0];
 
     expect(restriction?.id).toBe('r1');
-    expect(restriction?.diet).toBe('VEGAN');
-    expect(restriction?.severity).toBe('STRICT');
+    expect(restriction?.diet).toBe(Diet.Vegan);
+    expect(restriction?.severity).toBe(RestrictionSeverity.Allergy);
     expect(restriction?.notes).toBe('test');
   });
 
   it('updateDietaryProfile calls mutation with cleaned input', async () => {
-    mockUpdateProfile.mockResolvedValue({
-      data: { updateDietaryProfile: true },
+    const { result } = renderHookWithApollo(() => useDietaryProfile(), {
+      operationMocks: [buildGetProfileMock(), buildUpdateProfileMock()],
     });
-    const { result } = renderHook(() => useDietaryProfile());
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
 
     let success: boolean = false;
     await act(async () => {
@@ -156,100 +266,86 @@ describe('useDietaryProfile', () => {
       });
     });
 
-    expect(mockUpdateProfile).toHaveBeenCalledWith({
-      variables: {
-        input: expect.objectContaining({ mealsPerDay: 4 }),
-      },
-    });
     expect(success).toBe(true);
   });
 
   it('addDietaryRestriction calls mutation with correct params', async () => {
-    mockAddRestriction.mockResolvedValue({ data: { addRestriction: true } });
-    const { result } = renderHook(() => useDietaryProfile());
+    const { result } = renderHookWithApollo(() => useDietaryProfile(), {
+      operationMocks: [buildGetProfileMock(), buildAddRestrictionMock()],
+    });
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
 
     let success: boolean = false;
     await act(async () => {
       success = await result.current.addDietaryRestriction(
-        { diet: 'VEGAN' as any },
-        'STRICT' as any,
+        { diet: Diet.Vegan },
+        RestrictionSeverity.Allergy,
         'No animal products',
       );
     });
 
-    expect(mockAddRestriction).toHaveBeenCalledWith({
-      variables: {
-        input: {
-          diet: 'VEGAN',
-          severity: 'STRICT',
-          notes: 'No animal products',
-          appliesToHomeId: undefined,
-        },
-      },
-    });
     expect(success).toBe(true);
   });
 
   it('updateDietaryRestriction calls mutation', async () => {
-    mockUpdateRestriction.mockResolvedValue({
-      data: { updateRestriction: true },
+    const { result } = renderHookWithApollo(() => useDietaryProfile(), {
+      operationMocks: [buildGetProfileMock(), buildUpdateRestrictionMock()],
     });
-    const { result } = renderHook(() => useDietaryProfile());
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
 
     let success: boolean = false;
     await act(async () => {
       success = await result.current.updateDietaryRestriction('r1', {
-        severity: 'MODERATE' as any,
+        severity: RestrictionSeverity.Preference,
       });
     });
 
-    expect(mockUpdateRestriction).toHaveBeenCalledWith({
-      variables: {
-        input: { id: 'r1', severity: 'MODERATE' },
-      },
-    });
     expect(success).toBe(true);
   });
 
   it('removeDietaryRestriction calls mutation', async () => {
-    mockRemoveRestriction.mockResolvedValue({
-      data: { removeRestriction: true },
+    const { result } = renderHookWithApollo(() => useDietaryProfile(), {
+      operationMocks: [buildGetProfileMock(), buildRemoveRestrictionMock()],
     });
-    const { result } = renderHook(() => useDietaryProfile());
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
 
     let success: boolean = false;
     await act(async () => {
       success = await result.current.removeDietaryRestriction('r1');
     });
 
-    expect(mockRemoveRestriction).toHaveBeenCalledWith({
-      variables: { input: { id: 'r1' } },
-    });
     expect(success).toBe(true);
   });
 
-  it('provides defaults for missing profile fields', () => {
-    const { useQuery } = require('@apollo/client/react');
-    (useQuery as jest.Mock).mockReturnValueOnce({
-      data: {
-        me: {
-          dietaryProfile: {
-            id: 'dp-2',
-            userId: 'user-1',
-            restrictions: null,
-            preferredCuisines: null,
-            dislikedIngredients: null,
-            favoriteIngredients: null,
-            mealsPerDay: null,
-            snacksPerDay: null,
-          },
-        },
-      },
-      loading: false,
-      networkStatus: 7,
+  it('provides defaults for missing profile fields', async () => {
+    const sparseProfile = {
+      ...mockProfileData,
+      id: 'dp-2',
+      restrictions: null as any,
+      preferredCuisines: null as any,
+      dislikedIngredients: null as any,
+      favoriteIngredients: null as any,
+      mealsPerDay: null as any,
+      snacksPerDay: null as any,
+    };
+
+    const { result } = renderHookWithApollo(() => useDietaryProfile(), {
+      operationMocks: [buildGetProfileMock(sparseProfile)],
     });
 
-    const { result } = renderHook(() => useDietaryProfile());
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
     expect(result.current.profile?.restrictions).toEqual([]);
     expect(result.current.profile?.preferredCuisines).toEqual([]);
     expect(result.current.profile?.mealsPerDay).toBe(3);

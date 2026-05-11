@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
-import { View, Image, ActivityIndicator } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+import { View, Image } from 'react-native';
+import {
+  Pressable,
+  PrimaryActivityIndicator,
+  WhiteActivityIndicator,
+} from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { ImagePicker, ImageFile } from './ImagePicker';
 import { useImageUpload } from '#hooks/useImageUpload';
@@ -9,14 +13,6 @@ import { commonStyles } from '#/styles/commonStyles';
 import { ImageUploadPurpose } from '#/graphql/generated/schemaTypes';
 import { executeAsyncWithCleanup } from '#/utils/compilerSafeWrappers';
 import { Text } from '#components/atoms/Text';
-
-const WhiteActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
-  color: theme.colors.white,
-}));
-
-const PrimaryActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
-  color: theme.colors.primary,
-}));
 
 interface ImageUploadFieldProps {
   label?: string;

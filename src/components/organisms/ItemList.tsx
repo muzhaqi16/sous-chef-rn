@@ -151,7 +151,7 @@ export const ItemList: React.FC<ItemListProps> = ({
   onRefresh,
   onSwipeableWillOpen,
   onEndReached,
-  onEndReachedThreshold = 0.5,
+  onEndReachedThreshold = FLASHLIST_DEFAULTS.fullScreen.onEndReachedThreshold,
   ListHeaderComponent,
   ListFooterComponent,
   testIDPrefix,

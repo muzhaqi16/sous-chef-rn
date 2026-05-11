@@ -1,0 +1,42 @@
+# Operations composed locally per the Feature API Boundary Convention since
+# pantry/graphql and shoppingList/graphql are internal to those features.
+mutation AddItemToShoppingList($input: CreateShoppingListItemInput!) {
+  addItemToShoppingList(input: $input) {
+    success
+    message
+    code
+    shoppingListItem {
+      ...ShoppingListItemDisplayFragment
+    }
+  }
+}
+
+mutation CreatePantryItem($input: CreatePantryItemInput!) {
+  createPantryItem(input: $input) {
+    success
+    message
+    code
+    pantryItem {
+      ...PantryItemDisplay
+    }
+  }
+}
+
+mutation RestockPantryItem($id: ID!, $input: RestockPantryItemInput!) {
+  restockPantryItem(id: $id, input: $input) {
+    success
+    message
+    code
+    validUnits
+    pantryItemUsage {
+      id
+      quantityUsed
+      purpose
+      costPerUnit
+      totalCost
+      pantryItem {
+        ...PantryItemDisplay
+      }
+    }
+  }
+}

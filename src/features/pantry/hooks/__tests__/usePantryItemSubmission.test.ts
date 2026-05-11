@@ -1,28 +1,16 @@
 'use no memo';
 
-import { renderHook, act } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
+import {
+  recordMock,
+  renderHookWithApollo,
+} from '#/test-utils/apolloMockProvider';
+import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { alertService } from '#/services/alertService';
 import { usePantryItemSubmission } from '../usePantryItemSubmission';
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
-
-const mockCreatePantryItem = jest.fn();
-const mockRestockPantryItem = jest.fn();
-
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useMutation: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'CreatePantryItem') {
-      return [mockCreatePantryItem, { loading: false }];
-    }
-    if (opName === 'RestockPantryItem') {
-      return [mockRestockPantryItem, {}];
-    }
-    return [jest.fn(), {}];
-  }),
-}));
 
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),
@@ -80,17 +68,41 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
+function createMock(success = true) {
+  return recordMock(CreatePantryItemDocument, {
+    data: {
+      createPantryItem: {
+        __typename: 'PantryItemPayload',
+        success,
+        message: '',
+        code: success ? 'SUCCESS' : 'FAILED',
+        pantryItem: success ? { __typename: 'PantryItem', id: 'new-1' } : null,
+      },
+    },
+  });
+}
+
+function createErrorMock() {
+  return recordMock(CreatePantryItemDocument, {
+    error: new Error('Network error'),
+  });
+}
+
 describe('usePantryItemSubmission', () => {
   it('returns handleConfirm and loading', () => {
-    const { result } = renderHook(() => usePantryItemSubmission(defaultParams));
+    const { result } = renderHookWithApollo(() =>
+      usePantryItemSubmission(defaultParams),
+    );
 
     expect(typeof result.current.handleConfirm).toBe('function');
     expect(result.current.loading).toBe(false);
   });
 
   it('shows error and navigates to page 0 when itemName is empty', async () => {
-    const { result } = renderHook(() =>
-      usePantryItemSubmission({ ...defaultParams, itemName: '  ' }),
+    const m = createMock();
+    const { result } = renderHookWithApollo(
+      () => usePantryItemSubmission({ ...defaultParams, itemName: '  ' }),
+      { operationMocks: [m.mock] },
     );
 
     await act(async () => {
@@ -105,8 +117,10 @@ describe('usePantryItemSubmission', () => {
   });
 
   it('shows error when quantity is invalid', async () => {
-    const { result } = renderHook(() =>
-      usePantryItemSubmission({ ...defaultParams, quantityInput: 'abc' }),
+    const m = createMock();
+    const { result } = renderHookWithApollo(
+      () => usePantryItemSubmission({ ...defaultParams, quantityInput: 'abc' }),
+      { operationMocks: [m.mock] },
     );
 
     await act(async () => {
@@ -121,8 +135,10 @@ describe('usePantryItemSubmission', () => {
   });
 
   it('shows error when quantity is zero', async () => {
-    const { result } = renderHook(() =>
-      usePantryItemSubmission({ ...defaultParams, quantityInput: '0' }),
+    const m = createMock();
+    const { result } = renderHookWithApollo(
+      () => usePantryItemSubmission({ ...defaultParams, quantityInput: '0' }),
+      { operationMocks: [m.mock] },
     );
 
     await act(async () => {
@@ -136,92 +152,87 @@ describe('usePantryItemSubmission', () => {
   });
 
   it('does nothing when pantryId is undefined', async () => {
-    const { result } = renderHook(() =>
-      usePantryItemSubmission({ ...defaultParams, pantryId: undefined }),
+    const m = createMock();
+    const { result } = renderHookWithApollo(
+      () => usePantryItemSubmission({ ...defaultParams, pantryId: undefined }),
+      { operationMocks: [m.mock] },
     );
 
     await act(async () => {
       await result.current.handleConfirm();
     });
 
-    expect(mockCreatePantryItem).not.toHaveBeenCalled();
+    expect(m.fired).toEqual([]);
   });
 
   it('calls createPantryItem with correct input on success', async () => {
-    mockCreatePantryItem.mockResolvedValue({
-      data: { createPantryItem: { pantryItem: { id: 'new-1' } } },
-    });
-
-    const { result } = renderHook(() => usePantryItemSubmission(defaultParams));
+    const m = createMock();
+    const { result } = renderHookWithApollo(
+      () => usePantryItemSubmission(defaultParams),
+      { operationMocks: [m.mock] },
+    );
 
     await act(async () => {
       await result.current.handleConfirm();
     });
 
-    expect(mockCreatePantryItem).toHaveBeenCalledWith({
-      variables: {
-        input: expect.objectContaining({
-          pantryId: 'pantry-1',
-          quantity: 2,
-          item: expect.objectContaining({ name: 'Milk' }),
-        }),
-      },
+    expect(m.fired).toContainEqual({
+      input: expect.objectContaining({
+        pantryId: 'pantry-1',
+        quantity: 2,
+        item: expect.objectContaining({ name: 'Milk' }),
+      }),
     });
     expect(mockOnSuccess).toHaveBeenCalled();
   });
 
   it('includes tags when provided', async () => {
-    mockCreatePantryItem.mockResolvedValue({
-      data: { createPantryItem: { pantryItem: { id: 'new-1' } } },
-    });
-
-    const { result } = renderHook(() =>
-      usePantryItemSubmission({ ...defaultParams, tags: 'dairy, organic' }),
+    const m = createMock();
+    const { result } = renderHookWithApollo(
+      () =>
+        usePantryItemSubmission({ ...defaultParams, tags: 'dairy, organic' }),
+      { operationMocks: [m.mock] },
     );
 
     await act(async () => {
       await result.current.handleConfirm();
     });
 
-    expect(mockCreatePantryItem).toHaveBeenCalledWith({
-      variables: {
-        input: expect.objectContaining({
-          tags: ['dairy', 'organic'],
-        }),
-      },
+    expect(m.fired).toContainEqual({
+      input: expect.objectContaining({
+        tags: ['dairy', 'organic'],
+      }),
     });
   });
 
   it('includes thresholds when minQuantity provided', async () => {
-    mockCreatePantryItem.mockResolvedValue({
-      data: { createPantryItem: { pantryItem: { id: 'new-1' } } },
-    });
-
-    const { result } = renderHook(() =>
-      usePantryItemSubmission({
-        ...defaultParams,
-        minQuantity: '1',
-        restockQuantity: '5',
-      }),
+    const m = createMock();
+    const { result } = renderHookWithApollo(
+      () =>
+        usePantryItemSubmission({
+          ...defaultParams,
+          minQuantity: '1',
+          restockQuantity: '5',
+        }),
+      { operationMocks: [m.mock] },
     );
 
     await act(async () => {
       await result.current.handleConfirm();
     });
 
-    expect(mockCreatePantryItem).toHaveBeenCalledWith({
-      variables: {
-        input: expect.objectContaining({
-          thresholds: { minQuantity: 1, restockQuantity: 5 },
-        }),
-      },
+    expect(m.fired).toContainEqual({
+      input: expect.objectContaining({
+        thresholds: { minQuantity: 1, restockQuantity: 5 },
+      }),
     });
   });
 
   it('shows error alert when mutation fails', async () => {
-    mockCreatePantryItem.mockRejectedValue(new Error('Network error'));
-
-    const { result } = renderHook(() => usePantryItemSubmission(defaultParams));
+    const { result } = renderHookWithApollo(
+      () => usePantryItemSubmission(defaultParams),
+      { operationMocks: [createErrorMock().mock] },
+    );
 
     await act(async () => {
       await result.current.handleConfirm();
@@ -235,152 +246,136 @@ describe('usePantryItemSubmission', () => {
 
   it('includes expiration date when set', async () => {
     const date = new Date('2025-06-15T00:00:00.000Z');
-    mockCreatePantryItem.mockResolvedValue({
-      data: { createPantryItem: { pantryItem: { id: 'new-1' } } },
-    });
-
-    const { result } = renderHook(() =>
-      usePantryItemSubmission({ ...defaultParams, expirationDate: date }),
+    const m = createMock();
+    const { result } = renderHookWithApollo(
+      () => usePantryItemSubmission({ ...defaultParams, expirationDate: date }),
+      { operationMocks: [m.mock] },
     );
 
     await act(async () => {
       await result.current.handleConfirm();
     });
 
-    expect(mockCreatePantryItem).toHaveBeenCalledWith({
-      variables: {
-        input: expect.objectContaining({
-          expiresAt: '2025-06-15',
-        }),
-      },
+    expect(m.fired).toContainEqual({
+      input: expect.objectContaining({
+        expiresAt: '2025-06-15',
+      }),
     });
   });
 
   it('includes brand when provided', async () => {
-    mockCreatePantryItem.mockResolvedValue({
-      data: { createPantryItem: { pantryItem: { id: 'new-1' } } },
-    });
-
-    const { result } = renderHook(() =>
-      usePantryItemSubmission({ ...defaultParams, brand: 'Organic Valley' }),
+    const m = createMock();
+    const { result } = renderHookWithApollo(
+      () =>
+        usePantryItemSubmission({ ...defaultParams, brand: 'Organic Valley' }),
+      { operationMocks: [m.mock] },
     );
 
     await act(async () => {
       await result.current.handleConfirm();
     });
 
-    expect(mockCreatePantryItem).toHaveBeenCalledWith({
-      variables: {
-        input: expect.objectContaining({
-          item: expect.objectContaining({ brand: 'Organic Valley' }),
-        }),
-      },
+    expect(m.fired).toContainEqual({
+      input: expect.objectContaining({
+        item: expect.objectContaining({ brand: 'Organic Valley' }),
+      }),
     });
   });
 
   it('includes storage location when selectedStorageLocationId is set', async () => {
-    mockCreatePantryItem.mockResolvedValue({
-      data: { createPantryItem: { pantryItem: { id: 'new-1' } } },
-    });
-
-    const { result } = renderHook(() =>
-      usePantryItemSubmission({
-        ...defaultParams,
-        selectedStorageLocationId: 'loc-1',
-      }),
+    const m = createMock();
+    const { result } = renderHookWithApollo(
+      () =>
+        usePantryItemSubmission({
+          ...defaultParams,
+          selectedStorageLocationId: 'loc-1',
+        }),
+      { operationMocks: [m.mock] },
     );
 
     await act(async () => {
       await result.current.handleConfirm();
     });
 
-    expect(mockCreatePantryItem).toHaveBeenCalledWith({
-      variables: {
-        input: expect.objectContaining({
-          storage: expect.objectContaining({ storageLocationId: 'loc-1' }),
-        }),
-      },
+    expect(m.fired).toContainEqual({
+      input: expect.objectContaining({
+        storage: expect.objectContaining({ storageLocationId: 'loc-1' }),
+      }),
     });
   });
 
   it('includes storageLocation name when no selectedStorageLocationId', async () => {
-    mockCreatePantryItem.mockResolvedValue({
-      data: { createPantryItem: { pantryItem: { id: 'new-1' } } },
-    });
-
-    const { result } = renderHook(() =>
-      usePantryItemSubmission({
-        ...defaultParams,
-        storageLocation: 'Top Shelf',
-      }),
+    const m = createMock();
+    const { result } = renderHookWithApollo(
+      () =>
+        usePantryItemSubmission({
+          ...defaultParams,
+          storageLocation: 'Top Shelf',
+        }),
+      { operationMocks: [m.mock] },
     );
 
     await act(async () => {
       await result.current.handleConfirm();
     });
 
-    expect(mockCreatePantryItem).toHaveBeenCalledWith({
-      variables: {
-        input: expect.objectContaining({
-          storage: expect.objectContaining({
-            storageLocationName: 'Top Shelf',
-          }),
+    expect(m.fired).toContainEqual({
+      input: expect.objectContaining({
+        storage: expect.objectContaining({
+          storageLocationName: 'Top Shelf',
         }),
-      },
+      }),
     });
   });
 
   it('includes storageNotes when provided', async () => {
-    mockCreatePantryItem.mockResolvedValue({
-      data: { createPantryItem: { pantryItem: { id: 'new-1' } } },
-    });
-
-    const { result } = renderHook(() =>
-      usePantryItemSubmission({ ...defaultParams, storageNotes: 'Keep cool' }),
+    const m = createMock();
+    const { result } = renderHookWithApollo(
+      () =>
+        usePantryItemSubmission({
+          ...defaultParams,
+          storageNotes: 'Keep cool',
+        }),
+      { operationMocks: [m.mock] },
     );
 
     await act(async () => {
       await result.current.handleConfirm();
     });
 
-    expect(mockCreatePantryItem).toHaveBeenCalledWith({
-      variables: {
-        input: expect.objectContaining({
-          storage: expect.objectContaining({ storageNotes: 'Keep cool' }),
-        }),
-      },
+    expect(m.fired).toContainEqual({
+      input: expect.objectContaining({
+        storage: expect.objectContaining({ storageNotes: 'Keep cool' }),
+      }),
     });
   });
 
   it('handles package details with valid packageSize and contentUnit', async () => {
-    mockCreatePantryItem.mockResolvedValue({
-      data: { createPantryItem: { pantryItem: { id: 'new-1' } } },
-    });
-
-    const { result } = renderHook(() =>
-      usePantryItemSubmission({
-        ...defaultParams,
-        showPackageDetails: true,
-        packageSize: '12',
-        contentUnit: 'oz',
-        contentUnitId: 'cu-1',
-      }),
+    const m = createMock();
+    const { result } = renderHookWithApollo(
+      () =>
+        usePantryItemSubmission({
+          ...defaultParams,
+          showPackageDetails: true,
+          packageSize: '12',
+          contentUnit: 'oz',
+          contentUnitId: 'cu-1',
+        }),
+      { operationMocks: [m.mock] },
     );
 
     await act(async () => {
       await result.current.handleConfirm();
     });
 
-    expect(mockCreatePantryItem).toHaveBeenCalledWith({
-      variables: {
-        input: expect.objectContaining({
-          item: expect.objectContaining({
-            units: expect.arrayContaining([
-              expect.objectContaining({ packageSize: 12 }),
-            ]),
-          }),
+    expect(m.fired).toContainEqual({
+      input: expect.objectContaining({
+        item: expect.objectContaining({
+          units: expect.arrayContaining([
+            expect.objectContaining({ packageSize: 12 }),
+          ]),
         }),
-      },
+      }),
     });
   });
 
@@ -394,12 +389,10 @@ describe('usePantryItemSubmission', () => {
       existingPantryItemId: 'existing-1',
     });
 
-    mockCreatePantryItem.mockResolvedValue({
-      data: null,
-      error: { message: 'Duplicate item' },
-    });
-
-    const { result } = renderHook(() => usePantryItemSubmission(defaultParams));
+    const { result } = renderHookWithApollo(
+      () => usePantryItemSubmission(defaultParams),
+      { operationMocks: [createErrorMock().mock] },
+    );
 
     await act(async () => {
       await result.current.handleConfirm();
@@ -418,12 +411,10 @@ describe('usePantryItemSubmission', () => {
     } = require('#/utils/errors/pantryItemDuplicate');
     isPantryItemDuplicateError.mockReturnValue(false);
 
-    mockCreatePantryItem.mockResolvedValue({
-      data: null,
-      error: { message: 'Some error' },
-    });
-
-    const { result } = renderHook(() => usePantryItemSubmission(defaultParams));
+    const { result } = renderHookWithApollo(
+      () => usePantryItemSubmission(defaultParams),
+      { operationMocks: [createErrorMock().mock] },
+    );
 
     await act(async () => {
       await result.current.handleConfirm();
@@ -436,86 +427,77 @@ describe('usePantryItemSubmission', () => {
   });
 
   it('includes net weight when packageDetails and itemNetWeight provided', async () => {
-    mockCreatePantryItem.mockResolvedValue({
-      data: { createPantryItem: { pantryItem: { id: 'new-1' } } },
-    });
-
-    const { result } = renderHook(() =>
-      usePantryItemSubmission({
-        ...defaultParams,
-        showPackageDetails: true,
-        packageSize: '6',
-        contentUnit: 'oz',
-        contentUnitId: 'cu-1',
-        itemNetWeight: '16',
-        weightUnitId: 'wu-1',
-      }),
+    const m = createMock();
+    const { result } = renderHookWithApollo(
+      () =>
+        usePantryItemSubmission({
+          ...defaultParams,
+          showPackageDetails: true,
+          packageSize: '6',
+          contentUnit: 'oz',
+          contentUnitId: 'cu-1',
+          itemNetWeight: '16',
+          weightUnitId: 'wu-1',
+        }),
+      { operationMocks: [m.mock] },
     );
 
     await act(async () => {
       await result.current.handleConfirm();
     });
 
-    expect(mockCreatePantryItem).toHaveBeenCalledWith({
-      variables: {
-        input: expect.objectContaining({
-          item: expect.objectContaining({
-            netWeight: 16,
-            displayUnitId: 'wu-1',
-          }),
+    expect(m.fired).toContainEqual({
+      input: expect.objectContaining({
+        item: expect.objectContaining({
+          netWeight: 16,
+          displayUnitId: 'wu-1',
         }),
-      },
+      }),
     });
   });
 
   it('uses pantryNetWeight when explicitly provided', async () => {
-    mockCreatePantryItem.mockResolvedValue({
-      data: { createPantryItem: { pantryItem: { id: 'new-1' } } },
-    });
-
-    const { result } = renderHook(() =>
-      usePantryItemSubmission({
-        ...defaultParams,
-        pantryNetWeight: '500',
-        pantryNetWeightUnitId: 'g-unit',
-      }),
+    const m = createMock();
+    const { result } = renderHookWithApollo(
+      () =>
+        usePantryItemSubmission({
+          ...defaultParams,
+          pantryNetWeight: '500',
+          pantryNetWeightUnitId: 'g-unit',
+        }),
+      { operationMocks: [m.mock] },
     );
 
     await act(async () => {
       await result.current.handleConfirm();
     });
 
-    expect(mockCreatePantryItem).toHaveBeenCalledWith({
-      variables: {
-        input: expect.objectContaining({
-          netWeight: expect.objectContaining({
-            netWeight: 500,
-            netWeightUnitId: 'g-unit',
-          }),
+    expect(m.fired).toContainEqual({
+      input: expect.objectContaining({
+        netWeight: expect.objectContaining({
+          netWeight: 500,
+          netWeightUnitId: 'g-unit',
         }),
-      },
+      }),
     });
   });
 
   it('omits unit from input when no unitId and no unit name', async () => {
-    mockCreatePantryItem.mockResolvedValue({
-      data: { createPantryItem: { pantryItem: { id: 'new-1' } } },
-    });
-
-    const { result } = renderHook(() =>
-      usePantryItemSubmission({ ...defaultParams, unit: '', unitId: null }),
+    const m = createMock();
+    const { result } = renderHookWithApollo(
+      () =>
+        usePantryItemSubmission({ ...defaultParams, unit: '', unitId: null }),
+      { operationMocks: [m.mock] },
     );
 
     await act(async () => {
       await result.current.handleConfirm();
     });
 
-    expect(mockCreatePantryItem).toHaveBeenCalledWith({
-      variables: {
-        input: expect.objectContaining({
-          unit: undefined,
-        }),
-      },
+    expect(m.fired).toContainEqual({
+      input: expect.objectContaining({
+        unit: undefined,
+      }),
     });
   });
 });

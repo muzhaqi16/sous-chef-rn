@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useQuery } from '@apollo/client/react';
+import { useTranslation } from 'react-i18next';
 import { GetShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { Icon } from '#utils/iconUtils';
@@ -26,6 +27,7 @@ type RouteParams = {
 export const ShoppingListItemDetail: React.FC<
   StaticScreenProps<RouteParams>
 > = ({ route }) => {
+  const { t } = useTranslation();
   useScreenTransition('ShoppingListItemDetail');
   const { navigate, goBack } = useAppNavigation();
   const { listId, itemId } = route.params;
@@ -43,9 +45,9 @@ export const ShoppingListItemDetail: React.FC<
   };
 
   const formatDate = (dateString?: string | null) => {
-    if (!dateString) return 'Never';
+    if (!dateString) return t('shoppingListScreens.never');
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString(undefined, {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
@@ -62,14 +64,16 @@ export const ShoppingListItemDetail: React.FC<
   if (!item) {
     return (
       <DetailTemplate
-        title="Item Details"
+        title={t('shoppingListScreens.itemDetailsTitle')}
         onBack={() => goBack()}
         headerActions={[]}
         sections={[
           {
             content: (
               <Text style={[commonStyles.body, { textAlign: 'center' }]}>
-                {data === undefined ? 'Loading...' : 'Item not found'}
+                {data === undefined
+                  ? t('shoppingListScreens.loading')
+                  : t('shoppingListScreens.itemNotFound')}
               </Text>
             ),
           },
@@ -126,7 +130,7 @@ export const ShoppingListItemDetail: React.FC<
                 tone="success"
                 style={styles.statusBadgeText}
               >
-                Purchased
+                {t('shoppingListScreens.purchased')}
               </Text>
             </View>
           ) : null}
@@ -134,12 +138,12 @@ export const ShoppingListItemDetail: React.FC<
       ),
     },
     {
-      title: 'Information',
+      title: t('shoppingListScreens.information'),
       content: (
         <View>
           <View style={styles.detailRow}>
             <Text style={[commonStyles.caption, styles.detailLabel]}>
-              Quantity
+              {t('shoppingListScreens.quantity')}
             </Text>
             <View>
               <FormattedItemSubtitle
@@ -154,7 +158,7 @@ export const ShoppingListItemDetail: React.FC<
           {item.category ? (
             <View style={styles.detailRow}>
               <Text style={[commonStyles.caption, styles.detailLabel]}>
-                Category
+                {t('shoppingListScreens.category')}
               </Text>
               <Text size="sm" weight="medium">
                 {item.category}
@@ -165,7 +169,7 @@ export const ShoppingListItemDetail: React.FC<
           {item.priority ? (
             <View style={styles.detailRow}>
               <Text style={[commonStyles.caption, styles.detailLabel]}>
-                Priority
+                {t('shoppingListScreens.priority')}
               </Text>
               <Text size="sm" weight="medium">
                 {item.priority}
@@ -175,7 +179,9 @@ export const ShoppingListItemDetail: React.FC<
 
           {item.notes ? (
             <View style={styles.notesRow}>
-              <Text style={commonStyles.caption}>Notes</Text>
+              <Text style={commonStyles.caption}>
+                {t('shoppingListScreens.notes')}
+              </Text>
               <Text size="sm" weight="medium">
                 {item.notes}
               </Text>
@@ -189,7 +195,7 @@ export const ShoppingListItemDetail: React.FC<
   // Nutrition section (inline display, no navigation for shopping list)
   if (showNutrition) {
     sections.push({
-      title: 'Nutrition',
+      title: t('dietary.nutritionGoals'),
       content: (
         <NutritionSummary nutritions={itemNutritions} showHighlights compact />
       ),
@@ -214,11 +220,11 @@ export const ShoppingListItemDetail: React.FC<
   const purchaseHistoryItems = hasPurchases
     ? [
         {
-          label: 'Times Purchased',
+          label: t('shoppingListScreens.timesPurchased'),
           value: purchaseCount,
         },
         {
-          label: 'Most Recent Purchase',
+          label: t('shoppingListScreens.mostRecentPurchase'),
           value: purchases[0] ? formatDate(purchases[0].purchaseDate) : 'N/A',
         },
       ]
@@ -227,23 +233,23 @@ export const ShoppingListItemDetail: React.FC<
   sections.push({
     content: (
       <ClickableInfoPanel
-        title="Purchase History"
+        title={t('shoppingListScreens.purchaseHistoryTitle')}
         items={purchaseHistoryItems}
         onPress={handleViewHistory}
-        emptyMessage="No purchase history available"
+        emptyMessage={t('shoppingListScreens.noPurchaseHistory')}
       />
     ),
   });
 
   // Additional Details section
   sections.push({
-    title: 'Additional Details',
+    title: t('shoppingListScreens.additionalDetails'),
     content: (
       <View>
         {item.addedBy ? (
           <View style={styles.detailRow}>
             <Text style={[commonStyles.caption, styles.detailLabel]}>
-              Added By
+              {t('shoppingListScreens.addedBy')}
             </Text>
             <Text size="sm" weight="medium">
               {item.addedBy.profile?.displayName || item.addedBy.email}
@@ -253,7 +259,7 @@ export const ShoppingListItemDetail: React.FC<
 
         <View style={styles.detailRow}>
           <Text style={[commonStyles.caption, styles.detailLabel]}>
-            Added On
+            {t('shoppingListScreens.addedOn')}
           </Text>
           <Text size="sm" weight="medium">
             {formatDate(item.createdAt)}
@@ -263,7 +269,7 @@ export const ShoppingListItemDetail: React.FC<
         {item.updatedAt !== item.createdAt ? (
           <View style={styles.detailRow}>
             <Text style={[commonStyles.caption, styles.detailLabel]}>
-              Last Updated
+              {t('shoppingListScreens.lastUpdated')}
             </Text>
             <Text size="sm" weight="medium">
               {formatDate(item.updatedAt)}
@@ -274,10 +280,10 @@ export const ShoppingListItemDetail: React.FC<
         {item.source?.isAutoAdded ? (
           <View style={styles.detailRow}>
             <Text style={[commonStyles.caption, styles.detailLabel]}>
-              Auto-Added
+              {t('shoppingListScreens.autoAdded')}
             </Text>
             <Text size="sm" weight="medium">
-              {item.source?.autoAddReason || 'Yes'}
+              {item.source?.autoAddReason || t('shoppingListScreens.yes')}
             </Text>
           </View>
         ) : null}
@@ -285,10 +291,10 @@ export const ShoppingListItemDetail: React.FC<
         {item.source?.isFromMealPlan ? (
           <View style={styles.detailRow}>
             <Text style={[commonStyles.caption, styles.detailLabel]}>
-              From Meal Plan
+              {t('shoppingListScreens.fromMealPlan')}
             </Text>
             <Text size="sm" weight="medium">
-              Yes
+              {t('shoppingListScreens.yes')}
             </Text>
           </View>
         ) : null}
@@ -298,7 +304,7 @@ export const ShoppingListItemDetail: React.FC<
 
   return (
     <DetailTemplate
-      title="Item Details"
+      title={t('shoppingListScreens.itemDetailsTitle')}
       onBack={() => goBack()}
       headerActions={[
         {

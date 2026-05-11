@@ -26,6 +26,7 @@ import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
 import {
   buildDirtyUpdateInput,
   buildOptimisticUnit,
+  modifyPantryStats,
   stateToCountKey,
 } from './utils';
 import type { FormDataInput, UnitSelection } from './types';
@@ -190,40 +191,32 @@ export function useUpdatePantryItem({
           () => {
             // Update storageLocationCounts when location changed
             if (dirtyFields.location && oldLocationId !== selectedLocationId) {
-              cache.modify({
-                id: cache.identify({ __typename: 'Pantry', id: pantryId }),
-                fields: {
-                  stats(existingStats: any) {
-                    if (!existingStats?.storageLocationCounts)
-                      return existingStats;
-                    const counts = [...existingStats.storageLocationCounts];
-                    // Decrement old location
-                    if (oldLocationId) {
-                      const oldIdx = counts.findIndex(
-                        (c: any) => c.storageLocationId === oldLocationId,
-                      );
-                      if (oldIdx >= 0) {
-                        counts[oldIdx] = {
-                          ...counts[oldIdx],
-                          itemCount: Math.max(0, counts[oldIdx].itemCount - 1),
-                        };
-                      }
-                    }
-                    // Increment new location
-                    if (selectedLocationId) {
-                      const newIdx = counts.findIndex(
-                        (c: any) => c.storageLocationId === selectedLocationId,
-                      );
-                      if (newIdx >= 0) {
-                        counts[newIdx] = {
-                          ...counts[newIdx],
-                          itemCount: counts[newIdx].itemCount + 1,
-                        };
-                      }
-                    }
-                    return { ...existingStats, storageLocationCounts: counts };
-                  },
-                },
+              modifyPantryStats(cache, pantryId, existingStats => {
+                if (!existingStats?.storageLocationCounts) return undefined;
+                const counts = [...existingStats.storageLocationCounts];
+                if (oldLocationId) {
+                  const oldIdx = counts.findIndex(
+                    (c: any) => c.storageLocationId === oldLocationId,
+                  );
+                  if (oldIdx >= 0) {
+                    counts[oldIdx] = {
+                      ...counts[oldIdx],
+                      itemCount: Math.max(0, counts[oldIdx].itemCount - 1),
+                    };
+                  }
+                }
+                if (selectedLocationId) {
+                  const newIdx = counts.findIndex(
+                    (c: any) => c.storageLocationId === selectedLocationId,
+                  );
+                  if (newIdx >= 0) {
+                    counts[newIdx] = {
+                      ...counts[newIdx],
+                      itemCount: counts[newIdx].itemCount + 1,
+                    };
+                  }
+                }
+                return { ...existingStats, storageLocationCounts: counts };
               });
             }
 
@@ -232,26 +225,20 @@ export function useUpdatePantryItem({
               const oldKey = stateToCountKey(currentItem.storageState);
               const newKey = stateToCountKey(input.storageState);
               if (oldKey !== newKey) {
-                cache.modify({
-                  id: cache.identify({ __typename: 'Pantry', id: pantryId }),
-                  fields: {
-                    stats(existingStats: any) {
-                      if (!existingStats?.storageStateCounts)
-                        return existingStats;
-                      return {
-                        ...existingStats,
-                        storageStateCounts: {
-                          ...existingStats.storageStateCounts,
-                          [oldKey]: Math.max(
-                            0,
-                            (existingStats.storageStateCounts[oldKey] || 0) - 1,
-                          ),
-                          [newKey]:
-                            (existingStats.storageStateCounts[newKey] || 0) + 1,
-                        },
-                      };
+                modifyPantryStats(cache, pantryId, existingStats => {
+                  if (!existingStats?.storageStateCounts) return undefined;
+                  return {
+                    ...existingStats,
+                    storageStateCounts: {
+                      ...existingStats.storageStateCounts,
+                      [oldKey]: Math.max(
+                        0,
+                        (existingStats.storageStateCounts[oldKey] || 0) - 1,
+                      ),
+                      [newKey]:
+                        (existingStats.storageStateCounts[newKey] || 0) + 1,
                     },
-                  },
+                  };
                 });
               }
             }

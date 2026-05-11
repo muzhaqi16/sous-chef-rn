@@ -32,7 +32,6 @@ export const WriteReviewSheet: React.FC<WriteReviewSheetProps> = ({
     visible,
     onDismiss: onClose,
     snapPoints: ['55%'],
-    keyboardBehavior: 'interactive',
   });
 
   const [rating, setRating] = useState(0);

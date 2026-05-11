@@ -28,7 +28,6 @@ export const RecipeStepEditor = forwardRef<
     visible,
     onDismiss: () => setVisible(false),
     snapPoints: ['50%'],
-    keyboardBehavior: 'interactive',
   });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [instruction, setInstruction] = useState('');

@@ -19,7 +19,7 @@ import { PROFILE_SETTINGS_CONFIG } from '#/config/settingsConfig';
 import { dateStringToISO, extractDateString } from '#utils/dateUtils';
 import { BiometricSetupModal } from '#components/organisms/BiometricSetupModal';
 import { executeMutation, executeQuery } from '#/utils/compilerSafeWrappers';
-import { useUserPreferences } from '#hooks/navigation/useUserPreferences';
+import { useAuthPreferences } from '#hooks/navigation/useAuthPreferences';
 
 export const useConfigurableSettings = (profile: any) => {
   const user = useUser();
@@ -29,7 +29,7 @@ export const useConfigurableSettings = (profile: any) => {
   const { checkStoredCredentials, getBiometricInfo, removeCredentials } =
     useCredentialStorage();
   const { resetBiometricDeclination, markBiometricEnabled } =
-    useUserPreferences();
+    useAuthPreferences();
   // ===== MUTATION 1: Update User Profile =====
   const [updateProfileMutation] = useMutation(UpdateUserProfileDocument, {
     // Uses automatic normalization - mutation returns full UserProfile fragment

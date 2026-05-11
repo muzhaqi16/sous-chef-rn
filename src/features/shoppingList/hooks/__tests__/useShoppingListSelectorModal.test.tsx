@@ -1,7 +1,11 @@
 'use no memo';
 
-import { renderHook, act } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
+import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { useShoppingListSelectorModal } from '../useShoppingListSelectorModal';
+
+const renderHook = <TResult, TProps>(callback: (props: TProps) => TResult) =>
+  renderHookWithApollo(callback);
 
 // Mock token scheduler / refreshToken
 jest.mock('#/apollo/links/tokenScheduler');
@@ -21,63 +25,9 @@ jest.mock('#/context/TabBarActionsContext', () => ({
   })),
 }));
 
-jest.mock('react-native-unistyles', () => {
-  const theme = {
-    colors: {
-      primary: '#007AFF',
-      error: '#FF3B30',
-      errorLight: '#FFE5E5',
-      success: '#4CAF50',
-      warning: '#FF9800',
-      textPrimary: '#000',
-      textSecondary: '#666',
-      textTertiary: '#999',
-      textInverse: '#FFF',
-      textOnSurfaceVariant: '#333',
-      surface: '#FFF',
-      border: '#EEE',
-      primaryLight: '#E3F2FF',
-      white: '#FFF',
-    },
-    spacing: { xs: 4, sm: 8, md: 16, lg: 24 },
-    fonts: {
-      size: {
-        '2xs': 11,
-        xs: 12,
-        sm: 14,
-        base: 16,
-        md: 16,
-        lg: 18,
-        xl: 20,
-        '2xl': 24,
-        '3xl': 30,
-        '4xl': 36,
-        '5xl': 40,
-      },
-      weight: {
-        regular: '400',
-        medium: '500',
-        semibold: '600',
-        bold: '700',
-      },
-    },
-    typography: {
-      lineHeight: { tight: 20, normal: 24, relaxed: 28, loose: 32 },
-    },
-    radii: { md: 8, full: 999 },
-    opacity: { pressed: 0.7 },
-  };
-  return {
-    useUnistyles: jest.fn(() => ({ theme })),
-    StyleSheet: {
-      create: (fn: any) => {
-        const result = typeof fn === 'function' ? fn(theme) : fn;
-        return Object.assign(result, { useVariants: () => {} });
-      },
-    },
-    withUnistyles: jest.fn((component: any) => component),
-  };
-});
+// react-native-unistyles is auto-mocked via jest.setup.js
+// (__tests__/setup/mocks/react-native-unistyles.js) which provides the
+// full lightTheme. No local override needed.
 
 jest.mock('#hooks/ui/useSelectorManagement', () => ({
   useSelectorManagement: jest.fn(() => ({
@@ -93,19 +43,6 @@ jest.mock('#utils/iconUtils', () => ({
 
 jest.mock('#components/atoms/ShoppingListAvatar', () => ({
   ShoppingListAvatar: 'ShoppingListAvatar',
-}));
-
-const mockDeleteList = jest.fn().mockResolvedValue({
-  data: { deleteShoppingList: { shoppingList: { id: 'list-1' } } },
-});
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useMutation: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'DeleteShoppingList')
-      return [mockDeleteList, { loading: false }];
-    return [jest.fn(), {}];
-  }),
 }));
 
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({

@@ -1,15 +1,14 @@
 import React, { useState } from 'react';
-import { View, ActivityIndicator } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { View } from 'react-native';
+import {
+  Pressable,
+  WhiteActivityIndicator,
+} from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import { Icon } from '#utils/iconUtils';
 import { Header } from '#components/molecules/Header';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
-
-const WhiteActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
-  color: theme.colors.white,
-}));
+import { StyleSheet } from 'react-native-unistyles';
 import { useMutation, useQuery } from '@apollo/client/react';
 import {
   MyShoppingListInvitesDocument,

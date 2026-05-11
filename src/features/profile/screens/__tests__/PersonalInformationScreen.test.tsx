@@ -1,11 +1,8 @@
 'use no memo';
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { screen } from '@testing-library/react-native';
+import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { PersonalInformationScreen } from '../PersonalInformationScreen';
-
-// --- Mocks ---
-
-const mockUpdateProfileMutation = jest.fn().mockResolvedValue({});
 
 jest.mock('#features/profile/hooks/useProfileData', () => ({
   useProfileData: () => ({
@@ -27,21 +24,6 @@ jest.mock('#features/profile/hooks/useProfileData', () => ({
 
 jest.mock('#store/useAppStore', () => ({
   useUser: () => ({ email: 'john@example.com' }),
-}));
-
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useApolloClient: () => ({
-    readQuery: jest.fn(() => null),
-    writeQuery: jest.fn(),
-    refetchQueries: jest.fn(),
-  }),
-  useMutation: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'UpdateUserProfile')
-      return [mockUpdateProfileMutation, { loading: false }];
-    return [jest.fn(), {}];
-  }),
 }));
 
 jest.mock('#/services/errorService', () => ({
@@ -117,46 +99,46 @@ describe('PersonalInformationScreen', () => {
   });
 
   it('renders the screen with correct title', () => {
-    render(<PersonalInformationScreen />);
+    renderWithApollo(<PersonalInformationScreen />);
     expect(screen.getByText('Personal Information')).toBeTruthy();
   });
 
   it('renders Basic Info section', () => {
-    render(<PersonalInformationScreen />);
+    renderWithApollo(<PersonalInformationScreen />);
     expect(screen.getByText('Basic Info')).toBeTruthy();
   });
 
   it('renders Privacy section', () => {
-    render(<PersonalInformationScreen />);
+    renderWithApollo(<PersonalInformationScreen />);
     expect(screen.getByText('Privacy')).toBeTruthy();
   });
 
   it('displays email value', () => {
-    render(<PersonalInformationScreen />);
+    renderWithApollo(<PersonalInformationScreen />);
     expect(screen.getByTestId('value-email')).toBeTruthy();
     expect(screen.getByText('john@example.com')).toBeTruthy();
   });
 
   it('displays firstName value', () => {
-    render(<PersonalInformationScreen />);
+    renderWithApollo(<PersonalInformationScreen />);
     expect(screen.getByTestId('value-firstName')).toBeTruthy();
     expect(screen.getByText('John')).toBeTruthy();
   });
 
   it('displays lastName value', () => {
-    render(<PersonalInformationScreen />);
+    renderWithApollo(<PersonalInformationScreen />);
     expect(screen.getByTestId('value-lastName')).toBeTruthy();
     expect(screen.getByText('Doe')).toBeTruthy();
   });
 
   it('displays displayName value', () => {
-    render(<PersonalInformationScreen />);
+    renderWithApollo(<PersonalInformationScreen />);
     expect(screen.getByTestId('value-displayName')).toBeTruthy();
     expect(screen.getByText('JohnDoe')).toBeTruthy();
   });
 
   it('displays showEmail toggle value', () => {
-    render(<PersonalInformationScreen />);
+    renderWithApollo(<PersonalInformationScreen />);
     expect(screen.getByTestId('value-showEmail')).toBeTruthy();
     expect(screen.getByText('true')).toBeTruthy();
   });

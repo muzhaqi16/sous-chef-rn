@@ -1,17 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Keyboard, ScrollView } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
-import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+import {
+  Pressable,
+  ThemedBottomSheetTextInput,
+} from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
-
-const ThemedBottomSheetTextInput = withUnistyles(
-  BottomSheetTextInput,
-  theme => ({
-    placeholderTextColor: theme.colors.textSecondary,
-  }),
-);
 
 export interface TagInputProps {
   tags: string[];

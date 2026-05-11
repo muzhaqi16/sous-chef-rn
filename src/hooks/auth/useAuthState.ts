@@ -6,9 +6,15 @@ import {
 
 /**
  * Hook for managing core authentication state from Zustand store.
- * This hook handles all auth-related state selectors and computed properties.
+ * Composes 3 grouped selectors (useAuthTokens, useAuthActions, usePostLoginState),
+ * each returning shallow-equal references via Zustand's equalityFn integration.
  *
- * PERFORMANCE: Uses grouped selectors to reduce subscriptions from 16+ to 3
+ * The returned object's identity is stable across renders because:
+ *   1. Each sub-hook uses useShallow → same reference when values unchanged
+ *   2. The React Compiler auto-memoizes the returned object literal based on
+ *      its destructured deps (no useMemo needed; CLAUDE.md forbids it)
+ *
+ * Net subscriptions: 3 (one per sub-hook), regardless of consumer count.
  */
 export const useAuthState = () => {
   const { user, accessToken, refreshToken, isLoggingOut, isAutoLoggingIn } =
@@ -35,15 +41,12 @@ export const useAuthState = () => {
     setPostLoginCredentials,
   } = usePostLoginState();
 
-  // Computed properties
   const isAuthenticated = !!(user && accessToken);
   const hasAnyToken = !!(accessToken || refreshToken);
   const isLoggedOut = !user && !accessToken && !refreshToken;
   const isTokenRefreshing = !accessToken && !!refreshToken;
   const canAttemptQueries = hasAnyToken && !isLoggingOut;
 
-  // PERFORMANCE: Memoize return object to prevent infinite re-renders
-  // Without memoization, every render creates a new object reference causing cascade re-renders
   return {
     // Core auth state
     user,

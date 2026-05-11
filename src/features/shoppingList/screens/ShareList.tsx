@@ -1,24 +1,19 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, RefreshControl, ScrollView } from 'react-native';
 import {
-  View,
-  Text,
-  RefreshControl,
-  ActivityIndicator,
-  ScrollView,
-} from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+  Pressable,
+  PrimaryActivityIndicator,
+  WhiteActivityIndicator,
+} from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import { Icon } from '#utils/iconUtils';
+import { useTranslation } from 'react-i18next';
 import { EmailInput } from '#components/atoms/EmailInput';
 import { useNavigation } from '@react-navigation/native';
 import { Header } from '#components/molecules/Header';
 import { LoadingInline } from '#components/base/Loading';
 import type { StaticScreenProps } from '@react-navigation/native';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
-
-const PrimaryActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
-  color: theme.colors.primary,
-}));
+import { StyleSheet } from 'react-native-unistyles';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { useMutation } from '@apollo/client/react';
 import {
@@ -96,25 +91,29 @@ function StatusBadge({
   );
 }
 
-const formatStatus = (status: string) => {
+type T = (key: string, opts?: Record<string, unknown>) => string;
+
+const getFormatStatus = (t: T) => (status: string) => {
   switch (status?.toUpperCase()) {
     case 'ACCEPTED':
     case 'ACTIVE':
-      return 'Active';
+      return t('shoppingListScreens.statusActive');
     case 'PENDING':
-      return 'Invited';
+      return t('shoppingListScreens.statusInvited');
     case 'DECLINED':
-      return 'Declined';
+      return t('shoppingListScreens.statusDeclined');
     case 'EXPIRED':
-      return 'Expired';
+      return t('shoppingListScreens.statusExpired');
     default:
-      return status || 'Unknown';
+      return status || t('shoppingListScreens.statusUnknown');
   }
 };
 
 export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
   route,
 }) => {
+  const { t } = useTranslation();
+  const formatStatus = getFormatStatus(t);
   const { goBack } = useNavigation();
   const { navigate } = useAppNavigation();
   const { listId } = route.params;
@@ -186,7 +185,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
         if (!data?.shareShoppingList?.success) {
           throw new Error(
             data?.shareShoppingList?.message ||
-              'Failed to update share settings',
+              t('shoppingListScreens.failedToUpdateShareSettings'),
           );
         }
         // No refetch needed: the mutation returns shoppingList { id, shareCode, isPublic }
@@ -195,10 +194,10 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
       setTogglingShareCode,
       error => {
         alertService.alert(
-          'Error',
+          t('labels.error'),
           error instanceof Error
             ? error.message
-            : 'Failed to update share settings',
+            : t('shoppingListScreens.failedToUpdateShareSettings'),
         );
       },
     );
@@ -213,7 +212,10 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
 
   const handleShare = () => {
     if (!email.trim()) {
-      alertService.alert('Error', 'Please enter an email address');
+      alertService.alert(
+        t('labels.error'),
+        t('shoppingListScreens.pleaseEnterEmail'),
+      );
       return;
     }
 
@@ -238,7 +240,8 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
         });
         if (!data?.inviteToShoppingList?.success) {
           throw new Error(
-            data?.inviteToShoppingList?.message || 'Failed to send invitation',
+            data?.inviteToShoppingList?.message ||
+              t('shoppingListScreens.failedToSendInvitation'),
           );
         }
         setEmail('');
@@ -248,8 +251,10 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
       setSharing,
       error => {
         alertService.alert(
-          'Error',
-          error instanceof Error ? error.message : 'Failed to send invitation',
+          t('labels.error'),
+          error instanceof Error
+            ? error.message
+            : t('shoppingListScreens.failedToSendInvitation'),
         );
       },
     );
@@ -257,12 +262,12 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
 
   const handleRemoveMember = (memberId: string) => {
     alertService.alert(
-      'Remove Member',
-      'Are you sure you want to remove this member?',
+      t('shoppingListScreens.removeMemberTitle'),
+      t('shoppingListScreens.removeMemberMessage'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('labels.cancel'), style: 'cancel' },
         {
-          text: 'Remove',
+          text: t('labels.remove'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -277,7 +282,10 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
               // No refetch needed: the update() callback removes the
               // collaborator from the cached connection in place.
             } catch {
-              alertService.alert('Error', 'Failed to remove member');
+              alertService.alert(
+                t('labels.error'),
+                t('shoppingListScreens.failedToRemoveMember'),
+              );
             }
           },
         },
@@ -289,28 +297,28 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
     // Block owners from leaving
     if (isOwner) {
       alertService.alert(
-        'Cannot Leave',
-        'Owners cannot leave the list. Please transfer ownership to another member or delete the list.',
-        [{ text: 'OK' }],
+        t('shoppingListScreens.cannotLeaveTitle'),
+        t('shoppingListScreens.cannotLeaveOwnerMessage'),
+        [{ text: t('storageLocations.ok') }],
       );
       return;
     }
 
     alertService.alert(
-      'Leave Shopping List',
-      `Are you sure you want to leave "${
-        listName || 'this list'
-      }"? You will lose access to this shared list.`,
+      t('shoppingListScreens.leaveListTitle'),
+      t('shoppingListScreens.leaveListMessage', {
+        name: listName || t('shoppingListScreens.thisList'),
+      }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('labels.cancel'), style: 'cancel' },
         {
-          text: 'Leave',
+          text: t('shoppingListScreens.leaveList'),
           style: 'destructive',
           onPress: () => {
             if (!currentUserCollaborator?.id) {
               alertService.alert(
-                'Error',
-                'Could not determine your membership',
+                t('labels.error'),
+                t('shoppingListScreens.couldNotDetermineMembership'),
               );
               return;
             }
@@ -332,7 +340,10 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
               },
               setLeaving,
               () => {
-                alertService.alert('Error', 'Failed to leave list');
+                alertService.alert(
+                  t('labels.error'),
+                  t('shoppingListScreens.failedToLeave'),
+                );
               },
             );
           },
@@ -350,11 +361,15 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
 
   return (
     <View style={styles.container}>
-      <Header title="Share List" onBack={() => goBack()} centerTitle />
+      <Header
+        title={t('shoppingListScreens.shareTitle')}
+        onBack={() => goBack()}
+        centerTitle
+      />
 
       <OfflineGate
-        message="Sharing not available offline"
-        description="Connect to the internet to invite members or manage list sharing."
+        message={t('shoppingListScreens.sharingOfflineMessage')}
+        description={t('shoppingListScreens.sharingOfflineDescription')}
       >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
@@ -365,16 +380,18 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
           {isHomeLinked ? (
             <View style={styles.homeLinkedSection}>
               <AlertBanner
-                title={`This list belongs to the home "${
-                  shoppingList?.home?.name ?? 'Unknown'
-                }". Members are managed through home settings.`}
+                title={t('shoppingListScreens.shareHomeLinkedNotice', {
+                  name:
+                    shoppingList?.home?.name ??
+                    t('shoppingListScreens.ownerUnknown'),
+                })}
                 icon="home-outline"
                 iconLibrary="Ionicons"
                 variant="warning"
               />
               <View style={styles.homeLinkedButtonWrapper}>
                 <Button
-                  title="Manage Home"
+                  title={t('shoppingListScreens.manageHome')}
                   onPress={() =>
                     navigate('HomeDetail', {
                       homeId: shoppingList?.homeId ?? '',
@@ -388,10 +405,11 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
           ) : (
             <>
               <View style={styles.shareCodeSection}>
-                <Text style={styles.sectionTitle}>Share via Code</Text>
+                <Text style={styles.sectionTitle}>
+                  {t('shoppingListScreens.shareViaCode')}
+                </Text>
                 <Text style={styles.shareCodeDescription}>
-                  Enable public sharing to generate a code anyone can use to
-                  join this list.
+                  {t('shoppingListScreens.shareCodeDescription')}
                 </Text>
                 <Pressable
                   style={({ pressed }) => [
@@ -413,8 +431,8 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
                     />
                     <Text style={styles.shareCodeToggleText}>
                       {isPublic
-                        ? 'Public sharing enabled'
-                        : 'Public sharing disabled'}
+                        ? t('shoppingListScreens.publicSharingEnabled')
+                        : t('shoppingListScreens.publicSharingDisabled')}
                     </Text>
                   </Animated.View>
                   <View style={styles.toggleSlot}>
@@ -459,7 +477,9 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
                             copied && styles.copyTextCopied,
                           ]}
                         >
-                          {copied ? 'Copied' : 'Copy'}
+                          {copied
+                            ? t('shoppingListScreens.copied')
+                            : t('shoppingListScreens.copy')}
                         </Text>
                       </View>
                     </Pressable>
@@ -468,7 +488,9 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
               </View>
 
               <View style={styles.inviteSection}>
-                <Text style={styles.sectionTitle}>Invite Members</Text>
+                <Text style={styles.sectionTitle}>
+                  {t('shoppingListScreens.inviteMembers')}
+                </Text>
                 <View style={styles.inputRow}>
                   <EmailInput
                     containerStyle={styles.emailInputContainer}
@@ -484,13 +506,15 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
                     disabled={sharing}
                   >
                     {sharing ? (
-                      <ActivityIndicator size="small" color="white" />
+                      <WhiteActivityIndicator size="small" />
                     ) : (
                       <Icon name="send" size={20} tone="white" />
                     )}
                   </Pressable>
                 </View>
-                <Text style={styles.roleLabel}>Role</Text>
+                <Text style={styles.roleLabel}>
+                  {t('shoppingListScreens.role')}
+                </Text>
                 <ChipScrollRow
                   options={ROLE_OPTIONS}
                   selected={selectedRole}
@@ -505,7 +529,9 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
 
           {activeCollaborators.length > 0 && (
             <View style={styles.membersSection}>
-              <Text style={styles.sectionTitle}>Current Members</Text>
+              <Text style={styles.sectionTitle}>
+                {t('shoppingListScreens.currentMembers')}
+              </Text>
               {activeCollaborators.map(member => {
                 const statusVariant = getStatusVariant(member.status);
                 const statusText = formatStatus(member.status);
@@ -546,8 +572,11 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
                           />
                           {!!member.invitedAt && (
                             <Text style={styles.invitedText}>
-                              Invited{' '}
-                              {new Date(member.invitedAt).toLocaleDateString()}
+                              {t('shoppingListScreens.invitedOn', {
+                                date: new Date(
+                                  member.invitedAt,
+                                ).toLocaleDateString(),
+                              })}
                             </Text>
                           )}
                         </View>
@@ -574,12 +603,14 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
           {/* Leave List section - only show for non-owners who are collaborators on non-home-linked lists */}
           {!!currentUserCollaborator && !isOwner && !isHomeLinked && (
             <View style={styles.leaveSection}>
-              <Text style={styles.sectionTitle}>Danger Zone</Text>
+              <Text style={styles.sectionTitle}>
+                {t('shoppingListScreens.dangerZone')}
+              </Text>
               <Text style={styles.leaveDescription}>
-                Leaving this list will remove your access to all shared items.
+                {t('shoppingListScreens.leaveDescription')}
               </Text>
               <Button
-                title="Leave List"
+                title={t('shoppingListScreens.leaveList')}
                 onPress={handleLeaveList}
                 variant="danger"
                 loading={leaving}

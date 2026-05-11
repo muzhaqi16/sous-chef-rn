@@ -1,26 +1,16 @@
 'use no memo';
 
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { screen, waitFor } from '@testing-library/react-native';
+import type { MockLink } from '@apollo/client/testing';
+import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { ShoppingListItemDetail } from '../ItemDetail';
+import { GetShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 
 jest.mock('#hooks/navigation/useAppNavigation');
-
-const mockUseGetShoppingListItemQuery = jest.fn();
-
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useQuery: jest.fn((...args: any[]) => {
-    const [doc] = args;
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'GetShoppingListItem')
-      return mockUseGetShoppingListItemQuery(doc, ...args);
-    return { data: undefined, loading: false, error: undefined };
-  }),
-}));
 
 jest.mock('#utils/imageUtils', () => ({
   resolveImageUrl: jest.fn(() => null),
@@ -79,78 +69,119 @@ jest.mock('#components/atoms/CachedImage', () => ({
   CachedImage: () => null,
 }));
 
-const mockItem = {
-  id: 'si1',
-  itemName: 'Bread',
-  quantity: 2,
-  quantityInput: '2',
-  displayFormat: null,
-  unitName: 'loaves',
-  category: 'Bakery',
-  priority: 'HIGH',
-  notes: 'Get whole wheat',
-  createdAt: '2024-06-01T00:00:00Z',
-  updatedAt: '2024-06-02T00:00:00Z',
-  item: { images: null, nutritions: null, displayUnit: null },
-  purchaseInfo: { isPurchased: false },
-  purchasesConnection: { edges: [], totalCount: 0 },
-  addedBy: { email: 'test@test.com', profile: { displayName: 'Test User' } },
-  source: null,
-};
+function buildShoppingListItem(overrides: Partial<Record<string, any>> = {}) {
+  return {
+    __typename: 'ShoppingListItem',
+    id: 'si1',
+    itemName: 'Bread',
+    quantity: '2',
+    quantityInput: '2',
+    displayFormat: null,
+    unitName: 'loaves',
+    unit: null,
+    category: 'Bakery',
+    priority: 'HIGH',
+    notes: 'Get whole wheat',
+    version: 1,
+    createdAt: '2024-06-01T00:00:00Z',
+    updatedAt: '2024-06-02T00:00:00Z',
+    sortOrder: 0,
+    item: null,
+    purchaseInfo: { __typename: 'PurchaseInfo', isPurchased: false },
+    purchasesConnection: {
+      __typename: 'PurchaseConnection',
+      edges: [],
+      totalCount: 0,
+    },
+    addedBy: {
+      __typename: 'User',
+      id: 'u1',
+      email: 'test@test.com',
+      profile: {
+        __typename: 'UserProfile',
+        id: 'profile-1',
+        displayName: 'Test User',
+        avatar: null,
+      },
+    },
+    source: null,
+    priceEstimate: null,
+    ...overrides,
+  };
+}
+
+function buildItemMock(
+  itemId: string,
+  item: any | null,
+): MockLink.MockedResponse {
+  return {
+    request: { query: GetShoppingListItemDocument, variables: { id: itemId } },
+    result: { data: { shoppingListItem: item } },
+    maxUsageCount: 10,
+  };
+}
 
 describe('ShoppingListItemDetail', () => {
   const route = { params: { listId: 'sl1', itemId: 'si1' } };
 
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockUseGetShoppingListItemQuery.mockReturnValue({
-      data: { shoppingListItem: mockItem },
-      loading: false,
+  it('renders the item name', async () => {
+    renderWithApollo(<ShoppingListItemDetail route={route} />, {
+      operationMocks: [buildItemMock('si1', buildShoppingListItem())],
     });
+    await waitFor(() => expect(screen.getByText('Bread')).toBeTruthy());
   });
 
-  it('renders the item name', () => {
-    render(<ShoppingListItemDetail route={route} />);
-    expect(screen.getByText('Bread')).toBeTruthy();
+  it('renders the detail template title', async () => {
+    renderWithApollo(<ShoppingListItemDetail route={route} />, {
+      operationMocks: [buildItemMock('si1', buildShoppingListItem())],
+    });
+    await waitFor(() => expect(screen.getByText('Item Details')).toBeTruthy());
   });
 
-  it('renders the detail template title', () => {
-    render(<ShoppingListItemDetail route={route} />);
-    expect(screen.getByText('Item Details')).toBeTruthy();
+  it('shows category', async () => {
+    renderWithApollo(<ShoppingListItemDetail route={route} />, {
+      operationMocks: [buildItemMock('si1', buildShoppingListItem())],
+    });
+    await waitFor(() => expect(screen.getByText('Bakery')).toBeTruthy());
   });
 
-  it('shows category', () => {
-    render(<ShoppingListItemDetail route={route} />);
-    expect(screen.getByText('Bakery')).toBeTruthy();
+  it('shows priority', async () => {
+    renderWithApollo(<ShoppingListItemDetail route={route} />, {
+      operationMocks: [buildItemMock('si1', buildShoppingListItem())],
+    });
+    await waitFor(() => expect(screen.getByText('HIGH')).toBeTruthy());
   });
 
-  it('shows priority', () => {
-    render(<ShoppingListItemDetail route={route} />);
-    expect(screen.getByText('HIGH')).toBeTruthy();
+  it('shows notes', async () => {
+    renderWithApollo(<ShoppingListItemDetail route={route} />, {
+      operationMocks: [buildItemMock('si1', buildShoppingListItem())],
+    });
+    await waitFor(() =>
+      expect(screen.getByText('Get whole wheat')).toBeTruthy(),
+    );
   });
 
-  it('shows notes', () => {
-    render(<ShoppingListItemDetail route={route} />);
-    expect(screen.getByText('Get whole wheat')).toBeTruthy();
-  });
-
-  it('shows purchase history panel', () => {
-    render(<ShoppingListItemDetail route={route} />);
-    expect(screen.getByText('Purchase History')).toBeTruthy();
+  it('shows purchase history panel', async () => {
+    renderWithApollo(<ShoppingListItemDetail route={route} />, {
+      operationMocks: [buildItemMock('si1', buildShoppingListItem())],
+    });
+    await waitFor(() =>
+      expect(screen.getByText('Purchase History')).toBeTruthy(),
+    );
   });
 
   it('shows loading text when data is undefined', () => {
-    mockUseGetShoppingListItemQuery.mockReturnValue({
-      data: undefined,
-      loading: true,
+    renderWithApollo(<ShoppingListItemDetail route={route} />, {
+      operationMocks: [],
     });
-    render(<ShoppingListItemDetail route={route} />);
     expect(screen.getByText('Loading...')).toBeTruthy();
   });
 
-  it('shows added-by info', () => {
-    render(<ShoppingListItemDetail route={route} />);
-    expect(screen.getByText('Added By')).toBeTruthy();
+  it('shows added-by info', async () => {
+    renderWithApollo(<ShoppingListItemDetail route={route} />, {
+      operationMocks: [buildItemMock('si1', buildShoppingListItem())],
+    });
+    await waitFor(() => expect(screen.getByText('Added By')).toBeTruthy());
     expect(screen.getByText('Test User')).toBeTruthy();
   });
 });

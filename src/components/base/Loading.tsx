@@ -1,21 +1,15 @@
 import React from 'react';
 import {
   View,
-  ActivityIndicator,
   Modal,
   StyleProp,
   ViewStyle,
+  ActivityIndicator,
 } from 'react-native';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { SousChefLoader } from './SousChefLoader';
 import { Text } from '#components/atoms/Text';
-
-// Theme-reactive ActivityIndicator. When the consumer passes a `color`
-// override (e.g. for branded backgrounds) we render the plain RN component
-// so the override is preserved verbatim.
-const ThemedActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
-  color: theme.colors.primary,
-}));
+import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
 
 export interface LoadingProps {
   /** Primary loading message */

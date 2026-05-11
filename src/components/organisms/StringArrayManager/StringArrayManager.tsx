@@ -158,7 +158,6 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
     visible: isAddingModal,
     onDismiss: handleCancel,
     snapPoints: ['30%'],
-    keyboardBehavior: 'interactive',
   });
 
   const handleAddPress = () => {

@@ -58,14 +58,6 @@ jest.mock('react-native-device-info', () => ({
 }));
 
 // Mock environment logger
-jest.mock('#/utils/environment', () => ({
-  logger: {
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-  },
-}));
-
 import DeviceInfo from 'react-native-device-info';
 import {
   generateDeviceFingerprint,

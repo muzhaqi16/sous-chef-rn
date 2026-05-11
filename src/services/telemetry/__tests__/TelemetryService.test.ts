@@ -22,15 +22,6 @@ jest.mock('../transports/HttpTransport', () => ({
   })),
 }));
 
-jest.mock('#/utils/environment', () => ({
-  logger: {
-    info: jest.fn(),
-    error: jest.fn(),
-    debug: jest.fn(),
-    warn: jest.fn(),
-  },
-}));
-
 describe('TelemetryService', () => {
   beforeEach(() => {
     jest.clearAllMocks();

@@ -177,6 +177,144 @@ self-corrects when the network response arrives.
 - Use `extractNodes()` / `normalizeConnection()` helpers which return `[]` for missing edges
 - Use `cache-and-network` → `cache-first` fetch policy so the network fires immediately on restore
 
+### Feature API Boundary Convention
+
+Each feature under `src/features/<name>/` is treated as a self-contained module
+with a small public surface. The convention:
+
+| Subfolder | Public? | Notes |
+|---|---|---|
+| `screens/` | ✅ Public | Imported by navigation stacks |
+| `manifest.ts` | ✅ Public | Wired into `FEATURE_REGISTRY` |
+| `hooks/` (top-level files only) | ✅ Public | Cross-feature consumers may import top-level hooks |
+| `components/` | ⚠️ Mostly internal | Shared UI atoms/molecules belong in `src/components/`; feature-private cards/rows stay here |
+| `context/` | 🔒 Internal | Cross-feature consumers should not reach into another feature's context |
+| `graphql/` | 🔒 Internal | Other features should compose their own queries; only the feature's own hooks read from these documents |
+| `hooks/mutations/`, `hooks/<deeper>/` | 🔒 Internal | Lifecycle / mutation primitives — stay within the feature |
+| `utils/` | 🔒 Internal | Feature-specific helpers — stay within the feature |
+
+**Cross-feature reach is OK only for:** `screens`, `manifest`, top-level `hooks`,
+and the `<feature>Fragments.generated.ts` types (when composing your own
+fragments). Anything deeper (`hooks/mutations/...`, `context/`, `utils/`) is an
+implementation detail and may change without notice.
+
+This is enforced via ESLint `no-restricted-imports` patterns in `.eslintrc.js`
+(see the `from feature internals` rule). Migrations of working code are not
+required — the rule only blocks NEW reach-across imports.
+
+### Apollo Test Patterns
+
+**Always use `renderHookWithApollo` / `renderWithProviders` from `__tests__/helpers/`.**
+Direct `jest.mock('@apollo/client/react', () => ({ useQuery: jest.fn(...) }))`
+is the legacy anti-pattern — it couples tests to operation names (refactor-broken)
+and bypasses the real cache, missing the very integration bugs tests should catch.
+
+```ts
+// ✅ Correct — schema-backed cache, type-safe mocks
+//
+// Import `MockedResponse` from the helper, NOT from '@apollo/client/testing'
+// (the flat import there is deprecated; the helper re-exports the canonical
+// MockLink.MockedResponse type).
+import {
+  renderHookWithApollo,
+  type MockedResponse,
+} from '#/test-utils/apolloMockProvider';
+
+const operationMocks: MockedResponse[] = [
+  { request: { query: GetItemDoc, variables: { id: '1' } },
+    result: { data: { item: { __typename: 'Item', id: '1', name: 'A' } } } },
+];
+
+const { result } = renderHookWithApollo(() => useItem('1'), { operationMocks });
+```
+
+```ts
+// ❌ Anti-pattern — couples to operation names, no cache, refactor-broken
+jest.mock('@apollo/client/react', () => ({
+  useQuery: jest.fn((doc) => {
+    if (doc?.definitions?.[0]?.name?.value === 'GetItem') return { data: ... };
+  }),
+}));
+```
+
+The helper supports two modes:
+- **`operationMocks: MockedResponse[]`** — explicit per-operation request/response pairs (preferred for assertions on exact data flow)
+- **`mocks` + `resolvers`** — schema-driven auto-mocks via `@graphql-tools/mock` (preferred for setup-heavy tests where exact shapes don't matter)
+
+For mutation tests: assert on the cache after the mutation, not on the mock function. The whole point is exercising the cache update path that the production code relies on.
+
+**Migration gotchas (from the P1-16 sweep):**
+
+1. **`errorPolicy: 'all'` defeats `executeMutation`'s catch path.** The shared
+   `apolloMockProvider` wrapper sets `mutate: { errorPolicy: 'all' }`, so Apollo
+   mutations never throw — they resolve with `{ data: undefined, error }`. Hook
+   code wrapped in `executeMutation(fn, onError)` therefore never invokes
+   `onError` on Apollo errors, breaking failure-path tests. Workaround: mock
+   `executeMutation` directly with
+   `mockImplementationOnce((_, onError) => { onError(new Error('fail')); return false; })`.
+
+2. **Use `variables: () => true` for complex transformed inputs.** When a
+   mutation's `input` is built from a non-trivial transform (Spoonacular →
+   CreateRecipeInput, device-info → register payload), don't mirror the
+   transform in the test — use Apollo's `VariableMatcher` shape:
+   `{ request: { query, variables: () => true }, result: { data: ... } }`.
+
+3. **`waitFor(() => expect(result.current.loading).toBe(false))` is the right
+   settling primitive.** A bare `await Promise.resolve()` doesn't flush Apollo's
+   microtask chain reliably.
+
+4. **Schema-driven `mocks` for deep selections.** Queries with 3-4 levels of
+   fragment spreads (`GetPantry`, etc.) are impractical to mock literally — use
+   `{ mocks: { Query: () => ({ pantry: { id: 'p1' } }) } }` and let
+   `@graphql-tools/mock` fill the rest.
+
+5. **Mock provider doesn't auto-flatten connections.** If a query selects
+   `pantriesConnection` but the hook reads `home.pantries` (a flat array via a
+   normalizer), the test must either (a) reshape inside the test's mock
+   `normalize*` helper, or (b) update the production hook to read the
+   connection edges directly.
+
+6. **Subscription hooks with `customOnData`.** When a hook delegates to
+   `subscriptionService.register({ customOnData })`, keep mocking
+   `subscriptionService.register` to capture and invoke `customOnData` directly.
+   Driving a real subscription event through `MockedProvider` is brittle and
+   not what the cache-update assertion is testing.
+
+7. **`__typename` on every entity in `operationMocks`.** Without it, Apollo
+   can't normalize/cache the entity. The schema-driven path adds it
+   automatically; literal `operationMocks` must include it explicitly. Use the
+   generated TypeScript types as a structural reference.
+
+**Helper shortcuts (`__tests__/helpers/apolloMockProvider`):**
+
+- **`recordMock(query, { data, error?, delay?, maxUsageCount? })`** — replaces
+  the legacy variables-spy pattern. Returns `{ mock, fired }`: `mock` goes
+  into `operationMocks`; `fired` is an array of every variables payload Apollo
+  observed for that operation, in order. Assert via
+  `expect(fired).toContainEqual({ … })`.
+
+- **`seedCache(entries)`** — pre-writes entities into a fresh
+  `InMemoryCache` so hooks that call `useApolloClient().cache.readFragment(…)`
+  find them. Each entry needs `__typename` + `id` and any fields the hook
+  reads. Pass the returned cache as `{ cache }` to `renderHookWithApollo`.
+
+### Apollo Mutation Patterns
+
+Pick the cache-update pattern based on what the mutation changes:
+
+| Pattern | Use when | Example |
+|---|---|---|
+| **`writeFragment`** (preferred default) | Mutation returns the full updated entity | `useAdjustPantryItemQuantity` — server returns the patched item, fragment write syncs cache |
+| **`cache.modify`** | Need to update parent aggregate / stat fields not in the response | `useUpdatePantryItem` — patches `Pantry.stats` counts after a location change |
+| **`cache.modify` on connection edges + parent counts** | Entity moves between filtered connections (purchased ↔ unpurchased, list ↔ list) | `useToggleShoppingItem`, `useRemoveShoppingItem` |
+| **`refetchQueries`** (last resort) | Mutation affects unrelated queries / root-level aggregates that can't be derived from the response | `useRecipeReviews` (rating stats on the parent recipe) |
+
+Defaults:
+- `optimisticResponse` for any user-facing mutation; the cache update should be idempotent so the eventual server response converges cleanly.
+- `errorPolicy: 'all'` so partial-data errors are surfaced to the hook, not swallowed.
+- Avoid `refetchQueries` unless `cache.modify` would require duplicating server logic (e.g., recomputing aggregate ratings).
+- Build optimistic responses from the existing cache via `cache.readFragment` + spread, never with hand-rolled placeholder shapes that can drift from the schema.
+
 ### Autocomplete Local-First Search
 
 All autocomplete hooks use `useAutocompleteSearch` from `src/hooks/ui/useAutocompleteSearch.ts`.
@@ -263,6 +401,45 @@ type-level fragment-masking helper (`@graphql-codegen/client-preset`'s `useFragm
 advise against client-preset for AC4 projects. Our `near-operation-file` setup already
 emits `TypedDocumentNode`s, which is all Apollo's `FragmentType<typeof Doc>` and runtime
 masking need.
+
+### Test Mock Conventions — `Environment`
+
+`Environment` (`src/utils/environment.ts`) is auto-mocked globally for every
+test via `jest.setup.js` + `src/utils/__mocks__/environment.ts`. Tests get a
+complete `jest.fn()` surface with sensible defaults (dev mode, analytics off,
+loggers as no-op spies). This eliminates `TypeError: Environment.X is not a
+function` failures from any code that transitively pulls in the store, the
+telemetry slice, `IconButton → HapticService`, or anywhere else.
+
+**For tests that need bespoke values:**
+
+```ts
+// ✅ Override per-suite via mockReturnValue — do not replace the whole module
+import { Environment } from '#/utils/environment';
+beforeEach(() => {
+  (Environment.isDevelopment as jest.Mock).mockReturnValue(false);
+  (Environment.getApiConfig as jest.Mock).mockReturnValue({
+    baseUrl: 'https://test.example.com/graphql',
+  });
+});
+```
+
+```ts
+// ✅ For the rare suite that tests the real Environment class itself
+jest.unmock('#/utils/environment');
+import { Environment } from '../environment';
+```
+
+```ts
+// ❌ Don't do this — partial factories defeat the shared mock and reintroduce
+//    the per-test "missing method" fragility we removed:
+jest.mock('#/utils/environment', () => ({
+  Environment: { isDevelopment: jest.fn() },  // missing all other methods
+}));
+```
+
+The same pattern applies to `logger` (no-op `jest.fn()` per method) — assert on
+`logger.error` etc. directly without redefining the mock.
 
 ### Verification Commands
 

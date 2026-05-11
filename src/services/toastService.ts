@@ -26,4 +26,6 @@ export const toastService = {
     dispatch({ ...opts, message, type: 'error' }),
   info: (message: string, opts?: ShortOpts) =>
     dispatch({ ...opts, message, type: 'info' }),
+  warning: (message: string, opts?: ShortOpts) =>
+    dispatch({ ...opts, message, type: 'warning' }),
 };

@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useForm, type Resolver } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { View, ActivityIndicator } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { View } from 'react-native';
+import {
+  Pressable,
+  WhiteActivityIndicator,
+} from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 import { alertService } from '#/services/alertService';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
-
-const WhiteActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
-  color: theme.colors.white,
-}));
+import { StyleSheet } from 'react-native-unistyles';
+import { useTranslation } from 'react-i18next';
 import { formatRole } from '#utils/formatters/roleFormatters';
 import { type InviteCard_InviteFragment } from './CreateHomeScreen.generated';
 import {
@@ -104,6 +104,8 @@ async function performCreateHome(
     setSelectedPantryId: (id: string) => void;
     skipToStep: (step: string) => void;
     navigateToNextStep: (step: string) => void;
+    homeNotFoundMessage: string;
+    createHomeFailedMessage: string;
   },
 ): Promise<void> {
   if (deps.needsHome) {
@@ -146,13 +148,11 @@ async function performCreateHome(
         if (newHome?.id) {
           deps.setSelectedHomeId(newHome.id);
         } else {
-          throw new Error(
-            'Home was created but could not be found. Please try again.',
-          );
+          throw new Error(deps.homeNotFoundMessage);
         }
       }
     } else {
-      throw new Error(payload?.message || 'Failed to create home');
+      throw new Error(payload?.message || deps.createHomeFailedMessage);
     }
   } else if (deps.needsPantry && deps.selectedHomeId) {
     const success = await createPantryForHome(
@@ -193,12 +193,15 @@ function syncExistingResources(
 const InviteCard: React.FC<{ invite: InviteCard_InviteFragment }> = ({
   invite,
 }) => {
+  const { t } = useTranslation();
   const { handleAcceptInvite, handleDeclineInvite, accepting } =
     useInviteActions();
 
   const inviterName =
-    invite.inviter?.profile?.displayName || invite.inviter?.email || 'Someone';
-  const inviteHomeName = invite.home?.name || 'Unknown Home';
+    invite.inviter?.profile?.displayName ||
+    invite.inviter?.email ||
+    t('labels.someone');
+  const inviteHomeName = invite.home?.name || t('labels.unknownHome');
 
   return (
     <View style={styles.inviteCard}>
@@ -214,14 +217,14 @@ const InviteCard: React.FC<{ invite: InviteCard_InviteFragment }> = ({
       <View style={styles.inviteDetailsContainer}>
         <Text size="sm" lineHeight="tight">
           <Text weight="medium" tone="secondary">
-            From:{' '}
+            {t('labels.from')}:{' '}
           </Text>
           <Text weight="semibold">{inviterName}</Text>
         </Text>
 
         <Text size="sm" lineHeight="tight">
           <Text weight="medium" tone="secondary">
-            Role:{' '}
+            {t('labels.role')}:{' '}
           </Text>
           <Text weight="bold" tone="accent">
             {formatRole(invite.role)}
@@ -239,7 +242,7 @@ const InviteCard: React.FC<{ invite: InviteCard_InviteFragment }> = ({
           disabled={accepting}
         >
           <Text size="sm" weight="semibold">
-            Decline
+            {t('labels.decline')}
           </Text>
         </Pressable>
         <Pressable
@@ -258,7 +261,7 @@ const InviteCard: React.FC<{ invite: InviteCard_InviteFragment }> = ({
               weight="semibold"
               style={styles.inviteAcceptButtonText}
             >
-              Accept
+              {t('labels.accept')}
             </Text>
           )}
         </Pressable>
@@ -268,6 +271,7 @@ const InviteCard: React.FC<{ invite: InviteCard_InviteFragment }> = ({
 };
 
 const CreateHomeScreenComponent = () => {
+  const { t } = useTranslation();
   useScreenTransition('CreateHomeScreen');
   const { navigateToNextStep, setUserNavigationState, skipToStep } =
     useOnboardingNavigation();
@@ -395,8 +399,8 @@ const CreateHomeScreenComponent = () => {
       },
       onError: error => {
         alertService.alert(
-          'Error',
-          error.message || 'Failed to accept invitation',
+          t('labels.error'),
+          error.message || t('errors.acceptInviteFailed'),
         );
       },
     },
@@ -407,8 +411,8 @@ const CreateHomeScreenComponent = () => {
     // it just changes the invite status. No cache update needed.
     onError: error => {
       alertService.alert(
-        'Error',
-        error.message || 'Failed to decline invitation',
+        t('labels.error'),
+        error.message || t('errors.declineInviteFailed'),
       );
     },
   });
@@ -420,7 +424,7 @@ const CreateHomeScreenComponent = () => {
     ) as Resolver<FormValues>,
     defaultValues: {
       homeName: '',
-      pantryName: 'Kitchen Pantry',
+      pantryName: t('onBoarding.defaultPantryName'),
     },
   });
 
@@ -460,12 +464,12 @@ const CreateHomeScreenComponent = () => {
           setSelectedPantryId,
           skipToStep,
           navigateToNextStep,
+          homeNotFoundMessage: t('onBoarding.homeNotFound'),
+          createHomeFailedMessage: t('errors.createHomeFailed'),
         }),
       setIsCreating,
       (error: unknown) => {
-        setGraphqlError(
-          (error as any)?.message || 'An error occurred during setup',
-        );
+        setGraphqlError((error as any)?.message || t('onBoarding.setupError'));
       },
     );
   };
@@ -480,12 +484,12 @@ const CreateHomeScreenComponent = () => {
 
   const handleDeclineInvite = (token: string, homeNameParam: string) => {
     alertService.alert(
-      'Decline Invitation',
-      `Are you sure you want to decline the invitation to join ${homeNameParam}?`,
+      t('confirmations.declineInvitationTitle'),
+      t('confirmations.declineHomeInvitation', { homeName: homeNameParam }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('labels.cancel'), style: 'cancel' },
         {
-          text: 'Decline',
+          text: t('labels.decline'),
           style: 'destructive',
           onPress: () => {
             // Error handled by onError in mutation config
@@ -506,30 +510,33 @@ const CreateHomeScreenComponent = () => {
 
   // Determine what needs to be created
   const getTitle = () => {
-    if (!existingHome) return "Welcome! Let's set up your home";
-    if (!existingPantry) return 'Almost there!';
-    return "You're all set!";
+    if (!existingHome) return t('onBoarding.welcomeTitle');
+    if (!existingPantry) return t('onBoarding.almostThere');
+    return t('onBoarding.allSet');
   };
 
   const getSubtitle = () => {
-    if (!existingHome) return 'Create your home and pantry to get started';
-    if (!existingPantry) return `Let's add a pantry to ${existingHome.name}`;
-    return 'Your home and pantry are already configured';
+    if (!existingHome) return t('onBoarding.createHomeSubtitle');
+    if (!existingPantry)
+      return t('onBoarding.addPantryToHome', {
+        homeName: existingHome.name,
+      });
+    return t('onBoarding.homeAlreadyConfigured');
   };
 
   // If user has pending invites and no home, show invitations (unless forcing create form)
   if (hasPendingInvites && !existingHome && !forceShowCreateForm) {
     return (
       <OnBoardingWrapper
-        title="You have pending home invitations!"
-        subtitle="Accept an invitation to join an existing home or create your own"
+        title={t('onBoarding.pendingInvitesTitle')}
+        subtitle={t('onBoarding.pendingInvitesSubtitle')}
         step={1}
         totalSteps={7}
         onSkip={() => skipToStep('CreateShoppingList')}
       >
         <View style={styles.invitesContainer}>
           <Text size="md" weight="semibold" style={styles.invitesSectionTitle}>
-            Pending Invitations
+            {t('onBoarding.pendingInvitations')}
           </Text>
           <InviteActionsProvider
             handleAcceptInvite={handleAcceptInvite}
@@ -550,19 +557,19 @@ const CreateHomeScreenComponent = () => {
             weight="medium"
             style={styles.dividerText}
           >
-            OR
+            {t('onBoarding.or')}
           </Text>
           <View style={styles.dividerLine} />
         </View>
 
         <Button
-          title="Create My Own Home"
+          title={t('onBoarding.createOwnHome')}
           onPress={() => setForceShowCreateForm(true)}
           variant="secondary"
         />
 
         <Button
-          title="Skip for Now"
+          title={t('onBoarding.skipForNow')}
           onPress={() => skipToStep('CreateShoppingList')}
           variant="ghost"
         />
@@ -583,7 +590,7 @@ const CreateHomeScreenComponent = () => {
         <View style={styles.existingResourcesContainer}>
           <View style={styles.resourceCard}>
             <Text size="xs" tone="secondary" style={styles.resourceLabel}>
-              Home
+              {t('labels.home')}
             </Text>
             <Text size="lg" weight="semibold">
               {existingHome.name}
@@ -591,7 +598,7 @@ const CreateHomeScreenComponent = () => {
 
             <View style={styles.pantrySection}>
               <Text size="xs" tone="secondary" style={styles.resourceLabel}>
-                Pantry
+                {t('labels.pantry')}
               </Text>
               <Text size="lg" weight="semibold">
                 {existingPantry.name}
@@ -604,7 +611,7 @@ const CreateHomeScreenComponent = () => {
                     tone="accent"
                     style={styles.defaultBadgeText}
                   >
-                    Default
+                    {t('labels.default')}
                   </Text>
                 </View>
               )}
@@ -618,13 +625,12 @@ const CreateHomeScreenComponent = () => {
             lineHeight="normal"
             style={styles.infoText}
           >
-            These were already set up. You can continue to the next step or
-            create additional ones later in settings.
+            {t('onBoarding.homeAndPantryNote')}
           </Text>
         </View>
 
         <Button
-          title="Continue"
+          title={t('labels.continue')}
           onPress={() => navigateToNextStep('CreateHome')}
           variant="primary"
         />
@@ -646,7 +652,7 @@ const CreateHomeScreenComponent = () => {
         <View style={styles.existingResourcesContainer}>
           <View style={styles.resourceCard}>
             <Text size="xs" tone="secondary" style={styles.resourceLabel}>
-              Existing Home
+              {t('onBoarding.existingHome')}
             </Text>
             <Text size="lg" weight="semibold">
               {existingHome.name}

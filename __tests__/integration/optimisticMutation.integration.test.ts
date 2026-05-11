@@ -1,0 +1,267 @@
+/**
+ * Integration test: optimistic mutation flips the Apollo cache immediately,
+ * then converges on the server response.
+ *
+ * Boundary under test: `useToggleShoppingItem` (a mutation hook) plus the
+ * Apollo `InMemoryCache` plus the cache-updater utilities the hook calls.
+ * The contract is:
+ *   - calling `toggleItem` updates the cached purchase status synchronously
+ *     via `optimisticResponse` + `update` (visible to the next cache read
+ *     before the network request resolves);
+ *   - when the server confirms the optimistic value, the cache stays in the
+ *     same state after settle.
+ *
+ * Real implementations on both sides:
+ *  - the hook itself, with no mocks of `useMutation` or `useApolloClient`.
+ *    It runs through the production `optimisticResponse` builder and
+ *    `update` callback (which calls the real cache modify + connection
+ *    move helpers).
+ *  - the Apollo cache, configured the same way the production cache is.
+ *    We use `InMemoryCache` directly because `makeCache()` drags in the
+ *    fragment matcher and other production-only wiring that's irrelevant
+ *    to this seam; `__typename` keying is enough for the cache fragment
+ *    reads the SUT performs.
+ *
+ * Mocks live only at the I/O boundary: `MockLink` for network responses,
+ * plus the peripheral hooks the SUT calls (alertService, error service,
+ * network-error detector, optimistic-data persistence). These are
+ * unrelated to the cache seam under test.
+ */
+
+'use no memo';
+
+import { renderHook, act, waitFor } from '@testing-library/react-native';
+import type { ReactNode } from 'react';
+import React from 'react';
+import { ApolloClient, InMemoryCache } from '@apollo/client';
+import { ApolloProvider } from '@apollo/client/react';
+import type { MockedResponse } from '#/test-utils/apolloMockProvider';
+import { MockLink } from '@apollo/client/testing';
+import {
+  ToggleShoppingListItemPurchasedDocument,
+  type ToggleShoppingListItemPurchasedMutation,
+} from '#features/shoppingList/graphql/shoppingList.generated';
+import { DisplayFormat } from '#/graphql/generated/baseTypes';
+import {
+  ShoppingListItemDisplayFragmentDoc,
+  type ShoppingListItemDisplayFragment,
+} from '#features/shoppingList/graphql/shoppingListFragments.generated';
+import { useToggleShoppingItem } from '#features/shoppingList/hooks/mutations/useToggleShoppingItem';
+
+// Peripheral mocks — dependencies of the SUT that have nothing to do with
+// the cache seam under test. Stubbing them keeps the assertion focused on
+// the optimistic + cache-update behavior.
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
+jest.mock('#/services/errorService', () => ({
+  useErrorService: () => ({
+    handleApolloError: jest.fn(() => ({ message: 'mock error' })),
+  }),
+}));
+jest.mock('#/utils/isNetworkError', () => ({
+  isNetworkError: jest.fn(() => false),
+}));
+jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
+  optimisticDataPersistence: {
+    save: jest.fn(),
+    clear: jest.fn(),
+  },
+}));
+
+const LIST_ID = 'list-1';
+const ITEM_ID = 'item-1';
+
+function seedItem(cache: InMemoryCache, isPurchased: boolean) {
+  const data: ShoppingListItemDisplayFragment = {
+    __typename: 'ShoppingListItem',
+    id: ITEM_ID,
+    itemName: 'Milk',
+    quantity: 1,
+    quantityInput: '1',
+    displayFormat: DisplayFormat.Decimal,
+    purchaseInfo: {
+      __typename: 'ShoppingListItemPurchaseInfo',
+      isPurchased,
+    },
+    version: 1,
+    updatedAt: '2025-01-01T00:00:00.000Z',
+    category: 'Dairy',
+    notes: null,
+    unitName: null,
+    unit: null,
+    sortOrder: 'a0',
+    item: null,
+  };
+  cache.writeFragment({
+    id: cache.identify({ __typename: 'ShoppingListItem', id: ITEM_ID })!,
+    fragment: ShoppingListItemDisplayFragmentDoc,
+    fragmentName: 'ShoppingListItemDisplayFragment',
+    data,
+  });
+}
+
+function readPurchaseStatus(cache: InMemoryCache): boolean | undefined {
+  const item = cache.readFragment<ShoppingListItemDisplayFragment>({
+    id: cache.identify({ __typename: 'ShoppingListItem', id: ITEM_ID })!,
+    fragment: ShoppingListItemDisplayFragmentDoc,
+    fragmentName: 'ShoppingListItemDisplayFragment',
+  });
+  return item?.purchaseInfo?.isPurchased;
+}
+
+function buildSettledServerResponse(
+  newPurchased: boolean,
+): ToggleShoppingListItemPurchasedMutation {
+  return {
+    __typename: 'Mutation',
+    toggleShoppingListItemPurchased: {
+      __typename: 'ShoppingListItemPayload',
+      success: true,
+      message: '',
+      code: 'SUCCESS',
+      shoppingListItem: {
+        __typename: 'ShoppingListItem',
+        id: ITEM_ID,
+        itemName: 'Milk',
+        quantity: 1,
+        quantityInput: '1',
+        displayFormat: DisplayFormat.Decimal,
+        purchaseInfo: {
+          __typename: 'ShoppingListItemPurchaseInfo',
+          isPurchased: newPurchased,
+        },
+        version: 2,
+        updatedAt: '2025-01-02T00:00:00.000Z',
+        category: 'Dairy',
+        notes: null,
+        unitName: null,
+        unit: null,
+        sortOrder: 'a0',
+        item: null,
+      },
+    },
+  };
+}
+
+function buildClient(opts: {
+  initialPurchased: boolean;
+  serverResponse: ToggleShoppingListItemPurchasedMutation;
+  serverDelayMs?: number;
+}) {
+  const cache = new InMemoryCache();
+  seedItem(cache, opts.initialPurchased);
+
+  const newPurchased = !opts.initialPurchased;
+  const responses: MockedResponse[] = [
+    {
+      request: {
+        query: ToggleShoppingListItemPurchasedDocument,
+        variables: { input: { id: ITEM_ID, purchased: newPurchased } },
+      },
+      result: { data: opts.serverResponse },
+      // `delay` makes the network response asynchronous so we can observe
+      // the cache between "optimistic write" and "server settle".
+      delay: opts.serverDelayMs ?? 0,
+    },
+  ];
+
+  const client = new ApolloClient({
+    cache,
+    link: new MockLink(responses),
+    defaultOptions: { mutate: { errorPolicy: 'all' } },
+  });
+  return { client, cache };
+}
+
+function wrap(client: ApolloClient) {
+  return function Wrapper({ children }: { children: ReactNode }) {
+    return React.createElement(
+      ApolloProvider,
+      { client, children: children as React.ReactElement },
+    );
+  };
+}
+
+beforeEach(() => {
+  jest.clearAllMocks();
+});
+
+describe('integration: optimistic toggle + cache update', () => {
+  it('writes the optimistic purchase status to the cache before the network resolves', async () => {
+    const { client, cache } = buildClient({
+      initialPurchased: false,
+      serverResponse: buildSettledServerResponse(true),
+      serverDelayMs: 50, // network is async — observe optimistic-only state first
+    });
+
+    expect(readPurchaseStatus(cache)).toBe(false);
+
+    const refetch = jest.fn().mockResolvedValue(undefined);
+    const { result } = renderHook(
+      () => useToggleShoppingItem({ listId: LIST_ID, refetch }),
+      { wrapper: wrap(client) },
+    );
+
+    let togglePromise: Promise<unknown> | undefined;
+    act(() => {
+      togglePromise = result.current.toggleItem(ITEM_ID);
+    });
+
+    // Optimistic phase: the cache flips before the 50ms network delay
+    // elapses. Apollo applies optimistic responses synchronously during
+    // the mutate() call, so the cache value should be visible on the next
+    // microtask.
+    await waitFor(() => {
+      expect(readPurchaseStatus(cache)).toBe(true);
+    });
+
+    // Settle phase: let the network response arrive and the mutation
+    // promise resolve. The cache stays at the (confirmed) value.
+    await act(async () => {
+      await togglePromise;
+    });
+
+    expect(readPurchaseStatus(cache)).toBe(true);
+  });
+
+  it('keeps the optimistic value when the server confirms it', async () => {
+    const { client, cache } = buildClient({
+      initialPurchased: false,
+      serverResponse: buildSettledServerResponse(true),
+    });
+
+    const refetch = jest.fn().mockResolvedValue(undefined);
+    const { result } = renderHook(
+      () => useToggleShoppingItem({ listId: LIST_ID, refetch }),
+      { wrapper: wrap(client) },
+    );
+
+    await act(async () => {
+      await result.current.toggleItem(ITEM_ID);
+    });
+
+    expect(readPurchaseStatus(cache)).toBe(true);
+  });
+
+  it('toggles back to unpurchased on a second call', async () => {
+    const { client, cache } = buildClient({
+      initialPurchased: true,
+      serverResponse: buildSettledServerResponse(false),
+    });
+
+    expect(readPurchaseStatus(cache)).toBe(true);
+
+    const refetch = jest.fn().mockResolvedValue(undefined);
+    const { result } = renderHook(
+      () => useToggleShoppingItem({ listId: LIST_ID, refetch }),
+      { wrapper: wrap(client) },
+    );
+
+    await act(async () => {
+      await result.current.toggleItem(ITEM_ID);
+    });
+
+    expect(readPurchaseStatus(cache)).toBe(false);
+  });
+});

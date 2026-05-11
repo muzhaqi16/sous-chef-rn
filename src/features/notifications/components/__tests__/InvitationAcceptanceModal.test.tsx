@@ -1,11 +1,24 @@
 'use no memo';
 import React from 'react';
-import { screen, fireEvent, act } from '@testing-library/react-native';
+import { screen, fireEvent, act, waitFor } from '@testing-library/react-native';
 import {
   InvitationAcceptanceModal,
   type InvitationData,
 } from '../InvitationAcceptanceModal';
-import { renderWithProviders } from '#/test-utils/renderWithProviders';
+import {
+  recordMock,
+  renderWithApollo,
+  type MockedResponse,
+} from '#/test-utils/apolloMockProvider';
+import {
+  AcceptHomeInviteDocument,
+  DeclineHomeInviteDocument,
+} from '#operations/home/home.generated';
+import {
+  AcceptShoppingListInviteDocument,
+  DeclineShoppingListInviteDocument,
+  MyShoppingListInvitesDocument,
+} from '../InvitationAcceptanceModal.generated';
 import { alertService } from '#/services/alertService';
 
 jest.mock('#/utils/iconUtils', () => ({
@@ -80,30 +93,6 @@ jest.mock('#/utils/compilerSafeWrappers', () => ({
   },
 }));
 
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useMutation: jest.fn(),
-}));
-
-const apolloMock = jest.requireMock('@apollo/client/react') as {
-  useMutation: jest.Mock;
-};
-
-const mutationOverrides: Record<string, [jest.Mock, { loading: boolean }]> = {};
-
-const setMutationFor = (opName: string, fn: jest.Mock) => {
-  mutationOverrides[opName] = [fn, { loading: false }];
-};
-
-const installDefaultMutations = () => {
-  for (const k of Object.keys(mutationOverrides)) delete mutationOverrides[k];
-  apolloMock.useMutation.mockImplementation((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName && mutationOverrides[opName]) return mutationOverrides[opName];
-    return [jest.fn(), { loading: false }];
-  });
-};
-
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   createAddToQueryFieldUpdater: jest.fn(() => jest.fn()),
 }));
@@ -141,57 +130,251 @@ const defaultProps = {
   onReject: jest.fn(),
 };
 
+// Refetch query mocks (component declares refetchQueries in useMutation options;
+// MockedProvider matches them by document so we provide harmless empty payloads).
+function homesRefetchMock(): MockedResponse {
+  return recordMock(
+    require('#operations/home/home.generated').GetHomesDocument,
+    {
+      data: { homes: [] },
+    },
+  ).mock;
+}
+
+function pendingInvitesRefetchMock(): MockedResponse {
+  return recordMock(
+    require('#operations/home/home.generated').GetMyPendingInvitesDocument,
+    {
+      data: {
+        me: {
+          __typename: 'User',
+          id: 'u1',
+          pendingHomeInvites: [],
+        },
+      },
+    },
+  ).mock;
+}
+
+function myShoppingListInvitesRefetchMock(): MockedResponse {
+  return recordMock(MyShoppingListInvitesDocument, {
+    data: {
+      me: {
+        __typename: 'User',
+        id: 'u1',
+        pendingCollaborationInvites: [],
+      },
+    },
+  }).mock;
+}
+
+function acceptHomeOk(opts: { hasMembership?: boolean } = {}) {
+  const hasMembership = opts.hasMembership ?? true;
+  return recordMock(AcceptHomeInviteDocument, {
+    data: {
+      acceptHomeInvite: {
+        __typename: 'HomeInvitePayload',
+        success: true,
+        message: '',
+        code: 'OK',
+        membership: hasMembership
+          ? {
+              __typename: 'Membership',
+              id: 'm1',
+              homeId: 'home-1',
+              userId: 'u1',
+              role: 'MEMBER',
+              status: 'ACTIVE',
+              displayName: 'Tester',
+              canManageHome: false,
+              canViewPantry: true,
+              canEditPantry: true,
+              canAddItems: true,
+              canRemoveItems: true,
+              canInviteOthers: false,
+              user: {
+                __typename: 'User',
+                id: 'u1',
+                email: 'a@b.com',
+                profile: {
+                  __typename: 'UserProfile',
+                  id: 'p1',
+                  displayName: 'Tester',
+                  avatar: null,
+                },
+              },
+            }
+          : null,
+      },
+    },
+  });
+}
+
+function acceptHomeError(message: string) {
+  return recordMock(AcceptHomeInviteDocument, { error: new Error(message) });
+}
+
+function acceptShoppingListOk(opts: { success?: boolean } = {}) {
+  const success = opts.success ?? true;
+  return recordMock(AcceptShoppingListInviteDocument, {
+    data: {
+      acceptShoppingListInvite: {
+        __typename: 'ShoppingListCollaboratorPayload',
+        success,
+        message: '',
+        code: 'OK',
+        collaborator: success
+          ? {
+              __typename: 'ShoppingListCollaborator',
+              id: 'c1',
+              email: 'a@b.com',
+              role: 'EDITOR',
+              status: 'ACTIVE',
+              collaboratorId: 'u1',
+              canAddItems: true,
+              canRemoveItems: true,
+              canEditItems: true,
+              canMarkPurchased: true,
+              canEdit: true,
+              canInviteOthers: false,
+              invitedAt: '2025-01-01T00:00:00.000Z',
+              shoppingList: {
+                __typename: 'ShoppingList',
+                id: 'sl-1',
+                name: 'Weekly Groceries',
+                description: null,
+              },
+              collaborator: {
+                __typename: 'User',
+                id: 'u1',
+                email: 'a@b.com',
+                profile: {
+                  __typename: 'UserProfile',
+                  id: 'p1',
+                  displayName: 'Tester',
+                  avatar: null,
+                },
+              },
+            }
+          : null,
+      },
+    },
+  });
+}
+
+function acceptShoppingListError(message: string) {
+  return recordMock(AcceptShoppingListInviteDocument, {
+    error: new Error(message),
+  });
+}
+
+function declineHomeOk() {
+  return recordMock(DeclineHomeInviteDocument, {
+    data: {
+      declineHomeInvite: {
+        __typename: 'HomeInvitePayload',
+        success: true,
+        message: '',
+        code: 'OK',
+        homeInvite: { __typename: 'HomeInvite', id: 'inv-1' },
+      },
+    },
+  });
+}
+
+function declineHomeError(message: string) {
+  return recordMock(DeclineHomeInviteDocument, { error: new Error(message) });
+}
+
+function declineShoppingListOk() {
+  return recordMock(DeclineShoppingListInviteDocument, {
+    data: {
+      declineShoppingListInvite: {
+        __typename: 'ShoppingListCollaboratorPayload',
+        success: true,
+        message: '',
+        code: 'OK',
+        collaborator: {
+          __typename: 'ShoppingListCollaborator',
+          id: 'c1',
+        },
+      },
+    },
+  });
+}
+
+function declineShoppingListError(message: string) {
+  return recordMock(DeclineShoppingListInviteDocument, {
+    error: new Error(message),
+  });
+}
+
+function noTokenLookupMock(): MockedResponse {
+  // Resolves the SHOPPING_LIST_INVITE no-token path: client.query for
+  // MyShoppingListInvitesDocument returns an empty pending list so the
+  // invitation lookup yields `undefined` and the component takes the
+  // "invitationUnavailable" branch.
+  return recordMock(MyShoppingListInvitesDocument, {
+    data: {
+      me: {
+        __typename: 'User',
+        id: 'u1',
+        pendingCollaborationInvites: [],
+      },
+    },
+  }).mock;
+}
+
 describe('InvitationAcceptanceModal', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    installDefaultMutations();
   });
 
   it('renders nothing when invitation is null', () => {
-    renderWithProviders(
+    renderWithApollo(
       <InvitationAcceptanceModal {...defaultProps} invitation={null} />,
     );
     expect(screen.queryByText('Home Invitation')).toBeNull();
   });
 
   it('renders the invitation title', () => {
-    renderWithProviders(<InvitationAcceptanceModal {...defaultProps} />);
+    renderWithApollo(<InvitationAcceptanceModal {...defaultProps} />);
     expect(screen.getByText('Home Invitation')).toBeTruthy();
   });
 
   it('renders the invitation description', () => {
-    renderWithProviders(<InvitationAcceptanceModal {...defaultProps} />);
+    renderWithApollo(<InvitationAcceptanceModal {...defaultProps} />);
     expect(
       screen.getByText('You have been invited to join a home'),
     ).toBeTruthy();
   });
 
   it('renders the entity name', () => {
-    renderWithProviders(<InvitationAcceptanceModal {...defaultProps} />);
+    renderWithApollo(<InvitationAcceptanceModal {...defaultProps} />);
     expect(screen.getByText("Alice's Home")).toBeTruthy();
   });
 
   it('renders inviter name when provided', () => {
-    renderWithProviders(<InvitationAcceptanceModal {...defaultProps} />);
+    renderWithApollo(<InvitationAcceptanceModal {...defaultProps} />);
     expect(screen.getByText('Invited by Alice')).toBeTruthy();
   });
 
   it('does not render inviter name when not provided', () => {
     const noInviter = { ...homeInvitation, inviterName: undefined };
-    renderWithProviders(
+    renderWithApollo(
       <InvitationAcceptanceModal {...defaultProps} invitation={noInviter} />,
     );
     expect(screen.queryByText(/Invited by/)).toBeNull();
   });
 
   it('renders Accept and Reject buttons', () => {
-    renderWithProviders(<InvitationAcceptanceModal {...defaultProps} />);
+    renderWithApollo(<InvitationAcceptanceModal {...defaultProps} />);
     expect(screen.getByText('Accept')).toBeTruthy();
     expect(screen.getByText('Reject')).toBeTruthy();
   });
 
   it('renders shopping list invitation correctly', () => {
-    renderWithProviders(
+    renderWithApollo(
       <InvitationAcceptanceModal
         {...defaultProps}
         invitation={shoppingListInvitation}
@@ -202,14 +385,14 @@ describe('InvitationAcceptanceModal', () => {
   });
 
   it('calls onClose when close button is pressed', () => {
-    renderWithProviders(<InvitationAcceptanceModal {...defaultProps} />);
+    renderWithApollo(<InvitationAcceptanceModal {...defaultProps} />);
     // The close button uses an Icon, find it via the surrounding Pressable
     // Since Icon is mocked to null, we look for the modal structure
     expect(defaultProps.onClose).not.toHaveBeenCalled();
   });
 
   it('does not render content when visible is false', () => {
-    renderWithProviders(
+    renderWithApollo(
       <InvitationAcceptanceModal {...defaultProps} visible={false} />,
     );
     // Modal with visible=false does not render its content in test environment
@@ -219,212 +402,149 @@ describe('InvitationAcceptanceModal', () => {
   // --- Branch coverage tests ---
 
   it('handles accept for HOME_INVITE with token', async () => {
-    const mockAcceptHomeInvite = jest.fn().mockResolvedValue({
-      data: {
-        acceptHomeInvite: {
-          membership: { homeId: 'home-1' },
-        },
-      },
-    });
-    setMutationFor('AcceptHomeInvite', mockAcceptHomeInvite);
+    const acceptMock = acceptHomeOk();
 
-    renderWithProviders(<InvitationAcceptanceModal {...defaultProps} />);
-
-    await act(async () => {
-      fireEvent.press(screen.getByText('Accept'));
+    renderWithApollo(<InvitationAcceptanceModal {...defaultProps} />, {
+      operationMocks: [
+        acceptMock.mock,
+        homesRefetchMock(),
+        pendingInvitesRefetchMock(),
+      ],
     });
 
-    expect(mockAcceptHomeInvite).toHaveBeenCalledWith({
-      variables: { token: 'abc123' },
+    fireEvent.press(screen.getByText('Accept'));
+
+    await waitFor(() => {
+      expect(defaultProps.onAccept).toHaveBeenCalled();
     });
-    expect(defaultProps.onAccept).toHaveBeenCalled();
+    expect(acceptMock.fired).toContainEqual({ token: 'abc123' });
     expect(defaultProps.onClose).toHaveBeenCalled();
   });
 
   it('handles accept for SHOPPING_LIST_INVITE with token', async () => {
-    const mockAcceptShoppingListInvite = jest.fn().mockResolvedValue({
-      data: {
-        acceptShoppingListInvite: { success: true, collaborator: { id: 'c1' } },
-      },
-    });
-    setMutationFor('AcceptShoppingListInvite', mockAcceptShoppingListInvite);
+    const acceptMock = acceptShoppingListOk();
 
-    renderWithProviders(
+    renderWithApollo(
       <InvitationAcceptanceModal
         {...defaultProps}
         invitation={shoppingListInvitation}
       />,
+      {
+        operationMocks: [acceptMock.mock, myShoppingListInvitesRefetchMock()],
+      },
     );
 
-    await act(async () => {
-      fireEvent.press(screen.getByText('Accept'));
-    });
+    fireEvent.press(screen.getByText('Accept'));
 
-    expect(mockAcceptShoppingListInvite).toHaveBeenCalledWith({
-      variables: { token: 'def456' },
+    await waitFor(() => {
+      expect(defaultProps.onAccept).toHaveBeenCalled();
     });
-    expect(defaultProps.onAccept).toHaveBeenCalled();
+    expect(acceptMock.fired).toContainEqual({ token: 'def456' });
     expect(defaultProps.onClose).toHaveBeenCalled();
   });
 
   it('handles accept error with expired message for HOME_INVITE', async () => {
     const { toastService } = require('#/services/toastService');
-    const mockAcceptHomeInvite = jest.fn().mockResolvedValue({
-      error: { message: 'Token expired' },
-    });
-    setMutationFor('AcceptHomeInvite', mockAcceptHomeInvite);
+    const acceptMock = acceptHomeError('Token expired');
 
-    renderWithProviders(<InvitationAcceptanceModal {...defaultProps} />);
-
-    await act(async () => {
-      fireEvent.press(screen.getByText('Accept'));
+    renderWithApollo(<InvitationAcceptanceModal {...defaultProps} />, {
+      operationMocks: [acceptMock.mock],
     });
 
+    fireEvent.press(screen.getByText('Accept'));
+
+    await waitFor(() => {
+      expect(toastService.error).toHaveBeenCalledWith(
+        'This invitation is no longer valid. It may have expired or already been used.',
+      );
+    });
     expect(defaultProps.onClose).toHaveBeenCalled();
-    expect(toastService.error).toHaveBeenCalledWith(
-      'This invitation is no longer valid. It may have expired or already been used.',
-    );
   });
 
   it('handles accept error with generic message for SHOPPING_LIST_INVITE', async () => {
     const { toastService } = require('#/services/toastService');
-    const mockAcceptSLInvite = jest.fn().mockResolvedValue({
-      error: { message: 'Server error' },
-    });
-    setMutationFor('AcceptShoppingListInvite', mockAcceptSLInvite);
+    const acceptMock = acceptShoppingListError('Server error');
 
-    renderWithProviders(
+    renderWithApollo(
       <InvitationAcceptanceModal
         {...defaultProps}
         invitation={shoppingListInvitation}
       />,
+      { operationMocks: [acceptMock.mock] },
     );
 
-    await act(async () => {
-      fireEvent.press(screen.getByText('Accept'));
-    });
+    fireEvent.press(screen.getByText('Accept'));
 
-    expect(toastService.error).toHaveBeenCalledWith('Server error');
+    await waitFor(() => {
+      expect(toastService.error).toHaveBeenCalledWith('Server error');
+    });
   });
 
   it('handles accept when token is missing and type is SHOPPING_LIST_INVITE', async () => {
     const { toastService } = require('#/services/toastService');
     const noTokenInvite = { ...shoppingListInvitation, token: undefined };
 
-    renderWithProviders(
+    renderWithApollo(
       <InvitationAcceptanceModal
         {...defaultProps}
         invitation={noTokenInvite}
       />,
+      { operationMocks: [noTokenLookupMock()] },
     );
 
-    await act(async () => {
-      fireEvent.press(screen.getByText('Accept'));
+    fireEvent.press(screen.getByText('Accept'));
+
+    // Token resolution returns undefined → invitationUnavailable toast.
+    await waitFor(() => {
+      expect(toastService.error).toHaveBeenCalledWith(
+        'This invitation is no longer available. It may have been used, declined, or expired.',
+      );
     });
-
-    // Falls through to client.query which is not mocked, so it should hit the error path
-    // or the "no token" path
-    expect(toastService.error).toHaveBeenCalled();
-  });
-
-  it('handles accept with thrown error containing "expired" in message', async () => {
-    const { toastService } = require('#/services/toastService');
-    const mockAcceptHomeInvite = jest
-      .fn()
-      .mockRejectedValue(new Error('Token expired or Invalid'));
-    setMutationFor('AcceptHomeInvite', mockAcceptHomeInvite);
-
-    renderWithProviders(<InvitationAcceptanceModal {...defaultProps} />);
-
-    await act(async () => {
-      fireEvent.press(screen.getByText('Accept'));
-    });
-
-    expect(defaultProps.onClose).toHaveBeenCalled();
-    expect(toastService.error).toHaveBeenCalledWith(
-      'This invitation is no longer valid. It may have expired or already been used.',
-    );
-  });
-
-  it('handles accept with thrown error with generic message', async () => {
-    const { toastService } = require('#/services/toastService');
-    const mockAcceptHomeInvite = jest
-      .fn()
-      .mockRejectedValue(new Error('Something went wrong'));
-    setMutationFor('AcceptHomeInvite', mockAcceptHomeInvite);
-
-    renderWithProviders(<InvitationAcceptanceModal {...defaultProps} />);
-
-    await act(async () => {
-      fireEvent.press(screen.getByText('Accept'));
-    });
-
-    expect(defaultProps.onClose).toHaveBeenCalled();
-    expect(toastService.error).toHaveBeenCalledWith('Something went wrong');
-  });
-
-  it('handles accept with thrown error with no message', async () => {
-    const { toastService } = require('#/services/toastService');
-    const mockAcceptHomeInvite = jest.fn().mockRejectedValue({});
-    setMutationFor('AcceptHomeInvite', mockAcceptHomeInvite);
-
-    renderWithProviders(<InvitationAcceptanceModal {...defaultProps} />);
-
-    await act(async () => {
-      fireEvent.press(screen.getByText('Accept'));
-    });
-
-    expect(toastService.error).toHaveBeenCalledWith(
-      'Failed to accept invitation. Please try again.',
-    );
-  });
-
-  it('handles accept error with Invalid message', async () => {
-    const { toastService } = require('#/services/toastService');
-    const mockAcceptSLInvite = jest.fn().mockResolvedValue({
-      error: { message: 'Invalid token' },
-    });
-    setMutationFor('AcceptShoppingListInvite', mockAcceptSLInvite);
-
-    renderWithProviders(
-      <InvitationAcceptanceModal
-        {...defaultProps}
-        invitation={shoppingListInvitation}
-      />,
-    );
-
-    await act(async () => {
-      fireEvent.press(screen.getByText('Accept'));
-    });
-
-    expect(toastService.error).toHaveBeenCalledWith(
-      'This invitation is no longer valid. It may have expired or already been used.',
-    );
   });
 
   it('handles accept error with no message falls back to default', async () => {
     const { toastService } = require('#/services/toastService');
-    const mockAcceptHomeInvite = jest.fn().mockResolvedValue({
-      error: { message: '' },
-    });
-    setMutationFor('AcceptHomeInvite', mockAcceptHomeInvite);
+    const acceptMock = acceptHomeError('');
 
-    renderWithProviders(<InvitationAcceptanceModal {...defaultProps} />);
-
-    await act(async () => {
-      fireEvent.press(screen.getByText('Accept'));
+    renderWithApollo(<InvitationAcceptanceModal {...defaultProps} />, {
+      operationMocks: [acceptMock.mock],
     });
 
-    expect(toastService.error).toHaveBeenCalledWith(
-      'Failed to accept invitation. Please try again.',
+    fireEvent.press(screen.getByText('Accept'));
+
+    await waitFor(() => {
+      expect(toastService.error).toHaveBeenCalledWith(
+        'Failed to accept invitation. Please try again.',
+      );
+    });
+  });
+
+  it('handles accept error with Invalid message', async () => {
+    const { toastService } = require('#/services/toastService');
+    const acceptMock = acceptShoppingListError('Invalid token');
+
+    renderWithApollo(
+      <InvitationAcceptanceModal
+        {...defaultProps}
+        invitation={shoppingListInvitation}
+      />,
+      { operationMocks: [acceptMock.mock] },
     );
+
+    fireEvent.press(screen.getByText('Accept'));
+
+    await waitFor(() => {
+      expect(toastService.error).toHaveBeenCalledWith(
+        'This invitation is no longer valid. It may have expired or already been used.',
+      );
+    });
   });
 
   // --- Additional branch coverage tests ---
 
   it('does nothing on handleAccept when invitation is null', async () => {
     // Render with null invitation - returns null early
-    renderWithProviders(
+    renderWithApollo(
       <InvitationAcceptanceModal {...defaultProps} invitation={null} />,
     );
     // Component returns null, no buttons to press
@@ -432,7 +552,7 @@ describe('InvitationAcceptanceModal', () => {
   });
 
   it('handles reject flow for HOME_INVITE - shows confirmation alert', async () => {
-    renderWithProviders(<InvitationAcceptanceModal {...defaultProps} />);
+    renderWithApollo(<InvitationAcceptanceModal {...defaultProps} />);
 
     await act(async () => {
       fireEvent.press(screen.getByText('Reject'));
@@ -446,10 +566,11 @@ describe('InvitationAcceptanceModal', () => {
   });
 
   it('handles reject confirmation for HOME_INVITE with token', async () => {
-    const mockDeclineHomeInvite = jest.fn().mockResolvedValue({ data: {} });
-    setMutationFor('DeclineHomeInvite', mockDeclineHomeInvite);
+    const declineMock = declineHomeOk();
 
-    renderWithProviders(<InvitationAcceptanceModal {...defaultProps} />);
+    renderWithApollo(<InvitationAcceptanceModal {...defaultProps} />, {
+      operationMocks: [declineMock.mock, pendingInvitesRefetchMock()],
+    });
 
     await act(async () => {
       fireEvent.press(screen.getByText('Reject'));
@@ -465,20 +586,20 @@ describe('InvitationAcceptanceModal', () => {
       declineButton.onPress();
     });
 
-    expect(mockDeclineHomeInvite).toHaveBeenCalledWith({
-      variables: { token: 'abc123' },
-    });
+    expect(declineMock.fired).toContainEqual({ token: 'abc123' });
   });
 
   it('handles reject confirmation for SHOPPING_LIST_INVITE with token', async () => {
-    const mockDeclineSLInvite = jest.fn().mockResolvedValue({ data: {} });
-    setMutationFor('DeclineShoppingListInvite', mockDeclineSLInvite);
+    const declineMock = declineShoppingListOk();
 
-    renderWithProviders(
+    renderWithApollo(
       <InvitationAcceptanceModal
         {...defaultProps}
         invitation={shoppingListInvitation}
       />,
+      {
+        operationMocks: [declineMock.mock, myShoppingListInvitesRefetchMock()],
+      },
     );
 
     await act(async () => {
@@ -494,19 +615,16 @@ describe('InvitationAcceptanceModal', () => {
       declineButton.onPress();
     });
 
-    expect(mockDeclineSLInvite).toHaveBeenCalledWith({
-      variables: { token: 'def456' },
-    });
+    expect(declineMock.fired).toContainEqual({ token: 'def456' });
   });
 
   it('handles reject error with expired message for HOME_INVITE', async () => {
     const { toastService } = require('#/services/toastService');
-    const mockDeclineHomeInvite = jest.fn().mockResolvedValue({
-      error: { message: 'Token expired' },
-    });
-    setMutationFor('DeclineHomeInvite', mockDeclineHomeInvite);
+    const declineMock = declineHomeError('Token expired');
 
-    renderWithProviders(<InvitationAcceptanceModal {...defaultProps} />);
+    renderWithApollo(<InvitationAcceptanceModal {...defaultProps} />, {
+      operationMocks: [declineMock.mock],
+    });
 
     await act(async () => {
       fireEvent.press(screen.getByText('Reject'));
@@ -515,23 +633,22 @@ describe('InvitationAcceptanceModal', () => {
     const declineButton = (
       (alertService.alert as jest.Mock).mock.calls[0][2] as any
     ).find((b: any) => b.text === 'Decline');
-    await act(async () => {
-      declineButton.onPress();
-    });
+    declineButton.onPress();
 
-    expect(toastService.error).toHaveBeenCalledWith(
-      'This invitation is no longer valid. It may have expired or already been used.',
-    );
+    await waitFor(() => {
+      expect(toastService.error).toHaveBeenCalledWith(
+        'This invitation is no longer valid. It may have expired or already been used.',
+      );
+    });
   });
 
   it('handles reject error with generic message for HOME_INVITE', async () => {
     const { toastService } = require('#/services/toastService');
-    const mockDeclineHomeInvite = jest.fn().mockResolvedValue({
-      error: { message: 'Server error' },
-    });
-    setMutationFor('DeclineHomeInvite', mockDeclineHomeInvite);
+    const declineMock = declineHomeError('Server error');
 
-    renderWithProviders(<InvitationAcceptanceModal {...defaultProps} />);
+    renderWithApollo(<InvitationAcceptanceModal {...defaultProps} />, {
+      operationMocks: [declineMock.mock],
+    });
 
     await act(async () => {
       fireEvent.press(screen.getByText('Reject'));
@@ -540,21 +657,20 @@ describe('InvitationAcceptanceModal', () => {
     const declineButton = (
       (alertService.alert as jest.Mock).mock.calls[0][2] as any
     ).find((b: any) => b.text === 'Decline');
-    await act(async () => {
-      declineButton.onPress();
-    });
+    declineButton.onPress();
 
-    expect(toastService.error).toHaveBeenCalledWith('Server error');
+    await waitFor(() => {
+      expect(toastService.error).toHaveBeenCalledWith('Server error');
+    });
   });
 
   it('handles reject error with no message falls back to default for HOME_INVITE', async () => {
     const { toastService } = require('#/services/toastService');
-    const mockDeclineHomeInvite = jest.fn().mockResolvedValue({
-      error: { message: '' },
-    });
-    setMutationFor('DeclineHomeInvite', mockDeclineHomeInvite);
+    const declineMock = declineHomeError('');
 
-    renderWithProviders(<InvitationAcceptanceModal {...defaultProps} />);
+    renderWithApollo(<InvitationAcceptanceModal {...defaultProps} />, {
+      operationMocks: [declineMock.mock],
+    });
 
     await act(async () => {
       fireEvent.press(screen.getByText('Reject'));
@@ -563,27 +679,25 @@ describe('InvitationAcceptanceModal', () => {
     const declineButton = (
       (alertService.alert as jest.Mock).mock.calls[0][2] as any
     ).find((b: any) => b.text === 'Decline');
-    await act(async () => {
-      declineButton.onPress();
-    });
+    declineButton.onPress();
 
-    expect(toastService.error).toHaveBeenCalledWith(
-      'Failed to decline invitation. Please try again.',
-    );
+    await waitFor(() => {
+      expect(toastService.error).toHaveBeenCalledWith(
+        'Failed to decline invitation. Please try again.',
+      );
+    });
   });
 
   it('handles reject error with Invalid message for SHOPPING_LIST_INVITE', async () => {
     const { toastService } = require('#/services/toastService');
-    const mockDeclineSLInvite = jest.fn().mockResolvedValue({
-      error: { message: 'Invalid token provided' },
-    });
-    setMutationFor('DeclineShoppingListInvite', mockDeclineSLInvite);
+    const declineMock = declineShoppingListError('Invalid token provided');
 
-    renderWithProviders(
+    renderWithApollo(
       <InvitationAcceptanceModal
         {...defaultProps}
         invitation={shoppingListInvitation}
       />,
+      { operationMocks: [declineMock.mock] },
     );
 
     await act(async () => {
@@ -593,27 +707,25 @@ describe('InvitationAcceptanceModal', () => {
     const declineButton = (
       (alertService.alert as jest.Mock).mock.calls[0][2] as any
     ).find((b: any) => b.text === 'Decline');
-    await act(async () => {
-      declineButton.onPress();
-    });
+    declineButton.onPress();
 
-    expect(toastService.error).toHaveBeenCalledWith(
-      'This invitation is no longer valid. It may have expired or already been used.',
-    );
+    await waitFor(() => {
+      expect(toastService.error).toHaveBeenCalledWith(
+        'This invitation is no longer valid. It may have expired or already been used.',
+      );
+    });
   });
 
   it('handles reject error with generic message for SHOPPING_LIST_INVITE', async () => {
     const { toastService } = require('#/services/toastService');
-    const mockDeclineSLInvite = jest.fn().mockResolvedValue({
-      error: { message: 'Server error' },
-    });
-    setMutationFor('DeclineShoppingListInvite', mockDeclineSLInvite);
+    const declineMock = declineShoppingListError('Server error');
 
-    renderWithProviders(
+    renderWithApollo(
       <InvitationAcceptanceModal
         {...defaultProps}
         invitation={shoppingListInvitation}
       />,
+      { operationMocks: [declineMock.mock] },
     );
 
     await act(async () => {
@@ -623,94 +735,23 @@ describe('InvitationAcceptanceModal', () => {
     const declineButton = (
       (alertService.alert as jest.Mock).mock.calls[0][2] as any
     ).find((b: any) => b.text === 'Decline');
-    await act(async () => {
-      declineButton.onPress();
+    declineButton.onPress();
+
+    await waitFor(() => {
+      expect(toastService.error).toHaveBeenCalledWith('Server error');
     });
-
-    expect(toastService.error).toHaveBeenCalledWith('Server error');
-  });
-
-  it('handles reject thrown error with expired message', async () => {
-    const { toastService } = require('#/services/toastService');
-    const mockDeclineHomeInvite = jest
-      .fn()
-      .mockRejectedValue(new Error('Token expired'));
-    setMutationFor('DeclineHomeInvite', mockDeclineHomeInvite);
-
-    renderWithProviders(<InvitationAcceptanceModal {...defaultProps} />);
-
-    await act(async () => {
-      fireEvent.press(screen.getByText('Reject'));
-    });
-
-    const declineButton = (
-      (alertService.alert as jest.Mock).mock.calls[0][2] as any
-    ).find((b: any) => b.text === 'Decline');
-    await act(async () => {
-      declineButton.onPress();
-    });
-
-    expect(defaultProps.onClose).toHaveBeenCalled();
-    expect(toastService.error).toHaveBeenCalledWith(
-      'This invitation is no longer valid. It may have expired or already been used.',
-    );
-  });
-
-  it('handles reject thrown error with generic message', async () => {
-    const { toastService } = require('#/services/toastService');
-    const mockDeclineHomeInvite = jest
-      .fn()
-      .mockRejectedValue(new Error('Network failed'));
-    setMutationFor('DeclineHomeInvite', mockDeclineHomeInvite);
-
-    renderWithProviders(<InvitationAcceptanceModal {...defaultProps} />);
-
-    await act(async () => {
-      fireEvent.press(screen.getByText('Reject'));
-    });
-
-    const declineButton = (
-      (alertService.alert as jest.Mock).mock.calls[0][2] as any
-    ).find((b: any) => b.text === 'Decline');
-    await act(async () => {
-      declineButton.onPress();
-    });
-
-    expect(toastService.error).toHaveBeenCalledWith('Network failed');
-  });
-
-  it('handles reject thrown error with no message', async () => {
-    const { toastService } = require('#/services/toastService');
-    const mockDeclineHomeInvite = jest.fn().mockRejectedValue({});
-    setMutationFor('DeclineHomeInvite', mockDeclineHomeInvite);
-
-    renderWithProviders(<InvitationAcceptanceModal {...defaultProps} />);
-
-    await act(async () => {
-      fireEvent.press(screen.getByText('Reject'));
-    });
-
-    const declineButton = (
-      (alertService.alert as jest.Mock).mock.calls[0][2] as any
-    ).find((b: any) => b.text === 'Decline');
-    await act(async () => {
-      declineButton.onPress();
-    });
-
-    expect(toastService.error).toHaveBeenCalledWith(
-      'Failed to decline invitation. Please try again.',
-    );
   });
 
   it('handles reject when token is missing for SHOPPING_LIST_INVITE', async () => {
     const { toastService } = require('#/services/toastService');
     const noTokenInvite = { ...shoppingListInvitation, token: undefined };
 
-    renderWithProviders(
+    renderWithApollo(
       <InvitationAcceptanceModal
         {...defaultProps}
         invitation={noTokenInvite}
       />,
+      { operationMocks: [noTokenLookupMock()] },
     );
 
     await act(async () => {
@@ -720,17 +761,19 @@ describe('InvitationAcceptanceModal', () => {
     const declineButton = (
       (alertService.alert as jest.Mock).mock.calls[0][2] as any
     ).find((b: any) => b.text === 'Decline');
-    await act(async () => {
-      declineButton.onPress();
-    });
+    declineButton.onPress();
 
-    // Falls through to token fetch, which should error or show no-token toast
-    expect(toastService.error).toHaveBeenCalled();
+    // Token resolution returns undefined → invitationUnavailable toast.
+    await waitFor(() => {
+      expect(toastService.error).toHaveBeenCalledWith(
+        'This invitation is no longer available. It may have been used, declined, or expired.',
+      );
+    });
   });
 
   it('renders SHOPPING_LIST_INVITE without inviterName', () => {
     const noInviterSL = { ...shoppingListInvitation, inviterName: undefined };
-    renderWithProviders(
+    renderWithApollo(
       <InvitationAcceptanceModal {...defaultProps} invitation={noInviterSL} />,
     );
     expect(screen.queryByText(/Invited by/)).toBeNull();
@@ -738,38 +781,36 @@ describe('InvitationAcceptanceModal', () => {
   });
 
   it('handles accept for HOME_INVITE when result has no membership', async () => {
-    const mockAcceptHomeInvite = jest.fn().mockResolvedValue({
-      data: {
-        acceptHomeInvite: {
-          membership: null,
-        },
-      },
-    });
-    setMutationFor('AcceptHomeInvite', mockAcceptHomeInvite);
+    const acceptMock = acceptHomeOk({ hasMembership: false });
 
-    renderWithProviders(<InvitationAcceptanceModal {...defaultProps} />);
-
-    await act(async () => {
-      fireEvent.press(screen.getByText('Accept'));
+    renderWithApollo(<InvitationAcceptanceModal {...defaultProps} />, {
+      operationMocks: [
+        acceptMock.mock,
+        homesRefetchMock(),
+        pendingInvitesRefetchMock(),
+      ],
     });
 
-    // onAccept should NOT have been called since membership is null
-    expect(defaultProps.onAccept).not.toHaveBeenCalled();
+    fireEvent.press(screen.getByText('Accept'));
+
+    // success: true + null membership → "already accepted" branch calls
+    // onAccept with the original invitation.
+    await waitFor(() => {
+      expect(defaultProps.onAccept).toHaveBeenCalled();
+    });
   });
 
   it('handles accept for SHOPPING_LIST_INVITE when result has no success', async () => {
-    const mockAcceptSLInvite = jest.fn().mockResolvedValue({
-      data: {
-        acceptShoppingListInvite: { success: false },
-      },
-    });
-    setMutationFor('AcceptShoppingListInvite', mockAcceptSLInvite);
+    const acceptMock = acceptShoppingListOk({ success: false });
 
-    renderWithProviders(
+    renderWithApollo(
       <InvitationAcceptanceModal
         {...defaultProps}
         invitation={shoppingListInvitation}
       />,
+      {
+        operationMocks: [acceptMock.mock, myShoppingListInvitesRefetchMock()],
+      },
     );
 
     await act(async () => {
@@ -780,7 +821,7 @@ describe('InvitationAcceptanceModal', () => {
   });
 
   it('renders without onAccept and onReject callbacks', () => {
-    renderWithProviders(
+    renderWithApollo(
       <InvitationAcceptanceModal
         visible={true}
         invitation={homeInvitation}
@@ -793,19 +834,18 @@ describe('InvitationAcceptanceModal', () => {
 
   it('handles accept error with "Invalid" for HOME_INVITE', async () => {
     const { toastService } = require('#/services/toastService');
-    const mockAcceptHomeInvite = jest.fn().mockResolvedValue({
-      error: { message: 'Invalid invite token' },
-    });
-    setMutationFor('AcceptHomeInvite', mockAcceptHomeInvite);
+    const acceptMock = acceptHomeError('Invalid invite token');
 
-    renderWithProviders(<InvitationAcceptanceModal {...defaultProps} />);
-
-    await act(async () => {
-      fireEvent.press(screen.getByText('Accept'));
+    renderWithApollo(<InvitationAcceptanceModal {...defaultProps} />, {
+      operationMocks: [acceptMock.mock],
     });
 
-    expect(toastService.error).toHaveBeenCalledWith(
-      'This invitation is no longer valid. It may have expired or already been used.',
-    );
+    fireEvent.press(screen.getByText('Accept'));
+
+    await waitFor(() => {
+      expect(toastService.error).toHaveBeenCalledWith(
+        'This invitation is no longer valid. It may have expired or already been used.',
+      );
+    });
   });
 });

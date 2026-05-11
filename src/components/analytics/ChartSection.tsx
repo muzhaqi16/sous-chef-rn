@@ -1,12 +1,9 @@
 import React from 'react';
-import { View, ActivityIndicator } from 'react-native';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+import { View } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import { PrimaryActivityIndicator } from '#components/atoms/themedComponents';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
-
-const PrimaryActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
-  color: theme.colors.primary,
-}));
 
 interface ChartSectionProps {
   title: string;

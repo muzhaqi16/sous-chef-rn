@@ -134,7 +134,7 @@ const SlideAnimatedWrapper: React.FC<{
  * Displays item with emoji/image, name, expiration status, quantity, and location
  * Slide animation handled by SlideAnimatedWrapper (always renders Animated.View)
  */
-const PantryItemCardComponent: React.FC<PantryItemCardProps> = ({
+export const PantryItemCard: React.FC<PantryItemCardProps> = ({
   id,
   name,
   expirationText,
@@ -259,11 +259,6 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.sm - 1,
   },
 }));
-
-// PERFORMANCE: React.memo required — FlashList renderItem (module-scope parent,
-// not compiled by React Compiler). Default shallow comparison is sufficient
-// because all props are primitives (pre-flattened by PantryContent's computeDisplayMap).
-export const PantryItemCard = React.memo(PantryItemCardComponent);
 
 // PantryItemVariant alias for backwards compatibility
 export type PantryItemVariant = ItemVariant;

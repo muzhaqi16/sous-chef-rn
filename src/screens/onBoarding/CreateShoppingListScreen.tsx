@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { StyleSheet } from 'react-native-unistyles';
+import { useTranslation } from 'react-i18next';
 
 import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
 import { DynamicFormFields } from '#components/molecules/DynamicFormFields';
@@ -31,6 +32,7 @@ async function performCreateShoppingList(
   selectedHomeId: string | null,
   setSelectedShoppingListId: (id: string) => void,
   navigateToNextStep: (step: string) => void,
+  fallbackErrorMessage: string,
 ): Promise<void> {
   const response = await createShoppingList({
     variables: {
@@ -61,7 +63,7 @@ async function performCreateShoppingList(
     }
     navigateToNextStep('CreateShoppingList');
   } else {
-    throw new Error(payload?.message || 'Failed to create shopping list');
+    throw new Error(payload?.message || fallbackErrorMessage);
   }
 }
 
@@ -82,6 +84,7 @@ type FormValues = {
 };
 
 export const CreateShoppingListScreen = () => {
+  const { t } = useTranslation();
   useScreenTransition('CreateShoppingListScreen');
   const { navigateToNextStep, skipToStep } = useOnboardingNavigation();
 
@@ -113,7 +116,7 @@ export const CreateShoppingListScreen = () => {
   const form = useForm<FormValues>({
     resolver: yupResolver(createShoppingListSchema),
     defaultValues: {
-      shoppingListName: 'Weekly Groceries',
+      shoppingListName: t('onBoarding.defaultShoppingListName'),
     },
   });
 
@@ -142,6 +145,7 @@ export const CreateShoppingListScreen = () => {
           selectedHomeId,
           setSelectedShoppingListId,
           navigateToNextStep,
+          t('errors.createShoppingListFailed'),
         ),
       setIsCreating,
       (error: unknown) => {
@@ -149,8 +153,7 @@ export const CreateShoppingListScreen = () => {
           operation: 'CreateShoppingList.submit',
         });
         setGraphqlError(
-          (error as any)?.message ||
-            'An error occurred while creating the list.',
+          (error as any)?.message || t('onBoarding.createShoppingListError'),
         );
       },
     );
@@ -160,8 +163,8 @@ export const CreateShoppingListScreen = () => {
   if (checkingExisting || listsLoading) {
     return (
       <OnBoardingWrapper
-        title="Shopping Lists"
-        subtitle="Checking your existing lists..."
+        title={t('onBoarding.shoppingListsTitle')}
+        subtitle={t('onBoarding.checkingExistingLists')}
         step={2}
         totalSteps={7}
         onSkip={() => skipToStep('SelectPantryItems')}
@@ -170,7 +173,7 @@ export const CreateShoppingListScreen = () => {
           <SousChefLoader
             size="small"
             showBrand={false}
-            message="Checking your shopping lists..."
+            message={t('onBoarding.checkingYourShoppingLists')}
           />
         </View>
       </OnBoardingWrapper>
@@ -181,8 +184,8 @@ export const CreateShoppingListScreen = () => {
   if (existingList) {
     return (
       <OnBoardingWrapper
-        title="You're all set!"
-        subtitle="Your shopping list is already configured"
+        title={t('onBoarding.allSet')}
+        subtitle={t('onBoarding.shoppingListConfigured')}
         step={2}
         totalSteps={7}
         onSkip={() => skipToStep('SelectPantryItems')}
@@ -191,7 +194,7 @@ export const CreateShoppingListScreen = () => {
         <View style={styles.existingResourcesContainer}>
           <View style={styles.resourceCard}>
             <Text size="xs" tone="secondary" style={styles.resourceLabel}>
-              Shopping List
+              {t('labels.shoppingList')}
             </Text>
             <Text size="lg" weight="semibold">
               {existingList.name}
@@ -204,7 +207,7 @@ export const CreateShoppingListScreen = () => {
                   tone="accent"
                   style={styles.defaultBadgeText}
                 >
-                  Default
+                  {t('labels.default')}
                 </Text>
               </View>
             )}
@@ -217,13 +220,12 @@ export const CreateShoppingListScreen = () => {
             lineHeight="normal"
             style={styles.infoText}
           >
-            This was already set up. You can continue to the next step or create
-            additional ones later in settings.
+            {t('onBoarding.shoppingListAlreadySetUp')}
           </Text>
         </View>
 
         <Button
-          title="Continue"
+          title={t('labels.continue')}
           onPress={() => navigateToNextStep('CreateShoppingList')}
           variant="primary"
         />
@@ -234,8 +236,8 @@ export const CreateShoppingListScreen = () => {
   // No existing list - show create form
   return (
     <OnBoardingWrapper
-      title="Create your shopping list"
-      subtitle="You can add items to it later"
+      title={t('onBoarding.createShoppingListTitle')}
+      subtitle={t('onBoarding.createShoppingListSubtitle')}
       step={2}
       totalSteps={7}
       onSkip={() => skipToStep('SelectPantryItems')}
@@ -245,8 +247,8 @@ export const CreateShoppingListScreen = () => {
         fields={[
           {
             name: 'shoppingListName',
-            label: 'Shopping List Name',
-            placeholder: 'e.g. Weekly Groceries',
+            label: t('onBoarding.shoppingListName'),
+            placeholder: t('onBoarding.shoppingListPlaceholder'),
             component: BaseInput,
           },
         ]}
@@ -255,7 +257,9 @@ export const CreateShoppingListScreen = () => {
       />
 
       <Button
-        title={isCreating ? 'Creating List...' : 'Create List'}
+        title={
+          isCreating ? t('onBoarding.creatingList') : t('onBoarding.createList')
+        }
         onPress={form.handleSubmit(onSubmit)}
         variant="primary"
         disabled={isCreating}

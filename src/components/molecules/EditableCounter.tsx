@@ -1,14 +1,10 @@
 import React, { useState } from 'react';
-import { View, TextInput } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { View } from 'react-native';
+import { Pressable, ThemedTextInput } from '#components/atoms/themedComponents';
 import { Icon } from '#utils/iconUtils';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { Label } from '#components/atoms/Label';
-
-const ThemedTextInput = withUnistyles(TextInput, theme => ({
-  placeholderTextColor: theme.colors.textSecondary,
-}));
 
 interface EditableCounterProps {
   label?: string;

@@ -184,8 +184,34 @@ export const useStore = create<RootState>()(
                 applyThemePreferenceToRuntime(state.theme);
               }
 
+              // Sync the rehydrated UI language to i18next BEFORE flipping
+              // `isHydrated`, so the first paint already shows the user's
+              // preferred language instead of the bundled default ('en').
+              // Lazy-imported because i18n/config side-effects on load — we
+              // want to avoid pulling it into the persist closure.
+              if (state?.language && state.language !== 'en') {
+                import('#/i18n/config').then(({ getI18n }) => {
+                  void getI18n().changeLanguage(state.language);
+                });
+              }
+
               // Mark store as hydrated
               state?.setHydrated(true);
+
+              // Cold-start telemetry: time from JS bundle entry to Zustand
+              // hydration callback firing. Captures MMKV decrypt + JSON parse +
+              // store rehydrate cost. Imported lazily to avoid pulling
+              // telemetry into the persist closure during module load.
+              const startTs = (globalThis as { __APP_START_TIMESTAMP?: number })
+                .__APP_START_TIMESTAMP;
+              if (startTs) {
+                import('#services/telemetry').then(({ Telemetry }) => {
+                  Telemetry.histogram(
+                    'app_zustand_hydration_ms',
+                    Date.now() - startTs,
+                  );
+                });
+              }
 
               // Clean up orphaned notifications on app startup
               // This ensures persisted notifications are filtered correctly

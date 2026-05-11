@@ -131,12 +131,12 @@ jest.mock('../useAuthOperations', () => ({
   }),
 }));
 
-// --- Mock useUserPreferences ---
+// --- Mock useAuthPreferences ---
 const mockMarkBiometricDeclined = jest.fn();
 const mockMarkBiometricEnabled = jest.fn();
 
-jest.mock('#/hooks/navigation/useUserPreferences', () => ({
-  useUserPreferences: () => ({
+jest.mock('#/hooks/navigation/useAuthPreferences', () => ({
+  useAuthPreferences: () => ({
     markBiometricDeclined: mockMarkBiometricDeclined,
     markBiometricEnabled: mockMarkBiometricEnabled,
   }),

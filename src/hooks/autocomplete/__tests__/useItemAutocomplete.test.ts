@@ -1,4 +1,12 @@
-import { renderHook, act } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
+import {
+  renderHookWithApollo,
+  type MockedResponse,
+} from '#/test-utils/apolloMockProvider';
+import {
+  AutocompleteItemsDocument,
+  SearchItemsSemanticDocument,
+} from '#operations/item/item.generated';
 import { useItemAutocomplete } from '../useItemAutocomplete';
 
 jest.mock('../../../apollo/links/tokenScheduler');
@@ -10,20 +18,37 @@ jest.mock('#store/useAppStore', () => ({
     selector({ isOnline: mockIsOnline }),
 }));
 
-const mockFetchItems = jest.fn();
-const mockFetchSemantic = jest.fn();
-
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useLazyQuery: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'AutocompleteItems')
-      return [mockFetchItems, { loading: false }];
-    if (opName === 'SearchItemsSemantic')
-      return [mockFetchSemantic, { loading: false }];
-    return [jest.fn(), { loading: false }];
-  }),
-}));
+/**
+ * Per CLAUDE.md "Apollo Test Patterns": variable-recording mocks via the
+ * `variables: () => true` matcher capture the inputs the hook fires through
+ * useLazyQuery, replacing the legacy `mockFetchItems.toHaveBeenCalledWith`
+ * spy pattern.
+ */
+function createItemsMock(
+  recorded: Array<Record<string, unknown>>,
+): MockedResponse {
+  return {
+    request: {
+      query: AutocompleteItemsDocument,
+      variables: vars => {
+        recorded.push(vars);
+        return true;
+      },
+    },
+    maxUsageCount: Number.POSITIVE_INFINITY,
+    result: { data: { autocompleteItems: [] } },
+  };
+}
+function createSemanticMock(): MockedResponse {
+  return {
+    request: {
+      query: SearchItemsSemanticDocument,
+      variables: () => true,
+    },
+    maxUsageCount: Number.POSITIVE_INFINITY,
+    result: { data: { searchItemsSemantic: [] } },
+  };
+}
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -37,19 +62,19 @@ afterEach(() => {
 
 describe('useItemAutocomplete', () => {
   it('returns empty displayItems initially', () => {
-    const { result } = renderHook(() => useItemAutocomplete());
+    const { result } = renderHookWithApollo(() => useItemAutocomplete());
 
     expect(result.current.displayItems).toEqual([]);
   });
 
   it('returns empty searchTerm initially', () => {
-    const { result } = renderHook(() => useItemAutocomplete());
+    const { result } = renderHookWithApollo(() => useItemAutocomplete());
 
     expect(result.current.searchTerm).toBe('');
   });
 
   it('updates searchTerm via handleSearchTermChange', () => {
-    const { result } = renderHook(() => useItemAutocomplete());
+    const { result } = renderHookWithApollo(() => useItemAutocomplete());
 
     act(() => {
       result.current.handleSearchTermChange('milk');
@@ -59,7 +84,10 @@ describe('useItemAutocomplete', () => {
   });
 
   it('triggers lazy query after debounce when term meets minChars', () => {
-    const { result } = renderHook(() => useItemAutocomplete());
+    const recorded: Array<Record<string, unknown>> = [];
+    const { result } = renderHookWithApollo(() => useItemAutocomplete(), {
+      operationMocks: [createItemsMock(recorded), createSemanticMock()],
+    });
 
     act(() => {
       result.current.handleSearchTermChange('mi');
@@ -69,37 +97,36 @@ describe('useItemAutocomplete', () => {
       jest.advanceTimersByTime(250);
     });
 
-    expect(mockFetchItems).toHaveBeenCalledWith({
-      variables: { input: { query: 'mi', limit: 10 } },
-    });
+    expect(recorded).toContainEqual({ input: { query: 'mi', limit: 10 } });
   });
 
   it('uses custom debounceMs when provided', () => {
-    const { result } = renderHook(() =>
-      useItemAutocomplete({ debounceMs: 500 }),
+    const recorded: Array<Record<string, unknown>> = [];
+    const { result } = renderHookWithApollo(
+      () => useItemAutocomplete({ debounceMs: 500 }),
+      { operationMocks: [createItemsMock(recorded), createSemanticMock()] },
     );
 
     act(() => {
       result.current.handleSearchTermChange('egg');
     });
 
-    // At 250ms, should not have fired yet
     act(() => {
       jest.advanceTimersByTime(250);
     });
-    expect(mockFetchItems).not.toHaveBeenCalled();
+    expect(recorded).toEqual([]);
 
-    // At 500ms, should fire
     act(() => {
       jest.advanceTimersByTime(250);
     });
-    expect(mockFetchItems).toHaveBeenCalledWith({
-      variables: { input: { query: 'egg', limit: 10 } },
-    });
+    expect(recorded).toContainEqual({ input: { query: 'egg', limit: 10 } });
   });
 
   it('does not trigger search when term is below minChars', () => {
-    const { result } = renderHook(() => useItemAutocomplete());
+    const recorded: Array<Record<string, unknown>> = [];
+    const { result } = renderHookWithApollo(() => useItemAutocomplete(), {
+      operationMocks: [createItemsMock(recorded), createSemanticMock()],
+    });
 
     act(() => {
       result.current.handleSearchTermChange('m');
@@ -109,11 +136,11 @@ describe('useItemAutocomplete', () => {
       jest.advanceTimersByTime(500);
     });
 
-    expect(mockFetchItems).not.toHaveBeenCalled();
+    expect(recorded).toEqual([]);
   });
 
   it('sets shouldSearch to true when searchTerm meets minChars and is online', () => {
-    const { result } = renderHook(() => useItemAutocomplete());
+    const { result } = renderHookWithApollo(() => useItemAutocomplete());
 
     act(() => {
       result.current.handleSearchTermChange('ab');
@@ -124,7 +151,7 @@ describe('useItemAutocomplete', () => {
 
   it('sets shouldSearch to false when offline', () => {
     mockIsOnline = false;
-    const { result } = renderHook(() => useItemAutocomplete());
+    const { result } = renderHookWithApollo(() => useItemAutocomplete());
 
     act(() => {
       result.current.handleSearchTermChange('milk');
@@ -134,7 +161,7 @@ describe('useItemAutocomplete', () => {
   });
 
   it('resets state when reset is called', () => {
-    const { result } = renderHook(() => useItemAutocomplete());
+    const { result } = renderHookWithApollo(() => useItemAutocomplete());
 
     act(() => {
       result.current.handleSearchTermChange('test');
@@ -150,7 +177,7 @@ describe('useItemAutocomplete', () => {
   });
 
   it('returns isLoading false when query is not loading', () => {
-    const { result } = renderHook(() => useItemAutocomplete());
+    const { result } = renderHookWithApollo(() => useItemAutocomplete());
 
     expect(result.current.isLoading).toBe(false);
   });

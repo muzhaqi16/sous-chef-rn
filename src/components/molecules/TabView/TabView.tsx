@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, useWindowDimensions, ActivityIndicator } from 'react-native';
+import { View, useWindowDimensions } from 'react-native';
 import {
   TabView as RNTabView,
   TabBar,
@@ -9,6 +9,7 @@ import {
 } from 'react-native-tab-view';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
+import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
 
 export interface TabRoute extends Route {
   key: string;
@@ -28,10 +29,6 @@ export interface TabViewProps {
   renderLazyPlaceholder?: (props: { route: TabRoute }) => React.ReactNode;
   swipeEnabled?: boolean;
 }
-
-const ThemedActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
-  color: theme.colors.primary,
-}));
 
 const ThemedTabBar = withUnistyles(TabBar<TabRoute>, theme => ({
   indicatorStyle: {

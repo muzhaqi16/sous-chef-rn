@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { RefreshControl } from 'react-native';
 import { SettingsSection } from '#components/organisms/SettingsSection';
 import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
 import { useProfileData } from '#features/profile/hooks/useProfileData';
@@ -22,12 +21,7 @@ import {
   executeMutation,
   executeRefreshWithFinally,
 } from '#/utils/compilerSafeWrappers';
-import { withUnistyles } from 'react-native-unistyles';
-
-const ThemedRefreshControl = withUnistyles(RefreshControl, theme => ({
-  colors: [theme.colors.primary],
-  tintColor: theme.colors.primary,
-}));
+import { ThemedRefreshControl } from '#components/atoms/themedComponents';
 
 /** Module-level function for profile updates with optimistic cache.
  *  Extracted to avoid try-catch inside component body (React Compiler bailout). */

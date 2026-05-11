@@ -4,6 +4,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { StyleSheet } from 'react-native-unistyles';
+import { useTranslation } from 'react-i18next';
 import { object, string, ref } from 'yup';
 import { Icon } from '#utils/iconUtils';
 import { Header } from '#components/molecules/Header';
@@ -29,6 +30,8 @@ async function performPasswordReset(
   }) => Promise<any>,
   toast: ToastFn,
   navigateToLogin: () => void,
+  successMessage: string,
+  defaultErrorMessage: string,
 ): Promise<void> {
   logger.info('Attempting password reset', {
     tokenPrefix: token.substring(0, 8) + '...',
@@ -42,8 +45,7 @@ async function performPasswordReset(
     logger.info('Password reset successful');
 
     toast({
-      message:
-        'Password reset successfully! Please sign in with your new password.',
+      message: successMessage,
       type: 'success',
     });
 
@@ -51,9 +53,7 @@ async function performPasswordReset(
       navigateToLogin();
     }, 1500);
   } else {
-    throw new Error(
-      result.data?.resetPassword?.message || 'Password reset failed',
-    );
+    throw new Error(result.data?.resetPassword?.message || defaultErrorMessage);
   }
 }
 
@@ -66,20 +66,21 @@ interface ResetPasswordForm {
   confirmPassword: string;
 }
 
-const resetPasswordSchema = object().shape({
-  newPassword: string()
-    .required('Password is required')
-    .min(8, 'Password must be at least 8 characters')
-    .matches(
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-      'Password must contain at least one uppercase letter, one lowercase letter, and one number',
-    ),
-  confirmPassword: string()
-    .required('Please confirm your password')
-    .oneOf([ref('newPassword')], 'Passwords must match'),
-});
+type T = (key: string) => string;
+
+const getResetPasswordSchema = (t: T) =>
+  object().shape({
+    newPassword: string()
+      .required(t('auth.passwordRequired'))
+      .min(8, t('auth.passwordTooShort'))
+      .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, t('auth.passwordComplexity')),
+    confirmPassword: string()
+      .required(t('auth.passwordConfirmRequired'))
+      .oneOf([ref('newPassword')], t('auth.passwordsMustMatch')),
+  });
 
 export const ResetPasswordScreen: React.FC = () => {
+  const { t } = useTranslation();
   const route = useRoute();
   const { goBack } = useNavigation();
   const clearAuth = useAppStore(state => state.clearAuth);
@@ -94,7 +95,7 @@ export const ResetPasswordScreen: React.FC = () => {
   const [isTokenRejected, setIsTokenRejected] = useState(false);
 
   const form = useForm<ResetPasswordForm>({
-    resolver: yupResolver(resetPasswordSchema),
+    resolver: yupResolver(getResetPasswordSchema(t)),
     defaultValues: {
       newPassword: '',
       confirmPassword: '',
@@ -111,7 +112,7 @@ export const ResetPasswordScreen: React.FC = () => {
   const onSubmit = (data: ResetPasswordForm) => {
     if (!token) {
       toast({
-        message: 'Invalid reset token',
+        message: t('auth.invalidResetToken'),
         type: 'error',
       });
       return;
@@ -125,14 +126,15 @@ export const ResetPasswordScreen: React.FC = () => {
           resetPassword,
           toast,
           navigateToLogin,
+          t('auth.resetPasswordSuccess'),
+          t('errors.resetPasswordFailed'),
         ),
       setIsSubmitting,
       (error: unknown) => {
         logger.error('Password reset failed', { error });
 
         const errorMessage =
-          (error as any)?.message ||
-          'Failed to reset password. The link may be expired or invalid.';
+          (error as any)?.message || t('auth.resetPasswordFailedFallback');
 
         toast({
           message: errorMessage,
@@ -167,7 +169,7 @@ export const ResetPasswordScreen: React.FC = () => {
             <Icon name="close-circle-outline" size={64} tone="error" />
           </View>
           <Text size="xl" weight="semibold" align="center" style={styles.title}>
-            Invalid Reset Link
+            {t('auth.invalidResetLinkTitle')}
           </Text>
           <Text
             size="md"
@@ -176,8 +178,7 @@ export const ResetPasswordScreen: React.FC = () => {
             lineHeight="relaxed"
             style={styles.subtitle}
           >
-            This password reset link is invalid or has expired. Please request a
-            new password reset from the login screen.
+            {t('auth.invalidResetLinkSubtitle')}
           </Text>
 
           <Button
@@ -185,7 +186,7 @@ export const ResetPasswordScreen: React.FC = () => {
             onPress={handleReturnToLogin}
             style={styles.buttonSpacing}
           >
-            Return to Login
+            {t('auth.returnToLogin')}
           </Button>
         </View>
       </View>
@@ -202,7 +203,7 @@ export const ResetPasswordScreen: React.FC = () => {
         </View>
 
         <Text size="xl" weight="semibold" align="center" style={styles.title}>
-          Reset Your Password
+          {t('auth.resetPasswordTitle')}
         </Text>
         <Text
           size="md"
@@ -211,31 +212,30 @@ export const ResetPasswordScreen: React.FC = () => {
           lineHeight="relaxed"
           style={styles.subtitle}
         >
-          Enter your new password below. Make sure it's secure and easy for you
-          to remember.
+          {t('auth.resetPasswordSubtitle')}
         </Text>
 
         <View style={styles.form}>
           <View style={styles.field}>
             <Text size="md" weight="medium" style={styles.label}>
-              New Password
+              {t('auth.newPassword')}
             </Text>
             <PasswordInput
               value={watchedValues.newPassword}
               onChangeText={text => form.setValue('newPassword', text)}
-              placeholder="Enter your new password"
+              placeholder={t('auth.newPasswordPlaceholder')}
               errorMessage={form.formState.errors.newPassword?.message}
             />
           </View>
 
           <View style={styles.field}>
             <Text size="md" weight="medium" style={styles.label}>
-              Confirm Password
+              {t('auth.confirmPassword')}
             </Text>
             <PasswordInput
               value={watchedValues.confirmPassword}
               onChangeText={text => form.setValue('confirmPassword', text)}
-              placeholder="Confirm your new password"
+              placeholder={t('auth.confirmPasswordPlaceholder')}
               errorMessage={form.formState.errors.confirmPassword?.message}
             />
           </View>
@@ -247,7 +247,7 @@ export const ResetPasswordScreen: React.FC = () => {
             loading={isSubmitting}
             style={styles.buttonSpacing}
           >
-            Reset Password
+            {t('auth.resetPasswordButton')}
           </Button>
         </View>
       </View>

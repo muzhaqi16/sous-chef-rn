@@ -1,23 +1,14 @@
-import { renderHook, act } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
+import {
+  recordMock,
+  renderHookWithApollo,
+} from '#/test-utils/apolloMockProvider';
+import {
+  CreateMealPlanItemDocument,
+  UpdateMealPlanItemDocument,
+  DeleteMealPlanItemDocument,
+} from '#features/mealPlan/graphql/mealPlan.generated';
 import { useMealPlanItemActions } from '../useMealPlanItemActions';
-
-const mockCreateItemMutation = jest.fn();
-const mockUpdateItemMutation = jest.fn();
-const mockDeleteItemMutation = jest.fn();
-
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useMutation: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'CreateMealPlanItem')
-      return [mockCreateItemMutation, { loading: false }];
-    if (opName === 'UpdateMealPlanItem')
-      return [mockUpdateItemMutation, { loading: false }];
-    if (opName === 'DeleteMealPlanItem')
-      return [mockDeleteItemMutation, { loading: false }];
-    return [jest.fn(), {}];
-  }),
-}));
 
 const mockToastSuccess = jest.fn();
 const mockToastError = jest.fn();
@@ -35,7 +26,6 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   createRemoveFromParentArrayUpdater: jest.fn(() => jest.fn()),
 }));
 
-// Break circular dependency
 jest.mock('#/apollo/links/tokenScheduler');
 
 beforeEach(() => {
@@ -44,7 +34,9 @@ beforeEach(() => {
 
 describe('useMealPlanItemActions', () => {
   it('returns loading states all false initially', () => {
-    const { result } = renderHook(() => useMealPlanItemActions('plan-1'));
+    const { result } = renderHookWithApollo(() =>
+      useMealPlanItemActions('plan-1'),
+    );
 
     expect(result.current.loading).toBe(false);
     expect(result.current.creating).toBe(false);
@@ -55,15 +47,19 @@ describe('useMealPlanItemActions', () => {
   describe('createItem', () => {
     it('returns payload on success', async () => {
       const payload = {
+        __typename: 'MealPlanItemPayload',
         success: true,
         message: 'Created',
-        mealPlanItem: { id: 'mpi-1' },
+        mealPlanItem: { __typename: 'MealPlanItem', id: 'mpi-1' },
       };
-      mockCreateItemMutation.mockResolvedValueOnce({
+      const create = recordMock(CreateMealPlanItemDocument, {
         data: { createMealPlanItem: payload },
       });
 
-      const { result } = renderHook(() => useMealPlanItemActions('plan-1'));
+      const { result } = renderHookWithApollo(
+        () => useMealPlanItemActions('plan-1'),
+        { operationMocks: [create.mock] },
+      );
 
       let created: any;
       await act(async () => {
@@ -79,11 +75,20 @@ describe('useMealPlanItemActions', () => {
     });
 
     it('shows error toast and returns null on failure', async () => {
-      mockCreateItemMutation.mockResolvedValueOnce({
-        data: { createMealPlanItem: { success: false, message: 'Conflict' } },
+      const create = recordMock(CreateMealPlanItemDocument, {
+        data: {
+          createMealPlanItem: {
+            __typename: 'MealPlanItemPayload',
+            success: false,
+            message: 'Conflict',
+          },
+        },
       });
 
-      const { result } = renderHook(() => useMealPlanItemActions('plan-1'));
+      const { result } = renderHookWithApollo(
+        () => useMealPlanItemActions('plan-1'),
+        { operationMocks: [create.mock] },
+      );
 
       let created: any;
       await act(async () => {
@@ -103,15 +108,19 @@ describe('useMealPlanItemActions', () => {
   describe('updateItem', () => {
     it('returns payload on success', async () => {
       const payload = {
+        __typename: 'MealPlanItemPayload',
         success: true,
         message: 'Updated',
-        mealPlanItem: { id: 'mpi-1' },
+        mealPlanItem: { __typename: 'MealPlanItem', id: 'mpi-1' },
       };
-      mockUpdateItemMutation.mockResolvedValueOnce({
+      const update = recordMock(UpdateMealPlanItemDocument, {
         data: { updateMealPlanItem: payload },
       });
 
-      const { result } = renderHook(() => useMealPlanItemActions('plan-1'));
+      const { result } = renderHookWithApollo(
+        () => useMealPlanItemActions('plan-1'),
+        { operationMocks: [update.mock] },
+      );
 
       let updated: any;
       await act(async () => {
@@ -134,41 +143,54 @@ describe('useMealPlanItemActions', () => {
     };
 
     it('marks item as completed and shows toast', async () => {
-      const payload = {
-        success: true,
-        message: 'Updated',
-        mealPlanItem: { ...mockItem, isCompleted: true },
-      };
-      mockUpdateItemMutation.mockResolvedValueOnce({
-        data: { updateMealPlanItem: payload },
+      const update = recordMock(UpdateMealPlanItemDocument, {
+        data: {
+          updateMealPlanItem: {
+            __typename: 'MealPlanItemPayload',
+            success: true,
+            message: 'Updated',
+            mealPlanItem: {
+              __typename: 'MealPlanItem',
+              ...mockItem,
+              isCompleted: true,
+            },
+          },
+        },
       });
 
-      const { result } = renderHook(() => useMealPlanItemActions('plan-1'));
+      const { result } = renderHookWithApollo(
+        () => useMealPlanItemActions('plan-1'),
+        { operationMocks: [update.mock] },
+      );
 
       await act(async () => {
         await result.current.toggleCompleted(mockItem as any);
       });
 
-      expect(mockUpdateItemMutation).toHaveBeenCalledWith(
+      expect(update.fired).toContainEqual(
         expect.objectContaining({
-          variables: expect.objectContaining({
-            id: 'mpi-1',
-            input: expect.objectContaining({
-              isCompleted: true,
-            }),
-          }),
+          id: 'mpi-1',
+          input: expect.objectContaining({ isCompleted: true }),
         }),
       );
       expect(mockToastSuccess).toHaveBeenCalledWith('Meal completed!');
     });
 
     it('shows deduction toast when deductFromPantry is true', async () => {
-      const payload = { success: true, message: 'ok' };
-      mockUpdateItemMutation.mockResolvedValueOnce({
-        data: { updateMealPlanItem: payload },
+      const update = recordMock(UpdateMealPlanItemDocument, {
+        data: {
+          updateMealPlanItem: {
+            __typename: 'MealPlanItemPayload',
+            success: true,
+            message: 'ok',
+          },
+        },
       });
 
-      const { result } = renderHook(() => useMealPlanItemActions('plan-1'));
+      const { result } = renderHookWithApollo(
+        () => useMealPlanItemActions('plan-1'),
+        { operationMocks: [update.mock] },
+      );
 
       await act(async () => {
         await result.current.toggleCompleted(mockItem as any, {
@@ -183,33 +205,46 @@ describe('useMealPlanItemActions', () => {
 
     it('does not show toast when un-completing', async () => {
       const completedItem = { ...mockItem, isCompleted: true };
-      const payload = {
-        success: true,
-        message: 'ok',
-        mealPlanItem: { ...completedItem, isCompleted: false },
-      };
-      mockUpdateItemMutation.mockResolvedValueOnce({
-        data: { updateMealPlanItem: payload },
+      const update = recordMock(UpdateMealPlanItemDocument, {
+        data: {
+          updateMealPlanItem: {
+            __typename: 'MealPlanItemPayload',
+            success: true,
+            message: 'ok',
+            mealPlanItem: {
+              __typename: 'MealPlanItem',
+              ...completedItem,
+              isCompleted: false,
+            },
+          },
+        },
       });
 
-      const { result } = renderHook(() => useMealPlanItemActions('plan-1'));
+      const { result } = renderHookWithApollo(
+        () => useMealPlanItemActions('plan-1'),
+        { operationMocks: [update.mock] },
+      );
 
       await act(async () => {
         await result.current.toggleCompleted(completedItem as any);
       });
 
-      // markingComplete is false, so no success toast
       expect(mockToastSuccess).not.toHaveBeenCalled();
     });
   });
 
   describe('deleteItem', () => {
     it('returns true on success', async () => {
-      mockDeleteItemMutation.mockResolvedValueOnce({
-        data: { deleteMealPlanItem: { success: true } },
+      const del = recordMock(DeleteMealPlanItemDocument, {
+        data: {
+          deleteMealPlanItem: { __typename: 'BasicPayload', success: true },
+        },
       });
 
-      const { result } = renderHook(() => useMealPlanItemActions('plan-1'));
+      const { result } = renderHookWithApollo(
+        () => useMealPlanItemActions('plan-1'),
+        { operationMocks: [del.mock] },
+      );
 
       let deleted: boolean | undefined;
       await act(async () => {
@@ -220,11 +255,16 @@ describe('useMealPlanItemActions', () => {
     });
 
     it('returns false on failure', async () => {
-      mockDeleteItemMutation.mockResolvedValueOnce({
-        data: { deleteMealPlanItem: { success: false } },
+      const del = recordMock(DeleteMealPlanItemDocument, {
+        data: {
+          deleteMealPlanItem: { __typename: 'BasicPayload', success: false },
+        },
       });
 
-      const { result } = renderHook(() => useMealPlanItemActions('plan-1'));
+      const { result } = renderHookWithApollo(
+        () => useMealPlanItemActions('plan-1'),
+        { operationMocks: [del.mock] },
+      );
 
       let deleted: boolean | undefined;
       await act(async () => {

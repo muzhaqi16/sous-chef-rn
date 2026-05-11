@@ -125,6 +125,7 @@ export const useDeepLinkRouter = () => {
         token,
         timestamp: Date.now(),
       });
+      toastService.info('Sign in to finish verifying your email.');
       navigation.dispatch(CommonActions.navigate('Auth'));
       return;
     }
@@ -171,6 +172,7 @@ export const useDeepLinkRouter = () => {
         token,
         timestamp: Date.now(),
       });
+      toastService.info('Sign in to accept this invitation.');
       navigation.dispatch(CommonActions.navigate('Auth'));
       return;
     }
@@ -209,6 +211,15 @@ export const useDeepLinkRouter = () => {
       logger.warn('Discarding stale deep link action', {
         action: pendingDeepLinkAction,
       });
+      const staleCopy: Record<DeepLinkAction['type'], string> = {
+        email_verification:
+          'Your verification link expired. Request a new one to continue.',
+        password_reset:
+          'Your password reset link expired. Request a new one to continue.',
+        accept_invitation:
+          'Your invitation expired. Ask the household to send a new one.',
+      };
+      toastService.warning(staleCopy[pendingDeepLinkAction.type]);
       clearPendingDeepLinkAction();
       return;
     }

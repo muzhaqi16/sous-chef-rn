@@ -1,13 +1,11 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
-import { Icon, IconLibrary } from '#utils/iconUtils';
+import { Pressable, ThemedIcon } from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
+import { IconLibrary } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 
 export type AlertBannerVariant = 'error' | 'warning' | 'info' | 'success';
-
-const ThemedIcon = withUnistyles(Icon);
 
 export interface AlertBannerProps {
   /** Main title text */

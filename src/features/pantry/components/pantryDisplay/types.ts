@@ -3,7 +3,7 @@ import {
   type PantryItem,
   type PantryStats,
 } from '#/graphql/generated/schemaTypes';
-import type { LocationFilter } from '#utils/pantryFilters';
+import type { LocationFilter } from '#features/pantry/utils/pantryFilters';
 import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
 import type { ItemVariant, ExpirationVariant } from '../PantryItemCard';
 

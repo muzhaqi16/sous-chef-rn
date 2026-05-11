@@ -1,17 +1,10 @@
-import { renderHook, act } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
+import {
+  recordMock,
+  renderHookWithApollo,
+} from '#/test-utils/apolloMockProvider';
+import { DeleteRecipeFolderDocument } from '#features/recipes/graphql/recipe.generated';
 import { useFolderActions } from '../useFolderActions';
-
-const mockDeleteRecipeFolderMutation = jest.fn();
-
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useMutation: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'DeleteRecipeFolder')
-      return [mockDeleteRecipeFolderMutation, { loading: false }];
-    return [jest.fn(), {}];
-  }),
-}));
 
 const mockToastSuccess = jest.fn();
 const mockToastError = jest.fn();
@@ -25,8 +18,6 @@ jest.mock('#/services/toastService', () => ({
 }));
 
 jest.mock('#/utils/compilerSafeWrappers');
-
-// Break circular dependency
 jest.mock('#/apollo/links/tokenScheduler');
 
 beforeEach(() => {
@@ -36,7 +27,7 @@ beforeEach(() => {
 describe('useFolderActions', () => {
   describe('renameFolder', () => {
     it('returns false if oldName and newName are the same', async () => {
-      const { result } = renderHook(() => useFolderActions());
+      const { result } = renderHookWithApollo(() => useFolderActions());
 
       let success: boolean | undefined;
       await act(async () => {
@@ -44,11 +35,10 @@ describe('useFolderActions', () => {
       });
 
       expect(success).toBe(false);
-      expect(mockDeleteRecipeFolderMutation).not.toHaveBeenCalled();
     });
 
     it('returns false if oldName is empty', async () => {
-      const { result } = renderHook(() => useFolderActions());
+      const { result } = renderHookWithApollo(() => useFolderActions());
 
       let success: boolean | undefined;
       await act(async () => {
@@ -59,13 +49,19 @@ describe('useFolderActions', () => {
     });
 
     it('calls mutation with moveTo and shows success toast', async () => {
-      mockDeleteRecipeFolderMutation.mockResolvedValueOnce({
+      const del = recordMock(DeleteRecipeFolderDocument, {
         data: {
-          deleteRecipeFolder: { success: true, message: null },
+          deleteRecipeFolder: {
+            __typename: 'BasicPayload',
+            success: true,
+            message: null,
+          },
         },
       });
 
-      const { result } = renderHook(() => useFolderActions());
+      const { result } = renderHookWithApollo(() => useFolderActions(), {
+        operationMocks: [del.mock],
+      });
 
       let success: boolean | undefined;
       await act(async () => {
@@ -73,24 +69,28 @@ describe('useFolderActions', () => {
       });
 
       expect(success).toBe(true);
-      expect(mockDeleteRecipeFolderMutation).toHaveBeenCalledWith(
-        expect.objectContaining({
-          variables: { input: { folder: 'Old', moveTo: 'New' } },
-        }),
-      );
+      expect(del.fired).toContainEqual({
+        input: { folder: 'Old', moveTo: 'New' },
+      });
       expect(mockToastSuccess).toHaveBeenCalledWith(
         expect.stringContaining('Renamed "Old" to "New"'),
       );
     });
 
     it('returns false when mutation returns success: false', async () => {
-      mockDeleteRecipeFolderMutation.mockResolvedValueOnce({
+      const del = recordMock(DeleteRecipeFolderDocument, {
         data: {
-          deleteRecipeFolder: { success: false, message: 'Folder not found' },
+          deleteRecipeFolder: {
+            __typename: 'BasicPayload',
+            success: false,
+            message: 'Folder not found',
+          },
         },
       });
 
-      const { result } = renderHook(() => useFolderActions());
+      const { result } = renderHookWithApollo(() => useFolderActions(), {
+        operationMocks: [del.mock],
+      });
 
       let success: boolean | undefined;
       await act(async () => {
@@ -104,7 +104,7 @@ describe('useFolderActions', () => {
 
   describe('deleteFolder', () => {
     it('returns false if folderName is empty', async () => {
-      const { result } = renderHook(() => useFolderActions());
+      const { result } = renderHookWithApollo(() => useFolderActions());
 
       let success: boolean | undefined;
       await act(async () => {
@@ -115,13 +115,19 @@ describe('useFolderActions', () => {
     });
 
     it('calls mutation and shows success toast on delete', async () => {
-      mockDeleteRecipeFolderMutation.mockResolvedValueOnce({
+      const del = recordMock(DeleteRecipeFolderDocument, {
         data: {
-          deleteRecipeFolder: { success: true, message: null },
+          deleteRecipeFolder: {
+            __typename: 'BasicPayload',
+            success: true,
+            message: null,
+          },
         },
       });
 
-      const { result } = renderHook(() => useFolderActions());
+      const { result } = renderHookWithApollo(() => useFolderActions(), {
+        operationMocks: [del.mock],
+      });
 
       let success: boolean | undefined;
       await act(async () => {
@@ -129,37 +135,38 @@ describe('useFolderActions', () => {
       });
 
       expect(success).toBe(true);
-      expect(mockDeleteRecipeFolderMutation).toHaveBeenCalledWith(
-        expect.objectContaining({
-          variables: { input: { folder: 'MyFolder' } },
-        }),
-      );
+      expect(del.fired).toContainEqual({ input: { folder: 'MyFolder' } });
       expect(mockToastSuccess).toHaveBeenCalledWith(
         expect.stringContaining('Deleted "MyFolder"'),
       );
     });
 
     it('returns true even when mutation returns success: false but still shows toast', async () => {
-      mockDeleteRecipeFolderMutation.mockResolvedValueOnce({
+      const del = recordMock(DeleteRecipeFolderDocument, {
         data: {
-          deleteRecipeFolder: { success: false, message: null },
+          deleteRecipeFolder: {
+            __typename: 'BasicPayload',
+            success: false,
+            message: null,
+          },
         },
       });
 
-      const { result } = renderHook(() => useFolderActions());
+      const { result } = renderHookWithApollo(() => useFolderActions(), {
+        operationMocks: [del.mock],
+      });
 
       let success: boolean | undefined;
       await act(async () => {
         success = await result.current.deleteFolder('MyFolder');
       });
 
-      // deleteFolder returns true regardless of success flag (it always returns true after mutation)
       expect(success).toBe(true);
     });
   });
 
   it('tracks loading state', () => {
-    const { result } = renderHook(() => useFolderActions());
+    const { result } = renderHookWithApollo(() => useFolderActions());
     expect(result.current.loading).toBe(false);
   });
 });

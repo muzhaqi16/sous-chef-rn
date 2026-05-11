@@ -1,5 +1,6 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { screen, fireEvent } from '@testing-library/react-native';
+import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { ResetPasswordScreen } from '../ResetPasswordScreen';
 
 // --- Mocks ---
@@ -7,9 +8,6 @@ import { ResetPasswordScreen } from '../ResetPasswordScreen';
 const mockGoBack = jest.fn();
 const mockNavigateToLogin = jest.fn();
 const mockClearAuth = jest.fn();
-const mockResetPassword = jest.fn().mockResolvedValue({
-  data: { resetPassword: { success: true } },
-});
 const mockToast = jest.fn();
 
 jest.mock('@react-navigation/native', () => ({
@@ -41,30 +39,11 @@ jest.mock('#hooks/navigation/useAuthNavigation', () => ({
   }),
 }));
 
-jest.mock('@apollo/client/react', () => ({
-  ...jest.requireActual('@apollo/client/react'),
-  useMutation: jest.fn((doc: any) => {
-    const opName = doc?.definitions?.[0]?.name?.value;
-    if (opName === 'ResetPassword')
-      return [mockResetPassword, { loading: false }];
-    return [jest.fn(), {}];
-  }),
-}));
-
 jest.mock('#/hooks/useToast', () => ({
   useToast: () => mockToast,
 }));
 
 jest.mock('#/utils/compilerSafeWrappers');
-
-jest.mock('#/utils/environment', () => ({
-  logger: {
-    info: jest.fn(),
-    error: jest.fn(),
-    warn: jest.fn(),
-    debug: jest.fn(),
-  },
-}));
 
 jest.mock('#/utils/iconUtils', () => ({
   Icon: 'Icon',
@@ -126,33 +105,33 @@ describe('ResetPasswordScreen', () => {
   });
 
   it('renders the reset password form when token is valid', () => {
-    render(<ResetPasswordScreen />);
+    renderWithApollo(<ResetPasswordScreen />);
     expect(screen.getByText('Reset Your Password')).toBeTruthy();
   });
 
   it('renders password fields', () => {
-    render(<ResetPasswordScreen />);
+    renderWithApollo(<ResetPasswordScreen />);
     expect(screen.getByText('New Password')).toBeTruthy();
     expect(screen.getByText('Confirm Password')).toBeTruthy();
   });
 
   it('renders the reset password button', () => {
-    render(<ResetPasswordScreen />);
+    renderWithApollo(<ResetPasswordScreen />);
     expect(screen.getByText('Reset Password')).toBeTruthy();
   });
 
   it('renders description text', () => {
-    render(<ResetPasswordScreen />);
+    renderWithApollo(<ResetPasswordScreen />);
     expect(screen.getByText(/Enter your new password below/)).toBeTruthy();
   });
 
   it('calls clearAuth on mount', () => {
-    render(<ResetPasswordScreen />);
+    renderWithApollo(<ResetPasswordScreen />);
     expect(mockClearAuth).toHaveBeenCalled();
   });
 
   it('calls goBack when header close button is pressed', () => {
-    render(<ResetPasswordScreen />);
+    renderWithApollo(<ResetPasswordScreen />);
     fireEvent.press(screen.getByTestId('header-close'));
     expect(mockGoBack).toHaveBeenCalledTimes(1);
   });
@@ -170,17 +149,17 @@ describe('ResetPasswordScreen - invalid token', () => {
   });
 
   it('renders invalid reset link view when token is too short', () => {
-    render(<ResetPasswordScreen />);
+    renderWithApollo(<ResetPasswordScreen />);
     expect(screen.getByText('Invalid Reset Link')).toBeTruthy();
   });
 
   it('renders Return to Login button in invalid state', () => {
-    render(<ResetPasswordScreen />);
+    renderWithApollo(<ResetPasswordScreen />);
     expect(screen.getByText('Return to Login')).toBeTruthy();
   });
 
   it('navigates to login when Return to Login is pressed', () => {
-    render(<ResetPasswordScreen />);
+    renderWithApollo(<ResetPasswordScreen />);
     fireEvent.press(screen.getByText('Return to Login'));
     expect(mockNavigateToLogin).toHaveBeenCalledTimes(1);
   });
