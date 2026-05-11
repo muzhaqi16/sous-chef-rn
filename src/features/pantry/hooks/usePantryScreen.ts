@@ -3,22 +3,15 @@ import React, { useState } from 'react';
 import { useUser } from '#store/useAppStore';
 import { useCurrentPantry } from '#features/pantry/hooks/useCurrentPantry';
 import { usePantryManagement } from '#/hooks/home/pantry/usePantryManagement';
-import { useHybridSearch } from '#/hooks/search/useHybridSearch';
+import { useHybridPantrySearch } from '#features/pantry/hooks/useHybridPantrySearch';
 import { useCreateStorageLocation } from '#/hooks/storageLocation/useCreateStorageLocation';
 import { useAppStore, useIsOnline } from '#/store/useAppStore';
 import { useShallow } from 'zustand/shallow';
-import {
-  GetPantryDocument,
-  type GetPantryQuery,
-} from '#features/pantry/graphql/pantry.generated';
-import { normalizePantry } from '#/utils/connectionUtils';
 import {
   type LocationFilter,
   locationFilterToQueryFilter,
   sortOptionToOrderBy,
 } from '#features/pantry/utils/pantryFilters';
-import { PAGE_SIZE } from '#/constants/pagination';
-import { pantryItemSearch } from '#/utils/searchUtils';
 import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
 import { StorageLocationIcon } from '#components/atoms/StorageLocationIcon';
 import type {
@@ -123,27 +116,15 @@ export function usePantryScreen() {
     useServerSort,
     activeItems,
     removeFromResults,
-  } = useHybridSearch<GetPantryQuery, (typeof rawPantryItems)[number]>({
+  } = useHybridPantrySearch({
+    pantryId: pantry?.id,
+    locationQueryFilter,
+    orderBy,
     items: rawPantryItems,
     totalCount,
     hasMore,
     loading,
-    pageSize: PAGE_SIZE.EXTENDED,
     isOnline,
-    searchDocument: GetPantryDocument,
-    buildSearchVariables: search => {
-      if (!pantry?.id?.trim()) return null;
-      return {
-        id: pantry.id,
-        itemsFirst: PAGE_SIZE.DEFAULT,
-        itemsFilter: { ...(locationQueryFilter ?? {}), search },
-        itemsOrderBy: orderBy,
-        storageLocationsFirst: 0,
-      };
-    },
-    extractItems: data => normalizePantry(data.pantry)?.items ?? [],
-    searchPredicate: pantryItemSearch,
-    debounceMs: 300,
   });
 
   const pantryItems = activeItems;
