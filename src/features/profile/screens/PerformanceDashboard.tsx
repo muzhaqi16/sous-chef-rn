@@ -12,7 +12,7 @@ import { SettingSection } from '#components/settings/SettingSection';
 import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
 import { usePerformanceStore } from '#/store/performanceStore';
 import { Environment } from '#/utils/environment';
-import { useCanAccessDevTools } from '#/store/useAppStore';
+import { useCanAccessDevTools } from '#store/useAppStore';
 import { MemoryMonitor } from '#/services/performance/MemoryMonitor';
 import { useFPSMonitor } from '#/hooks/performance/useFPSMonitor';
 import { executeRefreshWithFinally } from '#/utils/compilerSafeWrappers';

@@ -25,7 +25,7 @@ import { useEffect } from 'react';
 import { Environment } from '#/utils/environment';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { ProfileSkeleton } from '#components/base/Skeleton/ProfileSkeleton';
-import { useCanAccessDevTools } from '#/store/useAppStore';
+import { useCanAccessDevTools } from '#store/useAppStore';
 import { Text } from '#components/atoms/Text';
 
 const HEADER_TIMING = {

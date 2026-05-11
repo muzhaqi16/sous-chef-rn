@@ -1,4 +1,4 @@
-import { useAppStore, useUserId } from '#/store/useAppStore';
+import { useAppStore, useUserId } from '#store/useAppStore';
 import {
   defaultUserPreferences,
   type UserPreferences,

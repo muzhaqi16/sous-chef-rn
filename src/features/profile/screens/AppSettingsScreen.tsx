@@ -14,8 +14,8 @@ const ThemedPickerItem = withUnistyles(Picker.Item, theme => ({
   color: theme.colors.textPrimary,
 }));
 import { commonStyles } from '#/styles/commonStyles';
-import { useAppStore, useShowNavigationLabels } from '#/store/useAppStore';
-import { useStore } from '#store/index';
+import { useAppStore, useShowNavigationLabels } from '#store/useAppStore';
+import { useStore } from '#store';
 import { resetAllFeatureHints } from '#hooks/useFeatureHint';
 import { useUserPreferences } from '#hooks/settings/useUserPreferences';
 import { executeAsyncWithCleanup } from '#/utils/compilerSafeWrappers';

@@ -66,7 +66,7 @@ jest.mock('#/store/performanceStore', () => ({
 // Environment is auto-mocked via jest.setup.js; the default
 // `shouldEnableDebugFeatures` returns true, which is what this suite expects.
 
-jest.mock('#/store/useAppStore', () => ({
+jest.mock('#store/useAppStore', () => ({
   useAppStore: jest.fn((selector: any) =>
     selector({ canAccessDevTools: true }),
   ),
@@ -135,7 +135,7 @@ beforeEach(() => {
   const { Environment } = require('#/utils/environment');
   Environment.shouldEnableDebugFeatures.mockReturnValue(true);
 
-  const { useAppStore } = require('#/store/useAppStore');
+  const { useAppStore } = require('#store/useAppStore');
   useAppStore.mockImplementation((selector: any) =>
     selector({ canAccessDevTools: true }),
   );
@@ -187,7 +187,7 @@ describe('PerformanceDashboard', () => {
     const { Environment } = require('#/utils/environment');
     Environment.shouldEnableDebugFeatures.mockReturnValue(false);
 
-    const storeModule = require('#/store/useAppStore');
+    const storeModule = require('#store/useAppStore');
     storeModule.useAppStore.mockImplementation((selector: any) =>
       selector({ canAccessDevTools: false }),
     );

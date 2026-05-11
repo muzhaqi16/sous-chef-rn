@@ -6,7 +6,7 @@ import { render, screen } from '@testing-library/react-native';
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 
-jest.mock('#/store/useAppStore', () => ({
+jest.mock('#store/useAppStore', () => ({
   useAppStore: jest.fn((selector: any) =>
     selector({ canAccessDevTools: false }),
   ),

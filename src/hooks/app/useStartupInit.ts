@@ -2,8 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { UnistylesRuntime } from 'react-native-unistyles';
 import { LaunchArguments } from 'react-native-launch-arguments';
 import { useAppStore, useIsHydrated } from '#store/useAppStore';
-import { useStore } from '#store/index';
-import { storage } from '#/storage/mmkv';
+import { useStore } from '#store';
 import { Telemetry } from '#services/telemetry';
 import { HapticService } from '#services/haptic/HapticService';
 import { NativePerformanceService } from '#/services/performance/NativePerformanceService';
@@ -80,12 +79,10 @@ export function useStartupInit(): void {
         setHasStoredCredentials(result);
       });
 
-      // Initialize offline mode from MMKV (transient Zustand state, not persisted via Zustand)
-      useStore
-        .getState()
-        .setOfflineModeEnabled(
-          storage.getBoolean('user_offline_mode') ?? false,
-        );
+      // offlineModeEnabled is hydrated from MMKV in the persist
+      // onRehydrateStorage callback (see src/store/index.ts), which runs
+      // before `isHydrated` flips — so by the time this effect fires the
+      // value is already correct.
 
       const telemetryConfig = getTelemetryConfig();
       if (detoxDisabled) {

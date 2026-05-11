@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
 import { Telemetry } from '#services/telemetry';
 import { queueManager } from '#/apollo/offlineQueue/queueManager';
-import { useStore } from '#store/index';
+import { useStore } from '#store';
 import { handleTokenRefreshOnResume } from '#store/slices/authSlice';
 
 /**

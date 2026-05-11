@@ -1,5 +1,5 @@
 import { useUnistyles } from 'react-native-unistyles';
-import { usePreferences } from '#/store/useAppStore';
+import { usePreferences } from '#store/useAppStore';
 import { ThemePreference } from '#/store/slices/preferencesSlice';
 
 /**

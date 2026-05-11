@@ -14,7 +14,7 @@ import { createPreferencesSlice, PreferencesState } from '#store/slices/preferen
 import { createNavigationSlice, NavigationState } from '#store/slices/navigationSlice';
 import { createNotificationSlice, NotificationState } from '#store/slices/notificationSlice';
 import { createUISlice, UIState } from '#store/slices/uiSlice';
-import { createBarcodeScannerSlice, BarcodeScannerState } from '#features/barcode/store/barcodeScannerSlice';
+import { createBarcodeScannerSlice, BarcodeScannerState } from '#store/slices/barcodeScannerSlice';
 import { createAppSlice, AppState } from '#store/slices/appSlice';
 import { createNetworkSlice, NetworkState } from '#store/slices/networkSlice';
 import { createTelemetrySlice, TelemetryState } from '#store/slices/telemetrySlice';

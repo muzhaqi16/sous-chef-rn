@@ -7,7 +7,7 @@ const mockSetUnistylesTheme = jest.fn();
 
 let mockUserThemePreference = 'SYSTEM';
 
-jest.mock('#/store/useAppStore', () => ({
+jest.mock('#store/useAppStore', () => ({
   useAppStore: (selector: (s: any) => any) =>
     selector({
       theme: mockUserThemePreference,

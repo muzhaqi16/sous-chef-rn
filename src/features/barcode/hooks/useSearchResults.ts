@@ -10,7 +10,7 @@ import {
 } from '#operations/item/item.generated';
 import { UpcFormat } from '#/graphql/generated/schemaTypes';
 import { useSearchState, useBottomSheetState } from '#store/useAppStore';
-import { ScannedItem } from '../store/barcodeScannerSlice';
+import { ScannedItem } from '#store/slices/barcodeScannerSlice';
 import { alertService } from '#/services/alertService';
 import { useImageUpload } from '#hooks/useImageUpload';
 import { storage } from '#/storage/mmkv';

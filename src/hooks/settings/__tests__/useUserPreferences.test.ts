@@ -15,7 +15,7 @@ const mockResetUserPreferences = jest.fn();
 let mockUserId: string | undefined = 'u1';
 let mockUserPreferencesMap: Record<string, any> = {};
 
-jest.mock('#/store/useAppStore', () => {
+jest.mock('#store/useAppStore', () => {
   const getState = () => ({
     user: mockUserId ? { id: mockUserId } : null,
     userPreferences: mockUserPreferencesMap,

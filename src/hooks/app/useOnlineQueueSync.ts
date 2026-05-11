@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useIsOnline } from '#store/useAppStore';
-import { useStore } from '#store/index';
+import { useStore } from '#store';
 import { queueManager } from '#/apollo/offlineQueue/queueManager';
 import { proactiveTokenRefresh } from '#/apollo/links/refreshToken';
 

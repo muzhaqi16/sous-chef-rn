@@ -44,7 +44,7 @@ import {
 import {
   BarcodeScannerState,
   createBarcodeScannerSlice,
-} from '#features/barcode/store/barcodeScannerSlice';
+} from './slices/barcodeScannerSlice';
 import { createAppSlice, AppState } from './slices/appSlice';
 import {
   createNotificationSlice,
@@ -62,7 +62,11 @@ import {
   NavigationState,
 } from './slices/navigationSlice';
 import { createTelemetrySlice, TelemetryState } from './slices/telemetrySlice';
-import { createNetworkSlice, NetworkState } from './slices/networkSlice';
+import {
+  createNetworkSlice,
+  hydrateOfflineModeFromStorage,
+  NetworkState,
+} from './slices/networkSlice';
 import { zustandStorage, STORAGE_KEY } from '#/storage/mmkv';
 
 // Add reset manager interface to root state
@@ -224,6 +228,13 @@ export const useStore = create<RootState>()(
               if (state?.selectedHomeId && state?.selectedPantryId) {
                 state?.setIsHomeSelectionReady(true);
               }
+
+              // Hydrate offlineModeEnabled from MMKV. Kept outside Zustand
+              // persist (see partialize) so we can read the user's last
+              // setting before the GetUserSettings query resolves.
+              if (state?.setOfflineModeEnabled) {
+                hydrateOfflineModeFromStorage(state.setOfflineModeEnabled);
+              }
             }
           };
         },
@@ -242,7 +253,7 @@ export const useStore = create<RootState>()(
             lastOnlineTime,
             lastOfflineTime,
             needsTokenRefresh,
-            offlineModeEnabled, // Initialized from MMKV on startup, not persisted via Zustand
+            offlineModeEnabled, // Hydrated from MMKV in onRehydrateStorage; setter writes through to MMKV
 
             // UI state (temporary, session-only)
             bottomSheetVisible,

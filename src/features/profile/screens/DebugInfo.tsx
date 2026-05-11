@@ -9,7 +9,7 @@ import Config from 'react-native-config';
 import { Platform } from 'react-native';
 import DeviceInfo from 'react-native-device-info';
 import Clipboard from '@react-native-clipboard/clipboard';
-import { useCanAccessDevTools } from '#/store/useAppStore';
+import { useCanAccessDevTools } from '#store/useAppStore';
 import { Text } from '#components/atoms/Text';
 
 export const DebugInfo: React.FC = () => {

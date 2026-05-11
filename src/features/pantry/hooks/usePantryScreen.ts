@@ -5,7 +5,7 @@ import { useCurrentPantry } from '#features/pantry/hooks/useCurrentPantry';
 import { usePantryManagement } from '#/hooks/home/pantry/usePantryManagement';
 import { useHybridPantrySearch } from '#features/pantry/hooks/useHybridPantrySearch';
 import { useCreateStorageLocation } from '#/hooks/storageLocation/useCreateStorageLocation';
-import { useAppStore, useIsOnline } from '#/store/useAppStore';
+import { useAppStore, useIsOnline } from '#store/useAppStore';
 import { useShallow } from 'zustand/shallow';
 import {
   type LocationFilter,

@@ -19,7 +19,7 @@ import {
 } from '#/utils/errors/pantryItemDuplicate';
 import { useAppStore } from '#store/useAppStore';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
-import type { ScannedItem } from '../store/barcodeScannerSlice';
+import type { ScannedItem } from '#store/slices/barcodeScannerSlice';
 import type { BarcodeSource } from '#/types/navigation';
 import { ScrollView } from 'react-native';
 

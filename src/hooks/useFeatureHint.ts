@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { storage } from '#/storage/mmkv';
 import { useShowTutorials } from '#hooks/settings/useSettings';
 import { useUserId } from '#store/useAppStore';
-import { useStore } from '#store/index';
+import { useStore } from '#store';
 import { useTutorialResetSignal } from '#hooks/ui/useTutorialResetSignal';
 
 const FEATURE_HINT_PREFIX = 'feature_hint_shown_';

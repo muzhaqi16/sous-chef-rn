@@ -82,7 +82,7 @@ jest.mock('#features/profile/hooks/useConfigurableSettings', () => ({
   }),
 }));
 
-jest.mock('#/store/useAppStore', () => ({
+jest.mock('#store/useAppStore', () => ({
   useAppStore: (selector: any) => {
     const state = { canAccessDevTools: false };
     return selector(state);

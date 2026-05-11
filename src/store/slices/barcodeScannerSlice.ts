@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import { RootState } from '#store/index';
+import { RootState } from '../index';
 
 // Types for your barcode scanner feature
 export interface ScannedItem {

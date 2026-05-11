@@ -19,7 +19,7 @@ import type { StaticScreenProps } from '@react-navigation/native';
 import { useBottomSheetState } from '#store/useAppStore';
 import { useSearchResults } from '../hooks/useSearchResults';
 import type { BarcodeSource } from '#/types/navigation';
-import type { ScannedItem } from '../store/barcodeScannerSlice';
+import type { ScannedItem } from '#store/slices/barcodeScannerSlice';
 
 /** Build form initialData from a ScannedItem for edit/variant modes */
 function buildInitialDataFromItem(item: ScannedItem): AddItemFormInitialData {

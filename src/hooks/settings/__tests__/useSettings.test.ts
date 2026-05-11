@@ -1,6 +1,6 @@
 import { renderHook, act } from '@testing-library/react-native';
 import { useSettings, useShowTutorials } from '../useSettings';
-import { useShowNavigationLabels } from '#/store/useAppStore';
+import { useShowNavigationLabels } from '#store/useAppStore';
 
 // Break circular dependency chain
 jest.mock('../../../apollo/links/tokenScheduler');
@@ -28,7 +28,7 @@ const mockSetHapticFeedbackEnabled = jest.fn();
 const mockSetShowNavigationLabels = jest.fn();
 const mockResetPreferences = jest.fn();
 
-jest.mock('#/store/useAppStore', () => {
+jest.mock('#store/useAppStore', () => {
   const getState = () => ({
     hapticFeedbackEnabled: mockHapticFeedbackEnabled,
     setHapticFeedbackEnabled: mockSetHapticFeedbackEnabled,

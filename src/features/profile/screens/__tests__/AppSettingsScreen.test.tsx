@@ -23,7 +23,7 @@ jest.mock('#features/profile/hooks/useAppSettings', () => ({
   }),
 }));
 
-jest.mock('#/store/useAppStore', () => {
+jest.mock('#store/useAppStore', () => {
   const getState = () => ({
     hapticFeedbackEnabled: true,
     setHapticFeedbackEnabled: jest.fn(),

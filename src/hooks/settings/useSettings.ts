@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useAppStore, useShowNavigationLabels } from '#/store/useAppStore';
+import { useAppStore, useShowNavigationLabels } from '#store/useAppStore';
 import { useAppSettings } from '#features/profile/hooks/useAppSettings';
 import { storage } from '#/storage/mmkv';
 import { useTutorialResetSignal } from '#hooks/ui/useTutorialResetSignal';
