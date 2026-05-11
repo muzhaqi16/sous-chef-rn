@@ -86,7 +86,6 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
       onCancel();
     },
     snapPoints: ['55%', '70%'],
-    keyboardBehavior: 'interactive',
   });
 
   const [showNewFolder, setShowNewFolder] = useState(false);

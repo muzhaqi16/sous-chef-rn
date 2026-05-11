@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Pressable } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import { StyleSheet } from 'react-native-unistyles';
+import { useTranslation } from 'react-i18next';
 import { Icon } from '#utils/iconUtils';
 import { FormModal } from '#components/organisms/FormModal';
 import { FormInput } from '#components/molecules/FormInput';
@@ -25,8 +26,14 @@ import { Text } from '#components/atoms/Text';
 
 const PLAN_TYPES = [MealPlanType.Weekly, MealPlanType.Monthly];
 
-function formatPlanType(value: string): string {
-  return value.charAt(0) + value.slice(1).toLowerCase();
+type T = (key: string, opts?: Record<string, unknown>) => string;
+
+function getPlanTypeFormatter(t: T) {
+  return (value: string): string => {
+    if (value === MealPlanType.Weekly) return t('mealPlan.weekly');
+    if (value === MealPlanType.Monthly) return t('mealPlan.monthly');
+    return value.charAt(0) + value.slice(1).toLowerCase();
+  };
 }
 
 function computeEndDate(startDate: Date, planType: MealPlanType): Date {
@@ -43,6 +50,7 @@ function computeEndDate(startDate: Date, planType: MealPlanType): Date {
 const PERSONAL_VALUE = '__personal__';
 
 export const CreateMealPlanScreen: React.FC = () => {
+  const { t } = useTranslation();
   const { goBack } = useAppNavigation();
   const { createMealPlan, creating } = useMealPlanActions();
   const { createPlanFromTemplate, creatingFromTemplate } =
@@ -60,7 +68,7 @@ export const CreateMealPlanScreen: React.FC = () => {
   );
 
   const homeOptions = (() => {
-    const opts = [{ label: 'Personal', value: PERSONAL_VALUE }];
+    const opts = [{ label: t('mealPlan.personal'), value: PERSONAL_VALUE }];
     if (homes) {
       for (const home of homes) {
         if (home?.id && home?.name) {
@@ -100,13 +108,16 @@ export const CreateMealPlanScreen: React.FC = () => {
   const handleSave = async () => {
     if (!name.trim()) {
       alertService.alert(
-        'Name Required',
-        'Please enter a name for your meal plan.',
+        t('mealPlan.nameRequiredTitle'),
+        t('mealPlan.nameRequiredMessage'),
       );
       return;
     }
     if (!startDate) {
-      alertService.alert('Start Date Required', 'Please select a start date.');
+      alertService.alert(
+        t('mealPlan.startDateRequiredTitle'),
+        t('mealPlan.startDateRequiredMessage'),
+      );
       return;
     }
 
@@ -127,55 +138,55 @@ export const CreateMealPlanScreen: React.FC = () => {
         homeId,
       });
     } catch (error: any) {
-      const errorMessage = error.message ?? 'Failed to create meal plan.';
-      alertService.alert('Error', errorMessage);
+      const errorMessage = error.message ?? t('mealPlan.failedToCreate');
+      alertService.alert(t('labels.error'), errorMessage);
       return;
     }
 
     if (result?.success) {
       goBack();
     } else {
-      const message = result?.message ?? 'Failed to create meal plan.';
-      alertService.alert('Error', message);
+      const message = result?.message ?? t('mealPlan.failedToCreate');
+      alertService.alert(t('labels.error'), message);
     }
   };
 
   return (
     <FormModal
-      title="Create Meal Plan"
+      title={t('mealPlan.createTitle')}
       onClose={goBack}
       onSave={handleSave}
       loading={creating}
       testID="create-meal-plan-screen"
     >
       <FormInput
-        label="Name"
+        label={t('mealPlan.name')}
         value={name}
         onChangeText={setName}
-        placeholder="e.g., Week 8 Plan"
+        placeholder={t('mealPlan.namePlaceholder')}
         required
         testID="meal-plan-name-input"
       />
 
       <FormTextArea
-        label="Description"
+        label={t('mealPlan.description')}
         value={description}
         onChangeText={setDescription}
-        placeholder="Optional description..."
+        placeholder={t('mealPlan.descriptionPlaceholder')}
         testID="meal-plan-description-input"
       />
 
       <SegmentedControl
-        label="Plan Type"
+        label={t('mealPlan.planType')}
         options={PLAN_TYPES}
         value={planType}
         onChange={setPlanType}
-        formatLabel={formatPlanType}
+        formatLabel={getPlanTypeFormatter(t)}
         required
       />
 
       <DatePickerField
-        label="Start Date"
+        label={t('mealPlan.startDate')}
         value={startDate}
         onChange={setStartDate}
         minimumDate={new Date()}
@@ -183,7 +194,7 @@ export const CreateMealPlanScreen: React.FC = () => {
       />
 
       <EditableCounter
-        label="Default Servings"
+        label={t('mealPlan.defaultServings')}
         value={servings}
         onChangeText={setServings}
         min={1}
@@ -192,11 +203,11 @@ export const CreateMealPlanScreen: React.FC = () => {
 
       {homeOptions.length > 1 && (
         <FormSelect
-          label="Share With"
+          label={t('mealPlan.shareWith')}
           value={homeSelection}
           onValueChange={setHomeSelection}
           options={homeOptions}
-          placeholder="Personal"
+          placeholder={t('mealPlan.personal')}
         />
       )}
 
@@ -214,7 +225,7 @@ export const CreateMealPlanScreen: React.FC = () => {
           color={createFromTemplateStyles.linkIcon.color}
         />
         <Text size="base" weight="medium" tone="accent">
-          Or create from a template
+          {t('mealPlan.orCreateFromTemplate')}
         </Text>
       </Pressable>
 

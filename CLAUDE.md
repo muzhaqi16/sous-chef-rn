@@ -402,6 +402,45 @@ advise against client-preset for AC4 projects. Our `near-operation-file` setup a
 emits `TypedDocumentNode`s, which is all Apollo's `FragmentType<typeof Doc>` and runtime
 masking need.
 
+### Test Mock Conventions — `Environment`
+
+`Environment` (`src/utils/environment.ts`) is auto-mocked globally for every
+test via `jest.setup.js` + `src/utils/__mocks__/environment.ts`. Tests get a
+complete `jest.fn()` surface with sensible defaults (dev mode, analytics off,
+loggers as no-op spies). This eliminates `TypeError: Environment.X is not a
+function` failures from any code that transitively pulls in the store, the
+telemetry slice, `IconButton → HapticService`, or anywhere else.
+
+**For tests that need bespoke values:**
+
+```ts
+// ✅ Override per-suite via mockReturnValue — do not replace the whole module
+import { Environment } from '#/utils/environment';
+beforeEach(() => {
+  (Environment.isDevelopment as jest.Mock).mockReturnValue(false);
+  (Environment.getApiConfig as jest.Mock).mockReturnValue({
+    baseUrl: 'https://test.example.com/graphql',
+  });
+});
+```
+
+```ts
+// ✅ For the rare suite that tests the real Environment class itself
+jest.unmock('#/utils/environment');
+import { Environment } from '../environment';
+```
+
+```ts
+// ❌ Don't do this — partial factories defeat the shared mock and reintroduce
+//    the per-test "missing method" fragility we removed:
+jest.mock('#/utils/environment', () => ({
+  Environment: { isDevelopment: jest.fn() },  // missing all other methods
+}));
+```
+
+The same pattern applies to `logger` (no-op `jest.fn()` per method) — assert on
+`logger.error` etc. directly without redefining the mock.
+
 ### Verification Commands
 
 After implementing fixes, run:

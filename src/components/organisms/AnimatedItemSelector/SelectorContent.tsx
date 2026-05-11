@@ -1,6 +1,6 @@
 import React from 'react';
-import { ActivityIndicator, ScrollView } from 'react-native';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+import { ScrollView } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
 import Animated, {
   FadeIn,
   FadeInUp,
@@ -11,10 +11,7 @@ import { SelectorItemContainer } from './SelectorItemContainer';
 import { ActionButtons } from './ActionButtons';
 import type { SelectorConfig, SelectableItem } from './types';
 import { Text } from '#components/atoms/Text';
-
-const ThemedActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
-  color: theme.colors.primary,
-}));
+import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
 
 interface SelectorContentProps<T extends SelectableItem> {
   config: SelectorConfig<T>;

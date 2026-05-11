@@ -9,19 +9,14 @@ jest.mock('#store', () => ({
   },
 }));
 
-// Mock environment
-jest.mock('#/utils/environment', () => ({
-  logger: {
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-  },
-  Environment: {
-    getApiConfig: jest.fn(() => ({
-      wsUrl: 'ws://localhost:4000/graphql',
-    })),
-  },
-}));
+// Environment is auto-mocked via jest.setup.js. Override `getApiConfig` so
+// the WS link picks up the local test URL.
+import { Environment } from '#/utils/environment';
+beforeAll(() => {
+  (Environment.getApiConfig as jest.Mock).mockReturnValue({
+    wsUrl: 'ws://localhost:4000/graphql',
+  });
+});
 
 // Mock errorSerialization
 jest.mock('#/utils/errorSerialization', () => ({

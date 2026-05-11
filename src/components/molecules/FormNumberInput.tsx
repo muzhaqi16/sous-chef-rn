@@ -1,11 +1,8 @@
 import React from 'react';
-import { TextInput, TextInputProps, ViewStyle } from 'react-native';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+import { TextInputProps, ViewStyle } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
 import { FormFieldWrapper } from '../atoms/FormFieldWrapper';
-
-const ThemedTextInput = withUnistyles(TextInput, theme => ({
-  placeholderTextColor: theme.colors.textSecondary,
-}));
+import { ThemedTextInput } from '../atoms/themedComponents';
 
 interface FormNumberInputProps
   extends Omit<TextInputProps, 'style' | 'keyboardType'> {

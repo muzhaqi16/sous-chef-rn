@@ -1,6 +1,6 @@
 import { useAppStore } from '#store/useAppStore';
 
-export const useUserPreferences = () => {
+export const useAuthPreferences = () => {
   const user = useAppStore(state => state.user);
   const getUserNavigationState = useAppStore(
     state => state.getUserNavigationState,

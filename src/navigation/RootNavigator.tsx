@@ -14,7 +14,7 @@ import {
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useIsHydrated, useUser, usePostLoginState } from '#store/useAppStore';
 import { useBiometricPrompting } from '#hooks/auth/useBiometricPrompting';
-import { useUserPreferences } from '#hooks/navigation/useUserPreferences';
+import { useAuthPreferences } from '#hooks/navigation/useAuthPreferences';
 import { SplashScreen } from '#screens/SplashScreen';
 import { NotFoundScreen } from '#screens/NotFoundScreen';
 import { AuthStack } from './stacks/AuthStack';
@@ -273,7 +273,7 @@ export function Navigation() {
     setPostLoginCredentials,
   } = usePostLoginState();
   const { recordBiometricPromptResponse } = useBiometricPrompting();
-  const { markBiometricDeclined, markBiometricEnabled } = useUserPreferences();
+  const { markBiometricDeclined, markBiometricEnabled } = useAuthPreferences();
 
   const handlePostLoginBiometricComplete = (
     enabled: boolean,

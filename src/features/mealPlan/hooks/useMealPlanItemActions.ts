@@ -36,7 +36,6 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
     CreateMealPlanItemDocument,
     {
       refetchQueries: refetchConfig,
-      awaitRefetchQueries: true,
       update(cache, { data }) {
         if (!data?.createMealPlanItem?.mealPlanItem || !mealPlanId) return;
         addToMealPlanItems(
@@ -60,7 +59,6 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
     DeleteMealPlanItemDocument,
     {
       refetchQueries: refetchConfig,
-      awaitRefetchQueries: true,
       update(cache, { data }) {
         if (!data?.deleteMealPlanItem?.mealPlanItem?.id || !mealPlanId) return;
         removeFromMealPlanItems(

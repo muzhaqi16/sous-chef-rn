@@ -1,13 +1,10 @@
 import React from 'react';
 import { View, type LayoutChangeEvent } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { Pressable, ThemedIcon } from '#components/atoms/themedComponents';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
-import { Icon } from '#utils/iconUtils';
 import { HapticService } from '#services/haptic/HapticService';
 import type { FilterTabConfig } from './types';
 import { Text } from '#components/atoms/Text';
-
-const ThemedIcon = withUnistyles(Icon);
 
 type IconColorState = 'action' | 'active' | 'filtered' | 'inactive';
 

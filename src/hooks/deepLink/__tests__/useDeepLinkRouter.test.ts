@@ -40,14 +40,6 @@ jest.mock('#hooks/auth/useAuth', () => ({
   })),
 }));
 
-jest.mock('#/utils/environment', () => ({
-  logger: {
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-  },
-}));
-
 jest.mock('#/services/toastService', () => ({
   toastService: {
     error: jest.fn(),

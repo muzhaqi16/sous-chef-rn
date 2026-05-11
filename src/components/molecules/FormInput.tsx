@@ -1,20 +1,12 @@
 import React from 'react';
-import { TextInput, TextInputProps, View, ViewStyle } from 'react-native';
-import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+import { TextInputProps, View, ViewStyle } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
 import { FormFieldWrapper } from '../atoms/FormFieldWrapper';
+import {
+  ThemedBottomSheetTextInput,
+  ThemedTextInput,
+} from '../atoms/themedComponents';
 import { useIsBottomSheetInput } from '#context/BottomSheetInputContext';
-
-const ThemedTextInput = withUnistyles(TextInput, theme => ({
-  placeholderTextColor: theme.colors.textSecondary,
-}));
-
-const ThemedBottomSheetTextInput = withUnistyles(
-  BottomSheetTextInput,
-  theme => ({
-    placeholderTextColor: theme.colors.textSecondary,
-  }),
-);
 
 interface FormInputProps extends Omit<TextInputProps, 'style'> {
   label: string;

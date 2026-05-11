@@ -7,6 +7,7 @@ import React, {
 } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
+import { useTranslation } from 'react-i18next';
 import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { BaseSwitch } from '#components/base/BaseSwitch';
 import { DismissBackdrop } from '#components/atoms/DismissBackdrop';
@@ -34,6 +35,7 @@ export const RecipeIngredientEditor = forwardRef<
   RecipeIngredientEditorRef,
   RecipeIngredientEditorProps
 >(({ onSave }, ref) => {
+  const { t } = useTranslation();
   const bottomSheetRef = useRef<BottomSheetModal>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
@@ -137,7 +139,9 @@ export const RecipeIngredientEditor = forwardRef<
       onDismiss={() => setVisible(false)}
     >
       <Header
-        title={editingId ? 'Edit Ingredient' : 'Add Ingredient'}
+        title={
+          editingId ? t('recipes.editIngredient') : t('recipes.addIngredient')
+        }
         centerTitle
         leftActions={[
           {
@@ -160,18 +164,18 @@ export const RecipeIngredientEditor = forwardRef<
         <View style={styles.autocompleteWrapper}>
           <ItemAutocompleteField
             variant="inline"
-            label="Ingredient Name"
+            label={t('recipes.ingredientName')}
             value={name}
             onChangeText={handleNameChange}
             onSelectItem={handleItemSelect}
-            placeholder="e.g., Chicken breast"
+            placeholder={t('recipes.ingredientNamePlaceholder')}
             required
           />
         </View>
 
         <FieldRow>
           <EditableCounter
-            label="Quantity"
+            label={t('recipes.quantity')}
             value={quantity}
             onChangeText={setQuantity}
             min={0}
@@ -179,40 +183,40 @@ export const RecipeIngredientEditor = forwardRef<
           />
           <UnitAutocompleteField
             variant="modal"
-            label="Unit"
+            label={t('recipes.unit')}
             value={unit}
             onChangeText={setUnit}
             onUnitSelected={handleUnitSelect}
-            placeholder="pcs, kg, etc."
+            placeholder={t('recipes.unitPlaceholder')}
           />
         </FieldRow>
 
         <FormInput
-          label="Preparation"
+          label={t('recipes.preparation')}
           value={preparation}
           onChangeText={setPreparation}
-          placeholder="e.g., diced, minced..."
+          placeholder={t('recipes.preparationPlaceholder')}
           useBottomSheetInput
         />
 
         <FormInput
-          label="Section"
+          label={t('recipes.section')}
           value={section}
           onChangeText={setSection}
-          placeholder="e.g., For the sauce..."
+          placeholder={t('recipes.sectionPlaceholder')}
           useBottomSheetInput
         />
 
         <FormInput
-          label="Notes"
+          label={t('recipes.notes')}
           value={notes}
           onChangeText={setNotes}
-          placeholder="Any additional notes..."
+          placeholder={t('recipes.notesPlaceholder')}
           useBottomSheetInput
         />
 
         <View style={styles.switchRow}>
-          <Text size="md">Optional</Text>
+          <Text size="md">{t('recipes.optional')}</Text>
           <BaseSwitch value={isOptional} onValueChange={setIsOptional} />
         </View>
       </BottomSheetScrollView>

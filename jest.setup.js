@@ -41,3 +41,20 @@ require('./__tests__/setup/mocks/react-native-vision-camera');
 // Globals (polyfills, console suppression)
 // ---------------------------------------------------------------------------
 require('./__tests__/setup/globals');
+
+// ---------------------------------------------------------------------------
+// i18n — initialize i18next so useTranslation() returns real strings in tests
+// instead of raw keys. This mirrors index.js's boot-time init.
+// ---------------------------------------------------------------------------
+require('./src/i18n/config');
+
+// ---------------------------------------------------------------------------
+// Environment — apply the shared mock from `src/utils/__mocks__/environment.ts`
+// globally. Without this, modules that read Environment at load time (e.g.
+// `telemetrySlice.ts:initialTelemetryState`) crash whenever a test pulls them
+// in transitively without first writing a per-suite factory mock. The shared
+// mock provides safe defaults; tests that need bespoke values can still
+// override via their own `jest.mock('#/utils/environment', factory)` or
+// `(Environment.x as jest.Mock).mockReturnValue(...)`.
+// ---------------------------------------------------------------------------
+jest.mock('#/utils/environment');

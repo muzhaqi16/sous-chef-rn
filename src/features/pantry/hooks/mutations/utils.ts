@@ -2,6 +2,7 @@
  * Shared utilities for pantry item mutations
  */
 
+import type { ApolloCache } from '@apollo/client';
 import { type PantryItemFragment } from '#features/pantry/graphql/pantryFragments.generated';
 import {
   StorageState,
@@ -153,4 +154,22 @@ export function stateToCountKey(
     default:
       return 'ambient';
   }
+}
+
+/**
+ * Apply an in-place patch to a Pantry's `stats` field via `cache.modify`.
+ * The updater receives the existing `stats` value and returns a replacement;
+ * if it returns `undefined`, the existing value is kept (no-op).
+ */
+export function modifyPantryStats(
+  cache: ApolloCache,
+  pantryId: string,
+  updater: (stats: any) => any,
+): void {
+  cache.modify({
+    id: cache.identify({ __typename: 'Pantry', id: pantryId }),
+    fields: {
+      stats: (existing: any) => updater(existing) ?? existing,
+    },
+  });
 }

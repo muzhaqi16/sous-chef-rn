@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import { View, ScrollView } from 'react-native';
+import { useTranslation } from 'react-i18next';
+
+type T = (key: string, opts?: Record<string, unknown>) => string;
 import {
   Pressable,
   ThemedRefreshControl,
@@ -32,49 +35,49 @@ type PantryAnalyticsProps = StaticScreenProps<{
   pantryId: string;
 }>;
 
-// Helper functions to format enum values
-function formatPurpose(purpose: string): string {
+// Helper functions to format enum values via translation keys
+function formatPurpose(purpose: string, t: T): string {
   const map: Record<string, string> = {
-    ADJUSTMENT: 'Adjustment',
-    COOKING: 'Cooking',
-    GENERAL: 'General',
-    GIFT: 'Gift',
-    MEAL_PREP: 'Meal Prep',
-    RESTOCK: 'Restock',
-    SNACK: 'Snack',
-    TRANSFER: 'Transfer',
-    WASTE: 'Waste',
+    ADJUSTMENT: 'pantryAnalytics.purposeAdjustment',
+    COOKING: 'pantryAnalytics.purposeCooking',
+    GENERAL: 'pantryAnalytics.purposeGeneral',
+    GIFT: 'pantryAnalytics.purposeGift',
+    MEAL_PREP: 'pantryAnalytics.purposeMealPrep',
+    RESTOCK: 'pantryAnalytics.purposeRestock',
+    SNACK: 'pantryAnalytics.purposeSnack',
+    TRANSFER: 'pantryAnalytics.purposeTransfer',
+    WASTE: 'pantryAnalytics.purposeWaste',
   };
-  return map[purpose] || purpose;
+  return map[purpose] ? t(map[purpose]) : purpose;
 }
 
-function formatSource(source: string): string {
+function formatSource(source: string, t: T): string {
   const map: Record<string, string> = {
-    MANUAL: 'Manual',
-    RECIPE_AUTO: 'Recipe (Auto)',
-    RECIPE_MANUAL: 'Recipe (Manual)',
-    TRANSFER: 'Transfer',
-    WASTE: 'Waste',
+    MANUAL: 'pantryAnalytics.sourceManual',
+    RECIPE_AUTO: 'pantryAnalytics.sourceRecipeAuto',
+    RECIPE_MANUAL: 'pantryAnalytics.sourceRecipeManual',
+    TRANSFER: 'pantryAnalytics.purposeTransfer',
+    WASTE: 'pantryAnalytics.purposeWaste',
   };
-  return map[source] || source;
+  return map[source] ? t(map[source]) : source;
 }
 
-function formatReason(reason: string): string {
+function formatReason(reason: string, t: T): string {
   const map: Record<string, string> = {
-    BURNT: 'Burnt',
-    COOKING_FAIL: 'Cooking Fail',
-    EXPIRED: 'Expired',
-    GAVE_AWAY: 'Gave Away',
-    MOLD: 'Mold',
-    OTHER: 'Other',
-    OVERSTOCK: 'Overstock',
-    PEST: 'Pest',
-    SPILLED: 'Spilled',
-    SPOILED: 'Spoiled',
-    TASTE: 'Taste',
-    UNKNOWN_LOSS: 'Unknown Loss',
+    BURNT: 'pantryAnalytics.reasonBurnt',
+    COOKING_FAIL: 'pantryAnalytics.reasonCookingFail',
+    EXPIRED: 'pantryAnalytics.reasonExpired',
+    GAVE_AWAY: 'pantryAnalytics.reasonGaveAway',
+    MOLD: 'pantryAnalytics.reasonMold',
+    OTHER: 'pantryAnalytics.reasonOther',
+    OVERSTOCK: 'pantryAnalytics.reasonOverstock',
+    PEST: 'pantryAnalytics.reasonPest',
+    SPILLED: 'pantryAnalytics.reasonSpilled',
+    SPOILED: 'pantryAnalytics.reasonSpoiled',
+    TASTE: 'pantryAnalytics.reasonTaste',
+    UNKNOWN_LOSS: 'pantryAnalytics.reasonUnknownLoss',
   };
-  return map[reason] || reason;
+  return map[reason] ? t(map[reason]) : reason;
 }
 
 /**
@@ -110,6 +113,7 @@ const GranularityButton: React.FC<{
 };
 
 export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
+  const { t } = useTranslation();
   const { pantryId } = route.params;
   const { goBack } = useAppNavigation();
 
@@ -139,21 +143,21 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
   };
 
   const routes: TabRoute[] = [
-    { key: 'usage', title: 'Usage' },
-    { key: 'waste', title: 'Waste' },
-    { key: 'ledger', title: 'Ledger' },
+    { key: 'usage', title: t('pantryAnalytics.tabUsage') },
+    { key: 'waste', title: t('pantryAnalytics.tabWaste') },
+    { key: 'ledger', title: t('pantryAnalytics.tabLedger') },
   ];
 
   // Transformed data grouped by data source
   const usagePurposeData =
     usageData?.usageByPurpose?.map(item => ({
-      label: formatPurpose(item.purpose),
+      label: formatPurpose(item.purpose, t),
       value: item.count,
       percentage: item.percentage,
     })) ?? [];
   const usageSourceData =
     usageData?.usageBySource?.map(item => ({
-      label: formatSource(item.source),
+      label: formatSource(item.source, t),
       value: item.count,
       percentage: item.percentage,
     })) ?? [];
@@ -165,7 +169,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
 
   const wasteReasonData =
     wasteData?.wasteByReason?.map(item => ({
-      label: formatReason(item.reason),
+      label: formatReason(item.reason, t),
       value: item.count,
       percentage: item.percentage,
     })) ?? [];
@@ -192,9 +196,18 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
 
   // Granularity options for ledger
   const granularityOptions = [
-    { value: PeriodGranularity.Daily, label: 'Daily' },
-    { value: PeriodGranularity.Weekly, label: 'Weekly' },
-    { value: PeriodGranularity.Monthly, label: 'Monthly' },
+    {
+      value: PeriodGranularity.Daily,
+      label: t('pantryAnalytics.granularityDaily'),
+    },
+    {
+      value: PeriodGranularity.Weekly,
+      label: t('pantryAnalytics.granularityWeekly'),
+    },
+    {
+      value: PeriodGranularity.Monthly,
+      label: t('pantryAnalytics.granularityMonthly'),
+    },
   ];
 
   const renderUsageTab = () => (
@@ -211,22 +224,22 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
       {/* Summary Cards */}
       <View style={styles.summaryRow}>
         <AnalyticsSummaryCard
-          title="Total Usage"
+          title={t('pantryAnalytics.totalUsage')}
           value={usageData?.totalUsageCount ?? 0}
           icon="restaurant"
-          subtitle="items used"
+          subtitle={t('pantryAnalytics.itemsUsed')}
         />
         <AnalyticsSummaryCard
-          title="Avg Per Day"
+          title={t('pantryAnalytics.avgPerDay')}
           value={(usageData?.averageUsagePerDay ?? 0).toFixed(1)}
           icon="time-outline"
-          subtitle="items/day"
+          subtitle={t('pantryAnalytics.itemsPerDay')}
         />
       </View>
 
       {/* Usage Trend */}
       <ChartSection
-        title="Usage Trend"
+        title={t('pantryAnalytics.usageTrend')}
         loading={usageLoading}
         error={usageError?.message}
         isEmpty={!usageData?.usageTrend?.length}
@@ -234,14 +247,14 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
         <TrendLineChart
           data={usageData?.usageTrend ?? []}
           height={200}
-          uniProps={t => ({ color: t.colors.primary })}
-          subtitle="Items used over time"
+          uniProps={theme => ({ color: theme.colors.primary })}
+          subtitle={t('pantryAnalytics.usageTrendSubtitle')}
         />
       </ChartSection>
 
       {/* Usage by Purpose */}
       <ChartSection
-        title="Usage by Purpose"
+        title={t('pantryAnalytics.usageByPurpose')}
         loading={usageLoading}
         error={usageError?.message}
         isEmpty={!usagePurposeData.length}
@@ -251,7 +264,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
 
       {/* Usage by Source */}
       <ChartSection
-        title="Usage by Source"
+        title={t('pantryAnalytics.usageBySource')}
         loading={usageLoading}
         error={usageError?.message}
         isEmpty={!usageSourceData.length}
@@ -265,14 +278,14 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
 
       {/* Top Used Items */}
       <ChartSection
-        title="Top Used Items"
+        title={t('pantryAnalytics.topUsedItems')}
         loading={usageLoading}
         error={usageError?.message}
         isEmpty={!topUsedItemsData.length}
       >
         <TopItemsBarChart
           data={topUsedItemsData}
-          uniProps={t => ({ color: t.colors.primary })}
+          uniProps={theme => ({ color: theme.colors.primary })}
         />
       </ChartSection>
     </ScrollView>
@@ -292,50 +305,50 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
       {/* Summary Cards */}
       <View style={styles.summaryRow}>
         <AnalyticsSummaryCard
-          title="Total Waste"
+          title={t('pantryAnalytics.totalWaste')}
           value={wasteData?.totalWasteCount ?? 0}
           icon="trash-outline"
-          uniProps={t => ({ color: t.colors.error })}
-          subtitle="items wasted"
+          uniProps={theme => ({ color: theme.colors.error })}
+          subtitle={t('pantryAnalytics.itemsWasted')}
         />
         <AnalyticsSummaryCard
-          title="Waste Rate"
+          title={t('pantryAnalytics.wasteRate')}
           value={`${(wasteData?.wasteRate ?? 0).toFixed(1)}%`}
           icon="pie-chart"
-          uniProps={t => ({ color: t.colors.warning })}
-          subtitle="of total"
+          uniProps={theme => ({ color: theme.colors.warning })}
+          subtitle={t('pantryAnalytics.ofTotal')}
         />
       </View>
 
       <View style={styles.summaryRow}>
         <AnalyticsSummaryCard
-          title="Est. Value Lost"
+          title={t('pantryAnalytics.estValueLost')}
           value={`$${(wasteData?.totalWasteValue ?? 0).toFixed(2)}`}
           icon="cash-outline"
-          uniProps={t => ({ color: t.colors.error })}
+          uniProps={theme => ({ color: theme.colors.error })}
         />
       </View>
 
       <View style={styles.summaryRow}>
         <AnalyticsSummaryCard
-          title="Composted"
+          title={t('pantryAnalytics.composted')}
           value={(wasteData?.composted ?? 0).toFixed(1)}
           icon="leaf-outline"
-          uniProps={t => ({ color: t.colors.success })}
-          subtitle="units"
+          uniProps={theme => ({ color: theme.colors.success })}
+          subtitle={t('pantryAnalytics.units')}
         />
         <AnalyticsSummaryCard
-          title="Recycled"
+          title={t('pantryAnalytics.recycled')}
           value={(wasteData?.recycled ?? 0).toFixed(1)}
           icon="refresh-outline"
-          uniProps={t => ({ color: t.colors.info })}
-          subtitle="units"
+          uniProps={theme => ({ color: theme.colors.info })}
+          subtitle={t('pantryAnalytics.units')}
         />
       </View>
 
       {/* Waste Trend */}
       <ChartSection
-        title="Waste Trend"
+        title={t('pantryAnalytics.wasteTrend')}
         loading={wasteLoading}
         error={wasteError?.message}
         isEmpty={!wasteData?.wasteTrend?.length}
@@ -343,14 +356,14 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
         <TrendLineChart
           data={wasteData?.wasteTrend ?? []}
           height={200}
-          uniProps={t => ({ color: t.colors.error })}
-          subtitle="Items wasted over time"
+          uniProps={theme => ({ color: theme.colors.error })}
+          subtitle={t('pantryAnalytics.wasteTrendSubtitle')}
         />
       </ChartSection>
 
       {/* Waste by Reason */}
       <ChartSection
-        title="Waste by Reason"
+        title={t('pantryAnalytics.wasteByReason')}
         loading={wasteLoading}
         error={wasteError?.message}
         isEmpty={!wasteReasonData.length}
@@ -364,14 +377,14 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
 
       {/* Top Wasted Items */}
       <ChartSection
-        title="Top Wasted Items"
+        title={t('pantryAnalytics.topWastedItems')}
         loading={wasteLoading}
         error={wasteError?.message}
         isEmpty={!topWastedItemsData.length}
       >
         <TopItemsBarChart
           data={topWastedItemsData}
-          uniProps={t => ({ color: t.colors.error })}
+          uniProps={theme => ({ color: theme.colors.error })}
           showSecondaryValue
           secondaryValuePrefix="$"
         />
@@ -393,7 +406,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
       {/* Granularity Selector */}
       <View style={styles.granularityRow}>
         <Text size="sm" tone="secondary" weight="medium">
-          Period:
+          {t('pantryAnalytics.period')}
         </Text>
         <View style={styles.granularityButtons}>
           {granularityOptions.map(option => (
@@ -410,56 +423,56 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
       {/* Summary Cards */}
       <View style={styles.summaryRow}>
         <AnalyticsSummaryCard
-          title="Added"
+          title={t('pantryAnalytics.added')}
           value={ledgerData?.summary?.totalAdded ?? 0}
           icon="add-circle-outline"
-          uniProps={t => ({ color: t.colors.success })}
-          subtitle="total quantity"
+          uniProps={theme => ({ color: theme.colors.success })}
+          subtitle={t('pantryAnalytics.totalQuantity')}
         />
         <AnalyticsSummaryCard
-          title="Consumed"
+          title={t('pantryAnalytics.consumed')}
           value={ledgerData?.summary?.totalConsumed ?? 0}
           icon="restaurant"
-          uniProps={t => ({ color: t.colors.primary })}
-          subtitle="total quantity"
+          uniProps={theme => ({ color: theme.colors.primary })}
+          subtitle={t('pantryAnalytics.totalQuantity')}
         />
       </View>
 
       <View style={styles.summaryRow}>
         <AnalyticsSummaryCard
-          title="Wasted"
+          title={t('pantryAnalytics.wasted')}
           value={ledgerData?.summary?.totalWasted ?? 0}
           icon="trash-outline"
-          uniProps={t => ({ color: t.colors.error })}
-          subtitle="total quantity"
+          uniProps={theme => ({ color: theme.colors.error })}
+          subtitle={t('pantryAnalytics.totalQuantity')}
         />
         <AnalyticsSummaryCard
-          title="Net Change"
+          title={t('pantryAnalytics.netChange')}
           value={ledgerData?.summary?.netQuantity ?? 0}
           icon="trending-up"
-          uniProps={t => ({
+          uniProps={theme => ({
             color:
               (ledgerData?.summary?.netQuantity ?? 0) >= 0
-                ? t.colors.success
-                : t.colors.error,
+                ? theme.colors.success
+                : theme.colors.error,
           })}
-          subtitle="added - used - wasted"
+          subtitle={t('pantryAnalytics.netChangeFormula')}
         />
       </View>
 
       {/* Transaction Counts */}
       <View style={styles.summaryRow}>
         <AnalyticsSummaryCard
-          title="Additions"
+          title={t('pantryAnalytics.additions')}
           value={ledgerData?.summary?.additionCount ?? 0}
           icon="add-circle-outline"
-          subtitle="transactions"
+          subtitle={t('pantryAnalytics.transactions')}
         />
         <AnalyticsSummaryCard
-          title="Consumptions"
+          title={t('pantryAnalytics.consumptions')}
           value={ledgerData?.summary?.consumptionCount ?? 0}
           icon="remove-circle-outline"
-          subtitle="transactions"
+          subtitle={t('pantryAnalytics.transactions')}
         />
       </View>
 
@@ -467,25 +480,25 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
       {!!ledgerData?.costAnalytics && (
         <View style={styles.summaryRow}>
           <AnalyticsSummaryCard
-            title="Total Spent"
+            title={t('pantryAnalytics.totalSpent')}
             value={`$${(ledgerData.costAnalytics.totalSpent ?? 0).toFixed(2)}`}
             icon="cash-outline"
-            uniProps={t => ({ color: t.colors.warning })}
+            uniProps={theme => ({ color: theme.colors.warning })}
           />
           <AnalyticsSummaryCard
-            title="Avg Cost/Unit"
+            title={t('pantryAnalytics.avgCostPerUnit')}
             value={`$${(
               ledgerData.costAnalytics.averageCostPerUnit ?? 0
             ).toFixed(2)}`}
             icon="calculator-outline"
-            uniProps={t => ({ color: t.colors.warning })}
+            uniProps={theme => ({ color: theme.colors.warning })}
           />
         </View>
       )}
 
       {/* Period Breakdown Chart */}
       <ChartSection
-        title="Activity Over Time"
+        title={t('pantryAnalytics.activityOverTime')}
         loading={ledgerLoading}
         error={ledgerError?.message}
         isEmpty={!ledgerPeriodData.length}
@@ -494,19 +507,19 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
           <View style={styles.legendItem}>
             <View style={styles.legendDotSuccess} />
             <Text size="xs" tone="secondary">
-              Added
+              {t('pantryAnalytics.added')}
             </Text>
           </View>
           <View style={styles.legendItem}>
             <View style={styles.legendDotPrimary} />
             <Text size="xs" tone="secondary">
-              Consumed
+              {t('pantryAnalytics.consumed')}
             </Text>
           </View>
           <View style={styles.legendItem}>
             <View style={styles.legendDotError} />
             <Text size="xs" tone="secondary">
-              Wasted
+              {t('pantryAnalytics.wasted')}
             </Text>
           </View>
         </View>
@@ -556,7 +569,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
       {!!ledgerData?.summary?.additionsByUnit &&
         ledgerData.summary.additionsByUnit.length > 0 && (
           <ChartSection
-            title="Additions by Unit"
+            title={t('pantryAnalytics.additionsByUnit')}
             loading={ledgerLoading}
             error={ledgerError?.message}
             isEmpty={false}
@@ -571,7 +584,9 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
                     {unit.totalQuantity} {unit.unitSymbol || unit.unitName}
                   </Text>
                   <Text size="sm" tone="secondary">
-                    ({unit.count} transactions)
+                    {t('pantryAnalytics.transactionCount', {
+                      count: unit.count,
+                    })}
                   </Text>
                 </View>
               ))}
@@ -583,7 +598,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
       {!!ledgerData?.summary?.consumptionByUnit &&
         ledgerData.summary.consumptionByUnit.length > 0 && (
           <ChartSection
-            title="Consumption by Unit"
+            title={t('pantryAnalytics.consumptionByUnit')}
             loading={ledgerLoading}
             error={ledgerError?.message}
             isEmpty={false}
@@ -598,7 +613,9 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
                     {unit.totalQuantity} {unit.unitSymbol || unit.unitName}
                   </Text>
                   <Text size="sm" tone="secondary">
-                    ({unit.count} transactions)
+                    {t('pantryAnalytics.transactionCount', {
+                      count: unit.count,
+                    })}
                   </Text>
                 </View>
               ))}
@@ -608,14 +625,14 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
 
       {/* Top Restocked Items */}
       <ChartSection
-        title="Top Restocked Items"
+        title={t('pantryAnalytics.topRestockedItems')}
         loading={ledgerLoading}
         error={ledgerError?.message}
         isEmpty={!topRestockedItemsData.length}
       >
         <TopItemsBarChart
           data={topRestockedItemsData}
-          uniProps={t => ({ color: t.colors.success })}
+          uniProps={theme => ({ color: theme.colors.success })}
         />
       </ChartSection>
     </ScrollView>
@@ -636,7 +653,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
 
   return (
     <View style={commonStyles.container}>
-      <Header title="Pantry Analytics" onBack={goBack} centerTitle />
+      <Header title={t('pantryAnalytics.title')} onBack={goBack} centerTitle />
 
       {/* Date Range Filter */}
       <DateRangeFilter selected={dateRange} onSelect={setDateRange} />

@@ -1,10 +1,6 @@
 import { HttpTransport } from '../HttpTransport';
 import { TelemetryConfig, LogEntry, MetricEntry } from '../../types';
 
-jest.mock('#/utils/environment', () => ({
-  logger: { debug: jest.fn(), warn: jest.fn(), error: jest.fn() },
-}));
-
 import { logger } from '#/utils/environment';
 
 const mockFetch = jest.fn();

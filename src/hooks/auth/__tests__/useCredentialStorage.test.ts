@@ -33,14 +33,6 @@ jest.mock('#/storage/keychain', () => ({
 }));
 
 // Mock environment logger
-jest.mock('#/utils/environment', () => ({
-  logger: {
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-  },
-}));
-
 beforeEach(() => {
   jest.clearAllMocks();
   mockHasCredentials.mockResolvedValue(false);

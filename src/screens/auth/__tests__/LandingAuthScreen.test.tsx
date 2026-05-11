@@ -33,9 +33,14 @@ jest.mock('#components/base/Button', () => {
   };
 });
 
-jest.mock('#utils/environment', () => ({
-  getWebAppUrl: (path: string) => `https://app.example.com${path}`,
-}));
+// Environment is auto-mocked via jest.setup.js. Override `getWebAppUrl` so the
+// deep-link assertions resolve to `https://app.example.com/...`.
+import { getWebAppUrl } from '#utils/environment';
+beforeAll(() => {
+  (getWebAppUrl as jest.Mock).mockImplementation(
+    (path: string) => `https://app.example.com${path}`,
+  );
+});
 
 describe('LandingAuthScreen', () => {
   beforeEach(() => {

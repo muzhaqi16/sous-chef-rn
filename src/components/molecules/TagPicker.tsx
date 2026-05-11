@@ -36,7 +36,6 @@ export const TagPicker: React.FC<TagPickerProps> = ({
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     onDismiss: onCancel,
     snapPoints: ['55%', '70%'],
-    keyboardBehavior: 'interactive',
   });
   const [searchQuery, setSearchQuery] = useState('');
 

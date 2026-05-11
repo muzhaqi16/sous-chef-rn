@@ -61,10 +61,10 @@ describe('useStandardBottomSheet', () => {
     expect(result.current.modalProps.enablePanDownToClose).toBe(true);
   });
 
-  it('defaults keyboardBehavior to extend', () => {
+  it('defaults keyboardBehavior to interactive', () => {
     const { result } = renderHook(() => useStandardBottomSheet(defaultOptions));
 
-    expect(result.current.modalProps.keyboardBehavior).toBe('extend');
+    expect(result.current.modalProps.keyboardBehavior).toBe('interactive');
   });
 
   it('allows overriding keyboardBehavior', () => {
@@ -175,7 +175,7 @@ describe('useStandardBottomSheet', () => {
     });
   });
 
-  describe('dismissOnBlur (navigation focus lifecycle)', () => {
+  describe('navigation focus lifecycle', () => {
     // Helper: capture the useFocusEffect callback so the test can drive blur.
     const installFocusCapture = () => {
       let captured: (() => void | (() => void)) | null = null;
@@ -252,29 +252,6 @@ describe('useStandardBottomSheet', () => {
       const fx = installFocusCapture();
       const { result } = renderHook(() =>
         useStandardBottomSheet(defaultOptions),
-      );
-
-      (result.current.ref as any).current = {
-        present: mockPresent,
-        dismiss: mockDismiss,
-      };
-
-      fx.focus();
-      const cleanup = fx.getCleanup();
-      cleanup?.();
-
-      expect(mockPresent).not.toHaveBeenCalled();
-      expect(mockDismiss).not.toHaveBeenCalled();
-    });
-
-    it('does not touch the sheet on blur when dismissOnBlur is false', () => {
-      const fx = installFocusCapture();
-      const { result } = renderHook(() =>
-        useStandardBottomSheet({
-          ...defaultOptions,
-          visible: true,
-          dismissOnBlur: false,
-        }),
       );
 
       (result.current.ref as any).current = {

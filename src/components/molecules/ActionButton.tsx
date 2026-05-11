@@ -1,9 +1,7 @@
 import React from 'react';
 import { View, StyleProp, ViewStyle } from 'react-native';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
-import IconButton from '../atoms/IconButton';
-
-const ThemedIconButton = withUnistyles(IconButton);
+import { StyleSheet } from 'react-native-unistyles';
+import { ThemedIconButton } from '../atoms/themedComponents';
 
 type ActionButtonProps = {
   onPress: () => void;

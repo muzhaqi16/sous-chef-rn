@@ -89,11 +89,13 @@ jest.mock('#/services/telemetry', () => ({
   },
 }));
 
-jest.mock('#/utils/environment', () => ({
-  Environment: {
-    shouldEnableDebugFeatures: () => false,
-  },
-}));
+// Environment is auto-mocked via jest.setup.js. ProfileScreen tests want
+// `shouldEnableDebugFeatures` to return false (debug section hidden in
+// non-dev contexts), so we override it below.
+import { Environment } from '#/utils/environment';
+beforeEach(() => {
+  (Environment.shouldEnableDebugFeatures as jest.Mock).mockReturnValue(false);
+});
 
 jest.mock('#/utils/iconUtils', () => ({
   Icon: 'Icon',

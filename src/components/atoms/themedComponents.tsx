@@ -3,6 +3,10 @@ import { Pressable as GHPressable } from 'react-native-gesture-handler';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { withUnistyles } from 'react-native-unistyles';
 
+import { BackButton } from './BackButton';
+import { IconButton } from './IconButton';
+import { Icon } from '#utils/iconUtils';
+
 // Shared withUnistyles wrappers for third-party components that take theme-
 // derived props. Defining them at module scope (not inline in screens) keeps
 // the per-screen code free of useUnistyles re-render subscriptions.
@@ -64,4 +68,17 @@ export const WhiteActivityIndicator = withUnistyles(
 export const ThemedRefreshControl = withUnistyles(RefreshControl, theme => ({
   colors: [theme.colors.primary],
   tintColor: theme.colors.primary,
+}));
+
+/** Theme-reactive Icon wrapper. Re-renders on theme change so `tone`/`color`
+ * derived values stay in sync. Pass color/size/name as props at the call site. */
+export const ThemedIcon = withUnistyles(Icon);
+
+/** Theme-reactive IconButton wrapper. */
+export const ThemedIconButton = withUnistyles(IconButton);
+
+/** BackButton tinted with `theme.colors.textPrimary` — the standard back-button
+ * color used in detail screens and modal headers. */
+export const ThemedBackButton = withUnistyles(BackButton, theme => ({
+  color: theme.colors.textPrimary,
 }));

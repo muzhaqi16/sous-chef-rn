@@ -1,25 +1,13 @@
 import React, { useState } from 'react';
+import { Modal, View, Text, ScrollView, Pressable } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
 import {
-  Modal,
-  View,
-  Text,
-  TextInput,
-  ActivityIndicator,
-  ScrollView,
-  Pressable,
-} from 'react-native';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+  ThemedTextInput,
+  WhiteActivityIndicator as ThemedActivityIndicator,
+} from '#components/atoms/themedComponents';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import { useIsEffectivelyOffline } from '#hooks/settings/useOfflineMode';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
-
-const ThemedActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
-  color: theme.colors.white,
-}));
-
-const ThemedTextInput = withUnistyles(TextInput, theme => ({
-  placeholderTextColor: theme.colors.textSecondary,
-}));
 
 interface InviteUserModalProps {
   visible: boolean;

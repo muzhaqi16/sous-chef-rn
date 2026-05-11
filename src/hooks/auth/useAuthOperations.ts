@@ -11,7 +11,7 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import { logger } from '#/utils/environment';
 import { useErrorService } from '#/services/errorService';
-import { useUserPreferences } from '#/hooks/navigation/useUserPreferences';
+import { useAuthPreferences } from '#/hooks/navigation/useAuthPreferences';
 import { executeMutation, executeQuery } from '#/utils/compilerSafeWrappers';
 import { queueManager } from '#/apollo/offlineQueue/queueManager';
 import { queueStore } from '#/apollo/offlineQueue/queueStore';
@@ -400,7 +400,7 @@ export const useAuthOperations = ({
     clearRegistrationPreferences,
     trackCredentialPromptShown,
     trackLogout,
-  } = useUserPreferences();
+  } = useAuthPreferences();
 
   // GraphQL mutations
   const [loginMutation] = useMutation(LoginDocument);

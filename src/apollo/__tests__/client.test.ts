@@ -2,15 +2,6 @@
 
 // Mock all dependencies before importing the client module
 
-jest.mock('#/utils/environment', () => ({
-  logger: {
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    debug: jest.fn(),
-  },
-}));
-
 jest.mock('../links/index', () => ({
   createLink: jest.fn(() => ({
     request: jest.fn(),

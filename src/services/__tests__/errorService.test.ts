@@ -5,15 +5,6 @@ jest.mock('#/services/telemetry', () => ({
   },
 }));
 
-jest.mock('#/utils/environment', () => ({
-  logger: {
-    error: jest.fn(),
-    warn: jest.fn(),
-    debug: jest.fn(),
-    info: jest.fn(),
-  },
-}));
-
 jest.mock('#/utils/errorSerialization', () => ({
   serializeError: jest.fn((e: unknown) => ({ message: String(e) })),
 }));

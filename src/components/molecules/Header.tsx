@@ -1,12 +1,11 @@
 import React, { useRef } from 'react';
 import { View, ActivityIndicator } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { Pressable, ThemedIcon } from '#components/atoms/themedComponents';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { Icon, IconName, IconLibrary } from '#utils/iconUtils';
 import { commonStyles } from '#/styles/commonStyles';
 import { Text } from '#components/atoms/Text';
 
-const ThemedIcon = withUnistyles(Icon);
 const ThemedActivityIndicator = withUnistyles(ActivityIndicator);
 
 // ============================================

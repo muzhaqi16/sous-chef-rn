@@ -45,14 +45,7 @@ jest.mock('#/hooks/useToast', () => ({
   useToast: () => mockToast,
 }));
 
-jest.mock('#/utils/environment', () => ({
-  logger: {
-    info: jest.fn(),
-    error: jest.fn(),
-    warn: jest.fn(),
-    debug: jest.fn(),
-  },
-}));
+// Environment is auto-mocked via jest.setup.js; logger methods are no-op jest.fn().
 
 jest.mock('#/utils/compilerSafeWrappers');
 

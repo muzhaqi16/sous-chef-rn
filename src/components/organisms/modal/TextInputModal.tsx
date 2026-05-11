@@ -3,24 +3,18 @@ import {
   Modal,
   View,
   Text,
-  TextInput,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
   Pressable,
 } from 'react-native';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
+import {
+  ThemedTextInput,
+  WhiteActivityIndicator as ThemedActivityIndicator,
+} from '#components/atoms/themedComponents';
 
 import { TextInputModalProps } from './types';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
-
-const ThemedActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
-  color: theme.colors.white,
-}));
-
-const ThemedTextInput = withUnistyles(TextInput, theme => ({
-  placeholderTextColor: theme.colors.textSecondary,
-}));
 
 /** Module-level helper to initialize text input modal state */
 function initTextInputModal(

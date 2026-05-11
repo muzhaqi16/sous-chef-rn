@@ -41,7 +41,6 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
     visible,
     onDismiss: onClose,
     snapPoints: ['65%'],
-    keyboardBehavior: 'interactive',
   });
 
   // Form state

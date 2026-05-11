@@ -63,11 +63,8 @@ jest.mock('#/store/performanceStore', () => ({
   ),
 }));
 
-jest.mock('#/utils/environment', () => ({
-  Environment: {
-    shouldEnableDebugFeatures: jest.fn().mockReturnValue(true),
-  },
-}));
+// Environment is auto-mocked via jest.setup.js; the default
+// `shouldEnableDebugFeatures` returns true, which is what this suite expects.
 
 jest.mock('#/store/useAppStore', () => ({
   useAppStore: jest.fn((selector: any) =>

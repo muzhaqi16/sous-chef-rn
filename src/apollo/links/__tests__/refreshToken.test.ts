@@ -18,17 +18,8 @@ jest.mock('#store', () => ({
   },
 }));
 
-// Mock logger
-jest.mock('#/utils/environment', () => ({
-  logger: {
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-  },
-  Environment: {
-    isDevelopment: jest.fn(() => true),
-  },
-}));
+// Environment is auto-mocked via jest.setup.js (logger is jest.fn() no-ops,
+// isDevelopment defaults to true) — no per-suite override needed.
 
 // Mock isNetworkError
 jest.mock('#/utils/isNetworkError', () => ({

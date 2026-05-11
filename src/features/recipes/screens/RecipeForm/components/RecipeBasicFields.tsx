@@ -1,6 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
+import { useTranslation } from 'react-i18next';
 import { FormInput } from '#components/molecules/FormInput';
 import { FormTextArea } from '#components/molecules/FormTextArea';
 import { EditableCounter } from '#components/molecules/EditableCounter';
@@ -18,28 +19,29 @@ export const RecipeBasicFields: React.FC<RecipeBasicFieldsProps> = ({
   state,
   updateField,
 }) => {
+  const { t } = useTranslation();
   return (
     <>
       <FormInput
-        label="Recipe Name"
+        label={t('recipes.name')}
         value={state.name}
         onChangeText={v => updateField('name', v)}
-        placeholder="e.g., Chicken Tikka Masala"
+        placeholder={t('recipes.namePlaceholder')}
         required
       />
 
       <FormTextArea
-        label="Description"
+        label={t('recipes.description')}
         value={state.description}
         onChangeText={v => updateField('description', v)}
-        placeholder="A brief description of the recipe..."
+        placeholder={t('recipes.descriptionPlaceholder')}
       />
 
       <FormInput
-        label="Image URL"
+        label={t('recipes.imageUrl')}
         value={state.imageUrl}
         onChangeText={v => updateField('imageUrl', v)}
-        placeholder="https://..."
+        placeholder={t('recipes.imageUrlPlaceholder')}
         keyboardType="url"
         autoCapitalize="none"
       />
@@ -47,7 +49,7 @@ export const RecipeBasicFields: React.FC<RecipeBasicFieldsProps> = ({
       <View style={styles.row}>
         <View style={styles.halfField}>
           <EditableCounter
-            label="Servings"
+            label={t('recipes.servings')}
             value={state.servings}
             onChangeText={v => updateField('servings', v)}
             min={1}
@@ -56,7 +58,7 @@ export const RecipeBasicFields: React.FC<RecipeBasicFieldsProps> = ({
         </View>
         <View style={styles.halfField}>
           <EditableCounter
-            label="Calories/Serving"
+            label={t('recipes.caloriesPerServing')}
             value={state.caloriesPerServing}
             onChangeText={v => updateField('caloriesPerServing', v)}
             min={0}
@@ -68,7 +70,7 @@ export const RecipeBasicFields: React.FC<RecipeBasicFieldsProps> = ({
       <View style={styles.row}>
         <View style={styles.halfField}>
           <EditableCounter
-            label="Prep Time (min)"
+            label={t('recipes.prepTimeMin')}
             value={state.prepTimeMinutes}
             onChangeText={v => updateField('prepTimeMinutes', v)}
             min={0}
@@ -77,7 +79,7 @@ export const RecipeBasicFields: React.FC<RecipeBasicFieldsProps> = ({
         </View>
         <View style={styles.halfField}>
           <EditableCounter
-            label="Cook Time (min)"
+            label={t('recipes.cookTimeMin')}
             value={state.cookTimeMinutes}
             onChangeText={v => updateField('cookTimeMinutes', v)}
             min={0}

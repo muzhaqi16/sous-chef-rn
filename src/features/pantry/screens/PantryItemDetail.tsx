@@ -7,6 +7,7 @@ import {
 import { alertService } from '#/services/alertService';
 import Animated from 'react-native-reanimated';
 import { useQuery } from '@apollo/client/react';
+import { useTranslation } from 'react-i18next';
 import { GetPantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import {
   useSelectedShoppingListId,
@@ -64,6 +65,7 @@ export const PantryItemDetail: React.FC<
     itemId: string;
   }>
 > = ({ route }) => {
+  const { t } = useTranslation();
   useScreenTransition('PantryItemDetail');
   const itemId = route.params.itemId;
   const { goBack, navigateTo, navigate } = useAppNavigation();
@@ -151,7 +153,11 @@ export const PantryItemDetail: React.FC<
       <View style={styles.container}>
         <Header variant="detail" onBack={goBack} borderless />
         <View style={styles.loadingContainer}>
-          <SousChefLoader size="small" showBrand={false} message="Loading" />
+          <SousChefLoader
+            size="small"
+            showBrand={false}
+            message={t('pantryItemDetail.loading')}
+          />
         </View>
       </View>
     );
@@ -252,29 +258,39 @@ export const PantryItemDetail: React.FC<
           <View style={styles.categoryBadge}>
             <Icon name="restaurant-outline" size={16} tone="primary" />
             <Text style={styles.categoryText}>
-              {categoryName || 'Item'}
-              {storageStateDisplay ? ` in ${storageStateDisplay}` : ''}
+              {categoryName || t('pantryItemDetail.item')}
+              {storageStateDisplay
+                ? t('pantryItemDetail.inLocation', {
+                    location: storageStateDisplay,
+                  })
+                : ''}
             </Text>
           </View>
         )}
 
         <View style={styles.infoColumns}>
           <View style={styles.infoColumn}>
-            <Text style={styles.infoColumnLabel}>In the pantry</Text>
+            <Text style={styles.infoColumnLabel}>
+              {t('pantryItemDetail.inThePantry')}
+            </Text>
             <Text style={styles.infoColumnValue}>
               {formatDaysInPantry(daysInPantry)}
             </Text>
           </View>
           <View style={styles.infoColumn}>
-            <Text style={styles.infoColumnLabel}>Expiring</Text>
+            <Text style={styles.infoColumnLabel}>
+              {t('pantryItemDetail.expiring')}
+            </Text>
             <ExpiryColumnText
-              text={expiryInfo?.text || 'No expiry'}
+              text={expiryInfo?.text || t('pantryItemDetail.noExpiry')}
               isUrgent={!!expiryInfo?.isUrgent}
               isExpired={!!expiryInfo?.isExpired}
             />
           </View>
           <View style={styles.infoColumn}>
-            <Text style={styles.infoColumnLabel}>Amount</Text>
+            <Text style={styles.infoColumnLabel}>
+              {t('pantryItemDetail.amount')}
+            </Text>
             <Text style={styles.infoColumnValue}>
               {item.quantity} {getUnitDisplayText(item.unit)}
             </Text>
@@ -283,7 +299,9 @@ export const PantryItemDetail: React.FC<
 
         {!!showNutrition && (
           <View style={styles.nutritionSection}>
-            <Text style={styles.nutritionTitle}>Nutrition</Text>
+            <Text style={styles.nutritionTitle}>
+              {t('pantryItemDetail.nutrition')}
+            </Text>
             <NutritionSummary
               nutritions={itemNutritions}
               showHighlights
@@ -329,7 +347,9 @@ export const PantryItemDetail: React.FC<
         )}
 
         <View style={styles.recipesSection}>
-          <Text style={styles.sectionTitle}>Recipes to try</Text>
+          <Text style={styles.sectionTitle}>
+            {t('pantryItemDetail.recipesToTry')}
+          </Text>
           {loadingRecipes ? (
             <ThemedActivityIndicator
               size="small"

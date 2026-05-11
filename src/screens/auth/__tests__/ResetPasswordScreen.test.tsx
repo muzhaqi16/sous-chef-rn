@@ -45,15 +45,6 @@ jest.mock('#/hooks/useToast', () => ({
 
 jest.mock('#/utils/compilerSafeWrappers');
 
-jest.mock('#/utils/environment', () => ({
-  logger: {
-    info: jest.fn(),
-    error: jest.fn(),
-    warn: jest.fn(),
-    debug: jest.fn(),
-  },
-}));
-
 jest.mock('#/utils/iconUtils', () => ({
   Icon: 'Icon',
 }));

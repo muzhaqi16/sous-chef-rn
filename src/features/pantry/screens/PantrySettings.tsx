@@ -3,6 +3,7 @@ import { View, ScrollView } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import { Icon } from '#/utils/iconUtils';
+import { useTranslation } from 'react-i18next';
 import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
 import { BaseSwitch } from '#components/base/BaseSwitch';
 import { StyleSheet } from 'react-native-unistyles';
@@ -191,6 +192,7 @@ export const PantrySettings: React.FC<
     | undefined
   >
 > = ({ route }) => {
+  const { t } = useTranslation();
   const { goBack } = useAppNavigation();
   const pantryId = route.params?.pantryId;
 
@@ -234,7 +236,7 @@ export const PantrySettings: React.FC<
       const { message } = handleApolloError(error, {
         operation: 'Set Default Pantry',
       });
-      alertService.alert('Error', message);
+      alertService.alert(t('labels.error'), message);
       // Revert the toggle on error
       setIsDefault(!isDefault);
     },
@@ -245,7 +247,7 @@ export const PantrySettings: React.FC<
       const { message } = handleApolloError(error, {
         operation: 'Delete Pantry',
       });
-      alertService.alert('Error', message);
+      alertService.alert(t('labels.error'), message);
     },
     // Update cache directly instead of refetching. Builder is module-scope to
     // keep try/catch out of the component body (React Compiler bailout).
@@ -264,7 +266,7 @@ export const PantrySettings: React.FC<
       goBack();
     },
     onError: () => {
-      alertService.alert('Error', 'Failed to create pantry');
+      alertService.alert(t('labels.error'), t('pantrySettings.createFailed'));
     },
   });
 
@@ -275,8 +277,8 @@ export const PantrySettings: React.FC<
         operation: 'PantrySettings.loadPantry',
       });
       alertService.alert(
-        'Error Loading Pantry',
-        'Failed to load pantry data. Please try again.',
+        t('pantrySettings.loadErrorTitle'),
+        t('pantrySettings.loadErrorMessage'),
       );
       return;
     }
@@ -306,12 +308,12 @@ export const PantrySettings: React.FC<
 
   const handleSave = () => {
     if (!name.trim()) {
-      alertService.alert('Error', 'Pantry name cannot be empty');
+      alertService.alert(t('labels.error'), t('pantrySettings.nameEmptyError'));
       return;
     }
 
     if (!selectedHomeId) {
-      alertService.alert('Error', 'No home selected');
+      alertService.alert(t('labels.error'), t('pantrySettings.noHomeError'));
       return;
     }
 
@@ -323,7 +325,9 @@ export const PantrySettings: React.FC<
               input: {
                 homeId: selectedHomeId,
                 name: name.trim(),
-                description: description.trim() || 'User created pantry',
+                description:
+                  description.trim() ||
+                  t('pantrySettings.userCreatedDescription'),
                 isDefault,
                 tags: ['user-created'],
               },
@@ -344,8 +348,10 @@ export const PantrySettings: React.FC<
       setSaving,
       () => {
         alertService.alert(
-          'Error',
-          pantryId ? 'Failed to save settings' : 'Failed to create pantry',
+          t('labels.error'),
+          pantryId
+            ? t('pantrySettings.saveFailed')
+            : t('pantrySettings.createFailed'),
         );
       },
     );
@@ -355,12 +361,12 @@ export const PantrySettings: React.FC<
     if (!pantryId) return;
 
     alertService.alert(
-      'Delete Pantry',
-      'Are you sure you want to delete this pantry? This action cannot be undone and will remove all items in this pantry.',
+      t('pantrySettings.deleteConfirmTitle'),
+      t('pantrySettings.deleteConfirmMessage'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('labels.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('labels.delete'),
           style: 'destructive',
           onPress: () => {
             // Register parent deletion to prevent subscription race conditions
@@ -387,8 +393,8 @@ export const PantrySettings: React.FC<
   if (pantryId && loadingPantry && !pantry) {
     return (
       <View style={styles.container}>
-        <ScreenHeader title="Loading..." onBack={goBack} />
-        <LoadingInline message="Loading pantry data..." />
+        <ScreenHeader title={t('pantrySettings.loading')} onBack={goBack} />
+        <LoadingInline message={t('pantrySettings.loadingData')} />
       </View>
     );
   }
@@ -396,7 +402,11 @@ export const PantrySettings: React.FC<
   return (
     <View style={styles.container}>
       <ScreenHeader
-        title={!pantryId ? 'Create New Pantry' : 'Pantry Settings'}
+        title={
+          !pantryId
+            ? t('pantrySettings.createTitle')
+            : t('pantrySettings.title')
+        }
         onBack={goBack}
         rightElement={
           (
@@ -408,7 +418,11 @@ export const PantrySettings: React.FC<
               style={({ pressed }) => pressed && styles.pressed}
             >
               <Text size="md" weight="semibold" tone="accent">
-                {saving ? 'Saving...' : !pantryId ? 'Create' : 'Save'}
+                {saving
+                  ? t('pantrySettings.saving')
+                  : !pantryId
+                  ? t('pantrySettings.create')
+                  : t('pantrySettings.save')}
               </Text>
             </Pressable>
           ) : undefined
@@ -417,29 +431,33 @@ export const PantrySettings: React.FC<
 
       <ScrollView style={styles.content}>
         <View style={commonStyles.settingsSection}>
-          <Text style={commonStyles.settingsSectionTitle}>General</Text>
+          <Text style={commonStyles.settingsSectionTitle}>
+            {t('pantrySettings.general')}
+          </Text>
 
           <BaseInput
-            label="Pantry Name"
+            label={t('pantrySettings.name')}
             value={name}
             onChangeText={setName}
-            placeholder="Enter pantry name (e.g., Kitchen Pantry)"
+            placeholder={t('pantrySettings.namePlaceholder')}
           />
 
           <BaseInput
-            label="Description (Optional)"
+            label={t('pantrySettings.descriptionLabel')}
             value={description}
             onChangeText={setDescription}
-            placeholder="Enter description"
+            placeholder={t('pantrySettings.descriptionPlaceholder')}
             multiline
             numberOfLines={3}
           />
 
           <View style={commonStyles.settingsRow}>
             <View style={commonStyles.settingsRowInfo}>
-              <Text style={commonStyles.settingsRowLabel}>Default Pantry</Text>
+              <Text style={commonStyles.settingsRowLabel}>
+                {t('pantrySettings.defaultPantry')}
+              </Text>
               <Text style={commonStyles.settingsRowDescription}>
-                Make this your default pantry for this home
+                {t('pantrySettings.defaultPantryDesc')}
               </Text>
             </View>
             <BaseSwitch value={isDefault} onValueChange={handleToggleDefault} />
@@ -448,11 +466,15 @@ export const PantrySettings: React.FC<
 
         {!!pantryId && !!pantry && (
           <View style={commonStyles.settingsSection}>
-            <Text style={commonStyles.settingsSectionTitle}>Information</Text>
+            <Text style={commonStyles.settingsSectionTitle}>
+              {t('pantrySettings.information')}
+            </Text>
 
             <InfoRow
-              label="Items in pantry"
-              value={`${pantry?.items?.length || 0} items`}
+              label={t('pantrySettings.itemsInPantry')}
+              value={t('pantrySettings.itemsCount', {
+                count: pantry?.items?.length || 0,
+              })}
             />
           </View>
         )}
@@ -460,7 +482,9 @@ export const PantrySettings: React.FC<
         {/* Only show danger zone if editing existing pantry and user can manage */}
         {!!pantryId && permissions.canManagePantry ? (
           <View style={commonStyles.settingsSection}>
-            <Text style={commonStyles.settingsSectionTitle}>Danger Zone</Text>
+            <Text style={commonStyles.settingsSectionTitle}>
+              {t('pantrySettings.dangerZone')}
+            </Text>
 
             <Pressable
               style={({ pressed }) => [
@@ -476,7 +500,7 @@ export const PantrySettings: React.FC<
                 tone="error"
                 style={styles.deleteButtonText}
               >
-                Delete Pantry
+                {t('pantrySettings.deletePantry')}
               </Text>
             </Pressable>
 
@@ -486,8 +510,7 @@ export const PantrySettings: React.FC<
               lineHeight="normal"
               style={styles.dangerWarning}
             >
-              Deleting this pantry will permanently remove all items stored in
-              it. This action cannot be undone.
+              {t('pantrySettings.deleteWarning')}
             </Text>
           </View>
         ) : null}

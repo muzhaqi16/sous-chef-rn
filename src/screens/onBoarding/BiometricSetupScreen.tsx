@@ -8,7 +8,7 @@ import { Icon } from '#utils/iconUtils';
 import { authService } from '#/services/authService';
 import { useTextInputModal } from '#components/organisms/modal/useTextInputModal';
 import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigation';
-import { useUserPreferences } from '#hooks/navigation/useUserPreferences';
+import { useAuthPreferences } from '#hooks/navigation/useAuthPreferences';
 import { useAppStore, useUser } from '#store/useAppStore';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import {
@@ -60,7 +60,7 @@ export const BiometricSetupScreen = () => {
   const clearRegistrationPassword = useAppStore(
     state => state.clearRegistrationPassword,
   );
-  const { markBiometricDeclined, markBiometricEnabled } = useUserPreferences();
+  const { markBiometricDeclined, markBiometricEnabled } = useAuthPreferences();
   const { show: showPasswordModal, TextModalComponent } = useTextInputModal();
   const [biometricInfo, setBiometricInfo] = useState<{
     isAvailable: boolean;

@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { View, Image, Dimensions, Platform } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import {
+  Pressable,
+  ThemedBackButton,
+} from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, CommonActions } from '@react-navigation/native';
 import { useSafeNavigation } from '#hooks/navigation/useSafeNavigation';
 import { Icon } from '#utils/iconUtils';
-import { BackButton } from '#components/atoms/BackButton';
 import {
   launchCamera,
   launchImageLibrary,
@@ -16,7 +18,7 @@ import {
   ImageLibraryOptions,
 } from 'react-native-image-picker';
 import { request, PERMISSIONS, RESULTS } from 'react-native-permissions';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import {
   validateImageFile,
   ImageValidationError,
@@ -31,10 +33,6 @@ import {
   executeMutation,
 } from '#/utils/compilerSafeWrappers';
 import { Text } from '#components/atoms/Text';
-
-const ThemedBackButton = withUnistyles(BackButton, theme => ({
-  color: theme.colors.textPrimary,
-}));
 
 const DEFAULT_OPTIONS: CameraOptions | ImageLibraryOptions = {
   mediaType: 'photo' as MediaType,

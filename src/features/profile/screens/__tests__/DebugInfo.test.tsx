@@ -24,25 +24,9 @@ jest.mock('#components/templates/ProfileScreenWrapper', () => ({
   },
 }));
 
-const mockShouldEnableDebugFeatures = jest.fn(() => true);
-jest.mock('#/utils/environment', () => ({
-  Environment: {
-    getConfig: () => ({
-      buildMode: 'development',
-      isDevelopment: true,
-      isStaging: false,
-      isProduction: false,
-      isTesting: true,
-    }),
-    getApiConfig: () => ({
-      baseUrl: 'http://localhost:4000',
-      wsUrl: 'ws://localhost:4000',
-      timeout: 30000,
-      retries: 3,
-    }),
-    shouldEnableDebugFeatures: () => mockShouldEnableDebugFeatures(),
-  },
-}));
+// Environment is auto-mocked via jest.setup.js + src/utils/__mocks__/environment.ts.
+// We override specific return values per-test below.
+import { Environment } from '#/utils/environment';
 
 // Set Platform.Version before importing the component
 beforeAll(() => {
@@ -57,7 +41,20 @@ const getDebugInfo = () => require('../DebugInfo').DebugInfo;
 
 describe('DebugInfo', () => {
   beforeEach(() => {
-    mockShouldEnableDebugFeatures.mockReturnValue(true);
+    (Environment.shouldEnableDebugFeatures as jest.Mock).mockReturnValue(true);
+    (Environment.getConfig as jest.Mock).mockReturnValue({
+      buildMode: 'development',
+      isDevelopment: true,
+      isStaging: false,
+      isProduction: false,
+      isTesting: true,
+    });
+    (Environment.getApiConfig as jest.Mock).mockReturnValue({
+      baseUrl: 'http://localhost:4000',
+      wsUrl: 'ws://localhost:4000',
+      timeout: 30000,
+      retries: 3,
+    });
   });
 
   it('renders debug info screen', () => {
@@ -79,7 +76,7 @@ describe('DebugInfo', () => {
   });
 
   it('shows not available message when debug features disabled', () => {
-    mockShouldEnableDebugFeatures.mockReturnValue(false);
+    (Environment.shouldEnableDebugFeatures as jest.Mock).mockReturnValue(false);
     const DebugInfo = getDebugInfo();
     render(<DebugInfo />);
     expect(screen.getByText(/only available in development/)).toBeTruthy();

@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
-import { View, ViewStyle, ActivityIndicator } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+import { View, ViewStyle } from 'react-native';
+import {
+  Pressable,
+  ThemedActivityIndicator,
+} from '#components/atoms/themedComponents';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';
 import type { ItemImage } from '#/types/nutrition';
@@ -12,10 +15,6 @@ import {
   getPrimaryImage,
   hasImages,
 } from '#utils/imageUtils';
-
-const ThemedActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
-  color: theme.colors.primary,
-}));
 
 interface ImageGalleryTabsProps {
   /** Raw images JSON from API or parsed ItemImage array */

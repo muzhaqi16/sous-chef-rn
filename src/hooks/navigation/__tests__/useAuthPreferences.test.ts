@@ -1,5 +1,5 @@
 import { renderHook, act } from '@testing-library/react-native';
-import { useUserPreferences } from '../useUserPreferences';
+import { useAuthPreferences } from '../useAuthPreferences';
 
 // Break circular dependency chain
 jest.mock('../../../apollo/links/tokenScheduler');
@@ -25,11 +25,11 @@ beforeEach(() => {
   mockGetUserNavigationState.mockReturnValue(null);
 });
 
-describe('useUserPreferences (navigation)', () => {
+describe('useAuthPreferences', () => {
   describe('shouldShowCredentialPrompt', () => {
     it('returns true when no navigation state exists for user', () => {
       mockGetUserNavigationState.mockReturnValue(null);
-      const { result } = renderHook(() => useUserPreferences());
+      const { result } = renderHook(() => useAuthPreferences());
 
       expect(result.current.shouldShowCredentialPrompt()).toBe(true);
     });
@@ -38,7 +38,7 @@ describe('useUserPreferences (navigation)', () => {
       mockGetUserNavigationState.mockReturnValue({
         credentialPromptDeclined: false,
       });
-      const { result } = renderHook(() => useUserPreferences());
+      const { result } = renderHook(() => useAuthPreferences());
 
       expect(result.current.shouldShowCredentialPrompt()).toBe(true);
     });
@@ -47,14 +47,14 @@ describe('useUserPreferences (navigation)', () => {
       mockGetUserNavigationState.mockReturnValue({
         credentialPromptDeclined: true,
       });
-      const { result } = renderHook(() => useUserPreferences());
+      const { result } = renderHook(() => useAuthPreferences());
 
       expect(result.current.shouldShowCredentialPrompt()).toBe(false);
     });
 
     it('returns false when no user and no userId provided', () => {
       mockUser = null;
-      const { result } = renderHook(() => useUserPreferences());
+      const { result } = renderHook(() => useAuthPreferences());
 
       expect(result.current.shouldShowCredentialPrompt()).toBe(false);
     });
@@ -63,7 +63,7 @@ describe('useUserPreferences (navigation)', () => {
       mockGetUserNavigationState.mockReturnValue({
         credentialPromptDeclined: true,
       });
-      const { result } = renderHook(() => useUserPreferences());
+      const { result } = renderHook(() => useAuthPreferences());
 
       result.current.shouldShowCredentialPrompt('other-user');
 
@@ -73,7 +73,7 @@ describe('useUserPreferences (navigation)', () => {
 
   describe('markBiometricDeclined', () => {
     it('sets biometricDeclinedPermanently for current user', () => {
-      const { result } = renderHook(() => useUserPreferences());
+      const { result } = renderHook(() => useAuthPreferences());
 
       act(() => {
         result.current.markBiometricDeclined();
@@ -85,7 +85,7 @@ describe('useUserPreferences (navigation)', () => {
     });
 
     it('uses provided userId', () => {
-      const { result } = renderHook(() => useUserPreferences());
+      const { result } = renderHook(() => useAuthPreferences());
 
       act(() => {
         result.current.markBiometricDeclined('u2');
@@ -98,7 +98,7 @@ describe('useUserPreferences (navigation)', () => {
 
     it('does nothing when no user and no userId', () => {
       mockUser = null;
-      const { result } = renderHook(() => useUserPreferences());
+      const { result } = renderHook(() => useAuthPreferences());
 
       act(() => {
         result.current.markBiometricDeclined();
@@ -110,7 +110,7 @@ describe('useUserPreferences (navigation)', () => {
 
   describe('markBiometricEnabled', () => {
     it('sets biometric enabled flags for current user', () => {
-      const { result } = renderHook(() => useUserPreferences());
+      const { result } = renderHook(() => useAuthPreferences());
 
       act(() => {
         result.current.markBiometricEnabled();
@@ -130,7 +130,7 @@ describe('useUserPreferences (navigation)', () => {
       const now = 1700000000000;
       jest.spyOn(Date, 'now').mockReturnValue(now);
 
-      const { result } = renderHook(() => useUserPreferences());
+      const { result } = renderHook(() => useAuthPreferences());
 
       act(() => {
         result.current.markCredentialPromptDeclined();
@@ -147,7 +147,7 @@ describe('useUserPreferences (navigation)', () => {
 
   describe('resetBiometricDeclination', () => {
     it('resets biometricDeclinedPermanently to false', () => {
-      const { result } = renderHook(() => useUserPreferences());
+      const { result } = renderHook(() => useAuthPreferences());
 
       act(() => {
         result.current.resetBiometricDeclination();
@@ -161,7 +161,7 @@ describe('useUserPreferences (navigation)', () => {
 
   describe('resetAllPreferences', () => {
     it('resets both biometric and credential preferences', () => {
-      const { result } = renderHook(() => useUserPreferences());
+      const { result } = renderHook(() => useAuthPreferences());
 
       act(() => {
         result.current.resetAllPreferences();
@@ -179,7 +179,7 @@ describe('useUserPreferences (navigation)', () => {
       const now = 1700000000000;
       jest.spyOn(Date, 'now').mockReturnValue(now);
 
-      const { result } = renderHook(() => useUserPreferences());
+      const { result } = renderHook(() => useAuthPreferences());
 
       act(() => {
         result.current.trackCredentialPromptShown();
@@ -195,7 +195,7 @@ describe('useUserPreferences (navigation)', () => {
 
   describe('clearRegistrationPreferences', () => {
     it('clears credential and biometric preferences for the given userId', () => {
-      const { result } = renderHook(() => useUserPreferences());
+      const { result } = renderHook(() => useAuthPreferences());
 
       act(() => {
         result.current.clearRegistrationPreferences('u3');
@@ -210,7 +210,7 @@ describe('useUserPreferences (navigation)', () => {
 
   describe('trackLogout', () => {
     it('sets biometricEnabled to false for the given userId', () => {
-      const { result } = renderHook(() => useUserPreferences());
+      const { result } = renderHook(() => useAuthPreferences());
 
       act(() => {
         result.current.trackLogout('u1');

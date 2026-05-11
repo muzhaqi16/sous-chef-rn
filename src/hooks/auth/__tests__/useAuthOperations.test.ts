@@ -29,13 +29,13 @@ jest.mock('#/services/errorService', () => ({
   }),
 }));
 
-// Mock useUserPreferences
+// Mock useAuthPreferences
 const mockShouldShowCredentialPrompt = jest.fn().mockReturnValue(true);
 const mockClearRegistrationPreferences = jest.fn();
 const mockTrackCredentialPromptShown = jest.fn();
 const mockTrackLogout = jest.fn();
-jest.mock('#/hooks/navigation/useUserPreferences', () => ({
-  useUserPreferences: () => ({
+jest.mock('#/hooks/navigation/useAuthPreferences', () => ({
+  useAuthPreferences: () => ({
     shouldShowCredentialPrompt: mockShouldShowCredentialPrompt,
     clearRegistrationPreferences: mockClearRegistrationPreferences,
     trackCredentialPromptShown: mockTrackCredentialPromptShown,
@@ -44,14 +44,6 @@ jest.mock('#/hooks/navigation/useUserPreferences', () => ({
 }));
 
 // Mock environment logger
-jest.mock('#/utils/environment', () => ({
-  logger: {
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-  },
-}));
-
 // Mock queueManager and queueStore
 jest.mock('#/apollo/offlineQueue/queueManager', () => ({
   queueManager: {

@@ -1,11 +1,8 @@
 import React from 'react';
-import { View, ActivityIndicator, Modal } from 'react-native';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+import { View, Modal } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
-
-const ThemedActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
-  color: theme.colors.primary,
-}));
+import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
 
 interface LoadingOverlayProps {
   visible: boolean;
