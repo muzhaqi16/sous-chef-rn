@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
 import { Button } from '#components/base/Button';
-import { useAppStore } from '#store/useAppStore';
+import { useUpdateUser, useUser } from '#store/useAppStore';
 import { useMutation } from '@apollo/client/react';
 import { CompleteOnboardingDocument } from '#operations/auth/user.generated';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
@@ -11,8 +11,8 @@ import { Text } from '#components/atoms/Text';
 
 export const OnboardingCompleteScreen = () => {
   useScreenTransition('OnboardingCompleteScreen');
-  const user = useAppStore(state => state.user);
-  const updateUser = useAppStore(state => state.updateUser);
+  const user = useUser();
+  const updateUser = useUpdateUser();
   const [isCompleting, setIsCompleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

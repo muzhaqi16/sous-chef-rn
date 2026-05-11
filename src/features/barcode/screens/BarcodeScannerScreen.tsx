@@ -37,7 +37,8 @@ export const BarcodeScannerScreen: React.FC<
     | undefined
   >
 > = ({ route }) => {
-  const { navigate, goBack, navigation } = useAppNavigation();
+  const { mergeIdentifiedItemFormUpc, toSearchResults, goBack, navigation } =
+    useAppNavigation();
   const { source, pantryId, shoppingListId, returnTo } = route?.params || {};
   const devices = useCameraDevices();
   const device = devices.find(d => d.position === 'back');
@@ -115,12 +116,12 @@ export const BarcodeScannerScreen: React.FC<
           // Pop back to the in-progress Identify form with the UPC; merge
           // semantics mean the form stays mounted and existing fields
           // survive the round-trip.
-          navigate('IdentifiedItemForm', { upc: value });
+          mergeIdentifiedItemFormUpc(value);
           return;
         }
 
         setScannedBarcode(value);
-        navigate('SearchResults', {
+        toSearchResults({
           barcode: value,
           format: type,
           source,

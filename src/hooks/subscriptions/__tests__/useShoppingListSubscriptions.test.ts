@@ -20,11 +20,13 @@ jest.mock('#/services/subscriptions/types', () => ({
   CacheStrategy: { NONE: 'NONE' },
 }));
 
-jest.mock('#store/useAppStore', () => ({
-  useAppStore: jest.fn((selector: any) =>
-    selector({ selectedShoppingListId: 'list-1' }),
-  ),
-}));
+jest.mock('#store/useAppStore', () => {
+  const getState = () => ({ selectedShoppingListId: 'list-1' });
+  return {
+    useAppStore: jest.fn((selector: any) => selector(getState())),
+    useSelectedShoppingListId: jest.fn(() => getState().selectedShoppingListId),
+  };
+});
 
 jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => ({
   removeFromShoppingListItemsConnection: jest.fn(),
@@ -85,10 +87,14 @@ describe('useShoppingListSubscriptions', () => {
   });
 
   it('mounts without error when no selectedShoppingListId', () => {
-    const { useAppStore } = require('#store/useAppStore');
-    useAppStore.mockImplementation((selector: any) =>
+    const {
+      useAppStore,
+      useSelectedShoppingListId,
+    } = require('#store/useAppStore');
+    useAppStore.mockImplementationOnce((selector: any) =>
       selector({ selectedShoppingListId: null }),
     );
+    useSelectedShoppingListId.mockReturnValueOnce(null);
 
     // The hook calls `useSubscription` with `skip: true` when
     // selectedShoppingListId is null. We don't directly inspect the

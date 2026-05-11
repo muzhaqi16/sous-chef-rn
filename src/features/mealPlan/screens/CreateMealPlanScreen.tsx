@@ -18,7 +18,7 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useMealPlanActions } from '#features/mealPlan/hooks/useMealPlanActions';
 import { useMealTemplateActions } from '#features/mealPlan/hooks/useMealTemplateActions';
 import { useHomeQuery } from '#hooks/home/hooks/useHomeQuery';
-import { useAppStore } from '#store/useAppStore';
+import { useSelectedHomeId } from '#store/useAppStore';
 import { addDays, addWeeks, addMonths } from 'date-fns';
 import { MealPlanType } from '#/graphql/generated/schemaTypes';
 import { type MealTemplateDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
@@ -56,7 +56,7 @@ export const CreateMealPlanScreen: React.FC = () => {
   const { createPlanFromTemplate, creatingFromTemplate } =
     useMealTemplateActions();
   const { homes } = useHomeQuery();
-  const selectedHomeId = useAppStore(s => s.selectedHomeId);
+  const selectedHomeId = useSelectedHomeId();
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');

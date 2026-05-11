@@ -38,7 +38,12 @@ import {
 import { CreatePantryDocument } from '#features/pantry/graphql/pantry.generated';
 
 // Store & Navigation
-import { useAppStore, useUser, useSelectedHomeId } from '#store/useAppStore';
+import {
+  useAppStore,
+  useSelectedHomeId,
+  useSetSelectedPantryId,
+  useUser,
+} from '#store/useAppStore';
 import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigation';
 
 // Validation & Helpers
@@ -279,7 +284,7 @@ const CreateHomeScreenComponent = () => {
   const user = useUser();
   const selectedHomeId = useSelectedHomeId();
   const setSelectedHomeId = useAppStore(state => state.setSelectedHomeId);
-  const setSelectedPantryId = useAppStore(state => state.setSelectedPantryId);
+  const setSelectedPantryId = useSetSelectedPantryId();
 
   // State
   const [graphqlError, setGraphqlError] = useState<string | null>(null);

@@ -29,7 +29,8 @@ import { StorageLocationsScreen } from '#screens/home/StorageLocationsScreen';
 import { CodeVerificationScreen } from '#screens/auth/CodeVerificationScreen';
 import { EmailVerificationDeepLinkScreen } from '#screens/auth/EmailVerificationDeepLinkScreen';
 import { ResetPasswordScreen } from '#screens/auth/ResetPasswordScreen';
-import { FEATURE_DEEP_LINK_SCREENS } from '#features/registry';
+import { AcceptInvite } from '#features/shoppingList/screens/AcceptInvite';
+import { JoinByShareCodeScreen } from '#features/shoppingList/screens/JoinByShareCodeScreen';
 
 // Lazy-loaded screens (infrequently visited, reduces cold start JS parsing)
 const ProfilePhotoUploadScreen = React.lazy(
@@ -87,14 +88,6 @@ const DEEP_LINK_PREFIXES = [
   `${appConfig.identity.deepLink.scheme}://`,
   ...appConfig.identity.deepLink.hosts.map(h => `https://${h}`),
 ];
-
-// Build deep-link screens from the feature registry (module scope).
-const featureDeepLinkScreens = Object.fromEntries(
-  FEATURE_DEEP_LINK_SCREENS.map(({ name, screen, linking, options }) => [
-    name,
-    createNativeStackScreen({ screen, linking, options }),
-  ]),
-);
 
 function RootLayout({ children }: { children: React.ReactNode }) {
   useDeepLinkRouter();
@@ -234,8 +227,17 @@ const RootStack = createNativeStackNavigator({
           screen: ResetPasswordScreen,
           linking: 'reset-password',
         }),
-        // Feature-contributed deep-link screens (from registry)
-        ...featureDeepLinkScreens,
+        // Feature-contributed deep-link screens. Declared statically so v8's
+        // `StaticParamList` inference picks them up (a runtime spread of the
+        // feature registry would erase their typing).
+        AcceptInvitation: createNativeStackScreen({
+          screen: AcceptInvite,
+          linking: 'accept-invitation',
+        }),
+        JoinByShareCode: createNativeStackScreen({
+          screen: JoinByShareCodeScreen,
+          linking: 'join-list/:shareCode',
+        }),
         // Catch-all (must be last)
         NotFound: createNativeStackScreen({
           screen: NotFoundScreen,

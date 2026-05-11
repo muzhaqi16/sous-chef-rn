@@ -20,7 +20,8 @@ import { executeMutation } from '#utils/compilerSafeWrappers';
 
 export const MyRecipes: React.FC = () => {
   useScreenTransition('MyRecipes');
-  const { navigate, goBack } = useAppNavigation();
+  const { toRecipeDetail, toRecipeEdit, toRecipeCreate, goBack } =
+    useAppNavigation();
   const [searchQuery, setSearchQuery] = useState('');
 
   const {
@@ -88,11 +89,11 @@ export const MyRecipes: React.FC = () => {
   });
 
   const handleItemPress = (id: string | number) => {
-    navigate('RecipeDetail', { recipeId: String(id) });
+    toRecipeDetail({ recipeId: String(id) });
   };
 
   const handleEditRecipe = (id: string) => {
-    navigate('RecipeEdit', { recipeId: id });
+    toRecipeEdit({ recipeId: id });
   };
 
   const handleDeleteRecipe = async (id: string) => {
@@ -123,7 +124,7 @@ export const MyRecipes: React.FC = () => {
     description: 'Create your first recipe',
     action: {
       label: 'Create Recipe',
-      onPress: () => navigate('RecipeCreate'),
+      onPress: toRecipeCreate,
     },
   };
 

@@ -22,6 +22,8 @@ export function useAppStore<T>(
 
 // Auth
 const selectUser = (state: RootState) => state.user;
+const selectUserId = (state: RootState) => state.user?.id;
+const selectUpdateUser = (state: RootState) => state.updateUser;
 const selectIsLoggingOut = (state: RootState) => state.isLoggingOut;
 const selectHydrated = (state: RootState) => state.isHydrated;
 const selectIsAdminUser = (state: RootState) =>
@@ -34,6 +36,8 @@ const selectSelectedHomeId = (state: RootState) => state.selectedHomeId;
 const selectSelectedPantryId = (state: RootState) => state.selectedPantryId;
 const selectSelectedShoppingListId = (state: RootState) =>
   state.selectedShoppingListId;
+const selectSetSelectedPantryId = (state: RootState) =>
+  state.setSelectedPantryId;
 
 // Home initialization flags
 const selectIsHomeSelectionReady = (state: RootState) =>
@@ -157,8 +161,12 @@ const selectThemePreferences = (state: RootState) => ({
 // ─── Atomic hooks ────────────────────────────────────────────────────────────
 
 export const useUser = () => useAppStore(selectUser);
+export const useUserId = () => useAppStore(selectUserId);
+export const useUpdateUser = () => useAppStore(selectUpdateUser);
 export const useSelectedHomeId = () => useAppStore(selectSelectedHomeId);
 export const useSelectedPantryId = () => useAppStore(selectSelectedPantryId);
+export const useSetSelectedPantryId = () =>
+  useAppStore(selectSetSelectedPantryId);
 export const useSelectedShoppingListId = () =>
   useAppStore(selectSelectedShoppingListId);
 export const useIsLoggingOut = () => useAppStore(selectIsLoggingOut);

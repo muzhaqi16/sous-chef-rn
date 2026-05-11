@@ -242,7 +242,7 @@ export const FilteredPantryItems: React.FC<
   const mode = route.params?.mode ?? 'lowStock';
   const config = MODE_CONFIG[mode];
 
-  const { goBack, navigateTo } = useAppNavigation();
+  const { goBack, toPantryItemDetail } = useAppNavigation();
 
   const [refreshing, setRefreshing] = React.useState(false);
 
@@ -317,8 +317,7 @@ export const FilteredPantryItems: React.FC<
   const showCart = config.showCartAction && permissions.canAddItems;
 
   const actions = {
-    navigateTo: (params: { itemId: string }) =>
-      navigateTo.pantryItemDetail(params),
+    navigateTo: (params: { itemId: string }) => toPantryItemDetail(params),
     ...(showCart && { handleAddToList }),
   };
 

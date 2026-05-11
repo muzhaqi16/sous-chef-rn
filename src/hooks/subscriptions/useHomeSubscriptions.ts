@@ -11,7 +11,7 @@
  * deduplication to prevent self-echo and duplicate updates.
  */
 
-import { useAppStore } from '#store/useAppStore';
+import { useIsHomeSelectionReady, useSelectedHomeId } from '#store/useAppStore';
 import { useSubscription } from '@apollo/client/react';
 import {
   MembershipChangesDocument,
@@ -48,9 +48,8 @@ import {
  */
 export function useHomeSubscriptions(userId?: string) {
   // Get selected home from global store
-  const selectedHomeId =
-    useAppStore(state => state.selectedHomeId) || undefined;
-  const isHomeSelectionReady = useAppStore(state => state.isHomeSelectionReady);
+  const selectedHomeId = useSelectedHomeId() || undefined;
+  const isHomeSelectionReady = useIsHomeSelectionReady();
 
   //
   // Membership Changes Subscription (consolidated)

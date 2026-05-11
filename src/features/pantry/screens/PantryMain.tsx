@@ -72,7 +72,16 @@ const PANTRY_TUTORIAL_STEPS: TutorialStep[] = [
  * Only mounts after DeferredScreen gates rendering, so the skeleton paints instantly.
  */
 const PantryMainInner: React.FC = () => {
-  const { navigate, navigateTo } = useAppNavigation();
+  const {
+    toProfile,
+    toNotifications,
+    toHomeManagement,
+    toPantryAnalytics,
+    toFilteredPantryItems,
+    toPantrySettings,
+    toPantryItem,
+    toPantryItemDetail,
+  } = useAppNavigation();
   const { setOverlayOpen, scrollTabBarHidden } = useTabBarSetters();
 
   // ── Scroll direction tracking (tab bar hide on scroll down) ──
@@ -146,7 +155,8 @@ const PantryMainInner: React.FC = () => {
     loading: screen.loading,
     setSelectedPantryId: screen.setSelectedPantryId,
     selectorRef,
-    navigate,
+    toPantrySettings,
+    toPantryAnalytics,
   });
 
   // Tutorial trigger conditions (passed to usePantryTutorial in PantryMainContent)
@@ -154,26 +164,24 @@ const PantryMainInner: React.FC = () => {
     !!screen.selectedHomeId && !screen.showBiometricSetup;
 
   // ── Navigation callbacks ──
-  const handleItemPress = (id: string) =>
-    navigateTo.pantryItemDetail({ itemId: id });
-  const handleAvatarPress = () => navigate('Profile');
-  const handleNotificationPress = () => navigate('Notifications');
+  const handleItemPress = (id: string) => toPantryItemDetail({ itemId: id });
+  const handleAvatarPress = toProfile;
+  const handleNotificationPress = toNotifications;
   const handleHomePress = () =>
-    navigate('HomeManagement', { homeId: screen.selectedHomeId });
+    toHomeManagement({ selectedHomeId: screen.selectedHomeId ?? undefined });
   const handleAnalyticsPress = () => {
     if (screen.pantry?.id) {
-      navigate('PantryAnalytics', { pantryId: screen.pantry.id });
+      toPantryAnalytics({ pantryId: screen.pantry.id });
     }
   };
   const handleLowStockNavigate = () =>
-    navigate('FilteredPantryItems', { mode: 'lowStock' });
+    toFilteredPantryItems({ mode: 'lowStock' });
   const handleExpiringNavigate = () =>
-    navigate('FilteredPantryItems', { mode: 'expiring' });
-  const handleSelectHome = () => navigate('HomeManagement', {});
-  const handleCreatePantry = () =>
-    navigate('PantrySettings', { pantryId: undefined });
+    toFilteredPantryItems({ mode: 'expiring' });
+  const handleSelectHome = () => toHomeManagement();
+  const handleCreatePantry = () => toPantrySettings();
   const stableNavigateTo = {
-    pantryItem: (params: { itemId: string }) => navigateTo.pantryItem(params),
+    pantryItem: (params: { itemId: string }) => toPantryItem(params),
   };
 
   return (

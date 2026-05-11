@@ -13,16 +13,19 @@ const mockCachedUnits: UnitItem[] = [
 let mockIsOnline = true;
 const mockSetCachedUnits = jest.fn();
 const mockSetLastUnitsFetchedAt = jest.fn();
-jest.mock('#store/useAppStore', () => ({
-  useAppStore: (selector: (state: any) => any) =>
-    selector({
-      isOnline: mockIsOnline,
-      cachedUnits: mockCachedUnits,
-      setCachedUnits: mockSetCachedUnits,
-      lastUnitsFetchedAt: Date.now(),
-      setLastUnitsFetchedAt: mockSetLastUnitsFetchedAt,
-    }),
-}));
+jest.mock('#store/useAppStore', () => {
+  const getState = () => ({
+    isOnline: mockIsOnline,
+    cachedUnits: mockCachedUnits,
+    setCachedUnits: mockSetCachedUnits,
+    lastUnitsFetchedAt: Date.now(),
+    setLastUnitsFetchedAt: mockSetLastUnitsFetchedAt,
+  });
+  return {
+    useAppStore: (selector: (state: any) => any) => selector(getState()),
+    useIsOnline: () => (s => s.isOnline)(getState()),
+  };
+});
 
 jest.mock('../../../apollo/links/tokenScheduler');
 jest.mock('../../../apollo/links/refreshToken');

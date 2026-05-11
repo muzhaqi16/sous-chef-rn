@@ -22,7 +22,7 @@ import { toastService } from '#/services/toastService';
 import type { FloatingTabBarProps } from './types';
 import { AddButton } from './AddButton';
 import { TabItem } from './TabItem';
-import { useShowNavigationLabels } from '#hooks/settings/useSettings';
+import { useShowNavigationLabels } from '#/store/useAppStore';
 import { HapticService } from '#services/haptic/HapticService';
 import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { SPRING, TIMING } from '#/constants/animations';

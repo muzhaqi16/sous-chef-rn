@@ -17,6 +17,7 @@ jest.mock('#store/useAppStore', () => ({
     selector({
       navigationState: mockNavigationState,
     }),
+  useNavigationState: () => mockNavigationState,
 }));
 
 beforeEach(() => {

@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useAppStore } from '#store/useAppStore';
+import { useUser } from '#store/useAppStore';
 import { formatRole } from '#/utils/formatters/roleFormatters';
 import {
   formatInviteStatus,
@@ -74,7 +74,7 @@ export const MembersList: React.FC<MembersListProps> = ({
   members,
   invites = [],
 }) => {
-  const currentUser = useAppStore(state => state.user);
+  const currentUser = useUser();
 
   // API now only returns pending invites, so no client-side filtering needed
   const pendingInvites = invites;

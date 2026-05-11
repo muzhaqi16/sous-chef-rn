@@ -29,7 +29,7 @@ export const ShoppingListItemDetail: React.FC<
 > = ({ route }) => {
   const { t } = useTranslation();
   useScreenTransition('ShoppingListItemDetail');
-  const { navigate, goBack } = useAppNavigation();
+  const { toEditItem, toPurchaseHistory, goBack } = useAppNavigation();
   const { listId, itemId } = route.params;
 
   // Use cache-first policy - offlineQueryLink will handle offline behavior automatically
@@ -41,7 +41,7 @@ export const ShoppingListItemDetail: React.FC<
   const item = data?.shoppingListItem;
 
   const handleEdit = () => {
-    navigate('EditItem', { listId, itemId });
+    toEditItem({ listId, itemId });
   };
 
   const formatDate = (dateString?: string | null) => {
@@ -210,9 +210,9 @@ export const ShoppingListItemDetail: React.FC<
   const hasPurchases = purchaseCount > 0;
 
   const handleViewHistory = () => {
-    navigate('PurchaseHistory', {
+    toPurchaseHistory({
       itemId: item.id,
-      itemName: item.itemName,
+      itemName: item.itemName ?? '',
       purchases: purchases,
     });
   };

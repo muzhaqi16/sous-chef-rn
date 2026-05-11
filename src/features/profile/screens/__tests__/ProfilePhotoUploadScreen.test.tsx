@@ -10,10 +10,11 @@ jest.mock('#/apollo/links/refreshToken');
 
 const mockGoBack = jest.fn();
 const mockDispatch = jest.fn();
-jest.mock('#hooks/navigation/useSafeNavigation', () => ({
-  useSafeNavigation: jest.fn(() => ({
+jest.mock('#hooks/navigation/useAppNavigation', () => ({
+  useAppNavigation: jest.fn(() => ({
     navigation: { dispatch: mockDispatch },
     goBack: mockGoBack,
+    toImageCrop: jest.fn(),
   })),
 }));
 

@@ -23,7 +23,7 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import { extractNodes } from '#/utils/connectionUtils';
 import { removeFromPantryItemsCache } from '#/hooks/home/pantry/utils';
-import { useAppStore } from '#store/useAppStore';
+import { useSelectedPantryId } from '#store/useAppStore';
 import { Button } from '#components/base/Button';
 import { AnimatedChip } from '#components/atoms/AnimatedChip';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
@@ -37,7 +37,7 @@ export const SelectPantryItems = () => {
   const { navigateToNextStep, navigateToPreviousStep } =
     useOnboardingNavigation();
 
-  const selectedPantryId = useAppStore(state => state.selectedPantryId);
+  const selectedPantryId = useSelectedPantryId();
 
   const {
     data,

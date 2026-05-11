@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { InMemoryCache } from '@apollo/client';
-import { fireEvent, screen} from '@testing-library/react-native';
+import { fireEvent, screen } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
 import {
@@ -29,6 +29,7 @@ jest.mock('#store/useAppStore', () => {
   return {
     useAppStore: fn,
     useSelectedHomeId: jest.fn(() => mockState.selectedHomeId),
+    useSetSelectedPantryId: jest.fn(() => mockState.setSelectedPantryId),
   };
 });
 
@@ -265,14 +266,12 @@ describe('PantrySettings', () => {
 
   it('shows no home selected error when saving without selectedHomeId', () => {
     const storeModule = require('#store/useAppStore');
-    jest
-      .spyOn(storeModule, 'useAppStore')
-      .mockImplementation((selector: any) =>
-        selector({
-          selectedHomeId: null,
-          setSelectedPantryId: jest.fn(),
-        }),
-      );
+    jest.spyOn(storeModule, 'useAppStore').mockImplementation((selector: any) =>
+      selector({
+        selectedHomeId: null,
+        setSelectedPantryId: jest.fn(),
+      }),
+    );
     jest.spyOn(storeModule, 'useSelectedHomeId').mockReturnValue(null);
 
     renderWithApollo(<PantrySettings route={createRoute} />, {

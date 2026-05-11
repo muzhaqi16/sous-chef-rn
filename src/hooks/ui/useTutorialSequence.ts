@@ -1,7 +1,7 @@
 import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { storage } from '#/storage/mmkv';
 import { useShowTutorials } from '#hooks/settings/useSettings';
-import { useAppStore } from '#store/useAppStore';
+import { useUserId } from '#store/useAppStore';
 import type { TargetRect } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 import { useTutorialResetSignal } from '#hooks/ui/useTutorialResetSignal';
 
@@ -65,7 +65,7 @@ export const useTutorialSequence = ({
   isPaused,
   startDelay = 2000,
 }: UseTutorialSequenceOptions): UseTutorialSequenceReturn => {
-  const userId = useAppStore(state => state.user?.id);
+  const userId = useUserId();
   const tutorialsEnabled = useShowTutorials();
 
   // Incrementing this forces re-derivation of activeStepIndex after

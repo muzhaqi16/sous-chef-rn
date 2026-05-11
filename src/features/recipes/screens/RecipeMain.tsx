@@ -129,7 +129,8 @@ const RecipeSearchInput = forwardRef<
 const RecipeMainInner: React.FC = () => {
   const { t } = useTranslation();
   useRenderTime('RecipeMain');
-  const { navigate } = useAppNavigation();
+  const { toRecipeCreate, toRecipeDetail, toSavedRecipes, toMyRecipes } =
+    useAppNavigation();
   // `useUnistyles()` is intentional: same `SearchBarAction[]` construction
   // pattern as `RecipeSearchInput` above — theme strings flow into a runtime
   // prop array that can't move into a stylesheet.
@@ -231,7 +232,7 @@ const RecipeMainInner: React.FC = () => {
     }),
   });
 
-  useTabBarAddButton(() => navigate('RecipeCreate'));
+  useTabBarAddButton(() => toRecipeCreate());
 
   const openIngredientSelector = () => {
     setIngredientSheetVisible(true);
@@ -256,7 +257,7 @@ const RecipeMainInner: React.FC = () => {
     const externalId = idStr.startsWith('spoonacular-')
       ? idStr.replace('spoonacular-', '')
       : idStr;
-    navigate('RecipeDetail', { externalSource: 'SPOONACULAR', externalId });
+    toRecipeDetail({ externalSource: 'SPOONACULAR', externalId });
   };
 
   const hasIngredientSelection = screen.selectedIngredients.size > 0;
@@ -300,7 +301,7 @@ const RecipeMainInner: React.FC = () => {
         }}
       >
         <Pressable
-          onPress={() => navigate('SavedRecipes')}
+          onPress={toSavedRecipes}
           hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel={t('recipes.savedRecipes')}
@@ -328,7 +329,7 @@ const RecipeMainInner: React.FC = () => {
         }}
       >
         <Pressable
-          onPress={() => navigate('MyRecipes')}
+          onPress={toMyRecipes}
           hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel={t('recipes.myRecipes')}
@@ -527,8 +528,8 @@ const RecipeMainInner: React.FC = () => {
           onNext={tutorial.advanceInPlace}
           onTargetPress={() => {
             const actions: Record<number, () => void> = {
-              0: () => navigate('SavedRecipes'),
-              1: () => navigate('MyRecipes'),
+              0: toSavedRecipes,
+              1: toMyRecipes,
               2: openFilterSheet,
               3: openIngredientSelector,
             };

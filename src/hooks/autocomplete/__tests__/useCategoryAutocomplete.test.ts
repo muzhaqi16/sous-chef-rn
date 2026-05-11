@@ -10,10 +10,13 @@ jest.mock('../../../apollo/links/tokenScheduler');
 jest.mock('../../../apollo/links/refreshToken');
 
 let mockIsOnline = true;
-jest.mock('#store/useAppStore', () => ({
-  useAppStore: (selector: (state: any) => any) =>
-    selector({ isOnline: mockIsOnline }),
-}));
+jest.mock('#store/useAppStore', () => {
+  const getState = () => ({ isOnline: mockIsOnline });
+  return {
+    useAppStore: (selector: (state: any) => any) => selector(getState()),
+    useIsOnline: () => (s => s.isOnline)(getState()),
+  };
+});
 
 /**
  * Per CLAUDE.md "Apollo Test Patterns": fire-spy assertions like

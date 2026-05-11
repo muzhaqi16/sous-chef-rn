@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useAppStore } from '#store/useAppStore';
+import { useIsOnline } from '#store/useAppStore';
 import { useStore } from '#store/index';
 import { queueManager } from '#/apollo/offlineQueue/queueManager';
 import { proactiveTokenRefresh } from '#/apollo/links/refreshToken';
@@ -11,7 +11,7 @@ import { proactiveTokenRefresh } from '#/apollo/links/refreshToken';
  * pauses the queue.
  */
 export function useOnlineQueueSync(): void {
-  const isOnline = useAppStore(state => state.isOnline);
+  const isOnline = useIsOnline();
 
   useEffect(() => {
     if (!isOnline) {

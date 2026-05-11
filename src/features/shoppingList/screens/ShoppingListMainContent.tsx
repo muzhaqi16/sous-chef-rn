@@ -94,7 +94,8 @@ export const ShoppingListMainContent: React.FC<
   // Get modal actions from context (provided by ShoppingListModalsProvider)
   const { addItemSheet, quantityEdit, moveToPantry } = useShoppingListModals();
 
-  const { navigate, navigateTo } = useAppNavigation();
+  const { toBarcode, toListSettings, toShoppingListItemDetail, toEditItem } =
+    useAppNavigation();
   const { setScannerProps, scrollTabBarHidden } = useTabBarSetters();
   const { addButtonRect, isOverlayOpen } = useTabBarState();
 
@@ -301,7 +302,7 @@ export const ShoppingListMainContent: React.FC<
         source: 'shopping_list',
         list_id: currentListId,
       });
-      navigateTo.barcode({
+      toBarcode({
         source: 'shoppingList',
         shoppingListId: currentListId,
       });
@@ -312,7 +313,7 @@ export const ShoppingListMainContent: React.FC<
     return () => {
       setScannerProps(undefined, false);
     };
-  }, [setScannerProps, navigateTo, currentListId]);
+  }, [setScannerProps, toBarcode, currentListId]);
 
   // Register add button action
   // Button visibility is automatic on allowed tabs; we just register handler and disabled state
@@ -337,7 +338,7 @@ export const ShoppingListMainContent: React.FC<
       description: 'Create a shopping list to get started',
       action: {
         label: 'Create List',
-        onPress: () => navigate('ListSettings'),
+        onPress: () => toListSettings(),
       },
     };
 
@@ -371,11 +372,9 @@ export const ShoppingListMainContent: React.FC<
         items={[]}
         loading={isLoadingInitial}
         onItemPress={id =>
-          navigate('ItemDetail', { listId: currentListId, itemId: id })
+          toShoppingListItemDetail({ listId: currentListId, itemId: id })
         }
-        onItemEdit={id =>
-          navigate('EditItem', { listId: currentListId, itemId: id })
-        }
+        onItemEdit={id => toEditItem({ listId: currentListId, itemId: id })}
         onItemDelete={handleDeleteItem}
         onRefresh={handleRefresh}
         testIDPrefix="shopping-list-item"

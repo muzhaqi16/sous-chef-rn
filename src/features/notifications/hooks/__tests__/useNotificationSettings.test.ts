@@ -11,9 +11,14 @@ import { useNotificationSettings } from '../useNotificationSettings';
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 
-jest.mock('#store/useAppStore', () => ({
-  useAppStore: jest.fn((selector: any) => selector({ user: { id: 'user-1' } })),
-}));
+jest.mock('#store/useAppStore', () => {
+  const getState = () => ({ user: { id: 'user-1' } });
+  return {
+    useAppStore: jest.fn((selector: any) => selector(getState())),
+    useUser: () => (s => s.user)(getState()),
+    useUserId: () => (s => s.user?.id)(getState()),
+  };
+});
 
 const mockPreferencesData = {
   __typename: 'NotificationPreferences',

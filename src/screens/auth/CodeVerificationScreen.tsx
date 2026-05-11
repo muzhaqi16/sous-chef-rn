@@ -6,7 +6,7 @@ import { GraphQLError } from 'graphql';
 import { AuthWrapper } from '#components/templates/AuthWrapper';
 import { AuthFormTemplate } from '#components/templates/AuthFormTemplate';
 import { CodeInputAdapter } from '#components/molecules/CodeInputAdapter';
-import { useAppStore } from '#store/useAppStore';
+import { useUpdateUser, useUser } from '#store/useAppStore';
 import { useToast } from '#/hooks/useToast';
 import { useMutation } from '@apollo/client/react';
 import {
@@ -80,8 +80,8 @@ type CodeVerificationValues = {
 };
 
 export function CodeVerificationScreen(): React.JSX.Element | null {
-  const user = useAppStore(state => state.user);
-  const updateUser = useAppStore(state => state.updateUser);
+  const user = useUser();
+  const updateUser = useUpdateUser();
   const toast = useToast();
   const [verifyEmail] = useMutation(VerifyEmailDocument);
   const [resendVerificationEmail] = useMutation(

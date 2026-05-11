@@ -5,7 +5,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { Header } from '#components/molecules/Header';
-import { useUser, useAppStore } from '#store/useAppStore';
+import { useUpdateUser, useUser } from '#store/useAppStore';
 import { useMutation } from '@apollo/client/react';
 import {
   VerifyEmailDocument,
@@ -102,7 +102,7 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
   const route = useRoute();
   const { goBack } = useNavigation();
   const user = useUser();
-  const updateUser = useAppStore(state => state.updateUser);
+  const updateUser = useUpdateUser();
   const toast = useToast();
 
   const { token } = (route.params ??

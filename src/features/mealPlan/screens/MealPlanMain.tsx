@@ -92,7 +92,7 @@ export const MealPlanMain: React.FC = () => (
  * Only mounts after isReady is true, so the skeleton paints instantly.
  */
 const MealPlanMainInner: React.FC = () => {
-  const { navigate } = useAppNavigation();
+  const { toMealPlanRecipeDetail, toCreateMealPlan } = useAppNavigation();
   const { setOverlayOpen } = useTabBarSetters();
 
   // Plan selector state
@@ -319,7 +319,7 @@ const MealPlanMainInner: React.FC = () => {
       | undefined;
     if (!item) return;
     if (item.recipe?.id) {
-      navigate('RecipeDetail', { recipeId: item.recipe.id });
+      toMealPlanRecipeDetail({ recipeId: item.recipe.id });
     } else if (item.customMealName && permissions.canEdit) {
       setEditingCustomItem(item);
       setEditCustomMealVisible(true);
@@ -334,7 +334,7 @@ const MealPlanMainInner: React.FC = () => {
   };
 
   const handleCreatePlan = () => {
-    navigate('CreateMealPlan');
+    toCreateMealPlan();
   };
 
   const handleSaveAsTemplate = () => {
@@ -365,7 +365,7 @@ const MealPlanMainInner: React.FC = () => {
     loading: plansLoading,
     setSelectedMealPlanId: (id: string) => setSelectedMealPlanId(id),
     selectorRef,
-    navigate,
+    toCreateMealPlan,
     onCreateFromTemplate: handleOpenTemplateBrowser,
   });
 

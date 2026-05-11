@@ -19,6 +19,12 @@
       "skillPath": "skills/react-native-unistyles-v3/SKILL.md",
       "computedHash": "75c83b0ca99ab986087778cbb069331104b5baf8a6238d7f9f822a6a8c0ebb91"
     },
+    "upgrade-react-navigation": {
+      "source": "react-navigation/skills",
+      "sourceType": "github",
+      "skillPath": "skills/upgrade-react-navigation/SKILL.md",
+      "computedHash": "9e56923400804c716df8ebb6e402c5cf86291a208a9a8bee335cd9ba102362a7"
+    },
     "vercel-react-native-skills": {
       "source": "vercel-labs/agent-skills",
       "sourceType": "github",

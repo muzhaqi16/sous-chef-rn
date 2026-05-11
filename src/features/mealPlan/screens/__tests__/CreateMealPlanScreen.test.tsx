@@ -33,6 +33,7 @@ jest.mock('#hooks/home/hooks/useHomeQuery', () => ({
 
 jest.mock('#store/useAppStore', () => ({
   useAppStore: jest.fn(() => 'home-1'),
+  useSelectedHomeId: jest.fn(() => 'home-1'),
 }));
 
 jest.mock('#components/organisms/FormModal', () => ({

@@ -90,7 +90,7 @@ const AVATAR_SIZE = Math.min(screenWidth * 0.4, 200);
 
 export const ProfilePictureUploadScreen = () => {
   useScreenTransition('ProfilePictureUploadScreen');
-  const { navigateTo } = useAppNavigation();
+  const { toImageCrop } = useAppNavigation();
   const { uploadProfileImage, updateProfileAvatarUrl } = useImageUpload();
   const { navigateToNextStep, navigateToPreviousStep, skipToStep } =
     useOnboardingNavigation();
@@ -187,7 +187,7 @@ export const ProfilePictureUploadScreen = () => {
   const handleCropImage = () => {
     if (!selectedImage) return;
 
-    navigateTo.imageCrop({
+    toImageCrop({
       imageFile: selectedImage,
     });
   };

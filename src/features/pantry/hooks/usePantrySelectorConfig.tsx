@@ -15,7 +15,8 @@ interface UsePantrySelectorConfigOptions {
   loading: boolean;
   setSelectedPantryId: (id: string) => void;
   selectorRef: RefObject<ItemSelectorRef | null>;
-  navigate: (screen: string, params?: object) => void;
+  toPantrySettings: (params?: { pantryId?: string }) => void;
+  toPantryAnalytics: (params: { pantryId: string }) => void;
 }
 
 export function usePantrySelectorConfig(
@@ -27,7 +28,8 @@ export function usePantrySelectorConfig(
     loading,
     setSelectedPantryId,
     selectorRef,
-    navigate,
+    toPantrySettings,
+    toPantryAnalytics,
   } = options;
 
   const renderPantryItem = (
@@ -66,7 +68,7 @@ export function usePantrySelectorConfig(
         label: 'Create New Pantry',
         onPress: () => {
           selectorRef.current?.close();
-          navigate('PantrySettings', { pantryId: undefined });
+          toPantrySettings();
         },
       },
       {
@@ -75,7 +77,7 @@ export function usePantrySelectorConfig(
         onPress: () => {
           selectorRef.current?.close();
           if (selectedPantryId) {
-            navigate('PantrySettings', { pantryId: selectedPantryId });
+            toPantrySettings({ pantryId: selectedPantryId });
           }
         },
         disabled: !selectedPantryId,
@@ -86,7 +88,7 @@ export function usePantrySelectorConfig(
         onPress: () => {
           selectorRef.current?.close();
           if (selectedPantryId) {
-            navigate('PantryAnalytics', { pantryId: selectedPantryId });
+            toPantryAnalytics({ pantryId: selectedPantryId });
           }
         },
         disabled: !selectedPantryId,

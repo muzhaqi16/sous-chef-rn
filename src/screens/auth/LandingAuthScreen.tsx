@@ -2,17 +2,16 @@ import React from 'react';
 import { View, Image, Linking } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
-import { CommonActions } from '@react-navigation/native';
 import { AuthWrapper } from '#components/templates/AuthWrapper';
 import { Button } from '#components/base/Button';
 import { Link } from '#components/atoms/Link';
-import { useSafeNavigation } from '#hooks/navigation/useSafeNavigation';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { getWebAppUrl } from '#utils/environment';
 import { appConfig } from '#/config/appConfig';
 import { Text } from '#components/atoms/Text';
 
 export function LandingAuthScreen() {
-  const { navigation } = useSafeNavigation();
+  const { toLogin, toSignUp } = useAppNavigation();
 
   return (
     <AuthWrapper testID="landing-auth-screen">
@@ -47,7 +46,7 @@ export function LandingAuthScreen() {
           <Button
             testID="landing-login-button"
             title="Log In"
-            onPress={() => navigation.dispatch(CommonActions.navigate('Login'))}
+            onPress={toLogin}
             variant="secondary"
             fullWidth
             txtStyle={styles.txt}
@@ -55,9 +54,7 @@ export function LandingAuthScreen() {
           <Button
             testID="landing-signup-button"
             title="Sign Up"
-            onPress={() =>
-              navigation.dispatch(CommonActions.navigate('SignUp'))
-            }
+            onPress={toSignUp}
             fullWidth
             txtStyle={styles.txt}
           />

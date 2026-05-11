@@ -13,15 +13,17 @@ import { CodeVerificationScreen } from '../CodeVerificationScreen';
 const mockUpdateUser = jest.fn();
 const mockToast = jest.fn();
 
-jest.mock('#store/useAppStore', () => ({
-  useAppStore: (selector: any) => {
-    const state = {
-      user: { id: '1', email: 'test@example.com', emailVerified: false },
-      updateUser: mockUpdateUser,
-    };
-    return selector(state);
-  },
-}));
+jest.mock('#store/useAppStore', () => {
+  const getState = () => ({
+    user: { id: '1', email: 'test@example.com', emailVerified: false },
+    updateUser: mockUpdateUser,
+  });
+  return {
+    useAppStore: (selector: any) => selector(getState()),
+    useUser: () => getState().user,
+    useUpdateUser: () => getState().updateUser,
+  };
+});
 
 jest.mock('#/hooks/useToast', () => ({
   useToast: () => mockToast,
@@ -175,15 +177,19 @@ describe('CodeVerificationScreen', () => {
   });
 
   it('returns null when user is already verified', () => {
+    const verifiedUser = {
+      id: '1',
+      email: 'test@example.com',
+      emailVerified: true,
+    };
     jest
       .spyOn(require('#store/useAppStore'), 'useAppStore')
-      .mockImplementation((selector: any) => {
-        const state = {
-          user: { id: '1', email: 'test@example.com', emailVerified: true },
-          updateUser: mockUpdateUser,
-        };
-        return selector(state);
-      });
+      .mockImplementation((selector: any) =>
+        selector({ user: verifiedUser, updateUser: mockUpdateUser }),
+      );
+    jest
+      .spyOn(require('#store/useAppStore'), 'useUser')
+      .mockReturnValue(verifiedUser);
 
     const { toJSON } = renderWithApollo(<CodeVerificationScreen />);
     expect(toJSON()).toBeNull();
@@ -192,13 +198,10 @@ describe('CodeVerificationScreen', () => {
   it('returns null when there is no user', () => {
     jest
       .spyOn(require('#store/useAppStore'), 'useAppStore')
-      .mockImplementation((selector: any) => {
-        const state = {
-          user: null,
-          updateUser: mockUpdateUser,
-        };
-        return selector(state);
-      });
+      .mockImplementation((selector: any) =>
+        selector({ user: null, updateUser: mockUpdateUser }),
+      );
+    jest.spyOn(require('#store/useAppStore'), 'useUser').mockReturnValue(null);
 
     const { toJSON } = renderWithApollo(<CodeVerificationScreen />);
     expect(toJSON()).toBeNull();

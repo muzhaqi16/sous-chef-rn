@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import { SystemBars } from 'react-native-edge-to-edge';
 import { UnistylesRuntime, useUnistyles } from 'react-native-unistyles';
-import { useAppStore, useIsHydrated } from '#store/useAppStore';
+import { useIsHydrated, useTheme } from '#store/useAppStore';
 import { Telemetry } from '#services/telemetry';
 import { WindowBackground } from '#/native/WindowBackground';
 import { ThemePreference } from '#/store/slices/preferencesSlice';
@@ -9,7 +9,7 @@ import { ThemePreference } from '#/store/slices/preferencesSlice';
 export const ThemedStatusBar = () => {
   const { rt } = useUnistyles();
   const isHydrated = useIsHydrated();
-  const userThemePreference = useAppStore(state => state.theme);
+  const userThemePreference = useTheme();
 
   // Derive theme from user preference + system color scheme directly.
   // Avoids depending on rt.themeName which lags by one render cycle

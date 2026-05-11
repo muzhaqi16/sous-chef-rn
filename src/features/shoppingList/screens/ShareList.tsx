@@ -115,7 +115,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
   const { t } = useTranslation();
   const formatStatus = getFormatStatus(t);
   const { goBack } = useNavigation();
-  const { navigate } = useAppNavigation();
+  const { toHomeDetail } = useAppNavigation();
   const { listId } = route.params;
 
   const [email, setEmail] = useState('');
@@ -393,7 +393,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
                 <Button
                   title={t('shoppingListScreens.manageHome')}
                   onPress={() =>
-                    navigate('HomeDetail', {
+                    toHomeDetail({
                       homeId: shoppingList?.homeId ?? '',
                     })
                   }

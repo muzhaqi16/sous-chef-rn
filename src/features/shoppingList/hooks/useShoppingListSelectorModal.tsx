@@ -64,7 +64,7 @@ export function useShoppingListSelectorModal({
   listDataWithOwnership,
   currentListId,
 }: UseShoppingListSelectorOptions) {
-  const { navigate } = useAppNavigation();
+  const { toListSettings, toShareList } = useAppNavigation();
   const { setOverlayOpen } = useTabBarSetters();
 
   const selectorRef = useRef<ItemSelectorRef>(null);
@@ -385,7 +385,7 @@ export function useShoppingListSelectorModal({
       onPress: () => {
         setOverlayOpen(false);
         selectorRef.current?.close();
-        navigate('ListSettings');
+        toListSettings();
       },
       iconLibrary: 'Ionicons' as IconLibrary,
     },
@@ -397,7 +397,7 @@ export function useShoppingListSelectorModal({
             onPress: () => {
               setOverlayOpen(false);
               selectorRef.current?.close();
-              navigate('ShareList', { listId: currentListId });
+              toShareList({ listId: currentListId });
             },
             iconLibrary: 'Ionicons' as IconLibrary,
           },
@@ -407,7 +407,7 @@ export function useShoppingListSelectorModal({
             onPress: () => {
               setOverlayOpen(false);
               selectorRef.current?.close();
-              navigate('ListSettings', { listId: currentListId });
+              toListSettings({ listId: currentListId });
             },
             iconLibrary: 'Ionicons' as IconLibrary,
           },

@@ -49,7 +49,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
   initialSearchQuery = '',
   onItemAdded,
 }) => {
-  const { navigate, navigateTo } = useAppNavigation();
+  const { toBarcode, toAddItem } = useAppNavigation();
   const client = useApolloClient();
   const showImages = useShowShoppingListImages();
   const tutorial = useShoppingListTutorial();
@@ -153,7 +153,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
   // clean. Calling onClose() here would flip visible to false before blur,
   // short-circuiting that cleanup and leaving the backdrop stuck on return.
   const handleScanPress = () => {
-    navigateTo.barcode({
+    toBarcode({
       source: 'shoppingList',
       shoppingListId,
     });
@@ -163,7 +163,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
   const handleAddManually = (searchValue: string) => {
     onClose();
     if (shoppingListId) {
-      navigate('AddItem', {
+      toAddItem({
         listId: shoppingListId,
         initialItemName: searchValue || undefined,
       });

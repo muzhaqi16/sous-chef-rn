@@ -44,6 +44,7 @@ jest.mock('#store/useAppStore', () => ({
   ),
   useUser: jest.fn(() => ({ id: 'user-1' })),
   useSelectedHomeId: jest.fn(() => null),
+  useSetSelectedPantryId: jest.fn(() => mockSetSelectedPantryId),
 }));
 
 jest.mock('#/utils/validation/onboarding', () => ({

@@ -41,10 +41,17 @@ jest.mock('#hooks/settings/useSettings', () => ({
 
 // Mock user store
 let mockUserId: string | undefined = 'user-1';
-jest.mock('#store/useAppStore', () => ({
-  useAppStore: (selector: (state: { user?: { id: string } }) => unknown) =>
-    selector({ user: mockUserId ? { id: mockUserId } : undefined }),
-}));
+jest.mock('#store/useAppStore', () => {
+  const getState = () => ({
+    user: mockUserId ? { id: mockUserId } : undefined,
+  });
+  return {
+    useAppStore: (selector: (state: { user?: { id: string } }) => unknown) =>
+      selector(getState()),
+    useUser: () => (s => s.user)(getState()),
+    useUserId: () => (s => s.user?.id)(getState()),
+  };
+});
 
 beforeEach(() => {
   mockStore.clear();

@@ -14,7 +14,7 @@ import {
   CollaboratorRole,
   MembershipRole,
 } from '#/graphql/generated/schemaTypes';
-import { useAppStore } from '#store/useAppStore';
+import { useAppStore, useSelectedHomeId } from '#store/useAppStore';
 import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigation';
 import { useUser } from '#store/useAppStore';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
@@ -32,7 +32,7 @@ export const InviteMemberScreen = () => {
   const { navigateToNextStep } = useOnboardingNavigation();
   const user = useUser();
 
-  const selectedHomeId = useAppStore(state => state.selectedHomeId);
+  const selectedHomeId = useSelectedHomeId();
   const selectedShoppingListId = useAppStore(
     state => state.selectedShoppingListId,
   );

@@ -70,7 +70,7 @@ export const ListSettings: React.FC<
 > = ({ route }) => {
   const { t } = useTranslation();
   const listId = route.params?.listId;
-  const { navigate, goBack } = useAppNavigation();
+  const { toShareList, goBack } = useAppNavigation();
   const setSelectedShoppingListId = useAppStore(
     state => state.setSelectedShoppingListId,
   );
@@ -482,7 +482,7 @@ export const ListSettings: React.FC<
                 styles.actionRow,
                 pressed && { opacity: 0.7 },
               ]}
-              onPress={() => navigate('ShareList', { listId: listId! })}
+              onPress={() => toShareList({ listId: listId! })}
             >
               <Icon name="person-add" size={20} tone="primary" />
               <Text size="md" tone="accent" style={styles.actionText}>

@@ -22,7 +22,7 @@ import { ShoppingListMainContent } from './ShoppingListMainContent';
  * Only mounts after DeferredScreen gates rendering, so the skeleton paints instantly.
  */
 const ShoppingListMainInner: React.FC = () => {
-  const { navigate } = useAppNavigation();
+  const { toListSettings } = useAppNavigation();
 
   // --- Screen Data Hook ---
   const screenData = useShoppingListScreen();
@@ -51,7 +51,7 @@ const ShoppingListMainInner: React.FC = () => {
         ]}
         searchQuery={screenData.state.searchQuery}
         onSearchQueryClear={() => screenData.actions.setSearchQuery('')}
-        onNavigateToListSettings={() => navigate('ListSettings')}
+        onNavigateToListSettings={() => toListSettings()}
       >
         <ShoppingListMainContent screenData={screenData} />
       </ShoppingListModalsProvider>

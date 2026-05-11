@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useAppStore } from '#store/useAppStore';
+import { useAppStore, useIsOnline } from '#store/useAppStore';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 
@@ -14,7 +14,7 @@ import { Text } from '#components/atoms/Text';
  * Place inside the SafeAreaView, above the navigation tree.
  */
 export const OfflineBanner: React.FC = () => {
-  const isOnline = useAppStore(state => state.isOnline);
+  const isOnline = useIsOnline();
   const offlineModeEnabled = useAppStore(state => state.offlineModeEnabled);
 
   if (isOnline && !offlineModeEnabled) return null;

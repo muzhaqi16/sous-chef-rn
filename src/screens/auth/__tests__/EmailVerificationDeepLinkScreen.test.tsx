@@ -33,13 +33,16 @@ const mockUserObject = {
   onBoarded: true,
 };
 
-jest.mock('#store/useAppStore', () => ({
-  useAppStore: (selector: any) =>
-    selector({
-      updateUser: mockUpdateUser,
-    }),
-  useUser: jest.fn(() => mockUserObject),
-}));
+jest.mock('#store/useAppStore', () => {
+  const getState = () => ({
+    updateUser: mockUpdateUser,
+  });
+  return {
+    useAppStore: (selector: any) => selector(getState()),
+    useUser: jest.fn(() => mockUserObject),
+    useUpdateUser: () => (s => s.updateUser)(getState()),
+  };
+});
 
 jest.mock('#/hooks/useToast', () => ({
   useToast: () => mockToast,

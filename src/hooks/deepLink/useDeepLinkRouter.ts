@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
-import { useNavigation, CommonActions } from '@react-navigation/native';
 import { jwtDecode } from 'jwt-decode';
-import { useAppStore } from '#store/useAppStore';
+import { useAppStore, useIsHydrated } from '#store/useAppStore';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { logger } from '#/utils/environment';
 import { DeepLinkAction } from '#store/slices/navigationSlice';
 import { toastService } from '#/services/toastService';
@@ -86,8 +86,9 @@ const validateDeepLinkToken = (
  * Queues deep link actions until app is hydrated and routes to appropriate handlers.
  */
 export const useDeepLinkRouter = () => {
-  const navigation = useNavigation();
-  const isHydrated = useAppStore(state => state.isHydrated);
+  const { toAuth, toEmailVerification, toResetPassword, toAcceptInvitation } =
+    useAppNavigation();
+  const isHydrated = useIsHydrated();
   const isAuthenticated = useAppStore(
     state => !!(state.user && state.accessToken),
   );
@@ -126,12 +127,12 @@ export const useDeepLinkRouter = () => {
         timestamp: Date.now(),
       });
       toastService.info('Sign in to finish verifying your email.');
-      navigation.dispatch(CommonActions.navigate('Auth'));
+      toAuth();
       return;
     }
 
     // User is authenticated, proceed with verification
-    navigation.dispatch(CommonActions.navigate('EmailVerification', { token }));
+    toEmailVerification(token);
   };
 
   const handlePasswordReset = (token: string) => {
@@ -149,7 +150,7 @@ export const useDeepLinkRouter = () => {
 
     // Always redirect to auth stack for password reset
     // This will clear any existing auth state
-    navigation.dispatch(CommonActions.navigate('ResetPassword', { token }));
+    toResetPassword(token);
   };
 
   const handleAcceptInvitation = (token: string) => {
@@ -173,12 +174,12 @@ export const useDeepLinkRouter = () => {
         timestamp: Date.now(),
       });
       toastService.info('Sign in to accept this invitation.');
-      navigation.dispatch(CommonActions.navigate('Auth'));
+      toAuth();
       return;
     }
 
     // User is authenticated, proceed with invitation
-    navigation.dispatch(CommonActions.navigate('AcceptInvitation', { token }));
+    toAcceptInvitation(token);
   };
 
   const routeDeepLink = (action: DeepLinkAction) => {
@@ -262,16 +263,12 @@ export const useDeepLinkRouter = () => {
             token: actionToken,
             timestamp: Date.now(),
           });
-          navigation.dispatch(CommonActions.navigate('Auth'));
+          toAuth();
         } else {
-          navigation.dispatch(
-            CommonActions.navigate('EmailVerification', { token: actionToken }),
-          );
+          toEmailVerification(actionToken);
         }
       } else if (actionType === 'password_reset') {
-        navigation.dispatch(
-          CommonActions.navigate('ResetPassword', { token: actionToken }),
-        );
+        toResetPassword(actionToken);
       } else if (actionType === 'accept_invitation') {
         if (!isAuthenticated) {
           setPendingDeepLinkAction({
@@ -279,11 +276,9 @@ export const useDeepLinkRouter = () => {
             token: actionToken,
             timestamp: Date.now(),
           });
-          navigation.dispatch(CommonActions.navigate('Auth'));
+          toAuth();
         } else {
-          navigation.dispatch(
-            CommonActions.navigate('AcceptInvitation', { token: actionToken }),
-          );
+          toAcceptInvitation(actionToken);
         }
       } else {
         logger.warn('Unknown deep link action type', { type: actionType });
@@ -297,8 +292,11 @@ export const useDeepLinkRouter = () => {
     pendingDeepLinkAction,
     isAuthenticated,
     clearPendingDeepLinkAction,
-    navigation,
     setPendingDeepLinkAction,
+    toAuth,
+    toEmailVerification,
+    toResetPassword,
+    toAcceptInvitation,
   ]);
 
   // Public API for triggering deep link actions

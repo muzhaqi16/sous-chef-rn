@@ -41,10 +41,10 @@ export const IdentifiedItemFormScreen: React.FC<
   }>
 > = ({ route }) => {
   const { name, brandName, netWeights, upc } = route.params;
-  const { goBack, navigation, navigateTo } = useAppNavigation();
+  const { goBack, navigation, toBarcode } = useAppNavigation();
 
   const handleScanUpc = () => {
-    navigateTo.barcode({ returnTo: 'identify-form' });
+    toBarcode({ returnTo: 'identify-form' });
   };
 
   const { uploadItemImage } = useImageUpload();

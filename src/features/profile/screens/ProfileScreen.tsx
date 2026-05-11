@@ -36,7 +36,19 @@ const HEADER_TIMING = {
 export const ProfileScreen = () => {
   useScreenTransition('ProfileScreen');
   const canAccessDevTools = useCanAccessDevTools();
-  const { navigate, goBack } = useAppNavigation();
+  const {
+    toProfilePhotoUpload,
+    toDeleteAccount,
+    toPersonalInformation,
+    toAppearance,
+    toNotificationSettings,
+    toDietaryProfile,
+    toAppSettings,
+    toDebugInfo,
+    toPerformanceDashboard,
+    toChangePassword,
+    goBack,
+  } = useAppNavigation();
   const { profile, user, loading } = useProfileData();
   const { sections, BiometricModal } = useConfigurableSettings(profile);
   const { bottom: safeBottom } = useSafeAreaInsets();
@@ -65,7 +77,7 @@ export const ProfileScreen = () => {
 
   const handleAvatarPress = () => {
     Telemetry.trackEvent('avatar_upload_clicked', { source: 'ProfileScreen' });
-    navigate('ProfilePhotoUpload');
+    toProfilePhotoUpload();
   };
 
   const handleLogout = () => {
@@ -89,7 +101,7 @@ export const ProfileScreen = () => {
   const handleDeleteAccount = () => {
     Telemetry.trackEvent('delete_account_clicked');
     actionTrayRef.current?.close();
-    navigate('DeleteAccount');
+    toDeleteAccount();
   };
 
   const handleOverlayOpen = () => {
@@ -165,21 +177,21 @@ export const ProfileScreen = () => {
                     testID: `profile-menu-${item.key}`,
                     onPress: () => {
                       if (item.key === 'personalInformation') {
-                        navigate('PersonalInformation');
+                        toPersonalInformation();
                       } else if (item.key === 'appearance') {
-                        navigate('Appearance');
+                        toAppearance();
                       } else if (item.key === 'notifications') {
-                        navigate('NotificationSettings');
+                        toNotificationSettings();
                       } else if (item.key === 'dietaryProfile') {
-                        navigate('DietaryProfile');
+                        toDietaryProfile();
                       } else if (item.key === 'appSettings') {
-                        navigate('AppSettings');
+                        toAppSettings();
                       } else if (item.key === 'debugInfo') {
-                        navigate('DebugInfo');
+                        toDebugInfo();
                       } else if (item.key === 'performanceDashboard') {
-                        navigate('PerformanceDashboard');
+                        toPerformanceDashboard();
                       } else if (item.key === 'changePassword') {
-                        navigate('ChangePassword');
+                        toChangePassword();
                       }
                     },
                   };

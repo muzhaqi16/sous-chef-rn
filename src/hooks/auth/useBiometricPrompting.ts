@@ -1,4 +1,4 @@
-import { useAppStore } from '#store/useAppStore';
+import { useAppStore, useUser } from '#store/useAppStore';
 import {
   hasCredentialsForAccount,
   getBiometricCapability,
@@ -10,7 +10,7 @@ type BiometricPromptDecision =
   | { shouldShow: true; reason?: undefined };
 
 export const useBiometricPrompting = () => {
-  const user = useAppStore(state => state.user);
+  const user = useUser();
   const setUserNavigationState = useAppStore(
     state => state.setUserNavigationState,
   );

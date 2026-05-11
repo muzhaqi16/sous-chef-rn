@@ -236,18 +236,21 @@ describe('RecipeMain', () => {
     mockDeferredScreen.mockImplementation(({ component: Component }: any) => (
       <Component />
     ));
-    const mockNavigate = jest.fn();
+    const mockToSavedRecipes = jest.fn();
     const { useAppNavigation } = jest.requireMock(
       '#hooks/navigation/useAppNavigation',
     );
     useAppNavigation.mockReturnValue({
-      navigate: mockNavigate,
+      toRecipeCreate: jest.fn(),
+      toRecipeDetail: jest.fn(),
+      toSavedRecipes: mockToSavedRecipes,
+      toMyRecipes: jest.fn(),
       goBack: jest.fn(),
     });
 
     const tree = render(<RecipeMain />);
     await user.press(tree.getByLabelText('Saved recipes'));
-    expect(mockNavigate).toHaveBeenCalledWith('SavedRecipes');
+    expect(mockToSavedRecipes).toHaveBeenCalledTimes(1);
   });
 
   it('navigates to MyRecipes when create icon pressed', async () => {
@@ -255,18 +258,21 @@ describe('RecipeMain', () => {
     mockDeferredScreen.mockImplementation(({ component: Component }: any) => (
       <Component />
     ));
-    const mockNavigate = jest.fn();
+    const mockToMyRecipes = jest.fn();
     const { useAppNavigation } = jest.requireMock(
       '#hooks/navigation/useAppNavigation',
     );
     useAppNavigation.mockReturnValue({
-      navigate: mockNavigate,
+      toRecipeCreate: jest.fn(),
+      toRecipeDetail: jest.fn(),
+      toSavedRecipes: jest.fn(),
+      toMyRecipes: mockToMyRecipes,
       goBack: jest.fn(),
     });
 
     const tree = render(<RecipeMain />);
     await user.press(tree.getByLabelText('My recipes'));
-    expect(mockNavigate).toHaveBeenCalledWith('MyRecipes');
+    expect(mockToMyRecipes).toHaveBeenCalledTimes(1);
   });
 
   it('shows discovery items from useRecipeScreen', () => {
@@ -352,12 +358,15 @@ describe('RecipeMain', () => {
     mockDeferredScreen.mockImplementation(({ component: Component }: any) => (
       <Component />
     ));
-    const mockNavigate = jest.fn();
+    const mockToRecipeDetail = jest.fn();
     const { useAppNavigation } = jest.requireMock(
       '#hooks/navigation/useAppNavigation',
     );
     useAppNavigation.mockReturnValue({
-      navigate: mockNavigate,
+      toRecipeCreate: jest.fn(),
+      toRecipeDetail: mockToRecipeDetail,
+      toSavedRecipes: jest.fn(),
+      toMyRecipes: jest.fn(),
       goBack: jest.fn(),
     });
     mockScreenWith({
@@ -383,7 +392,7 @@ describe('RecipeMain', () => {
     act(() => {
       capturedOnItemPress!('999');
     });
-    expect(mockNavigate).toHaveBeenCalledWith('RecipeDetail', {
+    expect(mockToRecipeDetail).toHaveBeenCalledWith({
       externalSource: 'SPOONACULAR',
       externalId: '999',
     });

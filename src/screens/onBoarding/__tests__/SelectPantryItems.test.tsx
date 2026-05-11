@@ -22,7 +22,7 @@ jest.mock('#store/useAppStore', () => {
   fn.getState = () => ({});
   fn.setState = jest.fn();
   fn.subscribe = jest.fn();
-  return { useAppStore: fn };
+  return { useAppStore: fn, useSelectedPantryId: jest.fn(() => 'p1') };
 });
 
 const mockItems = [

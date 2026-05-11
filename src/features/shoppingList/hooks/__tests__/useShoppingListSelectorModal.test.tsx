@@ -11,12 +11,13 @@ const renderHook = <TResult, TProps>(callback: (props: TProps) => TResult) =>
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 
-jest.mock('#hooks/navigation/useAppNavigation');
-const mockNav = (
-  jest.requireMock('#hooks/navigation/useAppNavigation') as {
-    useAppNavigation: jest.Mock;
-  }
-).useAppNavigation();
+const mockNav = {
+  toListSettings: jest.fn(),
+  toShareList: jest.fn(),
+};
+jest.mock('#hooks/navigation/useAppNavigation', () => ({
+  useAppNavigation: jest.fn(() => mockNav),
+}));
 
 const mockSetOverlayOpen = jest.fn();
 jest.mock('#/context/TabBarActionsContext', () => ({
@@ -450,7 +451,7 @@ describe('useShoppingListSelectorModal', () => {
     });
 
     expect(mockSetOverlayOpen).toHaveBeenCalledWith(false);
-    expect(mockNav.navigate).toHaveBeenCalledWith('ListSettings');
+    expect(mockNav.toListSettings).toHaveBeenCalledWith();
   });
 
   it('action navigates to ShareList when Share Current List pressed', () => {
@@ -466,7 +467,7 @@ describe('useShoppingListSelectorModal', () => {
       result.current.listConfig.actions![1].onPress();
     });
 
-    expect(mockNav.navigate).toHaveBeenCalledWith('ShareList', {
+    expect(mockNav.toShareList).toHaveBeenCalledWith({
       listId: 'list-1',
     });
   });
@@ -484,7 +485,7 @@ describe('useShoppingListSelectorModal', () => {
       result.current.listConfig.actions![2].onPress();
     });
 
-    expect(mockNav.navigate).toHaveBeenCalledWith('ListSettings', {
+    expect(mockNav.toListSettings).toHaveBeenCalledWith({
       listId: 'list-1',
     });
   });
@@ -953,7 +954,7 @@ describe('useShoppingListSelectorModal', () => {
       });
 
       expect(mockSetOverlayOpen).toHaveBeenCalledWith(false);
-      expect(mockNav.navigate).toHaveBeenCalledWith('ShareList', {
+      expect(mockNav.toShareList).toHaveBeenCalledWith({
         listId: 'list-1',
       });
     });
@@ -972,7 +973,7 @@ describe('useShoppingListSelectorModal', () => {
       });
 
       expect(mockSetOverlayOpen).toHaveBeenCalledWith(false);
-      expect(mockNav.navigate).toHaveBeenCalledWith('ListSettings', {
+      expect(mockNav.toListSettings).toHaveBeenCalledWith({
         listId: 'list-1',
       });
     });

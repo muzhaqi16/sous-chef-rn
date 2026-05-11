@@ -4,7 +4,7 @@ import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { BaseSwitch } from '#components/base/BaseSwitch';
 import { Header } from '#components/molecules/Header';
-import { useSafeNavigation } from '#hooks/navigation/useSafeNavigation';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import {
   useTheme as useThemePreference,
   useThemePreferences,
@@ -73,7 +73,7 @@ function SegmentedControl<T extends string>({
 }
 
 export default function AppearanceScreen() {
-  const { navigation } = useSafeNavigation();
+  const { navigation } = useAppNavigation();
   const { setLightTheme, setDarkTheme, setSystemTheme } = useTheme();
 
   const {

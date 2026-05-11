@@ -1,7 +1,7 @@
 'use no memo';
 
 import React from 'react';
-import { fireEvent, render, screen} from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 import { BottomSheetAutocompleteInput } from '../BottomSheetAutocompleteInput';
 
 // Override BottomSheetFlatList to use real FlatList (so ListEmptyComponent renders)
@@ -112,6 +112,7 @@ jest.mock('#hooks/useStandardBottomSheet', () => ({
 // Mock useAppStore
 jest.mock('#store/useAppStore', () => ({
   useAppStore: jest.fn(() => true), // isOnline = true
+  useIsOnline: jest.fn(() => true),
 }));
 
 interface TestItem {
@@ -264,8 +265,9 @@ describe('BottomSheetAutocompleteInput', () => {
   });
 
   it('shows offline message when not online', () => {
-    const { useAppStore } = require('#store/useAppStore');
+    const { useAppStore, useIsOnline } = require('#store/useAppStore');
     useAppStore.mockReturnValue(false); // isOnline = false
+    useIsOnline.mockReturnValue(false);
 
     render(<BottomSheetAutocompleteInput {...defaultProps} data={[]} />);
     expect(screen.getByText('Search unavailable offline')).toBeTruthy();

@@ -39,7 +39,7 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
 }) => {
   useScreenTransition('HomeDetailScreen');
   const { t } = useTranslation();
-  const { goBack, navigate } = useAppNavigation();
+  const { goBack, toStorageLocations } = useAppNavigation();
   const { homeId } = route.params;
   // PERFORMANCE: Use selective selector instead of full store subscription
   const currentUser = useUser();
@@ -232,7 +232,7 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
           icon="folder-open"
           title="Storage Locations"
           subtitle="Manage where items are stored"
-          onPress={() => navigate('StorageLocations', { homeId })}
+          onPress={() => toStorageLocations({ homeId })}
         />
       ),
     },

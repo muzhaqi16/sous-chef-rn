@@ -31,8 +31,9 @@ import {
 } from '#/utils/errors/versionConflict';
 import {
   useAppStore,
-  useSelectedHomeId,
   useHomeState,
+  useSelectedHomeId,
+  useSetSelectedPantryId,
 } from '#store/useAppStore';
 
 export interface RolePickerState {
@@ -64,7 +65,7 @@ export function useHomeDetailManagement(homeId: string) {
   // Store state and actions for managing selections after leaving
   const selectedHomeId = useSelectedHomeId();
   const { setSelectedHomeId } = useHomeState();
-  const setSelectedPantryId = useAppStore(state => state.setSelectedPantryId);
+  const setSelectedPantryId = useSetSelectedPantryId();
   const setSelectedShoppingListId = useAppStore(
     state => state.setSelectedShoppingListId,
   );

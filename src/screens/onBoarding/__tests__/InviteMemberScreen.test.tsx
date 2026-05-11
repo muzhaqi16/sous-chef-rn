@@ -31,6 +31,7 @@ jest.mock('#store/useAppStore', () => {
   return {
     useAppStore: fn,
     useUser: jest.fn(() => ({ id: 'u1', email: 'me@test.com' })),
+    useSelectedHomeId: jest.fn(() => mockSelectedHomeId),
   };
 });
 

@@ -9,8 +9,8 @@ jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 
 const mockGoBack = jest.fn();
-jest.mock('#hooks/navigation/useSafeNavigation', () => ({
-  useSafeNavigation: () => ({ goBack: mockGoBack }),
+jest.mock('#hooks/navigation/useAppNavigation', () => ({
+  useAppNavigation: () => ({ goBack: mockGoBack }),
 }));
 
 jest.mock('#utils/iconUtils', () => ({

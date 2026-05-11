@@ -68,7 +68,13 @@ export const PantryItemDetail: React.FC<
   const { t } = useTranslation();
   useScreenTransition('PantryItemDetail');
   const itemId = route.params.itemId;
-  const { goBack, navigateTo, navigate } = useAppNavigation();
+  const {
+    goBack,
+    toShoppingListMain,
+    toPantryItem,
+    toPantryRecipeDetail,
+    toNutritionScreen,
+  } = useAppNavigation();
   const insets = useSafeAreaInsets();
   const selectedShoppingListId = useSelectedShoppingListId();
   const selectedPantryId = useSelectedPantryId();
@@ -105,18 +111,18 @@ export const PantryItemDetail: React.FC<
           { text: 'Cancel', style: 'cancel' },
           {
             text: 'Go to Shopping Lists',
-            onPress: () => navigateTo.shoppingListMain(),
+            onPress: toShoppingListMain,
           },
         ],
       ),
   });
 
   const handleEdit = () => {
-    navigateTo.pantryItem({ itemId });
+    toPantryItem({ itemId });
   };
 
   const handleRecipePress = (recipeId: number) => {
-    navigate('RecipeDetail', {
+    toPantryRecipeDetail({
       externalSource: 'SPOONACULAR',
       externalId: String(recipeId),
     });
@@ -306,7 +312,7 @@ export const PantryItemDetail: React.FC<
               nutritions={itemNutritions}
               showHighlights
               onPress={() =>
-                navigateTo.nutritionScreen({
+                toNutritionScreen({
                   itemId: item.id,
                   itemName: item.itemName,
                   nutritions: item.item?.nutritions,

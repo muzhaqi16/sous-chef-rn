@@ -23,19 +23,20 @@ jest.mock('#features/profile/hooks/useAppSettings', () => ({
   }),
 }));
 
-jest.mock('#/store/useAppStore', () => ({
-  useAppStore: (selector: any) => {
-    const state = {
-      hapticFeedbackEnabled: true,
-      setHapticFeedbackEnabled: jest.fn(),
-      showNavigationLabels: true,
-      setShowNavigationLabels: jest.fn(),
-      userConsent: true,
-      setUserConsent: jest.fn(),
-    };
-    return selector(state);
-  },
-}));
+jest.mock('#/store/useAppStore', () => {
+  const getState = () => ({
+    hapticFeedbackEnabled: true,
+    setHapticFeedbackEnabled: jest.fn(),
+    showNavigationLabels: true,
+    setShowNavigationLabels: jest.fn(),
+    userConsent: true,
+    setUserConsent: jest.fn(),
+  });
+  return {
+    useAppStore: (selector: any) => selector(getState()),
+    useShowNavigationLabels: () => getState().showNavigationLabels,
+  };
+});
 
 jest.mock('#hooks/settings/useUserPreferences', () => ({
   useUserPreferences: () => ({

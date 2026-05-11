@@ -83,7 +83,7 @@ const RecipeDetailScreen: React.FC = () => {
   const { t } = useTranslation();
   useScreenTransition('RecipeDetail');
 
-  const { navigate } = useAppNavigation();
+  const { toRecipeEdit } = useAppNavigation();
   const user = useUser();
   const {
     goBack,
@@ -161,7 +161,7 @@ const RecipeDetailScreen: React.FC = () => {
 
   const handleEditRecipe = () => {
     if (recipeId) {
-      navigate('RecipeEdit', { recipeId });
+      toRecipeEdit({ recipeId });
     }
   };
 

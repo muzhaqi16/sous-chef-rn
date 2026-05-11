@@ -65,7 +65,7 @@ export const IdentifyItemScreen: React.FC<
     | undefined
   >
 > = ({ route }) => {
-  const { goBack, navigation, navigateTo } = useAppNavigation();
+  const { goBack, navigation, toIdentifiedItemForm } = useAppNavigation();
   const { source, pantryId, shoppingListId } = route?.params || {};
 
   const devices = useCameraDevices();
@@ -179,7 +179,7 @@ export const IdentifyItemScreen: React.FC<
       hasBrand: !!trimmedBrand,
       netWeightCount: detectedNetWeights.length,
     });
-    navigateTo.identifiedItemForm({
+    toIdentifiedItemForm({
       name: trimmedName,
       brandName: trimmedBrand || undefined,
       netWeights:

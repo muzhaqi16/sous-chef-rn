@@ -5,12 +5,22 @@ import { ProfileScreen } from '../ProfileScreen';
 
 // --- Mocks ---
 
-jest.mock('#hooks/navigation/useAppNavigation');
-const mockNav = (
-  jest.requireMock('#hooks/navigation/useAppNavigation') as {
-    useAppNavigation: jest.Mock;
-  }
-).useAppNavigation();
+const mockNav = {
+  goBack: jest.fn(),
+  toProfilePhotoUpload: jest.fn(),
+  toDeleteAccount: jest.fn(),
+  toPersonalInformation: jest.fn(),
+  toAppearance: jest.fn(),
+  toNotificationSettings: jest.fn(),
+  toDietaryProfile: jest.fn(),
+  toAppSettings: jest.fn(),
+  toDebugInfo: jest.fn(),
+  toPerformanceDashboard: jest.fn(),
+  toChangePassword: jest.fn(),
+};
+jest.mock('#hooks/navigation/useAppNavigation', () => ({
+  useAppNavigation: jest.fn(() => mockNav),
+}));
 
 jest.mock('#features/profile/hooks/useProfileData', () => ({
   useProfileData: () => ({
@@ -200,28 +210,28 @@ describe('ProfileScreen', () => {
     const user = userEvent.setup();
     render(<ProfileScreen />);
     await user.press(screen.getByTestId('profile-menu-personalInformation'));
-    expect(mockNav.navigate).toHaveBeenCalledWith('PersonalInformation');
+    expect(mockNav.toPersonalInformation).toHaveBeenCalledTimes(1);
   });
 
   it('navigates to DietaryProfile on press', async () => {
     const user = userEvent.setup();
     render(<ProfileScreen />);
     await user.press(screen.getByTestId('profile-menu-dietaryProfile'));
-    expect(mockNav.navigate).toHaveBeenCalledWith('DietaryProfile');
+    expect(mockNav.toDietaryProfile).toHaveBeenCalledTimes(1);
   });
 
   it('navigates to AppSettings on press', async () => {
     const user = userEvent.setup();
     render(<ProfileScreen />);
     await user.press(screen.getByTestId('profile-menu-appSettings'));
-    expect(mockNav.navigate).toHaveBeenCalledWith('AppSettings');
+    expect(mockNav.toAppSettings).toHaveBeenCalledTimes(1);
   });
 
   it('navigates to ChangePassword on press', async () => {
     const user = userEvent.setup();
     render(<ProfileScreen />);
     await user.press(screen.getByTestId('profile-menu-changePassword'));
-    expect(mockNav.navigate).toHaveBeenCalledWith('ChangePassword');
+    expect(mockNav.toChangePassword).toHaveBeenCalledTimes(1);
   });
 
   it('calls goBack when back button is pressed', async () => {
@@ -235,7 +245,7 @@ describe('ProfileScreen', () => {
     const user = userEvent.setup();
     render(<ProfileScreen />);
     await user.press(screen.getByTestId('avatar-button'));
-    expect(mockNav.navigate).toHaveBeenCalledWith('ProfilePhotoUpload');
+    expect(mockNav.toProfilePhotoUpload).toHaveBeenCalledTimes(1);
   });
 
   it('renders the delete account option in action tray', () => {

@@ -6,8 +6,8 @@ import {
 } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect, CommonActions } from '@react-navigation/native';
-import { useSafeNavigation } from '#hooks/navigation/useSafeNavigation';
+import { useFocusEffect } from '@react-navigation/native';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { Icon } from '#utils/iconUtils';
 import {
   launchCamera,
@@ -97,7 +97,7 @@ async function requestCameraAndLaunch(
 }
 
 export const ProfilePhotoUploadScreen: React.FC = () => {
-  const { navigation, goBack } = useSafeNavigation();
+  const { goBack, toImageCrop } = useAppNavigation();
   const { uploadProfileImage, updateProfileAvatarUrl } = useImageUpload();
 
   const [selectedImage, setSelectedImage] = useState<ImageFile | null>(null);
@@ -166,9 +166,7 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
   const handleCropImage = () => {
     if (!selectedImage) return;
 
-    navigation.dispatch(
-      CommonActions.navigate('ImageCrop', { imageFile: selectedImage }),
-    );
+    toImageCrop({ imageFile: selectedImage });
   };
 
   const handleUpload = () => {

@@ -1,4 +1,3 @@
-import type { NativeStackNavigationOptions } from '@react-navigation/native-stack';
 import type { createBottomTabScreen } from '@react-navigation/bottom-tabs';
 
 /**
@@ -11,9 +10,12 @@ type NavigationScreen = Parameters<typeof createBottomTabScreen>[0]['screen'];
 /**
  * Feature manifest — declares what a feature contributes to app navigation.
  *
- * Consumed by HomeTabs (tab entries) and RootNavigator (deep-link screens).
- * Today every feature is always enabled; future gating adds one `if` check
- * per consumer without changing manifests.
+ * Consumed by HomeTabs (tab entries). Today every feature is always enabled;
+ * future gating adds one `if` check per consumer without changing manifests.
+ *
+ * Deep-link screens previously lived here too, but they're now declared
+ * directly in `RootNavigator.tsx` so v8's `StaticParamList` inference can
+ * pick up their types. Feature manifests no longer carry `deepLinkScreens`.
  */
 export interface FeatureManifest {
   /** Unique feature identifier. */
@@ -30,17 +32,4 @@ export interface FeatureManifest {
     /** The stack navigator for this tab (result of createNativeStackNavigator). */
     stack: NavigationScreen;
   };
-
-  /**
-   * Screens registered in the always-available DeepLinks group
-   * (outside auth/onboarding guards). Used for invite links, etc.
-   */
-  deepLinkScreens?: Record<
-    string,
-    {
-      screen: React.ComponentType<any>;
-      options?: NativeStackNavigationOptions;
-      linking?: string;
-    }
-  >;
 }

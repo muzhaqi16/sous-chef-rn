@@ -33,6 +33,7 @@ jest.mock('#store/useAppStore', () => {
     useAppStore: fn,
     useUser: jest.fn(() => mockState.user),
     useSelectedHomeId: jest.fn(() => mockState.selectedHomeId),
+    useSetSelectedPantryId: jest.fn(() => mockState.setSelectedPantryId),
   };
 });
 

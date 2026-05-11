@@ -36,7 +36,8 @@ export const NotificationActionHandler: React.FC<
     useState<NotificationItem | null>(null);
   const { syncMarkAction, syncMarkRead } = useExpirationNotificationSync();
 
-  const { navigateTo, navigate } = useAppNavigation();
+  const { toPantryMain, toShoppingListMain, toNotifications } =
+    useAppNavigation();
   const setHomeAndPantry = useAppStore(state => state.setHomeAndPantry);
   const removeNotification = useAppStore(state => state.removeNotification);
   const { syncDelete } = useNotificationSync();
@@ -74,7 +75,7 @@ export const NotificationActionHandler: React.FC<
       setSelectedExpirationNotification(notification);
     } else {
       // Fallback: navigate to pantry if expiration data not yet linked
-      navigate('Pantry');
+      toPantryMain();
     }
   };
 
@@ -121,7 +122,7 @@ export const NotificationActionHandler: React.FC<
             {
               text: 'Go to Notifications',
               onPress: () => {
-                navigateTo.notifications();
+                toNotifications();
               },
             },
           ],
@@ -145,17 +146,17 @@ export const NotificationActionHandler: React.FC<
 
         // Defer navigation until idle to allow Zustand store update to propagate
         requestIdleCallback(() => {
-          navigateTo.pantryMain();
+          toPantryMain();
         });
       } else {
         toastService.success(`Welcome to ${invitation.entityName}!`);
-        navigateTo.pantryMain();
+        toPantryMain();
       }
     } else {
       toastService.success(
         `You can now collaborate on ${invitation.entityName}`,
       );
-      navigateTo.shoppingListMain();
+      toShoppingListMain();
     }
   };
 

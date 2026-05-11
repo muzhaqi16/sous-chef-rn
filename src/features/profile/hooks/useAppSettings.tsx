@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useAppStore } from '#store/useAppStore';
+import { useUser } from '#store/useAppStore';
 import { useStore } from '#store/index';
 import { useMutation, useQuery } from '@apollo/client/react';
 import {
@@ -26,7 +26,7 @@ export interface AppSettings {
 }
 
 export const useAppSettings = () => {
-  const user = useAppStore(state => state.user);
+  const user = useUser();
   const { data, loading, refetch } = useQuery(GetUserSettingsDocument, {
     skip: !user?.id,
   });

@@ -11,15 +11,18 @@ jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 
 jest.mock('#store/useAppStore', () => {
+  const mockUpdateUser = jest.fn();
+  const mockUser = { id: 'u1', onBoarded: false };
   const fn = (selector: any) =>
-    selector({
-      user: { id: 'u1', onBoarded: false },
-      updateUser: jest.fn(),
-    });
+    selector({ user: mockUser, updateUser: mockUpdateUser });
   fn.getState = () => ({});
   fn.setState = jest.fn();
   fn.subscribe = jest.fn();
-  return { useAppStore: fn };
+  return {
+    useAppStore: fn,
+    useUser: jest.fn(() => mockUser),
+    useUpdateUser: jest.fn(() => mockUpdateUser),
+  };
 });
 
 jest.mock('#hooks/performance/useScreenTransition');

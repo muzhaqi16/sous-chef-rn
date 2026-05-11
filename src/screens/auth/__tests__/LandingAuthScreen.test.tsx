@@ -1,15 +1,14 @@
 import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
-import { CommonActions } from '@react-navigation/native';
 import { LandingAuthScreen } from '../LandingAuthScreen';
 
-const mockDispatch = jest.fn();
+const mockToLogin = jest.fn();
+const mockToSignUp = jest.fn();
 
-jest.mock('#hooks/navigation/useSafeNavigation', () => ({
-  useSafeNavigation: () => ({
-    navigation: { dispatch: mockDispatch },
-    canGoBack: true,
-    goBack: jest.fn(),
+jest.mock('#hooks/navigation/useAppNavigation', () => ({
+  useAppNavigation: () => ({
+    toLogin: mockToLogin,
+    toSignUp: mockToSignUp,
   }),
 }));
 
@@ -82,16 +81,14 @@ describe('LandingAuthScreen', () => {
     const user = userEvent.setup();
     render(<LandingAuthScreen />);
     await user.press(screen.getByTestId('landing-login-button'));
-    expect(CommonActions.navigate).toHaveBeenCalledWith('Login');
-    expect(mockDispatch).toHaveBeenCalledTimes(1);
+    expect(mockToLogin).toHaveBeenCalledTimes(1);
   });
 
   it('navigates to SignUp when Sign Up button is pressed', async () => {
     const user = userEvent.setup();
     render(<LandingAuthScreen />);
     await user.press(screen.getByTestId('landing-signup-button'));
-    expect(CommonActions.navigate).toHaveBeenCalledWith('SignUp');
-    expect(mockDispatch).toHaveBeenCalledTimes(1);
+    expect(mockToSignUp).toHaveBeenCalledTimes(1);
   });
 
   it('renders the footer legal text', () => {

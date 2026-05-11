@@ -17,7 +17,7 @@ interface UseMealPlanSelectorConfigOptions {
   loading: boolean;
   setSelectedMealPlanId: (id: string) => void;
   selectorRef: RefObject<ItemSelectorRef | null>;
-  navigate: (screen: string, params?: object) => void;
+  toCreateMealPlan: () => void;
   onCreateFromTemplate: () => void;
 }
 
@@ -40,7 +40,7 @@ export function useMealPlanSelectorConfig(
     loading,
     setSelectedMealPlanId,
     selectorRef,
-    navigate,
+    toCreateMealPlan,
     onCreateFromTemplate,
   } = options;
 
@@ -87,7 +87,7 @@ export function useMealPlanSelectorConfig(
         label: 'Create New Plan',
         onPress: () => {
           selectorRef.current?.close();
-          navigate('CreateMealPlan');
+          toCreateMealPlan();
         },
       },
       {

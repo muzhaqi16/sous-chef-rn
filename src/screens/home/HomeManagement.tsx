@@ -38,7 +38,7 @@ import { SousChefLoader } from '#/components/base/SousChefLoader';
 
 export const HomeManagement: React.FC = () => {
   useScreenTransition('HomeManagement');
-  const { goBack, navigate } = useAppNavigation();
+  const { goBack, toHomeDetail } = useAppNavigation();
   const insets = useSafeAreaInsets();
 
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -180,7 +180,7 @@ export const HomeManagement: React.FC = () => {
   };
 
   const handleViewHomeDetail = (homeId: string) => {
-    navigate('HomeDetail', { homeId });
+    toHomeDetail({ homeId });
   };
 
   const handleRefresh = () => {

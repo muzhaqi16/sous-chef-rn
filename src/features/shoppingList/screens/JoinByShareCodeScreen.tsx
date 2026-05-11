@@ -19,7 +19,7 @@ export const JoinByShareCodeScreen: React.FC<
   StaticScreenProps<{ shareCode?: string }>
 > = ({ route }) => {
   const { goBack } = useNavigation();
-  const { navigate } = useAppNavigation();
+  const { toShoppingListMain } = useAppNavigation();
   const initialCode = route.params?.shareCode ?? '';
 
   const [code, setCode] = useState(initialCode);
@@ -54,7 +54,7 @@ export const JoinByShareCodeScreen: React.FC<
 
         useStore.getState().setSelectedShoppingListId(listId);
         goBack();
-        navigate('ShoppingListMain', {});
+        toShoppingListMain();
         toastService.success(`Joined "${listName || 'Shopping List'}"`);
       },
       setJoining,

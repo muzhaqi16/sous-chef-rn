@@ -21,7 +21,13 @@ import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 
 export const NotificationListScreen: React.FC = () => {
   useScreenTransition('NotificationListScreen');
-  const { navigate, navigateTo, goBack } = useAppNavigation();
+  const {
+    toPantryMain,
+    toShoppingListMain,
+    toNotificationDetail,
+    toNotificationSettings,
+    goBack,
+  } = useAppNavigation();
   const [filterCategory, setFilterCategory] =
     useState<NotificationCategory | null>(null);
 
@@ -77,27 +83,23 @@ export const NotificationListScreen: React.FC = () => {
           if (actionHandler) {
             actionHandler(notification);
           } else {
-            navigate('Pantry');
+            toPantryMain();
           }
           break;
         default:
-          navigate('NotificationDetail', {
-            notification,
-          });
+          toNotificationDetail({ id: notification.id, notification });
       }
     } else {
       // Default navigation based on category
       switch (notification.category) {
         case NotificationCategory.Shopping:
-          navigateTo.shoppingListMain();
+          toShoppingListMain();
           break;
         case NotificationCategory.Pantry:
-          navigateTo.pantryMain();
+          toPantryMain();
           break;
         default:
-          navigate('NotificationDetail', {
-            notification,
-          });
+          toNotificationDetail({ id: notification.id, notification });
       }
     }
   };
@@ -117,7 +119,7 @@ export const NotificationListScreen: React.FC = () => {
       rightActions={[
         {
           icon: 'settings',
-          onPress: () => navigate('NotificationSettings'),
+          onPress: toNotificationSettings,
         },
       ]}
     />

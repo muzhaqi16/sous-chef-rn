@@ -1,5 +1,5 @@
 import { alertService } from '#/services/alertService';
-import { useAppStore } from '#store/useAppStore';
+import { useUser } from '#store/useAppStore';
 import { usePreservedQueryData } from '#/hooks/apollo/usePreservedQueryData';
 import { useMutation, useQuery } from '@apollo/client/react';
 import {
@@ -52,7 +52,7 @@ export interface DietaryProfileData {
 }
 
 export const useDietaryProfile = () => {
-  const user = useAppStore(state => state.user);
+  const user = useUser();
   const { handleApolloError } = useErrorService();
 
   // The cache-and-network → cache-first pair

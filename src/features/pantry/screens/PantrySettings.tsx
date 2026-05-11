@@ -19,7 +19,7 @@ import {
   CreatePantryDocument,
   SetDefaultPantryDocument,
 } from '#features/pantry/graphql/pantry.generated';
-import { useAppStore, useSelectedHomeId } from '#store/useAppStore';
+import { useSelectedHomeId, useSetSelectedPantryId } from '#store/useAppStore';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { useErrorService, errorService } from '#/services/errorService';
@@ -197,7 +197,7 @@ export const PantrySettings: React.FC<
   const pantryId = route.params?.pantryId;
 
   const selectedHomeId = useSelectedHomeId();
-  const setSelectedPantryId = useAppStore(state => state.setSelectedPantryId);
+  const setSelectedPantryId = useSetSelectedPantryId();
   const { handleApolloError } = useErrorService();
   const permissions = usePantryPermissions();
 

@@ -8,7 +8,7 @@ import React, {
 } from 'react';
 import { storage } from '#/storage/mmkv';
 import { useShowTutorials } from '#hooks/settings/useSettings';
-import { useAppStore } from '#store/useAppStore';
+import { useUserId } from '#store/useAppStore';
 import type { TargetRect } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 import { useTutorialResetSignal } from '#hooks/ui/useTutorialResetSignal';
 
@@ -177,7 +177,7 @@ export function ShoppingListTutorialProvider({
   children,
   canStart,
 }: ShoppingListTutorialProviderProps) {
-  const userId = useAppStore(state => state.user?.id);
+  const userId = useUserId();
   const tutorialsEnabled = useShowTutorials();
 
   // Check if tutorial (or old tutorial) was already completed — once, on mount

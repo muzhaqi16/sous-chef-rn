@@ -21,14 +21,18 @@ let mockUser: any = { id: 'u1', email: 'test@test.com' };
 const mockSetUserNavigationState = jest.fn();
 const mockGetUserNavigationState = jest.fn();
 
-jest.mock('#store/useAppStore', () => ({
-  useAppStore: (selector: (state: any) => any) =>
-    selector({
-      user: mockUser,
-      setUserNavigationState: mockSetUserNavigationState,
-      getUserNavigationState: mockGetUserNavigationState,
-    }),
-}));
+jest.mock('#store/useAppStore', () => {
+  const getState = () => ({
+    user: mockUser,
+    setUserNavigationState: mockSetUserNavigationState,
+    getUserNavigationState: mockGetUserNavigationState,
+  });
+  return {
+    useAppStore: (selector: (state: any) => any) => selector(getState()),
+    useUser: () => (s => s.user)(getState()),
+    useUserId: () => (s => s.user?.id)(getState()),
+  };
+});
 
 beforeEach(() => {
   jest.clearAllMocks();

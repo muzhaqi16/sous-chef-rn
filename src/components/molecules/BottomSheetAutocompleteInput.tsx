@@ -13,7 +13,7 @@ import {
   ThemedTextInput,
 } from '#components/atoms/themedComponents';
 import { FormFieldWrapper } from '#components/atoms/FormFieldWrapper';
-import { useAppStore } from '#store/useAppStore';
+import { useIsOnline } from '#store/useAppStore';
 import { Icon } from '#utils/iconUtils';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { Text } from '#components/atoms/Text';
@@ -116,7 +116,7 @@ export function BottomSheetAutocompleteInput<T>({
   const BottomSheetScrollable = useBottomSheetScrollableCreator();
 
   // Check online status to prevent autocomplete when offline
-  const isOnline = useAppStore(state => state.isOnline);
+  const isOnline = useIsOnline();
 
   // Sync searchTerm with external value changes only when modal is closed (render-time state update)
   // When modal is open, searchTerm is the source of truth to avoid cursor jumping

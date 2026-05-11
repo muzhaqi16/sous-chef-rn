@@ -17,7 +17,7 @@ import {
   textSearchCacheKey,
   ingredientCacheKey,
 } from '#/store/useRecipeCacheStore';
-import { useAppStore } from '#store/useAppStore';
+import { useUserId } from '#store/useAppStore';
 import type { IconName } from '#/utils/iconUtils';
 
 // ── Filter types ──
@@ -168,7 +168,7 @@ interface DisplayItem {
 
 export function useRecipeScreen() {
   // ── User ──
-  const userId = useAppStore(state => state.user?.id);
+  const userId = useUserId();
 
   // ── Dietary profile (for filter defaults + discovery tags) ──
   const { profile: dietaryProfile } = useDietaryProfile();

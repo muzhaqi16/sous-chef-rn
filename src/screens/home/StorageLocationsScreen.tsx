@@ -8,7 +8,7 @@ import { DetailTemplate } from '#components/templates/DetailTemplate';
 import { useStorageLocationManagement } from '#hooks/storageLocation/useStorageLocationManagement';
 import { StorageLocationCard } from '#components/organisms/storageLocation/StorageLocationCard';
 import { StorageLocationSheet } from '#components/modals/StorageLocationSheet/StorageLocationSheet';
-import { useAppStore } from '#/store/useAppStore';
+import { useSelectedPantryId } from '#/store/useAppStore';
 import { commonStyles } from '#/styles/commonStyles';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { executeRefreshWithFinally } from '#/utils/compilerSafeWrappers';
@@ -29,7 +29,7 @@ export const StorageLocationsScreen: React.FC<
   useScreenTransition('StorageLocationsScreen');
   const { homeId } = route.params;
   const { goBack } = useAppNavigation();
-  const selectedPantryId = useAppStore(state => state.selectedPantryId);
+  const selectedPantryId = useSelectedPantryId();
   const [sheetVisible, setSheetVisible] = useState(false);
   const [editingLocation, setEditingLocation] = useState<any>(null);
   const [viewMode, setViewMode] = useState<'flat' | 'tree'>('flat');

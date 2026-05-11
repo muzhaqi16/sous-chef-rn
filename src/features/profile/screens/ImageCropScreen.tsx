@@ -11,7 +11,7 @@ import Animated, {
   clamp,
 } from 'react-native-reanimated';
 import type { StaticScreenProps } from '@react-navigation/native';
-import { useSafeNavigation } from '#hooks/navigation/useSafeNavigation';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { Icon } from '#utils/iconUtils';
 import { StyleSheet } from 'react-native-unistyles';
 import { Header } from '#components/molecules/Header';
@@ -29,7 +29,7 @@ const CROP_SIZE = Math.min(screenWidth * 0.8, 300);
 export const ImageCropScreen: React.FC<
   StaticScreenProps<{ imageFile: ImageFile }>
 > = ({ route }) => {
-  const { goBack } = useSafeNavigation();
+  const { goBack } = useAppNavigation();
   const { imageFile } = route.params;
 
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });

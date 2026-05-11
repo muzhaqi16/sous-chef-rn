@@ -19,6 +19,8 @@ const mockStoreState = {
 jest.mock('#store/useAppStore', () => ({
   useAppStore: (selector: (state: any) => any) => selector(mockStoreState),
   useSelectedHomeId: jest.fn(() => mockStoreState.selectedHomeId),
+  useSelectedPantryId: jest.fn(() => mockStoreState.selectedPantryId),
+  useSetSelectedPantryId: jest.fn(() => mockStoreState.setSelectedPantryId),
   useHomeState: jest.fn(() => ({
     selectedHomeId: mockStoreState.selectedHomeId,
     setSelectedHomeId: mockStoreState.setSelectedHomeId,

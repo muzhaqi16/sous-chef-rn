@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { storage } from '#/storage/mmkv';
 import { useShowTutorials } from '#hooks/settings/useSettings';
-import { useAppStore } from '#store/useAppStore';
+import { useUserId } from '#store/useAppStore';
 import { useStore } from '#store/index';
 import { useTutorialResetSignal } from '#hooks/ui/useTutorialResetSignal';
 
@@ -81,7 +81,7 @@ export const useFeatureHint = ({
   showOnMount = false,
   delay = 0,
 }: UseFeatureHintOptions): UseFeatureHintReturn => {
-  const userId = useAppStore(state => state.user?.id);
+  const userId = useUserId();
   const storageKey = buildStorageKey(userId, featureId);
 
   // Check global showTutorials setting

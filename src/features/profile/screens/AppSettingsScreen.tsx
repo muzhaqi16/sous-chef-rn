@@ -14,7 +14,7 @@ const ThemedPickerItem = withUnistyles(Picker.Item, theme => ({
   color: theme.colors.textPrimary,
 }));
 import { commonStyles } from '#/styles/commonStyles';
-import { useAppStore } from '#/store/useAppStore';
+import { useAppStore, useShowNavigationLabels } from '#/store/useAppStore';
 import { useStore } from '#store/index';
 import { resetAllFeatureHints } from '#hooks/useFeatureHint';
 import { useUserPreferences } from '#hooks/settings/useUserPreferences';
@@ -41,7 +41,7 @@ export const AppSettingsScreen: React.FC = () => {
   const setHapticFeedbackEnabled = useAppStore(
     state => state.setHapticFeedbackEnabled,
   );
-  const showNavigationLabels = useAppStore(state => state.showNavigationLabels);
+  const showNavigationLabels = useShowNavigationLabels();
   const setShowNavigationLabels = useAppStore(
     state => state.setShowNavigationLabels,
   );

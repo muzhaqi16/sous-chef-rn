@@ -13,9 +13,14 @@ import {
 import { Diet, RestrictionSeverity } from '#/graphql/generated/schemaTypes';
 import { useDietaryProfile } from '../useDietaryProfile';
 
-jest.mock('#store/useAppStore', () => ({
-  useAppStore: jest.fn((selector: any) => selector({ user: { id: 'user-1' } })),
-}));
+jest.mock('#store/useAppStore', () => {
+  const getState = () => ({ user: { id: 'user-1' } });
+  return {
+    useAppStore: jest.fn((selector: any) => selector(getState())),
+    useUser: () => (s => s.user)(getState()),
+    useUserId: () => (s => s.user?.id)(getState()),
+  };
+});
 
 jest.mock('#/hooks/apollo/usePreservedQueryData', () => ({
   usePreservedQueryData: (data: any, fallback: any) => data ?? fallback,

@@ -1,12 +1,16 @@
 import React from 'react';
 import { View } from 'react-native';
+import { useFragment } from '@apollo/client/react';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { formatDistanceToNow } from 'date-fns/formatDistanceToNow';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
-import { type RecipeReviewFragment } from '#features/recipes/graphql/recipeFragments.generated';
+import {
+  RecipeReviewFragmentDoc,
+  type RecipeReviewFragment,
+} from '#features/recipes/graphql/recipeFragments.generated';
 
 interface ReviewCardProps {
   review: RecipeReviewFragment;
@@ -18,13 +22,24 @@ interface ReviewCardProps {
 }
 
 export const ReviewCard: React.FC<ReviewCardProps> = ({
-  review,
+  review: reviewSource,
   isOwn,
   hasVotedHelpful,
   onToggleHelpful,
   onEdit,
   onDelete,
 }) => {
+  // Per-entity cache subscription: re-renders only when this review's
+  // RecipeReviewFragment fields change (e.g., helpful count after a
+  // toggleHelpful mutation, or comment/rating after an updateReview).
+  // Falls back to the source prop on cache miss so list cells never blank out.
+  const fragmentResult = useFragment({
+    fragment: RecipeReviewFragmentDoc,
+    fragmentName: 'RecipeReviewFragment',
+    from: reviewSource,
+  });
+  const review = fragmentResult.complete ? fragmentResult.data : reviewSource;
+
   const displayName = review.user.profile?.displayName || review.user.email;
   const avatar = review.user.profile?.avatar;
 

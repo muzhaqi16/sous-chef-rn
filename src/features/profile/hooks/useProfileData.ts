@@ -1,11 +1,11 @@
 import { useQuery } from '@apollo/client/react';
 import { GetUserProfileDocument } from '#operations/auth/user.generated';
-import { useAppStore } from '#store/useAppStore';
+import { useIsLoggingOut } from '#store/useAppStore';
 import { useUser } from '#store/useAppStore';
 
 export const useProfileData = () => {
   const user = useUser();
-  const isLoggingOut = useAppStore(state => state.isLoggingOut);
+  const isLoggingOut = useIsLoggingOut();
 
   const { data, loading, refetch } = useQuery(GetUserProfileDocument, {
     // First mount: read cache + fire one network request to refresh.
