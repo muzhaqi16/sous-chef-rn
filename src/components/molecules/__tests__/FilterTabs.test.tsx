@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { FilterTabs } from '../FilterTabs/FilterTabs';
 
 describe('FilterTabs', () => {
@@ -26,9 +26,10 @@ describe('FilterTabs', () => {
     expect(screen.getByText('Freezer')).toBeTruthy();
   });
 
-  it('calls onTabChange when a tab is pressed', () => {
+  it('calls onTabChange when a tab is pressed', async () => {
+    const user = userEvent.setup();
     render(<FilterTabs {...defaultProps} />);
-    fireEvent.press(screen.getByTestId('filter-tab-fridge'));
+    await user.press(screen.getByTestId('filter-tab-fridge'));
     expect(defaultProps.onTabChange).toHaveBeenCalledWith('fridge');
   });
 
@@ -79,7 +80,8 @@ describe('FilterTabs', () => {
     expect(screen.getByText('Add')).toBeTruthy();
   });
 
-  it('calls action button onPress when pressed', () => {
+  it('calls action button onPress when pressed', async () => {
+    const user = userEvent.setup();
     const onAction = jest.fn();
     render(
       <FilterTabs
@@ -91,11 +93,12 @@ describe('FilterTabs', () => {
         }}
       />,
     );
-    fireEvent.press(screen.getByTestId('add-action'));
+    await user.press(screen.getByTestId('add-action'));
     expect(onAction).toHaveBeenCalledTimes(1);
   });
 
-  it('uses custom tab onPress when provided instead of onTabChange', () => {
+  it('uses custom tab onPress when provided instead of onTabChange', async () => {
+    const user = userEvent.setup();
     const customPress = jest.fn();
     const tabsWithAction = [
       { id: 'all', label: 'All' },
@@ -109,7 +112,7 @@ describe('FilterTabs', () => {
         onTabChange={defaultProps.onTabChange}
       />,
     );
-    fireEvent.press(screen.getByTestId('filter-tab-custom'));
+    await user.press(screen.getByTestId('filter-tab-custom'));
     expect(customPress).toHaveBeenCalledTimes(1);
     expect(defaultProps.onTabChange).not.toHaveBeenCalled();
   });

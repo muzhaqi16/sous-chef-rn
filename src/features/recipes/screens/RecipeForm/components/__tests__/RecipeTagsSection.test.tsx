@@ -1,7 +1,7 @@
 'use no memo';
 
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react-native';
+import { render, userEvent } from '@testing-library/react-native';
 import { RecipeTagsSection } from '../RecipeTagsSection';
 import { Diet, HealthGoal, Intolerance } from '#/graphql/generated/schemaTypes';
 
@@ -80,33 +80,36 @@ describe('RecipeTagsSection', () => {
     expect(getByText('Vegan')).toBeTruthy();
   });
 
-  it('opens diets sheet when diets group is pressed', () => {
+  it('opens diets sheet when diets group is pressed', async () => {
+    const user = userEvent.setup();
     const { getByText, queryByTestId } = render(
       <RecipeTagsSection {...defaultProps} />,
     );
 
     expect(queryByTestId('sheet-Diets')).toBeNull();
 
-    fireEvent.press(getByText('Diets'));
+    await user.press(getByText('Diets'));
 
     expect(queryByTestId('sheet-Diets')).toBeTruthy();
   });
 
-  it('opens health goals sheet when pressed', () => {
+  it('opens health goals sheet when pressed', async () => {
+    const user = userEvent.setup();
     const { getByText, queryByTestId } = render(
       <RecipeTagsSection {...defaultProps} />,
     );
 
-    fireEvent.press(getByText('Health Goals'));
+    await user.press(getByText('Health Goals'));
     expect(queryByTestId('sheet-Health Goals')).toBeTruthy();
   });
 
-  it('opens intolerances sheet when pressed', () => {
+  it('opens intolerances sheet when pressed', async () => {
+    const user = userEvent.setup();
     const { getByText, queryByTestId } = render(
       <RecipeTagsSection {...defaultProps} />,
     );
 
-    fireEvent.press(getByText('Intolerances'));
+    await user.press(getByText('Intolerances'));
     expect(queryByTestId('sheet-Intolerances')).toBeTruthy();
   });
 

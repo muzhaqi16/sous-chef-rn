@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { CollapsibleSection } from '../CollapsibleSection';
 import { Text } from 'react-native';
 
@@ -61,14 +61,15 @@ describe('CollapsibleSection', () => {
     expect(screen.queryByText(/\(/)).toBeNull();
   });
 
-  it('calls onToggle when header is pressed', () => {
+  it('calls onToggle when header is pressed', async () => {
+    const user = userEvent.setup();
     const onToggle = jest.fn();
     render(
       <CollapsibleSection {...defaultProps} onToggle={onToggle}>
         <Text>Content</Text>
       </CollapsibleSection>,
     );
-    fireEvent.press(screen.getByText('Section Title'));
+    await user.press(screen.getByText('Section Title'));
     expect(onToggle).toHaveBeenCalledTimes(1);
   });
 });

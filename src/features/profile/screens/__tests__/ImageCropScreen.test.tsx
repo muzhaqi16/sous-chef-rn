@@ -1,7 +1,7 @@
 'use no memo';
 
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react-native';
+import { render, userEvent } from '@testing-library/react-native';
 import { Image } from 'react-native';
 import { ImageCropScreen } from '../ImageCropScreen';
 
@@ -97,9 +97,10 @@ describe('ImageCropScreen', () => {
     expect(getByTestId('back-button')).toBeTruthy();
   });
 
-  it('navigates back when back pressed', () => {
+  it('navigates back when back pressed', async () => {
+    const user = userEvent.setup();
     const { getByTestId } = render(<ImageCropScreen {...defaultProps} />);
-    fireEvent.press(getByTestId('back-button'));
+    await user.press(getByTestId('back-button'));
     expect(mockGoBack).toHaveBeenCalled();
   });
 });

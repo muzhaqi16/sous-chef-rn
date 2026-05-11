@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { fireEvent, render, screen, userEvent } from '@testing-library/react-native';
 
 // Override the global unistyles mock to add useVariants (needed by BaseInput's style variants)
 jest.mock('react-native-unistyles', () => {
@@ -128,9 +128,10 @@ describe('SearchBar', () => {
     expect(screen.getByLabelText('Clear input')).toBeTruthy();
   });
 
-  it('clears value when clear button is pressed', () => {
+  it('clears value when clear button is pressed', async () => {
+    const user = userEvent.setup();
     render(<SearchBar {...defaultProps} value="text" />);
-    fireEvent.press(screen.getByLabelText('Clear input'));
+    await user.press(screen.getByLabelText('Clear input'));
     expect(defaultProps.onChangeText).toHaveBeenCalledWith('');
   });
 });

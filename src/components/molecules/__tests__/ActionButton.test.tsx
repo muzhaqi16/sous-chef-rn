@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { ActionButton } from '../ActionButton';
 
 jest.mock('#services/haptic/HapticService', () => ({
@@ -37,9 +37,10 @@ describe('ActionButton', () => {
     expect(screen.getByLabelText('Create new item')).toBeTruthy();
   });
 
-  it('calls onPress when pressed', () => {
+  it('calls onPress when pressed', async () => {
+    const user = userEvent.setup();
     render(<ActionButton {...defaultProps} accessibilityLabel="Add" />);
-    fireEvent.press(screen.getByLabelText('Add'));
+    await user.press(screen.getByLabelText('Add'));
     expect(defaultProps.onPress).toHaveBeenCalledTimes(1);
   });
 

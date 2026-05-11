@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { RightActions } from '../RightActions';
 
 jest.mock('#/services/haptic/HapticService', () => ({
@@ -79,7 +79,8 @@ describe('RightActions', () => {
     expect(screen.getByText('trash-outline')).toBeTruthy();
   });
 
-  it('calls onActionPress with "edit" when edit button is pressed', () => {
+  it('calls onActionPress with "edit" when edit button is pressed', async () => {
+    const user = userEvent.setup();
     const onActionPress = jest.fn();
     render(
       <RightActions
@@ -88,11 +89,12 @@ describe('RightActions', () => {
         progress={mockProgress as any}
       />,
     );
-    fireEvent.press(screen.getByText('create-outline'));
+    await user.press(screen.getByText('create-outline'));
     expect(onActionPress).toHaveBeenCalledWith('edit');
   });
 
-  it('calls onActionPress with "delete" when delete button is pressed', () => {
+  it('calls onActionPress with "delete" when delete button is pressed', async () => {
+    const user = userEvent.setup();
     const onActionPress = jest.fn();
     render(
       <RightActions
@@ -101,11 +103,12 @@ describe('RightActions', () => {
         progress={mockProgress as any}
       />,
     );
-    fireEvent.press(screen.getByText('trash-outline'));
+    await user.press(screen.getByText('trash-outline'));
     expect(onActionPress).toHaveBeenCalledWith('delete');
   });
 
-  it('triggers haptic feedback on edit press', () => {
+  it('triggers haptic feedback on edit press', async () => {
+    const user = userEvent.setup();
     const { HapticService } = require('#/services/haptic/HapticService');
     render(
       <RightActions
@@ -114,11 +117,12 @@ describe('RightActions', () => {
         progress={mockProgress as any}
       />,
     );
-    fireEvent.press(screen.getByText('create-outline'));
+    await user.press(screen.getByText('create-outline'));
     expect(HapticService.light).toHaveBeenCalled();
   });
 
-  it('triggers haptic feedback on delete press', () => {
+  it('triggers haptic feedback on delete press', async () => {
+    const user = userEvent.setup();
     const { HapticService } = require('#/services/haptic/HapticService');
     render(
       <RightActions
@@ -127,7 +131,7 @@ describe('RightActions', () => {
         progress={mockProgress as any}
       />,
     );
-    fireEvent.press(screen.getByText('trash-outline'));
+    await user.press(screen.getByText('trash-outline'));
     expect(HapticService.light).toHaveBeenCalled();
   });
 

@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { fireEvent, render, screen} from '@testing-library/react-native';
 import { FormInput } from '../FormInput';
 
 jest.mock('#context/BottomSheetInputContext', () => ({

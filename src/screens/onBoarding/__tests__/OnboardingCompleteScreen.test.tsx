@@ -1,7 +1,7 @@
 'use no memo';
 
 import React from 'react';
-import { screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { screen, userEvent, waitFor } from '@testing-library/react-native';
 import type { MockedResponse } from '#/test-utils/apolloMockProvider';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { CompleteOnboardingDocument } from '#operations/auth/user.generated';
@@ -109,10 +109,11 @@ describe('OnboardingCompleteScreen', () => {
   });
 
   it('calls mutation on button press', async () => {
+    const user = userEvent.setup();
     renderWithApollo(<OnboardingCompleteScreen />, {
       operationMocks: [buildCompleteOnboardingMock()],
     });
-    fireEvent.press(screen.getByTestId('complete-button'));
+    await user.press(screen.getByTestId('complete-button'));
     // The mutation request matches the operation mock; the onCompleted handler
     // will execute. We assert by waiting for the loading state (button still
     // in DOM) since side effects are limited to store.updateUser (mocked).

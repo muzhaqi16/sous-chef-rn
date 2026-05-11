@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { Text } from 'react-native';
 import { Card } from '../Card';
 
@@ -35,10 +35,11 @@ describe('Card', () => {
     expect(screen.getByText('Line 2')).toBeTruthy();
   });
 
-  it('calls onPress when pressed', () => {
+  it('calls onPress when pressed', async () => {
+    const user = userEvent.setup();
     const mockPress = jest.fn();
     render(<Card title="Pressable Card" onPress={mockPress} />);
-    fireEvent.press(screen.getByRole('button'));
+    await user.press(screen.getByRole('button'));
     expect(mockPress).toHaveBeenCalledTimes(1);
   });
 

@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { Text } from 'react-native';
 import { OnBoardingWrapper } from '../OnBoardingWrapper';
 
@@ -80,7 +80,8 @@ describe('OnBoardingWrapper', () => {
     expect(screen.getByText('Get started')).toBeTruthy();
   });
 
-  it('renders back button when onBack is provided', () => {
+  it('renders back button when onBack is provided', async () => {
+    const user = userEvent.setup();
     const onBack = jest.fn();
     render(
       <OnBoardingWrapper onBack={onBack}>
@@ -88,7 +89,7 @@ describe('OnBoardingWrapper', () => {
       </OnBoardingWrapper>,
     );
     expect(screen.getByText('Back')).toBeTruthy();
-    fireEvent.press(screen.getByText('Back'));
+    await user.press(screen.getByText('Back'));
     expect(onBack).toHaveBeenCalled();
   });
 
@@ -101,7 +102,8 @@ describe('OnBoardingWrapper', () => {
     expect(screen.queryByText('Back')).toBeNull();
   });
 
-  it('renders skip button in legacy mode when onSkip is provided', () => {
+  it('renders skip button in legacy mode when onSkip is provided', async () => {
+    const user = userEvent.setup();
     const onSkip = jest.fn();
     render(
       <OnBoardingWrapper onSkip={onSkip}>
@@ -109,7 +111,7 @@ describe('OnBoardingWrapper', () => {
       </OnBoardingWrapper>,
     );
     expect(screen.getByText('Skip')).toBeTruthy();
-    fireEvent.press(screen.getByText('Skip'));
+    await user.press(screen.getByText('Skip'));
     expect(onSkip).toHaveBeenCalled();
   });
 

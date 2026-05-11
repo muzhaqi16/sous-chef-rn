@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { ItemRecentCard } from '../ItemRecentCard';
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -45,10 +45,11 @@ describe('ItemRecentCard', () => {
     expect(screen.getByText('Added 2 days ago')).toBeTruthy();
   });
 
-  it('calls onQuickAdd when add button pressed', () => {
+  it('calls onQuickAdd when add button pressed', async () => {
+    const user = userEvent.setup();
     render(<ItemRecentCard item={item} onQuickAdd={onQuickAdd} />);
     // The add button has the "add" icon
-    fireEvent.press(screen.getByText('add'));
+    await user.press(screen.getByText('add'));
     expect(onQuickAdd).toHaveBeenCalledWith(item);
   });
 

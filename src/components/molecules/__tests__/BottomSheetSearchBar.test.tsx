@@ -1,7 +1,7 @@
 'use no memo';
 
 import React, { createRef } from 'react';
-import { render, screen, fireEvent, act } from '@testing-library/react-native';
+import { fireEvent, render, screen, userEvent, act } from '@testing-library/react-native';
 import {
   BottomSheetSearchBar,
   type BottomSheetSearchBarRef,
@@ -80,7 +80,8 @@ describe('BottomSheetSearchBar', () => {
     expect(screen.getByTestId('icon-close')).toBeTruthy();
   });
 
-  it('clears text when clear button is pressed', () => {
+  it('clears text when clear button is pressed', async () => {
+    const user = userEvent.setup();
     const onClear = jest.fn();
     render(<BottomSheetSearchBar {...defaultProps} onClear={onClear} />);
     const input = screen.getByPlaceholderText('Search...');
@@ -90,14 +91,15 @@ describe('BottomSheetSearchBar', () => {
 
     // Press clear
     const clearButton = screen.getByTestId('icon-close');
-    fireEvent.press(clearButton);
+    await user.press(clearButton);
 
     // onChangeText should be called immediately with ''
     expect(defaultProps.onChangeText).toHaveBeenCalledWith('');
     expect(onClear).toHaveBeenCalled();
   });
 
-  it('renders right actions', () => {
+  it('renders right actions', async () => {
+    const user = userEvent.setup();
     const onAction = jest.fn();
     render(
       <BottomSheetSearchBar
@@ -109,7 +111,7 @@ describe('BottomSheetSearchBar', () => {
     );
 
     expect(screen.getByTestId('scan-btn')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('scan-btn'));
+    await user.press(screen.getByTestId('scan-btn'));
     expect(onAction).toHaveBeenCalled();
   });
 
@@ -248,7 +250,8 @@ describe('BottomSheetSearchBar', () => {
     expect(screen.getByTestId('my-search')).toBeTruthy();
   });
 
-  it('handles clear when onClear is not provided', () => {
+  it('handles clear when onClear is not provided', async () => {
+    const user = userEvent.setup();
     render(<BottomSheetSearchBar {...defaultProps} />);
     const input = screen.getByPlaceholderText('Search...');
 
@@ -256,7 +259,7 @@ describe('BottomSheetSearchBar', () => {
     const clearButton = screen.getByTestId('icon-close');
 
     // Should not throw even without onClear
-    fireEvent.press(clearButton);
+    await user.press(clearButton);
     expect(defaultProps.onChangeText).toHaveBeenCalledWith('');
   });
 

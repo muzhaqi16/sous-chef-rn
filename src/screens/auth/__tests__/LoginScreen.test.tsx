@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { LoginScreen } from '../LoginScreen';
 
 // --- Mocks ---
@@ -145,9 +145,10 @@ describe('LoginScreen', () => {
     expect(screen.getByText('Forgot password?')).toBeTruthy();
   });
 
-  it('navigates to forgot password when link is pressed', () => {
+  it('navigates to forgot password when link is pressed', async () => {
+    const user = userEvent.setup();
     render(<LoginScreen />);
-    fireEvent.press(screen.getByTestId('login-forgot-password-link'));
+    await user.press(screen.getByTestId('login-forgot-password-link'));
     expect(mockNavigateToForgotPassword).toHaveBeenCalledTimes(1);
   });
 
@@ -157,9 +158,10 @@ describe('LoginScreen', () => {
     expect(screen.getByText('Sign Up')).toBeTruthy();
   });
 
-  it('navigates to sign up when footer link is pressed', () => {
+  it('navigates to sign up when footer link is pressed', async () => {
+    const user = userEvent.setup();
     render(<LoginScreen />);
-    fireEvent.press(screen.getByTestId('login-signup-link'));
+    await user.press(screen.getByTestId('login-signup-link'));
     expect(mockNavigateToSignUp).toHaveBeenCalledTimes(1);
   });
 });

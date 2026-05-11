@@ -1,7 +1,7 @@
 'use no memo';
 
 import React from 'react';
-import { render, screen, fireEvent, act } from '@testing-library/react-native';
+import { render, screen, userEvent, act } from '@testing-library/react-native';
 import {
   FloatingTabBar as _FloatingTabBar,
   TAB_BAR_HEIGHT,
@@ -70,7 +70,7 @@ jest.mock('#utils/iconUtils', () => {
   };
 });
 
-// Mock AddButton — NOTE: do NOT pass disabled to Pressable since it blocks fireEvent.press
+// Mock AddButton — NOTE: do NOT pass disabled to Pressable since it blocks await user.press
 jest.mock('../AddButton', () => {
   const R = require('react');
   const RN = require('react-native');
@@ -227,7 +227,8 @@ describe('FloatingTabBar', () => {
     expect(screen.queryByTestId('add-button')).toBeNull();
   });
 
-  it('calls onAddPress when add button is pressed', () => {
+  it('calls onAddPress when add button is pressed', async () => {
+    const user = userEvent.setup();
     const state = createNavigationState();
     render(
       <FloatingTabBar
@@ -237,11 +238,12 @@ describe('FloatingTabBar', () => {
         insets={{ top: 0, bottom: 0, left: 0, right: 0 }}
       />,
     );
-    fireEvent.press(screen.getByTestId('add-button'));
+    await user.press(screen.getByTestId('add-button'));
     expect(mockOnAddPress).toHaveBeenCalled();
   });
 
-  it('shows toast when add button is disabled', () => {
+  it('shows toast when add button is disabled', async () => {
+    const user = userEvent.setup();
     mockTabBarState.isAddButtonDisabled = true;
     mockTabBarState.addButtonDisabledMessage = 'No permission';
     const { toastService } = require('#/services/toastService');
@@ -255,12 +257,13 @@ describe('FloatingTabBar', () => {
         insets={{ top: 0, bottom: 0, left: 0, right: 0 }}
       />,
     );
-    fireEvent.press(screen.getByTestId('add-button'));
+    await user.press(screen.getByTestId('add-button'));
     expect(toastService.info).toHaveBeenCalledWith('No permission');
     expect(mockOnAddPress).not.toHaveBeenCalled();
   });
 
-  it('shows default message when add button is disabled without custom message', () => {
+  it('shows default message when add button is disabled without custom message', async () => {
+    const user = userEvent.setup();
     mockTabBarState.isAddButtonDisabled = true;
     mockTabBarState.addButtonDisabledMessage = '';
     const { toastService } = require('#/services/toastService');
@@ -274,13 +277,14 @@ describe('FloatingTabBar', () => {
         insets={{ top: 0, bottom: 0, left: 0, right: 0 }}
       />,
     );
-    fireEvent.press(screen.getByTestId('add-button'));
+    await user.press(screen.getByTestId('add-button'));
     expect(toastService.info).toHaveBeenCalledWith(
       "You don't have permission to perform this action",
     );
   });
 
-  it('handles tab press and emits event', () => {
+  it('handles tab press and emits event', async () => {
+    const user = userEvent.setup();
     const nav = createNavigation();
     const state = createNavigationState();
     render(
@@ -292,7 +296,7 @@ describe('FloatingTabBar', () => {
       />,
     );
 
-    fireEvent.press(screen.getByTestId('tab-ShoppingList'));
+    await user.press(screen.getByTestId('tab-ShoppingList'));
 
     expect(nav.emit).toHaveBeenCalledWith({
       type: 'tabPress',
@@ -301,7 +305,8 @@ describe('FloatingTabBar', () => {
     });
   });
 
-  it('navigates without stack reset when switching to unfocused tab', () => {
+  it('navigates without stack reset when switching to unfocused tab', async () => {
+    const user = userEvent.setup();
     const nav = createNavigation();
     const state = createNavigationState();
     render(
@@ -313,13 +318,14 @@ describe('FloatingTabBar', () => {
       />,
     );
 
-    fireEvent.press(screen.getByTestId('tab-Recipe'));
+    await user.press(screen.getByTestId('tab-Recipe'));
 
     // Switching tabs should just navigate without resetting the stack
     expect(nav.navigate).toHaveBeenCalledWith('Recipe');
   });
 
-  it('resets stack to root when re-tapping focused tab', () => {
+  it('resets stack to root when re-tapping focused tab', async () => {
+    const user = userEvent.setup();
     const nav = createNavigation();
     // Recipe is focused (index 2)
     const state = createNavigationState(
@@ -335,7 +341,7 @@ describe('FloatingTabBar', () => {
       />,
     );
 
-    fireEvent.press(screen.getByTestId('tab-Recipe'));
+    await user.press(screen.getByTestId('tab-Recipe'));
 
     expect(nav.navigate).toHaveBeenCalledWith('Recipe', {
       screen: 'RecipeMain',
@@ -343,7 +349,8 @@ describe('FloatingTabBar', () => {
     });
   });
 
-  it('does not navigate when event is prevented', () => {
+  it('does not navigate when event is prevented', async () => {
+    const user = userEvent.setup();
     const nav = createNavigation();
     nav.emit.mockReturnValue({ defaultPrevented: true });
     const state = createNavigationState();
@@ -356,7 +363,7 @@ describe('FloatingTabBar', () => {
       />,
     );
 
-    fireEvent.press(screen.getByTestId('tab-ShoppingList'));
+    await user.press(screen.getByTestId('tab-ShoppingList'));
 
     expect(nav.navigate).not.toHaveBeenCalled();
   });
@@ -394,7 +401,8 @@ describe('FloatingTabBar', () => {
     expect(screen.getByTestId('tab-MealPlan')).toBeTruthy();
   });
 
-  it('triggers HapticService.selection on tab press', () => {
+  it('triggers HapticService.selection on tab press', async () => {
+    const user = userEvent.setup();
     const { HapticService } = require('#services/haptic/HapticService');
     const state = createNavigationState();
     render(
@@ -406,11 +414,12 @@ describe('FloatingTabBar', () => {
       />,
     );
 
-    fireEvent.press(screen.getByTestId('tab-Recipe'));
+    await user.press(screen.getByTestId('tab-Recipe'));
     expect(HapticService.selection).toHaveBeenCalled();
   });
 
   it('emits tabPress event for Profile tab (non-mainScreen tab)', async () => {
+    const user = userEvent.setup();
     const nav = createNavigation();
     const routeNames = ['Pantry', 'ShoppingList', 'Recipe', 'Profile'];
     const state = createNavigationState(routeNames, 0);
@@ -424,7 +433,7 @@ describe('FloatingTabBar', () => {
     );
 
     await act(async () => {
-      fireEvent.press(screen.getByTestId('tab-Profile'));
+      await user.press(screen.getByTestId('tab-Profile'));
     });
 
     // Emit is always called
@@ -437,6 +446,7 @@ describe('FloatingTabBar', () => {
   });
 
   it('does not navigate to Profile when already focused', async () => {
+    const user = userEvent.setup();
     const nav = createNavigation();
     const routeNames = ['Pantry', 'ShoppingList', 'Recipe', 'Profile'];
     const state = createNavigationState(routeNames, 3); // Profile is focused
@@ -450,7 +460,7 @@ describe('FloatingTabBar', () => {
     );
 
     await act(async () => {
-      fireEvent.press(screen.getByTestId('tab-Profile'));
+      await user.press(screen.getByTestId('tab-Profile'));
     });
 
     // emit is called, but navigate is NOT called because Profile is already focused

@@ -1,7 +1,7 @@
 'use no memo';
 
 import React from 'react';
-import { fireEvent, waitFor } from '@testing-library/react-native';
+import { userEvent, waitFor } from '@testing-library/react-native';
 import type { MockedResponse } from '#/test-utils/apolloMockProvider';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { alertService } from '#/services/alertService';
@@ -499,6 +499,7 @@ describe('AcceptInvite', () => {
   });
 
   it('calls acceptShoppingListInvite on accept for shopping list invite', async () => {
+    const user = userEvent.setup();
     const tree = renderWithApollo(<AcceptInvite />, {
       operationMocks: [
         buildShoppingListInvitesMock([
@@ -509,7 +510,7 @@ describe('AcceptInvite', () => {
       ],
     });
     await waitFor(() => expect(tree.getByText('Accept')).toBeTruthy());
-    fireEvent.press(tree.getByText('Accept'));
+    await user.press(tree.getByText('Accept'));
     await waitFor(() =>
       expect(alertService.alert).toHaveBeenCalledWith(
         'Success',
@@ -520,6 +521,7 @@ describe('AcceptInvite', () => {
   });
 
   it('calls acceptHomeInvite on accept for home invite', async () => {
+    const user = userEvent.setup();
     const tree = renderWithApollo(<AcceptInvite />, {
       operationMocks: [
         buildEmptyShoppingListInvitesMock(),
@@ -528,7 +530,7 @@ describe('AcceptInvite', () => {
       ],
     });
     await waitFor(() => expect(tree.getByText(/join/)).toBeTruthy());
-    fireEvent.press(tree.getByText('Accept'));
+    await user.press(tree.getByText('Accept'));
     await waitFor(() =>
       expect(alertService.alert).toHaveBeenCalledWith(
         'Success',
@@ -539,6 +541,7 @@ describe('AcceptInvite', () => {
   });
 
   it('shows decline confirmation dialog', async () => {
+    const user = userEvent.setup();
     const tree = renderWithApollo(<AcceptInvite />, {
       operationMocks: [
         buildShoppingListInvitesMock([
@@ -548,7 +551,7 @@ describe('AcceptInvite', () => {
       ],
     });
     await waitFor(() => expect(tree.getByText('Decline')).toBeTruthy());
-    fireEvent.press(tree.getByText('Decline'));
+    await user.press(tree.getByText('Decline'));
     expect(alertService.alert).toHaveBeenCalledWith(
       'Decline Invitation',
       'Are you sure you want to decline this invitation?',
@@ -557,6 +560,7 @@ describe('AcceptInvite', () => {
   });
 
   it('calls declineShoppingListInvite when decline is confirmed', async () => {
+    const user = userEvent.setup();
     const tree = renderWithApollo(<AcceptInvite />, {
       operationMocks: [
         buildShoppingListInvitesMock([
@@ -567,7 +571,7 @@ describe('AcceptInvite', () => {
       ],
     });
     await waitFor(() => expect(tree.getByText('Decline')).toBeTruthy());
-    fireEvent.press(tree.getByText('Decline'));
+    await user.press(tree.getByText('Decline'));
     const alertCall = (alertService.alert as jest.Mock).mock.calls[0];
     const buttons = alertCall[2];
     const declineBtn = buttons.find((b: any) => b.text === 'Decline');
@@ -576,6 +580,7 @@ describe('AcceptInvite', () => {
   });
 
   it('calls declineHomeInvite when decline is confirmed for home invite', async () => {
+    const user = userEvent.setup();
     const tree = renderWithApollo(<AcceptInvite />, {
       operationMocks: [
         buildEmptyShoppingListInvitesMock(),
@@ -584,7 +589,7 @@ describe('AcceptInvite', () => {
       ],
     });
     await waitFor(() => expect(tree.getByText(/join/)).toBeTruthy());
-    fireEvent.press(tree.getByText('Decline'));
+    await user.press(tree.getByText('Decline'));
     const alertCall = (alertService.alert as jest.Mock).mock.calls[0];
     const buttons = alertCall[2];
     const declineBtn = buttons.find((b: any) => b.text === 'Decline');
@@ -593,6 +598,7 @@ describe('AcceptInvite', () => {
   });
 
   it('shows error alert when accept fails', async () => {
+    const user = userEvent.setup();
     const { executeWithLoadingState } = require('#/utils/compilerSafeWrappers');
     executeWithLoadingState.mockImplementationOnce(
       (_fn: any, _setLoading: any, onError: any) => {
@@ -609,7 +615,7 @@ describe('AcceptInvite', () => {
       ],
     });
     await waitFor(() => expect(tree.getByText('Accept')).toBeTruthy());
-    fireEvent.press(tree.getByText('Accept'));
+    await user.press(tree.getByText('Accept'));
     await waitFor(() => {
       expect(alertService.alert).toHaveBeenCalledWith(
         'Error',
@@ -666,6 +672,7 @@ describe('AcceptInvite', () => {
   });
 
   it('navigates back when Go Back is pressed on not found screen', async () => {
+    const user = userEvent.setup();
     const tree = renderWithApollo(<AcceptInvite />, {
       operationMocks: [
         buildEmptyShoppingListInvitesMock(),
@@ -673,7 +680,7 @@ describe('AcceptInvite', () => {
       ],
     });
     await waitFor(() => expect(tree.getByText('Go Back')).toBeTruthy());
-    fireEvent.press(tree.getByText('Go Back'));
+    await user.press(tree.getByText('Go Back'));
     expect(mockGoBack).toHaveBeenCalled();
   });
 
@@ -727,6 +734,7 @@ describe('AcceptInvite', () => {
   });
 
   it('uses token from route params when available', async () => {
+    const user = userEvent.setup();
     const { useRoute } = jest.requireMock('@react-navigation/native');
     useRoute.mockReturnValue({
       params: { token: 'deep-link-token', inviteId: 'invite-1' },
@@ -741,7 +749,7 @@ describe('AcceptInvite', () => {
       ],
     });
     await waitFor(() => expect(tree.getByText(/collaborate on/)).toBeTruthy());
-    fireEvent.press(tree.getByText('Accept'));
+    await user.press(tree.getByText('Accept'));
     await waitFor(() =>
       expect(alertService.alert).toHaveBeenCalledWith(
         'Success',
@@ -762,6 +770,7 @@ describe('AcceptInvite', () => {
   });
 
   it('shows error alert when decline fails', async () => {
+    const user = userEvent.setup();
     const { executeWithLoadingState } = require('#/utils/compilerSafeWrappers');
     executeWithLoadingState.mockImplementation(
       async (_fn: any, _setLoading: any, onError: any) => {
@@ -779,7 +788,7 @@ describe('AcceptInvite', () => {
       ],
     });
     await waitFor(() => expect(tree.getByText('Decline')).toBeTruthy());
-    fireEvent.press(tree.getByText('Decline'));
+    await user.press(tree.getByText('Decline'));
     const alertCall = (alertService.alert as jest.Mock).mock.calls[0];
     const buttons = alertCall[2];
     const declineBtn = buttons.find((b: any) => b.text === 'Decline');

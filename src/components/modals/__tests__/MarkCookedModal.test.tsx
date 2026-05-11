@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { MarkCookedModal } from '../MarkCookedModal';
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
@@ -139,15 +139,17 @@ describe('MarkCookedModal', () => {
     expect(screen.getByText('Notes (Optional)')).toBeTruthy();
   });
 
-  it('calls onClose when Cancel is pressed', () => {
+  it('calls onClose when Cancel is pressed', async () => {
+    const user = userEvent.setup();
     render(<MarkCookedModal {...defaultProps} />);
-    fireEvent.press(screen.getByTestId('cancel-button'));
+    await user.press(screen.getByTestId('cancel-button'));
     expect(defaultProps.onClose).toHaveBeenCalled();
   });
 
-  it('calls onConfirm and onClose when Mark Cooked is pressed', () => {
+  it('calls onConfirm and onClose when Mark Cooked is pressed', async () => {
+    const user = userEvent.setup();
     render(<MarkCookedModal {...defaultProps} />);
-    fireEvent.press(screen.getByTestId('confirm-button'));
+    await user.press(screen.getByTestId('confirm-button'));
     expect(defaultProps.onConfirm).toHaveBeenCalled();
     expect(defaultProps.onClose).toHaveBeenCalled();
   });

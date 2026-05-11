@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { NotificationItem } from '../NotificationItem';
 import {
   NotificationCategory,
@@ -69,9 +69,10 @@ describe('NotificationItem', () => {
     expect(screen.getByText('1 day ago')).toBeTruthy();
   });
 
-  it('calls onPress with notification when pressed', () => {
+  it('calls onPress with notification when pressed', async () => {
+    const user = userEvent.setup();
     render(<NotificationItem {...defaultProps} />);
-    fireEvent.press(screen.getByText('New Invitation'));
+    await user.press(screen.getByText('New Invitation'));
     expect(defaultProps.onPress).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'notif-1' }),
     );
@@ -92,9 +93,10 @@ describe('NotificationItem', () => {
     expect(screen.queryByTestId('icon-close')).toBeNull();
   });
 
-  it('calls onDismiss with notification id when dismiss is pressed', () => {
+  it('calls onDismiss with notification id when dismiss is pressed', async () => {
+    const user = userEvent.setup();
     render(<NotificationItem {...defaultProps} />);
-    fireEvent.press(screen.getByTestId('icon-close'));
+    await user.press(screen.getByTestId('icon-close'));
     expect(defaultProps.onDismiss).toHaveBeenCalledWith('notif-1');
   });
 

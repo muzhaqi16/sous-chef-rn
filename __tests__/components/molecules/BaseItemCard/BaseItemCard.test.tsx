@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Text } from 'react-native';
-import { render, fireEvent } from '@testing-library/react-native';
+import { render, userEvent } from '@testing-library/react-native';
 import { BaseItemCard } from '../../../../src/components/molecules/BaseItemCard/BaseItemCard';
 
 jest.mock('../../../../src/apollo/links/tokenScheduler');
@@ -72,14 +72,15 @@ describe('BaseItemCard', () => {
     expect(getByText('Content')).toBeTruthy();
   });
 
-  it('wraps in Pressable when onPress provided without swipe actions', () => {
+  it('wraps in Pressable when onPress provided without swipe actions', async () => {
+    const user = userEvent.setup();
     const onPress = jest.fn();
     const { getByText } = render(
       <BaseItemCard onPress={onPress}>
         <Text>Pressable</Text>
       </BaseItemCard>,
     );
-    fireEvent.press(getByText('Pressable'));
+    await user.press(getByText('Pressable'));
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 

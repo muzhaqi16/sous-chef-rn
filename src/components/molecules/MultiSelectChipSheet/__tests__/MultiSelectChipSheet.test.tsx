@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { MultiSelectChipSheet } from '../MultiSelectChipSheet';
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
@@ -107,9 +107,10 @@ describe('MultiSelectChipSheet', () => {
     expect(screen.getByText('Clear all')).toBeTruthy();
   });
 
-  it('calls onSelect when chip is pressed', () => {
+  it('calls onSelect when chip is pressed', async () => {
+    const user = userEvent.setup();
     render(<MultiSelectChipSheet {...defaultProps} />);
-    fireEvent.press(screen.getByTestId('chip-Alpha'));
+    await user.press(screen.getByTestId('chip-Alpha'));
     expect(defaultProps.onSelect).toHaveBeenCalledWith(['a']);
   });
 

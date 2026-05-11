@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { EmptyDayState } from '../EmptyDayState';
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -35,7 +35,8 @@ describe('EmptyDayState', () => {
     expect(screen.getByText('Add a meal')).toBeTruthy();
   });
 
-  it('calls onAddMeal when button pressed', () => {
+  it('calls onAddMeal when button pressed', async () => {
+    const user = userEvent.setup();
     const onAddMeal = jest.fn();
     render(
       <EmptyDayState
@@ -43,7 +44,7 @@ describe('EmptyDayState', () => {
         onAddMeal={onAddMeal}
       />,
     );
-    fireEvent.press(screen.getByText('Add a meal'));
+    await user.press(screen.getByText('Add a meal'));
     expect(onAddMeal).toHaveBeenCalled();
   });
 

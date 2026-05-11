@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { MacroTargetsSheet } from '../MacroTargetsSheet';
 
 jest.mock('#components/atoms/GlobalBottomSheetBackdrop', () => ({
@@ -102,11 +102,11 @@ describe('MacroTargetsSheet', () => {
     expect(screen.getByText('Macro Targets')).toBeTruthy();
   });
 
-  it('calls onClose when cancel is pressed', () => {
+  it('calls onClose when cancel is pressed', async () => {
+    const user = userEvent.setup();
     render(<MacroTargetsSheet {...defaultProps} />);
     const cancelBtn = screen.getByTestId('cancel-btn');
-    const { fireEvent } = require('@testing-library/react-native');
-    fireEvent.press(cancelBtn);
+    await user.press(cancelBtn);
     expect(defaultProps.onClose).toHaveBeenCalled();
   });
 });

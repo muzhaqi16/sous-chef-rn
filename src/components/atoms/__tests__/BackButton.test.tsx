@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { BackButton } from '../BackButton';
 
 describe('BackButton', () => {
@@ -14,9 +14,10 @@ describe('BackButton', () => {
     expect(toJSON()).toBeTruthy();
   });
 
-  it('calls onPress when pressed', () => {
+  it('calls onPress when pressed', async () => {
+    const user = userEvent.setup();
     render(<BackButton onPress={mockOnPress} testID="back-btn" />);
-    fireEvent.press(screen.getByTestId('back-btn'));
+    await user.press(screen.getByTestId('back-btn'));
     expect(mockOnPress).toHaveBeenCalledTimes(1);
   });
 
@@ -25,9 +26,10 @@ describe('BackButton', () => {
     expect(screen.getByLabelText('Go back')).toBeTruthy();
   });
 
-  it('does not call onPress when disabled', () => {
+  it('does not call onPress when disabled', async () => {
+    const user = userEvent.setup();
     render(<BackButton onPress={mockOnPress} disabled testID="back-btn" />);
-    fireEvent.press(screen.getByTestId('back-btn'));
+    await user.press(screen.getByTestId('back-btn'));
     expect(mockOnPress).not.toHaveBeenCalled();
   });
 

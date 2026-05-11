@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import Chip from '../Chip';
 
 describe('Chip', () => {
@@ -14,9 +14,10 @@ describe('Chip', () => {
     expect(screen.getByText('Fruits')).toBeTruthy();
   });
 
-  it('calls onPress when pressed', () => {
+  it('calls onPress when pressed', async () => {
+    const user = userEvent.setup();
     render(<Chip label="Dairy" onPress={mockOnPress} />);
-    fireEvent.press(screen.getByText('Dairy'));
+    await user.press(screen.getByText('Dairy'));
     expect(mockOnPress).toHaveBeenCalledTimes(1);
   });
 

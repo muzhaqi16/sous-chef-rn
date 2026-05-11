@@ -1,7 +1,7 @@
 'use no memo';
 import React from 'react';
 import { Text } from 'react-native';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { CardRightSlot } from '../CardRightSlot';
 
 jest.mock('#utils/iconUtils', () => ({
@@ -50,7 +50,8 @@ describe('CardRightSlot', () => {
     expect(screen.getByText('pcs')).toBeTruthy();
   });
 
-  it('calls onIncrement when plus button is pressed', () => {
+  it('calls onIncrement when plus button is pressed', async () => {
+    const user = userEvent.setup();
     const onIncrement = jest.fn();
     render(
       <CardRightSlot
@@ -60,7 +61,7 @@ describe('CardRightSlot', () => {
         onDecrement={jest.fn()}
       />,
     );
-    fireEvent.press(screen.getByText('icon-add'));
+    await user.press(screen.getByText('icon-add'));
     expect(onIncrement).toHaveBeenCalled();
   });
 

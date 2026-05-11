@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { screen, userEvent, waitFor } from '@testing-library/react-native';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { GetShoppingListsLiteDocument } from '../GenerateShoppingListSheet.generated';
 import { GenerateShoppingListSheet } from '../GenerateShoppingListSheet';
@@ -189,8 +189,9 @@ describe('GenerateShoppingListSheet', () => {
   });
 
   it('shows existing lists when switching to "existing" mode', async () => {
+    const user = userEvent.setup();
     renderSheet();
-    fireEvent.press(screen.getByText('Existing List'));
+    await user.press(screen.getByText('Existing List'));
     expect(screen.getByText('Select a list')).toBeTruthy();
     await waitFor(() =>
       expect(screen.getByText('Weekly Groceries')).toBeTruthy(),
@@ -198,9 +199,10 @@ describe('GenerateShoppingListSheet', () => {
     expect(screen.getByText('Party Supplies')).toBeTruthy();
   });
 
-  it('calls onGenerate when confirm button is pressed', () => {
+  it('calls onGenerate when confirm button is pressed', async () => {
+    const user = userEvent.setup();
     renderSheet();
-    fireEvent.press(screen.getByTestId('confirm-button'));
+    await user.press(screen.getByTestId('confirm-button'));
     expect(defaultProps.onGenerate).toHaveBeenCalledWith({
       checkPantry: true,
       name: undefined,

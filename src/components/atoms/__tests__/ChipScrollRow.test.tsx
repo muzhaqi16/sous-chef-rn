@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { ChipScrollRow } from '../ChipScrollRow';
 
 describe('ChipScrollRow', () => {
@@ -27,7 +27,8 @@ describe('ChipScrollRow', () => {
     expect(screen.getByText('Expired')).toBeTruthy();
   });
 
-  it('calls onSelect with the correct key when pressed', () => {
+  it('calls onSelect with the correct key when pressed', async () => {
+    const user = userEvent.setup();
     render(
       <ChipScrollRow
         options={options}
@@ -35,11 +36,12 @@ describe('ChipScrollRow', () => {
         onSelect={mockOnSelect}
       />,
     );
-    fireEvent.press(screen.getByText('Active'));
+    await user.press(screen.getByText('Active'));
     expect(mockOnSelect).toHaveBeenCalledWith('active');
   });
 
-  it('calls onSelect with a different key', () => {
+  it('calls onSelect with a different key', async () => {
+    const user = userEvent.setup();
     render(
       <ChipScrollRow
         options={options}
@@ -47,7 +49,7 @@ describe('ChipScrollRow', () => {
         onSelect={mockOnSelect}
       />,
     );
-    fireEvent.press(screen.getByText('Expired'));
+    await user.press(screen.getByText('Expired'));
     expect(mockOnSelect).toHaveBeenCalledWith('expired');
   });
 

@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { CollapsiblePurchasedSection } from '../CollapsiblePurchasedSection';
 
 jest.mock('#utils/iconUtils', () => ({
@@ -59,9 +59,10 @@ describe('CollapsiblePurchasedSection', () => {
     expect(screen.getByText('2 Purchased')).toBeTruthy();
   });
 
-  it('toggles expansion on header press', () => {
+  it('toggles expansion on header press', async () => {
+    const user = userEvent.setup();
     render(<CollapsiblePurchasedSection {...defaultProps} />);
-    fireEvent.press(screen.getByText('2 Purchased'));
+    await user.press(screen.getByText('2 Purchased'));
     // After pressing, the list should expand - check for sortable list
     expect(screen.getByTestId('sortable-list')).toBeTruthy();
   });

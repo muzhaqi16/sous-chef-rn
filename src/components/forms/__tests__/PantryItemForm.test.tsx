@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { InMemoryCache } from '@apollo/client';
-import { screen, fireEvent } from '@testing-library/react-native';
+import { screen, userEvent } from '@testing-library/react-native';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { GetHomeDocument } from '#operations/home/home.generated';
 import {
@@ -247,27 +247,30 @@ describe('PantryItemForm — add mode', () => {
     expect(screen.getByText('Item Information (add)')).toBeTruthy();
   });
 
-  it('switches to Inventory tab and shows the quantity section', () => {
+  it('switches to Inventory tab and shows the quantity section', async () => {
+    const user = userEvent.setup();
     renderWithApollo(<PantryItemForm mode="add" />, {
       cache: buildCache({}),
     });
-    fireEvent.press(screen.getByText('Inventory'));
+    await user.press(screen.getByText('Inventory'));
     expect(screen.getByText('Quantity (add)')).toBeTruthy();
   });
 
-  it('switches to Storage tab and shows the storage details section', () => {
+  it('switches to Storage tab and shows the storage details section', async () => {
+    const user = userEvent.setup();
     renderWithApollo(<PantryItemForm mode="add" />, {
       cache: buildCache({}),
     });
-    fireEvent.press(screen.getByText('Storage'));
+    await user.press(screen.getByText('Storage'));
     expect(screen.getByText('Storage Details (add)')).toBeTruthy();
   });
 
-  it('switches to Product tab and shows the net weight section', () => {
+  it('switches to Product tab and shows the net weight section', async () => {
+    const user = userEvent.setup();
     renderWithApollo(<PantryItemForm mode="add" />, {
       cache: buildCache({}),
     });
-    fireEvent.press(screen.getByText('Product'));
+    await user.press(screen.getByText('Product'));
     expect(screen.getAllByText('Net Weight').length).toBeGreaterThanOrEqual(1);
   });
 
@@ -310,11 +313,12 @@ describe('PantryItemForm — edit mode', () => {
   });
 
   it('renders the Inventory tab with quantity section in edit mode', async () => {
+    const user = userEvent.setup();
     renderWithApollo(<PantryItemForm mode="edit" itemId="item-1" />, {
       cache: buildCache({ itemId: 'item-1' }),
     });
     await screen.findByText('Edit Pantry Item');
-    fireEvent.press(screen.getByText('Inventory'));
+    await user.press(screen.getByText('Inventory'));
     expect(screen.getByText('Quantity (edit)')).toBeTruthy();
   });
 });

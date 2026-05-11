@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { CommonActions } from '@react-navigation/native';
 import { LandingAuthScreen } from '../LandingAuthScreen';
 
@@ -78,16 +78,18 @@ describe('LandingAuthScreen', () => {
     expect(screen.getByText('Sign Up')).toBeTruthy();
   });
 
-  it('navigates to Login when Log In button is pressed', () => {
+  it('navigates to Login when Log In button is pressed', async () => {
+    const user = userEvent.setup();
     render(<LandingAuthScreen />);
-    fireEvent.press(screen.getByTestId('landing-login-button'));
+    await user.press(screen.getByTestId('landing-login-button'));
     expect(CommonActions.navigate).toHaveBeenCalledWith('Login');
     expect(mockDispatch).toHaveBeenCalledTimes(1);
   });
 
-  it('navigates to SignUp when Sign Up button is pressed', () => {
+  it('navigates to SignUp when Sign Up button is pressed', async () => {
+    const user = userEvent.setup();
     render(<LandingAuthScreen />);
-    fireEvent.press(screen.getByTestId('landing-signup-button'));
+    await user.press(screen.getByTestId('landing-signup-button'));
     expect(CommonActions.navigate).toHaveBeenCalledWith('SignUp');
     expect(mockDispatch).toHaveBeenCalledTimes(1);
   });

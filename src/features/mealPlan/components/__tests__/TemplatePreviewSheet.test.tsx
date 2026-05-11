@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import type { MealTemplateDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import {
   MembershipRole,
@@ -241,9 +241,10 @@ describe('TemplatePreviewSheet', () => {
     expect(screen.getByText('7 days · 4 servings')).toBeTruthy();
   });
 
-  it('calls onConfirm when Create Meal Plan is pressed', () => {
+  it('calls onConfirm when Create Meal Plan is pressed', async () => {
+    const user = userEvent.setup();
     render(<TemplatePreviewSheet {...defaultProps} />);
-    fireEvent.press(screen.getByText('Create Meal Plan'));
+    await user.press(screen.getByText('Create Meal Plan'));
     expect(defaultProps.onConfirm).toHaveBeenCalledWith(
       expect.objectContaining({
         templateId: 'tmpl-1',

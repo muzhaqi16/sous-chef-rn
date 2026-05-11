@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { AdjustQuantityModal } from '../AdjustQuantityModal';
 import { type PantryItemFragment } from '#features/pantry/graphql/pantryFragments.generated';
 
@@ -167,9 +167,10 @@ describe('AdjustQuantityModal', () => {
     expect(screen.getByText('Adjust')).toBeTruthy();
   });
 
-  it('calls onClose when cancel is pressed', () => {
+  it('calls onClose when cancel is pressed', async () => {
+    const user = userEvent.setup();
     render(<AdjustQuantityModal {...defaultProps} />);
-    fireEvent.press(screen.getByTestId('cancel-btn'));
+    await user.press(screen.getByTestId('cancel-btn'));
     expect(defaultProps.onClose).toHaveBeenCalled();
   });
 

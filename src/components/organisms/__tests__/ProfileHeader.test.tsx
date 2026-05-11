@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { ProfileHeader } from '../ProfileHeader';
 
 jest.mock('../../atoms/IconButton', () => {
@@ -59,15 +59,17 @@ describe('ProfileHeader', () => {
     expect(screen.queryByText('john@example.com')).toBeNull();
   });
 
-  it('calls onBack when back button pressed', () => {
+  it('calls onBack when back button pressed', async () => {
+    const user = userEvent.setup();
     render(<ProfileHeader {...defaultProps} />);
-    fireEvent.press(screen.getByLabelText('Go back'));
+    await user.press(screen.getByLabelText('Go back'));
     expect(defaultProps.onBack).toHaveBeenCalledTimes(1);
   });
 
-  it('calls onMore when more button pressed', () => {
+  it('calls onMore when more button pressed', async () => {
+    const user = userEvent.setup();
     render(<ProfileHeader {...defaultProps} />);
-    fireEvent.press(screen.getByLabelText('More options'));
+    await user.press(screen.getByLabelText('More options'));
     expect(defaultProps.onMore).toHaveBeenCalledTimes(1);
   });
 

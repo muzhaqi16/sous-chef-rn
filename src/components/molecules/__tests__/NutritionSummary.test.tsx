@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { NutritionSummary } from '../NutritionSummary';
 
 // Mock the nutritionUtils to control outputs
@@ -73,12 +73,13 @@ describe('NutritionSummary', () => {
     expect(screen.getByText('View Details')).toBeTruthy();
   });
 
-  it('calls onPress when pressed', () => {
+  it('calls onPress when pressed', async () => {
+    const user = userEvent.setup();
     const onPress = jest.fn();
     render(
       <NutritionSummary nutritions={mockNutritionData} onPress={onPress} />,
     );
-    fireEvent.press(screen.getByText('View Details'));
+    await user.press(screen.getByText('View Details'));
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 

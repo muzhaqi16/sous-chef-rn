@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { SaveRecipeSheet } from '../SaveRecipeSheet';
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
@@ -99,9 +99,10 @@ describe('SaveRecipeSheet', () => {
     ).toBeTruthy();
   });
 
-  it('selects a different folder when pressed', () => {
+  it('selects a different folder when pressed', async () => {
+    const user = userEvent.setup();
     render(<SaveRecipeSheet {...defaultProps} />);
-    fireEvent.press(screen.getByText('Dinner'));
+    await user.press(screen.getByText('Dinner'));
     // After pressing Dinner, Favorites should no longer be selected (checkmark removed)
     expect(screen.getByText('Dinner')).toBeTruthy();
   });
@@ -113,9 +114,10 @@ describe('SaveRecipeSheet', () => {
     ).toBeTruthy();
   });
 
-  it('shows new folder input when Create New Folder is pressed', () => {
+  it('shows new folder input when Create New Folder is pressed', async () => {
+    const user = userEvent.setup();
     render(<SaveRecipeSheet {...defaultProps} />);
-    fireEvent.press(screen.getByText('Create New Folder'));
+    await user.press(screen.getByText('Create New Folder'));
     expect(screen.getByPlaceholderText('Enter folder name...')).toBeTruthy();
     expect(screen.getByText('Create')).toBeTruthy();
   });

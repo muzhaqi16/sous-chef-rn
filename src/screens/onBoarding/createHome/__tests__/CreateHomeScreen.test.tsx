@@ -1,7 +1,7 @@
 'use no memo';
 
 import React from 'react';
-import { fireEvent, waitFor } from '@testing-library/react-native';
+import { userEvent, waitFor } from '@testing-library/react-native';
 import type { MockedResponse } from '#/test-utils/apolloMockProvider';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import {
@@ -478,6 +478,7 @@ describe('CreateHomeScreen', () => {
   });
 
   it('shows continue button for existing setup', async () => {
+    const user = userEvent.setup();
     const { normalizeHomes } = require('#/utils/connectionUtils');
     normalizeHomes.mockReturnValue([
       {
@@ -488,7 +489,7 @@ describe('CreateHomeScreen', () => {
     ]);
 
     const { findByText } = renderScreen();
-    fireEvent.press(await findByText('Continue'));
+    await user.press(await findByText('Continue'));
     expect(mockNavigateToNextStep).toHaveBeenCalledWith('CreateHome');
   });
 
@@ -625,6 +626,7 @@ describe('CreateHomeScreen', () => {
   });
 
   it('calls skipToStep when "Create My Own Home" is pressed on invites screen', async () => {
+    const user = userEvent.setup();
     mockPendingInvites = [
       {
         id: 'invite-1',
@@ -640,7 +642,7 @@ describe('CreateHomeScreen', () => {
 
     const { findByText } = renderScreen();
     // Press "Skip for Now"
-    fireEvent.press(await findByText('Skip for Now'));
+    await user.press(await findByText('Skip for Now'));
     expect(mockSkipToStep).toHaveBeenCalledWith('CreateShoppingList');
   });
 
@@ -708,6 +710,7 @@ describe('CreateHomeScreen', () => {
   });
 
   it('calls acceptHomeInvite when Accept button is pressed', async () => {
+    const user = userEvent.setup();
     mockPendingInvites = [
       {
         id: 'invite-1',
@@ -719,7 +722,7 @@ describe('CreateHomeScreen', () => {
     ];
 
     const { findByText } = renderScreen();
-    fireEvent.press(await findByText('Accept'));
+    await user.press(await findByText('Accept'));
     await waitFor(() => {
       expect(recordedMutations).toContainEqual({
         name: 'AcceptHomeInvite',
@@ -729,6 +732,7 @@ describe('CreateHomeScreen', () => {
   });
 
   it('calls alertService.alert when Decline button is pressed', async () => {
+    const user = userEvent.setup();
     mockPendingInvites = [
       {
         id: 'invite-1',
@@ -740,7 +744,7 @@ describe('CreateHomeScreen', () => {
     ];
 
     const { findByText } = renderScreen();
-    fireEvent.press(await findByText('Decline'));
+    await user.press(await findByText('Decline'));
     expect(alertService.alert).toHaveBeenCalledWith(
       'Decline Invitation',
       expect.stringContaining('Johns Home'),
@@ -749,6 +753,7 @@ describe('CreateHomeScreen', () => {
   });
 
   it('submits form and calls createHome on submit', async () => {
+    const user = userEvent.setup();
     mockCreateHomeResponse = {
       createHome: {
         __typename: 'HomeMutationPayload',
@@ -787,7 +792,7 @@ describe('CreateHomeScreen', () => {
     };
 
     const { findByTestId } = renderScreen();
-    fireEvent.press(await findByTestId('submit-button'));
+    await user.press(await findByTestId('submit-button'));
 
     // executeWithLoadingState was called
     const { executeWithLoadingState } = require('#/utils/compilerSafeWrappers');
@@ -797,6 +802,7 @@ describe('CreateHomeScreen', () => {
   });
 
   it('shows "Create My Own Home" button on invite view', async () => {
+    const user = userEvent.setup();
     mockPendingInvites = [
       {
         id: 'invite-1',
@@ -810,7 +816,7 @@ describe('CreateHomeScreen', () => {
     const { findByText } = renderScreen();
     expect(await findByText('Create My Own Home')).toBeTruthy();
     // Pressing it should show the create form
-    fireEvent.press(await findByText('Create My Own Home'));
+    await user.press(await findByText('Create My Own Home'));
   });
 
   it('selects first pantry as fallback when no default pantry exists', async () => {
@@ -832,6 +838,7 @@ describe('CreateHomeScreen', () => {
   });
 
   it('switches to create form after pressing "Create My Own Home" on invite view', async () => {
+    const user = userEvent.setup();
     mockPendingInvites = [
       {
         id: 'invite-1',
@@ -843,13 +850,14 @@ describe('CreateHomeScreen', () => {
     ];
 
     const { findByText, queryByText } = renderScreen();
-    fireEvent.press(await findByText('Create My Own Home'));
+    await user.press(await findByText('Create My Own Home'));
     // After pressing, should show create form instead of invites
     expect(await findByText("Welcome! Let's set up your home")).toBeTruthy();
     expect(queryByText('You have pending home invitations!')).toBeNull();
   });
 
   it('calls declineHomeInvite when decline confirmation is accepted', async () => {
+    const user = userEvent.setup();
     mockPendingInvites = [
       {
         id: 'invite-1',
@@ -861,7 +869,7 @@ describe('CreateHomeScreen', () => {
     ];
 
     const { findByText } = renderScreen();
-    fireEvent.press(await findByText('Decline'));
+    await user.press(await findByText('Decline'));
 
     // Get the alertService.alert call and execute the "Decline" button's onPress
     const alertCall = (alertService.alert as jest.Mock).mock.calls[0];
@@ -878,16 +886,18 @@ describe('CreateHomeScreen', () => {
   });
 
   it('shows error message when createHome mutation fails', async () => {
+    const user = userEvent.setup();
     mockCreateHomeError = new Error('Network error');
 
     const { findByTestId } = renderScreen();
-    fireEvent.press(await findByTestId('submit-button'));
+    await user.press(await findByTestId('submit-button'));
 
     const errorMessage = await findByTestId('error-message');
     expect(errorMessage).toBeTruthy();
   });
 
   it('sets home id and pantry id on successful createHome with home in response', async () => {
+    const user = userEvent.setup();
     mockCreateHomeResponse = {
       createHome: {
         __typename: 'HomeMutationPayload',
@@ -932,7 +942,7 @@ describe('CreateHomeScreen', () => {
       .mockReturnValueOnce([{ id: 'p1', isDefault: true }]); // mutation result: pantries
 
     const { findByTestId } = renderScreen();
-    fireEvent.press(await findByTestId('submit-button'));
+    await user.press(await findByTestId('submit-button'));
 
     await waitFor(() => {
       expect(mockSetSelectedHomeId).toHaveBeenCalledWith('home-new');
@@ -941,6 +951,7 @@ describe('CreateHomeScreen', () => {
   });
 
   it('handles createHome success without home in response by refetching', async () => {
+    const user = userEvent.setup();
     mockCreateHomeResponse = {
       createHome: {
         __typename: 'HomeMutationPayload',
@@ -958,7 +969,7 @@ describe('CreateHomeScreen', () => {
       .mockReturnValueOnce([{ id: 'found-home', name: 'My Home' }]);
 
     const { findByTestId } = renderScreen();
-    fireEvent.press(await findByTestId('submit-button'));
+    await user.press(await findByTestId('submit-button'));
 
     // Note: after createHome with no home, the screen calls refetchHomes()
     // and expects the refetch result to find the new home. Since we're
@@ -971,6 +982,7 @@ describe('CreateHomeScreen', () => {
   });
 
   it('shows error when createHome returns unsuccessful payload', async () => {
+    const user = userEvent.setup();
     mockCreateHomeResponse = {
       createHome: {
         __typename: 'HomeMutationPayload',
@@ -982,7 +994,7 @@ describe('CreateHomeScreen', () => {
     };
 
     const { findByTestId } = renderScreen();
-    fireEvent.press(await findByTestId('submit-button'));
+    await user.press(await findByTestId('submit-button'));
 
     await waitFor(async () => {
       expect(await findByTestId('error-message')).toBeTruthy();
@@ -990,6 +1002,7 @@ describe('CreateHomeScreen', () => {
   });
 
   it('shows default error message when createHome fails without message', async () => {
+    const user = userEvent.setup();
     mockCreateHomeResponse = {
       createHome: {
         __typename: 'HomeMutationPayload',
@@ -1001,12 +1014,13 @@ describe('CreateHomeScreen', () => {
     };
 
     const { findByTestId, findByText } = renderScreen();
-    fireEvent.press(await findByTestId('submit-button'));
+    await user.press(await findByTestId('submit-button'));
 
     expect(await findByText('Failed to create home')).toBeTruthy();
   });
 
   it('handles pantry creation when home exists but pantry does not', async () => {
+    const user = userEvent.setup();
     const { normalizeHomes } = require('#/utils/connectionUtils');
     normalizeHomes.mockReturnValue([
       {
@@ -1032,7 +1046,7 @@ describe('CreateHomeScreen', () => {
     createPantryForHome.mockResolvedValue(true);
 
     const { findByTestId } = renderScreen();
-    fireEvent.press(await findByTestId('submit-button'));
+    await user.press(await findByTestId('submit-button'));
 
     await waitFor(() => {
       expect(createPantryForHome).toHaveBeenCalled();
@@ -1040,6 +1054,7 @@ describe('CreateHomeScreen', () => {
   });
 
   it('shows pantry creation error and skips when pantry creation fails', async () => {
+    const user = userEvent.setup();
     const { normalizeHomes } = require('#/utils/connectionUtils');
     normalizeHomes.mockReturnValue([
       {
@@ -1068,14 +1083,15 @@ describe('CreateHomeScreen', () => {
     createPantryForHome.mockResolvedValue(false);
 
     const { findByTestId } = renderScreen();
-    fireEvent.press(await findByTestId('submit-button'));
+    await user.press(await findByTestId('submit-button'));
 
     await waitFor(() => {
       expect(showPantryCreationError).toHaveBeenCalled();
     });
   });
 
-  it('skips to CreateShoppingList when loading view skip is pressed', () => {
+  it('skips to CreateShoppingList when loading view skip is pressed', async () => {
+    const user = userEvent.setup();
     const loadingMocks: MockedResponse[] = [
       {
         request: { query: GetHomesDocument, variables: () => true },
@@ -1088,7 +1104,7 @@ describe('CreateHomeScreen', () => {
     const { getByText } = renderWithApollo(<CreateHomeScreen />, {
       operationMocks: loadingMocks,
     });
-    fireEvent.press(getByText('Skip'));
+    await user.press(getByText('Skip'));
     expect(mockSkipToStep).toHaveBeenCalledWith('CreateShoppingList');
   });
 
@@ -1183,6 +1199,7 @@ describe('CreateHomeScreen', () => {
   });
 
   it('handles generic error on submit with no message', async () => {
+    const user = userEvent.setup();
     // With Apollo errorPolicy: 'all', a network error resolves with
     // { data: undefined, error }. The screen then sees no payload and throws
     // 'Failed to create home' from the no-success branch — that error message
@@ -1192,7 +1209,7 @@ describe('CreateHomeScreen', () => {
     mockCreateHomeError = new Error('');
 
     const { findByTestId, findByText } = renderScreen();
-    fireEvent.press(await findByTestId('submit-button'));
+    await user.press(await findByTestId('submit-button'));
 
     expect(await findByText('Failed to create home')).toBeTruthy();
   });
@@ -1226,6 +1243,7 @@ describe('CreateHomeScreen', () => {
   });
 
   it('navigates to next step on successful home creation with first pantry (non-default)', async () => {
+    const user = userEvent.setup();
     const { extractNodes } = require('#/utils/connectionUtils');
     // First call is during initial render (homesData?.homes), second is during mutation result
     extractNodes
@@ -1270,7 +1288,7 @@ describe('CreateHomeScreen', () => {
     };
 
     const { findByTestId } = renderScreen();
-    fireEvent.press(await findByTestId('submit-button'));
+    await user.press(await findByTestId('submit-button'));
 
     await waitFor(() => {
       expect(mockSetSelectedPantryId).toHaveBeenCalledWith('p1');

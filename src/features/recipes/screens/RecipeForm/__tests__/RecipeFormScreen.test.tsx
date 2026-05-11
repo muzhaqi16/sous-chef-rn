@@ -1,7 +1,7 @@
 'use no memo';
 
 import React from 'react';
-import { fireEvent } from '@testing-library/react-native';
+import { userEvent } from '@testing-library/react-native';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { CreateRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import { alertService } from '#/services/alertService';
@@ -76,12 +76,13 @@ describe('RecipeFormScreen', () => {
     expect(getByText('Edit Recipe')).toBeTruthy();
   });
 
-  it('shows validation error on save with empty form', () => {
+  it('shows validation error on save with empty form', async () => {
+    const user = userEvent.setup();
     const { getByTestId } = renderWithApollo(
       <RecipeFormScreen {...defaultProps} />,
     );
 
-    fireEvent.press(getByTestId('save-button'));
+    await user.press(getByTestId('save-button'));
 
     expect(alertService.alert).toHaveBeenCalledWith(
       'Validation Error',
@@ -96,7 +97,8 @@ describe('RecipeFormScreen', () => {
     expect(getByTestId('recipe-form-screen')).toBeTruthy();
   });
 
-  it('does not call create mutation when validation fails', () => {
+  it('does not call create mutation when validation fails', async () => {
+    const user = userEvent.setup();
     const create = recordMock(CreateRecipeDocument, {
       data: {
         createRecipe: {
@@ -110,7 +112,7 @@ describe('RecipeFormScreen', () => {
       { operationMocks: [create.mock] },
     );
 
-    fireEvent.press(getByTestId('save-button'));
+    await user.press(getByTestId('save-button'));
 
     expect(create.fired).toEqual([]);
   });

@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { AddDetailsSheet } from '../AddDetailsSheet';
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
@@ -136,13 +136,15 @@ describe('AddDetailsSheet', () => {
     expect(screen.getByTestId('stock-settings-page')).toBeTruthy();
   });
 
-  it('calls onClose when Cancel is pressed', () => {
+  it('calls onClose when Cancel is pressed', async () => {
+    const user = userEvent.setup();
     render(<AddDetailsSheet {...defaultProps} />);
-    fireEvent.press(screen.getByText('Cancel'));
+    await user.press(screen.getByText('Cancel'));
     expect(defaultProps.onClose).toHaveBeenCalled();
   });
 
-  it('calls handleConfirm when Add is pressed', () => {
+  it('calls handleConfirm when Add is pressed', async () => {
+    const user = userEvent.setup();
     const mockHandleConfirm = jest.fn();
     const usePantryItemSubmission =
       require('#features/pantry/hooks/usePantryItemSubmission').usePantryItemSubmission;
@@ -151,7 +153,7 @@ describe('AddDetailsSheet', () => {
       loading: false,
     });
     render(<AddDetailsSheet {...defaultProps} />);
-    fireEvent.press(screen.getByTestId('add-pantry-item-submit-button'));
+    await user.press(screen.getByTestId('add-pantry-item-submit-button'));
     expect(mockHandleConfirm).toHaveBeenCalled();
   });
 

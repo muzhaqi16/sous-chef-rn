@@ -1,7 +1,7 @@
 'use no memo';
 
 import React from 'react';
-import { render, fireEvent, act } from '@testing-library/react-native';
+import { render, userEvent, act } from '@testing-library/react-native';
 import { RecipeMain } from '../RecipeMain';
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -231,7 +231,8 @@ describe('RecipeMain', () => {
     expect(tree.getByLabelText('Dietary restrictions')).toBeTruthy();
   });
 
-  it('navigates to SavedRecipes when bookmark icon pressed', () => {
+  it('navigates to SavedRecipes when bookmark icon pressed', async () => {
+    const user = userEvent.setup();
     mockDeferredScreen.mockImplementation(({ component: Component }: any) => (
       <Component />
     ));
@@ -245,11 +246,12 @@ describe('RecipeMain', () => {
     });
 
     const tree = render(<RecipeMain />);
-    fireEvent.press(tree.getByLabelText('Saved recipes'));
+    await user.press(tree.getByLabelText('Saved recipes'));
     expect(mockNavigate).toHaveBeenCalledWith('SavedRecipes');
   });
 
-  it('navigates to MyRecipes when create icon pressed', () => {
+  it('navigates to MyRecipes when create icon pressed', async () => {
+    const user = userEvent.setup();
     mockDeferredScreen.mockImplementation(({ component: Component }: any) => (
       <Component />
     ));
@@ -263,7 +265,7 @@ describe('RecipeMain', () => {
     });
 
     const tree = render(<RecipeMain />);
-    fireEvent.press(tree.getByLabelText('My recipes'));
+    await user.press(tree.getByLabelText('My recipes'));
     expect(mockNavigate).toHaveBeenCalledWith('MyRecipes');
   });
 

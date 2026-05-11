@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { UnitEntryList, UnitEntry } from '../UnitEntryList';
 
 jest.mock('#utils/iconUtils', () => ({
@@ -91,9 +91,10 @@ describe('UnitEntryList', () => {
     expect(screen.getByText('Add Unit')).toBeTruthy();
   });
 
-  it('calls onEntriesChanged with new entry when Add Unit pressed', () => {
+  it('calls onEntriesChanged with new entry when Add Unit pressed', async () => {
+    const user = userEvent.setup();
     render(<UnitEntryList {...defaultProps} />);
-    fireEvent.press(screen.getByTestId('add-unit-btn'));
+    await user.press(screen.getByTestId('add-unit-btn'));
     expect(defaultProps.onEntriesChanged).toHaveBeenCalledTimes(1);
     const newEntries = defaultProps.onEntriesChanged.mock.calls[0][0];
     expect(newEntries).toHaveLength(3);
@@ -115,14 +116,15 @@ describe('UnitEntryList', () => {
     expect(screen.queryByText('Size')).toBeNull();
   });
 
-  it('marks first added entry as default when list is empty', () => {
+  it('marks first added entry as default when list is empty', async () => {
+    const user = userEvent.setup();
     render(
       <UnitEntryList
         entries={[]}
         onEntriesChanged={defaultProps.onEntriesChanged}
       />,
     );
-    fireEvent.press(screen.getByTestId('add-unit-btn'));
+    await user.press(screen.getByTestId('add-unit-btn'));
     const newEntries = defaultProps.onEntriesChanged.mock.calls[0][0];
     expect(newEntries).toHaveLength(1);
     expect(newEntries[0].isDefault).toBe(true);

@@ -1,5 +1,5 @@
 import React from 'react';
-import { screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { screen, userEvent, waitFor } from '@testing-library/react-native';
 import type { MockedResponse } from '#/test-utils/apolloMockProvider';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import {
@@ -163,11 +163,12 @@ describe('CodeVerificationScreen', () => {
   });
 
   it('fires resend when footer link is pressed', async () => {
+    const user = userEvent.setup();
     const recordedVariables: Record<string, unknown>[] = [];
     renderWithApollo(<CodeVerificationScreen />, {
       operationMocks: [buildResendMock(recordedVariables), buildVerifyMock()],
     });
-    fireEvent.press(screen.getByTestId('footer-link'));
+    await user.press(screen.getByTestId('footer-link'));
     await waitFor(() => {
       expect(recordedVariables).toContainEqual({ email: 'test@example.com' });
     });

@@ -1,7 +1,7 @@
 'use no memo';
 
 import React from 'react';
-import { screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { screen, userEvent, waitFor } from '@testing-library/react-native';
 import type { MockedResponse } from '#/test-utils/apolloMockProvider';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { alertService } from '#/services/alertService';
@@ -390,9 +390,10 @@ describe('AddEditItem', () => {
     expect(screen.getByTestId('edit-item-submit-button')).toBeTruthy();
   });
 
-  it('navigates back when close button pressed', () => {
+  it('navigates back when close button pressed', async () => {
+    const user = userEvent.setup();
     renderWithApollo(<AddEditItem route={addRoute} />);
-    fireEvent.press(screen.getByTestId('close-button'));
+    await user.press(screen.getByTestId('close-button'));
     expect(mockNav.goBack).toHaveBeenCalled();
   });
 
@@ -428,16 +429,18 @@ describe('AddEditItem', () => {
     expect(mockUpdateField).toHaveBeenCalledWith('itemName', 'Bread');
   });
 
-  it('handles save validation for empty item name', () => {
+  it('handles save validation for empty item name', async () => {
+    const user = userEvent.setup();
     renderWithApollo(<AddEditItem route={addRoute} />);
-    fireEvent.press(screen.getByTestId('add-item-submit-button'));
+    await user.press(screen.getByTestId('add-item-submit-button'));
     expect(alertService.alert).toHaveBeenCalledWith(
       'Error',
       'Please enter an item name',
     );
   });
 
-  it('handles save validation for empty quantity', () => {
+  it('handles save validation for empty quantity', async () => {
+    const user = userEvent.setup();
     jest
       .spyOn(
         require('#features/shoppingList/hooks/useShoppingListItemForm'),
@@ -450,14 +453,15 @@ describe('AddEditItem', () => {
       );
 
     renderWithApollo(<AddEditItem route={addRoute} />);
-    fireEvent.press(screen.getByTestId('add-item-submit-button'));
+    await user.press(screen.getByTestId('add-item-submit-button'));
     expect(alertService.alert).toHaveBeenCalledWith(
       'Error',
       'Please enter a quantity',
     );
   });
 
-  it('navigates back when edit mode and no dirty fields', () => {
+  it('navigates back when edit mode and no dirty fields', async () => {
+    const user = userEvent.setup();
     jest
       .spyOn(
         require('#features/shoppingList/hooks/useShoppingListItemForm'),
@@ -473,11 +477,12 @@ describe('AddEditItem', () => {
     renderWithApollo(<AddEditItem route={editRoute} />, {
       operationMocks: [buildGetShoppingListItemMock('item1')],
     });
-    fireEvent.press(screen.getByTestId('edit-item-submit-button'));
+    await user.press(screen.getByTestId('edit-item-submit-button'));
     expect(mockNav.goBack).toHaveBeenCalled();
   });
 
   it('calls addItem mutation for new item (success path navigates back)', async () => {
+    const user = userEvent.setup();
     jest
       .spyOn(
         require('#features/shoppingList/hooks/useShoppingListItemForm'),
@@ -500,12 +505,13 @@ describe('AddEditItem', () => {
     renderWithApollo(<AddEditItem route={addRoute} />, {
       operationMocks: [buildAddItemMock()],
     });
-    fireEvent.press(screen.getByTestId('add-item-submit-button'));
+    await user.press(screen.getByTestId('add-item-submit-button'));
 
     await waitFor(() => expect(mockNav.goBack).toHaveBeenCalled());
   });
 
   it('calls updateItem mutation for edit mode with dirty fields', async () => {
+    const user = userEvent.setup();
     jest
       .spyOn(
         require('#features/shoppingList/hooks/useShoppingListItemForm'),
@@ -533,12 +539,13 @@ describe('AddEditItem', () => {
         buildUpdateItemMock(),
       ],
     });
-    fireEvent.press(screen.getByTestId('edit-item-submit-button'));
+    await user.press(screen.getByTestId('edit-item-submit-button'));
 
     await waitFor(() => expect(mockNav.goBack).toHaveBeenCalled());
   });
 
   it('shows error alert when addItem returns no data', async () => {
+    const user = userEvent.setup();
     jest
       .spyOn(
         require('#features/shoppingList/hooks/useShoppingListItemForm'),
@@ -553,7 +560,7 @@ describe('AddEditItem', () => {
     renderWithApollo(<AddEditItem route={addRoute} />, {
       operationMocks: [buildAddItemNoDataMock()],
     });
-    fireEvent.press(screen.getByTestId('add-item-submit-button'));
+    await user.press(screen.getByTestId('add-item-submit-button'));
 
     await waitFor(() =>
       expect(alertService.alert).toHaveBeenCalledWith(
@@ -564,6 +571,7 @@ describe('AddEditItem', () => {
   });
 
   it('shows error alert when mutation returns data but no item', async () => {
+    const user = userEvent.setup();
     jest
       .spyOn(
         require('#features/shoppingList/hooks/useShoppingListItemForm'),
@@ -578,7 +586,7 @@ describe('AddEditItem', () => {
     renderWithApollo(<AddEditItem route={addRoute} />, {
       operationMocks: [buildAddItemNullMock()],
     });
-    fireEvent.press(screen.getByTestId('add-item-submit-button'));
+    await user.press(screen.getByTestId('add-item-submit-button'));
 
     await waitFor(() =>
       expect(alertService.alert).toHaveBeenCalledWith(
@@ -589,6 +597,7 @@ describe('AddEditItem', () => {
   });
 
   it('handles version conflict error in edit mode', async () => {
+    const user = userEvent.setup();
     const {
       handleVersionConflict,
       getVersionConflictMessage,
@@ -618,7 +627,7 @@ describe('AddEditItem', () => {
         buildUpdateItemErrorMock(),
       ],
     });
-    fireEvent.press(screen.getByTestId('edit-item-submit-button'));
+    await user.press(screen.getByTestId('edit-item-submit-button'));
 
     await waitFor(() => {
       expect(alertService.alert).toHaveBeenCalledWith(
@@ -630,6 +639,7 @@ describe('AddEditItem', () => {
   });
 
   it('handles network error in error handler', async () => {
+    const user = userEvent.setup();
     const { handleVersionConflict } = require('#/utils/errors/versionConflict');
     handleVersionConflict.mockReturnValue(false);
     forceExecuteWithLoadingStateOnError({
@@ -651,7 +661,7 @@ describe('AddEditItem', () => {
     renderWithApollo(<AddEditItem route={addRoute} />, {
       operationMocks: [buildAddItemErrorMock()],
     });
-    fireEvent.press(screen.getByTestId('add-item-submit-button'));
+    await user.press(screen.getByTestId('add-item-submit-button'));
 
     await waitFor(() => {
       expect(alertService.alert).toHaveBeenCalledWith(
@@ -662,6 +672,7 @@ describe('AddEditItem', () => {
   });
 
   it('handles VALIDATION_ERROR graphQL error', async () => {
+    const user = userEvent.setup();
     const { handleVersionConflict } = require('#/utils/errors/versionConflict');
     handleVersionConflict.mockReturnValue(false);
     forceExecuteWithLoadingStateOnError({
@@ -684,7 +695,7 @@ describe('AddEditItem', () => {
     renderWithApollo(<AddEditItem route={addRoute} />, {
       operationMocks: [buildAddItemErrorMock()],
     });
-    fireEvent.press(screen.getByTestId('add-item-submit-button'));
+    await user.press(screen.getByTestId('add-item-submit-button'));
 
     await waitFor(() => {
       expect(alertService.alert).toHaveBeenCalledWith(
@@ -695,6 +706,7 @@ describe('AddEditItem', () => {
   });
 
   it('handles UNAUTHENTICATED graphQL error', async () => {
+    const user = userEvent.setup();
     const { handleVersionConflict } = require('#/utils/errors/versionConflict');
     handleVersionConflict.mockReturnValue(false);
     forceExecuteWithLoadingStateOnError({
@@ -717,7 +729,7 @@ describe('AddEditItem', () => {
     renderWithApollo(<AddEditItem route={addRoute} />, {
       operationMocks: [buildAddItemErrorMock()],
     });
-    fireEvent.press(screen.getByTestId('add-item-submit-button'));
+    await user.press(screen.getByTestId('add-item-submit-button'));
 
     await waitFor(() => {
       expect(alertService.alert).toHaveBeenCalledWith(
@@ -728,6 +740,7 @@ describe('AddEditItem', () => {
   });
 
   it('handles generic graphQL error with message', async () => {
+    const user = userEvent.setup();
     const { handleVersionConflict } = require('#/utils/errors/versionConflict');
     handleVersionConflict.mockReturnValue(false);
     forceExecuteWithLoadingStateOnError({
@@ -750,7 +763,7 @@ describe('AddEditItem', () => {
     renderWithApollo(<AddEditItem route={addRoute} />, {
       operationMocks: [buildAddItemErrorMock()],
     });
-    fireEvent.press(screen.getByTestId('add-item-submit-button'));
+    await user.press(screen.getByTestId('add-item-submit-button'));
 
     await waitFor(() => {
       expect(alertService.alert).toHaveBeenCalledWith(
@@ -761,6 +774,7 @@ describe('AddEditItem', () => {
   });
 
   it('handles generic error without graphQLErrors or networkError', async () => {
+    const user = userEvent.setup();
     const { handleVersionConflict } = require('#/utils/errors/versionConflict');
     handleVersionConflict.mockReturnValue(false);
     forceExecuteWithLoadingStateOnError(new Error('Unknown'));
@@ -779,7 +793,7 @@ describe('AddEditItem', () => {
     renderWithApollo(<AddEditItem route={addRoute} />, {
       operationMocks: [buildAddItemErrorMock()],
     });
-    fireEvent.press(screen.getByTestId('add-item-submit-button'));
+    await user.press(screen.getByTestId('add-item-submit-button'));
 
     await waitFor(() => {
       expect(alertService.alert).toHaveBeenCalledWith(
@@ -790,6 +804,7 @@ describe('AddEditItem', () => {
   });
 
   it('includes estimatedPrice in add mutation when provided (success navigates back)', async () => {
+    const user = userEvent.setup();
     jest
       .spyOn(
         require('#features/shoppingList/hooks/useShoppingListItemForm'),
@@ -810,7 +825,7 @@ describe('AddEditItem', () => {
     renderWithApollo(<AddEditItem route={addRoute} />, {
       operationMocks: [buildAddItemMock()],
     });
-    fireEvent.press(screen.getByTestId('add-item-submit-button'));
+    await user.press(screen.getByTestId('add-item-submit-button'));
 
     await waitFor(() => expect(mockNav.goBack).toHaveBeenCalled());
   });
@@ -842,6 +857,7 @@ describe('AddEditItem', () => {
   });
 
   it('shows server error alert when update returns no item data', async () => {
+    const user = userEvent.setup();
     jest
       .spyOn(
         require('#features/shoppingList/hooks/useShoppingListItemForm'),
@@ -861,7 +877,7 @@ describe('AddEditItem', () => {
         buildUpdateItemNullMock(),
       ],
     });
-    fireEvent.press(screen.getByTestId('edit-item-submit-button'));
+    await user.press(screen.getByTestId('edit-item-submit-button'));
 
     await waitFor(() =>
       expect(alertService.alert).toHaveBeenCalledWith(
@@ -872,6 +888,7 @@ describe('AddEditItem', () => {
   });
 
   it('navigates back on successful add', async () => {
+    const user = userEvent.setup();
     jest
       .spyOn(
         require('#features/shoppingList/hooks/useShoppingListItemForm'),
@@ -886,7 +903,7 @@ describe('AddEditItem', () => {
     renderWithApollo(<AddEditItem route={addRoute} />, {
       operationMocks: [buildAddItemMock()],
     });
-    fireEvent.press(screen.getByTestId('add-item-submit-button'));
+    await user.press(screen.getByTestId('add-item-submit-button'));
 
     await waitFor(() => expect(mockNav.goBack).toHaveBeenCalled());
   });

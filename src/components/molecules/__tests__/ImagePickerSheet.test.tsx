@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { ImagePickerSheet } from '../ImagePickerSheet';
 
 jest.mock('#utils/iconUtils', () => ({
@@ -63,9 +63,10 @@ describe('ImagePickerSheet', () => {
     expect(screen.getByText('Cancel')).toBeTruthy();
   });
 
-  it('calls onCamera handler when Take Photo is pressed', () => {
+  it('calls onCamera handler when Take Photo is pressed', async () => {
+    const user = userEvent.setup();
     render(<ImagePickerSheet {...defaultProps} />);
-    fireEvent.press(screen.getByText('Take Photo'));
+    await user.press(screen.getByText('Take Photo'));
     // The component dismisses first, then fires callback via pendingActionRef
     // We verify the press does not throw
     expect(screen.getByText('Take Photo')).toBeTruthy();

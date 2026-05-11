@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { DatePickerField } from '../DatePickerField';
 
 // Mock the DateTimePicker since it's a native component
@@ -55,9 +55,10 @@ describe('DatePickerField', () => {
     expect(screen.queryByTestId('date-picker')).toBeNull();
   });
 
-  it('shows picker after pressing the field', () => {
+  it('shows picker after pressing the field', async () => {
+    const user = userEvent.setup();
     render(<DatePickerField {...defaultProps} />);
-    fireEvent.press(screen.getByText('Select date'));
+    await user.press(screen.getByText('Select date'));
     expect(screen.getByTestId('date-picker')).toBeTruthy();
   });
 

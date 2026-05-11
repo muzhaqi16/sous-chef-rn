@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { StorageLocationCard } from '../StorageLocationCard';
 
 jest.mock('#utils/iconUtils', () => ({
@@ -96,15 +96,17 @@ describe('StorageLocationCard', () => {
     expect(screen.getByText('Delete')).toBeTruthy();
   });
 
-  it('calls onEdit when Edit is pressed', () => {
+  it('calls onEdit when Edit is pressed', async () => {
+    const user = userEvent.setup();
     render(<StorageLocationCard {...defaultProps} />);
-    fireEvent.press(screen.getByText('Edit'));
+    await user.press(screen.getByText('Edit'));
     expect(defaultProps.onEdit).toHaveBeenCalled();
   });
 
-  it('calls onDelete when Delete is pressed', () => {
+  it('calls onDelete when Delete is pressed', async () => {
+    const user = userEvent.setup();
     render(<StorageLocationCard {...defaultProps} />);
-    fireEvent.press(screen.getByText('Delete'));
+    await user.press(screen.getByText('Delete'));
     expect(defaultProps.onDelete).toHaveBeenCalled();
   });
 });

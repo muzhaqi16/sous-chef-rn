@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { InMemoryCache } from '@apollo/client';
-import { screen, fireEvent } from '@testing-library/react-native';
+import { fireEvent, screen} from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
 import {
@@ -199,7 +199,7 @@ describe('PantrySettings', () => {
     expect(screen.queryByText('Information')).toBeNull();
   });
 
-  it('calls handleSave and shows error when name is empty', () => {
+  it('calls handleSave and shows error when name is empty', async () => {
     renderWithApollo(<PantrySettings route={editRoute} />, {
       cache: cacheWithPantry({
         id: 'p1',
@@ -217,7 +217,7 @@ describe('PantrySettings', () => {
     );
   });
 
-  it('calls handleDelete and shows confirmation alert', () => {
+  it('calls handleDelete and shows confirmation alert', async () => {
     renderWithApollo(<PantrySettings route={editRoute} />, {
       cache: cacheWithPantry(defaultPantry),
     });

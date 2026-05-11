@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { FormCheckbox } from '../FormCheckbox';
 
 jest.mock('#utils/iconUtils', () => ({
@@ -28,9 +28,10 @@ describe('FormCheckbox', () => {
     expect(screen.getByText('Enable notifications')).toBeTruthy();
   });
 
-  it('calls onPress when pressed', () => {
+  it('calls onPress when pressed', async () => {
+    const user = userEvent.setup();
     render(<FormCheckbox {...defaultProps} />);
-    fireEvent.press(screen.getByText('Accept terms'));
+    await user.press(screen.getByText('Accept terms'));
     expect(defaultProps.onPress).toHaveBeenCalledTimes(1);
   });
 
@@ -44,9 +45,10 @@ describe('FormCheckbox', () => {
     expect(screen.queryByText('Must accept')).toBeNull();
   });
 
-  it('does not call onPress when disabled', () => {
+  it('does not call onPress when disabled', async () => {
+    const user = userEvent.setup();
     render(<FormCheckbox {...defaultProps} disabled />);
-    fireEvent.press(screen.getByText('Accept terms'));
+    await user.press(screen.getByText('Accept terms'));
     expect(defaultProps.onPress).not.toHaveBeenCalled();
   });
 });

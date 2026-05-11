@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { fireEvent, render, screen, userEvent } from '@testing-library/react-native';
 import { EditableCounter } from '../EditableCounter';
 
 jest.mock('@react-native-vector-icons/ionicons', () => ({
@@ -48,31 +48,35 @@ describe('EditableCounter', () => {
     expect(screen.getByRole('adjustable')).toBeTruthy();
   });
 
-  it('calls onChangeText when increment is pressed', () => {
+  it('calls onChangeText when increment is pressed', async () => {
+    const user = userEvent.setup();
     render(<EditableCounter {...defaultProps} />);
     const incrementBtn = screen.getByLabelText('Increase quantity');
-    fireEvent.press(incrementBtn);
+    await user.press(incrementBtn);
     expect(defaultProps.onChangeText).toHaveBeenCalledWith('6');
   });
 
-  it('calls onChangeText when decrement is pressed', () => {
+  it('calls onChangeText when decrement is pressed', async () => {
+    const user = userEvent.setup();
     render(<EditableCounter {...defaultProps} />);
     const decrementBtn = screen.getByLabelText('Decrease quantity');
-    fireEvent.press(decrementBtn);
+    await user.press(decrementBtn);
     expect(defaultProps.onChangeText).toHaveBeenCalledWith('4');
   });
 
-  it('does not go below min value on decrement', () => {
+  it('does not go below min value on decrement', async () => {
+    const user = userEvent.setup();
     render(<EditableCounter {...defaultProps} value="0" min={0} />);
     const decrementBtn = screen.getByLabelText('Decrease quantity');
-    fireEvent.press(decrementBtn);
+    await user.press(decrementBtn);
     expect(defaultProps.onChangeText).toHaveBeenCalledWith('0');
   });
 
-  it('does not call callbacks when disabled', () => {
+  it('does not call callbacks when disabled', async () => {
+    const user = userEvent.setup();
     render(<EditableCounter {...defaultProps} disabled />);
     const incrementBtn = screen.getByLabelText('Increase quantity');
-    fireEvent.press(incrementBtn);
+    await user.press(incrementBtn);
     expect(defaultProps.onChangeText).not.toHaveBeenCalled();
   });
 

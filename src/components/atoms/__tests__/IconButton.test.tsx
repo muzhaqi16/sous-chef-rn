@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { IconButton } from '../IconButton';
 
 describe('IconButton', () => {
@@ -20,7 +20,8 @@ describe('IconButton', () => {
     expect(toJSON()).toBeTruthy();
   });
 
-  it('calls onPress when pressed', () => {
+  it('calls onPress when pressed', async () => {
+    const user = userEvent.setup();
     render(
       <IconButton
         name="close"
@@ -29,11 +30,12 @@ describe('IconButton', () => {
         testID="icon-btn"
       />,
     );
-    fireEvent.press(screen.getByTestId('icon-btn'));
+    await user.press(screen.getByTestId('icon-btn'));
     expect(mockOnPress).toHaveBeenCalledTimes(1);
   });
 
-  it('does not call onPress when disabled', () => {
+  it('does not call onPress when disabled', async () => {
+    const user = userEvent.setup();
     render(
       <IconButton
         name="close"
@@ -43,7 +45,7 @@ describe('IconButton', () => {
         testID="icon-btn"
       />,
     );
-    fireEvent.press(screen.getByTestId('icon-btn'));
+    await user.press(screen.getByTestId('icon-btn'));
     expect(mockOnPress).not.toHaveBeenCalled();
   });
 

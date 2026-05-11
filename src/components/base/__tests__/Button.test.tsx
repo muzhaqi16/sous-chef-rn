@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { Button } from '../Button';
 
 describe('Button', () => {
@@ -19,33 +19,36 @@ describe('Button', () => {
     expect(screen.getByText('Click Me')).toBeTruthy();
   });
 
-  it('calls onPress when pressed', () => {
+  it('calls onPress when pressed', async () => {
+    const user = userEvent.setup();
     render(
       <Button onPress={mockOnPress} testID="btn">
         Press
       </Button>,
     );
-    fireEvent.press(screen.getByTestId('btn'));
+    await user.press(screen.getByTestId('btn'));
     expect(mockOnPress).toHaveBeenCalledTimes(1);
   });
 
-  it('does not call onPress when disabled', () => {
+  it('does not call onPress when disabled', async () => {
+    const user = userEvent.setup();
     render(
       <Button onPress={mockOnPress} disabled testID="btn">
         Press
       </Button>,
     );
-    fireEvent.press(screen.getByTestId('btn'));
+    await user.press(screen.getByTestId('btn'));
     expect(mockOnPress).not.toHaveBeenCalled();
   });
 
-  it('does not call onPress when loading', () => {
+  it('does not call onPress when loading', async () => {
+    const user = userEvent.setup();
     render(
       <Button onPress={mockOnPress} loading testID="btn">
         Press
       </Button>,
     );
-    fireEvent.press(screen.getByTestId('btn'));
+    await user.press(screen.getByTestId('btn'));
     expect(mockOnPress).not.toHaveBeenCalled();
   });
 

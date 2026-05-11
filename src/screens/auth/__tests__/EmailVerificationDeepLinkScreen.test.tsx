@@ -1,5 +1,5 @@
 import React from 'react';
-import { screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { screen, userEvent, waitFor } from '@testing-library/react-native';
 import type { MockedResponse } from '#/test-utils/apolloMockProvider';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { VerifyEmailDocument } from '#operations/auth/auth.generated';
@@ -158,11 +158,12 @@ describe('EmailVerificationDeepLinkScreen', () => {
     });
   });
 
-  it('calls goBack when header close button is pressed', () => {
+  it('calls goBack when header close button is pressed', async () => {
+    const user = userEvent.setup();
     renderWithApollo(<EmailVerificationDeepLinkScreen />, {
       operationMocks: [buildVerifyMock()],
     });
-    fireEvent.press(screen.getByTestId('header-close'));
+    await user.press(screen.getByTestId('header-close'));
     expect(mockGoBack).toHaveBeenCalledTimes(1);
   });
 

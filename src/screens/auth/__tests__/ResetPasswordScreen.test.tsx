@@ -1,5 +1,5 @@
 import React from 'react';
-import { screen, fireEvent } from '@testing-library/react-native';
+import { screen, userEvent } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { ResetPasswordScreen } from '../ResetPasswordScreen';
 
@@ -130,9 +130,10 @@ describe('ResetPasswordScreen', () => {
     expect(mockClearAuth).toHaveBeenCalled();
   });
 
-  it('calls goBack when header close button is pressed', () => {
+  it('calls goBack when header close button is pressed', async () => {
+    const user = userEvent.setup();
     renderWithApollo(<ResetPasswordScreen />);
-    fireEvent.press(screen.getByTestId('header-close'));
+    await user.press(screen.getByTestId('header-close'));
     expect(mockGoBack).toHaveBeenCalledTimes(1);
   });
 });
@@ -158,9 +159,10 @@ describe('ResetPasswordScreen - invalid token', () => {
     expect(screen.getByText('Return to Login')).toBeTruthy();
   });
 
-  it('navigates to login when Return to Login is pressed', () => {
+  it('navigates to login when Return to Login is pressed', async () => {
+    const user = userEvent.setup();
     renderWithApollo(<ResetPasswordScreen />);
-    fireEvent.press(screen.getByText('Return to Login'));
+    await user.press(screen.getByText('Return to Login'));
     expect(mockNavigateToLogin).toHaveBeenCalledTimes(1);
   });
 });

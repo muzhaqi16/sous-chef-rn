@@ -1,7 +1,7 @@
 'use no memo';
 
 import React from 'react';
-import { fireEvent } from '@testing-library/react-native';
+import { userEvent } from '@testing-library/react-native';
 import { MealPlanItemCard } from '#features/mealPlan/components/MealPlanItemCard';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 
@@ -69,7 +69,8 @@ describe('MealPlanItemCard', () => {
     expect(toJSON()).toBeTruthy();
   });
 
-  it('calls onPress with item id when card is pressed', () => {
+  it('calls onPress with item id when card is pressed', async () => {
+    const user = userEvent.setup();
     const onPress = jest.fn();
     const item = makeItem();
     const { getByText } = renderWithApollo(
@@ -79,7 +80,7 @@ describe('MealPlanItemCard', () => {
         onPress={onPress}
       />,
     );
-    fireEvent.press(getByText('Pasta Night'));
+    await user.press(getByText('Pasta Night'));
     expect(onPress).toHaveBeenCalledWith('mp1');
   });
 });

@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { screen, fireEvent } from '@testing-library/react-native';
+import { screen, userEvent } from '@testing-library/react-native';
 import {
   recordMock,
   renderWithApollo,
@@ -158,14 +158,16 @@ describe('DeleteAccountScreen - delete form', () => {
   });
 
   it('calls goBack when header back is pressed', async () => {
+    const user = userEvent.setup();
     await renderForm();
-    fireEvent.press(screen.getByTestId('header-back'));
+    await user.press(screen.getByTestId('header-back'));
     expect(mockNav.goBack).toHaveBeenCalledTimes(1);
   });
 
   it('calls goBack when Cancel button is pressed', async () => {
+    const user = userEvent.setup();
     await renderForm();
-    fireEvent.press(screen.getByText('Cancel'));
+    await user.press(screen.getByText('Cancel'));
     expect(mockNav.goBack).toHaveBeenCalledTimes(1);
   });
 });

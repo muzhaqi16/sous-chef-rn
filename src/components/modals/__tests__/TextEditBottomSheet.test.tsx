@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { TextEditBottomSheet } from '../TextEditBottomSheet/TextEditBottomSheet';
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
@@ -55,9 +55,10 @@ describe('TextEditBottomSheet', () => {
     expect(screen.getByDisplayValue('Test Value')).toBeTruthy();
   });
 
-  it('calls onClose when Cancel is pressed', () => {
+  it('calls onClose when Cancel is pressed', async () => {
+    const user = userEvent.setup();
     render(<TextEditBottomSheet {...defaultProps} />);
-    fireEvent.press(screen.getByText('Cancel'));
+    await user.press(screen.getByText('Cancel'));
     expect(defaultProps.onClose).toHaveBeenCalled();
   });
 

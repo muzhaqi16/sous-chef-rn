@@ -1,7 +1,7 @@
 'use no memo';
 
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { fireEvent, render, screen} from '@testing-library/react-native';
 import { BottomSheetAutocompleteInput } from '../BottomSheetAutocompleteInput';
 
 // Override BottomSheetFlatList to use real FlatList (so ListEmptyComponent renders)

@@ -1,7 +1,7 @@
 'use no memo';
 
 import React from 'react';
-import { fireEvent } from '@testing-library/react-native';
+import { userEvent } from '@testing-library/react-native';
 import { renderWithProviders } from '../../helpers/renderWithProviders';
 import { TemplateCard } from '../../../src/features/mealPlan/components/TemplateCard';
 
@@ -59,12 +59,13 @@ describe('TemplateCard', () => {
     expect(getByText('4 servings')).toBeTruthy();
   });
 
-  it('calls onPress when pressed', () => {
+  it('calls onPress when pressed', async () => {
+    const user = userEvent.setup();
     const template = makeTemplate();
     const { getByText } = render(
       <TemplateCard template={template as any} onPress={onPress} />,
     );
-    fireEvent.press(getByText('Weekly Dinner Plan'));
+    await user.press(getByText('Weekly Dinner Plan'));
     expect(onPress).toHaveBeenCalledWith(template);
   });
 });

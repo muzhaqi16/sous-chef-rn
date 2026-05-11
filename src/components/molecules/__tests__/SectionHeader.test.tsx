@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { SectionHeader } from '../SectionHeader';
 
 describe('SectionHeader', () => {
@@ -42,7 +42,8 @@ describe('SectionHeader', () => {
     expect(screen.getByText('Sort')).toBeTruthy();
   });
 
-  it('fires onActionPress when action button is pressed', () => {
+  it('fires onActionPress when action button is pressed', async () => {
+    const user = userEvent.setup();
     const onActionPress = jest.fn();
     render(
       <SectionHeader
@@ -51,7 +52,7 @@ describe('SectionHeader', () => {
         onActionPress={onActionPress}
       />,
     );
-    fireEvent.press(screen.getByText('Sort'));
+    await user.press(screen.getByText('Sort'));
     expect(onActionPress).toHaveBeenCalledTimes(1);
   });
 

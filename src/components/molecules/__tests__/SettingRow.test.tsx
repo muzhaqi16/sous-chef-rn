@@ -1,6 +1,6 @@
 import React from 'react';
 import { Text } from 'react-native';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { SettingRow } from '../SettingRow';
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
@@ -62,7 +62,8 @@ describe('SettingRow', () => {
     expect(screen.getByText('Notifications')).toBeTruthy();
   });
 
-  it('calls onPress for action type item', () => {
+  it('calls onPress for action type item', async () => {
+    const user = userEvent.setup();
     const onPress = jest.fn();
     const item = {
       key: 'logout',
@@ -72,7 +73,7 @@ describe('SettingRow', () => {
       onPress,
     };
     render(<SettingRow item={item} isFirst={false} isLast={true} />);
-    fireEvent.press(screen.getByText('Log Out'));
+    await user.press(screen.getByText('Log Out'));
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 

@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { QuantityEditSheet } from '../QuantityEditSheet';
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
@@ -222,7 +222,8 @@ describe('QuantityEditSheet', () => {
     expect(screen.getByText('cups (selected)')).toBeTruthy();
   });
 
-  it('handles chip press to change unit', () => {
+  it('handles chip press to change unit', async () => {
+    const user = userEvent.setup();
     const item = makeItem({
       unitName: 'cups',
       itemUnits: [
@@ -231,7 +232,7 @@ describe('QuantityEditSheet', () => {
       ],
     });
     render(<QuantityEditSheet {...defaultProps} item={item} />);
-    fireEvent.press(screen.getByTestId('chip-tbsp'));
+    await user.press(screen.getByTestId('chip-tbsp'));
     // After pressing, tbsp should become selected
     expect(screen.getByText('tbsp (selected)')).toBeTruthy();
   });
@@ -330,10 +331,11 @@ describe('QuantityEditSheet', () => {
     expect(screen.queryByTestId('chip-cups')).toBeNull();
   });
 
-  it('handles save call via header action', () => {
+  it('handles save call via header action', async () => {
+    const user = userEvent.setup();
     render(<QuantityEditSheet {...defaultProps} />);
     const saveButton = screen.getByTestId('header-action-0');
-    fireEvent.press(saveButton);
+    await user.press(saveButton);
     expect(defaultProps.onSave).toHaveBeenCalled();
   });
 

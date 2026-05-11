@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { screen, fireEvent } from '@testing-library/react-native';
+import { screen, userEvent } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { ChangePasswordScreen } from '../ChangePasswordScreen';
 
@@ -112,9 +112,10 @@ describe('ChangePasswordScreen', () => {
     expect(elements.length).toBe(2);
   });
 
-  it('calls goBack when header back button is pressed', () => {
+  it('calls goBack when header back button is pressed', async () => {
+    const user = userEvent.setup();
     renderWithApollo(<ChangePasswordScreen />);
-    fireEvent.press(screen.getByTestId('header-back'));
+    await user.press(screen.getByTestId('header-back'));
     expect(mockNav.goBack).toHaveBeenCalledTimes(1);
   });
 

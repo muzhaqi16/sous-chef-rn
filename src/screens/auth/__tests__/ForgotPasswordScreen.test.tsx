@@ -1,5 +1,5 @@
 import React from 'react';
-import { screen, fireEvent } from '@testing-library/react-native';
+import { screen, userEvent } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { ForgotPasswordScreen } from '../ForgotPasswordScreen';
 
@@ -99,9 +99,10 @@ describe('ForgotPasswordScreen', () => {
     expect(screen.getByText('Sign In')).toBeTruthy();
   });
 
-  it('navigates to login when Sign In footer link is pressed', () => {
+  it('navigates to login when Sign In footer link is pressed', async () => {
+    const user = userEvent.setup();
     renderWithApollo(<ForgotPasswordScreen />);
-    fireEvent.press(screen.getByTestId('forgot-password-login-link'));
+    await user.press(screen.getByTestId('forgot-password-login-link'));
     expect(mockNavigateToLogin).toHaveBeenCalledTimes(1);
   });
 });

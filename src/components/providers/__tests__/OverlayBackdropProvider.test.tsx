@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { View, Text, Pressable } from 'react-native';
-import { render, screen, fireEvent, act } from '@testing-library/react-native';
+import { render, screen, userEvent, act } from '@testing-library/react-native';
 import {
   OverlayBackdropProvider,
   useOverlayBackdrop,
@@ -92,16 +92,19 @@ describe('OverlayBackdropProvider', () => {
     expect(screen.getByText('Release')).toBeTruthy();
   });
 
-  it('does not throw when claim/release are called', () => {
+  it('does not throw when claim/release are called', async () => {
+    const user = userEvent.setup();
     render(
       <OverlayBackdropProvider>
         <ImperativeConsumer />
       </OverlayBackdropProvider>,
     );
-    expect(() => {
-      fireEvent.press(screen.getByTestId('claim-btn'));
-      fireEvent.press(screen.getByTestId('release-btn'));
-    }).not.toThrow();
+    await expect(
+      (async () => {
+        await user.press(screen.getByTestId('claim-btn'));
+        await user.press(screen.getByTestId('release-btn'));
+      })(),
+    ).resolves.not.toThrow();
   });
 
   it('makes the backdrop interactive while a declarative claim is active', () => {

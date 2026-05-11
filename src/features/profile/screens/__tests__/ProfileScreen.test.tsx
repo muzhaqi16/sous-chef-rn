@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { ProfileScreen } from '../ProfileScreen';
 
 // --- Mocks ---
@@ -196,39 +196,45 @@ describe('ProfileScreen', () => {
     expect(screen.getByText('App Settings')).toBeTruthy();
   });
 
-  it('navigates to PersonalInformation on press', () => {
+  it('navigates to PersonalInformation on press', async () => {
+    const user = userEvent.setup();
     render(<ProfileScreen />);
-    fireEvent.press(screen.getByTestId('profile-menu-personalInformation'));
+    await user.press(screen.getByTestId('profile-menu-personalInformation'));
     expect(mockNav.navigate).toHaveBeenCalledWith('PersonalInformation');
   });
 
-  it('navigates to DietaryProfile on press', () => {
+  it('navigates to DietaryProfile on press', async () => {
+    const user = userEvent.setup();
     render(<ProfileScreen />);
-    fireEvent.press(screen.getByTestId('profile-menu-dietaryProfile'));
+    await user.press(screen.getByTestId('profile-menu-dietaryProfile'));
     expect(mockNav.navigate).toHaveBeenCalledWith('DietaryProfile');
   });
 
-  it('navigates to AppSettings on press', () => {
+  it('navigates to AppSettings on press', async () => {
+    const user = userEvent.setup();
     render(<ProfileScreen />);
-    fireEvent.press(screen.getByTestId('profile-menu-appSettings'));
+    await user.press(screen.getByTestId('profile-menu-appSettings'));
     expect(mockNav.navigate).toHaveBeenCalledWith('AppSettings');
   });
 
-  it('navigates to ChangePassword on press', () => {
+  it('navigates to ChangePassword on press', async () => {
+    const user = userEvent.setup();
     render(<ProfileScreen />);
-    fireEvent.press(screen.getByTestId('profile-menu-changePassword'));
+    await user.press(screen.getByTestId('profile-menu-changePassword'));
     expect(mockNav.navigate).toHaveBeenCalledWith('ChangePassword');
   });
 
-  it('calls goBack when back button is pressed', () => {
+  it('calls goBack when back button is pressed', async () => {
+    const user = userEvent.setup();
     render(<ProfileScreen />);
-    fireEvent.press(screen.getByTestId('back-button'));
+    await user.press(screen.getByTestId('back-button'));
     expect(mockNav.goBack).toHaveBeenCalledTimes(1);
   });
 
-  it('navigates to ProfilePhotoUpload when avatar is pressed', () => {
+  it('navigates to ProfilePhotoUpload when avatar is pressed', async () => {
+    const user = userEvent.setup();
     render(<ProfileScreen />);
-    fireEvent.press(screen.getByTestId('avatar-button'));
+    await user.press(screen.getByTestId('avatar-button'));
     expect(mockNav.navigate).toHaveBeenCalledWith('ProfilePhotoUpload');
   });
 

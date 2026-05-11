@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import AddItemForm from '../AddItemForm';
 
 jest.mock('#/utils/iconUtils', () => ({
@@ -199,9 +199,10 @@ describe('AddItemForm', () => {
     expect(screen.getByText('Cancel')).toBeTruthy();
   });
 
-  it('calls onClose when Cancel is pressed', () => {
+  it('calls onClose when Cancel is pressed', async () => {
+    const user = userEvent.setup();
     render(<AddItemForm {...defaultProps} />);
-    fireEvent.press(screen.getByText('Cancel'));
+    await user.press(screen.getByText('Cancel'));
     expect(defaultProps.onClose).toHaveBeenCalled();
   });
 
@@ -284,15 +285,17 @@ describe('AddItemForm', () => {
     expect(screen.getAllByText('SKU').length).toBeGreaterThanOrEqual(1);
   });
 
-  it('renders unit entry list on the Inventory tab', () => {
+  it('renders unit entry list on the Inventory tab', async () => {
+    const user = userEvent.setup();
     render(<AddItemForm {...defaultProps} />);
-    fireEvent.press(screen.getByText('Inventory'));
+    await user.press(screen.getByText('Inventory'));
     expect(screen.getByTestId('unit-entry-list')).toBeTruthy();
   });
 
-  it('renders net weight entry list on the Inventory tab', () => {
+  it('renders net weight entry list on the Inventory tab', async () => {
+    const user = userEvent.setup();
     render(<AddItemForm {...defaultProps} />);
-    fireEvent.press(screen.getByText('Inventory'));
+    await user.press(screen.getByText('Inventory'));
     expect(screen.getByTestId('net-weight-entry-list')).toBeTruthy();
   });
 
@@ -385,7 +388,8 @@ describe('AddItemForm', () => {
   });
 
   describe('getFormSections field configuration', () => {
-    it('includes all expected form field labels across tabs and advanced sections', () => {
+    it('includes all expected form field labels across tabs and advanced sections', async () => {
+    const user = userEvent.setup();
       render(<AddItemForm {...defaultProps} />);
 
       // Basics tab (default active)
@@ -394,21 +398,21 @@ describe('AddItemForm', () => {
       expect(screen.getByText('Brand/Vendor')).toBeTruthy();
 
       // Product tab
-      fireEvent.press(screen.getByText('Product'));
+      await user.press(screen.getByText('Product'));
       expect(screen.getByText('Item Type')).toBeTruthy();
-      fireEvent.press(screen.getByText('More options'));
+      await user.press(screen.getByText('More options'));
       expect(screen.getByText('SKU')).toBeTruthy();
 
       // Storage tab
-      fireEvent.press(screen.getByText('Storage'));
+      await user.press(screen.getByText('Storage'));
       expect(screen.getByText('Storage State')).toBeTruthy();
       expect(screen.getByText('Shelf Life (Days)')).toBeTruthy();
-      fireEvent.press(screen.getByText('More options'));
+      await user.press(screen.getByText('More options'));
       expect(screen.getByText('Base Dimension')).toBeTruthy();
 
       // Inventory tab — expand its "More options" to reach the advanced fields
-      fireEvent.press(screen.getByText('Inventory'));
-      fireEvent.press(screen.getByText('More options'));
+      await user.press(screen.getByText('Inventory'));
+      await user.press(screen.getByText('More options'));
       expect(screen.getByText('Default Consume Increment')).toBeTruthy();
       expect(screen.getByText('Default Consume Unit')).toBeTruthy();
       expect(screen.getByText('Tags')).toBeTruthy();
@@ -418,10 +422,11 @@ describe('AddItemForm', () => {
   });
 
   describe('renderValue and transformValue in Tags field', () => {
-    it('renderValue converts array to comma-separated string', () => {
+    it('renderValue converts array to comma-separated string', async () => {
+    const user = userEvent.setup();
       render(<AddItemForm {...defaultProps} />);
-      fireEvent.press(screen.getByText('Inventory'));
-      fireEvent.press(screen.getByText('More options'));
+      await user.press(screen.getByText('Inventory'));
+      await user.press(screen.getByText('More options'));
       expect(screen.getByText('Tags')).toBeTruthy();
     });
   });
