@@ -19,23 +19,26 @@
 
 ### Pressable & Modal Convention
 
-- **Use `Pressable` from `#components/atoms/themedComponents`** as the default across
-  the app. That export is `withUnistyles(GHPressable)` — it integrates with the RNGH
-  gesture system *and* keeps the underlying View's style proxies in sync with theme
-  changes. Importing `Pressable` directly from `react-native-gesture-handler` works
-  for gestures but its child View does **not** repaint on theme change until a
-  remount (unistyles#1109), which is why theme switches appeared partial until the
-  app was reopened.
-- **Exception: inside RN's `<Modal>`**, always use `Pressable` from `react-native`.
-  React Native's `Modal` renders in a separate native window that has **no
-  `GestureHandlerRootView` ancestor**. RNGH components (Pressable, RectButton,
-  GestureDetector, etc.) silently stop responding to touches without that root view.
-  If you must use RNGH components inside a Modal, wrap the Modal content in
-  `<GestureHandlerRootView>` (see `SpotlightCoachMark.tsx` for an example).
-- **`ScrollView` from `react-native-gesture-handler`** is only needed when the scroll
-  container has RNGH gesture components inside it (Swipeable, GestureDetector, pan
-  gestures). For plain forms, settings, and display screens, use `ScrollView` from
-  `react-native`.
+- **Use `Pressable` from `#components/atoms/themedComponents`** as the default
+  across the app. That export is now React Native's `Pressable` (re-exported
+  through the shared module so existing imports keep working). The Unistyles
+  babel plugin auto-binds RN's `Pressable` to the C++ ShadowTree, so styles
+  — including function-style `style={({pressed}) => [styles.X, ...]}` callbacks
+  with `StyleSheet.create` proxies — and theme switches work natively without
+  any wrapper.
+- **Do not wrap `Pressable` with `withUnistyles(...)`.** Wrapping silently
+  drops `StyleSheet.create` proxy values inside function-style `style`
+  callbacks (unistyles#1109). The codemod that introduced this regression in
+  commit 6815252e has been reverted at the wrapper level.
+- **For gesture composition, import `Pressable` directly from
+  `react-native-gesture-handler`.** Required when the pressable lives inside
+  a `Swipeable`, is part of a `GestureDetector` / `Gesture.X` chain, or
+  needs RNGH's `RectButton`-style coordination. RN's Pressable does not
+  participate in RNGH's gesture system.
+- **`ScrollView` from `react-native-gesture-handler`** is only needed when the
+  scroll container has RNGH gesture components inside it (Swipeable,
+  GestureDetector, pan gestures). For plain forms, settings, and display
+  screens, use `ScrollView` from `react-native`.
 
 ### Unistyles Convention
 
@@ -53,6 +56,16 @@ happen inside that factory.
   `<SystemBars style>`, etc.). Wrapping with `withUnistyles` lets the wrapper
   re-render only when its declared dependencies change, instead of re-rendering
   the parent on every theme tick.
+- **Do not wrap `Pressable` / `TouchableX` with `withUnistyles`.** The wrapper
+  silently drops `StyleSheet.create` proxy values inside function-style
+  `style={({ pressed }) => [...]}` callbacks — layout, padding, and color rules
+  declared in the referenced styles disappear at render time
+  ([unistyles#1109](https://github.com/jpudysz/react-native-unistyles/issues/1109)).
+  RN's `Pressable` is auto-bound to the ShadowTree by the babel plugin, so use
+  it directly (via the re-export in `themedComponents.tsx`). For RNGH
+  gesture composition (Swipeable underlays, `GestureDetector` chains), import
+  `Pressable` from `react-native-gesture-handler` at the call site — also
+  without a `withUnistyles` wrapper.
 - **Shared themed wrappers live in `src/components/atoms/themedComponents.tsx`.**
   Use `ThemedBottomSheetTextInput`, `ThemedActivityIndicator`, and
   `OnPrimaryActivityIndicator` from there instead of recreating per-file
