@@ -1,4 +1,4 @@
-import { ApolloClient, type InMemoryCache } from '@apollo/client';
+import { ApolloClient } from '@apollo/client';
 import { logger } from '#/utils/environment';
 import { createLink } from './links/index';
 import { makeCache } from './cache';
@@ -193,27 +193,6 @@ function setupCachePersistence(client: ApolloClient) {
   }
 
   logger.info('✅ Apollo: Cache persistence enabled');
-}
-
-/**
- * Restore bulk persisted entities (PantryItem, ShoppingListItem, Recipe, …)
- * when the JS thread is idle. Call from the app entry after first paint.
- * If this hasn't fired when PantryMain mounts, the cache miss falls back
- * to the network and returns the first page — fast and correct.
- */
-export function startDeferredCacheRestore(cache: InMemoryCache): void {
-  requestIdleCallback(() => {
-    const deferredT0 = performance.now();
-    const deferred = apolloCachePersistence.loadDeferred();
-    if (deferred) {
-      cache.restore(deferred);
-      emitHistogram(
-        'app_apollo_deferred_restore_ms',
-        performance.now() - deferredT0,
-      );
-      logger.info('📦 Apollo: Deferred cache restore complete');
-    }
-  });
 }
 
 // Initialize client synchronously

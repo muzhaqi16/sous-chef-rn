@@ -1,7 +1,12 @@
-import { NormalizedCacheObject } from '@apollo/client';
+import type {
+  ApolloCache,
+  InMemoryCache,
+  NormalizedCacheObject,
+} from '@apollo/client';
 import { getVersion } from 'react-native-device-info';
 import { storage } from '#storage/mmkv';
 import { Telemetry } from '#/services/telemetry';
+import { logger } from '#/utils/environment';
 
 const CACHE_STORAGE_KEY = 'apollo-cache-v1';
 const CRITICAL_CACHE_KEY = 'apollo-cache-v1-critical';
@@ -58,6 +63,7 @@ const CRITICAL_ROOT_KEYS = new Set([
 class ApolloCachePersistence {
   private saveTimeout: ReturnType<typeof setTimeout> | null = null;
   private idleCallbackId: number | null = null;
+  private restoreIdleCallbackId: number | null = null;
   private readonly debounceMs = 3000; // Wait 3s before saving to reduce writes during burst operations
   private paused = false;
   private pendingWhilePaused = false;
@@ -137,6 +143,37 @@ class ApolloCachePersistence {
       console.error('📦 Cache: Failed to load critical cache:', error);
       return null;
     }
+  }
+
+  /**
+   * Restore bulk persisted entities (PantryItem, ShoppingListItem, Recipe, …)
+   * when the JS thread is idle. Call from the app entry (`App.tsx` useEffect)
+   * after first paint. If the idle callback hasn't fired when a screen mounts,
+   * the cache miss falls back to network — the first page renders fast.
+   *
+   * Tracked via `restoreIdleCallbackId` so `cancel()` (called on logout) can
+   * abort a pending restore and avoid writing stale entities into a cleared
+   * cache.
+   */
+  restoreDeferred(cache: ApolloCache): void {
+    // Cancel any prior in-flight restore so two calls don't race.
+    if (this.restoreIdleCallbackId != null) {
+      cancelIdleCallback(this.restoreIdleCallbackId);
+      this.restoreIdleCallbackId = null;
+    }
+
+    this.restoreIdleCallbackId = requestIdleCallback(() => {
+      this.restoreIdleCallbackId = null;
+      const t0 = performance.now();
+      const deferred = this.loadDeferred();
+      if (!deferred) return;
+      (cache as InMemoryCache).restore(deferred);
+      Telemetry.histogram(
+        'app_apollo_deferred_restore_ms',
+        performance.now() - t0,
+      );
+      logger.info('📦 Apollo: Deferred cache restore complete');
+    });
   }
 
   /**
@@ -357,8 +394,9 @@ class ApolloCachePersistence {
   }
 
   /**
-   * Cancel any pending debounced save
-   * Call during logout to prevent writing stale cache data
+   * Cancel any pending debounced save or in-flight deferred restore.
+   * Call during logout to prevent writing stale cache data, or to abort a
+   * deferred restore before it writes stale entities into a cleared cache.
    */
   cancel(): void {
     if (this.saveTimeout) {
@@ -368,6 +406,10 @@ class ApolloCachePersistence {
     if (this.idleCallbackId != null) {
       cancelIdleCallback(this.idleCallbackId);
       this.idleCallbackId = null;
+    }
+    if (this.restoreIdleCallbackId != null) {
+      cancelIdleCallback(this.restoreIdleCallbackId);
+      this.restoreIdleCallbackId = null;
     }
   }
 

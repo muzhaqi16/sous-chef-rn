@@ -479,6 +479,68 @@ describe('ApolloCachePersistence', () => {
     });
   });
 
+  describe('restoreDeferred', () => {
+    // requestIdleCallback is polyfilled in __tests__/setup/globals.js as
+    // setTimeout(cb, 0), so advancing timers fires the idle callback.
+    const makeFakeCache = () => ({ restore: jest.fn() });
+
+    it('schedules an idle callback and restores deferred entities into the cache', () => {
+      const deferredData = {
+        'PantryItem:1': { id: '1' },
+        'Recipe:2': { id: '2' },
+      };
+      storage.set(DEFERRED_KEY, JSON.stringify(deferredData));
+
+      const cache = makeFakeCache();
+      apolloCachePersistence.restoreDeferred(cache as any);
+
+      // Idle callback hasn't fired yet
+      expect(cache.restore).not.toHaveBeenCalled();
+
+      jest.advanceTimersByTime(0);
+
+      expect(cache.restore).toHaveBeenCalledWith(deferredData);
+    });
+
+    it('does nothing when there are no deferred entities to restore', () => {
+      const cache = makeFakeCache();
+      apolloCachePersistence.restoreDeferred(cache as any);
+
+      jest.advanceTimersByTime(0);
+
+      expect(cache.restore).not.toHaveBeenCalled();
+    });
+
+    it('cancel() aborts a pending restore so logout cannot race with idle fire', () => {
+      const deferredData = { 'PantryItem:1': { id: '1' } };
+      storage.set(DEFERRED_KEY, JSON.stringify(deferredData));
+
+      const cache = makeFakeCache();
+      apolloCachePersistence.restoreDeferred(cache as any);
+      apolloCachePersistence.cancel();
+
+      jest.advanceTimersByTime(0);
+
+      expect(cache.restore).not.toHaveBeenCalled();
+    });
+
+    it('cancels a prior in-flight restore when called twice', () => {
+      const deferredData = { 'PantryItem:1': { id: '1' } };
+      storage.set(DEFERRED_KEY, JSON.stringify(deferredData));
+
+      const cache1 = makeFakeCache();
+      const cache2 = makeFakeCache();
+      apolloCachePersistence.restoreDeferred(cache1 as any);
+      apolloCachePersistence.restoreDeferred(cache2 as any);
+
+      jest.advanceTimersByTime(0);
+
+      // Only the second call wins
+      expect(cache1.restore).not.toHaveBeenCalled();
+      expect(cache2.restore).toHaveBeenCalledWith(deferredData);
+    });
+  });
+
   describe('migration: old single-key format', () => {
     it('load() still reads old single-key format', () => {
       const cacheData = { ROOT_QUERY: {}, 'PantryItem:1': { id: '1' } };

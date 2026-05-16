@@ -9,8 +9,8 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { ApolloProvider } from '@apollo/client/react';
 import { useIsHydrated } from '#store/useAppStore';
-import type { InMemoryCache } from '@apollo/client';
-import { client, startDeferredCacheRestore } from '#/apollo/client';
+import { client } from '#/apollo/client';
+import { apolloCachePersistence } from '#/apollo/offline/ApolloCachePersistence';
 import { Navigation } from '#navigation/RootNavigator';
 import { SplashScreen } from '#screens/SplashScreen';
 import { ToastProvider } from '#components/atoms/Toast';
@@ -75,7 +75,7 @@ const App = () => {
   useAppLifecycle();
 
   React.useEffect(() => {
-    startDeferredCacheRestore(client.cache as InMemoryCache);
+    apolloCachePersistence.restoreDeferred(client.cache);
   }, []);
 
   if (!isHydrated) {

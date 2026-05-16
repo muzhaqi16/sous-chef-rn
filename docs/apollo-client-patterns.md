@@ -300,7 +300,7 @@ await toggleMutation({
     togglePurchased: {
       ...coreFields,
       isPurchased: newStatus,
-    } as any,
+    },
   },
 });
 // Result: Works, but gets ~30 "Missing field" warnings
@@ -333,7 +333,7 @@ However, `refetchQueries` is **acceptable** when:
 - Manual cache updates would be disproportionately complex for the mutation's return shape
 - The mutation affects many queries and cache normalization alone isn't sufficient
 
-**Current usage**: 7 files use `refetchQueries` (recipe, mealPlan, profile, onBoarding screens). The high-frequency meal-plan paths were converted to cache updates; the remaining 7 are acceptable because they target non-offline-critical flows where the complexity of manual cache updates outweighs the benefit.
+**Current usage**: concentrated in recipe, meal-plan, profile, home-create, and invitation flows — paths that are not offline-critical and where the mutation's effect on the cache would require duplicating server logic (e.g. recomputing aggregate ratings). High-frequency meal-plan paths have been converted to cache updates. Run `grep -rn "refetchQueries" src/` to see the current call sites.
 
 **When to migrate away from refetchQueries**:
 - Shopping list or pantry paths (offline-first, performance-critical)
@@ -390,7 +390,7 @@ optimisticResponse: variables => {
         // ... other required fields
       }),
       __typename: 'Item',
-    } as any,
+    },
   };
 }
 ```
@@ -413,19 +413,14 @@ optimisticResponse: variables => {
         version: 1,
         updatedAt: new Date().toISOString(),
         ...variables.input,
-      } as any,
+      },
     };
   }
 
   // Use version-aware helper (keeps current version, updates timestamp)
-  const optimisticUpdate = enhanceWithVersion(
-    currentItem as any,
-    variables.input
-  );
-
   return {
     __typename: 'Mutation',
-    updateItem: optimisticUpdate as any,
+    updateItem: enhanceWithVersion(currentItem, variables.input),
   };
 }
 ```
@@ -439,9 +434,9 @@ optimisticResponse: variables => {
   return {
     __typename: 'Mutation',
     togglePurchased: enhanceWithVersion(
-      currentItem as any,
-      { isPurchased: variables.purchased }
-    ) as any,
+      currentItem,
+      { isPurchased: variables.purchased },
+    ),
   };
 }
 ```
@@ -641,49 +636,33 @@ The service re-evicts the entity if the subscription arrives after the optimisti
 
 ## Fetch Policies
 
-### Use Hardcoded Policies for Stability
+### Global Defaults (Set in `src/apollo/client.ts`)
 
-**IMPORTANT:** Do NOT use dynamic fetch policies like `useOfflinePresetPolicy()`. They subscribe to store state (`store.isOnline`) and cause query cascade when network status changes during app initialization.
-
-#### Recommended Pattern
+`watchQuery` (i.e. anything backing `useQuery`) is configured globally with:
 
 ```typescript
-// ✅ CORRECT - Hardcoded policies prevent query cascade
-const { data } = useGetItemsQuery({
-  fetchPolicy: 'cache-and-network',  // Shows cache immediately, fetches fresh in background
-  nextFetchPolicy: 'cache-first',     // Prevents re-fetch on re-render/tab switch
-  errorPolicy: 'all',                 // Returns cached data on network errors
-});
+defaultOptions: {
+  watchQuery: {
+    fetchPolicy: 'cache-and-network',
+    nextFetchPolicy: 'cache-first',
+    errorPolicy: 'all',
+  },
+  query:  { fetchPolicy: 'network-only', errorPolicy: 'all' },
+  mutate: {                              errorPolicy: 'all' },
+},
 ```
 
-#### Policy Guidelines
+**Most `useQuery` call sites do not need to set these explicitly.** Set per-query
+only when the policy needs to differ from the default (e.g. autocomplete +
+`cache-first`, login + `network-only`).
 
-| Query Type | fetchPolicy | nextFetchPolicy | Why |
-|------------|-------------|-----------------|-----|
-| **Lists** | `'cache-and-network'` | `'cache-first'` | Fresh data + no cascade |
-| **Details** | `'cache-and-network'` | `'cache-first'` | Fresh data after mutations |
-| **Selectors** | `'cache-and-network'` | `'cache-first'` | Fresh options when opened |
-
-#### Why NOT useOfflinePresetPolicy
-
-```typescript
-// ❌ BROKEN - causes query cascade
-import { useOfflinePresetPolicy } from '#/apollo/policies/offlineFetchPolicies';
-const fetchPolicy = useOfflinePresetPolicy('LIST');
-
-// This subscribes to store.isOnline:
-// 1. Network status changes during app init
-// 2. fetchPolicy value changes ('cache-and-network' → 'cache-only')
-// 3. Apollo sees "options changed"
-// 4. Query re-fires (3x GetHomes, 3x GetShoppingLists)
-```
-
-#### Offline Handling
-
-Instead of dynamic policies, handle offline gracefully via:
-- `errorPolicy: 'all'` or `'ignore'` - Returns cached data when network fails
-- `usePreservedArrayData()` - Preserves last successful data across renders
-- `nextFetchPolicy: 'cache-first'` - Prevents re-fetches on subsequent renders
+**Do not introduce dynamic, store-subscribed fetch policies.** A hook that
+returns a fetchPolicy string derived from `store.isOnline` causes Apollo to
+see "options changed" on every network-state flip, which re-fires every active
+query (the documented cascade that motivated removing `useOfflinePresetPolicy`).
+Handle offline gracefully via the existing defaults instead — `errorPolicy: 'all'`
+keeps cached data on network failures, and `usePreservedArrayData` preserves
+the last good array across refetch errors.
 
 ### `nextFetchPolicy` — String vs Function Form
 
@@ -832,19 +811,31 @@ const homes = usePreservedArrayData(data?.homes);
 ### How It Works
 
 ```typescript
-// Implementation (you don't need to write this, it's already available)
-export function usePreservedArrayData<T>(
-  currentData: T[] | undefined | null
-): T[] {
-  const lastSuccessfulValue = useRef<T[]>([]);
+// Implementation (you don't need to write this, it's already available
+// at src/hooks/apollo/usePreservedQueryData.ts)
+export function usePreservedQueryData<T>(
+  currentData: T | undefined,
+  initialValue: T,
+): T {
+  // "Adjusting state during render" pattern — the React-recommended way to
+  // sync state with props without an effect. No useRef/useMemo: the React
+  // Compiler auto-memoizes, and reading ref.current during render bails out
+  // of compilation (see CLAUDE.md "React Compiler Conventions").
+  const [lastSuccessfulValue, setLastSuccessfulValue] = useState<T>(initialValue);
+  const [prevData, setPrevData] = useState<T | undefined>(currentData);
 
-  return useMemo(() => {
-    if (currentData !== undefined && currentData !== null) {
-      lastSuccessfulValue.current = currentData;
-      return currentData;
+  if (currentData !== prevData) {
+    setPrevData(currentData);
+    if (currentData !== undefined) {
+      setLastSuccessfulValue(currentData);
     }
-    return lastSuccessfulValue.current;
-  }, [currentData]);
+  }
+
+  return currentData !== undefined ? currentData : lastSuccessfulValue;
+}
+
+export function usePreservedArrayData<T>(currentData: T[] | undefined | null): T[] {
+  return usePreservedQueryData(currentData ?? undefined, [] as T[]);
 }
 ```
 
@@ -929,13 +920,13 @@ export const useItemSelector = ({ type }: { type: 'pantry' | 'home' }) => {
 
 ### Files Using This Pattern
 
-- ✅ `useShoppingListManagement.ts` (Priority 1)
-- ✅ `usePantryManagement.ts` (Priority 1)
-- ✅ `usePantryItems.ts` (Priority 1)
-- ✅ `useStorageLocationManagement.ts` (Priority 2)
-- ✅ `useItemSelector.ts` (Priority 2)
-- ✅ `useHomeManagement.ts` (Priority 3)
-- ✅ `useDefaultHome.ts` (Priority 3)
+Used by query-wrapping hooks that need to keep the last-known array stable
+across refetch errors. Run `grep -rn "usePreservedArrayData\|usePreservedQueryData" src/`
+to find current consumers — at the time of writing this includes
+`useDefaultHome`, `useHomeQuery`, `useLazyHomeData`, `useHomeDetailManagement`,
+`usePantryQuery`, `useCurrentPantry`, `useStorageLocationManagement`,
+`useItemSelector`, `useShoppingListDetails`, `useDietaryProfile`, and
+`ShareList`.
 
 ### For Non-Array Data
 
@@ -1075,7 +1066,7 @@ START
   │
   └─ DEFAULT → fetchPolicy: 'cache-and-network', nextFetchPolicy: 'cache-first'
 
-NOTE: Always use hardcoded policies. Do NOT use useOfflinePresetPolicy() - it causes query cascade.
+NOTE: These match the global `watchQuery` defaults in `src/apollo/client.ts`, so most call sites don't need to set them. Override only when the query needs to differ.
 ```
 
 ---
@@ -1108,8 +1099,9 @@ import {
   getVersionConflictMessage,
 } from '#/utils/errors/versionConflict';
 
-// Fetch policies - use hardcoded values, NOT useOfflinePresetPolicy
+// Fetch policies — the global watchQuery defaults already cover most cases:
 // fetchPolicy: 'cache-and-network', nextFetchPolicy: 'cache-first', errorPolicy: 'all'
+// (see src/apollo/client.ts). Override per-query only when needed.
 
 // Subscriptions
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
@@ -1127,8 +1119,8 @@ import { CacheStrategy } from '#/services/subscriptions/types';
 ❌ **Don't**: Forget `cache.gc()` after `cache.evict()`
 ✅ **Do**: Always call `cache.gc()` after eviction
 
-❌ **Don't**: Use dynamic fetch policies like `useOfflinePresetPolicy()` (causes query cascade)
-✅ **Do**: Use hardcoded `'cache-and-network'` with `nextFetchPolicy: 'cache-first'`
+❌ **Don't**: Introduce dynamic, store-subscribed fetch policies — they cause query cascade on network-state changes
+✅ **Do**: Rely on the global `watchQuery` defaults in `src/apollo/client.ts`; only override per-query when the policy needs to differ
 
 ❌ **Don't**: Let `skip` depend on volatile upstream state without a latch (causes duplicate network requests)
 ✅ **Do**: Use the [query activation latch](#skip-toggle-pitfall--query-activation-latch) pattern for queries gated on multi-step initialization
@@ -1160,7 +1152,7 @@ const [addItemMutation] = useAddItemMutation({
         isPurchased: false,
       }),
       __typename: 'Item',
-    } as any,
+    },
   }),
   // Cache update to add to array
   update: (cache, { data }) => {
@@ -1193,7 +1185,7 @@ const [updateItemMutation] = useUpdateItemMutation({
   errorPolicy: 'all',
   optimisticResponse: variables => ({
     __typename: 'Mutation',
-    updateItem: enhanceWithVersion(currentItem, variables.input) as any,
+    updateItem: enhanceWithVersion(currentItem, variables.input),
   }),
   onError: (error: any) => {
     if (handleVersionConflict(error)) {
@@ -1362,20 +1354,35 @@ customOnData: (payload, client) => {
 
 ### Cache Updaters (`src/apollo/utils/cacheUpdaters.ts`)
 
-Use these utilities instead of writing inline `cache.modify()` logic.
+Use these utilities instead of writing inline `cache.modify()` logic. Connection
+variants handle relay-style `{ edges, pageInfo }` wrappers; Array variants
+handle plain list fields.
+
+**Connection-shaped fields** (`edges` + `pageInfo`):
 
 | Utility | Use Case |
 |---------|----------|
-| `createAddToParentConnectionUpdater` | Add item to parent.connectionField (e.g., Pantry.itemsConnection) |
-| `createRemoveFromParentConnectionUpdater` | Remove item from parent.connectionField + optional eviction |
-| `createAddToQueryFieldUpdater` | Add item to Query.fieldName array |
-| `createRemoveFromQueryFieldUpdater` | Remove item from Query.fieldName array |
+| `createAddToParentConnectionUpdater` | Add item to `parent.connectionField` (e.g. `Pantry.itemsConnection`) |
+| `createRemoveFromParentConnectionUpdater` | Remove item from `parent.connectionField` + optional eviction |
+| `createAddToQueryConnectionUpdater` | Add item to a root-level `Query.connectionField` |
+| `createRemoveFromQueryConnectionUpdater` | Remove item from a root-level `Query.connectionField` |
+
+**Plain array fields** (no edges wrapper):
+
+| Utility | Use Case |
+|---------|----------|
+| `createAddToParentArrayUpdater` | Add item to `parent.arrayField` |
+| `createRemoveFromParentArrayUpdater` | Remove item from `parent.arrayField` + optional eviction |
+| `createAddToQueryFieldUpdater` | Add item to a root-level `Query.arrayField` |
+
+**Misc helpers in the same file:** `incrementNestedCounter`, `setCachedFields`,
+`createItemEvictor`, `safeEvict`, `safeEvictMany`, `gcResetResultCache`.
 
 **Example Usage:**
 ```typescript
 import { createAddToParentConnectionUpdater } from '#/apollo/utils';
 
-const addToPantryItemsCache = createAddToParentConnectionUpdater<any>(
+const addToPantryItemsCache = createAddToParentConnectionUpdater<PantryItem>(
   'Pantry',
   'itemsConnection',
   'PantryItem',
@@ -1430,6 +1437,60 @@ Provides standardized CRUD operation wrappers with built-in validation and error
 
 ---
 
+## Cache Persistence & Restoration
+
+The app persists Apollo's normalized cache to MMKV so cold starts paint from cache instantly and so cached data remains available offline. Persistence is implemented in `src/apollo/offline/ApolloCachePersistence.ts` and is wired into `src/apollo/client.ts` at module init and `App.tsx` on mount.
+
+### Why not `apollo3-cache-persist`
+
+Apollo's official guidance recommends [`apollo3-cache-persist`](https://github.com/apollographql/apollo-cache-persist) for cache hydration. We deliberately don't use it:
+
+- **MMKV is synchronous.** `apollo3-cache-persist` is async-only and built for AsyncStorage; with MMKV we can hydrate critical entities synchronously **before** `ApolloClient` is instantiated, eliminating the timing pitfalls documented in [apollo-cache-persist#337](https://github.com/apollographql/apollo-cache-persist/issues/337) (cache appearing empty on first mount despite successful restore).
+- **No explicit AC 4.x support statement.** The library's last release (March 2024) targets Apollo Client 3.0; AC 4.x compatibility is incidental, not contractual.
+- **MMKV is already a native dependency.** No additional library or storage abstraction to maintain.
+
+The trade-off: we own ~500 lines of persistence code (`ApolloCachePersistence.ts`) instead of pulling a library. That's worth it for the sync-restore property — without it, the first render would have to wait on `await persistCache()` and paint with an empty cache during the gap.
+
+### Two-phase critical/deferred restore
+
+Bulk-restoring the entire persisted cache synchronously at module init blocks the JS thread on a large `JSON.parse` (50-200ms for a populated cache). To avoid that, persisted entities are split into two partitions:
+
+- **Critical** — `ROOT_QUERY`, `User`, `Home`, `UserProfile`, `UserSettings`, `DietaryProfile`, `NotificationPreferences` (~30 entities, ~5ms). Restored synchronously at module init by `initializeClient()` so cache-first queries hit immediately on first render.
+- **Deferred** — everything else (`PantryItem`, `ShoppingListItem`, `Recipe`, etc.). Restored via `requestIdleCallback` after first paint by `apolloCachePersistence.restoreDeferred(client.cache)`, called from a `useEffect` in `App.tsx`.
+
+If a screen mounts before the deferred phase fires, the cache miss falls back to network and renders the first page (20-50 items via pagination). That's an acceptable degradation — the screen still paints fast.
+
+This split is a **custom optimization** — it's not a recognized community pattern. It's justified by measured cold-start blocking on this codebase; don't replicate the pattern elsewhere without similar evidence.
+
+### `apolloCachePersistence` API surface
+
+| Method | Use when |
+|---|---|
+| `loadCritical()` | Synchronously read critical partition at `initializeClient` |
+| `load()` | Migration fallback when split-key format is absent |
+| `restoreDeferred(cache)` | Schedule idle-callback bulk restore after first paint (called from `App.tsx`) |
+| `loadDeferred()` | Internal — read deferred partition (used by `restoreDeferred`) |
+| `save(cache)` / `scheduleExtractAndSave(...)` | Debounced persist after cache writes (wired in `setupCachePersistence`) |
+| `saveImmediate(cache)` | Synchronous flush — use for logout / app termination |
+| `pause()` / `resume()` | Suspend persistence during logout transitions |
+| `markDirty(keys)` | Mark cache keys as changed for incremental persistence |
+| `cancel()` | Abort pending debounced save **and** any in-flight `restoreDeferred` — call on logout |
+| `clear()` | Wipe all persisted cache from MMKV |
+| `getStats()` / `isValid()` | Diagnostics |
+| `partitionCache(cache)` | Internal — split normalized cache into critical/deferred buckets |
+
+### Lifecycle
+
+- **Module init** (`src/apollo/client.ts` → `initializeClient`): Phase 1 sync restore via `loadCritical()` (or `load()` migration fallback). Wire `setupCachePersistence(client)` to debounce-persist on every cache write.
+- **App mount** (`App.tsx` useEffect): `apolloCachePersistence.restoreDeferred(client.cache)` schedules Phase 2.
+- **Logout** (`src/apollo/logoutCleanup.ts`): `cancelCachePersistence()` → `apolloCachePersistence.cancel()` (aborts pending save AND any pending deferred restore — important: without this, a deferred restore could fire after `clearStore()` and write stale entities back into the cleared cache).
+
+### The `client.cache as InMemoryCache` cast
+
+Apollo Client 4 narrows `ApolloClient.cache` to the abstract `ApolloCache<TCacheShape>`, which doesn't expose `restore()` or `gc()`. Any call boundary that hits those methods has to cast. Keep the cast narrow — currently one production site: `src/apollo/logoutCleanup.ts` (`gc()` after `clearStore()`). The deferred restore path lives inside `apolloCachePersistence` and is no longer a cast boundary callers have to think about. Don't push the cast into application code.
+
+---
+
 ## Apollo Client 4.x Notes
 
 This project uses Apollo Client `~4.1.7`. AC 4.0 introduced several new hooks and APIs:
@@ -1439,9 +1500,10 @@ This project uses Apollo Client `~4.1.7`. AC 4.0 introduced several new hooks an
 | `useSuspenseQuery` | Suspense-compatible query hook (works with React `<Suspense>`) | Available, **not adopted** (see rationale below) |
 | `useBackgroundQuery` | Trigger queries in parent, read in child via `useReadQuery` | Available, **not adopted** |
 | `useReadQuery` | Read data from a `useBackgroundQuery` queryRef in a child component | Available, **not adopted** (companion to `useBackgroundQuery`) |
-| `useFragment` | Subscribe to a specific fragment in cache without a query | **Adopted** for `MealPlanItemCard`. New components consuming entity data should use it; see fragment colocation convention in `CLAUDE.md` |
+| `useFragment` | Subscribe to a specific fragment in cache without a query | **Adopted** — `ReviewCard`, `BatchListItem`, `MealPlanItemCard`, `TemplateCard`. New components consuming entity data should use it; see fragment colocation convention in `CLAUDE.md` |
 | `dataState` | Discriminated union on query results (`{status: 'loading' \| 'error' \| 'complete', data?}`) for type-safe data access | Available, not adopted (would require widespread refactor) |
 | `dataMasking: true` | Strips fragment fields from parent query results so children must use `useFragment` | **Not enabled** — would break direct-access consumers across the codebase. Re-evaluate once colocation migration progresses |
+| `apollo3-cache-persist` | Apollo's recommended cache persistence library | **Not adopted** — see [Cache Persistence & Restoration](#cache-persistence--restoration) for the MMKV-based custom implementation and the reasons |
 
 #### AC 4.0 New Concepts
 
@@ -1472,12 +1534,13 @@ This project uses Apollo Client `~4.1.7`. AC 4.0 introduced several new hooks an
 - **Current wrapper hooks already achieve render separation.** Hooks like `useShoppingListScreen()` aggregate queries in a parent, and children receive data as props — providing the same re-render reduction that `useBackgroundQuery` targets.
 - **No React Native-specific guidance** from Apollo. Documentation focuses on web patterns with no known-issues coverage for RN.
 
-#### `useFragment` — Safe but Not Currently Needed
+#### `useFragment` — Adopted Selectively
 
 - **No offline conflict.** Reads from cache only, never triggers network requests.
 - **No Suspense dependency.** Works independently of Suspense boundaries.
-- **Potential benefit for list items:** each item could subscribe to its own fragment, re-rendering only when its specific data changes.
-- **Current alternatives are sufficient.** FlashList v2 + memoized item components + `mergeArrayByIdIntelligent` cache merging already handle efficient list updates. Re-evaluate only if profiling reveals list re-render bottlenecks.
+- **Per-entity cache subscription.** Each item re-renders only when its own fields change — the win for deep lists where many cells share a screen.
+- **Current adopters:** `ReviewCard`, `BatchListItem`, `MealPlanItemCard`, `TemplateCard`. All use the same shape: accept a fragment ref, call `useFragment({ fragment, fragmentName, from })`, fall back to the passed prop when `complete` is `false` (cache miss).
+- **Convention for new code:** see CLAUDE.md "Apollo: Fragment Colocation Convention" — new non-page components that consume entity data should follow the same pattern. Don't migrate working `useQuery` consumers opportunistically; convert only when you're already in the area.
 
 ### When to Re-evaluate
 
@@ -1535,13 +1598,13 @@ See `src/apollo/utils/shoppingListCacheUpdaters.ts` for the full implementation.
 
 ## Need Help?
 
-- **Questions about patterns**: Check examples in `src/hooks/shoppingList/useShoppingListItemMutations.ts` (reference implementation)
+- **Questions about patterns**: Check the individual mutation hooks under `src/features/shoppingList/hooks/mutations/` — `useAddShoppingItem.ts` exemplifies "create with optimistic response + `cache.modify`", and `useToggleShoppingItem.ts` exemplifies "toggle without optimistic response, using `cache.modify` for instant UI". The legacy `useShoppingListItemMutations.ts` is now a composition wrapper kept for backward compatibility, not a reference.
 - **Cache updater utilities**: See `src/apollo/utils/cacheUpdaters.ts`
 - **Subscription setup**: See `src/hooks/subscriptions/` and `src/services/subscriptions/SubscriptionService.ts`
-- **Fetch policies**: Use hardcoded `'cache-and-network'` with `nextFetchPolicy: 'cache-first'`
+- **Fetch policies**: Global `watchQuery` defaults in `src/apollo/client.ts` cover the common case. Override per-query only when the policy needs to differ.
 - **Error handling**: See `src/services/errorService.ts`, `src/utils/errorHandlers.ts`, and `src/utils/errors/versionConflict.ts`
 
 ---
 
-**Last Updated**: 2026-05-02
+**Last Updated**: 2026-05-16
 **Maintainers**: Development Team

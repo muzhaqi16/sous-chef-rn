@@ -28,7 +28,7 @@ jest.mock('../cache', () => ({
 
 const mockLoad = jest.fn((): Record<string, unknown> | null => null);
 const mockLoadCritical = jest.fn((): Record<string, unknown> | null => null);
-const mockLoadDeferred = jest.fn((): Record<string, unknown> | null => null);
+const mockRestoreDeferred = jest.fn();
 const mockScheduleExtractAndSave = jest.fn();
 const mockCancel = jest.fn();
 const mockClear = jest.fn();
@@ -38,7 +38,7 @@ jest.mock('../offline/ApolloCachePersistence', () => ({
   apolloCachePersistence: {
     load: mockLoad,
     loadCritical: mockLoadCritical,
-    loadDeferred: mockLoadDeferred,
+    restoreDeferred: mockRestoreDeferred,
     scheduleExtractAndSave: mockScheduleExtractAndSave,
     cancel: mockCancel,
     clear: mockClear,
@@ -67,43 +67,25 @@ describe('Apollo client', () => {
   });
 
   describe('lazy cache hydration', () => {
-    it('restores critical cache synchronously and schedules deferred restore', () => {
+    it('restores critical cache synchronously and does NOT schedule deferred restore at module init', () => {
       const criticalData = { ROOT_QUERY: { __typename: 'Query' } };
       mockLoadCritical.mockReturnValueOnce(criticalData);
 
-      const deferredData = { 'PantryItem:1': { id: '1' } };
-      mockLoadDeferred.mockReturnValueOnce(deferredData);
+      const mockRIC = jest.spyOn(global, 'requestIdleCallback');
 
-      let idleCallback: (() => void) | undefined;
-      const mockRIC = jest
-        .spyOn(global, 'requestIdleCallback')
-        .mockImplementation(cb => {
-          idleCallback = cb as () => void;
-          return 1;
-        });
-
-      let startDeferredCacheRestore!: (cache: unknown) => void;
-      let client!: { cache: unknown };
       jest.isolateModules(() => {
-        ({ client, startDeferredCacheRestore } = require('../client'));
+        require('../client');
       });
 
       // Phase 1: critical restore called synchronously on module init
       expect(mockLoadCritical).toHaveBeenCalled();
       expect(mockRestore).toHaveBeenCalledWith(criticalData);
 
-      // Phase 2: deferred restore is opt-in via app entry — module init must
-      // NOT schedule it on its own.
+      // Phase 2 must be opt-in from App.tsx — module init must NOT schedule it.
+      // (Phase 2 itself is owned by apolloCachePersistence.restoreDeferred now
+      // and is tested in ApolloCachePersistence.test.ts.)
       expect(mockRIC).not.toHaveBeenCalled();
-
-      // App entry triggers Phase 2
-      startDeferredCacheRestore(client.cache);
-      expect(mockRIC).toHaveBeenCalled();
-
-      // Simulate idle callback firing
-      idleCallback!();
-      expect(mockLoadDeferred).toHaveBeenCalled();
-      expect(mockRestore).toHaveBeenCalledWith(deferredData);
+      expect(mockRestoreDeferred).not.toHaveBeenCalled();
 
       // Migration path should NOT have been used
       expect(mockLoad).not.toHaveBeenCalled();

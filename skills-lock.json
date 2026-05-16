@@ -7,6 +7,18 @@
       "skillPath": "skills/apollo-client/SKILL.md",
       "computedHash": "008c067a3d480ab905aa37aab113b8dc54028e29e593610866b7ea8131377ce1"
     },
+    "graphql-operations": {
+      "source": "apollographql/skills",
+      "sourceType": "github",
+      "skillPath": "skills/graphql-operations/SKILL.md",
+      "computedHash": "d0532171706cbba72112a6f3ffdc49d5d15b22fdd092de7324099e767bf1cbf1"
+    },
+    "graphql-schema": {
+      "source": "apollographql/skills",
+      "sourceType": "github",
+      "skillPath": "skills/graphql-schema/SKILL.md",
+      "computedHash": "95f5384cc907635fc31121648dffffed0bb6f773ee594cbfe9be9e5e4a0e6aba"
+    },
     "react-native-best-practices": {
       "source": "software-mansion-labs/skills",
       "sourceType": "github",
