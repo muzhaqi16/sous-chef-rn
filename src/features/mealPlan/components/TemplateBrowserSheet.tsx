@@ -1,5 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import {
   Pressable,
   PrimaryActivityIndicator,
@@ -29,17 +30,30 @@ import { type MealTemplateDisplayFragment } from '#features/mealPlan/graphql/mea
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { Text } from '#components/atoms/Text';
 
-const CATEGORIES: ChipOption<TemplateCategory | undefined>[] = [
-  { key: undefined, label: 'All' },
-  { key: TemplateCategory.Weekly, label: 'Weekly' },
-  { key: TemplateCategory.Monthly, label: 'Monthly' },
-  { key: TemplateCategory.Breakfast, label: 'Breakfast' },
-  { key: TemplateCategory.Lunch, label: 'Lunch' },
-  { key: TemplateCategory.Dinner, label: 'Dinner' },
-  { key: TemplateCategory.Holiday, label: 'Holiday' },
-  { key: TemplateCategory.SpecialDiet, label: 'Special Diet' },
-  { key: TemplateCategory.Custom, label: 'Custom' },
-];
+const CATEGORY_KEYS: { key: TemplateCategory | undefined; labelKey: string }[] =
+  [
+    { key: undefined, labelKey: 'templateBrowser.categoryAll' },
+    { key: TemplateCategory.Weekly, labelKey: 'saveAsTemplate.categoryWeekly' },
+    {
+      key: TemplateCategory.Monthly,
+      labelKey: 'saveAsTemplate.categoryMonthly',
+    },
+    {
+      key: TemplateCategory.Breakfast,
+      labelKey: 'saveAsTemplate.categoryBreakfast',
+    },
+    { key: TemplateCategory.Lunch, labelKey: 'saveAsTemplate.categoryLunch' },
+    { key: TemplateCategory.Dinner, labelKey: 'saveAsTemplate.categoryDinner' },
+    {
+      key: TemplateCategory.Holiday,
+      labelKey: 'saveAsTemplate.categoryHoliday',
+    },
+    {
+      key: TemplateCategory.SpecialDiet,
+      labelKey: 'saveAsTemplate.categorySpecialDiet',
+    },
+    { key: TemplateCategory.Custom, labelKey: 'saveAsTemplate.categoryCustom' },
+  ];
 
 const keyExtractor = (item: MealTemplateDisplayFragment) => item.id;
 
@@ -69,6 +83,9 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
   onClose,
   onSelectTemplate,
 }) => {
+  const { t } = useTranslation();
+  const categories: ChipOption<TemplateCategory | undefined>[] =
+    CATEGORY_KEYS.map(o => ({ key: o.key, label: t(o.labelKey) }));
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible,
     onDismiss: onClose,
@@ -87,7 +104,7 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
         {/* Header */}
         <View style={styles.header}>
           <Text size="lg" weight="semibold">
-            Browse Templates
+            {t('templateBrowser.title')}
           </Text>
           <Pressable onPress={onClose} hitSlop={8}>
             <Icon name="close" size={24} tone="textSecondary" />
@@ -99,7 +116,7 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
           <Icon name="search" size={18} tone="textTertiary" />
           <ThemedBottomSheetTextInput
             style={styles.searchInput}
-            placeholder="Search templates..."
+            placeholder={t('templateBrowser.searchPlaceholder')}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
@@ -107,7 +124,7 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
 
         {/* Category chips */}
         <ChipScrollRow
-          options={CATEGORIES}
+          options={categories}
           selected={selectedCategory}
           onSelect={setSelectedCategory}
           style={styles.chipScroll}
@@ -123,7 +140,7 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
           <View style={styles.emptyContainer}>
             <Icon name="document-text-outline" size={48} tone="textTertiary" />
             <Text size="base" tone="secondary">
-              No templates found
+              {t('templateBrowser.noTemplates')}
             </Text>
           </View>
         ) : (

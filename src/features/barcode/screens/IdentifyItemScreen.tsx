@@ -4,12 +4,13 @@ import {
   Text,
   Image,
   Platform,
-  Pressable,
   ActivityIndicator,
   ScrollView,
   Dimensions,
   TextInput,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import {
   Camera,
@@ -25,12 +26,7 @@ import { useOcrScanner } from '#hooks/useOcrScanner';
 import { useHiddenStatusBar } from '#hooks/useHiddenStatusBar';
 import { Button } from '#components/base/Button';
 import { IconButton } from '#components/atoms/IconButton';
-import BarcodeMask from '#components/organisms/BarcodeMask';
-
-const ThemedBarcodeMask = withUnistyles(BarcodeMask, theme => ({
-  edgeColor: theme.colors.primary,
-  backgroundColor: theme.colors.overlay,
-}));
+import { ThemedBarcodeMask } from '../components/ThemedBarcodeMask';
 
 const ThemedTextInput = withUnistyles(TextInput, theme => ({
   placeholderTextColor: theme.colors.textTertiary,
@@ -65,6 +61,7 @@ export const IdentifyItemScreen: React.FC<
     | undefined
   >
 > = ({ route }) => {
+  const { t } = useTranslation();
   const { goBack, navigation, toIdentifiedItemForm } = useAppNavigation();
   const { source, pantryId, shoppingListId } = route?.params || {};
 
@@ -203,19 +200,19 @@ export const IdentifyItemScreen: React.FC<
     return (
       <View style={styles.centeredContainer}>
         <Text style={styles.messageText}>
-          Camera access is required to identify items.
+          {t('identifyItem.permissionMessage')}
         </Text>
         {isBlocked ? (
           <Button onPress={openSettings} variant="primary" size="medium">
-            Open Settings
+            {t('labels.openSettings')}
           </Button>
         ) : (
           <Button onPress={requestPermission} variant="primary" size="medium">
-            Grant Permission
+            {t('labels.grantPermission')}
           </Button>
         )}
         <Button onPress={handleGoBack} variant="ghost" size="medium">
-          Cancel
+          {t('labels.cancel')}
         </Button>
       </View>
     );
@@ -224,9 +221,9 @@ export const IdentifyItemScreen: React.FC<
   if (!device) {
     return (
       <View style={styles.centeredContainer}>
-        <Text style={styles.messageText}>No camera device found</Text>
+        <Text style={styles.messageText}>{t('errors.noCameraDevice')}</Text>
         <Button onPress={handleGoBack} variant="primary" size="medium">
-          Go Back
+          {t('labels.goBack')}
         </Button>
       </View>
     );
@@ -260,19 +257,19 @@ export const IdentifyItemScreen: React.FC<
           onPress={handleGoBack}
           size="md"
           style={styles.headerButton}
-          accessibilityLabel="Close identifier"
+          accessibilityLabel={t('identifyItem.closeIdentifier')}
         />
-        <Text style={styles.headerTitle}>Identify Item</Text>
+        <Text style={styles.headerTitle}>{t('identifyItem.title')}</Text>
         <View style={styles.headerButton} />
       </View>
 
       {!photoUri && (
         <View style={styles.instructionsContainer}>
           <Text style={styles.instructionsText}>
-            Point your camera at the product label
+            {t('identifyItem.pointCamera')}
           </Text>
           <Text style={styles.subInstructionsText}>
-            Frame the brand and product name, then tap the shutter
+            {t('identifyItem.frameInstructions')}
           </Text>
         </View>
       )}
@@ -280,7 +277,7 @@ export const IdentifyItemScreen: React.FC<
       {!photoUri && (
         <View style={styles.shutterContainer}>
           <Pressable
-            accessibilityLabel="Capture photo"
+            accessibilityLabel={t('identifyItem.capturePhoto')}
             onPress={handleShutter}
             disabled={shutterDisabled}
             style={({ pressed }) => [
@@ -303,40 +300,42 @@ export const IdentifyItemScreen: React.FC<
           {isReadingText ? (
             <View style={styles.resultsLoading}>
               <ActivityIndicator />
-              <Text style={styles.resultsLoadingText}>Reading text…</Text>
+              <Text style={styles.resultsLoadingText}>
+                {t('identifyItem.readingText')}
+              </Text>
             </View>
           ) : ocrFailed ? (
             <View style={styles.resultsLoading}>
               <Text style={styles.resultsLoadingText}>
-                Couldn't read text from this photo.
+                {t('identifyItem.readFailed')}
               </Text>
               <View style={styles.resultsActions}>
                 <Button onPress={handleRetake} variant="ghost" size="medium">
-                  Retake
+                  {t('labels.retake')}
                 </Button>
                 <Button onPress={handleRetry} variant="primary" size="medium">
-                  Try again
+                  {t('labels.tryAgain')}
                 </Button>
               </View>
             </View>
           ) : candidates.length === 0 ? (
             <View style={styles.resultsLoading}>
               <Text style={styles.resultsLoadingText}>
-                No text detected. Try again with better lighting.
+                {t('identifyItem.noTextDetected')}
               </Text>
               <Button onPress={handleRetake} variant="primary" size="medium">
-                Retake
+                {t('labels.retake')}
               </Button>
             </View>
           ) : (
             <>
               <Text style={styles.resultsTitle} accessibilityRole="header">
-                Item name
+                {t('identifyItem.itemName')}
               </Text>
               <PickerInput
                 value={nameInput}
                 onChangeText={setNameInput}
-                placeholder="Tap chips or type..."
+                placeholder={t('identifyItem.tapChipsPlaceholder')}
               />
               <ScrollView
                 horizontal
@@ -354,12 +353,12 @@ export const IdentifyItemScreen: React.FC<
               </ScrollView>
 
               <Text style={styles.resultsTitle} accessibilityRole="header">
-                Brand (optional)
+                {t('identifyItem.brandOptional')}
               </Text>
               <PickerInput
                 value={brandInput}
                 onChangeText={setBrandInput}
-                placeholder="Tap chips or type..."
+                placeholder={t('identifyItem.tapChipsPlaceholder')}
               />
               <ScrollView
                 horizontal
@@ -378,7 +377,7 @@ export const IdentifyItemScreen: React.FC<
 
               <View style={styles.resultsActions}>
                 <Button onPress={handleRetake} variant="ghost" size="medium">
-                  Retake
+                  {t('labels.retake')}
                 </Button>
                 <Button
                   onPress={handleConfirm}
@@ -386,7 +385,7 @@ export const IdentifyItemScreen: React.FC<
                   size="medium"
                   disabled={!nameInput.trim()}
                 >
-                  Continue
+                  {t('labels.continue')}
                 </Button>
               </View>
             </>
@@ -403,16 +402,19 @@ interface ChipProps {
   onPress: () => void;
 }
 
-const Chip: React.FC<ChipProps> = ({ label, field, onPress }) => (
-  <Pressable
-    onPress={onPress}
-    style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
-    accessibilityRole="button"
-    accessibilityLabel={`Append ${label} to ${field}`}
-  >
-    <Text style={styles.chipText}>{label}</Text>
-  </Pressable>
-);
+const Chip: React.FC<ChipProps> = ({ label, field, onPress }) => {
+  const { t } = useTranslation();
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
+      accessibilityRole="button"
+      accessibilityLabel={t('identifyItem.appendToField', { label, field })}
+    >
+      <Text style={styles.chipText}>{label}</Text>
+    </Pressable>
+  );
+};
 
 interface PickerInputProps {
   value: string;
@@ -425,6 +427,7 @@ const PickerInput: React.FC<PickerInputProps> = ({
   onChangeText,
   placeholder,
 }) => {
+  const { t } = useTranslation();
   return (
     <View style={styles.pickerInputRow}>
       <ThemedTextInput
@@ -441,7 +444,7 @@ const PickerInput: React.FC<PickerInputProps> = ({
           style={styles.pickerClear}
           hitSlop={8}
           accessibilityRole="button"
-          accessibilityLabel="Clear"
+          accessibilityLabel={t('labels.clear')}
         >
           <Text style={styles.pickerClearText}>✕</Text>
         </Pressable>

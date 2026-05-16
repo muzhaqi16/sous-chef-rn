@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
@@ -20,6 +21,7 @@ export const StockSettingsPage: React.FC<StockSettingsPageProps> = ({
   setRestockQuantity,
   insets,
 }) => {
+  const { t } = useTranslation();
   return (
     <BottomSheetKeyboardAwareScrollView
       key="stock"
@@ -33,32 +35,32 @@ export const StockSettingsPage: React.FC<StockSettingsPageProps> = ({
       bottomOffset={16}
     >
       <Text size="lg" weight="semibold" style={styles.sectionTitle}>
-        Low Stock Settings
+        {t('addToPantry.lowStockSettings')}
       </Text>
       <Text size="sm" tone="secondary" style={styles.sectionDescription}>
-        Get notified when this item is running low.
+        {t('addToPantry.lowStockHint')}
       </Text>
 
       <FormInput
-        label="Alert When Below"
+        label={t('addToPantry.alertWhenBelow')}
         value={minQuantity}
         onChangeText={setMinQuantity}
-        placeholder="e.g., 2"
+        placeholder={t('addToPantry.alertPlaceholder')}
         keyboardType="decimal-pad"
         useBottomSheetInput
       />
 
       <FormInput
-        label="Restock To"
+        label={t('addToPantry.restockTo')}
         value={restockQuantity}
         onChangeText={setRestockQuantity}
-        placeholder="e.g., 6"
+        placeholder={t('addToPantry.restockPlaceholder')}
         keyboardType="decimal-pad"
         useBottomSheetInput
       />
 
       <Text size="sm" tone="secondary" style={styles.helpText}>
-        Leave empty to disable low stock alerts for this item.
+        {t('addToPantry.emptyHint')}
       </Text>
     </BottomSheetKeyboardAwareScrollView>
   );

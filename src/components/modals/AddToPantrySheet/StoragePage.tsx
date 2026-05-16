@@ -1,5 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
 import { FormInput } from '#components/molecules/FormInput';
@@ -34,6 +35,7 @@ export const StoragePage: React.FC<StoragePageProps> = ({
   setStorageNotes,
   insets,
 }) => {
+  const { t } = useTranslation();
   return (
     <BottomSheetKeyboardAwareScrollView
       key="storage"
@@ -50,10 +52,10 @@ export const StoragePage: React.FC<StoragePageProps> = ({
       <View style={[styles.section, { zIndex: 10 }]}>
         <StorageLocationAutocompleteField
           variant="inline"
-          label="Storage Location"
+          label={t('addToPantry.storageLocation')}
           value={storageLocation}
           onChangeText={setStorageLocation}
-          placeholder="e.g., Top shelf, Crisper drawer"
+          placeholder={t('addToPantry.storageLocationPlaceholder')}
           storageLocations={storageLocations}
           onStorageLocationSelected={handleStorageLocationSelected}
           onAddNewLocation={handleAddNewLocation}
@@ -62,19 +64,19 @@ export const StoragePage: React.FC<StoragePageProps> = ({
 
       {/* Tags */}
       <FormInput
-        label="Tags"
+        label={t('addToPantry.tags')}
         value={tags}
         onChangeText={setTags}
-        placeholder="e.g., organic, gluten-free (comma separated)"
+        placeholder={t('addToPantry.tagsPlaceholder')}
         useBottomSheetInput
       />
 
       {/* Notes */}
       <FormInput
-        label="Notes"
+        label={t('addToPantry.notes')}
         value={storageNotes}
         onChangeText={setStorageNotes}
-        placeholder="e.g., Store in cool, dry place"
+        placeholder={t('addToPantry.notesPlaceholder')}
         multiline
         useBottomSheetInput
       />

@@ -382,6 +382,35 @@ describe('refreshToken', () => {
       });
     });
 
+    it('does not pass errorPolicy: "all" to client.mutate (regression: would swallow auth errors)', done => {
+      (mockedUseStore.getState as jest.Mock).mockReturnValue({
+        refreshToken: 'mock-refresh-token',
+        tokenRefreshFailed: jest.fn(),
+        setTokens: jest.fn(),
+        setNeedsTokenRefresh: jest.fn(),
+      });
+      (mockedClient.mutate as jest.Mock).mockResolvedValue({
+        data: {
+          refresh: {
+            accessToken: 'new-access-token',
+            refreshToken: 'new-refresh-token',
+          },
+        },
+      });
+      const mockForward = createMockForward();
+
+      const observable = attemptTokenRefresh(mockOperation, mockForward);
+      observable.subscribe({
+        next: () => {
+          const mutateArgs = (mockedClient.mutate as jest.Mock).mock
+            .calls[0][0];
+          expect(mutateArgs.errorPolicy).toBeUndefined();
+          done();
+        },
+        error: done,
+      });
+    });
+
     it('handles network error without calling tokenRefreshFailed', done => {
       const mockTokenRefreshFailed = jest.fn();
       (mockedUseStore.getState as jest.Mock).mockReturnValue({

@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import {
@@ -50,6 +51,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   onItemAdded,
   initialSearchQuery = '',
 }) => {
+  const { t } = useTranslation();
   const { toBarcode, toIdentifyItem } = useAppNavigation();
   const client = useApolloClient();
 
@@ -210,7 +212,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
               },
             })
               .then(() => onItemAdded?.())
-              .catch(() => toastService.error('Failed to restock item.'))
+              .catch(() => toastService.error(t('addToPantry.restockFailed')))
               .finally(() => pendingItemIds.current.delete(item.id));
             return;
           }
@@ -222,7 +224,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
       })
       .catch(() => {
         pendingItemIds.current.delete(item.id);
-        toastService.error('Failed to add item. Please try again.');
+        toastService.error(t('addToPantry.addFailedRetry'));
       });
   };
 
@@ -268,7 +270,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
               },
             })
               .then(() => onItemAdded?.())
-              .catch(() => toastService.error('Failed to restock item.'))
+              .catch(() => toastService.error(t('addToPantry.restockFailed')))
               .finally(() => pendingItemIds.current.delete(pantryItem.itemId));
             return;
           }
@@ -281,7 +283,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
       .catch(() => {
         pendingItemIds.current.delete(pantryItem.itemId);
         state.completeExitAnimation(pantryItem.itemId);
-        toastService.error('Failed to add item');
+        toastService.error(t('addToPantry.addFailed'));
       });
   };
 
@@ -294,7 +296,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   const handleAddSuccess = () => {
     setShowAddDetails(false);
     suggestionsResult.refetch();
-    toastService.success('Item added to pantry');
+    toastService.success(t('addToPantry.itemAdded'));
     onItemAdded?.();
     onClose();
   };

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/molecules/FormInput';
 import { CollapsibleChipPicker } from '#components/molecules/CollapsibleChipPicker';
@@ -33,13 +34,13 @@ interface ConsumePantryItemModalProps {
   ) => void;
 }
 
-const PURPOSE_OPTIONS: Array<{ label: string; value: UsagePurpose }> = [
-  { label: 'Cooking', value: UsagePurpose.Cooking },
-  { label: 'Meal Prep', value: UsagePurpose.MealPrep },
-  { label: 'Snack', value: UsagePurpose.Snack },
-  { label: 'General', value: UsagePurpose.General },
-  { label: 'Gift', value: UsagePurpose.Gift },
-  { label: 'Transfer', value: UsagePurpose.Transfer },
+const PURPOSE_OPTIONS: Array<{ labelKey: string; value: UsagePurpose }> = [
+  { labelKey: 'consumeItem.purposeCooking', value: UsagePurpose.Cooking },
+  { labelKey: 'consumeItem.purposeMealPrep', value: UsagePurpose.MealPrep },
+  { labelKey: 'consumeItem.purposeSnack', value: UsagePurpose.Snack },
+  { labelKey: 'consumeItem.purposeGeneral', value: UsagePurpose.General },
+  { labelKey: 'consumeItem.purposeGift', value: UsagePurpose.Gift },
+  { labelKey: 'consumeItem.purposeTransfer', value: UsagePurpose.Transfer },
 ];
 
 export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
@@ -48,6 +49,7 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
   onClose,
   onConfirm,
 }) => {
+  const { t } = useTranslation();
   const [quantityInput, setQuantityInput] = useState('1');
   const [purpose, setPurpose] = useState<UsagePurpose>(UsagePurpose.General);
 
@@ -82,15 +84,20 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
 
   const showFifoHint = (pantryItem?.activeBatchCount ?? 0) > 1;
 
+  const purposeOptions = PURPOSE_OPTIONS.map(({ labelKey, value }) => ({
+    label: t(labelKey),
+    value,
+  }));
+
   return (
     <PantryActionModal
       visible={visible}
       pantryItem={pantryItem}
       onClose={onClose}
-      title="Consume Item"
-      confirmLabel="Confirm"
+      title={t('consumeItem.title')}
+      confirmLabel={t('consumeItem.confirm')}
       snapPoints={['75%', '95%']}
-      unitToggleLabel="Consume by"
+      unitToggleLabel={t('consumeItem.consumeBy')}
       operation={PantryOperation.Consume}
       onConfirm={handleConfirm}
       onReset={handleReset}
@@ -102,6 +109,7 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
           setPurpose={setPurpose}
           shared={shared}
           showFifoHint={showFifoHint}
+          purposeOptions={purposeOptions}
         />
       )}
     />
@@ -116,6 +124,7 @@ const ConsumeActionFields: React.FC<{
   setPurpose: (v: UsagePurpose) => void;
   shared: PantryActionSharedState;
   showFifoHint?: boolean;
+  purposeOptions: Array<{ label: string; value: UsagePurpose }>;
 }> = ({
   quantityInput,
   setQuantityInput,
@@ -123,7 +132,9 @@ const ConsumeActionFields: React.FC<{
   setPurpose,
   shared,
   showFifoHint,
+  purposeOptions,
 }) => {
+  const { t } = useTranslation();
   const consumeAmount = parseFractionalInput(quantityInput);
   const { conversion, remaining, availableInUnit, remainingUnitSymbol } =
     useQuantityFeedback(consumeAmount, shared);
@@ -133,11 +144,11 @@ const ConsumeActionFields: React.FC<{
       {/* Quantity Input */}
       <View style={commonStyles.bottomSheetSection}>
         <FractionInput
-          label="Quantity to Consume"
+          label={t('consumeItem.quantityToConsume')}
           required
           value={quantityInput}
           onChangeText={setQuantityInput}
-          placeholder="e.g., 1, 1 1/4, or 1.5"
+          placeholder={t('consumeItem.quantityPlaceholder')}
           keyboardType="numeric"
           useBottomSheetInput
         />
@@ -158,15 +169,15 @@ const ConsumeActionFields: React.FC<{
         />
         {showFifoHint ? (
           <Text style={commonStyles.bottomSheetHelperText}>
-            Items are consumed oldest-first by expiration date
+            {t('consumeItem.fifoHint')}
           </Text>
         ) : null}
       </View>
 
       {/* Purpose Selection */}
       <CollapsibleChipPicker
-        label="Purpose *"
-        options={PURPOSE_OPTIONS}
+        label={t('consumeItem.purpose')}
+        options={purposeOptions}
         selectedValue={purpose}
         onSelect={setPurpose}
       />
@@ -174,10 +185,10 @@ const ConsumeActionFields: React.FC<{
       {/* Notes */}
       <View style={commonStyles.bottomSheetSection}>
         <FormInput
-          label="Notes"
+          label={t('consumeItem.notes')}
           value={shared.notes}
           onChangeText={shared.setNotes}
-          placeholder="Add any notes about this usage..."
+          placeholder={t('consumeItem.notesPlaceholder')}
           multiline
           numberOfLines={3}
           useBottomSheetInput

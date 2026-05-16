@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Pressable } from '#components/atoms/themedComponents';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
@@ -36,6 +37,7 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
   saving = false,
   recipeName,
 }) => {
+  const { t } = useTranslation();
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible,
     onDismiss: onClose,
@@ -115,7 +117,7 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <Text size="lg" weight="semibold">
-              Save Recipe
+              {t('saveRecipe.title')}
             </Text>
             {!!recipeName && (
               <Text
@@ -158,7 +160,7 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
           tone="secondary"
           style={styles.sectionLabel}
         >
-          Folder
+          {t('saveRecipe.folder')}
         </Text>
         <View style={styles.folderList}>
           {[null, ...displayFolders].map(folder => {
@@ -186,7 +188,7 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
                     isSelected && styles.folderOptionTextSelected,
                   ]}
                 >
-                  {isNoFolder ? 'No Folder' : folder}
+                  {isNoFolder ? t('saveRecipe.noFolder') : folder}
                 </Text>
                 {!!isSelected && (
                   <Icon name="checkmark" size={18} tone="primary" />
@@ -201,7 +203,7 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
           <View style={styles.newFolderContainer}>
             <ThemedBottomSheetTextInput
               style={styles.newFolderInput}
-              placeholder="Enter folder name..."
+              placeholder={t('saveRecipe.enterFolderName')}
               defaultValue={newFolderName}
               onChangeText={setNewFolderName}
               autoFocus
@@ -223,7 +225,7 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
                   !newFolderName.trim() && styles.createButtonTextDisabled,
                 ]}
               >
-                Create
+                {t('saveRecipe.create')}
               </Text>
             </Pressable>
           </View>
@@ -237,7 +239,7 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
           >
             <Icon name="add" size={18} tone="primary" />
             <Text size="base" weight="medium" tone="accent">
-              Create New Folder
+              {t('saveRecipe.createNewFolder')}
             </Text>
           </Pressable>
         )}
@@ -249,13 +251,13 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
           tone="secondary"
           style={styles.sectionLabel}
         >
-          Tags (optional)
+          {t('saveRecipe.tagsOptional')}
         </Text>
         <TagInput
           tags={tags}
           onTagsChange={setTags}
           suggestions={availableTags}
-          placeholder="Add tags..."
+          placeholder={t('saveRecipe.tagsPlaceholder')}
           maxTags={5}
         />
 
@@ -266,11 +268,11 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
           tone="secondary"
           style={styles.sectionLabel}
         >
-          Notes (optional)
+          {t('saveRecipe.notesOptional')}
         </Text>
         <ThemedBottomSheetTextInput
           style={styles.notesInput}
-          placeholder="Add any notes about this recipe..."
+          placeholder={t('saveRecipe.notesPlaceholder')}
           defaultValue={notes}
           onChangeText={setNotes}
           multiline

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
@@ -25,6 +26,7 @@ export const EditCustomMealSheet: React.FC<EditCustomMealSheetProps> = ({
   onClose,
   onSave,
 }) => {
+  const { t } = useTranslation();
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible,
     onDismiss: onClose,
@@ -66,10 +68,10 @@ export const EditCustomMealSheet: React.FC<EditCustomMealSheetProps> = ({
         showsVerticalScrollIndicator={false}
       >
         <BottomSheetHeader
-          title="Edit Custom Meal"
+          title={t('editCustomMeal.title')}
           onCancel={onClose}
           onConfirm={handleSave}
-          confirmLabel="Save"
+          confirmLabel={t('editCustomMeal.save')}
         />
 
         <View style={styles.previewSection}>
@@ -81,19 +83,19 @@ export const EditCustomMealSheet: React.FC<EditCustomMealSheetProps> = ({
 
         <View style={styles.section}>
           <FormInput
-            label="Meal Name"
+            label={t('editCustomMeal.mealName')}
             value={name}
             onChangeText={setName}
-            placeholder="e.g., Grilled chicken with salad"
+            placeholder={t('editCustomMeal.mealNamePlaceholder')}
           />
         </View>
 
         <View style={styles.section}>
           <FormInput
-            label="Notes (Optional)"
+            label={t('editCustomMeal.notesLabel')}
             value={notes}
             onChangeText={setNotes}
-            placeholder="Any notes about this meal..."
+            placeholder={t('editCustomMeal.notesPlaceholder')}
             multiline
             numberOfLines={3}
           />

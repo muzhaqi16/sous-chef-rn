@@ -100,10 +100,12 @@ export const PROFILE_SETTINGS_CONFIG = [
         type: 'navigation',
       },
       {
+        // Options injected by useConfigurableSettings from
+        // SUPPORTED_LANGUAGES (src/i18n/config.ts), the single source of
+        // truth for bundled locales.
         key: 'language',
         label: 'Language',
         type: 'modal',
-        options: [{ label: 'English', value: 'en' }],
       },
     ],
   },

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import {
   Pressable,
   PrimaryActivityIndicator,
@@ -38,6 +39,7 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
   onConfirm,
   confirmLoading,
 }) => {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
 
   // Standard bottom-sheet boilerplate handled by useStandardBottomSheet.
@@ -102,7 +104,10 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
           )}
           <View style={styles.metaRow}>
             <Text size="sm" tone="tertiary">
-              {template.durationDays} days · {template.defaultServings} servings
+              {t('templatePreview.metaLine', {
+                days: template.durationDays,
+                servings: template.defaultServings,
+              })}
               {template.home?.name ? ` · ${template.home.name}` : ''}
             </Text>
             <Text size="xs" weight="medium" tone="accent">
@@ -115,23 +120,23 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
         {/* Configuration form */}
         <View style={styles.configSection}>
           <Text size="base" weight="semibold" style={styles.sectionTitle}>
-            Configuration
+            {t('templatePreview.configuration')}
           </Text>
           <FormInput
-            label="Plan Name (optional)"
+            label={t('templatePreview.planNameLabel')}
             value={nameOverride}
             onChangeText={setNameOverride}
             placeholder={template.name}
           />
           <DatePickerField
-            label="Start Date"
+            label={t('templatePreview.startDateLabel')}
             value={startDate}
             onChange={setStartDate}
             minimumDate={new Date()}
             required
           />
           <EditableCounter
-            label="Servings"
+            label={t('templatePreview.servingsLabel')}
             value={servings}
             onChangeText={setServings}
             min={1}
@@ -142,7 +147,7 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
         {/* Day-by-day preview */}
         <View style={styles.previewSection}>
           <Text size="base" weight="semibold" style={styles.sectionTitle}>
-            Preview
+            {t('templatePreview.preview')}
           </Text>
           {loading ? (
             <PrimaryActivityIndicator size="small" />
@@ -153,7 +158,7 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
               align="center"
               style={styles.emptyPreview}
             >
-              No meals in this template
+              {t('templatePreview.emptyPreview')}
             </Text>
           ) : (
             groupedByDay.map(day => (
@@ -164,7 +169,7 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
                   tone="accent"
                   style={styles.dayLabel}
                 >
-                  Day {day.dayOffset + 1}
+                  {t('templatePreview.day', { day: day.dayOffset + 1 })}
                 </Text>
                 {day.items.map(item => (
                   <View key={item.id} style={styles.mealRow}>
@@ -178,7 +183,9 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
                         item.mealType.slice(1).toLowerCase()}
                     </Text>
                     <Text size="sm" style={styles.mealName} numberOfLines={1}>
-                      {item.recipe?.name ?? item.customMealName ?? 'Custom'}
+                      {item.recipe?.name ??
+                        item.customMealName ??
+                        t('templatePreview.customMeal')}
                     </Text>
                   </View>
                 ))}
@@ -203,7 +210,7 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
             <>
               <Icon name="calendar-outline" size={20} tone="white" />
               <Text size="base" weight="semibold" style={styles.confirmText}>
-                Create Meal Plan
+                {t('templatePreview.createMealPlan')}
               </Text>
             </>
           )}

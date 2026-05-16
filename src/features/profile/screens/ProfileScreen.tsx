@@ -1,4 +1,5 @@
 import React, { useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Pressable } from '#components/atoms/themedComponents';
 import Animated, {
@@ -34,6 +35,7 @@ const HEADER_TIMING = {
 };
 
 export const ProfileScreen = () => {
+  const { t } = useTranslation();
   useScreenTransition('ProfileScreen');
   const canAccessDevTools = useCanAccessDevTools();
   const {
@@ -82,8 +84,9 @@ export const ProfileScreen = () => {
 
   const handleLogout = () => {
     Telemetry.trackEvent('logout_clicked', { source: 'ProfileScreen' });
-    // Find and execute logout action
-    const logoutSection = sections.find(s => s.title === '');
+    // Find and execute logout action — match the section by its stable `key`,
+    // not the translated `title` (which differs per locale).
+    const logoutSection = sections.find(s => s.key === '');
     const logoutItem = logoutSection?.items.find(
       (i: any) => i.key === 'logout',
     );
@@ -149,8 +152,10 @@ export const ProfileScreen = () => {
       >
         {sections
           .filter(section => {
-            // Filter out Developer section if debug features are not enabled
-            if (section.title === 'Developer') {
+            // Filter out Developer section if debug features are not enabled.
+            // Compare against the stable `key` so the filter still works in
+            // non-English locales where `title` is translated.
+            if (section.key === 'Developer') {
               return (
                 Environment.shouldEnableDebugFeatures() || canAccessDevTools
               );
@@ -220,7 +225,7 @@ export const ProfileScreen = () => {
             tone="error"
             style={styles.menuItemTextDestructive}
           >
-            Delete Account
+            {t('account.deleteTitle')}
           </Text>
         </Pressable>
       </ActionTray>

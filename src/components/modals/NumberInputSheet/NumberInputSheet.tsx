@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { BottomSheetView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
@@ -32,6 +33,7 @@ export const NumberInputSheet: React.FC<NumberInputSheetProps> = ({
   placeholder,
   allowDecimals = false,
 }) => {
+  const { t } = useTranslation();
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible,
     onDismiss: onClose,
@@ -60,15 +62,15 @@ export const NumberInputSheet: React.FC<NumberInputSheetProps> = ({
       : parseInt(inputValue);
 
     if (isNaN(numValue) || inputValue.trim() === '') {
-      setError('This field is required');
+      setError(t('numberInputSheet.required'));
       return;
     }
     if (min !== undefined && numValue < min) {
-      setError(`Value must be at least ${min}`);
+      setError(t('numberInputSheet.minError', { min }));
       return;
     }
     if (max !== undefined && numValue > max) {
-      setError(`Value must be at most ${max}`);
+      setError(t('numberInputSheet.maxError', { max }));
       return;
     }
 
@@ -78,12 +80,12 @@ export const NumberInputSheet: React.FC<NumberInputSheetProps> = ({
         if (success) {
           onClose();
         } else {
-          setError('Failed to save');
+          setError(t('numberInputSheet.saveFailed'));
         }
       },
       setLoading,
       (err: unknown) => {
-        setError((err as any).message || 'An error occurred');
+        setError((err as any).message || t('numberInputSheet.genericError'));
       },
     );
   };

@@ -53,7 +53,7 @@ export const AddButton: React.FC<AddButtonProps> = ({
       accessibilityState={{ disabled }}
       disabled={disabled}
     >
-      <Icon name={icon} size={28} tone="iconOnPrimary" library={iconLibrary} />
+      <Icon name={icon} size={28} tone="white" library={iconLibrary} />
     </AnimatedPressable>
   );
 };
@@ -63,6 +63,8 @@ const styles = StyleSheet.create(theme => ({
     width: theme.sizes.fab.md,
     height: theme.sizes.button.md,
     borderRadius: theme.radii.lg,
+    // Primary CTA — follows the user's selected App Color so the + button
+    // matches the active tab icon highlight and other primary-tinted surfaces.
     backgroundColor: theme.colors.primary,
     justifyContent: 'center',
     alignItems: 'center',

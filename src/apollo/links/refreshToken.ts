@@ -105,7 +105,6 @@ const performTokenRefresh = async (): Promise<string | null> => {
       mutation: RefreshTokenDocument,
       variables: { token: refreshToken },
       context: { skipErrorLink: true },
-      errorPolicy: 'all', // Allow partial data on errors
     });
 
     const data = (response.data as RefreshTokenMutation)?.refresh;

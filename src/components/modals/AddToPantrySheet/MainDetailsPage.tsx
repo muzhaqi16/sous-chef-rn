@@ -1,5 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
 import { FormInput } from '#components/molecules/FormInput';
@@ -40,6 +41,19 @@ export const MainDetailsPage: React.FC<MainDetailsPageProps> = ({
   setStorageState,
   insets,
 }) => {
+  const { t } = useTranslation();
+  const formatStorageStateLabel = (state: StorageState) => {
+    switch (state) {
+      case StorageState.Ambient:
+        return t('addToPantry.stateAmbient');
+      case StorageState.Refrigerated:
+        return t('addToPantry.stateRefrigerated');
+      case StorageState.Frozen:
+        return t('addToPantry.stateFrozen');
+      default:
+        return state;
+    }
+  };
   return (
     <BottomSheetKeyboardAwareScrollView
       key="main"
@@ -54,11 +68,11 @@ export const MainDetailsPage: React.FC<MainDetailsPageProps> = ({
     >
       {/* Item Name */}
       <FormInput
-        label="Item Name"
+        label={t('addToPantry.itemName')}
         required
         value={itemName}
         onChangeText={setItemName}
-        placeholder="e.g., Milk, Eggs, Bread..."
+        placeholder={t('addToPantry.itemNamePlaceholder')}
         useBottomSheetInput
         autoCapitalize="words"
         testID="add-pantry-item-name-input"
@@ -68,10 +82,10 @@ export const MainDetailsPage: React.FC<MainDetailsPageProps> = ({
       <View style={[styles.section, { zIndex: 10 }]}>
         <BrandAutocompleteField
           variant="inline"
-          label="Brand"
+          label={t('addToPantry.brand')}
           value={brand}
           onChangeText={setBrand}
-          placeholder="e.g., Whole Foods, Organic Valley"
+          placeholder={t('addToPantry.brandPlaceholder')}
           suggestedBrands={suggestedBrands}
           onBrandSelected={handleBrandSelected}
         />
@@ -79,19 +93,20 @@ export const MainDetailsPage: React.FC<MainDetailsPageProps> = ({
 
       {/* Expiration Date */}
       <DatePickerField
-        label="Expiration Date"
+        label={t('addToPantry.expirationDate')}
         value={expirationDate}
         onChange={setExpirationDate}
-        placeholder="Select date"
+        placeholder={t('addToPantry.expirationPlaceholder')}
         minimumDate={new Date()}
       />
 
       {/* Storage State */}
       <SegmentedControl
-        label="Storage"
+        label={t('addToPantry.storage')}
         options={STORAGE_STATES}
         value={storageState}
         onChange={setStorageState}
+        formatLabel={formatStorageStateLabel}
       />
     </BottomSheetKeyboardAwareScrollView>
   );

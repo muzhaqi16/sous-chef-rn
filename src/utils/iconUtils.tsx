@@ -40,6 +40,7 @@ const TONE_TO_COLOR: Record<string, (t: Theme) => string> = {
   black: t => t.colors.black,
   favorite: t => t.colors.favorite,
   rating: t => t.colors.rating,
+  navigationActive: t => t.colors.navigationActive,
 };
 
 export type IconTone = keyof typeof TONE_TO_COLOR;

@@ -1,5 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { t as tGlobal } from '#/i18n/t';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { format, parseISO } from 'date-fns';
@@ -79,7 +81,10 @@ export const MealPlanMain: React.FC = () => (
   <DeferredScreen
     fallback={
       <TabMainScreen testID="meal-plan-screen">
-        <TabScreenHeader label="Plan your meals" title="Meal Plan" />
+        <TabScreenHeader
+          label={tGlobal('mealPlanMain.label')}
+          title={tGlobal('mealPlanMain.defaultTitle')}
+        />
         <MealPlanSkeleton />
       </TabMainScreen>
     }
@@ -92,6 +97,7 @@ export const MealPlanMain: React.FC = () => (
  * Only mounts after isReady is true, so the skeleton paints instantly.
  */
 const MealPlanMainInner: React.FC = () => {
+  const { t } = useTranslation();
   const { toMealPlanRecipeDetail, toCreateMealPlan } = useAppNavigation();
   const { setOverlayOpen } = useTabBarSetters();
 
@@ -211,7 +217,9 @@ const MealPlanMainInner: React.FC = () => {
         if (id) removeFromMealPlansForMain(cache, id, { evictItem: true });
       },
       onError: error => {
-        toastService.error(error.message || 'Failed to delete meal plan');
+        toastService.error(
+          error.message || tGlobal('mealPlanMain.deleteMealPlanFailed'),
+        );
       },
     },
   );
@@ -407,7 +415,7 @@ const MealPlanMainInner: React.FC = () => {
       () => {},
     );
     if (result && result.data?.deleteMealPlan?.success) {
-      toastService.success('Meal plan deleted');
+      toastService.success(t('mealPlanMain.mealPlanDeleted'));
       // If we deleted the active plan, clear the selection so the UI falls back
       // to the next available plan (or the empty state if none remain).
       // awaitRefetchQueries ensures mealPlans is already updated at this point.
@@ -432,7 +440,10 @@ const MealPlanMainInner: React.FC = () => {
   if (!plansLoading && mealPlans.length === 0) {
     return (
       <TabMainScreen testID="meal-plan-screen">
-        <TabScreenHeader label="Plan your meals" title="Meal Plan" />
+        <TabScreenHeader
+          label={t('mealPlanMain.label')}
+          title={t('mealPlanMain.defaultTitle')}
+        />
         <MealPlanEmptyState
           onCreatePlan={handleCreatePlan}
           onCreateFromTemplate={handleOpenTemplateBrowser}
@@ -465,8 +476,8 @@ const MealPlanMainInner: React.FC = () => {
       <View style={styles.headerRow}>
         <View style={styles.headerContent}>
           <TabScreenHeader
-            label="Plan your meals"
-            title={activeMealPlan?.name ?? 'Meal Plan'}
+            label={t('mealPlanMain.label')}
+            title={activeMealPlan?.name ?? t('mealPlanMain.defaultTitle')}
             onTitlePress={handleOpenSelector}
             titleAccessory={
               <Icon name="chevron-down" size={20} tone="textPrimary" />
@@ -480,7 +491,7 @@ const MealPlanMainInner: React.FC = () => {
                 onPress={() => setShoppingListSheetVisible(true)}
                 hitSlop={8}
                 style={styles.headerActionButton}
-                accessibilityLabel="Generate shopping list"
+                accessibilityLabel={t('mealPlanMain.generateShoppingListLabel')}
               >
                 <Icon name="cart-outline" size={22} tone="primary" />
               </Pressable>
@@ -490,7 +501,7 @@ const MealPlanMainInner: React.FC = () => {
                 onPress={handleSaveAsTemplate}
                 hitSlop={8}
                 style={styles.headerActionButton}
-                accessibilityLabel="Save as template"
+                accessibilityLabel={t('mealPlanMain.saveAsTemplateLabel')}
               >
                 <Icon name="bookmark-outline" size={22} tone="primary" />
               </Pressable>
@@ -499,7 +510,7 @@ const MealPlanMainInner: React.FC = () => {
               onPress={() => setSettingsVisible(true)}
               hitSlop={8}
               style={styles.headerActionButton}
-              accessibilityLabel="Plan settings"
+              accessibilityLabel={t('mealPlanMain.planSettingsLabel')}
             >
               <Icon name="ellipsis-vertical" size={22} tone="textSecondary" />
             </Pressable>

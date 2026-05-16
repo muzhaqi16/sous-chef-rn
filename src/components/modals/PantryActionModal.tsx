@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { FormattedItemSubtitle } from '#components/atoms/FormattedItemSubtitle';
@@ -93,13 +94,18 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
   confirmLabel,
   confirmColor,
   snapPoints = ['75%', '95%'],
-  unitToggleLabel = 'Use by',
-  currentQuantityLabel = 'Available:',
+  unitToggleLabel,
+  currentQuantityLabel,
   operation,
   onConfirm,
   onReset,
   renderActionFields,
 }) => {
+  const { t } = useTranslation();
+  const resolvedUnitToggleLabel =
+    unitToggleLabel ?? t('pantryAction.useByDefault');
+  const resolvedCurrentQuantityLabel =
+    currentQuantityLabel ?? t('pantryAction.availableDefault');
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     onDismiss: onClose,
     snapPoints,
@@ -274,7 +280,7 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
               </Text>
               <View style={commonStyles.bottomSheetItemRow}>
                 <Text style={commonStyles.bottomSheetItemLabel}>
-                  {currentQuantityLabel}{' '}
+                  {resolvedCurrentQuantityLabel}{' '}
                 </Text>
                 <FormattedItemSubtitle
                   quantity={
@@ -319,7 +325,7 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
 
             {/* Unit Picker */}
             <UnitPicker
-              label={unitToggleLabel}
+              label={resolvedUnitToggleLabel}
               groups={groups}
               selectedUnitId={selectedUnitInfo?.unitId}
               onSelect={setSelectedUnitInfo}

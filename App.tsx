@@ -9,7 +9,8 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { ApolloProvider } from '@apollo/client/react';
 import { useIsHydrated } from '#store/useAppStore';
-import { client } from '#/apollo/client';
+import type { InMemoryCache } from '@apollo/client';
+import { client, startDeferredCacheRestore } from '#/apollo/client';
 import { Navigation } from '#navigation/RootNavigator';
 import { SplashScreen } from '#screens/SplashScreen';
 import { ToastProvider } from '#components/atoms/Toast';
@@ -72,6 +73,10 @@ queueManager.setFailureHandler(handleFailedMutation);
 const App = () => {
   const isHydrated = useIsHydrated();
   useAppLifecycle();
+
+  React.useEffect(() => {
+    startDeferredCacheRestore(client.cache as InMemoryCache);
+  }, []);
 
   if (!isHydrated) {
     return <SplashScreen />;

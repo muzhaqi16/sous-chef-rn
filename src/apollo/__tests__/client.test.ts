@@ -82,15 +82,22 @@ describe('Apollo client', () => {
           return 1;
         });
 
+      let startDeferredCacheRestore!: (cache: unknown) => void;
+      let client!: { cache: unknown };
       jest.isolateModules(() => {
-        require('../client');
+        ({ client, startDeferredCacheRestore } = require('../client'));
       });
 
-      // Phase 1: critical restore called synchronously
+      // Phase 1: critical restore called synchronously on module init
       expect(mockLoadCritical).toHaveBeenCalled();
       expect(mockRestore).toHaveBeenCalledWith(criticalData);
 
-      // Phase 2: requestIdleCallback scheduled
+      // Phase 2: deferred restore is opt-in via app entry — module init must
+      // NOT schedule it on its own.
+      expect(mockRIC).not.toHaveBeenCalled();
+
+      // App entry triggers Phase 2
+      startDeferredCacheRestore(client.cache);
       expect(mockRIC).toHaveBeenCalled();
 
       // Simulate idle callback firing

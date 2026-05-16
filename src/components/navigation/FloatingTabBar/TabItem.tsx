@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Pressable } from '#components/atoms/themedComponents';
 import Animated, {
@@ -49,6 +50,7 @@ export const TabItem: React.FC<TabItemProps> = ({
   activeTabIndex,
   tabIndex,
 }) => {
+  const { t } = useTranslation();
   const iconScale = useSharedValue(isFocused ? 1.2 : 1);
 
   // Drive scale animation from shared value on the UI thread
@@ -82,7 +84,9 @@ export const TabItem: React.FC<TabItemProps> = ({
     transform: [{ scale: iconScale.get() }],
   }));
 
-  const label = options.title || route.name;
+  // The manifest stores an i18n key in options.title; resolve it here so the
+  // tab label re-renders on language change.
+  const label = options.title ? t(options.title) : route.name;
   const [activeIcon, inactiveIcon] = TAB_ICON_MAP[route.name] || [
     'help-circle',
     'help-circle',
@@ -94,7 +98,7 @@ export const TabItem: React.FC<TabItemProps> = ({
     <Icon
       name={isFocused ? activeIcon : inactiveIcon}
       size={24}
-      tone={isFocused ? 'primary' : 'textTertiary'}
+      tone={isFocused ? 'primary' : 'white'}
     />
   );
 
@@ -132,7 +136,7 @@ const styles = StyleSheet.create(theme => ({
     minWidth: theme.sizes.touchTarget.sm,
   },
   tabLabel: {
-    color: theme.colors.textTertiary,
+    color: theme.colors.white,
     marginTop: theme.spacing.xs,
   },
   tabLabelFocused: {

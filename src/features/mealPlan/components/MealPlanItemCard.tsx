@@ -1,5 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { useFragment } from '@apollo/client/react';
@@ -29,6 +30,7 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
   onPress,
   onDelete,
 }) => {
+  const { t } = useTranslation();
   // Subscribe to this entity's MealPlanItemCard_item fields. Re-renders happen
   // only when these specific fields change in the cache.
   const fragmentResult = useFragment({
@@ -39,7 +41,8 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
   // Cache miss (e.g., entity evicted) — fall back to source data so we never blank out a list item.
   const item = fragmentResult.complete ? fragmentResult.data : itemSource;
 
-  const recipeName = item.recipe?.name ?? item.customMealName ?? 'Unnamed meal';
+  const recipeName =
+    item.recipe?.name ?? item.customMealName ?? t('mealPlanItem.unnamedMeal');
   const imageUrl = item.recipe?.imageUrl;
   const totalTime = item.recipe?.totalTimeMinutes;
   const usedPantryItems = item.usedPantryItems;
@@ -110,11 +113,15 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
           <View style={styles.meta}>
             <Text size="sm" tone="secondary">
               {[
-                totalTime != null && `${totalTime} min`,
-                item.servings != null && `${item.servings} servings`,
+                totalTime != null &&
+                  t('mealPlanItem.minutes', { count: totalTime }),
+                item.servings != null &&
+                  t('mealPlanItem.servings', { count: item.servings }),
                 item.calories != null &&
                   item.calories > 0 &&
-                  `${Math.round(item.calories)} cal`,
+                  t('mealPlanItem.calories', {
+                    count: Math.round(item.calories),
+                  }),
               ]
                 .filter(Boolean)
                 .join(' \u00B7 ')}
@@ -129,7 +136,7 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
               color={styles.pantryBadgeText.color}
             />
             <Text size="xs" weight="medium" style={styles.pantryBadgeText}>
-              Pantry updated
+              {t('mealPlanItem.pantryUpdated')}
             </Text>
           </View>
         )}

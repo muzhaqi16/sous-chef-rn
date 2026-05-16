@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Pressable } from '#components/atoms/themedComponents';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
@@ -77,6 +78,7 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
   onDelete,
   deleting,
 }) => {
+  const { t } = useTranslation();
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible,
     onDismiss: onClose,
@@ -88,12 +90,12 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
   const handleDelete = () => {
     if (!mealPlan) return;
     alertService.alert(
-      'Delete Meal Plan',
-      `Are you sure you want to delete "${mealPlan.name}"? This cannot be undone.`,
+      t('mealPlanSettings.deleteTitle'),
+      t('mealPlanSettings.deleteConfirm', { name: mealPlan.name }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('labels.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('mealPlanSettings.delete'),
           style: 'destructive',
           onPress: () => {
             onDelete(mealPlan.id);
@@ -119,10 +121,10 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
         showsVerticalScrollIndicator={false}
       >
         <BottomSheetHeader
-          title="Plan Settings"
+          title={t('mealPlanSettings.planSettings')}
           onCancel={onClose}
           onConfirm={onClose}
-          confirmLabel="Done"
+          confirmLabel={t('mealPlanSettings.done')}
         />
 
         {/* Plan info */}
@@ -140,12 +142,14 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
           </Text>
           {!!mealPlan.home?.name && (
             <Text size="sm" tone="tertiary" style={styles.planDate}>
-              Shared with {mealPlan.home.name}
+              {t('mealPlanSettings.sharedWith', { name: mealPlan.home.name })}
             </Text>
           )}
           {!!mealPlan.createdBy?.profile?.displayName && (
             <Text size="sm" tone="tertiary" style={styles.planDate}>
-              Created by {mealPlan.createdBy.profile.displayName}
+              {t('mealPlanSettings.createdBy', {
+                name: mealPlan.createdBy.profile.displayName,
+              })}
             </Text>
           )}
         </View>
@@ -158,13 +162,13 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
             tone="tertiary"
             style={styles.sectionTitle}
           >
-            Actions
+            {t('mealPlanSettings.actionsLabel')}
           </Text>
           <View style={styles.actionsCard}>
             <ActionItem
               icon="cart-outline"
-              label="Generate Shopping List"
-              description="Create a list from this plan's recipes"
+              label={t('mealPlanSettings.generateShoppingList')}
+              description={t('mealPlanSettings.generateShoppingListDesc')}
               onPress={() => {
                 onClose();
                 onGenerateShoppingList();
@@ -175,8 +179,8 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
                 <View style={styles.divider} />
                 <ActionItem
                   icon="copy-outline"
-                  label="Duplicate Plan"
-                  description="Copy this plan to a new date range"
+                  label={t('mealPlanSettings.duplicatePlan')}
+                  description={t('mealPlanSettings.duplicatePlanDesc')}
                   onPress={() => {
                     onClose();
                     onDuplicate();
@@ -187,8 +191,12 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
             <View style={styles.divider} />
             <ActionItem
               icon="nutrition-outline"
-              label={showNutrition ? 'Hide Nutrition' : 'View Nutrition'}
-              description="Calories, macros, and goal progress"
+              label={
+                showNutrition
+                  ? t('mealPlanSettings.hideNutrition')
+                  : t('mealPlanSettings.viewNutrition')
+              }
+              description={t('mealPlanSettings.viewNutritionDesc')}
               onPress={() => setShowNutrition(prev => !prev)}
             />
           </View>
@@ -214,7 +222,7 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
                 tone="tertiary"
                 style={styles.sectionTitle}
               >
-                Generated Lists
+                {t('mealPlanSettings.generatedLists')}
               </Text>
               <View style={styles.actionsCard}>
                 {mealPlan.generatedShoppingLists.map(list => (
@@ -238,13 +246,17 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
               tone="tertiary"
               style={styles.sectionTitle}
             >
-              Danger Zone
+              {t('mealPlanSettings.dangerZone')}
             </Text>
             <View style={styles.actionsCard}>
               <ActionItem
                 icon="trash-outline"
-                label={deleting ? 'Deleting...' : 'Delete Plan'}
-                description="Permanently remove this meal plan"
+                label={
+                  deleting
+                    ? t('mealPlanSettings.deletingLabel')
+                    : t('mealPlanSettings.deletePlanLabel')
+                }
+                description={t('mealPlanSettings.deletePlanDesc')}
                 onPress={handleDelete}
                 tone="error"
                 disabled={deleting}

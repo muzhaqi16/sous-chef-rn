@@ -5,7 +5,7 @@ jest.mock('#/graphql/generated/fragmentMatcher.json', () => ({
 }));
 
 import { gql } from '@apollo/client';
-import { makeCache, stopCacheMonitoring } from '../cache';
+import { makeCache } from '../cache';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -41,10 +41,6 @@ function buildConnection(
 // ---------------------------------------------------------------------------
 
 describe('cache pagination integration', () => {
-  afterEach(() => {
-    stopCacheMonitoring();
-  });
-
   // =========================================================================
   // Section A: mergeConnectionByNodeId via Home.shoppingListsConnection
   //   cursorArg = 'after', keyArgs = ['filters']

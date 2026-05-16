@@ -1,5 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { FlashList, type ListRenderItemInfo } from '@shopify/flash-list';
 import { StyleSheet } from 'react-native-unistyles';
@@ -57,10 +58,11 @@ const PurchaseHistoryItemComponent: React.FC<PurchaseHistoryItemProps> = ({
   item: purchase,
   index,
 }) => {
+  const { t } = useTranslation();
   const { totalCount } = usePurchaseHistoryContext();
 
   return (
-    <View style={styles.purchaseCard}>
+    <View style={[styles.purchaseCard, commonStyles.shadow]}>
       <View style={styles.purchaseHeader}>
         <View style={styles.purchaseNumber}>
           <Text size="xs" weight="bold" style={styles.purchaseNumberText}>
@@ -76,7 +78,7 @@ const PurchaseHistoryItemComponent: React.FC<PurchaseHistoryItemProps> = ({
         <View style={styles.purchaseDetailRow}>
           <Icon name="cube-outline" size={18} tone="iconSecondary" />
           <Text size="sm" tone="secondary" style={styles.purchaseDetailLabel}>
-            Quantity:
+            {t('purchaseHistory.quantityLabel')}
           </Text>
           <Text size="sm" weight="medium" style={styles.purchaseDetailValue}>
             {purchase.quantity} {purchase.unitSymbol}
@@ -87,7 +89,7 @@ const PurchaseHistoryItemComponent: React.FC<PurchaseHistoryItemProps> = ({
           <View style={styles.purchaseDetailRow}>
             <Icon name="person-outline" size={18} tone="iconSecondary" />
             <Text size="sm" tone="secondary" style={styles.purchaseDetailLabel}>
-              Purchased by:
+              {t('purchaseHistory.purchasedBy')}
             </Text>
             <Text size="sm" weight="medium" style={styles.purchaseDetailValue}>
               {purchase.user.profile?.displayName || purchase.user.email}
@@ -105,23 +107,27 @@ const getPurchaseItemType = () => 'item';
 
 const PurchaseHistoryHeader: React.FC<{ totalCount: number }> = ({
   totalCount,
-}) => (
-  <View style={styles.statsContainer}>
-    <Text size="md">
-      Total Purchases:{' '}
-      <Text weight="bold" style={styles.statsValue}>
-        {totalCount}
+}) => {
+  const { t } = useTranslation();
+  return (
+    <View style={styles.statsContainer}>
+      <Text size="md">
+        {t('purchaseHistory.totalPurchases')}{' '}
+        <Text weight="bold" style={styles.statsValue}>
+          {totalCount}
+        </Text>
       </Text>
-    </Text>
-  </View>
-);
+    </View>
+  );
+};
 
 const PurchaseHistoryEmpty: React.FC = () => {
+  const { t } = useTranslation();
   return (
     <View style={styles.emptyContainer}>
       <Icon name="receipt-outline" size={64} tone="iconDisabled" />
       <Text size="lg" weight="semibold" style={styles.emptyText}>
-        No purchase history
+        {t('purchaseHistory.emptyTitle')}
       </Text>
       <Text
         size="sm"
@@ -129,7 +135,7 @@ const PurchaseHistoryEmpty: React.FC = () => {
         align="center"
         style={styles.emptySubtext}
       >
-        Mark this item as purchased to start tracking history
+        {t('purchaseHistory.emptySubtitle')}
       </Text>
     </View>
   );
@@ -140,6 +146,7 @@ const PurchaseHistoryEmpty: React.FC = () => {
 export const PurchaseHistoryScreen: React.FC<
   StaticScreenProps<RouteParams>
 > = ({ route }) => {
+  const { t } = useTranslation();
   const { goBack } = useAppNavigation();
   const { itemName, purchases } = route.params;
 
@@ -150,7 +157,7 @@ export const PurchaseHistoryScreen: React.FC<
         <ThemedBackButton onPress={goBack} style={styles.backButton} />
         <View style={styles.headerContent}>
           <Text size="lg" weight="semibold">
-            Purchase History
+            {t('purchaseHistory.title')}
           </Text>
           <Text size="sm" tone="secondary" style={styles.headerSubtitle}>
             {itemName}
@@ -234,7 +241,6 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: 1,
     marginVertical: theme.spacing.sm,
     borderColor: theme.colors.border,
-    ...commonStyles.shadow,
   },
   purchaseHeader: {
     flexDirection: 'row',

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, ScrollView } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
@@ -20,13 +21,13 @@ interface AddToMealPlanSheetProps {
   initialMealType?: MealType;
 }
 
-const MEAL_TYPES: { type: MealType; label: string }[] = [
-  { type: MealType.Breakfast, label: 'Breakfast' },
-  { type: MealType.Brunch, label: 'Brunch' },
-  { type: MealType.Lunch, label: 'Lunch' },
-  { type: MealType.Snack, label: 'Snack' },
-  { type: MealType.Dinner, label: 'Dinner' },
-  { type: MealType.Dessert, label: 'Dessert' },
+const MEAL_TYPE_KEYS: { type: MealType; labelKey: string }[] = [
+  { type: MealType.Breakfast, labelKey: 'addToMealPlan.mealBreakfast' },
+  { type: MealType.Brunch, labelKey: 'addToMealPlan.mealBrunch' },
+  { type: MealType.Lunch, labelKey: 'addToMealPlan.mealLunch' },
+  { type: MealType.Snack, labelKey: 'addToMealPlan.mealSnack' },
+  { type: MealType.Dinner, labelKey: 'addToMealPlan.mealDinner' },
+  { type: MealType.Dessert, labelKey: 'addToMealPlan.mealDessert' },
 ];
 
 export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
@@ -35,6 +36,7 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
   recipeId,
   initialMealType,
 }) => {
+  const { t } = useTranslation();
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible,
     onDismiss: onClose,
@@ -90,10 +92,10 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
         contentContainerStyle={[styles.content, contentContainerStyle]}
       >
         <BottomSheetHeader
-          title="Add to Meal Plan"
+          title={t('addToMealPlan.title')}
           onCancel={onClose}
           onConfirm={handleConfirm}
-          confirmLabel="Add"
+          confirmLabel={t('addToMealPlan.add')}
           confirmDisabled={adding || !hasPlan}
           confirmColor="primary"
         />
@@ -105,7 +107,7 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
             align="center"
             style={styles.warningText}
           >
-            No active meal plan. Create one first.
+            {t('addToMealPlan.noActivePlan')}
           </Text>
         )}
 
@@ -117,7 +119,7 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
               tone="secondary"
               style={styles.sectionLabel}
             >
-              Meal Plan
+              {t('addToMealPlan.mealPlanLabel')}
             </Text>
             <ScrollView
               horizontal
@@ -173,7 +175,7 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
               tone="secondary"
               style={styles.sectionLabel}
             >
-              Date
+              {t('addToMealPlan.dateLabel')}
             </Text>
             <WeekStrip
               weekDays={calendar.weekDays}
@@ -203,11 +205,11 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
           tone="secondary"
           style={styles.sectionLabel}
         >
-          Meal Type
+          {t('addToMealPlan.mealTypeLabel')}
         </Text>
 
         <View style={styles.mealTypeRow}>
-          {MEAL_TYPES.map(({ type, label }) => (
+          {MEAL_TYPE_KEYS.map(({ type, labelKey }) => (
             <Pressable
               key={type}
               onPress={() => setSelectedMealType(type)}
@@ -223,7 +225,7 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
                   selectedMealType === type && styles.mealTypeTextSelected,
                 ]}
               >
-                {label}
+                {t(labelKey)}
               </Text>
             </Pressable>
           ))}

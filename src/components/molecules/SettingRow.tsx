@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { BaseSwitch } from '#components/base/BaseSwitch';
 import { BottomSheetView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
@@ -28,6 +29,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
   isFirst,
   isLast,
 }) => {
+  const { t } = useTranslation();
   const [modalVisible, setModalVisible] = useState(false);
   const [textEditVisible, setTextEditVisible] = useState(false);
 
@@ -90,29 +92,36 @@ export const SettingRow: React.FC<SettingRowProps> = ({
   const getAccessibilityLabel = () => {
     const baseLabel = item.label;
     if (item.type === 'switch') {
-      return `${baseLabel}, ${item.value ? 'enabled' : 'disabled'}`;
+      return `${baseLabel}, ${
+        item.value ? t('settingRow.enabled') : t('settingRow.disabled')
+      }`;
     } else if (item.type === 'modal' && item.options) {
       const selectedOption =
         item.options?.find((opt: any) => opt.value === item.value)?.label ||
-        'Select';
-      return `${baseLabel}, currently ${selectedOption}`;
+        t('labels.select');
+      return t('settingRow.currentlySelected', {
+        label: baseLabel,
+        selected: selectedOption,
+      });
     } else if (item.type === 'text') {
-      return `${baseLabel}, ${item.value || 'not set'}`;
+      return `${baseLabel}, ${item.value || t('settingRow.notSet')}`;
     } else if (item.type === 'info') {
-      return `${baseLabel}, ${item.value || 'not set'}`;
+      return `${baseLabel}, ${item.value || t('settingRow.notSet')}`;
     }
     return baseLabel;
   };
 
   const getAccessibilityHint = () => {
     if (item.type === 'switch') {
-      return `Tap to ${item.value ? 'disable' : 'enable'} ${item.label}`;
+      return item.value
+        ? t('settingRow.tapToDisable', { label: item.label })
+        : t('settingRow.tapToEnable', { label: item.label });
     } else if (item.type === 'modal') {
-      return 'Tap to select an option';
+      return t('settingRow.tapToSelect');
     } else if (item.type === 'text') {
-      return 'Tap to edit';
+      return t('settingRow.tapToEdit');
     } else if (item.type === 'navigation' || item.type === 'action') {
-      return 'Tap to open';
+      return t('settingRow.tapToOpen');
     }
     return undefined;
   };
@@ -182,7 +191,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
                 ellipsizeMode="tail"
               >
                 {item.options?.find((opt: any) => opt.value === item.value)
-                  ?.label || 'Select'}
+                  ?.label || t('labels.select')}
               </Text>
               <Icon name="chevron-forward" size={20} tone="textSecondary" />
             </View>
@@ -238,7 +247,9 @@ export const SettingRow: React.FC<SettingRowProps> = ({
                 android_ripple={RIPPLE.SUBTLE}
                 accessibilityRole="button"
                 accessibilityLabel={opt.label}
-                accessibilityHint={`Select ${opt.label}`}
+                accessibilityHint={t('settingRow.selectOption', {
+                  label: opt.label,
+                })}
                 accessibilityState={{ selected: item.value === opt.value }}
               >
                 <Text size="md" style={styles.sheetOptionText}>
@@ -258,7 +269,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   rowWrapper: {
-    paddingVertical: theme.spacing['5'],
+    paddingVertical: theme.spacing['3'],
     paddingHorizontal: theme.spacing.md,
     borderBottomWidth: 1,
     borderColor: theme.colors.border,

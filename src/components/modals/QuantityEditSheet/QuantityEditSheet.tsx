@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { TextInput } from 'react-native-gesture-handler';
 import { Pressable } from '#components/atoms/themedComponents';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
@@ -98,6 +99,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
   onSave,
   loading = false,
 }) => {
+  const { t } = useTranslation();
   const { ref, modalProps } = useStandardBottomSheet({
     visible: visible && !!item,
     onDismiss: onClose,
@@ -238,7 +240,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
   return (
     <BottomSheetModal ref={ref} {...modalProps}>
       <Header
-        title="Edit Quantity"
+        title={t('quantityEditSheet.title')}
         centerTitle
         onClose={onClose}
         rightActions={[
@@ -267,7 +269,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
             tone="secondary"
             style={styles.sectionLabel}
           >
-            Quantity
+            {t('quantityEditSheet.quantity')}
           </Text>
           <View style={styles.counterContainer}>
             {/* Decrement Button */}
@@ -333,7 +335,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
             tone="secondary"
             style={styles.sectionLabel}
           >
-            Unit
+            {t('quantityEditSheet.unit')}
           </Text>
 
           {/* Item-specific Units Chips - only show if available */}
@@ -370,8 +372,8 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
             }}
             placeholder={
               itemUnits.length > 0
-                ? 'Or type to search...'
-                : 'Type to search units...'
+                ? t('quantityEditSheet.orTypeToSearch')
+                : t('quantityEditSheet.typeToSearchUnits')
             }
           />
         </View>

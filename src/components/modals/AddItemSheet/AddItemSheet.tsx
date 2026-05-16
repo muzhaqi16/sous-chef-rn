@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -54,6 +55,7 @@ export function AddItemSheet({
   tutorialHint,
   children,
 }: AddItemSheetProps) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const searchBarRef = useRef<BottomSheetSearchBarRef>(null);
 
@@ -230,20 +232,20 @@ export function AddItemSheet({
               <View style={styles.actionButtons}>
                 <ActionCard
                   icon="barcode-outline"
-                  label="Scan Barcode"
+                  label={t('addItemSheet.scanBarcode')}
                   onPress={onScanPress}
                 />
                 {!!onIdentifyPress && (
                   <ActionCard
                     icon="camera-outline"
-                    label="Identify"
+                    label={t('addItemSheet.identify')}
                     onPress={onIdentifyPress}
                     testID={`${config.testIDPrefix}-identify-button`}
                   />
                 )}
                 <ActionCard
                   icon="add"
-                  label="Add Manually"
+                  label={t('addItemSheet.addManually')}
                   onPress={handleAddManually}
                   testID={`${config.testIDPrefix}-add-manually-button`}
                 />

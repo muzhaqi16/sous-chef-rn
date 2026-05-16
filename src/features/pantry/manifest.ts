@@ -5,7 +5,7 @@ export const pantryFeature: FeatureManifest = {
   id: 'pantry',
   tab: {
     screenName: 'Pantry',
-    title: 'Pantry',
+    title: 'navigation.tabs.pantry',
     order: 10,
     stack: PantryStack,
   },

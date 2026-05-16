@@ -1,4 +1,5 @@
 import React, { useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import {
@@ -49,6 +50,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
   initialSearchQuery = '',
   onItemAdded,
 }) => {
+  const { t } = useTranslation();
   const { toBarcode, toAddItem } = useAppNavigation();
   const client = useApolloClient();
   const showImages = useShowShoppingListImages();
@@ -198,7 +200,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
         tutorial?.notifyItemAdded();
       })
       .catch(() => {
-        toastService.error('Failed to add item. Please try again.');
+        toastService.error(t('addToShoppingListSheet.addFailedRetry'));
       });
   };
 
@@ -244,7 +246,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
       .catch(() => {
         // On error: remove from exiting, show error toast
         state.completeExitAnimation(shoppingItem.itemId);
-        toastService.error('Failed to add item. Please try again.');
+        toastService.error(t('addToShoppingListSheet.addFailedRetry'));
       });
   };
 
@@ -264,8 +266,8 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
           variant="inline"
           text={
             suggestions.hasSuggestions
-              ? 'Tap + next to an item to add it'
-              : 'Tap "Add Manually" to add an item'
+              ? t('addToShoppingListSheet.tutorialTapPlus')
+              : t('addToShoppingListSheet.tutorialTapAddManually')
           }
           onSkip={tutorial.skipAll}
         />
@@ -276,7 +278,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
       return (
         <SheetTutorialHint
           variant="handle"
-          text="Pull down to close"
+          text={t('addToShoppingListSheet.tutorialPullDown')}
           onSkip={tutorial.skipAll}
         />
       );

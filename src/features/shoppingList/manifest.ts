@@ -5,7 +5,7 @@ export const shoppingListFeature: FeatureManifest = {
   id: 'shoppingList',
   tab: {
     screenName: 'ShoppingList',
-    title: 'List',
+    title: 'navigation.tabs.shoppingList',
     order: 20,
     stack: ShoppingListStack,
   },

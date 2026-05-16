@@ -1,10 +1,29 @@
 import React, { useRef } from 'react';
 import { View } from 'react-native';
+import { Trans, useTranslation } from 'react-i18next';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { Text } from '#components/atoms/Text';
+
+/**
+ * Greeting display-name text. Uses a top-level `StyleSheet.create` with a
+ * direct `theme.colors.primary` read so the Unistyles babel plugin tracks the
+ * dependency and the C++ ShadowTree updates the color when the user picks a
+ * new App Color (no re-render, no reload).
+ */
+const GreetingName: React.FC<{ name: string }> = ({ name }) => (
+  <Text weight="bold" size="2xl" style={greetingNameStyles.text}>
+    {name}
+  </Text>
+);
+
+const greetingNameStyles = StyleSheet.create(theme => ({
+  text: {
+    color: theme.colors.primary,
+  },
+}));
 
 // Matches theme.typography.fontSize.lg (18). Inlined so the component does not
 // need useUnistyles — the theme value is module-static.
@@ -52,17 +71,18 @@ export const PantryHeader: React.FC<PantryHeaderProps> = ({
   onNotificationPress,
   onHomeBadgeLayout,
 }) => {
+  const { t } = useTranslation();
   const badgeRef = useRef<View>(null);
 
   return (
     <View style={styles.greetingRow}>
       <View style={styles.greetingContent}>
         <Text weight="bold" style={styles.greeting}>
-          Hello,{' '}
-          <Text weight="bold" tone="accent" size="2xl">
-            {userName}
-          </Text>
-          !
+          <Trans
+            i18nKey="pantryHeader.greeting"
+            values={{ name: userName }}
+            components={{ name: <GreetingName name={userName} /> }}
+          />
         </Text>
         <Pressable onPress={onHomePress} style={styles.householdBadge}>
           <View
@@ -111,7 +131,7 @@ export const PantryHeader: React.FC<PantryHeaderProps> = ({
           style={styles.notificationButton}
           hitSlop={8}
           accessibilityRole="button"
-          accessibilityLabel="Notifications"
+          accessibilityLabel={t('pantryHeader.notificationsLabel')}
         >
           <Icon name="notifications-outline" size={24} tone="textSecondary" />
           {notificationCount > 0 && <View style={styles.notificationDot} />}
@@ -121,11 +141,18 @@ export const PantryHeader: React.FC<PantryHeaderProps> = ({
       {/* Avatar */}
       <Pressable onPress={onAvatarPress} style={styles.avatarContainer}>
         {avatarUrl ? (
-          <CachedImage
-            uri={avatarUrl}
-            style={styles.avatarImage}
-            displaySize={48}
-          />
+          // Border lives on this wrapper View (auto-patched by the Unistyles
+          // babel plugin) instead of on the inner CachedImage — TurboImage is
+          // a third-party native component whose `style` prop isn't subscribed
+          // to ShadowTree updates, so a primary-color border there goes stale
+          // on App Color changes.
+          <View style={styles.avatarBorder}>
+            <CachedImage
+              uri={avatarUrl}
+              style={styles.avatarImageInner}
+              displaySize={48}
+            />
+          </View>
         ) : (
           <View style={styles.avatarPlaceholder}>
             <Icon name="person" size={24} tone="textSecondary" />
@@ -190,11 +217,19 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarImage: {
+  // RN View — auto-bound to the ShadowTree so the primary-color border
+  // updates instantly on App Color changes.
+  avatarBorder: {
     width: 48,
     height: 48,
     borderRadius: theme.radii.xl - 2,
     borderWidth: 2,
     borderColor: theme.colors.primary,
+    overflow: 'hidden',
+  },
+  avatarImageInner: {
+    width: '100%',
+    height: '100%',
+    borderRadius: theme.radii.xl - 2,
   },
 }));

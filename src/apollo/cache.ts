@@ -346,31 +346,13 @@ function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
 }
 
 /**
- * Apollo InMemoryCache with intelligent merge functions
+ * Apollo InMemoryCache with intelligent merge functions.
  *
- * Uses version-based conflict resolution to properly handle:
- * - Mutation responses updating cached queries
- * - Optimistic updates
- * - Concurrent modifications
- *
- * Cache Size Management:
- * - Monitors cache size and triggers garbage collection at 80% capacity
- * - Prevents unbounded cache growth through periodic cleanup
- * - Target maximum: ~100MB (approximately 100,000 typical entities)
+ * Uses version-based conflict resolution to handle mutation responses,
+ * optimistic updates, and concurrent modifications. Targeted `cache.evict()`
+ * + `cache.gc()` at known eviction points (logout, item deletion) keep the
+ * cache bounded — no periodic sweep needed.
  */
-// Track the dev-mode cache monitoring interval for cleanup
-let cacheMonitoringInterval: NodeJS.Timeout | null = null;
-
-/**
- * Stop the dev-mode cache size monitoring interval.
- * Called during logout to prevent stale interval from running.
- */
-export function stopCacheMonitoring(): void {
-  if (cacheMonitoringInterval) {
-    clearInterval(cacheMonitoringInterval);
-    cacheMonitoringInterval = null;
-  }
-}
 
 export function makeCache(): InMemoryCache {
   const cache = new InMemoryCache({
@@ -611,114 +593,6 @@ export function makeCache(): InMemoryCache {
       },
     },
   });
-
-  const MAX_CACHE_SIZE_MB = 50;
-  const GC_THRESHOLD = 0.8; // Trigger GC at 80% capacity
-  const SAMPLE_SIZE = 100; // Sample first 100 top-level keys for estimation
-
-  // Optimized cache size estimator using sampling instead of full traversal
-  // Samples first 100 keys and extrapolates, reducing 50-150ms to <5ms
-  const estimateCacheSizeSampled = (obj: any): number => {
-    const allKeys = Object.keys(obj);
-    const totalKeys = allKeys.length;
-
-    if (totalKeys === 0) return 0;
-
-    // Sample first SAMPLE_SIZE keys to avoid full traversal
-    const sampleKeys = allKeys.slice(0, Math.min(SAMPLE_SIZE, totalKeys));
-    let sampleObjectCount = 0;
-
-    for (const key of sampleKeys) {
-      const val = obj[key];
-      if (val && typeof val === 'object') {
-        sampleObjectCount += 1;
-        if (Array.isArray(val)) {
-          sampleObjectCount += val.length;
-        } else {
-          sampleObjectCount += Object.keys(val).length;
-        }
-      }
-    }
-
-    const avgObjectsPerKey = sampleObjectCount / sampleKeys.length;
-    const estimatedTotalObjects = avgObjectsPerKey * totalKeys;
-
-    // Rough estimate: ~1KB per object on average
-    return estimatedTotalObjects * 1024;
-  };
-
-  const runCacheGC = () => {
-    try {
-      const cacheData = cache.extract();
-      const estimatedSize = estimateCacheSizeSampled(cacheData);
-      const maxSizeBytes = MAX_CACHE_SIZE_MB * 1024 * 1024;
-      const usageRatio = estimatedSize / maxSizeBytes;
-
-      if (usageRatio > GC_THRESHOLD) {
-        if (__DEV__) {
-          console.warn(
-            `⚠️ Apollo Cache at ${(usageRatio * 100).toFixed(1)}% capacity (~${(
-              estimatedSize /
-              1024 /
-              1024
-            ).toFixed(2)}MB). Running garbage collection...`,
-          );
-        }
-
-        const removedIds = cache.gc({ resetResultCache: true });
-
-        if (__DEV__) {
-          console.log(
-            `🗑️ Garbage collected ${removedIds.length} unreachable cache objects`,
-          );
-
-          const newSize = estimateCacheSizeSampled(cache.extract());
-          const newRatio = newSize / maxSizeBytes;
-
-          if (newRatio > GC_THRESHOLD) {
-            console.error(
-              `❌ Cache still at ${(newRatio * 100).toFixed(
-                1,
-              )}% after GC. Consider increasing MAX_CACHE_SIZE_MB or reviewing data retention policies.`,
-            );
-          }
-        }
-      } else if (__DEV__) {
-        console.log(
-          `📊 Apollo Cache: ${(usageRatio * 100).toFixed(1)}% used (~${(
-            estimatedSize /
-            1024 /
-            1024
-          ).toFixed(2)}MB / ${MAX_CACHE_SIZE_MB}MB)`,
-        );
-      }
-
-      if (__DEV__) {
-        const allKeys = Object.keys(cacheData);
-        const shoppingItemCount = allKeys.filter(k =>
-          k.startsWith('ShoppingListItem:'),
-        ).length;
-        const pantryItemCount = allKeys.filter(k =>
-          k.startsWith('PantryItem:'),
-        ).length;
-        console.log(
-          `📊 [Cache] Entities: total=${allKeys.length} ShoppingListItem=${shoppingItemCount} PantryItem=${pantryItemCount}`,
-        );
-      }
-    } catch (_error) {
-      if (__DEV__) {
-        console.error('Error monitoring cache size:', _error);
-      }
-    }
-  };
-
-  // Clear any existing interval before creating new one (prevents memory leak during hot reload)
-  stopCacheMonitoring();
-
-  // Dev: monitor every 5 minutes with logging
-  // Production: GC check every 5 minutes (sampling takes <5ms, safe for prod)
-  const interval = 5 * 60 * 1000;
-  cacheMonitoringInterval = setInterval(runCacheGC, interval);
 
   return cache;
 }

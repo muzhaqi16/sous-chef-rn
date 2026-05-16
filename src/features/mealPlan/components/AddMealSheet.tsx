@@ -3,10 +3,11 @@ import {
   View,
   Text,
   ActivityIndicator,
+  ScrollView,
   type NativeSyntheticEvent,
   type NativeScrollEvent,
 } from 'react-native';
-import { ScrollView } from 'react-native-gesture-handler';
+import { useTranslation } from 'react-i18next';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
@@ -43,20 +44,20 @@ interface AddMealSheetProps {
   onAddCustomMeal: (name: string, mealType: MealType) => void;
 }
 
-const MEAL_TYPES: { type: MealType; label: string }[] = [
-  { type: MealType.Breakfast, label: 'Breakfast' },
-  { type: MealType.Lunch, label: 'Lunch' },
-  { type: MealType.Dinner, label: 'Dinner' },
-  { type: MealType.Snack, label: 'Snack' },
-  { type: MealType.Brunch, label: 'Brunch' },
-  { type: MealType.Dessert, label: 'Dessert' },
+const MEAL_TYPES: { type: MealType; labelKey: string }[] = [
+  { type: MealType.Breakfast, labelKey: 'addMealSheet.mealBreakfast' },
+  { type: MealType.Lunch, labelKey: 'addMealSheet.mealLunch' },
+  { type: MealType.Dinner, labelKey: 'addMealSheet.mealDinner' },
+  { type: MealType.Snack, labelKey: 'addMealSheet.mealSnack' },
+  { type: MealType.Brunch, labelKey: 'addMealSheet.mealBrunch' },
+  { type: MealType.Dessert, labelKey: 'addMealSheet.mealDessert' },
 ];
 
-const DIET_TAG_LABELS: Record<DietTag, string> = {
-  vegan: 'Vegan',
-  vegetarian: 'Vegetarian',
-  glutenFree: 'GF',
-  dairyFree: 'DF',
+const DIET_TAG_LABEL_KEYS: Record<DietTag, string> = {
+  vegan: 'addMealSheet.dietVegan',
+  vegetarian: 'addMealSheet.dietVegetarian',
+  glutenFree: 'addMealSheet.dietGlutenFree',
+  dairyFree: 'addMealSheet.dietDairyFree',
 };
 
 const MIN_QUERY_LENGTH = 3;
@@ -137,6 +138,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
   onAddRecipe,
   onAddCustomMeal,
 }) => {
+  const { t } = useTranslation();
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible,
     onDismiss: onClose,
@@ -245,12 +247,12 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
           onAddRecipe(preloaded.id, selectedMealType);
           ref.current?.dismiss();
         } else {
-          toastService.error('Failed to add recipe. Please try again.');
+          toastService.error(t('addMealSheet.addRecipeFailed'));
         }
       },
       () => setLoadingItemId(null),
       () => {
-        toastService.error('Failed to add recipe. Please try again.');
+        toastService.error(t('addMealSheet.addRecipeFailed'));
       },
     );
   };
@@ -280,7 +282,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
     >
       <View style={[styles.content, contentContainerStyle]}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Add a meal</Text>
+          <Text style={styles.headerTitle}>{t('addMealSheet.title')}</Text>
         </View>
 
         {/* Meal type selector */}
@@ -290,7 +292,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
           contentContainerStyle={styles.mealTypeRow}
           style={styles.mealTypeScroll}
         >
-          {MEAL_TYPES.map(({ type, label }) => (
+          {MEAL_TYPES.map(({ type, labelKey }) => (
             <Pressable
               key={type}
               onPress={() => setSelectedMealType(type)}
@@ -305,7 +307,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
                   selectedMealType === type && styles.mealTypeTextSelected,
                 ]}
               >
-                {label}
+                {t(labelKey)}
               </Text>
             </Pressable>
           ))}
@@ -315,7 +317,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
         <View style={styles.searchBarWrapper}>
           <BottomSheetSearchBar
             ref={searchBarRef}
-            placeholder="Search recipes or add a custom meal..."
+            placeholder={t('addMealSheet.searchPlaceholder')}
             onChangeText={handleDebouncedSearch}
             onClear={handleClearSearch}
             isLoading={searchingApi}
@@ -344,14 +346,16 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
                 color={styles.addIcon.color}
               />
               <Text style={styles.customMealText} numberOfLines={1}>
-                Add &quot;{searchQuery.trim()}&quot; as custom meal
+                {t('addMealSheet.addCustom', { query: searchQuery.trim() })}
               </Text>
             </Pressable>
           ) : null}
 
           {/* Your Recipes section */}
           {hasQuery && filteredRecipes.length > 0 ? (
-            <Text style={styles.sectionHeader}>Your Recipes</Text>
+            <Text style={styles.sectionHeader}>
+              {t('addMealSheet.yourRecipes')}
+            </Text>
           ) : null}
 
           {filteredRecipes.map(recipe => (
@@ -376,11 +380,14 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
                 </Text>
                 {recipe.servings || recipe.totalTimeMinutes ? (
                   <Text style={styles.recipeMeta}>
-                    {recipe.servings ? `${recipe.servings} servings` : ''}
+                    {recipe.servings
+                      ? t('addMealSheet.servings', { count: recipe.servings })
+                      : ''}
                     {recipe.totalTimeMinutes
-                      ? `${recipe.servings ? ' · ' : ''}${
-                          recipe.totalTimeMinutes
-                        } min`
+                      ? `${recipe.servings ? ' · ' : ''}${t(
+                          'addMealSheet.minutes',
+                          { count: recipe.totalTimeMinutes },
+                        )}`
                       : ''}
                   </Text>
                 ) : null}
@@ -436,7 +443,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
                         {item.dietTags.map(tag => (
                           <View key={tag} style={styles.dietTag}>
                             <Text style={styles.dietTagText}>
-                              {DIET_TAG_LABELS[tag]}
+                              {t(DIET_TAG_LABEL_KEYS[tag])}
                             </Text>
                           </View>
                         ))}
@@ -463,7 +470,9 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
           {/* Empty state */}
           {!hasQuery && filteredRecipes.length === 0 ? (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>No saved recipes yet</Text>
+              <Text style={styles.emptyText}>
+                {t('addMealSheet.noSavedRecipes')}
+              </Text>
             </View>
           ) : null}
 
@@ -472,7 +481,9 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
           !searchingApi &&
           spoonacularResults.length === 0 ? (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>No recipes match your search</Text>
+              <Text style={styles.emptyText}>
+                {t('addMealSheet.noResults')}
+              </Text>
             </View>
           ) : null}
         </BottomSheetScrollView>

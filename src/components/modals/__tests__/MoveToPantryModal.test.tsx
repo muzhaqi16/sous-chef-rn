@@ -220,9 +220,9 @@ describe('MoveToPantryModal', () => {
 
   it('renders all storage state options', () => {
     render(<MoveToPantryModal {...defaultProps} />);
-    expect(screen.getByText('AMBIENT')).toBeTruthy();
-    expect(screen.getByText('REFRIGERATED')).toBeTruthy();
-    expect(screen.getByText('FROZEN')).toBeTruthy();
+    expect(screen.getByText('Ambient')).toBeTruthy();
+    expect(screen.getByText('Refrigerated')).toBeTruthy();
+    expect(screen.getByText('Frozen')).toBeTruthy();
   });
 
   it('shows Select date text when no expiration date is set', () => {

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import {
   Pressable,
   PrimaryActivityIndicator,
@@ -31,6 +32,7 @@ interface GenerateShoppingListSheetProps {
 export const GenerateShoppingListSheet: React.FC<
   GenerateShoppingListSheetProps
 > = ({ visible, onClose, onGenerate, loading, homeName }) => {
+  const { t } = useTranslation();
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible,
     onDismiss: onClose,
@@ -81,10 +83,14 @@ export const GenerateShoppingListSheet: React.FC<
         showsVerticalScrollIndicator={false}
       >
         <BottomSheetHeader
-          title="Generate Shopping List"
+          title={t('generateShoppingList.title')}
           onCancel={onClose}
           onConfirm={handleGenerate}
-          confirmLabel={loading ? 'Generating...' : 'Generate'}
+          confirmLabel={
+            loading
+              ? t('generateShoppingList.generating')
+              : t('generateShoppingList.generate')
+          }
           confirmDisabled={loading || !canGenerate}
           confirmColor="primary"
         />
@@ -94,7 +100,7 @@ export const GenerateShoppingListSheet: React.FC<
           <View style={styles.infoNote}>
             <Icon name="information-circle-outline" size={18} tone="primary" />
             <Text size="sm" tone="accent" style={styles.infoNoteText}>
-              The shopping list will be shared with {homeName}
+              {t('generateShoppingList.sharedWithHome', { name: homeName })}
             </Text>
           </View>
         )}
@@ -103,10 +109,10 @@ export const GenerateShoppingListSheet: React.FC<
         <View style={styles.toggleRow}>
           <View style={styles.toggleInfo}>
             <Text size="md" weight="medium">
-              Check pantry availability
+              {t('generateShoppingList.checkPantry')}
             </Text>
             <Text size="sm" tone="secondary" style={styles.toggleDescription}>
-              Deduct items you already have in your pantry
+              {t('generateShoppingList.checkPantryDesc')}
             </Text>
           </View>
           <BaseSwitch value={checkPantry} onValueChange={setCheckPantry} />
@@ -115,7 +121,7 @@ export const GenerateShoppingListSheet: React.FC<
         {/* Mode selector */}
         <View style={styles.section}>
           <Text size="sm" weight="medium" tone="secondary">
-            Destination
+            {t('generateShoppingList.destination')}
           </Text>
           <View style={styles.modeRow}>
             <Pressable
@@ -138,7 +144,7 @@ export const GenerateShoppingListSheet: React.FC<
                   mode === 'new' && styles.modeTextActive,
                 ]}
               >
-                New List
+                {t('generateShoppingList.newList')}
               </Text>
             </Pressable>
             <Pressable
@@ -161,7 +167,7 @@ export const GenerateShoppingListSheet: React.FC<
                   mode === 'existing' && styles.modeTextActive,
                 ]}
               >
-                Existing List
+                {t('generateShoppingList.existingList')}
               </Text>
             </Pressable>
           </View>
@@ -170,10 +176,10 @@ export const GenerateShoppingListSheet: React.FC<
         {/* Custom name for new list */}
         {mode === 'new' && (
           <FormInput
-            label="List Name (optional)"
+            label={t('generateShoppingList.listNameLabel')}
             value={customName}
             onChangeText={setCustomName}
-            placeholder="Defaults to meal plan name"
+            placeholder={t('generateShoppingList.listNamePlaceholder')}
           />
         )}
 
@@ -181,7 +187,7 @@ export const GenerateShoppingListSheet: React.FC<
         {mode === 'existing' && (
           <View style={styles.section}>
             <Text size="sm" weight="medium" tone="secondary">
-              Select a list
+              {t('generateShoppingList.selectListLabel')}
             </Text>
             {shoppingLists.length === 0 ? (
               <Text
@@ -190,7 +196,7 @@ export const GenerateShoppingListSheet: React.FC<
                 align="center"
                 style={styles.emptyText}
               >
-                No shopping lists found
+                {t('generateShoppingList.noLists')}
               </Text>
             ) : (
               shoppingLists.map(list => (
@@ -218,7 +224,9 @@ export const GenerateShoppingListSheet: React.FC<
                       {list.name}
                     </Text>
                     <Text size="sm" tone="secondary">
-                      {list.totalItems} items
+                      {t('generateShoppingList.itemsCount', {
+                        count: list.totalItems,
+                      })}
                     </Text>
                   </View>
                 </Pressable>
@@ -231,7 +239,7 @@ export const GenerateShoppingListSheet: React.FC<
           <View style={styles.loadingContainer}>
             <PrimaryActivityIndicator size="small" />
             <Text size="sm" tone="secondary">
-              Generating shopping list...
+              {t('generateShoppingList.generatingMessage')}
             </Text>
           </View>
         )}

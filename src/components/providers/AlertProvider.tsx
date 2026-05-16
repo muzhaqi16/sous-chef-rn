@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Modal, View, Pressable } from 'react-native';
+import { Modal, View } from 'react-native';
+import { Pressable } from '#components/atoms/themedComponents';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,

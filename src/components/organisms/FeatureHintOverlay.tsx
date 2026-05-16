@@ -1,5 +1,7 @@
 import React from 'react';
-import { View, Modal, Pressable } from 'react-native';
+import { View, Modal } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import Animated, { FadeOut } from 'react-native-reanimated';
 import { TIMING } from '#constants/animations';
@@ -32,14 +34,10 @@ interface FeatureHintOverlayProps {
 export const FeatureHintOverlay: React.FC<FeatureHintOverlayProps> = ({
   config,
 }) => {
-  const {
-    title,
-    subtitle,
-    icon,
-    animatedElement,
-    dismissText = 'Got it!',
-    onDismiss,
-  } = config;
+  const { t } = useTranslation();
+  const { title, subtitle, icon, animatedElement, dismissText, onDismiss } =
+    config;
+  const resolvedDismissText = dismissText ?? t('featureHint.dismiss');
 
   return (
     <Modal
@@ -104,7 +102,7 @@ export const FeatureHintOverlay: React.FC<FeatureHintOverlayProps> = ({
                 align="center"
                 style={styles.dismissButtonText}
               >
-                {dismissText}
+                {resolvedDismissText}
               </Text>
             </Pressable>
           </Animated.View>

@@ -1,11 +1,7 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  Modal,
-  TouchableWithoutFeedback,
-  Pressable,
-} from 'react-native';
+import { View, Text, Modal, TouchableWithoutFeedback } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import type { SortOption, SortDirection } from './pantryDisplay/types';
@@ -26,28 +22,28 @@ interface PantrySortModalProps {
 // Sort option configuration
 const SORT_OPTIONS: Array<{
   key: SortOption;
-  label: string;
+  labelKey: string;
   icon: string;
   library?: string;
 }> = [
   {
     key: 'name',
-    label: 'Name',
+    labelKey: 'pantrySort.sortName',
     icon: 'text-outline',
   },
   {
     key: 'expiry',
-    label: 'Expiry Date',
+    labelKey: 'pantrySort.sortExpiryDate',
     icon: 'calendar-outline',
   },
   {
     key: 'quantity',
-    label: 'Quantity',
+    labelKey: 'pantrySort.sortQuantity',
     icon: 'bar-chart',
   },
   {
     key: 'recent',
-    label: 'Recently Added',
+    labelKey: 'pantrySort.sortRecentlyAdded',
     icon: 'time-outline',
   },
 ];
@@ -67,6 +63,7 @@ export const PantrySortModal: React.FC<PantrySortModalProps> = ({
   onSelect,
   onClose,
 }) => {
+  const { t } = useTranslation();
   return (
     <Modal
       visible={visible}
@@ -80,7 +77,7 @@ export const PantrySortModal: React.FC<PantrySortModalProps> = ({
         <View style={styles.modalOverlay}>
           <TouchableWithoutFeedback>
             <View style={styles.sortModal}>
-              <Text style={styles.sortModalTitle}>Sort by</Text>
+              <Text style={styles.sortModalTitle}>{t('pantrySort.title')}</Text>
               {SORT_OPTIONS.map(option => (
                 <Pressable
                   key={option.key}
@@ -103,7 +100,7 @@ export const PantrySortModal: React.FC<PantrySortModalProps> = ({
                       sortOption === option.key && styles.sortOptionLabelActive,
                     ]}
                   >
-                    {option.label}
+                    {t(option.labelKey)}
                   </Text>
                   {sortOption === option.key && (
                     <Icon

@@ -1,4 +1,4 @@
-import { ApolloClient } from '@apollo/client';
+import { ApolloClient, type InMemoryCache } from '@apollo/client';
 import { logger } from '#/utils/environment';
 import { createLink } from './links/index';
 import { makeCache } from './cache';
@@ -38,13 +38,9 @@ function initializeClient() {
   // Create cache instance
   const cache = makeCache();
 
-  // PERFORMANCE: Two-phase cache restore.
-  // Phase 1: Sync restore of critical entities (~30 entities, ~5ms).
-  //   ROOT_QUERY, User, Home, settings — needed by cache-first queries.
-  // Phase 2: Deferred restore of bulk entities via requestIdleCallback.
-  //   PantryItem, ShoppingListItem, Recipe, etc. — loaded when JS thread is idle.
-  // This reduces JS blocking at startup. If the deferred phase hasn't fired when
-  // PantryMain mounts, the cache miss means network returns only 20 items (fast render).
+  // Phase 1: sync restore of critical entities (~30, ~5ms) — needed by
+  // cache-first queries on the first render. Phase 2 (bulk restore) is
+  // deferred to the app entry; see startDeferredCacheRestore.
   const criticalT0 = performance.now();
   const criticalCache = apolloCachePersistence.loadCritical();
   if (criticalCache) {
@@ -54,20 +50,6 @@ function initializeClient() {
       'app_apollo_critical_restore_ms',
       performance.now() - criticalT0,
     );
-
-    // Phase 2: Deferred bulk restore
-    requestIdleCallback(() => {
-      const deferredT0 = performance.now();
-      const deferred = apolloCachePersistence.loadDeferred();
-      if (deferred) {
-        cache.restore(deferred);
-        emitHistogram(
-          'app_apollo_deferred_restore_ms',
-          performance.now() - deferredT0,
-        );
-        logger.info('📦 Apollo: Deferred cache restore complete');
-      }
-    });
   } else {
     // Migration fallback: read old single-key format
     const persistedCache = apolloCachePersistence.load();
@@ -211,6 +193,27 @@ function setupCachePersistence(client: ApolloClient) {
   }
 
   logger.info('✅ Apollo: Cache persistence enabled');
+}
+
+/**
+ * Restore bulk persisted entities (PantryItem, ShoppingListItem, Recipe, …)
+ * when the JS thread is idle. Call from the app entry after first paint.
+ * If this hasn't fired when PantryMain mounts, the cache miss falls back
+ * to the network and returns the first page — fast and correct.
+ */
+export function startDeferredCacheRestore(cache: InMemoryCache): void {
+  requestIdleCallback(() => {
+    const deferredT0 = performance.now();
+    const deferred = apolloCachePersistence.loadDeferred();
+    if (deferred) {
+      cache.restore(deferred);
+      emitHistogram(
+        'app_apollo_deferred_restore_ms',
+        performance.now() - deferredT0,
+      );
+      logger.info('📦 Apollo: Deferred cache restore complete');
+    }
+  });
 }
 
 // Initialize client synchronously

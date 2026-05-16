@@ -1,5 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
@@ -14,15 +15,15 @@ export const MealPlanEmptyState: React.FC<MealPlanEmptyStateProps> = ({
   onCreatePlan,
   onCreateFromTemplate,
 }) => {
+  const { t } = useTranslation();
   return (
     <View style={styles.container}>
       <Icon name="calendar-outline" size={64} color={styles.icon.color} />
       <Text size="xl" weight="bold" style={styles.title}>
-        Plan Your Meals
+        {t('mealPlanEmpty.title')}
       </Text>
       <Text size="md" tone="secondary" align="center" style={styles.subtitle}>
-        Create a meal plan to organize your weekly or monthly meals, track
-        nutrition, and generate shopping lists.
+        {t('mealPlanEmpty.subtitle')}
       </Text>
       <Pressable
         onPress={onCreatePlan}
@@ -30,7 +31,7 @@ export const MealPlanEmptyState: React.FC<MealPlanEmptyStateProps> = ({
       >
         <Icon name="add" size={20} color={styles.buttonIcon.color} />
         <Text size="md" weight="semibold" style={styles.buttonText}>
-          Create Your First Meal Plan
+          {t('mealPlanEmpty.createFirst')}
         </Text>
       </Pressable>
       {!!onCreateFromTemplate && (
@@ -52,7 +53,7 @@ export const MealPlanEmptyState: React.FC<MealPlanEmptyStateProps> = ({
             tone="accent"
             style={styles.templateButtonText}
           >
-            Create from Template
+            {t('mealPlanEmpty.createFromTemplate')}
           </Text>
         </Pressable>
       )}

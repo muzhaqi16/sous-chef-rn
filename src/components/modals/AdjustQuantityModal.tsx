@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { alertService } from '#/services/alertService';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
@@ -31,6 +32,7 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
   onClose,
   onConfirm,
 }) => {
+  const { t } = useTranslation();
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible: visible && !!pantryItem,
     onDismiss: onClose,
@@ -59,12 +61,15 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
     const newQuantity = parseFractionalInput(quantityInput);
 
     if (newQuantity === null || isNaN(newQuantity) || newQuantity < 0) {
-      alertService.alert('Error', 'Please enter a valid quantity');
+      alertService.alert(
+        t('labels.error'),
+        t('adjustQuantity.invalidQuantity'),
+      );
       return;
     }
 
     if (!reason.trim()) {
-      alertService.alert('Error', 'Please provide a reason for the adjustment');
+      alertService.alert(t('labels.error'), t('adjustQuantity.reasonRequired'));
       return;
     }
 
@@ -88,10 +93,10 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
         bottomOffset={16}
       >
         <BottomSheetHeader
-          title="Adjust Quantity"
+          title={t('adjustQuantity.title')}
           onCancel={onClose}
           onConfirm={handleConfirm}
-          confirmLabel="Adjust"
+          confirmLabel={t('adjustQuantity.adjust')}
         />
 
         {!!pantryItem && (
@@ -101,7 +106,9 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
                 {pantryItem.itemName}
               </Text>
               <View style={commonStyles.bottomSheetItemRow}>
-                <Text style={commonStyles.bottomSheetItemLabel}>Current: </Text>
+                <Text style={commonStyles.bottomSheetItemLabel}>
+                  {t('adjustQuantity.currentLabel')}
+                </Text>
                 <FormattedItemSubtitle
                   quantity={pantryItem.quantity}
                   displayAsFraction={pantryItem.unit?.displayAsFraction}
@@ -114,7 +121,7 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
               pantryItem.remainingNetWeight != null && (
                 <View style={commonStyles.bottomSheetItemRow}>
                   <Text style={commonStyles.bottomSheetItemLabel}>
-                    Remaining:{' '}
+                    {t('adjustQuantity.remainingLabel')}
                     {formatNetWeightDisplay(
                       pantryItem.remainingNetWeight,
                       pantryItem.netWeightUnit,
@@ -125,11 +132,11 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
 
             <View style={commonStyles.bottomSheetSection}>
               <FractionInput
-                label="New Quantity"
+                label={t('adjustQuantity.newQuantity')}
                 required
                 value={quantityInput}
                 onChangeText={setQuantityInput}
-                placeholder="e.g., 1, 1 1/4, or 1.5"
+                placeholder={t('adjustQuantity.quantityPlaceholder')}
                 keyboardType="numeric"
                 useBottomSheetInput
               />
@@ -137,11 +144,11 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
 
             <View style={commonStyles.bottomSheetSection}>
               <FormInput
-                label="Reason"
+                label={t('adjustQuantity.reason')}
                 required
                 value={reason}
                 onChangeText={setReason}
-                placeholder="Why is the quantity being adjusted?"
+                placeholder={t('adjustQuantity.reasonPlaceholder')}
                 useBottomSheetInput
               />
             </View>
@@ -149,10 +156,10 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
             {pantryItem.lastUsedAt != null &&
               pantryItem.remainingNetWeight != null && (
                 <FormInput
-                  label="Remaining Weight"
+                  label={t('adjustQuantity.remainingWeight')}
                   value={remainingWeightInput}
                   onChangeText={setRemainingWeightInput}
-                  placeholder="Leave blank to auto-adjust"
+                  placeholder={t('adjustQuantity.remainingWeightPlaceholder')}
                   keyboardType="decimal-pad"
                   useBottomSheetInput
                 />

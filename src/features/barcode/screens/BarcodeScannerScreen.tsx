@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Dimensions, Platform } from 'react-native';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+import { useTranslation } from 'react-i18next';
+import { StyleSheet } from 'react-native-unistyles';
 import { Camera, useCameraDevices } from 'react-native-vision-camera';
 import { useBarcodeScannerOutput } from 'react-native-vision-camera-barcode-scanner';
 import { useFocusEffect } from '@react-navigation/native';
@@ -9,12 +10,7 @@ import type { StaticScreenProps } from '@react-navigation/native';
 
 import { useBarcodeScanner } from '../hooks/useBarcodeScanner';
 import { usePermission } from '#hooks/permissions/usePermission';
-import BarcodeMask from '#components/organisms/BarcodeMask';
-
-const ThemedBarcodeMask = withUnistyles(BarcodeMask, theme => ({
-  edgeColor: theme.colors.primary,
-  backgroundColor: theme.colors.overlay,
-}));
+import { ThemedBarcodeMask } from '../components/ThemedBarcodeMask';
 import { Button } from '#components/base/Button';
 import { IconButton } from '#components/atoms/IconButton';
 import { HapticService } from '#services/haptic/HapticService';
@@ -37,6 +33,7 @@ export const BarcodeScannerScreen: React.FC<
     | undefined
   >
 > = ({ route }) => {
+  const { t } = useTranslation();
   const { mergeIdentifiedItemFormUpc, toSearchResults, goBack, navigation } =
     useAppNavigation();
   const { source, pantryId, shoppingListId, returnTo } = route?.params || {};
@@ -165,19 +162,19 @@ export const BarcodeScannerScreen: React.FC<
           align="center"
           style={styles.messageText}
         >
-          Camera access is required to scan barcodes.
+          {t('errors.cameraPermission')}
         </Text>
         {isBlocked ? (
           <Button onPress={openSettings} variant="primary" size="medium">
-            Open Settings
+            {t('labels.openSettings')}
           </Button>
         ) : (
           <Button onPress={requestPermission} variant="primary" size="medium">
-            Grant Permission
+            {t('labels.grantPermission')}
           </Button>
         )}
         <Button onPress={handleGoBack} variant="ghost" size="medium">
-          Cancel
+          {t('labels.cancel')}
         </Button>
       </View>
     );
@@ -193,10 +190,10 @@ export const BarcodeScannerScreen: React.FC<
           align="center"
           style={styles.messageText}
         >
-          No camera device found
+          {t('errors.noCameraDevice')}
         </Text>
         <Button onPress={handleGoBack} variant="primary" size="medium">
-          Go Back
+          {t('labels.goBack')}
         </Button>
       </View>
     );
@@ -227,17 +224,21 @@ export const BarcodeScannerScreen: React.FC<
           onPress={handleGoBack}
           size="md"
           style={styles.headerButton}
-          accessibilityLabel="Close scanner"
+          accessibilityLabel={t('barcodeScanner.closeScanner')}
         />
         <Text size="lg" weight="semibold" style={styles.headerTitle}>
-          Scan Barcode
+          {t('labels.scanBarcode')}
         </Text>
         <IconButton
           name={flashEnabled ? 'flash' : 'flash-off'}
           onPress={toggleFlash}
           size="md"
           style={styles.headerButton}
-          accessibilityLabel={flashEnabled ? 'Turn flash off' : 'Turn flash on'}
+          accessibilityLabel={
+            flashEnabled
+              ? t('barcodeScanner.flashOff')
+              : t('barcodeScanner.flashOn')
+          }
         />
       </View>
 
@@ -249,12 +250,12 @@ export const BarcodeScannerScreen: React.FC<
           style={styles.instructionsText}
         >
           {hasScanned
-            ? 'Barcode scanned! Navigating…'
-            : 'Point your camera at a barcode'}
+            ? t('status.barcodeScanned')
+            : t('instructions.pointCamera')}
         </Text>
         {!!isScanning && !hasScanned && (
           <Text size="sm" align="center" style={styles.subInstructionsText}>
-            Make sure the barcode is clearly visible
+            {t('instructions.barcodeVisible')}
           </Text>
         )}
       </View>
@@ -262,7 +263,7 @@ export const BarcodeScannerScreen: React.FC<
       <View style={styles.bottomControls}>
         {hasScanned ? (
           <Button onPress={resetScan} variant="primary" size="medium">
-            Scan Another
+            {t('labels.scanAnother')}
           </Button>
         ) : (
           <View style={styles.scanIndicator}>
@@ -270,7 +271,7 @@ export const BarcodeScannerScreen: React.FC<
               style={[styles.scanDot, isScanning && styles.scanDotActive]}
             />
             <Text size="sm" weight="medium" style={styles.scanStatusText}>
-              {isScanning ? 'Scanning…' : 'Ready to scan'}
+              {isScanning ? t('status.scanning') : t('status.readyToScan')}
             </Text>
           </View>
         )}

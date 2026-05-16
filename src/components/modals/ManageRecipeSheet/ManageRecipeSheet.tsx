@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Pressable } from '#components/atoms/themedComponents';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
@@ -48,6 +49,7 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
   updating = false,
   recipeName,
 }) => {
+  const { t } = useTranslation();
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible,
     onDismiss: onClose,
@@ -158,7 +160,7 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <Text size="xl" weight="semibold">
-              Manage Recipe
+              {t('manageRecipe.title')}
             </Text>
             {!!recipeName && (
               <Text
@@ -195,7 +197,7 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
           <View style={styles.updatingBanner}>
             <ThemedActivityIndicator size="small" />
             <Text size="sm" weight="medium" tone="accent">
-              Updating...
+              {t('manageRecipe.updating')}
             </Text>
           </View>
         )}
@@ -207,7 +209,7 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
           tone="secondary"
           style={styles.sectionLabel}
         >
-          Your Rating
+          {t('manageRecipe.yourRating')}
         </Text>
         <View style={styles.ratingContainer}>
           {[1, 2, 3, 4, 5].map(star => (
@@ -236,7 +238,7 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
           ))}
           {rating !== null && (
             <Text size="sm" tone="secondary" style={styles.ratingText}>
-              {rating}/5
+              {t('manageRecipe.ratingFormat', { rating })}
             </Text>
           )}
         </View>
@@ -248,7 +250,7 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
           tone="secondary"
           style={styles.sectionLabel}
         >
-          Folder
+          {t('manageRecipe.folder')}
         </Text>
         <View style={styles.folderList}>
           {[null, ...displayFolders].map(folder => {
@@ -277,7 +279,7 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
                     isSelected && styles.folderOptionTextSelected,
                   ]}
                 >
-                  {isNoFolder ? 'No Folder' : folder}
+                  {isNoFolder ? t('manageRecipe.noFolder') : folder}
                 </Text>
                 {!!isSelected && (
                   <Icon name="checkmark" size={18} tone="primary" />
@@ -292,7 +294,7 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
           <View style={styles.newFolderContainer}>
             <ThemedBottomSheetTextInput
               style={styles.newFolderInput}
-              placeholder="Enter folder name..."
+              placeholder={t('manageRecipe.enterFolderName')}
               value={newFolderName}
               onChangeText={setNewFolderName}
               autoFocus
@@ -314,7 +316,7 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
                   !newFolderName.trim() && styles.createButtonTextDisabled,
                 ]}
               >
-                Create
+                {t('manageRecipe.create')}
               </Text>
             </Pressable>
           </View>
@@ -329,7 +331,7 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
           >
             <Icon name="add" size={18} tone="primary" />
             <Text size="base" weight="medium" tone="accent">
-              Create New Folder
+              {t('manageRecipe.createNewFolder')}
             </Text>
           </Pressable>
         )}
@@ -341,13 +343,13 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
           tone="secondary"
           style={styles.sectionLabel}
         >
-          Tags
+          {t('manageRecipe.tags')}
         </Text>
         <TagInput
           tags={tags}
           onTagsChange={handleTagsChange}
           suggestions={availableTags}
-          placeholder="Add tags..."
+          placeholder={t('manageRecipe.tagsPlaceholder')}
           maxTags={5}
           editable={!updating}
         />
@@ -359,11 +361,11 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
           tone="secondary"
           style={styles.sectionLabel}
         >
-          Notes
+          {t('manageRecipe.notes')}
         </Text>
         <ThemedBottomSheetTextInput
           style={styles.notesInput}
-          placeholder="Add any notes about this recipe..."
+          placeholder={t('manageRecipe.notesPlaceholder')}
           value={notes}
           onChangeText={setNotes}
           onBlur={handleNotesBlur}

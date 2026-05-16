@@ -6,8 +6,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Pressable,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { alertService } from '#/services/alertService';
 import { Icon } from '#utils/iconUtils';
@@ -38,6 +39,7 @@ export const BiometricSetupModal = ({
   userPassword,
   mode = 'onboarding',
 }: BiometricSetupModalProps) => {
+  const { t } = useTranslation();
   const [biometricInfo, setBiometricInfo] = useState<{
     isAvailable: boolean;
     biometryType: string | null;
@@ -104,9 +106,9 @@ export const BiometricSetupModal = ({
             } else {
               // User cancelled biometric authentication
               alertService.alert(
-                'Authentication Required',
-                'Biometric authentication is required to enable this setting.',
-                [{ text: 'OK', onPress: () => onComplete(false) }],
+                t('biometricSetup.authRequiredTitle'),
+                t('biometricSetup.authRequiredMessage'),
+                [{ text: t('labels.ok'), onPress: () => onComplete(false) }],
               );
               return;
             }
@@ -116,9 +118,9 @@ export const BiometricSetupModal = ({
               // Show password input if not already visible
               if (!needsPassword) {
                 alertService.alert(
-                  'Password Required',
-                  'Enter your password to enable biometric authentication with your existing account.',
-                  [{ text: 'OK' }],
+                  t('biometricSetup.passwordRequiredTitle'),
+                  t('biometricSetup.passwordRequiredAccountMessage'),
+                  [{ text: t('labels.ok') }],
                 );
               }
               return;
@@ -134,9 +136,9 @@ export const BiometricSetupModal = ({
               return;
             } else {
               alertService.alert(
-                'Setup Failed',
-                'Failed to enable biometric authentication. Please verify your password and try again.',
-                [{ text: 'OK', onPress: () => onComplete(false) }],
+                t('biometricSetup.setupFailedTitle'),
+                t('biometricSetup.setupFailedPasswordMessage'),
+                [{ text: t('labels.ok'), onPress: () => onComplete(false) }],
               );
               return;
             }
@@ -146,8 +148,8 @@ export const BiometricSetupModal = ({
         // Onboarding mode - save credentials with biometric protection
         if (needsPassword && !password.trim()) {
           alertService.alert(
-            'Password Required',
-            'Please enter your password to enable biometric authentication.',
+            t('biometricSetup.passwordRequiredTitle'),
+            t('biometricSetup.passwordRequiredMessage'),
           );
           return;
         }
@@ -166,9 +168,9 @@ export const BiometricSetupModal = ({
         } else {
           // Biometric setup failed during onboarding
           alertService.alert(
-            'Setup Failed',
-            'Biometric setup failed. You can enable it later in Settings.',
-            [{ text: 'OK', onPress: () => onComplete(false) }],
+            t('biometricSetup.setupFailedTitle'),
+            t('biometricSetup.setupFailedGenericMessage'),
+            [{ text: t('labels.ok'), onPress: () => onComplete(false) }],
           );
         }
       },
@@ -176,9 +178,9 @@ export const BiometricSetupModal = ({
       error => {
         console.error('Error enabling biometric authentication:', error);
         alertService.alert(
-          'Setup Failed',
-          'Biometric setup failed. You can enable it later in Settings.',
-          [{ text: 'OK', onPress: () => onComplete(false) }],
+          t('biometricSetup.setupFailedTitle'),
+          t('biometricSetup.setupFailedGenericMessage'),
+          [{ text: t('labels.ok'), onPress: () => onComplete(false) }],
         );
       },
     );
@@ -207,12 +209,15 @@ export const BiometricSetupModal = ({
   };
 
   const getBiometricTitle = () => {
-    return `Enable ${biometricInfo.biometryType || 'Biometric'} Login`;
+    return t('biometricSetup.title', {
+      type: biometricInfo.biometryType || t('biometricSetup.biometricFallback'),
+    });
   };
 
   const getBiometricDescription = () => {
-    const authType = biometricInfo.biometryType || 'biometric authentication';
-    return `Use ${authType} to securely and quickly log into your account without entering your password each time.`;
+    const authType =
+      biometricInfo.biometryType || t('biometricSetup.biometricAuthLabel');
+    return t('biometricSetup.description', { authType });
   };
 
   return (
@@ -251,13 +256,13 @@ export const BiometricSetupModal = ({
                 <View style={styles.passwordSection}>
                   <Text style={styles.passwordLabel}>
                     {mode === 'settings'
-                      ? 'For security, please enter your current password to set up biometric login:'
-                      : 'Enter your password to enable biometric authentication:'}
+                      ? t('biometricSetup.passwordPromptCurrent')
+                      : t('biometricSetup.passwordPromptInitial')}
                   </Text>
                   <PasswordInput
                     value={password}
                     onChangeText={setPassword}
-                    placeholder="Current password"
+                    placeholder={t('biometricSetup.passwordPlaceholder')}
                     showToggle={true}
                     autoCapitalize="none"
                     autoCorrect={false}
@@ -276,7 +281,9 @@ export const BiometricSetupModal = ({
                   disabled={isEnabling}
                 >
                   <Text style={styles.primaryButtonText}>
-                    {isEnabling ? 'Setting up...' : 'Enable Now'}
+                    {isEnabling
+                      ? t('biometricSetup.settingUp')
+                      : t('labels.enableNow')}
                   </Text>
                 </Pressable>
 
@@ -288,7 +295,9 @@ export const BiometricSetupModal = ({
                   onPress={handleSkip}
                   disabled={isEnabling}
                 >
-                  <Text style={styles.secondaryButtonText}>Set up later</Text>
+                  <Text style={styles.secondaryButtonText}>
+                    {t('biometricSetup.setupLater')}
+                  </Text>
                 </Pressable>
               </View>
             </View>

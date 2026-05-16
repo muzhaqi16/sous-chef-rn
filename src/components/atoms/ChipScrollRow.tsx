@@ -1,6 +1,5 @@
 import React from 'react';
-import { View, type StyleProp, type ViewStyle } from 'react-native';
-import { ScrollView } from 'react-native-gesture-handler';
+import { View, ScrollView, type StyleProp, type ViewStyle } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';

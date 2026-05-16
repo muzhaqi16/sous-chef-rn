@@ -5,7 +5,6 @@ import { storage } from '#/storage/mmkv';
 import { apolloCachePersistence } from './offline/ApolloCachePersistence';
 import { optimisticDataPersistence } from './offline/OptimisticDataPersistence';
 import { cancelTokenRefresh } from './links/tokenScheduler';
-import { stopCacheMonitoring } from './cache';
 import { logger } from '#/utils/environment';
 
 interface LogoutCleanupOptions {
@@ -64,9 +63,8 @@ export class LogoutCleanup {
       // 1. Cancel scheduled token refresh
       cancelTokenRefresh();
 
-      // 2. Cancel pending cache persistence and stop cache monitoring
+      // 2. Cancel pending cache persistence
       cancelCachePersistence();
-      stopCacheMonitoring();
 
       // 3. Cancel all active subscriptions
       if (cancelSubscriptions) {

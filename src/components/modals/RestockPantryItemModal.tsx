@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet } from 'react-native-unistyles';
 import { alertService } from '#/services/alertService';
 import { FractionInput } from '#components/molecules/FractionInput';
@@ -40,6 +41,7 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
   onClose,
   onConfirm,
 }) => {
+  const { t } = useTranslation();
   const [quantityInput, setQuantityInput] = useState('1');
   const [costPerUnitInput, setCostPerUnitInput] = useState('');
   const [totalCostInput, setTotalCostInput] = useState('');
@@ -57,7 +59,10 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
 
     const quantityValue = parseFractionalInput(quantityInput);
     if (quantityValue === null || isNaN(quantityValue) || quantityValue <= 0) {
-      alertService.alert('Error', 'Please enter a valid quantity');
+      alertService.alert(
+        t('labels.error'),
+        t('adjustQuantity.invalidQuantity'),
+      );
       return;
     }
 
@@ -84,11 +89,11 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
       visible={visible}
       pantryItem={pantryItem}
       onClose={onClose}
-      title="Restock Item"
-      confirmLabel="Restock"
+      title={t('restockItem.title')}
+      confirmLabel={t('restockItem.restock')}
       snapPoints={['80%', '95%']}
-      unitToggleLabel="Restock by"
-      currentQuantityLabel="Current:"
+      unitToggleLabel={t('restockItem.restockBy')}
+      currentQuantityLabel={t('restockItem.currentLabel')}
       operation={PantryOperation.Restock}
       onConfirm={handleConfirm}
       onReset={handleReset}
@@ -130,6 +135,7 @@ const RestockActionFields: React.FC<{
   setExpiresAt,
   shared,
 }) => {
+  const { t } = useTranslation();
   const addAmount = parseFractionalInput(quantityInput);
 
   // For dual-tracked items, show conversion to net weight unit (e.g. cups → grams)
@@ -180,10 +186,10 @@ const RestockActionFields: React.FC<{
       {/* Quantity Input */}
       <View style={commonStyles.bottomSheetSection}>
         <FractionInput
-          label="Quantity to Add"
+          label={t('restockItem.quantityToAdd')}
           value={quantityInput}
           onChangeText={setQuantityInput}
-          placeholder="e.g., 1, 1 1/4, or 1.5"
+          placeholder={t('restockItem.quantityPlaceholder')}
           keyboardType="numeric"
           useBottomSheetInput
           required
@@ -197,7 +203,8 @@ const RestockActionFields: React.FC<{
                 tone="accent"
                 style={[styles.newQuantityText, { marginTop: 0 }]}
               >
-                New quantity: {formatQuantity(newQuantity)} {newQuantitySymbol}
+                {t('restockItem.newQuantityPrefix')}
+                {formatQuantity(newQuantity)} {newQuantitySymbol}
               </Text>
             ) : null}
             {shared.isConvertedUnit ? (
@@ -227,7 +234,7 @@ const RestockActionFields: React.FC<{
         <View style={styles.costRow}>
           <View style={styles.costField}>
             <FormInput
-              label="Cost per Unit"
+              label={t('restockItem.costPerUnit')}
               value={costPerUnitInput}
               onChangeText={setCostPerUnitInput}
               placeholder="0.00"
@@ -237,7 +244,7 @@ const RestockActionFields: React.FC<{
           </View>
           <View style={styles.costField}>
             <FormInput
-              label="Total Cost"
+              label={t('restockItem.totalCost')}
               value={totalCostInput}
               onChangeText={setTotalCostInput}
               placeholder="0.00"
@@ -251,10 +258,10 @@ const RestockActionFields: React.FC<{
       {/* Notes */}
       <View style={commonStyles.bottomSheetSection}>
         <FormInput
-          label="Notes"
+          label={t('restockItem.notes')}
           value={shared.notes}
           onChangeText={shared.setNotes}
-          placeholder="Add any notes about this restock..."
+          placeholder={t('restockItem.notesPlaceholder')}
           multiline
           numberOfLines={3}
           useBottomSheetInput
@@ -264,10 +271,10 @@ const RestockActionFields: React.FC<{
       {/* Expiration Date */}
       <View style={commonStyles.bottomSheetSection}>
         <DatePickerField
-          label="Expiration Date"
+          label={t('restockItem.expirationDate')}
           value={expiresAt}
           onChange={setExpiresAt}
-          placeholder="Set new expiration"
+          placeholder={t('restockItem.expirationPlaceholder')}
           minimumDate={new Date()}
         />
       </View>

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { StyleSheet } from 'react-native-unistyles';
@@ -14,15 +15,21 @@ import { FormTextArea } from '#components/molecules/FormTextArea';
 import { Text } from '#components/atoms/Text';
 import { TemplateCategory } from '#/graphql/generated/schemaTypes';
 
-const CATEGORY_OPTIONS: ChipOption<TemplateCategory>[] = [
-  { key: TemplateCategory.Weekly, label: 'Weekly' },
-  { key: TemplateCategory.Monthly, label: 'Monthly' },
-  { key: TemplateCategory.Breakfast, label: 'Breakfast' },
-  { key: TemplateCategory.Lunch, label: 'Lunch' },
-  { key: TemplateCategory.Dinner, label: 'Dinner' },
-  { key: TemplateCategory.Holiday, label: 'Holiday' },
-  { key: TemplateCategory.SpecialDiet, label: 'Special Diet' },
-  { key: TemplateCategory.Custom, label: 'Custom' },
+const CATEGORY_OPTION_KEYS: { key: TemplateCategory; labelKey: string }[] = [
+  { key: TemplateCategory.Weekly, labelKey: 'saveAsTemplate.categoryWeekly' },
+  { key: TemplateCategory.Monthly, labelKey: 'saveAsTemplate.categoryMonthly' },
+  {
+    key: TemplateCategory.Breakfast,
+    labelKey: 'saveAsTemplate.categoryBreakfast',
+  },
+  { key: TemplateCategory.Lunch, labelKey: 'saveAsTemplate.categoryLunch' },
+  { key: TemplateCategory.Dinner, labelKey: 'saveAsTemplate.categoryDinner' },
+  { key: TemplateCategory.Holiday, labelKey: 'saveAsTemplate.categoryHoliday' },
+  {
+    key: TemplateCategory.SpecialDiet,
+    labelKey: 'saveAsTemplate.categorySpecialDiet',
+  },
+  { key: TemplateCategory.Custom, labelKey: 'saveAsTemplate.categoryCustom' },
 ];
 
 interface SaveAsTemplateSheetProps {
@@ -50,6 +57,9 @@ export const SaveAsTemplateSheet: React.FC<SaveAsTemplateSheetProps> = ({
   onSave,
   saving,
 }) => {
+  const { t } = useTranslation();
+  const categoryOptions: ChipOption<TemplateCategory>[] =
+    CATEGORY_OPTION_KEYS.map(o => ({ key: o.key, label: t(o.labelKey) }));
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible,
     onDismiss: onClose,
@@ -71,7 +81,11 @@ export const SaveAsTemplateSheet: React.FC<SaveAsTemplateSheetProps> = ({
     setPrevVisible(visible);
     setPrevMealPlanName(mealPlanName);
     if (visible) {
-      setName(mealPlanName ? `${mealPlanName} Template` : '');
+      setName(
+        mealPlanName
+          ? t('saveAsTemplate.templateNameSuffix', { name: mealPlanName })
+          : '',
+      );
       setDescription('');
       setCategory(TemplateCategory.Weekly);
       setTagsInput('');
@@ -82,7 +96,7 @@ export const SaveAsTemplateSheet: React.FC<SaveAsTemplateSheetProps> = ({
     if (!mealPlanId || !name.trim()) return;
     const tags = tagsInput
       .split(',')
-      .map(t => t.trim())
+      .map(tag => tag.trim())
       .filter(Boolean);
     onSave({
       mealPlanId,
@@ -102,10 +116,12 @@ export const SaveAsTemplateSheet: React.FC<SaveAsTemplateSheetProps> = ({
         bottomOffset={16}
       >
         <BottomSheetHeader
-          title="Save as Template"
+          title={t('saveAsTemplate.title')}
           onCancel={onClose}
           onConfirm={handleSave}
-          confirmLabel={saving ? 'Saving...' : 'Save'}
+          confirmLabel={
+            saving ? t('saveAsTemplate.saving') : t('saveAsTemplate.save')
+          }
           confirmDisabled={saving || !name.trim()}
           confirmColor="primary"
         />
@@ -113,43 +129,43 @@ export const SaveAsTemplateSheet: React.FC<SaveAsTemplateSheetProps> = ({
         {!!homeName && (
           <View style={styles.infoNote}>
             <Text size="sm" tone="accent">
-              This template will be shared with {homeName}
+              {t('saveAsTemplate.sharedWithHome', { name: homeName })}
             </Text>
           </View>
         )}
 
         <FormInput
-          label="Template Name"
+          label={t('saveAsTemplate.templateName')}
           value={name}
           onChangeText={setName}
-          placeholder="e.g., My Weekly Dinner Plan"
+          placeholder={t('saveAsTemplate.templateNamePlaceholder')}
           required
         />
 
         <FormTextArea
-          label="Description"
+          label={t('saveAsTemplate.descriptionLabel')}
           value={description}
           onChangeText={setDescription}
-          placeholder="What's special about this template?"
+          placeholder={t('saveAsTemplate.descriptionPlaceholder')}
         />
 
         {/* Category selector */}
         <View style={styles.section}>
           <Text size="sm" weight="medium" tone="secondary">
-            Category
+            {t('saveAsTemplate.categoryLabel')}
           </Text>
           <ChipScrollRow
-            options={CATEGORY_OPTIONS}
+            options={categoryOptions}
             selected={category}
             onSelect={setCategory}
           />
         </View>
 
         <FormInput
-          label="Tags (comma-separated)"
+          label={t('saveAsTemplate.tagsLabel')}
           value={tagsInput}
           onChangeText={setTagsInput}
-          placeholder="e.g., healthy, quick, budget"
+          placeholder={t('saveAsTemplate.tagsPlaceholder')}
         />
       </BottomSheetFormScrollView>
     </BottomSheetModal>

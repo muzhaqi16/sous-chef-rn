@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Pressable } from '#components/atoms/themedComponents';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
@@ -68,6 +69,7 @@ export const StorageLocationSheet: React.FC<StorageLocationSheetProps> = ({
   availableLocations,
   isSubmitting = false,
 }) => {
+  const { t } = useTranslation();
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible,
     onDismiss: onClose,
@@ -87,8 +89,12 @@ export const StorageLocationSheet: React.FC<StorageLocationSheetProps> = ({
   };
 
   const isEditing = !!initialData;
-  const title = isEditing ? 'Edit Storage Location' : 'Add Storage Location';
-  const saveText = isEditing ? 'Update' : 'Create';
+  const title = isEditing
+    ? t('storageLocationSheet.editTitle')
+    : t('storageLocationSheet.addTitle');
+  const saveText = isEditing
+    ? t('storageLocationSheet.update')
+    : t('storageLocationSheet.create');
 
   return (
     <BottomSheetModal ref={ref} {...modalProps} index={0}>
@@ -106,11 +112,11 @@ export const StorageLocationSheet: React.FC<StorageLocationSheetProps> = ({
               pressed && styles.pressed,
             ]}
             accessibilityRole="button"
-            accessibilityLabel="Cancel"
+            accessibilityLabel={t('storageLocationSheet.cancel')}
             disabled={isSubmitting}
           >
             <Text size="md" tone="secondary">
-              Cancel
+              {t('storageLocationSheet.cancel')}
             </Text>
           </Pressable>
 

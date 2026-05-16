@@ -1,5 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,6 +19,7 @@ export const EmptyDayState: React.FC<EmptyDayStateProps> = ({
   selectedDate,
   onAddMeal,
 }) => {
+  const { t } = useTranslation();
   const { bottom: safeBottom } = useSafeAreaInsets();
   return (
     <View
@@ -28,7 +30,7 @@ export const EmptyDayState: React.FC<EmptyDayStateProps> = ({
     >
       <Icon name="restaurant-outline" size={48} color={styles.icon.color} />
       <Text size="lg" weight="semibold" style={styles.title}>
-        No meals planned
+        {t('emptyDay.title')}
       </Text>
       <Text size="sm" tone="secondary" style={styles.subtitle}>
         {format(selectedDate, 'EEEE, MMMM d')}
@@ -40,7 +42,7 @@ export const EmptyDayState: React.FC<EmptyDayStateProps> = ({
         >
           <Icon name="add" size={20} color={styles.buttonIcon.color} />
           <Text size="md" weight="semibold" style={styles.buttonText}>
-            Add a meal
+            {t('emptyDay.addMeal')}
           </Text>
         </Pressable>
       )}

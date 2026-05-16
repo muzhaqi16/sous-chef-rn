@@ -1,8 +1,8 @@
 import React from 'react';
 import { View } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
-import { BackButton } from '#components/atoms/BackButton';
+import { StyleSheet } from 'react-native-unistyles';
+import { ThemedBackButton } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 
 interface ScreenHeaderProps {
@@ -13,8 +13,6 @@ interface ScreenHeaderProps {
   backButtonDisabled?: boolean;
   style?: StyleProp<ViewStyle>;
 }
-
-const ThemedBackButton = withUnistyles(BackButton);
 
 export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
   title,

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { alertService } from '#/services/alertService';
@@ -34,6 +35,7 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
   onSave,
   initialValues,
 }) => {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
 
   // Standard bottom-sheet boilerplate handled by useStandardBottomSheet.
@@ -81,8 +83,11 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
         caloriesValue > DIETARY_LIMITS.calories.max
       ) {
         alertService.alert(
-          'Invalid Input',
-          `Calories must be between ${DIETARY_LIMITS.calories.min} and ${DIETARY_LIMITS.calories.max}`,
+          t('macroTargets.invalidInputTitle'),
+          t('macroTargets.caloriesRange', {
+            min: DIETARY_LIMITS.calories.min,
+            max: DIETARY_LIMITS.calories.max,
+          }),
         );
         return;
       }
@@ -98,8 +103,11 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
         proteinValue > DIETARY_LIMITS.protein.max
       ) {
         alertService.alert(
-          'Invalid Input',
-          `Protein must be between ${DIETARY_LIMITS.protein.min}g and ${DIETARY_LIMITS.protein.max}g`,
+          t('macroTargets.invalidInputTitle'),
+          t('macroTargets.proteinRange', {
+            min: DIETARY_LIMITS.protein.min,
+            max: DIETARY_LIMITS.protein.max,
+          }),
         );
         return;
       }
@@ -115,8 +123,11 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
         carbsValue > DIETARY_LIMITS.carbs.max
       ) {
         alertService.alert(
-          'Invalid Input',
-          `Carbs must be between ${DIETARY_LIMITS.carbs.min}g and ${DIETARY_LIMITS.carbs.max}g`,
+          t('macroTargets.invalidInputTitle'),
+          t('macroTargets.carbsRange', {
+            min: DIETARY_LIMITS.carbs.min,
+            max: DIETARY_LIMITS.carbs.max,
+          }),
         );
         return;
       }
@@ -132,8 +143,11 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
         fatValue > DIETARY_LIMITS.fat.max
       ) {
         alertService.alert(
-          'Invalid Input',
-          `Fat must be between ${DIETARY_LIMITS.fat.min}g and ${DIETARY_LIMITS.fat.max}g`,
+          t('macroTargets.invalidInputTitle'),
+          t('macroTargets.fatRange', {
+            min: DIETARY_LIMITS.fat.min,
+            max: DIETARY_LIMITS.fat.max,
+          }),
         );
         return;
       }
@@ -145,7 +159,7 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
     setSaving(false);
 
     if (!success) {
-      alertService.alert('Error', 'Failed to update macro targets');
+      alertService.alert(t('labels.error'), t('macroTargets.updateFailed'));
     }
   };
 
@@ -161,26 +175,26 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
       >
         {/* Header */}
         <BottomSheetHeader
-          title="Macro Targets"
+          title={t('macroTargets.title')}
           onCancel={onClose}
           onConfirm={handleSave}
-          confirmLabel="Save"
+          confirmLabel={t('macroTargets.save')}
           confirmDisabled={saving}
         />
 
         {/* Description */}
         <Text size="sm" tone="secondary" style={styles.description}>
-          Set your daily nutrition goals (optional)
+          {t('macroTargets.subtitle')}
         </Text>
 
         {/* Daily Calories */}
         <View style={styles.section}>
           <FormInput
-            label="Daily Calories (kcal)"
+            label={t('macroTargets.dailyCalories')}
             value={calories}
             onChangeText={setCalories}
             keyboardType="number-pad"
-            placeholder="e.g., 2000"
+            placeholder={t('macroTargets.caloriesPlaceholder')}
             useBottomSheetInput
           />
         </View>
@@ -188,11 +202,11 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
         {/* Protein */}
         <View style={styles.section}>
           <FormInput
-            label="Protein (g)"
+            label={t('macroTargets.protein')}
             value={protein}
             onChangeText={setProtein}
             keyboardType="number-pad"
-            placeholder="e.g., 150"
+            placeholder={t('macroTargets.proteinPlaceholder')}
             useBottomSheetInput
           />
         </View>
@@ -200,11 +214,11 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
         {/* Carbs */}
         <View style={styles.section}>
           <FormInput
-            label="Carbs (g)"
+            label={t('macroTargets.carbs')}
             value={carbs}
             onChangeText={setCarbs}
             keyboardType="number-pad"
-            placeholder="e.g., 200"
+            placeholder={t('macroTargets.carbsPlaceholder')}
             useBottomSheetInput
           />
         </View>
@@ -212,11 +226,11 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
         {/* Fat */}
         <View style={styles.section}>
           <FormInput
-            label="Fat (g)"
+            label={t('macroTargets.fat')}
             value={fat}
             onChangeText={setFat}
             keyboardType="number-pad"
-            placeholder="e.g., 70"
+            placeholder={t('macroTargets.fatPlaceholder')}
             useBottomSheetInput
           />
         </View>

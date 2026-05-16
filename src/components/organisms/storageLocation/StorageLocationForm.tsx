@@ -4,7 +4,8 @@ import React, {
   forwardRef,
   useImperativeHandle,
 } from 'react';
-import { View, TextInput, ActivityIndicator } from 'react-native';
+import { View, TextInput, ActivityIndicator, ScrollView } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -12,7 +13,6 @@ import Animated, {
   FadeIn,
   FadeOut,
 } from 'react-native-reanimated';
-import { ScrollView } from 'react-native-gesture-handler';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { commonStyles } from '#/styles/commonStyles';
@@ -31,49 +31,57 @@ export interface StorageLocationFormRef {
   isValid: () => boolean;
 }
 
-const STORAGE_TYPES = [
-  { label: 'Refrigerator', value: 'REFRIGERATOR' },
-  { label: 'Freezer', value: 'FREEZER' },
-  { label: 'Pantry Shelf', value: 'PANTRY_SHELF' },
-  { label: 'Cabinet', value: 'CABINET' },
-  { label: 'Drawer', value: 'DRAWER' },
-  { label: 'Counter', value: 'COUNTER' },
-  { label: 'Basement', value: 'BASEMENT' },
-  { label: 'Garage', value: 'GARAGE' },
-  { label: 'Closet', value: 'CLOSET' },
-  { label: 'Outdoor', value: 'OUTDOOR' },
-  { label: 'Boat Storage', value: 'BOAT_STORAGE' },
-  { label: 'RV Storage', value: 'RV_STORAGE' },
-  { label: 'Custom', value: 'CUSTOM' },
+type TFn = ReturnType<typeof useTranslation>['t'];
+
+const STORAGE_TYPE_VALUES = [
+  { key: 'typeRefrigerator', value: 'REFRIGERATOR' },
+  { key: 'typeFreezer', value: 'FREEZER' },
+  { key: 'typePantryShelf', value: 'PANTRY_SHELF' },
+  { key: 'typeCabinet', value: 'CABINET' },
+  { key: 'typeDrawer', value: 'DRAWER' },
+  { key: 'typeCounter', value: 'COUNTER' },
+  { key: 'typeBasement', value: 'BASEMENT' },
+  { key: 'typeGarage', value: 'GARAGE' },
+  { key: 'typeCloset', value: 'CLOSET' },
+  { key: 'typeOutdoor', value: 'OUTDOOR' },
+  { key: 'typeBoatStorage', value: 'BOAT_STORAGE' },
+  { key: 'typeRvStorage', value: 'RV_STORAGE' },
+  { key: 'typeCustom', value: 'CUSTOM' },
 ];
 
-const TEMPERATURE_OPTIONS: Array<{ label: string; value: StorageState }> = [
-  { label: 'None', value: StorageState.None },
-  { label: 'Ambient', value: StorageState.Ambient },
-  { label: 'Refrigerated', value: StorageState.Refrigerated },
-  { label: 'Frozen', value: StorageState.Frozen },
+const TEMPERATURE_OPTION_VALUES: Array<{ key: string; value: StorageState }> = [
+  { key: 'tempNone', value: StorageState.None },
+  { key: 'tempAmbient', value: StorageState.Ambient },
+  { key: 'tempRefrigerated', value: StorageState.Refrigerated },
+  { key: 'tempFrozen', value: StorageState.Frozen },
 ];
 
 const COLOR_PRESETS = [
-  { label: 'Red', value: '#E53935' },
-  { label: 'Pink', value: '#D81B60' },
-  { label: 'Purple', value: '#8E24AA' },
-  { label: 'Blue', value: '#1E88E5' },
-  { label: 'Teal', value: '#00897B' },
-  { label: 'Green', value: '#43A047' },
-  { label: 'Orange', value: '#FB8C00' },
-  { label: 'Brown', value: '#6D4C41' },
-  { label: 'Grey', value: '#757575' },
-  { label: 'Indigo', value: '#3949AB' },
+  { key: 'colorRed', value: '#E53935' },
+  { key: 'colorPink', value: '#D81B60' },
+  { key: 'colorPurple', value: '#8E24AA' },
+  { key: 'colorBlue', value: '#1E88E5' },
+  { key: 'colorTeal', value: '#00897B' },
+  { key: 'colorGreen', value: '#43A047' },
+  { key: 'colorOrange', value: '#FB8C00' },
+  { key: 'colorBrown', value: '#6D4C41' },
+  { key: 'colorGrey', value: '#757575' },
+  { key: 'colorIndigo', value: '#3949AB' },
 ];
 
-const CAPACITY_UNIT_OPTIONS = [
-  { label: 'Liters', value: 'liters' },
-  { label: 'Gallons', value: 'gallons' },
-  { label: 'Cubic Feet', value: 'cubic_feet' },
-  { label: 'Cubic Meters', value: 'cubic_meters' },
-  { label: 'Items', value: 'items' },
+const CAPACITY_UNIT_VALUES = [
+  { key: 'capacityLiters', value: 'liters' },
+  { key: 'capacityGallons', value: 'gallons' },
+  { key: 'capacityCubicFeet', value: 'cubic_feet' },
+  { key: 'capacityCubicMeters', value: 'cubic_meters' },
+  { key: 'capacityItems', value: 'items' },
 ];
+
+const buildCapacityUnitOptions = (t: TFn) =>
+  CAPACITY_UNIT_VALUES.map(opt => ({
+    label: t(`storageLocationForm.${opt.key}`),
+    value: opt.value,
+  }));
 
 interface StorageLocationFormProps {
   initialData?: any;
@@ -99,6 +107,7 @@ export const StorageLocationForm = forwardRef<
     },
     ref,
   ) => {
+    const { t } = useTranslation();
     const [advancedExpanded, setAdvancedExpanded] = useState(false);
     const chevronRotation = useSharedValue(0);
 
@@ -192,19 +201,23 @@ export const StorageLocationForm = forwardRef<
       <View style={styles.container}>
         {/* Name */}
         <View style={commonStyles.inputGroup}>
-          <Text style={commonStyles.label}>Name</Text>
+          <Text style={commonStyles.label}>
+            {t('storageLocationForm.name')}
+          </Text>
           <TextInput
             style={commonStyles.input}
             value={formData.name}
             onChangeText={name => setFormData({ ...formData, name })}
-            placeholder="e.g., Main Refrigerator"
+            placeholder={t('storageLocationForm.namePlaceholder')}
             autoFocus
           />
         </View>
 
         {/* Type Carousel */}
         <View style={[commonStyles.inputGroup, styles.carouselInputGroup]}>
-          <Text style={commonStyles.label}>Type</Text>
+          <Text style={commonStyles.label}>
+            {t('storageLocationForm.type')}
+          </Text>
           <View style={styles.carouselContainer}>
             <ScrollView
               horizontal
@@ -212,7 +225,7 @@ export const StorageLocationForm = forwardRef<
               style={styles.typeScroll}
               contentContainerStyle={styles.typeScrollContent}
             >
-              {STORAGE_TYPES.map(type => (
+              {STORAGE_TYPE_VALUES.map(type => (
                 <Pressable
                   key={type.value}
                   style={({ pressed }) => [
@@ -240,7 +253,7 @@ export const StorageLocationForm = forwardRef<
                         : styles.typeLabel
                     }
                   >
-                    {type.label}
+                    {t(`storageLocationForm.${type.key}`)}
                   </Text>
                 </Pressable>
               ))}
@@ -251,7 +264,9 @@ export const StorageLocationForm = forwardRef<
         {/* Parent Location Selector */}
         {parentOptions.length > 0 && (
           <View style={[commonStyles.inputGroup, styles.carouselInputGroup]}>
-            <Text style={commonStyles.label}>Parent Location (Optional)</Text>
+            <Text style={commonStyles.label}>
+              {t('storageLocationForm.parentLabel')}
+            </Text>
             <View style={styles.carouselContainer}>
               <ScrollView
                 horizontal
@@ -279,7 +294,7 @@ export const StorageLocationForm = forwardRef<
                         : styles.parentLabel
                     }
                   >
-                    None
+                    {t('storageLocationForm.parentNone')}
                   </Text>
                 </Pressable>
                 {parentOptions.map(location => (
@@ -318,25 +333,27 @@ export const StorageLocationForm = forwardRef<
               </ScrollView>
             </View>
             <Text size="xs" tone="secondary" style={styles.hint}>
-              Organize locations hierarchically (e.g., drawer inside fridge)
+              {t('storageLocationForm.parentHint')}
             </Text>
           </View>
         )}
 
         {/* Description */}
         <FormTextArea
-          label="Description (Optional)"
+          label={t('storageLocationForm.descriptionLabel')}
           value={formData.description}
           onChangeText={description =>
             setFormData({ ...formData, description })
           }
-          placeholder="Notes about this location..."
+          placeholder={t('storageLocationForm.descriptionPlaceholder')}
           numberOfLines={2}
         />
 
         {/* Temperature */}
         <View style={[commonStyles.inputGroup, styles.carouselInputGroup]}>
-          <Text style={commonStyles.label}>Temperature</Text>
+          <Text style={commonStyles.label}>
+            {t('storageLocationForm.temperature')}
+          </Text>
           <View style={styles.carouselContainer}>
             <ScrollView
               horizontal
@@ -344,7 +361,7 @@ export const StorageLocationForm = forwardRef<
               style={styles.typeScroll}
               contentContainerStyle={styles.typeScrollContent}
             >
-              {TEMPERATURE_OPTIONS.map(option => (
+              {TEMPERATURE_OPTION_VALUES.map(option => (
                 <Pressable
                   key={option.value}
                   style={({ pressed }) => [
@@ -370,7 +387,7 @@ export const StorageLocationForm = forwardRef<
                         : styles.parentLabel
                     }
                   >
-                    {option.label}
+                    {t(`storageLocationForm.${option.key}`)}
                   </Text>
                 </Pressable>
               ))}
@@ -380,7 +397,9 @@ export const StorageLocationForm = forwardRef<
 
         {/* Color */}
         <View style={[commonStyles.inputGroup, styles.carouselInputGroup]}>
-          <Text style={commonStyles.label}>Color (Optional)</Text>
+          <Text style={commonStyles.label}>
+            {t('storageLocationForm.colorLabel')}
+          </Text>
           <View style={styles.carouselContainer}>
             <ScrollView
               horizontal
@@ -414,7 +433,7 @@ export const StorageLocationForm = forwardRef<
                   onPress={() =>
                     setFormData({ ...formData, color: preset.value })
                   }
-                  accessibilityLabel={preset.label}
+                  accessibilityLabel={t(`storageLocationForm.${preset.key}`)}
                 />
               ))}
             </ScrollView>
@@ -430,7 +449,7 @@ export const StorageLocationForm = forwardRef<
           onPress={() => setAdvancedExpanded(!advancedExpanded)}
         >
           <Text size="sm" weight="semibold" tone="secondary">
-            Advanced Settings
+            {t('storageLocationForm.advancedSettings')}
           </Text>
           <Animated.View style={animatedChevronStyle}>
             <Icon name="chevron-down" size={20} tone="textSecondary" />
@@ -443,7 +462,7 @@ export const StorageLocationForm = forwardRef<
             exiting={FadeOut.duration(TIMING.FAST)}
           >
             <FormCheckbox
-              label="Climate Controlled"
+              label={t('storageLocationForm.climateControlled')}
               checked={formData.isClimateControlled}
               onPress={() =>
                 setFormData({
@@ -455,29 +474,29 @@ export const StorageLocationForm = forwardRef<
 
             <View style={styles.capacityRow}>
               <FormNumberInput
-                label="Capacity"
+                label={t('storageLocationForm.capacity')}
                 value={formData.capacity}
                 onChangeText={capacity =>
                   setFormData({ ...formData, capacity })
                 }
-                placeholder="e.g., 100"
+                placeholder={t('storageLocationForm.capacityPlaceholder')}
                 keyboardType="decimal-pad"
                 containerStyle={styles.capacityInput}
               />
               <FormSelect
-                label="Unit"
+                label={t('storageLocationForm.unit')}
                 value={formData.capacityUnit}
                 onValueChange={capacityUnit =>
                   setFormData({ ...formData, capacityUnit })
                 }
-                options={CAPACITY_UNIT_OPTIONS}
-                placeholder="Select unit"
+                options={buildCapacityUnitOptions(t)}
+                placeholder={t('storageLocationForm.unitPlaceholder')}
                 containerStyle={styles.capacityUnit}
               />
             </View>
 
             <FormCheckbox
-              label="Set as Default Location"
+              label={t('storageLocationForm.setAsDefault')}
               checked={formData.isDefault}
               onPress={() =>
                 setFormData({ ...formData, isDefault: !formData.isDefault })
@@ -487,7 +506,7 @@ export const StorageLocationForm = forwardRef<
         ) : null}
 
         {!hideActions && (
-          <View style={styles.formActions}>
+          <View style={[commonStyles.row, styles.formActions]}>
             <Pressable
               style={({ pressed }) => [
                 commonStyles.button,
@@ -497,7 +516,9 @@ export const StorageLocationForm = forwardRef<
               onPress={onCancel}
               disabled={isSubmitting}
             >
-              <Text style={commonStyles.buttonTextSecondary}>Cancel</Text>
+              <Text style={commonStyles.buttonTextSecondary}>
+                {t('labels.cancel')}
+              </Text>
             </Pressable>
             <Pressable
               style={({ pressed }) => [
@@ -512,7 +533,7 @@ export const StorageLocationForm = forwardRef<
                 <ActivityIndicator size="small" color="white" />
               ) : (
                 <Text style={commonStyles.buttonTextPrimary}>
-                  {initialData ? 'Update' : 'Create'}
+                  {initialData ? t('labels.update') : t('labels.create')}
                 </Text>
               )}
             </Pressable>
@@ -664,7 +685,6 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   formActions: {
-    ...commonStyles.row,
     gap: theme.spacing.sm,
     marginTop: theme.spacing.md,
   },

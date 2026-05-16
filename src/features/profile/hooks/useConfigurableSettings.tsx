@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { alertService } from '#/services/alertService';
 import {
   useAppStore,
@@ -16,12 +17,41 @@ import {
 import { ProfileVisibility } from '#/graphql/generated/schemaTypes';
 
 import { PROFILE_SETTINGS_CONFIG } from '#/config/settingsConfig';
+import { SUPPORTED_LANGUAGES } from '#/i18n/config';
 import { dateStringToISO, extractDateString } from '#utils/dateUtils';
 import { BiometricSetupModal } from '#components/organisms/BiometricSetupModal';
 import { executeMutation, executeQuery } from '#/utils/compilerSafeWrappers';
 import { useAuthPreferences } from '#hooks/navigation/useAuthPreferences';
 
+// Map PROFILE_SETTINGS_CONFIG section titles (the config's canonical English
+// keys) → translation keys under the `profile.sections` namespace.
+const SECTION_TITLE_KEYS: Record<string, string> = {
+  'Personal Information': 'profile.sections.personalInformation',
+  'Appearance & Language': 'profile.sections.appearanceAndLanguage',
+  Notifications: 'profile.sections.notifications',
+  'Dietary Profile': 'profile.sections.dietaryProfile',
+  'App Settings': 'profile.sections.appSettings',
+  Security: 'profile.sections.security',
+  Developer: 'profile.sections.developer',
+};
+
+// Map PROFILE_SETTINGS_CONFIG item.key → translation key under `profile.labels`.
+const ITEM_LABEL_KEYS: Record<string, string> = {
+  personalInformation: 'profile.labels.personalInformation',
+  appearance: 'profile.labels.appearance',
+  language: 'profile.labels.language',
+  notifications: 'profile.labels.notifications',
+  dietaryProfile: 'profile.labels.dietaryProfile',
+  appSettings: 'profile.labels.appSettings',
+  biometricAuthentication: 'profile.labels.biometricAuthentication',
+  changePassword: 'profile.labels.changePassword',
+  debugInfo: 'profile.labels.debugInfo',
+  performanceDashboard: 'profile.labels.performanceDashboard',
+  logout: 'profile.labels.logout',
+};
+
 export const useConfigurableSettings = (profile: any) => {
+  const { t } = useTranslation();
   const user = useUser();
   const logout = useAppStore(state => state.logout);
   const { getUserNavigationState } = useNavigationUtils();
@@ -157,9 +187,15 @@ export const useConfigurableSettings = (profile: any) => {
       appearance: 'profile-menu-appearance',
     };
 
+    // Translate well-known labels (Profile screen entries) via i18next; fall
+    // back to the config's English string for unmapped keys.
+    const translatedLabel = ITEM_LABEL_KEYS[config.key]
+      ? t(ITEM_LABEL_KEYS[config.key])
+      : config.label;
+
     const baseItem: any = {
       key: config.key,
-      label: config.label,
+      label: translatedLabel,
       type: config.type,
       ...(testIDMap[config.key] ? { testID: testIDMap[config.key] } : {}),
     };
@@ -293,11 +329,7 @@ export const useConfigurableSettings = (profile: any) => {
           return {
             ...baseItem,
             value: language || 'en',
-            options: config.options || [
-              { label: 'English', value: 'en' },
-              { label: 'Spanish', value: 'es' },
-              { label: 'French', value: 'fr' },
-            ],
+            options: SUPPORTED_LANGUAGES,
             onSave: (v: string) => {
               setLanguage(v);
               updateUserPreferences({ regional: { language: v } });
@@ -404,7 +436,12 @@ export const useConfigurableSettings = (profile: any) => {
 
   const sections = (() => {
     return PROFILE_SETTINGS_CONFIG.map(configSection => ({
-      title: configSection.title,
+      // Stable English/canonical key — safe to use for filtering/lookup across
+      // locales without depending on the user-visible (translated) title.
+      key: configSection.title,
+      title: SECTION_TITLE_KEYS[configSection.title]
+        ? t(SECTION_TITLE_KEYS[configSection.title])
+        : configSection.title,
       items: configSection.items.map(createSettingItem),
     }));
   })();
