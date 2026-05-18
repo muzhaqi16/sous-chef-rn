@@ -163,16 +163,27 @@ class ApolloCachePersistence {
     }
 
     this.restoreIdleCallbackId = requestIdleCallback(() => {
+      // `cancel()` / `clear()` set the id to null. Bail out before touching
+      // the cache so a logout fired between scheduling and firing doesn't
+      // resurrect stale entities into a cleared cache.
+      if (this.restoreIdleCallbackId == null) return;
       this.restoreIdleCallbackId = null;
       const t0 = performance.now();
-      const deferred = this.loadDeferred();
-      if (!deferred) return;
-      (cache as InMemoryCache).restore(deferred);
-      Telemetry.histogram(
-        'app_apollo_deferred_restore_ms',
-        performance.now() - t0,
-      );
-      logger.info('📦 Apollo: Deferred cache restore complete');
+      try {
+        const deferred = this.loadDeferred();
+        if (!deferred) return;
+        (cache as InMemoryCache).restore(deferred);
+        Telemetry.histogram(
+          'app_apollo_deferred_restore_ms',
+          performance.now() - t0,
+        );
+        logger.info('📦 Apollo: Deferred cache restore complete');
+      } catch (error) {
+        // A corrupt deferred blob shouldn't crash the JS thread — drop it and
+        // let the next save overwrite. Network refetch covers the data.
+        console.error('📦 Apollo: Deferred cache restore failed:', error);
+        storage.remove(DEFERRED_CACHE_KEY);
+      }
     });
   }
 
@@ -182,6 +193,12 @@ class ApolloCachePersistence {
    */
   loadDeferred(): NormalizedCacheObject | null {
     try {
+      // Mirror loadCritical()'s version guard: if a stale deferred blob
+      // survived a partial clear (e.g. crash mid-clear), don't resurrect
+      // entities from an incompatible schema.
+      const storedVersion = storage.getString(CACHE_VERSION_KEY);
+      if (storedVersion !== CURRENT_CACHE_VERSION) return null;
+
       const cacheString = storage.getString(DEFERRED_CACHE_KEY);
       if (!cacheString) return null;
 

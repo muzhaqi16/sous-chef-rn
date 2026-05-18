@@ -13,7 +13,6 @@ import {
   GetShoppingListSuggestionsDocument,
   type GetShoppingListSuggestionsQuery,
   type AddItemToShoppingListMutation,
-  type AddItemToShoppingListMutationVariables,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { ItemSuggestion } from '#/graphql/generated/schemaTypes';
 import { addNewItemToShoppingListCache } from '#/apollo/utils/shoppingListCacheUpdaters';
@@ -108,7 +107,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
     AddItemToShoppingListDocument,
     {
       optimisticResponse: (
-        variables: AddItemToShoppingListMutationVariables,
+        variables,
       ): Unmasked<AddItemToShoppingListMutation> => {
         const { tempId, entity } = createOptimisticShoppingListItem({
           itemName: variables.input.itemName ?? '',

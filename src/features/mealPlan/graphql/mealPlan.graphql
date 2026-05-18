@@ -113,11 +113,26 @@ mutation GenerateShoppingListFromMealPlan($input: GenerateShoppingListFromMealPl
     shoppingList {
       id
       name
+      isDefault
       totalItems
+      completedItems
       homeId
       home {
         id
         name
+      }
+      ownerships {
+        id
+        userId
+        user {
+          id
+          email
+          profile {
+            id
+            displayName
+            avatar
+          }
+        }
       }
     }
   }

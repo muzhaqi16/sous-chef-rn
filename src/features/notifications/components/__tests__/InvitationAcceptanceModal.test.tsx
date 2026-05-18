@@ -94,7 +94,9 @@ jest.mock('#/utils/compilerSafeWrappers', () => ({
 }));
 
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
-  createAddToQueryFieldUpdater: jest.fn(() => jest.fn()),
+  createAddToQueryConnectionUpdater: jest.fn(() => jest.fn()),
+  createRemoveFromParentArrayUpdater: jest.fn(() => jest.fn()),
+  safeEvict: jest.fn(),
 }));
 
 jest.mock('#/apollo/links/tokenScheduler');

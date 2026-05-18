@@ -75,6 +75,10 @@ const App = () => {
   useAppLifecycle();
 
   React.useEffect(() => {
+    // Intentionally fires before `isHydrated` flips — the deferred restore
+    // is scheduled via requestIdleCallback, so it runs *while* the splash is
+    // on screen. `client.cache` is a module singleton, so writes land before
+    // ApolloProvider mounts.
     apolloCachePersistence.restoreDeferred(client.cache);
   }, []);
 

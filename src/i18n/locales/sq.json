@@ -982,7 +982,6 @@
     "capacityItems": "Artikuj"
   },
   "barcodeScanner": {
-    "permissionMessage": "Aksesi i kamerës kërkohet për të skanuar barkode.",
     "closeScanner": "Mbyll skanerin",
     "flashOn": "Ndiz blicin",
     "flashOff": "Fik blicin"

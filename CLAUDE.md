@@ -357,15 +357,17 @@ Consumer hooks do not need to implement their own relevance checks.
 ### Apollo: Fragment Colocation Convention (new code)
 
 Apollo Client 4.x recommends colocated fragments + `useFragment` for new components,
-and runtime data masking (`dataMasking: true`) once enough consumers are migrated. The
-existing 256+ `useQuery` sites and 39 fragments in `src/graphql/operations/fragments.graphql`
-predate this and stay as-is — **don't migrate working code opportunistically**. New
-components and new entity-consuming child components should follow the convention below.
+and runtime data masking (`dataMasking: true`) is now enabled globally
+(`src/apollo/client.ts`). Existing `useQuery` sites and the per-domain fragment files
+predate the new convention and stay as-is — **don't migrate working code
+opportunistically**. New components and new entity-consuming child components should
+follow the convention below.
 
 **New non-page components that consume entity data:**
 
 - Define a colocated fragment named `<ComponentName>_<propName>` next to the component
-  (NOT in `src/graphql/operations/fragments.graphql` — that file is legacy).
+  (NOT in any of the domain `*Fragments.graphql` files — those are legacy and
+  multi-consumer only).
 - Accept `FragmentType<typeof MyFragmentDoc>` (from `@apollo/client`) as the prop type,
   not the raw fragment type.
 - Read fields via `useFragment` (from `@apollo/client/react`), not direct property access.

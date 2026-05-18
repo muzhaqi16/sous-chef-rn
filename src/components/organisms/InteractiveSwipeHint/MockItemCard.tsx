@@ -109,7 +109,6 @@ const styles = StyleSheet.create(theme => ({
       },
     },
   },
-  // Matches listItemImageContainerCompact from listStyles.ts
   emojiCircle: {
     width: theme.sizes.itemCard.compact.image,
     height: theme.sizes.itemCard.compact.image,

@@ -468,13 +468,30 @@ describe('ApolloCachePersistence', () => {
         'PantryItem:1': { id: '1' },
         'Recipe:2': { id: '2' },
       };
+      storage.set(VERSION_KEY, CURRENT_VERSION);
       storage.set(DEFERRED_KEY, JSON.stringify(deferredData));
 
       expect(apolloCachePersistence.loadDeferred()).toEqual(deferredData);
     });
 
     it('returns null on corrupted JSON', () => {
+      storage.set(VERSION_KEY, CURRENT_VERSION);
       storage.set(DEFERRED_KEY, 'bad-json');
+      expect(apolloCachePersistence.loadDeferred()).toBeNull();
+    });
+
+    it('returns null when version key is missing (crash-mid-clear guard)', () => {
+      const deferredData = { 'PantryItem:1': { id: '1' } };
+      storage.set(DEFERRED_KEY, JSON.stringify(deferredData));
+      // No VERSION_KEY set — simulates a partial clear where deferred
+      // survived but version did not.
+      expect(apolloCachePersistence.loadDeferred()).toBeNull();
+    });
+
+    it('returns null on version mismatch', () => {
+      const deferredData = { 'PantryItem:1': { id: '1' } };
+      storage.set(VERSION_KEY, '0.0.1');
+      storage.set(DEFERRED_KEY, JSON.stringify(deferredData));
       expect(apolloCachePersistence.loadDeferred()).toBeNull();
     });
   });
@@ -489,6 +506,7 @@ describe('ApolloCachePersistence', () => {
         'PantryItem:1': { id: '1' },
         'Recipe:2': { id: '2' },
       };
+      storage.set(VERSION_KEY, CURRENT_VERSION);
       storage.set(DEFERRED_KEY, JSON.stringify(deferredData));
 
       const cache = makeFakeCache();
@@ -513,6 +531,7 @@ describe('ApolloCachePersistence', () => {
 
     it('cancel() aborts a pending restore so logout cannot race with idle fire', () => {
       const deferredData = { 'PantryItem:1': { id: '1' } };
+      storage.set(VERSION_KEY, CURRENT_VERSION);
       storage.set(DEFERRED_KEY, JSON.stringify(deferredData));
 
       const cache = makeFakeCache();
@@ -526,6 +545,7 @@ describe('ApolloCachePersistence', () => {
 
     it('cancels a prior in-flight restore when called twice', () => {
       const deferredData = { 'PantryItem:1': { id: '1' } };
+      storage.set(VERSION_KEY, CURRENT_VERSION);
       storage.set(DEFERRED_KEY, JSON.stringify(deferredData));
 
       const cache1 = makeFakeCache();

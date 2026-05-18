@@ -54,13 +54,6 @@ const removeFromMealPlansForMain = createRemoveFromQueryConnectionUpdater(
 import { type MealTemplateDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import { type MealPlanMain_ItemFragment } from './MealPlanMain.generated';
 import { type EditCustomMealSheet_ItemFragment } from '#features/mealPlan/components/EditCustomMealSheet.generated';
-import type { Unmasked } from '@apollo/client/masking';
-import { type MealPlanItemActions_OptimisticFullItemFragment } from '#features/mealPlan/hooks/useMealPlanItemActions.generated';
-// MarkCookedModal reads recipe.name + servings off the pending item; the
-// compound optimistic fragment masks those behind `$fragmentRefs`, so we hold
-// the materialized (unmasked) shape in state.
-type MealPlanItemActionsItem =
-  Unmasked<MealPlanItemActions_OptimisticFullItemFragment>;
 import { toastService } from '#/services/toastService';
 import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
@@ -82,6 +75,12 @@ async function executeMealPlanRefresh(
 /**
  * Outer component that gates heavy work behind DeferredScreen.
  * Skeleton paints instantly; MealPlanMainInner mounts on the deferred re-render.
+ *
+ * Uses `tGlobal` (i18next instance directly) instead of `useTranslation()` so this
+ * wrapper does not subscribe to language changes. Subscribing here would re-render
+ * the wrapper just to flip skeleton labels that MealPlanMainInner replaces on
+ * mount anyway, defeating the point of the deferred split. All translations inside
+ * MealPlanMainInner go through `t` from `useTranslation()`.
  */
 export const MealPlanMain: React.FC = () => (
   <DeferredScreen
@@ -130,12 +129,14 @@ const MealPlanMainInner: React.FC = () => {
   const [shoppingListSheetVisible, setShoppingListSheetVisible] =
     useState(false);
 
-  // Mark cooked modal state.
-  // pendingCookItem is forwarded to `toggleCompleted` (needs the action's full item shape)
-  // and read by MarkCookedModal (needs recipe.name + servings).
+  // Mark cooked modal state — only what MarkCookedModal renders plus the id
+  // we hand back to `toggleCompleted`.
   const [markCookedVisible, setMarkCookedVisible] = useState(false);
-  const [pendingCookItem, setPendingCookItem] =
-    useState<MealPlanItemActionsItem | null>(null);
+  const [pendingCook, setPendingCook] = useState<{
+    id: string;
+    recipeName: string;
+    defaultServings: number;
+  } | null>(null);
 
   // Edit custom meal state — only the EditCustomMealSheet's narrow shape is needed.
   const [editCustomMealVisible, setEditCustomMealVisible] = useState(false);
@@ -224,7 +225,7 @@ const MealPlanMainInner: React.FC = () => {
       },
       onError: error => {
         toastService.error(
-          error.message || tGlobal('mealPlanMain.deleteMealPlanFailed'),
+          error.message || t('mealPlanMain.deleteMealPlanFailed'),
         );
       },
     },
@@ -268,13 +269,17 @@ const MealPlanMainInner: React.FC = () => {
 
     // Show MarkCookedModal when marking a recipe meal as complete
     if (!isCompleted && hasRecipe) {
-      setPendingCookItem(item);
+      setPendingCook({
+        id: item.id,
+        recipeName: item.recipe?.name ?? '',
+        defaultServings: item.servings ?? item.recipe?.servings ?? 1,
+      });
       setMarkCookedVisible(true);
       return;
     }
 
     // For unchecking or custom meals, toggle directly
-    toggleCompleted(item);
+    toggleCompleted(id);
   };
 
   const handleMarkCooked = (input: {
@@ -283,13 +288,13 @@ const MealPlanMainInner: React.FC = () => {
     useGranularDeduction: boolean;
     notes?: string;
   }) => {
-    if (!pendingCookItem) return;
-    toggleCompleted(pendingCookItem, {
+    if (!pendingCook) return;
+    toggleCompleted(pendingCook.id, {
       deductFromPantry: input.deductFromPantry,
       servings: input.servings,
       notes: input.notes,
     });
-    setPendingCookItem(null);
+    setPendingCook(null);
   };
 
   const handleDeleteItem = (id: string) => {
@@ -651,13 +656,11 @@ const MealPlanMainInner: React.FC = () => {
       {/* Mark Cooked Modal */}
       <MarkCookedModal
         visible={markCookedVisible}
-        recipeName={pendingCookItem?.recipe?.name ?? ''}
-        defaultServings={
-          pendingCookItem?.servings ?? pendingCookItem?.recipe?.servings ?? 1
-        }
+        recipeName={pendingCook?.recipeName ?? ''}
+        defaultServings={pendingCook?.defaultServings ?? 1}
         onClose={() => {
           setMarkCookedVisible(false);
-          setPendingCookItem(null);
+          setPendingCook(null);
         }}
         onConfirm={handleMarkCooked}
       />

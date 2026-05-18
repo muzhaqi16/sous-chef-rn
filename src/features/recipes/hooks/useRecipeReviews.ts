@@ -5,10 +5,7 @@ import {
   DeleteRecipeReviewDocument,
   ToggleReviewHelpfulDocument,
 } from '#features/recipes/graphql/recipeReview.generated';
-import {
-  GetRecipeReviewsDocument,
-  GetRecipeDocument,
-} from '#features/recipes/graphql/recipe.generated';
+import { GetRecipeReviewsDocument } from '#features/recipes/graphql/recipe.generated';
 import {
   RecipeReviewFragmentDoc,
   type RecipeReviewFragment,
@@ -16,7 +13,12 @@ import {
 import { type MaterializedRecipe } from './useRecipeData';
 import { useUser } from '#store/useAppStore';
 import { toastService } from '#/services/toastService';
-import { safeEvict } from '#/apollo/utils/cacheUpdaters';
+import {
+  addReviewToRecipe,
+  changeReviewRating,
+  getReviewRating,
+  removeReviewFromRecipe,
+} from '#/apollo/utils/recipeReviewCacheUpdaters';
 
 interface UseRecipeReviewsOptions {
   recipeId: string;
@@ -83,17 +85,19 @@ export function useRecipeReviews({
   const hasReviewed = !!userReview;
   const isOwnRecipe = backendRecipe?.createdBy?.id === userId;
 
-  // Refetch both queries: reviews list + recipe metadata (counts, average)
-  const refetchQueries = [
-    { query: GetRecipeReviewsDocument, variables: { id: recipeId } },
-    { query: GetRecipeDocument, variables: { id: recipeId } },
-  ];
-
   // Mutations
   const [createReviewMutation, { loading: createLoading }] = useMutation(
     CreateRecipeReviewDocument,
     {
-      refetchQueries: refetchQueries,
+      update: (cache, { data }) => {
+        const review = data?.createRecipeReview?.recipeReview;
+        if (review) {
+          addReviewToRecipe(cache, recipeId, {
+            id: review.id,
+            rating: review.rating,
+          });
+        }
+      },
       onError: err => {
         toastService.error(err.message || 'Failed to submit review');
       },
@@ -103,7 +107,6 @@ export function useRecipeReviews({
   const [updateReviewMutation, { loading: updateLoading }] = useMutation(
     UpdateRecipeReviewDocument,
     {
-      refetchQueries: refetchQueries,
       onError: err => {
         toastService.error(err.message || 'Failed to update review');
       },
@@ -113,10 +116,9 @@ export function useRecipeReviews({
   const [deleteReviewMutation, { loading: deleteLoading }] = useMutation(
     DeleteRecipeReviewDocument,
     {
-      refetchQueries: refetchQueries,
       update: (cache, { data }, { variables }) => {
         if (!data?.deleteRecipeReview?.success || !variables?.id) return;
-        safeEvict(cache, 'RecipeReview', variables.id);
+        removeReviewFromRecipe(cache, recipeId, variables.id);
       },
       onError: err => {
         toastService.error(err.message || 'Failed to delete review');
@@ -159,6 +161,7 @@ export function useRecipeReviews({
     id: string,
     input: { rating?: number; comment?: string },
   ) => {
+    const prevRating = getReviewRating(apolloClient.cache, id);
     await updateReviewMutation({
       variables: {
         id,
@@ -166,6 +169,13 @@ export function useRecipeReviews({
           rating: input.rating,
           comment: input.comment,
         },
+      },
+      update: (cache, { data }) => {
+        const review = data?.updateRecipeReview?.recipeReview;
+        if (!review || prevRating === null) return;
+        if (prevRating !== review.rating) {
+          changeReviewRating(cache, recipeId, prevRating, review.rating);
+        }
       },
     });
     toastService.success('Review updated');

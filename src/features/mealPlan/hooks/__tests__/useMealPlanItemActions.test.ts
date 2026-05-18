@@ -37,11 +37,6 @@ const seedToggleItem = (overrides: Record<string, unknown> = {}) =>
     },
   ]);
 
-const makeItemRef = () => ({
-  __typename: 'MealPlanItem',
-  id: 'mpi-1',
-});
-
 const mockToastSuccess = jest.fn();
 const mockToastError = jest.fn();
 jest.mock('#/services/toastService', () => ({
@@ -189,7 +184,7 @@ describe('useMealPlanItemActions', () => {
       );
 
       await act(async () => {
-        await result.current.toggleCompleted(makeItemRef() as any);
+        await result.current.toggleCompleted('mpi-1');
       });
 
       expect(update.fired).toContainEqual(
@@ -219,7 +214,7 @@ describe('useMealPlanItemActions', () => {
       );
 
       await act(async () => {
-        await result.current.toggleCompleted(makeItemRef() as any, {
+        await result.current.toggleCompleted('mpi-1', {
           deductFromPantry: true,
         });
       });
@@ -252,7 +247,7 @@ describe('useMealPlanItemActions', () => {
       );
 
       await act(async () => {
-        await result.current.toggleCompleted(makeItemRef() as any);
+        await result.current.toggleCompleted('mpi-1');
       });
 
       expect(mockToastSuccess).not.toHaveBeenCalled();

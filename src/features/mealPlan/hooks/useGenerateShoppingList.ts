@@ -1,24 +1,38 @@
 import { useMutation } from '@apollo/client/react';
-import {
-  GenerateShoppingListFromMealPlanDocument,
-  GetMealPlanDocument,
-} from '#features/mealPlan/graphql/mealPlan.generated';
-import { GetShoppingListsLiteDocument } from './useGenerateShoppingList.generated';
+import { GenerateShoppingListFromMealPlanDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 import { type GenerateShoppingListFromMealPlanInput } from '#/graphql/generated/schemaTypes';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
+import {
+  createAddToQueryConnectionUpdater,
+  createAddToParentArrayUpdater,
+} from '#/apollo/utils/cacheUpdaters';
+
+const addToShoppingLists = createAddToQueryConnectionUpdater(
+  'shoppingLists',
+  'ShoppingList',
+);
+const addToMealPlanGeneratedLists = createAddToParentArrayUpdater(
+  'MealPlan',
+  'generatedShoppingLists',
+);
 
 export function useGenerateShoppingList(mealPlanId: string | null) {
   const [generateMutation, { loading }] = useMutation(
     GenerateShoppingListFromMealPlanDocument,
     {
-      refetchQueries: [
-        ...(mealPlanId
-          ? [{ query: GetMealPlanDocument, variables: { id: mealPlanId } }]
-          : []),
-        { query: GetShoppingListsLiteDocument },
-      ],
+      update: (cache, { data }, { variables }) => {
+        const list = data?.generateShoppingListFromMealPlan?.shoppingList;
+        if (!list) return;
+        addToShoppingLists(cache, list, { position: 'start' });
+        const linkedMealPlanId = variables?.input?.mealPlanId;
+        if (linkedMealPlanId) {
+          addToMealPlanGeneratedLists(cache, linkedMealPlanId, list, {
+            position: 'end',
+          });
+        }
+      },
       onError: error => {
         toastService.error(error.message || 'Failed to generate shopping list');
       },

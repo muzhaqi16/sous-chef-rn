@@ -173,6 +173,36 @@ mutation AcceptHomeInvite($token: String!) {
     membership {
       id
       homeId
+      home {
+        id
+        name
+        isDefault
+        version
+        myMembership {
+          id
+          role
+          canManageHome
+          canViewPantry
+          canEditPantry
+          canAddItems
+          canRemoveItems
+          canInviteOthers
+        }
+        pantriesConnection(first: 10) {
+          edges {
+            node {
+              id
+              name
+              isDefault
+            }
+          }
+          totalCount
+        }
+        membersConnection(first: 5) {
+          totalCount
+        }
+        ...HomeCard_home
+      }
       ...HomeMemberCard_member
     }
   }

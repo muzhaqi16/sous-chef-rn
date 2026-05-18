@@ -20,6 +20,7 @@
     "createShoppingListFailed": "Failed to create shopping list",
     "invitationExpired": "This invitation is no longer valid. It may have expired or already been used.",
     "invitationUnavailable": "This invitation is no longer available. It may have been used, declined, or expired.",
+    "loadItemsFailed": "Unable to load items. Please try again.",
     "cameraPermission": "Camera access is required to scan barcodes.",
     "cameraPermissionDenied": "Camera permission was denied. Please enable it in settings.",
     "noCameraDevice": "No camera device found",
@@ -840,7 +841,6 @@
     "stockPantryTitle": "Stock your pantry",
     "stockPantrySubtitle": "Select items you already have at home",
     "stockPantrySubtitleOptional": "Select items you already have at home (optional)",
-    "loadItemsFailed": "Unable to load items. Please try again.",
     "tryAgain": "Try Again",
     "itemsSelected": "{{count}} selected",
     "saving": "Saving...",
@@ -983,7 +983,6 @@
     "capacityItems": "Items"
   },
   "barcodeScanner": {
-    "permissionMessage": "Camera access is required to scan barcodes.",
     "closeScanner": "Close scanner",
     "flashOn": "Turn flash on",
     "flashOff": "Turn flash off"

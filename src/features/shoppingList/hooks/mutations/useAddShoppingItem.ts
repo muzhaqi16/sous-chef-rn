@@ -14,7 +14,6 @@ import { type Unmasked } from '@apollo/client/masking';
 import {
   AddItemToShoppingListDocument,
   type AddItemToShoppingListMutation,
-  type AddItemToShoppingListMutationVariables,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useErrorService } from '#/services/errorService';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
@@ -50,7 +49,9 @@ export function useAddShoppingItem({
   const lastTempIdRef = useRef<string | null>(null);
 
   const [addItemMutation] = useMutation(AddItemToShoppingListDocument, {
-    optimisticResponse: (variables: AddItemToShoppingListMutationVariables) => {
+    optimisticResponse: (
+      variables,
+    ): Unmasked<AddItemToShoppingListMutation> => {
       const { tempId, entity } = createOptimisticShoppingListItem({
         itemName: variables.input.itemName ?? '',
         quantity: Number(variables.input.quantity) || 1,
@@ -61,7 +62,7 @@ export function useAddShoppingItem({
         unitId: variables.input.unit?.unitId,
       });
       lastTempIdRef.current = tempId;
-      const optimistic: Unmasked<AddItemToShoppingListMutation> = {
+      return {
         __typename: 'Mutation',
         addItemToShoppingList: {
           __typename: 'ShoppingListItemPayload',
@@ -71,7 +72,6 @@ export function useAddShoppingItem({
           shoppingListItem: entity,
         },
       };
-      return optimistic;
     },
     update(cache, { data }) {
       if (!data?.addItemToShoppingList?.shoppingListItem || !listId) return;

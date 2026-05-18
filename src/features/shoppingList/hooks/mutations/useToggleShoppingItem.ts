@@ -62,7 +62,10 @@ export function useToggleShoppingItem({
     ToggleShoppingListItemPurchasedDocument,
     {
       // Optimistic response ensures update() runs immediately (not after network response)
-      optimisticResponse: (variables, { IGNORE }) => {
+      optimisticResponse: (
+        variables,
+        { IGNORE },
+      ): Unmasked<ToggleShoppingListItemPurchasedMutation> | typeof IGNORE => {
         const item = client.cache.readFragment<ShoppingListItemDisplayFragment>(
           {
             id: client.cache.identify({
@@ -74,7 +77,7 @@ export function useToggleShoppingItem({
           },
         );
         if (!item) return IGNORE;
-        const optimistic: Unmasked<ToggleShoppingListItemPurchasedMutation> = {
+        return {
           __typename: 'Mutation',
           toggleShoppingListItemPurchased: {
             __typename: 'ShoppingListItemPayload',
@@ -91,7 +94,6 @@ export function useToggleShoppingItem({
             },
           },
         };
-        return optimistic;
       },
       update(cache, _result, { variables }) {
         if (!variables || !listId) return;

@@ -3,24 +3,35 @@ import {
   CreateMealPlanDocument,
   UpdateMealPlanDocument,
   DeleteMealPlanDocument,
-  GetMealPlansDocument,
 } from '#features/mealPlan/graphql/mealPlan.generated';
 import {
-  SortOrder,
   type CreateMealPlanInput,
   type UpdateMealPlanInput,
 } from '#/graphql/generated/schemaTypes';
+import {
+  createAddToQueryConnectionUpdater,
+  createRemoveFromQueryConnectionUpdater,
+} from '#/apollo/utils/cacheUpdaters';
+
+const addToMealPlans = createAddToQueryConnectionUpdater(
+  'mealPlans',
+  'MealPlan',
+);
+const removeFromMealPlans = createRemoveFromQueryConnectionUpdater(
+  'mealPlans',
+  'MealPlan',
+);
 
 export function useMealPlanActions() {
   const [createMealPlanMutation, { loading: creating }] = useMutation(
     CreateMealPlanDocument,
     {
-      refetchQueries: [
-        {
-          query: GetMealPlansDocument,
-          variables: { first: 20, orderBy: { startDate: SortOrder.Desc } },
-        },
-      ],
+      update: (cache, { data }) => {
+        const plan = data?.createMealPlan?.mealPlan;
+        if (plan) {
+          addToMealPlans(cache, plan, { position: 'start' });
+        }
+      },
     },
   );
 
@@ -31,12 +42,10 @@ export function useMealPlanActions() {
   const [deleteMealPlanMutation, { loading: deleting }] = useMutation(
     DeleteMealPlanDocument,
     {
-      refetchQueries: [
-        {
-          query: GetMealPlansDocument,
-          variables: { first: 20, orderBy: { startDate: SortOrder.Desc } },
-        },
-      ],
+      update: (cache, { data }, { variables }) => {
+        if (!data?.deleteMealPlan?.success || !variables?.id) return;
+        removeFromMealPlans(cache, variables.id, { evictItem: true });
+      },
     },
   );
 

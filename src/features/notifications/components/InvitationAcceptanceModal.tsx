@@ -6,25 +6,25 @@ import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { WhiteActivityIndicator } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import type { ApolloCache } from '@apollo/client';
 import { Icon } from '#utils/iconUtils';
 import { toastService } from '#/services/toastService';
 import { t as tGlobal } from '#/i18n/t';
 import {
   AcceptHomeInviteDocument,
   DeclineHomeInviteDocument,
-  GetHomesDocument,
-  GetMyPendingInvitesDocument,
 } from '#operations/home/home.generated';
 import {
   InvitationAcceptanceModalAcceptShoppingListInviteDocument,
   DeclineShoppingListInviteDocument,
   MyShoppingListInvitesDocument,
-  InvitationAcceptanceModal_CollaboratorFragmentDoc,
   type MyShoppingListInvitesQuery,
-  type InvitationAcceptanceModal_CollaboratorFragment,
 } from './InvitationAcceptanceModal.generated';
-import { createAddToQueryFieldUpdater } from '#/apollo/utils/cacheUpdaters';
+import {
+  createAddToQueryConnectionUpdater,
+  createRemoveFromParentArrayUpdater,
+  safeEvict,
+} from '#/apollo/utils/cacheUpdaters';
+import { useUser } from '#store/useAppStore';
 import { executeAsyncWithCleanup } from '#/utils/compilerSafeWrappers';
 import { Text } from '#components/atoms/Text';
 
@@ -32,19 +32,17 @@ const ErrorActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
   color: theme.colors.error,
 }));
 
-/** Module-level cache updater to keep try-catch out of the component body (React Compiler). */
-function updateShoppingListCache(
-  cache: ApolloCache,
-  collaborator: InvitationAcceptanceModal_CollaboratorFragment,
-): void {
-  try {
-    const addToShoppingListsCache =
-      createAddToQueryFieldUpdater('shoppingLists');
-    addToShoppingListsCache(cache, collaborator, { position: 'end' });
-  } catch (error) {
-    console.warn('Cache update failed for acceptShoppingListInvite:', error);
-  }
-}
+const addToHomes = createAddToQueryConnectionUpdater('homes', 'Home');
+const removePendingHomeInvite = createRemoveFromParentArrayUpdater(
+  'User',
+  'pendingHomeInvites',
+  'HomeInvite',
+);
+const removePendingCollaborationInvite = createRemoveFromParentArrayUpdater(
+  'User',
+  'pendingCollaborationInvites',
+  'ShoppingListCollaborator',
+);
 
 const getInvitationErrorMessage = (
   error: unknown,
@@ -82,44 +80,59 @@ export const InvitationAcceptanceModal: React.FC<
   const { t } = useTranslation();
   const invitationUnavailableMsg = t('errors.invitationUnavailable');
   const client = useApolloClient();
+  const user = useUser();
+  const userId = user?.id ?? null;
   const [accepting, setAccepting] = useState(false);
   const [rejecting, setRejecting] = useState(false);
 
   const [acceptHomeInvite] = useMutation(AcceptHomeInviteDocument, {
-    refetchQueries: [
-      { query: GetHomesDocument },
-      { query: GetMyPendingInvitesDocument },
-    ],
-    awaitRefetchQueries: true,
+    update: (cache, { data }) => {
+      const home = data?.acceptHomeInvite?.membership?.home;
+      if (home) {
+        addToHomes(cache, home, { position: 'end' });
+      }
+      const inviteId = invitation?.payload?.inviteId as string | undefined;
+      if (inviteId && userId) {
+        removePendingHomeInvite(cache, userId, inviteId, { evictItem: true });
+      }
+    },
   });
   const [acceptShoppingListInvite] = useMutation(
     InvitationAcceptanceModalAcceptShoppingListInviteDocument,
     {
-      refetchQueries: [{ query: MyShoppingListInvitesDocument }],
       update: (cache, { data }) => {
-        const maskedCollaborator = data?.acceptShoppingListInvite?.collaborator;
-        if (!maskedCollaborator) return;
-        // Materialize the masked fragment ref so the cache updater can read
-        // `id` from the collaborator entity.
-        const collaborator =
-          cache.readFragment<InvitationAcceptanceModal_CollaboratorFragment>({
-            fragment: InvitationAcceptanceModal_CollaboratorFragmentDoc,
-            fragmentName: 'InvitationAcceptanceModal_collaborator',
-            from: maskedCollaborator,
-          });
-        if (collaborator) {
-          updateShoppingListCache(cache, collaborator);
+        if (!data?.acceptShoppingListInvite?.success) return;
+        const inviteId = invitation?.payload?.inviteId as string | undefined;
+        if (inviteId && userId) {
+          // Don't evict — accepting transitions the pending collaborator record
+          // to active state. Apollo's normalized response already updated the
+          // entity; we just need to drop the reference from the pending list.
+          removePendingCollaborationInvite(cache, userId, inviteId);
         }
       },
     },
   );
   const [declineHomeInvite] = useMutation(DeclineHomeInviteDocument, {
-    refetchQueries: [{ query: GetMyPendingInvitesDocument }],
+    update: (cache, { data }) => {
+      const id = data?.declineHomeInvite?.homeInvite?.id;
+      if (id && userId) {
+        removePendingHomeInvite(cache, userId, id, { evictItem: true });
+      } else if (id) {
+        safeEvict(cache, 'HomeInvite', id);
+      }
+    },
   });
   const [declineShoppingListInvite] = useMutation(
     DeclineShoppingListInviteDocument,
     {
-      refetchQueries: [{ query: MyShoppingListInvitesDocument }],
+      update: cache => {
+        const inviteId = invitation?.payload?.inviteId as string | undefined;
+        if (inviteId && userId) {
+          removePendingCollaborationInvite(cache, userId, inviteId, {
+            evictItem: true,
+          });
+        }
+      },
     },
   );
 

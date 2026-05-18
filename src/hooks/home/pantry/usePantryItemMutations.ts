@@ -16,7 +16,6 @@ import {
   UpdatePantryItemDocument,
   DeletePantryItemDocument,
   type CreatePantryItemMutation,
-  type CreatePantryItemMutationVariables,
   type UpdatePantryItemMutation,
   type DeletePantryItemMutation,
 } from '#features/pantry/graphql/pantry.generated';
@@ -81,9 +80,7 @@ export function usePantryItemMutations({
       });
       alertService.alert('Error', message);
     },
-    optimisticResponse: (
-      variables: CreatePantryItemMutationVariables,
-    ): Unmasked<CreatePantryItemMutation> => {
+    optimisticResponse: (variables): Unmasked<CreatePantryItemMutation> => {
       const tempId = `temp-${generateId()}`;
       const input = variables.input;
       const optimisticPantryItem = {

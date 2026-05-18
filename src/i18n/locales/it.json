@@ -983,7 +983,6 @@
     "capacityItems": "Articoli"
   },
   "barcodeScanner": {
-    "permissionMessage": "L'accesso alla fotocamera è necessario per scansionare i codici a barre.",
     "closeScanner": "Chiudi scanner",
     "flashOn": "Attiva flash",
     "flashOff": "Disattiva flash"

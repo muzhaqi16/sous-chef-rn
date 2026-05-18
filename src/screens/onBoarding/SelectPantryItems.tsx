@@ -148,7 +148,7 @@ export const SelectPantryItems = () => {
       >
         <View style={styles.errorContainer}>
           <Text tone="error" align="center" style={styles.errorText}>
-            {t('onBoarding.loadItemsFailed')}
+            {t('errors.loadItemsFailed')}
           </Text>
           <Button onPress={() => refetch()} variant="primary">
             {t('onBoarding.tryAgain')}

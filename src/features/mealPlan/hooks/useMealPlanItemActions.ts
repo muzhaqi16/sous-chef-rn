@@ -4,10 +4,7 @@ import {
   UpdateMealPlanItemDocument,
   DeleteMealPlanItemDocument,
 } from '#features/mealPlan/graphql/mealPlan.generated';
-import {
-  MealPlanItemActions_OptimisticFullItemFragmentDoc,
-  type MealPlanItemActions_OptimisticFullItemFragment,
-} from './useMealPlanItemActions.generated';
+import { MealPlanItemActions_OptimisticFullItemFragmentDoc } from './useMealPlanItemActions.generated';
 import {
   type CreateMealPlanItemInput,
   type UpdateMealPlanItemInput,
@@ -92,18 +89,16 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
   };
 
   const toggleCompleted = async (
-    item: MealPlanItemActions_OptimisticFullItemFragment,
+    id: string,
     options?: { deductFromPantry?: boolean; servings?: number; notes?: string },
   ) => {
-    // Item arrives masked (only `__typename` + `$fragmentRefs`). Materialize
-    // through the compound optimistic fragment so we have id/isCompleted/recipe
-    // for branching and a complete unmasked payload to spread into the
-    // optimistic response. `cache.readFragment<T>` returns `Unmasked<T> | null`,
-    // so no explicit `Unmasked<>` wrap is needed here.
+    // Materialize the full optimistic shape from cache — callers only pass an
+    // id, so we read here to get isCompleted/recipe for branching and a
+    // complete payload to spread into the optimistic response.
     const fullItem = client.cache.readFragment({
       fragment: MealPlanItemActions_OptimisticFullItemFragmentDoc,
       fragmentName: 'MealPlanItemActions_optimisticFullItem',
-      from: item,
+      from: { __typename: 'MealPlanItem', id },
     });
     if (!fullItem) {
       toastService.error('Failed to update meal');
