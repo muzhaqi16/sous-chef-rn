@@ -148,6 +148,10 @@ jest.mock('#components/molecules/FieldRow', () => ({
   },
 }));
 
+// Must include every field selected by `ShoppingListItemFragment` (which
+// composes `ShoppingListItemDisplayFragment` + `ShoppingListItemCore`).
+// `useFragment` returns `complete: true` only when the cached entity has the
+// full field set, so the populate-form effect won't run with a sparse fixture.
 function buildShoppingListItem(id: string) {
   return {
     __typename: 'ShoppingListItem',
@@ -165,6 +169,21 @@ function buildShoppingListItem(id: string) {
     unit: null,
     sortOrder: 0,
     item: null,
+    priceEstimate: null,
+    source: {
+      __typename: 'ShoppingListItemSource',
+      isAutoAdded: false,
+      autoAddReason: null,
+      isFromMealPlan: false,
+    },
+    priority: null,
+    createdAt: '2025-01-01T00:00:00.000Z',
+    addedBy: null,
+    purchasesConnection: {
+      __typename: 'PurchaseConnection',
+      edges: [],
+      totalCount: 0,
+    },
   };
 }
 

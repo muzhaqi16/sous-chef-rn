@@ -1,5 +1,6 @@
 import { DocumentNode, GraphQLError } from 'graphql';
 import type { MockedResponse } from '#/test-utils/apolloMockProvider';
+import type { Unmasked } from '@apollo/client/masking';
 import {
   MembershipRole,
   StorageState,
@@ -419,7 +420,7 @@ export function createQueryMock<TData = Record<string, unknown>>(
       query: document,
       ...(variables ? { variables } : {}),
     },
-    result: { data },
+    result: { data: data as Unmasked<TData> },
   };
 }
 
@@ -433,7 +434,7 @@ export function createMutationMock<TData = Record<string, unknown>>(
       query: document,
       ...(variables ? { variables } : {}),
     },
-    result: { data },
+    result: { data: data as Unmasked<TData> },
   };
 }
 

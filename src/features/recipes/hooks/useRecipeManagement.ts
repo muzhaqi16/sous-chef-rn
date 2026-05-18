@@ -1,5 +1,8 @@
 import { useQuery } from '@apollo/client/react';
-import { MyRecipesDocument } from '#features/recipes/graphql/recipe.generated';
+import {
+  MyRecipesDocument,
+  type MyRecipesQuery,
+} from '#features/recipes/graphql/recipe.generated';
 import { RecipeCategory, Difficulty } from '#/graphql/generated/schemaTypes';
 import { useIsLoggedOut } from '#hooks/auth/useIsLoggedOut';
 import { useConnectionData } from '#hooks/utils/useConnectionData';
@@ -11,8 +14,20 @@ export interface RecipeFilters {
 }
 
 /**
- * Recipe management hook with cursor-based pagination
- * Uses Connection pattern for infinite scroll
+ * Connection node type emitted by the MyRecipes query. The cell renders via
+ * `useFragment(MyRecipeCard_recipe)` so the parent only needs the id +
+ * filterable scalars (category/difficulty) and the fragment ref.
+ */
+export type MyRecipeNode = NonNullable<
+  MyRecipesQuery['recipes']
+>['edges'][number]['node'];
+
+/**
+ * Recipe management hook with cursor-based pagination.
+ *
+ * Returns connection nodes as refs — consumers render them through
+ * `<MyRecipeCard recipeRef={node} />` which internally calls `useFragment`
+ * for a per-entity cache subscription.
  */
 export function useRecipeManagement(filters?: RecipeFilters) {
   const isLoggedOut = useIsLoggedOut();
@@ -39,7 +54,7 @@ export function useRecipeManagement(filters?: RecipeFilters) {
     cursorVariableName: 'cursor',
   });
 
-  const recipes = connectionData.items;
+  const recipes = connectionData.items as MyRecipeNode[];
 
   return {
     state: {

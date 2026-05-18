@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { useFragment } from '@apollo/client/react';
 import { Pressable } from '#components/atoms/themedComponents';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { alertService } from '#/services/alertService';
@@ -17,13 +18,13 @@ import { Icon } from '#utils/iconUtils';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { Text } from '#components/atoms/Text';
 import { StorageState } from '#/graphql/generated/schemaTypes';
-import { type ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
+import { MoveToPantryModal_ShoppingListItemFragmentDoc } from './MoveToPantryModal.generated';
 
 const STORAGE_STATES = Object.values(StorageState);
 
 interface MoveToPantryModalProps {
   visible: boolean;
-  shoppingListItem: ShoppingListItemDisplayFragment | null;
+  shoppingListItemId: string | null;
   pantries: Array<{ id: string; name: string; isDefault: boolean }>;
   selectedPantryId: string | null;
   onClose: () => void;
@@ -41,7 +42,7 @@ interface MoveToPantryModalProps {
 
 export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   visible,
-  shoppingListItem,
+  shoppingListItemId,
   pantries,
   selectedPantryId,
   onClose,
@@ -53,6 +54,15 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
     snapPoints: ['75%', '95%'],
     keyboardAware: true,
   });
+
+  const { data, complete } = useFragment({
+    fragment: MoveToPantryModal_ShoppingListItemFragmentDoc,
+    fragmentName: 'MoveToPantryModal_shoppingListItem',
+    from: shoppingListItemId
+      ? { __typename: 'ShoppingListItem', id: shoppingListItemId }
+      : null,
+  });
+  const shoppingListItem = shoppingListItemId && complete ? data : null;
 
   // Form state
   const [quantityInput, setQuantityInput] = useState('');
@@ -70,19 +80,22 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   const [actualPriceInput, setActualPriceInput] = useState('');
   const [notes, setNotes] = useState('');
 
-  // Reset form when modal opens with new item (render-time state update)
+  // Reset form when modal opens with new item (render-time state update).
+  // Key on the item id (not the materialized object) so cache updates to the
+  // same item don't clobber input.
   const [prevVisible, setPrevVisible] = useState(visible);
-  const [prevShoppingListItem, setPrevShoppingListItem] =
-    useState(shoppingListItem);
+  const [prevShoppingListItemId, setPrevShoppingListItemId] = useState(
+    shoppingListItem?.id,
+  );
   const [prevSelectedPantryId, setPrevSelectedPantryId] =
     useState(selectedPantryId);
   if (
     visible !== prevVisible ||
-    shoppingListItem !== prevShoppingListItem ||
+    shoppingListItem?.id !== prevShoppingListItemId ||
     selectedPantryId !== prevSelectedPantryId
   ) {
     setPrevVisible(visible);
-    setPrevShoppingListItem(shoppingListItem);
+    setPrevShoppingListItemId(shoppingListItem?.id);
     setPrevSelectedPantryId(selectedPantryId);
     if (visible && shoppingListItem) {
       setQuantityInput(shoppingListItem.quantity?.toString() || '1');

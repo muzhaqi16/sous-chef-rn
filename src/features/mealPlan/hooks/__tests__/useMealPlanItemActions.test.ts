@@ -2,6 +2,7 @@ import { act } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,
+  seedCache,
 } from '#/test-utils/apolloMockProvider';
 import {
   CreateMealPlanItemDocument,
@@ -9,6 +10,37 @@ import {
   DeleteMealPlanItemDocument,
 } from '#features/mealPlan/graphql/mealPlan.generated';
 import { useMealPlanItemActions } from '../useMealPlanItemActions';
+
+const seedToggleItem = (overrides: Record<string, unknown> = {}) =>
+  seedCache([
+    {
+      __typename: 'MealPlanItem',
+      id: 'mpi-1',
+      isCompleted: false,
+      completedAt: null,
+      servings: 1,
+      notes: null,
+      customMealName: null,
+      calories: null,
+      usedPantryItems: null,
+      mealType: 'DINNER',
+      date: '2025-06-15',
+      recipe: {
+        __typename: 'Recipe',
+        id: 'r-1',
+        name: 'Pasta',
+        servings: 1,
+        imageUrl: null,
+        totalTimeMinutes: 0,
+      },
+      ...overrides,
+    },
+  ]);
+
+const makeItemRef = () => ({
+  __typename: 'MealPlanItem',
+  id: 'mpi-1',
+});
 
 const mockToastSuccess = jest.fn();
 const mockToastError = jest.fn();
@@ -134,14 +166,6 @@ describe('useMealPlanItemActions', () => {
   });
 
   describe('toggleCompleted', () => {
-    const mockItem = {
-      id: 'mpi-1',
-      isCompleted: false,
-      recipe: { id: 'r-1', name: 'Pasta' },
-      mealType: 'DINNER',
-      date: '2025-06-15',
-    };
-
     it('marks item as completed and shows toast', async () => {
       const update = recordMock(UpdateMealPlanItemDocument, {
         data: {
@@ -151,20 +175,21 @@ describe('useMealPlanItemActions', () => {
             message: 'Updated',
             mealPlanItem: {
               __typename: 'MealPlanItem',
-              ...mockItem,
+              id: 'mpi-1',
               isCompleted: true,
             },
           },
         },
       });
 
+      const cache = seedToggleItem();
       const { result } = renderHookWithApollo(
         () => useMealPlanItemActions('plan-1'),
-        { operationMocks: [update.mock] },
+        { operationMocks: [update.mock], cache },
       );
 
       await act(async () => {
-        await result.current.toggleCompleted(mockItem as any);
+        await result.current.toggleCompleted(makeItemRef() as any);
       });
 
       expect(update.fired).toContainEqual(
@@ -187,13 +212,14 @@ describe('useMealPlanItemActions', () => {
         },
       });
 
+      const cache = seedToggleItem();
       const { result } = renderHookWithApollo(
         () => useMealPlanItemActions('plan-1'),
-        { operationMocks: [update.mock] },
+        { operationMocks: [update.mock], cache },
       );
 
       await act(async () => {
-        await result.current.toggleCompleted(mockItem as any, {
+        await result.current.toggleCompleted(makeItemRef() as any, {
           deductFromPantry: true,
         });
       });
@@ -204,7 +230,6 @@ describe('useMealPlanItemActions', () => {
     });
 
     it('does not show toast when un-completing', async () => {
-      const completedItem = { ...mockItem, isCompleted: true };
       const update = recordMock(UpdateMealPlanItemDocument, {
         data: {
           updateMealPlanItem: {
@@ -213,20 +238,21 @@ describe('useMealPlanItemActions', () => {
             message: 'ok',
             mealPlanItem: {
               __typename: 'MealPlanItem',
-              ...completedItem,
+              id: 'mpi-1',
               isCompleted: false,
             },
           },
         },
       });
 
+      const cache = seedToggleItem({ isCompleted: true });
       const { result } = renderHookWithApollo(
         () => useMealPlanItemActions('plan-1'),
-        { operationMocks: [update.mock] },
+        { operationMocks: [update.mock], cache },
       );
 
       await act(async () => {
-        await result.current.toggleCompleted(completedItem as any);
+        await result.current.toggleCompleted(makeItemRef() as any);
       });
 
       expect(mockToastSuccess).not.toHaveBeenCalled();

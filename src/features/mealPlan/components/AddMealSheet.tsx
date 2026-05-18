@@ -14,8 +14,13 @@ import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { Icon } from '#utils/iconUtils';
+import { useFragment } from '@apollo/client/react';
 import { MealType } from '#/graphql/generated/schemaTypes';
-import { useSavedRecipes } from '#features/recipes/hooks/useSavedRecipes';
+import {
+  useSavedRecipes,
+  type SavedRecipeNode,
+} from '#features/recipes/hooks/useSavedRecipes';
+import { SavedRecipeCard_SavedRecipeFragmentDoc } from '#features/recipes/components/SavedRecipeCard.generated';
 import { CachedImage } from '#components/atoms/CachedImage';
 import {
   BottomSheetSearchBar,
@@ -131,6 +136,74 @@ function searchSpoonacularWithCache(
   );
 }
 
+/**
+ * Per-row leaf that subscribes to a single SavedRecipe's
+ * `SavedRecipeCard_savedRecipe` fragment. The page-level query
+ * (MySavedRecipes) composes that fragment, so this row reads the same scalars
+ * the dedicated SavedRecipeCard would — but laid out inline to fit the
+ * AddMealSheet styling.
+ */
+interface SavedRecipeRowProps {
+  savedRecipeRef: SavedRecipeNode;
+  searchQuery: string;
+  onPress: (recipeId: string) => void;
+}
+
+const SavedRecipeRow: React.FC<SavedRecipeRowProps> = ({
+  savedRecipeRef,
+  searchQuery,
+  onPress,
+}) => {
+  const { t } = useTranslation();
+  const { data, complete } = useFragment({
+    fragment: SavedRecipeCard_SavedRecipeFragmentDoc,
+    fragmentName: 'SavedRecipeCard_savedRecipe',
+    from: savedRecipeRef,
+  });
+
+  if (!complete) return null;
+
+  if (searchQuery.trim()) {
+    const q = searchQuery.toLowerCase();
+    const name = (data.recipe.name ?? '').toLowerCase();
+    if (!name.includes(q)) return null;
+  }
+
+  const { recipe } = data;
+  return (
+    <Pressable
+      onPress={() => onPress(recipe.id)}
+      style={({ pressed }) => [styles.recipeItem, pressed && styles.pressed]}
+    >
+      {!!recipe.imageUrl && (
+        <CachedImage
+          uri={recipe.imageUrl}
+          style={styles.recipeImage}
+          displaySize={44}
+        />
+      )}
+      <View style={styles.recipeInfo}>
+        <Text style={styles.recipeName} numberOfLines={1}>
+          {recipe.name}
+        </Text>
+        {!!(recipe.servings || recipe.totalTimeMinutes) && (
+          <Text style={styles.recipeMeta}>
+            {recipe.servings
+              ? t('addMealSheet.servings', { count: recipe.servings })
+              : ''}
+            {recipe.totalTimeMinutes
+              ? `${recipe.servings ? ' · ' : ''}${t('addMealSheet.minutes', {
+                  count: recipe.totalTimeMinutes,
+                })}`
+              : ''}
+          </Text>
+        )}
+      </View>
+      <Icon name="add-circle-outline" size={24} color={styles.addIcon.color} />
+    </Pressable>
+  );
+};
+
 export const AddMealSheet: React.FC<AddMealSheetProps> = ({
   visible,
   onClose,
@@ -214,11 +287,10 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
     clearSearchResults(setSpoonacularResults, setSearchingApi);
   };
 
-  const filteredRecipes = (() => {
-    if (!searchQuery.trim()) return recipes;
-    const query = searchQuery.toLowerCase();
-    return recipes.filter(r => r.name?.toLowerCase().includes(query));
-  })();
+  // Search filtering happens inside SavedRecipeRow via useFragment — the
+  // hook returns refs, so we can't read recipe.name from the connection node
+  // shape without a cache subscription.
+  const filteredRecipes = recipes;
 
   const handleSelectRecipe = (recipeId: string) => {
     onAddRecipe(recipeId, selectedMealType);
@@ -358,46 +430,13 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
             </Text>
           ) : null}
 
-          {filteredRecipes.map(recipe => (
-            <Pressable
-              key={recipe.recipeId}
-              onPress={() => handleSelectRecipe(recipe.recipeId)}
-              style={({ pressed }) => [
-                styles.recipeItem,
-                pressed && styles.pressed,
-              ]}
-            >
-              {recipe.imageUrl ? (
-                <CachedImage
-                  uri={recipe.imageUrl}
-                  style={styles.recipeImage}
-                  displaySize={44}
-                />
-              ) : null}
-              <View style={styles.recipeInfo}>
-                <Text style={styles.recipeName} numberOfLines={1}>
-                  {recipe.name}
-                </Text>
-                {recipe.servings || recipe.totalTimeMinutes ? (
-                  <Text style={styles.recipeMeta}>
-                    {recipe.servings
-                      ? t('addMealSheet.servings', { count: recipe.servings })
-                      : ''}
-                    {recipe.totalTimeMinutes
-                      ? `${recipe.servings ? ' · ' : ''}${t(
-                          'addMealSheet.minutes',
-                          { count: recipe.totalTimeMinutes },
-                        )}`
-                      : ''}
-                  </Text>
-                ) : null}
-              </View>
-              <Icon
-                name="add-circle-outline"
-                size={24}
-                color={styles.addIcon.color}
-              />
-            </Pressable>
+          {filteredRecipes.map(savedRecipe => (
+            <SavedRecipeRow
+              key={savedRecipe.id}
+              savedRecipeRef={savedRecipe}
+              searchQuery={searchQuery}
+              onPress={handleSelectRecipe}
+            />
           ))}
 
           {/* Additional search results */}

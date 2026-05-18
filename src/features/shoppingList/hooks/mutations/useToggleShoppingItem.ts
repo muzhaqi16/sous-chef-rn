@@ -8,6 +8,7 @@
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
+import { type Unmasked } from '@apollo/client/masking';
 import { alertService } from '#/services/alertService';
 import {
   ToggleShoppingListItemPurchasedDocument,
@@ -73,7 +74,7 @@ export function useToggleShoppingItem({
           },
         );
         if (!item) return IGNORE;
-        const optimistic: ToggleShoppingListItemPurchasedMutation = {
+        const optimistic: Unmasked<ToggleShoppingListItemPurchasedMutation> = {
           __typename: 'Mutation',
           toggleShoppingListItemPurchased: {
             __typename: 'ShoppingListItemPayload',

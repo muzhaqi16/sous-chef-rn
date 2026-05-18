@@ -4,7 +4,7 @@
 
 query GetHome($homeId: ID!) {
   home(id: $homeId) {
-    ...HomeFragment
+    ...HomeDetailScreen_home
   }
 }
 
@@ -13,7 +13,37 @@ query GetHomes($first: Int, $after: String) {
     edges {
       cursor
       node {
-        ...HomeListFragment
+        # Direct selections cover what `HomeManagement` + hooks read off each
+        # node (id, default flag, default-pantry lookup, membership perms).
+        # Leaf rendering lives in the masked `HomeCard_home` spread.
+        id
+        name
+        isDefault
+        version
+        myMembership {
+          id
+          role
+          canManageHome
+          canViewPantry
+          canEditPantry
+          canAddItems
+          canRemoveItems
+          canInviteOthers
+        }
+        pantriesConnection(first: 10) {
+          edges {
+            node {
+              id
+              name
+              isDefault
+            }
+          }
+          totalCount
+        }
+        membersConnection(first: 5) {
+          totalCount
+        }
+        ...HomeCard_home
       }
     }
     pageInfo {
@@ -28,6 +58,8 @@ query GetMyPendingInvites {
   me {
     id
     pendingHomeInvites {
+      id
+      role
       ...InviteCard_invite
     }
   }
@@ -35,7 +67,22 @@ query GetMyPendingInvites {
 
 query GetHomeByJoinCode($joinCode: String!) {
   homeByJoinCode(joinCode: $joinCode) {
-    ...HomeDisplay
+    id
+    name
+    isDefault
+    membersConnection(first: 10) {
+      totalCount
+    }
+    pantriesConnection(first: 20) {
+      edges {
+        node {
+          id
+          name
+          isDefault
+        }
+      }
+      totalCount
+    }
   }
 }
 
@@ -49,7 +96,31 @@ mutation CreateHome($input: CreateHomeInput!) {
     message
     code
     home {
-      ...HomeListFragment
+      id
+      name
+      isDefault
+      version
+      myMembership {
+        id
+        role
+        canManageHome
+        canViewPantry
+        canEditPantry
+        canAddItems
+        canRemoveItems
+        canInviteOthers
+      }
+      pantriesConnection(first: 10) {
+        edges {
+          node {
+            id
+            name
+            isDefault
+          }
+        }
+        totalCount
+      }
+      ...HomeCard_home
     }
   }
 }
@@ -89,6 +160,7 @@ mutation InviteToHome($input: InviteToHomeInput!) {
     code
     homeInvite {
       ...InviteCard_invite
+      ...HomeInviteCard_invite
     }
   }
 }
@@ -99,7 +171,9 @@ mutation AcceptHomeInvite($token: String!) {
     message
     code
     membership {
-      ...MemberShipFragment
+      id
+      homeId
+      ...HomeMemberCard_member
     }
   }
 }
@@ -121,7 +195,8 @@ mutation UpdateMembership($id: ID!, $input: UpdateMembershipInput!) {
     message
     code
     membership {
-      ...MemberShipFragment
+      id
+      ...HomeMemberCard_member
     }
   }
 }
@@ -154,7 +229,9 @@ mutation JoinHomeByCode($joinCode: String!) {
     message
     code
     membership {
-      ...MemberShipFragment
+      id
+      homeId
+      ...HomeMemberCard_member
     }
   }
 }
@@ -179,7 +256,9 @@ subscription HomeInviteChanged($homeId: ID!) {
     mutation
     homeId
     homeInvite {
+      id
       ...InviteCard_invite
+      ...HomeInviteCard_invite
     }
     userId
     timestamp

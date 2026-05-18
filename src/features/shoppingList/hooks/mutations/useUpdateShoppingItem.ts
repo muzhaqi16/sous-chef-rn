@@ -8,6 +8,7 @@
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
+import { type Unmasked } from '@apollo/client/masking';
 import { alertService } from '#/services/alertService';
 import {
   UpdateShoppingListItemDocument,
@@ -78,7 +79,7 @@ export function useUpdateShoppingItem({
     const optimisticQuantity = updates.quantity ?? item.quantity;
     const optimisticCategory = updates.category ?? item.category;
     const optimisticUnitName = updates.unitName ?? item.unitName;
-    const optimisticResponse: UpdateShoppingListItemMutation = {
+    const optimisticResponse: Unmasked<UpdateShoppingListItemMutation> = {
       __typename: 'Mutation',
       updateShoppingListItem: {
         __typename: 'ShoppingListItemPayload',

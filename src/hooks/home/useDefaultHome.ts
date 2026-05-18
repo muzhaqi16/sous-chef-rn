@@ -16,11 +16,7 @@ import {
 } from '#store/useAppStore';
 import { useStore } from '#store';
 import { usePreservedArrayData } from '#/hooks/apollo/usePreservedQueryData';
-import {
-  normalizeHome,
-  normalizeHomes,
-  extractNodes,
-} from '#/utils/connectionUtils';
+import { extractNodes } from '#/utils/connectionUtils';
 
 /**
  * Manages home selection, default home resolution, and pantry ID tracking.
@@ -119,24 +115,44 @@ export const useDefaultHome = () => {
     }
   }, [canAttemptQueries, getHomes]);
 
-  // Preserve homes data even when query fails - prevents cascade failures
-  // Extract nodes from connection type (homes returns HomeConnection)
-  const homesList = normalizeHomes(
-    usePreservedArrayData(extractNodes(homes?.homes)),
-  );
+  // Preserve homes data even when query fails - prevents cascade failures.
+  // Each node carries `id`, `isDefault`, `myMembership`, and
+  // `pantriesConnection` from the operation plus a masked `HomeCard_home`
+  // ref. Pantry lookups read the connection nodes via `extractNodes`.
+  const homesList = usePreservedArrayData(extractNodes(homes?.homes));
+
+  type HomeNode = (typeof homesList)[number] & {
+    pantriesConnection?: {
+      edges?: Array<{ node?: { id: string; isDefault?: boolean } }>;
+    };
+  };
 
   // Derive default home from isDefault field (no separate query needed)
   const remoteDefaultHomeId = homesList?.find(h => h.isDefault)?.id ?? null;
 
+  const pantriesOf = (home: HomeNode | undefined) => {
+    if (!home) return [];
+    const fromConnection = extractNodes(home.pantriesConnection) as Array<{
+      id: string;
+      isDefault?: boolean;
+    }>;
+    if (fromConnection.length) return fromConnection;
+    // Legacy callers (e.g. tests, residual callers passing the old flat shape
+    // from before view-model removal) hand in `{ pantries: [...] }`. Accept it.
+    const flat = (home as { pantries?: unknown }).pantries;
+    return Array.isArray(flat)
+      ? (flat as Array<{ id: string; isDefault?: boolean }>)
+      : [];
+  };
+
   // Extract default pantry ID (React Compiler auto-memoizes this derivation)
   const defaultPantryId = (() => {
-    // Find the default home from the homes list
-    const defaultHome = homesList?.find(h => h.isDefault);
-    if (!defaultHome?.pantries?.length) return null;
-    const defaultPantry =
-      defaultHome.pantries.find(
-        (p: { isDefault?: boolean; id?: string }) => p.isDefault,
-      ) || defaultHome.pantries[0];
+    const defaultHome = homesList?.find(h => h.isDefault) as
+      | HomeNode
+      | undefined;
+    const pantries = pantriesOf(defaultHome);
+    if (!pantries.length) return null;
+    const defaultPantry = pantries.find(p => p.isDefault) ?? pantries[0];
     return defaultPantry?.id || null;
   })();
 
@@ -249,7 +265,7 @@ export const useDefaultHome = () => {
     if (remoteDefaultHomeId) return;
 
     // Auto-select first home
-    const firstHome = homesList[0];
+    const firstHome = homesList[0] as HomeNode;
     console.log(
       '🏠 No default home on server, auto-selecting first home:',
       firstHome.id,
@@ -259,10 +275,9 @@ export const useDefaultHome = () => {
     setSelectedHomeId(firstHome.id);
 
     // Set pantry immediately from local data (mutation will confirm/update later)
+    const firstHomePantries = pantriesOf(firstHome);
     const localDefaultPantry =
-      firstHome.pantries?.find(
-        (p: { isDefault?: boolean; id?: string }) => p.isDefault,
-      ) || firstHome.pantries?.[0];
+      firstHomePantries.find(p => p.isDefault) ?? firstHomePantries[0];
     if (localDefaultPantry?.id && !selectedPantryId) {
       setSelectedPantryId(localDefaultPantry.id);
     }
@@ -282,11 +297,8 @@ export const useDefaultHome = () => {
             returnedPantry.id,
           );
         } else if (!selectedPantryId) {
-          // Fallback: Get default pantry from first home data if mutation didn't return one
           const firstHomePantry =
-            firstHome.pantries?.find(
-              (p: { isDefault?: boolean; id?: string }) => p.isDefault,
-            ) || firstHome.pantries?.[0];
+            firstHomePantries.find(p => p.isDefault) ?? firstHomePantries[0];
           if (firstHomePantry?.id) {
             setSelectedPantryId(firstHomePantry.id);
             console.log(
@@ -298,12 +310,9 @@ export const useDefaultHome = () => {
       })
       .catch(err => {
         console.warn('Failed to set first home as default on server:', err);
-        // Fallback on error: try to set pantry from home data
         if (!selectedPantryId) {
           const firstHomePantry =
-            firstHome.pantries?.find(
-              (p: { isDefault?: boolean; id?: string }) => p.isDefault,
-            ) || firstHome.pantries?.[0];
+            firstHomePantries.find(p => p.isDefault) ?? firstHomePantries[0];
           if (firstHomePantry?.id) {
             setSelectedPantryId(firstHomePantry.id);
             console.log(
@@ -429,22 +438,15 @@ export const useDefaultHome = () => {
     needsClearing,
   ]);
 
-  // Helper function to get the default pantry from a home
-  // Handle both normalized homes (with pantries array) and raw homes (with pantriesConnection)
+  // Helper function to get the default pantry from a home (connection-shape).
   const getDefaultPantry = (homeData: any) => {
     const home = homeData?.home ?? homeData;
-    const pantries = home?.pantries ?? normalizeHome(home)?.pantries ?? [];
+    const pantries = pantriesOf(home);
 
     if (!pantries.length) {
       return null;
     }
-    return (
-      pantries.find(
-        (pantry: { isDefault?: boolean; id?: string }) => pantry.isDefault,
-      ) ||
-      pantries[0] ||
-      null
-    );
+    return pantries.find(p => p.isDefault) ?? pantries[0] ?? null;
   };
 
   // Provide the most appropriate home ID (prefer Zustand store, fallback to remote default)

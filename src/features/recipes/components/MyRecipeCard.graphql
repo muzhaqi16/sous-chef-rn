@@ -1,0 +1,10 @@
+fragment MyRecipeCard_recipe on Recipe {
+  id
+  name
+  description
+  imageUrl
+  servings
+  prepTimeMinutes
+  cookTimeMinutes
+  totalTimeMinutes
+}

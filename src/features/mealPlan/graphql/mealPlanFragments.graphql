@@ -34,8 +34,7 @@ fragment MealPlanDisplay on MealPlan {
 }
 
 fragment MealPlanFull on MealPlan {
-  ...MealPlanDisplay
-  dietaryProfile {
+  ...MealPlanDisplay  dietaryProfile {
     id
     calorieTarget
     proteinTarget
@@ -43,12 +42,7 @@ fragment MealPlanFull on MealPlan {
     fatTarget
   }
   mealPlanItems {
-    ...MealPlanItemCard_item
-    ...EditCustomMealSheet_item
-    ...DailyMeals_item
-    ...MealPlanMain_item
-    ...MealPlanItemActions_item
-  }
+    ...MealPlanItemCard_item    ...EditCustomMealSheet_item    ...DailyMeals_item    ...MealPlanMain_item    ...MealPlanItemActions_item  }
   generatedShoppingLists {
     id
     name

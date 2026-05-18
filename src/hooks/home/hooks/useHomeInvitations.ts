@@ -16,7 +16,6 @@ import {
 } from '#operations/home/home.generated';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import { useErrorService } from '#/services/errorService';
-import { normalizeHome } from '#/utils/connectionUtils';
 import {
   executeCacheUpdate,
   executeMutation,
@@ -185,9 +184,7 @@ export function useHomeInvitations({
     return result.data?.homeByJoinCode || null;
   };
 
-  const previewHome = previewData?.homeByJoinCode
-    ? normalizeHome(previewData.homeByJoinCode)
-    : null;
+  const previewHome = previewData?.homeByJoinCode ?? null;
 
   return {
     inviteUserToHome,

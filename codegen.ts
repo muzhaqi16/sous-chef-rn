@@ -95,11 +95,16 @@ const config: CodegenConfig = {
         },
         dedupeOperationSuffix: true,
         skipTypename: false,
-        inlineFragmentTypes: 'combine',
+        // 'mask' emits $fragmentName markers for spreads → AC 4.x runtime
+        // masking aligns with TS types. @unmask(mode: "migrate") spreads
+        // opt out of masking (composed inline) via `customDirectives`.
+        inlineFragmentTypes: 'mask',
+        customDirectives: { apolloUnmask: true },
         nonOptionalTypename: true,
         immutableTypes: false,
         strictScalars: true,
         pureMagicComment: true,
+        dataMasking: true,
       },
     },
   },

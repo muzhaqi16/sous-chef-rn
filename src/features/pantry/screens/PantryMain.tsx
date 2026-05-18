@@ -187,7 +187,6 @@ const PantryMainInner: React.FC = () => {
   return (
     <PantryModalsProvider
       pantryId={screen.pantry?.id}
-      pantryItems={screen.pantryItems}
       removeItem={screen.handleRemoveItem}
       navigateTo={stableNavigateTo}
       createLocation={screen.createLocation}

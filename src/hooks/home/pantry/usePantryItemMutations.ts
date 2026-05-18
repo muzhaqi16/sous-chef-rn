@@ -8,6 +8,7 @@
  */
 
 import { useMutation } from '@apollo/client/react';
+import { type Unmasked } from '@apollo/client/masking';
 import { alertService } from '#/services/alertService';
 import { generateId } from '#/utils/generateId';
 import {
@@ -37,11 +38,17 @@ import {
   executeMutation,
 } from '#/utils/compilerSafeWrappers';
 import type { PantryItemInput, PantryItemUpdate } from './types';
-import type { PantryItemDisplayFragment } from '#features/pantry/graphql/pantryFragments.generated';
+import type { PantryListItemNode } from './usePantryQuery';
 
 interface UsePantryItemMutationsOptions {
   pantryId: string | undefined;
-  pantryItems: PantryItemDisplayFragment[];
+  /**
+   * Connection nodes from the GetPantry query. At the type level these are
+   * masked fragment refs; at runtime they're the cache entries themselves
+   * (Apollo masking is type-only), so spreading `...currentItem` to build an
+   * optimistic response still picks up every cached field.
+   */
+  pantryItems: PantryListItemNode[];
 
   refetch: () => void;
 }
@@ -76,7 +83,7 @@ export function usePantryItemMutations({
     },
     optimisticResponse: (
       variables: CreatePantryItemMutationVariables,
-    ): CreatePantryItemMutation => {
+    ): Unmasked<CreatePantryItemMutation> => {
       const tempId = `temp-${generateId()}`;
       const input = variables.input;
       const optimisticPantryItem = {
@@ -108,8 +115,11 @@ export function usePantryItemMutations({
           success: true,
           message: '',
           code: 'SUCCESS',
+          // Partial optimistic shape — pin to the mutation's pantryItem field
+          // type. Apollo merges this with cache; the full entity arrives in
+          // the server response.
           pantryItem:
-            optimisticPantryItem as CreatePantryItemMutation['createPantryItem']['pantryItem'],
+            optimisticPantryItem as Unmasked<CreatePantryItemMutation>['createPantryItem']['pantryItem'],
         },
       };
     },
@@ -151,7 +161,7 @@ export function usePantryItemMutations({
       });
       alertService.alert('Error', message);
     },
-    optimisticResponse: (variables): UpdatePantryItemMutation => {
+    optimisticResponse: (variables): Unmasked<UpdatePantryItemMutation> => {
       const currentItem = pantryItems.find(item => item.id === variables.id);
 
       const pantryItem = currentItem
@@ -180,7 +190,7 @@ export function usePantryItemMutations({
           message: '',
           code: 'SUCCESS',
           pantryItem:
-            pantryItem as UpdatePantryItemMutation['updatePantryItem']['pantryItem'],
+            pantryItem as Unmasked<UpdatePantryItemMutation>['updatePantryItem']['pantryItem'],
         },
       };
     },

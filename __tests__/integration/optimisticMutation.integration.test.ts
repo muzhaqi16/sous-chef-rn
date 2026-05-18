@@ -37,6 +37,7 @@ import { ApolloClient, InMemoryCache } from '@apollo/client';
 import { ApolloProvider } from '@apollo/client/react';
 import type { MockedResponse } from '#/test-utils/apolloMockProvider';
 import { MockLink } from '@apollo/client/testing';
+import type { Unmasked } from '@apollo/client/masking';
 import {
   ToggleShoppingListItemPurchasedDocument,
   type ToggleShoppingListItemPurchasedMutation,
@@ -112,7 +113,7 @@ function readPurchaseStatus(cache: InMemoryCache): boolean | undefined {
 
 function buildSettledServerResponse(
   newPurchased: boolean,
-): ToggleShoppingListItemPurchasedMutation {
+): Unmasked<ToggleShoppingListItemPurchasedMutation> {
   return {
     __typename: 'Mutation',
     toggleShoppingListItemPurchased: {

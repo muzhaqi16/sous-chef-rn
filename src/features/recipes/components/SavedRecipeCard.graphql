@@ -1,0 +1,19 @@
+fragment SavedRecipeCard_savedRecipe on SavedRecipe {
+  id
+  folder
+  tags
+  notes
+  personalRating
+  cookedCount
+  lastCookedAt
+  recipe {
+    id
+    name
+    description
+    imageUrl
+    servings
+    prepTimeMinutes
+    cookTimeMinutes
+    totalTimeMinutes
+  }
+}

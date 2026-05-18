@@ -3,10 +3,40 @@ import { waitFor } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,
+  seedCache,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import { GetMealPlansDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 import { useMealPlans } from '../useMealPlans';
+
+function seedPlanCache(
+  plans: Array<{ id: string; startDate: string; endDate: string }>,
+) {
+  return seedCache(
+    plans.map(p => ({
+      __typename: 'MealPlan',
+      id: p.id,
+      name: `Plan ${p.id}`,
+      description: null,
+      planType: 'WEEKLY',
+      startDate: p.startDate,
+      endDate: p.endDate,
+      servings: 1,
+      totalCalories: null,
+      totalProtein: null,
+      totalCarbs: null,
+      totalFat: null,
+      actualCost: null,
+      budgetAmount: null,
+      homeId: 'h1',
+      home: null,
+      createdBy: null,
+      version: 1,
+      createdAt: '2025-01-01T00:00:00Z',
+      updatedAt: '2025-01-01T00:00:00Z',
+    })),
+  );
+}
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
@@ -87,6 +117,7 @@ describe('useMealPlans', () => {
     };
     const { result } = renderHookWithApollo(() => useMealPlans(), {
       operationMocks: [planData([plan])],
+      cache: seedPlanCache([plan]),
     });
     await waitFor(() => expect(result.current.state.mealPlans).toHaveLength(1));
     expect(result.current.state.mealPlans[0].id).toBe('1');
@@ -104,6 +135,7 @@ describe('useMealPlans', () => {
     };
     const { result } = renderHookWithApollo(() => useMealPlans(), {
       operationMocks: [planData([activePlan])],
+      cache: seedPlanCache([activePlan]),
     });
     await waitFor(() =>
       expect(result.current.state.currentPlan?.id).toBe('active'),

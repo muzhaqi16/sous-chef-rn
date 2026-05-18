@@ -1,8 +1,10 @@
 'use no memo';
 
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { ShoppingListMainContent } from '../ShoppingListMainContent';
+
+const render = (ui: React.ReactElement) => renderWithApollo(ui);
 
 // Mock token scheduler / refreshToken
 jest.mock('#/apollo/links/tokenScheduler');

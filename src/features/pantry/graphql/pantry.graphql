@@ -51,7 +51,29 @@ query GetPantry(
     itemsConnection(first: $itemsFirst, after: $itemsCursor, filters: $itemsFilter, orderBy: $itemsOrderBy) {
       edges {
         node {
-          ...PantryItemDisplay
+          # Direct selections cover what the screen-level hooks + filtered
+          # views read off each node — local sort comparators (itemName,
+          # expiresAt, quantity, createdAt), local search (itemName),
+          # location filtering (storageState, storageLocation.id), stats
+          # (isLowStock), and `FilteredPantryItems`' subtitle (unit.symbol).
+          # Leaf rendering lives in the masked `PantryItemCard_pantryItem`
+          # spread.
+          id
+          itemName
+          quantity
+          expiresAt
+          storageState
+          isLowStock
+          createdAt
+          updatedAt
+          storageLocation {
+            id
+          }
+          unit {
+            id
+            symbol
+          }
+          ...PantryItemCard_pantryItem
         }
         cursor
       }
@@ -598,6 +620,8 @@ mutation OpenPantryItemBatch($input: OpenBatchInput!) {
     pantryItem {
       ...PantryItemDisplay
       batches {
+        # Consumed by useOpenPantryItemBatch's optimisticResponse builder,
+        # which needs the unmasked shape to construct the cache write.
         ...PantryItemBatchFragment
       }
     }

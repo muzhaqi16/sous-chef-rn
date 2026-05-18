@@ -13,7 +13,7 @@ import type { FilterTabActionButton } from '#components/molecules/FilterTabs/typ
 import { ShoppingTab } from './ShoppingTab';
 import { PurchasedTab } from './PurchasedTab';
 import { EmptyState } from '#components/base/EmptyState';
-import type { SortableShoppingListItem } from '../SortableShoppingList/types';
+import type { ShoppingListRowItem } from '../SortableShoppingList/types';
 import {
   ShoppingListTabsActionsProvider,
   type ShoppingListTabsActions,
@@ -35,11 +35,13 @@ interface TabRoute extends Route {
 }
 
 interface ShoppingListTabsProps {
-  items?: SortableShoppingListItem[];
+  items?: ShoppingListRowItem[];
   // PERFORMANCE: Pre-filtered items with stable references from useShoppingListScreen
   // When provided, skip internal filtering to prevent new array references
-  unpurchasedItems?: SortableShoppingListItem[];
-  purchasedItems?: SortableShoppingListItem[];
+  unpurchasedItems?: ShoppingListRowItem[];
+  purchasedItems?: ShoppingListRowItem[];
+  /** Whether row cells render product images (threaded into tab data context) */
+  showImages?: boolean;
   // Total counts from GraphQL (not array length) for accurate tab badge counts
   totalCountUnpurchased?: number;
   totalCountPurchased?: number;
@@ -157,6 +159,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   scrollEventThrottle,
   // Scrollable header content
   listHeaderComponent,
+  showImages,
 }) => {
   const tabBarRef = useRef<View>(null);
   const layout = useWindowDimensions();
@@ -353,6 +356,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   // re-call renderScene on data changes (which would destroy FlashList recycling pools)
   const shoppingTabData: ShoppingListTabData = {
     items: unpurchasedItems,
+    showImages,
     onRefresh,
     refreshing,
     loading,
@@ -372,6 +376,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
 
   const purchasedTabData: ShoppingListTabData = {
     items: purchasedItems,
+    showImages,
     onRefresh,
     refreshing,
     loading,

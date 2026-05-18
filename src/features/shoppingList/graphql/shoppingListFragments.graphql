@@ -19,8 +19,29 @@ fragment ShoppingListItemCore on ShoppingListItem {
   }
 }
 
+# Flat leaf fragment consumed by row/list components, cache reads, mutation
+# optimistic responses, and subscription writeFragment calls. Fields duplicate
+# ShoppingListItemCore on purpose so consumers get all the data they need from
+# a single `useFragment` call without nested unmasking.
 fragment ShoppingListItemDisplayFragment on ShoppingListItem {
-  ...ShoppingListItemCore
+  id
+  itemName
+  quantity
+  quantityInput
+  displayFormat
+  purchaseInfo {
+    isPurchased
+  }
+  version
+  updatedAt
+  category
+  notes
+  unitName
+  unit {
+    id
+    name
+    symbol
+  }
   sortOrder
   item {
     id
@@ -29,8 +50,28 @@ fragment ShoppingListItemDisplayFragment on ShoppingListItem {
   }
 }
 
+# Flat leaf fragment consumed by AddEditItem and ItemDetail screens. Includes
+# every field they read so a single `useFragment` resolves the entire view.
 fragment ShoppingListItemFragment on ShoppingListItem {
-  ...ShoppingListItemDisplayFragment
+  id
+  itemName
+  quantity
+  quantityInput
+  displayFormat
+  purchaseInfo {
+    isPurchased
+  }
+  version
+  updatedAt
+  category
+  notes
+  unitName
+  unit {
+    id
+    name
+    symbol
+  }
+  sortOrder
   item {
     id
     name
@@ -38,6 +79,7 @@ fragment ShoppingListItemFragment on ShoppingListItem {
     imageUrl
     netWeight
     nutritions
+    images { url kind }
     displayUnit {
       id
       name
@@ -65,15 +107,24 @@ fragment ShoppingListItemFragment on ShoppingListItem {
     isFromMealPlan
   }
   priority
-  sortOrder
   createdAt
   addedBy {
-    ...UserSummary
+    id
+    email
+    profile {
+      id
+      displayName
+      avatar
+    }
   }
   purchasesConnection(first: 10) {
     edges {
       node {
-        ...PurchaseFragment
+        id
+        purchaseDate
+        quantity
+        unitPrice
+        unitSymbol
       }
     }
     totalCount
@@ -104,6 +155,7 @@ fragment ShoppingListCollaboratorFragment on ShoppingListCollaborator {
   canRemoveItems
   canEditItems
   canMarkPurchased
+  invitedAt
   collaborator {
     id
     email
@@ -113,12 +165,4 @@ fragment ShoppingListCollaboratorFragment on ShoppingListCollaborator {
       avatar
     }
   }
-}
-
-fragment PurchaseFragment on Purchase {
-  id
-  purchaseDate
-  quantity
-  unitPrice
-  unitSymbol
 }

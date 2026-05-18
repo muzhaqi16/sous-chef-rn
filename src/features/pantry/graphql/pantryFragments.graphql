@@ -1,4 +1,4 @@
-fragment PantryItemCore on PantryItem {
+fragment PantryItemDisplay on PantryItem {
   id
   pantryId
   itemId
@@ -16,10 +16,6 @@ fragment PantryItemCore on PantryItem {
   remainingNetWeight
   activeBatchCount
   earliestBatchExpiration
-}
-
-fragment PantryItemDisplay on PantryItem {
-  ...PantryItemCore
   item {
     id
     imageUrl
@@ -74,7 +70,7 @@ fragment PantryItemDisplay on PantryItem {
 }
 
 fragment PantryItemFragment on PantryItem {
-  ...PantryItemDisplay
+  ...PantryItemDisplay @unmask(mode: "migrate")
   item {
     name
     shelfLifeDays

@@ -42,7 +42,7 @@ jest.mock('#components/molecules/FormCheckbox', () => ({
   },
 }));
 jest.mock('../PantryActionModal', () => ({
-  PantryActionModal: ({ title, renderActionFields }: any) => {
+  PantryActionModal: ({ title, renderActionFields, pantryItemId }: any) => {
     const { View, Text } = require('react-native');
     const sharedState = {
       trackingQuantity: 10,
@@ -65,10 +65,15 @@ jest.mock('../PantryActionModal', () => ({
       itemId: 'item-1',
       defaultUnit: null,
     };
+    const fakePantryItem = pantryItemId
+      ? { id: pantryItemId, quantity: 10 }
+      : null;
     return (
       <View>
         <Text>{title}</Text>
-        {renderActionFields(sharedState)}
+        {fakePantryItem
+          ? renderActionFields(sharedState, fakePantryItem)
+          : null}
       </View>
     );
   },
@@ -91,7 +96,7 @@ jest.mock('#/utils/formatQuantity', () => ({
 describe('RecordWastePantryItemModal', () => {
   const defaultProps = {
     visible: true,
-    pantryItem: { id: '1', quantity: 10 } as any,
+    pantryItemId: '1',
     onClose: jest.fn(),
     onConfirm: jest.fn(),
   };

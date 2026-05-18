@@ -24,7 +24,7 @@ import {
   getVersionConflictMessage,
 } from '#/utils/errors/versionConflict';
 import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
-import { normalizeHome } from '#/utils/connectionUtils';
+import { extractNodes } from '#/utils/connectionUtils';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
 import { addToHomesCache, removeFromHomesCache } from './utils';
 import {
@@ -99,14 +99,12 @@ export function useHomeMutations({
           }
 
           // If a default pantry was created, set it as selected
-          const normalizedNewHome = normalizeHome(newHome);
-          if (normalizedNewHome?.pantries?.length) {
-            const defaultPantry = normalizedNewHome.pantries.find(
-              (pantry: any) => pantry.isDefault,
-            );
-            if (defaultPantry) {
-              setSelectedPantryId(defaultPantry.id);
-            }
+          const pantries = extractNodes(
+            (newHome as { pantriesConnection?: any }).pantriesConnection,
+          ) as Array<{ id: string; isDefault?: boolean }>;
+          const defaultPantry = pantries.find(p => p.isDefault);
+          if (defaultPantry) {
+            setSelectedPantryId(defaultPantry.id);
           }
         }
       },

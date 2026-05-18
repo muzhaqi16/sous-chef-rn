@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { useFragment } from '@apollo/client/react';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { alertService } from '#/services/alertService';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
@@ -10,14 +11,14 @@ import { FormattedItemSubtitle } from '#components/atoms/FormattedItemSubtitle';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
 import { parseFractionalInput } from '#/utils/fractionUtils';
-import { type PantryItemFragment } from '#features/pantry/graphql/pantryFragments.generated';
 import { commonStyles } from '#/styles/commonStyles';
 import { formatNetWeightDisplay } from '#features/pantry/hooks/usePantryItemTransformation';
 import { Text } from '#components/atoms/Text';
+import { AdjustQuantityModal_PantryItemFragmentDoc } from './AdjustQuantityModal.generated';
 
 interface AdjustQuantityModalProps {
   visible: boolean;
-  pantryItem: PantryItemFragment | null;
+  pantryItemId: string | null;
   onClose: () => void;
   onConfirm: (
     newQuantity: number,
@@ -28,11 +29,18 @@ interface AdjustQuantityModalProps {
 
 export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
   visible,
-  pantryItem,
+  pantryItemId,
   onClose,
   onConfirm,
 }) => {
   const { t } = useTranslation();
+  const { data, complete } = useFragment({
+    fragment: AdjustQuantityModal_PantryItemFragmentDoc,
+    fragmentName: 'AdjustQuantityModal_pantryItem',
+    from: pantryItemId ? { __typename: 'PantryItem', id: pantryItemId } : null,
+  });
+  const pantryItem = pantryItemId && complete ? data : null;
+
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible: visible && !!pantryItem,
     onDismiss: onClose,
@@ -42,12 +50,14 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
   const [reason, setReason] = useState('');
   const [remainingWeightInput, setRemainingWeightInput] = useState('');
 
-  // Reset state when sheet opens (render-time conditional state update)
+  // Reset state when sheet opens (render-time conditional state update).
+  // Key on pantryItemId so the reset still fires on a different item, but a
+  // cache update to the same item (mutation result) does not clobber user input.
   const [prevVisible, setPrevVisible] = useState(visible);
-  const [prevPantryItem, setPrevPantryItem] = useState(pantryItem);
-  if (visible !== prevVisible || pantryItem !== prevPantryItem) {
+  const [prevPantryItemId, setPrevPantryItemId] = useState(pantryItem?.id);
+  if (visible !== prevVisible || pantryItem?.id !== prevPantryItemId) {
     setPrevVisible(visible);
-    setPrevPantryItem(pantryItem);
+    setPrevPantryItemId(pantryItem?.id);
     if (visible && pantryItem) {
       setQuantityInput(pantryItem.quantity.toString());
       setReason('');

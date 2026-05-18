@@ -168,7 +168,7 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
       {/* Write/Edit Review Sheet */}
       <WriteReviewSheet
         visible={sheetVisible}
-        existingReview={userReview}
+        existingReviewId={userReview?.id ?? null}
         onSubmit={handleSubmit}
         onClose={() => setSheetVisible(false)}
         submitting={submitting}

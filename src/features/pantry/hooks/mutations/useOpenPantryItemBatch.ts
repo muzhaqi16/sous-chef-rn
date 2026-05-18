@@ -4,10 +4,7 @@
 
 import { useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
-import {
-  OpenPantryItemBatchDocument,
-  type OpenPantryItemBatchMutation,
-} from '#features/pantry/graphql/pantry.generated';
+import { OpenPantryItemBatchDocument } from '#features/pantry/graphql/pantry.generated';
 import { useErrorService } from '#/services/errorService';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 
@@ -28,19 +25,20 @@ export function useOpenPantryItemBatch({
   const openBatch = async (batchId: string): Promise<boolean> => {
     const now = new Date().toISOString();
 
-    const optimisticResponse: OpenPantryItemBatchMutation = {
-      __typename: 'Mutation',
-      openPantryItemBatch: {
-        __typename: 'PantryItemPayload',
-        success: true,
-        message: '',
-        code: 'SUCCESS',
-        pantryItem: null,
-      },
-    };
     const result = await openMutation({
       variables: { input: { batchId } },
-      optimisticResponse,
+      // pantryItem: null is fine — the real work is the cache.modify below
+      // which patches the specific batch entity by id.
+      optimisticResponse: {
+        __typename: 'Mutation',
+        openPantryItemBatch: {
+          __typename: 'PantryItemPayload',
+          success: true,
+          message: '',
+          code: 'SUCCESS',
+          pantryItem: null,
+        },
+      },
       update: cache => {
         // Optimistically update the batch in cache
         cache.modify({

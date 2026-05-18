@@ -3,6 +3,10 @@ import { alertService } from '#/services/alertService';
 import type { ModifierDetails } from '@apollo/client/cache';
 import type { Reference } from '@apollo/client/utilities';
 import { MoveShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import {
+  ShoppingListItemDisplayFragmentDoc,
+  type ShoppingListItemDisplayFragment,
+} from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { generatePosition } from '#/utils/fractionalIndexing';
 import { SubscriptionService } from '#/services/subscriptions/SubscriptionService';
 import {
@@ -277,8 +281,17 @@ export function useItemReordering<T extends ShoppingListItem>(
       return;
     }
 
-    // Check if a real move happened by comparing versions
-    const serverItem = result.data?.moveShoppingListItem?.shoppingListItem;
+    // Check if a real move happened by comparing versions. serverItem is a
+    // masked ShoppingListItemDisplay ref — materialize via cache.readFragment
+    // to read version/sortOrder.
+    const serverItemRef = result.data?.moveShoppingListItem?.shoppingListItem;
+    const serverItem = serverItemRef
+      ? client.cache.readFragment<ShoppingListItemDisplayFragment>({
+          fragment: ShoppingListItemDisplayFragmentDoc,
+          fragmentName: 'ShoppingListItemDisplayFragment',
+          from: serverItemRef,
+        })
+      : null;
     const serverVersion = serverItem?.version;
     const serverSortOrder = serverItem?.sortOrder;
     const originalVersion = currentItem.version;

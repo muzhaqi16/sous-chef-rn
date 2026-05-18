@@ -29,6 +29,8 @@ import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { executeRefreshWithFinally } from '#/utils/compilerSafeWrappers';
 import { SousChefLoader } from '#/components/base/SousChefLoader';
 import { Text } from '#components/atoms/Text';
+import { getInviteDisplayName } from '#/utils/formatters/inviteFormatters';
+import { getMemberDisplayName } from '#/utils/formatters/memberFormatters';
 
 type RouteParams = {
   homeId: string;
@@ -111,7 +113,7 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
       return;
     }
 
-    const success = await leaveHome(home.name);
+    const success = await leaveHome(home.name ?? '');
     if (success) {
       goBack();
     }
@@ -154,6 +156,24 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
     );
   }
 
+  // Edges from masked connections; node refs flow into the section's card
+  // components which call `useFragment` per row for cache-subscribed updates.
+  // `useFragment` types as `DeepPartialObject<...>` because writes may be
+  // incomplete; in practice the query selects every field so it's safe to
+  // narrow back to the section's expected node shape.
+  type SectionMemberNode = React.ComponentProps<
+    typeof HomeMembersSection
+  >['members'][number];
+  type SectionInviteNode = React.ComponentProps<
+    typeof HomeMembersSection
+  >['invites'][number];
+  const memberNodes = (home.membersConnection?.edges
+    ?.map(e => e?.node)
+    .filter(Boolean) ?? []) as SectionMemberNode[];
+  const inviteNodes = (home.invitesConnection?.edges
+    ?.map(e => e?.node)
+    .filter(Boolean) ?? []) as SectionInviteNode[];
+
   const sections = [
     {
       title: 'Home Information',
@@ -161,7 +181,7 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
         <>
           <EditableField
             label="Home Name"
-            value={home.name}
+            value={home.name ?? ''}
             onSave={saveName}
             placeholder="Enter home name"
             readOnly={!canManage}
@@ -215,10 +235,29 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
       title: 'Members & Invites',
       content: (
         <HomeMembersSection
-          members={home.members || []}
-          invites={home.invites || []}
-          currentUserId={currentUser?.id}
-          currentUserMembership={currentUserMembership}
+          members={memberNodes}
+          invites={inviteNodes}
+          canManageHome={canManage}
+          resolveMemberLabel={member => {
+            const isCurrentUser =
+              !!currentUser?.id && member.userId === currentUser.id;
+            return {
+              isCurrentUser,
+              displayName: isCurrentUser
+                ? 'You'
+                : getMemberDisplayName(
+                    {
+                      id: member.id,
+                      role: member.role,
+                      displayName: member.displayName,
+                    },
+                    currentUser?.id,
+                  ),
+            };
+          }}
+          resolveInviteLabel={invite =>
+            getInviteDisplayName({ email: invite.email })
+          }
           onChangeRole={changeRole}
           onRemove={removeMember}
           onRevokeInvite={revokeInvite}

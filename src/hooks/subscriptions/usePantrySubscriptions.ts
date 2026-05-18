@@ -24,7 +24,14 @@ import {
   type PantryChangesSubscription,
   type ExpirationNotificationChangedSubscription,
 } from '#features/pantry/graphql/pantry.generated';
-import { PantryItemDisplayFragmentDoc } from '#features/pantry/graphql/pantryFragments.generated';
+import {
+  PantryItemDisplayFragmentDoc,
+  type PantryItemDisplayFragment,
+} from '#features/pantry/graphql/pantryFragments.generated';
+import {
+  UsePantrySubscriptions_ExpirationNotificationFragmentDoc,
+  type UsePantrySubscriptions_ExpirationNotificationFragment,
+} from '#hooks/subscriptions/usePantrySubscriptions.generated';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import {
   CacheStrategy,
@@ -102,9 +109,18 @@ export function usePantrySubscriptions(userId?: string) {
 
       switch (changeType) {
         case 'ITEMS_CHANGED': {
-          const item = payload.pantryItem;
+          const itemRef = payload.pantryItem;
           const mutation = payload.mutation;
 
+          if (!itemRef) return;
+
+          // Materialize the masked PantryItem fragment ref so we can read
+          // its `id` (and downstream fields) without breaking data-masking.
+          const item = client.cache.readFragment<PantryItemDisplayFragment>({
+            fragment: PantryItemDisplayFragmentDoc,
+            fragmentName: 'PantryItemDisplay',
+            from: itemRef,
+          });
           if (!item) return;
 
           // Skip echoes for items this client is currently deleting. Our
@@ -217,9 +233,26 @@ export function usePantrySubscriptions(userId?: string) {
       cacheUpdateStrategy: CacheStrategy.NONE,
       enableLogging: true,
       entityId: selectedPantryId,
-      customOnData: (payload: ExpirationChangePayload) => {
+      customOnData: (
+        payload: ExpirationChangePayload,
+        client: SubscriptionApolloClient,
+      ) => {
         if (!payload) return;
-        const { changeType, notification } = payload;
+        const { changeType, notification: notificationRef } = payload;
+        if (!notificationRef) return;
+
+        // Materialize the masked fragment ref so we can read fields the
+        // colocated `usePantrySubscriptions_expirationNotification` fragment
+        // selects.
+        const notification =
+          client.cache.readFragment<UsePantrySubscriptions_ExpirationNotificationFragment>(
+            {
+              fragment:
+                UsePantrySubscriptions_ExpirationNotificationFragmentDoc,
+              fragmentName: 'usePantrySubscriptions_expirationNotification',
+              from: notificationRef,
+            },
+          );
         if (!notification?.genericNotificationId) return;
 
         if (changeType === 'CREATED' || changeType === 'UPDATED') {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { useFragment } from '@apollo/client/react';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { FormattedItemSubtitle } from '#components/atoms/FormattedItemSubtitle';
@@ -13,10 +14,12 @@ import {
   type PantryOperation,
 } from '#features/pantry/hooks/useOperationUnits';
 import { useConvertAvailableQuantity } from '#features/pantry/hooks/useConvertAvailableQuantity';
-import { type PantryItemFragment } from '#features/pantry/graphql/pantryFragments.generated';
-import { type UnitType } from '#/graphql/generated/schemaTypes';
 import { commonStyles } from '#/styles/commonStyles';
 import { Text } from '#components/atoms/Text';
+import {
+  PantryActionModal_PantryItemFragmentDoc,
+  type PantryActionModal_PantryItemFragment,
+} from './PantryActionModal.generated';
 
 export interface PantryActionSharedState {
   selectedUnitInfo: SelectedUnitInfo | null;
@@ -59,7 +62,7 @@ export interface PantryActionSharedState {
 
 interface PantryActionModalProps {
   visible: boolean;
-  pantryItem: PantryItemFragment | null;
+  pantryItemId: string | null;
   onClose: () => void;
   title: string;
   confirmLabel: string;
@@ -72,11 +75,14 @@ interface PantryActionModalProps {
   onConfirm: (shared: PantryActionSharedState) => void;
   /** Called when the modal opens with a valid pantryItem. Use to reset consumer-specific state. */
   onReset?: (
-    pantryItem: PantryItemFragment,
+    pantryItem: PantryActionModal_PantryItemFragment,
     defaultUnit: SelectedUnitInfo | null,
     defaultIncrement: number | null,
   ) => void;
-  renderActionFields: (shared: PantryActionSharedState) => React.ReactNode;
+  renderActionFields: (
+    shared: PantryActionSharedState,
+    pantryItem: PantryActionModal_PantryItemFragment,
+  ) => React.ReactNode;
 }
 
 /**
@@ -85,10 +91,14 @@ interface PantryActionModalProps {
  * Manages common state (selectedUnit, notes) and renders the shared shell
  * (header, item info, unit picker). Action-specific form fields are
  * rendered via the `renderActionFields` prop.
+ *
+ * Reads the pantry item live from the Apollo cache via `useFragment` keyed
+ * by `pantryItemId` so any cache update (e.g. an in-flight mutation) is
+ * reflected in the open modal without re-snapshotting state.
  */
 export const PantryActionModal: React.FC<PantryActionModalProps> = ({
   visible,
-  pantryItem,
+  pantryItemId,
   onClose,
   title,
   confirmLabel,
@@ -111,6 +121,13 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
     snapPoints,
   });
 
+  const { data, complete } = useFragment({
+    fragment: PantryActionModal_PantryItemFragmentDoc,
+    fragmentName: 'PantryActionModal_pantryItem',
+    from: pantryItemId ? { __typename: 'PantryItem', id: pantryItemId } : null,
+  });
+  const pantryItem = pantryItemId && complete ? data : null;
+
   const [selectedUnitInfo, setSelectedUnitInfo] =
     useState<SelectedUnitInfo | null>(null);
   const [notes, setNotes] = useState('');
@@ -127,7 +144,7 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
     itemId: pantryItem?.itemId,
     pantryItemId: pantryItem?.id,
     trackingUnitId: pantryItem?.unit?.id,
-    trackingUnitType: pantryItem?.unit?.type as UnitType | undefined,
+    trackingUnitType: pantryItem?.unit?.type,
     netWeightUnitId: pantryItem?.netWeightUnit?.id,
     operation,
   });
@@ -333,7 +350,7 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
             />
 
             {/* Action-specific fields */}
-            {renderActionFields(shared)}
+            {renderActionFields(shared, pantryItem)}
           </>
         )}
       </BottomSheetKeyboardAwareScrollView>

@@ -1,40 +1,12 @@
 import type { NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
-import {
-  type PantryItem,
-  type PantryStats,
-} from '#/graphql/generated/schemaTypes';
+import { type PantryStats } from '#/graphql/generated/schemaTypes';
 import type { LocationFilter } from '#features/pantry/utils/pantryFilters';
 import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
-import type { ItemVariant, ExpirationVariant } from '../PantryItemCard';
+import type { PantryListNode } from './renderItem';
 
 // Sort types (exported for use in other components)
 export type SortOption = 'name' | 'expiry' | 'quantity' | 'recent';
 export type SortDirection = 'asc' | 'desc';
-
-/** Theme-resolved color palette used by display map cache and main component. */
-export interface ExpirationColors {
-  expired: string;
-  warning: string;
-  normal: string;
-}
-
-/** Pre-computed display data for a single pantry item. */
-export interface ItemDisplayData {
-  id: string;
-  name: string;
-  imageUrl: string | null | undefined;
-  expirationText: string | null;
-  expirationVariant: ExpirationVariant | undefined;
-  expirationColor: string | undefined;
-  variant: ItemVariant;
-  quantityDisplay: string;
-  location: string | null;
-  isOutOfStock: boolean;
-  packageBreakdownText: string | null | undefined;
-  remainingNetWeightText: string | null | undefined;
-  quantityBreakdownText: string | null | undefined;
-  activeBatchCount: number | undefined;
-}
 
 export interface PantryContentRef {
   scrollToTop(): void;
@@ -53,8 +25,10 @@ export interface PantryContentProps {
     'totalItems' | 'expiringCount' | 'lowStockCount'
   > | null;
 
-  // Items
-  items: PantryItem[];
+  // Items — opaque fragment refs; the leaf `PantryItemCard` unmasks each via
+  // `useFragment`. Carries `id` so FlashList keyExtractor + sort comparators
+  // can identify entries without unmasking.
+  items: PantryListNode[];
 
   // Location filter
   locationFilter: LocationFilter;

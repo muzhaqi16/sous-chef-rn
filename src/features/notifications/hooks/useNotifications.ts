@@ -1,7 +1,11 @@
 import { useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
-import { useSubscription } from '@apollo/client/react';
+import { useApolloClient, useSubscription } from '@apollo/client/react';
 import { NotificationChangedDocument } from '#features/notifications/graphql/notifications.generated';
+import {
+  UseNotifications_NotificationFragmentDoc,
+  type UseNotifications_NotificationFragment,
+} from './useNotifications.generated';
 import {
   NotificationType,
   NotificationCategory,
@@ -43,6 +47,8 @@ interface NotificationConfig {
 }
 
 export const useNotifications = (config: NotificationConfig = {}) => {
+  const client = useApolloClient();
+
   // PERFORMANCE: Use ref instead of state for AppState to avoid re-renders
   const appStateRef = useRef(AppState.currentState);
 
@@ -186,9 +192,20 @@ export const useNotifications = (config: NotificationConfig = {}) => {
   useSubscription(NotificationChangedDocument, {
     skip: config.skip || !user?.id,
     onData: ({ data }) => {
-      if (data.data?.notificationChanged?.notification) {
-        const rawNotification = data.data.notificationChanged.notification;
-        const changeType = data.data.notificationChanged.changeType;
+      const maskedNotification = data.data?.notificationChanged?.notification;
+      if (maskedNotification) {
+        // Materialize the masked fragment ref so we can read fields the hook
+        // needs (title, message, payload, etc.). The masked spread is the
+        // result of @unmask removal in notifications.graphql.
+        const rawNotification =
+          client.cache.readFragment<UseNotifications_NotificationFragment>({
+            fragment: UseNotifications_NotificationFragmentDoc,
+            fragmentName: 'useNotifications_notification',
+            from: maskedNotification,
+          });
+        if (!rawNotification) return;
+
+        const changeType = data.data!.notificationChanged.changeType;
 
         if (changeType === 'RECEIVED') {
           // Map server Priority enum → store NotificationPriority

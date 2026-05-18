@@ -1,6 +1,7 @@
 import React, { useRef } from 'react';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
+import { useFragment } from '@apollo/client/react';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import type { ListRenderItemInfo } from '@shopify/flash-list';
@@ -25,35 +26,38 @@ import {
   useShoppingListTutorialActions,
   ShoppingListTutorialStep,
 } from '#features/shoppingList/context/ShoppingListTutorialContext';
-import type { QuantityElementConfig, ImageElementConfig } from './types';
+import { resolveImageUrl } from '#utils/imageUtils';
+import { SortableItem_ItemFragmentDoc } from './SortableItem.generated';
 import { useSortableListActions } from './SortableListActionsContext';
-import { useSortableListTheme } from './SortableListThemeContext';
-
-// Item data structure
-interface ItemData {
-  id: string;
-  title: string;
-  subtitle: string | React.ReactNode;
-  isPurchased?: boolean;
-  badge?: {
-    text: string;
-    variant?: 'default' | 'primary' | 'success' | 'warning' | 'danger';
-  };
-  rightElement?: React.ReactNode;
-  rightElementConfig?: QuantityElementConfig;
-  leftElement?: React.ReactNode;
-  leftElementConfig?: ImageElementConfig;
-}
+import {
+  useShoppingListRowOptions,
+  useSortableListTheme,
+} from './SortableListThemeContext';
+import type { ShoppingListRowItem } from './types';
 
 /**
- * Props for SwipeableListItem - extends ListRenderItemInfo from FlashList
+ * Props for SwipeableListItem - extends ListRenderItemInfo from FlashList.
+ *
+ * The wrapper `item` holds a per-row primitive (`id`, `isPurchased` — forced
+ * to match the active tab) plus the masked `itemRef` fragment ref. The row
+ * subscribes to its entity via `useFragment(SortableItem_item, itemRef)`
+ * and derives all display data inline; no upstream transform pipeline is
+ * involved.
  */
-type SwipeableListItemProps = ListRenderItemInfo<ItemData>;
+type SwipeableListItemProps = ListRenderItemInfo<ShoppingListRowItem>;
 
 const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
-  item,
+  item: rowItem,
   index,
 }) => {
+  // Per-entity cache subscription: this row re-renders only when its own
+  // ShoppingListItem cache record changes (quantity, unit, image, etc.).
+  const { data, complete } = useFragment({
+    fragment: SortableItem_ItemFragmentDoc,
+    fragmentName: 'SortableItem_item',
+    from: rowItem.itemRef,
+  });
+
   // PERFORMANCE: Get theme colors from context (single useUnistyles at list level)
   const themeColors = useSortableListTheme();
 
@@ -72,7 +76,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
 
   // Slide animation for purchase toggle
   const { animatedSlideStyle, triggerSlide } = useSlideAnimation({
-    itemId: item.id,
+    itemId: rowItem.id,
     slideDistance: screenWidth,
     duration: TIMING.MODERATE,
   });
@@ -103,11 +107,33 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   const checkboxRef = useRef<View>(null);
   const archiveIconRef = useRef<View>(null);
 
+  // `rowItem.isPurchased` is forced to match the active tab — use it for
+  // visual state so a freshly toggled item paints the new state immediately
+  // before the cache propagates.
+  const isPurchased = rowItem.isPurchased;
+  const itemId = rowItem.id;
+
+  // Derive display data from the fragment. On cache miss before first paint
+  // we fall back to safe defaults instead of returning null so the cell still
+  // takes up its FlashList slot during initial restore.
+  const itemName = data?.itemName ?? '';
+  const category = data?.category ?? null;
+  const subtitle = category?.split(',')[0].trim() || undefined;
+  const quantity = data?.quantity ?? 0;
+  const quantityInput = data?.quantityInput ?? null;
+  const unitDisplay = data?.unitName || data?.unit?.symbol || undefined;
+  // `resolveImageUrl` accepts a structural { item?: { images, imageUrl } }
+  // shape — feeding the fragment data directly resolves to the best image
+  // variant available without an intermediate transform step.
+  const imageUrl = data ? resolveImageUrl(data) : null;
+  const { showImages } = useShoppingListRowOptions();
+  const showImage = showImages && !!imageUrl;
+
   const isTutorialSwipeTarget =
     tutorial?.currentStep ===
       ShoppingListTutorialStep.SPOTLIGHT_SWIPE_ACTIONS &&
     index === 0 &&
-    !item.isPurchased;
+    !isPurchased;
 
   // Disable swipe gestures during non-swipe spotlight steps so users can't
   // accidentally swipe items while the tutorial overlay is showing.
@@ -121,7 +147,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
     tutorial?.isActive &&
     tutorial.currentStep === ShoppingListTutorialStep.SPOTLIGHT_CHECKBOX &&
     index === 0 &&
-    !item.isPurchased;
+    !isPurchased;
 
   // Check currentStep directly (not isActive) so the archive icon gets measured
   // during the 400ms transition period when the purchased tab first mounts.
@@ -131,7 +157,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
     tutorial?.currentStep ===
       ShoppingListTutorialStep.SPOTLIGHT_MOVE_TO_PANTRY &&
     index === 0 &&
-    !!item.isPurchased;
+    isPurchased;
 
   // Measure checkbox position for tutorial spotlight
   const handleCheckboxLayout = () => {
@@ -186,77 +212,63 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
 
   // === ELEMENT CREATION ===
 
-  // Create rightElement from config or use provided element
+  // Create rightElement: quantity badge + optional archive action
   const rightElement = (() => {
-    if (item.rightElementConfig?.type === 'quantity') {
-      const config = item.rightElementConfig;
-
-      const archiveIcon = !!item.isPurchased && !!onMoveToPantry && (
-        <View
-          ref={isTutorialArchiveTarget ? archiveIconRef : undefined}
-          collapsable={false}
-          onLayout={
-            isTutorialArchiveTarget ? handleArchiveIconLayout : undefined
-          }
+    const archiveIcon = isPurchased && !!onMoveToPantry && (
+      <View
+        ref={isTutorialArchiveTarget ? archiveIconRef : undefined}
+        collapsable={false}
+        onLayout={isTutorialArchiveTarget ? handleArchiveIconLayout : undefined}
+      >
+        <Pressable
+          onPress={() => {
+            onMoveToPantry(itemId);
+            tutorialActions?.notifyMoveToPantryTapped();
+          }}
+          style={({ pressed }) => [
+            styles.moveToPantryButton,
+            pressed && styles.pressed,
+          ]}
+          hitSlop={HIT_SLOP}
         >
-          <Pressable
-            onPress={() => {
-              onMoveToPantry(item.id);
-              tutorialActions?.notifyMoveToPantryTapped();
-            }}
-            style={({ pressed }) => [
-              styles.moveToPantryButton,
-              pressed && styles.pressed,
-            ]}
-            hitSlop={HIT_SLOP}
-          >
-            <Icon
-              name="archive-outline"
-              size={24}
-              color={themeColors?.primary}
-            />
-          </Pressable>
-        </View>
-      );
+          <Icon name="archive-outline" size={24} color={themeColors?.primary} />
+        </Pressable>
+      </View>
+    );
 
-      return (
-        <View style={styles.rightElementContainer}>
-          <QuantityBadge
-            quantity={config.quantity}
-            quantityInput={config.quantityInput}
-            unit={config.unit}
-            onPress={() => onQuantityPress?.(config.itemId)}
-            disabled={config.disabled}
-            isPurchased={item.isPurchased}
-            themeColors={themeColors}
-          />
-          {archiveIcon}
-        </View>
-      );
-    }
-    return item.rightElement;
+    return (
+      <View style={styles.rightElementContainer}>
+        <QuantityBadge
+          quantity={quantity}
+          quantityInput={quantityInput}
+          unit={unitDisplay}
+          onPress={() => onQuantityPress?.(itemId)}
+          disabled={isPurchased}
+          isPurchased={isPurchased}
+          themeColors={themeColors}
+        />
+        {archiveIcon}
+      </View>
+    );
   })();
 
-  // Create leftElement from config or use provided element
+  // Create leftElement: cached image if the item has one
   const leftElement = (() => {
-    if (item.leftElementConfig?.type === 'image') {
-      const config = item.leftElementConfig;
-      return (
-        <View
-          style={[
-            commonStyles.listItemImageContainerCompact,
-            config.isPurchased && styles.dimmed,
-          ]}
-        >
-          <CachedImage
-            uri={config.url}
-            style={commonStyles.listItemImageCompact}
-            displaySize={48}
-          />
-        </View>
-      );
-    }
-    return item.leftElement;
+    if (!showImage || !imageUrl) return null;
+    return (
+      <View
+        style={[
+          commonStyles.listItemImageContainerCompact,
+          isPurchased && styles.dimmed,
+        ]}
+      >
+        <CachedImage
+          uri={imageUrl}
+          style={commonStyles.listItemImageCompact}
+          displaySize={48}
+        />
+      </View>
+    );
   })();
 
   // Create checkbox element for marking items as purchased
@@ -267,19 +279,19 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
 
     const checkbox = (
       <AnimatedCheckbox
-        checked={!!item.isPurchased}
-        itemId={item.id}
+        checked={isPurchased}
+        itemId={itemId}
         onPress={() => {
           // Direction: 1 = right (marking as purchased), -1 = left (unmarking)
-          const direction = item.isPurchased ? -1 : 1;
+          const direction = isPurchased ? -1 : 1;
           // Trigger slide animation with callback for state change AFTER animation
           triggerSlide(direction, () => {
-            onTogglePurchase(item.id);
+            onTogglePurchase(itemId);
             tutorialActions?.notifyCheckboxTapped();
           });
         }}
         size={28}
-        testID={`shopping-item-checkbox-${item.id}`}
+        testID={`shopping-item-checkbox-${itemId}`}
       />
     );
 
@@ -299,6 +311,12 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
     return checkbox;
   })();
 
+  // While the fragment is hydrating from cache, render an empty cell rather
+  // than blanking — keeps the FlashList slot stable.
+  if (!complete && !data) {
+    return <View style={styles.container} />;
+  }
+
   // Render the item
   // PERF: Single Animated.View for both entry animation and slide style
   return (
@@ -316,18 +334,18 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
         />
       ) : null}
       <SwipeableItem
-        itemId={item.id}
-        onPress={onItemPress ? () => onItemPress(item.id) : undefined}
-        onLongPress={onItemPress ? () => onItemPress(item.id) : undefined}
+        itemId={itemId}
+        onPress={onItemPress ? () => onItemPress(itemId) : undefined}
+        onLongPress={onItemPress ? () => onItemPress(itemId) : undefined}
         onEdit={
-          canEditItems && onItemEdit ? () => onItemEdit(item.id) : undefined
+          canEditItems && onItemEdit ? () => onItemEdit(itemId) : undefined
         }
         onDelete={
           canRemoveItems && onItemDelete
-            ? () => onItemDelete(item.id)
+            ? () => onItemDelete(itemId)
             : undefined
         }
-        isPurchased={item.isPurchased}
+        isPurchased={isPurchased}
         friction={1}
         onSwipeableWillOpen={ref => {
           onSwipeableWillOpen?.(ref);
@@ -341,15 +359,14 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
         enabled={swipeEnabled}
       >
         <ListItem
-          title={item.title}
-          subtitle={item.subtitle}
-          badge={item.badge}
+          title={itemName}
+          subtitle={subtitle}
           rightElement={rightElement}
           leftElement={leftElement}
           checkboxElement={checkboxElement}
           dragHandleElement={null}
           rightIcon={undefined}
-          isPurchased={item.isPurchased}
+          isPurchased={isPurchased}
           themeColors={themeColors}
         />
       </SwipeableItem>

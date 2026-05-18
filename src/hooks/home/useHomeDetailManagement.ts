@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { alertService } from '#/services/alertService';
 import { usePreservedQueryData } from '#/hooks/apollo/usePreservedQueryData';
-import { useMutation, useQuery } from '@apollo/client/react';
+import { useFragment, useMutation, useQuery } from '@apollo/client/react';
+import { HomeDetailScreen_HomeFragmentDoc } from '#/screens/home/HomeDetailScreen.generated';
 import {
   GetHomeDocument,
   UpdateHomeDocument,
@@ -14,7 +15,6 @@ import {
 import { SetDefaultHomeDocument } from '#operations/home/userSettings.generated';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import { t } from '#/i18n/t';
-import { normalizeHome } from '#/utils/connectionUtils';
 import {
   createRemoveFromParentConnectionUpdater,
   safeEvict,
@@ -219,9 +219,16 @@ export function useHomeDetailManagement(homeId: string) {
       },
     });
 
-  // Preserve last successful data when errorPolicy: 'ignore' returns undefined on error
-  const preservedHomeData = usePreservedQueryData(data?.home, null);
-  const home = normalizeHome(preservedHomeData);
+  // Preserve last successful data when errorPolicy: 'ignore' returns undefined on error.
+  // Then unmask via useFragment so consumers (and this hook) see the full
+  // HomeDetailScreen_home shape — fields, members/invite edges, myMembership.
+  const homeRef = usePreservedQueryData(data?.home, null);
+  const unmasked = useFragment({
+    fragment: HomeDetailScreen_HomeFragmentDoc,
+    fragmentName: 'HomeDetailScreen_home',
+    from: homeRef ?? null,
+  });
+  const home = homeRef ? unmasked.data : null;
 
   // CRUD operations utilities
   const { createRemoveOperation } = useCrudOperations();

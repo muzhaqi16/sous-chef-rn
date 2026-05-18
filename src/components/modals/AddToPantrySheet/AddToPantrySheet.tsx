@@ -19,7 +19,7 @@ import type {
   ItemSuggestion,
   StorageLocation,
 } from '#/graphql/generated/schemaTypes';
-import { normalizePantry } from '#/utils/connectionUtils';
+import { extractNodes } from '#/utils/connectionUtils';
 import {
   isPantryItemDuplicateError,
   getPantryItemDuplicateInfo,
@@ -171,8 +171,11 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
       query: GetPantryDocument,
       variables: { id: pantryId ?? '' },
     });
-    const normalized = cached?.pantry ? normalizePantry(cached.pantry) : null;
-    setStorageLocations(normalized?.storageLocations || []);
+    setStorageLocations(
+      extractNodes(
+        cached?.pantry?.storageLocationsConnection,
+      ) as StorageLocation[],
+    );
     setPrefilledItemName(searchValue);
     setShowAddDetails(true);
   };

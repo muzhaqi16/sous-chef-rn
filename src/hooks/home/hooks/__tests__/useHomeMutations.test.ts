@@ -40,7 +40,10 @@ jest.mock('#/apollo/utils/createOptimisticResponse', () => ({
 }));
 
 jest.mock('#/utils/connectionUtils', () => ({
-  normalizeHome: jest.fn((home: any) => home),
+  extractNodes: jest.fn((conn: any) =>
+    conn?.edges ? conn.edges.map((e: any) => e?.node).filter(Boolean) : [],
+  ),
+  getConnectionTotalCount: jest.fn((conn: any) => conn?.totalCount ?? 0),
 }));
 
 const mockCreateAddOperation = jest.fn((config: any) => {

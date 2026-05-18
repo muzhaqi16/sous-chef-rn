@@ -28,7 +28,7 @@ fragment RecipeReviewFragment on RecipeReview {
   verified
   createdAt
   updatedAt
-  user { ...UserSummary }
+  user { ...UserSummary @unmask(mode: "migrate") }
   helpfulVotes {
     id
     user { id }
@@ -66,7 +66,7 @@ fragment BasicRecipeFragment on Recipe {
 }
 
 fragment RecipeFragment on Recipe {
-  ...BasicRecipeFragment
+  ...BasicRecipeFragment @unmask(mode: "migrate")
 
   # Extended fields not in BasicRecipeFragment
   instructions
@@ -91,6 +91,6 @@ fragment RecipeFragment on Recipe {
   }
 
   ingredients {
-    ...RecipeIngredientFragment
+    ...RecipeIngredientFragment @unmask(mode: "migrate")
   }
 }

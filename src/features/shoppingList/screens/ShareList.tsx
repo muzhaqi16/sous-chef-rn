@@ -15,12 +15,16 @@ import { LoadingInline } from '#components/base/Loading';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
 import Clipboard from '@react-native-clipboard/clipboard';
-import { useMutation } from '@apollo/client/react';
+import { useApolloClient, useMutation } from '@apollo/client/react';
 import {
   RemoveCollaboratorDocument,
   AddCollaboratorDocument,
   ShareShoppingListDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
+import {
+  ShoppingListCollaboratorFragmentDoc,
+  type ShoppingListCollaboratorFragment,
+} from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { CollaboratorRole } from '#/graphql/generated/schemaTypes';
 import {
   createAddToParentConnectionUpdater,
@@ -136,16 +140,38 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
     shoppingList,
     loading,
     isRefetching,
-    collaborators,
+    collaborators: collaboratorRefs,
     name: listName,
     refetch,
   } = useShoppingListDetails(listId);
 
   const isHomeLinked = !!shoppingList?.homeId;
 
+  const apolloClient = useApolloClient();
+
   const [shareList] = useMutation(AddCollaboratorDocument);
   const [removeMember] = useMutation(RemoveCollaboratorDocument);
   const [shareShoppingList] = useMutation(ShareShoppingListDocument);
+
+  // Materialize the masked ShoppingListCollaborator fragment refs once so we
+  // can read fields (id, email, role, status, ...) needed for owner detection,
+  // filtering, and rendering. Each edge also carries `invitedAt` directly on
+  // its selection, which we preserve alongside the materialized fragment.
+  const collaborators = collaboratorRefs
+    .map(ref => {
+      const fragment =
+        apolloClient.cache.readFragment<ShoppingListCollaboratorFragment>({
+          fragment: ShoppingListCollaboratorFragmentDoc,
+          fragmentName: 'ShoppingListCollaboratorFragment',
+          from: ref,
+        });
+      if (!fragment) return null;
+      return { ...fragment, invitedAt: ref.invitedAt };
+    })
+    .filter(
+      (c): c is ShoppingListCollaboratorFragment & { invitedAt: string } =>
+        c !== null,
+    );
 
   // Check if current user is owner
   const currentUserCollaborator = collaborators.find(

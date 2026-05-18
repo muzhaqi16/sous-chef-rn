@@ -1,9 +1,14 @@
 import { waitFor } from '@testing-library/react-native';
+import { useApolloClient } from '@apollo/client/react';
 import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
 import { MyRecipesDocument } from '#features/recipes/graphql/recipe.generated';
+import {
+  MyRecipeCard_RecipeFragmentDoc,
+  type MyRecipeCard_RecipeFragment,
+} from '#features/recipes/components/MyRecipeCard.generated';
 import { useRecipeManagement } from '../useRecipeManagement';
 
 jest.mock('#hooks/auth/useIsLoggedOut', () => ({
@@ -24,6 +29,27 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
+function buildRecipeNode(
+  id: string,
+  name: string,
+  category: string,
+  difficulty: string,
+) {
+  return {
+    __typename: 'Recipe',
+    id,
+    name,
+    category,
+    difficulty,
+    description: null,
+    imageUrl: null,
+    servings: 4,
+    prepTimeMinutes: null,
+    cookTimeMinutes: null,
+    totalTimeMinutes: null,
+  };
+}
+
 function recipesMock() {
   return recordMock(MyRecipesDocument, {
     data: {
@@ -33,35 +59,17 @@ function recipesMock() {
           {
             __typename: 'RecipeEdge',
             cursor: 'c1',
-            node: {
-              __typename: 'Recipe',
-              id: 'r1',
-              name: 'Pasta',
-              category: 'MAIN_COURSE',
-              difficulty: 'EASY',
-            },
+            node: buildRecipeNode('r1', 'Pasta', 'MAIN_COURSE', 'EASY'),
           },
           {
             __typename: 'RecipeEdge',
             cursor: 'c2',
-            node: {
-              __typename: 'Recipe',
-              id: 'r2',
-              name: 'Salad',
-              category: 'APPETIZER',
-              difficulty: 'EASY',
-            },
+            node: buildRecipeNode('r2', 'Salad', 'APPETIZER', 'EASY'),
           },
           {
             __typename: 'RecipeEdge',
             cursor: 'c3',
-            node: {
-              __typename: 'Recipe',
-              id: 'r3',
-              name: 'Soup',
-              category: 'APPETIZER',
-              difficulty: 'HARD',
-            },
+            node: buildRecipeNode('r3', 'Soup', 'APPETIZER', 'HARD'),
           },
         ],
         pageInfo: {
@@ -75,18 +83,40 @@ function recipesMock() {
   });
 }
 
+function useRecipeManagementWithClient() {
+  const state = useRecipeManagement();
+  const client = useApolloClient();
+  return { ...state, client };
+}
+
 async function renderReady() {
-  const { result } = renderHookWithApollo(() => useRecipeManagement(), {
-    operationMocks: [recipesMock().mock],
-  });
+  const { result } = renderHookWithApollo(
+    () => useRecipeManagementWithClient(),
+    {
+      operationMocks: [recipesMock().mock],
+    },
+  );
   await waitFor(() => expect(result.current.state.recipes).toHaveLength(3));
   return result;
+}
+
+function readName(
+  result: { current: ReturnType<typeof useRecipeManagementWithClient> },
+  recipeId: string,
+): string | undefined {
+  const ref = result.current.state.recipes.find(r => r.id === recipeId);
+  if (!ref) return undefined;
+  return result.current.client.cache.readFragment<MyRecipeCard_RecipeFragment>({
+    fragment: MyRecipeCard_RecipeFragmentDoc,
+    fragmentName: 'MyRecipeCard_recipe',
+    from: ref,
+  })?.name;
 }
 
 describe('useRecipeManagement', () => {
   it('returns recipes from query data', async () => {
     const result = await renderReady();
-    expect(result.current.state.recipes[0].name).toBe('Pasta');
+    expect(readName(result, 'r1')).toBe('Pasta');
     expect(result.current.state.totalCount).toBe(3);
   });
 
@@ -99,7 +129,8 @@ describe('useRecipeManagement', () => {
   it('getRecipeById finds a recipe by ID', async () => {
     const result = await renderReady();
     const recipe = result.current.actions.getRecipeById('r2');
-    expect(recipe?.name).toBe('Salad');
+    expect(recipe?.id).toBe('r2');
+    expect(readName(result, 'r2')).toBe('Salad');
   });
 
   it('getRecipeById returns undefined for unknown ID', async () => {
@@ -113,7 +144,7 @@ describe('useRecipeManagement', () => {
       'MAIN_COURSE' as any,
     );
     expect(mainCourses).toHaveLength(1);
-    expect(mainCourses[0].name).toBe('Pasta');
+    expect(readName(result, mainCourses[0].id)).toBe('Pasta');
   });
 
   it('getRecipesByDifficulty filters by difficulty', async () => {

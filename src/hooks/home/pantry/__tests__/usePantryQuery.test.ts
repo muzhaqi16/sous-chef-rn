@@ -12,16 +12,16 @@ jest.mock('#hooks/auth/useIsLoggedOut', () => ({
 }));
 
 jest.mock('#/utils/connectionUtils', () => ({
-  normalizePantry: jest.fn((pantry: any) => {
-    if (!pantry) return null;
-    return {
-      ...pantry,
-      items: pantry.items || [],
-      itemsPageInfo: pantry.itemsPageInfo || null,
-      stats: pantry.stats || null,
-      itemsTotalCount: pantry.itemsTotalCount || 0,
-      storageLocations: pantry.storageLocations || [],
-    };
+  extractNodes: jest.fn((connection: any) => {
+    if (!connection?.edges) return [];
+    return connection.edges
+      .map((edge: any) => edge?.node)
+      .filter((node: any) => node != null);
+  }),
+  getConnectionTotalCount: jest.fn((connection: any) => {
+    if (typeof connection?.totalCount === 'number')
+      return connection.totalCount;
+    return connection?.edges?.length ?? 0;
   }),
 }));
 
@@ -98,7 +98,7 @@ describe('usePantryQuery', () => {
     });
 
     await waitFor(() => expect(result.current.state.loading).toBe(false));
-    // Once the query resolves, normalizePantry is called and items is an array.
+    // Once the query resolves, extractNodes returns an array.
     expect(Array.isArray(result.current.state.pantryItems)).toBe(true);
   });
 
@@ -122,26 +122,36 @@ describe('usePantryQuery', () => {
     expect(Array.isArray(result.current.state.pantryItems)).toBe(true);
   });
 
-  it('returns normalized pantry items from query data', async () => {
-    const { normalizePantry } = require('#/utils/connectionUtils');
-    normalizePantry.mockReturnValue({
-      items: [{ id: 'item-1', itemName: 'Milk' }],
-      itemsPageInfo: null,
-      stats: { totalItems: 1 },
-      itemsTotalCount: 1,
-      storageLocations: [],
-    });
-
+  it('returns pantry items extracted from query connection', async () => {
     const { result } = renderHookWithApollo(() => usePantryQuery('pantry-1'), {
       mocks: {
-        Query: () => ({ pantry: { id: 'pantry-1' } }),
+        Query: () => ({
+          pantry: {
+            id: 'pantry-1',
+            itemsConnection: {
+              edges: [
+                {
+                  node: { id: 'item-1', itemName: 'Milk' },
+                  cursor: 'c1',
+                },
+              ],
+              totalCount: 1,
+              pageInfo: { hasNextPage: false, endCursor: null },
+            },
+          },
+        }),
+        PantryItem: (_root: unknown, args: { id?: string }) => ({
+          id: args?.id ?? 'item-1',
+          itemName: 'Milk',
+        }),
       },
     });
 
     await waitFor(() => {
-      expect(result.current.state.pantryItems).toEqual([
-        { id: 'item-1', itemName: 'Milk' },
-      ]);
+      expect(result.current.state.pantryItems.length).toBeGreaterThan(0);
+    });
+    expect(result.current.state.pantryItems[0]).toMatchObject({
+      itemName: 'Milk',
     });
     expect(result.current.state.totalCount).toBe(1);
   });
@@ -186,10 +196,10 @@ describe('usePantryQuery', () => {
   it('returns items directly from the cache (pending-delete filtering now happens in subscription handlers)', () => {
     const { result } = renderHookWithApollo(() => usePantryQuery('pantry-1'));
 
-    // Items come straight from normalizePantry → usePreservedArrayData with
-    // no intermediate JS-layer filtering. The Apollo cache is the single
-    // source of truth; pending-delete echoes are skipped at the subscription
-    // handler level in `usePantrySubscriptions.ts`.
+    // Items come straight from extractNodes(itemsConnection) →
+    // usePreservedArrayData with no intermediate JS-layer filtering. The Apollo
+    // cache is the single source of truth; pending-delete echoes are skipped
+    // at the subscription handler level in `usePantrySubscriptions.ts`.
     expect(Array.isArray(result.current.state.pantryItems)).toBe(true);
   });
 });

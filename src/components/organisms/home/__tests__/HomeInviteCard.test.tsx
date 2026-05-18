@@ -1,8 +1,11 @@
 'use no memo';
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { InMemoryCache } from '@apollo/client';
+import { screen } from '@testing-library/react-native';
+import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { HomeInviteCard } from '../HomeInviteCard';
-import { InviteStatus } from '#/graphql/generated/schemaTypes';
+import { HomeInviteCard_InviteFragmentDoc } from '../HomeInviteCard.generated';
+import { InviteStatus, MembershipRole } from '#/graphql/generated/schemaTypes';
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
@@ -17,61 +20,92 @@ jest.mock('#/utils/formatters/inviteFormatters', () => ({
   getInviteStatusColor: () => '#FF0000',
 }));
 
-describe('HomeInviteCard', () => {
-  const invite = {
+function buildInvite(
+  overrides: Partial<{ id: string; status: InviteStatus }> = {},
+) {
+  return {
+    __typename: 'HomeInvite',
     id: '1',
     email: 'user@test.com',
     recipientName: 'Test User',
+    role: MembershipRole.Member,
     status: InviteStatus.Pending,
+    expiresAt: '2099-01-01T00:00:00.000Z',
+    message: null,
+    ...overrides,
   };
+}
+
+/**
+ * Build a cache pre-seeded with the invite via its colocated fragment doc.
+ * The card's `useFragment` then reads back complete data and renders.
+ */
+function buildCache(invite: ReturnType<typeof buildInvite>) {
+  const cache = new InMemoryCache();
+  cache.writeFragment({
+    id: cache.identify(invite as never) ?? `HomeInvite:${invite.id}`,
+    fragment: HomeInviteCard_InviteFragmentDoc,
+    fragmentName: 'HomeInviteCard_invite',
+    data: invite as never,
+  });
+  return cache;
+}
+
+describe('HomeInviteCard', () => {
   const onRevoke = jest.fn();
 
   it('renders invite display name and email', () => {
-    render(
+    const invite = buildInvite();
+    renderWithApollo(
       <HomeInviteCard
-        invite={invite}
+        inviteRef={invite as never}
         displayName="Test User"
         onRevoke={onRevoke}
       />,
+      { cache: buildCache(invite) },
     );
     expect(screen.getByText('Test User')).toBeTruthy();
     expect(screen.getByText('user@test.com')).toBeTruthy();
   });
 
   it('shows revoke button for pending invites when canRevoke is true', () => {
-    render(
+    const invite = buildInvite();
+    renderWithApollo(
       <HomeInviteCard
-        invite={invite}
+        inviteRef={invite as never}
         displayName="Test User"
         canRevoke
         onRevoke={onRevoke}
       />,
+      { cache: buildCache(invite) },
     );
-    // close icon is the revoke button
     expect(screen.getByText('close')).toBeTruthy();
   });
 
   it('hides revoke button for pending invites when canRevoke is false', () => {
-    render(
+    const invite = buildInvite();
+    renderWithApollo(
       <HomeInviteCard
-        invite={invite}
+        inviteRef={invite as never}
         displayName="Test User"
         canRevoke={false}
         onRevoke={onRevoke}
       />,
+      { cache: buildCache(invite) },
     );
     expect(screen.queryByText('close')).toBeNull();
   });
 
   it('hides revoke button for non-pending invites', () => {
-    const acceptedInvite = { ...invite, status: InviteStatus.Accepted };
-    render(
+    const accepted = buildInvite({ status: InviteStatus.Accepted });
+    renderWithApollo(
       <HomeInviteCard
-        invite={acceptedInvite}
+        inviteRef={accepted as never}
         displayName="Test User"
         canRevoke
         onRevoke={onRevoke}
       />,
+      { cache: buildCache(accepted) },
     );
     expect(screen.queryByText('close')).toBeNull();
   });

@@ -1,10 +1,7 @@
-import type {
-  ReactNode,
-  ComponentType,
-  ReactElement,
-  JSXElementConstructor,
-} from 'react';
+import type { ComponentType, ReactElement, JSXElementConstructor } from 'react';
 import type { ScrollViewProps } from 'react-native';
+import type { FragmentType } from '@apollo/client/masking';
+import type { SortableItem_ItemFragmentDoc } from './SortableItem.generated';
 
 // Positions type for drag-and-drop animation
 export type Positions = Record<number, number>;
@@ -17,45 +14,32 @@ export interface GroupBoundary {
   endY: number;
 }
 
-// Configuration for quantity element (tappable badge instead of counter)
-// Opens a bottom sheet for editing quantity and unit when tapped
-export interface QuantityElementConfig {
-  type: 'quantity';
-  quantity: number;
-  quantityInput?: string | null;
-  unit?: string;
-  itemId: string;
-  disabled: boolean;
-}
-
-// Configuration for image element (avoids creating React elements in useMemo)
-export interface ImageElementConfig {
-  type: 'image';
-  url: string;
-  isPurchased?: boolean;
-}
-
-// Shopping list item interface for sorting
-export interface SortableShoppingListItem {
+/**
+ * Lightweight row wrapper used by the shopping list FlashList.
+ *
+ * Carries only the primitives the list itself needs (`id`, `isPurchased`,
+ * `sortOrder`) plus the masked `itemRef` fragment ref for the
+ * `SortableItem_item` selection. The row component calls `useFragment` on
+ * `itemRef` to subscribe to its entity's cache record.
+ */
+export interface ShoppingListRowItem {
+  /** Stable identity for FlashList keyExtractor + tutorial targeting */
   id: string;
-  title: string;
-  subtitle: string | ReactNode;
-  sortOrder: string; // Changed from number to string for fractional indexing
-  isPurchased?: boolean;
-  badge?: {
-    text: string;
-    variant?: 'default' | 'primary' | 'success' | 'warning' | 'danger';
-  };
-  rightElement?: ReactNode;
-  rightElementConfig?: QuantityElementConfig; // Config-based element creation (performance)
-  leftElement?: ReactNode;
-  leftElementConfig?: ImageElementConfig; // Config-based element creation (performance)
+  /**
+   * Forced isPurchased — matches the active tab so the cell renders the
+   * correct visual state even before the cache propagates after a toggle.
+   */
+  isPurchased: boolean;
+  /** Sort order used by the reorder helper / sanity-check chains */
+  sortOrder: string | null;
+  /** Masked fragment ref the row passes to `useFragment(SortableItem_item)` */
+  itemRef: FragmentType<typeof SortableItem_ItemFragmentDoc>;
 }
 
 // Props for the main sortable list component
 export interface SortableShoppingListProps
   extends Omit<ScrollViewProps, 'data' | 'renderItem' | 'keyExtractor'> {
-  items: SortableShoppingListItem[];
+  items: ShoppingListRowItem[];
   onItemPress: (id: string) => void;
   onItemEdit?: (id: string) => void;
   onItemDelete?: (id: string) => void;
@@ -96,6 +80,12 @@ export interface SortableShoppingListProps
   canReorderItems?: boolean;
   // Empty state component shown when items array is empty
   ListEmptyComponent?: ReactElement | ComponentType<any> | null;
+  /**
+   * Whether row cells render their product image. Threaded through context
+   * so we keep a single list-level subscription on the user preference.
+   * Defaults to true.
+   */
+  showImages?: boolean;
 }
 
 // Sort order update for API calls

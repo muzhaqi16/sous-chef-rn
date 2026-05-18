@@ -48,7 +48,10 @@ query MyRecipes(
   ) {
     edges {
       node {
-        ...BasicRecipeFragment
+        id
+        category
+        difficulty
+        ...MyRecipeCard_recipe
       }
       cursor
     }
@@ -89,15 +92,12 @@ query MySavedRecipes($folder: String, $first: Int, $after: String) {
           id
           folder
           tags
-          notes
-          personalRating
-          cookedCount
-          lastCookedAt
           createdAt
           updatedAt
           recipe {
-            ...BasicRecipeFragment
+            id
           }
+          ...SavedRecipeCard_savedRecipe
         }
         cursor
       }

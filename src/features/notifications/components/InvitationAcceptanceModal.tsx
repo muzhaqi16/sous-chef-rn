@@ -17,10 +17,12 @@ import {
   GetMyPendingInvitesDocument,
 } from '#operations/home/home.generated';
 import {
-  AcceptShoppingListInviteDocument,
+  InvitationAcceptanceModalAcceptShoppingListInviteDocument,
   DeclineShoppingListInviteDocument,
   MyShoppingListInvitesDocument,
+  InvitationAcceptanceModal_CollaboratorFragmentDoc,
   type MyShoppingListInvitesQuery,
+  type InvitationAcceptanceModal_CollaboratorFragment,
 } from './InvitationAcceptanceModal.generated';
 import { createAddToQueryFieldUpdater } from '#/apollo/utils/cacheUpdaters';
 import { executeAsyncWithCleanup } from '#/utils/compilerSafeWrappers';
@@ -31,7 +33,10 @@ const ErrorActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
 }));
 
 /** Module-level cache updater to keep try-catch out of the component body (React Compiler). */
-function updateShoppingListCache(cache: ApolloCache, collaborator: any): void {
+function updateShoppingListCache(
+  cache: ApolloCache,
+  collaborator: InvitationAcceptanceModal_CollaboratorFragment,
+): void {
   try {
     const addToShoppingListsCache =
       createAddToQueryFieldUpdater('shoppingLists');
@@ -88,15 +93,23 @@ export const InvitationAcceptanceModal: React.FC<
     awaitRefetchQueries: true,
   });
   const [acceptShoppingListInvite] = useMutation(
-    AcceptShoppingListInviteDocument,
+    InvitationAcceptanceModalAcceptShoppingListInviteDocument,
     {
       refetchQueries: [{ query: MyShoppingListInvitesDocument }],
       update: (cache, { data }) => {
-        if (!data?.acceptShoppingListInvite?.collaborator) return;
-        updateShoppingListCache(
-          cache,
-          data.acceptShoppingListInvite.collaborator,
-        );
+        const maskedCollaborator = data?.acceptShoppingListInvite?.collaborator;
+        if (!maskedCollaborator) return;
+        // Materialize the masked fragment ref so the cache updater can read
+        // `id` from the collaborator entity.
+        const collaborator =
+          cache.readFragment<InvitationAcceptanceModal_CollaboratorFragment>({
+            fragment: InvitationAcceptanceModal_CollaboratorFragmentDoc,
+            fragmentName: 'InvitationAcceptanceModal_collaborator',
+            from: maskedCollaborator,
+          });
+        if (collaborator) {
+          updateShoppingListCache(cache, collaborator);
+        }
       },
     },
   );

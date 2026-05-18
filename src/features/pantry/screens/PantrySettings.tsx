@@ -24,7 +24,6 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { useErrorService, errorService } from '#/services/errorService';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
-import { normalizePantry } from '#/utils/connectionUtils';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import {
   executeWithLoadingState,
@@ -223,8 +222,9 @@ export const PantrySettings: React.FC<
     skip: !hasValidPantryId,
   });
 
-  // Memoize normalized pantry to prevent re-creating on every render
-  const pantry = normalizePantry(pantryData?.pantry);
+  // Pantry data — read directly; consumers below use items count from connection
+  const pantry = pantryData?.pantry;
+  const pantryItemCount = pantry?.itemsConnection?.totalCount ?? 0;
 
   const [updatePantry] = useMutation(UpdatePantryDocument, {
     // Update cache directly - Apollo automatically merges the Pantry entity
@@ -473,7 +473,7 @@ export const PantrySettings: React.FC<
             <InfoRow
               label={t('pantrySettings.itemsInPantry')}
               value={t('pantrySettings.itemsCount', {
-                count: pantry?.items?.length || 0,
+                count: pantryItemCount,
               })}
             />
           </View>

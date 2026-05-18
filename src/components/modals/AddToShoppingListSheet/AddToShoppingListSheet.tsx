@@ -1,6 +1,7 @@
 import React, { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useApolloClient, useMutation } from '@apollo/client/react';
+import { type Unmasked } from '@apollo/client/masking';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import {
   useShoppingListSuggestions,
@@ -108,7 +109,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
     {
       optimisticResponse: (
         variables: AddItemToShoppingListMutationVariables,
-      ): AddItemToShoppingListMutation => {
+      ): Unmasked<AddItemToShoppingListMutation> => {
         const { tempId, entity } = createOptimisticShoppingListItem({
           itemName: variables.input.itemName ?? '',
           itemId: variables.input.itemId,
@@ -122,8 +123,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
             success: true,
             message: '',
             code: 'SUCCESS',
-            shoppingListItem:
-              entity as AddItemToShoppingListMutation['addItemToShoppingList']['shoppingListItem'],
+            shoppingListItem: entity,
           },
         };
       },

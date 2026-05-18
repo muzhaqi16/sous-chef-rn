@@ -1,28 +1,47 @@
 # Operations composed locally per the Feature API Boundary Convention since
 # pantry/graphql and shoppingList/graphql are internal to those features.
-mutation AddItemToShoppingList($input: CreateShoppingListItemInput!) {
+#
+# Each mutation only needs the resulting entity's `id` here — the cache updaters
+# (`createAddToParentConnectionUpdater`, `addNewItemToShoppingListCache`) read
+# only `{ id }` to add edges to the parent connection, and consumers don't read
+# any other field off the mutation result. Keeping the selection minimal avoids
+# coupling barcode to cross-domain fragments (`PantryItemDisplay`,
+# `ShoppingListItemDisplayFragment`) that are internal to their features.
+#
+# Operation names are barcode-prefixed so they don't collide with same-mutation
+# operations in pantry/recipes/shoppingList (which select richer fields needed
+# by their own consumers).
+fragment SearchResults_shoppingListItem on ShoppingListItem {
+  id
+}
+
+fragment SearchResults_pantryItem on PantryItem {
+  id
+}
+
+mutation BarcodeAddItemToShoppingList($input: CreateShoppingListItemInput!) {
   addItemToShoppingList(input: $input) {
     success
     message
     code
     shoppingListItem {
-      ...ShoppingListItemDisplayFragment
+      ...SearchResults_shoppingListItem
     }
   }
 }
 
-mutation CreatePantryItem($input: CreatePantryItemInput!) {
+mutation BarcodeCreatePantryItem($input: CreatePantryItemInput!) {
   createPantryItem(input: $input) {
     success
     message
     code
     pantryItem {
-      ...PantryItemDisplay
+      ...SearchResults_pantryItem
     }
   }
 }
 
-mutation RestockPantryItem($id: ID!, $input: RestockPantryItemInput!) {
+mutation BarcodeRestockPantryItem($id: ID!, $input: RestockPantryItemInput!) {
   restockPantryItem(id: $id, input: $input) {
     success
     message
@@ -35,7 +54,7 @@ mutation RestockPantryItem($id: ID!, $input: RestockPantryItemInput!) {
       costPerUnit
       totalCost
       pantryItem {
-        ...PantryItemDisplay
+        ...SearchResults_pantryItem
       }
     }
   }

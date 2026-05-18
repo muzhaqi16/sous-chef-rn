@@ -1,11 +1,11 @@
 import { useState } from 'react';
+import { gql } from '@apollo/client';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
 import {
   CreatePantryItemUsageDocument,
   RestockPantryItemDocument,
 } from '#features/pantry/graphql/pantry.generated';
-import type { PantryItemFragment } from '#features/pantry/graphql/pantryFragments.generated';
 import { UsagePurpose, WasteReason } from '#/graphql/generated/schemaTypes';
 import { isNetworkError } from '#/utils/isNetworkError';
 import {
@@ -21,20 +21,44 @@ import {
 import { Telemetry } from '#services/telemetry';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 
+// Minimal cache-read fragments — only the few fields the optimistic-update
+// path needs. Kept inside the module so they live next to the only consumer.
+const TrackingUnitOnlyFragment = gql`
+  fragment _UsePantryItemActionsTrackingUnit on PantryItem {
+    unit {
+      id
+    }
+  }
+`;
+
+const QuantityOnlyFragment = gql`
+  fragment _UsePantryItemActionsQuantity on PantryItem {
+    quantity
+  }
+`;
+
+const IdOnlyFragment = gql`
+  fragment _UsePantryItemActionsId on PantryItem {
+    id
+  }
+`;
+
 interface UsePantryItemActionsOptions {
-  pantryItems: PantryItemFragment[];
   removeItem: (id: string) => Promise<void>;
   navigateTo: {
     pantryItem: (params: { itemId: string }) => void;
   };
 }
 
-// Discriminated union: only one modal can be open at a time
+// Discriminated union: only one modal can be open at a time.
+// Stores only the entity id — the modal materializes the entity from the
+// Apollo cache via `useFragment`, so mutations to the pantry item are
+// reflected in the open modal without a re-snapshot.
 type ActiveModal =
   | { type: null }
-  | { type: 'consume'; item: PantryItemFragment }
-  | { type: 'waste'; item: PantryItemFragment }
-  | { type: 'restock'; item: PantryItemFragment };
+  | { type: 'consume'; itemId: string }
+  | { type: 'waste'; itemId: string }
+  | { type: 'restock'; itemId: string };
 
 const CLOSED_MODAL: ActiveModal = { type: null };
 
@@ -50,7 +74,6 @@ const CLOSED_MODAL: ActiveModal = { type: null };
  * - Delete item (mutation)
  */
 export function usePantryItemActions({
-  pantryItems,
   removeItem,
   navigateTo,
 }: UsePantryItemActionsOptions) {
@@ -59,6 +82,41 @@ export function usePantryItemActions({
   const [activeModal, setActiveModal] = useState<ActiveModal>(CLOSED_MODAL);
 
   const closeModal = () => setActiveModal(CLOSED_MODAL);
+
+  /**
+   * Read the tracking-unit id for an item from the cache. Used by mutation
+   * handlers to decide whether an optimistic same-unit update is safe.
+   */
+  const readTrackingUnitId = (itemId: string): string | undefined => {
+    const cacheId = client.cache.identify({
+      __typename: 'PantryItem',
+      id: itemId,
+    });
+    if (!cacheId) return undefined;
+    const data = client.cache.readFragment<{
+      unit: { id: string } | null;
+    }>({
+      id: cacheId,
+      fragment: TrackingUnitOnlyFragment,
+    });
+    return data?.unit?.id ?? undefined;
+  };
+
+  /**
+   * Read the current quantity from the cache, for optimistic revert.
+   */
+  const readCurrentQuantity = (itemId: string): number => {
+    const cacheId = client.cache.identify({
+      __typename: 'PantryItem',
+      id: itemId,
+    });
+    if (!cacheId) return 0;
+    const data = client.cache.readFragment<{ quantity: number }>({
+      id: cacheId,
+      fragment: QuantityOnlyFragment,
+    });
+    return data?.quantity ?? 0;
+  };
 
   /**
    * Optimistically update a pantry item's quantity in cache for instant UI feedback.
@@ -157,18 +215,19 @@ export function usePantryItemActions({
   ) => {
     if (activeModal.type !== 'consume') return;
 
-    const item = activeModal.item;
-    const originalQty = item.quantity;
+    const itemId = activeModal.itemId;
+    const originalQty = readCurrentQuantity(itemId);
+    const trackingUnitId = readTrackingUnitId(itemId);
     // Only apply optimistic update when using the tracking unit (same unit = direct subtraction)
     // When using a converted unit, the server response will update the cache
-    const canOptimistic = !usageUnitId || usageUnitId === item.unit?.id;
+    const canOptimistic = !usageUnitId || usageUnitId === trackingUnitId;
     if (canOptimistic) {
-      optimisticUpdateQuantity(item.id, originalQty - quantityUsed);
+      optimisticUpdateQuantity(itemId, originalQty - quantityUsed);
     }
 
     const consumeNotes = notes || undefined;
     const revertOptimistic = canOptimistic
-      ? () => revertQuantity(item.id, originalQty)
+      ? () => revertQuantity(itemId, originalQty)
       : undefined;
 
     const consumeResult = await executeMutation(
@@ -176,7 +235,7 @@ export function usePantryItemActions({
         createPantryItemUsage({
           variables: {
             input: {
-              pantryItemId: item.id,
+              pantryItemId: itemId,
               quantityUsed,
               purpose,
               notes: consumeNotes,
@@ -230,16 +289,17 @@ export function usePantryItemActions({
   ) => {
     if (activeModal.type !== 'waste') return;
 
-    const item = activeModal.item;
-    const originalQty = item.quantity;
-    const canOptimistic = !wasteUnitId || wasteUnitId === item.unit?.id;
+    const itemId = activeModal.itemId;
+    const originalQty = readCurrentQuantity(itemId);
+    const trackingUnitId = readTrackingUnitId(itemId);
+    const canOptimistic = !wasteUnitId || wasteUnitId === trackingUnitId;
     if (canOptimistic) {
-      optimisticUpdateQuantity(item.id, originalQty - wasteAmount);
+      optimisticUpdateQuantity(itemId, originalQty - wasteAmount);
     }
 
     const wasteNotes = notes || undefined;
     const revertOptimistic = canOptimistic
-      ? () => revertQuantity(item.id, originalQty)
+      ? () => revertQuantity(itemId, originalQty)
       : undefined;
 
     const wasteResult = await executeMutation(
@@ -247,7 +307,7 @@ export function usePantryItemActions({
         createPantryItemUsage({
           variables: {
             input: {
-              pantryItemId: item.id,
+              pantryItemId: itemId,
               quantityUsed: wasteAmount,
               purpose: UsagePurpose.Waste,
               notes: wasteNotes,
@@ -302,17 +362,18 @@ export function usePantryItemActions({
   ) => {
     if (activeModal.type !== 'restock') return;
 
-    const item = activeModal.item;
-    const originalQty = item.quantity;
-    const canOptimistic = !unitId || unitId === item.unit?.id;
+    const itemId = activeModal.itemId;
+    const originalQty = readCurrentQuantity(itemId);
+    const trackingUnitId = readTrackingUnitId(itemId);
+    const canOptimistic = !unitId || unitId === trackingUnitId;
     if (canOptimistic) {
-      optimisticUpdateQuantity(item.id, originalQty + quantity);
+      optimisticUpdateQuantity(itemId, originalQty + quantity);
     }
 
     // Optimistically increment activeBatchCount for instant UI feedback
     const cacheIdForBatch = client.cache.identify({
       __typename: 'PantryItem',
-      id: item.id,
+      id: itemId,
     });
     if (cacheIdForBatch) {
       client.cache.modify({
@@ -329,7 +390,7 @@ export function usePantryItemActions({
     const expiresAtValue = expiresAt ? expiresAt.toISOString() : null;
     const revertOptimistic = () => {
       if (canOptimistic) {
-        revertQuantity(item.id, originalQty);
+        revertQuantity(itemId, originalQty);
       }
       if (cacheIdForBatch) {
         client.cache.modify({
@@ -347,7 +408,7 @@ export function usePantryItemActions({
       () =>
         restockPantryItem({
           variables: {
-            id: item.id,
+            id: itemId,
             input: {
               quantity,
               unitId,
@@ -393,27 +454,39 @@ export function usePantryItemActions({
     closeModal();
   };
 
+  // Existence check helper — opens the modal only if the cache has an entry
+  // for the id (mirrors the previous `materializeItem` behavior).
+  const hasItemInCache = (itemId: string): boolean => {
+    const cacheId = client.cache.identify({
+      __typename: 'PantryItem',
+      id: itemId,
+    });
+    if (!cacheId) return false;
+    const data = client.cache.readFragment<{ id: string }>({
+      id: cacheId,
+      fragment: IdOnlyFragment,
+    });
+    return !!data?.id;
+  };
+
   // Handler to open consume modal (for swipe action)
   const handleConsumeItem = (itemId: string) => {
-    const item = pantryItems.find(p => p.id === itemId);
-    if (item) {
-      setActiveModal({ type: 'consume', item });
+    if (hasItemInCache(itemId)) {
+      setActiveModal({ type: 'consume', itemId });
     }
   };
 
   // Handler to open waste modal (for swipe action)
   const handleWasteItem = (itemId: string) => {
-    const item = pantryItems.find(p => p.id === itemId);
-    if (item) {
-      setActiveModal({ type: 'waste', item });
+    if (hasItemInCache(itemId)) {
+      setActiveModal({ type: 'waste', itemId });
     }
   };
 
   // Handler to open restock modal (for swipe action)
   const handleRestockItem = (itemId: string) => {
-    const item = pantryItems.find(p => p.id === itemId);
-    if (item) {
-      setActiveModal({ type: 'restock', item });
+    if (hasItemInCache(itemId)) {
+      setActiveModal({ type: 'restock', itemId });
     }
   };
 
@@ -435,19 +508,19 @@ export function usePantryItemActions({
   // Derive modal states from the single activeModal for backward compatibility
   const consumeModal = {
     visible: activeModal.type === 'consume',
-    item: activeModal.type === 'consume' ? activeModal.item : null,
+    itemId: activeModal.type === 'consume' ? activeModal.itemId : null,
     close: closeModal,
   };
 
   const wasteModal = {
     visible: activeModal.type === 'waste',
-    item: activeModal.type === 'waste' ? activeModal.item : null,
+    itemId: activeModal.type === 'waste' ? activeModal.itemId : null,
     close: closeModal,
   };
 
   const restockModal = {
     visible: activeModal.type === 'restock',
-    item: activeModal.type === 'restock' ? activeModal.item : null,
+    itemId: activeModal.type === 'restock' ? activeModal.itemId : null,
     close: closeModal,
   };
 

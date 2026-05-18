@@ -1,8 +1,8 @@
 import React from 'react';
-import { render, screen, userEvent } from '@testing-library/react-native';
+import { screen, userEvent } from '@testing-library/react-native';
 import { PantryActionModal } from '../PantryActionModal';
-import { type PantryItemFragment } from '#features/pantry/graphql/pantryFragments.generated';
 import { PantryOperation } from '#features/pantry/hooks/useOperationUnits';
+import { renderWithApollo, seedCache } from '#/test-utils/apolloMockProvider';
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
   useStandardBottomSheet: jest.fn(() => ({
@@ -111,28 +111,35 @@ jest.mock('#components/molecules/UnitPicker', () => ({
   UnitPicker: () => null,
 }));
 
-const makePantryItem = (overrides?: Partial<PantryItemFragment>) =>
-  ({
-    id: 'pantry-1',
-    itemId: 'item-1',
-    itemName: 'Flour',
-    quantity: 5,
-    unit: {
-      id: 'u1',
-      symbol: 'lbs',
-      name: 'Pounds',
-      type: 'WEIGHT',
-      displayAsFraction: false,
+const PANTRY_ITEM_ID = 'pantry-1';
+
+function makeCache(overrides: Record<string, unknown> = {}) {
+  return seedCache([
+    {
+      __typename: 'PantryItem',
+      id: PANTRY_ITEM_ID,
+      itemId: 'item-1',
+      itemName: 'Flour',
+      quantity: 5,
+      activeBatchCount: 1,
+      netWeight: null,
+      remainingNetWeight: null,
+      lastUsedAt: null,
+      unit: {
+        __typename: 'Unit',
+        id: 'u1',
+        symbol: 'lbs',
+        name: 'Pounds',
+        type: 'WEIGHT',
+        displayAsFraction: false,
+      },
+      netWeightUnit: null,
+      packageBreakdown: null,
+      quantityBreakdown: null,
+      ...overrides,
     },
-    remainingNetWeight: null,
-    netWeight: null,
-    netWeightUnit: null,
-    packageBreakdown: null,
-    quantityBreakdown: null,
-    lastUsedAt: null,
-    item: { defaultConsumeUnitId: null, defaultConsumeIncrement: null },
-    ...overrides,
-  } as unknown as PantryItemFragment);
+  ]);
+}
 
 describe('PantryActionModal', () => {
   const mockRenderActionFields = jest.fn<any, [any]>(() => {
@@ -146,7 +153,7 @@ describe('PantryActionModal', () => {
 
   const defaultProps = {
     visible: true,
-    pantryItem: makePantryItem(),
+    pantryItemId: PANTRY_ITEM_ID,
     onClose: jest.fn(),
     title: 'Test Action',
     confirmLabel: 'Confirm',
@@ -160,75 +167,104 @@ describe('PantryActionModal', () => {
   });
 
   it('renders with the provided title', () => {
-    render(<PantryActionModal {...defaultProps} />);
+    renderWithApollo(<PantryActionModal {...defaultProps} />, {
+      cache: makeCache(),
+    });
     expect(screen.getByText('Test Action')).toBeTruthy();
   });
 
   it('displays item name', () => {
-    render(<PantryActionModal {...defaultProps} />);
+    renderWithApollo(<PantryActionModal {...defaultProps} />, {
+      cache: makeCache(),
+    });
     expect(screen.getByText('Flour')).toBeTruthy();
   });
 
   it('renders action fields via renderActionFields prop', () => {
-    render(<PantryActionModal {...defaultProps} />);
+    renderWithApollo(<PantryActionModal {...defaultProps} />, {
+      cache: makeCache(),
+    });
     expect(screen.getByText('Action Fields')).toBeTruthy();
     expect(mockRenderActionFields).toHaveBeenCalled();
   });
 
   it('calls onClose when cancel is pressed', async () => {
     const user = userEvent.setup();
-    render(<PantryActionModal {...defaultProps} />);
+    renderWithApollo(<PantryActionModal {...defaultProps} />, {
+      cache: makeCache(),
+    });
     await user.press(screen.getByTestId('cancel-button'));
     expect(defaultProps.onClose).toHaveBeenCalled();
   });
 
   it('calls onConfirm when confirm is pressed', async () => {
     const user = userEvent.setup();
-    render(<PantryActionModal {...defaultProps} />);
+    renderWithApollo(<PantryActionModal {...defaultProps} />, {
+      cache: makeCache(),
+    });
     await user.press(screen.getByTestId('confirm-button'));
     expect(defaultProps.onConfirm).toHaveBeenCalled();
   });
 
-  it('does not render item info when pantryItem is null', () => {
-    render(<PantryActionModal {...defaultProps} pantryItem={null} />);
+  it('does not render item info when pantryItemId is null', () => {
+    renderWithApollo(
+      <PantryActionModal {...defaultProps} pantryItemId={null} />,
+      { cache: makeCache() },
+    );
     expect(screen.queryByText('Flour')).toBeNull();
   });
 
   it('renders confirm button with correct label', () => {
-    render(<PantryActionModal {...defaultProps} confirmLabel="Do it" />);
+    renderWithApollo(
+      <PantryActionModal {...defaultProps} confirmLabel="Do it" />,
+      { cache: makeCache() },
+    );
     expect(screen.getByText('Do it')).toBeTruthy();
   });
 
   it('passes correct trackingQuantity to renderActionFields', () => {
-    render(<PantryActionModal {...defaultProps} />);
+    renderWithApollo(<PantryActionModal {...defaultProps} />, {
+      cache: makeCache(),
+    });
     const shared = mockRenderActionFields.mock.calls[0][0];
     expect(shared.trackingQuantity).toBe(5);
     expect(shared.activeUnitSymbol).toBe('lbs');
   });
 
   it('passes trackingUnitId to renderActionFields', () => {
-    render(<PantryActionModal {...defaultProps} />);
+    renderWithApollo(<PantryActionModal {...defaultProps} />, {
+      cache: makeCache(),
+    });
     const shared = mockRenderActionFields.mock.calls[0][0];
     expect(shared.trackingUnitId).toBe('u1');
   });
 
-  it('returns 0 for trackingQuantity when pantryItem is null', async () => {
+  it('returns 0 for trackingQuantity when pantryItemId is null', async () => {
     const user = userEvent.setup();
-    render(<PantryActionModal {...defaultProps} pantryItem={null} />);
+    renderWithApollo(
+      <PantryActionModal {...defaultProps} pantryItemId={null} />,
+      { cache: makeCache() },
+    );
     await user.press(screen.getByTestId('confirm-button'));
     const shared = defaultProps.onConfirm.mock.calls[0][0];
     expect(shared.trackingQuantity).toBe(0);
   });
 
   it('resets notes when modal opens with new pantryItem', () => {
-    const { rerender } = render(
-      <PantryActionModal {...defaultProps} visible={false} pantryItem={null} />,
+    const cache = makeCache();
+    const { rerender } = renderWithApollo(
+      <PantryActionModal
+        {...defaultProps}
+        visible={false}
+        pantryItemId={null}
+      />,
+      { cache },
     );
     rerender(
       <PantryActionModal
         {...defaultProps}
         visible={true}
-        pantryItem={makePantryItem()}
+        pantryItemId={PANTRY_ITEM_ID}
       />,
     );
     const shared =
@@ -240,19 +276,21 @@ describe('PantryActionModal', () => {
 
   it('calls onReset when modal opens', () => {
     const onReset = jest.fn();
-    const { rerender } = render(
+    const cache = makeCache();
+    const { rerender } = renderWithApollo(
       <PantryActionModal
         {...defaultProps}
         visible={false}
-        pantryItem={null}
+        pantryItemId={null}
         onReset={onReset}
       />,
+      { cache },
     );
     rerender(
       <PantryActionModal
         {...defaultProps}
         visible={true}
-        pantryItem={makePantryItem()}
+        pantryItemId={PANTRY_ITEM_ID}
         onReset={onReset}
       />,
     );

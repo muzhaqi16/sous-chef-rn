@@ -54,7 +54,13 @@ const removeFromMealPlansForMain = createRemoveFromQueryConnectionUpdater(
 import { type MealTemplateDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import { type MealPlanMain_ItemFragment } from './MealPlanMain.generated';
 import { type EditCustomMealSheet_ItemFragment } from '#features/mealPlan/components/EditCustomMealSheet.generated';
-import { type MealPlanItemActions_OptimisticFullItemFragment as MealPlanItemActionsItem } from '#features/mealPlan/hooks/useMealPlanItemActions.generated';
+import type { Unmasked } from '@apollo/client/masking';
+import { type MealPlanItemActions_OptimisticFullItemFragment } from '#features/mealPlan/hooks/useMealPlanItemActions.generated';
+// MarkCookedModal reads recipe.name + servings off the pending item; the
+// compound optimistic fragment masks those behind `$fragmentRefs`, so we hold
+// the materialized (unmasked) shape in state.
+type MealPlanItemActionsItem =
+  Unmasked<MealPlanItemActions_OptimisticFullItemFragment>;
 import { toastService } from '#/services/toastService';
 import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle';
 import { executeMutation } from '#/utils/compilerSafeWrappers';

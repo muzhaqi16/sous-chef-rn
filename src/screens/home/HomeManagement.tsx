@@ -22,10 +22,7 @@ import { Button } from '#/components/base/Button';
 import { toastService } from '#/services/toastService';
 import { HomeStats } from '#/components/organisms/home/HomeStats';
 import { CreateHomeForm } from '#/components/organisms/home/CreateHomeForm';
-import {
-  HomeCard,
-  type PartialHome,
-} from '#/components/organisms/home/HomeCard';
+import { HomeCard } from '#/components/organisms/home/HomeCard';
 import {
   getInvitableRoles,
   canInviteToHome,
@@ -320,7 +317,7 @@ export const HomeManagement: React.FC = () => {
                   <View style={styles.previewCard}>
                     <Text style={styles.previewTitle}>{previewHome.name}</Text>
                     <Text style={styles.previewSubtitle}>
-                      {previewHome.members?.length || 0} member(s)
+                      {previewHome.membersConnection?.totalCount ?? 0} member(s)
                     </Text>
                   </View>
                 )}
@@ -391,7 +388,7 @@ export const HomeManagement: React.FC = () => {
                     .mass(1.5)}
                 >
                   <HomeCard
-                    home={home as PartialHome}
+                    homeRef={home}
                     isDefault={home.id === defaultHomeId}
                     isHighlighted={home.id === highlightedHomeId}
                     canInvite={userCanInvite}

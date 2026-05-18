@@ -2,9 +2,10 @@ import React from 'react';
 import { View } from 'react-native';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useQuery } from '@apollo/client/react';
+import { useFragment, useQuery } from '@apollo/client/react';
 import { useTranslation } from 'react-i18next';
 import { GetShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { ShoppingListItemFragmentDoc } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { Icon } from '#utils/iconUtils';
 import { DetailTemplate } from '#components/templates/DetailTemplate';
@@ -38,7 +39,18 @@ export const ShoppingListItemDetail: React.FC<
     fetchPolicy: 'cache-first',
   });
 
-  const item = data?.shoppingListItem;
+  // Unmask the ShoppingListItemFragment ref so this screen can read the full
+  // entity (item.itemName, item.purchaseInfo, item.purchasesConnection, ...).
+  // useFragment also subscribes to the entity record so edits made elsewhere
+  // (e.g., AddEditItem) refresh this detail view automatically.
+  const itemRef = data?.shoppingListItem ?? null;
+  const itemFragmentResult = useFragment({
+    fragment: ShoppingListItemFragmentDoc,
+    fragmentName: 'ShoppingListItemFragment',
+    from: itemRef,
+  });
+  const item =
+    itemRef && itemFragmentResult.complete ? itemFragmentResult.data : null;
 
   const handleEdit = () => {
     toEditItem({ listId, itemId });

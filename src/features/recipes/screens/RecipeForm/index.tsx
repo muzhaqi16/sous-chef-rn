@@ -3,7 +3,7 @@ import { alertService } from '#/services/alertService';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { FormModal } from '#components/organisms/FormModal';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { useMutation, useQuery } from '@apollo/client/react';
+import { useApolloClient, useMutation, useQuery } from '@apollo/client/react';
 import {
   GetRecipeDocument,
   CreateRecipeDocument,
@@ -12,6 +12,10 @@ import {
   MyRecipesDocument,
   type MyRecipesQuery,
 } from '#features/recipes/graphql/recipe.generated';
+import {
+  RecipeFragmentDoc,
+  type RecipeFragment,
+} from '#features/recipes/graphql/recipeFragments.generated';
 import { useRecipeForm } from './useRecipeForm';
 import { RecipeBasicFields } from './components/RecipeBasicFields';
 import { RecipeCategoryFields } from './components/RecipeCategoryFields';
@@ -47,13 +51,25 @@ export const RecipeFormScreen: React.FC<
     skip: !recipeId,
   });
 
+  // Materialize the masked RecipeFragment ref so populateFromRecipe sees the
+  // full entity (non-render context — useFragment is a hook and can't run
+  // inside useEffect).
+  const apolloClient = useApolloClient();
+  const recipeRef = recipeData?.recipe ?? null;
+
   // Populate form when recipe data arrives
   const { populateFromRecipe } = form;
   useEffect(() => {
-    if (recipeData?.recipe) {
-      populateFromRecipe(recipeData.recipe);
+    if (!recipeRef) return;
+    const recipe = apolloClient.cache.readFragment<RecipeFragment>({
+      fragment: RecipeFragmentDoc,
+      fragmentName: 'RecipeFragment',
+      from: recipeRef,
+    });
+    if (recipe) {
+      populateFromRecipe(recipe);
     }
-  }, [recipeData?.recipe, populateFromRecipe]);
+  }, [recipeRef, populateFromRecipe, apolloClient]);
 
   const [createRecipeMutation, { loading: creating }] = useMutation(
     CreateRecipeDocument,

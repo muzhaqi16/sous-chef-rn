@@ -4,17 +4,9 @@ import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper
 import { useProfileData } from '#features/profile/hooks/useProfileData';
 import { useUser } from '#store/useAppStore';
 import { PERSONAL_INFO_CONFIG } from '#/config/settingsConfig';
-import { useApolloClient, useMutation } from '@apollo/client/react';
-import {
-  UpdateUserProfileDocument,
-  type UpdateUserProfileMutation,
-  type UpdateUserProfileMutationVariables,
-} from '#operations/auth/user.generated';
+import { useMutation } from '@apollo/client/react';
+import { UpdateUserProfileDocument } from '#operations/auth/user.generated';
 import { ProfileVisibility } from '#/graphql/generated/schemaTypes';
-import {
-  GetUserProfileDocument,
-  type GetUserProfileQuery,
-} from '#operations/auth/user.generated';
 import { dateStringToISO, extractDateString } from '#utils/dateUtils';
 import { errorService } from '#/services/errorService';
 import {
@@ -23,51 +15,9 @@ import {
 } from '#/utils/compilerSafeWrappers';
 import { ThemedRefreshControl } from '#components/atoms/themedComponents';
 
-/** Module-level function for profile updates with optimistic cache.
- *  Extracted to avoid try-catch inside component body (React Compiler bailout). */
-async function performProfileUpdate(
-  client: ReturnType<typeof useApolloClient>,
-  updateProfileMutation: useMutation.MutationFunction<
-    UpdateUserProfileMutation,
-    UpdateUserProfileMutationVariables
-  >,
-  input: Partial<Record<any, any>>,
-): Promise<void> {
-  // Read current cache
-  const cache = client.readQuery<GetUserProfileQuery>({
-    query: GetUserProfileDocument,
-  });
-
-  // Optimistically update the cache immediately
-  if (cache?.me?.profile) {
-    client.writeQuery<GetUserProfileQuery>({
-      query: GetUserProfileDocument,
-      data: {
-        __typename: 'Query',
-        me: {
-          ...cache.me,
-          profile: {
-            ...cache.me.profile,
-            ...input,
-          },
-        },
-      },
-    });
-  }
-
-  // Then perform the actual mutation, refetching the profile query to ensure UI stays in sync
-  await updateProfileMutation({
-    variables: {
-      input,
-    },
-    refetchQueries: [{ query: GetUserProfileDocument }],
-  });
-}
-
 export const PersonalInformationScreen: React.FC = () => {
   const { profile, refetch } = useProfileData();
   const user = useUser();
-  const client = useApolloClient();
   const [updateProfileMutation] = useMutation(UpdateUserProfileDocument);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -76,15 +26,30 @@ export const PersonalInformationScreen: React.FC = () => {
   };
 
   const updateProfile = (input: Partial<Record<any, any>>) => {
+    if (!profile) return;
     executeMutation(
-      () => performProfileUpdate(client, updateProfileMutation, input),
+      () =>
+        updateProfileMutation({
+          variables: { input },
+          // Apollo auto-normalizes the UserProfile by id from the mutation
+          // response, so the cached `me.profile` updates without a refetch.
+          optimisticResponse: {
+            __typename: 'Mutation',
+            updateProfile: {
+              __typename: 'UserProfilePayload',
+              success: true,
+              message: '',
+              code: '',
+              userProfile: {
+                ...profile,
+                ...input,
+              },
+            },
+          },
+        }),
       error => {
         errorService.reportError(error, {
           operation: 'PersonalInformation.updateProfile',
-        });
-        // On error, refetch to restore correct state
-        client.refetchQueries({
-          include: [GetUserProfileDocument],
         });
       },
     );

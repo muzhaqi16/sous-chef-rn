@@ -1,6 +1,9 @@
-import { useQuery } from '@apollo/client/react';
+import { useApolloClient, useQuery } from '@apollo/client/react';
 import { GetMealTemplateDocument } from '#features/mealPlan/graphql/mealTemplate.generated';
-import { type MealTemplateItemFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
+import {
+  MealTemplateItemFragmentDoc,
+  type MealTemplateItemFragment,
+} from '#features/mealPlan/graphql/mealPlanFragments.generated';
 
 interface GroupedDay {
   dayOffset: number;
@@ -8,13 +11,25 @@ interface GroupedDay {
 }
 
 export function useMealTemplate(templateId: string | undefined) {
+  const client = useApolloClient();
   const { data, loading, error, refetch } = useQuery(GetMealTemplateDocument, {
     variables: { id: templateId! },
     skip: !templateId,
   });
 
   const template = data?.mealTemplate ?? null;
-  const items = template?.items ?? [];
+
+  // Items arrive as masked refs — materialize so the grouping logic can read
+  // `dayOffset` without bumping into `$fragmentRefs`.
+  const items: MealTemplateItemFragment[] = (template?.items ?? [])
+    .map(ref =>
+      client.cache.readFragment<MealTemplateItemFragment>({
+        fragment: MealTemplateItemFragmentDoc,
+        fragmentName: 'MealTemplateItemFragment',
+        from: ref,
+      }),
+    )
+    .filter((i): i is MealTemplateItemFragment => i !== null);
 
   // Group items by day offset
   let groupedByDay: GroupedDay[] = [];

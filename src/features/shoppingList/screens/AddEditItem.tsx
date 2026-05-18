@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { alertService } from '#/services/alertService';
-import { useMutation, useQuery } from '@apollo/client/react';
+import { useFragment, useMutation, useQuery } from '@apollo/client/react';
 import { useTranslation } from 'react-i18next';
 import {
   AddItemToShoppingListDocument,
@@ -8,7 +8,10 @@ import {
   GetShoppingListItemDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { ItemSuggestion, CategoryType } from '#/graphql/generated/schemaTypes';
-import { ShoppingListItemDisplayFragmentDoc } from '#features/shoppingList/graphql/shoppingListFragments.generated';
+import {
+  ShoppingListItemDisplayFragmentDoc,
+  ShoppingListItemFragmentDoc,
+} from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { FormModal } from '#components/organisms/FormModal';
 import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
 import { ItemAutocompleteField } from '#components/molecules/AutocompleteField/ItemAutocompleteField';
@@ -72,6 +75,21 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
     skip: !isEdit,
   });
 
+  // Unmask the ShoppingListItemFragment ref returned by GetShoppingListItem so
+  // setFromItem can read nested fields (item.unit, item.priceEstimate, etc.).
+  // useFragment also subscribes this screen to the entity's cache record, so
+  // edits made elsewhere flow back in without a refetch.
+  const itemFragmentRef = data?.shoppingListItem ?? null;
+  const itemFragmentResult = useFragment({
+    fragment: ShoppingListItemFragmentDoc,
+    fragmentName: 'ShoppingListItemFragment',
+    from: itemFragmentRef,
+  });
+  const itemData =
+    itemFragmentRef && itemFragmentResult.complete
+      ? itemFragmentResult.data
+      : null;
+
   const [addItem] = useMutation(AddItemToShoppingListDocument, {
     // Update cache immediately for optimistic UI
     update: (cache, { data: mutationData }) => {
@@ -112,12 +130,12 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
 
   // Populate form when editing existing item
   useEffect(() => {
-    if (data?.shoppingListItem) {
-      setFromItem(data.shoppingListItem);
+    if (itemData) {
+      setFromItem(itemData);
       // Store version for optimistic concurrency control
-      itemVersionRef.current = data.shoppingListItem.version;
+      itemVersionRef.current = itemData.version;
     }
-  }, [data, setFromItem]);
+  }, [itemData, setFromItem]);
 
   // Pre-populate item name when adding new item with initial value
   useEffect(() => {
@@ -276,7 +294,12 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
             ?.length
         ) {
           const graphQLError = (
-            error as { graphQLErrors: Array<{ message?: string; extensions?: { code?: string } }> }
+            error as {
+              graphQLErrors: Array<{
+                message?: string;
+                extensions?: { code?: string };
+              }>;
+            }
           ).graphQLErrors[0];
           const code = graphQLError.extensions?.code;
           if (code === 'VALIDATION_ERROR') {
@@ -301,7 +324,9 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
   return (
     <FormModal
       title={
-        isEdit ? t('shoppingListScreens.editItem') : t('shoppingListScreens.addItem')
+        isEdit
+          ? t('shoppingListScreens.editItem')
+          : t('shoppingListScreens.addItem')
       }
       onClose={() => navigation.goBack()}
       onSave={handleSave}

@@ -89,6 +89,12 @@ query GetShoppingListsLite($homeId: ID, $first: Int, $after: String) {
 # Paginated items query for a single tab (unpurchased OR purchased)
 # Called twice in the hook — once per tab — so each has its own independent
 # cursor and cache entry (Apollo keyArgs: ['filters'] handles separation)
+#
+# The `node` selects scalar meta fields inline (id, itemName, category,
+# sortOrder, version, purchaseInfo, item, etc.) so the hook layer can read
+# them directly without a `cache.readFragment` materialize round-trip.
+# The masked `...SortableItem_item` ref flows to the row component, which
+# calls `useFragment` to get a per-entity cache subscription.
 query GetShoppingListItemsFiltered(
   $id: ID!
   $first: Int!
@@ -107,7 +113,34 @@ query GetShoppingListItemsFiltered(
       edges {
         cursor
         node {
-          ...ShoppingListItemDisplayFragment
+          id
+          itemName
+          quantity
+          quantityInput
+          displayFormat
+          purchaseInfo {
+            isPurchased
+          }
+          version
+          updatedAt
+          category
+          notes
+          unitName
+          unit {
+            id
+            name
+            symbol
+          }
+          sortOrder
+          item {
+            id
+            imageUrl
+            images {
+              url
+              kind
+            }
+          }
+          ...SortableItem_item
         }
       }
       pageInfo {
@@ -244,6 +277,7 @@ mutation AddItemToShoppingList($input: CreateShoppingListItemInput!) {
     message
     code
     shoppingListItem {
+      id
       ...ShoppingListItemDisplayFragment
     }
   }
@@ -258,6 +292,7 @@ mutation UpdateShoppingListItem(
     message
     code
     shoppingListItem {
+      id
       ...ShoppingListItemDisplayFragment
     }
   }
@@ -280,6 +315,7 @@ mutation MoveShoppingListItem($input: MoveShoppingListItemInput!) {
     message
     code
     shoppingListItem {
+      id
       ...ShoppingListItemDisplayFragment
     }
   }
@@ -297,6 +333,10 @@ mutation ToggleShoppingListItemPurchased(
     message
     code
     shoppingListItem {
+      id
+      purchaseInfo {
+        isPurchased
+      }
       ...ShoppingListItemDisplayFragment
     }
   }
@@ -318,6 +358,7 @@ mutation UpdateShoppingListItemQuantity(
     message
     code
     shoppingListItem {
+      id
       ...ShoppingListItemDisplayFragment
     }
   }
@@ -339,6 +380,7 @@ mutation MoveShoppingItemToPantry($input: MoveShoppingItemToPantryInput!) {
     message
     code
     pantryItem {
+      id
       ...PantryItemDisplay
     }
   }
@@ -367,6 +409,7 @@ mutation AddItemsToShoppingList(
       clientId
       success
       item {
+        id
         ...ShoppingListItemDisplayFragment
       }
       quantityIncremented
@@ -417,6 +460,7 @@ mutation SyncShoppingListItem(
     operation
     wasCreated
     item {
+      id
       ...ShoppingListItemDisplayFragment
     }
     conflict {
@@ -467,6 +511,8 @@ mutation SyncMoveShoppingListItem(
     operation
     wasCreated
     item {
+      id
+      sortOrder
       ...ShoppingListItemDisplayFragment
     }
     conflict {
@@ -490,6 +536,11 @@ subscription ShoppingListChanges($listId: ID!) {
   shoppingListChanged(listId: $listId) {
     changeType
     item {
+      id
+      sortOrder
+      purchaseInfo {
+        isPurchased
+      }
       ...ShoppingListItemDisplayFragment
     }
     shoppingList {

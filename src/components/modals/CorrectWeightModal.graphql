@@ -1,0 +1,17 @@
+fragment CorrectWeightModal_pantryItem on PantryItem {
+  id
+  itemName
+  quantity
+  netWeight
+  remainingNetWeight
+  unit {
+    id
+    symbol
+    displayAsFraction
+  }
+  netWeightUnit {
+    id
+    name
+    symbol
+  }
+}

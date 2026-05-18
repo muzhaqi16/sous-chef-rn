@@ -11,7 +11,8 @@ import { alertService } from '#/services/alertService';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from 'react-i18next';
 import { formatRole } from '#utils/formatters/roleFormatters';
-import { type InviteCard_InviteFragment } from './CreateHomeScreen.generated';
+import { InviteCard_InviteFragmentDoc } from './CreateHomeScreen.generated';
+import type { FragmentType } from '@apollo/client/masking';
 import {
   InviteActionsProvider,
   useInviteActions,
@@ -26,7 +27,7 @@ import { ErrorMessage } from './ErrorMessage';
 import { Button } from '#components/base/Button';
 
 // GraphQL
-import { useMutation, useQuery } from '@apollo/client/react';
+import { useFragment, useMutation, useQuery } from '@apollo/client/react';
 import { HomeType } from '#/graphql/generated/schemaTypes';
 import {
   CreateHomeDocument,
@@ -49,7 +50,7 @@ import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigati
 // Validation & Helpers
 import { getCreateHomeSchema } from '#/utils/validation/onboarding';
 import { createPantryForHome, showPantryCreationError } from './helpers';
-import { normalizeHomes, extractNodes } from '#/utils/connectionUtils';
+import { extractNodes } from '#/utils/connectionUtils';
 import { OnboardingErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import {
@@ -144,11 +145,14 @@ async function performCreateHome(
         }
       } else {
         const refetchResult = await deps.refetchHomes();
-        const refetchedHomes = normalizeHomes(
-          extractNodes(refetchResult.data?.homes),
-        );
+        const refetchedHomes = extractNodes(
+          refetchResult.data?.homes,
+        ) as Array<{
+          id: string;
+          name?: string;
+        }>;
         const newHome = refetchedHomes.find(
-          (h: any) => h.name === data.homeName.trim(),
+          h => h.name === data.homeName.trim(),
         );
         if (newHome?.id) {
           deps.setSelectedHomeId(newHome.id);
@@ -195,12 +199,23 @@ function syncExistingResources(
 
 // --- Invite card component ---
 
-const InviteCard: React.FC<{ invite: InviteCard_InviteFragment }> = ({
-  invite,
-}) => {
+const InviteCard: React.FC<{
+  inviteRef: FragmentType<typeof InviteCard_InviteFragmentDoc>;
+}> = ({ inviteRef }) => {
   const { t } = useTranslation();
   const { handleAcceptInvite, handleDeclineInvite, accepting } =
     useInviteActions();
+
+  // Per-entity cache subscription via fragment colocation: this card
+  // re-renders only when this HomeInvite's fields change (e.g., after a
+  // revoke/decline mutation).
+  const { data: invite, complete } = useFragment({
+    fragment: InviteCard_InviteFragmentDoc,
+    fragmentName: 'InviteCard_invite',
+    from: inviteRef,
+  });
+
+  if (!complete) return null;
 
   const inviterName =
     invite.inviter?.profile?.displayName ||
@@ -321,12 +336,18 @@ const CreateHomeScreenComponent = () => {
   );
 
   // Extract nodes from connection types (homes and pantries return Connection types)
-  const homes = normalizeHomes(extractNodes(homesData?.homes));
+  const homes = extractNodes(homesData?.homes) as Array<{
+    id: string;
+    name?: string;
+    pantriesConnection?: unknown;
+  }>;
   const pendingInvites = pendingInvitesData?.me?.pendingHomeInvites || [];
   const existingHome = homes[0];
+  const existingHomePantries = extractNodes(
+    existingHome?.pantriesConnection as never,
+  ) as Array<{ id: string; name: string; isDefault?: boolean }>;
   const existingPantry =
-    existingHome?.pantries?.find((p: { isDefault: boolean }) => p.isDefault) ||
-    existingHome?.pantries?.[0];
+    existingHomePantries.find(p => p.isDefault) ?? existingHomePantries[0];
   const needsHome = !existingHome;
   const needsPantry = !existingPantry;
   const hasPendingInvites = pendingInvites.length > 0;
@@ -549,7 +570,7 @@ const CreateHomeScreenComponent = () => {
             accepting={accepting}
           >
             {pendingInvites.map(invite => (
-              <InviteCard key={invite.id} invite={invite} />
+              <InviteCard key={invite.id} inviteRef={invite} />
             ))}
           </InviteActionsProvider>
         </View>

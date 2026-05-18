@@ -19,7 +19,7 @@ jest.mock('#features/pantry/hooks/usePantryItemSuggestions', () => ({
 }));
 
 jest.mock('#/utils/connectionUtils', () => ({
-  normalizePantry: jest.fn(() => ({ storageLocations: [] })),
+  extractNodes: jest.fn(() => []),
 }));
 
 jest.mock('#/utils/errors/pantryItemDuplicate', () => ({

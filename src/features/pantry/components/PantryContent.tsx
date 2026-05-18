@@ -5,6 +5,7 @@ import React, {
   useImperativeHandle,
 } from 'react';
 import { View, RefreshControl } from 'react-native';
+import { useApolloClient } from '@apollo/client/react';
 import { Pressable } from '#components/atoms/themedComponents';
 import {
   FlashList,
@@ -12,7 +13,7 @@ import {
   ListRenderItemInfo,
 } from '@shopify/flash-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { getTabBarBottomPadding } from '#constants/layout';
 import { Icon } from '#utils/iconUtils';
 import { LocationFilter } from '#features/pantry/utils/pantryFilters';
@@ -25,12 +26,16 @@ import {
   type PantryItemActions,
 } from './PantryActionsContext';
 import { usePantrySorting } from './hooks/usePantrySorting';
-import { PantryItem } from '#/graphql/generated/schemaTypes';
+import {
+  PantryItemDisplayFragmentDoc,
+  type PantryItemDisplayFragment,
+} from '#features/pantry/graphql/pantryFragments.generated';
 import { PantryAlertBar } from '#features/pantry/components/PantryAlertBar';
 import { PaginationFooter } from '#components/organisms/PaginationFooter';
 import { PantryItemSkeleton } from '#components/base/Skeleton/PantryItemSkeleton';
 import { AnimatedCellRenderer } from '#components/atoms/AnimatedCellRenderer';
 import { preloadImages } from '#components/atoms/CachedImage';
+import { resolveImageUrl } from '#utils/imageUtils';
 import { useRenderTime } from '#hooks/performance/useRenderTime';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
 import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
@@ -49,20 +54,14 @@ import {
   MVCP_DISABLED,
   DEFAULT_PANTRY_TABS,
 } from './pantryDisplay/constants';
-import {
-  computeDisplayMap,
-  DisplayMapContext,
-  getLocationString,
-} from './pantryDisplay/displayMapCache';
-import { renderItem } from './pantryDisplay/renderItem';
+import { renderItem, type PantryListNode } from './pantryDisplay/renderItem';
 import { PantryEmptyState } from './PantryEmptyState';
 import type {
-  ExpirationColors,
   PantryContentProps,
   PantryContentRef,
 } from './pantryDisplay/types';
 
-type PantryListItem = PantryItem | StickyHeaderSentinel;
+type PantryListItem = PantryListNode | StickyHeaderSentinel;
 
 // Module-level flag: once pantry content has been shown, skip skeletons on remount.
 // Persists across component unmount/remount (stack navigation), resets on app restart.
@@ -127,11 +126,10 @@ export const PantryContent = React.forwardRef<
     ref,
   ) => {
     useRenderTime('PantryContent', { slowThreshold: 1000 });
-    // KEEP useUnistyles: theme colors flow into computeDisplayMap data — not
-    // stylesheets — so the values are passed through to per-item ExpirationText
-    // via `style={{ color }}`. They cannot be expressed as stylesheet variants.
-    const { theme } = useUnistyles();
     const { bottom: safeBottom } = useSafeAreaInsets();
+    // Apollo cache reads run inside the image-preload effect; each leaf
+    // computes its own display data via `useFragment`.
+    const client = useApolloClient();
     const flashListRef = useRef<FlashListRef<PantryListItem>>(null);
     const settingsIconRef = useRef<View>(null);
 
@@ -176,7 +174,7 @@ export const PantryContent = React.forwardRef<
       closeSortModal,
       handleSortSelect,
       sortItems,
-    } = usePantrySorting<PantryItem>({
+    } = usePantrySorting<PantryListNode>({
       initialSortOption,
       initialSortDirection,
       onSortChange,
@@ -213,32 +211,31 @@ export const PantryContent = React.forwardRef<
       perfCallbacks.onDataReferenceChange,
     );
 
-    // Precomputed theme colors — used by computeDisplayMap.
-    const expirationColors: ExpirationColors = {
-      expired: theme.colors.expiration.expiredText,
-      warning: theme.colors.expiration.warningText,
-      normal: theme.colors.textSecondary,
-    };
-
-    const displayMap = computeDisplayMap(
-      sortedItems,
-      expirationColors,
-      getLocationString,
-    );
-
+    // Image preloading — fragment refs don't carry field data at runtime
+    // (Apollo masks them), so unmask via `cache.readFragment` here to extract
+    // image URLs. This is a one-shot read inside an idle callback, not a
+    // render-path subscription.
     useEffect(() => {
-      const urls: string[] = [];
-      for (const item of sortedItems) {
-        const display = displayMap.get(item.id);
-        if (display?.imageUrl) urls.push(display.imageUrl);
-      }
-      if (urls.length === 0) return;
+      if (sortedItems.length === 0) return;
 
       const handle = requestIdleCallback(() => {
-        preloadImages(urls);
+        const urls: string[] = [];
+        for (const node of sortedItems) {
+          const item = client.cache.readFragment<PantryItemDisplayFragment>({
+            fragment: PantryItemDisplayFragmentDoc,
+            fragmentName: 'PantryItemDisplay',
+            from: node,
+          });
+          if (!item) continue;
+          const url = resolveImageUrl(item);
+          if (url) urls.push(url);
+        }
+        if (urls.length > 0) {
+          preloadImages(urls);
+        }
       });
       return () => cancelIdleCallback(handle);
-    }, [sortedItems, displayMap]);
+    }, [sortedItems, client]);
 
     const prevLocationFilter = useRef(locationFilter);
     const prevSortOption = useRef(sortOption);
@@ -327,145 +324,143 @@ export const PantryContent = React.forwardRef<
         <View style={styles.container}>
           <View style={styles.listContainer}>
             <View style={styles.contentFill}>
-              <DisplayMapContext.Provider value={displayMap}>
-                <FlashList<PantryListItem>
-                  ref={flashListRef}
-                  CellRendererComponent={AnimatedCellRenderer}
-                  testID="pantry-list"
-                  data={listData}
-                  renderItem={renderListItem}
-                  keyExtractor={listKeyExtractor}
-                  getItemType={getListItemType}
-                  stickyHeaderIndices={STICKY_HEADER_INDICES}
-                  stickyHeaderConfig={STICKY_HEADER_CONFIG}
-                  drawDistance={DRAW_DISTANCE}
-                  maxItemsInRecyclePool={15}
-                  extraData={extraData}
-                  contentContainerStyle={listContentStyle}
-                  showsVerticalScrollIndicator={false}
-                  onScroll={scrollHandler}
-                  onScrollEndDrag={onScrollEndDrag}
-                  onMomentumScrollEnd={onMomentumScrollEnd}
-                  scrollEventThrottle={16}
-                  refreshControl={
-                    onRefresh ? (
-                      <RefreshControl
-                        testID="pantry-refresh-control"
-                        refreshing={refreshing}
-                        onRefresh={onRefresh}
-                        progressViewOffset={100}
+              <FlashList<PantryListItem>
+                ref={flashListRef}
+                CellRendererComponent={AnimatedCellRenderer}
+                testID="pantry-list"
+                data={listData}
+                renderItem={renderListItem}
+                keyExtractor={listKeyExtractor}
+                getItemType={getListItemType}
+                stickyHeaderIndices={STICKY_HEADER_INDICES}
+                stickyHeaderConfig={STICKY_HEADER_CONFIG}
+                drawDistance={DRAW_DISTANCE}
+                maxItemsInRecyclePool={15}
+                extraData={extraData}
+                contentContainerStyle={listContentStyle}
+                showsVerticalScrollIndicator={false}
+                onScroll={scrollHandler}
+                onScrollEndDrag={onScrollEndDrag}
+                onMomentumScrollEnd={onMomentumScrollEnd}
+                scrollEventThrottle={16}
+                refreshControl={
+                  onRefresh ? (
+                    <RefreshControl
+                      testID="pantry-refresh-control"
+                      refreshing={refreshing}
+                      onRefresh={onRefresh}
+                      progressViewOffset={100}
+                    />
+                  ) : undefined
+                }
+                ListHeaderComponent={
+                  <>
+                    <View style={styles.header}>
+                      <PantryHeader
+                        userName={userName}
+                        householdName={householdName}
+                        avatarUrl={avatarUrl}
+                        notificationCount={notificationCount}
+                        onAvatarPress={onAvatarPress}
+                        onHomePress={onHomePress}
+                        onNotificationPress={onNotificationPress}
+                        onHomeBadgeLayout={onHomeBadgeLayout}
                       />
-                    ) : undefined
-                  }
-                  ListHeaderComponent={
-                    <>
-                      <View style={styles.header}>
-                        <PantryHeader
-                          userName={userName}
-                          householdName={householdName}
-                          avatarUrl={avatarUrl}
-                          notificationCount={notificationCount}
-                          onAvatarPress={onAvatarPress}
-                          onHomePress={onHomePress}
-                          onNotificationPress={onNotificationPress}
-                          onHomeBadgeLayout={onHomeBadgeLayout}
-                        />
-                      </View>
-                      <View style={styles.searchContainer}>
-                        <SearchBar
-                          value={searchQuery}
-                          onChangeText={onSearchChange}
-                          placeholder="Search your pantry..."
-                          showSearchIcon={true}
-                          testID="pantry-search-input"
-                          innerRightIcon={
-                            <View
-                              ref={settingsIconRef}
-                              collapsable={false}
-                              onLayout={() => {
-                                if (onSettingsIconLayout) {
-                                  requestAnimationFrame(() => {
-                                    settingsIconRef.current?.measure(
-                                      (_x, _y, w, h, pageX, pageY) => {
-                                        if (w > 0 && h > 0) {
-                                          onSettingsIconLayout({
-                                            x: pageX,
-                                            y: pageY,
-                                            width: w,
-                                            height: h,
-                                          });
-                                        }
-                                      },
-                                    );
-                                  });
-                                }
-                              }}
+                    </View>
+                    <View style={styles.searchContainer}>
+                      <SearchBar
+                        value={searchQuery}
+                        onChangeText={onSearchChange}
+                        placeholder="Search your pantry..."
+                        showSearchIcon={true}
+                        testID="pantry-search-input"
+                        innerRightIcon={
+                          <View
+                            ref={settingsIconRef}
+                            collapsable={false}
+                            onLayout={() => {
+                              if (onSettingsIconLayout) {
+                                requestAnimationFrame(() => {
+                                  settingsIconRef.current?.measure(
+                                    (_x, _y, w, h, pageX, pageY) => {
+                                      if (w > 0 && h > 0) {
+                                        onSettingsIconLayout({
+                                          x: pageX,
+                                          y: pageY,
+                                          width: w,
+                                          height: h,
+                                        });
+                                      }
+                                    },
+                                  );
+                                });
+                              }
+                            }}
+                          >
+                            <Pressable
+                              onPress={onSettingsPress}
+                              hitSlop={8}
+                              accessibilityRole="button"
+                              accessibilityLabel="Pantry settings"
                             >
-                              <Pressable
-                                onPress={onSettingsPress}
-                                hitSlop={8}
-                                accessibilityRole="button"
-                                accessibilityLabel="Pantry settings"
-                              >
-                                <Icon
-                                  name="settings-outline"
-                                  size={18}
-                                  tone="textTertiary"
-                                />
-                              </Pressable>
-                            </View>
-                          }
+                              <Icon
+                                name="settings-outline"
+                                size={18}
+                                tone="textTertiary"
+                              />
+                            </Pressable>
+                          </View>
+                        }
+                      />
+                      {!!stats && (
+                        <PantryAlertBar
+                          stats={stats}
+                          onAnalyticsPress={onAnalyticsPress}
+                          onLowStockNavigate={onLowStockNavigate}
+                          onExpiringNavigate={onExpiringNavigate}
+                          sortLabel={`Sort ${
+                            sortDirection === 'asc' ? '↑' : '↓'
+                          }`}
+                          onSortPress={openSortModal}
                         />
-                        {!!stats && (
-                          <PantryAlertBar
-                            stats={stats}
-                            onAnalyticsPress={onAnalyticsPress}
-                            onLowStockNavigate={onLowStockNavigate}
-                            onExpiringNavigate={onExpiringNavigate}
-                            sortLabel={`Sort ${
-                              sortDirection === 'asc' ? '↑' : '↓'
-                            }`}
-                            onSortPress={openSortModal}
-                          />
-                        )}
-                      </View>
-                    </>
-                  }
-                  ListFooterComponent={
-                    isEmpty ? (
-                      <PantryEmptyState
-                        showSkeletons={showSkeletons}
-                        searchQuery={searchQuery}
-                        itemCount={items.length}
-                        locationFilter={locationFilter}
-                        tabs={tabs}
-                        onAddItem={onAddItem}
-                        noHomeSelected={noHomeSelected}
-                        noHomes={noHomes}
-                        noPantries={noPantries}
-                        onSelectHome={onSelectHome}
-                        onCreatePantry={onCreatePantry}
-                        overallItemCount={locationCounts.all ?? 0}
-                      />
-                    ) : (
-                      <PaginationFooter
-                        hasMore={hasMore}
-                        itemCount={deferredSortedItems.length}
-                        SkeletonComponent={PantryItemSkeleton}
-                        skeletonCount={3}
-                      />
-                    )
-                  }
-                  onEndReached={onEndReached}
-                  onEndReachedThreshold={
-                    FLASHLIST_DEFAULTS.analyticsHeavyFullScreen
-                      .onEndReachedThreshold
-                  }
-                  onLoad={perfCallbacks.onLoad}
-                  onViewableItemsChanged={perfCallbacks.onViewableItemsChanged}
-                  maintainVisibleContentPosition={MVCP_DISABLED}
-                />
-              </DisplayMapContext.Provider>
+                      )}
+                    </View>
+                  </>
+                }
+                ListFooterComponent={
+                  isEmpty ? (
+                    <PantryEmptyState
+                      showSkeletons={showSkeletons}
+                      searchQuery={searchQuery}
+                      itemCount={items.length}
+                      locationFilter={locationFilter}
+                      tabs={tabs}
+                      onAddItem={onAddItem}
+                      noHomeSelected={noHomeSelected}
+                      noHomes={noHomes}
+                      noPantries={noPantries}
+                      onSelectHome={onSelectHome}
+                      onCreatePantry={onCreatePantry}
+                      overallItemCount={locationCounts.all ?? 0}
+                    />
+                  ) : (
+                    <PaginationFooter
+                      hasMore={hasMore}
+                      itemCount={deferredSortedItems.length}
+                      SkeletonComponent={PantryItemSkeleton}
+                      skeletonCount={3}
+                    />
+                  )
+                }
+                onEndReached={onEndReached}
+                onEndReachedThreshold={
+                  FLASHLIST_DEFAULTS.analyticsHeavyFullScreen
+                    .onEndReachedThreshold
+                }
+                onLoad={perfCallbacks.onLoad}
+                onViewableItemsChanged={perfCallbacks.onViewableItemsChanged}
+                maintainVisibleContentPosition={MVCP_DISABLED}
+              />
             </View>
           </View>
 

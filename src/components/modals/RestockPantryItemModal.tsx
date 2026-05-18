@@ -11,7 +11,6 @@ import { FractionQuickSelect } from '#components/atoms/FractionQuickSelect';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { formatQuantity } from '#/utils/formatQuantity';
 import { useConversionPreview } from '#features/pantry/hooks/useConversionPreview';
-import { type PantryItemFragment } from '#features/pantry/graphql/pantryFragments.generated';
 import { commonStyles } from '#/styles/commonStyles';
 import { PantryOperation } from '#features/pantry/hooks/useOperationUnits';
 import {
@@ -22,7 +21,7 @@ import { Text } from '#components/atoms/Text';
 
 interface RestockPantryItemModalProps {
   visible: boolean;
-  pantryItem: PantryItemFragment | null;
+  pantryItemId: string | null;
   onClose: () => void;
   onConfirm: (
     quantity: number,
@@ -37,7 +36,7 @@ interface RestockPantryItemModalProps {
 
 export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
   visible,
-  pantryItem,
+  pantryItemId,
   onClose,
   onConfirm,
 }) => {
@@ -55,7 +54,7 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
   };
 
   const handleConfirm = (shared: PantryActionSharedState) => {
-    if (!pantryItem) return;
+    if (!pantryItemId) return;
 
     const quantityValue = parseFractionalInput(quantityInput);
     if (quantityValue === null || isNaN(quantityValue) || quantityValue <= 0) {
@@ -87,7 +86,7 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
   return (
     <PantryActionModal
       visible={visible}
-      pantryItem={pantryItem}
+      pantryItemId={pantryItemId}
       onClose={onClose}
       title={t('restockItem.title')}
       confirmLabel={t('restockItem.restock')}

@@ -1502,7 +1502,7 @@ This project uses Apollo Client `~4.1.7`. AC 4.0 introduced several new hooks an
 | `useReadQuery` | Read data from a `useBackgroundQuery` queryRef in a child component | Available, **not adopted** (companion to `useBackgroundQuery`) |
 | `useFragment` | Subscribe to a specific fragment in cache without a query | **Adopted** — `ReviewCard`, `BatchListItem`, `MealPlanItemCard`, `TemplateCard`. New components consuming entity data should use it; see fragment colocation convention in `CLAUDE.md` |
 | `dataState` | Discriminated union on query results (`{status: 'loading' \| 'error' \| 'complete', data?}`) for type-safe data access | Available, not adopted (would require widespread refactor) |
-| `dataMasking: true` | Strips fragment fields from parent query results so children must use `useFragment` | **Not enabled** — would break direct-access consumers across the codebase. Re-evaluate once colocation migration progresses |
+| `dataMasking: true` | Strips fragment fields from parent query results so children must use `useFragment` | **Enabled** — every existing fragment spread carries `@unmask(mode: "migrate")` so direct-access consumers keep working and log dev-mode warnings. New fragments should omit `@unmask`; their consumers must use `useFragment`. |
 | `apollo3-cache-persist` | Apollo's recommended cache persistence library | **Not adopted** — see [Cache Persistence & Restoration](#cache-persistence--restoration) for the MMKV-based custom implementation and the reasons |
 
 #### AC 4.0 New Concepts

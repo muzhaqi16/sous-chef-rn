@@ -74,6 +74,7 @@ function initializeClient() {
       name: 'sous-chef-app',
       version: packageJson.version,
     },
+    dataMasking: true,
     defaultOptions: {
       query: {
         fetchPolicy: 'network-only', // Always fetch fresh data for one-time queries

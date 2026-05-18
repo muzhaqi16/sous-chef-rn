@@ -2,9 +2,11 @@
  * Shared utilities for shopping list item mutations
  */
 
+import type { Unmasked } from '@apollo/client/masking';
 import { createRemoveFromParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { createOptimisticEntity } from '#/apollo/utils/createOptimisticResponse';
 import { generateId } from '#/utils/generateId';
+import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 
 interface OptimisticShoppingListItemFields {
   itemName: string;
@@ -19,16 +21,22 @@ interface OptimisticShoppingListItemFields {
 /**
  * Creates an optimistic ShoppingListItem entity with sensible defaults.
  * Returns the temp ID so callers can track it for eviction on server response.
+ *
+ * Return type is `Unmasked<ShoppingListItemDisplayFragment>` — the structural
+ * shape Apollo's `optimisticResponse` (and `cache.writeFragment`) expects when
+ * data masking is enabled. Declaring it here means call sites don't need to.
  */
 export function createOptimisticShoppingListItem(
   fields: OptimisticShoppingListItemFields,
-) {
+): { tempId: string; entity: Unmasked<ShoppingListItemDisplayFragment> } {
   const tempId = `temp-${generateId()}`;
-  const entity = createOptimisticEntity('ShoppingListItem', tempId, {
+  const entity = createOptimisticEntity<
+    Unmasked<ShoppingListItemDisplayFragment>
+  >('ShoppingListItem', tempId, {
     itemName: fields.itemName,
     quantity: fields.quantity ?? 1,
     quantityInput: fields.quantityInput ?? null,
-    displayFormat: null,
+    displayFormat: undefined,
     unitName: fields.unitName ?? null,
     category: fields.category ?? null,
     notes: null,

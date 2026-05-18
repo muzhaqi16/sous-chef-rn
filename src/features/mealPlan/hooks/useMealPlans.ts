@@ -1,4 +1,4 @@
-import { useQuery } from '@apollo/client/react';
+import { useApolloClient, useQuery } from '@apollo/client/react';
 import { GetMealPlansDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 import {
   SortOrder,
@@ -7,9 +7,14 @@ import {
 import { useIsLoggedOut } from '#hooks/auth/useIsLoggedOut';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { useConnectionData } from '#hooks/utils/useConnectionData';
+import {
+  MealPlanDisplayFragmentDoc,
+  type MealPlanDisplayFragment,
+} from '#features/mealPlan/graphql/mealPlanFragments.generated';
 
 export function useMealPlans(filters?: MealPlanFilters) {
   const isLoggedOut = useIsLoggedOut();
+  const client = useApolloClient();
 
   const { data, loading, error, refetch, fetchMore } = useQuery(
     GetMealPlansDocument,
@@ -32,7 +37,19 @@ export function useMealPlans(filters?: MealPlanFilters) {
     fetchMore,
   });
 
-  const mealPlans = connectionData.items;
+  // Edges arrive as masked refs (`{ __typename: 'MealPlan' } & { $fragmentRefs }`).
+  // Materialize via cache.readFragment so consumers see the full
+  // MealPlanDisplayFragment shape (startDate, endDate, name, …) without
+  // exposing raw refs.
+  const mealPlans = connectionData.items
+    .map(ref =>
+      client.cache.readFragment<MealPlanDisplayFragment>({
+        fragment: MealPlanDisplayFragmentDoc,
+        fragmentName: 'MealPlanDisplay',
+        from: ref,
+      }),
+    )
+    .filter((p): p is MealPlanDisplayFragment => p !== null);
 
   // Find the current meal plan (active > nearest upcoming > most recent past)
   const now = new Date();

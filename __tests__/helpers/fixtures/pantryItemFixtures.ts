@@ -6,6 +6,7 @@
  * Defaults emit nullable fields as null; override the few needed for
  * each test.
  */
+import type { Unmasked } from '@apollo/client/masking';
 import type { GetPantryItemQuery } from '#features/pantry/graphql/pantry.generated';
 import {
   StorageState,
@@ -15,7 +16,10 @@ import {
   UnitType,
 } from '#/graphql/generated/schemaTypes';
 
-type PantryItemNode = NonNullable<GetPantryItemQuery['pantryItem']>;
+// Test fixtures need the fully unmasked shape so they can specify nested
+// fragment fields directly when seeding the cache.
+type UnmaskedGetPantryItemQuery = Unmasked<GetPantryItemQuery>;
+type PantryItemNode = NonNullable<UnmaskedGetPantryItemQuery['pantryItem']>;
 type UnitData = PantryItemNode['unit'];
 
 export interface PantryItemFixture {
@@ -56,10 +60,10 @@ function unit(symbol = 'L', name = 'liters'): UnitData {
 /** Build the full GetPantryItem query result. */
 export function pantryItemData(
   fixture: PantryItemFixture = {},
-): GetPantryItemQuery {
+): UnmaskedGetPantryItemQuery {
   const id = fixture.id ?? 'pi1';
   const tags = fixture.tags ?? [];
-  const data: GetPantryItemQuery = {
+  const data: UnmaskedGetPantryItemQuery = {
     __typename: 'Query',
     pantryItem: {
       __typename: 'PantryItem',

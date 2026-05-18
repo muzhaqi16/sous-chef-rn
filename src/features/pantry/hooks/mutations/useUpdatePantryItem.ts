@@ -10,10 +10,7 @@
 
 import { useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
-import {
-  UpdatePantryItemDocument,
-  type UpdatePantryItemMutation,
-} from '#features/pantry/graphql/pantry.generated';
+import { UpdatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import type { PantryItemFragment } from '#features/pantry/graphql/pantryFragments.generated';
 import { StorageType } from '#/graphql/generated/schemaTypes';
 import { useErrorService } from '#/services/errorService';
@@ -172,20 +169,20 @@ export function useUpdatePantryItem({
       currentItem,
       optimisticUpdate,
     );
-    const optimisticResponse: UpdatePantryItemMutation = {
-      __typename: 'Mutation',
-      updatePantryItem: {
-        __typename: 'PantryItemPayload',
-        success: true,
-        message: '',
-        code: 'SUCCESS',
-        pantryItem:
-          optimisticPantryItem as UpdatePantryItemMutation['updatePantryItem']['pantryItem'],
-      },
-    };
     updateMutation({
       variables: { id: itemId, input: updateInput },
-      optimisticResponse,
+      // Inline so Apollo's `Unmasked<NoInfer<TData>>` typing contextually
+      // checks the structural shape; no local annotation needed.
+      optimisticResponse: {
+        __typename: 'Mutation',
+        updatePantryItem: {
+          __typename: 'PantryItemPayload',
+          success: true,
+          message: '',
+          code: 'SUCCESS',
+          pantryItem: optimisticPantryItem,
+        },
+      },
       update(cache) {
         executeCacheUpdate(
           () => {

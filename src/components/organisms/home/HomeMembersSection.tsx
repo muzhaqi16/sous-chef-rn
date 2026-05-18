@@ -2,46 +2,49 @@ import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
-import {
-  getMemberDisplayName,
-  type Member,
-} from '#/utils/formatters/memberFormatters';
-import { getInviteDisplayName } from '#/utils/formatters/inviteFormatters';
 import { HomeMemberCard } from './HomeMemberCard';
 import { HomeInviteCard } from './HomeInviteCard';
 import { Text } from '#components/atoms/Text';
 import { InviteStatus } from '#/graphql/generated/schemaTypes';
+import type { HomeDetailScreen_HomeFragment } from '#/screens/home/HomeDetailScreen.generated';
 
-interface Invite {
-  id: string;
-  email: string;
-  recipientName?: string | null;
-  status: string;
-}
+type MemberNode =
+  HomeDetailScreen_HomeFragment['membersConnection']['edges'][number]['node'];
+type InviteNode =
+  HomeDetailScreen_HomeFragment['invitesConnection']['edges'][number]['node'];
 
 interface HomeMembersSectionProps {
-  members: Member[];
-  invites: Invite[];
-  currentUserId?: string;
-  currentUserMembership?: Member | null;
+  members: ReadonlyArray<MemberNode>;
+  invites: ReadonlyArray<InviteNode>;
+  canManageHome?: boolean;
+  /** Resolve a member's label (display name + isCurrentUser flag). The screen
+   *  owns the user-store dependency so this component stays presentational. */
+  resolveMemberLabel: (member: MemberNode) => {
+    isCurrentUser: boolean;
+    displayName: string;
+  };
+  resolveInviteLabel: (invite: InviteNode) => string;
   onChangeRole: (membershipId: string, role: string, name: string) => void;
   onRemove: (membershipId: string, name: string) => void;
   onRevokeInvite: (inviteId: string, email: string) => void;
 }
 
 /**
- * HomeMembersSection - Complete section for members and invites management
+ * HomeMembersSection - Members + pending invites for HomeDetailScreen.
+ *
+ * Each row passes its node down as a fragment ref; the row component runs its
+ * own `useFragment` so cells refresh independently when their entity changes.
  */
 export const HomeMembersSection: React.FC<HomeMembersSectionProps> = ({
   members,
   invites,
-  currentUserId,
-  currentUserMembership,
+  canManageHome,
+  resolveMemberLabel,
+  resolveInviteLabel,
   onChangeRole,
   onRemove,
   onRevokeInvite,
 }) => {
-  // Filter pending invites
   const pendingInvites = invites.filter(
     inv => inv.status !== InviteStatus.Accepted,
   );
@@ -49,18 +52,17 @@ export const HomeMembersSection: React.FC<HomeMembersSectionProps> = ({
   return (
     <View>
       {/* Active Members */}
-      {members && members.length > 0 ? (
+      {members.length > 0 ? (
         members.map(member => {
-          const isCurrentUser = member.user?.id === currentUserId;
-          const displayName = getMemberDisplayName(member, currentUserId);
+          const { isCurrentUser, displayName } = resolveMemberLabel(member);
 
           return (
             <HomeMemberCard
               key={member.id}
-              member={member}
+              memberRef={member}
               displayName={displayName}
               isCurrentUser={isCurrentUser}
-              currentUserMembership={currentUserMembership}
+              canManageHome={canManageHome}
               onChangeRole={() =>
                 onChangeRole(member.id, member.role, displayName)
               }
@@ -78,7 +80,7 @@ export const HomeMembersSection: React.FC<HomeMembersSectionProps> = ({
       )}
 
       {/* Pending Invites */}
-      {!!pendingInvites && pendingInvites.length > 0 && (
+      {pendingInvites.length > 0 && (
         <View style={styles.invitesSection}>
           <Text
             size="sm"
@@ -88,19 +90,15 @@ export const HomeMembersSection: React.FC<HomeMembersSectionProps> = ({
           >
             Pending Invitations
           </Text>
-          {pendingInvites.map(invite => {
-            const displayName = getInviteDisplayName(invite);
-
-            return (
-              <HomeInviteCard
-                key={invite.id}
-                invite={invite}
-                displayName={displayName}
-                canRevoke={currentUserMembership?.canManageHome}
-                onRevoke={() => onRevokeInvite(invite.id, invite.email)}
-              />
-            );
-          })}
+          {pendingInvites.map(invite => (
+            <HomeInviteCard
+              key={invite.id}
+              inviteRef={invite}
+              displayName={resolveInviteLabel(invite)}
+              canRevoke={canManageHome}
+              onRevoke={() => onRevokeInvite(invite.id, invite.email)}
+            />
+          ))}
         </View>
       )}
     </View>

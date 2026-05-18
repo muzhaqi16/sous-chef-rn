@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
+import { useFragment } from '@apollo/client/react';
 import { Pressable } from '#components/atoms/themedComponents';
 import { BottomSheetView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
@@ -9,21 +10,29 @@ import {
   ThemedBottomSheetTextInput,
 } from '#components/atoms/themedComponents';
 import { StarRatingInput } from './StarRatingInput';
-import { type RecipeReviewFragment } from '#features/recipes/graphql/recipeFragments.generated';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { Text } from '#components/atoms/Text';
+import { WriteReviewSheet_ReviewFragmentDoc } from './WriteReviewSheet.generated';
 
 interface WriteReviewSheetProps {
   visible: boolean;
-  existingReview?: RecipeReviewFragment | null;
+  existingReviewId?: string | null;
   onSubmit: (rating: number, comment?: string) => Promise<void>;
   onClose: () => void;
   submitting: boolean;
 }
 
+/**
+ * Bottom sheet for writing or editing a recipe review.
+ *
+ * Reads the existing review (when present) from the Apollo cache via
+ * `useFragment` keyed by `existingReviewId`. Form state is seeded from the
+ * cached review only when the sheet opens or the id changes — user edits are
+ * preserved across cache updates to the same review.
+ */
 export const WriteReviewSheet: React.FC<WriteReviewSheetProps> = ({
   visible,
-  existingReview,
+  existingReviewId,
   onSubmit,
   onClose,
   submitting,
@@ -34,15 +43,28 @@ export const WriteReviewSheet: React.FC<WriteReviewSheetProps> = ({
     snapPoints: ['55%'],
   });
 
+  const { data, complete } = useFragment({
+    fragment: WriteReviewSheet_ReviewFragmentDoc,
+    fragmentName: 'WriteReviewSheet_review',
+    from: existingReviewId
+      ? { __typename: 'RecipeReview', id: existingReviewId }
+      : null,
+  });
+  const existingReview = existingReviewId && complete ? data : null;
+
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
 
-  // Reset / populate form when sheet opens (render-time state update)
+  // Reset / populate form when sheet opens or the target review changes
+  // (render-time state update). Keying on `existingReviewId` (not the
+  // materialized object) means a cache update to the same review doesn't
+  // clobber the user's in-progress edits.
   const [prevVisible, setPrevVisible] = useState(visible);
-  const [prevExistingReview, setPrevExistingReview] = useState(existingReview);
-  if (visible !== prevVisible || existingReview !== prevExistingReview) {
+  const [prevExistingReviewId, setPrevExistingReviewId] =
+    useState(existingReviewId);
+  if (visible !== prevVisible || existingReviewId !== prevExistingReviewId) {
     setPrevVisible(visible);
-    setPrevExistingReview(existingReview);
+    setPrevExistingReviewId(existingReviewId);
     if (visible) {
       setRating(existingReview?.rating ?? 0);
       setComment(existingReview?.comment ?? '');
@@ -55,7 +77,7 @@ export const WriteReviewSheet: React.FC<WriteReviewSheetProps> = ({
     onClose();
   };
 
-  const isEditing = !!existingReview;
+  const isEditing = !!existingReviewId;
 
   return (
     <BottomSheetModal ref={ref} {...modalProps} index={0}>

@@ -149,7 +149,7 @@ export function ShoppingListModalsProvider({
       {/* Move to Pantry Modal */}
       <MoveToPantryModal
         visible={moveToPantry.visible}
-        shoppingListItem={moveToPantry.selectedItem}
+        shoppingListItemId={moveToPantry.selectedItemId}
         pantries={moveToPantry.pantries}
         selectedPantryId={moveToPantry.selectedPantryId}
         onClose={moveToPantry.close}

@@ -8,10 +8,7 @@ import {
   type FlashListRef,
   type ListRenderItemInfo,
 } from '@shopify/flash-list';
-import type {
-  SortableShoppingListProps,
-  SortableShoppingListItem,
-} from './types';
+import type { SortableShoppingListProps, ShoppingListRowItem } from './types';
 import { AnimatedCellRenderer } from '#components/atoms/AnimatedCellRenderer';
 import { SwipeableListItem } from './SortableItem';
 import {
@@ -21,7 +18,9 @@ import {
 } from './SortableListActionsContext';
 import {
   SortableListThemeContext,
+  ShoppingListRowOptionsContext,
   type SortableListThemeColors,
+  type ShoppingListRowOptions,
 } from './SortableListThemeContext';
 import { getTabBarBottomPadding } from '#constants/layout';
 import { useRenderTime } from '#hooks/performance/useRenderTime';
@@ -38,8 +37,8 @@ const DRAW_DISTANCE = Math.round(Dimensions.get('window').height * 2);
 const MVCP_DISABLED = { disabled: true };
 
 // Module-scope functions — zero runtime overhead (no compiler tracking/comparison)
-const keyExtractor = (item: SortableShoppingListItem) => item.id;
-const renderItem = (info: ListRenderItemInfo<SortableShoppingListItem>) => (
+const keyExtractor = (item: ShoppingListRowItem) => item.id;
+const renderItem = (info: ListRenderItemInfo<ShoppingListRowItem>) => (
   <SwipeableListItem {...info} />
 );
 const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
@@ -65,13 +64,14 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
   onEndReached,
   onEndReachedThreshold = FLASHLIST_DEFAULTS.fullScreen.onEndReachedThreshold,
   ListEmptyComponent,
+  showImages = true,
   onScroll,
   onScrollEndDrag,
   onMomentumScrollEnd,
   scrollEventThrottle,
 }) => {
   useRenderTime('SortableShoppingList', { slowThreshold: 1000 });
-  const flashListRef = useRef<FlashListRef<SortableShoppingListItem>>(null);
+  const flashListRef = useRef<FlashListRef<ShoppingListRowItem>>(null);
 
   const perfCallbacks = useFlashListPerformance(flashListRef, {
     componentName: 'SortableShoppingList',
@@ -145,37 +145,44 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
     flexGrow: 1,
   };
 
+  const rowOptions: ShoppingListRowOptions = { showImages };
+
   return (
     <SortableListThemeContext.Provider value={themeColors}>
-      <SortableListActionsProvider actions={actions} permissions={permissions}>
-        <View style={styles.container}>
-          <FlashList<SortableShoppingListItem>
-            ref={flashListRef}
-            CellRendererComponent={AnimatedCellRenderer}
-            data={items}
-            extraData={`${disabled}-${canRemoveItems}-${canEditItems}-${canMarkPurchased}-${canReorderItems}`}
-            keyExtractor={keyExtractor}
-            renderItem={renderItem}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={contentContainerStyle}
-            ListHeaderComponent={ListHeaderComponent ?? undefined}
-            ListFooterComponent={ListFooterComponent ?? undefined}
-            ListEmptyComponent={ListEmptyComponent ?? undefined}
-            onEndReached={onEndReached}
-            onEndReachedThreshold={onEndReachedThreshold}
-            onLoad={perfCallbacks.onLoad}
-            onViewableItemsChanged={perfCallbacks.onViewableItemsChanged}
-            drawDistance={DRAW_DISTANCE}
-            onScroll={onScroll}
-            onScrollEndDrag={onScrollEndDrag}
-            onMomentumScrollEnd={onMomentumScrollEnd}
-            scrollEventThrottle={scrollEventThrottle}
-            onRefresh={onRefresh}
-            refreshing={refreshing}
-            maintainVisibleContentPosition={MVCP_DISABLED}
-          />
-        </View>
-      </SortableListActionsProvider>
+      <ShoppingListRowOptionsContext.Provider value={rowOptions}>
+        <SortableListActionsProvider
+          actions={actions}
+          permissions={permissions}
+        >
+          <View style={styles.container}>
+            <FlashList<ShoppingListRowItem>
+              ref={flashListRef}
+              CellRendererComponent={AnimatedCellRenderer}
+              data={items}
+              extraData={`${disabled}-${canRemoveItems}-${canEditItems}-${canMarkPurchased}-${canReorderItems}`}
+              keyExtractor={keyExtractor}
+              renderItem={renderItem}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={contentContainerStyle}
+              ListHeaderComponent={ListHeaderComponent ?? undefined}
+              ListFooterComponent={ListFooterComponent ?? undefined}
+              ListEmptyComponent={ListEmptyComponent ?? undefined}
+              onEndReached={onEndReached}
+              onEndReachedThreshold={onEndReachedThreshold}
+              onLoad={perfCallbacks.onLoad}
+              onViewableItemsChanged={perfCallbacks.onViewableItemsChanged}
+              drawDistance={DRAW_DISTANCE}
+              onScroll={onScroll}
+              onScrollEndDrag={onScrollEndDrag}
+              onMomentumScrollEnd={onMomentumScrollEnd}
+              scrollEventThrottle={scrollEventThrottle}
+              onRefresh={onRefresh}
+              refreshing={refreshing}
+              maintainVisibleContentPosition={MVCP_DISABLED}
+            />
+          </View>
+        </SortableListActionsProvider>
+      </ShoppingListRowOptionsContext.Provider>
     </SortableListThemeContext.Provider>
   );
 };

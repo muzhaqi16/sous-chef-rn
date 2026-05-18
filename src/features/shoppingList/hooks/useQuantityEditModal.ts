@@ -1,8 +1,11 @@
 import { useState } from 'react';
 import { alertService } from '#/services/alertService';
-import { useMutation } from '@apollo/client/react';
+import { useFragment, useMutation } from '@apollo/client/react';
 import { UpdateShoppingListItemQuantityDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { type ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
+import {
+  ShoppingListItemDisplayFragmentDoc,
+  type ShoppingListItemDisplayFragment,
+} from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { Telemetry } from '#/services/telemetry';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { resolveImageUrl } from '#utils/imageUtils';
@@ -63,25 +66,9 @@ export interface UseQuantityEditModalResult {
 /**
  * Hook to manage QuantityEditSheet state and mutations.
  *
- * Handles:
- * - Modal visibility state
- * - Selected item transformation for QuantityEditSheet
- * - Update mutation with loading state
- * - Error handling with alerts
- *
- * @example
- * ```tsx
- * const quantityEdit = useQuantityEditModal({ items });
- *
- * // In render:
- * <QuantityEditSheet
- *   visible={quantityEdit.visible}
- *   item={quantityEdit.selectedItem}
- *   onClose={quantityEdit.close}
- *   onSave={quantityEdit.save}
- *   loading={quantityEdit.isLoading}
- * />
- * ```
+ * Stores only the entity id in state; the live item is read from the Apollo
+ * cache via `useFragment`, so mutations to the item are reflected in the open
+ * sheet without re-snapshotting.
  */
 export function useQuantityEditModal(
   options: UseQuantityEditModalOptions,
@@ -89,8 +76,7 @@ export function useQuantityEditModal(
   const { items } = options;
 
   const [visible, setVisible] = useState(false);
-  const [selectedItemRaw, setSelectedItemRaw] =
-    useState<ShoppingListItemDisplayFragment | null>(null);
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   // Update mutation
@@ -99,6 +85,24 @@ export function useQuantityEditModal(
       alertService.alert('Error', error.message || 'Failed to update item');
     },
   });
+
+  // Subscribe to the selected item in the cache. When `selectedItemId` is null
+  // we pass `null` to `from` which makes `useFragment` return `complete: false`.
+  const { data: liveItem, complete: liveItemComplete } = useFragment({
+    fragment: ShoppingListItemDisplayFragmentDoc,
+    fragmentName: 'ShoppingListItemDisplayFragment',
+    from: selectedItemId
+      ? { __typename: 'ShoppingListItem', id: selectedItemId }
+      : null,
+  });
+
+  // Prefer the live cache copy; fall back to the snapshot in `items` for the
+  // initial open before the cache has the entity (tests, edge cases).
+  const fallbackItem = selectedItemId
+    ? items.find(i => i.id === selectedItemId) ?? null
+    : null;
+  const selectedItemRaw: ShoppingListItemDisplayFragment | null =
+    selectedItemId && liveItemComplete ? liveItem : fallbackItem;
 
   // Transform raw item to QuantityEditItem format
   const selectedItem: QuantityEditItem | null = selectedItemRaw
@@ -133,14 +137,14 @@ export function useQuantityEditModal(
   const openForItem = (itemId: string) => {
     const item = items.find(i => i.id === itemId);
     if (item) {
-      setSelectedItemRaw(item as ShoppingListItemDisplayFragment);
+      setSelectedItemId(item.id);
       setVisible(true);
     }
   };
 
   const close = () => {
     setVisible(false);
-    setSelectedItemRaw(null);
+    setSelectedItemId(null);
   };
 
   const save = async (
@@ -169,7 +173,7 @@ export function useQuantityEditModal(
         });
 
         setVisible(false);
-        setSelectedItemRaw(null);
+        setSelectedItemId(null);
       },
       () => {
         // Error handled by mutation onError

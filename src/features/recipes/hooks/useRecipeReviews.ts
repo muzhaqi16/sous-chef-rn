@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from '@apollo/client/react';
+import { useApolloClient, useMutation, useQuery } from '@apollo/client/react';
 import {
   CreateRecipeReviewDocument,
   UpdateRecipeReviewDocument,
@@ -10,6 +10,7 @@ import {
   GetRecipeDocument,
 } from '#features/recipes/graphql/recipe.generated';
 import {
+  RecipeReviewFragmentDoc,
   type RecipeFragment,
   type RecipeReviewFragment,
 } from '#features/recipes/graphql/recipeFragments.generated';
@@ -35,6 +36,7 @@ export function useRecipeReviews({
 }: UseRecipeReviewsOptions) {
   const user = useUser();
   const userId = user?.id;
+  const apolloClient = useApolloClient();
 
   // Fetch reviews separately to avoid exceeding query depth limit
   const { data: reviewsData } = useQuery(GetRecipeReviewsDocument, {
@@ -51,11 +53,21 @@ export function useRecipeReviews({
   const rating4Count = backendRecipe?.rating4Count ?? 0;
   const rating5Count = backendRecipe?.rating5Count ?? 0;
 
-  // Sort reviews: most helpful first, then newest
+  // Materialize each masked review ref via cache.readFragment so we can
+  // sort/filter by `helpful`, `createdAt`, and inspect `user`.
   const reviews = (() => {
-    const raw =
+    const rawRefs =
       reviewsData?.recipe?.reviews?.edges?.map(edge => edge.node) ?? [];
-    return [...raw].sort((a, b) => {
+    const materialized: RecipeReviewFragment[] = [];
+    for (const ref of rawRefs) {
+      const review = apolloClient.cache.readFragment<RecipeReviewFragment>({
+        fragment: RecipeReviewFragmentDoc,
+        fragmentName: 'RecipeReviewFragment',
+        from: ref,
+      });
+      if (review) materialized.push(review);
+    }
+    return materialized.sort((a, b) => {
       if (b.helpful !== a.helpful) return b.helpful - a.helpful;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });

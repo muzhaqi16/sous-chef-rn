@@ -11,8 +11,7 @@ query GetMealPlans(
   mealPlans(first: $first, after: $after, filters: $filters, orderBy: $orderBy) {
     edges {
       node {
-        ...MealPlanDisplay
-      }
+        ...MealPlanDisplay      }
       cursor
     }
     pageInfo {
@@ -25,8 +24,7 @@ query GetMealPlans(
 
 query GetMealPlan($id: ID!) {
   mealPlan(id: $id) {
-    ...MealPlanFull
-  }
+    ...MealPlanFull  }
 }
 
 # ============================================
@@ -72,12 +70,7 @@ mutation CreateMealPlanItem($input: CreateMealPlanItemInput!) {
     message
     code
     mealPlanItem {
-      ...MealPlanItemCard_item
-      ...EditCustomMealSheet_item
-      ...DailyMeals_item
-      ...MealPlanMain_item
-      ...MealPlanItemActions_item
-    }
+      ...MealPlanItemCard_item      ...EditCustomMealSheet_item      ...DailyMeals_item      ...MealPlanMain_item      ...MealPlanItemActions_item    }
   }
 }
 
@@ -87,12 +80,7 @@ mutation UpdateMealPlanItem($id: ID!, $input: UpdateMealPlanItemInput!) {
     message
     code
     mealPlanItem {
-      ...MealPlanItemCard_item
-      ...EditCustomMealSheet_item
-      ...DailyMeals_item
-      ...MealPlanMain_item
-      ...MealPlanItemActions_item
-    }
+      ...MealPlanItemCard_item      ...EditCustomMealSheet_item      ...DailyMeals_item      ...MealPlanMain_item      ...MealPlanItemActions_item    }
   }
 }
 
@@ -113,8 +101,7 @@ mutation DuplicateMealPlan($input: DuplicateMealPlanInput!) {
     message
     code
     mealPlan {
-      ...MealPlanDisplay
-    }
+      ...MealPlanDisplay    }
   }
 }
 

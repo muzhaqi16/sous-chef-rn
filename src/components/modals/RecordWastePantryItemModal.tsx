@@ -11,18 +11,18 @@ import { parseFractionalInput } from '#/utils/fractionUtils';
 import { validateDeductionQuantity } from '#/utils/validateDeductionQuantity';
 import { useQuantityFeedback } from '#features/pantry/hooks/useQuantityFeedback';
 import { WasteReason } from '#/graphql/generated/schemaTypes';
-import { type PantryItemFragment } from '#features/pantry/graphql/pantryFragments.generated';
 import { commonStyles } from '#/styles/commonStyles';
 import { PantryOperation } from '#features/pantry/hooks/useOperationUnits';
 import {
   PantryActionModal,
   type PantryActionSharedState,
 } from './PantryActionModal';
+import { type PantryActionModal_PantryItemFragment } from './PantryActionModal.generated';
 import { Text } from '#components/atoms/Text';
 
 interface RecordWastePantryItemModalProps {
   visible: boolean;
-  pantryItem: PantryItemFragment | null;
+  pantryItemId: string | null;
   onClose: () => void;
   onConfirm: (
     wasteAmount: number,
@@ -51,7 +51,7 @@ const WASTE_REASON_OPTIONS: Array<{ labelKey: string; value: WasteReason }> = [
 
 export const RecordWastePantryItemModal: React.FC<
   RecordWastePantryItemModalProps
-> = ({ visible, pantryItem, onClose, onConfirm }) => {
+> = ({ visible, pantryItemId, onClose, onConfirm }) => {
   const { t } = useTranslation();
   const [wasteAmountInput, setWasteAmountInput] = useState('');
   const [wasteReason, setWasteReason] = useState<WasteReason>(
@@ -60,7 +60,7 @@ export const RecordWastePantryItemModal: React.FC<
   const [isComposted, setIsComposted] = useState(false);
   const [isRecycled, setIsRecycled] = useState(false);
 
-  const handleReset = (item: PantryItemFragment) => {
+  const handleReset = (item: PantryActionModal_PantryItemFragment) => {
     setWasteAmountInput(item.quantity.toString());
     setWasteReason(WasteReason.Expired);
     setIsComposted(false);
@@ -68,7 +68,7 @@ export const RecordWastePantryItemModal: React.FC<
   };
 
   const handleConfirm = (shared: PantryActionSharedState) => {
-    if (!pantryItem) return;
+    if (!pantryItemId) return;
 
     const wasteValue = validateDeductionQuantity(
       wasteAmountInput,
@@ -98,7 +98,7 @@ export const RecordWastePantryItemModal: React.FC<
   return (
     <PantryActionModal
       visible={visible}
-      pantryItem={pantryItem}
+      pantryItemId={pantryItemId}
       onClose={onClose}
       title={t('recordWaste.title')}
       confirmLabel={t('recordWaste.recordWaste')}

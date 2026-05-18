@@ -1,11 +1,13 @@
-import { useMutation } from '@apollo/client/react';
+import { useApolloClient, useMutation } from '@apollo/client/react';
 import {
   CreateMealPlanItemDocument,
   UpdateMealPlanItemDocument,
   DeleteMealPlanItemDocument,
-  GetMealPlanDocument,
 } from '#features/mealPlan/graphql/mealPlan.generated';
-import { type MealPlanItemActions_OptimisticFullItemFragment } from './useMealPlanItemActions.generated';
+import {
+  MealPlanItemActions_OptimisticFullItemFragmentDoc,
+  type MealPlanItemActions_OptimisticFullItemFragment,
+} from './useMealPlanItemActions.generated';
 import {
   type CreateMealPlanItemInput,
   type UpdateMealPlanItemInput,
@@ -28,14 +30,10 @@ const removeFromMealPlanItems = createRemoveFromParentArrayUpdater(
 );
 
 export function useMealPlanItemActions(mealPlanId: string | null) {
-  const refetchConfig = mealPlanId
-    ? [{ query: GetMealPlanDocument, variables: { id: mealPlanId } }]
-    : [];
-
+  const client = useApolloClient();
   const [createItemMutation, { loading: creating }] = useMutation(
     CreateMealPlanItemDocument,
     {
-      refetchQueries: refetchConfig,
       update(cache, { data }) {
         if (!data?.createMealPlanItem?.mealPlanItem || !mealPlanId) return;
         addToMealPlanItems(
@@ -48,17 +46,15 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
     },
   );
 
+  // No update/refetch needed — the mutation returns the full mealPlanItem
+  // with id, so Apollo auto-normalizes the cache entry.
   const [updateItemMutation, { loading: updating }] = useMutation(
     UpdateMealPlanItemDocument,
-    {
-      refetchQueries: refetchConfig,
-    },
   );
 
   const [deleteItemMutation, { loading: deleting }] = useMutation(
     DeleteMealPlanItemDocument,
     {
-      refetchQueries: refetchConfig,
       update(cache, { data }) {
         if (!data?.deleteMealPlanItem?.mealPlanItem?.id || !mealPlanId) return;
         removeFromMealPlanItems(
@@ -99,22 +95,37 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
     item: MealPlanItemActions_OptimisticFullItemFragment,
     options?: { deductFromPantry?: boolean; servings?: number; notes?: string },
   ) => {
-    const markingComplete = !item.isCompleted;
-    const hasRecipe = !!item.recipe;
+    // Item arrives masked (only `__typename` + `$fragmentRefs`). Materialize
+    // through the compound optimistic fragment so we have id/isCompleted/recipe
+    // for branching and a complete unmasked payload to spread into the
+    // optimistic response. `cache.readFragment<T>` returns `Unmasked<T> | null`,
+    // so no explicit `Unmasked<>` wrap is needed here.
+    const fullItem = client.cache.readFragment({
+      fragment: MealPlanItemActions_OptimisticFullItemFragmentDoc,
+      fragmentName: 'MealPlanItemActions_optimisticFullItem',
+      from: item,
+    });
+    if (!fullItem) {
+      toastService.error('Failed to update meal');
+      return null;
+    }
+
+    const markingComplete = !fullItem.isCompleted;
+    const hasRecipe = !!fullItem.recipe;
     const deductFromPantry = options?.deductFromPantry;
     const completedAt = markingComplete ? new Date().toISOString() : null;
 
     // Persist optimistic completion state to survive cache-and-network refetches while offline
     optimisticDataPersistence.save(
       'MealPlanItem',
-      item.id,
+      fullItem.id,
       'isCompleted',
       markingComplete,
     );
 
     const result = await updateItemMutation({
       variables: {
-        id: item.id,
+        id: fullItem.id,
         input: {
           isCompleted: markingComplete,
           completedAt,
@@ -134,7 +145,7 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
           message: 'Updated',
           code: 'SUCCESS',
           mealPlanItem: {
-            ...item,
+            ...fullItem,
             isCompleted: markingComplete,
             completedAt,
             ...(options?.servings != null && { servings: options.servings }),
@@ -151,7 +162,7 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
     }
 
     // Clear persisted optimistic state on server confirmation
-    optimisticDataPersistence.clear('MealPlanItem', item.id, 'isCompleted');
+    optimisticDataPersistence.clear('MealPlanItem', fullItem.id, 'isCompleted');
 
     if (markingComplete) {
       if (hasRecipe && deductFromPantry) {

@@ -1,10 +1,10 @@
 import React from 'react';
-import { render, screen, userEvent } from '@testing-library/react-native';
+import { InMemoryCache } from '@apollo/client';
+import { screen, userEvent } from '@testing-library/react-native';
+import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { HomeCard } from '../HomeCard';
-import {
-  MembershipRole,
-  MembershipStatus,
-} from '#/graphql/generated/schemaTypes';
+import { HomeCard_HomeFragmentDoc } from '../HomeCard.generated';
+import { MembershipRole } from '#/graphql/generated/schemaTypes';
 
 jest.mock('#utils/iconUtils', () => ({
   Icon: 'Icon',
@@ -63,96 +63,152 @@ jest.mock('../MembersList', () => {
   };
 });
 
-describe('HomeCard', () => {
-  const mockHome = {
-    id: 'home-1',
-    name: 'My Kitchen',
-    members: [
-      {
+function buildHome(
+  overrides: { name?: string; memberCount?: number; pantryCount?: number } = {},
+) {
+  const members = [
+    {
+      __typename: 'MembershipEdge',
+      node: {
+        __typename: 'Membership',
         id: 'm1',
         role: MembershipRole.Admin,
-        status: MembershipStatus.Active,
+        userId: 'u1',
         displayName: 'Alice',
+        user: {
+          __typename: 'User',
+          id: 'u1',
+          email: 'alice@example.com',
+        },
       },
-      {
+    },
+    {
+      __typename: 'MembershipEdge',
+      node: {
+        __typename: 'Membership',
         id: 'm2',
         role: MembershipRole.Member,
-        status: MembershipStatus.Active,
+        userId: 'u2',
         displayName: 'Bob',
+        user: {
+          __typename: 'User',
+          id: 'u2',
+          email: 'bob@example.com',
+        },
       },
-    ],
-    pantries: [{ id: 'p1' }],
-    invites: [],
-  };
+    },
+  ];
 
-  const defaultProps = {
-    home: mockHome,
-    isDefault: false,
-    onPress: jest.fn(),
-    onSetDefault: jest.fn(),
-    onInvite: jest.fn(),
-    onDelete: jest.fn(),
+  return {
+    __typename: 'Home',
+    id: 'home-1',
+    name: overrides.name ?? 'My Kitchen',
+    membersConnection: {
+      __typename: 'MembershipConnection',
+      totalCount: overrides.memberCount ?? 2,
+      edges: members.slice(0, overrides.memberCount ?? members.length),
+    },
+    invitesConnection: {
+      __typename: 'HomeInviteConnection',
+      totalCount: 0,
+      edges: [],
+    },
+    pantriesConnection: {
+      __typename: 'PantryConnection',
+      totalCount: overrides.pantryCount ?? 1,
+    },
   };
+}
 
+function buildCache(home: ReturnType<typeof buildHome>) {
+  const cache = new InMemoryCache();
+  cache.writeFragment({
+    id: cache.identify(home as never) ?? `Home:${home.id}`,
+    fragment: HomeCard_HomeFragmentDoc,
+    fragmentName: 'HomeCard_home',
+    data: home as never,
+  });
+  return cache;
+}
+
+function renderCard(props: Partial<React.ComponentProps<typeof HomeCard>>) {
+  const home = buildHome();
+  return renderWithApollo(
+    <HomeCard
+      homeRef={home as never}
+      isDefault={false}
+      onPress={props.onPress ?? jest.fn()}
+      onSetDefault={props.onSetDefault ?? jest.fn()}
+      onInvite={props.onInvite ?? jest.fn()}
+      onDelete={props.onDelete ?? jest.fn()}
+      {...props}
+    />,
+    { cache: buildCache(home) },
+  );
+}
+
+describe('HomeCard', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   it('renders home name', () => {
-    render(<HomeCard {...defaultProps} />);
+    renderCard({});
     expect(screen.getByText('My Kitchen')).toBeTruthy();
   });
 
   it('renders member and pantry counts', () => {
-    render(<HomeCard {...defaultProps} />);
+    renderCard({});
     expect(screen.getByText(/2 members/)).toBeTruthy();
     expect(screen.getByText(/1 pantry/)).toBeTruthy();
   });
 
   it('renders "Default" badge when isDefault is true', () => {
-    render(<HomeCard {...defaultProps} isDefault={true} />);
+    renderCard({ isDefault: true });
     expect(screen.getByText('Default')).toBeTruthy();
   });
 
   it('does not render "Default" badge when isDefault is false', () => {
-    render(<HomeCard {...defaultProps} isDefault={false} />);
+    renderCard({ isDefault: false });
     expect(screen.queryByText('Default')).toBeNull();
   });
 
   it('calls onDelete with home id and name', async () => {
+    const onDelete = jest.fn();
     const user = userEvent.setup();
-    render(<HomeCard {...defaultProps} />);
+    renderCard({ onDelete });
     await user.press(screen.getByTestId('delete-btn'));
-    expect(defaultProps.onDelete).toHaveBeenCalledWith('home-1', 'My Kitchen');
+    expect(onDelete).toHaveBeenCalledWith('home-1', 'My Kitchen');
   });
 
   it('calls onInvite with home id', async () => {
+    const onInvite = jest.fn();
     const user = userEvent.setup();
-    render(<HomeCard {...defaultProps} />);
+    renderCard({ onInvite });
     await user.press(screen.getByTestId('invite-btn'));
-    expect(defaultProps.onInvite).toHaveBeenCalledWith('home-1');
+    expect(onInvite).toHaveBeenCalledWith('home-1');
   });
 
   it('renders members list', () => {
-    render(<HomeCard {...defaultProps} />);
+    renderCard({});
     expect(screen.getByTestId('members-list')).toBeTruthy();
     expect(screen.getByText('Alice')).toBeTruthy();
     expect(screen.getByText('Bob')).toBeTruthy();
   });
 
   it('uses singular "member" for single member', () => {
-    const singleMemberHome = {
-      ...mockHome,
-      members: [
-        {
-          id: 'm1',
-          role: MembershipRole.Admin,
-          status: MembershipStatus.Active,
-          displayName: 'Alice',
-        },
-      ],
-    };
-    render(<HomeCard {...defaultProps} home={singleMemberHome} />);
+    const home = buildHome({ memberCount: 1 });
+    renderWithApollo(
+      <HomeCard
+        homeRef={home as never}
+        isDefault={false}
+        onPress={jest.fn()}
+        onSetDefault={jest.fn()}
+        onInvite={jest.fn()}
+        onDelete={jest.fn()}
+      />,
+      { cache: buildCache(home) },
+    );
     expect(screen.getByText(/1 member/)).toBeTruthy();
   });
 });

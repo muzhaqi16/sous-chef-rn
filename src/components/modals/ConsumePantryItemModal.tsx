@@ -9,7 +9,6 @@ import { parseFractionalInput } from '#/utils/fractionUtils';
 import { validateDeductionQuantity } from '#/utils/validateDeductionQuantity';
 import { useQuantityFeedback } from '#features/pantry/hooks/useQuantityFeedback';
 import { UsagePurpose } from '#/graphql/generated/schemaTypes';
-import { type PantryItemFragment } from '#features/pantry/graphql/pantryFragments.generated';
 import { commonStyles } from '#/styles/commonStyles';
 import {
   PantryOperation,
@@ -19,11 +18,12 @@ import {
   PantryActionModal,
   type PantryActionSharedState,
 } from './PantryActionModal';
+import { type PantryActionModal_PantryItemFragment } from './PantryActionModal.generated';
 import { Text } from '#components/atoms/Text';
 
 interface ConsumePantryItemModalProps {
   visible: boolean;
-  pantryItem: PantryItemFragment | null;
+  pantryItemId: string | null;
   onClose: () => void;
   onConfirm: (
     quantityUsed: number,
@@ -45,7 +45,7 @@ const PURPOSE_OPTIONS: Array<{ labelKey: string; value: UsagePurpose }> = [
 
 export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
   visible,
-  pantryItem,
+  pantryItemId,
   onClose,
   onConfirm,
 }) => {
@@ -54,7 +54,7 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
   const [purpose, setPurpose] = useState<UsagePurpose>(UsagePurpose.General);
 
   const handleReset = (
-    _item: PantryItemFragment,
+    _item: PantryActionModal_PantryItemFragment,
     _defaultUnit: SelectedUnitInfo | null,
     increment: number | null,
   ) => {
@@ -63,7 +63,7 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
   };
 
   const handleConfirm = (shared: PantryActionSharedState) => {
-    if (!pantryItem) return;
+    if (!pantryItemId) return;
 
     const quantityValue = validateDeductionQuantity(
       quantityInput,
@@ -82,8 +82,6 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
     onClose();
   };
 
-  const showFifoHint = (pantryItem?.activeBatchCount ?? 0) > 1;
-
   const purposeOptions = PURPOSE_OPTIONS.map(({ labelKey, value }) => ({
     label: t(labelKey),
     value,
@@ -92,7 +90,7 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
   return (
     <PantryActionModal
       visible={visible}
-      pantryItem={pantryItem}
+      pantryItemId={pantryItemId}
       onClose={onClose}
       title={t('consumeItem.title')}
       confirmLabel={t('consumeItem.confirm')}
@@ -101,14 +99,14 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
       operation={PantryOperation.Consume}
       onConfirm={handleConfirm}
       onReset={handleReset}
-      renderActionFields={shared => (
+      renderActionFields={(shared, pantryItem) => (
         <ConsumeActionFields
           quantityInput={quantityInput}
           setQuantityInput={setQuantityInput}
           purpose={purpose}
           setPurpose={setPurpose}
           shared={shared}
-          showFifoHint={showFifoHint}
+          showFifoHint={(pantryItem.activeBatchCount ?? 0) > 1}
           purposeOptions={purposeOptions}
         />
       )}

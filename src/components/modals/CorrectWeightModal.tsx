@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { useFragment } from '@apollo/client/react';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { alertService } from '#/services/alertService';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
@@ -9,14 +10,14 @@ import { UnitAutocompleteField } from '#components/molecules/AutocompleteField/U
 import { FormattedItemSubtitle } from '#components/atoms/FormattedItemSubtitle';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
-import { type PantryItemFragment } from '#features/pantry/graphql/pantryFragments.generated';
 import { commonStyles } from '#/styles/commonStyles';
 import { formatNetWeightDisplay } from '#features/pantry/hooks/usePantryItemTransformation';
 import { Text } from '#components/atoms/Text';
+import { CorrectWeightModal_PantryItemFragmentDoc } from './CorrectWeightModal.generated';
 
 interface CorrectWeightModalProps {
   visible: boolean;
-  pantryItem: PantryItemFragment | null;
+  pantryItemId: string | null;
   onClose: () => void;
   onConfirm: (
     netWeight: number,
@@ -27,11 +28,18 @@ interface CorrectWeightModalProps {
 
 export const CorrectWeightModal: React.FC<CorrectWeightModalProps> = ({
   visible,
-  pantryItem,
+  pantryItemId,
   onClose,
   onConfirm,
 }) => {
   const { t } = useTranslation();
+  const { data, complete } = useFragment({
+    fragment: CorrectWeightModal_PantryItemFragmentDoc,
+    fragmentName: 'CorrectWeightModal_pantryItem',
+    from: pantryItemId ? { __typename: 'PantryItem', id: pantryItemId } : null,
+  });
+  const pantryItem = pantryItemId && complete ? data : null;
+
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible: visible && !!pantryItem,
     onDismiss: onClose,
@@ -42,12 +50,13 @@ export const CorrectWeightModal: React.FC<CorrectWeightModalProps> = ({
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [reason, setReason] = useState('');
 
-  // Reset state when sheet opens (render-time conditional state update)
+  // Reset state when sheet opens (render-time conditional state update).
+  // Key on pantryItemId so cache updates to the same item don't clobber input.
   const [prevVisible, setPrevVisible] = useState(visible);
-  const [prevPantryItem, setPrevPantryItem] = useState(pantryItem);
-  if (visible !== prevVisible || pantryItem !== prevPantryItem) {
+  const [prevPantryItemId, setPrevPantryItemId] = useState(pantryItem?.id);
+  if (visible !== prevVisible || pantryItem?.id !== prevPantryItemId) {
     setPrevVisible(visible);
-    setPrevPantryItem(pantryItem);
+    setPrevPantryItemId(pantryItem?.id);
     if (visible && pantryItem) {
       setWeightInput(pantryItem.netWeight?.toString() || '');
       setUnitDisplay(

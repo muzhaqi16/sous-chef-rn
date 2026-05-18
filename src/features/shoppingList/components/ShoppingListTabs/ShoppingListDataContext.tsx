@@ -1,7 +1,7 @@
 import { createContext, useContext } from 'react';
 import type React from 'react';
 import type { NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
-import type { SortableShoppingListItem } from '../SortableShoppingList/types';
+import type { ShoppingListRowItem } from '../SortableShoppingList/types';
 
 /**
  * Per-tab data for shopping list tabs.
@@ -9,7 +9,9 @@ import type { SortableShoppingListItem } from '../SortableShoppingList/types';
  * preventing TabView from re-calling renderScene on every data change.
  */
 export interface ShoppingListTabData {
-  items: SortableShoppingListItem[];
+  items: ShoppingListRowItem[];
+  /** Whether row cells render product images */
+  showImages?: boolean;
   onRefresh?: () => void | Promise<void>;
   refreshing?: boolean;
   loading?: boolean;

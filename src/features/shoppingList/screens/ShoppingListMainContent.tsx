@@ -39,6 +39,13 @@ import {
 } from '#features/shoppingList/context/ShoppingListTutorialContext';
 
 // Utils
+import { useApolloClient } from '@apollo/client/react';
+import {
+  ShoppingListCollaboratorFragmentDoc,
+  ShoppingListOwnershipFragmentDoc,
+  type ShoppingListCollaboratorFragment,
+  type ShoppingListOwnershipFragment,
+} from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { Telemetry } from '#/services/telemetry';
 import { getShoppingListPermissionsWithOwner } from '#/utils/permissions/shoppingListPermissions';
@@ -78,6 +85,7 @@ export const ShoppingListMainContent: React.FC<
       hasMorePurchased,
       isLoadingMorePurchased,
       isTransitioning,
+      showImages,
     },
     actions: {
       setSearchQuery,
@@ -113,6 +121,8 @@ export const ShoppingListMainContent: React.FC<
       scrollTabBarHidden.set(hidden);
     },
   );
+
+  const apolloClient = useApolloClient();
 
   // ── Interactive tutorial context ──
   const tutorial = useShoppingListTutorial();
@@ -209,10 +219,30 @@ export const ShoppingListMainContent: React.FC<
       };
     }
 
+    // Build the permission input from materialized collaborator/ownership
+    // fragments. The query result has masked refs; the helper reads structural
+    // fields, so we project to its expected shape via `cache.readFragment`.
+    const collaboratorNodes =
+      currentListDetails.collaboratorsConnection?.edges.map(e =>
+        apolloClient.cache.readFragment<ShoppingListCollaboratorFragment>({
+          fragment: ShoppingListCollaboratorFragmentDoc,
+          fragmentName: 'ShoppingListCollaboratorFragment',
+          from: e.node,
+        }),
+      ) ?? [];
+    const ownershipNode = currentListDetails.ownerships?.[0]
+      ? apolloClient.cache.readFragment<ShoppingListOwnershipFragment>({
+          fragment: ShoppingListOwnershipFragmentDoc,
+          fragmentName: 'ShoppingListOwnershipFragment',
+          from: currentListDetails.ownerships[0],
+        })
+      : null;
     const listData = {
       homeId: currentListDetails.homeId,
-      collaboratorsConnection: currentListDetails.collaboratorsConnection,
-      ownership: currentListDetails.ownerships?.[0],
+      collaboratorsConnection: {
+        edges: collaboratorNodes.map(node => ({ node })),
+      },
+      ownership: ownershipNode,
     };
 
     const homeMembership = currentListDetails.home?.myMembership ?? null;
@@ -271,6 +301,7 @@ export const ShoppingListMainContent: React.FC<
     // Data
     unpurchasedItems,
     purchasedItems,
+    showImages,
     totalCountUnpurchased,
     totalCountPurchased,
     // Pagination

@@ -1,11 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
+import { useApolloClient } from '@apollo/client/react';
 import {
   CreateShoppingListItemsFromRecipeDocument,
   CreateShoppingListItemFromRecipeIngredientDocument,
-  type GetRecipeQuery,
 } from '#features/recipes/graphql/recipe.generated';
+import {
+  RecipeIngredientFragmentDoc,
+  type RecipeFragment,
+  type RecipeIngredientFragment,
+} from '#features/recipes/graphql/recipeFragments.generated';
 import {
   AddItemToShoppingListDocument,
   AddItemsToShoppingListDocument,
@@ -25,12 +30,10 @@ import {
   executeWithLoadingState,
 } from '#/utils/compilerSafeWrappers';
 
-type BackendRecipe = NonNullable<GetRecipeQuery['recipe']>;
-
 interface UseRecipeShoppingListOptions {
   recipeId: string | undefined;
   isBackendRecipe: boolean;
-  backendRecipe: BackendRecipe | null | undefined;
+  backendRecipe: RecipeFragment | null | undefined;
   externalRecipe: RecipeInformation | null;
 }
 
@@ -45,6 +48,7 @@ export function useRecipeShoppingList({
   backendRecipe,
   externalRecipe,
 }: UseRecipeShoppingListOptions) {
+  const apolloClient = useApolloClient();
   const { data: shoppingListsData, loading: shoppingListsLoading } = useQuery(
     GetShoppingListsLiteDocument,
     {},
@@ -294,9 +298,19 @@ export function useRecipeShoppingList({
 
           const data = result.data?.createShoppingListItemsFromRecipe;
           if (data) {
-            const allIngredientIds = backendRecipe.ingredients.map(
-              ing => ing.id,
-            );
+            // Each ingredient is a masked RecipeIngredientFragment ref;
+            // read each from the cache to recover its `id`.
+            const allIngredientIds = backendRecipe.ingredients
+              .map(ingRef => {
+                const ingredient =
+                  apolloClient.cache.readFragment<RecipeIngredientFragment>({
+                    fragment: RecipeIngredientFragmentDoc,
+                    fragmentName: 'RecipeIngredientFragment',
+                    from: ingRef,
+                  });
+                return ingredient?.id;
+              })
+              .filter((id): id is string => !!id);
             setAddedIngredients(prev => {
               const next = new Set(prev);
               allIngredientIds.forEach(id => next.add(id));

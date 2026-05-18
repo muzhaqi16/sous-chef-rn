@@ -60,12 +60,53 @@ jest.mock('../helpers', () => ({
   showPantryCreationError: jest.fn(),
 }));
 
+// Per-test override slot for the homes that production code reads off the
+// GetHomes connection. Tests call `stageHomes([…])` in place of the legacy
+// `toHomeViewModels.mockReturnValue(…)` from before the view-model module
+// was removed.
+// Prefixed `mock*` so the jest.mock factory below is allowed to reference it.
+let mockStagedHomes: any[] | null = null;
+
+/**
+ * `extractNodes` flattens Relay-style connections in production. The mock
+ * supports three shapes so existing fixtures keep working:
+ *
+ *   1. A real connection (`{ edges: [{ node }] }`) — normalize to nodes.
+ *   2. A flat array — already in node form, return as-is.
+ *   3. The GetHomes connection (or anything else) — return the test-staged
+ *      homes if set; otherwise the default empty array.
+ *
+ * Tests that stage homes also pre-flatten each home's pantries onto a
+ * `pantries` array; production reads `extractNodes(home.pantriesConnection)`,
+ * so the mock surfaces `home.pantries` when `pantriesConnection` is absent.
+ */
 jest.mock('#/utils/connectionUtils', () => ({
-  normalizeHomes: jest.fn((homes: any) => homes || []),
-  extractNodes: jest.fn(
-    (data: any) => data?.edges?.map((e: any) => e.node) || [],
-  ),
+  extractNodes: jest.fn((data: any) => {
+    // When the input is a Connection-shape (has `edges`/`__typename`) and the
+    // test staged homes, treat that input as the GetHomes connection and
+    // return the staged data. Empty fixtures from `defaultOperationMocks`
+    // would otherwise overwrite the staged value on a re-render.
+    if (
+      mockStagedHomes &&
+      data &&
+      typeof data === 'object' &&
+      'edges' in data &&
+      (data.__typename === 'HomeConnection' || !data.__typename)
+    ) {
+      return mockStagedHomes;
+    }
+    if (!data) return mockStagedHomes ?? [];
+    if (Array.isArray(data.edges)) {
+      return data.edges.map((e: any) => e?.node).filter(Boolean);
+    }
+    if (Array.isArray(data)) return data;
+    return [];
+  }),
 }));
+
+function stageHomes(homes: any[]) {
+  mockStagedHomes = homes;
+}
 
 jest.mock('#/components/providers/ScreenErrorBoundary', () => ({
   OnboardingErrorBoundary: ({ children }: any) => children,
@@ -420,11 +461,7 @@ beforeEach(() => {
     },
   };
 
-  const { normalizeHomes, extractNodes } = require('#/utils/connectionUtils');
-  normalizeHomes.mockImplementation((homes: any) => homes || []);
-  extractNodes.mockImplementation(
-    (data: any) => data?.edges?.map((e: any) => e.node) || [],
-  );
+  mockStagedHomes = null;
 
   const { formatRole } = require('#utils/formatters/roleFormatters');
   formatRole.mockImplementation((role: string) => role);
@@ -464,12 +501,25 @@ describe('CreateHomeScreen', () => {
   });
 
   it('shows existing resources when both home and pantry exist', async () => {
-    const { normalizeHomes } = require('#/utils/connectionUtils');
-    normalizeHomes.mockReturnValue([
+    stageHomes([
       {
         id: 'home-1',
         name: 'My Home',
-        pantries: [{ id: 'pantry-1', name: 'Kitchen', isDefault: true }],
+        pantriesConnection: {
+          __typename: 'PantryConnection',
+          edges: [
+            {
+              __typename: 'PantryEdge',
+              node: {
+                __typename: 'Pantry',
+                id: 'pantry-1',
+                name: 'Kitchen',
+                isDefault: true,
+              },
+            },
+          ],
+          totalCount: 1,
+        },
       },
     ]);
 
@@ -480,12 +530,25 @@ describe('CreateHomeScreen', () => {
 
   it('shows continue button for existing setup', async () => {
     const user = userEvent.setup();
-    const { normalizeHomes } = require('#/utils/connectionUtils');
-    normalizeHomes.mockReturnValue([
+    stageHomes([
       {
         id: 'home-1',
         name: 'My Home',
-        pantries: [{ id: 'pantry-1', name: 'Kitchen', isDefault: true }],
+        pantriesConnection: {
+          __typename: 'PantryConnection',
+          edges: [
+            {
+              __typename: 'PantryEdge',
+              node: {
+                __typename: 'Pantry',
+                id: 'pantry-1',
+                name: 'Kitchen',
+                isDefault: true,
+              },
+            },
+          ],
+          totalCount: 1,
+        },
       },
     ]);
 
@@ -531,12 +594,15 @@ describe('CreateHomeScreen', () => {
   });
 
   it('shows "Almost there!" title when home exists but no pantry', async () => {
-    const { normalizeHomes } = require('#/utils/connectionUtils');
-    normalizeHomes.mockReturnValue([
+    stageHomes([
       {
         id: 'home-1',
         name: 'My Home',
-        pantries: [],
+        pantriesConnection: {
+          __typename: 'PantryConnection',
+          edges: [],
+          totalCount: 0,
+        },
       },
     ]);
 
@@ -545,12 +611,15 @@ describe('CreateHomeScreen', () => {
   });
 
   it('shows subtitle about adding pantry when home exists but no pantry', async () => {
-    const { normalizeHomes } = require('#/utils/connectionUtils');
-    normalizeHomes.mockReturnValue([
+    stageHomes([
       {
         id: 'home-1',
         name: 'My Home',
-        pantries: [],
+        pantriesConnection: {
+          __typename: 'PantryConnection',
+          edges: [],
+          totalCount: 0,
+        },
       },
     ]);
 
@@ -566,12 +635,25 @@ describe('CreateHomeScreen', () => {
   });
 
   it('shows subtitle for existing setup', async () => {
-    const { normalizeHomes } = require('#/utils/connectionUtils');
-    normalizeHomes.mockReturnValue([
+    stageHomes([
       {
         id: 'home-1',
         name: 'My Home',
-        pantries: [{ id: 'pantry-1', name: 'Kitchen', isDefault: true }],
+        pantriesConnection: {
+          __typename: 'PantryConnection',
+          edges: [
+            {
+              __typename: 'PantryEdge',
+              node: {
+                __typename: 'Pantry',
+                id: 'pantry-1',
+                name: 'Kitchen',
+                isDefault: true,
+              },
+            },
+          ],
+          totalCount: 1,
+        },
       },
     ]);
 
@@ -582,12 +664,15 @@ describe('CreateHomeScreen', () => {
   });
 
   it('shows existing home name in resource card when home exists but pantry missing', async () => {
-    const { normalizeHomes } = require('#/utils/connectionUtils');
-    normalizeHomes.mockReturnValue([
+    stageHomes([
       {
         id: 'home-1',
         name: 'My Home',
-        pantries: [],
+        pantriesConnection: {
+          __typename: 'PantryConnection',
+          edges: [],
+          totalCount: 0,
+        },
       },
     ]);
 
@@ -597,12 +682,25 @@ describe('CreateHomeScreen', () => {
   });
 
   it('shows "Default" badge on default pantry in existing setup view', async () => {
-    const { normalizeHomes } = require('#/utils/connectionUtils');
-    normalizeHomes.mockReturnValue([
+    stageHomes([
       {
         id: 'home-1',
         name: 'My Home',
-        pantries: [{ id: 'pantry-1', name: 'Kitchen', isDefault: true }],
+        pantriesConnection: {
+          __typename: 'PantryConnection',
+          edges: [
+            {
+              __typename: 'PantryEdge',
+              node: {
+                __typename: 'Pantry',
+                id: 'pantry-1',
+                name: 'Kitchen',
+                isDefault: true,
+              },
+            },
+          ],
+          totalCount: 1,
+        },
       },
     ]);
 
@@ -611,12 +709,25 @@ describe('CreateHomeScreen', () => {
   });
 
   it('does not show "Default" badge when pantry is not default', async () => {
-    const { normalizeHomes } = require('#/utils/connectionUtils');
-    normalizeHomes.mockReturnValue([
+    stageHomes([
       {
         id: 'home-1',
         name: 'My Home',
-        pantries: [{ id: 'pantry-1', name: 'Kitchen', isDefault: false }],
+        pantriesConnection: {
+          __typename: 'PantryConnection',
+          edges: [
+            {
+              __typename: 'PantryEdge',
+              node: {
+                __typename: 'Pantry',
+                id: 'pantry-1',
+                name: 'Kitchen',
+                isDefault: false,
+              },
+            },
+          ],
+          totalCount: 1,
+        },
       },
     ]);
 
@@ -821,12 +932,25 @@ describe('CreateHomeScreen', () => {
   });
 
   it('selects first pantry as fallback when no default pantry exists', async () => {
-    const { normalizeHomes } = require('#/utils/connectionUtils');
-    normalizeHomes.mockReturnValue([
+    stageHomes([
       {
         id: 'home-1',
         name: 'My Home',
-        pantries: [{ id: 'pantry-1', name: 'Kitchen', isDefault: false }],
+        pantriesConnection: {
+          __typename: 'PantryConnection',
+          edges: [
+            {
+              __typename: 'PantryEdge',
+              node: {
+                __typename: 'Pantry',
+                id: 'pantry-1',
+                name: 'Kitchen',
+                isDefault: false,
+              },
+            },
+          ],
+          totalCount: 1,
+        },
       },
     ]);
 
@@ -963,11 +1087,12 @@ describe('CreateHomeScreen', () => {
       },
     };
 
-    const { normalizeHomes } = require('#/utils/connectionUtils');
     // First call for initial render: no homes; after refetch: found home
-    normalizeHomes
-      .mockReturnValueOnce([])
-      .mockReturnValueOnce([{ id: 'found-home', name: 'My Home' }]);
+    stageHomes([]);
+    const { extractNodes } = require('#/utils/connectionUtils');
+    extractNodes.mockImplementationOnce(() => [
+      { id: 'found-home', name: 'My Home' },
+    ]);
 
     const { findByTestId } = renderScreen();
     await user.press(await findByTestId('submit-button'));
@@ -1022,12 +1147,15 @@ describe('CreateHomeScreen', () => {
 
   it('handles pantry creation when home exists but pantry does not', async () => {
     const user = userEvent.setup();
-    const { normalizeHomes } = require('#/utils/connectionUtils');
-    normalizeHomes.mockReturnValue([
+    stageHomes([
       {
         id: 'home-1',
         name: 'My Home',
-        pantries: [],
+        pantriesConnection: {
+          __typename: 'PantryConnection',
+          edges: [],
+          totalCount: 0,
+        },
       },
     ]);
 
@@ -1056,12 +1184,15 @@ describe('CreateHomeScreen', () => {
 
   it('shows pantry creation error and skips when pantry creation fails', async () => {
     const user = userEvent.setup();
-    const { normalizeHomes } = require('#/utils/connectionUtils');
-    normalizeHomes.mockReturnValue([
+    stageHomes([
       {
         id: 'home-1',
         name: 'My Home',
-        pantries: [],
+        pantriesConnection: {
+          __typename: 'PantryConnection',
+          edges: [],
+          totalCount: 0,
+        },
       },
     ]);
 
@@ -1153,12 +1284,25 @@ describe('CreateHomeScreen', () => {
   });
 
   it('shows home and pantry names in existing setup view', async () => {
-    const { normalizeHomes } = require('#/utils/connectionUtils');
-    normalizeHomes.mockReturnValue([
+    stageHomes([
       {
         id: 'home-1',
         name: 'Beach House',
-        pantries: [{ id: 'pantry-1', name: 'Main Pantry', isDefault: true }],
+        pantriesConnection: {
+          __typename: 'PantryConnection',
+          edges: [
+            {
+              __typename: 'PantryEdge',
+              node: {
+                __typename: 'Pantry',
+                id: 'pantry-1',
+                name: 'Main Pantry',
+                isDefault: true,
+              },
+            },
+          ],
+          totalCount: 1,
+        },
       },
     ]);
 
@@ -1168,12 +1312,25 @@ describe('CreateHomeScreen', () => {
   });
 
   it('shows info text in existing setup view', async () => {
-    const { normalizeHomes } = require('#/utils/connectionUtils');
-    normalizeHomes.mockReturnValue([
+    stageHomes([
       {
         id: 'home-1',
         name: 'My Home',
-        pantries: [{ id: 'pantry-1', name: 'Kitchen', isDefault: true }],
+        pantriesConnection: {
+          __typename: 'PantryConnection',
+          edges: [
+            {
+              __typename: 'PantryEdge',
+              node: {
+                __typename: 'Pantry',
+                id: 'pantry-1',
+                name: 'Kitchen',
+                isDefault: true,
+              },
+            },
+          ],
+          totalCount: 1,
+        },
       },
     ]);
 
@@ -1182,12 +1339,15 @@ describe('CreateHomeScreen', () => {
   });
 
   it('does not set pantry id when existing home has no pantries', async () => {
-    const { normalizeHomes } = require('#/utils/connectionUtils');
-    normalizeHomes.mockReturnValue([
+    stageHomes([
       {
         id: 'home-1',
         name: 'My Home',
-        pantries: [],
+        pantriesConnection: {
+          __typename: 'PantryConnection',
+          edges: [],
+          totalCount: 0,
+        },
       },
     ]);
 

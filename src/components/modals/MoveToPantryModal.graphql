@@ -1,0 +1,11 @@
+fragment MoveToPantryModal_shoppingListItem on ShoppingListItem {
+  id
+  itemName
+  quantity
+  unitName
+  unit {
+    id
+    name
+    symbol
+  }
+}

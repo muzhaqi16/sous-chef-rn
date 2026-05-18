@@ -20,8 +20,8 @@ export interface UseMoveToPantryModalOptions {
 export interface UseMoveToPantryModalResult {
   /** Whether the modal is visible */
   visible: boolean;
-  /** Selected item for the modal */
-  selectedItem: ShoppingListItemDisplayFragment | null;
+  /** Selected item id for the modal (cache key for `useFragment`) */
+  selectedItemId: string | null;
   /** Available pantries (lazy-loaded) */
   pantries: Array<{ id: string; name: string; isDefault: boolean }>;
   /** Default selected pantry ID */
@@ -41,28 +41,11 @@ export interface UseMoveToPantryModalResult {
  *
  * Handles:
  * - Modal visibility state
- * - Selected item state
+ * - Selected item id state — the modal materializes the item from the Apollo
+ *   cache via `useFragment` so mutations to the item are reflected live.
  * - Lazy-loaded pantry data (fetched on first open)
  * - Move mutation with cache updates
  * - Validation (no pantries available)
- *
- * @example
- * ```tsx
- * const moveToPantry = useMoveToPantryModal({
- *   currentListId,
- *   items,
- * });
- *
- * // In render:
- * <MoveToPantryModal
- *   visible={moveToPantry.visible}
- *   shoppingListItem={moveToPantry.selectedItem}
- *   pantries={moveToPantry.pantries}
- *   selectedPantryId={moveToPantry.selectedPantryId}
- *   onClose={moveToPantry.close}
- *   onConfirm={moveToPantry.confirm}
- * />
- * ```
  */
 export function useMoveToPantryModal(
   options: UseMoveToPantryModalOptions,
@@ -70,8 +53,7 @@ export function useMoveToPantryModal(
   const { currentListId, items } = options;
 
   const [visible, setVisible] = useState(false);
-  const [selectedItem, setSelectedItem] =
-    useState<ShoppingListItemDisplayFragment | null>(null);
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
 
   // Lazy-loaded home/pantry data
   const {
@@ -87,7 +69,7 @@ export function useMoveToPantryModal(
     currentListId,
     onSuccess: () => {
       setVisible(false);
-      setSelectedItem(null);
+      setSelectedItemId(null);
     },
   });
 
@@ -111,24 +93,29 @@ export function useMoveToPantryModal(
 
     const item = items.find(i => i.id === itemId);
     if (item) {
-      setSelectedItem(item as ShoppingListItemDisplayFragment);
+      setSelectedItemId(item.id);
       setVisible(true);
     }
   };
 
   const close = () => {
     setVisible(false);
-    setSelectedItem(null);
+    setSelectedItemId(null);
   };
 
   const confirm = async (input: MoveToPantryInput) => {
-    if (!selectedItem) return;
-    await moveToPantry(selectedItem, input);
+    if (!selectedItemId) return;
+    // `useMoveToPantry.moveToPantry` needs the item for cache update closures
+    // (it reads `purchaseInfo` to know which connection-edge filter to remove
+    // from). Look it up from the items prop at confirm time.
+    const item = items.find(i => i.id === selectedItemId);
+    if (!item) return;
+    await moveToPantry(item, input);
   };
 
   return {
     visible,
-    selectedItem,
+    selectedItemId,
     pantries,
     selectedPantryId: selectedPantryId ?? null,
     isLoading: homeLoading || moveLoading,

@@ -59,7 +59,7 @@ describe('createOptimisticShoppingListItem', () => {
     expect(entity.unitName).toBeNull();
     expect(entity.category).toBeNull();
     expect(entity.notes).toBeNull();
-    expect(entity.displayFormat).toBeNull();
+    expect(entity.displayFormat).toBeUndefined();
   });
 
   it('includes provided optional fields', () => {

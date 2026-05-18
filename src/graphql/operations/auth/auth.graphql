@@ -7,7 +7,7 @@ mutation Login($input: LoginInput!) {
     accessToken
     refreshToken
     user {
-      ...LoginUser
+      ...LoginUser @unmask(mode: "migrate")
     }
   }
 }
@@ -17,7 +17,7 @@ mutation Register($input: RegisterInput!) {
     accessToken
     refreshToken
     user {
-      ...LoginUser
+      ...LoginUser @unmask(mode: "migrate")
     }
   }
 }
@@ -35,7 +35,7 @@ mutation VerifyEmail($code: String!) {
     message
     code
     user {
-      ...LoginUser
+      ...LoginUser @unmask(mode: "migrate")
     }
   }
 }

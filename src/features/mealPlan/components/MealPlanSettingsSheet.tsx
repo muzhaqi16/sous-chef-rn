@@ -13,12 +13,17 @@ import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { NutritionSummaryCard } from './NutritionSummaryCard';
 import { Icon } from '#utils/iconUtils';
 import { type MealPlanFullFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
+import type { Unmasked } from '@apollo/client/masking';
 import type { MealPlanPermissions } from '#utils/permissions/mealPlanPermissions';
 import { Text } from '#components/atoms/Text';
 
 interface MealPlanSettingsSheetProps {
   visible: boolean;
-  mealPlan: MealPlanFullFragment | null;
+  // Materialized (unmasked) shape — useMealPlan materializes the full fragment
+  // via cache.readFragment before passing it down. `Unmasked<>` is required
+  // because MealPlanFull spreads MealPlanDisplay via $fragmentRefs (no
+  // @unmask directive), so name/startDate/etc. live on the inner fragment.
+  mealPlan: Unmasked<MealPlanFullFragment> | null;
   permissions: MealPlanPermissions;
   onClose: () => void;
   onDuplicate: () => void;

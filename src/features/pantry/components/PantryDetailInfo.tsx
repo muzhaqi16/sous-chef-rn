@@ -7,7 +7,7 @@ import { InfoRow } from '#components/molecules/InfoRow';
 const ThemedConditionInfoRow = withUnistyles(InfoRow);
 import { Icon } from '#/utils/iconUtils';
 import { getUnitDisplayText } from '#utils/formatQuantity';
-import { type GetPantryItemQuery } from '#features/pantry/graphql/pantry.generated';
+import { type PantryItemFragment } from '#features/pantry/graphql/pantryFragments.generated';
 import {
   formatCondition,
   formatAcquisitionMethod,
@@ -16,10 +16,11 @@ import {
 } from '#features/pantry/hooks/usePantryItemTransformation';
 import { Text } from '#components/atoms/Text';
 
-type PantryItemData = NonNullable<GetPantryItemQuery['pantryItem']>;
-
 interface PantryDetailInfoProps {
-  item: PantryItemData;
+  // `@unmask(mode: "migrate")` on the inner PantryItemDisplay spread keeps all
+  // fields accessible directly off PantryItemFragment, so no `Unmasked<>` wrap
+  // is needed here.
+  item: PantryItemFragment;
   brandName: string | null;
   netWeightText: string | null;
   remainingNetWeightText: string | null;

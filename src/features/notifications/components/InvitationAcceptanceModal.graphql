@@ -44,21 +44,47 @@ query MyShoppingListInvites {
   }
 }
 
-mutation AcceptShoppingListInvite($token: String!) {
+# Local colocated fragment per the Feature API Boundary Convention.
+# Selects only what the cache-update path (createAddToQueryFieldUpdater) needs
+# (`id`) plus the collaborator/shopping-list fields the normalized cache should
+# carry after a successful accept. Avoids reaching into shoppingList's internal
+# ShoppingListCollaboratorFragment.
+fragment InvitationAcceptanceModal_collaborator on ShoppingListCollaborator {
+  id
+  email
+  role
+  status
+  collaboratorId
+  canEdit
+  canAddItems
+  canRemoveItems
+  canEditItems
+  canMarkPurchased
+  canInviteOthers
+  invitedAt
+  shoppingList {
+    id
+    name
+    description
+  }
+  collaborator {
+    id
+    email
+    profile {
+      id
+      displayName
+      avatar
+    }
+  }
+}
+
+mutation InvitationAcceptanceModalAcceptShoppingListInvite($token: String!) {
   acceptShoppingListInvite(token: $token) {
     success
     message
     code
     collaborator {
-      ...ShoppingListCollaboratorFragment
-      canEdit
-      canInviteOthers
-      invitedAt
-      shoppingList {
-        id
-        name
-        description
-      }
+      ...InvitationAcceptanceModal_collaborator
     }
   }
 }

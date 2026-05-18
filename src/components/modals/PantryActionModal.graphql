@@ -1,0 +1,53 @@
+fragment PantryActionModal_pantryItem on PantryItem {
+  id
+  itemId
+  itemName
+  quantity
+  activeBatchCount
+  netWeight
+  remainingNetWeight
+  lastUsedAt
+  unit {
+    id
+    name
+    symbol
+    type
+    displayAsFraction
+  }
+  netWeightUnit {
+    id
+    name
+    symbol
+  }
+  packageBreakdown {
+    count
+    contentUnit {
+      id
+      name
+      symbol
+    }
+    perUnitNetWeight
+    perUnitNetWeightUnit {
+      id
+      name
+      symbol
+    }
+    totalNetWeight
+  }
+  quantityBreakdown {
+    fullPackages
+    looseContentUnits
+    contentUnit {
+      id
+      name
+      symbol
+    }
+    totalContentUnits
+    remainingWeight
+    remainingWeightUnit {
+      id
+      name
+      symbol
+    }
+  }
+}

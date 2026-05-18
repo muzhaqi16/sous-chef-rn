@@ -1,219 +1,150 @@
+'use no memo';
 import { renderHook } from '@testing-library/react-native';
-import {
-  useShoppingListTransform,
-  useShoppingListTransformMulti,
-} from '../useShoppingListTransform';
+import { useShoppingListTransformMulti } from '../useShoppingListTransform';
 
-// Mock image utils
-jest.mock('#utils/imageUtils', () => ({
-  resolveImageUrl: (item: any) =>
-    item?.imageUrl ? `https://cdn.test/${item.imageUrl}` : null,
-}));
+/**
+ * After the per-cell `useFragment` migration the transform hook no longer
+ * computes display data — each row owns its own rendering. The remaining
+ * `useShoppingListTransformMulti` just wraps connection nodes into the
+ * lightweight FlashList row shape (`id`, `isPurchased`, `sortOrder`,
+ * `itemRef`) and pins `isPurchased` to the tab it came from.
+ */
 
-// Factory for ShoppingListItemDisplayFragment-like objects
-function createDisplayItem(overrides: Record<string, unknown> = {}) {
+// Build a minimal ShoppingListItemNode-shaped stub that satisfies the wrap
+// helper (it only reads `id`, `itemName`, `sortOrder`).
+function node(overrides: Record<string, unknown> = {}) {
   return {
+    __typename: 'ShoppingListItem',
     id: 'item-1',
     itemName: 'Milk',
-    quantity: 2,
-    quantityInput: '2',
-    unitName: 'gallon',
-    unit: { symbol: 'gal' },
-    category: 'Dairy',
     sortOrder: 'aaa',
-    imageUrl: 'milk.jpg',
-    purchaseInfo: { isPurchased: false },
+    purchaseInfo: {
+      __typename: 'ShoppingListItemPurchaseInfo',
+      isPurchased: false,
+    },
     ...overrides,
   } as any;
 }
 
-beforeEach(() => {
-  jest.clearAllMocks();
-});
-
-describe('useShoppingListTransform', () => {
-  it('transforms items to SortableShoppingListItem format', () => {
-    const items = [createDisplayItem()];
-    const { result } = renderHook(() => useShoppingListTransform(items));
-
-    expect(result.current.sortableItems).toHaveLength(1);
-    const item = result.current.sortableItems[0];
-    expect(item.id).toBe('item-1');
-    expect(item.title).toBe('Milk');
-    expect(item.subtitle).toBe('Dairy');
-    expect(item.sortOrder).toBe('aaa');
-    expect(item.isPurchased).toBe(false);
-  });
-
-  it('creates quantity config as rightElementConfig', () => {
-    const items = [createDisplayItem()];
-    const { result } = renderHook(() => useShoppingListTransform(items));
-
-    const item = result.current.sortableItems[0]!;
-    const config = item.rightElementConfig!;
-    expect(config.type).toBe('quantity');
-    expect(config.quantity).toBe(2);
-    expect(config.quantityInput).toBe('2');
-    expect(config.unit).toBe('gallon');
-    expect(config.itemId).toBe('item-1');
-    expect(config.disabled).toBe(false);
-  });
-
-  it('falls back to unit.symbol when unitName is missing', () => {
-    const items = [createDisplayItem({ unitName: null })];
-    const { result } = renderHook(() => useShoppingListTransform(items));
-
-    expect(result.current.sortableItems[0]!.rightElementConfig!.unit).toBe(
-      'gal',
-    );
-  });
-
-  it('creates image config as leftElementConfig when images enabled', () => {
-    const items = [createDisplayItem()];
-    const { result } = renderHook(() => useShoppingListTransform(items));
-
-    const config = result.current.sortableItems[0]!.leftElementConfig;
-    expect(config).toBeDefined();
-    expect(config!.type).toBe('image');
-    expect(config!.url).toBe('https://cdn.test/milk.jpg');
-  });
-
-  it('omits leftElementConfig when images are disabled', () => {
-    const items = [createDisplayItem()];
-    const { result } = renderHook(() =>
-      useShoppingListTransform(items, { showImages: false }),
-    );
-
-    expect(result.current.sortableItems[0].leftElementConfig).toBeUndefined();
-  });
-
-  it('omits leftElementConfig when item has no image', () => {
-    const items = [createDisplayItem({ imageUrl: null })];
-    const { result } = renderHook(() => useShoppingListTransform(items));
-
-    expect(result.current.sortableItems[0].leftElementConfig).toBeUndefined();
-  });
-
-  it('partitions items by purchase status', () => {
-    const items = [
-      createDisplayItem({ id: '1', purchaseInfo: { isPurchased: false } }),
-      createDisplayItem({ id: '2', purchaseInfo: { isPurchased: true } }),
-      createDisplayItem({ id: '3', purchaseInfo: { isPurchased: false } }),
-    ];
-    const { result } = renderHook(() => useShoppingListTransform(items));
-
-    expect(result.current.unpurchasedItems).toHaveLength(2);
-    expect(result.current.purchasedItems).toHaveLength(1);
-    expect(result.current.purchasedItems[0].id).toBe('2');
-  });
-
-  it('applies forcePurchasedState to override server value', () => {
-    const items = [
-      createDisplayItem({ id: '1', purchaseInfo: { isPurchased: false } }),
-    ];
-    const { result } = renderHook(() =>
-      useShoppingListTransform(items, { forcePurchasedState: true }),
-    );
-
-    expect(result.current.sortableItems[0].isPurchased).toBe(true);
-    expect(result.current.purchasedItems).toHaveLength(1);
-    expect(result.current.unpurchasedItems).toHaveLength(0);
-  });
-
-  it('filters out items without id', () => {
-    const items = [
-      createDisplayItem({ id: null }),
-      createDisplayItem({ id: '2' }),
-    ];
-    const { result } = renderHook(() => useShoppingListTransform(items));
-
-    expect(result.current.sortableItems).toHaveLength(1);
-    expect(result.current.sortableItems[0].id).toBe('2');
-  });
-
-  it('filters out items without itemName', () => {
-    const items = [
-      createDisplayItem({ itemName: null }),
-      createDisplayItem({ id: '2', itemName: 'Valid' }),
-    ];
-    const { result } = renderHook(() => useShoppingListTransform(items));
-
-    expect(result.current.sortableItems).toHaveLength(1);
-    expect(result.current.sortableItems[0].title).toBe('Valid');
-  });
-
-  it('uses "zzz" as default sortOrder when missing', () => {
-    const items = [createDisplayItem({ sortOrder: null })];
-    const { result } = renderHook(() => useShoppingListTransform(items));
-
-    expect(result.current.sortableItems[0].sortOrder).toBe('zzz');
-  });
-
-  it('defaults quantity to 0 when missing', () => {
-    const items = [createDisplayItem({ quantity: null })];
-    const { result } = renderHook(() => useShoppingListTransform(items));
-
-    expect(result.current.sortableItems[0]!.rightElementConfig!.quantity).toBe(
-      0,
-    );
-  });
-
-  it('handles empty items array', () => {
-    const { result } = renderHook(() => useShoppingListTransform([]));
-
-    expect(result.current.sortableItems).toHaveLength(0);
-    expect(result.current.unpurchasedItems).toHaveLength(0);
-    expect(result.current.purchasedItems).toHaveLength(0);
-  });
-});
-
 describe('useShoppingListTransformMulti', () => {
-  it('transforms unpurchased and purchased source arrays', () => {
-    const unpurchased = [createDisplayItem({ id: '1' })];
-    const purchased = [
-      createDisplayItem({ id: '2', purchaseInfo: { isPurchased: true } }),
-    ];
-
+  it('wraps unpurchased and purchased nodes into row items', () => {
     const { result } = renderHook(() =>
       useShoppingListTransformMulti({
-        rawUnpurchasedItems: unpurchased,
-        rawPurchasedItems: purchased,
+        rawUnpurchasedItems: [node({ id: '1' })],
+        rawPurchasedItems: [node({ id: '2' })],
       }),
     );
 
     expect(result.current.unpurchasedItems).toHaveLength(1);
     expect(result.current.purchasedItems).toHaveLength(1);
+    expect(result.current.unpurchasedItems[0].id).toBe('1');
+    expect(result.current.purchasedItems[0].id).toBe('2');
   });
 
-  it('forces isPurchased: false on unpurchasedItems', () => {
-    const unpurchased = [
-      createDisplayItem({ id: '1', purchaseInfo: { isPurchased: true } }),
-    ];
-
+  it('pins isPurchased to the unpurchased tab regardless of server value', () => {
     const { result } = renderHook(() =>
       useShoppingListTransformMulti({
-        rawUnpurchasedItems: unpurchased,
+        rawUnpurchasedItems: [
+          node({
+            id: '1',
+            purchaseInfo: {
+              __typename: 'ShoppingListItemPurchaseInfo',
+              isPurchased: true,
+            },
+          }),
+        ],
         rawPurchasedItems: [],
       }),
     );
 
-    // forcePurchasedState: false overrides the server value
-    expect(result.current.unpurchasedItems[0]!.isPurchased).toBe(false);
+    expect(result.current.unpurchasedItems[0].isPurchased).toBe(false);
   });
 
-  it('forces isPurchased: true on purchasedItems', () => {
-    const purchased = [
-      createDisplayItem({ id: '1', purchaseInfo: { isPurchased: false } }),
-    ];
-
+  it('pins isPurchased to the purchased tab regardless of server value', () => {
     const { result } = renderHook(() =>
       useShoppingListTransformMulti({
         rawUnpurchasedItems: [],
-        rawPurchasedItems: purchased,
+        rawPurchasedItems: [
+          node({
+            id: '1',
+            purchaseInfo: {
+              __typename: 'ShoppingListItemPurchaseInfo',
+              isPurchased: false,
+            },
+          }),
+        ],
       }),
     );
 
-    // forcePurchasedState: true overrides the server value
-    expect(result.current.purchasedItems[0]!.isPurchased).toBe(true);
+    expect(result.current.purchasedItems[0].isPurchased).toBe(true);
+  });
+
+  it('skips invalid items (missing id or itemName)', () => {
+    const { result } = renderHook(() =>
+      useShoppingListTransformMulti({
+        rawUnpurchasedItems: [
+          node({ id: null, itemName: 'Milk' }),
+          node({ id: '2', itemName: null }),
+          node({ id: '3', itemName: 'Valid' }),
+        ],
+        rawPurchasedItems: [],
+      }),
+    );
+
+    expect(result.current.unpurchasedItems).toHaveLength(1);
+    expect(result.current.unpurchasedItems[0].id).toBe('3');
+  });
+
+  it('preserves sortOrder on the row wrapper', () => {
+    const { result } = renderHook(() =>
+      useShoppingListTransformMulti({
+        rawUnpurchasedItems: [node({ id: '1', sortOrder: 'zzz' })],
+        rawPurchasedItems: [],
+      }),
+    );
+
+    expect(result.current.unpurchasedItems[0].sortOrder).toBe('zzz');
+  });
+
+  it('exposes the node as a fragment ref on `itemRef`', () => {
+    const n = node({ id: '1' });
+    const { result } = renderHook(() =>
+      useShoppingListTransformMulti({
+        rawUnpurchasedItems: [n],
+        rawPurchasedItems: [],
+      }),
+    );
+
+    expect(result.current.unpurchasedItems[0].itemRef).toBe(n);
+  });
+
+  it('returns stable arrays when input arrays are stable', () => {
+    const unpurchased = [node({ id: '1' })];
+    const purchased = [node({ id: '2' })];
+
+    const { result, rerender } = renderHook(
+      (props: { u: any[]; p: any[] }) =>
+        useShoppingListTransformMulti({
+          rawUnpurchasedItems: props.u,
+          rawPurchasedItems: props.p,
+        }),
+      { initialProps: { u: unpurchased, p: purchased } },
+    );
+
+    const firstUnpurchased = result.current.unpurchasedItems;
+    rerender({ u: unpurchased, p: purchased });
+    expect(result.current.unpurchasedItems).toBe(firstUnpurchased);
+  });
+
+  it('returns empty arrays for empty inputs', () => {
+    const { result } = renderHook(() =>
+      useShoppingListTransformMulti({
+        rawUnpurchasedItems: [],
+        rawPurchasedItems: [],
+      }),
+    );
+
+    expect(result.current.unpurchasedItems).toEqual([]);
+    expect(result.current.purchasedItems).toEqual([]);
   });
 });

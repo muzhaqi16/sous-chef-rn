@@ -28,7 +28,12 @@ import {
   ShoppingListChangeType,
   MutationType,
 } from '#/graphql/generated/schemaTypes';
-import { ShoppingListItemDisplayFragmentDoc } from '#features/shoppingList/graphql/shoppingListFragments.generated';
+import {
+  ShoppingListItemDisplayFragmentDoc,
+  ShoppingListCollaboratorFragmentDoc,
+  type ShoppingListItemDisplayFragment,
+  type ShoppingListCollaboratorFragment,
+} from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import {
   CacheStrategy,
@@ -294,6 +299,18 @@ export function useShoppingListSubscriptions(
               mutation === MutationType.ItemCompleted ||
               mutation === MutationType.ItemUncompleted
             ) {
+              // Materialize the masked ShoppingListItem fragment so we can
+              // pass the full fragment shape to cache.writeFragment below.
+              // For an Updated/Completed/Uncompleted event the entity is
+              // already in the cache (it's being updated), so readFragment
+              // returns the merged record.
+              const itemData =
+                client.cache.readFragment<ShoppingListItemDisplayFragment>({
+                  fragment: ShoppingListItemDisplayFragmentDoc,
+                  fragmentName: 'ShoppingListItemDisplayFragment',
+                  from: item,
+                });
+
               const sortOrderChanged = item.sortOrder != null;
               const isCompletedMutation =
                 mutation === MutationType.ItemCompleted;
@@ -316,15 +333,17 @@ export function useShoppingListSubscriptions(
               ) {
                 // Animated path: write fragment immediately for visual feedback,
                 // then batch the move + sort in the animation callback
-                client.cache.writeFragment({
-                  id: client.cache.identify({
-                    __typename: 'ShoppingListItem',
-                    id: item.id,
-                  }),
-                  fragment: ShoppingListItemDisplayFragmentDoc,
-                  fragmentName: 'ShoppingListItemDisplayFragment',
-                  data: item,
-                });
+                if (itemData) {
+                  client.cache.writeFragment({
+                    id: client.cache.identify({
+                      __typename: 'ShoppingListItem',
+                      id: item.id,
+                    }),
+                    fragment: ShoppingListItemDisplayFragmentDoc,
+                    fragmentName: 'ShoppingListItemDisplayFragment',
+                    data: itemData,
+                  });
+                }
 
                 const direction: 1 | -1 = isCompletedMutation ? 1 : -1;
                 const moveOp = isCompletedMutation
@@ -362,15 +381,17 @@ export function useShoppingListSubscriptions(
                 // writeFragment + move + sort would otherwise trigger 2-3 notifications.
                 client.cache.batch({
                   update(cache: ApolloCache) {
-                    cache.writeFragment({
-                      id: cache.identify({
-                        __typename: 'ShoppingListItem',
-                        id: item.id,
-                      }),
-                      fragment: ShoppingListItemDisplayFragmentDoc,
-                      fragmentName: 'ShoppingListItemDisplayFragment',
-                      data: item,
-                    });
+                    if (itemData) {
+                      cache.writeFragment({
+                        id: cache.identify({
+                          __typename: 'ShoppingListItem',
+                          id: item.id,
+                        }),
+                        fragment: ShoppingListItemDisplayFragmentDoc,
+                        fragmentName: 'ShoppingListItemDisplayFragment',
+                        data: itemData,
+                      });
+                    }
 
                     if (isCompletedMutation) {
                       moveShoppingListItemToPurchased(
@@ -549,10 +570,21 @@ export function useShoppingListSubscriptions(
         }
 
         const mutation = payload.mutation;
-        const collaborator = payload.collaborator;
+        const collaboratorRef = payload.collaborator;
         const listId = payload.listId;
 
-        if (!collaborator?.id || !listId) return;
+        if (!collaboratorRef || !listId) return;
+
+        // Materialize the masked ShoppingListCollaborator fragment so we can
+        // read `id` (cache lookup) and `status` (for the Active branch).
+        const collaborator =
+          client.cache.readFragment<ShoppingListCollaboratorFragment>({
+            fragment: ShoppingListCollaboratorFragmentDoc,
+            fragmentName: 'ShoppingListCollaboratorFragment',
+            from: collaboratorRef,
+          });
+
+        if (!collaborator?.id) return;
 
         switch (mutation) {
           case MutationType.Created:

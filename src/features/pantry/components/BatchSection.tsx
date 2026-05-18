@@ -2,18 +2,27 @@ import React, { useState } from 'react';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
-import { useLazyQuery } from '@apollo/client/react';
+import { useApolloClient, useLazyQuery } from '@apollo/client/react';
 import { Icon } from '#/utils/iconUtils';
 import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
-import type { PantryItemBatchFragment } from '#features/pantry/graphql/pantryFragments.generated';
+import {
+  PantryItemBatchFragmentDoc,
+  type PantryItemBatchFragment,
+} from '#features/pantry/graphql/pantryFragments.generated';
 import { BatchStatus } from '#/graphql/generated/schemaTypes';
 import { BatchListItem } from './BatchListItem';
 import { useOpenPantryItemBatch } from '#features/pantry/hooks/mutations/useOpenPantryItemBatch';
 import { useWastePantryItemBatch } from '#features/pantry/hooks/mutations/useWastePantryItemBatch';
 import { Text } from '#components/atoms/Text';
 
+/**
+ * `batches` arrive already unmasked from the parent (PantryItemDetail
+ * materializes the full PantryItemFragment via `cache.readFragment`, which
+ * recursively unmasks nested fragments). `BatchListItem` then runs its own
+ * `useFragment` for reactive per-row updates.
+ */
 interface BatchSectionProps {
-  batches: PantryItemBatchFragment[];
+  batches: ReadonlyArray<PantryItemBatchFragment>;
   pantryItemId: string;
   unitSymbol?: string;
 }
@@ -26,14 +35,28 @@ export const BatchSection: React.FC<BatchSectionProps> = ({
   const [expanded, setExpanded] = useState(true);
   const [showAll, setShowAll] = useState(false);
 
+  const client = useApolloClient();
   const { openBatch } = useOpenPantryItemBatch();
   const { wasteBatch } = useWastePantryItemBatch();
 
-  // Lazy query for loading all batches (including depleted/wasted)
+  // Lazy-fetched "all batches" (including depleted/wasted) returns masked refs
+  // since GetPantryItemBatches doesn't @unmask. Materialize via cache.readFragment
+  // for status/expiresAt sort/filter.
   const [fetchAllBatches, { data: allBatchesData }] = useLazyQuery(
     GetPantryItemBatchesDocument,
     {},
   );
+
+  const allBatchesUnmasked: PantryItemBatchFragment[] =
+    allBatchesData?.pantryItemBatches
+      ?.map(ref =>
+        client.cache.readFragment<PantryItemBatchFragment>({
+          fragment: PantryItemBatchFragmentDoc,
+          fragmentName: 'PantryItemBatchFragment',
+          from: ref,
+        }),
+      )
+      .filter((b): b is PantryItemBatchFragment => b !== null) ?? [];
 
   // Sort active batches by expiration (FIFO order) — earliest first
   const activeBatches = batches
@@ -45,8 +68,8 @@ export const BatchSection: React.FC<BatchSectionProps> = ({
       return new Date(a.expiresAt).getTime() - new Date(b.expiresAt).getTime();
     });
 
-  const inactiveBatches = showAll
-    ? (allBatchesData?.pantryItemBatches ?? batches).filter(
+  const inactiveBatches: PantryItemBatchFragment[] = showAll
+    ? (allBatchesUnmasked.length > 0 ? allBatchesUnmasked : batches).filter(
         b => b.status !== BatchStatus.Active,
       )
     : [];

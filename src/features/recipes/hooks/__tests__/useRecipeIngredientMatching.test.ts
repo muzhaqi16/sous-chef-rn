@@ -2,12 +2,37 @@ import { act, waitFor } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,
+  seedCache,
 } from '#/test-utils/apolloMockProvider';
 import { MatchRecipeIngredientsToPantryDocument } from '#features/recipes/graphql/recipe.generated';
 import {
   useRecipeIngredientMatching,
   getAvailabilityStatus,
 } from '../useRecipeIngredientMatching';
+
+function seedIngredientCache(ids: string[]) {
+  return seedCache(
+    ids.map(id => ({
+      __typename: 'RecipeIngredient',
+      id,
+      name: `Ingredient ${id}`,
+      quantity: 1,
+      image: null,
+      isOptional: id === 'ing-3',
+      notes: null,
+      preparation: null,
+      sortOrder: 0,
+      section: null,
+      item: null,
+      unit: {
+        __typename: 'Unit',
+        id: `u-${id}`,
+        name: 'cup',
+        symbol: 'cup',
+      },
+    })),
+  );
+}
 
 jest.mock('#store/useAppStore', () => ({
   useAppStore: (selector: (s: any) => any) =>
@@ -126,7 +151,12 @@ describe('useRecipeIngredientMatching', () => {
           __typename: 'RecipeIngredient',
           id: 'ing-1',
           isOptional: false,
-          unit: { __typename: 'Unit', id: 'u1' },
+          unit: {
+            __typename: 'Unit',
+            id: 'u-ing-1',
+            name: 'cup',
+            symbol: 'cup',
+          },
         },
         isAvailable: true,
         matchConfidence: 0.95,
@@ -140,7 +170,7 @@ describe('useRecipeIngredientMatching', () => {
 
     const { result } = renderHookWithApollo(
       () => useRecipeIngredientMatching('recipe-1'),
-      { operationMocks: [m.mock] },
+      { operationMocks: [m.mock], cache: seedIngredientCache(['ing-1']) },
     );
 
     let success: boolean | undefined;
@@ -161,7 +191,12 @@ describe('useRecipeIngredientMatching', () => {
           __typename: 'RecipeIngredient',
           id: 'ing-1',
           isOptional: false,
-          unit: { __typename: 'Unit', id: 'u1' },
+          unit: {
+            __typename: 'Unit',
+            id: 'u-ing-1',
+            name: 'cup',
+            symbol: 'cup',
+          },
         },
         isAvailable: true,
         matchConfidence: 0.9,
@@ -175,7 +210,7 @@ describe('useRecipeIngredientMatching', () => {
 
     const { result } = renderHookWithApollo(
       () => useRecipeIngredientMatching('recipe-1'),
-      { operationMocks: [m.mock] },
+      { operationMocks: [m.mock], cache: seedIngredientCache(['ing-1']) },
     );
 
     await act(async () => {
@@ -197,7 +232,12 @@ describe('useRecipeIngredientMatching', () => {
           __typename: 'RecipeIngredient',
           id: 'ing-1',
           isOptional: false,
-          unit: { __typename: 'Unit', id: 'u1' },
+          unit: {
+            __typename: 'Unit',
+            id: 'u-ing-1',
+            name: 'cup',
+            symbol: 'cup',
+          },
         },
         isAvailable: true,
         matchConfidence: 0.9,
@@ -211,7 +251,7 @@ describe('useRecipeIngredientMatching', () => {
 
     const { result } = renderHookWithApollo(
       () => useRecipeIngredientMatching('recipe-1'),
-      { operationMocks: [m.mock] },
+      { operationMocks: [m.mock], cache: seedIngredientCache(['ing-1']) },
     );
 
     await act(async () => {
@@ -234,7 +274,12 @@ describe('useRecipeIngredientMatching', () => {
           __typename: 'RecipeIngredient',
           id: 'ing-1',
           isOptional: false,
-          unit: { __typename: 'Unit', id: 'u1' },
+          unit: {
+            __typename: 'Unit',
+            id: 'u-ing-1',
+            name: 'cup',
+            symbol: 'cup',
+          },
         },
         isAvailable: true,
         matchConfidence: 0.9,
@@ -248,7 +293,12 @@ describe('useRecipeIngredientMatching', () => {
           __typename: 'RecipeIngredient',
           id: 'ing-2',
           isOptional: false,
-          unit: { __typename: 'Unit', id: 'u2' },
+          unit: {
+            __typename: 'Unit',
+            id: 'u-ing-2',
+            name: 'cup',
+            symbol: 'cup',
+          },
         },
         isAvailable: false,
         matchConfidence: 0.3,
@@ -262,7 +312,12 @@ describe('useRecipeIngredientMatching', () => {
           __typename: 'RecipeIngredient',
           id: 'ing-3',
           isOptional: true,
-          unit: { __typename: 'Unit', id: 'u3' },
+          unit: {
+            __typename: 'Unit',
+            id: 'u-ing-3',
+            name: 'cup',
+            symbol: 'cup',
+          },
         },
         isAvailable: false,
         matchConfidence: 0,
@@ -276,7 +331,10 @@ describe('useRecipeIngredientMatching', () => {
 
     const { result } = renderHookWithApollo(
       () => useRecipeIngredientMatching('recipe-1'),
-      { operationMocks: [m.mock] },
+      {
+        operationMocks: [m.mock],
+        cache: seedIngredientCache(['ing-1', 'ing-2', 'ing-3']),
+      },
     );
 
     await act(async () => {

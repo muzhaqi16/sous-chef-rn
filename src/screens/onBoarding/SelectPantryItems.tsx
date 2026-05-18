@@ -6,8 +6,12 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from 'react-i18next';
 import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigation';
 import { useSelectableItems } from '#hooks/useSelectableItems';
-import { useMutation, useQuery } from '@apollo/client/react';
+import { useApolloClient, useMutation, useQuery } from '@apollo/client/react';
 import { GetOnboardingItemsDocument } from '#operations/item/item.generated';
+import {
+  PantryItemDisplayFragmentDoc,
+  type PantryItemDisplayFragment,
+} from '#features/pantry/graphql/pantryFragments.generated';
 import {
   GetPantryDocument,
   CreatePantryItemDocument,
@@ -36,6 +40,7 @@ export const SelectPantryItems = () => {
   useScreenTransition('SelectPantryItems');
   const { navigateToNextStep, navigateToPreviousStep } =
     useOnboardingNavigation();
+  const apolloClient = useApolloClient();
 
   const selectedPantryId = useSelectedPantryId();
 
@@ -71,11 +76,20 @@ export const SelectPantryItems = () => {
 
   const [isSaving, setIsSaving] = useState(false);
 
-  // Map catalog item IDs to pantry item IDs for existing pantry items
-  const pantryItems = extractNodes(pantryData?.pantry?.itemsConnection);
+  // Map catalog item IDs to pantry item IDs for existing pantry items.
+  // pantryItems comes back as masked PantryItemDisplay refs — materialize each
+  // via cache.readFragment to read item/itemId/id.
+  const pantryItemRefs = extractNodes(pantryData?.pantry?.itemsConnection);
   const map = new Map<string, string>();
   const ids = new Set<string>();
-  for (const pantryItem of pantryItems) {
+  for (const ref of pantryItemRefs) {
+    const pantryItem =
+      apolloClient.cache.readFragment<PantryItemDisplayFragment>({
+        fragment: PantryItemDisplayFragmentDoc,
+        fragmentName: 'PantryItemDisplay',
+        from: ref,
+      });
+    if (!pantryItem) continue;
     const catalogId = pantryItem.item?.id ?? pantryItem.itemId;
     if (catalogId) {
       map.set(catalogId, pantryItem.id);

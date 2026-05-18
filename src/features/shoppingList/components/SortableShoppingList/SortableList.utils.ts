@@ -1,8 +1,18 @@
 /**
- * Utility functions for SortableShoppingList component
+ * Utility functions for SortableShoppingList component.
+ *
+ * Operate on a structural subset of the row item shape (just `id` +
+ * `sortOrder`) so they work against both the lightweight `ShoppingListRowItem`
+ * the FlashList sees and any other id-bearing entity in tests.
  */
 
-import type { SortableShoppingListItem } from './types';
+interface ItemLike {
+  id: string;
+  sortOrder?: string | null;
+}
+
+// Re-exported alias kept for backwards compatibility with existing imports.
+type SortableShoppingListItem = ItemLike;
 
 /**
  * Compare two arrays of items by their IDs to check if items were added/removed

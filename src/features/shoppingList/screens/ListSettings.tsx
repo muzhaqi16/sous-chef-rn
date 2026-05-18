@@ -83,26 +83,39 @@ export const ListSettings: React.FC<
   const [selectedHomeId, setSelectedHomeId] = useState<string | null>(null);
   const [showHomePicker, setShowHomePicker] = useState(false);
 
-  const { shoppingList, isShared, collaborators } =
+  const { shoppingList, isShared, collaborators, ownerships } =
     useShoppingListDetails(listId);
   const user = useUser();
   // Use lazy loading for homes data to avoid triggering Zustand store updates
   // that would cause ShoppingListMain to re-render
   const { homes, fetchHomeData, isLoaded: homesLoaded } = useLazyHomeData();
 
+  // ownerships + collaborators are materialized in the hook so the helpers
+  // (typed against structural shapes) accept them via a synthesized arg.
+  const ownershipSnapshot = shoppingList
+    ? {
+        ownerships,
+        collaboratorsConnection: {
+          edges: collaborators.map(n => ({ node: n })),
+        },
+      }
+    : null;
+
   // Check if current user is the owner
   const isOwner =
-    listId && shoppingList ? isShoppingListOwner(shoppingList, user?.id) : true; // For new lists, user is always the owner
-  const role = shoppingList
+    listId && ownershipSnapshot
+      ? isShoppingListOwner(ownershipSnapshot, user?.id)
+      : true; // For new lists, user is always the owner
+  const role = ownershipSnapshot
     ? getShoppingListRole(
-        shoppingList,
+        ownershipSnapshot,
         user?.id,
-        shoppingList.home?.myMembership,
+        shoppingList?.home?.myMembership,
       )
     : null;
   const roleDisplay = formatRoleDisplay(role);
-  const ownerInfo = shoppingList
-    ? getShoppingListOwnerInfo(shoppingList)
+  const ownerInfo = ownershipSnapshot
+    ? getShoppingListOwnerInfo(ownershipSnapshot)
     : null;
 
   // Find current user's collaborator entry for leave functionality

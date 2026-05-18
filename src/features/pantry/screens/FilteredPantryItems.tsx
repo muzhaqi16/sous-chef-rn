@@ -45,13 +45,16 @@ type FilteredPantryItemsParams = {
   mode?: FilteredPantryItemsMode;
 };
 
+// Minimal shape needed by `FilteredPantryItems` — kept structurally
+// compatible with the `GetPantry` node so the `usePantryManagement` items
+// flow through without explicit casts.
 interface FilteredItem {
   id: string;
   itemName: string;
   quantity: number;
-  unit: { symbol: string } | null;
+  unit: { id: string; symbol: string } | null;
   isLowStock: boolean;
-  expiresAt?: string | null;
+  expiresAt: string | null;
 }
 
 // ── Mode config ──

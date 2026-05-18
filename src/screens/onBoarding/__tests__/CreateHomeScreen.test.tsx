@@ -46,7 +46,6 @@ jest.mock('#/utils/validation/onboarding', () => ({
   })),
 }));
 jest.mock('#/utils/connectionUtils', () => ({
-  normalizeHomes: jest.fn(h => h || []),
   extractNodes: jest.fn(c => c?.edges?.map((e: any) => e.node) || []),
 }));
 jest.mock('#/utils/compilerSafeWrappers');

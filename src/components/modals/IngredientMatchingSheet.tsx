@@ -24,7 +24,7 @@ import type {
 } from '#features/recipes/hooks/useRecipeIngredientMatching';
 import { Text } from '#components/atoms/Text';
 
-const keyExtractor = (item: EditableMatch) => item.match.ingredient.id;
+const keyExtractor = (item: EditableMatch) => item.ingredient.id;
 
 const IngredientMatchRenderItemComponent = ({
   item,

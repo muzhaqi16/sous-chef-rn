@@ -25,6 +25,7 @@ const ShoppingTabComponent: React.FC = () => {
   const actions = useShoppingListTabsActions();
   const {
     items,
+    showImages,
     onRefresh,
     refreshing,
     loading,
@@ -87,6 +88,7 @@ const ShoppingTabComponent: React.FC = () => {
       >
         <StaggeredTabContent
           items={items}
+          showImages={showImages}
           onItemPress={actions.onItemPress}
           onItemEdit={actions.onItemEdit}
           onItemDelete={actions.onItemDelete}

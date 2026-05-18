@@ -9,10 +9,7 @@
 
 import { useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
-import {
-  UpdatePantryItemQuantityDocument,
-  type UpdatePantryItemQuantityMutation,
-} from '#features/pantry/graphql/pantry.generated';
+import { UpdatePantryItemQuantityDocument } from '#features/pantry/graphql/pantry.generated';
 import {
   PantryItemDisplayFragmentDoc,
   type PantryItemFragment,
@@ -113,17 +110,6 @@ export function useUpdatePantryItemQuantity({
       quantity: newQuantity,
       unit: buildOptimisticUnit(trackingUnit, currentItem.unit),
     });
-    const optimisticResponse: UpdatePantryItemQuantityMutation = {
-      __typename: 'Mutation',
-      updatePantryItemQuantity: {
-        __typename: 'PantryItemPayload',
-        success: true,
-        message: '',
-        code: 'SUCCESS',
-        pantryItem:
-          optimisticPantryItem as UpdatePantryItemQuantityMutation['updatePantryItemQuantity']['pantryItem'],
-      },
-    };
     updateQuantityMutation({
       variables: {
         pantryItemId: itemId,
@@ -131,7 +117,16 @@ export function useUpdatePantryItemQuantity({
         unitId: unitId,
         version: currentItem.version ?? undefined,
       },
-      optimisticResponse,
+      optimisticResponse: {
+        __typename: 'Mutation',
+        updatePantryItemQuantity: {
+          __typename: 'PantryItemPayload',
+          success: true,
+          message: '',
+          code: 'SUCCESS',
+          pantryItem: optimisticPantryItem,
+        },
+      },
     }).catch(error => {
       console.error('Quantity update failed:', error);
       // Error already handled by mutation's onError

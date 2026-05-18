@@ -15,7 +15,7 @@ import {
   DeclineHomeInviteDocument,
 } from '#operations/home/home.generated';
 import {
-  AcceptShoppingListInviteDocument,
+  InvitationAcceptanceModalAcceptShoppingListInviteDocument,
   DeclineShoppingListInviteDocument,
   MyShoppingListInvitesDocument,
 } from '../InvitationAcceptanceModal.generated';
@@ -216,7 +216,7 @@ function acceptHomeError(message: string) {
 
 function acceptShoppingListOk(opts: { success?: boolean } = {}) {
   const success = opts.success ?? true;
-  return recordMock(AcceptShoppingListInviteDocument, {
+  return recordMock(InvitationAcceptanceModalAcceptShoppingListInviteDocument, {
     data: {
       acceptShoppingListInvite: {
         __typename: 'ShoppingListCollaboratorPayload',
@@ -263,7 +263,7 @@ function acceptShoppingListOk(opts: { success?: boolean } = {}) {
 }
 
 function acceptShoppingListError(message: string) {
-  return recordMock(AcceptShoppingListInviteDocument, {
+  return recordMock(InvitationAcceptanceModalAcceptShoppingListInviteDocument, {
     error: new Error(message),
   });
 }
