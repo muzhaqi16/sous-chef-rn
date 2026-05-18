@@ -7,6 +7,7 @@ import { InfoRow } from '#components/molecules/InfoRow';
 const ThemedConditionInfoRow = withUnistyles(InfoRow);
 import { Icon } from '#/utils/iconUtils';
 import { getUnitDisplayText } from '#utils/formatQuantity';
+import type { Unmasked } from '@apollo/client/masking';
 import { type PantryItemFragment } from '#features/pantry/graphql/pantryFragments.generated';
 import {
   formatCondition,
@@ -17,10 +18,9 @@ import {
 import { Text } from '#components/atoms/Text';
 
 interface PantryDetailInfoProps {
-  // `@unmask(mode: "migrate")` on the inner PantryItemDisplay spread keeps all
-  // fields accessible directly off PantryItemFragment, so no `Unmasked<>` wrap
-  // is needed here.
-  item: PantryItemFragment;
+  // `Unmasked<>` reflects what `cache.readFragment<PantryItemFragment>` returns
+  // to the caller — the inner PantryItemDisplay fields are inlined.
+  item: Unmasked<PantryItemFragment>;
   brandName: string | null;
   netWeightText: string | null;
   remainingNetWeightText: string | null;

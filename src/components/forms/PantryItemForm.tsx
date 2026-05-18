@@ -205,16 +205,16 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
 
   // Materialize the masked PantryItemFragment ref into the full entity for
   // direct field access throughout the form. `cache.readFragment` reads from
-  // the same normalized cache entry the `useQuery` subscription drives.
+  // the same normalized cache entry the `useQuery` subscription drives and
+  // returns `Unmasked<PantryItemFragment>` so inner display fields are inlined.
   const apolloClient = useApolloClient();
-  const existingPantryItem: PantryItemFragment | null =
-    existingItemData?.pantryItem
-      ? apolloClient.cache.readFragment<PantryItemFragment>({
-          fragment: PantryItemFragmentDoc,
-          fragmentName: 'PantryItemFragment',
-          from: existingItemData.pantryItem,
-        })
-      : null;
+  const existingPantryItem = existingItemData?.pantryItem
+    ? apolloClient.cache.readFragment<PantryItemFragment>({
+        fragment: PantryItemFragmentDoc,
+        fragmentName: 'PantryItemFragment',
+        from: existingItemData.pantryItem,
+      })
+    : null;
 
   const pantry = getDefaultPantry(homeData);
   const currentPantryId =
@@ -449,7 +449,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     itemId,
     currentPantryId,
     isWeightLocked,
-    existingItemData,
+    existingPantryItem,
     dirtyFields: dirtyFields as Record<string, unknown>,
     trackingUnit,
     netWeightUnitId,

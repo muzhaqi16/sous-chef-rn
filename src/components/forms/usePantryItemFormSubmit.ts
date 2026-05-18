@@ -1,7 +1,9 @@
+import type { Unmasked } from '@apollo/client/masking';
 import { alertService } from '#/services/alertService';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { parseFractionalInput as parseQuantityInput } from '#/utils/fractionUtils';
 import type { UnitSelection } from '#features/pantry/hooks/mutations/types';
+import type { PantryItemFragment } from '#features/pantry/graphql/pantryFragments.generated';
 
 /** All form fields PantryItemForm exposes through `useForm`. */
 export interface PantryItemFormData {
@@ -28,7 +30,7 @@ export interface UsePantryItemFormSubmitParams {
   itemId: string | undefined;
   currentPantryId: string | undefined | null;
   isWeightLocked: boolean;
-  existingItemData: { pantryItem?: any } | null | undefined;
+  existingPantryItem: Unmasked<PantryItemFragment> | null;
   dirtyFields: Record<string, unknown>;
   trackingUnit: UnitSelection;
   netWeightUnitId: string | null;
@@ -95,7 +97,7 @@ export function usePantryItemFormSubmit(params: UsePantryItemFormSubmitParams) {
           return;
         }
 
-        const currentItem = params.existingItemData?.pantryItem;
+        const currentItem = params.existingPantryItem;
         if (!currentItem || !params.itemId) {
           alertService.alert('Error', 'Item not found');
           return;

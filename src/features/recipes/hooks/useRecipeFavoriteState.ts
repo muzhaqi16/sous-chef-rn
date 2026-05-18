@@ -5,8 +5,8 @@ import { MyRecipesDocument } from '#features/recipes/graphql/recipe.generated';
 import {
   BasicRecipeFragmentDoc,
   type BasicRecipeFragment,
-  type RecipeFragment,
 } from '#features/recipes/graphql/recipeFragments.generated';
+import { type MaterializedRecipe } from '#features/recipes/hooks/useRecipeData';
 import { extractNodes } from '#/utils/connectionUtils';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 import type {
@@ -19,7 +19,7 @@ export interface UseRecipeFavoriteStateParams {
   externalId: string | undefined;
   externalRecipe: RecipeInformation | null;
   isBackendRecipe: boolean;
-  backendRecipe: RecipeFragment | undefined;
+  backendRecipe: MaterializedRecipe | undefined;
   /** From `useRecipePreload`. */
   saveRecipeToFavorites: UseRecipePreloadReturn['saveRecipeToFavorites'];
   /** From `useRecipePreload`. */

@@ -11,6 +11,7 @@ import {
   RecipeReviewFragmentDoc,
   type RecipeReviewFragment,
 } from '#features/recipes/graphql/recipeFragments.generated';
+import { UserSummaryFragmentDoc } from '#operations/auth/userFragments.generated';
 
 interface ReviewCardProps {
   review: RecipeReviewFragment;
@@ -40,8 +41,19 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
   });
   const review = fragmentResult.complete ? fragmentResult.data : reviewSource;
 
-  const displayName = review.user.profile?.displayName || review.user.email;
-  const avatar = review.user.profile?.avatar;
+  const userFragmentResult = useFragment({
+    fragment: UserSummaryFragmentDoc,
+    fragmentName: 'UserSummary',
+    from: review.user,
+  });
+  // Falls back to the source prop on cache miss so list cells never blank out.
+  const sourceUser = review.user as typeof userFragmentResult.data;
+  const user = userFragmentResult.complete
+    ? userFragmentResult.data
+    : sourceUser;
+
+  const displayName = user.profile?.displayName || user.email;
+  const avatar = user.profile?.avatar;
 
   return (
     <View style={styles.container}>

@@ -11,16 +11,16 @@ import {
 } from '#features/recipes/graphql/recipe.generated';
 import {
   RecipeReviewFragmentDoc,
-  type RecipeFragment,
   type RecipeReviewFragment,
 } from '#features/recipes/graphql/recipeFragments.generated';
+import { type MaterializedRecipe } from './useRecipeData';
 import { useUser } from '#store/useAppStore';
 import { toastService } from '#/services/toastService';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 
 interface UseRecipeReviewsOptions {
   recipeId: string;
-  backendRecipe: RecipeFragment | null | undefined;
+  backendRecipe: MaterializedRecipe | null | undefined;
 }
 
 /**
@@ -54,19 +54,21 @@ export function useRecipeReviews({
   const rating5Count = backendRecipe?.rating5Count ?? 0;
 
   // Materialize each masked review ref via cache.readFragment so we can
-  // sort/filter by `helpful`, `createdAt`, and inspect `user`.
+  // sort/filter by `helpful`, `createdAt`, and inspect `user`. The return type
+  // of cache.readFragment is `Unmasked<RecipeReviewFragment>`, so nested
+  // UserSummary fields are inlined.
   const reviews = (() => {
     const rawRefs =
       reviewsData?.recipe?.reviews?.edges?.map(edge => edge.node) ?? [];
-    const materialized: RecipeReviewFragment[] = [];
-    for (const ref of rawRefs) {
-      const review = apolloClient.cache.readFragment<RecipeReviewFragment>({
-        fragment: RecipeReviewFragmentDoc,
-        fragmentName: 'RecipeReviewFragment',
-        from: ref,
-      });
-      if (review) materialized.push(review);
-    }
+    const materialized = rawRefs
+      .map(ref =>
+        apolloClient.cache.readFragment<RecipeReviewFragment>({
+          fragment: RecipeReviewFragmentDoc,
+          fragmentName: 'RecipeReviewFragment',
+          from: ref,
+        }),
+      )
+      .filter((r): r is NonNullable<typeof r> => r !== null && r !== undefined);
     return materialized.sort((a, b) => {
       if (b.helpful !== a.helpful) return b.helpful - a.helpful;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();

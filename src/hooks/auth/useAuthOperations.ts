@@ -1,10 +1,15 @@
 import { useState } from 'react';
 import { useToast } from '#/hooks/useToast';
-import { useMutation } from '@apollo/client/react';
+import { useApolloClient, useMutation } from '@apollo/client/react';
 import {
   LoginDocument,
   RegisterDocument,
 } from '#operations/auth/auth.generated';
+import {
+  LoginUserFragmentDoc,
+  type LoginUserFragment,
+} from '#operations/auth/userFragments.generated';
+import type { ApolloClient } from '@apollo/client';
 import {
   type LoginInput,
   type RegisterInput,
@@ -97,6 +102,38 @@ export interface AuthOperationsReturn {
   clearRegistrationPassword: () => void;
 }
 
+// Resolve the masked AuthPayload.user ref into a plain LoginUser by reading
+// from the Apollo cache. The mutation has already written the user entity to
+// the normalized cache, so this read is synchronous.
+function unmaskAuthPayload(
+  apolloClient: ApolloClient,
+  payload:
+    | {
+        accessToken: string;
+        refreshToken: string;
+        user: { __typename: 'User'; id: string };
+      }
+    | null
+    | undefined,
+): {
+  accessToken: string;
+  refreshToken: string;
+  user: LoginUserFragment;
+} | null {
+  if (!payload) return null;
+  const user = apolloClient.cache.readFragment<LoginUserFragment>({
+    fragment: LoginUserFragmentDoc,
+    fragmentName: 'LoginUser',
+    from: payload.user,
+  });
+  if (!user) return null;
+  return {
+    accessToken: payload.accessToken,
+    refreshToken: payload.refreshToken,
+    user,
+  };
+}
+
 // --- Module-level helpers (outside hook body for React Compiler) ---
 
 function handleAuthErrorImpl(
@@ -137,6 +174,7 @@ function handleAuthErrorImpl(
 }
 
 async function autoLoginImpl(
+  apolloClient: ApolloClient,
   credentialStorage: CredentialStorageEvents,
   loginMutation: (opts: any) => Promise<any>,
   handleLogin: (response: any, shouldRemember?: boolean) => Promise<boolean>,
@@ -175,7 +213,13 @@ async function autoLoginImpl(
       });
 
       if (loginResult.data?.login) {
-        await handleLogin(loginResult.data.login, true);
+        const unmaskedLogin = unmaskAuthPayload(
+          apolloClient,
+          loginResult.data.login,
+        );
+        if (unmaskedLogin) {
+          await handleLogin(unmaskedLogin, true);
+        }
         logger.info('Auto-login successful');
         return true;
       }
@@ -201,6 +245,7 @@ async function autoLoginImpl(
 }
 
 async function loginImpl(
+  apolloClient: ApolloClient,
   input: LoginInput,
   showRememberPrompt: boolean,
   loginMutation: (opts: any) => Promise<any>,
@@ -228,11 +273,13 @@ async function loginImpl(
           password: input.password,
         };
 
-        const biometricTriggered = await handleLogin(
+        const unmaskedLogin = unmaskAuthPayload(
+          apolloClient,
           mutationResult.data.login,
-          true,
-          loginCredentials,
         );
+        const biometricTriggered = unmaskedLogin
+          ? await handleLogin(unmaskedLogin, true, loginCredentials)
+          : false;
 
         if (showRememberPrompt && !biometricTriggered) {
           const hasStoredCreds = await credentialStorage.onCredentialCheck(
@@ -264,6 +311,7 @@ async function loginImpl(
 }
 
 async function registerImpl(
+  apolloClient: ApolloClient,
   input: RegisterInput,
   shouldRemember: boolean,
   registerMutation: (opts: any) => Promise<any>,
@@ -297,7 +345,13 @@ async function registerImpl(
           clearRegistrationPreferences(mutationResult.data.register.user.id);
         }
 
-        await handleRegistration(mutationResult.data.register, shouldRemember);
+        const unmaskedRegister = unmaskAuthPayload(
+          apolloClient,
+          mutationResult.data.register,
+        );
+        if (unmaskedRegister) {
+          await handleRegistration(unmaskedRegister, shouldRemember);
+        }
         return true;
       }
 
@@ -403,6 +457,7 @@ export const useAuthOperations = ({
   } = useAuthPreferences();
 
   // GraphQL mutations
+  const apolloClient = useApolloClient();
   const [loginMutation] = useMutation(LoginDocument);
   const [registerMutation] = useMutation(RegisterDocument);
 
@@ -547,6 +602,7 @@ export const useAuthOperations = ({
   // Auto-login functionality
   const autoLogin = async (): Promise<boolean> => {
     return autoLoginImpl(
+      apolloClient,
       credentialStorage,
       loginMutation,
       handleLogin,
@@ -560,6 +616,7 @@ export const useAuthOperations = ({
     showRememberPrompt = true,
   ): Promise<boolean> => {
     return loginImpl(
+      apolloClient,
       input,
       showRememberPrompt,
       loginMutation,
@@ -578,6 +635,7 @@ export const useAuthOperations = ({
     shouldRemember = true,
   ): Promise<boolean> => {
     return registerImpl(
+      apolloClient,
       input,
       shouldRemember,
       registerMutation,

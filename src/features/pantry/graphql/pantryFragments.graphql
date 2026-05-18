@@ -70,7 +70,7 @@ fragment PantryItemDisplay on PantryItem {
 }
 
 fragment PantryItemFragment on PantryItem {
-  ...PantryItemDisplay @unmask(mode: "migrate")
+  ...PantryItemDisplay
   item {
     name
     shelfLifeDays

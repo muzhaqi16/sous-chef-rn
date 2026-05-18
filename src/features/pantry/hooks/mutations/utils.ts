@@ -3,6 +3,7 @@
  */
 
 import type { ApolloCache } from '@apollo/client';
+import type { Unmasked } from '@apollo/client/masking';
 import { type PantryItemFragment } from '#features/pantry/graphql/pantryFragments.generated';
 import {
   StorageState,
@@ -28,8 +29,8 @@ export const addToPantryItemsCache = createAddToParentConnectionUpdater<any>(
  */
 export function buildOptimisticUnit(
   newUnit: UnitSelection,
-  currentUnit?: PantryItemFragment['unit'] | null,
-): PantryItemFragment['unit'] | null {
+  currentUnit?: Unmasked<PantryItemFragment>['unit'] | null,
+): Unmasked<PantryItemFragment>['unit'] | null {
   if (!newUnit.id) return null;
 
   // Cast type to UnitType if it's a string, fallback to COUNT

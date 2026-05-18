@@ -9,6 +9,7 @@
  */
 
 import { useMutation } from '@apollo/client/react';
+import type { Unmasked } from '@apollo/client/masking';
 import { alertService } from '#/services/alertService';
 import { UpdatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import type { PantryItemFragment } from '#features/pantry/graphql/pantryFragments.generated';
@@ -36,7 +37,7 @@ interface UseUpdatePantryItemOptions {
 interface UpdatePantryItemFieldsParams {
   itemId: string;
   input: FormDataInput;
-  currentItem: PantryItemFragment;
+  currentItem: Unmasked<PantryItemFragment>;
   dirtyFields: Record<string, boolean>;
   selectedLocationId: string | null;
   selectedBrandId: string | null;
@@ -114,7 +115,7 @@ export function useUpdatePantryItem({
     }
 
     // Build optimistic update from form data (PantryItem-shaped, not mutation-input-shaped)
-    const optimisticUpdate: Partial<PantryItemFragment> = {};
+    const optimisticUpdate: Partial<Unmasked<PantryItemFragment>> = {};
     if (dirtyFields.itemName) optimisticUpdate.itemName = input.itemName;
     if (dirtyFields.storageState)
       optimisticUpdate.storageState = input.storageState;

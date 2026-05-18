@@ -2,6 +2,7 @@
  * Shared types for pantry item mutations
  */
 
+import type { Unmasked } from '@apollo/client/masking';
 import { StorageState } from '#/graphql/generated/schemaTypes';
 import { type PantryItemFragment } from '#features/pantry/graphql/pantryFragments.generated';
 
@@ -58,7 +59,7 @@ export interface UpdatePantryItemParams<
 > {
   itemId: string;
   input: T;
-  currentItem: PantryItemFragment;
+  currentItem: Unmasked<PantryItemFragment>;
   dirtyFields: Record<string, boolean>;
   quantityValue: number;
   unitId: string | null;

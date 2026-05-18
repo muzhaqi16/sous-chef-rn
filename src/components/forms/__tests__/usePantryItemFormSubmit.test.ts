@@ -55,7 +55,7 @@ function defaults(
     itemId: undefined,
     currentPantryId: 'pantry-1',
     isWeightLocked: false,
-    existingItemData: null,
+    existingPantryItem: null,
     dirtyFields: {},
     trackingUnit: { id: 'unit-1', name: 'Liter', symbol: 'L', type: null },
     netWeightUnitId: null,
@@ -103,7 +103,10 @@ describe('usePantryItemFormSubmit', () => {
 
   describe('add mode', () => {
     it('calls createPantryItem with form input + pantry context', async () => {
-      const params = defaults({ selectedLocationId: 'loc-1', selectedCategoryId: 'cat-1' });
+      const params = defaults({
+        selectedLocationId: 'loc-1',
+        selectedCategoryId: 'cat-1',
+      });
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
       result.current.handleSave(baseData);
@@ -179,23 +182,24 @@ describe('usePantryItemFormSubmit', () => {
       defaults({
         mode: 'edit',
         itemId: 'item-1',
-        existingItemData: {
-          pantryItem: {
-            id: 'item-1',
-            unit: { symbol: 'L' },
-          },
-        },
+        existingPantryItem: {
+          id: 'item-1',
+          unit: { symbol: 'L' },
+        } as any,
         ...overrides,
       });
 
     it('alerts when editing without an existing item', async () => {
-      const params = editParams({ existingItemData: null });
+      const params = editParams({ existingPantryItem: null });
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
       result.current.handleSave(baseData);
       await new Promise(r => setImmediate(r));
 
-      expect(alertService.alert).toHaveBeenCalledWith('Error', 'Item not found');
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Error',
+        'Item not found',
+      );
     });
 
     it('calls updateQuantity when quantityInput is dirty', async () => {
@@ -257,7 +261,8 @@ describe('usePantryItemFormSubmit', () => {
       result.current.handleSave(baseData);
       await new Promise(r => setImmediate(r));
 
-      const call = (params.updatePantryItemFields as jest.Mock).mock.calls[0][0];
+      const call = (params.updatePantryItemFields as jest.Mock).mock
+        .calls[0][0];
       expect(call.dirtyFields.netWeight).toBeUndefined();
       expect(call.dirtyFields.notes).toBe(true);
     });
@@ -296,9 +301,7 @@ describe('usePantryItemFormSubmit', () => {
       const params = defaults({
         mode: 'edit',
         itemId: 'item-1',
-        existingItemData: {
-          pantryItem: { id: 'item-1', unit: { symbol: 'L' } },
-        },
+        existingPantryItem: { id: 'item-1', unit: { symbol: 'L' } } as any,
         dirtyFields: { quantityInput: true },
         updateQuantity: jest.fn(() => {
           throw new Error('boom');
