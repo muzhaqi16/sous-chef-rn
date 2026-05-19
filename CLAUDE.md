@@ -28,8 +28,7 @@
   any wrapper.
 - **Do not wrap `Pressable` with `withUnistyles(...)`.** Wrapping silently
   drops `StyleSheet.create` proxy values inside function-style `style`
-  callbacks (unistyles#1109). The codemod that introduced this regression in
-  commit 6815252e has been reverted at the wrapper level.
+  callbacks (unistyles#1109).
 - **For gesture composition, import `Pressable` directly from
   `react-native-gesture-handler`.** Required when the pressable lives inside
   a `Swipeable`, is part of a `GestureDetector` / `Gesture.X` chain, or
@@ -91,15 +90,10 @@ happen inside that factory.
     colors flow into Skia draw calls.
   - `RecipeMain`, `SortableShoppingList` — theme colors flow into data
     structures (`SearchBarAction[]`, the sortable theme context provider).
-- **Merging a `style` prop with themed styles is supported.** Unistyles'
-  [official "Merging styles" guide](https://www.unistyl.es/v3/guides/merging-styles/)
-  recommends `<View style={[styles.x, callerStyle]} />`, and the React
-  Compiler interaction bug ([unistyles#368](https://github.com/jpudysz/react-native-unistyles/issues/368),
-  fixed in [PR #672](https://github.com/jpudysz/react-native-unistyles/pull/672))
-  was resolved upstream — the babel plugin now parses variants on
-  `Program.enter` so the React Compiler's auto-memoization no longer hides
-  theme deps. Just use the array merge pattern; no wrapper or `'use no memo'`
-  directive is needed.
+- **Merging a `style` prop with themed styles uses the array pattern**
+  `<View style={[styles.x, callerStyle]} />` ([Unistyles "Merging styles"
+  guide](https://www.unistyl.es/v3/guides/merging-styles/)). No wrapper or
+  `'use no memo'` directive needed.
 - **Navigators must use `inactiveBehavior: 'none'`** in `screenOptions`. The
   default `'pause'` behavior in `@react-navigation/native-stack` v8 and
   `@react-navigation/bottom-tabs` v8 freezes inactive screens, preventing
@@ -217,7 +211,7 @@ required — the rule only blocks NEW reach-across imports.
 
 ### Apollo Test Patterns
 
-**Always use `renderHookWithApollo` / `renderWithProviders` from `__tests__/helpers/`.**
+**Always use `renderHookWithApollo` / `renderWithApollo` from `__tests__/helpers/apolloMockProvider.tsx`.**
 Direct `jest.mock('@apollo/client/react', () => ({ useQuery: jest.fn(...) }))`
 is the legacy anti-pattern — it couples tests to operation names (refactor-broken)
 and bypasses the real cache, missing the very integration bugs tests should catch.
@@ -256,7 +250,7 @@ The helper supports two modes:
 
 For mutation tests: assert on the cache after the mutation, not on the mock function. The whole point is exercising the cache update path that the production code relies on.
 
-**Migration gotchas (from the P1-16 sweep):**
+**Apollo test gotchas:**
 
 1. **`errorPolicy: 'all'` defeats `executeMutation`'s catch path.** The shared
    `apolloMockProvider` wrapper sets `mutate: { errorPolicy: 'all' }`, so Apollo
@@ -317,15 +311,17 @@ Pick the cache-update pattern based on what the mutation changes:
 
 | Pattern | Use when | Example |
 |---|---|---|
-| **`writeFragment`** (preferred default) | Mutation returns the full updated entity | `useAdjustPantryItemQuantity` — server returns the patched item, fragment write syncs cache |
-| **`cache.modify`** | Need to update parent aggregate / stat fields not in the response | `useUpdatePantryItem` — patches `Pantry.stats` counts after a location change |
-| **`cache.modify` on connection edges + parent counts** | Entity moves between filtered connections (purchased ↔ unpurchased, list ↔ list) | `useToggleShoppingItem`, `useRemoveShoppingItem` |
-| **`refetchQueries`** (last resort) | Mutation affects unrelated queries / root-level aggregates that can't be derived from the response | `useRecipeReviews` (rating stats on the parent recipe) |
+| **No `update` callback** (preferred default) | Mutation returns the entity and Apollo auto-normalizes by `__typename + id` | `useAdjustPantryItemQuantity` — the mutation spreads the hook's fragment on the response; Apollo writes through automatically |
+| **`cache.modify` on parent aggregates** | Need to update parent stat fields not in the response | `useUpdatePantryItem` — patches `Pantry.stats` counts (`modifyPantryStats`) after a location change |
+| **`cache.modify` on entity fields BEFORE firing the mutation** | Optimistic UI without a callback — set fields synchronously, revert from a snapshot on error | `useToggleShoppingItem` — flips `purchaseInfo.isPurchased` + moves the item between purchased/unpurchased connections immediately, reverts in `onError` |
+| **`cache.modify` on connection edges + parent counts** | Entity moves between filtered connections (purchased ↔ unpurchased, list ↔ list) | `useToggleShoppingItem`, `useRemoveShoppingItem` — `moveShoppingListItemTo*` helpers |
+| **`writeFragment`** | Subscription handler receives an entity push and writes it through | `usePantrySubscriptions`, `useShoppingListSubscriptions` |
+| **`refetchQueries`** (last resort) | Mutation affects queries whose shape can't be derived from the response | `CreateHomeScreen` (refetches home list after creating home), `useRecipePreload` |
 
 Defaults:
-- `optimisticResponse` for any user-facing mutation; the cache update should be idempotent so the eventual server response converges cleanly.
+- `optimisticResponse` (callback form returning `Unmasked<TData>`) for mutations that need to materialize the cached entity for the optimistic shape; otherwise prefer the **cache.modify before mutation + revert on error** pattern (no callback needed, no `Unmasked<>` import).
 - `errorPolicy: 'all'` so partial-data errors are surfaced to the hook, not swallowed.
-- Avoid `refetchQueries` unless `cache.modify` would require duplicating server logic (e.g., recomputing aggregate ratings).
+- Avoid `refetchQueries` unless `cache.modify` would require duplicating server logic.
 - Build optimistic responses from the existing cache via `cache.readFragment` + spread, never with hand-rolled placeholder shapes that can drift from the schema.
 
 ### Autocomplete Local-First Search
@@ -360,8 +356,7 @@ Consumer hooks do not need to implement their own relevance checks.
 follows Apollo Client 4.x's recommended pattern: **per-component / per-hook
 colocated fragments**, masked at the type level, materialized through
 `useFragment` (for cache subscriptions) or `cache.readFragment` (for one-shot
-reads). The legacy "god fragment" approach (`PantryItemFragment`,
-`ShoppingListItemFragment`, `MealPlanFull`) has been decomposed.
+reads).
 
 **Fragment locations:**
 - A component / hook owns its fragment in a sibling `<Name>.graphql` file
@@ -373,16 +368,35 @@ reads). The legacy "god fragment" approach (`PantryItemFragment`,
   `fragment ItemDetail_X on X { ...ChildA_X ...ChildB_X /* + screen fields */ }`.
 - Queries spread the screen-level fragment(s); mutations spread the
   hook-owned fragment.
-- A small number of **domain structural fragments** stay shared in
-  `*Fragments.graphql` — e.g. `PantryItemDisplay`, `ShoppingListItemDisplayFragment`
-  — because multiple subscription handlers / cache writers legitimately need
-  the same canonical write-back shape. Document the intent in the fragment's
-  own file when adding a new one.
+- **Shared fragments** live in `*Fragments.graphql` and each carries a
+  header listing the operations that spread it and the hooks that read it.
+  That header is the contract for keeping the fragment shared. Current set:
+  `PantryItemBatchFragment`, `ShoppingListItemDisplayFragment`,
+  `ShoppingListOwnershipFragment`, `ShoppingListCollaboratorFragment`,
+  `MealPlanDisplay`, `MealTemplateDisplay`, `MealTemplateItemFragment`,
+  `BasicRecipeFragment`, `RecipeIngredientFragment`, `RecipeReviewFragment`,
+  `LoginUser`, `PartialUser`.
 
-**`@unmask` is not used anywhere in this codebase.** It's an Apollo-documented
-*migration tool* (see `@unmask(mode: "migrate")` for incremental rollouts),
-not a steady-state pattern. The `customDirectives.apolloUnmask` flag has been
-removed from `codegen.ts`.
+**Don't:**
+- Don't add a new fragment to `*Fragments.graphql` without 2+ operations and
+  1+ hook needing the identical shape, plus the consumer-list header.
+- Don't import the following names from `**/*Fragments.generated` (lint
+  blocks them via `no-restricted-imports` in `.eslintrc.js`):
+  `UnitBasic*`, `UnitFull*`, `StoreFields*`, `BrandFields*`,
+  `UserProfileFields*`, `UserProfileFull*`, `UserSummary*`,
+  `ItemFragment*`, `ItemDisplay*`, `ItemCore*`, `HomeFragment*`,
+  `PantryItemFragment*`, `PantryItemDisplay*`, `ShoppingListItemFragment*`,
+  `MealPlanFullFragment*`, `RecipeFragment*`. If you need fields one of
+  these described, create a colocated `<Consumer>_<entity>` fragment in a
+  sibling `.graphql` file.
+- Don't use `@unmask` (any mode). It's an Apollo migration tool, not a
+  steady-state pattern. If a mutation hook needs an unmasked shape, annotate
+  the `optimisticResponse` callback return type as `Unmasked<TData>` — see
+  the "Mutation optimistic responses" section below.
+- Don't reach across feature boundaries into another feature's
+  `graphql/`, `context/`, `hooks/mutations/`, or `utils/` folder. Only
+  `<feature>Fragments.generated.ts` type imports are allowed across
+  features. `import/no-restricted-paths` enforces this.
 
 **Two valid `useFragment` consumer patterns — pick by use case:**
 
@@ -459,29 +473,27 @@ React Native app the practical benefit is small:
 Reach for `useSuspenseQuery` when a new screen has **2+ independent parallel queries**
 that benefit from `useBackgroundQuery` waterfall avoidance. Otherwise stay with `useQuery`.
 
-**Existing code:**
+**File layout:**
 
-- The legacy `src/graphql/operations/fragments.graphql` monolith has been deleted.
-  Fragments are organized by domain: `auth/userFragments.graphql`,
-  `home/homeFragments.graphql`, `item/itemFragments.graphql`,
-  `mealPlan/mealPlanFragments.graphql`, `pantry/pantryFragments.graphql`,
-  `recipe/recipeFragments.graphql`, `shoppingList/shoppingListFragments.graphql`.
-  Multi-consumer fragments live in those domain files; single-consumer fragments
-  (e.g. `MealPlanItemCard_item`, `InviteCard_invite`) are colocated next to their
-  component.
-- Use the `#operations/<domain>/...` alias for imports rather than long relative paths.
-- Don't migrate working `useQuery` sites or fragment consumers opportunistically.
-  Convert only when you're touching the area for another reason and the conversion
-  is small.
+- Shared fragments live in per-feature `*Fragments.graphql`:
+  `src/graphql/operations/auth/userFragments.graphql`,
+  `src/features/pantry/graphql/pantryFragments.graphql`,
+  `src/features/shoppingList/graphql/shoppingListFragments.graphql`,
+  `src/features/mealPlan/graphql/mealPlanFragments.graphql`,
+  `src/features/recipes/graphql/recipeFragments.graphql`.
+- All other fragments are colocated next to their consuming component or
+  hook (e.g. `PantryItemCard.graphql`, `InviteCard.graphql`,
+  `useUpdatePantryItem.graphql`).
+- Use the `#operations/<domain>/...` alias for imports rather than long
+  relative paths.
 
-**`dataMasking: true` is enabled globally** and operations are fully masked.
-Per-component and per-hook colocated fragments are the default for new code;
-existing screens that still use a "screen-level materialization fragment"
-(e.g. `PantryItemDetail_pantryItem` composing `PantryDetailInfo_pantryItem`
-+ `PantryItemForm_pantryItem` via spread) are fine — that's the natural
-endpoint when a single screen needs the union of its children's data.
+**Screen-level materialization fragments** (e.g. `PantryItemDetail_pantryItem`
+composing `PantryDetailInfo_pantryItem` + `PantryItemForm_pantryItem` via
+spread) are the right shape when a single screen needs the union of its
+children's data — the screen owns one fragment, children own theirs, and
+the screen fragment spreads them.
 
-**Why we don't use graphql-codegen's `client-preset`:** the client-preset bundles its own
+**Why not `client-preset`:** the client-preset bundles its own
 type-level fragment-masking helper (`@graphql-codegen/client-preset`'s `useFragment`) that
 **conflicts** with Apollo Client 4.x's runtime data masking. Apollo's docs explicitly
 advise against client-preset for AC4 projects. Our `near-operation-file` setup already
