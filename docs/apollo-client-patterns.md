@@ -275,46 +275,17 @@ const [incrementViewsMutation] = useIncrementViewsMutation({
 4. **Offline-first**: Works seamlessly with offline queue (cache updates locally, mutation queues)
 5. **Type-safe field updates**: Modify only the fields that changed
 
-**Comparison with Optimistic Response Pattern**:
+**The cache.modify form vs an optimisticResponse callback:**
 
-❌ **Old Pattern (Optimistic Response)**:
 ```typescript
-// Complex: Read fragment, extract fields, create optimistic response
-const fullItem = client.readFragment<any>({
-  id: cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
-  fragment: ShoppingListItemFragmentDoc,
-  fragmentName: 'ShoppingListItemFragment',
-});
-
-const coreFields: ShoppingListItemCoreFragment = {
-  __typename: 'ShoppingListItem',
-  id: fullItem.id,
-  itemName: fullItem.itemName,
-  // ... extract 8+ fields manually
-};
-
+// ✅ cache.modify — simple toggle, no callback needed
 await toggleMutation({
   variables: { id: itemId, purchased: newStatus },
-  optimisticResponse: {
-    __typename: 'Mutation',
-    togglePurchased: {
-      ...coreFields,
-      isPurchased: newStatus,
-    },
-  },
+  // No optimisticResponse — cache.modify in `update` handles instant UI
 });
-// Result: Works, but gets ~30 "Missing field" warnings
 ```
 
-✅ **New Pattern (cache.modify)**:
-```typescript
-// Simple: Just call mutation, let cache.modify handle UI update
-await toggleMutation({
-  variables: { id: itemId, purchased: newStatus },
-  // No optimisticResponse needed!
-});
-// Result: Zero warnings, instant UI update, simpler code
-```
+Compared to an `optimisticResponse` callback, the cache.modify form skips reading the fragment, skips constructing the response shape, and avoids "Missing field" warnings from partial responses. Reserve `optimisticResponse` for cases that genuinely need the full mutation result shape (e.g. creating an entity that doesn't exist in cache yet — see "Optimistic Responses" section below).
 
 **When NOT to Use This Pattern**:
 - Creating new entities (use optimistic response with `createOptimisticEntity`)
@@ -333,9 +304,9 @@ However, `refetchQueries` is **acceptable** when:
 - Manual cache updates would be disproportionately complex for the mutation's return shape
 - The mutation affects many queries and cache normalization alone isn't sufficient
 
-**Current usage**: concentrated in recipe, meal-plan, profile, home-create, and invitation flows — paths that are not offline-critical and where the mutation's effect on the cache would require duplicating server logic (e.g. recomputing aggregate ratings). High-frequency meal-plan paths have been converted to cache updates. Run `grep -rn "refetchQueries" src/` to see the current call sites.
+**Where it lives in this codebase**: recipe, meal-plan, profile, home-create, and invitation flows — paths that are not offline-critical and where reproducing the mutation's cache effect would require duplicating server logic (e.g. recomputing aggregate ratings). `grep -rn "refetchQueries" src/` shows the current call sites.
 
-**When to migrate away from refetchQueries**:
+**Don't reach for `refetchQueries` on**:
 - Shopping list or pantry paths (offline-first, performance-critical)
 - Frequently-triggered mutations where the extra network round-trip is noticeable
 
@@ -1237,42 +1208,32 @@ const [deleteItemMutation] = useDeleteItemMutation({
 
 ---
 
-## Simplified Patterns (2025 Update)
+## Reading entities before a mutation
 
-This section documents simplified patterns adopted to reduce complexity and improve consistency.
+When a mutation hook needs the current entity (e.g. to compute an optimistic response or detect a state change), the source of truth is the cache. Two patterns:
 
-### Use Items Array Instead of Cache Reads
-
-When you need to access an item before a mutation, prefer using the items array already in memory over reading from the cache.
-
-**Old Pattern (avoid):**
+**Hook-owned fragment + cache.readFragment** (preferred for mutation hooks):
 ```typescript
-const cachedItem = client.readFragment<ItemFragment>({
-  id: cache.identify({ __typename: 'Item', id: itemId }),
-  fragment: ItemFragmentDoc,
-  fragmentName: 'ItemFragment',
+// Hook declares a colocated `useUpdateX_item.graphql` fragment with the
+// fields it needs, then materializes it from cache by entity id.
+const item = client.cache.readFragment<UseUpdateX_ItemFragment>({
+  id: client.cache.identify({ __typename: 'Item', id: itemId }),
+  fragment: UseUpdateX_ItemFragmentDoc,
+  fragmentName: 'useUpdateX_item',
 });
+if (!item) return false;
 ```
 
-**New Pattern (preferred):**
+**In-memory array lookup** (acceptable for screens that already have the items in scope):
 ```typescript
-// Items array is already in memory from the query
+// Screen already has the items array from useQuery — find by id directly.
 const item = items.find(i => i.id === itemId);
 if (!item) return false;
-
-// Use item directly for optimistic response
-optimisticResponse: {
-  __typename: 'Mutation',
-  updateItem: {
-    ...item,
-    ...updates,
-  },
-}
 ```
 
-**Why:** The items array is already in memory from the query. Reading from cache adds complexity without benefit and can fail if the item isn't in cache.
+Use the hook-owned fragment form when the caller is a hook that runs outside the screen's render scope (mutation hooks, subscription handlers). Use the array lookup when the caller is a screen-level action handler that already holds the items array.
 
-### When to Use Each Cache Update Approach
+### Which cache update approach
 
 | Operation | Cache Update Needed? | Use This |
 |-----------|---------------------|----------|
@@ -1294,15 +1255,15 @@ optimisticResponse: {
 
 ### When Subscriptions Need Manual writeFragment
 
-When using custom `onData` callbacks with `CacheStrategy.NONE`, you should explicitly write entity updates to cache:
+When using custom `onData` callbacks with `CacheStrategy.NONE`, write entity updates to cache via the subscription handler's own colocated fragment (e.g. `usePantrySubscriptions_pantryItem`, `useShoppingListSubscriptions_item`):
 
 ```typescript
 customOnData: (payload, client) => {
   if (mutation === 'UPDATE') {
-    // Write the updated entity to cache
     client.cache.writeFragment({
-      id: client.cache.identify({ __typename: 'Item', id: item.id }),
-      fragment: ItemFragmentDoc,
+      id: client.cache.identify({ __typename: 'PantryItem', id: item.id }),
+      fragment: UsePantrySubscriptions_PantryItemFragmentDoc,
+      fragmentName: 'usePantrySubscriptions_pantryItem',
       data: item,
     });
   }
@@ -1500,9 +1461,9 @@ This project uses Apollo Client `~4.1.7`. AC 4.0 introduced several new hooks an
 | `useSuspenseQuery` | Suspense-compatible query hook (works with React `<Suspense>`) | Available, **not adopted** (see rationale below) |
 | `useBackgroundQuery` | Trigger queries in parent, read in child via `useReadQuery` | Available, **not adopted** |
 | `useReadQuery` | Read data from a `useBackgroundQuery` queryRef in a child component | Available, **not adopted** (companion to `useBackgroundQuery`) |
-| `useFragment` | Subscribe to a specific fragment in cache without a query | **Adopted** — `ReviewCard`, `BatchListItem`, `MealPlanItemCard`, `TemplateCard`. New components consuming entity data should use it; see fragment colocation convention in `CLAUDE.md` |
+| `useFragment` | Subscribe to a specific fragment in cache without a query | **Adopted.** See CLAUDE.md "Apollo: Fragment composition + `useFragment` convention" for the full pattern. |
 | `dataState` | Discriminated union on query results (`{status: 'loading' \| 'error' \| 'complete', data?}`) for type-safe data access | Available, not adopted (would require widespread refactor) |
-| `dataMasking: true` | Strips fragment fields from parent query results so children must use `useFragment` | **Enabled** — every existing fragment spread carries `@unmask(mode: "migrate")` so direct-access consumers keep working and log dev-mode warnings. New fragments should omit `@unmask`; their consumers must use `useFragment`. |
+| `dataMasking: true` | Strips fragment fields from parent query results so children must use `useFragment` | **Enabled.** See CLAUDE.md "Apollo: Fragment composition + `useFragment` convention" for the colocated-fragment convention. |
 | `apollo3-cache-persist` | Apollo's recommended cache persistence library | **Not adopted** — see [Cache Persistence & Restoration](#cache-persistence--restoration) for the MMKV-based custom implementation and the reasons |
 
 #### AC 4.0 New Concepts
@@ -1534,19 +1495,20 @@ This project uses Apollo Client `~4.1.7`. AC 4.0 introduced several new hooks an
 - **Current wrapper hooks already achieve render separation.** Hooks like `useShoppingListScreen()` aggregate queries in a parent, and children receive data as props — providing the same re-render reduction that `useBackgroundQuery` targets.
 - **No React Native-specific guidance** from Apollo. Documentation focuses on web patterns with no known-issues coverage for RN.
 
-#### `useFragment` — Adopted Selectively
+#### `useFragment` — safe for offline-first
 
-- **No offline conflict.** Reads from cache only, never triggers network requests.
-- **No Suspense dependency.** Works independently of Suspense boundaries.
-- **Per-entity cache subscription.** Each item re-renders only when its own fields change — the win for deep lists where many cells share a screen.
-- **Current adopters:** `ReviewCard`, `BatchListItem`, `MealPlanItemCard`, `TemplateCard`. All use the same shape: accept a fragment ref, call `useFragment({ fragment, fragmentName, from })`, fall back to the passed prop when `complete` is `false` (cache miss).
-- **Convention for new code:** see CLAUDE.md "Apollo: Fragment Colocation Convention" — new non-page components that consume entity data should follow the same pattern. Don't migrate working `useQuery` consumers opportunistically; convert only when you're already in the area.
+Specifics of *how* to use it live in CLAUDE.md. The reason it's safe to adopt
+broadly (unlike `useSuspenseQuery`):
 
-### When to Re-evaluate
+- Reads from cache only, never triggers network requests — no offline conflict.
+- Works independently of Suspense boundaries.
+- Per-entity cache subscription: each item re-renders only when its own fields
+  change.
 
-- Apollo releases React Native-specific Suspense guidance with offline-first patterns
-- React Native resolves Suspense stability issues ([RN#49129](https://github.com/facebook/react-native/issues/49129))
-- Performance profiling shows list re-render bottlenecks — then consider `useFragment` first
+### When to Re-evaluate Suspense/BackgroundQuery
+
+- Apollo releases React Native-specific Suspense guidance with offline-first patterns.
+- React Native resolves Suspense stability issues ([RN#49129](https://github.com/facebook/react-native/issues/49129)).
 
 ### Codegen Setup
 
@@ -1557,20 +1519,10 @@ gets a colocated `*.generated.ts` next to it; the generated file exports a
 types. Call sites do `useQuery(GetPantryItemDocument, options)` directly — there are no
 wrapper hooks like `useGetPantryItemQuery`.
 
-**Why we don't use `@graphql-codegen/client-preset`:** Apollo's docs are explicit —
-"We do not recommend using the client preset with Apollo Client apps because it generates
-additional runtime code that adds bundle size to your application and includes features
-that are incompatible with Apollo Client." The runtime fragment-masking helper in the
-client preset conflicts with Apollo Client 4.x's own `dataMasking` runtime feature. The
-plugin set we use (`typescript-operations` + `typed-document-node`) is the path Apollo's
-docs actually recommend.
-
-**Fragment file layout:** Fragments are organized by domain — `auth/userFragments.graphql`,
-`home/homeFragments.graphql`, `item/itemFragments.graphql`, `mealPlan/mealPlanFragments.graphql`,
-`pantry/pantryFragments.graphql`, `recipe/recipeFragments.graphql`,
-`shoppingList/shoppingListFragments.graphql`. Single-consumer fragments (e.g.
-`MealPlanItemCard_item`, `InviteCard_invite`) are colocated next to their consuming
-component. New code should follow strict colocation per `CLAUDE.md`.
+**Fragment file layout and naming, `@unmask` policy, `customDirectives` config:**
+see CLAUDE.md "Apollo: Fragment composition + `useFragment` convention".
+`@graphql-codegen/client-preset` is not used in this project — its runtime
+fragment-masking helper conflicts with Apollo Client 4.x's own `dataMasking`.
 
 Use the `#operations/<domain>/...` import alias rather than long relative paths.
 
@@ -1596,15 +1548,15 @@ See `src/apollo/utils/shoppingListCacheUpdaters.ts` for the full implementation.
 
 ---
 
-## Need Help?
+## Reference implementations
 
-- **Questions about patterns**: Check the individual mutation hooks under `src/features/shoppingList/hooks/mutations/` — `useAddShoppingItem.ts` exemplifies "create with optimistic response + `cache.modify`", and `useToggleShoppingItem.ts` exemplifies "toggle without optimistic response, using `cache.modify` for instant UI". The legacy `useShoppingListItemMutations.ts` is now a composition wrapper kept for backward compatibility, not a reference.
-- **Cache updater utilities**: See `src/apollo/utils/cacheUpdaters.ts`
-- **Subscription setup**: See `src/hooks/subscriptions/` and `src/services/subscriptions/SubscriptionService.ts`
-- **Fetch policies**: Global `watchQuery` defaults in `src/apollo/client.ts` cover the common case. Override per-query only when the policy needs to differ.
-- **Error handling**: See `src/services/errorService.ts`, `src/utils/errorHandlers.ts`, and `src/utils/errors/versionConflict.ts`
+- **Mutation patterns**: `useAddShoppingItem.ts` ("create with optimistic response + `cache.modify`"), `useToggleShoppingItem.ts` ("toggle without optimistic response, using `cache.modify` for instant UI"), `useUpdatePantryItem.ts` (`enhanceWithVersion` + `Unmasked<TData>` annotation on the optimisticResponse callback).
+- **Cache updater utilities**: `src/apollo/utils/cacheUpdaters.ts`
+- **Subscription setup**: `src/hooks/subscriptions/` and `src/services/subscriptions/SubscriptionService.ts`
+- **Fetch policies**: global `watchQuery` defaults in `src/apollo/client.ts` cover the common case. Override per-query only when the policy needs to differ.
+- **Error handling**: `src/services/errorService.ts`, `src/utils/errorHandlers.ts`, `src/utils/errors/versionConflict.ts`
 
 ---
 
-**Last Updated**: 2026-05-16
+**Last Updated**: 2026-05-19
 **Maintainers**: Development Team
