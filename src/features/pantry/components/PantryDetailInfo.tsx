@@ -7,8 +7,11 @@ import { InfoRow } from '#components/molecules/InfoRow';
 const ThemedConditionInfoRow = withUnistyles(InfoRow);
 import { Icon } from '#/utils/iconUtils';
 import { getUnitDisplayText } from '#utils/formatQuantity';
-import type { Unmasked } from '@apollo/client/masking';
-import { type PantryItemFragment } from '#features/pantry/graphql/pantryFragments.generated';
+import { useFragment } from '@apollo/client/react';
+import {
+  PantryItemFragmentDoc,
+  type PantryItemFragment,
+} from '#features/pantry/graphql/pantryFragments.generated';
 import {
   formatCondition,
   formatAcquisitionMethod,
@@ -18,9 +21,7 @@ import {
 import { Text } from '#components/atoms/Text';
 
 interface PantryDetailInfoProps {
-  // `Unmasked<>` reflects what `cache.readFragment<PantryItemFragment>` returns
-  // to the caller — the inner PantryItemDisplay fields are inlined.
-  item: Unmasked<PantryItemFragment>;
+  item: PantryItemFragment;
   brandName: string | null;
   netWeightText: string | null;
   remainingNetWeightText: string | null;
@@ -32,7 +33,7 @@ interface PantryDetailInfoProps {
 }
 
 export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
-  item,
+  item: itemSource,
   brandName,
   netWeightText,
   remainingNetWeightText,
@@ -42,6 +43,16 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
   shelfLifeOpenedDays,
   onCorrectWeight,
 }) => {
+  // Per-entity cache subscription: re-renders only when this PantryItem's
+  // fields change. Falls back to the source prop on cache miss so the
+  // component renders correctly under test fixtures + tolerates stale state.
+  const fragmentResult = useFragment({
+    fragment: PantryItemFragmentDoc,
+    fragmentName: 'PantryItemFragment',
+    from: itemSource,
+  });
+  const item = fragmentResult.complete ? fragmentResult.data : itemSource;
+
   const isCriticalCondition =
     item.condition === 'SPOILED' || item.condition === 'EXPIRED';
 

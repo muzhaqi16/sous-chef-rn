@@ -7,7 +7,29 @@ mutation AddItemToShoppingList($input: CreateShoppingListItemInput!) {
     code
     shoppingListItem {
       id
-      ...ShoppingListItemDisplayFragment
+      itemName
+      quantity
+      quantityInput
+      displayFormat
+      purchaseInfo {
+        isPurchased
+      }
+      version
+      updatedAt
+      category
+      notes
+      unitName
+      unit {
+        id
+        name
+        symbol
+      }
+      sortOrder
+      item {
+        id
+        imageUrl
+        images { url kind }
+      }
     }
   }
 }

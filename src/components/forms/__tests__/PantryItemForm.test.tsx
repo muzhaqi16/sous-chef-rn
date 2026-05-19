@@ -227,9 +227,9 @@ function buildCache(opts: {
     cache.writeQuery({
       query: GetPantryItemDocument,
       variables: { id: opts.itemId },
-      // `writeQuery` accepts the unmasked shape; codegen now emits masked
-      // types for spreads without `@unmask`, so we cast to match the same
-      // pattern as `pantryData` above.
+      // `writeQuery` accepts the unmasked shape; codegen emits masked types
+      // for fragment spreads, so we cast to match the same pattern as
+      // `pantryData` above.
       data: pantryItemData({
         id: opts.itemId,
         ...(opts.itemFixture ?? {}),

@@ -69,11 +69,7 @@ query GetShoppingListsLite($homeId: ID, $first: Int, $after: String) {
           user {
             id
             email
-            profile {
-              id
-              displayName
-              avatar
-            }
+            profile { id displayName avatar }
           }
         }
       }
@@ -278,7 +274,29 @@ mutation AddItemToShoppingList($input: CreateShoppingListItemInput!) {
     code
     shoppingListItem {
       id
-      ...ShoppingListItemDisplayFragment
+      itemName
+      quantity
+      quantityInput
+      displayFormat
+      purchaseInfo {
+        isPurchased
+      }
+      version
+      updatedAt
+      category
+      notes
+      unitName
+      unit {
+        id
+        name
+        symbol
+      }
+      sortOrder
+      item {
+        id
+        imageUrl
+        images { url kind }
+      }
     }
   }
 }
@@ -334,10 +352,29 @@ mutation ToggleShoppingListItemPurchased(
     code
     shoppingListItem {
       id
+      itemName
+      quantity
+      quantityInput
+      displayFormat
       purchaseInfo {
         isPurchased
       }
-      ...ShoppingListItemDisplayFragment
+      version
+      updatedAt
+      category
+      notes
+      unitName
+      unit {
+        id
+        name
+        symbol
+      }
+      sortOrder
+      item {
+        id
+        imageUrl
+        images { url kind }
+      }
     }
   }
 }

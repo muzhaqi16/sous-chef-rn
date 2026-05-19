@@ -13,6 +13,7 @@ fragment ItemDisplay on Item {
   netWeight
   displayUnit {
     id
+    name
     symbol
   }
   categories {
@@ -28,7 +29,26 @@ fragment ItemDisplay on Item {
 }
 
 fragment ItemFragment on Item {
-  ...ItemDisplay
+  id
+  name
+  imageUrl
+  images { url kind }
+  netWeight
+  displayUnit {
+    id
+    name
+    symbol
+  }
+  categories {
+    id
+    isPrimary
+    category {
+      id
+      name
+      color
+      icon
+    }
+  }
   description
   dataSource
   type
@@ -51,11 +71,6 @@ fragment ItemFragment on Item {
   }
   defaultConsumeUnitId
   defaultConsumeIncrement
-  displayUnit {
-    id
-    name
-    symbol
-  }
   units {
     id
     itemId
@@ -79,10 +94,10 @@ fragment ItemFragment on Item {
     displayNamePlural
     contentUnitId
     contentUnit {
-      id
-      name
-      symbol
-    }
+    id
+    name
+    symbol
+  }
   }
   brands {
     id

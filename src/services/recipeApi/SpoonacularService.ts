@@ -6,7 +6,10 @@ import type {
   GetRecipeInformationParams,
   RecipeInformation,
   SearchRecipesParams,
+  SearchRecipesParamsWithInfo,
+  SearchRecipesParamsWithoutInfo,
   SearchRecipesResponse,
+  SearchRecipesResponseWithInfo,
   GetRandomRecipesParams,
   GetRandomRecipesResponse,
   SpoonacularApiError,
@@ -160,19 +163,40 @@ class SpoonacularService {
   }
 
   /**
-   * Search recipes (complex search)
+   * Search recipes (complex search) — basic results only.
    * https://spoonacular.com/food-api/docs#Search-Recipes-Complex
    *
-   * @param params - Search parameters
-   * @returns Search results with pagination
+   * For full recipe details (extendedIngredients, analyzedInstructions, …) in
+   * `results[]`, use `searchRecipesWithInfo` instead.
    */
   async searchRecipes(
-    params: SearchRecipesParams,
+    params: SearchRecipesParamsWithoutInfo,
     signal?: AbortSignal,
   ): Promise<SearchRecipesResponse> {
-    const { query, number = 10, offset = 0, ...restParams } = params;
+    return this.complexSearch<SearchRecipesResponse>(params, signal);
+  }
 
-    return this.fetch<SearchRecipesResponse>(
+  /**
+   * Search recipes (complex search) with full recipe information per result —
+   * sends `addRecipeInformation=true` so `results[]` contains
+   * `RecipeInformation` objects.
+   */
+  async searchRecipesWithInfo(
+    params: SearchRecipesParamsWithoutInfo,
+    signal?: AbortSignal,
+  ): Promise<SearchRecipesResponseWithInfo> {
+    return this.complexSearch<SearchRecipesResponseWithInfo>(
+      { ...params, addRecipeInformation: true } as SearchRecipesParamsWithInfo,
+      signal,
+    );
+  }
+
+  private async complexSearch<R>(
+    params: SearchRecipesParams,
+    signal?: AbortSignal,
+  ): Promise<R> {
+    const { query, number = 10, offset = 0, ...restParams } = params;
+    return this.fetch<R>(
       '/recipes/complexSearch',
       {
         query,

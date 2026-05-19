@@ -417,7 +417,74 @@ mutation CreatePantryItem($input: CreatePantryItemInput!) {
     message
     code
     pantryItem {
-      ...PantryItemDisplay
+      id
+      pantryId
+      itemId
+      itemName
+      quantity
+      version
+      updatedAt
+      storageState
+      expiresAt
+      lowStockAlert
+      isLowStock
+      minQuantity
+      lastUsedAt
+      netWeight
+      remainingNetWeight
+      activeBatchCount
+      earliestBatchExpiration
+      item {
+        id
+        imageUrl
+        images { url kind }
+      }
+      unit {
+        id
+        name
+        symbol
+      }
+      netWeightUnit {
+        id
+        name
+        symbol
+      }
+      storageLocation {
+        id
+        name
+        type
+      }
+      packageBreakdown {
+        count
+        contentUnit {
+          id
+          name
+          symbol
+        }
+        perUnitNetWeight
+        perUnitNetWeightUnit {
+          id
+          name
+          symbol
+        }
+        totalNetWeight
+      }
+      quantityBreakdown {
+        fullPackages
+        looseContentUnits
+        contentUnit {
+          id
+          name
+          symbol
+        }
+        totalContentUnits
+        remainingWeight
+        remainingWeightUnit {
+          id
+          name
+          symbol
+        }
+      }
     }
   }
 }
@@ -428,7 +495,74 @@ mutation UpdatePantryItem($id: ID!, $input: UpdatePantryItemInput!) {
     message
     code
     pantryItem {
-      ...PantryItemDisplay
+      id
+      pantryId
+      itemId
+      itemName
+      quantity
+      version
+      updatedAt
+      storageState
+      expiresAt
+      lowStockAlert
+      isLowStock
+      minQuantity
+      lastUsedAt
+      netWeight
+      remainingNetWeight
+      activeBatchCount
+      earliestBatchExpiration
+      item {
+        id
+        imageUrl
+        images { url kind }
+      }
+      unit {
+        id
+        name
+        symbol
+      }
+      netWeightUnit {
+        id
+        name
+        symbol
+      }
+      storageLocation {
+        id
+        name
+        type
+      }
+      packageBreakdown {
+        count
+        contentUnit {
+          id
+          name
+          symbol
+        }
+        perUnitNetWeight
+        perUnitNetWeightUnit {
+          id
+          name
+          symbol
+        }
+        totalNetWeight
+      }
+      quantityBreakdown {
+        fullPackages
+        looseContentUnits
+        contentUnit {
+          id
+          name
+          symbol
+        }
+        totalContentUnits
+        remainingWeight
+        remainingWeightUnit {
+          id
+          name
+          symbol
+        }
+      }
     }
   }
 }

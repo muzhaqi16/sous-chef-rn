@@ -1,3 +1,17 @@
+fragment UserProfileFields on UserProfile {
+  id
+  displayName
+  avatar
+}
+
+fragment UserProfileFull on UserProfile {
+  id
+  displayName
+  avatar
+  firstName
+  lastName
+}
+
 # Lightweight user reference for nested display (addedBy, purchasedBy, etc.)
 # Used by RecipeReview, ShoppingListItem, Membership.
 fragment UserSummary on User {
@@ -62,10 +76,10 @@ fragment PartialUser on User {
   updatedAt
   profile {
     id
-    firstName
-    lastName
     displayName
     avatar
+    firstName
+    lastName
   }
   settings {
     id

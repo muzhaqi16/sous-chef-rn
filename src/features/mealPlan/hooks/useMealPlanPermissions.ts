@@ -1,5 +1,4 @@
 import { useUser } from '#store/useAppStore';
-import type { Unmasked } from '@apollo/client/masking';
 import {
   getMealPlanPermissions,
   type MealPlanPermissions,
@@ -9,13 +8,7 @@ import {
   type MealPlanFullFragment,
 } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 
-// Both display and full fragments arrive materialized (unmasked) from
-// useMealPlans / useMealPlan so homeId + createdBy are directly readable.
-// MealPlanFull spreads MealPlanDisplay via $fragmentRefs, so the full
-// variant requires `Unmasked<>` to expose homeId/createdBy at top level.
-type MealPlanLike =
-  | Unmasked<MealPlanDisplayFragment>
-  | Unmasked<MealPlanFullFragment>;
+type MealPlanLike = MealPlanDisplayFragment | MealPlanFullFragment;
 
 /**
  * Hook that computes permissions for a meal plan based on the current user's

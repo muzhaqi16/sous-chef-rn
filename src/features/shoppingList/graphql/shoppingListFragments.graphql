@@ -19,10 +19,9 @@ fragment ShoppingListItemCore on ShoppingListItem {
   }
 }
 
-# Flat leaf fragment consumed by row/list components, cache reads, mutation
-# optimistic responses, and subscription writeFragment calls. Fields duplicate
-# ShoppingListItemCore on purpose so consumers get all the data they need from
-# a single `useFragment` call without nested unmasking.
+# Adds list-row display data (sortOrder + item thumbnail) on top of Core.
+# Consumed by row/list components, cache reads, mutation optimistic responses,
+# and subscription writeFragment calls.
 fragment ShoppingListItemDisplayFragment on ShoppingListItem {
   id
   itemName
@@ -50,8 +49,9 @@ fragment ShoppingListItemDisplayFragment on ShoppingListItem {
   }
 }
 
-# Flat leaf fragment consumed by AddEditItem and ItemDetail screens. Includes
-# every field they read so a single `useFragment` resolves the entire view.
+# Adds full screen-level data (item description/nutrition, price, source,
+# addedBy, purchase history) on top of Display. Consumed by AddEditItem and
+# ItemDetail screens.
 fragment ShoppingListItemFragment on ShoppingListItem {
   id
   itemName
@@ -74,12 +74,12 @@ fragment ShoppingListItemFragment on ShoppingListItem {
   sortOrder
   item {
     id
+    imageUrl
+    images { url kind }
     name
     description
-    imageUrl
     netWeight
     nutritions
-    images { url kind }
     displayUnit {
       id
       name

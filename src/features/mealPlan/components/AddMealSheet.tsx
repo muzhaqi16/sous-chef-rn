@@ -117,8 +117,8 @@ function searchSpoonacularWithCache(
 
   executeAsyncWithCleanup(
     async () => {
-      const response = await spoonacularService.searchRecipes(
-        { query, number: 10, addRecipeInformation: true },
+      const response = await spoonacularService.searchRecipesWithInfo(
+        { query, number: 10 },
         signal,
       );
 

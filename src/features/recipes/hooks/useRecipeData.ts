@@ -12,9 +12,6 @@ import {
   type RecipeFragment,
 } from '#features/recipes/graphql/recipeFragments.generated';
 
-/** Fully materialized RecipeFragment — `cache.readFragment` returns
- *  `Unmasked<RecipeFragment>`, so BasicRecipeFragment + RecipeIngredientFragment
- *  fields are inlined for direct property access. */
 export type MaterializedRecipe = NonNullable<
   ReturnType<typeof readRecipeFragment>
 >;
@@ -194,8 +191,7 @@ export function useRecipeData({
 
   // Materialize the masked RecipeFragment ref so downstream consumers (and
   // this hook's own buildBackendDisplayData) see the full RecipeFragment
-  // fields. `cache.readFragment` returns `Unmasked<RecipeFragment>`, recursively
-  // inlining BasicRecipeFragment + RecipeIngredientFragment fields.
+  // fields.
   const backendRecipeRef = backendRecipeData?.recipe ?? null;
   const backendRecipe =
     readRecipeFragment(apolloClient, backendRecipeRef) ?? undefined;

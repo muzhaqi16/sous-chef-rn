@@ -13,6 +13,13 @@ const mockGetBulkRecipeInformation = jest.fn();
 jest.mock('#/services/recipeApi/SpoonacularService', () => ({
   spoonacularService: {
     searchRecipes: (...args: unknown[]) => mockSearchRecipes(...args),
+    searchRecipesWithInfo: (...args: unknown[]) => {
+      const [params, ...rest] = args;
+      return mockSearchRecipes(
+        { ...(params as object), addRecipeInformation: true },
+        ...rest,
+      );
+    },
     searchRecipesByIngredients: (...args: unknown[]) =>
       mockSearchRecipesByIngredients(...args),
     getRandomRecipes: (...args: unknown[]) => mockGetRandomRecipes(...args),

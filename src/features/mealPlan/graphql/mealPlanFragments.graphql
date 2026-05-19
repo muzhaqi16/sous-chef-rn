@@ -26,6 +26,7 @@ fragment MealPlanDisplay on MealPlan {
     profile {
       id
       displayName
+      avatar
     }
   }
   version
@@ -34,7 +35,40 @@ fragment MealPlanDisplay on MealPlan {
 }
 
 fragment MealPlanFull on MealPlan {
-  ...MealPlanDisplay  dietaryProfile {
+  id
+  name
+  description
+  planType
+  startDate
+  endDate
+  servings
+  totalCalories
+  totalProtein
+  totalCarbs
+  totalFat
+  actualCost
+  budgetAmount
+  homeId
+  home {
+    id
+    name
+    myMembership {
+      id
+      role
+    }
+  }
+  createdBy {
+    id
+    profile {
+      id
+      displayName
+      avatar
+    }
+  }
+  version
+  createdAt
+  updatedAt
+  dietaryProfile {
     id
     calorieTarget
     proteinTarget
@@ -42,7 +76,12 @@ fragment MealPlanFull on MealPlan {
     fatTarget
   }
   mealPlanItems {
-    ...MealPlanItemCard_item    ...EditCustomMealSheet_item    ...DailyMeals_item    ...MealPlanMain_item    ...MealPlanItemActions_item  }
+    ...MealPlanItemCard_item
+    ...EditCustomMealSheet_item
+    ...DailyMeals_item
+    ...MealPlanMain_item
+    ...MealPlanItemActions_item
+  }
   generatedShoppingLists {
     id
     name
@@ -70,30 +109,10 @@ fragment MealPlanFull on MealPlan {
   }
   nutritionGoalProgress {
     overallScore
-    caloriesProgress {
-      target
-      current
-      percentage
-      status
-    }
-    proteinProgress {
-      target
-      current
-      percentage
-      status
-    }
-    carbsProgress {
-      target
-      current
-      percentage
-      status
-    }
-    fatProgress {
-      target
-      current
-      percentage
-      status
-    }
+    caloriesProgress { target current percentage status }
+    proteinProgress { target current percentage status }
+    carbsProgress { target current percentage status }
+    fatProgress { target current percentage status }
   }
 }
 

@@ -39,15 +39,14 @@ export const BatchSection: React.FC<BatchSectionProps> = ({
   const { openBatch } = useOpenPantryItemBatch();
   const { wasteBatch } = useWastePantryItemBatch();
 
-  // Lazy-fetched "all batches" (including depleted/wasted) returns masked refs
-  // since GetPantryItemBatches doesn't @unmask. Materialize via cache.readFragment
-  // for status/expiresAt sort/filter.
+  // Lazy-fetched "all batches" (including depleted/wasted) returns masked refs.
+  // Materialize via cache.readFragment for status/expiresAt sort/filter.
   const [fetchAllBatches, { data: allBatchesData }] = useLazyQuery(
     GetPantryItemBatchesDocument,
     {},
   );
 
-  const allBatchesUnmasked: PantryItemBatchFragment[] =
+  const allBatches: PantryItemBatchFragment[] =
     allBatchesData?.pantryItemBatches
       ?.map(ref =>
         client.cache.readFragment<PantryItemBatchFragment>({
@@ -69,7 +68,7 @@ export const BatchSection: React.FC<BatchSectionProps> = ({
     });
 
   const inactiveBatches: PantryItemBatchFragment[] = showAll
-    ? (allBatchesUnmasked.length > 0 ? allBatchesUnmasked : batches).filter(
+    ? (allBatches.length > 0 ? allBatches : batches).filter(
         b => b.status !== BatchStatus.Active,
       )
     : [];

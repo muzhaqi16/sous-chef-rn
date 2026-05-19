@@ -1,7 +1,6 @@
 import React, { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import { type Unmasked } from '@apollo/client/masking';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import {
   useShoppingListSuggestions,
@@ -27,10 +26,7 @@ import {
 import { SheetTutorialHint } from '#components/molecules/SheetTutorialHint';
 import { AddItemSheet } from '../AddItemSheet/AddItemSheet';
 import { useAddItemSheetState } from '../AddItemSheet/useAddItemSheetState';
-import type {
-  BaseSuggestionItem,
-  SuggestionsHookResult,
-} from '../AddItemSheet/types';
+import type { SuggestionsHookResult } from '../AddItemSheet/types';
 import { shoppingListSheetConfig } from '../AddItemSheet/configs/shoppingListConfig';
 
 interface AddToShoppingListSheetProps {
@@ -71,7 +67,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
   });
 
   // Adapt suggestions to the expected interface
-  const suggestions: SuggestionsHookResult = {
+  const suggestions: SuggestionsHookResult<ShoppingListSuggestionItem> = {
     grouped: suggestionsResult.grouped,
     loading: suggestionsResult.loading,
     hasSuggestions: suggestionsResult.hasSuggestions,
@@ -106,16 +102,14 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
   const [addItemMutation, { loading: adding }] = useMutation(
     AddItemToShoppingListDocument,
     {
-      optimisticResponse: (
-        variables,
-      ): Unmasked<AddItemToShoppingListMutation> => {
+      optimisticResponse: variables => {
         const { tempId, entity } = createOptimisticShoppingListItem({
           itemName: variables.input.itemName ?? '',
           itemId: variables.input.itemId,
           unitId: variables.input.unit?.unitId,
         });
         lastTempIdRef.current = tempId;
-        return {
+        const optimistic: AddItemToShoppingListMutation = {
           __typename: 'Mutation',
           addItemToShoppingList: {
             __typename: 'ShoppingListItemPayload',
@@ -125,6 +119,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
             shoppingListItem: entity,
           },
         };
+        return optimistic;
       },
       update(cache, { data }) {
         const newItem = data?.addItemToShoppingList?.shoppingListItem;
@@ -204,9 +199,9 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
   };
 
   // Handle quick add from suggestion (fire-and-forget with exit animations)
-  const handleQuickAddSuggestion = (item: BaseSuggestionItem) => {
-    // Cast to ShoppingListSuggestionItem for full type info
-    const shoppingItem = item as unknown as ShoppingListSuggestionItem;
+  const handleQuickAddSuggestion = (
+    shoppingItem: ShoppingListSuggestionItem,
+  ) => {
     if (
       !shoppingListId ||
       adding ||

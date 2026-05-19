@@ -8,7 +8,6 @@
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import { type Unmasked } from '@apollo/client/masking';
 import { alertService } from '#/services/alertService';
 import {
   ToggleShoppingListItemPurchasedDocument,
@@ -62,10 +61,7 @@ export function useToggleShoppingItem({
     ToggleShoppingListItemPurchasedDocument,
     {
       // Optimistic response ensures update() runs immediately (not after network response)
-      optimisticResponse: (
-        variables,
-        { IGNORE },
-      ): Unmasked<ToggleShoppingListItemPurchasedMutation> | typeof IGNORE => {
+      optimisticResponse: (variables, { IGNORE }) => {
         const item = client.cache.readFragment<ShoppingListItemDisplayFragment>(
           {
             id: client.cache.identify({
@@ -77,7 +73,7 @@ export function useToggleShoppingItem({
           },
         );
         if (!item) return IGNORE;
-        return {
+        const optimistic: ToggleShoppingListItemPurchasedMutation = {
           __typename: 'Mutation',
           toggleShoppingListItemPurchased: {
             __typename: 'ShoppingListItemPayload',
@@ -94,6 +90,7 @@ export function useToggleShoppingItem({
             },
           },
         };
+        return optimistic;
       },
       update(cache, _result, { variables }) {
         if (!variables || !listId) return;

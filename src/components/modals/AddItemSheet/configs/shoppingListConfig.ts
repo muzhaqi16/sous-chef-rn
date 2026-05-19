@@ -1,3 +1,4 @@
+import type { ShoppingListSuggestionItem } from '#features/shoppingList/hooks/useShoppingListSuggestions';
 import type { AddItemSheetConfig } from '../types';
 
 /**
@@ -9,43 +10,44 @@ import type { AddItemSheetConfig } from '../types';
  * - Deferred fetch for smooth sheet animation
  * - No add details sub-sheet (navigates to separate screen)
  */
-export const shoppingListSheetConfig: AddItemSheetConfig = {
-  title: 'Add to Shopping List',
-  testIDPrefix: 'add-shopping-item',
-  placeholderIcon: 'cart-outline',
-  searchPlaceholder: 'Search or scan item...',
-  suggestionGroups: [
-    {
-      key: 'recentlyDeleted',
-      title: 'ADD AGAIN',
-      priority: 1,
-      accessor: g => g.recentlyDeleted ?? [],
+export const shoppingListSheetConfig: AddItemSheetConfig<ShoppingListSuggestionItem> =
+  {
+    title: 'Add to Shopping List',
+    testIDPrefix: 'add-shopping-item',
+    placeholderIcon: 'cart-outline',
+    searchPlaceholder: 'Search or scan item...',
+    suggestionGroups: [
+      {
+        key: 'recentlyDeleted',
+        title: 'ADD AGAIN',
+        priority: 1,
+        accessor: g => g.recentlyDeleted ?? [],
+      },
+      {
+        key: 'frequentlyAdded',
+        title: 'YOUR FAVORITES',
+        priority: 2,
+        accessor: g => g.frequentlyAdded ?? [],
+      },
+      {
+        key: 'popular',
+        title: 'POPULAR',
+        priority: 3,
+        accessor: g => g.popular ?? [],
+      },
+    ],
+    quickAdd: {
+      fireAndForget: true,
+      enableExitAnimations: true,
+      toastMessage: (name: string) => `Added ${name}`,
     },
-    {
-      key: 'frequentlyAdded',
-      title: 'YOUR FAVORITES',
-      priority: 2,
-      accessor: g => g.frequentlyAdded ?? [],
+    addDetails: {
+      enabled: false,
     },
-    {
-      key: 'popular',
-      title: 'POPULAR',
-      priority: 3,
-      accessor: g => g.popular ?? [],
-    },
-  ],
-  quickAdd: {
-    fireAndForget: true,
-    enableExitAnimations: true,
-    toastMessage: (name: string) => `Added ${name}`,
-  },
-  addDetails: {
-    enabled: false,
-  },
-  deferFetch: true,
-  barcodeSource: 'shoppingList',
-  addManuallyPosition: 'bottom',
-  emptyStateMessage: 'No suggestions yet',
-  emptyStateSubtext:
-    "Add items to your list and they'll appear here for quick re-adding",
-};
+    deferFetch: true,
+    barcodeSource: 'shoppingList',
+    addManuallyPosition: 'bottom',
+    emptyStateMessage: 'No suggestions yet',
+    emptyStateSubtext:
+      "Add items to your list and they'll appear here for quick re-adding",
+  };

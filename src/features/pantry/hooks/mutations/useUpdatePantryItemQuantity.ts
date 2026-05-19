@@ -8,7 +8,6 @@
  */
 
 import { useMutation } from '@apollo/client/react';
-import type { Unmasked } from '@apollo/client/masking';
 import { alertService } from '#/services/alertService';
 import { UpdatePantryItemQuantityDocument } from '#features/pantry/graphql/pantry.generated';
 import {
@@ -36,7 +35,7 @@ interface UpdateQuantityParams {
   unitId: string | null;
   unitSymbol: string;
   trackingUnit: UnitSelection;
-  currentItem: Unmasked<PantryItemFragment>;
+  currentItem: PantryItemFragment;
 }
 
 /**

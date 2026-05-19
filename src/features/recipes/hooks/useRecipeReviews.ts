@@ -56,9 +56,7 @@ export function useRecipeReviews({
   const rating5Count = backendRecipe?.rating5Count ?? 0;
 
   // Materialize each masked review ref via cache.readFragment so we can
-  // sort/filter by `helpful`, `createdAt`, and inspect `user`. The return type
-  // of cache.readFragment is `Unmasked<RecipeReviewFragment>`, so nested
-  // UserSummary fields are inlined.
+  // sort/filter by `helpful`, `createdAt`, and inspect `user`.
   const reviews = (() => {
     const rawRefs =
       reviewsData?.recipe?.reviews?.edges?.map(edge => edge.node) ?? [];

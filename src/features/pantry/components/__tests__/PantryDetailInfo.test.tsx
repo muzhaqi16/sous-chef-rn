@@ -1,6 +1,7 @@
 'use no memo';
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { screen } from '@testing-library/react-native';
+import { renderWithApollo as render } from '#/test-utils/apolloMockProvider';
 import { PantryDetailInfo } from '../PantryDetailInfo';
 
 jest.mock('#features/pantry/hooks/usePantryItemTransformation', () => ({
@@ -30,6 +31,7 @@ jest.mock('#utils/formatQuantity', () => ({
 }));
 
 const baseItem = {
+  __typename: 'PantryItem',
   id: 'pi1',
   itemName: 'Milk',
   quantity: 2,
@@ -235,7 +237,6 @@ describe('PantryDetailInfo', () => {
         onCorrectWeight={onCorrectWeight}
       />,
     );
-    // Net weight row should exist with the value
     expect(screen.getByText('Net Weight')).toBeTruthy();
     expect(screen.getByText('500g')).toBeTruthy();
   });

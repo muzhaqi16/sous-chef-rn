@@ -12,18 +12,17 @@ import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { NutritionSummaryCard } from './NutritionSummaryCard';
 import { Icon } from '#utils/iconUtils';
-import { type MealPlanFullFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
-import type { Unmasked } from '@apollo/client/masking';
+import { useFragment } from '@apollo/client/react';
+import {
+  MealPlanFullFragmentDoc,
+  type MealPlanFullFragment,
+} from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import type { MealPlanPermissions } from '#utils/permissions/mealPlanPermissions';
 import { Text } from '#components/atoms/Text';
 
 interface MealPlanSettingsSheetProps {
   visible: boolean;
-  // Materialized (unmasked) shape — useMealPlan materializes the full fragment
-  // via cache.readFragment before passing it down. `Unmasked<>` is required
-  // because MealPlanFull spreads MealPlanDisplay via $fragmentRefs (no
-  // @unmask directive), so name/startDate/etc. live on the inner fragment.
-  mealPlan: Unmasked<MealPlanFullFragment> | null;
+  mealPlan: MealPlanFullFragment | null;
   permissions: MealPlanPermissions;
   onClose: () => void;
   onDuplicate: () => void;
@@ -75,7 +74,7 @@ function ActionItem({
 
 export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
   visible,
-  mealPlan,
+  mealPlan: mealPlanSource,
   permissions,
   onClose,
   onDuplicate,
@@ -89,6 +88,17 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
     onDismiss: onClose,
     snapPoints: ['80%'],
   });
+
+  // Per-entity cache subscription: re-renders only when this MealPlan's
+  // fields change. Falls back to the source prop on cache miss.
+  const fragmentResult = useFragment({
+    fragment: MealPlanFullFragmentDoc,
+    fragmentName: 'MealPlanFull',
+    from: mealPlanSource,
+  });
+  const mealPlan = fragmentResult.complete
+    ? fragmentResult.data
+    : mealPlanSource;
 
   const [showNutrition, setShowNutrition] = useState(false);
 

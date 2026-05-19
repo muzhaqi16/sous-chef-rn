@@ -323,6 +323,7 @@ function buildGetMyPendingInvitesMock(): MockedResponse {
                         __typename: 'UserProfile',
                         id: `profile-for-${invite.id}`,
                         displayName: invite.inviter.profile.displayName ?? null,
+                        avatar: null,
                       }
                     : null,
                 }

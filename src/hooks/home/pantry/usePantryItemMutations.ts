@@ -8,7 +8,6 @@
  */
 
 import { useMutation } from '@apollo/client/react';
-import { type Unmasked } from '@apollo/client/masking';
 import { alertService } from '#/services/alertService';
 import { generateId } from '#/utils/generateId';
 import {
@@ -80,7 +79,7 @@ export function usePantryItemMutations({
       });
       alertService.alert('Error', message);
     },
-    optimisticResponse: (variables): Unmasked<CreatePantryItemMutation> => {
+    optimisticResponse: variables => {
       const tempId = `temp-${generateId()}`;
       const input = variables.input;
       const optimisticPantryItem = {
@@ -105,20 +104,18 @@ export function usePantryItemMutations({
         }),
         __typename: 'PantryItem',
       };
-      return {
+      const optimistic: CreatePantryItemMutation = {
         __typename: 'Mutation',
         createPantryItem: {
           __typename: 'PantryItemPayload',
           success: true,
           message: '',
           code: 'SUCCESS',
-          // Partial optimistic shape — pin to the mutation's pantryItem field
-          // type. Apollo merges this with cache; the full entity arrives in
-          // the server response.
           pantryItem:
-            optimisticPantryItem as Unmasked<CreatePantryItemMutation>['createPantryItem']['pantryItem'],
+            optimisticPantryItem as CreatePantryItemMutation['createPantryItem']['pantryItem'],
         },
       };
+      return optimistic;
     },
     update: (cache, { data }) => {
       const pantryItem = data?.createPantryItem?.pantryItem;
@@ -158,7 +155,7 @@ export function usePantryItemMutations({
       });
       alertService.alert('Error', message);
     },
-    optimisticResponse: (variables): Unmasked<UpdatePantryItemMutation> => {
+    optimisticResponse: variables => {
       const currentItem = pantryItems.find(item => item.id === variables.id);
 
       const pantryItem = currentItem
@@ -179,7 +176,7 @@ export function usePantryItemMutations({
             ...variables.input,
           };
 
-      return {
+      const optimistic: UpdatePantryItemMutation = {
         __typename: 'Mutation',
         updatePantryItem: {
           __typename: 'PantryItemPayload',
@@ -187,9 +184,10 @@ export function usePantryItemMutations({
           message: '',
           code: 'SUCCESS',
           pantryItem:
-            pantryItem as Unmasked<UpdatePantryItemMutation>['updatePantryItem']['pantryItem'],
+            pantryItem as UpdatePantryItemMutation['updatePantryItem']['pantryItem'],
         },
       };
+      return optimistic;
     },
   });
 

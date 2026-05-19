@@ -14,10 +14,5 @@ fragment HomeMemberCard_member on Membership {
   user {
     id
     email
-    profile {
-      id
-      displayName
-      avatar
-    }
   }
 }

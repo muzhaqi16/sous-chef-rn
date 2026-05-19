@@ -1,4 +1,3 @@
-import type { Unmasked } from '@apollo/client/masking';
 import { alertService } from '#/services/alertService';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { parseFractionalInput as parseQuantityInput } from '#/utils/fractionUtils';
@@ -30,7 +29,7 @@ export interface UsePantryItemFormSubmitParams {
   itemId: string | undefined;
   currentPantryId: string | undefined | null;
   isWeightLocked: boolean;
-  existingPantryItem: Unmasked<PantryItemFragment> | null;
+  existingPantryItem: PantryItemFragment | null;
   dirtyFields: Record<string, unknown>;
   trackingUnit: UnitSelection;
   netWeightUnitId: string | null;

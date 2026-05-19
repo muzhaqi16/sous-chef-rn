@@ -1,0 +1,29 @@
+fragment UnitBasic on Unit {
+  id
+  name
+  symbol
+}
+
+fragment UnitFull on Unit {
+  id
+  name
+  symbol
+  type
+  isMetric
+  baseUnitId
+  conversionFactor
+  isCommon
+  displayAsFraction
+  minPrecision
+  autoConvertThreshold
+}
+
+fragment StoreFields on Store {
+  id
+  name
+}
+
+fragment BrandFields on Brand {
+  id
+  name
+}

@@ -195,8 +195,7 @@ export const useNotifications = (config: NotificationConfig = {}) => {
       const maskedNotification = data.data?.notificationChanged?.notification;
       if (maskedNotification) {
         // Materialize the masked fragment ref so we can read fields the hook
-        // needs (title, message, payload, etc.). The masked spread is the
-        // result of @unmask removal in notifications.graphql.
+        // needs (title, message, payload, etc.).
         const rawNotification =
           client.cache.readFragment<UseNotifications_NotificationFragment>({
             fragment: UseNotifications_NotificationFragmentDoc,

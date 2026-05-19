@@ -26,19 +26,12 @@ query MyShoppingListInvites {
       collaborator {
         id
         email
-        profile {
-          id
-          displayName
-          avatar
-        }
+        profile { id displayName avatar }
       }
       invitedBy {
         id
         email
-        profile {
-          id
-          displayName
-        }
+        profile { id displayName avatar }
       }
     }
   }
@@ -70,11 +63,7 @@ fragment InvitationAcceptanceModal_collaborator on ShoppingListCollaborator {
   collaborator {
     id
     email
-    profile {
-      id
-      displayName
-      avatar
-    }
+    profile { id displayName avatar }
   }
 }
 

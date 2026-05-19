@@ -216,6 +216,29 @@ export interface SearchRecipesResponse {
   totalResults: number;
 }
 
+/**
+ * When `addRecipeInformation: true` is passed to `searchRecipes`, the
+ * Spoonacular API returns full `RecipeInformation` objects in `results[]`
+ * (extendedIngredients, analyzedInstructions, summary, nutrition, …) instead
+ * of the lean `SearchRecipesResult` shape.
+ */
+export interface SearchRecipesResponseWithInfo {
+  results: RecipeInformation[];
+  offset: number;
+  number: number;
+  totalResults: number;
+}
+
+export interface SearchRecipesParamsWithoutInfo
+  extends Omit<SearchRecipesParams, 'addRecipeInformation'> {
+  addRecipeInformation?: false;
+}
+
+export interface SearchRecipesParamsWithInfo
+  extends Omit<SearchRecipesParams, 'addRecipeInformation'> {
+  addRecipeInformation: true;
+}
+
 // ============================================
 // Get Random Recipes
 // ============================================

@@ -10,7 +10,6 @@
 import { useRef } from 'react';
 import { alertService } from '#/services/alertService';
 import { useMutation } from '@apollo/client/react';
-import { type Unmasked } from '@apollo/client/masking';
 import {
   AddItemToShoppingListDocument,
   type AddItemToShoppingListMutation,
@@ -49,9 +48,7 @@ export function useAddShoppingItem({
   const lastTempIdRef = useRef<string | null>(null);
 
   const [addItemMutation] = useMutation(AddItemToShoppingListDocument, {
-    optimisticResponse: (
-      variables,
-    ): Unmasked<AddItemToShoppingListMutation> => {
+    optimisticResponse: variables => {
       const { tempId, entity } = createOptimisticShoppingListItem({
         itemName: variables.input.itemName ?? '',
         quantity: Number(variables.input.quantity) || 1,
@@ -62,7 +59,7 @@ export function useAddShoppingItem({
         unitId: variables.input.unit?.unitId,
       });
       lastTempIdRef.current = tempId;
-      return {
+      const optimistic: AddItemToShoppingListMutation = {
         __typename: 'Mutation',
         addItemToShoppingList: {
           __typename: 'ShoppingListItemPayload',
@@ -72,6 +69,7 @@ export function useAddShoppingItem({
           shoppingListItem: entity,
         },
       };
+      return optimistic;
     },
     update(cache, { data }) {
       if (!data?.addItemToShoppingList?.shoppingListItem || !listId) return;

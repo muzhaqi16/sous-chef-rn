@@ -354,28 +354,67 @@ When adding cached data to a new autocomplete hook, pass `localFirst: true` alon
 the debounce cycle — e.g., switching from "app" to "banana" won't flash "app" results.
 Consumer hooks do not need to implement their own relevance checks.
 
-### Apollo: Fragment Colocation Convention (new code)
+### Apollo: Fragment composition + `useFragment` convention
 
-Apollo Client 4.x recommends colocated fragments + `useFragment` for new components,
-and runtime data masking (`dataMasking: true`) is now enabled globally
-(`src/apollo/client.ts`). Existing `useQuery` sites and the per-domain fragment files
-predate the new convention and stay as-is — **don't migrate working code
-opportunistically**. New components and new entity-consuming child components should
-follow the convention below.
+`dataMasking: true` is enabled globally (`src/apollo/client.ts`). The project leans on
+**central fragments composed from shared sub-fragments**, not per-component narrow
+fragments. The user's stated preference: *"better have an unused extra field than
+duplicate code"* — when two consumers overlap, extend a single central fragment rather
+than emit two narrow ones.
 
-**New non-page components that consume entity data:**
+**Shared sub-fragments live in `src/graphql/operations/common/commonFragments.graphql`:**
+`UnitBasic` (id, name, symbol), `UnitFull` (extends UnitBasic + conversion fields),
+`StoreFields`, `BrandFields`. `UserProfileFields` lives in
+`src/graphql/operations/auth/userFragments.graphql`. These are reserved for true
+`useFragment` consumers — anywhere else, inline the field selection you need at
+the callsite. `@unmask` is no longer used anywhere in the codebase (the global
+`apolloUnmask: true` codegen flag stays on but is inert).
 
-- Define a colocated fragment named `<ComponentName>_<propName>` next to the component
-  (NOT in any of the domain `*Fragments.graphql` files — those are legacy and
-  multi-consumer only).
-- Accept `FragmentType<typeof MyFragmentDoc>` (from `@apollo/client`) as the prop type,
-  not the raw fragment type.
-- Read fields via `useFragment` (from `@apollo/client/react`), not direct property access.
-  This creates a per-entity cache subscription so the child re-renders only when its own
-  fields change — a real win in deep component trees, available even before `dataMasking: true`
-  is flipped globally.
-- The page-level query composes the child fragments via codegen's automatic inlining;
-  no manual fragment interpolation needed.
+**Two valid `useFragment` consumer patterns — pick by use case:**
+
+| Pattern | Prop type | Cache miss | Use for |
+|---|---|---|---|
+| **A — strict** | `FragmentType<typeof XDoc>` | `return null` on `!complete` | List cells (`MyRecipeCard`, `SavedRecipeCard`, `PantryItemCard`, `HomeMemberCard`) — brief blanking is OK |
+| **B — resilient fallback** | `XFragment` (codegen type — flat because the central fragment lists fields inline) | Fall back to source prop | Detail panels, sheets (`PantryDetailInfo`, `MealPlanSettingsSheet`, `ReviewCard`) — must render without blanking |
+
+Pattern B template (preferred for new sheets/detail components):
+
+```tsx
+import { useFragment } from '@apollo/client/react';
+import { XFragmentDoc, type XFragment } from '…';
+
+interface Props { item: XFragment; /* …other props */ }
+
+export const Foo: React.FC<Props> = ({ item: itemSource, … }) => {
+  const fragmentResult = useFragment({
+    fragment: XFragmentDoc,
+    fragmentName: 'XFragment',
+    from: itemSource,
+  });
+  const item = fragmentResult.complete ? fragmentResult.data : itemSource;
+  // …direct field reads on `item`
+};
+```
+
+Tests must wrap with `renderWithApollo` from `__tests__/helpers/apolloMockProvider` (so
+useFragment has an Apollo context) and include `__typename` on the literal fixture.
+**Do not `jest.mock('@apollo/client/react', …)` directly** — it's banned by the lint rule
+(`no-restricted-syntax`).
+
+**`Unmasked<>` should not appear in feature code.** Central fragments list nested
+fields inline (e.g. `unit { id name symbol }`, `profile { id displayName avatar }`
+instead of `unit { ...UnitBasic @unmask }`), so the codegen-emitted `XFragment` type
+IS the unmasked-equivalent shape. Plain `XFragment` works everywhere — prop types,
+function params, state, mutation hook helpers.
+
+The only required `Unmasked<>` site is `src/types/apollo-masking.d.ts` — Apollo's HKT
+registration. Everywhere else, replace `Unmasked<XFragment>` → `XFragment`. For
+mutation `optimisticResponse` callbacks, the mutation operation lists payload fields
+inline (e.g. `pantryItem { id name unit { id name symbol } … }`) so the result type
+is naturally flat and callbacks return the plain mutation result type.
+
+**Never write `as unknown as X`** — it hides type mismatches. If a cast feels necessary,
+fix the data flow or widen the type contract.
 
 **`useSuspenseQuery` / `useBackgroundQuery` — use selectively, not by default.** For this
 React Native app the practical benefit is small:
@@ -405,10 +444,11 @@ that benefit from `useBackgroundQuery` waterfall avoidance. Otherwise stay with 
   Convert only when you're touching the area for another reason and the conversion
   is small.
 
-**Why `dataMasking: true` is NOT set globally:** flipping the flag strips fragment fields
-from parent query results, which would break every existing direct-access consumer (e.g.
-`item.recipe?.name` would return `undefined`). The flag flips only after enough consumers
-are migrated to `useFragment`, which is a separate, scoped initiative.
+**`dataMasking: true` IS enabled globally.** Direct-access consumers work because
+central fragments and operation payloads list their nested fields inline rather
+than spreading sub-fragments. The migration to `useFragment` is opportunistic —
+convert components when you touch them for other reasons, not as a sweeping
+initiative.
 
 **Why we don't use graphql-codegen's `client-preset`:** the client-preset bundles its own
 type-level fragment-masking helper (`@graphql-codegen/client-preset`'s `useFragment`) that

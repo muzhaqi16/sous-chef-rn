@@ -205,8 +205,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
 
   // Materialize the masked PantryItemFragment ref into the full entity for
   // direct field access throughout the form. `cache.readFragment` reads from
-  // the same normalized cache entry the `useQuery` subscription drives and
-  // returns `Unmasked<PantryItemFragment>` so inner display fields are inlined.
+  // the same normalized cache entry the `useQuery` subscription drives.
   const apolloClient = useApolloClient();
   const existingPantryItem = existingItemData?.pantryItem
     ? apolloClient.cache.readFragment<PantryItemFragment>({

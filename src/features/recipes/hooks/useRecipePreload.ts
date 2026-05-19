@@ -176,7 +176,7 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
       prepTimeMinutes: spoonacularRecipe.preparationMinutes || undefined,
       cookTimeMinutes: spoonacularRecipe.cookingMinutes || undefined,
       imageUrl: spoonacularRecipe.image,
-      instructions: instructions as unknown,
+      instructions,
       caloriesPerServing: caloriesPerServing
         ? Math.round(caloriesPerServing)
         : undefined,

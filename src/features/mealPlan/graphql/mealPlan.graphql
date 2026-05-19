@@ -127,11 +127,7 @@ mutation GenerateShoppingListFromMealPlan($input: GenerateShoppingListFromMealPl
         user {
           id
           email
-          profile {
-            id
-            displayName
-            avatar
-          }
+          profile { id displayName avatar }
         }
       }
     }

@@ -3,14 +3,7 @@
  *
  * These utilities help create optimistic responses that work seamlessly with
  * version-based conflict resolution in Apollo cache merge functions.
- *
- * Helpers return `Unmasked<T>` (Apollo's "structural unmasked shape" — the
- * type `optimisticResponse` and `cache.writeFragment` expect when data
- * masking is enabled). Callers pass the masked fragment type as `T` and
- * never need to write `Unmasked<>` themselves.
  */
-
-import type { Unmasked } from '@apollo/client/masking';
 
 /**
  * Base interface for entities that support versioned optimistic updates
@@ -50,7 +43,7 @@ export interface VersionedEntity {
 export function enhanceWithVersion<T extends VersionedEntity>(
   currentItem: T | undefined,
   updates: Partial<T> | Record<string, unknown>,
-): Unmasked<T> {
+): T {
   if (!currentItem) {
     // If no current item, return minimal optimistic response
     // Caller should handle this case
@@ -63,7 +56,7 @@ export function enhanceWithVersion<T extends VersionedEntity>(
     // Keep current version - server will increment it
     version: currentItem.version || 0,
     updatedAt: new Date().toISOString(),
-  } as Unmasked<T>;
+  } as T;
 }
 
 /**
@@ -93,14 +86,14 @@ export function createOptimisticEntity<T extends VersionedEntity>(
   typename: string,
   id: string,
   data: Partial<Omit<T, 'id' | 'version' | 'updatedAt' | '__typename'>>,
-): Unmasked<T> {
+): T {
   return {
     __typename: typename,
     id,
     version: 1,
     updatedAt: new Date().toISOString(),
     ...data,
-  } as Unmasked<T>;
+  } as T;
 }
 
 /**

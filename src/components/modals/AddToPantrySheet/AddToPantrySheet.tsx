@@ -29,10 +29,7 @@ import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
 import { incrementNestedCounter } from '#/apollo/utils/cacheUpdaters';
 import { AddItemSheet } from '../AddItemSheet/AddItemSheet';
 import { useAddItemSheetState } from '../AddItemSheet/useAddItemSheetState';
-import type {
-  BaseSuggestionItem,
-  SuggestionsHookResult,
-} from '../AddItemSheet/types';
+import type { SuggestionsHookResult } from '../AddItemSheet/types';
 import { pantrySheetConfig } from '../AddItemSheet/configs/pantryConfig';
 import { AddDetailsSheet } from './AddDetailsSheet';
 
@@ -74,7 +71,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   });
 
   // Adapt suggestions to the expected interface
-  const suggestions: SuggestionsHookResult = {
+  const suggestions: SuggestionsHookResult<PantryItemSuggestion> = {
     grouped: suggestionsResult.grouped,
     loading: suggestionsResult.loading,
     hasSuggestions: suggestionsResult.hasSuggestions,
@@ -233,9 +230,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
 
   // Handle quick add from pantry item suggestion (fire-and-forget)
   // On duplicate: auto-restock by 1 silently
-  const handleQuickAddSuggestion = (item: BaseSuggestionItem) => {
-    // Cast to PantryItemSuggestion for full type info
-    const pantryItem = item as unknown as PantryItemSuggestion;
+  const handleQuickAddSuggestion = (pantryItem: PantryItemSuggestion) => {
     if (
       !pantryId ||
       state.exitingItems.has(pantryItem.itemId) ||

@@ -1,6 +1,7 @@
 'use no memo';
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { screen } from '@testing-library/react-native';
+import { renderWithApollo as render } from '#/test-utils/apolloMockProvider';
 import { MealPlanSettingsSheet } from '../MealPlanSettingsSheet';
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
@@ -45,6 +46,7 @@ jest.mock('../NutritionSummaryCard', () => ({
 }));
 
 const makeMealPlan = (overrides?: any) => ({
+  __typename: 'MealPlan',
   id: 'mp-1',
   name: 'Weekly Plan',
   description: 'My meal plan description',

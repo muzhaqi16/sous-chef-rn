@@ -8,12 +8,8 @@
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import { type Unmasked } from '@apollo/client/masking';
 import { alertService } from '#/services/alertService';
-import {
-  UpdateShoppingListItemDocument,
-  type UpdateShoppingListItemMutation,
-} from '#features/shoppingList/graphql/shoppingList.generated';
+import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { ShoppingListItemDisplayFragmentDoc } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { type ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { useErrorService } from '#/services/errorService';
@@ -74,38 +70,6 @@ export function useUpdateShoppingItem({
       return false;
     }
 
-    // Pre-compute optimistic values outside try/catch (React Compiler cannot handle ?? inside try)
-    const optimisticItemName = updates.itemName ?? item.itemName;
-    const optimisticQuantity = updates.quantity ?? item.quantity;
-    const optimisticCategory = updates.category ?? item.category;
-    const optimisticUnitName = updates.unitName ?? item.unitName;
-    const optimisticResponse: Unmasked<UpdateShoppingListItemMutation> = {
-      __typename: 'Mutation',
-      updateShoppingListItem: {
-        __typename: 'ShoppingListItemPayload',
-        success: true,
-        message: '',
-        code: 'SUCCESS',
-        shoppingListItem: {
-          __typename: 'ShoppingListItem',
-          id: item.id,
-          itemName: optimisticItemName,
-          quantity: optimisticQuantity,
-          quantityInput: item.quantityInput,
-          displayFormat: item.displayFormat,
-          notes: item.notes,
-          purchaseInfo: item.purchaseInfo,
-          version: item.version,
-          updatedAt: new Date().toISOString(),
-          category: optimisticCategory,
-          unitName: optimisticUnitName,
-          unit: item.unit,
-          sortOrder: item.sortOrder,
-          item: item.item,
-        },
-      },
-    };
-
     const result = await executeMutation(
       () =>
         updateItemMutation({
@@ -113,9 +77,32 @@ export function useUpdateShoppingItem({
             id: itemId,
             input: { ...updates, version: item.version },
           },
-          // Simple optimistic response - Apollo merges by __typename + id
-          // Only include fields from ShoppingListItemDisplayFragment
-          optimisticResponse,
+          optimisticResponse: {
+            __typename: 'Mutation',
+            updateShoppingListItem: {
+              __typename: 'ShoppingListItemPayload',
+              success: true,
+              message: '',
+              code: 'SUCCESS',
+              shoppingListItem: {
+                __typename: 'ShoppingListItem',
+                id: item.id,
+                itemName: updates.itemName ?? item.itemName,
+                quantity: updates.quantity ?? item.quantity,
+                quantityInput: item.quantityInput,
+                displayFormat: item.displayFormat,
+                notes: item.notes,
+                purchaseInfo: item.purchaseInfo,
+                version: item.version,
+                updatedAt: new Date().toISOString(),
+                category: updates.category ?? item.category,
+                unitName: updates.unitName ?? item.unitName,
+                unit: item.unit,
+                sortOrder: item.sortOrder,
+                item: item.item,
+              },
+            },
+          },
         }),
       error => {
         if (handleVersionConflict(error)) {

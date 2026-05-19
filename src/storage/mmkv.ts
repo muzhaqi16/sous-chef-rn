@@ -66,9 +66,7 @@ export const storage: MMKV = new Proxy({} as MMKV, {
           `Ensure initializeSecureStorage() is called in index.js before any sync storage access.`,
       );
     }
-    const value = (
-      secureStorageInstance as unknown as Record<PropertyKey, unknown>
-    )[prop];
+    const value = Reflect.get(secureStorageInstance, prop);
     if (typeof value !== 'function') return value;
     // Preserve jest.fn() identity so tests can assert via toHaveBeenCalledWith.
     if ((value as { mock?: unknown }).mock != null) return value;
@@ -82,8 +80,7 @@ export const storage: MMKV = new Proxy({} as MMKV, {
         `Storage written before initialization (prop: ${String(prop)}).`,
       );
     }
-    (secureStorageInstance as unknown as Record<PropertyKey, unknown>)[prop] =
-      value;
+    Reflect.set(secureStorageInstance, prop, value);
     return true;
   },
 });
