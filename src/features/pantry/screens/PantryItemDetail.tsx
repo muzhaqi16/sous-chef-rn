@@ -8,11 +8,13 @@ import { alertService } from '#/services/alertService';
 import Animated from 'react-native-reanimated';
 import { useApolloClient, useQuery } from '@apollo/client/react';
 import {
-  PantryItemFragmentDoc,
-  type PantryItemFragment,
   PantryItemBatchFragmentDoc,
   type PantryItemBatchFragment,
 } from '#features/pantry/graphql/pantryFragments.generated';
+import {
+  PantryItemDetail_PantryItemFragmentDoc,
+  type PantryItemDetail_PantryItemFragment,
+} from '#features/pantry/screens/PantryItemDetail.generated';
 import { useTranslation } from 'react-i18next';
 import { GetPantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import {
@@ -104,9 +106,9 @@ export const PantryItemDetail: React.FC<
   // can access them directly. The outer `useQuery` subscription drives
   // re-renders when the entity changes.
   const item = data?.pantryItem
-    ? client.cache.readFragment<PantryItemFragment>({
-        fragment: PantryItemFragmentDoc,
-        fragmentName: 'PantryItemFragment',
+    ? client.cache.readFragment<PantryItemDetail_PantryItemFragment>({
+        fragment: PantryItemDetail_PantryItemFragmentDoc,
+        fragmentName: 'PantryItemDetail_pantryItem',
         from: data.pantryItem,
       })
     : null;
@@ -349,7 +351,7 @@ export const PantryItemDetail: React.FC<
         )}
 
         <PantryDetailInfo
-          item={item}
+          itemRef={item}
           brandName={brandName}
           netWeightText={netWeightText}
           remainingNetWeightText={remainingNetWeightText}

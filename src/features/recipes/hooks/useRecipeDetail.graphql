@@ -45,7 +45,7 @@ mutation AddItemsToShoppingList(
       success
       item {
         id
-        ...ShoppingListItemDisplayFragment
+        ...useRecipeShoppingList_addedItem
       }
       quantityIncremented
       error

@@ -1,0 +1,25 @@
+# Narrow fragment for useShoppingListActions's increment/decrement reads.
+# Reads `quantity` to compute the new value and `version` to pass
+# optimistic-concurrency control to the mutation.
+fragment useShoppingListActions_item on ShoppingListItem {
+  id
+  quantity
+  version
+}
+
+# Narrow fragment for the UpdateShoppingListItemQuantity mutation response.
+# The mutation can change quantity, quantityInput, displayFormat, unit,
+# unitName, and version.
+fragment useShoppingListActions_updateQuantityResult on ShoppingListItem {
+  id
+  quantity
+  quantityInput
+  displayFormat
+  unitName
+  version
+  unit {
+    id
+    name
+    symbol
+  }
+}

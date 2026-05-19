@@ -1,3 +1,8 @@
+# Domain-level shape for recipe ingredients. Spread by GetRecipe and
+# UpdateRecipeIngredients — both operations populate the cache with this
+# shape, and useRecipeIngredientMatching materializes it for matching logic.
+# Stays shared because the operation-populated shape IS the consumer shape;
+# splitting per-hook would duplicate the selection set.
 fragment RecipeIngredientFragment on RecipeIngredient {
   id
   name
@@ -20,6 +25,10 @@ fragment RecipeIngredientFragment on RecipeIngredient {
   section
 }
 
+# Domain-level shape for recipe reviews. Spread by GetRecipeReviews,
+# CreateRecipeReview, and UpdateRecipeReview — all three populate the cache
+# with this shape, and useRecipeReviews materializes the canonical shape for
+# sort/filter and helpful-vote checks. Stays shared.
 fragment RecipeReviewFragment on RecipeReview {
   id
   rating
@@ -28,13 +37,27 @@ fragment RecipeReviewFragment on RecipeReview {
   verified
   createdAt
   updatedAt
-  user { ...UserSummary }
+  user {
+    id
+    email
+    profile {
+      id
+      displayName
+      avatar
+    }
+  }
   helpfulVotes {
     id
     user { id }
   }
 }
 
+# Shared hydration shape for "basic recipe" reads. Spread by SearchRecipes,
+# SuggestedRecipes, CreateRecipe, and FavoriteRecipe — four operations that
+# all hydrate the cache with the same shallow recipe shape. Per-operation
+# narrowing would duplicate this selection 4× with no clarity gain. Hooks
+# that need narrower reads (useRecipeFavoriteState, etc.) have co-located
+# fragments next to their hook file.
 fragment BasicRecipeFragment on Recipe {
   id
   name
@@ -62,35 +85,5 @@ fragment BasicRecipeFragment on Recipe {
     notes
     personalRating
     cookedCount
-  }
-}
-
-fragment RecipeFragment on Recipe {
-  ...BasicRecipeFragment
-
-  # Extended fields not in BasicRecipeFragment
-  instructions
-  notes
-  videoUrl
-  sourceUrl
-  source
-
-  # Metadata
-  isPublished
-  averageRating
-  totalReviews
-  rating1Count
-  rating2Count
-  rating3Count
-  rating4Count
-  rating5Count
-  # Relations
-  createdBy {
-    id
-    email
-  }
-
-  ingredients {
-    ...RecipeIngredientFragment
   }
 }

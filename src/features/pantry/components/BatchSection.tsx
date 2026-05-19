@@ -17,7 +17,7 @@ import { Text } from '#components/atoms/Text';
 
 /**
  * `batches` arrive already unmasked from the parent (PantryItemDetail
- * materializes the full PantryItemFragment via `cache.readFragment`, which
+ * materializes the full PantryItemDetail_pantryItem via `cache.readFragment`, which
  * recursively unmasks nested fragments). `BatchListItem` then runs its own
  * `useFragment` for reactive per-row updates.
  */

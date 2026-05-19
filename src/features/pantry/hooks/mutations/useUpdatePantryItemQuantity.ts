@@ -4,16 +4,17 @@
  * Single responsibility:
  * - Update quantity and unit fields via dedicated endpoint
  * - Version conflict handling
- * - Optimistic response with cache update
+ * - Optimistic response built from the hook's own narrow fragment read from
+ *   cache — callers pass only `itemId`.
  */
 
-import { useMutation } from '@apollo/client/react';
+import { useApolloClient, useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
 import { UpdatePantryItemQuantityDocument } from '#features/pantry/graphql/pantry.generated';
 import {
-  PantryItemDisplayFragmentDoc,
-  type PantryItemFragment,
-} from '#features/pantry/graphql/pantryFragments.generated';
+  UseUpdatePantryItemQuantity_PantryItemFragmentDoc,
+  type UseUpdatePantryItemQuantity_PantryItemFragment,
+} from './useUpdatePantryItemQuantity.generated';
 import { useErrorService } from '#/services/errorService';
 import {
   handleVersionConflict,
@@ -35,46 +36,18 @@ interface UpdateQuantityParams {
   unitId: string | null;
   unitSymbol: string;
   trackingUnit: UnitSelection;
-  currentItem: PantryItemFragment;
 }
 
-/**
- * Hook for updating pantry item quantity and unit
- *
- * @example
- * ```tsx
- * const { updateQuantity } = useUpdatePantryItemQuantity({ onSuccess, refetch });
- * updateQuantity({
- *   itemId: 'item-123',
- *   quantityInput: '2.5',
- *   quantityValue: 2.5,
- *   unitId: 'unit-456',
- *   unitSymbol: 'kg',
- *   trackingUnit,
- *   currentItem,
- * });
- * ```
- */
 export function useUpdatePantryItemQuantity({
   onSuccess,
   refetch,
 }: UseUpdatePantryItemQuantityOptions) {
   const { handleApolloError } = useErrorService();
+  const client = useApolloClient();
 
   const [updateQuantityMutation] = useMutation(
     UpdatePantryItemQuantityDocument,
     {
-      update: (cache, { data }) => {
-        const pantryItem = data?.updatePantryItemQuantity?.pantryItem;
-        if (!pantryItem) return;
-
-        cache.writeFragment({
-          id: cache.identify({ __typename: 'PantryItem', id: pantryItem.id }),
-          fragment: PantryItemDisplayFragmentDoc,
-          fragmentName: 'PantryItemDisplay',
-          data: pantryItem,
-        });
-      },
       onError: error => {
         if (handleVersionConflict(error)) {
           alertService.alert('Item Updated', getVersionConflictMessage(error), [
@@ -101,8 +74,21 @@ export function useUpdatePantryItemQuantity({
     quantityValue,
     unitId,
     trackingUnit,
-    currentItem,
   }: UpdateQuantityParams): void => {
+    const currentItem =
+      client.cache.readFragment<UseUpdatePantryItemQuantity_PantryItemFragment>(
+        {
+          id: client.cache.identify({ __typename: 'PantryItem', id: itemId }),
+          fragment: UseUpdatePantryItemQuantity_PantryItemFragmentDoc,
+          fragmentName: 'useUpdatePantryItemQuantity_pantryItem',
+        },
+      );
+
+    if (!currentItem) {
+      console.warn('Item not found, cannot update quantity:', itemId);
+      return;
+    }
+
     const newQuantity = parseFloat(quantityInput || quantityValue.toString());
 
     // Fire mutation asynchronously - don't await to allow immediate navigation

@@ -1,0 +1,9 @@
+# Narrow fragment for WastePantryItemBatch mutation response.
+# Server returns the parent PantryItem with updated batches + counts.
+fragment useWastePantryItemBatch_pantryItem on PantryItem {
+  id
+  version
+  quantity
+  activeBatchCount
+  earliestBatchExpiration
+}

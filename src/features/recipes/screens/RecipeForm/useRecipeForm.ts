@@ -10,7 +10,7 @@ import {
   type HealthGoal,
   type Intolerance,
 } from '#/graphql/generated/schemaTypes';
-import { type MaterializedRecipe } from '#features/recipes/hooks/useRecipeData';
+import { type RecipeForm_RecipeFragment } from './RecipeForm.generated';
 
 export interface IngredientFormState {
   id: string; // local temp id
@@ -276,7 +276,7 @@ export function useRecipeForm() {
   };
 
   // Populate from existing recipe (edit mode)
-  const populateFromRecipe = (recipe: MaterializedRecipe) => {
+  const populateFromRecipe = (recipe: RecipeForm_RecipeFragment) => {
     const formState: RecipeFormState = {
       name: recipe.name ?? '',
       description: recipe.description ?? '',

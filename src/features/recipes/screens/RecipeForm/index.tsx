@@ -13,9 +13,9 @@ import {
   type MyRecipesQuery,
 } from '#features/recipes/graphql/recipe.generated';
 import {
-  RecipeFragmentDoc,
-  type RecipeFragment,
-} from '#features/recipes/graphql/recipeFragments.generated';
+  RecipeForm_RecipeFragmentDoc,
+  type RecipeForm_RecipeFragment,
+} from './RecipeForm.generated';
 import { useRecipeForm } from './useRecipeForm';
 import { RecipeBasicFields } from './components/RecipeBasicFields';
 import { RecipeCategoryFields } from './components/RecipeCategoryFields';
@@ -51,9 +51,9 @@ export const RecipeFormScreen: React.FC<
     skip: !recipeId,
   });
 
-  // Materialize the masked RecipeFragment ref so populateFromRecipe sees the
-  // full entity (non-render context — useFragment is a hook and can't run
-  // inside useEffect).
+  // Materialize the masked recipe ref into the form's own narrow fragment so
+  // populateFromRecipe sees the fields it needs (non-render context —
+  // useFragment is a hook and can't run inside useEffect).
   const apolloClient = useApolloClient();
   const recipeRef = recipeData?.recipe ?? null;
 
@@ -61,9 +61,9 @@ export const RecipeFormScreen: React.FC<
   const { populateFromRecipe } = form;
   useEffect(() => {
     if (!recipeRef) return;
-    const recipe = apolloClient.cache.readFragment<RecipeFragment>({
-      fragment: RecipeFragmentDoc,
-      fragmentName: 'RecipeFragment',
+    const recipe = apolloClient.cache.readFragment<RecipeForm_RecipeFragment>({
+      fragment: RecipeForm_RecipeFragmentDoc,
+      fragmentName: 'RecipeForm_recipe',
       from: recipeRef,
     });
     if (recipe) {

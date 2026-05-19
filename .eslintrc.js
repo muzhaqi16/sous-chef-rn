@@ -72,6 +72,11 @@ module.exports = {
 
     // Enforce StyleSheet from react-native-unistyles instead of react-native
     // Prevent useMemo/useCallback — React Compiler handles memoization automatically
+    // Block re-introducing deleted "god" / dead-scalar fragments. See CLAUDE.md
+    // "Apollo: Fragment composition" — the codebase converged on per-component
+    // colocated fragments + a small documented set of shared fragments. The
+    // names listed below were either deleted (inlined into consumers) or
+    // decomposed into per-consumer fragments and should not return.
     'no-restricted-imports': [
       'error',
       {
@@ -86,6 +91,52 @@ module.exports = {
             importNames: ['useMemo', 'useCallback'],
             message:
               'useMemo/useCallback are unnecessary — the React Compiler handles memoization automatically.',
+          },
+        ],
+        patterns: [
+          {
+            group: ['**/*Fragments.generated'],
+            importNames: [
+              // Deleted dead scalar/leaf fragments — fields are inlined where used.
+              'UnitBasicFragment',
+              'UnitBasicFragmentDoc',
+              'UnitFullFragment',
+              'UnitFullFragmentDoc',
+              'StoreFieldsFragment',
+              'StoreFieldsFragmentDoc',
+              'BrandFieldsFragment',
+              'BrandFieldsFragmentDoc',
+              'UserProfileFieldsFragment',
+              'UserProfileFieldsFragmentDoc',
+              'UserProfileFullFragment',
+              'UserProfileFullFragmentDoc',
+              'UserSummaryFragment',
+              'UserSummaryFragmentDoc',
+              // Deleted "god" fragments — decomposed into colocated component
+              // fragments (PantryItemDetail_pantryItem, PantryItemForm_pantryItem,
+              // useUpdatePantryItem_pantryItem, etc.).
+              'PantryItemFragment',
+              'PantryItemFragmentDoc',
+              'PantryItemDisplay',
+              'PantryItemDisplayFragment',
+              'PantryItemDisplayFragmentDoc',
+              'ShoppingListItemFragment',
+              'ShoppingListItemFragmentDoc',
+              'MealPlanFullFragment',
+              'MealPlanFullFragmentDoc',
+              'RecipeFragment',
+              'RecipeFragmentDoc',
+              'ItemFragment',
+              'ItemFragmentDoc',
+              'ItemDisplayFragment',
+              'ItemDisplayFragmentDoc',
+              'ItemCoreFragment',
+              'ItemCoreFragmentDoc',
+              'HomeFragment',
+              'HomeFragmentDoc',
+            ],
+            message:
+              'This fragment was deleted or decomposed. Use a colocated `<Consumer>_<entity>` fragment instead (sibling .graphql file next to the consumer). See CLAUDE.md "Apollo: Fragment composition + `useFragment` convention".',
           },
         ],
       },

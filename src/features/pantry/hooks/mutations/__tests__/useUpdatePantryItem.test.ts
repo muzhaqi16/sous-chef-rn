@@ -1,4 +1,7 @@
-import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  renderHookWithApollo,
+  seedCache,
+} from '#/test-utils/apolloMockProvider';
 import { useUpdatePantryItem } from '../useUpdatePantryItem';
 
 jest.mock('#/services/errorService', () => ({
@@ -36,11 +39,10 @@ jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
 }));
 
-// `currentItem` is passed directly into the hook (not fetched via a query),
-// so the schema mock can't fill it in for us. The optimistic response Apollo
-// writes is `currentItem` + dirty-field updates; both halves must satisfy the
-// PantryItemDisplay selection set or the cache logs "Missing field …".
-const buildPantryItemDisplay = (overrides: Record<string, any> = {}) => ({
+// Hook reads currentItem from the cache via cache.readFragment, so tests
+// must seed the cache with a matching entity. The optimistic response is
+// then computed from the cached values plus the dirty-field updates.
+const buildPantryItem = (overrides: Record<string, any> = {}) => ({
   __typename: 'PantryItem',
   id: 'item-1',
   pantryId: 'pantry-1',
@@ -59,16 +61,33 @@ const buildPantryItemDisplay = (overrides: Record<string, any> = {}) => ({
   remainingNetWeight: null,
   activeBatchCount: 0,
   earliestBatchExpiration: null,
+  restockQuantity: null,
+  storageNotes: null,
+  tags: [],
   item: null,
-  unit: { __typename: 'Unit', id: 'unit-1', name: 'Gram', symbol: 'g' },
+  unit: {
+    __typename: 'Unit',
+    id: 'unit-1',
+    name: 'Gram',
+    symbol: 'g',
+    type: 'WEIGHT',
+    isMetric: true,
+    baseUnitId: null,
+    conversionFactor: 1,
+    isCommon: true,
+    displayAsFraction: false,
+    minPrecision: 0,
+    autoConvertThreshold: null,
+  },
   netWeightUnit: null,
   storageLocation: null,
   packageBreakdown: null,
   quantityBreakdown: null,
+  brand: null,
   ...overrides,
 });
 
-const createCurrentItem = () => buildPantryItemDisplay() as any;
+const seedItem = () => seedCache([buildPantryItem()]);
 
 const createFormData = (overrides: Record<string, any> = {}) =>
   ({
@@ -87,21 +106,23 @@ beforeEach(() => {
 
 describe('useUpdatePantryItem', () => {
   it('returns updatePantryItemFields function', () => {
-    const { result } = renderHookWithApollo(() => useUpdatePantryItem({}));
+    const { result } = renderHookWithApollo(() => useUpdatePantryItem({}), {
+      cache: seedItem(),
+    });
 
     expect(typeof result.current.updatePantryItemFields).toBe('function');
   });
 
   it('fires mutation with dirty fields only', () => {
     const onSuccess = jest.fn();
-    const { result } = renderHookWithApollo(() =>
-      useUpdatePantryItem({ onSuccess }),
+    const { result } = renderHookWithApollo(
+      () => useUpdatePantryItem({ onSuccess }),
+      { cache: seedItem() },
     );
 
     result.current.updatePantryItemFields({
       itemId: 'item-1',
       input: createFormData(),
-      currentItem: createCurrentItem(),
       dirtyFields: { itemName: true },
       selectedLocationId: null,
       selectedBrandId: null,
@@ -113,14 +134,14 @@ describe('useUpdatePantryItem', () => {
 
   it('calls onSuccess immediately without waiting for mutation', () => {
     const onSuccess = jest.fn();
-    const { result } = renderHookWithApollo(() =>
-      useUpdatePantryItem({ onSuccess }),
+    const { result } = renderHookWithApollo(
+      () => useUpdatePantryItem({ onSuccess }),
+      { cache: seedItem() },
     );
 
     result.current.updatePantryItemFields({
       itemId: 'item-1',
       input: createFormData(),
-      currentItem: createCurrentItem(),
       dirtyFields: { itemName: true },
       selectedLocationId: null,
       selectedBrandId: null,
@@ -131,14 +152,14 @@ describe('useUpdatePantryItem', () => {
 
   it('calls onSuccess without mutation when no dirty fields', () => {
     const onSuccess = jest.fn();
-    const { result } = renderHookWithApollo(() =>
-      useUpdatePantryItem({ onSuccess }),
+    const { result } = renderHookWithApollo(
+      () => useUpdatePantryItem({ onSuccess }),
+      { cache: seedItem() },
     );
 
     result.current.updatePantryItemFields({
       itemId: 'item-1',
       input: createFormData(),
-      currentItem: createCurrentItem(),
       dirtyFields: {},
       selectedLocationId: null,
       selectedBrandId: null,
@@ -151,12 +172,13 @@ describe('useUpdatePantryItem', () => {
   });
 
   it('builds optimistic unit when trackingUnit has different id', () => {
-    const { result } = renderHookWithApollo(() => useUpdatePantryItem({}));
+    const { result } = renderHookWithApollo(() => useUpdatePantryItem({}), {
+      cache: seedItem(),
+    });
 
     result.current.updatePantryItemFields({
       itemId: 'item-1',
       input: createFormData(),
-      currentItem: createCurrentItem(),
       dirtyFields: { notes: true },
       selectedLocationId: null,
       selectedBrandId: null,
@@ -173,12 +195,13 @@ describe('useUpdatePantryItem', () => {
   });
 
   it('does not build optimistic unit when trackingUnit matches current', () => {
-    const { result } = renderHookWithApollo(() => useUpdatePantryItem({}));
+    const { result } = renderHookWithApollo(() => useUpdatePantryItem({}), {
+      cache: seedItem(),
+    });
 
     result.current.updatePantryItemFields({
       itemId: 'item-1',
       input: createFormData(),
-      currentItem: createCurrentItem(),
       dirtyFields: { notes: true },
       selectedLocationId: null,
       selectedBrandId: null,

@@ -8,10 +8,9 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { UpdateShoppingListItemQuantityDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
-  ShoppingListItemDisplayFragmentDoc,
-  type ShoppingListItemDisplayFragment,
-} from '#features/shoppingList/graphql/shoppingListFragments.generated';
-import { DisplayFormat } from '#/graphql/generated/schemaTypes';
+  UseShoppingListActions_ItemFragmentDoc,
+  type UseShoppingListActions_ItemFragment,
+} from '../useShoppingListActions.generated';
 import { useShoppingListActions } from '../useShoppingListActions';
 
 // --- Mocks ---
@@ -121,38 +120,24 @@ function createItem(overrides: Record<string, unknown> = {}) {
 
 /**
  * Build a cache pre-seeded with a ShoppingListItem written via the production
- * `ShoppingListItemDisplayFragmentDoc` so that the hook's `client.readFragment`
+ * `UseShoppingListActions_ItemFragmentDoc` so the hook's `client.readFragment`
  * call (which uses the same fragment doc) returns the seeded data.
  */
 function seedShoppingListItem(
   overrides: Record<string, unknown> = {},
 ): InMemoryCache {
   const cache = new InMemoryCache();
-  const data: ShoppingListItemDisplayFragment = {
+  const data: UseShoppingListActions_ItemFragment = {
     __typename: 'ShoppingListItem',
     id: 'item-1',
-    itemName: 'Milk',
     quantity: 2,
-    quantityInput: '2',
-    displayFormat: DisplayFormat.Decimal,
-    purchaseInfo: {
-      __typename: 'ShoppingListItemPurchaseInfo',
-      isPurchased: false,
-    },
     version: 1,
-    updatedAt: '2025-01-01T00:00:00.000Z',
-    category: null,
-    notes: null,
-    unitName: null,
-    unit: null,
-    sortOrder: 'aaa',
-    item: null,
     ...overrides,
   };
   cache.writeFragment({
     id: `ShoppingListItem:${data.id}`,
-    fragment: ShoppingListItemDisplayFragmentDoc,
-    fragmentName: 'ShoppingListItemDisplayFragment',
+    fragment: UseShoppingListActions_ItemFragmentDoc,
+    fragmentName: 'useShoppingListActions_item',
     data,
   });
   return cache;

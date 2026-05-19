@@ -1,0 +1,34 @@
+# Narrow fragment for the AddItemsToShoppingList mutation response.
+# The `update` callback reads only `item.id` to add the newly-created
+# entity to the parent connection via `toReference`. Apollo's automatic
+# normalization populates the entity from this response, so we include
+# the display fields a freshly-added cell needs.
+fragment useRecipeShoppingList_addedItem on ShoppingListItem {
+  id
+  itemName
+  quantity
+  quantityInput
+  displayFormat
+  purchaseInfo {
+    isPurchased
+  }
+  version
+  updatedAt
+  category
+  notes
+  unitName
+  unit {
+    id
+    name
+    symbol
+  }
+  sortOrder
+  item {
+    id
+    imageUrl
+    images {
+      url
+      kind
+    }
+  }
+}

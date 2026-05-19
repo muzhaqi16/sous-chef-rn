@@ -70,7 +70,8 @@ mutation CreateMealPlanFromTemplate($input: CreateMealPlanFromTemplateInput!) {
     message
     code
     mealPlan {
-      ...MealPlanFull
+      ...MealPlanMain_mealPlan
+      ...MealPlanSettingsSheet_mealPlan
     }
   }
 }

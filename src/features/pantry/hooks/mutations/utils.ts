@@ -3,7 +3,7 @@
  */
 
 import type { ApolloCache } from '@apollo/client';
-import { type PantryItemFragment } from '#features/pantry/graphql/pantryFragments.generated';
+import { type UseUpdatePantryItem_PantryItemFragment } from './useUpdatePantryItem.generated';
 import {
   StorageState,
   UnitType,
@@ -24,12 +24,12 @@ export const addToPantryItemsCache = createAddToParentConnectionUpdater<any>(
 
 /**
  * Build optimistic Unit object for cache updates.
- * Includes all Unit fields from PantryItemFragment to prevent cache warnings.
+ * Includes all Unit fields to prevent cache warnings.
  */
 export function buildOptimisticUnit(
   newUnit: UnitSelection,
-  currentUnit?: PantryItemFragment['unit'] | null,
-): PantryItemFragment['unit'] | null {
+  currentUnit?: UseUpdatePantryItem_PantryItemFragment['unit'] | null,
+): UseUpdatePantryItem_PantryItemFragment['unit'] | null {
   if (!newUnit.id) return null;
 
   // Cast type to UnitType if it's a string, fallback to COUNT

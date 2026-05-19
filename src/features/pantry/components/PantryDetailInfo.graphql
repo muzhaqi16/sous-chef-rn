@@ -1,0 +1,40 @@
+# Component fragment for PantryDetailInfo's info-row rendering. Apollo Client
+# 4.x data-masking pattern: the component declares its own narrow fragment,
+# its prop type is the corresponding `*_pantryItem` shape, and useFragment
+# scopes cache subscriptions to just this fragment's fields.
+fragment PantryDetailInfo_pantryItem on PantryItem {
+  id
+  condition
+  quantity
+  lastUsedAt
+  acquisitionMethod
+  costPerUnit
+  totalCost
+  minQuantity
+  restockQuantity
+  storageNotes
+  createdAt
+  tags
+  unit {
+    id
+    name
+    symbol
+  }
+  storageLocation {
+    id
+    name
+  }
+  store {
+    id
+    name
+  }
+  brand {
+    id
+    name
+  }
+  purchase {
+    id
+    purchaseDate
+    unitPrice
+  }
+}

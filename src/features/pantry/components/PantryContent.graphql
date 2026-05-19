@@ -1,0 +1,13 @@
+# Narrow fragment for PantryContent's image-preload pass.
+# Reads only the fields `resolveImageUrl` needs to pick an image variant.
+fragment PantryContent_pantryItem on PantryItem {
+  id
+  item {
+    id
+    imageUrl
+    images {
+      url
+      kind
+    }
+  }
+}

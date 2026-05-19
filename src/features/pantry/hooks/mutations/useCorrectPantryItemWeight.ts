@@ -8,7 +8,6 @@
 import { useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
 import { CorrectPantryItemWeightDocument } from '#features/pantry/graphql/pantry.generated';
-import { PantryItemDisplayFragmentDoc } from '#features/pantry/graphql/pantryFragments.generated';
 import { useErrorService } from '#/services/errorService';
 import {
   handleVersionConflict,
@@ -30,22 +29,6 @@ export function useCorrectPantryItemWeight({
 
   const [correctMutation, { loading }] = useMutation(
     CorrectPantryItemWeightDocument,
-    {
-      update: (cache, { data }) => {
-        const pantryItem = data?.correctPantryItemWeight?.pantryItem;
-        if (!pantryItem) return;
-
-        cache.writeFragment({
-          id: cache.identify({
-            __typename: 'PantryItem',
-            id: pantryItem.id,
-          }),
-          fragment: PantryItemDisplayFragmentDoc,
-          fragmentName: 'PantryItemDisplay',
-          data: pantryItem,
-        });
-      },
-    },
   );
 
   const correctWeight = async (

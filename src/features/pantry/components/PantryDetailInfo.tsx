@@ -8,10 +8,11 @@ const ThemedConditionInfoRow = withUnistyles(InfoRow);
 import { Icon } from '#/utils/iconUtils';
 import { getUnitDisplayText } from '#utils/formatQuantity';
 import { useFragment } from '@apollo/client/react';
+import type { FragmentType } from '@apollo/client/masking';
 import {
-  PantryItemFragmentDoc,
-  type PantryItemFragment,
-} from '#features/pantry/graphql/pantryFragments.generated';
+  PantryDetailInfo_PantryItemFragmentDoc,
+  type PantryDetailInfo_PantryItemFragment,
+} from './PantryDetailInfo.generated';
 import {
   formatCondition,
   formatAcquisitionMethod,
@@ -21,7 +22,9 @@ import {
 import { Text } from '#components/atoms/Text';
 
 interface PantryDetailInfoProps {
-  item: PantryItemFragment;
+  itemRef:
+    | FragmentType<typeof PantryDetailInfo_PantryItemFragmentDoc>
+    | PantryDetailInfo_PantryItemFragment;
   brandName: string | null;
   netWeightText: string | null;
   remainingNetWeightText: string | null;
@@ -33,7 +36,7 @@ interface PantryDetailInfoProps {
 }
 
 export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
-  item: itemSource,
+  itemRef,
   brandName,
   netWeightText,
   remainingNetWeightText,
@@ -47,11 +50,13 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
   // fields change. Falls back to the source prop on cache miss so the
   // component renders correctly under test fixtures + tolerates stale state.
   const fragmentResult = useFragment({
-    fragment: PantryItemFragmentDoc,
-    fragmentName: 'PantryItemFragment',
-    from: itemSource,
+    fragment: PantryDetailInfo_PantryItemFragmentDoc,
+    fragmentName: 'PantryDetailInfo_pantryItem',
+    from: itemRef,
   });
-  const item = fragmentResult.complete ? fragmentResult.data : itemSource;
+  const item: PantryDetailInfo_PantryItemFragment = fragmentResult.complete
+    ? fragmentResult.data
+    : (itemRef as PantryDetailInfo_PantryItemFragment);
 
   const isCriticalCondition =
     item.condition === 'SPOILED' || item.condition === 'EXPIRED';

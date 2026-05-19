@@ -1,0 +1,56 @@
+# Screen-level fragment for the recipe-detail flow. Materialized via
+# `cache.readFragment` so the screen + `RecipeDetail` consumers can read
+# display fields directly. Composes the form fragment so the same query
+# also populates the edit screen's cache.
+fragment useRecipeData_recipe on Recipe {
+  id
+  name
+  description
+  imageUrl
+  servings
+  totalTimeMinutes
+  source
+  sourceUrl
+  instructions
+  # Display/badge fields for the detail screen
+  savedDetails {
+    id
+    folder
+    tags
+    notes
+    personalRating
+    cookedCount
+  }
+  averageRating
+  totalReviews
+  rating1Count
+  rating2Count
+  rating3Count
+  rating4Count
+  rating5Count
+  createdBy {
+    id
+    email
+  }
+  ingredients {
+    id
+    name
+    quantity
+    item {
+      id
+      name
+      imageUrl
+    }
+    unit {
+      id
+      name
+      symbol
+    }
+    image
+    isOptional
+    notes
+    preparation
+    sortOrder
+    section
+  }
+}

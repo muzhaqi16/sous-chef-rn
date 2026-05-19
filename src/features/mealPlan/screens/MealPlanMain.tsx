@@ -164,6 +164,7 @@ const MealPlanMainInner: React.FC = () => {
   // Fetch the active plan with items
   const {
     mealPlan: activeMealPlan,
+    mealPlanRef: activeMealPlanRef,
     items,
     nutritionSummary,
     refetch,
@@ -635,7 +636,7 @@ const MealPlanMainInner: React.FC = () => {
       {/* Settings Sheet */}
       <MealPlanSettingsSheet
         visible={settingsVisible}
-        mealPlan={activeMealPlan}
+        mealPlanRef={activeMealPlanRef}
         permissions={permissions}
         onClose={() => setSettingsVisible(false)}
         onDuplicate={() => setDuplicateVisible(true)}

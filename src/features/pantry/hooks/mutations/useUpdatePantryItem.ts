@@ -5,13 +5,17 @@
  * - Update non-quantity fields (storage, notes, tags, brand, etc.)
  * - Only sends changed fields (dirty field tracking)
  * - Version conflict handling
- * - Optimistic response with cache update
+ * - Optimistic response built from the hook's own narrow fragment read from
+ *   cache — callers pass only `itemId`.
  */
 
-import { useMutation } from '@apollo/client/react';
+import { useApolloClient, useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
 import { UpdatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
-import type { PantryItemFragment } from '#features/pantry/graphql/pantryFragments.generated';
+import {
+  UseUpdatePantryItem_PantryItemFragmentDoc,
+  type UseUpdatePantryItem_PantryItemFragment,
+} from './useUpdatePantryItem.generated';
 import { StorageType } from '#/graphql/generated/schemaTypes';
 import { useErrorService } from '#/services/errorService';
 import {
@@ -36,7 +40,6 @@ interface UseUpdatePantryItemOptions {
 interface UpdatePantryItemFieldsParams {
   itemId: string;
   input: FormDataInput;
-  currentItem: PantryItemFragment;
   dirtyFields: Record<string, boolean>;
   selectedLocationId: string | null;
   selectedBrandId: string | null;
@@ -45,27 +48,12 @@ interface UpdatePantryItemFieldsParams {
   unitSymbol?: string;
 }
 
-/**
- * Hook for updating pantry item non-quantity fields
- *
- * @example
- * ```tsx
- * const { updatePantryItemFields } = useUpdatePantryItem({ onSuccess, refetch });
- * updatePantryItemFields({
- *   itemId: 'item-123',
- *   input: formData,
- *   currentItem,
- *   dirtyFields,
- *   selectedLocationId: null,
- *   selectedBrandId: null,
- * });
- * ```
- */
 export function useUpdatePantryItem({
   onSuccess,
   refetch,
 }: UseUpdatePantryItemOptions) {
   const { handleApolloError } = useErrorService();
+  const client = useApolloClient();
 
   const [updateMutation] = useMutation(UpdatePantryItemDocument, {
     onError: error => {
@@ -90,7 +78,6 @@ export function useUpdatePantryItem({
   const updatePantryItemFields = ({
     itemId,
     input,
-    currentItem,
     dirtyFields,
     selectedLocationId,
     selectedBrandId,
@@ -113,8 +100,21 @@ export function useUpdatePantryItem({
       return;
     }
 
+    const currentItem =
+      client.cache.readFragment<UseUpdatePantryItem_PantryItemFragment>({
+        id: client.cache.identify({ __typename: 'PantryItem', id: itemId }),
+        fragment: UseUpdatePantryItem_PantryItemFragmentDoc,
+        fragmentName: 'useUpdatePantryItem_pantryItem',
+      });
+
+    if (!currentItem) {
+      console.warn('Item not found, cannot update:', itemId);
+      return;
+    }
+
     // Build optimistic update from form data (PantryItem-shaped, not mutation-input-shaped)
-    const optimisticUpdate: Partial<PantryItemFragment> = {};
+    const optimisticUpdate: Partial<UseUpdatePantryItem_PantryItemFragment> =
+      {};
     if (dirtyFields.itemName) optimisticUpdate.itemName = input.itemName;
     if (dirtyFields.storageState)
       optimisticUpdate.storageState = input.storageState;
@@ -163,16 +163,14 @@ export function useUpdatePantryItem({
 
     const pantryId = currentItem.pantryId;
     const oldLocationId = currentItem.storageLocation?.id ?? null;
+    const oldStorageState = currentItem.storageState;
 
-    // Fire mutation asynchronously - don't await to allow immediate navigation
     const optimisticPantryItem = enhanceWithVersion(
       currentItem,
       optimisticUpdate,
     );
     updateMutation({
       variables: { id: itemId, input: updateInput },
-      // Inline so Apollo's `Unmasked<NoInfer<TData>>` typing contextually
-      // checks the structural shape; no local annotation needed.
       optimisticResponse: {
         __typename: 'Mutation',
         updatePantryItem: {
@@ -219,7 +217,7 @@ export function useUpdatePantryItem({
 
             // Update storageStateCounts when storage state changed
             if (dirtyFields.storageState) {
-              const oldKey = stateToCountKey(currentItem.storageState);
+              const oldKey = stateToCountKey(oldStorageState);
               const newKey = stateToCountKey(input.storageState);
               if (oldKey !== newKey) {
                 modifyPantryStats(cache, pantryId, existingStats => {

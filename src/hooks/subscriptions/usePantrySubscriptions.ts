@@ -25,12 +25,10 @@ import {
   type ExpirationNotificationChangedSubscription,
 } from '#features/pantry/graphql/pantry.generated';
 import {
-  PantryItemDisplayFragmentDoc,
-  type PantryItemDisplayFragment,
-} from '#features/pantry/graphql/pantryFragments.generated';
-import {
   UsePantrySubscriptions_ExpirationNotificationFragmentDoc,
   type UsePantrySubscriptions_ExpirationNotificationFragment,
+  UsePantrySubscriptions_PantryItemFragmentDoc,
+  type UsePantrySubscriptions_PantryItemFragment,
 } from '#hooks/subscriptions/usePantrySubscriptions.generated';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import {
@@ -116,11 +114,14 @@ export function usePantrySubscriptions(userId?: string) {
 
           // Materialize the masked PantryItem fragment ref so we can read
           // its `id` (and downstream fields) without breaking data-masking.
-          const item = client.cache.readFragment<PantryItemDisplayFragment>({
-            fragment: PantryItemDisplayFragmentDoc,
-            fragmentName: 'PantryItemDisplay',
-            from: itemRef,
-          });
+          const item =
+            client.cache.readFragment<UsePantrySubscriptions_PantryItemFragment>(
+              {
+                fragment: UsePantrySubscriptions_PantryItemFragmentDoc,
+                fragmentName: 'usePantrySubscriptions_pantryItem',
+                from: itemRef,
+              },
+            );
           if (!item) return;
 
           // Skip echoes for items this client is currently deleting. Our
@@ -165,8 +166,8 @@ export function usePantrySubscriptions(userId?: string) {
             if (cacheId) {
               client.cache.writeFragment({
                 id: cacheId,
-                fragment: PantryItemDisplayFragmentDoc,
-                fragmentName: 'PantryItemDisplay',
+                fragment: UsePantrySubscriptions_PantryItemFragmentDoc,
+                fragmentName: 'usePantrySubscriptions_pantryItem',
                 data: item,
               });
             } else {

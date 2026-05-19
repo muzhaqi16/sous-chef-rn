@@ -14,9 +14,9 @@ import {
   type RemoveItemFromShoppingListMutation,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
-  ShoppingListItemCoreFragmentDoc,
-  type ShoppingListItemCoreFragment,
-} from '#features/shoppingList/graphql/shoppingListFragments.generated';
+  UseRemoveShoppingItem_ItemFragmentDoc,
+  type UseRemoveShoppingItem_ItemFragment,
+} from './useRemoveShoppingItem.generated';
 import { useErrorService } from '#/services/errorService';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
 import { removeFromShoppingListItemsCache } from './utils';
@@ -69,16 +69,17 @@ export function useRemoveShoppingItem({
           const itemId = variables.id;
 
           // Read isPurchased before eviction so we can update completedItems.
-          // Uses the generated ShoppingListItemCore fragment so the field path
-          // (`purchaseInfo.isPurchased`) is type-checked against the schema —
-          // the previous inline gql read `isPurchased` directly on
-          // ShoppingListItem, which doesn't exist there, and silently fell
-          // back to `wasPurchased = false` for every removal.
-          const itemData = cache.readFragment<ShoppingListItemCoreFragment>({
-            id: cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
-            fragment: ShoppingListItemCoreFragmentDoc,
-            fragmentName: 'ShoppingListItemCore',
-          });
+          // Uses a co-located narrow fragment (just id + purchaseInfo.isPurchased)
+          // so this hook doesn't depend on the wider ShoppingListItemCore shape.
+          const itemData =
+            cache.readFragment<UseRemoveShoppingItem_ItemFragment>({
+              id: cache.identify({
+                __typename: 'ShoppingListItem',
+                id: itemId,
+              }),
+              fragment: UseRemoveShoppingItem_ItemFragmentDoc,
+              fragmentName: 'useRemoveShoppingItem_item',
+            });
           const wasPurchased = itemData?.purchaseInfo?.isPurchased ?? false;
 
           removeFromShoppingListItemsCache(cache, listId, itemId, {

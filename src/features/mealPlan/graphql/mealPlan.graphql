@@ -24,7 +24,9 @@ query GetMealPlans(
 
 query GetMealPlan($id: ID!) {
   mealPlan(id: $id) {
-    ...MealPlanFull  }
+    ...MealPlanMain_mealPlan
+    ...MealPlanSettingsSheet_mealPlan
+  }
 }
 
 # ============================================

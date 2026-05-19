@@ -82,7 +82,7 @@ subscription CollaborationChanges($listId: ID!) {
   collaborationChanged(listId: $listId) {
     mutation
     collaborator {
-      ...ShoppingListCollaboratorFragment
+      ...useShoppingListSubscriptions_collaborator
       canEdit
       invitedAt
       lastViewedAt

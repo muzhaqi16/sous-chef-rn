@@ -8,7 +8,6 @@
 import { useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
 import { AdjustPantryItemQuantityDocument } from '#features/pantry/graphql/pantry.generated';
-import { PantryItemDisplayFragmentDoc } from '#features/pantry/graphql/pantryFragments.generated';
 import { useErrorService } from '#/services/errorService';
 import {
   handleVersionConflict,
@@ -51,21 +50,14 @@ export function useAdjustPantryItemQuantity({
           ...(remainingNetWeight != null ? { remainingNetWeight } : {}),
         },
       },
-      update: (cache, { data: mutationData }) => {
+      update: (_cache, { data: mutationData }) => {
         const pantryItem = mutationData?.adjustPantryItemQuantity?.pantryItem;
         if (!pantryItem) return;
 
-        cache.writeFragment({
-          id: cache.identify({
-            __typename: 'PantryItem',
-            id: pantryItem.id,
-          }),
-          fragment: PantryItemDisplayFragmentDoc,
-          fragmentName: 'PantryItemDisplay',
-          data: pantryItem,
-        });
-
-        // Persist optimistic quantity to survive cache-and-network refetches while offline
+        // Apollo auto-normalizes the mutation response into the cached
+        // PantryItem entity via __typename + id; no explicit writeFragment
+        // is needed here. We do persist the optimistic quantity so it
+        // survives cache-and-network refetches while offline.
         optimisticDataPersistence.save(
           'PantryItem',
           pantryItemId,

@@ -1,0 +1,16 @@
+# Narrow fragment for the CorrectPantryItemWeight mutation response.
+# The mutation only changes weight-related fields, lastUsedAt, and version;
+# Apollo auto-normalization writes these to the cached PantryItem entity.
+fragment useCorrectPantryItemWeight_pantryItem on PantryItem {
+  id
+  version
+  updatedAt
+  netWeight
+  remainingNetWeight
+  lastUsedAt
+  netWeightUnit {
+    id
+    name
+    symbol
+  }
+}

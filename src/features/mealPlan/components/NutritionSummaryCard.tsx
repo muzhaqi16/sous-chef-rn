@@ -6,11 +6,33 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { NutritionGoalProgress } from './NutritionGoalProgress';
 import { Text } from '#components/atoms/Text';
-import { type MealPlanFullFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
+import { type GoalProgress } from '#/graphql/generated/schemaTypes';
+
+// Structural prop types — only the fields the card actually renders. Keeps
+// the component reusable across MealPlanMain and MealPlanSettingsSheet
+// fragment shapes (which select different subsets of nutritionSummary).
+interface NutritionSummaryShape {
+  totalCalories: number;
+  avgDailyCalories: number;
+  avgDailyProtein: number;
+  avgDailyCarbs: number;
+  avgDailyFat: number;
+  totalMeals: number;
+  mealsWithNutrition: number;
+  coveragePercentage: number;
+}
+
+interface NutritionGoalProgressShape {
+  overallScore: number;
+  caloriesProgress: GoalProgress | null;
+  proteinProgress: GoalProgress | null;
+  carbsProgress: GoalProgress | null;
+  fatProgress: GoalProgress | null;
+}
 
 interface NutritionSummaryCardProps {
-  nutritionSummary: NonNullable<MealPlanFullFragment['nutritionSummary']>;
-  nutritionGoalProgress?: MealPlanFullFragment['nutritionGoalProgress'];
+  nutritionSummary: NutritionSummaryShape;
+  nutritionGoalProgress?: NutritionGoalProgressShape | null;
 }
 
 function MacroStat({

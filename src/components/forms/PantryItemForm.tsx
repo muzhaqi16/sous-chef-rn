@@ -22,9 +22,9 @@ import {
   GetPantryItemDocument,
 } from '#features/pantry/graphql/pantry.generated';
 import {
-  PantryItemFragmentDoc,
-  type PantryItemFragment,
-} from '#features/pantry/graphql/pantryFragments.generated';
+  PantryItemForm_PantryItemFragmentDoc,
+  type PantryItemForm_PantryItemFragment,
+} from './PantryItemForm.generated';
 import {
   StorageState,
   type ItemSuggestion,
@@ -203,14 +203,14 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     skip: mode !== 'edit' || !itemId,
   });
 
-  // Materialize the masked PantryItemFragment ref into the full entity for
-  // direct field access throughout the form. `cache.readFragment` reads from
-  // the same normalized cache entry the `useQuery` subscription drives.
+  // Materialize the form's own narrow fragment from the cache. The screen's
+  // `GetPantryItem` query selects this fragment via `...PantryItemForm_pantryItem`
+  // in `PantryItemDetail_pantryItem`, so the cache is already populated.
   const apolloClient = useApolloClient();
   const existingPantryItem = existingItemData?.pantryItem
-    ? apolloClient.cache.readFragment<PantryItemFragment>({
-        fragment: PantryItemFragmentDoc,
-        fragmentName: 'PantryItemFragment',
+    ? apolloClient.cache.readFragment<PantryItemForm_PantryItemFragment>({
+        fragment: PantryItemForm_PantryItemFragmentDoc,
+        fragmentName: 'PantryItemForm_pantryItem',
         from: existingItemData.pantryItem,
       })
     : null;

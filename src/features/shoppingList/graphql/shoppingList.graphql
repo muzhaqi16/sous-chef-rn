@@ -149,7 +149,8 @@ query GetShoppingListItemsFiltered(
 
 query GetShoppingListItem($id: ID!) {
   shoppingListItem(id: $id) {
-    ...ShoppingListItemFragment
+    ...ItemDetail_shoppingListItem
+    ...useShoppingListItemForm_item
   }
 }
 
@@ -311,7 +312,7 @@ mutation UpdateShoppingListItem(
     code
     shoppingListItem {
       id
-      ...ShoppingListItemDisplayFragment
+      ...useUpdateShoppingItem_item
     }
   }
 }
@@ -334,7 +335,7 @@ mutation MoveShoppingListItem($input: MoveShoppingListItemInput!) {
     code
     shoppingListItem {
       id
-      ...ShoppingListItemDisplayFragment
+      ...useItemReordering_moveResult
     }
   }
 }
@@ -352,29 +353,7 @@ mutation ToggleShoppingListItemPurchased(
     code
     shoppingListItem {
       id
-      itemName
-      quantity
-      quantityInput
-      displayFormat
-      purchaseInfo {
-        isPurchased
-      }
-      version
-      updatedAt
-      category
-      notes
-      unitName
-      unit {
-        id
-        name
-        symbol
-      }
-      sortOrder
-      item {
-        id
-        imageUrl
-        images { url kind }
-      }
+      ...useToggleShoppingItem_item
     }
   }
 }
@@ -396,7 +375,7 @@ mutation UpdateShoppingListItemQuantity(
     code
     shoppingListItem {
       id
-      ...ShoppingListItemDisplayFragment
+      ...useShoppingListActions_updateQuantityResult
     }
   }
 }
@@ -418,7 +397,7 @@ mutation MoveShoppingItemToPantry($input: MoveShoppingItemToPantryInput!) {
     code
     pantryItem {
       id
-      ...PantryItemDisplay
+      ...useMoveToPantry_pantryItem
     }
   }
 }
@@ -447,7 +426,7 @@ mutation AddItemsToShoppingList(
       success
       item {
         id
-        ...ShoppingListItemDisplayFragment
+        ...useRecipeShoppingList_addedItem
       }
       quantityIncremented
       error
@@ -498,7 +477,7 @@ mutation SyncShoppingListItem(
     wasCreated
     item {
       id
-      ...ShoppingListItemDisplayFragment
+      ...queueManager_syncItem
     }
     conflict {
       clientVersion
@@ -549,8 +528,7 @@ mutation SyncMoveShoppingListItem(
     wasCreated
     item {
       id
-      sortOrder
-      ...ShoppingListItemDisplayFragment
+      ...queueManager_syncMoveItem
     }
     conflict {
       clientVersion
@@ -578,7 +556,7 @@ subscription ShoppingListChanges($listId: ID!) {
       purchaseInfo {
         isPurchased
       }
-      ...ShoppingListItemDisplayFragment
+      ...useShoppingListSubscriptions_item
     }
     shoppingList {
       id

@@ -78,14 +78,6 @@ jest.mock('#/services/alertService', () => ({
 
 const defaultOptions = {
   pantryId: 'pantry-1',
-  pantryItems: [
-    {
-      id: 'item-1',
-      itemName: 'Milk',
-      version: 1,
-      updatedAt: '2024-01-01',
-    } as any,
-  ],
   refetch: jest.fn().mockResolvedValue(undefined),
 };
 

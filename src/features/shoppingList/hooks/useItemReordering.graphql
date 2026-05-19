@@ -1,0 +1,19 @@
+# Narrow fragment for useItemReordering's server-response check.
+# Reads version + sortOrder to detect a real move vs. a no-op.
+fragment useItemReordering_serverItem on ShoppingListItem {
+  id
+  version
+  sortOrder
+}
+
+# Narrow fragment for the MoveShoppingListItem mutation response.
+# Move only changes sortOrder + version; purchaseInfo is included so
+# the existing connection-update logic remains consistent.
+fragment useItemReordering_moveResult on ShoppingListItem {
+  id
+  version
+  sortOrder
+  purchaseInfo {
+    isPurchased
+  }
+}

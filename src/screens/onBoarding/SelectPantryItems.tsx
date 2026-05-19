@@ -9,9 +9,9 @@ import { useSelectableItems } from '#hooks/useSelectableItems';
 import { useApolloClient, useMutation, useQuery } from '@apollo/client/react';
 import { GetOnboardingItemsDocument } from '#operations/item/item.generated';
 import {
-  PantryItemDisplayFragmentDoc,
-  type PantryItemDisplayFragment,
-} from '#features/pantry/graphql/pantryFragments.generated';
+  SelectPantryItems_PantryItemFragmentDoc,
+  type SelectPantryItems_PantryItemFragment,
+} from './SelectPantryItems.generated';
 import {
   GetPantryDocument,
   CreatePantryItemDocument,
@@ -77,16 +77,17 @@ export const SelectPantryItems = () => {
   const [isSaving, setIsSaving] = useState(false);
 
   // Map catalog item IDs to pantry item IDs for existing pantry items.
-  // pantryItems comes back as masked PantryItemDisplay refs — materialize each
-  // via cache.readFragment to read item/itemId/id.
+  // pantryItems comes back as masked refs — materialize each via
+  // cache.readFragment with a narrow `SelectPantryItems_pantryItem` fragment
+  // that selects only `id`, `itemId`, and `item.id`.
   const pantryItemRefs = extractNodes(pantryData?.pantry?.itemsConnection);
   const map = new Map<string, string>();
   const ids = new Set<string>();
   for (const ref of pantryItemRefs) {
     const pantryItem =
-      apolloClient.cache.readFragment<PantryItemDisplayFragment>({
-        fragment: PantryItemDisplayFragmentDoc,
-        fragmentName: 'PantryItemDisplay',
+      apolloClient.cache.readFragment<SelectPantryItems_PantryItemFragment>({
+        fragment: SelectPantryItems_PantryItemFragmentDoc,
+        fragmentName: 'SelectPantryItems_pantryItem',
         from: ref,
       });
     if (!pantryItem) continue;

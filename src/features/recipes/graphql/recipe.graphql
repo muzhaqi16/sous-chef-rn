@@ -65,7 +65,8 @@ query MyRecipes(
 
 query GetRecipe($id: ID!) {
   recipe(id: $id) {
-    ...RecipeFragment
+    ...useRecipeData_recipe
+    ...RecipeForm_recipe
   }
 }
 
@@ -152,7 +153,8 @@ mutation UpdateRecipe($id: ID!, $input: UpdateRecipeInput!) {
     message
     code
     recipe {
-      ...RecipeFragment
+      ...useRecipeData_recipe
+      ...RecipeForm_recipe
     }
   }
 }

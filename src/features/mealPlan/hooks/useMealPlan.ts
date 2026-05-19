@@ -2,9 +2,9 @@ import { useApolloClient, useQuery } from '@apollo/client/react';
 import { GetMealPlanDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import {
-  MealPlanFullFragmentDoc,
-  type MealPlanFullFragment,
-} from '#features/mealPlan/graphql/mealPlanFragments.generated';
+  MealPlanMain_MealPlanFragmentDoc,
+  type MealPlanMain_MealPlanFragment,
+} from '#features/mealPlan/screens/MealPlanMain.generated';
 
 export function useMealPlan(id: string | null) {
   const client = useApolloClient();
@@ -17,12 +17,13 @@ export function useMealPlan(id: string | null) {
   useApolloErrorLogger('GetMealPlan', error);
 
   // The query returns a masked ref — materialize via cache.readFragment so
-  // downstream consumers (MealPlanMain, useMealPlanPermissions, settings sheet)
-  // see the full MealPlanFullFragment shape rather than `$fragmentRefs`.
+  // the screen sees the full MealPlanMain_mealPlan shape rather than
+  // `$fragmentRefs`. The settings sheet does its own useFragment on the
+  // ref passed down to it (different fragment, different selection).
   const mealPlan = data?.mealPlan
-    ? client.cache.readFragment<MealPlanFullFragment>({
-        fragment: MealPlanFullFragmentDoc,
-        fragmentName: 'MealPlanFull',
+    ? client.cache.readFragment<MealPlanMain_MealPlanFragment>({
+        fragment: MealPlanMain_MealPlanFragmentDoc,
+        fragmentName: 'MealPlanMain_mealPlan',
         from: data.mealPlan,
       }) ?? null
     : null;
@@ -33,6 +34,7 @@ export function useMealPlan(id: string | null) {
     mealPlan,
     items,
     nutritionSummary: mealPlan?.nutritionSummary ?? null,
+    mealPlanRef: data?.mealPlan ?? null,
     loading,
     error,
     refetch,

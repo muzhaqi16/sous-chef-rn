@@ -1,0 +1,50 @@
+# Narrow fragment for the RestockPantryItem mutation response's nested
+# pantryItem. Restocking can change quantity, netWeight, remainingNetWeight,
+# version, expiresAt, activeBatchCount, and breakdown shapes.
+fragment useRestockPantryItem_pantryItem on PantryItem {
+  id
+  version
+  updatedAt
+  quantity
+  netWeight
+  remainingNetWeight
+  expiresAt
+  activeBatchCount
+  earliestBatchExpiration
+  netWeightUnit {
+    id
+    name
+    symbol
+  }
+  packageBreakdown {
+    count
+    contentUnit {
+      id
+      name
+      symbol
+    }
+    perUnitNetWeight
+    perUnitNetWeightUnit {
+      id
+      name
+      symbol
+    }
+    totalNetWeight
+  }
+  quantityBreakdown {
+    fullPackages
+    looseContentUnits
+    contentUnit {
+      id
+      name
+      symbol
+    }
+    totalContentUnits
+    remainingWeight
+    remainingWeightUnit {
+      id
+      name
+      symbol
+    }
+  }
+}

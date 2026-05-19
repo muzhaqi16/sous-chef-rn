@@ -1,0 +1,33 @@
+# Narrow fragment for useToggleShoppingItem's optimistic-response shape.
+# Mirrors what the ToggleShoppingListItemPurchased mutation selects on
+# `shoppingListItem` — keep them in sync. The hook spreads this entire shape
+# into the optimistic response (`...item, purchaseInfo, updatedAt`).
+fragment useToggleShoppingItem_item on ShoppingListItem {
+  id
+  itemName
+  quantity
+  quantityInput
+  displayFormat
+  purchaseInfo {
+    isPurchased
+  }
+  version
+  updatedAt
+  category
+  notes
+  unitName
+  unit {
+    id
+    name
+    symbol
+  }
+  sortOrder
+  item {
+    id
+    imageUrl
+    images {
+      url
+      kind
+    }
+  }
+}

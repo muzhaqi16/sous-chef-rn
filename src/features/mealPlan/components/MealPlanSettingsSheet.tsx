@@ -13,16 +13,20 @@ import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { NutritionSummaryCard } from './NutritionSummaryCard';
 import { Icon } from '#utils/iconUtils';
 import { useFragment } from '@apollo/client/react';
+import type { FragmentType } from '@apollo/client/masking';
 import {
-  MealPlanFullFragmentDoc,
-  type MealPlanFullFragment,
-} from '#features/mealPlan/graphql/mealPlanFragments.generated';
+  MealPlanSettingsSheet_MealPlanFragmentDoc,
+  type MealPlanSettingsSheet_MealPlanFragment,
+} from './MealPlanSettingsSheet.generated';
 import type { MealPlanPermissions } from '#utils/permissions/mealPlanPermissions';
 import { Text } from '#components/atoms/Text';
 
 interface MealPlanSettingsSheetProps {
   visible: boolean;
-  mealPlan: MealPlanFullFragment | null;
+  mealPlanRef:
+    | FragmentType<typeof MealPlanSettingsSheet_MealPlanFragmentDoc>
+    | MealPlanSettingsSheet_MealPlanFragment
+    | null;
   permissions: MealPlanPermissions;
   onClose: () => void;
   onDuplicate: () => void;
@@ -74,7 +78,7 @@ function ActionItem({
 
 export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
   visible,
-  mealPlan: mealPlanSource,
+  mealPlanRef,
   permissions,
   onClose,
   onDuplicate,
@@ -92,13 +96,14 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
   // Per-entity cache subscription: re-renders only when this MealPlan's
   // fields change. Falls back to the source prop on cache miss.
   const fragmentResult = useFragment({
-    fragment: MealPlanFullFragmentDoc,
-    fragmentName: 'MealPlanFull',
-    from: mealPlanSource,
+    fragment: MealPlanSettingsSheet_MealPlanFragmentDoc,
+    fragmentName: 'MealPlanSettingsSheet_mealPlan',
+    from: mealPlanRef,
   });
-  const mealPlan = fragmentResult.complete
-    ? fragmentResult.data
-    : mealPlanSource;
+  const mealPlan: MealPlanSettingsSheet_MealPlanFragment | null =
+    fragmentResult.complete
+      ? fragmentResult.data
+      : (mealPlanRef as MealPlanSettingsSheet_MealPlanFragment | null);
 
   const [showNutrition, setShowNutrition] = useState(false);
 

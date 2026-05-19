@@ -1,0 +1,56 @@
+# Narrow fragments for useShoppingListSubscriptions's cache writes.
+# The `ShoppingListChanges` subscription pushes the full item shape on
+# Updated/Completed/Uncompleted events; the hook materializes via cache.readFragment
+# and writes back via cache.writeFragment to trigger a single notification.
+# Both fragments must mirror exactly what the subscription server pushes.
+fragment useShoppingListSubscriptions_item on ShoppingListItem {
+  id
+  itemName
+  quantity
+  quantityInput
+  displayFormat
+  purchaseInfo {
+    isPurchased
+  }
+  version
+  updatedAt
+  category
+  notes
+  unitName
+  unit {
+    id
+    name
+    symbol
+  }
+  sortOrder
+  item {
+    id
+    imageUrl
+    images {
+      url
+      kind
+    }
+  }
+}
+
+fragment useShoppingListSubscriptions_collaborator on ShoppingListCollaborator {
+  id
+  email
+  role
+  status
+  collaboratorId
+  canAddItems
+  canRemoveItems
+  canEditItems
+  canMarkPurchased
+  invitedAt
+  collaborator {
+    id
+    email
+    profile {
+      id
+      displayName
+      avatar
+    }
+  }
+}

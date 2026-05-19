@@ -8,9 +8,9 @@ import type {
   GetRecipeQueryVariables,
 } from '#features/recipes/graphql/recipe.generated';
 import {
-  RecipeFragmentDoc,
-  type RecipeFragment,
-} from '#features/recipes/graphql/recipeFragments.generated';
+  UseRecipeData_RecipeFragmentDoc,
+  type UseRecipeData_RecipeFragment,
+} from './useRecipeData.generated';
 
 export type MaterializedRecipe = NonNullable<
   ReturnType<typeof readRecipeFragment>
@@ -21,9 +21,9 @@ function readRecipeFragment(
   ref: NonNullable<GetRecipeQuery['recipe']> | null,
 ) {
   if (!ref) return null;
-  return client.cache.readFragment<RecipeFragment>({
-    fragment: RecipeFragmentDoc,
-    fragmentName: 'RecipeFragment',
+  return client.cache.readFragment<UseRecipeData_RecipeFragment>({
+    fragment: UseRecipeData_RecipeFragmentDoc,
+    fragmentName: 'useRecipeData_recipe',
     from: ref,
   });
 }

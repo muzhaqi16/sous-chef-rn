@@ -7,7 +7,9 @@
  * - Cache updates for offline-first support
  */
 
-import { useMutation } from '@apollo/client/react';
+import { useApolloClient, useMutation } from '@apollo/client/react';
+import type { Unmasked } from '@apollo/client/masking';
+import type { IgnoreModifier } from '@apollo/client/cache';
 import { alertService } from '#/services/alertService';
 import { generateId } from '#/utils/generateId';
 import {
@@ -18,6 +20,10 @@ import {
   type UpdatePantryItemMutation,
   type DeletePantryItemMutation,
 } from '#features/pantry/graphql/pantry.generated';
+import {
+  UseUpdatePantryItem_PantryItemFragmentDoc,
+  type UseUpdatePantryItem_PantryItemFragment,
+} from '#features/pantry/hooks/mutations/useUpdatePantryItem.generated';
 import { useErrorService } from '#/services/errorService';
 import {
   enhanceWithVersion,
@@ -36,18 +42,9 @@ import {
   executeMutation,
 } from '#/utils/compilerSafeWrappers';
 import type { PantryItemInput, PantryItemUpdate } from './types';
-import type { PantryListItemNode } from './usePantryQuery';
 
 interface UsePantryItemMutationsOptions {
   pantryId: string | undefined;
-  /**
-   * Connection nodes from the GetPantry query. At the type level these are
-   * masked fragment refs; at runtime they're the cache entries themselves
-   * (Apollo masking is type-only), so spreading `...currentItem` to build an
-   * optimistic response still picks up every cached field.
-   */
-  pantryItems: PantryListItemNode[];
-
   refetch: () => void;
 }
 
@@ -58,18 +55,17 @@ interface UsePantryItemMutationsOptions {
  * ```tsx
  * const { addItem, updateItem, removeItem } = usePantryItemMutations({
  *   pantryId,
- *   pantryItems,
  *   refetch,
  * });
  * ```
  */
 export function usePantryItemMutations({
   pantryId,
-  pantryItems,
   refetch,
 }: UsePantryItemMutationsOptions) {
   const { handleApolloError } = useErrorService();
   const { createAddOperation, createUpdateOperation } = useCrudOperations();
+  const client = useApolloClient();
 
   // ADD MUTATION
   const [addItemMutation] = useMutation(CreatePantryItemDocument, {
@@ -155,39 +151,39 @@ export function usePantryItemMutations({
       });
       alertService.alert('Error', message);
     },
-    optimisticResponse: variables => {
-      const currentItem = pantryItems.find(item => item.id === variables.id);
-
-      const pantryItem = currentItem
-        ? enhanceWithVersion(
-            {
-              ...currentItem,
-              updatedAt: currentItem.updatedAt ?? new Date().toISOString(),
-            },
-            // Input types use InputMaybe (T | null | undefined) while fragment types
-            // don't accept null — safe to cast since this is an optimistic prediction
-            variables.input as Partial<typeof currentItem>,
-          )
-        : {
+    // Pattern (b) per the migration plan: the operation spread stays masked
+    // (no `@unmask` directive), and the callback narrows its OWN return type
+    // to `Unmasked<UpdatePantryItemMutation>` so it can return the flat shape.
+    optimisticResponse: (
+      variables,
+      { IGNORE },
+    ): IgnoreModifier | Unmasked<UpdatePantryItemMutation> => {
+      const currentItem =
+        client.cache.readFragment<UseUpdatePantryItem_PantryItemFragment>({
+          id: client.cache.identify({
             __typename: 'PantryItem',
             id: variables.id,
-            version: 1,
-            updatedAt: new Date().toISOString(),
-            ...variables.input,
-          };
+          }),
+          fragment: UseUpdatePantryItem_PantryItemFragmentDoc,
+          fragmentName: 'useUpdatePantryItem_pantryItem',
+        });
+      if (!currentItem) return IGNORE;
 
-      const optimistic: UpdatePantryItemMutation = {
+      return {
         __typename: 'Mutation',
         updatePantryItem: {
           __typename: 'PantryItemPayload',
           success: true,
           message: '',
           code: 'SUCCESS',
-          pantryItem:
-            pantryItem as UpdatePantryItemMutation['updatePantryItem']['pantryItem'],
+          pantryItem: enhanceWithVersion(
+            currentItem,
+            // Input types use InputMaybe (T | null | undefined) while fragment
+            // types don't accept null — safe cast for optimistic prediction.
+            variables.input as Partial<UseUpdatePantryItem_PantryItemFragment>,
+          ),
         },
       };
-      return optimistic;
     },
   });
 

@@ -5,7 +5,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useFragment, useQuery } from '@apollo/client/react';
 import { useTranslation } from 'react-i18next';
 import { GetShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { ShoppingListItemFragmentDoc } from '#features/shoppingList/graphql/shoppingListFragments.generated';
+import { ItemDetail_ShoppingListItemFragmentDoc } from './ItemDetail.generated';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { Icon } from '#utils/iconUtils';
 import { DetailTemplate } from '#components/templates/DetailTemplate';
@@ -39,14 +39,13 @@ export const ShoppingListItemDetail: React.FC<
     fetchPolicy: 'cache-first',
   });
 
-  // Unmask the ShoppingListItemFragment ref so this screen can read the full
-  // entity (item.itemName, item.purchaseInfo, item.purchasesConnection, ...).
-  // useFragment also subscribes to the entity record so edits made elsewhere
-  // (e.g., AddEditItem) refresh this detail view automatically.
+  // The detail screen owns its own narrow fragment. useFragment subscribes
+  // to the entity record so edits made elsewhere (e.g., AddEditItem) refresh
+  // this detail view automatically.
   const itemRef = data?.shoppingListItem ?? null;
   const itemFragmentResult = useFragment({
-    fragment: ShoppingListItemFragmentDoc,
-    fragmentName: 'ShoppingListItemFragment',
+    fragment: ItemDetail_ShoppingListItemFragmentDoc,
+    fragmentName: 'ItemDetail_shoppingListItem',
     from: itemRef,
   });
   const item =

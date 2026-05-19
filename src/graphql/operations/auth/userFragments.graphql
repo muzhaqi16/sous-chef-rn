@@ -1,30 +1,7 @@
-fragment UserProfileFields on UserProfile {
-  id
-  displayName
-  avatar
-}
-
-fragment UserProfileFull on UserProfile {
-  id
-  displayName
-  avatar
-  firstName
-  lastName
-}
-
-# Lightweight user reference for nested display (addedBy, purchasedBy, etc.)
-# Used by RecipeReview, ShoppingListItem, Membership.
-fragment UserSummary on User {
-  id
-  email
-  profile {
-    id
-    displayName
-    avatar
-  }
-}
-
 # Bootstrap fragment for login/register responses.
+# Spread by: auth.graphql (Login, Register, RefreshToken — 3 operations)
+# Read via cache.readFragment by: useAuthOperations.ts, authService.ts
+# Kept shared — all 5 consumers need the identical bootstrap shape.
 fragment LoginUser on User {
   id
   email
@@ -61,7 +38,8 @@ fragment LoginUser on User {
   }
 }
 
-# Returned by GetMe query.
+# Returned by the GetMe query. Single-operation fragment kept here so the
+# auth-related shape lives alongside LoginUser.
 fragment PartialUser on User {
   id
   email

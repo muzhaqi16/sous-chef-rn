@@ -3,9 +3,9 @@ import { useApolloClient, useQuery } from '@apollo/client/react';
 import type { RecipeInformation } from '#/services/recipeApi/types';
 import { MyRecipesDocument } from '#features/recipes/graphql/recipe.generated';
 import {
-  BasicRecipeFragmentDoc,
-  type BasicRecipeFragment,
-} from '#features/recipes/graphql/recipeFragments.generated';
+  UseRecipeFavoriteState_RecipeFragmentDoc,
+  type UseRecipeFavoriteState_RecipeFragment,
+} from './useRecipeFavoriteState.generated';
 import { type MaterializedRecipe } from '#features/recipes/hooks/useRecipeData';
 import { extractNodes } from '#/utils/connectionUtils';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
@@ -76,17 +76,19 @@ export function useRecipeFavoriteState({
 
   const savedRecipesList = extractNodes(myRecipesData?.recipes);
 
-  // Materialize each recipe ref to read BasicRecipeFragment fields
-  // (externalSource, externalId, savedDetails).
+  // Materialize each recipe ref via a narrow fragment that reads only the
+  // fields needed to identify a saved external recipe and surface its folder.
   const savedRecipeMatch =
     externalSource && externalId && savedRecipesList.length > 0
       ? savedRecipesList
           .map(ref =>
-            apolloClient.cache.readFragment<BasicRecipeFragment>({
-              fragment: BasicRecipeFragmentDoc,
-              fragmentName: 'BasicRecipeFragment',
-              from: ref,
-            }),
+            apolloClient.cache.readFragment<UseRecipeFavoriteState_RecipeFragment>(
+              {
+                fragment: UseRecipeFavoriteState_RecipeFragmentDoc,
+                fragmentName: 'useRecipeFavoriteState_recipe',
+                from: ref,
+              },
+            ),
           )
           .find(
             r =>

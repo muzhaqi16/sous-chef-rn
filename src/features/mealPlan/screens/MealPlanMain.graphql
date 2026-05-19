@@ -8,3 +8,66 @@ fragment MealPlanMain_item on MealPlanItem {
     servings
   }
 }
+
+# Screen-level fragment for MealPlanMain. Composes the per-cell fragments
+# the daily-meal list renders, plus the permission/header fields the screen
+# reads directly.
+fragment MealPlanMain_mealPlan on MealPlan {
+  id
+  name
+  startDate
+  endDate
+  homeId
+  version
+  home {
+    id
+    name
+    myMembership {
+      id
+      role
+    }
+  }
+  createdBy {
+    id
+    profile {
+      id
+      displayName
+      avatar
+    }
+  }
+  mealPlanItems {
+    ...MealPlanItemCard_item
+    ...EditCustomMealSheet_item
+    ...DailyMeals_item
+    ...MealPlanMain_item
+    ...MealPlanItemActions_item
+  }
+  nutritionSummary {
+    totalCalories
+    totalProtein
+    totalCarbs
+    totalFat
+    avgDailyCalories
+    avgDailyProtein
+    avgDailyCarbs
+    avgDailyFat
+    totalMeals
+    mealsWithNutrition
+    coveragePercentage
+    mealTypeBreakdown {
+      mealType
+      totalCalories
+      totalProtein
+      totalCarbs
+      totalFat
+      mealCount
+    }
+  }
+  nutritionGoalProgress {
+    overallScore
+    caloriesProgress { target current percentage status }
+    proteinProgress { target current percentage status }
+    carbsProgress { target current percentage status }
+    fatProgress { target current percentage status }
+  }
+}

@@ -2,10 +2,8 @@ import { useState } from 'react';
 import { alertService } from '#/services/alertService';
 import { useFragment, useMutation } from '@apollo/client/react';
 import { UpdateShoppingListItemQuantityDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import {
-  ShoppingListItemDisplayFragmentDoc,
-  type ShoppingListItemDisplayFragment,
-} from '#features/shoppingList/graphql/shoppingListFragments.generated';
+import { type ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
+import { UseQuantityEditModal_ItemFragmentDoc } from './useQuantityEditModal.generated';
 import { Telemetry } from '#/services/telemetry';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { resolveImageUrl } from '#utils/imageUtils';
@@ -37,7 +35,7 @@ export interface QuantityEditItem {
  * Options for useQuantityEditModal hook
  */
 export interface UseQuantityEditModalOptions {
-  /** Items array to find item by ID */
+  /** Items array to find item by ID (fallback when the cache hasn't loaded yet) */
   items: ShoppingListItemDisplayFragment[];
 }
 
@@ -89,8 +87,8 @@ export function useQuantityEditModal(
   // Subscribe to the selected item in the cache. When `selectedItemId` is null
   // we pass `null` to `from` which makes `useFragment` return `complete: false`.
   const { data: liveItem, complete: liveItemComplete } = useFragment({
-    fragment: ShoppingListItemDisplayFragmentDoc,
-    fragmentName: 'ShoppingListItemDisplayFragment',
+    fragment: UseQuantityEditModal_ItemFragmentDoc,
+    fragmentName: 'useQuantityEditModal_item',
     from: selectedItemId
       ? { __typename: 'ShoppingListItem', id: selectedItemId }
       : null,
@@ -101,7 +99,7 @@ export function useQuantityEditModal(
   const fallbackItem = selectedItemId
     ? items.find(i => i.id === selectedItemId) ?? null
     : null;
-  const selectedItemRaw: ShoppingListItemDisplayFragment | null =
+  const selectedItemRaw =
     selectedItemId && liveItemComplete ? liveItem : fallbackItem;
 
   // Transform raw item to QuantityEditItem format

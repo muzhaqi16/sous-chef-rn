@@ -1,6 +1,6 @@
 {
   "name": "sous-chef-app",
-  "version": "3.4.15",
+  "version": "3.5.0",
   "private": true,
   "scripts": {
     "android": "react-native run-android",
@@ -46,6 +46,7 @@
     "npm:clean": "rm -rf node_modules/ && npm cache clean --force",
     "codegen:schema": "graphql-codegen --config codegen.schema.ts",
     "codegen": "npm run codegen:schema && graphql-codegen --config codegen.ts",
+    "audit:fragments": "node scripts/audit-fragment-inlining.mjs",
     "codegen:watch": "graphql-codegen --watch --config codegen.ts",
     "typecheck": "tsc --noEmit && tsc --noEmit -p __tests__/tsconfig.json",
     "typecheck:tests": "tsc --project __tests__/tsconfig.json --noEmit",

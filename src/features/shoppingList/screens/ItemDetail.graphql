@@ -1,0 +1,57 @@
+# Screen-level fragment for the ShoppingListItemDetail screen. Selects the
+# fields the screen reads directly — purchase history, display metadata,
+# nutrition/image data from the catalog item, audit fields (addedBy,
+# createdAt, updatedAt), and the auto-add/meal-plan source flags.
+fragment ItemDetail_shoppingListItem on ShoppingListItem {
+  id
+  itemName
+  quantity
+  quantityInput
+  displayFormat
+  unitName
+  category
+  notes
+  priority
+  createdAt
+  updatedAt
+  purchaseInfo {
+    isPurchased
+  }
+  source {
+    isAutoAdded
+    autoAddReason
+    isFromMealPlan
+  }
+  addedBy {
+    id
+    email
+    profile {
+      id
+      displayName
+      avatar
+    }
+  }
+  item {
+    id
+    imageUrl
+    images { url kind }
+    nutritions
+    displayUnit {
+      id
+      name
+      symbol
+    }
+  }
+  purchasesConnection(first: 10) {
+    edges {
+      node {
+        id
+        purchaseDate
+        quantity
+        unitPrice
+        unitSymbol
+      }
+    }
+    totalCount
+  }
+}

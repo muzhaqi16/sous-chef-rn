@@ -8,10 +8,7 @@ import {
   GetShoppingListItemDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { ItemSuggestion, CategoryType } from '#/graphql/generated/schemaTypes';
-import {
-  ShoppingListItemDisplayFragmentDoc,
-  ShoppingListItemFragmentDoc,
-} from '#features/shoppingList/graphql/shoppingListFragments.generated';
+import { UseShoppingListItemForm_ItemFragmentDoc } from '#features/shoppingList/hooks/useShoppingListItemForm.generated';
 import { FormModal } from '#components/organisms/FormModal';
 import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
 import { ItemAutocompleteField } from '#components/molecules/AutocompleteField/ItemAutocompleteField';
@@ -75,14 +72,13 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
     skip: !isEdit,
   });
 
-  // Unmask the ShoppingListItemFragment ref returned by GetShoppingListItem so
-  // setFromItem can read nested fields (item.unit, item.priceEstimate, etc.).
-  // useFragment also subscribes this screen to the entity's cache record, so
-  // edits made elsewhere flow back in without a refetch.
+  // The form hook owns its own narrow fragment (`useShoppingListItemForm_item`).
+  // useFragment subscribes this screen to the entity's cache record so edits
+  // made elsewhere flow back in without a refetch.
   const itemFragmentRef = data?.shoppingListItem ?? null;
   const itemFragmentResult = useFragment({
-    fragment: ShoppingListItemFragmentDoc,
-    fragmentName: 'ShoppingListItemFragment',
+    fragment: UseShoppingListItemForm_ItemFragmentDoc,
+    fragmentName: 'useShoppingListItemForm_item',
     from: itemFragmentRef,
   });
   const itemData =
@@ -106,21 +102,6 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
   });
 
   const [updateItem] = useMutation(UpdateShoppingListItemDocument, {
-    // Update cache to ensure UI reflects changes immediately
-    update(cache, { data }) {
-      const updatedItem = data?.updateShoppingListItem?.shoppingListItem;
-      if (updatedItem) {
-        cache.writeFragment({
-          id: cache.identify({
-            __typename: 'ShoppingListItem',
-            id: updatedItem.id,
-          }),
-          fragment: ShoppingListItemDisplayFragmentDoc,
-          fragmentName: 'ShoppingListItemDisplayFragment',
-          data: updatedItem,
-        });
-      }
-    },
     onError: error => {
       errorService.reportError(error, {
         operation: 'ShoppingListItem.updateItem',

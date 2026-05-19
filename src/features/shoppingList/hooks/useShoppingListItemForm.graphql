@@ -1,0 +1,18 @@
+# Narrow fragment for the AddEditItem form hook. Selects only what
+# `setFromItem` reads to populate form state for edit mode.
+fragment useShoppingListItemForm_item on ShoppingListItem {
+  id
+  itemName
+  quantity
+  quantityInput
+  unitName
+  notes
+  category
+  version
+  unit {
+    id
+  }
+  priceEstimate {
+    estimated
+  }
+}

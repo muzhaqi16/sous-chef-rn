@@ -27,9 +27,9 @@ import {
 } from './PantryActionsContext';
 import { usePantrySorting } from './hooks/usePantrySorting';
 import {
-  PantryItemDisplayFragmentDoc,
-  type PantryItemDisplayFragment,
-} from '#features/pantry/graphql/pantryFragments.generated';
+  PantryContent_PantryItemFragmentDoc,
+  type PantryContent_PantryItemFragment,
+} from './PantryContent.generated';
 import { PantryAlertBar } from '#features/pantry/components/PantryAlertBar';
 import { PaginationFooter } from '#components/organisms/PaginationFooter';
 import { PantryItemSkeleton } from '#components/base/Skeleton/PantryItemSkeleton';
@@ -221,11 +221,12 @@ export const PantryContent = React.forwardRef<
       const handle = requestIdleCallback(() => {
         const urls: string[] = [];
         for (const node of sortedItems) {
-          const item = client.cache.readFragment<PantryItemDisplayFragment>({
-            fragment: PantryItemDisplayFragmentDoc,
-            fragmentName: 'PantryItemDisplay',
-            from: node,
-          });
+          const item =
+            client.cache.readFragment<PantryContent_PantryItemFragment>({
+              fragment: PantryContent_PantryItemFragmentDoc,
+              fragmentName: 'PantryContent_pantryItem',
+              from: node,
+            });
           if (!item) continue;
           const url = resolveImageUrl(item);
           if (url) urls.push(url);

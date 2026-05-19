@@ -1,27 +1,10 @@
-fragment ShoppingListItemCore on ShoppingListItem {
-  id
-  itemName
-  quantity
-  quantityInput
-  displayFormat
-  purchaseInfo {
-    isPurchased
-  }
-  version
-  updatedAt
-  category
-  notes
-  unitName
-  unit {
-    id
-    name
-    symbol
-  }
-}
-
-# Adds list-row display data (sortOrder + item thumbnail) on top of Core.
-# Consumed by row/list components, cache reads, mutation optimistic responses,
-# and subscription writeFragment calls.
+# Structural shape passed between shopping-list modal hooks
+# (`useMoveToPantry`, `useQuantityEditModal`, `useClearShoppingListItems`,
+# `ShoppingListModalsContext`, etc.). Not spread by any operation — only
+# used as a TypeScript type at the boundary where masked fragment refs are
+# materialized and handed between hooks. Per-hook splits would each
+# duplicate this identical shape; this is the one acknowledged exception
+# to strict per-consumer ownership.
 fragment ShoppingListItemDisplayFragment on ShoppingListItem {
   id
   itemName
@@ -49,88 +32,12 @@ fragment ShoppingListItemDisplayFragment on ShoppingListItem {
   }
 }
 
-# Adds full screen-level data (item description/nutrition, price, source,
-# addedBy, purchase history) on top of Display. Consumed by AddEditItem and
-# ItemDetail screens.
-fragment ShoppingListItemFragment on ShoppingListItem {
-  id
-  itemName
-  quantity
-  quantityInput
-  displayFormat
-  purchaseInfo {
-    isPurchased
-  }
-  version
-  updatedAt
-  category
-  notes
-  unitName
-  unit {
-    id
-    name
-    symbol
-  }
-  sortOrder
-  item {
-    id
-    imageUrl
-    images { url kind }
-    name
-    description
-    netWeight
-    nutritions
-    displayUnit {
-      id
-      name
-      symbol
-    }
-    categories {
-      id
-      isPrimary
-      confidence
-      source
-      assignedAt
-      category {
-        id
-        name
-      }
-    }
-  }
-  priceEstimate {
-    estimated
-    lastKnown
-  }
-  source {
-    isAutoAdded
-    autoAddReason
-    isFromMealPlan
-  }
-  priority
-  createdAt
-  addedBy {
-    id
-    email
-    profile {
-      id
-      displayName
-      avatar
-    }
-  }
-  purchasesConnection(first: 10) {
-    edges {
-      node {
-        id
-        purchaseDate
-        quantity
-        unitPrice
-        unitSymbol
-      }
-    }
-    totalCount
-  }
-}
-
+# Canonical shape for a ShoppingListOwnership in the cache.
+# Spread by: shoppingList.graphql (GetShoppingListDetails, CreateShoppingList,
+#   UpdateShoppingList), useRecipeDetail.graphql (GetShoppingListsLite)
+# Read via cache.readFragment by: useShoppingListDetails.ts,
+#   ShoppingListMainContent.tsx
+# Kept shared — all 6 consumers need the identical write-back shape.
 fragment ShoppingListOwnershipFragment on ShoppingListOwnership {
   id
   userId
@@ -145,6 +52,12 @@ fragment ShoppingListOwnershipFragment on ShoppingListOwnership {
   }
 }
 
+# Canonical shape for a ShoppingListCollaborator in the cache.
+# Spread by: shoppingList.graphql (GetShoppingListDetails, AddCollaborator),
+#   collaboration.graphql (CollaborationChanges subscription)
+# Read via cache.readFragment by: useShoppingListDetails.ts, ShareList.tsx,
+#   ShoppingListMainContent.tsx
+# Kept shared — all 6 consumers need the identical write-back shape.
 fragment ShoppingListCollaboratorFragment on ShoppingListCollaborator {
   id
   email

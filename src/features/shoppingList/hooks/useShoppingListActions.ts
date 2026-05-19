@@ -1,6 +1,6 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
-import { ShoppingListItemDisplayFragmentDoc } from '#features/shoppingList/graphql/shoppingListFragments.generated';
+import { UseShoppingListActions_ItemFragmentDoc } from './useShoppingListActions.generated';
 import { UpdateShoppingListItemQuantityDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { toastService } from '#/services/toastService';
 import {
@@ -200,8 +200,8 @@ export function useShoppingListActions({
 
     const cachedItem = client.readFragment<any>({
       id: cacheId,
-      fragment: ShoppingListItemDisplayFragmentDoc,
-      fragmentName: 'ShoppingListItemDisplayFragment',
+      fragment: UseShoppingListActions_ItemFragmentDoc,
+      fragmentName: 'useShoppingListActions_item',
     });
 
     if (!cachedItem) {
@@ -268,8 +268,8 @@ export function useShoppingListActions({
 
     const cachedItem = client.readFragment<any>({
       id: cacheId,
-      fragment: ShoppingListItemDisplayFragmentDoc,
-      fragmentName: 'ShoppingListItemDisplayFragment',
+      fragment: UseShoppingListActions_ItemFragmentDoc,
+      fragmentName: 'useShoppingListActions_item',
     });
 
     if (!cachedItem) {

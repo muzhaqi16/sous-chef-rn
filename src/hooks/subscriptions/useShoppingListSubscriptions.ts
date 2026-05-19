@@ -29,11 +29,11 @@ import {
   MutationType,
 } from '#/graphql/generated/schemaTypes';
 import {
-  ShoppingListItemDisplayFragmentDoc,
-  ShoppingListCollaboratorFragmentDoc,
-  type ShoppingListItemDisplayFragment,
-  type ShoppingListCollaboratorFragment,
-} from '#features/shoppingList/graphql/shoppingListFragments.generated';
+  UseShoppingListSubscriptions_ItemFragmentDoc,
+  UseShoppingListSubscriptions_CollaboratorFragmentDoc,
+  type UseShoppingListSubscriptions_ItemFragment,
+  type UseShoppingListSubscriptions_CollaboratorFragment,
+} from './useShoppingListSubscriptions.generated';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import {
   CacheStrategy,
@@ -305,11 +305,13 @@ export function useShoppingListSubscriptions(
               // already in the cache (it's being updated), so readFragment
               // returns the merged record.
               const itemData =
-                client.cache.readFragment<ShoppingListItemDisplayFragment>({
-                  fragment: ShoppingListItemDisplayFragmentDoc,
-                  fragmentName: 'ShoppingListItemDisplayFragment',
-                  from: item,
-                });
+                client.cache.readFragment<UseShoppingListSubscriptions_ItemFragment>(
+                  {
+                    fragment: UseShoppingListSubscriptions_ItemFragmentDoc,
+                    fragmentName: 'useShoppingListSubscriptions_item',
+                    from: item,
+                  },
+                );
 
               const sortOrderChanged = item.sortOrder != null;
               const isCompletedMutation =
@@ -339,8 +341,8 @@ export function useShoppingListSubscriptions(
                       __typename: 'ShoppingListItem',
                       id: item.id,
                     }),
-                    fragment: ShoppingListItemDisplayFragmentDoc,
-                    fragmentName: 'ShoppingListItemDisplayFragment',
+                    fragment: UseShoppingListSubscriptions_ItemFragmentDoc,
+                    fragmentName: 'useShoppingListSubscriptions_item',
                     data: itemData,
                   });
                 }
@@ -387,8 +389,8 @@ export function useShoppingListSubscriptions(
                           __typename: 'ShoppingListItem',
                           id: item.id,
                         }),
-                        fragment: ShoppingListItemDisplayFragmentDoc,
-                        fragmentName: 'ShoppingListItemDisplayFragment',
+                        fragment: UseShoppingListSubscriptions_ItemFragmentDoc,
+                        fragmentName: 'useShoppingListSubscriptions_item',
                         data: itemData,
                       });
                     }
@@ -578,11 +580,13 @@ export function useShoppingListSubscriptions(
         // Materialize the masked ShoppingListCollaborator fragment so we can
         // read `id` (cache lookup) and `status` (for the Active branch).
         const collaborator =
-          client.cache.readFragment<ShoppingListCollaboratorFragment>({
-            fragment: ShoppingListCollaboratorFragmentDoc,
-            fragmentName: 'ShoppingListCollaboratorFragment',
-            from: collaboratorRef,
-          });
+          client.cache.readFragment<UseShoppingListSubscriptions_CollaboratorFragment>(
+            {
+              fragment: UseShoppingListSubscriptions_CollaboratorFragmentDoc,
+              fragmentName: 'useShoppingListSubscriptions_collaborator',
+              from: collaboratorRef,
+            },
+          );
 
         if (!collaborator?.id) return;
 

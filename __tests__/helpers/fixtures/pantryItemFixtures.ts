@@ -1,6 +1,6 @@
 /**
- * Test fixture builders matching the production `PantryItemFragment`
- * (composed of PantryItemDisplay → PantryItemCore + extras). Use with
+ * Test fixture builders matching the production `PantryItemDetail_pantryItem`
+ * fragment selected by `GetPantryItem`. Use with
  * `recordMock(GetPantryItemDocument, { data: pantryItemData(...) })`.
  *
  * Defaults emit nullable fields as null; override the few needed for
@@ -95,10 +95,6 @@ export function pantryItemData(
         shelfLifeDays: null,
         shelfLifeOpenedDays: null,
         nutritions: null,
-        defaultConsumeIncrement: null,
-        defaultConsumeUnitId: null,
-        defaultConsumeUnit: null,
-        displayUnit: null,
         categories: fixture.categoryName
           ? [
               {
@@ -112,7 +108,6 @@ export function pantryItemData(
               },
             ]
           : [],
-        unitConversions: [],
       },
       unit: unit(fixture.unitSymbol, fixture.unitName),
       netWeightUnit: null,
