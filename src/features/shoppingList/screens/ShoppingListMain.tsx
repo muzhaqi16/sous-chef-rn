@@ -1,5 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet } from 'react-native-unistyles';
 import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
 import { SearchBar } from '#components/molecules/SearchBar';
@@ -59,39 +60,44 @@ const ShoppingListMainInner: React.FC = () => {
   );
 };
 
-const SKELETON_ROUTES = [
-  { key: 'shopping', title: 'Shopping' },
-  { key: 'purchased', title: 'Purchased' },
-];
-
-const SKELETON_NAV_STATE = { index: 0, routes: SKELETON_ROUTES };
-
 const noop = () => {};
+
+const ShoppingListMainFallback: React.FC = () => {
+  const { t } = useTranslation();
+  const skeletonRoutes = [
+    { key: 'shopping', title: t('shoppingListScreen.tabShopping') },
+    { key: 'purchased', title: t('shoppingListScreen.tabPurchased') },
+  ];
+  return (
+    <TabMainScreen testID="shopping-list-screen">
+      <TabScreenHeader
+        label={t('shoppingListScreen.label')}
+        title={t('shoppingListScreen.title')}
+      />
+      <View style={styles.searchBarContainer}>
+        <SearchBar
+          value=""
+          onChangeText={noop}
+          placeholder={t('shoppingListScreen.searchPlaceholder')}
+          showSearchIcon
+          editable={false}
+        />
+      </View>
+      <FilterTabBar
+        navigationState={{ index: 0, routes: skeletonRoutes }}
+        jumpTo={noop}
+        counts={{ shopping: 0, purchased: 0 }}
+      />
+      <ShoppingListSkeleton />
+    </TabMainScreen>
+  );
+};
 
 // Screen-level error boundary prevents full app reset on mutation failures
 export const ShoppingListMain: React.FC = () => (
   <ShoppingListErrorBoundary>
     <DeferredScreen
-      fallback={
-        <TabMainScreen testID="shopping-list-screen">
-          <TabScreenHeader label="Shopping list" title="Shopping List" />
-          <View style={styles.searchBarContainer}>
-            <SearchBar
-              value=""
-              onChangeText={noop}
-              placeholder="Search shopping list..."
-              showSearchIcon
-              editable={false}
-            />
-          </View>
-          <FilterTabBar
-            navigationState={SKELETON_NAV_STATE}
-            jumpTo={noop}
-            counts={{ shopping: 0, purchased: 0 }}
-          />
-          <ShoppingListSkeleton />
-        </TabMainScreen>
-      }
+      fallback={<ShoppingListMainFallback />}
       component={ShoppingListMainInner}
     />
   </ShoppingListErrorBoundary>

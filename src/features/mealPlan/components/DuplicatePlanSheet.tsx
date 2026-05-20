@@ -103,7 +103,7 @@ export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
           confirmColor="primary"
         />
 
-        {!!mealPlan && (
+        {!!mealPlan && !!mealPlan.startDate && !!mealPlan.endDate && (
           <View style={styles.currentInfo}>
             <Text size="sm" tone="secondary" style={styles.currentLabel}>
               {t('duplicatePlan.currentPlanLabel')}

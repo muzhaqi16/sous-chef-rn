@@ -1,5 +1,6 @@
 import React, { useLayoutEffect } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -40,6 +41,7 @@ export const HomeCard: React.FC<HomeCardProps> = ({
   onInvite,
   onDelete,
 }) => {
+  const { t } = useTranslation();
   // Per-entity cache subscription: this card re-renders only when this Home's
   // fields change.
   const { data: home, complete } = useFragment({
@@ -94,12 +96,15 @@ export const HomeCard: React.FC<HomeCardProps> = ({
           ]}
           onPress={() => onPress?.(home.id)}
           accessibilityRole="button"
-          accessibilityLabel={`${home.name}, ${memberCount} ${
-            memberCount === 1 ? 'member' : 'members'
-          }, ${pantryCount} ${pantryCount === 1 ? 'pantry' : 'pantries'}${
-            isDefault ? ', default home' : ''
+          accessibilityLabel={`${home.name}, ${t(
+            'homeManagement.cardMemberCount',
+            { count: memberCount },
+          )}, ${t('homeManagement.cardPantryCount', {
+            count: pantryCount,
+          })}${
+            isDefault ? t('homeManagement.accessibilityDefaultSuffix') : ''
           }`}
-          accessibilityHint="Tap to view home details"
+          accessibilityHint={t('homeManagement.accessibilityHint')}
           disabled={!onPress}
         >
           <View style={styles.homeInfo}>
@@ -108,14 +113,14 @@ export const HomeCard: React.FC<HomeCardProps> = ({
             </Text>
 
             <Text size="sm" tone="secondary" style={styles.homeDetails}>
-              {memberCount} {memberCount === 1 ? 'member' : 'members'} •{' '}
-              {pantryCount} {pantryCount === 1 ? 'pantry' : 'pantries'}
+              {t('homeManagement.cardMemberCount', { count: memberCount })} •{' '}
+              {t('homeManagement.cardPantryCount', { count: pantryCount })}
             </Text>
           </View>
           {!!isDefault && (
             <View style={styles.defaultBadge}>
               <Text size="xs" weight="semibold" tone="accent">
-                Default
+                {t('homeManagement.cardDefault')}
               </Text>
             </View>
           )}

@@ -114,12 +114,14 @@ export function usePantrySubscriptions(userId?: string) {
 
           // Materialize the masked PantryItem fragment ref so we can read
           // its `id` (and downstream fields) without breaking data-masking.
+          // Use the cache-key form — passing the masked ref directly silently
+          // returns partial/null data. See [[feedback-usefragment-unmask-pattern]].
           const item =
             client.cache.readFragment<UsePantrySubscriptions_PantryItemFragment>(
               {
                 fragment: UsePantrySubscriptions_PantryItemFragmentDoc,
                 fragmentName: 'usePantrySubscriptions_pantryItem',
-                from: itemRef,
+                from: { __typename: 'PantryItem', id: itemRef.id },
               },
             );
           if (!item) return;

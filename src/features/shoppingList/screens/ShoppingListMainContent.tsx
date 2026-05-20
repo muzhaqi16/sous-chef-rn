@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Pressable } from '#components/atoms/themedComponents';
 import { useAnimatedReaction } from 'react-native-reanimated';
 import { useFocusEffect } from '@react-navigation/native';
@@ -65,6 +66,7 @@ export interface ShoppingListMainContentProps {
 export const ShoppingListMainContent: React.FC<
   ShoppingListMainContentProps
 > = ({ screenData }) => {
+  const { t } = useTranslation();
   const {
     state: {
       lists,
@@ -220,21 +222,24 @@ export const ShoppingListMainContent: React.FC<
     }
 
     // Build the permission input from materialized collaborator/ownership
-    // fragments. The query result has masked refs; the helper reads structural
-    // fields, so we project to its expected shape via `cache.readFragment`.
+    // fragments. Use the cache-key form (`{ __typename, id }`) — passing the
+    // masked ref directly silently returns partial/null data under
+    // `dataMasking: true`, which made owners of personal lists fall through
+    // to NO_PERMISSIONS.
     const collaboratorNodes =
       currentListDetails.collaboratorsConnection?.edges.map(e =>
         apolloClient.cache.readFragment<ShoppingListCollaboratorFragment>({
           fragment: ShoppingListCollaboratorFragmentDoc,
           fragmentName: 'ShoppingListCollaboratorFragment',
-          from: e.node,
+          from: { __typename: 'ShoppingListCollaborator', id: e.node.id },
         }),
       ) ?? [];
-    const ownershipNode = currentListDetails.ownerships?.[0]
+    const ownershipRef = currentListDetails.ownerships?.[0];
+    const ownershipNode = ownershipRef
       ? apolloClient.cache.readFragment<ShoppingListOwnershipFragment>({
           fragment: ShoppingListOwnershipFragmentDoc,
           fragmentName: 'ShoppingListOwnershipFragment',
-          from: currentListDetails.ownerships[0],
+          from: { __typename: 'ShoppingListOwnership', id: ownershipRef.id },
         })
       : null;
     const listData = {
@@ -261,7 +266,7 @@ export const ShoppingListMainContent: React.FC<
       hitSlop={8}
       testID="shopping-list-selector"
       accessibilityRole="button"
-      accessibilityLabel="Switch shopping list"
+      accessibilityLabel={t('shoppingListScreen.switchListAccessibility')}
     >
       <Icon name="list" size={24} tone="textSecondary" />
     </Pressable>
@@ -273,7 +278,7 @@ export const ShoppingListMainContent: React.FC<
       <SearchBar
         value={searchQuery}
         onChangeText={setSearchQuery}
-        placeholder="Search shopping list..."
+        placeholder={t('shoppingListScreen.searchPlaceholder')}
         showSearchIcon
       />
     </View>
@@ -365,17 +370,20 @@ export const ShoppingListMainContent: React.FC<
   if (!isLoadingInitial && lists.length === 0) {
     const noListsEmptyState = {
       icon: 'cart-outline',
-      title: 'No shopping lists',
-      description: 'Create a shopping list to get started',
+      title: t('shoppingListScreen.noListsTitle'),
+      description: t('shoppingListScreen.noListsDescription'),
       action: {
-        label: 'Create List',
+        label: t('shoppingListScreen.noListsAction'),
         onPress: () => toListSettings(),
       },
     };
 
     return (
       <TabMainScreen testID="shopping-list-screen">
-        <TabScreenHeader label="Shopping list" title="Shopping List" />
+        <TabScreenHeader
+          label={t('shoppingListScreen.label')}
+          title={t('shoppingListScreen.title')}
+        />
         <ListTemplate items={[]} emptyState={noListsEmptyState} />
       </TabMainScreen>
     );
@@ -383,10 +391,10 @@ export const ShoppingListMainContent: React.FC<
 
   const emptyStateConfig = {
     icon: 'cart-outline',
-    title: 'No items in this list',
-    description: 'Add some items to get started',
+    title: t('shoppingListScreen.emptyTitle'),
+    description: t('shoppingListScreen.emptyDescription'),
     action: {
-      label: 'Add Item',
+      label: t('shoppingListScreen.emptyAction'),
       onPress: addItemSheet.open,
     },
   };
@@ -394,8 +402,8 @@ export const ShoppingListMainContent: React.FC<
   return (
     <TabMainScreen testID="shopping-list-screen">
       <TabScreenHeader
-        label="Shopping list"
-        title={currentList?.name || 'Shopping List'}
+        label={t('shoppingListScreen.label')}
+        title={currentList?.name || t('shoppingListScreen.title')}
         headerRight={headerRight}
       />
       {searchBarHeader}

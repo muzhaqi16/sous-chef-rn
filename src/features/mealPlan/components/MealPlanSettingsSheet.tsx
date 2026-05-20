@@ -128,10 +128,13 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
 
   if (!mealPlan) return null;
 
-  const dateRange = `${format(
-    parseISO(mealPlan.startDate),
-    'MMM d',
-  )} - ${format(parseISO(mealPlan.endDate), 'MMM d, yyyy')}`;
+  const dateRange =
+    mealPlan.startDate && mealPlan.endDate
+      ? `${format(parseISO(mealPlan.startDate), 'MMM d')} - ${format(
+          parseISO(mealPlan.endDate),
+          'MMM d, yyyy',
+        )}`
+      : null;
 
   return (
     <BottomSheetModal ref={ref} {...modalProps}>
@@ -157,9 +160,11 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
               {mealPlan.description}
             </Text>
           ) : null}
-          <Text size="sm" tone="tertiary" style={styles.planDate}>
-            {dateRange}
-          </Text>
+          {!!dateRange && (
+            <Text size="sm" tone="tertiary" style={styles.planDate}>
+              {dateRange}
+            </Text>
+          )}
           {!!mealPlan.home?.name && (
             <Text size="sm" tone="tertiary" style={styles.planDate}>
               {t('mealPlanSettings.sharedWith', { name: mealPlan.home.name })}

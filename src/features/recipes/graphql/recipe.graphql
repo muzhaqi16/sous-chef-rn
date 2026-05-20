@@ -76,6 +76,7 @@ query GetRecipeReviews($id: ID!) {
     reviews {
       edges {
         node {
+          id
           ...RecipeReviewFragment
         }
       }
@@ -329,6 +330,7 @@ query MatchRecipeIngredientsToPantry(
     servings: $servings
   ) {
     ingredient {
+      id
       ...RecipeIngredientFragment
     }
     isAvailable

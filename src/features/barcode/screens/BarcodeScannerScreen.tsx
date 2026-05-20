@@ -3,12 +3,12 @@ import { View, Dimensions, Platform } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet } from 'react-native-unistyles';
 import { Camera, useCameraDevices } from 'react-native-vision-camera';
-import { useBarcodeScannerOutput } from 'react-native-vision-camera-barcode-scanner';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import type { StaticScreenProps } from '@react-navigation/native';
 
 import { useBarcodeScanner } from '../hooks/useBarcodeScanner';
+import { useBarcodeOutput } from '../hooks/useBarcodeOutput';
 import { usePermission } from '#hooks/permissions/usePermission';
 import { ThemedBarcodeMask } from '../components/ThemedBarcodeMask';
 import { Button } from '#components/base/Button';
@@ -26,17 +26,13 @@ export const BarcodeScannerScreen: React.FC<
         source?: BarcodeSource;
         pantryId?: string;
         shoppingListId?: string;
-        /** When set, the scanner pops back to the named screen with the
-         *  detected UPC as a route param instead of opening SearchResults. */
-        returnTo?: 'identify-form';
       }
     | undefined
   >
 > = ({ route }) => {
   const { t } = useTranslation();
-  const { mergeIdentifiedItemFormUpc, toSearchResults, goBack, navigation } =
-    useAppNavigation();
-  const { source, pantryId, shoppingListId, returnTo } = route?.params || {};
+  const { toSearchResults, goBack, navigation } = useAppNavigation();
+  const { source, pantryId, shoppingListId } = route?.params || {};
   const devices = useCameraDevices();
   const device = devices.find(d => d.position === 'back');
 
@@ -85,47 +81,38 @@ export const BarcodeScannerScreen: React.FC<
     };
   });
 
-  // 3) Set up the VisionCamera barcode-scanner output (MLKit on Android, Vision on iOS)
+  // 3) Set up the barcode-scanner output. On iOS this resolves to
+  //    VisionCamera's built-in useObjectOutput (native AVCaptureMetadataOutput,
+  //    no MLKit). On Android it falls through to react-native-vision-camera-
+  //    barcode-scanner (MLKit). useBarcodeOutput normalizes both sides to
+  //    `{ value, format }` with format ∈ 'qr' | 'ean-13' | 'ean-8' | 'upc-a'
+  //    | 'upc-e' so callers don't see the platform difference.
+  //
   // PERFORMANCE: Limited to most common barcode types for grocery items.
-  const barcodeOutput = useBarcodeScannerOutput({
-    barcodeFormats: [
-      'qr-code', // QR codes - common for product info, coupons
+  const barcodeOutput = useBarcodeOutput({
+    formats: [
+      'qr', // QR codes - common for product info, coupons
       'ean-13', // European Article Number - most common grocery barcode
       'upc-a', // Universal Product Code - US standard
       'upc-e', // UPC compressed format
     ],
-    onBarcodeScanned: barcodes => {
-      if (!isActive || hasNavigatedRef.current || !barcodes.length) return;
+    onBarcodeScanned: ({ value, format }) => {
+      if (!isActive || hasNavigatedRef.current) return;
+      hasNavigatedRef.current = true;
+      setHasScanned(true);
+      setScanning(false);
 
-      const { rawValue: value, format } = barcodes[0];
-      // Map 'qr-code' back to 'qr' so downstream consumers (UpcFormat mapping,
-      // navigation params) receive the format string they were written for.
-      const type = format === 'qr-code' ? 'qr' : format;
-      if (value) {
-        hasNavigatedRef.current = true;
-        setHasScanned(true);
-        setScanning(false);
+      // Haptic feedback on successful barcode scan
+      HapticService.success();
 
-        // Haptic feedback on successful barcode scan
-        HapticService.success();
-
-        if (returnTo === 'identify-form') {
-          // Pop back to the in-progress Identify form with the UPC; merge
-          // semantics mean the form stays mounted and existing fields
-          // survive the round-trip.
-          mergeIdentifiedItemFormUpc(value);
-          return;
-        }
-
-        setScannedBarcode(value);
-        toSearchResults({
-          barcode: value,
-          format: type,
-          source,
-          pantryId,
-          shoppingListId,
-        });
-      }
+      setScannedBarcode(value);
+      toSearchResults({
+        barcode: value,
+        format,
+        source,
+        pantryId,
+        shoppingListId,
+      });
     },
     onError: error => {
       console.warn('Barcode scanner error:', error);

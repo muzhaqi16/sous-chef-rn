@@ -205,7 +205,16 @@ describe('OverlayBackdropProvider', () => {
     expect(backdrop.props.pointerEvents).toBe('none');
   });
 
-  it('clears all claims on a navigation state change', () => {
+  it('does not subscribe to navigation state changes', () => {
+    // The previous implementation registered a `navigationRef` listener
+    // that force-cleared all slots on every navigation state change. That
+    // listener broke the AddToPantrySheet → BarcodeStack → back flow: the
+    // slot was released on push into Barcode, the sheet stayed at index 0,
+    // and on return the sheet was visible with no dim layer because the
+    // hook's slotIdRef was still held but no slot existed. With the new
+    // imperative onChange-driven claim/release model (plus the hook's
+    // defensive unmount cleanup), the listener is no longer earning its
+    // keep and was removed.
     render(
       <OverlayBackdropProvider>
         <DeclarativeConsumer active={true} />
@@ -213,18 +222,17 @@ describe('OverlayBackdropProvider', () => {
       </OverlayBackdropProvider>,
     );
 
-    const reanimated = require('react-native-reanimated').default;
-    let backdrop = screen.UNSAFE_getByType(reanimated.View);
-    expect(backdrop.props.pointerEvents).toBe('auto');
-    expect(mockListeners.state?.length ?? 0).toBeGreaterThan(0);
+    expect(mockListeners.state?.length ?? 0).toBe(0);
 
-    // Simulate React Navigation firing a 'state' event (push or pop).
+    // Firing the (non-existent) listener is a no-op; the backdrop stays
+    // active because the consumer is still mounted.
     act(() => {
       fireNavState();
     });
 
-    backdrop = screen.UNSAFE_getByType(reanimated.View);
-    expect(backdrop.props.pointerEvents).toBe('none');
+    const reanimated = require('react-native-reanimated').default;
+    const backdrop = screen.UNSAFE_getByType(reanimated.View);
+    expect(backdrop.props.pointerEvents).toBe('auto');
   });
 
   it('release is a no-op for unknown ids', () => {

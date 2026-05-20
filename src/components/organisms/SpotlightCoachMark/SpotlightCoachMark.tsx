@@ -27,6 +27,7 @@ import {
 } from '@shopify/react-native-skia';
 import { scheduleOnRN } from 'react-native-worklets';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { useTranslation } from 'react-i18next';
 import { SPRING, TIMING, standardEasing } from '#constants/animations';
 import { Text } from '#components/atoms/Text';
 import { useShowTutorials } from '#hooks/settings/useSettings';
@@ -79,6 +80,7 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
   allowGesturePassthrough,
   onNext,
 }) => {
+  const { t } = useTranslation();
   const tutorialsEnabled = useShowTutorials();
   const { theme } = useUnistyles();
   const { height: screenHeight, width: screenWidth } = useWindowDimensions();
@@ -420,7 +422,7 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
           ) : onNext ? (
             <Pressable onPress={onNext} style={styles.nextButton} hitSlop={8}>
               <Text size="md" weight="medium" tone="accent">
-                Next ›
+                {t('labels.next')} ›
               </Text>
             </Pressable>
           ) : null}
@@ -443,7 +445,9 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
           accessibilityLabel="Skip tutorial"
         >
           <Text size="md" weight="medium" style={styles.skipText}>
-            {totalSteps != null && totalSteps > 1 ? 'Skip all' : 'Skip'}
+            {totalSteps != null && totalSteps > 1
+              ? t('labels.skipAll')
+              : t('labels.skip')}
           </Text>
         </Pressable>
       </View>

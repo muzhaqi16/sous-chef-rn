@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { SettingsSection } from '#components/organisms/SettingsSection';
 import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
 import { useProfileData } from '#features/profile/hooks/useProfileData';
@@ -15,7 +16,38 @@ import {
 } from '#/utils/compilerSafeWrappers';
 import { ThemedRefreshControl } from '#components/atoms/themedComponents';
 
+const SECTION_TITLE_KEYS: Record<string, string> = {
+  'Personal Information': 'personalInformation.sectionPersonalInformation',
+  'Privacy Settings': 'personalInformation.sectionPrivacySettings',
+};
+
+const FIELD_LABEL_KEYS: Record<string, string> = {
+  email: 'personalInformation.email',
+  firstName: 'personalInformation.firstName',
+  lastName: 'personalInformation.lastName',
+  displayName: 'personalInformation.displayName',
+  bio: 'personalInformation.bio',
+  phone: 'personalInformation.phone',
+  dateOfBirth: 'personalInformation.dateOfBirth',
+  gender: 'personalInformation.gender',
+  profileVisibility: 'personalInformation.profileVisibility',
+  showEmail: 'personalInformation.showEmail',
+  showPhone: 'personalInformation.showPhone',
+};
+
+const OPTION_LABEL_KEYS: Record<string, string> = {
+  Male: 'personalInformation.genderMale',
+  Female: 'personalInformation.genderFemale',
+  'Non-binary': 'personalInformation.genderNonBinary',
+  Other: 'personalInformation.genderOther',
+  'Prefer not to say': 'personalInformation.genderPreferNotToSay',
+  Public: 'personalInformation.visibilityPublic',
+  'Friends Only': 'personalInformation.visibilityFriendsOnly',
+  Private: 'personalInformation.visibilityPrivate',
+};
+
 export const PersonalInformationScreen: React.FC = () => {
+  const { t } = useTranslation();
   const { profile, refetch } = useProfileData();
   const user = useUser();
   const [updateProfileMutation] = useMutation(UpdateUserProfileDocument);
@@ -55,10 +87,22 @@ export const PersonalInformationScreen: React.FC = () => {
     );
   };
 
+  const translateOptions = (
+    options?: Array<{ label: string; value: string }>,
+  ) =>
+    options?.map(opt => ({
+      ...opt,
+      label: OPTION_LABEL_KEYS[opt.label]
+        ? t(OPTION_LABEL_KEYS[opt.label])
+        : opt.label,
+    }));
+
   const createSettingItem = (config: any) => {
     const baseItem: any = {
       key: config.key,
-      label: config.label,
+      label: FIELD_LABEL_KEYS[config.key]
+        ? t(FIELD_LABEL_KEYS[config.key])
+        : config.label,
       type: config.type,
     };
 
@@ -115,7 +159,7 @@ export const PersonalInformationScreen: React.FC = () => {
         return {
           ...baseItem,
           value: profile?.gender || '',
-          options: config.options,
+          options: translateOptions(config.options),
           onSave: (v: string) => updateProfile({ gender: v }),
         };
 
@@ -123,7 +167,7 @@ export const PersonalInformationScreen: React.FC = () => {
         return {
           ...baseItem,
           value: profile?.profileVisibility || ProfileVisibility.Public,
-          options: config.options,
+          options: translateOptions(config.options),
           onSave: (v: string) => updateProfile({ profileVisibility: v }),
         };
 
@@ -147,14 +191,16 @@ export const PersonalInformationScreen: React.FC = () => {
 
   const sections = (() => {
     return PERSONAL_INFO_CONFIG.map(configSection => ({
-      title: configSection.title,
+      title: SECTION_TITLE_KEYS[configSection.title]
+        ? t(SECTION_TITLE_KEYS[configSection.title])
+        : configSection.title,
       items: configSection.items.map(createSettingItem),
     }));
   })();
 
   return (
     <ProfileScreenWrapper
-      title="Personal Information"
+      title={t('personalInformation.screenTitle')}
       refreshControl={
         <ThemedRefreshControl
           refreshing={refreshing}

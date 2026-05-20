@@ -200,7 +200,7 @@ export const useNotifications = (config: NotificationConfig = {}) => {
           client.cache.readFragment<UseNotifications_NotificationFragment>({
             fragment: UseNotifications_NotificationFragmentDoc,
             fragmentName: 'useNotifications_notification',
-            from: maskedNotification,
+            from: { __typename: 'Notification', id: maskedNotification.id },
           });
         if (!rawNotification) return;
 

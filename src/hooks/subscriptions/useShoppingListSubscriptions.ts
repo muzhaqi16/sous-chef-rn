@@ -309,7 +309,7 @@ export function useShoppingListSubscriptions(
                   {
                     fragment: UseShoppingListSubscriptions_ItemFragmentDoc,
                     fragmentName: 'useShoppingListSubscriptions_item',
-                    from: item,
+                    from: { __typename: 'ShoppingListItem', id: item.id },
                   },
                 );
 

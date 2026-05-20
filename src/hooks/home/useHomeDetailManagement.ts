@@ -222,13 +222,20 @@ export function useHomeDetailManagement(homeId: string) {
   // Preserve last successful data when errorPolicy: 'ignore' returns undefined on error.
   // Then unmask via useFragment so consumers (and this hook) see the full
   // HomeDetailScreen_home shape — fields, members/invite edges, myMembership.
+  //
+  // useFragment reads from `{ __typename, id }` rather than the masked
+  // `data?.home` ref so it always resolves the cache entry by key. When the
+  // fragment isn't fully in cache yet, `complete` is false and we fall back
+  // to null so the screen shows the loader instead of rendering with
+  // partial data (which would, e.g., make the owner look like a non-owner
+  // because `myMembership.role` isn't populated yet).
   const homeRef = usePreservedQueryData(data?.home, null);
-  const unmasked = useFragment({
+  const { data: unmaskedData, complete: unmaskedComplete } = useFragment({
     fragment: HomeDetailScreen_HomeFragmentDoc,
     fragmentName: 'HomeDetailScreen_home',
-    from: homeRef ?? null,
+    from: homeRef ? { __typename: 'Home', id: homeId } : null,
   });
-  const home = homeRef ? unmasked.data : null;
+  const home = homeRef && unmaskedComplete ? unmaskedData : null;
 
   // CRUD operations utilities
   const { createRemoveOperation } = useCrudOperations();

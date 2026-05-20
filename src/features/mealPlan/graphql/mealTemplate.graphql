@@ -30,6 +30,7 @@ query GetMealTemplates(
 query GetMealTemplate($id: ID!) {
   mealTemplate(id: $id) {
     ...MealTemplateDisplay    items {
+      id
       ...MealTemplateItemFragment    }
   }
 }

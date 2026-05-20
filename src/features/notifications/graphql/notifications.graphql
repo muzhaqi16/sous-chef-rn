@@ -6,6 +6,7 @@ subscription NotificationChanged {
   notificationChanged {
     changeType
     notification {
+      id
       ...useNotifications_notification
     }
     timestamp
@@ -26,6 +27,7 @@ query GetUnreadNotifications {
     ) {
       edges {
         node {
+          id
           ...useNotificationsOnLaunch_notification
         }
       }

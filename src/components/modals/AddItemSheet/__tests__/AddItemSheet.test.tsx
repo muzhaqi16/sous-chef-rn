@@ -10,16 +10,6 @@ import type {
   BaseSuggestionItem,
 } from '../types';
 
-// Mock GlobalBottomSheetBackdrop
-jest.mock('#components/atoms/GlobalBottomSheetBackdrop', () => {
-  const R = require('react');
-  const RN = require('react-native');
-  return {
-    GlobalBottomSheetBackdrop: (props: any) =>
-      R.createElement(RN.View, { testID: 'backdrop', ...props }),
-  };
-});
-
 // Mock useSharedBottomSheetConfigs
 jest.mock('#hooks/useSharedBottomSheetConfigs', () => ({
   useSharedBottomSheetConfigs: jest.fn(() => ({})),

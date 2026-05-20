@@ -44,7 +44,7 @@ export function useShoppingListDetails(listId: string | undefined) {
         client.cache.readFragment<ShoppingListCollaboratorFragment>({
           fragment: ShoppingListCollaboratorFragmentDoc,
           fragmentName: 'ShoppingListCollaboratorFragment',
-          from: edge.node,
+          from: { __typename: 'ShoppingListCollaborator', id: edge.node.id },
         }),
       )
       .filter(isNonNull) ?? [];
@@ -54,7 +54,7 @@ export function useShoppingListDetails(listId: string | undefined) {
         client.cache.readFragment<ShoppingListOwnershipFragment>({
           fragment: ShoppingListOwnershipFragmentDoc,
           fragmentName: 'ShoppingListOwnershipFragment',
-          from: o,
+          from: { __typename: 'ShoppingListOwnership', id: o.id },
         }),
       )
       .filter(isNonNull) ?? [];

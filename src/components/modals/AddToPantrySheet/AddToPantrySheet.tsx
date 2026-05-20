@@ -49,7 +49,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   initialSearchQuery = '',
 }) => {
   const { t } = useTranslation();
-  const { toBarcode, toIdentifyItem } = useAppNavigation();
+  const { toBarcode } = useAppNavigation();
   const client = useApolloClient();
 
   // Add details sheet state
@@ -149,13 +149,6 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   // backdrop's ref-count clean.
   const handleScanPress = () => {
     toBarcode({
-      source: 'pantry',
-      pantryId,
-    });
-  };
-
-  const handleIdentifyPress = () => {
-    toIdentifyItem({
       source: 'pantry',
       pantryId,
     });
@@ -317,7 +310,6 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
       isMutating={false}
       onAddManually={handleAddManually}
       onScanPress={handleScanPress}
-      onIdentifyPress={handleIdentifyPress}
       exitingItems={state.exitingItems}
       onExitComplete={handleExitComplete}
       shouldFetch={state.shouldFetch}

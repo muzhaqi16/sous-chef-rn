@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Pressable } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import { StyleSheet } from 'react-native-unistyles';
@@ -64,6 +65,7 @@ export function useShoppingListSelectorModal({
   listDataWithOwnership,
   currentListId,
 }: UseShoppingListSelectorOptions) {
+  const { t } = useTranslation();
   const { toListSettings, toShareList } = useAppNavigation();
   const { setOverlayOpen } = useTabBarSetters();
 
@@ -151,14 +153,12 @@ export function useShoppingListSelectorModal({
     if (count === 0) return;
 
     alertService.alert(
-      `Delete ${count} List${count > 1 ? 's' : ''}`,
-      `Are you sure you want to delete ${
-        count > 1 ? 'these lists' : 'this list'
-      }? This action cannot be undone.`,
+      t('shoppingListSelector.deleteAlertTitle', { count }),
+      t('shoppingListSelector.deleteAlertMessage', { count }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('shoppingListSelector.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('shoppingListSelector.deleteAction'),
           style: 'destructive',
           onPress: async () => {
             const idsToDelete = Array.from(selectedForDeletion);
@@ -178,7 +178,7 @@ export function useShoppingListSelectorModal({
                 idsToDelete.forEach(id =>
                   subscriptionService.unregisterParentDeletion(id),
                 );
-                toastService.error('Failed to delete lists');
+                toastService.error(t('shoppingListSelector.deleteFailed'));
               },
             );
 
@@ -190,7 +190,7 @@ export function useShoppingListSelectorModal({
             }
 
             toastService.success(
-              `Deleted ${count} list${count > 1 ? 's' : ''}`,
+              t('shoppingListSelector.deletedToast', { count }),
             );
             exitDeleteMode();
           },
@@ -227,7 +227,7 @@ export function useShoppingListSelectorModal({
         </Pressable>
         <Pressable onPress={exitDeleteMode}>
           <Text size="md" weight="semibold" tone="accent">
-            Cancel
+            {t('shoppingListSelector.cancel')}
           </Text>
         </Pressable>
       </View>
@@ -244,7 +244,7 @@ export function useShoppingListSelectorModal({
       result.push({
         _isHeader: true,
         id: 'header-personal',
-        title: 'Personal Lists',
+        title: t('shoppingListSelector.personalLists'),
       });
       result.push(...personalLists);
     }
@@ -262,7 +262,8 @@ export function useShoppingListSelectorModal({
       });
 
     homeGroups.forEach((lists, homeId) => {
-      const homeName = lists[0]?.home?.name || 'Unknown Home';
+      const homeName =
+        lists[0]?.home?.name || t('shoppingListSelector.unknownHome');
       result.push({
         _isHeader: true,
         id: `header-${homeId}`,
@@ -286,7 +287,7 @@ export function useShoppingListSelectorModal({
       return (
         <View style={styles.sectionHeader}>
           <Icon
-            name={item.title === 'Personal Lists' ? 'person' : 'home'}
+            name={item.id === 'header-personal' ? 'person' : 'home'}
             size={14}
             tone="textTertiary"
           />
@@ -335,7 +336,7 @@ export function useShoppingListSelectorModal({
             </Text>
             {!canDelete && (
               <Text size="xs" tone="secondary">
-                Cannot delete (shared)
+                {t('shoppingListSelector.cannotDeleteShared')}
               </Text>
             )}
           </View>
@@ -358,17 +359,21 @@ export function useShoppingListSelectorModal({
           </Text>
           {!list._isOwner && (
             <Text size="xs" tone="secondary">
-              {`Shared by ${
-                list.ownerships?.[0]?.user?.profile?.displayName ||
-                list.ownerships?.[0]?.user?.email ||
-                'someone'
-              }`}
+              {t('shoppingListSelector.sharedBy', {
+                name:
+                  list.ownerships?.[0]?.user?.profile?.displayName ||
+                  list.ownerships?.[0]?.user?.email ||
+                  t('shoppingListSelector.sharedBySomeone'),
+              })}
             </Text>
           )}
         </View>
         {list.totalItems > 0 && (
           <Text size="xs" tone="secondary">
-            {list.totalItems - list.completedItems} of {list.totalItems}
+            {t('shoppingListSelector.itemsRemaining', {
+              remaining: list.totalItems - list.completedItems,
+              total: list.totalItems,
+            })}
           </Text>
         )}
         {!!isSelected && <Icon name="checkmark" size={20} tone="primary" />}
@@ -381,7 +386,7 @@ export function useShoppingListSelectorModal({
   const listActions = [
     {
       icon: 'add',
-      label: 'Create New List',
+      label: t('shoppingListSelector.createNewList'),
       onPress: () => {
         setOverlayOpen(false);
         selectorRef.current?.close();
@@ -393,7 +398,7 @@ export function useShoppingListSelectorModal({
       ? [
           {
             icon: 'share-outline',
-            label: 'Share Current List',
+            label: t('shoppingListSelector.shareCurrentList'),
             onPress: () => {
               setOverlayOpen(false);
               selectorRef.current?.close();
@@ -403,7 +408,7 @@ export function useShoppingListSelectorModal({
           },
           {
             icon: 'settings-outline',
-            label: 'List Settings',
+            label: t('shoppingListSelector.listSettings'),
             onPress: () => {
               setOverlayOpen(false);
               selectorRef.current?.close();
@@ -431,14 +436,16 @@ export function useShoppingListSelectorModal({
   // PERFORMANCE: Combine memoized parts into final config
   const listConfig: SelectorConfig<ListItemOrHeader> = {
     title: selectorExtraData.isDeleteMode
-      ? `${selectorExtraData.selectedForDeletion.size} Selected`
-      : 'Select Shopping List',
+      ? t('shoppingListSelector.deleteModeTitle', {
+          count: selectorExtraData.selectedForDeletion.size,
+        })
+      : t('shoppingListSelector.title'),
     data: groupedData,
     selectedId: currentListId,
     onSelect,
     displayProperty: 'id', // unused — renderCustomItem handles all rendering
     loading: false,
-    emptyMessage: 'No shopping lists available',
+    emptyMessage: t('shoppingListSelector.emptyMessage'),
     renderCustomItem: renderListItem,
     actions: listActions,
     headerRight: deleteHeaderRight,

@@ -1,9 +1,10 @@
 import { CollaboratorRole } from '#/graphql/generated/schemaTypes';
+import type { IconName } from '#utils/iconUtils';
 
 export interface RoleInfo {
   label: string;
   description: string;
-  icon: string;
+  icon: IconName;
   permissions: Array<{ label: string; granted: boolean }>;
 }
 
@@ -11,7 +12,7 @@ export const ROLE_PERMISSIONS: Record<CollaboratorRole, RoleInfo> = {
   [CollaboratorRole.Viewer]: {
     label: 'Viewer',
     description: 'Can view the shopping list',
-    icon: '👁️',
+    icon: 'eye-outline',
     permissions: [
       { label: 'View items', granted: true },
       { label: 'View history', granted: true },
@@ -26,7 +27,7 @@ export const ROLE_PERMISSIONS: Record<CollaboratorRole, RoleInfo> = {
   [CollaboratorRole.Shopper]: {
     label: 'Shopper',
     description: 'Can mark items as purchased',
-    icon: '🛒',
+    icon: 'cart-outline',
     permissions: [
       { label: 'View items', granted: true },
       { label: 'View history', granted: true },
@@ -41,7 +42,7 @@ export const ROLE_PERMISSIONS: Record<CollaboratorRole, RoleInfo> = {
   [CollaboratorRole.Contributor]: {
     label: 'Contributor',
     description: 'Can add items and mark as purchased',
-    icon: '✏️',
+    icon: 'add-circle-outline',
     permissions: [
       { label: 'View items', granted: true },
       { label: 'View history', granted: true },
@@ -56,7 +57,7 @@ export const ROLE_PERMISSIONS: Record<CollaboratorRole, RoleInfo> = {
   [CollaboratorRole.Editor]: {
     label: 'Editor',
     description: 'Can add, edit, and remove items',
-    icon: '📝',
+    icon: 'create-outline',
     permissions: [
       { label: 'View items', granted: true },
       { label: 'View history', granted: true },
@@ -71,7 +72,7 @@ export const ROLE_PERMISSIONS: Record<CollaboratorRole, RoleInfo> = {
   [CollaboratorRole.Admin]: {
     label: 'Admin',
     description: 'Full control including inviting others',
-    icon: '⚙️',
+    icon: 'settings-outline',
     permissions: [
       { label: 'View items', granted: true },
       { label: 'View history', granted: true },
@@ -86,7 +87,7 @@ export const ROLE_PERMISSIONS: Record<CollaboratorRole, RoleInfo> = {
   [CollaboratorRole.Owner]: {
     label: 'Owner',
     description: 'Full control over the shopping list',
-    icon: '👑',
+    icon: 'star',
     permissions: [
       { label: 'View items', granted: true },
       { label: 'View history', granted: true },

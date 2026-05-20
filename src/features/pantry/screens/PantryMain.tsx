@@ -4,6 +4,7 @@ import {
   type NativeSyntheticEvent,
   type NativeScrollEvent,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useAnimatedReaction } from 'react-native-reanimated';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -432,14 +433,52 @@ function PantryMainContent({
   );
 }
 
-const SKELETON_PANTRY_TABS: FilterTabConfig<LocationFilter>[] = [
-  { id: 'all', label: 'All' },
-  { id: 'fridge', label: 'Fridge', icon: 'thermometer-outline' },
-  { id: 'freezer', label: 'Freezer', icon: 'snow-outline' },
-  { id: 'pantry', label: 'Pantry', icon: 'cube-outline' },
-];
-
 const noop = () => {};
+
+const PantryMainFallback: React.FC = () => {
+  const { t } = useTranslation();
+  const skeletonTabs: FilterTabConfig<LocationFilter>[] = [
+    { id: 'all', label: t('pantryScreen.tabAll') },
+    {
+      id: 'fridge',
+      label: t('pantryScreen.tabFridge'),
+      icon: 'thermometer-outline',
+    },
+    {
+      id: 'freezer',
+      label: t('pantryScreen.tabFreezer'),
+      icon: 'snow-outline',
+    },
+    {
+      id: 'pantry',
+      label: t('pantryScreen.tabPantry'),
+      icon: 'cube-outline',
+    },
+  ];
+  return (
+    <TabMainScreen testID="pantry-screen">
+      <TabScreenHeader
+        label={t('pantryScreen.greetingFallback')}
+        title={t('pantryScreen.tabPantry')}
+      />
+      <View style={styles.searchContainer}>
+        <SearchBar
+          value=""
+          onChangeText={noop}
+          placeholder={t('pantryScreen.searchPlaceholder')}
+          showSearchIcon
+          editable={false}
+        />
+      </View>
+      <FilterTabs<LocationFilter>
+        tabs={skeletonTabs}
+        activeTabId="all"
+        onTabChange={noop}
+      />
+      <PantryScreenSkeleton />
+    </TabMainScreen>
+  );
+};
 
 // PERFORMANCE: Screen-level error boundary prevents full app reset on mutation failures.
 // DeferredScreen gates heavy work — skeleton paints instantly; PantryMainInner mounts
@@ -447,26 +486,7 @@ const noop = () => {};
 export const PantryMain: React.FC = () => (
   <PantryErrorBoundary>
     <DeferredScreen
-      fallback={
-        <TabMainScreen testID="pantry-screen">
-          <TabScreenHeader label="Good morning" title="Pantry" />
-          <View style={styles.searchContainer}>
-            <SearchBar
-              value=""
-              onChangeText={noop}
-              placeholder="Search your pantry..."
-              showSearchIcon
-              editable={false}
-            />
-          </View>
-          <FilterTabs<LocationFilter>
-            tabs={SKELETON_PANTRY_TABS}
-            activeTabId="all"
-            onTabChange={noop}
-          />
-          <PantryScreenSkeleton />
-        </TabMainScreen>
-      }
+      fallback={<PantryMainFallback />}
       component={PantryMainInner}
     />
   </PantryErrorBoundary>

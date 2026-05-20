@@ -40,13 +40,14 @@ export function useMealPlans(filters?: MealPlanFilters) {
   // Edges arrive as masked refs (`{ __typename: 'MealPlan' } & { $fragmentRefs }`).
   // Materialize via cache.readFragment so consumers see the full
   // MealPlanDisplayFragment shape (startDate, endDate, name, …) without
-  // exposing raw refs.
+  // exposing raw refs. Use the cache-key form — the masked-ref `from` silently
+  // returns partial/null data under dataMasking.
   const mealPlans = connectionData.items
     .map(ref =>
       client.cache.readFragment<MealPlanDisplayFragment>({
         fragment: MealPlanDisplayFragmentDoc,
         fragmentName: 'MealPlanDisplay',
-        from: ref,
+        from: { __typename: 'MealPlan', id: ref.id },
       }),
     )
     .filter((p): p is MealPlanDisplayFragment => p !== null);

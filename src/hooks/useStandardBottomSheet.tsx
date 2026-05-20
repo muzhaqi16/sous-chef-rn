@@ -9,7 +9,7 @@ import { withUnistyles } from 'react-native-unistyles';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
 import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
-import { DismissBackdrop } from '#components/atoms/DismissBackdrop';
+import { useBottomSheetBackdropClaim } from '#hooks/useBottomSheetBackdropClaim';
 
 /**
  * Theme-reactive `BottomSheetModal` — applies `backgroundStyle` and
@@ -50,11 +50,36 @@ interface UseStandardBottomSheetOptions {
    * or a string (e.g. `'85%'`) to specify a custom expanded snap point.
    */
   keyboardAware?: boolean | string;
+  /** Optional user-supplied onChange — wrapped so the hook can drive the
+   *  global backdrop slot off gorhom's authoritative index transitions. */
+  onChange?: (index: number, position: number, type: number) => void;
 }
+
+// Gorhom expects the snap-point type literal even though we don't branch on it.
+type SnapPointType = Parameters<
+  NonNullable<BottomSheetModalProps['onChange']>
+>[2];
+
+// `backdropComponent` is intentionally omitted from `modalProps` below. The
+// dim overlay is painted by `GlobalBackdrop` (rendered once at App level
+// inside the `BottomSheetModalProvider`), and its lifetime is driven by a
+// claim/release from this hook keyed off gorhom's `onChange(index)` JS
+// callback. That decouples the backdrop's slot from the contributor
+// component's mount/unmount inside gorhom's portal, which was the source of
+// stuck-overlay races after sheet dismiss and on the
+// AddToPantrySheet → BarcodeStack round trip. Gorhom renders nothing when
+// `backdropComponent` is undefined (BottomSheet.tsx:1784).
 
 /**
  * Consolidates BottomSheetModal boilerplate shared across all modals:
  * ref, insets, animation configs, back handler, present/dismiss effect, and common props.
+ *
+ * The global dim layer is claimed imperatively against `OverlayBackdropProvider`
+ * via gorhom's `onChange(index)` JS callback: claim when index transitions
+ * from -1 to ≥0, release when it transitions back to -1. A defensive release
+ * runs on hook unmount in case the sheet is torn down by its parent's
+ * conditional render before reaching index -1 (gorhom's portal can in that
+ * case skip firing `onClose`, so we never rely on it).
  *
  * Usage (auto-managed presentation):
  * ```
@@ -81,18 +106,20 @@ export function useStandardBottomSheet({
   keyboardBehavior,
   enableDynamicSizing = false,
   keyboardAware = false,
+  onChange: userOnChange,
 }: UseStandardBottomSheetOptions) {
   const insets = useSafeAreaInsets();
   const ref = useRef<GorhomBottomSheetModal>(null);
   const animationConfigs = useSharedBottomSheetConfigs();
   useBottomSheetBackHandler(ref, visible ?? false);
 
-  // Track the latest visible value for the focus-aware callback below
-  // without rebuilding the callback each render.
-  const visibleRef = useRef(visible);
-  useEffect(() => {
-    visibleRef.current = visible;
-  });
+  // Backdrop integration. The hook creates an `animatedIndex` SharedValue
+  // we pass to gorhom (gorhom drives it as the sheet animates), derives an
+  // opacity SV from it via `interpolate`, and claims the global backdrop
+  // with that SV — meaning the dim layer ramps in/out in lockstep with
+  // the sheet on the UI thread, zero JS-thread delay.
+  const { animatedIndex, onChange: handleBackdrop } =
+    useBottomSheetBackdropClaim(ref);
 
   // Compute final snap points: append expanded point when keyboardAware and not already present
   const expandedPoint =
@@ -106,6 +133,13 @@ export function useStandardBottomSheet({
   // can still pass 'extend' or 'fillParent' explicitly when needed.
   const resolvedKeyboardBehavior = keyboardBehavior ?? 'interactive';
 
+  // Track the latest visible value for the focus-aware callback below
+  // without rebuilding the callback each render.
+  const visibleRef = useRef(visible);
+  useEffect(() => {
+    visibleRef.current = visible;
+  });
+
   // Auto present/dismiss when visible is provided
   useEffect(() => {
     if (visible === undefined) return;
@@ -117,11 +151,21 @@ export function useStandardBottomSheet({
   }, [visible]);
 
   // Navigation focus awareness — dismiss the sheet when the owning screen
-  // blurs and re-present it on refocus. This keeps OverlayBackdropProvider's
-  // ref-count clean when a sheet stays mounted across a navigation push
-  // (e.g. AddToPantrySheet → BarcodeStack → back). The caller's `visible`
-  // state is preserved, so the sheet's inner form state survives the round
-  // trip. Short-circuits for manual-presentation callers (visible === undefined)
+  // blurs and re-present it on refocus.
+  //
+  // This is REQUIRED because `BottomSheetModal` renders into the
+  // `BottomSheetModalProvider`'s portal at App root, ABOVE the navigation
+  // container. Without this hook, an open sheet stays visually on top of
+  // any newly-pushed screen (e.g. BarcodeScannerScreen pushed from a Scan
+  // button inside the sheet) — the sheet would obscure the new screen
+  // instead of getting out of its way.
+  //
+  // The new imperative `onChange`-driven claim/release model makes this
+  // safe: `dismiss()` fires `onChange(-1)` which releases the backdrop
+  // slot cleanly, and a subsequent `present()` on refocus fires
+  // `onChange(0)` which claims a fresh slot.
+  //
+  // Short-circuits for manual-presentation callers (visible === undefined)
   // — they own the full lifecycle.
   const [onScreenFocus] = useState(() => () => {
     if (visibleRef.current === undefined) return undefined;
@@ -131,6 +175,25 @@ export function useStandardBottomSheet({
     };
   });
   useFocusEffect(onScreenFocus);
+
+  // Compose the backdrop claim with the caller's onChange. The current
+  // user-supplied onChange is held in a ref so its identity changing across
+  // renders doesn't churn `handleChange` (and force gorhom to rewire). The
+  // React Compiler auto-memoizes `handleChange` based on its stable-ref
+  // closure (no try-catch in this hook).
+  const userOnChangeRef = useRef(userOnChange);
+  useEffect(() => {
+    userOnChangeRef.current = userOnChange;
+  });
+
+  const handleChange = (
+    index: number,
+    position: number,
+    type: SnapPointType,
+  ): void => {
+    handleBackdrop(index);
+    userOnChangeRef.current?.(index, position, type);
+  };
 
   // Snap back to initial position when keyboard hides (keyboardAware only)
   useEffect(() => {
@@ -150,11 +213,12 @@ export function useStandardBottomSheet({
     enableDynamicSizing,
     topInset: insets.top,
     onDismiss,
+    onChange: handleChange,
+    animatedIndex,
     animationConfigs,
     keyboardBehavior: resolvedKeyboardBehavior,
     keyboardBlurBehavior: 'restore',
     android_keyboardInputMode: 'adjustPan',
-    backdropComponent: DismissBackdrop,
   };
 
   // Standard content container padding

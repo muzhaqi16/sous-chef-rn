@@ -5,6 +5,7 @@ import {
   View,
   Platform,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { ScrollView } from 'react-native-gesture-handler';
 import { alertService } from '#/services/alertService';
 import { TabView, type Route } from 'react-native-tab-view';
@@ -94,10 +95,8 @@ interface ShoppingListTabsProps {
   scrollEventThrottle?: number;
 }
 
-const ROUTES: TabRoute[] = [
-  { key: 'shopping', title: 'Shopping' },
-  { key: 'purchased', title: 'Purchased' },
-];
+// Stable tab key list for index lookups (titles come from i18n at render time).
+const ROUTE_KEYS: ShoppingListTabId[] = ['shopping', 'purchased'];
 
 // Module-level renderScene — data-free so TabView never re-calls it on data changes.
 // Each tab reads its data from ShoppingListDataContext instead of props.
@@ -161,9 +160,15 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   listHeaderComponent,
   showImages,
 }) => {
+  const { t } = useTranslation();
   const tabBarRef = useRef<View>(null);
   const layout = useWindowDimensions();
   const tutorial = useShoppingListTutorial();
+
+  const routes: TabRoute[] = [
+    { key: 'shopping', title: t('shoppingListScreen.tabShopping') },
+    { key: 'purchased', title: t('shoppingListScreen.tabPurchased') },
+  ];
 
   // TabView navigation state
   const [index, setIndex] = useState(0);
@@ -312,7 +317,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
 
   // Standalone jumpTo for FilterTabBar inside ListHeaderComponent
   const jumpTo = (key: string) => {
-    const routeIndex = ROUTES.findIndex(r => r.key === key);
+    const routeIndex = ROUTE_KEYS.indexOf(key as ShoppingListTabId);
     if (routeIndex >= 0) handleIndexChange(routeIndex);
   };
 
@@ -342,7 +347,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   const renderTabBar = () => (
     <View ref={tabBarRef} collapsable={false}>
       <FilterTabBar
-        navigationState={{ index, routes: ROUTES }}
+        navigationState={{ index, routes }}
         jumpTo={jumpTo}
         counts={counts}
         actionButtons={actionButtons.length > 0 ? actionButtons : undefined}
@@ -438,7 +443,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
             </ScrollView>
           ) : (
             <TabView
-              navigationState={{ index, routes: ROUTES }}
+              navigationState={{ index, routes }}
               renderScene={renderSceneDataFree}
               renderTabBar={renderTabBar}
               onIndexChange={handleIndexChange}

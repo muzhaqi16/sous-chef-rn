@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useUser } from '#store/useAppStore';
 import { useCurrentPantry } from '#features/pantry/hooks/useCurrentPantry';
@@ -40,6 +41,7 @@ import type {
  * - Render JSX
  */
 export function usePantryScreen() {
+  const { t } = useTranslation();
   // -------------------------------------------------------------------------
   // 1. User info
   // -------------------------------------------------------------------------
@@ -137,10 +139,10 @@ export function usePantryScreen() {
 
   const tabIconSize = 16;
   const defaultTabs: FilterTabConfig<LocationFilter>[] = [
-    { id: 'all', label: 'All' },
+    { id: 'all', label: t('pantryScreen.tabAll') },
     {
       id: 'fridge',
-      label: 'Fridge',
+      label: t('pantryScreen.tabFridge'),
       icon: 'thermometer-outline',
       iconElement: React.createElement(StorageLocationIcon, {
         type: 'REFRIGERATOR',
@@ -149,7 +151,7 @@ export function usePantryScreen() {
     },
     {
       id: 'freezer',
-      label: 'Freezer',
+      label: t('pantryScreen.tabFreezer'),
       icon: 'snow-outline',
       iconElement: React.createElement(StorageLocationIcon, {
         type: 'FREEZER',
@@ -158,7 +160,7 @@ export function usePantryScreen() {
     },
     {
       id: 'pantry',
-      label: 'Pantry',
+      label: t('pantryScreen.tabPantry'),
       icon: 'cube-outline',
       iconElement: React.createElement(StorageLocationIcon, {
         type: 'PANTRY_SHELF',

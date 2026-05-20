@@ -8,10 +8,8 @@ import {
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { FlashList } from '@shopify/flash-list';
-import type {
-  BottomSheetModal,
-  useBottomSheetScrollableCreator,
-} from '@gorhom/bottom-sheet';
+import type { useBottomSheetScrollableCreator } from '@gorhom/bottom-sheet';
+import type { BottomSheetModalRef } from '#hooks/useStandardBottomSheet';
 import { BottomSheetAction } from '#components/templates/BottomSheetAction';
 
 interface ShoppingList {
@@ -22,7 +20,7 @@ interface ShoppingList {
 }
 
 interface ShoppingListPickerSheetProps {
-  sheetRef: React.RefObject<BottomSheetModal | null>;
+  sheetRef: React.RefObject<BottomSheetModalRef | null>;
   shoppingLists: ShoppingList[];
   defaultNewListName: string;
   creatingList: boolean;

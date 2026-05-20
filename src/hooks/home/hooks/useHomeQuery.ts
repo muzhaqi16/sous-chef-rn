@@ -63,10 +63,19 @@ export function useHomeQuery() {
         getConnectionTotalCount((home as HomeWithCounts).pantriesConnection),
       0,
     );
+    // Genuine empty state: no homes means no pantries. Without this guard the
+    // anti-flicker fallback below would keep showing the stale last-known
+    // count after the user deletes their last home.
+    if (validHomes.length === 0) {
+      if (lastKnownPantriesCount !== 0) setLastKnownPantriesCount(0);
+      return 0;
+    }
     if (sum > 0 && sum !== lastKnownPantriesCount) {
       setLastKnownPantriesCount(sum);
       return sum;
     }
+    // Anti-flicker: homes are loaded but per-home pantriesConnection counts
+    // are transiently 0 during refetch — fall back to the last known count.
     return sum > 0 ? sum : lastKnownPantriesCount;
   })();
 

@@ -3,10 +3,6 @@ import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { CookingPreferencesSheet } from '../CookingPreferencesSheet';
 
-jest.mock('#components/atoms/GlobalBottomSheetBackdrop', () => ({
-  GlobalBottomSheetBackdrop: () => null,
-}));
-
 jest.mock('#hooks/useSharedBottomSheetConfigs', () => ({
   useSharedBottomSheetConfigs: jest.fn(() => ({})),
 }));

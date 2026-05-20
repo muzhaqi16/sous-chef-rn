@@ -15,10 +15,6 @@ jest.mock('#hooks/useBottomSheetBackHandler', () => ({
   useBottomSheetBackHandler: jest.fn(),
 }));
 
-jest.mock('#components/atoms/DismissBackdrop', () => ({
-  DismissBackdrop: 'DismissBackdrop',
-}));
-
 const mockedUseFocusEffect = useFocusEffect as jest.MockedFunction<
   typeof useFocusEffect
 >;
@@ -115,11 +111,14 @@ describe('useStandardBottomSheet', () => {
     ).toBeGreaterThanOrEqual(16);
   });
 
-  it('uses DismissBackdrop as backdropComponent', () => {
-    const { DismissBackdrop } = require('#components/atoms/DismissBackdrop');
+  it('omits backdropComponent (global dim layer drives itself)', () => {
     const { result } = renderHook(() => useStandardBottomSheet(defaultOptions));
 
-    expect(result.current.modalProps.backdropComponent).toBe(DismissBackdrop);
+    // The dim overlay is painted by `GlobalBackdrop` (rendered once at App
+    // level) and driven by a claim from this hook keyed off gorhom's
+    // `onChange(index)`. With `backdropComponent` omitted, gorhom renders
+    // nothing for the per-sheet backdrop (BottomSheet.tsx:1784).
+    expect(result.current.modalProps.backdropComponent).toBeUndefined();
   });
 
   describe('auto present/dismiss', () => {
@@ -176,6 +175,13 @@ describe('useStandardBottomSheet', () => {
   });
 
   describe('navigation focus lifecycle', () => {
+    // The sheet dismisses on screen blur and re-presents on focus, so it
+    // gets out of the way when a sibling screen is pushed (e.g.
+    // BarcodeScannerScreen pushed from a Scan button inside the sheet).
+    // `BottomSheetModal` renders into the BottomSheetModalProvider portal
+    // ABOVE the navigation container, so without this hook the sheet
+    // would stay visually on top of any new screen.
+
     // Helper: capture the useFocusEffect callback so the test can drive blur.
     const installFocusCapture = () => {
       let captured: (() => void | (() => void)) | null = null;

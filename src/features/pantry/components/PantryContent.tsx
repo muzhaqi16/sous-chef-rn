@@ -5,6 +5,7 @@ import React, {
   useImperativeHandle,
 } from 'react';
 import { View, RefreshControl } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useApolloClient } from '@apollo/client/react';
 import { Pressable } from '#components/atoms/themedComponents';
 import {
@@ -126,6 +127,7 @@ export const PantryContent = React.forwardRef<
     ref,
   ) => {
     useRenderTime('PantryContent', { slowThreshold: 1000 });
+    const { t } = useTranslation();
     const { bottom: safeBottom } = useSafeAreaInsets();
     // Apollo cache reads run inside the image-preload effect; each leaf
     // computes its own display data via `useFragment`.
@@ -372,7 +374,7 @@ export const PantryContent = React.forwardRef<
                       <SearchBar
                         value={searchQuery}
                         onChangeText={onSearchChange}
-                        placeholder="Search your pantry..."
+                        placeholder={t('pantryScreen.searchPlaceholder')}
                         showSearchIcon={true}
                         testID="pantry-search-input"
                         innerRightIcon={
@@ -402,7 +404,9 @@ export const PantryContent = React.forwardRef<
                               onPress={onSettingsPress}
                               hitSlop={8}
                               accessibilityRole="button"
-                              accessibilityLabel="Pantry settings"
+                              accessibilityLabel={t(
+                                'pantryScreen.settingsAccessibility',
+                              )}
                             >
                               <Icon
                                 name="settings-outline"
@@ -419,7 +423,7 @@ export const PantryContent = React.forwardRef<
                           onAnalyticsPress={onAnalyticsPress}
                           onLowStockNavigate={onLowStockNavigate}
                           onExpiringNavigate={onExpiringNavigate}
-                          sortLabel={`Sort ${
+                          sortLabel={`${t('pantryScreen.sort')} ${
                             sortDirection === 'asc' ? '↑' : '↓'
                           }`}
                           onSortPress={openSortModal}

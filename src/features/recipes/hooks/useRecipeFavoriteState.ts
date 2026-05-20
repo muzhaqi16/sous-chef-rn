@@ -86,7 +86,7 @@ export function useRecipeFavoriteState({
               {
                 fragment: UseRecipeFavoriteState_RecipeFragmentDoc,
                 fragmentName: 'useRecipeFavoriteState_recipe',
-                from: ref,
+                from: { __typename: 'Recipe', id: ref.id },
               },
             ),
           )

@@ -11,6 +11,7 @@ query GetMealPlans(
   mealPlans(first: $first, after: $after, filters: $filters, orderBy: $orderBy) {
     edges {
       node {
+        id
         ...MealPlanDisplay      }
       cursor
     }
@@ -24,6 +25,7 @@ query GetMealPlans(
 
 query GetMealPlan($id: ID!) {
   mealPlan(id: $id) {
+    id
     ...MealPlanMain_mealPlan
     ...MealPlanSettingsSheet_mealPlan
   }

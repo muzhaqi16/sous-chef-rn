@@ -18,13 +18,14 @@ export function useMealPlan(id: string | null) {
 
   // The query returns a masked ref — materialize via cache.readFragment so
   // the screen sees the full MealPlanMain_mealPlan shape rather than
-  // `$fragmentRefs`. The settings sheet does its own useFragment on the
-  // ref passed down to it (different fragment, different selection).
+  // `$fragmentRefs`. Use the cache-key form — the masked-ref `from` silently
+  // returns partial/null data under dataMasking. The settings sheet does its
+  // own useFragment on the ref passed down to it.
   const mealPlan = data?.mealPlan
     ? client.cache.readFragment<MealPlanMain_MealPlanFragment>({
         fragment: MealPlanMain_MealPlanFragmentDoc,
         fragmentName: 'MealPlanMain_mealPlan',
-        from: data.mealPlan,
+        from: { __typename: 'MealPlan', id: data.mealPlan.id },
       }) ?? null
     : null;
 

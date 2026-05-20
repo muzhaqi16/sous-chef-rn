@@ -58,10 +58,21 @@ const removeCollaboratorFromCache = createRemoveFromParentConnectionUpdater(
   'ShoppingListCollaborator',
 );
 
-const ROLE_OPTIONS = INVITE_ROLES.map(role => ({
-  key: role,
-  label: `${ROLE_PERMISSIONS[role].icon} ${ROLE_PERMISSIONS[role].label}`,
-}));
+const ROLE_LABEL_KEYS: Record<CollaboratorRole, string> = {
+  [CollaboratorRole.Viewer]: 'collaboratorRoles.viewer',
+  [CollaboratorRole.Shopper]: 'collaboratorRoles.shopper',
+  [CollaboratorRole.Contributor]: 'collaboratorRoles.contributor',
+  [CollaboratorRole.Editor]: 'collaboratorRoles.editor',
+  [CollaboratorRole.Admin]: 'collaboratorRoles.admin',
+  [CollaboratorRole.Owner]: 'collaboratorRoles.owner',
+};
+
+const buildRoleOptions = (t: T) =>
+  INVITE_ROLES.map(role => ({
+    key: role,
+    icon: ROLE_PERMISSIONS[role].icon,
+    label: t(ROLE_LABEL_KEYS[role]),
+  }));
 
 type StatusVariant = 'active' | 'pending' | 'declined' | 'expired';
 
@@ -118,6 +129,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
 }) => {
   const { t } = useTranslation();
   const formatStatus = getFormatStatus(t);
+  const roleOptions = buildRoleOptions(t);
   const { goBack } = useNavigation();
   const { toHomeDetail } = useAppNavigation();
   const { listId } = route.params;
@@ -542,7 +554,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
                   {t('shoppingListScreens.role')}
                 </Text>
                 <ChipScrollRow
-                  options={ROLE_OPTIONS}
+                  options={roleOptions}
                   selected={selectedRole}
                   onSelect={setSelectedRole}
                   size="md"

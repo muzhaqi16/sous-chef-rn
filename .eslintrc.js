@@ -54,6 +54,26 @@ module.exports = {
       env: { node: true },
       globals: { __DEV__: 'readonly', globalThis: 'readonly' },
     },
+    {
+      // Justified exceptions to the BottomSheetModal-import restriction:
+      // - useStandardBottomSheet.tsx is the canonical re-export site
+      //   (aliases gorhom's component as GorhomBottomSheetModal and wraps
+      //    it with `withUnistyles` for theme reactivity).
+      // - useBottomSheetBackHandler.ts is imported BY the hook, so it
+      //   can't import from the hook (circular). Type-only usage.
+      // - ActionTray.tsx is intentionally a different-shape sheet that
+      //   manages its own backdrop via `useBackdropClaim` and doesn't
+      //   use useStandardBottomSheet. Renders gorhom's BottomSheetModal
+      //   directly.
+      files: [
+        'src/hooks/useStandardBottomSheet.tsx',
+        'src/hooks/useBottomSheetBackHandler.ts',
+        'src/components/templates/ActionTray/ActionTray.tsx',
+      ],
+      rules: {
+        'no-restricted-imports': 'off',
+      },
+    },
   ],
   rules: {
     // Prevent barrel file imports for better tree shaking
@@ -91,6 +111,12 @@ module.exports = {
             importNames: ['useMemo', 'useCallback'],
             message:
               'useMemo/useCallback are unnecessary — the React Compiler handles memoization automatically.',
+          },
+          {
+            name: '@gorhom/bottom-sheet',
+            importNames: ['BottomSheetModal'],
+            message:
+              "Import BottomSheetModal from '#hooks/useStandardBottomSheet' instead. That re-export is theme-wrapped and composes the global backdrop claim via modalProps.onChange — importing from @gorhom/bottom-sheet directly bypasses both. For type-only usage, import { BottomSheetModalRef } from '#hooks/useStandardBottomSheet'.",
           },
         ],
         patterns: [
@@ -378,6 +404,12 @@ module.exports = {
           'ArrayExpression > MemberExpression[object.name="styles"] ~ MemberExpression[object.name="styles"]',
         message:
           "Avoid combining multiple `styles.*` on the same element — Unistyles v3 proxies break when spread by reanimated's StyleSheet.flatten(). Use `styles.useVariants()` instead.",
+      },
+      {
+        selector:
+          "JSXSpreadAttribute[argument.name='modalProps'] ~ JSXAttribute[name.name='onChange']",
+        message:
+          "Do not override `onChange` after `{...modalProps}` — useStandardBottomSheet composes the global backdrop claim onto this callback. Overriding here silently breaks the dim layer. Forward via the hook's options API: `useStandardBottomSheet({ ..., onChange: handler })`. (Other props like `snapPoints`, `keyboardBlurBehavior`, `onDismiss` can be overridden safely.)",
       },
       {
         selector:

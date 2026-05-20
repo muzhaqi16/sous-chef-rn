@@ -6,30 +6,59 @@ import React, {
   useState,
 } from 'react';
 import Animated, {
-  useSharedValue,
+  cancelAnimation,
+  makeMutable,
   useAnimatedStyle,
+  useDerivedValue,
   withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 import { StyleSheet } from 'react-native-unistyles';
 import { SHEET } from '#constants/animations';
 import { Pressable } from '#components/atoms/themedComponents';
-import { navigationRef } from '#services/NavigationService';
 
 export interface BackdropClaimOptions {
-  opacity?: number;
+  /** Either a fixed target opacity (provider creates an internal SV and
+   *  animates 0 → target on claim, target → 0 on release via withTiming),
+   *  OR a SharedValue<number> the contributor drives externally (e.g. a
+   *  `useDerivedValue` interpolated from a bottom sheet's `animatedIndex`).
+   *
+   *  The SV path keeps the backdrop in lockstep with the sheet's motion
+   *  on the UI thread — same pattern as gorhom's built-in BottomSheetBackdrop.
+   *  In the SV path, release removes the slot immediately (the contributor's
+   *  SV is already at 0 by the time release is called: gorhom fires
+   *  `onChange(-1)` after the sheet hits its closed snap point, and
+   *  release is wired off that event). */
+  opacity?: number | SharedValue<number>;
+  onPress?: () => void;
+}
+
+interface SlotEntry {
+  id: string;
+  /** The opacity SharedValue this slot contributes. `ownedByProvider: true`
+   *  → created by `claim()` via `makeMutable`, animated via withTiming on
+   *  claim and release. `ownedByProvider: false` → contributor-supplied
+   *  (e.g. a useDerivedValue from a sheet's animatedIndex). */
+  sv: SharedValue<number>;
+  ownedByProvider: boolean;
   onPress?: () => void;
 }
 
 interface OverlayBackdropContextType {
+  /** Imperative claim — provider creates an internal SharedValue, animates
+   *  it from 0 → `opacity` immediately, returns an id. Pair with `release()`. */
   claim: (opts?: BackdropClaimOptions) => string;
+  /** Release a claim by id. The provider animates its SharedValue to 0 over
+   *  `BACKDROP_FADE_OUT` and removes the slot when the timing completes.
+   *  Calling with an unknown id (e.g., double-release) is a safe no-op. */
   release: (id: string) => void;
 }
 
 interface OverlayBackdropInternalContextType {
   opacity: SharedValue<number>;
   isVisible: boolean;
-  onPressRef: React.RefObject<(() => void) | null>;
+  onPress: (() => void) | null;
 }
 
 const OverlayBackdropContext = createContext<OverlayBackdropContextType | null>(
@@ -48,20 +77,45 @@ export const useOverlayBackdrop = (): OverlayBackdropContextType => {
   return context;
 };
 
+// No-op fallback returned by `useOverlayBackdropOptional` when no provider
+// is mounted. The `claim` returns an empty-string id so a paired `release`
+// is a harmless no-op via `slotsRef.find`'s undefined branch (no real claim
+// to find). Defined at module scope so identity is stable across calls.
+const NOOP_BACKDROP: OverlayBackdropContextType = {
+  claim: () => '',
+  release: () => {},
+};
+
 /**
- * Declarative backdrop claim. While `active` is true, the overlay is
- * painted; unmounting the consumer (for any reason — conditional render,
- * screen unmount, parent re-render) releases the claim via useEffect
- * cleanup. There is no manual decrement to leak.
+ * Like `useOverlayBackdrop` but returns a no-op fallback when no provider
+ * is mounted, instead of throwing. Use this from cross-cutting hooks
+ * (e.g. `useStandardBottomSheet`) that may be rendered in unit-test trees
+ * without an `OverlayBackdropProvider` wrapper. Real app code always
+ * mounts the provider at App root, so the fallback is only exercised by
+ * tests.
+ */
+export const useOverlayBackdropOptional = (): OverlayBackdropContextType => {
+  return useContext(OverlayBackdropContext) ?? NOOP_BACKDROP;
+};
+
+/**
+ * Declarative backdrop claim. While `active` is true, the overlay is painted;
+ * unmounting the consumer (for any reason — conditional render, screen
+ * unmount, parent re-render) releases the claim via useEffect cleanup. There
+ * is no manual decrement to leak.
  *
- * onPress is wrapped in a stable closure so updates to the prop don't
- * release/re-claim. opacity is captured at claim-time.
+ * `onPress` is wrapped in a stable closure so updates to the prop don't
+ * release/re-claim. `opacity` is captured at claim-time.
  */
 export function useBackdropClaim(
   active: boolean,
   opts?: BackdropClaimOptions,
 ): void {
-  const { claim, release } = useOverlayBackdrop();
+  // Use the optional variant so cross-cutting consumers (e.g. sheets
+  // rendered in unit-test trees without an `OverlayBackdropProvider`
+  // wrapper) silently no-op instead of throwing. Real app code mounts
+  // the provider at App root, so the fallback is only exercised by tests.
+  const { claim, release } = useOverlayBackdropOptional();
   const onPressRef = useRef(opts?.onPress);
   useEffect(() => {
     onPressRef.current = opts?.onPress;
@@ -84,92 +138,149 @@ interface OverlayBackdropProviderProps {
 
 interface BackdropHandlers {
   publicValue: OverlayBackdropContextType;
-  onNavigationState: () => void;
 }
 
 /**
- * Tracks backdrop "claims" in a Map keyed by id. Visibility, opacity, and
- * the active onPress are derived from the registry whenever it changes.
- * The registry lives in a ref so claim/release don't re-render the
- * provider tree — only the `isVisible` flag (used to gate pointerEvents
- * on the paint surface) is React state.
+ * Tracks backdrop claims — each is a provider-owned SharedValue<number>
+ * representing one consumer's opacity contribution. The global opacity is a
+ * `useDerivedValue` reading the max across all claim SVs; `isVisible` (which
+ * gates pointerEvents) derives from claim count.
+ *
+ * All claim SVs are owned by the provider and animated via `withTiming` on
+ * claim and release, so the provider has full control over the SV's
+ * lifetime. No external contributor can keep writing to a slot SV after the
+ * slot has been logically removed — that race vector (which produced stuck
+ * overlays after sheet dismiss / barcode round trip) is structurally gone.
+ *
+ * Sheet backdrops claim/release imperatively from
+ * `useStandardBottomSheet` via gorhom's `onChange(index)` callback (see that
+ * file). `ActionTray` and any other static overlays use `useBackdropClaim`.
+ *
+ * There is intentionally no `navigationRef.addListener('state', …)` safety
+ * net. The old listener wiped all slots on every navigation state change,
+ * which broke the AddToPantrySheet → BarcodeStack → back flow: the slot
+ * was released when the user pushed into Barcode, the sheet stayed at
+ * index 0 (gorhom never fired `onChange(-1)`), and on return the sheet was
+ * visible with no dim layer because the hook's `slotIdRef.current` was
+ * still held. With imperative `onChange`-driven claim/release plus the
+ * hook's defensive unmount cleanup, every claim has a guaranteed release
+ * path and the listener becomes net-negative.
  */
 export const OverlayBackdropProvider: React.FC<
   OverlayBackdropProviderProps
 > = ({ children }) => {
-  const opacity = useSharedValue(0);
-  const claimsRef = useRef<Map<string, BackdropClaimOptions>>(new Map());
-  const nextIdRef = useRef(0);
-  const onPressRef = useRef<(() => void) | null>(null);
-  const [isVisible, setIsVisible] = useState(false);
-
-  // All handlers are defined once via useState lazy init. They close over
-  // only stable inputs (ref objects, useState's stable setter, useSharedValue's
-  // stable instance), so first-render instances behave identically to any
-  // later render's would. Stable identity → consumer useEffect deps don't
-  // churn on provider re-renders.
-  const [{ publicValue, onNavigationState }] = useState<BackdropHandlers>(
-    () => {
-      const recompute = () => {
-        const claims = Array.from(claimsRef.current.values());
-        const isActive = claims.length > 0;
-        const target = isActive
-          ? Math.max(...claims.map(c => c.opacity ?? 0.5))
-          : 0;
-        onPressRef.current = isActive
-          ? claims[claims.length - 1].onPress ?? null
-          : null;
-        setIsVisible(isActive);
-        opacity.set(
-          withTiming(target, {
-            duration: isActive
-              ? SHEET.BACKDROP_FADE_IN
-              : SHEET.BACKDROP_FADE_OUT,
-          }),
-        );
-      };
-
-      const claim = (opts?: BackdropClaimOptions): string => {
-        const id = String(nextIdRef.current);
-        nextIdRef.current += 1;
-        claimsRef.current.set(id, opts ?? {});
-        recompute();
-        return id;
-      };
-
-      const release = (id: string): void => {
-        if (!claimsRef.current.delete(id)) return;
-        recompute();
-      };
-
-      return {
-        publicValue: { claim, release },
-        onNavigationState: () => {
-          if (claimsRef.current.size === 0) return;
-          claimsRef.current.clear();
-          recompute();
-        },
-      };
-    },
-  );
-
-  // Defense in depth: react-native-screens v4 freezes blurred screens via
-  // <Activity mode="hidden">, which defers effect cleanups for the duration
-  // of the visit. A consumer mounted on a screen the user has navigated
-  // away from could keep its claim alive past its perceptual lifetime.
-  // Wiping claims on every navigation state change ties the backdrop's
-  // invariant to "what the active route's tree currently wants" — anything
-  // still legitimately wanting it re-claims via its own effect on the next
-  // render of the now-focused screen.
+  const [slots, setSlots] = useState<readonly SlotEntry[]>([]);
+  const slotsRef = useRef<readonly SlotEntry[]>(slots);
   useEffect(() => {
-    const unsub = navigationRef.addListener('state', onNavigationState);
-    return unsub;
-  }, [onNavigationState]);
+    slotsRef.current = slots;
+  });
+  const nextIdRef = useRef(0);
+
+  // pointerEvents tracks claim presence (not opacity value) so taps are
+  // blocked through the entire fade-in/fade-out window.
+  const isVisible = slots.length > 0;
+
+  // Latest claim's onPress is the active backdrop handler. Derived inline
+  // each provider render — no ref needed because the context's
+  // `internalValue` is rebuilt every render anyway (so a ref wouldn't save
+  // any consumer re-renders).
+  const onPress =
+    slots.length > 0 ? slots[slots.length - 1].onPress ?? null : null;
+
+  // Global opacity = max of all claim SharedValues. Re-registered when
+  // `slots` identity changes (add/remove); Reanimated auto-tracks each
+  // `.value` read inside the worklet as a dep so it re-runs whenever any
+  // contributing SV changes — including external SVs (e.g. a sheet's
+  // animatedIndex-interpolated opacity), which is how the backdrop stays
+  // in lockstep with the sheet's motion on the UI thread.
+  const opacity = useDerivedValue(() => {
+    let max = 0;
+    for (const entry of slots) {
+      const v = entry.sv.value;
+      if (v > max) max = v;
+    }
+    return max;
+  }, [slots]);
+
+  const [{ publicValue }] = useState<BackdropHandlers>(() => {
+    const removeSlot = (id: string): void => {
+      // Cancel any in-flight animation on a provider-owned SV before
+      // dropping it (per Reanimated docs — `makeMutable` SVs persist
+      // unless cancelled). External SVs are driven by the contributor;
+      // we don't own their animation lifecycle, so don't touch them.
+      const entry = slotsRef.current.find(e => e.id === id);
+      if (entry?.ownedByProvider) cancelAnimation(entry.sv);
+      setSlots(prev =>
+        prev.some(e => e.id === id) ? prev.filter(e => e.id !== id) : prev,
+      );
+    };
+
+    const claim = (opts?: BackdropClaimOptions): string => {
+      const id = String(nextIdRef.current);
+      nextIdRef.current += 1;
+
+      // External SV path: contributor drives the value (typically a
+      // useDerivedValue interpolated from a sheet's animatedIndex). Use
+      // it directly — no withTiming, no provider-side animation.
+      if (opts?.opacity !== undefined && typeof opts.opacity !== 'number') {
+        const entry: SlotEntry = {
+          id,
+          sv: opts.opacity,
+          ownedByProvider: false,
+          onPress: opts.onPress,
+        };
+        setSlots(prev => [...prev, entry]);
+        return id;
+      }
+
+      // Static path: provider creates an internal SV and animates 0 →
+      // target via withTiming. Used by ActionTray and any other consumer
+      // that doesn't have its own opacity source.
+      const target = (opts?.opacity as number | undefined) ?? 0.5;
+      const sv = makeMutable(0);
+      sv.set(withTiming(target, { duration: SHEET.BACKDROP_FADE_IN }));
+      const entry: SlotEntry = {
+        id,
+        sv,
+        ownedByProvider: true,
+        onPress: opts?.onPress,
+      };
+      setSlots(prev => [...prev, entry]);
+      return id;
+    };
+
+    const release = (id: string): void => {
+      const entry = slotsRef.current.find(e => e.id === id);
+      if (!entry) return;
+
+      if (!entry.ownedByProvider) {
+        // External SV: contributor (the sheet) has already animated the
+        // value to 0 — `release` is called from `onChange(-1)` which
+        // gorhom fires AFTER animatedIndex hits the closed position, so
+        // the interpolated opacity is at 0. Remove immediately.
+        removeSlot(id);
+        return;
+      }
+
+      // Provider-owned: animate to 0, then drop the slot when the timing
+      // finishes. If interrupted (e.g. a new claim arrives mid-fade),
+      // the callback still fires; the `.some` guard in removeSlot makes
+      // that a no-op.
+      entry.sv.set(
+        withTiming(0, { duration: SHEET.BACKDROP_FADE_OUT }, () => {
+          'worklet';
+          scheduleOnRN(removeSlot, id);
+        }),
+      );
+    };
+
+    return { publicValue: { claim, release } };
+  });
 
   const internalValue: OverlayBackdropInternalContextType = {
     opacity,
     isVisible,
-    onPressRef,
+    onPress,
   };
 
   return (
@@ -189,10 +300,10 @@ export const GlobalBackdrop: React.FC = () => {
   const internal = useContext(OverlayBackdropInternalContext);
   const opacity = internal?.opacity;
   const isVisible = internal?.isVisible ?? false;
-  const onPressRef = internal?.onPressRef;
+  const onPress = internal?.onPress;
 
   const handlePress = () => {
-    onPressRef?.current?.();
+    onPress?.();
   };
 
   const animatedStyle = useAnimatedStyle(() => ({

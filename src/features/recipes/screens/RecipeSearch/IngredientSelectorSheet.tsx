@@ -41,19 +41,10 @@ export const IngredientSelectorSheet = forwardRef<
   const BottomSheetScrollable = useBottomSheetScrollableCreator();
   const ingredientSearchBarRef = useRef<BottomSheetSearchBarRef>(null);
 
-  const { ref: sheetRef, modalProps } = useStandardBottomSheet({
-    onDismiss: () => {
-      onSheetChange(false);
-    },
-    snapPoints: ['50%', '75%', '90%'],
-    keyboardAware: true,
-  });
-
-  useImperativeHandle(ref, () => ({
-    present: () => sheetRef.current?.present(),
-    dismiss: () => sheetRef.current?.dismiss(),
-  }));
-
+  // Forward `onChange` through the hook so it composes with the backdrop
+  // claim handler. Setting `onChange` directly on `<BottomSheetModal>`
+  // below would overwrite the composition and silently break the dim
+  // layer.
   const handleSheetChange = (index: number) => {
     onSheetChange(index >= 0);
     if (index >= 0) {
@@ -62,18 +53,27 @@ export const IngredientSelectorSheet = forwardRef<
     }
   };
 
+  const { ref: sheetRef, modalProps } = useStandardBottomSheet({
+    onDismiss: () => {
+      onSheetChange(false);
+    },
+    snapPoints: ['50%', '75%', '90%'],
+    keyboardAware: true,
+    onChange: index => handleSheetChange(index),
+  });
+
+  useImperativeHandle(ref, () => ({
+    present: () => sheetRef.current?.present(),
+    dismiss: () => sheetRef.current?.dismiss(),
+  }));
+
   const handleSearchAndClose = async () => {
     sheetRef.current?.close();
     await screen.handleIngredientSearch();
   };
 
   return (
-    <BottomSheetModal
-      ref={sheetRef}
-      {...modalProps}
-      index={0}
-      onChange={handleSheetChange}
-    >
+    <BottomSheetModal ref={sheetRef} {...modalProps} index={0}>
       {/* Non-scrollable header */}
       <View style={styles.header}>
         <View style={styles.headerRow}>

@@ -25,6 +25,7 @@ mutation BarcodeAddItemToShoppingList($input: CreateShoppingListItemInput!) {
     message
     code
     shoppingListItem {
+      id
       ...SearchResults_shoppingListItem
     }
   }
@@ -36,6 +37,7 @@ mutation BarcodeCreatePantryItem($input: CreatePantryItemInput!) {
     message
     code
     pantryItem {
+      id
       ...SearchResults_pantryItem
     }
   }

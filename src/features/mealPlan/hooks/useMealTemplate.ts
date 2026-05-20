@@ -20,13 +20,14 @@ export function useMealTemplate(templateId: string | undefined) {
   const template = data?.mealTemplate ?? null;
 
   // Items arrive as masked refs — materialize so the grouping logic can read
-  // `dayOffset` without bumping into `$fragmentRefs`.
+  // `dayOffset` without bumping into `$fragmentRefs`. Use the cache-key form;
+  // the masked-ref `from` silently returns partial/null data under dataMasking.
   const items: MealTemplateItemFragment[] = (template?.items ?? [])
     .map(ref =>
       client.cache.readFragment<MealTemplateItemFragment>({
         fragment: MealTemplateItemFragmentDoc,
         fragmentName: 'MealTemplateItemFragment',
-        from: ref,
+        from: { __typename: 'MealTemplateItem', id: ref.id },
       }),
     )
     .filter((i): i is MealTemplateItemFragment => i !== null);

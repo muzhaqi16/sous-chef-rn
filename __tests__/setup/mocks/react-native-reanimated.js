@@ -36,6 +36,7 @@ jest.mock('react-native-reanimated', () => {
       FlatList: require('react-native').FlatList,
     },
     useSharedValue: jest.fn(mockSharedValue),
+    makeMutable: jest.fn(mockSharedValue),
     useAnimatedStyle: jest.fn(() => ({})),
     useAnimatedProps: jest.fn(() => ({})),
     useDerivedValue: jest.fn(fn => mockSharedValue(fn())),
@@ -44,7 +45,14 @@ jest.mock('react-native-reanimated', () => {
     useAnimatedRef: jest.fn(() => ({ current: null })),
     useAnimatedReaction: jest.fn(),
     useReducedMotion: jest.fn(() => false),
-    withTiming: jest.fn(toValue => toValue),
+    withTiming: jest.fn((toValue, _config, callback) => {
+      // Mirror real Reanimated semantics enough for tests: when a completion
+      // callback is provided, invoke it synchronously as if the animation had
+      // finished. Without this, code that waits for the callback (e.g.
+      // backdrop slot cleanup) would never advance.
+      if (typeof callback === 'function') callback(true);
+      return toValue;
+    }),
     withSpring: jest.fn(toValue => toValue),
     withDecay: jest.fn(config => config),
     withDelay: jest.fn((_, animation) => animation),

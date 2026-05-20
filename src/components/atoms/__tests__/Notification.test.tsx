@@ -1,6 +1,7 @@
 'use no memo';
 import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
+import { withTiming } from 'react-native-reanimated';
 import { NotificationBanner } from '../Notification';
 
 describe('NotificationBanner', () => {
@@ -11,6 +12,11 @@ describe('NotificationBanner', () => {
   beforeEach(() => {
     jest.useFakeTimers();
     jest.clearAllMocks();
+    // The global withTiming mock fires its completion callback synchronously,
+    // which would invoke the auto-dismiss handler on mount and remove the
+    // banner before any assertions run. Skip the callback so the rendered
+    // output is stable while the test inspects it.
+    (withTiming as jest.Mock).mockImplementation(toValue => toValue);
   });
 
   afterEach(() => {

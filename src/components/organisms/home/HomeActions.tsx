@@ -1,5 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Pressable } from '#components/atoms/themedComponents';
 import { Icon } from '#utils/iconUtils';
 import { StyleSheet } from 'react-native-unistyles';
@@ -24,6 +25,7 @@ export const HomeActions: React.FC<HomeActionsProps> = ({
   onInvite,
   onDelete,
 }) => {
+  const { t } = useTranslation();
   const hasVisibleActions = !isDefault || canInvite || canDelete;
   if (!hasVisibleActions) return null;
 
@@ -39,7 +41,7 @@ export const HomeActions: React.FC<HomeActionsProps> = ({
         >
           <Icon name="star-outline" size={20} tone="textSecondary" />
           <Text size="sm" tone="secondary" style={styles.actionText}>
-            Set Default
+            {t('homeManagement.cardSetDefault')}
           </Text>
         </Pressable>
       )}
@@ -54,7 +56,7 @@ export const HomeActions: React.FC<HomeActionsProps> = ({
         >
           <Icon name="person-add" size={20} tone="textSecondary" />
           <Text size="sm" tone="secondary" style={styles.actionText}>
-            Invite
+            {t('homeManagement.cardInvite')}
           </Text>
         </Pressable>
       )}
@@ -69,7 +71,7 @@ export const HomeActions: React.FC<HomeActionsProps> = ({
         >
           <Icon name="trash-outline" size={20} tone="error" />
           <Text size="sm" tone="error" style={styles.actionText}>
-            Delete
+            {t('homeManagement.cardDelete')}
           </Text>
         </Pressable>
       )}

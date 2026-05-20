@@ -405,6 +405,12 @@ reads).
 | **A — strict** | `FragmentType<typeof XDoc>` | `return null` on `!complete` | List cells (`MyRecipeCard`, `SavedRecipeCard`, `PantryItemCard`, `HomeMemberCard`) — brief blanking is OK |
 | **B — resilient fallback** | `FragmentType<typeof XDoc> \| XFragment` | Fall back to source prop | Detail panels, sheets (`PantryDetailInfo`, `MealPlanSettingsSheet`) — must render without blanking |
 
+Pass the masked ref directly as `from`. Apollo's `useFragment` runs
+`cache.identify(from)` internally (which reads only `__typename` + the
+type's key fields) so the masked ref shape
+`{ __typename, id, $fragmentRefs }` and a bare `{ __typename, id }`
+produce the same cache lookup — no manual extraction needed.
+
 Pattern B template (preferred for new sheets/detail components):
 
 ```tsx
@@ -428,6 +434,20 @@ export const Foo: React.FC<Props> = ({ itemRef, … }) => {
     : (itemRef as XFragment);
   // …direct field reads on `item`
 };
+```
+
+**Guard scalar reads** that would crash on undefined when the fallback
+fires (e.g. `parseISO(item.startDate)`, arithmetic on `item.qty`).
+`complete: false` means the cache doesn't have every field the fragment
+selects — the cast to `XFragment` lies in that case, and unguarded reads
+on the masked-ref fallback will throw. Either gate the dangerous read
+(`item.startDate && parseISO(item.startDate)`) or use Pattern A:
+
+```tsx
+const item: XFragment | null = fragmentResult.complete
+  ? fragmentResult.data
+  : null;
+if (!item) return null;
 ```
 
 Tests must wrap with `renderWithApollo` from `__tests__/helpers/apolloMockProvider`

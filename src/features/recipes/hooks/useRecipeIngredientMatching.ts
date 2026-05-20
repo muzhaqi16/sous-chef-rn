@@ -104,7 +104,7 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
         const ingredient = client.cache.readFragment<RecipeIngredientFragment>({
           fragment: RecipeIngredientFragmentDoc,
           fragmentName: 'RecipeIngredientFragment',
-          from: match.ingredient,
+          from: { __typename: 'RecipeIngredient', id: match.ingredient.id },
         });
         if (!ingredient) return null;
         return {

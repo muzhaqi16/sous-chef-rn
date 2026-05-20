@@ -1,5 +1,5 @@
 import type { RefObject } from 'react';
-import type { BottomSheetModal } from '@gorhom/bottom-sheet';
+import type { BottomSheetModalRef } from '#hooks/useStandardBottomSheet';
 import type { BottomSheetSearchBarRef } from '#components/molecules/BottomSheetSearchBar';
 import { type ItemSuggestion } from '#/graphql/generated/schemaTypes';
 
@@ -131,9 +131,6 @@ export interface AddItemSheetProps<
   onAddManually: (searchValue: string) => void;
   /** Handler for barcode scan button */
   onScanPress: () => void;
-  /** Optional: Handler for "Identify with camera" (OCR) button. When provided,
-   *  a third action card is rendered alongside Scan Barcode / Add Manually. */
-  onIdentifyPress?: () => void;
   /** Optional: Items currently animating out (for exit animations) */
   exitingItems?: Set<string>;
   /** Optional: Callback when exit animation completes */
@@ -143,7 +140,7 @@ export interface AddItemSheetProps<
   /** Optional: Initial search query */
   initialSearchQuery?: string;
   /** Optional: Refs for external control */
-  bottomSheetRef?: RefObject<BottomSheetModal>;
+  bottomSheetRef?: RefObject<BottomSheetModalRef>;
   searchBarRef?: RefObject<BottomSheetSearchBarRef>;
   /** Optional: When false, hide product images in suggestions (default: true) */
   showImages?: boolean;

@@ -93,7 +93,7 @@ export function useNotificationsOnLaunch(userId?: string) {
           {
             fragment: UseNotificationsOnLaunch_NotificationFragmentDoc,
             fragmentName: 'useNotificationsOnLaunch_notification',
-            from: edge.node,
+            from: { __typename: 'Notification', id: edge.node.id },
           },
         ),
       )

@@ -66,13 +66,13 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
       const maskedPantryItem = data?.createPantryItem?.pantryItem;
       if (maskedPantryItem && pantryId) {
         // Materialize the masked fragment ref so the cache updater can read
-        // `id`. With dataMasking enabled, fragment spreads return a masked
-        // shape that doesn't expose fragment fields directly.
+        // `id`. Use the cache-key form — passing the masked ref directly
+        // silently returns partial/null data under dataMasking.
         const pantryItem = cache.readFragment<SearchResults_PantryItemFragment>(
           {
             fragment: SearchResults_PantryItemFragmentDoc,
             fragmentName: 'SearchResults_pantryItem',
-            from: maskedPantryItem,
+            from: { __typename: 'PantryItem', id: maskedPantryItem.id },
           },
         );
         if (pantryItem) {
@@ -94,7 +94,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
             cache.readFragment<SearchResults_ShoppingListItemFragment>({
               fragment: SearchResults_ShoppingListItemFragmentDoc,
               fragmentName: 'SearchResults_shoppingListItem',
-              from: maskedItem,
+              from: { __typename: 'ShoppingListItem', id: maskedItem.id },
             });
           if (shoppingListItem) {
             addNewItemToShoppingListCache(

@@ -94,9 +94,7 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
     );
   };
 
-  // Use myMembership for reliable current user membership (not affected by connection limits)
   const currentUserMembership = home?.myMembership;
-
   const isOwner = currentUserMembership?.role === 'OWNER';
   const canManage = currentUserMembership?.canManageHome ?? false;
 
@@ -106,8 +104,8 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
     // Check if user is owner
     if (isOwner) {
       alertService.alert(
-        'Cannot Leave',
-        'Owners cannot leave the home. Please transfer ownership to another member or delete the home.',
+        t('homeDetail.ownerCannotLeaveTitle'),
+        t('homeDetail.ownerCannotLeaveMessage'),
         [{ text: t('labels.ok') }],
       );
       return;
@@ -121,14 +119,14 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
 
   if (loading || !home) {
     const getMessage = () => {
-      if (loading) return 'Loading';
-      if (error) return 'Failed to load home details';
-      return 'Home not found';
+      if (loading) return t('homeDetail.loadingMessage');
+      if (error) return t('homeDetail.errorFailedToLoad');
+      return t('homeDetail.errorHomeNotFound');
     };
 
     return (
       <DetailTemplate
-        title="Home Details"
+        title={t('homeDetail.title')}
         onBack={goBack}
         headerActions={[]}
         sections={[
@@ -176,26 +174,26 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
 
   const sections = [
     {
-      title: 'Home Information',
+      title: t('homeDetail.sectionHomeInformation'),
       content: (
         <>
           <EditableField
-            label="Home Name"
+            label={t('homeDetail.labelHomeName')}
             value={home.name ?? ''}
             onSave={saveName}
-            placeholder="Enter home name"
+            placeholder={t('homeDetail.placeholderHomeName')}
             readOnly={!canManage}
             validation={value => {
               if (!value.trim()) {
-                return 'Home name cannot be empty';
+                return t('homeDetail.homeNameEmptyError');
               }
               return null;
             }}
           />
           {canManage ? (
             <SettingSwitch
-              title="Allow Join Code"
-              description="Let others join this home using a code"
+              title={t('homeDetail.labelAllowJoinCode')}
+              description={t('homeDetail.descriptionAllowJoinCode')}
               value={home.allowJoinCode ?? false}
               onValueChange={handleToggleJoinCode}
               disabled={joinCodeLoading}
@@ -207,7 +205,7 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
             <View style={styles.joinCodeRow}>
               <View style={styles.joinCodeContent}>
                 <Text size="sm" tone="secondary" style={styles.joinCodeLabel}>
-                  Join Code
+                  {t('homeDetail.labelJoinCode')}
                 </Text>
                 <Text size="lg" weight="semibold" style={styles.joinCodeValue}>
                   {home.joinCode}
@@ -232,7 +230,7 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
       ),
     },
     {
-      title: 'Members & Invites',
+      title: t('homeDetail.sectionMembersInvites'),
       content: (
         <HomeMembersSection
           members={memberNodes}
@@ -244,7 +242,7 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
             return {
               isCurrentUser,
               displayName: isCurrentUser
-                ? 'You'
+                ? t('homeDetail.youLabel')
                 : getMemberDisplayName(
                     {
                       id: member.id,
@@ -265,12 +263,12 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
       ),
     },
     {
-      title: 'Storage',
+      title: t('homeDetail.sectionStorage'),
       content: (
         <ThemedNavigationRow
           icon="folder-open"
-          title="Storage Locations"
-          subtitle="Manage where items are stored"
+          title={t('homeDetail.storageLocationsTitle')}
+          subtitle={t('homeDetail.storageLocationsSubtitle')}
           onPress={() => toStorageLocations({ homeId })}
         />
       ),
@@ -279,7 +277,7 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
     ...(!isOwner
       ? [
           {
-            title: 'Danger Zone',
+            title: t('homeDetail.sectionDangerZone'),
             content: (
               <View style={styles.leaveHomeSection}>
                 <Text
@@ -287,11 +285,10 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
                   tone="secondary"
                   style={styles.leaveHomeDescription}
                 >
-                  Leaving this home will remove your access to all shared
-                  pantries, shopping lists, meal plans, and templates.
+                  {t('homeDetail.leaveHomeDescription')}
                 </Text>
                 <Button
-                  title="Leave Home"
+                  title={t('homeDetail.leaveHomeButton')}
                   onPress={handleLeaveHome}
                   variant="danger"
                   loading={leaving}
@@ -307,7 +304,7 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
   return (
     <>
       <DetailTemplate
-        title="Home Details"
+        title={t('homeDetail.title')}
         onBack={goBack}
         headerActions={[]}
         sections={sections}
@@ -316,7 +313,7 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
       />
       <ModalPicker
         visible={rolePickerState.visible}
-        label="Select Role"
+        label={t('homeDetail.selectRoleLabel')}
         options={ROLE_OPTIONS}
         selected={rolePickerState.currentRole}
         onSelect={handleRoleSelect}

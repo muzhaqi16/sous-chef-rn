@@ -233,31 +233,6 @@ export function useAppNavigation() {
     // ─── Barcode modal flow (nested) ──────────────────────────────────────
     toBarcode: (params?: BarcodeStackParams['BarcodeScanner']) =>
       navigation.navigate('Barcode', { screen: 'BarcodeScanner', params }),
-    toIdentifyItem: (params?: BarcodeStackParams['IdentifyItem']) =>
-      navigation.navigate('Barcode', { screen: 'IdentifyItem', params }),
-    toIdentifiedItemForm: (params: BarcodeStackParams['IdentifiedItemForm']) =>
-      navigation.navigate('Barcode', {
-        screen: 'IdentifiedItemForm',
-        params,
-      }),
-    /**
-     * Pop back to an in-progress IdentifiedItemForm with only the scanned UPC,
-     * preserving the form's existing input via react-navigation's param merge.
-     * The form must already be mounted; its required `name` is preserved
-     * from the prior screen's params.
-     */
-    mergeIdentifiedItemFormUpc: (upc: string) =>
-      navigation.dispatch({
-        type: 'NAVIGATE',
-        payload: {
-          name: 'Barcode',
-          params: {
-            screen: 'IdentifiedItemForm',
-            params: { upc },
-            merge: true,
-          },
-        },
-      }),
     toSearchResults: (params: BarcodeStackParams['SearchResults']) =>
       navigation.navigate('Barcode', { screen: 'SearchResults', params }),
   };

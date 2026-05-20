@@ -3,6 +3,7 @@ import {
   type MembershipRole,
   type MembershipStatus,
 } from '#/graphql/generated/schemaTypes';
+import { t } from '#/i18n/t';
 
 /**
  * Loose `Membership` shape used by home-membership UI helpers.
@@ -55,7 +56,7 @@ export function getMemberDisplayName(
   currentUserId?: string,
 ): string {
   if (currentUserId && member.user?.id === currentUserId) {
-    return 'You';
+    return t('homeDetail.youLabel');
   }
 
   return (
@@ -97,7 +98,7 @@ export function getCollaboratorDisplayName(
   currentUserId?: string,
 ): string {
   if (currentUserId && collaborator.collaboratorId === currentUserId) {
-    return 'You';
+    return t('homeDetail.youLabel');
   }
 
   const email = collaborator.collaborator?.email ?? collaborator.email ?? null;

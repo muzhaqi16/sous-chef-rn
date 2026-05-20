@@ -775,6 +775,7 @@ subscription PantryChanges($pantryId: ID!) {
       updatedAt
     }
     pantryItem {
+      id
       ...usePantrySubscriptions_pantryItem
     }
     usage {

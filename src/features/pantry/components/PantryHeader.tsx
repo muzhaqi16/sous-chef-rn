@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { View } from 'react-native';
-import { Trans, useTranslation } from 'react-i18next';
+import { useTranslation } from 'react-i18next';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
@@ -28,6 +28,10 @@ const greetingNameStyles = StyleSheet.create(theme => ({
 // Matches theme.typography.fontSize.lg (18). Inlined so the component does not
 // need useUnistyles — the theme value is module-static.
 const ICON_SIZE_LG = 18;
+
+// Sentinel used to split a translated greeting around the user's name without
+// false matches if the name itself appears in the surrounding text.
+const GREETING_NAME_TOKEN = 'NAME';
 
 interface PantryHeaderProps {
   /** User's display name */
@@ -74,15 +78,19 @@ export const PantryHeader: React.FC<PantryHeaderProps> = ({
   const { t } = useTranslation();
   const badgeRef = useRef<View>(null);
 
+  const greetingTemplate = t('pantryHeader.greeting', {
+    name: GREETING_NAME_TOKEN,
+  });
+  const [greetingBefore, greetingAfter] =
+    greetingTemplate.split(GREETING_NAME_TOKEN);
+
   return (
     <View style={styles.greetingRow}>
       <View style={styles.greetingContent}>
         <Text weight="bold" style={styles.greeting}>
-          <Trans
-            i18nKey="pantryHeader.greeting"
-            values={{ name: userName }}
-            components={{ name: <GreetingName name={userName} /> }}
-          />
+          {greetingBefore ?? ''}
+          <GreetingName name={userName} />
+          {greetingAfter ?? ''}
         </Text>
         <Pressable onPress={onHomePress} style={styles.householdBadge}>
           <View

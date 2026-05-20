@@ -72,8 +72,8 @@ export const HomeMembersSection: React.FC<HomeMembersSectionProps> = ({
         })
       ) : (
         <View style={styles.emptyContainer}>
-          <Icon name="people-outline" size={48} tone="textSecondary" />
-          <Text size="md" tone="secondary" style={styles.emptyText}>
+          <Icon name="people-outline" size={24} tone="textSecondary" />
+          <Text size="sm" tone="secondary" style={styles.emptyText}>
             No members
           </Text>
         </View>
@@ -107,13 +107,13 @@ export const HomeMembersSection: React.FC<HomeMembersSectionProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   emptyContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: theme.spacing.xl * 2,
+    paddingVertical: theme.spacing.md,
+    gap: theme.spacing.sm,
   },
-  emptyText: {
-    marginTop: theme.spacing.md,
-  },
+  emptyText: {},
   invitesSection: {
     marginTop: theme.spacing.lg,
     paddingTop: theme.spacing.md,

@@ -12,14 +12,6 @@ jest.mock('#hooks/useSharedBottomSheetConfigs', () => ({
   useSharedBottomSheetConfigs: () => ({ damping: 80, stiffness: 500 }),
 }));
 
-jest.mock('#components/atoms/GlobalBottomSheetBackdrop', () => {
-  const RN = require('react-native');
-  return {
-    GlobalBottomSheetBackdrop: (props: any) =>
-      require('react').createElement(RN.View, { testID: 'backdrop', ...props }),
-  };
-});
-
 jest.mock('#components/molecules/FormInput', () => {
   const RN = require('react-native');
   const R = require('react');

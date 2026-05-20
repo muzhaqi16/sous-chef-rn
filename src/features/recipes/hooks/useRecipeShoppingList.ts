@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useMutation, useQuery } from '@apollo/client/react';
-import { BottomSheetModal } from '@gorhom/bottom-sheet';
+import type { BottomSheetModalRef } from '#hooks/useStandardBottomSheet';
 import {
   CreateShoppingListItemsFromRecipeDocument,
   CreateShoppingListItemFromRecipeIngredientDocument,
@@ -83,9 +83,9 @@ export function useRecipeShoppingList({
 
   // Sheet refs and visibility state. Per CLAUDE.md, control visibility via
   // state + effect (never call present()/dismiss() directly from event handlers).
-  const shoppingListOptionsRef = useRef<BottomSheetModal>(null);
-  const ingredientSelectorRef = useRef<BottomSheetModal>(null);
-  const listPickerRef = useRef<BottomSheetModal>(null);
+  const shoppingListOptionsRef = useRef<BottomSheetModalRef>(null);
+  const ingredientSelectorRef = useRef<BottomSheetModalRef>(null);
+  const listPickerRef = useRef<BottomSheetModalRef>(null);
   const pendingDismissActionRef = useRef<(() => void) | null>(null);
 
   const [listPickerVisible, setListPickerVisible] = useState(false);

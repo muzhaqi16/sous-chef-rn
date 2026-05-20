@@ -65,7 +65,7 @@ export function useRecipeReviews({
         apolloClient.cache.readFragment<RecipeReviewFragment>({
           fragment: RecipeReviewFragmentDoc,
           fragmentName: 'RecipeReviewFragment',
-          from: ref,
+          from: { __typename: 'RecipeReview', id: ref.id },
         }),
       )
       .filter((r): r is NonNullable<typeof r> => r !== null && r !== undefined);

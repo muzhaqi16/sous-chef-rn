@@ -8,9 +8,13 @@ import React, {
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from 'react-i18next';
-import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import {
+  BottomSheetModal,
+  type BottomSheetModalRef,
+} from '#hooks/useStandardBottomSheet';
 import { BaseSwitch } from '#components/base/BaseSwitch';
-import { DismissBackdrop } from '#components/atoms/DismissBackdrop';
+import { useBottomSheetBackdropClaim } from '#hooks/useBottomSheetBackdropClaim';
 import { ItemAutocompleteField } from '#components/molecules/AutocompleteField/ItemAutocompleteField';
 import { UnitAutocompleteField } from '#components/molecules/AutocompleteField/UnitAutocompleteField';
 import { FormInput } from '#components/molecules/FormInput';
@@ -36,7 +40,7 @@ export const RecipeIngredientEditor = forwardRef<
   RecipeIngredientEditorProps
 >(({ onSave }, ref) => {
   const { t } = useTranslation();
-  const bottomSheetRef = useRef<BottomSheetModal>(null);
+  const bottomSheetRef = useRef<BottomSheetModalRef>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [itemId, setItemId] = useState<string | null>(null);
@@ -60,6 +64,12 @@ export const RecipeIngredientEditor = forwardRef<
       bottomSheetRef.current?.dismiss();
     }
   }, [visible]);
+
+  // Backdrop integration — drives the global dim layer in lockstep with
+  // the sheet's motion. The hook owns the SharedValue plumbing; we just
+  // thread `animatedIndex` to gorhom and `onChange` to the modal below.
+  const { animatedIndex, onChange: handleSheetChange } =
+    useBottomSheetBackdropClaim(bottomSheetRef);
 
   useImperativeHandle(ref, () => ({
     open: (ingredient?: IngredientFormState) => {
@@ -133,9 +143,10 @@ export const RecipeIngredientEditor = forwardRef<
       snapPoints={['80%']}
       enableDynamicSizing={false}
       enablePanDownToClose
-      backdropComponent={DismissBackdrop}
       handleIndicatorStyle={styles.handleIndicator}
       backgroundStyle={styles.sheetBackground}
+      animatedIndex={animatedIndex}
+      onChange={handleSheetChange}
       onDismiss={() => setVisible(false)}
     >
       <Header
