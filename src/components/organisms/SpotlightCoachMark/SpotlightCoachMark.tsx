@@ -459,6 +459,14 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
   // ensures the overlay never renders when tutorials are explicitly disabled.
   if (!tutorialsEnabled) return null;
 
+  // Refuse to render with a degenerate target rect. Tutorial state machines
+  // can advance to a spotlight step before the target view has committed
+  // its layout — at that moment the rect is 0×0. The Canvas would then
+  // draw a full-screen dim with NO hole and the tooltip would be positioned
+  // at (0, 0) (off-screen / invisible), producing a "stuck dim" with no
+  // dismiss UI. Returning null until the rect is real avoids it.
+  if (targetRect.width <= 0 || targetRect.height <= 0) return null;
+
   if (allowGesturePassthrough) {
     // Wait for the overlay to measure its page offset before showing content
     // to avoid a single-frame flash at the wrong position

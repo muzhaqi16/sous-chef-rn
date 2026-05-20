@@ -9,6 +9,7 @@
 
 import { alertService } from '#/services/alertService';
 import { useMutation } from '@apollo/client/react';
+import type { Unmasked } from '@apollo/client/masking';
 import {
   RemoveItemFromShoppingListDocument,
   type RemoveItemFromShoppingListMutation,
@@ -48,7 +49,9 @@ export function useRemoveShoppingItem({
   const { createRemoveOperation } = useCrudOperations();
 
   const [removeItemMutation] = useMutation(RemoveItemFromShoppingListDocument, {
-    optimisticResponse: (variables): RemoveItemFromShoppingListMutation => ({
+    optimisticResponse: (
+      variables,
+    ): Unmasked<RemoveItemFromShoppingListMutation> => ({
       __typename: 'Mutation',
       removeItemFromShoppingList: {
         __typename: 'ShoppingListItemPayload',
@@ -58,7 +61,7 @@ export function useRemoveShoppingItem({
         shoppingListItem: {
           __typename: 'ShoppingListItem',
           id: variables.id,
-        } as RemoveItemFromShoppingListMutation['removeItemFromShoppingList']['shoppingListItem'],
+        },
       },
     }),
     update(cache, { data }, { variables }) {

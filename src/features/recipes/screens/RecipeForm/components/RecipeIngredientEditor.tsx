@@ -2,7 +2,6 @@ import React, {
   forwardRef,
   useEffect,
   useImperativeHandle,
-  useRef,
   useState,
 } from 'react';
 import { View } from 'react-native';
@@ -11,10 +10,9 @@ import { useTranslation } from 'react-i18next';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import {
   BottomSheetModal,
-  type BottomSheetModalRef,
+  useStandardBottomSheet,
 } from '#hooks/useStandardBottomSheet';
 import { BaseSwitch } from '#components/base/BaseSwitch';
-import { useBottomSheetBackdropClaim } from '#hooks/useBottomSheetBackdropClaim';
 import { ItemAutocompleteField } from '#components/molecules/AutocompleteField/ItemAutocompleteField';
 import { UnitAutocompleteField } from '#components/molecules/AutocompleteField/UnitAutocompleteField';
 import { FormInput } from '#components/molecules/FormInput';
@@ -40,7 +38,6 @@ export const RecipeIngredientEditor = forwardRef<
   RecipeIngredientEditorProps
 >(({ onSave }, ref) => {
   const { t } = useTranslation();
-  const bottomSheetRef = useRef<BottomSheetModalRef>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [itemId, setItemId] = useState<string | null>(null);
@@ -51,25 +48,30 @@ export const RecipeIngredientEditor = forwardRef<
   const [section, setSection] = useState('');
   const [notes, setNotes] = useState('');
   const [isOptional, setIsOptional] = useState(false);
+  const [visible, setVisible] = useState(false);
+
+  // Manual-presentation pattern: omit `visible` so the hook doesn't auto-
+  // present/dismiss off prop changes, then drive presentation via the
+  // effect below. `useStandardBottomSheet` still owns the back handler,
+  // animation configs, focus-aware dismiss-on-blur, theme styles, and the
+  // backdrop claim wiring.
+  const { ref: bottomSheetRef, modalProps } = useStandardBottomSheet({
+    onDismiss: () => setVisible(false),
+    snapPoints: ['80%'],
+    enableDynamicSizing: false,
+  });
 
   // Per CLAUDE.md: never call present()/dismiss() outside an effect.
   // The imperative `open` / `close` API is preserved (parents still pass a
-  // ref), but internally it sets a `visible` state and an effect dispatches
-  // the present/dismiss after render commits.
-  const [visible, setVisible] = useState(false);
+  // ref), but internally it sets `visible` and an effect dispatches the
+  // present/dismiss after render commits.
   useEffect(() => {
     if (visible) {
       bottomSheetRef.current?.present();
     } else {
       bottomSheetRef.current?.dismiss();
     }
-  }, [visible]);
-
-  // Backdrop integration — drives the global dim layer in lockstep with
-  // the sheet's motion. The hook owns the SharedValue plumbing; we just
-  // thread `animatedIndex` to gorhom and `onChange` to the modal below.
-  const { animatedIndex, onChange: handleSheetChange } =
-    useBottomSheetBackdropClaim(bottomSheetRef);
+  }, [visible, bottomSheetRef]);
 
   useImperativeHandle(ref, () => ({
     open: (ingredient?: IngredientFormState) => {
@@ -140,14 +142,9 @@ export const RecipeIngredientEditor = forwardRef<
   return (
     <BottomSheetModal
       ref={bottomSheetRef}
-      snapPoints={['80%']}
-      enableDynamicSizing={false}
-      enablePanDownToClose
+      {...modalProps}
       handleIndicatorStyle={styles.handleIndicator}
       backgroundStyle={styles.sheetBackground}
-      animatedIndex={animatedIndex}
-      onChange={handleSheetChange}
-      onDismiss={() => setVisible(false)}
     >
       <Header
         title={

@@ -134,3 +134,41 @@ describe('SpotlightCoachMark swipe-to-advance gesture', () => {
     expect(gesture.enabled).toHaveBeenCalledWith(false);
   });
 });
+
+describe('SpotlightCoachMark degenerate-rect guard', () => {
+  // Returns null when width/height is 0 — the actual repro for "stuck
+  // dim with no hole" the guard is here to prevent.
+
+  it('renders nothing when the rect has zero width', () => {
+    const { toJSON } = render(
+      <SpotlightCoachMark
+        targetRect={{ x: 100, y: 200, width: 0, height: 50 }}
+        title="X"
+        onDismiss={jest.fn()}
+      />,
+    );
+    expect(toJSON()).toBeNull();
+  });
+
+  it('renders nothing when the rect has zero height', () => {
+    const { toJSON } = render(
+      <SpotlightCoachMark
+        targetRect={{ x: 100, y: 200, width: 50, height: 0 }}
+        title="X"
+        onDismiss={jest.fn()}
+      />,
+    );
+    expect(toJSON()).toBeNull();
+  });
+
+  it('renders the overlay when the rect is valid', () => {
+    const { toJSON } = render(
+      <SpotlightCoachMark
+        targetRect={{ x: 100, y: 200, width: 50, height: 50 }}
+        title="X"
+        onDismiss={jest.fn()}
+      />,
+    );
+    expect(toJSON()).not.toBeNull();
+  });
+});

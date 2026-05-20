@@ -5,6 +5,7 @@
 import { createRemoveFromParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { createOptimisticEntity } from '#/apollo/utils/createOptimisticResponse';
 import { generateId } from '#/utils/generateId';
+import { DisplayFormat } from '#/graphql/generated/schemaTypes';
 import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 
 interface OptimisticShoppingListItemFields {
@@ -32,7 +33,7 @@ export function createOptimisticShoppingListItem(
       itemName: fields.itemName,
       quantity: fields.quantity ?? 1,
       quantityInput: fields.quantityInput ?? null,
-      displayFormat: undefined,
+      displayFormat: DisplayFormat.Auto,
       unitName: fields.unitName ?? null,
       category: fields.category ?? null,
       notes: null,

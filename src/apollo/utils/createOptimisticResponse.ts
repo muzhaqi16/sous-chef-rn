@@ -64,28 +64,30 @@ export function enhanceWithVersion<T extends VersionedEntity>(
  *
  * Useful for add/create mutations where the item doesn't exist yet.
  *
- * @template T - Entity type that extends VersionedEntity
+ * Callers MUST pass T explicitly (the fragment / mutation selection type) and
+ * supply every selected field. A previous version used `Partial<>` + `as T`,
+ * which let `displayFormat: undefined` slip past TypeScript and triggered
+ * Apollo "Missing field" warnings at runtime.
+ *
+ * @template T - Fragment / mutation selection type (must be passed explicitly)
  * @param typename - GraphQL typename (e.g., 'ShoppingListItem')
  * @param id - Entity ID (use 'temp-{uuid}' for new items)
- * @param data - Initial entity data
- * @returns Minimal entity with version 1 and current timestamp
+ * @param data - All selected fields except id/version/updatedAt/__typename
+ * @returns Entity with version 1 and current timestamp merged in
  *
  * @example
  * ```typescript
- * optimisticResponse: variables => ({
- *   __typename: 'Mutation',
- *   addItemToShoppingList: createOptimisticEntity(
- *     'ShoppingListItem',
- *     `temp-${Date.now()}`,
- *     { itemName: variables.itemName, isPurchased: false }
- *   )
- * })
+ * createOptimisticEntity<ShoppingListItemDisplayFragment>(
+ *   'ShoppingListItem',
+ *   tempId,
+ *   { itemName, quantity, displayFormat: DisplayFormat.Auto, ... },
+ * )
  * ```
  */
 export function createOptimisticEntity<T extends VersionedEntity>(
-  typename: string,
+  typename: T['__typename'],
   id: string,
-  data: Partial<Omit<T, 'id' | 'version' | 'updatedAt' | '__typename'>>,
+  data: Omit<T, 'id' | 'version' | 'updatedAt' | '__typename'>,
 ): T {
   return {
     __typename: typename,

@@ -118,6 +118,11 @@ module.exports = {
             message:
               "Import BottomSheetModal from '#hooks/useStandardBottomSheet' instead. That re-export is theme-wrapped and composes the global backdrop claim via modalProps.onChange — importing from @gorhom/bottom-sheet directly bypasses both. For type-only usage, import { BottomSheetModalRef } from '#hooks/useStandardBottomSheet'.",
           },
+          {
+            name: '#hooks/useBottomSheetBackdropClaim',
+            message:
+              'useBottomSheetBackdropClaim is an internal helper for useStandardBottomSheet. Consumers should use useStandardBottomSheet instead — it wires animatedIndex, onChange, the back handler, focus-aware dismiss-on-blur, and theme styles all together. Importing the lower-level hook directly bypasses every other affordance.',
+          },
         ],
         patterns: [
           {
@@ -407,15 +412,31 @@ module.exports = {
       },
       {
         selector:
-          "JSXSpreadAttribute[argument.name='modalProps'] ~ JSXAttribute[name.name='onChange']",
+          "JSXSpreadAttribute[argument.name='modalProps'] ~ JSXAttribute[name.name=/^(onChange|animatedIndex)$/]",
         message:
-          "Do not override `onChange` after `{...modalProps}` — useStandardBottomSheet composes the global backdrop claim onto this callback. Overriding here silently breaks the dim layer. Forward via the hook's options API: `useStandardBottomSheet({ ..., onChange: handler })`. (Other props like `snapPoints`, `keyboardBlurBehavior`, `onDismiss` can be overridden safely.)",
+          "Do not override `onChange` or `animatedIndex` after `{...modalProps}` — useStandardBottomSheet supplies both: a composed onChange (drives the global backdrop claim) and the animatedIndex SharedValue (drives backdrop opacity in lockstep with the sheet). Overriding either silently breaks the dim layer. Forward via the hook's options API: `useStandardBottomSheet({ ..., onChange: handler })`. (Other props like `snapPoints`, `keyboardBlurBehavior`, `onDismiss` can be overridden safely.)",
       },
       {
         selector:
           'CallExpression[callee.object.name="jest"][callee.property.name="mock"][arguments.0.value="@apollo/client/react"]',
         message:
           'Use renderHookWithApollo / renderWithApollo from __tests__/helpers/apolloMockProvider.tsx instead. Direct jest.mock of @apollo/client/react couples tests to operation names, bypasses the real cache, and breaks under refactors. See CLAUDE.md "Apollo Test Patterns" for the migration recipe + 7 gotchas.',
+      },
+      {
+        // Catches the hand-rolled optimisticResponse anti-pattern:
+        //   pantryItem: { __typename: 'PantryItem', id } as DeleteFooMutation['...']
+        // With dataMasking enabled, casting a partial `{ __typename, id }` literal
+        // hides that the real mutation return type expects more fields, and the
+        // partial entity gets written to cache — useFragment Pattern A consumers
+        // then resolve `complete: false` and render null, producing phantom rows
+        // until the real network response arrives. Build optimistic responses
+        // from cache (cache.readFragment + spread) and annotate the callback
+        // return type as `Unmasked<TData>` instead. See CLAUDE.md "Apollo
+        // Mutation Patterns" + "Apollo: Fragment composition + useFragment".
+        selector:
+          'Property[key.name="optimisticResponse"] TSAsExpression > ObjectExpression:has(Property[key.name="__typename"])',
+        message:
+          "Hand-rolled `{ __typename, id, ... } as TData['field']` shapes inside `optimisticResponse` write partial entities to the cache and break data-masking watchers (useFragment returns `complete: false` → phantom rows in lists). Read the current entity via `client.cache.readFragment(...)` (returning IGNORE when absent) and annotate the callback's return type as `Unmasked<TData>` so no cast is needed. See CLAUDE.md \"Apollo Mutation Patterns\" + `usePantryItemMutations.ts:updateItemMutation` for the pattern.",
       },
     ],
   },

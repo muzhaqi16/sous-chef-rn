@@ -20,6 +20,7 @@ import {
   type UpdatePantryItemMutation,
   type DeletePantryItemMutation,
 } from '#features/pantry/graphql/pantry.generated';
+import { StorageState, StorageType } from '#/graphql/generated/schemaTypes';
 import {
   UseUpdatePantryItem_PantryItemFragmentDoc,
   type UseUpdatePantryItem_PantryItemFragment,
@@ -75,43 +76,66 @@ export function usePantryItemMutations({
       });
       alertService.alert('Error', message);
     },
-    optimisticResponse: variables => {
+    optimisticResponse: (variables): Unmasked<CreatePantryItemMutation> => {
       const tempId = `temp-${generateId()}`;
       const input = variables.input;
-      const optimisticPantryItem = {
-        ...createOptimisticEntity('PantryItem', tempId, {
-          itemName: input.item?.name ?? '',
-          quantity: input.quantity ?? 1,
-          storageState: input.storage?.storageState ?? null,
-          storageLocation: input.storage?.storageLocationName ?? null,
-          storageNotes: input.storage?.storageNotes ?? null,
-          expiresAt: input.expiresAt ?? null,
-          autoReorderPoint: null,
-          pantry: {
-            __typename: 'Pantry',
-            id: pantryId || '',
-          },
-          unit: input.unit?.unitId
-            ? {
-                __typename: 'Unit',
-                id: input.unit.unitId,
-              }
-            : null,
-        }),
-        __typename: 'PantryItem',
-      };
-      const optimistic: CreatePantryItemMutation = {
+      type OptimisticPantryItem = NonNullable<
+        Unmasked<CreatePantryItemMutation>['createPantryItem']['pantryItem']
+      >;
+      return {
         __typename: 'Mutation',
         createPantryItem: {
           __typename: 'PantryItemPayload',
           success: true,
           message: '',
           code: 'SUCCESS',
-          pantryItem:
-            optimisticPantryItem as CreatePantryItemMutation['createPantryItem']['pantryItem'],
+          pantryItem: createOptimisticEntity<OptimisticPantryItem>(
+            'PantryItem',
+            tempId,
+            {
+              pantryId: pantryId ?? '',
+              itemId: input.itemId ?? '',
+              itemName: input.item?.name ?? '',
+              quantity: input.quantity ?? 1,
+              storageState: input.storage?.storageState ?? StorageState.None,
+              expiresAt: input.expiresAt ?? null,
+              lowStockAlert: false,
+              isLowStock: false,
+              minQuantity: null,
+              lastUsedAt: null,
+              netWeight: null,
+              remainingNetWeight: null,
+              activeBatchCount: 0,
+              earliestBatchExpiration: null,
+              item: {
+                __typename: 'Item',
+                id: input.itemId ?? '',
+                imageUrl: null,
+                images: [],
+              },
+              unit: input.unit?.unitId
+                ? {
+                    __typename: 'Unit',
+                    id: input.unit.unitId,
+                    name: input.unit.unitName ?? '',
+                    symbol: '',
+                  }
+                : null,
+              netWeightUnit: null,
+              storageLocation: input.storage?.storageLocationName
+                ? {
+                    __typename: 'StorageLocation',
+                    id: `temp-loc-${tempId}`,
+                    name: input.storage.storageLocationName,
+                    type: StorageType.Custom,
+                  }
+                : null,
+              packageBreakdown: null,
+              quantityBreakdown: null,
+            },
+          ),
         },
       };
-      return optimistic;
     },
     update: (cache, { data }) => {
       const pantryItem = data?.createPantryItem?.pantryItem;
@@ -188,8 +212,13 @@ export function usePantryItemMutations({
   });
 
   // REMOVE MUTATION
+  // The DeletePantryItem mutation only selects `{ id }` on `pantryItem`, so the
+  // optimistic shape is genuinely complete with `{ __typename, id }` — no cast
+  // needed once the callback's return type is `Unmasked<DeletePantryItemMutation>`.
+  // The actual edge removal + counter decrement + entity eviction lives in the
+  // `update` callback below, which runs in both the optimistic and server phases.
   const [removeItemMutation] = useMutation(DeletePantryItemDocument, {
-    optimisticResponse: (variables): DeletePantryItemMutation => ({
+    optimisticResponse: (variables): Unmasked<DeletePantryItemMutation> => ({
       __typename: 'Mutation',
       deletePantryItem: {
         __typename: 'PantryItemPayload',
@@ -199,7 +228,7 @@ export function usePantryItemMutations({
         pantryItem: {
           __typename: 'PantryItem',
           id: variables.id,
-        } as DeletePantryItemMutation['deletePantryItem']['pantryItem'],
+        },
       },
     }),
     onError: error => {

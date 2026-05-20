@@ -86,6 +86,11 @@ const NOOP_BACKDROP: OverlayBackdropContextType = {
   release: () => {},
 };
 
+// One-shot `__DEV__` warning guard so the fallback is loud about misuse in
+// development without spamming the console on every render. Mutated only
+// from inside a useEffect (post-commit), never during render.
+const missingProviderWarning = { fired: false };
+
 /**
  * Like `useOverlayBackdrop` but returns a no-op fallback when no provider
  * is mounted, instead of throwing. Use this from cross-cutting hooks
@@ -93,9 +98,27 @@ const NOOP_BACKDROP: OverlayBackdropContextType = {
  * without an `OverlayBackdropProvider` wrapper. Real app code always
  * mounts the provider at App root, so the fallback is only exercised by
  * tests.
+ *
+ * If the fallback is hit in DEV (i.e. production code accidentally rendered
+ * outside the provider — e.g. someone deleted the provider mount, or
+ * mounted a sheet above it in the tree), warn once. The fallback silently
+ * loses the dim layer; the warning makes that diagnosable.
  */
 export const useOverlayBackdropOptional = (): OverlayBackdropContextType => {
-  return useContext(OverlayBackdropContext) ?? NOOP_BACKDROP;
+  const context = useContext(OverlayBackdropContext);
+  useEffect(() => {
+    if (__DEV__ && !context && !missingProviderWarning.fired) {
+      missingProviderWarning.fired = true;
+      console.warn(
+        '[OverlayBackdropProvider] useOverlayBackdropOptional fell back to ' +
+          'a no-op — no <OverlayBackdropProvider> is mounted above this ' +
+          'consumer. Backdrops will silently not appear. This is expected ' +
+          'only in unit-test trees; in production code, mount the provider ' +
+          'at App root.',
+      );
+    }
+  }, [context]);
+  return context ?? NOOP_BACKDROP;
 };
 
 /**
@@ -104,8 +127,13 @@ export const useOverlayBackdropOptional = (): OverlayBackdropContextType => {
  * unmount, parent re-render) releases the claim via useEffect cleanup. There
  * is no manual decrement to leak.
  *
- * `onPress` is wrapped in a stable closure so updates to the prop don't
- * release/re-claim. `opacity` is captured at claim-time.
+ * - `onPress` is wrapped in a stable closure so updates to the prop don't
+ *   release/re-claim.
+ * - `opacity` is reactive: changing it releases the current claim and
+ *   creates a new one. For static numeric opacity this would cause a fade-
+ *   out + fade-in flicker, but consumers never mutate it in practice. For
+ *   SharedValue<number> opacity (used by sheets), identity is stable across
+ *   the hook's lifetime, so reactivity is a no-op.
  */
 export function useBackdropClaim(
   active: boolean,

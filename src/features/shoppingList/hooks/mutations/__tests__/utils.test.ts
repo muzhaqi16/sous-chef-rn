@@ -52,14 +52,14 @@ describe('createOptimisticShoppingListItem', () => {
     expect(entity.quantity).toBe(3);
   });
 
-  it('defaults optional fields to null', () => {
+  it('defaults optional fields to null and displayFormat to AUTO', () => {
     const entity = getEntity({ itemName: 'Bread' });
 
     expect(entity.quantityInput).toBeNull();
     expect(entity.unitName).toBeNull();
     expect(entity.category).toBeNull();
     expect(entity.notes).toBeNull();
-    expect(entity.displayFormat).toBeUndefined();
+    expect(entity.displayFormat).toBe('AUTO');
   });
 
   it('includes provided optional fields', () => {
