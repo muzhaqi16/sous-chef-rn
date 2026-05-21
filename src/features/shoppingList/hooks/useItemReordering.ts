@@ -7,7 +7,7 @@ import {
   UseItemReordering_ServerItemFragmentDoc,
   type UseItemReordering_ServerItemFragment,
 } from './useItemReordering.generated';
-import { generatePosition } from '#/utils/fractionalIndexing';
+import { generateKeyBetween } from 'fractional-indexing';
 import { SubscriptionService } from '#/services/subscriptions/SubscriptionService';
 import {
   handleVersionConflict,
@@ -150,7 +150,7 @@ export function useItemReordering<T extends ShoppingListItem>(
             (a.sortOrder || '').localeCompare(b.sortOrder || ''),
           )[0];
 
-        newSortOrder = generatePosition(
+        newSortOrder = generateKeyBetween(
           afterItem.sortOrder,
           nextItem?.sortOrder ?? null,
         );
@@ -159,7 +159,7 @@ export function useItemReordering<T extends ShoppingListItem>(
 
     // Generate sortOrder normally if not already set by fallback logic
     if (!newSortOrder) {
-      newSortOrder = generatePosition(
+      newSortOrder = generateKeyBetween(
         afterItem?.sortOrder ?? null,
         beforeItem?.sortOrder ?? null,
       );

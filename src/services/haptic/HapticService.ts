@@ -1,89 +1,59 @@
-import { Vibration, Platform } from 'react-native';
+import { Platform } from 'react-native';
+import {
+  trigger as triggerHaptic,
+  HapticFeedbackTypes,
+} from 'react-native-haptic-feedback';
 import { useStore } from '#store';
 
 /**
  * Haptic Feedback Types
  *
- * Maps to different vibration patterns for various user interactions
+ * Mapped to react-native-haptic-feedback's native iOS Haptic Feedback
+ * Generator and Android equivalents. iOS produces real haptics (not just
+ * vibrations); Android falls back to vibration patterns when the device
+ * has no haptic actuator.
  */
 export enum HapticFeedbackType {
-  /** Light tap - for selections, toggles */
   LIGHT = 'light',
-  /** Medium impact - for button presses */
   MEDIUM = 'medium',
-  /** Heavy impact - for significant actions */
   HEAVY = 'heavy',
-  /** Success feedback - for completed actions */
   SUCCESS = 'success',
-  /** Warning feedback - for caution states */
   WARNING = 'warning',
-  /** Error feedback - for errors or failures */
   ERROR = 'error',
-  /** Selection changed - for picker/selector changes */
   SELECTION = 'selection',
-  /** Long press detected */
   LONG_PRESS = 'longPress',
 }
 
-/**
- * Vibration patterns (in milliseconds)
- * Format: [wait, vibrate, wait, vibrate, ...]
- *
- * Android guidelines recommend 10-20ms for crisp click feedback.
- * @see https://developer.android.com/develop/ui/views/haptics/haptics-principles
- */
-const HAPTIC_PATTERNS: Record<HapticFeedbackType, number | number[]> = {
-  [HapticFeedbackType.LIGHT]: 15, // Android recommends 10-20ms for crisp feedback
-  [HapticFeedbackType.MEDIUM]: 20, // Upper end of recommended range
-  [HapticFeedbackType.HEAVY]: 40, // Reduced from 50ms
-  [HapticFeedbackType.SUCCESS]: [0, 12, 40, 12], // Two quick taps
-  [HapticFeedbackType.WARNING]: [0, 18, 80, 18], // Two medium taps with pause
-  [HapticFeedbackType.ERROR]: [0, 35, 80, 35, 80, 35], // Three strong taps
-  [HapticFeedbackType.SELECTION]: 10, // Minimum perceptible
-  [HapticFeedbackType.LONG_PRESS]: 80, // Reduced from 100ms
+const NATIVE_TYPE: Record<HapticFeedbackType, HapticFeedbackTypes> = {
+  [HapticFeedbackType.LIGHT]: HapticFeedbackTypes.impactLight,
+  [HapticFeedbackType.MEDIUM]: HapticFeedbackTypes.impactMedium,
+  [HapticFeedbackType.HEAVY]: HapticFeedbackTypes.impactHeavy,
+  [HapticFeedbackType.SUCCESS]: HapticFeedbackTypes.notificationSuccess,
+  [HapticFeedbackType.WARNING]: HapticFeedbackTypes.notificationWarning,
+  [HapticFeedbackType.ERROR]: HapticFeedbackTypes.notificationError,
+  [HapticFeedbackType.SELECTION]: HapticFeedbackTypes.selection,
+  [HapticFeedbackType.LONG_PRESS]: HapticFeedbackTypes.longPress,
 };
 
-/**
- * Haptic Feedback Service
- *
- * Provides consistent haptic feedback across the app using React Native's
- * built-in Vibration API. Supports user preferences and graceful degradation.
- *
- * @example
- * ```typescript
- * // Trigger light haptic feedback
- * HapticService.trigger(HapticFeedbackType.LIGHT);
- *
- * // Trigger success feedback
- * HapticService.success();
- *
- * // Disable haptics
- * HapticService.setEnabled(false);
- * ```
- */
+const TRIGGER_OPTIONS = {
+  enableVibrateFallback: true,
+  ignoreAndroidSystemSettings: false,
+};
+
 class HapticFeedbackService {
-  private supported: boolean = true;
+  private supported = Platform.OS === 'ios' || Platform.OS === 'android';
   private initialized = false;
   private enabledPreference: boolean | undefined;
   private unsubscribe: (() => void) | undefined;
 
-  constructor() {
-    // Check if vibration is supported
-    // Note: Vibration API is supported on iOS and Android by default in RN
-    this.supported = Platform.OS === 'ios' || Platform.OS === 'android';
-  }
-
   /**
-   * Initialize the service by caching the user preference from the store
-   * and subscribing to future changes. Call after store hydration in App.tsx.
+   * Cache the user preference and subscribe to future changes. Call once
+   * after store hydration in App.tsx.
    */
   initialize(): void {
     if (this.initialized) return;
-
     this.enabledPreference = useStore.getState().hapticFeedbackEnabled ?? true;
     this.initialized = true;
-
-    // Subscribe to store changes so toggling in settings takes effect immediately
     this.unsubscribe = useStore.subscribe(
       state => state.hapticFeedbackEnabled,
       enabled => {
@@ -92,18 +62,10 @@ class HapticFeedbackService {
     );
   }
 
-  /**
-   * Enable or disable haptic feedback
-   * Updates the preference in the store
-   */
   setEnabled(enabled: boolean): void {
     useStore.getState().setHapticFeedbackEnabled(enabled);
   }
 
-  /**
-   * Check if haptic feedback is currently enabled
-   * Uses cached preference when initialized, falls back to store read otherwise
-   */
   isEnabled(): boolean {
     if (this.initialized) {
       return (this.enabledPreference ?? true) && this.supported;
@@ -111,115 +73,55 @@ class HapticFeedbackService {
     if (__DEV__) {
       console.warn('[HapticService] isEnabled() called before initialize()');
     }
-    const hapticEnabled = useStore.getState().hapticFeedbackEnabled;
-    return (hapticEnabled ?? true) && this.supported;
+    const stored = useStore.getState().hapticFeedbackEnabled;
+    return (stored ?? true) && this.supported;
   }
 
-  /**
-   * Check if haptic feedback is supported on this device
-   */
   isSupported(): boolean {
     return this.supported;
   }
 
-  /**
-   * Trigger haptic feedback with specified type
-   *
-   * @param type - The type of haptic feedback to trigger
-   */
   trigger(type: HapticFeedbackType): void {
-    if (!this.isEnabled()) {
-      return;
-    }
-
+    if (!this.isEnabled()) return;
     try {
-      const pattern = HAPTIC_PATTERNS[type];
-
-      if (typeof pattern === 'number') {
-        // Single vibration
-        Vibration.vibrate(pattern);
-      } else {
-        // Pattern vibration (Android supports patterns, iOS will use first value)
-        Vibration.vibrate(pattern);
-      }
+      triggerHaptic(NATIVE_TYPE[type], TRIGGER_OPTIONS);
     } catch (error) {
-      // Silently fail if vibration is not available
       console.warn('[HapticService] Failed to trigger haptic feedback:', error);
     }
   }
 
   /**
-   * Cancel any ongoing vibration
+   * Native-iOS haptics don't support cancellation (each tap is a discrete
+   * event). Kept as a no-op so existing callsites compile; the Android
+   * fallback also can't be cancelled mid-pulse through this library.
    */
-  cancel(): void {
-    try {
-      Vibration.cancel();
-    } catch (error) {
-      console.warn('[HapticService] Failed to cancel vibration:', error);
-    }
-  }
+  cancel(): void {}
 
-  // Convenience methods for common feedback types
-
-  /**
-   * Light tap feedback - for selections, toggles
-   */
-  light(): void {
+  light() {
     this.trigger(HapticFeedbackType.LIGHT);
   }
-
-  /**
-   * Medium impact feedback - for button presses
-   */
-  medium(): void {
+  medium() {
     this.trigger(HapticFeedbackType.MEDIUM);
   }
-
-  /**
-   * Heavy impact feedback - for significant actions
-   */
-  heavy(): void {
+  heavy() {
     this.trigger(HapticFeedbackType.HEAVY);
   }
-
-  /**
-   * Success feedback - for completed actions
-   */
-  success(): void {
+  success() {
     this.trigger(HapticFeedbackType.SUCCESS);
   }
-
-  /**
-   * Warning feedback - for caution states
-   */
-  warning(): void {
+  warning() {
     this.trigger(HapticFeedbackType.WARNING);
   }
-
-  /**
-   * Error feedback - for errors or failures
-   */
-  error(): void {
+  error() {
     this.trigger(HapticFeedbackType.ERROR);
   }
-
-  /**
-   * Selection changed feedback - for picker/selector changes
-   */
-  selection(): void {
+  selection() {
     this.trigger(HapticFeedbackType.SELECTION);
   }
-
-  /**
-   * Long press feedback
-   */
-  longPress(): void {
+  longPress() {
     this.trigger(HapticFeedbackType.LONG_PRESS);
   }
 }
 
-// Export singleton instance
 export const HapticService = new HapticFeedbackService();
-
-// Export type for convenience
 export type { HapticFeedbackService };

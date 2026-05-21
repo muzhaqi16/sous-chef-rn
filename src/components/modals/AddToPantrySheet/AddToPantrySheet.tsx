@@ -24,9 +24,11 @@ import {
   isPantryItemDuplicateError,
   getPantryItemDuplicateInfo,
 } from '#/utils/errors/pantryItemDuplicate';
-import { addToPantryItemsCache } from '#hooks/home/pantry/utils';
+import {
+  addToPantryItemsCache,
+  adjustPantryTotalItemsCount,
+} from '#hooks/home/pantry/utils';
 import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
-import { incrementNestedCounter } from '#/apollo/utils/cacheUpdaters';
 import { AddItemSheet } from '../AddItemSheet/AddItemSheet';
 import { useAddItemSheetState } from '../AddItemSheet/useAddItemSheetState';
 import type { SuggestionsHookResult } from '../AddItemSheet/types';
@@ -91,14 +93,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
 
       executeCacheUpdate(() => {
         addToPantryItemsCache(cache, pantryId, pantryItem);
-        incrementNestedCounter(
-          cache,
-          'Pantry',
-          pantryId,
-          'stats',
-          'totalItems',
-          1,
-        );
+        adjustPantryTotalItemsCount(cache, pantryId, 1);
       }, 'Cache update failed for createPantryItem:');
     },
   });

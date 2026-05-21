@@ -34,7 +34,6 @@ jest.mock('#/hooks/utils/useCrudOperations', () => ({
 }));
 
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
-  createAddToQueryFieldUpdater: jest.fn(() => jest.fn()),
   createAddToQueryConnectionUpdater: jest.fn(() => jest.fn()),
   createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),
   createRemoveFromQueryConnectionUpdater: jest.fn(() => jest.fn()),

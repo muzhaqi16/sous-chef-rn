@@ -1,59 +1,33 @@
 import { useEffect } from 'react';
-import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
+import { useNetInfo } from '@react-native-community/netinfo';
 import { useAppStore } from '#store/useAppStore';
 
 /**
- * Hook to monitor network status and sync with store
+ * Subscribe to NetInfo and sync connectivity state into the app store.
  *
- * This hook sets up a NetInfo listener that automatically updates
- * the global network state in the Zustand store.
- *
- * Usage:
- * ```typescript
- * // In your root App.tsx or layout component
- * useNetworkStatus();
- *
- * // In any component
- * const { isOnline } = useStore(state => ({ isOnline: state.isOnline }));
- * ```
+ * `isInternetReachable` is `null` when NetInfo hasn't probed yet — we treat
+ * that as online (matching the original semantics) so the UI doesn't flash
+ * an offline state on cold start.
  */
 export function useNetworkStatus() {
   const setNetworkStatus = useAppStore(state => state.setNetworkStatus);
+  const netInfo = useNetInfo();
 
   useEffect(() => {
-    // Get initial network state
-    NetInfo.fetch().then(state => {
-      updateNetworkState(state, setNetworkStatus);
+    if (netInfo.isConnected == null) return; // initial indeterminate emission
+
+    const isOnline =
+      netInfo.isConnected === true && netInfo.isInternetReachable !== false;
+
+    setNetworkStatus({
+      isOnline,
+      isInternetReachable: netInfo.isInternetReachable,
+      networkType: netInfo.type,
     });
-
-    // Subscribe to network state changes
-    const unsubscribe = NetInfo.addEventListener(state => {
-      updateNetworkState(state, setNetworkStatus);
-    });
-
-    return () => {
-      unsubscribe();
-    };
-  }, [setNetworkStatus]);
-}
-
-/**
- * Helper function to update network state in store
- */
-function updateNetworkState(
-  state: NetInfoState,
-  setNetworkStatus: (status: {
-    isOnline: boolean;
-    isInternetReachable: boolean | null;
-    networkType: string | null;
-  }) => void,
-) {
-  const isOnline =
-    state.isConnected === true && state.isInternetReachable !== false;
-
-  setNetworkStatus({
-    isOnline,
-    isInternetReachable: state.isInternetReachable,
-    networkType: state.type,
-  });
+  }, [
+    netInfo.isConnected,
+    netInfo.isInternetReachable,
+    netInfo.type,
+    setNetworkStatus,
+  ]);
 }

@@ -1,20 +1,10 @@
 import { renderHook } from '@testing-library/react-native';
 import { useNetworkStatus } from '../useNetworkStatus';
 
-// Track the callback registered with addEventListener
-let netInfoCallback: ((state: any) => void) | null = null;
-const mockUnsubscribe = jest.fn();
-const mockFetch = jest.fn();
-
+const mockUseNetInfo = jest.fn();
 jest.mock('@react-native-community/netinfo', () => ({
   __esModule: true,
-  default: {
-    fetch: (...args: unknown[]) => mockFetch(...args),
-    addEventListener: (cb: (state: any) => void) => {
-      netInfoCallback = cb;
-      return mockUnsubscribe;
-    },
-  },
+  useNetInfo: () => mockUseNetInfo(),
 }));
 
 const mockSetNetworkStatus = jest.fn();
@@ -25,23 +15,18 @@ jest.mock('#store/useAppStore', () => ({
 
 beforeEach(() => {
   jest.clearAllMocks();
-  netInfoCallback = null;
-  mockFetch.mockResolvedValue({
-    isConnected: true,
-    isInternetReachable: true,
-    type: 'wifi',
-  });
 });
 
 describe('useNetworkStatus', () => {
-  it('fetches initial network state on mount', async () => {
+  it('syncs store when net info reports connected and reachable', () => {
+    mockUseNetInfo.mockReturnValue({
+      isConnected: true,
+      isInternetReachable: true,
+      type: 'wifi',
+    });
+
     renderHook(() => useNetworkStatus());
 
-    // Flush the microtask from NetInfo.fetch().then()
-    await Promise.resolve();
-    await Promise.resolve();
-
-    expect(mockFetch).toHaveBeenCalledTimes(1);
     expect(mockSetNetworkStatus).toHaveBeenCalledWith({
       isOnline: true,
       isInternetReachable: true,
@@ -49,21 +34,14 @@ describe('useNetworkStatus', () => {
     });
   });
 
-  it('subscribes to network changes via addEventListener', () => {
-    renderHook(() => useNetworkStatus());
-
-    expect(netInfoCallback).toBeTruthy();
-  });
-
-  it('updates store when network state changes', () => {
-    renderHook(() => useNetworkStatus());
-
-    // Simulate going offline
-    netInfoCallback?.({
+  it('syncs offline when not connected', () => {
+    mockUseNetInfo.mockReturnValue({
       isConnected: false,
       isInternetReachable: false,
       type: 'none',
     });
+
+    renderHook(() => useNetworkStatus());
 
     expect(mockSetNetworkStatus).toHaveBeenCalledWith({
       isOnline: false,
@@ -72,40 +50,43 @@ describe('useNetworkStatus', () => {
     });
   });
 
-  it('treats isInternetReachable === null as online (initial indeterminate)', () => {
-    renderHook(() => useNetworkStatus());
-
-    netInfoCallback?.({
+  it('treats isInternetReachable === null as online (indeterminate)', () => {
+    mockUseNetInfo.mockReturnValue({
       isConnected: true,
       isInternetReachable: null,
       type: 'wifi',
     });
 
-    // isConnected: true && isInternetReachable !== false → isOnline: true
+    renderHook(() => useNetworkStatus());
+
     expect(mockSetNetworkStatus).toHaveBeenCalledWith(
       expect.objectContaining({ isOnline: true }),
     );
   });
 
   it('treats isConnected === false as offline even when isInternetReachable is null', () => {
-    renderHook(() => useNetworkStatus());
-
-    netInfoCallback?.({
+    mockUseNetInfo.mockReturnValue({
       isConnected: false,
       isInternetReachable: null,
       type: 'none',
     });
+
+    renderHook(() => useNetworkStatus());
 
     expect(mockSetNetworkStatus).toHaveBeenCalledWith(
       expect.objectContaining({ isOnline: false }),
     );
   });
 
-  it('unsubscribes on unmount', () => {
-    const { unmount } = renderHook(() => useNetworkStatus());
+  it('skips sync while NetInfo is still indeterminate (isConnected === null)', () => {
+    mockUseNetInfo.mockReturnValue({
+      isConnected: null,
+      isInternetReachable: null,
+      type: 'unknown',
+    });
 
-    unmount();
+    renderHook(() => useNetworkStatus());
 
-    expect(mockUnsubscribe).toHaveBeenCalledTimes(1);
+    expect(mockSetNetworkStatus).not.toHaveBeenCalled();
   });
 });

@@ -179,6 +179,25 @@ function shouldPreservePageInfo(
 function mergeConnectionByNodeId() {
   return {
     keyArgs: ['filters'] as string[],
+    // Same self-healing read as itemsConnectionFieldPolicy — drop dangling
+    // `edge.node` refs (post-eviction) and decrement totalCount accordingly.
+    // See the read() comment in itemsConnectionFieldPolicy for context.
+    read(existing: any, { canRead }: any) {
+      if (!existing?.edges?.length) return existing;
+      const validEdges = existing.edges.filter((edge: any) =>
+        edge?.node ? canRead(edge.node) : false,
+      );
+      if (validEdges.length === existing.edges.length) return existing;
+      const dropped = existing.edges.length - validEdges.length;
+      return {
+        ...existing,
+        edges: validEdges,
+        totalCount:
+          typeof existing.totalCount === 'number'
+            ? Math.max(0, existing.totalCount - dropped)
+            : existing.totalCount,
+      };
+    },
     merge(existing: any, incoming: any, { args, readField }: any) {
       if (!incoming) return existing;
       if (!existing) return incoming;
@@ -250,6 +269,36 @@ function mergeConnectionByNodeId() {
 function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
   return {
     keyArgs,
+    // Self-heal dangling refs: when an entity is evicted (delete mutation, gc,
+    // cache restore from MMKV with stale edges), Apollo leaves the dangling
+    // Reference inside `edge.node` because connections are `{ edges: [{ node }] }`
+    // — its default broken-ref filter only handles plain lists of refs, not
+    // nested `edge.node` shape. The unresolved ref still reads as a truthy
+    // Reference object, so `extractNodes` doesn't drop it and `useFragment`
+    // Pattern A consumers render null → phantom rows + stale totalCount.
+    // Filtering via `canRead` here drops those edges at the source and
+    // decrements `totalCount` by however many were dropped.
+    read(existing: any, { canRead }: any) {
+      if (!existing?.edges?.length) return existing;
+      const validEdges = existing.edges.filter((edge: any) =>
+        edge?.node ? canRead(edge.node) : false,
+      );
+      if (validEdges.length === existing.edges.length) return existing;
+      const dropped = existing.edges.length - validEdges.length;
+      if (__DEV__) {
+        console.log(
+          `📊 [Cache] itemsConnection read: dropped ${dropped} dangling edge(s)`,
+        );
+      }
+      return {
+        ...existing,
+        edges: validEdges,
+        totalCount:
+          typeof existing.totalCount === 'number'
+            ? Math.max(0, existing.totalCount - dropped)
+            : existing.totalCount,
+      };
+    },
     merge(existing: any, incoming: any, { args, readField }: any) {
       if (!incoming) return existing;
       if (!existing) return incoming;
@@ -578,8 +627,8 @@ export function makeCache(): InMemoryCache {
             keyArgs: ['filters'],
           },
           recipes: {
+            ...mergeConnectionByNodeId(),
             keyArgs: ['category', 'difficulty'],
-            merge: mergeConnectionByNodeId().merge,
           },
           mealPlans: {
             ...mergeConnectionByNodeId(),

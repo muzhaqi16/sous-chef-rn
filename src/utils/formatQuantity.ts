@@ -1,10 +1,4 @@
-/**
- * Shared quantity formatting utilities.
- *
- * Previously duplicated across QuantityBadge, QuantityEditSheet,
- * ConsumePantryItemModal, RecordWastePantryItemModal, RestockPantryItemModal,
- * and usePantryItemTransformation.
- */
+import Fraction from 'fraction.js';
 
 /**
  * Format a numeric quantity to at most 2 decimal places, stripping trailing zeros.
@@ -33,11 +27,6 @@ export function formatQuantityDisplay(quantity: number, unit?: string): string {
 }
 
 /**
- * Format a quantity as a fraction or mixed number when possible.
- *
- * Examples: 0.5 → "1/2", 1.25 → "1 1/4", 2.7 → "2.7"
- */
-/**
  * Get display text for a unit, preferring symbol over name.
  */
 export function getUnitDisplayText(
@@ -46,44 +35,26 @@ export function getUnitDisplayText(
   return unit?.symbol || unit?.name || '';
 }
 
+// Denominators we consider "cooking-friendly". Anything else falls back to
+// a decimal representation (we don't want "7/10 cup" — show "0.7" instead).
+const COOKING_DENOMINATORS = new Set([2, 3, 4, 8]);
+const TOLERANCE = 0.02;
+
 /**
- * Format a quantity as a fraction or mixed number when possible.
+ * Format a quantity as a fraction or mixed number when it cleanly maps to a
+ * cooking-friendly denominator (halves/thirds/quarters/eighths). Otherwise
+ * falls back to a 2-decimal representation.
  *
  * Examples: 0.5 → "1/2", 1.25 → "1 1/4", 2.7 → "2.7"
  */
 export function formatQuantityAsFraction(qty: number): string {
-  if (qty == null) return '0';
-  if (qty === 0) return '0';
+  if (qty == null || qty === 0) return '0';
   if (Number.isInteger(qty)) return qty.toString();
 
-  const whole = Math.floor(qty);
-  const fractional = qty - whole;
-
-  // Common fractions with tolerance-based matching for floating point
-  const commonFractions = [
-    { value: 0.125, display: '1/8' },
-    { value: 0.25, display: '1/4' },
-    { value: 1 / 3, display: '1/3' },
-    { value: 0.375, display: '3/8' },
-    { value: 0.5, display: '1/2' },
-    { value: 0.625, display: '5/8' },
-    { value: 2 / 3, display: '2/3' },
-    { value: 0.75, display: '3/4' },
-    { value: 0.875, display: '7/8' },
-  ];
-
-  const tolerance = 0.02; // Allow small floating point differences
-  const matchedFraction = commonFractions.find(
-    f => Math.abs(fractional - f.value) < tolerance,
-  );
-
-  if (matchedFraction) {
-    return whole === 0
-      ? matchedFraction.display
-      : `${whole} ${matchedFraction.display}`;
+  const simplified = new Fraction(qty).simplify(TOLERANCE);
+  if (COOKING_DENOMINATORS.has(Number(simplified.d))) {
+    return simplified.toFraction(true);
   }
 
-  // Fall back to decimal with smart formatting
-  const formatted = qty.toFixed(2).replace(/\.?0+$/, '');
-  return formatted || '0';
+  return qty.toFixed(2).replace(/\.?0+$/, '') || '0';
 }

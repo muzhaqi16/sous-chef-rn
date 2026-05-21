@@ -8,12 +8,12 @@ import { MoveShoppingListItemDocument } from '#features/shoppingList/graphql/sho
 import { alertService } from '#/services/alertService';
 import { useItemReordering } from '../useItemReordering';
 
-const mockGeneratePosition = jest.fn<string, [string | null, string | null]>(
+const mockGenerateKeyBetween = jest.fn<string, [string | null, string | null]>(
   () => 'bbb',
 );
-jest.mock('#/utils/fractionalIndexing', () => ({
-  generatePosition: (a: string | null, b: string | null) =>
-    mockGeneratePosition(a, b),
+jest.mock('fractional-indexing', () => ({
+  generateKeyBetween: (a: string | null, b: string | null) =>
+    mockGenerateKeyBetween(a, b),
 }));
 
 jest.mock('#/utils/errors/versionConflict', () => ({
@@ -122,7 +122,7 @@ describe('useItemReordering', () => {
       await result.current.handleSortOrderUpdate('item-2', 'item-1', 'item-3');
     });
 
-    expect(mockGeneratePosition).toHaveBeenCalledWith('aaa', 'eee');
+    expect(mockGenerateKeyBetween).toHaveBeenCalledWith('aaa', 'eee');
     expect(m.fired).toContainEqual({
       input: {
         itemId: 'item-2',
@@ -143,7 +143,7 @@ describe('useItemReordering', () => {
       await result.current.handleSortOrderUpdate('item-2', null, 'item-1');
     });
 
-    expect(mockGeneratePosition).toHaveBeenCalledWith(null, 'aaa');
+    expect(mockGenerateKeyBetween).toHaveBeenCalledWith(null, 'aaa');
     expect(m.fired).toContainEqual({
       input: {
         itemId: 'item-2',
@@ -164,7 +164,7 @@ describe('useItemReordering', () => {
       await result.current.handleSortOrderUpdate('item-2', 'item-3', null);
     });
 
-    expect(mockGeneratePosition).toHaveBeenCalledWith('eee', null);
+    expect(mockGenerateKeyBetween).toHaveBeenCalledWith('eee', null);
   });
 
   it('refetches when sortOrder ordering is invalid (after > before)', async () => {

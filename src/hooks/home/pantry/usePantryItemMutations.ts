@@ -36,8 +36,11 @@ import {
 } from '#/utils/errors/versionConflict';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
-import { addToPantryItemsCache, removeFromPantryItemsCache } from './utils';
-import { incrementNestedCounter } from '#/apollo/utils/cacheUpdaters';
+import {
+  addToPantryItemsCache,
+  removeFromPantryItemsCache,
+  adjustPantryTotalItemsCount,
+} from './utils';
 import {
   executeCacheUpdate,
   executeMutation,
@@ -144,14 +147,7 @@ export function usePantryItemMutations({
       executeCacheUpdate(
         () => {
           addToPantryItemsCache(cache, pantryId, pantryItem);
-          incrementNestedCounter(
-            cache,
-            'Pantry',
-            pantryId,
-            'stats',
-            'totalItems',
-            1,
-          );
+          adjustPantryTotalItemsCount(cache, pantryId, 1);
         },
         'Cache update failed for addItem, will refetch:',
         refetch,
@@ -245,14 +241,7 @@ export function usePantryItemMutations({
 
       const itemId = variables.id;
       removeFromPantryItemsCache(cache, pantryId, itemId, { evictItem: true });
-      incrementNestedCounter(
-        cache,
-        'Pantry',
-        pantryId,
-        'stats',
-        'totalItems',
-        -1,
-      );
+      adjustPantryTotalItemsCount(cache, pantryId, -1);
     },
   });
 

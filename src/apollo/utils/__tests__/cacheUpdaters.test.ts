@@ -1,12 +1,10 @@
 import {
-  createAddToQueryFieldUpdater,
   createAddToQueryConnectionUpdater,
   createRemoveFromQueryConnectionUpdater,
   createAddToParentConnectionUpdater,
   createAddToParentArrayUpdater,
   createRemoveFromParentConnectionUpdater,
   createRemoveFromParentArrayUpdater,
-  createItemEvictor,
 } from '../cacheUpdaters';
 
 // ---------------------------------------------------------------------------
@@ -66,128 +64,6 @@ function invokeFieldModifier(
   const fields = modifyCall[0].fields;
   return fields[fieldName](existingValue, helpers);
 }
-
-// ---------------------------------------------------------------------------
-// createAddToQueryFieldUpdater
-// ---------------------------------------------------------------------------
-
-describe('createAddToQueryFieldUpdater', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it('adds a new item at the start by default', () => {
-    const addToHomes = createAddToQueryFieldUpdater('homes');
-    const cache = createMockCache();
-    const newItem = { id: '1', __typename: 'Home', name: 'My Home' };
-
-    addToHomes(cache, newItem);
-
-    expect(cache.modify).toHaveBeenCalledTimes(1);
-
-    const helpers = createFieldHelpers();
-    const existingRefs = [{ __ref: 'Home:2' }];
-    const result = invokeFieldModifier(cache, 'homes', existingRefs, helpers);
-
-    expect(result[0]).toEqual(helpers.toReference.mock.results[0]?.value);
-    expect(result).toHaveLength(2);
-    expect(result[1]).toBe(existingRefs[0]);
-  });
-
-  it('adds a new item at the end when position is end', () => {
-    const addToHomes = createAddToQueryFieldUpdater('homes');
-    const cache = createMockCache();
-    const newItem = { id: '1', __typename: 'Home', name: 'My Home' };
-
-    addToHomes(cache, newItem, { position: 'end' });
-
-    const helpers = createFieldHelpers();
-    const existingRefs = [{ __ref: 'Home:2' }];
-    const result = invokeFieldModifier(cache, 'homes', existingRefs, helpers);
-
-    expect(result).toHaveLength(2);
-    expect(result[0]).toBe(existingRefs[0]);
-  });
-
-  it('prevents duplicates by default', () => {
-    const addToHomes = createAddToQueryFieldUpdater('homes');
-    const cache = createMockCache();
-    const newItem = { id: '1', __typename: 'Home' };
-
-    addToHomes(cache, newItem);
-
-    const helpers = createFieldHelpers();
-    helpers.readField.mockImplementation((field: string) => {
-      if (field === 'id') return '1';
-      return undefined;
-    });
-    const existingRefs = [{ __ref: 'Home:1' }];
-    const result = invokeFieldModifier(cache, 'homes', existingRefs, helpers);
-
-    expect(result).toBe(existingRefs); // unchanged
-  });
-
-  it('allows duplicates when checkDuplicates is false', () => {
-    const addToHomes = createAddToQueryFieldUpdater('homes');
-    const cache = createMockCache();
-    const newItem = { id: '1', __typename: 'Home' };
-
-    addToHomes(cache, newItem, { checkDuplicates: false });
-
-    const helpers = createFieldHelpers();
-    helpers.readField.mockImplementation((field: string) => {
-      if (field === 'id') return '1';
-      return undefined;
-    });
-    const existingRefs = [{ __ref: 'Home:1' }];
-    const result = invokeFieldModifier(cache, 'homes', existingRefs, helpers);
-
-    expect(result).toHaveLength(2);
-  });
-
-  it('returns existing items when toReference returns undefined', () => {
-    const addToHomes = createAddToQueryFieldUpdater('homes');
-    const cache = createMockCache();
-    const newItem = { id: '1', __typename: 'Home' };
-
-    addToHomes(cache, newItem);
-
-    const helpers = createFieldHelpers();
-    helpers.toReference.mockReturnValue(undefined);
-    const existingRefs = [{ __ref: 'Home:2' }];
-    const result = invokeFieldModifier(cache, 'homes', existingRefs, helpers);
-
-    expect(result).toBe(existingRefs);
-  });
-
-  it('defaults to empty array when existing items are undefined', () => {
-    const addToHomes = createAddToQueryFieldUpdater('homes');
-    const cache = createMockCache();
-    const newItem = { id: '1', __typename: 'Home' };
-
-    addToHomes(cache, newItem);
-
-    const helpers = createFieldHelpers();
-    const result = invokeFieldModifier(cache, 'homes', undefined, helpers);
-
-    expect(result).toHaveLength(1);
-  });
-
-  it('does not throw when cache.modify throws', () => {
-    const addToHomes = createAddToQueryFieldUpdater('homes');
-    const cache = createMockCache();
-    cache.modify.mockImplementation(() => {
-      throw new Error('cache error');
-    });
-    expect(() =>
-      addToHomes(cache, { id: '1', __typename: 'Home' } as any),
-    ).not.toThrow();
-    expect(console.warn).toHaveBeenCalledWith(
-      expect.stringContaining('Cache update failed for adding to homes'),
-      expect.any(Error),
-    );
-  });
-});
 
 // ---------------------------------------------------------------------------
 // createAddToQueryConnectionUpdater
@@ -1021,47 +897,6 @@ describe('createRemoveFromParentArrayUpdater', () => {
     expect(cache.modify).not.toHaveBeenCalled();
     expect(console.warn).toHaveBeenCalledWith(
       expect.stringContaining('Parent entity not found'),
-    );
-  });
-});
-
-// ---------------------------------------------------------------------------
-// createItemEvictor
-// ---------------------------------------------------------------------------
-
-describe('createItemEvictor', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it('evicts the item by typename and id', () => {
-    const evictItem = createItemEvictor('PantryItem');
-    const cache = createMockCache();
-
-    evictItem(cache, 'pi-1');
-
-    expect(cache.evict).toHaveBeenCalledWith({ id: 'PantryItem:pi-1' });
-  });
-
-  it('runs gc after eviction', () => {
-    const evictItem = createItemEvictor('Recipe');
-    const cache = createMockCache();
-
-    evictItem(cache, 'r-1');
-
-    expect(cache.gc).toHaveBeenCalled();
-  });
-
-  it('does not throw when eviction fails', () => {
-    const evictItem = createItemEvictor('Item');
-    const cache = createMockCache();
-    cache.evict.mockImplementation(() => {
-      throw new Error('evict error');
-    });
-    expect(() => evictItem(cache, 'i-1')).not.toThrow();
-    expect(console.warn).toHaveBeenCalledWith(
-      expect.stringContaining('Cache eviction failed'),
-      expect.any(Object),
     );
   });
 });
