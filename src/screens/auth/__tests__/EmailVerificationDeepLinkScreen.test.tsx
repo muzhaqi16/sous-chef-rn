@@ -94,10 +94,7 @@ function buildVerifyMock(
     result: {
       data: {
         verifyEmail: {
-          __typename: 'UserPayload',
-          success: true,
-          message: 'OK',
-          code: 'OK',
+          __typename: 'VerifyEmailSuccess',
           user: {
             __typename: 'User',
             id: '1',

@@ -186,10 +186,13 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
           variables: { code: data.code },
         });
 
-        if (response.data?.verifyEmail.success) {
+        const payload = response.data?.verifyEmail;
+        if (payload?.__typename === 'VerifyEmailSuccess') {
           updateUser({ emailVerified: true });
-        } else if (response.data?.verifyEmail) {
-          toast({ message: response.data.verifyEmail.message, type: 'error' });
+        } else if (payload) {
+          const message =
+            'message' in payload ? payload.message : 'Verification failed';
+          toast({ message, type: 'error' });
         }
       },
       error => {

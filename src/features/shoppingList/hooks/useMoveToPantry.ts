@@ -46,8 +46,13 @@ export function useMoveToPantry({
     MoveShoppingItemToPantryDocument,
     {
       update: (cache, { data }) => {
-        if (!data?.moveShoppingItemToPantry || !moveToPantryIdRef.current)
+        const payload = data?.moveShoppingItemToPantry;
+        if (
+          payload?.__typename !== 'MoveShoppingItemToPantrySuccess' ||
+          !moveToPantryIdRef.current
+        ) {
           return;
+        }
 
         executeCacheUpdate(() => {
           // Add to pantry items cache
@@ -59,7 +64,7 @@ export function useMoveToPantry({
           addToPantryCache(
             cache,
             moveToPantryIdRef.current!,
-            data.moveShoppingItemToPantry!.pantryItem!,
+            payload.pantryItem,
           );
 
           const selectedItem = selectedItemRef.current;

@@ -75,7 +75,7 @@ export const RecipeFormScreen: React.FC<
     CreateRecipeDocument,
     {
       update: (cache, { data }) => {
-        if (!data?.createRecipe?.success || !data.createRecipe.recipe) return;
+        if (data?.createRecipe?.__typename !== 'CreateRecipeSuccess') return;
         const newRecipe = data.createRecipe.recipe;
         cache.updateQuery<MyRecipesQuery>(
           { query: MyRecipesDocument },
@@ -120,7 +120,7 @@ export const RecipeFormScreen: React.FC<
           const input = form.buildUpdateInput();
           const [updateResult, ingredientsResult] = await Promise.all([
             updateRecipeMutation({
-              variables: { id: recipeId, input },
+              variables: { input: { ...input, id: recipeId } },
             }),
             updateRecipeIngredientsMutation({
               variables: {
@@ -129,30 +129,43 @@ export const RecipeFormScreen: React.FC<
               },
             }),
           ]);
-          const recipeSuccess = updateResult.data?.updateRecipe?.success;
+          const updatePayload = updateResult.data?.updateRecipe;
+          const ingredientsPayload =
+            ingredientsResult.data?.updateRecipeIngredients;
+          const recipeSuccess =
+            updatePayload?.__typename === 'UpdateRecipeSuccess';
           const ingredientsSuccess =
-            ingredientsResult.data?.updateRecipeIngredients?.success;
+            ingredientsPayload?.__typename === 'UpdateRecipeIngredientsSuccess';
           if (recipeSuccess && ingredientsSuccess) {
             goBack();
           } else {
-            const errorMessage =
-              updateResult.data?.updateRecipe?.message ??
-              ingredientsResult.data?.updateRecipeIngredients?.message ??
-              'Failed to update recipe.';
-            alertService.alert('Error', errorMessage);
+            const updateMsg =
+              updatePayload && 'message' in updatePayload
+                ? updatePayload.message
+                : null;
+            const ingredientsMsg =
+              ingredientsPayload && 'message' in ingredientsPayload
+                ? ingredientsPayload.message
+                : null;
+            alertService.alert(
+              'Error',
+              updateMsg ?? ingredientsMsg ?? 'Failed to update recipe.',
+            );
           }
         } else {
           const input = form.buildCreateInput();
           const result = await createRecipeMutation({
             variables: { input },
           });
-          if (result.data?.createRecipe?.success) {
+          const createPayload = result.data?.createRecipe;
+          if (createPayload?.__typename === 'CreateRecipeSuccess') {
             goBack();
           } else {
-            alertService.alert(
-              'Error',
-              result.data?.createRecipe?.message ?? 'Failed to create recipe.',
-            );
+            const message =
+              createPayload && 'message' in createPayload
+                ? createPayload.message
+                : null;
+            alertService.alert('Error', message ?? 'Failed to create recipe.');
           }
         }
       },

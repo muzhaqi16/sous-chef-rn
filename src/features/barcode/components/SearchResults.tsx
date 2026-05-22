@@ -63,8 +63,9 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   );
   const [addToPantry] = useMutation(BarcodeCreatePantryItemDocument, {
     update: (cache, { data }) => {
-      const maskedPantryItem = data?.createPantryItem?.pantryItem;
-      if (maskedPantryItem && pantryId) {
+      const payload = data?.createPantryItem;
+      if (payload?.__typename === 'CreatePantryItemSuccess' && pantryId) {
+        const maskedPantryItem = payload.pantryItem;
         // Materialize the masked fragment ref so the cache updater can read
         // `id`. Use the cache-key form — passing the masked ref directly
         // silently returns partial/null data under dataMasking.
@@ -88,8 +89,12 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
     BarcodeAddItemToShoppingListDocument,
     {
       update: (cache, { data }) => {
-        const maskedItem = data?.addItemToShoppingList?.shoppingListItem;
-        if (maskedItem && shoppingListId) {
+        const payload = data?.addItemToShoppingList;
+        if (
+          payload?.__typename === 'AddItemToShoppingListSuccess' &&
+          shoppingListId
+        ) {
+          const maskedItem = payload.shoppingListItem;
           const shoppingListItem =
             cache.readFragment<SearchResults_ShoppingListItemFragment>({
               fragment: SearchResults_ShoppingListItemFragmentDoc,
@@ -152,8 +157,10 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                         async () => {
                           await restockPantryItem({
                             variables: {
-                              id: duplicateInfo.existingPantryItemId,
-                              input: { quantity },
+                              input: {
+                                id: duplicateInfo.existingPantryItemId,
+                                quantity,
+                              },
                             },
                           });
                           setIsAdded(true);
@@ -180,7 +187,10 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                               input: { ...mutationInput, forceAdd: true },
                             },
                           });
-                          if (retryResult.data?.createPantryItem?.success) {
+                          if (
+                            retryResult.data?.createPantryItem?.__typename ===
+                            'CreatePantryItemSuccess'
+                          ) {
                             setIsAdded(true);
                             setPendingPantryScrollToTop(true);
                             onScanAnother();
@@ -207,7 +217,10 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
             }
           }
 
-          if (result.data?.createPantryItem?.success) {
+          if (
+            result.data?.createPantryItem?.__typename ===
+            'CreatePantryItemSuccess'
+          ) {
             setIsAdded(true);
             setPendingPantryScrollToTop(true);
             onScanAnother();

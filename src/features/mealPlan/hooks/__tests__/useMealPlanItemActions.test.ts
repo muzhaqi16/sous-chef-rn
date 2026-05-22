@@ -1,4 +1,6 @@
 import { act } from '@testing-library/react-native';
+import { InMemoryCache } from '@apollo/client';
+import fragmentMatcherData from '#/graphql/generated/fragmentMatcher.json';
 import {
   recordMock,
   renderHookWithApollo,
@@ -74,9 +76,7 @@ describe('useMealPlanItemActions', () => {
   describe('createItem', () => {
     it('returns payload on success', async () => {
       const payload = {
-        __typename: 'MealPlanItemPayload',
-        success: true,
-        message: 'Created',
+        __typename: 'CreateMealPlanItemSuccess',
         mealPlanItem: { __typename: 'MealPlanItem', id: 'mpi-1' },
       };
       const create = recordMock(CreateMealPlanItemDocument, {
@@ -105,16 +105,22 @@ describe('useMealPlanItemActions', () => {
       const create = recordMock(CreateMealPlanItemDocument, {
         data: {
           createMealPlanItem: {
-            __typename: 'MealPlanItemPayload',
-            success: false,
+            __typename: 'ConflictError',
+            code: 'CONFLICT',
             message: 'Conflict',
           },
         },
       });
 
+      // Inline fragments on the Error interface require possibleTypes for the
+      // cache to keep `code`/`message` when the concrete return is a
+      // ConflictError. The default test cache omits possibleTypes.
+      const cache = new InMemoryCache({
+        possibleTypes: fragmentMatcherData.possibleTypes,
+      });
       const { result } = renderHookWithApollo(
         () => useMealPlanItemActions('plan-1'),
-        { operationMocks: [create.mock] },
+        { operationMocks: [create.mock], cache },
       );
 
       let created: any;
@@ -135,9 +141,7 @@ describe('useMealPlanItemActions', () => {
   describe('updateItem', () => {
     it('returns payload on success', async () => {
       const payload = {
-        __typename: 'MealPlanItemPayload',
-        success: true,
-        message: 'Updated',
+        __typename: 'UpdateMealPlanItemSuccess',
         mealPlanItem: { __typename: 'MealPlanItem', id: 'mpi-1' },
       };
       const update = recordMock(UpdateMealPlanItemDocument, {
@@ -165,9 +169,7 @@ describe('useMealPlanItemActions', () => {
       const update = recordMock(UpdateMealPlanItemDocument, {
         data: {
           updateMealPlanItem: {
-            __typename: 'MealPlanItemPayload',
-            success: true,
-            message: 'Updated',
+            __typename: 'UpdateMealPlanItemSuccess',
             mealPlanItem: {
               __typename: 'MealPlanItem',
               id: 'mpi-1',
@@ -189,8 +191,10 @@ describe('useMealPlanItemActions', () => {
 
       expect(update.fired).toContainEqual(
         expect.objectContaining({
-          id: 'mpi-1',
-          input: expect.objectContaining({ isCompleted: true }),
+          input: expect.objectContaining({
+            id: 'mpi-1',
+            isCompleted: true,
+          }),
         }),
       );
       expect(mockToastSuccess).toHaveBeenCalledWith('Meal completed!');
@@ -200,9 +204,12 @@ describe('useMealPlanItemActions', () => {
       const update = recordMock(UpdateMealPlanItemDocument, {
         data: {
           updateMealPlanItem: {
-            __typename: 'MealPlanItemPayload',
-            success: true,
-            message: 'ok',
+            __typename: 'UpdateMealPlanItemSuccess',
+            mealPlanItem: {
+              __typename: 'MealPlanItem',
+              id: 'mpi-1',
+              isCompleted: true,
+            },
           },
         },
       });
@@ -228,9 +235,7 @@ describe('useMealPlanItemActions', () => {
       const update = recordMock(UpdateMealPlanItemDocument, {
         data: {
           updateMealPlanItem: {
-            __typename: 'MealPlanItemPayload',
-            success: true,
-            message: 'ok',
+            __typename: 'UpdateMealPlanItemSuccess',
             mealPlanItem: {
               __typename: 'MealPlanItem',
               id: 'mpi-1',
@@ -258,7 +263,10 @@ describe('useMealPlanItemActions', () => {
     it('returns true on success', async () => {
       const del = recordMock(DeleteMealPlanItemDocument, {
         data: {
-          deleteMealPlanItem: { __typename: 'BasicPayload', success: true },
+          deleteMealPlanItem: {
+            __typename: 'DeleteMealPlanItemSuccess',
+            mealPlanItem: { __typename: 'MealPlanItem', id: 'mpi-1' },
+          },
         },
       });
 
@@ -278,7 +286,11 @@ describe('useMealPlanItemActions', () => {
     it('returns false on failure', async () => {
       const del = recordMock(DeleteMealPlanItemDocument, {
         data: {
-          deleteMealPlanItem: { __typename: 'BasicPayload', success: false },
+          deleteMealPlanItem: {
+            __typename: 'NotFoundError',
+            code: 'NOT_FOUND',
+            message: 'Meal plan item not found',
+          },
         },
       });
 

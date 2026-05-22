@@ -21,6 +21,22 @@ export type Scalars = {
   Upload: { input: { uri: string; type: string; name: string }; output: { uri: string; type: string; name: string }; }
 };
 
+export type AcceptHomeInviteResult = AcceptHomeInviteSuccess | ConflictError | ForbiddenError | NotFoundError | ValidationError;
+
+export type AcceptHomeInviteSuccess = {
+  __typename: 'AcceptHomeInviteSuccess';
+  home: Maybe<Home>;
+  membership: Membership;
+};
+
+export type AcceptShoppingListInviteResult = AcceptShoppingListInviteSuccess | ConflictError | ForbiddenError | NotFoundError | ValidationError;
+
+export type AcceptShoppingListInviteSuccess = {
+  __typename: 'AcceptShoppingListInviteSuccess';
+  collaborator: ShoppingListCollaborator;
+  shoppingList: Maybe<ShoppingList>;
+};
+
 /**
  * Access level for resource-based authorization
  * - OWNER: Full control (create, read, update, delete, manage permissions)
@@ -64,6 +80,14 @@ export type AddIngredientResult = {
   wasUpdated: Scalars['Boolean']['output'];
 };
 
+export type AddItemToShoppingListResult = AddItemToShoppingListSuccess | ConflictError | ForbiddenError | NotFoundError | ValidationError;
+
+export type AddItemToShoppingListSuccess = {
+  __typename: 'AddItemToShoppingListSuccess';
+  shoppingList: Maybe<ShoppingList>;
+  shoppingListItem: ShoppingListItem;
+};
+
 /** Result of adding a pantry item to a shopping list */
 export type AddPantryItemToShoppingListResult = {
   __typename: 'AddPantryItemToShoppingListResult';
@@ -88,13 +112,28 @@ export type AddRecipeToShoppingListResult = {
   updatedItems: Array<ShoppingListItem>;
 };
 
+export type AddRecipeToShoppingListResultUnion = AddRecipeToShoppingListSuccess | ConflictError | ForbiddenError | NotFoundError | ValidationError;
+
+export type AddRecipeToShoppingListSuccess = {
+  __typename: 'AddRecipeToShoppingListSuccess';
+  shoppingList: ShoppingList;
+};
+
 export type AddRestrictionInput = {
-  appliesToHomeId?: InputMaybe<Scalars['String']['input']>;
+  appliesToHomeId?: InputMaybe<Scalars['ID']['input']>;
   diet?: InputMaybe<Diet>;
   healthGoal?: InputMaybe<HealthGoal>;
   intolerance?: InputMaybe<Intolerance>;
   notes?: InputMaybe<Scalars['String']['input']>;
   severity: RestrictionSeverity;
+};
+
+export type AddRestrictionResult = AddRestrictionSuccess | ConflictError | ForbiddenError | NotFoundError | ValidationError;
+
+export type AddRestrictionSuccess = {
+  __typename: 'AddRestrictionSuccess';
+  dietaryProfile: Maybe<DietaryProfile>;
+  dietaryRestriction: DietaryRestriction;
 };
 
 export type AddRestrictionsInput = {
@@ -114,9 +153,31 @@ export type AddTemplateItemInput = {
   templateId: Scalars['ID']['input'];
 };
 
+export type AddTemplateItemResult = AddTemplateItemSuccess | ConflictError | ForbiddenError | NotFoundError | ValidationError;
+
+export type AddTemplateItemSuccess = {
+  __typename: 'AddTemplateItemSuccess';
+  mealTemplate: Maybe<MealTemplate>;
+  mealTemplateItem: MealTemplateItem;
+};
+
+export type AddUserAddressResult = AddUserAddressSuccess | ConflictError | ForbiddenError | ValidationError;
+
+export type AddUserAddressSuccess = {
+  __typename: 'AddUserAddressSuccess';
+  userAddress: UserAddress;
+};
+
 export type AddWarningInput = {
   reason: Scalars['String']['input'];
   userId: Scalars['ID']['input'];
+};
+
+export type AddWarningResult = AddWarningSuccess | ConflictError | ForbiddenError | NotFoundError | ValidationError;
+
+export type AddWarningSuccess = {
+  __typename: 'AddWarningSuccess';
+  userModeration: UserModeration;
 };
 
 export enum AddedContext {
@@ -152,6 +213,7 @@ export type AdditionCostAnalytics = {
  * Creates an ADJUSTMENT usage record for audit trail.
  */
 export type AdjustPantryItemQuantityInput = {
+  id: Scalars['ID']['input'];
   /** The actual quantity from physical count */
   newQuantity: Scalars['Float']['input'];
   /** Why the adjustment was made (required for audit trail) */
@@ -160,6 +222,14 @@ export type AdjustPantryItemQuantityInput = {
   remainingNetWeight?: InputMaybe<Scalars['Float']['input']>;
   /** Optimistic concurrency control — must match current version */
   version?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type AdjustPantryItemQuantityResult = AdjustPantryItemQuantitySuccess | ConflictError | ForbiddenError | NotFoundError | ValidationError;
+
+export type AdjustPantryItemQuantitySuccess = {
+  __typename: 'AdjustPantryItemQuantitySuccess';
+  pantry: Maybe<Pantry>;
+  pantryItem: PantryItem;
 };
 
 /**
@@ -181,9 +251,37 @@ export type AdminDeleteImagesInput = {
   useQueue?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
+export type AdminDeleteItemResult = AdminDeleteItemSuccess | ConflictError | ForbiddenError | NotFoundError;
+
+export type AdminDeleteItemSuccess = {
+  __typename: 'AdminDeleteItemSuccess';
+  item: Maybe<Item>;
+};
+
+export type AdminDeleteRecipeResult = AdminDeleteRecipeSuccess | ConflictError | ForbiddenError | NotFoundError;
+
+export type AdminDeleteRecipeReviewResult = AdminDeleteRecipeReviewSuccess | ConflictError | ForbiddenError | NotFoundError;
+
+export type AdminDeleteRecipeReviewSuccess = {
+  __typename: 'AdminDeleteRecipeReviewSuccess';
+  recipeReview: RecipeReview;
+};
+
+export type AdminDeleteRecipeSuccess = {
+  __typename: 'AdminDeleteRecipeSuccess';
+  recipe: Maybe<Recipe>;
+};
+
 export type AdminDeleteUserInput = {
   /** If true, permanently deletes the user (SuperAdmin only) */
   hard?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
+export type AdminDeleteUserResult = AdminDeleteUserSuccess | ConflictError | ForbiddenError | NotFoundError;
+
+export type AdminDeleteUserSuccess = {
+  __typename: 'AdminDeleteUserSuccess';
+  user: Maybe<User>;
 };
 
 /** Paginated result for admin item unit conversion listing */
@@ -191,6 +289,20 @@ export type AdminItemUnitConversionsResult = {
   __typename: 'AdminItemUnitConversionsResult';
   conversions: Array<ItemUnitConversion>;
   totalCount: Scalars['Int']['output'];
+};
+
+export type AdminUpdateItemResult = AdminUpdateItemSuccess | ConflictError | ForbiddenError | NotFoundError | ValidationError;
+
+export type AdminUpdateItemSuccess = {
+  __typename: 'AdminUpdateItemSuccess';
+  item: Item;
+};
+
+export type AdminUpdateRecipeResult = AdminUpdateRecipeSuccess | ConflictError | ForbiddenError | NotFoundError | ValidationError;
+
+export type AdminUpdateRecipeSuccess = {
+  __typename: 'AdminUpdateRecipeSuccess';
+  recipe: Recipe;
 };
 
 /** Result of quantity aggregation (add/subtract) */
@@ -257,6 +369,20 @@ export enum AppealStatus {
   UnderReview = 'UNDER_REVIEW',
   Withdrawn = 'WITHDRAWN'
 }
+
+export type ApproveItemResult = ApproveItemSuccess | ConflictError | ForbiddenError | NotFoundError;
+
+export type ApproveItemSuccess = {
+  __typename: 'ApproveItemSuccess';
+  item: Item;
+};
+
+export type ArchiveShoppingListResult = ArchiveShoppingListSuccess | ConflictError | ForbiddenError | NotFoundError;
+
+export type ArchiveShoppingListSuccess = {
+  __typename: 'ArchiveShoppingListSuccess';
+  shoppingList: ShoppingList;
+};
 
 /** Sub-input for attribution data */
 export type AttributionInput = {
@@ -423,7 +549,7 @@ export type BatchUpsertItemResult = {
   success: Scalars['Boolean']['output'];
 };
 
-export type BatchUpsertItemsResponse = MutationPayload & {
+export type BatchUpsertItemsResponse = {
   __typename: 'BatchUpsertItemsResponse';
   code: Scalars['String']['output'];
   message: Scalars['String']['output'];
@@ -475,7 +601,7 @@ export type BrandEdge = Edge & {
 /** Sub-input for brand-related filters */
 export type BrandFilterInput = {
   brand?: InputMaybe<Scalars['String']['input']>;
-  brandIds?: InputMaybe<Array<Scalars['String']['input']>>;
+  brandIds?: InputMaybe<Array<Scalars['ID']['input']>>;
   brands?: InputMaybe<Array<Scalars['String']['input']>>;
 };
 
@@ -495,14 +621,6 @@ export type BrandOpsInput = {
 export type BrandOrderBy = {
   createdAt?: InputMaybe<SortOrder>;
   name?: InputMaybe<SortOrder>;
-};
-
-export type BrandPayload = MutationPayload & {
-  __typename: 'BrandPayload';
-  brand: Maybe<Brand>;
-  code: Scalars['String']['output'];
-  message: Scalars['String']['output'];
-  success: Scalars['Boolean']['output'];
 };
 
 /** Reusable sub-input for referencing a brand by ID or name (find-or-create) */
@@ -540,7 +658,7 @@ export type BulkCreateItemInput = {
   validateOnly?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
-export type BulkCreateItemsResponse = MutationPayload & {
+export type BulkCreateItemsResponse = {
   __typename: 'BulkCreateItemsResponse';
   code: Scalars['String']['output'];
   created: Array<Item>;
@@ -552,6 +670,30 @@ export type BulkCreateItemsResponse = MutationPayload & {
   updated: Array<Item>;
 };
 
+export type BulkCreatePurchasesResult = BulkCreatePurchasesSuccess | ConflictError | ForbiddenError | NotFoundError | ValidationError;
+
+export type BulkCreatePurchasesSuccess = {
+  __typename: 'BulkCreatePurchasesSuccess';
+  count: Scalars['Int']['output'];
+  purchases: Array<Purchase>;
+};
+
+export type BulkCreateStoresResult = BulkCreateStoresSuccess | ConflictError | ForbiddenError | ValidationError;
+
+export type BulkCreateStoresSuccess = {
+  __typename: 'BulkCreateStoresSuccess';
+  count: Scalars['Int']['output'];
+  stores: Array<Store>;
+};
+
+export type BulkDeletePurchasesResult = BulkDeletePurchasesSuccess | ConflictError | ForbiddenError | NotFoundError;
+
+export type BulkDeletePurchasesSuccess = {
+  __typename: 'BulkDeletePurchasesSuccess';
+  count: Scalars['Int']['output'];
+  purchases: Array<Purchase>;
+};
+
 /** Error detail for bulk device operations */
 export type BulkDeviceError = {
   __typename: 'BulkDeviceError';
@@ -560,7 +702,7 @@ export type BulkDeviceError = {
 };
 
 /** Result of bulk device update */
-export type BulkDeviceResult = MutationPayload & {
+export type BulkDeviceResult = {
   __typename: 'BulkDeviceResult';
   code: Scalars['String']['output'];
   devices: Array<Device>;
@@ -581,15 +723,6 @@ export type BulkDeviceUpdateInput = {
   isVerified?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
-export type BulkLoginHistoryPayload = MutationPayload & {
-  __typename: 'BulkLoginHistoryPayload';
-  code: Scalars['String']['output'];
-  count: Scalars['Int']['output'];
-  loginHistories: Array<LoginHistory>;
-  message: Scalars['String']['output'];
-  success: Scalars['Boolean']['output'];
-};
-
 export type BulkNotificationInput = {
   actionUrl?: InputMaybe<Scalars['String']['input']>;
   batchId?: InputMaybe<Scalars['String']['input']>;
@@ -601,22 +734,13 @@ export type BulkNotificationInput = {
   priority?: InputMaybe<Priority>;
   title?: InputMaybe<Scalars['String']['input']>;
   type: NotificationType;
-  userIds: Array<Scalars['String']['input']>;
+  userIds: Array<Scalars['ID']['input']>;
 };
 
-export type BulkNotificationPayload = MutationPayload & {
-  __typename: 'BulkNotificationPayload';
-  code: Scalars['String']['output'];
-  count: Scalars['Int']['output'];
-  message: Scalars['String']['output'];
-  notifications: Array<Notification>;
-  success: Scalars['Boolean']['output'];
-};
-
-export type BulkNotificationResult = MutationPayload & {
+export type BulkNotificationResult = {
   __typename: 'BulkNotificationResult';
   code: Scalars['String']['output'];
-  failed: Array<Scalars['String']['output']>;
+  failed: Array<Scalars['ID']['output']>;
   message: Scalars['String']['output'];
   sent: Array<Notification>;
   success: Scalars['Boolean']['output'];
@@ -624,7 +748,7 @@ export type BulkNotificationResult = MutationPayload & {
   totalSent: Scalars['Int']['output'];
 };
 
-export type BulkOperationSummary = MutationPayload & {
+export type BulkOperationSummary = {
   __typename: 'BulkOperationSummary';
   code: Scalars['String']['output'];
   executionTime: Scalars['Float']['output'];
@@ -636,22 +760,12 @@ export type BulkOperationSummary = MutationPayload & {
   total: Scalars['Int']['output'];
 };
 
-export type BulkPurchasePayload = MutationPayload & {
-  __typename: 'BulkPurchasePayload';
-  code: Scalars['String']['output'];
-  count: Scalars['Int']['output'];
-  message: Scalars['String']['output'];
-  purchases: Array<Purchase>;
-  success: Scalars['Boolean']['output'];
-};
+export type BulkUpdateLoginHistoriesResult = BulkUpdateLoginHistoriesSuccess | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
-export type BulkStorePayload = MutationPayload & {
-  __typename: 'BulkStorePayload';
-  code: Scalars['String']['output'];
+export type BulkUpdateLoginHistoriesSuccess = {
+  __typename: 'BulkUpdateLoginHistoriesSuccess';
   count: Scalars['Int']['output'];
-  message: Scalars['String']['output'];
-  stores: Array<Store>;
-  success: Scalars['Boolean']['output'];
+  loginHistories: Array<LoginHistory>;
 };
 
 /**
@@ -670,11 +784,25 @@ export type CanDeleteAccountResult = {
   canDelete: Scalars['Boolean']['output'];
 };
 
+export type CancelRecurringResult = CancelRecurringSuccess | ConflictError | ForbiddenError | NotFoundError;
+
+export type CancelRecurringSuccess = {
+  __typename: 'CancelRecurringSuccess';
+  shoppingList: ShoppingList;
+};
+
 /** Input for categorizing an item */
 export type CategorizeItemInput = {
   categoryId: Scalars['ID']['input'];
   isPrimary?: InputMaybe<Scalars['Boolean']['input']>;
   itemId: Scalars['ID']['input'];
+};
+
+export type CategorizeItemResult = CategorizeItemSuccess | ConflictError | ForbiddenError | NotFoundError | ValidationError;
+
+export type CategorizeItemSuccess = {
+  __typename: 'CategorizeItemSuccess';
+  itemCategory: ItemCategory;
 };
 
 /**
@@ -737,14 +865,6 @@ export type CategoryOrderBy = {
   sortOrder?: InputMaybe<SortOrder>;
 };
 
-export type CategoryPayload = MutationPayload & {
-  __typename: 'CategoryPayload';
-  category: Maybe<Category>;
-  code: Scalars['String']['output'];
-  message: Scalars['String']['output'];
-  success: Scalars['Boolean']['output'];
-};
-
 export enum CategorySource {
   Ai = 'AI',
   Auto = 'AUTO',
@@ -778,7 +898,7 @@ export type ChangePasswordInput = {
   newPassword: Scalars['String']['input'];
 };
 
-export type ChangePasswordResponse = MutationPayload & {
+export type ChangePasswordResponse = {
   __typename: 'ChangePasswordResponse';
   code: Scalars['String']['output'];
   message: Scalars['String']['output'];
@@ -816,6 +936,13 @@ export type ClearItemsResponse = {
   clearedItemIds: Array<Scalars['ID']['output']>;
   /** Summary of the bulk operation */
   summary: BulkOperationSummary;
+};
+
+export type ClearReminderResult = ClearReminderSuccess | ConflictError | ForbiddenError | NotFoundError;
+
+export type ClearReminderSuccess = {
+  __typename: 'ClearReminderSuccess';
+  shoppingList: ShoppingList;
 };
 
 export type CollaborationChangeEvent = {
@@ -867,9 +994,38 @@ export type CompatibleUnit = {
   usageContexts: Array<UnitUsageContext>;
 };
 
+export type CompleteOnboardingResult = CompleteOnboardingSuccess | ConflictError | ForbiddenError | NotFoundError;
+
+export type CompleteOnboardingSuccess = {
+  __typename: 'CompleteOnboardingSuccess';
+  user: User;
+};
+
 export type CompleteShoppingListInput = {
   completedShopDate?: InputMaybe<Scalars['DateTime']['input']>;
+  id: Scalars['ID']['input'];
   totalCost?: InputMaybe<Scalars['Float']['input']>;
+};
+
+export type CompleteShoppingListResult = CompleteShoppingListSuccess | ConflictError | ForbiddenError | NotFoundError | ValidationError;
+
+export type CompleteShoppingListSuccess = {
+  __typename: 'CompleteShoppingListSuccess';
+  shoppingList: ShoppingList;
+};
+
+export type ConfirmItemImageUploadResult = ConfirmItemImageUploadSuccess | ConflictError | ForbiddenError | NotFoundError | ValidationError;
+
+export type ConfirmItemImageUploadSuccess = {
+  __typename: 'ConfirmItemImageUploadSuccess';
+  url: Maybe<Scalars['String']['output']>;
+};
+
+export type ConfirmProfileImageUploadResult = ConfirmProfileImageUploadSuccess | ConflictError | ForbiddenError | NotFoundError | ValidationError;
+
+export type ConfirmProfileImageUploadSuccess = {
+  __typename: 'ConfirmProfileImageUploadSuccess';
+  url: Maybe<Scalars['String']['output']>;
 };
 
 /** Input for confirming recipe ingredient consumption from pantry */
@@ -884,6 +1040,17 @@ export type ConfirmedIngredientConsumptionInput = {
   quantity: Scalars['Float']['input'];
   recipeIngredientId: Scalars['ID']['input'];
   unitId: Scalars['ID']['input'];
+};
+
+/**
+ * The operation would violate a uniqueness, state, or optimistic-locking
+ * invariant. Includes both `CONFLICT` (logical) and `VERSION_CONFLICT`
+ * (optimistic locking) cases — disambiguate via `code`.
+ */
+export type ConflictError = Error & {
+  __typename: 'ConflictError';
+  code: ErrorCode;
+  message: Scalars['String']['output'];
 };
 
 export type Connection = {
@@ -975,6 +1142,22 @@ export enum ConversionType {
   SameTypeStandard = 'SAME_TYPE_STANDARD'
 }
 
+export type ConvertExpiredBatchesToWasteResult = ConflictError | ConvertExpiredBatchesToWasteSuccess | ForbiddenError | NotFoundError;
+
+export type ConvertExpiredBatchesToWasteSuccess = {
+  __typename: 'ConvertExpiredBatchesToWasteSuccess';
+  pantry: Maybe<Pantry>;
+  pantryItem: PantryItem;
+};
+
+export type ConvertExpiredToWasteResult = ConflictError | ConvertExpiredToWasteSuccess | ForbiddenError | NotFoundError;
+
+export type ConvertExpiredToWasteSuccess = {
+  __typename: 'ConvertExpiredToWasteSuccess';
+  pantry: Maybe<Pantry>;
+  pantryItem: PantryItem;
+};
+
 export type ConvertedUnitValue = {
   __typename: 'ConvertedUnitValue';
   conversionFactor: Scalars['Float']['output'];
@@ -1030,14 +1213,6 @@ export type CookingLogOrderBy = {
   createdAt?: InputMaybe<SortOrder>;
 };
 
-export type CookingLogPayload = MutationPayload & {
-  __typename: 'CookingLogPayload';
-  code: Scalars['String']['output'];
-  cookingLog: Maybe<CookingLog>;
-  message: Scalars['String']['output'];
-  success: Scalars['Boolean']['output'];
-};
-
 export type CookingStats = {
   __typename: 'CookingStats';
   averageRating: Maybe<Scalars['Float']['output']>;
@@ -1052,6 +1227,7 @@ export type CookingStats = {
  * Recalculates remainingNetWeight proportionally and derives new quantity.
  */
 export type CorrectPantryItemWeightInput = {
+  id: Scalars['ID']['input'];
   /** The corrected net weight per unit (e.g., 12.5 for 12.5 oz per jar) */
   netWeight: Scalars['Float']['input'];
   /** Unit for the net weight (optional — only provide to also change the unit) */
@@ -1062,10 +1238,25 @@ export type CorrectPantryItemWeightInput = {
   version: Scalars['Int']['input'];
 };
 
+export type CorrectPantryItemWeightResult = ConflictError | CorrectPantryItemWeightSuccess | ForbiddenError | NotFoundError | ValidationError;
+
+export type CorrectPantryItemWeightSuccess = {
+  __typename: 'CorrectPantryItemWeightSuccess';
+  pantry: Maybe<Pantry>;
+  pantryItem: PantryItem;
+};
+
 export type CreateBrandInput = {
   description?: InputMaybe<Scalars['String']['input']>;
   name: Scalars['String']['input'];
   parentId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type CreateBrandResult = ConflictError | CreateBrandSuccess | ForbiddenError | ValidationError;
+
+export type CreateBrandSuccess = {
+  __typename: 'CreateBrandSuccess';
+  brand: Brand;
 };
 
 export type CreateCategoryInput = {
@@ -1077,6 +1268,13 @@ export type CreateCategoryInput = {
   slug?: InputMaybe<Scalars['String']['input']>;
   type?: InputMaybe<CategoryType>;
   visibility?: InputMaybe<Visibility>;
+};
+
+export type CreateCategoryResult = ConflictError | CreateCategorySuccess | ForbiddenError | ValidationError;
+
+export type CreateCategorySuccess = {
+  __typename: 'CreateCategorySuccess';
+  category: Category;
 };
 
 export type CreateCookingLogInput = {
@@ -1092,11 +1290,26 @@ export type CreateCookingLogInput = {
   wouldMakeAgain?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
+export type CreateCookingLogResult = CreateCookingLogSuccess | ForbiddenError | NotFoundError | ValidationError;
+
+export type CreateCookingLogSuccess = {
+  __typename: 'CreateCookingLogSuccess';
+  cookingLog: CookingLog;
+  recipe: Maybe<Recipe>;
+};
+
 export type CreateCurrencyInput = {
   code: Scalars['String']['input'];
   decimalPlaces: Scalars['Int']['input'];
   name: Scalars['String']['input'];
   symbol: Scalars['String']['input'];
+};
+
+export type CreateCurrencyResult = ConflictError | CreateCurrencySuccess | ForbiddenError | ValidationError;
+
+export type CreateCurrencySuccess = {
+  __typename: 'CreateCurrencySuccess';
+  currency: Currency;
 };
 
 export type CreateDeviceInput = {
@@ -1121,6 +1334,13 @@ export type CreateFromTemplateInput = {
   templateId: Scalars['ID']['input'];
 };
 
+export type CreateFromTemplateResult = ConflictError | CreateFromTemplateSuccess | ForbiddenError | NotFoundError | ValidationError;
+
+export type CreateFromTemplateSuccess = {
+  __typename: 'CreateFromTemplateSuccess';
+  shoppingList: ShoppingList;
+};
+
 export type CreateHomeInput = {
   allowJoinCode?: InputMaybe<Scalars['Boolean']['input']>;
   createDefaultPantry?: InputMaybe<Scalars['Boolean']['input']>;
@@ -1133,6 +1353,21 @@ export type CreateHomeInput = {
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
   timezone?: InputMaybe<Scalars['String']['input']>;
   type?: InputMaybe<HomeType>;
+};
+
+export type CreateHomeResult = ConflictError | CreateHomeSuccess | ForbiddenError | ValidationError;
+
+export type CreateHomeSuccess = {
+  __typename: 'CreateHomeSuccess';
+  home: Home;
+};
+
+export type CreateImageUploadUrlResult = ConflictError | CreateImageUploadUrlSuccess | ForbiddenError | NotFoundError | ValidationError;
+
+export type CreateImageUploadUrlSuccess = {
+  __typename: 'CreateImageUploadUrlSuccess';
+  key: Scalars['String']['output'];
+  url: Scalars['String']['output'];
 };
 
 export type CreateItemInput = {
@@ -1151,6 +1386,14 @@ export type CreateItemInput = {
   storeSkus?: InputMaybe<Array<StoreSkuInput>>;
   type?: InputMaybe<ItemType>;
   unitConfig?: InputMaybe<ItemUnitConfigInput>;
+};
+
+export type CreateItemResult = ConflictError | CreateItemSuccess | ForbiddenError | NotFoundError | ValidationError;
+
+export type CreateItemSuccess = {
+  __typename: 'CreateItemSuccess';
+  item: Item;
+  matchType: Maybe<ItemMatchType>;
 };
 
 /** Input for creating a meal plan from a template */
@@ -1201,6 +1444,22 @@ export type CreateMealPlanItemInput = {
   servings?: InputMaybe<Scalars['Int']['input']>;
 };
 
+export type CreateMealPlanItemResult = ConflictError | CreateMealPlanItemSuccess | ForbiddenError | NotFoundError | ValidationError;
+
+export type CreateMealPlanItemSuccess = {
+  __typename: 'CreateMealPlanItemSuccess';
+  mealPlan: Maybe<MealPlan>;
+  mealPlanItem: MealPlanItem;
+};
+
+export type CreateMealPlanResult = ConflictError | CreateMealPlanSuccess | ForbiddenError | NotFoundError | ValidationError;
+
+export type CreateMealPlanSuccess = {
+  __typename: 'CreateMealPlanSuccess';
+  home: Maybe<Home>;
+  mealPlan: MealPlan;
+};
+
 export type CreateMealTemplateInput = {
   category?: InputMaybe<TemplateCategory>;
   defaultServings?: InputMaybe<Scalars['Int']['input']>;
@@ -1217,6 +1476,14 @@ export type CreateMealTemplateInput = {
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
 };
 
+export type CreateMealTemplateResult = ConflictError | CreateMealTemplateSuccess | ForbiddenError | ValidationError;
+
+export type CreateMealTemplateSuccess = {
+  __typename: 'CreateMealTemplateSuccess';
+  home: Maybe<Home>;
+  mealTemplate: MealTemplate;
+};
+
 export type CreateMembershipInput = {
   canAddItems?: InputMaybe<Scalars['Boolean']['input']>;
   canEditPantry?: InputMaybe<Scalars['Boolean']['input']>;
@@ -1228,6 +1495,21 @@ export type CreateMembershipInput = {
   homeId: Scalars['ID']['input'];
   role?: InputMaybe<MembershipRole>;
   userId: Scalars['ID']['input'];
+};
+
+export type CreateMembershipResult = ConflictError | CreateMembershipSuccess | ForbiddenError | NotFoundError | ValidationError;
+
+export type CreateMembershipSuccess = {
+  __typename: 'CreateMembershipSuccess';
+  home: Maybe<Home>;
+  membership: Membership;
+};
+
+export type CreateModerationRecordResult = ConflictError | CreateModerationRecordSuccess | ForbiddenError | NotFoundError | ValidationError;
+
+export type CreateModerationRecordSuccess = {
+  __typename: 'CreateModerationRecordSuccess';
+  userModeration: UserModeration;
 };
 
 export type CreateNotificationInput = {
@@ -1244,7 +1526,14 @@ export type CreateNotificationInput = {
   status?: InputMaybe<NotificationStatus>;
   title?: InputMaybe<Scalars['String']['input']>;
   type: NotificationType;
-  userId?: InputMaybe<Scalars['String']['input']>;
+  userId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type CreateNotificationResult = ConflictError | CreateNotificationSuccess | ForbiddenError | NotFoundError | ValidationError;
+
+export type CreateNotificationSuccess = {
+  __typename: 'CreateNotificationSuccess';
+  notification: Maybe<Notification>;
 };
 
 export type CreatePantryActivityInput = {
@@ -1286,6 +1575,38 @@ export type CreatePantryItemInput = {
   unit?: InputMaybe<UnitSpecInput>;
 };
 
+export type CreatePantryItemResult = ConflictError | CreatePantryItemSuccess | ForbiddenError | NotFoundError | ValidationError;
+
+export type CreatePantryItemSuccess = {
+  __typename: 'CreatePantryItemSuccess';
+  pantry: Maybe<Pantry>;
+  pantryItem: PantryItem;
+};
+
+export type CreatePantryItemUsageResult = ConflictError | CreatePantryItemUsageSuccess | ForbiddenError | NotFoundError | ValidationError;
+
+export type CreatePantryItemUsageSuccess = {
+  __typename: 'CreatePantryItemUsageSuccess';
+  pantry: Maybe<Pantry>;
+  pantryItem: Maybe<PantryItem>;
+  pantryItemUsage: PantryItemUsage;
+};
+
+export type CreatePantryResult = ConflictError | CreatePantrySuccess | ForbiddenError | NotFoundError | ValidationError;
+
+export type CreatePantrySuccess = {
+  __typename: 'CreatePantrySuccess';
+  home: Maybe<Home>;
+  pantry: Pantry;
+};
+
+export type CreateProfileResult = ConflictError | CreateProfileSuccess | ForbiddenError | NotFoundError | ValidationError;
+
+export type CreateProfileSuccess = {
+  __typename: 'CreateProfileSuccess';
+  userProfile: UserProfile;
+};
+
 export type CreatePurchaseInput = {
   currencyId: Scalars['ID']['input'];
   discountAmount?: InputMaybe<Scalars['Float']['input']>;
@@ -1302,6 +1623,14 @@ export type CreatePurchaseInput = {
   transactionId?: InputMaybe<Scalars['String']['input']>;
   unitId: Scalars['ID']['input'];
   unitPrice: Scalars['Float']['input'];
+};
+
+export type CreatePurchaseResult = ConflictError | CreatePurchaseSuccess | ForbiddenError | NotFoundError | ValidationError;
+
+export type CreatePurchaseSuccess = {
+  __typename: 'CreatePurchaseSuccess';
+  purchase: Purchase;
+  store: Maybe<Store>;
 };
 
 export type CreateRecipeInput = {
@@ -1337,10 +1666,25 @@ export type CreateRecipeInput = {
   tips?: InputMaybe<Scalars['String']['input']>;
 };
 
+export type CreateRecipeResult = ConflictError | CreateRecipeSuccess | ForbiddenError | NotFoundError | ValidationError;
+
 export type CreateRecipeReviewInput = {
   comment?: InputMaybe<Scalars['String']['input']>;
   rating: Scalars['Int']['input'];
   recipeId: Scalars['ID']['input'];
+};
+
+export type CreateRecipeReviewResult = ConflictError | CreateRecipeReviewSuccess | ForbiddenError | NotFoundError | ValidationError;
+
+export type CreateRecipeReviewSuccess = {
+  __typename: 'CreateRecipeReviewSuccess';
+  recipe: Maybe<Recipe>;
+  recipeReview: RecipeReview;
+};
+
+export type CreateRecipeSuccess = {
+  __typename: 'CreateRecipeSuccess';
+  recipe: Recipe;
 };
 
 export type CreateShoppingListInput = {
@@ -1376,6 +1720,13 @@ export type CreateShoppingListItemsFromRecipeInput = {
   shoppingListId: Scalars['ID']['input'];
 };
 
+export type CreateShoppingListResult = ConflictError | CreateShoppingListSuccess | ForbiddenError | ValidationError;
+
+export type CreateShoppingListSuccess = {
+  __typename: 'CreateShoppingListSuccess';
+  shoppingList: ShoppingList;
+};
+
 /** Input for creating a new storage location */
 export type CreateStorageLocationInput = {
   /** Maximum capacity in specified units */
@@ -1406,6 +1757,14 @@ export type CreateStorageLocationInput = {
   type: StorageType;
 };
 
+export type CreateStorageLocationResult = ConflictError | CreateStorageLocationSuccess | ForbiddenError | NotFoundError | ValidationError;
+
+export type CreateStorageLocationSuccess = {
+  __typename: 'CreateStorageLocationSuccess';
+  home: Maybe<Home>;
+  storageLocation: StorageLocation;
+};
+
 export type CreateStoreInput = {
   address?: InputMaybe<Scalars['String']['input']>;
   averageShelfLife?: InputMaybe<Scalars['JSON']['input']>;
@@ -1415,6 +1774,13 @@ export type CreateStoreInput = {
   supportsPriceAPI?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
+export type CreateStoreResult = ConflictError | CreateStoreSuccess | ForbiddenError | ValidationError;
+
+export type CreateStoreSuccess = {
+  __typename: 'CreateStoreSuccess';
+  store: Store;
+};
+
 /** Input for creating a template from an existing meal plan */
 export type CreateTemplateFromMealPlanInput = {
   category?: InputMaybe<TemplateCategory>;
@@ -1422,6 +1788,14 @@ export type CreateTemplateFromMealPlanInput = {
   mealPlanId: Scalars['ID']['input'];
   name: Scalars['String']['input'];
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
+};
+
+export type CreateTemplateFromMealPlanResult = ConflictError | CreateTemplateFromMealPlanSuccess | ForbiddenError | NotFoundError | ValidationError;
+
+export type CreateTemplateFromMealPlanSuccess = {
+  __typename: 'CreateTemplateFromMealPlanSuccess';
+  home: Maybe<Home>;
+  mealTemplate: MealTemplate;
 };
 
 export type CreateUnitInput = {
@@ -1434,6 +1808,13 @@ export type CreateUnitInput = {
   sortOrder?: InputMaybe<Scalars['Int']['input']>;
   symbol: Scalars['String']['input'];
   type: UnitType;
+};
+
+export type CreateUnitResult = ConflictError | CreateUnitSuccess | ForbiddenError | ValidationError;
+
+export type CreateUnitSuccess = {
+  __typename: 'CreateUnitSuccess';
+  unit: Unit;
 };
 
 export type CreateUserAddressInput = {
@@ -1524,14 +1905,6 @@ export type Currency = {
   updatedAt: Scalars['DateTime']['output'];
 };
 
-export type CurrencyPayload = MutationPayload & {
-  __typename: 'CurrencyPayload';
-  code: Scalars['String']['output'];
-  currency: Maybe<Currency>;
-  message: Scalars['String']['output'];
-  success: Scalars['Boolean']['output'];
-};
-
 export enum DataSource {
   Api = 'API',
   BarcodeScan = 'BARCODE_SCAN',
@@ -1566,6 +1939,22 @@ export type DateRangeInput = {
   start: Scalars['DateTime']['input'];
 };
 
+export type DeclineHomeInviteResult = ConflictError | DeclineHomeInviteSuccess | ForbiddenError | NotFoundError;
+
+export type DeclineHomeInviteSuccess = {
+  __typename: 'DeclineHomeInviteSuccess';
+  home: Maybe<Home>;
+  homeInvite: HomeInvite;
+};
+
+export type DeclineShoppingListInviteResult = ConflictError | DeclineShoppingListInviteSuccess | ForbiddenError | NotFoundError | ValidationError;
+
+export type DeclineShoppingListInviteSuccess = {
+  __typename: 'DeclineShoppingListInviteSuccess';
+  collaborator: ShoppingListCollaborator;
+  shoppingList: Maybe<ShoppingList>;
+};
+
 /** Method used to deduct ingredients from pantry */
 export enum DeductionMethod {
   Automatic = 'AUTOMATIC',
@@ -1573,9 +1962,210 @@ export enum DeductionMethod {
   Skipped = 'SKIPPED'
 }
 
+export type DeleteAccountResult = ConflictError | DeleteAccountSuccess | ForbiddenError | NotFoundError;
+
+export type DeleteAccountSuccess = {
+  __typename: 'DeleteAccountSuccess';
+  user: Maybe<User>;
+};
+
+export type DeleteAllReadNotificationsResult = DeleteAllReadNotificationsSuccess | ForbiddenError;
+
+export type DeleteAllReadNotificationsSuccess = {
+  __typename: 'DeleteAllReadNotificationsSuccess';
+  count: Scalars['Int']['output'];
+  notifications: Array<Notification>;
+};
+
+export type DeleteBrandResult = ConflictError | DeleteBrandSuccess | ForbiddenError | NotFoundError;
+
+export type DeleteBrandSuccess = {
+  __typename: 'DeleteBrandSuccess';
+  brand: Brand;
+};
+
+export type DeleteCategoryResult = ConflictError | DeleteCategorySuccess | ForbiddenError | NotFoundError;
+
+export type DeleteCategorySuccess = {
+  __typename: 'DeleteCategorySuccess';
+  category: Category;
+};
+
+export type DeleteCookingLogResult = DeleteCookingLogSuccess | ForbiddenError | NotFoundError;
+
+export type DeleteCookingLogSuccess = {
+  __typename: 'DeleteCookingLogSuccess';
+  cookingLog: CookingLog;
+  recipe: Maybe<Recipe>;
+};
+
+export type DeleteCurrencyResult = ConflictError | DeleteCurrencySuccess | ForbiddenError | NotFoundError;
+
+export type DeleteCurrencySuccess = {
+  __typename: 'DeleteCurrencySuccess';
+  currency: Currency;
+};
+
+export type DeleteExpiredNotificationsResult = DeleteExpiredNotificationsSuccess | ForbiddenError;
+
+export type DeleteExpiredNotificationsSuccess = {
+  __typename: 'DeleteExpiredNotificationsSuccess';
+  count: Scalars['Int']['output'];
+  notifications: Array<Notification>;
+};
+
+export type DeleteExternalSourceResult = DeleteExternalSourceSuccess | ForbiddenError | NotFoundError;
+
+export type DeleteExternalSourceSuccess = {
+  __typename: 'DeleteExternalSourceSuccess';
+  externalSourceMapping: ExternalSourceMapping;
+};
+
+export type DeleteHomeResult = ConflictError | DeleteHomeSuccess | ForbiddenError | NotFoundError;
+
+export type DeleteHomeSuccess = {
+  __typename: 'DeleteHomeSuccess';
+  home: Home;
+};
+
+export type DeleteItemResult = ConflictError | DeleteItemSuccess | ForbiddenError | NotFoundError;
+
+export type DeleteItemSuccess = {
+  __typename: 'DeleteItemSuccess';
+  item: Item;
+};
+
+export type DeleteItemUnitConversionResult = ConflictError | DeleteItemUnitConversionSuccess | ForbiddenError | NotFoundError;
+
+export type DeleteItemUnitConversionSuccess = {
+  __typename: 'DeleteItemUnitConversionSuccess';
+  unitConversion: ItemUnitConversion;
+};
+
+export type DeleteMealPlanItemResult = ConflictError | DeleteMealPlanItemSuccess | ForbiddenError | NotFoundError;
+
+export type DeleteMealPlanItemSuccess = {
+  __typename: 'DeleteMealPlanItemSuccess';
+  mealPlan: Maybe<MealPlan>;
+  mealPlanItem: MealPlanItem;
+};
+
+export type DeleteMealPlanResult = ConflictError | DeleteMealPlanSuccess | ForbiddenError | NotFoundError;
+
+export type DeleteMealPlanSuccess = {
+  __typename: 'DeleteMealPlanSuccess';
+  home: Maybe<Home>;
+  mealPlan: MealPlan;
+};
+
+export type DeleteMealTemplateResult = ConflictError | DeleteMealTemplateSuccess | ForbiddenError | NotFoundError;
+
+export type DeleteMealTemplateSuccess = {
+  __typename: 'DeleteMealTemplateSuccess';
+  home: Maybe<Home>;
+  mealTemplate: MealTemplate;
+};
+
+export type DeleteMultipleNotificationsResult = DeleteMultipleNotificationsSuccess | ForbiddenError | ValidationError;
+
+export type DeleteMultipleNotificationsSuccess = {
+  __typename: 'DeleteMultipleNotificationsSuccess';
+  count: Scalars['Int']['output'];
+  notifications: Array<Notification>;
+};
+
+export type DeleteNotificationResult = ConflictError | DeleteNotificationSuccess | ForbiddenError | NotFoundError;
+
+export type DeleteNotificationSuccess = {
+  __typename: 'DeleteNotificationSuccess';
+  notification: Notification;
+};
+
+export type DeletePantryItemResult = ConflictError | DeletePantryItemSuccess | ForbiddenError | NotFoundError;
+
+export type DeletePantryItemSuccess = {
+  __typename: 'DeletePantryItemSuccess';
+  pantry: Maybe<Pantry>;
+  pantryItem: PantryItem;
+};
+
+export type DeletePantryResult = ConflictError | DeletePantrySuccess | ForbiddenError | NotFoundError;
+
+export type DeletePantrySuccess = {
+  __typename: 'DeletePantrySuccess';
+  home: Maybe<Home>;
+  pantry: Pantry;
+};
+
+export type DeletePurchaseResult = ConflictError | DeletePurchaseSuccess | ForbiddenError | NotFoundError;
+
+export type DeletePurchaseSuccess = {
+  __typename: 'DeletePurchaseSuccess';
+  purchase: Purchase;
+  store: Maybe<Store>;
+};
+
 export type DeleteRecipeFolderInput = {
   folder: Scalars['String']['input'];
   moveTo?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type DeleteRecipeFolderResult = ConflictError | DeleteRecipeFolderSuccess | ForbiddenError | NotFoundError;
+
+export type DeleteRecipeFolderSuccess = {
+  __typename: 'DeleteRecipeFolderSuccess';
+  success: Scalars['Boolean']['output'];
+};
+
+export type DeleteRecipeResult = ConflictError | DeleteRecipeSuccess | ForbiddenError | NotFoundError;
+
+export type DeleteRecipeReviewResult = DeleteRecipeReviewSuccess | ForbiddenError | NotFoundError;
+
+export type DeleteRecipeReviewSuccess = {
+  __typename: 'DeleteRecipeReviewSuccess';
+  recipe: Maybe<Recipe>;
+  recipeReview: RecipeReview;
+};
+
+export type DeleteRecipeSuccess = {
+  __typename: 'DeleteRecipeSuccess';
+  success: Scalars['Boolean']['output'];
+};
+
+export type DeleteShoppingListResult = ConflictError | DeleteShoppingListSuccess | ForbiddenError | NotFoundError;
+
+export type DeleteShoppingListSuccess = {
+  __typename: 'DeleteShoppingListSuccess';
+  shoppingList: ShoppingList;
+};
+
+export type DeleteStorageLocationResult = ConflictError | DeleteStorageLocationSuccess | ForbiddenError | NotFoundError | ValidationError;
+
+export type DeleteStorageLocationSuccess = {
+  __typename: 'DeleteStorageLocationSuccess';
+  home: Maybe<Home>;
+  storageLocation: StorageLocation;
+};
+
+export type DeleteStoreResult = ConflictError | DeleteStoreSuccess | ForbiddenError | NotFoundError;
+
+export type DeleteStoreSuccess = {
+  __typename: 'DeleteStoreSuccess';
+  store: Store;
+};
+
+export type DeleteUnitResult = ConflictError | DeleteUnitSuccess | ForbiddenError | NotFoundError;
+
+export type DeleteUnitSuccess = {
+  __typename: 'DeleteUnitSuccess';
+  unit: Unit;
+};
+
+export type DeleteUserAddressResult = ConflictError | DeleteUserAddressSuccess | ForbiddenError | NotFoundError;
+
+export type DeleteUserAddressSuccess = {
+  __typename: 'DeleteUserAddressSuccess';
+  userAddress: UserAddress;
 };
 
 /** Input for deleted device cleanup */
@@ -1669,6 +2259,17 @@ export type DeviceActivity = {
   loginCount: Scalars['Int']['output'];
 };
 
+/**
+ * Emitted when a device's activity is updated (last-seen, location,
+ * login-count increments, etc.).
+ */
+export type DeviceActivityPayload = {
+  __typename: 'DeviceActivityPayload';
+  device: Device;
+  timestamp: Scalars['DateTime']['output'];
+  userId: Scalars['ID']['output'];
+};
+
 export type DeviceBreakdown = {
   __typename: 'DeviceBreakdown';
   browsers: Array<BrowserStat>;
@@ -1676,22 +2277,6 @@ export type DeviceBreakdown = {
   operatingSystems: Array<OperatingSystemStat>;
   platforms: Array<PlatformStat>;
 };
-
-export type DeviceChangeEvent = {
-  __typename: 'DeviceChangeEvent';
-  changeType: DeviceChangeType;
-  device: Device;
-  timestamp: Scalars['DateTime']['output'];
-  userId: Scalars['ID']['output'];
-};
-
-export enum DeviceChangeType {
-  Activity = 'ACTIVITY',
-  Registered = 'REGISTERED',
-  StatusChanged = 'STATUS_CHANGED',
-  TrustChanged = 'TRUST_CHANGED',
-  Verified = 'VERIFIED'
-}
 
 /** Sub-input for device characteristics */
 export type DeviceCharacteristicsInput = {
@@ -1710,7 +2295,7 @@ export type DeviceCleanupInput = {
 };
 
 /** Result of device cleanup operation */
-export type DeviceCleanupResult = MutationPayload & {
+export type DeviceCleanupResult = {
   __typename: 'DeviceCleanupResult';
   code: Scalars['String']['output'];
   deletedDevicesRemoved: Maybe<Scalars['Int']['output']>;
@@ -1735,6 +2320,18 @@ export type DeviceCountFilters = {
   isVerified?: InputMaybe<Scalars['Boolean']['input']>;
   platform?: InputMaybe<MobilePlatform>;
   userId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+/**
+ * Emitted when a device is deleted. The full device row is not returned
+ * (the row may be soft-deleted or removed by the time subscribers receive
+ * the event) — clients should evict by deviceId from cache.
+ */
+export type DeviceDeletedPayload = {
+  __typename: 'DeviceDeletedPayload';
+  deviceId: Scalars['ID']['output'];
+  timestamp: Scalars['DateTime']['output'];
+  userId: Scalars['ID']['output'];
 };
 
 /** Composite sub-input for all device details */
@@ -1826,14 +2423,6 @@ export type DeviceOrderBy = {
   lastActiveAt?: InputMaybe<SortOrder>;
 };
 
-export type DevicePayload = MutationPayload & {
-  __typename: 'DevicePayload';
-  code: Scalars['String']['output'];
-  device: Maybe<Device>;
-  message: Scalars['String']['output'];
-  success: Scalars['Boolean']['output'];
-};
-
 /** Sub-input for device peripherals (automation detection) */
 export type DevicePeripheralsDetailsInput = {
   isBluetoothHeadphonesConnected?: InputMaybe<Scalars['Boolean']['input']>;
@@ -1849,6 +2438,14 @@ export type DevicePeripheralsInput = {
   isKeyboardConnected?: InputMaybe<Scalars['Boolean']['input']>;
   isMouseConnected?: InputMaybe<Scalars['Boolean']['input']>;
   isWiredHeadphonesConnected?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
+/** Emitted when a new device is registered for a user. */
+export type DeviceRegisteredPayload = {
+  __typename: 'DeviceRegisteredPayload';
+  device: Device;
+  timestamp: Scalars['DateTime']['output'];
+  userId: Scalars['ID']['output'];
 };
 
 export type DeviceRegistrationInput = {
@@ -1883,6 +2480,15 @@ export type DeviceStats = {
   summary: DeviceSummary;
 };
 
+/** Emitted when a device's active-status flips (activated / deactivated). */
+export type DeviceStatusChangedPayload = {
+  __typename: 'DeviceStatusChangedPayload';
+  device: Device;
+  isActive: Scalars['Boolean']['output'];
+  timestamp: Scalars['DateTime']['output'];
+  userId: Scalars['ID']['output'];
+};
+
 export type DeviceSummary = {
   __typename: 'DeviceSummary';
   activeDevices: Scalars['Int']['output'];
@@ -1891,6 +2497,15 @@ export type DeviceSummary = {
   totalDevices: Scalars['Int']['output'];
   trustedDevices: Scalars['Int']['output'];
   verifiedDevices: Scalars['Int']['output'];
+};
+
+/** Emitted when a device's trust status flips (trusted / untrusted). */
+export type DeviceTrustChangedPayload = {
+  __typename: 'DeviceTrustChangedPayload';
+  device: Device;
+  isTrusted: Scalars['Boolean']['output'];
+  timestamp: Scalars['DateTime']['output'];
+  userId: Scalars['ID']['output'];
 };
 
 export enum DeviceType {
@@ -1906,6 +2521,14 @@ export type DeviceTypeStat = {
   __typename: 'DeviceTypeStat';
   count: Scalars['Int']['output'];
   deviceType: DeviceType;
+};
+
+/** Emitted when a device is marked verified. */
+export type DeviceVerifiedPayload = {
+  __typename: 'DeviceVerifiedPayload';
+  device: Device;
+  timestamp: Scalars['DateTime']['output'];
+  userId: Scalars['ID']['output'];
 };
 
 /** Represents a dietary preference or restriction that influences recipe and meal recommendations */
@@ -1967,14 +2590,6 @@ export type DietaryProfile = {
   userId: Scalars['ID']['output'];
 };
 
-export type DietaryProfilePayload = MutationPayload & {
-  __typename: 'DietaryProfilePayload';
-  code: Scalars['String']['output'];
-  dietaryProfile: Maybe<DietaryProfile>;
-  message: Scalars['String']['output'];
-  success: Scalars['Boolean']['output'];
-};
-
 export type DietaryRestriction = {
   __typename: 'DietaryRestriction';
   appliesToHomeId: Maybe<Scalars['ID']['output']>;
@@ -1988,14 +2603,6 @@ export type DietaryRestriction = {
   notes: Maybe<Scalars['String']['output']>;
   severity: RestrictionSeverity;
   updatedAt: Scalars['DateTime']['output'];
-};
-
-export type DietaryRestrictionPayload = MutationPayload & {
-  __typename: 'DietaryRestrictionPayload';
-  code: Scalars['String']['output'];
-  dietaryRestriction: Maybe<DietaryRestriction>;
-  message: Scalars['String']['output'];
-  success: Scalars['Boolean']['output'];
 };
 
 /** Reusable sub-input for dietary tags */
@@ -2012,6 +2619,14 @@ export enum Difficulty {
   Medium = 'MEDIUM',
   VeryEasy = 'VERY_EASY'
 }
+
+export type DismissExpirationNotificationResult = ConflictError | DismissExpirationNotificationSuccess | ForbiddenError | NotFoundError;
+
+export type DismissExpirationNotificationSuccess = {
+  __typename: 'DismissExpirationNotificationSuccess';
+  expirationNotification: ExpirationNotification;
+  pantryItem: Maybe<PantryItem>;
+};
 
 export type DismissNotificationInput = {
   notificationId: Scalars['ID']['input'];
@@ -2032,6 +2647,22 @@ export type DuplicateMealPlanInput = {
   newStartDate: Scalars['DateTime']['input'];
 };
 
+export type DuplicateMealPlanResult = ConflictError | DuplicateMealPlanSuccess | ForbiddenError | NotFoundError | ValidationError;
+
+export type DuplicateMealPlanSuccess = {
+  __typename: 'DuplicateMealPlanSuccess';
+  home: Maybe<Home>;
+  mealPlan: MealPlan;
+};
+
+export type DuplicateTemplateResult = ConflictError | DuplicateTemplateSuccess | ForbiddenError | NotFoundError | ValidationError;
+
+export type DuplicateTemplateSuccess = {
+  __typename: 'DuplicateTemplateSuccess';
+  home: Maybe<Home>;
+  mealTemplate: MealTemplate;
+};
+
 export type Edge = {
   cursor: Scalars['String']['output'];
 };
@@ -2048,6 +2679,33 @@ export type EffectiveUsageRate = {
   totalWasted: Scalars['Float']['output'];
   unitName: Maybe<Scalars['String']['output']>;
 };
+
+/**
+ * Base interface for every mutation error variant. Every concrete error
+ * type implements this so clients can write a generic
+ * `... on Error { code message }` fallback alongside specific variants.
+ */
+export type Error = {
+  code: ErrorCode;
+  message: Scalars['String']['output'];
+};
+
+/**
+ * Machine-readable error code. Returned on every Error implementer so
+ * clients can branch on `code` without needing to inspect `__typename`
+ * for common cases.
+ */
+export enum ErrorCode {
+  Conflict = 'CONFLICT',
+  Deadlock = 'DEADLOCK',
+  Forbidden = 'FORBIDDEN',
+  InternalError = 'INTERNAL_ERROR',
+  NotFound = 'NOT_FOUND',
+  RateLimited = 'RATE_LIMITED',
+  UnitInvalid = 'UNIT_INVALID',
+  ValidationFailed = 'VALIDATION_FAILED',
+  VersionConflict = 'VERSION_CONFLICT'
+}
 
 export enum ExpirationAction {
   Consumed = 'CONSUMED',
@@ -2097,24 +2755,45 @@ export type ExpirationNotification = {
   userId: Scalars['ID']['output'];
 };
 
-export type ExpirationNotificationChangeEvent = {
-  __typename: 'ExpirationNotificationChangeEvent';
-  changeType: ExpirationNotificationChangeType;
+/**
+ * Emitted when the user takes an action on an expiration notification
+ * (waste, restock, mark-as-consumed, etc.).
+ */
+export type ExpirationNotificationActionTakenPayload = {
+  __typename: 'ExpirationNotificationActionTakenPayload';
+  action: ExpirationAction;
   notification: ExpirationNotification;
   pantryId: Scalars['ID']['output'];
   timestamp: Scalars['DateTime']['output'];
+  userId: Scalars['ID']['output'];
 };
-
-export enum ExpirationNotificationChangeType {
-  Created = 'CREATED',
-  Updated = 'UPDATED'
-}
 
 export type ExpirationNotificationConnection = Connection & {
   __typename: 'ExpirationNotificationConnection';
   edges: Array<ExpirationNotificationEdge>;
   pageInfo: PageInfo;
   totalCount: Maybe<Scalars['Int']['output']>;
+};
+
+/**
+ * Emitted when the expiration-check background job creates a new
+ * expiration notification for an item the user owns.
+ */
+export type ExpirationNotificationCreatedPayload = {
+  __typename: 'ExpirationNotificationCreatedPayload';
+  notification: ExpirationNotification;
+  pantryId: Scalars['ID']['output'];
+  timestamp: Scalars['DateTime']['output'];
+  userId: Scalars['ID']['output'];
+};
+
+/** Emitted when the user dismisses an expiration notification. */
+export type ExpirationNotificationDismissedPayload = {
+  __typename: 'ExpirationNotificationDismissedPayload';
+  notification: ExpirationNotification;
+  pantryId: Scalars['ID']['output'];
+  timestamp: Scalars['DateTime']['output'];
+  userId: Scalars['ID']['output'];
 };
 
 /** Expiration notification connection for pagination */
@@ -2130,12 +2809,13 @@ export type ExpirationNotificationOrderBy = {
   expiresAt?: InputMaybe<SortOrder>;
 };
 
-export type ExpirationNotificationPayload = MutationPayload & {
-  __typename: 'ExpirationNotificationPayload';
-  code: Scalars['String']['output'];
-  expirationNotification: Maybe<ExpirationNotification>;
-  message: Scalars['String']['output'];
-  success: Scalars['Boolean']['output'];
+/** Emitted when the user marks an expiration notification as read. */
+export type ExpirationNotificationReadPayload = {
+  __typename: 'ExpirationNotificationReadPayload';
+  notification: ExpirationNotification;
+  pantryId: Scalars['ID']['output'];
+  timestamp: Scalars['DateTime']['output'];
+  userId: Scalars['ID']['output'];
 };
 
 export enum ExpirationNotificationType {
@@ -2237,14 +2917,6 @@ export type ExternalSourceMappingInput = {
   storage?: InputMaybe<Scalars['JSON']['input']>;
 };
 
-export type ExternalSourceMappingPayload = MutationPayload & {
-  __typename: 'ExternalSourceMappingPayload';
-  code: Scalars['String']['output'];
-  externalSourceMapping: Maybe<ExternalSourceMapping>;
-  message: Scalars['String']['output'];
-  success: Scalars['Boolean']['output'];
-};
-
 export type FacetValue = {
   __typename: 'FacetValue';
   count: Scalars['Int']['output'];
@@ -2264,6 +2936,14 @@ export type FavoriteRecipeInput = {
   notes?: InputMaybe<Scalars['String']['input']>;
   recipeId: Scalars['ID']['input'];
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
+};
+
+export type FavoriteRecipeResult = ConflictError | FavoriteRecipeSuccess | ForbiddenError | NotFoundError | ValidationError;
+
+export type FavoriteRecipeSuccess = {
+  __typename: 'FavoriteRecipeSuccess';
+  recipe: Maybe<Recipe>;
+  savedRecipe: SavedRecipe;
 };
 
 /** Sub-input for feature-specific notifications */
@@ -2287,11 +2967,43 @@ export type FeatureTogglesInput = {
   enabledFeatures?: InputMaybe<Array<Scalars['String']['input']>>;
 };
 
-export type ForgotPasswordResponse = MutationPayload & {
+export type FlagItemForReviewResult = ConflictError | FlagItemForReviewSuccess | ForbiddenError | NotFoundError | ValidationError;
+
+export type FlagItemForReviewSuccess = {
+  __typename: 'FlagItemForReviewSuccess';
+  item: Item;
+};
+
+/**
+ * Caller is authenticated but not authorized for this operation. (Pure
+ * authentication failures surface as top-level GraphQL errors, not as a
+ * result variant.)
+ */
+export type ForbiddenError = Error & {
+  __typename: 'ForbiddenError';
+  code: ErrorCode;
+  message: Scalars['String']['output'];
+};
+
+export type ForgotPasswordResponse = {
   __typename: 'ForgotPasswordResponse';
   code: Scalars['String']['output'];
   message: Scalars['String']['output'];
   success: Scalars['Boolean']['output'];
+};
+
+export type ForkRecipeResult = ConflictError | ForbiddenError | ForkRecipeSuccess | NotFoundError | ValidationError;
+
+export type ForkRecipeSuccess = {
+  __typename: 'ForkRecipeSuccess';
+  recipe: Recipe;
+};
+
+export type GenerateNextRecurringListResult = ConflictError | ForbiddenError | GenerateNextRecurringListSuccess | NotFoundError;
+
+export type GenerateNextRecurringListSuccess = {
+  __typename: 'GenerateNextRecurringListSuccess';
+  shoppingList: ShoppingList;
 };
 
 export type GenerateShoppingListFromMealPlanInput = {
@@ -2302,6 +3014,13 @@ export type GenerateShoppingListFromMealPlanInput = {
   name?: InputMaybe<Scalars['String']['input']>;
   /** Optional: add to existing list instead of creating a new one */
   shoppingListId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type GenerateShoppingListFromMealPlanResult = ConflictError | ForbiddenError | GenerateShoppingListFromMealPlanSuccess | NotFoundError | ValidationError;
+
+export type GenerateShoppingListFromMealPlanSuccess = {
+  __typename: 'GenerateShoppingListFromMealPlanSuccess';
+  shoppingList: ShoppingList;
 };
 
 export type GetExpirationNotificationsInput = {
@@ -2324,6 +3043,13 @@ export enum GoalStatus {
   OverTarget = 'OVER_TARGET',
   UnderTarget = 'UNDER_TARGET'
 }
+
+export type HardDeleteDeviceResult = ConflictError | ForbiddenError | HardDeleteDeviceSuccess | NotFoundError;
+
+export type HardDeleteDeviceSuccess = {
+  __typename: 'HardDeleteDeviceSuccess';
+  success: Scalars['Boolean']['output'];
+};
 
 /** Typed health benefit information (replaces JSON healthBenefits field) */
 export type HealthBenefit = {
@@ -2589,14 +3315,6 @@ export enum HomeInviteMutationType {
   Revoked = 'REVOKED'
 }
 
-export type HomeInvitePayload = MutationPayload & {
-  __typename: 'HomeInvitePayload';
-  code: Scalars['String']['output'];
-  homeInvite: Maybe<HomeInvite>;
-  message: Scalars['String']['output'];
-  success: Scalars['Boolean']['output'];
-};
-
 export type HomeInviteStatsGroup = {
   __typename: 'HomeInviteStatsGroup';
   action: InviteAction;
@@ -2619,22 +3337,6 @@ export type HomeOwnership = {
   transferredFrom: Maybe<Scalars['String']['output']>;
   user: User;
   userId: Scalars['ID']['output'];
-};
-
-export type HomeOwnershipPayload = MutationPayload & {
-  __typename: 'HomeOwnershipPayload';
-  code: Scalars['String']['output'];
-  homeOwnership: Maybe<HomeOwnership>;
-  message: Scalars['String']['output'];
-  success: Scalars['Boolean']['output'];
-};
-
-export type HomePayload = MutationPayload & {
-  __typename: 'HomePayload';
-  code: Scalars['String']['output'];
-  home: Maybe<Home>;
-  message: Scalars['String']['output'];
-  success: Scalars['Boolean']['output'];
 };
 
 /** Custom permissions that can override default role permissions */
@@ -2718,7 +3420,7 @@ export type ImageDeletionJobStatus = {
  * Result of an image deletion operation.
  * Contains counts of successfully deleted and failed images.
  */
-export type ImageDeletionResult = MutationPayload & {
+export type ImageDeletionResult = {
   __typename: 'ImageDeletionResult';
   code: Scalars['String']['output'];
   /** Number of database Item records updated */
@@ -2770,6 +3472,21 @@ export enum ImageUploadPurpose {
   ProfileAvatar = 'PROFILE_AVATAR',
   ProfileCover = 'PROFILE_COVER'
 }
+
+export type IncrementItemPopularityResult = ConflictError | ForbiddenError | IncrementItemPopularitySuccess | NotFoundError;
+
+export type IncrementItemPopularitySuccess = {
+  __typename: 'IncrementItemPopularitySuccess';
+  item: Item;
+};
+
+export type IncrementRecipeCookedCountResult = ConflictError | ForbiddenError | IncrementRecipeCookedCountSuccess | NotFoundError;
+
+export type IncrementRecipeCookedCountSuccess = {
+  __typename: 'IncrementRecipeCookedCountSuccess';
+  recipe: Maybe<Recipe>;
+  savedRecipe: SavedRecipe;
+};
 
 export type IngredientInput = {
   isActive?: InputMaybe<Scalars['Boolean']['input']>;
@@ -2931,6 +3648,14 @@ export type InviteToHomeInput = {
   role: MembershipRole;
 };
 
+export type InviteToHomeResult = ConflictError | ForbiddenError | InviteToHomeSuccess | NotFoundError | ValidationError;
+
+export type InviteToHomeSuccess = {
+  __typename: 'InviteToHomeSuccess';
+  home: Maybe<Home>;
+  homeInvite: HomeInvite;
+};
+
 export type InviteToShoppingListInput = {
   canAddItems?: InputMaybe<Scalars['Boolean']['input']>;
   canEdit?: InputMaybe<Scalars['Boolean']['input']>;
@@ -2944,6 +3669,14 @@ export type InviteToShoppingListInput = {
   expiresAt?: InputMaybe<Scalars['DateTime']['input']>;
   role: CollaboratorRole;
   shoppingListId: Scalars['ID']['input'];
+};
+
+export type InviteToShoppingListResult = ConflictError | ForbiddenError | InviteToShoppingListSuccess | NotFoundError | ValidationError;
+
+export type InviteToShoppingListSuccess = {
+  __typename: 'InviteToShoppingListSuccess';
+  collaborator: ShoppingListCollaborator;
+  shoppingList: Maybe<ShoppingList>;
 };
 
 /**
@@ -2988,7 +3721,7 @@ export type Item = {
   popularity: Scalars['Int']['output'];
   preferredTrackingUnit: Maybe<Unit>;
   preferredTrackingUnitId: Maybe<Scalars['ID']['output']>;
-  priceHistory: Array<ItemPriceHistory>;
+  priceHistory: ItemPriceHistoryConnection;
   primaryUpc: Maybe<Scalars['String']['output']>;
   servingSize: Maybe<Scalars['Float']['output']>;
   servingSizeUnit: Maybe<Scalars['String']['output']>;
@@ -2998,7 +3731,7 @@ export type Item = {
   showInOnboarding: Scalars['Boolean']['output'];
   status: ItemStatus;
   storageState: StorageState;
-  storeSkus: Array<ItemStoreSku>;
+  storeSkus: ItemStoreSkuConnection;
   tags: Array<Scalars['String']['output']>;
   type: ItemType;
   unitConversions: Array<ItemUnitConversion>;
@@ -3016,6 +3749,28 @@ export type Item = {
  */
 export type ItemImagesArgs = {
   kind?: InputMaybe<ImageKind>;
+};
+
+
+/**
+ * Item/Product catalog type
+ * Cache: 30 minutes - catalog items are relatively static
+ */
+export type ItemPriceHistoryArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  orderBy?: InputMaybe<ItemPriceHistoryOrderBy>;
+};
+
+
+/**
+ * Item/Product catalog type
+ * Cache: 30 minutes - catalog items are relatively static
+ */
+export type ItemStoreSkusArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  orderBy?: InputMaybe<ItemStoreSkuOrderBy>;
 };
 
 export type ItemAvailability = {
@@ -3045,14 +3800,6 @@ export type ItemCategory = {
   isPrimary: Scalars['Boolean']['output'];
   item: Item;
   source: CategorySource;
-};
-
-export type ItemCategoryPayload = MutationPayload & {
-  __typename: 'ItemCategoryPayload';
-  code: Scalars['String']['output'];
-  itemCategory: Maybe<ItemCategory>;
-  message: Scalars['String']['output'];
-  success: Scalars['Boolean']['output'];
 };
 
 export type ItemCategorySuggestion = {
@@ -3131,7 +3878,7 @@ export type ItemFilters = {
   brandFilter?: InputMaybe<BrandFilterInput>;
   categories?: InputMaybe<Array<Scalars['String']['input']>>;
   category?: InputMaybe<Scalars['String']['input']>;
-  categoryIds?: InputMaybe<Array<Scalars['String']['input']>>;
+  categoryIds?: InputMaybe<Array<Scalars['ID']['input']>>;
   curation?: InputMaybe<CurationFilterInput>;
   dateRange?: InputMaybe<DateRangeFilterInput>;
   dietary?: InputMaybe<DietaryFilterInput>;
@@ -3175,7 +3922,7 @@ export type ItemLookupInput = {
   /** SKU to search for */
   sku?: InputMaybe<Scalars['String']['input']>;
   /** Store ID for SKU lookup (optional, searches all stores if not provided) */
-  skuStoreId?: InputMaybe<Scalars['String']['input']>;
+  skuStoreId?: InputMaybe<Scalars['ID']['input']>;
   /** UPC/barcode to search for */
   upc?: InputMaybe<Scalars['String']['input']>;
   /** Format hint for UPC validation/normalization (defaults to AUTO) */
@@ -3194,15 +3941,6 @@ export type ItemNetWeightInput = {
   unitId?: InputMaybe<Scalars['ID']['input']>;
   unitName?: InputMaybe<Scalars['String']['input']>;
   value: Scalars['Float']['input'];
-};
-
-export type ItemPayload = MutationPayload & {
-  __typename: 'ItemPayload';
-  code: Scalars['String']['output'];
-  item: Maybe<Item>;
-  matchType: Maybe<ItemMatchType>;
-  message: Scalars['String']['output'];
-  success: Scalars['Boolean']['output'];
 };
 
 /** Price history for items - may contain user-specific pricing data */
@@ -3233,14 +3971,6 @@ export type ItemPriceHistoryEdge = Edge & {
 export type ItemPriceHistoryOrderBy = {
   createdAt?: InputMaybe<SortOrder>;
   price?: InputMaybe<SortOrder>;
-};
-
-export type ItemPriceHistoryPayload = MutationPayload & {
-  __typename: 'ItemPriceHistoryPayload';
-  code: Scalars['String']['output'];
-  message: Scalars['String']['output'];
-  priceHistory: Maybe<ItemPriceHistory>;
-  success: Scalars['Boolean']['output'];
 };
 
 export enum ItemSortField {
@@ -3393,14 +4123,6 @@ export type ItemUnitConversion = {
   verifiedBy: Maybe<User>;
 };
 
-export type ItemUnitConversionPayload = MutationPayload & {
-  __typename: 'ItemUnitConversionPayload';
-  code: Scalars['String']['output'];
-  message: Scalars['String']['output'];
-  success: Scalars['Boolean']['output'];
-  unitConversion: Maybe<ItemUnitConversion>;
-};
-
 export type ItemUnitInput = {
   averagePricePerUnit?: InputMaybe<Scalars['Float']['input']>;
   contentUnitId?: InputMaybe<Scalars['ID']['input']>;
@@ -3439,6 +4161,29 @@ export type ItemsResponse = {
   hasMore: Scalars['Boolean']['output'];
   items: Array<Item>;
   totalCount: Scalars['Int']['output'];
+};
+
+export type JoinHomeByCodeResult = ConflictError | ForbiddenError | JoinHomeByCodeSuccess | NotFoundError | ValidationError;
+
+export type JoinHomeByCodeSuccess = {
+  __typename: 'JoinHomeByCodeSuccess';
+  home: Maybe<Home>;
+  membership: Membership;
+};
+
+export type JoinShoppingListByShareCodeResult = ConflictError | ForbiddenError | JoinShoppingListByShareCodeSuccess | NotFoundError | ValidationError;
+
+export type JoinShoppingListByShareCodeSuccess = {
+  __typename: 'JoinShoppingListByShareCodeSuccess';
+  shoppingList: ShoppingList;
+};
+
+export type LeaveHomeResult = ConflictError | ForbiddenError | LeaveHomeSuccess | NotFoundError;
+
+export type LeaveHomeSuccess = {
+  __typename: 'LeaveHomeSuccess';
+  home: Maybe<Home>;
+  membership: Membership;
 };
 
 /** Comprehensive ledger analytics combining additions and consumption */
@@ -3496,6 +4241,13 @@ export type LinkItemToExternalSourceInput = {
   source: ExternalSource;
 };
 
+export type LinkItemToExternalSourceResult = ConflictError | ForbiddenError | LinkItemToExternalSourceSuccess | NotFoundError | ValidationError;
+
+export type LinkItemToExternalSourceSuccess = {
+  __typename: 'LinkItemToExternalSourceSuccess';
+  externalSourceMapping: ExternalSourceMapping;
+};
+
 export enum ListActivityType {
   CollaboratorAdded = 'COLLABORATOR_ADDED',
   CollaboratorRemoved = 'COLLABORATOR_REMOVED',
@@ -3526,21 +4278,22 @@ export type LocationStat = {
   ipCountry: Maybe<Scalars['String']['output']>;
 };
 
-export type LoginActivityEvent = {
-  __typename: 'LoginActivityEvent';
-  activityType: LoginActivityType;
-  loginHistory: Maybe<LoginHistory>;
-  suspiciousActivity: Maybe<SuspiciousActivity>;
+/** Emitted when a successful login attempt is recorded. */
+export type LoginAttemptedPayload = {
+  __typename: 'LoginAttemptedPayload';
+  loginHistory: LoginHistory;
   timestamp: Scalars['DateTime']['output'];
   userId: Scalars['ID']['output'];
 };
 
-export enum LoginActivityType {
-  Attempted = 'ATTEMPTED',
-  Failed = 'FAILED',
-  Risky = 'RISKY',
-  Suspicious = 'SUSPICIOUS'
-}
+/** Emitted when a failed login attempt is recorded. */
+export type LoginFailedPayload = {
+  __typename: 'LoginFailedPayload';
+  failureReason: Maybe<Scalars['String']['output']>;
+  loginHistory: LoginHistory;
+  timestamp: Scalars['DateTime']['output'];
+  userId: Scalars['ID']['output'];
+};
 
 export enum LoginFailureReason {
   AccountDisabled = 'ACCOUNT_DISABLED',
@@ -3651,14 +4404,6 @@ export type LoginHistoryOrderBy = {
   loginAt?: InputMaybe<SortOrder>;
 };
 
-export type LoginHistoryPayload = MutationPayload & {
-  __typename: 'LoginHistoryPayload';
-  code: Scalars['String']['output'];
-  loginHistory: Maybe<LoginHistory>;
-  message: Scalars['String']['output'];
-  success: Scalars['Boolean']['output'];
-};
-
 export type LoginHistoryPeriod = {
   __typename: 'LoginHistoryPeriod';
   days: Scalars['Int']['output'];
@@ -3756,6 +4501,13 @@ export type ManageAppealInput = {
   userId: Scalars['ID']['input'];
 };
 
+export type ManageAppealResult = ConflictError | ForbiddenError | ManageAppealSuccess | NotFoundError | ValidationError;
+
+export type ManageAppealSuccess = {
+  __typename: 'ManageAppealSuccess';
+  userModeration: Maybe<UserModeration>;
+};
+
 /** Input for managing restrictions (add and/or remove in one call). */
 export type ManageRestrictionsInput = {
   /** Restrictions to add */
@@ -3767,14 +4519,75 @@ export type ManageRestrictionsInput = {
   userId: Scalars['ID']['input'];
 };
 
+export type ManageRestrictionsResult = ConflictError | ForbiddenError | ManageRestrictionsSuccess | NotFoundError | ValidationError;
+
+export type ManageRestrictionsSuccess = {
+  __typename: 'ManageRestrictionsSuccess';
+  userModeration: Maybe<UserModeration>;
+};
+
 export type MarkActionInput = {
   action: ExpirationAction;
   notificationId: Scalars['ID']['input'];
 };
 
+export type MarkAllNotificationsAsReadResult = ForbiddenError | MarkAllNotificationsAsReadSuccess;
+
+export type MarkAllNotificationsAsReadSuccess = {
+  __typename: 'MarkAllNotificationsAsReadSuccess';
+  count: Scalars['Int']['output'];
+  notifications: Array<Notification>;
+};
+
 export type MarkAsTemplateInput = {
+  id: Scalars['ID']['input'];
   saveItems?: InputMaybe<Scalars['Boolean']['input']>;
   templateName: Scalars['String']['input'];
+};
+
+export type MarkAsTemplateResult = ConflictError | ForbiddenError | MarkAsTemplateSuccess | NotFoundError | ValidationError;
+
+export type MarkAsTemplateSuccess = {
+  __typename: 'MarkAsTemplateSuccess';
+  shoppingList: ShoppingList;
+};
+
+export type MarkExpirationActionResult = ConflictError | ForbiddenError | MarkExpirationActionSuccess | NotFoundError | ValidationError;
+
+export type MarkExpirationActionSuccess = {
+  __typename: 'MarkExpirationActionSuccess';
+  expirationNotification: ExpirationNotification;
+  pantryItem: Maybe<PantryItem>;
+};
+
+export type MarkExpirationNotificationAsReadResult = ConflictError | ForbiddenError | MarkExpirationNotificationAsReadSuccess | NotFoundError;
+
+export type MarkExpirationNotificationAsReadSuccess = {
+  __typename: 'MarkExpirationNotificationAsReadSuccess';
+  expirationNotification: ExpirationNotification;
+  pantryItem: Maybe<PantryItem>;
+};
+
+export type MarkNotificationAsReadResult = ConflictError | ForbiddenError | MarkNotificationAsReadSuccess | NotFoundError;
+
+export type MarkNotificationAsReadSuccess = {
+  __typename: 'MarkNotificationAsReadSuccess';
+  notification: Notification;
+};
+
+export type MarkNotificationUnreadResult = ConflictError | ForbiddenError | MarkNotificationUnreadSuccess | NotFoundError;
+
+export type MarkNotificationUnreadSuccess = {
+  __typename: 'MarkNotificationUnreadSuccess';
+  notification: Notification;
+};
+
+export type MarkPantryItemExpiredResult = ConflictError | ForbiddenError | MarkPantryItemExpiredSuccess | NotFoundError;
+
+export type MarkPantryItemExpiredSuccess = {
+  __typename: 'MarkPantryItemExpiredSuccess';
+  pantry: Maybe<Pantry>;
+  pantryItem: PantryItem;
 };
 
 /** Input for marking a recipe as cooked */
@@ -3784,6 +4597,14 @@ export type MarkRecipeAsCookedInput = {
   notes?: InputMaybe<Scalars['String']['input']>;
   recipeId: Scalars['ID']['input'];
   servings?: InputMaybe<Scalars['Float']['input']>;
+};
+
+export type MarkRecipeAsCookedResult = ConflictError | ForbiddenError | MarkRecipeAsCookedSuccess | NotFoundError | ValidationError;
+
+export type MarkRecipeAsCookedSuccess = {
+  __typename: 'MarkRecipeAsCookedSuccess';
+  cookingLog: CookingLog;
+  recipe: Maybe<Recipe>;
 };
 
 export enum MatchType {
@@ -3889,14 +4710,6 @@ export type MealPlanItem = {
   usedPantryItems: Scalars['JSON']['output'];
 };
 
-export type MealPlanItemPayload = MutationPayload & {
-  __typename: 'MealPlanItemPayload';
-  code: Scalars['String']['output'];
-  mealPlanItem: Maybe<MealPlanItem>;
-  message: Scalars['String']['output'];
-  success: Scalars['Boolean']['output'];
-};
-
 /** Aggregated nutrition data for a meal plan */
 export type MealPlanNutritionSummary = {
   __typename: 'MealPlanNutritionSummary';
@@ -3918,14 +4731,6 @@ export type MealPlanNutritionSummary = {
 export type MealPlanOrderBy = {
   createdAt?: InputMaybe<SortOrder>;
   startDate?: InputMaybe<SortOrder>;
-};
-
-export type MealPlanPayload = MutationPayload & {
-  __typename: 'MealPlanPayload';
-  code: Scalars['String']['output'];
-  mealPlan: Maybe<MealPlan>;
-  message: Scalars['String']['output'];
-  success: Scalars['Boolean']['output'];
 };
 
 export enum MealPlanType {
@@ -4006,28 +4811,12 @@ export type MealTemplateItemInput = {
   servings?: InputMaybe<Scalars['Int']['input']>;
 };
 
-export type MealTemplateItemPayload = MutationPayload & {
-  __typename: 'MealTemplateItemPayload';
-  code: Scalars['String']['output'];
-  mealTemplateItem: Maybe<MealTemplateItem>;
-  message: Scalars['String']['output'];
-  success: Scalars['Boolean']['output'];
-};
-
 /** Order by options for meal templates */
 export type MealTemplateOrderBy = {
   createdAt?: InputMaybe<SortOrder>;
   name?: InputMaybe<SortOrder>;
   updatedAt?: InputMaybe<SortOrder>;
   usageCount?: InputMaybe<SortOrder>;
-};
-
-export type MealTemplatePayload = MutationPayload & {
-  __typename: 'MealTemplatePayload';
-  code: Scalars['String']['output'];
-  mealTemplate: Maybe<MealTemplate>;
-  message: Scalars['String']['output'];
-  success: Scalars['Boolean']['output'];
 };
 
 /** Identifies the type of meal for meal planning and recipe categorization */
@@ -4127,10 +4916,10 @@ export enum MembershipJoinMethod {
 
 export type MembershipJoinedPayload = {
   __typename: 'MembershipJoinedPayload';
-  homeId: Scalars['String']['output'];
+  homeId: Scalars['ID']['output'];
   joinMethod: MembershipJoinMethod;
   membership: Membership;
-  userId: Scalars['String']['output'];
+  userId: Scalars['ID']['output'];
 };
 
 export enum MembershipLeftMethod {
@@ -4141,10 +4930,10 @@ export enum MembershipLeftMethod {
 
 export type MembershipLeftPayload = {
   __typename: 'MembershipLeftPayload';
-  homeId: Scalars['String']['output'];
+  homeId: Scalars['ID']['output'];
   leftMethod: MembershipLeftMethod;
   membership: Membership;
-  userId: Scalars['String']['output'];
+  userId: Scalars['ID']['output'];
 };
 
 export enum MembershipMutationType {
@@ -4157,14 +4946,6 @@ export enum MembershipMutationType {
 
 export type MembershipOrderBy = {
   createdAt?: InputMaybe<SortOrder>;
-};
-
-export type MembershipPayload = MutationPayload & {
-  __typename: 'MembershipPayload';
-  code: Scalars['String']['output'];
-  membership: Maybe<Membership>;
-  message: Scalars['String']['output'];
-  success: Scalars['Boolean']['output'];
 };
 
 /** Defines the role and permission level of a member within a household */
@@ -4182,11 +4963,11 @@ export enum MembershipRole {
 export type MembershipRoleChangedPayload = {
   __typename: 'MembershipRoleChangedPayload';
   changedBy: Scalars['String']['output'];
-  homeId: Scalars['String']['output'];
+  homeId: Scalars['ID']['output'];
   membership: Membership;
   newRole: MembershipRole;
   previousRole: MembershipRole;
-  userId: Scalars['String']['output'];
+  userId: Scalars['ID']['output'];
 };
 
 export type MembershipRoleStats = {
@@ -4315,10 +5096,26 @@ export type MoveShoppingItemToPantryInput = {
   storageState?: InputMaybe<StorageState>;
 };
 
+export type MoveShoppingItemToPantryResult = ConflictError | ForbiddenError | MoveShoppingItemToPantrySuccess | NotFoundError | ValidationError;
+
+export type MoveShoppingItemToPantrySuccess = {
+  __typename: 'MoveShoppingItemToPantrySuccess';
+  pantry: Maybe<Pantry>;
+  pantryItem: PantryItem;
+};
+
 export type MoveShoppingListItemInput = {
   afterItemId?: InputMaybe<Scalars['ID']['input']>;
   beforeItemId?: InputMaybe<Scalars['ID']['input']>;
   itemId: Scalars['ID']['input'];
+};
+
+export type MoveShoppingListItemResult = ConflictError | ForbiddenError | MoveShoppingListItemSuccess | NotFoundError | ValidationError;
+
+export type MoveShoppingListItemSuccess = {
+  __typename: 'MoveShoppingListItemSuccess';
+  shoppingList: Maybe<ShoppingList>;
+  shoppingListItem: ShoppingListItem;
 };
 
 /** Info about a successfully moved item */
@@ -4349,11 +5146,11 @@ export type MultiUnitMeasurementInput = {
 export type Mutation = {
   __typename: 'Mutation';
   /** Accept a home invitation using its token. */
-  acceptHomeInvite: MembershipPayload;
+  acceptHomeInvite: AcceptHomeInviteResult;
   /** Accept an invitation to collaborate on a shopping list. */
-  acceptShoppingListInvite: ShoppingListCollaboratorPayload;
+  acceptShoppingListInvite: AcceptShoppingListInviteResult;
   /** Add a single item to a shopping list. */
-  addItemToShoppingList: ShoppingListItemPayload;
+  addItemToShoppingList: AddItemToShoppingListResult;
   /**
    * Batch add multiple items to a shopping list.
    * More efficient than calling addItemToShoppingList multiple times.
@@ -4374,21 +5171,21 @@ export type Mutation = {
    * Add recipe ingredients to shopping list with smart unit handling
    * Checks pantry for available items and only adds deficit
    */
-  addRecipeToShoppingList: ShoppingListPayload;
+  addRecipeToShoppingList: AddRecipeToShoppingListResultUnion;
   /** Add a dietary restriction to the user's profile. */
-  addRestriction: DietaryRestrictionPayload;
+  addRestriction: AddRestrictionResult;
   /** Add an item to a template */
-  addTemplateItem: MealTemplateItemPayload;
+  addTemplateItem: AddTemplateItemResult;
   /** Add a new address to the current user's account. */
-  addUserAddress: UserAddressPayload;
+  addUserAddress: AddUserAddressResult;
   /** Add a warning to a user's moderation record */
-  addWarning: UserModerationPayload;
+  addWarning: AddWarningResult;
   /**
    * Adjust pantry item quantity to match a physical count.
    * Creates an ADJUSTMENT usage record with mandatory reason for audit trail.
    * The delta (positive or negative) is calculated automatically.
    */
-  adjustPantryItemQuantity: PantryItemPayload;
+  adjustPantryItemQuantity: AdjustPantryItemQuantityResult;
   /** Admin: Delete multiple items (soft delete by default, permanent if specified) */
   adminBulkDeleteItems: BulkOperationSummary;
   /**
@@ -4402,21 +5199,21 @@ export type Mutation = {
    */
   adminDeleteImages: ImageDeletionResult;
   /** Admin: Delete an item (soft delete by default, permanent if specified) */
-  adminDeleteItem: ItemPayload;
+  adminDeleteItem: AdminDeleteItemResult;
   /** Admin: Delete any recipe (soft delete by default, permanent if specified) */
-  adminDeleteRecipe: RecipePayload;
+  adminDeleteRecipe: AdminDeleteRecipeResult;
   /** Admin: Delete any recipe review (bypasses ownership restrictions) */
-  adminDeleteRecipeReview: RecipeReviewPayload;
+  adminDeleteRecipeReview: AdminDeleteRecipeReviewResult;
   /** Delete a user's account as an administrator. */
-  adminDeleteUser: UserPayload;
+  adminDeleteUser: AdminDeleteUserResult;
   /** Admin: Update any item (bypasses ownership restrictions) */
-  adminUpdateItem: ItemPayload;
+  adminUpdateItem: AdminUpdateItemResult;
   /** Admin: Update any recipe (bypasses ownership restrictions) */
-  adminUpdateRecipe: RecipePayload;
+  adminUpdateRecipe: AdminUpdateRecipeResult;
   /** Approve a user-created item for public visibility */
-  approveItem: ItemPayload;
+  approveItem: ApproveItemResult;
   /** Archive a shopping list. */
-  archiveShoppingList: ShoppingListPayload;
+  archiveShoppingList: ArchiveShoppingListResult;
   /**
    * Admin: enqueue embedding computation for items that don't yet have one.
    * Returns the number of jobs queued. Use dryRun to estimate backlog without
@@ -4426,12 +5223,12 @@ export type Mutation = {
   /** Create multiple items at once */
   bulkCreateItems: BulkCreateItemsResponse;
   /** Create multiple purchase records at once. */
-  bulkCreatePurchases: BulkPurchasePayload;
-  bulkCreateStores: BulkStorePayload;
+  bulkCreatePurchases: BulkCreatePurchasesResult;
+  bulkCreateStores: BulkCreateStoresResult;
   /** Delete multiple items */
   bulkDeleteItems: BulkOperationSummary;
   /** Delete multiple purchase records at once. */
-  bulkDeletePurchases: BulkPurchasePayload;
+  bulkDeletePurchases: BulkDeletePurchasesResult;
   /** Send notifications to multiple users at once (admin only). */
   bulkSendNotifications: BulkNotificationResult;
   /**
@@ -4439,19 +5236,23 @@ export type Mutation = {
    * Replaces: trustMultipleDevices, untrustMultipleDevices, deactivateMultipleDevices, deleteMultipleDevices
    */
   bulkUpdateDevices: BulkDeviceResult;
-  /** Update multiple items with the same changes */
+  /**
+   * Update multiple items with the same changes.
+   * Note: the `id` field on `input` is ignored — ids are taken from the `ids` argument.
+   */
   bulkUpdateItems: BulkOperationSummary;
   /**
    * Bulk update multiple login history records with the same changes.
    * Replaces markMultipleLoginsAsReviewed and flagMultipleLoginsAsRisky.
+   * Note: the `id` field on `input` is ignored — ids are taken from the `ids` argument.
    */
-  bulkUpdateLoginHistories: BulkLoginHistoryPayload;
+  bulkUpdateLoginHistories: BulkUpdateLoginHistoriesResult;
   /** Bulk create or update items by external source (max 50 per batch). */
   bulkUpsertItemsByExternalSource: BatchUpsertItemsResponse;
   /** Cancel recurring generation for a shopping list. */
-  cancelRecurring: ShoppingListPayload;
+  cancelRecurring: CancelRecurringResult;
   /** Assign an item to a category. */
-  categorizeItem: ItemCategoryPayload;
+  categorizeItem: CategorizeItemResult;
   /** Change password for authenticated user (requires current password verification) */
   changePassword: ChangePasswordResponse;
   /**
@@ -4460,7 +5261,7 @@ export type Mutation = {
    */
   cleanupDevices: DeviceCleanupResult;
   /** Clear the reminder from a shopping list. */
-  clearReminder: ShoppingListPayload;
+  clearReminder: ClearReminderResult;
   /**
    * Clear items from a shopping list based on purchased status.
    * Soft-deletes all items matching the purchased filter and where deletedAt is not set.
@@ -4469,79 +5270,79 @@ export type Mutation = {
    */
   clearShoppingListItems: ClearItemsResponse;
   /** Mark user onboarding as complete and send welcome email */
-  completeOnboarding: UserPayload;
+  completeOnboarding: CompleteOnboardingResult;
   /** Mark a shopping list as completed. */
-  completeShoppingList: ShoppingListPayload;
+  completeShoppingList: CompleteShoppingListResult;
   /** Confirm an item image upload and associate it with the item. */
-  confirmItemImageUpload: UploadPayload;
+  confirmItemImageUpload: ConfirmItemImageUploadResult;
   /** Confirm a profile image upload and associate it with the user. */
-  confirmProfileImageUpload: UploadPayload;
+  confirmProfileImageUpload: ConfirmProfileImageUploadResult;
   confirmRecipeConsumption: RecipeConsumptionResult;
   /**
    * Convert only expired batches to waste within a pantry item.
    * Non-expired batches remain active. Aggregate is recalculated.
    */
-  convertExpiredBatchesToWaste: PantryItemPayload;
+  convertExpiredBatchesToWaste: ConvertExpiredBatchesToWasteResult;
   /**
    * Convert an expired pantry item to waste in one step.
    * Sets condition to SPOILED, creates a WASTE usage record with wasteReason=EXPIRED,
    * and sets quantity to 0. Use after expiration job marks item as EXPIRED.
    */
-  convertExpiredToWaste: PantryItemPayload;
+  convertExpiredToWaste: ConvertExpiredToWasteResult;
   /**
    * Correct the net weight for a dual-tracked pantry item.
    * Recalculates remainingNetWeight proportionally and derives new quantity.
    * Use this when the original net weight was entered incorrectly.
    */
-  correctPantryItemWeight: PantryItemPayload;
+  correctPantryItemWeight: CorrectPantryItemWeightResult;
   /** Create a new brand. */
-  createBrand: BrandPayload;
+  createBrand: CreateBrandResult;
   /** Create a new category. */
-  createCategory: CategoryPayload;
+  createCategory: CreateCategoryResult;
   /** Create a new cooking log entry. */
-  createCookingLog: CookingLogPayload;
+  createCookingLog: CreateCookingLogResult;
   /** Create a new currency. */
-  createCurrency: CurrencyPayload;
+  createCurrency: CreateCurrencyResult;
   /** Create a new shopping list from a template. */
-  createFromTemplate: ShoppingListPayload;
+  createFromTemplate: CreateFromTemplateResult;
   /** Create a new home. */
-  createHome: HomePayload;
+  createHome: CreateHomeResult;
   /** Generate a presigned URL for image upload with purpose validation. */
-  createImageUploadUrl: PresignPayload;
+  createImageUploadUrl: CreateImageUploadUrlResult;
   /** Create a new item */
-  createItem: ItemPayload;
+  createItem: CreateItemResult;
   /** Create a new meal plan. */
-  createMealPlan: MealPlanPayload;
+  createMealPlan: CreateMealPlanResult;
   /**
    * Create a new meal plan from a template.
    * Copies all template items to the new plan with dates offset from startDate.
    */
-  createMealPlanFromTemplate: MealPlanPayload;
+  createMealPlanFromTemplate: CreateMealPlanResult;
   /** Add an item to a meal plan. */
-  createMealPlanItem: MealPlanItemPayload;
+  createMealPlanItem: CreateMealPlanItemResult;
   /** Create a new meal template */
-  createMealTemplate: MealTemplatePayload;
+  createMealTemplate: CreateMealTemplateResult;
   /** Create a new membership directly (owner/admin only). */
-  createMembership: MembershipPayload;
+  createMembership: CreateMembershipResult;
   /** Create a moderation record for a user */
-  createModerationRecord: UserModerationPayload;
+  createModerationRecord: CreateModerationRecordResult;
   /** Create a new notification. */
-  createNotification: NotificationPayload;
+  createNotification: CreateNotificationResult;
   /** Create a new pantry for a home. */
-  createPantry: PantryPayload;
+  createPantry: CreatePantryResult;
   /** Create a new pantry item in a pantry. */
-  createPantryItem: PantryItemPayload;
+  createPantryItem: CreatePantryItemResult;
   /** Record a usage event for a pantry item. */
-  createPantryItemUsage: PantryItemUsagePayload;
+  createPantryItemUsage: CreatePantryItemUsageResult;
   /** Create a user profile for the current user. */
-  createProfile: UserProfilePayload;
+  createProfile: CreateProfileResult;
   /** Create a new purchase record. */
-  createPurchase: PurchasePayload;
-  createRecipe: RecipePayload;
+  createPurchase: CreatePurchaseResult;
+  createRecipe: CreateRecipeResult;
   /** Create a review for a published recipe. */
-  createRecipeReview: RecipeReviewPayload;
+  createRecipeReview: CreateRecipeReviewResult;
   /** Create a new shopping list. */
-  createShoppingList: ShoppingListPayload;
+  createShoppingList: CreateShoppingListResult;
   createShoppingListItemFromRecipeIngredient: AddIngredientResult;
   createShoppingListItemsFromRecipe: AddRecipeToShoppingListResult;
   /**
@@ -4549,138 +5350,138 @@ export type Mutation = {
    * Validates parent-child relationships and prevents circular references
    * Requires user to have edit permissions in the home
    */
-  createStorageLocation: StorageLocationPayload;
-  createStore: StorePayload;
+  createStorageLocation: CreateStorageLocationResult;
+  createStore: CreateStoreResult;
   /**
    * Create a template from an existing meal plan.
    * Extracts the meal pattern into a reusable template.
    */
-  createTemplateFromMealPlan: MealTemplatePayload;
+  createTemplateFromMealPlan: CreateTemplateFromMealPlanResult;
   /** Create a new unit of measurement. */
-  createUnit: UnitPayload;
+  createUnit: CreateUnitResult;
   /** Decline a home invitation using its token. */
-  declineHomeInvite: HomeInvitePayload;
+  declineHomeInvite: DeclineHomeInviteResult;
   /** Decline an invitation to collaborate on a shopping list. */
-  declineShoppingListInvite: ShoppingListCollaboratorPayload;
+  declineShoppingListInvite: DeclineShoppingListInviteResult;
   /** Delete the current user's account. */
-  deleteAccount: UserPayload;
+  deleteAccount: DeleteAccountResult;
   /** Delete all read notifications for the current user. */
-  deleteAllReadNotifications: BulkNotificationPayload;
+  deleteAllReadNotifications: DeleteAllReadNotificationsResult;
   /** Delete a brand. */
-  deleteBrand: BrandPayload;
+  deleteBrand: DeleteBrandResult;
   /** Delete a category. */
-  deleteCategory: CategoryPayload;
+  deleteCategory: DeleteCategoryResult;
   /** Delete a cooking log entry. */
-  deleteCookingLog: CookingLogPayload;
+  deleteCookingLog: DeleteCookingLogResult;
   /** Delete a currency. */
-  deleteCurrency: CurrencyPayload;
+  deleteCurrency: DeleteCurrencyResult;
   /** Delete all expired notifications (admin only). */
-  deleteExpiredNotifications: BulkNotificationPayload;
+  deleteExpiredNotifications: DeleteExpiredNotificationsResult;
   /** Delete an external source mapping. */
-  deleteExternalSource: ExternalSourceMappingPayload;
+  deleteExternalSource: DeleteExternalSourceResult;
   /** Delete a home (owner only). */
-  deleteHome: HomePayload;
+  deleteHome: DeleteHomeResult;
   /** Delete an item (soft delete by default, permanent if specified) */
-  deleteItem: ItemPayload;
+  deleteItem: DeleteItemResult;
   /** Delete an item unit conversion and its reverse conversion (admin only) */
-  deleteItemUnitConversion: ItemUnitConversionPayload;
+  deleteItemUnitConversion: DeleteItemUnitConversionResult;
   /** Delete a meal plan. */
-  deleteMealPlan: MealPlanPayload;
+  deleteMealPlan: DeleteMealPlanResult;
   /** Remove an item from a meal plan. */
-  deleteMealPlanItem: MealPlanItemPayload;
+  deleteMealPlanItem: DeleteMealPlanItemResult;
   /** Delete a meal template (soft delete) */
-  deleteMealTemplate: MealTemplatePayload;
+  deleteMealTemplate: DeleteMealTemplateResult;
   /** Delete multiple notifications by their IDs. */
-  deleteMultipleNotifications: BulkNotificationPayload;
+  deleteMultipleNotifications: DeleteMultipleNotificationsResult;
   /** Delete a notification. */
-  deleteNotification: NotificationPayload;
+  deleteNotification: DeleteNotificationResult;
   /** Delete a pantry (owner only). */
-  deletePantry: PantryPayload;
+  deletePantry: DeletePantryResult;
   /** Delete a pantry item (soft delete). */
-  deletePantryItem: PantryItemPayload;
+  deletePantryItem: DeletePantryItemResult;
   /** Delete a purchase record. */
-  deletePurchase: PurchasePayload;
-  deleteRecipe: RecipePayload;
+  deletePurchase: DeletePurchaseResult;
+  deleteRecipe: DeleteRecipeResult;
   /** Delete a recipe folder and optionally move its recipes. */
-  deleteRecipeFolder: SavedRecipePayload;
+  deleteRecipeFolder: DeleteRecipeFolderResult;
   /** Delete a recipe review (author only). */
-  deleteRecipeReview: RecipeReviewPayload;
+  deleteRecipeReview: DeleteRecipeReviewResult;
   /** Delete a shopping list (owner only). */
-  deleteShoppingList: ShoppingListPayload;
+  deleteShoppingList: DeleteShoppingListResult;
   /**
    * Delete a storage location (soft delete)
    * Fails if location has child locations or items
    * Requires user to have edit permissions in the home
    */
-  deleteStorageLocation: StorageLocationPayload;
-  deleteStore: StorePayload;
+  deleteStorageLocation: DeleteStorageLocationResult;
+  deleteStore: DeleteStoreResult;
   /** Delete a unit of measurement. */
-  deleteUnit: UnitPayload;
+  deleteUnit: DeleteUnitResult;
   /** Delete a user address. */
-  deleteUserAddress: UserAddressPayload;
+  deleteUserAddress: DeleteUserAddressResult;
   /** Dismiss an expiration notification so it no longer appears. */
-  dismissExpirationNotification: ExpirationNotificationPayload;
+  dismissExpirationNotification: DismissExpirationNotificationResult;
   /** Duplicate a meal plan with all its items, shifted to new dates. */
-  duplicateMealPlan: MealPlanPayload;
+  duplicateMealPlan: DuplicateMealPlanResult;
   /** Duplicate a template with a new name */
-  duplicateTemplate: MealTemplatePayload;
+  duplicateTemplate: DuplicateTemplateResult;
   /** Save a recipe as a favorite. */
-  favoriteRecipe: SavedRecipePayload;
+  favoriteRecipe: FavoriteRecipeResult;
   /** Flag an item for review */
-  flagItemForReview: ItemPayload;
+  flagItemForReview: FlagItemForReviewResult;
   /** Request a password reset email */
   forgotPassword: ForgotPasswordResponse;
-  forkRecipe: RecipePayload;
+  forkRecipe: ForkRecipeResult;
   /** Generate the next recurring shopping list instance. */
-  generateNextRecurringList: ShoppingListPayload;
+  generateNextRecurringList: GenerateNextRecurringListResult;
   /** Generate a shopping list from all recipe-based items in a meal plan. */
-  generateShoppingListFromMealPlan: ShoppingListPayload;
+  generateShoppingListFromMealPlan: GenerateShoppingListFromMealPlanResult;
   /** Hard delete a device permanently (admin only) */
-  hardDeleteDevice: DevicePayload;
+  hardDeleteDevice: HardDeleteDeviceResult;
   /** Increment an item's popularity counter */
-  incrementItemPopularity: ItemPayload;
+  incrementItemPopularity: IncrementItemPopularityResult;
   /** Increment the cooked count for a saved recipe. */
-  incrementRecipeCookedCount: SavedRecipePayload;
+  incrementRecipeCookedCount: IncrementRecipeCookedCountResult;
   /** Send an invitation for a user to join a home. */
-  inviteToHome: HomeInvitePayload;
+  inviteToHome: InviteToHomeResult;
   /** Invite a user to collaborate on a shopping list. */
-  inviteToShoppingList: ShoppingListCollaboratorPayload;
+  inviteToShoppingList: InviteToShoppingListResult;
   /** Join a home using its join code. */
-  joinHomeByCode: MembershipPayload;
+  joinHomeByCode: JoinHomeByCodeResult;
   /** Join a shared shopping list using its share code. */
-  joinShoppingListByShareCode: ShoppingListPayload;
+  joinShoppingListByShareCode: JoinShoppingListByShareCodeResult;
   /** Leave a home as the current user. */
-  leaveHome: MembershipPayload;
+  leaveHome: LeaveHomeResult;
   /** Link an existing item to an external source. */
-  linkItemToExternalSource: ExternalSourceMappingPayload;
+  linkItemToExternalSource: LinkItemToExternalSourceResult;
   /** Authenticate a user with credentials and return tokens. */
   login: AuthPayload;
   /**
    * Manage appeals (submit or review).
    * Consolidates: submitAppeal, reviewAppeal.
    */
-  manageAppeal: UserModerationPayload;
+  manageAppeal: ManageAppealResult;
   /**
    * Manage user restrictions (add and/or remove in one call).
    * Consolidates: addRestrictions, removeRestrictions.
    */
-  manageRestrictions: UserModerationPayload;
+  manageRestrictions: ManageRestrictionsResult;
   /** Mark all notifications as read for the current user. */
-  markAllNotificationsAsRead: BulkNotificationPayload;
+  markAllNotificationsAsRead: MarkAllNotificationsAsReadResult;
   /** Mark a shopping list as a reusable template. */
-  markAsTemplate: ShoppingListPayload;
+  markAsTemplate: MarkAsTemplateResult;
   /** Record an action taken on an expiring item. */
-  markExpirationAction: ExpirationNotificationPayload;
+  markExpirationAction: MarkExpirationActionResult;
   /** Mark an expiration notification as read. */
-  markExpirationNotificationAsRead: ExpirationNotificationPayload;
+  markExpirationNotificationAsRead: MarkExpirationNotificationAsReadResult;
   /** Mark a notification as read. */
-  markNotificationAsRead: NotificationPayload;
+  markNotificationAsRead: MarkNotificationAsReadResult;
   /** Mark a notification as unread. */
-  markNotificationUnread: NotificationPayload;
+  markNotificationUnread: MarkNotificationUnreadResult;
   /** Mark a pantry item as expired. */
-  markPantryItemExpired: PantryItemPayload;
+  markPantryItemExpired: MarkPantryItemExpiredResult;
   /** Mark recipe as cooked and optionally deduct from pantry */
-  markRecipeAsCooked: CookingLogPayload;
+  markRecipeAsCooked: MarkRecipeAsCookedResult;
   /**
    * Move all purchased items from a shopping list to the home's default pantry.
    * Only available for shopping lists linked to a home.
@@ -4692,25 +5493,25 @@ export type Mutation = {
    * Creates a PantryItem with full traceability back to the shopping list item.
    * Optionally removes the item from the shopping list.
    */
-  moveShoppingItemToPantry: PantryItemPayload;
+  moveShoppingItemToPantry: MoveShoppingItemToPantryResult;
   /** Reorder a shopping list item relative to other items. */
-  moveShoppingListItem: ShoppingListItemPayload;
+  moveShoppingListItem: MoveShoppingListItemResult;
   /** Mark a pantry item as opened. */
-  openPantryItem: PantryItemPayload;
+  openPantryItem: OpenPantryItemResult;
   /**
    * Mark a specific batch as opened.
    * Sets isOpened=true and openedAt to current time on the targeted batch.
    */
-  openPantryItemBatch: PantryItemPayload;
+  openPantryItemBatch: OpenPantryItemBatchResult;
   /**
    * Record a login event. Consolidates recordLoginAttempt and createLoginHistory.
    * Use for all login recording — both high-level attempts and direct history creation.
    */
-  recordLogin: LoginHistoryPayload;
+  recordLogin: RecordLoginResult;
   /** Manually record pantry item usage */
-  recordPantryUsage: PantryItemUsagePayload;
+  recordPantryUsage: RecordPantryUsageResult;
   /** Record a price observation for historical tracking */
-  recordPriceObservation: ItemPriceHistoryPayload;
+  recordPriceObservation: RecordPriceObservationResult;
   /** Refresh an expired access token using a refresh token. */
   refresh: RefreshTokenPayload;
   /** Register a new user account and return tokens. */
@@ -4719,64 +5520,64 @@ export type Mutation = {
    * Register a new device for the current user.
    * This is the primary way to add a device from mobile apps.
    */
-  registerDevice: DevicePayload;
+  registerDevice: RegisterDeviceResult;
   /** Reject a user-created item */
-  rejectItem: ItemPayload;
+  rejectItem: RejectItemResult;
   /** Remove an item from a shopping list. */
-  removeItemFromShoppingList: ShoppingListItemPayload;
+  removeItemFromShoppingList: RemoveItemFromShoppingListResult;
   /** Remove the primary image from an item (deletes from S3) */
-  removeItemImage: ItemPayload;
+  removeItemImage: RemoveItemImageResult;
   /** Remove a member from a home (owner/admin only). */
-  removeMember: MembershipPayload;
+  removeMember: RemoveMemberResult;
   /** Remove a dietary restriction from the user's profile. */
-  removeRestriction: DietaryRestrictionPayload;
+  removeRestriction: RemoveRestrictionResult;
   /** Remove a collaborator from a shopping list. */
-  removeShoppingListCollaborator: ShoppingListCollaboratorPayload;
+  removeShoppingListCollaborator: RemoveShoppingListCollaboratorResult;
   /** Remove an item from a template */
-  removeTemplateItem: MealTemplateItemPayload;
+  removeTemplateItem: RemoveTemplateItemResult;
   /** Remove the conversion factor from a unit. */
-  removeUnitConversion: UnitPayload;
+  removeUnitConversion: RemoveUnitConversionResult;
   /**
    * Reorder multiple storage locations
    * All locations must belong to the same home
    * Requires user to have edit permissions in the home
    */
-  reorderStorageLocations: StorageLocationPayload;
+  reorderStorageLocations: ReorderStorageLocationsResult;
   /** Resend the email verification message to a user. */
-  resendVerificationEmail: UserPayload;
+  resendVerificationEmail: ResendVerificationEmailResult;
   /** Reset password using token from email */
   resetPassword: ResetPasswordResponse;
   /**
    * Restock a pantry item - adds quantity and creates a ledger record.
    * Use this when replenishing an existing pantry item.
    */
-  restockPantryItem: PantryItemUsagePayload;
+  restockPantryItem: RestockPantryItemResult;
   /** Restore a soft-deleted item */
-  restoreItem: ItemPayload;
+  restoreItem: RestoreItemResult;
   /** Revoke a pending home invitation. */
-  revokeHomeInvite: HomeInvitePayload;
+  revokeHomeInvite: RevokeHomeInviteResult;
   /** Send a test notification of a specific type to the current user. */
-  sendTestNotification: NotificationPayload;
+  sendTestNotification: SendTestNotificationResult;
   /** Set the default home for the current user. */
-  setDefaultHome: SetDefaultHomePayload;
+  setDefaultHome: SetDefaultHomeResult;
   /** Set a pantry as the default for its home. */
-  setDefaultPantry: PantryPayload;
+  setDefaultPantry: SetDefaultPantryResult;
   /** Set a shopping list as the default. */
-  setDefaultShoppingList: ShoppingListPayload;
+  setDefaultShoppingList: SetDefaultShoppingListResult;
   /**
    * Set a storage location as the default for its home
    * Automatically unsets the previous default location
    * Requires user to have edit permissions in the home
    */
-  setDefaultStorageLocation: StorageLocationPayload;
+  setDefaultStorageLocation: SetDefaultStorageLocationResult;
   /** Set a reminder for a shopping list. */
-  setReminder: ShoppingListPayload;
+  setReminder: SetReminderResult;
   /** Set up recurring generation for a shopping list. */
-  setupRecurring: ShoppingListPayload;
+  setupRecurring: SetupRecurringResult;
   /** Set up a conversion factor between a unit and its base unit. */
-  setupUnitConversion: UnitPayload;
+  setupUnitConversion: SetupUnitConversionResult;
   /** Share a shopping list publicly with an optional share code. */
-  shareShoppingList: ShoppingListPayload;
+  shareShoppingList: ShareShoppingListResult;
   /** Sync a pantry item deletion from an offline client. */
   syncDeletePantryItem: SyncPantryItemResult;
   /** Sync a shopping list item deletion from an offline client. */
@@ -4790,29 +5591,29 @@ export type Mutation = {
   /** Sync a shopping list item from an offline client. */
   syncShoppingListItem: SyncShoppingListItemResult;
   /** Toggle a helpful vote on a recipe review. */
-  toggleReviewHelpful: ReviewHelpfulPayload;
+  toggleReviewHelpful: ToggleReviewHelpfulResult;
   /** Toggle the purchased state of a shopping list item. */
-  toggleShoppingListItemPurchased: ShoppingListItemPayload;
+  toggleShoppingListItemPurchased: ToggleShoppingListItemPurchasedResult;
   /** Transfer ownership of a home to another member. */
-  transferHomeOwnership: HomeOwnershipPayload;
+  transferHomeOwnership: TransferHomeOwnershipResult;
   /** Remove an item from a category. */
-  uncategorizeItem: ItemCategoryPayload;
+  uncategorizeItem: UncategorizeItemResult;
   /** Revert a completed shopping list back to active. */
-  uncompleteShoppingList: ShoppingListPayload;
+  uncompleteShoppingList: UncompleteShoppingListResult;
   /** Remove a recipe from favorites. */
-  unfavoriteRecipe: SavedRecipePayload;
+  unfavoriteRecipe: UnfavoriteRecipeResult;
   /** Update an existing brand. */
-  updateBrand: BrandPayload;
+  updateBrand: UpdateBrandResult;
   /** Update an existing category. */
-  updateCategory: CategoryPayload;
+  updateCategory: UpdateCategoryResult;
   /** Update a collaborator's granular permissions on a shopping list. */
-  updateCollaboratorPermissions: ShoppingListCollaboratorPayload;
+  updateCollaboratorPermissions: UpdateCollaboratorPermissionsResult;
   /** Update a collaborator's role on a shopping list. */
-  updateCollaboratorRole: ShoppingListCollaboratorPayload;
+  updateCollaboratorRole: UpdateCollaboratorRoleResult;
   /** Update an existing cooking log entry. */
-  updateCookingLog: CookingLogPayload;
+  updateCookingLog: UpdateCookingLogResult;
   /** Update an existing currency. */
-  updateCurrency: CurrencyPayload;
+  updateCurrency: UpdateCurrencyResult;
   /**
    * Update a device. Consolidated mutation that handles all device updates including:
    * - Status changes (trust, verify, activate/deactivate)
@@ -4823,15 +5624,15 @@ export type Mutation = {
    * - Peripheral updates
    * - Soft delete
    */
-  updateDevice: DevicePayload;
+  updateDevice: UpdateDeviceResult;
   /** Update the current user's dietary profile. */
-  updateDietaryProfile: DietaryProfilePayload;
+  updateDietaryProfile: UpdateDietaryProfileResult;
   /** Update an external source mapping. */
-  updateExternalSource: ExternalSourceMappingPayload;
+  updateExternalSource: UpdateExternalSourceResult;
   /** Update details of a favorited recipe (notes, folder, rating). */
-  updateFavoriteRecipe: SavedRecipePayload;
+  updateFavoriteRecipe: UpdateFavoriteRecipeResult;
   /** Update an existing home's details. */
-  updateHome: HomePayload;
+  updateHome: UpdateHomeResult;
   /**
    * Update an item. Consolidated mutation that handles:
    * - Basic fields (name, description, type, etc.)
@@ -4843,77 +5644,77 @@ export type Mutation = {
    * - Images
    * - Metadata
    */
-  updateItem: ItemPayload;
+  updateItem: UpdateItemResult;
   /**
    * Update a login history record. Handles:
    * - Session updates (loggedOutAt, sessionDuration, lastActivityAt)
    * - Administrative actions (marking as reviewed, flagging as risky)
    * - General field updates
    */
-  updateLoginHistory: LoginHistoryPayload;
+  updateLoginHistory: UpdateLoginHistoryResult;
   /** Update an existing meal plan. */
-  updateMealPlan: MealPlanPayload;
+  updateMealPlan: UpdateMealPlanResult;
   /** Update an item in a meal plan. */
-  updateMealPlanItem: MealPlanItemPayload;
+  updateMealPlanItem: UpdateMealPlanItemResult;
   /** Update an existing meal template */
-  updateMealTemplate: MealTemplatePayload;
+  updateMealTemplate: UpdateMealTemplateResult;
   /** Update membership details and permissions (owner/admin only). */
-  updateMembership: MembershipPayload;
+  updateMembership: UpdateMembershipResult;
   /**
    * Update moderation state for a user.
    * Consolidates: updateModerationStatus, updateTrustLevel, updateRiskScore,
    * banUser, unbanUser, suspendUser, unsuspendUser, putUnderReview, completeReview.
    */
-  updateModeration: UserModerationPayload;
+  updateModeration: UpdateModerationResult;
   /** Update an existing notification. */
-  updateNotification: NotificationPayload;
+  updateNotification: UpdateNotificationResult;
   /** Update notification preferences for the current user. */
-  updateNotificationPreferences: NotificationPreferencesPayload;
+  updateNotificationPreferences: UpdateNotificationPreferencesResult;
   /** Update an existing pantry's details. */
-  updatePantry: PantryPayload;
+  updatePantry: UpdatePantryResult;
   /** Update an existing pantry item. */
-  updatePantryItem: PantryItemPayload;
+  updatePantryItem: UpdatePantryItemResult;
   /** Move a pantry item to a different storage location. */
-  updatePantryItemLocation: PantryItemPayload;
+  updatePantryItemLocation: UpdatePantryItemLocationResult;
   /** Update pantry item quantity (supports fractions) */
-  updatePantryItemQuantity: PantryItemPayload;
+  updatePantryItemQuantity: UpdatePantryItemQuantityResult;
   /**
    * Update user profile. Handles all profile fields including avatar and cover image.
    * Set avatarUrl/coverImageUrl to null to remove them.
    */
-  updateProfile: UserProfilePayload;
+  updateProfile: UpdateProfileResult;
   /** Update an existing purchase record. */
-  updatePurchase: PurchasePayload;
-  updateRecipe: RecipePayload;
-  updateRecipeIngredients: RecipePayload;
+  updatePurchase: UpdatePurchaseResult;
+  updateRecipe: UpdateRecipeResult;
+  updateRecipeIngredients: UpdateRecipeIngredientsResult;
   /** Update an existing recipe review (author only). */
-  updateRecipeReview: RecipeReviewPayload;
+  updateRecipeReview: UpdateRecipeReviewResult;
   /** Update an existing dietary restriction. */
-  updateRestriction: DietaryRestrictionPayload;
+  updateRestriction: UpdateRestrictionResult;
   /** Update settings for the current user. */
-  updateSettings: UserSettingsPayload;
+  updateSettings: UpdateSettingsResult;
   /** Update an existing shopping list. */
-  updateShoppingList: ShoppingListPayload;
+  updateShoppingList: UpdateShoppingListResult;
   /** Update a shopping list item. */
-  updateShoppingListItem: ShoppingListItemPayload;
+  updateShoppingListItem: UpdateShoppingListItemResult;
   /** Update shopping list item quantity (supports fractions) */
-  updateShoppingListItemQuantity: ShoppingListItemPayload;
+  updateShoppingListItemQuantity: UpdateShoppingListItemQuantityResult;
   /**
    * Update an existing storage location
    * Validates parent-child relationships and prevents circular references
    * Requires user to have edit permissions in the home
    */
-  updateStorageLocation: StorageLocationPayload;
-  updateStore: StorePayload;
-  updateStoreInfo: StorePayload;
+  updateStorageLocation: UpdateStorageLocationResult;
+  updateStore: UpdateStoreResult;
+  updateStoreInfo: UpdateStoreInfoResult;
   /** Update a template item */
-  updateTemplateItem: MealTemplateItemPayload;
+  updateTemplateItem: UpdateTemplateItemResult;
   /** Update an existing unit of measurement. */
-  updateUnit: UnitPayload;
+  updateUnit: UpdateUnitResult;
   /** Update a user's account details. */
-  updateUser: UserPayload;
+  updateUser: UpdateUserResult;
   /** Update an existing user address. */
-  updateUserAddress: UserAddressPayload;
+  updateUserAddress: UpdateUserAddressResult;
   upsertExternalRecipe: UpsertExternalRecipeResult;
   /** Create or update an item based on its external source ID. */
   upsertItemByExternalSource: UpsertItemResult;
@@ -4921,23 +5722,23 @@ export type Mutation = {
    * Add or update item-specific unit conversion
    * Admins can set source, confidence, and isVerified; non-admins get defaults
    */
-  upsertItemUnitConversion: ItemUnitConversionPayload;
+  upsertItemUnitConversion: UpsertItemUnitConversionResult;
   /** Validate if a password reset token is still valid */
   validatePasswordResetToken: ValidateTokenResponse;
   /** Verify a user's email address using a verification code. */
-  verifyEmail: UserPayload;
+  verifyEmail: VerifyEmailResult;
   /**
    * Verify an item unit conversion as accurate (admin only)
    * Sets isVerified to true and records the verifying admin
    */
-  verifyItemUnitConversion: ItemUnitConversionPayload;
+  verifyItemUnitConversion: VerifyItemUnitConversionResult;
   /** Manually verify a user's email address (admin use). */
-  verifyUserEmail: UserPayload;
+  verifyUserEmail: VerifyUserEmailResult;
   /**
    * Waste a specific batch within a pantry item.
    * Only the targeted batch is zeroed out; other batches remain active.
    */
-  wastePantryItemBatch: PantryItemPayload;
+  wastePantryItemBatch: WastePantryItemBatchResult;
 };
 
 
@@ -5097,7 +5898,6 @@ export type MutationAddWarningArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationAdjustPantryItemQuantityArgs = {
-  id: Scalars['ID']['input'];
   input: AdjustPantryItemQuantityInput;
 };
 
@@ -5193,7 +5993,6 @@ export type MutationAdminDeleteUserArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationAdminUpdateItemArgs = {
-  id: Scalars['ID']['input'];
   input: UpdateItemInput;
 };
 
@@ -5207,7 +6006,6 @@ export type MutationAdminUpdateItemArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationAdminUpdateRecipeArgs = {
-  id: Scalars['ID']['input'];
   input: UpdateRecipeInput;
 };
 
@@ -5473,7 +6271,6 @@ export type MutationClearShoppingListItemsArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationCompleteShoppingListArgs = {
-  id: Scalars['ID']['input'];
   input: CompleteShoppingListInput;
 };
 
@@ -5487,7 +6284,7 @@ export type MutationCompleteShoppingListArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationConfirmItemImageUploadArgs = {
-  itemId: Scalars['String']['input'];
+  itemId: Scalars['ID']['input'];
   key: Scalars['String']['input'];
 };
 
@@ -5553,7 +6350,6 @@ export type MutationConvertExpiredToWasteArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationCorrectPantryItemWeightArgs = {
-  id: Scalars['ID']['input'];
   input: CorrectPantryItemWeightInput;
 };
 
@@ -5645,7 +6441,7 @@ export type MutationCreateHomeArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationCreateImageUploadUrlArgs = {
-  itemId?: InputMaybe<Scalars['String']['input']>;
+  itemId?: InputMaybe<Scalars['ID']['input']>;
   mime: Scalars['String']['input'];
   purpose: ImageUploadPurpose;
 };
@@ -6562,7 +7358,6 @@ export type MutationManageRestrictionsArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationMarkAsTemplateArgs = {
-  id: Scalars['ID']['input'];
   input: MarkAsTemplateInput;
 };
 
@@ -6943,7 +7738,6 @@ export type MutationResetPasswordArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationRestockPantryItemArgs = {
-  id: Scalars['ID']['input'];
   input: RestockPantryItemInput;
 };
 
@@ -7048,7 +7842,6 @@ export type MutationSetDefaultStorageLocationArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationSetReminderArgs = {
-  id: Scalars['ID']['input'];
   input: SetReminderInput;
 };
 
@@ -7062,7 +7855,6 @@ export type MutationSetReminderArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationSetupRecurringArgs = {
-  id: Scalars['ID']['input'];
   input: SetupRecurringInput;
 };
 
@@ -7091,7 +7883,6 @@ export type MutationSetupUnitConversionArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationShareShoppingListArgs = {
-  id: Scalars['ID']['input'];
   input: ShareShoppingListInput;
 };
 
@@ -7273,7 +8064,6 @@ export type MutationUnfavoriteRecipeArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationUpdateBrandArgs = {
-  id: Scalars['ID']['input'];
   input: UpdateBrandInput;
 };
 
@@ -7287,7 +8077,6 @@ export type MutationUpdateBrandArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationUpdateCategoryArgs = {
-  id: Scalars['ID']['input'];
   input: UpdateCategoryInput;
 };
 
@@ -7329,7 +8118,6 @@ export type MutationUpdateCollaboratorRoleArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationUpdateCookingLogArgs = {
-  id: Scalars['ID']['input'];
   input: UpdateCookingLogInput;
 };
 
@@ -7343,7 +8131,6 @@ export type MutationUpdateCookingLogArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationUpdateCurrencyArgs = {
-  id: Scalars['ID']['input'];
   input: UpdateCurrencyInput;
 };
 
@@ -7357,7 +8144,6 @@ export type MutationUpdateCurrencyArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationUpdateDeviceArgs = {
-  id: Scalars['ID']['input'];
   input: UpdateDeviceInput;
 };
 
@@ -7384,7 +8170,6 @@ export type MutationUpdateDietaryProfileArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationUpdateExternalSourceArgs = {
-  id: Scalars['ID']['input'];
   input: UpdateExternalSourceInput;
 };
 
@@ -7412,7 +8197,6 @@ export type MutationUpdateFavoriteRecipeArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationUpdateHomeArgs = {
-  id: Scalars['ID']['input'];
   input: UpdateHomeInput;
 };
 
@@ -7426,7 +8210,6 @@ export type MutationUpdateHomeArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationUpdateItemArgs = {
-  id: Scalars['ID']['input'];
   input: UpdateItemInput;
 };
 
@@ -7440,7 +8223,6 @@ export type MutationUpdateItemArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationUpdateLoginHistoryArgs = {
-  id: Scalars['ID']['input'];
   input: UpdateLoginHistoryInput;
 };
 
@@ -7454,7 +8236,6 @@ export type MutationUpdateLoginHistoryArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationUpdateMealPlanArgs = {
-  id: Scalars['ID']['input'];
   input: UpdateMealPlanInput;
 };
 
@@ -7468,7 +8249,6 @@ export type MutationUpdateMealPlanArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationUpdateMealPlanItemArgs = {
-  id: Scalars['ID']['input'];
   input: UpdateMealPlanItemInput;
 };
 
@@ -7482,7 +8262,6 @@ export type MutationUpdateMealPlanItemArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationUpdateMealTemplateArgs = {
-  id: Scalars['ID']['input'];
   input: UpdateMealTemplateInput;
 };
 
@@ -7496,7 +8275,6 @@ export type MutationUpdateMealTemplateArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationUpdateMembershipArgs = {
-  id: Scalars['ID']['input'];
   input: UpdateMembershipInput;
 };
 
@@ -7524,7 +8302,6 @@ export type MutationUpdateModerationArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationUpdateNotificationArgs = {
-  id: Scalars['ID']['input'];
   input: UpdateNotificationInput;
 };
 
@@ -7551,7 +8328,6 @@ export type MutationUpdateNotificationPreferencesArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationUpdatePantryArgs = {
-  id: Scalars['ID']['input'];
   input: UpdatePantryInput;
 };
 
@@ -7565,7 +8341,6 @@ export type MutationUpdatePantryArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationUpdatePantryItemArgs = {
-  id: Scalars['ID']['input'];
   input: UpdatePantryItemInput;
 };
 
@@ -7623,7 +8398,6 @@ export type MutationUpdateProfileArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationUpdatePurchaseArgs = {
-  id: Scalars['ID']['input'];
   input: UpdatePurchaseInput;
 };
 
@@ -7637,7 +8411,6 @@ export type MutationUpdatePurchaseArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationUpdateRecipeArgs = {
-  id: Scalars['ID']['input'];
   input: UpdateRecipeInput;
 };
 
@@ -7665,7 +8438,6 @@ export type MutationUpdateRecipeIngredientsArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationUpdateRecipeReviewArgs = {
-  id: Scalars['ID']['input'];
   input: UpdateRecipeReviewInput;
 };
 
@@ -7705,7 +8477,6 @@ export type MutationUpdateSettingsArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationUpdateShoppingListArgs = {
-  id: Scalars['ID']['input'];
   input: UpdateShoppingListInput;
 };
 
@@ -7719,7 +8490,6 @@ export type MutationUpdateShoppingListArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationUpdateShoppingListItemArgs = {
-  id: Scalars['ID']['input'];
   input: UpdateShoppingListItemInput;
 };
 
@@ -7749,7 +8519,6 @@ export type MutationUpdateShoppingListItemQuantityArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationUpdateStorageLocationArgs = {
-  id: Scalars['ID']['input'];
   input: UpdateStorageLocationInput;
 };
 
@@ -7763,7 +8532,6 @@ export type MutationUpdateStorageLocationArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationUpdateStoreArgs = {
-  id: Scalars['ID']['input'];
   input: UpdateStoreInput;
 };
 
@@ -7791,7 +8559,6 @@ export type MutationUpdateStoreInfoArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationUpdateTemplateItemArgs = {
-  id: Scalars['ID']['input'];
   input: UpdateTemplateItemInput;
 };
 
@@ -7805,7 +8572,6 @@ export type MutationUpdateTemplateItemArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationUpdateUnitArgs = {
-  id: Scalars['ID']['input'];
   input: UpdateUnitInput;
 };
 
@@ -7819,7 +8585,6 @@ export type MutationUpdateUnitArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationUpdateUserArgs = {
-  id: Scalars['ID']['input'];
   input: UpdateUserInput;
 };
 
@@ -7833,7 +8598,6 @@ export type MutationUpdateUserArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationUpdateUserAddressArgs = {
-  id: Scalars['ID']['input'];
   input: UpdateUserAddressInput;
 };
 
@@ -7947,20 +8711,6 @@ export type MutationWastePantryItemBatchArgs = {
   input: WasteBatchInput;
 };
 
-/**
- * Base interface for all mutation payloads.
- * Ensures every mutation response includes operation metadata.
- * Domain-specific payload types implement this interface and add their entity field.
- */
-export type MutationPayload = {
-  /** Machine-readable status code (e.g., SUCCESS, VALIDATION_ERROR, NOT_FOUND) */
-  code: Scalars['String']['output'];
-  /** Human-readable message describing the result */
-  message: Scalars['String']['output'];
-  /** Whether the mutation operation succeeded */
-  success: Scalars['Boolean']['output'];
-};
-
 /** Describes the type of mutation that triggered a real-time subscription event */
 export enum MutationType {
   /** A new collaborator was added to a shared resource */
@@ -8033,6 +8783,17 @@ export type NetworkLocationInput = {
   timezone?: InputMaybe<Scalars['String']['input']>;
 };
 
+/** A referenced resource does not exist (or is not visible to the caller). */
+export type NotFoundError = Error & {
+  __typename: 'NotFoundError';
+  code: ErrorCode;
+  message: Scalars['String']['output'];
+  /** Logical resource type, e.g. `MealPlan`. */
+  resource: Maybe<Scalars['String']['output']>;
+  /** Identifier the caller supplied, when applicable. */
+  resourceId: Maybe<Scalars['ID']['output']>;
+};
+
 /**
  * Notification type for user alerts and messages
  * Cache: None - notifications must be real-time
@@ -8070,6 +8831,18 @@ export type Notification = Timestamped & {
   userId: Scalars['ID']['output'];
 };
 
+/**
+ * Emitted for lightweight notification state transitions where only the id
+ * is needed (read / dismissed). Clients can refetch the notification by id
+ * if they need its updated state.
+ */
+export type NotificationActionPayload = {
+  __typename: 'NotificationActionPayload';
+  notificationId: Scalars['ID']['output'];
+  timestamp: Scalars['DateTime']['output'];
+  userId: Scalars['ID']['output'];
+};
+
 export enum NotificationCategory {
   Home = 'HOME',
   Pantry = 'PANTRY',
@@ -8085,18 +8858,6 @@ export type NotificationCategoryCount = {
   unreadCount: Scalars['Int']['output'];
 };
 
-export type NotificationChangeEvent = {
-  __typename: 'NotificationChangeEvent';
-  changeType: NotificationChangeType;
-  notification: Notification;
-  timestamp: Scalars['DateTime']['output'];
-};
-
-export enum NotificationChangeType {
-  Received = 'RECEIVED',
-  Updated = 'UPDATED'
-}
-
 /** Sub-input for notification channel toggles */
 export type NotificationChannelsInput = {
   emailEnabled?: InputMaybe<Scalars['Boolean']['input']>;
@@ -8110,6 +8871,15 @@ export type NotificationConnection = Connection & {
   pageInfo: PageInfo;
   totalCount: Maybe<Scalars['Int']['output']>;
   unreadCount: Scalars['Int']['output'];
+};
+
+/** Emitted when a new notification is created for a user. */
+export type NotificationCreatedPayload = {
+  __typename: 'NotificationCreatedPayload';
+  mutation: MutationType;
+  notification: Notification;
+  timestamp: Scalars['DateTime']['output'];
+  userId: Scalars['ID']['output'];
 };
 
 export enum NotificationDeliveryStatus {
@@ -8127,12 +8897,16 @@ export type NotificationEdge = Edge & {
   node: Notification;
 };
 
+/**
+ * Legacy generic notification event payload. Retained for unknown external
+ * consumers; new subscriptions use the typed payloads below.
+ */
 export type NotificationEventPayload = {
   __typename: 'NotificationEventPayload';
   mutation: Maybe<MutationType>;
   notification: Maybe<Notification>;
   timestamp: Maybe<Scalars['String']['output']>;
-  userId: Maybe<Scalars['String']['output']>;
+  userId: Maybe<Scalars['ID']['output']>;
 };
 
 export type NotificationFilters = {
@@ -8158,14 +8932,6 @@ export enum NotificationOrderBy {
   TypeAsc = 'TYPE_ASC',
   TypeDesc = 'TYPE_DESC'
 }
-
-export type NotificationPayload = MutationPayload & {
-  __typename: 'NotificationPayload';
-  code: Scalars['String']['output'];
-  message: Scalars['String']['output'];
-  notification: Maybe<Notification>;
-  success: Scalars['Boolean']['output'];
-};
 
 /**
  * User notification preferences
@@ -8199,14 +8965,6 @@ export type NotificationPreferences = {
   user: User;
   userId: Scalars['ID']['output'];
   weeklyDigest: Scalars['Boolean']['output'];
-};
-
-export type NotificationPreferencesPayload = MutationPayload & {
-  __typename: 'NotificationPreferencesPayload';
-  code: Scalars['String']['output'];
-  message: Scalars['String']['output'];
-  notificationPreferences: Maybe<NotificationPreferences>;
-  success: Scalars['Boolean']['output'];
 };
 
 export type NotificationPriorityCount = {
@@ -8288,6 +9046,15 @@ export type NotificationTypeCount = {
   unreadCount: Scalars['Int']['output'];
 };
 
+/** Emitted when an existing notification is updated. */
+export type NotificationUpdatedPayload = {
+  __typename: 'NotificationUpdatedPayload';
+  mutation: MutationType;
+  notification: Notification;
+  timestamp: Scalars['DateTime']['output'];
+  userId: Scalars['ID']['output'];
+};
+
 export enum NutritionCategory {
   Macronutrient = 'MACRONUTRIENT',
   Mineral = 'MINERAL',
@@ -8353,6 +9120,22 @@ export type OfferSummary = {
 /** Input for opening a specific batch */
 export type OpenBatchInput = {
   batchId: Scalars['ID']['input'];
+};
+
+export type OpenPantryItemBatchResult = ConflictError | ForbiddenError | NotFoundError | OpenPantryItemBatchSuccess | ValidationError;
+
+export type OpenPantryItemBatchSuccess = {
+  __typename: 'OpenPantryItemBatchSuccess';
+  pantry: Maybe<Pantry>;
+  pantryItem: PantryItem;
+};
+
+export type OpenPantryItemResult = ConflictError | ForbiddenError | NotFoundError | OpenPantryItemSuccess;
+
+export type OpenPantryItemSuccess = {
+  __typename: 'OpenPantryItemSuccess';
+  pantry: Maybe<Pantry>;
+  pantryItem: PantryItem;
 };
 
 export type OperatingSystemStat = {
@@ -8453,7 +9236,7 @@ export type PantryItemsConnectionArgs = {
 export type PantryLedgerAnalyticsArgs = {
   filter?: InputMaybe<AnalyticsFilters>;
   granularity?: InputMaybe<PeriodGranularity>;
-  itemId?: InputMaybe<Scalars['String']['input']>;
+  itemId?: InputMaybe<Scalars['ID']['input']>;
 };
 
 
@@ -8544,47 +9327,6 @@ export enum PantryActivityType {
   PantryDeleted = 'PANTRY_DELETED',
   PantryUpdated = 'PANTRY_UPDATED',
   QuantityUpdated = 'QUANTITY_UPDATED'
-}
-
-export type PantryAlertEvent = {
-  __typename: 'PantryAlertEvent';
-  alertType: PantryAlertType;
-  /** Populated for EXPIRING_ITEMS alerts */
-  items: Maybe<Array<PantryItem>>;
-  message: Maybe<Scalars['String']['output']>;
-  pantryId: Scalars['ID']['output'];
-  /** Populated for LOW_STOCK and WASTE alerts */
-  pantryItem: Maybe<PantryItem>;
-  timestamp: Scalars['DateTime']['output'];
-  userId: Scalars['ID']['output'];
-};
-
-export enum PantryAlertType {
-  ExpiringItems = 'EXPIRING_ITEMS',
-  LowStock = 'LOW_STOCK',
-  Waste = 'WASTE'
-}
-
-export type PantryChangeEvent = {
-  __typename: 'PantryChangeEvent';
-  changeType: PantryChangeType;
-  mutation: Maybe<MutationType>;
-  /** Populated for UPDATED events */
-  pantry: Maybe<Pantry>;
-  pantryId: Scalars['ID']['output'];
-  /** Populated for ITEMS_CHANGED events */
-  pantryItem: Maybe<PantryItem>;
-  timestamp: Scalars['DateTime']['output'];
-  updatedFields: Maybe<Array<Scalars['String']['output']>>;
-  /** Populated for USAGE_CHANGED events */
-  usage: Maybe<PantryItemUsage>;
-  userId: Scalars['ID']['output'];
-};
-
-export enum PantryChangeType {
-  ItemsChanged = 'ITEMS_CHANGED',
-  Updated = 'UPDATED',
-  UsageChanged = 'USAGE_CHANGED'
 }
 
 export type PantryConnection = Connection & {
@@ -8825,14 +9567,6 @@ export type PantryItemOrderBy = {
   itemName?: InputMaybe<SortOrder>;
 };
 
-export type PantryItemPayload = MutationPayload & {
-  __typename: 'PantryItemPayload';
-  code: Scalars['String']['output'];
-  message: Scalars['String']['output'];
-  pantryItem: Maybe<PantryItem>;
-  success: Scalars['Boolean']['output'];
-};
-
 export type PantryItemPhoto = {
   __typename: 'PantryItemPhoto';
   id: Scalars['ID']['output'];
@@ -8951,16 +9685,6 @@ export type PantryItemUsageOrderBy = {
   usedAt?: InputMaybe<SortOrder>;
 };
 
-export type PantryItemUsagePayload = MutationPayload & {
-  __typename: 'PantryItemUsagePayload';
-  code: Scalars['String']['output'];
-  message: Scalars['String']['output'];
-  pantryItemUsage: Maybe<PantryItemUsage>;
-  success: Scalars['Boolean']['output'];
-  /** Eligible unit symbols when code is INVALID_UNIT. Null for other error codes and successes. */
-  validUnits: Maybe<Array<Scalars['String']['output']>>;
-};
-
 export type PantryLowStockAlertPayload = {
   __typename: 'PantryLowStockAlertPayload';
   currentQuantity: Scalars['Float']['output'];
@@ -8975,14 +9699,6 @@ export type PantryLowStockAlertPayload = {
 export type PantryOrderBy = {
   createdAt?: InputMaybe<SortOrder>;
   name?: InputMaybe<SortOrder>;
-};
-
-export type PantryPayload = MutationPayload & {
-  __typename: 'PantryPayload';
-  code: Scalars['String']['output'];
-  message: Scalars['String']['output'];
-  pantry: Maybe<Pantry>;
-  success: Scalars['Boolean']['output'];
 };
 
 export type PantryStats = {
@@ -9082,12 +9798,6 @@ export type PowerStatusInput = {
   batteryLevel?: InputMaybe<Scalars['Float']['input']>;
   isBatteryCharging?: InputMaybe<Scalars['Boolean']['input']>;
   powerState?: InputMaybe<Scalars['JSON']['input']>;
-};
-
-export type PresignPayload = {
-  __typename: 'PresignPayload';
-  key: Scalars['String']['output'];
-  url: Scalars['String']['output'];
 };
 
 /** Price estimate information for a shopping list item */
@@ -9296,14 +10006,6 @@ export type PurchaseOrderBy = {
   createdAt?: InputMaybe<SortOrder>;
   purchaseDate?: InputMaybe<SortOrder>;
   totalPrice?: InputMaybe<SortOrder>;
-};
-
-export type PurchasePayload = MutationPayload & {
-  __typename: 'PurchasePayload';
-  code: Scalars['String']['output'];
-  message: Scalars['String']['output'];
-  purchase: Maybe<Purchase>;
-  success: Scalars['Boolean']['output'];
 };
 
 export type PurchaseStats = {
@@ -9872,13 +10574,13 @@ export type QueryCategoryBySlugArgs = {
 
 export type QueryCheckItemAvailabilityArgs = {
   itemId: Scalars['ID']['input'];
-  storeIds?: InputMaybe<Array<Scalars['String']['input']>>;
+  storeIds?: InputMaybe<Array<Scalars['ID']['input']>>;
 };
 
 
 export type QueryCompareItemPricesArgs = {
   itemId: Scalars['ID']['input'];
-  storeIds?: InputMaybe<Array<Scalars['String']['input']>>;
+  storeIds?: InputMaybe<Array<Scalars['ID']['input']>>;
 };
 
 
@@ -9992,7 +10694,7 @@ export type QueryHomesArgs = {
 
 
 export type QueryInviteStatsArgs = {
-  inviteId: Scalars['String']['input'];
+  inviteId: Scalars['ID']['input'];
 };
 
 
@@ -10173,7 +10875,7 @@ export type QueryRecipesArgs = {
 
 export type QueryRecommendedItemsArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
-  userId?: InputMaybe<Scalars['String']['input']>;
+  userId?: InputMaybe<Scalars['ID']['input']>;
 };
 
 
@@ -10372,6 +11074,17 @@ export type RapidAttempt = {
   __typename: 'RapidAttempt';
   count: Scalars['Int']['output'];
   hour: Scalars['String']['output'];
+};
+
+/**
+ * Caller has exceeded a rate limit. `retryAfter` is the suggested wait
+ * in seconds before retrying, when known.
+ */
+export type RateLimitError = Error & {
+  __typename: 'RateLimitError';
+  code: ErrorCode;
+  message: Scalars['String']['output'];
+  retryAfter: Maybe<Scalars['Int']['output']>;
 };
 
 /**
@@ -10612,14 +11325,6 @@ export type RecipeMetadataInput = {
   servings?: InputMaybe<Scalars['Int']['input']>;
 };
 
-export type RecipePayload = MutationPayload & {
-  __typename: 'RecipePayload';
-  code: Scalars['String']['output'];
-  message: Scalars['String']['output'];
-  recipe: Maybe<Recipe>;
-  success: Scalars['Boolean']['output'];
-};
-
 export type RecipeReview = {
   __typename: 'RecipeReview';
   comment: Maybe<Scalars['String']['output']>;
@@ -10651,14 +11356,6 @@ export type RecipeReviewEdge = Edge & {
 export type RecipeReviewOrderBy = {
   createdAt?: InputMaybe<SortOrder>;
   rating?: InputMaybe<SortOrder>;
-};
-
-export type RecipeReviewPayload = MutationPayload & {
-  __typename: 'RecipeReviewPayload';
-  code: Scalars['String']['output'];
-  message: Scalars['String']['output'];
-  recipeReview: Maybe<RecipeReview>;
-  success: Scalars['Boolean']['output'];
 };
 
 export type RecipeSourceMapping = {
@@ -10708,6 +11405,13 @@ export type RecordLoginInput = {
   userId: Scalars['ID']['input'];
 };
 
+export type RecordLoginResult = ConflictError | ForbiddenError | NotFoundError | RecordLoginSuccess | ValidationError;
+
+export type RecordLoginSuccess = {
+  __typename: 'RecordLoginSuccess';
+  loginHistory: LoginHistory;
+};
+
 export type RecordPantryItemUsageInput = {
   cookingLogId?: InputMaybe<Scalars['ID']['input']>;
   isComposted?: InputMaybe<Scalars['Boolean']['input']>;
@@ -10732,12 +11436,30 @@ export type RecordPantryUsageInput = {
   unitId: Scalars['ID']['input'];
 };
 
+export type RecordPantryUsageResult = ConflictError | ForbiddenError | NotFoundError | RecordPantryUsageSuccess | ValidationError;
+
+export type RecordPantryUsageSuccess = {
+  __typename: 'RecordPantryUsageSuccess';
+  pantry: Maybe<Pantry>;
+  pantryItem: Maybe<PantryItem>;
+  pantryItemUsage: PantryItemUsage;
+};
+
 /** Input for recording a price observation (historical tracking) */
 export type RecordPriceObservationInput = {
   itemId: Scalars['ID']['input'];
   observedAt?: InputMaybe<Scalars['DateTime']['input']>;
   price: Scalars['Float']['input'];
   storeId: Scalars['ID']['input'];
+};
+
+export type RecordPriceObservationResult = ConflictError | ForbiddenError | NotFoundError | RecordPriceObservationSuccess | ValidationError;
+
+export type RecordPriceObservationSuccess = {
+  __typename: 'RecordPriceObservationSuccess';
+  item: Maybe<Item>;
+  priceHistory: ItemPriceHistory;
+  store: Maybe<Store>;
 };
 
 export enum RecurringPattern {
@@ -10763,6 +11485,13 @@ export type RegionalSettingsInput = {
   timezone?: InputMaybe<Scalars['String']['input']>;
 };
 
+export type RegisterDeviceResult = ConflictError | ForbiddenError | NotFoundError | RegisterDeviceSuccess | ValidationError;
+
+export type RegisterDeviceSuccess = {
+  __typename: 'RegisterDeviceSuccess';
+  device: Maybe<Device>;
+};
+
 export type RegisterInput = {
   email: Scalars['String']['input'];
   name?: InputMaybe<Scalars['String']['input']>;
@@ -10774,6 +11503,13 @@ export type RejectItemInput = {
   itemId: Scalars['ID']['input'];
   notifyUser?: InputMaybe<Scalars['Boolean']['input']>;
   reason: Scalars['String']['input'];
+};
+
+export type RejectItemResult = ConflictError | ForbiddenError | NotFoundError | RejectItemSuccess | ValidationError;
+
+export type RejectItemSuccess = {
+  __typename: 'RejectItemSuccess';
+  item: Item;
 };
 
 export type RelatedItemsResponse = {
@@ -10793,13 +11529,67 @@ export type RemoveCollaboratorInput = {
   shoppingListId: Scalars['ID']['input'];
 };
 
+export type RemoveItemFromShoppingListResult = ConflictError | ForbiddenError | NotFoundError | RemoveItemFromShoppingListSuccess;
+
+export type RemoveItemFromShoppingListSuccess = {
+  __typename: 'RemoveItemFromShoppingListSuccess';
+  shoppingList: Maybe<ShoppingList>;
+  shoppingListItem: ShoppingListItem;
+};
+
+export type RemoveItemImageResult = ConflictError | ForbiddenError | NotFoundError | RemoveItemImageSuccess;
+
+export type RemoveItemImageSuccess = {
+  __typename: 'RemoveItemImageSuccess';
+  item: Item;
+};
+
+export type RemoveMemberResult = ConflictError | ForbiddenError | NotFoundError | RemoveMemberSuccess;
+
+export type RemoveMemberSuccess = {
+  __typename: 'RemoveMemberSuccess';
+  home: Maybe<Home>;
+  membership: Membership;
+};
+
 export type RemoveRestrictionInput = {
   id: Scalars['ID']['input'];
+};
+
+export type RemoveRestrictionResult = ConflictError | ForbiddenError | NotFoundError | RemoveRestrictionSuccess;
+
+export type RemoveRestrictionSuccess = {
+  __typename: 'RemoveRestrictionSuccess';
+  dietaryProfile: Maybe<DietaryProfile>;
+  dietaryRestriction: DietaryRestriction;
 };
 
 export type RemoveRestrictionsInput = {
   restrictions: Array<ModerationRestriction>;
   userId: Scalars['ID']['input'];
+};
+
+export type RemoveShoppingListCollaboratorResult = ConflictError | ForbiddenError | NotFoundError | RemoveShoppingListCollaboratorSuccess;
+
+export type RemoveShoppingListCollaboratorSuccess = {
+  __typename: 'RemoveShoppingListCollaboratorSuccess';
+  collaborator: ShoppingListCollaborator;
+  shoppingList: Maybe<ShoppingList>;
+};
+
+export type RemoveTemplateItemResult = ConflictError | ForbiddenError | NotFoundError | RemoveTemplateItemSuccess;
+
+export type RemoveTemplateItemSuccess = {
+  __typename: 'RemoveTemplateItemSuccess';
+  mealTemplate: Maybe<MealTemplate>;
+  mealTemplateItem: MealTemplateItem;
+};
+
+export type RemoveUnitConversionResult = ForbiddenError | NotFoundError | RemoveUnitConversionSuccess;
+
+export type RemoveUnitConversionSuccess = {
+  __typename: 'RemoveUnitConversionSuccess';
+  unit: Unit;
 };
 
 /**
@@ -10813,12 +11603,27 @@ export type ReorderStorageLocationsInput = {
   sortOrders: Array<Scalars['Int']['input']>;
 };
 
+export type ReorderStorageLocationsResult = ForbiddenError | NotFoundError | ReorderStorageLocationsSuccess | ValidationError;
+
+export type ReorderStorageLocationsSuccess = {
+  __typename: 'ReorderStorageLocationsSuccess';
+  home: Maybe<Home>;
+  storageLocation: StorageLocation;
+};
+
+export type ResendVerificationEmailResult = ConflictError | ForbiddenError | ResendVerificationEmailSuccess | ValidationError;
+
+export type ResendVerificationEmailSuccess = {
+  __typename: 'ResendVerificationEmailSuccess';
+  user: Maybe<User>;
+};
+
 export type ResetPasswordInput = {
   password: Scalars['String']['input'];
   token: Scalars['String']['input'];
 };
 
-export type ResetPasswordResponse = MutationPayload & {
+export type ResetPasswordResponse = {
   __typename: 'ResetPasswordResponse';
   code: Scalars['String']['output'];
   message: Scalars['String']['output'];
@@ -10829,12 +11634,22 @@ export type ResetPasswordResponse = MutationPayload & {
 export type RestockPantryItemInput = {
   costPerUnit?: InputMaybe<Scalars['Float']['input']>;
   expiresAt?: InputMaybe<Scalars['DateTime']['input']>;
+  id: Scalars['ID']['input'];
   notes?: InputMaybe<Scalars['String']['input']>;
   quantity: Scalars['Float']['input'];
   restockedAt?: InputMaybe<Scalars['DateTime']['input']>;
   storeId?: InputMaybe<Scalars['ID']['input']>;
   totalCost?: InputMaybe<Scalars['Float']['input']>;
   unitId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type RestockPantryItemResult = ConflictError | ForbiddenError | NotFoundError | RestockPantryItemSuccess | ValidationError;
+
+export type RestockPantryItemSuccess = {
+  __typename: 'RestockPantryItemSuccess';
+  pantry: Maybe<Pantry>;
+  pantryItem: Maybe<PantryItem>;
+  pantryItemUsage: PantryItemUsage;
 };
 
 /** Restocking frequency for an item or pantry */
@@ -10847,6 +11662,13 @@ export type RestockingFrequency = {
   periodEnd: Scalars['DateTime']['output'];
   periodStart: Scalars['DateTime']['output'];
   totalRestocks: Scalars['Int']['output'];
+};
+
+export type RestoreItemResult = ConflictError | ForbiddenError | NotFoundError | RestoreItemSuccess;
+
+export type RestoreItemSuccess = {
+  __typename: 'RestoreItemSuccess';
+  item: Item;
 };
 
 export enum RestrictionSeverity {
@@ -10870,12 +11692,12 @@ export type ReviewHelpful = {
   user: User;
 };
 
-export type ReviewHelpfulPayload = MutationPayload & {
-  __typename: 'ReviewHelpfulPayload';
-  code: Scalars['String']['output'];
-  message: Scalars['String']['output'];
-  reviewHelpful: Maybe<ReviewHelpful>;
-  success: Scalars['Boolean']['output'];
+export type RevokeHomeInviteResult = ConflictError | ForbiddenError | NotFoundError | RevokeHomeInviteSuccess;
+
+export type RevokeHomeInviteSuccess = {
+  __typename: 'RevokeHomeInviteSuccess';
+  home: Maybe<Home>;
+  homeInvite: HomeInvite;
 };
 
 /** Sub-input for risk assessment data */
@@ -10902,6 +11724,20 @@ export enum RiskFactor {
   UnusualTime = 'UNUSUAL_TIME',
   VpnDetected = 'VPN_DETECTED'
 }
+
+/**
+ * Emitted when an individual login is classified as high-risk
+ * (either by the fast-path heuristic or the background risk job).
+ */
+export type RiskyLoginDetectedPayload = {
+  __typename: 'RiskyLoginDetectedPayload';
+  loginHistory: LoginHistory;
+  requiresMfa: Scalars['Boolean']['output'];
+  riskFactors: Array<Scalars['String']['output']>;
+  riskScore: Scalars['Float']['output'];
+  timestamp: Scalars['DateTime']['output'];
+  userId: Scalars['ID']['output'];
+};
 
 export type SavedRecipe = {
   __typename: 'SavedRecipe';
@@ -10940,14 +11776,6 @@ export type SavedRecipeOrderBy = {
   savedAt?: InputMaybe<SortOrder>;
 };
 
-export type SavedRecipePayload = MutationPayload & {
-  __typename: 'SavedRecipePayload';
-  code: Scalars['String']['output'];
-  message: Scalars['String']['output'];
-  savedRecipe: Maybe<SavedRecipe>;
-  success: Scalars['Boolean']['output'];
-};
-
 export type SearchFacets = {
   __typename: 'SearchFacets';
   brands: Array<FacetValue>;
@@ -10967,6 +11795,13 @@ export type SearchItemsInput = {
   sort?: InputMaybe<ItemSortInput>;
 };
 
+export type SendTestNotificationResult = ConflictError | ForbiddenError | NotFoundError | SendTestNotificationSuccess | ValidationError;
+
+export type SendTestNotificationSuccess = {
+  __typename: 'SendTestNotificationSuccess';
+  notification: Maybe<Notification>;
+};
+
 /** Sub-input for session info */
 export type SessionInfoInput = {
   lastActivityAt?: InputMaybe<Scalars['DateTime']['input']>;
@@ -10975,29 +11810,82 @@ export type SessionInfoInput = {
   sessionId?: InputMaybe<Scalars['String']['input']>;
 };
 
-export type SetDefaultHomePayload = MutationPayload & {
-  __typename: 'SetDefaultHomePayload';
-  code: Scalars['String']['output'];
+export type SetDefaultHomeResult = ConflictError | ForbiddenError | NotFoundError | SetDefaultHomeSuccess | ValidationError;
+
+export type SetDefaultHomeSuccess = {
+  __typename: 'SetDefaultHomeSuccess';
   defaultPantry: Maybe<Pantry>;
-  message: Scalars['String']['output'];
-  settings: Maybe<UserSettings>;
-  success: Scalars['Boolean']['output'];
+  settings: UserSettings;
+};
+
+export type SetDefaultPantryResult = ForbiddenError | NotFoundError | SetDefaultPantrySuccess;
+
+export type SetDefaultPantrySuccess = {
+  __typename: 'SetDefaultPantrySuccess';
+  home: Maybe<Home>;
+  pantry: Pantry;
+};
+
+export type SetDefaultShoppingListResult = ConflictError | ForbiddenError | NotFoundError | SetDefaultShoppingListSuccess;
+
+export type SetDefaultShoppingListSuccess = {
+  __typename: 'SetDefaultShoppingListSuccess';
+  shoppingList: ShoppingList;
+};
+
+export type SetDefaultStorageLocationResult = ForbiddenError | NotFoundError | SetDefaultStorageLocationSuccess;
+
+export type SetDefaultStorageLocationSuccess = {
+  __typename: 'SetDefaultStorageLocationSuccess';
+  home: Maybe<Home>;
+  storageLocation: StorageLocation;
 };
 
 export type SetReminderInput = {
+  id: Scalars['ID']['input'];
   reminderDate: Scalars['DateTime']['input'];
   reminderEnabled?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
+export type SetReminderResult = ConflictError | ForbiddenError | NotFoundError | SetReminderSuccess | ValidationError;
+
+export type SetReminderSuccess = {
+  __typename: 'SetReminderSuccess';
+  shoppingList: ShoppingList;
+};
+
 export type SetupRecurringInput = {
+  id: Scalars['ID']['input'];
   nextRecurringDate?: InputMaybe<Scalars['DateTime']['input']>;
   recurringInterval: Scalars['Int']['input'];
   recurringPattern: RecurringPattern;
 };
 
+export type SetupRecurringResult = ConflictError | ForbiddenError | NotFoundError | SetupRecurringSuccess | ValidationError;
+
+export type SetupRecurringSuccess = {
+  __typename: 'SetupRecurringSuccess';
+  shoppingList: ShoppingList;
+};
+
+export type SetupUnitConversionResult = ForbiddenError | NotFoundError | SetupUnitConversionSuccess | ValidationError;
+
+export type SetupUnitConversionSuccess = {
+  __typename: 'SetupUnitConversionSuccess';
+  unit: Unit;
+};
+
 export type ShareShoppingListInput = {
+  id: Scalars['ID']['input'];
   isPublic?: InputMaybe<Scalars['Boolean']['input']>;
   shareCode?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type ShareShoppingListResult = ConflictError | ForbiddenError | NotFoundError | ShareShoppingListSuccess | ValidationError;
+
+export type ShareShoppingListSuccess = {
+  __typename: 'ShareShoppingListSuccess';
+  shoppingList: ShoppingList;
 };
 
 /**
@@ -11179,30 +12067,6 @@ export type ShoppingListActivityOrderBy = {
   timestamp?: InputMaybe<SortOrder>;
 };
 
-export type ShoppingListChangeEvent = {
-  __typename: 'ShoppingListChangeEvent';
-  changeType: ShoppingListChangeType;
-  clearedCount: Maybe<Scalars['Int']['output']>;
-  /** Populated for ITEMS_BATCH_CLEARED events */
-  clearedItemIds: Maybe<Array<Scalars['ID']['output']>>;
-  /** Populated for ITEMS_CHANGED events */
-  item: Maybe<ShoppingListItem>;
-  listId: Scalars['ID']['output'];
-  mutation: Maybe<MutationType>;
-  /** Populated for LIST_UPDATED and STATUS_CHANGED events */
-  shoppingList: Maybe<ShoppingList>;
-  timestamp: Scalars['DateTime']['output'];
-  updatedFields: Maybe<Array<Scalars['String']['output']>>;
-  userId: Scalars['ID']['output'];
-};
-
-export enum ShoppingListChangeType {
-  ItemsBatchCleared = 'ITEMS_BATCH_CLEARED',
-  ItemsChanged = 'ITEMS_CHANGED',
-  ListUpdated = 'LIST_UPDATED',
-  StatusChanged = 'STATUS_CHANGED'
-}
-
 export type ShoppingListCollaborator = {
   __typename: 'ShoppingListCollaborator';
   canAddItems: Scalars['Boolean']['output'];
@@ -11256,14 +12120,6 @@ export type ShoppingListCollaboratorEdge = Edge & {
   __typename: 'ShoppingListCollaboratorEdge';
   cursor: Scalars['String']['output'];
   node: ShoppingListCollaborator;
-};
-
-export type ShoppingListCollaboratorPayload = MutationPayload & {
-  __typename: 'ShoppingListCollaboratorPayload';
-  code: Scalars['String']['output'];
-  collaborator: Maybe<ShoppingListCollaborator>;
-  message: Scalars['String']['output'];
-  success: Scalars['Boolean']['output'];
 };
 
 export type ShoppingListConnection = Connection & {
@@ -11389,14 +12245,6 @@ export type ShoppingListItemOrderBy = {
   updatedAt?: InputMaybe<SortOrder>;
 };
 
-export type ShoppingListItemPayload = MutationPayload & {
-  __typename: 'ShoppingListItemPayload';
-  code: Scalars['String']['output'];
-  message: Scalars['String']['output'];
-  shoppingListItem: Maybe<ShoppingListItem>;
-  success: Scalars['Boolean']['output'];
-};
-
 /** Purchase state for a shopping list item */
 export type ShoppingListItemPurchaseInfo = {
   __typename: 'ShoppingListItemPurchaseInfo';
@@ -11482,14 +12330,6 @@ export type ShoppingListOwnership = {
   transferredFrom: Maybe<Scalars['String']['output']>;
   user: User;
   userId: Scalars['ID']['output'];
-};
-
-export type ShoppingListPayload = MutationPayload & {
-  __typename: 'ShoppingListPayload';
-  code: Scalars['String']['output'];
-  message: Scalars['String']['output'];
-  shoppingList: Maybe<ShoppingList>;
-  success: Scalars['Boolean']['output'];
 };
 
 /** Sub-input for shopping list planning details */
@@ -11719,14 +12559,6 @@ export type StorageLocationOrderBy = {
   name?: InputMaybe<SortOrder>;
 };
 
-export type StorageLocationPayload = MutationPayload & {
-  __typename: 'StorageLocationPayload';
-  code: Scalars['String']['output'];
-  message: Scalars['String']['output'];
-  storageLocation: Maybe<StorageLocation>;
-  success: Scalars['Boolean']['output'];
-};
-
 /** Temperature state of a storage location */
 export enum StorageState {
   /** Room temperature / ambient conditions */
@@ -11890,8 +12722,8 @@ export type StoreEdge = Edge & {
 /** Sub-input for store-related filters */
 export type StoreFilterInput = {
   inventoryStatus?: InputMaybe<Scalars['String']['input']>;
-  storeId?: InputMaybe<Scalars['String']['input']>;
-  storeIds?: InputMaybe<Array<Scalars['String']['input']>>;
+  storeId?: InputMaybe<Scalars['ID']['input']>;
+  storeIds?: InputMaybe<Array<Scalars['ID']['input']>>;
 };
 
 /**
@@ -11961,14 +12793,6 @@ export enum StoreOrderBy {
   PopularityDesc = 'POPULARITY_DESC'
 }
 
-export type StorePayload = MutationPayload & {
-  __typename: 'StorePayload';
-  code: Scalars['String']['output'];
-  message: Scalars['String']['output'];
-  store: Maybe<Store>;
-  success: Scalars['Boolean']['output'];
-};
-
 /** Sub-input for store preferences */
 export type StorePreferencesInput = {
   aisle?: InputMaybe<Scalars['String']['input']>;
@@ -11982,7 +12806,7 @@ export type StorePriceComparison = {
   lastUpdated: Maybe<Scalars['DateTime']['output']>;
   offers: Array<OfferSummary>;
   price: Maybe<Scalars['Float']['output']>;
-  storeId: Scalars['String']['output'];
+  storeId: Scalars['ID']['output'];
   storeName: Scalars['String']['output'];
   unitPrice: Maybe<Scalars['Float']['output']>;
 };
@@ -12034,30 +12858,99 @@ export type Subscription = {
   __typename: 'Subscription';
   /** Subscribe to collaborator changes for a shopping list (invites, removals, role/permission updates) */
   collaborationChanged: CollaborationChangeEvent;
-  /** Subscribe to all device changes for a user */
-  deviceChanged: DeviceChangeEvent;
-  /** Subscribe to expiration notification changes for a pantry */
-  expirationNotificationChanged: ExpirationNotificationChangeEvent;
+  /** Subscribe to device activity updates (last-seen, location, login count). */
+  deviceActivity: DeviceActivityPayload;
+  /** Subscribe to device deletion events. */
+  deviceDeleted: DeviceDeletedPayload;
+  /** Subscribe to new device registrations for a user. */
+  deviceRegistered: DeviceRegisteredPayload;
+  /** Subscribe to device active-status changes (activated / deactivated). */
+  deviceStatusChanged: DeviceStatusChangedPayload;
+  /** Subscribe to device trust changes (trusted / untrusted). */
+  deviceTrustChanged: DeviceTrustChangedPayload;
+  /** Subscribe to device verification events. */
+  deviceVerified: DeviceVerifiedPayload;
+  /**
+   * Subscribe to action-taken events on expiration notifications
+   * (waste, restock, mark-consumed, etc.).
+   */
+  expirationNotificationActionTaken: ExpirationNotificationActionTakenPayload;
+  /**
+   * Subscribe to new expiration notifications created by the background
+   * expiration-check job for a pantry.
+   */
+  expirationNotificationCreated: ExpirationNotificationCreatedPayload;
+  /** Subscribe to user-initiated dismissal of expiration notifications. */
+  expirationNotificationDismissed: ExpirationNotificationDismissedPayload;
+  /** Subscribe to read-state changes on expiration notifications. */
+  expirationNotificationRead: ExpirationNotificationReadPayload;
   /** Subscribe to home invitation changes for a specific home */
   homeInviteChanged: HomeInviteChangeEvent;
-  /** Subscribe to all login activity for a user */
-  loginActivityChanged: LoginActivityEvent;
+  /** Subscribe to successful login attempts for a user. */
+  loginAttempted: LoginAttemptedPayload;
+  /** Subscribe to failed login attempts for a user. */
+  loginFailed: LoginFailedPayload;
   /** Subscribe to all membership changes for a home */
   membershipChanged: MembershipChangeEvent;
-  /** Subscribe to changes across all of the current user's shopping lists */
-  myShoppingListsChanged: ShoppingListChangeEvent;
-  /** Subscribe to notification changes */
-  notificationChanged: NotificationChangeEvent;
-  /** Subscribe to pantry alerts (low stock, expiring, waste) */
-  pantryAlert: PantryAlertEvent;
-  /** Subscribe to pantry data changes (updates, items, usage) */
-  pantryChanged: PantryChangeEvent;
-  /** Subscribe to all changes for a specific shopping list */
-  shoppingListChanged: ShoppingListChangeEvent;
+  /** Subscribe to item changes across all of the current user's shopping lists. */
+  myShoppingListsItemChanged: ShoppingListItemChangedPayload;
+  /** Subscribe to batch-clear events across all of the current user's shopping lists. */
+  myShoppingListsItemsBatchCleared: ShoppingListItemsBatchClearedPayload;
+  /** Subscribe to status changes across all of the current user's shopping lists. */
+  myShoppingListsStatusChanged: ShoppingListStatusChangedPayload;
+  /** Subscribe to metadata updates across all of the current user's shopping lists. */
+  myShoppingListsUpdated: ShoppingListUpdatedPayload;
+  /** Subscribe to new notifications created for the current user. */
+  notificationCreated: NotificationCreatedPayload;
+  /** Subscribe to dismissal events (lightweight payload — id only). */
+  notificationDismissed: NotificationActionPayload;
+  /** Subscribe to read-state changes (lightweight payload — id only). */
+  notificationRead: NotificationActionPayload;
+  /** Subscribe to updates of existing notifications for the current user. */
+  notificationUpdated: NotificationUpdatedPayload;
+  /** Subscribe to expiring-items alerts for a pantry. */
+  pantryExpirationAlert: PantryExpiringItemsAlertPayload;
+  /** Subscribe to pantry item create/update/delete events. */
+  pantryItemChanged: PantryItemChangedPayload;
+  /** Subscribe to pantry item usage events (consume, restock, adjust). */
+  pantryItemUsageChanged: PantryItemUsageChangedPayload;
+  /** Subscribe to low-stock alerts for items in a pantry. */
+  pantryLowStockAlert: PantryLowStockAlertPayload;
+  /** Subscribe to pantry metadata updates (name, settings, etc.). */
+  pantryUpdated: PantryUpdatedPayload;
+  /** Subscribe to waste alerts for items in a pantry. */
+  pantryWasteAlert: PantryWasteAlertPayload;
+  /**
+   * Subscribe to individual logins flagged as high-risk for a user.
+   * Re-emitted by the background risk-assessment job with the authoritative
+   * score after the fast-path heuristic fires.
+   */
+  riskyLoginDetected: RiskyLoginDetectedPayload;
+  /** Subscribe to item create/update/delete events on a specific shopping list. */
+  shoppingListItemChanged: ShoppingListItemChangedPayload;
+  /** Subscribe to batch-clear events on a specific shopping list. */
+  shoppingListItemsBatchCleared: ShoppingListItemsBatchClearedPayload;
+  /** Subscribe to status changes on a specific shopping list (ACTIVE / COMPLETED / etc.). */
+  shoppingListStatusChanged: ShoppingListStatusChangedPayload;
+  /** Subscribe to metadata updates on a specific shopping list (name, settings, etc.). */
+  shoppingListUpdated: ShoppingListUpdatedPayload;
   /** Subscribe to store changes */
   storeChanged: StoreChangeEvent;
-  /** Subscribe to all user changes */
-  userChanged: UserChangeEvent;
+  /**
+   * Subscribe to aggregate suspicious-activity events for a user (e.g.,
+   * high-confidence risky logins or rapid repeated failures).
+   */
+  suspiciousActivityDetected: SuspiciousActivityDetectedPayload;
+  /** Subscribe to user activity events. */
+  userActivity: UserActivityPayload;
+  /** Subscribe to user moderation changes (ban / suspend / warn). */
+  userModerationChanged: UserModerationChangedPayload;
+  /** Subscribe to user profile changes. */
+  userProfileChanged: UserProfileChangedPayload;
+  /** Subscribe to user status changes (online / offline / etc.). */
+  userStatusChanged: UserStatusChangedPayload;
+  /** Subscribe to user record updates (account-level fields). */
+  userUpdated: UserUpdatedPayload;
 };
 
 
@@ -12066,12 +12959,52 @@ export type SubscriptionCollaborationChangedArgs = {
 };
 
 
-export type SubscriptionDeviceChangedArgs = {
+export type SubscriptionDeviceActivityArgs = {
   userId: Scalars['ID']['input'];
 };
 
 
-export type SubscriptionExpirationNotificationChangedArgs = {
+export type SubscriptionDeviceDeletedArgs = {
+  userId: Scalars['ID']['input'];
+};
+
+
+export type SubscriptionDeviceRegisteredArgs = {
+  userId: Scalars['ID']['input'];
+};
+
+
+export type SubscriptionDeviceStatusChangedArgs = {
+  userId: Scalars['ID']['input'];
+};
+
+
+export type SubscriptionDeviceTrustChangedArgs = {
+  userId: Scalars['ID']['input'];
+};
+
+
+export type SubscriptionDeviceVerifiedArgs = {
+  userId: Scalars['ID']['input'];
+};
+
+
+export type SubscriptionExpirationNotificationActionTakenArgs = {
+  pantryId: Scalars['ID']['input'];
+};
+
+
+export type SubscriptionExpirationNotificationCreatedArgs = {
+  pantryId: Scalars['ID']['input'];
+};
+
+
+export type SubscriptionExpirationNotificationDismissedArgs = {
+  pantryId: Scalars['ID']['input'];
+};
+
+
+export type SubscriptionExpirationNotificationReadArgs = {
   pantryId: Scalars['ID']['input'];
 };
 
@@ -12081,7 +13014,12 @@ export type SubscriptionHomeInviteChangedArgs = {
 };
 
 
-export type SubscriptionLoginActivityChangedArgs = {
+export type SubscriptionLoginAttemptedArgs = {
+  userId: Scalars['ID']['input'];
+};
+
+
+export type SubscriptionLoginFailedArgs = {
   userId: Scalars['ID']['input'];
 };
 
@@ -12091,17 +13029,57 @@ export type SubscriptionMembershipChangedArgs = {
 };
 
 
-export type SubscriptionPantryAlertArgs = {
+export type SubscriptionPantryExpirationAlertArgs = {
   pantryId: Scalars['ID']['input'];
 };
 
 
-export type SubscriptionPantryChangedArgs = {
+export type SubscriptionPantryItemChangedArgs = {
   pantryId: Scalars['ID']['input'];
 };
 
 
-export type SubscriptionShoppingListChangedArgs = {
+export type SubscriptionPantryItemUsageChangedArgs = {
+  pantryId: Scalars['ID']['input'];
+};
+
+
+export type SubscriptionPantryLowStockAlertArgs = {
+  pantryId: Scalars['ID']['input'];
+};
+
+
+export type SubscriptionPantryUpdatedArgs = {
+  pantryId: Scalars['ID']['input'];
+};
+
+
+export type SubscriptionPantryWasteAlertArgs = {
+  pantryId: Scalars['ID']['input'];
+};
+
+
+export type SubscriptionRiskyLoginDetectedArgs = {
+  userId: Scalars['ID']['input'];
+};
+
+
+export type SubscriptionShoppingListItemChangedArgs = {
+  listId: Scalars['ID']['input'];
+};
+
+
+export type SubscriptionShoppingListItemsBatchClearedArgs = {
+  listId: Scalars['ID']['input'];
+};
+
+
+export type SubscriptionShoppingListStatusChangedArgs = {
+  listId: Scalars['ID']['input'];
+};
+
+
+export type SubscriptionShoppingListUpdatedArgs = {
   listId: Scalars['ID']['input'];
 };
 
@@ -12111,7 +13089,32 @@ export type SubscriptionStoreChangedArgs = {
 };
 
 
-export type SubscriptionUserChangedArgs = {
+export type SubscriptionSuspiciousActivityDetectedArgs = {
+  userId: Scalars['ID']['input'];
+};
+
+
+export type SubscriptionUserActivityArgs = {
+  userId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+
+export type SubscriptionUserModerationChangedArgs = {
+  userId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+
+export type SubscriptionUserProfileChangedArgs = {
+  userId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+
+export type SubscriptionUserStatusChangedArgs = {
+  userId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+
+export type SubscriptionUserUpdatedArgs = {
   userId?: InputMaybe<Scalars['ID']['input']>;
 };
 
@@ -12163,6 +13166,20 @@ export type SuspiciousActivity = {
   riskyLogins: Array<LoginHistory>;
   suspiciousActivity: Scalars['Boolean']['output'];
   unusualTimeLogins: Array<LoginHistory>;
+};
+
+/**
+ * Emitted when an aggregate pattern of activity crosses a suspicion threshold
+ * (e.g., rapid repeated failures, login from a new geography).
+ */
+export type SuspiciousActivityDetectedPayload = {
+  __typename: 'SuspiciousActivityDetectedPayload';
+  loginHistory: LoginHistory;
+  riskFactors: Array<Scalars['String']['output']>;
+  riskScore: Scalars['Float']['output'];
+  timestamp: Scalars['DateTime']['output'];
+  triggerEvent: Scalars['String']['output'];
+  userId: Scalars['ID']['output'];
 };
 
 export type SuspiciousActivitySummary = {
@@ -12329,11 +13346,35 @@ export type ToggleReviewHelpfulInput = {
   reviewId: Scalars['ID']['input'];
 };
 
+export type ToggleReviewHelpfulResult = ForbiddenError | NotFoundError | ToggleReviewHelpfulSuccess | ValidationError;
+
+export type ToggleReviewHelpfulSuccess = {
+  __typename: 'ToggleReviewHelpfulSuccess';
+  recipeReview: Maybe<RecipeReview>;
+  reviewHelpful: ReviewHelpful;
+};
+
 /** Input for toggling the purchased state of a shopping list item */
 export type ToggleShoppingListItemPurchasedInput = {
   id: Scalars['ID']['input'];
   purchased: Scalars['Boolean']['input'];
   version?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type ToggleShoppingListItemPurchasedResult = ConflictError | ForbiddenError | NotFoundError | ToggleShoppingListItemPurchasedSuccess | ValidationError;
+
+export type ToggleShoppingListItemPurchasedSuccess = {
+  __typename: 'ToggleShoppingListItemPurchasedSuccess';
+  shoppingList: Maybe<ShoppingList>;
+  shoppingListItem: ShoppingListItem;
+};
+
+export type TransferHomeOwnershipResult = ConflictError | ForbiddenError | NotFoundError | TransferHomeOwnershipSuccess | ValidationError;
+
+export type TransferHomeOwnershipSuccess = {
+  __typename: 'TransferHomeOwnershipSuccess';
+  home: Maybe<Home>;
+  homeOwnership: HomeOwnership;
 };
 
 export enum TrustLevel {
@@ -12350,6 +13391,28 @@ export type UiPreferencesInput = {
   compactMode?: InputMaybe<Scalars['Boolean']['input']>;
   showTutorials?: InputMaybe<Scalars['Boolean']['input']>;
   theme?: InputMaybe<AppTheme>;
+};
+
+export type UncategorizeItemResult = ForbiddenError | NotFoundError | UncategorizeItemSuccess;
+
+export type UncategorizeItemSuccess = {
+  __typename: 'UncategorizeItemSuccess';
+  itemCategory: ItemCategory;
+};
+
+export type UncompleteShoppingListResult = ConflictError | ForbiddenError | NotFoundError | UncompleteShoppingListSuccess;
+
+export type UncompleteShoppingListSuccess = {
+  __typename: 'UncompleteShoppingListSuccess';
+  shoppingList: ShoppingList;
+};
+
+export type UnfavoriteRecipeResult = ConflictError | ForbiddenError | NotFoundError | UnfavoriteRecipeSuccess;
+
+export type UnfavoriteRecipeSuccess = {
+  __typename: 'UnfavoriteRecipeSuccess';
+  recipe: Maybe<Recipe>;
+  savedRecipe: SavedRecipe;
 };
 
 /**
@@ -12383,14 +13446,6 @@ export type Unit = {
 export type UnitOpsInput = {
   addUnits?: InputMaybe<Array<ItemUnitInput>>;
   removeUnitIds?: InputMaybe<Array<Scalars['ID']['input']>>;
-};
-
-export type UnitPayload = MutationPayload & {
-  __typename: 'UnitPayload';
-  code: Scalars['String']['output'];
-  message: Scalars['String']['output'];
-  success: Scalars['Boolean']['output'];
-  unit: Maybe<Unit>;
 };
 
 export enum UnitRecommendation {
@@ -12499,20 +13554,36 @@ export type UpcValidation = {
 
 export type UpdateBrandInput = {
   description?: InputMaybe<Scalars['String']['input']>;
+  id: Scalars['ID']['input'];
   name?: InputMaybe<Scalars['String']['input']>;
   parentId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type UpdateBrandResult = ConflictError | ForbiddenError | NotFoundError | UpdateBrandSuccess | ValidationError;
+
+export type UpdateBrandSuccess = {
+  __typename: 'UpdateBrandSuccess';
+  brand: Brand;
 };
 
 export type UpdateCategoryInput = {
   color?: InputMaybe<Scalars['String']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
   icon?: InputMaybe<Scalars['String']['input']>;
+  id: Scalars['ID']['input'];
   isActive?: InputMaybe<Scalars['Boolean']['input']>;
   name?: InputMaybe<Scalars['String']['input']>;
   parentId?: InputMaybe<Scalars['ID']['input']>;
   slug?: InputMaybe<Scalars['String']['input']>;
   sortOrder?: InputMaybe<Scalars['Int']['input']>;
   visibility?: InputMaybe<Visibility>;
+};
+
+export type UpdateCategoryResult = ConflictError | ForbiddenError | NotFoundError | UpdateCategorySuccess | ValidationError;
+
+export type UpdateCategorySuccess = {
+  __typename: 'UpdateCategorySuccess';
+  category: Category;
 };
 
 export type UpdateCollaboratorPermissionsInput = {
@@ -12526,6 +13597,14 @@ export type UpdateCollaboratorPermissionsInput = {
   canViewHistory?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
+export type UpdateCollaboratorPermissionsResult = ConflictError | ForbiddenError | NotFoundError | UpdateCollaboratorPermissionsSuccess | ValidationError;
+
+export type UpdateCollaboratorPermissionsSuccess = {
+  __typename: 'UpdateCollaboratorPermissionsSuccess';
+  collaborator: ShoppingListCollaborator;
+  shoppingList: Maybe<ShoppingList>;
+};
+
 /** Input for updating a collaborator's role */
 export type UpdateCollaboratorRoleInput = {
   collaboratorId: Scalars['ID']['input'];
@@ -12533,10 +13612,19 @@ export type UpdateCollaboratorRoleInput = {
   shoppingListId: Scalars['ID']['input'];
 };
 
+export type UpdateCollaboratorRoleResult = ConflictError | ForbiddenError | NotFoundError | UpdateCollaboratorRoleSuccess | ValidationError;
+
+export type UpdateCollaboratorRoleSuccess = {
+  __typename: 'UpdateCollaboratorRoleSuccess';
+  collaborator: ShoppingListCollaborator;
+  shoppingList: Maybe<ShoppingList>;
+};
+
 export type UpdateCookingLogInput = {
   actualCookTime?: InputMaybe<Scalars['Int']['input']>;
   actualPrepTime?: InputMaybe<Scalars['Int']['input']>;
   difficulty?: InputMaybe<Difficulty>;
+  id: Scalars['ID']['input'];
   imageUrl?: InputMaybe<Scalars['String']['input']>;
   notes?: InputMaybe<Scalars['String']['input']>;
   rating?: InputMaybe<Scalars['Int']['input']>;
@@ -12544,12 +13632,28 @@ export type UpdateCookingLogInput = {
   wouldMakeAgain?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
+export type UpdateCookingLogResult = ConflictError | ForbiddenError | NotFoundError | UpdateCookingLogSuccess | ValidationError;
+
+export type UpdateCookingLogSuccess = {
+  __typename: 'UpdateCookingLogSuccess';
+  cookingLog: CookingLog;
+  recipe: Maybe<Recipe>;
+};
+
 export type UpdateCurrencyInput = {
   code?: InputMaybe<Scalars['String']['input']>;
   decimalPlaces?: InputMaybe<Scalars['Int']['input']>;
+  id: Scalars['ID']['input'];
   isActive?: InputMaybe<Scalars['Boolean']['input']>;
   name?: InputMaybe<Scalars['String']['input']>;
   symbol?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type UpdateCurrencyResult = ConflictError | ForbiddenError | NotFoundError | UpdateCurrencySuccess | ValidationError;
+
+export type UpdateCurrencySuccess = {
+  __typename: 'UpdateCurrencySuccess';
+  currency: Currency;
 };
 
 /**
@@ -12565,6 +13669,7 @@ export type UpdateDeviceInput = {
   details?: InputMaybe<DeviceDetailsInput>;
   deviceName?: InputMaybe<Scalars['String']['input']>;
   deviceType?: InputMaybe<DeviceType>;
+  id: Scalars['ID']['input'];
   /** Increment the login count (replaces incrementDeviceLoginCount mutation) */
   incrementLoginCount?: InputMaybe<Scalars['Boolean']['input']>;
   isActive?: InputMaybe<Scalars['Boolean']['input']>;
@@ -12575,6 +13680,13 @@ export type UpdateDeviceInput = {
   pushToken?: InputMaybe<Scalars['String']['input']>;
   /** Update lastSeenAt to now (replaces updateDeviceLastSeen mutation) */
   touchLastSeen?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
+export type UpdateDeviceResult = ConflictError | ForbiddenError | NotFoundError | UpdateDeviceSuccess | ValidationError;
+
+export type UpdateDeviceSuccess = {
+  __typename: 'UpdateDeviceSuccess';
+  device: Maybe<Device>;
 };
 
 export type UpdateDietaryProfileInput = {
@@ -12594,14 +13706,29 @@ export type UpdateDietaryProfileInput = {
   snacksPerDay?: InputMaybe<Scalars['Int']['input']>;
 };
 
+export type UpdateDietaryProfileResult = ConflictError | ForbiddenError | NotFoundError | UpdateDietaryProfileSuccess | ValidationError;
+
+export type UpdateDietaryProfileSuccess = {
+  __typename: 'UpdateDietaryProfileSuccess';
+  dietaryProfile: DietaryProfile;
+};
+
 export type UpdateExternalSourceInput = {
   externalName?: InputMaybe<Scalars['String']['input']>;
+  id: Scalars['ID']['input'];
   identifiers?: InputMaybe<Scalars['JSON']['input']>;
   images?: InputMaybe<Scalars['JSON']['input']>;
   isPrimary?: InputMaybe<Scalars['Boolean']['input']>;
   netWeight?: InputMaybe<Scalars['Float']['input']>;
   netWeightUnit?: InputMaybe<Scalars['String']['input']>;
   packageSize?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type UpdateExternalSourceResult = ConflictError | ForbiddenError | NotFoundError | UpdateExternalSourceSuccess | ValidationError;
+
+export type UpdateExternalSourceSuccess = {
+  __typename: 'UpdateExternalSourceSuccess';
+  externalSourceMapping: ExternalSourceMapping;
 };
 
 export type UpdateFavoriteRecipeInput = {
@@ -12611,16 +13738,32 @@ export type UpdateFavoriteRecipeInput = {
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
 };
 
+export type UpdateFavoriteRecipeResult = ConflictError | ForbiddenError | NotFoundError | UpdateFavoriteRecipeSuccess | ValidationError;
+
+export type UpdateFavoriteRecipeSuccess = {
+  __typename: 'UpdateFavoriteRecipeSuccess';
+  recipe: Maybe<Recipe>;
+  savedRecipe: SavedRecipe;
+};
+
 export type UpdateHomeInput = {
   allowJoinCode?: InputMaybe<Scalars['Boolean']['input']>;
   currency?: InputMaybe<Scalars['String']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
+  id: Scalars['ID']['input'];
   isPublic?: InputMaybe<Scalars['Boolean']['input']>;
   maxMembers?: InputMaybe<Scalars['Int']['input']>;
   name?: InputMaybe<Scalars['String']['input']>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
   timezone?: InputMaybe<Scalars['String']['input']>;
   version?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type UpdateHomeResult = ConflictError | ForbiddenError | NotFoundError | UpdateHomeSuccess | ValidationError;
+
+export type UpdateHomeSuccess = {
+  __typename: 'UpdateHomeSuccess';
+  home: Home;
 };
 
 /**
@@ -12635,6 +13778,7 @@ export type UpdateItemInput = {
   description?: InputMaybe<Scalars['String']['input']>;
   editReason?: InputMaybe<Scalars['String']['input']>;
   healthInfo?: InputMaybe<HealthInfoInput>;
+  id: Scalars['ID']['input'];
   media?: InputMaybe<MediaAssetsInput>;
   mergeMetadata?: InputMaybe<Scalars['Boolean']['input']>;
   metadata?: InputMaybe<Scalars['JSON']['input']>;
@@ -12661,6 +13805,13 @@ export type UpdateItemPriceInput = {
   storeId?: InputMaybe<Scalars['ID']['input']>;
 };
 
+export type UpdateItemResult = ConflictError | ForbiddenError | NotFoundError | UpdateItemSuccess | ValidationError;
+
+export type UpdateItemSuccess = {
+  __typename: 'UpdateItemSuccess';
+  item: Item;
+};
+
 export type UpdateLoginHistoryInput = {
   attribution?: InputMaybe<AttributionInput>;
   automation?: InputMaybe<ApiAutomationInput>;
@@ -12672,6 +13823,7 @@ export type UpdateLoginHistoryInput = {
   failureReason?: InputMaybe<LoginFailureReason>;
   flaggedById?: InputMaybe<Scalars['ID']['input']>;
   flaggedReason?: InputMaybe<Scalars['String']['input']>;
+  id: Scalars['ID']['input'];
   isMobileApp?: InputMaybe<Scalars['Boolean']['input']>;
   network?: InputMaybe<NetworkLocationInput>;
   reviewNotes?: InputMaybe<Scalars['String']['input']>;
@@ -12681,6 +13833,13 @@ export type UpdateLoginHistoryInput = {
   session?: InputMaybe<SessionInfoInput>;
 };
 
+export type UpdateLoginHistoryResult = ConflictError | ForbiddenError | NotFoundError | UpdateLoginHistorySuccess | ValidationError;
+
+export type UpdateLoginHistorySuccess = {
+  __typename: 'UpdateLoginHistorySuccess';
+  loginHistory: LoginHistory;
+};
+
 export type UpdateMealPlanInput = {
   actualCost?: InputMaybe<Scalars['Float']['input']>;
   budgetAmount?: InputMaybe<Scalars['Float']['input']>;
@@ -12688,6 +13847,7 @@ export type UpdateMealPlanInput = {
   /** Link or unlink dietary profile for nutrition goal tracking */
   dietaryProfileId?: InputMaybe<Scalars['ID']['input']>;
   endDate?: InputMaybe<Scalars['DateTime']['input']>;
+  id: Scalars['ID']['input'];
   name?: InputMaybe<Scalars['String']['input']>;
   planType?: InputMaybe<MealPlanType>;
   servings?: InputMaybe<Scalars['Int']['input']>;
@@ -12706,6 +13866,7 @@ export type UpdateMealPlanItemInput = {
   deductFromPantry?: InputMaybe<Scalars['Boolean']['input']>;
   estimatedCost?: InputMaybe<Scalars['Float']['input']>;
   fat?: InputMaybe<Scalars['Float']['input']>;
+  id: Scalars['ID']['input'];
   isCompleted?: InputMaybe<Scalars['Boolean']['input']>;
   mealType?: InputMaybe<MealType>;
   notes?: InputMaybe<Scalars['String']['input']>;
@@ -12716,13 +13877,38 @@ export type UpdateMealPlanItemInput = {
   usedPantryItems?: InputMaybe<Scalars['JSON']['input']>;
 };
 
+export type UpdateMealPlanItemResult = ConflictError | ForbiddenError | NotFoundError | UpdateMealPlanItemSuccess | ValidationError;
+
+export type UpdateMealPlanItemSuccess = {
+  __typename: 'UpdateMealPlanItemSuccess';
+  mealPlan: Maybe<MealPlan>;
+  mealPlanItem: MealPlanItem;
+};
+
+export type UpdateMealPlanResult = ConflictError | ForbiddenError | NotFoundError | UpdateMealPlanSuccess | ValidationError;
+
+export type UpdateMealPlanSuccess = {
+  __typename: 'UpdateMealPlanSuccess';
+  home: Maybe<Home>;
+  mealPlan: MealPlan;
+};
+
 export type UpdateMealTemplateInput = {
   category?: InputMaybe<TemplateCategory>;
   defaultServings?: InputMaybe<Scalars['Int']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
   durationDays?: InputMaybe<Scalars['Int']['input']>;
+  id: Scalars['ID']['input'];
   name?: InputMaybe<Scalars['String']['input']>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
+};
+
+export type UpdateMealTemplateResult = ConflictError | ForbiddenError | NotFoundError | UpdateMealTemplateSuccess | ValidationError;
+
+export type UpdateMealTemplateSuccess = {
+  __typename: 'UpdateMealTemplateSuccess';
+  home: Maybe<Home>;
+  mealTemplate: MealTemplate;
 };
 
 export type UpdateMembershipInput = {
@@ -12733,7 +13919,16 @@ export type UpdateMembershipInput = {
   canRemoveItems?: InputMaybe<Scalars['Boolean']['input']>;
   canViewPantry?: InputMaybe<Scalars['Boolean']['input']>;
   displayName?: InputMaybe<Scalars['String']['input']>;
+  id: Scalars['ID']['input'];
   role?: InputMaybe<MembershipRole>;
+};
+
+export type UpdateMembershipResult = ConflictError | ForbiddenError | NotFoundError | UpdateMembershipSuccess | ValidationError;
+
+export type UpdateMembershipSuccess = {
+  __typename: 'UpdateMembershipSuccess';
+  home: Maybe<Home>;
+  membership: Membership;
 };
 
 /**
@@ -12754,10 +13949,18 @@ export type UpdateModerationInput = {
   trustLevel?: InputMaybe<TrustLevel>;
 };
 
+export type UpdateModerationResult = ConflictError | ForbiddenError | NotFoundError | UpdateModerationSuccess | ValidationError;
+
+export type UpdateModerationSuccess = {
+  __typename: 'UpdateModerationSuccess';
+  userModeration: Maybe<UserModeration>;
+};
+
 export type UpdateNotificationInput = {
   actionUrl?: InputMaybe<Scalars['String']['input']>;
   category?: InputMaybe<NotificationCategory>;
   expiresAt?: InputMaybe<Scalars['DateTime']['input']>;
+  id: Scalars['ID']['input'];
   message?: InputMaybe<Scalars['String']['input']>;
   metadata?: InputMaybe<Scalars['JSON']['input']>;
   payload?: InputMaybe<Scalars['JSON']['input']>;
@@ -12775,8 +13978,23 @@ export type UpdateNotificationPreferencesInput = {
   quietHours?: InputMaybe<QuietHoursInput>;
 };
 
+export type UpdateNotificationPreferencesResult = ConflictError | ForbiddenError | NotFoundError | UpdateNotificationPreferencesSuccess | ValidationError;
+
+export type UpdateNotificationPreferencesSuccess = {
+  __typename: 'UpdateNotificationPreferencesSuccess';
+  notificationPreferences: NotificationPreferences;
+};
+
+export type UpdateNotificationResult = ConflictError | ForbiddenError | NotFoundError | UpdateNotificationSuccess | ValidationError;
+
+export type UpdateNotificationSuccess = {
+  __typename: 'UpdateNotificationSuccess';
+  notification: Notification;
+};
+
 export type UpdatePantryInput = {
   description?: InputMaybe<Scalars['String']['input']>;
+  id: Scalars['ID']['input'];
   isDefault?: InputMaybe<Scalars['Boolean']['input']>;
   location?: InputMaybe<Scalars['String']['input']>;
   name?: InputMaybe<Scalars['String']['input']>;
@@ -12788,6 +14006,7 @@ export type UpdatePantryItemInput = {
   brand?: InputMaybe<BrandReferenceInput>;
   expirationAlert?: InputMaybe<Scalars['Boolean']['input']>;
   expiresAt?: InputMaybe<Scalars['String']['input']>;
+  id: Scalars['ID']['input'];
   isComposted?: InputMaybe<Scalars['Boolean']['input']>;
   isRecycled?: InputMaybe<Scalars['Boolean']['input']>;
   itemName?: InputMaybe<Scalars['String']['input']>;
@@ -12803,9 +14022,49 @@ export type UpdatePantryItemInput = {
   wasteReason?: InputMaybe<WasteReason>;
 };
 
+export type UpdatePantryItemLocationResult = ConflictError | ForbiddenError | NotFoundError | UpdatePantryItemLocationSuccess | ValidationError;
+
+export type UpdatePantryItemLocationSuccess = {
+  __typename: 'UpdatePantryItemLocationSuccess';
+  pantry: Maybe<Pantry>;
+  pantryItem: PantryItem;
+};
+
+export type UpdatePantryItemQuantityResult = ConflictError | ForbiddenError | NotFoundError | UpdatePantryItemQuantitySuccess | ValidationError;
+
+export type UpdatePantryItemQuantitySuccess = {
+  __typename: 'UpdatePantryItemQuantitySuccess';
+  pantry: Maybe<Pantry>;
+  pantryItem: PantryItem;
+};
+
+export type UpdatePantryItemResult = ConflictError | ForbiddenError | NotFoundError | UpdatePantryItemSuccess | ValidationError;
+
+export type UpdatePantryItemSuccess = {
+  __typename: 'UpdatePantryItemSuccess';
+  pantry: Maybe<Pantry>;
+  pantryItem: PantryItem;
+};
+
+export type UpdatePantryResult = ConflictError | ForbiddenError | NotFoundError | UpdatePantrySuccess | ValidationError;
+
+export type UpdatePantrySuccess = {
+  __typename: 'UpdatePantrySuccess';
+  home: Maybe<Home>;
+  pantry: Pantry;
+};
+
+export type UpdateProfileResult = ConflictError | ForbiddenError | NotFoundError | UpdateProfileSuccess | ValidationError;
+
+export type UpdateProfileSuccess = {
+  __typename: 'UpdateProfileSuccess';
+  userProfile: UserProfile;
+};
+
 export type UpdatePurchaseInput = {
   discountAmount?: InputMaybe<Scalars['Float']['input']>;
   expirationDate?: InputMaybe<Scalars['DateTime']['input']>;
+  id: Scalars['ID']['input'];
   originalPrice?: InputMaybe<Scalars['Float']['input']>;
   purchaseDate?: InputMaybe<Scalars['DateTime']['input']>;
   quantity?: InputMaybe<Scalars['Float']['input']>;
@@ -12813,6 +14072,21 @@ export type UpdatePurchaseInput = {
   totalPrice?: InputMaybe<Scalars['Float']['input']>;
   transactionId?: InputMaybe<Scalars['String']['input']>;
   unitPrice?: InputMaybe<Scalars['Float']['input']>;
+};
+
+export type UpdatePurchaseResult = ConflictError | ForbiddenError | NotFoundError | UpdatePurchaseSuccess | ValidationError;
+
+export type UpdatePurchaseSuccess = {
+  __typename: 'UpdatePurchaseSuccess';
+  purchase: Purchase;
+  store: Maybe<Store>;
+};
+
+export type UpdateRecipeIngredientsResult = ConflictError | ForbiddenError | NotFoundError | UpdateRecipeIngredientsSuccess | ValidationError;
+
+export type UpdateRecipeIngredientsSuccess = {
+  __typename: 'UpdateRecipeIngredientsSuccess';
+  recipe: Recipe;
 };
 
 export type UpdateRecipeInput = {
@@ -12824,6 +14098,7 @@ export type UpdateRecipeInput = {
   description?: InputMaybe<Scalars['String']['input']>;
   dietary?: InputMaybe<DietaryTagsInput>;
   difficulty?: InputMaybe<Difficulty>;
+  id: Scalars['ID']['input'];
   imageUrl?: InputMaybe<Scalars['String']['input']>;
   instructions?: InputMaybe<Scalars['JSON']['input']>;
   media?: InputMaybe<MediaAssetsInput>;
@@ -12840,9 +14115,25 @@ export type UpdateRecipeInput = {
   tips?: InputMaybe<Scalars['String']['input']>;
 };
 
+export type UpdateRecipeResult = ConflictError | ForbiddenError | NotFoundError | UpdateRecipeSuccess | ValidationError;
+
 export type UpdateRecipeReviewInput = {
   comment?: InputMaybe<Scalars['String']['input']>;
+  id: Scalars['ID']['input'];
   rating?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type UpdateRecipeReviewResult = ConflictError | ForbiddenError | NotFoundError | UpdateRecipeReviewSuccess | ValidationError;
+
+export type UpdateRecipeReviewSuccess = {
+  __typename: 'UpdateRecipeReviewSuccess';
+  recipe: Maybe<Recipe>;
+  recipeReview: RecipeReview;
+};
+
+export type UpdateRecipeSuccess = {
+  __typename: 'UpdateRecipeSuccess';
+  recipe: Recipe;
 };
 
 export type UpdateRestrictionInput = {
@@ -12851,9 +14142,25 @@ export type UpdateRestrictionInput = {
   severity?: InputMaybe<RestrictionSeverity>;
 };
 
+export type UpdateRestrictionResult = ConflictError | ForbiddenError | NotFoundError | UpdateRestrictionSuccess | ValidationError;
+
+export type UpdateRestrictionSuccess = {
+  __typename: 'UpdateRestrictionSuccess';
+  dietaryProfile: Maybe<DietaryProfile>;
+  dietaryRestriction: DietaryRestriction;
+};
+
+export type UpdateSettingsResult = ConflictError | ForbiddenError | NotFoundError | UpdateSettingsSuccess | ValidationError;
+
+export type UpdateSettingsSuccess = {
+  __typename: 'UpdateSettingsSuccess';
+  userSettings: UserSettings;
+};
+
 export type UpdateShoppingListInput = {
   description?: InputMaybe<Scalars['String']['input']>;
   homeId?: InputMaybe<Scalars['ID']['input']>;
+  id: Scalars['ID']['input'];
   isCompleted?: InputMaybe<Scalars['Boolean']['input']>;
   isDefault?: InputMaybe<Scalars['Boolean']['input']>;
   name?: InputMaybe<Scalars['String']['input']>;
@@ -12866,6 +14173,7 @@ export type UpdateShoppingListInput = {
 
 export type UpdateShoppingListItemInput = {
   category?: InputMaybe<Scalars['String']['input']>;
+  id: Scalars['ID']['input'];
   itemName?: InputMaybe<Scalars['String']['input']>;
   notes?: InputMaybe<Scalars['String']['input']>;
   pricing?: InputMaybe<PricingEstimatesInput>;
@@ -12877,6 +14185,29 @@ export type UpdateShoppingListItemInput = {
   storePrefs?: InputMaybe<StorePreferencesInput>;
   unit?: InputMaybe<UnitSpecInput>;
   version?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type UpdateShoppingListItemQuantityResult = ConflictError | ForbiddenError | NotFoundError | UpdateShoppingListItemQuantitySuccess | ValidationError;
+
+export type UpdateShoppingListItemQuantitySuccess = {
+  __typename: 'UpdateShoppingListItemQuantitySuccess';
+  shoppingList: Maybe<ShoppingList>;
+  shoppingListItem: ShoppingListItem;
+};
+
+export type UpdateShoppingListItemResult = ConflictError | ForbiddenError | NotFoundError | UpdateShoppingListItemSuccess | ValidationError;
+
+export type UpdateShoppingListItemSuccess = {
+  __typename: 'UpdateShoppingListItemSuccess';
+  shoppingList: Maybe<ShoppingList>;
+  shoppingListItem: ShoppingListItem;
+};
+
+export type UpdateShoppingListResult = ConflictError | ForbiddenError | NotFoundError | UpdateShoppingListSuccess | ValidationError;
+
+export type UpdateShoppingListSuccess = {
+  __typename: 'UpdateShoppingListSuccess';
+  shoppingList: ShoppingList;
 };
 
 /**
@@ -12894,6 +14225,7 @@ export type UpdateStorageLocationInput = {
   description?: InputMaybe<Scalars['String']['input']>;
   /** New icon identifier */
   icon?: InputMaybe<Scalars['String']['input']>;
+  id: Scalars['ID']['input'];
   /** Activate or deactivate the location */
   isActive?: InputMaybe<Scalars['Boolean']['input']>;
   /** Update climate control setting */
@@ -12912,6 +14244,14 @@ export type UpdateStorageLocationInput = {
   type?: InputMaybe<StorageType>;
 };
 
+export type UpdateStorageLocationResult = ConflictError | ForbiddenError | NotFoundError | UpdateStorageLocationSuccess | ValidationError;
+
+export type UpdateStorageLocationSuccess = {
+  __typename: 'UpdateStorageLocationSuccess';
+  home: Maybe<Home>;
+  storageLocation: StorageLocation;
+};
+
 /** Input for updating store information */
 export type UpdateStoreInfoInput = {
   email?: InputMaybe<Scalars['String']['input']>;
@@ -12922,27 +14262,52 @@ export type UpdateStoreInfoInput = {
   website?: InputMaybe<Scalars['String']['input']>;
 };
 
+export type UpdateStoreInfoResult = ConflictError | ForbiddenError | NotFoundError | UpdateStoreInfoSuccess | ValidationError;
+
+export type UpdateStoreInfoSuccess = {
+  __typename: 'UpdateStoreInfoSuccess';
+  store: Store;
+};
+
 export type UpdateStoreInput = {
   address?: InputMaybe<Scalars['String']['input']>;
   averageShelfLife?: InputMaybe<Scalars['JSON']['input']>;
+  id: Scalars['ID']['input'];
   name?: InputMaybe<Scalars['String']['input']>;
   priceAccuracy?: InputMaybe<Scalars['Float']['input']>;
   qualityRating?: InputMaybe<Scalars['Float']['input']>;
   supportsPriceAPI?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
+export type UpdateStoreResult = ConflictError | ForbiddenError | NotFoundError | UpdateStoreSuccess | ValidationError;
+
+export type UpdateStoreSuccess = {
+  __typename: 'UpdateStoreSuccess';
+  store: Store;
+};
+
 export type UpdateTemplateItemInput = {
   customMealName?: InputMaybe<Scalars['String']['input']>;
   dayOffset?: InputMaybe<Scalars['Int']['input']>;
+  id: Scalars['ID']['input'];
   mealType?: InputMaybe<MealType>;
   notes?: InputMaybe<Scalars['String']['input']>;
   recipeId?: InputMaybe<Scalars['ID']['input']>;
   servings?: InputMaybe<Scalars['Int']['input']>;
 };
 
+export type UpdateTemplateItemResult = ConflictError | ForbiddenError | NotFoundError | UpdateTemplateItemSuccess | ValidationError;
+
+export type UpdateTemplateItemSuccess = {
+  __typename: 'UpdateTemplateItemSuccess';
+  mealTemplate: Maybe<MealTemplate>;
+  mealTemplateItem: MealTemplateItem;
+};
+
 export type UpdateUnitInput = {
   baseUnitId?: InputMaybe<Scalars['ID']['input']>;
   conversionFactor?: InputMaybe<Scalars['Float']['input']>;
+  id: Scalars['ID']['input'];
   isCommon?: InputMaybe<Scalars['Boolean']['input']>;
   isMetric?: InputMaybe<Scalars['Boolean']['input']>;
   name?: InputMaybe<Scalars['String']['input']>;
@@ -12952,9 +14317,17 @@ export type UpdateUnitInput = {
   type?: InputMaybe<UnitType>;
 };
 
+export type UpdateUnitResult = ConflictError | ForbiddenError | NotFoundError | UpdateUnitSuccess | ValidationError;
+
+export type UpdateUnitSuccess = {
+  __typename: 'UpdateUnitSuccess';
+  unit: Unit;
+};
+
 export type UpdateUserAddressInput = {
   city?: InputMaybe<Scalars['String']['input']>;
   country?: InputMaybe<Scalars['String']['input']>;
+  id: Scalars['ID']['input'];
   isDefault?: InputMaybe<Scalars['Boolean']['input']>;
   label?: InputMaybe<Scalars['String']['input']>;
   lat?: InputMaybe<Scalars['Float']['input']>;
@@ -12964,10 +14337,18 @@ export type UpdateUserAddressInput = {
   street?: InputMaybe<Scalars['String']['input']>;
 };
 
+export type UpdateUserAddressResult = ConflictError | ForbiddenError | NotFoundError | UpdateUserAddressSuccess | ValidationError;
+
+export type UpdateUserAddressSuccess = {
+  __typename: 'UpdateUserAddressSuccess';
+  userAddress: UserAddress;
+};
+
 export type UpdateUserInput = {
   deletedAt?: InputMaybe<Scalars['DateTime']['input']>;
   email?: InputMaybe<Scalars['String']['input']>;
   emailVerified?: InputMaybe<Scalars['Boolean']['input']>;
+  id: Scalars['ID']['input'];
   lastLoginAt?: InputMaybe<Scalars['DateTime']['input']>;
   onBoarded?: InputMaybe<Scalars['Boolean']['input']>;
   preferredCurrency?: InputMaybe<Scalars['String']['input']>;
@@ -13001,6 +14382,8 @@ export type UpdateUserProfileInput = {
   website?: InputMaybe<Scalars['String']['input']>;
 };
 
+export type UpdateUserResult = ConflictError | ForbiddenError | NotFoundError | UpdateUserSuccess | ValidationError;
+
 export type UpdateUserSettingsInput = {
   features?: InputMaybe<FeatureTogglesInput>;
   notifications?: InputMaybe<UserNotificationSettingsInput>;
@@ -13011,12 +14394,9 @@ export type UpdateUserSettingsInput = {
   ui?: InputMaybe<UiPreferencesInput>;
 };
 
-export type UploadPayload = MutationPayload & {
-  __typename: 'UploadPayload';
-  code: Scalars['String']['output'];
-  message: Scalars['String']['output'];
-  success: Scalars['Boolean']['output'];
-  url: Maybe<Scalars['String']['output']>;
+export type UpdateUserSuccess = {
+  __typename: 'UpdateUserSuccess';
+  user: User;
 };
 
 export type UpsertExternalRecipeResult = {
@@ -13048,6 +14428,13 @@ export type UpsertItemUnitConversionInput = {
   /** Admin only: set the conversion source (defaults to USER_DEFINED) */
   source?: InputMaybe<ConversionSource>;
   toUnitId: Scalars['ID']['input'];
+};
+
+export type UpsertItemUnitConversionResult = ConflictError | ForbiddenError | NotFoundError | UpsertItemUnitConversionSuccess | ValidationError;
+
+export type UpsertItemUnitConversionSuccess = {
+  __typename: 'UpsertItemUnitConversionSuccess';
+  unitConversion: ItemUnitConversion;
 };
 
 /** Comprehensive usage analytics for a pantry */
@@ -13337,7 +14724,7 @@ export type UserActivityPayload = {
   description: Scalars['String']['output'];
   metadata: Maybe<Scalars['JSON']['output']>;
   timestamp: Scalars['DateTime']['output'];
-  userId: Scalars['String']['output'];
+  userId: Scalars['ID']['output'];
 };
 
 export enum UserActivityType {
@@ -13371,39 +14758,13 @@ export type UserAddress = {
   street: Scalars['String']['output'];
 };
 
-export type UserAddressPayload = MutationPayload & {
-  __typename: 'UserAddressPayload';
-  code: Scalars['String']['output'];
-  message: Scalars['String']['output'];
-  success: Scalars['Boolean']['output'];
-  userAddress: Maybe<UserAddress>;
-};
-
 export type UserAuthPayload = {
   __typename: 'UserAuthPayload';
   authType: Scalars['String']['output'];
   deviceInfo: Maybe<Scalars['JSON']['output']>;
   timestamp: Scalars['DateTime']['output'];
-  userId: Scalars['String']['output'];
-};
-
-export type UserChangeEvent = {
-  __typename: 'UserChangeEvent';
-  changeType: UserChangeType;
-  profile: Maybe<UserProfile>;
-  timestamp: Scalars['DateTime']['output'];
-  updatedFields: Maybe<Array<Scalars['String']['output']>>;
-  user: Maybe<User>;
   userId: Scalars['ID']['output'];
 };
-
-export enum UserChangeType {
-  Activity = 'ACTIVITY',
-  ModerationChanged = 'MODERATION_CHANGED',
-  ProfileChanged = 'PROFILE_CHANGED',
-  StatusChanged = 'STATUS_CHANGED',
-  Updated = 'UPDATED'
-}
 
 export type UserConnection = Connection & {
   __typename: 'UserConnection';
@@ -13430,14 +14791,14 @@ export type UserModeration = {
   bannedAt: Maybe<Scalars['DateTime']['output']>;
   createdAt: Scalars['DateTime']['output'];
   createdBy: Maybe<User>;
-  createdById: Maybe<Scalars['String']['output']>;
+  createdById: Maybe<Scalars['ID']['output']>;
   deletedBy: Maybe<User>;
-  deletedById: Maybe<Scalars['String']['output']>;
+  deletedById: Maybe<Scalars['ID']['output']>;
   id: Scalars['ID']['output'];
   isBanned: Scalars['Boolean']['output'];
   isSuspended: Scalars['Boolean']['output'];
   lastModifiedBy: Maybe<User>;
-  lastModifiedById: Maybe<Scalars['String']['output']>;
+  lastModifiedById: Maybe<Scalars['ID']['output']>;
   lastViolationAt: Maybe<Scalars['DateTime']['output']>;
   moderatorNotes: Maybe<Scalars['String']['output']>;
   restrictedUntil: Maybe<Scalars['DateTime']['output']>;
@@ -13467,7 +14828,7 @@ export type UserModerationChangedPayload = {
   moderationType: Scalars['String']['output'];
   reason: Maybe<Scalars['String']['output']>;
   timestamp: Scalars['DateTime']['output'];
-  userId: Scalars['String']['output'];
+  userId: Scalars['ID']['output'];
 };
 
 export type UserModerationConnection = Connection & {
@@ -13481,14 +14842,6 @@ export type UserModerationEdge = Edge & {
   __typename: 'UserModerationEdge';
   cursor: Scalars['String']['output'];
   node: UserModeration;
-};
-
-export type UserModerationPayload = MutationPayload & {
-  __typename: 'UserModerationPayload';
-  code: Scalars['String']['output'];
-  message: Scalars['String']['output'];
-  success: Scalars['Boolean']['output'];
-  userModeration: Maybe<UserModeration>;
 };
 
 /** Sub-input for notification settings within user settings */
@@ -13507,14 +14860,6 @@ export type UserNotificationSettingsInput = {
 export type UserOrderBy = {
   createdAt?: InputMaybe<SortOrder>;
   username?: InputMaybe<SortOrder>;
-};
-
-export type UserPayload = MutationPayload & {
-  __typename: 'UserPayload';
-  code: Scalars['String']['output'];
-  message: Scalars['String']['output'];
-  success: Scalars['Boolean']['output'];
-  user: Maybe<User>;
 };
 
 /**
@@ -13548,15 +14893,7 @@ export type UserProfileChangedPayload = {
   profile: UserProfile;
   timestamp: Scalars['DateTime']['output'];
   updatedFields: Array<Scalars['String']['output']>;
-  userId: Scalars['String']['output'];
-};
-
-export type UserProfilePayload = MutationPayload & {
-  __typename: 'UserProfilePayload';
-  code: Scalars['String']['output'];
-  message: Scalars['String']['output'];
-  success: Scalars['Boolean']['output'];
-  userProfile: Maybe<UserProfile>;
+  userId: Scalars['ID']['output'];
 };
 
 export enum UserRole {
@@ -13596,20 +14933,12 @@ export type UserSettings = {
   user: User;
 };
 
-export type UserSettingsPayload = MutationPayload & {
-  __typename: 'UserSettingsPayload';
-  code: Scalars['String']['output'];
-  message: Scalars['String']['output'];
-  success: Scalars['Boolean']['output'];
-  userSettings: Maybe<UserSettings>;
-};
-
 export type UserSocialPayload = {
   __typename: 'UserSocialPayload';
   action: Scalars['String']['output'];
-  targetUserId: Scalars['String']['output'];
+  targetUserId: Scalars['ID']['output'];
   timestamp: Scalars['DateTime']['output'];
-  userId: Scalars['String']['output'];
+  userId: Scalars['ID']['output'];
 };
 
 /**
@@ -13644,7 +14973,7 @@ export type UserStatusChangedPayload = {
   newStatus: UserStatusType;
   previousStatus: Maybe<UserStatusType>;
   timestamp: Scalars['DateTime']['output'];
-  userId: Scalars['String']['output'];
+  userId: Scalars['ID']['output'];
 };
 
 export enum UserStatusType {
@@ -13661,15 +14990,27 @@ export type UserUpdatedPayload = {
   node: User;
   timestamp: Scalars['DateTime']['output'];
   updatedFields: Array<Scalars['String']['output']>;
-  userId: Scalars['String']['output'];
+  userId: Scalars['ID']['output'];
 };
 
-export type ValidateTokenResponse = MutationPayload & {
+export type ValidateTokenResponse = {
   __typename: 'ValidateTokenResponse';
   code: Scalars['String']['output'];
   message: Scalars['String']['output'];
   success: Scalars['Boolean']['output'];
-  userId: Maybe<Scalars['String']['output']>;
+  userId: Maybe<Scalars['ID']['output']>;
+};
+
+/**
+ * Input validation failure. Either a top-level rule was violated or a
+ * specific field failed validation (carried in `field`).
+ */
+export type ValidationError = Error & {
+  __typename: 'ValidationError';
+  code: ErrorCode;
+  /** Dotted path to the offending field, when the error is field-specific. */
+  field: Maybe<Scalars['String']['output']>;
+  message: Scalars['String']['output'];
 };
 
 export type ValidationResult = {
@@ -13701,6 +15042,27 @@ export type VariationImage = {
   size: Maybe<Scalars['String']['output']>;
   source: Maybe<Scalars['String']['output']>;
   url: Scalars['String']['output'];
+};
+
+export type VerifyEmailResult = ConflictError | ForbiddenError | NotFoundError | ValidationError | VerifyEmailSuccess;
+
+export type VerifyEmailSuccess = {
+  __typename: 'VerifyEmailSuccess';
+  user: User;
+};
+
+export type VerifyItemUnitConversionResult = ConflictError | ForbiddenError | NotFoundError | VerifyItemUnitConversionSuccess;
+
+export type VerifyItemUnitConversionSuccess = {
+  __typename: 'VerifyItemUnitConversionSuccess';
+  unitConversion: ItemUnitConversion;
+};
+
+export type VerifyUserEmailResult = ConflictError | ForbiddenError | NotFoundError | VerifyUserEmailSuccess;
+
+export type VerifyUserEmailSuccess = {
+  __typename: 'VerifyUserEmailSuccess';
+  user: User;
 };
 
 export enum Visibility {
@@ -13755,6 +15117,14 @@ export type WasteByReason = {
   percentage: Scalars['Float']['output'];
   reason: WasteReason;
   totalQuantity: Scalars['Float']['output'];
+};
+
+export type WastePantryItemBatchResult = ConflictError | ForbiddenError | NotFoundError | ValidationError | WastePantryItemBatchSuccess;
+
+export type WastePantryItemBatchSuccess = {
+  __typename: 'WastePantryItemBatchSuccess';
+  pantry: Maybe<Pantry>;
+  pantryItem: PantryItem;
 };
 
 /** Describes the reason why a pantry item was wasted or discarded */

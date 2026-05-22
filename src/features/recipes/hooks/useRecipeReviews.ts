@@ -88,8 +88,9 @@ export function useRecipeReviews({
     CreateRecipeReviewDocument,
     {
       update: (cache, { data }) => {
-        const review = data?.createRecipeReview?.recipeReview;
-        if (review) {
+        const payload = data?.createRecipeReview;
+        if (payload?.__typename === 'CreateRecipeReviewSuccess') {
+          const review = payload.recipeReview;
           addReviewToRecipe(cache, recipeId, {
             id: review.id,
             rating: review.rating,
@@ -115,7 +116,13 @@ export function useRecipeReviews({
     DeleteRecipeReviewDocument,
     {
       update: (cache, { data }, { variables }) => {
-        if (!data?.deleteRecipeReview?.success || !variables?.id) return;
+        if (
+          data?.deleteRecipeReview?.__typename !==
+            'DeleteRecipeReviewSuccess' ||
+          !variables?.id
+        ) {
+          return;
+        }
         removeReviewFromRecipe(cache, recipeId, variables.id);
       },
       onError: err => {
@@ -126,7 +133,13 @@ export function useRecipeReviews({
 
   const [toggleHelpfulMutation] = useMutation(ToggleReviewHelpfulDocument, {
     update: (cache, { data }, { variables }) => {
-      if (!data?.toggleReviewHelpful?.success || !variables?.input) return;
+      if (
+        data?.toggleReviewHelpful?.__typename !==
+          'ToggleReviewHelpfulSuccess' ||
+        !variables?.input
+      ) {
+        return;
+      }
       const { reviewId, isHelpful } = variables.input;
       cache.modify({
         id: cache.identify({ __typename: 'RecipeReview', id: reviewId }),
@@ -162,15 +175,17 @@ export function useRecipeReviews({
     const prevRating = getReviewRating(apolloClient.cache, id);
     await updateReviewMutation({
       variables: {
-        id,
         input: {
+          id,
           rating: input.rating,
           comment: input.comment,
         },
       },
       update: (cache, { data }) => {
-        const review = data?.updateRecipeReview?.recipeReview;
-        if (!review || prevRating === null) return;
+        const payload = data?.updateRecipeReview;
+        if (payload?.__typename !== 'UpdateRecipeReviewSuccess') return;
+        const review = payload.recipeReview;
+        if (prevRating === null) return;
         if (prevRating !== review.rating) {
           changeReviewRating(cache, recipeId, prevRating, review.rating);
         }

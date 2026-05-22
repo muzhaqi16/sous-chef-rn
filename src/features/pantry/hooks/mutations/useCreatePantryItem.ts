@@ -57,8 +57,10 @@ export function useCreatePantryItem({
 
   const [createMutation] = useMutation(CreatePantryItemDocument, {
     update: (cache, { data: mutationData }) => {
-      const pantryItem = mutationData?.createPantryItem?.pantryItem;
-      if (!pantryItem || !pantryId) return;
+      const payload = mutationData?.createPantryItem;
+      if (payload?.__typename !== 'CreatePantryItemSuccess' || !pantryId)
+        return;
+      const pantryItem = payload.pantryItem;
 
       executeCacheUpdate(
         () => addToPantryItemsCache(cache, pantryId, pantryItem),
@@ -155,7 +157,9 @@ export function useCreatePantryItem({
       variables: { input: mutationInput },
     });
 
-    if (result.data?.createPantryItem?.success) {
+    if (
+      result.data?.createPantryItem?.__typename === 'CreatePantryItemSuccess'
+    ) {
       onSuccess?.();
       return true;
     }
@@ -182,8 +186,10 @@ export function useCreatePantryItem({
                     () =>
                       restockMutation({
                         variables: {
-                          id: duplicateInfo.existingPantryItemId,
-                          input: { quantity: restockQuantity },
+                          input: {
+                            id: duplicateInfo.existingPantryItemId,
+                            quantity: restockQuantity,
+                          },
                         },
                       }),
                     'Restock pantry item error:',
@@ -220,7 +226,10 @@ export function useCreatePantryItem({
                     resolve(false);
                     return;
                   }
-                  if (retryResult.data?.createPantryItem?.success) {
+                  if (
+                    retryResult.data?.createPantryItem?.__typename ===
+                    'CreatePantryItemSuccess'
+                  ) {
                     onSuccess?.();
                     resolve(true);
                   } else {

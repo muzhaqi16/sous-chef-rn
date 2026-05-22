@@ -239,7 +239,7 @@ export const useSearchResults = (barcode: string, format?: string) => {
     CreateItemDocument,
     {
       onCompleted: async (data: CreateItemMutation) => {
-        if (data.createItem?.item) {
+        if (data.createItem?.__typename === 'CreateItemSuccess') {
           const createdItem = data.createItem.item;
 
           // Upload pending images (module-level function avoids try-catch in hook)

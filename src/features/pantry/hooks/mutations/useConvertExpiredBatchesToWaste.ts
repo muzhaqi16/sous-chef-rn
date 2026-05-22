@@ -31,7 +31,10 @@ export function useConvertExpiredBatchesToWaste({
       variables: { pantryItemId },
     });
 
-    if (result.data?.convertExpiredBatchesToWaste?.pantryItem) {
+    if (
+      result.data?.convertExpiredBatchesToWaste?.__typename ===
+      'ConvertExpiredBatchesToWasteSuccess'
+    ) {
       onSuccess?.();
       return true;
     }

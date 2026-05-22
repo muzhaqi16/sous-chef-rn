@@ -216,14 +216,17 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
       async () => {
         const { data } = await shareShoppingList({
           variables: {
-            id: listId,
-            input: { isPublic: !isPublic },
+            input: { id: listId, isPublic: !isPublic },
           },
         });
-        if (!data?.shareShoppingList?.success) {
+        const sharePayload = data?.shareShoppingList;
+        if (sharePayload?.__typename !== 'ShareShoppingListSuccess') {
+          const message =
+            sharePayload && 'message' in sharePayload
+              ? sharePayload.message
+              : null;
           throw new Error(
-            data?.shareShoppingList?.message ||
-              t('shoppingListScreens.failedToUpdateShareSettings'),
+            message ?? t('shoppingListScreens.failedToUpdateShareSettings'),
           );
         }
         // No refetch needed: the mutation returns shoppingList { id, shareCode, isPublic }
@@ -268,18 +271,27 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
             },
           },
           update(cache, { data: updateData }) {
-            const collaborator = updateData?.inviteToShoppingList?.collaborator;
-            if (collaborator) {
-              addCollaboratorToCache(cache, listId, collaborator, {
-                position: 'end',
-              });
+            const invitePayload = updateData?.inviteToShoppingList;
+            if (invitePayload?.__typename === 'InviteToShoppingListSuccess') {
+              addCollaboratorToCache(
+                cache,
+                listId,
+                invitePayload.collaborator,
+                {
+                  position: 'end',
+                },
+              );
             }
           },
         });
-        if (!data?.inviteToShoppingList?.success) {
+        const invitePayload = data?.inviteToShoppingList;
+        if (invitePayload?.__typename !== 'InviteToShoppingListSuccess') {
+          const message =
+            invitePayload && 'message' in invitePayload
+              ? invitePayload.message
+              : null;
           throw new Error(
-            data?.inviteToShoppingList?.message ||
-              t('shoppingListScreens.failedToSendInvitation'),
+            message ?? t('shoppingListScreens.failedToSendInvitation'),
           );
         }
         setEmail('');

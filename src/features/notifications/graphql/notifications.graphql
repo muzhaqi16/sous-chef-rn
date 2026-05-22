@@ -2,13 +2,24 @@
 # SUBSCRIPTIONS
 # ============================================
 
-subscription NotificationChanged {
-  notificationChanged {
-    changeType
+subscription NotificationCreated {
+  notificationCreated {
     notification {
       id
       ...useNotifications_notification
     }
+    mutation
+    timestamp
+  }
+}
+
+subscription NotificationUpdated {
+  notificationUpdated {
+    notification {
+      id
+      ...useNotifications_notification
+    }
+    mutation
     timestamp
   }
 }

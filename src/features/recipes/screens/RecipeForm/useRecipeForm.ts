@@ -254,8 +254,8 @@ export function useRecipeForm() {
     };
   };
 
-  // Build UpdateRecipeInput
-  const buildUpdateInput = (): UpdateRecipeInput => {
+  // Build UpdateRecipeInput (without id — caller adds it)
+  const buildUpdateInput = (): Omit<UpdateRecipeInput, 'id'> => {
     return {
       name: state.name.trim() || undefined,
       description: state.description.trim() || undefined,

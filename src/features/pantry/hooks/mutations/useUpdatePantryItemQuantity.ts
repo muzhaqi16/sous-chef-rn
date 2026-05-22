@@ -106,10 +106,7 @@ export function useUpdatePantryItemQuantity({
       optimisticResponse: {
         __typename: 'Mutation',
         updatePantryItemQuantity: {
-          __typename: 'PantryItemPayload',
-          success: true,
-          message: '',
-          code: 'SUCCESS',
+          __typename: 'UpdatePantryItemQuantitySuccess',
           pantryItem: optimisticPantryItem,
         },
       },

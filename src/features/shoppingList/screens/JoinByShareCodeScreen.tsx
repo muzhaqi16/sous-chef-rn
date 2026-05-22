@@ -41,16 +41,18 @@ export const JoinByShareCodeScreen: React.FC<
         });
 
         const result = data?.joinShoppingListByShareCode;
-        const listId = result?.shoppingList?.id;
-        const listName = result?.shoppingList?.name;
 
-        if (!result?.success || !listId) {
+        if (result?.__typename !== 'JoinShoppingListByShareCodeSuccess') {
+          const message = result && 'message' in result ? result.message : null;
           toastService.error(
-            result?.message ||
+            message ??
               'Failed to join list. The code may be invalid or expired.',
           );
           return;
         }
+
+        const listId = result.shoppingList.id;
+        const listName = result.shoppingList.name;
 
         useStore.getState().setSelectedShoppingListId(listId);
         goBack();

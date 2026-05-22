@@ -3,35 +3,32 @@
  *
  * Centralizes user-related subscriptions using the unified SubscriptionService.
  * Handles real-time updates for:
- * - Profile changes (name, avatar, bio, etc.)
- * - Account updates (email, timezone, preferences)
+ * - Account updates (email, timezone, preferences) via userUpdated
+ * - Profile changes (name, avatar, bio, etc.) via userProfileChanged
  *
  * Apollo auto-normalizes both User and UserProfile entities by id,
  * so no manual cache updates are needed.
  */
 
 import { useSubscription } from '@apollo/client/react';
-import { UserChangesDocument } from '#operations/auth/user.generated';
+import {
+  UserUpdatedDocument,
+  UserProfileChangedDocument,
+} from '#operations/auth/user.generated';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import { CacheStrategy } from '#/services/subscriptions/types';
 
 /**
  * Initialize user subscriptions for multi-device profile/settings sync
  *
- * This hook should be called once at the app level (in AuthenticatedSubscriptions).
- * Apollo auto-normalizes the User and UserProfile entities returned by the
- * subscription, so changes from other devices are reflected automatically.
+ * Two subscriptions: one for account-level User updates, one for UserProfile
+ * changes. Both rely on Apollo auto-normalization (CacheStrategy.NONE).
  *
  * @param userId - Current user ID for deduplication and subscription scoping
  */
 export function useUserSubscriptions(userId?: string) {
-  //
-  // User Changes Subscription
-  // Handles: PROFILE_CHANGED, UPDATED, ACTIVITY, STATUS_CHANGED, MODERATION_CHANGED
-  // Apollo auto-normalizes User and UserProfile by id — no manual cache updates needed.
-  //
   const userHandlers = subscriptionService.register({
-    subscriptionName: 'UserChanges',
+    subscriptionName: 'UserUpdated',
     entityType: 'User',
     enableDeduplication: true,
     userId,
@@ -39,9 +36,24 @@ export function useUserSubscriptions(userId?: string) {
     enableLogging: true,
   });
 
-  useSubscription(UserChangesDocument, {
+  useSubscription(UserUpdatedDocument, {
     variables: { userId },
     skip: !userId,
     ...userHandlers,
+  });
+
+  const profileHandlers = subscriptionService.register({
+    subscriptionName: 'UserProfileChanged',
+    entityType: 'UserProfile',
+    enableDeduplication: true,
+    userId,
+    cacheUpdateStrategy: CacheStrategy.NONE,
+    enableLogging: true,
+  });
+
+  useSubscription(UserProfileChangedDocument, {
+    variables: { userId },
+    skip: !userId,
+    ...profileHandlers,
   });
 }

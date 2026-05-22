@@ -96,7 +96,12 @@ export const SavedRecipes: React.FC = () => {
   // Unfavorite (remove from saved) recipe mutation
   const [unfavoriteRecipeMutation] = useMutation(UnfavoriteRecipeDocument, {
     update: (cache, { data }, { variables }) => {
-      if (!data?.unfavoriteRecipe?.success || !variables?.recipeId) return;
+      if (
+        data?.unfavoriteRecipe?.__typename !== 'UnfavoriteRecipeSuccess' ||
+        !variables?.recipeId
+      ) {
+        return;
+      }
 
       cache.updateQuery<MySavedRecipesQuery>(
         { query: MySavedRecipesDocument },

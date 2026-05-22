@@ -117,10 +117,7 @@ function buildSettledServerResponse(
   return {
     __typename: 'Mutation',
     toggleShoppingListItemPurchased: {
-      __typename: 'ShoppingListItemPayload',
-      success: true,
-      message: '',
-      code: 'SUCCESS',
+      __typename: 'ToggleShoppingListItemPurchasedSuccess',
       shoppingListItem: {
         __typename: 'ShoppingListItem',
         id: ITEM_ID,
@@ -140,6 +137,14 @@ function buildSettledServerResponse(
         unit: null,
         sortOrder: 'a0',
         item: null,
+        shoppingList: {
+          __typename: 'ShoppingList',
+          id: 'list-1',
+          totalItems: 0,
+          completedItems: 0,
+          remainingItems: 0,
+          completionRate: 0,
+        },
       },
     },
   };

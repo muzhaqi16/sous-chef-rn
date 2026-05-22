@@ -33,7 +33,10 @@ export function useConvertExpiredToWaste({
       variables: { pantryItemId },
     });
 
-    if (result.data?.convertExpiredToWaste?.pantryItem) {
+    if (
+      result.data?.convertExpiredToWaste?.__typename ===
+      'ConvertExpiredToWasteSuccess'
+    ) {
       onSuccess?.();
       return true;
     }

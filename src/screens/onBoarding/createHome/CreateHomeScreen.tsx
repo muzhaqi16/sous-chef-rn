@@ -356,7 +356,10 @@ const CreateHomeScreenComponent = () => {
   const [createHome] = useMutation(CreateHomeDocument);
   const [createPantry] = useMutation(CreatePantryDocument, {
     update: (cache, { data }) => {
-      const newPantry = data?.createPantry?.pantry;
+      if (data?.createPantry?.__typename !== 'CreatePantrySuccess') {
+        return;
+      }
+      const newPantry = data.createPantry.pantry;
       if (!newPantry?.homeId) {
         return;
       }
@@ -418,7 +421,7 @@ const CreateHomeScreenComponent = () => {
       // component body (React Compiler bailout).
       update: buildAcceptHomeInviteUpdater(user?.id),
       onCompleted: data => {
-        if (data.acceptHomeInvite?.membership?.homeId) {
+        if (data.acceptHomeInvite?.__typename === 'AcceptHomeInviteSuccess') {
           setSelectedHomeId(data.acceptHomeInvite.membership.homeId);
           navigateToNextStep('CreateHome');
         }

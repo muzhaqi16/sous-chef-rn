@@ -20,7 +20,7 @@ import { SpotlightCoachMark } from '#/components/organisms/SpotlightCoachMark/Sp
 import { usePantryManagement } from '#hooks/home/pantry/usePantryManagement';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useMutation } from '@apollo/client/react';
-import { AddItemToShoppingListDocument } from './FilteredPantryItems.generated';
+import { AddItemToShoppingListFromFilteredPantryDocument } from './FilteredPantryItems.generated';
 import { useCurrentPantry } from '#features/pantry/hooks/useCurrentPantry';
 import { useAddLowStockToShoppingList } from '#features/pantry/hooks/useAddLowStockToShoppingList';
 import {
@@ -279,7 +279,9 @@ export const FilteredPantryItems: React.FC<
     state: { items: allItems, loading, hasMore, isLoadingMore },
     actions: { refetch, loadMore },
   } = usePantryManagement(pantry?.id);
-  const [addToShoppingList] = useMutation(AddItemToShoppingListDocument);
+  const [addToShoppingList] = useMutation(
+    AddItemToShoppingListFromFilteredPantryDocument,
+  );
 
   // Progressively load all pages so the filter sees every item
   useEffect(() => {

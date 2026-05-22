@@ -41,52 +41,77 @@ query GetMealTemplate($id: ID!) {
 
 mutation DeleteMealTemplate($id: ID!) {
   deleteMealTemplate(id: $id) {
-    success
-    message
-    code
-    mealTemplate {
-      id
-      name
+    __typename
+    ... on DeleteMealTemplateSuccess {
+      mealTemplate {
+        id
+        name
+      }
+    }
+    ... on Error {
+      code
+      message
     }
   }
 }
 
 mutation DuplicateTemplate($id: ID!, $newName: String!) {
   duplicateTemplate(id: $id, newName: $newName) {
-    success
-    message
-    code
-    mealTemplate {
-      ...MealTemplateDisplay
-      items {
-        ...MealTemplateItemFragment
+    __typename
+    ... on DuplicateTemplateSuccess {
+      mealTemplate {
+        ...MealTemplateDisplay
+        items {
+          ...MealTemplateItemFragment
+        }
       }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
 mutation CreateMealPlanFromTemplate($input: CreateMealPlanFromTemplateInput!) {
   createMealPlanFromTemplate(input: $input) {
-    success
-    message
-    code
-    mealPlan {
-      ...MealPlanMain_mealPlan
-      ...MealPlanSettingsSheet_mealPlan
+    __typename
+    ... on CreateMealPlanSuccess {
+      mealPlan {
+        ...MealPlanMain_mealPlan
+        ...MealPlanSettingsSheet_mealPlan
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
 mutation CreateTemplateFromMealPlan($input: CreateTemplateFromMealPlanInput!) {
   createTemplateFromMealPlan(input: $input) {
-    success
-    message
-    code
-    mealTemplate {
-      ...MealTemplateDisplay
-      items {
-        ...MealTemplateItemFragment
+    __typename
+    ... on CreateTemplateFromMealPlanSuccess {
+      mealTemplate {
+        ...MealTemplateDisplay
+        items {
+          ...MealTemplateItemFragment
+        }
       }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }

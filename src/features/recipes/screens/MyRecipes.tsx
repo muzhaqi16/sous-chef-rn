@@ -79,7 +79,12 @@ export const MyRecipes: React.FC = () => {
 
   const [deleteRecipeMutation] = useMutation(DeleteRecipeDocument, {
     update: (cache, { data }, { variables }) => {
-      if (!data?.deleteRecipe?.success || !variables?.id) return;
+      if (
+        data?.deleteRecipe?.__typename !== 'DeleteRecipeSuccess' ||
+        !variables?.id
+      ) {
+        return;
+      }
       cache.updateQuery<MyRecipesQuery>(
         { query: MyRecipesDocument },
         existing => {

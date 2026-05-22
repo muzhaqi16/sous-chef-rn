@@ -29,16 +29,10 @@ export function useOpenPantryItemBatch({
       variables: { input: { batchId } },
       // pantryItem: null is fine — the real work is the cache.modify below
       // which patches the specific batch entity by id.
-      optimisticResponse: {
-        __typename: 'Mutation',
-        openPantryItemBatch: {
-          __typename: 'PantryItemPayload',
-          success: true,
-          message: '',
-          code: 'SUCCESS',
-          pantryItem: null,
-        },
-      },
+      // Optimistic response omitted — the cache.modify below patches the
+      // batch entity directly, which is the only state the UI reads.
+      // Constructing a full OpenPantryItemBatchSuccess { pantryItem } shape
+      // would require materializing the entire PantryItem fragment.
       update: cache => {
         // Optimistically update the batch in cache
         cache.modify({
@@ -59,7 +53,10 @@ export function useOpenPantryItemBatch({
       },
     });
 
-    if (result.data?.openPantryItemBatch?.pantryItem) {
+    if (
+      result.data?.openPantryItemBatch?.__typename ===
+      'OpenPantryItemBatchSuccess'
+    ) {
       optimisticDataPersistence.clear('PantryItemBatch', batchId, 'isOpened');
       onSuccess?.();
       return true;

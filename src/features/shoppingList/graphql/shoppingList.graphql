@@ -193,151 +193,221 @@ query GetShoppingListSuggestions($id: ID!, $limit: Int = 15) {
 
 mutation CreateShoppingList($input: CreateShoppingListInput!) {
   createShoppingList(input: $input) {
-    success
-    message
-    code
-    shoppingList {
-      id
-      name
-      isDefault
-      totalItems
-      completedItems
-      createdAt
-      updatedAt
-      homeId
-      home {
+    __typename
+    ... on CreateShoppingListSuccess {
+      shoppingList {
         id
         name
+        isDefault
+        totalItems
+        completedItems
+        createdAt
+        updatedAt
+        homeId
+        home {
+          id
+          name
+        }
+        ownerships {
+          ...ShoppingListOwnershipFragment
+        }
       }
-      ownerships {
-        ...ShoppingListOwnershipFragment
-      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
-mutation UpdateShoppingList($id: ID!, $input: UpdateShoppingListInput!) {
-  updateShoppingList(id: $id, input: $input) {
-    success
-    message
-    code
-    shoppingList {
-      id
-      name
-      isDefault
-      totalItems
-      completedItems
-      createdAt
-      updatedAt
-      ownerships {
-        ...ShoppingListOwnershipFragment
+mutation UpdateShoppingList($input: UpdateShoppingListInput!) {
+  updateShoppingList(input: $input) {
+    __typename
+    ... on UpdateShoppingListSuccess {
+      shoppingList {
+        id
+        name
+        isDefault
+        totalItems
+        completedItems
+        createdAt
+        updatedAt
+        ownerships {
+          ...ShoppingListOwnershipFragment
+        }
       }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
 mutation DeleteShoppingList($id: ID!) {
   deleteShoppingList(id: $id) {
-    success
-    message
-    code
-    shoppingList {
-      id
-      name
+    __typename
+    ... on DeleteShoppingListSuccess {
+      shoppingList {
+        id
+        name
+      }
+    }
+    ... on Error {
+      code
+      message
     }
   }
 }
 
 mutation AddCollaborator($input: InviteToShoppingListInput!) {
   inviteToShoppingList(input: $input) {
-    success
-    message
-    code
-    collaborator {
-      ...ShoppingListCollaboratorFragment
-      canEdit
-      invitedAt
-      lastViewedAt
+    __typename
+    ... on InviteToShoppingListSuccess {
+      collaborator {
+        ...ShoppingListCollaboratorFragment
+        canEdit
+        invitedAt
+        lastViewedAt
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
 mutation RemoveCollaborator($id: ID!) {
   removeShoppingListCollaborator(id: $id) {
-    success
-    message
-    code
+    __typename
+    ... on RemoveShoppingListCollaboratorSuccess {
+      collaborator {
+        id
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
   }
 }
 
 mutation AddItemToShoppingList($input: CreateShoppingListItemInput!) {
   addItemToShoppingList(input: $input) {
-    success
-    message
-    code
-    shoppingListItem {
-      id
-      itemName
-      quantity
-      quantityInput
-      displayFormat
-      purchaseInfo {
-        isPurchased
-      }
-      version
-      updatedAt
-      category
-      notes
-      unitName
-      unit {
+    __typename
+    ... on AddItemToShoppingListSuccess {
+      shoppingListItem {
         id
-        name
-        symbol
+        itemName
+        quantity
+        quantityInput
+        displayFormat
+        purchaseInfo {
+          isPurchased
+        }
+        version
+        updatedAt
+        category
+        notes
+        unitName
+        unit {
+          id
+          name
+          symbol
+        }
+        sortOrder
+        item {
+          id
+          imageUrl
+          images { url kind }
+        }
+        shoppingList {
+          id
+          totalItems
+          completedItems
+          remainingItems
+          completionRate
+        }
       }
-      sortOrder
-      item {
-        id
-        imageUrl
-        images { url kind }
-      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
 mutation UpdateShoppingListItem(
-  $id: ID!
   $input: UpdateShoppingListItemInput!
 ) {
-  updateShoppingListItem(id: $id, input: $input) {
-    success
-    message
-    code
-    shoppingListItem {
-      id
-      ...useUpdateShoppingItem_item
+  updateShoppingListItem(input: $input) {
+    __typename
+    ... on UpdateShoppingListItemSuccess {
+      shoppingListItem {
+        id
+        ...useUpdateShoppingItem_item
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
 mutation RemoveItemFromShoppingList($id: ID!) {
   removeItemFromShoppingList(id: $id) {
-    success
-    message
-    code
-    shoppingListItem {
-      id
+    __typename
+    ... on RemoveItemFromShoppingListSuccess {
+      shoppingListItem {
+        id
+        shoppingList {
+          id
+          totalItems
+          completedItems
+          remainingItems
+          completionRate
+        }
+      }
+    }
+    ... on Error {
+      code
+      message
     }
   }
 }
 
 mutation MoveShoppingListItem($input: MoveShoppingListItemInput!) {
   moveShoppingListItem(input: $input) {
-    success
-    message
-    code
-    shoppingListItem {
-      id
-      ...useItemReordering_moveResult
+    __typename
+    ... on MoveShoppingListItemSuccess {
+      shoppingListItem {
+        id
+        ...useItemReordering_moveResult
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
@@ -350,12 +420,26 @@ mutation ToggleShoppingListItemPurchased(
   $input: ToggleShoppingListItemPurchasedInput!
 ) {
   toggleShoppingListItemPurchased(input: $input) {
-    success
-    message
-    code
-    shoppingListItem {
-      id
-      ...useToggleShoppingItem_item
+    __typename
+    ... on ToggleShoppingListItemPurchasedSuccess {
+      shoppingListItem {
+        id
+        ...useToggleShoppingItem_item
+        shoppingList {
+          id
+          totalItems
+          completedItems
+          remainingItems
+          completionRate
+        }
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
@@ -372,12 +456,19 @@ mutation UpdateShoppingListItemQuantity(
     unitId: $unitId
     version: $version
   ) {
-    success
-    message
-    code
-    shoppingListItem {
-      id
-      ...useShoppingListActions_updateQuantityResult
+    __typename
+    ... on UpdateShoppingListItemQuantitySuccess {
+      shoppingListItem {
+        id
+        ...useShoppingListActions_updateQuantityResult
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
@@ -386,20 +477,37 @@ mutation UpdateCollaboratorRole(
   $input: UpdateCollaboratorRoleInput!
 ) {
   updateCollaboratorRole(input: $input) {
-    success
-    message
-    code
+    __typename
+    ... on UpdateCollaboratorRoleSuccess {
+      collaborator {
+        id
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
+    }
   }
 }
 
 mutation MoveShoppingItemToPantry($input: MoveShoppingItemToPantryInput!) {
   moveShoppingItemToPantry(input: $input) {
-    success
-    message
-    code
-    pantryItem {
-      id
-      ...useMoveToPantry_pantryItem
+    __typename
+    ... on MoveShoppingItemToPantrySuccess {
+      pantryItem {
+        id
+        ...useMoveToPantry_pantryItem
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
@@ -439,27 +547,41 @@ mutation AddItemsToShoppingList(
   }
 }
 
-mutation ShareShoppingList($id: ID!, $input: ShareShoppingListInput!) {
-  shareShoppingList(id: $id, input: $input) {
-    success
-    message
-    code
-    shoppingList {
-      id
-      shareCode
-      isPublic
+mutation ShareShoppingList($input: ShareShoppingListInput!) {
+  shareShoppingList(input: $input) {
+    __typename
+    ... on ShareShoppingListSuccess {
+      shoppingList {
+        id
+        shareCode
+        isPublic
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
 mutation JoinShoppingListByShareCode($shareCode: String!) {
   joinShoppingListByShareCode(shareCode: $shareCode) {
-    success
-    message
-    code
-    shoppingList {
-      id
-      name
+    __typename
+    ... on JoinShoppingListByShareCodeSuccess {
+      shoppingList {
+        id
+        name
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
@@ -549,9 +671,9 @@ mutation SyncMoveShoppingListItem(
 # SUBSCRIPTIONS
 # ============================================
 
-subscription ShoppingListChanges($listId: ID!) {
-  shoppingListChanged(listId: $listId) {
-    changeType
+subscription ShoppingListItemChanged($listId: ID!) {
+  shoppingListItemChanged(listId: $listId) {
+    mutation
     item {
       id
       sortOrder
@@ -560,15 +682,25 @@ subscription ShoppingListChanges($listId: ID!) {
       }
       ...useShoppingListSubscriptions_item
     }
-    shoppingList {
-      id
-      name
-      totalItems
-      completedItems
-    }
-    clearedItemIds
-    clearedCount
+    updatedFields
+    listId
+    timestamp
+    userId
+    originatorClientId
+  }
+}
+
+subscription MyShoppingListsItemChanged {
+  myShoppingListsItemChanged {
     mutation
+    item {
+      id
+      sortOrder
+      purchaseInfo {
+        isPurchased
+      }
+      ...useShoppingListSubscriptions_item
+    }
     updatedFields
     listId
     timestamp
@@ -576,19 +708,64 @@ subscription ShoppingListChanges($listId: ID!) {
   }
 }
 
-subscription MyShoppingListsChanges {
-  myShoppingListsChanged {
-    changeType
-    shoppingList {
+subscription ShoppingListUpdated($listId: ID!) {
+  shoppingListUpdated(listId: $listId) {
+    mutation
+    node {
       id
       name
+      isCompleted
       totalItems
       completedItems
+      remainingItems
+      completionRate
     }
-    mutation
     updatedFields
-    listId
     timestamp
     userId
+    originatorClientId
+  }
+}
+
+subscription ShoppingListItemsBatchCleared($listId: ID!) {
+  shoppingListItemsBatchCleared(listId: $listId) {
+    listId
+    clearedItemIds
+    clearedCount
+    mutation
+    timestamp
+    userId
+    originatorClientId
+  }
+}
+
+subscription MyShoppingListsUpdated {
+  myShoppingListsUpdated {
+    mutation
+    node {
+      id
+      name
+      isCompleted
+      totalItems
+      completedItems
+      remainingItems
+      completionRate
+    }
+    updatedFields
+    timestamp
+    userId
+    originatorClientId
+  }
+}
+
+subscription MyShoppingListsStatusChanged {
+  myShoppingListsStatusChanged {
+    listId
+    newStatus
+    previousStatus
+    mutation
+    timestamp
+    userId
+    originatorClientId
   }
 }

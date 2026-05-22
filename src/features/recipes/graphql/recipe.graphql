@@ -122,11 +122,18 @@ query SavedRecipeFolders {
 
 mutation CreateRecipe($input: CreateRecipeInput!) {
   createRecipe(input: $input) {
-    success
-    message
-    code
-    recipe {
-      ...BasicRecipeFragment
+    __typename
+    ... on CreateRecipeSuccess {
+      recipe {
+        ...BasicRecipeFragment
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
@@ -148,102 +155,141 @@ mutation UpsertExternalRecipe($input: CreateRecipeInput!) {
   }
 }
 
-mutation UpdateRecipe($id: ID!, $input: UpdateRecipeInput!) {
-  updateRecipe(id: $id, input: $input) {
-    success
-    message
-    code
-    recipe {
-      ...useRecipeData_recipe
-      ...RecipeForm_recipe
+mutation UpdateRecipe($input: UpdateRecipeInput!) {
+  updateRecipe(input: $input) {
+    __typename
+    ... on UpdateRecipeSuccess {
+      recipe {
+        ...useRecipeData_recipe
+        ...RecipeForm_recipe
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
 mutation UpdateRecipeIngredients($recipeId: ID!, $ingredients: [RecipeIngredientInput!]!) {
   updateRecipeIngredients(recipeId: $recipeId, ingredients: $ingredients) {
-    success
-    message
-    code
-    recipe {
-      id
-      ingredients {
-        ...RecipeIngredientFragment
+    __typename
+    ... on UpdateRecipeIngredientsSuccess {
+      recipe {
+        id
+        ingredients {
+          ...RecipeIngredientFragment
+        }
       }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
 mutation DeleteRecipe($id: ID!) {
   deleteRecipe(id: $id) {
-    success
-    message
-    code
-    recipe {
-      id
+    __typename
+    ... on DeleteRecipeSuccess {
+      success
+    }
+    ... on Error {
+      code
+      message
     }
   }
 }
 
 mutation FavoriteRecipe($input: FavoriteRecipeInput!) {
   favoriteRecipe(input: $input) {
-    success
-    message
-    code
-    savedRecipe {
-      id
-      recipeId
-      userId
-      folder
-      tags
-      notes
-      personalRating
-      cookedCount
-      lastCookedAt
-      createdAt
-      updatedAt
-      recipe {
-        ...BasicRecipeFragment
+    __typename
+    ... on FavoriteRecipeSuccess {
+      savedRecipe {
+        id
+        recipeId
+        userId
+        folder
+        tags
+        notes
+        personalRating
+        cookedCount
+        lastCookedAt
+        createdAt
+        updatedAt
+        recipe {
+          ...BasicRecipeFragment
+        }
       }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
 mutation UnfavoriteRecipe($recipeId: ID!) {
   unfavoriteRecipe(recipeId: $recipeId) {
-    success
-    message
-    code
-    savedRecipe {
-      id
+    __typename
+    ... on UnfavoriteRecipeSuccess {
+      savedRecipe {
+        id
+      }
+    }
+    ... on Error {
+      code
+      message
     }
   }
 }
 
 mutation DeleteRecipeFolder($input: DeleteRecipeFolderInput!) {
   deleteRecipeFolder(input: $input) {
-    success
-    message
-    code
+    __typename
+    ... on DeleteRecipeFolderSuccess {
+      success
+    }
+    ... on Error {
+      code
+      message
+    }
   }
 }
 
 mutation UpdateFavoriteRecipe($recipeId: ID!, $input: UpdateFavoriteRecipeInput!) {
   updateFavoriteRecipe(recipeId: $recipeId, input: $input) {
-    success
-    message
-    code
-    savedRecipe {
-      id
-      recipeId
-      userId
-      folder
-      tags
-      notes
-      personalRating
-      cookedCount
-      createdAt
-      updatedAt
+    __typename
+    ... on UpdateFavoriteRecipeSuccess {
+      savedRecipe {
+        id
+        recipeId
+        userId
+        folder
+        tags
+        notes
+        personalRating
+        cookedCount
+        createdAt
+        updatedAt
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
@@ -376,18 +422,25 @@ mutation MarkRecipeAsCooked(
   $input: MarkRecipeAsCookedInput!
 ) {
   markRecipeAsCooked(input: $input) {
-    success
-    message
-    code
-    cookingLog {
-      id
-      servingsMade
-      notes
-      cookedAt
-      recipe {
+    __typename
+    ... on MarkRecipeAsCookedSuccess {
+      cookingLog {
         id
-        name
+        servingsMade
+        notes
+        cookedAt
+        recipe {
+          id
+          name
+        }
       }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }

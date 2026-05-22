@@ -1,15 +1,22 @@
 mutation SetDefaultHome($homeId: ID!) {
   setDefaultHome(homeId: $homeId) {
-    success
-    message
-    code
-    settings {
-      id
+    __typename
+    ... on SetDefaultHomeSuccess {
+      settings {
+        id
+      }
+      defaultPantry {
+        id
+        name
+        isDefault
+      }
     }
-    defaultPantry {
-      id
-      name
-      isDefault
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }

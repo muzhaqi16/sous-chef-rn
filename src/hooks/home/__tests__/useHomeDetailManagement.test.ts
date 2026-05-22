@@ -172,10 +172,7 @@ function updateHomeMock() {
   return recordMock(UpdateHomeDocument, {
     data: {
       updateHome: {
-        __typename: 'HomePayload',
-        success: true,
-        message: '',
-        code: 'SUCCESS',
+        __typename: 'UpdateHomeSuccess',
         home: {
           __typename: 'Home',
           id: 'home-1',
@@ -243,8 +240,7 @@ describe('useHomeDetailManagement', () => {
       });
 
       expect(update.fired).toContainEqual({
-        id: 'home-1',
-        input: { name: 'New Name' },
+        input: { id: 'home-1', name: 'New Name' },
       });
     });
   });
@@ -264,8 +260,7 @@ describe('useHomeDetailManagement', () => {
       });
 
       expect(update.fired).toContainEqual({
-        id: 'home-1',
-        input: { allowJoinCode: true },
+        input: { id: 'home-1', allowJoinCode: true },
       });
     });
   });
@@ -370,8 +365,7 @@ describe('useHomeDetailManagement', () => {
       });
 
       expect(update.fired).toContainEqual({
-        id: 'home-1',
-        input: { allowJoinCode: false },
+        input: { id: 'home-1', allowJoinCode: false },
       });
     });
   });

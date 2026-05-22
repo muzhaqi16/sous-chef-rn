@@ -25,8 +25,13 @@ export function useCreateStorageLocation(
     CreateStorageLocationDocument,
     {
       update: (cache, { data }) => {
-        const newLocation = data?.createStorageLocation?.storageLocation;
-        if (!newLocation) return;
+        if (
+          data?.createStorageLocation?.__typename !==
+          'CreateStorageLocationSuccess'
+        ) {
+          return;
+        }
+        const newLocation = data.createStorageLocation.storageLocation;
 
         executeCacheUpdate(() => {
           // Keep the StorageLocationsScreen query cache warm
@@ -61,7 +66,10 @@ export function useCreateStorageLocation(
       ...input,
       homeId,
     }),
-    onSuccess: (data: any) => data?.createStorageLocation?.storageLocation,
+    onSuccess: (data: any) =>
+      data?.createStorageLocation?.__typename === 'CreateStorageLocationSuccess'
+        ? data.createStorageLocation.storageLocation
+        : undefined,
     operationName: 'Create Storage Location',
   });
 

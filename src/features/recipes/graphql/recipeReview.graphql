@@ -4,42 +4,70 @@
 
 mutation CreateRecipeReview($input: CreateRecipeReviewInput!) {
   createRecipeReview(input: $input) {
-    success
-    code
-    message
-    recipeReview {
-      ...RecipeReviewFragment
+    __typename
+    ... on CreateRecipeReviewSuccess {
+      recipeReview {
+        ...RecipeReviewFragment
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
-mutation UpdateRecipeReview($id: ID!, $input: UpdateRecipeReviewInput!) {
-  updateRecipeReview(id: $id, input: $input) {
-    success
-    code
-    message
-    recipeReview {
-      ...RecipeReviewFragment
+mutation UpdateRecipeReview($input: UpdateRecipeReviewInput!) {
+  updateRecipeReview(input: $input) {
+    __typename
+    ... on UpdateRecipeReviewSuccess {
+      recipeReview {
+        ...RecipeReviewFragment
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
 mutation DeleteRecipeReview($id: ID!) {
   deleteRecipeReview(id: $id) {
-    success
-    code
-    message
+    __typename
+    ... on DeleteRecipeReviewSuccess {
+      recipeReview {
+        id
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
   }
 }
 
 mutation ToggleReviewHelpful($input: ToggleReviewHelpfulInput!) {
   toggleReviewHelpful(input: $input) {
-    success
-    code
-    message
-    reviewHelpful {
-      id
-      user { id }
+    __typename
+    ... on ToggleReviewHelpfulSuccess {
+      reviewHelpful {
+        id
+        user { id }
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }

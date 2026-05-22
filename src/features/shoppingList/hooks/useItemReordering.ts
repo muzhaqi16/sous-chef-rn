@@ -284,7 +284,11 @@ export function useItemReordering<T extends ShoppingListItem>(
     // Check if a real move happened by comparing versions. serverItem is a
     // masked ref — materialize via a narrow fragment that only selects what
     // we read here (version, sortOrder).
-    const serverItemRef = result.data?.moveShoppingListItem?.shoppingListItem;
+    const serverItemRef =
+      result.data?.moveShoppingListItem?.__typename ===
+      'MoveShoppingListItemSuccess'
+        ? result.data.moveShoppingListItem.shoppingListItem
+        : null;
     const serverItem = serverItemRef
       ? client.cache.readFragment<UseItemReordering_ServerItemFragment>({
           fragment: UseItemReordering_ServerItemFragmentDoc,

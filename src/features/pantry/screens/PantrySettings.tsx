@@ -259,9 +259,9 @@ export const PantrySettings: React.FC<
     // keep try/catch out of the component body (React Compiler bailout).
     update: buildCreatePantryUpdater(selectedHomeId),
     onCompleted: data => {
-      const newPantryResult = data?.createPantry?.pantry;
-      if (newPantryResult) {
-        setSelectedPantryId(newPantryResult.id);
+      const payload = data?.createPantry;
+      if (payload?.__typename === 'CreatePantrySuccess') {
+        setSelectedPantryId(payload.pantry.id);
       }
       goBack();
     },
@@ -336,8 +336,8 @@ export const PantrySettings: React.FC<
         } else {
           await updatePantry({
             variables: {
-              id: pantryId,
               input: {
+                id: pantryId,
                 name: name.trim(),
                 description: description.trim(),
               },

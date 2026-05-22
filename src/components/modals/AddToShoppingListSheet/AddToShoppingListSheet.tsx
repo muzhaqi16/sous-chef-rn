@@ -112,18 +112,31 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
         const optimistic: AddItemToShoppingListMutation = {
           __typename: 'Mutation',
           addItemToShoppingList: {
-            __typename: 'ShoppingListItemPayload',
-            success: true,
-            message: '',
-            code: 'SUCCESS',
-            shoppingListItem: entity,
+            __typename: 'AddItemToShoppingListSuccess',
+            shoppingListItem: {
+              ...entity,
+              shoppingList: {
+                __typename: 'ShoppingList',
+                id: shoppingListId ?? '',
+                totalItems: 0,
+                completedItems: 0,
+                remainingItems: 0,
+                completionRate: 0,
+              },
+            },
           },
         };
         return optimistic;
       },
       update(cache, { data }) {
-        const newItem = data?.addItemToShoppingList?.shoppingListItem;
-        if (!newItem || !shoppingListId) return;
+        const payload = data?.addItemToShoppingList;
+        if (
+          payload?.__typename !== 'AddItemToShoppingListSuccess' ||
+          !shoppingListId
+        ) {
+          return;
+        }
+        const newItem = payload.shoppingListItem;
 
         // Evict temp-ID entity when the real server response arrives
         if (lastTempIdRef.current && !newItem.id.startsWith('temp-')) {

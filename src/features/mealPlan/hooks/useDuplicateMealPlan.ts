@@ -16,8 +16,10 @@ export function useDuplicateMealPlan() {
     DuplicateMealPlanDocument,
     {
       update(cache, { data }) {
-        const newPlan = data?.duplicateMealPlan?.mealPlan;
-        if (newPlan) addToMealPlans(cache, newPlan);
+        const result = data?.duplicateMealPlan;
+        if (result?.__typename === 'DuplicateMealPlanSuccess') {
+          addToMealPlans(cache, result.mealPlan);
+        }
       },
       onError: error => {
         toastService.error(error.message || 'Failed to duplicate meal plan');
@@ -32,7 +34,7 @@ export function useDuplicateMealPlan() {
     );
     if (!result) return null;
     const data = result.data?.duplicateMealPlan;
-    if (data?.success) {
+    if (data?.__typename === 'DuplicateMealPlanSuccess') {
       toastService.success('Meal plan duplicated!');
       Telemetry.trackEvent('meal_plan_duplicated', {
         meal_plan_id: input.mealPlanId,

@@ -243,11 +243,13 @@ async function registerDeviceOnce(): Promise<boolean> {
       variables: { input: buildDeviceInput(deviceInfo) },
     });
 
-    if (!result.data?.registerDevice?.success) {
-      logger.error(
-        'Device registration failed:',
-        result.data?.registerDevice?.message,
-      );
+    const registerPayload = result.data?.registerDevice;
+    if (registerPayload?.__typename !== 'RegisterDeviceSuccess') {
+      const message =
+        registerPayload && 'message' in registerPayload
+          ? registerPayload.message
+          : null;
+      logger.error('Device registration failed:', message);
       return false;
     }
 

@@ -1,35 +1,42 @@
 # Local copy of AddItemToShoppingList per the Feature API Boundary Convention.
 # The shoppingList feature's graphql/ folder is internal.
-mutation AddItemToShoppingList($input: CreateShoppingListItemInput!) {
+mutation AddItemToShoppingListFromFilteredPantry($input: CreateShoppingListItemInput!) {
   addItemToShoppingList(input: $input) {
-    success
-    message
-    code
-    shoppingListItem {
-      id
-      itemName
-      quantity
-      quantityInput
-      displayFormat
-      purchaseInfo {
-        isPurchased
-      }
-      version
-      updatedAt
-      category
-      notes
-      unitName
-      unit {
+    __typename
+    ... on AddItemToShoppingListSuccess {
+      shoppingListItem {
         id
-        name
-        symbol
+        itemName
+        quantity
+        quantityInput
+        displayFormat
+        purchaseInfo {
+          isPurchased
+        }
+        version
+        updatedAt
+        category
+        notes
+        unitName
+        unit {
+          id
+          name
+          symbol
+        }
+        sortOrder
+        item {
+          id
+          imageUrl
+          images { url kind }
+        }
       }
-      sortOrder
-      item {
-        id
-        imageUrl
-        images { url kind }
-      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }

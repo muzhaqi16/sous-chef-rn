@@ -69,10 +69,7 @@ export function useHomeSelection({
     optimisticResponse: (variables): SetDefaultHomeMutation => ({
       __typename: 'Mutation',
       setDefaultHome: {
-        __typename: 'SetDefaultHomePayload',
-        success: true,
-        code: 'SUCCESS',
-        message: 'Default home set',
+        __typename: 'SetDefaultHomeSuccess',
         settings: {
           __typename: 'UserSettings',
           id: variables.homeId,
@@ -208,7 +205,7 @@ export function useHomeSelection({
     );
     if (!result) return false;
 
-    if (result.data?.setDefaultHome?.success) {
+    if (result.data?.setDefaultHome?.__typename === 'SetDefaultHomeSuccess') {
       // Update pantry from server response (server is source of truth)
       const serverPantry = result.data.setDefaultHome.defaultPantry;
       if (serverPantry?.id) {

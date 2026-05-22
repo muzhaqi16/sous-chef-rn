@@ -68,15 +68,12 @@ export function useFolderActions() {
     if (!result) return false;
 
     const payload = result.data?.deleteRecipeFolder;
-    if (payload?.success) {
-      toastService.success(
-        `Renamed "${oldName}" to "${newName}"${
-          payload.message ? ` - ${payload.message}` : ''
-        }`,
-      );
+    if (payload?.__typename === 'DeleteRecipeFolderSuccess') {
+      toastService.success(`Renamed "${oldName}" to "${newName}"`);
       return true;
     }
-    toastService.error(payload?.message || 'Failed to rename folder.');
+    const message = payload && 'message' in payload ? payload.message : null;
+    toastService.error(message ?? 'Failed to rename folder.');
     return false;
   };
 
@@ -121,16 +118,13 @@ export function useFolderActions() {
     if (!result) return false;
 
     const payload = result.data?.deleteRecipeFolder;
-    if (payload?.success) {
-      toastService.success(
-        `Deleted "${folderName}"${
-          payload.message ? ` - ${payload.message}` : ''
-        }`,
-      );
-    } else {
+    if (payload?.__typename === 'DeleteRecipeFolderSuccess') {
       toastService.success(`Deleted "${folderName}"`);
+      return true;
     }
-    return true;
+    const message = payload && 'message' in payload ? payload.message : null;
+    toastService.error(message ?? 'Failed to delete folder.');
+    return false;
   };
 
   return {

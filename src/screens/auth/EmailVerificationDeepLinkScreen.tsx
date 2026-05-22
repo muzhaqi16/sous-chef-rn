@@ -58,7 +58,8 @@ async function performVerificationImpl(
         variables: { code: token },
       });
 
-      if (result.data?.verifyEmail?.success) {
+      const payload = result.data?.verifyEmail;
+      if (payload?.__typename === 'VerifyEmailSuccess') {
         logger.info('Email verification successful');
 
         if (user) {
@@ -72,9 +73,9 @@ async function performVerificationImpl(
           type: 'success',
         });
       } else {
-        throw new Error(
-          result.data?.verifyEmail?.message || 'Verification failed',
-        );
+        const message =
+          payload && 'message' in payload ? payload.message : null;
+        throw new Error(message ?? 'Verification failed');
       }
       return result;
     },

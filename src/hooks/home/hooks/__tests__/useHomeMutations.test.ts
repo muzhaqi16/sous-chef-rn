@@ -127,10 +127,7 @@ function createHomeMock(home: { id: string; name: string }) {
   return recordMock(CreateHomeDocument, {
     data: {
       createHome: {
-        __typename: 'CreateHomePayload',
-        success: true,
-        message: '',
-        code: 'SUCCESS',
+        __typename: 'CreateHomeSuccess',
         home: { __typename: 'Home', id: home.id, name: home.name },
       },
     },
@@ -140,15 +137,15 @@ function createHomeMock(home: { id: string; name: string }) {
 function updateHomeMock(home: { id: string; name?: string } | null) {
   return recordMock(UpdateHomeDocument, {
     data: {
-      updateHome: {
-        __typename: 'UpdateHomePayload',
-        success: home != null,
-        message: '',
-        code: home != null ? 'SUCCESS' : 'NOT_FOUND',
-        home: home
-          ? { __typename: 'Home', id: home.id, name: home.name ?? null }
-          : null,
-      },
+      updateHome: home
+        ? {
+            __typename: 'UpdateHomeSuccess',
+            home: { __typename: 'Home', id: home.id, name: home.name ?? null },
+          }
+        : {
+            __typename: 'NotFoundError',
+            message: 'Home not found',
+          },
     },
   });
 }
@@ -243,8 +240,7 @@ describe('useHomeMutations', () => {
       });
 
       expect(m.fired).toContainEqual({
-        id: 'home-1',
-        input: { name: 'Updated Name' },
+        input: { id: 'home-1', name: 'Updated Name' },
       });
     });
 

@@ -68,10 +68,7 @@ export const PersonalInformationScreen: React.FC = () => {
           optimisticResponse: {
             __typename: 'Mutation',
             updateProfile: {
-              __typename: 'UserProfilePayload',
-              success: true,
-              message: '',
-              code: '',
+              __typename: 'UpdateProfileSuccess',
               userProfile: {
                 ...profile,
                 ...input,

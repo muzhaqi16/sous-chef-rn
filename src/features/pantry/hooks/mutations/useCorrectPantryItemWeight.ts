@@ -40,8 +40,8 @@ export function useCorrectPantryItemWeight({
   ): Promise<boolean> => {
     const result = await correctMutation({
       variables: {
-        id: pantryItemId,
         input: {
+          id: pantryItemId,
           netWeight,
           reason,
           version,
@@ -50,7 +50,10 @@ export function useCorrectPantryItemWeight({
       },
     });
 
-    if (result.data?.correctPantryItemWeight?.pantryItem) {
+    if (
+      result.data?.correctPantryItemWeight?.__typename ===
+      'CorrectPantryItemWeightSuccess'
+    ) {
       onSuccess?.();
       return true;
     }

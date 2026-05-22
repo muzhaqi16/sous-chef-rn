@@ -74,10 +74,7 @@ export const useDietaryProfile = () => {
       const optimistic: UpdateDietaryProfileMutation = {
         __typename: 'Mutation',
         updateDietaryProfile: {
-          __typename: 'DietaryProfilePayload',
-          success: true,
-          message: 'Dietary profile updated',
-          code: 'DIETARY_PROFILE_UPDATED',
+          __typename: 'UpdateDietaryProfileSuccess',
           dietaryProfile: enhanceWithVersion(profile, variables.input),
         },
       };
@@ -96,7 +93,11 @@ export const useDietaryProfile = () => {
     // Note: No optimistic response - DietaryRestriction has complex enum types that need server validation
     // cache.modify() handles instant UI update when server responds (~100-200ms)
     update: (cache, { data }) => {
-      if (!data?.addRestriction?.dietaryRestriction || !profile?.id) return;
+      if (
+        data?.addRestriction?.__typename !== 'AddRestrictionSuccess' ||
+        !profile?.id
+      )
+        return;
 
       const newRestriction = data.addRestriction.dietaryRestriction;
 
@@ -140,10 +141,7 @@ export const useDietaryProfile = () => {
       const optimistic: UpdateDietaryRestrictionMutation = {
         __typename: 'Mutation',
         updateRestriction: {
-          __typename: 'DietaryRestrictionPayload',
-          success: true,
-          message: 'Dietary restriction updated',
-          code: 'DIETARY_RESTRICTION_UPDATED',
+          __typename: 'UpdateRestrictionSuccess',
           dietaryRestriction: enhanceWithVersion(
             currentRestriction,
             variables.input,
@@ -165,7 +163,7 @@ export const useDietaryProfile = () => {
     // No optimistic response for deletes (following Pattern 4 recommendation)
     update: (cache, { data }, { variables }) => {
       if (
-        !data?.removeRestriction?.success ||
+        data?.removeRestriction?.__typename !== 'RemoveRestrictionSuccess' ||
         !variables?.input?.id ||
         !profile?.id
       )

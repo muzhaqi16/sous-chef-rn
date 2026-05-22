@@ -62,19 +62,29 @@ export function useAddShoppingItem({
       const optimistic: AddItemToShoppingListMutation = {
         __typename: 'Mutation',
         addItemToShoppingList: {
-          __typename: 'ShoppingListItemPayload',
-          success: true,
-          message: '',
-          code: 'SUCCESS',
-          shoppingListItem: entity,
+          __typename: 'AddItemToShoppingListSuccess',
+          shoppingListItem: {
+            ...entity,
+            shoppingList: {
+              __typename: 'ShoppingList',
+              id: listId ?? '',
+              totalItems: 0,
+              completedItems: 0,
+              remainingItems: 0,
+              completionRate: 0,
+            },
+          },
         },
       };
       return optimistic;
     },
     update(cache, { data }) {
-      if (!data?.addItemToShoppingList?.shoppingListItem || !listId) return;
+      const payload = data?.addItemToShoppingList;
+      if (payload?.__typename !== 'AddItemToShoppingListSuccess' || !listId) {
+        return;
+      }
 
-      const item = data.addItemToShoppingList.shoppingListItem;
+      const item = payload.shoppingListItem;
 
       // Evict temp-ID entity when the real server response arrives
       // update() runs twice: once for the optimistic response (item.id starts with "temp-"),

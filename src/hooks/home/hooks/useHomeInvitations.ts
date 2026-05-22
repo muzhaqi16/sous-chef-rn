@@ -57,13 +57,16 @@ export function useHomeInvitations({
     InviteToHomeDocument,
     {
       update: (cache, { data }, { variables }) => {
-        if (!data?.inviteToHome?.homeInvite || !variables) return;
+        const payload = data?.inviteToHome;
+        if (payload?.__typename !== 'InviteToHomeSuccess' || !variables) {
+          return;
+        }
 
         executeCacheUpdate(() => {
           addInviteToHomeCache(
             cache,
             variables.input.homeId,
-            data.inviteToHome!.homeInvite!,
+            payload.homeInvite,
             { position: 'end' },
           );
         }, 'Cache update failed for inviteUser:');
@@ -86,14 +89,15 @@ export function useHomeInvitations({
       // The mutation returns only Membership data (not the full Home object)
       // We refetch GetHomesQuery to get the complete home with all fields
       update: (_cache, { data }) => {
-        if (!data?.joinHomeByCode?.membership) return;
+        if (data?.joinHomeByCode?.__typename !== 'JoinHomeByCodeSuccess')
+          return;
 
         executeCacheUpdate(() => {
           refetch();
         }, 'Failed to refetch homes after join:');
       },
       onCompleted: data => {
-        if (data?.joinHomeByCode?.membership) {
+        if (data?.joinHomeByCode?.__typename === 'JoinHomeByCodeSuccess') {
           const homeId = data.joinHomeByCode.membership.homeId;
 
           // Set as default if this is the first home
@@ -159,7 +163,9 @@ export function useHomeInvitations({
     );
     if (!result) return false;
 
-    return result.data?.joinHomeByCode?.membership || false;
+    return result.data?.joinHomeByCode?.__typename === 'JoinHomeByCodeSuccess'
+      ? result.data.joinHomeByCode.membership
+      : false;
   };
 
   const previewHomeByCode = async (joinCode: string) => {

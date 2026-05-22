@@ -351,216 +351,280 @@ query RestockUnitsForItem($pantryItemId: ID!) {
 
 mutation CreatePantry($input: CreatePantryInput!) {
   createPantry(input: $input) {
-    success
-    message
-    code
-    pantry {
-      id
-      homeId
-      name
-      description
-      isDefault
-      version
-      createdAt
-      updatedAt
+    __typename
+    ... on CreatePantrySuccess {
+      pantry {
+        id
+        homeId
+        name
+        description
+        isDefault
+        version
+        createdAt
+        updatedAt
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
-mutation UpdatePantry($id: ID!, $input: UpdatePantryInput!) {
-  updatePantry(id: $id, input: $input) {
-    success
-    message
-    code
-    pantry {
-      id
-      homeId
-      name
-      description
-      isDefault
-      version
-      createdAt
-      updatedAt
+mutation UpdatePantry($input: UpdatePantryInput!) {
+  updatePantry(input: $input) {
+    __typename
+    ... on UpdatePantrySuccess {
+      pantry {
+        id
+        homeId
+        name
+        description
+        isDefault
+        version
+        createdAt
+        updatedAt
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
 mutation DeletePantry($id: ID!) {
   deletePantry(id: $id) {
-    success
-    message
-    code
-    pantry {
-      id
-      name
+    __typename
+    ... on DeletePantrySuccess {
+      pantry {
+        id
+        name
+      }
+    }
+    ... on Error {
+      code
+      message
     }
   }
 }
 
 mutation SetDefaultPantry($id: ID!) {
   setDefaultPantry(id: $id) {
-    success
-    message
-    code
-    pantry {
-      id
-      name
-      isDefault
-      homeId
+    __typename
+    ... on SetDefaultPantrySuccess {
+      pantry {
+        id
+        name
+        isDefault
+        homeId
+      }
+    }
+    ... on Error {
+      code
+      message
     }
   }
 }
 
 mutation CreatePantryItem($input: CreatePantryItemInput!) {
   createPantryItem(input: $input) {
-    success
-    message
-    code
-    pantryItem {
-      id
-      pantryId
-      itemId
-      itemName
-      quantity
-      version
-      updatedAt
-      storageState
-      expiresAt
-      lowStockAlert
-      isLowStock
-      minQuantity
-      lastUsedAt
-      netWeight
-      remainingNetWeight
-      activeBatchCount
-      earliestBatchExpiration
-      item {
+    __typename
+    ... on CreatePantryItemSuccess {
+      pantryItem {
         id
-        imageUrl
-        images { url kind }
-      }
-      unit {
-        id
-        name
-        symbol
-      }
-      netWeightUnit {
-        id
-        name
-        symbol
-      }
-      storageLocation {
-        id
-        name
-        type
-      }
-      packageBreakdown {
-        count
-        contentUnit {
+        pantryId
+        itemId
+        itemName
+        quantity
+        version
+        updatedAt
+        storageState
+        expiresAt
+        lowStockAlert
+        isLowStock
+        minQuantity
+        lastUsedAt
+        netWeight
+        remainingNetWeight
+        activeBatchCount
+        earliestBatchExpiration
+        item {
+          id
+          imageUrl
+          images { url kind }
+        }
+        unit {
           id
           name
           symbol
         }
-        perUnitNetWeight
-        perUnitNetWeightUnit {
+        netWeightUnit {
           id
           name
           symbol
         }
-        totalNetWeight
+        storageLocation {
+          id
+          name
+          type
+        }
+        packageBreakdown {
+          count
+          contentUnit {
+            id
+            name
+            symbol
+          }
+          perUnitNetWeight
+          perUnitNetWeightUnit {
+            id
+            name
+            symbol
+          }
+          totalNetWeight
+        }
+        quantityBreakdown {
+          fullPackages
+          looseContentUnits
+          contentUnit {
+            id
+            name
+            symbol
+          }
+          totalContentUnits
+          remainingWeight
+          remainingWeightUnit {
+            id
+            name
+            symbol
+          }
+        }
+        pantry {
+          id
+          stats {
+            totalItems
+          }
+        }
       }
-      quantityBreakdown {
-        fullPackages
-        looseContentUnits
-        contentUnit {
-          id
-          name
-          symbol
-        }
-        totalContentUnits
-        remainingWeight
-        remainingWeightUnit {
-          id
-          name
-          symbol
-        }
-      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
-mutation UpdatePantryItem($id: ID!, $input: UpdatePantryItemInput!) {
-  updatePantryItem(id: $id, input: $input) {
-    success
-    message
-    code
-    pantryItem {
-      id
-      ...useUpdatePantryItem_pantryItem
+mutation UpdatePantryItem($input: UpdatePantryItemInput!) {
+  updatePantryItem(input: $input) {
+    __typename
+    ... on UpdatePantryItemSuccess {
+      pantryItem {
+        id
+        ...useUpdatePantryItem_pantryItem
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
 mutation DeletePantryItem($id: ID!) {
   deletePantryItem(id: $id) {
-    success
-    message
-    code
-    pantryItem {
-      id
+    __typename
+    ... on DeletePantryItemSuccess {
+      pantryItem {
+        id
+        pantry {
+          id
+          stats {
+            totalItems
+          }
+        }
+      }
+    }
+    ... on Error {
+      code
+      message
     }
   }
 }
 
 mutation CreatePantryItemUsage($input: RecordPantryItemUsageInput!) {
   createPantryItemUsage(input: $input) {
-    success
-    message
-    code
-    validUnits
-    pantryItemUsage {
-      id
-      quantityUsed
-      usageUnitId
-      usageUnit {
+    __typename
+    ... on CreatePantryItemUsageSuccess {
+      pantryItemUsage {
         id
-        name
-        symbol
+        quantityUsed
+        usageUnitId
+        usageUnit {
+          id
+          name
+          symbol
+        }
+        usedAt
+        purpose
+        notes
+        wasteReason
+        isComposted
+        isRecycled
+        pantryItem {
+          id
+          quantity
+          ...useCreatePantryItemUsage_pantryItem
+        }
+        usedBy {
+          id
+          email
+        }
       }
-      usedAt
-      purpose
-      notes
-      wasteReason
-      isComposted
-      isRecycled
-      pantryItem {
-        id
-        quantity
-        ...useCreatePantryItemUsage_pantryItem
-      }
-      usedBy {
-        id
-        email
-      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
-mutation RestockPantryItem($id: ID!, $input: RestockPantryItemInput!) {
-  restockPantryItem(id: $id, input: $input) {
-    success
-    message
-    code
-    validUnits
-    pantryItemUsage {
-      id
-      quantityUsed
-      purpose
-      costPerUnit
-      totalCost
-      pantryItem {
-        ...useRestockPantryItem_pantryItem
+mutation RestockPantryItem($input: RestockPantryItemInput!) {
+  restockPantryItem(input: $input) {
+    __typename
+    ... on RestockPantryItemSuccess {
+      pantryItemUsage {
+        id
+        quantityUsed
+        purpose
+        costPerUnit
+        totalCost
+        pantryItem {
+          ...useRestockPantryItem_pantryItem
+        }
       }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
@@ -577,34 +641,55 @@ mutation UpdatePantryItemQuantity(
     unitId: $unitId
     version: $version
   ) {
-    success
-    message
-    code
-    pantryItem {
-      id
-      ...useUpdatePantryItemQuantity_pantryItem
+    __typename
+    ... on UpdatePantryItemQuantitySuccess {
+      pantryItem {
+        id
+        ...useUpdatePantryItemQuantity_pantryItem
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
-mutation AdjustPantryItemQuantity($id: ID!, $input: AdjustPantryItemQuantityInput!) {
-  adjustPantryItemQuantity(id: $id, input: $input) {
-    success
-    message
-    code
-    pantryItem {
-      ...useAdjustPantryItemQuantity_pantryItem
+mutation AdjustPantryItemQuantity($input: AdjustPantryItemQuantityInput!) {
+  adjustPantryItemQuantity(input: $input) {
+    __typename
+    ... on AdjustPantryItemQuantitySuccess {
+      pantryItem {
+        ...useAdjustPantryItemQuantity_pantryItem
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
-mutation CorrectPantryItemWeight($id: ID!, $input: CorrectPantryItemWeightInput!) {
-  correctPantryItemWeight(id: $id, input: $input) {
-    success
-    message
-    code
-    pantryItem {
-      ...useCorrectPantryItemWeight_pantryItem
+mutation CorrectPantryItemWeight($input: CorrectPantryItemWeightInput!) {
+  correctPantryItemWeight(input: $input) {
+    __typename
+    ... on CorrectPantryItemWeightSuccess {
+      pantryItem {
+        ...useCorrectPantryItemWeight_pantryItem
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
@@ -649,22 +734,30 @@ mutation MovePurchasedItemsToPantry($shoppingListId: ID!) {
 
 mutation OpenPantryItem($id: ID!, $version: Int) {
   openPantryItem(id: $id, version: $version) {
-    success
-    message
-    code
-    pantryItem {
-      ...useOpenPantryItem_pantryItem
+    __typename
+    ... on OpenPantryItemSuccess {
+      pantryItem {
+        ...useOpenPantryItem_pantryItem
+      }
+    }
+    ... on Error {
+      code
+      message
     }
   }
 }
 
 mutation ConvertExpiredToWaste($pantryItemId: ID!) {
   convertExpiredToWaste(pantryItemId: $pantryItemId) {
-    success
-    message
-    code
-    pantryItem {
-      ...useConvertExpiredToWaste_pantryItem
+    __typename
+    ... on ConvertExpiredToWasteSuccess {
+      pantryItem {
+        ...useConvertExpiredToWaste_pantryItem
+      }
+    }
+    ... on Error {
+      code
+      message
     }
   }
 }
@@ -681,33 +774,51 @@ query GetPantryItemBatches($pantryItemId: ID!, $status: BatchStatus) {
 
 mutation OpenPantryItemBatch($input: OpenBatchInput!) {
   openPantryItemBatch(input: $input) {
-    success
-    message
-    code
-    pantryItem {
-      ...useOpenPantryItemBatch_pantryItem
+    __typename
+    ... on OpenPantryItemBatchSuccess {
+      pantryItem {
+        ...useOpenPantryItemBatch_pantryItem
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
 mutation WastePantryItemBatch($input: WasteBatchInput!) {
   wastePantryItemBatch(input: $input) {
-    success
-    message
-    code
-    pantryItem {
-      ...useWastePantryItemBatch_pantryItem
+    __typename
+    ... on WastePantryItemBatchSuccess {
+      pantryItem {
+        ...useWastePantryItemBatch_pantryItem
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
 mutation ConvertExpiredBatchesToWaste($pantryItemId: ID!) {
   convertExpiredBatchesToWaste(pantryItemId: $pantryItemId) {
-    success
-    message
-    code
-    pantryItem {
-      ...useConvertExpiredBatchesToWaste_pantryItem
+    __typename
+    ... on ConvertExpiredBatchesToWasteSuccess {
+      pantryItem {
+        ...useConvertExpiredBatchesToWaste_pantryItem
+      }
+    }
+    ... on Error {
+      code
+      message
     }
   }
 }
@@ -759,39 +870,13 @@ mutation SyncDeletePantryItem($clientId: ID!, $version: Int) {
 # SUBSCRIPTIONS
 # ============================================
 
-subscription PantryChanges($pantryId: ID!) {
-  pantryChanged(pantryId: $pantryId) {
-    changeType
-    pantry {
-      id
-      homeId
-      name
-      description
-      location
-      temperature
-      tags
-      metadata
-      version
-      updatedAt
-    }
-    pantryItem {
+subscription PantryItemChanged($pantryId: ID!) {
+  pantryItemChanged(pantryId: $pantryId) {
+    mutation
+    item {
       id
       ...usePantrySubscriptions_pantryItem
     }
-    usage {
-      id
-      quantityUsed
-      usedAt
-      purpose
-      notes
-      pantryItem {
-        id
-      }
-      usedBy {
-        id
-      }
-    }
-    mutation
     updatedFields
     timestamp
     userId
@@ -799,10 +884,9 @@ subscription PantryChanges($pantryId: ID!) {
   }
 }
 
-subscription PantryAlerts($pantryId: ID!) {
-  pantryAlert(pantryId: $pantryId) {
-    alertType
-    pantryItem {
+subscription PantryExpirationAlert($pantryId: ID!) {
+  pantryExpirationAlert(pantryId: $pantryId) {
+    item {
       id
       itemId
       itemName
@@ -820,28 +904,29 @@ subscription PantryAlerts($pantryId: ID!) {
         images { url kind }
       }
     }
-    items {
-      id
-      itemId
-      itemName
-      item {
-        id
-        name
-        imageUrl
-        images { url kind }
-      }
-    }
-    message
+    expiresAt
+    daysUntilExpiration
     pantryId
     timestamp
     userId
   }
 }
 
-subscription ExpirationNotificationChanged($pantryId: ID!) {
-  expirationNotificationChanged(pantryId: $pantryId) {
-    changeType
+subscription ExpirationNotificationCreated($pantryId: ID!) {
+  expirationNotificationCreated(pantryId: $pantryId) {
     notification {
+      id
+      ...usePantrySubscriptions_expirationNotification
+    }
+    pantryId
+    timestamp
+  }
+}
+
+subscription ExpirationNotificationActionTaken($pantryId: ID!) {
+  expirationNotificationActionTaken(pantryId: $pantryId) {
+    notification {
+      id
       ...usePantrySubscriptions_expirationNotification
     }
     pantryId

@@ -54,18 +54,30 @@ export function useRemoveShoppingItem({
     ): Unmasked<RemoveItemFromShoppingListMutation> => ({
       __typename: 'Mutation',
       removeItemFromShoppingList: {
-        __typename: 'ShoppingListItemPayload',
-        success: true,
-        message: '',
-        code: 'SUCCESS',
+        __typename: 'RemoveItemFromShoppingListSuccess',
         shoppingListItem: {
           __typename: 'ShoppingListItem',
           id: variables.id,
+          shoppingList: {
+            __typename: 'ShoppingList',
+            id: listId ?? '',
+            totalItems: 0,
+            completedItems: 0,
+            remainingItems: 0,
+            completionRate: 0,
+          },
         },
       },
     }),
     update(cache, { data }, { variables }) {
-      if (!data?.removeItemFromShoppingList || !listId || !variables) return;
+      if (
+        data?.removeItemFromShoppingList?.__typename !==
+          'RemoveItemFromShoppingListSuccess' ||
+        !listId ||
+        !variables
+      ) {
+        return;
+      }
 
       executeCacheUpdate(
         () => {

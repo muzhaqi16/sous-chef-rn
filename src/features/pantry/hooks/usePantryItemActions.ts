@@ -167,30 +167,40 @@ export function usePantryItemActions({
   /**
    * Handle payload-level errors from pantry mutations.
    * Returns true if an error was detected and handled, false otherwise.
+   *
+   * Accepts either a success-variant (anything with __typename ending in
+   * 'Success') or an error-variant carrying `code` + `message`.
    */
   const handlePayloadError = (
-    payload: {
-      success: boolean;
-      code: string;
-      message: string;
-      validUnits?: string[] | null;
-    },
+    payload: { __typename: string } & Record<string, unknown>,
     revertFn?: () => void,
   ): boolean => {
-    if (payload.success) return false;
+    // Success variants are named *Success and don't carry an error code
+    if (payload.__typename.endsWith('Success')) return false;
 
     revertFn?.();
 
-    if (isInvalidUnitPayload(payload)) {
-      const validList = payload.validUnits?.join(', ');
+    const code =
+      typeof payload.code === 'string' ? (payload.code as string) : '';
+    const message =
+      typeof payload.message === 'string'
+        ? (payload.message as string)
+        : 'Something went wrong';
+    const errorShape = { success: false, code, message };
+
+    if (isInvalidUnitPayload(errorShape)) {
+      const rawValidUnits = (payload as { validUnits?: unknown }).validUnits;
+      const validList = Array.isArray(rawValidUnits)
+        ? (rawValidUnits as string[]).join(', ')
+        : undefined;
       const detail = validList
-        ? `${payload.message}\n\nValid units: ${validList}`
-        : payload.message;
+        ? `${message}\n\nValid units: ${validList}`
+        : message;
       alertService.alert('Invalid Unit', detail);
-    } else if (isVersionConflictPayload(payload)) {
-      alertService.alert('Item Updated', payload.message);
+    } else if (isVersionConflictPayload(errorShape)) {
+      alertService.alert('Item Updated', message);
     } else {
-      alertService.alert('Error', payload.message);
+      alertService.alert('Error', message);
     }
 
     return true;
@@ -408,8 +418,8 @@ export function usePantryItemActions({
       () =>
         restockPantryItem({
           variables: {
-            id: itemId,
             input: {
+              id: itemId,
               quantity,
               unitId,
               notes: restockNotes,

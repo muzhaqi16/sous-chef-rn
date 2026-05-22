@@ -24,10 +24,7 @@ import {
   isPantryItemDuplicateError,
   getPantryItemDuplicateInfo,
 } from '#/utils/errors/pantryItemDuplicate';
-import {
-  addToPantryItemsCache,
-  adjustPantryTotalItemsCount,
-} from '#hooks/home/pantry/utils';
+import { addToPantryItemsCache } from '#hooks/home/pantry/utils';
 import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
 import { AddItemSheet } from '../AddItemSheet/AddItemSheet';
 import { useAddItemSheetState } from '../AddItemSheet/useAddItemSheetState';
@@ -88,21 +85,27 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   // Create pantry item mutation — synchronous cache update prevents flickering
   const [createPantryItem] = useMutation(CreatePantryItemDocument, {
     update: (cache, { data }) => {
-      const pantryItem = data?.createPantryItem?.pantryItem;
-      if (!pantryItem || !pantryId) return;
+      const payload = data?.createPantryItem;
+      if (payload?.__typename !== 'CreatePantryItemSuccess' || !pantryId)
+        return;
+      const pantryItem = payload.pantryItem;
 
-      executeCacheUpdate(() => {
-        addToPantryItemsCache(cache, pantryId, pantryItem);
-        adjustPantryTotalItemsCount(cache, pantryId, 1);
-      }, 'Cache update failed for createPantryItem:');
+      executeCacheUpdate(
+        () => addToPantryItemsCache(cache, pantryId, pantryItem),
+        'Cache update failed for createPantryItem:',
+      );
     },
   });
 
   // Restock pantry item mutation
   const [restockPantryItem] = useMutation(RestockPantryItemDocument, {
     update: (cache, { data }) => {
-      const pantryItem = data?.restockPantryItem?.pantryItemUsage?.pantryItem;
-      if (!pantryItem || !pantryId) return;
+      const payload = data?.restockPantryItem;
+      if (payload?.__typename !== 'RestockPantryItemSuccess' || !pantryId) {
+        return;
+      }
+      const pantryItem = payload.pantryItemUsage.pantryItem;
+      if (!pantryItem) return;
       // Force connection cache broadcast — the item already exists,
       // so addToPantryItemsCache will detect the duplicate and return
       // the existing connection unchanged, but cache.modify still
@@ -195,8 +198,10 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
             // Auto-restock by 1 for quick-add
             restockPantryItem({
               variables: {
-                id: duplicateInfo.existingPantryItemId,
-                input: { quantity: 1 },
+                input: {
+                  id: duplicateInfo.existingPantryItemId,
+                  quantity: 1,
+                },
               },
             })
               .then(() => onItemAdded?.())
@@ -251,8 +256,10 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
             // Auto-restock by 1 for quick-add
             restockPantryItem({
               variables: {
-                id: duplicateInfo.existingPantryItemId,
-                input: { quantity: 1 },
+                input: {
+                  id: duplicateInfo.existingPantryItemId,
+                  quantity: 1,
+                },
               },
             })
               .then(() => onItemAdded?.())

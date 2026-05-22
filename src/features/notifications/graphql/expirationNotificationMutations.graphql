@@ -4,39 +4,54 @@
 
 mutation MarkExpirationAction($input: MarkActionInput!) {
   markExpirationAction(input: $input) {
-    success
-    message
-    code
-    expirationNotification {
-      id
-      status
-      actionTaken
+    __typename
+    ... on MarkExpirationActionSuccess {
+      expirationNotification {
+        id
+        status
+        actionTaken
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
 mutation DismissExpirationNotification($input: DismissNotificationInput!) {
   dismissExpirationNotification(input: $input) {
-    success
-    message
-    code
-    expirationNotification {
-      id
-      status
-      actionTaken
+    __typename
+    ... on DismissExpirationNotificationSuccess {
+      expirationNotification {
+        id
+        status
+        actionTaken
+      }
+    }
+    ... on Error {
+      code
+      message
     }
   }
 }
 
 mutation MarkExpirationNotificationAsRead($notificationId: ID!) {
   markExpirationNotificationAsRead(notificationId: $notificationId) {
-    success
-    message
-    code
-    expirationNotification {
-      id
-      status
-      actionTaken
+    __typename
+    ... on MarkExpirationNotificationAsReadSuccess {
+      expirationNotification {
+        id
+        status
+        actionTaken
+      }
+    }
+    ... on Error {
+      code
+      message
     }
   }
 }

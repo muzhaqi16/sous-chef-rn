@@ -4,32 +4,47 @@
 
 mutation MarkNotificationAsRead($id: ID!) {
   markNotificationAsRead(id: $id) {
-    success
-    message
-    code
-    notification {
-      id
-      status
+    __typename
+    ... on MarkNotificationAsReadSuccess {
+      notification {
+        id
+        status
+      }
+    }
+    ... on Error {
+      code
+      message
     }
   }
 }
 
 mutation MarkNotificationUnread($id: ID!) {
   markNotificationUnread(id: $id) {
-    success
-    message
-    code
-    notification {
-      id
-      status
+    __typename
+    ... on MarkNotificationUnreadSuccess {
+      notification {
+        id
+        status
+      }
+    }
+    ... on Error {
+      code
+      message
     }
   }
 }
 
 mutation DeleteNotification($id: ID!) {
   deleteNotification(id: $id) {
-    success
-    message
-    code
+    __typename
+    ... on DeleteNotificationSuccess {
+      notification {
+        id
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
   }
 }

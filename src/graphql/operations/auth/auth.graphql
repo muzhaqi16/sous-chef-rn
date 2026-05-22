@@ -33,11 +33,18 @@ mutation RefreshToken($token: String!) {
 
 mutation VerifyEmail($code: String!) {
   verifyEmail(code: $code) {
-    success
-    message
-    code
-    user {
-      ...LoginUser
+    __typename
+    ... on VerifyEmailSuccess {
+      user {
+        ...LoginUser
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
@@ -60,9 +67,19 @@ mutation ResetPassword($token: String!, $newPassword: String!) {
 
 mutation ResendVerificationEmail($email: String!) {
   resendVerificationEmail(email: $email) {
-    success
-    message
-    code
+    __typename
+    ... on ResendVerificationEmailSuccess {
+      user {
+        id
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
+    }
   }
 }
 

@@ -231,12 +231,13 @@ export function useShoppingListActions({
             version: cachedItem.version,
           },
           onCompleted: data => {
-            const updatedItem =
-              data?.updateShoppingListItemQuantity?.shoppingListItem;
-            if (updatedItem) {
+            const payload = data?.updateShoppingListItemQuantity;
+            if (
+              payload?.__typename === 'UpdateShoppingListItemQuantitySuccess'
+            ) {
               optimisticDataPersistence.clear(
                 'ShoppingListItem',
-                updatedItem.id,
+                payload.shoppingListItem.id,
                 'quantity',
               );
             }
@@ -299,12 +300,13 @@ export function useShoppingListActions({
             version: cachedItem.version,
           },
           onCompleted: data => {
-            const updatedItem =
-              data?.updateShoppingListItemQuantity?.shoppingListItem;
-            if (updatedItem) {
+            const payload = data?.updateShoppingListItemQuantity;
+            if (
+              payload?.__typename === 'UpdateShoppingListItemQuantitySuccess'
+            ) {
               optimisticDataPersistence.clear(
                 'ShoppingListItem',
-                updatedItem.id,
+                payload.shoppingListItem.id,
                 'quantity',
               );
             }

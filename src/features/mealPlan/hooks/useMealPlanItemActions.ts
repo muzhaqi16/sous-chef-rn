@@ -32,13 +32,13 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
     CreateMealPlanItemDocument,
     {
       update(cache, { data }) {
-        if (!data?.createMealPlanItem?.mealPlanItem || !mealPlanId) return;
-        addToMealPlanItems(
-          cache,
-          mealPlanId,
-          data.createMealPlanItem.mealPlanItem,
-          { position: 'end' },
-        );
+        const result = data?.createMealPlanItem;
+        if (result?.__typename !== 'CreateMealPlanItemSuccess' || !mealPlanId) {
+          return;
+        }
+        addToMealPlanItems(cache, mealPlanId, result.mealPlanItem, {
+          position: 'end',
+        });
       },
     },
   );
@@ -53,13 +53,13 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
     DeleteMealPlanItemDocument,
     {
       update(cache, { data }) {
-        if (!data?.deleteMealPlanItem?.mealPlanItem?.id || !mealPlanId) return;
-        removeFromMealPlanItems(
-          cache,
-          mealPlanId,
-          data.deleteMealPlanItem.mealPlanItem.id,
-          { evictItem: true },
-        );
+        const result = data?.deleteMealPlanItem;
+        if (result?.__typename !== 'DeleteMealPlanItemSuccess' || !mealPlanId) {
+          return;
+        }
+        removeFromMealPlanItems(cache, mealPlanId, result.mealPlanItem.id, {
+          evictItem: true,
+        });
       },
     },
   );
@@ -69,20 +69,25 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
       variables: { input },
     });
     const payload = result.data?.createMealPlanItem;
-    if (!payload?.success) {
-      toastService.error(payload?.message ?? 'Failed to add meal');
+    if (payload?.__typename !== 'CreateMealPlanItemSuccess') {
+      const message = payload && 'message' in payload ? payload.message : null;
+      toastService.error(message ?? 'Failed to add meal');
       return null;
     }
     return payload;
   };
 
-  const updateItem = async (id: string, input: UpdateMealPlanItemInput) => {
+  const updateItem = async (
+    id: string,
+    input: Omit<UpdateMealPlanItemInput, 'id'>,
+  ) => {
     const result = await updateItemMutation({
-      variables: { id, input },
+      variables: { input: { ...input, id } },
     });
     const payload = result.data?.updateMealPlanItem;
-    if (!payload?.success) {
-      toastService.error(payload?.message ?? 'Failed to update meal');
+    if (payload?.__typename !== 'UpdateMealPlanItemSuccess') {
+      const message = payload && 'message' in payload ? payload.message : null;
+      toastService.error(message ?? 'Failed to update meal');
       return null;
     }
     return payload;
@@ -120,8 +125,8 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
 
     const result = await updateItemMutation({
       variables: {
-        id: fullItem.id,
         input: {
+          id: fullItem.id,
           isCompleted: markingComplete,
           completedAt,
           ...(markingComplete &&
@@ -135,10 +140,7 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
       optimisticResponse: {
         __typename: 'Mutation',
         updateMealPlanItem: {
-          __typename: 'MealPlanItemPayload',
-          success: true,
-          message: 'Updated',
-          code: 'SUCCESS',
+          __typename: 'UpdateMealPlanItemSuccess',
           mealPlanItem: {
             ...fullItem,
             isCompleted: markingComplete,
@@ -151,8 +153,9 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
     });
 
     const payload = result.data?.updateMealPlanItem;
-    if (!payload?.success) {
-      toastService.error(payload?.message ?? 'Failed to update meal');
+    if (payload?.__typename !== 'UpdateMealPlanItemSuccess') {
+      const message = payload && 'message' in payload ? payload.message : null;
+      toastService.error(message ?? 'Failed to update meal');
       return null;
     }
 
@@ -174,7 +177,10 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
     const result = await deleteItemMutation({
       variables: { id },
     });
-    return result.data?.deleteMealPlanItem?.success ?? false;
+    return (
+      result.data?.deleteMealPlanItem?.__typename ===
+      'DeleteMealPlanItemSuccess'
+    );
   };
 
   return {

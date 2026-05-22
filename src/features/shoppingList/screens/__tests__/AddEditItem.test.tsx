@@ -193,10 +193,7 @@ function buildAddItemMock(): MockedResponse {
     result: {
       data: {
         addItemToShoppingList: {
-          __typename: 'ShoppingListItemPayload',
-          success: true,
-          message: 'OK',
-          code: 'SUCCESS',
+          __typename: 'AddItemToShoppingListSuccess',
           shoppingListItem: buildShoppingListItem('new-item'),
         },
       },
@@ -211,11 +208,9 @@ function buildAddItemNullMock(): MockedResponse {
     result: {
       data: {
         addItemToShoppingList: {
-          __typename: 'ShoppingListItemPayload',
-          success: false,
+          __typename: 'ConflictError',
+          code: 'CONFLICT',
           message: 'No item',
-          code: 'ERROR',
-          shoppingListItem: null,
         },
       },
     },
@@ -245,10 +240,7 @@ function buildUpdateItemMock(): MockedResponse {
     result: {
       data: {
         updateShoppingListItem: {
-          __typename: 'ShoppingListItemPayload',
-          success: true,
-          message: 'OK',
-          code: 'SUCCESS',
+          __typename: 'UpdateShoppingListItemSuccess',
           shoppingListItem: buildShoppingListItem('item1'),
         },
       },
@@ -263,11 +255,9 @@ function buildUpdateItemNullMock(): MockedResponse {
     result: {
       data: {
         updateShoppingListItem: {
-          __typename: 'ShoppingListItemPayload',
-          success: false,
+          __typename: 'ConflictError',
+          code: 'CONFLICT',
           message: 'No item',
-          code: 'ERROR',
-          shoppingListItem: null,
         },
       },
     },

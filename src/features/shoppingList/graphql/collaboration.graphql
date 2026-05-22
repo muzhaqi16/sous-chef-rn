@@ -46,30 +46,44 @@ query MyShoppingListInvites {
 
 mutation AcceptShoppingListInvite($token: String!) {
   acceptShoppingListInvite(token: $token) {
-    success
-    message
-    code
-    collaborator {
-      ...ShoppingListCollaboratorFragment
-      canEdit
-      canInviteOthers
-      invitedAt
-      shoppingList {
-        id
-        name
-        description
+    __typename
+    ... on AcceptShoppingListInviteSuccess {
+      collaborator {
+        ...ShoppingListCollaboratorFragment
+        canEdit
+        canInviteOthers
+        invitedAt
+        shoppingList {
+          id
+          name
+          description
+        }
       }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
 mutation DeclineShoppingListInvite($token: String!) {
   declineShoppingListInvite(token: $token) {
-    success
-    message
-    code
-    collaborator {
-      id
+    __typename
+    ... on DeclineShoppingListInviteSuccess {
+      collaborator {
+        id
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }

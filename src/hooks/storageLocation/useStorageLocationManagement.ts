@@ -151,8 +151,14 @@ export function useStorageLocationManagement(
 
   const [deleteMutation] = useMutation(DeleteStorageLocationDocument, {
     update: (cache, { data }, { variables }) => {
-      if (!data?.deleteStorageLocation?.success || !variables || !homeId)
+      if (
+        data?.deleteStorageLocation?.__typename !==
+          'DeleteStorageLocationSuccess' ||
+        !variables ||
+        !homeId
+      ) {
         return;
+      }
 
       executeCacheUpdate(
         () => {
@@ -198,14 +204,17 @@ export function useStorageLocationManagement(
 
   const updateLocation = async (
     id: string,
-    input: UpdateStorageLocationInput,
+    input: Omit<UpdateStorageLocationInput, 'id'>,
   ) => {
     const result = await executeMutation(
-      () => updateMutation({ variables: { id, input } }),
+      () => updateMutation({ variables: { input: { ...input, id } } }),
       'Update storage location error:',
     );
     if (!result) return false;
-    return result.data?.updateStorageLocation?.storageLocation ?? false;
+    return result.data?.updateStorageLocation?.__typename ===
+      'UpdateStorageLocationSuccess'
+      ? result.data.updateStorageLocation.storageLocation
+      : false;
   };
 
   const deleteLocation = async (id: string) => {
@@ -215,14 +224,13 @@ export function useStorageLocationManagement(
     );
     if (!result) return false;
     const payload = result.data?.deleteStorageLocation;
-    if (payload?.success) {
+    if (payload?.__typename === 'DeleteStorageLocationSuccess') {
       toastService.success('Storage location deleted');
-    } else {
-      toastService.error(
-        payload?.message ?? 'Failed to delete storage location',
-      );
+      return true;
     }
-    return payload?.success ?? false;
+    const message = payload && 'message' in payload ? payload.message : null;
+    toastService.error(message ?? 'Failed to delete storage location');
+    return false;
   };
 
   const setDefaultLocation = async (id: string) => {
@@ -231,7 +239,10 @@ export function useStorageLocationManagement(
       'Set default storage location error:',
     );
     if (!result) return false;
-    return result.data?.setDefaultStorageLocation?.storageLocation ?? false;
+    return result.data?.setDefaultStorageLocation?.__typename ===
+      'SetDefaultStorageLocationSuccess'
+      ? result.data.setDefaultStorageLocation.storageLocation
+      : false;
   };
 
   // Preserve data even when query fails to prevent cascade failures

@@ -98,7 +98,7 @@ export const CreateMealPlanScreen: React.FC = () => {
     servings?: number;
   }) => {
     const result = await createPlanFromTemplate(config);
-    if (result?.success) {
+    if (result?.__typename === 'CreateMealPlanSuccess') {
       setTemplatePreviewVisible(false);
       setSelectedTemplate(null);
       goBack();
@@ -143,10 +143,13 @@ export const CreateMealPlanScreen: React.FC = () => {
       return;
     }
 
-    if (result?.success) {
+    if (result?.__typename === 'CreateMealPlanSuccess') {
       goBack();
     } else {
-      const message = result?.message ?? t('mealPlan.failedToCreate');
+      const message =
+        result && 'message' in result
+          ? result.message
+          : t('mealPlan.failedToCreate');
       alertService.alert(t('labels.error'), message);
     }
   };

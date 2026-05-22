@@ -37,15 +37,15 @@ const successMock = (id: string): MockedResponse => ({
   result: {
     data: {
       convertExpiredToWaste: {
-        __typename: 'PantryItemPayload',
-        success: true,
-        message: '',
-        code: 'SUCCESS',
+        __typename: 'ConvertExpiredToWasteSuccess',
         pantryItem: {
           __typename: 'PantryItem',
           id,
-          quantity: 0,
+          version: 2,
+          quantity: '0',
           condition: 'SPOILED',
+          wasteReason: 'EXPIRED',
+          storageState: 'WASTE',
         },
       },
     },
@@ -60,7 +60,7 @@ const errorMock = (id: string): MockedResponse => ({
   error: new Error('Something went wrong'),
 });
 
-const nullPantryItemMock = (id: string): MockedResponse => ({
+const notFoundErrorMock = (id: string): MockedResponse => ({
   request: {
     query: ConvertExpiredToWasteDocument,
     variables: { pantryItemId: id },
@@ -68,11 +68,11 @@ const nullPantryItemMock = (id: string): MockedResponse => ({
   result: {
     data: {
       convertExpiredToWaste: {
-        __typename: 'PantryItemPayload',
-        success: true,
-        message: '',
-        code: 'SUCCESS',
-        pantryItem: null,
+        __typename: 'NotFoundError',
+        code: 'NOT_FOUND',
+        message: 'Pantry item not found',
+        resource: 'PantryItem',
+        resourceId: id,
       },
     },
   },
@@ -120,8 +120,8 @@ describe('useConvertExpiredToWaste', () => {
     );
   });
 
-  it('returns false when mutation returns no pantryItem', async () => {
-    const { result } = renderWith([nullPantryItemMock('item-1')]);
+  it('returns false when mutation returns a NotFoundError', async () => {
+    const { result } = renderWith([notFoundErrorMock('item-1')]);
 
     let success: boolean | undefined;
     await act(async () => {

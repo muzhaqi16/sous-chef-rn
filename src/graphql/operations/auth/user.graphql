@@ -73,110 +73,142 @@ query CanDeleteAccount {
 # MUTATIONS
 # ============================================
 
-mutation UpdateUser($id: ID!, $input: UpdateUserInput!) {
-  updateUser(id: $id, input: $input) {
-    success
-    message
-    code
-    user {
-      id
-      email
-      emailVerified
-      role
-      onBoarded
-      timezone
-      preferredCurrency
-      language
-      defaultShoppingListId
-      defaultHomeId
-      createdAt
-      updatedAt
-      lastActiveAt
+mutation UpdateUser($input: UpdateUserInput!) {
+  updateUser(input: $input) {
+    __typename
+    ... on UpdateUserSuccess {
+      user {
+        id
+        email
+        emailVerified
+        role
+        onBoarded
+        timezone
+        preferredCurrency
+        language
+        defaultShoppingListId
+        defaultHomeId
+        createdAt
+        updatedAt
+        lastActiveAt
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
 mutation UpdateUserProfile($input: UpdateUserProfileInput!) {
   updateProfile(input: $input) {
-    success
-    message
-    code
-    userProfile {
-      id
-      userId
-      firstName
-      lastName
-      displayName
-      bio
-      avatar
-      coverImage
-      phone
-      website
-      dateOfBirth
-      gender
-      profileVisibility
-      showEmail
-      showPhone
-      createdAt
-      updatedAt
+    __typename
+    ... on UpdateProfileSuccess {
+      userProfile {
+        id
+        userId
+        firstName
+        lastName
+        displayName
+        bio
+        avatar
+        coverImage
+        phone
+        website
+        dateOfBirth
+        gender
+        profileVisibility
+        showEmail
+        showPhone
+        createdAt
+        updatedAt
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
 mutation UpdateUserPreferences($input: UpdateUserSettingsInput!) {
   updateSettings(input: $input) {
-    success
-    message
-    code
-    userSettings {
-      id
-      user {
+    __typename
+    ... on UpdateSettingsSuccess {
+      userSettings {
         id
-        email
+        user {
+          id
+          email
+        }
+        theme
+        compactMode
+        showTutorials
+        autoSync
+        offlineMode
+        shareUsageData
+        shareWithPartners
+        personalizedAds
+        preferredUnitSystem
+        language
+        timezone
+        preferredCurrency
+        enabledFeatures
+        betaFeatures
+        createdAt
+        updatedAt
       }
-      theme
-      compactMode
-      showTutorials
-      autoSync
-      offlineMode
-      shareUsageData
-      shareWithPartners
-      personalizedAds
-      preferredUnitSystem
-      language
-      timezone
-      preferredCurrency
-      enabledFeatures
-      betaFeatures
-      createdAt
-      updatedAt
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
 mutation DeleteAccount {
   deleteAccount {
-    success
-    message
-    code
+    __typename
+    ... on DeleteAccountSuccess {
+      user {
+        id
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
   }
 }
 
 mutation CompleteOnboarding {
   completeOnboarding {
-    success
-    message
-    code
-    user {
-      id
-      email
-      emailVerified
-      role
-      canAccessDevTools
-      onBoarded
-      createdAt
-      updatedAt
-      timezone
+    __typename
+    ... on CompleteOnboardingSuccess {
+      user {
+        id
+        email
+        emailVerified
+        role
+        canAccessDevTools
+        onBoarded
+        createdAt
+        updatedAt
+        timezone
+      }
+    }
+    ... on Error {
+      code
+      message
     }
   }
 }
@@ -185,10 +217,10 @@ mutation CompleteOnboarding {
 # SUBSCRIPTIONS
 # ============================================
 
-subscription UserChanges($userId: ID) {
-  userChanged(userId: $userId) {
-    changeType
-    user {
+subscription UserUpdated($userId: ID) {
+  userUpdated(userId: $userId) {
+    mutation
+    node {
       id
       email
       emailVerified
@@ -199,6 +231,15 @@ subscription UserChanges($userId: ID) {
       language
       lastActiveAt
     }
+    updatedFields
+    timestamp
+    userId
+  }
+}
+
+subscription UserProfileChanged($userId: ID) {
+  userProfileChanged(userId: $userId) {
+    mutation
     profile {
       id
       firstName

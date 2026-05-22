@@ -69,22 +69,36 @@ fragment InvitationAcceptanceModal_collaborator on ShoppingListCollaborator {
 
 mutation InvitationAcceptanceModalAcceptShoppingListInvite($token: String!) {
   acceptShoppingListInvite(token: $token) {
-    success
-    message
-    code
-    collaborator {
-      ...InvitationAcceptanceModal_collaborator
+    __typename
+    ... on AcceptShoppingListInviteSuccess {
+      collaborator {
+        ...InvitationAcceptanceModal_collaborator
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
-mutation DeclineShoppingListInvite($token: String!) {
+mutation InvitationAcceptanceModalDeclineShoppingListInvite($token: String!) {
   declineShoppingListInvite(token: $token) {
-    success
-    message
-    code
-    collaborator {
-      id
+    __typename
+    ... on DeclineShoppingListInviteSuccess {
+      collaborator {
+        id
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }

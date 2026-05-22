@@ -221,7 +221,11 @@ const MealPlanMainInner: React.FC = () => {
     DeleteMealPlanDocument,
     {
       update(cache, { data }, { variables }) {
-        const id = data?.deleteMealPlan?.mealPlan?.id ?? variables?.id;
+        const result = data?.deleteMealPlan;
+        const id =
+          result?.__typename === 'DeleteMealPlanSuccess'
+            ? result.mealPlan.id
+            : variables?.id;
         if (id) removeFromMealPlansForMain(cache, id, { evictItem: true });
       },
       onError: error => {
@@ -369,7 +373,7 @@ const MealPlanMainInner: React.FC = () => {
     tags?: string[];
   }) => {
     const result = await createTemplateFromPlan(input);
-    if (result?.success) {
+    if (result?.__typename === 'CreateTemplateFromMealPlanSuccess') {
       setSaveTemplateVisible(false);
     }
   };
@@ -402,7 +406,7 @@ const MealPlanMainInner: React.FC = () => {
     servings?: number;
   }) => {
     const result = await createPlanFromTemplate(config);
-    if (result?.success) {
+    if (result?.__typename === 'CreateMealPlanSuccess') {
       setTemplatePreviewVisible(false);
       setSelectedTemplate(null);
     }
@@ -415,7 +419,7 @@ const MealPlanMainInner: React.FC = () => {
     newEndDate: string;
   }) => {
     const result = await duplicatePlan(input);
-    if (result?.success) {
+    if (result?.__typename === 'DuplicateMealPlanSuccess') {
       setDuplicateVisible(false);
     }
   };
@@ -426,7 +430,10 @@ const MealPlanMainInner: React.FC = () => {
       // Error handled by onError callback on the mutation hook
       () => {},
     );
-    if (result && result.data?.deleteMealPlan?.success) {
+    if (
+      result &&
+      result.data?.deleteMealPlan?.__typename === 'DeleteMealPlanSuccess'
+    ) {
       toastService.success(t('mealPlanMain.mealPlanDeleted'));
       // If we deleted the active plan, clear the selection so the UI falls back
       // to the next available plan (or the empty state if none remain).
@@ -443,7 +450,7 @@ const MealPlanMainInner: React.FC = () => {
     shoppingListId?: string;
   }) => {
     const result = await generateShoppingList(options);
-    if (result?.success) {
+    if (result?.__typename === 'GenerateShoppingListFromMealPlanSuccess') {
       setShoppingListSheetVisible(false);
     }
   };

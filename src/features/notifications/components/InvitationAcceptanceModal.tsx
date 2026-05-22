@@ -15,7 +15,7 @@ import {
 } from '#operations/home/home.generated';
 import {
   InvitationAcceptanceModalAcceptShoppingListInviteDocument,
-  DeclineShoppingListInviteDocument,
+  InvitationAcceptanceModalDeclineShoppingListInviteDocument,
   MyShoppingListInvitesDocument,
   type MyShoppingListInvitesQuery,
 } from './InvitationAcceptanceModal.generated';
@@ -87,9 +87,9 @@ export const InvitationAcceptanceModal: React.FC<
 
   const [acceptHomeInvite] = useMutation(AcceptHomeInviteDocument, {
     update: (cache, { data }) => {
-      const home = data?.acceptHomeInvite?.membership?.home;
-      if (home) {
-        addToHomes(cache, home, { position: 'end' });
+      const payload = data?.acceptHomeInvite;
+      if (payload?.__typename === 'AcceptHomeInviteSuccess') {
+        addToHomes(cache, payload.membership.home, { position: 'end' });
       }
       const inviteId = invitation?.payload?.inviteId as string | undefined;
       if (inviteId && userId) {
@@ -101,7 +101,12 @@ export const InvitationAcceptanceModal: React.FC<
     InvitationAcceptanceModalAcceptShoppingListInviteDocument,
     {
       update: (cache, { data }) => {
-        if (!data?.acceptShoppingListInvite?.success) return;
+        if (
+          data?.acceptShoppingListInvite?.__typename !==
+          'AcceptShoppingListInviteSuccess'
+        ) {
+          return;
+        }
         const inviteId = invitation?.payload?.inviteId as string | undefined;
         if (inviteId && userId) {
           // Don't evict — accepting transitions the pending collaborator record
@@ -114,7 +119,9 @@ export const InvitationAcceptanceModal: React.FC<
   );
   const [declineHomeInvite] = useMutation(DeclineHomeInviteDocument, {
     update: (cache, { data }) => {
-      const id = data?.declineHomeInvite?.homeInvite?.id;
+      const payload = data?.declineHomeInvite;
+      if (payload?.__typename !== 'DeclineHomeInviteSuccess') return;
+      const id = payload.homeInvite.id;
       if (id && userId) {
         removePendingHomeInvite(cache, userId, id, { evictItem: true });
       } else if (id) {
@@ -123,7 +130,7 @@ export const InvitationAcceptanceModal: React.FC<
     },
   });
   const [declineShoppingListInvite] = useMutation(
-    DeclineShoppingListInviteDocument,
+    InvitationAcceptanceModalDeclineShoppingListInviteDocument,
     {
       update: cache => {
         const inviteId = invitation?.payload?.inviteId as string | undefined;
@@ -184,7 +191,10 @@ export const InvitationAcceptanceModal: React.FC<
             return;
           }
 
-          if (result.data?.acceptHomeInvite?.membership) {
+          if (
+            result.data?.acceptHomeInvite?.__typename ===
+            'AcceptHomeInviteSuccess'
+          ) {
             const newHomeId = result.data.acceptHomeInvite.membership.homeId;
 
             // Pass the homeId to the handler so it can update the store
@@ -194,10 +204,6 @@ export const InvitationAcceptanceModal: React.FC<
             };
 
             onAccept?.(invitationWithHomeId);
-            onClose();
-          } else if (result.data?.acceptHomeInvite?.success) {
-            // Already accepted — token was valid but no new membership created
-            onAccept?.(invitation);
             onClose();
           }
         } else if (invitation.type === 'SHOPPING_LIST_INVITE') {
@@ -216,7 +222,10 @@ export const InvitationAcceptanceModal: React.FC<
             return;
           }
 
-          if (result.data?.acceptShoppingListInvite?.success) {
+          if (
+            result.data?.acceptShoppingListInvite?.__typename ===
+            'AcceptShoppingListInviteSuccess'
+          ) {
             onAccept?.(invitation);
             onClose();
           }

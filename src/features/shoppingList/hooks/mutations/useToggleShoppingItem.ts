@@ -172,9 +172,10 @@ export function useToggleShoppingItem({
     );
     if (!result) return false;
 
-    return (
-      result.data?.toggleShoppingListItemPurchased?.shoppingListItem ?? false
-    );
+    return result.data?.toggleShoppingListItemPurchased?.__typename ===
+      'ToggleShoppingListItemPurchasedSuccess'
+      ? result.data.toggleShoppingListItemPurchased.shoppingListItem
+      : false;
   };
 
   return { toggleItem };

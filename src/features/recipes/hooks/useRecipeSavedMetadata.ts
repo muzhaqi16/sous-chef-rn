@@ -31,8 +31,12 @@ export function useRecipeSavedMetadata({
     UpdateFavoriteRecipeDocument,
     {
       update: (cache, { data }) => {
-        if (!data?.updateFavoriteRecipe?.savedRecipe) return;
-
+        if (
+          data?.updateFavoriteRecipe?.__typename !==
+          'UpdateFavoriteRecipeSuccess'
+        ) {
+          return;
+        }
         const updatedSavedRecipe = data.updateFavoriteRecipe.savedRecipe;
 
         const folder = updatedSavedRecipe.folder;
@@ -85,7 +89,12 @@ export function useRecipeSavedMetadata({
 
   const [unfavoriteRecipeMutation] = useMutation(UnfavoriteRecipeDocument, {
     update: (cache, { data }, { variables }) => {
-      if (!data?.unfavoriteRecipe?.success || !variables?.recipeId) return;
+      if (
+        data?.unfavoriteRecipe?.__typename !== 'UnfavoriteRecipeSuccess' ||
+        !variables?.recipeId
+      ) {
+        return;
+      }
 
       cache.updateQuery<MySavedRecipesQuery>(
         { query: MySavedRecipesDocument },

@@ -42,8 +42,8 @@ export function useAdjustPantryItemQuantity({
   ): Promise<boolean> => {
     const result = await adjustMutation({
       variables: {
-        id: pantryItemId,
         input: {
+          id: pantryItemId,
           newQuantity,
           reason,
           ...(version != null ? { version } : {}),
@@ -51,8 +51,8 @@ export function useAdjustPantryItemQuantity({
         },
       },
       update: (_cache, { data: mutationData }) => {
-        const pantryItem = mutationData?.adjustPantryItemQuantity?.pantryItem;
-        if (!pantryItem) return;
+        const payload = mutationData?.adjustPantryItemQuantity;
+        if (payload?.__typename !== 'AdjustPantryItemQuantitySuccess') return;
 
         // Apollo auto-normalizes the mutation response into the cached
         // PantryItem entity via __typename + id; no explicit writeFragment
@@ -67,7 +67,10 @@ export function useAdjustPantryItemQuantity({
       },
     });
 
-    if (result.data?.adjustPantryItemQuantity?.pantryItem) {
+    if (
+      result.data?.adjustPantryItemQuantity?.__typename ===
+      'AdjustPantryItemQuantitySuccess'
+    ) {
       optimisticDataPersistence.clear('PantryItem', pantryItemId, 'quantity');
       onSuccess?.();
       return true;

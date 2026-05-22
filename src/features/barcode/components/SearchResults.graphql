@@ -21,43 +21,63 @@ fragment SearchResults_pantryItem on PantryItem {
 
 mutation BarcodeAddItemToShoppingList($input: CreateShoppingListItemInput!) {
   addItemToShoppingList(input: $input) {
-    success
-    message
-    code
-    shoppingListItem {
-      id
-      ...SearchResults_shoppingListItem
+    __typename
+    ... on AddItemToShoppingListSuccess {
+      shoppingListItem {
+        id
+        ...SearchResults_shoppingListItem
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
 mutation BarcodeCreatePantryItem($input: CreatePantryItemInput!) {
   createPantryItem(input: $input) {
-    success
-    message
-    code
-    pantryItem {
-      id
-      ...SearchResults_pantryItem
+    __typename
+    ... on CreatePantryItemSuccess {
+      pantryItem {
+        id
+        ...SearchResults_pantryItem
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
-mutation BarcodeRestockPantryItem($id: ID!, $input: RestockPantryItemInput!) {
-  restockPantryItem(id: $id, input: $input) {
-    success
-    message
-    code
-    validUnits
-    pantryItemUsage {
-      id
-      quantityUsed
-      purpose
-      costPerUnit
-      totalCost
-      pantryItem {
-        ...SearchResults_pantryItem
+mutation BarcodeRestockPantryItem($input: RestockPantryItemInput!) {
+  restockPantryItem(input: $input) {
+    __typename
+    ... on RestockPantryItemSuccess {
+      pantryItemUsage {
+        id
+        quantityUsed
+        purpose
+        costPerUnit
+        totalCost
+        pantryItem {
+          ...SearchResults_pantryItem
+        }
       }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }

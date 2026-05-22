@@ -7,7 +7,7 @@ import {
 } from '#features/recipes/graphql/recipe.generated';
 import { type MaterializedRecipe } from './useRecipeData';
 import {
-  AddItemToShoppingListDocument,
+  AddItemToShoppingListFromRecipeDocument,
   AddItemsToShoppingListDocument,
   GetShoppingListsLiteDocument,
   CreateShoppingListDocument,
@@ -124,9 +124,9 @@ export function useRecipeShoppingList({
   );
   const [createShoppingListMutation] = useMutation(CreateShoppingListDocument, {
     update(cache, { data }) {
-      const newList = data?.createShoppingList?.shoppingList;
-      if (newList) {
-        addToShoppingListsCache(cache, newList);
+      const payload = data?.createShoppingList;
+      if (payload?.__typename === 'CreateShoppingListSuccess') {
+        addToShoppingListsCache(cache, payload.shoppingList);
       }
     },
     onError: () => {
@@ -178,13 +178,18 @@ export function useRecipeShoppingList({
   );
 
   const [addItemToShoppingListMutation] = useMutation(
-    AddItemToShoppingListDocument,
+    AddItemToShoppingListFromRecipeDocument,
     {
       update: (cache, { data }, { variables }) => {
-        if (!data?.addItemToShoppingList?.shoppingListItem || !variables)
+        const payload = data?.addItemToShoppingList;
+        if (
+          payload?.__typename !== 'AddItemToShoppingListSuccess' ||
+          !variables
+        ) {
           return;
+        }
         executeCacheUpdate(() => {
-          const item = data.addItemToShoppingList!.shoppingListItem!;
+          const item = payload.shoppingListItem;
           const shoppingListId = variables.input.shoppingListId;
           addNewItemToShoppingListCache(cache, shoppingListId, item);
         }, 'Cache update failed for addItemToShoppingList:');
@@ -449,11 +454,12 @@ export function useRecipeShoppingList({
           },
         });
 
-        const newList = result.data?.createShoppingList?.shoppingList;
-        if (!newList) {
+        const createPayload = result.data?.createShoppingList;
+        if (createPayload?.__typename !== 'CreateShoppingListSuccess') {
           toastService.error('Failed to create shopping list');
           return;
         }
+        const newList = createPayload.shoppingList;
 
         setSelectedShoppingListId(newList.id);
         setListPickerVisible(false);

@@ -61,8 +61,8 @@ export function buildDirtyUpdateInput(
   locationId: string | null,
   brandId: string | null,
   unitSymbol?: string | null,
-): UpdatePantryItemInput {
-  const input: UpdatePantryItemInput = {};
+): Omit<UpdatePantryItemInput, 'id'> {
+  const input: Omit<UpdatePantryItemInput, 'id'> = {};
 
   if (dirtyFields.itemName) {
     input.itemName = data.itemName;

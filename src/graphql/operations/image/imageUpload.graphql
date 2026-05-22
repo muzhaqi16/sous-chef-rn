@@ -1,25 +1,49 @@
-mutation CreateImageUploadUrl($mime: String!, $purpose: ImageUploadPurpose!, $itemId: String) {
+mutation CreateImageUploadUrl($mime: String!, $purpose: ImageUploadPurpose!, $itemId: ID) {
   createImageUploadUrl(mime: $mime, purpose: $purpose, itemId: $itemId) {
-    url
-    key
+    __typename
+    ... on CreateImageUploadUrlSuccess {
+      url
+      key
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
+    }
   }
 }
 
 mutation ConfirmProfileImageUpload($key: String!) {
   confirmProfileImageUpload(key: $key) {
-    success
-    message
-    code
-    url
+    __typename
+    ... on ConfirmProfileImageUploadSuccess {
+      url
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
+    }
   }
 }
 
-mutation ConfirmItemImageUpload($itemId: String!, $key: String!) {
+mutation ConfirmItemImageUpload($itemId: ID!, $key: String!) {
   confirmItemImageUpload(itemId: $itemId, key: $key) {
-    success
-    message
-    code
-    url
+    __typename
+    ... on ConfirmItemImageUploadSuccess {
+      url
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
+    }
   }
 }
 
@@ -30,13 +54,20 @@ mutation ConfirmItemImageUpload($itemId: String!, $key: String!) {
 # Use: updateProfile(input: { coverImage: null }) to remove cover
 
 mutation UpdateItemImage($id: ID!, $imageUrl: String!) {
-  updateItem(id: $id, input: { media: { imageUrl: $imageUrl } }) {
-    success
-    message
-    code
-    item {
-      id
-      imageUrl
+  updateItem(input: { id: $id, media: { imageUrl: $imageUrl } }) {
+    __typename
+    ... on UpdateItemSuccess {
+      item {
+        id
+        imageUrl
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }

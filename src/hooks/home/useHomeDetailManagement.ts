@@ -96,9 +96,14 @@ export function useHomeDetailManagement(homeId: string) {
   const [updateMembershipMutation] = useMutation(UpdateMembershipDocument, {
     // Use cache.modify to update the membership role field
     update(cache, { data }, { variables }) {
-      if (!data?.updateMembership?.success || !variables) return;
+      if (
+        data?.updateMembership?.__typename !== 'UpdateMembershipSuccess' ||
+        !variables
+      ) {
+        return;
+      }
 
-      const membershipId = variables.id;
+      const membershipId = variables.input.id;
       const newRole = variables.input.role;
 
       setCachedFields(cache, 'Membership', membershipId, {
@@ -116,7 +121,12 @@ export function useHomeDetailManagement(homeId: string) {
 
   const [removeMemberMutation] = useMutation(RemoveMemberDocument, {
     update(cache, { data }, { variables }) {
-      if (!data?.removeMember?.success || !variables) return;
+      if (
+        data?.removeMember?.__typename !== 'RemoveMemberSuccess' ||
+        !variables
+      ) {
+        return;
+      }
 
       executeCacheUpdate(() => {
         const removeFromMembersCache = createRemoveFromParentConnectionUpdater(
@@ -148,7 +158,12 @@ export function useHomeDetailManagement(homeId: string) {
 
   const [revokeInviteMutation] = useMutation(RevokeHomeInviteDocument, {
     update(cache, { data }, { variables }) {
-      if (!data?.revokeHomeInvite?.success || !variables) return;
+      if (
+        data?.revokeHomeInvite?.__typename !== 'RevokeHomeInviteSuccess' ||
+        !variables
+      ) {
+        return;
+      }
 
       executeCacheUpdate(() => {
         const removeFromInvitesCache = createRemoveFromParentConnectionUpdater(
@@ -183,14 +198,17 @@ export function useHomeDetailManagement(homeId: string) {
   const [leaveHomeMutation, { loading: leaving, client: leaveClient }] =
     useMutation(LeaveHomeDocument, {
       update(cache, { data }) {
-        if (!data?.leaveHome?.success) return;
+        if (data?.leaveHome?.__typename !== 'LeaveHomeSuccess') return;
 
         executeCacheUpdate(() => {
           safeEvict(cache, 'Home', homeId);
         }, 'Cache update failed for leaveHome:');
       },
       onCompleted: data => {
-        if (data?.leaveHome?.success && homeId === selectedHomeId) {
+        if (
+          data?.leaveHome?.__typename === 'LeaveHomeSuccess' &&
+          homeId === selectedHomeId
+        ) {
           // Read remaining homes from cache
           const cachedData = leaveClient.cache.readQuery({
             query: GetHomesDocument,
@@ -244,8 +262,7 @@ export function useHomeDetailManagement(homeId: string) {
   const saveName = async (name: string) => {
     await updateHomeMutation({
       variables: {
-        id: homeId,
-        input: { name },
+        input: { id: homeId, name },
       },
     });
   };
@@ -279,8 +296,7 @@ export function useHomeDetailManagement(homeId: string) {
 
     await updateMembershipMutation({
       variables: {
-        id: membershipId,
-        input: { role: value as MembershipRole },
+        input: { id: membershipId, role: value as MembershipRole },
       },
     });
   };
@@ -322,7 +338,11 @@ export function useHomeDetailManagement(homeId: string) {
                 () => leaveHomeMutation({ variables: { homeId } }),
                 'Failed to leave home',
               );
-              resolve(result ? !!result.data?.leaveHome?.success : false);
+              resolve(
+                result
+                  ? result.data?.leaveHome?.__typename === 'LeaveHomeSuccess'
+                  : false,
+              );
             },
           },
         ],
@@ -333,8 +353,7 @@ export function useHomeDetailManagement(homeId: string) {
   const toggleJoinCode = async (enabled: boolean) => {
     await updateHomeMutation({
       variables: {
-        id: homeId,
-        input: { allowJoinCode: enabled },
+        input: { id: homeId, allowJoinCode: enabled },
       },
     });
   };

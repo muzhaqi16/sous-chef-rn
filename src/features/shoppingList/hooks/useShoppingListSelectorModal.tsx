@@ -105,7 +105,12 @@ export function useShoppingListSelectorModal({
       toastService.error(message);
     },
     update: (cache, { data }, { variables }) => {
-      if (!data?.deleteShoppingList?.shoppingList || !variables) return;
+      if (
+        data?.deleteShoppingList?.__typename !== 'DeleteShoppingListSuccess' ||
+        !variables
+      ) {
+        return;
+      }
 
       executeCacheUpdate(() => {
         const removeFromShoppingListsCache =

@@ -27,46 +27,41 @@ jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
 }));
 
-const successMock = (variables: {
-  id: string;
-  input: any;
-}): MockedResponse => ({
+const successMock = (variables: { input: any }): MockedResponse => ({
   request: { query: AdjustPantryItemQuantityDocument, variables },
   result: {
     data: {
       adjustPantryItemQuantity: {
-        __typename: 'PantryItemPayload',
-        success: true,
-        message: '',
-        code: 'SUCCESS',
+        __typename: 'AdjustPantryItemQuantitySuccess',
         pantryItem: {
           __typename: 'PantryItem',
-          id: variables.id,
-          quantity: variables.input.newQuantity,
+          id: variables.input.id,
+          version: 1,
+          updatedAt: '2026-01-01T00:00:00.000Z',
+          quantity: String(variables.input.newQuantity),
+          remainingNetWeight: variables.input.remainingNetWeight ?? null,
+          lastUsedAt: null,
+          activeBatchCount: 0,
         },
       },
     },
   },
 });
 
-const errorMock = (variables: { id: string; input: any }): MockedResponse => ({
+const errorMock = (variables: { input: any }): MockedResponse => ({
   request: { query: AdjustPantryItemQuantityDocument, variables },
   error: new Error('Network error'),
 });
 
-const nullPantryItemMock = (variables: {
-  id: string;
-  input: any;
-}): MockedResponse => ({
+const validationErrorMock = (variables: { input: any }): MockedResponse => ({
   request: { query: AdjustPantryItemQuantityDocument, variables },
   result: {
     data: {
       adjustPantryItemQuantity: {
-        __typename: 'PantryItemPayload',
-        success: true,
-        message: '',
-        code: 'SUCCESS',
-        pantryItem: null,
+        __typename: 'ValidationError',
+        code: 'VALIDATION_ERROR',
+        message: 'Invalid quantity',
+        field: 'newQuantity',
       },
     },
   },
@@ -91,12 +86,15 @@ describe('useAdjustPantryItemQuantity', () => {
   it('returns true and calls onSuccess on successful adjustment', async () => {
     const onSuccess = jest.fn();
     const variables = {
-      id: 'item-1',
-      input: { newQuantity: 5, reason: 'Physical count' },
+      input: { id: 'item-1', newQuantity: 5, reason: 'Physical count' },
     };
     const { result } = renderHook(
       () => useAdjustPantryItemQuantity({ onSuccess }),
-      { wrapper: createApolloTestWrapper({ operationMocks: [successMock(variables)] }) },
+      {
+        wrapper: createApolloTestWrapper({
+          operationMocks: [successMock(variables)],
+        }),
+      },
     );
 
     let success: boolean | undefined;
@@ -114,11 +112,12 @@ describe('useAdjustPantryItemQuantity', () => {
 
   it('includes version when provided', async () => {
     const variables = {
-      id: 'item-1',
-      input: { newQuantity: 3, reason: 'Counted', version: 7 },
+      input: { id: 'item-1', newQuantity: 3, reason: 'Counted', version: 7 },
     };
     const { result } = renderHook(() => useAdjustPantryItemQuantity(), {
-      wrapper: createApolloTestWrapper({ operationMocks: [successMock(variables)] }),
+      wrapper: createApolloTestWrapper({
+        operationMocks: [successMock(variables)],
+      }),
     });
 
     let success: boolean | undefined;
@@ -131,8 +130,8 @@ describe('useAdjustPantryItemQuantity', () => {
 
   it('includes remainingNetWeight when provided', async () => {
     const variables = {
-      id: 'item-1',
       input: {
+        id: 'item-1',
         newQuantity: 2,
         reason: 'Weighed',
         version: 5,
@@ -140,7 +139,9 @@ describe('useAdjustPantryItemQuantity', () => {
       },
     };
     const { result } = renderHook(() => useAdjustPantryItemQuantity(), {
-      wrapper: createApolloTestWrapper({ operationMocks: [successMock(variables)] }),
+      wrapper: createApolloTestWrapper({
+        operationMocks: [successMock(variables)],
+      }),
     });
 
     let success: boolean | undefined;
@@ -159,11 +160,12 @@ describe('useAdjustPantryItemQuantity', () => {
 
   it('omits version and remainingNetWeight when undefined', async () => {
     const variables = {
-      id: 'item-1',
-      input: { newQuantity: 1, reason: 'Adjusted' },
+      input: { id: 'item-1', newQuantity: 1, reason: 'Adjusted' },
     };
     const { result } = renderHook(() => useAdjustPantryItemQuantity(), {
-      wrapper: createApolloTestWrapper({ operationMocks: [successMock(variables)] }),
+      wrapper: createApolloTestWrapper({
+        operationMocks: [successMock(variables)],
+      }),
     });
 
     let success: boolean | undefined;
@@ -177,11 +179,12 @@ describe('useAdjustPantryItemQuantity', () => {
   it('shows version conflict alert on version error', async () => {
     mockHandleVersionConflict = true;
     const variables = {
-      id: 'item-1',
-      input: { newQuantity: 5, reason: 'Count' },
+      input: { id: 'item-1', newQuantity: 5, reason: 'Count' },
     };
     const { result } = renderHook(() => useAdjustPantryItemQuantity(), {
-      wrapper: createApolloTestWrapper({ operationMocks: [errorMock(variables)] }),
+      wrapper: createApolloTestWrapper({
+        operationMocks: [errorMock(variables)],
+      }),
     });
 
     let success: boolean | undefined;
@@ -200,11 +203,12 @@ describe('useAdjustPantryItemQuantity', () => {
 
   it('shows generic error alert on non-conflict error', async () => {
     const variables = {
-      id: 'item-1',
-      input: { newQuantity: 5, reason: 'Count' },
+      input: { id: 'item-1', newQuantity: 5, reason: 'Count' },
     };
     const { result } = renderHook(() => useAdjustPantryItemQuantity(), {
-      wrapper: createApolloTestWrapper({ operationMocks: [errorMock(variables)] }),
+      wrapper: createApolloTestWrapper({
+        operationMocks: [errorMock(variables)],
+      }),
     });
 
     let success: boolean | undefined;
@@ -218,13 +222,14 @@ describe('useAdjustPantryItemQuantity', () => {
     );
   });
 
-  it('returns false when no pantryItem returned', async () => {
+  it('returns false when response is a ValidationError', async () => {
     const variables = {
-      id: 'item-1',
-      input: { newQuantity: 5, reason: 'Count' },
+      input: { id: 'item-1', newQuantity: 5, reason: 'Count' },
     };
     const { result } = renderHook(() => useAdjustPantryItemQuantity(), {
-      wrapper: createApolloTestWrapper({ operationMocks: [nullPantryItemMock(variables)] }),
+      wrapper: createApolloTestWrapper({
+        operationMocks: [validationErrorMock(variables)],
+      }),
     });
 
     let success: boolean | undefined;

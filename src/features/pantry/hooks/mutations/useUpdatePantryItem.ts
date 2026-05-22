@@ -170,14 +170,11 @@ export function useUpdatePantryItem({
       optimisticUpdate,
     );
     updateMutation({
-      variables: { id: itemId, input: updateInput },
+      variables: { input: { ...updateInput, id: itemId } },
       optimisticResponse: {
         __typename: 'Mutation',
         updatePantryItem: {
-          __typename: 'PantryItemPayload',
-          success: true,
-          message: '',
-          code: 'SUCCESS',
+          __typename: 'UpdatePantryItemSuccess',
           pantryItem: optimisticPantryItem,
         },
       },

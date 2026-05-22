@@ -97,8 +97,7 @@ export function useUpdateShoppingItem({
       () =>
         updateItemMutation({
           variables: {
-            id: itemId,
-            input: { ...updates, version: snapshot.version },
+            input: { ...updates, id: itemId, version: snapshot.version },
           },
         }),
       error => {
@@ -118,7 +117,10 @@ export function useUpdateShoppingItem({
     );
     if (!result) return false;
 
-    return result.data?.updateShoppingListItem?.success ?? false;
+    return (
+      result.data?.updateShoppingListItem?.__typename ===
+      'UpdateShoppingListItemSuccess'
+    );
   };
 
   return { updateItem };

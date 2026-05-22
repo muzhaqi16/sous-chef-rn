@@ -23,8 +23,11 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
     GenerateShoppingListFromMealPlanDocument,
     {
       update: (cache, { data }, { variables }) => {
-        const list = data?.generateShoppingListFromMealPlan?.shoppingList;
-        if (!list) return;
+        const payload = data?.generateShoppingListFromMealPlan;
+        if (payload?.__typename !== 'GenerateShoppingListFromMealPlanSuccess') {
+          return;
+        }
+        const list = payload.shoppingList;
         addToShoppingLists(cache, list, { position: 'start' });
         const linkedMealPlanId = variables?.input?.mealPlanId;
         if (linkedMealPlanId) {
@@ -57,11 +60,11 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
     );
     if (!result) return null;
     const data = result.data?.generateShoppingListFromMealPlan;
-    if (data?.success) {
-      const homeName = data.shoppingList?.home?.name;
-      const baseMsg = `Shopping list "${
-        data.shoppingList?.name
-      }" created with ${data.shoppingList?.totalItems ?? 0} items`;
+    if (data?.__typename === 'GenerateShoppingListFromMealPlanSuccess') {
+      const homeName = data.shoppingList.home?.name;
+      const baseMsg = `Shopping list "${data.shoppingList.name}" created with ${
+        data.shoppingList.totalItems ?? 0
+      } items`;
       toastService.success(
         homeName ? `${baseMsg} (shared with ${homeName})` : baseMsg,
       );

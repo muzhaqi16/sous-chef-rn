@@ -47,33 +47,70 @@ const createOptions = () => ({
 });
 
 function consumeMock(payload?: Record<string, unknown>) {
+  const defaultPayload = {
+    __typename: 'CreatePantryItemUsageSuccess',
+    pantryItemUsage: {
+      __typename: 'PantryItemUsage',
+      id: 'usage-1',
+      quantityUsed: 1,
+      usageUnitId: null,
+      usageUnit: null,
+      usedAt: '2026-01-01T00:00:00.000Z',
+      purpose: 'COOK',
+      notes: null,
+      wasteReason: null,
+      isComposted: null,
+      isRecycled: null,
+      pantryItem: {
+        __typename: 'PantryItem',
+        id: 'item-1',
+        quantity: '4',
+        version: 2,
+        lastUsedAt: '2026-01-01T00:00:00.000Z',
+        remainingNetWeight: null,
+        activeBatchCount: 0,
+        earliestBatchExpiration: null,
+      },
+      usedBy: null,
+    },
+  };
   return recordMock(CreatePantryItemUsageDocument, {
     data: {
-      createPantryItemUsage: {
-        __typename: 'PantryItemUsagePayload',
-        success: true,
-        message: '',
-        code: 'SUCCESS',
-        validUnits: null,
-        pantryItemUsage: null,
-        ...(payload ?? {}),
-      },
+      createPantryItemUsage: (payload ?? defaultPayload) as any,
     },
   });
 }
 
 function restockMock(payload?: Record<string, unknown>) {
+  const defaultPayload = {
+    __typename: 'RestockPantryItemSuccess',
+    pantryItemUsage: {
+      __typename: 'PantryItemUsage',
+      id: 'usage-1',
+      quantityUsed: 1,
+      purpose: 'RESTOCK',
+      costPerUnit: null,
+      totalCost: null,
+      pantryItem: {
+        __typename: 'PantryItem',
+        id: 'item-1',
+        version: 2,
+        updatedAt: '2026-01-01T00:00:00.000Z',
+        quantity: '6',
+        netWeight: null,
+        remainingNetWeight: null,
+        expiresAt: null,
+        activeBatchCount: 1,
+        earliestBatchExpiration: null,
+        netWeightUnit: null,
+        packageBreakdown: null,
+        quantityBreakdown: null,
+      },
+    },
+  };
   return recordMock(RestockPantryItemDocument, {
     data: {
-      restockPantryItem: {
-        __typename: 'PantryItemUsagePayload',
-        success: true,
-        message: '',
-        code: 'SUCCESS',
-        validUnits: null,
-        pantryItemUsage: null,
-        ...(payload ?? {}),
-      },
+      restockPantryItem: (payload ?? defaultPayload) as any,
     },
   });
 }
@@ -346,8 +383,8 @@ describe('usePantryItemActions', () => {
       });
 
       expect(m.fired).toContainEqual({
-        id: 'item-1',
         input: {
+          id: 'item-1',
           quantity: 3,
           unitId: undefined,
           notes: 'Bought more',
@@ -395,10 +432,10 @@ describe('usePantryItemActions', () => {
   describe('payload error handling', () => {
     it('shows invalid unit alert on consume payload UNIT_INVALID', async () => {
       const m = consumeMock({
-        success: false,
+        __typename: 'ValidationError',
         code: 'UNIT_INVALID',
         message: "Cannot consume in 'jar'",
-        validUnits: ['oz', 'cup', 'tbsp'],
+        field: 'usageUnitId',
       });
       const { result } = renderHookWithApollo(
         () => usePantryItemActions(createOptions()),
@@ -415,7 +452,7 @@ describe('usePantryItemActions', () => {
 
       expect(alertService.alert).toHaveBeenCalledWith(
         'Invalid Unit',
-        expect.stringContaining('oz, cup, tbsp'),
+        "Cannot consume in 'jar'",
       );
       // Modal should not close on payload error
       expect(result.current.consumeModal.visible).toBe(true);
@@ -423,10 +460,10 @@ describe('usePantryItemActions', () => {
 
     it('shows invalid unit alert on waste payload UNIT_INVALID', async () => {
       const m = consumeMock({
-        success: false,
+        __typename: 'ValidationError',
         code: 'UNIT_INVALID',
         message: "Cannot waste in 'jar'",
-        validUnits: null,
+        field: 'usageUnitId',
       });
       const { result } = renderHookWithApollo(
         () => usePantryItemActions(createOptions()),
@@ -456,10 +493,9 @@ describe('usePantryItemActions', () => {
 
     it('shows version conflict alert on consume payload CONFLICT', async () => {
       const m = consumeMock({
-        success: false,
+        __typename: 'ConflictError',
         code: 'CONFLICT',
         message: 'Version conflict: expected 3, found 4',
-        validUnits: null,
       });
       const { result } = renderHookWithApollo(
         () => usePantryItemActions(createOptions()),
@@ -482,10 +518,10 @@ describe('usePantryItemActions', () => {
 
     it('shows invalid unit alert on restock payload UNIT_INVALID', async () => {
       const m = restockMock({
-        success: false,
+        __typename: 'ValidationError',
         code: 'UNIT_INVALID',
         message: "Cannot restock in 'slice'",
-        validUnits: ['bottle', 'mL'],
+        field: 'unitId',
       });
       const { result } = renderHookWithApollo(
         () => usePantryItemActions(createOptions()),
@@ -502,17 +538,17 @@ describe('usePantryItemActions', () => {
 
       expect(alertService.alert).toHaveBeenCalledWith(
         'Invalid Unit',
-        expect.stringContaining('bottle, mL'),
+        "Cannot restock in 'slice'",
       );
       expect(result.current.restockModal.visible).toBe(true);
     });
 
     it('shows alert on restock payload error', async () => {
       const m = restockMock({
-        success: false,
+        __typename: 'ValidationError',
         code: 'UNIT_INVALID',
         message: 'Invalid unit',
-        validUnits: null,
+        field: 'unitId',
       });
       const { result } = renderHookWithApollo(
         () => usePantryItemActions(createOptions()),
@@ -535,10 +571,10 @@ describe('usePantryItemActions', () => {
 
     it('shows generic error for unknown payload failure codes', async () => {
       const m = consumeMock({
-        success: false,
+        __typename: 'ValidationError',
         code: 'VALIDATION_ERROR',
         message: 'Cannot use more than available quantity',
-        validUnits: null,
+        field: 'quantityUsed',
       });
       const { result } = renderHookWithApollo(
         () => usePantryItemActions(createOptions()),

@@ -289,7 +289,10 @@ export const useDefaultHome = () => {
     })
       .then(result => {
         // Use pantry from mutation response (eliminates race condition)
-        const returnedPantry = result.data?.setDefaultHome?.defaultPantry;
+        const returnedPantry =
+          result.data?.setDefaultHome?.__typename === 'SetDefaultHomeSuccess'
+            ? result.data.setDefaultHome.defaultPantry
+            : null;
         if (returnedPantry?.id && !selectedPantryId) {
           setSelectedPantryId(returnedPantry.id);
           console.log(
@@ -353,7 +356,10 @@ export const useDefaultHome = () => {
       variables: { homeId: selectedHomeId },
     })
       .then(result => {
-        const returnedPantry = result.data?.setDefaultHome?.defaultPantry;
+        const returnedPantry =
+          result.data?.setDefaultHome?.__typename === 'SetDefaultHomeSuccess'
+            ? result.data.setDefaultHome.defaultPantry
+            : null;
         if (returnedPantry?.id && !selectedPantryId) {
           setSelectedPantryId(returnedPantry.id);
           console.log(

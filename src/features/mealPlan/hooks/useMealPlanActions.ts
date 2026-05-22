@@ -27,9 +27,9 @@ export function useMealPlanActions() {
     CreateMealPlanDocument,
     {
       update: (cache, { data }) => {
-        const plan = data?.createMealPlan?.mealPlan;
-        if (plan) {
-          addToMealPlans(cache, plan, { position: 'start' });
+        const result = data?.createMealPlan;
+        if (result?.__typename === 'CreateMealPlanSuccess') {
+          addToMealPlans(cache, result.mealPlan, { position: 'start' });
         }
       },
     },
@@ -43,7 +43,10 @@ export function useMealPlanActions() {
     DeleteMealPlanDocument,
     {
       update: (cache, { data }, { variables }) => {
-        if (!data?.deleteMealPlan?.success || !variables?.id) return;
+        const result = data?.deleteMealPlan;
+        if (result?.__typename !== 'DeleteMealPlanSuccess' || !variables?.id) {
+          return;
+        }
         removeFromMealPlans(cache, variables.id, { evictItem: true });
       },
     },
@@ -56,9 +59,12 @@ export function useMealPlanActions() {
     return result.data?.createMealPlan ?? null;
   };
 
-  const updateMealPlan = async (id: string, input: UpdateMealPlanInput) => {
+  const updateMealPlan = async (
+    id: string,
+    input: Omit<UpdateMealPlanInput, 'id'>,
+  ) => {
     const result = await updateMealPlanMutation({
-      variables: { id, input },
+      variables: { input: { ...input, id } },
     });
     return result.data?.updateMealPlan ?? null;
   };
@@ -67,7 +73,7 @@ export function useMealPlanActions() {
     const result = await deleteMealPlanMutation({
       variables: { id },
     });
-    return result.data?.deleteMealPlan?.success ?? false;
+    return result.data?.deleteMealPlan?.__typename === 'DeleteMealPlanSuccess';
   };
 
   return {

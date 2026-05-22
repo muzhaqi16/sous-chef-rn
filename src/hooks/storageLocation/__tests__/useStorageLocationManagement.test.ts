@@ -132,10 +132,8 @@ function buildUpdateLocationMock(): MockedResponse {
     result: {
       data: {
         updateStorageLocation: {
-          __typename: 'StorageLocationPayload',
-          success: true,
-          message: 'OK',
-          code: 'OK',
+          __typename: 'UpdateStorageLocationSuccess',
+          home: null,
           storageLocation: buildLocationNode({
             id: 'loc-1',
             name: 'Updated Fridge',
@@ -157,15 +155,19 @@ function buildDeleteLocationMock(
     },
     result: {
       data: {
-        deleteStorageLocation: {
-          __typename: 'StorageLocationPayload',
-          success,
-          message,
-          code: success ? 'OK' : 'ERROR',
-          storageLocation: success
-            ? { __typename: 'StorageLocation', id: 'loc-1' }
-            : null,
-        },
+        deleteStorageLocation: success
+          ? {
+              __typename: 'DeleteStorageLocationSuccess',
+              home: null,
+              storageLocation: {
+                __typename: 'StorageLocation',
+                id: 'loc-1',
+              },
+            }
+          : {
+              __typename: 'ValidationError',
+              message,
+            },
       },
     },
   };
@@ -180,10 +182,8 @@ function buildSetDefaultMock(): MockedResponse {
     result: {
       data: {
         setDefaultStorageLocation: {
-          __typename: 'StorageLocationPayload',
-          success: true,
-          message: 'OK',
-          code: 'OK',
+          __typename: 'SetDefaultStorageLocationSuccess',
+          home: null,
           storageLocation: {
             __typename: 'StorageLocation',
             id: 'loc-2',

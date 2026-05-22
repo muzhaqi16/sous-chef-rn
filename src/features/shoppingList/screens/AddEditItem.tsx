@@ -89,8 +89,9 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
   const [addItem] = useMutation(AddItemToShoppingListDocument, {
     // Update cache immediately for optimistic UI
     update: (cache, { data: mutationData }) => {
-      const newItem = mutationData?.addItemToShoppingList?.shoppingListItem;
-      if (!newItem) return;
+      const payload = mutationData?.addItemToShoppingList;
+      if (payload?.__typename !== 'AddItemToShoppingListSuccess') return;
+      const newItem = payload.shoppingListItem;
 
       addNewItemToShoppingListCache(cache, listId, newItem);
     },
@@ -178,9 +179,9 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
           const input = buildDirtyInput();
           result = await updateItem({
             variables: {
-              id: itemId,
               input: {
                 ...input,
+                id: itemId,
                 // Include version for strict version checking (optimistic concurrency control)
                 version: itemVersionRef.current,
               },
@@ -207,12 +208,20 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
 
         // Only navigate back if mutation succeeded
         if (result.data) {
+          const updatePayload =
+            'updateShoppingListItem' in result.data
+              ? result.data.updateShoppingListItem
+              : null;
+          const addPayload =
+            'addItemToShoppingList' in result.data
+              ? result.data.addItemToShoppingList
+              : null;
           const mutationData = isEdit
-            ? 'updateShoppingListItem' in result.data
-              ? result.data.updateShoppingListItem?.shoppingListItem
+            ? updatePayload?.__typename === 'UpdateShoppingListItemSuccess'
+              ? updatePayload.shoppingListItem
               : null
-            : 'addItemToShoppingList' in result.data
-            ? result.data.addItemToShoppingList?.shoppingListItem
+            : addPayload?.__typename === 'AddItemToShoppingListSuccess'
+            ? addPayload.shoppingListItem
             : null;
 
           if (mutationData) {

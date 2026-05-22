@@ -171,10 +171,11 @@ export const useImageUpload = () => {
           },
         });
 
-        const uploadResult = uploadData?.createImageUploadUrl;
-        if (!uploadResult) {
+        const uploadPayload = uploadData?.createImageUploadUrl;
+        if (uploadPayload?.__typename !== 'CreateImageUploadUrlSuccess') {
           throw new Error('Failed to get upload URL');
         }
+        const uploadResult = uploadPayload;
 
         onProgress?.(30);
 
@@ -224,7 +225,10 @@ export const useImageUpload = () => {
             const { data } = await confirmProfileUpload({
               variables: { key },
             });
-            return data?.confirmProfileImageUpload?.url || null;
+            return data?.confirmProfileImageUpload?.__typename ===
+              'ConfirmProfileImageUploadSuccess'
+              ? data.confirmProfileImageUpload.url
+              : null;
           },
           options,
         ),
@@ -269,7 +273,10 @@ export const useImageUpload = () => {
             const { data } = await confirmItemUpload({
               variables: { itemId, key },
             });
-            return data?.confirmItemImageUpload?.url || null;
+            return data?.confirmItemImageUpload?.__typename ===
+              'ConfirmItemImageUploadSuccess'
+              ? data.confirmItemImageUpload.url
+              : null;
           },
           options,
         ),
@@ -318,7 +325,9 @@ export const useImageUpload = () => {
     // Sync avatar to Zustand store so screens reading from the store
     // (e.g. Pantry header) reflect the change immediately.
     useStore.getState().updateUser({ profilePicture: avatarUrl });
-    return result.data?.updateProfile?.userProfile || null;
+    return result.data?.updateProfile?.__typename === 'UpdateProfileSuccess'
+      ? result.data.updateProfile.userProfile
+      : null;
   };
 
   const updateProfileCoverUrl = async (coverImageUrl: string) => {
@@ -333,7 +342,9 @@ export const useImageUpload = () => {
       },
     );
     if (!result) return null;
-    return result.data?.updateProfile?.userProfile || null;
+    return result.data?.updateProfile?.__typename === 'UpdateProfileSuccess'
+      ? result.data.updateProfile.userProfile
+      : null;
   };
 
   const updateItemImageUrl = async (id: string, imageUrl: string) => {

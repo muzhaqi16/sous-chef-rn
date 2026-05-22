@@ -95,76 +95,101 @@ query GetStorageLocation($id: ID!) {
 
 mutation CreateStorageLocation($input: CreateStorageLocationInput!) {
   createStorageLocation(input: $input) {
-    success
-    message
-    code
-    storageLocation {
-      id
-      name
-      type
-      icon
-      color
-      temperature
-      description
-      isClimateControlled
-      capacity
-      capacityUnit
-      sortOrder
-      isDefault
-      currentItemCount
-      homeId
-      parentLocation {
+    __typename
+    ... on CreateStorageLocationSuccess {
+      storageLocation {
         id
         name
+        type
+        icon
+        color
+        temperature
+        description
+        isClimateControlled
+        capacity
+        capacityUnit
+        sortOrder
+        isDefault
+        currentItemCount
+        homeId
+        parentLocation {
+          id
+          name
+        }
       }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
-mutation UpdateStorageLocation($id: ID!, $input: UpdateStorageLocationInput!) {
-  updateStorageLocation(id: $id, input: $input) {
-    success
-    message
-    code
-    storageLocation {
-      id
-      name
-      type
-      icon
-      color
-      temperature
-      description
-      isClimateControlled
-      capacity
-      capacityUnit
-      sortOrder
-      isDefault
-      currentItemCount
-      parentLocationId
+mutation UpdateStorageLocation($input: UpdateStorageLocationInput!) {
+  updateStorageLocation(input: $input) {
+    __typename
+    ... on UpdateStorageLocationSuccess {
+      storageLocation {
+        id
+        name
+        type
+        icon
+        color
+        temperature
+        description
+        isClimateControlled
+        capacity
+        capacityUnit
+        sortOrder
+        isDefault
+        currentItemCount
+        parentLocationId
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
 mutation DeleteStorageLocation($id: ID!) {
   deleteStorageLocation(id: $id) {
-    success
-    message
-    code
-    storageLocation {
-      id
+    __typename
+    ... on DeleteStorageLocationSuccess {
+      storageLocation {
+        id
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
 mutation SetDefaultStorageLocation($id: ID!) {
   setDefaultStorageLocation(id: $id) {
-    success
-    message
-    code
-    storageLocation {
-      id
-      name
-      isDefault
+    __typename
+    ... on SetDefaultStorageLocationSuccess {
+      storageLocation {
+        id
+        name
+        isDefault
+      }
+    }
+    ... on Error {
+      code
+      message
     }
   }
 }

@@ -1,10 +1,21 @@
 import { act } from '@testing-library/react-native';
+import { InMemoryCache } from '@apollo/client';
 import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
 import { DeleteRecipeFolderDocument } from '#features/recipes/graphql/recipe.generated';
 import { useFolderActions } from '../useFolderActions';
+import fragmentMatcherData from '#/graphql/generated/fragmentMatcher.json';
+
+// Inline fragments on the Error interface require possibleTypes for the
+// cache to keep `code`/`message` when the concrete return is a NotFoundError /
+// ConflictError. The default test cache omits possibleTypes.
+function makeCacheWithPossibleTypes() {
+  return new InMemoryCache({
+    possibleTypes: fragmentMatcherData.possibleTypes,
+  });
+}
 
 const mockToastSuccess = jest.fn();
 const mockToastError = jest.fn();
@@ -52,9 +63,8 @@ describe('useFolderActions', () => {
       const del = recordMock(DeleteRecipeFolderDocument, {
         data: {
           deleteRecipeFolder: {
-            __typename: 'BasicPayload',
+            __typename: 'DeleteRecipeFolderSuccess',
             success: true,
-            message: null,
           },
         },
       });
@@ -77,12 +87,12 @@ describe('useFolderActions', () => {
       );
     });
 
-    it('returns false when mutation returns success: false', async () => {
+    it('returns false when mutation returns error union member', async () => {
       const del = recordMock(DeleteRecipeFolderDocument, {
         data: {
           deleteRecipeFolder: {
-            __typename: 'BasicPayload',
-            success: false,
+            __typename: 'NotFoundError',
+            code: 'NOT_FOUND',
             message: 'Folder not found',
           },
         },
@@ -90,6 +100,7 @@ describe('useFolderActions', () => {
 
       const { result } = renderHookWithApollo(() => useFolderActions(), {
         operationMocks: [del.mock],
+        cache: makeCacheWithPossibleTypes(),
       });
 
       let success: boolean | undefined;
@@ -118,9 +129,8 @@ describe('useFolderActions', () => {
       const del = recordMock(DeleteRecipeFolderDocument, {
         data: {
           deleteRecipeFolder: {
-            __typename: 'BasicPayload',
+            __typename: 'DeleteRecipeFolderSuccess',
             success: true,
-            message: null,
           },
         },
       });
@@ -141,19 +151,20 @@ describe('useFolderActions', () => {
       );
     });
 
-    it('returns true even when mutation returns success: false but still shows toast', async () => {
+    it('returns false when mutation returns error union member', async () => {
       const del = recordMock(DeleteRecipeFolderDocument, {
         data: {
           deleteRecipeFolder: {
-            __typename: 'BasicPayload',
-            success: false,
-            message: null,
+            __typename: 'NotFoundError',
+            code: 'NOT_FOUND',
+            message: 'Folder not found',
           },
         },
       });
 
       const { result } = renderHookWithApollo(() => useFolderActions(), {
         operationMocks: [del.mock],
+        cache: makeCacheWithPossibleTypes(),
       });
 
       let success: boolean | undefined;
@@ -161,7 +172,9 @@ describe('useFolderActions', () => {
         success = await result.current.deleteFolder('MyFolder');
       });
 
-      expect(success).toBe(true);
+      // Production code returns false on non-Success union members.
+      expect(success).toBe(false);
+      expect(mockToastError).toHaveBeenCalledWith('Folder not found');
     });
   });
 

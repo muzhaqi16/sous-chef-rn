@@ -134,7 +134,12 @@ export const ListSettings: React.FC<
       toastService.error(message);
     },
     update: (cache, { data }, { variables }) => {
-      if (!data?.deleteShoppingList?.shoppingList || !variables) return;
+      if (
+        data?.deleteShoppingList?.__typename !== 'DeleteShoppingListSuccess' ||
+        !variables
+      ) {
+        return;
+      }
 
       try {
         const removeFromShoppingListsCache =
@@ -155,14 +160,17 @@ export const ListSettings: React.FC<
 
   const [createList] = useMutation(CreateShoppingListDocument, {
     update(cache, { data }) {
-      const newList = data?.createShoppingList?.shoppingList;
-      if (newList) {
-        addToShoppingListsCache(cache, newList);
+      if (
+        data?.createShoppingList?.__typename === 'CreateShoppingListSuccess'
+      ) {
+        addToShoppingListsCache(cache, data.createShoppingList.shoppingList);
       }
     },
     onCompleted: data => {
-      const newList = data?.createShoppingList?.shoppingList;
-      if (newList) {
+      if (
+        data?.createShoppingList?.__typename === 'CreateShoppingListSuccess'
+      ) {
+        const newList = data.createShoppingList.shoppingList;
         setSelectedShoppingListId(newList.id);
         goBack();
       }
@@ -201,8 +209,7 @@ export const ListSettings: React.FC<
           // Update existing list
           await updateList({
             variables: {
-              id: listId!,
-              input: { name: name.trim(), isDefault },
+              input: { id: listId!, name: name.trim(), isDefault },
             },
           });
         }

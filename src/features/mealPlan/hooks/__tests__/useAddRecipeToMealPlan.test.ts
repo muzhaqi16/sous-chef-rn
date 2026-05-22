@@ -70,7 +70,10 @@ describe('useAddRecipeToMealPlan', () => {
   });
 
   it('addRecipeToMealPlan creates item and shows success toast', async () => {
-    mockCreateItem.mockResolvedValueOnce({ success: true });
+    mockCreateItem.mockResolvedValueOnce({
+      __typename: 'CreateMealPlanItemSuccess',
+      mealPlanItem: { __typename: 'MealPlanItem', id: 'mpi-1' },
+    });
 
     const { result } = renderHook(() => useAddRecipeToMealPlan());
 
