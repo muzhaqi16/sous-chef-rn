@@ -220,7 +220,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
           },
         });
         const sharePayload = data?.shareShoppingList;
-        if (sharePayload?.__typename !== 'ShareShoppingListSuccess') {
+        if (sharePayload?.__typename !== 'ShareShoppingListPayload') {
           const message =
             sharePayload && 'message' in sharePayload
               ? sharePayload.message
@@ -272,7 +272,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
           },
           update(cache, { data: updateData }) {
             const invitePayload = updateData?.inviteToShoppingList;
-            if (invitePayload?.__typename === 'InviteToShoppingListSuccess') {
+            if (invitePayload?.__typename === 'InviteToShoppingListPayload') {
               addCollaboratorToCache(
                 cache,
                 listId,
@@ -285,7 +285,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
           },
         });
         const invitePayload = data?.inviteToShoppingList;
-        if (invitePayload?.__typename !== 'InviteToShoppingListSuccess') {
+        if (invitePayload?.__typename !== 'InviteToShoppingListPayload') {
           const message =
             invitePayload && 'message' in invitePayload
               ? invitePayload.message
@@ -322,7 +322,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
           onPress: async () => {
             try {
               await removeMember({
-                variables: { id: memberId },
+                variables: { input: { id: memberId } },
                 update(cache) {
                   removeCollaboratorFromCache(cache, listId, memberId, {
                     evictItem: true,
@@ -376,7 +376,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
             executeWithLoadingState(
               async () => {
                 await removeMember({
-                  variables: { id: currentUserCollaborator.id },
+                  variables: { input: { id: currentUserCollaborator.id } },
                   update(cache) {
                     removeCollaboratorFromCache(
                       cache,

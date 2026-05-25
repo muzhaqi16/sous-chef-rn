@@ -52,7 +52,7 @@ export function useCorrectPantryItemWeight({
 
     if (
       result.data?.correctPantryItemWeight?.__typename ===
-      'CorrectPantryItemWeightSuccess'
+      'CorrectPantryItemWeightPayload'
     ) {
       onSuccess?.();
       return true;

@@ -55,7 +55,7 @@ export function useOpenPantryItemBatch({
 
     if (
       result.data?.openPantryItemBatch?.__typename ===
-      'OpenPantryItemBatchSuccess'
+      'OpenPantryItemBatchPayload'
     ) {
       optimisticDataPersistence.clear('PantryItemBatch', batchId, 'isOpened');
       onSuccess?.();

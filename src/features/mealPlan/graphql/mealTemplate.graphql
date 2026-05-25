@@ -39,10 +39,10 @@ query GetMealTemplate($id: ID!) {
 # MUTATIONS
 # ============================================
 
-mutation DeleteMealTemplate($id: ID!) {
-  deleteMealTemplate(id: $id) {
+mutation DeleteMealTemplate($input: DeleteMealTemplateInput!) {
+  deleteMealTemplate(input: $input) {
     __typename
-    ... on DeleteMealTemplateSuccess {
+    ... on DeleteMealTemplatePayload {
       mealTemplate {
         id
         name
@@ -52,13 +52,17 @@ mutation DeleteMealTemplate($id: ID!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
   }
 }
 
-mutation DuplicateTemplate($id: ID!, $newName: String!) {
-  duplicateTemplate(id: $id, newName: $newName) {
+mutation DuplicateTemplate($input: DuplicateTemplateInput!) {
+  duplicateTemplate(input: $input) {
     __typename
-    ... on DuplicateTemplateSuccess {
+    ... on DuplicateTemplatePayload {
       mealTemplate {
         ...MealTemplateDisplay
         items {
@@ -69,6 +73,10 @@ mutation DuplicateTemplate($id: ID!, $newName: String!) {
     ... on Error {
       code
       message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
     ... on ValidationError {
       field
@@ -79,7 +87,7 @@ mutation DuplicateTemplate($id: ID!, $newName: String!) {
 mutation CreateMealPlanFromTemplate($input: CreateMealPlanFromTemplateInput!) {
   createMealPlanFromTemplate(input: $input) {
     __typename
-    ... on CreateMealPlanSuccess {
+    ... on CreateMealPlanPayload {
       mealPlan {
         ...MealPlanMain_mealPlan
         ...MealPlanSettingsSheet_mealPlan
@@ -88,6 +96,10 @@ mutation CreateMealPlanFromTemplate($input: CreateMealPlanFromTemplateInput!) {
     ... on Error {
       code
       message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
     ... on ValidationError {
       field
@@ -98,7 +110,7 @@ mutation CreateMealPlanFromTemplate($input: CreateMealPlanFromTemplateInput!) {
 mutation CreateTemplateFromMealPlan($input: CreateTemplateFromMealPlanInput!) {
   createTemplateFromMealPlan(input: $input) {
     __typename
-    ... on CreateTemplateFromMealPlanSuccess {
+    ... on CreateTemplateFromMealPlanPayload {
       mealTemplate {
         ...MealTemplateDisplay
         items {
@@ -109,6 +121,10 @@ mutation CreateTemplateFromMealPlan($input: CreateTemplateFromMealPlanInput!) {
     ... on Error {
       code
       message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
     ... on ValidationError {
       field

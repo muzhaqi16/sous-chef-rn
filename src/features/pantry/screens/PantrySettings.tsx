@@ -41,10 +41,10 @@ function buildDeletePantryUpdater(selectedHomeId: string | null | undefined) {
     { data }: any,
     { variables }: any,
   ) {
-    if (!data?.deletePantry?.pantry || !variables?.id || !selectedHomeId)
+    if (!data?.deletePantry?.pantry || !variables?.input?.id || !selectedHomeId)
       return;
     try {
-      const deletedPantryId = variables.id;
+      const deletedPantryId = variables.input.id;
       const homeCacheId = cache.identify({
         __typename: 'Home',
         id: selectedHomeId,
@@ -145,11 +145,13 @@ function buildCreatePantryUpdater(selectedHomeId: string | null | undefined) {
  *  errors via errorService — extracted to keep try/catch out of the
  *  component body (React Compiler bailout). */
 async function safeSetDefaultPantry(
-  setDefaultPantry: (opts: { variables: { id: string } }) => Promise<unknown>,
+  setDefaultPantry: (opts: {
+    variables: { input: { id: string } };
+  }) => Promise<unknown>,
   pantryId: string,
 ): Promise<void> {
   try {
-    await setDefaultPantry({ variables: { id: pantryId } });
+    await setDefaultPantry({ variables: { input: { id: pantryId } } });
   } catch (error) {
     errorService.reportError(error, {
       operation: 'PantrySettings.setDefaultPantry',
@@ -260,7 +262,7 @@ export const PantrySettings: React.FC<
     update: buildCreatePantryUpdater(selectedHomeId),
     onCompleted: data => {
       const payload = data?.createPantry;
-      if (payload?.__typename === 'CreatePantrySuccess') {
+      if (payload?.__typename === 'CreatePantryPayload') {
         setSelectedPantryId(payload.pantry.id);
       }
       goBack();
@@ -374,7 +376,7 @@ export const PantrySettings: React.FC<
 
             executeAsyncWithCleanup(
               async () => {
-                await deletePantry({ variables: { id: pantryId } });
+                await deletePantry({ variables: { input: { id: pantryId } } });
                 setSelectedPantryId(null);
                 goBack();
               },

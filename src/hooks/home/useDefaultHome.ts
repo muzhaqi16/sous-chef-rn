@@ -285,12 +285,12 @@ export const useDefaultHome = () => {
     // Sync to server - set this home as the default
     // The mutation returns the default pantry, which we use to set selectedPantryId
     setDefaultHomeMutation({
-      variables: { homeId: firstHome.id },
+      variables: { input: { homeId: firstHome.id } },
     })
       .then(result => {
         // Use pantry from mutation response (eliminates race condition)
         const returnedPantry =
-          result.data?.setDefaultHome?.__typename === 'SetDefaultHomeSuccess'
+          result.data?.setDefaultHome?.__typename === 'SetDefaultHomePayload'
             ? result.data.setDefaultHome.defaultPantry
             : null;
         if (returnedPantry?.id && !selectedPantryId) {
@@ -353,11 +353,11 @@ export const useDefaultHome = () => {
     );
 
     setDefaultHomeMutation({
-      variables: { homeId: selectedHomeId },
+      variables: { input: { homeId: selectedHomeId } },
     })
       .then(result => {
         const returnedPantry =
-          result.data?.setDefaultHome?.__typename === 'SetDefaultHomeSuccess'
+          result.data?.setDefaultHome?.__typename === 'SetDefaultHomePayload'
             ? result.data.setDefaultHome.defaultPantry
             : null;
         if (returnedPantry?.id && !selectedPantryId) {

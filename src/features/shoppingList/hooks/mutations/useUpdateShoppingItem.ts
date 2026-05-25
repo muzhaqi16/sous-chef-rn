@@ -119,7 +119,7 @@ export function useUpdateShoppingItem({
 
     return (
       result.data?.updateShoppingListItem?.__typename ===
-      'UpdateShoppingListItemSuccess'
+      'UpdateShoppingListItemPayload'
     );
   };
 

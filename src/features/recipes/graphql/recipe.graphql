@@ -123,7 +123,7 @@ query SavedRecipeFolders {
 mutation CreateRecipe($input: CreateRecipeInput!) {
   createRecipe(input: $input) {
     __typename
-    ... on CreateRecipeSuccess {
+    ... on CreateRecipePayload {
       recipe {
         ...BasicRecipeFragment
       }
@@ -131,6 +131,10 @@ mutation CreateRecipe($input: CreateRecipeInput!) {
     ... on Error {
       code
       message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
     ... on ValidationError {
       field
@@ -158,7 +162,7 @@ mutation UpsertExternalRecipe($input: CreateRecipeInput!) {
 mutation UpdateRecipe($input: UpdateRecipeInput!) {
   updateRecipe(input: $input) {
     __typename
-    ... on UpdateRecipeSuccess {
+    ... on UpdateRecipePayload {
       recipe {
         ...useRecipeData_recipe
         ...RecipeForm_recipe
@@ -168,16 +172,20 @@ mutation UpdateRecipe($input: UpdateRecipeInput!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
     ... on ValidationError {
       field
     }
   }
 }
 
-mutation UpdateRecipeIngredients($recipeId: ID!, $ingredients: [RecipeIngredientInput!]!) {
-  updateRecipeIngredients(recipeId: $recipeId, ingredients: $ingredients) {
+mutation UpdateRecipeIngredients($input: UpdateRecipeIngredientsInput!) {
+  updateRecipeIngredients(input: $input) {
     __typename
-    ... on UpdateRecipeIngredientsSuccess {
+    ... on UpdateRecipeIngredientsPayload {
       recipe {
         id
         ingredients {
@@ -189,21 +197,29 @@ mutation UpdateRecipeIngredients($recipeId: ID!, $ingredients: [RecipeIngredient
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
     ... on ValidationError {
       field
     }
   }
 }
 
-mutation DeleteRecipe($id: ID!) {
-  deleteRecipe(id: $id) {
+mutation DeleteRecipe($input: DeleteRecipeInput!) {
+  deleteRecipe(input: $input) {
     __typename
-    ... on DeleteRecipeSuccess {
+    ... on DeleteRecipePayload {
       success
     }
     ... on Error {
       code
       message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
   }
 }
@@ -211,7 +227,7 @@ mutation DeleteRecipe($id: ID!) {
 mutation FavoriteRecipe($input: FavoriteRecipeInput!) {
   favoriteRecipe(input: $input) {
     __typename
-    ... on FavoriteRecipeSuccess {
+    ... on FavoriteRecipePayload {
       savedRecipe {
         id
         recipeId
@@ -233,16 +249,20 @@ mutation FavoriteRecipe($input: FavoriteRecipeInput!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
     ... on ValidationError {
       field
     }
   }
 }
 
-mutation UnfavoriteRecipe($recipeId: ID!) {
-  unfavoriteRecipe(recipeId: $recipeId) {
+mutation UnfavoriteRecipe($input: UnfavoriteRecipeInput!) {
+  unfavoriteRecipe(input: $input) {
     __typename
-    ... on UnfavoriteRecipeSuccess {
+    ... on UnfavoriteRecipePayload {
       savedRecipe {
         id
       }
@@ -251,26 +271,34 @@ mutation UnfavoriteRecipe($recipeId: ID!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
   }
 }
 
 mutation DeleteRecipeFolder($input: DeleteRecipeFolderInput!) {
   deleteRecipeFolder(input: $input) {
     __typename
-    ... on DeleteRecipeFolderSuccess {
+    ... on DeleteRecipeFolderPayload {
       success
     }
     ... on Error {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
   }
 }
 
-mutation UpdateFavoriteRecipe($recipeId: ID!, $input: UpdateFavoriteRecipeInput!) {
-  updateFavoriteRecipe(recipeId: $recipeId, input: $input) {
+mutation UpdateFavoriteRecipe($input: UpdateFavoriteRecipeInput!) {
+  updateFavoriteRecipe(input: $input) {
     __typename
-    ... on UpdateFavoriteRecipeSuccess {
+    ... on UpdateFavoriteRecipePayload {
       savedRecipe {
         id
         recipeId
@@ -287,6 +315,10 @@ mutation UpdateFavoriteRecipe($recipeId: ID!, $input: UpdateFavoriteRecipeInput!
     ... on Error {
       code
       message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
     ... on ValidationError {
       field
@@ -339,29 +371,39 @@ mutation CreateShoppingListItemsFromRecipe(
 }
 
 mutation CreateShoppingListItemFromRecipeIngredient(
-  $recipeIngredientId: ID!
-  $shoppingListId: ID!
-  $quantityOverride: Float
+  $input: CreateShoppingListItemFromRecipeIngredientInput!
 ) {
-  createShoppingListItemFromRecipeIngredient(
-    recipeIngredientId: $recipeIngredientId
-    shoppingListId: $shoppingListId
-    quantityOverride: $quantityOverride
-  ) {
-    shoppingListItem {
-      id
-      itemName
-      quantity
-      unit {
-        id
-        name
-        symbol
+  createShoppingListItemFromRecipeIngredient(input: $input) {
+    __typename
+    ... on CreateShoppingListItemFromRecipeIngredientPayload {
+      result {
+        shoppingListItem {
+          id
+          itemName
+          quantity
+          unit {
+            id
+            name
+            symbol
+          }
+        }
+        previousQuantity
+        quantityAdded
+        wasUpdated
+        unitConversionApplied
       }
     }
-    previousQuantity
-    quantityAdded
-    wasUpdated
-    unitConversionApplied
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
+    }
   }
 }
 
@@ -423,7 +465,7 @@ mutation MarkRecipeAsCooked(
 ) {
   markRecipeAsCooked(input: $input) {
     __typename
-    ... on MarkRecipeAsCookedSuccess {
+    ... on MarkRecipeAsCookedPayload {
       cookingLog {
         id
         servingsMade
@@ -438,6 +480,10 @@ mutation MarkRecipeAsCooked(
     ... on Error {
       code
       message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
     ... on ValidationError {
       field

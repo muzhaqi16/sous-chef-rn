@@ -112,7 +112,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
         const optimistic: AddItemToShoppingListMutation = {
           __typename: 'Mutation',
           addItemToShoppingList: {
-            __typename: 'AddItemToShoppingListSuccess',
+            __typename: 'AddItemToShoppingListPayload',
             shoppingListItem: {
               ...entity,
               shoppingList: {
@@ -131,7 +131,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
       update(cache, { data }) {
         const payload = data?.addItemToShoppingList;
         if (
-          payload?.__typename !== 'AddItemToShoppingListSuccess' ||
+          payload?.__typename !== 'AddItemToShoppingListPayload' ||
           !shoppingListId
         ) {
           return;

@@ -106,7 +106,7 @@ export function useShoppingListSelectorModal({
     },
     update: (cache, { data }, { variables }) => {
       if (
-        data?.deleteShoppingList?.__typename !== 'DeleteShoppingListSuccess' ||
+        data?.deleteShoppingList?.__typename !== 'DeleteShoppingListPayload' ||
         !variables
       ) {
         return;
@@ -118,7 +118,9 @@ export function useShoppingListSelectorModal({
             'shoppingLists',
             'ShoppingList',
           );
-        removeFromShoppingListsCache(cache, variables.id, { evictItem: true });
+        removeFromShoppingListsCache(cache, variables.input.id, {
+          evictItem: true,
+        });
       }, 'Cache update failed for deleteList:');
     },
   });
@@ -176,7 +178,9 @@ export function useShoppingListSelectorModal({
             const result = await executeMutation(
               () =>
                 Promise.all(
-                  idsToDelete.map(id => deleteList({ variables: { id } })),
+                  idsToDelete.map(id =>
+                    deleteList({ variables: { input: { id } } }),
+                  ),
                 ),
               () => {
                 // Deletion failed — unregister immediately

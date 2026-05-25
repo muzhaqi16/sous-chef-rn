@@ -5,7 +5,7 @@
 mutation RegisterDevice($input: DeviceRegistrationInput!) {
   registerDevice(input: $input) {
     __typename
-    ... on RegisterDeviceSuccess {
+    ... on RegisterDevicePayload {
       device {
         id
       }

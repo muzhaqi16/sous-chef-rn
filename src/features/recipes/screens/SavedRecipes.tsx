@@ -97,8 +97,8 @@ export const SavedRecipes: React.FC = () => {
   const [unfavoriteRecipeMutation] = useMutation(UnfavoriteRecipeDocument, {
     update: (cache, { data }, { variables }) => {
       if (
-        data?.unfavoriteRecipe?.__typename !== 'UnfavoriteRecipeSuccess' ||
-        !variables?.recipeId
+        data?.unfavoriteRecipe?.__typename !== 'UnfavoriteRecipePayload' ||
+        !variables?.input?.recipeId
       ) {
         return;
       }
@@ -114,7 +114,7 @@ export const SavedRecipes: React.FC = () => {
               savedRecipesConnection: {
                 ...existing.me.savedRecipesConnection,
                 edges: existing.me.savedRecipesConnection.edges.filter(
-                  edge => edge.node.recipe.id !== variables.recipeId,
+                  edge => edge.node.recipe.id !== variables.input.recipeId,
                 ),
                 totalCount:
                   (existing.me.savedRecipesConnection.totalCount ?? 0) - 1,
@@ -126,7 +126,7 @@ export const SavedRecipes: React.FC = () => {
 
       optimisticDataPersistence.save(
         'SavedRecipe',
-        variables.recipeId,
+        variables.input.recipeId,
         'isFavorited',
         false,
       );
@@ -164,7 +164,7 @@ export const SavedRecipes: React.FC = () => {
 
   const handleRemoveRecipe = async (recipeId: string) => {
     await executeMutation(
-      () => unfavoriteRecipeMutation({ variables: { recipeId } }),
+      () => unfavoriteRecipeMutation({ variables: { input: { recipeId } } }),
       (error: unknown) => {
         console.error('Failed to remove recipe:', error);
         alertService.alert(

@@ -64,7 +64,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   const [addToPantry] = useMutation(BarcodeCreatePantryItemDocument, {
     update: (cache, { data }) => {
       const payload = data?.createPantryItem;
-      if (payload?.__typename === 'CreatePantryItemSuccess' && pantryId) {
+      if (payload?.__typename === 'CreatePantryItemPayload' && pantryId) {
         const maskedPantryItem = payload.pantryItem;
         // Materialize the masked fragment ref so the cache updater can read
         // `id`. Use the cache-key form — passing the masked ref directly
@@ -91,7 +91,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
       update: (cache, { data }) => {
         const payload = data?.addItemToShoppingList;
         if (
-          payload?.__typename === 'AddItemToShoppingListSuccess' &&
+          payload?.__typename === 'AddItemToShoppingListPayload' &&
           shoppingListId
         ) {
           const maskedItem = payload.shoppingListItem;
@@ -189,7 +189,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                           });
                           if (
                             retryResult.data?.createPantryItem?.__typename ===
-                            'CreatePantryItemSuccess'
+                            'CreatePantryItemPayload'
                           ) {
                             setIsAdded(true);
                             setPendingPantryScrollToTop(true);
@@ -219,7 +219,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
 
           if (
             result.data?.createPantryItem?.__typename ===
-            'CreatePantryItemSuccess'
+            'CreatePantryItemPayload'
           ) {
             setIsAdded(true);
             setPendingPantryScrollToTop(true);

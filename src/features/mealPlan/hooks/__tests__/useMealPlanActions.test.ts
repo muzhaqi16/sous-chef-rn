@@ -33,7 +33,7 @@ describe('useMealPlanActions', () => {
       name: 'Week Plan',
     };
     const successPayload = {
-      __typename: 'CreateMealPlanSuccess',
+      __typename: 'CreateMealPlanPayload',
       mealPlan: expectedPlan,
     };
     const create = recordMock(CreateMealPlanDocument, {
@@ -54,7 +54,7 @@ describe('useMealPlanActions', () => {
     });
 
     expect(created).toMatchObject({
-      __typename: 'CreateMealPlanSuccess',
+      __typename: 'CreateMealPlanPayload',
       mealPlan: { id: 'plan-1', name: 'Week Plan' },
     });
     expect(create.fired).toContainEqual({
@@ -91,7 +91,7 @@ describe('useMealPlanActions', () => {
     const update = recordMock(UpdateMealPlanDocument, {
       data: {
         updateMealPlan: {
-          __typename: 'UpdateMealPlanSuccess',
+          __typename: 'UpdateMealPlanPayload',
           mealPlan: {
             __typename: 'MealPlan',
             id: 'plan-1',
@@ -113,7 +113,7 @@ describe('useMealPlanActions', () => {
     });
 
     expect(updated).toMatchObject({
-      __typename: 'UpdateMealPlanSuccess',
+      __typename: 'UpdateMealPlanPayload',
       mealPlan: { id: 'plan-1', name: 'Updated' },
     });
     expect(update.fired).toContainEqual({
@@ -125,7 +125,7 @@ describe('useMealPlanActions', () => {
     const del = recordMock(DeleteMealPlanDocument, {
       data: {
         deleteMealPlan: {
-          __typename: 'DeleteMealPlanSuccess',
+          __typename: 'DeleteMealPlanPayload',
           mealPlan: { __typename: 'MealPlan', id: 'plan-1' },
         },
       },
@@ -141,7 +141,7 @@ describe('useMealPlanActions', () => {
     });
 
     expect(deleted).toBe(true);
-    expect(del.fired).toContainEqual({ id: 'plan-1' });
+    expect(del.fired).toContainEqual({ input: { id: 'plan-1' } });
   });
 
   it('deleteMealPlan returns false on failure', async () => {

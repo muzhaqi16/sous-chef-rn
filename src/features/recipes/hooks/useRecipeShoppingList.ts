@@ -125,7 +125,7 @@ export function useRecipeShoppingList({
   const [createShoppingListMutation] = useMutation(CreateShoppingListDocument, {
     update(cache, { data }) {
       const payload = data?.createShoppingList;
-      if (payload?.__typename === 'CreateShoppingListSuccess') {
+      if (payload?.__typename === 'CreateShoppingListPayload') {
         addToShoppingListsCache(cache, payload.shoppingList);
       }
     },
@@ -160,16 +160,21 @@ export function useRecipeShoppingList({
     CreateShoppingListItemFromRecipeIngredientDocument,
     {
       update: (cache, { data }, { variables }) => {
-        if (!data?.createShoppingListItemFromRecipeIngredient || !variables)
+        const response = data?.createShoppingListItemFromRecipeIngredient;
+        if (
+          response?.__typename !==
+            'CreateShoppingListItemFromRecipeIngredientPayload' ||
+          !variables
+        )
           return;
         executeCacheUpdate(() => {
-          const result = data.createShoppingListItemFromRecipeIngredient;
-          const shoppingListId = variables.shoppingListId;
-          if (!result.wasUpdated) {
+          const ingredientResult = response.result;
+          const shoppingListId = variables.input.shoppingListId;
+          if (!ingredientResult.wasUpdated) {
             addNewItemToShoppingListCache(
               cache,
               shoppingListId,
-              result.shoppingListItem,
+              ingredientResult.shoppingListItem,
             );
           }
         }, 'Cache update failed for addRecipeIngredient:');
@@ -183,7 +188,7 @@ export function useRecipeShoppingList({
       update: (cache, { data }, { variables }) => {
         const payload = data?.addItemToShoppingList;
         if (
-          payload?.__typename !== 'AddItemToShoppingListSuccess' ||
+          payload?.__typename !== 'AddItemToShoppingListPayload' ||
           !variables
         ) {
           return;
@@ -204,7 +209,7 @@ export function useRecipeShoppingList({
         if (!data?.addItemsToShoppingList || !variables) return;
         executeCacheUpdate(() => {
           const { results } = data.addItemsToShoppingList!;
-          const shoppingListId = variables.shoppingListId;
+          const shoppingListId = variables.input.shoppingListId;
           results.forEach(result => {
             if (result.success && result.item) {
               addNewItemToShoppingListCache(cache, shoppingListId, result.item);
@@ -234,8 +239,10 @@ export function useRecipeShoppingList({
         if (isBackendRecipe) {
           await addRecipeIngredientMutation({
             variables: {
-              recipeIngredientId: ingredient.id,
-              shoppingListId: targetList.id,
+              input: {
+                recipeIngredientId: ingredient.id,
+                shoppingListId: targetList.id,
+              },
             },
           });
         } else {
@@ -331,8 +338,10 @@ export function useRecipeShoppingList({
 
           const result = await addItemsToShoppingListMutation({
             variables: {
-              shoppingListId: listId,
-              items,
+              input: {
+                shoppingListId: listId,
+                items,
+              },
             },
           });
 
@@ -384,15 +393,20 @@ export function useRecipeShoppingList({
         for (const ingredientId of selectedIngredients) {
           const result = await addRecipeIngredientMutation({
             variables: {
-              recipeIngredientId: ingredientId,
-              shoppingListId: listId,
+              input: {
+                recipeIngredientId: ingredientId,
+                shoppingListId: listId,
+              },
             },
           });
 
-          if (result.data?.createShoppingListItemFromRecipeIngredient) {
-            const wasUpdated =
-              result.data.createShoppingListItemFromRecipeIngredient.wasUpdated;
-            if (wasUpdated) {
+          const response =
+            result.data?.createShoppingListItemFromRecipeIngredient;
+          if (
+            response?.__typename ===
+            'CreateShoppingListItemFromRecipeIngredientPayload'
+          ) {
+            if (response.result.wasUpdated) {
               updatedCount++;
             } else {
               addedCount++;
@@ -455,7 +469,7 @@ export function useRecipeShoppingList({
         });
 
         const createPayload = result.data?.createShoppingList;
-        if (createPayload?.__typename !== 'CreateShoppingListSuccess') {
+        if (createPayload?.__typename !== 'CreateShoppingListPayload') {
           toastService.error('Failed to create shopping list');
           return;
         }

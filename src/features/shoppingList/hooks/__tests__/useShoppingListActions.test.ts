@@ -436,9 +436,11 @@ describe('useShoppingListActions', () => {
 
       await waitFor(() => {
         expect(m.fired).toContainEqual({
-          itemId: 'item-1',
-          quantity: '3',
-          version: 1,
+          input: {
+            itemId: 'item-1',
+            quantity: '3',
+            version: 1,
+          },
         });
       });
     });
@@ -462,9 +464,11 @@ describe('useShoppingListActions', () => {
 
       await waitFor(() => {
         expect(m.fired).toContainEqual({
-          itemId: 'item-1',
-          quantity: '1',
-          version: 1,
+          input: {
+            itemId: 'item-1',
+            quantity: '1',
+            version: 1,
+          },
         });
       });
     });
@@ -522,9 +526,11 @@ describe('useShoppingListActions', () => {
 
       await waitFor(() => {
         expect(m.fired).toContainEqual({
-          itemId: 'item-1',
-          quantity: '4',
-          version: 2,
+          input: {
+            itemId: 'item-1',
+            quantity: '4',
+            version: 2,
+          },
         });
       });
     });
@@ -546,7 +552,11 @@ describe('useShoppingListActions', () => {
 
       // null ?? 1 = 1, then Math.max(1, 1 - 1) = Math.max(1, 0) = 1
       await waitFor(() => {
-        expect(m.fired.some(v => v.quantity === '1')).toBe(true);
+        expect(
+          m.fired.some(
+            v => (v as { input: { quantity: string } }).input.quantity === '1',
+          ),
+        ).toBe(true);
       });
     });
   });
@@ -586,7 +596,11 @@ describe('useShoppingListActions', () => {
       });
 
       await waitFor(() => {
-        expect(m.fired.some(v => v.quantity === '1')).toBe(true);
+        expect(
+          m.fired.some(
+            v => (v as { input: { quantity: string } }).input.quantity === '1',
+          ),
+        ).toBe(true);
       });
     });
   });

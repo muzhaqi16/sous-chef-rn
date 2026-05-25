@@ -76,7 +76,7 @@ describe('useMealPlanItemActions', () => {
   describe('createItem', () => {
     it('returns payload on success', async () => {
       const payload = {
-        __typename: 'CreateMealPlanItemSuccess',
+        __typename: 'CreateMealPlanItemPayload',
         mealPlanItem: { __typename: 'MealPlanItem', id: 'mpi-1' },
       };
       const create = recordMock(CreateMealPlanItemDocument, {
@@ -141,7 +141,7 @@ describe('useMealPlanItemActions', () => {
   describe('updateItem', () => {
     it('returns payload on success', async () => {
       const payload = {
-        __typename: 'UpdateMealPlanItemSuccess',
+        __typename: 'UpdateMealPlanItemPayload',
         mealPlanItem: { __typename: 'MealPlanItem', id: 'mpi-1' },
       };
       const update = recordMock(UpdateMealPlanItemDocument, {
@@ -169,7 +169,7 @@ describe('useMealPlanItemActions', () => {
       const update = recordMock(UpdateMealPlanItemDocument, {
         data: {
           updateMealPlanItem: {
-            __typename: 'UpdateMealPlanItemSuccess',
+            __typename: 'UpdateMealPlanItemPayload',
             mealPlanItem: {
               __typename: 'MealPlanItem',
               id: 'mpi-1',
@@ -204,7 +204,7 @@ describe('useMealPlanItemActions', () => {
       const update = recordMock(UpdateMealPlanItemDocument, {
         data: {
           updateMealPlanItem: {
-            __typename: 'UpdateMealPlanItemSuccess',
+            __typename: 'UpdateMealPlanItemPayload',
             mealPlanItem: {
               __typename: 'MealPlanItem',
               id: 'mpi-1',
@@ -235,7 +235,7 @@ describe('useMealPlanItemActions', () => {
       const update = recordMock(UpdateMealPlanItemDocument, {
         data: {
           updateMealPlanItem: {
-            __typename: 'UpdateMealPlanItemSuccess',
+            __typename: 'UpdateMealPlanItemPayload',
             mealPlanItem: {
               __typename: 'MealPlanItem',
               id: 'mpi-1',
@@ -264,7 +264,7 @@ describe('useMealPlanItemActions', () => {
       const del = recordMock(DeleteMealPlanItemDocument, {
         data: {
           deleteMealPlanItem: {
-            __typename: 'DeleteMealPlanItemSuccess',
+            __typename: 'DeleteMealPlanItemPayload',
             mealPlanItem: { __typename: 'MealPlanItem', id: 'mpi-1' },
           },
         },

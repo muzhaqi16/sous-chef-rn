@@ -76,7 +76,7 @@ query CanDeleteAccount {
 mutation UpdateUser($input: UpdateUserInput!) {
   updateUser(input: $input) {
     __typename
-    ... on UpdateUserSuccess {
+    ... on UpdateUserPayload {
       user {
         id
         email
@@ -97,6 +97,10 @@ mutation UpdateUser($input: UpdateUserInput!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
     ... on ValidationError {
       field
     }
@@ -106,7 +110,7 @@ mutation UpdateUser($input: UpdateUserInput!) {
 mutation UpdateUserProfile($input: UpdateUserProfileInput!) {
   updateProfile(input: $input) {
     __typename
-    ... on UpdateProfileSuccess {
+    ... on UpdateProfilePayload {
       userProfile {
         id
         userId
@@ -131,6 +135,10 @@ mutation UpdateUserProfile($input: UpdateUserProfileInput!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
     ... on ValidationError {
       field
     }
@@ -140,7 +148,7 @@ mutation UpdateUserProfile($input: UpdateUserProfileInput!) {
 mutation UpdateUserPreferences($input: UpdateUserSettingsInput!) {
   updateSettings(input: $input) {
     __typename
-    ... on UpdateSettingsSuccess {
+    ... on UpdateSettingsPayload {
       userSettings {
         id
         user {
@@ -169,6 +177,10 @@ mutation UpdateUserPreferences($input: UpdateUserSettingsInput!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
     ... on ValidationError {
       field
     }
@@ -178,7 +190,7 @@ mutation UpdateUserPreferences($input: UpdateUserSettingsInput!) {
 mutation DeleteAccount {
   deleteAccount {
     __typename
-    ... on DeleteAccountSuccess {
+    ... on DeleteAccountPayload {
       user {
         id
       }
@@ -187,13 +199,17 @@ mutation DeleteAccount {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
   }
 }
 
 mutation CompleteOnboarding {
   completeOnboarding {
     __typename
-    ... on CompleteOnboardingSuccess {
+    ... on CompleteOnboardingPayload {
       user {
         id
         email
@@ -209,6 +225,10 @@ mutation CompleteOnboarding {
     ... on Error {
       code
       message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
   }
 }
@@ -255,5 +275,20 @@ subscription UserProfileChanged($userId: ID) {
     updatedFields
     timestamp
     userId
+  }
+}
+
+subscription UserLifecycleEvents($userId: ID!) {
+  userLifecycleEvents(userId: $userId) {
+    subtype
+    userId
+    actorUserId
+    parents {
+      homeId
+      shoppingListId
+    }
+    reason
+    warningCount
+    timestamp
   }
 }

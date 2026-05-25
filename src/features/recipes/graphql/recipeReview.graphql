@@ -5,14 +5,23 @@
 mutation CreateRecipeReview($input: CreateRecipeReviewInput!) {
   createRecipeReview(input: $input) {
     __typename
-    ... on CreateRecipeReviewSuccess {
+    ... on CreateRecipeReviewPayload {
       recipeReview {
         ...RecipeReviewFragment
       }
     }
+    ... on RateLimitError {
+      code
+      message
+      retryAfter
+    }
     ... on Error {
       code
       message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
     ... on ValidationError {
       field
@@ -23,7 +32,7 @@ mutation CreateRecipeReview($input: CreateRecipeReviewInput!) {
 mutation UpdateRecipeReview($input: UpdateRecipeReviewInput!) {
   updateRecipeReview(input: $input) {
     __typename
-    ... on UpdateRecipeReviewSuccess {
+    ... on UpdateRecipeReviewPayload {
       recipeReview {
         ...RecipeReviewFragment
       }
@@ -32,16 +41,20 @@ mutation UpdateRecipeReview($input: UpdateRecipeReviewInput!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
     ... on ValidationError {
       field
     }
   }
 }
 
-mutation DeleteRecipeReview($id: ID!) {
-  deleteRecipeReview(id: $id) {
+mutation DeleteRecipeReview($input: DeleteRecipeReviewInput!) {
+  deleteRecipeReview(input: $input) {
     __typename
-    ... on DeleteRecipeReviewSuccess {
+    ... on DeleteRecipeReviewPayload {
       recipeReview {
         id
       }
@@ -50,13 +63,17 @@ mutation DeleteRecipeReview($id: ID!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
   }
 }
 
 mutation ToggleReviewHelpful($input: ToggleReviewHelpfulInput!) {
   toggleReviewHelpful(input: $input) {
     __typename
-    ... on ToggleReviewHelpfulSuccess {
+    ... on ToggleReviewHelpfulPayload {
       reviewHelpful {
         id
         user { id }
@@ -65,6 +82,10 @@ mutation ToggleReviewHelpful($input: ToggleReviewHelpfulInput!) {
     ... on Error {
       code
       message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
     ... on ValidationError {
       field

@@ -8,7 +8,9 @@ import { AuthWrapper } from '../../components/templates/AuthWrapper';
 import { useMutation } from '@apollo/client/react';
 import { ForgotPasswordDocument } from '#operations/auth/auth.generated';
 import { useAuthNavigation } from '#hooks/navigation/useAuthNavigation';
+import { useToast } from '#/hooks/useToast';
 import { errorService } from '#/services/errorService';
+import { getRateLimitMessage } from '#/utils/errors/rateLimit';
 
 type ForgotPasswordValues = {
   email: string;
@@ -17,6 +19,7 @@ type ForgotPasswordValues = {
 export function ForgotPasswordScreen() {
   const { navigateToLogin } = useAuthNavigation();
   const [forgotPasswordApi] = useMutation(ForgotPasswordDocument);
+  const toast = useToast();
 
   const {
     control,
@@ -29,20 +32,28 @@ export function ForgotPasswordScreen() {
 
   const sendResetEmail = async (data: ForgotPasswordValues) => {
     const { email } = data;
-    // Simulate sending reset email
     try {
-      await forgotPasswordApi({
-        variables: { email },
+      const response = await forgotPasswordApi({
+        variables: { input: { email } },
       });
-      // On success, navigate to login
+
+      const payload = response.data?.forgotPassword;
+      if (payload?.__typename === 'RateLimitError') {
+        toast({
+          message: getRateLimitMessage({
+            extensions: { code: payload.code, retryAfter: payload.retryAfter },
+          }),
+          type: 'error',
+        });
+        return;
+      }
+
       navigateToLogin();
     } catch (error) {
       errorService.reportError(error, {
         operation: 'ForgotPassword.sendResetEmail',
       });
     }
-    // Here you would typically call your API to send the reset email
-    // For example: await api.sendResetEmail(email);
   };
 
   return (

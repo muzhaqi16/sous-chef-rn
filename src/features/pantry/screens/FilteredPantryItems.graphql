@@ -3,7 +3,7 @@
 mutation AddItemToShoppingListFromFilteredPantry($input: CreateShoppingListItemInput!) {
   addItemToShoppingList(input: $input) {
     __typename
-    ... on AddItemToShoppingListSuccess {
+    ... on AddItemToShoppingListPayload {
       shoppingListItem {
         id
         itemName
@@ -34,6 +34,10 @@ mutation AddItemToShoppingListFromFilteredPantry($input: CreateShoppingListItemI
     ... on Error {
       code
       message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
     ... on ValidationError {
       field

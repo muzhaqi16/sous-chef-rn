@@ -223,9 +223,9 @@ const MealPlanMainInner: React.FC = () => {
       update(cache, { data }, { variables }) {
         const result = data?.deleteMealPlan;
         const id =
-          result?.__typename === 'DeleteMealPlanSuccess'
+          result?.__typename === 'DeleteMealPlanPayload'
             ? result.mealPlan.id
-            : variables?.id;
+            : variables?.input?.id;
         if (id) removeFromMealPlansForMain(cache, id, { evictItem: true });
       },
       onError: error => {
@@ -373,7 +373,7 @@ const MealPlanMainInner: React.FC = () => {
     tags?: string[];
   }) => {
     const result = await createTemplateFromPlan(input);
-    if (result?.__typename === 'CreateTemplateFromMealPlanSuccess') {
+    if (result?.__typename === 'CreateTemplateFromMealPlanPayload') {
       setSaveTemplateVisible(false);
     }
   };
@@ -406,7 +406,7 @@ const MealPlanMainInner: React.FC = () => {
     servings?: number;
   }) => {
     const result = await createPlanFromTemplate(config);
-    if (result?.__typename === 'CreateMealPlanSuccess') {
+    if (result?.__typename === 'CreateMealPlanPayload') {
       setTemplatePreviewVisible(false);
       setSelectedTemplate(null);
     }
@@ -419,20 +419,20 @@ const MealPlanMainInner: React.FC = () => {
     newEndDate: string;
   }) => {
     const result = await duplicatePlan(input);
-    if (result?.__typename === 'DuplicateMealPlanSuccess') {
+    if (result?.__typename === 'DuplicateMealPlanPayload') {
       setDuplicateVisible(false);
     }
   };
 
   const handleDeletePlan = async (id: string) => {
     const result = await executeMutation(
-      () => deletePlanMutation({ variables: { id } }),
+      () => deletePlanMutation({ variables: { input: { id } } }),
       // Error handled by onError callback on the mutation hook
       () => {},
     );
     if (
       result &&
-      result.data?.deleteMealPlan?.__typename === 'DeleteMealPlanSuccess'
+      result.data?.deleteMealPlan?.__typename === 'DeleteMealPlanPayload'
     ) {
       toastService.success(t('mealPlanMain.mealPlanDeleted'));
       // If we deleted the active plan, clear the selection so the UI falls back
@@ -450,7 +450,7 @@ const MealPlanMainInner: React.FC = () => {
     shoppingListId?: string;
   }) => {
     const result = await generateShoppingList(options);
-    if (result?.__typename === 'GenerateShoppingListFromMealPlanSuccess') {
+    if (result?.__typename === 'GenerateShoppingListFromMealPlanPayload') {
       setShoppingListSheetVisible(false);
     }
   };

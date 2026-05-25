@@ -193,7 +193,7 @@ function buildAddItemMock(): MockedResponse {
     result: {
       data: {
         addItemToShoppingList: {
-          __typename: 'AddItemToShoppingListSuccess',
+          __typename: 'AddItemToShoppingListPayload',
           shoppingListItem: buildShoppingListItem('new-item'),
         },
       },
@@ -240,7 +240,7 @@ function buildUpdateItemMock(): MockedResponse {
     result: {
       data: {
         updateShoppingListItem: {
-          __typename: 'UpdateShoppingListItemSuccess',
+          __typename: 'UpdateShoppingListItemPayload',
           shoppingListItem: buildShoppingListItem('item1'),
         },
       },

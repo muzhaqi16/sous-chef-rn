@@ -82,13 +82,13 @@ export function usePantryItemMutations({
         Unmasked<CreatePantryItemMutation>['createPantryItem'];
       type CreatePantryItemSuccessShape = Extract<
         CreatePantryItemPayload,
-        { __typename: 'CreatePantryItemSuccess' }
+        { __typename: 'CreatePantryItemPayload' }
       >;
       type OptimisticPantryItem = CreatePantryItemSuccessShape['pantryItem'];
       return {
         __typename: 'Mutation',
         createPantryItem: {
-          __typename: 'CreatePantryItemSuccess',
+          __typename: 'CreatePantryItemPayload',
           pantryItem: createOptimisticEntity<OptimisticPantryItem>(
             'PantryItem',
             tempId,
@@ -147,7 +147,7 @@ export function usePantryItemMutations({
     },
     update: (cache, { data }) => {
       const payload = data?.createPantryItem;
-      if (payload?.__typename !== 'CreatePantryItemSuccess' || !pantryId) {
+      if (payload?.__typename !== 'CreatePantryItemPayload' || !pantryId) {
         return;
       }
       const pantryItem = payload.pantryItem;
@@ -197,7 +197,7 @@ export function usePantryItemMutations({
       return {
         __typename: 'Mutation',
         updatePantryItem: {
-          __typename: 'UpdatePantryItemSuccess',
+          __typename: 'UpdatePantryItemPayload',
           pantryItem: enhanceWithVersion(
             currentItem,
             // Input types use InputMaybe (T | null | undefined) while fragment
@@ -219,10 +219,10 @@ export function usePantryItemMutations({
     optimisticResponse: (variables): Unmasked<DeletePantryItemMutation> => ({
       __typename: 'Mutation',
       deletePantryItem: {
-        __typename: 'DeletePantryItemSuccess',
+        __typename: 'DeletePantryItemPayload',
         pantryItem: {
           __typename: 'PantryItem',
-          id: variables.id,
+          id: variables.input.id,
           pantry: {
             __typename: 'Pantry',
             id: pantryId ?? '',
@@ -243,14 +243,14 @@ export function usePantryItemMutations({
     },
     update: (cache, { data }, { variables }) => {
       if (
-        data?.deletePantryItem?.__typename !== 'DeletePantryItemSuccess' ||
+        data?.deletePantryItem?.__typename !== 'DeletePantryItemPayload' ||
         !pantryId ||
         !variables
       ) {
         return;
       }
 
-      const itemId = variables.id;
+      const itemId = variables.input.id;
       removeFromPantryItemsCache(cache, pantryId, itemId, { evictItem: true });
     },
   });
@@ -278,7 +278,7 @@ export function usePantryItemMutations({
       ...(input.expirationDate && { expiresAt: input.expirationDate }),
     }),
     onSuccess: (data: CreatePantryItemMutation) =>
-      data?.createPantryItem?.__typename === 'CreatePantryItemSuccess'
+      data?.createPantryItem?.__typename === 'CreatePantryItemPayload'
         ? data.createPantryItem.pantryItem
         : undefined,
     operationName: 'Add Pantry Item',
@@ -290,7 +290,7 @@ export function usePantryItemMutations({
       parentId: () => pantryId,
       itemId,
       onSuccess: (data: UpdatePantryItemMutation) =>
-        data?.updatePantryItem?.__typename === 'UpdatePantryItemSuccess'
+        data?.updatePantryItem?.__typename === 'UpdatePantryItemPayload'
           ? data.updatePantryItem.pantryItem
           : undefined,
       onVersionConflict: refetch,
@@ -316,7 +316,7 @@ export function usePantryItemMutations({
     const result = await executeMutation(
       () =>
         removeItemMutation({
-          variables: { id: itemId },
+          variables: { input: { id: itemId } },
         }),
       error => {
         subscriptionService.unregisterPendingDelete(itemId);

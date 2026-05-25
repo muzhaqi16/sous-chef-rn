@@ -193,10 +193,12 @@ describe('useQuantityEditModal', () => {
     });
 
     expect(m.fired).toContainEqual({
-      itemId: 'item-1',
-      quantity: '5',
-      unitId: 'unit-1',
-      version: 3,
+      input: {
+        itemId: 'item-1',
+        quantity: '5',
+        unitId: 'unit-1',
+        version: 3,
+      },
     });
   });
 

@@ -96,7 +96,7 @@ query GetStorageLocation($id: ID!) {
 mutation CreateStorageLocation($input: CreateStorageLocationInput!) {
   createStorageLocation(input: $input) {
     __typename
-    ... on CreateStorageLocationSuccess {
+    ... on CreateStorageLocationPayload {
       storageLocation {
         id
         name
@@ -122,6 +122,10 @@ mutation CreateStorageLocation($input: CreateStorageLocationInput!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
     ... on ValidationError {
       field
     }
@@ -131,7 +135,7 @@ mutation CreateStorageLocation($input: CreateStorageLocationInput!) {
 mutation UpdateStorageLocation($input: UpdateStorageLocationInput!) {
   updateStorageLocation(input: $input) {
     __typename
-    ... on UpdateStorageLocationSuccess {
+    ... on UpdateStorageLocationPayload {
       storageLocation {
         id
         name
@@ -153,16 +157,20 @@ mutation UpdateStorageLocation($input: UpdateStorageLocationInput!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
     ... on ValidationError {
       field
     }
   }
 }
 
-mutation DeleteStorageLocation($id: ID!) {
-  deleteStorageLocation(id: $id) {
+mutation DeleteStorageLocation($input: DeleteStorageLocationInput!) {
+  deleteStorageLocation(input: $input) {
     __typename
-    ... on DeleteStorageLocationSuccess {
+    ... on DeleteStorageLocationPayload {
       storageLocation {
         id
       }
@@ -171,16 +179,20 @@ mutation DeleteStorageLocation($id: ID!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
     ... on ValidationError {
       field
     }
   }
 }
 
-mutation SetDefaultStorageLocation($id: ID!) {
-  setDefaultStorageLocation(id: $id) {
+mutation SetDefaultStorageLocation($input: SetDefaultStorageLocationInput!) {
+  setDefaultStorageLocation(input: $input) {
     __typename
-    ... on SetDefaultStorageLocationSuccess {
+    ... on SetDefaultStorageLocationPayload {
       storageLocation {
         id
         name
@@ -190,6 +202,10 @@ mutation SetDefaultStorageLocation($id: ID!) {
     ... on Error {
       code
       message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
   }
 }

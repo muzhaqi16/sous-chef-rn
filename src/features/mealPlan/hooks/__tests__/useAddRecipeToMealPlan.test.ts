@@ -71,7 +71,7 @@ describe('useAddRecipeToMealPlan', () => {
 
   it('addRecipeToMealPlan creates item and shows success toast', async () => {
     mockCreateItem.mockResolvedValueOnce({
-      __typename: 'CreateMealPlanItemSuccess',
+      __typename: 'CreateMealPlanItemPayload',
       mealPlanItem: { __typename: 'MealPlanItem', id: 'mpi-1' },
     });
 

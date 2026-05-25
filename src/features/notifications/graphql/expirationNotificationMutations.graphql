@@ -5,7 +5,7 @@
 mutation MarkExpirationAction($input: MarkActionInput!) {
   markExpirationAction(input: $input) {
     __typename
-    ... on MarkExpirationActionSuccess {
+    ... on MarkExpirationActionPayload {
       expirationNotification {
         id
         status
@@ -15,6 +15,10 @@ mutation MarkExpirationAction($input: MarkActionInput!) {
     ... on Error {
       code
       message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
     ... on ValidationError {
       field
@@ -25,7 +29,7 @@ mutation MarkExpirationAction($input: MarkActionInput!) {
 mutation DismissExpirationNotification($input: DismissNotificationInput!) {
   dismissExpirationNotification(input: $input) {
     __typename
-    ... on DismissExpirationNotificationSuccess {
+    ... on DismissExpirationNotificationPayload {
       expirationNotification {
         id
         status
@@ -35,14 +39,18 @@ mutation DismissExpirationNotification($input: DismissNotificationInput!) {
     ... on Error {
       code
       message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
   }
 }
 
-mutation MarkExpirationNotificationAsRead($notificationId: ID!) {
-  markExpirationNotificationAsRead(notificationId: $notificationId) {
+mutation MarkExpirationNotificationAsRead($input: MarkExpirationNotificationAsReadInput!) {
+  markExpirationNotificationAsRead(input: $input) {
     __typename
-    ... on MarkExpirationNotificationAsReadSuccess {
+    ... on MarkExpirationNotificationAsReadPayload {
       expirationNotification {
         id
         status
@@ -52,6 +60,10 @@ mutation MarkExpirationNotificationAsRead($notificationId: ID!) {
     ... on Error {
       code
       message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
   }
 }

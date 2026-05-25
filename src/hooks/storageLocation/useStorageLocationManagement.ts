@@ -153,7 +153,7 @@ export function useStorageLocationManagement(
     update: (cache, { data }, { variables }) => {
       if (
         data?.deleteStorageLocation?.__typename !==
-          'DeleteStorageLocationSuccess' ||
+          'DeleteStorageLocationPayload' ||
         !variables ||
         !homeId
       ) {
@@ -170,7 +170,7 @@ export function useStorageLocationManagement(
                 'storageLocationsConnection',
                 'StorageLocation',
               );
-            removeFromPantryLocations(cache, pantryId, variables.id);
+            removeFromPantryLocations(cache, pantryId, variables.input.id);
           }
 
           const removeFromStorageLocationsCache =
@@ -178,7 +178,7 @@ export function useStorageLocationManagement(
               'storageLocations',
               'StorageLocation',
             );
-          removeFromStorageLocationsCache(cache, variables.id, {
+          removeFromStorageLocationsCache(cache, variables.input.id, {
             evictItem: true,
           });
         },
@@ -212,19 +212,19 @@ export function useStorageLocationManagement(
     );
     if (!result) return false;
     return result.data?.updateStorageLocation?.__typename ===
-      'UpdateStorageLocationSuccess'
+      'UpdateStorageLocationPayload'
       ? result.data.updateStorageLocation.storageLocation
       : false;
   };
 
   const deleteLocation = async (id: string) => {
     const result = await executeMutation(
-      () => deleteMutation({ variables: { id } }),
+      () => deleteMutation({ variables: { input: { id } } }),
       'Delete storage location error:',
     );
     if (!result) return false;
     const payload = result.data?.deleteStorageLocation;
-    if (payload?.__typename === 'DeleteStorageLocationSuccess') {
+    if (payload?.__typename === 'DeleteStorageLocationPayload') {
       toastService.success('Storage location deleted');
       return true;
     }
@@ -235,12 +235,12 @@ export function useStorageLocationManagement(
 
   const setDefaultLocation = async (id: string) => {
     const result = await executeMutation(
-      () => setDefaultMutation({ variables: { id } }),
+      () => setDefaultMutation({ variables: { input: { id } } }),
       'Set default storage location error:',
     );
     if (!result) return false;
     return result.data?.setDefaultStorageLocation?.__typename ===
-      'SetDefaultStorageLocationSuccess'
+      'SetDefaultStorageLocationPayload'
       ? result.data.setDefaultStorageLocation.storageLocation
       : false;
   };

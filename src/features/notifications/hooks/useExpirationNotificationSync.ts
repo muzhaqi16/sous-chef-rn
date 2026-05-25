@@ -94,7 +94,7 @@ export function useExpirationNotificationSync() {
     executeMutation(
       () =>
         markReadMutation({
-          variables: { notificationId: expirationNotificationId },
+          variables: { input: { notificationId: expirationNotificationId } },
         }),
       (error: unknown) => {
         errorService.reportError(error, {

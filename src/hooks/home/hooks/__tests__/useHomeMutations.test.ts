@@ -127,7 +127,7 @@ function createHomeMock(home: { id: string; name: string }) {
   return recordMock(CreateHomeDocument, {
     data: {
       createHome: {
-        __typename: 'CreateHomeSuccess',
+        __typename: 'CreateHomePayload',
         home: { __typename: 'Home', id: home.id, name: home.name },
       },
     },
@@ -139,7 +139,7 @@ function updateHomeMock(home: { id: string; name?: string } | null) {
     data: {
       updateHome: home
         ? {
-            __typename: 'UpdateHomeSuccess',
+            __typename: 'UpdateHomePayload',
             home: { __typename: 'Home', id: home.id, name: home.name ?? null },
           }
         : {

@@ -73,7 +73,7 @@ function buildUpdateProfileMock(
     result: {
       data: {
         updateProfile: {
-          __typename: 'UpdateProfileSuccess',
+          __typename: 'UpdateProfilePayload',
           userProfile: {
             __typename: 'UserProfile',
             id,
@@ -116,7 +116,7 @@ function buildUpdateItemImageMock(
     result: {
       data: {
         updateItem: {
-          __typename: 'UpdateItemSuccess',
+          __typename: 'UpdateItemPayload',
           item: {
             __typename: 'Item',
             id: variables.id,

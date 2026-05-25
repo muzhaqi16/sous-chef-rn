@@ -29,16 +29,21 @@ export function useAddLowStockToShoppingList({
     const result = await executeMutation(
       () =>
         addLowStockMutation({
-          variables: { homeId },
+          variables: { input: { homeId } },
         }),
       'Add low stock to shopping list error:',
     );
     if (!result) return;
 
-    const data = result.data?.addLowStockItemsToShoppingList;
-    if (!data) return;
+    const response = result.data?.addLowStockItemsToShoppingList;
+    if (response?.__typename !== 'AddLowStockItemsToShoppingListPayload') {
+      const errorMsg =
+        response && 'message' in response ? response.message : undefined;
+      toastService.error(errorMsg || 'Failed to add low stock items');
+      return;
+    }
 
-    const { addedCount, skippedCount } = data;
+    const { addedCount, skippedCount } = response.result;
 
     if (addedCount === 0 && skippedCount === 0) {
       toastService.info('No low stock items found');

@@ -24,7 +24,7 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
     {
       update: (cache, { data }, { variables }) => {
         const payload = data?.generateShoppingListFromMealPlan;
-        if (payload?.__typename !== 'GenerateShoppingListFromMealPlanSuccess') {
+        if (payload?.__typename !== 'GenerateShoppingListFromMealPlanPayload') {
           return;
         }
         const list = payload.shoppingList;
@@ -60,7 +60,7 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
     );
     if (!result) return null;
     const data = result.data?.generateShoppingListFromMealPlan;
-    if (data?.__typename === 'GenerateShoppingListFromMealPlanSuccess') {
+    if (data?.__typename === 'GenerateShoppingListFromMealPlanPayload') {
       const homeName = data.shoppingList.home?.name;
       const baseMsg = `Shopping list "${data.shoppingList.name}" created with ${
         data.shoppingList.totalItems ?? 0

@@ -52,7 +52,7 @@ export function useWastePantryItemBatch({
 
     if (
       result.data?.wastePantryItemBatch?.__typename ===
-      'WastePantryItemBatchSuccess'
+      'WastePantryItemBatchPayload'
     ) {
       optimisticDataPersistence.clear('PantryItemBatch', batchId, 'isWasted');
       onSuccess?.();

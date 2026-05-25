@@ -77,7 +77,7 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
     {
       update: (cache, { data }) => {
         const payload = data?.createPantryItem;
-        if (payload?.__typename !== 'CreatePantryItemSuccess' || !pantryId)
+        if (payload?.__typename !== 'CreatePantryItemPayload' || !pantryId)
           return;
         const pantryItem = payload.pantryItem;
 
@@ -277,7 +277,7 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
                 }
                 if (
                   retryResult.data?.createPantryItem?.__typename ===
-                  'CreatePantryItemSuccess'
+                  'CreatePantryItemPayload'
                 ) {
                   onSuccess();
                 } else {
@@ -295,7 +295,7 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
     }
 
     if (
-      result.data?.createPantryItem?.__typename === 'CreatePantryItemSuccess'
+      result.data?.createPantryItem?.__typename === 'CreatePantryItemPayload'
     ) {
       onSuccess();
     } else if (result.error) {

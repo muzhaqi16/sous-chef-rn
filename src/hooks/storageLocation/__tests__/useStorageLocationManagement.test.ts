@@ -132,7 +132,7 @@ function buildUpdateLocationMock(): MockedResponse {
     result: {
       data: {
         updateStorageLocation: {
-          __typename: 'UpdateStorageLocationSuccess',
+          __typename: 'UpdateStorageLocationPayload',
           home: null,
           storageLocation: buildLocationNode({
             id: 'loc-1',
@@ -157,7 +157,7 @@ function buildDeleteLocationMock(
       data: {
         deleteStorageLocation: success
           ? {
-              __typename: 'DeleteStorageLocationSuccess',
+              __typename: 'DeleteStorageLocationPayload',
               home: null,
               storageLocation: {
                 __typename: 'StorageLocation',
@@ -182,7 +182,7 @@ function buildSetDefaultMock(): MockedResponse {
     result: {
       data: {
         setDefaultStorageLocation: {
-          __typename: 'SetDefaultStorageLocationSuccess',
+          __typename: 'SetDefaultStorageLocationPayload',
           home: null,
           storageLocation: {
             __typename: 'StorageLocation',

@@ -32,12 +32,12 @@ function renderWith(
 const successMock = (id: string): MockedResponse => ({
   request: {
     query: ConvertExpiredToWasteDocument,
-    variables: { pantryItemId: id },
+    variables: { input: { pantryItemId: id } },
   },
   result: {
     data: {
       convertExpiredToWaste: {
-        __typename: 'ConvertExpiredToWasteSuccess',
+        __typename: 'ConvertExpiredToWastePayload',
         pantryItem: {
           __typename: 'PantryItem',
           id,
@@ -55,7 +55,7 @@ const successMock = (id: string): MockedResponse => ({
 const errorMock = (id: string): MockedResponse => ({
   request: {
     query: ConvertExpiredToWasteDocument,
-    variables: { pantryItemId: id },
+    variables: { input: { pantryItemId: id } },
   },
   error: new Error('Something went wrong'),
 });
@@ -63,7 +63,7 @@ const errorMock = (id: string): MockedResponse => ({
 const notFoundErrorMock = (id: string): MockedResponse => ({
   request: {
     query: ConvertExpiredToWasteDocument,
-    variables: { pantryItemId: id },
+    variables: { input: { pantryItemId: id } },
   },
   result: {
     data: {

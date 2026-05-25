@@ -26,7 +26,7 @@ const successMock = (variables: { input: any }): MockedResponse => ({
   result: {
     data: {
       correctPantryItemWeight: {
-        __typename: 'CorrectPantryItemWeightSuccess',
+        __typename: 'CorrectPantryItemWeightPayload',
         pantryItem: {
           __typename: 'PantryItem',
           id: variables.input.id,

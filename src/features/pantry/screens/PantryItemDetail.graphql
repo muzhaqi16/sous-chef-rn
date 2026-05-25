@@ -142,7 +142,7 @@ fragment PantryItemDetail_pantryItem on PantryItem {
 mutation AddItemToShoppingListFromPantryItem($input: CreateShoppingListItemInput!) {
   addItemToShoppingList(input: $input) {
     __typename
-    ... on AddItemToShoppingListSuccess {
+    ... on AddItemToShoppingListPayload {
       shoppingListItem {
         id
         itemName
@@ -173,6 +173,10 @@ mutation AddItemToShoppingListFromPantryItem($input: CreateShoppingListItemInput
     ... on Error {
       code
       message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
     ... on ValidationError {
       field

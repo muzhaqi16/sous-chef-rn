@@ -35,7 +35,7 @@ export function useMealTemplateActions() {
     useMutation(CreateMealPlanFromTemplateDocument, {
       update: (cache, { data }) => {
         const result = data?.createMealPlanFromTemplate;
-        if (result?.__typename === 'CreateMealPlanSuccess') {
+        if (result?.__typename === 'CreateMealPlanPayload') {
           addToMealPlans(cache, result.mealPlan, { position: 'start' });
         }
       },
@@ -51,7 +51,7 @@ export function useMealTemplateActions() {
     {
       update: (cache, { data }) => {
         const payload = data?.createTemplateFromMealPlan;
-        if (payload?.__typename === 'CreateTemplateFromMealPlanSuccess') {
+        if (payload?.__typename === 'CreateTemplateFromMealPlanPayload') {
           addToMealTemplates(cache, payload.mealTemplate, {
             position: 'start',
           });
@@ -69,12 +69,12 @@ export function useMealTemplateActions() {
       update: (cache, { data }, { variables }) => {
         if (
           data?.deleteMealTemplate?.__typename !==
-            'DeleteMealTemplateSuccess' ||
-          !variables?.id
+            'DeleteMealTemplatePayload' ||
+          !variables?.input?.id
         ) {
           return;
         }
-        removeFromMealTemplates(cache, variables.id, { evictItem: true });
+        removeFromMealTemplates(cache, variables.input.id, { evictItem: true });
       },
       onError: error => {
         toastService.error(error.message || 'Failed to delete template');
@@ -87,7 +87,7 @@ export function useMealTemplateActions() {
     {
       update: (cache, { data }) => {
         const payload = data?.duplicateTemplate;
-        if (payload?.__typename === 'DuplicateTemplateSuccess') {
+        if (payload?.__typename === 'DuplicateTemplatePayload') {
           addToMealTemplates(cache, payload.mealTemplate, {
             position: 'start',
           });
@@ -108,7 +108,7 @@ export function useMealTemplateActions() {
     );
     if (!result) return null;
     const data = result.data?.createMealPlanFromTemplate;
-    if (data?.__typename === 'CreateMealPlanSuccess') {
+    if (data?.__typename === 'CreateMealPlanPayload') {
       toastService.success('Meal plan created from template!');
       Telemetry.trackEvent('meal_plan_created_from_template', {
         template_id: input.templateId,
@@ -126,7 +126,7 @@ export function useMealTemplateActions() {
     );
     if (!result) return null;
     const data = result.data?.createTemplateFromMealPlan;
-    if (data?.__typename === 'CreateTemplateFromMealPlanSuccess') {
+    if (data?.__typename === 'CreateTemplateFromMealPlanPayload') {
       toastService.success('Meal plan saved as template!');
       Telemetry.trackEvent('template_created_from_meal_plan', {
         meal_plan_id: input.mealPlanId,
@@ -137,13 +137,13 @@ export function useMealTemplateActions() {
 
   const deleteTemplate = async (id: string) => {
     const result = await executeMutation(
-      () => deleteTemplateMutation({ variables: { id } }),
+      () => deleteTemplateMutation({ variables: { input: { id } } }),
       'Delete meal template error:',
     );
     if (!result) return false;
     const success =
       result.data?.deleteMealTemplate?.__typename ===
-      'DeleteMealTemplateSuccess';
+      'DeleteMealTemplatePayload';
     if (success) {
       toastService.success('Template deleted');
     }
@@ -152,12 +152,13 @@ export function useMealTemplateActions() {
 
   const duplicateTemplate = async (id: string, newName: string) => {
     const result = await executeMutation(
-      () => duplicateTemplateMutation({ variables: { id, newName } }),
+      () =>
+        duplicateTemplateMutation({ variables: { input: { id, newName } } }),
       'Duplicate template error:',
     );
     if (!result) return null;
     const data = result.data?.duplicateTemplate;
-    if (data?.__typename === 'DuplicateTemplateSuccess') {
+    if (data?.__typename === 'DuplicateTemplatePayload') {
       toastService.success('Template duplicated!');
     }
     return data ?? null;

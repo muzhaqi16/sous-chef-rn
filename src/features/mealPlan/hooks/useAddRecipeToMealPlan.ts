@@ -54,7 +54,7 @@ export function useAddRecipeToMealPlan(
       mealType,
       date: date.toISOString(),
     });
-    if (result?.__typename === 'CreateMealPlanItemSuccess') {
+    if (result?.__typename === 'CreateMealPlanItemPayload') {
       toastService.success('Added to meal plan');
       return true;
     }

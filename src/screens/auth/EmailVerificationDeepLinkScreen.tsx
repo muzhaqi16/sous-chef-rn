@@ -15,6 +15,7 @@ import {
 import { logger } from '#/utils/environment';
 import { useToast } from '#/hooks/useToast';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
+import { errorService } from '#/services/errorService';
 import { SousChefLoader } from '#/components/base/SousChefLoader';
 import { Text } from '#components/atoms/Text';
 
@@ -55,11 +56,11 @@ async function performVerificationImpl(
       });
 
       const result = await verifyEmail({
-        variables: { code: token },
+        variables: { input: { code: token } },
       });
 
       const payload = result.data?.verifyEmail;
-      if (payload?.__typename === 'VerifyEmailSuccess') {
+      if (payload?.__typename === 'VerifyEmailPayload') {
         logger.info('Email verification successful');
 
         if (user) {
@@ -72,6 +73,12 @@ async function performVerificationImpl(
           message: 'Email verified successfully!',
           type: 'success',
         });
+      } else if (payload?.__typename === 'AuthError') {
+        const message = errorService.getUserFriendlyMessage(
+          payload.code,
+          payload.message,
+        );
+        throw new Error(message);
       } else {
         const message =
           payload && 'message' in payload ? payload.message : null;

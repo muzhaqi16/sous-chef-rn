@@ -172,7 +172,7 @@ function updateHomeMock() {
   return recordMock(UpdateHomeDocument, {
     data: {
       updateHome: {
-        __typename: 'UpdateHomeSuccess',
+        __typename: 'UpdateHomePayload',
         home: {
           __typename: 'Home',
           id: 'home-1',

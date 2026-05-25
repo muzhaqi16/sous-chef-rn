@@ -67,10 +67,10 @@ fragment InvitationAcceptanceModal_collaborator on ShoppingListCollaborator {
   }
 }
 
-mutation InvitationAcceptanceModalAcceptShoppingListInvite($token: String!) {
-  acceptShoppingListInvite(token: $token) {
+mutation InvitationAcceptanceModalAcceptShoppingListInvite($input: AcceptShoppingListInviteInput!) {
+  acceptShoppingListInvite(input: $input) {
     __typename
-    ... on AcceptShoppingListInviteSuccess {
+    ... on AcceptShoppingListInvitePayload {
       collaborator {
         ...InvitationAcceptanceModal_collaborator
       }
@@ -79,16 +79,20 @@ mutation InvitationAcceptanceModalAcceptShoppingListInvite($token: String!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
     ... on ValidationError {
       field
     }
   }
 }
 
-mutation InvitationAcceptanceModalDeclineShoppingListInvite($token: String!) {
-  declineShoppingListInvite(token: $token) {
+mutation InvitationAcceptanceModalDeclineShoppingListInvite($input: DeclineShoppingListInviteInput!) {
+  declineShoppingListInvite(input: $input) {
     __typename
-    ... on DeclineShoppingListInviteSuccess {
+    ... on DeclineShoppingListInvitePayload {
       collaborator {
         id
       }
@@ -96,6 +100,10 @@ mutation InvitationAcceptanceModalDeclineShoppingListInvite($token: String!) {
     ... on Error {
       code
       message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
     ... on ValidationError {
       field

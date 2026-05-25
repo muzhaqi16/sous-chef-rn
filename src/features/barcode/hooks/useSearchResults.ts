@@ -239,7 +239,7 @@ export const useSearchResults = (barcode: string, format?: string) => {
     CreateItemDocument,
     {
       onCompleted: async (data: CreateItemMutation) => {
-        if (data.createItem?.__typename === 'CreateItemSuccess') {
+        if (data.createItem?.__typename === 'CreateItemPayload') {
           const createdItem = data.createItem.item;
 
           // Upload pending images (module-level function avoids try-catch in hook)
@@ -441,7 +441,7 @@ export const useSearchResults = (barcode: string, format?: string) => {
     }
 
     const result = await executeMutation(
-      () => flagItem({ variables: { itemId, reason } }),
+      () => flagItem({ variables: { input: { itemId, reason } } }),
       'Error flagging item for review:',
     );
 

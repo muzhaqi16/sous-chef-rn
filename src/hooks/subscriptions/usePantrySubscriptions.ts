@@ -3,11 +3,8 @@
  *
  * Centralizes all pantry-related subscriptions using the unified
  * SubscriptionService. Handles real-time updates for:
- * - Pantry item changes (add/update/delete) via pantryItemChanged
- * - Expiration notifications (created + action-taken) via the new split events
- *
- * These subscriptions automatically update the Apollo cache and provide
- * deduplication to prevent self-echo and duplicate updates.
+ * - Pantry events (item changes, pantry updates, usage, alerts) via pantryEvents
+ * - Expiration notifications (created + action-taken) via the split events
  */
 
 import { useSubscription } from '@apollo/client/react';
@@ -17,10 +14,10 @@ import {
   useSelectedPantryId,
 } from '#store/useAppStore';
 import {
-  PantryItemChangedDocument,
+  PantryEventsDocument,
   ExpirationNotificationCreatedDocument,
   ExpirationNotificationActionTakenDocument,
-  type PantryItemChangedSubscription,
+  type PantryEventsSubscription,
   type ExpirationNotificationCreatedSubscription,
   type ExpirationNotificationActionTakenSubscription,
 } from '#features/pantry/graphql/pantry.generated';
@@ -35,14 +32,16 @@ import {
   CacheStrategy,
   type SubscriptionApolloClient,
 } from '#/services/subscriptions/types';
-import { MutationType } from '#/graphql/generated/schemaTypes';
+import {
+  MutationType,
+  PantryEventSubtype,
+} from '#/graphql/generated/schemaTypes';
 import {
   createAddToParentConnectionUpdater,
   createRemoveFromParentConnectionUpdater,
 } from '#/apollo/utils/cacheUpdaters';
 
-type PantryItemChangedPayload =
-  PantryItemChangedSubscription['pantryItemChanged'];
+type PantryEventsPayload = PantryEventsSubscription['pantryEvents'];
 type ExpirationCreatedPayload =
   ExpirationNotificationCreatedSubscription['expirationNotificationCreated'];
 type ExpirationActionPayload =
@@ -60,17 +59,72 @@ const removeFromPantryItemsConnection = createRemoveFromParentConnectionUpdater(
   'PantryItem',
 );
 
+function handleItemChanged(
+  payload: PantryEventsPayload,
+  client: SubscriptionApolloClient,
+  selectedPantryId: string,
+) {
+  if (payload.node.__typename !== 'PantryItem') return;
+
+  const itemRef = payload.node;
+  const mutation = payload.mutation;
+
+  const item =
+    client.cache.readFragment<UsePantrySubscriptions_PantryItemFragment>({
+      fragment: UsePantrySubscriptions_PantryItemFragmentDoc,
+      fragmentName: 'usePantrySubscriptions_pantryItem',
+      from: { __typename: 'PantryItem', id: itemRef.id },
+    });
+  if (!item) return;
+
+  if (subscriptionService.isPendingDelete(item.id)) {
+    if (__DEV__) {
+      console.log(
+        '⏭️ [Subscription] Skipping pantry echo for pending-delete',
+        item.id,
+      );
+    }
+    return;
+  }
+
+  if (mutation === MutationType.ItemAdded) {
+    addToPantryItemsConnection(client.cache, selectedPantryId, item);
+  } else if (
+    mutation === MutationType.Deleted ||
+    mutation === MutationType.ItemRemoved
+  ) {
+    removeFromPantryItemsConnection(client.cache, selectedPantryId, item.id, {
+      evictItem: true,
+    });
+  } else if (
+    mutation === MutationType.Updated ||
+    mutation === MutationType.ItemUpdated
+  ) {
+    const cacheId = client.cache.identify({
+      __typename: 'PantryItem',
+      id: item.id,
+    });
+    if (cacheId) {
+      client.cache.writeFragment({
+        id: cacheId,
+        fragment: UsePantrySubscriptions_PantryItemFragmentDoc,
+        fragmentName: 'usePantrySubscriptions_pantryItem',
+        data: item,
+      });
+    } else {
+      addToPantryItemsConnection(client.cache, selectedPantryId, item);
+    }
+  }
+}
+
 /**
  * Initialize pantry subscriptions for the current user.
  *
  * Subscribes to:
- * - pantryItemChanged: real-time CRUD on pantry items
+ * - pantryEvents: consolidated real-time events (item changes, pantry updates,
+ *   usage records, low-stock/expiration alerts)
  * - expirationNotificationCreated / actionTaken: ties expiration metadata
  *   into the generic notification store entries
- *
- * The old pantryAlert subscription was dropped — the new split alerts
- * (pantryLowStockAlert, pantryExpirationAlert, pantryWasteAlert) are
- * available if any consumer wants to subscribe to them directly.
  *
  * @param userId - Current user ID for deduplication
  */
@@ -79,8 +133,8 @@ export function usePantrySubscriptions(userId?: string) {
   const isHomeSelectionReady = useIsHomeSelectionReady();
   const linkExpirationData = useAppStore(state => state.linkExpirationData);
 
-  const itemHandlers = subscriptionService.register<PantryItemChangedPayload>({
-    subscriptionName: 'PantryItemChanged',
+  const eventHandlers = subscriptionService.register<PantryEventsPayload>({
+    subscriptionName: 'PantryEvents',
     entityType: 'PantryItem',
     enableDeduplication: true,
     userId,
@@ -88,79 +142,42 @@ export function usePantrySubscriptions(userId?: string) {
     enableLogging: true,
     entityId: selectedPantryId,
     customOnData: (
-      payload: PantryItemChangedPayload,
+      payload: PantryEventsPayload,
       client: SubscriptionApolloClient,
     ) => {
       if (!payload || !selectedPantryId) return;
 
-      const payloadUserId = payload.userId;
-      if (payloadUserId && userId && payloadUserId === userId) {
+      if (payload.actorUserId && userId && payload.actorUserId === userId) {
         if (__DEV__) {
-          console.log('⏭️ [Subscription] Skipping pantry item self-echo');
+          console.log('⏭️ [Subscription] Skipping pantry self-echo');
         }
         return;
       }
 
-      const itemRef = payload.item;
-      const mutation = payload.mutation;
-      if (!itemRef) return;
+      switch (payload.subtype) {
+        case PantryEventSubtype.ItemChanged:
+          handleItemChanged(payload, client, selectedPantryId);
+          break;
 
-      const item =
-        client.cache.readFragment<UsePantrySubscriptions_PantryItemFragment>({
-          fragment: UsePantrySubscriptions_PantryItemFragmentDoc,
-          fragmentName: 'usePantrySubscriptions_pantryItem',
-          from: { __typename: 'PantryItem', id: itemRef.id },
-        });
-      if (!item) return;
-
-      if (subscriptionService.isPendingDelete(item.id)) {
-        if (__DEV__) {
-          console.log(
-            '⏭️ [Subscription] Skipping pantry echo for pending-delete',
-            item.id,
-          );
-        }
-        return;
-      }
-
-      if (mutation === MutationType.ItemAdded) {
-        addToPantryItemsConnection(client.cache, selectedPantryId, item);
-      } else if (
-        mutation === MutationType.Deleted ||
-        mutation === MutationType.ItemRemoved
-      ) {
-        removeFromPantryItemsConnection(
-          client.cache,
-          selectedPantryId,
-          item.id,
-          { evictItem: true },
-        );
-      } else if (
-        mutation === MutationType.Updated ||
-        mutation === MutationType.ItemUpdated
-      ) {
-        const cacheId = client.cache.identify({
-          __typename: 'PantryItem',
-          id: item.id,
-        });
-        if (cacheId) {
-          client.cache.writeFragment({
-            id: cacheId,
-            fragment: UsePantrySubscriptions_PantryItemFragmentDoc,
-            fragmentName: 'usePantrySubscriptions_pantryItem',
-            data: item,
-          });
-        } else {
-          addToPantryItemsConnection(client.cache, selectedPantryId, item);
-        }
+        case PantryEventSubtype.PantryUpdated:
+        case PantryEventSubtype.UsageChanged:
+        case PantryEventSubtype.LowStockAlert:
+        case PantryEventSubtype.ExpirationAlert:
+          if (__DEV__) {
+            console.log(
+              `📡 [Subscription] Pantry event: ${payload.subtype}`,
+              payload.node.__typename,
+            );
+          }
+          break;
       }
     },
   });
 
-  useSubscription(PantryItemChangedDocument, {
+  useSubscription(PantryEventsDocument, {
     variables: { pantryId: selectedPantryId! },
     skip: !selectedPantryId || !isHomeSelectionReady,
-    ...itemHandlers,
+    ...eventHandlers,
   });
 
   const expirationOnData = (

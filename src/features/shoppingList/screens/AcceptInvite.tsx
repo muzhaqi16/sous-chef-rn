@@ -101,12 +101,16 @@ export const AcceptInvite: React.FC = () => {
     executeWithLoadingState(
       async () => {
         if (invitationType === 'shopping_list') {
-          await acceptShoppingListInvite({ variables: { token: inviteToken } });
+          await acceptShoppingListInvite({
+            variables: { input: { token: inviteToken } },
+          });
           alertService.alert('Success', 'Shopping list invitation accepted!', [
             { text: 'OK', onPress: () => goBack() },
           ]);
         } else if (invitationType === 'home') {
-          await acceptHomeInvite({ variables: { token: inviteToken } });
+          await acceptHomeInvite({
+            variables: { input: { token: inviteToken } },
+          });
           alertService.alert('Success', 'Home invitation accepted!', [
             { text: 'OK', onPress: () => goBack() },
           ]);
@@ -145,11 +149,11 @@ export const AcceptInvite: React.FC = () => {
               async () => {
                 if (invitationType === 'shopping_list') {
                   await declineShoppingListInvite({
-                    variables: { token: inviteToken! },
+                    variables: { input: { token: inviteToken! } },
                   });
                 } else if (invitationType === 'home') {
                   await declineHomeInvite({
-                    variables: { token: inviteToken! },
+                    variables: { input: { token: inviteToken! } },
                   });
                 }
 

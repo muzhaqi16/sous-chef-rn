@@ -69,7 +69,7 @@ function setDefaultMock(defaultPantryId: string | null = null) {
   return recordMock(SetDefaultHomeDocument, {
     data: {
       setDefaultHome: {
-        __typename: 'SetDefaultHomeSuccess',
+        __typename: 'SetDefaultHomePayload',
         settings: {
           __typename: 'UserSettings',
           id: 'settings-1',

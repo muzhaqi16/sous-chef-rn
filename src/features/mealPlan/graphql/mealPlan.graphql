@@ -38,7 +38,7 @@ query GetMealPlan($id: ID!) {
 mutation CreateMealPlan($input: CreateMealPlanInput!) {
   createMealPlan(input: $input) {
     __typename
-    ... on CreateMealPlanSuccess {
+    ... on CreateMealPlanPayload {
       mealPlan {
         ...MealPlanDisplay
       }
@@ -46,6 +46,10 @@ mutation CreateMealPlan($input: CreateMealPlanInput!) {
     ... on Error {
       code
       message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
     ... on ValidationError {
       field
@@ -56,7 +60,7 @@ mutation CreateMealPlan($input: CreateMealPlanInput!) {
 mutation UpdateMealPlan($input: UpdateMealPlanInput!) {
   updateMealPlan(input: $input) {
     __typename
-    ... on UpdateMealPlanSuccess {
+    ... on UpdateMealPlanPayload {
       mealPlan {
         ...MealPlanDisplay
       }
@@ -65,16 +69,20 @@ mutation UpdateMealPlan($input: UpdateMealPlanInput!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
     ... on ValidationError {
       field
     }
   }
 }
 
-mutation DeleteMealPlan($id: ID!) {
-  deleteMealPlan(id: $id) {
+mutation DeleteMealPlan($input: DeleteMealPlanInput!) {
+  deleteMealPlan(input: $input) {
     __typename
-    ... on DeleteMealPlanSuccess {
+    ... on DeleteMealPlanPayload {
       mealPlan {
         id
       }
@@ -83,13 +91,17 @@ mutation DeleteMealPlan($id: ID!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
   }
 }
 
 mutation CreateMealPlanItem($input: CreateMealPlanItemInput!) {
   createMealPlanItem(input: $input) {
     __typename
-    ... on CreateMealPlanItemSuccess {
+    ... on CreateMealPlanItemPayload {
       mealPlanItem {
         ...MealPlanItemCard_item
         ...EditCustomMealSheet_item
@@ -101,6 +113,10 @@ mutation CreateMealPlanItem($input: CreateMealPlanItemInput!) {
     ... on Error {
       code
       message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
     ... on ValidationError {
       field
@@ -111,7 +127,7 @@ mutation CreateMealPlanItem($input: CreateMealPlanItemInput!) {
 mutation UpdateMealPlanItem($input: UpdateMealPlanItemInput!) {
   updateMealPlanItem(input: $input) {
     __typename
-    ... on UpdateMealPlanItemSuccess {
+    ... on UpdateMealPlanItemPayload {
       mealPlanItem {
         ...MealPlanItemCard_item
         ...EditCustomMealSheet_item
@@ -124,16 +140,20 @@ mutation UpdateMealPlanItem($input: UpdateMealPlanItemInput!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
     ... on ValidationError {
       field
     }
   }
 }
 
-mutation DeleteMealPlanItem($id: ID!) {
-  deleteMealPlanItem(id: $id) {
+mutation DeleteMealPlanItem($input: DeleteMealPlanItemInput!) {
+  deleteMealPlanItem(input: $input) {
     __typename
-    ... on DeleteMealPlanItemSuccess {
+    ... on DeleteMealPlanItemPayload {
       mealPlanItem {
         id
       }
@@ -142,13 +162,17 @@ mutation DeleteMealPlanItem($id: ID!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
   }
 }
 
 mutation DuplicateMealPlan($input: DuplicateMealPlanInput!) {
   duplicateMealPlan(input: $input) {
     __typename
-    ... on DuplicateMealPlanSuccess {
+    ... on DuplicateMealPlanPayload {
       mealPlan {
         ...MealPlanDisplay
       }
@@ -156,6 +180,10 @@ mutation DuplicateMealPlan($input: DuplicateMealPlanInput!) {
     ... on Error {
       code
       message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
     ... on ValidationError {
       field
@@ -166,7 +194,7 @@ mutation DuplicateMealPlan($input: DuplicateMealPlanInput!) {
 mutation GenerateShoppingListFromMealPlan($input: GenerateShoppingListFromMealPlanInput!) {
   generateShoppingListFromMealPlan(input: $input) {
     __typename
-    ... on GenerateShoppingListFromMealPlanSuccess {
+    ... on GenerateShoppingListFromMealPlanPayload {
       shoppingList {
         id
         name
@@ -192,6 +220,10 @@ mutation GenerateShoppingListFromMealPlan($input: GenerateShoppingListFromMealPl
     ... on Error {
       code
       message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
     ... on ValidationError {
       field

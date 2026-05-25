@@ -37,12 +37,12 @@ export const JoinByShareCodeScreen: React.FC<
     executeWithLoadingState(
       async () => {
         const { data } = await joinMutation({
-          variables: { shareCode: trimmed },
+          variables: { input: { shareCode: trimmed } },
         });
 
         const result = data?.joinShoppingListByShareCode;
 
-        if (result?.__typename !== 'JoinShoppingListByShareCodeSuccess') {
+        if (result?.__typename !== 'JoinShoppingListByShareCodePayload') {
           const message = result && 'message' in result ? result.message : null;
           toastService.error(
             message ??

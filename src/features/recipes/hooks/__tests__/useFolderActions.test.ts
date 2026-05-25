@@ -63,7 +63,7 @@ describe('useFolderActions', () => {
       const del = recordMock(DeleteRecipeFolderDocument, {
         data: {
           deleteRecipeFolder: {
-            __typename: 'DeleteRecipeFolderSuccess',
+            __typename: 'DeleteRecipeFolderPayload',
             success: true,
           },
         },
@@ -129,7 +129,7 @@ describe('useFolderActions', () => {
       const del = recordMock(DeleteRecipeFolderDocument, {
         data: {
           deleteRecipeFolder: {
-            __typename: 'DeleteRecipeFolderSuccess',
+            __typename: 'DeleteRecipeFolderPayload',
             success: true,
           },
         },

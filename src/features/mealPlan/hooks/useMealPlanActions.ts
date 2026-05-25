@@ -28,7 +28,7 @@ export function useMealPlanActions() {
     {
       update: (cache, { data }) => {
         const result = data?.createMealPlan;
-        if (result?.__typename === 'CreateMealPlanSuccess') {
+        if (result?.__typename === 'CreateMealPlanPayload') {
           addToMealPlans(cache, result.mealPlan, { position: 'start' });
         }
       },
@@ -44,10 +44,13 @@ export function useMealPlanActions() {
     {
       update: (cache, { data }, { variables }) => {
         const result = data?.deleteMealPlan;
-        if (result?.__typename !== 'DeleteMealPlanSuccess' || !variables?.id) {
+        if (
+          result?.__typename !== 'DeleteMealPlanPayload' ||
+          !variables?.input?.id
+        ) {
           return;
         }
-        removeFromMealPlans(cache, variables.id, { evictItem: true });
+        removeFromMealPlans(cache, variables.input.id, { evictItem: true });
       },
     },
   );
@@ -71,9 +74,9 @@ export function useMealPlanActions() {
 
   const deleteMealPlan = async (id: string) => {
     const result = await deleteMealPlanMutation({
-      variables: { id },
+      variables: { input: { id } },
     });
-    return result.data?.deleteMealPlan?.__typename === 'DeleteMealPlanSuccess';
+    return result.data?.deleteMealPlan?.__typename === 'DeleteMealPlanPayload';
   };
 
   return {

@@ -189,7 +189,7 @@ function acceptHomeOk(opts: { hasMembership?: boolean } = {}) {
   return recordMock(AcceptHomeInviteDocument, {
     data: {
       acceptHomeInvite: {
-        __typename: 'AcceptHomeInviteSuccess',
+        __typename: 'AcceptHomeInvitePayload',
         membership: {
           __typename: 'Membership',
           id: 'm1',
@@ -259,7 +259,7 @@ function acceptShoppingListOk(opts: { success?: boolean } = {}) {
   return recordMock(InvitationAcceptanceModalAcceptShoppingListInviteDocument, {
     data: {
       acceptShoppingListInvite: {
-        __typename: 'AcceptShoppingListInviteSuccess',
+        __typename: 'AcceptShoppingListInvitePayload',
         collaborator: {
           __typename: 'ShoppingListCollaborator',
           id: 'c1',
@@ -307,7 +307,7 @@ function declineHomeOk() {
   return recordMock(DeclineHomeInviteDocument, {
     data: {
       declineHomeInvite: {
-        __typename: 'DeclineHomeInviteSuccess',
+        __typename: 'DeclineHomeInvitePayload',
         homeInvite: { __typename: 'HomeInvite', id: 'inv-1' },
       },
     },
@@ -322,7 +322,7 @@ function declineShoppingListOk() {
   return recordMock(DeclineShoppingListInviteDocument, {
     data: {
       declineShoppingListInvite: {
-        __typename: 'DeclineShoppingListInviteSuccess',
+        __typename: 'DeclineShoppingListInvitePayload',
         collaborator: {
           __typename: 'ShoppingListCollaborator',
           id: 'c1',
@@ -447,7 +447,7 @@ describe('InvitationAcceptanceModal', () => {
     await waitFor(() => {
       expect(defaultProps.onAccept).toHaveBeenCalled();
     });
-    expect(acceptMock.fired).toContainEqual({ token: 'abc123' });
+    expect(acceptMock.fired).toContainEqual({ input: { token: 'abc123' } });
     expect(defaultProps.onClose).toHaveBeenCalled();
   });
 
@@ -470,7 +470,7 @@ describe('InvitationAcceptanceModal', () => {
     await waitFor(() => {
       expect(defaultProps.onAccept).toHaveBeenCalled();
     });
-    expect(acceptMock.fired).toContainEqual({ token: 'def456' });
+    expect(acceptMock.fired).toContainEqual({ input: { token: 'def456' } });
     expect(defaultProps.onClose).toHaveBeenCalled();
   });
 
@@ -624,7 +624,7 @@ describe('InvitationAcceptanceModal', () => {
       declineButton.onPress();
     });
 
-    expect(declineMock.fired).toContainEqual({ token: 'abc123' });
+    expect(declineMock.fired).toContainEqual({ input: { token: 'abc123' } });
   });
 
   it('handles reject confirmation for SHOPPING_LIST_INVITE with token', async () => {
@@ -654,7 +654,7 @@ describe('InvitationAcceptanceModal', () => {
       declineButton.onPress();
     });
 
-    expect(declineMock.fired).toContainEqual({ token: 'def456' });
+    expect(declineMock.fired).toContainEqual({ input: { token: 'def456' } });
   });
 
   it('handles reject error with expired message for HOME_INVITE', async () => {

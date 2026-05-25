@@ -69,10 +69,10 @@ export function useHomeSelection({
     optimisticResponse: (variables): SetDefaultHomeMutation => ({
       __typename: 'Mutation',
       setDefaultHome: {
-        __typename: 'SetDefaultHomeSuccess',
+        __typename: 'SetDefaultHomePayload',
         settings: {
           __typename: 'UserSettings',
-          id: variables.homeId,
+          id: variables.input.homeId,
         },
         // defaultPantry will be returned by server, null in optimistic response
         defaultPantry: null,
@@ -81,7 +81,7 @@ export function useHomeSelection({
 
     // Update Apollo cache to set isDefault on the correct home
     update: (cache, _result, { variables }) => {
-      if (!variables?.homeId) return;
+      if (!variables?.input.homeId) return;
 
       // Update isDefault field on all homes in cache
       cache.modify({
@@ -104,7 +104,7 @@ export function useHomeSelection({
                 cache.modify({
                   id: cacheId,
                   fields: {
-                    isDefault: () => homeId === variables.homeId,
+                    isDefault: () => homeId === variables.input.homeId,
                   },
                 });
               }
@@ -135,7 +135,7 @@ export function useHomeSelection({
 
       // Sync this choice to the backend
       setDefaultHomeMutation({
-        variables: { homeId: firstHome.id },
+        variables: { input: { homeId: firstHome.id } },
       }).catch((error: any) => {
         const { message } = handleApolloError(error, {
           operation: 'Set First Home as Default',
@@ -194,7 +194,7 @@ export function useHomeSelection({
     const result = await executeMutation(
       () =>
         setDefaultHomeMutation({
-          variables: { homeId },
+          variables: { input: { homeId } },
         }),
       () => {
         // Rollback on error and re-enable queries
@@ -205,7 +205,7 @@ export function useHomeSelection({
     );
     if (!result) return false;
 
-    if (result.data?.setDefaultHome?.__typename === 'SetDefaultHomeSuccess') {
+    if (result.data?.setDefaultHome?.__typename === 'SetDefaultHomePayload') {
       // Update pantry from server response (server is source of truth)
       const serverPantry = result.data.setDefaultHome.defaultPantry;
       if (serverPantry?.id) {

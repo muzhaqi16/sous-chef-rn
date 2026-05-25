@@ -278,7 +278,7 @@ query GetPopularItems($first: Int = 10) {
 mutation CreateItem($input: CreateItemInput!) {
   createItem(input: $input) {
     __typename
-    ... on CreateItemSuccess {
+    ... on CreateItemPayload {
       item {
         id
         name
@@ -345,10 +345,10 @@ mutation CreateItem($input: CreateItemInput!) {
   }
 }
 
-mutation FlagItemForReview($itemId: ID!, $reason: String) {
-  flagItemForReview(itemId: $itemId, reason: $reason) {
+mutation FlagItemForReview($input: FlagItemForReviewInput!) {
+  flagItemForReview(input: $input) {
     __typename
-    ... on FlagItemForReviewSuccess {
+    ... on FlagItemForReviewPayload {
       item {
         id
       }

@@ -5,7 +5,7 @@
 mutation MarkAllNotificationsAsRead {
   markAllNotificationsAsRead {
     __typename
-    ... on MarkAllNotificationsAsReadSuccess {
+    ... on MarkAllNotificationsAsReadPayload {
       count
     }
     ... on Error {

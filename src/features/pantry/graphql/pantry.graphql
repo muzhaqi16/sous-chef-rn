@@ -352,7 +352,7 @@ query RestockUnitsForItem($pantryItemId: ID!) {
 mutation CreatePantry($input: CreatePantryInput!) {
   createPantry(input: $input) {
     __typename
-    ... on CreatePantrySuccess {
+    ... on CreatePantryPayload {
       pantry {
         id
         homeId
@@ -367,6 +367,10 @@ mutation CreatePantry($input: CreatePantryInput!) {
     ... on Error {
       code
       message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
     ... on ValidationError {
       field
@@ -377,7 +381,7 @@ mutation CreatePantry($input: CreatePantryInput!) {
 mutation UpdatePantry($input: UpdatePantryInput!) {
   updatePantry(input: $input) {
     __typename
-    ... on UpdatePantrySuccess {
+    ... on UpdatePantryPayload {
       pantry {
         id
         homeId
@@ -393,16 +397,20 @@ mutation UpdatePantry($input: UpdatePantryInput!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
     ... on ValidationError {
       field
     }
   }
 }
 
-mutation DeletePantry($id: ID!) {
-  deletePantry(id: $id) {
+mutation DeletePantry($input: DeletePantryInput!) {
+  deletePantry(input: $input) {
     __typename
-    ... on DeletePantrySuccess {
+    ... on DeletePantryPayload {
       pantry {
         id
         name
@@ -412,13 +420,17 @@ mutation DeletePantry($id: ID!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
   }
 }
 
-mutation SetDefaultPantry($id: ID!) {
-  setDefaultPantry(id: $id) {
+mutation SetDefaultPantry($input: SetDefaultPantryInput!) {
+  setDefaultPantry(input: $input) {
     __typename
-    ... on SetDefaultPantrySuccess {
+    ... on SetDefaultPantryPayload {
       pantry {
         id
         name
@@ -430,13 +442,17 @@ mutation SetDefaultPantry($id: ID!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
   }
 }
 
 mutation CreatePantryItem($input: CreatePantryItemInput!) {
   createPantryItem(input: $input) {
     __typename
-    ... on CreatePantryItemSuccess {
+    ... on CreatePantryItemPayload {
       pantryItem {
         id
         pantryId
@@ -518,6 +534,10 @@ mutation CreatePantryItem($input: CreatePantryItemInput!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
     ... on ValidationError {
       field
     }
@@ -527,7 +547,7 @@ mutation CreatePantryItem($input: CreatePantryItemInput!) {
 mutation UpdatePantryItem($input: UpdatePantryItemInput!) {
   updatePantryItem(input: $input) {
     __typename
-    ... on UpdatePantryItemSuccess {
+    ... on UpdatePantryItemPayload {
       pantryItem {
         id
         ...useUpdatePantryItem_pantryItem
@@ -537,16 +557,20 @@ mutation UpdatePantryItem($input: UpdatePantryItemInput!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
     ... on ValidationError {
       field
     }
   }
 }
 
-mutation DeletePantryItem($id: ID!) {
-  deletePantryItem(id: $id) {
+mutation DeletePantryItem($input: DeletePantryItemInput!) {
+  deletePantryItem(input: $input) {
     __typename
-    ... on DeletePantryItemSuccess {
+    ... on DeletePantryItemPayload {
       pantryItem {
         id
         pantry {
@@ -561,13 +585,17 @@ mutation DeletePantryItem($id: ID!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
   }
 }
 
 mutation CreatePantryItemUsage($input: RecordPantryItemUsageInput!) {
   createPantryItemUsage(input: $input) {
     __typename
-    ... on CreatePantryItemUsageSuccess {
+    ... on CreatePantryItemUsagePayload {
       pantryItemUsage {
         id
         quantityUsed
@@ -598,6 +626,10 @@ mutation CreatePantryItemUsage($input: RecordPantryItemUsageInput!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
     ... on ValidationError {
       field
     }
@@ -607,7 +639,7 @@ mutation CreatePantryItemUsage($input: RecordPantryItemUsageInput!) {
 mutation RestockPantryItem($input: RestockPantryItemInput!) {
   restockPantryItem(input: $input) {
     __typename
-    ... on RestockPantryItemSuccess {
+    ... on RestockPantryItemPayload {
       pantryItemUsage {
         id
         quantityUsed
@@ -623,26 +655,20 @@ mutation RestockPantryItem($input: RestockPantryItemInput!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
     ... on ValidationError {
       field
     }
   }
 }
 
-mutation UpdatePantryItemQuantity(
-  $pantryItemId: ID!
-  $quantity: String!
-  $unitId: ID
-  $version: Int
-) {
-  updatePantryItemQuantity(
-    pantryItemId: $pantryItemId
-    quantity: $quantity
-    unitId: $unitId
-    version: $version
-  ) {
+mutation UpdatePantryItemQuantity($input: UpdatePantryItemQuantityInput!) {
+  updatePantryItemQuantity(input: $input) {
     __typename
-    ... on UpdatePantryItemQuantitySuccess {
+    ... on UpdatePantryItemQuantityPayload {
       pantryItem {
         id
         ...useUpdatePantryItemQuantity_pantryItem
@@ -651,6 +677,10 @@ mutation UpdatePantryItemQuantity(
     ... on Error {
       code
       message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
     ... on ValidationError {
       field
@@ -661,7 +691,7 @@ mutation UpdatePantryItemQuantity(
 mutation AdjustPantryItemQuantity($input: AdjustPantryItemQuantityInput!) {
   adjustPantryItemQuantity(input: $input) {
     __typename
-    ... on AdjustPantryItemQuantitySuccess {
+    ... on AdjustPantryItemQuantityPayload {
       pantryItem {
         ...useAdjustPantryItemQuantity_pantryItem
       }
@@ -669,6 +699,10 @@ mutation AdjustPantryItemQuantity($input: AdjustPantryItemQuantityInput!) {
     ... on Error {
       code
       message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
     ... on ValidationError {
       field
@@ -679,7 +713,7 @@ mutation AdjustPantryItemQuantity($input: AdjustPantryItemQuantityInput!) {
 mutation CorrectPantryItemWeight($input: CorrectPantryItemWeightInput!) {
   correctPantryItemWeight(input: $input) {
     __typename
-    ... on CorrectPantryItemWeightSuccess {
+    ... on CorrectPantryItemWeightPayload {
       pantryItem {
         ...useCorrectPantryItemWeight_pantryItem
       }
@@ -688,32 +722,52 @@ mutation CorrectPantryItemWeight($input: CorrectPantryItemWeightInput!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
     ... on ValidationError {
       field
     }
   }
 }
 
-mutation AddLowStockItemsToShoppingList($homeId: ID!, $shoppingListId: ID) {
-  addLowStockItemsToShoppingList(homeId: $homeId, shoppingListId: $shoppingListId) {
-    addedCount
-    addedItems {
-      pantryItemId
-      shoppingListItemId
-      itemName
-      quantity
+mutation AddLowStockItemsToShoppingList($input: AddLowStockItemsToShoppingListInput!) {
+  addLowStockItemsToShoppingList(input: $input) {
+    __typename
+    ... on AddLowStockItemsToShoppingListPayload {
+      result {
+        addedCount
+        addedItems {
+          pantryItemId
+          shoppingListItemId
+          itemName
+          quantity
+        }
+        skippedCount
+        skippedItems {
+          pantryItemId
+          itemName
+          reason
+        }
+      }
     }
-    skippedCount
-    skippedItems {
-      pantryItemId
-      itemName
-      reason
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
-mutation MovePurchasedItemsToPantry($shoppingListId: ID!) {
-  movePurchasedItemsToPantry(shoppingListId: $shoppingListId) {
+mutation MovePurchasedItemsToPantry($input: MovePurchasedItemsToPantryInput!) {
+  movePurchasedItemsToPantry(input: $input) {
     movedCount
     movedItems {
       shoppingListItemId
@@ -732,10 +786,10 @@ mutation MovePurchasedItemsToPantry($shoppingListId: ID!) {
   }
 }
 
-mutation OpenPantryItem($id: ID!, $version: Int) {
-  openPantryItem(id: $id, version: $version) {
+mutation OpenPantryItem($input: OpenPantryItemInput!) {
+  openPantryItem(input: $input) {
     __typename
-    ... on OpenPantryItemSuccess {
+    ... on OpenPantryItemPayload {
       pantryItem {
         ...useOpenPantryItem_pantryItem
       }
@@ -744,13 +798,17 @@ mutation OpenPantryItem($id: ID!, $version: Int) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
   }
 }
 
-mutation ConvertExpiredToWaste($pantryItemId: ID!) {
-  convertExpiredToWaste(pantryItemId: $pantryItemId) {
+mutation ConvertExpiredToWaste($input: ConvertExpiredToWasteInput!) {
+  convertExpiredToWaste(input: $input) {
     __typename
-    ... on ConvertExpiredToWasteSuccess {
+    ... on ConvertExpiredToWastePayload {
       pantryItem {
         ...useConvertExpiredToWaste_pantryItem
       }
@@ -758,6 +816,10 @@ mutation ConvertExpiredToWaste($pantryItemId: ID!) {
     ... on Error {
       code
       message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
   }
 }
@@ -775,7 +837,7 @@ query GetPantryItemBatches($pantryItemId: ID!, $status: BatchStatus) {
 mutation OpenPantryItemBatch($input: OpenBatchInput!) {
   openPantryItemBatch(input: $input) {
     __typename
-    ... on OpenPantryItemBatchSuccess {
+    ... on OpenPantryItemBatchPayload {
       pantryItem {
         ...useOpenPantryItemBatch_pantryItem
       }
@@ -783,6 +845,10 @@ mutation OpenPantryItemBatch($input: OpenBatchInput!) {
     ... on Error {
       code
       message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
     ... on ValidationError {
       field
@@ -793,7 +859,7 @@ mutation OpenPantryItemBatch($input: OpenBatchInput!) {
 mutation WastePantryItemBatch($input: WasteBatchInput!) {
   wastePantryItemBatch(input: $input) {
     __typename
-    ... on WastePantryItemBatchSuccess {
+    ... on WastePantryItemBatchPayload {
       pantryItem {
         ...useWastePantryItemBatch_pantryItem
       }
@@ -802,16 +868,20 @@ mutation WastePantryItemBatch($input: WasteBatchInput!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
     ... on ValidationError {
       field
     }
   }
 }
 
-mutation ConvertExpiredBatchesToWaste($pantryItemId: ID!) {
-  convertExpiredBatchesToWaste(pantryItemId: $pantryItemId) {
+mutation ConvertExpiredBatchesToWaste($input: ConvertExpiredBatchesToWasteInput!) {
+  convertExpiredBatchesToWaste(input: $input) {
     __typename
-    ... on ConvertExpiredBatchesToWasteSuccess {
+    ... on ConvertExpiredBatchesToWastePayload {
       pantryItem {
         ...useConvertExpiredBatchesToWaste_pantryItem
       }
@@ -820,6 +890,10 @@ mutation ConvertExpiredBatchesToWaste($pantryItemId: ID!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
   }
 }
 
@@ -827,8 +901,8 @@ mutation ConvertExpiredBatchesToWaste($pantryItemId: ID!) {
 # OFFLINE SYNC MUTATIONS
 # ============================================
 
-mutation SyncPantryItem($clientId: ID!, $input: SyncPantryItemInput!) {
-  syncPantryItem(clientId: $clientId, input: $input) {
+mutation SyncPantryItem($input: SyncPantryItemInput!) {
+  syncPantryItem(input: $input) {
     clientId
     serverId
     operation
@@ -848,8 +922,8 @@ mutation SyncPantryItem($clientId: ID!, $input: SyncPantryItemInput!) {
   }
 }
 
-mutation SyncDeletePantryItem($clientId: ID!, $version: Int) {
-  syncDeletePantryItem(clientId: $clientId, version: $version) {
+mutation SyncDeletePantryItem($input: SyncDeletePantryItemInput!) {
+  syncDeletePantryItem(input: $input) {
     clientId
     serverId
     operation
@@ -870,45 +944,44 @@ mutation SyncDeletePantryItem($clientId: ID!, $version: Int) {
 # SUBSCRIPTIONS
 # ============================================
 
-subscription PantryItemChanged($pantryId: ID!) {
-  pantryItemChanged(pantryId: $pantryId) {
+subscription PantryEvents($pantryId: ID!) {
+  pantryEvents(pantryId: $pantryId) {
+    actorUserId
     mutation
-    item {
-      id
-      ...usePantrySubscriptions_pantryItem
-    }
-    updatedFields
-    timestamp
-    userId
-    pantryId
-  }
-}
-
-subscription PantryExpirationAlert($pantryId: ID!) {
-  pantryExpirationAlert(pantryId: $pantryId) {
-    item {
-      id
-      itemId
-      itemName
-      pantryId
-      quantity
-      unit {
-        id
-        name
-        symbol
-      }
-      item {
-        id
-        name
-        imageUrl
-        images { url kind }
-      }
-    }
-    expiresAt
-    daysUntilExpiration
+    subtype
     pantryId
     timestamp
-    userId
+    parents {
+      homeId
+    }
+    node {
+      ... on PantryItem {
+        id
+        ...usePantrySubscriptions_pantryItem
+      }
+      ... on Pantry {
+        id
+        name
+        description
+        isDefault
+        version
+        stats {
+          totalItems
+          expiringCount
+          lowStockCount
+        }
+      }
+      ... on PantryItemUsage {
+        id
+        quantityUsed
+        purpose
+        pantryItem {
+          id
+          quantity
+          isLowStock
+        }
+      }
+    }
   }
 }
 

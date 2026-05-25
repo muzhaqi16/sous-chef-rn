@@ -98,15 +98,17 @@ export function useUpdatePantryItemQuantity({
     });
     updateQuantityMutation({
       variables: {
-        pantryItemId: itemId,
-        quantity: quantityInput || quantityValue.toString(),
-        unitId: unitId,
-        version: currentItem.version ?? undefined,
+        input: {
+          pantryItemId: itemId,
+          quantity: quantityInput || quantityValue.toString(),
+          unitId: unitId,
+          version: currentItem.version ?? undefined,
+        },
       },
       optimisticResponse: {
         __typename: 'Mutation',
         updatePantryItemQuantity: {
-          __typename: 'UpdatePantryItemQuantitySuccess',
+          __typename: 'UpdatePantryItemQuantityPayload',
           pantryItem: optimisticPantryItem,
         },
       },

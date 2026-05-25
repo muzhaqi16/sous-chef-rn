@@ -1,5 +1,5 @@
-mutation MovePurchasedItemsToPantry($shoppingListId: ID!) {
-  movePurchasedItemsToPantry(shoppingListId: $shoppingListId) {
+mutation MovePurchasedItemsToPantry($input: MovePurchasedItemsToPantryInput!) {
+  movePurchasedItemsToPantry(input: $input) {
     movedCount
     movedItems {
       shoppingListItemId

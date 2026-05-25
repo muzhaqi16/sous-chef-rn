@@ -30,12 +30,12 @@ export function useConvertExpiredToWaste({
     pantryItemId: string,
   ): Promise<boolean> => {
     const result = await convertMutation({
-      variables: { pantryItemId },
+      variables: { input: { pantryItemId } },
     });
 
     if (
       result.data?.convertExpiredToWaste?.__typename ===
-      'ConvertExpiredToWasteSuccess'
+      'ConvertExpiredToWastePayload'
     ) {
       onSuccess?.();
       return true;

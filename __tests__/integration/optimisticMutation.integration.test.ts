@@ -117,7 +117,7 @@ function buildSettledServerResponse(
   return {
     __typename: 'Mutation',
     toggleShoppingListItemPurchased: {
-      __typename: 'ToggleShoppingListItemPurchasedSuccess',
+      __typename: 'ToggleShoppingListItemPurchasedPayload',
       shoppingListItem: {
         __typename: 'ShoppingListItem',
         id: ITEM_ID,

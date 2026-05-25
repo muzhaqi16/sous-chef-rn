@@ -194,7 +194,7 @@ query GetShoppingListSuggestions($id: ID!, $limit: Int = 15) {
 mutation CreateShoppingList($input: CreateShoppingListInput!) {
   createShoppingList(input: $input) {
     __typename
-    ... on CreateShoppingListSuccess {
+    ... on CreateShoppingListPayload {
       shoppingList {
         id
         name
@@ -226,7 +226,7 @@ mutation CreateShoppingList($input: CreateShoppingListInput!) {
 mutation UpdateShoppingList($input: UpdateShoppingListInput!) {
   updateShoppingList(input: $input) {
     __typename
-    ... on UpdateShoppingListSuccess {
+    ... on UpdateShoppingListPayload {
       shoppingList {
         id
         name
@@ -244,16 +244,20 @@ mutation UpdateShoppingList($input: UpdateShoppingListInput!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
     ... on ValidationError {
       field
     }
   }
 }
 
-mutation DeleteShoppingList($id: ID!) {
-  deleteShoppingList(id: $id) {
+mutation DeleteShoppingList($input: DeleteShoppingListInput!) {
+  deleteShoppingList(input: $input) {
     __typename
-    ... on DeleteShoppingListSuccess {
+    ... on DeleteShoppingListPayload {
       shoppingList {
         id
         name
@@ -263,13 +267,17 @@ mutation DeleteShoppingList($id: ID!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
   }
 }
 
 mutation AddCollaborator($input: InviteToShoppingListInput!) {
   inviteToShoppingList(input: $input) {
     __typename
-    ... on InviteToShoppingListSuccess {
+    ... on InviteToShoppingListPayload {
       collaborator {
         ...ShoppingListCollaboratorFragment
         canEdit
@@ -281,16 +289,20 @@ mutation AddCollaborator($input: InviteToShoppingListInput!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
     ... on ValidationError {
       field
     }
   }
 }
 
-mutation RemoveCollaborator($id: ID!) {
-  removeShoppingListCollaborator(id: $id) {
+mutation RemoveCollaborator($input: RemoveShoppingListCollaboratorInput!) {
+  removeShoppingListCollaborator(input: $input) {
     __typename
-    ... on RemoveShoppingListCollaboratorSuccess {
+    ... on RemoveShoppingListCollaboratorPayload {
       collaborator {
         id
       }
@@ -299,13 +311,17 @@ mutation RemoveCollaborator($id: ID!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
   }
 }
 
 mutation AddItemToShoppingList($input: CreateShoppingListItemInput!) {
   addItemToShoppingList(input: $input) {
     __typename
-    ... on AddItemToShoppingListSuccess {
+    ... on AddItemToShoppingListPayload {
       shoppingListItem {
         id
         itemName
@@ -344,6 +360,10 @@ mutation AddItemToShoppingList($input: CreateShoppingListItemInput!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
     ... on ValidationError {
       field
     }
@@ -355,7 +375,7 @@ mutation UpdateShoppingListItem(
 ) {
   updateShoppingListItem(input: $input) {
     __typename
-    ... on UpdateShoppingListItemSuccess {
+    ... on UpdateShoppingListItemPayload {
       shoppingListItem {
         id
         ...useUpdateShoppingItem_item
@@ -365,16 +385,20 @@ mutation UpdateShoppingListItem(
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
     ... on ValidationError {
       field
     }
   }
 }
 
-mutation RemoveItemFromShoppingList($id: ID!) {
-  removeItemFromShoppingList(id: $id) {
+mutation RemoveItemFromShoppingList($input: RemoveItemFromShoppingListInput!) {
+  removeItemFromShoppingList(input: $input) {
     __typename
-    ... on RemoveItemFromShoppingListSuccess {
+    ... on RemoveItemFromShoppingListPayload {
       shoppingListItem {
         id
         shoppingList {
@@ -390,13 +414,17 @@ mutation RemoveItemFromShoppingList($id: ID!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
   }
 }
 
 mutation MoveShoppingListItem($input: MoveShoppingListItemInput!) {
   moveShoppingListItem(input: $input) {
     __typename
-    ... on MoveShoppingListItemSuccess {
+    ... on MoveShoppingListItemPayload {
       shoppingListItem {
         id
         ...useItemReordering_moveResult
@@ -405,6 +433,10 @@ mutation MoveShoppingListItem($input: MoveShoppingListItemInput!) {
     ... on Error {
       code
       message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
     ... on ValidationError {
       field
@@ -421,7 +453,7 @@ mutation ToggleShoppingListItemPurchased(
 ) {
   toggleShoppingListItemPurchased(input: $input) {
     __typename
-    ... on ToggleShoppingListItemPurchasedSuccess {
+    ... on ToggleShoppingListItemPurchasedPayload {
       shoppingListItem {
         id
         ...useToggleShoppingItem_item
@@ -438,6 +470,10 @@ mutation ToggleShoppingListItemPurchased(
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
     ... on ValidationError {
       field
     }
@@ -445,19 +481,11 @@ mutation ToggleShoppingListItemPurchased(
 }
 
 mutation UpdateShoppingListItemQuantity(
-  $itemId: ID!
-  $quantity: String!
-  $unitId: ID
-  $version: Int
+  $input: UpdateShoppingListItemQuantityInput!
 ) {
-  updateShoppingListItemQuantity(
-    itemId: $itemId
-    quantity: $quantity
-    unitId: $unitId
-    version: $version
-  ) {
+  updateShoppingListItemQuantity(input: $input) {
     __typename
-    ... on UpdateShoppingListItemQuantitySuccess {
+    ... on UpdateShoppingListItemQuantityPayload {
       shoppingListItem {
         id
         ...useShoppingListActions_updateQuantityResult
@@ -466,6 +494,10 @@ mutation UpdateShoppingListItemQuantity(
     ... on Error {
       code
       message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
     ... on ValidationError {
       field
@@ -478,7 +510,7 @@ mutation UpdateCollaboratorRole(
 ) {
   updateCollaboratorRole(input: $input) {
     __typename
-    ... on UpdateCollaboratorRoleSuccess {
+    ... on UpdateCollaboratorRolePayload {
       collaborator {
         id
       }
@@ -486,6 +518,10 @@ mutation UpdateCollaboratorRole(
     ... on Error {
       code
       message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
     ... on ValidationError {
       field
@@ -496,7 +532,7 @@ mutation UpdateCollaboratorRole(
 mutation MoveShoppingItemToPantry($input: MoveShoppingItemToPantryInput!) {
   moveShoppingItemToPantry(input: $input) {
     __typename
-    ... on MoveShoppingItemToPantrySuccess {
+    ... on MoveShoppingItemToPantryPayload {
       pantryItem {
         id
         ...useMoveToPantry_pantryItem
@@ -506,14 +542,18 @@ mutation MoveShoppingItemToPantry($input: MoveShoppingItemToPantryInput!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
     ... on ValidationError {
       field
     }
   }
 }
 
-mutation ClearShoppingListItems($shoppingListId: ID!, $purchased: Boolean!) {
-  clearShoppingListItems(shoppingListId: $shoppingListId, purchased: $purchased) {
+mutation ClearShoppingListItems($input: ClearShoppingListItemsInput!) {
+  clearShoppingListItems(input: $input) {
     summary {
       total
       successful
@@ -525,11 +565,8 @@ mutation ClearShoppingListItems($shoppingListId: ID!, $purchased: Boolean!) {
   }
 }
 
-mutation AddItemsToShoppingList(
-  $shoppingListId: ID!
-  $items: [BatchAddShoppingListItemInput!]!
-) {
-  addItemsToShoppingList(shoppingListId: $shoppingListId, items: $items) {
+mutation AddItemsToShoppingList($input: AddItemsToShoppingListInput!) {
+  addItemsToShoppingList(input: $input) {
     results {
       index
       clientId
@@ -550,7 +587,7 @@ mutation AddItemsToShoppingList(
 mutation ShareShoppingList($input: ShareShoppingListInput!) {
   shareShoppingList(input: $input) {
     __typename
-    ... on ShareShoppingListSuccess {
+    ... on ShareShoppingListPayload {
       shoppingList {
         id
         shareCode
@@ -561,16 +598,20 @@ mutation ShareShoppingList($input: ShareShoppingListInput!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
     ... on ValidationError {
       field
     }
   }
 }
 
-mutation JoinShoppingListByShareCode($shareCode: String!) {
-  joinShoppingListByShareCode(shareCode: $shareCode) {
+mutation JoinShoppingListByShareCode($input: JoinShoppingListByShareCodeInput!) {
+  joinShoppingListByShareCode(input: $input) {
     __typename
-    ... on JoinShoppingListByShareCodeSuccess {
+    ... on JoinShoppingListByShareCodePayload {
       shoppingList {
         id
         name
@@ -579,6 +620,10 @@ mutation JoinShoppingListByShareCode($shareCode: String!) {
     ... on Error {
       code
       message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
     ... on ValidationError {
       field
@@ -590,11 +635,8 @@ mutation JoinShoppingListByShareCode($shareCode: String!) {
 # OFFLINE SYNC MUTATIONS
 # ============================================
 
-mutation SyncShoppingListItem(
-  $clientId: ID!
-  $input: SyncShoppingListItemInput!
-) {
-  syncShoppingListItem(clientId: $clientId, input: $input) {
+mutation SyncShoppingListItem($input: SyncShoppingListItemFullInput!) {
+  syncShoppingListItem(input: $input) {
     clientId
     serverId
     operation
@@ -616,8 +658,8 @@ mutation SyncShoppingListItem(
   }
 }
 
-mutation SyncDeleteShoppingListItem($clientId: ID!, $version: Int) {
-  syncDeleteShoppingListItem(clientId: $clientId, version: $version) {
+mutation SyncDeleteShoppingListItem($input: SyncDeleteShoppingListItemInput!) {
+  syncDeleteShoppingListItem(input: $input) {
     clientId
     serverId
     operation
@@ -634,18 +676,8 @@ mutation SyncDeleteShoppingListItem($clientId: ID!, $version: Int) {
   }
 }
 
-mutation SyncMoveShoppingListItem(
-  $clientId: ID!
-  $afterId: ID
-  $beforeId: ID
-  $version: Int
-) {
-  syncMoveShoppingListItem(
-    clientId: $clientId
-    afterId: $afterId
-    beforeId: $beforeId
-    version: $version
-  ) {
+mutation SyncMoveShoppingListItem($input: SyncMoveShoppingListItemInput!) {
+  syncMoveShoppingListItem(input: $input) {
     clientId
     serverId
     operation

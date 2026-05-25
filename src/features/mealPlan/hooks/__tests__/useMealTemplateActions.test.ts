@@ -54,7 +54,7 @@ describe('useMealTemplateActions', () => {
     const create = recordMock(CreateMealPlanFromTemplateDocument, {
       data: {
         createMealPlanFromTemplate: {
-          __typename: 'CreateMealPlanSuccess',
+          __typename: 'CreateMealPlanPayload',
           mealPlan: { __typename: 'MealPlan', id: 'plan-1' },
         },
       },
@@ -69,7 +69,7 @@ describe('useMealTemplateActions', () => {
       startDate: '2025-01-01',
     });
 
-    expect(response).toMatchObject({ __typename: 'CreateMealPlanSuccess' });
+    expect(response).toMatchObject({ __typename: 'CreateMealPlanPayload' });
     expect(toastService.success).toHaveBeenCalledWith(
       'Meal plan created from template!',
     );
@@ -100,7 +100,7 @@ describe('useMealTemplateActions', () => {
     const create = recordMock(CreateTemplateFromMealPlanDocument, {
       data: {
         createTemplateFromMealPlan: {
-          __typename: 'CreateTemplateFromMealPlanSuccess',
+          __typename: 'CreateTemplateFromMealPlanPayload',
           mealTemplate: { __typename: 'MealTemplate', id: 'tmpl-1' },
         },
       },
@@ -116,7 +116,7 @@ describe('useMealTemplateActions', () => {
     });
 
     expect(response).toMatchObject({
-      __typename: 'CreateTemplateFromMealPlanSuccess',
+      __typename: 'CreateTemplateFromMealPlanPayload',
     });
     expect(toastService.success).toHaveBeenCalledWith(
       'Meal plan saved as template!',
@@ -131,7 +131,7 @@ describe('useMealTemplateActions', () => {
     const del = recordMock(DeleteMealTemplateDocument, {
       data: {
         deleteMealTemplate: {
-          __typename: 'DeleteMealTemplateSuccess',
+          __typename: 'DeleteMealTemplatePayload',
           mealTemplate: { __typename: 'MealTemplate', id: 'template-1' },
         },
       },
@@ -171,7 +171,7 @@ describe('useMealTemplateActions', () => {
     const dup = recordMock(DuplicateTemplateDocument, {
       data: {
         duplicateTemplate: {
-          __typename: 'DuplicateTemplateSuccess',
+          __typename: 'DuplicateTemplatePayload',
           mealTemplate: { __typename: 'MealTemplate', id: 'dup-1' },
         },
       },
@@ -187,7 +187,7 @@ describe('useMealTemplateActions', () => {
     );
 
     expect(response).toMatchObject({
-      __typename: 'DuplicateTemplateSuccess',
+      __typename: 'DuplicateTemplatePayload',
       mealTemplate: { id: 'dup-1' },
     });
     expect(toastService.success).toHaveBeenCalledWith('Template duplicated!');

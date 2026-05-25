@@ -75,7 +75,7 @@ export const RecipeFormScreen: React.FC<
     CreateRecipeDocument,
     {
       update: (cache, { data }) => {
-        if (data?.createRecipe?.__typename !== 'CreateRecipeSuccess') return;
+        if (data?.createRecipe?.__typename !== 'CreateRecipePayload') return;
         const newRecipe = data.createRecipe.recipe;
         cache.updateQuery<MyRecipesQuery>(
           { query: MyRecipesDocument },
@@ -124,8 +124,10 @@ export const RecipeFormScreen: React.FC<
             }),
             updateRecipeIngredientsMutation({
               variables: {
-                recipeId,
-                ingredients: form.buildIngredientsInput(),
+                input: {
+                  recipeId,
+                  ingredients: form.buildIngredientsInput(),
+                },
               },
             }),
           ]);
@@ -133,9 +135,9 @@ export const RecipeFormScreen: React.FC<
           const ingredientsPayload =
             ingredientsResult.data?.updateRecipeIngredients;
           const recipeSuccess =
-            updatePayload?.__typename === 'UpdateRecipeSuccess';
+            updatePayload?.__typename === 'UpdateRecipePayload';
           const ingredientsSuccess =
-            ingredientsPayload?.__typename === 'UpdateRecipeIngredientsSuccess';
+            ingredientsPayload?.__typename === 'UpdateRecipeIngredientsPayload';
           if (recipeSuccess && ingredientsSuccess) {
             goBack();
           } else {
@@ -158,7 +160,7 @@ export const RecipeFormScreen: React.FC<
             variables: { input },
           });
           const createPayload = result.data?.createRecipe;
-          if (createPayload?.__typename === 'CreateRecipeSuccess') {
+          if (createPayload?.__typename === 'CreateRecipePayload') {
             goBack();
           } else {
             const message =

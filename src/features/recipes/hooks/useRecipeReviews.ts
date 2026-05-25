@@ -89,7 +89,7 @@ export function useRecipeReviews({
     {
       update: (cache, { data }) => {
         const payload = data?.createRecipeReview;
-        if (payload?.__typename === 'CreateRecipeReviewSuccess') {
+        if (payload?.__typename === 'CreateRecipeReviewPayload') {
           const review = payload.recipeReview;
           addReviewToRecipe(cache, recipeId, {
             id: review.id,
@@ -118,12 +118,12 @@ export function useRecipeReviews({
       update: (cache, { data }, { variables }) => {
         if (
           data?.deleteRecipeReview?.__typename !==
-            'DeleteRecipeReviewSuccess' ||
-          !variables?.id
+            'DeleteRecipeReviewPayload' ||
+          !variables?.input?.id
         ) {
           return;
         }
-        removeReviewFromRecipe(cache, recipeId, variables.id);
+        removeReviewFromRecipe(cache, recipeId, variables.input.id);
       },
       onError: err => {
         toastService.error(err.message || 'Failed to delete review');
@@ -135,7 +135,7 @@ export function useRecipeReviews({
     update: (cache, { data }, { variables }) => {
       if (
         data?.toggleReviewHelpful?.__typename !==
-          'ToggleReviewHelpfulSuccess' ||
+          'ToggleReviewHelpfulPayload' ||
         !variables?.input
       ) {
         return;
@@ -160,11 +160,16 @@ export function useRecipeReviews({
 
   // Actions
   const createReview = async (rating: number, comment?: string) => {
-    await createReviewMutation({
+    const result = await createReviewMutation({
       variables: {
         input: { recipeId, rating, comment: comment || undefined },
       },
     });
+    const payload = result.data?.createRecipeReview;
+    if (payload?.__typename === 'RateLimitError') {
+      toastService.error(payload.message);
+      return;
+    }
     toastService.success('Review submitted');
   };
 
@@ -183,7 +188,7 @@ export function useRecipeReviews({
       },
       update: (cache, { data }) => {
         const payload = data?.updateRecipeReview;
-        if (payload?.__typename !== 'UpdateRecipeReviewSuccess') return;
+        if (payload?.__typename !== 'UpdateRecipeReviewPayload') return;
         const review = payload.recipeReview;
         if (prevRating === null) return;
         if (prevRating !== review.rating) {
@@ -195,7 +200,7 @@ export function useRecipeReviews({
   };
 
   const deleteReview = async (id: string) => {
-    await deleteReviewMutation({ variables: { id } });
+    await deleteReviewMutation({ variables: { input: { id } } });
     toastService.success('Review deleted');
   };
 

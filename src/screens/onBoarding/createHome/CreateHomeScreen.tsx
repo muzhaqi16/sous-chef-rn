@@ -356,7 +356,7 @@ const CreateHomeScreenComponent = () => {
   const [createHome] = useMutation(CreateHomeDocument);
   const [createPantry] = useMutation(CreatePantryDocument, {
     update: (cache, { data }) => {
-      if (data?.createPantry?.__typename !== 'CreatePantrySuccess') {
+      if (data?.createPantry?.__typename !== 'CreatePantryPayload') {
         return;
       }
       const newPantry = data.createPantry.pantry;
@@ -421,7 +421,7 @@ const CreateHomeScreenComponent = () => {
       // component body (React Compiler bailout).
       update: buildAcceptHomeInviteUpdater(user?.id),
       onCompleted: data => {
-        if (data.acceptHomeInvite?.__typename === 'AcceptHomeInviteSuccess') {
+        if (data.acceptHomeInvite?.__typename === 'AcceptHomeInvitePayload') {
           setSelectedHomeId(data.acceptHomeInvite.membership.homeId);
           navigateToNextStep('CreateHome');
         }
@@ -506,7 +506,7 @@ const CreateHomeScreenComponent = () => {
   const handleAcceptInvite = (token: string) => {
     // Error handled by onError in mutation config
     executeMutation(
-      () => acceptHomeInvite({ variables: { token } }),
+      () => acceptHomeInvite({ variables: { input: { token } } }),
       'Failed to accept home invite',
     );
   };
@@ -523,7 +523,7 @@ const CreateHomeScreenComponent = () => {
           onPress: () => {
             // Error handled by onError in mutation config
             executeMutation(
-              () => declineHomeInvite({ variables: { token } }),
+              () => declineHomeInvite({ variables: { input: { token } } }),
               'Failed to decline home invite',
             );
           },

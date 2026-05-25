@@ -26,7 +26,7 @@ async function performPasswordReset(
   token: string,
   newPassword: string,
   resetPassword: (opts: {
-    variables: { token: string; newPassword: string };
+    variables: { input: { token: string; newPassword: string } };
   }) => Promise<any>,
   toast: ToastFn,
   navigateToLogin: () => void,
@@ -38,7 +38,7 @@ async function performPasswordReset(
   });
 
   const result = await resetPassword({
-    variables: { token, newPassword },
+    variables: { input: { token, newPassword } },
   });
 
   if (result.data?.resetPassword?.success) {

@@ -22,7 +22,7 @@ fragment SearchResults_pantryItem on PantryItem {
 mutation BarcodeAddItemToShoppingList($input: CreateShoppingListItemInput!) {
   addItemToShoppingList(input: $input) {
     __typename
-    ... on AddItemToShoppingListSuccess {
+    ... on AddItemToShoppingListPayload {
       shoppingListItem {
         id
         ...SearchResults_shoppingListItem
@@ -31,6 +31,10 @@ mutation BarcodeAddItemToShoppingList($input: CreateShoppingListItemInput!) {
     ... on Error {
       code
       message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
     ... on ValidationError {
       field
@@ -41,7 +45,7 @@ mutation BarcodeAddItemToShoppingList($input: CreateShoppingListItemInput!) {
 mutation BarcodeCreatePantryItem($input: CreatePantryItemInput!) {
   createPantryItem(input: $input) {
     __typename
-    ... on CreatePantryItemSuccess {
+    ... on CreatePantryItemPayload {
       pantryItem {
         id
         ...SearchResults_pantryItem
@@ -50,6 +54,10 @@ mutation BarcodeCreatePantryItem($input: CreatePantryItemInput!) {
     ... on Error {
       code
       message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
     ... on ValidationError {
       field
@@ -60,7 +68,7 @@ mutation BarcodeCreatePantryItem($input: CreatePantryItemInput!) {
 mutation BarcodeRestockPantryItem($input: RestockPantryItemInput!) {
   restockPantryItem(input: $input) {
     __typename
-    ... on RestockPantryItemSuccess {
+    ... on RestockPantryItemPayload {
       pantryItemUsage {
         id
         quantityUsed
@@ -75,6 +83,10 @@ mutation BarcodeRestockPantryItem($input: RestockPantryItemInput!) {
     ... on Error {
       code
       message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
     ... on ValidationError {
       field

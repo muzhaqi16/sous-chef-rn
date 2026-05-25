@@ -75,7 +75,7 @@ query GetDietaryProfile {
 mutation UpdateNotificationPreferences($input: UpdateNotificationPreferencesInput!) {
   updateNotificationPreferences(input: $input) {
     __typename
-    ... on UpdateNotificationPreferencesSuccess {
+    ... on UpdateNotificationPreferencesPayload {
       notificationPreferences {
         id
         userId
@@ -106,6 +106,10 @@ mutation UpdateNotificationPreferences($input: UpdateNotificationPreferencesInpu
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
     ... on ValidationError {
       field
     }
@@ -115,7 +119,7 @@ mutation UpdateNotificationPreferences($input: UpdateNotificationPreferencesInpu
 mutation UpdateDietaryProfile($input: UpdateDietaryProfileInput!) {
   updateDietaryProfile(input: $input) {
     __typename
-    ... on UpdateDietaryProfileSuccess {
+    ... on UpdateDietaryProfilePayload {
       dietaryProfile {
         id
         userId
@@ -150,6 +154,10 @@ mutation UpdateDietaryProfile($input: UpdateDietaryProfileInput!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
     ... on ValidationError {
       field
     }
@@ -159,7 +167,7 @@ mutation UpdateDietaryProfile($input: UpdateDietaryProfileInput!) {
 mutation AddDietaryRestriction($input: AddRestrictionInput!) {
   addRestriction(input: $input) {
     __typename
-    ... on AddRestrictionSuccess {
+    ... on AddRestrictionPayload {
       dietaryRestriction {
         id
         diet
@@ -174,6 +182,10 @@ mutation AddDietaryRestriction($input: AddRestrictionInput!) {
     ... on Error {
       code
       message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
     ... on ValidationError {
       field
@@ -184,7 +196,7 @@ mutation AddDietaryRestriction($input: AddRestrictionInput!) {
 mutation UpdateDietaryRestriction($input: UpdateRestrictionInput!) {
   updateRestriction(input: $input) {
     __typename
-    ... on UpdateRestrictionSuccess {
+    ... on UpdateRestrictionPayload {
       dietaryRestriction {
         id
         diet
@@ -200,6 +212,10 @@ mutation UpdateDietaryRestriction($input: UpdateRestrictionInput!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
     ... on ValidationError {
       field
     }
@@ -209,7 +225,7 @@ mutation UpdateDietaryRestriction($input: UpdateRestrictionInput!) {
 mutation RemoveDietaryRestriction($input: RemoveRestrictionInput!) {
   removeRestriction(input: $input) {
     __typename
-    ... on RemoveRestrictionSuccess {
+    ... on RemoveRestrictionPayload {
       dietaryRestriction {
         id
       }
@@ -217,6 +233,10 @@ mutation RemoveDietaryRestriction($input: RemoveRestrictionInput!) {
     ... on Error {
       code
       message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
   }
 }

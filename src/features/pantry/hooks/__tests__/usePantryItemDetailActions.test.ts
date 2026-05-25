@@ -178,7 +178,7 @@ describe('usePantryItemDetailActions', () => {
       });
 
       await waitFor(() =>
-        expect(deleteMock.fired).toContainEqual({ id: 'item-1' }),
+        expect(deleteMock.fired).toContainEqual({ input: { id: 'item-1' } }),
       );
       await waitFor(() => expect(mockGoBack).toHaveBeenCalled());
     });

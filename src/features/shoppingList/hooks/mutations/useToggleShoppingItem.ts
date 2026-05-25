@@ -173,7 +173,7 @@ export function useToggleShoppingItem({
     if (!result) return false;
 
     return result.data?.toggleShoppingListItemPurchased?.__typename ===
-      'ToggleShoppingListItemPurchasedSuccess'
+      'ToggleShoppingListItemPurchasedPayload'
       ? result.data.toggleShoppingListItemPurchased.shoppingListItem
       : false;
   };

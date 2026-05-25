@@ -244,7 +244,7 @@ async function registerDeviceOnce(): Promise<boolean> {
     });
 
     const registerPayload = result.data?.registerDevice;
-    if (registerPayload?.__typename !== 'RegisterDeviceSuccess') {
+    if (registerPayload?.__typename !== 'RegisterDevicePayload') {
       const message =
         registerPayload && 'message' in registerPayload
           ? registerPayload.message

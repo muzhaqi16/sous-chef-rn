@@ -1,7 +1,7 @@
-mutation SetDefaultHome($homeId: ID!) {
-  setDefaultHome(homeId: $homeId) {
+mutation SetDefaultHome($input: SetDefaultHomeInput!) {
+  setDefaultHome(input: $input) {
     __typename
-    ... on SetDefaultHomeSuccess {
+    ... on SetDefaultHomePayload {
       settings {
         id
       }
@@ -14,6 +14,10 @@ mutation SetDefaultHome($homeId: ID!) {
     ... on Error {
       code
       message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
     ... on ValidationError {
       field

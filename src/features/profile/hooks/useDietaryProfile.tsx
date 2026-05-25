@@ -74,7 +74,7 @@ export const useDietaryProfile = () => {
       const optimistic: UpdateDietaryProfileMutation = {
         __typename: 'Mutation',
         updateDietaryProfile: {
-          __typename: 'UpdateDietaryProfileSuccess',
+          __typename: 'UpdateDietaryProfilePayload',
           dietaryProfile: enhanceWithVersion(profile, variables.input),
         },
       };
@@ -94,7 +94,7 @@ export const useDietaryProfile = () => {
     // cache.modify() handles instant UI update when server responds (~100-200ms)
     update: (cache, { data }) => {
       if (
-        data?.addRestriction?.__typename !== 'AddRestrictionSuccess' ||
+        data?.addRestriction?.__typename !== 'AddRestrictionPayload' ||
         !profile?.id
       )
         return;
@@ -141,7 +141,7 @@ export const useDietaryProfile = () => {
       const optimistic: UpdateDietaryRestrictionMutation = {
         __typename: 'Mutation',
         updateRestriction: {
-          __typename: 'UpdateRestrictionSuccess',
+          __typename: 'UpdateRestrictionPayload',
           dietaryRestriction: enhanceWithVersion(
             currentRestriction,
             variables.input,
@@ -163,7 +163,7 @@ export const useDietaryProfile = () => {
     // No optimistic response for deletes (following Pattern 4 recommendation)
     update: (cache, { data }, { variables }) => {
       if (
-        data?.removeRestriction?.__typename !== 'RemoveRestrictionSuccess' ||
+        data?.removeRestriction?.__typename !== 'RemoveRestrictionPayload' ||
         !variables?.input?.id ||
         !profile?.id
       )

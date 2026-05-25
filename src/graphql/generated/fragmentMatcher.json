@@ -1,184 +1,232 @@
 {
   "possibleTypes": {
     "AcceptHomeInviteResult": [
-      "AcceptHomeInviteSuccess",
+      "AcceptHomeInvitePayload",
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
     ],
     "AcceptShoppingListInviteResult": [
-      "AcceptShoppingListInviteSuccess",
+      "AcceptShoppingListInvitePayload",
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
     ],
     "AddItemToShoppingListResult": [
-      "AddItemToShoppingListSuccess",
+      "AddItemToShoppingListPayload",
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
     ],
+    "AddLowStockItemsToShoppingListResult": [
+      "AddLowStockItemsToShoppingListPayload",
+      "ForbiddenError",
+      "NotFoundError",
+      "ValidationError"
+    ],
+    "AddPantryItemToShoppingListResultUnion": [
+      "AddPantryItemToShoppingListPayload",
+      "ForbiddenError",
+      "NotFoundError",
+      "ValidationError"
+    ],
     "AddRecipeToShoppingListResultUnion": [
-      "AddRecipeToShoppingListSuccess",
+      "AddRecipeToShoppingListPayload",
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
     ],
     "AddRestrictionResult": [
-      "AddRestrictionSuccess",
+      "AddRestrictionPayload",
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
     ],
     "AddTemplateItemResult": [
-      "AddTemplateItemSuccess",
+      "AddTemplateItemPayload",
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
     ],
     "AddUserAddressResult": [
-      "AddUserAddressSuccess",
+      "AddUserAddressPayload",
       "ConflictError",
       "ForbiddenError",
       "ValidationError"
     ],
     "AddWarningResult": [
-      "AddWarningSuccess",
+      "AddWarningPayload",
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
     ],
     "AdjustPantryItemQuantityResult": [
-      "AdjustPantryItemQuantitySuccess",
+      "AdjustPantryItemQuantityPayload",
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
     ],
+    "AdminBulkDeleteItemsResult": [
+      "AdminBulkDeleteItemsPayload",
+      "ForbiddenError",
+      "NotFoundError",
+      "ValidationError"
+    ],
     "AdminDeleteItemResult": [
-      "AdminDeleteItemSuccess",
+      "AdminDeleteItemPayload",
       "ConflictError",
       "ForbiddenError",
       "NotFoundError"
     ],
     "AdminDeleteRecipeResult": [
-      "AdminDeleteRecipeSuccess",
+      "AdminDeleteRecipePayload",
       "ConflictError",
       "ForbiddenError",
       "NotFoundError"
     ],
     "AdminDeleteRecipeReviewResult": [
-      "AdminDeleteRecipeReviewSuccess",
+      "AdminDeleteRecipeReviewPayload",
       "ConflictError",
       "ForbiddenError",
       "NotFoundError"
     ],
     "AdminDeleteUserResult": [
-      "AdminDeleteUserSuccess",
+      "AdminDeleteUserPayload",
       "ConflictError",
       "ForbiddenError",
       "NotFoundError"
     ],
     "AdminUpdateItemResult": [
-      "AdminUpdateItemSuccess",
+      "AdminUpdateItemPayload",
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
     ],
     "AdminUpdateRecipeResult": [
-      "AdminUpdateRecipeSuccess",
+      "AdminUpdateRecipePayload",
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
     ],
     "ApproveItemResult": [
-      "ApproveItemSuccess",
+      "ApproveItemPayload",
       "ConflictError",
       "ForbiddenError",
       "NotFoundError"
     ],
     "ArchiveShoppingListResult": [
-      "ArchiveShoppingListSuccess",
+      "ArchiveShoppingListPayload",
       "ConflictError",
       "ForbiddenError",
       "NotFoundError"
     ],
+    "BulkCreateItemsResult": [
+      "BulkCreateItemsPayload",
+      "ForbiddenError",
+      "NotFoundError",
+      "ValidationError"
+    ],
     "BulkCreatePurchasesResult": [
-      "BulkCreatePurchasesSuccess",
+      "BulkCreatePurchasesPayload",
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
     ],
     "BulkCreateStoresResult": [
-      "BulkCreateStoresSuccess",
+      "BulkCreateStoresPayload",
       "ConflictError",
       "ForbiddenError",
       "ValidationError"
     ],
+    "BulkDeleteItemsResult": [
+      "BulkDeleteItemsPayload",
+      "ForbiddenError",
+      "NotFoundError",
+      "ValidationError"
+    ],
     "BulkDeletePurchasesResult": [
-      "BulkDeletePurchasesSuccess",
+      "BulkDeletePurchasesPayload",
       "ConflictError",
       "ForbiddenError",
       "NotFoundError"
     ],
+    "BulkUpdateDevicesResult": [
+      "BulkUpdateDevicesPayload",
+      "ForbiddenError",
+      "NotFoundError",
+      "ValidationError"
+    ],
+    "BulkUpdateItemsResult": [
+      "BulkUpdateItemsPayload",
+      "ForbiddenError",
+      "NotFoundError",
+      "ValidationError"
+    ],
     "BulkUpdateLoginHistoriesResult": [
-      "BulkUpdateLoginHistoriesSuccess",
+      "BulkUpdateLoginHistoriesPayload",
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
     ],
     "CancelRecurringResult": [
-      "CancelRecurringSuccess",
+      "CancelRecurringPayload",
       "ConflictError",
       "ForbiddenError",
       "NotFoundError"
     ],
     "CategorizeItemResult": [
-      "CategorizeItemSuccess",
+      "CategorizeItemPayload",
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
     ],
+    "CleanupDevicesResult": [
+      "CleanupDevicesPayload",
+      "ForbiddenError",
+      "NotFoundError",
+      "ValidationError"
+    ],
     "ClearReminderResult": [
-      "ClearReminderSuccess",
+      "ClearReminderPayload",
       "ConflictError",
       "ForbiddenError",
       "NotFoundError"
     ],
     "CompleteOnboardingResult": [
-      "CompleteOnboardingSuccess",
+      "CompleteOnboardingPayload",
       "ConflictError",
       "ForbiddenError",
       "NotFoundError"
     ],
     "CompleteShoppingListResult": [
-      "CompleteShoppingListSuccess",
+      "CompleteShoppingListPayload",
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
     ],
     "ConfirmItemImageUploadResult": [
-      "ConfirmItemImageUploadSuccess",
+      "ConfirmItemImageUploadPayload",
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
     ],
     "ConfirmProfileImageUploadResult": [
-      "ConfirmProfileImageUploadSuccess",
+      "ConfirmProfileImageUploadPayload",
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
@@ -196,6 +244,7 @@
       "ItemConnection",
       "ItemPriceHistoryConnection",
       "ItemStoreSkuConnection",
+      "ItemUnitConversionConnection",
       "LoginHistoryConnection",
       "MealPlanConnection",
       "MealTemplateConnection",
@@ -207,6 +256,7 @@
       "PantryItemUsageConnection",
       "PurchaseConnection",
       "RecipeConnection",
+      "RecipeForkConnection",
       "RecipeReviewConnection",
       "SavedRecipeConnection",
       "ShoppingListActivityConnection",
@@ -215,385 +265,393 @@
       "ShoppingListItemConnection",
       "StorageLocationConnection",
       "StoreConnection",
+      "UserAddressConnection",
       "UserConnection",
       "UserModerationConnection"
     ],
     "ConvertExpiredBatchesToWasteResult": [
       "ConflictError",
-      "ConvertExpiredBatchesToWasteSuccess",
+      "ConvertExpiredBatchesToWastePayload",
       "ForbiddenError",
       "NotFoundError"
     ],
     "ConvertExpiredToWasteResult": [
       "ConflictError",
-      "ConvertExpiredToWasteSuccess",
+      "ConvertExpiredToWastePayload",
       "ForbiddenError",
       "NotFoundError"
     ],
     "CorrectPantryItemWeightResult": [
       "ConflictError",
-      "CorrectPantryItemWeightSuccess",
+      "CorrectPantryItemWeightPayload",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
     ],
     "CreateBrandResult": [
       "ConflictError",
-      "CreateBrandSuccess",
+      "CreateBrandPayload",
       "ForbiddenError",
       "ValidationError"
     ],
     "CreateCategoryResult": [
       "ConflictError",
-      "CreateCategorySuccess",
+      "CreateCategoryPayload",
       "ForbiddenError",
       "ValidationError"
     ],
     "CreateCookingLogResult": [
-      "CreateCookingLogSuccess",
+      "CreateCookingLogPayload",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
     ],
     "CreateCurrencyResult": [
       "ConflictError",
-      "CreateCurrencySuccess",
+      "CreateCurrencyPayload",
       "ForbiddenError",
       "ValidationError"
     ],
     "CreateFromTemplateResult": [
       "ConflictError",
-      "CreateFromTemplateSuccess",
+      "CreateFromTemplatePayload",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
     ],
     "CreateHomeResult": [
       "ConflictError",
-      "CreateHomeSuccess",
+      "CreateHomePayload",
       "ForbiddenError",
       "ValidationError"
     ],
     "CreateImageUploadUrlResult": [
       "ConflictError",
-      "CreateImageUploadUrlSuccess",
+      "CreateImageUploadUrlPayload",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
     ],
     "CreateItemResult": [
       "ConflictError",
-      "CreateItemSuccess",
+      "CreateItemPayload",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
     ],
     "CreateMealPlanItemResult": [
       "ConflictError",
-      "CreateMealPlanItemSuccess",
+      "CreateMealPlanItemPayload",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
     ],
     "CreateMealPlanResult": [
       "ConflictError",
-      "CreateMealPlanSuccess",
+      "CreateMealPlanPayload",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
     ],
     "CreateMealTemplateResult": [
       "ConflictError",
-      "CreateMealTemplateSuccess",
+      "CreateMealTemplatePayload",
       "ForbiddenError",
       "ValidationError"
     ],
     "CreateMembershipResult": [
       "ConflictError",
-      "CreateMembershipSuccess",
+      "CreateMembershipPayload",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
     ],
     "CreateModerationRecordResult": [
       "ConflictError",
-      "CreateModerationRecordSuccess",
+      "CreateModerationRecordPayload",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
     ],
     "CreateNotificationResult": [
       "ConflictError",
-      "CreateNotificationSuccess",
+      "CreateNotificationPayload",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
     ],
     "CreatePantryItemResult": [
       "ConflictError",
-      "CreatePantryItemSuccess",
+      "CreatePantryItemPayload",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
     ],
     "CreatePantryItemUsageResult": [
       "ConflictError",
-      "CreatePantryItemUsageSuccess",
+      "CreatePantryItemUsagePayload",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
     ],
     "CreatePantryResult": [
       "ConflictError",
-      "CreatePantrySuccess",
+      "CreatePantryPayload",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
     ],
     "CreateProfileResult": [
       "ConflictError",
-      "CreateProfileSuccess",
+      "CreateProfilePayload",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
     ],
     "CreatePurchaseResult": [
       "ConflictError",
-      "CreatePurchaseSuccess",
+      "CreatePurchasePayload",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
     ],
     "CreateRecipeResult": [
       "ConflictError",
-      "CreateRecipeSuccess",
+      "CreateRecipePayload",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
     ],
     "CreateRecipeReviewResult": [
       "ConflictError",
-      "CreateRecipeReviewSuccess",
+      "CreateRecipeReviewPayload",
+      "ForbiddenError",
+      "NotFoundError",
+      "RateLimitError",
+      "ValidationError"
+    ],
+    "CreateShoppingListItemFromRecipeIngredientResult": [
+      "CreateShoppingListItemFromRecipeIngredientPayload",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
     ],
     "CreateShoppingListResult": [
       "ConflictError",
-      "CreateShoppingListSuccess",
+      "CreateShoppingListPayload",
       "ForbiddenError",
       "ValidationError"
     ],
     "CreateStorageLocationResult": [
       "ConflictError",
-      "CreateStorageLocationSuccess",
+      "CreateStorageLocationPayload",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
     ],
     "CreateStoreResult": [
       "ConflictError",
-      "CreateStoreSuccess",
+      "CreateStorePayload",
       "ForbiddenError",
       "ValidationError"
     ],
     "CreateTemplateFromMealPlanResult": [
       "ConflictError",
-      "CreateTemplateFromMealPlanSuccess",
+      "CreateTemplateFromMealPlanPayload",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
     ],
     "CreateUnitResult": [
       "ConflictError",
-      "CreateUnitSuccess",
+      "CreateUnitPayload",
       "ForbiddenError",
       "ValidationError"
     ],
     "DeclineHomeInviteResult": [
       "ConflictError",
-      "DeclineHomeInviteSuccess",
+      "DeclineHomeInvitePayload",
       "ForbiddenError",
       "NotFoundError"
     ],
     "DeclineShoppingListInviteResult": [
       "ConflictError",
-      "DeclineShoppingListInviteSuccess",
+      "DeclineShoppingListInvitePayload",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
     ],
     "DeleteAccountResult": [
       "ConflictError",
-      "DeleteAccountSuccess",
+      "DeleteAccountPayload",
       "ForbiddenError",
       "NotFoundError"
     ],
     "DeleteAllReadNotificationsResult": [
-      "DeleteAllReadNotificationsSuccess",
+      "DeleteAllReadNotificationsPayload",
       "ForbiddenError"
     ],
     "DeleteBrandResult": [
       "ConflictError",
-      "DeleteBrandSuccess",
+      "DeleteBrandPayload",
       "ForbiddenError",
       "NotFoundError"
     ],
     "DeleteCategoryResult": [
       "ConflictError",
-      "DeleteCategorySuccess",
+      "DeleteCategoryPayload",
       "ForbiddenError",
       "NotFoundError"
     ],
     "DeleteCookingLogResult": [
-      "DeleteCookingLogSuccess",
+      "DeleteCookingLogPayload",
       "ForbiddenError",
       "NotFoundError"
     ],
     "DeleteCurrencyResult": [
       "ConflictError",
-      "DeleteCurrencySuccess",
+      "DeleteCurrencyPayload",
       "ForbiddenError",
       "NotFoundError"
     ],
     "DeleteExpiredNotificationsResult": [
-      "DeleteExpiredNotificationsSuccess",
+      "DeleteExpiredNotificationsPayload",
       "ForbiddenError"
     ],
     "DeleteExternalSourceResult": [
-      "DeleteExternalSourceSuccess",
+      "DeleteExternalSourcePayload",
       "ForbiddenError",
       "NotFoundError"
     ],
     "DeleteHomeResult": [
       "ConflictError",
-      "DeleteHomeSuccess",
+      "DeleteHomePayload",
       "ForbiddenError",
       "NotFoundError"
     ],
     "DeleteItemResult": [
       "ConflictError",
-      "DeleteItemSuccess",
+      "DeleteItemPayload",
       "ForbiddenError",
       "NotFoundError"
     ],
     "DeleteItemUnitConversionResult": [
       "ConflictError",
-      "DeleteItemUnitConversionSuccess",
+      "DeleteItemUnitConversionPayload",
       "ForbiddenError",
       "NotFoundError"
     ],
     "DeleteMealPlanItemResult": [
       "ConflictError",
-      "DeleteMealPlanItemSuccess",
+      "DeleteMealPlanItemPayload",
       "ForbiddenError",
       "NotFoundError"
     ],
     "DeleteMealPlanResult": [
       "ConflictError",
-      "DeleteMealPlanSuccess",
+      "DeleteMealPlanPayload",
       "ForbiddenError",
       "NotFoundError"
     ],
     "DeleteMealTemplateResult": [
       "ConflictError",
-      "DeleteMealTemplateSuccess",
+      "DeleteMealTemplatePayload",
       "ForbiddenError",
       "NotFoundError"
     ],
     "DeleteMultipleNotificationsResult": [
-      "DeleteMultipleNotificationsSuccess",
+      "DeleteMultipleNotificationsPayload",
       "ForbiddenError",
       "ValidationError"
     ],
     "DeleteNotificationResult": [
       "ConflictError",
-      "DeleteNotificationSuccess",
+      "DeleteNotificationPayload",
       "ForbiddenError",
       "NotFoundError"
     ],
     "DeletePantryItemResult": [
       "ConflictError",
-      "DeletePantryItemSuccess",
+      "DeletePantryItemPayload",
       "ForbiddenError",
       "NotFoundError"
     ],
     "DeletePantryResult": [
       "ConflictError",
-      "DeletePantrySuccess",
+      "DeletePantryPayload",
       "ForbiddenError",
       "NotFoundError"
     ],
     "DeletePurchaseResult": [
       "ConflictError",
-      "DeletePurchaseSuccess",
+      "DeletePurchasePayload",
       "ForbiddenError",
       "NotFoundError"
     ],
     "DeleteRecipeFolderResult": [
       "ConflictError",
-      "DeleteRecipeFolderSuccess",
+      "DeleteRecipeFolderPayload",
       "ForbiddenError",
       "NotFoundError"
     ],
     "DeleteRecipeResult": [
       "ConflictError",
-      "DeleteRecipeSuccess",
+      "DeleteRecipePayload",
       "ForbiddenError",
       "NotFoundError"
     ],
     "DeleteRecipeReviewResult": [
-      "DeleteRecipeReviewSuccess",
+      "DeleteRecipeReviewPayload",
       "ForbiddenError",
       "NotFoundError"
     ],
     "DeleteShoppingListResult": [
       "ConflictError",
-      "DeleteShoppingListSuccess",
+      "DeleteShoppingListPayload",
       "ForbiddenError",
       "NotFoundError"
     ],
     "DeleteStorageLocationResult": [
       "ConflictError",
-      "DeleteStorageLocationSuccess",
+      "DeleteStorageLocationPayload",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
     ],
     "DeleteStoreResult": [
       "ConflictError",
-      "DeleteStoreSuccess",
+      "DeleteStorePayload",
       "ForbiddenError",
       "NotFoundError"
     ],
     "DeleteUnitResult": [
       "ConflictError",
-      "DeleteUnitSuccess",
+      "DeleteUnitPayload",
       "ForbiddenError",
       "NotFoundError"
     ],
     "DeleteUserAddressResult": [
       "ConflictError",
-      "DeleteUserAddressSuccess",
+      "DeleteUserAddressPayload",
       "ForbiddenError",
       "NotFoundError"
     ],
     "DismissExpirationNotificationResult": [
       "ConflictError",
-      "DismissExpirationNotificationSuccess",
+      "DismissExpirationNotificationPayload",
       "ForbiddenError",
       "NotFoundError"
     ],
     "DuplicateMealPlanResult": [
       "ConflictError",
-      "DuplicateMealPlanSuccess",
+      "DuplicateMealPlanPayload",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
     ],
     "DuplicateTemplateResult": [
       "ConflictError",
-      "DuplicateTemplateSuccess",
+      "DuplicateTemplatePayload",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
@@ -610,6 +668,7 @@
       "ItemEdge",
       "ItemPriceHistoryEdge",
       "ItemStoreSkuEdge",
+      "ItemUnitConversionEdge",
       "LoginHistoryEdge",
       "MealPlanEdge",
       "MealTemplateEdge",
@@ -621,6 +680,7 @@
       "PantryItemUsageEdge",
       "PurchaseEdge",
       "RecipeEdge",
+      "RecipeForkEdge",
       "RecipeReviewEdge",
       "SavedRecipeEdge",
       "ShoppingListActivityEdge",
@@ -629,10 +689,12 @@
       "ShoppingListItemEdge",
       "StorageLocationEdge",
       "StoreEdge",
+      "UserAddressEdge",
       "UserEdge",
       "UserModerationEdge"
     ],
     "Error": [
+      "AuthError",
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
@@ -641,171 +703,175 @@
     ],
     "FavoriteRecipeResult": [
       "ConflictError",
-      "FavoriteRecipeSuccess",
+      "FavoriteRecipePayload",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
     ],
     "FlagItemForReviewResult": [
       "ConflictError",
-      "FlagItemForReviewSuccess",
+      "FlagItemForReviewPayload",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
     ],
+    "ForgotPasswordResult": [
+      "ForgotPasswordPayload",
+      "RateLimitError"
+    ],
     "ForkRecipeResult": [
       "ConflictError",
       "ForbiddenError",
-      "ForkRecipeSuccess",
+      "ForkRecipePayload",
       "NotFoundError",
       "ValidationError"
     ],
     "GenerateNextRecurringListResult": [
       "ConflictError",
       "ForbiddenError",
-      "GenerateNextRecurringListSuccess",
+      "GenerateNextRecurringListPayload",
       "NotFoundError"
     ],
     "GenerateShoppingListFromMealPlanResult": [
       "ConflictError",
       "ForbiddenError",
-      "GenerateShoppingListFromMealPlanSuccess",
+      "GenerateShoppingListFromMealPlanPayload",
       "NotFoundError",
       "ValidationError"
     ],
     "HardDeleteDeviceResult": [
       "ConflictError",
       "ForbiddenError",
-      "HardDeleteDeviceSuccess",
+      "HardDeleteDevicePayload",
       "NotFoundError"
     ],
     "IncrementItemPopularityResult": [
       "ConflictError",
       "ForbiddenError",
-      "IncrementItemPopularitySuccess",
+      "IncrementItemPopularityPayload",
       "NotFoundError"
     ],
     "IncrementRecipeCookedCountResult": [
       "ConflictError",
       "ForbiddenError",
-      "IncrementRecipeCookedCountSuccess",
+      "IncrementRecipeCookedCountPayload",
       "NotFoundError"
     ],
     "InviteToHomeResult": [
       "ConflictError",
       "ForbiddenError",
-      "InviteToHomeSuccess",
+      "InviteToHomePayload",
       "NotFoundError",
       "ValidationError"
     ],
     "InviteToShoppingListResult": [
       "ConflictError",
       "ForbiddenError",
-      "InviteToShoppingListSuccess",
+      "InviteToShoppingListPayload",
       "NotFoundError",
       "ValidationError"
     ],
     "JoinHomeByCodeResult": [
       "ConflictError",
       "ForbiddenError",
-      "JoinHomeByCodeSuccess",
+      "JoinHomeByCodePayload",
       "NotFoundError",
       "ValidationError"
     ],
     "JoinShoppingListByShareCodeResult": [
       "ConflictError",
       "ForbiddenError",
-      "JoinShoppingListByShareCodeSuccess",
+      "JoinShoppingListByShareCodePayload",
       "NotFoundError",
       "ValidationError"
     ],
     "LeaveHomeResult": [
       "ConflictError",
       "ForbiddenError",
-      "LeaveHomeSuccess",
+      "LeaveHomePayload",
       "NotFoundError"
     ],
     "LinkItemToExternalSourceResult": [
       "ConflictError",
       "ForbiddenError",
-      "LinkItemToExternalSourceSuccess",
+      "LinkItemToExternalSourcePayload",
       "NotFoundError",
       "ValidationError"
     ],
     "ManageAppealResult": [
       "ConflictError",
       "ForbiddenError",
-      "ManageAppealSuccess",
+      "ManageAppealPayload",
       "NotFoundError",
       "ValidationError"
     ],
     "ManageRestrictionsResult": [
       "ConflictError",
       "ForbiddenError",
-      "ManageRestrictionsSuccess",
+      "ManageRestrictionsPayload",
       "NotFoundError",
       "ValidationError"
     ],
     "MarkAllNotificationsAsReadResult": [
       "ForbiddenError",
-      "MarkAllNotificationsAsReadSuccess"
+      "MarkAllNotificationsAsReadPayload"
     ],
     "MarkAsTemplateResult": [
       "ConflictError",
       "ForbiddenError",
-      "MarkAsTemplateSuccess",
+      "MarkAsTemplatePayload",
       "NotFoundError",
       "ValidationError"
     ],
     "MarkExpirationActionResult": [
       "ConflictError",
       "ForbiddenError",
-      "MarkExpirationActionSuccess",
+      "MarkExpirationActionPayload",
       "NotFoundError",
       "ValidationError"
     ],
     "MarkExpirationNotificationAsReadResult": [
       "ConflictError",
       "ForbiddenError",
-      "MarkExpirationNotificationAsReadSuccess",
+      "MarkExpirationNotificationAsReadPayload",
       "NotFoundError"
     ],
     "MarkNotificationAsReadResult": [
       "ConflictError",
       "ForbiddenError",
-      "MarkNotificationAsReadSuccess",
+      "MarkNotificationAsReadPayload",
       "NotFoundError"
     ],
     "MarkNotificationUnreadResult": [
       "ConflictError",
       "ForbiddenError",
-      "MarkNotificationUnreadSuccess",
+      "MarkNotificationUnreadPayload",
       "NotFoundError"
     ],
     "MarkPantryItemExpiredResult": [
       "ConflictError",
       "ForbiddenError",
-      "MarkPantryItemExpiredSuccess",
+      "MarkPantryItemExpiredPayload",
       "NotFoundError"
     ],
     "MarkRecipeAsCookedResult": [
       "ConflictError",
       "ForbiddenError",
-      "MarkRecipeAsCookedSuccess",
+      "MarkRecipeAsCookedPayload",
       "NotFoundError",
       "ValidationError"
     ],
     "MoveShoppingItemToPantryResult": [
       "ConflictError",
       "ForbiddenError",
-      "MoveShoppingItemToPantrySuccess",
+      "MoveShoppingItemToPantryPayload",
       "NotFoundError",
       "ValidationError"
     ],
     "MoveShoppingListItemResult": [
       "ConflictError",
       "ForbiddenError",
-      "MoveShoppingListItemSuccess",
+      "MoveShoppingListItemPayload",
       "NotFoundError",
       "ValidationError"
     ],
@@ -813,177 +879,183 @@
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "OpenPantryItemBatchSuccess",
+      "OpenPantryItemBatchPayload",
       "ValidationError"
     ],
     "OpenPantryItemResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "OpenPantryItemSuccess"
+      "OpenPantryItemPayload"
+    ],
+    "PantryEventNode": [
+      "Pantry",
+      "PantryItem",
+      "PantryItemUsage"
     ],
     "RecordLoginResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "RecordLoginSuccess",
+      "RecordLoginPayload",
       "ValidationError"
     ],
     "RecordPantryUsageResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "RecordPantryUsageSuccess",
+      "RecordPantryUsagePayload",
       "ValidationError"
     ],
     "RecordPriceObservationResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "RecordPriceObservationSuccess",
+      "RecordPriceObservationPayload",
       "ValidationError"
     ],
     "RegisterDeviceResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "RegisterDeviceSuccess",
+      "RegisterDevicePayload",
       "ValidationError"
     ],
     "RejectItemResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "RejectItemSuccess",
+      "RejectItemPayload",
       "ValidationError"
     ],
     "RemoveItemFromShoppingListResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "RemoveItemFromShoppingListSuccess"
+      "RemoveItemFromShoppingListPayload"
     ],
     "RemoveItemImageResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "RemoveItemImageSuccess"
+      "RemoveItemImagePayload"
     ],
     "RemoveMemberResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "RemoveMemberSuccess"
+      "RemoveMemberPayload"
     ],
     "RemoveRestrictionResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "RemoveRestrictionSuccess"
+      "RemoveRestrictionPayload"
     ],
     "RemoveShoppingListCollaboratorResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "RemoveShoppingListCollaboratorSuccess"
+      "RemoveShoppingListCollaboratorPayload"
     ],
     "RemoveTemplateItemResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "RemoveTemplateItemSuccess"
+      "RemoveTemplateItemPayload"
     ],
     "RemoveUnitConversionResult": [
       "ForbiddenError",
       "NotFoundError",
-      "RemoveUnitConversionSuccess"
+      "RemoveUnitConversionPayload"
     ],
     "ReorderStorageLocationsResult": [
       "ForbiddenError",
       "NotFoundError",
-      "ReorderStorageLocationsSuccess",
+      "ReorderStorageLocationsPayload",
       "ValidationError"
     ],
     "ResendVerificationEmailResult": [
+      "AuthError",
       "ConflictError",
       "ForbiddenError",
-      "ResendVerificationEmailSuccess",
+      "ResendVerificationEmailPayload",
       "ValidationError"
     ],
     "RestockPantryItemResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "RestockPantryItemSuccess",
+      "RestockPantryItemPayload",
       "ValidationError"
     ],
     "RestoreItemResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "RestoreItemSuccess"
+      "RestoreItemPayload"
     ],
     "RevokeHomeInviteResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "RevokeHomeInviteSuccess"
+      "RevokeHomeInvitePayload"
     ],
     "SendTestNotificationResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "SendTestNotificationSuccess",
+      "SendTestNotificationPayload",
       "ValidationError"
     ],
     "SetDefaultHomeResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "SetDefaultHomeSuccess",
+      "SetDefaultHomePayload",
       "ValidationError"
     ],
     "SetDefaultPantryResult": [
       "ForbiddenError",
       "NotFoundError",
-      "SetDefaultPantrySuccess"
+      "SetDefaultPantryPayload"
     ],
     "SetDefaultShoppingListResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "SetDefaultShoppingListSuccess"
+      "SetDefaultShoppingListPayload"
     ],
     "SetDefaultStorageLocationResult": [
       "ForbiddenError",
       "NotFoundError",
-      "SetDefaultStorageLocationSuccess"
+      "SetDefaultStorageLocationPayload"
     ],
     "SetReminderResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "SetReminderSuccess",
+      "SetReminderPayload",
       "ValidationError"
     ],
     "SetupRecurringResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "SetupRecurringSuccess",
+      "SetupRecurringPayload",
       "ValidationError"
     ],
     "SetupUnitConversionResult": [
       "ForbiddenError",
       "NotFoundError",
-      "SetupUnitConversionSuccess",
+      "SetupUnitConversionPayload",
       "ValidationError"
     ],
     "ShareShoppingListResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "ShareShoppingListSuccess",
+      "ShareShoppingListPayload",
       "ValidationError"
     ],
     "Timestamped": [
@@ -992,359 +1064,360 @@
     "ToggleReviewHelpfulResult": [
       "ForbiddenError",
       "NotFoundError",
-      "ToggleReviewHelpfulSuccess",
+      "ToggleReviewHelpfulPayload",
       "ValidationError"
     ],
     "ToggleShoppingListItemPurchasedResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "ToggleShoppingListItemPurchasedSuccess",
+      "ToggleShoppingListItemPurchasedPayload",
       "ValidationError"
     ],
     "TransferHomeOwnershipResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "TransferHomeOwnershipSuccess",
+      "TransferHomeOwnershipPayload",
       "ValidationError"
     ],
     "UncategorizeItemResult": [
       "ForbiddenError",
       "NotFoundError",
-      "UncategorizeItemSuccess"
+      "UncategorizeItemPayload"
     ],
     "UncompleteShoppingListResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "UncompleteShoppingListSuccess"
+      "UncompleteShoppingListPayload"
     ],
     "UnfavoriteRecipeResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "UnfavoriteRecipeSuccess"
+      "UnfavoriteRecipePayload"
     ],
     "UpdateBrandResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "UpdateBrandSuccess",
+      "UpdateBrandPayload",
       "ValidationError"
     ],
     "UpdateCategoryResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "UpdateCategorySuccess",
+      "UpdateCategoryPayload",
       "ValidationError"
     ],
     "UpdateCollaboratorPermissionsResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "UpdateCollaboratorPermissionsSuccess",
+      "UpdateCollaboratorPermissionsPayload",
       "ValidationError"
     ],
     "UpdateCollaboratorRoleResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "UpdateCollaboratorRoleSuccess",
+      "UpdateCollaboratorRolePayload",
       "ValidationError"
     ],
     "UpdateCookingLogResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "UpdateCookingLogSuccess",
+      "UpdateCookingLogPayload",
       "ValidationError"
     ],
     "UpdateCurrencyResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "UpdateCurrencySuccess",
+      "UpdateCurrencyPayload",
       "ValidationError"
     ],
     "UpdateDeviceResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "UpdateDeviceSuccess",
+      "UpdateDevicePayload",
       "ValidationError"
     ],
     "UpdateDietaryProfileResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "UpdateDietaryProfileSuccess",
+      "UpdateDietaryProfilePayload",
       "ValidationError"
     ],
     "UpdateExternalSourceResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "UpdateExternalSourceSuccess",
+      "UpdateExternalSourcePayload",
       "ValidationError"
     ],
     "UpdateFavoriteRecipeResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "UpdateFavoriteRecipeSuccess",
+      "UpdateFavoriteRecipePayload",
       "ValidationError"
     ],
     "UpdateHomeResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "UpdateHomeSuccess",
+      "UpdateHomePayload",
       "ValidationError"
     ],
     "UpdateItemResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "UpdateItemSuccess",
+      "UpdateItemPayload",
       "ValidationError"
     ],
     "UpdateLoginHistoryResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "UpdateLoginHistorySuccess",
+      "UpdateLoginHistoryPayload",
       "ValidationError"
     ],
     "UpdateMealPlanItemResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "UpdateMealPlanItemSuccess",
+      "UpdateMealPlanItemPayload",
       "ValidationError"
     ],
     "UpdateMealPlanResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "UpdateMealPlanSuccess",
+      "UpdateMealPlanPayload",
       "ValidationError"
     ],
     "UpdateMealTemplateResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "UpdateMealTemplateSuccess",
+      "UpdateMealTemplatePayload",
       "ValidationError"
     ],
     "UpdateMembershipResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "UpdateMembershipSuccess",
+      "UpdateMembershipPayload",
       "ValidationError"
     ],
     "UpdateModerationResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "UpdateModerationSuccess",
+      "UpdateModerationPayload",
       "ValidationError"
     ],
     "UpdateNotificationPreferencesResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "UpdateNotificationPreferencesSuccess",
+      "UpdateNotificationPreferencesPayload",
       "ValidationError"
     ],
     "UpdateNotificationResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "UpdateNotificationSuccess",
+      "UpdateNotificationPayload",
       "ValidationError"
     ],
     "UpdatePantryItemLocationResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "UpdatePantryItemLocationSuccess",
+      "UpdatePantryItemLocationPayload",
       "ValidationError"
     ],
     "UpdatePantryItemQuantityResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "UpdatePantryItemQuantitySuccess",
+      "UpdatePantryItemQuantityPayload",
       "ValidationError"
     ],
     "UpdatePantryItemResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "UpdatePantryItemSuccess",
+      "UpdatePantryItemPayload",
       "ValidationError"
     ],
     "UpdatePantryResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "UpdatePantrySuccess",
+      "UpdatePantryPayload",
       "ValidationError"
     ],
     "UpdateProfileResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "UpdateProfileSuccess",
+      "UpdateProfilePayload",
       "ValidationError"
     ],
     "UpdatePurchaseResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "UpdatePurchaseSuccess",
+      "UpdatePurchasePayload",
       "ValidationError"
     ],
     "UpdateRecipeIngredientsResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "UpdateRecipeIngredientsSuccess",
+      "UpdateRecipeIngredientsPayload",
       "ValidationError"
     ],
     "UpdateRecipeResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "UpdateRecipeSuccess",
+      "UpdateRecipePayload",
       "ValidationError"
     ],
     "UpdateRecipeReviewResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "UpdateRecipeReviewSuccess",
+      "UpdateRecipeReviewPayload",
       "ValidationError"
     ],
     "UpdateRestrictionResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "UpdateRestrictionSuccess",
+      "UpdateRestrictionPayload",
       "ValidationError"
     ],
     "UpdateSettingsResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "UpdateSettingsSuccess",
+      "UpdateSettingsPayload",
       "ValidationError"
     ],
     "UpdateShoppingListItemQuantityResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "UpdateShoppingListItemQuantitySuccess",
+      "UpdateShoppingListItemQuantityPayload",
       "ValidationError"
     ],
     "UpdateShoppingListItemResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "UpdateShoppingListItemSuccess",
+      "UpdateShoppingListItemPayload",
       "ValidationError"
     ],
     "UpdateShoppingListResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "UpdateShoppingListSuccess",
+      "UpdateShoppingListPayload",
       "ValidationError"
     ],
     "UpdateStorageLocationResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "UpdateStorageLocationSuccess",
+      "UpdateStorageLocationPayload",
       "ValidationError"
     ],
     "UpdateStoreInfoResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "UpdateStoreInfoSuccess",
+      "UpdateStoreInfoPayload",
       "ValidationError"
     ],
     "UpdateStoreResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "UpdateStoreSuccess",
+      "UpdateStorePayload",
       "ValidationError"
     ],
     "UpdateTemplateItemResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "UpdateTemplateItemSuccess",
+      "UpdateTemplateItemPayload",
       "ValidationError"
     ],
     "UpdateUnitResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "UpdateUnitSuccess",
+      "UpdateUnitPayload",
       "ValidationError"
     ],
     "UpdateUserAddressResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "UpdateUserAddressSuccess",
+      "UpdateUserAddressPayload",
       "ValidationError"
     ],
     "UpdateUserResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "UpdateUserSuccess",
+      "UpdateUserPayload",
       "ValidationError"
     ],
     "UpsertItemUnitConversionResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "UpsertItemUnitConversionSuccess",
+      "UpsertItemUnitConversionPayload",
       "ValidationError"
     ],
     "VerifyEmailResult": [
+      "AuthError",
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError",
-      "VerifyEmailSuccess"
+      "VerifyEmailPayload"
     ],
     "VerifyItemUnitConversionResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "VerifyItemUnitConversionSuccess"
+      "VerifyItemUnitConversionPayload"
     ],
     "VerifyUserEmailResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
-      "VerifyUserEmailSuccess"
+      "VerifyUserEmailPayload"
     ],
     "WastePantryItemBatchResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError",
-      "WastePantryItemBatchSuccess"
+      "WastePantryItemBatchPayload"
     ]
   }
 }

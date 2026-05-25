@@ -80,8 +80,8 @@ export const MyRecipes: React.FC = () => {
   const [deleteRecipeMutation] = useMutation(DeleteRecipeDocument, {
     update: (cache, { data }, { variables }) => {
       if (
-        data?.deleteRecipe?.__typename !== 'DeleteRecipeSuccess' ||
-        !variables?.id
+        data?.deleteRecipe?.__typename !== 'DeleteRecipePayload' ||
+        !variables?.input?.id
       ) {
         return;
       }
@@ -94,7 +94,7 @@ export const MyRecipes: React.FC = () => {
             recipes: {
               ...existing.recipes,
               edges: existing.recipes.edges.filter(
-                edge => edge.node.id !== variables.id,
+                edge => edge.node.id !== variables.input.id,
               ),
               totalCount: (existing.recipes.totalCount ?? 0) - 1,
             },
@@ -114,7 +114,7 @@ export const MyRecipes: React.FC = () => {
 
   const handleDeleteRecipe = async (id: string) => {
     await executeMutation(
-      () => deleteRecipeMutation({ variables: { id } }),
+      () => deleteRecipeMutation({ variables: { input: { id } } }),
       (error: unknown) => {
         console.error('Failed to delete recipe:', error);
         alertService.alert(

@@ -58,7 +58,7 @@ export function useHomeInvitations({
     {
       update: (cache, { data }, { variables }) => {
         const payload = data?.inviteToHome;
-        if (payload?.__typename !== 'InviteToHomeSuccess' || !variables) {
+        if (payload?.__typename !== 'InviteToHomePayload' || !variables) {
           return;
         }
 
@@ -89,7 +89,7 @@ export function useHomeInvitations({
       // The mutation returns only Membership data (not the full Home object)
       // We refetch GetHomesQuery to get the complete home with all fields
       update: (_cache, { data }) => {
-        if (data?.joinHomeByCode?.__typename !== 'JoinHomeByCodeSuccess')
+        if (data?.joinHomeByCode?.__typename !== 'JoinHomeByCodePayload')
           return;
 
         executeCacheUpdate(() => {
@@ -97,7 +97,7 @@ export function useHomeInvitations({
         }, 'Failed to refetch homes after join:');
       },
       onCompleted: data => {
-        if (data?.joinHomeByCode?.__typename === 'JoinHomeByCodeSuccess') {
+        if (data?.joinHomeByCode?.__typename === 'JoinHomeByCodePayload') {
           const homeId = data.joinHomeByCode.membership.homeId;
 
           // Set as default if this is the first home
@@ -157,13 +157,13 @@ export function useHomeInvitations({
     const result = await executeMutation(
       () =>
         joinHomeByCodeMutation({
-          variables: { joinCode: joinCode.trim() },
+          variables: { input: { joinCode: joinCode.trim() } },
         }),
       'Join home by code error:',
     );
     if (!result) return false;
 
-    return result.data?.joinHomeByCode?.__typename === 'JoinHomeByCodeSuccess'
+    return result.data?.joinHomeByCode?.__typename === 'JoinHomeByCodePayload'
       ? result.data.joinHomeByCode.membership
       : false;
   };

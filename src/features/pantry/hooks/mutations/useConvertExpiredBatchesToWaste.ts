@@ -28,12 +28,12 @@ export function useConvertExpiredBatchesToWaste({
     pantryItemId: string,
   ): Promise<boolean> => {
     const result = await convertMutation({
-      variables: { pantryItemId },
+      variables: { input: { pantryItemId } },
     });
 
     if (
       result.data?.convertExpiredBatchesToWaste?.__typename ===
-      'ConvertExpiredBatchesToWasteSuccess'
+      'ConvertExpiredBatchesToWastePayload'
     ) {
       onSuccess?.();
       return true;

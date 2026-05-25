@@ -51,7 +51,7 @@ function buildInviteMock(
     result: {
       data: {
         inviteToHome: {
-          __typename: 'InviteToHomeSuccess',
+          __typename: 'InviteToHomePayload',
           home: { __typename: 'Home', id: input.homeId, name: 'Home' },
           homeInvite: {
             __typename: 'HomeInvite',
@@ -83,13 +83,13 @@ function buildJoinByCodeMock(
   return {
     request: {
       query: JoinHomeByCodeDocument,
-      variables: { joinCode },
+      variables: { input: { joinCode } },
     },
     result: {
       data: {
         joinHomeByCode: membershipFields
           ? {
-              __typename: 'JoinHomeByCodeSuccess',
+              __typename: 'JoinHomeByCodePayload',
               home: {
                 __typename: 'Home',
                 id: membershipFields.homeId,

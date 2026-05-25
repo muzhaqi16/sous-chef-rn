@@ -103,7 +103,7 @@ const performTokenRefresh = async (): Promise<string | null> => {
 
     const response = await client.mutate({
       mutation: RefreshTokenDocument,
-      variables: { token: refreshToken },
+      variables: { input: { token: refreshToken } },
       context: { skipErrorLink: true },
     });
 

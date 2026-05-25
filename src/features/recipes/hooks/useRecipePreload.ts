@@ -81,7 +81,7 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
   const [favoriteRecipe] = useMutation(FavoriteRecipeDocument, {
     // Use cache.updateQuery instead of refetchQueries for better performance and offline support
     update: (cache, { data }) => {
-      if (data?.favoriteRecipe?.__typename !== 'FavoriteRecipeSuccess') return;
+      if (data?.favoriteRecipe?.__typename !== 'FavoriteRecipePayload') return;
 
       const savedRecipe = data.favoriteRecipe.savedRecipe;
 

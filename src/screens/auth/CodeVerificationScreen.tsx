@@ -35,7 +35,9 @@ function extractVerificationToken(url: string): string | null {
  *  Extracted from component body to avoid try-catch bailout. */
 async function performAutoVerify(
   token: string,
-  verifyEmail: (opts: { variables: { code: string } }) => Promise<any>,
+  verifyEmail: (opts: {
+    variables: { input: { code: string } };
+  }) => Promise<any>,
   updateUser: (patch: { emailVerified: boolean }) => void,
   toast: ToastFn,
   setIsAutoVerifying: (v: boolean) => void,
@@ -46,7 +48,7 @@ async function performAutoVerify(
       tokenPrefix: token.substring(0, 8) + '...',
     });
 
-    const result = await verifyEmail({ variables: { code: token } });
+    const result = await verifyEmail({ variables: { input: { code: token } } });
 
     if (result.data?.verifyEmail?.success) {
       updateUser({ emailVerified: true });
@@ -183,12 +185,18 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
     executeMutation(
       async () => {
         const response = await verifyEmail({
-          variables: { code: data.code },
+          variables: { input: { code: data.code } },
         });
 
         const payload = response.data?.verifyEmail;
-        if (payload?.__typename === 'VerifyEmailSuccess') {
+        if (payload?.__typename === 'VerifyEmailPayload') {
           updateUser({ emailVerified: true });
+        } else if (payload?.__typename === 'AuthError') {
+          const message = errorService.getUserFriendlyMessage(
+            payload.code,
+            payload.message,
+          );
+          toast({ message, type: 'error' });
         } else if (payload) {
           const message =
             'message' in payload ? payload.message : 'Verification failed';
@@ -214,7 +222,7 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
     executeMutation(
       async () => {
         const response = await resendVerificationEmail({
-          variables: { email: user.email },
+          variables: { input: { email: user.email } },
         });
 
         // Increment attempts and start countdown for next request

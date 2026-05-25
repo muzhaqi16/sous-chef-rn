@@ -172,7 +172,9 @@ describe('CodeVerificationScreen', () => {
     });
     await user.press(screen.getByTestId('footer-link'));
     await waitFor(() => {
-      expect(recordedVariables).toContainEqual({ email: 'test@example.com' });
+      expect(recordedVariables).toContainEqual({
+        input: { email: 'test@example.com' },
+      });
     });
   });
 

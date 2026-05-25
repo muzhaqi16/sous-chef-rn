@@ -3,7 +3,7 @@
 mutation AddItemToShoppingListFromRecipe($input: CreateShoppingListItemInput!) {
   addItemToShoppingList(input: $input) {
     __typename
-    ... on AddItemToShoppingListSuccess {
+    ... on AddItemToShoppingListPayload {
       shoppingListItem {
         id
         itemName
@@ -35,17 +35,18 @@ mutation AddItemToShoppingListFromRecipe($input: CreateShoppingListItemInput!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
     ... on ValidationError {
       field
     }
   }
 }
 
-mutation AddItemsToShoppingList(
-  $shoppingListId: ID!
-  $items: [BatchAddShoppingListItemInput!]!
-) {
-  addItemsToShoppingList(shoppingListId: $shoppingListId, items: $items) {
+mutation AddItemsToShoppingList($input: AddItemsToShoppingListInput!) {
+  addItemsToShoppingList(input: $input) {
     results {
       index
       clientId
@@ -100,7 +101,7 @@ query GetShoppingListsLite($homeId: ID, $first: Int, $after: String) {
 mutation CreateShoppingList($input: CreateShoppingListInput!) {
   createShoppingList(input: $input) {
     __typename
-    ... on CreateShoppingListSuccess {
+    ... on CreateShoppingListPayload {
       shoppingList {
         id
         name

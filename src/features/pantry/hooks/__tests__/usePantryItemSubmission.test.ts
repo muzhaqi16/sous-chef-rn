@@ -73,7 +73,7 @@ function createMock(success = true) {
     return recordMock(CreatePantryItemDocument, {
       data: {
         createPantryItem: {
-          __typename: 'CreatePantryItemSuccess',
+          __typename: 'CreatePantryItemPayload',
           pantryItem: {
             __typename: 'PantryItem',
             id: 'new-1',

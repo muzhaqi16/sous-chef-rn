@@ -58,7 +58,7 @@ export function useCreatePantryItem({
   const [createMutation] = useMutation(CreatePantryItemDocument, {
     update: (cache, { data: mutationData }) => {
       const payload = mutationData?.createPantryItem;
-      if (payload?.__typename !== 'CreatePantryItemSuccess' || !pantryId)
+      if (payload?.__typename !== 'CreatePantryItemPayload' || !pantryId)
         return;
       const pantryItem = payload.pantryItem;
 
@@ -158,7 +158,7 @@ export function useCreatePantryItem({
     });
 
     if (
-      result.data?.createPantryItem?.__typename === 'CreatePantryItemSuccess'
+      result.data?.createPantryItem?.__typename === 'CreatePantryItemPayload'
     ) {
       onSuccess?.();
       return true;
@@ -228,7 +228,7 @@ export function useCreatePantryItem({
                   }
                   if (
                     retryResult.data?.createPantryItem?.__typename ===
-                    'CreatePantryItemSuccess'
+                    'CreatePantryItemPayload'
                   ) {
                     onSuccess?.();
                     resolve(true);

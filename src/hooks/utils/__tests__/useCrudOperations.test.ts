@@ -224,7 +224,7 @@ describe('useCrudOperations', () => {
       const data = await updateOp({ name: 'Updated' });
 
       expect(mockMutation).toHaveBeenCalledWith({
-        variables: { id: 'item-1', input: { name: 'Updated' } },
+        variables: { input: { id: 'item-1', name: 'Updated' } },
       });
       expect(onSuccess).toHaveBeenCalledWith({ id: '1', name: 'Updated' });
       expect(data).toEqual({ id: '1', name: 'Updated' });
@@ -246,7 +246,7 @@ describe('useCrudOperations', () => {
       await updateOp({ name: 'Updated' });
 
       expect(mockMutation).toHaveBeenCalledWith({
-        variables: { id: 'item-1', input: { name: 'Updated', version: 5 } },
+        variables: { input: { id: 'item-1', name: 'Updated', version: 5 } },
       });
     });
 
@@ -290,7 +290,7 @@ describe('useCrudOperations', () => {
       const data = await removeOp();
 
       expect(mockMutation).toHaveBeenCalledWith({
-        variables: { id: 'item-1' },
+        variables: { input: { id: 'item-1' } },
       });
       expect(onSuccess).toHaveBeenCalledWith({ id: '1', deleted: true });
       expect(data).toEqual({ id: '1', deleted: true });
@@ -330,7 +330,7 @@ describe('useCrudOperations', () => {
       const data = await deletePromise;
 
       expect(mockMutation).toHaveBeenCalledWith({
-        variables: { id: 'item-1' },
+        variables: { input: { id: 'item-1' } },
       });
       expect(data).toEqual({ id: '1' });
     });

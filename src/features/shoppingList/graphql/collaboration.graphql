@@ -44,10 +44,10 @@ query MyShoppingListInvites {
 # MUTATIONS
 # ============================================
 
-mutation AcceptShoppingListInvite($token: String!) {
-  acceptShoppingListInvite(token: $token) {
+mutation AcceptShoppingListInvite($input: AcceptShoppingListInviteInput!) {
+  acceptShoppingListInvite(input: $input) {
     __typename
-    ... on AcceptShoppingListInviteSuccess {
+    ... on AcceptShoppingListInvitePayload {
       collaborator {
         ...ShoppingListCollaboratorFragment
         canEdit
@@ -64,16 +64,20 @@ mutation AcceptShoppingListInvite($token: String!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
     ... on ValidationError {
       field
     }
   }
 }
 
-mutation DeclineShoppingListInvite($token: String!) {
-  declineShoppingListInvite(token: $token) {
+mutation DeclineShoppingListInvite($input: DeclineShoppingListInviteInput!) {
+  declineShoppingListInvite(input: $input) {
     __typename
-    ... on DeclineShoppingListInviteSuccess {
+    ... on DeclineShoppingListInvitePayload {
       collaborator {
         id
       }
@@ -81,6 +85,10 @@ mutation DeclineShoppingListInvite($token: String!) {
     ... on Error {
       code
       message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
     ... on ValidationError {
       field

@@ -98,7 +98,7 @@ export const CreateMealPlanScreen: React.FC = () => {
     servings?: number;
   }) => {
     const result = await createPlanFromTemplate(config);
-    if (result?.__typename === 'CreateMealPlanSuccess') {
+    if (result?.__typename === 'CreateMealPlanPayload') {
       setTemplatePreviewVisible(false);
       setSelectedTemplate(null);
       goBack();
@@ -143,7 +143,7 @@ export const CreateMealPlanScreen: React.FC = () => {
       return;
     }
 
-    if (result?.__typename === 'CreateMealPlanSuccess') {
+    if (result?.__typename === 'CreateMealPlanPayload') {
       goBack();
     } else {
       const message =

@@ -68,7 +68,7 @@ export function useFolderActions() {
     if (!result) return false;
 
     const payload = result.data?.deleteRecipeFolder;
-    if (payload?.__typename === 'DeleteRecipeFolderSuccess') {
+    if (payload?.__typename === 'DeleteRecipeFolderPayload') {
       toastService.success(`Renamed "${oldName}" to "${newName}"`);
       return true;
     }
@@ -118,7 +118,7 @@ export function useFolderActions() {
     if (!result) return false;
 
     const payload = result.data?.deleteRecipeFolder;
-    if (payload?.__typename === 'DeleteRecipeFolderSuccess') {
+    if (payload?.__typename === 'DeleteRecipeFolderPayload') {
       toastService.success(`Deleted "${folderName}"`);
       return true;
     }

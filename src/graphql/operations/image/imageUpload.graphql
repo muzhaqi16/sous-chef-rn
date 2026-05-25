@@ -1,7 +1,7 @@
-mutation CreateImageUploadUrl($mime: String!, $purpose: ImageUploadPurpose!, $itemId: ID) {
-  createImageUploadUrl(mime: $mime, purpose: $purpose, itemId: $itemId) {
+mutation CreateImageUploadUrl($input: CreateImageUploadUrlInput!) {
+  createImageUploadUrl(input: $input) {
     __typename
-    ... on CreateImageUploadUrlSuccess {
+    ... on CreateImageUploadUrlPayload {
       url
       key
     }
@@ -9,21 +9,9 @@ mutation CreateImageUploadUrl($mime: String!, $purpose: ImageUploadPurpose!, $it
       code
       message
     }
-    ... on ValidationError {
-      field
-    }
-  }
-}
-
-mutation ConfirmProfileImageUpload($key: String!) {
-  confirmProfileImageUpload(key: $key) {
-    __typename
-    ... on ConfirmProfileImageUploadSuccess {
-      url
-    }
-    ... on Error {
-      code
-      message
+    ... on NotFoundError {
+      resource
+      resourceId
     }
     ... on ValidationError {
       field
@@ -31,15 +19,39 @@ mutation ConfirmProfileImageUpload($key: String!) {
   }
 }
 
-mutation ConfirmItemImageUpload($itemId: ID!, $key: String!) {
-  confirmItemImageUpload(itemId: $itemId, key: $key) {
+mutation ConfirmProfileImageUpload($input: ConfirmProfileImageUploadInput!) {
+  confirmProfileImageUpload(input: $input) {
     __typename
-    ... on ConfirmItemImageUploadSuccess {
+    ... on ConfirmProfileImageUploadPayload {
       url
     }
     ... on Error {
       code
       message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
+    }
+  }
+}
+
+mutation ConfirmItemImageUpload($input: ConfirmItemImageUploadInput!) {
+  confirmItemImageUpload(input: $input) {
+    __typename
+    ... on ConfirmItemImageUploadPayload {
+      url
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
     ... on ValidationError {
       field
@@ -56,7 +68,7 @@ mutation ConfirmItemImageUpload($itemId: ID!, $key: String!) {
 mutation UpdateItemImage($id: ID!, $imageUrl: String!) {
   updateItem(input: { id: $id, media: { imageUrl: $imageUrl } }) {
     __typename
-    ... on UpdateItemSuccess {
+    ... on UpdateItemPayload {
       item {
         id
         imageUrl
@@ -65,6 +77,10 @@ mutation UpdateItemImage($id: ID!, $imageUrl: String!) {
     ... on Error {
       code
       message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
     ... on ValidationError {
       field

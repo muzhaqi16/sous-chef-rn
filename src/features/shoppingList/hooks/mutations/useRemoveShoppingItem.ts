@@ -54,10 +54,10 @@ export function useRemoveShoppingItem({
     ): Unmasked<RemoveItemFromShoppingListMutation> => ({
       __typename: 'Mutation',
       removeItemFromShoppingList: {
-        __typename: 'RemoveItemFromShoppingListSuccess',
+        __typename: 'RemoveItemFromShoppingListPayload',
         shoppingListItem: {
           __typename: 'ShoppingListItem',
-          id: variables.id,
+          id: variables.input.id,
           shoppingList: {
             __typename: 'ShoppingList',
             id: listId ?? '',
@@ -72,7 +72,7 @@ export function useRemoveShoppingItem({
     update(cache, { data }, { variables }) {
       if (
         data?.removeItemFromShoppingList?.__typename !==
-          'RemoveItemFromShoppingListSuccess' ||
+          'RemoveItemFromShoppingListPayload' ||
         !listId ||
         !variables
       ) {
@@ -81,7 +81,7 @@ export function useRemoveShoppingItem({
 
       executeCacheUpdate(
         () => {
-          const itemId = variables.id;
+          const itemId = variables.input.id;
 
           // Read isPurchased before eviction so we can update completedItems.
           // Uses a co-located narrow fragment (just id + purchaseInfo.isPurchased)

@@ -101,7 +101,7 @@ export function useBatchMoveToPantry({
     const result = await executeMutation(
       () =>
         movePurchasedMutation({
-          variables: { shoppingListId: currentListId },
+          variables: { input: { shoppingListId: currentListId } },
         }),
       'Batch move to pantry error:',
     );

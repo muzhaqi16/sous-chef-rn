@@ -218,8 +218,7 @@ function createUpdateOperationImpl<TInput, TResult>(
       () =>
         mutation({
           variables: {
-            id: itemId,
-            input: transformedInput,
+            input: { id: itemId, ...transformedInput },
           },
         }),
       error => {
@@ -259,7 +258,7 @@ async function executeRemoveImpl<TResult>(
   onError?: (error: unknown) => void,
 ): Promise<TResult | false> {
   const result = await executeMutation(
-    () => mutation({ variables: { id: itemId } }),
+    () => mutation({ variables: { input: { id: itemId } } }),
     error => {
       errorService.reportError(error, { operation: operationName });
       onError?.(error);

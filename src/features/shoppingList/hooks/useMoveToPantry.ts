@@ -48,7 +48,7 @@ export function useMoveToPantry({
       update: (cache, { data }) => {
         const payload = data?.moveShoppingItemToPantry;
         if (
-          payload?.__typename !== 'MoveShoppingItemToPantrySuccess' ||
+          payload?.__typename !== 'MoveShoppingItemToPantryPayload' ||
           !moveToPantryIdRef.current
         ) {
           return;

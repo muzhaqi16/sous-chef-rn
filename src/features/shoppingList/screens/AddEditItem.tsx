@@ -90,7 +90,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
     // Update cache immediately for optimistic UI
     update: (cache, { data: mutationData }) => {
       const payload = mutationData?.addItemToShoppingList;
-      if (payload?.__typename !== 'AddItemToShoppingListSuccess') return;
+      if (payload?.__typename !== 'AddItemToShoppingListPayload') return;
       const newItem = payload.shoppingListItem;
 
       addNewItemToShoppingListCache(cache, listId, newItem);
@@ -217,10 +217,10 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
               ? result.data.addItemToShoppingList
               : null;
           const mutationData = isEdit
-            ? updatePayload?.__typename === 'UpdateShoppingListItemSuccess'
+            ? updatePayload?.__typename === 'UpdateShoppingListItemPayload'
               ? updatePayload.shoppingListItem
               : null
-            : addPayload?.__typename === 'AddItemToShoppingListSuccess'
+            : addPayload?.__typename === 'AddItemToShoppingListPayload'
             ? addPayload.shoppingListItem
             : null;
 

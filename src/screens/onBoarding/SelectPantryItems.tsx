@@ -196,7 +196,7 @@ export const SelectPantryItems = () => {
             ...itemsToRemove.map(catalogId => {
               const pantryItemId = existingItemMap.get(catalogId)!;
               return deletePantryItem({
-                variables: { id: pantryItemId },
+                variables: { input: { id: pantryItemId } },
                 update: cache => {
                   removeFromPantryItemsCache(
                     cache,

@@ -88,7 +88,7 @@ export const InvitationAcceptanceModal: React.FC<
   const [acceptHomeInvite] = useMutation(AcceptHomeInviteDocument, {
     update: (cache, { data }) => {
       const payload = data?.acceptHomeInvite;
-      if (payload?.__typename === 'AcceptHomeInviteSuccess') {
+      if (payload?.__typename === 'AcceptHomeInvitePayload') {
         addToHomes(cache, payload.membership.home, { position: 'end' });
       }
       const inviteId = invitation?.payload?.inviteId as string | undefined;
@@ -103,7 +103,7 @@ export const InvitationAcceptanceModal: React.FC<
       update: (cache, { data }) => {
         if (
           data?.acceptShoppingListInvite?.__typename !==
-          'AcceptShoppingListInviteSuccess'
+          'AcceptShoppingListInvitePayload'
         ) {
           return;
         }
@@ -120,7 +120,7 @@ export const InvitationAcceptanceModal: React.FC<
   const [declineHomeInvite] = useMutation(DeclineHomeInviteDocument, {
     update: (cache, { data }) => {
       const payload = data?.declineHomeInvite;
-      if (payload?.__typename !== 'DeclineHomeInviteSuccess') return;
+      if (payload?.__typename !== 'DeclineHomeInvitePayload') return;
       const id = payload.homeInvite.id;
       if (id && userId) {
         removePendingHomeInvite(cache, userId, id, { evictItem: true });
@@ -177,7 +177,7 @@ export const InvitationAcceptanceModal: React.FC<
 
         if (invitation.type === 'HOME_INVITE') {
           const result = await acceptHomeInvite({
-            variables: { token: token! },
+            variables: { input: { token: token! } },
           });
 
           if (result.error) {
@@ -193,7 +193,7 @@ export const InvitationAcceptanceModal: React.FC<
 
           if (
             result.data?.acceptHomeInvite?.__typename ===
-            'AcceptHomeInviteSuccess'
+            'AcceptHomeInvitePayload'
           ) {
             const newHomeId = result.data.acceptHomeInvite.membership.homeId;
 
@@ -208,7 +208,7 @@ export const InvitationAcceptanceModal: React.FC<
           }
         } else if (invitation.type === 'SHOPPING_LIST_INVITE') {
           const result = await acceptShoppingListInvite({
-            variables: { token: token! },
+            variables: { input: { token: token! } },
           });
 
           if (result.error) {
@@ -224,7 +224,7 @@ export const InvitationAcceptanceModal: React.FC<
 
           if (
             result.data?.acceptShoppingListInvite?.__typename ===
-            'AcceptShoppingListInviteSuccess'
+            'AcceptShoppingListInvitePayload'
           ) {
             onAccept?.(invitation);
             onClose();
@@ -274,7 +274,7 @@ export const InvitationAcceptanceModal: React.FC<
 
                 if (invitation.type === 'HOME_INVITE') {
                   const result = await declineHomeInvite({
-                    variables: { token: token! },
+                    variables: { input: { token: token! } },
                   });
 
                   if (result.error) {
@@ -289,7 +289,7 @@ export const InvitationAcceptanceModal: React.FC<
                   }
                 } else if (invitation.type === 'SHOPPING_LIST_INVITE') {
                   const result = await declineShoppingListInvite({
-                    variables: { token: token! },
+                    variables: { input: { token: token! } },
                   });
 
                   if (result.error) {

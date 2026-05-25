@@ -17,7 +17,7 @@ export function useDuplicateMealPlan() {
     {
       update(cache, { data }) {
         const result = data?.duplicateMealPlan;
-        if (result?.__typename === 'DuplicateMealPlanSuccess') {
+        if (result?.__typename === 'DuplicateMealPlanPayload') {
           addToMealPlans(cache, result.mealPlan);
         }
       },
@@ -34,7 +34,7 @@ export function useDuplicateMealPlan() {
     );
     if (!result) return null;
     const data = result.data?.duplicateMealPlan;
-    if (data?.__typename === 'DuplicateMealPlanSuccess') {
+    if (data?.__typename === 'DuplicateMealPlanPayload') {
       toastService.success('Meal plan duplicated!');
       Telemetry.trackEvent('meal_plan_duplicated', {
         meal_plan_id: input.mealPlanId,

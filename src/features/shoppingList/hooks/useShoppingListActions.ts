@@ -226,14 +226,16 @@ export function useShoppingListActions({
       async () => {
         await updateQuantity({
           variables: {
-            itemId,
-            quantity: newQuantity.toString(),
-            version: cachedItem.version,
+            input: {
+              itemId,
+              quantity: newQuantity.toString(),
+              version: cachedItem.version,
+            },
           },
           onCompleted: data => {
             const payload = data?.updateShoppingListItemQuantity;
             if (
-              payload?.__typename === 'UpdateShoppingListItemQuantitySuccess'
+              payload?.__typename === 'UpdateShoppingListItemQuantityPayload'
             ) {
               optimisticDataPersistence.clear(
                 'ShoppingListItem',
@@ -295,14 +297,16 @@ export function useShoppingListActions({
       async () => {
         await updateQuantity({
           variables: {
-            itemId,
-            quantity: newQuantity.toString(),
-            version: cachedItem.version,
+            input: {
+              itemId,
+              quantity: newQuantity.toString(),
+              version: cachedItem.version,
+            },
           },
           onCompleted: data => {
             const payload = data?.updateShoppingListItemQuantity;
             if (
-              payload?.__typename === 'UpdateShoppingListItemQuantitySuccess'
+              payload?.__typename === 'UpdateShoppingListItemQuantityPayload'
             ) {
               optimisticDataPersistence.clear(
                 'ShoppingListItem',

@@ -97,7 +97,7 @@ export function useHomeDetailManagement(homeId: string) {
     // Use cache.modify to update the membership role field
     update(cache, { data }, { variables }) {
       if (
-        data?.updateMembership?.__typename !== 'UpdateMembershipSuccess' ||
+        data?.updateMembership?.__typename !== 'UpdateMembershipPayload' ||
         !variables
       ) {
         return;
@@ -122,7 +122,7 @@ export function useHomeDetailManagement(homeId: string) {
   const [removeMemberMutation] = useMutation(RemoveMemberDocument, {
     update(cache, { data }, { variables }) {
       if (
-        data?.removeMember?.__typename !== 'RemoveMemberSuccess' ||
+        data?.removeMember?.__typename !== 'RemoveMemberPayload' ||
         !variables
       ) {
         return;
@@ -134,7 +134,7 @@ export function useHomeDetailManagement(homeId: string) {
           'membersConnection',
           'Membership',
         );
-        removeFromMembersCache(cache, homeId, variables.id, {
+        removeFromMembersCache(cache, homeId, variables.input.membershipId, {
           evictItem: true,
         });
       }, 'Cache update failed for removeMember:');
@@ -159,7 +159,7 @@ export function useHomeDetailManagement(homeId: string) {
   const [revokeInviteMutation] = useMutation(RevokeHomeInviteDocument, {
     update(cache, { data }, { variables }) {
       if (
-        data?.revokeHomeInvite?.__typename !== 'RevokeHomeInviteSuccess' ||
+        data?.revokeHomeInvite?.__typename !== 'RevokeHomeInvitePayload' ||
         !variables
       ) {
         return;
@@ -171,7 +171,7 @@ export function useHomeDetailManagement(homeId: string) {
           'invitesConnection',
           'HomeInvite',
         );
-        removeFromInvitesCache(cache, homeId, variables.id, {
+        removeFromInvitesCache(cache, homeId, variables.input.id, {
           evictItem: true,
         });
       }, 'Cache update failed for revokeInvite:');
@@ -198,7 +198,7 @@ export function useHomeDetailManagement(homeId: string) {
   const [leaveHomeMutation, { loading: leaving, client: leaveClient }] =
     useMutation(LeaveHomeDocument, {
       update(cache, { data }) {
-        if (data?.leaveHome?.__typename !== 'LeaveHomeSuccess') return;
+        if (data?.leaveHome?.__typename !== 'LeaveHomePayload') return;
 
         executeCacheUpdate(() => {
           safeEvict(cache, 'Home', homeId);
@@ -206,7 +206,7 @@ export function useHomeDetailManagement(homeId: string) {
       },
       onCompleted: data => {
         if (
-          data?.leaveHome?.__typename === 'LeaveHomeSuccess' &&
+          data?.leaveHome?.__typename === 'LeaveHomePayload' &&
           homeId === selectedHomeId
         ) {
           // Read remaining homes from cache
@@ -220,7 +220,7 @@ export function useHomeDetailManagement(homeId: string) {
             setSelectedHomeId(newDefaultHome.id);
             setSelectedPantryId(null);
             setDefaultHomeMutation({
-              variables: { homeId: newDefaultHome.id },
+              variables: { input: { homeId: newDefaultHome.id } },
             }).catch(err => {
               console.warn('Failed to set new default home after leave:', err);
             });
@@ -335,12 +335,12 @@ export function useHomeDetailManagement(homeId: string) {
             style: 'destructive',
             onPress: async () => {
               const result = await executeMutation(
-                () => leaveHomeMutation({ variables: { homeId } }),
+                () => leaveHomeMutation({ variables: { input: { homeId } } }),
                 'Failed to leave home',
               );
               resolve(
                 result
-                  ? result.data?.leaveHome?.__typename === 'LeaveHomeSuccess'
+                  ? result.data?.leaveHome?.__typename === 'LeaveHomePayload'
                   : false,
               );
             },

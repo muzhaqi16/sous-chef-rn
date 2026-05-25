@@ -27,7 +27,7 @@ export function useCreateStorageLocation(
       update: (cache, { data }) => {
         if (
           data?.createStorageLocation?.__typename !==
-          'CreateStorageLocationSuccess'
+          'CreateStorageLocationPayload'
         ) {
           return;
         }
@@ -67,7 +67,7 @@ export function useCreateStorageLocation(
       homeId,
     }),
     onSuccess: (data: any) =>
-      data?.createStorageLocation?.__typename === 'CreateStorageLocationSuccess'
+      data?.createStorageLocation?.__typename === 'CreateStorageLocationPayload'
         ? data.createStorageLocation.storageLocation
         : undefined,
     operationName: 'Create Storage Location',

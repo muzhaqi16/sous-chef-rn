@@ -93,7 +93,7 @@ query GetHomeByJoinCode($joinCode: String!) {
 mutation CreateHome($input: CreateHomeInput!) {
   createHome(input: $input) {
     __typename
-    ... on CreateHomeSuccess {
+    ... on CreateHomePayload {
       home {
         id
         name
@@ -135,7 +135,7 @@ mutation CreateHome($input: CreateHomeInput!) {
 mutation UpdateHome($input: UpdateHomeInput!) {
   updateHome(input: $input) {
     __typename
-    ... on UpdateHomeSuccess {
+    ... on UpdateHomePayload {
       home {
         id
         name
@@ -149,16 +149,20 @@ mutation UpdateHome($input: UpdateHomeInput!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
     ... on ValidationError {
       field
     }
   }
 }
 
-mutation DeleteHome($id: ID!) {
-  deleteHome(id: $id) {
+mutation DeleteHome($input: DeleteHomeInput!) {
+  deleteHome(input: $input) {
     __typename
-    ... on DeleteHomeSuccess {
+    ... on DeleteHomePayload {
       home {
         id
         name
@@ -168,13 +172,17 @@ mutation DeleteHome($id: ID!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
   }
 }
 
 mutation InviteToHome($input: InviteToHomeInput!) {
   inviteToHome(input: $input) {
     __typename
-    ... on InviteToHomeSuccess {
+    ... on InviteToHomePayload {
       homeInvite {
         ...InviteCard_invite
         ...HomeInviteCard_invite
@@ -184,16 +192,20 @@ mutation InviteToHome($input: InviteToHomeInput!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
     ... on ValidationError {
       field
     }
   }
 }
 
-mutation AcceptHomeInvite($token: String!) {
-  acceptHomeInvite(token: $token) {
+mutation AcceptHomeInvite($input: AcceptHomeInviteInput!) {
+  acceptHomeInvite(input: $input) {
     __typename
-    ... on AcceptHomeInviteSuccess {
+    ... on AcceptHomeInvitePayload {
       membership {
         id
         homeId
@@ -234,16 +246,20 @@ mutation AcceptHomeInvite($token: String!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
     ... on ValidationError {
       field
     }
   }
 }
 
-mutation DeclineHomeInvite($token: String!) {
-  declineHomeInvite(token: $token) {
+mutation DeclineHomeInvite($input: DeclineHomeInviteInput!) {
+  declineHomeInvite(input: $input) {
     __typename
-    ... on DeclineHomeInviteSuccess {
+    ... on DeclineHomeInvitePayload {
       homeInvite {
         id
       }
@@ -252,13 +268,17 @@ mutation DeclineHomeInvite($token: String!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
   }
 }
 
 mutation UpdateMembership($input: UpdateMembershipInput!) {
   updateMembership(input: $input) {
     __typename
-    ... on UpdateMembershipSuccess {
+    ... on UpdateMembershipPayload {
       membership {
         id
         ...HomeMemberCard_member
@@ -268,16 +288,20 @@ mutation UpdateMembership($input: UpdateMembershipInput!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
     ... on ValidationError {
       field
     }
   }
 }
 
-mutation RemoveMember($id: ID!) {
-  removeMember(membershipId: $id) {
+mutation RemoveMember($input: RemoveMemberInput!) {
+  removeMember(input: $input) {
     __typename
-    ... on RemoveMemberSuccess {
+    ... on RemoveMemberPayload {
       membership {
         id
       }
@@ -286,13 +310,17 @@ mutation RemoveMember($id: ID!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
   }
 }
 
-mutation RevokeHomeInvite($id: ID!) {
-  revokeHomeInvite(id: $id) {
+mutation RevokeHomeInvite($input: RevokeHomeInviteInput!) {
+  revokeHomeInvite(input: $input) {
     __typename
-    ... on RevokeHomeInviteSuccess {
+    ... on RevokeHomeInvitePayload {
       homeInvite {
         id
       }
@@ -301,13 +329,17 @@ mutation RevokeHomeInvite($id: ID!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
   }
 }
 
-mutation JoinHomeByCode($joinCode: String!) {
-  joinHomeByCode(joinCode: $joinCode) {
+mutation JoinHomeByCode($input: JoinHomeByCodeInput!) {
+  joinHomeByCode(input: $input) {
     __typename
-    ... on JoinHomeByCodeSuccess {
+    ... on JoinHomeByCodePayload {
       membership {
         id
         homeId
@@ -318,16 +350,20 @@ mutation JoinHomeByCode($joinCode: String!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
     ... on ValidationError {
       field
     }
   }
 }
 
-mutation LeaveHome($homeId: ID!) {
-  leaveHome(homeId: $homeId) {
+mutation LeaveHome($input: LeaveHomeInput!) {
+  leaveHome(input: $input) {
     __typename
-    ... on LeaveHomeSuccess {
+    ... on LeaveHomePayload {
       membership {
         id
       }
@@ -335,6 +371,10 @@ mutation LeaveHome($homeId: ID!) {
     ... on Error {
       code
       message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
   }
 }

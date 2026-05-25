@@ -134,7 +134,7 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
         const optimistic: UpdateNotificationPreferencesMutation = {
           __typename: 'Mutation',
           updateNotificationPreferences: {
-            __typename: 'UpdateNotificationPreferencesSuccess',
+            __typename: 'UpdateNotificationPreferencesPayload',
             notificationPreferences: {
               ...preferences,
               ...definedInputs,

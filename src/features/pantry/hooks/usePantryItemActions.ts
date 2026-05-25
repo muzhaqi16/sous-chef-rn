@@ -18,6 +18,10 @@ import {
   isVersionConflictPayload,
   getVersionConflictMessage,
 } from '#/utils/errors/versionConflict';
+import {
+  isNotFoundErrorPayload,
+  getNotFoundMessage,
+} from '#/utils/errors/notFound';
 import { Telemetry } from '#services/telemetry';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 
@@ -168,15 +172,14 @@ export function usePantryItemActions({
    * Handle payload-level errors from pantry mutations.
    * Returns true if an error was detected and handled, false otherwise.
    *
-   * Accepts either a success-variant (anything with __typename ending in
-   * 'Success') or an error-variant carrying `code` + `message`.
+   * Accepts either a payload-variant (anything with __typename ending in
+   * 'Payload') or an error-variant carrying `code` + `message`.
    */
   const handlePayloadError = (
     payload: { __typename: string } & Record<string, unknown>,
     revertFn?: () => void,
   ): boolean => {
-    // Success variants are named *Success and don't carry an error code
-    if (payload.__typename.endsWith('Success')) return false;
+    if (payload.__typename.endsWith('Payload')) return false;
 
     revertFn?.();
 
@@ -188,7 +191,11 @@ export function usePantryItemActions({
         : 'Something went wrong';
     const errorShape = { success: false, code, message };
 
-    if (isInvalidUnitPayload(errorShape)) {
+    if (isNotFoundErrorPayload(payload)) {
+      const resource =
+        typeof payload.resource === 'string' ? payload.resource : undefined;
+      alertService.alert('Not Found', getNotFoundMessage(resource));
+    } else if (isInvalidUnitPayload(errorShape)) {
       const rawValidUnits = (payload as { validUnits?: unknown }).validUnits;
       const validList = Array.isArray(rawValidUnits)
         ? (rawValidUnits as string[]).join(', ')

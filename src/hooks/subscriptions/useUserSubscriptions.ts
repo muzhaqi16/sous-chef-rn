@@ -5,28 +5,107 @@
  * Handles real-time updates for:
  * - Account updates (email, timezone, preferences) via userUpdated
  * - Profile changes (name, avatar, bio, etc.) via userProfileChanged
- *
- * Apollo auto-normalizes both User and UserProfile entities by id,
- * so no manual cache updates are needed.
+ * - Lifecycle events (membership, moderation) via userLifecycleEvents
  */
 
-import { useSubscription } from '@apollo/client/react';
+import { useApolloClient, useSubscription } from '@apollo/client/react';
 import {
   UserUpdatedDocument,
   UserProfileChangedDocument,
+  UserLifecycleEventsDocument,
+  type UserLifecycleEventsSubscription,
 } from '#operations/auth/user.generated';
+import { GetHomesDocument } from '#operations/home/home.generated';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
-import { CacheStrategy } from '#/services/subscriptions/types';
+import {
+  CacheStrategy,
+  type SubscriptionApolloClient,
+} from '#/services/subscriptions/types';
+import { UserLifecycleEventSubtype } from '#/graphql/generated/schemaTypes';
+import { useSelectedHomeId } from '#store/useAppStore';
+import { useStore } from '#store/index';
+import { safeEvict } from '#/apollo/utils/cacheUpdaters';
+import { toastService } from '#/services/toastService';
+import { authService } from '#/services/authService';
+
+type LifecyclePayload = UserLifecycleEventsSubscription['userLifecycleEvents'];
+
+function handleRemovedFromHome(
+  payload: LifecyclePayload,
+  client: SubscriptionApolloClient,
+  selectedHomeId: string | null,
+) {
+  const homeId = payload.parents?.homeId;
+  if (!homeId) return;
+
+  safeEvict(client.cache, 'Home', homeId);
+
+  if (homeId === selectedHomeId) {
+    const cachedData = client.cache.readQuery({
+      query: GetHomesDocument,
+    }) as { homes: any[] } | null;
+    const remaining = cachedData?.homes ?? [];
+
+    const store = useStore.getState();
+    if (remaining.length > 0) {
+      store.setSelectedHomeId(remaining[0].id);
+    } else {
+      store.setSelectedHomeId(null);
+    }
+    store.setSelectedPantryId(null);
+    store.setSelectedShoppingListId(null);
+  }
+
+  toastService.error('You were removed from a home');
+}
+
+function handleAddedToHome(client: SubscriptionApolloClient) {
+  client.refetchQueries({ include: [GetHomesDocument] });
+  toastService.success('You were added to a new home');
+}
+
+function handleRemovedFromShoppingList(
+  payload: LifecyclePayload,
+  client: SubscriptionApolloClient,
+) {
+  const listId = payload.parents?.shoppingListId;
+  if (!listId) return;
+
+  safeEvict(client.cache, 'ShoppingList', listId);
+
+  const store = useStore.getState();
+  if (store.selectedShoppingListId === listId) {
+    store.setSelectedShoppingListId(null);
+  }
+
+  toastService.error('You were removed from a shopping list');
+}
+
+function handleAddedToShoppingList() {
+  toastService.success('You were added to a shopping list');
+}
+
+function handleBannedOrSuspended(
+  payload: LifecyclePayload,
+  subtype: UserLifecycleEventSubtype,
+) {
+  const label =
+    subtype === UserLifecycleEventSubtype.Banned ? 'banned' : 'suspended';
+  const reason = payload.reason ? `: ${payload.reason}` : '';
+  toastService.error(`Your account has been ${label}${reason}`);
+  authService.logout();
+}
 
 /**
  * Initialize user subscriptions for multi-device profile/settings sync
- *
- * Two subscriptions: one for account-level User updates, one for UserProfile
- * changes. Both rely on Apollo auto-normalization (CacheStrategy.NONE).
+ * and lifecycle events (membership changes, moderation actions).
  *
  * @param userId - Current user ID for deduplication and subscription scoping
  */
 export function useUserSubscriptions(userId?: string) {
+  const client = useApolloClient();
+  const selectedHomeId = useSelectedHomeId() || null;
+
   const userHandlers = subscriptionService.register({
     subscriptionName: 'UserUpdated',
     entityType: 'User',
@@ -55,5 +134,56 @@ export function useUserSubscriptions(userId?: string) {
     variables: { userId },
     skip: !userId,
     ...profileHandlers,
+  });
+
+  const lifecycleHandlers = subscriptionService.register<LifecyclePayload>({
+    subscriptionName: 'UserLifecycleEvents',
+    entityType: 'User',
+    enableDeduplication: false,
+    userId,
+    cacheUpdateStrategy: CacheStrategy.NONE,
+    enableLogging: true,
+    customOnData: (payload: LifecyclePayload) => {
+      if (!payload) return;
+
+      switch (payload.subtype) {
+        case UserLifecycleEventSubtype.RemovedFromHome:
+          handleRemovedFromHome(payload, client, selectedHomeId);
+          break;
+
+        case UserLifecycleEventSubtype.AddedToHome:
+          handleAddedToHome(client);
+          break;
+
+        case UserLifecycleEventSubtype.RemovedFromShoppingList:
+          handleRemovedFromShoppingList(payload, client);
+          break;
+
+        case UserLifecycleEventSubtype.AddedToShoppingList:
+          handleAddedToShoppingList();
+          break;
+
+        case UserLifecycleEventSubtype.Banned:
+        case UserLifecycleEventSubtype.Suspended:
+          handleBannedOrSuspended(payload, payload.subtype);
+          break;
+
+        case UserLifecycleEventSubtype.Warned:
+          toastService.error(
+            payload.reason || 'You received a warning from a moderator',
+          );
+          break;
+
+        case UserLifecycleEventSubtype.Unbanned:
+        case UserLifecycleEventSubtype.Unsuspended:
+          break;
+      }
+    },
+  });
+
+  useSubscription(UserLifecycleEventsDocument, {
+    variables: { userId: userId! },
+    skip: !userId,
+    ...lifecycleHandlers,
   });
 }

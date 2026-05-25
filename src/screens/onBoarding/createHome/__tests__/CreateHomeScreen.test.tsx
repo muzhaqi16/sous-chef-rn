@@ -839,7 +839,7 @@ describe('CreateHomeScreen', () => {
     await waitFor(() => {
       expect(recordedMutations).toContainEqual({
         name: 'AcceptHomeInvite',
-        variables: { token: 'invite-1' },
+        variables: { input: { token: 'invite-1' } },
       });
     });
   });
@@ -1006,7 +1006,7 @@ describe('CreateHomeScreen', () => {
     await waitFor(() => {
       expect(recordedMutations).toContainEqual({
         name: 'DeclineHomeInvite',
-        variables: { token: 'invite-1' },
+        variables: { input: { token: 'invite-1' } },
       });
     });
   });

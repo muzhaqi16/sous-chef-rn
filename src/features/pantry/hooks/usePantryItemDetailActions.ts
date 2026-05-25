@@ -91,13 +91,13 @@ export function usePantryItemDetailActions({
     update: (cache, { data: mutationData }, { variables }) => {
       const payload = mutationData?.deletePantryItem;
       if (
-        payload?.__typename !== 'DeletePantryItemSuccess' ||
+        payload?.__typename !== 'DeletePantryItemPayload' ||
         !selectedPantryId ||
         !variables
       ) {
         return;
       }
-      removeFromPantryItemsCache(cache, selectedPantryId, variables.id, {
+      removeFromPantryItemsCache(cache, selectedPantryId, variables.input.id, {
         evictItem: true,
       });
       cache.modify({
@@ -121,7 +121,7 @@ export function usePantryItemDetailActions({
       update: (cache, { data: mutationData }) => {
         const payload = mutationData?.addItemToShoppingList;
         if (
-          payload?.__typename !== 'AddItemToShoppingListSuccess' ||
+          payload?.__typename !== 'AddItemToShoppingListPayload' ||
           !selectedShoppingListId
         ) {
           return;
@@ -168,7 +168,7 @@ export function usePantryItemDetailActions({
           onPress: () => {
             executeMutation(
               async () => {
-                await deleteItem({ variables: { id: itemId } });
+                await deleteItem({ variables: { input: { id: itemId } } });
                 goBack();
               },
               error => {

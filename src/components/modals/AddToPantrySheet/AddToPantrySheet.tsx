@@ -86,7 +86,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   const [createPantryItem] = useMutation(CreatePantryItemDocument, {
     update: (cache, { data }) => {
       const payload = data?.createPantryItem;
-      if (payload?.__typename !== 'CreatePantryItemSuccess' || !pantryId)
+      if (payload?.__typename !== 'CreatePantryItemPayload' || !pantryId)
         return;
       const pantryItem = payload.pantryItem;
 
@@ -101,7 +101,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   const [restockPantryItem] = useMutation(RestockPantryItemDocument, {
     update: (cache, { data }) => {
       const payload = data?.restockPantryItem;
-      if (payload?.__typename !== 'RestockPantryItemSuccess' || !pantryId) {
+      if (payload?.__typename !== 'RestockPantryItemPayload' || !pantryId) {
         return;
       }
       const pantryItem = payload.pantryItemUsage.pantryItem;

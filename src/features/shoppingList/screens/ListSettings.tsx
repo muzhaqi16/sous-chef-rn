@@ -135,7 +135,7 @@ export const ListSettings: React.FC<
     },
     update: (cache, { data }, { variables }) => {
       if (
-        data?.deleteShoppingList?.__typename !== 'DeleteShoppingListSuccess' ||
+        data?.deleteShoppingList?.__typename !== 'DeleteShoppingListPayload' ||
         !variables
       ) {
         return;
@@ -147,7 +147,9 @@ export const ListSettings: React.FC<
             'shoppingLists',
             'ShoppingList',
           );
-        removeFromShoppingListsCache(cache, variables.id, { evictItem: true });
+        removeFromShoppingListsCache(cache, variables.input.id, {
+          evictItem: true,
+        });
       } catch (error) {
         console.warn('Cache update failed for deleteList:', error);
       }
@@ -161,14 +163,14 @@ export const ListSettings: React.FC<
   const [createList] = useMutation(CreateShoppingListDocument, {
     update(cache, { data }) {
       if (
-        data?.createShoppingList?.__typename === 'CreateShoppingListSuccess'
+        data?.createShoppingList?.__typename === 'CreateShoppingListPayload'
       ) {
         addToShoppingListsCache(cache, data.createShoppingList.shoppingList);
       }
     },
     onCompleted: data => {
       if (
-        data?.createShoppingList?.__typename === 'CreateShoppingListSuccess'
+        data?.createShoppingList?.__typename === 'CreateShoppingListPayload'
       ) {
         const newList = data.createShoppingList.shoppingList;
         setSelectedShoppingListId(newList.id);
@@ -242,7 +244,7 @@ export const ListSettings: React.FC<
 
             executeMutation(
               async () => {
-                await deleteList({ variables: { id: listId! } });
+                await deleteList({ variables: { input: { id: listId! } } });
 
                 // Clear selection — useShoppingListSelection auto-selects the next list
                 setSelectedShoppingListId(null);
@@ -291,7 +293,7 @@ export const ListSettings: React.FC<
             executeWithLoadingState(
               async () => {
                 await removeMember({
-                  variables: { id: currentUserCollaborator.id },
+                  variables: { input: { id: currentUserCollaborator.id } },
                 });
                 setSelectedShoppingListId(null);
                 goBack();

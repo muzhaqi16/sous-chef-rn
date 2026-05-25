@@ -2,10 +2,10 @@
 # MUTATIONS
 # ============================================
 
-mutation MarkNotificationAsRead($id: ID!) {
-  markNotificationAsRead(id: $id) {
+mutation MarkNotificationAsRead($input: MarkNotificationAsReadInput!) {
+  markNotificationAsRead(input: $input) {
     __typename
-    ... on MarkNotificationAsReadSuccess {
+    ... on MarkNotificationAsReadPayload {
       notification {
         id
         status
@@ -15,13 +15,17 @@ mutation MarkNotificationAsRead($id: ID!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
   }
 }
 
-mutation MarkNotificationUnread($id: ID!) {
-  markNotificationUnread(id: $id) {
+mutation MarkNotificationUnread($input: MarkNotificationUnreadInput!) {
+  markNotificationUnread(input: $input) {
     __typename
-    ... on MarkNotificationUnreadSuccess {
+    ... on MarkNotificationUnreadPayload {
       notification {
         id
         status
@@ -31,13 +35,17 @@ mutation MarkNotificationUnread($id: ID!) {
       code
       message
     }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
   }
 }
 
-mutation DeleteNotification($id: ID!) {
-  deleteNotification(id: $id) {
+mutation DeleteNotification($input: DeleteNotificationInput!) {
+  deleteNotification(input: $input) {
     __typename
-    ... on DeleteNotificationSuccess {
+    ... on DeleteNotificationPayload {
       notification {
         id
       }
@@ -45,6 +53,10 @@ mutation DeleteNotification($id: ID!) {
     ... on Error {
       code
       message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
   }
 }

@@ -48,7 +48,7 @@ const createOptions = () => ({
 
 function consumeMock(payload?: Record<string, unknown>) {
   const defaultPayload = {
-    __typename: 'CreatePantryItemUsageSuccess',
+    __typename: 'CreatePantryItemUsagePayload',
     pantryItemUsage: {
       __typename: 'PantryItemUsage',
       id: 'usage-1',
@@ -83,7 +83,7 @@ function consumeMock(payload?: Record<string, unknown>) {
 
 function restockMock(payload?: Record<string, unknown>) {
   const defaultPayload = {
-    __typename: 'RestockPantryItemSuccess',
+    __typename: 'RestockPantryItemPayload',
     pantryItemUsage: {
       __typename: 'PantryItemUsage',
       id: 'usage-1',

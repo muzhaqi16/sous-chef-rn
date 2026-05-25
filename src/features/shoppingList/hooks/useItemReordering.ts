@@ -286,7 +286,7 @@ export function useItemReordering<T extends ShoppingListItem>(
     // we read here (version, sortOrder).
     const serverItemRef =
       result.data?.moveShoppingListItem?.__typename ===
-      'MoveShoppingListItemSuccess'
+      'MoveShoppingListItemPayload'
         ? result.data.moveShoppingListItem.shoppingListItem
         : null;
     const serverItem = serverItemRef

@@ -158,10 +158,12 @@ export function useQuantityEditModal(
       async () => {
         await updateQuantity({
           variables: {
-            itemId: selectedItemRaw.id,
-            quantity,
-            unitId,
-            version: selectedItemRaw.version,
+            input: {
+              itemId: selectedItemRaw.id,
+              quantity,
+              unitId,
+              version: selectedItemRaw.version,
+            },
           },
         });
 

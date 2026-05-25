@@ -24,20 +24,28 @@ mutation Register($input: RegisterInput!) {
   }
 }
 
-mutation RefreshToken($token: String!) {
-  refresh(token: $token) {
+mutation RefreshToken($input: RefreshTokenInput!) {
+  refresh(input: $input) {
     accessToken
     refreshToken
   }
 }
 
-mutation VerifyEmail($code: String!) {
-  verifyEmail(code: $code) {
+mutation VerifyEmail($input: VerifyEmailInput!) {
+  verifyEmail(input: $input) {
     __typename
-    ... on VerifyEmailSuccess {
+    ... on VerifyEmailPayload {
       user {
         ...LoginUser
       }
+    }
+    ... on AuthError {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
     ... on Error {
       code
@@ -49,29 +57,43 @@ mutation VerifyEmail($code: String!) {
   }
 }
 
-mutation ForgotPassword($email: String!) {
-  forgotPassword(email: $email) {
-    success
-    message
-    code
-  }
-}
-
-mutation ResetPassword($token: String!, $newPassword: String!) {
-  resetPassword(token: $token, newPassword: $newPassword) {
-    success
-    message
-    code
-  }
-}
-
-mutation ResendVerificationEmail($email: String!) {
-  resendVerificationEmail(email: $email) {
+mutation ForgotPassword($input: ForgotPasswordInput!) {
+  forgotPassword(input: $input) {
     __typename
-    ... on ResendVerificationEmailSuccess {
+    ... on ForgotPasswordPayload {
+      status {
+        success
+        code
+        message
+      }
+    }
+    ... on RateLimitError {
+      code
+      message
+      retryAfter
+    }
+  }
+}
+
+mutation ResetPassword($input: ResetPasswordWithTokenInput!) {
+  resetPassword(input: $input) {
+    success
+    message
+    code
+  }
+}
+
+mutation ResendVerificationEmail($input: ResendVerificationEmailInput!) {
+  resendVerificationEmail(input: $input) {
+    __typename
+    ... on ResendVerificationEmailPayload {
       user {
         id
       }
+    }
+    ... on AuthError {
+      code
+      message
     }
     ... on Error {
       code
