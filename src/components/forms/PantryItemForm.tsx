@@ -52,6 +52,7 @@ import { ItemInformationSection } from './ItemInformationSection';
 import { QuantitySection } from './QuantitySection';
 import { StorageDetailsSection } from './StorageDetailsSection';
 import { usePantryItemFormSubmit } from './usePantryItemFormSubmit';
+import { logValidationErrors } from '#utils/validation/common';
 
 type PageName = 'Basics' | 'Product' | 'Storage' | 'Inventory';
 const PAGES: readonly PageName[] = [
@@ -539,7 +540,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
           rightActions={[
             {
               icon: 'checkmark',
-              onPress: handleSubmit(handleSave),
+              onPress: handleSubmit(handleSave, logValidationErrors),
               variant: 'primary',
               testID:
                 mode === 'add'

@@ -4,6 +4,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { AuthFormTemplate } from '../../components/templates/AuthFormTemplate';
 import { EmailInput } from '../../components/atoms/EmailInput';
 import { getForgotPasswordValidationSchema } from '#utils/validation/auth';
+import { logValidationErrors } from '#utils/validation/common';
 import { AuthWrapper } from '../../components/templates/AuthWrapper';
 import { useMutation } from '@apollo/client/react';
 import { ForgotPasswordDocument } from '#operations/auth/auth.generated';
@@ -73,7 +74,7 @@ export function ForgotPasswordScreen() {
         errors={errors}
         submitText="Send Reset Link"
         submitButtonTestID="forgot-password-submit-button"
-        onSubmit={handleSubmit(sendResetEmail)}
+        onSubmit={handleSubmit(sendResetEmail, logValidationErrors)}
         footerText="Remembered it?"
         footerLinkText="Sign In"
         footerLinkTestID="forgot-password-login-link"

@@ -323,14 +323,14 @@ describe('usePantryItemDetailActions', () => {
       expect(mockConvertExpiredBatches).toHaveBeenCalledWith('item-1');
     });
 
-    it('calls convertExpiredToWaste on item-discard confirm', () => {
+    it('calls convertExpiredToWaste on item-discard confirm', async () => {
       const { result } = setup();
 
       act(() => result.current.handleDiscardExpired());
 
       const discardButton = (alertService.alert as jest.Mock).mock
         .calls[0][2][1];
-      act(() => discardButton.onPress());
+      await act(async () => discardButton.onPress());
 
       expect(mockConvertExpiredToWaste).toHaveBeenCalledWith('item-1');
     });

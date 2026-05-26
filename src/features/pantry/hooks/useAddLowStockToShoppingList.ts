@@ -2,7 +2,7 @@ import { useMutation } from '@apollo/client/react';
 import { AddLowStockItemsToShoppingListDocument } from '#features/pantry/graphql/pantry.generated';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
+import { executeMutation, unwrapPayload } from '#/utils/compilerSafeWrappers';
 
 interface UseAddLowStockToShoppingListOptions {
   homeId: string | undefined;
@@ -27,23 +27,27 @@ export function useAddLowStockToShoppingList({
     }
 
     const result = await executeMutation(
-      () =>
-        addLowStockMutation({
+      async () => {
+        const { data } = await addLowStockMutation({
           variables: { input: { homeId } },
-        }),
-      'Add low stock to shopping list error:',
+        });
+        return unwrapPayload(
+          data?.addLowStockItemsToShoppingList,
+          'AddLowStockItemsToShoppingListPayload',
+          'Failed to add low stock items',
+        );
+      },
+      (error: unknown) => {
+        toastService.error(
+          error instanceof Error
+            ? error.message
+            : 'Failed to add low stock items',
+        );
+      },
     );
     if (!result) return;
 
-    const response = result.data?.addLowStockItemsToShoppingList;
-    if (response?.__typename !== 'AddLowStockItemsToShoppingListPayload') {
-      const errorMsg =
-        response && 'message' in response ? response.message : undefined;
-      toastService.error(errorMsg || 'Failed to add low stock items');
-      return;
-    }
-
-    const { addedCount, skippedCount } = response.result;
+    const { addedCount, skippedCount } = result.result;
 
     if (addedCount === 0 && skippedCount === 0) {
       toastService.info('No low stock items found');

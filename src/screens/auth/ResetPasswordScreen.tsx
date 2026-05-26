@@ -14,6 +14,7 @@ import { useAppStore } from '#store/useAppStore';
 import { useMutation } from '@apollo/client/react';
 import { ResetPasswordDocument } from '#operations/auth/auth.generated';
 import { logger } from '#/utils/environment';
+import { logValidationErrors } from '#/utils/validation/common';
 import { useToast } from '#/hooks/useToast';
 import { useAuthNavigation } from '#hooks/navigation/useAuthNavigation';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
@@ -242,7 +243,7 @@ export const ResetPasswordScreen: React.FC = () => {
 
           <Button
             variant="primary"
-            onPress={form.handleSubmit(onSubmit)}
+            onPress={form.handleSubmit(onSubmit, logValidationErrors)}
             disabled={!form.formState.isValid}
             loading={isSubmitting}
             style={styles.buttonSpacing}

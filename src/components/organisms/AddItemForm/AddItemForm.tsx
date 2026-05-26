@@ -37,6 +37,7 @@ import {
 import { PageIndicator } from '#/components/molecules/PageIndicator/PageIndicator';
 import { CollapsibleSection } from '#/components/molecules/CollapsibleSection';
 import { Text } from '#components/atoms/Text';
+import { logValidationErrors } from '#utils/validation/common';
 
 export type AddItemFormMode = 'create' | 'edit' | 'variant';
 
@@ -690,7 +691,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
           fullWidth
           loading={loading}
           disabled={!isValid}
-          onPress={handleSubmit(handleFormSubmit)}
+          onPress={handleSubmit(handleFormSubmit, logValidationErrors)}
         >
           {modeConfig.buttonLabel}
         </Button>

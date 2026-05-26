@@ -39,7 +39,10 @@ import { Button } from '#components/base/Button';
 import { OfflineGate } from '#components/atoms/OfflineGate';
 import { AlertBanner } from '#components/molecules/AlertBanner';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+import {
+  executeWithLoadingState,
+  unwrapPayload,
+} from '#/utils/compilerSafeWrappers';
 import { ROLE_PERMISSIONS, INVITE_ROLES } from '#/constants/collaboratorRoles';
 import { ChipScrollRow } from '#components/atoms/ChipScrollRow';
 import { getCollaboratorDisplayName } from '#/utils/formatters/memberFormatters';
@@ -219,16 +222,11 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
             input: { id: listId, isPublic: !isPublic },
           },
         });
-        const sharePayload = data?.shareShoppingList;
-        if (sharePayload?.__typename !== 'ShareShoppingListPayload') {
-          const message =
-            sharePayload && 'message' in sharePayload
-              ? sharePayload.message
-              : null;
-          throw new Error(
-            message ?? t('shoppingListScreens.failedToUpdateShareSettings'),
-          );
-        }
+        unwrapPayload(
+          data?.shareShoppingList,
+          'ShareShoppingListPayload',
+          t('shoppingListScreens.failedToUpdateShareSettings'),
+        );
         // No refetch needed: the mutation returns shoppingList { id, shareCode, isPublic }
         // which Apollo normalizes by ShoppingList:${id}, auto-updating the cache.
       },
@@ -284,16 +282,11 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
             }
           },
         });
-        const invitePayload = data?.inviteToShoppingList;
-        if (invitePayload?.__typename !== 'InviteToShoppingListPayload') {
-          const message =
-            invitePayload && 'message' in invitePayload
-              ? invitePayload.message
-              : null;
-          throw new Error(
-            message ?? t('shoppingListScreens.failedToSendInvitation'),
-          );
-        }
+        unwrapPayload(
+          data?.inviteToShoppingList,
+          'InviteToShoppingListPayload',
+          t('shoppingListScreens.failedToSendInvitation'),
+        );
         setEmail('');
         // No refetch needed: the update() callback above already inserts the
         // new collaborator into the cached collaboratorsConnection.

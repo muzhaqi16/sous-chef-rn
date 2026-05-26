@@ -230,31 +230,34 @@ let recordedMutations: RecordedMutation[] = [];
 // Per-mutation response control
 let mockCreateHomeResponse: any = {
   createHome: {
-    __typename: 'HomeMutationPayload',
-    success: true,
-    message: null,
-    code: null,
-    home: null,
+    __typename: 'CreateHomePayload',
+    home: {
+      __typename: 'Home',
+      id: 'home-default',
+      name: 'My Home',
+      isDefault: true,
+      version: 1,
+      pantriesConnection: {
+        __typename: 'PantryConnection',
+        totalCount: 0,
+        edges: [],
+      },
+      myMembership: null,
+    },
   },
 };
 let mockCreateHomeError: Error | null = null;
 
 let mockAcceptHomeInviteResponse: any = {
   acceptHomeInvite: {
-    __typename: 'MembershipPayload',
-    success: true,
-    message: null,
-    code: null,
+    __typename: 'AcceptHomeInvitePayload',
     membership: { __typename: 'Membership', id: 'm1', homeId: 'home-1' },
   },
 };
 
 let mockDeclineHomeInviteResponse: any = {
   declineHomeInvite: {
-    __typename: 'HomeInvitePayload',
-    success: true,
-    message: null,
-    code: null,
+    __typename: 'DeclineHomeInvitePayload',
     homeInvite: { __typename: 'HomeInvite', id: 'invite-1' },
   },
 };
@@ -436,28 +439,31 @@ beforeEach(() => {
   mockCreateHomeError = null;
   mockCreateHomeResponse = {
     createHome: {
-      __typename: 'HomeMutationPayload',
-      success: true,
-      message: null,
-      code: null,
-      home: null,
+      __typename: 'CreateHomePayload',
+      home: {
+        __typename: 'Home',
+        id: 'home-default',
+        name: 'My Home',
+        isDefault: true,
+        version: 1,
+        pantriesConnection: {
+          __typename: 'PantryConnection',
+          totalCount: 0,
+          edges: [],
+        },
+        myMembership: null,
+      },
     },
   };
   mockAcceptHomeInviteResponse = {
     acceptHomeInvite: {
-      __typename: 'MembershipPayload',
-      success: true,
-      message: null,
-      code: null,
+      __typename: 'AcceptHomeInvitePayload',
       membership: { __typename: 'Membership', id: 'm1', homeId: 'home-1' },
     },
   };
   mockDeclineHomeInviteResponse = {
     declineHomeInvite: {
-      __typename: 'HomeInvitePayload',
-      success: true,
-      message: null,
-      code: null,
+      __typename: 'DeclineHomeInvitePayload',
       homeInvite: { __typename: 'HomeInvite', id: 'invite-1' },
     },
   };
@@ -869,10 +875,7 @@ describe('CreateHomeScreen', () => {
     const user = userEvent.setup();
     mockCreateHomeResponse = {
       createHome: {
-        __typename: 'HomeMutationPayload',
-        success: true,
-        message: null,
-        code: null,
+        __typename: 'CreateHomePayload',
         home: {
           __typename: 'Home',
           id: 'home-new',
@@ -888,16 +891,6 @@ describe('CreateHomeScreen', () => {
                 node: { __typename: 'Pantry', id: 'p1', isDefault: true },
               },
             ],
-          },
-          membersConnection: {
-            __typename: 'MembershipConnection',
-            totalCount: 0,
-            edges: [],
-          },
-          invitesConnection: {
-            __typename: 'HomeInviteConnection',
-            totalCount: 0,
-            edges: [],
           },
           myMembership: null,
         },
@@ -1026,10 +1019,7 @@ describe('CreateHomeScreen', () => {
     const user = userEvent.setup();
     mockCreateHomeResponse = {
       createHome: {
-        __typename: 'HomeMutationPayload',
-        success: true,
-        message: null,
-        code: null,
+        __typename: 'CreateHomePayload',
         home: {
           __typename: 'Home',
           id: 'home-new',
@@ -1045,16 +1035,6 @@ describe('CreateHomeScreen', () => {
                 node: { __typename: 'Pantry', id: 'p1', isDefault: true },
               },
             ],
-          },
-          membersConnection: {
-            __typename: 'MembershipConnection',
-            totalCount: 0,
-            edges: [],
-          },
-          invitesConnection: {
-            __typename: 'HomeInviteConnection',
-            totalCount: 0,
-            edges: [],
           },
           myMembership: null,
         },
@@ -1076,47 +1056,33 @@ describe('CreateHomeScreen', () => {
     expect(mockSetSelectedPantryId).toHaveBeenCalledWith('p1');
   });
 
-  it('handles createHome success without home in response by refetching', async () => {
+  it('handles createHome conflict error response', async () => {
     const user = userEvent.setup();
     mockCreateHomeResponse = {
       createHome: {
-        __typename: 'HomeMutationPayload',
-        success: true,
-        message: null,
-        code: null,
-        home: null,
+        __typename: 'ConflictError',
+        code: 'CONFLICT',
+        message: 'A home with this name already exists',
       },
     };
-
-    // First call for initial render: no homes; after refetch: found home
-    stageHomes([]);
-    const { extractNodes } = require('#/utils/connectionUtils');
-    extractNodes.mockImplementationOnce(() => [
-      { id: 'found-home', name: 'My Home' },
-    ]);
 
     const { findByTestId } = renderScreen();
     await user.press(await findByTestId('submit-button'));
 
-    // Note: after createHome with no home, the screen calls refetchHomes()
-    // and expects the refetch result to find the new home. Since we're
-    // returning the same data, the refetch will find no home and the path
-    // throws. We can still assert that the executeWithLoadingState was called.
     const { executeWithLoadingState } = require('#/utils/compilerSafeWrappers');
     await waitFor(() => {
       expect(executeWithLoadingState).toHaveBeenCalled();
     });
   });
 
-  it('shows error when createHome returns unsuccessful payload', async () => {
+  it('shows error when createHome returns error payload', async () => {
     const user = userEvent.setup();
     mockCreateHomeResponse = {
       createHome: {
-        __typename: 'HomeMutationPayload',
-        success: false,
+        __typename: 'ValidationError',
+        code: 'VALIDATION_ERROR',
         message: 'Home limit reached',
-        code: null,
-        home: null,
+        field: null,
       },
     };
 
@@ -1132,11 +1098,9 @@ describe('CreateHomeScreen', () => {
     const user = userEvent.setup();
     mockCreateHomeResponse = {
       createHome: {
-        __typename: 'HomeMutationPayload',
-        success: false,
-        message: null,
-        code: null,
-        home: null,
+        __typename: 'ForbiddenError',
+        code: 'FORBIDDEN',
+        message: '',
       },
     };
 
@@ -1414,10 +1378,7 @@ describe('CreateHomeScreen', () => {
 
     mockCreateHomeResponse = {
       createHome: {
-        __typename: 'HomeMutationPayload',
-        success: true,
-        message: null,
-        code: null,
+        __typename: 'CreateHomePayload',
         home: {
           __typename: 'Home',
           id: 'home-new',
@@ -1433,16 +1394,6 @@ describe('CreateHomeScreen', () => {
                 node: { __typename: 'Pantry', id: 'p1', isDefault: false },
               },
             ],
-          },
-          membersConnection: {
-            __typename: 'MembershipConnection',
-            totalCount: 0,
-            edges: [],
-          },
-          invitesConnection: {
-            __typename: 'HomeInviteConnection',
-            totalCount: 0,
-            edges: [],
           },
           myMembership: null,
         },

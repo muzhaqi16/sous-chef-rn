@@ -49,6 +49,7 @@ import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigati
 
 // Validation & Helpers
 import { getCreateHomeSchema } from '#/utils/validation/onboarding';
+import { logValidationErrors } from '#/utils/validation/common';
 import { createPantryForHome, showPantryCreationError } from './helpers';
 import { extractNodes } from '#/utils/connectionUtils';
 import { OnboardingErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
@@ -56,6 +57,7 @@ import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import {
   executeWithLoadingState,
   executeMutation,
+  unwrapPayload,
 } from '#/utils/compilerSafeWrappers';
 
 /** Module-level cache update closure for `useAcceptHomeInviteMutation`.
@@ -130,38 +132,19 @@ async function performCreateHome(
       },
     });
 
-    const payload = response.data?.createHome;
+    const payload = unwrapPayload(
+      response.data?.createHome,
+      'CreateHomePayload',
+      deps.createHomeFailedMessage,
+    );
 
-    if (payload?.success) {
-      if (payload.home) {
-        deps.setSelectedHomeId(payload.home.id);
+    deps.setSelectedHomeId(payload.home.id);
 
-        const pantries = extractNodes(payload.home.pantriesConnection) as any[];
-        const defaultPantry =
-          pantries.find((p: { isDefault: boolean }) => p.isDefault) ||
-          pantries[0];
-        if (defaultPantry) {
-          deps.setSelectedPantryId(defaultPantry.id);
-        }
-      } else {
-        const refetchResult = await deps.refetchHomes();
-        const refetchedHomes = extractNodes(
-          refetchResult.data?.homes,
-        ) as Array<{
-          id: string;
-          name?: string;
-        }>;
-        const newHome = refetchedHomes.find(
-          h => h.name === data.homeName.trim(),
-        );
-        if (newHome?.id) {
-          deps.setSelectedHomeId(newHome.id);
-        } else {
-          throw new Error(deps.homeNotFoundMessage);
-        }
-      }
-    } else {
-      throw new Error(payload?.message || deps.createHomeFailedMessage);
+    const pantries = extractNodes(payload.home.pantriesConnection) as any[];
+    const defaultPantry =
+      pantries.find((p: { isDefault: boolean }) => p.isDefault) || pantries[0];
+    if (defaultPantry) {
+      deps.setSelectedPantryId(defaultPantry.id);
     }
   } else if (deps.needsPantry && deps.selectedHomeId) {
     const success = await createPantryForHome(
@@ -699,7 +682,7 @@ const CreateHomeScreenComponent = () => {
       <SubmitButton
         isCreating={isCreating}
         needsHome={needsHome}
-        onPress={form.handleSubmit(onSubmit)}
+        onPress={form.handleSubmit(onSubmit, logValidationErrors)}
       />
 
       {graphqlError ? <ErrorMessage message={graphqlError} /> : null}

@@ -1,4 +1,25 @@
 import { string } from 'yup';
+import type { FieldErrors, FieldValues } from 'react-hook-form';
+import { logger } from '#/utils/environment';
+
+// --- shared helpers ----------------------------------------------------------
+
+export function normalizeSmartPunctuation(
+  value: string | undefined,
+): string | undefined {
+  if (!value) return value;
+  return value
+    .replace(/[‘’‚‛]/g, "'")
+    .replace(/[“”„‟]/g, '"')
+    .replace(/[–—]/g, '-');
+}
+
+export function logValidationErrors(errors: FieldErrors<FieldValues>) {
+  const fields = Object.entries(errors)
+    .map(([key, err]) => `${key}: ${err?.message}`)
+    .join(', ');
+  logger.warn('Form validation failed:', fields);
+}
 
 // --- shared rules ------------------------------------------------------------
 
@@ -16,6 +37,7 @@ export const passwordRule = string()
 
 // name rules (for firstName, lastName)
 export const nameRule = string()
+  .transform(normalizeSmartPunctuation)
   .min(2, 'Name must be at least 2 characters')
   .max(50, 'Name must be less than 50 characters')
   .matches(

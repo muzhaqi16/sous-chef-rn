@@ -12,7 +12,10 @@ import { JoinShoppingListByShareCodeDocument } from '#features/shoppingList/grap
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useStore } from '#store';
 import { toastService } from '#/services/toastService';
-import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+import {
+  executeWithLoadingState,
+  unwrapPayload,
+} from '#/utils/compilerSafeWrappers';
 import { Text } from '#components/atoms/Text';
 
 export const JoinByShareCodeScreen: React.FC<
@@ -40,24 +43,18 @@ export const JoinByShareCodeScreen: React.FC<
           variables: { input: { shareCode: trimmed } },
         });
 
-        const result = data?.joinShoppingListByShareCode;
+        const result = unwrapPayload(
+          data?.joinShoppingListByShareCode,
+          'JoinShoppingListByShareCodePayload',
+          'Failed to join list. The code may be invalid or expired.',
+        );
 
-        if (result?.__typename !== 'JoinShoppingListByShareCodePayload') {
-          const message = result && 'message' in result ? result.message : null;
-          toastService.error(
-            message ??
-              'Failed to join list. The code may be invalid or expired.',
-          );
-          return;
-        }
-
-        const listId = result.shoppingList.id;
-        const listName = result.shoppingList.name;
-
-        useStore.getState().setSelectedShoppingListId(listId);
+        useStore.getState().setSelectedShoppingListId(result.shoppingList.id);
         goBack();
         toShoppingListMain();
-        toastService.success(`Joined "${listName || 'Shopping List'}"`);
+        toastService.success(
+          `Joined "${result.shoppingList.name || 'Shopping List'}"`,
+        );
       },
       setJoining,
       () => {

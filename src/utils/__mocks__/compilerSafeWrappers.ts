@@ -1,5 +1,10 @@
 /** Passthrough auto-mock — wraps every export in jest.fn() while preserving real behavior. */
 
+import {
+  GraphQLDomainError,
+  GraphQLNetworkError,
+} from '../errors/graphqlErrors';
+
 export const executeMutation = jest.fn(
   async <T>(
     mutationFn: () => Promise<T>,
@@ -73,6 +78,31 @@ export const executeAsyncWithCleanup = jest.fn(
     } finally {
       cleanup();
     }
+  },
+);
+
+export const unwrapPayload = jest.fn(
+  <TUnion extends { __typename: string }, TName extends TUnion['__typename']>(
+    payload: TUnion | null | undefined,
+    successTypename: TName,
+    fallbackMessage: string,
+  ): Extract<TUnion, { __typename: TName }> => {
+    if (payload == null) {
+      throw new GraphQLNetworkError(fallbackMessage);
+    }
+    if (payload.__typename === successTypename) {
+      return payload as Extract<TUnion, { __typename: TName }>;
+    }
+    const { __typename, code, message, ...extra } = payload as Record<
+      string,
+      unknown
+    > & { __typename: string };
+    throw new GraphQLDomainError({
+      __typename,
+      code: String(code ?? 'UNKNOWN'),
+      message: String(message || fallbackMessage),
+      ...extra,
+    });
   },
 );
 

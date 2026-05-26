@@ -8,47 +8,24 @@
  */
 
 import { useMutation } from '@apollo/client/react';
-import { alertService } from '#/services/alertService';
 import { ConvertExpiredToWasteDocument } from '#features/pantry/graphql/pantry.generated';
-import { useErrorService } from '#/services/errorService';
+import { unwrapPayload } from '#/utils/compilerSafeWrappers';
 
-interface UseConvertExpiredToWasteOptions {
-  onSuccess?: () => void;
-}
-
-export function useConvertExpiredToWaste({
-  onSuccess,
-}: UseConvertExpiredToWasteOptions = {}) {
-  const { handleApolloError } = useErrorService();
-
+export function useConvertExpiredToWaste() {
   const [convertMutation, { loading }] = useMutation(
     ConvertExpiredToWasteDocument,
-    { errorPolicy: 'all' },
   );
 
-  const convertExpiredToWaste = async (
-    pantryItemId: string,
-  ): Promise<boolean> => {
-    const result = await convertMutation({
+  const convertExpiredToWaste = async (pantryItemId: string) => {
+    const { data } = await convertMutation({
       variables: { input: { pantryItemId } },
     });
 
-    if (
-      result.data?.convertExpiredToWaste?.__typename ===
-      'ConvertExpiredToWastePayload'
-    ) {
-      onSuccess?.();
-      return true;
-    }
-
-    if (result.error) {
-      const { message } = handleApolloError(result.error, {
-        operation: 'Discard Expired Item',
-      });
-      alertService.alert('Error', message);
-    }
-
-    return false;
+    return unwrapPayload(
+      data?.convertExpiredToWaste,
+      'ConvertExpiredToWastePayload',
+      'Failed to discard expired item',
+    );
   };
 
   return { convertExpiredToWaste, loading };

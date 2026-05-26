@@ -24,6 +24,7 @@ import {
 import { useToast } from '#hooks/useToast';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { changePasswordSchema } from '#utils/validation/auth';
+import { logValidationErrors } from '#utils/validation/common';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 
 interface ChangePasswordForm {
@@ -184,7 +185,7 @@ export const ChangePasswordScreen: React.FC = () => {
 
             <Button
               variant="primary"
-              onPress={form.handleSubmit(onSubmit)}
+              onPress={form.handleSubmit(onSubmit, logValidationErrors)}
               disabled={!isFormValid}
               loading={isSubmitting}
               style={styles.buttonSpacing}

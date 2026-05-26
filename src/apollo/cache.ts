@@ -454,6 +454,11 @@ export function makeCache(): InMemoryCache {
               return incoming;
             },
           },
+          stats: {
+            merge(existing, incoming, { mergeObjects }) {
+              return mergeObjects(existing, incoming);
+            },
+          },
         },
       },
       PantryItem: {

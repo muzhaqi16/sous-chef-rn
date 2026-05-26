@@ -11,16 +11,10 @@ import { ShoppingListAvatar } from '#components/atoms/ShoppingListAvatar';
 import { useSelectorManagement } from '#hooks/ui/useSelectorManagement';
 import { IconLibrary } from '#/utils/iconUtils';
 import { useStore } from '#store';
-import { useMutation } from '@apollo/client/react';
-import { DeleteShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { createRemoveFromQueryConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
-import { useErrorService } from '#/services/errorService';
 import { toastService } from '#/services/toastService';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
-import {
-  executeCacheUpdate,
-  executeMutation,
-} from '#/utils/compilerSafeWrappers';
+import { executeMutation } from '#/utils/compilerSafeWrappers';
+import { useDeleteShoppingList } from '#features/shoppingList/hooks/mutations/useDeleteShoppingList';
 import type {
   SelectorConfig,
   ItemSelectorRef,
@@ -95,35 +89,7 @@ export function useShoppingListSelectorModal({
     selectedForDeletionRef.current = selectedForDeletion;
   });
   const longPressItemRef = useRef<string | null>(null);
-  const { handleApolloError } = useErrorService();
-
-  const [deleteList] = useMutation(DeleteShoppingListDocument, {
-    onError: (error: any) => {
-      const { message } = handleApolloError(error, {
-        operation: 'Delete Shopping List',
-      });
-      toastService.error(message);
-    },
-    update: (cache, { data }, { variables }) => {
-      if (
-        data?.deleteShoppingList?.__typename !== 'DeleteShoppingListPayload' ||
-        !variables
-      ) {
-        return;
-      }
-
-      executeCacheUpdate(() => {
-        const removeFromShoppingListsCache =
-          createRemoveFromQueryConnectionUpdater(
-            'shoppingLists',
-            'ShoppingList',
-          );
-        removeFromShoppingListsCache(cache, variables.input.id, {
-          evictItem: true,
-        });
-      }, 'Cache update failed for deleteList:');
-    },
-  });
+  const { deleteShoppingList } = useDeleteShoppingList();
 
   // --- Delete mode handlers ---
   const exitDeleteMode = () => {
@@ -176,12 +142,7 @@ export function useShoppingListSelectorModal({
             );
 
             const result = await executeMutation(
-              () =>
-                Promise.all(
-                  idsToDelete.map(id =>
-                    deleteList({ variables: { input: { id } } }),
-                  ),
-                ),
+              () => Promise.all(idsToDelete.map(id => deleteShoppingList(id))),
               () => {
                 // Deletion failed — unregister immediately
                 idsToDelete.forEach(id =>

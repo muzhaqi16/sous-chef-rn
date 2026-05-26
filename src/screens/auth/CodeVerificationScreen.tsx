@@ -15,6 +15,7 @@ import {
 } from '#operations/auth/auth.generated';
 import { errorService } from '#/services/errorService';
 import { logger } from '#/utils/environment';
+import { logValidationErrors } from '#/utils/validation/common';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import type { ToastFn } from '#/components/atoms/Toast';
 import { SousChefLoader } from '#/components/base/SousChefLoader';
@@ -306,7 +307,7 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
         control={control}
         errors={errors}
         submitText="Submit"
-        onSubmit={handleSubmit(onVerifyCode)}
+        onSubmit={handleSubmit(onVerifyCode, logValidationErrors)}
         footerText="Didn't get the email?"
         footerLinkText="Resend code"
         onFooterLinkPress={onResend}
