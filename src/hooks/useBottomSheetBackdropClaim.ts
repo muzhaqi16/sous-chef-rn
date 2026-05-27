@@ -1,4 +1,4 @@
-import { useState, type RefObject } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import {
   Extrapolation,
   interpolate,
@@ -7,7 +7,7 @@ import {
   type SharedValue,
 } from 'react-native-reanimated';
 import { SHEET } from '#constants/animations';
-import { useBackdropClaim } from '#components/providers/OverlayBackdropProvider';
+import { useOverlayBackdropOptional } from '#components/providers/OverlayBackdropProvider';
 
 interface DismissableRef {
   dismiss: () => void;
@@ -25,10 +25,9 @@ interface DismissableRef {
  *   `interpolate(animatedIndex, [-1, 0], [0, SHEET.BACKDROP_OPACITY])` and
  *   claims the global backdrop with it. The dim layer ramps in/out on the
  *   UI thread, frame-synced with the sheet — zero JS-thread delay.
- * - Tracks a local `isOpen` JS state driven by gorhom's `onChange(index)`
- *   callback (≥0 → open, -1 → closed). Delegates the actual claim/release
- *   to the declarative `useBackdropClaim`, which owns the effects and the
- *   defensive unmount cleanup.
+ * - Claims/releases the backdrop imperatively via `onChange(index)` from
+ *   gorhom. Imperative management avoids the useEffect cleanup race that
+ *   caused leaked claims when the React Compiler optimized effect deps.
  *
  * Backdrop-tap dismisses the sheet via the supplied ref.
  *
@@ -58,15 +57,35 @@ export function useBottomSheetBackdropClaim(
     ),
   );
 
-  const [isOpen, setIsOpen] = useState(false);
-  useBackdropClaim(isOpen, {
-    opacity: opacitySV,
-    onPress: () => ref.current?.dismiss(),
+  const { claim, release } = useOverlayBackdropOptional();
+  const claimIdRef = useRef<string | null>(null);
+  const onPressRef = useRef(() => ref.current?.dismiss());
+  useEffect(() => {
+    onPressRef.current = () => ref.current?.dismiss();
   });
+  const [stableOnPress] = useState<() => void>(
+    () => () => onPressRef.current(),
+  );
+
+  const claimBackdrop = () => {
+    if (claimIdRef.current != null) return;
+    claimIdRef.current = claim({ opacity: opacitySV, onPress: stableOnPress });
+  };
+
+  const releaseBackdrop = () => {
+    if (claimIdRef.current == null) return;
+    release(claimIdRef.current);
+    claimIdRef.current = null;
+  };
+
+  // Defensive unmount cleanup
+  useEffect(() => {
+    return () => releaseBackdrop();
+  }, []);
 
   const onChange = (index: number) => {
-    if (index >= 0) setIsOpen(true);
-    else if (index === -1) setIsOpen(false);
+    if (index >= 0) claimBackdrop();
+    else if (index === -1) releaseBackdrop();
   };
 
   return { animatedIndex, onChange };

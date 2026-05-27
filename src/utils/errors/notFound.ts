@@ -1,19 +1,4 @@
-const RESOURCE_DISPLAY_NAMES: Record<string, string> = {
-  PantryItem: 'pantry item',
-  Pantry: 'pantry',
-  ShoppingList: 'shopping list',
-  ShoppingListItem: 'shopping item',
-  Recipe: 'recipe',
-  RecipeReview: 'review',
-  Home: 'home',
-  MealPlan: 'meal plan',
-  MealPlanItem: 'meal plan item',
-  MealTemplate: 'meal template',
-  StorageLocation: 'storage location',
-  User: 'user',
-  Item: 'item',
-  Notification: 'notification',
-};
+import { getI18n } from '#/i18n/config';
 
 export function isNotFoundErrorPayload(payload: {
   __typename: string;
@@ -22,11 +7,23 @@ export function isNotFoundErrorPayload(payload: {
 }
 
 export function getNotFoundMessage(resource?: string | null): string {
+  const i18n = getI18n();
+
   if (!resource) {
-    return 'The requested item could not be found. It may have been deleted.';
+    return i18n.t('errors.notFoundGeneric', {
+      defaultValue:
+        'The requested item could not be found. It may have been deleted.',
+    });
   }
 
   const displayName =
-    RESOURCE_DISPLAY_NAMES[resource] || resource.toLowerCase();
-  return `The ${displayName} could not be found. It may have been deleted or moved.`;
+    i18n.t(`errors.resourceNames.${resource}`, {
+      defaultValue: resource.toLowerCase(),
+    }) || resource.toLowerCase();
+
+  return i18n.t('errors.notFoundResource', {
+    resource: displayName,
+    defaultValue:
+      'The {{resource}} could not be found. It may have been deleted or moved.',
+  });
 }

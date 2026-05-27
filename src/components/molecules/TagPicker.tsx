@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import {
@@ -34,6 +34,7 @@ export const TagPicker: React.FC<TagPickerProps> = ({
 }) => {
   const BottomSheetScrollable = useBottomSheetScrollableCreator();
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
+    visible,
     onDismiss: onCancel,
     snapPoints: ['55%', '70%'],
   });
@@ -47,15 +48,6 @@ export const TagPicker: React.FC<TagPickerProps> = ({
       setSearchQuery('');
     }
   }
-
-  // Sync visible prop with bottom sheet ref
-  useEffect(() => {
-    if (visible) {
-      ref.current?.present();
-    } else {
-      ref.current?.dismiss();
-    }
-  }, [visible, ref]);
 
   const filteredTags = (() => {
     if (!searchQuery.trim()) return tags;

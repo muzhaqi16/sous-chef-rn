@@ -206,6 +206,27 @@ export function renderWithApollo(
 }
 
 import type { DocumentNode } from 'graphql';
+import type { FragmentType } from '@apollo/client/masking';
+import type { TypedDocumentNode } from '@graphql-typed-document-node/core';
+
+/**
+ * Brand a plain data fixture as `FragmentType<typeof SomeFragmentDoc>` so it
+ * can be passed to component props that expect an opaque fragment ref.
+ *
+ * At runtime `useFragment` only reads `__typename` + key fields from the ref
+ * (via `cache.identify`), so any object with those fields works. This helper
+ * exists purely to satisfy the type system without `as never` or
+ * `as unknown as X`.
+ *
+ * @example
+ *   const item = buildItem();
+ *   <PantryItemCard pantryItemRef={toFragmentRef<typeof PantryItemCard_PantryItemFragmentDoc>(item)} />
+ */
+export function toFragmentRef<
+  TDoc extends TypedDocumentNode<any, any>,
+>(data: Record<string, unknown> & { __typename: string; id: string }): FragmentType<TDoc> {
+  return data as FragmentType<TDoc>;
+}
 
 export interface RecordedMock<TData = Record<string, unknown>> {
   /** MockedResponse to feed into `operationMocks`. */

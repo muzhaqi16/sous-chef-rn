@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { BaseSwitch } from '#components/base/BaseSwitch';
@@ -34,21 +34,11 @@ export const SettingRow: React.FC<SettingRowProps> = ({
   const [textEditVisible, setTextEditVisible] = useState(false);
 
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
+    visible: modalVisible,
     onDismiss: () => setModalVisible(false),
     snapPoints: [],
     enableDynamicSizing: true,
   });
-
-  // Sync bottom sheet visibility with state (complex: checks item.type)
-  useEffect(() => {
-    if (item.type === 'modal') {
-      if (modalVisible) {
-        ref.current?.present();
-      } else {
-        ref.current?.dismiss();
-      }
-    }
-  }, [modalVisible, item.type, ref]);
 
   // Get field metadata
   const inputLabel = getInputLabelForField(item.key);

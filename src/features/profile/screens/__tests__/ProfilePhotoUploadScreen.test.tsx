@@ -57,6 +57,7 @@ jest.mock('#/storage/mmkv', () => ({
     getString: jest.fn(() => null),
     remove: jest.fn(),
   },
+  isStorageReady: () => true,
 }));
 
 jest.mock('#/services/errorService', () => ({

@@ -22,8 +22,8 @@ import {
   useSetIsHomeSelectionReady,
   useSetSelectedPantryId,
 } from '#store/useAppStore';
-import { useErrorService } from '#/services/errorService';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
+import { handleMutationError } from '#/utils/errorHandlers';
 
 interface UseHomeSelectionOptions {
   homes: any[] | null;
@@ -59,7 +59,6 @@ export function useHomeSelection({
   const setSelectedPantryId = useSetSelectedPantryId();
   const setHomeAndPantry = useSetHomeAndPantry();
   const setIsHomeSelectionReady = useSetIsHomeSelectionReady();
-  const { handleApolloError } = useErrorService();
 
   // Ref to track if initial home auto-selection has been attempted
   const hasInitializedDefaultHome = useRef(false);
@@ -135,11 +134,11 @@ export function useHomeSelection({
       // Sync this choice to the backend
       setDefaultHomeMutation({
         variables: { input: { homeId: firstHome.id } },
-      }).catch((error: any) => {
-        const { message } = handleApolloError(error, {
+      }).catch(error => {
+        handleMutationError(error, {
           operation: 'Set First Home as Default',
+          showAlert: false,
         });
-        console.warn('Failed to set first home as default:', message);
       });
     }
   }, [
@@ -149,7 +148,6 @@ export function useHomeSelection({
     homes?.length, // Use primitive to prevent re-runs when array reference changes
     setDefaultHomeMutation,
     setSelectedHomeId,
-    handleApolloError,
     homes,
   ]);
 

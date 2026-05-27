@@ -3,6 +3,7 @@ import { AppState, type AppStateStatus } from 'react-native';
 import { Telemetry } from '#services/telemetry';
 import { queueManager } from '#/apollo/offlineQueue/queueManager';
 import { useStore } from '#store';
+import { useIsHydrated } from '#store/useAppStore';
 import { handleTokenRefreshOnResume } from '#store/slices/authSlice';
 
 /**
@@ -12,9 +13,19 @@ import { handleTokenRefreshOnResume } from '#store/slices/authSlice';
  * Tracks the previous state in a closure so the resume branch only fires
  * on a real background→active transition (not on launch, where currentState
  * is already 'active').
+ *
+ * Gated on `isHydrated` — the listener is only registered after Zustand
+ * hydration completes, which guarantees MMKV storage is initialized.
+ * Without this gate, an early AppState `active` event fires
+ * `Telemetry.trackEvent()` before storage is ready, crashing telemetry
+ * module init (getDeviceId → storage.getString).
  */
 export function useAppStateLifecycle(): void {
+  const isHydrated = useIsHydrated();
+
   useEffect(() => {
+    if (!isHydrated) return;
+
     let lastAppState: AppStateStatus = AppState.currentState;
 
     const handleAppStateChange = async (nextAppState: AppStateStatus) => {
@@ -42,5 +53,5 @@ export function useAppStateLifecycle(): void {
     return () => {
       subscription?.remove();
     };
-  }, []);
+  }, [isHydrated]);
 }

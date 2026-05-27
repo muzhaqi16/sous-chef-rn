@@ -12,6 +12,7 @@ jest.mock('#hooks/useStandardBottomSheet', () => ({
     ref: { current: null },
     modalProps: {},
     contentContainerStyle: {},
+    dismiss: jest.fn(),
     theme: {
       colors: {
         textPrimary: '#000',
@@ -30,6 +31,8 @@ jest.mock('#hooks/useStandardBottomSheet', () => ({
 
 describe('ImagePickerSheet', () => {
   const defaultProps = {
+    visible: true,
+    onDismiss: jest.fn(),
     onCamera: jest.fn(),
     onLibrary: jest.fn(),
   };

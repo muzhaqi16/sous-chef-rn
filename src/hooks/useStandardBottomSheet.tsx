@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useContext } from 'react';
 import { Keyboard } from 'react-native';
 import {
   BottomSheetModal as GorhomBottomSheetModal,
@@ -6,7 +6,7 @@ import {
 } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { withUnistyles } from 'react-native-unistyles';
-import { useFocusEffect } from '@react-navigation/native';
+import { NavigationContext } from '@react-navigation/native';
 import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
 import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
 import { useBottomSheetBackdropClaim } from '#hooks/useBottomSheetBackdropClaim';
@@ -167,14 +167,29 @@ export function useStandardBottomSheet({
   //
   // Short-circuits for manual-presentation callers (visible === undefined)
   // — they own the full lifecycle.
-  const [onScreenFocus] = useState(() => () => {
-    if (visibleRef.current === undefined) return undefined;
-    if (visibleRef.current) ref.current?.present();
-    return () => {
+  //
+  // No-ops when rendered inside a BottomSheet portal (no NavigationContext).
+  const navigation = useContext(NavigationContext);
+  useEffect(() => {
+    if (!navigation) return;
+    if (visibleRef.current === undefined) return;
+
+    if (navigation.isFocused() && visibleRef.current) {
+      ref.current?.present();
+    }
+
+    const unsubFocus = navigation.addListener('focus', () => {
+      if (visibleRef.current) ref.current?.present();
+    });
+    const unsubBlur = navigation.addListener('blur', () => {
       if (visibleRef.current) ref.current?.dismiss();
+    });
+
+    return () => {
+      unsubFocus();
+      unsubBlur();
     };
-  });
-  useFocusEffect(onScreenFocus);
+  }, [navigation]);
 
   // Compose the backdrop claim with the caller's onChange. The current
   // user-supplied onChange is held in a ref so its identity changing across
@@ -204,6 +219,17 @@ export function useStandardBottomSheet({
     return () => sub.remove();
   }, [keyboardAware]);
 
+  // Gorhom fires `onClose` and `onChange(-1)` from separate animated
+  // reactions. If `onClose` wins the race it calls `unmount()` — tearing
+  // down the portal before `onChange(-1)` reaches JS — so our
+  // `handleBackdrop(-1)` never runs and the backdrop claim leaks.
+  // Defensive release here guarantees the claim is freed; calling
+  // `handleBackdrop(-1)` when the claim is already released is a no-op.
+  const safeOnDismiss = () => {
+    handleBackdrop(-1);
+    onDismiss();
+  };
+
   // All standard BottomSheetModal props as a spread-ready object.
   // Theme-derived `backgroundStyle` / `handleIndicatorStyle` come from the
   // wrapped `BottomSheetModal` re-exported above — no theme reads here.
@@ -212,7 +238,7 @@ export function useStandardBottomSheet({
     enablePanDownToClose: true,
     enableDynamicSizing,
     topInset: insets.top,
-    onDismiss,
+    onDismiss: safeOnDismiss,
     onChange: handleChange,
     animatedIndex,
     animationConfigs,

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { BottomSheetView, BottomSheetScrollView } from '@gorhom/bottom-sheet';
@@ -38,6 +38,7 @@ export function MultiSelectChipSheet<T extends string = string>({
   loading = false,
 }: MultiSelectChipSheetProps<T>) {
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
+    visible,
     onDismiss: onClose,
     snapPoints: ['60%', '80%'],
   });
@@ -51,15 +52,6 @@ export function MultiSelectChipSheet<T extends string = string>({
       setSearchQuery('');
     }
   }
-
-  // Sync visible prop with bottom sheet ref
-  useEffect(() => {
-    if (visible) {
-      ref.current?.present();
-    } else {
-      ref.current?.dismiss();
-    }
-  }, [visible, ref]);
 
   const filteredItems = (() => {
     if (!searchQuery.trim()) return items;

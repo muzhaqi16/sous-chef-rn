@@ -288,9 +288,8 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
   };
 
   // Search filtering happens inside SavedRecipeRow via useFragment — the
-  // hook returns refs, so we can't read recipe.name from the connection node
-  // shape without a cache subscription.
-  const filteredRecipes = recipes;
+  // hook returns masked refs, so we can't read recipe.name at the parent
+  // level. Rows that don't match return null.
 
   const handleSelectRecipe = (recipeId: string) => {
     onAddRecipe(recipeId, selectedMealType);
@@ -423,14 +422,16 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
             </Pressable>
           ) : null}
 
-          {/* Your Recipes section */}
-          {hasQuery && filteredRecipes.length > 0 ? (
+          {/* Your Recipes section — header only when NOT searching.
+              During search, rows filter themselves via useFragment (returning
+              null on mismatch), so the parent can't know the match count. */}
+          {!hasQuery && recipes.length > 0 ? (
             <Text style={styles.sectionHeader}>
               {t('addMealSheet.yourRecipes')}
             </Text>
           ) : null}
 
-          {filteredRecipes.map(savedRecipe => (
+          {recipes.map(savedRecipe => (
             <SavedRecipeRow
               key={savedRecipe.id}
               savedRecipeRef={savedRecipe}
@@ -507,7 +508,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
           ) : null}
 
           {/* Empty state */}
-          {!hasQuery && filteredRecipes.length === 0 ? (
+          {!hasQuery && recipes.length === 0 ? (
             <View style={styles.emptyState}>
               <Text style={styles.emptyText}>
                 {t('addMealSheet.noSavedRecipes')}
@@ -516,7 +517,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
           ) : null}
 
           {hasQuery &&
-          filteredRecipes.length === 0 &&
+          recipes.length === 0 &&
           !searchingApi &&
           spoonacularResults.length === 0 ? (
             <View style={styles.emptyState}>

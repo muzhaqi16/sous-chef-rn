@@ -32,7 +32,25 @@
     "resetPasswordFailed": "Impossibile reimpostare la password",
     "networkError": "Errore di rete. Controlla la tua connessione.",
     "somethingWentWrong": "Qualcosa è andato storto. Riprova.",
-    "unknownError": "Si è verificato un errore sconosciuto"
+    "unknownError": "Si è verificato un errore sconosciuto",
+    "notFoundGeneric": "L'elemento richiesto non è stato trovato. Potrebbe essere stato eliminato.",
+    "notFoundResource": "{{resource}} non è stato trovato. Potrebbe essere stato eliminato o spostato.",
+    "resourceNames": {
+      "PantryItem": "L'articolo della dispensa",
+      "Pantry": "La dispensa",
+      "ShoppingList": "La lista della spesa",
+      "ShoppingListItem": "L'articolo della spesa",
+      "Recipe": "La ricetta",
+      "RecipeReview": "La recensione",
+      "Home": "La casa",
+      "MealPlan": "Il piano pasti",
+      "MealPlanItem": "L'articolo del piano pasti",
+      "MealTemplate": "Il modello di pasto",
+      "StorageLocation": "La posizione di conservazione",
+      "User": "L'utente",
+      "Item": "L'articolo",
+      "Notification": "La notifica"
+    }
   },
   "success": {
     "itemAdded": "Articolo aggiunto",

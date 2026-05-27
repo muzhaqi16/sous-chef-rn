@@ -32,7 +32,25 @@
     "resetPasswordFailed": "Nuk u rivendos dot fjalëkalimi",
     "networkError": "Gabim rrjeti. Kontrollo lidhjen tënde.",
     "somethingWentWrong": "Diçka shkoi keq. Provoje sërish.",
-    "unknownError": "Ndodhi një gabim i panjohur"
+    "unknownError": "Ndodhi një gabim i panjohur",
+    "notFoundGeneric": "Artikulli i kërkuar nuk u gjet. Mund të jetë fshirë.",
+    "notFoundResource": "{{resource}} nuk u gjet. Mund të jetë fshirë ose zhvendosur.",
+    "resourceNames": {
+      "PantryItem": "Artikulli i qilarit",
+      "Pantry": "Qilari",
+      "ShoppingList": "Lista e blerjeve",
+      "ShoppingListItem": "Artikulli i blerjeve",
+      "Recipe": "Receta",
+      "RecipeReview": "Vlerësimi",
+      "Home": "Shtëpia",
+      "MealPlan": "Plani i vakteve",
+      "MealPlanItem": "Artikulli i planit të vakteve",
+      "MealTemplate": "Modeli i vaktit",
+      "StorageLocation": "Vendndodhja e ruajtjes",
+      "User": "Përdoruesi",
+      "Item": "Artikulli",
+      "Notification": "Njoftimi"
+    }
   },
   "success": {
     "itemAdded": "Artikulli u shtua",

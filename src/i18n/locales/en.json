@@ -32,7 +32,25 @@
     "resetPasswordFailed": "Failed to reset password",
     "networkError": "Network error. Please check your connection.",
     "somethingWentWrong": "Something went wrong. Please try again.",
-    "unknownError": "An unknown error occurred"
+    "unknownError": "An unknown error occurred",
+    "notFoundGeneric": "The requested item could not be found. It may have been deleted.",
+    "notFoundResource": "The {{resource}} could not be found. It may have been deleted or moved.",
+    "resourceNames": {
+      "PantryItem": "pantry item",
+      "Pantry": "pantry",
+      "ShoppingList": "shopping list",
+      "ShoppingListItem": "shopping item",
+      "Recipe": "recipe",
+      "RecipeReview": "review",
+      "Home": "home",
+      "MealPlan": "meal plan",
+      "MealPlanItem": "meal plan item",
+      "MealTemplate": "meal template",
+      "StorageLocation": "storage location",
+      "User": "user",
+      "Item": "item",
+      "Notification": "notification"
+    }
   },
   "success": {
     "itemAdded": "Item added successfully",

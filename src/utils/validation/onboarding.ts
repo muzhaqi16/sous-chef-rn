@@ -9,7 +9,7 @@ const homeNameRule = string()
   .max(50, 'Home name must be less than 50 characters')
   .matches(
     /^[a-zA-Z0-9\s'"-]+$/,
-    'Home name can only contain letters, numbers, spaces, hyphens, and apostrophes',
+    'Home name can only contain letters, numbers, spaces, hyphens, apostrophes, and quotes',
   )
   .trim();
 

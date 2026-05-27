@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useFragment } from '@apollo/client/react';
@@ -117,6 +117,7 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
   const resolvedCurrentQuantityLabel =
     currentQuantityLabel ?? t('pantryAction.availableDefault');
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
+    visible: visible && !!pantryItemId,
     onDismiss: onClose,
     snapPoints,
   });
@@ -230,15 +231,6 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
       setSelectedUnitInfo(defaultUnit);
     }
   }
-
-  // Present/dismiss bottom sheet
-  useEffect(() => {
-    if (visible && pantryItem) {
-      ref.current?.present();
-    } else {
-      ref.current?.dismiss();
-    }
-  }, [visible, pantryItem, ref]);
 
   // Look up the selected unit's ranked metadata for increment/fractions
   const selectedRankedUnit = allUnits.find(

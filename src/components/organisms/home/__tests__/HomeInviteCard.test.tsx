@@ -2,9 +2,15 @@
 import React from 'react';
 import { InMemoryCache } from '@apollo/client';
 import { screen } from '@testing-library/react-native';
-import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  renderWithApollo,
+  toFragmentRef,
+} from '#/test-utils/apolloMockProvider';
 import { HomeInviteCard } from '../HomeInviteCard';
-import { HomeInviteCard_InviteFragmentDoc } from '../HomeInviteCard.generated';
+import {
+  HomeInviteCard_InviteFragmentDoc,
+  type HomeInviteCard_InviteFragment,
+} from '../HomeInviteCard.generated';
 import { InviteStatus, MembershipRole } from '#/graphql/generated/schemaTypes';
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -22,7 +28,7 @@ jest.mock('#/utils/formatters/inviteFormatters', () => ({
 
 function buildInvite(
   overrides: Partial<{ id: string; status: InviteStatus }> = {},
-) {
+): HomeInviteCard_InviteFragment {
   return {
     __typename: 'HomeInvite',
     id: '1',
@@ -40,13 +46,15 @@ function buildInvite(
  * Build a cache pre-seeded with the invite via its colocated fragment doc.
  * The card's `useFragment` then reads back complete data and renders.
  */
-function buildCache(invite: ReturnType<typeof buildInvite>) {
+function buildCache(invite: HomeInviteCard_InviteFragment) {
   const cache = new InMemoryCache();
   cache.writeFragment({
-    id: cache.identify(invite as never) ?? `HomeInvite:${invite.id}`,
+    id:
+      cache.identify({ __typename: invite.__typename, id: invite.id }) ??
+      `HomeInvite:${invite.id}`,
     fragment: HomeInviteCard_InviteFragmentDoc,
     fragmentName: 'HomeInviteCard_invite',
-    data: invite as never,
+    data: invite,
   });
   return cache;
 }
@@ -58,7 +66,9 @@ describe('HomeInviteCard', () => {
     const invite = buildInvite();
     renderWithApollo(
       <HomeInviteCard
-        inviteRef={invite as never}
+        inviteRef={toFragmentRef<typeof HomeInviteCard_InviteFragmentDoc>(
+          invite,
+        )}
         displayName="Test User"
         onRevoke={onRevoke}
       />,
@@ -72,7 +82,9 @@ describe('HomeInviteCard', () => {
     const invite = buildInvite();
     renderWithApollo(
       <HomeInviteCard
-        inviteRef={invite as never}
+        inviteRef={toFragmentRef<typeof HomeInviteCard_InviteFragmentDoc>(
+          invite,
+        )}
         displayName="Test User"
         canRevoke
         onRevoke={onRevoke}
@@ -86,7 +98,9 @@ describe('HomeInviteCard', () => {
     const invite = buildInvite();
     renderWithApollo(
       <HomeInviteCard
-        inviteRef={invite as never}
+        inviteRef={toFragmentRef<typeof HomeInviteCard_InviteFragmentDoc>(
+          invite,
+        )}
         displayName="Test User"
         canRevoke={false}
         onRevoke={onRevoke}
@@ -100,7 +114,9 @@ describe('HomeInviteCard', () => {
     const accepted = buildInvite({ status: InviteStatus.Accepted });
     renderWithApollo(
       <HomeInviteCard
-        inviteRef={accepted as never}
+        inviteRef={toFragmentRef<typeof HomeInviteCard_InviteFragmentDoc>(
+          accepted,
+        )}
         displayName="Test User"
         canRevoke
         onRevoke={onRevoke}

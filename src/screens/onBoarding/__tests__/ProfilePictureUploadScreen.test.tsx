@@ -37,6 +37,7 @@ jest.mock('#/storage/mmkv', () => ({
     getString: jest.fn(() => undefined),
     remove: jest.fn(),
   },
+  isStorageReady: () => true,
 }));
 jest.mock('#/utils/compilerSafeWrappers');
 jest.mock('#utils/imageValidation', () => ({

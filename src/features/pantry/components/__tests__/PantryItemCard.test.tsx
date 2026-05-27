@@ -2,9 +2,15 @@
 import React from 'react';
 import { InMemoryCache } from '@apollo/client';
 import { screen } from '@testing-library/react-native';
-import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  renderWithApollo,
+  toFragmentRef,
+} from '#/test-utils/apolloMockProvider';
 import { PantryItemCard } from '../PantryItemCard';
-import { PantryItemCard_PantryItemFragmentDoc } from '../PantryItemCard.generated';
+import {
+  PantryItemCard_PantryItemFragmentDoc,
+  type PantryItemCard_PantryItemFragment,
+} from '../PantryItemCard.generated';
 import { PantryActionsProvider } from '../PantryActionsContext';
 import { StorageState } from '#/graphql/generated/schemaTypes';
 
@@ -113,7 +119,9 @@ interface BuildItemOverrides {
   activeBatchCount?: number;
 }
 
-function buildItem(overrides: BuildItemOverrides = {}) {
+function buildItem(
+  overrides: BuildItemOverrides = {},
+): PantryItemCard_PantryItemFragment {
   return {
     __typename: 'PantryItem',
     id: overrides.id ?? 'pantry-1',
@@ -130,7 +138,7 @@ function buildItem(overrides: BuildItemOverrides = {}) {
       __typename: 'Item',
       id: `item-${overrides.id ?? 'pantry-1'}`,
       imageUrl: overrides.imageUrl ?? null,
-      images: [],
+      images: [] as PantryItemCard_PantryItemFragment['item']['images'],
     },
     unit: {
       __typename: 'Unit',
@@ -147,24 +155,56 @@ function buildItem(overrides: BuildItemOverrides = {}) {
             name: overrides.storageLocationName,
           },
     packageBreakdown: overrides.packageBreakdown
-      ? { __typename: 'PackageBreakdown', ...overrides.packageBreakdown }
+      ? {
+          __typename: 'PackageBreakdown',
+          count: overrides.packageBreakdown.count,
+          perUnitNetWeight: overrides.packageBreakdown.perUnitNetWeight ?? null,
+          totalNetWeight: overrides.packageBreakdown.totalNetWeight ?? null,
+          contentUnit: {
+            __typename: 'Unit',
+            ...overrides.packageBreakdown.contentUnit,
+          },
+          perUnitNetWeightUnit: overrides.packageBreakdown.perUnitNetWeightUnit
+            ? {
+                __typename: 'Unit',
+                ...overrides.packageBreakdown.perUnitNetWeightUnit,
+              }
+            : null,
+        }
       : null,
     quantityBreakdown: overrides.quantityBreakdown
       ? {
           __typename: 'QuantityBreakdown',
-          ...overrides.quantityBreakdown,
+          fullPackages: overrides.quantityBreakdown.fullPackages,
+          looseContentUnits: overrides.quantityBreakdown.looseContentUnits,
+          totalContentUnits: overrides.quantityBreakdown.totalContentUnits,
+          remainingWeight: overrides.quantityBreakdown.remainingWeight,
+          contentUnit: overrides.quantityBreakdown.contentUnit
+            ? {
+                __typename: 'Unit',
+                ...overrides.quantityBreakdown.contentUnit,
+              }
+            : null,
+          remainingWeightUnit: overrides.quantityBreakdown.remainingWeightUnit
+            ? {
+                __typename: 'Unit',
+                ...overrides.quantityBreakdown.remainingWeightUnit,
+              }
+            : null,
         }
       : null,
   };
 }
 
-function buildCache(item: ReturnType<typeof buildItem>) {
+function buildCache(item: PantryItemCard_PantryItemFragment) {
   const cache = new InMemoryCache();
   cache.writeFragment({
-    id: cache.identify(item as never) ?? `PantryItem:${item.id}`,
+    id:
+      cache.identify({ __typename: item.__typename, id: item.id }) ??
+      `PantryItem:${item.id}`,
     fragment: PantryItemCard_PantryItemFragmentDoc,
     fragmentName: 'PantryItemCard_pantryItem',
-    data: item as never,
+    data: item,
   });
   return cache;
 }
@@ -176,7 +216,11 @@ function renderCard(
   const item = buildItem(overrides);
   return renderWithApollo(
     <PantryActionsProvider actions={actions}>
-      <PantryItemCard pantryItemRef={item as never} />
+      <PantryItemCard
+        pantryItemRef={toFragmentRef<
+          typeof PantryItemCard_PantryItemFragmentDoc
+        >(item)}
+      />
     </PantryActionsProvider>,
     { cache: buildCache(item) },
   );

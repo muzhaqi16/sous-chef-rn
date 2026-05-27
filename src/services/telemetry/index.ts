@@ -53,48 +53,55 @@ const createTelemetryConfig = (): TelemetryConfig => {
   };
 };
 
-const telemetryService = new TelemetryService(createTelemetryConfig());
+let telemetryService: TelemetryService | null = null;
+
+function getService(): TelemetryService {
+  if (!telemetryService) {
+    telemetryService = new TelemetryService(createTelemetryConfig());
+  }
+  return telemetryService;
+}
 
 export const Telemetry = {
   log: (message: string, extra?: Record<string, any>) =>
-    telemetryService.log('info', message, extra),
+    getService().log('info', message, extra),
 
   info: (message: string, extra?: Record<string, any>) =>
-    telemetryService.log('info', message, extra),
+    getService().log('info', message, extra),
 
   warn: (message: string, extra?: Record<string, any>) =>
-    telemetryService.log('warn', message, extra),
+    getService().log('warn', message, extra),
 
   error: (message: string, extra?: Record<string, any>) =>
-    telemetryService.log('error', message, extra),
+    getService().log('error', message, extra),
 
   debug: (message: string, extra?: Record<string, any>) =>
-    telemetryService.log('debug', message, extra),
+    getService().log('debug', message, extra),
 
   increment: (name: string, value = 1, labels: Record<string, string> = {}) =>
-    telemetryService.incrementCounter(name, value, labels),
+    getService().incrementCounter(name, value, labels),
 
   gauge: (name: string, value: number, labels: Record<string, string> = {}) =>
-    telemetryService.recordGauge(name, value, labels),
+    getService().recordGauge(name, value, labels),
 
   histogram: (
     name: string,
     value: number,
     labels: Record<string, string> = {},
-  ) => telemetryService.recordHistogram(name, value, labels),
+  ) => getService().recordHistogram(name, value, labels),
 
   trackEvent: (eventName: string, properties: Record<string, any> = {}) =>
-    telemetryService.trackEvent(eventName, properties),
+    getService().trackEvent(eventName, properties),
 
   trackScreen: (screenName: string, properties: Record<string, any> = {}) =>
-    telemetryService.trackScreenView(screenName, properties),
+    getService().trackScreenView(screenName, properties),
 
   trackTiming: (
     category: string,
     variable: string,
     duration: number,
     label?: string,
-  ) => telemetryService.trackTiming(category, variable, duration, label),
+  ) => getService().trackTiming(category, variable, duration, label),
 
   trackError: (error: Error | string, context?: Record<string, any>) => {
     const { component, operation, isFatal, ...rest } = context || {};
@@ -106,15 +113,13 @@ export const Telemetry = {
       isFatal: typeof isFatal === 'boolean' ? isFatal : undefined,
       context: Object.keys(rest).length > 0 ? rest : undefined,
     };
-    telemetryService.trackError(details);
+    getService().trackError(details);
   },
 
-  flush: () => telemetryService.flush(),
+  flush: () => getService().flush(),
 
   updateConfig: (config: Partial<TelemetryConfig>) =>
-    telemetryService.updateConfig(config),
+    getService().updateConfig(config),
 
-  initialize: () => telemetryService.initialize(),
+  initialize: () => getService().initialize(),
 };
-
-export default telemetryService;

@@ -11,6 +11,7 @@ import { ApolloProvider } from '@apollo/client/react';
 import { useIsHydrated } from '#store/useAppStore';
 import { client } from '#/apollo/client';
 import { apolloCachePersistence } from '#/apollo/offline/ApolloCachePersistence';
+import { getStorage } from '#/storage/mmkv';
 import { Navigation } from '#navigation/RootNavigator';
 import { SplashScreen } from '#screens/SplashScreen';
 import { ToastProvider } from '#components/atoms/Toast';
@@ -75,11 +76,15 @@ const App = () => {
   useAppLifecycle();
 
   React.useEffect(() => {
-    // Intentionally fires before `isHydrated` flips — the deferred restore
-    // is scheduled via requestIdleCallback, so it runs *while* the splash is
-    // on screen. `client.cache` is a module singleton, so writes land before
-    // ApolloProvider mounts.
-    apolloCachePersistence.restoreDeferred(client.cache);
+    // Await MMKV initialization before accessing `client` — the lazy-require
+    // of apollo/client.ts triggers initializeClient() which reads persisted
+    // cache from storage synchronously. Without this gate, the read fires
+    // before the async encrypted MMKV instance is ready.
+    // The deferred restore is then scheduled via requestIdleCallback, so it
+    // runs while the splash is on screen.
+    getStorage().then(() => {
+      apolloCachePersistence.restoreDeferred(client.cache);
+    });
   }, []);
 
   if (!isHydrated) {

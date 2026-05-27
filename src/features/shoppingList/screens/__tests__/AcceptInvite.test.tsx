@@ -646,7 +646,9 @@ describe('AcceptInvite', () => {
         buildHomeInvitesMock([buildHomeInvite({ homeName: 'Family Home' })]),
       ],
     });
-    await waitFor(() => expect(tree.getByText('Home')).toBeTruthy());
+    await waitFor(() =>
+      expect(tree.getAllByText('Home').length).toBeGreaterThanOrEqual(1),
+    );
   });
 
   it('shows "Home" fallback when home invite has no home name', async () => {
@@ -661,14 +663,14 @@ describe('AcceptInvite', () => {
     );
   });
 
-  it('shows "Someone" for home invite (component reads invitedBy not inviter)', async () => {
+  it('shows inviter email for home invite when no displayName', async () => {
     const tree = renderWithApollo(<AcceptInvite />, {
       operationMocks: [
         buildEmptyShoppingListInvitesMock(),
         buildHomeInvitesMock([buildHomeInvite({ homeName: 'Family Home' })]),
       ],
     });
-    await waitFor(() => expect(tree.getByText(/Someone/)).toBeTruthy());
+    await waitFor(() => expect(tree.getByText(/owner@test.com/)).toBeTruthy());
   });
 
   it('navigates back when Go Back is pressed on not found screen', async () => {
@@ -696,9 +698,7 @@ describe('AcceptInvite', () => {
     await waitFor(() => expect(tree.getByText(/Someone/)).toBeTruthy());
   });
 
-  it('shows "Someone" for home invite even with inviter displayName', async () => {
-    // Component reads invitedBy via `as any` cast even though schema-correct
-    // field is `inviter`. With schema-correct mocks, lookup misses.
+  it('shows inviter displayName for home invite when available', async () => {
     const tree = renderWithApollo(<AcceptInvite />, {
       operationMocks: [
         buildEmptyShoppingListInvitesMock(),
@@ -710,7 +710,7 @@ describe('AcceptInvite', () => {
         ]),
       ],
     });
-    await waitFor(() => expect(tree.getByText(/Someone/)).toBeTruthy());
+    await waitFor(() => expect(tree.getByText(/HomeOwner/)).toBeTruthy());
   });
 
   it('shows inviter displayName for shopping list invite when available', async () => {

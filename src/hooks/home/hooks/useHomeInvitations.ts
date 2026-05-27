@@ -15,11 +15,11 @@ import {
   GetHomeByJoinCodeDocument,
 } from '#operations/home/home.generated';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
-import { useErrorService } from '#/services/errorService';
 import {
   executeCacheUpdate,
   executeMutation,
 } from '#/utils/compilerSafeWrappers';
+import { handleMutationError } from '#/utils/errorHandlers';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 
 const addInviteToHomeCache = createAddToParentConnectionUpdater(
@@ -50,8 +50,6 @@ export function useHomeInvitations({
   setDefaultHome,
   setSelectedHomeId,
 }: UseHomeInvitationsOptions) {
-  const { handleApolloError } = useErrorService();
-
   // Invite user to home mutation
   const [inviteUserMutation, { loading: inviting }] = useMutation(
     InviteToHomeDocument,
@@ -72,11 +70,8 @@ export function useHomeInvitations({
         }, 'Cache update failed for inviteUser:');
       },
 
-      onError: (error: any) => {
-        const { message } = handleApolloError(error, {
-          operation: 'Invite User',
-        });
-        alertService.alert('Error', message);
+      onError: error => {
+        handleMutationError(error, { operation: 'Invite User' });
       },
     },
   );
@@ -115,11 +110,8 @@ export function useHomeInvitations({
           );
         }
       },
-      onError: (error: any) => {
-        const { message } = handleApolloError(error, {
-          operation: 'Join Home By Code',
-        });
-        alertService.alert('Error', message);
+      onError: error => {
+        handleMutationError(error, { operation: 'Join Home By Code' });
       },
     },
   );
@@ -178,11 +170,8 @@ export function useHomeInvitations({
         getHomeByJoinCode({
           variables: { joinCode: joinCode.trim() },
         }),
-      (error: any) => {
-        const { message } = handleApolloError(error, {
-          operation: 'Preview Home',
-        });
-        alertService.alert('Error', message);
+      error => {
+        handleMutationError(error, { operation: 'Preview Home' });
       },
     );
     if (!result) return null;

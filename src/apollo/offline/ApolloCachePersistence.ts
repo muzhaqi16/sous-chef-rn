@@ -4,7 +4,7 @@ import type {
   NormalizedCacheObject,
 } from '@apollo/client';
 import { getVersion } from 'react-native-device-info';
-import { storage } from '#storage/mmkv';
+import { storage, isStorageReady } from '#storage/mmkv';
 import { Telemetry } from '#/services/telemetry';
 import { logger } from '#/utils/environment';
 
@@ -78,6 +78,7 @@ class ApolloCachePersistence {
    * Returns null if no cache exists or if cache version is outdated
    */
   load(): NormalizedCacheObject | null {
+    if (!isStorageReady()) return null;
     try {
       // Check cache version
       const storedVersion = storage.getString(CACHE_VERSION_KEY);
@@ -120,6 +121,7 @@ class ApolloCachePersistence {
    * Returns null if no split-key cache exists (triggers migration fallback).
    */
   loadCritical(): NormalizedCacheObject | null {
+    if (!isStorageReady()) return null;
     try {
       const storedVersion = storage.getString(CACHE_VERSION_KEY);
       if (storedVersion !== CURRENT_CACHE_VERSION) {
@@ -192,6 +194,7 @@ class ApolloCachePersistence {
    * Called from requestIdleCallback after critical restore.
    */
   loadDeferred(): NormalizedCacheObject | null {
+    if (!isStorageReady()) return null;
     try {
       // Mirror loadCritical()'s version guard: if a stale deferred blob
       // survived a partial clear (e.g. crash mid-clear), don't resurrect
@@ -470,6 +473,7 @@ class ApolloCachePersistence {
    * Call on logout or cache invalidation
    */
   clear(): void {
+    if (!isStorageReady()) return;
     try {
       // Clear pending save
       if (this.saveTimeout) {

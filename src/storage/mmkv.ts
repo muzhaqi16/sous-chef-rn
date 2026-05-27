@@ -85,6 +85,10 @@ export const storage: MMKV = new Proxy({} as MMKV, {
   },
 });
 
+export function isStorageReady(): boolean {
+  return secureStorageInstance !== null;
+}
+
 export const zustandStorage: StateStorage = {
   setItem: async (name, value) => {
     const s = await initializeSecureStorage();

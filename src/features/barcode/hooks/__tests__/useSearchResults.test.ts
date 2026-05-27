@@ -65,6 +65,7 @@ jest.mock('#/storage/mmkv', () => ({
     set: jest.fn(),
     remove: jest.fn(),
   },
+  isStorageReady: () => true,
 }));
 
 jest.mock('#/utils/compilerSafeWrappers', () => ({

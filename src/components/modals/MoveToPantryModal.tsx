@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useFragment } from '@apollo/client/react';
@@ -49,11 +49,6 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   onConfirm,
 }) => {
   const { t } = useTranslation();
-  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
-    onDismiss: onClose,
-    snapPoints: ['75%', '95%'],
-    keyboardAware: true,
-  });
 
   const { data, complete } = useFragment({
     fragment: MoveToPantryModal_ShoppingListItemFragmentDoc,
@@ -63,6 +58,13 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
       : null,
   });
   const shoppingListItem = shoppingListItemId && complete ? data : null;
+
+  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
+    visible: visible && !!shoppingListItem,
+    onDismiss: onClose,
+    snapPoints: ['75%', '95%'],
+    keyboardAware: true,
+  });
 
   // Form state
   const [quantityInput, setQuantityInput] = useState('');
@@ -112,15 +114,6 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
       setNotes('');
     }
   }
-
-  // Control bottom sheet visibility
-  useEffect(() => {
-    if (visible && shoppingListItem) {
-      ref.current?.present();
-    } else {
-      ref.current?.dismiss();
-    }
-  }, [visible, shoppingListItem, ref]);
 
   const handleConfirm = () => {
     if (!shoppingListItem) return;

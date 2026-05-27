@@ -1,9 +1,15 @@
 import React from 'react';
 import { InMemoryCache } from '@apollo/client';
 import { screen, userEvent } from '@testing-library/react-native';
-import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  renderWithApollo,
+  toFragmentRef,
+} from '#/test-utils/apolloMockProvider';
 import { HomeCard } from '../HomeCard';
-import { HomeCard_HomeFragmentDoc } from '../HomeCard.generated';
+import {
+  HomeCard_HomeFragmentDoc,
+  type HomeCard_HomeFragment,
+} from '../HomeCard.generated';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
 
 jest.mock('#utils/iconUtils', () => ({
@@ -65,8 +71,8 @@ jest.mock('../MembersList', () => {
 
 function buildHome(
   overrides: { name?: string; memberCount?: number; pantryCount?: number } = {},
-) {
-  const members = [
+): HomeCard_HomeFragment {
+  const members: HomeCard_HomeFragment['membersConnection']['edges'] = [
     {
       __typename: 'MembershipEdge',
       node: {
@@ -120,13 +126,15 @@ function buildHome(
   };
 }
 
-function buildCache(home: ReturnType<typeof buildHome>) {
+function buildCache(home: HomeCard_HomeFragment) {
   const cache = new InMemoryCache();
   cache.writeFragment({
-    id: cache.identify(home as never) ?? `Home:${home.id}`,
+    id:
+      cache.identify({ __typename: home.__typename, id: home.id }) ??
+      `Home:${home.id}`,
     fragment: HomeCard_HomeFragmentDoc,
     fragmentName: 'HomeCard_home',
-    data: home as never,
+    data: home,
   });
   return cache;
 }
@@ -135,7 +143,7 @@ function renderCard(props: Partial<React.ComponentProps<typeof HomeCard>>) {
   const home = buildHome();
   return renderWithApollo(
     <HomeCard
-      homeRef={home as never}
+      homeRef={toFragmentRef<typeof HomeCard_HomeFragmentDoc>(home)}
       isDefault={false}
       onPress={props.onPress ?? jest.fn()}
       onSetDefault={props.onSetDefault ?? jest.fn()}
@@ -200,7 +208,7 @@ describe('HomeCard', () => {
     const home = buildHome({ memberCount: 1 });
     renderWithApollo(
       <HomeCard
-        homeRef={home as never}
+        homeRef={toFragmentRef<typeof HomeCard_HomeFragmentDoc>(home)}
         isDefault={false}
         onPress={jest.fn()}
         onSetDefault={jest.fn()}

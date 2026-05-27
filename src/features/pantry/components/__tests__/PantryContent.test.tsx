@@ -5,22 +5,27 @@ import { screen } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { PantryContent } from '../PantryContent';
 import { PantryItem, StorageState } from '#/graphql/generated/schemaTypes';
-import { PantryItemCard_PantryItemFragmentDoc } from '../PantryItemCard.generated';
+import {
+  PantryItemCard_PantryItemFragmentDoc,
+  type PantryItemCard_PantryItemFragment,
+} from '../PantryItemCard.generated';
 
 // PantryContent now reads `useApolloClient` for the image-preload effect and
 // each `PantryItemCard` cell subscribes to its own entity via `useFragment`.
 // Seed the cache with the items so the cells unmask successfully.
 function renderContent(
   ui: React.ReactElement,
-  items: Array<{ id: string } & Record<string, unknown>>,
+  items: Array<{ __typename: string; id: string } & Record<string, unknown>>,
 ) {
   const cache = new InMemoryCache();
   for (const item of items) {
     cache.writeFragment({
-      id: cache.identify(item as never) ?? `PantryItem:${item.id}`,
+      id:
+        cache.identify({ __typename: item.__typename, id: item.id }) ??
+        `PantryItem:${item.id}`,
       fragment: PantryItemCard_PantryItemFragmentDoc,
       fragmentName: 'PantryItemCard_pantryItem',
-      data: item as never,
+      data: item as PantryItemCard_PantryItemFragment,
     });
   }
   return renderWithApollo(ui, { cache });
@@ -29,9 +34,9 @@ function renderContent(
 // Helper that extracts items from props before delegating to renderContent so
 // the existing test bodies keep working as-is.
 function render(ui: React.ReactElement) {
-  const props = (ui as { props?: { items?: Array<{ id: string }> } }).props;
+  const props = (ui as { props?: { items?: PantryItem[] } }).props;
   const items = (props?.items ?? []) as Array<
-    { id: string } & Record<string, unknown>
+    { __typename: string; id: string } & Record<string, unknown>
   >;
   return renderContent(ui, items);
 }

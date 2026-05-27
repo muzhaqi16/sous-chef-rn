@@ -71,7 +71,67 @@ module.exports = {
         'src/components/templates/ActionTray/ActionTray.tsx',
       ],
       rules: {
-        'no-restricted-imports': 'off',
+        'no-restricted-imports': [
+          'error',
+          {
+            paths: [
+              {
+                name: 'react-native',
+                importNames: ['StyleSheet'],
+                message:
+                  'Import StyleSheet from "react-native-unistyles" instead.',
+              },
+              {
+                name: 'react',
+                importNames: ['useMemo', 'useCallback'],
+                message:
+                  'useMemo/useCallback are unnecessary — the React Compiler handles memoization automatically.',
+              },
+            ],
+            patterns: [
+              {
+                group: ['**/*Fragments.generated'],
+                importNames: [
+                  'UnitBasicFragment',
+                  'UnitBasicFragmentDoc',
+                  'UnitFullFragment',
+                  'UnitFullFragmentDoc',
+                  'StoreFieldsFragment',
+                  'StoreFieldsFragmentDoc',
+                  'BrandFieldsFragment',
+                  'BrandFieldsFragmentDoc',
+                  'UserProfileFieldsFragment',
+                  'UserProfileFieldsFragmentDoc',
+                  'UserProfileFullFragment',
+                  'UserProfileFullFragmentDoc',
+                  'UserSummaryFragment',
+                  'UserSummaryFragmentDoc',
+                  'PantryItemFragment',
+                  'PantryItemFragmentDoc',
+                  'PantryItemDisplay',
+                  'PantryItemDisplayFragment',
+                  'PantryItemDisplayFragmentDoc',
+                  'ShoppingListItemFragment',
+                  'ShoppingListItemFragmentDoc',
+                  'MealPlanFullFragment',
+                  'MealPlanFullFragmentDoc',
+                  'RecipeFragment',
+                  'RecipeFragmentDoc',
+                  'ItemFragment',
+                  'ItemFragmentDoc',
+                  'ItemDisplayFragment',
+                  'ItemDisplayFragmentDoc',
+                  'ItemCoreFragment',
+                  'ItemCoreFragmentDoc',
+                  'HomeFragment',
+                  'HomeFragmentDoc',
+                ],
+                message:
+                  'This fragment was deleted or decomposed. Use a colocated `<Consumer>_<entity>` fragment instead (sibling .graphql file next to the consumer). See CLAUDE.md "Apollo: Fragment composition + `useFragment` convention".',
+              },
+            ],
+          },
+        ],
       },
     },
   ],

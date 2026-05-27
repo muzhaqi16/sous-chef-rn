@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Dimensions } from 'react-native';
+import { View, useWindowDimensions } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import Svg, { Defs, Rect, Mask } from 'react-native-svg';
 import AnimatedScanLine from '../molecules/AnimatedScanLine';
@@ -13,8 +13,6 @@ interface BarcodeMaskProps {
   lineAnimationDuration?: number;
 }
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
-
 const BarcodeMask: React.FC<BarcodeMaskProps> = ({
   width = 280,
   height = 230,
@@ -23,13 +21,15 @@ const BarcodeMask: React.FC<BarcodeMaskProps> = ({
   showAnimatedLine = true,
   lineAnimationDuration = 2000,
 }) => {
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+
   const maskId = 'mask';
   const centerX = screenWidth / 2;
   const centerY = screenHeight / 2;
   const left = centerX - width / 2;
   const top = centerY - height / 2;
 
-  const cornerOffset = 4; // Consistent offset for corners
+  const cornerOffset = 4;
 
   return (
     <View style={styles.container}>
@@ -54,54 +54,44 @@ const BarcodeMask: React.FC<BarcodeMaskProps> = ({
         />
       </Svg>
 
-      {/* Corner brackets - properly aligned */}
-      {/* Left */}
+      {/* Corner brackets — children of a wrapper at the cutout area so
+          positioning is relative, not dependent on screen dimensions */}
       <View
         style={[
-          styles.corner,
+          styles.cornerContainer,
           {
             left: left - cornerOffset,
             top: top - cornerOffset,
-            borderLeftColor: edgeColor,
-            borderTopColor: edgeColor,
+            width: width + cornerOffset * 2,
+            height: height + cornerOffset * 2,
           },
         ]}
-      />
-      <View
-        style={[
-          styles.corner,
-          {
-            right: screenWidth - left - width - cornerOffset,
-            top: top - cornerOffset,
-            borderRightColor: edgeColor,
-            borderTopColor: edgeColor,
-          },
-        ]}
-      />
-      {/* Bottom Left */}
-      <View
-        style={[
-          styles.corner,
-          {
-            left: left - cornerOffset,
-            bottom: screenHeight - top - height - cornerOffset,
-            borderLeftColor: edgeColor,
-            borderBottomColor: edgeColor,
-          },
-        ]}
-      />
-      {/* Bottom Right */}
-      <View
-        style={[
-          styles.corner,
-          {
-            right: screenWidth - left - width - cornerOffset,
-            bottom: screenHeight - top - height - cornerOffset,
-            borderRightColor: edgeColor,
-            borderBottomColor: edgeColor,
-          },
-        ]}
-      />
+      >
+        <View
+          style={[
+            styles.cornerTopLeft,
+            { borderLeftColor: edgeColor, borderTopColor: edgeColor },
+          ]}
+        />
+        <View
+          style={[
+            styles.cornerTopRight,
+            { borderRightColor: edgeColor, borderTopColor: edgeColor },
+          ]}
+        />
+        <View
+          style={[
+            styles.cornerBottomLeft,
+            { borderLeftColor: edgeColor, borderBottomColor: edgeColor },
+          ]}
+        />
+        <View
+          style={[
+            styles.cornerBottomRight,
+            { borderRightColor: edgeColor, borderBottomColor: edgeColor },
+          ]}
+        />
+      </View>
 
       {/* Animated scanning line */}
       {!!showAnimatedLine && (
@@ -126,12 +116,44 @@ const styles = StyleSheet.create(() => ({
   svgOverlay: {
     ...StyleSheet.absoluteFill,
   },
-  corner: {
+  cornerContainer: {
+    position: 'absolute',
+  },
+  cornerTopLeft: {
     position: 'absolute',
     width: 24,
     height: 24,
     borderWidth: 3,
     borderColor: 'transparent',
+    top: 0,
+    left: 0,
+  },
+  cornerTopRight: {
+    position: 'absolute',
+    width: 24,
+    height: 24,
+    borderWidth: 3,
+    borderColor: 'transparent',
+    top: 0,
+    right: 0,
+  },
+  cornerBottomLeft: {
+    position: 'absolute',
+    width: 24,
+    height: 24,
+    borderWidth: 3,
+    borderColor: 'transparent',
+    bottom: 0,
+    left: 0,
+  },
+  cornerBottomRight: {
+    position: 'absolute',
+    width: 24,
+    height: 24,
+    borderWidth: 3,
+    borderColor: 'transparent',
+    bottom: 0,
+    right: 0,
   },
 }));
 

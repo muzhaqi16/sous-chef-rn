@@ -22,7 +22,8 @@ import {
 import { useSelectedHomeId, useSetSelectedPantryId } from '#store/useAppStore';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import type { StaticScreenProps } from '@react-navigation/native';
-import { useErrorService, errorService } from '#/services/errorService';
+import { errorService } from '#/services/errorService';
+import { handleMutationError } from '#/utils/errorHandlers';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import {
@@ -199,7 +200,6 @@ export const PantrySettings: React.FC<
 
   const selectedHomeId = useSelectedHomeId();
   const setSelectedPantryId = useSetSelectedPantryId();
-  const { handleApolloError } = useErrorService();
   const permissions = usePantryPermissions();
 
   const [name, setName] = useState('');
@@ -234,22 +234,16 @@ export const PantrySettings: React.FC<
   });
 
   const [setDefaultPantry] = useMutation(SetDefaultPantryDocument, {
-    onError: (error: any) => {
-      const { message } = handleApolloError(error, {
-        operation: 'Set Default Pantry',
-      });
-      alertService.alert(t('labels.error'), message);
+    onError: error => {
+      handleMutationError(error, { operation: 'Set Default Pantry' });
       // Revert the toggle on error
       setIsDefault(!isDefault);
     },
   });
 
   const [deletePantry] = useMutation(DeletePantryDocument, {
-    onError: (error: any) => {
-      const { message } = handleApolloError(error, {
-        operation: 'Delete Pantry',
-      });
-      alertService.alert(t('labels.error'), message);
+    onError: error => {
+      handleMutationError(error, { operation: 'Delete Pantry' });
     },
     // Update cache directly instead of refetching. Builder is module-scope to
     // keep try/catch out of the component body (React Compiler bailout).

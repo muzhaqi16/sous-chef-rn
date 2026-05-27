@@ -11,32 +11,51 @@ export interface RateLimitDetails {
   message: string;
 }
 
-export function isRateLimitError(error: any): boolean {
-  if ('graphQLErrors' in error && error.graphQLErrors) {
-    return error.graphQLErrors.some((err: any) =>
-      RATE_LIMIT_CODES.includes(err.extensions?.code),
+interface GraphQLErrorLike {
+  extensions?: { code?: string; retryAfter?: number };
+  message?: string;
+}
+
+interface ApolloErrorLike {
+  graphQLErrors?: GraphQLErrorLike[];
+  extensions?: { code?: string; retryAfter?: number };
+  message?: string;
+}
+
+function toErrorObject(error: unknown): ApolloErrorLike | null {
+  if (error == null || typeof error !== 'object') return null;
+  return error as ApolloErrorLike;
+}
+
+export function isRateLimitError(error: unknown): boolean {
+  const err = toErrorObject(error);
+  if (!err) return false;
+
+  if (err.graphQLErrors) {
+    return err.graphQLErrors.some(gqlErr =>
+      RATE_LIMIT_CODES.includes(gqlErr.extensions?.code ?? ''),
     );
   }
 
-  if ('extensions' in error && error.extensions) {
-    return RATE_LIMIT_CODES.includes(error.extensions.code);
+  if (err.extensions) {
+    return RATE_LIMIT_CODES.includes(err.extensions.code ?? '');
   }
 
   return false;
 }
 
-export function getRateLimitDetails(error: any): RateLimitDetails | null {
-  let rateLimitError: any | undefined;
+export function getRateLimitDetails(error: unknown): RateLimitDetails | null {
+  const err = toErrorObject(error);
+  if (!err) return null;
 
-  if ('graphQLErrors' in error && error.graphQLErrors) {
-    rateLimitError = error.graphQLErrors.find((err: any) =>
-      RATE_LIMIT_CODES.includes(err.extensions?.code),
+  let rateLimitError: GraphQLErrorLike | undefined;
+
+  if (err.graphQLErrors) {
+    rateLimitError = err.graphQLErrors.find(gqlErr =>
+      RATE_LIMIT_CODES.includes(gqlErr.extensions?.code ?? ''),
     );
-  } else if (
-    'extensions' in error &&
-    RATE_LIMIT_CODES.includes(error.extensions?.code)
-  ) {
-    rateLimitError = error;
+  } else if (RATE_LIMIT_CODES.includes(err.extensions?.code ?? '')) {
+    rateLimitError = err;
   }
 
   if (!rateLimitError) return null;
@@ -51,7 +70,7 @@ export function getRateLimitDetails(error: any): RateLimitDetails | null {
   };
 }
 
-export function getRateLimitMessage(error: any): string {
+export function getRateLimitMessage(error: unknown): string {
   const details = getRateLimitDetails(error);
   if (!details) return 'Too many requests. Please try again later.';
 

@@ -1,68 +1,59 @@
-import React, { forwardRef, useRef, useImperativeHandle } from 'react';
+import React, { useRef } from 'react';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { BottomSheetView } from '@gorhom/bottom-sheet';
 import {
   BottomSheetModal,
-  type BottomSheetModalRef,
   useStandardBottomSheet,
 } from '#hooks/useStandardBottomSheet';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 
-// `useStandardBottomSheet`'s `BottomSheetModal` defaults to `theme.colors.surface`;
-// the image picker uses the slightly tinted `surfaceVariant` to read as a layer
-// above the screen content. Override via withUnistyles so the prop is theme-reactive.
 const VariantBottomSheetModal = withUnistyles(BottomSheetModal, theme => ({
   backgroundStyle: { backgroundColor: theme.colors.surfaceVariant },
 }));
 
 interface ImagePickerSheetProps {
+  visible: boolean;
+  onDismiss: () => void;
   onCamera: () => void;
   onLibrary: () => void;
 }
 
-export const ImagePickerSheet = forwardRef<
-  BottomSheetModalRef,
-  ImagePickerSheetProps
->(({ onCamera, onLibrary }, ref) => {
-  const localRef = useRef<BottomSheetModalRef>(null);
-  useImperativeHandle(ref, () => localRef.current!, []);
-
-  // Pending action to execute after sheet dismisses
+export const ImagePickerSheet: React.FC<ImagePickerSheetProps> = ({
+  visible,
+  onDismiss,
+  onCamera,
+  onLibrary,
+}) => {
   const pendingActionRef = useRef<(() => void) | null>(null);
 
-  const handleDismiss = () => {
-    localRef.current?.dismiss();
-  };
-
-  const { modalProps, contentContainerStyle } = useStandardBottomSheet({
-    onDismiss: () => {
-      const action = pendingActionRef.current;
-      pendingActionRef.current = null;
-      action?.();
-    },
-    snapPoints: [],
-    enableDynamicSizing: true,
-  });
+  const { ref, modalProps, contentContainerStyle, dismiss } =
+    useStandardBottomSheet({
+      visible,
+      onDismiss: () => {
+        const action = pendingActionRef.current;
+        pendingActionRef.current = null;
+        onDismiss();
+        action?.();
+      },
+      snapPoints: [],
+      enableDynamicSizing: true,
+    });
 
   const handleCamera = () => {
     pendingActionRef.current = onCamera;
-    handleDismiss();
+    dismiss();
   };
 
   const handleLibrary = () => {
     pendingActionRef.current = onLibrary;
-    handleDismiss();
+    dismiss();
   };
 
   return (
-    <VariantBottomSheetModal
-      ref={localRef}
-      {...modalProps}
-      stackBehavior="push"
-    >
+    <VariantBottomSheetModal ref={ref} {...modalProps} stackBehavior="push">
       <BottomSheetView style={[styles.container, contentContainerStyle]}>
         <Text size="lg" weight="bold" align="center" style={styles.title}>
           Add Photo
@@ -96,7 +87,7 @@ export const ImagePickerSheet = forwardRef<
             styles.cancelButton,
             pressed && styles.pressed,
           ]}
-          onPress={handleDismiss}
+          onPress={dismiss}
         >
           <Text size="md" weight="medium" tone="secondary">
             Cancel
@@ -105,9 +96,7 @@ export const ImagePickerSheet = forwardRef<
       </BottomSheetView>
     </VariantBottomSheetModal>
   );
-});
-
-ImagePickerSheet.displayName = 'ImagePickerSheet';
+};
 
 const styles = StyleSheet.create(theme => ({
   container: {

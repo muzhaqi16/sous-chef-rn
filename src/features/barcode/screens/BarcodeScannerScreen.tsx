@@ -37,6 +37,7 @@ export const BarcodeScannerScreen: React.FC<
   const device = devices.find(d => d.position === 'back');
 
   const {
+    isChecking: isCheckingPermission,
     isGranted: hasPermission,
     isBlocked,
     request: requestPermission,
@@ -56,12 +57,12 @@ export const BarcodeScannerScreen: React.FC<
   const [hasScanned, setHasScanned] = useState(false);
   const [flashEnabled, setFlashEnabled] = useState(false);
 
-  // 1) On mount, ask for camera permission if we don't have it yet
+  // 1) Request permission once the initial check completes and status is undetermined
   useEffect(() => {
-    if (!hasPermission) {
+    if (!isCheckingPermission && !hasPermission && !isBlocked) {
       requestPermission();
     }
-  }, [hasPermission, requestPermission]);
+  }, [isCheckingPermission, hasPermission, isBlocked, requestPermission]);
 
   // 2) When screen focuses *and* permission granted, turn scanner on;
   //    when unfocused, turn it off.
@@ -139,7 +140,12 @@ export const BarcodeScannerScreen: React.FC<
 
   // --- RENDER FALLBACKS ---
 
-  // A) No permission yet (or denied/blocked) → ask the user
+  // A) Still checking permission status — show black screen to prevent flash
+  if (isCheckingPermission) {
+    return <View style={styles.centeredContainer} />;
+  }
+
+  // B) No permission (denied/blocked) → ask the user
   if (!hasPermission) {
     return (
       <View style={styles.centeredContainer}>
@@ -167,7 +173,7 @@ export const BarcodeScannerScreen: React.FC<
     );
   }
 
-  // B) No camera hardware
+  // C) No camera hardware
   if (!device) {
     return (
       <View style={styles.centeredContainer}>
@@ -186,7 +192,7 @@ export const BarcodeScannerScreen: React.FC<
     );
   }
 
-  // C) Permission granted & device ready → show scanner
+  // D) Permission granted & device ready → show scanner
   return (
     <View style={styles.container}>
       <Camera

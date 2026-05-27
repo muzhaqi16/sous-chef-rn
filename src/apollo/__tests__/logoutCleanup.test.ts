@@ -50,6 +50,7 @@ jest.mock('#/storage/mmkv', () => ({
       remove: jest.fn(),
     }),
   ),
+  isStorageReady: () => true,
 }));
 
 // Mock wsLink dynamic import

@@ -232,12 +232,13 @@ describe('AddMealSheet', () => {
     expect(screen.getByText(/Add "Tacos" as custom meal/)).toBeTruthy();
   });
 
-  it('shows "Your Recipes" section header when searching with results', () => {
+  it('hides "Your Recipes" section header while searching', () => {
     renderWithApollo(<AddMealSheet {...defaultProps} />);
+    expect(screen.getByText('Your Recipes')).toBeTruthy();
     const searchInput = screen.getByPlaceholderText(
       'Search recipes or add a custom meal...',
     );
     fireEvent.changeText(searchInput, 'Pasta');
-    expect(screen.getByText('Your Recipes')).toBeTruthy();
+    expect(screen.queryByText('Your Recipes')).toBeNull();
   });
 });
