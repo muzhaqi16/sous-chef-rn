@@ -15,15 +15,16 @@ import {
   UpdateHomeDocument,
   DeleteHomeDocument,
   GetHomesDocument,
-  type UpdateHomeMutation,
 } from '#operations/home/home.generated';
 import { useSelectedHomeId, useHomeState } from '#store/useAppStore';
-import { useErrorService } from '#/services/errorService';
 import {
-  handleVersionConflict,
-  getVersionConflictMessage,
-} from '#/utils/errors/versionConflict';
-import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
+  handleMutationError,
+  versionConflictCheck,
+} from '#/utils/errorHandlers';
+import {
+  enhanceWithVersion,
+  buildOptimisticMutationResponse,
+} from '#/apollo/utils/createOptimisticResponse';
 import { extractNodes } from '#/utils/connectionUtils';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
 import { addToHomesCache, removeFromHomesCache } from './utils';
@@ -60,7 +61,6 @@ export function useHomeMutations({
 }: UseHomeMutationsOptions) {
   const selectedHomeId = useSelectedHomeId();
   const { setSelectedHomeId } = useHomeState();
-  const { handleApolloError } = useErrorService();
   const { createAddOperation, createRemoveOperation } = useCrudOperations();
 
   const [createHomeMutation, { loading: creating, client }] = useMutation(
@@ -109,10 +109,7 @@ export function useHomeMutations({
         }
       },
       onError: (error: ErrorLike) => {
-        const { message } = handleApolloError(error, {
-          operation: 'Create Home',
-        });
-        alertService.alert('Error', message);
+        handleMutationError(error, { operation: 'Create Home' });
       },
     },
   );
@@ -125,14 +122,11 @@ export function useHomeMutations({
           (h: any) => h.id === variables.input.id,
         );
         if (!currentHome) return IGNORE;
-        const optimistic: UpdateHomeMutation = {
-          __typename: 'Mutation',
-          updateHome: {
-            __typename: 'UpdateHomePayload',
-            home: enhanceWithVersion(currentHome, variables.input),
-          },
-        };
-        return optimistic;
+        return buildOptimisticMutationResponse(
+          'updateHome',
+          'UpdateHomePayload',
+          { home: enhanceWithVersion(currentHome, variables.input) },
+        );
       },
       onCompleted: data => {
         if (data?.updateHome?.__typename === 'UpdateHomePayload') {
@@ -140,18 +134,15 @@ export function useHomeMutations({
         }
       },
       onError: (error: ErrorLike) => {
-        if (handleVersionConflict(error)) {
-          alertService.alert('Home Updated', getVersionConflictMessage(error), [
-            { text: 'Refresh', onPress: () => refetch() },
-            { text: 'Cancel', style: 'cancel' },
-          ]);
-          return;
-        }
-
-        const { message } = handleApolloError(error, {
+        handleMutationError(error, {
           operation: 'Update Home',
+          checks: [
+            versionConflictCheck({
+              itemName: 'Home',
+              onRefresh: () => refetch(),
+            }),
+          ],
         });
-        alertService.alert('Error', message);
       },
     },
   );
@@ -206,10 +197,7 @@ export function useHomeMutations({
         }
       },
       onError: (error: ErrorLike) => {
-        const { message } = handleApolloError(error, {
-          operation: 'Delete Home',
-        });
-        alertService.alert('Error', message);
+        handleMutationError(error, { operation: 'Delete Home' });
       },
     });
 

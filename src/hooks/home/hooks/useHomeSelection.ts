@@ -74,7 +74,6 @@ export function useHomeSelection({
           __typename: 'UserSettings',
           id: variables.input.homeId,
         },
-        // defaultPantry will be returned by server, null in optimistic response
         defaultPantry: null,
       },
     }),

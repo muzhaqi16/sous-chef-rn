@@ -6,9 +6,8 @@
  */
 
 import { useMutation } from '@apollo/client/react';
-import { alertService } from '#/services/alertService';
 import { ConvertExpiredBatchesToWasteDocument } from '#features/pantry/graphql/pantry.generated';
-import { useErrorService } from '#/services/errorService';
+import { unwrapPayload } from '#/utils/compilerSafeWrappers';
 
 interface UseConvertExpiredBatchesToWasteOptions {
   onSuccess?: () => void;
@@ -17,36 +16,22 @@ interface UseConvertExpiredBatchesToWasteOptions {
 export function useConvertExpiredBatchesToWaste({
   onSuccess,
 }: UseConvertExpiredBatchesToWasteOptions = {}) {
-  const { handleApolloError } = useErrorService();
-
   const [convertMutation, { loading }] = useMutation(
     ConvertExpiredBatchesToWasteDocument,
-    { errorPolicy: 'all' },
   );
 
-  const convertExpiredBatches = async (
-    pantryItemId: string,
-  ): Promise<boolean> => {
-    const result = await convertMutation({
+  const convertExpiredBatches = async (pantryItemId: string) => {
+    const { data } = await convertMutation({
       variables: { input: { pantryItemId } },
     });
 
-    if (
-      result.data?.convertExpiredBatchesToWaste?.__typename ===
-      'ConvertExpiredBatchesToWastePayload'
-    ) {
-      onSuccess?.();
-      return true;
-    }
-
-    if (result.error) {
-      const { message } = handleApolloError(result.error, {
-        operation: 'Discard Expired Batches',
-      });
-      alertService.alert('Error', message);
-    }
-
-    return false;
+    const result = unwrapPayload(
+      data?.convertExpiredBatchesToWaste,
+      'ConvertExpiredBatchesToWastePayload',
+      'Failed to discard expired batches',
+    );
+    onSuccess?.();
+    return result;
   };
 
   return { convertExpiredBatches, loading };

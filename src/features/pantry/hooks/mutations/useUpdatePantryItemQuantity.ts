@@ -9,18 +9,19 @@
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import { alertService } from '#/services/alertService';
 import { UpdatePantryItemQuantityDocument } from '#features/pantry/graphql/pantry.generated';
 import {
   UseUpdatePantryItemQuantity_PantryItemFragmentDoc,
   type UseUpdatePantryItemQuantity_PantryItemFragment,
 } from './useUpdatePantryItemQuantity.generated';
-import { useErrorService } from '#/services/errorService';
 import {
-  handleVersionConflict,
-  getVersionConflictMessage,
-} from '#/utils/errors/versionConflict';
-import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
+  handleMutationError,
+  versionConflictCheck,
+} from '#/utils/errorHandlers';
+import {
+  enhanceWithVersion,
+  buildOptimisticMutationResponse,
+} from '#/apollo/utils/createOptimisticResponse';
 import { buildOptimisticUnit } from './utils';
 import type { UnitSelection } from './types';
 
@@ -42,24 +43,16 @@ export function useUpdatePantryItemQuantity({
   onSuccess,
   refetch,
 }: UseUpdatePantryItemQuantityOptions) {
-  const { handleApolloError } = useErrorService();
   const client = useApolloClient();
 
   const [updateQuantityMutation] = useMutation(
     UpdatePantryItemQuantityDocument,
     {
       onError: error => {
-        if (handleVersionConflict(error)) {
-          alertService.alert('Item Updated', getVersionConflictMessage(error), [
-            { text: 'Refresh', onPress: () => refetch?.() },
-            { text: 'Cancel', style: 'cancel' },
-          ]);
-          return;
-        }
-        const { message } = handleApolloError(error, {
+        handleMutationError(error, {
           operation: 'Update Quantity',
+          checks: [versionConflictCheck({ onRefresh: refetch })],
         });
-        alertService.alert('Error', message);
       },
     },
   );
@@ -105,13 +98,11 @@ export function useUpdatePantryItemQuantity({
           version: currentItem.version ?? undefined,
         },
       },
-      optimisticResponse: {
-        __typename: 'Mutation',
-        updatePantryItemQuantity: {
-          __typename: 'UpdatePantryItemQuantityPayload',
-          pantryItem: optimisticPantryItem,
-        },
-      },
+      optimisticResponse: buildOptimisticMutationResponse(
+        'updatePantryItemQuantity',
+        'UpdatePantryItemQuantityPayload',
+        { pantryItem: optimisticPantryItem },
+      ),
     }).catch(error => {
       console.error('Quantity update failed:', error);
       // Error already handled by mutation's onError

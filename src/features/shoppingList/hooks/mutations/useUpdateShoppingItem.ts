@@ -8,17 +8,15 @@
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import { alertService } from '#/services/alertService';
 import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
   UseUpdateShoppingItem_ItemFragmentDoc,
   type UseUpdateShoppingItem_ItemFragment,
 } from './useUpdateShoppingItem.generated';
-import { useErrorService } from '#/services/errorService';
 import {
-  handleVersionConflict,
-  getVersionConflictMessage,
-} from '#/utils/errors/versionConflict';
+  handleMutationError,
+  versionConflictCheck,
+} from '#/utils/errorHandlers';
 import type { ShoppingListItemUpdate } from './types';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 
@@ -38,7 +36,6 @@ export function useUpdateShoppingItem({
   listId,
   refetch,
 }: UseUpdateShoppingItemOptions) {
-  const { handleApolloError } = useErrorService();
   const client = useApolloClient();
 
   const [updateItemMutation] = useMutation(UpdateShoppingListItemDocument);
@@ -102,17 +99,10 @@ export function useUpdateShoppingItem({
         }),
       error => {
         revertSnapshot();
-        if (handleVersionConflict(error)) {
-          alertService.alert('Item Updated', getVersionConflictMessage(error), [
-            { text: 'Refresh', onPress: () => refetch() },
-            { text: 'Cancel', style: 'cancel' },
-          ]);
-          return;
-        }
-        const { message } = handleApolloError(error, {
+        handleMutationError(error, {
           operation: 'Update Shopping List Item',
+          checks: [versionConflictCheck({ onRefresh: () => refetch() })],
         });
-        alertService.alert('Error', message);
       },
     );
     if (!result) return false;

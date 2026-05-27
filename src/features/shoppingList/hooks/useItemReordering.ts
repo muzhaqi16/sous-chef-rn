@@ -1,5 +1,4 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import { alertService } from '#/services/alertService';
 import type { ModifierDetails } from '@apollo/client/cache';
 import type { Reference } from '@apollo/client/utilities';
 import { MoveShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
@@ -10,9 +9,9 @@ import {
 import { generateKeyBetween } from 'fractional-indexing';
 import { SubscriptionService } from '#/services/subscriptions/SubscriptionService';
 import {
-  handleVersionConflict,
-  getVersionConflictMessage,
-} from '#/utils/errors/versionConflict';
+  handleMutationError,
+  versionConflictCheck,
+} from '#/utils/errorHandlers';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { isUnpurchasedVariant } from '#/apollo/utils/shoppingListCacheUpdaters';
@@ -250,33 +249,20 @@ export function useItemReordering<T extends ShoppingListItem>(
           },
         }),
       (error: any) => {
-        console.error('Failed to move item:', error);
-
-        // PERFORMANCE: Handle version conflict errors with user-friendly message
-        if (handleVersionConflict(error)) {
-          alertService.alert('Item Updated', getVersionConflictMessage(error), [
-            { text: 'Refresh', onPress: () => refetch?.() },
-            { text: 'Cancel', style: 'cancel' },
-          ]);
-          return;
-        }
-
-        // Generic error fallback
-        alertService.alert(
-          'Error',
-          'Failed to reorder items. Please try again.',
-        );
+        handleMutationError(error, {
+          operation: 'Move Item',
+          checks: [versionConflictCheck({ onRefresh: () => refetch?.() })],
+        });
       },
     );
     if (!result) return;
 
     // Check for GraphQL errors (with errorPolicy: 'all', errors don't throw)
     if (result.error) {
-      console.error('MoveShoppingListItem mutation error:', result.error);
-      alertService.alert(
-        'Error',
-        result.error.message || 'Failed to reorder item',
-      );
+      handleMutationError(result.error, {
+        operation: 'Move Item',
+        checks: [versionConflictCheck({ onRefresh: () => refetch?.() })],
+      });
       refetch?.(); // Refetch to restore correct order
       return;
     }

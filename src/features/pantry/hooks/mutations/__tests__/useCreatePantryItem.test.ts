@@ -7,10 +7,8 @@ import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.genera
 import { alertService } from '#/services/alertService';
 import { useCreatePantryItem } from '../useCreatePantryItem';
 
-jest.mock('#/services/errorService', () => ({
-  useErrorService: () => ({
-    handleApolloError: jest.fn(() => ({ message: 'Create error' })),
-  }),
+jest.mock('#/utils/errorHandlers', () => ({
+  handleMutationError: jest.fn(),
 }));
 
 jest.mock('#/utils/errors/pantryItemDuplicate', () => ({
@@ -22,7 +20,23 @@ jest.mock('../utils', () => ({
   addToPantryItemsCache: jest.fn(),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/compilerSafeWrappers', () => ({
+  ...jest.requireActual('#/utils/compilerSafeWrappers'),
+  executeCacheUpdate: jest.fn((fn: () => void) => {
+    try {
+      fn();
+    } catch {
+      // swallow
+    }
+  }),
+  executeMutation: jest.fn(async <T>(fn: () => Promise<T>) => {
+    try {
+      return await fn();
+    } catch {
+      return false;
+    }
+  }),
+}));
 
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },

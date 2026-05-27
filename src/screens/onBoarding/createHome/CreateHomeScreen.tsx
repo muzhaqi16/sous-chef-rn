@@ -8,6 +8,7 @@ import {
 } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 import { alertService } from '#/services/alertService';
+import { handleMutationError } from '#/utils/errorHandlers';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from 'react-i18next';
 import { formatRole } from '#utils/formatters/roleFormatters';
@@ -410,10 +411,7 @@ const CreateHomeScreenComponent = () => {
         }
       },
       onError: error => {
-        alertService.alert(
-          t('labels.error'),
-          error.message || t('errors.acceptInviteFailed'),
-        );
+        handleMutationError(error, { operation: 'Accept Home Invite' });
       },
     },
   );
@@ -422,10 +420,7 @@ const CreateHomeScreenComponent = () => {
     // Note: Declining an invite doesn't add or remove homes from the list,
     // it just changes the invite status. No cache update needed.
     onError: error => {
-      alertService.alert(
-        t('labels.error'),
-        error.message || t('errors.declineInviteFailed'),
-      );
+      handleMutationError(error, { operation: 'Decline Home Invite' });
     },
   });
 

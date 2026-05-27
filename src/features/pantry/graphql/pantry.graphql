@@ -552,6 +552,23 @@ mutation UpdatePantryItem($input: UpdatePantryItemInput!) {
         id
         ...useUpdatePantryItem_pantryItem
       }
+      pantry {
+        id
+        stats {
+          totalItems
+          storageStateCounts {
+            refrigerated
+            frozen
+            ambient
+          }
+          storageLocationCounts {
+            storageLocationId
+            name
+            type
+            itemCount
+          }
+        }
+      }
     }
     ... on Error {
       code

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { toastService } from '#/services/toastService';
 import { useLazyQuery, useMutation, useQuery } from '@apollo/client/react';
+import { handleMutationError } from '#/utils/errorHandlers';
 import {
   GetStorageLocationsDocument,
   GetStorageLocationTreeDocument,
@@ -142,9 +143,7 @@ export function useStorageLocationManagement(
       // Update mutation automatically updates the cache for modified fields
       // No manual cache update needed - Apollo handles it automatically
       onError: error => {
-        toastService.error(
-          error.message || 'Failed to update storage location',
-        );
+        handleMutationError(error, { operation: 'Update Storage Location' });
       },
     },
   );
@@ -187,9 +186,7 @@ export function useStorageLocationManagement(
       );
     },
     onError: error => {
-      toastService.error(
-        error.message || 'Cannot delete location with items or child locations',
-      );
+      handleMutationError(error, { operation: 'Delete Storage Location' });
     },
   });
 
@@ -198,7 +195,7 @@ export function useStorageLocationManagement(
     // Apollo automatically updates the cache for this location
     // No manual cache update needed
     onError: error => {
-      toastService.error(error.message || 'Failed to set default location');
+      handleMutationError(error, { operation: 'Set Default Storage Location' });
     },
   });
 

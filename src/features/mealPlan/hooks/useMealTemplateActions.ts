@@ -9,6 +9,7 @@ import {
   type CreateMealPlanFromTemplateInput,
   type CreateTemplateFromMealPlanInput,
 } from '#/graphql/generated/schemaTypes';
+import { handleMutationError } from '#/utils/errorHandlers';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
@@ -40,9 +41,7 @@ export function useMealTemplateActions() {
         }
       },
       onError: error => {
-        toastService.error(
-          error.message || 'Failed to create meal plan from template',
-        );
+        handleMutationError(error, { operation: 'Create Plan from Template' });
       },
     });
 
@@ -58,7 +57,7 @@ export function useMealTemplateActions() {
         }
       },
       onError: error => {
-        toastService.error(error.message || 'Failed to save as template');
+        handleMutationError(error, { operation: 'Save as Template' });
       },
     },
   );
@@ -77,7 +76,7 @@ export function useMealTemplateActions() {
         removeFromMealTemplates(cache, variables.input.id, { evictItem: true });
       },
       onError: error => {
-        toastService.error(error.message || 'Failed to delete template');
+        handleMutationError(error, { operation: 'Delete Template' });
       },
     },
   );
@@ -94,7 +93,7 @@ export function useMealTemplateActions() {
         }
       },
       onError: error => {
-        toastService.error(error.message || 'Failed to duplicate template');
+        handleMutationError(error, { operation: 'Duplicate Template' });
       },
     },
   );

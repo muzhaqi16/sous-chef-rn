@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
+import { handleMutationError } from '#/utils/errorHandlers';
 import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
 import { Button } from '#components/base/Button';
 import { EmailInput } from '#components/atoms/EmailInput';
@@ -49,13 +50,13 @@ export const InviteMemberScreen = () => {
 
   const [inviteToHome] = useMutation(InviteToHomeDocument, {
     onError: error => {
-      console.error('Failed to invite to home:', error);
+      handleMutationError(error, { operation: 'Invite to Home' });
     },
   });
 
   const [addCollaborator] = useMutation(AddCollaboratorDocument, {
     onError: error => {
-      console.error('Failed to add collaborator:', error);
+      handleMutationError(error, { operation: 'Add Collaborator' });
     },
   });
 

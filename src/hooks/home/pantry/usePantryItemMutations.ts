@@ -10,7 +10,6 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import type { Unmasked } from '@apollo/client/masking';
 import type { IgnoreModifier } from '@apollo/client/cache';
-import { alertService } from '#/services/alertService';
 import { generateId } from '#/utils/generateId';
 import {
   CreatePantryItemDocument,
@@ -25,15 +24,15 @@ import {
   UseUpdatePantryItem_PantryItemFragmentDoc,
   type UseUpdatePantryItem_PantryItemFragment,
 } from '#features/pantry/hooks/mutations/useUpdatePantryItem.generated';
-import { useErrorService } from '#/services/errorService';
 import {
   enhanceWithVersion,
   createOptimisticEntity,
+  buildOptimisticMutationResponse,
 } from '#/apollo/utils/createOptimisticResponse';
 import {
-  handleVersionConflict,
-  getVersionConflictMessage,
-} from '#/utils/errors/versionConflict';
+  handleMutationError,
+  versionConflictCheck,
+} from '#/utils/errorHandlers';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import { addToPantryItemsCache, removeFromPantryItemsCache } from './utils';
@@ -63,17 +62,13 @@ export function usePantryItemMutations({
   pantryId,
   refetch,
 }: UsePantryItemMutationsOptions) {
-  const { handleApolloError } = useErrorService();
   const { createAddOperation, createUpdateOperation } = useCrudOperations();
   const client = useApolloClient();
 
   // ADD MUTATION
   const [addItemMutation] = useMutation(CreatePantryItemDocument, {
     onError: error => {
-      const { message } = handleApolloError(error, {
-        operation: 'Add Pantry Item',
-      });
-      alertService.alert('Error', message);
+      handleMutationError(error, { operation: 'Add Pantry Item' });
     },
     optimisticResponse: (variables): Unmasked<CreatePantryItemMutation> => {
       const tempId = `temp-${generateId()}`;
@@ -163,18 +158,10 @@ export function usePantryItemMutations({
   // UPDATE MUTATION
   const [updateItemMutation] = useMutation(UpdatePantryItemDocument, {
     onError: error => {
-      if (handleVersionConflict(error)) {
-        alertService.alert('Item Updated', getVersionConflictMessage(error), [
-          { text: 'Refresh', onPress: () => refetch() },
-          { text: 'Cancel', style: 'cancel' },
-        ]);
-        return;
-      }
-
-      const { message } = handleApolloError(error, {
+      handleMutationError(error, {
         operation: 'Update Pantry Item',
+        checks: [versionConflictCheck({ onRefresh: () => refetch() })],
       });
-      alertService.alert('Error', message);
     },
     // Pattern (b) per the migration plan: the operation spread stays masked
     // (no `@unmask` directive), and the callback narrows its OWN return type
@@ -194,18 +181,19 @@ export function usePantryItemMutations({
         });
       if (!currentItem) return IGNORE;
 
-      return {
-        __typename: 'Mutation',
-        updatePantryItem: {
-          __typename: 'UpdatePantryItemPayload',
+      return buildOptimisticMutationResponse(
+        'updatePantryItem',
+        'UpdatePantryItemPayload',
+        {
           pantryItem: enhanceWithVersion(
             currentItem,
             // Input types use InputMaybe (T | null | undefined) while fragment
             // types don't accept null — safe cast for optimistic prediction.
             variables.input as Partial<UseUpdatePantryItem_PantryItemFragment>,
           ),
+          pantry: null,
         },
-      };
+      );
     },
   });
 
@@ -235,10 +223,7 @@ export function usePantryItemMutations({
       },
     }),
     onError: error => {
-      const { message } = handleApolloError(error, {
-        operation: 'Remove Pantry Item',
-      });
-      alertService.alert('Error', message);
+      handleMutationError(error, { operation: 'Remove Pantry Item' });
       refetch(); // Restore state on error
     },
     update: (cache, { data }, { variables }) => {

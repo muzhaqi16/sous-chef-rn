@@ -26,9 +26,9 @@ import {
 } from '#/utils/compilerSafeWrappers';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
 import {
-  handleVersionConflict,
-  getVersionConflictMessage,
-} from '#/utils/errors/versionConflict';
+  handleMutationError,
+  versionConflictCheck,
+} from '#/utils/errorHandlers';
 import {
   useAppStore,
   useHomeState,
@@ -140,19 +140,15 @@ export function useHomeDetailManagement(homeId: string) {
       }, 'Cache update failed for removeMember:');
     },
     onError: error => {
-      // PERFORMANCE: Handle version conflict errors with user-friendly message
-      if (handleVersionConflict(error)) {
-        alertService.alert('Member Updated', getVersionConflictMessage(error), [
-          { text: 'Refresh', onPress: () => refetch() },
-          { text: 'Cancel', style: 'cancel' },
-        ]);
-        return;
-      }
-
-      alertService.alert(
-        'Error',
-        error.message || t('errors.removeMemberFailed'),
-      );
+      handleMutationError(error, {
+        operation: 'Remove Member',
+        checks: [
+          versionConflictCheck({
+            itemName: 'Member',
+            onRefresh: () => refetch(),
+          }),
+        ],
+      });
     },
   });
 
@@ -177,19 +173,15 @@ export function useHomeDetailManagement(homeId: string) {
       }, 'Cache update failed for revokeInvite:');
     },
     onError: error => {
-      // PERFORMANCE: Handle version conflict errors with user-friendly message
-      if (handleVersionConflict(error)) {
-        alertService.alert('Invite Updated', getVersionConflictMessage(error), [
-          { text: 'Refresh', onPress: () => refetch() },
-          { text: 'Cancel', style: 'cancel' },
-        ]);
-        return;
-      }
-
-      alertService.alert(
-        'Error',
-        error.message || t('errors.revokeInviteFailed'),
-      );
+      handleMutationError(error, {
+        operation: 'Revoke Invitation',
+        checks: [
+          versionConflictCheck({
+            itemName: 'Invite',
+            onRefresh: () => refetch(),
+          }),
+        ],
+      });
     },
   });
 

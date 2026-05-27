@@ -10,26 +10,21 @@
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import { alertService } from '#/services/alertService';
 import { UpdatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import {
   UseUpdatePantryItem_PantryItemFragmentDoc,
   type UseUpdatePantryItem_PantryItemFragment,
 } from './useUpdatePantryItem.generated';
 import { StorageType } from '#/graphql/generated/schemaTypes';
-import { useErrorService } from '#/services/errorService';
 import {
-  handleVersionConflict,
-  getVersionConflictMessage,
-} from '#/utils/errors/versionConflict';
-import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
-import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
+  handleMutationError,
+  versionConflictCheck,
+} from '#/utils/errorHandlers';
 import {
-  buildDirtyUpdateInput,
-  buildOptimisticUnit,
-  modifyPantryStats,
-  stateToCountKey,
-} from './utils';
+  enhanceWithVersion,
+  buildOptimisticMutationResponse,
+} from '#/apollo/utils/createOptimisticResponse';
+import { buildDirtyUpdateInput, buildOptimisticUnit } from './utils';
 import type { FormDataInput, UnitSelection } from './types';
 
 interface UseUpdatePantryItemOptions {
@@ -52,22 +47,14 @@ export function useUpdatePantryItem({
   onSuccess,
   refetch,
 }: UseUpdatePantryItemOptions) {
-  const { handleApolloError } = useErrorService();
   const client = useApolloClient();
 
   const [updateMutation] = useMutation(UpdatePantryItemDocument, {
     onError: error => {
-      if (handleVersionConflict(error)) {
-        alertService.alert('Item Updated', getVersionConflictMessage(error), [
-          { text: 'Refresh', onPress: () => refetch?.() },
-          { text: 'Cancel', style: 'cancel' },
-        ]);
-        return;
-      }
-      const { message } = handleApolloError(error, {
+      handleMutationError(error, {
         operation: 'Update Pantry Item',
+        checks: [versionConflictCheck({ onRefresh: refetch })],
       });
-      alertService.alert('Error', message);
     },
   });
 
@@ -161,84 +148,17 @@ export function useUpdatePantryItem({
       );
     }
 
-    const pantryId = currentItem.pantryId;
-    const oldLocationId = currentItem.storageLocation?.id ?? null;
-    const oldStorageState = currentItem.storageState;
-
     const optimisticPantryItem = enhanceWithVersion(
       currentItem,
       optimisticUpdate,
     );
     updateMutation({
       variables: { input: { ...updateInput, id: itemId } },
-      optimisticResponse: {
-        __typename: 'Mutation',
-        updatePantryItem: {
-          __typename: 'UpdatePantryItemPayload',
-          pantryItem: optimisticPantryItem,
-        },
-      },
-      update(cache) {
-        executeCacheUpdate(
-          () => {
-            // Update storageLocationCounts when location changed
-            if (dirtyFields.location && oldLocationId !== selectedLocationId) {
-              modifyPantryStats(cache, pantryId, existingStats => {
-                if (!existingStats?.storageLocationCounts) return undefined;
-                const counts = [...existingStats.storageLocationCounts];
-                if (oldLocationId) {
-                  const oldIdx = counts.findIndex(
-                    (c: any) => c.storageLocationId === oldLocationId,
-                  );
-                  if (oldIdx >= 0) {
-                    counts[oldIdx] = {
-                      ...counts[oldIdx],
-                      itemCount: Math.max(0, counts[oldIdx].itemCount - 1),
-                    };
-                  }
-                }
-                if (selectedLocationId) {
-                  const newIdx = counts.findIndex(
-                    (c: any) => c.storageLocationId === selectedLocationId,
-                  );
-                  if (newIdx >= 0) {
-                    counts[newIdx] = {
-                      ...counts[newIdx],
-                      itemCount: counts[newIdx].itemCount + 1,
-                    };
-                  }
-                }
-                return { ...existingStats, storageLocationCounts: counts };
-              });
-            }
-
-            // Update storageStateCounts when storage state changed
-            if (dirtyFields.storageState) {
-              const oldKey = stateToCountKey(oldStorageState);
-              const newKey = stateToCountKey(input.storageState);
-              if (oldKey !== newKey) {
-                modifyPantryStats(cache, pantryId, existingStats => {
-                  if (!existingStats?.storageStateCounts) return undefined;
-                  return {
-                    ...existingStats,
-                    storageStateCounts: {
-                      ...existingStats.storageStateCounts,
-                      [oldKey]: Math.max(
-                        0,
-                        (existingStats.storageStateCounts[oldKey] || 0) - 1,
-                      ),
-                      [newKey]:
-                        (existingStats.storageStateCounts[newKey] || 0) + 1,
-                    },
-                  };
-                });
-              }
-            }
-          },
-          'Cache update failed for updatePantryItemFields:',
-          refetch,
-        );
-      },
+      optimisticResponse: buildOptimisticMutationResponse(
+        'updatePantryItem',
+        'UpdatePantryItemPayload',
+        { pantryItem: optimisticPantryItem, pantry: null },
+      ),
     }).catch(error => {
       console.error('Pantry item update failed:', error);
       // Error already handled by mutation's onError

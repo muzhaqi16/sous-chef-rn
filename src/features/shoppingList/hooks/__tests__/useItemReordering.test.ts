@@ -5,7 +5,7 @@ import {
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import { MoveShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { alertService } from '#/services/alertService';
+import { handleMutationError } from '#/utils/errorHandlers';
 import { useItemReordering } from '../useItemReordering';
 
 const mockGenerateKeyBetween = jest.fn<string, [string | null, string | null]>(
@@ -16,16 +16,15 @@ jest.mock('fractional-indexing', () => ({
     mockGenerateKeyBetween(a, b),
 }));
 
-jest.mock('#/utils/errors/versionConflict', () => ({
-  handleVersionConflict: jest.fn(() => false),
-  getVersionConflictMessage: jest.fn(() => 'Item was updated'),
+jest.mock('#/utils/errorHandlers', () => ({
+  handleMutationError: jest.fn(),
+  versionConflictCheck: jest.fn(() => ({
+    detect: jest.fn(),
+    handle: jest.fn(),
+  })),
 }));
 
 jest.mock('#/utils/compilerSafeWrappers');
-
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
 
 jest.mock('#/services/subscriptions/SubscriptionService', () => ({
   SubscriptionService: {
@@ -199,9 +198,12 @@ describe('useItemReordering', () => {
       await result.current.handleSortOrderUpdate('item-2', 'item-1', 'item-3');
     });
 
-    expect(alertService.alert).toHaveBeenCalledWith(
-      'Error',
-      expect.stringContaining('Server error'),
+    expect(handleMutationError).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({
+        operation: 'Move Item',
+        checks: expect.any(Array),
+      }),
     );
     expect(refetch).toHaveBeenCalled();
   });

@@ -147,6 +147,20 @@ export function unwrapPayload<
   });
 }
 
+/** Type guard for union-type mutation payloads — returns true and narrows type
+ *  if the payload matches the success typename. Unlike `unwrapPayload`, this
+ *  does not throw — use it in hooks with `update`/`optimisticResponse` where
+ *  the error handling happens via `onError` or `handleMutationError`. */
+export function isSuccessPayload<
+  TUnion extends { __typename: string },
+  TName extends TUnion['__typename'],
+>(
+  payload: TUnion | null | undefined,
+  successTypename: TName,
+): payload is Extract<TUnion, { __typename: TName }> {
+  return payload != null && payload.__typename === successTypename;
+}
+
 /** Wraps an Apollo client.query() call — returns data on success, null on cancellation/failure */
 export async function executeSearchQuery<TData>(
   queryFn: () => Promise<{ data?: TData }>,

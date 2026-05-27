@@ -37,6 +37,12 @@ jest.mock('#/utils/errors/versionConflict', () => ({
 
 jest.mock('#/apollo/utils/createOptimisticResponse', () => ({
   enhanceWithVersion: jest.fn((item, updates) => ({ ...item, ...updates })),
+  buildOptimisticMutationResponse: jest.fn(
+    (opName, payloadTypename, fields) => ({
+      __typename: 'Mutation',
+      [opName]: { __typename: payloadTypename, ...fields },
+    }),
+  ),
 }));
 
 jest.mock('#/utils/connectionUtils', () => ({

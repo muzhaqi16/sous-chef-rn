@@ -1,6 +1,7 @@
 import { useMutation } from '@apollo/client/react';
 import { GenerateShoppingListFromMealPlanDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 import { type GenerateShoppingListFromMealPlanInput } from '#/graphql/generated/schemaTypes';
+import { handleMutationError } from '#/utils/errorHandlers';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
@@ -37,7 +38,7 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
         }
       },
       onError: error => {
-        toastService.error(error.message || 'Failed to generate shopping list');
+        handleMutationError(error, { operation: 'Generate Shopping List' });
       },
     },
   );

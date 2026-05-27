@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { alertService } from '#/services/alertService';
+import { handleMutationError } from '#/utils/errorHandlers';
 import {
   useAppStore,
   useUser,
@@ -12,9 +13,9 @@ import { useMutation } from '@apollo/client/react';
 import {
   UpdateUserProfileDocument,
   UpdateUserPreferencesDocument,
-  type UpdateUserProfileMutation,
 } from '#operations/auth/user.generated';
 import { ProfileVisibility } from '#/graphql/generated/schemaTypes';
+import { buildOptimisticMutationResponse } from '#/apollo/utils/createOptimisticResponse';
 
 import { PROFILE_SETTINGS_CONFIG } from '#/config/settingsConfig';
 import { SUPPORTED_LANGUAGES } from '#/i18n/config';
@@ -66,22 +67,13 @@ export const useConfigurableSettings = (profile: any) => {
     // No manual cache update needed (Pattern 2)
     optimisticResponse: (variables, { IGNORE }) => {
       if (!profile) return IGNORE;
-      const optimistic: UpdateUserProfileMutation = {
-        __typename: 'Mutation',
-        updateProfile: {
-          ...profile,
-          ...variables.input,
-          __typename: 'UserProfile',
-        },
-      };
-      return optimistic;
+      return buildOptimisticMutationResponse('updateProfile', 'UserProfile', {
+        ...profile,
+        ...variables.input,
+      });
     },
     onError: error => {
-      console.error('Failed to update profile:', error);
-      alertService.alert(
-        'Error',
-        'Failed to update profile. Please try again.',
-      );
+      handleMutationError(error, { operation: 'Update Profile' });
     },
   });
 
@@ -91,11 +83,7 @@ export const useConfigurableSettings = (profile: any) => {
     // Automatic normalization handles UI updates when server responds (~100-200ms)
     // No manual cache update needed (Pattern 2)
     onError: error => {
-      console.error('Failed to update preferences:', error);
-      alertService.alert(
-        'Error',
-        'Failed to update preferences. Please try again.',
-      );
+      handleMutationError(error, { operation: 'Update Preferences' });
     },
   });
 

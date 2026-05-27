@@ -8,18 +8,17 @@
  */
 
 import { useRef } from 'react';
-import { alertService } from '#/services/alertService';
 import { useMutation } from '@apollo/client/react';
 import {
   AddItemToShoppingListDocument,
   type AddItemToShoppingListMutation,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import { useErrorService } from '#/services/errorService';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
 import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { addNewItemToShoppingListCache } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { createOptimisticShoppingListItem } from './utils';
+import { handleMutationError } from '#/utils/errorHandlers';
 import type { ShoppingListItemInput } from './types';
 
 interface UseAddShoppingItemOptions {
@@ -40,7 +39,6 @@ export function useAddShoppingItem({
   listId,
   refetch,
 }: UseAddShoppingItemOptions) {
-  const { handleApolloError } = useErrorService();
   const { createAddOperation } = useCrudOperations();
   // Track the most recently generated temp ID for cleanup in update()
   // A ref is necessary here because optimisticResponse and update are separate
@@ -102,10 +100,7 @@ export function useAddShoppingItem({
     },
     onError: error => {
       lastTempIdRef.current = null;
-      const { message } = handleApolloError(error, {
-        operation: 'Add Shopping List Item',
-      });
-      alertService.alert('Error', message);
+      handleMutationError(error, { operation: 'Add Shopping List Item' });
     },
   });
 

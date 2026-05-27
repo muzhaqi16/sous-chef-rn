@@ -1,9 +1,9 @@
 import { useMutation } from '@apollo/client/react';
 import { DeleteShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { createRemoveFromQueryConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
-import { useErrorService } from '#/services/errorService';
 import { toastService } from '#/services/toastService';
 import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
+import { getErrorMessage } from '#/services/errorService';
 
 const removeFromShoppingListsCache = createRemoveFromQueryConnectionUpdater(
   'shoppingLists',
@@ -11,14 +11,9 @@ const removeFromShoppingListsCache = createRemoveFromQueryConnectionUpdater(
 );
 
 export function useDeleteShoppingList() {
-  const { handleApolloError } = useErrorService();
-
   const [mutate, { loading }] = useMutation(DeleteShoppingListDocument, {
     onError: (error: any) => {
-      const { message } = handleApolloError(error, {
-        operation: 'Delete Shopping List',
-      });
-      toastService.error(message);
+      toastService.error(getErrorMessage(error));
     },
     update: (cache, { data }, { variables }) => {
       if (

@@ -37,6 +37,12 @@ jest.mock('#/apollo/utils/createOptimisticResponse', () => ({
       ...fields,
     }),
   ),
+  buildOptimisticMutationResponse: jest.fn(
+    (opName: string, payloadTypename: string, fields: any) => ({
+      __typename: 'Mutation',
+      [opName]: { __typename: payloadTypename, ...fields },
+    }),
+  ),
 }));
 
 jest.mock('#/utils/errors/versionConflict', () => ({

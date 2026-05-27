@@ -380,6 +380,13 @@ mutation UpdateShoppingListItem(
         id
         ...useUpdateShoppingItem_item
       }
+      shoppingList {
+        id
+        totalItems
+        completedItems
+        remainingItems
+        completionRate
+      }
     }
     ... on Error {
       code

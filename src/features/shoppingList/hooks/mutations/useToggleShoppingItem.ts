@@ -10,7 +10,6 @@
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import { alertService } from '#/services/alertService';
 import {
   ToggleShoppingListItemPurchasedDocument,
   GetShoppingListItemsFilteredDocument,
@@ -21,14 +20,17 @@ import {
   UseToggleShoppingItem_ItemFragmentDoc,
   type UseToggleShoppingItem_ItemFragment,
 } from './useToggleShoppingItem.generated';
-import { useErrorService } from '#/services/errorService';
 import {
   moveShoppingListItemToPurchased,
   moveShoppingListItemToUnpurchased,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { isNetworkError } from '#/utils/isNetworkError';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
+import {
+  executeMutation,
+  isSuccessPayload,
+} from '#/utils/compilerSafeWrappers';
+import { handleMutationError } from '#/utils/errorHandlers';
 import { PAGINATION } from '#/constants/shoppingList';
 
 interface UseToggleShoppingItemOptions {
@@ -43,7 +45,6 @@ export function useToggleShoppingItem({
   listId,
   refetch,
 }: UseToggleShoppingItemOptions) {
-  const { handleApolloError } = useErrorService();
   const client = useApolloClient();
 
   const [togglePurchasedMutation] = useMutation(
@@ -90,7 +91,7 @@ export function useToggleShoppingItem({
     }
 
     // 3. Persist optimistic state so it survives app restarts while offline
-    optimisticDataPersistence.save(
+    const clearPersistence = optimisticDataPersistence.track(
       'ShoppingListItem',
       itemId,
       'isPurchased',
@@ -107,17 +108,12 @@ export function useToggleShoppingItem({
           updatedAt: () => previousUpdatedAt,
         },
       });
-      // Move back to the original connection
       if (previousIsPurchased) {
         moveShoppingListItemToPurchased(client.cache, listId, { id: itemId });
       } else {
         moveShoppingListItemToUnpurchased(client.cache, listId, { id: itemId });
       }
-      optimisticDataPersistence.clear(
-        'ShoppingListItem',
-        itemId,
-        'isPurchased',
-      );
+      clearPersistence();
     };
 
     const result = await executeMutation(
@@ -125,12 +121,7 @@ export function useToggleShoppingItem({
         togglePurchasedMutation({
           variables: { input: { id: itemId, purchased: newStatus } },
           onCompleted: () => {
-            // Clear persisted optimistic state on successful server sync
-            optimisticDataPersistence.clear(
-              'ShoppingListItem',
-              itemId,
-              'isPurchased',
-            );
+            clearPersistence();
 
             // Depletion recovery: if the source connection (the tab we toggled
             // FROM) is now empty but totalCount > 0, server has unfetched
@@ -159,12 +150,8 @@ export function useToggleShoppingItem({
               return;
             }
 
-            // Server/validation error — revert and surface to the user.
             revert();
-            const { message } = handleApolloError(error, {
-              operation: 'Toggle Item Purchased',
-            });
-            alertService.alert('Error', message);
+            handleMutationError(error, { operation: 'Toggle Item Purchased' });
             refetch();
           },
         }),
@@ -172,9 +159,9 @@ export function useToggleShoppingItem({
     );
     if (!result) return false;
 
-    return result.data?.toggleShoppingListItemPurchased?.__typename ===
-      'ToggleShoppingListItemPurchasedPayload'
-      ? result.data.toggleShoppingListItemPurchased.shoppingListItem
+    const payload = result.data?.toggleShoppingListItemPurchased;
+    return isSuccessPayload(payload, 'ToggleShoppingListItemPurchasedPayload')
+      ? payload.shoppingListItem
       : false;
   };
 

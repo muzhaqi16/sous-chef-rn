@@ -55,6 +55,7 @@ import { type MealTemplateDisplayFragment } from '#features/mealPlan/graphql/mea
 import { type MealPlanMain_ItemFragment } from './MealPlanMain.generated';
 import { type EditCustomMealSheet_ItemFragment } from '#features/mealPlan/components/EditCustomMealSheet.generated';
 import { toastService } from '#/services/toastService';
+import { handleMutationError } from '#/utils/errorHandlers';
 import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 
@@ -229,9 +230,7 @@ const MealPlanMainInner: React.FC = () => {
         if (id) removeFromMealPlansForMain(cache, id, { evictItem: true });
       },
       onError: error => {
-        toastService.error(
-          error.message || t('mealPlanMain.deleteMealPlanFailed'),
-        );
+        handleMutationError(error, { operation: 'Delete Meal Plan' });
       },
     },
   );

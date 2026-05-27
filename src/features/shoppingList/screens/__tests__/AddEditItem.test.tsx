@@ -5,6 +5,7 @@ import { screen, userEvent, waitFor } from '@testing-library/react-native';
 import type { MockedResponse } from '#/test-utils/apolloMockProvider';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { alertService } from '#/services/alertService';
+import { handleMutationError } from '#/utils/errorHandlers';
 import { AddEditItem } from '../AddEditItem';
 import {
   AddItemToShoppingListDocument,
@@ -44,9 +45,12 @@ jest.mock('#features/shoppingList/hooks/useShoppingListItemForm', () => ({
 jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => ({
   addNewItemToShoppingListCache: jest.fn(),
 }));
-jest.mock('#/utils/errors/versionConflict', () => ({
-  handleVersionConflict: jest.fn(() => false),
-  getVersionConflictMessage: jest.fn(() => ''),
+jest.mock('#/utils/errorHandlers', () => ({
+  handleMutationError: jest.fn(),
+  versionConflictCheck: jest.fn(() => ({
+    detect: jest.fn(),
+    handle: jest.fn(),
+  })),
 }));
 jest.mock('#/services/errorService', () => ({
   errorService: { reportError: jest.fn() },
@@ -607,15 +611,8 @@ describe('AddEditItem', () => {
 
   it('handles version conflict error in edit mode', async () => {
     const user = userEvent.setup();
-    const {
-      handleVersionConflict,
-      getVersionConflictMessage,
-    } = require('#/utils/errors/versionConflict');
-    handleVersionConflict.mockReturnValue(true);
-    getVersionConflictMessage.mockReturnValue(
-      'Item was updated by someone else',
-    );
-    forceExecuteWithLoadingStateOnError(new Error('VERSION_CONFLICT'));
+    const versionError = new Error('VERSION_CONFLICT');
+    forceExecuteWithLoadingStateOnError(versionError);
 
     jest
       .spyOn(
@@ -639,22 +636,20 @@ describe('AddEditItem', () => {
     await user.press(screen.getByTestId('edit-item-submit-button'));
 
     await waitFor(() => {
-      expect(alertService.alert).toHaveBeenCalledWith(
-        'Item Updated',
-        'Item was updated by someone else',
-        expect.any(Array),
-      );
+      expect(handleMutationError).toHaveBeenCalledWith(versionError, {
+        operation: 'ShoppingListItem.save',
+        checks: expect.any(Array),
+      });
     });
   });
 
   it('handles network error in error handler', async () => {
     const user = userEvent.setup();
-    const { handleVersionConflict } = require('#/utils/errors/versionConflict');
-    handleVersionConflict.mockReturnValue(false);
-    forceExecuteWithLoadingStateOnError({
+    const networkError = {
       networkError: new Error('timeout'),
       message: 'Network error',
-    } as any);
+    } as any;
+    forceExecuteWithLoadingStateOnError(networkError);
 
     jest
       .spyOn(
@@ -673,22 +668,21 @@ describe('AddEditItem', () => {
     await user.press(screen.getByTestId('add-item-submit-button'));
 
     await waitFor(() => {
-      expect(alertService.alert).toHaveBeenCalledWith(
-        'Error',
-        expect.stringContaining('Network error'),
-      );
+      expect(handleMutationError).toHaveBeenCalledWith(networkError, {
+        operation: 'ShoppingListItem.save',
+        checks: expect.any(Array),
+      });
     });
   });
 
   it('handles VALIDATION_ERROR graphQL error', async () => {
     const user = userEvent.setup();
-    const { handleVersionConflict } = require('#/utils/errors/versionConflict');
-    handleVersionConflict.mockReturnValue(false);
-    forceExecuteWithLoadingStateOnError({
+    const validationError = {
       graphQLErrors: [
         { extensions: { code: 'VALIDATION_ERROR' }, message: 'Invalid' },
       ],
-    } as any);
+    } as any;
+    forceExecuteWithLoadingStateOnError(validationError);
 
     jest
       .spyOn(
@@ -707,22 +701,21 @@ describe('AddEditItem', () => {
     await user.press(screen.getByTestId('add-item-submit-button'));
 
     await waitFor(() => {
-      expect(alertService.alert).toHaveBeenCalledWith(
-        'Error',
-        expect.stringContaining('Invalid input'),
-      );
+      expect(handleMutationError).toHaveBeenCalledWith(validationError, {
+        operation: 'ShoppingListItem.save',
+        checks: expect.any(Array),
+      });
     });
   });
 
   it('handles UNAUTHENTICATED graphQL error', async () => {
     const user = userEvent.setup();
-    const { handleVersionConflict } = require('#/utils/errors/versionConflict');
-    handleVersionConflict.mockReturnValue(false);
-    forceExecuteWithLoadingStateOnError({
+    const unauthError = {
       graphQLErrors: [
         { extensions: { code: 'UNAUTHENTICATED' }, message: 'Unauthorized' },
       ],
-    } as any);
+    } as any;
+    forceExecuteWithLoadingStateOnError(unauthError);
 
     jest
       .spyOn(
@@ -741,22 +734,21 @@ describe('AddEditItem', () => {
     await user.press(screen.getByTestId('add-item-submit-button'));
 
     await waitFor(() => {
-      expect(alertService.alert).toHaveBeenCalledWith(
-        'Error',
-        expect.stringContaining('Session expired'),
-      );
+      expect(handleMutationError).toHaveBeenCalledWith(unauthError, {
+        operation: 'ShoppingListItem.save',
+        checks: expect.any(Array),
+      });
     });
   });
 
   it('handles generic graphQL error with message', async () => {
     const user = userEvent.setup();
-    const { handleVersionConflict } = require('#/utils/errors/versionConflict');
-    handleVersionConflict.mockReturnValue(false);
-    forceExecuteWithLoadingStateOnError({
+    const genericError = {
       graphQLErrors: [
         { extensions: { code: 'INTERNAL_ERROR' }, message: 'Something broke' },
       ],
-    } as any);
+    } as any;
+    forceExecuteWithLoadingStateOnError(genericError);
 
     jest
       .spyOn(
@@ -775,18 +767,17 @@ describe('AddEditItem', () => {
     await user.press(screen.getByTestId('add-item-submit-button'));
 
     await waitFor(() => {
-      expect(alertService.alert).toHaveBeenCalledWith(
-        'Error',
-        expect.stringContaining('Something broke'),
-      );
+      expect(handleMutationError).toHaveBeenCalledWith(genericError, {
+        operation: 'ShoppingListItem.save',
+        checks: expect.any(Array),
+      });
     });
   });
 
   it('handles generic error without graphQLErrors or networkError', async () => {
     const user = userEvent.setup();
-    const { handleVersionConflict } = require('#/utils/errors/versionConflict');
-    handleVersionConflict.mockReturnValue(false);
-    forceExecuteWithLoadingStateOnError(new Error('Unknown'));
+    const unknownError = new Error('Unknown');
+    forceExecuteWithLoadingStateOnError(unknownError);
 
     jest
       .spyOn(
@@ -805,10 +796,10 @@ describe('AddEditItem', () => {
     await user.press(screen.getByTestId('add-item-submit-button'));
 
     await waitFor(() => {
-      expect(alertService.alert).toHaveBeenCalledWith(
-        'Error',
-        expect.stringContaining('Please try again'),
-      );
+      expect(handleMutationError).toHaveBeenCalledWith(unknownError, {
+        operation: 'ShoppingListItem.save',
+        checks: expect.any(Array),
+      });
     });
   });
 

@@ -1,4 +1,3 @@
-import { alertService } from '#/services/alertService';
 import { useUser } from '#store/useAppStore';
 import { usePreservedQueryData } from '#/hooks/apollo/usePreservedQueryData';
 import { useMutation, useQuery } from '@apollo/client/react';
@@ -8,8 +7,6 @@ import {
   AddDietaryRestrictionDocument,
   UpdateDietaryRestrictionDocument,
   RemoveDietaryRestrictionDocument,
-  type UpdateDietaryProfileMutation,
-  type UpdateDietaryRestrictionMutation,
 } from '#operations/user/user.generated';
 import {
   Diet,
@@ -17,10 +14,13 @@ import {
   HealthGoal,
   RestrictionSeverity,
 } from '#/graphql/generated/schemaTypes';
-import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
+import {
+  enhanceWithVersion,
+  buildOptimisticMutationResponse,
+} from '#/apollo/utils/createOptimisticResponse';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
-import { useErrorService } from '#/services/errorService';
+import { handleMutationError } from '#/utils/errorHandlers';
 
 export interface DietaryRestriction {
   id: string;
@@ -53,7 +53,6 @@ export interface DietaryProfileData {
 
 export const useDietaryProfile = () => {
   const user = useUser();
-  const { handleApolloError } = useErrorService();
 
   // The cache-and-network → cache-first pair
   // means first mount fires once, subsequent mounts read cache only.
@@ -71,20 +70,14 @@ export const useDietaryProfile = () => {
     // No manual cache update needed (Pattern 2)
     optimisticResponse: (variables, { IGNORE }) => {
       if (!profile) return IGNORE;
-      const optimistic: UpdateDietaryProfileMutation = {
-        __typename: 'Mutation',
-        updateDietaryProfile: {
-          __typename: 'UpdateDietaryProfilePayload',
-          dietaryProfile: enhanceWithVersion(profile, variables.input),
-        },
-      };
-      return optimistic;
+      return buildOptimisticMutationResponse(
+        'updateDietaryProfile',
+        'UpdateDietaryProfilePayload',
+        { dietaryProfile: enhanceWithVersion(profile, variables.input) },
+      );
     },
     onError: error => {
-      const { message } = handleApolloError(error, {
-        operation: 'Update Dietary Profile',
-      });
-      alertService.alert('Error', message);
+      handleMutationError(error, { operation: 'Update Dietary Profile' });
     },
   });
 
@@ -122,10 +115,7 @@ export const useDietaryProfile = () => {
       });
     },
     onError: error => {
-      const { message } = handleApolloError(error, {
-        operation: 'Add Dietary Restriction',
-      });
-      alertService.alert('Error', message);
+      handleMutationError(error, { operation: 'Add Dietary Restriction' });
     },
   });
 
@@ -138,23 +128,19 @@ export const useDietaryProfile = () => {
         r => r.id === variables.input.id,
       );
       if (!currentRestriction) return IGNORE;
-      const optimistic: UpdateDietaryRestrictionMutation = {
-        __typename: 'Mutation',
-        updateRestriction: {
-          __typename: 'UpdateRestrictionPayload',
+      return buildOptimisticMutationResponse(
+        'updateRestriction',
+        'UpdateRestrictionPayload',
+        {
           dietaryRestriction: enhanceWithVersion(
             currentRestriction,
             variables.input,
           ),
         },
-      };
-      return optimistic;
+      );
     },
     onError: error => {
-      const { message } = handleApolloError(error, {
-        operation: 'Update Dietary Restriction',
-      });
-      alertService.alert('Error', message);
+      handleMutationError(error, { operation: 'Update Dietary Restriction' });
     },
   });
 
@@ -187,10 +173,7 @@ export const useDietaryProfile = () => {
       safeEvict(cache, 'DietaryRestriction', restrictionId);
     },
     onError: error => {
-      const { message } = handleApolloError(error, {
-        operation: 'Remove Dietary Restriction',
-      });
-      alertService.alert('Error', message);
+      handleMutationError(error, { operation: 'Remove Dietary Restriction' });
     },
   });
 

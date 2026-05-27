@@ -6,9 +6,8 @@ import { createApolloTestWrapper } from '#/test-utils/apolloMockProvider';
 import { useCorrectPantryItemWeight } from '../useCorrectPantryItemWeight';
 
 jest.mock('#/services/errorService', () => ({
-  useErrorService: () => ({
-    handleApolloError: jest.fn(() => ({ message: 'Test error' })),
-  }),
+  errorService: { reportError: jest.fn() },
+  getErrorMessage: jest.fn(() => 'Test error'),
 }));
 
 let mockHandleVersionConflict = false;
@@ -168,6 +167,10 @@ describe('useCorrectPantryItemWeight', () => {
       expect(alertService.alert).toHaveBeenCalledWith(
         'Item Updated',
         'Version conflict message',
+        [
+          { text: 'Refresh', onPress: expect.any(Function) },
+          { text: 'Cancel', style: 'cancel' },
+        ],
       ),
     );
   });

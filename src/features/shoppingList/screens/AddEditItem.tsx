@@ -21,9 +21,9 @@ import type { StaticScreenProps } from '@react-navigation/native';
 import { addNewItemToShoppingListCache } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { useShoppingListItemForm } from '#features/shoppingList/hooks/useShoppingListItemForm';
 import {
-  handleVersionConflict,
-  getVersionConflictMessage,
-} from '#/utils/errors/versionConflict';
+  handleMutationError,
+  versionConflictCheck,
+} from '#/utils/errorHandlers';
 import { errorService } from '#/services/errorService';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 
@@ -251,60 +251,18 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
       },
       setSaving,
       (error: unknown) => {
-        errorService.reportError(error, { operation: 'ShoppingListItem.save' });
-
-        // Handle version conflict errors with user-friendly message
-        if (handleVersionConflict(error)) {
-          alertService.alert(
-            t('shoppingListScreens.itemUpdated'),
-            getVersionConflictMessage(error),
-            [
-              {
-                text: t('shoppingListScreens.refresh'),
-                onPress: () => {
-                  // Navigate back - the query will automatically refetch
-                  // when returning to the list view
-                  navigation.goBack();
-                },
+        handleMutationError(error, {
+          operation: 'ShoppingListItem.save',
+          checks: [
+            versionConflictCheck({
+              onRefresh: () => {
+                // Navigate back - the query will automatically refetch
+                // when returning to the list view
+                navigation.goBack();
               },
-              { text: t('labels.cancel'), style: 'cancel' },
-            ],
-          );
-          return; // Don't show generic error alert
-        }
-
-        // Specific user-facing error mapping. Network → connectivity hint,
-        // VALIDATION_ERROR → field guidance, UNAUTHENTICATED → re-login,
-        // other GraphQL → server-provided message, generic → retry hint.
-        let errorMessage: string;
-        if ((error as { networkError?: unknown }).networkError) {
-          errorMessage = t('shoppingListScreens.errorNetwork');
-        } else if (
-          (error as { graphQLErrors?: ReadonlyArray<unknown> }).graphQLErrors
-            ?.length
-        ) {
-          const graphQLError = (
-            error as {
-              graphQLErrors: Array<{
-                message?: string;
-                extensions?: { code?: string };
-              }>;
-            }
-          ).graphQLErrors[0];
-          const code = graphQLError.extensions?.code;
-          if (code === 'VALIDATION_ERROR') {
-            errorMessage = t('shoppingListScreens.errorInvalidInput');
-          } else if (code === 'UNAUTHENTICATED') {
-            errorMessage = t('shoppingListScreens.errorSessionExpired');
-          } else {
-            errorMessage =
-              graphQLError.message ?? t('shoppingListScreens.errorGeneric');
-          }
-        } else {
-          errorMessage = t('shoppingListScreens.errorGeneric');
-        }
-
-        alertService.alert(t('labels.error'), errorMessage);
+            }),
+          ],
+        });
       },
     );
   };

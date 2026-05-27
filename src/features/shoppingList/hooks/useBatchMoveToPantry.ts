@@ -2,6 +2,7 @@ import { useMutation } from '@apollo/client/react';
 import { MovePurchasedItemsToPantryDocument } from './useBatchMoveToPantry.generated';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
+import { handleMutationError } from '#/utils/errorHandlers';
 import {
   executeCacheUpdate,
   executeMutation,
@@ -87,7 +88,7 @@ export function useBatchMoveToPantry({
         }, 'Cache update failed for batch move to pantry:');
       },
       onError: error => {
-        toastService.error(error.message || 'Failed to move items to pantry');
+        handleMutationError(error, { operation: 'Batch Move to Pantry' });
       },
     },
   );

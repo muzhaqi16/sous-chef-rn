@@ -6,9 +6,8 @@ import { createApolloTestWrapper } from '#/test-utils/apolloMockProvider';
 import { useAdjustPantryItemQuantity } from '../useAdjustPantryItemQuantity';
 
 jest.mock('#/services/errorService', () => ({
-  useErrorService: () => ({
-    handleApolloError: jest.fn(() => ({ message: 'Adjust error' })),
-  }),
+  errorService: { reportError: jest.fn() },
+  getErrorMessage: jest.fn(() => 'Network error'),
 }));
 
 let mockHandleVersionConflict = false;
@@ -197,6 +196,10 @@ describe('useAdjustPantryItemQuantity', () => {
       expect(alertService.alert).toHaveBeenCalledWith(
         'Item Updated',
         'Version conflict message',
+        [
+          { text: 'Refresh', onPress: expect.any(Function) },
+          { text: 'Cancel', style: 'cancel' },
+        ],
       ),
     );
   });
@@ -218,7 +221,7 @@ describe('useAdjustPantryItemQuantity', () => {
 
     expect(success).toBe(false);
     await waitFor(() =>
-      expect(alertService.alert).toHaveBeenCalledWith('Error', 'Adjust error'),
+      expect(alertService.alert).toHaveBeenCalledWith('Error', 'Network error'),
     );
   });
 

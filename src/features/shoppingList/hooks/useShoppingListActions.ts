@@ -1,12 +1,11 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import { alertService } from '#/services/alertService';
 import { UseShoppingListActions_ItemFragmentDoc } from './useShoppingListActions.generated';
 import { UpdateShoppingListItemQuantityDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { toastService } from '#/services/toastService';
 import {
-  handleVersionConflict,
-  getVersionConflictMessage,
-} from '#/utils/errors/versionConflict';
+  handleMutationError,
+  versionConflictCheck,
+} from '#/utils/errorHandlers';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { setCachedFields } from '#/apollo/utils/cacheUpdaters';
@@ -37,15 +36,10 @@ async function executeQuantityUpdate(
     revertCache();
     clearPersistence();
 
-    if (handleVersionConflict(error)) {
-      alertService.alert('Item Updated', getVersionConflictMessage(error), [
-        { text: 'Refresh', onPress: () => refetchItems() },
-        { text: 'Cancel', style: 'cancel' },
-      ]);
-      return;
-    }
-    console.error('Failed to update quantity:', error);
-    toastService.error('Failed to update quantity');
+    handleMutationError(error, {
+      operation: 'Update Quantity',
+      checks: [versionConflictCheck({ onRefresh: () => refetchItems() })],
+    });
   });
   if (result === false) return;
 }

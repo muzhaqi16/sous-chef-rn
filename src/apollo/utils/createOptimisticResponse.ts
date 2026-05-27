@@ -113,3 +113,50 @@ export function isVersionedEntity(entity: any): entity is VersionedEntity {
     'updatedAt' in entity
   );
 }
+
+/**
+ * Builds the standard optimistic mutation response wrapper.
+ *
+ * Eliminates the repetitive `{ __typename: 'Mutation', opName: { __typename: 'PayloadType', ... } }`
+ * boilerplate and ensures parent aggregate fields (which can't be predicted client-side) are null.
+ *
+ * @param operationName - The mutation field name (e.g. 'updatePantryItem')
+ * @param payloadTypename - The success payload typename (e.g. 'UpdatePantryItemPayload')
+ * @param fields - The payload fields (e.g. `{ pantryItem: entity, pantry: null }`)
+ *
+ * @example
+ * ```ts
+ * optimisticResponse: buildOptimisticMutationResponse(
+ *   'updatePantryItem',
+ *   'UpdatePantryItemPayload',
+ *   { pantryItem: optimisticEntity, pantry: null },
+ * ),
+ * ```
+ */
+export function buildOptimisticMutationResponse<
+  TOpName extends string,
+  TPayloadName extends string,
+  TFields extends Record<string, unknown>,
+>(
+  operationName: TOpName,
+  payloadTypename: TPayloadName,
+  fields: TFields,
+): { __typename: 'Mutation' } & Record<
+  TOpName,
+  { __typename: TPayloadName } & TFields
+> {
+  const result: { __typename: 'Mutation' } & Record<
+    TOpName,
+    { __typename: TPayloadName } & TFields
+  > = {
+    __typename: 'Mutation',
+    [operationName]: {
+      __typename: payloadTypename,
+      ...fields,
+    },
+  } as { __typename: 'Mutation' } & Record<
+    TOpName,
+    { __typename: TPayloadName } & TFields
+  >;
+  return result;
+}

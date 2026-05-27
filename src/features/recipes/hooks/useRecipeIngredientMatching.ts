@@ -18,6 +18,7 @@ import { useSelectedPantryId } from '#store/useAppStore';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
+import { handleMutationError } from '#/utils/errorHandlers';
 
 type IngredientMatch =
   MatchRecipeIngredientsToPantryQuery['matchRecipeIngredientsToPantry'][number];
@@ -73,7 +74,7 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
     ConfirmRecipeConsumptionDocument,
     {
       onError: error => {
-        toastService.error(error.message || 'Failed to confirm consumption');
+        handleMutationError(error, { operation: 'Confirm Recipe Consumption' });
       },
     },
   );

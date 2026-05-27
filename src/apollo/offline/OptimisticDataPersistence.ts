@@ -186,6 +186,27 @@ class OptimisticDataPersistence {
   }
 
   /**
+   * Save an optimistic field and return a cleanup function.
+   * Simplifies the save-before-mutation / clear-after pattern.
+   *
+   * @example
+   * ```ts
+   * const clearPersistence = optimisticDataPersistence.track('PantryItemBatch', id, 'isOpened', true);
+   * const result = await mutation(...);
+   * clearPersistence();
+   * ```
+   */
+  track(
+    entityType: string,
+    entityId: string,
+    field: string,
+    value: any,
+  ): () => void {
+    this.save(entityType, entityId, field, value);
+    return () => this.clear(entityType, entityId, field);
+  }
+
+  /**
    * Clear optimistic data for a specific field
    * Called after successful mutation sync
    *

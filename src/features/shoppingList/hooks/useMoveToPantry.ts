@@ -1,6 +1,6 @@
 import { useRef } from 'react';
-import { alertService } from '#/services/alertService';
 import { useMutation } from '@apollo/client/react';
+import { handleMutationError } from '#/utils/errorHandlers';
 import { MoveShoppingItemToPantryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { StorageState } from '#/graphql/generated/schemaTypes';
 import { type ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
@@ -109,10 +109,7 @@ export function useMoveToPantry({
         onSuccess?.();
       },
       onError: error => {
-        alertService.alert(
-          'Error',
-          error.message || 'Failed to move item to pantry',
-        );
+        handleMutationError(error, { operation: 'Move Item to Pantry' });
       },
     },
   );

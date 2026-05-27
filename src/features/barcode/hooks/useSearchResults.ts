@@ -12,6 +12,7 @@ import { UpcFormat } from '#/graphql/generated/schemaTypes';
 import { useSearchState, useBottomSheetState } from '#store/useAppStore';
 import { ScannedItem } from '#store/slices/barcodeScannerSlice';
 import { alertService } from '#/services/alertService';
+import { handleMutationError } from '#/utils/errorHandlers';
 import { useImageUpload } from '#hooks/useImageUpload';
 import { storage } from '#/storage/mmkv';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
@@ -265,7 +266,7 @@ export const useSearchResults = (barcode: string, format?: string) => {
         cleanupPendingImageStorage();
         pendingBrandNameRef.current = undefined;
 
-        alertService.alert('Error', `Failed to add item: ${error.message}`);
+        handleMutationError(error, { operation: 'Add Item' });
       },
     },
   );

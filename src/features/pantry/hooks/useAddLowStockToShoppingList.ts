@@ -3,6 +3,7 @@ import { AddLowStockItemsToShoppingListDocument } from '#features/pantry/graphql
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
 import { executeMutation, unwrapPayload } from '#/utils/compilerSafeWrappers';
+import { handleMutationError } from '#/utils/errorHandlers';
 
 interface UseAddLowStockToShoppingListOptions {
   homeId: string | undefined;
@@ -15,7 +16,7 @@ export function useAddLowStockToShoppingList({
     AddLowStockItemsToShoppingListDocument,
     {
       onError: error => {
-        toastService.error(error.message || 'Failed to add low stock items');
+        handleMutationError(error, { operation: 'Add Low Stock Items' });
       },
     },
   );

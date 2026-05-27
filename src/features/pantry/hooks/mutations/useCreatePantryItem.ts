@@ -16,7 +16,6 @@ import {
   RestockPantryItemDocument,
 } from '#features/pantry/graphql/pantry.generated';
 import type { CreatePantryItemInput } from '#/graphql/generated/schemaTypes';
-import { useErrorService } from '#/services/errorService';
 import {
   isPantryItemDuplicateError,
   getPantryItemDuplicateInfo,
@@ -25,7 +24,9 @@ import { addToPantryItemsCache } from './utils';
 import {
   executeCacheUpdate,
   executeMutation,
+  isSuccessPayload,
 } from '#/utils/compilerSafeWrappers';
+import { handleMutationError } from '#/utils/errorHandlers';
 import type { CreatePantryItemParams } from './types';
 
 interface UseCreatePantryItemOptions {
@@ -53,8 +54,6 @@ export function useCreatePantryItem({
   pantryId,
   onSuccess,
 }: UseCreatePantryItemOptions) {
-  const { handleApolloError } = useErrorService();
-
   const [createMutation] = useMutation(CreatePantryItemDocument, {
     update: (cache, { data: mutationData }) => {
       const payload = mutationData?.createPantryItem;
@@ -158,7 +157,7 @@ export function useCreatePantryItem({
     });
 
     if (
-      result.data?.createPantryItem?.__typename === 'CreatePantryItemPayload'
+      isSuccessPayload(result.data?.createPantryItem, 'CreatePantryItemPayload')
     ) {
       onSuccess?.();
       return true;
@@ -227,8 +226,10 @@ export function useCreatePantryItem({
                     return;
                   }
                   if (
-                    retryResult.data?.createPantryItem?.__typename ===
-                    'CreatePantryItemPayload'
+                    isSuccessPayload(
+                      retryResult.data?.createPantryItem,
+                      'CreatePantryItemPayload',
+                    )
                   ) {
                     onSuccess?.();
                     resolve(true);
@@ -247,12 +248,8 @@ export function useCreatePantryItem({
       }
     }
 
-    // Non-duplicate error
     if (result.error) {
-      const { message } = handleApolloError(result.error, {
-        operation: 'Create Pantry Item',
-      });
-      alertService.alert('Error', message);
+      handleMutationError(result.error, { operation: 'Create Pantry Item' });
     }
 
     return false;
