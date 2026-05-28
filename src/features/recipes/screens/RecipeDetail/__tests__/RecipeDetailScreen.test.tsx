@@ -143,7 +143,7 @@ jest.mock('#/components/modals/ManageRecipeSheet/ManageRecipeSheet', () => ({
   ManageRecipeSheet: () => null,
 }));
 
-jest.mock('#features/mealPlan/components/AddToMealPlanSheet', () => ({
+jest.mock('#components/modals/AddToMealPlanSheet/AddToMealPlanSheet', () => ({
   AddToMealPlanSheet: () => null,
 }));
 

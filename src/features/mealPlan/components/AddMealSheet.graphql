@@ -1,0 +1,10 @@
+fragment AddMealSheet_savedRecipe on SavedRecipe {
+  id
+  recipe {
+    id
+    name
+    imageUrl
+    servings
+    totalTimeMinutes
+  }
+}

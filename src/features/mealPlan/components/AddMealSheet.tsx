@@ -20,7 +20,7 @@ import {
   useSavedRecipes,
   type SavedRecipeNode,
 } from '#features/recipes/hooks/useSavedRecipes';
-import { SavedRecipeCard_SavedRecipeFragmentDoc } from '#features/recipes/components/SavedRecipeCard.generated';
+import { AddMealSheet_SavedRecipeFragmentDoc } from './AddMealSheet.generated';
 import { CachedImage } from '#components/atoms/CachedImage';
 import {
   BottomSheetSearchBar,
@@ -137,11 +137,10 @@ function searchSpoonacularWithCache(
 }
 
 /**
- * Per-row leaf that subscribes to a single SavedRecipe's
- * `SavedRecipeCard_savedRecipe` fragment. The page-level query
- * (MySavedRecipes) composes that fragment, so this row reads the same scalars
- * the dedicated SavedRecipeCard would — but laid out inline to fit the
- * AddMealSheet styling.
+ * Per-row leaf that subscribes to a single SavedRecipe via the colocated
+ * `AddMealSheet_savedRecipe` fragment. `useFragment` reads these scalars
+ * straight from the normalized cache (populated by the MySavedRecipes query),
+ * so the row stays independent of the recipes feature's internal fragments.
  */
 interface SavedRecipeRowProps {
   savedRecipeRef: SavedRecipeNode;
@@ -156,8 +155,8 @@ const SavedRecipeRow: React.FC<SavedRecipeRowProps> = ({
 }) => {
   const { t } = useTranslation();
   const { data, complete } = useFragment({
-    fragment: SavedRecipeCard_SavedRecipeFragmentDoc,
-    fragmentName: 'SavedRecipeCard_savedRecipe',
+    fragment: AddMealSheet_SavedRecipeFragmentDoc,
+    fragmentName: 'AddMealSheet_savedRecipe',
     from: savedRecipeRef,
   });
 

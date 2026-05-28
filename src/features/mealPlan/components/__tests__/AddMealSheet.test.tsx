@@ -125,10 +125,9 @@ function renderWithApollo(ui: React.ReactElement) {
   for (const node of savedRecipeNodes) {
     cache.writeFragment({
       id: `Recipe:${node.recipe.id}`,
-      fragment:
-        require('#features/recipes/components/SavedRecipeCard.generated')
-          .SavedRecipeCard_SavedRecipeFragmentDoc,
-      fragmentName: 'SavedRecipeCard_savedRecipe',
+      fragment: require('../AddMealSheet.generated')
+        .AddMealSheet_SavedRecipeFragmentDoc,
+      fragmentName: 'AddMealSheet_savedRecipe',
       data: node,
     });
   }

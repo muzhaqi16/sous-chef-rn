@@ -45,6 +45,7 @@ import {
   clearRefreshState,
   attemptTokenRefresh,
   proactiveTokenRefresh,
+  registerApolloClient,
 } from '../refreshToken';
 import { useStore } from '#store';
 import { client } from '../../client';
@@ -70,6 +71,9 @@ describe('refreshToken', () => {
     jest.clearAllMocks();
     // Reset the module-level refresh state
     clearRefreshState();
+    // The client is injected at runtime (registerApolloClient) rather than
+    // imported, so the refresh mutation reads it from the registered reference.
+    registerApolloClient(mockedClient);
   });
 
   describe('isRefreshTokenValid', () => {
@@ -221,14 +225,15 @@ describe('refreshToken', () => {
       });
     });
 
-    it('errors when rate limited (too frequent refresh)', done => {
-      // Simulate recent refresh by making canAttemptRefresh return false
-      // We need to set lastRefreshTime recently via a successful refresh first
-      const mockSetTokens = jest.fn();
+    it('re-forwards with skipErrorLink instead of refreshing again when throttled', done => {
+      // A successful refresh stamps lastRefreshTime (preserved across cycles).
+      // A second 401 within MIN_REFRESH_INTERVAL must not start another refresh —
+      // it re-forwards the op once with skipErrorLink instead.
       (mockedUseStore.getState as jest.Mock).mockReturnValue({
+        accessToken: 'fresh-token',
         refreshToken: 'mock-refresh-token',
         tokenRefreshFailed: jest.fn(),
-        setTokens: mockSetTokens,
+        setTokens: jest.fn(),
         setNeedsTokenRefresh: jest.fn(),
       });
       (mockedClient.mutate as jest.Mock).mockResolvedValue({
@@ -239,19 +244,26 @@ describe('refreshToken', () => {
           },
         },
       });
-      const mockForward = createMockForward();
 
-      // First refresh succeeds and sets lastRefreshTime
-      const obs1 = attemptTokenRefresh(mockOperation, mockForward);
+      // First refresh succeeds and stamps lastRefreshTime.
+      const obs1 = attemptTokenRefresh(mockOperation, createMockForward());
       obs1.subscribe({
         next: () => {
-          // Immediately try another refresh (should be rate limited)
-          clearRefreshState();
-          // Manually set lastRefreshTime to now (it was reset by clearRefreshState)
-          // Actually clearRefreshState resets lastRefreshTime to 0, so let's just call
-          // attemptTokenRefresh again quickly - but the state is reset.
-          // Let's test differently:
-          done();
+          const secondForward = createMockForward();
+          const obs2 = attemptTokenRefresh(mockOperation, secondForward);
+          obs2.subscribe({
+            next: () => {
+              // Throttled path: op re-forwarded once, errorLink suppressed,
+              // and crucially the refresh mutation was NOT fired a second time.
+              expect(secondForward).toHaveBeenCalledWith(mockOperation);
+              expect(mockOperation.setContext).toHaveBeenCalledWith({
+                skipErrorLink: true,
+              });
+              expect(mockedClient.mutate).toHaveBeenCalledTimes(1);
+              done();
+            },
+            error: done,
+          });
         },
         error: done,
       });

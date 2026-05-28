@@ -11,7 +11,7 @@ import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { MealType } from '#/graphql/generated/schemaTypes';
 import { useAddRecipeToMealPlan } from '#features/mealPlan/hooks/useAddRecipeToMealPlan';
 import { useMealPlanCalendar } from '#features/mealPlan/hooks/useMealPlanCalendar';
-import { WeekStrip } from '#features/mealPlan/components/WeekStrip';
+import { WeekStrip } from '#components/molecules/WeekStrip';
 import { Text } from '#components/atoms/Text';
 
 interface AddToMealPlanSheetProps {

@@ -8,7 +8,7 @@ import { format, parseISO } from 'date-fns';
 import { Icon } from '#utils/iconUtils';
 import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
 import { TabMainScreen } from '#components/templates/TabMainScreen';
-import { WeekStrip } from '#features/mealPlan/components/WeekStrip';
+import { WeekStrip } from '#components/molecules/WeekStrip';
 import { MonthCalendar } from '#features/mealPlan/components/MonthCalendar';
 import { DayMealList } from '#features/mealPlan/components/DayMealList';
 import { CalendarToggleBar } from '#features/mealPlan/components/CalendarToggleBar';

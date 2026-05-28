@@ -55,6 +55,7 @@ jest.mock('../links/tokenScheduler', () => ({
 
 jest.mock('../links/refreshToken', () => ({
   refreshAccessToken: jest.fn(),
+  registerApolloClient: jest.fn(),
 }));
 
 describe('Apollo client', () => {

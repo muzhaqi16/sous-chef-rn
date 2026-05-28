@@ -1,5 +1,4 @@
 import { InMemoryCache } from '@apollo/client';
-import { relayStylePagination } from '@apollo/client/utilities';
 // Import generated fragment matcher for proper interface/union type handling
 import fragmentMatcherData from '#/graphql/generated/fragmentMatcher.json';
 
@@ -588,7 +587,7 @@ export function makeCache(): InMemoryCache {
               return incoming;
             },
           },
-          homes: relayStylePagination(),
+          homes: mergeConnectionByNodeId(),
           storageLocations: {
             // Different homes have different storage locations - cache separately
             keyArgs: ['homeId'],

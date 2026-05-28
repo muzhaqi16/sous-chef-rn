@@ -1,11 +1,21 @@
-import { Observable } from '@apollo/client';
+import { Observable, type ApolloClient } from '@apollo/client';
 import { jwtDecode } from 'jwt-decode';
 import { logger } from '#/utils/environment';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { useStore } from '#store';
 import { RefreshTokenDocument } from '#operations/auth/auth.generated';
 import { reconnectWebSocket, isWebSocketReconnecting } from './wsLink';
-import { client } from '../client';
+
+// The Apollo client singleton is injected after creation rather than imported
+// directly, which would form a circular dependency:
+// client → links/index → errorLink → refreshToken → client. `client.ts` calls
+// registerApolloClient() once the client exists; the refresh mutation reads the
+// reference at call time, by which point it is always set.
+let apolloClient: ApolloClient | null = null;
+
+export const registerApolloClient = (clientInstance: ApolloClient): void => {
+  apolloClient = clientInstance;
+};
 
 // Enhanced token refresh with mutex pattern and retry logic
 interface RefreshState {
@@ -50,7 +60,9 @@ const resetRefreshState = () => {
     isRefreshing: false,
     refreshPromise: null,
     retryCount: 0,
-    lastRefreshTime: 0,
+    // Preserve lastRefreshTime so MIN_REFRESH_INTERVAL throttles across refresh
+    // cycles. Logout clears it via clearRefreshState().
+    lastRefreshTime: refreshState.lastRefreshTime,
   };
 };
 
@@ -98,7 +110,11 @@ const performTokenRefresh = async (): Promise<string | null> => {
       `Attempting token refresh (attempt ${refreshState.retryCount}/${REFRESH_CONFIG.MAX_RETRIES})`,
     );
 
-    const response = await client.mutate({
+    if (!apolloClient) {
+      throw new Error('Apollo client not registered for token refresh');
+    }
+
+    const response = await apolloClient.mutate({
       mutation: RefreshTokenDocument,
       variables: { input: { token: refreshToken } },
       context: { skipErrorLink: true },
@@ -210,13 +226,13 @@ export const attemptTokenRefresh = (
       return;
     }
 
-    // Check if we can attempt a NEW refresh
+    // Within MIN_REFRESH_INTERVAL (or retry budget exhausted): give the
+    // operation one more pass with skipErrorLink instead of starting another
+    // refresh. authLink attaches the current token on the way down; a repeat
+    // 401 then surfaces normally rather than looping back into this link.
     if (!canAttemptRefresh()) {
-      observer.error(
-        new Error(
-          'Token refresh not allowed: rate limited or max retries exceeded',
-        ),
-      );
+      operation.setContext({ skipErrorLink: true });
+      forward(operation).subscribe(observer);
       return;
     }
 
@@ -224,8 +240,13 @@ export const attemptTokenRefresh = (
     refreshState.isRefreshing = true;
     refreshState.refreshPromise = performTokenRefresh();
 
-    refreshState.refreshPromise
-      .then(newToken => {
+    // Reset state and drain the queue in one synchronous settle handler so a
+    // concurrent 401 can't land on an already-drained queue and hang: a late
+    // joiner either makes the queue before this runs, or sees isRefreshing
+    // cleared and starts its own refresh.
+    refreshState.refreshPromise.then(
+      newToken => {
+        resetRefreshState();
         processQueue(newToken);
         if (newToken) {
           operation.setContext({
@@ -238,23 +259,28 @@ export const attemptTokenRefresh = (
         } else {
           observer.error(new Error('Token refresh returned null token'));
         }
-      })
-      .catch(error => {
+      },
+      error => {
+        resetRefreshState();
         processQueue(null);
         observer.error(error);
-      })
-      .finally(() => {
-        resetRefreshState();
-      });
+      },
+    );
   });
 };
 
 // Export for testing and monitoring
 export const getRefreshState = () => ({ ...refreshState });
 
-// Export for manual refresh state reset (useful for logout)
+// Full reset for logout: zeroes lastRefreshTime so the next session can refresh
+// immediately, and drops any queued joiners.
 export const clearRefreshState = () => {
-  resetRefreshState();
+  refreshState = {
+    isRefreshing: false,
+    refreshPromise: null,
+    retryCount: 0,
+    lastRefreshTime: 0,
+  };
   refreshQueue = [];
 };
 

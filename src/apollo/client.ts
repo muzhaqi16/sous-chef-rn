@@ -1,6 +1,7 @@
 import { ApolloClient } from '@apollo/client';
 import { logger } from '#/utils/environment';
 import { createLink } from './links/index';
+import { registerApolloClient } from './links/refreshToken';
 import { makeCache } from './cache';
 import { apolloCachePersistence } from './offline/ApolloCachePersistence';
 import packageJson from '../../package.json';
@@ -204,3 +205,8 @@ function setupCachePersistence(client: ApolloClient) {
 
 // Initialize client synchronously
 export const client = initializeClient();
+
+// Inject the client into the token-refresh module. refreshToken can't import
+// this singleton directly without forming a circular dependency, so it reads
+// the reference we register here at call time.
+registerApolloClient(client);

@@ -8,3 +8,4 @@ export const getRefreshState = jest.fn(() => ({
 export const clearRefreshState = jest.fn();
 export const isRefreshTokenValid = jest.fn(() => false);
 export const proactiveTokenRefresh = jest.fn(() => Promise.resolve(null));
+export const registerApolloClient = jest.fn();

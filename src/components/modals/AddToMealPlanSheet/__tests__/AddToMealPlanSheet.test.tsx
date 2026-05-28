@@ -73,7 +73,7 @@ jest.mock('#features/mealPlan/hooks/useMealPlanCalendar', () => ({
   })),
 }));
 
-jest.mock('#features/mealPlan/components/WeekStrip', () => ({
+jest.mock('#components/molecules/WeekStrip', () => ({
   WeekStrip: () => {
     const { Text } = require('react-native');
     return require('react').createElement(Text, null, 'WeekStrip');

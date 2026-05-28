@@ -93,14 +93,18 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
       return;
     }
 
-    // For network errors, log and forward the operation to let Apollo's errorPolicy handle it
-    // Returning void silently swallows the error, leaving query observers without a result
+    // For network errors, log and let the error propagate. retryLink (above this
+    // link) owns query-retry policy with backoff/jitter and deliberately skips
+    // mutations — re-forwarding here would double query retries AND re-send
+    // mutations (a duplicate-write risk for non-idempotent ones). Returning void
+    // makes Apollo emit the networkError to the observer, where errorPolicy plus
+    // the cache-and-network fetch policy keep cached data visible.
     if (isNetworkError(error)) {
       console.warn(
         `Network error for ${operation.operationName}:`,
         error.message,
       );
-      return forward(operation);
+      return;
     }
 
     // Only log non-network errors as these are unexpected
