@@ -10,11 +10,6 @@ mutation CreateRecipeReview($input: CreateRecipeReviewInput!) {
         ...RecipeReviewFragment
       }
     }
-    ... on RateLimitError {
-      code
-      message
-      retryAfter
-    }
     ... on Error {
       code
       message

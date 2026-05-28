@@ -11,7 +11,10 @@ import { ForgotPasswordDocument } from '#operations/auth/auth.generated';
 import { useAuthNavigation } from '#hooks/navigation/useAuthNavigation';
 import { useToast } from '#/hooks/useToast';
 import { errorService } from '#/services/errorService';
-import { getRateLimitMessage } from '#/utils/errors/rateLimit';
+import {
+  getRateLimitMessage,
+  isRateLimitError,
+} from '#/utils/errors/rateLimit';
 
 type ForgotPasswordValues = {
   email: string;
@@ -38,12 +41,11 @@ export function ForgotPasswordScreen() {
         variables: { input: { email } },
       });
 
-      const payload = response.data?.forgotPassword;
-      if (payload?.__typename === 'RateLimitError') {
+      // Rate-limit now arrives as a top-level GraphQL error, not a
+      // RateLimitError union variant.
+      if (isRateLimitError(response.error)) {
         toast({
-          message: getRateLimitMessage({
-            extensions: { code: payload.code, retryAfter: payload.retryAfter },
-          }),
+          message: getRateLimitMessage(response.error),
           type: 'error',
         });
         return;

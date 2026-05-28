@@ -39,10 +39,6 @@ mutation VerifyEmail($input: VerifyEmailInput!) {
         ...LoginUser
       }
     }
-    ... on AuthError {
-      code
-      message
-    }
     ... on NotFoundError {
       resource
       resourceId
@@ -67,10 +63,9 @@ mutation ForgotPassword($input: ForgotPasswordInput!) {
         message
       }
     }
-    ... on RateLimitError {
+    ... on Error {
       code
       message
-      retryAfter
     }
   }
 }
@@ -90,10 +85,6 @@ mutation ResendVerificationEmail($input: ResendVerificationEmailInput!) {
       user {
         id
       }
-    }
-    ... on AuthError {
-      code
-      message
     }
     ... on Error {
       code

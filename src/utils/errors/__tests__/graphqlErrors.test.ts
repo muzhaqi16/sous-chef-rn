@@ -1,4 +1,9 @@
-import { GraphQLDomainError, GraphQLNetworkError } from '../graphqlErrors';
+import { CombinedGraphQLErrors } from '@apollo/client/errors';
+import {
+  GraphQLDomainError,
+  GraphQLNetworkError,
+  getTopLevelGraphQLError,
+} from '../graphqlErrors';
 
 describe('GraphQLDomainError', () => {
   const payload = {
@@ -38,5 +43,32 @@ describe('GraphQLNetworkError', () => {
     const error = new GraphQLNetworkError('Failed to create item');
     expect(error.message).toBe('Failed to create item');
     expect(error.name).toBe('GraphQLNetworkError');
+  });
+});
+
+describe('getTopLevelGraphQLError', () => {
+  it('reads the first error code + message from CombinedGraphQLErrors', () => {
+    const error = new CombinedGraphQLErrors({
+      errors: [
+        { message: 'Token expired', extensions: { code: 'UNAUTHENTICATED' } },
+        { message: 'Second', extensions: { code: 'OTHER' } },
+      ],
+    } as any);
+
+    expect(getTopLevelGraphQLError(error)).toEqual({
+      code: 'UNAUTHENTICATED',
+      message: 'Token expired',
+    });
+  });
+
+  it('defaults code/message to empty strings when missing', () => {
+    const error = new CombinedGraphQLErrors({ errors: [{}] } as any);
+    expect(getTopLevelGraphQLError(error)).toEqual({ code: '', message: '' });
+  });
+
+  it('returns null for a non-GraphQL error', () => {
+    expect(getTopLevelGraphQLError(new Error('network'))).toBeNull();
+    expect(getTopLevelGraphQLError(undefined)).toBeNull();
+    expect(getTopLevelGraphQLError(null)).toBeNull();
   });
 });

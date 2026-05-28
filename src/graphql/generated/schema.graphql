@@ -258,7 +258,7 @@ type AddLowStockItemsToShoppingListPayload {
   result: LowStockToShoppingListResult!
 }
 
-union AddLowStockItemsToShoppingListResult = AddLowStockItemsToShoppingListPayload | ForbiddenError | NotFoundError | ValidationError
+union AddLowStockItemsToShoppingListResult = AddLowStockItemsToShoppingListPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
 
 input AddPantryItemToShoppingListInput {
   pantryItemId: ID!
@@ -274,7 +274,7 @@ type AddPantryItemToShoppingListResult {
   shoppingListItemId: ID!
 }
 
-union AddPantryItemToShoppingListResultUnion = AddPantryItemToShoppingListPayload | ForbiddenError | NotFoundError | ValidationError
+union AddPantryItemToShoppingListResultUnion = AddPantryItemToShoppingListPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
 
 """Input for adding recipe ingredients to a shopping list"""
 input AddRecipeToShoppingListInput {
@@ -343,7 +343,7 @@ type AddUserAddressPayload {
   userAddress: UserAddress!
 }
 
-union AddUserAddressResult = AddUserAddressPayload | ConflictError | ForbiddenError | ValidationError
+union AddUserAddressResult = AddUserAddressPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
 
 input AddWarningInput {
   reason: String!
@@ -416,7 +416,7 @@ type AdminBulkDeleteItemsPayload {
   result: BulkOperationSummary!
 }
 
-union AdminBulkDeleteItemsResult = AdminBulkDeleteItemsPayload | ForbiddenError | NotFoundError | ValidationError
+union AdminBulkDeleteItemsResult = AdminBulkDeleteItemsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
 
 """
 Input for batch deleting images from S3/MinIO storage.
@@ -446,7 +446,7 @@ type AdminDeleteItemPayload {
   item: Item
 }
 
-union AdminDeleteItemResult = AdminDeleteItemPayload | ConflictError | ForbiddenError | NotFoundError
+union AdminDeleteItemResult = AdminDeleteItemPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
 
 input AdminDeleteRecipeInput {
   id: ID!
@@ -457,7 +457,7 @@ type AdminDeleteRecipePayload {
   recipe: Recipe
 }
 
-union AdminDeleteRecipeResult = AdminDeleteRecipePayload | ConflictError | ForbiddenError | NotFoundError
+union AdminDeleteRecipeResult = AdminDeleteRecipePayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
 
 input AdminDeleteRecipeReviewInput {
   id: ID!
@@ -467,7 +467,7 @@ type AdminDeleteRecipeReviewPayload {
   recipeReview: RecipeReview!
 }
 
-union AdminDeleteRecipeReviewResult = AdminDeleteRecipeReviewPayload | ConflictError | ForbiddenError | NotFoundError
+union AdminDeleteRecipeReviewResult = AdminDeleteRecipeReviewPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
 
 input AdminDeleteUserInput {
   """If true, permanently deletes the user (SuperAdmin only)"""
@@ -479,7 +479,7 @@ type AdminDeleteUserPayload {
   user: User
 }
 
-union AdminDeleteUserResult = AdminDeleteUserPayload | ConflictError | ForbiddenError | NotFoundError
+union AdminDeleteUserResult = AdminDeleteUserPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
 
 """Paginated result for admin item unit conversion listing"""
 type AdminItemUnitConversionsResult {
@@ -570,7 +570,7 @@ type ApproveItemPayload {
   item: Item!
 }
 
-union ApproveItemResult = ApproveItemPayload | ConflictError | ForbiddenError | NotFoundError
+union ApproveItemResult = ApproveItemPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
 
 input ArchiveShoppingListInput {
   id: ID!
@@ -580,7 +580,7 @@ type ArchiveShoppingListPayload {
   shoppingList: ShoppingList!
 }
 
-union ArchiveShoppingListResult = ArchiveShoppingListPayload | ConflictError | ForbiddenError | NotFoundError
+union ArchiveShoppingListResult = ArchiveShoppingListPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
 
 """Sub-input for attribution data"""
 input AttributionInput {
@@ -588,17 +588,6 @@ input AttributionInput {
   landingPage: String
   referrer: String
   source: String
-}
-
-"""
-Authentication failure surfaced as a result-union variant (for mutations
-that opt into structured auth errors instead of top-level GraphQL errors).
-Disambiguate via `code` (e.g. `AUTH_TOKEN_MISSING`, `AUTH_TOKEN_EXPIRED`,
-`AUTH_CREDENTIALS_INVALID`, `AUTH_ACCOUNT_LOCKED`).
-"""
-type AuthError implements Error {
-  code: ErrorCode!
-  message: String!
 }
 
 """Authentication response containing tokens - NEVER cache"""
@@ -877,7 +866,7 @@ type BulkCreateItemsResponse {
   updated: [Item!]!
 }
 
-union BulkCreateItemsResult = BulkCreateItemsPayload | ForbiddenError | NotFoundError | ValidationError
+union BulkCreateItemsResult = BulkCreateItemsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
 
 input BulkCreatePurchasesInput {
   purchases: [CreatePurchaseInput!]!
@@ -899,7 +888,7 @@ type BulkCreateStoresPayload {
   stores: [Store!]!
 }
 
-union BulkCreateStoresResult = BulkCreateStoresPayload | ConflictError | ForbiddenError | ValidationError
+union BulkCreateStoresResult = BulkCreateStoresPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
 
 input BulkDeleteItemsInput {
   ids: [ID!]!
@@ -909,7 +898,7 @@ type BulkDeleteItemsPayload {
   result: BulkOperationSummary!
 }
 
-union BulkDeleteItemsResult = BulkDeleteItemsPayload | ForbiddenError | NotFoundError | ValidationError
+union BulkDeleteItemsResult = BulkDeleteItemsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
 
 input BulkDeletePurchasesInput {
   purchaseIds: [ID!]!
@@ -920,7 +909,7 @@ type BulkDeletePurchasesPayload {
   purchases: [Purchase!]!
 }
 
-union BulkDeletePurchasesResult = BulkDeletePurchasesPayload | ConflictError | ForbiddenError | NotFoundError
+union BulkDeletePurchasesResult = BulkDeletePurchasesPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
 
 """Error detail for bulk device operations"""
 type BulkDeviceError {
@@ -993,7 +982,7 @@ type BulkUpdateDevicesPayload {
   result: BulkDeviceResult!
 }
 
-union BulkUpdateDevicesResult = BulkUpdateDevicesPayload | ForbiddenError | NotFoundError | ValidationError
+union BulkUpdateDevicesResult = BulkUpdateDevicesPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
 
 """
 Fields to apply to all items in a bulk update.
@@ -1034,7 +1023,7 @@ type BulkUpdateItemsPayload {
   result: BulkOperationSummary!
 }
 
-union BulkUpdateItemsResult = BulkUpdateItemsPayload | ForbiddenError | NotFoundError | ValidationError
+union BulkUpdateItemsResult = BulkUpdateItemsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
 
 input BulkUpdateLoginHistoriesInput {
   ids: [ID!]!
@@ -1075,7 +1064,7 @@ type CancelRecurringPayload {
   shoppingList: ShoppingList!
 }
 
-union CancelRecurringResult = CancelRecurringPayload | ConflictError | ForbiddenError | NotFoundError
+union CancelRecurringResult = CancelRecurringPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
 
 """Input for categorizing an item"""
 input CategorizeItemInput {
@@ -1213,7 +1202,7 @@ type CleanupDevicesPayload {
   result: DeviceCleanupResult!
 }
 
-union CleanupDevicesResult = CleanupDevicesPayload | ForbiddenError | NotFoundError | ValidationError
+union CleanupDevicesResult = CleanupDevicesPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
 
 """Response for clearing items from a shopping list"""
 type ClearItemsResponse {
@@ -1231,7 +1220,7 @@ type ClearReminderPayload {
   shoppingList: ShoppingList!
 }
 
-union ClearReminderResult = ClearReminderPayload | ConflictError | ForbiddenError | NotFoundError
+union ClearReminderResult = ClearReminderPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
 
 input ClearShoppingListItemsInput {
   purchased: Boolean!
@@ -1291,7 +1280,7 @@ type CompleteOnboardingPayload {
   user: User!
 }
 
-union CompleteOnboardingResult = CompleteOnboardingPayload | ConflictError | ForbiddenError | NotFoundError
+union CompleteOnboardingResult = CompleteOnboardingPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
 
 input CompleteShoppingListInput {
   completedShopDate: DateTime
@@ -1442,7 +1431,7 @@ type ConvertExpiredBatchesToWastePayload {
   pantryItem: PantryItem!
 }
 
-union ConvertExpiredBatchesToWasteResult = ConflictError | ConvertExpiredBatchesToWastePayload | ForbiddenError | NotFoundError
+union ConvertExpiredBatchesToWasteResult = ConflictError | ConvertExpiredBatchesToWastePayload | ForbiddenError | NotFoundError | ValidationError
 
 input ConvertExpiredToWasteInput {
   pantryItemId: ID!
@@ -1453,7 +1442,7 @@ type ConvertExpiredToWastePayload {
   pantryItem: PantryItem!
 }
 
-union ConvertExpiredToWasteResult = ConflictError | ConvertExpiredToWastePayload | ForbiddenError | NotFoundError
+union ConvertExpiredToWasteResult = ConflictError | ConvertExpiredToWastePayload | ForbiddenError | NotFoundError | ValidationError
 
 type ConvertedUnitValue {
   conversionFactor: Float!
@@ -1560,7 +1549,7 @@ type CreateBrandPayload {
   brand: Brand!
 }
 
-union CreateBrandResult = ConflictError | CreateBrandPayload | ForbiddenError | ValidationError
+union CreateBrandResult = ConflictError | CreateBrandPayload | ForbiddenError | NotFoundError | ValidationError
 
 input CreateCategoryInput {
   color: String
@@ -1577,7 +1566,7 @@ type CreateCategoryPayload {
   category: Category!
 }
 
-union CreateCategoryResult = ConflictError | CreateCategoryPayload | ForbiddenError | ValidationError
+union CreateCategoryResult = ConflictError | CreateCategoryPayload | ForbiddenError | NotFoundError | ValidationError
 
 input CreateCookingLogInput {
   actualCookTime: Int
@@ -1597,7 +1586,7 @@ type CreateCookingLogPayload {
   recipe: Recipe
 }
 
-union CreateCookingLogResult = CreateCookingLogPayload | ForbiddenError | NotFoundError | ValidationError
+union CreateCookingLogResult = ConflictError | CreateCookingLogPayload | ForbiddenError | NotFoundError | ValidationError
 
 input CreateCurrencyInput {
   code: String!
@@ -1610,7 +1599,7 @@ type CreateCurrencyPayload {
   currency: Currency!
 }
 
-union CreateCurrencyResult = ConflictError | CreateCurrencyPayload | ForbiddenError | ValidationError
+union CreateCurrencyResult = ConflictError | CreateCurrencyPayload | ForbiddenError | NotFoundError | ValidationError
 
 input CreateDeviceInput {
   appVersion: String
@@ -1658,7 +1647,7 @@ type CreateHomePayload {
   home: Home!
 }
 
-union CreateHomeResult = ConflictError | CreateHomePayload | ForbiddenError | ValidationError
+union CreateHomeResult = ConflictError | CreateHomePayload | ForbiddenError | NotFoundError | ValidationError
 
 input CreateImageUploadUrlInput {
   itemId: ID
@@ -1783,7 +1772,7 @@ type CreateMealTemplatePayload {
   mealTemplate: MealTemplate!
 }
 
-union CreateMealTemplateResult = ConflictError | CreateMealTemplatePayload | ForbiddenError | ValidationError
+union CreateMealTemplateResult = ConflictError | CreateMealTemplatePayload | ForbiddenError | NotFoundError | ValidationError
 
 input CreateMembershipInput {
   canAddItems: Boolean
@@ -1976,7 +1965,7 @@ type CreateRecipeReviewPayload {
   recipeReview: RecipeReview!
 }
 
-union CreateRecipeReviewResult = ConflictError | CreateRecipeReviewPayload | ForbiddenError | NotFoundError | RateLimitError | ValidationError
+union CreateRecipeReviewResult = ConflictError | CreateRecipeReviewPayload | ForbiddenError | NotFoundError | ValidationError
 
 input CreateShoppingListInput {
   budgetAmount: Float
@@ -1997,7 +1986,7 @@ type CreateShoppingListItemFromRecipeIngredientPayload {
   result: AddIngredientResult!
 }
 
-union CreateShoppingListItemFromRecipeIngredientResult = CreateShoppingListItemFromRecipeIngredientPayload | ForbiddenError | NotFoundError | ValidationError
+union CreateShoppingListItemFromRecipeIngredientResult = ConflictError | CreateShoppingListItemFromRecipeIngredientPayload | ForbiddenError | NotFoundError | ValidationError
 
 input CreateShoppingListItemInput {
   brand: BrandReferenceInput
@@ -2027,7 +2016,7 @@ type CreateShoppingListPayload {
   shoppingList: ShoppingList!
 }
 
-union CreateShoppingListResult = ConflictError | CreateShoppingListPayload | ForbiddenError | ValidationError
+union CreateShoppingListResult = ConflictError | CreateShoppingListPayload | ForbiddenError | NotFoundError | ValidationError
 
 """Input for creating a new storage location"""
 input CreateStorageLocationInput {
@@ -2079,7 +2068,7 @@ type CreateStorePayload {
   store: Store!
 }
 
-union CreateStoreResult = ConflictError | CreateStorePayload | ForbiddenError | ValidationError
+union CreateStoreResult = ConflictError | CreateStorePayload | ForbiddenError | NotFoundError | ValidationError
 
 """Input for creating a template from an existing meal plan"""
 input CreateTemplateFromMealPlanInput {
@@ -2113,7 +2102,7 @@ type CreateUnitPayload {
   unit: Unit!
 }
 
-union CreateUnitResult = ConflictError | CreateUnitPayload | ForbiddenError | ValidationError
+union CreateUnitResult = ConflictError | CreateUnitPayload | ForbiddenError | NotFoundError | ValidationError
 
 input CreateUserAddressInput {
   city: String!
@@ -2250,7 +2239,7 @@ type DeclineHomeInvitePayload {
   homeInvite: HomeInvite!
 }
 
-union DeclineHomeInviteResult = ConflictError | DeclineHomeInvitePayload | ForbiddenError | NotFoundError
+union DeclineHomeInviteResult = ConflictError | DeclineHomeInvitePayload | ForbiddenError | NotFoundError | ValidationError
 
 input DeclineShoppingListInviteInput {
   token: String!
@@ -2274,14 +2263,14 @@ type DeleteAccountPayload {
   user: User
 }
 
-union DeleteAccountResult = ConflictError | DeleteAccountPayload | ForbiddenError | NotFoundError
+union DeleteAccountResult = ConflictError | DeleteAccountPayload | ForbiddenError | NotFoundError | ValidationError
 
 type DeleteAllReadNotificationsPayload {
   count: Int!
   notifications: [Notification!]!
 }
 
-union DeleteAllReadNotificationsResult = DeleteAllReadNotificationsPayload | ForbiddenError
+union DeleteAllReadNotificationsResult = ConflictError | DeleteAllReadNotificationsPayload | ForbiddenError | NotFoundError | ValidationError
 
 input DeleteBrandInput {
   id: ID!
@@ -2291,7 +2280,7 @@ type DeleteBrandPayload {
   brand: Brand!
 }
 
-union DeleteBrandResult = ConflictError | DeleteBrandPayload | ForbiddenError | NotFoundError
+union DeleteBrandResult = ConflictError | DeleteBrandPayload | ForbiddenError | NotFoundError | ValidationError
 
 input DeleteCategoryInput {
   id: ID!
@@ -2301,7 +2290,7 @@ type DeleteCategoryPayload {
   category: Category!
 }
 
-union DeleteCategoryResult = ConflictError | DeleteCategoryPayload | ForbiddenError | NotFoundError
+union DeleteCategoryResult = ConflictError | DeleteCategoryPayload | ForbiddenError | NotFoundError | ValidationError
 
 input DeleteCookingLogInput {
   id: ID!
@@ -2312,7 +2301,7 @@ type DeleteCookingLogPayload {
   recipe: Recipe
 }
 
-union DeleteCookingLogResult = DeleteCookingLogPayload | ForbiddenError | NotFoundError
+union DeleteCookingLogResult = ConflictError | DeleteCookingLogPayload | ForbiddenError | NotFoundError | ValidationError
 
 input DeleteCurrencyInput {
   id: ID!
@@ -2322,14 +2311,14 @@ type DeleteCurrencyPayload {
   currency: Currency!
 }
 
-union DeleteCurrencyResult = ConflictError | DeleteCurrencyPayload | ForbiddenError | NotFoundError
+union DeleteCurrencyResult = ConflictError | DeleteCurrencyPayload | ForbiddenError | NotFoundError | ValidationError
 
 type DeleteExpiredNotificationsPayload {
   count: Int!
   notifications: [Notification!]!
 }
 
-union DeleteExpiredNotificationsResult = DeleteExpiredNotificationsPayload | ForbiddenError
+union DeleteExpiredNotificationsResult = ConflictError | DeleteExpiredNotificationsPayload | ForbiddenError | NotFoundError | ValidationError
 
 input DeleteExternalSourceInput {
   id: ID!
@@ -2339,7 +2328,7 @@ type DeleteExternalSourcePayload {
   externalSourceMapping: ExternalSourceMapping!
 }
 
-union DeleteExternalSourceResult = DeleteExternalSourcePayload | ForbiddenError | NotFoundError
+union DeleteExternalSourceResult = ConflictError | DeleteExternalSourcePayload | ForbiddenError | NotFoundError | ValidationError
 
 input DeleteHomeInput {
   id: ID!
@@ -2349,7 +2338,7 @@ type DeleteHomePayload {
   home: Home!
 }
 
-union DeleteHomeResult = ConflictError | DeleteHomePayload | ForbiddenError | NotFoundError
+union DeleteHomeResult = ConflictError | DeleteHomePayload | ForbiddenError | NotFoundError | ValidationError
 
 input DeleteItemInput {
   id: ID!
@@ -2359,7 +2348,7 @@ type DeleteItemPayload {
   item: Item!
 }
 
-union DeleteItemResult = ConflictError | DeleteItemPayload | ForbiddenError | NotFoundError
+union DeleteItemResult = ConflictError | DeleteItemPayload | ForbiddenError | NotFoundError | ValidationError
 
 """Input for deleting an item unit conversion (admin only)"""
 input DeleteItemUnitConversionInput {
@@ -2370,7 +2359,7 @@ type DeleteItemUnitConversionPayload {
   unitConversion: ItemUnitConversion!
 }
 
-union DeleteItemUnitConversionResult = ConflictError | DeleteItemUnitConversionPayload | ForbiddenError | NotFoundError
+union DeleteItemUnitConversionResult = ConflictError | DeleteItemUnitConversionPayload | ForbiddenError | NotFoundError | ValidationError
 
 input DeleteMealPlanInput {
   id: ID!
@@ -2385,14 +2374,14 @@ type DeleteMealPlanItemPayload {
   mealPlanItem: MealPlanItem!
 }
 
-union DeleteMealPlanItemResult = ConflictError | DeleteMealPlanItemPayload | ForbiddenError | NotFoundError
+union DeleteMealPlanItemResult = ConflictError | DeleteMealPlanItemPayload | ForbiddenError | NotFoundError | ValidationError
 
 type DeleteMealPlanPayload {
   home: Home
   mealPlan: MealPlan!
 }
 
-union DeleteMealPlanResult = ConflictError | DeleteMealPlanPayload | ForbiddenError | NotFoundError
+union DeleteMealPlanResult = ConflictError | DeleteMealPlanPayload | ForbiddenError | NotFoundError | ValidationError
 
 input DeleteMealTemplateInput {
   id: ID!
@@ -2403,7 +2392,7 @@ type DeleteMealTemplatePayload {
   mealTemplate: MealTemplate!
 }
 
-union DeleteMealTemplateResult = ConflictError | DeleteMealTemplatePayload | ForbiddenError | NotFoundError
+union DeleteMealTemplateResult = ConflictError | DeleteMealTemplatePayload | ForbiddenError | NotFoundError | ValidationError
 
 input DeleteMultipleNotificationsInput {
   ids: [ID!]!
@@ -2414,7 +2403,7 @@ type DeleteMultipleNotificationsPayload {
   notifications: [Notification!]!
 }
 
-union DeleteMultipleNotificationsResult = DeleteMultipleNotificationsPayload | ForbiddenError | ValidationError
+union DeleteMultipleNotificationsResult = ConflictError | DeleteMultipleNotificationsPayload | ForbiddenError | NotFoundError | ValidationError
 
 input DeleteNotificationInput {
   id: ID!
@@ -2424,7 +2413,7 @@ type DeleteNotificationPayload {
   notification: Notification!
 }
 
-union DeleteNotificationResult = ConflictError | DeleteNotificationPayload | ForbiddenError | NotFoundError
+union DeleteNotificationResult = ConflictError | DeleteNotificationPayload | ForbiddenError | NotFoundError | ValidationError
 
 input DeletePantryInput {
   id: ID!
@@ -2439,14 +2428,14 @@ type DeletePantryItemPayload {
   pantryItem: PantryItem!
 }
 
-union DeletePantryItemResult = ConflictError | DeletePantryItemPayload | ForbiddenError | NotFoundError
+union DeletePantryItemResult = ConflictError | DeletePantryItemPayload | ForbiddenError | NotFoundError | ValidationError
 
 type DeletePantryPayload {
   home: Home
   pantry: Pantry!
 }
 
-union DeletePantryResult = ConflictError | DeletePantryPayload | ForbiddenError | NotFoundError
+union DeletePantryResult = ConflictError | DeletePantryPayload | ForbiddenError | NotFoundError | ValidationError
 
 input DeletePurchaseInput {
   id: ID!
@@ -2457,7 +2446,7 @@ type DeletePurchasePayload {
   store: Store
 }
 
-union DeletePurchaseResult = ConflictError | DeletePurchasePayload | ForbiddenError | NotFoundError
+union DeletePurchaseResult = ConflictError | DeletePurchasePayload | ForbiddenError | NotFoundError | ValidationError
 
 input DeleteRecipeFolderInput {
   folder: String!
@@ -2468,7 +2457,7 @@ type DeleteRecipeFolderPayload {
   success: Boolean!
 }
 
-union DeleteRecipeFolderResult = ConflictError | DeleteRecipeFolderPayload | ForbiddenError | NotFoundError
+union DeleteRecipeFolderResult = ConflictError | DeleteRecipeFolderPayload | ForbiddenError | NotFoundError | ValidationError
 
 input DeleteRecipeInput {
   id: ID!
@@ -2478,7 +2467,7 @@ type DeleteRecipePayload {
   success: Boolean!
 }
 
-union DeleteRecipeResult = ConflictError | DeleteRecipePayload | ForbiddenError | NotFoundError
+union DeleteRecipeResult = ConflictError | DeleteRecipePayload | ForbiddenError | NotFoundError | ValidationError
 
 input DeleteRecipeReviewInput {
   id: ID!
@@ -2489,7 +2478,7 @@ type DeleteRecipeReviewPayload {
   recipeReview: RecipeReview!
 }
 
-union DeleteRecipeReviewResult = DeleteRecipeReviewPayload | ForbiddenError | NotFoundError
+union DeleteRecipeReviewResult = ConflictError | DeleteRecipeReviewPayload | ForbiddenError | NotFoundError | ValidationError
 
 input DeleteShoppingListInput {
   id: ID!
@@ -2499,7 +2488,7 @@ type DeleteShoppingListPayload {
   shoppingList: ShoppingList!
 }
 
-union DeleteShoppingListResult = ConflictError | DeleteShoppingListPayload | ForbiddenError | NotFoundError
+union DeleteShoppingListResult = ConflictError | DeleteShoppingListPayload | ForbiddenError | NotFoundError | ValidationError
 
 input DeleteStorageLocationInput {
   id: ID!
@@ -2520,7 +2509,7 @@ type DeleteStorePayload {
   store: Store!
 }
 
-union DeleteStoreResult = ConflictError | DeleteStorePayload | ForbiddenError | NotFoundError
+union DeleteStoreResult = ConflictError | DeleteStorePayload | ForbiddenError | NotFoundError | ValidationError
 
 input DeleteUnitInput {
   id: ID!
@@ -2530,7 +2519,7 @@ type DeleteUnitPayload {
   unit: Unit!
 }
 
-union DeleteUnitResult = ConflictError | DeleteUnitPayload | ForbiddenError | NotFoundError
+union DeleteUnitResult = ConflictError | DeleteUnitPayload | ForbiddenError | NotFoundError | ValidationError
 
 input DeleteUserAddressInput {
   id: ID!
@@ -2540,7 +2529,7 @@ type DeleteUserAddressPayload {
   userAddress: UserAddress!
 }
 
-union DeleteUserAddressResult = ConflictError | DeleteUserAddressPayload | ForbiddenError | NotFoundError
+union DeleteUserAddressResult = ConflictError | DeleteUserAddressPayload | ForbiddenError | NotFoundError | ValidationError
 
 """Input for deleted device cleanup"""
 input DeletedDeviceCleanupInput {
@@ -2992,7 +2981,7 @@ type DismissExpirationNotificationPayload {
   pantryItem: PantryItem
 }
 
-union DismissExpirationNotificationResult = ConflictError | DismissExpirationNotificationPayload | ForbiddenError | NotFoundError
+union DismissExpirationNotificationResult = ConflictError | DismissExpirationNotificationPayload | ForbiddenError | NotFoundError | ValidationError
 
 input DismissNotificationInput {
   notificationId: ID!
@@ -3364,7 +3353,7 @@ type ForgotPasswordPayload {
   status: ForgotPasswordStatus!
 }
 
-union ForgotPasswordResult = ForgotPasswordPayload | RateLimitError
+union ForgotPasswordResult = ConflictError | ForbiddenError | ForgotPasswordPayload | NotFoundError | ValidationError
 
 type ForgotPasswordStatus {
   code: String!
@@ -3390,7 +3379,7 @@ type GenerateNextRecurringListPayload {
   shoppingList: ShoppingList!
 }
 
-union GenerateNextRecurringListResult = ConflictError | ForbiddenError | GenerateNextRecurringListPayload | NotFoundError
+union GenerateNextRecurringListResult = ConflictError | ForbiddenError | GenerateNextRecurringListPayload | NotFoundError | ValidationError
 
 input GenerateShoppingListFromMealPlanInput {
   """Deduct pantry availability from needed quantities (default true)"""
@@ -3436,7 +3425,7 @@ type HardDeleteDevicePayload {
   success: Boolean!
 }
 
-union HardDeleteDeviceResult = ConflictError | ForbiddenError | HardDeleteDevicePayload | NotFoundError
+union HardDeleteDeviceResult = ConflictError | ForbiddenError | HardDeleteDevicePayload | NotFoundError | ValidationError
 
 """Typed health benefit information (replaces JSON healthBenefits field)"""
 type HealthBenefit {
@@ -3763,7 +3752,7 @@ type IncrementItemPopularityPayload {
   item: Item!
 }
 
-union IncrementItemPopularityResult = ConflictError | ForbiddenError | IncrementItemPopularityPayload | NotFoundError
+union IncrementItemPopularityResult = ConflictError | ForbiddenError | IncrementItemPopularityPayload | NotFoundError | ValidationError
 
 input IncrementRecipeCookedCountInput {
   recipeId: ID!
@@ -3774,7 +3763,7 @@ type IncrementRecipeCookedCountPayload {
   savedRecipe: SavedRecipe!
 }
 
-union IncrementRecipeCookedCountResult = ConflictError | ForbiddenError | IncrementRecipeCookedCountPayload | NotFoundError
+union IncrementRecipeCookedCountResult = ConflictError | ForbiddenError | IncrementRecipeCookedCountPayload | NotFoundError | ValidationError
 
 input IngredientInput {
   isActive: Boolean
@@ -4453,7 +4442,7 @@ type LeaveHomePayload {
   membership: Membership!
 }
 
-union LeaveHomeResult = ConflictError | ForbiddenError | LeaveHomePayload | NotFoundError
+union LeaveHomeResult = ConflictError | ForbiddenError | LeaveHomePayload | NotFoundError | ValidationError
 
 """Comprehensive ledger analytics combining additions and consumption"""
 type LedgerAnalytics {
@@ -4787,7 +4776,7 @@ type MarkAllNotificationsAsReadPayload {
   notifications: [Notification!]!
 }
 
-union MarkAllNotificationsAsReadResult = ForbiddenError | MarkAllNotificationsAsReadPayload
+union MarkAllNotificationsAsReadResult = ConflictError | ForbiddenError | MarkAllNotificationsAsReadPayload | NotFoundError | ValidationError
 
 input MarkAsTemplateInput {
   id: ID!
@@ -4817,7 +4806,7 @@ type MarkExpirationNotificationAsReadPayload {
   pantryItem: PantryItem
 }
 
-union MarkExpirationNotificationAsReadResult = ConflictError | ForbiddenError | MarkExpirationNotificationAsReadPayload | NotFoundError
+union MarkExpirationNotificationAsReadResult = ConflictError | ForbiddenError | MarkExpirationNotificationAsReadPayload | NotFoundError | ValidationError
 
 input MarkNotificationAsReadInput {
   id: ID!
@@ -4827,7 +4816,7 @@ type MarkNotificationAsReadPayload {
   notification: Notification!
 }
 
-union MarkNotificationAsReadResult = ConflictError | ForbiddenError | MarkNotificationAsReadPayload | NotFoundError
+union MarkNotificationAsReadResult = ConflictError | ForbiddenError | MarkNotificationAsReadPayload | NotFoundError | ValidationError
 
 input MarkNotificationUnreadInput {
   id: ID!
@@ -4837,7 +4826,7 @@ type MarkNotificationUnreadPayload {
   notification: Notification!
 }
 
-union MarkNotificationUnreadResult = ConflictError | ForbiddenError | MarkNotificationUnreadPayload | NotFoundError
+union MarkNotificationUnreadResult = ConflictError | ForbiddenError | MarkNotificationUnreadPayload | NotFoundError | ValidationError
 
 input MarkPantryItemExpiredInput {
   id: ID!
@@ -4849,7 +4838,7 @@ type MarkPantryItemExpiredPayload {
   pantryItem: PantryItem!
 }
 
-union MarkPantryItemExpiredResult = ConflictError | ForbiddenError | MarkPantryItemExpiredPayload | NotFoundError
+union MarkPantryItemExpiredResult = ConflictError | ForbiddenError | MarkPantryItemExpiredPayload | NotFoundError | ValidationError
 
 """Input for marking a recipe as cooked"""
 input MarkRecipeAsCookedInput {
@@ -6411,7 +6400,7 @@ type OpenPantryItemPayload {
   pantryItem: PantryItem!
 }
 
-union OpenPantryItemResult = ConflictError | ForbiddenError | NotFoundError | OpenPantryItemPayload
+union OpenPantryItemResult = ConflictError | ForbiddenError | NotFoundError | OpenPantryItemPayload | ValidationError
 
 type OperatingSystemStat {
   count: Int!
@@ -7599,16 +7588,6 @@ type RapidAttempt {
 }
 
 """
-Caller has exceeded a rate limit. `retryAfter` is the suggested wait
-in seconds before retrying, when known.
-"""
-type RateLimitError implements Error {
-  code: ErrorCode!
-  message: String!
-  retryAfter: Int
-}
-
-"""
 Recipe type for meal instructions and ingredients
 Cache: 30 minutes - published recipes are static content
 """
@@ -8041,7 +8020,7 @@ type RemoveItemFromShoppingListPayload {
   shoppingListItem: ShoppingListItem!
 }
 
-union RemoveItemFromShoppingListResult = ConflictError | ForbiddenError | NotFoundError | RemoveItemFromShoppingListPayload
+union RemoveItemFromShoppingListResult = ConflictError | ForbiddenError | NotFoundError | RemoveItemFromShoppingListPayload | ValidationError
 
 input RemoveItemImageInput {
   id: ID!
@@ -8051,7 +8030,7 @@ type RemoveItemImagePayload {
   item: Item!
 }
 
-union RemoveItemImageResult = ConflictError | ForbiddenError | NotFoundError | RemoveItemImagePayload
+union RemoveItemImageResult = ConflictError | ForbiddenError | NotFoundError | RemoveItemImagePayload | ValidationError
 
 input RemoveMemberInput {
   membershipId: ID!
@@ -8062,7 +8041,7 @@ type RemoveMemberPayload {
   membership: Membership!
 }
 
-union RemoveMemberResult = ConflictError | ForbiddenError | NotFoundError | RemoveMemberPayload
+union RemoveMemberResult = ConflictError | ForbiddenError | NotFoundError | RemoveMemberPayload | ValidationError
 
 input RemoveRestrictionInput {
   id: ID!
@@ -8073,7 +8052,7 @@ type RemoveRestrictionPayload {
   dietaryRestriction: DietaryRestriction!
 }
 
-union RemoveRestrictionResult = ConflictError | ForbiddenError | NotFoundError | RemoveRestrictionPayload
+union RemoveRestrictionResult = ConflictError | ForbiddenError | NotFoundError | RemoveRestrictionPayload | ValidationError
 
 input RemoveRestrictionsInput {
   restrictions: [ModerationRestriction!]!
@@ -8089,7 +8068,7 @@ type RemoveShoppingListCollaboratorPayload {
   shoppingList: ShoppingList
 }
 
-union RemoveShoppingListCollaboratorResult = ConflictError | ForbiddenError | NotFoundError | RemoveShoppingListCollaboratorPayload
+union RemoveShoppingListCollaboratorResult = ConflictError | ForbiddenError | NotFoundError | RemoveShoppingListCollaboratorPayload | ValidationError
 
 input RemoveTemplateItemInput {
   id: ID!
@@ -8100,7 +8079,7 @@ type RemoveTemplateItemPayload {
   mealTemplateItem: MealTemplateItem!
 }
 
-union RemoveTemplateItemResult = ConflictError | ForbiddenError | NotFoundError | RemoveTemplateItemPayload
+union RemoveTemplateItemResult = ConflictError | ForbiddenError | NotFoundError | RemoveTemplateItemPayload | ValidationError
 
 input RemoveUnitConversionInput {
   unitId: ID!
@@ -8110,7 +8089,7 @@ type RemoveUnitConversionPayload {
   unit: Unit!
 }
 
-union RemoveUnitConversionResult = ForbiddenError | NotFoundError | RemoveUnitConversionPayload
+union RemoveUnitConversionResult = ConflictError | ForbiddenError | NotFoundError | RemoveUnitConversionPayload | ValidationError
 
 """
 Input for reordering multiple storage locations
@@ -8128,7 +8107,7 @@ type ReorderStorageLocationsPayload {
   storageLocation: StorageLocation!
 }
 
-union ReorderStorageLocationsResult = ForbiddenError | NotFoundError | ReorderStorageLocationsPayload | ValidationError
+union ReorderStorageLocationsResult = ConflictError | ForbiddenError | NotFoundError | ReorderStorageLocationsPayload | ValidationError
 
 input ResendVerificationEmailInput {
   email: String!
@@ -8138,7 +8117,7 @@ type ResendVerificationEmailPayload {
   user: User
 }
 
-union ResendVerificationEmailResult = AuthError | ConflictError | ForbiddenError | ResendVerificationEmailPayload | ValidationError
+union ResendVerificationEmailResult = ConflictError | ForbiddenError | NotFoundError | ResendVerificationEmailPayload | ValidationError
 
 input ResetPasswordInput {
   password: String!
@@ -8198,7 +8177,7 @@ type RestoreItemPayload {
   item: Item!
 }
 
-union RestoreItemResult = ConflictError | ForbiddenError | NotFoundError | RestoreItemPayload
+union RestoreItemResult = ConflictError | ForbiddenError | NotFoundError | RestoreItemPayload | ValidationError
 
 enum RestrictionSeverity {
   ALLERGY
@@ -8229,7 +8208,7 @@ type RevokeHomeInvitePayload {
   homeInvite: HomeInvite!
 }
 
-union RevokeHomeInviteResult = ConflictError | ForbiddenError | NotFoundError | RevokeHomeInvitePayload
+union RevokeHomeInviteResult = ConflictError | ForbiddenError | NotFoundError | RevokeHomeInvitePayload | ValidationError
 
 """Sub-input for risk assessment data"""
 input RiskAssessmentInput {
@@ -8359,7 +8338,7 @@ type SetDefaultPantryPayload {
   pantry: Pantry!
 }
 
-union SetDefaultPantryResult = ForbiddenError | NotFoundError | SetDefaultPantryPayload
+union SetDefaultPantryResult = ConflictError | ForbiddenError | NotFoundError | SetDefaultPantryPayload | ValidationError
 
 input SetDefaultShoppingListInput {
   id: ID!
@@ -8369,7 +8348,7 @@ type SetDefaultShoppingListPayload {
   shoppingList: ShoppingList!
 }
 
-union SetDefaultShoppingListResult = ConflictError | ForbiddenError | NotFoundError | SetDefaultShoppingListPayload
+union SetDefaultShoppingListResult = ConflictError | ForbiddenError | NotFoundError | SetDefaultShoppingListPayload | ValidationError
 
 input SetDefaultStorageLocationInput {
   id: ID!
@@ -8380,7 +8359,7 @@ type SetDefaultStorageLocationPayload {
   storageLocation: StorageLocation!
 }
 
-union SetDefaultStorageLocationResult = ForbiddenError | NotFoundError | SetDefaultStorageLocationPayload
+union SetDefaultStorageLocationResult = ConflictError | ForbiddenError | NotFoundError | SetDefaultStorageLocationPayload | ValidationError
 
 input SetReminderInput {
   id: ID!
@@ -8417,7 +8396,7 @@ type SetupUnitConversionPayload {
   unit: Unit!
 }
 
-union SetupUnitConversionResult = ForbiddenError | NotFoundError | SetupUnitConversionPayload | ValidationError
+union SetupUnitConversionResult = ConflictError | ForbiddenError | NotFoundError | SetupUnitConversionPayload | ValidationError
 
 input ShareShoppingListInput {
   id: ID!
@@ -9632,7 +9611,7 @@ type ToggleReviewHelpfulPayload {
   reviewHelpful: ReviewHelpful!
 }
 
-union ToggleReviewHelpfulResult = ForbiddenError | NotFoundError | ToggleReviewHelpfulPayload | ValidationError
+union ToggleReviewHelpfulResult = ConflictError | ForbiddenError | NotFoundError | ToggleReviewHelpfulPayload | ValidationError
 
 """Input for toggling the purchased state of a shopping list item"""
 input ToggleShoppingListItemPurchasedInput {
@@ -9685,7 +9664,7 @@ type UncategorizeItemPayload {
   itemCategory: ItemCategory!
 }
 
-union UncategorizeItemResult = ForbiddenError | NotFoundError | UncategorizeItemPayload
+union UncategorizeItemResult = ConflictError | ForbiddenError | NotFoundError | UncategorizeItemPayload | ValidationError
 
 input UncompleteShoppingListInput {
   id: ID!
@@ -9695,7 +9674,7 @@ type UncompleteShoppingListPayload {
   shoppingList: ShoppingList!
 }
 
-union UncompleteShoppingListResult = ConflictError | ForbiddenError | NotFoundError | UncompleteShoppingListPayload
+union UncompleteShoppingListResult = ConflictError | ForbiddenError | NotFoundError | UncompleteShoppingListPayload | ValidationError
 
 input UnfavoriteRecipeInput {
   recipeId: ID!
@@ -9706,7 +9685,7 @@ type UnfavoriteRecipePayload {
   savedRecipe: SavedRecipe!
 }
 
-union UnfavoriteRecipeResult = ConflictError | ForbiddenError | NotFoundError | UnfavoriteRecipePayload
+union UnfavoriteRecipeResult = ConflictError | ForbiddenError | NotFoundError | UnfavoriteRecipePayload | ValidationError
 
 """
 Unit of measurement type
@@ -11214,7 +11193,7 @@ type VerifyEmailPayload {
   user: User!
 }
 
-union VerifyEmailResult = AuthError | ConflictError | ForbiddenError | NotFoundError | ValidationError | VerifyEmailPayload
+union VerifyEmailResult = ConflictError | ForbiddenError | NotFoundError | ValidationError | VerifyEmailPayload
 
 """Input for verifying an item unit conversion (admin only)"""
 input VerifyItemUnitConversionInput {
@@ -11227,7 +11206,7 @@ type VerifyItemUnitConversionPayload {
   unitConversion: ItemUnitConversion!
 }
 
-union VerifyItemUnitConversionResult = ConflictError | ForbiddenError | NotFoundError | VerifyItemUnitConversionPayload
+union VerifyItemUnitConversionResult = ConflictError | ForbiddenError | NotFoundError | ValidationError | VerifyItemUnitConversionPayload
 
 input VerifyUserEmailInput {
   id: ID!
@@ -11237,7 +11216,7 @@ type VerifyUserEmailPayload {
   user: User!
 }
 
-union VerifyUserEmailResult = ConflictError | ForbiddenError | NotFoundError | VerifyUserEmailPayload
+union VerifyUserEmailResult = ConflictError | ForbiddenError | NotFoundError | ValidationError | VerifyUserEmailPayload
 
 enum Visibility {
   PRIVATE

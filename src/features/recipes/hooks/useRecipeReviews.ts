@@ -14,6 +14,10 @@ import { type MaterializedRecipe } from './useRecipeData';
 import { useUser } from '#store/useAppStore';
 import { toastService } from '#/services/toastService';
 import {
+  getRateLimitMessage,
+  isRateLimitError,
+} from '#/utils/errors/rateLimit';
+import {
   addReviewToRecipe,
   changeReviewRating,
   getReviewRating,
@@ -168,6 +172,12 @@ export function useRecipeReviews({
     const payload = result.data?.createRecipeReview;
     if (payload?.__typename === 'CreateRecipeReviewPayload') {
       toastService.success('Review submitted');
+      return;
+    }
+    // Rate-limit now arrives as a top-level GraphQL error, not a RateLimitError
+    // union variant.
+    if (isRateLimitError(result.error)) {
+      toastService.error(getRateLimitMessage(result.error));
       return;
     }
     const message = payload && 'message' in payload ? payload.message : null;

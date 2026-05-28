@@ -15,6 +15,7 @@ import {
 import { logger } from '#/utils/environment';
 import { useToast } from '#/hooks/useToast';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
+import { getTopLevelGraphQLError } from '#/utils/errors/graphqlErrors';
 import { errorService } from '#/services/errorService';
 import { SousChefLoader } from '#/components/base/SousChefLoader';
 import { Text } from '#components/atoms/Text';
@@ -73,13 +74,18 @@ async function performVerificationImpl(
           message: 'Email verified successfully!',
           type: 'success',
         });
-      } else if (payload?.__typename === 'AuthError') {
-        const message = errorService.getUserFriendlyMessage(
-          payload.code,
-          payload.message,
-        );
-        throw new Error(message);
       } else {
+        // Auth failures now arrive as top-level GraphQL errors, not an
+        // AuthError union variant.
+        const topLevelError = getTopLevelGraphQLError(result.error);
+        if (topLevelError) {
+          throw new Error(
+            errorService.getUserFriendlyMessage(
+              topLevelError.code,
+              topLevelError.message,
+            ),
+          );
+        }
         const message =
           payload && 'message' in payload ? payload.message : null;
         throw new Error(message ?? 'Verification failed');

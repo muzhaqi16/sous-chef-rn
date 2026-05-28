@@ -20,8 +20,14 @@ interface GraphQLErrorLike {
 
 interface ApolloErrorLike {
   graphQLErrors?: GraphQLErrorLike[];
+  // Apollo Client 4 surfaces top-level GraphQL errors as `CombinedGraphQLErrors.errors`.
+  errors?: GraphQLErrorLike[];
   extensions?: { code?: string; retryAfter?: number };
   message?: string;
+}
+
+function graphQLErrorsOf(err: ApolloErrorLike): GraphQLErrorLike[] | undefined {
+  return err.graphQLErrors ?? err.errors;
 }
 
 function toErrorObject(error: unknown): ApolloErrorLike | null {
@@ -33,8 +39,9 @@ export function isRateLimitError(error: unknown): boolean {
   const err = toErrorObject(error);
   if (!err) return false;
 
-  if (err.graphQLErrors) {
-    return err.graphQLErrors.some(gqlErr =>
+  const graphQLErrors = graphQLErrorsOf(err);
+  if (graphQLErrors) {
+    return graphQLErrors.some(gqlErr =>
       RATE_LIMIT_CODES.includes(gqlErr.extensions?.code ?? ''),
     );
   }
@@ -52,8 +59,9 @@ export function getRateLimitDetails(error: unknown): RateLimitDetails | null {
 
   let rateLimitError: GraphQLErrorLike | undefined;
 
-  if (err.graphQLErrors) {
-    rateLimitError = err.graphQLErrors.find(gqlErr =>
+  const graphQLErrors = graphQLErrorsOf(err);
+  if (graphQLErrors) {
+    rateLimitError = graphQLErrors.find(gqlErr =>
       RATE_LIMIT_CODES.includes(gqlErr.extensions?.code ?? ''),
     );
   } else if (RATE_LIMIT_CODES.includes(err.extensions?.code ?? '')) {

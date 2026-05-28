@@ -17,6 +17,7 @@ import { errorService } from '#/services/errorService';
 import { logger } from '#/utils/environment';
 import { logValidationErrors } from '#/utils/validation/common';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
+import { getTopLevelGraphQLError } from '#/utils/errors/graphqlErrors';
 import type { ToastFn } from '#/components/atoms/Toast';
 import { SousChefLoader } from '#/components/base/SousChefLoader';
 
@@ -192,12 +193,19 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
         const payload = response.data?.verifyEmail;
         if (payload?.__typename === 'VerifyEmailPayload') {
           updateUser({ emailVerified: true });
-        } else if (payload?.__typename === 'AuthError') {
-          const message = errorService.getUserFriendlyMessage(
-            payload.code,
-            payload.message,
-          );
-          toast({ message, type: 'error' });
+          return;
+        }
+        // Auth failures now arrive as top-level GraphQL errors, not an
+        // AuthError union variant.
+        const topLevelError = getTopLevelGraphQLError(response.error);
+        if (topLevelError) {
+          toast({
+            message: errorService.getUserFriendlyMessage(
+              topLevelError.code,
+              topLevelError.message,
+            ),
+            type: 'error',
+          });
         } else if (payload) {
           const message =
             'message' in payload ? payload.message : 'Verification failed';

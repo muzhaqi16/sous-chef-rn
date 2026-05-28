@@ -6,6 +6,8 @@
  * from server-rejected domain errors (GraphQLDomainError).
  */
 
+import { CombinedGraphQLErrors } from '@apollo/client/errors';
+
 export class GraphQLDomainError extends Error {
   override readonly name = 'GraphQLDomainError';
   readonly __typename: string;
@@ -31,4 +33,25 @@ export class GraphQLNetworkError extends Error {
   constructor(fallbackMessage: string) {
     super(fallbackMessage);
   }
+}
+
+export interface TopLevelGraphQLError {
+  code: string;
+  message: string;
+}
+
+/** Reads the first top-level GraphQL error's code + message from an Apollo
+ *  mutation/query `result.error` (Apollo 4 `CombinedGraphQLErrors`). Returns
+ *  null when the error isn't a GraphQL error (e.g. a network error). */
+export function getTopLevelGraphQLError(
+  error: unknown,
+): TopLevelGraphQLError | null {
+  if (!CombinedGraphQLErrors.is(error) || error.errors.length === 0) {
+    return null;
+  }
+  const first = error.errors[0];
+  return {
+    code: String(first.extensions?.code ?? ''),
+    message: String(first.message ?? ''),
+  };
 }

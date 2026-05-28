@@ -111,7 +111,7 @@ export type AddLowStockItemsToShoppingListPayload = {
   result: LowStockToShoppingListResult;
 };
 
-export type AddLowStockItemsToShoppingListResult = AddLowStockItemsToShoppingListPayload | ForbiddenError | NotFoundError | ValidationError;
+export type AddLowStockItemsToShoppingListResult = AddLowStockItemsToShoppingListPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 export type AddPantryItemToShoppingListInput = {
   pantryItemId: Scalars['ID']['input'];
@@ -129,7 +129,7 @@ export type AddPantryItemToShoppingListResult = {
   shoppingListItemId: Scalars['ID']['output'];
 };
 
-export type AddPantryItemToShoppingListResultUnion = AddPantryItemToShoppingListPayload | ForbiddenError | NotFoundError | ValidationError;
+export type AddPantryItemToShoppingListResultUnion = AddPantryItemToShoppingListPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 /** Input for adding recipe ingredients to a shopping list */
 export type AddRecipeToShoppingListInput = {
@@ -203,7 +203,7 @@ export type AddUserAddressPayload = {
   userAddress: UserAddress;
 };
 
-export type AddUserAddressResult = AddUserAddressPayload | ConflictError | ForbiddenError | ValidationError;
+export type AddUserAddressResult = AddUserAddressPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 export type AddWarningInput = {
   reason: Scalars['String']['input'];
@@ -279,7 +279,7 @@ export type AdminBulkDeleteItemsPayload = {
   result: BulkOperationSummary;
 };
 
-export type AdminBulkDeleteItemsResult = AdminBulkDeleteItemsPayload | ForbiddenError | NotFoundError | ValidationError;
+export type AdminBulkDeleteItemsResult = AdminBulkDeleteItemsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 /**
  * Input for batch deleting images from S3/MinIO storage.
@@ -310,7 +310,7 @@ export type AdminDeleteItemPayload = {
   item: Maybe<Item>;
 };
 
-export type AdminDeleteItemResult = AdminDeleteItemPayload | ConflictError | ForbiddenError | NotFoundError;
+export type AdminDeleteItemResult = AdminDeleteItemPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 export type AdminDeleteRecipeInput = {
   id: Scalars['ID']['input'];
@@ -322,7 +322,7 @@ export type AdminDeleteRecipePayload = {
   recipe: Maybe<Recipe>;
 };
 
-export type AdminDeleteRecipeResult = AdminDeleteRecipePayload | ConflictError | ForbiddenError | NotFoundError;
+export type AdminDeleteRecipeResult = AdminDeleteRecipePayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 export type AdminDeleteRecipeReviewInput = {
   id: Scalars['ID']['input'];
@@ -333,7 +333,7 @@ export type AdminDeleteRecipeReviewPayload = {
   recipeReview: RecipeReview;
 };
 
-export type AdminDeleteRecipeReviewResult = AdminDeleteRecipeReviewPayload | ConflictError | ForbiddenError | NotFoundError;
+export type AdminDeleteRecipeReviewResult = AdminDeleteRecipeReviewPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 export type AdminDeleteUserInput = {
   /** If true, permanently deletes the user (SuperAdmin only) */
@@ -346,7 +346,7 @@ export type AdminDeleteUserPayload = {
   user: Maybe<User>;
 };
 
-export type AdminDeleteUserResult = AdminDeleteUserPayload | ConflictError | ForbiddenError | NotFoundError;
+export type AdminDeleteUserResult = AdminDeleteUserPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 /** Paginated result for admin item unit conversion listing */
 export type AdminItemUnitConversionsResult = {
@@ -443,7 +443,7 @@ export type ApproveItemPayload = {
   item: Item;
 };
 
-export type ApproveItemResult = ApproveItemPayload | ConflictError | ForbiddenError | NotFoundError;
+export type ApproveItemResult = ApproveItemPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 export type ArchiveShoppingListInput = {
   id: Scalars['ID']['input'];
@@ -454,7 +454,7 @@ export type ArchiveShoppingListPayload = {
   shoppingList: ShoppingList;
 };
 
-export type ArchiveShoppingListResult = ArchiveShoppingListPayload | ConflictError | ForbiddenError | NotFoundError;
+export type ArchiveShoppingListResult = ArchiveShoppingListPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 /** Sub-input for attribution data */
 export type AttributionInput = {
@@ -462,18 +462,6 @@ export type AttributionInput = {
   landingPage?: InputMaybe<Scalars['String']['input']>;
   referrer?: InputMaybe<Scalars['String']['input']>;
   source?: InputMaybe<Scalars['String']['input']>;
-};
-
-/**
- * Authentication failure surfaced as a result-union variant (for mutations
- * that opt into structured auth errors instead of top-level GraphQL errors).
- * Disambiguate via `code` (e.g. `AUTH_TOKEN_MISSING`, `AUTH_TOKEN_EXPIRED`,
- * `AUTH_CREDENTIALS_INVALID`, `AUTH_ACCOUNT_LOCKED`).
- */
-export type AuthError = Error & {
-  __typename: 'AuthError';
-  code: ErrorCode;
-  message: Scalars['String']['output'];
 };
 
 /** Authentication response containing tokens - NEVER cache */
@@ -764,7 +752,7 @@ export type BulkCreateItemsResponse = {
   updated: Array<Item>;
 };
 
-export type BulkCreateItemsResult = BulkCreateItemsPayload | ForbiddenError | NotFoundError | ValidationError;
+export type BulkCreateItemsResult = BulkCreateItemsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 export type BulkCreatePurchasesInput = {
   purchases: Array<CreatePurchaseInput>;
@@ -788,7 +776,7 @@ export type BulkCreateStoresPayload = {
   stores: Array<Store>;
 };
 
-export type BulkCreateStoresResult = BulkCreateStoresPayload | ConflictError | ForbiddenError | ValidationError;
+export type BulkCreateStoresResult = BulkCreateStoresPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 export type BulkDeleteItemsInput = {
   ids: Array<Scalars['ID']['input']>;
@@ -799,7 +787,7 @@ export type BulkDeleteItemsPayload = {
   result: BulkOperationSummary;
 };
 
-export type BulkDeleteItemsResult = BulkDeleteItemsPayload | ForbiddenError | NotFoundError | ValidationError;
+export type BulkDeleteItemsResult = BulkDeleteItemsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 export type BulkDeletePurchasesInput = {
   purchaseIds: Array<Scalars['ID']['input']>;
@@ -811,7 +799,7 @@ export type BulkDeletePurchasesPayload = {
   purchases: Array<Purchase>;
 };
 
-export type BulkDeletePurchasesResult = BulkDeletePurchasesPayload | ConflictError | ForbiddenError | NotFoundError;
+export type BulkDeletePurchasesResult = BulkDeletePurchasesPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 /** Error detail for bulk device operations */
 export type BulkDeviceError = {
@@ -889,7 +877,7 @@ export type BulkUpdateDevicesPayload = {
   result: BulkDeviceResult;
 };
 
-export type BulkUpdateDevicesResult = BulkUpdateDevicesPayload | ForbiddenError | NotFoundError | ValidationError;
+export type BulkUpdateDevicesResult = BulkUpdateDevicesPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 /**
  * Fields to apply to all items in a bulk update.
@@ -931,7 +919,7 @@ export type BulkUpdateItemsPayload = {
   result: BulkOperationSummary;
 };
 
-export type BulkUpdateItemsResult = BulkUpdateItemsPayload | ForbiddenError | NotFoundError | ValidationError;
+export type BulkUpdateItemsResult = BulkUpdateItemsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 export type BulkUpdateLoginHistoriesInput = {
   ids: Array<Scalars['ID']['input']>;
@@ -975,7 +963,7 @@ export type CancelRecurringPayload = {
   shoppingList: ShoppingList;
 };
 
-export type CancelRecurringResult = CancelRecurringPayload | ConflictError | ForbiddenError | NotFoundError;
+export type CancelRecurringResult = CancelRecurringPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 /** Input for categorizing an item */
 export type CategorizeItemInput = {
@@ -1120,7 +1108,7 @@ export type CleanupDevicesPayload = {
   result: DeviceCleanupResult;
 };
 
-export type CleanupDevicesResult = CleanupDevicesPayload | ForbiddenError | NotFoundError | ValidationError;
+export type CleanupDevicesResult = CleanupDevicesPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 /** Response for clearing items from a shopping list */
 export type ClearItemsResponse = {
@@ -1140,7 +1128,7 @@ export type ClearReminderPayload = {
   shoppingList: ShoppingList;
 };
 
-export type ClearReminderResult = ClearReminderPayload | ConflictError | ForbiddenError | NotFoundError;
+export type ClearReminderResult = ClearReminderPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 export type ClearShoppingListItemsInput = {
   purchased: Scalars['Boolean']['input'];
@@ -1201,7 +1189,7 @@ export type CompleteOnboardingPayload = {
   user: User;
 };
 
-export type CompleteOnboardingResult = CompleteOnboardingPayload | ConflictError | ForbiddenError | NotFoundError;
+export type CompleteOnboardingResult = CompleteOnboardingPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 export type CompleteShoppingListInput = {
   completedShopDate?: InputMaybe<Scalars['DateTime']['input']>;
@@ -1363,7 +1351,7 @@ export type ConvertExpiredBatchesToWastePayload = {
   pantryItem: PantryItem;
 };
 
-export type ConvertExpiredBatchesToWasteResult = ConflictError | ConvertExpiredBatchesToWastePayload | ForbiddenError | NotFoundError;
+export type ConvertExpiredBatchesToWasteResult = ConflictError | ConvertExpiredBatchesToWastePayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type ConvertExpiredToWasteInput = {
   pantryItemId: Scalars['ID']['input'];
@@ -1375,7 +1363,7 @@ export type ConvertExpiredToWastePayload = {
   pantryItem: PantryItem;
 };
 
-export type ConvertExpiredToWasteResult = ConflictError | ConvertExpiredToWastePayload | ForbiddenError | NotFoundError;
+export type ConvertExpiredToWasteResult = ConflictError | ConvertExpiredToWastePayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type ConvertedUnitValue = {
   __typename: 'ConvertedUnitValue';
@@ -1489,7 +1477,7 @@ export type CreateBrandPayload = {
   brand: Brand;
 };
 
-export type CreateBrandResult = ConflictError | CreateBrandPayload | ForbiddenError | ValidationError;
+export type CreateBrandResult = ConflictError | CreateBrandPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type CreateCategoryInput = {
   color?: InputMaybe<Scalars['String']['input']>;
@@ -1507,7 +1495,7 @@ export type CreateCategoryPayload = {
   category: Category;
 };
 
-export type CreateCategoryResult = ConflictError | CreateCategoryPayload | ForbiddenError | ValidationError;
+export type CreateCategoryResult = ConflictError | CreateCategoryPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type CreateCookingLogInput = {
   actualCookTime?: InputMaybe<Scalars['Int']['input']>;
@@ -1528,7 +1516,7 @@ export type CreateCookingLogPayload = {
   recipe: Maybe<Recipe>;
 };
 
-export type CreateCookingLogResult = CreateCookingLogPayload | ForbiddenError | NotFoundError | ValidationError;
+export type CreateCookingLogResult = ConflictError | CreateCookingLogPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type CreateCurrencyInput = {
   code: Scalars['String']['input'];
@@ -1542,7 +1530,7 @@ export type CreateCurrencyPayload = {
   currency: Currency;
 };
 
-export type CreateCurrencyResult = ConflictError | CreateCurrencyPayload | ForbiddenError | ValidationError;
+export type CreateCurrencyResult = ConflictError | CreateCurrencyPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type CreateDeviceInput = {
   appVersion?: InputMaybe<Scalars['String']['input']>;
@@ -1592,7 +1580,7 @@ export type CreateHomePayload = {
   home: Home;
 };
 
-export type CreateHomeResult = ConflictError | CreateHomePayload | ForbiddenError | ValidationError;
+export type CreateHomeResult = ConflictError | CreateHomePayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type CreateImageUploadUrlInput = {
   itemId?: InputMaybe<Scalars['ID']['input']>;
@@ -1720,7 +1708,7 @@ export type CreateMealTemplatePayload = {
   mealTemplate: MealTemplate;
 };
 
-export type CreateMealTemplateResult = ConflictError | CreateMealTemplatePayload | ForbiddenError | ValidationError;
+export type CreateMealTemplateResult = ConflictError | CreateMealTemplatePayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type CreateMembershipInput = {
   canAddItems?: InputMaybe<Scalars['Boolean']['input']>;
@@ -1923,7 +1911,7 @@ export type CreateRecipeReviewPayload = {
   recipeReview: RecipeReview;
 };
 
-export type CreateRecipeReviewResult = ConflictError | CreateRecipeReviewPayload | ForbiddenError | NotFoundError | RateLimitError | ValidationError;
+export type CreateRecipeReviewResult = ConflictError | CreateRecipeReviewPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type CreateShoppingListInput = {
   budgetAmount?: InputMaybe<Scalars['Float']['input']>;
@@ -1945,7 +1933,7 @@ export type CreateShoppingListItemFromRecipeIngredientPayload = {
   result: AddIngredientResult;
 };
 
-export type CreateShoppingListItemFromRecipeIngredientResult = CreateShoppingListItemFromRecipeIngredientPayload | ForbiddenError | NotFoundError | ValidationError;
+export type CreateShoppingListItemFromRecipeIngredientResult = ConflictError | CreateShoppingListItemFromRecipeIngredientPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type CreateShoppingListItemInput = {
   brand?: InputMaybe<BrandReferenceInput>;
@@ -1976,7 +1964,7 @@ export type CreateShoppingListPayload = {
   shoppingList: ShoppingList;
 };
 
-export type CreateShoppingListResult = ConflictError | CreateShoppingListPayload | ForbiddenError | ValidationError;
+export type CreateShoppingListResult = ConflictError | CreateShoppingListPayload | ForbiddenError | NotFoundError | ValidationError;
 
 /** Input for creating a new storage location */
 export type CreateStorageLocationInput = {
@@ -2030,7 +2018,7 @@ export type CreateStorePayload = {
   store: Store;
 };
 
-export type CreateStoreResult = ConflictError | CreateStorePayload | ForbiddenError | ValidationError;
+export type CreateStoreResult = ConflictError | CreateStorePayload | ForbiddenError | NotFoundError | ValidationError;
 
 /** Input for creating a template from an existing meal plan */
 export type CreateTemplateFromMealPlanInput = {
@@ -2066,7 +2054,7 @@ export type CreateUnitPayload = {
   unit: Unit;
 };
 
-export type CreateUnitResult = ConflictError | CreateUnitPayload | ForbiddenError | ValidationError;
+export type CreateUnitResult = ConflictError | CreateUnitPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type CreateUserAddressInput = {
   city: Scalars['String']['input'];
@@ -2200,7 +2188,7 @@ export type DeclineHomeInvitePayload = {
   homeInvite: HomeInvite;
 };
 
-export type DeclineHomeInviteResult = ConflictError | DeclineHomeInvitePayload | ForbiddenError | NotFoundError;
+export type DeclineHomeInviteResult = ConflictError | DeclineHomeInvitePayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeclineShoppingListInviteInput = {
   token: Scalars['String']['input'];
@@ -2226,7 +2214,7 @@ export type DeleteAccountPayload = {
   user: Maybe<User>;
 };
 
-export type DeleteAccountResult = ConflictError | DeleteAccountPayload | ForbiddenError | NotFoundError;
+export type DeleteAccountResult = ConflictError | DeleteAccountPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteAllReadNotificationsPayload = {
   __typename: 'DeleteAllReadNotificationsPayload';
@@ -2234,7 +2222,7 @@ export type DeleteAllReadNotificationsPayload = {
   notifications: Array<Notification>;
 };
 
-export type DeleteAllReadNotificationsResult = DeleteAllReadNotificationsPayload | ForbiddenError;
+export type DeleteAllReadNotificationsResult = ConflictError | DeleteAllReadNotificationsPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteBrandInput = {
   id: Scalars['ID']['input'];
@@ -2245,7 +2233,7 @@ export type DeleteBrandPayload = {
   brand: Brand;
 };
 
-export type DeleteBrandResult = ConflictError | DeleteBrandPayload | ForbiddenError | NotFoundError;
+export type DeleteBrandResult = ConflictError | DeleteBrandPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteCategoryInput = {
   id: Scalars['ID']['input'];
@@ -2256,7 +2244,7 @@ export type DeleteCategoryPayload = {
   category: Category;
 };
 
-export type DeleteCategoryResult = ConflictError | DeleteCategoryPayload | ForbiddenError | NotFoundError;
+export type DeleteCategoryResult = ConflictError | DeleteCategoryPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteCookingLogInput = {
   id: Scalars['ID']['input'];
@@ -2268,7 +2256,7 @@ export type DeleteCookingLogPayload = {
   recipe: Maybe<Recipe>;
 };
 
-export type DeleteCookingLogResult = DeleteCookingLogPayload | ForbiddenError | NotFoundError;
+export type DeleteCookingLogResult = ConflictError | DeleteCookingLogPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteCurrencyInput = {
   id: Scalars['ID']['input'];
@@ -2279,7 +2267,7 @@ export type DeleteCurrencyPayload = {
   currency: Currency;
 };
 
-export type DeleteCurrencyResult = ConflictError | DeleteCurrencyPayload | ForbiddenError | NotFoundError;
+export type DeleteCurrencyResult = ConflictError | DeleteCurrencyPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteExpiredNotificationsPayload = {
   __typename: 'DeleteExpiredNotificationsPayload';
@@ -2287,7 +2275,7 @@ export type DeleteExpiredNotificationsPayload = {
   notifications: Array<Notification>;
 };
 
-export type DeleteExpiredNotificationsResult = DeleteExpiredNotificationsPayload | ForbiddenError;
+export type DeleteExpiredNotificationsResult = ConflictError | DeleteExpiredNotificationsPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteExternalSourceInput = {
   id: Scalars['ID']['input'];
@@ -2298,7 +2286,7 @@ export type DeleteExternalSourcePayload = {
   externalSourceMapping: ExternalSourceMapping;
 };
 
-export type DeleteExternalSourceResult = DeleteExternalSourcePayload | ForbiddenError | NotFoundError;
+export type DeleteExternalSourceResult = ConflictError | DeleteExternalSourcePayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteHomeInput = {
   id: Scalars['ID']['input'];
@@ -2309,7 +2297,7 @@ export type DeleteHomePayload = {
   home: Home;
 };
 
-export type DeleteHomeResult = ConflictError | DeleteHomePayload | ForbiddenError | NotFoundError;
+export type DeleteHomeResult = ConflictError | DeleteHomePayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteItemInput = {
   id: Scalars['ID']['input'];
@@ -2320,7 +2308,7 @@ export type DeleteItemPayload = {
   item: Item;
 };
 
-export type DeleteItemResult = ConflictError | DeleteItemPayload | ForbiddenError | NotFoundError;
+export type DeleteItemResult = ConflictError | DeleteItemPayload | ForbiddenError | NotFoundError | ValidationError;
 
 /** Input for deleting an item unit conversion (admin only) */
 export type DeleteItemUnitConversionInput = {
@@ -2332,7 +2320,7 @@ export type DeleteItemUnitConversionPayload = {
   unitConversion: ItemUnitConversion;
 };
 
-export type DeleteItemUnitConversionResult = ConflictError | DeleteItemUnitConversionPayload | ForbiddenError | NotFoundError;
+export type DeleteItemUnitConversionResult = ConflictError | DeleteItemUnitConversionPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteMealPlanInput = {
   id: Scalars['ID']['input'];
@@ -2348,7 +2336,7 @@ export type DeleteMealPlanItemPayload = {
   mealPlanItem: MealPlanItem;
 };
 
-export type DeleteMealPlanItemResult = ConflictError | DeleteMealPlanItemPayload | ForbiddenError | NotFoundError;
+export type DeleteMealPlanItemResult = ConflictError | DeleteMealPlanItemPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteMealPlanPayload = {
   __typename: 'DeleteMealPlanPayload';
@@ -2356,7 +2344,7 @@ export type DeleteMealPlanPayload = {
   mealPlan: MealPlan;
 };
 
-export type DeleteMealPlanResult = ConflictError | DeleteMealPlanPayload | ForbiddenError | NotFoundError;
+export type DeleteMealPlanResult = ConflictError | DeleteMealPlanPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteMealTemplateInput = {
   id: Scalars['ID']['input'];
@@ -2368,7 +2356,7 @@ export type DeleteMealTemplatePayload = {
   mealTemplate: MealTemplate;
 };
 
-export type DeleteMealTemplateResult = ConflictError | DeleteMealTemplatePayload | ForbiddenError | NotFoundError;
+export type DeleteMealTemplateResult = ConflictError | DeleteMealTemplatePayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteMultipleNotificationsInput = {
   ids: Array<Scalars['ID']['input']>;
@@ -2380,7 +2368,7 @@ export type DeleteMultipleNotificationsPayload = {
   notifications: Array<Notification>;
 };
 
-export type DeleteMultipleNotificationsResult = DeleteMultipleNotificationsPayload | ForbiddenError | ValidationError;
+export type DeleteMultipleNotificationsResult = ConflictError | DeleteMultipleNotificationsPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteNotificationInput = {
   id: Scalars['ID']['input'];
@@ -2391,7 +2379,7 @@ export type DeleteNotificationPayload = {
   notification: Notification;
 };
 
-export type DeleteNotificationResult = ConflictError | DeleteNotificationPayload | ForbiddenError | NotFoundError;
+export type DeleteNotificationResult = ConflictError | DeleteNotificationPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeletePantryInput = {
   id: Scalars['ID']['input'];
@@ -2407,7 +2395,7 @@ export type DeletePantryItemPayload = {
   pantryItem: PantryItem;
 };
 
-export type DeletePantryItemResult = ConflictError | DeletePantryItemPayload | ForbiddenError | NotFoundError;
+export type DeletePantryItemResult = ConflictError | DeletePantryItemPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeletePantryPayload = {
   __typename: 'DeletePantryPayload';
@@ -2415,7 +2403,7 @@ export type DeletePantryPayload = {
   pantry: Pantry;
 };
 
-export type DeletePantryResult = ConflictError | DeletePantryPayload | ForbiddenError | NotFoundError;
+export type DeletePantryResult = ConflictError | DeletePantryPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeletePurchaseInput = {
   id: Scalars['ID']['input'];
@@ -2427,7 +2415,7 @@ export type DeletePurchasePayload = {
   store: Maybe<Store>;
 };
 
-export type DeletePurchaseResult = ConflictError | DeletePurchasePayload | ForbiddenError | NotFoundError;
+export type DeletePurchaseResult = ConflictError | DeletePurchasePayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteRecipeFolderInput = {
   folder: Scalars['String']['input'];
@@ -2439,7 +2427,7 @@ export type DeleteRecipeFolderPayload = {
   success: Scalars['Boolean']['output'];
 };
 
-export type DeleteRecipeFolderResult = ConflictError | DeleteRecipeFolderPayload | ForbiddenError | NotFoundError;
+export type DeleteRecipeFolderResult = ConflictError | DeleteRecipeFolderPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteRecipeInput = {
   id: Scalars['ID']['input'];
@@ -2450,7 +2438,7 @@ export type DeleteRecipePayload = {
   success: Scalars['Boolean']['output'];
 };
 
-export type DeleteRecipeResult = ConflictError | DeleteRecipePayload | ForbiddenError | NotFoundError;
+export type DeleteRecipeResult = ConflictError | DeleteRecipePayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteRecipeReviewInput = {
   id: Scalars['ID']['input'];
@@ -2462,7 +2450,7 @@ export type DeleteRecipeReviewPayload = {
   recipeReview: RecipeReview;
 };
 
-export type DeleteRecipeReviewResult = DeleteRecipeReviewPayload | ForbiddenError | NotFoundError;
+export type DeleteRecipeReviewResult = ConflictError | DeleteRecipeReviewPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteShoppingListInput = {
   id: Scalars['ID']['input'];
@@ -2473,7 +2461,7 @@ export type DeleteShoppingListPayload = {
   shoppingList: ShoppingList;
 };
 
-export type DeleteShoppingListResult = ConflictError | DeleteShoppingListPayload | ForbiddenError | NotFoundError;
+export type DeleteShoppingListResult = ConflictError | DeleteShoppingListPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteStorageLocationInput = {
   id: Scalars['ID']['input'];
@@ -2496,7 +2484,7 @@ export type DeleteStorePayload = {
   store: Store;
 };
 
-export type DeleteStoreResult = ConflictError | DeleteStorePayload | ForbiddenError | NotFoundError;
+export type DeleteStoreResult = ConflictError | DeleteStorePayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteUnitInput = {
   id: Scalars['ID']['input'];
@@ -2507,7 +2495,7 @@ export type DeleteUnitPayload = {
   unit: Unit;
 };
 
-export type DeleteUnitResult = ConflictError | DeleteUnitPayload | ForbiddenError | NotFoundError;
+export type DeleteUnitResult = ConflictError | DeleteUnitPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteUserAddressInput = {
   id: Scalars['ID']['input'];
@@ -2518,7 +2506,7 @@ export type DeleteUserAddressPayload = {
   userAddress: UserAddress;
 };
 
-export type DeleteUserAddressResult = ConflictError | DeleteUserAddressPayload | ForbiddenError | NotFoundError;
+export type DeleteUserAddressResult = ConflictError | DeleteUserAddressPayload | ForbiddenError | NotFoundError | ValidationError;
 
 /** Input for deleted device cleanup */
 export type DeletedDeviceCleanupInput = {
@@ -2978,7 +2966,7 @@ export type DismissExpirationNotificationPayload = {
   pantryItem: Maybe<PantryItem>;
 };
 
-export type DismissExpirationNotificationResult = ConflictError | DismissExpirationNotificationPayload | ForbiddenError | NotFoundError;
+export type DismissExpirationNotificationResult = ConflictError | DismissExpirationNotificationPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DismissNotificationInput = {
   notificationId: Scalars['ID']['input'];
@@ -3364,7 +3352,7 @@ export type ForgotPasswordPayload = {
   status: ForgotPasswordStatus;
 };
 
-export type ForgotPasswordResult = ForgotPasswordPayload | RateLimitError;
+export type ForgotPasswordResult = ConflictError | ForbiddenError | ForgotPasswordPayload | NotFoundError | ValidationError;
 
 export type ForgotPasswordStatus = {
   __typename: 'ForgotPasswordStatus';
@@ -3393,7 +3381,7 @@ export type GenerateNextRecurringListPayload = {
   shoppingList: ShoppingList;
 };
 
-export type GenerateNextRecurringListResult = ConflictError | ForbiddenError | GenerateNextRecurringListPayload | NotFoundError;
+export type GenerateNextRecurringListResult = ConflictError | ForbiddenError | GenerateNextRecurringListPayload | NotFoundError | ValidationError;
 
 export type GenerateShoppingListFromMealPlanInput = {
   /** Deduct pantry availability from needed quantities (default true) */
@@ -3442,7 +3430,7 @@ export type HardDeleteDevicePayload = {
   success: Scalars['Boolean']['output'];
 };
 
-export type HardDeleteDeviceResult = ConflictError | ForbiddenError | HardDeleteDevicePayload | NotFoundError;
+export type HardDeleteDeviceResult = ConflictError | ForbiddenError | HardDeleteDevicePayload | NotFoundError | ValidationError;
 
 /** Typed health benefit information (replaces JSON healthBenefits field) */
 export type HealthBenefit = {
@@ -3876,7 +3864,7 @@ export type IncrementItemPopularityPayload = {
   item: Item;
 };
 
-export type IncrementItemPopularityResult = ConflictError | ForbiddenError | IncrementItemPopularityPayload | NotFoundError;
+export type IncrementItemPopularityResult = ConflictError | ForbiddenError | IncrementItemPopularityPayload | NotFoundError | ValidationError;
 
 export type IncrementRecipeCookedCountInput = {
   recipeId: Scalars['ID']['input'];
@@ -3888,7 +3876,7 @@ export type IncrementRecipeCookedCountPayload = {
   savedRecipe: SavedRecipe;
 };
 
-export type IncrementRecipeCookedCountResult = ConflictError | ForbiddenError | IncrementRecipeCookedCountPayload | NotFoundError;
+export type IncrementRecipeCookedCountResult = ConflictError | ForbiddenError | IncrementRecipeCookedCountPayload | NotFoundError | ValidationError;
 
 export type IngredientInput = {
   isActive?: InputMaybe<Scalars['Boolean']['input']>;
@@ -4632,7 +4620,7 @@ export type LeaveHomePayload = {
   membership: Membership;
 };
 
-export type LeaveHomeResult = ConflictError | ForbiddenError | LeaveHomePayload | NotFoundError;
+export type LeaveHomeResult = ConflictError | ForbiddenError | LeaveHomePayload | NotFoundError | ValidationError;
 
 /** Comprehensive ledger analytics combining additions and consumption */
 export type LedgerAnalytics = {
@@ -4985,7 +4973,7 @@ export type MarkAllNotificationsAsReadPayload = {
   notifications: Array<Notification>;
 };
 
-export type MarkAllNotificationsAsReadResult = ForbiddenError | MarkAllNotificationsAsReadPayload;
+export type MarkAllNotificationsAsReadResult = ConflictError | ForbiddenError | MarkAllNotificationsAsReadPayload | NotFoundError | ValidationError;
 
 export type MarkAsTemplateInput = {
   id: Scalars['ID']['input'];
@@ -5018,7 +5006,7 @@ export type MarkExpirationNotificationAsReadPayload = {
   pantryItem: Maybe<PantryItem>;
 };
 
-export type MarkExpirationNotificationAsReadResult = ConflictError | ForbiddenError | MarkExpirationNotificationAsReadPayload | NotFoundError;
+export type MarkExpirationNotificationAsReadResult = ConflictError | ForbiddenError | MarkExpirationNotificationAsReadPayload | NotFoundError | ValidationError;
 
 export type MarkNotificationAsReadInput = {
   id: Scalars['ID']['input'];
@@ -5029,7 +5017,7 @@ export type MarkNotificationAsReadPayload = {
   notification: Notification;
 };
 
-export type MarkNotificationAsReadResult = ConflictError | ForbiddenError | MarkNotificationAsReadPayload | NotFoundError;
+export type MarkNotificationAsReadResult = ConflictError | ForbiddenError | MarkNotificationAsReadPayload | NotFoundError | ValidationError;
 
 export type MarkNotificationUnreadInput = {
   id: Scalars['ID']['input'];
@@ -5040,7 +5028,7 @@ export type MarkNotificationUnreadPayload = {
   notification: Notification;
 };
 
-export type MarkNotificationUnreadResult = ConflictError | ForbiddenError | MarkNotificationUnreadPayload | NotFoundError;
+export type MarkNotificationUnreadResult = ConflictError | ForbiddenError | MarkNotificationUnreadPayload | NotFoundError | ValidationError;
 
 export type MarkPantryItemExpiredInput = {
   id: Scalars['ID']['input'];
@@ -5053,7 +5041,7 @@ export type MarkPantryItemExpiredPayload = {
   pantryItem: PantryItem;
 };
 
-export type MarkPantryItemExpiredResult = ConflictError | ForbiddenError | MarkPantryItemExpiredPayload | NotFoundError;
+export type MarkPantryItemExpiredResult = ConflictError | ForbiddenError | MarkPantryItemExpiredPayload | NotFoundError | ValidationError;
 
 /** Input for marking a recipe as cooked */
 export type MarkRecipeAsCookedInput = {
@@ -9552,7 +9540,7 @@ export type OpenPantryItemPayload = {
   pantryItem: PantryItem;
 };
 
-export type OpenPantryItemResult = ConflictError | ForbiddenError | NotFoundError | OpenPantryItemPayload;
+export type OpenPantryItemResult = ConflictError | ForbiddenError | NotFoundError | OpenPantryItemPayload | ValidationError;
 
 export type OperatingSystemStat = {
   __typename: 'OperatingSystemStat';
@@ -11532,17 +11520,6 @@ export type RapidAttempt = {
 };
 
 /**
- * Caller has exceeded a rate limit. `retryAfter` is the suggested wait
- * in seconds before retrying, when known.
- */
-export type RateLimitError = Error & {
-  __typename: 'RateLimitError';
-  code: ErrorCode;
-  message: Scalars['String']['output'];
-  retryAfter: Maybe<Scalars['Int']['output']>;
-};
-
-/**
  * Recipe type for meal instructions and ingredients
  * Cache: 30 minutes - published recipes are static content
  */
@@ -12032,7 +12009,7 @@ export type RemoveItemFromShoppingListPayload = {
   shoppingListItem: ShoppingListItem;
 };
 
-export type RemoveItemFromShoppingListResult = ConflictError | ForbiddenError | NotFoundError | RemoveItemFromShoppingListPayload;
+export type RemoveItemFromShoppingListResult = ConflictError | ForbiddenError | NotFoundError | RemoveItemFromShoppingListPayload | ValidationError;
 
 export type RemoveItemImageInput = {
   id: Scalars['ID']['input'];
@@ -12043,7 +12020,7 @@ export type RemoveItemImagePayload = {
   item: Item;
 };
 
-export type RemoveItemImageResult = ConflictError | ForbiddenError | NotFoundError | RemoveItemImagePayload;
+export type RemoveItemImageResult = ConflictError | ForbiddenError | NotFoundError | RemoveItemImagePayload | ValidationError;
 
 export type RemoveMemberInput = {
   membershipId: Scalars['ID']['input'];
@@ -12055,7 +12032,7 @@ export type RemoveMemberPayload = {
   membership: Membership;
 };
 
-export type RemoveMemberResult = ConflictError | ForbiddenError | NotFoundError | RemoveMemberPayload;
+export type RemoveMemberResult = ConflictError | ForbiddenError | NotFoundError | RemoveMemberPayload | ValidationError;
 
 export type RemoveRestrictionInput = {
   id: Scalars['ID']['input'];
@@ -12067,7 +12044,7 @@ export type RemoveRestrictionPayload = {
   dietaryRestriction: DietaryRestriction;
 };
 
-export type RemoveRestrictionResult = ConflictError | ForbiddenError | NotFoundError | RemoveRestrictionPayload;
+export type RemoveRestrictionResult = ConflictError | ForbiddenError | NotFoundError | RemoveRestrictionPayload | ValidationError;
 
 export type RemoveRestrictionsInput = {
   restrictions: Array<ModerationRestriction>;
@@ -12084,7 +12061,7 @@ export type RemoveShoppingListCollaboratorPayload = {
   shoppingList: Maybe<ShoppingList>;
 };
 
-export type RemoveShoppingListCollaboratorResult = ConflictError | ForbiddenError | NotFoundError | RemoveShoppingListCollaboratorPayload;
+export type RemoveShoppingListCollaboratorResult = ConflictError | ForbiddenError | NotFoundError | RemoveShoppingListCollaboratorPayload | ValidationError;
 
 export type RemoveTemplateItemInput = {
   id: Scalars['ID']['input'];
@@ -12096,7 +12073,7 @@ export type RemoveTemplateItemPayload = {
   mealTemplateItem: MealTemplateItem;
 };
 
-export type RemoveTemplateItemResult = ConflictError | ForbiddenError | NotFoundError | RemoveTemplateItemPayload;
+export type RemoveTemplateItemResult = ConflictError | ForbiddenError | NotFoundError | RemoveTemplateItemPayload | ValidationError;
 
 export type RemoveUnitConversionInput = {
   unitId: Scalars['ID']['input'];
@@ -12107,7 +12084,7 @@ export type RemoveUnitConversionPayload = {
   unit: Unit;
 };
 
-export type RemoveUnitConversionResult = ForbiddenError | NotFoundError | RemoveUnitConversionPayload;
+export type RemoveUnitConversionResult = ConflictError | ForbiddenError | NotFoundError | RemoveUnitConversionPayload | ValidationError;
 
 /**
  * Input for reordering multiple storage locations
@@ -12126,7 +12103,7 @@ export type ReorderStorageLocationsPayload = {
   storageLocation: StorageLocation;
 };
 
-export type ReorderStorageLocationsResult = ForbiddenError | NotFoundError | ReorderStorageLocationsPayload | ValidationError;
+export type ReorderStorageLocationsResult = ConflictError | ForbiddenError | NotFoundError | ReorderStorageLocationsPayload | ValidationError;
 
 export type ResendVerificationEmailInput = {
   email: Scalars['String']['input'];
@@ -12137,7 +12114,7 @@ export type ResendVerificationEmailPayload = {
   user: Maybe<User>;
 };
 
-export type ResendVerificationEmailResult = AuthError | ConflictError | ForbiddenError | ResendVerificationEmailPayload | ValidationError;
+export type ResendVerificationEmailResult = ConflictError | ForbiddenError | NotFoundError | ResendVerificationEmailPayload | ValidationError;
 
 export type ResetPasswordInput = {
   password: Scalars['String']['input'];
@@ -12199,7 +12176,7 @@ export type RestoreItemPayload = {
   item: Item;
 };
 
-export type RestoreItemResult = ConflictError | ForbiddenError | NotFoundError | RestoreItemPayload;
+export type RestoreItemResult = ConflictError | ForbiddenError | NotFoundError | RestoreItemPayload | ValidationError;
 
 export enum RestrictionSeverity {
   Allergy = 'ALLERGY',
@@ -12232,7 +12209,7 @@ export type RevokeHomeInvitePayload = {
   homeInvite: HomeInvite;
 };
 
-export type RevokeHomeInviteResult = ConflictError | ForbiddenError | NotFoundError | RevokeHomeInvitePayload;
+export type RevokeHomeInviteResult = ConflictError | ForbiddenError | NotFoundError | RevokeHomeInvitePayload | ValidationError;
 
 /** Sub-input for risk assessment data */
 export type RiskAssessmentInput = {
@@ -12370,7 +12347,7 @@ export type SetDefaultPantryPayload = {
   pantry: Pantry;
 };
 
-export type SetDefaultPantryResult = ForbiddenError | NotFoundError | SetDefaultPantryPayload;
+export type SetDefaultPantryResult = ConflictError | ForbiddenError | NotFoundError | SetDefaultPantryPayload | ValidationError;
 
 export type SetDefaultShoppingListInput = {
   id: Scalars['ID']['input'];
@@ -12381,7 +12358,7 @@ export type SetDefaultShoppingListPayload = {
   shoppingList: ShoppingList;
 };
 
-export type SetDefaultShoppingListResult = ConflictError | ForbiddenError | NotFoundError | SetDefaultShoppingListPayload;
+export type SetDefaultShoppingListResult = ConflictError | ForbiddenError | NotFoundError | SetDefaultShoppingListPayload | ValidationError;
 
 export type SetDefaultStorageLocationInput = {
   id: Scalars['ID']['input'];
@@ -12393,7 +12370,7 @@ export type SetDefaultStorageLocationPayload = {
   storageLocation: StorageLocation;
 };
 
-export type SetDefaultStorageLocationResult = ForbiddenError | NotFoundError | SetDefaultStorageLocationPayload;
+export type SetDefaultStorageLocationResult = ConflictError | ForbiddenError | NotFoundError | SetDefaultStorageLocationPayload | ValidationError;
 
 export type SetReminderInput = {
   id: Scalars['ID']['input'];
@@ -12433,7 +12410,7 @@ export type SetupUnitConversionPayload = {
   unit: Unit;
 };
 
-export type SetupUnitConversionResult = ForbiddenError | NotFoundError | SetupUnitConversionPayload | ValidationError;
+export type SetupUnitConversionResult = ConflictError | ForbiddenError | NotFoundError | SetupUnitConversionPayload | ValidationError;
 
 export type ShareShoppingListInput = {
   id: Scalars['ID']['input'];
@@ -13976,7 +13953,7 @@ export type ToggleReviewHelpfulPayload = {
   reviewHelpful: ReviewHelpful;
 };
 
-export type ToggleReviewHelpfulResult = ForbiddenError | NotFoundError | ToggleReviewHelpfulPayload | ValidationError;
+export type ToggleReviewHelpfulResult = ConflictError | ForbiddenError | NotFoundError | ToggleReviewHelpfulPayload | ValidationError;
 
 /** Input for toggling the purchased state of a shopping list item */
 export type ToggleShoppingListItemPurchasedInput = {
@@ -14032,7 +14009,7 @@ export type UncategorizeItemPayload = {
   itemCategory: ItemCategory;
 };
 
-export type UncategorizeItemResult = ForbiddenError | NotFoundError | UncategorizeItemPayload;
+export type UncategorizeItemResult = ConflictError | ForbiddenError | NotFoundError | UncategorizeItemPayload | ValidationError;
 
 export type UncompleteShoppingListInput = {
   id: Scalars['ID']['input'];
@@ -14043,7 +14020,7 @@ export type UncompleteShoppingListPayload = {
   shoppingList: ShoppingList;
 };
 
-export type UncompleteShoppingListResult = ConflictError | ForbiddenError | NotFoundError | UncompleteShoppingListPayload;
+export type UncompleteShoppingListResult = ConflictError | ForbiddenError | NotFoundError | UncompleteShoppingListPayload | ValidationError;
 
 export type UnfavoriteRecipeInput = {
   recipeId: Scalars['ID']['input'];
@@ -14055,7 +14032,7 @@ export type UnfavoriteRecipePayload = {
   savedRecipe: SavedRecipe;
 };
 
-export type UnfavoriteRecipeResult = ConflictError | ForbiddenError | NotFoundError | UnfavoriteRecipePayload;
+export type UnfavoriteRecipeResult = ConflictError | ForbiddenError | NotFoundError | UnfavoriteRecipePayload | ValidationError;
 
 /**
  * Unit of measurement type
@@ -15783,7 +15760,7 @@ export type VerifyEmailPayload = {
   user: User;
 };
 
-export type VerifyEmailResult = AuthError | ConflictError | ForbiddenError | NotFoundError | ValidationError | VerifyEmailPayload;
+export type VerifyEmailResult = ConflictError | ForbiddenError | NotFoundError | ValidationError | VerifyEmailPayload;
 
 /** Input for verifying an item unit conversion (admin only) */
 export type VerifyItemUnitConversionInput = {
@@ -15797,7 +15774,7 @@ export type VerifyItemUnitConversionPayload = {
   unitConversion: ItemUnitConversion;
 };
 
-export type VerifyItemUnitConversionResult = ConflictError | ForbiddenError | NotFoundError | VerifyItemUnitConversionPayload;
+export type VerifyItemUnitConversionResult = ConflictError | ForbiddenError | NotFoundError | ValidationError | VerifyItemUnitConversionPayload;
 
 export type VerifyUserEmailInput = {
   id: Scalars['ID']['input'];
@@ -15808,7 +15785,7 @@ export type VerifyUserEmailPayload = {
   user: User;
 };
 
-export type VerifyUserEmailResult = ConflictError | ForbiddenError | NotFoundError | VerifyUserEmailPayload;
+export type VerifyUserEmailResult = ConflictError | ForbiddenError | NotFoundError | ValidationError | VerifyUserEmailPayload;
 
 export enum Visibility {
   Private = 'PRIVATE',
