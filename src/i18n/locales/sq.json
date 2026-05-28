@@ -33,6 +33,9 @@
     "networkError": "Gabim rrjeti. Kontrollo lidhjen tënde.",
     "somethingWentWrong": "Diçka shkoi keq. Provoje sërish.",
     "unknownError": "Ndodhi një gabim i panjohur",
+    "rateLimitGeneric": "Shumë kërkesa. Provoje sërish më vonë.",
+    "rateLimitMinutes": "Shumë kërkesa. Provoje sërish pas {{count}} minute(sh).",
+    "rateLimitSeconds": "Shumë kërkesa. Provoje sërish pas {{count}} sekonde(sh).",
     "notFoundGeneric": "Artikulli i kërkuar nuk u gjet. Mund të jetë fshirë.",
     "notFoundResource": "{{resource}} nuk u gjet. Mund të jetë fshirë ose zhvendosur.",
     "resourceNames": {

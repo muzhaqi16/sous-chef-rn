@@ -33,6 +33,9 @@
     "networkError": "Error de red. Revisa tu conexión.",
     "somethingWentWrong": "Algo salió mal. Inténtalo de nuevo.",
     "unknownError": "Ocurrió un error desconocido",
+    "rateLimitGeneric": "Demasiadas solicitudes. Inténtalo de nuevo más tarde.",
+    "rateLimitMinutes": "Demasiadas solicitudes. Inténtalo de nuevo en {{count}} minuto(s).",
+    "rateLimitSeconds": "Demasiadas solicitudes. Inténtalo de nuevo en {{count}} segundo(s).",
     "notFoundGeneric": "El elemento solicitado no se pudo encontrar. Es posible que haya sido eliminado.",
     "notFoundResource": "No se pudo encontrar {{resource}}. Es posible que haya sido eliminado o movido.",
     "resourceNames": {

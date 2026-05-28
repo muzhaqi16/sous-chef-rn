@@ -33,6 +33,9 @@
     "networkError": "Errore di rete. Controlla la tua connessione.",
     "somethingWentWrong": "Qualcosa è andato storto. Riprova.",
     "unknownError": "Si è verificato un errore sconosciuto",
+    "rateLimitGeneric": "Troppe richieste. Riprova più tardi.",
+    "rateLimitMinutes": "Troppe richieste. Riprova tra {{count}} minuto/i.",
+    "rateLimitSeconds": "Troppe richieste. Riprova tra {{count}} secondo/i.",
     "notFoundGeneric": "L'elemento richiesto non è stato trovato. Potrebbe essere stato eliminato.",
     "notFoundResource": "{{resource}} non è stato trovato. Potrebbe essere stato eliminato o spostato.",
     "resourceNames": {
