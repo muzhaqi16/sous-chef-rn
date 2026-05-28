@@ -224,7 +224,9 @@ export const useStore = create<RootState>()(
 
               // PERF: If persisted home+pantry IDs exist, mark ready immediately
               // so usePantryQuery fires on the FIRST render instead of waiting
-              // for useDefaultHome's effect (which runs after render)
+              // for useDefaultHome's effect (which runs after render).
+              // Safe because both cache partitions are now restored synchronously
+              // in initializeClient() before React mounts.
               if (state?.selectedHomeId && state?.selectedPantryId) {
                 state?.setIsHomeSelectionReady(true);
               }

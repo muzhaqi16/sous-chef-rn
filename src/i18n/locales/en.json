@@ -33,6 +33,9 @@
     "networkError": "Network error. Please check your connection.",
     "somethingWentWrong": "Something went wrong. Please try again.",
     "unknownError": "An unknown error occurred",
+    "rateLimitGeneric": "Too many requests. Please try again later.",
+    "rateLimitMinutes": "Too many requests. Please try again in {{count}} minute(s).",
+    "rateLimitSeconds": "Too many requests. Please try again in {{count}} second(s).",
     "notFoundGeneric": "The requested item could not be found. It may have been deleted.",
     "notFoundResource": "The {{resource}} could not be found. It may have been deleted or moved.",
     "resourceNames": {

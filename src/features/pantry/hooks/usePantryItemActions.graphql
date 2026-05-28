@@ -1,0 +1,13 @@
+fragment _UsePantryItemActionsTrackingUnit on PantryItem {
+  unit {
+    id
+  }
+}
+
+fragment _UsePantryItemActionsQuantity on PantryItem {
+  quantity
+}
+
+fragment _UsePantryItemActionsId on PantryItem {
+  id
+}

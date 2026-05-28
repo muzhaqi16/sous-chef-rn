@@ -2,7 +2,6 @@ import { InMemoryCache } from '@apollo/client';
 import { relayStylePagination } from '@apollo/client/utilities';
 // Import generated fragment matcher for proper interface/union type handling
 import fragmentMatcherData from '#/graphql/generated/fragmentMatcher.json';
-import { Telemetry } from '#/services/telemetry';
 
 /**
  * Maximum number of edges to retain in an itemsConnection cache entry.
@@ -384,9 +383,13 @@ function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
         console.log(
           `📊 [Cache] itemsConnection merge: existing=${existingCount} incoming=${incomingCount} merged=${mergedEdges.length} cursor=${hasCursor}`,
         );
-        Telemetry.gauge('apollo_cache_edge_count', mergedEdges.length, {
-          field: 'itemsConnection',
-        });
+        import('#services/telemetry')
+          .then(({ Telemetry }) =>
+            Telemetry.gauge('apollo_cache_edge_count', mergedEdges.length, {
+              field: 'itemsConnection',
+            }),
+          )
+          .catch(() => {});
       }
 
       return { ...incoming, pageInfo, edges: mergedEdges };

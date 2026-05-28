@@ -8,7 +8,8 @@
  */
 
 import { useRef } from 'react';
-import { useMutation } from '@apollo/client/react';
+import { gql } from '@apollo/client';
+import { useApolloClient, useMutation } from '@apollo/client/react';
 import {
   AddItemToShoppingListDocument,
   type AddItemToShoppingListMutation,
@@ -20,6 +21,16 @@ import { addNewItemToShoppingListCache } from '#/apollo/utils/shoppingListCacheU
 import { createOptimisticShoppingListItem } from './utils';
 import { handleMutationError } from '#/utils/errorHandlers';
 import type { ShoppingListItemInput } from './types';
+
+// Minimal cache-read fragment — only the fields the optimistic-update path needs.
+const ShoppingListStatsFragment = gql`
+  fragment _AddShoppingItemStats on ShoppingList {
+    totalItems
+    completedItems
+    remainingItems
+    completionRate
+  }
+`;
 
 interface UseAddShoppingItemOptions {
   listId: string | null | undefined;
@@ -40,6 +51,7 @@ export function useAddShoppingItem({
   refetch,
 }: UseAddShoppingItemOptions) {
   const { createAddOperation } = useCrudOperations();
+  const client = useApolloClient();
   // Track the most recently generated temp ID for cleanup in update()
   // A ref is necessary here because optimisticResponse and update are separate
   // callbacks configured at hook level that need to share per-mutation state
@@ -57,6 +69,32 @@ export function useAddShoppingItem({
         unitId: variables.input.unit?.unitId,
       });
       lastTempIdRef.current = tempId;
+
+      // Read current aggregates from cache so the optimistic response
+      // reflects correct counts instead of hardcoded zeros.
+      const listStats = listId
+        ? client.cache.readFragment<{
+            totalItems: number;
+            completedItems: number;
+            remainingItems: number;
+            completionRate: number;
+          }>({
+            id: client.cache.identify({
+              __typename: 'ShoppingList',
+              id: listId,
+            }),
+            fragment: ShoppingListStatsFragment,
+            fragmentName: '_AddShoppingItemStats',
+          })
+        : null;
+
+      const prevTotal = listStats?.totalItems ?? 0;
+      const prevCompleted = listStats?.completedItems ?? 0;
+      const newTotal = prevTotal + 1;
+      // New items are always unpurchased, so completedItems stays the same
+      const newRemaining = newTotal - prevCompleted;
+      const newCompletionRate = newTotal > 0 ? prevCompleted / newTotal : 0;
+
       const optimistic: AddItemToShoppingListMutation = {
         __typename: 'Mutation',
         addItemToShoppingList: {
@@ -66,10 +104,10 @@ export function useAddShoppingItem({
             shoppingList: {
               __typename: 'ShoppingList',
               id: listId ?? '',
-              totalItems: 0,
-              completedItems: 0,
-              remainingItems: 0,
-              completionRate: 0,
+              totalItems: newTotal,
+              completedItems: prevCompleted,
+              remainingItems: newRemaining,
+              completionRate: newCompletionRate,
             },
           },
         },

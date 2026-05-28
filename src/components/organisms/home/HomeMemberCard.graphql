@@ -4,7 +4,6 @@ fragment HomeMemberCard_member on Membership {
   userId
   role
   status
-  displayName
   canManageHome
   canViewPantry
   canEditPantry

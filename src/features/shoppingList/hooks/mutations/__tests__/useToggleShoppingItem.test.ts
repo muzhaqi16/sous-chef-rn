@@ -52,7 +52,7 @@ function createToggleMock(
     result: {
       data: {
         toggleShoppingListItemPurchased: {
-          __typename: 'ShoppingListItemPayload',
+          __typename: 'ToggleShoppingListItemPurchasedPayload',
           success: true,
           message: '',
           code: 'SUCCESS',

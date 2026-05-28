@@ -122,7 +122,7 @@ function buildCreateReviewMock(): MockedResponse {
     result: {
       data: {
         createRecipeReview: {
-          __typename: 'RecipeReviewPayload',
+          __typename: 'CreateRecipeReviewPayload',
           success: true,
           message: 'OK',
           code: 'OK',
@@ -143,15 +143,16 @@ function buildDeleteReviewMock(): MockedResponse {
   return {
     request: {
       query: DeleteRecipeReviewDocument,
-      variables: { id: 'rev-2' },
+      variables: { input: { id: 'rev-2' } },
     },
     result: {
       data: {
         deleteRecipeReview: {
-          __typename: 'GenericPayload',
-          success: true,
-          message: 'OK',
-          code: 'OK',
+          __typename: 'DeleteRecipeReviewPayload',
+          recipeReview: {
+            __typename: 'RecipeReview',
+            id: 'rev-2',
+          },
         },
       },
     },

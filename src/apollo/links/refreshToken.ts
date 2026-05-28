@@ -3,10 +3,7 @@ import { jwtDecode } from 'jwt-decode';
 import { logger } from '#/utils/environment';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { useStore } from '#store';
-import {
-  RefreshTokenDocument,
-  type RefreshTokenMutation,
-} from '#operations/auth/auth.generated';
+import { RefreshTokenDocument } from '#operations/auth/auth.generated';
 import { reconnectWebSocket, isWebSocketReconnecting } from './wsLink';
 import { client } from '../client';
 
@@ -107,7 +104,7 @@ const performTokenRefresh = async (): Promise<string | null> => {
       context: { skipErrorLink: true },
     });
 
-    const data = (response.data as RefreshTokenMutation)?.refresh;
+    const data = response.data?.refresh;
     if (!data?.accessToken || !data?.refreshToken) {
       throw new Error('Invalid refresh response: Missing tokens');
     }

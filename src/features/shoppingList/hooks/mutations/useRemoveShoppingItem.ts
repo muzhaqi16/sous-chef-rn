@@ -7,7 +7,8 @@
  * - Error handling with user feedback
  */
 
-import { useMutation } from '@apollo/client/react';
+import { gql } from '@apollo/client';
+import { useApolloClient, useMutation } from '@apollo/client/react';
 import type { Unmasked } from '@apollo/client/masking';
 import {
   RemoveItemFromShoppingListDocument,
@@ -17,6 +18,24 @@ import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
 import { removeFromShoppingListItemsCache } from './utils';
 import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
 import { handleMutationError } from '#/utils/errorHandlers';
+
+// Minimal cache-read fragments — only the fields the optimistic-update path needs.
+const ShoppingListStatsFragment = gql`
+  fragment _RemoveShoppingItemStats on ShoppingList {
+    totalItems
+    completedItems
+    remainingItems
+    completionRate
+  }
+`;
+
+const ShoppingListItemPurchaseFragment = gql`
+  fragment _RemoveShoppingItemPurchase on ShoppingListItem {
+    purchaseInfo {
+      isPurchased
+    }
+  }
+`;
 
 interface UseRemoveShoppingItemOptions {
   listId: string | null | undefined;
@@ -41,28 +60,70 @@ export function useRemoveShoppingItem({
   refetch,
 }: UseRemoveShoppingItemOptions): UseRemoveShoppingItemReturn {
   const { createRemoveOperation } = useCrudOperations();
+  const client = useApolloClient();
 
   const [removeItemMutation] = useMutation(RemoveItemFromShoppingListDocument, {
     optimisticResponse: (
       variables,
-    ): Unmasked<RemoveItemFromShoppingListMutation> => ({
-      __typename: 'Mutation',
-      removeItemFromShoppingList: {
-        __typename: 'RemoveItemFromShoppingListPayload',
-        shoppingListItem: {
+    ): Unmasked<RemoveItemFromShoppingListMutation> => {
+      // Read current aggregates from cache so the optimistic response
+      // reflects correct counts instead of hardcoded zeros.
+      const listStats = listId
+        ? client.cache.readFragment<{
+            totalItems: number;
+            completedItems: number;
+            remainingItems: number;
+            completionRate: number;
+          }>({
+            id: client.cache.identify({
+              __typename: 'ShoppingList',
+              id: listId,
+            }),
+            fragment: ShoppingListStatsFragment,
+            fragmentName: '_RemoveShoppingItemStats',
+          })
+        : null;
+
+      const itemPurchase = client.cache.readFragment<{
+        purchaseInfo: { isPurchased: boolean } | null;
+      }>({
+        id: client.cache.identify({
           __typename: 'ShoppingListItem',
           id: variables.input.id,
-          shoppingList: {
-            __typename: 'ShoppingList',
-            id: listId ?? '',
-            totalItems: 0,
-            completedItems: 0,
-            remainingItems: 0,
-            completionRate: 0,
+        }),
+        fragment: ShoppingListItemPurchaseFragment,
+        fragmentName: '_RemoveShoppingItemPurchase',
+      });
+
+      const wasPurchased = itemPurchase?.purchaseInfo?.isPurchased ?? false;
+      const prevTotal = listStats?.totalItems ?? 0;
+      const prevCompleted = listStats?.completedItems ?? 0;
+      const newTotal = Math.max(0, prevTotal - 1);
+      const newCompleted = wasPurchased
+        ? Math.max(0, prevCompleted - 1)
+        : prevCompleted;
+      const newRemaining = Math.max(0, newTotal - newCompleted);
+      const newCompletionRate = newTotal > 0 ? newCompleted / newTotal : 0;
+
+      return {
+        __typename: 'Mutation',
+        removeItemFromShoppingList: {
+          __typename: 'RemoveItemFromShoppingListPayload',
+          shoppingListItem: {
+            __typename: 'ShoppingListItem',
+            id: variables.input.id,
+            shoppingList: {
+              __typename: 'ShoppingList',
+              id: listId ?? '',
+              totalItems: newTotal,
+              completedItems: newCompleted,
+              remainingItems: newRemaining,
+              completionRate: newCompletionRate,
+            },
           },
         },
-      },
-    }),
+      };
+    },
     update(cache, { data }, { variables }) {
       if (
         data?.removeItemFromShoppingList?.__typename !==

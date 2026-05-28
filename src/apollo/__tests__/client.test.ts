@@ -28,6 +28,7 @@ jest.mock('../cache', () => ({
 
 const mockLoad = jest.fn((): Record<string, unknown> | null => null);
 const mockLoadCritical = jest.fn((): Record<string, unknown> | null => null);
+const mockLoadDeferred = jest.fn((): Record<string, unknown> | null => null);
 const mockRestoreDeferred = jest.fn();
 const mockScheduleExtractAndSave = jest.fn();
 const mockCancel = jest.fn();
@@ -38,6 +39,7 @@ jest.mock('../offline/ApolloCachePersistence', () => ({
   apolloCachePersistence: {
     load: mockLoad,
     loadCritical: mockLoadCritical,
+    loadDeferred: mockLoadDeferred,
     restoreDeferred: mockRestoreDeferred,
     scheduleExtractAndSave: mockScheduleExtractAndSave,
     cancel: mockCancel,
@@ -67,34 +69,60 @@ describe('Apollo client', () => {
   });
 
   describe('lazy cache hydration', () => {
-    it('restores critical cache synchronously and does NOT schedule deferred restore at module init', () => {
-      const criticalData = { ROOT_QUERY: { __typename: 'Query' } };
+    it('merges critical and deferred partitions into a single cache.restore() call', () => {
+      const criticalData = {
+        ROOT_QUERY: { __typename: 'Query' },
+        'User:1': { id: '1' },
+      };
+      const deferredData = {
+        'PantryItem:1': { id: '1' },
+        'Recipe:2': { id: '2' },
+      };
       mockLoadCritical.mockReturnValueOnce(criticalData);
-
-      const mockRIC = jest.spyOn(global, 'requestIdleCallback');
+      mockLoadDeferred.mockReturnValueOnce(deferredData);
 
       jest.isolateModules(() => {
         require('../client');
       });
 
-      // Phase 1: critical restore called synchronously on module init
       expect(mockLoadCritical).toHaveBeenCalled();
-      expect(mockRestore).toHaveBeenCalledWith(criticalData);
-
-      // Phase 2 must be opt-in from App.tsx — module init must NOT schedule it.
-      // (Phase 2 itself is owned by apolloCachePersistence.restoreDeferred now
-      // and is tested in ApolloCachePersistence.test.ts.)
-      expect(mockRIC).not.toHaveBeenCalled();
-      expect(mockRestoreDeferred).not.toHaveBeenCalled();
-
-      // Migration path should NOT have been used
+      expect(mockLoadDeferred).toHaveBeenCalled();
+      expect(mockRestore).toHaveBeenCalledWith({
+        ...criticalData,
+        ...deferredData,
+      });
       expect(mockLoad).not.toHaveBeenCalled();
-
-      mockRIC.mockRestore();
     });
 
-    it('falls back to load() when loadCritical returns null (migration)', () => {
+    it('restores only critical when deferred returns null', () => {
+      const criticalData = { ROOT_QUERY: { __typename: 'Query' } };
+      mockLoadCritical.mockReturnValueOnce(criticalData);
+      mockLoadDeferred.mockReturnValueOnce(null);
+
+      jest.isolateModules(() => {
+        require('../client');
+      });
+
+      expect(mockRestore).toHaveBeenCalledWith(criticalData);
+      expect(mockLoad).not.toHaveBeenCalled();
+    });
+
+    it('restores only deferred when critical returns null', () => {
+      const deferredData = { 'PantryItem:1': { id: '1' } };
       mockLoadCritical.mockReturnValueOnce(null);
+      mockLoadDeferred.mockReturnValueOnce(deferredData);
+
+      jest.isolateModules(() => {
+        require('../client');
+      });
+
+      expect(mockRestore).toHaveBeenCalledWith(deferredData);
+      expect(mockLoad).not.toHaveBeenCalled();
+    });
+
+    it('falls back to load() when both loadCritical and loadDeferred return null (migration)', () => {
+      mockLoadCritical.mockReturnValueOnce(null);
+      mockLoadDeferred.mockReturnValueOnce(null);
       const legacyData = { ROOT_QUERY: {}, 'PantryItem:1': { id: '1' } };
       mockLoad.mockReturnValueOnce(legacyData);
 
@@ -103,20 +131,20 @@ describe('Apollo client', () => {
       });
 
       expect(mockLoadCritical).toHaveBeenCalled();
+      expect(mockLoadDeferred).toHaveBeenCalled();
       expect(mockLoad).toHaveBeenCalled();
       expect(mockRestore).toHaveBeenCalledWith(legacyData);
     });
 
-    it('does not restore when both loadCritical and load return null', () => {
+    it('does not restore when all load methods return null', () => {
       mockLoadCritical.mockReturnValueOnce(null);
+      mockLoadDeferred.mockReturnValueOnce(null);
       mockLoad.mockReturnValueOnce(null);
 
       jest.isolateModules(() => {
         require('../client');
       });
 
-      expect(mockLoadCritical).toHaveBeenCalled();
-      expect(mockLoad).toHaveBeenCalled();
       expect(mockRestore).not.toHaveBeenCalled();
     });
   });

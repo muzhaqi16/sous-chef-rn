@@ -157,7 +157,7 @@ class ApolloCachePersistence {
    * abort a pending restore and avoid writing stale entities into a cleared
    * cache.
    */
-  restoreDeferred(cache: ApolloCache): void {
+  restoreDeferred(cache: ApolloCache, onComplete?: () => void): void {
     // Cancel any prior in-flight restore so two calls don't race.
     if (this.restoreIdleCallbackId != null) {
       cancelIdleCallback(this.restoreIdleCallbackId);
@@ -168,13 +168,17 @@ class ApolloCachePersistence {
       // `cancel()` / `clear()` set the id to null. Bail out before touching
       // the cache so a logout fired between scheduling and firing doesn't
       // resurrect stale entities into a cleared cache.
+      // Intentionally do NOT call onComplete here — the cancel was deliberate.
       if (this.restoreIdleCallbackId == null) return;
       this.restoreIdleCallbackId = null;
       const t0 = performance.now();
       try {
         const deferred = this.loadDeferred();
         if (!deferred) return;
-        (cache as InMemoryCache).restore(deferred);
+        // cache.restore() is destructive (wipes the EntityStore via init()).
+        // Merge deferred entities with existing cache to avoid losing data.
+        const existing = (cache as InMemoryCache).extract();
+        (cache as InMemoryCache).restore({ ...existing, ...deferred });
         Telemetry.histogram(
           'app_apollo_deferred_restore_ms',
           performance.now() - t0,
@@ -185,6 +189,8 @@ class ApolloCachePersistence {
         // let the next save overwrite. Network refetch covers the data.
         console.error('📦 Apollo: Deferred cache restore failed:', error);
         storage.remove(DEFERRED_CACHE_KEY);
+      } finally {
+        onComplete?.();
       }
     });
   }
@@ -459,6 +465,8 @@ class ApolloCachePersistence {
       storage.set(CACHE_VERSION_KEY, CURRENT_CACHE_VERSION);
       // Migration cleanup: remove old single-key format
       storage.remove(CACHE_STORAGE_KEY);
+      this.lastPersistedSnapshot = cache;
+      this.dirtyKeys.clear();
 
       if (__DEV__) {
         console.log(`💾 Cache: Persisted cache immediately (${sizeKB} KB)`);
@@ -475,11 +483,9 @@ class ApolloCachePersistence {
   clear(): void {
     if (!isStorageReady()) return;
     try {
-      // Clear pending save
-      if (this.saveTimeout) {
-        clearTimeout(this.saveTimeout);
-        this.saveTimeout = null;
-      }
+      // Cancel all pending saves and deferred restores so nothing writes
+      // stale data back into storage or the cache after we wipe it.
+      this.cancel();
 
       storage.remove(CACHE_STORAGE_KEY);
       storage.remove(CRITICAL_CACHE_KEY);

@@ -1,3 +1,5 @@
+import { getI18n } from '#/i18n/config';
+
 const RATE_LIMIT_CODES = [
   'RATE_LIMITED',
   'RATE_LIMIT_EXCEEDED',
@@ -66,24 +68,36 @@ export function getRateLimitDetails(error: unknown): RateLimitDetails | null {
         ? rateLimitError.extensions.retryAfter
         : null,
     message:
-      rateLimitError.message || 'Too many requests. Please try again later.',
+      rateLimitError.message ||
+      getI18n().t('errors.rateLimitGeneric', {
+        defaultValue: 'Too many requests. Please try again later.',
+      }),
   };
 }
 
 export function getRateLimitMessage(error: unknown): string {
+  const i18n = getI18n();
   const details = getRateLimitDetails(error);
-  if (!details) return 'Too many requests. Please try again later.';
+  if (!details) {
+    return i18n.t('errors.rateLimitGeneric', {
+      defaultValue: 'Too many requests. Please try again later.',
+    });
+  }
 
   if (details.retryAfter && details.retryAfter > 0) {
     if (details.retryAfter >= 60) {
       const minutes = Math.ceil(details.retryAfter / 60);
-      return `Too many requests. Please try again in ${minutes} minute${
-        minutes > 1 ? 's' : ''
-      }.`;
+      return i18n.t('errors.rateLimitMinutes', {
+        count: minutes,
+        defaultValue:
+          'Too many requests. Please try again in {{count}} minute(s).',
+      });
     }
-    return `Too many requests. Please try again in ${
-      details.retryAfter
-    } second${details.retryAfter > 1 ? 's' : ''}.`;
+    return i18n.t('errors.rateLimitSeconds', {
+      count: details.retryAfter,
+      defaultValue:
+        'Too many requests. Please try again in {{count}} second(s).',
+    });
   }
 
   return details.message;

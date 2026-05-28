@@ -38,18 +38,24 @@ function initializeClient() {
   // Create cache instance
   const cache = makeCache();
 
-  // Phase 1: sync restore of critical entities (~30, ~5ms) — needed by
-  // cache-first queries on the first render. Phase 2 (bulk restore) is
-  // deferred to the app entry; see startDeferredCacheRestore.
-  const criticalT0 = performance.now();
+  // Restore persisted cache: load both critical and deferred partitions and
+  // merge into a single cache.restore() call. cache.restore() is destructive
+  // (it wipes the EntityStore via init()), so calling it twice would discard
+  // whichever partition was restored first. Merging first avoids that.
+  // Both reads are synchronous MMKV operations (~5-20ms total during native splash).
+  const restoreT0 = performance.now();
   const criticalCache = apolloCachePersistence.loadCritical();
-  if (criticalCache) {
-    logger.info('📦 Apollo: Restoring critical cache from storage');
-    cache.restore(criticalCache);
-    emitHistogram(
-      'app_apollo_critical_restore_ms',
-      performance.now() - criticalT0,
+  const deferredCache = apolloCachePersistence.loadDeferred();
+
+  if (criticalCache || deferredCache) {
+    const merged = { ...(criticalCache || {}), ...(deferredCache || {}) };
+    logger.info(
+      `📦 Apollo: Restoring ${
+        Object.keys(merged).length
+      } entities from storage`,
     );
+    cache.restore(merged);
+    emitHistogram('app_apollo_restore_ms', performance.now() - restoreT0);
   } else {
     // Migration fallback: read old single-key format
     const persistedCache = apolloCachePersistence.load();
@@ -58,7 +64,7 @@ function initializeClient() {
       cache.restore(persistedCache);
       emitHistogram(
         'app_apollo_legacy_restore_ms',
-        performance.now() - criticalT0,
+        performance.now() - restoreT0,
       );
     }
   }

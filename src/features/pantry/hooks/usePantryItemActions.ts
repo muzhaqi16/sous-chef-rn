@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { gql } from '@apollo/client';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
 import {
@@ -24,28 +23,11 @@ import {
 } from '#/utils/errors/notFound';
 import { Telemetry } from '#services/telemetry';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
-
-// Minimal cache-read fragments — only the few fields the optimistic-update
-// path needs. Kept inside the module so they live next to the only consumer.
-const TrackingUnitOnlyFragment = gql`
-  fragment _UsePantryItemActionsTrackingUnit on PantryItem {
-    unit {
-      id
-    }
-  }
-`;
-
-const QuantityOnlyFragment = gql`
-  fragment _UsePantryItemActionsQuantity on PantryItem {
-    quantity
-  }
-`;
-
-const IdOnlyFragment = gql`
-  fragment _UsePantryItemActionsId on PantryItem {
-    id
-  }
-`;
+import {
+  _UsePantryItemActionsTrackingUnitFragmentDoc,
+  _UsePantryItemActionsQuantityFragmentDoc,
+  _UsePantryItemActionsIdFragmentDoc,
+} from './usePantryItemActions.generated';
 
 interface UsePantryItemActionsOptions {
   removeItem: (id: string) => Promise<void>;
@@ -101,7 +83,7 @@ export function usePantryItemActions({
       unit: { id: string } | null;
     }>({
       id: cacheId,
-      fragment: TrackingUnitOnlyFragment,
+      fragment: _UsePantryItemActionsTrackingUnitFragmentDoc,
     });
     return data?.unit?.id ?? undefined;
   };
@@ -117,7 +99,7 @@ export function usePantryItemActions({
     if (!cacheId) return 0;
     const data = client.cache.readFragment<{ quantity: number }>({
       id: cacheId,
-      fragment: QuantityOnlyFragment,
+      fragment: _UsePantryItemActionsQuantityFragmentDoc,
     });
     return data?.quantity ?? 0;
   };
@@ -481,7 +463,7 @@ export function usePantryItemActions({
     if (!cacheId) return false;
     const data = client.cache.readFragment<{ id: string }>({
       id: cacheId,
-      fragment: IdOnlyFragment,
+      fragment: _UsePantryItemActionsIdFragmentDoc,
     });
     return !!data?.id;
   };

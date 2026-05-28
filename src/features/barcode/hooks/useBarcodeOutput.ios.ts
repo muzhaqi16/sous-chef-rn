@@ -2,6 +2,7 @@ import { useObjectOutput } from 'react-native-vision-camera';
 import type {
   CameraObjectOutput,
   ScannedCode,
+  ScannedObject,
   ScannedObjectType,
 } from 'react-native-vision-camera';
 
@@ -21,6 +22,31 @@ export interface UseBarcodeOutputOptions {
   formats: NormalizedBarcodeFormat[];
   onBarcodeScanned: (barcode: ScannedBarcode) => void;
   onError?: (error: unknown) => void;
+}
+
+/**
+ * Module-level try-catch wrapper for the onObjectsScanned callback.
+ * Keeps try-catch out of the hook body so the React Compiler doesn't bail out.
+ * iOS's useObjectOutput has no onError option, so we catch here and forward.
+ */
+function processScannedObjects(
+  objects: ScannedObject[],
+  requested: Set<NormalizedBarcodeFormat>,
+  onBarcodeScanned: (barcode: ScannedBarcode) => void,
+  onError?: (error: unknown) => void,
+): void {
+  try {
+    for (const obj of objects) {
+      const code = obj as ScannedCode;
+      if (!code.value) continue;
+      const format = emitFormat(code.type, code.value, requested);
+      if (!format) continue;
+      onBarcodeScanned({ value: code.value, format });
+      return;
+    }
+  } catch (error) {
+    onError?.(error);
+  }
 }
 
 // Map our normalized format names → vision-camera's ScannedObjectType.
@@ -82,14 +108,12 @@ export function useBarcodeOutput(
   return useObjectOutput({
     types: toNativeTypes(options.formats),
     onObjectsScanned: objects => {
-      for (const obj of objects) {
-        const code = obj as ScannedCode;
-        if (!code.value) continue;
-        const format = emitFormat(code.type, code.value, requested);
-        if (!format) continue;
-        options.onBarcodeScanned({ value: code.value, format });
-        return;
-      }
+      processScannedObjects(
+        objects,
+        requested,
+        options.onBarcodeScanned,
+        options.onError,
+      );
     },
   });
 }

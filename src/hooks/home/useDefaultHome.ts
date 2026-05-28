@@ -75,6 +75,8 @@ export const useDefaultHome = () => {
 
   // Allow pantry query to start immediately when persisted selections exist.
   // This runs in parallel with GetHomes instead of waiting for selection init.
+  // Safe because both cache partitions are restored synchronously in
+  // initializeClient() before React mounts.
   useEffect(() => {
     if (
       canAttemptQueries &&

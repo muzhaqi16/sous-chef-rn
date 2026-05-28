@@ -19,7 +19,7 @@ export interface ScannedBarcode {
 export interface UseBarcodeOutputOptions {
   formats: NormalizedBarcodeFormat[];
   onBarcodeScanned: (barcode: ScannedBarcode) => void;
-  onError?: (error: Error) => void;
+  onError?: (error: unknown) => void;
 }
 
 const noopOnError = () => {};

@@ -166,11 +166,12 @@ export function useRecipeReviews({
       },
     });
     const payload = result.data?.createRecipeReview;
-    if (payload?.__typename === 'RateLimitError') {
-      toastService.error(payload.message);
+    if (payload?.__typename === 'CreateRecipeReviewPayload') {
+      toastService.success('Review submitted');
       return;
     }
-    toastService.success('Review submitted');
+    const message = payload && 'message' in payload ? payload.message : null;
+    toastService.error(message ?? 'Failed to submit review');
   };
 
   const updateReview = async (
@@ -178,7 +179,7 @@ export function useRecipeReviews({
     input: { rating?: number; comment?: string },
   ) => {
     const prevRating = getReviewRating(apolloClient.cache, id);
-    await updateReviewMutation({
+    const result = await updateReviewMutation({
       variables: {
         input: {
           id,
@@ -196,12 +197,24 @@ export function useRecipeReviews({
         }
       },
     });
-    toastService.success('Review updated');
+    const payload = result.data?.updateRecipeReview;
+    if (payload?.__typename === 'UpdateRecipeReviewPayload') {
+      toastService.success('Review updated');
+      return;
+    }
+    const message = payload && 'message' in payload ? payload.message : null;
+    toastService.error(message ?? 'Failed to update review');
   };
 
   const deleteReview = async (id: string) => {
-    await deleteReviewMutation({ variables: { input: { id } } });
-    toastService.success('Review deleted');
+    const result = await deleteReviewMutation({ variables: { input: { id } } });
+    const payload = result.data?.deleteRecipeReview;
+    if (payload?.__typename === 'DeleteRecipeReviewPayload') {
+      toastService.success('Review deleted');
+      return;
+    }
+    const message = payload && 'message' in payload ? payload.message : null;
+    toastService.error(message ?? 'Failed to delete review');
   };
 
   const toggleHelpful = async (reviewId: string, isHelpful: boolean) => {
