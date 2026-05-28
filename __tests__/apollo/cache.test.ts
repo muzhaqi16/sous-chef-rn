@@ -1,7 +1,7 @@
 'use no memo';
 
 import { InMemoryCache } from '@apollo/client';
-import { makeCache, stopCacheMonitoring } from '#/apollo/cache';
+import { makeCache } from '#/apollo/cache';
 
 // Mock the fragment matcher data
 jest.mock('#/graphql/generated/fragmentMatcher.json', () => ({
@@ -11,57 +11,10 @@ jest.mock('#/graphql/generated/fragmentMatcher.json', () => ({
 }));
 
 describe('cache.ts', () => {
-  beforeEach(() => {
-    jest.useFakeTimers();
-    stopCacheMonitoring();
-  });
-
-  afterEach(() => {
-    stopCacheMonitoring();
-    jest.useRealTimers();
-  });
-
-  // ─── makeCache ────────────────────────────────────────────────
-
   describe('makeCache', () => {
     it('returns an InMemoryCache instance', () => {
       const cache = makeCache();
       expect(cache).toBeInstanceOf(InMemoryCache);
-    });
-
-    it('sets up cache monitoring interval', () => {
-      const spy = jest.spyOn(global, 'setInterval');
-      makeCache();
-      expect(spy).toHaveBeenCalledWith(expect.any(Function), expect.any(Number));
-      spy.mockRestore();
-    });
-
-    it('clears previous monitoring interval on second call (prevents memory leak on hot reload)', () => {
-      const clearSpy = jest.spyOn(global, 'clearInterval');
-      makeCache();
-      const callsBefore = clearSpy.mock.calls.length;
-      makeCache();
-      // Second makeCache should call stopCacheMonitoring which clears the first interval
-      expect(clearSpy.mock.calls.length).toBeGreaterThan(callsBefore);
-      clearSpy.mockRestore();
-    });
-  });
-
-  // ─── stopCacheMonitoring ──────────────────────────────────────
-
-  describe('stopCacheMonitoring', () => {
-    it('clears the monitoring interval', () => {
-      makeCache();
-      const clearSpy = jest.spyOn(global, 'clearInterval');
-      stopCacheMonitoring();
-      expect(clearSpy).toHaveBeenCalled();
-      clearSpy.mockRestore();
-    });
-
-    it('is safe to call when no interval exists', () => {
-      // Should not throw
-      stopCacheMonitoring();
-      stopCacheMonitoring();
     });
   });
 
@@ -72,10 +25,6 @@ describe('cache.ts', () => {
 
     beforeEach(() => {
       cache = makeCache();
-    });
-
-    afterEach(() => {
-      stopCacheMonitoring();
     });
 
     const gql = require('graphql-tag').default;
@@ -122,10 +71,6 @@ describe('cache.ts', () => {
 
     beforeEach(() => {
       cache = makeCache();
-    });
-
-    afterEach(() => {
-      stopCacheMonitoring();
     });
 
     const gql = require('graphql-tag').default;
@@ -175,10 +120,6 @@ describe('cache.ts', () => {
 
     beforeEach(() => {
       cache = makeCache();
-    });
-
-    afterEach(() => {
-      stopCacheMonitoring();
     });
 
     const gql = require('graphql-tag').default;
@@ -293,10 +234,6 @@ describe('cache.ts', () => {
 
     beforeEach(() => {
       cache = makeCache();
-    });
-
-    afterEach(() => {
-      stopCacheMonitoring();
     });
 
     const gql = require('graphql-tag').default;
@@ -414,26 +351,6 @@ describe('cache.ts', () => {
     });
   });
 
-  // ─── GC / cache monitoring ─────────────────────────────────────
-
-  describe('runCacheGC (via interval)', () => {
-    it('runs without error when cache is empty', () => {
-      makeCache();
-      // Advance the timer to trigger the interval callback
-      expect(() => jest.advanceTimersByTime(11 * 60 * 1000)).not.toThrow();
-    });
-
-    it('handles errors gracefully in GC monitoring', () => {
-      const cache = makeCache();
-      // Corrupt the extract to cause an error
-      jest.spyOn(cache, 'extract').mockImplementation(() => {
-        throw new Error('extract failed');
-      });
-      // Should not throw when interval fires
-      expect(() => jest.advanceTimersByTime(11 * 60 * 1000)).not.toThrow();
-    });
-  });
-
   // ─── User.profile merge ────────────────────────────────────────
 
   describe('User.profile merge', () => {
@@ -441,10 +358,6 @@ describe('cache.ts', () => {
 
     beforeEach(() => {
       cache = makeCache();
-    });
-
-    afterEach(() => {
-      stopCacheMonitoring();
     });
 
     const gql = require('graphql-tag').default;

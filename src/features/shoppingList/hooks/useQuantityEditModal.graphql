@@ -1,0 +1,23 @@
+# Narrow fragment for useQuantityEditModal's live cache subscription.
+# Reads only the fields the QuantityEditItem display needs.
+fragment useQuantityEditModal_item on ShoppingListItem {
+  id
+  itemName
+  quantity
+  category
+  unitName
+  version
+  unit {
+    id
+    name
+    symbol
+  }
+  item {
+    id
+    imageUrl
+    images {
+      url
+      kind
+    }
+  }
+}

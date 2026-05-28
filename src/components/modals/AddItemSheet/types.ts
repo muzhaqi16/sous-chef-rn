@@ -1,5 +1,5 @@
 import type { RefObject } from 'react';
-import type { BottomSheetModal } from '@gorhom/bottom-sheet';
+import type { BottomSheetModalRef } from '#hooks/useStandardBottomSheet';
 import type { BottomSheetSearchBarRef } from '#components/molecules/BottomSheetSearchBar';
 import { type ItemSuggestion } from '#/graphql/generated/schemaTypes';
 
@@ -17,17 +17,18 @@ export interface BaseSuggestionItem {
 
 /**
  * Configuration for a suggestion group/section in the sheet.
- * Uses `any` for grouped data since the actual type varies by use case.
+ * Parameterized over the concrete suggestion type so wrapper components
+ * (AddToPantrySheet, AddToShoppingListSheet) preserve their entity shape.
  */
-export interface SuggestionGroupConfig {
+export interface SuggestionGroupConfig<
+  T extends BaseSuggestionItem = BaseSuggestionItem,
+> {
   /** Unique key for this group */
   key: string;
   /** Display title (e.g., "LOW STOCK", "ADD AGAIN") */
   title: string;
   /** Function to extract items from grouped data */
-  accessor: (
-    grouped: Record<string, BaseSuggestionItem[]>,
-  ) => BaseSuggestionItem[];
+  accessor: (grouped: Record<string, T[]>) => T[];
   /** Priority order for display (lower = higher priority) */
   priority: number;
 }
@@ -55,7 +56,9 @@ export interface AddDetailsConfig {
 /**
  * Main configuration object for AddItemSheet.
  */
-export interface AddItemSheetConfig {
+export interface AddItemSheetConfig<
+  T extends BaseSuggestionItem = BaseSuggestionItem,
+> {
   /** Sheet title (e.g., "Add to Pantry", "Add to Shopping List") */
   title: string;
   /** Test ID prefix for testing */
@@ -65,7 +68,7 @@ export interface AddItemSheetConfig {
   /** Search bar placeholder text */
   searchPlaceholder: string;
   /** Suggestion groups to display */
-  suggestionGroups: SuggestionGroupConfig[];
+  suggestionGroups: SuggestionGroupConfig<T>[];
   /** Quick add behavior configuration */
   quickAdd: QuickAddConfig;
   /** Add details sheet configuration */
@@ -85,9 +88,11 @@ export interface AddItemSheetConfig {
 /**
  * Result from a suggestions hook (usePantryItemSuggestions or useShoppingListSuggestions).
  */
-export interface SuggestionsHookResult {
+export interface SuggestionsHookResult<
+  T extends BaseSuggestionItem = BaseSuggestionItem,
+> {
   /** Grouped suggestions by category */
-  grouped: Record<string, BaseSuggestionItem[]>;
+  grouped: Record<string, T[]>;
   /** Whether suggestions are loading */
   loading: boolean;
   /** Whether there are any suggestions to display */
@@ -98,8 +103,14 @@ export interface SuggestionsHookResult {
 
 /**
  * Props for the generic AddItemSheet component.
+ *
+ * Parameterized over the concrete suggestion type so wrapper components
+ * (AddToPantrySheet, AddToShoppingListSheet) keep their entity shape end-to-end
+ * — no `as unknown as` casts needed at the callback boundary.
  */
-export interface AddItemSheetProps {
+export interface AddItemSheetProps<
+  T extends BaseSuggestionItem = BaseSuggestionItem,
+> {
   /** Whether the sheet is visible */
   visible: boolean;
   /** Context ID (pantryId or shoppingListId) */
@@ -107,22 +118,19 @@ export interface AddItemSheetProps {
   /** Callback when sheet is closed */
   onClose: () => void;
   /** Configuration for this sheet instance */
-  config: AddItemSheetConfig;
+  config: AddItemSheetConfig<T>;
   /** Suggestions hook result */
-  suggestions: SuggestionsHookResult;
+  suggestions: SuggestionsHookResult<T>;
   /** Handler for quick adding from search autocomplete */
   onQuickAddSearchSuggestion: (item: ItemSuggestion) => void;
   /** Handler for quick adding from suggestion list */
-  onQuickAddSuggestion: (item: BaseSuggestionItem) => void;
+  onQuickAddSuggestion: (item: T) => void;
   /** Whether a mutation is currently in progress */
   isMutating: boolean;
   /** Handler for "Add manually" button */
   onAddManually: (searchValue: string) => void;
   /** Handler for barcode scan button */
   onScanPress: () => void;
-  /** Optional: Handler for "Identify with camera" (OCR) button. When provided,
-   *  a third action card is rendered alongside Scan Barcode / Add Manually. */
-  onIdentifyPress?: () => void;
   /** Optional: Items currently animating out (for exit animations) */
   exitingItems?: Set<string>;
   /** Optional: Callback when exit animation completes */
@@ -132,7 +140,7 @@ export interface AddItemSheetProps {
   /** Optional: Initial search query */
   initialSearchQuery?: string;
   /** Optional: Refs for external control */
-  bottomSheetRef?: RefObject<BottomSheetModal>;
+  bottomSheetRef?: RefObject<BottomSheetModalRef>;
   searchBarRef?: RefObject<BottomSheetSearchBarRef>;
   /** Optional: When false, hide product images in suggestions (default: true) */
   showImages?: boolean;

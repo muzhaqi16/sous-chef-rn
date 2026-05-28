@@ -9,6 +9,7 @@ import { EmailInput } from '#components/atoms/EmailInput';
 import { PasswordInput } from '#components/atoms/PasswordInput';
 import { NameInput } from '#components/atoms/NameInput';
 import { getSignUpValidationSchema } from '#/utils/validation/auth';
+import { logValidationErrors } from '#/utils/validation/common';
 import { type RegisterInput } from '#/graphql/generated/schemaTypes';
 import { authService } from '#/services/authService';
 import { useAppStore } from '#store/useAppStore';
@@ -79,7 +80,7 @@ export const SignUpScreen = (): React.JSX.Element => {
         errors={form.formState.errors}
         submitText={isRegistering ? 'Creating account…' : 'Sign Up'}
         submitButtonTestID="signup-submit-button"
-        onSubmit={form.handleSubmit(onSubmit)}
+        onSubmit={form.handleSubmit(onSubmit, logValidationErrors)}
         footerText="Already have an account?"
         footerLinkText="Sign In"
         footerLinkTestID="signup-login-link"

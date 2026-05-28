@@ -81,7 +81,7 @@ jest.mock('#/components/organisms/home/CreateHomeForm', () => ({
 }));
 
 jest.mock('#/components/organisms/home/HomeCard', () => ({
-  HomeCard: ({ home }: any) => home.name,
+  HomeCard: ({ homeRef }: any) => homeRef?.name,
 }));
 
 jest.mock('#/services/toastService', () => ({

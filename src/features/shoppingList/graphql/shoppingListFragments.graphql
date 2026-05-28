@@ -1,4 +1,11 @@
-fragment ShoppingListItemCore on ShoppingListItem {
+# Structural shape passed between shopping-list modal hooks
+# (`useMoveToPantry`, `useQuantityEditModal`, `useClearShoppingListItems`,
+# `ShoppingListModalsContext`, etc.). Not spread by any operation — only
+# used as a TypeScript type at the boundary where masked fragment refs are
+# materialized and handed between hooks. Per-hook splits would each
+# duplicate this identical shape; this is the one acknowledged exception
+# to strict per-consumer ownership.
+fragment ShoppingListItemDisplayFragment on ShoppingListItem {
   id
   itemName
   quantity
@@ -17,10 +24,6 @@ fragment ShoppingListItemCore on ShoppingListItem {
     name
     symbol
   }
-}
-
-fragment ShoppingListItemDisplayFragment on ShoppingListItem {
-  ...ShoppingListItemCore
   sortOrder
   item {
     id
@@ -29,57 +32,12 @@ fragment ShoppingListItemDisplayFragment on ShoppingListItem {
   }
 }
 
-fragment ShoppingListItemFragment on ShoppingListItem {
-  ...ShoppingListItemDisplayFragment
-  item {
-    id
-    name
-    description
-    imageUrl
-    netWeight
-    nutritions
-    displayUnit {
-      id
-      name
-      symbol
-    }
-    categories {
-      id
-      isPrimary
-      confidence
-      source
-      assignedAt
-      category {
-        id
-        name
-      }
-    }
-  }
-  priceEstimate {
-    estimated
-    lastKnown
-  }
-  source {
-    isAutoAdded
-    autoAddReason
-    isFromMealPlan
-  }
-  priority
-  sortOrder
-  createdAt
-  addedBy {
-    ...UserSummary
-  }
-  purchasesConnection(first: 10) {
-    edges {
-      node {
-        ...PurchaseFragment
-      }
-    }
-    totalCount
-  }
-}
-
+# Canonical shape for a ShoppingListOwnership in the cache.
+# Spread by: shoppingList.graphql (GetShoppingListDetails, CreateShoppingList,
+#   UpdateShoppingList), useRecipeDetail.graphql (GetShoppingListsLite)
+# Read via cache.readFragment by: useShoppingListDetails.ts,
+#   ShoppingListMainContent.tsx
+# Kept shared — all 6 consumers need the identical write-back shape.
 fragment ShoppingListOwnershipFragment on ShoppingListOwnership {
   id
   userId
@@ -94,6 +52,12 @@ fragment ShoppingListOwnershipFragment on ShoppingListOwnership {
   }
 }
 
+# Canonical shape for a ShoppingListCollaborator in the cache.
+# Spread by: shoppingList.graphql (GetShoppingListDetails, AddCollaborator),
+#   collaboration.graphql (CollaborationChanges subscription)
+# Read via cache.readFragment by: useShoppingListDetails.ts, ShareList.tsx,
+#   ShoppingListMainContent.tsx
+# Kept shared — all 6 consumers need the identical write-back shape.
 fragment ShoppingListCollaboratorFragment on ShoppingListCollaborator {
   id
   email
@@ -104,6 +68,7 @@ fragment ShoppingListCollaboratorFragment on ShoppingListCollaborator {
   canRemoveItems
   canEditItems
   canMarkPurchased
+  invitedAt
   collaborator {
     id
     email
@@ -113,12 +78,4 @@ fragment ShoppingListCollaboratorFragment on ShoppingListCollaborator {
       avatar
     }
   }
-}
-
-fragment PurchaseFragment on Purchase {
-  id
-  purchaseDate
-  quantity
-  unitPrice
-  unitSymbol
 }

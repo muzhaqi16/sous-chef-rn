@@ -49,7 +49,7 @@ jest.mock('#features/recipes/components/IngredientMatchRow', () => ({
     return require('react').createElement(
       Text,
       null,
-      editableMatch.match.ingredient.name,
+      editableMatch.ingredient.name,
     );
   },
 }));
@@ -57,11 +57,19 @@ jest.mock('#features/recipes/components/IngredientMatchRow', () => ({
 describe('IngredientMatchingSheet', () => {
   const makeMatch = (name: string, id: string) => ({
     match: {
-      ingredient: { id, name, isOptional: false },
+      ingredient: { __typename: 'RecipeIngredient', id },
       matchedPantryItem: null,
       suggestedUnit: null,
     },
+    ingredient: {
+      __typename: 'RecipeIngredient',
+      id,
+      name,
+      isOptional: false,
+      unit: null,
+    },
     adjustedQuantity: 1,
+    adjustedUnitId: null,
     isIncluded: true,
   });
 

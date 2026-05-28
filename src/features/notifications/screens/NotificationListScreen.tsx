@@ -156,17 +156,17 @@ export const NotificationListScreen: React.FC = () => {
               urgentNotifications={filteredGroups.urgent}
             />
 
-            <NotificationHeader
-              onMarkAllRead={handleMarkAllAsRead}
-              onClearAll={clearAll}
-              hasNotifications={hasNotifications}
-            />
-
             {renderHeader()}
 
             <NotificationFilters
               selectedCategory={filterCategory}
               onCategoryChange={setFilterCategory}
+            />
+
+            <NotificationHeader
+              onMarkAllRead={handleMarkAllAsRead}
+              onClearAll={clearAll}
+              hasNotifications={hasNotifications}
             />
 
             <SectionList

@@ -10,7 +10,7 @@ import {
   type HealthGoal,
   type Intolerance,
 } from '#/graphql/generated/schemaTypes';
-import { type RecipeFragment } from '#features/recipes/graphql/recipeFragments.generated';
+import { type RecipeForm_RecipeFragment } from './RecipeForm.generated';
 
 export interface IngredientFormState {
   id: string; // local temp id
@@ -254,8 +254,8 @@ export function useRecipeForm() {
     };
   };
 
-  // Build UpdateRecipeInput
-  const buildUpdateInput = (): UpdateRecipeInput => {
+  // Build UpdateRecipeInput (without id — caller adds it)
+  const buildUpdateInput = (): Omit<UpdateRecipeInput, 'id'> => {
     return {
       name: state.name.trim() || undefined,
       description: state.description.trim() || undefined,
@@ -276,7 +276,7 @@ export function useRecipeForm() {
   };
 
   // Populate from existing recipe (edit mode)
-  const populateFromRecipe = (recipe: RecipeFragment) => {
+  const populateFromRecipe = (recipe: RecipeForm_RecipeFragment) => {
     const formState: RecipeFormState = {
       name: recipe.name ?? '',
       description: recipe.description ?? '',

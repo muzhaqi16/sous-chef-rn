@@ -1,0 +1,14 @@
+# Narrow fragment for the AdjustPantryItemQuantity mutation response.
+# The mutation changes quantity, remainingNetWeight, version, and
+# lastUsedAt; Apollo auto-normalization writes these to the cached
+# PantryItem entity. The explicit writeFragment in the hook was
+# redundant — removed in this migration.
+fragment useAdjustPantryItemQuantity_pantryItem on PantryItem {
+  id
+  version
+  updatedAt
+  quantity
+  remainingNetWeight
+  lastUsedAt
+  activeBatchCount
+}

@@ -7,6 +7,7 @@ mutation Login($input: LoginInput!) {
     accessToken
     refreshToken
     user {
+      id
       ...LoginUser
     }
   }
@@ -17,50 +18,81 @@ mutation Register($input: RegisterInput!) {
     accessToken
     refreshToken
     user {
+      id
       ...LoginUser
     }
   }
 }
 
-mutation RefreshToken($token: String!) {
-  refresh(token: $token) {
+mutation RefreshToken($input: RefreshTokenInput!) {
+  refresh(input: $input) {
     accessToken
     refreshToken
   }
 }
 
-mutation VerifyEmail($code: String!) {
-  verifyEmail(code: $code) {
-    success
-    message
-    code
-    user {
-      ...LoginUser
+mutation VerifyEmail($input: VerifyEmailInput!) {
+  verifyEmail(input: $input) {
+    __typename
+    ... on VerifyEmailPayload {
+      user {
+        ...LoginUser
+      }
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
-mutation ForgotPassword($email: String!) {
-  forgotPassword(email: $email) {
+mutation ForgotPassword($input: ForgotPasswordInput!) {
+  forgotPassword(input: $input) {
+    __typename
+    ... on ForgotPasswordPayload {
+      status {
+        success
+        code
+        message
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+  }
+}
+
+mutation ResetPassword($input: ResetPasswordWithTokenInput!) {
+  resetPassword(input: $input) {
     success
     message
     code
   }
 }
 
-mutation ResetPassword($token: String!, $newPassword: String!) {
-  resetPassword(token: $token, newPassword: $newPassword) {
-    success
-    message
-    code
-  }
-}
-
-mutation ResendVerificationEmail($email: String!) {
-  resendVerificationEmail(email: $email) {
-    success
-    message
-    code
+mutation ResendVerificationEmail($input: ResendVerificationEmailInput!) {
+  resendVerificationEmail(input: $input) {
+    __typename
+    ... on ResendVerificationEmailPayload {
+      user {
+        id
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
+    }
   }
 }
 

@@ -1,5 +1,6 @@
+import React from 'react';
 import { renderHook } from '@testing-library/react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { NavigationContext } from '@react-navigation/native';
 import { useStandardBottomSheet } from '../useStandardBottomSheet';
 
 // Track present/dismiss calls on the BottomSheetModal ref
@@ -14,14 +15,6 @@ jest.mock('#hooks/useSharedBottomSheetConfigs', () => ({
 jest.mock('#hooks/useBottomSheetBackHandler', () => ({
   useBottomSheetBackHandler: jest.fn(),
 }));
-
-jest.mock('#components/atoms/DismissBackdrop', () => ({
-  DismissBackdrop: 'DismissBackdrop',
-}));
-
-const mockedUseFocusEffect = useFocusEffect as jest.MockedFunction<
-  typeof useFocusEffect
->;
 
 beforeEach(() => {
   mockPresent.mockClear();
@@ -90,7 +83,10 @@ describe('useStandardBottomSheet', () => {
       useStandardBottomSheet({ ...defaultOptions, onDismiss }),
     );
 
-    expect(result.current.modalProps.onDismiss).toBe(onDismiss);
+    // onDismiss is wrapped by safeOnDismiss for backdrop cleanup;
+    // verify calling it invokes the original callback
+    result.current.modalProps.onDismiss?.();
+    expect(onDismiss).toHaveBeenCalled();
   });
 
   it('includes animation configs in modalProps', () => {
@@ -115,11 +111,14 @@ describe('useStandardBottomSheet', () => {
     ).toBeGreaterThanOrEqual(16);
   });
 
-  it('uses DismissBackdrop as backdropComponent', () => {
-    const { DismissBackdrop } = require('#components/atoms/DismissBackdrop');
+  it('omits backdropComponent (global dim layer drives itself)', () => {
     const { result } = renderHook(() => useStandardBottomSheet(defaultOptions));
 
-    expect(result.current.modalProps.backdropComponent).toBe(DismissBackdrop);
+    // The dim overlay is painted by `GlobalBackdrop` (rendered once at App
+    // level) and driven by a claim from this hook keyed off gorhom's
+    // `onChange(index)`. With `backdropComponent` omitted, gorhom renders
+    // nothing for the per-sheet backdrop (BottomSheet.tsx:1784).
+    expect(result.current.modalProps.backdropComponent).toBeUndefined();
   });
 
   describe('auto present/dismiss', () => {
@@ -176,31 +175,50 @@ describe('useStandardBottomSheet', () => {
   });
 
   describe('navigation focus lifecycle', () => {
-    // Helper: capture the useFocusEffect callback so the test can drive blur.
-    const installFocusCapture = () => {
-      let captured: (() => void | (() => void)) | null = null;
-      mockedUseFocusEffect.mockImplementation(cb => {
-        captured = cb as () => void | (() => void);
-      });
+    // The sheet dismisses on screen blur and re-presents on focus, so it
+    // gets out of the way when a sibling screen is pushed (e.g.
+    // BarcodeScannerScreen pushed from a Scan button inside the sheet).
+    // `BottomSheetModal` renders into the BottomSheetModalProvider portal
+    // ABOVE the navigation container, so without this hook the sheet
+    // would stay visually on top of any new screen.
+
+    // The hook uses useContext(NavigationContext) + addListener, so tests
+    // provide a mock navigation via context wrapper.
+    type Listener = () => void;
+    const createMockNavigation = () => {
+      const listeners: Record<string, Listener[]> = {};
+      const navigation = {
+        isFocused: jest.fn(() => true),
+        addListener: jest.fn((event: string, cb: Listener) => {
+          if (!listeners[event]) listeners[event] = [];
+          listeners[event].push(cb);
+          return () => {
+            listeners[event] = listeners[event].filter(l => l !== cb);
+          };
+        }),
+      };
       return {
-        focus: () => captured?.(),
-        blur: () => {
-          const cleanup = captured?.() as (() => void) | undefined;
-          cleanup?.();
+        navigation,
+        emit: (event: string) => {
+          listeners[event]?.forEach(cb => cb());
         },
-        getCleanup: () => captured?.() as (() => void) | undefined,
       };
     };
 
-    afterEach(() => {
-      // Restore the default mock (`cb => cb()`) for other test blocks.
-      mockedUseFocusEffect.mockImplementation(cb => cb() as any);
-    });
+    const navWrapper =
+      (nav: unknown) =>
+      ({ children }: { children: React.ReactNode }) =>
+        React.createElement(
+          NavigationContext.Provider,
+          { value: nav as any },
+          children,
+        );
 
     it('re-presents the sheet on focus when visible is true', () => {
-      const fx = installFocusCapture();
-      const { result } = renderHook(() =>
-        useStandardBottomSheet({ ...defaultOptions, visible: true }),
+      const { navigation, emit } = createMockNavigation();
+      const { result } = renderHook(
+        () => useStandardBottomSheet({ ...defaultOptions, visible: true }),
+        { wrapper: navWrapper(navigation) },
       );
 
       (result.current.ref as any).current = {
@@ -208,15 +226,16 @@ describe('useStandardBottomSheet', () => {
         dismiss: mockDismiss,
       };
 
-      fx.focus();
+      emit('focus');
 
       expect(mockPresent).toHaveBeenCalled();
     });
 
     it('dismisses the sheet on blur when visible is true', () => {
-      const fx = installFocusCapture();
-      const { result } = renderHook(() =>
-        useStandardBottomSheet({ ...defaultOptions, visible: true }),
+      const { navigation, emit } = createMockNavigation();
+      const { result } = renderHook(
+        () => useStandardBottomSheet({ ...defaultOptions, visible: true }),
+        { wrapper: navWrapper(navigation) },
       );
 
       (result.current.ref as any).current = {
@@ -224,15 +243,16 @@ describe('useStandardBottomSheet', () => {
         dismiss: mockDismiss,
       };
 
-      fx.blur();
+      emit('blur');
 
       expect(mockDismiss).toHaveBeenCalled();
     });
 
     it('does not present or dismiss on focus/blur when visible is false', () => {
-      const fx = installFocusCapture();
-      const { result } = renderHook(() =>
-        useStandardBottomSheet({ ...defaultOptions, visible: false }),
+      const { navigation, emit } = createMockNavigation();
+      const { result } = renderHook(
+        () => useStandardBottomSheet({ ...defaultOptions, visible: false }),
+        { wrapper: navWrapper(navigation) },
       );
 
       (result.current.ref as any).current = {
@@ -240,18 +260,18 @@ describe('useStandardBottomSheet', () => {
         dismiss: mockDismiss,
       };
 
-      fx.focus();
+      emit('focus');
       expect(mockPresent).not.toHaveBeenCalled();
 
-      const cleanup = fx.getCleanup();
-      cleanup?.();
+      emit('blur');
       expect(mockDismiss).not.toHaveBeenCalled();
     });
 
     it('does not touch the sheet on focus/blur when visible is undefined (manual)', () => {
-      const fx = installFocusCapture();
-      const { result } = renderHook(() =>
-        useStandardBottomSheet(defaultOptions),
+      const { navigation, emit } = createMockNavigation();
+      const { result } = renderHook(
+        () => useStandardBottomSheet(defaultOptions),
+        { wrapper: navWrapper(navigation) },
       );
 
       (result.current.ref as any).current = {
@@ -259,9 +279,8 @@ describe('useStandardBottomSheet', () => {
         dismiss: mockDismiss,
       };
 
-      fx.focus();
-      const cleanup = fx.getCleanup();
-      cleanup?.();
+      emit('focus');
+      emit('blur');
 
       expect(mockPresent).not.toHaveBeenCalled();
       expect(mockDismiss).not.toHaveBeenCalled();

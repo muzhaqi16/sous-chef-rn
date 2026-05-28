@@ -1,6 +1,7 @@
 import { ApolloClient } from '@apollo/client';
 import { logger } from '#/utils/environment';
 import { createLink } from './links/index';
+import { registerApolloClient } from './links/refreshToken';
 import { makeCache } from './cache';
 import { apolloCachePersistence } from './offline/ApolloCachePersistence';
 import packageJson from '../../package.json';
@@ -38,36 +39,24 @@ function initializeClient() {
   // Create cache instance
   const cache = makeCache();
 
-  // PERFORMANCE: Two-phase cache restore.
-  // Phase 1: Sync restore of critical entities (~30 entities, ~5ms).
-  //   ROOT_QUERY, User, Home, settings — needed by cache-first queries.
-  // Phase 2: Deferred restore of bulk entities via requestIdleCallback.
-  //   PantryItem, ShoppingListItem, Recipe, etc. — loaded when JS thread is idle.
-  // This reduces JS blocking at startup. If the deferred phase hasn't fired when
-  // PantryMain mounts, the cache miss means network returns only 20 items (fast render).
-  const criticalT0 = performance.now();
+  // Restore persisted cache: load both critical and deferred partitions and
+  // merge into a single cache.restore() call. cache.restore() is destructive
+  // (it wipes the EntityStore via init()), so calling it twice would discard
+  // whichever partition was restored first. Merging first avoids that.
+  // Both reads are synchronous MMKV operations (~5-20ms total during native splash).
+  const restoreT0 = performance.now();
   const criticalCache = apolloCachePersistence.loadCritical();
-  if (criticalCache) {
-    logger.info('📦 Apollo: Restoring critical cache from storage');
-    cache.restore(criticalCache);
-    emitHistogram(
-      'app_apollo_critical_restore_ms',
-      performance.now() - criticalT0,
-    );
+  const deferredCache = apolloCachePersistence.loadDeferred();
 
-    // Phase 2: Deferred bulk restore
-    requestIdleCallback(() => {
-      const deferredT0 = performance.now();
-      const deferred = apolloCachePersistence.loadDeferred();
-      if (deferred) {
-        cache.restore(deferred);
-        emitHistogram(
-          'app_apollo_deferred_restore_ms',
-          performance.now() - deferredT0,
-        );
-        logger.info('📦 Apollo: Deferred cache restore complete');
-      }
-    });
+  if (criticalCache || deferredCache) {
+    const merged = { ...(criticalCache || {}), ...(deferredCache || {}) };
+    logger.info(
+      `📦 Apollo: Restoring ${
+        Object.keys(merged).length
+      } entities from storage`,
+    );
+    cache.restore(merged);
+    emitHistogram('app_apollo_restore_ms', performance.now() - restoreT0);
   } else {
     // Migration fallback: read old single-key format
     const persistedCache = apolloCachePersistence.load();
@@ -76,7 +65,7 @@ function initializeClient() {
       cache.restore(persistedCache);
       emitHistogram(
         'app_apollo_legacy_restore_ms',
-        performance.now() - criticalT0,
+        performance.now() - restoreT0,
       );
     }
   }
@@ -92,6 +81,7 @@ function initializeClient() {
       name: 'sous-chef-app',
       version: packageJson.version,
     },
+    dataMasking: true,
     defaultOptions: {
       query: {
         fetchPolicy: 'network-only', // Always fetch fresh data for one-time queries
@@ -215,3 +205,8 @@ function setupCachePersistence(client: ApolloClient) {
 
 // Initialize client synchronously
 export const client = initializeClient();
+
+// Inject the client into the token-refresh module. refreshToken can't import
+// this singleton directly without forming a circular dependency, so it reads
+// the reference we register here at call time.
+registerApolloClient(client);

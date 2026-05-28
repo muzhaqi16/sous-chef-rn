@@ -1,18 +1,20 @@
+import { t } from '#/i18n/t';
+
 /**
  * Format a role string from API format to display format
  * @param role - Role in API format (OWNER, ADMIN, MEMBER, GUEST)
- * @returns Formatted role string (Owner, Admin, Member, Guest)
+ * @returns Translated role label
  */
 export function formatRole(role: string): string {
   switch (role) {
     case 'OWNER':
-      return 'Owner';
+      return t('roles.owner');
     case 'ADMIN':
-      return 'Admin';
+      return t('roles.admin');
     case 'MEMBER':
-      return 'Member';
+      return t('roles.member');
     case 'GUEST':
-      return 'Guest';
+      return t('roles.guest');
     default:
       return role;
   }

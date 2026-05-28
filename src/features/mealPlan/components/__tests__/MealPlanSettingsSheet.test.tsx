@@ -1,6 +1,7 @@
 'use no memo';
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { screen } from '@testing-library/react-native';
+import { renderWithApollo as render } from '#/test-utils/apolloMockProvider';
 import { MealPlanSettingsSheet } from '../MealPlanSettingsSheet';
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
@@ -45,6 +46,7 @@ jest.mock('../NutritionSummaryCard', () => ({
 }));
 
 const makeMealPlan = (overrides?: any) => ({
+  __typename: 'MealPlan',
   id: 'mp-1',
   name: 'Weekly Plan',
   description: 'My meal plan description',
@@ -68,7 +70,7 @@ const defaultPermissions = {
 
 const defaultProps: any = {
   visible: true,
-  mealPlan: makeMealPlan(),
+  mealPlanRef: makeMealPlan(),
   permissions: defaultPermissions,
   onClose: jest.fn(),
   onDuplicate: jest.fn(),
@@ -88,7 +90,7 @@ describe('MealPlanSettingsSheet', () => {
   });
 
   it('renders null when mealPlan is null', () => {
-    render(<MealPlanSettingsSheet {...defaultProps} mealPlan={null} />);
+    render(<MealPlanSettingsSheet {...defaultProps} mealPlanRef={null} />);
     expect(screen.queryByText('Plan Settings')).toBeNull();
   });
 
@@ -148,7 +150,7 @@ describe('MealPlanSettingsSheet', () => {
     render(
       <MealPlanSettingsSheet
         {...defaultProps}
-        mealPlan={makeMealPlan({ description: null })}
+        mealPlanRef={makeMealPlan({ description: null })}
       />,
     );
     expect(screen.queryByText('My meal plan description')).toBeNull();
@@ -161,7 +163,7 @@ describe('MealPlanSettingsSheet', () => {
         { id: 'sl-2', name: 'Grocery Run 2' },
       ],
     });
-    render(<MealPlanSettingsSheet {...defaultProps} mealPlan={mealPlan} />);
+    render(<MealPlanSettingsSheet {...defaultProps} mealPlanRef={mealPlan} />);
     expect(screen.getByText('Generated Lists')).toBeTruthy();
     expect(screen.getByText('Grocery Run 1')).toBeTruthy();
     expect(screen.getByText('Grocery Run 2')).toBeTruthy();

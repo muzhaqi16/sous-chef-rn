@@ -37,6 +37,12 @@ jest.mock('#/apollo/utils/createOptimisticResponse', () => ({
       ...fields,
     }),
   ),
+  buildOptimisticMutationResponse: jest.fn(
+    (opName: string, payloadTypename: string, fields: any) => ({
+      __typename: 'Mutation',
+      [opName]: { __typename: payloadTypename, ...fields },
+    }),
+  ),
 }));
 
 jest.mock('#/utils/errors/versionConflict', () => ({
@@ -78,14 +84,6 @@ jest.mock('#/services/alertService', () => ({
 
 const defaultOptions = {
   pantryId: 'pantry-1',
-  pantryItems: [
-    {
-      id: 'item-1',
-      itemName: 'Milk',
-      version: 1,
-      updatedAt: '2024-01-01',
-    } as any,
-  ],
   refetch: jest.fn().mockResolvedValue(undefined),
 };
 

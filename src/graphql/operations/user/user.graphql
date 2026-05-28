@@ -74,61 +74,101 @@ query GetDietaryProfile {
 
 mutation UpdateNotificationPreferences($input: UpdateNotificationPreferencesInput!) {
   updateNotificationPreferences(input: $input) {
-    success
-    message
-    code
-    notificationPreferences {
-      id
-      userId
-      emailEnabled
-      pushEnabled
-      smsEnabled
-      expirationNotifications
-      expirationNotificationFrequency
-      expirationDaysThreshold
-      lowStockAlerts
-      shoppingListUpdates
-      pantryChanges
-      recipeRecommendations
-      mealPlanReminders
-      cookingReminders
-      collaborationInvites
-      homeInvites
-      sharedListUpdates
-      weeklyDigest
-      monthlyReport
-      quietHoursEnabled
-      quietHoursStart
-      quietHoursEnd
-      quietHoursTimezone
+    __typename
+    ... on UpdateNotificationPreferencesPayload {
+      notificationPreferences {
+        id
+        userId
+        emailEnabled
+        pushEnabled
+        smsEnabled
+        expirationNotifications
+        expirationNotificationFrequency
+        expirationDaysThreshold
+        lowStockAlerts
+        shoppingListUpdates
+        pantryChanges
+        recipeRecommendations
+        mealPlanReminders
+        cookingReminders
+        collaborationInvites
+        homeInvites
+        sharedListUpdates
+        weeklyDigest
+        monthlyReport
+        quietHoursEnabled
+        quietHoursStart
+        quietHoursEnd
+        quietHoursTimezone
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
 mutation UpdateDietaryProfile($input: UpdateDietaryProfileInput!) {
   updateDietaryProfile(input: $input) {
-    success
-    message
-    code
-    dietaryProfile {
-      id
-      userId
-      preferredCuisines
-      dislikedIngredients
-      favoriteIngredients
-      calorieTarget
-      proteinTarget
-      carbsTarget
-      fatTarget
-      mealsPerDay
-      snacksPerDay
-      cookingSkillLevel
-      maxPrepTimeMinutes
-      maxCookTimeMinutes
-      budgetPerMeal
-      createdAt
-      updatedAt
-      restrictions {
+    __typename
+    ... on UpdateDietaryProfilePayload {
+      dietaryProfile {
+        id
+        userId
+        preferredCuisines
+        dislikedIngredients
+        favoriteIngredients
+        calorieTarget
+        proteinTarget
+        carbsTarget
+        fatTarget
+        mealsPerDay
+        snacksPerDay
+        cookingSkillLevel
+        maxPrepTimeMinutes
+        maxCookTimeMinutes
+        budgetPerMeal
+        createdAt
+        updatedAt
+        restrictions {
+          id
+          diet
+          intolerance
+          healthGoal
+          severity
+          notes
+          appliesToHomeId
+          createdAt
+        }
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
+    }
+  }
+}
+
+mutation AddDietaryRestriction($input: AddRestrictionInput!) {
+  addRestriction(input: $input) {
+    __typename
+    ... on AddRestrictionPayload {
+      dietaryRestriction {
         id
         diet
         intolerance
@@ -139,50 +179,65 @@ mutation UpdateDietaryProfile($input: UpdateDietaryProfileInput!) {
         createdAt
       }
     }
-  }
-}
-
-mutation AddDietaryRestriction($input: AddRestrictionInput!) {
-  addRestriction(input: $input) {
-    success
-    message
-    code
-    dietaryRestriction {
-      id
-      diet
-      intolerance
-      healthGoal
-      severity
-      notes
-      appliesToHomeId
-      createdAt
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
 mutation UpdateDietaryRestriction($input: UpdateRestrictionInput!) {
   updateRestriction(input: $input) {
-    success
-    message
-    code
-    dietaryRestriction {
-      id
-      diet
-      intolerance
-      healthGoal
-      severity
-      notes
-      appliesToHomeId
-      createdAt
+    __typename
+    ... on UpdateRestrictionPayload {
+      dietaryRestriction {
+        id
+        diet
+        intolerance
+        healthGoal
+        severity
+        notes
+        appliesToHomeId
+        createdAt
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
 mutation RemoveDietaryRestriction($input: RemoveRestrictionInput!) {
   removeRestriction(input: $input) {
-    success
-    message
-    code
+    __typename
+    ... on RemoveRestrictionPayload {
+      dietaryRestriction {
+        id
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
   }
 }
 

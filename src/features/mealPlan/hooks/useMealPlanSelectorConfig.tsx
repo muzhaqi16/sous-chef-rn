@@ -1,5 +1,6 @@
 import React, { RefObject } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet } from 'react-native-unistyles';
 import { format, parseISO } from 'date-fns';
 import { Icon } from '#utils/iconUtils';
@@ -34,6 +35,7 @@ function formatPlanType(planType: string): string {
 export function useMealPlanSelectorConfig(
   options: UseMealPlanSelectorConfigOptions,
 ): SelectorConfig<any> {
+  const { t } = useTranslation();
   const {
     mealPlans,
     selectedMealPlanId,
@@ -43,6 +45,7 @@ export function useMealPlanSelectorConfig(
     toCreateMealPlan,
     onCreateFromTemplate,
   } = options;
+  const personalLabel = t('mealPlanSelector.personalSubtitle');
 
   const renderMealPlanItem = (
     item: MealPlanDisplayFragment,
@@ -61,7 +64,7 @@ export function useMealPlanSelectorConfig(
           <Text size="sm" tone="secondary" style={styles.itemSubtext}>
             {formatDateRange(item.startDate, item.endDate)} ·{' '}
             {formatPlanType(item.planType)}
-            {` · ${item.home?.name ?? 'Personal'}`}
+            {` · ${item.home?.name ?? personalLabel}`}
           </Text>
         </View>
         {!!isSelected && <Icon name="checkmark" size={20} tone="primary" />}
@@ -70,7 +73,7 @@ export function useMealPlanSelectorConfig(
   };
 
   return {
-    title: 'Select Meal Plan',
+    title: t('mealPlanSelector.title'),
     data: mealPlans,
     selectedId: selectedMealPlanId ?? undefined,
     onSelect: (id: string) => {
@@ -79,12 +82,12 @@ export function useMealPlanSelectorConfig(
     },
     displayProperty: 'name',
     loading,
-    emptyMessage: 'No meal plans available',
+    emptyMessage: t('mealPlanSelector.emptyMessage'),
     renderCustomItem: renderMealPlanItem,
     actions: [
       {
         icon: 'add',
-        label: 'Create New Plan',
+        label: t('mealPlanSelector.createNewPlan'),
         onPress: () => {
           selectorRef.current?.close();
           toCreateMealPlan();
@@ -92,7 +95,7 @@ export function useMealPlanSelectorConfig(
       },
       {
         icon: 'copy-outline',
-        label: 'Create from Template',
+        label: t('mealPlanSelector.createFromTemplate'),
         onPress: () => {
           selectorRef.current?.close();
           onCreateFromTemplate();

@@ -1,25 +1,22 @@
 /**
  * useUpdateShoppingItem - Update item mutation for shopping list
  *
- * Single responsibility:
- * - Update mutation with optimistic response
- * - Version conflict handling
- * - Apollo auto-normalizes response by __typename + id
+ * Pattern: write the optimistic field updates to the cache via
+ * `cache.modify` BEFORE firing the mutation, then rely on Apollo's
+ * auto-normalization to apply the server-confirmed values. On error,
+ * revert the optimistic changes from a snapshot captured up front.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import { alertService } from '#/services/alertService';
+import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
-  UpdateShoppingListItemDocument,
-  type UpdateShoppingListItemMutation,
-} from '#features/shoppingList/graphql/shoppingList.generated';
-import { ShoppingListItemDisplayFragmentDoc } from '#features/shoppingList/graphql/shoppingListFragments.generated';
-import { type ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
-import { useErrorService } from '#/services/errorService';
+  UseUpdateShoppingItem_ItemFragmentDoc,
+  type UseUpdateShoppingItem_ItemFragment,
+} from './useUpdateShoppingItem.generated';
 import {
-  handleVersionConflict,
-  getVersionConflictMessage,
-} from '#/utils/errors/versionConflict';
+  handleMutationError,
+  versionConflictCheck,
+} from '#/utils/errorHandlers';
 import type { ShoppingListItemUpdate } from './types';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 
@@ -28,108 +25,92 @@ interface UseUpdateShoppingItemOptions {
   refetch: () => Promise<any>;
 }
 
-/**
- * Hook for updating shopping list items
- *
- * @example
- * ```tsx
- * const { updateItem } = useUpdateShoppingItem({ listId, items, refetch });
- * await updateItem('item-123', { quantity: 3 });
- * ```
- */
+const OPTIMISTIC_FIELDS: ReadonlyArray<
+  Extract<
+    keyof ShoppingListItemUpdate,
+    'itemName' | 'quantity' | 'category' | 'unitName' | 'notes'
+  >
+> = ['itemName', 'quantity', 'category', 'unitName', 'notes'];
+
 export function useUpdateShoppingItem({
   listId,
   refetch,
 }: UseUpdateShoppingItemOptions) {
-  const { handleApolloError } = useErrorService();
   const client = useApolloClient();
 
-  // Apollo auto-normalizes the server response by __typename + id
-  // No manual cache update needed - Apollo merge functions handle this automatically
-  const [updateItemMutation] = useMutation(UpdateShoppingListItemDocument, {
-    onError: error => {
-      const { message } = handleApolloError(error, {
-        operation: 'Update Shopping List Item',
-      });
-      alertService.alert('Error', message);
-    },
-  });
+  const [updateItemMutation] = useMutation(UpdateShoppingListItemDocument);
 
-  // Apollo auto-normalizes the server response by __typename + id, so we only need a basic optimistic response
   const updateItem = async (
     itemId: string,
     updates: ShoppingListItemUpdate,
   ) => {
     if (!listId) return false;
 
-    const item = client.cache.readFragment<ShoppingListItemDisplayFragment>({
-      id: client.cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
-      fragment: ShoppingListItemDisplayFragmentDoc,
-      fragmentName: 'ShoppingListItemDisplayFragment',
+    const cacheId = client.cache.identify({
+      __typename: 'ShoppingListItem',
+      id: itemId,
     });
-
-    if (!item) {
+    if (!cacheId) {
       console.warn('Item not found, cannot update:', itemId);
       return false;
     }
 
-    // Pre-compute optimistic values outside try/catch (React Compiler cannot handle ?? inside try)
-    const optimisticItemName = updates.itemName ?? item.itemName;
-    const optimisticQuantity = updates.quantity ?? item.quantity;
-    const optimisticCategory = updates.category ?? item.category;
-    const optimisticUnitName = updates.unitName ?? item.unitName;
-    const optimisticResponse: UpdateShoppingListItemMutation = {
-      __typename: 'Mutation',
-      updateShoppingListItem: {
-        __typename: 'ShoppingListItemPayload',
-        success: true,
-        message: '',
-        code: 'SUCCESS',
-        shoppingListItem: {
-          __typename: 'ShoppingListItem',
-          id: item.id,
-          itemName: optimisticItemName,
-          quantity: optimisticQuantity,
-          quantityInput: item.quantityInput,
-          displayFormat: item.displayFormat,
-          notes: item.notes,
-          purchaseInfo: item.purchaseInfo,
-          version: item.version,
-          updatedAt: new Date().toISOString(),
-          category: optimisticCategory,
-          unitName: optimisticUnitName,
-          unit: item.unit,
-          sortOrder: item.sortOrder,
-          item: item.item,
-        },
-      },
+    const snapshot =
+      client.cache.readFragment<UseUpdateShoppingItem_ItemFragment>({
+        id: cacheId,
+        fragment: UseUpdateShoppingItem_ItemFragmentDoc,
+        fragmentName: 'useUpdateShoppingItem_item',
+      });
+    if (!snapshot) {
+      console.warn('Item not found, cannot update:', itemId);
+      return false;
+    }
+
+    // Optimistically write the changed fields. Server response will be
+    // auto-normalized on top of this when the mutation completes.
+    const optimisticFields: Record<string, () => unknown> = {
+      updatedAt: () => new Date().toISOString(),
+    };
+    for (const field of OPTIMISTIC_FIELDS) {
+      if (updates[field] !== undefined) {
+        const value = updates[field];
+        optimisticFields[field] = () => value;
+      }
+    }
+    client.cache.modify({ id: cacheId, fields: optimisticFields });
+
+    const revertSnapshot = () => {
+      const revertFields: Record<string, () => unknown> = {};
+      for (const field of OPTIMISTIC_FIELDS) {
+        if (updates[field] !== undefined) {
+          revertFields[field] = () => snapshot[field];
+        }
+      }
+      revertFields.updatedAt = () => snapshot.updatedAt;
+      client.cache.modify({ id: cacheId, fields: revertFields });
     };
 
     const result = await executeMutation(
       () =>
         updateItemMutation({
           variables: {
-            id: itemId,
-            input: { ...updates, version: item.version },
+            input: { ...updates, id: itemId, version: snapshot.version },
           },
-          // Simple optimistic response - Apollo merges by __typename + id
-          // Only include fields from ShoppingListItemDisplayFragment
-          optimisticResponse,
         }),
       error => {
-        if (handleVersionConflict(error)) {
-          alertService.alert('Item Updated', getVersionConflictMessage(error), [
-            { text: 'Refresh', onPress: () => refetch() },
-            { text: 'Cancel', style: 'cancel' },
-          ]);
-          return;
-        }
-        console.error('Update shopping list item error:', error);
+        revertSnapshot();
+        handleMutationError(error, {
+          operation: 'Update Shopping List Item',
+          checks: [versionConflictCheck({ onRefresh: () => refetch() })],
+        });
       },
     );
     if (!result) return false;
 
-    return result.data?.updateShoppingListItem?.success ?? false;
+    return (
+      result.data?.updateShoppingListItem?.__typename ===
+      'UpdateShoppingListItemPayload'
+    );
   };
 
   return { updateItem };

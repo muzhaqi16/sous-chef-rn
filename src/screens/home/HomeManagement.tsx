@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, ScrollView } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import {
   Pressable,
   PrimaryActivityIndicator,
@@ -22,10 +23,7 @@ import { Button } from '#/components/base/Button';
 import { toastService } from '#/services/toastService';
 import { HomeStats } from '#/components/organisms/home/HomeStats';
 import { CreateHomeForm } from '#/components/organisms/home/CreateHomeForm';
-import {
-  HomeCard,
-  type PartialHome,
-} from '#/components/organisms/home/HomeCard';
+import { HomeCard } from '#/components/organisms/home/HomeCard';
 import {
   getInvitableRoles,
   canInviteToHome,
@@ -38,6 +36,7 @@ import { SousChefLoader } from '#/components/base/SousChefLoader';
 
 export const HomeManagement: React.FC = () => {
   useScreenTransition('HomeManagement');
+  const { t } = useTranslation();
   const { goBack, toHomeDetail } = useAppNavigation();
   const insets = useSafeAreaInsets();
 
@@ -91,21 +90,19 @@ export const HomeManagement: React.FC = () => {
     // Find the home and user's membership
     const home = homes?.find(h => h.id === homeId);
     if (!home) {
-      toastService.error('Home not found');
+      toastService.error(t('homeManagement.errorHomeNotFound'));
       return;
     }
 
     const membership = home.myMembership;
     if (!membership) {
-      toastService.error('You are not a member of this home');
+      toastService.error(t('homeManagement.errorNotMember'));
       return;
     }
 
     // Check if user has permission to invite
     if (!canInviteToHome(membership.role, membership.canInviteOthers)) {
-      toastService.error(
-        'You do not have permission to invite members to this home',
-      );
+      toastService.error(t('homeManagement.errorNoInvitePermission'));
       return;
     }
 
@@ -116,7 +113,7 @@ export const HomeManagement: React.FC = () => {
     );
 
     show({
-      title: 'Invite Member to Home',
+      title: t('homeManagement.inviteModalTitle'),
       allowedRoles,
       onSubmit: async (email, role) => {
         // Just call the function and let any errors bubble up to the modal
@@ -212,7 +209,11 @@ export const HomeManagement: React.FC = () => {
   if (initialLoading) {
     return (
       <View style={commonStyles.loadingContainer}>
-        <SousChefLoader size="small" showBrand={false} message="Loading" />
+        <SousChefLoader
+          size="small"
+          showBrand={false}
+          message={t('homeManagement.loadingMessage')}
+        />
       </View>
     );
   }
@@ -222,7 +223,7 @@ export const HomeManagement: React.FC = () => {
       <View style={commonStyles.container}>
         {/* Header */}
         <Header
-          title="My Homes"
+          title={t('homeManagement.title')}
           centerTitle
           onBack={goBack}
           rightActions={[
@@ -265,7 +266,7 @@ export const HomeManagement: React.FC = () => {
                     mode === 'create' && styles.modeButtonTextActive,
                   ]}
                 >
-                  Create Home
+                  {t('homeManagement.modeCreate')}
                 </Text>
               </Pressable>
               <Pressable
@@ -282,7 +283,7 @@ export const HomeManagement: React.FC = () => {
                     mode === 'join' && styles.modeButtonTextActive,
                   ]}
                 >
-                  Join with Code
+                  {t('homeManagement.modeJoin')}
                 </Text>
               </Pressable>
             </View>
@@ -305,7 +306,7 @@ export const HomeManagement: React.FC = () => {
                   value={joinCode}
                   onChangeText={setJoinCode}
                   onBlur={handlePreviewHome}
-                  placeholder="Enter join code"
+                  placeholder={t('homeManagement.joinCodePlaceholder')}
                   autoCapitalize="characters"
                 />
 
@@ -320,7 +321,9 @@ export const HomeManagement: React.FC = () => {
                   <View style={styles.previewCard}>
                     <Text style={styles.previewTitle}>{previewHome.name}</Text>
                     <Text style={styles.previewSubtitle}>
-                      {previewHome.members?.length || 0} member(s)
+                      {t('homeManagement.joinCodeMemberCount', {
+                        count: previewHome.membersConnection?.totalCount ?? 0,
+                      })}
                     </Text>
                   </View>
                 )}
@@ -332,7 +335,7 @@ export const HomeManagement: React.FC = () => {
                     onPress={handleCancelCreate}
                     fullWidth
                   >
-                    Cancel
+                    {t('homeManagement.cancel')}
                   </Button>
                   <Button
                     loading={joiningByCode}
@@ -341,7 +344,7 @@ export const HomeManagement: React.FC = () => {
                     variant="primary"
                     style={styles.actionButton}
                   >
-                    Join
+                    {t('homeManagement.join')}
                   </Button>
                 </View>
               </View>
@@ -391,7 +394,7 @@ export const HomeManagement: React.FC = () => {
                     .mass(1.5)}
                 >
                   <HomeCard
-                    home={home as PartialHome}
+                    homeRef={home}
                     isDefault={home.id === defaultHomeId}
                     isHighlighted={home.id === highlightedHomeId}
                     canInvite={userCanInvite}

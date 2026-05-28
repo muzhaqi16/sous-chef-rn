@@ -1,4 +1,5 @@
 npm run typecheck || exit 1
+npm run i18n:check || exit 1
 
 if ! git diff --quiet HEAD || ! git diff --cached --quiet HEAD; then
   echo "Working tree has uncommitted changes; skipping codegen drift check." >&2

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { render, userEvent } from '@testing-library/react-native';
-import { WeekStrip } from '../../../src/features/mealPlan/components/WeekStrip';
+import { WeekStrip } from '../../../src/components/molecules/WeekStrip';
 
 jest.mock('../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../src/apollo/links/refreshToken');

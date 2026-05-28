@@ -6,7 +6,6 @@ import React, {
   useState,
   type ReactNode,
 } from 'react';
-import { type PantryItemFragment } from '#features/pantry/graphql/pantryFragments.generated';
 import { type StorageType } from '#/graphql/generated/schemaTypes';
 import { usePantryItemActions } from '#features/pantry/hooks/usePantryItemActions';
 import { ConsumePantryItemModal } from '#/components/modals/ConsumePantryItemModal';
@@ -71,8 +70,6 @@ interface PantryModalsProviderProps {
   children: ReactNode;
   /** Current pantry ID */
   pantryId: string | undefined;
-  /** Items array for modal item lookup */
-  pantryItems: PantryItemFragment[];
   /** Remove a pantry item by ID */
   removeItem: (id: string) => Promise<void>;
   /** Navigation callbacks */
@@ -104,7 +101,6 @@ interface PantryModalsProviderProps {
 export function PantryModalsProvider({
   children,
   pantryId,
-  pantryItems,
   removeItem,
   navigateTo,
   createLocation,
@@ -148,7 +144,6 @@ export function PantryModalsProvider({
     handleEditItem,
     handleDeleteItem,
   } = usePantryItemActions({
-    pantryItems,
     removeItem,
     navigateTo,
   });
@@ -202,7 +197,7 @@ export function PantryModalsProvider({
       {!!consumeModal.visible && (
         <ConsumePantryItemModal
           visible={consumeModal.visible}
-          pantryItem={consumeModal.item}
+          pantryItemId={consumeModal.itemId}
           onClose={consumeModal.close}
           onConfirm={handleConfirmConsume}
         />
@@ -212,7 +207,7 @@ export function PantryModalsProvider({
       {!!wasteModal.visible && (
         <RecordWastePantryItemModal
           visible={wasteModal.visible}
-          pantryItem={wasteModal.item}
+          pantryItemId={wasteModal.itemId}
           onClose={wasteModal.close}
           onConfirm={handleConfirmWaste}
         />
@@ -222,7 +217,7 @@ export function PantryModalsProvider({
       {!!restockModal.visible && (
         <RestockPantryItemModal
           visible={restockModal.visible}
-          pantryItem={restockModal.item}
+          pantryItemId={restockModal.itemId}
           onClose={restockModal.close}
           onConfirm={handleConfirmRestock}
         />

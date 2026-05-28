@@ -1,13 +1,14 @@
 import React from 'react';
-import { View, type StyleProp, type ViewStyle } from 'react-native';
-import { ScrollView } from 'react-native-gesture-handler';
+import { View, ScrollView, type StyleProp, type ViewStyle } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
+import { Icon, type IconName } from '#utils/iconUtils';
 
 export interface ChipOption<T> {
   key: T;
   label: string;
+  icon?: IconName;
 }
 
 interface ChipScrollRowProps<T> {
@@ -40,6 +41,13 @@ export function ChipScrollRow<T>({
         return (
           <Pressable key={opt.label} onPress={() => onSelect(opt.key)}>
             <View style={[styles.chip, isActive && styles.chipActive]}>
+              {opt.icon ? (
+                <Icon
+                  name={opt.icon}
+                  size={size === 'md' ? 18 : 16}
+                  tone={isActive ? 'primary' : 'textSecondary'}
+                />
+              ) : null}
               <Text
                 style={[styles.chipText, isActive && styles.chipTextActive]}
               >
@@ -58,6 +66,8 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.sm,
   },
   chip: {
+    flexDirection: 'row',
+    gap: theme.spacing.xs,
     borderRadius: theme.radii.lg,
     backgroundColor: theme.colors.surface,
     borderWidth: 1,

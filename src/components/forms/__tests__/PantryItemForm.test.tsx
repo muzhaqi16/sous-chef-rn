@@ -79,16 +79,19 @@ jest.mock('#components/molecules/FormInput', () => ({
   },
 }));
 
-jest.mock('#components/molecules/AutocompleteField/UnitAutocompleteField', () => ({
-  UnitAutocompleteField: ({ label }: any) => {
-    const { Text, View } = require('react-native');
-    return (
-      <View testID="unit-autocomplete">
-        {label ? <Text>{label}</Text> : null}
-      </View>
-    );
-  },
-}));
+jest.mock(
+  '#components/molecules/AutocompleteField/UnitAutocompleteField',
+  () => ({
+    UnitAutocompleteField: ({ label }: any) => {
+      const { Text, View } = require('react-native');
+      return (
+        <View testID="unit-autocomplete">
+          {label ? <Text>{label}</Text> : null}
+        </View>
+      );
+    },
+  }),
+);
 
 jest.mock('#components/molecules/Header', () => ({
   Header: ({ title }: any) => {
@@ -224,7 +227,13 @@ function buildCache(opts: {
     cache.writeQuery({
       query: GetPantryItemDocument,
       variables: { id: opts.itemId },
-      data: pantryItemData({ id: opts.itemId, ...(opts.itemFixture ?? {}) }),
+      // `writeQuery` accepts the unmasked shape; codegen emits masked types
+      // for fragment spreads, so we cast to match the same pattern as
+      // `pantryData` above.
+      data: pantryItemData({
+        id: opts.itemId,
+        ...(opts.itemFixture ?? {}),
+      }) as any,
     });
   }
 

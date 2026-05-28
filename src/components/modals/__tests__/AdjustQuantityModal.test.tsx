@@ -1,7 +1,7 @@
 import React from 'react';
-import { render, screen, userEvent } from '@testing-library/react-native';
+import { screen, userEvent } from '@testing-library/react-native';
 import { AdjustQuantityModal } from '../AdjustQuantityModal';
-import { type PantryItemFragment } from '#features/pantry/graphql/pantryFragments.generated';
+import { renderWithApollo, seedCache } from '#/test-utils/apolloMockProvider';
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
   useStandardBottomSheet: jest.fn(() => ({
@@ -117,23 +117,33 @@ jest.mock('#/utils/fractionUtils', () => ({
   },
 }));
 
-const makePantryItem = (overrides?: Partial<PantryItemFragment>) =>
-  ({
-    id: 'pantry-1',
-    itemName: 'Sugar',
-    quantity: 3,
-    unit: { id: 'u1', symbol: 'cups', name: 'Cups', displayAsFraction: false },
-    remainingNetWeight: null,
-    netWeight: null,
-    netWeightUnit: null,
-    lastUsedAt: null,
-    ...overrides,
-  } as unknown as PantryItemFragment);
+const PANTRY_ITEM_ID = 'pantry-1';
+
+function makeCache(overrides: Record<string, unknown> = {}) {
+  return seedCache([
+    {
+      __typename: 'PantryItem',
+      id: PANTRY_ITEM_ID,
+      itemName: 'Sugar',
+      quantity: 3,
+      lastUsedAt: null,
+      remainingNetWeight: null,
+      unit: {
+        __typename: 'Unit',
+        id: 'u1',
+        symbol: 'cups',
+        displayAsFraction: false,
+      },
+      netWeightUnit: null,
+      ...overrides,
+    },
+  ]);
+}
 
 describe('AdjustQuantityModal', () => {
   const defaultProps = {
     visible: true,
-    pantryItem: makePantryItem(),
+    pantryItemId: PANTRY_ITEM_ID,
     onClose: jest.fn(),
     onConfirm: jest.fn(),
   };
@@ -143,44 +153,61 @@ describe('AdjustQuantityModal', () => {
   });
 
   it('renders Adjust Quantity title', () => {
-    render(<AdjustQuantityModal {...defaultProps} />);
+    renderWithApollo(<AdjustQuantityModal {...defaultProps} />, {
+      cache: makeCache(),
+    });
     expect(screen.getByText('Adjust Quantity')).toBeTruthy();
   });
 
   it('displays item name', () => {
-    render(<AdjustQuantityModal {...defaultProps} />);
+    renderWithApollo(<AdjustQuantityModal {...defaultProps} />, {
+      cache: makeCache(),
+    });
     expect(screen.getByText('Sugar')).toBeTruthy();
   });
 
   it('renders New Quantity input', () => {
-    render(<AdjustQuantityModal {...defaultProps} />);
+    renderWithApollo(<AdjustQuantityModal {...defaultProps} />, {
+      cache: makeCache(),
+    });
     expect(screen.getByText('New Quantity')).toBeTruthy();
   });
 
   it('renders Reason input', () => {
-    render(<AdjustQuantityModal {...defaultProps} />);
+    renderWithApollo(<AdjustQuantityModal {...defaultProps} />, {
+      cache: makeCache(),
+    });
     expect(screen.getByText('Reason')).toBeTruthy();
   });
 
   it('renders Adjust confirm button', () => {
-    render(<AdjustQuantityModal {...defaultProps} />);
+    renderWithApollo(<AdjustQuantityModal {...defaultProps} />, {
+      cache: makeCache(),
+    });
     expect(screen.getByText('Adjust')).toBeTruthy();
   });
 
   it('calls onClose when cancel is pressed', async () => {
     const user = userEvent.setup();
-    render(<AdjustQuantityModal {...defaultProps} />);
+    renderWithApollo(<AdjustQuantityModal {...defaultProps} />, {
+      cache: makeCache(),
+    });
     await user.press(screen.getByTestId('cancel-btn'));
     expect(defaultProps.onClose).toHaveBeenCalled();
   });
 
-  it('does not render item info when pantryItem is null', () => {
-    render(<AdjustQuantityModal {...defaultProps} pantryItem={null} />);
+  it('does not render item info when pantryItemId is null', () => {
+    renderWithApollo(
+      <AdjustQuantityModal {...defaultProps} pantryItemId={null} />,
+      { cache: makeCache() },
+    );
     expect(screen.queryByText('Sugar')).toBeNull();
   });
 
   it('shows current quantity info', () => {
-    render(<AdjustQuantityModal {...defaultProps} />);
+    renderWithApollo(<AdjustQuantityModal {...defaultProps} />, {
+      cache: makeCache(),
+    });
     expect(screen.getByText(/3 cups/)).toBeTruthy();
   });
 });

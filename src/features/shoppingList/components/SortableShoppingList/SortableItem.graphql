@@ -1,0 +1,23 @@
+fragment SortableItem_item on ShoppingListItem {
+  id
+  itemName
+  quantity
+  quantityInput
+  category
+  unitName
+  unit {
+    id
+    symbol
+  }
+  purchaseInfo {
+    isPurchased
+  }
+  item {
+    id
+    imageUrl
+    images {
+      url
+      kind
+    }
+  }
+}

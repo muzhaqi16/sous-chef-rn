@@ -15,16 +15,17 @@ import {
   UpdateHomeDocument,
   DeleteHomeDocument,
   GetHomesDocument,
-  type UpdateHomeMutation,
 } from '#operations/home/home.generated';
 import { useSelectedHomeId, useHomeState } from '#store/useAppStore';
-import { useErrorService } from '#/services/errorService';
 import {
-  handleVersionConflict,
-  getVersionConflictMessage,
-} from '#/utils/errors/versionConflict';
-import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
-import { normalizeHome } from '#/utils/connectionUtils';
+  handleMutationError,
+  versionConflictCheck,
+} from '#/utils/errorHandlers';
+import {
+  enhanceWithVersion,
+  buildOptimisticMutationResponse,
+} from '#/apollo/utils/createOptimisticResponse';
+import { extractNodes } from '#/utils/connectionUtils';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
 import { addToHomesCache, removeFromHomesCache } from './utils';
 import {
@@ -60,7 +61,6 @@ export function useHomeMutations({
 }: UseHomeMutationsOptions) {
   const selectedHomeId = useSelectedHomeId();
   const { setSelectedHomeId } = useHomeState();
-  const { handleApolloError } = useErrorService();
   const { createAddOperation, createRemoveOperation } = useCrudOperations();
 
   const [createHomeMutation, { loading: creating, client }] = useMutation(
@@ -68,17 +68,17 @@ export function useHomeMutations({
     {
       // Note: No optimisticResponse - the mutation returns complex nested types that are difficult to predict
       update: (cache, { data }) => {
-        if (!data?.createHome?.home) return;
+        if (data?.createHome?.__typename !== 'CreateHomePayload') return;
+        const newHome = data.createHome.home;
 
         executeCacheUpdate(
-          () =>
-            addToHomesCache(cache, data.createHome!.home!, { position: 'end' }),
+          () => addToHomesCache(cache, newHome, { position: 'end' }),
           'Cache update failed for createHome:',
           refetch,
         );
       },
       onCompleted: async data => {
-        if (data?.createHome?.home) {
+        if (data?.createHome?.__typename === 'CreateHomePayload') {
           const newHome = data.createHome.home;
 
           // Read fresh data from Apollo cache (no refetch needed!)
@@ -99,22 +99,17 @@ export function useHomeMutations({
           }
 
           // If a default pantry was created, set it as selected
-          const normalizedNewHome = normalizeHome(newHome);
-          if (normalizedNewHome?.pantries?.length) {
-            const defaultPantry = normalizedNewHome.pantries.find(
-              (pantry: any) => pantry.isDefault,
-            );
-            if (defaultPantry) {
-              setSelectedPantryId(defaultPantry.id);
-            }
+          const pantries = extractNodes(
+            (newHome as { pantriesConnection?: any }).pantriesConnection,
+          ) as Array<{ id: string; isDefault?: boolean }>;
+          const defaultPantry = pantries.find(p => p.isDefault);
+          if (defaultPantry) {
+            setSelectedPantryId(defaultPantry.id);
           }
         }
       },
       onError: (error: ErrorLike) => {
-        const { message } = handleApolloError(error, {
-          operation: 'Create Home',
-        });
-        alertService.alert('Error', message);
+        handleMutationError(error, { operation: 'Create Home' });
       },
     },
   );
@@ -123,38 +118,31 @@ export function useHomeMutations({
     UpdateHomeDocument,
     {
       optimisticResponse: (variables, { IGNORE }) => {
-        const currentHome = homes?.find((h: any) => h.id === variables.id);
+        const currentHome = homes?.find(
+          (h: any) => h.id === variables.input.id,
+        );
         if (!currentHome) return IGNORE;
-        const optimistic: UpdateHomeMutation = {
-          __typename: 'Mutation',
-          updateHome: {
-            __typename: 'HomePayload',
-            success: true,
-            message: 'Home updated successfully',
-            code: 'HOME_UPDATED',
-            home: enhanceWithVersion(currentHome, variables.input),
-          },
-        };
-        return optimistic;
+        return buildOptimisticMutationResponse(
+          'updateHome',
+          'UpdateHomePayload',
+          { home: enhanceWithVersion(currentHome, variables.input) },
+        );
       },
       onCompleted: data => {
-        if (data?.updateHome?.home) {
+        if (data?.updateHome?.__typename === 'UpdateHomePayload') {
           alertService.alert('Success', 'Home updated successfully');
         }
       },
       onError: (error: ErrorLike) => {
-        if (handleVersionConflict(error)) {
-          alertService.alert('Home Updated', getVersionConflictMessage(error), [
-            { text: 'Refresh', onPress: () => refetch() },
-            { text: 'Cancel', style: 'cancel' },
-          ]);
-          return;
-        }
-
-        const { message } = handleApolloError(error, {
+        handleMutationError(error, {
           operation: 'Update Home',
+          checks: [
+            versionConflictCheck({
+              itemName: 'Home',
+              onRefresh: () => refetch(),
+            }),
+          ],
         });
-        alertService.alert('Error', message);
       },
     },
   );
@@ -162,18 +150,26 @@ export function useHomeMutations({
   const [deleteHomeMutation, { loading: deleting, client: deleteClient }] =
     useMutation(DeleteHomeDocument, {
       update: (cache, { data }, { variables }) => {
-        if (!data?.deleteHome?.success || !variables) return;
+        if (
+          data?.deleteHome?.__typename !== 'DeleteHomePayload' ||
+          !variables
+        ) {
+          return;
+        }
 
         executeCacheUpdate(
-          () => removeFromHomesCache(cache, variables.id, { evictItem: true }),
+          () =>
+            removeFromHomesCache(cache, variables.input.id, {
+              evictItem: true,
+            }),
           'Cache update failed for deleteHome:',
           refetch,
         );
       },
       onCompleted: async data => {
-        if (data?.deleteHome?.success) {
+        if (data?.deleteHome?.__typename === 'DeleteHomePayload') {
           // If deleted home was the default, clear it or set another
-          if (data.deleteHome.home?.id === selectedHomeId) {
+          if (data.deleteHome.home.id === selectedHomeId) {
             // Read fresh data from Apollo cache (no refetch needed!)
             const cachedData = deleteClient.cache.readQuery({
               query: GetHomesDocument,
@@ -201,10 +197,7 @@ export function useHomeMutations({
         }
       },
       onError: (error: ErrorLike) => {
-        const { message } = handleApolloError(error, {
-          operation: 'Delete Home',
-        });
-        alertService.alert('Error', message);
+        handleMutationError(error, { operation: 'Delete Home' });
       },
     });
 
@@ -226,7 +219,10 @@ export function useHomeMutations({
       }
       return true;
     },
-    onSuccess: (data: any) => data?.createHome?.home,
+    onSuccess: (data: any) =>
+      data?.createHome?.__typename === 'CreateHomePayload'
+        ? data.createHome.home
+        : undefined,
     operationName: 'Create Home',
   });
 
@@ -266,15 +262,16 @@ export function useHomeMutations({
         () =>
           updateHomeMutation({
             variables: {
-              id: homeId,
-              input: updates,
+              input: { ...updates, id: homeId },
             },
           }),
         'Update home error:',
       );
       if (!result) return false;
 
-      return result.data?.updateHome?.home || false;
+      return result.data?.updateHome?.__typename === 'UpdateHomePayload'
+        ? result.data.updateHome.home
+        : false;
     }
 
     return true;

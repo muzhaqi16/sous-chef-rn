@@ -6,9 +6,6 @@ import { RecipeStepEditor } from '../RecipeStepEditor';
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 
-jest.mock('#components/atoms/GlobalBottomSheetBackdrop', () => ({
-  GlobalBottomSheetBackdrop: 'GlobalBottomSheetBackdrop',
-}));
 jest.mock('#components/atoms/BottomSheetFormScrollView', () => ({
   BottomSheetFormScrollView: ({ children }: any) => children,
 }));

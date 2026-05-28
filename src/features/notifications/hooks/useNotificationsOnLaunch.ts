@@ -18,8 +18,12 @@
 
 import { useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
-import { useLazyQuery } from '@apollo/client/react';
+import { useApolloClient, useLazyQuery } from '@apollo/client/react';
 import { GetUnreadNotificationsDocument } from '#features/notifications/graphql/notifications.generated';
+import {
+  UseNotificationsOnLaunch_NotificationFragmentDoc,
+  type UseNotificationsOnLaunch_NotificationFragment,
+} from './useNotificationsOnLaunch.generated';
 import {
   NotificationCategory,
   Priority,
@@ -37,6 +41,7 @@ import {
 } from '#utils/notifications/notificationHelpers';
 
 export function useNotificationsOnLaunch(userId?: string) {
+  const client = useApolloClient();
   const addMultipleNotifications = useAppStore(
     state => state.addMultipleNotifications,
   );
@@ -80,9 +85,22 @@ export function useNotificationsOnLaunch(userId?: string) {
     const edges = data?.me?.notificationsConnection?.edges;
     if (!edges || edges.length === 0) return;
 
-    const notifications: Omit<NotificationItem, 'isRead'>[] = edges.map(
-      edge => {
-        const n = edge.node;
+    // Materialize each masked node ref via cache.readFragment so the hook can
+    // read the fields it pushes into the Zustand store.
+    const notifications: Omit<NotificationItem, 'isRead'>[] = edges
+      .map(edge =>
+        client.cache.readFragment<UseNotificationsOnLaunch_NotificationFragment>(
+          {
+            fragment: UseNotificationsOnLaunch_NotificationFragmentDoc,
+            fragmentName: 'useNotificationsOnLaunch_notification',
+            from: { __typename: 'Notification', id: edge.node.id },
+          },
+        ),
+      )
+      .filter(
+        (n): n is UseNotificationsOnLaunch_NotificationFragment => n !== null,
+      )
+      .map(n => {
         const type = n.type;
         const payload = (n.payload ?? {}) as Record<string, unknown>;
 
@@ -113,9 +131,9 @@ export function useNotificationsOnLaunch(userId?: string) {
           actionType,
           actionData: payload,
         };
-      },
-    );
+      });
 
+    if (notifications.length === 0) return;
     addMultipleNotifications(notifications);
-  }, [data, addMultipleNotifications]);
+  }, [data, addMultipleNotifications, client]);
 }

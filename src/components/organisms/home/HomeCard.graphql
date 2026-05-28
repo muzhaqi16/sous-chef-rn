@@ -1,0 +1,33 @@
+fragment HomeCard_home on Home {
+  id
+  name
+  membersConnection(first: 5) {
+    edges {
+      node {
+        id
+        role
+        userId
+        displayName
+        user {
+          id
+          email
+        }
+      }
+    }
+    totalCount
+  }
+  invitesConnection(first: 5) {
+    edges {
+      node {
+        id
+        email
+        recipientName
+        status
+      }
+    }
+    totalCount
+  }
+  pantriesConnection(first: 10) {
+    totalCount
+  }
+}

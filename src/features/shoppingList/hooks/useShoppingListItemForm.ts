@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { type ShoppingListItemFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
+import { type UseShoppingListItemForm_ItemFragment } from './useShoppingListItemForm.generated';
 import {
   type UpdateShoppingListItemInput,
   type UnitSpecInput,
@@ -84,7 +84,7 @@ export function useShoppingListItemForm(initialState?: Partial<FormState>) {
     setFormState(prev => ({ ...prev, [field]: value }));
   };
 
-  const setFromItem = (item: ShoppingListItemFragment) => {
+  const setFromItem = (item: UseShoppingListItemForm_ItemFragment) => {
     const state: FormState = {
       itemName: item.itemName || '',
       quantityInput: item.quantityInput || item.quantity?.toString() || '1',

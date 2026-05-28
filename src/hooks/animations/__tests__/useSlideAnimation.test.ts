@@ -10,11 +10,16 @@ jest.mock('react-native-worklets', () => ({
 }));
 
 import { renderHook, act } from '@testing-library/react-native';
+import { withTiming } from 'react-native-reanimated';
 import { useSlideAnimation } from '../useSlideAnimation';
 
 describe('useSlideAnimation', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // The global mock fires the completion callback synchronously, which would
+    // immediately reset isAnimating to false inside triggerSlide. These tests
+    // assert on the mid-animation state, so suppress the synchronous callback.
+    (withTiming as jest.Mock).mockImplementation(toValue => toValue);
   });
 
   it('returns animatedSlideStyle, triggerSlide, resetSlide and isAnimating', () => {

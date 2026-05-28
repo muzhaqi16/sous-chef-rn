@@ -15,12 +15,16 @@ import { LoadingInline } from '#components/base/Loading';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
 import Clipboard from '@react-native-clipboard/clipboard';
-import { useMutation } from '@apollo/client/react';
+import { useApolloClient, useMutation } from '@apollo/client/react';
 import {
   RemoveCollaboratorDocument,
   AddCollaboratorDocument,
   ShareShoppingListDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
+import {
+  ShoppingListCollaboratorFragmentDoc,
+  type ShoppingListCollaboratorFragment,
+} from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { CollaboratorRole } from '#/graphql/generated/schemaTypes';
 import {
   createAddToParentConnectionUpdater,
@@ -35,7 +39,10 @@ import { Button } from '#components/base/Button';
 import { OfflineGate } from '#components/atoms/OfflineGate';
 import { AlertBanner } from '#components/molecules/AlertBanner';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+import {
+  executeWithLoadingState,
+  unwrapPayload,
+} from '#/utils/compilerSafeWrappers';
 import { ROLE_PERMISSIONS, INVITE_ROLES } from '#/constants/collaboratorRoles';
 import { ChipScrollRow } from '#components/atoms/ChipScrollRow';
 import { getCollaboratorDisplayName } from '#/utils/formatters/memberFormatters';
@@ -54,10 +61,21 @@ const removeCollaboratorFromCache = createRemoveFromParentConnectionUpdater(
   'ShoppingListCollaborator',
 );
 
-const ROLE_OPTIONS = INVITE_ROLES.map(role => ({
-  key: role,
-  label: `${ROLE_PERMISSIONS[role].icon} ${ROLE_PERMISSIONS[role].label}`,
-}));
+const ROLE_LABEL_KEYS: Record<CollaboratorRole, string> = {
+  [CollaboratorRole.Viewer]: 'collaboratorRoles.viewer',
+  [CollaboratorRole.Shopper]: 'collaboratorRoles.shopper',
+  [CollaboratorRole.Contributor]: 'collaboratorRoles.contributor',
+  [CollaboratorRole.Editor]: 'collaboratorRoles.editor',
+  [CollaboratorRole.Admin]: 'collaboratorRoles.admin',
+  [CollaboratorRole.Owner]: 'collaboratorRoles.owner',
+};
+
+const buildRoleOptions = (t: T) =>
+  INVITE_ROLES.map(role => ({
+    key: role,
+    icon: ROLE_PERMISSIONS[role].icon,
+    label: t(ROLE_LABEL_KEYS[role]),
+  }));
 
 type StatusVariant = 'active' | 'pending' | 'declined' | 'expired';
 
@@ -114,6 +132,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
 }) => {
   const { t } = useTranslation();
   const formatStatus = getFormatStatus(t);
+  const roleOptions = buildRoleOptions(t);
   const { goBack } = useNavigation();
   const { toHomeDetail } = useAppNavigation();
   const { listId } = route.params;
@@ -136,16 +155,38 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
     shoppingList,
     loading,
     isRefetching,
-    collaborators,
+    collaborators: collaboratorRefs,
     name: listName,
     refetch,
   } = useShoppingListDetails(listId);
 
   const isHomeLinked = !!shoppingList?.homeId;
 
+  const apolloClient = useApolloClient();
+
   const [shareList] = useMutation(AddCollaboratorDocument);
   const [removeMember] = useMutation(RemoveCollaboratorDocument);
   const [shareShoppingList] = useMutation(ShareShoppingListDocument);
+
+  // Materialize the masked ShoppingListCollaborator fragment refs once so we
+  // can read fields (id, email, role, status, ...) needed for owner detection,
+  // filtering, and rendering. Each edge also carries `invitedAt` directly on
+  // its selection, which we preserve alongside the materialized fragment.
+  const collaborators = collaboratorRefs
+    .map(ref => {
+      const fragment =
+        apolloClient.cache.readFragment<ShoppingListCollaboratorFragment>({
+          fragment: ShoppingListCollaboratorFragmentDoc,
+          fragmentName: 'ShoppingListCollaboratorFragment',
+          from: ref,
+        });
+      if (!fragment) return null;
+      return { ...fragment, invitedAt: ref.invitedAt };
+    })
+    .filter(
+      (c): c is ShoppingListCollaboratorFragment & { invitedAt: string } =>
+        c !== null,
+    );
 
   // Check if current user is owner
   const currentUserCollaborator = collaborators.find(
@@ -178,16 +219,14 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
       async () => {
         const { data } = await shareShoppingList({
           variables: {
-            id: listId,
-            input: { isPublic: !isPublic },
+            input: { id: listId, isPublic: !isPublic },
           },
         });
-        if (!data?.shareShoppingList?.success) {
-          throw new Error(
-            data?.shareShoppingList?.message ||
-              t('shoppingListScreens.failedToUpdateShareSettings'),
-          );
-        }
+        unwrapPayload(
+          data?.shareShoppingList,
+          'ShareShoppingListPayload',
+          t('shoppingListScreens.failedToUpdateShareSettings'),
+        );
         // No refetch needed: the mutation returns shoppingList { id, shareCode, isPublic }
         // which Apollo normalizes by ShoppingList:${id}, auto-updating the cache.
       },
@@ -230,20 +269,24 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
             },
           },
           update(cache, { data: updateData }) {
-            const collaborator = updateData?.inviteToShoppingList?.collaborator;
-            if (collaborator) {
-              addCollaboratorToCache(cache, listId, collaborator, {
-                position: 'end',
-              });
+            const invitePayload = updateData?.inviteToShoppingList;
+            if (invitePayload?.__typename === 'InviteToShoppingListPayload') {
+              addCollaboratorToCache(
+                cache,
+                listId,
+                invitePayload.collaborator,
+                {
+                  position: 'end',
+                },
+              );
             }
           },
         });
-        if (!data?.inviteToShoppingList?.success) {
-          throw new Error(
-            data?.inviteToShoppingList?.message ||
-              t('shoppingListScreens.failedToSendInvitation'),
-          );
-        }
+        unwrapPayload(
+          data?.inviteToShoppingList,
+          'InviteToShoppingListPayload',
+          t('shoppingListScreens.failedToSendInvitation'),
+        );
         setEmail('');
         // No refetch needed: the update() callback above already inserts the
         // new collaborator into the cached collaboratorsConnection.
@@ -272,7 +315,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
           onPress: async () => {
             try {
               await removeMember({
-                variables: { id: memberId },
+                variables: { input: { id: memberId } },
                 update(cache) {
                   removeCollaboratorFromCache(cache, listId, memberId, {
                     evictItem: true,
@@ -326,7 +369,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
             executeWithLoadingState(
               async () => {
                 await removeMember({
-                  variables: { id: currentUserCollaborator.id },
+                  variables: { input: { id: currentUserCollaborator.id } },
                   update(cache) {
                     removeCollaboratorFromCache(
                       cache,
@@ -516,7 +559,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
                   {t('shoppingListScreens.role')}
                 </Text>
                 <ChipScrollRow
-                  options={ROLE_OPTIONS}
+                  options={roleOptions}
                   selected={selectedRole}
                   onSelect={setSelectedRole}
                   size="md"

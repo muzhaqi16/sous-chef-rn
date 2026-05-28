@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useQuery } from '@apollo/client/react';
+import { useApolloClient, useQuery } from '@apollo/client/react';
 import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
 import type { RecipeInformation } from '#/services/recipeApi/types';
 import { GetRecipeDocument } from '#features/recipes/graphql/recipe.generated';
@@ -7,6 +7,26 @@ import type {
   GetRecipeQuery,
   GetRecipeQueryVariables,
 } from '#features/recipes/graphql/recipe.generated';
+import {
+  UseRecipeData_RecipeFragmentDoc,
+  type UseRecipeData_RecipeFragment,
+} from './useRecipeData.generated';
+
+export type MaterializedRecipe = NonNullable<
+  ReturnType<typeof readRecipeFragment>
+>;
+
+function readRecipeFragment(
+  client: ReturnType<typeof useApolloClient>,
+  ref: NonNullable<GetRecipeQuery['recipe']> | null,
+) {
+  if (!ref) return null;
+  return client.cache.readFragment<UseRecipeData_RecipeFragment>({
+    fragment: UseRecipeData_RecipeFragmentDoc,
+    fragmentName: 'useRecipeData_recipe',
+    from: ref,
+  });
+}
 
 export interface RecipeDisplayData {
   title: string;
@@ -42,7 +62,7 @@ export interface UseRecipeDataResult {
   backendError: ReturnType<
     typeof useQuery<GetRecipeQuery, GetRecipeQueryVariables>
   >['error'];
-  backendRecipe: NonNullable<GetRecipeQuery['recipe']> | undefined;
+  backendRecipe: MaterializedRecipe | undefined;
   isBackendRecipe: boolean;
   externalRecipe: RecipeInformation | null;
 }
@@ -103,7 +123,7 @@ async function fetchRecipeData(
 }
 
 function buildBackendDisplayData(
-  recipe: NonNullable<GetRecipeQuery['recipe']>,
+  recipe: MaterializedRecipe,
 ): RecipeDisplayData {
   return {
     title: recipe.name,
@@ -158,6 +178,7 @@ export function useRecipeData({
     useState<RecipeInformation | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const apolloClient = useApolloClient();
   const {
     data: backendRecipeData,
     loading: backendLoading,
@@ -168,7 +189,12 @@ export function useRecipeData({
     fetchPolicy: 'cache-and-network',
   });
 
-  const backendRecipe = backendRecipeData?.recipe;
+  // Materialize the masked RecipeFragment ref so downstream consumers (and
+  // this hook's own buildBackendDisplayData) see the full RecipeFragment
+  // fields.
+  const backendRecipeRef = backendRecipeData?.recipe ?? null;
+  const backendRecipe =
+    readRecipeFragment(apolloClient, backendRecipeRef) ?? undefined;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -202,7 +228,7 @@ export function useRecipeData({
     loading: loading || backendLoading,
     error,
     backendError,
-    backendRecipe: backendRecipe ?? undefined,
+    backendRecipe,
     isBackendRecipe,
     externalRecipe,
   };

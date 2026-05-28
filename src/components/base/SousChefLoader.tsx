@@ -1,5 +1,6 @@
 import React, { useLayoutEffect } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import {
   Canvas,
   Group,
@@ -34,7 +35,7 @@ const COLORS = {
   leaves: '#66BB6A',
   leavesDark: '#43A047',
   banner: '#FFF3E0',
-  bannerText: '#F76818',
+  bannerText: '#F97416',
 };
 
 // Size configurations
@@ -149,9 +150,11 @@ interface SousChefLoaderProps {
 
 export const SousChefLoader: React.FC<SousChefLoaderProps> = ({
   size = 'medium',
-  message = 'Please Wait',
+  message,
   showBrand = true,
 }) => {
+  const { t } = useTranslation();
+  const resolvedMessage = message ?? t('loader.pleaseWait');
   const config = SIZES[size];
   componentStyles.useVariants({ size });
 
@@ -242,7 +245,7 @@ export const SousChefLoader: React.FC<SousChefLoaderProps> = ({
             tone="secondary"
             style={componentStyles.brandSubtitle}
           >
-            Your Kitchen Assistant
+            {t('loader.brandTagline')}
           </Text>
         </View>
       )}
@@ -347,7 +350,7 @@ export const SousChefLoader: React.FC<SousChefLoaderProps> = ({
         ]}
       >
         <Text weight="bold" align="center" style={componentStyles.bannerText}>
-          {message.toUpperCase()}
+          {resolvedMessage.toUpperCase()}
         </Text>
       </View>
     </View>

@@ -1,15 +1,26 @@
-mutation SetDefaultHome($homeId: ID!) {
-  setDefaultHome(homeId: $homeId) {
-    success
-    message
-    code
-    settings {
-      id
+mutation SetDefaultHome($input: SetDefaultHomeInput!) {
+  setDefaultHome(input: $input) {
+    __typename
+    ... on SetDefaultHomePayload {
+      settings {
+        id
+      }
+      defaultPantry {
+        id
+        name
+        isDefault
+      }
     }
-    defaultPantry {
-      id
-      name
-      isDefault
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
     }
   }
 }

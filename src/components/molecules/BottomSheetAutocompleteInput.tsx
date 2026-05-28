@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import {
@@ -110,6 +110,7 @@ export function BottomSheetAutocompleteInput<T>({
   };
 
   const { ref: bottomSheetRef, modalProps } = useStandardBottomSheet({
+    visible: showAutocomplete,
     onDismiss: handleDismiss,
     snapPoints: [snapPoint],
   });
@@ -142,15 +143,14 @@ export function BottomSheetAutocompleteInput<T>({
     setShowAutocomplete(true);
   }
 
-  // Present modal when showAutocomplete transitions to true
-  const wasShowingRef = useRef(false);
-  useEffect(() => {
-    if (showAutocomplete && !wasShowingRef.current) {
-      bottomSheetRef.current?.present();
-      onModalOpen?.();
-    }
-    wasShowingRef.current = showAutocomplete;
-  });
+  // Call onModalOpen when showAutocomplete transitions to true (render-time state adjustment)
+  const [prevShowAutoForCallback, setPrevShowAutoForCallback] = useState(false);
+  if (showAutocomplete && !prevShowAutoForCallback) {
+    onModalOpen?.();
+  }
+  if (showAutocomplete !== prevShowAutoForCallback) {
+    setPrevShowAutoForCallback(showAutocomplete);
+  }
 
   // Modal only closes via explicit user action:
   // - handleSelectItem (user selects an item)
@@ -174,7 +174,6 @@ export function BottomSheetAutocompleteInput<T>({
     setUserDismissed(true);
     setHasInteracted(false);
     setShowAutocomplete(false);
-    bottomSheetRef.current?.dismiss();
     onSelectItem(item);
     onModalClose?.();
   };
@@ -186,7 +185,6 @@ export function BottomSheetAutocompleteInput<T>({
     setUserDismissed(true);
     setHasInteracted(false);
     setShowAutocomplete(false);
-    bottomSheetRef.current?.dismiss();
     onModalClose?.();
   };
 

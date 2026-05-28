@@ -17,16 +17,12 @@ import { ModalPicker } from '#components/molecules/ModalPicker';
 import { useMutation } from '@apollo/client/react';
 import {
   UpdateShoppingListDocument,
-  DeleteShoppingListDocument,
-  CreateShoppingListDocument,
   RemoveCollaboratorDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import {
-  createRemoveFromQueryConnectionUpdater,
-  createAddToQueryConnectionUpdater,
-} from '#/apollo/utils/cacheUpdaters';
+import { useCreateShoppingList } from '#features/shoppingList/hooks/mutations/useCreateShoppingList';
+import { useDeleteShoppingList } from '#features/shoppingList/hooks/mutations/useDeleteShoppingList';
 import { useAppStore } from '#store/useAppStore';
-import { useErrorService } from '#/services/errorService';
+
 import { useUser } from '#store/useAppStore';
 import { toastService } from '#/services/toastService';
 import {
@@ -74,8 +70,6 @@ export const ListSettings: React.FC<
   const setSelectedShoppingListId = useAppStore(
     state => state.setSelectedShoppingListId,
   );
-  const { handleApolloError } = useErrorService();
-
   const [name, setName] = useState('');
   const [isDefault, setIsDefault] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -83,26 +77,39 @@ export const ListSettings: React.FC<
   const [selectedHomeId, setSelectedHomeId] = useState<string | null>(null);
   const [showHomePicker, setShowHomePicker] = useState(false);
 
-  const { shoppingList, isShared, collaborators } =
+  const { shoppingList, isShared, collaborators, ownerships } =
     useShoppingListDetails(listId);
   const user = useUser();
   // Use lazy loading for homes data to avoid triggering Zustand store updates
   // that would cause ShoppingListMain to re-render
   const { homes, fetchHomeData, isLoaded: homesLoaded } = useLazyHomeData();
 
+  // ownerships + collaborators are materialized in the hook so the helpers
+  // (typed against structural shapes) accept them via a synthesized arg.
+  const ownershipSnapshot = shoppingList
+    ? {
+        ownerships,
+        collaboratorsConnection: {
+          edges: collaborators.map(n => ({ node: n })),
+        },
+      }
+    : null;
+
   // Check if current user is the owner
   const isOwner =
-    listId && shoppingList ? isShoppingListOwner(shoppingList, user?.id) : true; // For new lists, user is always the owner
-  const role = shoppingList
+    listId && ownershipSnapshot
+      ? isShoppingListOwner(ownershipSnapshot, user?.id)
+      : true; // For new lists, user is always the owner
+  const role = ownershipSnapshot
     ? getShoppingListRole(
-        shoppingList,
+        ownershipSnapshot,
         user?.id,
-        shoppingList.home?.myMembership,
+        shoppingList?.home?.myMembership,
       )
     : null;
   const roleDisplay = formatRoleDisplay(role);
-  const ownerInfo = shoppingList
-    ? getShoppingListOwnerInfo(shoppingList)
+  const ownerInfo = ownershipSnapshot
+    ? getShoppingListOwnerInfo(ownershipSnapshot)
     : null;
 
   // Find current user's collaborator entry for leave functionality
@@ -113,51 +120,10 @@ export const ListSettings: React.FC<
 
   const [removeMember] = useMutation(RemoveCollaboratorDocument);
   const [updateList] = useMutation(UpdateShoppingListDocument);
-  const [deleteList] = useMutation(DeleteShoppingListDocument, {
-    onError: (error: any) => {
-      const { message } = handleApolloError(error, {
-        operation: 'Delete Shopping List',
-      });
-      toastService.error(message);
-    },
-    update: (cache, { data }, { variables }) => {
-      if (!data?.deleteShoppingList?.shoppingList || !variables) return;
-
-      try {
-        const removeFromShoppingListsCache =
-          createRemoveFromQueryConnectionUpdater(
-            'shoppingLists',
-            'ShoppingList',
-          );
-        removeFromShoppingListsCache(cache, variables.id, { evictItem: true });
-      } catch (error) {
-        console.warn('Cache update failed for deleteList:', error);
-      }
-    },
-  });
-  const addToShoppingListsCache = createAddToQueryConnectionUpdater(
-    'shoppingLists',
-    'ShoppingList',
+  const { deleteShoppingList } = useDeleteShoppingList();
+  const { createShoppingList } = useCreateShoppingList(
+    t('shoppingListScreens.failedToCreate'),
   );
-
-  const [createList] = useMutation(CreateShoppingListDocument, {
-    update(cache, { data }) {
-      const newList = data?.createShoppingList?.shoppingList;
-      if (newList) {
-        addToShoppingListsCache(cache, newList);
-      }
-    },
-    onCompleted: data => {
-      const newList = data?.createShoppingList?.shoppingList;
-      if (newList) {
-        setSelectedShoppingListId(newList.id);
-        goBack();
-      }
-    },
-    onError: () => {
-      toastService.error(t('shoppingListScreens.failedToCreate'));
-    },
-  });
 
   useEffect(() => {
     syncListFormState(shoppingList, listId, setName, setIsDefault);
@@ -173,23 +139,20 @@ export const ListSettings: React.FC<
       async () => {
         if (!listId) {
           // Create new list
-          await createList({
-            variables: {
-              input: {
-                name: name.trim(),
-                description: t('shoppingListScreens.createdFromSettings'),
-                isDefault,
-                tags: ['user-created'],
-                homeId: selectedHomeId || undefined,
-              },
-            },
+          const newList = await createShoppingList({
+            name: name.trim(),
+            description: t('shoppingListScreens.createdFromSettings'),
+            isDefault,
+            tags: ['user-created'],
+            homeId: selectedHomeId || undefined,
           });
+          setSelectedShoppingListId(newList.id);
+          goBack();
         } else {
           // Update existing list
           await updateList({
             variables: {
-              id: listId!,
-              input: { name: name.trim(), isDefault },
+              input: { id: listId!, name: name.trim(), isDefault },
             },
           });
         }
@@ -222,7 +185,7 @@ export const ListSettings: React.FC<
 
             executeMutation(
               async () => {
-                await deleteList({ variables: { id: listId! } });
+                await deleteShoppingList(listId!);
 
                 // Clear selection — useShoppingListSelection auto-selects the next list
                 setSelectedShoppingListId(null);
@@ -271,7 +234,7 @@ export const ListSettings: React.FC<
             executeWithLoadingState(
               async () => {
                 await removeMember({
-                  variables: { id: currentUserCollaborator.id },
+                  variables: { input: { id: currentUserCollaborator.id } },
                 });
                 setSelectedShoppingListId(null);
                 goBack();

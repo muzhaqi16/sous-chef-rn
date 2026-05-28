@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { toastService } from '#/services/toastService';
 import { useLazyQuery, useMutation, useQuery } from '@apollo/client/react';
+import { handleMutationError } from '#/utils/errorHandlers';
 import {
   GetStorageLocationsDocument,
   GetStorageLocationTreeDocument,
@@ -142,17 +143,21 @@ export function useStorageLocationManagement(
       // Update mutation automatically updates the cache for modified fields
       // No manual cache update needed - Apollo handles it automatically
       onError: error => {
-        toastService.error(
-          error.message || 'Failed to update storage location',
-        );
+        handleMutationError(error, { operation: 'Update Storage Location' });
       },
     },
   );
 
   const [deleteMutation] = useMutation(DeleteStorageLocationDocument, {
     update: (cache, { data }, { variables }) => {
-      if (!data?.deleteStorageLocation?.success || !variables || !homeId)
+      if (
+        data?.deleteStorageLocation?.__typename !==
+          'DeleteStorageLocationPayload' ||
+        !variables ||
+        !homeId
+      ) {
         return;
+      }
 
       executeCacheUpdate(
         () => {
@@ -164,7 +169,7 @@ export function useStorageLocationManagement(
                 'storageLocationsConnection',
                 'StorageLocation',
               );
-            removeFromPantryLocations(cache, pantryId, variables.id);
+            removeFromPantryLocations(cache, pantryId, variables.input.id);
           }
 
           const removeFromStorageLocationsCache =
@@ -172,7 +177,7 @@ export function useStorageLocationManagement(
               'storageLocations',
               'StorageLocation',
             );
-          removeFromStorageLocationsCache(cache, variables.id, {
+          removeFromStorageLocationsCache(cache, variables.input.id, {
             evictItem: true,
           });
         },
@@ -181,9 +186,7 @@ export function useStorageLocationManagement(
       );
     },
     onError: error => {
-      toastService.error(
-        error.message || 'Cannot delete location with items or child locations',
-      );
+      handleMutationError(error, { operation: 'Delete Storage Location' });
     },
   });
 
@@ -192,46 +195,51 @@ export function useStorageLocationManagement(
     // Apollo automatically updates the cache for this location
     // No manual cache update needed
     onError: error => {
-      toastService.error(error.message || 'Failed to set default location');
+      handleMutationError(error, { operation: 'Set Default Storage Location' });
     },
   });
 
   const updateLocation = async (
     id: string,
-    input: UpdateStorageLocationInput,
+    input: Omit<UpdateStorageLocationInput, 'id'>,
   ) => {
     const result = await executeMutation(
-      () => updateMutation({ variables: { id, input } }),
+      () => updateMutation({ variables: { input: { ...input, id } } }),
       'Update storage location error:',
     );
     if (!result) return false;
-    return result.data?.updateStorageLocation?.storageLocation ?? false;
+    return result.data?.updateStorageLocation?.__typename ===
+      'UpdateStorageLocationPayload'
+      ? result.data.updateStorageLocation.storageLocation
+      : false;
   };
 
   const deleteLocation = async (id: string) => {
     const result = await executeMutation(
-      () => deleteMutation({ variables: { id } }),
+      () => deleteMutation({ variables: { input: { id } } }),
       'Delete storage location error:',
     );
     if (!result) return false;
     const payload = result.data?.deleteStorageLocation;
-    if (payload?.success) {
+    if (payload?.__typename === 'DeleteStorageLocationPayload') {
       toastService.success('Storage location deleted');
-    } else {
-      toastService.error(
-        payload?.message ?? 'Failed to delete storage location',
-      );
+      return true;
     }
-    return payload?.success ?? false;
+    const message = payload && 'message' in payload ? payload.message : null;
+    toastService.error(message ?? 'Failed to delete storage location');
+    return false;
   };
 
   const setDefaultLocation = async (id: string) => {
     const result = await executeMutation(
-      () => setDefaultMutation({ variables: { id } }),
+      () => setDefaultMutation({ variables: { input: { id } } }),
       'Set default storage location error:',
     );
     if (!result) return false;
-    return result.data?.setDefaultStorageLocation?.storageLocation ?? false;
+    return result.data?.setDefaultStorageLocation?.__typename ===
+      'SetDefaultStorageLocationPayload'
+      ? result.data.setDefaultStorageLocation.storageLocation
+      : false;
   };
 
   // Preserve data even when query fails to prevent cascade failures

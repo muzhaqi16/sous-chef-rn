@@ -1,5 +1,7 @@
 import { StateCreator } from 'zustand';
 import { UnistylesRuntime } from 'react-native-unistyles';
+import { getI18n } from '#/i18n/config';
+import { applyAppearanceToRuntime } from '#/theme/applyAppearance';
 import { RootState } from '../index';
 
 /**
@@ -131,7 +133,10 @@ export const createPreferencesSlice: StateCreator<
     applyThemePreferenceToRuntime(theme);
     set({ theme });
   },
-  setLanguage: language => set({ language }),
+  setLanguage: language => {
+    void getI18n().changeLanguage(language);
+    set({ language });
+  },
   setEmailNotifications: enabled => set({ emailNotifications: enabled }),
   setNotificationsEnabled: enabled => set({ pushNotifications: enabled }),
   setRememberMe: remember => set({ rememberMe: remember }),
@@ -159,10 +164,46 @@ export const createPreferencesSlice: StateCreator<
     });
   },
 
-  setPrimaryColorOverride: color => set({ primaryColorOverride: color }),
-  setDensityPreference: density => set({ densityPreference: density }),
-  setFontScalePreference: scale => set({ fontScalePreference: scale }),
-  setHighContrast: enabled => set({ highContrast: enabled }),
+  setPrimaryColorOverride: color => {
+    // Apply to the Unistyles runtime BEFORE the Zustand notification so the
+    // ShadowTree updates synchronously with the state — picking a swatch in
+    // AppearanceScreen reflects on the next frame instead of waiting for the
+    // useAppearance effect to re-fire on the next render.
+    applyAppearanceToRuntime({
+      primaryColorOverride: color,
+      densityPreference: get().densityPreference,
+      fontScalePreference: get().fontScalePreference,
+      highContrast: get().highContrast,
+    });
+    set({ primaryColorOverride: color });
+  },
+  setDensityPreference: density => {
+    applyAppearanceToRuntime({
+      primaryColorOverride: get().primaryColorOverride,
+      densityPreference: density,
+      fontScalePreference: get().fontScalePreference,
+      highContrast: get().highContrast,
+    });
+    set({ densityPreference: density });
+  },
+  setFontScalePreference: scale => {
+    applyAppearanceToRuntime({
+      primaryColorOverride: get().primaryColorOverride,
+      densityPreference: get().densityPreference,
+      fontScalePreference: scale,
+      highContrast: get().highContrast,
+    });
+    set({ fontScalePreference: scale });
+  },
+  setHighContrast: enabled => {
+    applyAppearanceToRuntime({
+      primaryColorOverride: get().primaryColorOverride,
+      densityPreference: get().densityPreference,
+      fontScalePreference: get().fontScalePreference,
+      highContrast: enabled,
+    });
+    set({ highContrast: enabled });
+  },
 
   resetPreferences: () => set(initialPreferencesState),
 });

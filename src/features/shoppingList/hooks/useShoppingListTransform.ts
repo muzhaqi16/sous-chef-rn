@@ -1,175 +1,79 @@
-import { resolveImageUrl } from '#utils/imageUtils';
-import { type ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
-import type {
-  SortableShoppingListItem,
-  QuantityElementConfig,
-  ImageElementConfig,
-} from '#features/shoppingList/components/SortableShoppingList/types';
+import type { ShoppingListRowItem } from '#features/shoppingList/components/SortableShoppingList/types';
+import type { ShoppingListItemNode } from './usePaginatedShoppingItems';
 
-const EMPTY_SORTABLE_ITEMS: SortableShoppingListItem[] = [];
-
-interface TransformOptions {
-  /**
-   * Force the isPurchased state for all items.
-   * Use this when items are already filtered by purchase status
-   * to ensure checkbox state matches the tab they're in.
-   */
-  forcePurchasedState?: boolean;
-  /** Whether to show product images (default: true). Passed from parent to support deferred removal. */
-  showImages?: boolean;
-}
+const EMPTY_ROW_ITEMS: ShoppingListRowItem[] = [];
 
 /**
- * Options for consolidated multi-source transform.
- * Pass multiple arrays to transform them all in a single hook call.
+ * Per-source transform cache.
+ *
+ * After the per-row `useFragment` migration the row component computes every
+ * piece of display data itself, so this hook no longer produces a transformed
+ * shape — it just wraps each node with the primitive metadata the FlashList
+ * needs (`id`, `isPurchased`, `sortOrder`) and the masked fragment ref.
+ *
+ * The WeakMap cache keeps the wrapper array stable as long as the source
+ * array is stable, which lets the React Compiler skip re-renders downstream.
  */
-interface MultiSourceTransformOptions {
-  /** Pre-filtered unpurchased items (from pagination) */
-  rawUnpurchasedItems: ShoppingListItemDisplayFragment[];
-  /** Pre-filtered purchased items (from pagination) */
-  rawPurchasedItems: ShoppingListItemDisplayFragment[];
-  /** Whether to show product images (default: true). Passed from parent to support deferred removal. */
-  showImages?: boolean;
-}
-
-/**
- * Transform a single item to SortableShoppingListItem format.
- * Pure function extracted for reuse across different transform modes.
- */
-function transformItem(
-  item: ShoppingListItemDisplayFragment,
-  forcePurchasedState?: boolean,
-  showImages: boolean = true,
-): SortableShoppingListItem | null {
-  // Skip items without ID or name (invalid/corrupt data)
-  if (!item.id || !item.itemName) {
-    if (__DEV__) {
-      console.warn('⚠️ Skipping invalid shopping list item:', item.id);
-    }
-    return null;
-  }
-
-  const imageUrl = resolveImageUrl(item);
-
-  // Use forced state if provided, otherwise read from server data
-  const isPurchasedValue =
-    forcePurchasedState ?? item.purchaseInfo?.isPurchased;
-
-  // Create quantity config
-  const rightElementConfig: QuantityElementConfig = {
-    type: 'quantity',
-    quantity: item.quantity || 0,
-    quantityInput: item.quantityInput,
-    unit: item.unitName || item.unit?.symbol || undefined,
-    itemId: item.id,
-    disabled: isPurchasedValue ?? false,
-  };
-
-  // Create image config (only if images are enabled and image exists)
-  const leftElementConfig: ImageElementConfig | undefined =
-    showImages && imageUrl
-      ? {
-          type: 'image',
-          url: imageUrl,
-          isPurchased: isPurchasedValue,
-        }
-      : undefined;
-
-  return {
-    id: item.id,
-    title: item.itemName,
-    subtitle: item.category?.split(',')[0].trim() || undefined,
-    sortOrder: item.sortOrder ?? 'zzz',
-    isPurchased: isPurchasedValue,
-    rightElementConfig,
-    leftElementConfig,
-  };
-}
-
-/**
- * Transform an array of items, filtering out invalid ones.
- */
-const transformItemsCache = new WeakMap<
-  ShoppingListItemDisplayFragment[],
-  { key: string; result: SortableShoppingListItem[] }
+const wrapItemsCache = new WeakMap<
+  readonly ShoppingListItemNode[],
+  { key: string; result: ShoppingListRowItem[] }
 >();
 
-function transformItems(
-  items: ShoppingListItemDisplayFragment[],
-  forcePurchasedState?: boolean,
-  showImages: boolean = true,
-): SortableShoppingListItem[] {
-  if (items.length === 0) return EMPTY_SORTABLE_ITEMS;
-  const key = `${forcePurchasedState}-${showImages}`;
-  const cached = transformItemsCache.get(items);
+function wrapItems(
+  items: readonly ShoppingListItemNode[],
+  forcePurchasedState: boolean,
+): ShoppingListRowItem[] {
+  if (items.length === 0) return EMPTY_ROW_ITEMS;
+  const key = String(forcePurchasedState);
+  const cached = wrapItemsCache.get(items);
   if (cached && cached.key === key) return cached.result;
-  const result = items
-    .map(item => transformItem(item, forcePurchasedState, showImages))
-    .filter((item): item is SortableShoppingListItem => item !== null);
-  transformItemsCache.set(items, { key, result });
+  const result: ShoppingListRowItem[] = [];
+  for (const node of items) {
+    if (!node.id || !node.itemName) {
+      if (__DEV__) {
+        console.warn(
+          '⚠️ Skipping invalid shopping list item:',
+          (node as { id?: string }).id,
+        );
+      }
+      continue;
+    }
+    result.push({
+      id: node.id,
+      isPurchased: forcePurchasedState,
+      sortOrder: node.sortOrder ?? null,
+      itemRef: node,
+    });
+  }
+  wrapItemsCache.set(items, { key, result });
   return result;
 }
 
 /**
- * useShoppingListTransform - Transform raw items to SortableShoppingListItem
- *
- * Single responsibility:
- * - Transform ShoppingListItemDisplayFragment[] to SortableShoppingListItem[]
- * - Create config objects for quantity and image elements
- * - Partition items by purchase status
- *
- * This hook removes the need for ref-based caching by relying on:
- * 1. React Compiler for automatic memoization (recalculates only when items change)
- * 2. Stable keys on child components
- * 3. Accepting that config objects are recreated when item data changes (which is correct behavior)
+ * Options for consolidated multi-source wrap.
+ * Pass the pre-filtered (unpurchased / purchased) raw node arrays from
+ * `useShoppingListManagement` and get the matching FlashList row arrays
+ * back, with `isPurchased` pinned to each tab.
  */
-export function useShoppingListTransform(
-  items: ShoppingListItemDisplayFragment[],
-  options?: TransformOptions,
-) {
-  const { forcePurchasedState, showImages = true } = options ?? {};
-
-  // Transform items using the extracted helper function
-  const sortableItems = transformItems(items, forcePurchasedState, showImages);
-
-  // Partition by purchase status
-  const unpurchasedItems = sortableItems.filter(item => !item.isPurchased);
-  const purchasedItems = sortableItems.filter(item => item.isPurchased);
-
-  return {
-    sortableItems,
-    unpurchasedItems,
-    purchasedItems,
-  };
+interface MultiSourceTransformOptions {
+  rawUnpurchasedItems: ShoppingListItemNode[];
+  rawPurchasedItems: ShoppingListItemNode[];
 }
 
 /**
- * useShoppingListTransformMulti - Consolidated transform for multiple item sources
+ * useShoppingListTransformMulti
  *
- * Use this when you have multiple arrays to transform (e.g., from paginated queries).
- * Transforms all arrays in a single call for better performance.
- *
- * @example
- * ```tsx
- * const { sortableItems, unpurchasedItems, purchasedItems } = useShoppingListTransformMulti({
- *   items,                // All items (combined)
- *   rawUnpurchasedItems,  // Paginated unpurchased
- *   rawPurchasedItems,    // Paginated purchased
- * });
- * ```
+ * Wraps the two paginated source arrays into the lightweight FlashList row
+ * shape. No display data is computed here — that lives on the row component
+ * via `useFragment`.
  */
 export function useShoppingListTransformMulti(
   options: MultiSourceTransformOptions,
 ) {
-  const { rawUnpurchasedItems, rawPurchasedItems, showImages = true } = options;
+  const { rawUnpurchasedItems, rawPurchasedItems } = options;
 
-  // Transform only the two partitioned arrays (skip redundant combined transform)
-  const unpurchasedItems = transformItems(
-    rawUnpurchasedItems,
-    false,
-    showImages,
-  );
-  const purchasedItems = transformItems(rawPurchasedItems, true, showImages);
+  const unpurchasedItems = wrapItems(rawUnpurchasedItems, false);
+  const purchasedItems = wrapItems(rawPurchasedItems, true);
 
   return { unpurchasedItems, purchasedItems };
 }

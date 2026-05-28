@@ -254,6 +254,23 @@ describe('ApolloCachePersistence', () => {
       // Cache should remain cleared, not re-populated by the debounced save
       expect(storage.getString(CACHE_KEY)).toBeUndefined();
     });
+
+    it('cancels a pending deferred restore so stale data is not written back', () => {
+      const deferredData = { 'PantryItem:1': { id: '1' } };
+      storage.set(VERSION_KEY, CURRENT_VERSION);
+      storage.set(DEFERRED_KEY, JSON.stringify(deferredData));
+
+      const cache = { restore: jest.fn() };
+      apolloCachePersistence.restoreDeferred(cache as any);
+
+      // clear() should cancel the pending idle callback
+      apolloCachePersistence.clear();
+
+      jest.advanceTimersByTime(0);
+
+      // The deferred restore must NOT have fired after clear()
+      expect(cache.restore).not.toHaveBeenCalled();
+    });
   });
 
   describe('getStats', () => {
@@ -405,6 +422,22 @@ describe('ApolloCachePersistence', () => {
       expect(deferred).toEqual({ 'ShoppingListItem:5': { id: '5' } });
     });
 
+    it('classifies Pantry and Membership as deferred', () => {
+      const cache = {
+        'Home:1': { id: '1', __typename: 'Home' },
+        'Pantry:1': { id: '1', __typename: 'Pantry', name: 'Main' },
+        'Membership:1': { id: '1', __typename: 'Membership', role: 'OWNER' },
+        'PantryItem:1': { id: '1', __typename: 'PantryItem' },
+      };
+      const { critical, deferred } =
+        apolloCachePersistence.partitionCache(cache);
+      expect(critical['Pantry:1']).toBeUndefined();
+      expect(critical['Membership:1']).toBeUndefined();
+      expect(deferred['Pantry:1']).toBeDefined();
+      expect(deferred['Membership:1']).toBeDefined();
+      expect(deferred['PantryItem:1']).toBeDefined();
+    });
+
     it('classifies PantryItem, ShoppingListItem, Recipe as deferred', () => {
       const cache = {
         'PantryItem:1': { id: '1' },
@@ -468,14 +501,165 @@ describe('ApolloCachePersistence', () => {
         'PantryItem:1': { id: '1' },
         'Recipe:2': { id: '2' },
       };
+      storage.set(VERSION_KEY, CURRENT_VERSION);
       storage.set(DEFERRED_KEY, JSON.stringify(deferredData));
 
       expect(apolloCachePersistence.loadDeferred()).toEqual(deferredData);
     });
 
     it('returns null on corrupted JSON', () => {
+      storage.set(VERSION_KEY, CURRENT_VERSION);
       storage.set(DEFERRED_KEY, 'bad-json');
       expect(apolloCachePersistence.loadDeferred()).toBeNull();
+    });
+
+    it('returns null when version key is missing (crash-mid-clear guard)', () => {
+      const deferredData = { 'PantryItem:1': { id: '1' } };
+      storage.set(DEFERRED_KEY, JSON.stringify(deferredData));
+      // No VERSION_KEY set — simulates a partial clear where deferred
+      // survived but version did not.
+      expect(apolloCachePersistence.loadDeferred()).toBeNull();
+    });
+
+    it('returns null on version mismatch', () => {
+      const deferredData = { 'PantryItem:1': { id: '1' } };
+      storage.set(VERSION_KEY, '0.0.1');
+      storage.set(DEFERRED_KEY, JSON.stringify(deferredData));
+      expect(apolloCachePersistence.loadDeferred()).toBeNull();
+    });
+  });
+
+  describe('restoreDeferred', () => {
+    // requestIdleCallback is polyfilled in __tests__/setup/globals.js as
+    // setTimeout(cb, 0), so advancing timers fires the idle callback.
+    const makeFakeCache = (existingData: Record<string, any> = {}) => ({
+      restore: jest.fn(),
+      extract: jest.fn(() => existingData),
+    });
+
+    it('schedules an idle callback and merges deferred entities with existing cache', () => {
+      const deferredData = {
+        'PantryItem:1': { id: '1' },
+        'Recipe:2': { id: '2' },
+      };
+      storage.set(VERSION_KEY, CURRENT_VERSION);
+      storage.set(DEFERRED_KEY, JSON.stringify(deferredData));
+
+      const existingData = { 'User:1': { id: '1' }, ROOT_QUERY: {} };
+      const cache = makeFakeCache(existingData);
+      apolloCachePersistence.restoreDeferred(cache as any);
+
+      // Idle callback hasn't fired yet
+      expect(cache.restore).not.toHaveBeenCalled();
+
+      jest.advanceTimersByTime(0);
+
+      // Merges existing cache with deferred data (cache.restore is destructive)
+      expect(cache.extract).toHaveBeenCalled();
+      expect(cache.restore).toHaveBeenCalledWith({
+        ...existingData,
+        ...deferredData,
+      });
+    });
+
+    it('does nothing when there are no deferred entities to restore', () => {
+      const cache = makeFakeCache();
+      apolloCachePersistence.restoreDeferred(cache as any);
+
+      jest.advanceTimersByTime(0);
+
+      expect(cache.restore).not.toHaveBeenCalled();
+    });
+
+    it('cancel() aborts a pending restore so logout cannot race with idle fire', () => {
+      const deferredData = { 'PantryItem:1': { id: '1' } };
+      storage.set(VERSION_KEY, CURRENT_VERSION);
+      storage.set(DEFERRED_KEY, JSON.stringify(deferredData));
+
+      const cache = makeFakeCache();
+      apolloCachePersistence.restoreDeferred(cache as any);
+      apolloCachePersistence.cancel();
+
+      jest.advanceTimersByTime(0);
+
+      expect(cache.restore).not.toHaveBeenCalled();
+    });
+
+    it('cancels a prior in-flight restore when called twice', () => {
+      const deferredData = { 'PantryItem:1': { id: '1' } };
+      storage.set(VERSION_KEY, CURRENT_VERSION);
+      storage.set(DEFERRED_KEY, JSON.stringify(deferredData));
+
+      const cache1 = makeFakeCache();
+      const cache2 = makeFakeCache();
+      apolloCachePersistence.restoreDeferred(cache1 as any);
+      apolloCachePersistence.restoreDeferred(cache2 as any);
+
+      jest.advanceTimersByTime(0);
+
+      // Only the second call wins
+      expect(cache1.restore).not.toHaveBeenCalled();
+      expect(cache2.restore).toHaveBeenCalled();
+    });
+
+    it('calls onComplete after successful restore', () => {
+      const deferredData = { 'PantryItem:1': { id: '1' } };
+      storage.set(VERSION_KEY, CURRENT_VERSION);
+      storage.set(DEFERRED_KEY, JSON.stringify(deferredData));
+
+      const cache = makeFakeCache();
+      const onComplete = jest.fn();
+      apolloCachePersistence.restoreDeferred(cache as any, onComplete);
+
+      expect(onComplete).not.toHaveBeenCalled();
+      jest.advanceTimersByTime(0);
+
+      expect(cache.restore).toHaveBeenCalled();
+      expect(onComplete).toHaveBeenCalledTimes(1);
+    });
+
+    it('calls onComplete when there are no deferred entities', () => {
+      const cache = makeFakeCache();
+      const onComplete = jest.fn();
+      apolloCachePersistence.restoreDeferred(cache as any, onComplete);
+
+      jest.advanceTimersByTime(0);
+
+      expect(cache.restore).not.toHaveBeenCalled();
+      expect(onComplete).toHaveBeenCalledTimes(1);
+    });
+
+    it('calls onComplete even when restore throws', () => {
+      storage.set(VERSION_KEY, CURRENT_VERSION);
+      storage.set(DEFERRED_KEY, JSON.stringify({ 'X:1': {} }));
+
+      const cache = {
+        extract: jest.fn(() => ({})),
+        restore: jest.fn(() => {
+          throw new Error('boom');
+        }),
+      };
+      const onComplete = jest.fn();
+      apolloCachePersistence.restoreDeferred(cache as any, onComplete);
+
+      jest.advanceTimersByTime(0);
+
+      expect(onComplete).toHaveBeenCalledTimes(1);
+    });
+
+    it('does NOT call onComplete when cancel() aborts the restore', () => {
+      const deferredData = { 'PantryItem:1': { id: '1' } };
+      storage.set(VERSION_KEY, CURRENT_VERSION);
+      storage.set(DEFERRED_KEY, JSON.stringify(deferredData));
+
+      const cache = makeFakeCache();
+      const onComplete = jest.fn();
+      apolloCachePersistence.restoreDeferred(cache as any, onComplete);
+      apolloCachePersistence.cancel();
+
+      jest.advanceTimersByTime(0);
+
+      expect(onComplete).not.toHaveBeenCalled();
     });
   });
 

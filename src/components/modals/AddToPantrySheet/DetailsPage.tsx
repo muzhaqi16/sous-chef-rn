@@ -1,5 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
@@ -63,6 +64,7 @@ export const DetailsPage: React.FC<DetailsPageProps> = ({
   handleWeightUnitSelected,
   insets,
 }) => {
+  const { t } = useTranslation();
   return (
     <BottomSheetKeyboardAwareScrollView
       key="details"
@@ -79,20 +81,20 @@ export const DetailsPage: React.FC<DetailsPageProps> = ({
       <View style={{ zIndex: 10 }}>
         <FieldRow>
           <EditableCounter
-            label="Quantity"
+            label={t('addToPantry.quantity')}
             required
             value={quantityInput}
             onChangeText={setQuantityInput}
-            placeholder="1"
+            placeholder={t('addToPantry.quantityPlaceholder')}
             testID="add-pantry-item-quantity-input"
           />
           <UnitAutocompleteField
             variant="inline"
-            label="Unit"
+            label={t('addToPantry.unit')}
             value={unit}
             onChangeText={setUnit}
             onUnitSelected={handleUnitSelected}
-            placeholder="pcs, dozen"
+            placeholder={t('addToPantry.unitPlaceholder')}
             testID="add-pantry-item-unit-picker"
           />
         </FieldRow>
@@ -102,25 +104,25 @@ export const DetailsPage: React.FC<DetailsPageProps> = ({
       <View style={{ zIndex: 5 }}>
         <FieldRow containerStyle={{ marginBottom: 4 }}>
           <FormInput
-            label="Net Weight"
+            label={t('addToPantry.netWeight')}
             value={pantryNetWeight}
             onChangeText={setPantryNetWeight}
-            placeholder="e.g., 14.5"
+            placeholder={t('addToPantry.netWeightPlaceholder')}
             keyboardType="decimal-pad"
             useBottomSheetInput
             inputStyle={{ height: 44 }}
           />
           <UnitAutocompleteField
             variant="inline"
-            label="Unit"
+            label={t('addToPantry.weightUnit')}
             value={pantryNetWeightUnit}
             onChangeText={setPantryNetWeightUnit}
             onUnitSelected={handlePantryNetWeightUnitSelected}
-            placeholder="oz, g, ml"
+            placeholder={t('addToPantry.weightUnitPlaceholder')}
           />
         </FieldRow>
         <Text size="sm" tone="secondary" style={styles.netWeightHint}>
-          Net weight is used for consumption tracking and is optional.
+          {t('addToPantry.netWeightHint')}
         </Text>
       </View>
 
@@ -135,23 +137,23 @@ export const DetailsPage: React.FC<DetailsPageProps> = ({
         >
           <Text size="md" weight="medium" tone="accent">
             {showPackageDetails
-              ? 'Hide Package Details'
-              : 'Add Package Details'}
+              ? t('addToPantry.hidePackageDetails')
+              : t('addToPantry.addPackageDetails')}
           </Text>
         </Pressable>
 
         {!!showPackageDetails && (
           <View style={styles.packageDetailsContainer}>
             <Text size="sm" tone="secondary" style={styles.sectionDescription}>
-              Define what's inside a package (e.g., 12 cans of 335ml each).
+              {t('addToPantry.packageHint')}
             </Text>
 
             {/* Package Size */}
             <FormInput
-              label="Qty per Package"
+              label={t('addToPantry.qtyPerPackage')}
               value={packageSize}
               onChangeText={setPackageSize}
-              placeholder="e.g., 12"
+              placeholder={t('addToPantry.qtyPerPackagePlaceholder')}
               keyboardType="decimal-pad"
               useBottomSheetInput
             />
@@ -160,11 +162,11 @@ export const DetailsPage: React.FC<DetailsPageProps> = ({
             <View style={[styles.section, { zIndex: 10 }]}>
               <UnitAutocompleteField
                 variant="inline"
-                label="Content Unit"
+                label={t('addToPantry.contentUnit')}
                 value={contentUnit}
                 onChangeText={setContentUnit}
                 onUnitSelected={handleContentUnitSelected}
-                placeholder="e.g., can, bottle"
+                placeholder={t('addToPantry.contentUnitPlaceholder')}
               />
             </View>
 
@@ -172,20 +174,20 @@ export const DetailsPage: React.FC<DetailsPageProps> = ({
             <View style={{ zIndex: 1 }}>
               <FieldRow>
                 <FormInput
-                  label="Weight per Unit"
+                  label={t('addToPantry.weightPerUnit')}
                   value={itemNetWeight}
                   onChangeText={setItemNetWeight}
-                  placeholder="e.g., 335"
+                  placeholder={t('addToPantry.weightPerUnitPlaceholder')}
                   keyboardType="decimal-pad"
                   useBottomSheetInput
                 />
                 <UnitAutocompleteField
                   variant="inline"
-                  label="Weight Unit"
+                  label={t('addToPantry.contentWeightUnit')}
                   value={weightUnit}
                   onChangeText={setWeightUnit}
                   onUnitSelected={handleWeightUnitSelected}
-                  placeholder="mL, g, oz"
+                  placeholder={t('addToPantry.contentWeightUnitPlaceholder')}
                 />
               </FieldRow>
             </View>

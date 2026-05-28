@@ -7,20 +7,35 @@
  * - Error handling with user feedback
  */
 
-import { alertService } from '#/services/alertService';
-import { useMutation } from '@apollo/client/react';
+import { gql } from '@apollo/client';
+import { useApolloClient, useMutation } from '@apollo/client/react';
+import type { Unmasked } from '@apollo/client/masking';
 import {
   RemoveItemFromShoppingListDocument,
   type RemoveItemFromShoppingListMutation,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import {
-  ShoppingListItemCoreFragmentDoc,
-  type ShoppingListItemCoreFragment,
-} from '#features/shoppingList/graphql/shoppingListFragments.generated';
-import { useErrorService } from '#/services/errorService';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
 import { removeFromShoppingListItemsCache } from './utils';
 import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
+import { handleMutationError } from '#/utils/errorHandlers';
+
+// Minimal cache-read fragments — only the fields the optimistic-update path needs.
+const ShoppingListStatsFragment = gql`
+  fragment _RemoveShoppingItemStats on ShoppingList {
+    totalItems
+    completedItems
+    remainingItems
+    completionRate
+  }
+`;
+
+const ShoppingListItemPurchaseFragment = gql`
+  fragment _RemoveShoppingItemPurchase on ShoppingListItem {
+    purchaseInfo {
+      isPurchased
+    }
+  }
+`;
 
 interface UseRemoveShoppingItemOptions {
   listId: string | null | undefined;
@@ -44,77 +59,94 @@ export function useRemoveShoppingItem({
   listId,
   refetch,
 }: UseRemoveShoppingItemOptions): UseRemoveShoppingItemReturn {
-  const { handleApolloError } = useErrorService();
   const { createRemoveOperation } = useCrudOperations();
+  const client = useApolloClient();
 
   const [removeItemMutation] = useMutation(RemoveItemFromShoppingListDocument, {
-    optimisticResponse: (variables): RemoveItemFromShoppingListMutation => ({
-      __typename: 'Mutation',
-      removeItemFromShoppingList: {
-        __typename: 'ShoppingListItemPayload',
-        success: true,
-        message: '',
-        code: 'SUCCESS',
-        shoppingListItem: {
+    optimisticResponse: (
+      variables,
+    ): Unmasked<RemoveItemFromShoppingListMutation> => {
+      // Read current aggregates from cache so the optimistic response
+      // reflects correct counts instead of hardcoded zeros.
+      const listStats = listId
+        ? client.cache.readFragment<{
+            totalItems: number;
+            completedItems: number;
+            remainingItems: number;
+            completionRate: number;
+          }>({
+            id: client.cache.identify({
+              __typename: 'ShoppingList',
+              id: listId,
+            }),
+            fragment: ShoppingListStatsFragment,
+            fragmentName: '_RemoveShoppingItemStats',
+          })
+        : null;
+
+      const itemPurchase = client.cache.readFragment<{
+        purchaseInfo: { isPurchased: boolean } | null;
+      }>({
+        id: client.cache.identify({
           __typename: 'ShoppingListItem',
-          id: variables.id,
-        } as RemoveItemFromShoppingListMutation['removeItemFromShoppingList']['shoppingListItem'],
-      },
-    }),
+          id: variables.input.id,
+        }),
+        fragment: ShoppingListItemPurchaseFragment,
+        fragmentName: '_RemoveShoppingItemPurchase',
+      });
+
+      const wasPurchased = itemPurchase?.purchaseInfo?.isPurchased ?? false;
+      const prevTotal = listStats?.totalItems ?? 0;
+      const prevCompleted = listStats?.completedItems ?? 0;
+      const newTotal = Math.max(0, prevTotal - 1);
+      const newCompleted = wasPurchased
+        ? Math.max(0, prevCompleted - 1)
+        : prevCompleted;
+      const newRemaining = Math.max(0, newTotal - newCompleted);
+      const newCompletionRate = newTotal > 0 ? newCompleted / newTotal : 0;
+
+      return {
+        __typename: 'Mutation',
+        removeItemFromShoppingList: {
+          __typename: 'RemoveItemFromShoppingListPayload',
+          shoppingListItem: {
+            __typename: 'ShoppingListItem',
+            id: variables.input.id,
+            shoppingList: {
+              __typename: 'ShoppingList',
+              id: listId ?? '',
+              totalItems: newTotal,
+              completedItems: newCompleted,
+              remainingItems: newRemaining,
+              completionRate: newCompletionRate,
+            },
+          },
+        },
+      };
+    },
     update(cache, { data }, { variables }) {
-      if (!data?.removeItemFromShoppingList || !listId || !variables) return;
+      if (
+        data?.removeItemFromShoppingList?.__typename !==
+          'RemoveItemFromShoppingListPayload' ||
+        !listId ||
+        !variables
+      ) {
+        return;
+      }
 
       executeCacheUpdate(
         () => {
-          const itemId = variables.id;
-
-          // Read isPurchased before eviction so we can update completedItems.
-          // Uses the generated ShoppingListItemCore fragment so the field path
-          // (`purchaseInfo.isPurchased`) is type-checked against the schema —
-          // the previous inline gql read `isPurchased` directly on
-          // ShoppingListItem, which doesn't exist there, and silently fell
-          // back to `wasPurchased = false` for every removal.
-          const itemData = cache.readFragment<ShoppingListItemCoreFragment>({
-            id: cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
-            fragment: ShoppingListItemCoreFragmentDoc,
-            fragmentName: 'ShoppingListItemCore',
-          });
-          const wasPurchased = itemData?.purchaseInfo?.isPurchased ?? false;
-
+          const itemId = variables.input.id;
           removeFromShoppingListItemsCache(cache, listId, itemId, {
             evictItem: true,
           });
-
-          // Update totalItems and conditionally completedItems
-          const parentCacheId = cache.identify({
-            __typename: 'ShoppingList',
-            id: listId,
-          });
-          if (parentCacheId) {
-            cache.modify({
-              id: parentCacheId,
-              fields: {
-                totalItems(existing: number = 0) {
-                  return Math.max(0, existing - 1);
-                },
-                ...(wasPurchased && {
-                  completedItems(existing: number = 0) {
-                    return Math.max(0, existing - 1);
-                  },
-                }),
-              },
-            });
-          }
         },
         'Cache update failed for removeItem, will refetch:',
         refetch,
       );
     },
     onError: error => {
-      const { message } = handleApolloError(error, {
-        operation: 'Remove Shopping List Item',
-      });
-      alertService.alert('Error', message);
+      handleMutationError(error, { operation: 'Remove Shopping List Item' });
     },
   });
 

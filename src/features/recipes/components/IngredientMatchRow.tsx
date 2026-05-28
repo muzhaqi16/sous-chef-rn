@@ -31,10 +31,10 @@ const IngredientMatchRowComponent: React.FC<IngredientMatchRowProps> = ({
   index,
   onUpdate,
 }) => {
-  const { match, adjustedQuantity, isIncluded } = editableMatch;
+  const { match, ingredient, adjustedQuantity, isIncluded } = editableMatch;
   const status = getAvailabilityStatus(match);
   const badge = BADGE_CONFIG[status];
-  const isOptional = match.ingredient.isOptional;
+  const isOptional = ingredient.isOptional;
   styles.useVariants({ badgeColor: badge.color });
 
   return (
@@ -47,7 +47,7 @@ const IngredientMatchRowComponent: React.FC<IngredientMatchRowProps> = ({
             style={[styles.name, !isIncluded && styles.textExcluded]}
             numberOfLines={1}
           >
-            {match.ingredient.name}
+            {ingredient.name}
           </Text>
           <View style={styles.badge}>
             <Text size="xs" weight="semibold" style={styles.badgeText}>

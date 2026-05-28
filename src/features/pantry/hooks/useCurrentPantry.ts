@@ -6,12 +6,10 @@ import {
 } from '#store/useAppStore';
 import { useQuery } from '@apollo/client/react';
 import { GetHomesDocument } from '#operations/home/home.generated';
-import {
-  normalizeHomes,
-  normalizeHome,
-  extractNodes,
-} from '#/utils/connectionUtils';
+import { extractNodes } from '#/utils/connectionUtils';
 import { usePreservedArrayData } from '#/hooks/apollo/usePreservedQueryData';
+
+type PantryNode = { id: string; name?: string; isDefault?: boolean };
 
 /**
  * Hook for resolving the current pantry with fallback chain:
@@ -34,46 +32,34 @@ export function useCurrentPantry() {
     errorPolicy: 'ignore',
   });
 
-  // Preserve homes data and normalize
-  // Extract nodes from connection type (homes returns HomeConnection)
-  const homes = normalizeHomes(
-    usePreservedArrayData(extractNodes(homesData?.homes)),
-  );
+  // Preserve homes (connection-shape nodes).
+  const homes = usePreservedArrayData(extractNodes(homesData?.homes));
 
-  // Get current home from cached homes
-  const currentHome = isHomeSelectionReady
-    ? homes.find((h: any) => h.id === selectedHomeId)
-    : undefined;
-
-  // Helper to get default pantry from a home
-  // Handle both normalized homes (with pantries array) and raw homes (with pantriesConnection)
-  const getDefaultPantry = (homeData: any) => {
-    const home = homeData?.home ?? homeData;
-    const pantries = home?.pantries ?? normalizeHome(home)?.pantries ?? [];
-
-    if (!pantries.length) {
-      return null;
-    }
-    return (
-      pantries.find((pantry: any) => pantry.isDefault) || pantries[0] || null
-    );
+  type HomeNode = (typeof homes)[number] & {
+    name?: string;
+    pantriesConnection?: unknown;
+    myMembership?: unknown;
   };
 
-  // Get home's default pantry (isDefault=true or first)
+  const currentHome = isHomeSelectionReady
+    ? (homes.find(h => h.id === selectedHomeId) as HomeNode | undefined)
+    : undefined;
+
+  const pantries = extractNodes(
+    currentHome?.pantriesConnection as never,
+  ) as PantryNode[];
+
   const defaultPantry = isHomeSelectionReady
-    ? getDefaultPantry({ home: currentHome })
+    ? pantries.find(p => p.isDefault) ?? pantries[0] ?? null
     : null;
 
   // Resolve pantry with fallback chain
   const pantry = (() => {
-    // Return null if home selection not ready
     if (!isHomeSelectionReady) return null;
 
     // 1. Try selected pantry
-    if (selectedPantryId && currentHome?.pantries) {
-      const found = currentHome.pantries.find(
-        (p: any) => p.id === selectedPantryId,
-      );
+    if (selectedPantryId && pantries.length) {
+      const found = pantries.find(p => p.id === selectedPantryId);
       if (found) return found;
     }
 
@@ -81,9 +67,6 @@ export function useCurrentPantry() {
     if (defaultPantry) return defaultPantry;
 
     // 3. Minimal object — only while currentHome hasn't loaded yet.
-    //    Once currentHome is defined and the pantry isn't in its list,
-    //    it has been deleted: return null and let the auto-clear effect
-    //    below reset selectedPantryId.
     if (selectedPantryId && !currentHome) {
       return { id: selectedPantryId, name: 'Pantry', isDefault: false };
     }
@@ -91,15 +74,11 @@ export function useCurrentPantry() {
     return null;
   })();
 
-  // Keep selectedPantryId valid for the current home in a single update —
-  // covers both initial auto-select and clearing a stale id when the
-  // selected pantry has been deleted (locally or remotely). Stale → default
-  // (or null) in one render, no intermediate "no pantry" flicker.
+  // Keep selectedPantryId valid for the current home (stale → default in one render).
   useEffect(() => {
     if (!isHomeSelectionReady || !currentHome) return;
     const isValid =
-      selectedPantryId &&
-      currentHome.pantries?.some((p: any) => p.id === selectedPantryId);
+      selectedPantryId && pantries.some(p => p.id === selectedPantryId);
     if (isValid) return;
     const next = defaultPantry?.id ?? null;
     if (next !== selectedPantryId) {
@@ -109,11 +88,11 @@ export function useCurrentPantry() {
     isHomeSelectionReady,
     selectedPantryId,
     currentHome,
+    pantries,
     defaultPantry?.id,
     setSelectedPantryId,
   ]);
 
-  // Return early values if not ready, otherwise return resolved values
   if (!isHomeSelectionReady) {
     return {
       pantry: null,
@@ -129,7 +108,7 @@ export function useCurrentPantry() {
 
   return {
     pantry,
-    pantries: currentHome?.pantries || [],
+    pantries,
     selectedPantryId,
     setSelectedPantryId,
     currentHome,

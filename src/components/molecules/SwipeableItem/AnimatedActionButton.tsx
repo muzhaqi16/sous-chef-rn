@@ -1,6 +1,9 @@
 import React from 'react';
 
-import { Pressable } from '#components/atoms/themedComponents';
+// RNGH's Pressable (not the themed RN re-export). The action button sits in
+// RNGH Swipeable's underlay; RN's Pressable doesn't register with RNGH's
+// gesture coordinator, so taps on the revealed action are silently dropped.
+import { Pressable } from 'react-native-gesture-handler';
 import Animated, {
   useAnimatedStyle,
   interpolate,
@@ -78,9 +81,8 @@ const AnimatedActionButtonComponent: React.FC<AnimatedActionButtonProps> = ({
     onPress();
   };
 
-  // Pressable instead of GestureDetector + Gesture.Tap() — lighter weight and
-  // sufficient for simple tap actions. The parent Swipeable already handles
-  // gesture coordination.
+  // RNGH Pressable (see import comment) instead of GestureDetector + Gesture.Tap()
+  // — lighter weight and sufficient for simple tap actions on a Swipeable underlay.
   return (
     <Pressable onPress={handlePress} style={buttonStyle} testID={testID}>
       <Animated.View style={animatedStyle}>

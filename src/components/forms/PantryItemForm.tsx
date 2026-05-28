@@ -14,16 +14,21 @@ import { PrimaryActivityIndicator } from '#components/atoms/themedComponents';
 import { useNavigation } from '@react-navigation/native';
 import { commonStyles } from '#/styles/commonStyles';
 import { useSelectedPantryId, useSelectedHomeId } from '#store/useAppStore';
-import { normalizeHome, normalizePantry } from '#/utils/connectionUtils';
-import { useQuery } from '@apollo/client/react';
+import { extractNodes } from '#/utils/connectionUtils';
+import { useApolloClient, useQuery } from '@apollo/client/react';
 import { GetHomeDocument } from '#operations/home/home.generated';
 import {
   GetPantryDocument,
   GetPantryItemDocument,
 } from '#features/pantry/graphql/pantry.generated';
 import {
+  PantryItemForm_PantryItemFragmentDoc,
+  type PantryItemForm_PantryItemFragment,
+} from './PantryItemForm.generated';
+import {
   StorageState,
   type ItemSuggestion,
+  type StorageLocation,
 } from '#/graphql/generated/schemaTypes';
 import { useCreatePantryItem } from '#features/pantry/hooks/mutations/useCreatePantryItem';
 import { useUpdatePantryItem } from '#features/pantry/hooks/mutations/useUpdatePantryItem';
@@ -47,6 +52,7 @@ import { ItemInformationSection } from './ItemInformationSection';
 import { QuantitySection } from './QuantitySection';
 import { StorageDetailsSection } from './StorageDetailsSection';
 import { usePantryItemFormSubmit } from './usePantryItemFormSubmit';
+import { logValidationErrors } from '#utils/validation/common';
 
 type PageName = 'Basics' | 'Product' | 'Storage' | 'Inventory';
 const PAGES: readonly PageName[] = [
@@ -174,13 +180,13 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
 
   // Helper to get default pantry (inline to avoid useDefaultHome dependency)
   const getDefaultPantry = (data: any) => {
-    const normalized = normalizeHome(data?.home ?? data);
-    if (!normalized?.pantries?.length) return null;
-    return (
-      normalized.pantries.find((p: any) => p.isDefault) ||
-      normalized.pantries[0] ||
-      null
-    );
+    const home = data?.home ?? data;
+    const pantries = extractNodes(home?.pantriesConnection) as Array<{
+      id: string;
+      isDefault?: boolean;
+    }>;
+    if (!pantries.length) return null;
+    return pantries.find(p => p.isDefault) ?? pantries[0] ?? null;
   };
 
   const { data: homeData } = useQuery(GetHomeDocument, {
@@ -198,9 +204,21 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     skip: mode !== 'edit' || !itemId,
   });
 
+  // Materialize the form's own narrow fragment from the cache. The screen's
+  // `GetPantryItem` query selects this fragment via `...PantryItemForm_pantryItem`
+  // in `PantryItemDetail_pantryItem`, so the cache is already populated.
+  const apolloClient = useApolloClient();
+  const existingPantryItem = existingItemData?.pantryItem
+    ? apolloClient.cache.readFragment<PantryItemForm_PantryItemFragment>({
+        fragment: PantryItemForm_PantryItemFragmentDoc,
+        fragmentName: 'PantryItemForm_pantryItem',
+        from: existingItemData.pantryItem,
+      })
+    : null;
+
   const pantry = getDefaultPantry(homeData);
   const currentPantryId =
-    selectedPantryId || pantry?.id || existingItemData?.pantryItem?.pantryId;
+    selectedPantryId || pantry?.id || existingPantryItem?.pantryId;
 
   // Fetch pantry details to get storage locations
   const { data: pantryData } = useQuery(GetPantryDocument, {
@@ -209,10 +227,9 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     fetchPolicy: 'cache-first',
   });
 
-  const normalizedPantry = pantryData?.pantry
-    ? normalizePantry(pantryData.pantry)
-    : null;
-  const storageLocations = normalizedPantry?.storageLocations || [];
+  const storageLocations = extractNodes(
+    pantryData?.pantry?.storageLocationsConnection,
+  ) as StorageLocation[];
 
   // Mutation hooks - modular pattern for maintainability
   const { createPantryItem } = useCreatePantryItem({
@@ -234,8 +251,8 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
 
   // Get initial values based on mode
   const getInitialValues = (): PantryItemFormData => {
-    if (mode === 'edit' && existingItemData?.pantryItem) {
-      const item = existingItemData.pantryItem;
+    if (mode === 'edit' && existingPantryItem) {
+      const item = existingPantryItem;
       // Tracking unit (for counting items) - from item.unit or item.unitName
       const trackingUnitSymbol = item.unit?.symbol || '';
       return {
@@ -300,11 +317,11 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     useState<typeof existingItemData>();
   if (
     mode === 'edit' &&
-    existingItemData?.pantryItem &&
+    existingPantryItem &&
     existingItemData !== prevExistingItemData
   ) {
     setPrevExistingItemData(existingItemData);
-    const item = existingItemData.pantryItem;
+    const item = existingPantryItem;
     const trackingUnitSymbol = item.unit?.symbol || '';
     reset({
       itemName: item.itemName || '',
@@ -424,7 +441,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     setNetWeightUnitId(unitId);
   };
 
-  const item = existingItemData?.pantryItem;
+  const item = existingPantryItem;
   const isWeightLocked = mode === 'edit' && !!item?.lastUsedAt;
 
   const { handleSave } = usePantryItemFormSubmit({
@@ -432,7 +449,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     itemId,
     currentPantryId,
     isWeightLocked,
-    existingItemData,
+    existingPantryItem,
     dirtyFields: dirtyFields as Record<string, unknown>,
     trackingUnit,
     netWeightUnitId,
@@ -457,7 +474,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   }
 
   // Show error if edit mode but no item found
-  if (mode === 'edit' && !existingItemData?.pantryItem) {
+  if (mode === 'edit' && !existingPantryItem) {
     return (
       <View style={[commonStyles.container, commonStyles.center]}>
         <Text style={styles.errorText}>Item not found</Text>
@@ -523,7 +540,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
           rightActions={[
             {
               icon: 'checkmark',
-              onPress: handleSubmit(handleSave),
+              onPress: handleSubmit(handleSave, logValidationErrors),
               variant: 'primary',
               testID:
                 mode === 'add'

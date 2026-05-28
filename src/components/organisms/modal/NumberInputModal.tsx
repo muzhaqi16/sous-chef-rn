@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Modal, TextInput, Pressable } from 'react-native';
+import { View, Text, Modal, TextInput } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { commonStyles } from '#/styles/commonStyles';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
@@ -170,9 +172,12 @@ export const NumberInputModal: React.FC<NumberInputModalProps> = ({
   allowDecimals = false,
   required = true,
   validate,
-  saveButtonLabel = 'Save',
-  cancelButtonLabel = 'Cancel',
+  saveButtonLabel,
+  cancelButtonLabel,
 }) => {
+  const { t } = useTranslation();
+  const resolvedSaveLabel = saveButtonLabel ?? t('labels.save');
+  const resolvedCancelLabel = cancelButtonLabel ?? t('labels.cancel');
   const [inputValue, setInputValue] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -187,17 +192,21 @@ export const NumberInputModal: React.FC<NumberInputModalProps> = ({
   const validateInput = (numValue: number): string | null => {
     // Check required
     if (required && (isNaN(numValue) || inputValue.trim() === '')) {
-      return 'This field is required';
+      return t('numberInputModal.required');
     }
 
     // Check min
     if (min !== undefined && numValue < min) {
-      return `Value must be at least ${min}${unit ? ` ${unit}` : ''}`;
+      return t('numberInputModal.minError', {
+        value: `${min}${unit ? ` ${unit}` : ''}`,
+      });
     }
 
     // Check max
     if (max !== undefined && numValue > max) {
-      return `Value must be at most ${max}${unit ? ` ${unit}` : ''}`;
+      return t('numberInputModal.maxError', {
+        value: `${max}${unit ? ` ${unit}` : ''}`,
+      });
     }
 
     // Custom validation
@@ -230,12 +239,12 @@ export const NumberInputModal: React.FC<NumberInputModalProps> = ({
         if (success) {
           onCancel(); // Close modal on success
         } else {
-          setError('Failed to save');
+          setError(t('numberInputModal.saveFailed'));
         }
       },
       setLoading,
       (err: unknown) => {
-        setError((err as any).message || 'An error occurred');
+        setError((err as any).message || t('numberInputModal.genericError'));
       },
     );
   };
@@ -251,10 +260,14 @@ export const NumberInputModal: React.FC<NumberInputModalProps> = ({
       return `(${min}-${max}${unit ? ` ${unit}` : ''})`;
     }
     if (min !== undefined) {
-      return `(min: ${min}${unit ? ` ${unit}` : ''})`;
+      return t('numberInputModal.minRange', {
+        value: `${min}${unit ? ` ${unit}` : ''}`,
+      });
     }
     if (max !== undefined) {
-      return `(max: ${max}${unit ? ` ${unit}` : ''})`;
+      return t('numberInputModal.maxRange', {
+        value: `${max}${unit ? ` ${unit}` : ''}`,
+      });
     }
     return '';
   };
@@ -304,7 +317,12 @@ export const NumberInputModal: React.FC<NumberInputModalProps> = ({
               setError(''); // Clear error on input
             }}
             keyboardType={allowDecimals ? 'decimal-pad' : 'number-pad'}
-            placeholder={placeholder || `Enter ${title.toLowerCase()}`}
+            placeholder={
+              placeholder ||
+              t('numberInputModal.enterPlaceholder', {
+                title: title.toLowerCase(),
+              })
+            }
             autoFocus
             editable={!loading}
           />
@@ -323,7 +341,7 @@ export const NumberInputModal: React.FC<NumberInputModalProps> = ({
               onPress={handleCancel}
               disabled={loading}
             >
-              <Text style={commonStyles.buttonText}>{cancelButtonLabel}</Text>
+              <Text style={commonStyles.buttonText}>{resolvedCancelLabel}</Text>
             </Pressable>
 
             <Pressable
@@ -346,7 +364,7 @@ export const NumberInputModal: React.FC<NumberInputModalProps> = ({
                     commonStyles.buttonTextPrimary,
                   ]}
                 >
-                  {saveButtonLabel}
+                  {resolvedSaveLabel}
                 </Text>
               )}
             </Pressable>

@@ -28,6 +28,10 @@ import {
   type RegisterMutationVariables,
 } from '#operations/auth/auth.generated';
 import {
+  LoginUserFragmentDoc,
+  type LoginUserFragment,
+} from '#operations/auth/userFragments.generated';
+import {
   RegisterDeviceDocument,
   type RegisterDeviceMutation,
   type RegisterDeviceMutationVariables,
@@ -239,11 +243,13 @@ async function registerDeviceOnce(): Promise<boolean> {
       variables: { input: buildDeviceInput(deviceInfo) },
     });
 
-    if (!result.data?.registerDevice?.success) {
-      logger.error(
-        'Device registration failed:',
-        result.data?.registerDevice?.message,
-      );
+    const registerPayload = result.data?.registerDevice;
+    if (registerPayload?.__typename !== 'RegisterDevicePayload') {
+      const message =
+        registerPayload && 'message' in registerPayload
+          ? registerPayload.message
+          : null;
+      logger.error('Device registration failed:', message);
       return false;
     }
 
@@ -335,6 +341,35 @@ function getUserPreferences(userId?: string) {
         biometricEnabled: false,
       });
     },
+  };
+}
+
+// Resolve the masked AuthPayload.user ref into a plain LoginUser by reading
+// from the Apollo cache. The mutation has already written the user entity to
+// the normalized cache, so this read is synchronous.
+function unmaskAuthPayload<
+  T extends {
+    accessToken: string;
+    refreshToken: string;
+    user: { __typename: 'User'; id: string };
+  },
+>(
+  payload: T,
+): {
+  accessToken: string;
+  refreshToken: string;
+  user: LoginUserFragment;
+} | null {
+  const user = client.cache.readFragment<LoginUserFragment>({
+    fragment: LoginUserFragmentDoc,
+    fragmentName: 'LoginUser',
+    from: payload.user,
+  });
+  if (!user) return null;
+  return {
+    accessToken: payload.accessToken,
+    refreshToken: payload.refreshToken,
+    user,
   };
 }
 
@@ -527,11 +562,10 @@ async function login(
         password: input.password,
       };
 
-      const biometricTriggered = await handleLogin(
-        result.data.login,
-        true,
-        loginCredentials,
-      );
+      const unmaskedLogin = unmaskAuthPayload(result.data.login);
+      const biometricTriggered = unmaskedLogin
+        ? await handleLogin(unmaskedLogin, true, loginCredentials)
+        : false;
 
       if (showRememberPrompt && !biometricTriggered) {
         const hasStoredCreds = await checkStoredCredentials(input.email);
@@ -596,7 +630,10 @@ async function register(
         prefs?.clearRegistrationPreferences();
       }
 
-      await handleRegistration(result.data.register, shouldRemember);
+      const unmaskedRegister = unmaskAuthPayload(result.data.register);
+      if (unmaskedRegister) {
+        await handleRegistration(unmaskedRegister, shouldRemember);
+      }
       store.setAuthIsLoading(false);
       return true;
     }
@@ -678,7 +715,10 @@ async function autoLogin(): Promise<boolean> {
     });
 
     if (result.data?.login) {
-      await handleLogin(result.data.login, true);
+      const unmaskedLogin = unmaskAuthPayload(result.data.login);
+      if (unmaskedLogin) {
+        await handleLogin(unmaskedLogin, true);
+      }
       logger.info('Auto-login successful');
       return true;
     }

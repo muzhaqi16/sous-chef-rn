@@ -24,3 +24,21 @@ export const SortableListThemeContext =
 export const useSortableListTheme = (): SortableListThemeColors | null => {
   return useContext(SortableListThemeContext);
 };
+
+/**
+ * List-level row display options. Cell components read these via context
+ * so a single subscription at list level fans out without re-rendering
+ * every row when the value is stable.
+ */
+export interface ShoppingListRowOptions {
+  /** Whether to show product images in row cells */
+  showImages: boolean;
+}
+
+export const ShoppingListRowOptionsContext =
+  createContext<ShoppingListRowOptions>({
+    showImages: true,
+  });
+
+export const useShoppingListRowOptions = (): ShoppingListRowOptions =>
+  useContext(ShoppingListRowOptionsContext);

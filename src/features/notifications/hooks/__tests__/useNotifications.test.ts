@@ -3,13 +3,16 @@
 import { act, waitFor } from '@testing-library/react-native';
 import type { MockedResponse } from '#/test-utils/apolloMockProvider';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
-import { NotificationChangedDocument } from '#features/notifications/graphql/notifications.generated';
+import {
+  NotificationCreatedDocument,
+  NotificationUpdatedDocument,
+} from '#features/notifications/graphql/notifications.generated';
 import {
   NotificationType,
   NotificationCategory,
   NotificationStatus,
   Priority,
-  NotificationChangeType,
+  MutationType,
 } from '#/graphql/generated/schemaTypes';
 import { useNotifications } from '../useNotifications';
 
@@ -106,17 +109,23 @@ function buildNotificationSubscriptionMock(
     payload?: Record<string, unknown>;
     sentAt?: string;
   },
-  changeType: NotificationChangeType = NotificationChangeType.Received,
+  variant: 'created' | 'updated' = 'created',
 ): MockedResponse {
+  const isCreated = variant === 'created';
   return {
     request: {
-      query: NotificationChangedDocument,
+      query: isCreated
+        ? NotificationCreatedDocument
+        : NotificationUpdatedDocument,
     },
     result: {
       data: {
-        notificationChanged: {
-          __typename: 'NotificationChangeEvent',
-          changeType,
+        [isCreated ? 'notificationCreated' : 'notificationUpdated']: {
+          __typename: isCreated
+            ? 'NotificationCreatedPayload'
+            : 'NotificationUpdatedPayload',
+          mutation: isCreated ? MutationType.Created : MutationType.Updated,
+          userId: 'user-1',
           timestamp: '2024-01-01T00:00:00Z',
           notification: {
             __typename: 'Notification',

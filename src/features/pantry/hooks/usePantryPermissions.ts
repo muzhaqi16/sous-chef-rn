@@ -22,9 +22,11 @@ export function usePantryPermissions(): PantryPermissions {
   const { currentHome } = useCurrentPantry();
 
   return (() => {
-    if (!currentHome?.myMembership) {
+    const membership = (currentHome as { myMembership?: any } | null)
+      ?.myMembership;
+    if (!membership) {
       return NO_PERMISSIONS;
     }
-    return getPantryPermissions(currentHome.myMembership);
+    return getPantryPermissions(membership);
   })();
 }

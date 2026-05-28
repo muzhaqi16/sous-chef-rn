@@ -76,8 +76,10 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
     CreatePantryItemDocument,
     {
       update: (cache, { data }) => {
-        const pantryItem = data?.createPantryItem?.pantryItem;
-        if (!pantryItem || !pantryId) return;
+        const payload = data?.createPantryItem;
+        if (payload?.__typename !== 'CreatePantryItemPayload' || !pantryId)
+          return;
+        const pantryItem = payload.pantryItem;
 
         executeCacheUpdate(() => {
           const addToPantryCache = createAddToParentConnectionUpdater(
@@ -236,8 +238,10 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
                   () =>
                     restockPantryItem({
                       variables: {
-                        id: duplicateInfo.existingPantryItemId,
-                        input: { quantity },
+                        input: {
+                          id: duplicateInfo.existingPantryItemId,
+                          quantity,
+                        },
                       },
                     }),
                   'Restock pantry item error:',
@@ -271,7 +275,10 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
                   );
                   return;
                 }
-                if (retryResult.data?.createPantryItem?.pantryItem) {
+                if (
+                  retryResult.data?.createPantryItem?.__typename ===
+                  'CreatePantryItemPayload'
+                ) {
                   onSuccess();
                 } else {
                   alertService.alert(
@@ -287,7 +294,9 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
       }
     }
 
-    if (result.data?.createPantryItem?.pantryItem) {
+    if (
+      result.data?.createPantryItem?.__typename === 'CreatePantryItemPayload'
+    ) {
       onSuccess();
     } else if (result.error) {
       alertService.alert('Error', 'Failed to add item. Please try again.');

@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, ActivityIndicator } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Pressable } from '#components/atoms/themedComponents';
 import { FlashList, type ListRenderItemInfo } from '@shopify/flash-list';
 import {
@@ -23,7 +24,7 @@ import type {
 } from '#features/recipes/hooks/useRecipeIngredientMatching';
 import { Text } from '#components/atoms/Text';
 
-const keyExtractor = (item: EditableMatch) => item.match.ingredient.id;
+const keyExtractor = (item: EditableMatch) => item.ingredient.id;
 
 const IngredientMatchRenderItemComponent = ({
   item,
@@ -77,6 +78,7 @@ export const IngredientMatchingSheet: React.FC<
   onClose,
   confirmLoading,
 }) => {
+  const { t } = useTranslation();
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible,
     onDismiss: onClose,
@@ -88,10 +90,14 @@ export const IngredientMatchingSheet: React.FC<
     <BottomSheetModal ref={ref} {...modalProps}>
       <BottomSheetView style={[styles.container, contentContainerStyle]}>
         <BottomSheetHeader
-          title="Review Ingredients"
+          title={t('ingredientMatching.reviewIngredients')}
           onCancel={onClose}
           onConfirm={onConfirm}
-          confirmLabel={confirmLoading ? 'Deducting...' : 'Confirm & Deduct'}
+          confirmLabel={
+            confirmLoading
+              ? t('ingredientMatching.deducting')
+              : t('ingredientMatching.confirmAndDeduct')
+          }
           confirmDisabled={confirmLoading || matchSummary.included === 0}
           confirmColor="success"
         />
@@ -99,22 +105,25 @@ export const IngredientMatchingSheet: React.FC<
         {/* Summary bar */}
         <View style={styles.summaryBar}>
           <SummaryPill
-            label="Available"
+            label={t('ingredientMatching.available')}
             count={matchSummary.available}
             tone="success"
           />
           <SummaryPill
-            label="Partial"
+            label={t('ingredientMatching.partial')}
             count={matchSummary.partial}
             tone="warning"
           />
           <SummaryPill
-            label="Missing"
+            label={t('ingredientMatching.missing')}
             count={matchSummary.missing}
             tone="error"
           />
           <Text size="xs" tone="secondary" style={styles.includedText}>
-            {matchSummary.included}/{matchSummary.total} included
+            {t('ingredientMatching.includedCount', {
+              n: matchSummary.included,
+              m: matchSummary.total,
+            })}
           </Text>
         </View>
 
@@ -142,7 +151,7 @@ export const IngredientMatchingSheet: React.FC<
             ]}
           >
             <Text size="base" weight="medium" tone="secondary">
-              Skip Review
+              {t('ingredientMatching.skipReview')}
             </Text>
           </Pressable>
           <Pressable
@@ -159,7 +168,9 @@ export const IngredientMatchingSheet: React.FC<
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
               <Text size="base" weight="semibold" style={styles.confirmText}>
-                Confirm & Deduct ({matchSummary.included})
+                {t('ingredientMatching.confirmAndDeductCount', {
+                  count: matchSummary.included,
+                })}
               </Text>
             )}
           </Pressable>

@@ -9,9 +9,6 @@ fragment InviteCard_invite on HomeInvite {
   inviter {
     id
     email
-    profile {
-      id
-      displayName
-    }
+    profile { id displayName avatar }
   }
 }

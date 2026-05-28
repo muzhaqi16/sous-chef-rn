@@ -1,0 +1,5 @@
+fragment WriteReviewSheet_review on RecipeReview {
+  id
+  rating
+  comment
+}

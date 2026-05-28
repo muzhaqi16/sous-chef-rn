@@ -1,4 +1,3 @@
-import { alertService } from '#/services/alertService';
 import { useUser } from '#store/useAppStore';
 import { useMutation, useQuery } from '@apollo/client/react';
 import {
@@ -11,7 +10,7 @@ import {
   type UpdateNotificationPreferencesInput,
 } from '#/graphql/generated/schemaTypes';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
-import { useErrorService } from '#/services/errorService';
+import { handleMutationError } from '#/utils/errorHandlers';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 
 export interface NotificationSettings {
@@ -99,7 +98,6 @@ function toNestedInput(
 
 export const useNotificationSettings = (options?: { skip?: boolean }) => {
   const user = useUser();
-  const { handleApolloError } = useErrorService();
 
   // PERFORMANCE: Hardcoded policies prevent query cascade from network status changes
   // - cache-first: Uses cache if available for settings
@@ -134,10 +132,7 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
         const optimistic: UpdateNotificationPreferencesMutation = {
           __typename: 'Mutation',
           updateNotificationPreferences: {
-            __typename: 'NotificationPreferencesPayload',
-            success: true,
-            message: 'Notification preferences updated',
-            code: 'NOTIFICATION_PREFERENCES_UPDATED',
+            __typename: 'UpdateNotificationPreferencesPayload',
             notificationPreferences: {
               ...preferences,
               ...definedInputs,
@@ -148,10 +143,9 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
         return optimistic;
       },
       onError: error => {
-        const { message } = handleApolloError(error, {
+        handleMutationError(error, {
           operation: 'Update Notification Preferences',
         });
-        alertService.alert('Error', message);
       },
     },
   );

@@ -24,6 +24,7 @@ import { authService } from '#/services/authService';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { errorService } from '#/services/errorService';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
+import { handleMutationError } from '#/utils/errorHandlers';
 
 /** Module-level wrapper around the deleteAccount mutation. Extracted from the
  *  inline `onPress` arrow inside the component body so the surrounding try/catch
@@ -70,10 +71,7 @@ export const DeleteAccountScreen: React.FC = () => {
   const [deleteAccountMutation] = useMutation(DeleteAccountDocument, {
     onCompleted: () => authService.logout(),
     onError: error => {
-      alertService.alert(
-        t('labels.error'),
-        t('account.deleteFailedAlert', { error: error.message }),
-      );
+      handleMutationError(error, { operation: 'Delete Account' });
       setIsDeleting(false);
     },
   });

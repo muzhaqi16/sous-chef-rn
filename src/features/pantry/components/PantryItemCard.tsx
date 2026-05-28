@@ -10,6 +10,9 @@ import Animated, {
 import { scheduleOnRN } from 'react-native-worklets';
 import { useRecyclingState } from '@shopify/flash-list';
 import { StyleSheet } from 'react-native-unistyles';
+import { differenceInCalendarDays } from 'date-fns';
+import { useFragment } from '@apollo/client/react';
+import { type FragmentType } from '@apollo/client/masking';
 import { BaseItemCard } from '#components/molecules/BaseItemCard/BaseItemCard';
 import { CardLeftSlot } from '#components/molecules/BaseItemCard/CardLeftSlot';
 import { CardContent } from '#components/molecules/BaseItemCard/CardContent';
@@ -18,6 +21,15 @@ import type { CardVariant } from '#components/molecules/BaseItemCard/types';
 import { SLIDE_PRESETS } from '#/constants/animations';
 import { usePantryActions } from './PantryActionsContext';
 import { Text } from '#components/atoms/Text';
+import { resolveImageUrl } from '#utils/imageUtils';
+import {
+  getExpirationStatus,
+  formatPackageBreakdown,
+  formatRemainingNetWeight,
+  formatQuantityBreakdown,
+} from '#features/pantry/hooks/usePantryItemTransformation';
+import { formatQuantityDisplay } from '#/utils/formatQuantity';
+import { PantryItemCard_PantryItemFragmentDoc } from './PantryItemCard.generated';
 
 // Module-level constant — only used for slide animation distance, no need for reactive updates
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -26,41 +38,29 @@ export type ItemVariant = 'normal' | 'warning' | 'expired';
 
 export type ExpirationVariant = 'normal' | 'warning' | 'critical' | 'expired';
 
-interface PantryItemCardProps {
-  id: string;
-  name: string;
-  expirationText?: string | null;
-  expirationVariant?: ExpirationVariant;
-  expirationColor?: string;
-  quantity: string;
-  location?: string | null;
-  variant?: ItemVariant;
-  imageUrl?: string | null;
-  isOutOfStock?: boolean;
-  packageBreakdownText?: string | null;
-  remainingNetWeightText?: string | null;
-  quantityBreakdownText?: string | null;
-  activeBatchCount?: number;
-}
+type ExpiryStatus = 'expired' | 'warning' | 'normal';
 
 /**
- * Expiration text — pure presentational, color precomputed by parent list.
- * Eliminates per-item useUnistyles subscription. React Compiler memoizes the
- * JSX at the parent call site, so React.memo is redundant per CLAUDE.md.
+ * Expiration text — uses theme-tied styles via `styles.useVariants` so that
+ * theme color changes propagate through Unistyles' ShadowTree binding rather
+ * than React re-renders. Extracted so `useVariants` fires once per row.
  */
 const ExpirationText: React.FC<{
   text: string;
-  color: string;
+  status: ExpiryStatus;
   bold: boolean;
-}> = ({ text, color, bold }) => (
-  <Text
-    weight={bold ? 'medium' : undefined}
-    style={[styles.expiration, { color }]}
-    numberOfLines={1}
-  >
-    {text}
-  </Text>
-);
+}> = ({ text, status, bold }) => {
+  styles.useVariants({ expiryStatus: status });
+  return (
+    <Text
+      weight={bold ? 'medium' : undefined}
+      style={styles.expiration}
+      numberOfLines={1}
+    >
+      {text}
+    </Text>
+  );
+};
 
 /**
  * Lightweight slide-right + fade animation wrapper for delete.
@@ -129,28 +129,99 @@ const SlideAnimatedWrapper: React.FC<{
   );
 };
 
+/** Returns true when at least one usage has been recorded for the item. */
+function hasConsumptionStarted(item: {
+  lastUsedAt: string | null;
+  netWeight: number | null;
+  remainingNetWeight: number | null;
+}): boolean {
+  if (item.lastUsedAt != null) return true;
+  if (
+    item.netWeight != null &&
+    item.remainingNetWeight != null &&
+    item.remainingNetWeight !== item.netWeight
+  )
+    return true;
+  return false;
+}
+
+interface PantryItemCardProps {
+  pantryItemRef: FragmentType<typeof PantryItemCard_PantryItemFragmentDoc>;
+}
+
 /**
- * Pantry item card using BaseItemCard composition
- * Displays item with emoji/image, name, expiration status, quantity, and location
- * Slide animation handled by SlideAnimatedWrapper (always renders Animated.View)
+ * Pantry item card using BaseItemCard composition.
+ *
+ * Subscribes to its own PantryItem entity via `useFragment` so the cell
+ * re-renders only when its own fields change (per Apollo Client 4.x's data
+ * masking guidance). Display values — expiry status, location, quantity
+ * breakdown — are computed inline; the React Compiler memoizes them at the
+ * parent FlashList call site, so no module-level cache is needed.
  */
 export const PantryItemCard: React.FC<PantryItemCardProps> = ({
-  id,
-  name,
-  expirationText,
-  expirationVariant,
-  expirationColor,
-  quantity,
-  location,
-  variant = 'normal',
-  imageUrl,
-  isOutOfStock,
-  packageBreakdownText,
-  remainingNetWeightText,
-  quantityBreakdownText,
-  activeBatchCount,
+  pantryItemRef,
 }) => {
+  const { data: pantryItem, complete } = useFragment({
+    fragment: PantryItemCard_PantryItemFragmentDoc,
+    fragmentName: 'PantryItemCard_pantryItem',
+    from: pantryItemRef,
+  });
+
   const { actions, swipeable } = usePantryActions();
+
+  if (!complete) return null;
+
+  const id = pantryItem.id;
+  const name = pantryItem.itemName || 'Unknown Item';
+  const imageUrl = resolveImageUrl(pantryItem);
+
+  const expiresAt = pantryItem.expiresAt;
+  const expiresIn = expiresAt
+    ? differenceInCalendarDays(new Date(expiresAt), new Date())
+    : null;
+  const expStatus = getExpirationStatus(expiresIn);
+  const isExpired = expiresIn !== null && expiresIn < 0;
+  const isExpiringSoon = expiresIn !== null && expiresIn >= 0 && expiresIn <= 3;
+  const variant: ItemVariant = isExpired
+    ? 'expired'
+    : isExpiringSoon
+    ? 'warning'
+    : 'normal';
+  const hasExpiry = expiresAt != null;
+  const expirationText = hasExpiry ? expStatus.text : null;
+  const expirationVariant: ExpirationVariant | undefined = hasExpiry
+    ? expStatus.type
+    : undefined;
+  const expiryStatusKey: ExpiryStatus = (() => {
+    if (!hasExpiry) return 'normal';
+    if (expStatus.type === 'expired' || expStatus.type === 'critical')
+      return 'expired';
+    if (expStatus.type === 'warning') return 'warning';
+    return 'normal';
+  })();
+
+  const quantity = formatQuantityDisplay(
+    pantryItem.quantity,
+    pantryItem.unit?.symbol,
+  );
+  // Only return custom storage location names; default states are represented
+  // by the filter tabs.
+  const location = pantryItem.storageLocation?.name ?? null;
+  const isOutOfStock = pantryItem.quantity === 0;
+  const packageBreakdownText = formatPackageBreakdown(
+    pantryItem.packageBreakdown,
+    pantryItem.quantityBreakdown?.totalContentUnits,
+  );
+  const remainingNetWeightText = hasConsumptionStarted(pantryItem)
+    ? formatRemainingNetWeight(
+        pantryItem.remainingNetWeight,
+        pantryItem.netWeightUnit,
+      )
+    : null;
+  const quantityBreakdownText = formatQuantityBreakdown(
+    pantryItem.quantityBreakdown,
+  );
+  const activeBatchCount = pantryItem.activeBatchCount;
 
   // PERFORMANCE: Single object for all item action callbacks
   const itemActions = {
@@ -183,11 +254,11 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
         </Text>
       );
     }
-    if (expirationText && expirationColor) {
+    if (expirationText) {
       return (
         <ExpirationText
           text={expirationText}
-          color={expirationColor}
+          status={expiryStatusKey}
           bold={expirationBold}
         />
       );
@@ -254,6 +325,13 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
 const styles = StyleSheet.create(theme => ({
   expiration: {
     fontSize: theme.typography.fontSize.sm - 1,
+    variants: {
+      expiryStatus: {
+        expired: { color: theme.colors.expiration.expiredText },
+        warning: { color: theme.colors.expiration.warningText },
+        normal: { color: theme.colors.textSecondary },
+      },
+    },
   },
   outOfStock: {
     fontSize: theme.typography.fontSize.sm - 1,

@@ -88,10 +88,9 @@ async function executeRecipeTextSearch(
 
   await executeMutation(
     async () => {
-      const data = await spoonacularService.searchRecipes({
+      const data = await spoonacularService.searchRecipesWithInfo({
         query,
         number: SEARCH_FETCH_SIZE,
-        addRecipeInformation: true,
         ...(filters.diet.length > 0 && { diet: filters.diet.join('|') }),
         ...(filters.intolerances.length > 0 && {
           intolerances: filters.intolerances.join(','),

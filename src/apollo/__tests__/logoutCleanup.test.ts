@@ -14,10 +14,6 @@ jest.mock('../client', () => ({
   cancelCachePersistence: jest.fn(),
 }));
 
-jest.mock('../cache', () => ({
-  stopCacheMonitoring: jest.fn(),
-}));
-
 jest.mock('../links/tokenScheduler', () => ({
   cancelTokenRefresh: jest.fn(),
 }));
@@ -54,6 +50,7 @@ jest.mock('#/storage/mmkv', () => ({
       remove: jest.fn(),
     }),
   ),
+  isStorageReady: () => true,
 }));
 
 // Mock wsLink dynamic import
@@ -67,7 +64,6 @@ jest.mock('../links/wsLink', () => ({
 
 import { LogoutCleanup } from '../logoutCleanup';
 import { client, cancelCachePersistence } from '../client';
-import { stopCacheMonitoring } from '../cache';
 import { cancelTokenRefresh } from '../links/tokenScheduler';
 import { apolloCachePersistence } from '../offline/ApolloCachePersistence';
 import { optimisticDataPersistence } from '../offline/OptimisticDataPersistence';
@@ -115,10 +111,9 @@ describe('LogoutCleanup', () => {
       expect(cancelTokenRefresh).toHaveBeenCalled();
     });
 
-    it('cancels cache persistence and stops monitoring', async () => {
+    it('cancels cache persistence', async () => {
       await LogoutCleanup.performLogoutCleanup();
       expect(cancelCachePersistence).toHaveBeenCalled();
-      expect(stopCacheMonitoring).toHaveBeenCalled();
     });
 
     it('stops in-flight queries', async () => {

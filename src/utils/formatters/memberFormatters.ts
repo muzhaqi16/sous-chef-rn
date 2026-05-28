@@ -1,45 +1,39 @@
-import { type MemberShipFragment } from '#operations/home/homeFragments.generated';
 import { type ShoppingListCollaboratorFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
+import {
+  type MembershipRole,
+  type MembershipStatus,
+} from '#/graphql/generated/schemaTypes';
+import { t } from '#/i18n/t';
 
 /**
- * Loose `Membership` shape used by home-membership UI components.
+ * Loose `Membership` shape used by home-membership UI helpers.
  *
- * Different queries select different subsets of `Membership`:
- *  - `HomeFragment.membersConnection` selects `user { id, email }` + `canManageHome`
- *  - `HomeListFragment.membersConnection` selects no `user` and no permissions
- *  - `HomeFragment.myMembership` selects all permissions but no `user`
- *
- * To accept all three at the same call site, every field beyond the
- * always-present `id`/`role`/`status` is optional. Field types are pulled
- * from `MemberShipFragment` so the schema stays the source of truth.
- *
- * `user` is defined locally rather than as `MemberShipFragment['user']`
- * because slim queries (e.g. `HomeFragment.membersConnection`) select only
- * `{ id, email }` without `profile` — narrower than the full `UserSummary`.
+ * Different queries select different subsets of `Membership` (per-row card
+ * fragment, page-level summary, `myMembership`, the `MembersList` slim
+ * selection). Every field beyond the always-present `id`/`role`/`status` is
+ * optional so callers can pass any of these shapes interchangeably.
  */
-export type Member = Pick<MemberShipFragment, 'id' | 'role' | 'status'> &
-  Partial<
-    Pick<
-      MemberShipFragment,
-      | 'homeId'
-      | 'userId'
-      | 'displayName'
-      | 'canManageHome'
-      | 'canViewPantry'
-      | 'canEditPantry'
-      | 'canAddItems'
-      | 'canRemoveItems'
-      | 'canInviteOthers'
-    >
-  > & {
-    user?: {
-      id: string;
-      email?: string | null;
-      profile?: {
-        displayName?: string | null;
-      } | null;
+export type Member = {
+  id: string;
+  role: MembershipRole;
+  status?: MembershipStatus;
+  homeId?: string;
+  userId?: string;
+  displayName?: string | null;
+  canManageHome?: boolean;
+  canViewPantry?: boolean;
+  canEditPantry?: boolean;
+  canAddItems?: boolean;
+  canRemoveItems?: boolean;
+  canInviteOthers?: boolean;
+  user?: {
+    id: string;
+    email?: string | null;
+    profile?: {
+      displayName?: string | null;
     } | null;
-  };
+  } | null;
+};
 
 /**
  * Get display name for a member with comprehensive fallback logic
@@ -62,7 +56,7 @@ export function getMemberDisplayName(
   currentUserId?: string,
 ): string {
   if (currentUserId && member.user?.id === currentUserId) {
-    return 'You';
+    return t('homeDetail.youLabel');
   }
 
   return (
@@ -104,7 +98,7 @@ export function getCollaboratorDisplayName(
   currentUserId?: string,
 ): string {
   if (currentUserId && collaborator.collaboratorId === currentUserId) {
-    return 'You';
+    return t('homeDetail.youLabel');
   }
 
   const email = collaborator.collaborator?.email ?? collaborator.email ?? null;

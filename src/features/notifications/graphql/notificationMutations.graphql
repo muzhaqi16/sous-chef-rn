@@ -2,34 +2,61 @@
 # MUTATIONS
 # ============================================
 
-mutation MarkNotificationAsRead($id: ID!) {
-  markNotificationAsRead(id: $id) {
-    success
-    message
-    code
-    notification {
-      id
-      status
+mutation MarkNotificationAsRead($input: MarkNotificationAsReadInput!) {
+  markNotificationAsRead(input: $input) {
+    __typename
+    ... on MarkNotificationAsReadPayload {
+      notification {
+        id
+        status
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
   }
 }
 
-mutation MarkNotificationUnread($id: ID!) {
-  markNotificationUnread(id: $id) {
-    success
-    message
-    code
-    notification {
-      id
-      status
+mutation MarkNotificationUnread($input: MarkNotificationUnreadInput!) {
+  markNotificationUnread(input: $input) {
+    __typename
+    ... on MarkNotificationUnreadPayload {
+      notification {
+        id
+        status
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
   }
 }
 
-mutation DeleteNotification($id: ID!) {
-  deleteNotification(id: $id) {
-    success
-    message
-    code
+mutation DeleteNotification($input: DeleteNotificationInput!) {
+  deleteNotification(input: $input) {
+    __typename
+    ... on DeleteNotificationPayload {
+      notification {
+        id
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
   }
 }

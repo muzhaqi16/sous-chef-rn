@@ -1,6 +1,7 @@
 'use no memo';
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { screen } from '@testing-library/react-native';
+import { renderWithApollo as render } from '#/test-utils/apolloMockProvider';
 import { PantryDetailInfo } from '../PantryDetailInfo';
 
 jest.mock('#features/pantry/hooks/usePantryItemTransformation', () => ({
@@ -30,6 +31,7 @@ jest.mock('#utils/formatQuantity', () => ({
 }));
 
 const baseItem = {
+  __typename: 'PantryItem',
   id: 'pi1',
   itemName: 'Milk',
   quantity: 2,
@@ -57,7 +59,7 @@ const baseItem = {
 
 describe('PantryDetailInfo', () => {
   const defaultProps = {
-    item: baseItem,
+    itemRef: baseItem,
     brandName: null as string | null,
     netWeightText: null as string | null,
     remainingNetWeightText: null as string | null,
@@ -128,14 +130,14 @@ describe('PantryDetailInfo', () => {
 
   it('renders Storage row when storageLocation is set', () => {
     const item = { ...baseItem, storageLocation: { name: 'Top shelf' } };
-    render(<PantryDetailInfo {...defaultProps} item={item} />);
+    render(<PantryDetailInfo {...defaultProps} itemRef={item} />);
     expect(screen.getByText('Storage')).toBeTruthy();
     expect(screen.getByText('Top shelf')).toBeTruthy();
   });
 
   it('renders Store row when store name exists', () => {
     const item = { ...baseItem, store: { name: 'Whole Foods' } };
-    render(<PantryDetailInfo {...defaultProps} item={item} />);
+    render(<PantryDetailInfo {...defaultProps} itemRef={item} />);
     expect(screen.getByText('Store')).toBeTruthy();
     expect(screen.getByText('Whole Foods')).toBeTruthy();
   });
@@ -147,21 +149,21 @@ describe('PantryDetailInfo', () => {
 
   it('renders Condition row with error styling for SPOILED', () => {
     const item = { ...baseItem, condition: 'SPOILED' };
-    render(<PantryDetailInfo {...defaultProps} item={item} />);
+    render(<PantryDetailInfo {...defaultProps} itemRef={item} />);
     expect(screen.getByText('Condition')).toBeTruthy();
     expect(screen.getByText('Spoiled')).toBeTruthy();
   });
 
   it('renders Condition row for EXPIRED', () => {
     const item = { ...baseItem, condition: 'EXPIRED' };
-    render(<PantryDetailInfo {...defaultProps} item={item} />);
+    render(<PantryDetailInfo {...defaultProps} itemRef={item} />);
     expect(screen.getByText('Condition')).toBeTruthy();
     expect(screen.getByText('Expired')).toBeTruthy();
   });
 
   it('renders Acquired row when acquisitionMethod is set', () => {
     const item = { ...baseItem, acquisitionMethod: 'HOME_GROWN' };
-    render(<PantryDetailInfo {...defaultProps} item={item} />);
+    render(<PantryDetailInfo {...defaultProps} itemRef={item} />);
     expect(screen.getByText('Acquired')).toBeTruthy();
     expect(screen.getByText('Home Grown')).toBeTruthy();
   });
@@ -173,46 +175,46 @@ describe('PantryDetailInfo', () => {
 
   it('renders Cost/Unit row when costPerUnit is positive', () => {
     const item = { ...baseItem, costPerUnit: 3.5 };
-    render(<PantryDetailInfo {...defaultProps} item={item} />);
+    render(<PantryDetailInfo {...defaultProps} itemRef={item} />);
     expect(screen.getByText('Cost/Unit')).toBeTruthy();
     expect(screen.getByText('$3.50')).toBeTruthy();
   });
 
   it('renders Total Cost row when totalCost is positive', () => {
     const item = { ...baseItem, totalCost: 7.0 };
-    render(<PantryDetailInfo {...defaultProps} item={item} />);
+    render(<PantryDetailInfo {...defaultProps} itemRef={item} />);
     expect(screen.getByText('Total Cost')).toBeTruthy();
     expect(screen.getByText('$7.00')).toBeTruthy();
   });
 
   it('renders Min Stock row when minQuantity is set', () => {
     const item = { ...baseItem, minQuantity: 1 };
-    render(<PantryDetailInfo {...defaultProps} item={item} />);
+    render(<PantryDetailInfo {...defaultProps} itemRef={item} />);
     expect(screen.getByText('Min Stock')).toBeTruthy();
   });
 
   it('renders Restock At row when restockQuantity is set', () => {
     const item = { ...baseItem, restockQuantity: 2 };
-    render(<PantryDetailInfo {...defaultProps} item={item} />);
+    render(<PantryDetailInfo {...defaultProps} itemRef={item} />);
     expect(screen.getByText('Restock At')).toBeTruthy();
   });
 
   it('renders Last Used row when lastUsedAt is set', () => {
     const item = { ...baseItem, lastUsedAt: '2024-06-15' };
-    render(<PantryDetailInfo {...defaultProps} item={item} />);
+    render(<PantryDetailInfo {...defaultProps} itemRef={item} />);
     expect(screen.getByText('Last Used')).toBeTruthy();
   });
 
   it('renders notes section when storageNotes exists', () => {
     const item = { ...baseItem, storageNotes: 'Keep refrigerated' };
-    render(<PantryDetailInfo {...defaultProps} item={item} />);
+    render(<PantryDetailInfo {...defaultProps} itemRef={item} />);
     expect(screen.getByText('Notes')).toBeTruthy();
     expect(screen.getByText('Keep refrigerated')).toBeTruthy();
   });
 
   it('renders tags when tags array is non-empty', () => {
     const item = { ...baseItem, tags: ['organic', 'dairy'] };
-    render(<PantryDetailInfo {...defaultProps} item={item} />);
+    render(<PantryDetailInfo {...defaultProps} itemRef={item} />);
     expect(screen.getByText('Tags')).toBeTruthy();
     expect(screen.getByText('organic')).toBeTruthy();
     expect(screen.getByText('dairy')).toBeTruthy();
@@ -220,7 +222,7 @@ describe('PantryDetailInfo', () => {
 
   it('does not render tags section when tags is empty', () => {
     const item = { ...baseItem, tags: [] };
-    render(<PantryDetailInfo {...defaultProps} item={item} />);
+    render(<PantryDetailInfo {...defaultProps} itemRef={item} />);
     expect(screen.queryByText('Tags')).toBeNull();
   });
 
@@ -230,12 +232,11 @@ describe('PantryDetailInfo', () => {
     render(
       <PantryDetailInfo
         {...defaultProps}
-        item={item}
+        itemRef={item}
         netWeightText="500g"
         onCorrectWeight={onCorrectWeight}
       />,
     );
-    // Net weight row should exist with the value
     expect(screen.getByText('Net Weight')).toBeTruthy();
     expect(screen.getByText('500g')).toBeTruthy();
   });

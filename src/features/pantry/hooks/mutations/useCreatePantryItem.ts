@@ -16,7 +16,6 @@ import {
   RestockPantryItemDocument,
 } from '#features/pantry/graphql/pantry.generated';
 import type { CreatePantryItemInput } from '#/graphql/generated/schemaTypes';
-import { useErrorService } from '#/services/errorService';
 import {
   isPantryItemDuplicateError,
   getPantryItemDuplicateInfo,
@@ -25,7 +24,9 @@ import { addToPantryItemsCache } from './utils';
 import {
   executeCacheUpdate,
   executeMutation,
+  isSuccessPayload,
 } from '#/utils/compilerSafeWrappers';
+import { handleMutationError } from '#/utils/errorHandlers';
 import type { CreatePantryItemParams } from './types';
 
 interface UseCreatePantryItemOptions {
@@ -53,12 +54,12 @@ export function useCreatePantryItem({
   pantryId,
   onSuccess,
 }: UseCreatePantryItemOptions) {
-  const { handleApolloError } = useErrorService();
-
   const [createMutation] = useMutation(CreatePantryItemDocument, {
     update: (cache, { data: mutationData }) => {
-      const pantryItem = mutationData?.createPantryItem?.pantryItem;
-      if (!pantryItem || !pantryId) return;
+      const payload = mutationData?.createPantryItem;
+      if (payload?.__typename !== 'CreatePantryItemPayload' || !pantryId)
+        return;
+      const pantryItem = payload.pantryItem;
 
       executeCacheUpdate(
         () => addToPantryItemsCache(cache, pantryId, pantryItem),
@@ -155,7 +156,9 @@ export function useCreatePantryItem({
       variables: { input: mutationInput },
     });
 
-    if (result.data?.createPantryItem?.success) {
+    if (
+      isSuccessPayload(result.data?.createPantryItem, 'CreatePantryItemPayload')
+    ) {
       onSuccess?.();
       return true;
     }
@@ -182,8 +185,10 @@ export function useCreatePantryItem({
                     () =>
                       restockMutation({
                         variables: {
-                          id: duplicateInfo.existingPantryItemId,
-                          input: { quantity: restockQuantity },
+                          input: {
+                            id: duplicateInfo.existingPantryItemId,
+                            quantity: restockQuantity,
+                          },
                         },
                       }),
                     'Restock pantry item error:',
@@ -220,7 +225,12 @@ export function useCreatePantryItem({
                     resolve(false);
                     return;
                   }
-                  if (retryResult.data?.createPantryItem?.success) {
+                  if (
+                    isSuccessPayload(
+                      retryResult.data?.createPantryItem,
+                      'CreatePantryItemPayload',
+                    )
+                  ) {
                     onSuccess?.();
                     resolve(true);
                   } else {
@@ -238,12 +248,8 @@ export function useCreatePantryItem({
       }
     }
 
-    // Non-duplicate error
     if (result.error) {
-      const { message } = handleApolloError(result.error, {
-        operation: 'Create Pantry Item',
-      });
-      alertService.alert('Error', message);
+      handleMutationError(result.error, { operation: 'Create Pantry Item' });
     }
 
     return false;

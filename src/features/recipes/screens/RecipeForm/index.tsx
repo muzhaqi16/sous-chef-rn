@@ -3,7 +3,7 @@ import { alertService } from '#/services/alertService';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { FormModal } from '#components/organisms/FormModal';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { useMutation, useQuery } from '@apollo/client/react';
+import { useApolloClient, useMutation, useQuery } from '@apollo/client/react';
 import {
   GetRecipeDocument,
   CreateRecipeDocument,
@@ -12,6 +12,10 @@ import {
   MyRecipesDocument,
   type MyRecipesQuery,
 } from '#features/recipes/graphql/recipe.generated';
+import {
+  RecipeForm_RecipeFragmentDoc,
+  type RecipeForm_RecipeFragment,
+} from './RecipeForm.generated';
 import { useRecipeForm } from './useRecipeForm';
 import { RecipeBasicFields } from './components/RecipeBasicFields';
 import { RecipeCategoryFields } from './components/RecipeCategoryFields';
@@ -47,19 +51,31 @@ export const RecipeFormScreen: React.FC<
     skip: !recipeId,
   });
 
+  // Materialize the masked recipe ref into the form's own narrow fragment so
+  // populateFromRecipe sees the fields it needs (non-render context —
+  // useFragment is a hook and can't run inside useEffect).
+  const apolloClient = useApolloClient();
+  const recipeRef = recipeData?.recipe ?? null;
+
   // Populate form when recipe data arrives
   const { populateFromRecipe } = form;
   useEffect(() => {
-    if (recipeData?.recipe) {
-      populateFromRecipe(recipeData.recipe);
+    if (!recipeRef) return;
+    const recipe = apolloClient.cache.readFragment<RecipeForm_RecipeFragment>({
+      fragment: RecipeForm_RecipeFragmentDoc,
+      fragmentName: 'RecipeForm_recipe',
+      from: recipeRef,
+    });
+    if (recipe) {
+      populateFromRecipe(recipe);
     }
-  }, [recipeData?.recipe, populateFromRecipe]);
+  }, [recipeRef, populateFromRecipe, apolloClient]);
 
   const [createRecipeMutation, { loading: creating }] = useMutation(
     CreateRecipeDocument,
     {
       update: (cache, { data }) => {
-        if (!data?.createRecipe?.success || !data.createRecipe.recipe) return;
+        if (data?.createRecipe?.__typename !== 'CreateRecipePayload') return;
         const newRecipe = data.createRecipe.recipe;
         cache.updateQuery<MyRecipesQuery>(
           { query: MyRecipesDocument },
@@ -104,39 +120,54 @@ export const RecipeFormScreen: React.FC<
           const input = form.buildUpdateInput();
           const [updateResult, ingredientsResult] = await Promise.all([
             updateRecipeMutation({
-              variables: { id: recipeId, input },
+              variables: { input: { ...input, id: recipeId } },
             }),
             updateRecipeIngredientsMutation({
               variables: {
-                recipeId,
-                ingredients: form.buildIngredientsInput(),
+                input: {
+                  recipeId,
+                  ingredients: form.buildIngredientsInput(),
+                },
               },
             }),
           ]);
-          const recipeSuccess = updateResult.data?.updateRecipe?.success;
+          const updatePayload = updateResult.data?.updateRecipe;
+          const ingredientsPayload =
+            ingredientsResult.data?.updateRecipeIngredients;
+          const recipeSuccess =
+            updatePayload?.__typename === 'UpdateRecipePayload';
           const ingredientsSuccess =
-            ingredientsResult.data?.updateRecipeIngredients?.success;
+            ingredientsPayload?.__typename === 'UpdateRecipeIngredientsPayload';
           if (recipeSuccess && ingredientsSuccess) {
             goBack();
           } else {
-            const errorMessage =
-              updateResult.data?.updateRecipe?.message ??
-              ingredientsResult.data?.updateRecipeIngredients?.message ??
-              'Failed to update recipe.';
-            alertService.alert('Error', errorMessage);
+            const updateMsg =
+              updatePayload && 'message' in updatePayload
+                ? updatePayload.message
+                : null;
+            const ingredientsMsg =
+              ingredientsPayload && 'message' in ingredientsPayload
+                ? ingredientsPayload.message
+                : null;
+            alertService.alert(
+              'Error',
+              updateMsg ?? ingredientsMsg ?? 'Failed to update recipe.',
+            );
           }
         } else {
           const input = form.buildCreateInput();
           const result = await createRecipeMutation({
             variables: { input },
           });
-          if (result.data?.createRecipe?.success) {
+          const createPayload = result.data?.createRecipe;
+          if (createPayload?.__typename === 'CreateRecipePayload') {
             goBack();
           } else {
-            alertService.alert(
-              'Error',
-              result.data?.createRecipe?.message ?? 'Failed to create recipe.',
-            );
+            const message =
+              createPayload && 'message' in createPayload
+                ? createPayload.message
+                : null;
+            alertService.alert('Error', message ?? 'Failed to create recipe.');
           }
         }
       },

@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { Modal, View, Text, ScrollView, Pressable } from 'react-native';
+import { Modal, View, Text, ScrollView } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import {
   ThemedTextInput,
@@ -8,6 +10,8 @@ import {
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import { useIsEffectivelyOffline } from '#hooks/settings/useOfflineMode';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+
+type TFn = ReturnType<typeof useTranslation>['t'];
 
 interface InviteUserModalProps {
   visible: boolean;
@@ -19,39 +23,44 @@ interface InviteUserModalProps {
   allowedRoles?: MembershipRole[];
 }
 
-const ROLE_OPTIONS = [
-  {
-    value: MembershipRole.Member,
-    label: 'Member',
-    description: 'Can add and edit items in pantry',
-    icon: '👤',
-  },
-  {
-    value: MembershipRole.Admin,
-    label: 'Admin',
-    description: 'Can manage members and settings',
-    icon: '⚙️',
-  },
-  {
-    value: MembershipRole.Guest,
-    label: 'Guest',
-    description: 'View-only access to home',
-    icon: '👁️',
-  },
-  {
-    value: MembershipRole.Owner,
-    label: 'Owner',
-    description: 'Full control over home and all members',
-    icon: '👑',
-    warning: true,
-  },
-];
+function buildRoleOptions(t: TFn) {
+  return [
+    {
+      value: MembershipRole.Member,
+      label: t('inviteUser.roleMemberLabel'),
+      description: t('inviteUser.roleMemberDescription'),
+      icon: '👤',
+    },
+    {
+      value: MembershipRole.Admin,
+      label: t('inviteUser.roleAdminLabel'),
+      description: t('inviteUser.roleAdminDescription'),
+      icon: '⚙️',
+    },
+    {
+      value: MembershipRole.Guest,
+      label: t('inviteUser.roleGuestLabel'),
+      description: t('inviteUser.roleGuestDescription'),
+      icon: '👁️',
+    },
+    {
+      value: MembershipRole.Owner,
+      label: t('inviteUser.roleOwnerLabel'),
+      description: t('inviteUser.roleOwnerDescription'),
+      icon: '👑',
+      warning: true,
+    },
+  ];
+}
+
+type RoleOption = ReturnType<typeof buildRoleOptions>[number];
 
 interface RoleOptionProps {
-  role: (typeof ROLE_OPTIONS)[number];
+  role: RoleOption;
   selected: boolean;
   onPress: () => void;
   disabled: boolean;
+  warningText: string;
 }
 
 const RoleOption: React.FC<RoleOptionProps> = ({
@@ -59,6 +68,7 @@ const RoleOption: React.FC<RoleOptionProps> = ({
   selected,
   onPress,
   disabled,
+  warningText,
 }) => {
   styles.useVariants({ selected });
   return (
@@ -81,9 +91,7 @@ const RoleOption: React.FC<RoleOptionProps> = ({
         </View>
         <Text style={styles.roleDescription}>{role.description}</Text>
         {!!role.warning && selected ? (
-          <Text style={styles.warningText}>
-            {'⚠️ Owners have full control'}
-          </Text>
+          <Text style={styles.warningText}>{warningText}</Text>
         ) : null}
       </View>
     </Pressable>
@@ -94,14 +102,19 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
   visible,
   onClose,
   onSubmit,
-  title = 'Invite Member to Home',
-  submitText = 'Send Invite',
-  cancelText = 'Cancel',
+  title,
+  submitText,
+  cancelText,
   allowedRoles,
 }) => {
+  const { t } = useTranslation();
+  const resolvedTitle = title ?? t('inviteUser.title');
+  const resolvedSubmitText = submitText ?? t('inviteUser.submit');
+  const resolvedCancelText = cancelText ?? t('labels.cancel');
+  const roleOptions = buildRoleOptions(t);
   // Filter role options based on allowed roles
   // If no allowedRoles provided, exclude Owner by default (it's reserved for home creators)
-  const availableRoleOptions = ROLE_OPTIONS.filter(roleOption => {
+  const availableRoleOptions = roleOptions.filter(roleOption => {
     if (allowedRoles) {
       return allowedRoles.includes(roleOption.value);
     }
@@ -131,19 +144,19 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
 
   const handleSubmit = () => {
     if (isOffline) {
-      setError('Cannot send invite while offline');
+      setError(t('inviteUser.offlineError'));
       return;
     }
 
     const trimmedEmail = email.trim();
 
     if (!trimmedEmail) {
-      setError('Please enter an email address');
+      setError(t('inviteUser.emailRequired'));
       return;
     }
 
     if (!validateEmail(trimmedEmail)) {
-      setError('Please enter a valid email address');
+      setError(t('inviteUser.emailInvalid'));
       return;
     }
 
@@ -158,7 +171,7 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
       setIsSubmitting,
       (err: unknown) => {
         // Extract the actual error message from the API
-        let errorMessage = 'Failed to send invite. Please try again.';
+        let errorMessage = t('inviteUser.sendFailed');
         const error = err as any;
 
         if (error?.message) {
@@ -196,13 +209,13 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
       <View style={styles.centeredView}>
         <View style={styles.modalView}>
           <ScrollView showsVerticalScrollIndicator={false}>
-            <Text style={styles.title}>{title}</Text>
+            <Text style={styles.title}>{resolvedTitle}</Text>
 
             {/* Email Input */}
-            <Text style={styles.label}>Email Address</Text>
+            <Text style={styles.label}>{t('inviteUser.emailLabel')}</Text>
             <ThemedTextInput
               style={styles.input}
-              placeholder="Enter email address"
+              placeholder={t('inviteUser.emailPlaceholder')}
               value={email}
               onChangeText={text => {
                 setEmail(text);
@@ -215,7 +228,9 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
             />
 
             {/* Role Selection */}
-            <Text style={styles.roleSectionLabel}>Select Role</Text>
+            <Text style={styles.roleSectionLabel}>
+              {t('inviteUser.selectRole')}
+            </Text>
             {availableRoleOptions.map(role => (
               <RoleOption
                 key={role.value}
@@ -223,6 +238,7 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
                 selected={selectedRole === role.value}
                 onPress={() => setSelectedRole(role.value)}
                 disabled={isSubmitting}
+                warningText={t('inviteUser.ownerWarning')}
               />
             ))}
 
@@ -239,7 +255,9 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
                 onPress={handleClose}
                 disabled={isSubmitting}
               >
-                <Text style={styles.cancelButtonText}>{cancelText}</Text>
+                <Text style={styles.cancelButtonText}>
+                  {resolvedCancelText}
+                </Text>
               </Pressable>
 
               <Pressable
@@ -254,7 +272,9 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
                 {isSubmitting ? (
                   <ThemedActivityIndicator size="small" />
                 ) : (
-                  <Text style={styles.submitButtonText}>{submitText}</Text>
+                  <Text style={styles.submitButtonText}>
+                    {resolvedSubmitText}
+                  </Text>
                 )}
               </Pressable>
             </View>

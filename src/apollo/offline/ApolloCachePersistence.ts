@@ -1,7 +1,12 @@
-import { NormalizedCacheObject } from '@apollo/client';
+import type {
+  ApolloCache,
+  InMemoryCache,
+  NormalizedCacheObject,
+} from '@apollo/client';
 import { getVersion } from 'react-native-device-info';
-import { storage } from '#storage/mmkv';
+import { storage, isStorageReady } from '#storage/mmkv';
 import { Telemetry } from '#/services/telemetry';
+import { logger } from '#/utils/environment';
 
 const CACHE_STORAGE_KEY = 'apollo-cache-v1';
 const CRITICAL_CACHE_KEY = 'apollo-cache-v1-critical';
@@ -58,6 +63,7 @@ const CRITICAL_ROOT_KEYS = new Set([
 class ApolloCachePersistence {
   private saveTimeout: ReturnType<typeof setTimeout> | null = null;
   private idleCallbackId: number | null = null;
+  private restoreIdleCallbackId: number | null = null;
   private readonly debounceMs = 3000; // Wait 3s before saving to reduce writes during burst operations
   private paused = false;
   private pendingWhilePaused = false;
@@ -72,6 +78,7 @@ class ApolloCachePersistence {
    * Returns null if no cache exists or if cache version is outdated
    */
   load(): NormalizedCacheObject | null {
+    if (!isStorageReady()) return null;
     try {
       // Check cache version
       const storedVersion = storage.getString(CACHE_VERSION_KEY);
@@ -114,6 +121,7 @@ class ApolloCachePersistence {
    * Returns null if no split-key cache exists (triggers migration fallback).
    */
   loadCritical(): NormalizedCacheObject | null {
+    if (!isStorageReady()) return null;
     try {
       const storedVersion = storage.getString(CACHE_VERSION_KEY);
       if (storedVersion !== CURRENT_CACHE_VERSION) {
@@ -140,11 +148,66 @@ class ApolloCachePersistence {
   }
 
   /**
+   * Restore bulk persisted entities (PantryItem, ShoppingListItem, Recipe, …)
+   * when the JS thread is idle. Call from the app entry (`App.tsx` useEffect)
+   * after first paint. If the idle callback hasn't fired when a screen mounts,
+   * the cache miss falls back to network — the first page renders fast.
+   *
+   * Tracked via `restoreIdleCallbackId` so `cancel()` (called on logout) can
+   * abort a pending restore and avoid writing stale entities into a cleared
+   * cache.
+   */
+  restoreDeferred(cache: ApolloCache, onComplete?: () => void): void {
+    // Cancel any prior in-flight restore so two calls don't race.
+    if (this.restoreIdleCallbackId != null) {
+      cancelIdleCallback(this.restoreIdleCallbackId);
+      this.restoreIdleCallbackId = null;
+    }
+
+    this.restoreIdleCallbackId = requestIdleCallback(() => {
+      // `cancel()` / `clear()` set the id to null. Bail out before touching
+      // the cache so a logout fired between scheduling and firing doesn't
+      // resurrect stale entities into a cleared cache.
+      // Intentionally do NOT call onComplete here — the cancel was deliberate.
+      if (this.restoreIdleCallbackId == null) return;
+      this.restoreIdleCallbackId = null;
+      const t0 = performance.now();
+      try {
+        const deferred = this.loadDeferred();
+        if (!deferred) return;
+        // cache.restore() is destructive (wipes the EntityStore via init()).
+        // Merge deferred entities with existing cache to avoid losing data.
+        const existing = (cache as InMemoryCache).extract();
+        (cache as InMemoryCache).restore({ ...existing, ...deferred });
+        Telemetry.histogram(
+          'app_apollo_deferred_restore_ms',
+          performance.now() - t0,
+        );
+        logger.info('📦 Apollo: Deferred cache restore complete');
+      } catch (error) {
+        // A corrupt deferred blob shouldn't crash the JS thread — drop it and
+        // let the next save overwrite. Network refetch covers the data.
+        console.error('📦 Apollo: Deferred cache restore failed:', error);
+        storage.remove(DEFERRED_CACHE_KEY);
+      } finally {
+        onComplete?.();
+      }
+    });
+  }
+
+  /**
    * Load deferred (bulk) entities from storage.
    * Called from requestIdleCallback after critical restore.
    */
   loadDeferred(): NormalizedCacheObject | null {
+    if (!isStorageReady()) return null;
     try {
+      // Mirror loadCritical()'s version guard: if a stale deferred blob
+      // survived a partial clear (e.g. crash mid-clear), don't resurrect
+      // entities from an incompatible schema.
+      const storedVersion = storage.getString(CACHE_VERSION_KEY);
+      if (storedVersion !== CURRENT_CACHE_VERSION) return null;
+
       const cacheString = storage.getString(DEFERRED_CACHE_KEY);
       if (!cacheString) return null;
 
@@ -357,8 +420,9 @@ class ApolloCachePersistence {
   }
 
   /**
-   * Cancel any pending debounced save
-   * Call during logout to prevent writing stale cache data
+   * Cancel any pending debounced save or in-flight deferred restore.
+   * Call during logout to prevent writing stale cache data, or to abort a
+   * deferred restore before it writes stale entities into a cleared cache.
    */
   cancel(): void {
     if (this.saveTimeout) {
@@ -368,6 +432,10 @@ class ApolloCachePersistence {
     if (this.idleCallbackId != null) {
       cancelIdleCallback(this.idleCallbackId);
       this.idleCallbackId = null;
+    }
+    if (this.restoreIdleCallbackId != null) {
+      cancelIdleCallback(this.restoreIdleCallbackId);
+      this.restoreIdleCallbackId = null;
     }
   }
 
@@ -397,6 +465,8 @@ class ApolloCachePersistence {
       storage.set(CACHE_VERSION_KEY, CURRENT_CACHE_VERSION);
       // Migration cleanup: remove old single-key format
       storage.remove(CACHE_STORAGE_KEY);
+      this.lastPersistedSnapshot = cache;
+      this.dirtyKeys.clear();
 
       if (__DEV__) {
         console.log(`💾 Cache: Persisted cache immediately (${sizeKB} KB)`);
@@ -411,12 +481,11 @@ class ApolloCachePersistence {
    * Call on logout or cache invalidation
    */
   clear(): void {
+    if (!isStorageReady()) return;
     try {
-      // Clear pending save
-      if (this.saveTimeout) {
-        clearTimeout(this.saveTimeout);
-        this.saveTimeout = null;
-      }
+      // Cancel all pending saves and deferred restores so nothing writes
+      // stale data back into storage or the cache after we wipe it.
+      this.cancel();
 
       storage.remove(CACHE_STORAGE_KEY);
       storage.remove(CRITICAL_CACHE_KEY);

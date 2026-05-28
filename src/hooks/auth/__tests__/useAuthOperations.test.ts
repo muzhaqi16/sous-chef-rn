@@ -168,7 +168,17 @@ function buildAuthPayload(input: AuthPayloadInput = {}) {
       id: input.userId ?? 'u1',
       email: input.email ?? 'test@test.com',
       emailVerified: input.emailVerified ?? true,
+      role: 'USER',
+      canAccessDevTools: false,
       onBoarded: input.onBoarded ?? true,
+      createdAt: '2024-01-01T00:00:00Z',
+      updatedAt: '2024-01-01T00:00:00Z',
+      timezone: null,
+      defaultHomeId: null,
+      defaultShoppingListId: null,
+      defaultHome: null,
+      profile: null,
+      settings: null,
     } as any,
   };
 }

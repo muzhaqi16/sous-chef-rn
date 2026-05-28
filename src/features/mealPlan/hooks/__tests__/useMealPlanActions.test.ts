@@ -32,8 +32,12 @@ describe('useMealPlanActions', () => {
       id: 'plan-1',
       name: 'Week Plan',
     };
+    const successPayload = {
+      __typename: 'CreateMealPlanPayload',
+      mealPlan: expectedPlan,
+    };
     const create = recordMock(CreateMealPlanDocument, {
-      data: { createMealPlan: expectedPlan },
+      data: { createMealPlan: successPayload },
     });
 
     const { result } = renderHookWithApollo(() => useMealPlanActions(), {
@@ -49,7 +53,10 @@ describe('useMealPlanActions', () => {
       } as any);
     });
 
-    expect(created).toEqual(expectedPlan);
+    expect(created).toMatchObject({
+      __typename: 'CreateMealPlanPayload',
+      mealPlan: { id: 'plan-1', name: 'Week Plan' },
+    });
     expect(create.fired).toContainEqual({
       input: {
         name: 'Week Plan',
@@ -84,9 +91,12 @@ describe('useMealPlanActions', () => {
     const update = recordMock(UpdateMealPlanDocument, {
       data: {
         updateMealPlan: {
-          __typename: 'MealPlan',
-          id: 'plan-1',
-          name: 'Updated',
+          __typename: 'UpdateMealPlanPayload',
+          mealPlan: {
+            __typename: 'MealPlan',
+            id: 'plan-1',
+            name: 'Updated',
+          },
         },
       },
     });
@@ -102,16 +112,23 @@ describe('useMealPlanActions', () => {
       } as any);
     });
 
-    expect(updated).toMatchObject({ id: 'plan-1', name: 'Updated' });
+    expect(updated).toMatchObject({
+      __typename: 'UpdateMealPlanPayload',
+      mealPlan: { id: 'plan-1', name: 'Updated' },
+    });
     expect(update.fired).toContainEqual({
-      id: 'plan-1',
-      input: { name: 'Updated' },
+      input: { id: 'plan-1', name: 'Updated' },
     });
   });
 
   it('deleteMealPlan returns true on success', async () => {
     const del = recordMock(DeleteMealPlanDocument, {
-      data: { deleteMealPlan: { __typename: 'BasicPayload', success: true } },
+      data: {
+        deleteMealPlan: {
+          __typename: 'DeleteMealPlanPayload',
+          mealPlan: { __typename: 'MealPlan', id: 'plan-1' },
+        },
+      },
     });
 
     const { result } = renderHookWithApollo(() => useMealPlanActions(), {
@@ -124,12 +141,18 @@ describe('useMealPlanActions', () => {
     });
 
     expect(deleted).toBe(true);
-    expect(del.fired).toContainEqual({ id: 'plan-1' });
+    expect(del.fired).toContainEqual({ input: { id: 'plan-1' } });
   });
 
   it('deleteMealPlan returns false on failure', async () => {
     const del = recordMock(DeleteMealPlanDocument, {
-      data: { deleteMealPlan: { __typename: 'BasicPayload', success: false } },
+      data: {
+        deleteMealPlan: {
+          __typename: 'NotFoundError',
+          code: 'NOT_FOUND',
+          message: 'Meal plan not found',
+        },
+      },
     });
 
     const { result } = renderHookWithApollo(() => useMealPlanActions(), {

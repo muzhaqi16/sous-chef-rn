@@ -4,9 +4,13 @@
 
 mutation MarkAllNotificationsAsRead {
   markAllNotificationsAsRead {
-    success
-    message
-    code
-    count
+    __typename
+    ... on MarkAllNotificationsAsReadPayload {
+      count
+    }
+    ... on Error {
+      code
+      message
+    }
   }
 }

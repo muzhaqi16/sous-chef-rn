@@ -15,12 +15,11 @@ import {
   GetHomeByJoinCodeDocument,
 } from '#operations/home/home.generated';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
-import { useErrorService } from '#/services/errorService';
-import { normalizeHome } from '#/utils/connectionUtils';
 import {
   executeCacheUpdate,
   executeMutation,
 } from '#/utils/compilerSafeWrappers';
+import { handleMutationError } from '#/utils/errorHandlers';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 
 const addInviteToHomeCache = createAddToParentConnectionUpdater(
@@ -51,30 +50,28 @@ export function useHomeInvitations({
   setDefaultHome,
   setSelectedHomeId,
 }: UseHomeInvitationsOptions) {
-  const { handleApolloError } = useErrorService();
-
   // Invite user to home mutation
   const [inviteUserMutation, { loading: inviting }] = useMutation(
     InviteToHomeDocument,
     {
       update: (cache, { data }, { variables }) => {
-        if (!data?.inviteToHome?.homeInvite || !variables) return;
+        const payload = data?.inviteToHome;
+        if (payload?.__typename !== 'InviteToHomePayload' || !variables) {
+          return;
+        }
 
         executeCacheUpdate(() => {
           addInviteToHomeCache(
             cache,
             variables.input.homeId,
-            data.inviteToHome!.homeInvite!,
+            payload.homeInvite,
             { position: 'end' },
           );
         }, 'Cache update failed for inviteUser:');
       },
 
-      onError: (error: any) => {
-        const { message } = handleApolloError(error, {
-          operation: 'Invite User',
-        });
-        alertService.alert('Error', message);
+      onError: error => {
+        handleMutationError(error, { operation: 'Invite User' });
       },
     },
   );
@@ -87,14 +84,15 @@ export function useHomeInvitations({
       // The mutation returns only Membership data (not the full Home object)
       // We refetch GetHomesQuery to get the complete home with all fields
       update: (_cache, { data }) => {
-        if (!data?.joinHomeByCode?.membership) return;
+        if (data?.joinHomeByCode?.__typename !== 'JoinHomeByCodePayload')
+          return;
 
         executeCacheUpdate(() => {
           refetch();
         }, 'Failed to refetch homes after join:');
       },
       onCompleted: data => {
-        if (data?.joinHomeByCode?.membership) {
+        if (data?.joinHomeByCode?.__typename === 'JoinHomeByCodePayload') {
           const homeId = data.joinHomeByCode.membership.homeId;
 
           // Set as default if this is the first home
@@ -112,11 +110,8 @@ export function useHomeInvitations({
           );
         }
       },
-      onError: (error: any) => {
-        const { message } = handleApolloError(error, {
-          operation: 'Join Home By Code',
-        });
-        alertService.alert('Error', message);
+      onError: error => {
+        handleMutationError(error, { operation: 'Join Home By Code' });
       },
     },
   );
@@ -154,13 +149,15 @@ export function useHomeInvitations({
     const result = await executeMutation(
       () =>
         joinHomeByCodeMutation({
-          variables: { joinCode: joinCode.trim() },
+          variables: { input: { joinCode: joinCode.trim() } },
         }),
       'Join home by code error:',
     );
     if (!result) return false;
 
-    return result.data?.joinHomeByCode?.membership || false;
+    return result.data?.joinHomeByCode?.__typename === 'JoinHomeByCodePayload'
+      ? result.data.joinHomeByCode.membership
+      : false;
   };
 
   const previewHomeByCode = async (joinCode: string) => {
@@ -173,11 +170,8 @@ export function useHomeInvitations({
         getHomeByJoinCode({
           variables: { joinCode: joinCode.trim() },
         }),
-      (error: any) => {
-        const { message } = handleApolloError(error, {
-          operation: 'Preview Home',
-        });
-        alertService.alert('Error', message);
+      error => {
+        handleMutationError(error, { operation: 'Preview Home' });
       },
     );
     if (!result) return null;
@@ -185,9 +179,7 @@ export function useHomeInvitations({
     return result.data?.homeByJoinCode || null;
   };
 
-  const previewHome = previewData?.homeByJoinCode
-    ? normalizeHome(previewData.homeByJoinCode)
-    : null;
+  const previewHome = previewData?.homeByJoinCode ?? null;
 
   return {
     inviteUserToHome,

@@ -29,11 +29,7 @@ subscription MembershipChanges($homeId: ID!) {
       user {
         id
         email
-        profile {
-          id
-          displayName
-          avatar
-        }
+        profile { id displayName avatar }
       }
     }
     previousRole

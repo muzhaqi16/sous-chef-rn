@@ -15,7 +15,9 @@ import {
 } from '#operations/auth/auth.generated';
 import { errorService } from '#/services/errorService';
 import { logger } from '#/utils/environment';
+import { logValidationErrors } from '#/utils/validation/common';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
+import { getTopLevelGraphQLError } from '#/utils/errors/graphqlErrors';
 import type { ToastFn } from '#/components/atoms/Toast';
 import { SousChefLoader } from '#/components/base/SousChefLoader';
 
@@ -35,7 +37,9 @@ function extractVerificationToken(url: string): string | null {
  *  Extracted from component body to avoid try-catch bailout. */
 async function performAutoVerify(
   token: string,
-  verifyEmail: (opts: { variables: { code: string } }) => Promise<any>,
+  verifyEmail: (opts: {
+    variables: { input: { code: string } };
+  }) => Promise<any>,
   updateUser: (patch: { emailVerified: boolean }) => void,
   toast: ToastFn,
   setIsAutoVerifying: (v: boolean) => void,
@@ -46,7 +50,7 @@ async function performAutoVerify(
       tokenPrefix: token.substring(0, 8) + '...',
     });
 
-    const result = await verifyEmail({ variables: { code: token } });
+    const result = await verifyEmail({ variables: { input: { code: token } } });
 
     if (result.data?.verifyEmail?.success) {
       updateUser({ emailVerified: true });
@@ -183,13 +187,29 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
     executeMutation(
       async () => {
         const response = await verifyEmail({
-          variables: { code: data.code },
+          variables: { input: { code: data.code } },
         });
 
-        if (response.data?.verifyEmail.success) {
+        const payload = response.data?.verifyEmail;
+        if (payload?.__typename === 'VerifyEmailPayload') {
           updateUser({ emailVerified: true });
-        } else if (response.data?.verifyEmail) {
-          toast({ message: response.data.verifyEmail.message, type: 'error' });
+          return;
+        }
+        // Auth failures now arrive as top-level GraphQL errors, not an
+        // AuthError union variant.
+        const topLevelError = getTopLevelGraphQLError(response.error);
+        if (topLevelError) {
+          toast({
+            message: errorService.getUserFriendlyMessage(
+              topLevelError.code,
+              topLevelError.message,
+            ),
+            type: 'error',
+          });
+        } else if (payload) {
+          const message =
+            'message' in payload ? payload.message : 'Verification failed';
+          toast({ message, type: 'error' });
         }
       },
       error => {
@@ -211,7 +231,7 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
     executeMutation(
       async () => {
         const response = await resendVerificationEmail({
-          variables: { email: user.email },
+          variables: { input: { email: user.email } },
         });
 
         // Increment attempts and start countdown for next request
@@ -295,7 +315,7 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
         control={control}
         errors={errors}
         submitText="Submit"
-        onSubmit={handleSubmit(onVerifyCode)}
+        onSubmit={handleSubmit(onVerifyCode, logValidationErrors)}
         footerText="Didn't get the email?"
         footerLinkText="Resend code"
         onFooterLinkPress={onResend}

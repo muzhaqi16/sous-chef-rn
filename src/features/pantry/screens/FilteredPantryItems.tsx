@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import {
   Pressable,
   ThemedRefreshControl,
@@ -19,7 +20,7 @@ import { SpotlightCoachMark } from '#/components/organisms/SpotlightCoachMark/Sp
 import { usePantryManagement } from '#hooks/home/pantry/usePantryManagement';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useMutation } from '@apollo/client/react';
-import { AddItemToShoppingListDocument } from './FilteredPantryItems.generated';
+import { AddItemToShoppingListFromFilteredPantryDocument } from './FilteredPantryItems.generated';
 import { useCurrentPantry } from '#features/pantry/hooks/useCurrentPantry';
 import { useAddLowStockToShoppingList } from '#features/pantry/hooks/useAddLowStockToShoppingList';
 import {
@@ -44,13 +45,16 @@ type FilteredPantryItemsParams = {
   mode?: FilteredPantryItemsMode;
 };
 
+// Minimal shape needed by `FilteredPantryItems` — kept structurally
+// compatible with the `GetPantry` node so the `usePantryManagement` items
+// flow through without explicit casts.
 interface FilteredItem {
   id: string;
   itemName: string;
   quantity: number;
-  unit: { symbol: string } | null;
+  unit: { id: string; symbol: string } | null;
   isLowStock: boolean;
-  expiresAt?: string | null;
+  expiresAt: string | null;
 }
 
 // ── Mode config ──
@@ -66,63 +70,71 @@ interface ModeConfig {
   showCartAction: boolean;
 }
 
-const LOW_STOCK_TUTORIAL_STEPS: TutorialStep[] = [
-  {
-    featureId: 'low_stock_tutorial_item_cart',
-    title: 'Add to shopping list',
-    subtitle: 'Tap to add this item to your shopping list',
-    rectKey: 'itemCart',
-  },
-  {
-    featureId: 'low_stock_tutorial_header_cart',
-    title: 'Add all at once',
-    subtitle: 'Add all low stock items to your shopping list at once',
-    rectKey: 'headerCart',
-  },
-];
+type TFn = ReturnType<typeof useTranslation>['t'];
 
-function formatExpirySubtitle(expiresAt: string | null | undefined): string {
+function formatExpirySubtitle(
+  expiresAt: string | null | undefined,
+  t: TFn,
+): string {
   if (!expiresAt) return '';
   const days = differenceInCalendarDays(new Date(expiresAt), new Date());
-  if (days < 0) return 'Expired';
-  if (days === 0) return 'Expires today';
-  if (days === 1) return 'Expires tomorrow';
-  return `Expires in ${days} days`;
+  if (days < 0) return t('filteredPantry.expired');
+  if (days === 0) return t('filteredPantry.expiresToday');
+  if (days === 1) return t('filteredPantry.expiresTomorrow');
+  return t('filteredPantry.expiresInDays', { count: days });
 }
 
-const MODE_CONFIG: Record<FilteredPantryItemsMode, ModeConfig> = {
-  lowStock: {
-    title: 'Low Stock Items',
-    emptyMessage: 'All items are above minimum stock levels',
-    emptyIcon: 'cube-outline',
-    filter: item => item.isLowStock,
-    subtitle: item =>
-      `${item.quantity} ${item.unit?.symbol ?? ''} remaining`.trim(),
-    tutorialSteps: LOW_STOCK_TUTORIAL_STEPS,
-    showCartAction: true,
-  },
-  expiring: {
-    title: 'Expiring Items',
-    emptyMessage: 'No items are expiring soon',
-    emptyIcon: 'time-outline',
-    filter: item => {
-      if (!item.expiresAt) return false;
-      const days = differenceInCalendarDays(
-        new Date(item.expiresAt),
-        new Date(),
-      );
-      return days <= 7;
+function buildModeConfig(t: TFn): Record<FilteredPantryItemsMode, ModeConfig> {
+  return {
+    lowStock: {
+      title: t('filteredPantry.lowStockTitle'),
+      emptyMessage: t('filteredPantry.lowStockEmpty'),
+      emptyIcon: 'cube-outline',
+      filter: item => item.isLowStock,
+      subtitle: item =>
+        t('filteredPantry.remaining', {
+          quantity: item.quantity,
+          unit: item.unit?.symbol ?? '',
+        }).trim(),
+      tutorialSteps: [
+        {
+          featureId: 'low_stock_tutorial_item_cart',
+          title: t('filteredPantry.tutorialAddTitle'),
+          subtitle: t('filteredPantry.tutorialAddSubtitle'),
+          rectKey: 'itemCart',
+        },
+        {
+          featureId: 'low_stock_tutorial_header_cart',
+          title: t('filteredPantry.tutorialAddAllTitle'),
+          subtitle: t('filteredPantry.tutorialAddAllSubtitle'),
+          rectKey: 'headerCart',
+        },
+      ],
+      showCartAction: true,
     },
-    sort: (a, b) => {
-      const aDate = a.expiresAt ? new Date(a.expiresAt).getTime() : Infinity;
-      const bDate = b.expiresAt ? new Date(b.expiresAt).getTime() : Infinity;
-      return aDate - bDate;
+    expiring: {
+      title: t('filteredPantry.expiringTitle'),
+      emptyMessage: t('filteredPantry.expiringEmpty'),
+      emptyIcon: 'time-outline',
+      filter: item => {
+        if (!item.expiresAt) return false;
+        const days = differenceInCalendarDays(
+          new Date(item.expiresAt),
+          new Date(),
+        );
+        return days <= 7;
+      },
+      sort: (a, b) => {
+        const aDate = a.expiresAt ? new Date(a.expiresAt).getTime() : Infinity;
+        const bDate = b.expiresAt ? new Date(b.expiresAt).getTime() : Infinity;
+        return aDate - bDate;
+      },
+      subtitle: item => formatExpirySubtitle(item.expiresAt, t),
+      tutorialSteps: [],
+      showCartAction: false,
     },
-    subtitle: item => formatExpirySubtitle(item.expiresAt),
-    tutorialSteps: [],
-    showCartAction: false,
-  },
-};
+  };
+}
 
 // ── Helpers ──
 
@@ -164,7 +176,7 @@ const FilteredRenderItemComponent: React.FC<FilteredRenderItemProps> = ({
 
   return (
     <SwipeableItem onPress={() => navigateTo({ itemId: item.id })}>
-      <View style={[commonStyles.card, styles.itemCard]}>
+      <View style={[commonStyles.card, commonStyles.rowSpaceBetween]}>
         <View style={styles.itemInfo}>
           <Text size="base" weight="medium">
             {item.itemName}
@@ -239,8 +251,9 @@ const FilteredEmpty: React.FC<FilteredEmptyProps> = ({
 export const FilteredPantryItems: React.FC<
   StaticScreenProps<FilteredPantryItemsParams | undefined>
 > = ({ route }) => {
+  const { t } = useTranslation();
   const mode = route.params?.mode ?? 'lowStock';
-  const config = MODE_CONFIG[mode];
+  const config = buildModeConfig(t)[mode];
 
   const { goBack, toPantryItemDetail } = useAppNavigation();
 
@@ -266,7 +279,9 @@ export const FilteredPantryItems: React.FC<
     state: { items: allItems, loading, hasMore, isLoadingMore },
     actions: { refetch, loadMore },
   } = usePantryManagement(pantry?.id);
-  const [addToShoppingList] = useMutation(AddItemToShoppingListDocument);
+  const [addToShoppingList] = useMutation(
+    AddItemToShoppingListFromFilteredPantryDocument,
+  );
 
   // Progressively load all pages so the filter sees every item
   useEffect(() => {
@@ -310,7 +325,10 @@ export const FilteredPantryItems: React.FC<
         variables: { input: { shoppingListId: '', itemId } },
       });
     } catch {
-      alertService.alert('Error', 'Failed to add to shopping list');
+      alertService.alert(
+        t('labels.error'),
+        t('filteredPantry.addToShoppingFailed'),
+      );
     }
   };
 
@@ -415,9 +433,6 @@ const styles = StyleSheet.create(theme => ({
   },
   skeletonContainer: {
     gap: theme.spacing.sm,
-  },
-  itemCard: {
-    ...commonStyles.rowSpaceBetween,
   },
   itemInfo: {
     flex: 1,

@@ -30,7 +30,7 @@ jest.mock('#/utils/formatQuantity', () => ({
   formatQuantity: (v: number) => v.toString(),
 }));
 jest.mock('../PantryActionModal', () => ({
-  PantryActionModal: ({ title, renderActionFields }: any) => {
+  PantryActionModal: ({ title, renderActionFields, pantryItemId }: any) => {
     const { View, Text } = require('react-native');
     const sharedState = {
       trackingQuantity: 5,
@@ -53,10 +53,15 @@ jest.mock('../PantryActionModal', () => ({
       itemId: 'item-1',
       defaultUnit: null,
     };
+    const fakePantryItem = pantryItemId
+      ? { id: pantryItemId, quantity: 5 }
+      : null;
     return (
       <View>
         <Text>{title}</Text>
-        {renderActionFields(sharedState)}
+        {fakePantryItem
+          ? renderActionFields(sharedState, fakePantryItem)
+          : null}
       </View>
     );
   },
@@ -73,7 +78,7 @@ jest.mock('#features/pantry/hooks/useConversionPreview', () => ({
 describe('RestockPantryItemModal', () => {
   const defaultProps = {
     visible: true,
-    pantryItem: { id: '1', quantity: 5 } as any,
+    pantryItemId: '1',
     onClose: jest.fn(),
     onConfirm: jest.fn(),
   };

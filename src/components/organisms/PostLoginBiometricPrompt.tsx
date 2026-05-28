@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Modal, Pressable } from 'react-native';
+import { View, Modal } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { authService } from '#/services/authService';
@@ -19,6 +21,7 @@ export const PostLoginBiometricPrompt = ({
   userEmail,
   userPassword,
 }: PostLoginBiometricPromptProps) => {
+  const { t } = useTranslation();
   const [biometricInfo, setBiometricInfo] = useState<{
     isAvailable: boolean;
     biometryType: string | null;
@@ -81,12 +84,16 @@ export const PostLoginBiometricPrompt = ({
   };
 
   const getBiometricTitle = () => {
-    return `Set up ${biometricInfo.biometryType || 'Biometric'} Login?`;
+    return t('postLoginBiometric.title', {
+      type:
+        biometricInfo.biometryType || t('postLoginBiometric.biometricFallback'),
+    });
   };
 
   const getBiometricDescription = () => {
-    const authType = biometricInfo.biometryType || 'biometric authentication';
-    return `Use ${authType} for faster, more secure login next time. You can always enable this later in Settings if you change your mind.`;
+    const authType =
+      biometricInfo.biometryType || t('postLoginBiometric.biometricAuthLabel');
+    return t('postLoginBiometric.description', { authType });
   };
 
   return (
@@ -129,14 +136,16 @@ export const PostLoginBiometricPrompt = ({
               onPress={handleEnableNow}
               disabled={isEnabling}
               testID="biometric-prompt-enable"
-              accessibilityLabel="Enable Now"
+              accessibilityLabel={t('labels.enableNow')}
             >
               <Text
                 size="md"
                 weight="semibold"
                 style={styles.primaryButtonText}
               >
-                {isEnabling ? 'Setting up...' : 'Enable Now'}
+                {isEnabling
+                  ? t('postLoginBiometric.settingUp')
+                  : t('labels.enableNow')}
               </Text>
             </Pressable>
 
@@ -148,10 +157,10 @@ export const PostLoginBiometricPrompt = ({
               onPress={handleDecline}
               disabled={isEnabling}
               testID="biometric-prompt-decline"
-              accessibilityLabel="Not now"
+              accessibilityLabel={t('labels.notNow')}
             >
               <Text size="md" weight="semibold" tone="secondary">
-                Not now
+                {t('labels.notNow')}
               </Text>
             </Pressable>
           </View>

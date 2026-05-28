@@ -1,12 +1,14 @@
 import React, { useRef, useState } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { t as tGlobal } from '#/i18n/t';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { format, parseISO } from 'date-fns';
 import { Icon } from '#utils/iconUtils';
 import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
 import { TabMainScreen } from '#components/templates/TabMainScreen';
-import { WeekStrip } from '#features/mealPlan/components/WeekStrip';
+import { WeekStrip } from '#components/molecules/WeekStrip';
 import { MonthCalendar } from '#features/mealPlan/components/MonthCalendar';
 import { DayMealList } from '#features/mealPlan/components/DayMealList';
 import { CalendarToggleBar } from '#features/mealPlan/components/CalendarToggleBar';
@@ -52,8 +54,8 @@ const removeFromMealPlansForMain = createRemoveFromQueryConnectionUpdater(
 import { type MealTemplateDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import { type MealPlanMain_ItemFragment } from './MealPlanMain.generated';
 import { type EditCustomMealSheet_ItemFragment } from '#features/mealPlan/components/EditCustomMealSheet.generated';
-import { type MealPlanItemActions_OptimisticFullItemFragment as MealPlanItemActionsItem } from '#features/mealPlan/hooks/useMealPlanItemActions.generated';
 import { toastService } from '#/services/toastService';
+import { handleMutationError } from '#/utils/errorHandlers';
 import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 
@@ -74,12 +76,21 @@ async function executeMealPlanRefresh(
 /**
  * Outer component that gates heavy work behind DeferredScreen.
  * Skeleton paints instantly; MealPlanMainInner mounts on the deferred re-render.
+ *
+ * Uses `tGlobal` (i18next instance directly) instead of `useTranslation()` so this
+ * wrapper does not subscribe to language changes. Subscribing here would re-render
+ * the wrapper just to flip skeleton labels that MealPlanMainInner replaces on
+ * mount anyway, defeating the point of the deferred split. All translations inside
+ * MealPlanMainInner go through `t` from `useTranslation()`.
  */
 export const MealPlanMain: React.FC = () => (
   <DeferredScreen
     fallback={
       <TabMainScreen testID="meal-plan-screen">
-        <TabScreenHeader label="Plan your meals" title="Meal Plan" />
+        <TabScreenHeader
+          label={tGlobal('mealPlanMain.label')}
+          title={tGlobal('mealPlanMain.defaultTitle')}
+        />
         <MealPlanSkeleton />
       </TabMainScreen>
     }
@@ -92,6 +103,7 @@ export const MealPlanMain: React.FC = () => (
  * Only mounts after isReady is true, so the skeleton paints instantly.
  */
 const MealPlanMainInner: React.FC = () => {
+  const { t } = useTranslation();
   const { toMealPlanRecipeDetail, toCreateMealPlan } = useAppNavigation();
   const { setOverlayOpen } = useTabBarSetters();
 
@@ -118,12 +130,14 @@ const MealPlanMainInner: React.FC = () => {
   const [shoppingListSheetVisible, setShoppingListSheetVisible] =
     useState(false);
 
-  // Mark cooked modal state.
-  // pendingCookItem is forwarded to `toggleCompleted` (needs the action's full item shape)
-  // and read by MarkCookedModal (needs recipe.name + servings).
+  // Mark cooked modal state — only what MarkCookedModal renders plus the id
+  // we hand back to `toggleCompleted`.
   const [markCookedVisible, setMarkCookedVisible] = useState(false);
-  const [pendingCookItem, setPendingCookItem] =
-    useState<MealPlanItemActionsItem | null>(null);
+  const [pendingCook, setPendingCook] = useState<{
+    id: string;
+    recipeName: string;
+    defaultServings: number;
+  } | null>(null);
 
   // Edit custom meal state — only the EditCustomMealSheet's narrow shape is needed.
   const [editCustomMealVisible, setEditCustomMealVisible] = useState(false);
@@ -151,6 +165,7 @@ const MealPlanMainInner: React.FC = () => {
   // Fetch the active plan with items
   const {
     mealPlan: activeMealPlan,
+    mealPlanRef: activeMealPlanRef,
     items,
     nutritionSummary,
     refetch,
@@ -207,11 +222,15 @@ const MealPlanMainInner: React.FC = () => {
     DeleteMealPlanDocument,
     {
       update(cache, { data }, { variables }) {
-        const id = data?.deleteMealPlan?.mealPlan?.id ?? variables?.id;
+        const result = data?.deleteMealPlan;
+        const id =
+          result?.__typename === 'DeleteMealPlanPayload'
+            ? result.mealPlan.id
+            : variables?.input?.id;
         if (id) removeFromMealPlansForMain(cache, id, { evictItem: true });
       },
       onError: error => {
-        toastService.error(error.message || 'Failed to delete meal plan');
+        handleMutationError(error, { operation: 'Delete Meal Plan' });
       },
     },
   );
@@ -254,13 +273,17 @@ const MealPlanMainInner: React.FC = () => {
 
     // Show MarkCookedModal when marking a recipe meal as complete
     if (!isCompleted && hasRecipe) {
-      setPendingCookItem(item);
+      setPendingCook({
+        id: item.id,
+        recipeName: item.recipe?.name ?? '',
+        defaultServings: item.servings ?? item.recipe?.servings ?? 1,
+      });
       setMarkCookedVisible(true);
       return;
     }
 
     // For unchecking or custom meals, toggle directly
-    toggleCompleted(item);
+    toggleCompleted(id);
   };
 
   const handleMarkCooked = (input: {
@@ -269,13 +292,13 @@ const MealPlanMainInner: React.FC = () => {
     useGranularDeduction: boolean;
     notes?: string;
   }) => {
-    if (!pendingCookItem) return;
-    toggleCompleted(pendingCookItem, {
+    if (!pendingCook) return;
+    toggleCompleted(pendingCook.id, {
       deductFromPantry: input.deductFromPantry,
       servings: input.servings,
       notes: input.notes,
     });
-    setPendingCookItem(null);
+    setPendingCook(null);
   };
 
   const handleDeleteItem = (id: string) => {
@@ -349,7 +372,7 @@ const MealPlanMainInner: React.FC = () => {
     tags?: string[];
   }) => {
     const result = await createTemplateFromPlan(input);
-    if (result?.success) {
+    if (result?.__typename === 'CreateTemplateFromMealPlanPayload') {
       setSaveTemplateVisible(false);
     }
   };
@@ -382,7 +405,7 @@ const MealPlanMainInner: React.FC = () => {
     servings?: number;
   }) => {
     const result = await createPlanFromTemplate(config);
-    if (result?.success) {
+    if (result?.__typename === 'CreateMealPlanPayload') {
       setTemplatePreviewVisible(false);
       setSelectedTemplate(null);
     }
@@ -395,19 +418,22 @@ const MealPlanMainInner: React.FC = () => {
     newEndDate: string;
   }) => {
     const result = await duplicatePlan(input);
-    if (result?.success) {
+    if (result?.__typename === 'DuplicateMealPlanPayload') {
       setDuplicateVisible(false);
     }
   };
 
   const handleDeletePlan = async (id: string) => {
     const result = await executeMutation(
-      () => deletePlanMutation({ variables: { id } }),
+      () => deletePlanMutation({ variables: { input: { id } } }),
       // Error handled by onError callback on the mutation hook
       () => {},
     );
-    if (result && result.data?.deleteMealPlan?.success) {
-      toastService.success('Meal plan deleted');
+    if (
+      result &&
+      result.data?.deleteMealPlan?.__typename === 'DeleteMealPlanPayload'
+    ) {
+      toastService.success(t('mealPlanMain.mealPlanDeleted'));
       // If we deleted the active plan, clear the selection so the UI falls back
       // to the next available plan (or the empty state if none remain).
       // awaitRefetchQueries ensures mealPlans is already updated at this point.
@@ -423,7 +449,7 @@ const MealPlanMainInner: React.FC = () => {
     shoppingListId?: string;
   }) => {
     const result = await generateShoppingList(options);
-    if (result?.success) {
+    if (result?.__typename === 'GenerateShoppingListFromMealPlanPayload') {
       setShoppingListSheetVisible(false);
     }
   };
@@ -432,7 +458,10 @@ const MealPlanMainInner: React.FC = () => {
   if (!plansLoading && mealPlans.length === 0) {
     return (
       <TabMainScreen testID="meal-plan-screen">
-        <TabScreenHeader label="Plan your meals" title="Meal Plan" />
+        <TabScreenHeader
+          label={t('mealPlanMain.label')}
+          title={t('mealPlanMain.defaultTitle')}
+        />
         <MealPlanEmptyState
           onCreatePlan={handleCreatePlan}
           onCreateFromTemplate={handleOpenTemplateBrowser}
@@ -465,8 +494,8 @@ const MealPlanMainInner: React.FC = () => {
       <View style={styles.headerRow}>
         <View style={styles.headerContent}>
           <TabScreenHeader
-            label="Plan your meals"
-            title={activeMealPlan?.name ?? 'Meal Plan'}
+            label={t('mealPlanMain.label')}
+            title={activeMealPlan?.name ?? t('mealPlanMain.defaultTitle')}
             onTitlePress={handleOpenSelector}
             titleAccessory={
               <Icon name="chevron-down" size={20} tone="textPrimary" />
@@ -480,7 +509,7 @@ const MealPlanMainInner: React.FC = () => {
                 onPress={() => setShoppingListSheetVisible(true)}
                 hitSlop={8}
                 style={styles.headerActionButton}
-                accessibilityLabel="Generate shopping list"
+                accessibilityLabel={t('mealPlanMain.generateShoppingListLabel')}
               >
                 <Icon name="cart-outline" size={22} tone="primary" />
               </Pressable>
@@ -490,7 +519,7 @@ const MealPlanMainInner: React.FC = () => {
                 onPress={handleSaveAsTemplate}
                 hitSlop={8}
                 style={styles.headerActionButton}
-                accessibilityLabel="Save as template"
+                accessibilityLabel={t('mealPlanMain.saveAsTemplateLabel')}
               >
                 <Icon name="bookmark-outline" size={22} tone="primary" />
               </Pressable>
@@ -499,7 +528,7 @@ const MealPlanMainInner: React.FC = () => {
               onPress={() => setSettingsVisible(true)}
               hitSlop={8}
               style={styles.headerActionButton}
-              accessibilityLabel="Plan settings"
+              accessibilityLabel={t('mealPlanMain.planSettingsLabel')}
             >
               <Icon name="ellipsis-vertical" size={22} tone="textSecondary" />
             </Pressable>
@@ -613,7 +642,7 @@ const MealPlanMainInner: React.FC = () => {
       {/* Settings Sheet */}
       <MealPlanSettingsSheet
         visible={settingsVisible}
-        mealPlan={activeMealPlan}
+        mealPlanRef={activeMealPlanRef}
         permissions={permissions}
         onClose={() => setSettingsVisible(false)}
         onDuplicate={() => setDuplicateVisible(true)}
@@ -634,13 +663,11 @@ const MealPlanMainInner: React.FC = () => {
       {/* Mark Cooked Modal */}
       <MarkCookedModal
         visible={markCookedVisible}
-        recipeName={pendingCookItem?.recipe?.name ?? ''}
-        defaultServings={
-          pendingCookItem?.servings ?? pendingCookItem?.recipe?.servings ?? 1
-        }
+        recipeName={pendingCook?.recipeName ?? ''}
+        defaultServings={pendingCook?.defaultServings ?? 1}
         onClose={() => {
           setMarkCookedVisible(false);
-          setPendingCookItem(null);
+          setPendingCook(null);
         }}
         onConfirm={handleMarkCooked}
       />

@@ -11,13 +11,16 @@
 import { useEffect, useState } from 'react';
 import { NetworkStatus } from '@apollo/client';
 import { useQuery } from '@apollo/client/react';
-import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
+import {
+  GetPantryDocument,
+  type GetPantryQuery,
+} from '#features/pantry/graphql/pantry.generated';
 import type {
   PantryItemFilters,
   PantryItemOrderBy,
 } from '#/graphql/generated/schemaTypes';
 import { useIsLoggedOut } from '#hooks/auth/useIsLoggedOut';
-import { normalizePantry } from '#/utils/connectionUtils';
+import { extractNodes, getConnectionTotalCount } from '#/utils/connectionUtils';
 import { usePagination } from '#/hooks/utils/usePagination';
 import {
   usePreservedArrayData,
@@ -28,6 +31,16 @@ import {
   useSetIsPantryQueryComplete,
 } from '#store/useAppStore';
 import { PAGE_SIZE } from '#/constants/pagination';
+
+/**
+ * Type of each pantry item node returned by `usePantryQuery`. It mirrors the
+ * `GetPantry` query selection: direct fields the screen-level hooks need plus
+ * an opaque `PantryItemCard_pantryItem` fragment ref that the leaf cell
+ * unmasks via `useFragment`.
+ */
+export type PantryListItemNode = NonNullable<
+  NonNullable<GetPantryQuery['pantry']>['itemsConnection']['edges'][number]
+>['node'];
 
 /**
  * Fetches pantry data with items, storage locations, and pagination.
@@ -119,17 +132,21 @@ export function usePantryQuery(
   // Pull-to-refresh state — derived directly from Apollo's networkStatus.
   const isRefreshing = networkStatus === NetworkStatus.refetch;
 
-  // Normalize pantry data to flatten Connection pattern
-  const normalizedPantry = normalizePantry(data?.pantry);
+  const pantry = data?.pantry;
+  const itemsConnection = pantry?.itemsConnection;
+  const storageLocationsConnection = pantry?.storageLocationsConnection;
 
-  // Preserve pantry items across network failures — the cache is now the
-  // single source of truth for which items exist, so no additional JS-layer
-  // filtering (e.g. filterPendingDeletes) is needed.
-  const pantryItems = usePreservedArrayData(normalizedPantry?.items);
+  // Pass connection edges through as opaque fragment refs — each leaf cell
+  // unmasks its own slice via `useFragment` inside `PantryItemCard`. The
+  // parent operation also selects screen-level fields (id, itemName,
+  // quantity, expiresAt, storageState, storageLocation.id, createdAt,
+  // updatedAt, isLowStock) directly on each node, so local sort/search and
+  // hook logic don't need to materialize.
+  const pantryItems = usePreservedArrayData(extractNodes(itemsConnection));
 
   // Pagination using generic utility hook
   const { hasMore, loadMore, isLoadingMore } = usePagination({
-    pageInfo: normalizedPantry?.itemsPageInfo,
+    pageInfo: itemsConnection?.pageInfo ?? undefined,
     loading,
     itemCount: pantryItems.length,
     fetchMore,
@@ -141,14 +158,11 @@ export function usePantryQuery(
   });
 
   const pantryStorageLocations = usePreservedArrayData(
-    normalizedPantry?.storageLocations,
+    extractNodes(storageLocationsConnection),
   );
 
-  const stats = usePreservedQueryData(
-    normalizedPantry?.stats ?? undefined,
-    null,
-  );
-  const totalCount = normalizedPantry?.itemsTotalCount ?? 0;
+  const stats = usePreservedQueryData(pantry?.stats ?? undefined, null);
+  const totalCount = getConnectionTotalCount(itemsConnection);
 
   const setIsPantryQueryComplete = useSetIsPantryQueryComplete();
 
@@ -178,7 +192,6 @@ export function usePantryQuery(
     state: {
       pantryItems,
       pantryStorageLocations,
-      normalizedPantry,
       stats,
       totalCount,
       loading,

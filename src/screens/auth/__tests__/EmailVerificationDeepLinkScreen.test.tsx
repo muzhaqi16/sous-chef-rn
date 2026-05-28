@@ -94,10 +94,7 @@ function buildVerifyMock(
     result: {
       data: {
         verifyEmail: {
-          __typename: 'UserPayload',
-          success: true,
-          message: 'OK',
-          code: 'OK',
+          __typename: 'VerifyEmailPayload',
           user: {
             __typename: 'User',
             id: '1',
@@ -157,7 +154,9 @@ describe('EmailVerificationDeepLinkScreen', () => {
       operationMocks: [buildVerifyMock(recordedVariables)],
     });
     await waitFor(() => {
-      expect(recordedVariables).toContainEqual({ code: 'abc123def456' });
+      expect(recordedVariables).toContainEqual({
+        input: { code: 'abc123def456' },
+      });
     });
   });
 

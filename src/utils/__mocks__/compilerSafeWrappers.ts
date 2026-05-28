@@ -1,5 +1,10 @@
 /** Passthrough auto-mock — wraps every export in jest.fn() while preserving real behavior. */
 
+import {
+  GraphQLDomainError,
+  GraphQLNetworkError,
+} from '../errors/graphqlErrors';
+
 export const executeMutation = jest.fn(
   async <T>(
     mutationFn: () => Promise<T>,
@@ -76,6 +81,31 @@ export const executeAsyncWithCleanup = jest.fn(
   },
 );
 
+export const unwrapPayload = jest.fn(
+  <TUnion extends { __typename: string }, TName extends TUnion['__typename']>(
+    payload: TUnion | null | undefined,
+    successTypename: TName,
+    fallbackMessage: string,
+  ): Extract<TUnion, { __typename: TName }> => {
+    if (payload == null) {
+      throw new GraphQLNetworkError(fallbackMessage);
+    }
+    if (payload.__typename === successTypename) {
+      return payload as Extract<TUnion, { __typename: TName }>;
+    }
+    const { __typename, code, message, ...extra } = payload as Record<
+      string,
+      unknown
+    > & { __typename: string };
+    throw new GraphQLDomainError({
+      __typename,
+      code: String(code ?? 'UNKNOWN'),
+      message: String(message || fallbackMessage),
+      ...extra,
+    });
+  },
+);
+
 export const executeWithLoadingState = jest.fn(
   async (
     fn: () => Promise<void>,
@@ -89,6 +119,30 @@ export const executeWithLoadingState = jest.fn(
       onError?.(error);
     } finally {
       setLoading(false);
+    }
+  },
+);
+
+export const isSuccessPayload = jest.fn(
+  <TUnion extends { __typename: string }, TName extends TUnion['__typename']>(
+    payload: TUnion | null | undefined,
+    successTypename: TName,
+  ): payload is Extract<TUnion, { __typename: TName }> => {
+    return payload != null && payload.__typename === successTypename;
+  },
+);
+
+export const executeSearchQuery = jest.fn(
+  async <TData>(
+    queryFn: () => Promise<{ data?: TData }>,
+    cancelled: () => boolean,
+  ): Promise<TData | null> => {
+    try {
+      const result = await queryFn();
+      if (cancelled()) return null;
+      return result.data ?? null;
+    } catch {
+      return null;
     }
   },
 );

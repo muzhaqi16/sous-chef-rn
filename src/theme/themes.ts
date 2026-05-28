@@ -1,4 +1,4 @@
-import { colors } from './foundations/colors';
+import { colors, darkExpiration, darkFilterTab } from './foundations/colors';
 import { spacing } from './foundations/spacing';
 import { typography, fonts } from './foundations/typography';
 import { radii } from './foundations/radii';
@@ -25,7 +25,7 @@ export const lightTheme = {
   ...commonTheme,
   colors: {
     ...colors,
-    // Primary — jaffa[500] (#f76818) is the brand orange shown in the app
+    // Primary — jaffa[500] (#f97416) is the brand orange shown in the app
     // icon and in the AppearanceScreen "Default" swatch. Keep all three in sync.
     primary: colors.jaffa[500],
     primaryLight: colors.jaffa[100],
@@ -118,6 +118,15 @@ export const lightTheme = {
     // Semantic action colors
     favorite: colors.actions.favorite.light,
     rating: colors.actions.rating.light,
+
+    // Navigation bar active accent — charade-based. The bar background
+    // (`secondaryDark`) stays dark in both themes; the active accent shifts
+    // with the theme so theme switches are visible.
+    navigationActive: colors.charade[600],
+    // FloatingTabBar `+` button background — charade[500] is a muted accent
+    // that harmonizes with the other charade-based nav elements without
+    // overpowering them like the primary brand color did.
+    navigationCta: colors.charade[500],
   },
 };
 
@@ -125,7 +134,7 @@ export const darkTheme = {
   ...commonTheme,
   colors: {
     ...colors,
-    // Primary — jaffa[500] (#f76818) for brand consistency with light mode.
+    // Primary — jaffa[500] (#f97416) for brand consistency with light mode.
     // primaryLight uses jaffa[400] @ 20% for a slightly brighter accent surface
     // since the deeper hue can swallow itself on dark backgrounds.
     primary: colors.jaffa[500],
@@ -222,28 +231,10 @@ export const darkTheme = {
       infoBg: '#2A303D',
     },
 
-    // Pantry redesign colors - dark mode specific expiration colors
-    // Using solid colors from foundations to prevent swipeable container background bleed-through
-    expiration: {
-      expiredBg: colors.expiration.darkExpiredBg,
-      expiredBorder: colors.expiration.darkExpiredBorder,
-      expiredText: colors.expiration.darkExpiredText,
-      expiredIconBg: colors.expiration.darkExpiredIconBg,
-      warningText: colors.expiration.darkWarningText,
-      warningBg: colors.expiration.darkWarningBg,
-      warningBorder: colors.expiration.darkWarningBorder,
-    },
-    filterTab: {
-      activeBg: colors.filterTab.activeBg,
-      activeText: colors.filterTab.activeText,
-      inactiveBg: colors.filterTab.darkInactiveBg,
-      inactiveText: colors.filterTab.darkInactiveText,
-      filteredBg: colors.filterTab.darkFilteredBg,
-      filteredText: colors.filterTab.darkFilteredText,
-      countBg: colors.filterTab.darkCountBg,
-      countText: colors.filterTab.darkCountText,
-      activeCountBg: colors.filterTab.activeCountBg,
-    },
+    // Pantry redesign colors — dark-mode override values (same key shape as light).
+    // Solid backgrounds prevent swipeable container background bleed-through.
+    expiration: darkExpiration,
+    filterTab: darkFilterTab,
     avatar: colors.avatar,
     sectionHeader: colors.sectionHeader,
     // Alert banner — solid dark backgrounds instead of light-mode pastels
@@ -287,6 +278,13 @@ export const darkTheme = {
     // Semantic action colors
     favorite: colors.actions.favorite.dark,
     rating: colors.actions.rating.dark,
+
+    // Navigation bar active accent — lighter charade step for dark mode so
+    // the switch is visible against the (also-dark) bar background.
+    navigationActive: colors.charade[300],
+    // FloatingTabBar `+` button background — same charade[500] in both
+    // themes so the CTA reads consistently against the dark bar bg.
+    navigationCta: colors.charade[500],
   },
 };
 

@@ -1,4 +1,4 @@
-import { storage } from '#/storage/mmkv';
+import { storage, isStorageReady } from '#/storage/mmkv';
 import { generateId } from './generateId';
 
 const DEVICE_ID_KEY = 'device_id';
@@ -11,9 +11,16 @@ let cachedDeviceId: string | null = null;
  * Used for subscription self-echo prevention: when this device makes a mutation,
  * the server includes our deviceId in the subscription payload, allowing us
  * to skip processing our own updates (which were already handled by the mutation).
+ *
+ * If storage isn't initialized yet (early startup race), returns a transient ID.
+ * `initializeDeviceId()` reconciles with storage once hydration completes.
  */
 export function getDeviceId(): string {
   if (cachedDeviceId) return cachedDeviceId;
+
+  if (!isStorageReady()) {
+    return `device_${generateId()}`;
+  }
 
   let deviceId = storage.getString(DEVICE_ID_KEY);
   if (!deviceId) {
@@ -37,10 +44,11 @@ export function getDeviceIdSync(): string | null {
 }
 
 /**
- * Initialize the device ID cache.
- * Call this early in app startup (e.g., in App.tsx).
- * Since MMKV is synchronous, this just ensures the cache is populated.
+ * Initialize the device ID cache from storage.
+ * Call this early in app startup after hydration (e.g., in useStartupInit).
+ * Clears any transient ID so the persisted value is used going forward.
  */
 export function initializeDeviceId(): string {
+  cachedDeviceId = null;
   return getDeviceId();
 }

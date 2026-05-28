@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { alertService } from '#/services/alertService';
 import { usePreservedQueryData } from '#/hooks/apollo/usePreservedQueryData';
-import { useMutation, useQuery } from '@apollo/client/react';
+import { useFragment, useMutation, useQuery } from '@apollo/client/react';
+import { HomeDetailScreen_HomeFragmentDoc } from '#/screens/home/HomeDetailScreen.generated';
 import {
   GetHomeDocument,
   UpdateHomeDocument,
@@ -14,7 +15,6 @@ import {
 import { SetDefaultHomeDocument } from '#operations/home/userSettings.generated';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import { t } from '#/i18n/t';
-import { normalizeHome } from '#/utils/connectionUtils';
 import {
   createRemoveFromParentConnectionUpdater,
   safeEvict,
@@ -26,9 +26,9 @@ import {
 } from '#/utils/compilerSafeWrappers';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
 import {
-  handleVersionConflict,
-  getVersionConflictMessage,
-} from '#/utils/errors/versionConflict';
+  handleMutationError,
+  versionConflictCheck,
+} from '#/utils/errorHandlers';
 import {
   useAppStore,
   useHomeState,
@@ -96,9 +96,14 @@ export function useHomeDetailManagement(homeId: string) {
   const [updateMembershipMutation] = useMutation(UpdateMembershipDocument, {
     // Use cache.modify to update the membership role field
     update(cache, { data }, { variables }) {
-      if (!data?.updateMembership?.success || !variables) return;
+      if (
+        data?.updateMembership?.__typename !== 'UpdateMembershipPayload' ||
+        !variables
+      ) {
+        return;
+      }
 
-      const membershipId = variables.id;
+      const membershipId = variables.input.id;
       const newRole = variables.input.role;
 
       setCachedFields(cache, 'Membership', membershipId, {
@@ -116,7 +121,12 @@ export function useHomeDetailManagement(homeId: string) {
 
   const [removeMemberMutation] = useMutation(RemoveMemberDocument, {
     update(cache, { data }, { variables }) {
-      if (!data?.removeMember?.success || !variables) return;
+      if (
+        data?.removeMember?.__typename !== 'RemoveMemberPayload' ||
+        !variables
+      ) {
+        return;
+      }
 
       executeCacheUpdate(() => {
         const removeFromMembersCache = createRemoveFromParentConnectionUpdater(
@@ -124,31 +134,32 @@ export function useHomeDetailManagement(homeId: string) {
           'membersConnection',
           'Membership',
         );
-        removeFromMembersCache(cache, homeId, variables.id, {
+        removeFromMembersCache(cache, homeId, variables.input.membershipId, {
           evictItem: true,
         });
       }, 'Cache update failed for removeMember:');
     },
     onError: error => {
-      // PERFORMANCE: Handle version conflict errors with user-friendly message
-      if (handleVersionConflict(error)) {
-        alertService.alert('Member Updated', getVersionConflictMessage(error), [
-          { text: 'Refresh', onPress: () => refetch() },
-          { text: 'Cancel', style: 'cancel' },
-        ]);
-        return;
-      }
-
-      alertService.alert(
-        'Error',
-        error.message || t('errors.removeMemberFailed'),
-      );
+      handleMutationError(error, {
+        operation: 'Remove Member',
+        checks: [
+          versionConflictCheck({
+            itemName: 'Member',
+            onRefresh: () => refetch(),
+          }),
+        ],
+      });
     },
   });
 
   const [revokeInviteMutation] = useMutation(RevokeHomeInviteDocument, {
     update(cache, { data }, { variables }) {
-      if (!data?.revokeHomeInvite?.success || !variables) return;
+      if (
+        data?.revokeHomeInvite?.__typename !== 'RevokeHomeInvitePayload' ||
+        !variables
+      ) {
+        return;
+      }
 
       executeCacheUpdate(() => {
         const removeFromInvitesCache = createRemoveFromParentConnectionUpdater(
@@ -156,25 +167,21 @@ export function useHomeDetailManagement(homeId: string) {
           'invitesConnection',
           'HomeInvite',
         );
-        removeFromInvitesCache(cache, homeId, variables.id, {
+        removeFromInvitesCache(cache, homeId, variables.input.id, {
           evictItem: true,
         });
       }, 'Cache update failed for revokeInvite:');
     },
     onError: error => {
-      // PERFORMANCE: Handle version conflict errors with user-friendly message
-      if (handleVersionConflict(error)) {
-        alertService.alert('Invite Updated', getVersionConflictMessage(error), [
-          { text: 'Refresh', onPress: () => refetch() },
-          { text: 'Cancel', style: 'cancel' },
-        ]);
-        return;
-      }
-
-      alertService.alert(
-        'Error',
-        error.message || t('errors.revokeInviteFailed'),
-      );
+      handleMutationError(error, {
+        operation: 'Revoke Invitation',
+        checks: [
+          versionConflictCheck({
+            itemName: 'Invite',
+            onRefresh: () => refetch(),
+          }),
+        ],
+      });
     },
   });
 
@@ -183,14 +190,17 @@ export function useHomeDetailManagement(homeId: string) {
   const [leaveHomeMutation, { loading: leaving, client: leaveClient }] =
     useMutation(LeaveHomeDocument, {
       update(cache, { data }) {
-        if (!data?.leaveHome?.success) return;
+        if (data?.leaveHome?.__typename !== 'LeaveHomePayload') return;
 
         executeCacheUpdate(() => {
           safeEvict(cache, 'Home', homeId);
         }, 'Cache update failed for leaveHome:');
       },
       onCompleted: data => {
-        if (data?.leaveHome?.success && homeId === selectedHomeId) {
+        if (
+          data?.leaveHome?.__typename === 'LeaveHomePayload' &&
+          homeId === selectedHomeId
+        ) {
           // Read remaining homes from cache
           const cachedData = leaveClient.cache.readQuery({
             query: GetHomesDocument,
@@ -202,7 +212,7 @@ export function useHomeDetailManagement(homeId: string) {
             setSelectedHomeId(newDefaultHome.id);
             setSelectedPantryId(null);
             setDefaultHomeMutation({
-              variables: { homeId: newDefaultHome.id },
+              variables: { input: { homeId: newDefaultHome.id } },
             }).catch(err => {
               console.warn('Failed to set new default home after leave:', err);
             });
@@ -219,9 +229,23 @@ export function useHomeDetailManagement(homeId: string) {
       },
     });
 
-  // Preserve last successful data when errorPolicy: 'ignore' returns undefined on error
-  const preservedHomeData = usePreservedQueryData(data?.home, null);
-  const home = normalizeHome(preservedHomeData);
+  // Preserve last successful data when errorPolicy: 'ignore' returns undefined on error.
+  // Then unmask via useFragment so consumers (and this hook) see the full
+  // HomeDetailScreen_home shape — fields, members/invite edges, myMembership.
+  //
+  // useFragment reads from `{ __typename, id }` rather than the masked
+  // `data?.home` ref so it always resolves the cache entry by key. When the
+  // fragment isn't fully in cache yet, `complete` is false and we fall back
+  // to null so the screen shows the loader instead of rendering with
+  // partial data (which would, e.g., make the owner look like a non-owner
+  // because `myMembership.role` isn't populated yet).
+  const homeRef = usePreservedQueryData(data?.home, null);
+  const { data: unmaskedData, complete: unmaskedComplete } = useFragment({
+    fragment: HomeDetailScreen_HomeFragmentDoc,
+    fragmentName: 'HomeDetailScreen_home',
+    from: homeRef ? { __typename: 'Home', id: homeId } : null,
+  });
+  const home = homeRef && unmaskedComplete ? unmaskedData : null;
 
   // CRUD operations utilities
   const { createRemoveOperation } = useCrudOperations();
@@ -230,8 +254,7 @@ export function useHomeDetailManagement(homeId: string) {
   const saveName = async (name: string) => {
     await updateHomeMutation({
       variables: {
-        id: homeId,
-        input: { name },
+        input: { id: homeId, name },
       },
     });
   };
@@ -265,8 +288,7 @@ export function useHomeDetailManagement(homeId: string) {
 
     await updateMembershipMutation({
       variables: {
-        id: membershipId,
-        input: { role: value as MembershipRole },
+        input: { id: membershipId, role: value as MembershipRole },
       },
     });
   };
@@ -305,10 +327,14 @@ export function useHomeDetailManagement(homeId: string) {
             style: 'destructive',
             onPress: async () => {
               const result = await executeMutation(
-                () => leaveHomeMutation({ variables: { homeId } }),
+                () => leaveHomeMutation({ variables: { input: { homeId } } }),
                 'Failed to leave home',
               );
-              resolve(result ? !!result.data?.leaveHome?.success : false);
+              resolve(
+                result
+                  ? result.data?.leaveHome?.__typename === 'LeaveHomePayload'
+                  : false,
+              );
             },
           },
         ],
@@ -319,8 +345,7 @@ export function useHomeDetailManagement(homeId: string) {
   const toggleJoinCode = async (enabled: boolean) => {
     await updateHomeMutation({
       variables: {
-        id: homeId,
-        input: { allowJoinCode: enabled },
+        input: { id: homeId, allowJoinCode: enabled },
       },
     });
   };

@@ -1,0 +1,12 @@
+# Narrow fragment for useRecipeFavoriteState's external-recipe-match
+# lookup. Reads only what's needed to identify a saved external recipe
+# (externalSource + externalId) and surface its folder.
+fragment useRecipeFavoriteState_recipe on Recipe {
+  id
+  externalSource
+  externalId
+  savedDetails {
+    id
+    folder
+  }
+}

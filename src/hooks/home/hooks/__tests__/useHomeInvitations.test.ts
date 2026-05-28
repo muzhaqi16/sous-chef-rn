@@ -51,10 +51,8 @@ function buildInviteMock(
     result: {
       data: {
         inviteToHome: {
-          __typename: 'HomeInvitePayload',
-          success: true,
-          message: 'OK',
-          code: 'OK',
+          __typename: 'InviteToHomePayload',
+          home: { __typename: 'Home', id: input.homeId, name: 'Home' },
           homeInvite: {
             __typename: 'HomeInvite',
             id: homeInviteId,
@@ -85,17 +83,19 @@ function buildJoinByCodeMock(
   return {
     request: {
       query: JoinHomeByCodeDocument,
-      variables: { joinCode },
+      variables: { input: { joinCode } },
     },
     result: {
       data: {
-        joinHomeByCode: {
-          __typename: 'MembershipPayload',
-          success: !!membershipFields,
-          message: 'OK',
-          code: 'OK',
-          membership: membershipFields
-            ? {
+        joinHomeByCode: membershipFields
+          ? {
+              __typename: 'JoinHomeByCodePayload',
+              home: {
+                __typename: 'Home',
+                id: membershipFields.homeId,
+                name: 'Home',
+              },
+              membership: {
                 __typename: 'Membership',
                 id: 'mem-1',
                 homeId: membershipFields.homeId,
@@ -120,9 +120,12 @@ function buildJoinByCodeMock(
                     avatar: null,
                   },
                 },
-              }
-            : null,
-        },
+              },
+            }
+          : {
+              __typename: 'NotFoundError',
+              message: 'Home not found for join code',
+            },
       },
     },
   };

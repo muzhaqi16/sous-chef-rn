@@ -12,12 +12,12 @@ import Animated, {
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { SPRING, TIMING } from '#/constants/animations';
-import type { SortableShoppingListItem } from '#features/shoppingList/components/SortableShoppingList/types';
+import type { ShoppingListRowItem } from '#features/shoppingList/components/SortableShoppingList/types';
 import { SortableShoppingList } from '#features/shoppingList/components/SortableShoppingList/SortableList';
 import { Text } from '#components/atoms/Text';
 
 interface CollapsiblePurchasedSectionProps {
-  purchasedItems: SortableShoppingListItem[];
+  purchasedItems: ShoppingListRowItem[];
   unpurchasedCount?: number;
   onItemPress: (id: string) => void;
   onItemEdit?: (id: string) => void;

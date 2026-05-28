@@ -1,8 +1,11 @@
 'use no memo';
 
 import React from 'react';
-import { render } from '@testing-library/react-native';
 import { WriteReviewSheet } from '../../../src/features/recipes/components/WriteReviewSheet';
+import {
+  renderWithApollo,
+  seedCache,
+} from '../../helpers/apolloMockProvider';
 
 jest.mock('../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../src/apollo/links/refreshToken');
@@ -29,57 +32,63 @@ jest.mock('../../../src/features/recipes/components/StarRatingInput', () => ({
   StarRatingInput: () => null,
 }));
 
+const REVIEW_ID = 'r1';
+
+function makeCache() {
+  return seedCache([
+    {
+      __typename: 'RecipeReview',
+      id: REVIEW_ID,
+      rating: 4,
+      comment: 'Nice',
+    },
+  ]);
+}
+
 describe('WriteReviewSheet', () => {
   const defaultProps = {
     visible: false,
-    existingReview: null,
+    existingReviewId: null,
     onSubmit: jest.fn(),
     onClose: jest.fn(),
     submitting: false,
   };
 
   it('renders without crashing', () => {
-    const { toJSON } = render(<WriteReviewSheet {...defaultProps} />);
+    const { toJSON } = renderWithApollo(
+      <WriteReviewSheet {...defaultProps} />,
+    );
     expect(toJSON()).toBeTruthy();
   });
 
   it('shows Write a Review title when no existing review', () => {
-    const { getByText } = render(
+    const { getByText } = renderWithApollo(
       <WriteReviewSheet {...defaultProps} visible={true} />,
     );
     expect(getByText('Write a Review')).toBeTruthy();
   });
 
   it('shows Edit Review title when existing review provided', () => {
-    const existingReview = {
-      id: 'r1',
-      rating: 4,
-      comment: 'Nice',
-      helpful: 0,
-      verified: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      user: { id: 'u1', email: 'test@test.com', profile: null },
-    };
-    const { getByText } = render(
+    const { getByText } = renderWithApollo(
       <WriteReviewSheet
         {...defaultProps}
         visible={true}
-        existingReview={existingReview as any}
+        existingReviewId={REVIEW_ID}
       />,
+      { cache: makeCache() },
     );
     expect(getByText('Edit Review')).toBeTruthy();
   });
 
   it('shows Rating label', () => {
-    const { getByText } = render(
+    const { getByText } = renderWithApollo(
       <WriteReviewSheet {...defaultProps} visible={true} />,
     );
     expect(getByText('Rating')).toBeTruthy();
   });
 
   it('shows Submit Review button text', () => {
-    const { getByText } = render(
+    const { getByText } = renderWithApollo(
       <WriteReviewSheet {...defaultProps} visible={true} />,
     );
     expect(getByText('Submit Review')).toBeTruthy();

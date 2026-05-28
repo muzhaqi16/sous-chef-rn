@@ -23,7 +23,7 @@
  *    reads the SUT performs.
  *
  * Mocks live only at the I/O boundary: `MockLink` for network responses,
- * plus the peripheral hooks the SUT calls (alertService, error service,
+ * plus the peripheral utilities the SUT calls (error handlers,
  * network-error detector, optimistic-data persistence). These are
  * unrelated to the cache seam under test.
  */
@@ -37,6 +37,7 @@ import { ApolloClient, InMemoryCache } from '@apollo/client';
 import { ApolloProvider } from '@apollo/client/react';
 import type { MockedResponse } from '#/test-utils/apolloMockProvider';
 import { MockLink } from '@apollo/client/testing';
+import type { Unmasked } from '@apollo/client/masking';
 import {
   ToggleShoppingListItemPurchasedDocument,
   type ToggleShoppingListItemPurchasedMutation,
@@ -51,21 +52,15 @@ import { useToggleShoppingItem } from '#features/shoppingList/hooks/mutations/us
 // Peripheral mocks — dependencies of the SUT that have nothing to do with
 // the cache seam under test. Stubbing them keeps the assertion focused on
 // the optimistic + cache-update behavior.
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
-}));
-jest.mock('#/services/errorService', () => ({
-  useErrorService: () => ({
-    handleApolloError: jest.fn(() => ({ message: 'mock error' })),
-  }),
+jest.mock('#/utils/errorHandlers', () => ({
+  handleMutationError: jest.fn(),
 }));
 jest.mock('#/utils/isNetworkError', () => ({
   isNetworkError: jest.fn(() => false),
 }));
 jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
   optimisticDataPersistence: {
-    save: jest.fn(),
-    clear: jest.fn(),
+    track: jest.fn(() => jest.fn()),
   },
 }));
 
@@ -112,14 +107,11 @@ function readPurchaseStatus(cache: InMemoryCache): boolean | undefined {
 
 function buildSettledServerResponse(
   newPurchased: boolean,
-): ToggleShoppingListItemPurchasedMutation {
+): Unmasked<ToggleShoppingListItemPurchasedMutation> {
   return {
     __typename: 'Mutation',
     toggleShoppingListItemPurchased: {
-      __typename: 'ShoppingListItemPayload',
-      success: true,
-      message: '',
-      code: 'SUCCESS',
+      __typename: 'ToggleShoppingListItemPurchasedPayload',
       shoppingListItem: {
         __typename: 'ShoppingListItem',
         id: ITEM_ID,
@@ -139,6 +131,14 @@ function buildSettledServerResponse(
         unit: null,
         sortOrder: 'a0',
         item: null,
+        shoppingList: {
+          __typename: 'ShoppingList',
+          id: 'list-1',
+          totalItems: 0,
+          completedItems: 0,
+          remainingItems: 0,
+          completionRate: 0,
+        },
       },
     },
   };

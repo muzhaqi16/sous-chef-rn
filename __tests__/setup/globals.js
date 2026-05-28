@@ -15,9 +15,21 @@ if (!globalThis.crypto || !globalThis.crypto.getRandomValues) {
 // Suppress all console output in tests by default.
 // Tests can assert on calls via expect(console.error).toHaveBeenCalledWith(...)
 // To debug, temporarily comment out the relevant line below.
+//
+// Exception: Apollo cache "Missing field" warnings indicate an optimistic
+// response (or any cache write) is missing a non-nullable field selected by
+// the operation. These almost always point at a real bug — fail the test
+// instead of silently swallowing.
 // ---------------------------------------------------------------------------
+const APOLLO_MISSING_FIELD = /Missing field '[^']+' while writing result/;
+
 beforeEach(() => {
-  jest.spyOn(console, 'error').mockImplementation(() => {});
+  jest.spyOn(console, 'error').mockImplementation((...args) => {
+    const first = args[0];
+    if (typeof first === 'string' && APOLLO_MISSING_FIELD.test(first)) {
+      throw new Error(`Apollo cache write error: ${first}`);
+    }
+  });
   jest.spyOn(console, 'warn').mockImplementation(() => {});
   jest.spyOn(console, 'log').mockImplementation(() => {});
 });

@@ -1,12 +1,185 @@
+# Screen-level materialization fragment for the PantryItemDetail screen.
+# Composed of fields the detail screen, PantryDetailInfo, BatchSection,
+# PantryUsageHistory, PantryItemForm, and the update mutation hooks all read.
+# Apollo Client 4.x recommends colocating fragments with their primary
+# consumer rather than maintaining central "god" fragments.
+fragment PantryItemDetail_pantryItem on PantryItem {
+  ...PantryDetailInfo_pantryItem
+  ...PantryItemForm_pantryItem
+  id
+  pantryId
+  itemId
+  itemName
+  quantity
+  version
+  updatedAt
+  storageState
+  expiresAt
+  lowStockAlert
+  isLowStock
+  minQuantity
+  lastUsedAt
+  netWeight
+  remainingNetWeight
+  activeBatchCount
+  earliestBatchExpiration
+  item {
+    id
+    imageUrl
+    images { url kind }
+    name
+    shelfLifeDays
+    shelfLifeOpenedDays
+    nutritions
+    categories {
+      isPrimary
+      category {
+        id
+        name
+      }
+    }
+  }
+  unit {
+    id
+    name
+    symbol
+    type
+    isMetric
+    baseUnitId
+    conversionFactor
+    isCommon
+    displayAsFraction
+    minPrecision
+    autoConvertThreshold
+  }
+  netWeightUnit {
+    id
+    name
+    symbol
+  }
+  storageLocation {
+    id
+    name
+    type
+  }
+  packageBreakdown {
+    count
+    contentUnit {
+      id
+      name
+      symbol
+    }
+    perUnitNetWeight
+    perUnitNetWeightUnit {
+      id
+      name
+      symbol
+    }
+    totalNetWeight
+  }
+  quantityBreakdown {
+    fullPackages
+    looseContentUnits
+    contentUnit {
+      id
+      name
+      symbol
+    }
+    totalContentUnits
+    remainingWeight
+    remainingWeightUnit {
+      id
+      name
+      symbol
+    }
+  }
+  brand {
+    id
+    name
+  }
+  tags
+  storageNotes
+  createdAt
+  restockQuantity
+  store {
+    id
+    name
+  }
+  condition
+  acquisitionMethod
+  costPerUnit
+  totalCost
+  purchase {
+    id
+    purchaseDate
+    unitPrice
+    totalPrice
+    quantity
+  }
+  usageRecords(first: 5) {
+    edges {
+      node {
+        id
+        quantityUsed
+        usageUnit {
+          id
+          name
+          symbol
+        }
+        usedAt
+        purpose
+        adjustmentReason
+      }
+    }
+  }
+  batches {
+    ...PantryItemBatchFragment
+  }
+}
+
 # Local copy of AddItemToShoppingList per the Feature API Boundary Convention.
 # The shoppingList feature's graphql/ folder is internal.
-mutation AddItemToShoppingList($input: CreateShoppingListItemInput!) {
+mutation AddItemToShoppingListFromPantryItem($input: CreateShoppingListItemInput!) {
   addItemToShoppingList(input: $input) {
-    success
-    message
-    code
-    shoppingListItem {
-      ...ShoppingListItemDisplayFragment
+    __typename
+    ... on AddItemToShoppingListPayload {
+      shoppingListItem {
+        id
+        itemName
+        quantity
+        quantityInput
+        displayFormat
+        purchaseInfo {
+          isPurchased
+        }
+        version
+        updatedAt
+        category
+        notes
+        unitName
+        unit {
+          id
+          name
+          symbol
+        }
+        sortOrder
+        item {
+          id
+          imageUrl
+          images { url kind }
+        }
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
     }
   }
 }

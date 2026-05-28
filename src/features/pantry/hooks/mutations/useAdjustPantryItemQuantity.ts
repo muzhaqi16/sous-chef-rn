@@ -6,19 +6,14 @@
  */
 
 import { useMutation } from '@apollo/client/react';
-import { alertService } from '#/services/alertService';
 import { AdjustPantryItemQuantityDocument } from '#features/pantry/graphql/pantry.generated';
-import { PantryItemDisplayFragmentDoc } from '#features/pantry/graphql/pantryFragments.generated';
-import { useErrorService } from '#/services/errorService';
-import {
-  handleVersionConflict,
-  getVersionConflictMessage,
-} from '#/utils/errors/versionConflict';
-import {
-  isInvalidUnitError,
-  getInvalidUnitMessage,
-} from '#/utils/errors/invalidUnit';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
+import {
+  handleMutationError,
+  versionConflictCheck,
+  invalidUnitCheck,
+} from '#/utils/errorHandlers';
+import { isSuccessPayload } from '#/utils/compilerSafeWrappers';
 
 interface UseAdjustPantryItemQuantityOptions {
   onSuccess?: () => void;
@@ -27,11 +22,8 @@ interface UseAdjustPantryItemQuantityOptions {
 export function useAdjustPantryItemQuantity({
   onSuccess,
 }: UseAdjustPantryItemQuantityOptions = {}) {
-  const { handleApolloError } = useErrorService();
-
   const [adjustMutation, { loading }] = useMutation(
     AdjustPantryItemQuantityDocument,
-    {},
   );
 
   const adjustQuantity = async (
@@ -43,29 +35,18 @@ export function useAdjustPantryItemQuantity({
   ): Promise<boolean> => {
     const result = await adjustMutation({
       variables: {
-        id: pantryItemId,
         input: {
+          id: pantryItemId,
           newQuantity,
           reason,
           ...(version != null ? { version } : {}),
           ...(remainingNetWeight != null ? { remainingNetWeight } : {}),
         },
       },
-      update: (cache, { data: mutationData }) => {
-        const pantryItem = mutationData?.adjustPantryItemQuantity?.pantryItem;
-        if (!pantryItem) return;
+      update: (_cache, { data: mutationData }) => {
+        const payload = mutationData?.adjustPantryItemQuantity;
+        if (payload?.__typename !== 'AdjustPantryItemQuantityPayload') return;
 
-        cache.writeFragment({
-          id: cache.identify({
-            __typename: 'PantryItem',
-            id: pantryItem.id,
-          }),
-          fragment: PantryItemDisplayFragmentDoc,
-          fragmentName: 'PantryItemDisplay',
-          data: pantryItem,
-        });
-
-        // Persist optimistic quantity to survive cache-and-network refetches while offline
         optimisticDataPersistence.save(
           'PantryItem',
           pantryItemId,
@@ -75,26 +56,22 @@ export function useAdjustPantryItemQuantity({
       },
     });
 
-    if (result.data?.adjustPantryItemQuantity?.pantryItem) {
+    if (
+      isSuccessPayload(
+        result.data?.adjustPantryItemQuantity,
+        'AdjustPantryItemQuantityPayload',
+      )
+    ) {
       optimisticDataPersistence.clear('PantryItem', pantryItemId, 'quantity');
       onSuccess?.();
       return true;
     }
 
     if (result.error) {
-      if (handleVersionConflict(result.error)) {
-        alertService.alert(
-          'Item Updated',
-          getVersionConflictMessage(result.error),
-        );
-      } else if (isInvalidUnitError(result.error)) {
-        alertService.alert('Invalid Unit', getInvalidUnitMessage(result.error));
-      } else {
-        const { message } = handleApolloError(result.error, {
-          operation: 'Adjust Quantity',
-        });
-        alertService.alert('Error', message);
-      }
+      handleMutationError(result.error, {
+        operation: 'Adjust Quantity',
+        checks: [versionConflictCheck(), invalidUnitCheck()],
+      });
     }
 
     return false;

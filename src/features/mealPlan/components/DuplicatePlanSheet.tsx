@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Pressable } from '#components/atoms/themedComponents';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
@@ -32,6 +33,7 @@ export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
   onDuplicate,
   loading,
 }) => {
+  const { t } = useTranslation();
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible,
     onDismiss: onClose,
@@ -49,7 +51,7 @@ export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
     setPrevVisible(visible);
     setPrevMealPlan(mealPlan);
     if (visible && mealPlan) {
-      setName(`${mealPlan.name} (Copy)`);
+      setName(t('duplicatePlan.copySuffix', { name: mealPlan.name }));
       setStartDateOffset(0);
     }
   }
@@ -89,18 +91,22 @@ export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
         showsVerticalScrollIndicator={false}
       >
         <BottomSheetHeader
-          title="Duplicate Plan"
+          title={t('duplicatePlan.title')}
           onCancel={onClose}
           onConfirm={handleDuplicate}
-          confirmLabel={loading ? 'Duplicating...' : 'Duplicate'}
+          confirmLabel={
+            loading
+              ? t('duplicatePlan.duplicating')
+              : t('duplicatePlan.duplicate')
+          }
           confirmDisabled={loading || !name.trim()}
           confirmColor="primary"
         />
 
-        {!!mealPlan && (
+        {!!mealPlan && !!mealPlan.startDate && !!mealPlan.endDate && (
           <View style={styles.currentInfo}>
             <Text size="sm" tone="secondary" style={styles.currentLabel}>
-              Current Plan
+              {t('duplicatePlan.currentPlanLabel')}
             </Text>
             <Text size="md" weight="medium">
               {format(parseISO(mealPlan.startDate), 'MMM d')} -{' '}
@@ -110,17 +116,17 @@ export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
         )}
 
         <FormInput
-          label="New Plan Name"
+          label={t('duplicatePlan.newNameLabel')}
           value={name}
           onChangeText={setName}
-          placeholder="Enter plan name"
+          placeholder={t('duplicatePlan.newNamePlaceholder')}
           required
         />
 
         {/* Date adjustment */}
         <View style={styles.section}>
           <Text size="sm" weight="medium" tone="secondary">
-            Start Date
+            {t('duplicatePlan.startDateLabel')}
           </Text>
           <View style={styles.dateAdjust}>
             <Pressable
@@ -163,8 +169,7 @@ export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
             color={styles.infoText.color}
           />
           <Text size="sm" style={styles.infoText}>
-            All meals will be copied to the new date range with the same
-            structure.
+            {t('duplicatePlan.infoText')}
           </Text>
         </View>
       </BottomSheetFormScrollView>

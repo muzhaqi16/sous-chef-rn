@@ -7,10 +7,8 @@ import {
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { FlashList, type ListRenderItemInfo } from '@shopify/flash-list';
-import type {
-  BottomSheetModal,
-  useBottomSheetScrollableCreator,
-} from '@gorhom/bottom-sheet';
+import type { useBottomSheetScrollableCreator } from '@gorhom/bottom-sheet';
+import type { BottomSheetModalRef } from '#hooks/useStandardBottomSheet';
 import { BottomSheetAction } from '#components/templates/BottomSheetAction';
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 import {
@@ -63,7 +61,7 @@ const renderItem = (info: ListRenderItemInfo<SelectableIngredient>) => (
 );
 
 interface IngredientSelectorSheetProps {
-  sheetRef: React.RefObject<BottomSheetModal | null>;
+  sheetRef: React.RefObject<BottomSheetModalRef | null>;
   ingredients: SelectableIngredient[];
   selectedIngredients: Set<string>;
   toggleIngredient: (id: string) => void;

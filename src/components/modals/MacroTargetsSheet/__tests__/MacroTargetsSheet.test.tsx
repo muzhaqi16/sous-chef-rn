@@ -3,10 +3,6 @@ import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
 import { MacroTargetsSheet } from '../MacroTargetsSheet';
 
-jest.mock('#components/atoms/GlobalBottomSheetBackdrop', () => ({
-  GlobalBottomSheetBackdrop: () => null,
-}));
-
 jest.mock('#hooks/useSharedBottomSheetConfigs', () => ({
   useSharedBottomSheetConfigs: jest.fn(() => ({})),
 }));

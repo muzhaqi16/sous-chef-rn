@@ -28,19 +28,12 @@ query MyShoppingListInvites {
       collaborator {
         id
         email
-        profile {
-          id
-          displayName
-          avatar
-        }
+        profile { id displayName avatar }
       }
       invitedBy {
         id
         email
-        profile {
-          id
-          displayName
-        }
+        profile { id displayName avatar }
       }
     }
   }
@@ -51,32 +44,54 @@ query MyShoppingListInvites {
 # MUTATIONS
 # ============================================
 
-mutation AcceptShoppingListInvite($token: String!) {
-  acceptShoppingListInvite(token: $token) {
-    success
-    message
-    code
-    collaborator {
-      ...ShoppingListCollaboratorFragment
-      canEdit
-      canInviteOthers
-      invitedAt
-      shoppingList {
-        id
-        name
-        description
+mutation AcceptShoppingListInvite($input: AcceptShoppingListInviteInput!) {
+  acceptShoppingListInvite(input: $input) {
+    __typename
+    ... on AcceptShoppingListInvitePayload {
+      collaborator {
+        ...ShoppingListCollaboratorFragment
+        canEdit
+        canInviteOthers
+        invitedAt
+        shoppingList {
+          id
+          name
+          description
+        }
       }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
-mutation DeclineShoppingListInvite($token: String!) {
-  declineShoppingListInvite(token: $token) {
-    success
-    message
-    code
-    collaborator {
-      id
+mutation DeclineShoppingListInvite($input: DeclineShoppingListInviteInput!) {
+  declineShoppingListInvite(input: $input) {
+    __typename
+    ... on DeclineShoppingListInvitePayload {
+      collaborator {
+        id
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
@@ -89,7 +104,7 @@ subscription CollaborationChanges($listId: ID!) {
   collaborationChanged(listId: $listId) {
     mutation
     collaborator {
-      ...ShoppingListCollaboratorFragment
+      ...useShoppingListSubscriptions_collaborator
       canEdit
       invitedAt
       lastViewedAt

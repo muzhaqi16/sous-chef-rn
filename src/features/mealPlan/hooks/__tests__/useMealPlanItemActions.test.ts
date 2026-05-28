@@ -1,7 +1,10 @@
 import { act } from '@testing-library/react-native';
+import { InMemoryCache } from '@apollo/client';
+import fragmentMatcherData from '#/graphql/generated/fragmentMatcher.json';
 import {
   recordMock,
   renderHookWithApollo,
+  seedCache,
 } from '#/test-utils/apolloMockProvider';
 import {
   CreateMealPlanItemDocument,
@@ -9,6 +12,32 @@ import {
   DeleteMealPlanItemDocument,
 } from '#features/mealPlan/graphql/mealPlan.generated';
 import { useMealPlanItemActions } from '../useMealPlanItemActions';
+
+const seedToggleItem = (overrides: Record<string, unknown> = {}) =>
+  seedCache([
+    {
+      __typename: 'MealPlanItem',
+      id: 'mpi-1',
+      isCompleted: false,
+      completedAt: null,
+      servings: 1,
+      notes: null,
+      customMealName: null,
+      calories: null,
+      usedPantryItems: null,
+      mealType: 'DINNER',
+      date: '2025-06-15',
+      recipe: {
+        __typename: 'Recipe',
+        id: 'r-1',
+        name: 'Pasta',
+        servings: 1,
+        imageUrl: null,
+        totalTimeMinutes: 0,
+      },
+      ...overrides,
+    },
+  ]);
 
 const mockToastSuccess = jest.fn();
 const mockToastError = jest.fn();
@@ -47,9 +76,7 @@ describe('useMealPlanItemActions', () => {
   describe('createItem', () => {
     it('returns payload on success', async () => {
       const payload = {
-        __typename: 'MealPlanItemPayload',
-        success: true,
-        message: 'Created',
+        __typename: 'CreateMealPlanItemPayload',
         mealPlanItem: { __typename: 'MealPlanItem', id: 'mpi-1' },
       };
       const create = recordMock(CreateMealPlanItemDocument, {
@@ -78,16 +105,22 @@ describe('useMealPlanItemActions', () => {
       const create = recordMock(CreateMealPlanItemDocument, {
         data: {
           createMealPlanItem: {
-            __typename: 'MealPlanItemPayload',
-            success: false,
+            __typename: 'ConflictError',
+            code: 'CONFLICT',
             message: 'Conflict',
           },
         },
       });
 
+      // Inline fragments on the Error interface require possibleTypes for the
+      // cache to keep `code`/`message` when the concrete return is a
+      // ConflictError. The default test cache omits possibleTypes.
+      const cache = new InMemoryCache({
+        possibleTypes: fragmentMatcherData.possibleTypes,
+      });
       const { result } = renderHookWithApollo(
         () => useMealPlanItemActions('plan-1'),
-        { operationMocks: [create.mock] },
+        { operationMocks: [create.mock], cache },
       );
 
       let created: any;
@@ -108,9 +141,7 @@ describe('useMealPlanItemActions', () => {
   describe('updateItem', () => {
     it('returns payload on success', async () => {
       const payload = {
-        __typename: 'MealPlanItemPayload',
-        success: true,
-        message: 'Updated',
+        __typename: 'UpdateMealPlanItemPayload',
         mealPlanItem: { __typename: 'MealPlanItem', id: 'mpi-1' },
       };
       const update = recordMock(UpdateMealPlanItemDocument, {
@@ -134,43 +165,36 @@ describe('useMealPlanItemActions', () => {
   });
 
   describe('toggleCompleted', () => {
-    const mockItem = {
-      id: 'mpi-1',
-      isCompleted: false,
-      recipe: { id: 'r-1', name: 'Pasta' },
-      mealType: 'DINNER',
-      date: '2025-06-15',
-    };
-
     it('marks item as completed and shows toast', async () => {
       const update = recordMock(UpdateMealPlanItemDocument, {
         data: {
           updateMealPlanItem: {
-            __typename: 'MealPlanItemPayload',
-            success: true,
-            message: 'Updated',
+            __typename: 'UpdateMealPlanItemPayload',
             mealPlanItem: {
               __typename: 'MealPlanItem',
-              ...mockItem,
+              id: 'mpi-1',
               isCompleted: true,
             },
           },
         },
       });
 
+      const cache = seedToggleItem();
       const { result } = renderHookWithApollo(
         () => useMealPlanItemActions('plan-1'),
-        { operationMocks: [update.mock] },
+        { operationMocks: [update.mock], cache },
       );
 
       await act(async () => {
-        await result.current.toggleCompleted(mockItem as any);
+        await result.current.toggleCompleted('mpi-1');
       });
 
       expect(update.fired).toContainEqual(
         expect.objectContaining({
-          id: 'mpi-1',
-          input: expect.objectContaining({ isCompleted: true }),
+          input: expect.objectContaining({
+            id: 'mpi-1',
+            isCompleted: true,
+          }),
         }),
       );
       expect(mockToastSuccess).toHaveBeenCalledWith('Meal completed!');
@@ -180,20 +204,24 @@ describe('useMealPlanItemActions', () => {
       const update = recordMock(UpdateMealPlanItemDocument, {
         data: {
           updateMealPlanItem: {
-            __typename: 'MealPlanItemPayload',
-            success: true,
-            message: 'ok',
+            __typename: 'UpdateMealPlanItemPayload',
+            mealPlanItem: {
+              __typename: 'MealPlanItem',
+              id: 'mpi-1',
+              isCompleted: true,
+            },
           },
         },
       });
 
+      const cache = seedToggleItem();
       const { result } = renderHookWithApollo(
         () => useMealPlanItemActions('plan-1'),
-        { operationMocks: [update.mock] },
+        { operationMocks: [update.mock], cache },
       );
 
       await act(async () => {
-        await result.current.toggleCompleted(mockItem as any, {
+        await result.current.toggleCompleted('mpi-1', {
           deductFromPantry: true,
         });
       });
@@ -204,29 +232,27 @@ describe('useMealPlanItemActions', () => {
     });
 
     it('does not show toast when un-completing', async () => {
-      const completedItem = { ...mockItem, isCompleted: true };
       const update = recordMock(UpdateMealPlanItemDocument, {
         data: {
           updateMealPlanItem: {
-            __typename: 'MealPlanItemPayload',
-            success: true,
-            message: 'ok',
+            __typename: 'UpdateMealPlanItemPayload',
             mealPlanItem: {
               __typename: 'MealPlanItem',
-              ...completedItem,
+              id: 'mpi-1',
               isCompleted: false,
             },
           },
         },
       });
 
+      const cache = seedToggleItem({ isCompleted: true });
       const { result } = renderHookWithApollo(
         () => useMealPlanItemActions('plan-1'),
-        { operationMocks: [update.mock] },
+        { operationMocks: [update.mock], cache },
       );
 
       await act(async () => {
-        await result.current.toggleCompleted(completedItem as any);
+        await result.current.toggleCompleted('mpi-1');
       });
 
       expect(mockToastSuccess).not.toHaveBeenCalled();
@@ -237,7 +263,10 @@ describe('useMealPlanItemActions', () => {
     it('returns true on success', async () => {
       const del = recordMock(DeleteMealPlanItemDocument, {
         data: {
-          deleteMealPlanItem: { __typename: 'BasicPayload', success: true },
+          deleteMealPlanItem: {
+            __typename: 'DeleteMealPlanItemPayload',
+            mealPlanItem: { __typename: 'MealPlanItem', id: 'mpi-1' },
+          },
         },
       });
 
@@ -257,7 +286,11 @@ describe('useMealPlanItemActions', () => {
     it('returns false on failure', async () => {
       const del = recordMock(DeleteMealPlanItemDocument, {
         data: {
-          deleteMealPlanItem: { __typename: 'BasicPayload', success: false },
+          deleteMealPlanItem: {
+            __typename: 'NotFoundError',
+            code: 'NOT_FOUND',
+            message: 'Meal plan item not found',
+          },
         },
       });
 

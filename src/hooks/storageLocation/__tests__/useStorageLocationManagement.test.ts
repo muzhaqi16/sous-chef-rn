@@ -34,7 +34,6 @@ jest.mock('#/hooks/utils/useCrudOperations', () => ({
 }));
 
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
-  createAddToQueryFieldUpdater: jest.fn(() => jest.fn()),
   createAddToQueryConnectionUpdater: jest.fn(() => jest.fn()),
   createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),
   createRemoveFromQueryConnectionUpdater: jest.fn(() => jest.fn()),
@@ -133,10 +132,8 @@ function buildUpdateLocationMock(): MockedResponse {
     result: {
       data: {
         updateStorageLocation: {
-          __typename: 'StorageLocationPayload',
-          success: true,
-          message: 'OK',
-          code: 'OK',
+          __typename: 'UpdateStorageLocationPayload',
+          home: null,
           storageLocation: buildLocationNode({
             id: 'loc-1',
             name: 'Updated Fridge',
@@ -158,15 +155,19 @@ function buildDeleteLocationMock(
     },
     result: {
       data: {
-        deleteStorageLocation: {
-          __typename: 'StorageLocationPayload',
-          success,
-          message,
-          code: success ? 'OK' : 'ERROR',
-          storageLocation: success
-            ? { __typename: 'StorageLocation', id: 'loc-1' }
-            : null,
-        },
+        deleteStorageLocation: success
+          ? {
+              __typename: 'DeleteStorageLocationPayload',
+              home: null,
+              storageLocation: {
+                __typename: 'StorageLocation',
+                id: 'loc-1',
+              },
+            }
+          : {
+              __typename: 'ValidationError',
+              message,
+            },
       },
     },
   };
@@ -181,10 +182,8 @@ function buildSetDefaultMock(): MockedResponse {
     result: {
       data: {
         setDefaultStorageLocation: {
-          __typename: 'StorageLocationPayload',
-          success: true,
-          message: 'OK',
-          code: 'OK',
+          __typename: 'SetDefaultStorageLocationPayload',
+          home: null,
           storageLocation: {
             __typename: 'StorageLocation',
             id: 'loc-2',

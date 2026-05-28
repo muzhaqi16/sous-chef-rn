@@ -3,24 +3,35 @@ import {
   CreateMealPlanDocument,
   UpdateMealPlanDocument,
   DeleteMealPlanDocument,
-  GetMealPlansDocument,
 } from '#features/mealPlan/graphql/mealPlan.generated';
 import {
-  SortOrder,
   type CreateMealPlanInput,
   type UpdateMealPlanInput,
 } from '#/graphql/generated/schemaTypes';
+import {
+  createAddToQueryConnectionUpdater,
+  createRemoveFromQueryConnectionUpdater,
+} from '#/apollo/utils/cacheUpdaters';
+
+const addToMealPlans = createAddToQueryConnectionUpdater(
+  'mealPlans',
+  'MealPlan',
+);
+const removeFromMealPlans = createRemoveFromQueryConnectionUpdater(
+  'mealPlans',
+  'MealPlan',
+);
 
 export function useMealPlanActions() {
   const [createMealPlanMutation, { loading: creating }] = useMutation(
     CreateMealPlanDocument,
     {
-      refetchQueries: [
-        {
-          query: GetMealPlansDocument,
-          variables: { first: 20, orderBy: { startDate: SortOrder.Desc } },
-        },
-      ],
+      update: (cache, { data }) => {
+        const result = data?.createMealPlan;
+        if (result?.__typename === 'CreateMealPlanPayload') {
+          addToMealPlans(cache, result.mealPlan, { position: 'start' });
+        }
+      },
     },
   );
 
@@ -31,12 +42,16 @@ export function useMealPlanActions() {
   const [deleteMealPlanMutation, { loading: deleting }] = useMutation(
     DeleteMealPlanDocument,
     {
-      refetchQueries: [
-        {
-          query: GetMealPlansDocument,
-          variables: { first: 20, orderBy: { startDate: SortOrder.Desc } },
-        },
-      ],
+      update: (cache, { data }, { variables }) => {
+        const result = data?.deleteMealPlan;
+        if (
+          result?.__typename !== 'DeleteMealPlanPayload' ||
+          !variables?.input?.id
+        ) {
+          return;
+        }
+        removeFromMealPlans(cache, variables.input.id, { evictItem: true });
+      },
     },
   );
 
@@ -47,18 +62,21 @@ export function useMealPlanActions() {
     return result.data?.createMealPlan ?? null;
   };
 
-  const updateMealPlan = async (id: string, input: UpdateMealPlanInput) => {
+  const updateMealPlan = async (
+    id: string,
+    input: Omit<UpdateMealPlanInput, 'id'>,
+  ) => {
     const result = await updateMealPlanMutation({
-      variables: { id, input },
+      variables: { input: { ...input, id } },
     });
     return result.data?.updateMealPlan ?? null;
   };
 
   const deleteMealPlan = async (id: string) => {
     const result = await deleteMealPlanMutation({
-      variables: { id },
+      variables: { input: { id } },
     });
-    return result.data?.deleteMealPlan?.success ?? false;
+    return result.data?.deleteMealPlan?.__typename === 'DeleteMealPlanPayload';
   };
 
   return {

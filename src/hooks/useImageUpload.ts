@@ -165,16 +165,19 @@ export const useImageUpload = () => {
           fileToUpload.type || getMimeTypeFromUri(fileToUpload.uri);
         const { data: uploadData } = await createUploadUrl({
           variables: {
-            mime: mimeType,
-            purpose: purpose,
-            itemId: itemId,
+            input: {
+              mime: mimeType,
+              purpose: purpose,
+              itemId: itemId,
+            },
           },
         });
 
-        const uploadResult = uploadData?.createImageUploadUrl;
-        if (!uploadResult) {
+        const uploadPayload = uploadData?.createImageUploadUrl;
+        if (uploadPayload?.__typename !== 'CreateImageUploadUrlPayload') {
           throw new Error('Failed to get upload URL');
         }
+        const uploadResult = uploadPayload;
 
         onProgress?.(30);
 
@@ -222,9 +225,12 @@ export const useImageUpload = () => {
           undefined,
           async (key: string) => {
             const { data } = await confirmProfileUpload({
-              variables: { key },
+              variables: { input: { key } },
             });
-            return data?.confirmProfileImageUpload?.url || null;
+            return data?.confirmProfileImageUpload?.__typename ===
+              'ConfirmProfileImageUploadPayload'
+              ? data.confirmProfileImageUpload.url
+              : null;
           },
           options,
         ),
@@ -267,9 +273,12 @@ export const useImageUpload = () => {
           itemId,
           async (key: string) => {
             const { data } = await confirmItemUpload({
-              variables: { itemId, key },
+              variables: { input: { itemId, key } },
             });
-            return data?.confirmItemImageUpload?.url || null;
+            return data?.confirmItemImageUpload?.__typename ===
+              'ConfirmItemImageUploadPayload'
+              ? data.confirmItemImageUpload.url
+              : null;
           },
           options,
         ),
@@ -318,7 +327,9 @@ export const useImageUpload = () => {
     // Sync avatar to Zustand store so screens reading from the store
     // (e.g. Pantry header) reflect the change immediately.
     useStore.getState().updateUser({ profilePicture: avatarUrl });
-    return result.data?.updateProfile?.userProfile || null;
+    return result.data?.updateProfile?.__typename === 'UpdateProfilePayload'
+      ? result.data.updateProfile.userProfile
+      : null;
   };
 
   const updateProfileCoverUrl = async (coverImageUrl: string) => {
@@ -333,7 +344,9 @@ export const useImageUpload = () => {
       },
     );
     if (!result) return null;
-    return result.data?.updateProfile?.userProfile || null;
+    return result.data?.updateProfile?.__typename === 'UpdateProfilePayload'
+      ? result.data.updateProfile.userProfile
+      : null;
   };
 
   const updateItemImageUrl = async (id: string, imageUrl: string) => {

@@ -51,6 +51,7 @@ jest.mock('#/storage/mmkv', () => ({
       return undefined;
     },
   },
+  isStorageReady: () => true,
 }));
 
 beforeEach(() => {

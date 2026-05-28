@@ -1,6 +1,6 @@
 import { useRef } from 'react';
-import { alertService } from '#/services/alertService';
 import { useMutation } from '@apollo/client/react';
+import { handleMutationError } from '#/utils/errorHandlers';
 import { MoveShoppingItemToPantryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { StorageState } from '#/graphql/generated/schemaTypes';
 import { type ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
@@ -46,8 +46,13 @@ export function useMoveToPantry({
     MoveShoppingItemToPantryDocument,
     {
       update: (cache, { data }) => {
-        if (!data?.moveShoppingItemToPantry || !moveToPantryIdRef.current)
+        const payload = data?.moveShoppingItemToPantry;
+        if (
+          payload?.__typename !== 'MoveShoppingItemToPantryPayload' ||
+          !moveToPantryIdRef.current
+        ) {
           return;
+        }
 
         executeCacheUpdate(() => {
           // Add to pantry items cache
@@ -59,7 +64,7 @@ export function useMoveToPantry({
           addToPantryCache(
             cache,
             moveToPantryIdRef.current!,
-            data.moveShoppingItemToPantry!.pantryItem!,
+            payload.pantryItem,
           );
 
           const selectedItem = selectedItemRef.current;
@@ -104,10 +109,7 @@ export function useMoveToPantry({
         onSuccess?.();
       },
       onError: error => {
-        alertService.alert(
-          'Error',
-          error.message || 'Failed to move item to pantry',
-        );
+        handleMutationError(error, { operation: 'Move Item to Pantry' });
       },
     },
   );

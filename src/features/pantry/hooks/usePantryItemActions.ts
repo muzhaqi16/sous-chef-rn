@@ -5,7 +5,6 @@ import {
   CreatePantryItemUsageDocument,
   RestockPantryItemDocument,
 } from '#features/pantry/graphql/pantry.generated';
-import type { PantryItemFragment } from '#features/pantry/graphql/pantryFragments.generated';
 import { UsagePurpose, WasteReason } from '#/graphql/generated/schemaTypes';
 import { isNetworkError } from '#/utils/isNetworkError';
 import {
@@ -18,23 +17,34 @@ import {
   isVersionConflictPayload,
   getVersionConflictMessage,
 } from '#/utils/errors/versionConflict';
+import {
+  isNotFoundErrorPayload,
+  getNotFoundMessage,
+} from '#/utils/errors/notFound';
 import { Telemetry } from '#services/telemetry';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
+import {
+  _UsePantryItemActionsTrackingUnitFragmentDoc,
+  _UsePantryItemActionsQuantityFragmentDoc,
+  _UsePantryItemActionsIdFragmentDoc,
+} from './usePantryItemActions.generated';
 
 interface UsePantryItemActionsOptions {
-  pantryItems: PantryItemFragment[];
   removeItem: (id: string) => Promise<void>;
   navigateTo: {
     pantryItem: (params: { itemId: string }) => void;
   };
 }
 
-// Discriminated union: only one modal can be open at a time
+// Discriminated union: only one modal can be open at a time.
+// Stores only the entity id — the modal materializes the entity from the
+// Apollo cache via `useFragment`, so mutations to the pantry item are
+// reflected in the open modal without a re-snapshot.
 type ActiveModal =
   | { type: null }
-  | { type: 'consume'; item: PantryItemFragment }
-  | { type: 'waste'; item: PantryItemFragment }
-  | { type: 'restock'; item: PantryItemFragment };
+  | { type: 'consume'; itemId: string }
+  | { type: 'waste'; itemId: string }
+  | { type: 'restock'; itemId: string };
 
 const CLOSED_MODAL: ActiveModal = { type: null };
 
@@ -50,7 +60,6 @@ const CLOSED_MODAL: ActiveModal = { type: null };
  * - Delete item (mutation)
  */
 export function usePantryItemActions({
-  pantryItems,
   removeItem,
   navigateTo,
 }: UsePantryItemActionsOptions) {
@@ -59,6 +68,41 @@ export function usePantryItemActions({
   const [activeModal, setActiveModal] = useState<ActiveModal>(CLOSED_MODAL);
 
   const closeModal = () => setActiveModal(CLOSED_MODAL);
+
+  /**
+   * Read the tracking-unit id for an item from the cache. Used by mutation
+   * handlers to decide whether an optimistic same-unit update is safe.
+   */
+  const readTrackingUnitId = (itemId: string): string | undefined => {
+    const cacheId = client.cache.identify({
+      __typename: 'PantryItem',
+      id: itemId,
+    });
+    if (!cacheId) return undefined;
+    const data = client.cache.readFragment<{
+      unit: { id: string } | null;
+    }>({
+      id: cacheId,
+      fragment: _UsePantryItemActionsTrackingUnitFragmentDoc,
+    });
+    return data?.unit?.id ?? undefined;
+  };
+
+  /**
+   * Read the current quantity from the cache, for optimistic revert.
+   */
+  const readCurrentQuantity = (itemId: string): number => {
+    const cacheId = client.cache.identify({
+      __typename: 'PantryItem',
+      id: itemId,
+    });
+    if (!cacheId) return 0;
+    const data = client.cache.readFragment<{ quantity: number }>({
+      id: cacheId,
+      fragment: _UsePantryItemActionsQuantityFragmentDoc,
+    });
+    return data?.quantity ?? 0;
+  };
 
   /**
    * Optimistically update a pantry item's quantity in cache for instant UI feedback.
@@ -109,30 +153,43 @@ export function usePantryItemActions({
   /**
    * Handle payload-level errors from pantry mutations.
    * Returns true if an error was detected and handled, false otherwise.
+   *
+   * Accepts either a payload-variant (anything with __typename ending in
+   * 'Payload') or an error-variant carrying `code` + `message`.
    */
   const handlePayloadError = (
-    payload: {
-      success: boolean;
-      code: string;
-      message: string;
-      validUnits?: string[] | null;
-    },
+    payload: { __typename: string } & Record<string, unknown>,
     revertFn?: () => void,
   ): boolean => {
-    if (payload.success) return false;
+    if (payload.__typename.endsWith('Payload')) return false;
 
     revertFn?.();
 
-    if (isInvalidUnitPayload(payload)) {
-      const validList = payload.validUnits?.join(', ');
+    const code =
+      typeof payload.code === 'string' ? (payload.code as string) : '';
+    const message =
+      typeof payload.message === 'string'
+        ? (payload.message as string)
+        : 'Something went wrong';
+    const errorShape = { success: false, code, message };
+
+    if (isNotFoundErrorPayload(payload)) {
+      const resource =
+        typeof payload.resource === 'string' ? payload.resource : undefined;
+      alertService.alert('Not Found', getNotFoundMessage(resource));
+    } else if (isInvalidUnitPayload(errorShape)) {
+      const rawValidUnits = (payload as { validUnits?: unknown }).validUnits;
+      const validList = Array.isArray(rawValidUnits)
+        ? (rawValidUnits as string[]).join(', ')
+        : undefined;
       const detail = validList
-        ? `${payload.message}\n\nValid units: ${validList}`
-        : payload.message;
+        ? `${message}\n\nValid units: ${validList}`
+        : message;
       alertService.alert('Invalid Unit', detail);
-    } else if (isVersionConflictPayload(payload)) {
-      alertService.alert('Item Updated', payload.message);
+    } else if (isVersionConflictPayload(errorShape)) {
+      alertService.alert('Item Updated', message);
     } else {
-      alertService.alert('Error', payload.message);
+      alertService.alert('Error', message);
     }
 
     return true;
@@ -157,18 +214,19 @@ export function usePantryItemActions({
   ) => {
     if (activeModal.type !== 'consume') return;
 
-    const item = activeModal.item;
-    const originalQty = item.quantity;
+    const itemId = activeModal.itemId;
+    const originalQty = readCurrentQuantity(itemId);
+    const trackingUnitId = readTrackingUnitId(itemId);
     // Only apply optimistic update when using the tracking unit (same unit = direct subtraction)
     // When using a converted unit, the server response will update the cache
-    const canOptimistic = !usageUnitId || usageUnitId === item.unit?.id;
+    const canOptimistic = !usageUnitId || usageUnitId === trackingUnitId;
     if (canOptimistic) {
-      optimisticUpdateQuantity(item.id, originalQty - quantityUsed);
+      optimisticUpdateQuantity(itemId, originalQty - quantityUsed);
     }
 
     const consumeNotes = notes || undefined;
     const revertOptimistic = canOptimistic
-      ? () => revertQuantity(item.id, originalQty)
+      ? () => revertQuantity(itemId, originalQty)
       : undefined;
 
     const consumeResult = await executeMutation(
@@ -176,7 +234,7 @@ export function usePantryItemActions({
         createPantryItemUsage({
           variables: {
             input: {
-              pantryItemId: item.id,
+              pantryItemId: itemId,
               quantityUsed,
               purpose,
               notes: consumeNotes,
@@ -230,16 +288,17 @@ export function usePantryItemActions({
   ) => {
     if (activeModal.type !== 'waste') return;
 
-    const item = activeModal.item;
-    const originalQty = item.quantity;
-    const canOptimistic = !wasteUnitId || wasteUnitId === item.unit?.id;
+    const itemId = activeModal.itemId;
+    const originalQty = readCurrentQuantity(itemId);
+    const trackingUnitId = readTrackingUnitId(itemId);
+    const canOptimistic = !wasteUnitId || wasteUnitId === trackingUnitId;
     if (canOptimistic) {
-      optimisticUpdateQuantity(item.id, originalQty - wasteAmount);
+      optimisticUpdateQuantity(itemId, originalQty - wasteAmount);
     }
 
     const wasteNotes = notes || undefined;
     const revertOptimistic = canOptimistic
-      ? () => revertQuantity(item.id, originalQty)
+      ? () => revertQuantity(itemId, originalQty)
       : undefined;
 
     const wasteResult = await executeMutation(
@@ -247,7 +306,7 @@ export function usePantryItemActions({
         createPantryItemUsage({
           variables: {
             input: {
-              pantryItemId: item.id,
+              pantryItemId: itemId,
               quantityUsed: wasteAmount,
               purpose: UsagePurpose.Waste,
               notes: wasteNotes,
@@ -302,17 +361,18 @@ export function usePantryItemActions({
   ) => {
     if (activeModal.type !== 'restock') return;
 
-    const item = activeModal.item;
-    const originalQty = item.quantity;
-    const canOptimistic = !unitId || unitId === item.unit?.id;
+    const itemId = activeModal.itemId;
+    const originalQty = readCurrentQuantity(itemId);
+    const trackingUnitId = readTrackingUnitId(itemId);
+    const canOptimistic = !unitId || unitId === trackingUnitId;
     if (canOptimistic) {
-      optimisticUpdateQuantity(item.id, originalQty + quantity);
+      optimisticUpdateQuantity(itemId, originalQty + quantity);
     }
 
     // Optimistically increment activeBatchCount for instant UI feedback
     const cacheIdForBatch = client.cache.identify({
       __typename: 'PantryItem',
-      id: item.id,
+      id: itemId,
     });
     if (cacheIdForBatch) {
       client.cache.modify({
@@ -329,7 +389,7 @@ export function usePantryItemActions({
     const expiresAtValue = expiresAt ? expiresAt.toISOString() : null;
     const revertOptimistic = () => {
       if (canOptimistic) {
-        revertQuantity(item.id, originalQty);
+        revertQuantity(itemId, originalQty);
       }
       if (cacheIdForBatch) {
         client.cache.modify({
@@ -347,8 +407,8 @@ export function usePantryItemActions({
       () =>
         restockPantryItem({
           variables: {
-            id: item.id,
             input: {
+              id: itemId,
               quantity,
               unitId,
               notes: restockNotes,
@@ -393,27 +453,39 @@ export function usePantryItemActions({
     closeModal();
   };
 
+  // Existence check helper — opens the modal only if the cache has an entry
+  // for the id (mirrors the previous `materializeItem` behavior).
+  const hasItemInCache = (itemId: string): boolean => {
+    const cacheId = client.cache.identify({
+      __typename: 'PantryItem',
+      id: itemId,
+    });
+    if (!cacheId) return false;
+    const data = client.cache.readFragment<{ id: string }>({
+      id: cacheId,
+      fragment: _UsePantryItemActionsIdFragmentDoc,
+    });
+    return !!data?.id;
+  };
+
   // Handler to open consume modal (for swipe action)
   const handleConsumeItem = (itemId: string) => {
-    const item = pantryItems.find(p => p.id === itemId);
-    if (item) {
-      setActiveModal({ type: 'consume', item });
+    if (hasItemInCache(itemId)) {
+      setActiveModal({ type: 'consume', itemId });
     }
   };
 
   // Handler to open waste modal (for swipe action)
   const handleWasteItem = (itemId: string) => {
-    const item = pantryItems.find(p => p.id === itemId);
-    if (item) {
-      setActiveModal({ type: 'waste', item });
+    if (hasItemInCache(itemId)) {
+      setActiveModal({ type: 'waste', itemId });
     }
   };
 
   // Handler to open restock modal (for swipe action)
   const handleRestockItem = (itemId: string) => {
-    const item = pantryItems.find(p => p.id === itemId);
-    if (item) {
-      setActiveModal({ type: 'restock', item });
+    if (hasItemInCache(itemId)) {
+      setActiveModal({ type: 'restock', itemId });
     }
   };
 
@@ -435,19 +507,19 @@ export function usePantryItemActions({
   // Derive modal states from the single activeModal for backward compatibility
   const consumeModal = {
     visible: activeModal.type === 'consume',
-    item: activeModal.type === 'consume' ? activeModal.item : null,
+    itemId: activeModal.type === 'consume' ? activeModal.itemId : null,
     close: closeModal,
   };
 
   const wasteModal = {
     visible: activeModal.type === 'waste',
-    item: activeModal.type === 'waste' ? activeModal.item : null,
+    itemId: activeModal.type === 'waste' ? activeModal.itemId : null,
     close: closeModal,
   };
 
   const restockModal = {
     visible: activeModal.type === 'restock',
-    item: activeModal.type === 'restock' ? activeModal.item : null,
+    itemId: activeModal.type === 'restock' ? activeModal.itemId : null,
     close: closeModal,
   };
 

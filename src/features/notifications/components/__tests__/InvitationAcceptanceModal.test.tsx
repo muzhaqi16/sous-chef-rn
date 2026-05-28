@@ -15,8 +15,8 @@ import {
   DeclineHomeInviteDocument,
 } from '#operations/home/home.generated';
 import {
-  AcceptShoppingListInviteDocument,
-  DeclineShoppingListInviteDocument,
+  InvitationAcceptanceModalAcceptShoppingListInviteDocument,
+  InvitationAcceptanceModalDeclineShoppingListInviteDocument as DeclineShoppingListInviteDocument,
   MyShoppingListInvitesDocument,
 } from '../InvitationAcceptanceModal.generated';
 import { alertService } from '#/services/alertService';
@@ -94,7 +94,9 @@ jest.mock('#/utils/compilerSafeWrappers', () => ({
 }));
 
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
-  createAddToQueryFieldUpdater: jest.fn(() => jest.fn()),
+  createAddToQueryConnectionUpdater: jest.fn(() => jest.fn()),
+  createRemoveFromParentArrayUpdater: jest.fn(() => jest.fn()),
+  safeEvict: jest.fn(),
 }));
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -170,41 +172,63 @@ function myShoppingListInvitesRefetchMock(): MockedResponse {
 
 function acceptHomeOk(opts: { hasMembership?: boolean } = {}) {
   const hasMembership = opts.hasMembership ?? true;
+  // Note: AcceptHomeInviteSuccess.membership is non-nullable in the schema.
+  // When `hasMembership: false`, we return a ConflictError union member instead
+  // to simulate the "already accepted" branch the test asserts on.
+  if (!hasMembership) {
+    return recordMock(AcceptHomeInviteDocument, {
+      data: {
+        acceptHomeInvite: {
+          __typename: 'ConflictError',
+          code: 'CONFLICT',
+          message: 'Already accepted',
+        },
+      },
+    });
+  }
   return recordMock(AcceptHomeInviteDocument, {
     data: {
       acceptHomeInvite: {
-        __typename: 'HomeInvitePayload',
-        success: true,
-        message: '',
-        code: 'OK',
-        membership: hasMembership
-          ? {
+        __typename: 'AcceptHomeInvitePayload',
+        membership: {
+          __typename: 'Membership',
+          id: 'm1',
+          homeId: 'home-1',
+          role: 'MEMBER',
+          canManageHome: false,
+          canViewPantry: true,
+          canEditPantry: true,
+          canAddItems: true,
+          canRemoveItems: true,
+          canInviteOthers: false,
+          home: {
+            __typename: 'Home',
+            id: 'home-1',
+            name: "Alice's Home",
+            isDefault: false,
+            version: 1,
+            myMembership: {
               __typename: 'Membership',
               id: 'm1',
-              homeId: 'home-1',
-              userId: 'u1',
               role: 'MEMBER',
-              status: 'ACTIVE',
-              displayName: 'Tester',
               canManageHome: false,
               canViewPantry: true,
               canEditPantry: true,
               canAddItems: true,
               canRemoveItems: true,
               canInviteOthers: false,
-              user: {
-                __typename: 'User',
-                id: 'u1',
-                email: 'a@b.com',
-                profile: {
-                  __typename: 'UserProfile',
-                  id: 'p1',
-                  displayName: 'Tester',
-                  avatar: null,
-                },
-              },
-            }
-          : null,
+            },
+            pantriesConnection: {
+              __typename: 'PantryConnection',
+              totalCount: 0,
+              edges: [],
+            },
+            membersConnection: {
+              __typename: 'MembershipConnection',
+              totalCount: 1,
+            },
+          },
+        },
       },
     },
   });
@@ -216,54 +240,65 @@ function acceptHomeError(message: string) {
 
 function acceptShoppingListOk(opts: { success?: boolean } = {}) {
   const success = opts.success ?? true;
-  return recordMock(AcceptShoppingListInviteDocument, {
+  // When `success: false`, simulate the error branch via a ConflictError union
+  // member. The test asserts onAccept is NOT called in that case.
+  if (!success) {
+    return recordMock(
+      InvitationAcceptanceModalAcceptShoppingListInviteDocument,
+      {
+        data: {
+          acceptShoppingListInvite: {
+            __typename: 'ConflictError',
+            code: 'CONFLICT',
+            message: 'Could not accept',
+          },
+        },
+      },
+    );
+  }
+  return recordMock(InvitationAcceptanceModalAcceptShoppingListInviteDocument, {
     data: {
       acceptShoppingListInvite: {
-        __typename: 'ShoppingListCollaboratorPayload',
-        success,
-        message: '',
-        code: 'OK',
-        collaborator: success
-          ? {
-              __typename: 'ShoppingListCollaborator',
-              id: 'c1',
-              email: 'a@b.com',
-              role: 'EDITOR',
-              status: 'ACTIVE',
-              collaboratorId: 'u1',
-              canAddItems: true,
-              canRemoveItems: true,
-              canEditItems: true,
-              canMarkPurchased: true,
-              canEdit: true,
-              canInviteOthers: false,
-              invitedAt: '2025-01-01T00:00:00.000Z',
-              shoppingList: {
-                __typename: 'ShoppingList',
-                id: 'sl-1',
-                name: 'Weekly Groceries',
-                description: null,
-              },
-              collaborator: {
-                __typename: 'User',
-                id: 'u1',
-                email: 'a@b.com',
-                profile: {
-                  __typename: 'UserProfile',
-                  id: 'p1',
-                  displayName: 'Tester',
-                  avatar: null,
-                },
-              },
-            }
-          : null,
+        __typename: 'AcceptShoppingListInvitePayload',
+        collaborator: {
+          __typename: 'ShoppingListCollaborator',
+          id: 'c1',
+          email: 'a@b.com',
+          role: 'EDITOR',
+          status: 'ACTIVE',
+          collaboratorId: 'u1',
+          canAddItems: true,
+          canRemoveItems: true,
+          canEditItems: true,
+          canMarkPurchased: true,
+          canEdit: true,
+          canInviteOthers: false,
+          invitedAt: '2025-01-01T00:00:00.000Z',
+          shoppingList: {
+            __typename: 'ShoppingList',
+            id: 'sl-1',
+            name: 'Weekly Groceries',
+            description: null,
+          },
+          collaborator: {
+            __typename: 'User',
+            id: 'u1',
+            email: 'a@b.com',
+            profile: {
+              __typename: 'UserProfile',
+              id: 'p1',
+              displayName: 'Tester',
+              avatar: null,
+            },
+          },
+        },
       },
     },
   });
 }
 
 function acceptShoppingListError(message: string) {
-  return recordMock(AcceptShoppingListInviteDocument, {
+  return recordMock(InvitationAcceptanceModalAcceptShoppingListInviteDocument, {
     error: new Error(message),
   });
 }
@@ -272,10 +307,7 @@ function declineHomeOk() {
   return recordMock(DeclineHomeInviteDocument, {
     data: {
       declineHomeInvite: {
-        __typename: 'HomeInvitePayload',
-        success: true,
-        message: '',
-        code: 'OK',
+        __typename: 'DeclineHomeInvitePayload',
         homeInvite: { __typename: 'HomeInvite', id: 'inv-1' },
       },
     },
@@ -290,10 +322,7 @@ function declineShoppingListOk() {
   return recordMock(DeclineShoppingListInviteDocument, {
     data: {
       declineShoppingListInvite: {
-        __typename: 'ShoppingListCollaboratorPayload',
-        success: true,
-        message: '',
-        code: 'OK',
+        __typename: 'DeclineShoppingListInvitePayload',
         collaborator: {
           __typename: 'ShoppingListCollaborator',
           id: 'c1',
@@ -418,7 +447,7 @@ describe('InvitationAcceptanceModal', () => {
     await waitFor(() => {
       expect(defaultProps.onAccept).toHaveBeenCalled();
     });
-    expect(acceptMock.fired).toContainEqual({ token: 'abc123' });
+    expect(acceptMock.fired).toContainEqual({ input: { token: 'abc123' } });
     expect(defaultProps.onClose).toHaveBeenCalled();
   });
 
@@ -441,7 +470,7 @@ describe('InvitationAcceptanceModal', () => {
     await waitFor(() => {
       expect(defaultProps.onAccept).toHaveBeenCalled();
     });
-    expect(acceptMock.fired).toContainEqual({ token: 'def456' });
+    expect(acceptMock.fired).toContainEqual({ input: { token: 'def456' } });
     expect(defaultProps.onClose).toHaveBeenCalled();
   });
 
@@ -595,7 +624,7 @@ describe('InvitationAcceptanceModal', () => {
       declineButton.onPress();
     });
 
-    expect(declineMock.fired).toContainEqual({ token: 'abc123' });
+    expect(declineMock.fired).toContainEqual({ input: { token: 'abc123' } });
   });
 
   it('handles reject confirmation for SHOPPING_LIST_INVITE with token', async () => {
@@ -625,7 +654,7 @@ describe('InvitationAcceptanceModal', () => {
       declineButton.onPress();
     });
 
-    expect(declineMock.fired).toContainEqual({ token: 'def456' });
+    expect(declineMock.fired).toContainEqual({ input: { token: 'def456' } });
   });
 
   it('handles reject error with expired message for HOME_INVITE', async () => {
@@ -796,7 +825,7 @@ describe('InvitationAcceptanceModal', () => {
     expect(screen.getByText('Weekly Groceries')).toBeTruthy();
   });
 
-  it('handles accept for HOME_INVITE when result has no membership', async () => {
+  it('handles accept for HOME_INVITE when result is not Success union (does not call onAccept)', async () => {
     const user = userEvent.setup();
     const acceptMock = acceptHomeOk({ hasMembership: false });
 
@@ -808,13 +837,13 @@ describe('InvitationAcceptanceModal', () => {
       ],
     });
 
-    await user.press(screen.getByText('Accept'));
-
-    // success: true + null membership → "already accepted" branch calls
-    // onAccept with the original invitation.
-    await waitFor(() => {
-      expect(defaultProps.onAccept).toHaveBeenCalled();
+    await act(async () => {
+      await user.press(screen.getByText('Accept'));
     });
+
+    // Result is ConflictError (non-Success union member) → onAccept must NOT
+    // be called. Production only invokes onAccept on `AcceptHomeInviteSuccess`.
+    expect(defaultProps.onAccept).not.toHaveBeenCalled();
   });
 
   it('handles accept for SHOPPING_LIST_INVITE when result has no success', async () => {

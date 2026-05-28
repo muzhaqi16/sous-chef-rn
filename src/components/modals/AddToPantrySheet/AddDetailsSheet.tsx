@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Pressable } from '#components/atoms/themedComponents';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import PagerView from 'react-native-pager-view';
@@ -16,8 +17,6 @@ import { DetailsPage } from './DetailsPage';
 import { StoragePage } from './StoragePage';
 import { StockSettingsPage } from './StockSettingsPage';
 import { Text } from '#components/atoms/Text';
-
-const PAGES = ['Main', 'Details', 'Storage', 'Stock'];
 
 interface AddDetailsSheetProps {
   visible: boolean;
@@ -123,6 +122,13 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
   onClose,
   onSuccess,
 }) => {
+  const { t } = useTranslation();
+  const pages = [
+    t('addToPantry.pageMain'),
+    t('addToPantry.pageDetails'),
+    t('addToPantry.pageStorage'),
+    t('addToPantry.pageStock'),
+  ];
   const { ref, modalProps, insets } = useStandardBottomSheet({
     visible: visible && !!pantryId,
     onDismiss: onClose,
@@ -340,11 +346,11 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
             ]}
           >
             <Text size="md" weight="medium" tone="secondary">
-              Cancel
+              {t('addToPantry.cancel')}
             </Text>
           </Pressable>
           <Text size="lg" weight="bold" align="center" style={styles.title}>
-            Add Item Details
+            {t('addToPantry.addItemDetails')}
           </Text>
           <Pressable
             style={({ pressed }) => [
@@ -357,14 +363,14 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
             testID="add-pantry-item-submit-button"
           >
             <Text size="md" weight="semibold" style={styles.saveButtonText}>
-              {loading ? 'Adding...' : 'Add'}
+              {loading ? t('addToPantry.adding') : t('addToPantry.add')}
             </Text>
           </Pressable>
         </View>
 
         {/* Page Indicators */}
         <PageIndicator
-          pages={PAGES}
+          pages={pages}
           currentPage={currentPage}
           onPagePress={handlePageChange}
         />

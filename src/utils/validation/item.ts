@@ -1,10 +1,12 @@
 import { string, number, array, object, boolean, type InferType } from 'yup';
+import { normalizeSmartPunctuation } from './common';
 
 // --- item-specific validation rules ------------------------------------------
 
 // Item name validation
 export const itemNameRule = string()
   .required('Item name is required')
+  .transform(normalizeSmartPunctuation)
   .min(1, 'Item name cannot be empty')
   .max(100, 'Item name cannot exceed 100 characters')
   .matches(

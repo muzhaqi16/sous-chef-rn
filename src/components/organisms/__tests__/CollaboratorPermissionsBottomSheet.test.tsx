@@ -40,10 +40,6 @@ jest.mock('#components/atoms/BottomSheetHeader', () => ({
   },
 }));
 
-jest.mock('#components/atoms/GlobalBottomSheetBackdrop', () => ({
-  GlobalBottomSheetBackdrop: () => null,
-}));
-
 jest.mock('#/utils/compilerSafeWrappers');
 
 describe('CollaboratorPermissionsBottomSheet', () => {

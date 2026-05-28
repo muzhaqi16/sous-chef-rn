@@ -1,11 +1,10 @@
-import { useMutation } from '@apollo/client/react';
+import { useApolloClient, useMutation } from '@apollo/client/react';
 import {
   CreateMealPlanItemDocument,
   UpdateMealPlanItemDocument,
   DeleteMealPlanItemDocument,
-  GetMealPlanDocument,
 } from '#features/mealPlan/graphql/mealPlan.generated';
-import { type MealPlanItemActions_OptimisticFullItemFragment } from './useMealPlanItemActions.generated';
+import { MealPlanItemActions_OptimisticFullItemFragmentDoc } from './useMealPlanItemActions.generated';
 import {
   type CreateMealPlanItemInput,
   type UpdateMealPlanItemInput,
@@ -28,45 +27,39 @@ const removeFromMealPlanItems = createRemoveFromParentArrayUpdater(
 );
 
 export function useMealPlanItemActions(mealPlanId: string | null) {
-  const refetchConfig = mealPlanId
-    ? [{ query: GetMealPlanDocument, variables: { id: mealPlanId } }]
-    : [];
-
+  const client = useApolloClient();
   const [createItemMutation, { loading: creating }] = useMutation(
     CreateMealPlanItemDocument,
     {
-      refetchQueries: refetchConfig,
       update(cache, { data }) {
-        if (!data?.createMealPlanItem?.mealPlanItem || !mealPlanId) return;
-        addToMealPlanItems(
-          cache,
-          mealPlanId,
-          data.createMealPlanItem.mealPlanItem,
-          { position: 'end' },
-        );
+        const result = data?.createMealPlanItem;
+        if (result?.__typename !== 'CreateMealPlanItemPayload' || !mealPlanId) {
+          return;
+        }
+        addToMealPlanItems(cache, mealPlanId, result.mealPlanItem, {
+          position: 'end',
+        });
       },
     },
   );
 
+  // No update/refetch needed — the mutation returns the full mealPlanItem
+  // with id, so Apollo auto-normalizes the cache entry.
   const [updateItemMutation, { loading: updating }] = useMutation(
     UpdateMealPlanItemDocument,
-    {
-      refetchQueries: refetchConfig,
-    },
   );
 
   const [deleteItemMutation, { loading: deleting }] = useMutation(
     DeleteMealPlanItemDocument,
     {
-      refetchQueries: refetchConfig,
       update(cache, { data }) {
-        if (!data?.deleteMealPlanItem?.mealPlanItem?.id || !mealPlanId) return;
-        removeFromMealPlanItems(
-          cache,
-          mealPlanId,
-          data.deleteMealPlanItem.mealPlanItem.id,
-          { evictItem: true },
-        );
+        const result = data?.deleteMealPlanItem;
+        if (result?.__typename !== 'DeleteMealPlanItemPayload' || !mealPlanId) {
+          return;
+        }
+        removeFromMealPlanItems(cache, mealPlanId, result.mealPlanItem.id, {
+          evictItem: true,
+        });
       },
     },
   );
@@ -76,46 +69,64 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
       variables: { input },
     });
     const payload = result.data?.createMealPlanItem;
-    if (!payload?.success) {
-      toastService.error(payload?.message ?? 'Failed to add meal');
+    if (payload?.__typename !== 'CreateMealPlanItemPayload') {
+      const message = payload && 'message' in payload ? payload.message : null;
+      toastService.error(message ?? 'Failed to add meal');
       return null;
     }
     return payload;
   };
 
-  const updateItem = async (id: string, input: UpdateMealPlanItemInput) => {
+  const updateItem = async (
+    id: string,
+    input: Omit<UpdateMealPlanItemInput, 'id'>,
+  ) => {
     const result = await updateItemMutation({
-      variables: { id, input },
+      variables: { input: { ...input, id } },
     });
     const payload = result.data?.updateMealPlanItem;
-    if (!payload?.success) {
-      toastService.error(payload?.message ?? 'Failed to update meal');
+    if (payload?.__typename !== 'UpdateMealPlanItemPayload') {
+      const message = payload && 'message' in payload ? payload.message : null;
+      toastService.error(message ?? 'Failed to update meal');
       return null;
     }
     return payload;
   };
 
   const toggleCompleted = async (
-    item: MealPlanItemActions_OptimisticFullItemFragment,
+    id: string,
     options?: { deductFromPantry?: boolean; servings?: number; notes?: string },
   ) => {
-    const markingComplete = !item.isCompleted;
-    const hasRecipe = !!item.recipe;
+    // Materialize the full optimistic shape from cache — callers only pass an
+    // id, so we read here to get isCompleted/recipe for branching and a
+    // complete payload to spread into the optimistic response.
+    const fullItem = client.cache.readFragment({
+      fragment: MealPlanItemActions_OptimisticFullItemFragmentDoc,
+      fragmentName: 'MealPlanItemActions_optimisticFullItem',
+      from: { __typename: 'MealPlanItem', id },
+    });
+    if (!fullItem) {
+      toastService.error('Failed to update meal');
+      return null;
+    }
+
+    const markingComplete = !fullItem.isCompleted;
+    const hasRecipe = !!fullItem.recipe;
     const deductFromPantry = options?.deductFromPantry;
     const completedAt = markingComplete ? new Date().toISOString() : null;
 
     // Persist optimistic completion state to survive cache-and-network refetches while offline
     optimisticDataPersistence.save(
       'MealPlanItem',
-      item.id,
+      fullItem.id,
       'isCompleted',
       markingComplete,
     );
 
     const result = await updateItemMutation({
       variables: {
-        id: item.id,
         input: {
+          id: fullItem.id,
           isCompleted: markingComplete,
           completedAt,
           ...(markingComplete &&
@@ -129,12 +140,9 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
       optimisticResponse: {
         __typename: 'Mutation',
         updateMealPlanItem: {
-          __typename: 'MealPlanItemPayload',
-          success: true,
-          message: 'Updated',
-          code: 'SUCCESS',
+          __typename: 'UpdateMealPlanItemPayload',
           mealPlanItem: {
-            ...item,
+            ...fullItem,
             isCompleted: markingComplete,
             completedAt,
             ...(options?.servings != null && { servings: options.servings }),
@@ -145,13 +153,14 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
     });
 
     const payload = result.data?.updateMealPlanItem;
-    if (!payload?.success) {
-      toastService.error(payload?.message ?? 'Failed to update meal');
+    if (payload?.__typename !== 'UpdateMealPlanItemPayload') {
+      const message = payload && 'message' in payload ? payload.message : null;
+      toastService.error(message ?? 'Failed to update meal');
       return null;
     }
 
     // Clear persisted optimistic state on server confirmation
-    optimisticDataPersistence.clear('MealPlanItem', item.id, 'isCompleted');
+    optimisticDataPersistence.clear('MealPlanItem', fullItem.id, 'isCompleted');
 
     if (markingComplete) {
       if (hasRecipe && deductFromPantry) {
@@ -166,9 +175,12 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
 
   const deleteItem = async (id: string) => {
     const result = await deleteItemMutation({
-      variables: { id },
+      variables: { input: { id } },
     });
-    return result.data?.deleteMealPlanItem?.success ?? false;
+    return (
+      result.data?.deleteMealPlanItem?.__typename ===
+      'DeleteMealPlanItemPayload'
+    );
   };
 
   return {

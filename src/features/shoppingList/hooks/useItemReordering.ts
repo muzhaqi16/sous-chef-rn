@@ -1,14 +1,17 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import { alertService } from '#/services/alertService';
 import type { ModifierDetails } from '@apollo/client/cache';
 import type { Reference } from '@apollo/client/utilities';
 import { MoveShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { generatePosition } from '#/utils/fractionalIndexing';
+import {
+  UseItemReordering_ServerItemFragmentDoc,
+  type UseItemReordering_ServerItemFragment,
+} from './useItemReordering.generated';
+import { generateKeyBetween } from 'fractional-indexing';
 import { SubscriptionService } from '#/services/subscriptions/SubscriptionService';
 import {
-  handleVersionConflict,
-  getVersionConflictMessage,
-} from '#/utils/errors/versionConflict';
+  handleMutationError,
+  versionConflictCheck,
+} from '#/utils/errorHandlers';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { isUnpurchasedVariant } from '#/apollo/utils/shoppingListCacheUpdaters';
@@ -146,7 +149,7 @@ export function useItemReordering<T extends ShoppingListItem>(
             (a.sortOrder || '').localeCompare(b.sortOrder || ''),
           )[0];
 
-        newSortOrder = generatePosition(
+        newSortOrder = generateKeyBetween(
           afterItem.sortOrder,
           nextItem?.sortOrder ?? null,
         );
@@ -155,7 +158,7 @@ export function useItemReordering<T extends ShoppingListItem>(
 
     // Generate sortOrder normally if not already set by fallback logic
     if (!newSortOrder) {
-      newSortOrder = generatePosition(
+      newSortOrder = generateKeyBetween(
         afterItem?.sortOrder ?? null,
         beforeItem?.sortOrder ?? null,
       );
@@ -246,39 +249,39 @@ export function useItemReordering<T extends ShoppingListItem>(
           },
         }),
       (error: any) => {
-        console.error('Failed to move item:', error);
-
-        // PERFORMANCE: Handle version conflict errors with user-friendly message
-        if (handleVersionConflict(error)) {
-          alertService.alert('Item Updated', getVersionConflictMessage(error), [
-            { text: 'Refresh', onPress: () => refetch?.() },
-            { text: 'Cancel', style: 'cancel' },
-          ]);
-          return;
-        }
-
-        // Generic error fallback
-        alertService.alert(
-          'Error',
-          'Failed to reorder items. Please try again.',
-        );
+        handleMutationError(error, {
+          operation: 'Move Item',
+          checks: [versionConflictCheck({ onRefresh: () => refetch?.() })],
+        });
       },
     );
     if (!result) return;
 
     // Check for GraphQL errors (with errorPolicy: 'all', errors don't throw)
     if (result.error) {
-      console.error('MoveShoppingListItem mutation error:', result.error);
-      alertService.alert(
-        'Error',
-        result.error.message || 'Failed to reorder item',
-      );
+      handleMutationError(result.error, {
+        operation: 'Move Item',
+        checks: [versionConflictCheck({ onRefresh: () => refetch?.() })],
+      });
       refetch?.(); // Refetch to restore correct order
       return;
     }
 
-    // Check if a real move happened by comparing versions
-    const serverItem = result.data?.moveShoppingListItem?.shoppingListItem;
+    // Check if a real move happened by comparing versions. serverItem is a
+    // masked ref — materialize via a narrow fragment that only selects what
+    // we read here (version, sortOrder).
+    const serverItemRef =
+      result.data?.moveShoppingListItem?.__typename ===
+      'MoveShoppingListItemPayload'
+        ? result.data.moveShoppingListItem.shoppingListItem
+        : null;
+    const serverItem = serverItemRef
+      ? client.cache.readFragment<UseItemReordering_ServerItemFragment>({
+          fragment: UseItemReordering_ServerItemFragmentDoc,
+          fragmentName: 'useItemReordering_serverItem',
+          from: serverItemRef,
+        })
+      : null;
     const serverVersion = serverItem?.version;
     const serverSortOrder = serverItem?.sortOrder;
     const originalVersion = currentItem.version;

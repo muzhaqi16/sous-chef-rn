@@ -2,9 +2,55 @@ import { act, waitFor } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,
+  seedCache,
 } from '#/test-utils/apolloMockProvider';
 import { MyRecipesDocument } from '#features/recipes/graphql/recipe.generated';
 import { useRecipeFavoriteState } from '../useRecipeFavoriteState';
+
+function seedRecipeCache(
+  recipes: Array<{
+    id: string;
+    externalSource: string;
+    externalId: string;
+    folder?: string;
+  }>,
+) {
+  return seedCache(
+    recipes.map(r => ({
+      __typename: 'Recipe',
+      id: r.id,
+      name: `Recipe ${r.id}`,
+      description: null,
+      imageUrl: null,
+      servings: 1,
+      prepTimeMinutes: null,
+      cookTimeMinutes: null,
+      totalTimeMinutes: null,
+      difficulty: 'EASY',
+      category: 'DINNER',
+      cuisine: null,
+      status: 'PUBLISHED',
+      isExternal: true,
+      externalSource: r.externalSource,
+      externalId: r.externalId,
+      primarySource: null,
+      caloriesPerServing: null,
+      createdAt: '2025-01-01T00:00:00Z',
+      updatedAt: '2025-01-01T00:00:00Z',
+      savedDetails: r.folder
+        ? {
+            __typename: 'SavedRecipe',
+            id: `sd-${r.id}`,
+            folder: r.folder,
+            tags: [],
+            notes: null,
+            personalRating: null,
+            cookedCount: 0,
+          }
+        : null,
+    })),
+  );
+}
 
 jest.mock('#/utils/compilerSafeWrappers', () => ({
   executeWithLoadingState: jest.fn(
@@ -44,11 +90,27 @@ function myRecipesMock(
             __typename: 'Recipe',
             id: r.id,
             name: `Recipe ${r.id}`,
+            description: null,
+            imageUrl: null,
+            servings: 1,
+            prepTimeMinutes: null,
+            cookTimeMinutes: null,
+            totalTimeMinutes: null,
+            difficulty: 'EASY',
+            category: 'DINNER',
+            cuisine: null,
+            status: 'PUBLISHED',
+            isExternal: true,
             externalSource: r.externalSource,
             externalId: r.externalId,
+            primarySource: null,
+            caloriesPerServing: null,
+            createdAt: '2025-01-01T00:00:00Z',
+            updatedAt: '2025-01-01T00:00:00Z',
             savedDetails: r.folder
               ? {
-                  __typename: 'RecipeSavedDetails',
+                  __typename: 'SavedRecipe',
+                  id: `sd-${r.id}`,
                   folder: r.folder,
                   tags: [],
                   notes: null,
@@ -56,21 +118,6 @@ function myRecipesMock(
                   cookedCount: 0,
                 }
               : null,
-            category: null,
-            difficulty: null,
-            cuisine: null,
-            servings: 1,
-            totalTimeMinutes: null,
-            description: null,
-            imageUrl: null,
-            ingredients: [],
-            instructions: [],
-            source: null,
-            sourceUrl: null,
-            notes: null,
-            averageRating: null,
-            ratingCount: 0,
-            reviewCount: 0,
           },
         })),
         pageInfo: {
@@ -129,14 +176,16 @@ describe('useRecipeFavoriteState', () => {
     });
 
     it('returns true for external recipe found in MyRecipes', async () => {
-      const m = myRecipesMock([
+      const recipes = [
         {
           id: 'saved-1',
           externalSource: 'SPOONACULAR',
           externalId: '12345',
           folder: 'Dinner',
         },
-      ]);
+      ];
+      const m = myRecipesMock(recipes);
+      const cache = seedRecipeCache(recipes);
 
       const { result } = renderHookWithApollo(
         () =>
@@ -149,7 +198,7 @@ describe('useRecipeFavoriteState', () => {
             saveRecipeToFavorites: noopSave,
             savingToFavorites: false,
           }),
-        { operationMocks: [m.mock] },
+        { operationMocks: [m.mock], cache },
       );
 
       await waitFor(() => expect(result.current.isSaved).toBe(true));

@@ -1,41 +1,53 @@
 import React from 'react';
 import { View } from 'react-native';
+import { useFragment } from '@apollo/client/react';
+import { type FragmentType } from '@apollo/client/masking';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { formatRole } from '#/utils/formatters/roleFormatters';
-import { type Member } from '#/utils/formatters/memberFormatters';
 import { commonStyles } from '#/styles/commonStyles';
 import { Text } from '#components/atoms/Text';
+import { HomeMemberCard_MemberFragmentDoc } from './HomeMemberCard.generated';
 
 interface HomeMemberCardProps {
-  member: Member;
+  memberRef: FragmentType<typeof HomeMemberCard_MemberFragmentDoc>;
   displayName: string;
   isCurrentUser: boolean;
-  currentUserMembership?: Member | null;
+  /** Current user's own membership — drives whether action buttons render. */
+  canManageHome?: boolean;
   onChangeRole: () => void;
   onRemove: () => void;
 }
 
 /**
- * HomeMemberCard - Displays individual member with role badge and actions
+ * HomeMemberCard - Displays individual member with role badge and actions.
+ *
+ * Subscribes to its Membership cache entry via `useFragment` so it re-renders
+ * independently when this member's role changes.
  */
 export const HomeMemberCard: React.FC<HomeMemberCardProps> = ({
-  member,
+  memberRef,
   displayName,
   isCurrentUser,
-  currentUserMembership,
+  canManageHome,
   onChangeRole,
   onRemove,
 }) => {
+  const { data: member, complete } = useFragment({
+    fragment: HomeMemberCard_MemberFragmentDoc,
+    fragmentName: 'HomeMemberCard_member',
+    from: memberRef,
+  });
+
+  if (!complete) return null;
+
   // Only show actions if:
   // 1. Current user has canManageHome permission (OWNER/ADMIN)
   // 2. Target member is not the current user
   // 3. Target member is not OWNER (owners cannot be removed/demoted)
   const canManageMember =
-    currentUserMembership?.canManageHome &&
-    !isCurrentUser &&
-    member.role !== 'OWNER';
+    canManageHome && !isCurrentUser && member.role !== 'OWNER';
   return (
     <View style={[commonStyles.card, commonStyles.shadow, styles.memberCard]}>
       <View style={styles.memberInfo}>

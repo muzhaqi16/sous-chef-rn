@@ -1,4 +1,5 @@
 import React, { useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import {
@@ -11,7 +12,6 @@ import {
   GetShoppingListSuggestionsDocument,
   type GetShoppingListSuggestionsQuery,
   type AddItemToShoppingListMutation,
-  type AddItemToShoppingListMutationVariables,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { ItemSuggestion } from '#/graphql/generated/schemaTypes';
 import { addNewItemToShoppingListCache } from '#/apollo/utils/shoppingListCacheUpdaters';
@@ -26,10 +26,7 @@ import {
 import { SheetTutorialHint } from '#components/molecules/SheetTutorialHint';
 import { AddItemSheet } from '../AddItemSheet/AddItemSheet';
 import { useAddItemSheetState } from '../AddItemSheet/useAddItemSheetState';
-import type {
-  BaseSuggestionItem,
-  SuggestionsHookResult,
-} from '../AddItemSheet/types';
+import type { SuggestionsHookResult } from '../AddItemSheet/types';
 import { shoppingListSheetConfig } from '../AddItemSheet/configs/shoppingListConfig';
 
 interface AddToShoppingListSheetProps {
@@ -49,6 +46,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
   initialSearchQuery = '',
   onItemAdded,
 }) => {
+  const { t } = useTranslation();
   const { toBarcode, toAddItem } = useAppNavigation();
   const client = useApolloClient();
   const showImages = useShowShoppingListImages();
@@ -69,7 +67,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
   });
 
   // Adapt suggestions to the expected interface
-  const suggestions: SuggestionsHookResult = {
+  const suggestions: SuggestionsHookResult<ShoppingListSuggestionItem> = {
     grouped: suggestionsResult.grouped,
     loading: suggestionsResult.loading,
     hasSuggestions: suggestionsResult.hasSuggestions,
@@ -104,30 +102,41 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
   const [addItemMutation, { loading: adding }] = useMutation(
     AddItemToShoppingListDocument,
     {
-      optimisticResponse: (
-        variables: AddItemToShoppingListMutationVariables,
-      ): AddItemToShoppingListMutation => {
+      optimisticResponse: variables => {
         const { tempId, entity } = createOptimisticShoppingListItem({
           itemName: variables.input.itemName ?? '',
           itemId: variables.input.itemId,
           unitId: variables.input.unit?.unitId,
         });
         lastTempIdRef.current = tempId;
-        return {
+        const optimistic: AddItemToShoppingListMutation = {
           __typename: 'Mutation',
           addItemToShoppingList: {
-            __typename: 'ShoppingListItemPayload',
-            success: true,
-            message: '',
-            code: 'SUCCESS',
-            shoppingListItem:
-              entity as AddItemToShoppingListMutation['addItemToShoppingList']['shoppingListItem'],
+            __typename: 'AddItemToShoppingListPayload',
+            shoppingListItem: {
+              ...entity,
+              shoppingList: {
+                __typename: 'ShoppingList',
+                id: shoppingListId ?? '',
+                totalItems: 0,
+                completedItems: 0,
+                remainingItems: 0,
+                completionRate: 0,
+              },
+            },
           },
         };
+        return optimistic;
       },
       update(cache, { data }) {
-        const newItem = data?.addItemToShoppingList?.shoppingListItem;
-        if (!newItem || !shoppingListId) return;
+        const payload = data?.addItemToShoppingList;
+        if (
+          payload?.__typename !== 'AddItemToShoppingListPayload' ||
+          !shoppingListId
+        ) {
+          return;
+        }
+        const newItem = payload.shoppingListItem;
 
         // Evict temp-ID entity when the real server response arrives
         if (lastTempIdRef.current && !newItem.id.startsWith('temp-')) {
@@ -198,14 +207,14 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
         tutorial?.notifyItemAdded();
       })
       .catch(() => {
-        toastService.error('Failed to add item. Please try again.');
+        toastService.error(t('addToShoppingListSheet.addFailedRetry'));
       });
   };
 
   // Handle quick add from suggestion (fire-and-forget with exit animations)
-  const handleQuickAddSuggestion = (item: BaseSuggestionItem) => {
-    // Cast to ShoppingListSuggestionItem for full type info
-    const shoppingItem = item as unknown as ShoppingListSuggestionItem;
+  const handleQuickAddSuggestion = (
+    shoppingItem: ShoppingListSuggestionItem,
+  ) => {
     if (
       !shoppingListId ||
       adding ||
@@ -244,7 +253,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
       .catch(() => {
         // On error: remove from exiting, show error toast
         state.completeExitAnimation(shoppingItem.itemId);
-        toastService.error('Failed to add item. Please try again.');
+        toastService.error(t('addToShoppingListSheet.addFailedRetry'));
       });
   };
 
@@ -264,8 +273,8 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
           variant="inline"
           text={
             suggestions.hasSuggestions
-              ? 'Tap + next to an item to add it'
-              : 'Tap "Add Manually" to add an item'
+              ? t('addToShoppingListSheet.tutorialTapPlus')
+              : t('addToShoppingListSheet.tutorialTapAddManually')
           }
           onSkip={tutorial.skipAll}
         />
@@ -276,7 +285,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
       return (
         <SheetTutorialHint
           variant="handle"
-          text="Pull down to close"
+          text={t('addToShoppingListSheet.tutorialPullDown')}
           onSkip={tutorial.skipAll}
         />
       );

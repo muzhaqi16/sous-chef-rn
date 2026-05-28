@@ -205,7 +205,16 @@ describe('OverlayBackdropProvider', () => {
     expect(backdrop.props.pointerEvents).toBe('none');
   });
 
-  it('clears all claims on a navigation state change', () => {
+  it('does not subscribe to navigation state changes', () => {
+    // The previous implementation registered a `navigationRef` listener
+    // that force-cleared all slots on every navigation state change. That
+    // listener broke the AddToPantrySheet → BarcodeStack → back flow: the
+    // slot was released on push into Barcode, the sheet stayed at index 0,
+    // and on return the sheet was visible with no dim layer because the
+    // hook's slotIdRef was still held but no slot existed. With the new
+    // imperative onChange-driven claim/release model (plus the hook's
+    // defensive unmount cleanup), the listener is no longer earning its
+    // keep and was removed.
     render(
       <OverlayBackdropProvider>
         <DeclarativeConsumer active={true} />
@@ -213,18 +222,90 @@ describe('OverlayBackdropProvider', () => {
       </OverlayBackdropProvider>,
     );
 
-    const reanimated = require('react-native-reanimated').default;
-    let backdrop = screen.UNSAFE_getByType(reanimated.View);
-    expect(backdrop.props.pointerEvents).toBe('auto');
-    expect(mockListeners.state?.length ?? 0).toBeGreaterThan(0);
+    expect(mockListeners.state?.length ?? 0).toBe(0);
 
-    // Simulate React Navigation firing a 'state' event (push or pop).
+    // Firing the (non-existent) listener is a no-op; the backdrop stays
+    // active because the consumer is still mounted.
     act(() => {
       fireNavState();
     });
 
+    const reanimated = require('react-native-reanimated').default;
+    const backdrop = screen.UNSAFE_getByType(reanimated.View);
+    expect(backdrop.props.pointerEvents).toBe('auto');
+  });
+
+  it('handles mixed static + dynamic claims simultaneously', () => {
+    // The provider supports two claim paths: static (number → provider
+    // animates internal SV) and dynamic (caller supplies a SharedValue
+    // that's externally driven, e.g. from a sheet's animatedIndex).
+    // This test exercises both paths active at the same time — the
+    // failure mode is that the slot bookkeeping might treat them
+    // differently or fail to track both.
+    const { makeMutable } = require('react-native-reanimated');
+    const externalSV = makeMutable(0.3);
+
+    let staticId: string | null = null;
+    let dynamicId: string | null = null;
+    let releaseRef: ((id: string) => void) | null = null;
+    let staticOnPressFired = false;
+    let dynamicOnPressFired = false;
+
+    const MixedConsumer: React.FC = () => {
+      const { claim, release } = useOverlayBackdrop();
+      useEffect(() => {
+        releaseRef = release;
+        staticId = claim({
+          opacity: 0.5,
+          onPress: () => {
+            staticOnPressFired = true;
+          },
+        });
+        dynamicId = claim({
+          opacity: externalSV,
+          onPress: () => {
+            dynamicOnPressFired = true;
+          },
+        });
+      }, [claim, release]);
+      return null;
+    };
+
+    render(
+      <OverlayBackdropProvider>
+        <MixedConsumer />
+        <GlobalBackdrop />
+      </OverlayBackdropProvider>,
+    );
+
+    // Both claims should be active — backdrop is interactive.
+    const reanimated = require('react-native-reanimated').default;
+    let backdrop = screen.UNSAFE_getByType(reanimated.View);
+    expect(backdrop.props.pointerEvents).toBe('auto');
+    expect(staticId).not.toBeNull();
+    expect(dynamicId).not.toBeNull();
+    expect(staticId).not.toBe(dynamicId);
+
+    // Drop the static claim — dynamic remains, backdrop stays active.
+    act(() => {
+      releaseRef?.(staticId!);
+    });
+    backdrop = screen.UNSAFE_getByType(reanimated.View);
+    expect(backdrop.props.pointerEvents).toBe('auto');
+
+    // Drop the dynamic claim too — backdrop hides.
+    act(() => {
+      releaseRef?.(dynamicId!);
+    });
     backdrop = screen.UNSAFE_getByType(reanimated.View);
     expect(backdrop.props.pointerEvents).toBe('none');
+
+    // Sanity: silenced unused-var warnings — these would assert onPress
+    // routing if we wired Pressable taps, but tap dispatch through the
+    // animated backdrop View isn't reliable in test-renderer. The mixed-
+    // path slot bookkeeping is what we actually care about here.
+    expect(staticOnPressFired).toBe(false);
+    expect(dynamicOnPressFired).toBe(false);
   });
 
   it('release is a no-op for unknown ids', () => {

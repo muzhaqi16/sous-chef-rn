@@ -31,18 +31,18 @@ jest.mock('#/apollo/utils/createOptimisticResponse', () => ({
     ...obj,
     ...updates,
   })),
+  buildOptimisticMutationResponse: jest.fn(
+    (opName: string, typeName: string, fields: any) => ({
+      __typename: 'Mutation',
+      [opName]: { __typename: typeName, ...fields },
+    }),
+  ),
 }));
 
 jest.mock('#/utils/compilerSafeWrappers');
 
-jest.mock('#/services/errorService', () => ({
-  useErrorService: () => ({
-    handleApolloError: jest.fn().mockReturnValue({ message: 'Error' }),
-  }),
-}));
-
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: jest.fn() },
+jest.mock('#/utils/errorHandlers', () => ({
+  handleMutationError: jest.fn(),
 }));
 
 const mockProfileData = {
@@ -105,10 +105,7 @@ function buildUpdateProfileMock(): MockedResponse {
     result: {
       data: {
         updateDietaryProfile: {
-          __typename: 'DietaryProfilePayload',
-          success: true,
-          message: 'OK',
-          code: 'OK',
+          __typename: 'UpdateDietaryProfilePayload',
           dietaryProfile: { ...mockProfileData, mealsPerDay: 4 },
         },
       },
@@ -125,10 +122,7 @@ function buildAddRestrictionMock(): MockedResponse {
     result: {
       data: {
         addRestriction: {
-          __typename: 'DietaryRestrictionPayload',
-          success: true,
-          message: 'OK',
-          code: 'OK',
+          __typename: 'AddRestrictionPayload',
           dietaryRestriction: {
             __typename: 'DietaryRestriction',
             id: 'r-new',
@@ -155,10 +149,7 @@ function buildUpdateRestrictionMock(): MockedResponse {
     result: {
       data: {
         updateRestriction: {
-          __typename: 'DietaryRestrictionPayload',
-          success: true,
-          message: 'OK',
-          code: 'OK',
+          __typename: 'UpdateRestrictionPayload',
           dietaryRestriction: {
             __typename: 'DietaryRestriction',
             id: 'r1',
@@ -185,10 +176,11 @@ function buildRemoveRestrictionMock(): MockedResponse {
     result: {
       data: {
         removeRestriction: {
-          __typename: 'DietaryRestrictionPayload',
-          success: true,
-          message: 'OK',
-          code: 'OK',
+          __typename: 'RemoveRestrictionPayload',
+          dietaryRestriction: {
+            __typename: 'DietaryRestriction',
+            id: 'r1',
+          },
         },
       },
     },

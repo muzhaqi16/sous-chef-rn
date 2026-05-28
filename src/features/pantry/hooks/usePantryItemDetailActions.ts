@@ -3,7 +3,7 @@ import { useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
 import { errorService } from '#/services/errorService';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
-import { AddItemToShoppingListDocument } from '#features/pantry/screens/PantryItemDetail.generated';
+import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/screens/PantryItemDetail.generated';
 import { DeletePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { removeFromPantryItemsCache } from '#hooks/home/pantry/utils';
 import { addNewItemToShoppingListCache } from '#/apollo/utils/shoppingListCacheUpdaters';
@@ -12,15 +12,21 @@ import { useConvertExpiredBatchesToWaste } from '#features/pantry/hooks/mutation
 import { useAdjustPantryItemQuantity } from '#features/pantry/hooks/mutations/useAdjustPantryItemQuantity';
 import { useCorrectPantryItemWeight } from '#features/pantry/hooks/mutations/useCorrectPantryItemWeight';
 
-type PantryItemForActions = {
-  id: string;
-  version?: number | null;
-  quantity?: number | null;
-  unit?: { id: string; name?: string | null; symbol?: string | null } | null;
-  item?: { id?: string | null } | null;
-  itemName?: string | null;
-  activeBatchCount?: number | null;
-} | null
+type PantryItemForActions =
+  | {
+      id: string;
+      version?: number | null;
+      quantity?: number | null;
+      unit?: {
+        id: string;
+        name?: string | null;
+        symbol?: string | null;
+      } | null;
+      item?: { id?: string | null } | null;
+      itemName?: string | null;
+      activeBatchCount?: number | null;
+    }
+  | null
   | undefined;
 
 export interface UsePantryItemDetailActionsParams {
@@ -83,14 +89,15 @@ export function usePantryItemDetailActions({
 
   const [deleteItem] = useMutation(DeletePantryItemDocument, {
     update: (cache, { data: mutationData }, { variables }) => {
+      const payload = mutationData?.deletePantryItem;
       if (
-        !mutationData?.deletePantryItem?.pantryItem ||
+        payload?.__typename !== 'DeletePantryItemPayload' ||
         !selectedPantryId ||
         !variables
       ) {
         return;
       }
-      removeFromPantryItemsCache(cache, selectedPantryId, variables.id, {
+      removeFromPantryItemsCache(cache, selectedPantryId, variables.input.id, {
         evictItem: true,
       });
       cache.modify({
@@ -108,29 +115,33 @@ export function usePantryItemDetailActions({
     },
   });
 
-  const [addToShoppingList] = useMutation(AddItemToShoppingListDocument, {
-    update: (cache, { data: mutationData }) => {
-      const shoppingListItem =
-        mutationData?.addItemToShoppingList?.shoppingListItem;
-      if (!shoppingListItem || !selectedShoppingListId) return;
+  const [addToShoppingList] = useMutation(
+    AddItemToShoppingListFromPantryItemDocument,
+    {
+      update: (cache, { data: mutationData }) => {
+        const payload = mutationData?.addItemToShoppingList;
+        if (
+          payload?.__typename !== 'AddItemToShoppingListPayload' ||
+          !selectedShoppingListId
+        ) {
+          return;
+        }
+        const shoppingListItem = payload.shoppingListItem;
 
-      try {
-        addNewItemToShoppingListCache(
-          cache,
-          selectedShoppingListId,
-          shoppingListItem,
-        );
-      } catch (error) {
-        console.warn('Cache update failed for addToShoppingList:', error);
-      }
+        try {
+          addNewItemToShoppingListCache(
+            cache,
+            selectedShoppingListId,
+            shoppingListItem,
+          );
+        } catch (error) {
+          console.warn('Cache update failed for addToShoppingList:', error);
+        }
+      },
     },
-  });
+  );
 
-  const { convertExpiredToWaste } = useConvertExpiredToWaste({
-    onSuccess: () => {
-      alertService.alert('Done', 'Expired item has been discarded.');
-    },
-  });
+  const { convertExpiredToWaste } = useConvertExpiredToWaste();
 
   const { convertExpiredBatches } = useConvertExpiredBatchesToWaste({
     onSuccess: () => {
@@ -153,7 +164,7 @@ export function usePantryItemDetailActions({
           onPress: () => {
             executeMutation(
               async () => {
-                await deleteItem({ variables: { id: itemId } });
+                await deleteItem({ variables: { input: { id: itemId } } });
                 goBack();
               },
               error => {
@@ -247,7 +258,23 @@ export function usePantryItemDetailActions({
           {
             text: 'Discard',
             style: 'destructive',
-            onPress: () => convertExpiredToWaste(item.id),
+            onPress: () =>
+              executeMutation(
+                async () => {
+                  await convertExpiredToWaste(item.id);
+                  alertService.alert(
+                    'Done',
+                    'Expired item has been discarded.',
+                  );
+                },
+                (error: unknown) =>
+                  alertService.alert(
+                    'Error',
+                    error instanceof Error
+                      ? error.message
+                      : 'Failed to discard expired item',
+                  ),
+              ),
           },
         ],
       );

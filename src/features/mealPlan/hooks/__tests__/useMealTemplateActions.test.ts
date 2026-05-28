@@ -54,8 +54,8 @@ describe('useMealTemplateActions', () => {
     const create = recordMock(CreateMealPlanFromTemplateDocument, {
       data: {
         createMealPlanFromTemplate: {
-          __typename: 'BasicPayload',
-          success: true,
+          __typename: 'CreateMealPlanPayload',
+          mealPlan: { __typename: 'MealPlan', id: 'plan-1' },
         },
       },
     });
@@ -69,7 +69,7 @@ describe('useMealTemplateActions', () => {
       startDate: '2025-01-01',
     });
 
-    expect(response).toMatchObject({ success: true });
+    expect(response).toMatchObject({ __typename: 'CreateMealPlanPayload' });
     expect(toastService.success).toHaveBeenCalledWith(
       'Meal plan created from template!',
     );
@@ -100,8 +100,8 @@ describe('useMealTemplateActions', () => {
     const create = recordMock(CreateTemplateFromMealPlanDocument, {
       data: {
         createTemplateFromMealPlan: {
-          __typename: 'BasicPayload',
-          success: true,
+          __typename: 'CreateTemplateFromMealPlanPayload',
+          mealTemplate: { __typename: 'MealTemplate', id: 'tmpl-1' },
         },
       },
     });
@@ -115,7 +115,9 @@ describe('useMealTemplateActions', () => {
       name: 'My Template',
     });
 
-    expect(response).toMatchObject({ success: true });
+    expect(response).toMatchObject({
+      __typename: 'CreateTemplateFromMealPlanPayload',
+    });
     expect(toastService.success).toHaveBeenCalledWith(
       'Meal plan saved as template!',
     );
@@ -128,7 +130,10 @@ describe('useMealTemplateActions', () => {
   it('deleteTemplate returns true and shows toast on success', async () => {
     const del = recordMock(DeleteMealTemplateDocument, {
       data: {
-        deleteMealTemplate: { __typename: 'BasicPayload', success: true },
+        deleteMealTemplate: {
+          __typename: 'DeleteMealTemplatePayload',
+          mealTemplate: { __typename: 'MealTemplate', id: 'template-1' },
+        },
       },
     });
 
@@ -145,7 +150,11 @@ describe('useMealTemplateActions', () => {
   it('deleteTemplate returns false when mutation fails', async () => {
     const del = recordMock(DeleteMealTemplateDocument, {
       data: {
-        deleteMealTemplate: { __typename: 'BasicPayload', success: false },
+        deleteMealTemplate: {
+          __typename: 'NotFoundError',
+          code: 'NOT_FOUND',
+          message: 'Template not found',
+        },
       },
     });
 
@@ -162,9 +171,8 @@ describe('useMealTemplateActions', () => {
     const dup = recordMock(DuplicateTemplateDocument, {
       data: {
         duplicateTemplate: {
-          __typename: 'BasicPayload',
-          success: true,
-          id: 'dup-1',
+          __typename: 'DuplicateTemplatePayload',
+          mealTemplate: { __typename: 'MealTemplate', id: 'dup-1' },
         },
       },
     });
@@ -178,7 +186,10 @@ describe('useMealTemplateActions', () => {
       'Copy of Template',
     );
 
-    expect(response).toMatchObject({ success: true, id: 'dup-1' });
+    expect(response).toMatchObject({
+      __typename: 'DuplicateTemplatePayload',
+      mealTemplate: { id: 'dup-1' },
+    });
     expect(toastService.success).toHaveBeenCalledWith('Template duplicated!');
   });
 });

@@ -121,6 +121,11 @@ const DEFAULT_HOME_DATA = {
             status: 'ACTIVE',
             displayName: 'Alice',
             canManageHome: true,
+            canViewPantry: true,
+            canEditPantry: true,
+            canAddItems: true,
+            canRemoveItems: true,
+            canInviteOthers: true,
             user: {
               __typename: 'User',
               id: 'user-1',
@@ -167,10 +172,7 @@ function updateHomeMock() {
   return recordMock(UpdateHomeDocument, {
     data: {
       updateHome: {
-        __typename: 'HomePayload',
-        success: true,
-        message: '',
-        code: 'SUCCESS',
+        __typename: 'UpdateHomePayload',
         home: {
           __typename: 'Home',
           id: 'home-1',
@@ -238,8 +240,7 @@ describe('useHomeDetailManagement', () => {
       });
 
       expect(update.fired).toContainEqual({
-        id: 'home-1',
-        input: { name: 'New Name' },
+        input: { id: 'home-1', name: 'New Name' },
       });
     });
   });
@@ -259,8 +260,7 @@ describe('useHomeDetailManagement', () => {
       });
 
       expect(update.fired).toContainEqual({
-        id: 'home-1',
-        input: { allowJoinCode: true },
+        input: { id: 'home-1', allowJoinCode: true },
       });
     });
   });
@@ -365,8 +365,7 @@ describe('useHomeDetailManagement', () => {
       });
 
       expect(update.fired).toContainEqual({
-        id: 'home-1',
-        input: { allowJoinCode: false },
+        input: { id: 'home-1', allowJoinCode: false },
       });
     });
   });
@@ -445,6 +444,11 @@ describe('useHomeDetailManagement', () => {
                   status: 'ACTIVE',
                   displayName: 'Alice',
                   canManageHome: true,
+                  canViewPantry: true,
+                  canEditPantry: true,
+                  canAddItems: true,
+                  canRemoveItems: true,
+                  canInviteOthers: true,
                   user: {
                     __typename: 'User',
                     id: 'user-1',
@@ -463,6 +467,11 @@ describe('useHomeDetailManagement', () => {
                   status: 'ACTIVE',
                   displayName: 'Bob',
                   canManageHome: false,
+                  canViewPantry: true,
+                  canEditPantry: false,
+                  canAddItems: true,
+                  canRemoveItems: false,
+                  canInviteOthers: false,
                   user: {
                     __typename: 'User',
                     id: 'user-2',
@@ -485,6 +494,8 @@ describe('useHomeDetailManagement', () => {
                   recipientName: null,
                   role: 'MEMBER',
                   status: 'PENDING',
+                  expiresAt: '2026-12-31T00:00:00.000Z',
+                  message: null,
                 },
               },
             ],

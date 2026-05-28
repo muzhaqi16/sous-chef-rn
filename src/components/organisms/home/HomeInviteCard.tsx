@@ -1,11 +1,14 @@
 import React from 'react';
 import { View } from 'react-native';
+import { useFragment } from '@apollo/client/react';
+import { type FragmentType } from '@apollo/client/masking';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { formatInviteStatus } from '#/utils/formatters/inviteFormatters';
 import { Text } from '#components/atoms/Text';
 import { InviteStatus } from '#/graphql/generated/schemaTypes';
+import { HomeInviteCard_InviteFragmentDoc } from './HomeInviteCard.generated';
 
 type StatusKey = 'pending' | 'accepted' | 'declined' | 'expired';
 
@@ -24,32 +27,37 @@ function getStatusKey(status: string): StatusKey {
   }
 }
 
-interface Invite {
-  id: string;
-  email: string;
-  recipientName?: string | null;
-  status: string;
-}
-
 interface HomeInviteCardProps {
-  invite: Invite;
+  inviteRef: FragmentType<typeof HomeInviteCard_InviteFragmentDoc>;
   displayName: string;
   canRevoke?: boolean;
   onRevoke: () => void;
 }
 
 /**
- * HomeInviteCard - Displays individual invite with status badge
+ * HomeInviteCard - Displays individual invite with status badge.
+ *
+ * Subscribes to its HomeInvite cache entry via `useFragment` so it re-renders
+ * independently when invite status changes (e.g. after a revoke mutation).
  */
 export const HomeInviteCard: React.FC<HomeInviteCardProps> = ({
-  invite,
+  inviteRef,
   displayName,
   canRevoke,
   onRevoke,
 }) => {
-  const statusText = formatInviteStatus(invite.status);
-  const statusKey = getStatusKey(invite.status);
+  const { data: invite, complete } = useFragment({
+    fragment: HomeInviteCard_InviteFragmentDoc,
+    fragmentName: 'HomeInviteCard_invite',
+    from: inviteRef,
+  });
+
+  const statusKey = getStatusKey(invite.status ?? 'EXPIRED');
   styles.useVariants({ status: statusKey });
+
+  if (!complete) return null;
+
+  const statusText = formatInviteStatus(invite.status);
 
   return (
     <View style={styles.inviteCard}>

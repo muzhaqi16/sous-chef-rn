@@ -5,6 +5,8 @@
 import { createRemoveFromParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { createOptimisticEntity } from '#/apollo/utils/createOptimisticResponse';
 import { generateId } from '#/utils/generateId';
+import { DisplayFormat } from '#/graphql/generated/schemaTypes';
+import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 
 interface OptimisticShoppingListItemFields {
   itemName: string;
@@ -22,28 +24,32 @@ interface OptimisticShoppingListItemFields {
  */
 export function createOptimisticShoppingListItem(
   fields: OptimisticShoppingListItemFields,
-) {
+): { tempId: string; entity: ShoppingListItemDisplayFragment } {
   const tempId = `temp-${generateId()}`;
-  const entity = createOptimisticEntity('ShoppingListItem', tempId, {
-    itemName: fields.itemName,
-    quantity: fields.quantity ?? 1,
-    quantityInput: fields.quantityInput ?? null,
-    displayFormat: null,
-    unitName: fields.unitName ?? null,
-    category: fields.category ?? null,
-    notes: null,
-    sortOrder: '',
-    purchaseInfo: {
-      __typename: 'ShoppingListItemPurchaseInfo',
-      isPurchased: false,
+  const entity = createOptimisticEntity<ShoppingListItemDisplayFragment>(
+    'ShoppingListItem',
+    tempId,
+    {
+      itemName: fields.itemName,
+      quantity: fields.quantity ?? 1,
+      quantityInput: fields.quantityInput ?? null,
+      displayFormat: DisplayFormat.Auto,
+      unitName: fields.unitName ?? null,
+      category: fields.category ?? null,
+      notes: null,
+      sortOrder: '',
+      purchaseInfo: {
+        __typename: 'ShoppingListItemPurchaseInfo',
+        isPurchased: false,
+      },
+      item: fields.itemId
+        ? { __typename: 'Item', id: fields.itemId, imageUrl: null, images: [] }
+        : null,
+      unit: fields.unitId
+        ? { __typename: 'Unit', id: fields.unitId, name: '', symbol: '' }
+        : null,
     },
-    item: fields.itemId
-      ? { __typename: 'Item', id: fields.itemId, imageUrl: null, images: [] }
-      : null,
-    unit: fields.unitId
-      ? { __typename: 'Unit', id: fields.unitId, name: '', symbol: '' }
-      : null,
-  });
+  );
   return { tempId, entity };
 }
 

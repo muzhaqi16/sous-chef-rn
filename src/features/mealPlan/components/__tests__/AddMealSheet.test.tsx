@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { fireEvent, render, screen} from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 import { AddMealSheet } from '../AddMealSheet';
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
@@ -43,25 +43,58 @@ jest.mock('#components/molecules/BottomSheetSearchBar', () => {
   };
 });
 
+// The hook now returns connection node refs; the rendered row internally calls
+// `useFragment` to read the saved-recipe shape. We mock both so the component
+// renders without an Apollo provider.
+const savedRecipeNodes = [
+  {
+    __typename: 'SavedRecipe',
+    id: 'sr-1',
+    folder: null,
+    tags: [],
+    notes: null,
+    personalRating: null,
+    cookedCount: 0,
+    lastCookedAt: null,
+    recipe: {
+      __typename: 'Recipe',
+      id: 'r1',
+      name: 'Pasta Carbonara',
+      description: null,
+      imageUrl: null,
+      servings: 4,
+      prepTimeMinutes: null,
+      cookTimeMinutes: null,
+      totalTimeMinutes: 30,
+    },
+  },
+  {
+    __typename: 'SavedRecipe',
+    id: 'sr-2',
+    folder: null,
+    tags: [],
+    notes: null,
+    personalRating: null,
+    cookedCount: 0,
+    lastCookedAt: null,
+    recipe: {
+      __typename: 'Recipe',
+      id: 'r2',
+      name: 'Chicken Salad',
+      description: null,
+      imageUrl: null,
+      servings: 2,
+      prepTimeMinutes: null,
+      cookTimeMinutes: null,
+      totalTimeMinutes: 15,
+    },
+  },
+];
+
 jest.mock('#features/recipes/hooks/useSavedRecipes', () => ({
   useSavedRecipes: jest.fn(() => ({
     state: {
-      recipes: [
-        {
-          recipeId: 'r1',
-          name: 'Pasta Carbonara',
-          servings: 4,
-          totalTimeMinutes: 30,
-          imageUrl: null,
-        },
-        {
-          recipeId: 'r2',
-          name: 'Chicken Salad',
-          servings: 2,
-          totalTimeMinutes: 15,
-          imageUrl: null,
-        },
-      ],
+      recipes: savedRecipeNodes,
       hasMore: false,
     },
     actions: {
@@ -69,6 +102,38 @@ jest.mock('#features/recipes/hooks/useSavedRecipes', () => ({
     },
   })),
 }));
+
+// AddMealSheet's saved-recipe row uses `useFragment` for its per-entity cache
+// subscription. The parent `useSavedRecipes` hook is mocked in this suite, but
+// the row still needs an Apollo client to call `useFragment`. We wrap renders
+// in a real Apollo provider with the saved-recipe nodes seeded into the cache,
+// satisfying the row's lookup without coupling the test to operation names.
+import {
+  createApolloTestWrapper,
+  seedCache,
+} from '#/test-utils/apolloMockProvider';
+
+function renderWithApollo(ui: React.ReactElement) {
+  const cache = seedCache(
+    savedRecipeNodes.map(node => ({
+      ...node,
+      recipe: { ...node.recipe },
+    })),
+  );
+  // Also seed the nested Recipe entries (seedCache doesn't recurse into
+  // referenced entities).
+  for (const node of savedRecipeNodes) {
+    cache.writeFragment({
+      id: `Recipe:${node.recipe.id}`,
+      fragment: require('../AddMealSheet.generated')
+        .AddMealSheet_SavedRecipeFragmentDoc,
+      fragmentName: 'AddMealSheet_savedRecipe',
+      data: node,
+    });
+  }
+  const Wrapper = createApolloTestWrapper({ cache });
+  return render(<Wrapper>{ui}</Wrapper>);
+}
 
 jest.mock('#features/recipes/hooks/useRecipePreload', () => ({
   useRecipePreload: jest.fn(() => ({
@@ -119,12 +184,12 @@ describe('AddMealSheet', () => {
   });
 
   it('renders the header title', () => {
-    render(<AddMealSheet {...defaultProps} />);
+    renderWithApollo(<AddMealSheet {...defaultProps} />);
     expect(screen.getByText('Add a meal')).toBeTruthy();
   });
 
   it('renders all meal type chips', () => {
-    render(<AddMealSheet {...defaultProps} />);
+    renderWithApollo(<AddMealSheet {...defaultProps} />);
     expect(screen.getByText('Breakfast')).toBeTruthy();
     expect(screen.getByText('Lunch')).toBeTruthy();
     expect(screen.getByText('Dinner')).toBeTruthy();
@@ -134,31 +199,31 @@ describe('AddMealSheet', () => {
   });
 
   it('renders the search input with placeholder', () => {
-    render(<AddMealSheet {...defaultProps} />);
+    renderWithApollo(<AddMealSheet {...defaultProps} />);
     expect(
       screen.getByPlaceholderText('Search recipes or add a custom meal...'),
     ).toBeTruthy();
   });
 
   it('renders saved recipes', () => {
-    render(<AddMealSheet {...defaultProps} />);
+    renderWithApollo(<AddMealSheet {...defaultProps} />);
     expect(screen.getByText('Pasta Carbonara')).toBeTruthy();
     expect(screen.getByText('Chicken Salad')).toBeTruthy();
   });
 
   it('shows recipe metadata (servings and time)', () => {
-    render(<AddMealSheet {...defaultProps} />);
+    renderWithApollo(<AddMealSheet {...defaultProps} />);
     expect(screen.getByText(/4 servings/)).toBeTruthy();
   });
 
   it('renders recipe servings and time metadata', () => {
-    render(<AddMealSheet {...defaultProps} />);
+    renderWithApollo(<AddMealSheet {...defaultProps} />);
     expect(screen.getByText(/4 servings · 30 min/)).toBeTruthy();
     expect(screen.getByText(/2 servings · 15 min/)).toBeTruthy();
   });
 
   it('shows custom meal option when search query has text', () => {
-    render(<AddMealSheet {...defaultProps} />);
+    renderWithApollo(<AddMealSheet {...defaultProps} />);
     const searchInput = screen.getByPlaceholderText(
       'Search recipes or add a custom meal...',
     );
@@ -166,12 +231,13 @@ describe('AddMealSheet', () => {
     expect(screen.getByText(/Add "Tacos" as custom meal/)).toBeTruthy();
   });
 
-  it('shows "Your Recipes" section header when searching with results', () => {
-    render(<AddMealSheet {...defaultProps} />);
+  it('hides "Your Recipes" section header while searching', () => {
+    renderWithApollo(<AddMealSheet {...defaultProps} />);
+    expect(screen.getByText('Your Recipes')).toBeTruthy();
     const searchInput = screen.getByPlaceholderText(
       'Search recipes or add a custom meal...',
     );
     fireEvent.changeText(searchInput, 'Pasta');
-    expect(screen.getByText('Your Recipes')).toBeTruthy();
+    expect(screen.queryByText('Your Recipes')).toBeNull();
   });
 });

@@ -1,4 +1,5 @@
 import React, { RefObject } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
@@ -22,6 +23,7 @@ interface UsePantrySelectorConfigOptions {
 export function usePantrySelectorConfig(
   options: UsePantrySelectorConfigOptions,
 ): SelectorConfig<any> {
+  const { t } = useTranslation();
   const {
     pantries,
     selectedPantryId,
@@ -51,7 +53,7 @@ export function usePantrySelectorConfig(
   };
 
   return {
-    title: 'Select Pantry',
+    title: t('pantrySelector.title'),
     data: pantries,
     selectedId: selectedPantryId,
     onSelect: (id: string) => {
@@ -60,12 +62,12 @@ export function usePantrySelectorConfig(
     },
     displayProperty: 'name',
     loading,
-    emptyMessage: 'No pantries available',
+    emptyMessage: t('pantrySelector.emptyMessage'),
     renderCustomItem: renderPantryItem,
     actions: [
       {
         icon: 'add',
-        label: 'Create New Pantry',
+        label: t('pantrySelector.createNewPantry'),
         onPress: () => {
           selectorRef.current?.close();
           toPantrySettings();
@@ -73,7 +75,7 @@ export function usePantrySelectorConfig(
       },
       {
         icon: 'settings-outline',
-        label: 'Edit Selected Pantry',
+        label: t('pantrySelector.editSelectedPantry'),
         onPress: () => {
           selectorRef.current?.close();
           if (selectedPantryId) {
@@ -84,7 +86,7 @@ export function usePantrySelectorConfig(
       },
       {
         icon: 'bar-chart-outline',
-        label: 'View Analytics',
+        label: t('pantrySelector.viewAnalytics'),
         onPress: () => {
           selectorRef.current?.close();
           if (selectedPantryId) {

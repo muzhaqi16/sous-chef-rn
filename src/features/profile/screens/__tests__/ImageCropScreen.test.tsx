@@ -42,6 +42,7 @@ jest.mock('@react-native-community/image-editor', () => ({
 
 jest.mock('#/storage/mmkv', () => ({
   storage: { set: jest.fn(), getString: jest.fn() },
+  isStorageReady: () => true,
 }));
 
 jest.mock('#/services/errorService', () => ({

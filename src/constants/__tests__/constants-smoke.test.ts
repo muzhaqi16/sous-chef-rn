@@ -122,8 +122,13 @@ describe('dietary constants', () => {
 });
 
 describe('languages constants', () => {
-  it('exports LANGUAGE_OPTIONS', () => {
-    expect(LANGUAGE_OPTIONS).toEqual([{ label: 'English', value: 'en' }]);
+  it('exports LANGUAGE_OPTIONS with all four bundled locales', () => {
+    expect(LANGUAGE_OPTIONS).toEqual([
+      { value: 'en', label: 'English' },
+      { value: 'it', label: 'Italiano' },
+      { value: 'es', label: 'Español' },
+      { value: 'sq', label: 'Shqip' },
+    ]);
   });
 });
 

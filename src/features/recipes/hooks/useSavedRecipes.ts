@@ -1,5 +1,8 @@
 import { useQuery } from '@apollo/client/react';
-import { MySavedRecipesDocument } from '#features/recipes/graphql/recipe.generated';
+import {
+  MySavedRecipesDocument,
+  type MySavedRecipesQuery,
+} from '#features/recipes/graphql/recipe.generated';
 import { useIsLoggedOut } from '#hooks/auth/useIsLoggedOut';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { useConnectionData } from '#hooks/utils/useConnectionData';
@@ -8,34 +11,18 @@ import type { HookReturn } from '#hooks/types';
 const DEFAULT_PAGE_SIZE = 20;
 
 /**
- * Normalized saved recipe with recipe data flattened
+ * Connection node type emitted by the MySavedRecipes query. Cells read fields
+ * via `useFragment(SavedRecipeCard_savedRecipe)` for a per-entity cache
+ * subscription. The hook itself exposes only the id-level scalars needed for
+ * client-side filter helpers (`getRecipeById`, `getRecipesByFolder`,
+ * `getRecipesByTag`).
  */
-export interface SavedRecipe {
-  id: string;
-  recipeId: string;
-  name: string;
-  imageUrl?: string | null;
-  servings?: number | null;
-  prepTimeMinutes?: number | null;
-  cookTimeMinutes?: number | null;
-  totalTimeMinutes?: number | null;
-  description?: string | null;
-  category?: string | null;
-  difficulty?: string | null;
-  cuisine?: string | null;
-  // Saved recipe metadata
-  folder?: string | null;
-  tags: string[];
-  notes?: string | null;
-  personalRating?: number | null;
-  cookedCount: number;
-  lastCookedAt?: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
+export type SavedRecipeNode = NonNullable<
+  MySavedRecipesQuery['me']
+>['savedRecipesConnection']['edges'][number]['node'];
 
 interface SavedRecipesState {
-  recipes: SavedRecipe[];
+  recipes: SavedRecipeNode[];
   loading: boolean;
   error: Error | undefined;
   totalCount: number | undefined;
@@ -45,65 +32,19 @@ interface SavedRecipesState {
 interface SavedRecipesActions {
   refetch: () => void;
   loadMore: () => Promise<void>;
-  getRecipeById: (recipeId: string) => SavedRecipe | undefined;
-  getRecipesByFolder: (folderName: string) => SavedRecipe[];
-  getRecipesByTag: (tag: string) => SavedRecipe[];
+  getRecipeById: (recipeId: string) => SavedRecipeNode | undefined;
+  getRecipesByFolder: (folderName: string) => SavedRecipeNode[];
+  getRecipesByTag: (tag: string) => SavedRecipeNode[];
 }
 
 type UseSavedRecipesResult = HookReturn<SavedRecipesState, SavedRecipesActions>;
 
-/** Flatten a saved recipe node into the normalized SavedRecipe shape */
-function normalizeSavedRecipe(savedRecipe: {
-  id: string;
-  recipe: {
-    id: string;
-    name: string;
-    imageUrl?: string | null;
-    servings?: number | null;
-    prepTimeMinutes?: number | null;
-    cookTimeMinutes?: number | null;
-    totalTimeMinutes?: number | null;
-    description?: string | null;
-    category?: string | null;
-    difficulty?: string | null;
-    cuisine?: string | null;
-  };
-  folder?: string | null;
-  tags?: string[] | null;
-  notes?: string | null;
-  personalRating?: number | null;
-  cookedCount?: number | null;
-  lastCookedAt?: string | null;
-  createdAt: string;
-  updatedAt: string;
-}): SavedRecipe {
-  return {
-    id: savedRecipe.id,
-    recipeId: savedRecipe.recipe.id,
-    name: savedRecipe.recipe.name,
-    imageUrl: savedRecipe.recipe.imageUrl,
-    servings: savedRecipe.recipe.servings,
-    prepTimeMinutes: savedRecipe.recipe.prepTimeMinutes,
-    cookTimeMinutes: savedRecipe.recipe.cookTimeMinutes,
-    totalTimeMinutes: savedRecipe.recipe.totalTimeMinutes,
-    description: savedRecipe.recipe.description,
-    category: savedRecipe.recipe.category,
-    difficulty: savedRecipe.recipe.difficulty,
-    cuisine: savedRecipe.recipe.cuisine,
-    folder: savedRecipe.folder,
-    tags: savedRecipe.tags ?? [],
-    notes: savedRecipe.notes,
-    personalRating: savedRecipe.personalRating,
-    cookedCount: savedRecipe.cookedCount ?? 0,
-    lastCookedAt: savedRecipe.lastCookedAt,
-    createdAt: savedRecipe.createdAt,
-    updatedAt: savedRecipe.updatedAt,
-  };
-}
-
 /**
- * Hook to fetch user's saved/favorited recipes
- * Uses MySavedRecipes query which returns recipes saved via FavoriteRecipe mutation
+ * Hook to fetch the user's saved/favorited recipes.
+ *
+ * Returns connection nodes as refs — consumers render them through
+ * `<SavedRecipeCard savedRecipeRef={node} />` which internally calls
+ * `useFragment` for a per-entity cache subscription.
  */
 export function useSavedRecipes(folder?: string | null): UseSavedRecipesResult {
   const isLoggedOut = useIsLoggedOut();
@@ -128,8 +69,7 @@ export function useSavedRecipes(folder?: string | null): UseSavedRecipesResult {
     fetchMore,
   });
 
-  // Flatten saved recipe nodes into normalized shape
-  const recipes = connectionData.items.map(normalizeSavedRecipe);
+  const recipes = connectionData.items as SavedRecipeNode[];
 
   return {
     state: {
@@ -143,11 +83,11 @@ export function useSavedRecipes(folder?: string | null): UseSavedRecipesResult {
       refetch,
       loadMore: connectionData.loadMore,
       getRecipeById: (recipeId: string) =>
-        recipes.find(recipe => recipe.recipeId === recipeId),
+        recipes.find(recipe => recipe.recipe.id === recipeId),
       getRecipesByFolder: (folderName: string) =>
         recipes.filter(recipe => recipe.folder === folderName),
       getRecipesByTag: (tag: string) =>
-        recipes.filter(recipe => recipe.tags.includes(tag)),
+        recipes.filter(recipe => (recipe.tags ?? []).includes(tag)),
     },
   };
 }

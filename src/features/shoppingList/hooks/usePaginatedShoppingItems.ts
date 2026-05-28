@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@apollo/client/react';
-import { GetShoppingListItemsFilteredDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { type ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
+import {
+  GetShoppingListItemsFilteredDocument,
+  type GetShoppingListItemsFilteredQuery,
+} from '#features/shoppingList/graphql/shoppingList.generated';
 import { useIsLoggedOut } from '#hooks/auth/useIsLoggedOut';
 import { PAGINATION } from '#/constants/shoppingList';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
@@ -12,14 +14,26 @@ import {
 import { executeRefetch } from '#/utils/compilerSafeWrappers';
 import type { HookReturn } from '#hooks/types';
 
+/**
+ * Node shape emitted by the GetShoppingListItemsFiltered query.
+ * Carries inline meta fields (id, itemName, category, sortOrder, version, ...)
+ * for direct hook-layer access, plus the masked `SortableItem_item` fragment
+ * ref consumed by the row component via `useFragment`.
+ */
+export type ShoppingListItemNode = NonNullable<
+  NonNullable<
+    GetShoppingListItemsFilteredQuery['shoppingList']
+  >['itemsConnection']
+>['edges'][number]['node'];
+
 interface UsePaginatedShoppingItemsOptions {
   listId: string | null | undefined;
   skip?: boolean;
 }
 
 interface PaginatedShoppingItemsState {
-  unpurchased: ConnectionData<ShoppingListItemDisplayFragment>;
-  purchased: ConnectionData<ShoppingListItemDisplayFragment>;
+  unpurchased: ConnectionData<ShoppingListItemNode>;
+  purchased: ConnectionData<ShoppingListItemNode>;
   loading: boolean;
   error: Error | undefined;
   isTransitioning: boolean;
@@ -110,6 +124,9 @@ export function usePaginatedShoppingItems({
   useApolloErrorLogger('GetShoppingListItemsFiltered[purchased]', pError);
 
   // --- Extract + paginate via useConnectionData ---
+  // The parent query selects inline scalar meta fields at `node` alongside
+  // the masked `SortableItem_item` ref, so consumers (search, sort, modal
+  // lookups) read directly without a `cache.readFragment` round-trip.
   const unpurchased = useConnectionData({
     data: unpurchasedData,
     selector: d => d.shoppingList?.itemsConnection,

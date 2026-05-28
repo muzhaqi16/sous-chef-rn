@@ -1,27 +1,59 @@
 # Local copies of shoppingList operations per the Feature API Boundary Convention.
 # The shoppingList feature's graphql/ folder is internal.
-mutation AddItemToShoppingList($input: CreateShoppingListItemInput!) {
+mutation AddItemToShoppingListFromRecipe($input: CreateShoppingListItemInput!) {
   addItemToShoppingList(input: $input) {
-    success
-    message
-    code
-    shoppingListItem {
-      ...ShoppingListItemDisplayFragment
+    __typename
+    ... on AddItemToShoppingListPayload {
+      shoppingListItem {
+        id
+        itemName
+        quantity
+        quantityInput
+        displayFormat
+        purchaseInfo {
+          isPurchased
+        }
+        version
+        updatedAt
+        category
+        notes
+        unitName
+        unit {
+          id
+          name
+          symbol
+        }
+        sortOrder
+        item {
+          id
+          imageUrl
+          images { url kind }
+        }
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
-mutation AddItemsToShoppingList(
-  $shoppingListId: ID!
-  $items: [BatchAddShoppingListItemInput!]!
-) {
-  addItemsToShoppingList(shoppingListId: $shoppingListId, items: $items) {
+mutation AddItemsToShoppingList($input: AddItemsToShoppingListInput!) {
+  addItemsToShoppingList(input: $input) {
     results {
       index
       clientId
       success
       item {
-        ...ShoppingListItemDisplayFragment
+        id
+        ...useRecipeShoppingList_addedItem
       }
       quantityIncremented
       error
@@ -53,11 +85,7 @@ query GetShoppingListsLite($homeId: ID, $first: Int, $after: String) {
           user {
             id
             email
-            profile {
-              id
-              displayName
-              avatar
-            }
+            profile { id displayName avatar }
           }
         }
       }
@@ -72,25 +100,32 @@ query GetShoppingListsLite($homeId: ID, $first: Int, $after: String) {
 
 mutation CreateShoppingList($input: CreateShoppingListInput!) {
   createShoppingList(input: $input) {
-    success
-    message
-    code
-    shoppingList {
-      id
-      name
-      isDefault
-      totalItems
-      completedItems
-      createdAt
-      updatedAt
-      homeId
-      home {
+    __typename
+    ... on CreateShoppingListPayload {
+      shoppingList {
         id
         name
+        isDefault
+        totalItems
+        completedItems
+        createdAt
+        updatedAt
+        homeId
+        home {
+          id
+          name
+        }
+        ownerships {
+          ...ShoppingListOwnershipFragment
+        }
       }
-      ownerships {
-        ...ShoppingListOwnershipFragment
-      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }

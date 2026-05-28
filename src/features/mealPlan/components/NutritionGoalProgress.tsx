@@ -1,5 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
 import { GoalStatus, type GoalProgress } from '#/graphql/generated/schemaTypes';
@@ -12,10 +13,10 @@ interface NutritionGoalProgressProps {
   fatProgress: GoalProgress | null | undefined;
 }
 
-const STATUS_LABELS: Record<GoalStatus, string> = {
-  [GoalStatus.OnTarget]: 'On Target',
-  [GoalStatus.UnderTarget]: 'Under',
-  [GoalStatus.OverTarget]: 'Over',
+const STATUS_LABEL_KEYS: Record<GoalStatus, string> = {
+  [GoalStatus.OnTarget]: 'nutritionGoal.statusOnTarget',
+  [GoalStatus.UnderTarget]: 'nutritionGoal.statusUnder',
+  [GoalStatus.OverTarget]: 'nutritionGoal.statusOver',
 };
 
 function MacroProgressBar({
@@ -25,6 +26,7 @@ function MacroProgressBar({
   label: string;
   progress: GoalProgress | null | undefined;
 }) {
+  const { t } = useTranslation();
   barStyles.useVariants({ status: progress?.status });
   if (!progress) return null;
 
@@ -37,7 +39,7 @@ function MacroProgressBar({
           {label}
         </Text>
         <Text size="xs" weight="semibold" style={barStyles.statusLabel}>
-          {STATUS_LABELS[progress.status]}
+          {t(STATUS_LABEL_KEYS[progress.status])}
         </Text>
       </View>
       <View style={barStyles.barBackground}>
@@ -62,22 +64,37 @@ export const NutritionGoalProgress: React.FC<NutritionGoalProgressProps> = ({
   carbsProgress,
   fatProgress,
 }) => {
+  const { t } = useTranslation();
   return (
     <View style={styles.container}>
       <View style={styles.scoreRow}>
         <Text size="md" weight="semibold">
-          Overall Score
+          {t('nutritionGoal.overallScore')}
         </Text>
         <Text size="lg" weight="bold" tone="accent">
-          {Math.round(overallScore)}/100
+          {t('nutritionGoal.scoreFormat', {
+            score: Math.round(overallScore),
+          })}
         </Text>
       </View>
 
       <View style={styles.barsContainer}>
-        <MacroProgressBar label="Calories" progress={caloriesProgress} />
-        <MacroProgressBar label="Protein (g)" progress={proteinProgress} />
-        <MacroProgressBar label="Carbs (g)" progress={carbsProgress} />
-        <MacroProgressBar label="Fat (g)" progress={fatProgress} />
+        <MacroProgressBar
+          label={t('nutritionGoal.labelCalories')}
+          progress={caloriesProgress}
+        />
+        <MacroProgressBar
+          label={t('nutritionGoal.labelProteinG')}
+          progress={proteinProgress}
+        />
+        <MacroProgressBar
+          label={t('nutritionGoal.labelCarbsG')}
+          progress={carbsProgress}
+        />
+        <MacroProgressBar
+          label={t('nutritionGoal.labelFatG')}
+          progress={fatProgress}
+        />
       </View>
     </View>
   );

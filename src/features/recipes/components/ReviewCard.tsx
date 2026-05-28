@@ -40,8 +40,10 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
   });
   const review = fragmentResult.complete ? fragmentResult.data : reviewSource;
 
-  const displayName = review.user.profile?.displayName || review.user.email;
-  const avatar = review.user.profile?.avatar;
+  // User fields are inlined in RecipeReviewFragment, so direct field reads.
+  const user = review.user;
+  const displayName = user.profile?.displayName || user.email;
+  const avatar = user.profile?.avatar;
 
   return (
     <View style={styles.container}>

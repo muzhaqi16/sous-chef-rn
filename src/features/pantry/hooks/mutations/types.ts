@@ -3,7 +3,6 @@
  */
 
 import { StorageState } from '#/graphql/generated/schemaTypes';
-import { type PantryItemFragment } from '#features/pantry/graphql/pantryFragments.generated';
 
 export interface UnitSelection {
   id: string | null;
@@ -51,18 +50,4 @@ export interface CreatePantryItemParams<
   unitId: string | null;
   selectedLocationId: string | null;
   selectedCategoryId: string | null;
-}
-
-export interface UpdatePantryItemParams<
-  T extends FormDataInput = FormDataInput,
-> {
-  itemId: string;
-  input: T;
-  currentItem: PantryItemFragment;
-  dirtyFields: Record<string, boolean>;
-  quantityValue: number;
-  unitId: string | null;
-  trackingUnit: UnitSelection;
-  selectedLocationId: string | null;
-  selectedBrandId: string | null;
 }

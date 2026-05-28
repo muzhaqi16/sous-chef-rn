@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { useMutation, useQuery } from '@apollo/client/react';
-import { BottomSheetModal } from '@gorhom/bottom-sheet';
+import type { BottomSheetModalRef } from '#hooks/useStandardBottomSheet';
 import {
   CreateShoppingListItemsFromRecipeDocument,
   CreateShoppingListItemFromRecipeIngredientDocument,
-  type GetRecipeQuery,
 } from '#features/recipes/graphql/recipe.generated';
+import { type MaterializedRecipe } from './useRecipeData';
 import {
-  AddItemToShoppingListDocument,
+  AddItemToShoppingListFromRecipeDocument,
   AddItemsToShoppingListDocument,
   GetShoppingListsLiteDocument,
   CreateShoppingListDocument,
@@ -25,12 +25,10 @@ import {
   executeWithLoadingState,
 } from '#/utils/compilerSafeWrappers';
 
-type BackendRecipe = NonNullable<GetRecipeQuery['recipe']>;
-
 interface UseRecipeShoppingListOptions {
   recipeId: string | undefined;
   isBackendRecipe: boolean;
-  backendRecipe: BackendRecipe | null | undefined;
+  backendRecipe: MaterializedRecipe | null | undefined;
   externalRecipe: RecipeInformation | null;
 }
 
@@ -85,9 +83,9 @@ export function useRecipeShoppingList({
 
   // Sheet refs and visibility state. Per CLAUDE.md, control visibility via
   // state + effect (never call present()/dismiss() directly from event handlers).
-  const shoppingListOptionsRef = useRef<BottomSheetModal>(null);
-  const ingredientSelectorRef = useRef<BottomSheetModal>(null);
-  const listPickerRef = useRef<BottomSheetModal>(null);
+  const shoppingListOptionsRef = useRef<BottomSheetModalRef>(null);
+  const ingredientSelectorRef = useRef<BottomSheetModalRef>(null);
+  const listPickerRef = useRef<BottomSheetModalRef>(null);
   const pendingDismissActionRef = useRef<(() => void) | null>(null);
 
   const [listPickerVisible, setListPickerVisible] = useState(false);
@@ -126,9 +124,9 @@ export function useRecipeShoppingList({
   );
   const [createShoppingListMutation] = useMutation(CreateShoppingListDocument, {
     update(cache, { data }) {
-      const newList = data?.createShoppingList?.shoppingList;
-      if (newList) {
-        addToShoppingListsCache(cache, newList);
+      const payload = data?.createShoppingList;
+      if (payload?.__typename === 'CreateShoppingListPayload') {
+        addToShoppingListsCache(cache, payload.shoppingList);
       }
     },
     onError: () => {
@@ -162,16 +160,21 @@ export function useRecipeShoppingList({
     CreateShoppingListItemFromRecipeIngredientDocument,
     {
       update: (cache, { data }, { variables }) => {
-        if (!data?.createShoppingListItemFromRecipeIngredient || !variables)
+        const response = data?.createShoppingListItemFromRecipeIngredient;
+        if (
+          response?.__typename !==
+            'CreateShoppingListItemFromRecipeIngredientPayload' ||
+          !variables
+        )
           return;
         executeCacheUpdate(() => {
-          const result = data.createShoppingListItemFromRecipeIngredient;
-          const shoppingListId = variables.shoppingListId;
-          if (!result.wasUpdated) {
+          const ingredientResult = response.result;
+          const shoppingListId = variables.input.shoppingListId;
+          if (!ingredientResult.wasUpdated) {
             addNewItemToShoppingListCache(
               cache,
               shoppingListId,
-              result.shoppingListItem,
+              ingredientResult.shoppingListItem,
             );
           }
         }, 'Cache update failed for addRecipeIngredient:');
@@ -180,13 +183,18 @@ export function useRecipeShoppingList({
   );
 
   const [addItemToShoppingListMutation] = useMutation(
-    AddItemToShoppingListDocument,
+    AddItemToShoppingListFromRecipeDocument,
     {
       update: (cache, { data }, { variables }) => {
-        if (!data?.addItemToShoppingList?.shoppingListItem || !variables)
+        const payload = data?.addItemToShoppingList;
+        if (
+          payload?.__typename !== 'AddItemToShoppingListPayload' ||
+          !variables
+        ) {
           return;
+        }
         executeCacheUpdate(() => {
-          const item = data.addItemToShoppingList!.shoppingListItem!;
+          const item = payload.shoppingListItem;
           const shoppingListId = variables.input.shoppingListId;
           addNewItemToShoppingListCache(cache, shoppingListId, item);
         }, 'Cache update failed for addItemToShoppingList:');
@@ -201,7 +209,7 @@ export function useRecipeShoppingList({
         if (!data?.addItemsToShoppingList || !variables) return;
         executeCacheUpdate(() => {
           const { results } = data.addItemsToShoppingList!;
-          const shoppingListId = variables.shoppingListId;
+          const shoppingListId = variables.input.shoppingListId;
           results.forEach(result => {
             if (result.success && result.item) {
               addNewItemToShoppingListCache(cache, shoppingListId, result.item);
@@ -231,8 +239,10 @@ export function useRecipeShoppingList({
         if (isBackendRecipe) {
           await addRecipeIngredientMutation({
             variables: {
-              recipeIngredientId: ingredient.id,
-              shoppingListId: targetList.id,
+              input: {
+                recipeIngredientId: ingredient.id,
+                shoppingListId: targetList.id,
+              },
             },
           });
         } else {
@@ -328,8 +338,10 @@ export function useRecipeShoppingList({
 
           const result = await addItemsToShoppingListMutation({
             variables: {
-              shoppingListId: listId,
-              items,
+              input: {
+                shoppingListId: listId,
+                items,
+              },
             },
           });
 
@@ -381,15 +393,20 @@ export function useRecipeShoppingList({
         for (const ingredientId of selectedIngredients) {
           const result = await addRecipeIngredientMutation({
             variables: {
-              recipeIngredientId: ingredientId,
-              shoppingListId: listId,
+              input: {
+                recipeIngredientId: ingredientId,
+                shoppingListId: listId,
+              },
             },
           });
 
-          if (result.data?.createShoppingListItemFromRecipeIngredient) {
-            const wasUpdated =
-              result.data.createShoppingListItemFromRecipeIngredient.wasUpdated;
-            if (wasUpdated) {
+          const response =
+            result.data?.createShoppingListItemFromRecipeIngredient;
+          if (
+            response?.__typename ===
+            'CreateShoppingListItemFromRecipeIngredientPayload'
+          ) {
+            if (response.result.wasUpdated) {
               updatedCount++;
             } else {
               addedCount++;
@@ -451,11 +468,12 @@ export function useRecipeShoppingList({
           },
         });
 
-        const newList = result.data?.createShoppingList?.shoppingList;
-        if (!newList) {
+        const createPayload = result.data?.createShoppingList;
+        if (createPayload?.__typename !== 'CreateShoppingListPayload') {
           toastService.error('Failed to create shopping list');
           return;
         }
+        const newList = createPayload.shoppingList;
 
         setSelectedShoppingListId(newList.id);
         setListPickerVisible(false);

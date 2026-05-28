@@ -95,6 +95,7 @@ module.exports = {
       'uuid|' +
       'react-native-launch-arguments|' +
       'react-native-performance|' +
+      'react-native-haptic-feedback|' +
       'fractional-indexing' +
       ')/)',
   ],

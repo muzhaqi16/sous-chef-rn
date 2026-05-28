@@ -49,17 +49,12 @@ export function useRecipeSuggestionsForItem(
 
     executeWithLoadingState(
       async () => {
-        const recipes = await spoonacularService.searchRecipes(
-          {
-            query: itemName,
-            number: 5,
-            addRecipeInformation: true,
-          },
+        const recipes = await spoonacularService.searchRecipesWithInfo(
+          { query: itemName, number: 5 },
           controller.signal,
         );
-        const results = recipes.results as unknown as RecipeInformation[];
-        setSuggestedRecipes(results);
-        setCachedSuggestions(itemName, results);
+        setSuggestedRecipes(recipes.results);
+        setCachedSuggestions(itemName, recipes.results);
       },
       setLoadingRecipes,
       (error: unknown) => {

@@ -11,7 +11,7 @@ import { useState } from 'react';
 import { useQuery } from '@apollo/client/react';
 import { GetHomesDocument } from '#operations/home/home.generated';
 import { usePreservedArrayData } from '#/hooks/apollo/usePreservedQueryData';
-import { normalizeHomes, extractNodes } from '#/utils/connectionUtils';
+import { extractNodes, getConnectionTotalCount } from '#/utils/connectionUtils';
 
 /**
  * Hook for fetching and managing homes query
@@ -20,6 +20,11 @@ import { normalizeHomes, extractNodes } from '#/utils/connectionUtils';
  * - cache-and-network: Shows cached data immediately, fetches fresh in background
  * - nextFetchPolicy: 'cache-first' prevents re-fetches on subsequent renders
  * - errorPolicy: 'ignore' returns cached data when network fails (offline graceful degradation)
+ *
+ * Returns connection-shape home nodes (each carries `id`, `name`, `isDefault`,
+ * `myMembership`, `pantriesConnection`, plus a masked `HomeCard_home` ref).
+ * Consumers that need a flat array of pantries call
+ * `extractNodes(home.pantriesConnection)` directly.
  *
  * @example
  * ```tsx
@@ -31,68 +36,69 @@ export function useHomeQuery() {
     errorPolicy: 'ignore',
   });
 
-  // Preserve homes even when query fails to prevent cascade failures
-  // Extract nodes from connection type (homes returns HomeConnection)
-  const preservedHomes = usePreservedArrayData(extractNodes(data?.homes));
-  const homes = normalizeHomes(preservedHomes);
+  // Preserve homes data even when query fails to prevent cascade failures.
+  // Each node carries `id` + `isDefault` directly plus masked refs for the
+  // leaf fragments (`HomeCard_home`, `HomeForHookLogic_home`).
+  const homes = usePreservedArrayData(extractNodes(data?.homes));
 
   // Derive default home from isDefault field (no separate query needed)
-  const remoteDefaultHomeId =
-    preservedHomes?.find((h: any) => h.isDefault)?.id ?? null;
+  const remoteDefaultHomeId = homes?.find(h => h.isDefault)?.id ?? null;
 
   // Track the last known pantries count to avoid flickering to 0 during refetch
   const [lastKnownPantriesCount, setLastKnownPantriesCount] =
     useState<number>(0);
 
-  // Statistics and computed values
   const validHomes = Array.isArray(homes) ? homes.filter(Boolean) : [];
 
-  // Check if all homes have loaded their pantries data
-  const allHomesLoaded = validHomes.every(
-    (home: any) => home.pantries !== null,
-  );
+  // Use totalCount from each home's connections.
+  type HomeWithCounts = (typeof validHomes)[number] & {
+    pantriesConnection?: { totalCount?: number | null };
+    membersConnection?: { totalCount?: number | null };
+  };
 
-  let totalPantries: number;
-
-  if (allHomesLoaded) {
-    // Use totalCount from the server for accurate counts, fall back to array length
-    totalPantries = validHomes.reduce((acc, home: any) => {
-      const count =
-        home?.pantriesTotalCount ??
-        (Array.isArray(home?.pantries) ? home.pantries.length : 0);
-      return acc + count;
-    }, 0);
-    // Update our last known count (only if changed to avoid extra re-renders)
-    if (totalPantries !== lastKnownPantriesCount) {
-      setLastKnownPantriesCount(totalPantries);
+  const totalPantries = (() => {
+    const sum = validHomes.reduce(
+      (acc, home) =>
+        acc +
+        getConnectionTotalCount((home as HomeWithCounts).pantriesConnection),
+      0,
+    );
+    // Genuine empty state: no homes means no pantries. Without this guard the
+    // anti-flicker fallback below would keep showing the stale last-known
+    // count after the user deletes their last home.
+    if (validHomes.length === 0) {
+      if (lastKnownPantriesCount !== 0) setLastKnownPantriesCount(0);
+      return 0;
     }
-  } else {
-    // Some data is still loading, use the last known count to prevent flickering
-    totalPantries = lastKnownPantriesCount;
-  }
+    if (sum > 0 && sum !== lastKnownPantriesCount) {
+      setLastKnownPantriesCount(sum);
+      return sum;
+    }
+    // Anti-flicker: homes are loaded but per-home pantriesConnection counts
+    // are transiently 0 during refetch — fall back to the last known count.
+    return sum > 0 ? sum : lastKnownPantriesCount;
+  })();
 
   const stats = {
     totalHomes: validHomes.length,
-    totalMembers: validHomes.reduce((acc, home: any) => {
-      const count =
-        home?.membersTotalCount ??
-        (Array.isArray(home?.members) ? home.members.length : 0);
-      return acc + count;
-    }, 0),
+    totalMembers: validHomes.reduce(
+      (acc, home) =>
+        acc +
+        getConnectionTotalCount((home as HomeWithCounts).membersConnection),
+      0,
+    ),
     totalPantries,
   };
 
-  // Memoize the refetch function to prevent unnecessary re-renders
   const memoizedRefetch = async () => {
     await refetch();
   };
 
   return {
     homes,
-    preservedHomes,
     remoteDefaultHomeId,
     loading,
-    initialLoading: !homes && loading,
+    initialLoading: !homes.length && loading,
     error,
     stats,
     refetch: memoizedRefetch,

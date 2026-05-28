@@ -22,9 +22,9 @@ import {
 import { useSelectedHomeId, useSetSelectedPantryId } from '#store/useAppStore';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import type { StaticScreenProps } from '@react-navigation/native';
-import { useErrorService, errorService } from '#/services/errorService';
+import { errorService } from '#/services/errorService';
+import { handleMutationError } from '#/utils/errorHandlers';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
-import { normalizePantry } from '#/utils/connectionUtils';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import {
   executeWithLoadingState,
@@ -42,10 +42,10 @@ function buildDeletePantryUpdater(selectedHomeId: string | null | undefined) {
     { data }: any,
     { variables }: any,
   ) {
-    if (!data?.deletePantry?.pantry || !variables?.id || !selectedHomeId)
+    if (!data?.deletePantry?.pantry || !variables?.input?.id || !selectedHomeId)
       return;
     try {
-      const deletedPantryId = variables.id;
+      const deletedPantryId = variables.input.id;
       const homeCacheId = cache.identify({
         __typename: 'Home',
         id: selectedHomeId,
@@ -146,11 +146,13 @@ function buildCreatePantryUpdater(selectedHomeId: string | null | undefined) {
  *  errors via errorService — extracted to keep try/catch out of the
  *  component body (React Compiler bailout). */
 async function safeSetDefaultPantry(
-  setDefaultPantry: (opts: { variables: { id: string } }) => Promise<unknown>,
+  setDefaultPantry: (opts: {
+    variables: { input: { id: string } };
+  }) => Promise<unknown>,
   pantryId: string,
 ): Promise<void> {
   try {
-    await setDefaultPantry({ variables: { id: pantryId } });
+    await setDefaultPantry({ variables: { input: { id: pantryId } } });
   } catch (error) {
     errorService.reportError(error, {
       operation: 'PantrySettings.setDefaultPantry',
@@ -198,7 +200,6 @@ export const PantrySettings: React.FC<
 
   const selectedHomeId = useSelectedHomeId();
   const setSelectedPantryId = useSetSelectedPantryId();
-  const { handleApolloError } = useErrorService();
   const permissions = usePantryPermissions();
 
   const [name, setName] = useState('');
@@ -223,8 +224,9 @@ export const PantrySettings: React.FC<
     skip: !hasValidPantryId,
   });
 
-  // Memoize normalized pantry to prevent re-creating on every render
-  const pantry = normalizePantry(pantryData?.pantry);
+  // Pantry data — read directly; consumers below use items count from connection
+  const pantry = pantryData?.pantry;
+  const pantryItemCount = pantry?.itemsConnection?.totalCount ?? 0;
 
   const [updatePantry] = useMutation(UpdatePantryDocument, {
     // Update cache directly - Apollo automatically merges the Pantry entity
@@ -232,22 +234,16 @@ export const PantrySettings: React.FC<
   });
 
   const [setDefaultPantry] = useMutation(SetDefaultPantryDocument, {
-    onError: (error: any) => {
-      const { message } = handleApolloError(error, {
-        operation: 'Set Default Pantry',
-      });
-      alertService.alert(t('labels.error'), message);
+    onError: error => {
+      handleMutationError(error, { operation: 'Set Default Pantry' });
       // Revert the toggle on error
       setIsDefault(!isDefault);
     },
   });
 
   const [deletePantry] = useMutation(DeletePantryDocument, {
-    onError: (error: any) => {
-      const { message } = handleApolloError(error, {
-        operation: 'Delete Pantry',
-      });
-      alertService.alert(t('labels.error'), message);
+    onError: error => {
+      handleMutationError(error, { operation: 'Delete Pantry' });
     },
     // Update cache directly instead of refetching. Builder is module-scope to
     // keep try/catch out of the component body (React Compiler bailout).
@@ -259,9 +255,9 @@ export const PantrySettings: React.FC<
     // keep try/catch out of the component body (React Compiler bailout).
     update: buildCreatePantryUpdater(selectedHomeId),
     onCompleted: data => {
-      const newPantryResult = data?.createPantry?.pantry;
-      if (newPantryResult) {
-        setSelectedPantryId(newPantryResult.id);
+      const payload = data?.createPantry;
+      if (payload?.__typename === 'CreatePantryPayload') {
+        setSelectedPantryId(payload.pantry.id);
       }
       goBack();
     },
@@ -336,8 +332,8 @@ export const PantrySettings: React.FC<
         } else {
           await updatePantry({
             variables: {
-              id: pantryId,
               input: {
+                id: pantryId,
                 name: name.trim(),
                 description: description.trim(),
               },
@@ -374,7 +370,7 @@ export const PantrySettings: React.FC<
 
             executeAsyncWithCleanup(
               async () => {
-                await deletePantry({ variables: { id: pantryId } });
+                await deletePantry({ variables: { input: { id: pantryId } } });
                 setSelectedPantryId(null);
                 goBack();
               },
@@ -473,7 +469,7 @@ export const PantrySettings: React.FC<
             <InfoRow
               label={t('pantrySettings.itemsInPantry')}
               value={t('pantrySettings.itemsCount', {
-                count: pantry?.items?.length || 0,
+                count: pantryItemCount,
               })}
             />
           </View>

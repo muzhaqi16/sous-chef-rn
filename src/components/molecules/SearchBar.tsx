@@ -1,5 +1,6 @@
 import { useEffect, useRef, type FC, type ReactNode } from 'react';
 import { View, StyleProp, ViewStyle, TextInputProps } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import {
   StyleSheet,
   useUnistyles,
@@ -120,7 +121,7 @@ const MeasuredAction: FC<{
 export const SearchBar: FC<SearchBarProps> = ({
   value,
   onChangeText,
-  placeholder = 'Search…',
+  placeholder,
   containerStyle,
   inputStyle,
   leftActions = [],
@@ -129,7 +130,8 @@ export const SearchBar: FC<SearchBarProps> = ({
   innerRightIcon,
   ...textInputProps
 }) => {
-  // Handle legacy props by converting them to action arrays
+  const { t } = useTranslation();
+  const resolvedPlaceholder = placeholder ?? t('searchBar.placeholder');
 
   const renderActionButtons = (
     actions: SearchBarAction[],
@@ -141,20 +143,21 @@ export const SearchBar: FC<SearchBarProps> = ({
       <View style={styles.actionsContainer}>
         {actions.map((action, index) => {
           const key = `${side}-${index}-${action.icon}`;
+          const fallbackLabel = t('searchBar.actionFallback', {
+            icon: action.icon,
+          });
           const button = action.animated ? (
             <ThemedAnimatedActionButton
               key={key}
               name={action.icon}
               onPress={action.onPress}
-              style={[{ ...commonStyles.shadow }, action.style]}
-              uniProps={t => ({
-                color: action.color ?? t.colors.white,
-                backgroundColor: action.backgroundColor ?? t.colors.primary,
+              style={[commonStyles.shadow, action.style]}
+              uniProps={theme => ({
+                color: action.color ?? theme.colors.white,
+                backgroundColor: action.backgroundColor ?? theme.colors.primary,
               })}
               size={action.size}
-              accessibilityLabel={
-                action.accessibilityLabel || `${action.icon} button`
-              }
+              accessibilityLabel={action.accessibilityLabel || fallbackLabel}
               isHighlighted={action.isHighlighted}
               testID={action.testID}
             />
@@ -163,20 +166,19 @@ export const SearchBar: FC<SearchBarProps> = ({
               key={key}
               name={action.icon}
               onPress={action.onPress}
-              uniProps={t => ({
+              uniProps={theme => ({
                 style: [
                   {
-                    backgroundColor: action.backgroundColor ?? t.colors.primary,
-                    ...commonStyles.shadow,
+                    backgroundColor:
+                      action.backgroundColor ?? theme.colors.primary,
                   },
+                  commonStyles.shadow,
                   action.style,
                 ],
-                color: action.color ?? t.colors.white,
+                color: action.color ?? theme.colors.white,
               })}
               size={action.size}
-              accessibilityLabel={
-                action.accessibilityLabel || `${action.icon} button`
-              }
+              accessibilityLabel={action.accessibilityLabel || fallbackLabel}
               testID={action.testID}
             />
           );
@@ -202,9 +204,9 @@ export const SearchBar: FC<SearchBarProps> = ({
       <BaseInput
         value={value}
         onChangeText={onChangeText}
-        placeholder={placeholder}
+        placeholder={resolvedPlaceholder}
         style={inputStyle}
-        containerStyle={styles.inputContainer}
+        containerStyle={[styles.inputContainer, commonStyles.shadow]}
         showClearIcon={true}
         onClear={() => onChangeText('')}
         leftIcon={
@@ -229,7 +231,6 @@ const styles = StyleSheet.create(theme => ({
   inputContainer: {
     flex: 1,
     borderRadius: theme.radii.md,
-    ...commonStyles.shadow,
   },
   actionsContainer: {
     flexDirection: 'row',

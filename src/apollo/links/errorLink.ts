@@ -5,6 +5,10 @@ import {
 } from '@apollo/client/errors';
 import { isKnownServerError } from '#utils/subscriptionErrorHandler';
 import { isNetworkError } from '#/utils/isNetworkError';
+import {
+  isRateLimitError,
+  getRateLimitMessage,
+} from '#/utils/errors/rateLimit';
 import { LogoutCleanup } from '../logoutCleanup';
 import { attemptTokenRefresh, getRefreshState } from './refreshToken';
 
@@ -38,6 +42,15 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
   const { isRefreshing } = getRefreshState();
 
   if (CombinedGraphQLErrors.is(error)) {
+    if (isRateLimitError(error)) {
+      console.warn(
+        `Rate limited [${operation.operationName}]: ${getRateLimitMessage(
+          error,
+        )}`,
+      );
+      return;
+    }
+
     for (const err of error.errors) {
       const code = String(err.extensions?.code || '');
       const message = String(err.message || '');
@@ -47,8 +60,6 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
         continue;
       }
 
-      // Handle FORBIDDEN separately - it's a resource access issue, not an auth problem
-      // This prevents unnecessary token refresh cycles when accessing deleted/unauthorized resources
       if (isResourceAccessError(code)) {
         console.warn(
           `Access denied for ${operation.operationName}: ${message}`,
@@ -82,14 +93,18 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
       return;
     }
 
-    // For network errors, log and forward the operation to let Apollo's errorPolicy handle it
-    // Returning void silently swallows the error, leaving query observers without a result
+    // For network errors, log and let the error propagate. retryLink (above this
+    // link) owns query-retry policy with backoff/jitter and deliberately skips
+    // mutations — re-forwarding here would double query retries AND re-send
+    // mutations (a duplicate-write risk for non-idempotent ones). Returning void
+    // makes Apollo emit the networkError to the observer, where errorPolicy plus
+    // the cache-and-network fetch policy keep cached data visible.
     if (isNetworkError(error)) {
       console.warn(
         `Network error for ${operation.operationName}:`,
         error.message,
       );
-      return forward(operation);
+      return;
     }
 
     // Only log non-network errors as these are unexpected

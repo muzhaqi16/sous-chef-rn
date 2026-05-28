@@ -65,7 +65,7 @@ query ItemByUpcFilter($upc: String!, $upcFormat: UpcFormat) {
   }
 }
 
-query ItemBySkuFilter($sku: String!, $skuStoreId: String) {
+query ItemBySkuFilter($sku: String!, $skuStoreId: ID) {
   items(filters: { lookup: { sku: $sku, skuStoreId: $skuStoreId } }, first: 1) {
     edges {
       cursor
@@ -277,74 +277,88 @@ query GetPopularItems($first: Int = 10) {
 
 mutation CreateItem($input: CreateItemInput!) {
   createItem(input: $input) {
-    success
-    message
-    code
-    item {
-      id
-      name
-      description
-      netWeight
-      displayUnit {
+    __typename
+    ... on CreateItemPayload {
+      item {
         id
         name
-        symbol
-      }
-      convertedNetWeight {
-        value
-        unit {
+        description
+        netWeight
+        displayUnit {
           id
           name
           symbol
         }
-      }
-      type
-      storageState
-      shelfLifeDays
-      shelfLifeOpenedDays
-      imageUrl
-      tags
-      brands {
-        brand {
+        convertedNetWeight {
+          value
+          unit {
+            id
+            name
+            symbol
+          }
+        }
+        type
+        storageState
+        shelfLifeDays
+        shelfLifeOpenedDays
+        imageUrl
+        tags
+        brands {
+          brand {
+            id
+            name
+          }
+        }
+        categories {
+          category {
+            id
+            name
+          }
+        }
+        units {
           id
-          name
+          unitId
+          isDefault
+          packageSize
+          retailUnit
+          contentUnitId
+          unit {
+            id
+            name
+            symbol
+          }
+          contentUnit {
+            id
+            name
+            symbol
+          }
         }
       }
-      categories {
-        category {
-          id
-          name
-        }
-      }
-      units {
-        id
-        unitId
-        isDefault
-        packageSize
-        retailUnit
-        contentUnitId
-        unit {
-          id
-          name
-          symbol
-        }
-        contentUnit {
-          id
-          name
-          symbol
-        }
-      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
-mutation FlagItemForReview($itemId: ID!, $reason: String) {
-  flagItemForReview(itemId: $itemId, reason: $reason) {
-    success
-    message
-    code
-    item {
-      id
+mutation FlagItemForReview($input: FlagItemForReviewInput!) {
+  flagItemForReview(input: $input) {
+    __typename
+    ... on FlagItemForReviewPayload {
+      item {
+        id
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }

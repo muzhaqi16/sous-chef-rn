@@ -1,5 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet } from 'react-native-unistyles';
 import { useUser } from '#store/useAppStore';
 import { formatRole } from '#/utils/formatters/roleFormatters';
@@ -74,6 +75,7 @@ export const MembersList: React.FC<MembersListProps> = ({
   members,
   invites = [],
 }) => {
+  const { t } = useTranslation();
   const currentUser = useUser();
 
   // API now only returns pending invites, so no client-side filtering needed
@@ -93,7 +95,7 @@ export const MembersList: React.FC<MembersListProps> = ({
         tone="secondary"
         style={styles.membersSectionTitle}
       >
-        Members
+        {t('homeManagement.cardMembersSectionTitle')}
       </Text>
       <View style={styles.membersList}>
         {members.map(member => {

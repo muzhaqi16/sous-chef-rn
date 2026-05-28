@@ -3,18 +3,24 @@ import {
   View,
   Text,
   ActivityIndicator,
+  ScrollView,
   type NativeSyntheticEvent,
   type NativeScrollEvent,
 } from 'react-native';
-import { ScrollView } from 'react-native-gesture-handler';
+import { useTranslation } from 'react-i18next';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { Icon } from '#utils/iconUtils';
+import { useFragment } from '@apollo/client/react';
 import { MealType } from '#/graphql/generated/schemaTypes';
-import { useSavedRecipes } from '#features/recipes/hooks/useSavedRecipes';
+import {
+  useSavedRecipes,
+  type SavedRecipeNode,
+} from '#features/recipes/hooks/useSavedRecipes';
+import { AddMealSheet_SavedRecipeFragmentDoc } from './AddMealSheet.generated';
 import { CachedImage } from '#components/atoms/CachedImage';
 import {
   BottomSheetSearchBar,
@@ -43,20 +49,20 @@ interface AddMealSheetProps {
   onAddCustomMeal: (name: string, mealType: MealType) => void;
 }
 
-const MEAL_TYPES: { type: MealType; label: string }[] = [
-  { type: MealType.Breakfast, label: 'Breakfast' },
-  { type: MealType.Lunch, label: 'Lunch' },
-  { type: MealType.Dinner, label: 'Dinner' },
-  { type: MealType.Snack, label: 'Snack' },
-  { type: MealType.Brunch, label: 'Brunch' },
-  { type: MealType.Dessert, label: 'Dessert' },
+const MEAL_TYPES: { type: MealType; labelKey: string }[] = [
+  { type: MealType.Breakfast, labelKey: 'addMealSheet.mealBreakfast' },
+  { type: MealType.Lunch, labelKey: 'addMealSheet.mealLunch' },
+  { type: MealType.Dinner, labelKey: 'addMealSheet.mealDinner' },
+  { type: MealType.Snack, labelKey: 'addMealSheet.mealSnack' },
+  { type: MealType.Brunch, labelKey: 'addMealSheet.mealBrunch' },
+  { type: MealType.Dessert, labelKey: 'addMealSheet.mealDessert' },
 ];
 
-const DIET_TAG_LABELS: Record<DietTag, string> = {
-  vegan: 'Vegan',
-  vegetarian: 'Vegetarian',
-  glutenFree: 'GF',
-  dairyFree: 'DF',
+const DIET_TAG_LABEL_KEYS: Record<DietTag, string> = {
+  vegan: 'addMealSheet.dietVegan',
+  vegetarian: 'addMealSheet.dietVegetarian',
+  glutenFree: 'addMealSheet.dietGlutenFree',
+  dairyFree: 'addMealSheet.dietDairyFree',
 };
 
 const MIN_QUERY_LENGTH = 3;
@@ -111,8 +117,8 @@ function searchSpoonacularWithCache(
 
   executeAsyncWithCleanup(
     async () => {
-      const response = await spoonacularService.searchRecipes(
-        { query, number: 10, addRecipeInformation: true },
+      const response = await spoonacularService.searchRecipesWithInfo(
+        { query, number: 10 },
         signal,
       );
 
@@ -130,6 +136,73 @@ function searchSpoonacularWithCache(
   );
 }
 
+/**
+ * Per-row leaf that subscribes to a single SavedRecipe via the colocated
+ * `AddMealSheet_savedRecipe` fragment. `useFragment` reads these scalars
+ * straight from the normalized cache (populated by the MySavedRecipes query),
+ * so the row stays independent of the recipes feature's internal fragments.
+ */
+interface SavedRecipeRowProps {
+  savedRecipeRef: SavedRecipeNode;
+  searchQuery: string;
+  onPress: (recipeId: string) => void;
+}
+
+const SavedRecipeRow: React.FC<SavedRecipeRowProps> = ({
+  savedRecipeRef,
+  searchQuery,
+  onPress,
+}) => {
+  const { t } = useTranslation();
+  const { data, complete } = useFragment({
+    fragment: AddMealSheet_SavedRecipeFragmentDoc,
+    fragmentName: 'AddMealSheet_savedRecipe',
+    from: savedRecipeRef,
+  });
+
+  if (!complete) return null;
+
+  if (searchQuery.trim()) {
+    const q = searchQuery.toLowerCase();
+    const name = (data.recipe.name ?? '').toLowerCase();
+    if (!name.includes(q)) return null;
+  }
+
+  const { recipe } = data;
+  return (
+    <Pressable
+      onPress={() => onPress(recipe.id)}
+      style={({ pressed }) => [styles.recipeItem, pressed && styles.pressed]}
+    >
+      {!!recipe.imageUrl && (
+        <CachedImage
+          uri={recipe.imageUrl}
+          style={styles.recipeImage}
+          displaySize={44}
+        />
+      )}
+      <View style={styles.recipeInfo}>
+        <Text style={styles.recipeName} numberOfLines={1}>
+          {recipe.name}
+        </Text>
+        {!!(recipe.servings || recipe.totalTimeMinutes) && (
+          <Text style={styles.recipeMeta}>
+            {recipe.servings
+              ? t('addMealSheet.servings', { count: recipe.servings })
+              : ''}
+            {recipe.totalTimeMinutes
+              ? `${recipe.servings ? ' · ' : ''}${t('addMealSheet.minutes', {
+                  count: recipe.totalTimeMinutes,
+                })}`
+              : ''}
+          </Text>
+        )}
+      </View>
+      <Icon name="add-circle-outline" size={24} color={styles.addIcon.color} />
+    </Pressable>
+  );
+};
+
 export const AddMealSheet: React.FC<AddMealSheetProps> = ({
   visible,
   onClose,
@@ -137,6 +210,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
   onAddRecipe,
   onAddCustomMeal,
 }) => {
+  const { t } = useTranslation();
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible,
     onDismiss: onClose,
@@ -212,11 +286,9 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
     clearSearchResults(setSpoonacularResults, setSearchingApi);
   };
 
-  const filteredRecipes = (() => {
-    if (!searchQuery.trim()) return recipes;
-    const query = searchQuery.toLowerCase();
-    return recipes.filter(r => r.name?.toLowerCase().includes(query));
-  })();
+  // Search filtering happens inside SavedRecipeRow via useFragment — the
+  // hook returns masked refs, so we can't read recipe.name at the parent
+  // level. Rows that don't match return null.
 
   const handleSelectRecipe = (recipeId: string) => {
     onAddRecipe(recipeId, selectedMealType);
@@ -245,12 +317,12 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
           onAddRecipe(preloaded.id, selectedMealType);
           ref.current?.dismiss();
         } else {
-          toastService.error('Failed to add recipe. Please try again.');
+          toastService.error(t('addMealSheet.addRecipeFailed'));
         }
       },
       () => setLoadingItemId(null),
       () => {
-        toastService.error('Failed to add recipe. Please try again.');
+        toastService.error(t('addMealSheet.addRecipeFailed'));
       },
     );
   };
@@ -280,7 +352,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
     >
       <View style={[styles.content, contentContainerStyle]}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Add a meal</Text>
+          <Text style={styles.headerTitle}>{t('addMealSheet.title')}</Text>
         </View>
 
         {/* Meal type selector */}
@@ -290,7 +362,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
           contentContainerStyle={styles.mealTypeRow}
           style={styles.mealTypeScroll}
         >
-          {MEAL_TYPES.map(({ type, label }) => (
+          {MEAL_TYPES.map(({ type, labelKey }) => (
             <Pressable
               key={type}
               onPress={() => setSelectedMealType(type)}
@@ -305,7 +377,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
                   selectedMealType === type && styles.mealTypeTextSelected,
                 ]}
               >
-                {label}
+                {t(labelKey)}
               </Text>
             </Pressable>
           ))}
@@ -315,7 +387,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
         <View style={styles.searchBarWrapper}>
           <BottomSheetSearchBar
             ref={searchBarRef}
-            placeholder="Search recipes or add a custom meal..."
+            placeholder={t('addMealSheet.searchPlaceholder')}
             onChangeText={handleDebouncedSearch}
             onClear={handleClearSearch}
             isLoading={searchingApi}
@@ -344,53 +416,27 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
                 color={styles.addIcon.color}
               />
               <Text style={styles.customMealText} numberOfLines={1}>
-                Add &quot;{searchQuery.trim()}&quot; as custom meal
+                {t('addMealSheet.addCustom', { query: searchQuery.trim() })}
               </Text>
             </Pressable>
           ) : null}
 
-          {/* Your Recipes section */}
-          {hasQuery && filteredRecipes.length > 0 ? (
-            <Text style={styles.sectionHeader}>Your Recipes</Text>
+          {/* Your Recipes section — header only when NOT searching.
+              During search, rows filter themselves via useFragment (returning
+              null on mismatch), so the parent can't know the match count. */}
+          {!hasQuery && recipes.length > 0 ? (
+            <Text style={styles.sectionHeader}>
+              {t('addMealSheet.yourRecipes')}
+            </Text>
           ) : null}
 
-          {filteredRecipes.map(recipe => (
-            <Pressable
-              key={recipe.recipeId}
-              onPress={() => handleSelectRecipe(recipe.recipeId)}
-              style={({ pressed }) => [
-                styles.recipeItem,
-                pressed && styles.pressed,
-              ]}
-            >
-              {recipe.imageUrl ? (
-                <CachedImage
-                  uri={recipe.imageUrl}
-                  style={styles.recipeImage}
-                  displaySize={44}
-                />
-              ) : null}
-              <View style={styles.recipeInfo}>
-                <Text style={styles.recipeName} numberOfLines={1}>
-                  {recipe.name}
-                </Text>
-                {recipe.servings || recipe.totalTimeMinutes ? (
-                  <Text style={styles.recipeMeta}>
-                    {recipe.servings ? `${recipe.servings} servings` : ''}
-                    {recipe.totalTimeMinutes
-                      ? `${recipe.servings ? ' · ' : ''}${
-                          recipe.totalTimeMinutes
-                        } min`
-                      : ''}
-                  </Text>
-                ) : null}
-              </View>
-              <Icon
-                name="add-circle-outline"
-                size={24}
-                color={styles.addIcon.color}
-              />
-            </Pressable>
+          {recipes.map(savedRecipe => (
+            <SavedRecipeRow
+              key={savedRecipe.id}
+              savedRecipeRef={savedRecipe}
+              searchQuery={searchQuery}
+              onPress={handleSelectRecipe}
+            />
           ))}
 
           {/* Additional search results */}
@@ -436,7 +482,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
                         {item.dietTags.map(tag => (
                           <View key={tag} style={styles.dietTag}>
                             <Text style={styles.dietTagText}>
-                              {DIET_TAG_LABELS[tag]}
+                              {t(DIET_TAG_LABEL_KEYS[tag])}
                             </Text>
                           </View>
                         ))}
@@ -461,18 +507,22 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
           ) : null}
 
           {/* Empty state */}
-          {!hasQuery && filteredRecipes.length === 0 ? (
+          {!hasQuery && recipes.length === 0 ? (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>No saved recipes yet</Text>
+              <Text style={styles.emptyText}>
+                {t('addMealSheet.noSavedRecipes')}
+              </Text>
             </View>
           ) : null}
 
           {hasQuery &&
-          filteredRecipes.length === 0 &&
+          recipes.length === 0 &&
           !searchingApi &&
           spoonacularResults.length === 0 ? (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>No recipes match your search</Text>
+              <Text style={styles.emptyText}>
+                {t('addMealSheet.noResults')}
+              </Text>
             </View>
           ) : null}
         </BottomSheetScrollView>

@@ -1,0 +1,12 @@
+# Narrow fragment for the CreatePantryItemUsage mutation response's
+# nested pantryItem. Records a usage event — the parent item's quantity,
+# version, lastUsedAt, remainingNetWeight, and activeBatchCount may change.
+fragment useCreatePantryItemUsage_pantryItem on PantryItem {
+  id
+  version
+  quantity
+  lastUsedAt
+  remainingNetWeight
+  activeBatchCount
+  earliestBatchExpiration
+}

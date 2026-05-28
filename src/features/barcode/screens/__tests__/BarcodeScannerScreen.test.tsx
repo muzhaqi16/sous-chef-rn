@@ -36,8 +36,10 @@ jest.mock('react-native-vision-camera', () => ({
   useCameraDevices: jest.fn(() => []),
 }));
 
-jest.mock('react-native-vision-camera-barcode-scanner', () => ({
-  useBarcodeScannerOutput: jest.fn(() => ({})),
+// The screen reads from our platform-shimmed hook, not the underlying
+// vision-camera packages, so mocking this single module is enough.
+jest.mock('../../hooks/useBarcodeOutput', () => ({
+  useBarcodeOutput: jest.fn(() => ({})),
 }));
 
 jest.mock('#components/organisms/BarcodeMask', () => 'BarcodeMask');

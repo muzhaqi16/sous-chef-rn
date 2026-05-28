@@ -65,6 +65,7 @@ export const SearchResultsScreen: React.FC<
   } = useBottomSheetState();
 
   const { ref: bottomSheetRef, modalProps } = useStandardBottomSheet({
+    visible: scannerSheetVisible,
     onDismiss: hideBottomSheet,
     snapPoints: ['50%', '65%', '85%'],
   });
@@ -92,15 +93,6 @@ export const SearchResultsScreen: React.FC<
       hideBottomSheet();
     }
   }, [searchResults.length, scannerSheetVisible, hideBottomSheet, sheetMode]);
-
-  // Handle bottom sheet changes
-  useEffect(() => {
-    if (scannerSheetVisible) {
-      bottomSheetRef.current?.present();
-    } else {
-      bottomSheetRef.current?.dismiss();
-    }
-  }, [scannerSheetVisible, bottomSheetRef]);
 
   const handleScanAnother = () => {
     clearSearch();
@@ -198,6 +190,7 @@ export const SearchResultsScreen: React.FC<
       <BottomSheetModal
         ref={bottomSheetRef}
         {...modalProps}
+        stackBehavior="push"
         backgroundStyle={styles.bottomSheetBackground}
         handleIndicatorStyle={styles.bottomSheetHandle}
       >

@@ -1,0 +1,62 @@
+fragment HomeDetailScreen_home on Home {
+  id
+  name
+  description
+  timezone
+  currency
+  isPublic
+  joinCode
+  allowJoinCode
+  maxMembers
+  version
+  createdAt
+  updatedAt
+  myMembership {
+    id
+    role
+    status
+    displayName
+    canManageHome
+    canViewPantry
+    canEditPantry
+    canAddItems
+    canRemoveItems
+    canInviteOthers
+  }
+  membersConnection(first: 20) {
+    edges {
+      node {
+        id
+        role
+        userId
+        displayName
+        ...HomeMemberCard_member
+      }
+    }
+    totalCount
+  }
+  invitesConnection(first: 20) {
+    edges {
+      node {
+        id
+        status
+        email
+        ...HomeInviteCard_invite
+      }
+    }
+    totalCount
+  }
+  # Lightweight pantries selection — consumed by PantryItemForm's
+  # "default pantry" lookup. The detail screen itself doesn't render pantries
+  # directly (those live on the Storage Locations subscreen).
+  pantriesConnection(first: 20) {
+    edges {
+      node {
+        id
+        name
+        isDefault
+      }
+    }
+    totalCount
+  }
+}

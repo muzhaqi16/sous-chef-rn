@@ -1,0 +1,17 @@
+fragment HomeMemberCard_member on Membership {
+  id
+  homeId
+  userId
+  role
+  status
+  canManageHome
+  canViewPantry
+  canEditPantry
+  canAddItems
+  canRemoveItems
+  canInviteOthers
+  user {
+    id
+    email
+  }
+}

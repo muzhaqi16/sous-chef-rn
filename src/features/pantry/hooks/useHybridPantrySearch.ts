@@ -2,10 +2,7 @@ import {
   GetPantryDocument,
   type GetPantryQuery,
 } from '#features/pantry/graphql/pantry.generated';
-import {
-  normalizePantry,
-  type NormalizedPantry,
-} from '#/utils/connectionUtils';
+import { extractNodes } from '#/utils/connectionUtils';
 import { PAGE_SIZE } from '#/constants/pagination';
 import { pantryItemSearch } from '#/utils/searchUtils';
 import {
@@ -13,8 +10,13 @@ import {
   type UseHybridSearchConfig,
   type UseHybridSearchReturn,
 } from '#hooks/search/useHybridSearch';
+import type { PantryListItemNode } from '#hooks/home/pantry/usePantryQuery';
 
-type PantryItem = NonNullable<NormalizedPantry<any>['items']>[number];
+// Connection nodes carry direct fields (id, itemName, expiresAt, …) plus an
+// opaque `PantryItemCard_pantryItem` fragment ref. The leaf cell unmasks the
+// ref via `useFragment`; the hook layer only needs the direct fields for
+// local search / sort.
+type PantryItem = PantryListItemNode;
 
 export interface UseHybridPantrySearchParams {
   /** Pantry ID — search is disabled when null/empty. */
@@ -38,7 +40,7 @@ export interface UseHybridPantrySearchParams {
 /**
  * Pantry-specific wrapper around the generic `useHybridSearch` primitive. Bakes
  * in the GetPantry document, the variable shape (id + itemsFilter + orderBy),
- * the result extractor (normalizePantry → items), and the local search
+ * the result extractor (extractNodes → items), and the local search
  * predicate. Callers just supply the pantry context.
  *
  * The generic `useHybridSearch` is harder to test because its document is a
@@ -73,7 +75,11 @@ export function useHybridPantrySearch({
         storageLocationsFirst: 0,
       };
     },
-    extractItems: data => normalizePantry(data.pantry)?.items ?? [],
+    // Each node already carries the fields needed for local search + sort
+    // (itemName, expiresAt, quantity, …) plus the masked PantryItemCard
+    // fragment ref. Pass through without unmasking.
+    extractItems: data =>
+      extractNodes(data.pantry?.itemsConnection) as PantryItem[],
     searchPredicate: pantryItemSearch,
     debounceMs: 300,
   };

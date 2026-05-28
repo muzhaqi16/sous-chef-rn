@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { alertService } from '#/services/alertService';
@@ -32,6 +33,7 @@ interface CookingPreferencesSheetProps {
 export const CookingPreferencesSheet: React.FC<
   CookingPreferencesSheetProps
 > = ({ visible, onClose, onSave, initialValues }) => {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
 
   // Standard bottom-sheet boilerplate (ref + modalProps + present/dismiss
@@ -85,8 +87,11 @@ export const CookingPreferencesSheet: React.FC<
         prepTimeValue > DIETARY_LIMITS.prepTime.max
       ) {
         alertService.alert(
-          'Invalid Input',
-          `Prep time must be between ${DIETARY_LIMITS.prepTime.min} and ${DIETARY_LIMITS.prepTime.max} minutes`,
+          t('cookingPreferences.invalidInputTitle'),
+          t('cookingPreferences.prepTimeRange', {
+            min: DIETARY_LIMITS.prepTime.min,
+            max: DIETARY_LIMITS.prepTime.max,
+          }),
         );
         return;
       }
@@ -102,8 +107,11 @@ export const CookingPreferencesSheet: React.FC<
         cookTimeValue > DIETARY_LIMITS.cookTime.max
       ) {
         alertService.alert(
-          'Invalid Input',
-          `Cook time must be between ${DIETARY_LIMITS.cookTime.min} and ${DIETARY_LIMITS.cookTime.max} minutes`,
+          t('cookingPreferences.invalidInputTitle'),
+          t('cookingPreferences.cookTimeRange', {
+            min: DIETARY_LIMITS.cookTime.min,
+            max: DIETARY_LIMITS.cookTime.max,
+          }),
         );
         return;
       }
@@ -119,8 +127,11 @@ export const CookingPreferencesSheet: React.FC<
         budgetValue > DIETARY_LIMITS.budget.max
       ) {
         alertService.alert(
-          'Invalid Input',
-          `Budget must be between $${DIETARY_LIMITS.budget.min} and $${DIETARY_LIMITS.budget.max}`,
+          t('cookingPreferences.invalidInputTitle'),
+          t('cookingPreferences.budgetRange', {
+            min: DIETARY_LIMITS.budget.min,
+            max: DIETARY_LIMITS.budget.max,
+          }),
         );
         return;
       }
@@ -132,7 +143,10 @@ export const CookingPreferencesSheet: React.FC<
     setSaving(false);
 
     if (!success) {
-      alertService.alert('Error', 'Failed to update cooking preferences');
+      alertService.alert(
+        t('labels.error'),
+        t('cookingPreferences.updateFailed'),
+      );
     }
   };
 
@@ -148,17 +162,17 @@ export const CookingPreferencesSheet: React.FC<
       >
         {/* Header */}
         <BottomSheetHeader
-          title="Cooking Preferences"
+          title={t('cookingPreferences.title')}
           onCancel={onClose}
           onConfirm={handleSave}
-          confirmLabel="Save"
+          confirmLabel={t('cookingPreferences.save')}
           confirmDisabled={saving}
         />
 
         {/* Skill Level Picker */}
         <View style={styles.section}>
           <Text size="base" weight="medium" style={styles.label}>
-            Cooking Skill Level
+            {t('cookingPreferences.skillLevel')}
           </Text>
           <View style={styles.pickerContainer}>
             <Picker
@@ -166,7 +180,10 @@ export const CookingPreferencesSheet: React.FC<
               onValueChange={setSkillLevel}
               style={styles.picker}
             >
-              <Picker.Item label="Select skill level..." value="" />
+              <Picker.Item
+                label={t('cookingPreferences.selectSkillLevel')}
+                value=""
+              />
               {SKILL_LEVELS.map(level => (
                 <Picker.Item key={level} label={level} value={level} />
               ))}
@@ -177,11 +194,11 @@ export const CookingPreferencesSheet: React.FC<
         {/* Max Prep Time */}
         <View style={styles.section}>
           <FormInput
-            label="Max Prep Time (minutes)"
+            label={t('cookingPreferences.maxPrepTime')}
             value={prepTime}
             onChangeText={setPrepTime}
             keyboardType="number-pad"
-            placeholder="e.g., 30"
+            placeholder={t('cookingPreferences.prepTimePlaceholder')}
             useBottomSheetInput
           />
         </View>
@@ -189,11 +206,11 @@ export const CookingPreferencesSheet: React.FC<
         {/* Max Cook Time */}
         <View style={styles.section}>
           <FormInput
-            label="Max Cook Time (minutes)"
+            label={t('cookingPreferences.maxCookTime')}
             value={cookTime}
             onChangeText={setCookTime}
             keyboardType="number-pad"
-            placeholder="e.g., 60"
+            placeholder={t('cookingPreferences.cookTimePlaceholder')}
             useBottomSheetInput
           />
         </View>
@@ -201,11 +218,11 @@ export const CookingPreferencesSheet: React.FC<
         {/* Budget per Meal */}
         <View style={styles.section}>
           <FormInput
-            label="Budget per Meal ($)"
+            label={t('cookingPreferences.budgetPerMeal')}
             value={budget}
             onChangeText={setBudget}
             keyboardType="decimal-pad"
-            placeholder="e.g., 15.00"
+            placeholder={t('cookingPreferences.budgetPlaceholder')}
             useBottomSheetInput
           />
         </View>

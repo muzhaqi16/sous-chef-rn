@@ -37,10 +37,19 @@ jest.mock('#/utils/errors/versionConflict', () => ({
 
 jest.mock('#/apollo/utils/createOptimisticResponse', () => ({
   enhanceWithVersion: jest.fn((item, updates) => ({ ...item, ...updates })),
+  buildOptimisticMutationResponse: jest.fn(
+    (opName, payloadTypename, fields) => ({
+      __typename: 'Mutation',
+      [opName]: { __typename: payloadTypename, ...fields },
+    }),
+  ),
 }));
 
 jest.mock('#/utils/connectionUtils', () => ({
-  normalizeHome: jest.fn((home: any) => home),
+  extractNodes: jest.fn((conn: any) =>
+    conn?.edges ? conn.edges.map((e: any) => e?.node).filter(Boolean) : [],
+  ),
+  getConnectionTotalCount: jest.fn((conn: any) => conn?.totalCount ?? 0),
 }));
 
 const mockCreateAddOperation = jest.fn((config: any) => {
@@ -125,9 +134,6 @@ function createHomeMock(home: { id: string; name: string }) {
     data: {
       createHome: {
         __typename: 'CreateHomePayload',
-        success: true,
-        message: '',
-        code: 'SUCCESS',
         home: { __typename: 'Home', id: home.id, name: home.name },
       },
     },
@@ -137,15 +143,15 @@ function createHomeMock(home: { id: string; name: string }) {
 function updateHomeMock(home: { id: string; name?: string } | null) {
   return recordMock(UpdateHomeDocument, {
     data: {
-      updateHome: {
-        __typename: 'UpdateHomePayload',
-        success: home != null,
-        message: '',
-        code: home != null ? 'SUCCESS' : 'NOT_FOUND',
-        home: home
-          ? { __typename: 'Home', id: home.id, name: home.name ?? null }
-          : null,
-      },
+      updateHome: home
+        ? {
+            __typename: 'UpdateHomePayload',
+            home: { __typename: 'Home', id: home.id, name: home.name ?? null },
+          }
+        : {
+            __typename: 'NotFoundError',
+            message: 'Home not found',
+          },
     },
   });
 }
@@ -240,8 +246,7 @@ describe('useHomeMutations', () => {
       });
 
       expect(m.fired).toContainEqual({
-        id: 'home-1',
-        input: { name: 'Updated Name' },
+        input: { id: 'home-1', name: 'Updated Name' },
       });
     });
 

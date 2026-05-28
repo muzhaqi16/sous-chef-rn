@@ -1,53 +1,60 @@
 import React, { useState, type RefObject } from 'react';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
-import type { BottomSheetModal } from '@gorhom/bottom-sheet';
+import type { BottomSheetModalRef } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
+import { useTranslation } from 'react-i18next';
 import { BottomSheetAction } from '#components/templates/BottomSheetAction';
 import { Icon } from '#/utils/iconUtils';
 import type { RecipeFilters } from '#features/recipes/hooks/useRecipeScreen';
 import { Text } from '#components/atoms/Text';
 
 // ── Filter options — synced with DietaryRestrictionSelector + Spoonacular API values ──
+// `value` is the Spoonacular API value (do not translate). `labelKey` resolves
+// to the translated chip label via i18n.
 
 const DIET_OPTIONS = [
-  { label: 'Vegetarian', value: 'vegetarian' },
-  { label: 'Vegan', value: 'vegan' },
-  { label: 'Gluten Free', value: 'gluten free' },
-  { label: 'Ketogenic', value: 'ketogenic' },
-  { label: 'Paleo', value: 'paleo' },
-  { label: 'Pescetarian', value: 'pescetarian' },
-  { label: 'Lacto-Vegetarian', value: 'lacto-vegetarian' },
-  { label: 'Ovo-Vegetarian', value: 'ovo-vegetarian' },
-  { label: 'Primal', value: 'primal' },
-  { label: 'Low FODMAP', value: 'low fodmap' },
-  { label: 'Whole30', value: 'whole30' },
+  { labelKey: 'recipeFilters.diets.vegetarian', value: 'vegetarian' },
+  { labelKey: 'recipeFilters.diets.vegan', value: 'vegan' },
+  { labelKey: 'recipeFilters.diets.glutenFree', value: 'gluten free' },
+  { labelKey: 'recipeFilters.diets.ketogenic', value: 'ketogenic' },
+  { labelKey: 'recipeFilters.diets.paleo', value: 'paleo' },
+  { labelKey: 'recipeFilters.diets.pescetarian', value: 'pescetarian' },
+  {
+    labelKey: 'recipeFilters.diets.lactoVegetarian',
+    value: 'lacto-vegetarian',
+  },
+  { labelKey: 'recipeFilters.diets.ovoVegetarian', value: 'ovo-vegetarian' },
+  { labelKey: 'recipeFilters.diets.primal', value: 'primal' },
+  { labelKey: 'recipeFilters.diets.lowFodmap', value: 'low fodmap' },
+  { labelKey: 'recipeFilters.diets.whole30', value: 'whole30' },
 ];
 
 const INTOLERANCE_OPTIONS = [
-  { label: 'Dairy', value: 'dairy' },
-  { label: 'Egg', value: 'egg' },
-  { label: 'Gluten', value: 'gluten' },
-  { label: 'Grain', value: 'grain' },
-  { label: 'Peanut', value: 'peanut' },
-  { label: 'Seafood', value: 'seafood' },
-  { label: 'Sesame', value: 'sesame' },
-  { label: 'Shellfish', value: 'shellfish' },
-  { label: 'Soy', value: 'soy' },
-  { label: 'Sulfite', value: 'sulfite' },
-  { label: 'Tree Nut', value: 'tree nut' },
-  { label: 'Wheat', value: 'wheat' },
-  { label: 'Fish', value: 'fish' },
+  { labelKey: 'recipeFilters.intolerances.dairy', value: 'dairy' },
+  { labelKey: 'recipeFilters.intolerances.egg', value: 'egg' },
+  { labelKey: 'recipeFilters.intolerances.gluten', value: 'gluten' },
+  { labelKey: 'recipeFilters.intolerances.grain', value: 'grain' },
+  { labelKey: 'recipeFilters.intolerances.peanut', value: 'peanut' },
+  { labelKey: 'recipeFilters.intolerances.seafood', value: 'seafood' },
+  { labelKey: 'recipeFilters.intolerances.sesame', value: 'sesame' },
+  { labelKey: 'recipeFilters.intolerances.shellfish', value: 'shellfish' },
+  { labelKey: 'recipeFilters.intolerances.soy', value: 'soy' },
+  { labelKey: 'recipeFilters.intolerances.sulfite', value: 'sulfite' },
+  { labelKey: 'recipeFilters.intolerances.treeNut', value: 'tree nut' },
+  { labelKey: 'recipeFilters.intolerances.wheat', value: 'wheat' },
+  { labelKey: 'recipeFilters.intolerances.fish', value: 'fish' },
 ];
 
-const MEAL_TYPES = ['Breakfast', 'Lunch', 'Dinner', 'Snack', 'Dessert'];
-
-const COOK_TIMES = [
-  { label: '15 min', value: 15 },
-  { label: '30 min', value: 30 },
-  { label: '45 min', value: 45 },
-  { label: '60 min', value: 60 },
+const MEAL_TYPES = [
+  { labelKey: 'recipeFilters.mealTypes.breakfast', value: 'breakfast' },
+  { labelKey: 'recipeFilters.mealTypes.lunch', value: 'lunch' },
+  { labelKey: 'recipeFilters.mealTypes.dinner', value: 'dinner' },
+  { labelKey: 'recipeFilters.mealTypes.snack', value: 'snack' },
+  { labelKey: 'recipeFilters.mealTypes.dessert', value: 'dessert' },
 ];
+
+const COOK_TIMES = [15, 30, 45, 60];
 
 // ── Props ──
 
@@ -59,7 +66,7 @@ const DEFAULT_FILTERS: RecipeFilters = {
 };
 
 interface RecipeFilterSheetProps {
-  sheetRef: RefObject<BottomSheetModal | null>;
+  sheetRef: RefObject<BottomSheetModalRef | null>;
   activeFilters: RecipeFilters;
   setActiveFilters: React.Dispatch<React.SetStateAction<RecipeFilters>>;
   onSheetChange: (index: number) => void;
@@ -75,6 +82,7 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
   onSheetChange,
   isIngredientSearch = false,
 }) => {
+  const { t } = useTranslation();
   // Lazy mount: don't render filter content until sheet opens for the first time
   const [mounted, setMounted] = useState(false);
 
@@ -107,7 +115,7 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
   return (
     <BottomSheetAction
       sheetRef={sheetRef}
-      sheetTitle="Filters"
+      sheetTitle={t('recipeFilters.title')}
       snapPoints={['75%', '90%']}
       onChange={handleChange}
       headerRight={
@@ -116,17 +124,17 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
             onPress={() => setDraftFilters(DEFAULT_FILTERS)}
             hitSlop={8}
             accessibilityRole="button"
-            accessibilityLabel="Clear all filters"
+            accessibilityLabel={t('recipeFilters.clearAllA11y')}
           >
             <Text size="sm" weight="semibold" tone="secondary">
-              Clear
+              {t('recipeFilters.clear')}
             </Text>
           </Pressable>
           <Pressable
             onPress={() => sheetRef.current?.close()}
             hitSlop={8}
             accessibilityRole="button"
-            accessibilityLabel="Apply filters"
+            accessibilityLabel={t('recipeFilters.applyA11y')}
           >
             <Icon
               name={
@@ -149,7 +157,7 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
                 <Icon name="information-circle" size={16} tone="white" />
               </View>
               <Text size="sm" weight="semibold" style={styles.infoBannerTitle}>
-                Filters only apply to text search
+                {t('recipeFilters.infoBanner')}
               </Text>
             </View>
           ) : null}
@@ -157,14 +165,14 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
             {/* Diet Filter */}
             <View style={styles.filterSection}>
               <Text size="lg" weight="bold" style={styles.filterSectionTitle}>
-                Diet
+                {t('recipeFilters.dietTitle')}
               </Text>
               <Text
                 size="sm"
                 tone="secondary"
                 style={styles.filterSectionSubtitle}
               >
-                Select all that apply
+                {t('recipeFilters.selectAllThatApply')}
               </Text>
               <View style={styles.chipRow}>
                 {DIET_OPTIONS.map(diet => {
@@ -193,7 +201,7 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
                           isSelected ? styles.filterChipTextActive : undefined
                         }
                       >
-                        {diet.label}
+                        {t(diet.labelKey)}
                       </Text>
                     </Pressable>
                   );
@@ -204,14 +212,14 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
             {/* Intolerances Filter */}
             <View style={styles.filterSection}>
               <Text size="lg" weight="bold" style={styles.filterSectionTitle}>
-                Allergies & Intolerances
+                {t('recipeFilters.intolerancesTitle')}
               </Text>
               <Text
                 size="sm"
                 tone="secondary"
                 style={styles.filterSectionSubtitle}
               >
-                Select all that apply
+                {t('recipeFilters.selectAllThatApply')}
               </Text>
               <View style={styles.checkboxGrid}>
                 {INTOLERANCE_OPTIONS.map(intolerance => {
@@ -242,7 +250,7 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
                         tone={isSelected ? 'primary' : 'textSecondary'}
                       />
                       <Text size="sm" style={styles.checkboxText}>
-                        {intolerance.label}
+                        {t(intolerance.labelKey)}
                       </Text>
                     </Pressable>
                   );
@@ -253,94 +261,92 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
             {/* Meal Type Filter */}
             <View style={styles.filterSection}>
               <Text size="lg" weight="bold" style={styles.filterSectionTitle}>
-                Meal Type
+                {t('recipeFilters.mealTypeTitle')}
               </Text>
               <Text
                 size="sm"
                 tone="secondary"
                 style={styles.filterSectionSubtitle}
               >
-                Select one
+                {t('recipeFilters.selectOne')}
               </Text>
               <View style={styles.chipRow}>
-                {MEAL_TYPES.map(type => (
-                  <Pressable
-                    key={type}
-                    style={({ pressed }) => [
-                      styles.filterChip,
-                      draftFilters.mealType === type.toLowerCase() &&
-                        styles.filterChipActive,
-                      pressed && styles.pressed,
-                    ]}
-                    onPress={() =>
-                      setDraftFilters(prev => ({
-                        ...prev,
-                        mealType:
-                          prev.mealType === type.toLowerCase()
-                            ? null
-                            : type.toLowerCase(),
-                      }))
-                    }
-                  >
-                    <Text
-                      size="sm"
-                      weight="semibold"
-                      style={
-                        draftFilters.mealType === type.toLowerCase()
-                          ? styles.filterChipTextActive
-                          : undefined
+                {MEAL_TYPES.map(type => {
+                  const isSelected = draftFilters.mealType === type.value;
+                  return (
+                    <Pressable
+                      key={type.value}
+                      style={({ pressed }) => [
+                        styles.filterChip,
+                        isSelected && styles.filterChipActive,
+                        pressed && styles.pressed,
+                      ]}
+                      onPress={() =>
+                        setDraftFilters(prev => ({
+                          ...prev,
+                          mealType:
+                            prev.mealType === type.value ? null : type.value,
+                        }))
                       }
                     >
-                      {type}
-                    </Text>
-                  </Pressable>
-                ))}
+                      <Text
+                        size="sm"
+                        weight="semibold"
+                        style={
+                          isSelected ? styles.filterChipTextActive : undefined
+                        }
+                      >
+                        {t(type.labelKey)}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
               </View>
             </View>
 
             {/* Max Cook Time Filter */}
             <View style={styles.filterSection}>
               <Text size="lg" weight="bold" style={styles.filterSectionTitle}>
-                Max Cook Time
+                {t('recipeFilters.maxCookTimeTitle')}
               </Text>
               <Text
                 size="sm"
                 tone="secondary"
                 style={styles.filterSectionSubtitle}
               >
-                Select one
+                {t('recipeFilters.selectOne')}
               </Text>
               <View style={styles.chipRow}>
-                {COOK_TIMES.map(time => (
-                  <Pressable
-                    key={time.value}
-                    style={({ pressed }) => [
-                      styles.filterChip,
-                      draftFilters.maxReadyTime === time.value &&
-                        styles.filterChipActive,
-                      pressed && styles.pressed,
-                    ]}
-                    onPress={() =>
-                      setDraftFilters(prev => ({
-                        ...prev,
-                        maxReadyTime:
-                          prev.maxReadyTime === time.value ? null : time.value,
-                      }))
-                    }
-                  >
-                    <Text
-                      size="sm"
-                      weight="semibold"
-                      style={
-                        draftFilters.maxReadyTime === time.value
-                          ? styles.filterChipTextActive
-                          : undefined
+                {COOK_TIMES.map(minutes => {
+                  const isSelected = draftFilters.maxReadyTime === minutes;
+                  return (
+                    <Pressable
+                      key={minutes}
+                      style={({ pressed }) => [
+                        styles.filterChip,
+                        isSelected && styles.filterChipActive,
+                        pressed && styles.pressed,
+                      ]}
+                      onPress={() =>
+                        setDraftFilters(prev => ({
+                          ...prev,
+                          maxReadyTime:
+                            prev.maxReadyTime === minutes ? null : minutes,
+                        }))
                       }
                     >
-                      {time.label}
-                    </Text>
-                  </Pressable>
-                ))}
+                      <Text
+                        size="sm"
+                        weight="semibold"
+                        style={
+                          isSelected ? styles.filterChipTextActive : undefined
+                        }
+                      >
+                        {t('recipeFilters.cookTimeOption', { minutes })}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
               </View>
             </View>
           </View>

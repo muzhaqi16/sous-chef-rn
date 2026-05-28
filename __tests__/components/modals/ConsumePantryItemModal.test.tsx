@@ -28,17 +28,7 @@ jest.mock('../../../src/components/molecules/FormInput', () => ({
 describe('ConsumePantryItemModal', () => {
   const defaultProps = {
     visible: true,
-    pantryItem: {
-      id: 'pi1',
-      itemName: 'Milk',
-      quantity: 2,
-      unit: { id: 'u1', name: 'gallons', symbol: 'gal', displayAsFraction: false },
-      item: null,
-      remainingNetWeight: null,
-      netWeightUnit: null,
-      netWeight: null,
-      packageBreakdown: null,
-    } as any,
+    pantryItemId: 'pi1',
     onClose: jest.fn(),
     onConfirm: jest.fn(),
   };
@@ -58,9 +48,9 @@ describe('ConsumePantryItemModal', () => {
     expect(getByText('Confirm')).toBeTruthy();
   });
 
-  it('renders with null pantryItem', () => {
+  it('renders with null pantryItemId', () => {
     const { toJSON } = render(
-      <ConsumePantryItemModal {...defaultProps} pantryItem={null} />,
+      <ConsumePantryItemModal {...defaultProps} pantryItemId={null} />,
     );
     expect(toJSON()).toBeTruthy();
   });

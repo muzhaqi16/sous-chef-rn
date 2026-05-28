@@ -70,9 +70,10 @@ function setDefaultMock(defaultPantryId: string | null = null) {
     data: {
       setDefaultHome: {
         __typename: 'SetDefaultHomePayload',
-        success: true,
-        message: '',
-        code: 'SUCCESS',
+        settings: {
+          __typename: 'UserSettings',
+          id: 'settings-1',
+        },
         defaultPantry: defaultPantryId
           ? { __typename: 'Pantry', id: defaultPantryId }
           : null,
@@ -85,11 +86,8 @@ function setDefaultFailureMock() {
   return recordMock(SetDefaultHomeDocument, {
     data: {
       setDefaultHome: {
-        __typename: 'SetDefaultHomePayload',
-        success: false,
-        message: '',
-        code: 'FAILED',
-        defaultPantry: null,
+        __typename: 'NotFoundError',
+        message: 'Home not found',
       },
     },
   });

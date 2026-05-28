@@ -1,7 +1,7 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { screen } from '@testing-library/react-native';
 import { MoveToPantryModal } from '../MoveToPantryModal';
-import { type ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
+import { renderWithApollo, seedCache } from '#/test-utils/apolloMockProvider';
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
   useStandardBottomSheet: jest.fn(() => ({
@@ -104,13 +104,26 @@ jest.mock('@react-native-community/datetimepicker', () => {
   };
 });
 
-const mockShoppingListItem = {
-  id: 'sli-1',
-  itemName: 'Milk',
-  quantity: 2,
-  unit: { id: 'u1', symbol: 'gal', name: 'Gallons' },
-  unitName: 'gal',
-} as unknown as ShoppingListItemDisplayFragment;
+const ITEM_ID = 'sli-1';
+
+function makeCache(overrides: Record<string, unknown> = {}) {
+  return seedCache([
+    {
+      __typename: 'ShoppingListItem',
+      id: ITEM_ID,
+      itemName: 'Milk',
+      quantity: 2,
+      unitName: 'gal',
+      unit: {
+        __typename: 'Unit',
+        id: 'u1',
+        symbol: 'gal',
+        name: 'Gallons',
+      },
+      ...overrides,
+    },
+  ]);
+}
 
 const mockPantries = [
   { id: 'p1', name: 'Kitchen Pantry', isDefault: true },
@@ -120,7 +133,7 @@ const mockPantries = [
 describe('MoveToPantryModal', () => {
   const defaultProps = {
     visible: true,
-    shoppingListItem: mockShoppingListItem,
+    shoppingListItemId: ITEM_ID,
     pantries: mockPantries,
     selectedPantryId: 'p1',
     onClose: jest.fn(),
@@ -132,136 +145,154 @@ describe('MoveToPantryModal', () => {
   });
 
   it('renders Move to Pantry title', () => {
-    render(<MoveToPantryModal {...defaultProps} />);
+    renderWithApollo(<MoveToPantryModal {...defaultProps} />, {
+      cache: makeCache(),
+    });
     expect(screen.getByText('Move to Pantry')).toBeTruthy();
   });
 
   it('displays item name', () => {
-    render(<MoveToPantryModal {...defaultProps} />);
+    renderWithApollo(<MoveToPantryModal {...defaultProps} />, {
+      cache: makeCache(),
+    });
     expect(screen.getByText('Milk')).toBeTruthy();
   });
 
   it('renders pantry options', () => {
-    render(<MoveToPantryModal {...defaultProps} />);
+    renderWithApollo(<MoveToPantryModal {...defaultProps} />, {
+      cache: makeCache(),
+    });
     expect(screen.getByText('Kitchen Pantry')).toBeTruthy();
     expect(screen.getByText('Garage')).toBeTruthy();
   });
 
   it('shows Default badge on default pantry', () => {
-    render(<MoveToPantryModal {...defaultProps} />);
+    renderWithApollo(<MoveToPantryModal {...defaultProps} />, {
+      cache: makeCache(),
+    });
     expect(screen.getByText('Default')).toBeTruthy();
   });
 
   it('renders Quantity input', () => {
-    render(<MoveToPantryModal {...defaultProps} />);
+    renderWithApollo(<MoveToPantryModal {...defaultProps} />, {
+      cache: makeCache(),
+    });
     expect(screen.getByText('Quantity')).toBeTruthy();
   });
 
   it('renders Storage Type section', () => {
-    render(<MoveToPantryModal {...defaultProps} />);
+    renderWithApollo(<MoveToPantryModal {...defaultProps} />, {
+      cache: makeCache(),
+    });
     expect(screen.getByText('Storage Type')).toBeTruthy();
   });
 
   it('renders Expiration Date section', () => {
-    render(<MoveToPantryModal {...defaultProps} />);
+    renderWithApollo(<MoveToPantryModal {...defaultProps} />, {
+      cache: makeCache(),
+    });
     expect(screen.getByText('Expiration Date')).toBeTruthy();
   });
 
   it('renders Remove from shopping list toggle', () => {
-    render(<MoveToPantryModal {...defaultProps} />);
+    renderWithApollo(<MoveToPantryModal {...defaultProps} />, {
+      cache: makeCache(),
+    });
     expect(screen.getByText('Remove from shopping list')).toBeTruthy();
   });
 
   it('renders notes input', () => {
-    render(<MoveToPantryModal {...defaultProps} />);
+    renderWithApollo(<MoveToPantryModal {...defaultProps} />, {
+      cache: makeCache(),
+    });
     expect(screen.getByText('Notes (Optional)')).toBeTruthy();
   });
 
-  it('does not render item info when shoppingListItem is null', () => {
-    render(<MoveToPantryModal {...defaultProps} shoppingListItem={null} />);
+  it('does not render item info when shoppingListItemId is null', () => {
+    renderWithApollo(
+      <MoveToPantryModal {...defaultProps} shoppingListItemId={null} />,
+      { cache: makeCache() },
+    );
     expect(screen.queryByText('Milk')).toBeNull();
   });
 
   it('shows shopping list quantity with unit symbol', () => {
-    render(<MoveToPantryModal {...defaultProps} />);
+    renderWithApollo(<MoveToPantryModal {...defaultProps} />, {
+      cache: makeCache(),
+    });
     expect(screen.getByText(/Shopping list quantity: 2/)).toBeTruthy();
   });
 
   it('uses unitName when unit.symbol is missing', () => {
-    const itemWithUnitName = {
-      ...mockShoppingListItem,
-      unit: null,
-      unitName: 'gallons',
-    } as unknown as ShoppingListItemDisplayFragment;
-
-    render(
-      <MoveToPantryModal
-        {...defaultProps}
-        shoppingListItem={itemWithUnitName}
-      />,
-    );
+    renderWithApollo(<MoveToPantryModal {...defaultProps} />, {
+      cache: makeCache({ unit: null, unitName: 'gallons' }),
+    });
     expect(screen.getByText(/Shopping list quantity/)).toBeTruthy();
   });
 
   it('shows quantity as 1 when no quantity is set', () => {
-    const itemWithoutQuantity = {
-      ...mockShoppingListItem,
-      quantity: null,
-    } as unknown as ShoppingListItemDisplayFragment;
-
-    render(
-      <MoveToPantryModal
-        {...defaultProps}
-        shoppingListItem={itemWithoutQuantity}
-      />,
-    );
+    renderWithApollo(<MoveToPantryModal {...defaultProps} />, {
+      cache: makeCache({ quantity: null }),
+    });
     expect(screen.getByText(/Shopping list quantity: 1/)).toBeTruthy();
   });
 
   it('renders all storage state options', () => {
-    render(<MoveToPantryModal {...defaultProps} />);
-    expect(screen.getByText('AMBIENT')).toBeTruthy();
-    expect(screen.getByText('REFRIGERATED')).toBeTruthy();
-    expect(screen.getByText('FROZEN')).toBeTruthy();
+    renderWithApollo(<MoveToPantryModal {...defaultProps} />, {
+      cache: makeCache(),
+    });
+    expect(screen.getByText('Ambient')).toBeTruthy();
+    expect(screen.getByText('Refrigerated')).toBeTruthy();
+    expect(screen.getByText('Frozen')).toBeTruthy();
   });
 
   it('shows Select date text when no expiration date is set', () => {
-    render(<MoveToPantryModal {...defaultProps} />);
+    renderWithApollo(<MoveToPantryModal {...defaultProps} />, {
+      cache: makeCache(),
+    });
     expect(screen.getByText('Select date')).toBeTruthy();
   });
 
   it('renders Purchase Price input', () => {
-    render(<MoveToPantryModal {...defaultProps} />);
+    renderWithApollo(<MoveToPantryModal {...defaultProps} />, {
+      cache: makeCache(),
+    });
     expect(screen.getByText('Purchase Price (per unit)')).toBeTruthy();
   });
 
   it('resets form when modal opens with new item', () => {
-    const { rerender } = render(
+    const cache = makeCache();
+    const { rerender } = renderWithApollo(
       <MoveToPantryModal
         {...defaultProps}
         visible={false}
-        shoppingListItem={null}
+        shoppingListItemId={null}
       />,
+      { cache },
     );
     rerender(
       <MoveToPantryModal
         {...defaultProps}
         visible={true}
-        shoppingListItem={mockShoppingListItem}
+        shoppingListItemId={ITEM_ID}
       />,
     );
     expect(screen.getByText('Milk')).toBeTruthy();
   });
 
   it('renders with empty pantries list', () => {
-    render(<MoveToPantryModal {...defaultProps} pantries={[]} />);
+    renderWithApollo(<MoveToPantryModal {...defaultProps} pantries={[]} />, {
+      cache: makeCache(),
+    });
     // Should still render but without pantry selector
     expect(screen.getByText('Milk')).toBeTruthy();
     expect(screen.queryByText('Select Pantry')).toBeNull();
   });
 
   it('hides empty pantries section label when no pantries', () => {
-    render(<MoveToPantryModal {...defaultProps} pantries={[]} />);
+    renderWithApollo(<MoveToPantryModal {...defaultProps} pantries={[]} />, {
+      cache: makeCache(),
+    });
     expect(screen.queryByText('Kitchen Pantry')).toBeNull();
     expect(screen.queryByText('Garage')).toBeNull();
   });

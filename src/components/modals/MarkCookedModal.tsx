@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
@@ -33,6 +34,7 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
   onConfirm,
   hasPantry = false,
 }) => {
+  const { t } = useTranslation();
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible,
     onDismiss: onClose,
@@ -88,10 +90,10 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
       >
         {/* Header */}
         <BottomSheetHeader
-          title="I Cooked This!"
+          title={t('markCookedModal.title')}
           onCancel={onClose}
           onConfirm={handleConfirm}
-          confirmLabel="Mark Cooked"
+          confirmLabel={t('markCookedModal.markCooked')}
           confirmColor="success"
         />
 
@@ -105,10 +107,12 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
         {/* Servings Input */}
         <View style={styles.section}>
           <FractionInput
-            label="Servings Made"
+            label={t('markCookedModal.servingsMade')}
             value={servingsInput}
             onChangeText={setServingsInput}
-            placeholder={`e.g., ${defaultServings || 1}`}
+            placeholder={t('markCookedModal.servingsPlaceholderPrefix', {
+              count: defaultServings || 1,
+            })}
             keyboardType="numeric"
           />
         </View>
@@ -117,10 +121,10 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
         <View style={styles.toggleSection}>
           <View style={styles.toggleInfo}>
             <Text size="base" weight="medium">
-              Deduct from Pantry
+              {t('markCookedModal.deductFromPantry')}
             </Text>
             <Text size="sm" tone="secondary" style={styles.toggleDescription}>
-              Automatically reduce ingredient quantities in your pantry
+              {t('markCookedModal.deductFromPantryDesc')}
             </Text>
           </View>
           <BaseSwitch
@@ -134,10 +138,10 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
           <View style={styles.toggleSection}>
             <View style={styles.toggleInfo}>
               <Text size="base" weight="medium">
-                Smart Deduction
+                {t('markCookedModal.smartDeduction')}
               </Text>
               <Text size="sm" tone="secondary" style={styles.toggleDescription}>
-                Review and adjust ingredient quantities before deducting
+                {t('markCookedModal.smartDeductionDesc')}
               </Text>
             </View>
             <BaseSwitch
@@ -150,10 +154,10 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
         {/* Notes (Optional) */}
         <View style={styles.section}>
           <FormInput
-            label="Notes (Optional)"
+            label={t('markCookedModal.notesOptional')}
             value={notes}
             onChangeText={setNotes}
-            placeholder="How did it turn out?"
+            placeholder={t('markCookedModal.notesPlaceholder')}
             multiline
             numberOfLines={2}
           />

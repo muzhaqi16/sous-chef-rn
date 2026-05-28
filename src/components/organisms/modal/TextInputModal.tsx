@@ -5,8 +5,9 @@ import {
   Text,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import {
   ThemedTextInput,
@@ -30,10 +31,10 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
   visible,
   onClose,
   onSubmit,
-  title = 'Enter Text',
-  placeholder = 'Enter text',
-  submitText = 'Submit',
-  cancelText = 'Cancel',
+  title,
+  placeholder,
+  submitText,
+  cancelText,
   primaryColor,
   errorColor,
   loading = false,
@@ -42,6 +43,11 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
   textInputProps = {},
   multiline = false,
 }) => {
+  const { t } = useTranslation();
+  const resolvedTitle = title ?? t('textInputModal.title');
+  const resolvedPlaceholder = placeholder ?? t('textInputModal.placeholder');
+  const resolvedSubmitText = submitText ?? t('textInputModal.submit');
+  const resolvedCancelText = cancelText ?? t('labels.cancel');
   const [text, setText] = useState(initialValue);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -65,7 +71,7 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
 
     // Check if empty
     if (!trimmedValue) {
-      return 'This field is required';
+      return t('textInputModal.required');
     }
 
     // Run custom validation rules
@@ -96,7 +102,7 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
       },
       setIsSubmitting,
       () => {
-        setError('Operation failed. Please try again.');
+        setError(t('textInputModal.submitFailed'));
       },
     );
   };
@@ -122,14 +128,14 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <View style={styles.modalView}>
-          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.title}>{resolvedTitle}</Text>
 
           <ThemedTextInput
             style={[
               multiline ? styles.multilineInput : styles.input,
               errorBorderOverrideStyle,
             ]}
-            placeholder={placeholder}
+            placeholder={resolvedPlaceholder}
             value={text}
             onChangeText={newText => {
               setText(newText);
@@ -155,7 +161,7 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
               onPress={handleClose}
               disabled={isSubmitting}
             >
-              <Text style={styles.cancelButtonText}>{cancelText}</Text>
+              <Text style={styles.cancelButtonText}>{resolvedCancelText}</Text>
             </Pressable>
 
             <Pressable
@@ -171,7 +177,9 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
               {isSubmitting || loading ? (
                 <ThemedActivityIndicator size="small" />
               ) : (
-                <Text style={styles.submitButtonText}>{submitText}</Text>
+                <Text style={styles.submitButtonText}>
+                  {resolvedSubmitText}
+                </Text>
               )}
             </Pressable>
           </View>

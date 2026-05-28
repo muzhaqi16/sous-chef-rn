@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { BottomSheetView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
@@ -9,6 +10,7 @@ import { Controller, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { object, string, type AnyObjectSchema } from 'yup';
 import { Button } from '#components/base/Button';
+import { logValidationErrors } from '#utils/validation/common';
 import { Text } from '#components/atoms/Text';
 
 interface TextEditBottomSheetProps {
@@ -54,6 +56,7 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
   maxLength,
   keyboardType = 'default',
 }) => {
+  const { t } = useTranslation();
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible,
     onDismiss: onClose,
@@ -97,9 +100,9 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
             variant="ghost"
             size="small"
             onPress={handleCancel}
-            accessibilityLabel="Cancel"
+            accessibilityLabel={t('textEditBottomSheet.cancel')}
           >
-            Cancel
+            {t('textEditBottomSheet.cancel')}
           </Button>
 
           <Text size="lg" weight="semibold" align="center" style={styles.title}>
@@ -109,10 +112,10 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
           <Button
             variant="ghost"
             size="small"
-            onPress={form.handleSubmit(handleSave)}
-            accessibilityLabel="Save"
+            onPress={form.handleSubmit(handleSave, logValidationErrors)}
+            accessibilityLabel={t('textEditBottomSheet.save')}
           >
-            Save
+            {t('textEditBottomSheet.save')}
           </Button>
         </View>
 

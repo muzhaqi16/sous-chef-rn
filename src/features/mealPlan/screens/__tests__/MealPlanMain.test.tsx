@@ -145,7 +145,7 @@ jest.mock('#hooks/performance/useTabScreenLifecycle', () => ({
 }));
 
 const mockDeferredScreen = jest.fn(({ fallback }: any) => fallback);
-jest.mock('#features/mealPlan/components/WeekStrip', () => ({
+jest.mock('#components/molecules/WeekStrip', () => ({
   WeekStrip: () => null,
 }));
 jest.mock('#features/mealPlan/components/MonthCalendar', () => ({

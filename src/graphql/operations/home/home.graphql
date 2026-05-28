@@ -4,7 +4,7 @@
 
 query GetHome($homeId: ID!) {
   home(id: $homeId) {
-    ...HomeFragment
+    ...HomeDetailScreen_home
   }
 }
 
@@ -13,7 +13,37 @@ query GetHomes($first: Int, $after: String) {
     edges {
       cursor
       node {
-        ...HomeListFragment
+        # Direct selections cover what `HomeManagement` + hooks read off each
+        # node (id, default flag, default-pantry lookup, membership perms).
+        # Leaf rendering lives in the masked `HomeCard_home` spread.
+        id
+        name
+        isDefault
+        version
+        myMembership {
+          id
+          role
+          canManageHome
+          canViewPantry
+          canEditPantry
+          canAddItems
+          canRemoveItems
+          canInviteOthers
+        }
+        pantriesConnection(first: 10) {
+          edges {
+            node {
+              id
+              name
+              isDefault
+            }
+          }
+          totalCount
+        }
+        membersConnection(first: 5) {
+          totalCount
+        }
+        ...HomeCard_home
       }
     }
     pageInfo {
@@ -28,6 +58,8 @@ query GetMyPendingInvites {
   me {
     id
     pendingHomeInvites {
+      id
+      role
       ...InviteCard_invite
     }
   }
@@ -35,7 +67,22 @@ query GetMyPendingInvites {
 
 query GetHomeByJoinCode($joinCode: String!) {
   homeByJoinCode(joinCode: $joinCode) {
-    ...HomeDisplay
+    id
+    name
+    isDefault
+    membersConnection(first: 10) {
+      totalCount
+    }
+    pantriesConnection(first: 20) {
+      edges {
+        node {
+          id
+          name
+          isDefault
+        }
+      }
+      totalCount
+    }
   }
 }
 
@@ -45,127 +92,289 @@ query GetHomeByJoinCode($joinCode: String!) {
 
 mutation CreateHome($input: CreateHomeInput!) {
   createHome(input: $input) {
-    success
-    message
-    code
-    home {
-      ...HomeListFragment
+    __typename
+    ... on CreateHomePayload {
+      home {
+        id
+        name
+        isDefault
+        version
+        myMembership {
+          id
+          role
+          canManageHome
+          canViewPantry
+          canEditPantry
+          canAddItems
+          canRemoveItems
+          canInviteOthers
+        }
+        pantriesConnection(first: 10) {
+          edges {
+            node {
+              id
+              name
+              isDefault
+            }
+          }
+          totalCount
+        }
+        ...HomeCard_home
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
-mutation UpdateHome($id: ID!, $input: UpdateHomeInput!) {
-  updateHome(id: $id, input: $input) {
-    success
-    message
-    code
-    home {
-      id
-      name
-      allowJoinCode
-      joinCode
-      version
-      updatedAt
+mutation UpdateHome($input: UpdateHomeInput!) {
+  updateHome(input: $input) {
+    __typename
+    ... on UpdateHomePayload {
+      home {
+        id
+        name
+        allowJoinCode
+        joinCode
+        version
+        updatedAt
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
-mutation DeleteHome($id: ID!) {
-  deleteHome(id: $id) {
-    success
-    message
-    code
-    home {
-      id
-      name
+mutation DeleteHome($input: DeleteHomeInput!) {
+  deleteHome(input: $input) {
+    __typename
+    ... on DeleteHomePayload {
+      home {
+        id
+        name
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
   }
 }
 
 mutation InviteToHome($input: InviteToHomeInput!) {
   inviteToHome(input: $input) {
-    success
-    message
-    code
-    homeInvite {
-      ...InviteCard_invite
+    __typename
+    ... on InviteToHomePayload {
+      homeInvite {
+        ...InviteCard_invite
+        ...HomeInviteCard_invite
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
-mutation AcceptHomeInvite($token: String!) {
-  acceptHomeInvite(token: $token) {
-    success
-    message
-    code
-    membership {
-      ...MemberShipFragment
+mutation AcceptHomeInvite($input: AcceptHomeInviteInput!) {
+  acceptHomeInvite(input: $input) {
+    __typename
+    ... on AcceptHomeInvitePayload {
+      membership {
+        id
+        homeId
+        home {
+          id
+          name
+          isDefault
+          version
+          myMembership {
+            id
+            role
+            canManageHome
+            canViewPantry
+            canEditPantry
+            canAddItems
+            canRemoveItems
+            canInviteOthers
+          }
+          pantriesConnection(first: 10) {
+            edges {
+              node {
+                id
+                name
+                isDefault
+              }
+            }
+            totalCount
+          }
+          membersConnection(first: 5) {
+            totalCount
+          }
+          ...HomeCard_home
+        }
+        ...HomeMemberCard_member
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
-mutation DeclineHomeInvite($token: String!) {
-  declineHomeInvite(token: $token) {
-    success
-    message
-    code
-    homeInvite {
-      id
+mutation DeclineHomeInvite($input: DeclineHomeInviteInput!) {
+  declineHomeInvite(input: $input) {
+    __typename
+    ... on DeclineHomeInvitePayload {
+      homeInvite {
+        id
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
   }
 }
 
-mutation UpdateMembership($id: ID!, $input: UpdateMembershipInput!) {
-  updateMembership(id: $id, input: $input) {
-    success
-    message
-    code
-    membership {
-      ...MemberShipFragment
+mutation UpdateMembership($input: UpdateMembershipInput!) {
+  updateMembership(input: $input) {
+    __typename
+    ... on UpdateMembershipPayload {
+      membership {
+        id
+        ...HomeMemberCard_member
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
-mutation RemoveMember($id: ID!) {
-  removeMember(membershipId: $id) {
-    success
-    message
-    code
-    membership {
-      id
+mutation RemoveMember($input: RemoveMemberInput!) {
+  removeMember(input: $input) {
+    __typename
+    ... on RemoveMemberPayload {
+      membership {
+        id
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
   }
 }
 
-mutation RevokeHomeInvite($id: ID!) {
-  revokeHomeInvite(id: $id) {
-    success
-    message
-    code
-    homeInvite {
-      id
+mutation RevokeHomeInvite($input: RevokeHomeInviteInput!) {
+  revokeHomeInvite(input: $input) {
+    __typename
+    ... on RevokeHomeInvitePayload {
+      homeInvite {
+        id
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
   }
 }
 
-mutation JoinHomeByCode($joinCode: String!) {
-  joinHomeByCode(joinCode: $joinCode) {
-    success
-    message
-    code
-    membership {
-      ...MemberShipFragment
+mutation JoinHomeByCode($input: JoinHomeByCodeInput!) {
+  joinHomeByCode(input: $input) {
+    __typename
+    ... on JoinHomeByCodePayload {
+      membership {
+        id
+        homeId
+        ...HomeMemberCard_member
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
-mutation LeaveHome($homeId: ID!) {
-  leaveHome(homeId: $homeId) {
-    success
-    message
-    code
-    membership {
-      id
+mutation LeaveHome($input: LeaveHomeInput!) {
+  leaveHome(input: $input) {
+    __typename
+    ... on LeaveHomePayload {
+      membership {
+        id
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
   }
 }
@@ -179,7 +388,9 @@ subscription HomeInviteChanged($homeId: ID!) {
     mutation
     homeId
     homeInvite {
+      id
       ...InviteCard_invite
+      ...HomeInviteCard_invite
     }
     userId
     timestamp

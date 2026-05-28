@@ -5,10 +5,16 @@ import {
   findMovedItem,
   getNeighborIds,
 } from '../SortableList.utils';
-import type { SortableShoppingListItem } from '../types';
 
-const makeItem = (id: string, sortOrder = '0'): SortableShoppingListItem =>
-  ({ id, sortOrder } as SortableShoppingListItem);
+interface TestItem {
+  id: string;
+  sortOrder?: string | null;
+}
+
+const makeItem = (id: string, sortOrder = '0'): TestItem => ({
+  id,
+  sortOrder,
+});
 
 describe('SortableList.utils', () => {
   describe('areItemIdsEqual', () => {

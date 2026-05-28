@@ -32,6 +32,7 @@ require('./__tests__/setup/mocks/react-native-mmkv');
 require('./__tests__/setup/mocks/react-native-device-info');
 require('./__tests__/setup/mocks/react-native-keychain');
 require('./__tests__/setup/mocks/react-native-keyboard-controller');
+require('./__tests__/setup/mocks/react-native-haptic-feedback');
 require('./__tests__/setup/mocks/react-native-performance');
 require('./__tests__/setup/mocks/shopify-flash-list');
 require('./__tests__/setup/mocks/shopify-react-native-skia');

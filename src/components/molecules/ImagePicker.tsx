@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 import { Pressable } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
@@ -16,7 +16,6 @@ import {
   validateImageFile,
   ImageValidationError,
 } from '#utils/imageValidation';
-import { useBottomSheetModal } from '#hooks/useBottomSheetModal';
 import { usePermission } from '#hooks/permissions/usePermission';
 import { ImagePickerSheet } from './ImagePickerSheet';
 import { Text } from '#components/atoms/Text';
@@ -68,7 +67,7 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
   isProfile = false,
   children,
 }) => {
-  const { ref: sheetRef, open: openSheet } = useBottomSheetModal();
+  const [sheetVisible, setSheetVisible] = useState(false);
   const {
     request: requestCamera,
     isBlocked,
@@ -150,12 +149,15 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
 
   const showImagePicker = () => {
     if (disabled) return;
-    openSheet();
+    setSheetVisible(true);
   };
+
+  const hideSheet = () => setSheetVisible(false);
 
   const renderSheet = () => (
     <ImagePickerSheet
-      ref={sheetRef}
+      visible={sheetVisible}
+      onDismiss={hideSheet}
       onCamera={handleCameraPress}
       onLibrary={handleLibraryPress}
     />

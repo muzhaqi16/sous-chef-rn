@@ -29,6 +29,8 @@ import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { executeRefreshWithFinally } from '#/utils/compilerSafeWrappers';
 import { SousChefLoader } from '#/components/base/SousChefLoader';
 import { Text } from '#components/atoms/Text';
+import { getInviteDisplayName } from '#/utils/formatters/inviteFormatters';
+import { getMemberDisplayName } from '#/utils/formatters/memberFormatters';
 
 type RouteParams = {
   homeId: string;
@@ -92,9 +94,7 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
     );
   };
 
-  // Use myMembership for reliable current user membership (not affected by connection limits)
   const currentUserMembership = home?.myMembership;
-
   const isOwner = currentUserMembership?.role === 'OWNER';
   const canManage = currentUserMembership?.canManageHome ?? false;
 
@@ -104,14 +104,14 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
     // Check if user is owner
     if (isOwner) {
       alertService.alert(
-        'Cannot Leave',
-        'Owners cannot leave the home. Please transfer ownership to another member or delete the home.',
+        t('homeDetail.ownerCannotLeaveTitle'),
+        t('homeDetail.ownerCannotLeaveMessage'),
         [{ text: t('labels.ok') }],
       );
       return;
     }
 
-    const success = await leaveHome(home.name);
+    const success = await leaveHome(home.name ?? '');
     if (success) {
       goBack();
     }
@@ -119,14 +119,14 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
 
   if (loading || !home) {
     const getMessage = () => {
-      if (loading) return 'Loading';
-      if (error) return 'Failed to load home details';
-      return 'Home not found';
+      if (loading) return t('homeDetail.loadingMessage');
+      if (error) return t('homeDetail.errorFailedToLoad');
+      return t('homeDetail.errorHomeNotFound');
     };
 
     return (
       <DetailTemplate
-        title="Home Details"
+        title={t('homeDetail.title')}
         onBack={goBack}
         headerActions={[]}
         sections={[
@@ -154,28 +154,46 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
     );
   }
 
+  // Edges from masked connections; node refs flow into the section's card
+  // components which call `useFragment` per row for cache-subscribed updates.
+  // `useFragment` types as `DeepPartialObject<...>` because writes may be
+  // incomplete; in practice the query selects every field so it's safe to
+  // narrow back to the section's expected node shape.
+  type SectionMemberNode = React.ComponentProps<
+    typeof HomeMembersSection
+  >['members'][number];
+  type SectionInviteNode = React.ComponentProps<
+    typeof HomeMembersSection
+  >['invites'][number];
+  const memberNodes = (home.membersConnection?.edges
+    ?.map(e => e?.node)
+    .filter(Boolean) ?? []) as SectionMemberNode[];
+  const inviteNodes = (home.invitesConnection?.edges
+    ?.map(e => e?.node)
+    .filter(Boolean) ?? []) as SectionInviteNode[];
+
   const sections = [
     {
-      title: 'Home Information',
+      title: t('homeDetail.sectionHomeInformation'),
       content: (
         <>
           <EditableField
-            label="Home Name"
-            value={home.name}
+            label={t('homeDetail.labelHomeName')}
+            value={home.name ?? ''}
             onSave={saveName}
-            placeholder="Enter home name"
+            placeholder={t('homeDetail.placeholderHomeName')}
             readOnly={!canManage}
             validation={value => {
               if (!value.trim()) {
-                return 'Home name cannot be empty';
+                return t('homeDetail.homeNameEmptyError');
               }
               return null;
             }}
           />
           {canManage ? (
             <SettingSwitch
-              title="Allow Join Code"
-              description="Let others join this home using a code"
+              title={t('homeDetail.labelAllowJoinCode')}
+              description={t('homeDetail.descriptionAllowJoinCode')}
               value={home.allowJoinCode ?? false}
               onValueChange={handleToggleJoinCode}
               disabled={joinCodeLoading}
@@ -187,7 +205,7 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
             <View style={styles.joinCodeRow}>
               <View style={styles.joinCodeContent}>
                 <Text size="sm" tone="secondary" style={styles.joinCodeLabel}>
-                  Join Code
+                  {t('homeDetail.labelJoinCode')}
                 </Text>
                 <Text size="lg" weight="semibold" style={styles.joinCodeValue}>
                   {home.joinCode}
@@ -212,13 +230,32 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
       ),
     },
     {
-      title: 'Members & Invites',
+      title: t('homeDetail.sectionMembersInvites'),
       content: (
         <HomeMembersSection
-          members={home.members || []}
-          invites={home.invites || []}
-          currentUserId={currentUser?.id}
-          currentUserMembership={currentUserMembership}
+          members={memberNodes}
+          invites={inviteNodes}
+          canManageHome={canManage}
+          resolveMemberLabel={member => {
+            const isCurrentUser =
+              !!currentUser?.id && member.userId === currentUser.id;
+            return {
+              isCurrentUser,
+              displayName: isCurrentUser
+                ? t('homeDetail.youLabel')
+                : getMemberDisplayName(
+                    {
+                      id: member.id,
+                      role: member.role,
+                      displayName: member.displayName,
+                    },
+                    currentUser?.id,
+                  ),
+            };
+          }}
+          resolveInviteLabel={invite =>
+            getInviteDisplayName({ email: invite.email })
+          }
           onChangeRole={changeRole}
           onRemove={removeMember}
           onRevokeInvite={revokeInvite}
@@ -226,12 +263,12 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
       ),
     },
     {
-      title: 'Storage',
+      title: t('homeDetail.sectionStorage'),
       content: (
         <ThemedNavigationRow
           icon="folder-open"
-          title="Storage Locations"
-          subtitle="Manage where items are stored"
+          title={t('homeDetail.storageLocationsTitle')}
+          subtitle={t('homeDetail.storageLocationsSubtitle')}
           onPress={() => toStorageLocations({ homeId })}
         />
       ),
@@ -240,7 +277,7 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
     ...(!isOwner
       ? [
           {
-            title: 'Danger Zone',
+            title: t('homeDetail.sectionDangerZone'),
             content: (
               <View style={styles.leaveHomeSection}>
                 <Text
@@ -248,11 +285,10 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
                   tone="secondary"
                   style={styles.leaveHomeDescription}
                 >
-                  Leaving this home will remove your access to all shared
-                  pantries, shopping lists, meal plans, and templates.
+                  {t('homeDetail.leaveHomeDescription')}
                 </Text>
                 <Button
-                  title="Leave Home"
+                  title={t('homeDetail.leaveHomeButton')}
                   onPress={handleLeaveHome}
                   variant="danger"
                   loading={leaving}
@@ -268,7 +304,7 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
   return (
     <>
       <DetailTemplate
-        title="Home Details"
+        title={t('homeDetail.title')}
         onBack={goBack}
         headerActions={[]}
         sections={sections}
@@ -277,7 +313,7 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
       />
       <ModalPicker
         visible={rolePickerState.visible}
-        label="Select Role"
+        label={t('homeDetail.selectRoleLabel')}
         options={ROLE_OPTIONS}
         selected={rolePickerState.currentRole}
         onSelect={handleRoleSelect}

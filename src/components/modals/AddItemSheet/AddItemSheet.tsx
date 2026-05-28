@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -35,7 +36,9 @@ import { Text } from '#components/atoms/Text';
  *
  * Used by both AddToPantrySheet and AddToShoppingListSheet.
  */
-export function AddItemSheet({
+export function AddItemSheet<
+  T extends BaseSuggestionItem = BaseSuggestionItem,
+>({
   visible,
   contextId,
   onClose,
@@ -46,14 +49,14 @@ export function AddItemSheet({
   isMutating,
   onAddManually,
   onScanPress,
-  onIdentifyPress,
   exitingItems: externalExitingItems,
   onExitComplete,
   initialSearchQuery = '',
   showImages = true,
   tutorialHint,
   children,
-}: AddItemSheetProps) {
+}: AddItemSheetProps<T>) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const searchBarRef = useRef<BottomSheetSearchBarRef>(null);
 
@@ -126,7 +129,7 @@ export function AddItemSheet({
   };
 
   // Render a suggestion item with exit animation support
-  const renderSuggestionItem = (item: BaseSuggestionItem) => {
+  const renderSuggestionItem = (item: T) => {
     const itemId = item.itemId;
     const isExiting = exitingItems.has(itemId);
 
@@ -149,7 +152,7 @@ export function AddItemSheet({
   };
 
   // Render a section of suggestions
-  const renderSuggestionSection = (groupConfig: SuggestionGroupConfig) => {
+  const renderSuggestionSection = (groupConfig: SuggestionGroupConfig<T>) => {
     const items = groupConfig.accessor(suggestions.grouped);
     if (items.length === 0) return null;
 
@@ -230,20 +233,12 @@ export function AddItemSheet({
               <View style={styles.actionButtons}>
                 <ActionCard
                   icon="barcode-outline"
-                  label="Scan Barcode"
+                  label={t('addItemSheet.scanBarcode')}
                   onPress={onScanPress}
                 />
-                {!!onIdentifyPress && (
-                  <ActionCard
-                    icon="camera-outline"
-                    label="Identify"
-                    onPress={onIdentifyPress}
-                    testID={`${config.testIDPrefix}-identify-button`}
-                  />
-                )}
                 <ActionCard
                   icon="add"
-                  label="Add Manually"
+                  label={t('addItemSheet.addManually')}
                   onPress={handleAddManually}
                   testID={`${config.testIDPrefix}-add-manually-button`}
                 />

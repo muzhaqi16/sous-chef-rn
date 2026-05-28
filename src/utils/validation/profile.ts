@@ -1,8 +1,9 @@
 import { object, string } from 'yup';
-import { nameRule } from './common';
+import { nameRule, normalizeSmartPunctuation } from './common';
 
 // display name rule
 const displayNameRule = string()
+  .transform(normalizeSmartPunctuation)
   .min(3, 'Display name must be at least 3 characters')
   .max(30, 'Display name must be less than 30 characters')
   .matches(
@@ -39,6 +40,7 @@ const urlRule = string()
 
 // date of birth rule - simplified
 const dateOfBirthRule = string()
+  .transform(normalizeSmartPunctuation)
   .matches(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format')
   .test('valid-date', 'Please enter a valid date', value => {
     if (!value) return true;

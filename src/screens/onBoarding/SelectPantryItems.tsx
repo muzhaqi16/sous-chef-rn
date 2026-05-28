@@ -6,8 +6,12 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from 'react-i18next';
 import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigation';
 import { useSelectableItems } from '#hooks/useSelectableItems';
-import { useMutation, useQuery } from '@apollo/client/react';
+import { useApolloClient, useMutation, useQuery } from '@apollo/client/react';
 import { GetOnboardingItemsDocument } from '#operations/item/item.generated';
+import {
+  SelectPantryItems_PantryItemFragmentDoc,
+  type SelectPantryItems_PantryItemFragment,
+} from './SelectPantryItems.generated';
 import {
   GetPantryDocument,
   CreatePantryItemDocument,
@@ -36,6 +40,7 @@ export const SelectPantryItems = () => {
   useScreenTransition('SelectPantryItems');
   const { navigateToNextStep, navigateToPreviousStep } =
     useOnboardingNavigation();
+  const apolloClient = useApolloClient();
 
   const selectedPantryId = useSelectedPantryId();
 
@@ -71,11 +76,21 @@ export const SelectPantryItems = () => {
 
   const [isSaving, setIsSaving] = useState(false);
 
-  // Map catalog item IDs to pantry item IDs for existing pantry items
-  const pantryItems = extractNodes(pantryData?.pantry?.itemsConnection);
+  // Map catalog item IDs to pantry item IDs for existing pantry items.
+  // pantryItems comes back as masked refs — materialize each via
+  // cache.readFragment with a narrow `SelectPantryItems_pantryItem` fragment
+  // that selects only `id`, `itemId`, and `item.id`.
+  const pantryItemRefs = extractNodes(pantryData?.pantry?.itemsConnection);
   const map = new Map<string, string>();
   const ids = new Set<string>();
-  for (const pantryItem of pantryItems) {
+  for (const ref of pantryItemRefs) {
+    const pantryItem =
+      apolloClient.cache.readFragment<SelectPantryItems_PantryItemFragment>({
+        fragment: SelectPantryItems_PantryItemFragmentDoc,
+        fragmentName: 'SelectPantryItems_pantryItem',
+        from: ref,
+      });
+    if (!pantryItem) continue;
     const catalogId = pantryItem.item?.id ?? pantryItem.itemId;
     if (catalogId) {
       map.set(catalogId, pantryItem.id);
@@ -134,7 +149,7 @@ export const SelectPantryItems = () => {
       >
         <View style={styles.errorContainer}>
           <Text tone="error" align="center" style={styles.errorText}>
-            {t('onBoarding.loadItemsFailed')}
+            {t('errors.loadItemsFailed')}
           </Text>
           <Button onPress={() => refetch()} variant="primary">
             {t('onBoarding.tryAgain')}
@@ -181,7 +196,7 @@ export const SelectPantryItems = () => {
             ...itemsToRemove.map(catalogId => {
               const pantryItemId = existingItemMap.get(catalogId)!;
               return deletePantryItem({
-                variables: { id: pantryItemId },
+                variables: { input: { id: pantryItemId } },
                 update: cache => {
                   removeFromPantryItemsCache(
                     cache,

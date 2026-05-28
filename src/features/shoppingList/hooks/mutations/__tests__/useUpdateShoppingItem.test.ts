@@ -40,7 +40,7 @@ function createUpdateMock(
     result: {
       data: {
         updateShoppingListItem: {
-          __typename: 'ShoppingListItemPayload',
+          __typename: 'UpdateShoppingListItemPayload',
           success: true,
           message: '',
           code: 'SUCCESS',

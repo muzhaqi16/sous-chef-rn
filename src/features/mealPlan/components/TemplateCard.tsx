@@ -1,5 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { useMappingHelper } from '@shopify/flash-list';
@@ -20,6 +21,7 @@ const TemplateCardComponent: React.FC<TemplateCardProps> = ({
   template: templateSource,
   onPress,
 }) => {
+  const { t } = useTranslation();
   // Per-entity cache subscription: re-renders only when this template's
   // MealTemplateDisplay fields change. Falls back to the source prop on cache
   // miss (e.g., entity evicted, or a test that doesn't seed the cache) so we
@@ -51,7 +53,7 @@ const TemplateCardComponent: React.FC<TemplateCardProps> = ({
         </Text>
         {template.usageCount > 0 && (
           <Text size="xs" tone="tertiary" style={styles.usageCount}>
-            Used {template.usageCount}x
+            {t('templateCard.usedTimes', { count: template.usageCount })}
           </Text>
         )}
       </View>
@@ -75,13 +77,13 @@ const TemplateCardComponent: React.FC<TemplateCardProps> = ({
             color={styles.metaIcon.color}
           />
           <Text size="sm" tone="secondary">
-            {template.durationDays} days
+            {t('templateCard.durationDays', { count: template.durationDays })}
           </Text>
         </View>
         <View style={styles.metaItem}>
           <Icon name="people-outline" size={14} color={styles.metaIcon.color} />
           <Text size="sm" tone="secondary">
-            {template.defaultServings} servings
+            {t('templateCard.servings', { count: template.defaultServings })}
           </Text>
         </View>
         {!!template.home?.name && (

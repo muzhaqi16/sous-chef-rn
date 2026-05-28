@@ -54,6 +54,86 @@ module.exports = {
       env: { node: true },
       globals: { __DEV__: 'readonly', globalThis: 'readonly' },
     },
+    {
+      // Justified exceptions to the BottomSheetModal-import restriction:
+      // - useStandardBottomSheet.tsx is the canonical re-export site
+      //   (aliases gorhom's component as GorhomBottomSheetModal and wraps
+      //    it with `withUnistyles` for theme reactivity).
+      // - useBottomSheetBackHandler.ts is imported BY the hook, so it
+      //   can't import from the hook (circular). Type-only usage.
+      // - ActionTray.tsx is intentionally a different-shape sheet that
+      //   manages its own backdrop via `useBackdropClaim` and doesn't
+      //   use useStandardBottomSheet. Renders gorhom's BottomSheetModal
+      //   directly.
+      files: [
+        'src/hooks/useStandardBottomSheet.tsx',
+        'src/hooks/useBottomSheetBackHandler.ts',
+        'src/components/templates/ActionTray/ActionTray.tsx',
+      ],
+      rules: {
+        'no-restricted-imports': [
+          'error',
+          {
+            paths: [
+              {
+                name: 'react-native',
+                importNames: ['StyleSheet'],
+                message:
+                  'Import StyleSheet from "react-native-unistyles" instead.',
+              },
+              {
+                name: 'react',
+                importNames: ['useMemo', 'useCallback'],
+                message:
+                  'useMemo/useCallback are unnecessary — the React Compiler handles memoization automatically.',
+              },
+            ],
+            patterns: [
+              {
+                group: ['**/*Fragments.generated'],
+                importNames: [
+                  'UnitBasicFragment',
+                  'UnitBasicFragmentDoc',
+                  'UnitFullFragment',
+                  'UnitFullFragmentDoc',
+                  'StoreFieldsFragment',
+                  'StoreFieldsFragmentDoc',
+                  'BrandFieldsFragment',
+                  'BrandFieldsFragmentDoc',
+                  'UserProfileFieldsFragment',
+                  'UserProfileFieldsFragmentDoc',
+                  'UserProfileFullFragment',
+                  'UserProfileFullFragmentDoc',
+                  'UserSummaryFragment',
+                  'UserSummaryFragmentDoc',
+                  'PantryItemFragment',
+                  'PantryItemFragmentDoc',
+                  'PantryItemDisplay',
+                  'PantryItemDisplayFragment',
+                  'PantryItemDisplayFragmentDoc',
+                  'ShoppingListItemFragment',
+                  'ShoppingListItemFragmentDoc',
+                  'MealPlanFullFragment',
+                  'MealPlanFullFragmentDoc',
+                  'RecipeFragment',
+                  'RecipeFragmentDoc',
+                  'ItemFragment',
+                  'ItemFragmentDoc',
+                  'ItemDisplayFragment',
+                  'ItemDisplayFragmentDoc',
+                  'ItemCoreFragment',
+                  'ItemCoreFragmentDoc',
+                  'HomeFragment',
+                  'HomeFragmentDoc',
+                ],
+                message:
+                  'This fragment was deleted or decomposed. Use a colocated `<Consumer>_<entity>` fragment instead (sibling .graphql file next to the consumer). See CLAUDE.md "Apollo: Fragment composition + `useFragment` convention".',
+              },
+            ],
+          },
+        ],
+      },
+    },
   ],
   rules: {
     // Prevent barrel file imports for better tree shaking
@@ -72,6 +152,11 @@ module.exports = {
 
     // Enforce StyleSheet from react-native-unistyles instead of react-native
     // Prevent useMemo/useCallback — React Compiler handles memoization automatically
+    // Block re-introducing deleted "god" / dead-scalar fragments. See CLAUDE.md
+    // "Apollo: Fragment composition" — the codebase converged on per-component
+    // colocated fragments + a small documented set of shared fragments. The
+    // names listed below were either deleted (inlined into consumers) or
+    // decomposed into per-consumer fragments and should not return.
     'no-restricted-imports': [
       'error',
       {
@@ -86,6 +171,63 @@ module.exports = {
             importNames: ['useMemo', 'useCallback'],
             message:
               'useMemo/useCallback are unnecessary — the React Compiler handles memoization automatically.',
+          },
+          {
+            name: '@gorhom/bottom-sheet',
+            importNames: ['BottomSheetModal'],
+            message:
+              "Import BottomSheetModal from '#hooks/useStandardBottomSheet' instead. That re-export is theme-wrapped and composes the global backdrop claim via modalProps.onChange — importing from @gorhom/bottom-sheet directly bypasses both. For type-only usage, import { BottomSheetModalRef } from '#hooks/useStandardBottomSheet'.",
+          },
+          {
+            name: '#hooks/useBottomSheetBackdropClaim',
+            message:
+              'useBottomSheetBackdropClaim is an internal helper for useStandardBottomSheet. Consumers should use useStandardBottomSheet instead — it wires animatedIndex, onChange, the back handler, focus-aware dismiss-on-blur, and theme styles all together. Importing the lower-level hook directly bypasses every other affordance.',
+          },
+        ],
+        patterns: [
+          {
+            group: ['**/*Fragments.generated'],
+            importNames: [
+              // Deleted dead scalar/leaf fragments — fields are inlined where used.
+              'UnitBasicFragment',
+              'UnitBasicFragmentDoc',
+              'UnitFullFragment',
+              'UnitFullFragmentDoc',
+              'StoreFieldsFragment',
+              'StoreFieldsFragmentDoc',
+              'BrandFieldsFragment',
+              'BrandFieldsFragmentDoc',
+              'UserProfileFieldsFragment',
+              'UserProfileFieldsFragmentDoc',
+              'UserProfileFullFragment',
+              'UserProfileFullFragmentDoc',
+              'UserSummaryFragment',
+              'UserSummaryFragmentDoc',
+              // Deleted "god" fragments — decomposed into colocated component
+              // fragments (PantryItemDetail_pantryItem, PantryItemForm_pantryItem,
+              // useUpdatePantryItem_pantryItem, etc.).
+              'PantryItemFragment',
+              'PantryItemFragmentDoc',
+              'PantryItemDisplay',
+              'PantryItemDisplayFragment',
+              'PantryItemDisplayFragmentDoc',
+              'ShoppingListItemFragment',
+              'ShoppingListItemFragmentDoc',
+              'MealPlanFullFragment',
+              'MealPlanFullFragmentDoc',
+              'RecipeFragment',
+              'RecipeFragmentDoc',
+              'ItemFragment',
+              'ItemFragmentDoc',
+              'ItemDisplayFragment',
+              'ItemDisplayFragmentDoc',
+              'ItemCoreFragment',
+              'ItemCoreFragmentDoc',
+              'HomeFragment',
+              'HomeFragmentDoc',
+            ],
+            message:
+              'This fragment was deleted or decomposed. Use a colocated `<Consumer>_<entity>` fragment instead (sibling .graphql file next to the consumer). See CLAUDE.md "Apollo: Fragment composition + `useFragment` convention".',
           },
         ],
       },
@@ -330,9 +472,31 @@ module.exports = {
       },
       {
         selector:
+          "JSXSpreadAttribute[argument.name='modalProps'] ~ JSXAttribute[name.name=/^(onChange|animatedIndex)$/]",
+        message:
+          "Do not override `onChange` or `animatedIndex` after `{...modalProps}` — useStandardBottomSheet supplies both: a composed onChange (drives the global backdrop claim) and the animatedIndex SharedValue (drives backdrop opacity in lockstep with the sheet). Overriding either silently breaks the dim layer. Forward via the hook's options API: `useStandardBottomSheet({ ..., onChange: handler })`. (Other props like `snapPoints`, `keyboardBlurBehavior`, `onDismiss` can be overridden safely.)",
+      },
+      {
+        selector:
           'CallExpression[callee.object.name="jest"][callee.property.name="mock"][arguments.0.value="@apollo/client/react"]',
         message:
           'Use renderHookWithApollo / renderWithApollo from __tests__/helpers/apolloMockProvider.tsx instead. Direct jest.mock of @apollo/client/react couples tests to operation names, bypasses the real cache, and breaks under refactors. See CLAUDE.md "Apollo Test Patterns" for the migration recipe + 7 gotchas.',
+      },
+      {
+        // Catches the hand-rolled optimisticResponse anti-pattern:
+        //   pantryItem: { __typename: 'PantryItem', id } as DeleteFooMutation['...']
+        // With dataMasking enabled, casting a partial `{ __typename, id }` literal
+        // hides that the real mutation return type expects more fields, and the
+        // partial entity gets written to cache — useFragment Pattern A consumers
+        // then resolve `complete: false` and render null, producing phantom rows
+        // until the real network response arrives. Build optimistic responses
+        // from cache (cache.readFragment + spread) and annotate the callback
+        // return type as `Unmasked<TData>` instead. See CLAUDE.md "Apollo
+        // Mutation Patterns" + "Apollo: Fragment composition + useFragment".
+        selector:
+          'Property[key.name="optimisticResponse"] TSAsExpression > ObjectExpression:has(Property[key.name="__typename"])',
+        message:
+          "Hand-rolled `{ __typename, id, ... } as TData['field']` shapes inside `optimisticResponse` write partial entities to the cache and break data-masking watchers (useFragment returns `complete: false` → phantom rows in lists). Read the current entity via `client.cache.readFragment(...)` (returning IGNORE when absent) and annotate the callback's return type as `Unmasked<TData>` so no cast is needed. See CLAUDE.md \"Apollo Mutation Patterns\" + `usePantryItemMutations.ts:updateItemMutation` for the pattern.",
       },
     ],
   },

@@ -8,6 +8,7 @@ import {
 
 export function usePermission(permission: AppPermission) {
   const [status, setStatus] = useState<PermissionStatus>('undetermined');
+  const [isChecking, setIsChecking] = useState(true);
 
   const requestPermission = async () => {
     const result = await PermissionService.request(permission);
@@ -24,6 +25,7 @@ export function usePermission(permission: AppPermission) {
     const check = async () => {
       const result = await PermissionService.check(permission);
       setStatus(result);
+      setIsChecking(false);
     };
     check();
   }, [permission]);
@@ -44,6 +46,7 @@ export function usePermission(permission: AppPermission) {
 
   return {
     status,
+    isChecking,
     request: requestPermission,
     openSettings,
     isGranted: status === 'granted',

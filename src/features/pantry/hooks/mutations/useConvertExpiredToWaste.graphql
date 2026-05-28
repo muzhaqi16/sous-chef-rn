@@ -1,0 +1,11 @@
+# Narrow fragment for ConvertExpiredToWaste mutation response.
+# Marks the item itself as waste — the operation can change condition,
+# wasteReason, quantity, and version.
+fragment useConvertExpiredToWaste_pantryItem on PantryItem {
+  id
+  version
+  quantity
+  condition
+  wasteReason
+  storageState
+}

@@ -81,7 +81,7 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
   const [favoriteRecipe] = useMutation(FavoriteRecipeDocument, {
     // Use cache.updateQuery instead of refetchQueries for better performance and offline support
     update: (cache, { data }) => {
-      if (!data?.favoriteRecipe?.savedRecipe) return;
+      if (data?.favoriteRecipe?.__typename !== 'FavoriteRecipePayload') return;
 
       const savedRecipe = data.favoriteRecipe.savedRecipe;
 
@@ -176,7 +176,7 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
       prepTimeMinutes: spoonacularRecipe.preparationMinutes || undefined,
       cookTimeMinutes: spoonacularRecipe.cookingMinutes || undefined,
       imageUrl: spoonacularRecipe.image,
-      instructions: instructions as unknown,
+      instructions,
       caloriesPerServing: caloriesPerServing
         ? Math.round(caloriesPerServing)
         : undefined,

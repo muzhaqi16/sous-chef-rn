@@ -42,7 +42,7 @@ export function useNotificationSync() {
     useStore.getState().markAsRead(id);
 
     executeMutation(
-      () => markReadMutation({ variables: { id } }),
+      () => markReadMutation({ variables: { input: { id } } }),
       (error: unknown) => {
         errorService.reportError(error, {
           operation: 'syncMarkAsRead',
@@ -57,7 +57,7 @@ export function useNotificationSync() {
 
   const syncMarkUnread = (id: string) => {
     executeMutation(
-      () => markUnreadMutation({ variables: { id } }),
+      () => markUnreadMutation({ variables: { input: { id } } }),
       (error: unknown) => {
         errorService.reportError(error, {
           operation: 'syncMarkUnread',
@@ -75,7 +75,7 @@ export function useNotificationSync() {
     useStore.getState().removeNotification(id);
 
     executeMutation(
-      () => deleteMutation({ variables: { id } }),
+      () => deleteMutation({ variables: { input: { id } } }),
       (error: unknown) => {
         errorService.reportError(error, {
           operation: 'syncDeleteNotification',

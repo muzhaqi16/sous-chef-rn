@@ -31,8 +31,12 @@ export function useRecipeSavedMetadata({
     UpdateFavoriteRecipeDocument,
     {
       update: (cache, { data }) => {
-        if (!data?.updateFavoriteRecipe?.savedRecipe) return;
-
+        if (
+          data?.updateFavoriteRecipe?.__typename !==
+          'UpdateFavoriteRecipePayload'
+        ) {
+          return;
+        }
         const updatedSavedRecipe = data.updateFavoriteRecipe.savedRecipe;
 
         const folder = updatedSavedRecipe.folder;
@@ -85,7 +89,12 @@ export function useRecipeSavedMetadata({
 
   const [unfavoriteRecipeMutation] = useMutation(UnfavoriteRecipeDocument, {
     update: (cache, { data }, { variables }) => {
-      if (!data?.unfavoriteRecipe?.success || !variables?.recipeId) return;
+      if (
+        data?.unfavoriteRecipe?.__typename !== 'UnfavoriteRecipePayload' ||
+        !variables?.input?.recipeId
+      ) {
+        return;
+      }
 
       cache.updateQuery<MySavedRecipesQuery>(
         { query: MySavedRecipesDocument },
@@ -98,7 +107,7 @@ export function useRecipeSavedMetadata({
               savedRecipesConnection: {
                 ...existing.me.savedRecipesConnection,
                 edges: existing.me.savedRecipesConnection.edges.filter(
-                  edge => edge.node.recipe.id !== variables.recipeId,
+                  edge => edge.node.recipe.id !== variables.input.recipeId,
                 ),
                 totalCount:
                   (existing.me.savedRecipesConnection.totalCount ?? 0) - 1,
@@ -109,7 +118,10 @@ export function useRecipeSavedMetadata({
       );
 
       cache.modify({
-        id: cache.identify({ __typename: 'Recipe', id: variables.recipeId }),
+        id: cache.identify({
+          __typename: 'Recipe',
+          id: variables.input.recipeId,
+        }),
         fields: {
           savedDetails() {
             return null;
@@ -130,8 +142,8 @@ export function useRecipeSavedMetadata({
     return executeWithLoadingState(async () => {
       await updateFavoriteRecipeMutation({
         variables: {
-          recipeId,
           input: {
+            recipeId,
             folder: folder ?? undefined,
           },
         },
@@ -148,8 +160,8 @@ export function useRecipeSavedMetadata({
     return executeWithLoadingState(async () => {
       await updateFavoriteRecipeMutation({
         variables: {
-          recipeId,
           input: {
+            recipeId,
             tags,
           },
         },
@@ -164,8 +176,8 @@ export function useRecipeSavedMetadata({
     return executeWithLoadingState(async () => {
       await updateFavoriteRecipeMutation({
         variables: {
-          recipeId,
           input: {
+            recipeId,
             notes: notes || undefined,
           },
         },
@@ -180,8 +192,8 @@ export function useRecipeSavedMetadata({
     return executeWithLoadingState(async () => {
       await updateFavoriteRecipeMutation({
         variables: {
-          recipeId,
           input: {
+            recipeId,
             personalRating: rating,
           },
         },
@@ -202,7 +214,7 @@ export function useRecipeSavedMetadata({
 
     return executeWithLoadingState(async () => {
       await unfavoriteRecipeMutation({
-        variables: { recipeId: targetRecipeId },
+        variables: { input: { recipeId: targetRecipeId } },
       });
       onUnfavoriteSuccess();
       toastService.success('Recipe removed from saved');

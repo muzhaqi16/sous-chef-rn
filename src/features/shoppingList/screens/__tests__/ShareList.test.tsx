@@ -2,10 +2,43 @@
 
 import React from 'react';
 import { screen } from '@testing-library/react-native';
-import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { renderWithApollo, seedCache } from '#/test-utils/apolloMockProvider';
 import { ShareList } from '../ShareList';
 
-const render = (ui: any) => renderWithApollo(ui);
+const seedCollaboratorCache = () =>
+  seedCache([
+    {
+      __typename: 'ShoppingListCollaborator',
+      id: 'c1',
+      email: 'owner@test.com',
+      role: 'OWNER',
+      status: 'ACTIVE',
+      collaboratorId: 'u1',
+      canAddItems: true,
+      canRemoveItems: true,
+      canEditItems: true,
+      canMarkPurchased: true,
+      invitedAt: '2024-01-01T00:00:00Z',
+      collaborator: null,
+    },
+    {
+      __typename: 'ShoppingListCollaborator',
+      id: 'c2',
+      email: 'member@test.com',
+      role: 'CONTRIBUTOR',
+      status: 'ACCEPTED',
+      collaboratorId: 'u2',
+      canAddItems: true,
+      canRemoveItems: false,
+      canEditItems: false,
+      canMarkPurchased: true,
+      invitedAt: '2024-01-05T00:00:00Z',
+      collaborator: null,
+    },
+  ]);
+
+const render = (ui: any) =>
+  renderWithApollo(ui, { cache: seedCollaboratorCache() });
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
@@ -23,19 +56,13 @@ jest.mock('#store/useAppStore', () => {
 
 const mockCollaborators = [
   {
+    __typename: 'ShoppingListCollaborator',
     id: 'c1',
-    email: 'owner@test.com',
-    collaboratorId: 'u1',
-    role: 'OWNER',
-    status: 'ACTIVE',
     invitedAt: '2024-01-01T00:00:00Z',
   },
   {
+    __typename: 'ShoppingListCollaborator',
     id: 'c2',
-    email: 'member@test.com',
-    collaboratorId: 'u2',
-    role: 'CONTRIBUTOR',
-    status: 'ACCEPTED',
     invitedAt: '2024-01-05T00:00:00Z',
   },
 ];

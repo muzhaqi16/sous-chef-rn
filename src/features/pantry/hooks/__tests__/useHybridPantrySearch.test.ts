@@ -7,9 +7,8 @@ import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
 import { useHybridPantrySearch } from '../useHybridPantrySearch';
 
 jest.mock('#/utils/searchUtils', () => ({
-  pantryItemSearch: jest.fn(
-    (item: any, query: string) =>
-      (item.itemName ?? '').toLowerCase().includes(query.toLowerCase()),
+  pantryItemSearch: jest.fn((item: any, query: string) =>
+    (item.itemName ?? '').toLowerCase().includes(query.toLowerCase()),
   ),
 }));
 
@@ -44,10 +43,13 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
+// Minimal fixtures — the hook only reads `id` and `itemName` (via the mocked
+// pantryItemSearch); cast to the full PantryItem shape that the production
+// hook prop expects.
 const baseItems = [
   { id: 'i1', itemName: 'Milk' },
   { id: 'i2', itemName: 'Bread' },
-];
+] as unknown as Parameters<typeof useHybridPantrySearch>[0]['items'];
 
 describe('useHybridPantrySearch', () => {
   describe('local search (small dataset)', () => {

@@ -6,9 +6,8 @@ import { createApolloTestWrapper } from '#/test-utils/apolloMockProvider';
 import { useCorrectPantryItemWeight } from '../useCorrectPantryItemWeight';
 
 jest.mock('#/services/errorService', () => ({
-  useErrorService: () => ({
-    handleApolloError: jest.fn(() => ({ message: 'Test error' })),
-  }),
+  errorService: { reportError: jest.fn() },
+  getErrorMessage: jest.fn(() => 'Test error'),
 }));
 
 let mockHandleVersionConflict = false;
@@ -21,45 +20,48 @@ jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
 }));
 
-const successMock = (
-  variables: { id: string; input: any },
-  data: { id: string; netWeight?: any } = { id: variables.id },
-): MockedResponse => ({
+const successMock = (variables: { input: any }): MockedResponse => ({
   request: { query: CorrectPantryItemWeightDocument, variables },
   result: {
     data: {
       correctPantryItemWeight: {
-        __typename: 'PantryItemPayload',
-        success: true,
-        message: '',
-        code: 'SUCCESS',
+        __typename: 'CorrectPantryItemWeightPayload',
         pantryItem: {
           __typename: 'PantryItem',
-          ...data,
+          id: variables.input.id,
+          version: (variables.input.version ?? 0) + 1,
+          updatedAt: '2026-01-01T00:00:00.000Z',
+          netWeight: variables.input.netWeight,
+          remainingNetWeight: variables.input.netWeight,
+          lastUsedAt: null,
+          netWeightUnit: variables.input.netWeightUnitId
+            ? {
+                __typename: 'Unit',
+                id: variables.input.netWeightUnitId,
+                name: 'gram',
+                symbol: 'g',
+              }
+            : null,
         },
       },
     },
   },
 });
 
-const errorMock = (variables: { id: string; input: any }): MockedResponse => ({
+const errorMock = (variables: { input: any }): MockedResponse => ({
   request: { query: CorrectPantryItemWeightDocument, variables },
   error: new Error('Network error'),
 });
 
-const nullPantryItemMock = (variables: {
-  id: string;
-  input: any;
-}): MockedResponse => ({
+const validationErrorMock = (variables: { input: any }): MockedResponse => ({
   request: { query: CorrectPantryItemWeightDocument, variables },
   result: {
     data: {
       correctPantryItemWeight: {
-        __typename: 'PantryItemPayload',
-        success: true,
-        message: '',
-        code: 'SUCCESS',
-        pantryItem: null,
+        __typename: 'ValidationError',
+        code: 'VALIDATION_ERROR',
+        message: 'Invalid weight',
+        field: 'netWeight',
       },
     },
   },
@@ -83,12 +85,20 @@ describe('useCorrectPantryItemWeight', () => {
   it('returns true and calls onSuccess on successful mutation', async () => {
     const onSuccess = jest.fn();
     const variables = {
-      id: 'item-1',
-      input: { netWeight: 500, reason: 'Measured with scale', version: 2 },
+      input: {
+        id: 'item-1',
+        netWeight: 500,
+        reason: 'Measured with scale',
+        version: 2,
+      },
     };
     const { result } = renderHook(
       () => useCorrectPantryItemWeight({ onSuccess }),
-      { wrapper: createApolloTestWrapper({ operationMocks: [successMock(variables)] }) },
+      {
+        wrapper: createApolloTestWrapper({
+          operationMocks: [successMock(variables)],
+        }),
+      },
     );
 
     let success: boolean | undefined;
@@ -107,8 +117,8 @@ describe('useCorrectPantryItemWeight', () => {
 
   it('includes netWeightUnitId when provided', async () => {
     const variables = {
-      id: 'item-1',
       input: {
+        id: 'item-1',
         netWeight: 500,
         reason: 'Reason',
         version: 3,
@@ -116,7 +126,9 @@ describe('useCorrectPantryItemWeight', () => {
       },
     };
     const { result } = renderHook(() => useCorrectPantryItemWeight(), {
-      wrapper: createApolloTestWrapper({ operationMocks: [successMock(variables)] }),
+      wrapper: createApolloTestWrapper({
+        operationMocks: [successMock(variables)],
+      }),
     });
 
     let success: boolean | undefined;
@@ -137,11 +149,12 @@ describe('useCorrectPantryItemWeight', () => {
   it('returns false and shows version conflict alert', async () => {
     mockHandleVersionConflict = true;
     const variables = {
-      id: 'item-1',
-      input: { netWeight: 500, reason: 'Reason', version: 1 },
+      input: { id: 'item-1', netWeight: 500, reason: 'Reason', version: 1 },
     };
     const { result } = renderHook(() => useCorrectPantryItemWeight(), {
-      wrapper: createApolloTestWrapper({ operationMocks: [errorMock(variables)] }),
+      wrapper: createApolloTestWrapper({
+        operationMocks: [errorMock(variables)],
+      }),
     });
 
     let success: boolean | undefined;
@@ -154,17 +167,22 @@ describe('useCorrectPantryItemWeight', () => {
       expect(alertService.alert).toHaveBeenCalledWith(
         'Item Updated',
         'Version conflict message',
+        [
+          { text: 'Refresh', onPress: expect.any(Function) },
+          { text: 'Cancel', style: 'cancel' },
+        ],
       ),
     );
   });
 
   it('returns false and shows generic error on non-conflict error', async () => {
     const variables = {
-      id: 'item-1',
-      input: { netWeight: 500, reason: 'Reason', version: 1 },
+      input: { id: 'item-1', netWeight: 500, reason: 'Reason', version: 1 },
     };
     const { result } = renderHook(() => useCorrectPantryItemWeight(), {
-      wrapper: createApolloTestWrapper({ operationMocks: [errorMock(variables)] }),
+      wrapper: createApolloTestWrapper({
+        operationMocks: [errorMock(variables)],
+      }),
     });
 
     let success: boolean | undefined;
@@ -178,13 +196,14 @@ describe('useCorrectPantryItemWeight', () => {
     );
   });
 
-  it('returns false when mutation returns no pantryItem', async () => {
+  it('returns false when mutation returns a ValidationError', async () => {
     const variables = {
-      id: 'item-1',
-      input: { netWeight: 500, reason: 'Reason', version: 1 },
+      input: { id: 'item-1', netWeight: 500, reason: 'Reason', version: 1 },
     };
     const { result } = renderHook(() => useCorrectPantryItemWeight(), {
-      wrapper: createApolloTestWrapper({ operationMocks: [nullPantryItemMock(variables)] }),
+      wrapper: createApolloTestWrapper({
+        operationMocks: [validationErrorMock(variables)],
+      }),
     });
 
     let success: boolean | undefined;

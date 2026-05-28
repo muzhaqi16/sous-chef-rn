@@ -1,21 +1,34 @@
 import { useState } from 'react';
-import { useLazyQuery, useMutation } from '@apollo/client/react';
+import {
+  useApolloClient,
+  useLazyQuery,
+  useMutation,
+} from '@apollo/client/react';
 import {
   MatchRecipeIngredientsToPantryDocument,
   ConfirmRecipeConsumptionDocument,
   type MatchRecipeIngredientsToPantryQuery,
 } from '#features/recipes/graphql/recipe.generated';
+import {
+  RecipeIngredientFragmentDoc,
+  type RecipeIngredientFragment,
+} from '#features/recipes/graphql/recipeFragments.generated';
 import { type ConfirmedIngredientConsumptionInput } from '#/graphql/generated/schemaTypes';
 import { useSelectedPantryId } from '#store/useAppStore';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
+import { handleMutationError } from '#/utils/errorHandlers';
 
 type IngredientMatch =
   MatchRecipeIngredientsToPantryQuery['matchRecipeIngredientsToPantry'][number];
 
 export interface EditableMatch {
   match: IngredientMatch;
+  /** Materialized RecipeIngredient fragment (id, isOptional, unit, …). The
+   *  match's `ingredient` field is a masked fragment ref; we unmask once
+   *  when building the editable so consumers can read fields directly. */
+  ingredient: RecipeIngredientFragment;
   adjustedQuantity: number;
   adjustedUnitId: string | null;
   isIncluded: boolean;
@@ -46,6 +59,7 @@ export function getAvailabilityStatus(
 
 export function useRecipeIngredientMatching(recipeId: string | undefined) {
   const pantryId = useSelectedPantryId();
+  const client = useApolloClient();
   const [editableMatches, setEditableMatches] = useState<EditableMatch[]>([]);
   const [isSheetVisible, setIsSheetVisible] = useState(false);
 
@@ -60,7 +74,7 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
     ConfirmRecipeConsumptionDocument,
     {
       onError: error => {
-        toastService.error(error.message || 'Failed to confirm consumption');
+        handleMutationError(error, { operation: 'Confirm Recipe Consumption' });
       },
     },
   );
@@ -86,13 +100,24 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
       return false;
     }
 
-    const editable: EditableMatch[] = matches.map(match => ({
-      match,
-      adjustedQuantity: match.suggestedQuantity,
-      adjustedUnitId:
-        match.suggestedUnit?.id ?? match.ingredient?.unit?.id ?? null,
-      isIncluded: !match.ingredient.isOptional && !!match.matchedPantryItem,
-    }));
+    const editable: EditableMatch[] = matches
+      .map(match => {
+        const ingredient = client.cache.readFragment<RecipeIngredientFragment>({
+          fragment: RecipeIngredientFragmentDoc,
+          fragmentName: 'RecipeIngredientFragment',
+          from: { __typename: 'RecipeIngredient', id: match.ingredient.id },
+        });
+        if (!ingredient) return null;
+        return {
+          match,
+          ingredient,
+          adjustedQuantity: match.suggestedQuantity,
+          adjustedUnitId:
+            match.suggestedUnit?.id ?? ingredient.unit?.id ?? null,
+          isIncluded: !ingredient.isOptional && !!match.matchedPantryItem,
+        };
+      })
+      .filter((m): m is EditableMatch => m !== null);
 
     setEditableMatches(editable);
     setIsSheetVisible(true);
@@ -139,7 +164,7 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
     const consumptions: ConfirmedIngredientConsumptionInput[] = editableMatches
       .filter(em => em.isIncluded && em.match.matchedPantryItem)
       .map(em => ({
-        recipeIngredientId: em.match.ingredient.id,
+        recipeIngredientId: em.ingredient.id,
         pantryItemId: em.match.matchedPantryItem!.id,
         quantity: em.adjustedQuantity,
         unitId:

@@ -3,12 +3,10 @@ import {
   getMealPlanPermissions,
   type MealPlanPermissions,
 } from '#utils/permissions/mealPlanPermissions';
-import {
-  type MealPlanDisplayFragment,
-  type MealPlanFullFragment,
-} from '#features/mealPlan/graphql/mealPlanFragments.generated';
+import { type MealPlanDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
+import { type MealPlanMain_MealPlanFragment } from '#features/mealPlan/screens/MealPlanMain.generated';
 
-type MealPlanLike = MealPlanDisplayFragment | MealPlanFullFragment;
+type MealPlanLike = MealPlanDisplayFragment | MealPlanMain_MealPlanFragment;
 
 /**
  * Hook that computes permissions for a meal plan based on the current user's

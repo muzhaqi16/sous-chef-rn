@@ -22,8 +22,8 @@ import {
   useSetIsHomeSelectionReady,
   useSetSelectedPantryId,
 } from '#store/useAppStore';
-import { useErrorService } from '#/services/errorService';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
+import { handleMutationError } from '#/utils/errorHandlers';
 
 interface UseHomeSelectionOptions {
   homes: any[] | null;
@@ -59,7 +59,6 @@ export function useHomeSelection({
   const setSelectedPantryId = useSetSelectedPantryId();
   const setHomeAndPantry = useSetHomeAndPantry();
   const setIsHomeSelectionReady = useSetIsHomeSelectionReady();
-  const { handleApolloError } = useErrorService();
 
   // Ref to track if initial home auto-selection has been attempted
   const hasInitializedDefaultHome = useRef(false);
@@ -70,21 +69,17 @@ export function useHomeSelection({
       __typename: 'Mutation',
       setDefaultHome: {
         __typename: 'SetDefaultHomePayload',
-        success: true,
-        code: 'SUCCESS',
-        message: 'Default home set',
         settings: {
           __typename: 'UserSettings',
-          id: variables.homeId,
+          id: variables.input.homeId,
         },
-        // defaultPantry will be returned by server, null in optimistic response
         defaultPantry: null,
       },
     }),
 
     // Update Apollo cache to set isDefault on the correct home
     update: (cache, _result, { variables }) => {
-      if (!variables?.homeId) return;
+      if (!variables?.input.homeId) return;
 
       // Update isDefault field on all homes in cache
       cache.modify({
@@ -107,7 +102,7 @@ export function useHomeSelection({
                 cache.modify({
                   id: cacheId,
                   fields: {
-                    isDefault: () => homeId === variables.homeId,
+                    isDefault: () => homeId === variables.input.homeId,
                   },
                 });
               }
@@ -138,12 +133,12 @@ export function useHomeSelection({
 
       // Sync this choice to the backend
       setDefaultHomeMutation({
-        variables: { homeId: firstHome.id },
-      }).catch((error: any) => {
-        const { message } = handleApolloError(error, {
+        variables: { input: { homeId: firstHome.id } },
+      }).catch(error => {
+        handleMutationError(error, {
           operation: 'Set First Home as Default',
+          showAlert: false,
         });
-        console.warn('Failed to set first home as default:', message);
       });
     }
   }, [
@@ -153,7 +148,6 @@ export function useHomeSelection({
     homes?.length, // Use primitive to prevent re-runs when array reference changes
     setDefaultHomeMutation,
     setSelectedHomeId,
-    handleApolloError,
     homes,
   ]);
 
@@ -197,7 +191,7 @@ export function useHomeSelection({
     const result = await executeMutation(
       () =>
         setDefaultHomeMutation({
-          variables: { homeId },
+          variables: { input: { homeId } },
         }),
       () => {
         // Rollback on error and re-enable queries
@@ -208,7 +202,7 @@ export function useHomeSelection({
     );
     if (!result) return false;
 
-    if (result.data?.setDefaultHome?.success) {
+    if (result.data?.setDefaultHome?.__typename === 'SetDefaultHomePayload') {
       // Update pantry from server response (server is source of truth)
       const serverPantry = result.data.setDefaultHome.defaultPantry;
       if (serverPantry?.id) {

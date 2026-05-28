@@ -6,33 +6,13 @@ jest.mock('#/graphql/generated/fragmentMatcher.json', () => ({
 }));
 
 import { gql, InMemoryCache } from '@apollo/client';
-import { makeCache, stopCacheMonitoring } from '../cache';
+import { makeCache } from '../cache';
 
 describe('cache', () => {
-  afterEach(() => {
-    stopCacheMonitoring();
-  });
-
   describe('makeCache', () => {
     it('returns an InMemoryCache instance', () => {
       const cache = makeCache();
       expect(cache).toBeInstanceOf(InMemoryCache);
-    });
-  });
-
-  describe('stopCacheMonitoring', () => {
-    it('clears the monitoring interval', () => {
-      const clearIntervalSpy = jest.spyOn(global, 'clearInterval');
-      makeCache(); // creates interval
-      stopCacheMonitoring();
-      expect(clearIntervalSpy).toHaveBeenCalled();
-      clearIntervalSpy.mockRestore();
-    });
-
-    it('is safe to call multiple times', () => {
-      // Should not throw
-      stopCacheMonitoring();
-      stopCacheMonitoring();
     });
   });
 
@@ -1495,25 +1475,6 @@ describe('cache', () => {
         `,
       });
       expect(result?.imageUrl).toBeNull();
-    });
-  });
-
-  describe('cache GC and monitoring', () => {
-    it('sets up an interval for cache monitoring', () => {
-      const setIntervalSpy = jest.spyOn(global, 'setInterval');
-      makeCache();
-      expect(setIntervalSpy).toHaveBeenCalled();
-      setIntervalSpy.mockRestore();
-      stopCacheMonitoring();
-    });
-
-    it('clears previous interval on makeCache to prevent leaks', () => {
-      const clearIntervalSpy = jest.spyOn(global, 'clearInterval');
-      makeCache();
-      makeCache(); // Second call should clear previous interval first
-      expect(clearIntervalSpy).toHaveBeenCalled();
-      clearIntervalSpy.mockRestore();
-      stopCacheMonitoring();
     });
   });
 

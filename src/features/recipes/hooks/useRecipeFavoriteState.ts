@@ -1,9 +1,13 @@
 import { useState, useEffect } from 'react';
-import { useQuery } from '@apollo/client/react';
+import { useApolloClient, useQuery } from '@apollo/client/react';
 import type { RecipeInformation } from '#/services/recipeApi/types';
 import { MyRecipesDocument } from '#features/recipes/graphql/recipe.generated';
-import type { GetRecipeQuery } from '#features/recipes/graphql/recipe.generated';
-import { normalizeRecipes } from '#/utils/connectionUtils';
+import {
+  UseRecipeFavoriteState_RecipeFragmentDoc,
+  type UseRecipeFavoriteState_RecipeFragment,
+} from './useRecipeFavoriteState.generated';
+import { type MaterializedRecipe } from '#features/recipes/hooks/useRecipeData';
+import { extractNodes } from '#/utils/connectionUtils';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 import type {
   SaveToFavoritesOptions,
@@ -15,7 +19,7 @@ export interface UseRecipeFavoriteStateParams {
   externalId: string | undefined;
   externalRecipe: RecipeInformation | null;
   isBackendRecipe: boolean;
-  backendRecipe: NonNullable<GetRecipeQuery['recipe']> | undefined;
+  backendRecipe: MaterializedRecipe | undefined;
   /** From `useRecipePreload`. */
   saveRecipeToFavorites: UseRecipePreloadReturn['saveRecipeToFavorites'];
   /** From `useRecipePreload`. */
@@ -61,6 +65,7 @@ export function useRecipeFavoriteState({
   saveRecipeToFavorites,
   savingToFavorites,
 }: UseRecipeFavoriteStateParams): UseRecipeFavoriteStateResult {
+  const apolloClient = useApolloClient();
   const [saving, setSaving] = useState(false);
   const [recipeSaved, setRecipeSaved] = useState(false);
   const [savedFolderLocal, setSavedFolderLocal] = useState<string | null>(null);
@@ -69,20 +74,32 @@ export function useRecipeFavoriteState({
     skip: !externalSource || !externalId,
   });
 
-  const normalizedRecipes = normalizeRecipes(myRecipesData?.recipes);
-  const savedRecipesList = normalizedRecipes?.recipes || [];
+  const savedRecipesList = extractNodes(myRecipesData?.recipes);
 
-  const savedRecipe =
+  // Materialize each recipe ref via a narrow fragment that reads only the
+  // fields needed to identify a saved external recipe and surface its folder.
+  const savedRecipeMatch =
     externalSource && externalId && savedRecipesList.length > 0
-      ? savedRecipesList.find(
-          (recipe: any) =>
-            recipe.externalSource === externalSource &&
-            recipe.externalId === externalId,
-        )
+      ? savedRecipesList
+          .map(ref =>
+            apolloClient.cache.readFragment<UseRecipeFavoriteState_RecipeFragment>(
+              {
+                fragment: UseRecipeFavoriteState_RecipeFragmentDoc,
+                fragmentName: 'useRecipeFavoriteState_recipe',
+                from: { __typename: 'Recipe', id: ref.id },
+              },
+            ),
+          )
+          .find(
+            r =>
+              r?.externalSource === externalSource &&
+              r?.externalId === externalId,
+          )
       : undefined;
 
-  const derivedRecipeSaved = !!savedRecipe;
-  const derivedSavedFolderLocal = savedRecipe?.savedDetails?.folder ?? null;
+  const derivedRecipeSaved = !!savedRecipeMatch;
+  const derivedSavedFolderLocal =
+    savedRecipeMatch?.savedDetails?.folder ?? null;
 
   useEffect(() => {
     syncSavedRecipeState(

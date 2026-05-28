@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Pressable } from '#components/atoms/themedComponents';
 import { BottomSheetTextInput, BottomSheetView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
@@ -16,12 +17,12 @@ import { Text } from '#components/atoms/Text';
 async function executeCreateLocation(
   createFn: (input: { name: string; type: StorageType }) => Promise<unknown>,
   input: { name: string; type: StorageType },
-): Promise<{ error?: string }> {
+): Promise<{ failed?: boolean }> {
   try {
     await createFn(input);
     return {};
   } catch {
-    return { error: 'Failed to create location' };
+    return { failed: true };
   }
 }
 
@@ -47,6 +48,7 @@ interface AddStorageLocationSheetProps {
 export const AddStorageLocationSheet: React.FC<
   AddStorageLocationSheetProps
 > = ({ visible, onClose, onCreateLocation, creating = false }) => {
+  const { t } = useTranslation();
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible,
     onDismiss: onClose,
@@ -79,12 +81,12 @@ export const AddStorageLocationSheet: React.FC<
     const trimmedName = name.trim();
 
     if (!trimmedName) {
-      setError('Location name is required');
+      setError(t('addStorageLocation.nameRequired'));
       return;
     }
 
     if (trimmedName.length < 2) {
-      setError('Name must be at least 2 characters');
+      setError(t('addStorageLocation.nameTooShort'));
       return;
     }
 
@@ -92,8 +94,8 @@ export const AddStorageLocationSheet: React.FC<
       name: trimmedName,
       type: StorageType.Custom,
     });
-    if (result.error) {
-      setError(result.error);
+    if (result.failed) {
+      setError(t('addStorageLocation.createFailed'));
     } else {
       onClose();
     }
@@ -126,15 +128,15 @@ export const AddStorageLocationSheet: React.FC<
               pressed && styles.pressed,
             ]}
             accessibilityRole="button"
-            accessibilityLabel="Cancel"
+            accessibilityLabel={t('addStorageLocation.cancel')}
           >
             <Text size="md" tone="secondary">
-              Cancel
+              {t('addStorageLocation.cancel')}
             </Text>
           </Pressable>
 
           <Text size="lg" weight="semibold" align="center" style={styles.title}>
-            Add Location
+            {t('addStorageLocation.addLocation')}
           </Text>
 
           <Pressable
@@ -144,7 +146,7 @@ export const AddStorageLocationSheet: React.FC<
               pressed && styles.pressed,
             ]}
             accessibilityRole="button"
-            accessibilityLabel="Create"
+            accessibilityLabel={t('addStorageLocation.create')}
             disabled={isCreateDisabled}
           >
             {creating ? (
@@ -156,7 +158,7 @@ export const AddStorageLocationSheet: React.FC<
                 align="right"
                 tone={isCreateDisabled ? 'tertiary' : 'accent'}
               >
-                Create
+                {t('addStorageLocation.create')}
               </Text>
             )}
           </Pressable>
@@ -168,7 +170,7 @@ export const AddStorageLocationSheet: React.FC<
         {/* Input Field */}
         <View style={styles.inputContainer}>
           <Text size="sm" weight="medium" tone="secondary" style={styles.label}>
-            Location Name
+            {t('addStorageLocation.locationName')}
           </Text>
 
           <ThemedBottomSheetTextInput
@@ -176,7 +178,7 @@ export const AddStorageLocationSheet: React.FC<
             style={styles.input}
             defaultValue={name}
             onChangeText={handleNameChange}
-            placeholder="e.g., Kitchen Cabinet, Garage Shelf"
+            placeholder={t('addStorageLocation.namePlaceholder')}
             autoCapitalize="words"
             autoCorrect={false}
             maxLength={50}
@@ -190,7 +192,7 @@ export const AddStorageLocationSheet: React.FC<
           )}
 
           <Text size="xs" tone="tertiary" style={styles.hint}>
-            You can edit details later in Settings &gt; Storage Locations
+            {t('addStorageLocation.hintText')}
           </Text>
         </View>
       </BottomSheetView>

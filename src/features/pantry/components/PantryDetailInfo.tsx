@@ -7,7 +7,12 @@ import { InfoRow } from '#components/molecules/InfoRow';
 const ThemedConditionInfoRow = withUnistyles(InfoRow);
 import { Icon } from '#/utils/iconUtils';
 import { getUnitDisplayText } from '#utils/formatQuantity';
-import { type GetPantryItemQuery } from '#features/pantry/graphql/pantry.generated';
+import { useFragment } from '@apollo/client/react';
+import type { FragmentType } from '@apollo/client/masking';
+import {
+  PantryDetailInfo_PantryItemFragmentDoc,
+  type PantryDetailInfo_PantryItemFragment,
+} from './PantryDetailInfo.generated';
 import {
   formatCondition,
   formatAcquisitionMethod,
@@ -16,10 +21,10 @@ import {
 } from '#features/pantry/hooks/usePantryItemTransformation';
 import { Text } from '#components/atoms/Text';
 
-type PantryItemData = NonNullable<GetPantryItemQuery['pantryItem']>;
-
 interface PantryDetailInfoProps {
-  item: PantryItemData;
+  itemRef:
+    | FragmentType<typeof PantryDetailInfo_PantryItemFragmentDoc>
+    | PantryDetailInfo_PantryItemFragment;
   brandName: string | null;
   netWeightText: string | null;
   remainingNetWeightText: string | null;
@@ -31,7 +36,7 @@ interface PantryDetailInfoProps {
 }
 
 export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
-  item,
+  itemRef,
   brandName,
   netWeightText,
   remainingNetWeightText,
@@ -41,6 +46,18 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
   shelfLifeOpenedDays,
   onCorrectWeight,
 }) => {
+  // Per-entity cache subscription: re-renders only when this PantryItem's
+  // fields change. Falls back to the source prop on cache miss so the
+  // component renders correctly under test fixtures + tolerates stale state.
+  const fragmentResult = useFragment({
+    fragment: PantryDetailInfo_PantryItemFragmentDoc,
+    fragmentName: 'PantryDetailInfo_pantryItem',
+    from: itemRef,
+  });
+  const item: PantryDetailInfo_PantryItemFragment = fragmentResult.complete
+    ? fragmentResult.data
+    : (itemRef as PantryDetailInfo_PantryItemFragment);
+
   const isCriticalCondition =
     item.condition === 'SPOILED' || item.condition === 'EXPIRED';
 

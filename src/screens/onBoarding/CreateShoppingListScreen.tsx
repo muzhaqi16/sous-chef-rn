@@ -9,18 +9,17 @@ import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
 import { DynamicFormFields } from '#components/molecules/DynamicFormFields';
 import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
 import { Button } from '#components/base/Button';
-import { useMutation, useQuery } from '@apollo/client/react';
-import {
-  CreateShoppingListDocument,
-  GetShoppingListsLiteDocument,
-} from '#features/shoppingList/graphql/shoppingList.generated';
+import { useQuery } from '@apollo/client/react';
+import { GetShoppingListsLiteDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { extractNodes } from '#/utils/connectionUtils';
 import { useAppStore, useUser, useSelectedHomeId } from '#store/useAppStore';
 import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigation';
 import { createShoppingListSchema } from '#utils/validation/onboarding';
+import { logValidationErrors } from '#utils/validation/common';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { errorService } from '#/services/errorService';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+import { useCreateShoppingList } from '#features/shoppingList/hooks/mutations/useCreateShoppingList';
 import { SousChefLoader } from '#/components/base/SousChefLoader';
 import { Text } from '#components/atoms/Text';
 
@@ -28,43 +27,27 @@ import { Text } from '#components/atoms/Text';
  *  Extracted from component body to avoid ThrowStatement-in-try-catch bailout. */
 async function performCreateShoppingList(
   data: { shoppingListName: string },
-  createShoppingList: (opts: { variables: any }) => Promise<any>,
+  createShoppingList: (input: {
+    name: string;
+    description?: string;
+    isDefault?: boolean;
+    tags?: string[];
+    homeId?: string;
+  }) => Promise<{ id: string }>,
   selectedHomeId: string | null,
   setSelectedShoppingListId: (id: string) => void,
   navigateToNextStep: (step: string) => void,
-  fallbackErrorMessage: string,
 ): Promise<void> {
-  const response = await createShoppingList({
-    variables: {
-      input: {
-        name: data.shoppingListName.trim(),
-        description: 'Created during onboarding',
-        isDefault: true,
-        tags: ['onboarding', 'groceries'],
-        homeId: selectedHomeId || undefined,
-      },
-    },
+  const shoppingList = await createShoppingList({
+    name: data.shoppingListName.trim(),
+    description: 'Created during onboarding',
+    isDefault: true,
+    tags: ['onboarding', 'groceries'],
+    homeId: selectedHomeId || undefined,
   });
 
-  console.log('CreateShoppingList response:', response);
-
-  if (response.error) {
-    errorService.reportError(response.error, {
-      operation: 'CreateShoppingList.graphqlError',
-    });
-    throw new Error(response.error.message);
-  }
-
-  const payload = response.data?.createShoppingList;
-
-  if (payload?.success) {
-    if (payload.shoppingList) {
-      setSelectedShoppingListId(payload.shoppingList.id);
-    }
-    navigateToNextStep('CreateShoppingList');
-  } else {
-    throw new Error(payload?.message || fallbackErrorMessage);
-  }
+  setSelectedShoppingListId(shoppingList.id);
+  navigateToNextStep('CreateShoppingList');
 }
 
 /** Module-level helper to sync existing list state */
@@ -120,7 +103,9 @@ export const CreateShoppingListScreen = () => {
     },
   });
 
-  const [createShoppingList] = useMutation(CreateShoppingListDocument);
+  const { createShoppingList } = useCreateShoppingList(
+    t('errors.createShoppingListFailed'),
+  );
 
   // Check existing lists
   useEffect(() => {
@@ -145,7 +130,6 @@ export const CreateShoppingListScreen = () => {
           selectedHomeId,
           setSelectedShoppingListId,
           navigateToNextStep,
-          t('errors.createShoppingListFailed'),
         ),
       setIsCreating,
       (error: unknown) => {
@@ -260,7 +244,7 @@ export const CreateShoppingListScreen = () => {
         title={
           isCreating ? t('onBoarding.creatingList') : t('onBoarding.createList')
         }
-        onPress={form.handleSubmit(onSubmit)}
+        onPress={form.handleSubmit(onSubmit, logValidationErrors)}
         variant="primary"
         disabled={isCreating}
       />

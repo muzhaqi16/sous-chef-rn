@@ -9,7 +9,7 @@ import { Icon } from '#utils/iconUtils';
 import { Header } from '#components/molecules/Header';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useMutation, useQuery } from '@apollo/client/react';
+import { useFragment, useMutation, useQuery } from '@apollo/client/react';
 import {
   MyShoppingListInvitesDocument,
   AcceptShoppingListInviteDocument,
@@ -20,6 +20,12 @@ import {
   AcceptHomeInviteDocument,
   DeclineHomeInviteDocument,
 } from '#operations/home/home.generated';
+import {
+  AcceptInvite_ShoppingListInviteFragmentDoc,
+  AcceptInvite_HomeInviteFragmentDoc,
+  type AcceptInvite_ShoppingListInviteFragment,
+  type AcceptInvite_HomeInviteFragment,
+} from './AcceptInvite.generated';
 import { errorService, getErrorMessage } from '#/services/errorService';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 import { SousChefLoader } from '#/components/base/SousChefLoader';
@@ -74,6 +80,30 @@ export const AcceptInvite: React.FC = () => {
     inviteId ? inv.id === inviteId : false,
   );
 
+  // Unmask display fields via useFragment (pattern B — resilient fallback).
+  // The queries already select these fields, so the cache has them;
+  // useFragment reads from the normalized cache without needing a spread.
+  const shoppingListFragmentResult = useFragment({
+    fragment: AcceptInvite_ShoppingListInviteFragmentDoc,
+    fragmentName: 'AcceptInvite_shoppingListInvite',
+    from: shoppingListInvite ?? {
+      __typename: 'ShoppingListCollaborator',
+      id: '',
+    },
+  });
+  const shoppingListInviteData: AcceptInvite_ShoppingListInviteFragment | null =
+    shoppingListInvite && shoppingListFragmentResult.complete
+      ? shoppingListFragmentResult.data
+      : null;
+
+  const homeFragmentResult = useFragment({
+    fragment: AcceptInvite_HomeInviteFragmentDoc,
+    fragmentName: 'AcceptInvite_homeInvite',
+    from: homeInvite ?? { __typename: 'HomeInvite', id: '' },
+  });
+  const homeInviteDisplay: AcceptInvite_HomeInviteFragment | null =
+    homeInvite && homeFragmentResult.complete ? homeFragmentResult.data : null;
+
   const invitationType: InvitationType = shoppingListInvite
     ? 'shopping_list'
     : homeInvite
@@ -101,12 +131,16 @@ export const AcceptInvite: React.FC = () => {
     executeWithLoadingState(
       async () => {
         if (invitationType === 'shopping_list') {
-          await acceptShoppingListInvite({ variables: { token: inviteToken } });
+          await acceptShoppingListInvite({
+            variables: { input: { token: inviteToken } },
+          });
           alertService.alert('Success', 'Shopping list invitation accepted!', [
             { text: 'OK', onPress: () => goBack() },
           ]);
         } else if (invitationType === 'home') {
-          await acceptHomeInvite({ variables: { token: inviteToken } });
+          await acceptHomeInvite({
+            variables: { input: { token: inviteToken } },
+          });
           alertService.alert('Success', 'Home invitation accepted!', [
             { text: 'OK', onPress: () => goBack() },
           ]);
@@ -145,11 +179,11 @@ export const AcceptInvite: React.FC = () => {
               async () => {
                 if (invitationType === 'shopping_list') {
                   await declineShoppingListInvite({
-                    variables: { token: inviteToken! },
+                    variables: { input: { token: inviteToken! } },
                   });
                 } else if (invitationType === 'home') {
                   await declineHomeInvite({
-                    variables: { token: inviteToken! },
+                    variables: { input: { token: inviteToken! } },
                   });
                 }
 
@@ -221,11 +255,11 @@ export const AcceptInvite: React.FC = () => {
           style={styles.inviteText}
         >
           {invitationType === 'home'
-            ? (homeInvite as any)?.invitedBy?.profile?.displayName || // Acceptable: invitedBy.profile not in fragment; gracefully falls back
-              (homeInvite as any)?.invitedBy?.email ||
+            ? homeInviteDisplay?.inviter?.profile?.displayName ||
+              homeInviteDisplay?.inviter?.email ||
               'Someone'
-            : (shoppingListInvite?.invitedBy as any)?.profile?.displayName || // Acceptable: profile not in fragment; gracefully falls back
-              shoppingListInvite?.invitedBy?.email ||
+            : shoppingListInviteData?.invitedBy?.profile?.displayName ||
+              shoppingListInviteData?.invitedBy?.email ||
               'Someone'}{' '}
           has invited you to{' '}
           {invitationType === 'home' ? 'join' : 'collaborate on'}
@@ -233,12 +267,9 @@ export const AcceptInvite: React.FC = () => {
 
         <View style={styles.inviteDetails}>
           <Text size="lg" weight="semibold">
-            {
-              invitationType === 'home'
-                ? (homeInvite as any)?.home?.name || 'Home' // Acceptable: home.name not in fragment; uses fallback
-                : (shoppingListInvite as any)?.shoppingList?.name ||
-                  'Shopping List' // Acceptable: shoppingList.name not in fragment; uses fallback
-            }
+            {invitationType === 'home'
+              ? homeInviteDisplay?.home?.name || 'Home'
+              : shoppingListInviteData?.shoppingList?.name || 'Shopping List'}
           </Text>
           <Text size="sm" tone="secondary" style={styles.inviteType}>
             {invitationType === 'home' ? 'Home' : 'Shopping List'}
@@ -257,9 +288,8 @@ export const AcceptInvite: React.FC = () => {
         </View>
 
         {!!(
-          (invitationType === 'shopping_list' &&
-            (shoppingListInvite as any)?.shoppingList?.description) || // Acceptable: optional field
-          (invitationType === 'home' && (homeInvite as any)?.home?.description)
+          invitationType === 'shopping_list' &&
+          shoppingListInviteData?.shoppingList?.description
         ) && (
           <View style={styles.messageContainer}>
             <Text
@@ -271,11 +301,7 @@ export const AcceptInvite: React.FC = () => {
               Description:
             </Text>
             <Text size="md">
-              {
-                invitationType === 'home'
-                  ? (homeInvite as any)?.home?.description // Acceptable: optional field for display only
-                  : (shoppingListInvite as any)?.shoppingList?.description // Acceptable: optional field for display only
-              }
+              {shoppingListInviteData?.shoppingList?.description}
             </Text>
           </View>
         )}

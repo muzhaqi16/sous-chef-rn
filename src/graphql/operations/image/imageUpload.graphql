@@ -1,25 +1,61 @@
-mutation CreateImageUploadUrl($mime: String!, $purpose: ImageUploadPurpose!, $itemId: String) {
-  createImageUploadUrl(mime: $mime, purpose: $purpose, itemId: $itemId) {
-    url
-    key
+mutation CreateImageUploadUrl($input: CreateImageUploadUrlInput!) {
+  createImageUploadUrl(input: $input) {
+    __typename
+    ... on CreateImageUploadUrlPayload {
+      url
+      key
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
+    }
   }
 }
 
-mutation ConfirmProfileImageUpload($key: String!) {
-  confirmProfileImageUpload(key: $key) {
-    success
-    message
-    code
-    url
+mutation ConfirmProfileImageUpload($input: ConfirmProfileImageUploadInput!) {
+  confirmProfileImageUpload(input: $input) {
+    __typename
+    ... on ConfirmProfileImageUploadPayload {
+      url
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
+    }
   }
 }
 
-mutation ConfirmItemImageUpload($itemId: String!, $key: String!) {
-  confirmItemImageUpload(itemId: $itemId, key: $key) {
-    success
-    message
-    code
-    url
+mutation ConfirmItemImageUpload($input: ConfirmItemImageUploadInput!) {
+  confirmItemImageUpload(input: $input) {
+    __typename
+    ... on ConfirmItemImageUploadPayload {
+      url
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
+    }
   }
 }
 
@@ -30,13 +66,24 @@ mutation ConfirmItemImageUpload($itemId: String!, $key: String!) {
 # Use: updateProfile(input: { coverImage: null }) to remove cover
 
 mutation UpdateItemImage($id: ID!, $imageUrl: String!) {
-  updateItem(id: $id, input: { media: { imageUrl: $imageUrl } }) {
-    success
-    message
-    code
-    item {
-      id
-      imageUrl
+  updateItem(input: { id: $id, media: { imageUrl: $imageUrl } }) {
+    __typename
+    ... on UpdateItemPayload {
+      item {
+        id
+        imageUrl
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
     }
   }
 }

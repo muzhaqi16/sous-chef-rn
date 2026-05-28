@@ -84,14 +84,14 @@ export function useShoppingListScreen() {
     return refetch();
   };
 
-  // 4b. Transform: Convert raw items to UI format (single consolidated call)
+  // 4b. Wrap nodes into FlashList row items. Display data is no longer
+  // pre-computed — each row reads its fields via `useFragment` internally.
   const {
     unpurchasedItems: transformedUnpurchasedItems,
     purchasedItems: transformedPurchasedItems,
   } = useShoppingListTransformMulti({
     rawUnpurchasedItems: filteredUnpurchasedItems,
     rawPurchasedItems: filteredPurchasedItems,
-    showImages: displayedShowImages,
   });
 
   // Defer data updates so pagination and subscription renders don't block scroll.
@@ -170,6 +170,9 @@ export function useShoppingListScreen() {
 
       // Search
       searchQuery,
+
+      // Row display preference (gated on pull-to-refresh for "disable")
+      showImages: displayedShowImages,
     },
     actions: {
       setSelectedShoppingListId,

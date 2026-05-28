@@ -1,12 +1,11 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import { alertService } from '#/services/alertService';
-import { ShoppingListItemDisplayFragmentDoc } from '#features/shoppingList/graphql/shoppingListFragments.generated';
+import { UseShoppingListActions_ItemFragmentDoc } from './useShoppingListActions.generated';
 import { UpdateShoppingListItemQuantityDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { toastService } from '#/services/toastService';
 import {
-  handleVersionConflict,
-  getVersionConflictMessage,
-} from '#/utils/errors/versionConflict';
+  handleMutationError,
+  versionConflictCheck,
+} from '#/utils/errorHandlers';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { setCachedFields } from '#/apollo/utils/cacheUpdaters';
@@ -37,15 +36,10 @@ async function executeQuantityUpdate(
     revertCache();
     clearPersistence();
 
-    if (handleVersionConflict(error)) {
-      alertService.alert('Item Updated', getVersionConflictMessage(error), [
-        { text: 'Refresh', onPress: () => refetchItems() },
-        { text: 'Cancel', style: 'cancel' },
-      ]);
-      return;
-    }
-    console.error('Failed to update quantity:', error);
-    toastService.error('Failed to update quantity');
+    handleMutationError(error, {
+      operation: 'Update Quantity',
+      checks: [versionConflictCheck({ onRefresh: () => refetchItems() })],
+    });
   });
   if (result === false) return;
 }
@@ -200,8 +194,8 @@ export function useShoppingListActions({
 
     const cachedItem = client.readFragment<any>({
       id: cacheId,
-      fragment: ShoppingListItemDisplayFragmentDoc,
-      fragmentName: 'ShoppingListItemDisplayFragment',
+      fragment: UseShoppingListActions_ItemFragmentDoc,
+      fragmentName: 'useShoppingListActions_item',
     });
 
     if (!cachedItem) {
@@ -226,17 +220,20 @@ export function useShoppingListActions({
       async () => {
         await updateQuantity({
           variables: {
-            itemId,
-            quantity: newQuantity.toString(),
-            version: cachedItem.version,
+            input: {
+              itemId,
+              quantity: newQuantity.toString(),
+              version: cachedItem.version,
+            },
           },
           onCompleted: data => {
-            const updatedItem =
-              data?.updateShoppingListItemQuantity?.shoppingListItem;
-            if (updatedItem) {
+            const payload = data?.updateShoppingListItemQuantity;
+            if (
+              payload?.__typename === 'UpdateShoppingListItemQuantityPayload'
+            ) {
               optimisticDataPersistence.clear(
                 'ShoppingListItem',
-                updatedItem.id,
+                payload.shoppingListItem.id,
                 'quantity',
               );
             }
@@ -268,8 +265,8 @@ export function useShoppingListActions({
 
     const cachedItem = client.readFragment<any>({
       id: cacheId,
-      fragment: ShoppingListItemDisplayFragmentDoc,
-      fragmentName: 'ShoppingListItemDisplayFragment',
+      fragment: UseShoppingListActions_ItemFragmentDoc,
+      fragmentName: 'useShoppingListActions_item',
     });
 
     if (!cachedItem) {
@@ -294,17 +291,20 @@ export function useShoppingListActions({
       async () => {
         await updateQuantity({
           variables: {
-            itemId,
-            quantity: newQuantity.toString(),
-            version: cachedItem.version,
+            input: {
+              itemId,
+              quantity: newQuantity.toString(),
+              version: cachedItem.version,
+            },
           },
           onCompleted: data => {
-            const updatedItem =
-              data?.updateShoppingListItemQuantity?.shoppingListItem;
-            if (updatedItem) {
+            const payload = data?.updateShoppingListItemQuantity;
+            if (
+              payload?.__typename === 'UpdateShoppingListItemQuantityPayload'
+            ) {
               optimisticDataPersistence.clear(
                 'ShoppingListItem',
-                updatedItem.id,
+                payload.shoppingListItem.id,
                 'quantity',
               );
             }

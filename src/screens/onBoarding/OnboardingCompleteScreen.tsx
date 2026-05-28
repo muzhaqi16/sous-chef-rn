@@ -6,6 +6,7 @@ import { Button } from '#components/base/Button';
 import { useUpdateUser, useUser } from '#store/useAppStore';
 import { useMutation } from '@apollo/client/react';
 import { CompleteOnboardingDocument } from '#operations/auth/user.generated';
+import { handleMutationError } from '#/utils/errorHandlers';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { Text } from '#components/atoms/Text';
 
@@ -29,7 +30,7 @@ export const OnboardingCompleteScreen = () => {
       // The RootNavigator will automatically navigate to main_app since user.onBoarded = true
     },
     onError: error => {
-      console.error('Failed to complete onboarding:', error);
+      handleMutationError(error, { operation: 'Complete Onboarding' });
       setError('Failed to complete onboarding. Please try again.');
       setIsCompleting(false);
     },

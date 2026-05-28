@@ -7,9 +7,6 @@ import { RecipeIngredientEditor } from '../../../../../src/features/recipes/scre
 jest.mock('../../../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../../../src/apollo/links/refreshToken');
 
-jest.mock('../../../../../src/components/atoms/GlobalBottomSheetBackdrop', () => ({
-  GlobalBottomSheetBackdrop: () => null,
-}));
 jest.mock('../../../../../src/components/molecules/AutocompleteField/ItemAutocompleteField', () => ({
   ItemAutocompleteField: (props: any) => {
     const { Text } = require('react-native');

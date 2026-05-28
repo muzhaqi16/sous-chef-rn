@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { useFragment } from '@apollo/client/react';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { alertService } from '#/services/alertService';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
@@ -8,14 +10,14 @@ import { UnitAutocompleteField } from '#components/molecules/AutocompleteField/U
 import { FormattedItemSubtitle } from '#components/atoms/FormattedItemSubtitle';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
-import { type PantryItemFragment } from '#features/pantry/graphql/pantryFragments.generated';
 import { commonStyles } from '#/styles/commonStyles';
 import { formatNetWeightDisplay } from '#features/pantry/hooks/usePantryItemTransformation';
 import { Text } from '#components/atoms/Text';
+import { CorrectWeightModal_PantryItemFragmentDoc } from './CorrectWeightModal.generated';
 
 interface CorrectWeightModalProps {
   visible: boolean;
-  pantryItem: PantryItemFragment | null;
+  pantryItemId: string | null;
   onClose: () => void;
   onConfirm: (
     netWeight: number,
@@ -26,10 +28,18 @@ interface CorrectWeightModalProps {
 
 export const CorrectWeightModal: React.FC<CorrectWeightModalProps> = ({
   visible,
-  pantryItem,
+  pantryItemId,
   onClose,
   onConfirm,
 }) => {
+  const { t } = useTranslation();
+  const { data, complete } = useFragment({
+    fragment: CorrectWeightModal_PantryItemFragmentDoc,
+    fragmentName: 'CorrectWeightModal_pantryItem',
+    from: pantryItemId ? { __typename: 'PantryItem', id: pantryItemId } : null,
+  });
+  const pantryItem = pantryItemId && complete ? data : null;
+
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible: visible && !!pantryItem,
     onDismiss: onClose,
@@ -40,12 +50,13 @@ export const CorrectWeightModal: React.FC<CorrectWeightModalProps> = ({
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [reason, setReason] = useState('');
 
-  // Reset state when sheet opens (render-time conditional state update)
+  // Reset state when sheet opens (render-time conditional state update).
+  // Key on pantryItemId so cache updates to the same item don't clobber input.
   const [prevVisible, setPrevVisible] = useState(visible);
-  const [prevPantryItem, setPrevPantryItem] = useState(pantryItem);
-  if (visible !== prevVisible || pantryItem !== prevPantryItem) {
+  const [prevPantryItemId, setPrevPantryItemId] = useState(pantryItem?.id);
+  if (visible !== prevVisible || pantryItem?.id !== prevPantryItemId) {
     setPrevVisible(visible);
-    setPrevPantryItem(pantryItem);
+    setPrevPantryItemId(pantryItem?.id);
     if (visible && pantryItem) {
       setWeightInput(pantryItem.netWeight?.toString() || '');
       setUnitDisplay(
@@ -71,12 +82,12 @@ export const CorrectWeightModal: React.FC<CorrectWeightModalProps> = ({
 
     const netWeight = parseFloat(weightInput);
     if (isNaN(netWeight) || netWeight <= 0) {
-      alertService.alert('Error', 'Please enter a valid weight');
+      alertService.alert(t('labels.error'), t('correctWeight.invalidWeight'));
       return;
     }
 
     if (!reason.trim()) {
-      alertService.alert('Error', 'Please provide a reason for the correction');
+      alertService.alert(t('labels.error'), t('correctWeight.reasonRequired'));
       return;
     }
 
@@ -111,10 +122,10 @@ export const CorrectWeightModal: React.FC<CorrectWeightModalProps> = ({
         bottomOffset={16}
       >
         <BottomSheetHeader
-          title="Correct Weight"
+          title={t('correctWeight.title')}
           onCancel={onClose}
           onConfirm={handleConfirm}
-          confirmLabel="Correct"
+          confirmLabel={t('correctWeight.correct')}
         />
 
         {!!pantryItem && (
@@ -126,20 +137,22 @@ export const CorrectWeightModal: React.FC<CorrectWeightModalProps> = ({
               {!!currentWeightText && (
                 <View style={commonStyles.bottomSheetItemRow}>
                   <Text style={commonStyles.bottomSheetItemLabel}>
-                    Net Weight: {currentWeightText}
+                    {t('correctWeight.netWeightPrefix')}
+                    {currentWeightText}
                   </Text>
                 </View>
               )}
               {!!remainingWeightText && (
                 <View style={commonStyles.bottomSheetItemRow}>
                   <Text style={commonStyles.bottomSheetItemLabel}>
-                    Remaining: {remainingWeightText}
+                    {t('correctWeight.remainingPrefix')}
+                    {remainingWeightText}
                   </Text>
                 </View>
               )}
               <View style={commonStyles.bottomSheetItemRow}>
                 <Text style={commonStyles.bottomSheetItemLabel}>
-                  Quantity:{' '}
+                  {t('correctWeight.quantityLabel')}
                 </Text>
                 <FormattedItemSubtitle
                   quantity={pantryItem.quantity}
@@ -151,11 +164,11 @@ export const CorrectWeightModal: React.FC<CorrectWeightModalProps> = ({
 
             <View style={commonStyles.bottomSheetSection}>
               <FormInput
-                label="New Net Weight"
+                label={t('correctWeight.newNetWeight')}
                 required
                 value={weightInput}
                 onChangeText={setWeightInput}
-                placeholder="e.g., 14.5"
+                placeholder={t('correctWeight.newNetWeightPlaceholder')}
                 keyboardType="decimal-pad"
                 useBottomSheetInput
               />
@@ -164,21 +177,21 @@ export const CorrectWeightModal: React.FC<CorrectWeightModalProps> = ({
             <View style={commonStyles.bottomSheetSection}>
               <UnitAutocompleteField
                 variant="modal"
-                label="Unit"
+                label={t('correctWeight.unit')}
                 value={unitDisplay}
                 onChangeText={setUnitDisplay}
                 onUnitSelected={handleUnitSelected}
-                placeholder="oz, g, ml"
+                placeholder={t('correctWeight.unitPlaceholder')}
               />
             </View>
 
             <View style={commonStyles.bottomSheetSection}>
               <FormInput
-                label="Reason"
+                label={t('correctWeight.reason')}
                 required
                 value={reason}
                 onChangeText={setReason}
-                placeholder="Why is the weight being corrected?"
+                placeholder={t('correctWeight.reasonPlaceholder')}
                 useBottomSheetInput
               />
             </View>

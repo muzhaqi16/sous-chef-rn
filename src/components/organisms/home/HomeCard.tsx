@@ -1,5 +1,6 @@
 import React, { useLayoutEffect } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -7,34 +8,18 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
+import { useFragment } from '@apollo/client/react';
+import { type FragmentType } from '@apollo/client/masking';
 import { TIMING } from '#constants/animations';
 import { Icon } from '#utils/iconUtils';
 import { HomeActions } from './HomeActions';
 import { MembersList } from './MembersList';
 import { Pressable } from '#components/atoms/themedComponents';
-import type { Member } from '#/utils/formatters/memberFormatters';
 import { Text } from '#components/atoms/Text';
-
-export type PartialHome = {
-  id: string;
-  name: string;
-  joinCode?: string;
-  allowJoinCode?: boolean;
-  membersTotalCount?: number;
-  pantriesTotalCount?: number;
-  members?: Member[];
-  pantries?: Array<{ id: string }>;
-  invites?: Array<{
-    id: string;
-    email: string | null;
-    recipientName: string | null;
-    status: string;
-  }>;
-  myMembership?: Member | null;
-};
+import { HomeCard_HomeFragmentDoc } from './HomeCard.generated';
 
 interface HomeCardProps {
-  home: PartialHome;
+  homeRef: FragmentType<typeof HomeCard_HomeFragmentDoc>;
   isDefault: boolean;
   isHighlighted?: boolean;
   canInvite?: boolean;
@@ -46,7 +31,7 @@ interface HomeCardProps {
 }
 
 export const HomeCard: React.FC<HomeCardProps> = ({
-  home,
+  homeRef,
   isDefault,
   isHighlighted = false,
   canInvite,
@@ -56,6 +41,15 @@ export const HomeCard: React.FC<HomeCardProps> = ({
   onInvite,
   onDelete,
 }) => {
+  const { t } = useTranslation();
+  // Per-entity cache subscription: this card re-renders only when this Home's
+  // fields change.
+  const { data: home, complete } = useFragment({
+    fragment: HomeCard_HomeFragmentDoc,
+    fragmentName: 'HomeCard_home',
+    from: homeRef,
+  });
+
   // Animated value for highlight effect
   const highlightOpacity = useSharedValue(0);
 
@@ -74,12 +68,19 @@ export const HomeCard: React.FC<HomeCardProps> = ({
     opacity: highlightOpacity.get(),
   }));
 
+  if (!complete) return null;
+
+  const memberCount = home.membersConnection?.totalCount ?? 0;
+  const pantryCount = home.pantriesConnection?.totalCount ?? 0;
+  const members =
+    home.membersConnection?.edges?.map(e => e.node).filter(Boolean) ?? [];
+  const invites =
+    home.invitesConnection?.edges?.map(e => e.node).filter(Boolean) ?? [];
+
   const handleDelete = () => {
     onDelete(home.id, home.name);
   };
 
-  // Wrapper pattern: static Unistyles on outer View for margin/shadow,
-  // static card style with animated highlight overlay for smooth animation
   return (
     <View style={styles.homeCardWrapper}>
       <View style={styles.card}>
@@ -95,18 +96,15 @@ export const HomeCard: React.FC<HomeCardProps> = ({
           ]}
           onPress={() => onPress?.(home.id)}
           accessibilityRole="button"
-          accessibilityLabel={`${home.name}, ${
-            home.membersTotalCount ?? home.members?.length ?? 0
-          } ${
-            (home.membersTotalCount ?? home.members?.length ?? 0) === 1
-              ? 'member'
-              : 'members'
-          }, ${home.pantriesTotalCount ?? home.pantries?.length ?? 0} ${
-            (home.pantriesTotalCount ?? home.pantries?.length ?? 0) === 1
-              ? 'pantry'
-              : 'pantries'
-          }${isDefault ? ', default home' : ''}`}
-          accessibilityHint="Tap to view home details"
+          accessibilityLabel={`${home.name}, ${t(
+            'homeManagement.cardMemberCount',
+            { count: memberCount },
+          )}, ${t('homeManagement.cardPantryCount', {
+            count: pantryCount,
+          })}${
+            isDefault ? t('homeManagement.accessibilityDefaultSuffix') : ''
+          }`}
+          accessibilityHint={t('homeManagement.accessibilityHint')}
           disabled={!onPress}
         >
           <View style={styles.homeInfo}>
@@ -115,20 +113,14 @@ export const HomeCard: React.FC<HomeCardProps> = ({
             </Text>
 
             <Text size="sm" tone="secondary" style={styles.homeDetails}>
-              {home.membersTotalCount ?? home.members?.length ?? 0}{' '}
-              {(home.membersTotalCount ?? home.members?.length ?? 0) === 1
-                ? 'member'
-                : 'members'}{' '}
-              • {home.pantriesTotalCount ?? home.pantries?.length ?? 0}{' '}
-              {(home.pantriesTotalCount ?? home.pantries?.length ?? 0) === 1
-                ? 'pantry'
-                : 'pantries'}
+              {t('homeManagement.cardMemberCount', { count: memberCount })} •{' '}
+              {t('homeManagement.cardPantryCount', { count: pantryCount })}
             </Text>
           </View>
           {!!isDefault && (
             <View style={styles.defaultBadge}>
               <Text size="xs" weight="semibold" tone="accent">
-                Default
+                {t('homeManagement.cardDefault')}
               </Text>
             </View>
           )}
@@ -147,10 +139,7 @@ export const HomeCard: React.FC<HomeCardProps> = ({
           onDelete={handleDelete}
         />
 
-        <MembersList
-          members={home.members || []}
-          invites={home.invites || []}
-        />
+        <MembersList members={members} invites={invites} />
       </View>
     </View>
   );

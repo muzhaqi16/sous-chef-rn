@@ -1,5 +1,9 @@
-import { ActivityIndicator, RefreshControl, TextInput } from 'react-native';
-import { Pressable as GHPressable } from 'react-native-gesture-handler';
+import {
+  ActivityIndicator,
+  Pressable as RNPressable,
+  RefreshControl,
+  TextInput,
+} from 'react-native';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { withUnistyles } from 'react-native-unistyles';
 
@@ -11,12 +15,14 @@ import { Icon } from '#utils/iconUtils';
 // derived props. Defining them at module scope (not inline in screens) keeps
 // the per-screen code free of useUnistyles re-render subscriptions.
 
-// RNGH's Pressable bypasses the standard RN style pipeline, so Unistyles' C++
-// proxy bindings don't repaint it on theme change (unistyles#1109). Wrapping
-// with `withUnistyles` re-runs style processing on every theme tick so the
-// pressable's child View receives the fresh proxy values. Project convention:
-// always import `Pressable` from this module (not directly from RNGH).
-export const Pressable = withUnistyles(GHPressable);
+// Project convention: import Pressable from this module. Aliased to RN's
+// Pressable — wrapping RNGH's Pressable with `withUnistyles` silently dropped
+// StyleSheet.create proxy values inside function-style `({pressed}) => [...]`
+// callbacks (unistyles#1109). RN's Pressable is auto-bound to the Unistyles
+// ShadowTree by the babel plugin, so styles and theme switches work natively.
+// For gesture composition (Swipeable, GestureDetector chains), import
+// Pressable directly from 'react-native-gesture-handler' at the call site.
+export const Pressable = RNPressable;
 
 /** Plain RN TextInput with a theme-reactive placeholder color. */
 export const ThemedTextInput = withUnistyles(TextInput, theme => ({

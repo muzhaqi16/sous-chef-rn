@@ -16,6 +16,10 @@
  */
 
 import { errorService } from '#/services/errorService';
+import {
+  GraphQLDomainError,
+  GraphQLNetworkError,
+} from '#/utils/errors/graphqlErrors';
 
 /** Wraps an async mutation — returns T on success, false on failure.
  *  Pass a string for default logging, or a function for custom error handling (rollbacks, Alerts, etc.). */
@@ -112,6 +116,49 @@ export async function executeWithLoadingState(
 ): Promise<void> {
   setLoading(true);
   await executeAsyncWithCleanup(fn, () => setLoading(false), onError);
+}
+
+/** Narrows a GraphQL union-type mutation payload to the success variant.
+ *  Throws GraphQLNetworkError when payload is null/undefined (transport failure),
+ *  or GraphQLDomainError when the server returns an error union member. */
+export function unwrapPayload<
+  TUnion extends { __typename: string },
+  TName extends TUnion['__typename'],
+>(
+  payload: TUnion | null | undefined,
+  successTypename: TName,
+  fallbackMessage: string,
+): Extract<TUnion, { __typename: TName }> {
+  if (payload == null) {
+    throw new GraphQLNetworkError(fallbackMessage);
+  }
+  if (payload.__typename === successTypename) {
+    return payload as Extract<TUnion, { __typename: TName }>;
+  }
+  const { __typename, code, message, ...extra } = payload as Record<
+    string,
+    unknown
+  > & { __typename: string };
+  throw new GraphQLDomainError({
+    __typename,
+    code: String(code ?? 'UNKNOWN'),
+    message: String(message || fallbackMessage),
+    ...extra,
+  });
+}
+
+/** Type guard for union-type mutation payloads — returns true and narrows type
+ *  if the payload matches the success typename. Unlike `unwrapPayload`, this
+ *  does not throw — use it in hooks with `update`/`optimisticResponse` where
+ *  the error handling happens via `onError` or `handleMutationError`. */
+export function isSuccessPayload<
+  TUnion extends { __typename: string },
+  TName extends TUnion['__typename'],
+>(
+  payload: TUnion | null | undefined,
+  successTypename: TName,
+): payload is Extract<TUnion, { __typename: TName }> {
+  return payload != null && payload.__typename === successTypename;
 }
 
 /** Wraps an Apollo client.query() call — returns data on success, null on cancellation/failure */

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { alertService } from '#/services/alertService';
-import { useMutation, useQuery } from '@apollo/client/react';
+import { useFragment, useMutation, useQuery } from '@apollo/client/react';
 import { useTranslation } from 'react-i18next';
 import {
   AddItemToShoppingListDocument,
@@ -8,7 +8,7 @@ import {
   GetShoppingListItemDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { ItemSuggestion, CategoryType } from '#/graphql/generated/schemaTypes';
-import { ShoppingListItemDisplayFragmentDoc } from '#features/shoppingList/graphql/shoppingListFragments.generated';
+import { UseShoppingListItemForm_ItemFragmentDoc } from '#features/shoppingList/hooks/useShoppingListItemForm.generated';
 import { FormModal } from '#components/organisms/FormModal';
 import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
 import { ItemAutocompleteField } from '#components/molecules/AutocompleteField/ItemAutocompleteField';
@@ -21,9 +21,9 @@ import type { StaticScreenProps } from '@react-navigation/native';
 import { addNewItemToShoppingListCache } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { useShoppingListItemForm } from '#features/shoppingList/hooks/useShoppingListItemForm';
 import {
-  handleVersionConflict,
-  getVersionConflictMessage,
-} from '#/utils/errors/versionConflict';
+  handleMutationError,
+  versionConflictCheck,
+} from '#/utils/errorHandlers';
 import { errorService } from '#/services/errorService';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 
@@ -72,11 +72,26 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
     skip: !isEdit,
   });
 
+  // The form hook owns its own narrow fragment (`useShoppingListItemForm_item`).
+  // useFragment subscribes this screen to the entity's cache record so edits
+  // made elsewhere flow back in without a refetch.
+  const itemFragmentRef = data?.shoppingListItem ?? null;
+  const itemFragmentResult = useFragment({
+    fragment: UseShoppingListItemForm_ItemFragmentDoc,
+    fragmentName: 'useShoppingListItemForm_item',
+    from: itemFragmentRef,
+  });
+  const itemData =
+    itemFragmentRef && itemFragmentResult.complete
+      ? itemFragmentResult.data
+      : null;
+
   const [addItem] = useMutation(AddItemToShoppingListDocument, {
     // Update cache immediately for optimistic UI
     update: (cache, { data: mutationData }) => {
-      const newItem = mutationData?.addItemToShoppingList?.shoppingListItem;
-      if (!newItem) return;
+      const payload = mutationData?.addItemToShoppingList;
+      if (payload?.__typename !== 'AddItemToShoppingListPayload') return;
+      const newItem = payload.shoppingListItem;
 
       addNewItemToShoppingListCache(cache, listId, newItem);
     },
@@ -88,21 +103,6 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
   });
 
   const [updateItem] = useMutation(UpdateShoppingListItemDocument, {
-    // Update cache to ensure UI reflects changes immediately
-    update(cache, { data }) {
-      const updatedItem = data?.updateShoppingListItem?.shoppingListItem;
-      if (updatedItem) {
-        cache.writeFragment({
-          id: cache.identify({
-            __typename: 'ShoppingListItem',
-            id: updatedItem.id,
-          }),
-          fragment: ShoppingListItemDisplayFragmentDoc,
-          fragmentName: 'ShoppingListItemDisplayFragment',
-          data: updatedItem,
-        });
-      }
-    },
     onError: error => {
       errorService.reportError(error, {
         operation: 'ShoppingListItem.updateItem',
@@ -112,12 +112,12 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
 
   // Populate form when editing existing item
   useEffect(() => {
-    if (data?.shoppingListItem) {
-      setFromItem(data.shoppingListItem);
+    if (itemData) {
+      setFromItem(itemData);
       // Store version for optimistic concurrency control
-      itemVersionRef.current = data.shoppingListItem.version;
+      itemVersionRef.current = itemData.version;
     }
-  }, [data, setFromItem]);
+  }, [itemData, setFromItem]);
 
   // Pre-populate item name when adding new item with initial value
   useEffect(() => {
@@ -179,9 +179,9 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
           const input = buildDirtyInput();
           result = await updateItem({
             variables: {
-              id: itemId,
               input: {
                 ...input,
+                id: itemId,
                 // Include version for strict version checking (optimistic concurrency control)
                 version: itemVersionRef.current,
               },
@@ -208,12 +208,20 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
 
         // Only navigate back if mutation succeeded
         if (result.data) {
+          const updatePayload =
+            'updateShoppingListItem' in result.data
+              ? result.data.updateShoppingListItem
+              : null;
+          const addPayload =
+            'addItemToShoppingList' in result.data
+              ? result.data.addItemToShoppingList
+              : null;
           const mutationData = isEdit
-            ? 'updateShoppingListItem' in result.data
-              ? result.data.updateShoppingListItem?.shoppingListItem
+            ? updatePayload?.__typename === 'UpdateShoppingListItemPayload'
+              ? updatePayload.shoppingListItem
               : null
-            : 'addItemToShoppingList' in result.data
-            ? result.data.addItemToShoppingList?.shoppingListItem
+            : addPayload?.__typename === 'AddItemToShoppingListPayload'
+            ? addPayload.shoppingListItem
             : null;
 
           if (mutationData) {
@@ -243,55 +251,18 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
       },
       setSaving,
       (error: unknown) => {
-        errorService.reportError(error, { operation: 'ShoppingListItem.save' });
-
-        // Handle version conflict errors with user-friendly message
-        if (handleVersionConflict(error)) {
-          alertService.alert(
-            t('shoppingListScreens.itemUpdated'),
-            getVersionConflictMessage(error),
-            [
-              {
-                text: t('shoppingListScreens.refresh'),
-                onPress: () => {
-                  // Navigate back - the query will automatically refetch
-                  // when returning to the list view
-                  navigation.goBack();
-                },
+        handleMutationError(error, {
+          operation: 'ShoppingListItem.save',
+          checks: [
+            versionConflictCheck({
+              onRefresh: () => {
+                // Navigate back - the query will automatically refetch
+                // when returning to the list view
+                navigation.goBack();
               },
-              { text: t('labels.cancel'), style: 'cancel' },
-            ],
-          );
-          return; // Don't show generic error alert
-        }
-
-        // Specific user-facing error mapping. Network → connectivity hint,
-        // VALIDATION_ERROR → field guidance, UNAUTHENTICATED → re-login,
-        // other GraphQL → server-provided message, generic → retry hint.
-        let errorMessage: string;
-        if ((error as { networkError?: unknown }).networkError) {
-          errorMessage = t('shoppingListScreens.errorNetwork');
-        } else if (
-          (error as { graphQLErrors?: ReadonlyArray<unknown> }).graphQLErrors
-            ?.length
-        ) {
-          const graphQLError = (
-            error as { graphQLErrors: Array<{ message?: string; extensions?: { code?: string } }> }
-          ).graphQLErrors[0];
-          const code = graphQLError.extensions?.code;
-          if (code === 'VALIDATION_ERROR') {
-            errorMessage = t('shoppingListScreens.errorInvalidInput');
-          } else if (code === 'UNAUTHENTICATED') {
-            errorMessage = t('shoppingListScreens.errorSessionExpired');
-          } else {
-            errorMessage =
-              graphQLError.message ?? t('shoppingListScreens.errorGeneric');
-          }
-        } else {
-          errorMessage = t('shoppingListScreens.errorGeneric');
-        }
-
-        alertService.alert(t('labels.error'), errorMessage);
+            }),
+          ],
+        });
       },
     );
   };
@@ -301,7 +272,9 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
   return (
     <FormModal
       title={
-        isEdit ? t('shoppingListScreens.editItem') : t('shoppingListScreens.addItem')
+        isEdit
+          ? t('shoppingListScreens.editItem')
+          : t('shoppingListScreens.addItem')
       }
       onClose={() => navigation.goBack()}
       onSave={handleSave}

@@ -1,5 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
@@ -13,13 +14,16 @@ export const CalendarToggleBar: React.FC<CalendarToggleBarProps> = ({
   isExpanded,
   onToggle,
 }) => {
+  const { t } = useTranslation();
   return (
     <Pressable
       onPress={onToggle}
       hitSlop={{ top: 8, bottom: 8 }}
       style={styles.container}
       accessibilityLabel={
-        isExpanded ? 'Collapse to week view' : 'Expand to month view'
+        isExpanded
+          ? t('calendarToggle.collapseToWeek')
+          : t('calendarToggle.expandToMonth')
       }
       accessibilityRole="button"
     >

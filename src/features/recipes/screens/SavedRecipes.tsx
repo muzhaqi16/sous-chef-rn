@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
+import { useFragment } from '@apollo/client/react';
 import { StyleSheet } from 'react-native-unistyles';
 import { Header } from '#components/molecules/Header';
 import { SearchBar } from '#components/molecules/SearchBar';
@@ -7,12 +9,15 @@ import { FilterTabs } from '#components/molecules/FilterTabs/FilterTabs';
 import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
 import { FolderPicker } from '#components/molecules/FolderPicker';
 import { TagPicker } from '#components/molecules/TagPicker';
-import { ItemList } from '#components/organisms/ItemList';
-import { CachedImage } from '#components/atoms/CachedImage';
-import { commonStyles } from '#/styles/commonStyles';
+import { EmptyState } from '#components/base/EmptyState';
+import { SavedRecipeCard } from '#features/recipes/components/SavedRecipeCard';
+import { SavedRecipeCard_SavedRecipeFragmentDoc } from '#features/recipes/components/SavedRecipeCard.generated';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
-import { useSavedRecipes } from '#features/recipes/hooks/useSavedRecipes';
+import {
+  useSavedRecipes,
+  type SavedRecipeNode,
+} from '#features/recipes/hooks/useSavedRecipes';
 import { useRecipeFolders } from '#features/recipes/hooks/useRecipeFolders';
 import { useRecipeTags } from '#features/recipes/hooks/useRecipeTags';
 import { useFolderActions } from '#features/recipes/hooks/useFolderActions';
@@ -25,7 +30,44 @@ import {
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { alertService } from '#/services/alertService';
-import type { IconName } from '#/utils/iconUtils';
+import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
+
+const keyExtractor = (item: SavedRecipeNode) => item.id;
+
+/**
+ * Inline cell adapter — calls `useFragment` to read `name`/`description` for
+ * search filtering, then delegates rendering to `<SavedRecipeCard>` which
+ * subscribes via its own `useFragment`.
+ */
+const SavedRecipeRow: React.FC<{
+  savedRecipe: SavedRecipeNode;
+  searchQuery: string;
+  onPress: (recipeId: string) => void;
+  onRemove: (recipeId: string) => void;
+}> = ({ savedRecipe, searchQuery, onPress, onRemove }) => {
+  const { data, complete } = useFragment({
+    fragment: SavedRecipeCard_SavedRecipeFragmentDoc,
+    fragmentName: 'SavedRecipeCard_savedRecipe',
+    from: savedRecipe,
+  });
+
+  if (!complete) return null;
+
+  if (searchQuery.trim()) {
+    const q = searchQuery.toLowerCase();
+    const name = (data.recipe.name ?? '').toLowerCase();
+    const description = (data.recipe.description ?? '').toLowerCase();
+    if (!name.includes(q) && !description.includes(q)) return null;
+  }
+
+  return (
+    <SavedRecipeCard
+      savedRecipeRef={savedRecipe}
+      onPress={onPress}
+      onRemove={onRemove}
+    />
+  );
+};
 
 export const SavedRecipes: React.FC = () => {
   useScreenTransition('SavedRecipes');
@@ -54,7 +96,12 @@ export const SavedRecipes: React.FC = () => {
   // Unfavorite (remove from saved) recipe mutation
   const [unfavoriteRecipeMutation] = useMutation(UnfavoriteRecipeDocument, {
     update: (cache, { data }, { variables }) => {
-      if (!data?.unfavoriteRecipe?.success || !variables?.recipeId) return;
+      if (
+        data?.unfavoriteRecipe?.__typename !== 'UnfavoriteRecipePayload' ||
+        !variables?.input?.recipeId
+      ) {
+        return;
+      }
 
       cache.updateQuery<MySavedRecipesQuery>(
         { query: MySavedRecipesDocument },
@@ -67,7 +114,7 @@ export const SavedRecipes: React.FC = () => {
               savedRecipesConnection: {
                 ...existing.me.savedRecipesConnection,
                 edges: existing.me.savedRecipesConnection.edges.filter(
-                  edge => edge.node.recipe.id !== variables.recipeId,
+                  edge => edge.node.recipe.id !== variables.input.recipeId,
                 ),
                 totalCount:
                   (existing.me.savedRecipesConnection.totalCount ?? 0) - 1,
@@ -79,14 +126,14 @@ export const SavedRecipes: React.FC = () => {
 
       optimisticDataPersistence.save(
         'SavedRecipe',
-        variables.recipeId,
+        variables.input.recipeId,
         'isFavorited',
         false,
       );
     },
   });
 
-  // Filter recipes based on search query, folder, and tags
+  // Filter recipes by folder + tags (search query filtering happens per-row).
   const filteredRecipes = (() => {
     let result = recipes;
 
@@ -96,51 +143,13 @@ export const SavedRecipes: React.FC = () => {
 
     if (selectedTags.length > 0) {
       result = result.filter(recipe => {
-        const recipeTags = recipe.tags || [];
+        const recipeTags = recipe.tags ?? [];
         return selectedTags.some(tag => recipeTags.includes(tag));
-      });
-    }
-
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(recipe => {
-        const name = recipe.name?.toLowerCase() || '';
-        const description = recipe.description?.toLowerCase() || '';
-        return name.includes(query) || description.includes(query);
       });
     }
 
     return result;
   })();
-
-  // Transform filtered recipes to list items format
-  const items = filteredRecipes.map((recipe: any) => {
-    const name = recipe.name || recipe.title;
-    const imageUrl = recipe.imageUrl || recipe.image;
-    const servings = recipe.servings;
-
-    const totalTime =
-      recipe.totalTimeMinutes ||
-      recipe.readyInMinutes ||
-      (recipe.prepTimeMinutes && recipe.cookTimeMinutes
-        ? recipe.prepTimeMinutes + recipe.cookTimeMinutes
-        : recipe.prepTimeMinutes || recipe.cookTimeMinutes || null);
-
-    return {
-      id: String(recipe.recipeId),
-      title: name,
-      subtitle: `${servings} servings${totalTime ? ` • ${totalTime} min` : ''}`,
-      leftElement: imageUrl ? (
-        <View style={commonStyles.listItemImageContainerCompact}>
-          <CachedImage
-            uri={imageUrl}
-            style={commonStyles.listItemImageCompact}
-            displaySize={48}
-          />
-        </View>
-      ) : undefined,
-    };
-  });
 
   // Clear all filters
   const handleClearFilters = () => {
@@ -155,7 +164,7 @@ export const SavedRecipes: React.FC = () => {
 
   const handleRemoveRecipe = async (recipeId: string) => {
     await executeMutation(
-      () => unfavoriteRecipeMutation({ variables: { recipeId } }),
+      () => unfavoriteRecipeMutation({ variables: { input: { recipeId } } }),
       (error: unknown) => {
         console.error('Failed to remove recipe:', error);
         alertService.alert(
@@ -167,8 +176,8 @@ export const SavedRecipes: React.FC = () => {
     optimisticDataPersistence.clear('SavedRecipe', recipeId, 'isFavorited');
   };
 
-  const handleItemPress = (id: string | number) => {
-    toRecipeDetail({ recipeId: String(id) });
+  const handleItemPress = (recipeId: string) => {
+    toRecipeDetail({ recipeId });
   };
 
   // Check if any filters are active
@@ -224,16 +233,6 @@ export const SavedRecipes: React.FC = () => {
 
   const activeFilterTab = filteredTabs.length === 0 ? 'all' : '';
 
-  const emptyStateConfig: {
-    icon: IconName;
-    title: string;
-    description: string;
-  } = {
-    icon: 'bookmark-outline',
-    title: 'No saved recipes',
-    description: 'Save recipes from search to see them here',
-  };
-
   // Filter header - shown when folders or tags are available
   const FilterHeader = (() => {
     if (folders.length === 0 && availableTags.length === 0) {
@@ -262,6 +261,15 @@ export const SavedRecipes: React.FC = () => {
     );
   })();
 
+  const renderItem = ({ item }: { item: SavedRecipeNode }) => (
+    <SavedRecipeRow
+      savedRecipe={item}
+      searchQuery={searchQuery}
+      onPress={handleItemPress}
+      onRemove={handleRemoveRecipe}
+    />
+  );
+
   return (
     <View style={styles.container}>
       <Header title="Saved Recipes" onBack={goBack} />
@@ -274,13 +282,22 @@ export const SavedRecipes: React.FC = () => {
         />
       </View>
       {FilterHeader}
-      <ItemList
-        items={items}
-        onItemPress={handleItemPress}
-        onItemDelete={handleRemoveRecipe}
-        onRefresh={handleRefresh}
-        emptyState={emptyStateConfig}
-      />
+      {filteredRecipes.length === 0 ? (
+        <EmptyState
+          icon="bookmark-outline"
+          title="No saved recipes"
+          description="Save recipes from search to see them here"
+        />
+      ) : (
+        <FlashList
+          data={filteredRecipes}
+          keyExtractor={keyExtractor}
+          renderItem={renderItem}
+          onRefresh={handleRefresh}
+          refreshing={false}
+          {...FLASHLIST_DEFAULTS.fullScreen}
+        />
+      )}
 
       {/* Folder Picker Modal */}
       <FolderPicker

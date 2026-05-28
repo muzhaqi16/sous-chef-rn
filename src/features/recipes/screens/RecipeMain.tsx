@@ -9,7 +9,7 @@ import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAnimatedReaction } from 'react-native-reanimated';
-import { BottomSheetModal } from '@gorhom/bottom-sheet';
+import type { BottomSheetModalRef } from '#hooks/useStandardBottomSheet';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
 import { useTabBarSetters } from '#/context/TabBarActionsContext';
@@ -185,7 +185,7 @@ const RecipeMainInner: React.FC = () => {
     });
   };
 
-  const filterSheetRef = useRef<BottomSheetModal>(null);
+  const filterSheetRef = useRef<BottomSheetModalRef>(null);
   const ingredientSheetRef = useRef<IngredientSelectorSheetRef>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 

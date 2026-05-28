@@ -13,11 +13,21 @@ jest.mock('#store/useRecipeSuggestionsStore', () => ({
   }),
 }));
 
-jest.mock('#/services/recipeApi/SpoonacularService', () => ({
-  spoonacularService: {
-    searchRecipes: jest.fn(),
-  },
-}));
+jest.mock('#/services/recipeApi/SpoonacularService', () => {
+  const searchRecipes = jest.fn();
+  return {
+    spoonacularService: {
+      searchRecipes,
+      searchRecipesWithInfo: (...args: unknown[]) => {
+        const [params, ...rest] = args;
+        return searchRecipes(
+          { ...(params as object), addRecipeInformation: true },
+          ...rest,
+        );
+      },
+    },
+  };
+});
 
 const mockReportError = jest.fn();
 jest.mock('#/services/errorService', () => ({

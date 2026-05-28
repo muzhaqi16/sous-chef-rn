@@ -3,11 +3,11 @@
  */
 
 import { useMutation } from '@apollo/client/react';
-import { alertService } from '#/services/alertService';
 import { WastePantryItemBatchDocument } from '#features/pantry/graphql/pantry.generated';
 import type { WasteReason } from '#/graphql/generated/schemaTypes';
-import { useErrorService } from '#/services/errorService';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
+import { handleMutationError } from '#/utils/errorHandlers';
+import { isSuccessPayload } from '#/utils/compilerSafeWrappers';
 
 interface UseWastePantryItemBatchOptions {
   onSuccess?: () => void;
@@ -16,11 +16,8 @@ interface UseWastePantryItemBatchOptions {
 export function useWastePantryItemBatch({
   onSuccess,
 }: UseWastePantryItemBatchOptions = {}) {
-  const { handleApolloError } = useErrorService();
-
   const [wasteMutation, { loading }] = useMutation(
     WastePantryItemBatchDocument,
-    {},
   );
 
   const wasteBatch = async (
@@ -30,8 +27,7 @@ export function useWastePantryItemBatch({
     isRecycled?: boolean,
     notes?: string,
   ): Promise<boolean> => {
-    // Persist optimistic waste state to survive cache-and-network refetches while offline
-    optimisticDataPersistence.save(
+    const clearPersistence = optimisticDataPersistence.track(
       'PantryItemBatch',
       batchId,
       'isWasted',
@@ -50,17 +46,19 @@ export function useWastePantryItemBatch({
       },
     });
 
-    if (result.data?.wastePantryItemBatch?.pantryItem) {
-      optimisticDataPersistence.clear('PantryItemBatch', batchId, 'isWasted');
+    if (
+      isSuccessPayload(
+        result.data?.wastePantryItemBatch,
+        'WastePantryItemBatchPayload',
+      )
+    ) {
+      clearPersistence();
       onSuccess?.();
       return true;
     }
 
     if (result.error) {
-      const { message } = handleApolloError(result.error, {
-        operation: 'Waste Batch',
-      });
-      alertService.alert('Error', message);
+      handleMutationError(result.error, { operation: 'Waste Batch' });
     }
 
     return false;

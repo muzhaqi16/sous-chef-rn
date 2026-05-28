@@ -1,20 +1,13 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { SettingsSection } from '#components/organisms/SettingsSection';
 import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
 import { useProfileData } from '#features/profile/hooks/useProfileData';
 import { useUser } from '#store/useAppStore';
 import { PERSONAL_INFO_CONFIG } from '#/config/settingsConfig';
-import { useApolloClient, useMutation } from '@apollo/client/react';
-import {
-  UpdateUserProfileDocument,
-  type UpdateUserProfileMutation,
-  type UpdateUserProfileMutationVariables,
-} from '#operations/auth/user.generated';
+import { useMutation } from '@apollo/client/react';
+import { UpdateUserProfileDocument } from '#operations/auth/user.generated';
 import { ProfileVisibility } from '#/graphql/generated/schemaTypes';
-import {
-  GetUserProfileDocument,
-  type GetUserProfileQuery,
-} from '#operations/auth/user.generated';
 import { dateStringToISO, extractDateString } from '#utils/dateUtils';
 import { errorService } from '#/services/errorService';
 import {
@@ -23,51 +16,40 @@ import {
 } from '#/utils/compilerSafeWrappers';
 import { ThemedRefreshControl } from '#components/atoms/themedComponents';
 
-/** Module-level function for profile updates with optimistic cache.
- *  Extracted to avoid try-catch inside component body (React Compiler bailout). */
-async function performProfileUpdate(
-  client: ReturnType<typeof useApolloClient>,
-  updateProfileMutation: useMutation.MutationFunction<
-    UpdateUserProfileMutation,
-    UpdateUserProfileMutationVariables
-  >,
-  input: Partial<Record<any, any>>,
-): Promise<void> {
-  // Read current cache
-  const cache = client.readQuery<GetUserProfileQuery>({
-    query: GetUserProfileDocument,
-  });
+const SECTION_TITLE_KEYS: Record<string, string> = {
+  'Personal Information': 'personalInformation.sectionPersonalInformation',
+  'Privacy Settings': 'personalInformation.sectionPrivacySettings',
+};
 
-  // Optimistically update the cache immediately
-  if (cache?.me?.profile) {
-    client.writeQuery<GetUserProfileQuery>({
-      query: GetUserProfileDocument,
-      data: {
-        __typename: 'Query',
-        me: {
-          ...cache.me,
-          profile: {
-            ...cache.me.profile,
-            ...input,
-          },
-        },
-      },
-    });
-  }
+const FIELD_LABEL_KEYS: Record<string, string> = {
+  email: 'personalInformation.email',
+  firstName: 'personalInformation.firstName',
+  lastName: 'personalInformation.lastName',
+  displayName: 'personalInformation.displayName',
+  bio: 'personalInformation.bio',
+  phone: 'personalInformation.phone',
+  dateOfBirth: 'personalInformation.dateOfBirth',
+  gender: 'personalInformation.gender',
+  profileVisibility: 'personalInformation.profileVisibility',
+  showEmail: 'personalInformation.showEmail',
+  showPhone: 'personalInformation.showPhone',
+};
 
-  // Then perform the actual mutation, refetching the profile query to ensure UI stays in sync
-  await updateProfileMutation({
-    variables: {
-      input,
-    },
-    refetchQueries: [{ query: GetUserProfileDocument }],
-  });
-}
+const OPTION_LABEL_KEYS: Record<string, string> = {
+  Male: 'personalInformation.genderMale',
+  Female: 'personalInformation.genderFemale',
+  'Non-binary': 'personalInformation.genderNonBinary',
+  Other: 'personalInformation.genderOther',
+  'Prefer not to say': 'personalInformation.genderPreferNotToSay',
+  Public: 'personalInformation.visibilityPublic',
+  'Friends Only': 'personalInformation.visibilityFriendsOnly',
+  Private: 'personalInformation.visibilityPrivate',
+};
 
 export const PersonalInformationScreen: React.FC = () => {
+  const { t } = useTranslation();
   const { profile, refetch } = useProfileData();
   const user = useUser();
-  const client = useApolloClient();
   const [updateProfileMutation] = useMutation(UpdateUserProfileDocument);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -76,24 +58,48 @@ export const PersonalInformationScreen: React.FC = () => {
   };
 
   const updateProfile = (input: Partial<Record<any, any>>) => {
+    if (!profile) return;
     executeMutation(
-      () => performProfileUpdate(client, updateProfileMutation, input),
+      () =>
+        updateProfileMutation({
+          variables: { input },
+          // Apollo auto-normalizes the UserProfile by id from the mutation
+          // response, so the cached `me.profile` updates without a refetch.
+          optimisticResponse: {
+            __typename: 'Mutation',
+            updateProfile: {
+              __typename: 'UpdateProfilePayload',
+              userProfile: {
+                ...profile,
+                ...input,
+              },
+            },
+          },
+        }),
       error => {
         errorService.reportError(error, {
           operation: 'PersonalInformation.updateProfile',
-        });
-        // On error, refetch to restore correct state
-        client.refetchQueries({
-          include: [GetUserProfileDocument],
         });
       },
     );
   };
 
+  const translateOptions = (
+    options?: Array<{ label: string; value: string }>,
+  ) =>
+    options?.map(opt => ({
+      ...opt,
+      label: OPTION_LABEL_KEYS[opt.label]
+        ? t(OPTION_LABEL_KEYS[opt.label])
+        : opt.label,
+    }));
+
   const createSettingItem = (config: any) => {
     const baseItem: any = {
       key: config.key,
-      label: config.label,
+      label: FIELD_LABEL_KEYS[config.key]
+        ? t(FIELD_LABEL_KEYS[config.key])
+        : config.label,
       type: config.type,
     };
 
@@ -150,7 +156,7 @@ export const PersonalInformationScreen: React.FC = () => {
         return {
           ...baseItem,
           value: profile?.gender || '',
-          options: config.options,
+          options: translateOptions(config.options),
           onSave: (v: string) => updateProfile({ gender: v }),
         };
 
@@ -158,7 +164,7 @@ export const PersonalInformationScreen: React.FC = () => {
         return {
           ...baseItem,
           value: profile?.profileVisibility || ProfileVisibility.Public,
-          options: config.options,
+          options: translateOptions(config.options),
           onSave: (v: string) => updateProfile({ profileVisibility: v }),
         };
 
@@ -182,14 +188,16 @@ export const PersonalInformationScreen: React.FC = () => {
 
   const sections = (() => {
     return PERSONAL_INFO_CONFIG.map(configSection => ({
-      title: configSection.title,
+      title: SECTION_TITLE_KEYS[configSection.title]
+        ? t(SECTION_TITLE_KEYS[configSection.title])
+        : configSection.title,
       items: configSection.items.map(createSettingItem),
     }));
   })();
 
   return (
     <ProfileScreenWrapper
-      title="Personal Information"
+      title={t('personalInformation.screenTitle')}
       refreshControl={
         <ThemedRefreshControl
           refreshing={refreshing}

@@ -25,6 +25,7 @@ jest.mock('#/storage/mmkv', () => {
       removeItem: async (name: string) => store.delete(name),
     },
     getStorage: async () => ({}),
+    isStorageReady: () => true,
     STORAGE_KEY: 'sous-chef-storage',
   };
 });

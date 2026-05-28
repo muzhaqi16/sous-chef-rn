@@ -188,7 +188,11 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
               >
                 <View style={styles.roleHeader}>
                   <View style={styles.roleTitle}>
-                    <Text size="xl">{roleInfo.icon}</Text>
+                    <Icon
+                      name={roleInfo.icon}
+                      size={24}
+                      tone={isSelected ? 'primary' : 'textSecondary'}
+                    />
                     <View>
                       <Text size="md" weight="semibold">
                         {roleInfo.label}

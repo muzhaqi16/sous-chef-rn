@@ -1,25 +1,32 @@
-import { useMutation, useQuery } from '@apollo/client/react';
+import { useApolloClient, useMutation, useQuery } from '@apollo/client/react';
 import {
   CreateRecipeReviewDocument,
   UpdateRecipeReviewDocument,
   DeleteRecipeReviewDocument,
   ToggleReviewHelpfulDocument,
 } from '#features/recipes/graphql/recipeReview.generated';
+import { GetRecipeReviewsDocument } from '#features/recipes/graphql/recipe.generated';
 import {
-  GetRecipeReviewsDocument,
-  GetRecipeDocument,
-} from '#features/recipes/graphql/recipe.generated';
-import {
-  type RecipeFragment,
+  RecipeReviewFragmentDoc,
   type RecipeReviewFragment,
 } from '#features/recipes/graphql/recipeFragments.generated';
+import { type MaterializedRecipe } from './useRecipeData';
 import { useUser } from '#store/useAppStore';
 import { toastService } from '#/services/toastService';
-import { safeEvict } from '#/apollo/utils/cacheUpdaters';
+import {
+  getRateLimitMessage,
+  isRateLimitError,
+} from '#/utils/errors/rateLimit';
+import {
+  addReviewToRecipe,
+  changeReviewRating,
+  getReviewRating,
+  removeReviewFromRecipe,
+} from '#/apollo/utils/recipeReviewCacheUpdaters';
 
 interface UseRecipeReviewsOptions {
   recipeId: string;
-  backendRecipe: RecipeFragment | null | undefined;
+  backendRecipe: MaterializedRecipe | null | undefined;
 }
 
 /**
@@ -35,6 +42,7 @@ export function useRecipeReviews({
 }: UseRecipeReviewsOptions) {
   const user = useUser();
   const userId = user?.id;
+  const apolloClient = useApolloClient();
 
   // Fetch reviews separately to avoid exceeding query depth limit
   const { data: reviewsData } = useQuery(GetRecipeReviewsDocument, {
@@ -51,11 +59,21 @@ export function useRecipeReviews({
   const rating4Count = backendRecipe?.rating4Count ?? 0;
   const rating5Count = backendRecipe?.rating5Count ?? 0;
 
-  // Sort reviews: most helpful first, then newest
+  // Materialize each masked review ref via cache.readFragment so we can
+  // sort/filter by `helpful`, `createdAt`, and inspect `user`.
   const reviews = (() => {
-    const raw =
+    const rawRefs =
       reviewsData?.recipe?.reviews?.edges?.map(edge => edge.node) ?? [];
-    return [...raw].sort((a, b) => {
+    const materialized = rawRefs
+      .map(ref =>
+        apolloClient.cache.readFragment<RecipeReviewFragment>({
+          fragment: RecipeReviewFragmentDoc,
+          fragmentName: 'RecipeReviewFragment',
+          from: { __typename: 'RecipeReview', id: ref.id },
+        }),
+      )
+      .filter((r): r is NonNullable<typeof r> => r !== null && r !== undefined);
+    return materialized.sort((a, b) => {
       if (b.helpful !== a.helpful) return b.helpful - a.helpful;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
@@ -69,17 +87,20 @@ export function useRecipeReviews({
   const hasReviewed = !!userReview;
   const isOwnRecipe = backendRecipe?.createdBy?.id === userId;
 
-  // Refetch both queries: reviews list + recipe metadata (counts, average)
-  const refetchQueries = [
-    { query: GetRecipeReviewsDocument, variables: { id: recipeId } },
-    { query: GetRecipeDocument, variables: { id: recipeId } },
-  ];
-
   // Mutations
   const [createReviewMutation, { loading: createLoading }] = useMutation(
     CreateRecipeReviewDocument,
     {
-      refetchQueries: refetchQueries,
+      update: (cache, { data }) => {
+        const payload = data?.createRecipeReview;
+        if (payload?.__typename === 'CreateRecipeReviewPayload') {
+          const review = payload.recipeReview;
+          addReviewToRecipe(cache, recipeId, {
+            id: review.id,
+            rating: review.rating,
+          });
+        }
+      },
       onError: err => {
         toastService.error(err.message || 'Failed to submit review');
       },
@@ -89,7 +110,6 @@ export function useRecipeReviews({
   const [updateReviewMutation, { loading: updateLoading }] = useMutation(
     UpdateRecipeReviewDocument,
     {
-      refetchQueries: refetchQueries,
       onError: err => {
         toastService.error(err.message || 'Failed to update review');
       },
@@ -99,10 +119,15 @@ export function useRecipeReviews({
   const [deleteReviewMutation, { loading: deleteLoading }] = useMutation(
     DeleteRecipeReviewDocument,
     {
-      refetchQueries: refetchQueries,
       update: (cache, { data }, { variables }) => {
-        if (!data?.deleteRecipeReview?.success || !variables?.id) return;
-        safeEvict(cache, 'RecipeReview', variables.id);
+        if (
+          data?.deleteRecipeReview?.__typename !==
+            'DeleteRecipeReviewPayload' ||
+          !variables?.input?.id
+        ) {
+          return;
+        }
+        removeReviewFromRecipe(cache, recipeId, variables.input.id);
       },
       onError: err => {
         toastService.error(err.message || 'Failed to delete review');
@@ -112,7 +137,13 @@ export function useRecipeReviews({
 
   const [toggleHelpfulMutation] = useMutation(ToggleReviewHelpfulDocument, {
     update: (cache, { data }, { variables }) => {
-      if (!data?.toggleReviewHelpful?.success || !variables?.input) return;
+      if (
+        data?.toggleReviewHelpful?.__typename !==
+          'ToggleReviewHelpfulPayload' ||
+        !variables?.input
+      ) {
+        return;
+      }
       const { reviewId, isHelpful } = variables.input;
       cache.modify({
         id: cache.identify({ __typename: 'RecipeReview', id: reviewId }),
@@ -133,33 +164,67 @@ export function useRecipeReviews({
 
   // Actions
   const createReview = async (rating: number, comment?: string) => {
-    await createReviewMutation({
+    const result = await createReviewMutation({
       variables: {
         input: { recipeId, rating, comment: comment || undefined },
       },
     });
-    toastService.success('Review submitted');
+    const payload = result.data?.createRecipeReview;
+    if (payload?.__typename === 'CreateRecipeReviewPayload') {
+      toastService.success('Review submitted');
+      return;
+    }
+    // Rate-limit now arrives as a top-level GraphQL error, not a RateLimitError
+    // union variant.
+    if (isRateLimitError(result.error)) {
+      toastService.error(getRateLimitMessage(result.error));
+      return;
+    }
+    const message = payload && 'message' in payload ? payload.message : null;
+    toastService.error(message ?? 'Failed to submit review');
   };
 
   const updateReview = async (
     id: string,
     input: { rating?: number; comment?: string },
   ) => {
-    await updateReviewMutation({
+    const prevRating = getReviewRating(apolloClient.cache, id);
+    const result = await updateReviewMutation({
       variables: {
-        id,
         input: {
+          id,
           rating: input.rating,
           comment: input.comment,
         },
       },
+      update: (cache, { data }) => {
+        const payload = data?.updateRecipeReview;
+        if (payload?.__typename !== 'UpdateRecipeReviewPayload') return;
+        const review = payload.recipeReview;
+        if (prevRating === null) return;
+        if (prevRating !== review.rating) {
+          changeReviewRating(cache, recipeId, prevRating, review.rating);
+        }
+      },
     });
-    toastService.success('Review updated');
+    const payload = result.data?.updateRecipeReview;
+    if (payload?.__typename === 'UpdateRecipeReviewPayload') {
+      toastService.success('Review updated');
+      return;
+    }
+    const message = payload && 'message' in payload ? payload.message : null;
+    toastService.error(message ?? 'Failed to update review');
   };
 
   const deleteReview = async (id: string) => {
-    await deleteReviewMutation({ variables: { id } });
-    toastService.success('Review deleted');
+    const result = await deleteReviewMutation({ variables: { input: { id } } });
+    const payload = result.data?.deleteRecipeReview;
+    if (payload?.__typename === 'DeleteRecipeReviewPayload') {
+      toastService.success('Review deleted');
+      return;
+    }
+    const message = payload && 'message' in payload ? payload.message : null;
+    toastService.error(message ?? 'Failed to delete review');
   };
 
   const toggleHelpful = async (reviewId: string, isHelpful: boolean) => {

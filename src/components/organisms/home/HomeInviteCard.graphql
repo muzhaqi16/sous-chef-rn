@@ -1,0 +1,9 @@
+fragment HomeInviteCard_invite on HomeInvite {
+  id
+  email
+  recipientName
+  role
+  status
+  expiresAt
+  message
+}

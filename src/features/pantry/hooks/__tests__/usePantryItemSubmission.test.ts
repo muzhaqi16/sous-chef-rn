@@ -69,14 +69,56 @@ beforeEach(() => {
 });
 
 function createMock(success = true) {
+  if (success) {
+    return recordMock(CreatePantryItemDocument, {
+      data: {
+        createPantryItem: {
+          __typename: 'CreatePantryItemPayload',
+          pantryItem: {
+            __typename: 'PantryItem',
+            id: 'new-1',
+            pantryId: 'pantry-1',
+            itemId: null,
+            itemName: 'Milk',
+            quantity: '1',
+            version: 1,
+            updatedAt: '2026-01-01T00:00:00.000Z',
+            storageState: 'PANTRY',
+            expiresAt: null,
+            lowStockAlert: false,
+            isLowStock: false,
+            minQuantity: null,
+            lastUsedAt: null,
+            netWeight: null,
+            remainingNetWeight: null,
+            activeBatchCount: 0,
+            earliestBatchExpiration: null,
+            item: null,
+            unit: null,
+            netWeightUnit: null,
+            storageLocation: null,
+            packageBreakdown: null,
+            quantityBreakdown: null,
+            pantry: {
+              __typename: 'Pantry',
+              id: 'pantry-1',
+              stats: {
+                __typename: 'PantryStats',
+                totalItems: 1,
+              },
+            },
+          },
+        },
+      },
+    });
+  }
   return recordMock(CreatePantryItemDocument, {
     data: {
       createPantryItem: {
-        __typename: 'PantryItemPayload',
-        success,
-        message: '',
-        code: success ? 'SUCCESS' : 'FAILED',
-        pantryItem: success ? { __typename: 'PantryItem', id: 'new-1' } : null,
+        __typename: 'ValidationError',
+        code: 'VALIDATION_ERROR',
+        message: 'Validation failed',
+        field: 'itemName',
       },
     },
   });

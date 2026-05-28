@@ -1,20 +1,22 @@
 import { object, string, array } from 'yup';
-import { emailRule } from './common';
+import { emailRule, normalizeSmartPunctuation } from './common';
 
 // home name rule
 const homeNameRule = string()
   .required('Home name is required')
+  .transform(normalizeSmartPunctuation)
   .min(2, 'Home name must be at least 2 characters')
   .max(50, 'Home name must be less than 50 characters')
   .matches(
-    /^[a-zA-Z0-9\s'-]+$/,
-    'Home name can only contain letters, numbers, spaces, hyphens, and apostrophes',
+    /^[a-zA-Z0-9\s'"-]+$/,
+    'Home name can only contain letters, numbers, spaces, hyphens, apostrophes, and quotes',
   )
   .trim();
 
 // pantry name rule
 const pantryNameRule = string()
   .required('Pantry name is required')
+  .transform(normalizeSmartPunctuation)
   .min(2, 'Pantry name must be at least 2 characters')
   .max(50, 'Pantry name must be less than 50 characters')
   .trim();
@@ -22,6 +24,7 @@ const pantryNameRule = string()
 // shopping list name rule
 const shoppingListNameRule = string()
   .required('Shopping list name is required')
+  .transform(normalizeSmartPunctuation)
   .min(2, 'Shopping list name must be at least 2 characters')
   .max(50, 'Shopping list name must be less than 50 characters')
   .trim();

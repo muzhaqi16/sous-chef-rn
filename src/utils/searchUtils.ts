@@ -1,67 +1,59 @@
 /**
- * Search Utilities - Reusable search predicates for filtering data
+ * Search Utilities — reusable predicates for client-side list filtering.
  *
- * These utilities provide type-safe search functions that can be
- * used with useSearchableList or any other filtering mechanism.
+ * Uses a fast substring check first (the common case when users type
+ * what they see), then falls back to a strict Fuse fuzzy match so a
+ * one-character typo ("tomatoe" → "Tomato") still finds the item.
  */
 
-/**
- * Creates a case-insensitive search predicate for item names
- */
+import Fuse from 'fuse.js';
+
+const FUZZY_THRESHOLD = 0.3;
+
+const fuzzyMatch = (
+  text: string | null | undefined,
+  query: string,
+): boolean => {
+  if (!text || !query) return false;
+
+  const lowerText = text.toLowerCase();
+  const lowerQuery = query.toLowerCase();
+  if (lowerText.includes(lowerQuery)) return true;
+
+  // Fuse construction over a single-element collection is cheap; the
+  // index has only one record. Only the typo path pays for this.
+  const fuse = new Fuse([text], { threshold: FUZZY_THRESHOLD });
+  return fuse.search(query).length > 0;
+};
+
 export const createItemNameSearch = <T extends { itemName?: string | null }>(
   item: T,
   query: string,
-): boolean => {
-  if (!item?.itemName || !query) return false;
-  return item.itemName.toLowerCase().includes(query.toLowerCase());
-};
+): boolean => fuzzyMatch(item?.itemName, query);
 
-/**
- * Creates a case-insensitive search predicate for categories
- */
 export const createCategorySearch = <T extends { category?: string | null }>(
   item: T,
   query: string,
-): boolean => {
-  if (!item?.category || !query) return false;
-  return item.category.toLowerCase().includes(query.toLowerCase());
-};
+): boolean => fuzzyMatch(item?.category, query);
 
-/**
- * Specialized search predicate for shopping list items
- * Searches in: itemName, category
- */
 export const shoppingListItemSearch = <
   T extends { itemName?: string | null; category?: string | null },
 >(
   item: T,
   query: string,
 ): boolean => {
-  if (!query) return true;
-  const trimmedQuery = query.trim();
-  if (!trimmedQuery) return true;
-
+  const trimmed = query.trim();
+  if (!trimmed) return true;
   return (
-    createItemNameSearch(item, trimmedQuery) ||
-    createCategorySearch(item, trimmedQuery)
+    fuzzyMatch(item?.itemName, trimmed) || fuzzyMatch(item?.category, trimmed)
   );
 };
 
-/**
- * Specialized search predicate for pantry items
- * Searches in: itemName, nested item.name
- */
-export const pantryItemSearch = <
-  T extends {
-    itemName?: string | null;
-  },
->(
+export const pantryItemSearch = <T extends { itemName?: string | null }>(
   item: T,
   query: string,
 ): boolean => {
-  if (!query) return true;
-  const trimmedQuery = query.trim();
-  if (!trimmedQuery) return true;
-
-  return createItemNameSearch(item, trimmedQuery);
+  const trimmed = query.trim();
+  if (!trimmed) return true;
+  return fuzzyMatch(item?.itemName, trimmed);
 };

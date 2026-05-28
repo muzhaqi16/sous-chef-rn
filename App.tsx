@@ -73,6 +73,10 @@ const App = () => {
   const isHydrated = useIsHydrated();
   useAppLifecycle();
 
+  // Cache is fully restored synchronously during initializeClient() in client.ts
+  // (both critical and deferred partitions merged into one cache.restore() call).
+  // No deferred restore needed here.
+
   if (!isHydrated) {
     return <SplashScreen />;
   }

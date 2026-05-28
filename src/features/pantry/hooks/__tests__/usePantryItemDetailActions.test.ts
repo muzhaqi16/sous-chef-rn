@@ -4,7 +4,7 @@ import {
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
 import { DeletePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
-import { AddItemToShoppingListDocument } from '#features/pantry/screens/PantryItemDetail.generated';
+import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/screens/PantryItemDetail.generated';
 import { alertService } from '#/services/alertService';
 import { usePantryItemDetailActions } from '../usePantryItemDetailActions';
 
@@ -70,13 +70,19 @@ jest.mock(
   }),
 );
 
-jest.mock('#features/pantry/hooks/mutations/useAdjustPantryItemQuantity', () => ({
-  useAdjustPantryItemQuantity: () => ({ adjustQuantity: mockAdjustQuantity }),
-}));
+jest.mock(
+  '#features/pantry/hooks/mutations/useAdjustPantryItemQuantity',
+  () => ({
+    useAdjustPantryItemQuantity: () => ({ adjustQuantity: mockAdjustQuantity }),
+  }),
+);
 
-jest.mock('#features/pantry/hooks/mutations/useCorrectPantryItemWeight', () => ({
-  useCorrectPantryItemWeight: () => ({ correctWeight: mockCorrectWeight }),
-}));
+jest.mock(
+  '#features/pantry/hooks/mutations/useCorrectPantryItemWeight',
+  () => ({
+    useCorrectPantryItemWeight: () => ({ correctWeight: mockCorrectWeight }),
+  }),
+);
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -165,13 +171,14 @@ describe('usePantryItemDetailActions', () => {
 
       act(() => result.current.handleDelete());
 
-      const deleteButton = (alertService.alert as jest.Mock).mock.calls[0][2][1];
+      const deleteButton = (alertService.alert as jest.Mock).mock
+        .calls[0][2][1];
       await act(async () => {
         deleteButton.onPress();
       });
 
       await waitFor(() =>
-        expect(deleteMock.fired).toContainEqual({ id: 'item-1' }),
+        expect(deleteMock.fired).toContainEqual({ input: { id: 'item-1' } }),
       );
       await waitFor(() => expect(mockGoBack).toHaveBeenCalled());
     });
@@ -187,7 +194,7 @@ describe('usePantryItemDetailActions', () => {
     });
 
     it('fires AddItemToShoppingList with correct variables', async () => {
-      const addMock = recordMock(AddItemToShoppingListDocument, {
+      const addMock = recordMock(AddItemToShoppingListFromPantryItemDocument, {
         data: {
           addItemToShoppingList: {
             __typename: 'ShoppingListItemPayload',
@@ -217,7 +224,7 @@ describe('usePantryItemDetailActions', () => {
     });
 
     it('falls back to quantity 1 when item has no quantity', async () => {
-      const addMock = recordMock(AddItemToShoppingListDocument, {
+      const addMock = recordMock(AddItemToShoppingListFromPantryItemDocument, {
         data: {
           addItemToShoppingList: {
             __typename: 'ShoppingListItemPayload',
@@ -246,7 +253,7 @@ describe('usePantryItemDetailActions', () => {
     });
 
     it('omits unit when item.unit is null', async () => {
-      const addMock = recordMock(AddItemToShoppingListDocument, {
+      const addMock = recordMock(AddItemToShoppingListFromPantryItemDocument, {
         data: {
           addItemToShoppingList: {
             __typename: 'ShoppingListItemPayload',
@@ -309,19 +316,21 @@ describe('usePantryItemDetailActions', () => {
 
       act(() => result.current.handleDiscardExpired());
 
-      const discardButton = (alertService.alert as jest.Mock).mock.calls[0][2][1];
+      const discardButton = (alertService.alert as jest.Mock).mock
+        .calls[0][2][1];
       act(() => discardButton.onPress());
 
       expect(mockConvertExpiredBatches).toHaveBeenCalledWith('item-1');
     });
 
-    it('calls convertExpiredToWaste on item-discard confirm', () => {
+    it('calls convertExpiredToWaste on item-discard confirm', async () => {
       const { result } = setup();
 
       act(() => result.current.handleDiscardExpired());
 
-      const discardButton = (alertService.alert as jest.Mock).mock.calls[0][2][1];
-      act(() => discardButton.onPress());
+      const discardButton = (alertService.alert as jest.Mock).mock
+        .calls[0][2][1];
+      await act(async () => discardButton.onPress());
 
       expect(mockConvertExpiredToWaste).toHaveBeenCalledWith('item-1');
     });

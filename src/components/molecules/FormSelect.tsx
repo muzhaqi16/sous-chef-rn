@@ -1,12 +1,7 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  Modal,
-  FlatList,
-  ViewStyle,
-  Pressable,
-} from 'react-native';
+import { View, Text, Modal, FlatList, ViewStyle } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { FormFieldWrapper } from '../atoms/FormFieldWrapper';
@@ -34,9 +29,11 @@ export const FormSelect: React.FC<FormSelectProps> = ({
   options,
   error,
   required = false,
-  placeholder = 'Select an option',
+  placeholder,
   containerStyle,
 }) => {
+  const { t } = useTranslation();
+  const resolvedPlaceholder = placeholder ?? t('formSelect.placeholder');
   const [modalVisible, setModalVisible] = useState(false);
 
   const selectedOption = options.find(option => option.value === value);
@@ -87,7 +84,7 @@ export const FormSelect: React.FC<FormSelectProps> = ({
             !selectedOption && styles.selectTextPlaceholder,
           ]}
         >
-          {selectedOption ? selectedOption.label : placeholder}
+          {selectedOption ? selectedOption.label : resolvedPlaceholder}
         </Text>
         <Icon name="chevron-down" size={24} tone="textSecondary" />
       </Pressable>
@@ -117,7 +114,7 @@ export const FormSelect: React.FC<FormSelectProps> = ({
                 ]}
                 onPress={() => setModalVisible(false)}
               >
-                <Text style={styles.closeButtonText}>Close</Text>
+                <Text style={styles.closeButtonText}>{t('labels.close')}</Text>
               </Pressable>
             </View>
           </View>

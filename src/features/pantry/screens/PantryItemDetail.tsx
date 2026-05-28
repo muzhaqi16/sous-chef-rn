@@ -6,7 +6,15 @@ import {
 } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import Animated from 'react-native-reanimated';
-import { useQuery } from '@apollo/client/react';
+import { useApolloClient, useQuery } from '@apollo/client/react';
+import {
+  PantryItemBatchFragmentDoc,
+  type PantryItemBatchFragment,
+} from '#features/pantry/graphql/pantryFragments.generated';
+import {
+  PantryItemDetail_PantryItemFragmentDoc,
+  type PantryItemDetail_PantryItemFragment,
+} from '#features/pantry/screens/PantryItemDetail.generated';
 import { useTranslation } from 'react-i18next';
 import { GetPantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import {
@@ -85,13 +93,25 @@ export const PantryItemDetail: React.FC<
   const { data, refetch } = useQuery(GetPantryItemDocument, {
     variables: { id: itemId },
   });
+  const client = useApolloClient();
 
   const handleRefresh = () => {
     executeRefreshWithFinally(() => refetch(), setRefreshing);
   };
 
   const permissions = usePantryPermissions();
-  const item = data?.pantryItem;
+  // Materialize the masked PantryItem ref into a fully unmasked entity.
+  // `cache.readFragment` returns the unmasked shape (Apollo's signature),
+  // inlining nested fragment fields so the screen and downstream components
+  // can access them directly. The outer `useQuery` subscription drives
+  // re-renders when the entity changes.
+  const item = data?.pantryItem
+    ? client.cache.readFragment<PantryItemDetail_PantryItemFragment>({
+        fragment: PantryItemDetail_PantryItemFragmentDoc,
+        fragmentName: 'PantryItemDetail_pantryItem',
+        from: data.pantryItem,
+      })
+    : null;
 
   const { suggestedRecipes, loadingRecipes } = useRecipeSuggestionsForItem(
     item?.itemName ?? undefined,
@@ -169,14 +189,22 @@ export const PantryItemDetail: React.FC<
     );
   }
 
+  // batches are masked fragment refs — materialize each via cache.readFragment
+  // to inspect status/expiresAt for the discard-expired affordance.
   const hasExpiredBatches =
     (item.condition === 'EXPIRED' && item.quantity > 0) ||
-    item.batches?.some(
-      b =>
-        b.status === 'ACTIVE' &&
-        b.expiresAt &&
-        new Date(b.expiresAt) < new Date(),
-    );
+    item.batches?.some(batchRef => {
+      const batch = client.cache.readFragment<PantryItemBatchFragment>({
+        fragment: PantryItemBatchFragmentDoc,
+        fragmentName: 'PantryItemBatchFragment',
+        from: batchRef,
+      });
+      return (
+        batch?.status === 'ACTIVE' &&
+        !!batch.expiresAt &&
+        new Date(batch.expiresAt) < new Date()
+      );
+    });
 
   const discardActions: HeaderAction[] =
     hasExpiredBatches && permissions.canEditItems
@@ -323,7 +351,7 @@ export const PantryItemDetail: React.FC<
         )}
 
         <PantryDetailInfo
-          item={item}
+          itemRef={item}
           brandName={brandName}
           netWeightText={netWeightText}
           remainingNetWeightText={remainingNetWeightText}
@@ -401,7 +429,7 @@ export const PantryItemDetail: React.FC<
       {!!actions.adjustModalVisible && (
         <AdjustQuantityModal
           visible={actions.adjustModalVisible}
-          pantryItem={item}
+          pantryItemId={itemId}
           onClose={() => actions.setAdjustModalVisible(false)}
           onConfirm={actions.handleConfirmAdjust}
         />
@@ -410,7 +438,7 @@ export const PantryItemDetail: React.FC<
       {!!actions.correctWeightVisible && (
         <CorrectWeightModal
           visible={actions.correctWeightVisible}
-          pantryItem={item}
+          pantryItemId={itemId}
           onClose={() => actions.setCorrectWeightVisible(false)}
           onConfirm={actions.handleCorrectWeight}
         />

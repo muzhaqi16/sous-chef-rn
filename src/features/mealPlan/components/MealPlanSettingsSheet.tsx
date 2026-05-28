@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Pressable } from '#components/atoms/themedComponents';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
@@ -11,13 +12,21 @@ import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { NutritionSummaryCard } from './NutritionSummaryCard';
 import { Icon } from '#utils/iconUtils';
-import { type MealPlanFullFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
+import { useFragment } from '@apollo/client/react';
+import type { FragmentType } from '@apollo/client/masking';
+import {
+  MealPlanSettingsSheet_MealPlanFragmentDoc,
+  type MealPlanSettingsSheet_MealPlanFragment,
+} from './MealPlanSettingsSheet.generated';
 import type { MealPlanPermissions } from '#utils/permissions/mealPlanPermissions';
 import { Text } from '#components/atoms/Text';
 
 interface MealPlanSettingsSheetProps {
   visible: boolean;
-  mealPlan: MealPlanFullFragment | null;
+  mealPlanRef:
+    | FragmentType<typeof MealPlanSettingsSheet_MealPlanFragmentDoc>
+    | MealPlanSettingsSheet_MealPlanFragment
+    | null;
   permissions: MealPlanPermissions;
   onClose: () => void;
   onDuplicate: () => void;
@@ -69,7 +78,7 @@ function ActionItem({
 
 export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
   visible,
-  mealPlan,
+  mealPlanRef,
   permissions,
   onClose,
   onDuplicate,
@@ -77,23 +86,36 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
   onDelete,
   deleting,
 }) => {
+  const { t } = useTranslation();
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible,
     onDismiss: onClose,
     snapPoints: ['80%'],
   });
 
+  // Per-entity cache subscription: re-renders only when this MealPlan's
+  // fields change. Falls back to the source prop on cache miss.
+  const fragmentResult = useFragment({
+    fragment: MealPlanSettingsSheet_MealPlanFragmentDoc,
+    fragmentName: 'MealPlanSettingsSheet_mealPlan',
+    from: mealPlanRef,
+  });
+  const mealPlan: MealPlanSettingsSheet_MealPlanFragment | null =
+    fragmentResult.complete
+      ? fragmentResult.data
+      : (mealPlanRef as MealPlanSettingsSheet_MealPlanFragment | null);
+
   const [showNutrition, setShowNutrition] = useState(false);
 
   const handleDelete = () => {
     if (!mealPlan) return;
     alertService.alert(
-      'Delete Meal Plan',
-      `Are you sure you want to delete "${mealPlan.name}"? This cannot be undone.`,
+      t('mealPlanSettings.deleteTitle'),
+      t('mealPlanSettings.deleteConfirm', { name: mealPlan.name }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('labels.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('mealPlanSettings.delete'),
           style: 'destructive',
           onPress: () => {
             onDelete(mealPlan.id);
@@ -106,10 +128,13 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
 
   if (!mealPlan) return null;
 
-  const dateRange = `${format(
-    parseISO(mealPlan.startDate),
-    'MMM d',
-  )} - ${format(parseISO(mealPlan.endDate), 'MMM d, yyyy')}`;
+  const dateRange =
+    mealPlan.startDate && mealPlan.endDate
+      ? `${format(parseISO(mealPlan.startDate), 'MMM d')} - ${format(
+          parseISO(mealPlan.endDate),
+          'MMM d, yyyy',
+        )}`
+      : null;
 
   return (
     <BottomSheetModal ref={ref} {...modalProps}>
@@ -119,10 +144,10 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
         showsVerticalScrollIndicator={false}
       >
         <BottomSheetHeader
-          title="Plan Settings"
+          title={t('mealPlanSettings.planSettings')}
           onCancel={onClose}
           onConfirm={onClose}
-          confirmLabel="Done"
+          confirmLabel={t('mealPlanSettings.done')}
         />
 
         {/* Plan info */}
@@ -135,17 +160,21 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
               {mealPlan.description}
             </Text>
           ) : null}
-          <Text size="sm" tone="tertiary" style={styles.planDate}>
-            {dateRange}
-          </Text>
+          {!!dateRange && (
+            <Text size="sm" tone="tertiary" style={styles.planDate}>
+              {dateRange}
+            </Text>
+          )}
           {!!mealPlan.home?.name && (
             <Text size="sm" tone="tertiary" style={styles.planDate}>
-              Shared with {mealPlan.home.name}
+              {t('mealPlanSettings.sharedWith', { name: mealPlan.home.name })}
             </Text>
           )}
           {!!mealPlan.createdBy?.profile?.displayName && (
             <Text size="sm" tone="tertiary" style={styles.planDate}>
-              Created by {mealPlan.createdBy.profile.displayName}
+              {t('mealPlanSettings.createdBy', {
+                name: mealPlan.createdBy.profile.displayName,
+              })}
             </Text>
           )}
         </View>
@@ -158,13 +187,13 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
             tone="tertiary"
             style={styles.sectionTitle}
           >
-            Actions
+            {t('mealPlanSettings.actionsLabel')}
           </Text>
           <View style={styles.actionsCard}>
             <ActionItem
               icon="cart-outline"
-              label="Generate Shopping List"
-              description="Create a list from this plan's recipes"
+              label={t('mealPlanSettings.generateShoppingList')}
+              description={t('mealPlanSettings.generateShoppingListDesc')}
               onPress={() => {
                 onClose();
                 onGenerateShoppingList();
@@ -175,8 +204,8 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
                 <View style={styles.divider} />
                 <ActionItem
                   icon="copy-outline"
-                  label="Duplicate Plan"
-                  description="Copy this plan to a new date range"
+                  label={t('mealPlanSettings.duplicatePlan')}
+                  description={t('mealPlanSettings.duplicatePlanDesc')}
                   onPress={() => {
                     onClose();
                     onDuplicate();
@@ -187,8 +216,12 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
             <View style={styles.divider} />
             <ActionItem
               icon="nutrition-outline"
-              label={showNutrition ? 'Hide Nutrition' : 'View Nutrition'}
-              description="Calories, macros, and goal progress"
+              label={
+                showNutrition
+                  ? t('mealPlanSettings.hideNutrition')
+                  : t('mealPlanSettings.viewNutrition')
+              }
+              description={t('mealPlanSettings.viewNutritionDesc')}
               onPress={() => setShowNutrition(prev => !prev)}
             />
           </View>
@@ -214,7 +247,7 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
                 tone="tertiary"
                 style={styles.sectionTitle}
               >
-                Generated Lists
+                {t('mealPlanSettings.generatedLists')}
               </Text>
               <View style={styles.actionsCard}>
                 {mealPlan.generatedShoppingLists.map(list => (
@@ -238,13 +271,17 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
               tone="tertiary"
               style={styles.sectionTitle}
             >
-              Danger Zone
+              {t('mealPlanSettings.dangerZone')}
             </Text>
             <View style={styles.actionsCard}>
               <ActionItem
                 icon="trash-outline"
-                label={deleting ? 'Deleting...' : 'Delete Plan'}
-                description="Permanently remove this meal plan"
+                label={
+                  deleting
+                    ? t('mealPlanSettings.deletingLabel')
+                    : t('mealPlanSettings.deletePlanLabel')
+                }
+                description={t('mealPlanSettings.deletePlanDesc')}
                 onPress={handleDelete}
                 tone="error"
                 disabled={deleting}

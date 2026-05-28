@@ -1,4 +1,4 @@
-import { colors } from '../foundations/colors';
+import { colors, darkExpiration, darkFilterTab } from '../foundations/colors';
 import { spacing, space } from '../foundations/spacing';
 import { typography, fonts } from '../foundations/typography';
 import { radii } from '../foundations/radii';
@@ -11,9 +11,9 @@ describe('theme foundations', () => {
   describe('colors', () => {
     it('exports jaffa color palette', () => {
       expect(colors.jaffa).toBeDefined();
-      expect(colors.jaffa['50']).toBe('#fff6ed');
-      expect(colors.jaffa['400']).toBe('#f98537');
-      expect(colors.jaffa['950']).toBe('#421108');
+      expect(colors.jaffa['50']).toBe('#fff7ed');
+      expect(colors.jaffa['400']).toBe('#fb923b');
+      expect(colors.jaffa['950']).toBe('#431407');
     });
 
     it('exports charade color palette', () => {
@@ -53,9 +53,20 @@ describe('theme foundations', () => {
       expect(colors.validation.successBg).toBeDefined();
     });
 
-    it('exports expiration colors for light and dark modes', () => {
+    it('exports expiration colors with matching shape for light and dark modes', () => {
       expect(colors.expiration.expiredBg).toBeDefined();
-      expect(colors.expiration.darkExpiredBg).toBeDefined();
+      expect(darkExpiration.expiredBg).toBeDefined();
+      expect(Object.keys(darkExpiration).sort()).toEqual(
+        Object.keys(colors.expiration).sort(),
+      );
+    });
+
+    it('exports filterTab colors with matching shape for light and dark modes', () => {
+      expect(colors.filterTab.activeBg).toBeDefined();
+      expect(darkFilterTab.inactiveBg).toBeDefined();
+      expect(Object.keys(darkFilterTab).sort()).toEqual(
+        Object.keys(colors.filterTab).sort(),
+      );
     });
 
     it('exports action colors with light and dark variants', () => {

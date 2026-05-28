@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { EmptyState } from '#components/base/EmptyState';
 import { PantryScreenSkeleton } from '#components/base/Skeleton/PantryScreenSkeleton';
 import { EMPTY_STATE_MIN_HEIGHT } from './pantryDisplay/constants';
@@ -18,6 +19,8 @@ export function PantryEmptyState({
   onCreatePantry,
   overallItemCount,
 }: PantryEmptyStateProps) {
+  const { t } = useTranslation();
+
   if (showSkeletons) return <PantryScreenSkeleton />;
 
   if (noHomes) {
@@ -25,12 +28,15 @@ export function PantryEmptyState({
       <EmptyState
         testID="pantry-empty-state"
         icon="home-outline"
-        title="No home yet"
-        description="Create or join a home to start tracking food"
+        title={t('pantryScreen.noHomeTitle')}
+        description={t('pantryScreen.noHomeDescription')}
         style={{ minHeight: EMPTY_STATE_MIN_HEIGHT }}
         action={
           onSelectHome
-            ? { label: 'Get Started', onPress: onSelectHome }
+            ? {
+                label: t('pantryScreen.noHomeAction'),
+                onPress: onSelectHome,
+              }
             : undefined
         }
       />
@@ -42,12 +48,15 @@ export function PantryEmptyState({
       <EmptyState
         testID="pantry-empty-state"
         icon="home-outline"
-        title="No home selected"
-        description="Select a home to view your pantry"
+        title={t('pantryScreen.noHomeSelectedTitle')}
+        description={t('pantryScreen.noHomeSelectedDescription')}
         style={{ minHeight: EMPTY_STATE_MIN_HEIGHT }}
         action={
           onSelectHome
-            ? { label: 'Go to My Homes', onPress: onSelectHome }
+            ? {
+                label: t('pantryScreen.noHomeSelectedAction'),
+                onPress: onSelectHome,
+              }
             : undefined
         }
       />
@@ -59,12 +68,15 @@ export function PantryEmptyState({
       <EmptyState
         testID="pantry-empty-state"
         icon="basket-outline"
-        title="Create a pantry"
-        description="Set up a pantry to start tracking your food"
+        title={t('pantryScreen.noPantriesTitle')}
+        description={t('pantryScreen.noPantriesDescription')}
         style={{ minHeight: EMPTY_STATE_MIN_HEIGHT }}
         action={
           onCreatePantry
-            ? { label: 'Create Pantry', onPress: onCreatePantry }
+            ? {
+                label: t('pantryScreen.noPantriesAction'),
+                onPress: onCreatePantry,
+              }
             : undefined
         }
       />
@@ -78,11 +90,16 @@ export function PantryEmptyState({
       <EmptyState
         testID="pantry-empty-state"
         icon="search-outline"
-        title={`No results for "${displayQuery}"`}
-        description="Would you like to add it to your pantry?"
+        title={t('pantryScreen.searchNoResultsTitle', { query: displayQuery })}
+        description={t('pantryScreen.searchNoResultsDescription')}
         style={{ minHeight: EMPTY_STATE_MIN_HEIGHT }}
         action={
-          onAddItem ? { label: 'Add Item', onPress: onAddItem } : undefined
+          onAddItem
+            ? {
+                label: t('pantryScreen.searchNoResultsAction'),
+                onPress: onAddItem,
+              }
+            : undefined
         }
       />
     );
@@ -90,13 +107,13 @@ export function PantryEmptyState({
 
   if (locationFilter !== 'all' && itemCount === 0 && overallItemCount > 0) {
     const activeTab = tabs.find(tab => tab.id === locationFilter);
-    const tabName = activeTab?.label ?? 'this location';
+    const tabName = activeTab?.label ?? t('pantryScreen.tabEmptyFallbackName');
     return (
       <EmptyState
         testID="pantry-empty-state"
         icon="basket-outline"
-        title={`No items in ${tabName}`}
-        description="Items stored here will appear in this tab"
+        title={t('pantryScreen.tabEmptyTitle', { tabName })}
+        description={t('pantryScreen.tabEmptyDescription')}
         style={{ minHeight: EMPTY_STATE_MIN_HEIGHT }}
       />
     );
@@ -106,11 +123,13 @@ export function PantryEmptyState({
     <EmptyState
       testID="pantry-empty-state"
       icon="basket-outline"
-      title="Your pantry is empty"
-      description="Start tracking your food to reduce waste"
+      title={t('pantryScreen.emptyTitle')}
+      description={t('pantryScreen.emptySubtitle')}
       style={{ minHeight: EMPTY_STATE_MIN_HEIGHT }}
       action={
-        onAddItem ? { label: 'Add Items', onPress: onAddItem } : undefined
+        onAddItem
+          ? { label: t('pantryScreen.emptyAction'), onPress: onAddItem }
+          : undefined
       }
     />
   );

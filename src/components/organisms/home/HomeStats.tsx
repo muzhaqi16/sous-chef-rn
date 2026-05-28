@@ -1,5 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet } from 'react-native-unistyles';
 import { commonStyles } from '#/styles/commonStyles';
 import { Text } from '#components/atoms/Text';
@@ -15,6 +16,7 @@ export const HomeStats: React.FC<HomeStatsProps> = ({
   totalMembers,
   totalPantries,
 }) => {
+  const { t } = useTranslation();
   return (
     <View style={styles.statsContainer}>
       <View style={[commonStyles.shadow, styles.statCard]}>
@@ -22,7 +24,7 @@ export const HomeStats: React.FC<HomeStatsProps> = ({
           {totalHomes}
         </Text>
         <Text size="xs" tone="secondary" style={styles.statLabel}>
-          {totalHomes === 1 ? 'Home' : 'Homes'}
+          {t('homeManagement.statsHome', { count: totalHomes })}
         </Text>
       </View>
       <View style={[commonStyles.shadow, styles.statCard]}>
@@ -30,7 +32,7 @@ export const HomeStats: React.FC<HomeStatsProps> = ({
           {totalMembers}
         </Text>
         <Text size="xs" tone="secondary" style={styles.statLabel}>
-          {totalMembers === 1 ? 'Member' : 'Members'}
+          {t('homeManagement.statsMember', { count: totalMembers })}
         </Text>
       </View>
       <View style={[commonStyles.shadow, styles.statCard]}>
@@ -38,7 +40,7 @@ export const HomeStats: React.FC<HomeStatsProps> = ({
           {totalPantries}
         </Text>
         <Text size="xs" tone="secondary" style={styles.statLabel}>
-          {totalPantries === 1 ? 'Pantry' : 'Pantries'}
+          {t('homeManagement.statsPantry', { count: totalPantries })}
         </Text>
       </View>
     </View>

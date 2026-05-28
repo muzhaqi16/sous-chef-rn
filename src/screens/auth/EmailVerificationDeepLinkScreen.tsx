@@ -15,6 +15,8 @@ import {
 import { logger } from '#/utils/environment';
 import { useToast } from '#/hooks/useToast';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
+import { getTopLevelGraphQLError } from '#/utils/errors/graphqlErrors';
+import { errorService } from '#/services/errorService';
 import { SousChefLoader } from '#/components/base/SousChefLoader';
 import { Text } from '#components/atoms/Text';
 
@@ -55,10 +57,11 @@ async function performVerificationImpl(
       });
 
       const result = await verifyEmail({
-        variables: { code: token },
+        variables: { input: { code: token } },
       });
 
-      if (result.data?.verifyEmail?.success) {
+      const payload = result.data?.verifyEmail;
+      if (payload?.__typename === 'VerifyEmailPayload') {
         logger.info('Email verification successful');
 
         if (user) {
@@ -72,9 +75,20 @@ async function performVerificationImpl(
           type: 'success',
         });
       } else {
-        throw new Error(
-          result.data?.verifyEmail?.message || 'Verification failed',
-        );
+        // Auth failures now arrive as top-level GraphQL errors, not an
+        // AuthError union variant.
+        const topLevelError = getTopLevelGraphQLError(result.error);
+        if (topLevelError) {
+          throw new Error(
+            errorService.getUserFriendlyMessage(
+              topLevelError.code,
+              topLevelError.message,
+            ),
+          );
+        }
+        const message =
+          payload && 'message' in payload ? payload.message : null;
+        throw new Error(message ?? 'Verification failed');
       }
       return result;
     },

@@ -1,25 +1,30 @@
 import React, { useState } from 'react';
-import { View, Modal, ActivityIndicator, Pressable } from 'react-native';
+import { View, Modal, ActivityIndicator } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { WhiteActivityIndicator } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import type { ApolloCache } from '@apollo/client';
 import { Icon } from '#utils/iconUtils';
 import { toastService } from '#/services/toastService';
+import { t as tGlobal } from '#/i18n/t';
 import {
   AcceptHomeInviteDocument,
   DeclineHomeInviteDocument,
-  GetHomesDocument,
-  GetMyPendingInvitesDocument,
 } from '#operations/home/home.generated';
 import {
-  AcceptShoppingListInviteDocument,
-  DeclineShoppingListInviteDocument,
+  InvitationAcceptanceModalAcceptShoppingListInviteDocument,
+  InvitationAcceptanceModalDeclineShoppingListInviteDocument,
   MyShoppingListInvitesDocument,
   type MyShoppingListInvitesQuery,
 } from './InvitationAcceptanceModal.generated';
-import { createAddToQueryFieldUpdater } from '#/apollo/utils/cacheUpdaters';
+import {
+  createAddToQueryConnectionUpdater,
+  createRemoveFromParentArrayUpdater,
+  safeEvict,
+} from '#/apollo/utils/cacheUpdaters';
+import { useUser } from '#store/useAppStore';
 import { executeAsyncWithCleanup } from '#/utils/compilerSafeWrappers';
 import { Text } from '#components/atoms/Text';
 
@@ -27,19 +32,17 @@ const ErrorActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
   color: theme.colors.error,
 }));
 
-/** Module-level cache updater to keep try-catch out of the component body (React Compiler). */
-function updateShoppingListCache(cache: ApolloCache, collaborator: any): void {
-  try {
-    const addToShoppingListsCache =
-      createAddToQueryFieldUpdater('shoppingLists');
-    addToShoppingListsCache(cache, collaborator, { position: 'end' });
-  } catch (error) {
-    console.warn('Cache update failed for acceptShoppingListInvite:', error);
-  }
-}
-
-const INVITATION_EXPIRED_MSG =
-  'This invitation is no longer valid. It may have expired or already been used.';
+const addToHomes = createAddToQueryConnectionUpdater('homes', 'Home');
+const removePendingHomeInvite = createRemoveFromParentArrayUpdater(
+  'User',
+  'pendingHomeInvites',
+  'HomeInvite',
+);
+const removePendingCollaborationInvite = createRemoveFromParentArrayUpdater(
+  'User',
+  'pendingCollaborationInvites',
+  'ShoppingListCollaborator',
+);
 
 const getInvitationErrorMessage = (
   error: unknown,
@@ -47,7 +50,7 @@ const getInvitationErrorMessage = (
 ): string => {
   const msg = (error as Error)?.message?.toLowerCase() || '';
   return msg.includes('expired') || msg.includes('invalid')
-    ? INVITATION_EXPIRED_MSG
+    ? tGlobal('errors.invitationExpired')
     : (error as Error)?.message || fallback;
 };
 
@@ -71,43 +74,72 @@ interface InvitationAcceptanceModalProps {
   onInvalidate?: (invitation: InvitationData) => void;
 }
 
-const INVITATION_UNAVAILABLE_MSG =
-  'This invitation is no longer available. It may have been used, declined, or expired.';
-
 export const InvitationAcceptanceModal: React.FC<
   InvitationAcceptanceModalProps
 > = ({ visible, invitation, onClose, onAccept, onReject, onInvalidate }) => {
+  const { t } = useTranslation();
+  const invitationUnavailableMsg = t('errors.invitationUnavailable');
   const client = useApolloClient();
+  const user = useUser();
+  const userId = user?.id ?? null;
   const [accepting, setAccepting] = useState(false);
   const [rejecting, setRejecting] = useState(false);
 
   const [acceptHomeInvite] = useMutation(AcceptHomeInviteDocument, {
-    refetchQueries: [
-      { query: GetHomesDocument },
-      { query: GetMyPendingInvitesDocument },
-    ],
-    awaitRefetchQueries: true,
+    update: (cache, { data }) => {
+      const payload = data?.acceptHomeInvite;
+      if (payload?.__typename === 'AcceptHomeInvitePayload') {
+        addToHomes(cache, payload.membership.home, { position: 'end' });
+      }
+      const inviteId = invitation?.payload?.inviteId as string | undefined;
+      if (inviteId && userId) {
+        removePendingHomeInvite(cache, userId, inviteId, { evictItem: true });
+      }
+    },
   });
   const [acceptShoppingListInvite] = useMutation(
-    AcceptShoppingListInviteDocument,
+    InvitationAcceptanceModalAcceptShoppingListInviteDocument,
     {
-      refetchQueries: [{ query: MyShoppingListInvitesDocument }],
       update: (cache, { data }) => {
-        if (!data?.acceptShoppingListInvite?.collaborator) return;
-        updateShoppingListCache(
-          cache,
-          data.acceptShoppingListInvite.collaborator,
-        );
+        if (
+          data?.acceptShoppingListInvite?.__typename !==
+          'AcceptShoppingListInvitePayload'
+        ) {
+          return;
+        }
+        const inviteId = invitation?.payload?.inviteId as string | undefined;
+        if (inviteId && userId) {
+          // Don't evict — accepting transitions the pending collaborator record
+          // to active state. Apollo's normalized response already updated the
+          // entity; we just need to drop the reference from the pending list.
+          removePendingCollaborationInvite(cache, userId, inviteId);
+        }
       },
     },
   );
   const [declineHomeInvite] = useMutation(DeclineHomeInviteDocument, {
-    refetchQueries: [{ query: GetMyPendingInvitesDocument }],
+    update: (cache, { data }) => {
+      const payload = data?.declineHomeInvite;
+      if (payload?.__typename !== 'DeclineHomeInvitePayload') return;
+      const id = payload.homeInvite.id;
+      if (id && userId) {
+        removePendingHomeInvite(cache, userId, id, { evictItem: true });
+      } else if (id) {
+        safeEvict(cache, 'HomeInvite', id);
+      }
+    },
   });
   const [declineShoppingListInvite] = useMutation(
-    DeclineShoppingListInviteDocument,
+    InvitationAcceptanceModalDeclineShoppingListInviteDocument,
     {
-      refetchQueries: [{ query: MyShoppingListInvitesDocument }],
+      update: cache => {
+        const inviteId = invitation?.payload?.inviteId as string | undefined;
+        if (inviteId && userId) {
+          removePendingCollaborationInvite(cache, userId, inviteId, {
+            evictItem: true,
+          });
+        }
+      },
     },
   );
 
@@ -138,14 +170,14 @@ export const InvitationAcceptanceModal: React.FC<
         if (!token) {
           onInvalidate?.(invitation);
           onClose();
-          toastService.error(INVITATION_UNAVAILABLE_MSG);
+          toastService.error(invitationUnavailableMsg);
           setAccepting(false);
           return;
         }
 
         if (invitation.type === 'HOME_INVITE') {
           const result = await acceptHomeInvite({
-            variables: { token: token! },
+            variables: { input: { token: token! } },
           });
 
           if (result.error) {
@@ -153,13 +185,16 @@ export const InvitationAcceptanceModal: React.FC<
             toastService.error(
               getInvitationErrorMessage(
                 result.error,
-                'Failed to accept invitation. Please try again.',
+                t('invitationAcceptance.acceptFailed'),
               ),
             );
             return;
           }
 
-          if (result.data?.acceptHomeInvite?.membership) {
+          if (
+            result.data?.acceptHomeInvite?.__typename ===
+            'AcceptHomeInvitePayload'
+          ) {
             const newHomeId = result.data.acceptHomeInvite.membership.homeId;
 
             // Pass the homeId to the handler so it can update the store
@@ -170,14 +205,10 @@ export const InvitationAcceptanceModal: React.FC<
 
             onAccept?.(invitationWithHomeId);
             onClose();
-          } else if (result.data?.acceptHomeInvite?.success) {
-            // Already accepted — token was valid but no new membership created
-            onAccept?.(invitation);
-            onClose();
           }
         } else if (invitation.type === 'SHOPPING_LIST_INVITE') {
           const result = await acceptShoppingListInvite({
-            variables: { token: token! },
+            variables: { input: { token: token! } },
           });
 
           if (result.error) {
@@ -185,13 +216,16 @@ export const InvitationAcceptanceModal: React.FC<
             toastService.error(
               getInvitationErrorMessage(
                 result.error,
-                'Failed to accept invitation. Please try again.',
+                t('invitationAcceptance.acceptFailed'),
               ),
             );
             return;
           }
 
-          if (result.data?.acceptShoppingListInvite?.success) {
+          if (
+            result.data?.acceptShoppingListInvite?.__typename ===
+            'AcceptShoppingListInvitePayload'
+          ) {
             onAccept?.(invitation);
             onClose();
           }
@@ -203,7 +237,7 @@ export const InvitationAcceptanceModal: React.FC<
         toastService.error(
           getInvitationErrorMessage(
             error,
-            'Failed to accept invitation. Please try again.',
+            t('invitationAcceptance.acceptFailed'),
           ),
         );
       },
@@ -215,12 +249,14 @@ export const InvitationAcceptanceModal: React.FC<
 
     // Show confirmation alert
     alertService.alert(
-      'Decline Invitation',
-      `Are you sure you want to decline this invitation to ${invitation.entityName}?`,
+      t('confirmations.declineInvitationTitle'),
+      t('confirmations.declineInvitation', {
+        entityName: invitation.entityName,
+      }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('labels.cancel'), style: 'cancel' },
         {
-          text: 'Decline',
+          text: t('labels.decline'),
           style: 'destructive',
           onPress: () => {
             setRejecting(true);
@@ -231,14 +267,14 @@ export const InvitationAcceptanceModal: React.FC<
                 if (!token) {
                   onInvalidate?.(invitation);
                   onClose();
-                  toastService.error(INVITATION_UNAVAILABLE_MSG);
+                  toastService.error(invitationUnavailableMsg);
                   setRejecting(false);
                   return;
                 }
 
                 if (invitation.type === 'HOME_INVITE') {
                   const result = await declineHomeInvite({
-                    variables: { token: token! },
+                    variables: { input: { token: token! } },
                   });
 
                   if (result.error) {
@@ -246,14 +282,14 @@ export const InvitationAcceptanceModal: React.FC<
                     toastService.error(
                       getInvitationErrorMessage(
                         result.error,
-                        'Failed to decline invitation. Please try again.',
+                        t('invitationAcceptance.declineFailed'),
                       ),
                     );
                     return;
                   }
                 } else if (invitation.type === 'SHOPPING_LIST_INVITE') {
                   const result = await declineShoppingListInvite({
-                    variables: { token: token! },
+                    variables: { input: { token: token! } },
                   });
 
                   if (result.error) {
@@ -261,7 +297,7 @@ export const InvitationAcceptanceModal: React.FC<
                     toastService.error(
                       getInvitationErrorMessage(
                         result.error,
-                        'Failed to decline invitation. Please try again.',
+                        t('invitationAcceptance.declineFailed'),
                       ),
                     );
                     return;
@@ -269,7 +305,9 @@ export const InvitationAcceptanceModal: React.FC<
                 }
 
                 toastService.success(
-                  `Declined invitation to ${invitation.entityName}`,
+                  t('success.invitationDeclinedTo', {
+                    entityName: invitation.entityName,
+                  }),
                 );
                 onReject?.(invitation);
                 onClose();
@@ -280,7 +318,7 @@ export const InvitationAcceptanceModal: React.FC<
                 toastService.error(
                   getInvitationErrorMessage(
                     error,
-                    'Failed to decline invitation. Please try again.',
+                    t('invitationAcceptance.declineFailed'),
                   ),
                 );
               },
@@ -337,7 +375,7 @@ export const InvitationAcceptanceModal: React.FC<
               <View style={styles.inviterContainer}>
                 <Icon name="person" size={16} tone="textSecondary" />
                 <Text size="sm" tone="secondary" style={styles.inviterText}>
-                  Invited by {invitation.inviterName}
+                  {t('labels.invitedBy', { name: invitation.inviterName })}
                 </Text>
               </View>
             )}
@@ -375,7 +413,7 @@ export const InvitationAcceptanceModal: React.FC<
                 <>
                   <Icon name="close" size={20} tone="error" />
                   <Text size="md" weight="semibold" tone="error">
-                    Reject
+                    {t('labels.reject')}
                   </Text>
                 </>
               )}
@@ -395,7 +433,7 @@ export const InvitationAcceptanceModal: React.FC<
                 <>
                   <Icon name="checkmark" size={20} tone="white" />
                   <Text size="md" weight="semibold" style={styles.acceptText}>
-                    Accept
+                    {t('labels.accept')}
                   </Text>
                 </>
               )}

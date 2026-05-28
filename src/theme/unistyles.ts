@@ -2,7 +2,7 @@ import { StyleSheet, UnistylesRuntime } from 'react-native-unistyles';
 import { lightTheme, darkTheme } from './themes';
 import { breakpoints } from './foundations/breakpoints';
 
-const appThemes = {
+const appThemes: { light: typeof lightTheme; dark: typeof lightTheme } = {
   light: lightTheme,
   dark: darkTheme,
 };

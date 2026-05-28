@@ -1,8 +1,45 @@
 'use no memo';
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { InMemoryCache } from '@apollo/client';
+import { screen } from '@testing-library/react-native';
+import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { PantryContent } from '../PantryContent';
 import { PantryItem, StorageState } from '#/graphql/generated/schemaTypes';
+import {
+  PantryItemCard_PantryItemFragmentDoc,
+  type PantryItemCard_PantryItemFragment,
+} from '../PantryItemCard.generated';
+
+// PantryContent now reads `useApolloClient` for the image-preload effect and
+// each `PantryItemCard` cell subscribes to its own entity via `useFragment`.
+// Seed the cache with the items so the cells unmask successfully.
+function renderContent(
+  ui: React.ReactElement,
+  items: Array<{ __typename: string; id: string } & Record<string, unknown>>,
+) {
+  const cache = new InMemoryCache();
+  for (const item of items) {
+    cache.writeFragment({
+      id:
+        cache.identify({ __typename: item.__typename, id: item.id }) ??
+        `PantryItem:${item.id}`,
+      fragment: PantryItemCard_PantryItemFragmentDoc,
+      fragmentName: 'PantryItemCard_pantryItem',
+      data: item as PantryItemCard_PantryItemFragment,
+    });
+  }
+  return renderWithApollo(ui, { cache });
+}
+
+// Helper that extracts items from props before delegating to renderContent so
+// the existing test bodies keep working as-is.
+function render(ui: React.ReactElement) {
+  const props = (ui as { props?: { items?: PantryItem[] } }).props;
+  const items = (props?.items ?? []) as Array<
+    { __typename: string; id: string } & Record<string, unknown>
+  >;
+  return renderContent(ui, items);
+}
 
 type DeepPartial<T> = T extends object
   ? { [P in keyof T]?: DeepPartial<T[P]> }
@@ -174,10 +211,16 @@ jest.mock('../PantrySortModal', () => ({
 }));
 
 jest.mock('../PantryItemCard', () => ({
-  PantryItemCard: ({ name, id }: any) => {
+  // PantryItemCard now accepts an opaque fragment ref and unmasks via
+  // useFragment internally. The ref is the raw cache entity at runtime, so
+  // reading `id` / `itemName` off it works directly in tests. Mirror the
+  // production "Unknown Item" fallback so the corresponding test still asserts
+  // the same behavior.
+  PantryItemCard: ({ pantryItemRef }: any) => {
     const { Text, View } = require('react-native');
+    const name = pantryItemRef?.itemName || 'Unknown Item';
     return (
-      <View testID={`pantry-item-${id}`}>
+      <View testID={`pantry-item-${pantryItemRef?.id}`}>
         <Text>{name}</Text>
       </View>
     );

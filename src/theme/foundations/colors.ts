@@ -2,30 +2,56 @@
 export const colors = {
   // Brand colors - using your existing palette
   jaffa: {
-    '50': '#fff6ed',
-    '100': '#ffebd5',
-    '200': '#fdd3ab',
-    '300': '#fcb375',
-    '400': '#f98537',
-    '500': '#f76818',
-    '600': '#e84e0e',
-    '700': '#c0390e',
-    '800': '#992f13',
-    '900': '#7b2813',
-    '950': '#421108',
+    '50': '#fff7ed',
+    '100': '#ffedd5',
+    '200': '#fed7aa',
+    '300': '#fdba74',
+    '400': '#fb923b',
+    '500': '#f97416',
+    '600': '#ea590c',
+    '700': '#c2420c',
+    '800': '#9a3412',
+    '900': '#7c2d12',
+    '950': '#431407',
   },
   charade: {
     '50': '#f5f6f9',
-    '100': '#e8e9f1',
-    '200': '#d6d9e7',
-    '300': '#b9bed7',
-    '400': '#989fc2',
-    '500': '#7f83b2',
-    '600': '#6d6ea3',
-    '700': '#636194',
-    '800': '#55537a',
-    '900': '#464563',
-    '950': '#2c2b3b',
+    '100': '#e7e9f2',
+    '200': '#d5d8e8',
+    '300': '#b9bfd7',
+    '400': '#979ec3',
+    '500': '#7d82b4',
+    '600': '#6b6ca5',
+    '700': '#605f96',
+    '800': '#54527b',
+    '900': '#454464',
+    '950': '#2c2b3c',
+  },
+  fuchsiaBlue: {
+    '50': '#f6f3ff',
+    '100': '#eee9fe',
+    '200': '#dfd5ff',
+    '300': '#c7b4fe',
+    '400': '#ac89fc',
+    '500': '#8d51f8',
+    '600': '#8537f0',
+    '700': '#7625dc',
+    '800': '#631fb8',
+    '900': '#521b97',
+    '950': '#320f66',
+  },
+  seance: {
+    '50': '#fef1ff',
+    '100': '#fbe2ff',
+    '200': '#f9c4ff',
+    '300': '#f996ff',
+    '400': '#f757ff',
+    '500': '#f51aff',
+    '600': '#f900ff',
+    '700': '#d500d5',
+    '800': '#ae00ac',
+    '900': '#81027d',
+    '950': '#61005e',
   },
 
   // Neutral colors
@@ -83,9 +109,9 @@ export const colors = {
     infoBg: '#E3F2FD',
   },
 
-  // Pantry expiration colors - for item status display
+  // Pantry expiration colors (light mode canonical shape — dark-mode values
+  // live in `darkExpiration` below). Both themes consume identical keys.
   expiration: {
-    // Light mode
     expiredBg: '#FEF2F2',
     expiredBorder: '#FECACA',
     expiredText: '#DC2626',
@@ -93,19 +119,11 @@ export const colors = {
     warningText: '#EA580C',
     warningBg: '#FFFBEB',
     warningBorder: '#FDE68A',
-    // Dark mode (solid colors to prevent swipeable container background bleed-through)
-    darkExpiredBg: '#3D2A2A',
-    darkExpiredBorder: '#5C3A3A',
-    darkExpiredText: '#FCA5A5',
-    darkExpiredIconBg: '#4A3030',
-    darkWarningText: '#FDBA74',
-    darkWarningBg: '#3D3225',
-    darkWarningBorder: '#5C4A35',
   },
 
-  // Filter tab colors
+  // Filter tab colors (light mode canonical shape — dark-mode values live
+  // in `darkFilterTab` below). Both themes consume identical keys.
   filterTab: {
-    // Light mode
     activeBg: '#F97316',
     activeText: '#FFFFFF',
     inactiveBg: '#F3F4F6',
@@ -115,13 +133,6 @@ export const colors = {
     countBg: '#D1D5DB',
     countText: '#000000',
     activeCountBg: 'rgba(255,255,255,0.25)',
-    // Dark mode
-    darkInactiveBg: '#3F4553',
-    darkInactiveText: '#D1D5DB',
-    darkFilteredBg: 'rgba(249, 115, 22, 0.15)',
-    darkFilteredText: '#FB923C',
-    darkCountBg: '#4B5563',
-    darkCountText: '#D1D5DB',
   },
 
   // Avatar gradient colors
@@ -188,4 +199,31 @@ export const colors = {
   // Special colors
   transparent: 'transparent',
   overlay: 'rgba(0, 0, 0, 0.6)', // Default overlay - kept for backwards compatibility
+};
+
+// Dark-mode override values for `colors.expiration`. Solid colors (no alpha)
+// to prevent swipeable container background bleed-through.
+export const darkExpiration: typeof colors.expiration = {
+  expiredBg: '#3D2A2A',
+  expiredBorder: '#5C3A3A',
+  expiredText: '#FCA5A5',
+  expiredIconBg: '#4A3030',
+  warningText: '#FDBA74',
+  warningBg: '#3D3225',
+  warningBorder: '#5C4A35',
+};
+
+// Dark-mode override values for `colors.filterTab`. Keys that don't change
+// between themes (e.g. `activeBg`, `activeText`, `activeCountBg`) reuse the
+// canonical light-mode values from `colors.filterTab`.
+export const darkFilterTab: typeof colors.filterTab = {
+  activeBg: colors.filterTab.activeBg,
+  activeText: colors.filterTab.activeText,
+  inactiveBg: '#3F4553',
+  inactiveText: '#D1D5DB',
+  filteredBg: 'rgba(249, 115, 22, 0.15)',
+  filteredText: '#FB923C',
+  countBg: '#4B5563',
+  countText: '#D1D5DB',
+  activeCountBg: colors.filterTab.activeCountBg,
 };

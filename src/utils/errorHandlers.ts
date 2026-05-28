@@ -1,13 +1,12 @@
 /**
- * Inline error handlers used by `useCrudOperations`.
+ * Mutation error handlers — composable error-check chains.
  *
- * Both functions are designed to be called from inside a try/catch in a
- * mutation flow. They handle the user-visible alert and (for the mutation
- * variant) telemetry reporting, returning a boolean so the caller can decide
- * how to continue.
+ * `handleMutationError` replaces per-hook if/else-if chains. Pass an array of
+ * pre-built checks (`versionConflictCheck`, `invalidUnitCheck`, etc.) and the
+ * function runs through them in order, falling back to a generic alert+report.
  *
- * For React-component error handling (parsing Apollo errors into structured
- * results), use `useErrorService()` from `src/services/errorService.ts`.
+ * Lower-level `handleVersionConflictAlert` and `handleMutationErrorAlert` are
+ * still exported for the few call-sites that need direct access.
  */
 
 import { alertService } from '#/services/alertService';
@@ -15,6 +14,10 @@ import {
   handleVersionConflict,
   getVersionConflictMessage,
 } from './errors/versionConflict';
+import {
+  isInvalidUnitError,
+  getInvalidUnitMessage,
+} from './errors/invalidUnit';
 import { errorService, getErrorMessage } from '#/services/errorService';
 
 export interface VersionConflictConfig {
@@ -99,3 +102,70 @@ export const handleMutationErrorAlert = (
 
   errorService.reportError(error, { operation });
 };
+
+// ---------------------------------------------------------------------------
+// Composable error-check chain
+// ---------------------------------------------------------------------------
+
+export interface MutationErrorCheck {
+  detect: (error: unknown) => boolean;
+  handle: (error: unknown) => void;
+}
+
+export interface MutationErrorHandlerConfig {
+  operation: string;
+  checks?: MutationErrorCheck[];
+  showAlert?: boolean;
+}
+
+/**
+ * Run `error` through an ordered list of checks, then fall back to generic
+ * alert + telemetry report.
+ *
+ * @example
+ * ```ts
+ * if (result.error) {
+ *   handleMutationError(result.error, {
+ *     operation: 'Adjust Quantity',
+ *     checks: [versionConflictCheck(), invalidUnitCheck()],
+ *   });
+ * }
+ * ```
+ */
+export function handleMutationError(
+  error: unknown,
+  config: MutationErrorHandlerConfig,
+): void {
+  for (const check of config.checks ?? []) {
+    if (check.detect(error)) {
+      check.handle(error);
+      return;
+    }
+  }
+  handleMutationErrorAlert(error, {
+    operation: config.operation,
+    showAlert: config.showAlert,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Pre-built error checks
+// ---------------------------------------------------------------------------
+
+export function versionConflictCheck(
+  opts?: VersionConflictConfig,
+): MutationErrorCheck {
+  return {
+    detect: error => handleVersionConflict(error),
+    handle: error => handleVersionConflictAlert(error, opts),
+  };
+}
+
+export function invalidUnitCheck(): MutationErrorCheck {
+  return {
+    detect: error => isInvalidUnitError(error),
+    handle: error => {
+      alertService.alert('Invalid Unit', getInvalidUnitMessage(error));
+    },
+  };
+}

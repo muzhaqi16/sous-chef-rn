@@ -11,8 +11,8 @@ query GetMealPlans(
   mealPlans(first: $first, after: $after, filters: $filters, orderBy: $orderBy) {
     edges {
       node {
-        ...MealPlanDisplay
-      }
+        id
+        ...MealPlanDisplay      }
       cursor
     }
     pageInfo {
@@ -25,7 +25,9 @@ query GetMealPlans(
 
 query GetMealPlan($id: ID!) {
   mealPlan(id: $id) {
-    ...MealPlanFull
+    id
+    ...MealPlanMain_mealPlan
+    ...MealPlanSettingsSheet_mealPlan
   }
 }
 
@@ -35,103 +37,196 @@ query GetMealPlan($id: ID!) {
 
 mutation CreateMealPlan($input: CreateMealPlanInput!) {
   createMealPlan(input: $input) {
-    success
-    message
-    code
-    mealPlan {
-      ...MealPlanDisplay
+    __typename
+    ... on CreateMealPlanPayload {
+      mealPlan {
+        ...MealPlanDisplay
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
-mutation UpdateMealPlan($id: ID!, $input: UpdateMealPlanInput!) {
-  updateMealPlan(id: $id, input: $input) {
-    success
-    message
-    code
-    mealPlan {
-      ...MealPlanDisplay
+mutation UpdateMealPlan($input: UpdateMealPlanInput!) {
+  updateMealPlan(input: $input) {
+    __typename
+    ... on UpdateMealPlanPayload {
+      mealPlan {
+        ...MealPlanDisplay
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
-mutation DeleteMealPlan($id: ID!) {
-  deleteMealPlan(id: $id) {
-    success
-    message
-    code
-    mealPlan {
-      id
+mutation DeleteMealPlan($input: DeleteMealPlanInput!) {
+  deleteMealPlan(input: $input) {
+    __typename
+    ... on DeleteMealPlanPayload {
+      mealPlan {
+        id
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
   }
 }
 
 mutation CreateMealPlanItem($input: CreateMealPlanItemInput!) {
   createMealPlanItem(input: $input) {
-    success
-    message
-    code
-    mealPlanItem {
-      ...MealPlanItemCard_item
-      ...EditCustomMealSheet_item
-      ...DailyMeals_item
-      ...MealPlanMain_item
-      ...MealPlanItemActions_item
+    __typename
+    ... on CreateMealPlanItemPayload {
+      mealPlanItem {
+        ...MealPlanItemCard_item
+        ...EditCustomMealSheet_item
+        ...DailyMeals_item
+        ...MealPlanMain_item
+        ...MealPlanItemActions_item
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
-mutation UpdateMealPlanItem($id: ID!, $input: UpdateMealPlanItemInput!) {
-  updateMealPlanItem(id: $id, input: $input) {
-    success
-    message
-    code
-    mealPlanItem {
-      ...MealPlanItemCard_item
-      ...EditCustomMealSheet_item
-      ...DailyMeals_item
-      ...MealPlanMain_item
-      ...MealPlanItemActions_item
+mutation UpdateMealPlanItem($input: UpdateMealPlanItemInput!) {
+  updateMealPlanItem(input: $input) {
+    __typename
+    ... on UpdateMealPlanItemPayload {
+      mealPlanItem {
+        ...MealPlanItemCard_item
+        ...EditCustomMealSheet_item
+        ...DailyMeals_item
+        ...MealPlanMain_item
+        ...MealPlanItemActions_item
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
-mutation DeleteMealPlanItem($id: ID!) {
-  deleteMealPlanItem(id: $id) {
-    success
-    message
-    code
-    mealPlanItem {
-      id
+mutation DeleteMealPlanItem($input: DeleteMealPlanItemInput!) {
+  deleteMealPlanItem(input: $input) {
+    __typename
+    ... on DeleteMealPlanItemPayload {
+      mealPlanItem {
+        id
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
     }
   }
 }
 
 mutation DuplicateMealPlan($input: DuplicateMealPlanInput!) {
   duplicateMealPlan(input: $input) {
-    success
-    message
-    code
-    mealPlan {
-      ...MealPlanDisplay
+    __typename
+    ... on DuplicateMealPlanPayload {
+      mealPlan {
+        ...MealPlanDisplay
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
     }
   }
 }
 
 mutation GenerateShoppingListFromMealPlan($input: GenerateShoppingListFromMealPlanInput!) {
   generateShoppingListFromMealPlan(input: $input) {
-    success
-    message
-    code
-    shoppingList {
-      id
-      name
-      totalItems
-      homeId
-      home {
+    __typename
+    ... on GenerateShoppingListFromMealPlanPayload {
+      shoppingList {
         id
         name
+        isDefault
+        totalItems
+        completedItems
+        homeId
+        home {
+          id
+          name
+        }
+        ownerships {
+          id
+          userId
+          user {
+            id
+            email
+            profile { id displayName avatar }
+          }
+        }
       }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
     }
   }
 }

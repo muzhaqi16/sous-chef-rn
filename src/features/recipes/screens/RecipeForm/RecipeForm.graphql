@@ -1,0 +1,39 @@
+# Form fragment for the RecipeForm screen — what `populateFromRecipe` reads
+# when hydrating the form for edit mode.
+fragment RecipeForm_recipe on Recipe {
+  id
+  name
+  description
+  imageUrl
+  servings
+  prepTimeMinutes
+  cookTimeMinutes
+  caloriesPerServing
+  difficulty
+  category
+  cuisine
+  status
+  notes
+  instructions
+  ingredients {
+    id
+    name
+    quantity
+    item {
+      id
+      name
+      imageUrl
+    }
+    unit {
+      id
+      name
+      symbol
+    }
+    image
+    isOptional
+    notes
+    preparation
+    sortOrder
+    section
+  }
+}

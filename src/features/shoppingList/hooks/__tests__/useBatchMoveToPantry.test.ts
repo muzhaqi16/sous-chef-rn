@@ -91,7 +91,7 @@ describe('useBatchMoveToPantry', () => {
       await result.current.batchMoveToPantry();
     });
 
-    expect(move.fired).toContainEqual({ shoppingListId: 'list-1' });
+    expect(move.fired).toContainEqual({ input: { shoppingListId: 'list-1' } });
   });
 
   it('shows success toast with moved count', async () => {

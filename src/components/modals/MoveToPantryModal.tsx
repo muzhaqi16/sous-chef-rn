@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { useFragment } from '@apollo/client/react';
 import { Pressable } from '#components/atoms/themedComponents';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { alertService } from '#/services/alertService';
@@ -16,13 +18,13 @@ import { Icon } from '#utils/iconUtils';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { Text } from '#components/atoms/Text';
 import { StorageState } from '#/graphql/generated/schemaTypes';
-import { type ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
+import { MoveToPantryModal_ShoppingListItemFragmentDoc } from './MoveToPantryModal.generated';
 
 const STORAGE_STATES = Object.values(StorageState);
 
 interface MoveToPantryModalProps {
   visible: boolean;
-  shoppingListItem: ShoppingListItemDisplayFragment | null;
+  shoppingListItemId: string | null;
   pantries: Array<{ id: string; name: string; isDefault: boolean }>;
   selectedPantryId: string | null;
   onClose: () => void;
@@ -40,13 +42,25 @@ interface MoveToPantryModalProps {
 
 export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   visible,
-  shoppingListItem,
+  shoppingListItemId,
   pantries,
   selectedPantryId,
   onClose,
   onConfirm,
 }) => {
+  const { t } = useTranslation();
+
+  const { data, complete } = useFragment({
+    fragment: MoveToPantryModal_ShoppingListItemFragmentDoc,
+    fragmentName: 'MoveToPantryModal_shoppingListItem',
+    from: shoppingListItemId
+      ? { __typename: 'ShoppingListItem', id: shoppingListItemId }
+      : null,
+  });
+  const shoppingListItem = shoppingListItemId && complete ? data : null;
+
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
+    visible: visible && !!shoppingListItem,
     onDismiss: onClose,
     snapPoints: ['75%', '95%'],
     keyboardAware: true,
@@ -68,19 +82,22 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   const [actualPriceInput, setActualPriceInput] = useState('');
   const [notes, setNotes] = useState('');
 
-  // Reset form when modal opens with new item (render-time state update)
+  // Reset form when modal opens with new item (render-time state update).
+  // Key on the item id (not the materialized object) so cache updates to the
+  // same item don't clobber input.
   const [prevVisible, setPrevVisible] = useState(visible);
-  const [prevShoppingListItem, setPrevShoppingListItem] =
-    useState(shoppingListItem);
+  const [prevShoppingListItemId, setPrevShoppingListItemId] = useState(
+    shoppingListItem?.id,
+  );
   const [prevSelectedPantryId, setPrevSelectedPantryId] =
     useState(selectedPantryId);
   if (
     visible !== prevVisible ||
-    shoppingListItem !== prevShoppingListItem ||
+    shoppingListItem?.id !== prevShoppingListItemId ||
     selectedPantryId !== prevSelectedPantryId
   ) {
     setPrevVisible(visible);
-    setPrevShoppingListItem(shoppingListItem);
+    setPrevShoppingListItemId(shoppingListItem?.id);
     setPrevSelectedPantryId(selectedPantryId);
     if (visible && shoppingListItem) {
       setQuantityInput(shoppingListItem.quantity?.toString() || '1');
@@ -98,33 +115,27 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
     }
   }
 
-  // Control bottom sheet visibility
-  useEffect(() => {
-    if (visible && shoppingListItem) {
-      ref.current?.present();
-    } else {
-      ref.current?.dismiss();
-    }
-  }, [visible, shoppingListItem, ref]);
-
   const handleConfirm = () => {
     if (!shoppingListItem) return;
 
     if (!pantryId) {
-      alertService.alert('Error', 'Please select a pantry');
+      alertService.alert(
+        t('labels.error'),
+        t('moveToPantry.selectPantryError'),
+      );
       return;
     }
 
     const quantityValue = parseFractionalInput(quantityInput);
 
     if (quantityValue === null || isNaN(quantityValue) || quantityValue <= 0) {
-      alertService.alert('Error', 'Please enter a valid quantity');
+      alertService.alert(t('labels.error'), t('moveToPantry.invalidQuantity'));
       return;
     }
 
     // Validate unit is selected
     if (!unitId && !unitValue.trim()) {
-      alertService.alert('Error', 'Please select a unit');
+      alertService.alert(t('labels.error'), t('moveToPantry.selectUnitError'));
       return;
     }
 
@@ -157,6 +168,13 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
     setExpirationDate(undefined);
   };
 
+  const storageStateLabel: Record<StorageState, string> = {
+    [StorageState.Ambient]: t('moveToPantry.stateAmbient'),
+    [StorageState.Refrigerated]: t('moveToPantry.stateRefrigerated'),
+    [StorageState.Frozen]: t('moveToPantry.stateFrozen'),
+    [StorageState.None]: '',
+  };
+
   return (
     <BottomSheetModal ref={ref} {...modalProps}>
       <BottomSheetFormScrollView
@@ -166,7 +184,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
       >
         {/* Header */}
         <Header
-          title="Move to Pantry"
+          title={t('moveToPantry.title')}
           centerTitle
           leftActions={[
             {
@@ -190,7 +208,8 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                 {shoppingListItem.itemName}
               </Text>
               <Text size="base" tone="secondary">
-                Shopping list quantity: {shoppingListItem.quantity || 1}{' '}
+                {t('moveToPantry.shoppingListQuantityPrefix')}
+                {shoppingListItem.quantity || 1}{' '}
                 {shoppingListItem.unit?.symbol ||
                   shoppingListItem.unitName ||
                   ''}
@@ -201,7 +220,8 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
             {pantries.length > 0 && (
               <View style={styles.section}>
                 <Text size="md" weight="medium" style={styles.sectionLabel}>
-                  Select Pantry<Text tone="error"> *</Text>
+                  {t('moveToPantry.selectPantry')}
+                  <Text tone="error">{t('moveToPantry.requiredAsterisk')}</Text>
                 </Text>
                 <View style={styles.pantryList}>
                   {pantries.map(pantry => (
@@ -245,7 +265,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                                 styles.defaultBadgeTextActive,
                             ]}
                           >
-                            Default
+                            {t('moveToPantry.defaultLabel')}
                           </Text>
                         </View>
                       )}
@@ -260,10 +280,10 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
               <View style={styles.quantityUnitRow}>
                 <View style={styles.quantityField}>
                   <FractionInput
-                    label="Quantity"
+                    label={t('moveToPantry.quantity')}
                     value={quantityInput}
                     onChangeText={setQuantityInput}
-                    placeholder="e.g., 1, 1 1/4"
+                    placeholder={t('moveToPantry.quantityPlaceholder')}
                     keyboardType="numeric"
                     required
                   />
@@ -271,10 +291,10 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                 <View style={styles.unitField}>
                   <UnitAutocompleteField
                     variant="inline"
-                    label="Unit"
+                    label={t('moveToPantry.unit')}
                     value={unitValue}
                     onChangeText={setUnitValue}
-                    placeholder="pcs, kg"
+                    placeholder={t('moveToPantry.unitPlaceholder')}
                     required
                     onUnitSelected={id => {
                       setUnitId(id);
@@ -287,7 +307,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
             {/* Storage State */}
             <View style={styles.section}>
               <Text size="md" weight="medium" style={styles.sectionLabel}>
-                Storage Type
+                {t('moveToPantry.storageType')}
               </Text>
               <View style={styles.segmentedControl}>
                 {STORAGE_STATES.map(state => (
@@ -307,7 +327,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                       ]}
                       numberOfLines={1}
                     >
-                      {state}
+                      {storageStateLabel[state]}
                     </Text>
                   </Pressable>
                 ))}
@@ -317,7 +337,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
             {/* Expiration Date */}
             <View style={styles.section}>
               <Text size="md" weight="medium" style={styles.sectionLabel}>
-                Expiration Date
+                {t('moveToPantry.expirationDate')}
               </Text>
               <View style={styles.dateRow}>
                 <Pressable
@@ -335,7 +355,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                   <Text style={styles.dateText}>
                     {expirationDate
                       ? expirationDate.toLocaleDateString()
-                      : 'Select date'}
+                      : t('moveToPantry.selectDate')}
                   </Text>
                 </Pressable>
                 {!!expirationDate && (
@@ -363,7 +383,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
             {/* Purchase Price (Optional) */}
             <View style={styles.section}>
               <FormInput
-                label="Purchase Price (per unit)"
+                label={t('moveToPantry.purchasePrice')}
                 value={actualPriceInput}
                 onChangeText={setActualPriceInput}
                 placeholder="0.00"
@@ -374,10 +394,10 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
             {/* Notes (Optional) */}
             <View style={styles.section}>
               <FormInput
-                label="Notes (Optional)"
+                label={t('moveToPantry.notesOptional')}
                 value={notes}
                 onChangeText={setNotes}
-                placeholder="Add any notes about this purchase..."
+                placeholder={t('moveToPantry.notesPlaceholder')}
                 multiline
                 numberOfLines={2}
               />
@@ -387,14 +407,14 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
             <View style={styles.toggleSection}>
               <View style={styles.toggleInfo}>
                 <Text size="base" weight="medium">
-                  Remove from shopping list
+                  {t('moveToPantry.removeFromShopping')}
                 </Text>
                 <Text
                   size="sm"
                   tone="secondary"
                   style={styles.toggleDescription}
                 >
-                  Turn off to keep the item in your shopping list
+                  {t('moveToPantry.removeFromShoppingDesc')}
                 </Text>
               </View>
               <BaseSwitch

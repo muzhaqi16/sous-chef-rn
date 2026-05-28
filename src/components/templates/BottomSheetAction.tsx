@@ -46,6 +46,11 @@ export const BottomSheetAction: React.FC<BottomSheetActionProps> = ({
     },
     snapPoints,
     keyboardBehavior: 'fillParent',
+    // Forward through the hook so it composes the backdrop claim with the
+    // caller's onChange. Setting `onChange` directly on `<BottomSheetModal>`
+    // below would overwrite the hook's composed handler and silently break
+    // the dim layer (the claim/release path never fires).
+    onChange: onChangeProp ? index => onChangeProp(index) : undefined,
   });
 
   const content = (
@@ -68,7 +73,6 @@ export const BottomSheetAction: React.FC<BottomSheetActionProps> = ({
       {...modalProps}
       index={0}
       handleIndicatorStyle={{ backgroundColor: 'gray' }}
-      onChange={onChangeProp}
     >
       {scrollable ? (
         <BottomSheetScrollView

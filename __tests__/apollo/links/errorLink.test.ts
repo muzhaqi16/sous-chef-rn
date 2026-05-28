@@ -221,10 +221,21 @@ describe('errorLink.ts', () => {
       );
     });
 
-    it('forwards network errors to let errorPolicy handle them', () => {
+    it('does not re-forward network errors (retryLink owns retries; lets the error propagate)', () => {
       const error = { message: 'Network request failed' };
-      errorHandler({ error, operation: mockOperation, forward: mockForward });
-      expect(mockForward).toHaveBeenCalledWith(mockOperation);
+      const result = errorHandler({
+        error,
+        operation: mockOperation,
+        forward: mockForward,
+      });
+      // Returning void propagates the networkError to the observer; re-forwarding
+      // would double query retries and re-send mutations.
+      expect(result).toBeUndefined();
+      expect(mockForward).not.toHaveBeenCalled();
+      expect(console.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Network error'),
+        expect.any(String),
+      );
     });
 
     it('logs unexpected non-network, non-GraphQL errors', () => {

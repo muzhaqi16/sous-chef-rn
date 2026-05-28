@@ -1,26 +1,44 @@
 import { useMutation } from '@apollo/client/react';
-import {
-  GenerateShoppingListFromMealPlanDocument,
-  GetMealPlanDocument,
-} from '#features/mealPlan/graphql/mealPlan.generated';
-import { GetShoppingListsLiteDocument } from './useGenerateShoppingList.generated';
+import { GenerateShoppingListFromMealPlanDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 import { type GenerateShoppingListFromMealPlanInput } from '#/graphql/generated/schemaTypes';
+import { handleMutationError } from '#/utils/errorHandlers';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
+import {
+  createAddToQueryConnectionUpdater,
+  createAddToParentArrayUpdater,
+} from '#/apollo/utils/cacheUpdaters';
+
+const addToShoppingLists = createAddToQueryConnectionUpdater(
+  'shoppingLists',
+  'ShoppingList',
+);
+const addToMealPlanGeneratedLists = createAddToParentArrayUpdater(
+  'MealPlan',
+  'generatedShoppingLists',
+);
 
 export function useGenerateShoppingList(mealPlanId: string | null) {
   const [generateMutation, { loading }] = useMutation(
     GenerateShoppingListFromMealPlanDocument,
     {
-      refetchQueries: [
-        ...(mealPlanId
-          ? [{ query: GetMealPlanDocument, variables: { id: mealPlanId } }]
-          : []),
-        { query: GetShoppingListsLiteDocument },
-      ],
+      update: (cache, { data }, { variables }) => {
+        const payload = data?.generateShoppingListFromMealPlan;
+        if (payload?.__typename !== 'GenerateShoppingListFromMealPlanPayload') {
+          return;
+        }
+        const list = payload.shoppingList;
+        addToShoppingLists(cache, list, { position: 'start' });
+        const linkedMealPlanId = variables?.input?.mealPlanId;
+        if (linkedMealPlanId) {
+          addToMealPlanGeneratedLists(cache, linkedMealPlanId, list, {
+            position: 'end',
+          });
+        }
+      },
       onError: error => {
-        toastService.error(error.message || 'Failed to generate shopping list');
+        handleMutationError(error, { operation: 'Generate Shopping List' });
       },
     },
   );
@@ -43,11 +61,11 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
     );
     if (!result) return null;
     const data = result.data?.generateShoppingListFromMealPlan;
-    if (data?.success) {
-      const homeName = data.shoppingList?.home?.name;
-      const baseMsg = `Shopping list "${
-        data.shoppingList?.name
-      }" created with ${data.shoppingList?.totalItems ?? 0} items`;
+    if (data?.__typename === 'GenerateShoppingListFromMealPlanPayload') {
+      const homeName = data.shoppingList.home?.name;
+      const baseMsg = `Shopping list "${data.shoppingList.name}" created with ${
+        data.shoppingList.totalItems ?? 0
+      } items`;
       toastService.success(
         homeName ? `${baseMsg} (shared with ${homeName})` : baseMsg,
       );

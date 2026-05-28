@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Pressable,
   ThemedRefreshControl,
@@ -45,6 +46,7 @@ export const DayMealList: React.FC<DayMealListProps> = ({
   refreshing = false,
   onRefresh,
 }) => {
+  const { t } = useTranslation();
   return (
     <Animated.ScrollView
       style={styles.container}
@@ -96,7 +98,7 @@ export const DayMealList: React.FC<DayMealListProps> = ({
                 tone="accent"
                 style={styles.addMealText}
               >
-                Add a meal
+                {t('emptyDay.addMeal')}
               </Text>
             </Pressable>
           )}

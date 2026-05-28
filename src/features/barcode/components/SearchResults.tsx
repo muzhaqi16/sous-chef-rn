@@ -5,11 +5,14 @@ import { ItemCard } from './ItemCard';
 import { ActionButtons } from './ActionButtons';
 import { StyleSheet } from 'react-native-unistyles';
 import {
-  AddItemToShoppingListDocument,
-  CreatePantryItemDocument,
-  RestockPantryItemDocument,
+  BarcodeAddItemToShoppingListDocument,
+  BarcodeCreatePantryItemDocument,
+  BarcodeRestockPantryItemDocument,
+  SearchResults_PantryItemFragmentDoc,
+  SearchResults_ShoppingListItemFragmentDoc,
+  type SearchResults_PantryItemFragment,
+  type SearchResults_ShoppingListItemFragment,
 } from './SearchResults.generated';
-import type { PantryItemDisplayFragment } from '#features/pantry/graphql/pantryFragments.generated';
 import type { CreatePantryItemInput } from '#/graphql/generated/schemaTypes';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { addNewItemToShoppingListCache } from '#/apollo/utils/shoppingListCacheUpdaters';
@@ -23,9 +26,10 @@ import type { ScannedItem } from '#store/slices/barcodeScannerSlice';
 import type { BarcodeSource } from '#/types/navigation';
 import { ScrollView } from 'react-native';
 
-// Cache updater for Pantry.itemsConnection
+// Cache updater for Pantry.itemsConnection — only reads `{ id }` from the
+// new item, so the local SearchResults_pantryItem fragment is sufficient.
 const addToPantryItemsConnection =
-  createAddToParentConnectionUpdater<PantryItemDisplayFragment>(
+  createAddToParentConnectionUpdater<SearchResults_PantryItemFragment>(
     'Pantry',
     'itemsConnection',
     'PantryItem',
@@ -57,25 +61,57 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   const setPendingPantryScrollToTop = useAppStore(
     s => s.setPendingPantryScrollToTop,
   );
-  const [addToPantry] = useMutation(CreatePantryItemDocument, {
+  const [addToPantry] = useMutation(BarcodeCreatePantryItemDocument, {
     update: (cache, { data }) => {
-      const pantryItem = data?.createPantryItem?.pantryItem;
-      if (pantryItem && pantryId) {
-        addToPantryItemsConnection(cache, pantryId, pantryItem);
+      const payload = data?.createPantryItem;
+      if (payload?.__typename === 'CreatePantryItemPayload' && pantryId) {
+        const maskedPantryItem = payload.pantryItem;
+        // Materialize the masked fragment ref so the cache updater can read
+        // `id`. Use the cache-key form — passing the masked ref directly
+        // silently returns partial/null data under dataMasking.
+        const pantryItem = cache.readFragment<SearchResults_PantryItemFragment>(
+          {
+            fragment: SearchResults_PantryItemFragmentDoc,
+            fragmentName: 'SearchResults_pantryItem',
+            from: { __typename: 'PantryItem', id: maskedPantryItem.id },
+          },
+        );
+        if (pantryItem) {
+          addToPantryItemsConnection(cache, pantryId, pantryItem);
+        }
       }
     },
   });
 
-  const [restockPantryItem] = useMutation(RestockPantryItemDocument, {});
+  const [restockPantryItem] = useMutation(BarcodeRestockPantryItemDocument, {});
 
-  const [addToShoppingList] = useMutation(AddItemToShoppingListDocument, {
-    update: (cache, { data }) => {
-      const shoppingListItem = data?.addItemToShoppingList?.shoppingListItem;
-      if (shoppingListItem && shoppingListId) {
-        addNewItemToShoppingListCache(cache, shoppingListId, shoppingListItem);
-      }
+  const [addToShoppingList] = useMutation(
+    BarcodeAddItemToShoppingListDocument,
+    {
+      update: (cache, { data }) => {
+        const payload = data?.addItemToShoppingList;
+        if (
+          payload?.__typename === 'AddItemToShoppingListPayload' &&
+          shoppingListId
+        ) {
+          const maskedItem = payload.shoppingListItem;
+          const shoppingListItem =
+            cache.readFragment<SearchResults_ShoppingListItemFragment>({
+              fragment: SearchResults_ShoppingListItemFragmentDoc,
+              fragmentName: 'SearchResults_shoppingListItem',
+              from: { __typename: 'ShoppingListItem', id: maskedItem.id },
+            });
+          if (shoppingListItem) {
+            addNewItemToShoppingListCache(
+              cache,
+              shoppingListId,
+              shoppingListItem,
+            );
+          }
+        }
+      },
     },
-  });
+  );
 
   const handleAddItem = () => {
     if (!source || isAdded) {
@@ -121,8 +157,10 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                         async () => {
                           await restockPantryItem({
                             variables: {
-                              id: duplicateInfo.existingPantryItemId,
-                              input: { quantity },
+                              input: {
+                                id: duplicateInfo.existingPantryItemId,
+                                quantity,
+                              },
                             },
                           });
                           setIsAdded(true);
@@ -149,7 +187,10 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                               input: { ...mutationInput, forceAdd: true },
                             },
                           });
-                          if (retryResult.data?.createPantryItem?.success) {
+                          if (
+                            retryResult.data?.createPantryItem?.__typename ===
+                            'CreatePantryItemPayload'
+                          ) {
                             setIsAdded(true);
                             setPendingPantryScrollToTop(true);
                             onScanAnother();
@@ -176,7 +217,10 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
             }
           }
 
-          if (result.data?.createPantryItem?.success) {
+          if (
+            result.data?.createPantryItem?.__typename ===
+            'CreatePantryItemPayload'
+          ) {
             setIsAdded(true);
             setPendingPantryScrollToTop(true);
             onScanAnother();

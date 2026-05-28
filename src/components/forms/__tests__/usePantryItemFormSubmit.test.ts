@@ -1,4 +1,4 @@
-import { renderHook } from '@testing-library/react-native';
+import { renderHook, waitFor } from '@testing-library/react-native';
 import { alertService } from '#/services/alertService';
 import {
   usePantryItemFormSubmit,
@@ -55,7 +55,7 @@ function defaults(
     itemId: undefined,
     currentPantryId: 'pantry-1',
     isWeightLocked: false,
-    existingItemData: null,
+    existingPantryItem: null,
     dirtyFields: {},
     trackingUnit: { id: 'unit-1', name: 'Liter', symbol: 'L', type: null },
     netWeightUnitId: null,
@@ -103,20 +103,24 @@ describe('usePantryItemFormSubmit', () => {
 
   describe('add mode', () => {
     it('calls createPantryItem with form input + pantry context', async () => {
-      const params = defaults({ selectedLocationId: 'loc-1', selectedCategoryId: 'cat-1' });
-      const { result } = renderHook(() => usePantryItemFormSubmit(params));
-
-      result.current.handleSave(baseData);
-      await new Promise(r => setImmediate(r));
-
-      expect(params.createPantryItem).toHaveBeenCalledWith({
-        input: baseData,
-        pantryId: 'pantry-1',
-        quantityValue: 2,
-        unitId: 'unit-1',
+      const params = defaults({
         selectedLocationId: 'loc-1',
         selectedCategoryId: 'cat-1',
       });
+      const { result } = renderHook(() => usePantryItemFormSubmit(params));
+
+      result.current.handleSave(baseData);
+
+      await waitFor(() =>
+        expect(params.createPantryItem).toHaveBeenCalledWith({
+          input: baseData,
+          pantryId: 'pantry-1',
+          quantityValue: 2,
+          unitId: 'unit-1',
+          selectedLocationId: 'loc-1',
+          selectedCategoryId: 'cat-1',
+        }),
+      );
     });
 
     it('resolves unitId from symbol when trackingUnit.id is null', async () => {
@@ -128,12 +132,13 @@ describe('usePantryItemFormSubmit', () => {
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
       result.current.handleSave(baseData);
-      await new Promise(r => setImmediate(r));
 
-      expect(resolveUnitId).toHaveBeenCalledWith(null, 'L');
-      expect(params.createPantryItem).toHaveBeenCalledWith(
-        expect.objectContaining({ unitId: 'resolved-unit' }),
+      await waitFor(() =>
+        expect(params.createPantryItem).toHaveBeenCalledWith(
+          expect.objectContaining({ unitId: 'resolved-unit' }),
+        ),
       );
+      expect(resolveUnitId).toHaveBeenCalledWith(null, 'L');
     });
 
     it('resolves netWeight unit from symbol text when not weight-locked', async () => {
@@ -150,9 +155,10 @@ describe('usePantryItemFormSubmit', () => {
 
       const data = { ...baseData, netWeightUnit: 'oz' };
       result.current.handleSave(data);
-      await new Promise(r => setImmediate(r));
 
-      expect(resolveUnitId).toHaveBeenCalledWith(null, 'oz');
+      await waitFor(() =>
+        expect(resolveUnitId).toHaveBeenCalledWith(null, 'oz'),
+      );
       expect(data.netWeightUnitId).toBe('nw-unit');
     });
 
@@ -166,8 +172,8 @@ describe('usePantryItemFormSubmit', () => {
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
       result.current.handleSave({ ...baseData, netWeightUnit: 'oz' });
-      await new Promise(r => setImmediate(r));
 
+      await waitFor(() => expect(params.createPantryItem).toHaveBeenCalled());
       expect(resolveUnitId).not.toHaveBeenCalled();
     });
   });
@@ -179,23 +185,25 @@ describe('usePantryItemFormSubmit', () => {
       defaults({
         mode: 'edit',
         itemId: 'item-1',
-        existingItemData: {
-          pantryItem: {
-            id: 'item-1',
-            unit: { symbol: 'L' },
-          },
-        },
+        existingPantryItem: {
+          id: 'item-1',
+          unit: { symbol: 'L' },
+        } as any,
         ...overrides,
       });
 
     it('alerts when editing without an existing item', async () => {
-      const params = editParams({ existingItemData: null });
+      const params = editParams({ existingPantryItem: null });
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
       result.current.handleSave(baseData);
-      await new Promise(r => setImmediate(r));
 
-      expect(alertService.alert).toHaveBeenCalledWith('Error', 'Item not found');
+      await waitFor(() =>
+        expect(alertService.alert).toHaveBeenCalledWith(
+          'Error',
+          'Item not found',
+        ),
+      );
     });
 
     it('calls updateQuantity when quantityInput is dirty', async () => {
@@ -203,14 +211,15 @@ describe('usePantryItemFormSubmit', () => {
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
       result.current.handleSave(baseData);
-      await new Promise(r => setImmediate(r));
 
-      expect(params.updateQuantity).toHaveBeenCalledWith(
-        expect.objectContaining({
-          itemId: 'item-1',
-          quantityValue: 2,
-          unitId: 'unit-1',
-        }),
+      await waitFor(() =>
+        expect(params.updateQuantity).toHaveBeenCalledWith(
+          expect.objectContaining({
+            itemId: 'item-1',
+            quantityValue: 2,
+            unitId: 'unit-1',
+          }),
+        ),
       );
     });
 
@@ -219,11 +228,10 @@ describe('usePantryItemFormSubmit', () => {
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
       result.current.handleSave({ ...baseData, unit: 'kg' });
-      await new Promise(r => setImmediate(r));
 
       // unit changed from 'L' (current) to 'kg' (typed) but trackingUnit still has 'L'
       // unitId is 'unit-1' (from trackingUnit), so unitChangedWithoutId is false
-      expect(params.updateQuantity).toHaveBeenCalled();
+      await waitFor(() => expect(params.updateQuantity).toHaveBeenCalled());
     });
 
     it('routes unit-only change without unitId through updatePantryItemFields', async () => {
@@ -235,13 +243,14 @@ describe('usePantryItemFormSubmit', () => {
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
       result.current.handleSave({ ...baseData, unit: 'kg' });
-      await new Promise(r => setImmediate(r));
 
-      expect(params.updatePantryItemFields).toHaveBeenCalledWith(
-        expect.objectContaining({
-          itemId: 'item-1',
-          unitSymbol: 'kg',
-        }),
+      await waitFor(() =>
+        expect(params.updatePantryItemFields).toHaveBeenCalledWith(
+          expect.objectContaining({
+            itemId: 'item-1',
+            unitSymbol: 'kg',
+          }),
+        ),
       );
       // updateQuantity NOT called because unitChangedWithoutId
       expect(params.updateQuantity).not.toHaveBeenCalled();
@@ -255,9 +264,12 @@ describe('usePantryItemFormSubmit', () => {
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
       result.current.handleSave(baseData);
-      await new Promise(r => setImmediate(r));
 
-      const call = (params.updatePantryItemFields as jest.Mock).mock.calls[0][0];
+      await waitFor(() =>
+        expect(params.updatePantryItemFields).toHaveBeenCalled(),
+      );
+      const call = (params.updatePantryItemFields as jest.Mock).mock
+        .calls[0][0];
       expect(call.dirtyFields.netWeight).toBeUndefined();
       expect(call.dirtyFields.notes).toBe(true);
     });
@@ -268,9 +280,8 @@ describe('usePantryItemFormSubmit', () => {
 
       // unit unchanged because data.unit === currentItem.unit.symbol === 'L'
       result.current.handleSave(baseData);
-      await new Promise(r => setImmediate(r));
 
-      expect(params.onSuccess).toHaveBeenCalled();
+      await waitFor(() => expect(params.onSuccess).toHaveBeenCalled());
       expect(params.updateQuantity).not.toHaveBeenCalled();
       expect(params.updatePantryItemFields).not.toHaveBeenCalled();
     });
@@ -284,11 +295,12 @@ describe('usePantryItemFormSubmit', () => {
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
       result.current.handleSave(baseData);
-      await new Promise(r => setImmediate(r));
 
-      expect(alertService.alert).toHaveBeenCalledWith(
-        'Error',
-        'Failed to add pantry item. Please try again.',
+      await waitFor(() =>
+        expect(alertService.alert).toHaveBeenCalledWith(
+          'Error',
+          'Failed to add pantry item. Please try again.',
+        ),
       );
     });
 
@@ -296,9 +308,7 @@ describe('usePantryItemFormSubmit', () => {
       const params = defaults({
         mode: 'edit',
         itemId: 'item-1',
-        existingItemData: {
-          pantryItem: { id: 'item-1', unit: { symbol: 'L' } },
-        },
+        existingPantryItem: { id: 'item-1', unit: { symbol: 'L' } } as any,
         dirtyFields: { quantityInput: true },
         updateQuantity: jest.fn(() => {
           throw new Error('boom');
@@ -307,11 +317,12 @@ describe('usePantryItemFormSubmit', () => {
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
       result.current.handleSave(baseData);
-      await new Promise(r => setImmediate(r));
 
-      expect(alertService.alert).toHaveBeenCalledWith(
-        'Error',
-        'Failed to update pantry item. Please try again.',
+      await waitFor(() =>
+        expect(alertService.alert).toHaveBeenCalledWith(
+          'Error',
+          'Failed to update pantry item. Please try again.',
+        ),
       );
     });
   });

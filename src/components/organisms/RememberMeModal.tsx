@@ -1,5 +1,7 @@
 import React from 'react';
-import { View, Modal, Pressable } from 'react-native';
+import { View, Modal } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
@@ -10,6 +12,7 @@ export const RememberMeModal: React.FC<{
   onDecline: () => void;
   email: string;
 }> = ({ visible, onAccept, onDecline, email }) => {
+  const { t } = useTranslation();
   return (
     <Modal
       visible={visible}
@@ -24,7 +27,7 @@ export const RememberMeModal: React.FC<{
           <Icon name="lock-closed-outline" size={48} tone="primary" />
 
           <Text size="xl" weight="semibold" style={styles.modalTitle}>
-            Remember login info?
+            {t('rememberMe.title')}
           </Text>
           <Text
             size="sm"
@@ -33,8 +36,7 @@ export const RememberMeModal: React.FC<{
             lineHeight="normal"
             style={styles.modalSubtitle}
           >
-            We'll securely save your login info for {email} on this device, so
-            you won't need to enter it next time.
+            {t('rememberMe.body', { email })}
           </Text>
 
           <View style={styles.modalButtons}>
@@ -46,7 +48,7 @@ export const RememberMeModal: React.FC<{
               onPress={onDecline}
             >
               <Text size="md" weight="semibold">
-                Not Now
+                {t('rememberMe.notNow')}
               </Text>
             </Pressable>
 
@@ -62,7 +64,7 @@ export const RememberMeModal: React.FC<{
                 weight="semibold"
                 style={styles.modalButtonPrimaryText}
               >
-                Remember
+                {t('rememberMe.remember')}
               </Text>
             </Pressable>
           </View>

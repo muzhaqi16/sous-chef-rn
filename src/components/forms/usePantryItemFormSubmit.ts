@@ -2,6 +2,7 @@ import { alertService } from '#/services/alertService';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { parseFractionalInput as parseQuantityInput } from '#/utils/fractionUtils';
 import type { UnitSelection } from '#features/pantry/hooks/mutations/types';
+import type { PantryItemForm_PantryItemFragment } from './PantryItemForm.generated';
 
 /** All form fields PantryItemForm exposes through `useForm`. */
 export interface PantryItemFormData {
@@ -28,7 +29,7 @@ export interface UsePantryItemFormSubmitParams {
   itemId: string | undefined;
   currentPantryId: string | undefined | null;
   isWeightLocked: boolean;
-  existingItemData: { pantryItem?: any } | null | undefined;
+  existingPantryItem: PantryItemForm_PantryItemFragment | null;
   dirtyFields: Record<string, unknown>;
   trackingUnit: UnitSelection;
   netWeightUnitId: string | null;
@@ -95,7 +96,7 @@ export function usePantryItemFormSubmit(params: UsePantryItemFormSubmitParams) {
           return;
         }
 
-        const currentItem = params.existingItemData?.pantryItem;
+        const currentItem = params.existingPantryItem;
         if (!currentItem || !params.itemId) {
           alertService.alert('Error', 'Item not found');
           return;
@@ -133,7 +134,6 @@ export function usePantryItemFormSubmit(params: UsePantryItemFormSubmitParams) {
             unitId: unitChangedWithoutId ? null : unitId,
             unitSymbol: data.unit,
             trackingUnit: params.trackingUnit,
-            currentItem,
           });
         }
 
@@ -141,7 +141,6 @@ export function usePantryItemFormSubmit(params: UsePantryItemFormSubmitParams) {
           params.updatePantryItemFields({
             itemId: params.itemId,
             input: data,
-            currentItem,
             dirtyFields: dirtyFieldsRecord,
             selectedLocationId: params.selectedLocationId,
             selectedBrandId: params.selectedBrandId,

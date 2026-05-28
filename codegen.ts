@@ -95,11 +95,17 @@ const config: CodegenConfig = {
         },
         dedupeOperationSuffix: true,
         skipTypename: false,
-        inlineFragmentTypes: 'combine',
+        // 'mask' emits $fragmentName markers for spreads → AC 4.x runtime
+        // masking aligns with TS types. Operations stay fully masked; the
+        // few mutation `optimisticResponse` callbacks that need the inline
+        // shape annotate themselves with Apollo's `Unmasked<TData>` type.
+        // (The `@unmask` directive is not used in this codebase.)
+        inlineFragmentTypes: 'mask',
         nonOptionalTypename: true,
         immutableTypes: false,
         strictScalars: true,
         pureMagicComment: true,
+        dataMasking: true,
       },
     },
   },

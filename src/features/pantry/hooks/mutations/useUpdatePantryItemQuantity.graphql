@@ -1,0 +1,20 @@
+# Narrow fragment for useUpdatePantryItemQuantity's optimistic-response shape.
+# Mirrors what the UpdatePantryItemQuantity mutation selects on `pantryItem`.
+fragment useUpdatePantryItemQuantity_pantryItem on PantryItem {
+  id
+  version
+  quantity
+  unit {
+    id
+    name
+    symbol
+    type
+    isMetric
+    baseUnitId
+    conversionFactor
+    isCommon
+    displayAsFraction
+    minPrecision
+    autoConvertThreshold
+  }
+}

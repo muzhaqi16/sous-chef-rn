@@ -11,14 +11,23 @@ jest.mock('#features/recipes/hooks/useRecipeIngredientMatching', () => ({
 }));
 
 describe('IngredientMatchRow', () => {
-  const makeMatch = (name: string, overrides = {}) => ({
+  const makeMatch = (name: string, overrides: any = {}) => ({
     match: {
-      ingredient: { id: 'i1', name, isOptional: false },
+      ingredient: { __typename: 'RecipeIngredient', id: 'i1' },
       matchedPantryItem: null,
       suggestedUnit: null,
       ...overrides,
     },
+    ingredient: {
+      __typename: 'RecipeIngredient',
+      id: 'i1',
+      name,
+      isOptional: false,
+      unit: null,
+      ...(overrides.ingredient ?? {}),
+    },
     adjustedQuantity: 2,
+    adjustedUnitId: null,
     isIncluded: true,
   });
 
@@ -56,7 +65,7 @@ describe('IngredientMatchRow', () => {
 
   it('renders Optional badge for optional ingredients', () => {
     const optionalMatch = makeMatch('Garnish');
-    optionalMatch.match.ingredient.isOptional = true;
+    optionalMatch.ingredient.isOptional = true;
     render(
       <IngredientMatchRow {...defaultProps} editableMatch={optionalMatch} />,
     );

@@ -7,12 +7,14 @@ import {
 } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { SortableShoppingList } from '../SortableShoppingList/SortableList';
-import type { SortableShoppingListItem } from '../SortableShoppingList/types';
+import type { ShoppingListRowItem } from '../SortableShoppingList/types';
 import { PaginationFooter } from '#components/organisms/PaginationFooter';
 import { ShoppingListItemSkeleton } from '#components/base/Skeleton/ShoppingListItemSkeleton';
 
 interface StaggeredTabContentProps {
-  items: SortableShoppingListItem[];
+  items: ShoppingListRowItem[];
+  /** Whether row cells render their product image */
+  showImages?: boolean;
   onItemPress: (id: string) => void;
   onItemEdit?: (id: string) => void;
   onItemDelete?: (id: string) => void;
@@ -48,6 +50,7 @@ interface StaggeredTabContentProps {
 
 export const StaggeredTabContent: React.FC<StaggeredTabContentProps> = ({
   items,
+  showImages,
   onItemPress,
   onItemEdit,
   onItemDelete,
@@ -86,6 +89,7 @@ export const StaggeredTabContent: React.FC<StaggeredTabContentProps> = ({
     <View style={styles.container}>
       <SortableShoppingList
         items={items}
+        showImages={showImages}
         onItemPress={onItemPress}
         onItemEdit={onItemEdit}
         onItemDelete={onItemDelete}

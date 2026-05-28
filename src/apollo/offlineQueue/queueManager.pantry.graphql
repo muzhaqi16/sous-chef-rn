@@ -1,0 +1,76 @@
+# Narrow fragment for SyncPantryItem mutation response (offline queue).
+# Sync may create new entities, so the response carries the display-cell
+# hydration shape. Apollo auto-normalization writes these to the cache.
+fragment queueManager_syncPantryItem on PantryItem {
+  id
+  pantryId
+  itemId
+  itemName
+  quantity
+  version
+  updatedAt
+  storageState
+  expiresAt
+  lowStockAlert
+  isLowStock
+  minQuantity
+  lastUsedAt
+  netWeight
+  remainingNetWeight
+  activeBatchCount
+  earliestBatchExpiration
+  item {
+    id
+    imageUrl
+    images {
+      url
+      kind
+    }
+  }
+  unit {
+    id
+    name
+    symbol
+  }
+  netWeightUnit {
+    id
+    name
+    symbol
+  }
+  storageLocation {
+    id
+    name
+    type
+  }
+  packageBreakdown {
+    count
+    contentUnit {
+      id
+      name
+      symbol
+    }
+    perUnitNetWeight
+    perUnitNetWeightUnit {
+      id
+      name
+      symbol
+    }
+    totalNetWeight
+  }
+  quantityBreakdown {
+    fullPackages
+    looseContentUnits
+    contentUnit {
+      id
+      name
+      symbol
+    }
+    totalContentUnits
+    remainingWeight
+    remainingWeightUnit {
+      id
+      name
+      symbol
+    }
+  }
+}

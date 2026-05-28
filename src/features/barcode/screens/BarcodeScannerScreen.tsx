@@ -1,20 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Dimensions, Platform } from 'react-native';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+import { useTranslation } from 'react-i18next';
+import { StyleSheet } from 'react-native-unistyles';
 import { Camera, useCameraDevices } from 'react-native-vision-camera';
-import { useBarcodeScannerOutput } from 'react-native-vision-camera-barcode-scanner';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import type { StaticScreenProps } from '@react-navigation/native';
 
 import { useBarcodeScanner } from '../hooks/useBarcodeScanner';
+import { useBarcodeOutput } from '../hooks/useBarcodeOutput';
 import { usePermission } from '#hooks/permissions/usePermission';
-import BarcodeMask from '#components/organisms/BarcodeMask';
-
-const ThemedBarcodeMask = withUnistyles(BarcodeMask, theme => ({
-  edgeColor: theme.colors.primary,
-  backgroundColor: theme.colors.overlay,
-}));
+import { ThemedBarcodeMask } from '../components/ThemedBarcodeMask';
 import { Button } from '#components/base/Button';
 import { IconButton } from '#components/atoms/IconButton';
 import { HapticService } from '#services/haptic/HapticService';
@@ -30,20 +26,18 @@ export const BarcodeScannerScreen: React.FC<
         source?: BarcodeSource;
         pantryId?: string;
         shoppingListId?: string;
-        /** When set, the scanner pops back to the named screen with the
-         *  detected UPC as a route param instead of opening SearchResults. */
-        returnTo?: 'identify-form';
       }
     | undefined
   >
 > = ({ route }) => {
-  const { mergeIdentifiedItemFormUpc, toSearchResults, goBack, navigation } =
-    useAppNavigation();
-  const { source, pantryId, shoppingListId, returnTo } = route?.params || {};
+  const { t } = useTranslation();
+  const { toSearchResults, goBack, navigation } = useAppNavigation();
+  const { source, pantryId, shoppingListId } = route?.params || {};
   const devices = useCameraDevices();
   const device = devices.find(d => d.position === 'back');
 
   const {
+    isChecking: isCheckingPermission,
     isGranted: hasPermission,
     isBlocked,
     request: requestPermission,
@@ -63,12 +57,12 @@ export const BarcodeScannerScreen: React.FC<
   const [hasScanned, setHasScanned] = useState(false);
   const [flashEnabled, setFlashEnabled] = useState(false);
 
-  // 1) On mount, ask for camera permission if we don't have it yet
+  // 1) Request permission once the initial check completes and status is undetermined
   useEffect(() => {
-    if (!hasPermission) {
+    if (!isCheckingPermission && !hasPermission && !isBlocked) {
       requestPermission();
     }
-  }, [hasPermission, requestPermission]);
+  }, [isCheckingPermission, hasPermission, isBlocked, requestPermission]);
 
   // 2) When screen focuses *and* permission granted, turn scanner on;
   //    when unfocused, turn it off.
@@ -88,47 +82,38 @@ export const BarcodeScannerScreen: React.FC<
     };
   });
 
-  // 3) Set up the VisionCamera barcode-scanner output (MLKit on Android, Vision on iOS)
+  // 3) Set up the barcode-scanner output. On iOS this resolves to
+  //    VisionCamera's built-in useObjectOutput (native AVCaptureMetadataOutput,
+  //    no MLKit). On Android it falls through to react-native-vision-camera-
+  //    barcode-scanner (MLKit). useBarcodeOutput normalizes both sides to
+  //    `{ value, format }` with format ∈ 'qr' | 'ean-13' | 'ean-8' | 'upc-a'
+  //    | 'upc-e' so callers don't see the platform difference.
+  //
   // PERFORMANCE: Limited to most common barcode types for grocery items.
-  const barcodeOutput = useBarcodeScannerOutput({
-    barcodeFormats: [
-      'qr-code', // QR codes - common for product info, coupons
+  const barcodeOutput = useBarcodeOutput({
+    formats: [
+      'qr', // QR codes - common for product info, coupons
       'ean-13', // European Article Number - most common grocery barcode
       'upc-a', // Universal Product Code - US standard
       'upc-e', // UPC compressed format
     ],
-    onBarcodeScanned: barcodes => {
-      if (!isActive || hasNavigatedRef.current || !barcodes.length) return;
+    onBarcodeScanned: ({ value, format }) => {
+      if (!isActive || hasNavigatedRef.current) return;
+      hasNavigatedRef.current = true;
+      setHasScanned(true);
+      setScanning(false);
 
-      const { rawValue: value, format } = barcodes[0];
-      // Map 'qr-code' back to 'qr' so downstream consumers (UpcFormat mapping,
-      // navigation params) receive the format string they were written for.
-      const type = format === 'qr-code' ? 'qr' : format;
-      if (value) {
-        hasNavigatedRef.current = true;
-        setHasScanned(true);
-        setScanning(false);
+      // Haptic feedback on successful barcode scan
+      HapticService.success();
 
-        // Haptic feedback on successful barcode scan
-        HapticService.success();
-
-        if (returnTo === 'identify-form') {
-          // Pop back to the in-progress Identify form with the UPC; merge
-          // semantics mean the form stays mounted and existing fields
-          // survive the round-trip.
-          mergeIdentifiedItemFormUpc(value);
-          return;
-        }
-
-        setScannedBarcode(value);
-        toSearchResults({
-          barcode: value,
-          format: type,
-          source,
-          pantryId,
-          shoppingListId,
-        });
-      }
+      setScannedBarcode(value);
+      toSearchResults({
+        barcode: value,
+        format,
+        source,
+        pantryId,
+        shoppingListId,
+      });
     },
     onError: error => {
       console.warn('Barcode scanner error:', error);
@@ -155,7 +140,12 @@ export const BarcodeScannerScreen: React.FC<
 
   // --- RENDER FALLBACKS ---
 
-  // A) No permission yet (or denied/blocked) → ask the user
+  // A) Still checking permission status — show black screen to prevent flash
+  if (isCheckingPermission) {
+    return <View style={styles.centeredContainer} />;
+  }
+
+  // B) No permission (denied/blocked) → ask the user
   if (!hasPermission) {
     return (
       <View style={styles.centeredContainer}>
@@ -165,25 +155,25 @@ export const BarcodeScannerScreen: React.FC<
           align="center"
           style={styles.messageText}
         >
-          Camera access is required to scan barcodes.
+          {t('errors.cameraPermission')}
         </Text>
         {isBlocked ? (
           <Button onPress={openSettings} variant="primary" size="medium">
-            Open Settings
+            {t('labels.openSettings')}
           </Button>
         ) : (
           <Button onPress={requestPermission} variant="primary" size="medium">
-            Grant Permission
+            {t('labels.grantPermission')}
           </Button>
         )}
         <Button onPress={handleGoBack} variant="ghost" size="medium">
-          Cancel
+          {t('labels.cancel')}
         </Button>
       </View>
     );
   }
 
-  // B) No camera hardware
+  // C) No camera hardware
   if (!device) {
     return (
       <View style={styles.centeredContainer}>
@@ -193,16 +183,16 @@ export const BarcodeScannerScreen: React.FC<
           align="center"
           style={styles.messageText}
         >
-          No camera device found
+          {t('errors.noCameraDevice')}
         </Text>
         <Button onPress={handleGoBack} variant="primary" size="medium">
-          Go Back
+          {t('labels.goBack')}
         </Button>
       </View>
     );
   }
 
-  // C) Permission granted & device ready → show scanner
+  // D) Permission granted & device ready → show scanner
   return (
     <View style={styles.container}>
       <Camera
@@ -227,17 +217,21 @@ export const BarcodeScannerScreen: React.FC<
           onPress={handleGoBack}
           size="md"
           style={styles.headerButton}
-          accessibilityLabel="Close scanner"
+          accessibilityLabel={t('barcodeScanner.closeScanner')}
         />
         <Text size="lg" weight="semibold" style={styles.headerTitle}>
-          Scan Barcode
+          {t('labels.scanBarcode')}
         </Text>
         <IconButton
           name={flashEnabled ? 'flash' : 'flash-off'}
           onPress={toggleFlash}
           size="md"
           style={styles.headerButton}
-          accessibilityLabel={flashEnabled ? 'Turn flash off' : 'Turn flash on'}
+          accessibilityLabel={
+            flashEnabled
+              ? t('barcodeScanner.flashOff')
+              : t('barcodeScanner.flashOn')
+          }
         />
       </View>
 
@@ -249,12 +243,12 @@ export const BarcodeScannerScreen: React.FC<
           style={styles.instructionsText}
         >
           {hasScanned
-            ? 'Barcode scanned! Navigating…'
-            : 'Point your camera at a barcode'}
+            ? t('status.barcodeScanned')
+            : t('instructions.pointCamera')}
         </Text>
         {!!isScanning && !hasScanned && (
           <Text size="sm" align="center" style={styles.subInstructionsText}>
-            Make sure the barcode is clearly visible
+            {t('instructions.barcodeVisible')}
           </Text>
         )}
       </View>
@@ -262,7 +256,7 @@ export const BarcodeScannerScreen: React.FC<
       <View style={styles.bottomControls}>
         {hasScanned ? (
           <Button onPress={resetScan} variant="primary" size="medium">
-            Scan Another
+            {t('labels.scanAnother')}
           </Button>
         ) : (
           <View style={styles.scanIndicator}>
@@ -270,7 +264,7 @@ export const BarcodeScannerScreen: React.FC<
               style={[styles.scanDot, isScanning && styles.scanDotActive]}
             />
             <Text size="sm" weight="medium" style={styles.scanStatusText}>
-              {isScanning ? 'Scanning…' : 'Ready to scan'}
+              {isScanning ? t('status.scanning') : t('status.readyToScan')}
             </Text>
           </View>
         )}

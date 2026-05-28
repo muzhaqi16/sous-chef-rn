@@ -56,7 +56,6 @@ export function usePantryManagement(
   // Mutations hook - CRUD operations
   const { addItem, updateItem, removeItem } = usePantryItemMutations({
     pantryId,
-    pantryItems,
     refetch,
   });
 

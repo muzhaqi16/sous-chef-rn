@@ -1,5 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
@@ -28,13 +29,14 @@ export const PantryAlertBar: React.FC<PantryAlertBarProps> = ({
   sortLabel,
   onSortPress,
 }) => {
+  const { t } = useTranslation();
   return (
     <View style={styles.container}>
       {/* Left: item count */}
       <View style={styles.statLink}>
         <ThemedGroceryBasket width={16} height={16} />
         <Text size="sm" weight="medium" tone="secondary">
-          {stats.totalItems} {stats.totalItems === 1 ? 'item' : 'items'}
+          {t('pantryScreen.itemCount', { count: stats.totalItems })}
         </Text>
       </View>
 
@@ -49,7 +51,9 @@ export const PantryAlertBar: React.FC<PantryAlertBarProps> = ({
             >
               <Icon name="time-outline" size={14} tone="warning" />
               <Text size="sm" weight="medium" tone="warning">
-                {stats.expiringCount} expiring
+                {t('pantryScreen.expiringCount', {
+                  count: stats.expiringCount,
+                })}
               </Text>
             </Pressable>
           )}
@@ -61,7 +65,9 @@ export const PantryAlertBar: React.FC<PantryAlertBarProps> = ({
             >
               <Icon name="trending-down-outline" size={14} tone="danger" />
               <Text size="sm" weight="medium" style={styles.lowStockText}>
-                {stats.lowStockCount} low stock
+                {t('pantryScreen.lowStockCount', {
+                  count: stats.lowStockCount,
+                })}
               </Text>
             </Pressable>
           )}
@@ -75,7 +81,7 @@ export const PantryAlertBar: React.FC<PantryAlertBarProps> = ({
             onPress={onAnalyticsPress}
             hitSlop={8}
             accessibilityRole="button"
-            accessibilityLabel="View analytics"
+            accessibilityLabel={t('pantryScreen.analyticsAccessibility')}
           >
             <Icon name="bar-chart-outline" size={18} tone="textTertiary" />
           </Pressable>

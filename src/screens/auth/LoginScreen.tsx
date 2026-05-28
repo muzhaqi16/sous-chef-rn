@@ -13,6 +13,7 @@ import { EmailInput } from '#components/atoms/EmailInput';
 import { PasswordInput } from '#components/atoms/PasswordInput';
 import { RememberMeModal } from '#components/organisms/RememberMeModal';
 import { getLoginValidationSchema } from '#/utils/validation/auth';
+import { logValidationErrors } from '#/utils/validation/common';
 import { type LoginInput } from '#/graphql/generated/schemaTypes';
 import { useAuth } from '#hooks/auth/useAuth';
 import { useAuthNavigation } from '#hooks/navigation/useAuthNavigation';
@@ -217,7 +218,7 @@ export function LoginScreen(): React.JSX.Element {
         }}
         submitText={isLoggingIn ? t('auth.loggingIn') : t('auth.logIn')}
         submitButtonTestID="login-submit-button"
-        onSubmit={form.handleSubmit(onSubmit)}
+        onSubmit={form.handleSubmit(onSubmit, logValidationErrors)}
         footerText={t('auth.noAccount')}
         footerLinkText={t('auth.signUp')}
         footerLinkTestID="login-signup-link"
