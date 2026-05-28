@@ -126,6 +126,13 @@
       "NotFoundError",
       "ValidationError"
     ],
+    "ApproveAndMergeResult": [
+      "ApproveAndMergePayload",
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "ValidationError"
+    ],
     "ApproveItemResult": [
       "ApproveItemPayload",
       "ConflictError",
@@ -938,6 +945,13 @@
       "ConflictError",
       "ForbiddenError",
       "MarkRecipeAsCookedPayload",
+      "NotFoundError",
+      "ValidationError"
+    ],
+    "MergeItemsResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "MergeItemsPayload",
       "NotFoundError",
       "ValidationError"
     ],

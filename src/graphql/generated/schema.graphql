@@ -562,6 +562,21 @@ enum AppealStatus {
   WITHDRAWN
 }
 
+"""
+Approve a primary item and merge the given secondary duplicates into it,
+atomically.
+"""
+input ApproveAndMergeInput {
+  primaryItemId: ID!
+  secondaryItemIds: [ID!]!
+}
+
+type ApproveAndMergePayload {
+  item: Item!
+}
+
+union ApproveAndMergeResult = ApproveAndMergePayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
+
 input ApproveItemInput {
   itemId: ID!
 }
@@ -2995,6 +3010,12 @@ enum DisplayFormat {
   MIXED
 }
 
+"""An item that is a UPC-duplicate of another, with its reference counts."""
+type DuplicateItem {
+  item: Item!
+  references: ItemReferenceCounts!
+}
+
 input DuplicateMealPlanInput {
   mealPlanId: ID!
   newEndDate: DateTime!
@@ -4085,6 +4106,19 @@ type ItemCreation {
   user: User!
 }
 
+"""A cluster of items that share a UPC."""
+type ItemDuplicateCluster {
+  items: [DuplicateItem!]!
+  upc: String!
+}
+
+"""A page of duplicate clusters (offset paginated)."""
+type ItemDuplicateClusterPage {
+  clusters: [ItemDuplicateCluster!]!
+  hasMore: Boolean!
+  totalCount: Int!
+}
+
 """Item connection for pagination (Relay spec)"""
 type ItemEdge implements Edge {
   cursor: String!
@@ -4207,6 +4241,16 @@ type ItemPriceHistoryEdge implements Edge {
 input ItemPriceHistoryOrderBy {
   createdAt: SortOrder
   price: SortOrder
+}
+
+"""
+Number of records that reference an item, used to gauge the impact of a merge.
+"""
+type ItemReferenceCounts {
+  pantryItems: Int!
+  purchases: Int!
+  recipeIngredients: Int!
+  shoppingListItems: Int!
 }
 
 enum ItemSortField {
@@ -5240,6 +5284,21 @@ type MembershipUpdatePayload {
   userId: ID!
 }
 
+"""
+Merge one or more secondary items into a primary. References on the
+secondaries are retargeted onto the primary and the secondaries are deleted.
+"""
+input MergeItemsInput {
+  primaryItemId: ID!
+  secondaryItemIds: [ID!]!
+}
+
+type MergeItemsPayload {
+  item: Item!
+}
+
+union MergeItemsResult = ConflictError | ForbiddenError | MergeItemsPayload | NotFoundError | ValidationError
+
 enum MfaMethod {
   BIOMETRIC
   EMAIL
@@ -5445,6 +5504,11 @@ type Mutation {
   adminUpdateItem(input: UpdateItemInput!): AdminUpdateItemResult!
   """Admin: Update any recipe (bypasses ownership restrictions)"""
   adminUpdateRecipe(input: UpdateRecipeInput!): AdminUpdateRecipeResult!
+  """
+  Approve a primary item for public visibility and merge the given secondary
+  duplicates into it, atomically.
+  """
+  approveAndMerge(input: ApproveAndMergeInput!): ApproveAndMergeResult!
   """Approve a user-created item for public visibility"""
   approveItem(input: ApproveItemInput!): ApproveItemResult!
   """Archive a shopping list."""
@@ -5719,6 +5783,13 @@ type Mutation {
   markPantryItemExpired(input: MarkPantryItemExpiredInput!): MarkPantryItemExpiredResult!
   """Mark recipe as cooked and optionally deduct from pantry"""
   markRecipeAsCooked(input: MarkRecipeAsCookedInput!): MarkRecipeAsCookedResult!
+  """
+  Merge one or more secondary items into a primary item. All references
+  (pantry, purchases, shopping lists, recipes, frequencies, etc.) are
+  retargeted onto the primary, missing fields are absorbed, and the
+  secondaries are hard-deleted.
+  """
+  mergeItems(input: MergeItemsInput!): MergeItemsResult!
   """
   Move all purchased items from a shopping list to the home's default pantry.
   Only available for shopping lists linked to a home.
@@ -7408,6 +7479,17 @@ type Query {
   Returns both stored conversions and calculable standard conversions
   """
   itemConversions(includeStandard: Boolean, itemId: ID!): [ItemUnitConversion!]!
+  """
+  List clusters of items that share a UPC, for duplicate review. Set
+  pendingOnly to restrict to clusters that contain an unapproved item.
+  Moderator only.
+  """
+  itemDuplicateClusters(pendingOnly: Boolean, skip: Int, take: Int): ItemDuplicateClusterPage!
+  """
+  Find non-deleted items that share a UPC (primary or alternate) with the
+  given item. Used to surface duplicates during approval. Moderator only.
+  """
+  itemUpcDuplicates(itemId: ID!): [DuplicateItem!]!
   """
   List items with filtering and cursor-based pagination (Relay spec).
   Use filters for UPC, SKU, or external ID lookups:

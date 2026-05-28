@@ -434,6 +434,22 @@ export enum AppealStatus {
   Withdrawn = 'WITHDRAWN'
 }
 
+/**
+ * Approve a primary item and merge the given secondary duplicates into it,
+ * atomically.
+ */
+export type ApproveAndMergeInput = {
+  primaryItemId: Scalars['ID']['input'];
+  secondaryItemIds: Array<Scalars['ID']['input']>;
+};
+
+export type ApproveAndMergePayload = {
+  __typename: 'ApproveAndMergePayload';
+  item: Item;
+};
+
+export type ApproveAndMergeResult = ApproveAndMergePayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
+
 export type ApproveItemInput = {
   itemId: Scalars['ID']['input'];
 };
@@ -2980,6 +2996,13 @@ export enum DisplayFormat {
   Mixed = 'MIXED'
 }
 
+/** An item that is a UPC-duplicate of another, with its reference counts. */
+export type DuplicateItem = {
+  __typename: 'DuplicateItem';
+  item: Item;
+  references: ItemReferenceCounts;
+};
+
 export type DuplicateMealPlanInput = {
   mealPlanId: Scalars['ID']['input'];
   newEndDate: Scalars['DateTime']['input'];
@@ -4251,6 +4274,21 @@ export type ItemCreation = {
   user: User;
 };
 
+/** A cluster of items that share a UPC. */
+export type ItemDuplicateCluster = {
+  __typename: 'ItemDuplicateCluster';
+  items: Array<DuplicateItem>;
+  upc: Scalars['String']['output'];
+};
+
+/** A page of duplicate clusters (offset paginated). */
+export type ItemDuplicateClusterPage = {
+  __typename: 'ItemDuplicateClusterPage';
+  clusters: Array<ItemDuplicateCluster>;
+  hasMore: Scalars['Boolean']['output'];
+  totalCount: Scalars['Int']['output'];
+};
+
 /** Item connection for pagination (Relay spec) */
 export type ItemEdge = Edge & {
   __typename: 'ItemEdge';
@@ -4376,6 +4414,15 @@ export type ItemPriceHistoryEdge = Edge & {
 export type ItemPriceHistoryOrderBy = {
   createdAt?: InputMaybe<SortOrder>;
   price?: InputMaybe<SortOrder>;
+};
+
+/** Number of records that reference an item, used to gauge the impact of a merge. */
+export type ItemReferenceCounts = {
+  __typename: 'ItemReferenceCounts';
+  pantryItems: Scalars['Int']['output'];
+  purchases: Scalars['Int']['output'];
+  recipeIngredients: Scalars['Int']['output'];
+  shoppingListItems: Scalars['Int']['output'];
 };
 
 export enum ItemSortField {
@@ -5463,6 +5510,22 @@ export type MembershipUpdatePayload = {
   userId: Scalars['ID']['output'];
 };
 
+/**
+ * Merge one or more secondary items into a primary. References on the
+ * secondaries are retargeted onto the primary and the secondaries are deleted.
+ */
+export type MergeItemsInput = {
+  primaryItemId: Scalars['ID']['input'];
+  secondaryItemIds: Array<Scalars['ID']['input']>;
+};
+
+export type MergeItemsPayload = {
+  __typename: 'MergeItemsPayload';
+  item: Item;
+};
+
+export type MergeItemsResult = ConflictError | ForbiddenError | MergeItemsPayload | NotFoundError | ValidationError;
+
 export enum MfaMethod {
   Biometric = 'BIOMETRIC',
   Email = 'EMAIL',
@@ -5667,6 +5730,11 @@ export type Mutation = {
   adminUpdateItem: AdminUpdateItemResult;
   /** Admin: Update any recipe (bypasses ownership restrictions) */
   adminUpdateRecipe: AdminUpdateRecipeResult;
+  /**
+   * Approve a primary item for public visibility and merge the given secondary
+   * duplicates into it, atomically.
+   */
+  approveAndMerge: ApproveAndMergeResult;
   /** Approve a user-created item for public visibility */
   approveItem: ApproveItemResult;
   /** Archive a shopping list. */
@@ -5939,6 +6007,13 @@ export type Mutation = {
   markPantryItemExpired: MarkPantryItemExpiredResult;
   /** Mark recipe as cooked and optionally deduct from pantry */
   markRecipeAsCooked: MarkRecipeAsCookedResult;
+  /**
+   * Merge one or more secondary items into a primary item. All references
+   * (pantry, purchases, shopping lists, recipes, frequencies, etc.) are
+   * retargeted onto the primary, missing fields are absorbed, and the
+   * secondaries are hard-deleted.
+   */
+  mergeItems: MergeItemsResult;
   /**
    * Move all purchased items from a shopping list to the home's default pantry.
    * Only available for shopping lists linked to a home.
@@ -6456,6 +6531,19 @@ export type MutationAdminUpdateItemArgs = {
  */
 export type MutationAdminUpdateRecipeArgs = {
   input: UpdateRecipeInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
+export type MutationApproveAndMergeArgs = {
+  input: ApproveAndMergeInput;
 };
 
 
@@ -7873,6 +7961,19 @@ export type MutationMarkPantryItemExpiredArgs = {
  */
 export type MutationMarkRecipeAsCookedArgs = {
   input: MarkRecipeAsCookedInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
+export type MutationMergeItemsArgs = {
+  input: MergeItemsInput;
 };
 
 
@@ -10685,6 +10786,17 @@ export type Query = {
    */
   itemConversions: Array<ItemUnitConversion>;
   /**
+   * List clusters of items that share a UPC, for duplicate review. Set
+   * pendingOnly to restrict to clusters that contain an unapproved item.
+   * Moderator only.
+   */
+  itemDuplicateClusters: ItemDuplicateClusterPage;
+  /**
+   * Find non-deleted items that share a UPC (primary or alternate) with the
+   * given item. Used to surface duplicates during approval. Moderator only.
+   */
+  itemUpcDuplicates: Array<DuplicateItem>;
+  /**
    * List items with filtering and cursor-based pagination (Relay spec).
    * Use filters for UPC, SKU, or external ID lookups:
    * - items(filters: { upc, upcFormat }) - UPC/barcode lookup
@@ -11148,6 +11260,18 @@ export type QueryItemArgs = {
 
 export type QueryItemConversionsArgs = {
   includeStandard?: InputMaybe<Scalars['Boolean']['input']>;
+  itemId: Scalars['ID']['input'];
+};
+
+
+export type QueryItemDuplicateClustersArgs = {
+  pendingOnly?: InputMaybe<Scalars['Boolean']['input']>;
+  skip?: InputMaybe<Scalars['Int']['input']>;
+  take?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+export type QueryItemUpcDuplicatesArgs = {
   itemId: Scalars['ID']['input'];
 };
 
