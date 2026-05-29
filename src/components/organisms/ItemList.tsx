@@ -1,11 +1,11 @@
 import React, { useDeferredValue, useEffect, useRef, useState } from 'react';
 import {
   View,
-  RefreshControl,
   type NativeSyntheticEvent,
   type NativeScrollEvent,
   ScrollView,
 } from 'react-native';
+import { ThemedRefreshControl } from '#components/atoms/themedComponents';
 import {
   FlashList,
   type FlashListRef,
@@ -17,6 +17,7 @@ import { ItemCard } from './ItemCard';
 import { AnimatedCellRenderer } from '#components/atoms/AnimatedCellRenderer';
 import { IconName } from '#/utils/iconUtils';
 import { getTabBarBottomPadding } from '#constants/layout';
+import type { SwipeableRef } from '#components/molecules/SwipeableItem/types';
 
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 import { CachedImage, preloadImages } from '#components/atoms/CachedImage';
@@ -117,11 +118,17 @@ interface ItemListProps {
   onItemWaste?: (id: string) => void;
   onItemRestock?: (id: string) => void;
   onRefresh?: () => Promise<void>;
-  onSwipeableWillOpen?: (ref: any) => void;
+  onSwipeableWillOpen?: (ref: SwipeableRef) => void;
   onEndReached?: () => void;
   onEndReachedThreshold?: number;
-  ListHeaderComponent?: React.ComponentType<any> | React.ReactElement | null;
-  ListFooterComponent?: React.ComponentType<any> | React.ReactElement | null;
+  ListHeaderComponent?:
+    | React.ComponentType<Record<string, never>>
+    | React.ReactElement
+    | null;
+  ListFooterComponent?:
+    | React.ComponentType<Record<string, never>>
+    | React.ReactElement
+    | null;
   testIDPrefix?: string;
   onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
   onScrollEndDrag?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
@@ -243,7 +250,10 @@ export const ItemList: React.FC<ItemListProps> = ({
         scrollEventThrottle={scrollEventThrottle}
         refreshControl={
           onRefresh ? (
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+            <ThemedRefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+            />
           ) : undefined
         }
       >
@@ -274,7 +284,10 @@ export const ItemList: React.FC<ItemListProps> = ({
         scrollEventThrottle={scrollEventThrottle}
         refreshControl={
           onRefresh ? (
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+            <ThemedRefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+            />
           ) : undefined
         }
         renderItem={renderItem}

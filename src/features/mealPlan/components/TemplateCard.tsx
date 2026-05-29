@@ -71,28 +71,20 @@ const TemplateCardComponent: React.FC<TemplateCardProps> = ({
 
       <View style={styles.metaRow}>
         <View style={styles.metaItem}>
-          <Icon
-            name="calendar-outline"
-            size={14}
-            color={styles.metaIcon.color}
-          />
+          <Icon name="calendar-outline" size={14} tone="textTertiary" />
           <Text size="sm" tone="secondary">
             {t('templateCard.durationDays', { count: template.durationDays })}
           </Text>
         </View>
         <View style={styles.metaItem}>
-          <Icon name="people-outline" size={14} color={styles.metaIcon.color} />
+          <Icon name="people-outline" size={14} tone="textTertiary" />
           <Text size="sm" tone="secondary">
             {t('templateCard.servings', { count: template.defaultServings })}
           </Text>
         </View>
         {!!template.home?.name && (
           <View style={styles.homeBadge}>
-            <Icon
-              name="home-outline"
-              size={12}
-              color={styles.homeBadgeText.color}
-            />
+            <Icon name="home-outline" size={12} tone="textSecondary" />
             <Text size="xs" tone="secondary">
               {template.home.name}
             </Text>
@@ -166,9 +158,6 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     gap: theme.spacing.xs,
   },
-  metaIcon: {
-    color: theme.colors.textTertiary,
-  },
   homeBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -177,9 +166,6 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: 2,
     borderRadius: theme.radii.sm,
     backgroundColor: theme.colors.surfaceVariant,
-  },
-  homeBadgeText: {
-    color: theme.colors.textSecondary,
   },
   categoryBadge: {
     marginLeft: 'auto',

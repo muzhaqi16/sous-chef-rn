@@ -25,11 +25,11 @@ export interface UIState {
 
   // Form states
   activeFormId: string | null;
-  formData: Record<string, any>;
+  formData: Record<string, Record<string, unknown>>;
 
   // Search and filter states
   globalSearchQuery: string;
-  activeFilters: Record<string, any>;
+  activeFilters: Record<string, unknown>;
 
   // Toast and notification states
   toastMessage: string | null;
@@ -58,11 +58,14 @@ export interface UIState {
   setBottomSheetVisible: (visible: boolean) => void;
   setBottomSheetIndex: (index: number) => void;
 
-  setActiveForm: (formId: string | null, data?: any) => void;
-  updateFormData: (formId: string, data: any) => void;
+  setActiveForm: (
+    formId: string | null,
+    data?: Record<string, unknown>,
+  ) => void;
+  updateFormData: (formId: string, data: Record<string, unknown>) => void;
   clearFormData: (formId: string) => void;
   setGlobalSearchQuery: (query: string) => void;
-  setActiveFilters: (filters: Record<string, any>) => void;
+  setActiveFilters: (filters: Record<string, unknown>) => void;
   setPendingPantryScrollToTop: (pending: boolean) => void;
   bumpTutorialResetGeneration: () => void;
   showToast: (

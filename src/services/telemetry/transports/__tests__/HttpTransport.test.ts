@@ -11,6 +11,7 @@ const makeConfig = (overrides?: Partial<TelemetryConfig>): TelemetryConfig => ({
   enableMetrics: true,
   enableLogs: true,
   enableConsoleInDev: false,
+  minLogLevel: 'debug',
   appName: 'test-app',
   environment: 'test',
   platform: 'ios',
@@ -102,9 +103,38 @@ describe('HttpTransport', () => {
       const logRecords = body.resourceLogs[0].scopeLogs[0].logRecords;
       expect(logRecords).toHaveLength(1);
       expect(logRecords[0].severityText).toBe('INFO');
+      expect(logRecords[0].severityNumber).toBe(9);
 
       const parsed = JSON.parse(logRecords[0].body.stringValue);
       expect(parsed.message).toBe('test log');
+      // `level` must be in the body so LogQL `| json | level="..."` works.
+      expect(parsed.level).toBe('info');
+      // timeUnixNano derived from the record's own timestamp (2024-01-01T00:00:00Z),
+      // not the flush time, so Loki preserves per-event ordering.
+      expect(logRecords[0].timeUnixNano).toBe('1704067200000000000');
+    });
+
+    it('throws on a non-ok response so the service re-buffers instead of losing logs', async () => {
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error',
+        text: jest.fn().mockResolvedValue('boom'),
+      });
+      const transport = new HttpTransport(makeConfig());
+
+      await expect(transport.sendLogs(makeLogs())).rejects.toThrow(
+        /OTLP logs HTTP 500/,
+      );
+    });
+
+    it('throws on a fetch rejection', async () => {
+      mockFetch.mockRejectedValue(new Error('Network down'));
+      const transport = new HttpTransport(makeConfig());
+
+      await expect(transport.sendLogs(makeLogs())).rejects.toThrow(
+        'Network down',
+      );
     });
 
     it('includes Basic auth header when credentials present', async () => {
@@ -161,7 +191,7 @@ describe('HttpTransport', () => {
       expect(attrs['service.instance.id']).toBe('ios_device_test123');
     });
 
-    it('serializes counters as OTLP Sum with DELTA temporality', async () => {
+    it('serializes counters as OTLP Sum with CUMULATIVE temporality', async () => {
       const transport = new HttpTransport(makeConfig());
 
       await transport.sendMetrics([
@@ -269,34 +299,45 @@ describe('HttpTransport', () => {
       expect(counts.slice(6)).toEqual([0, 0, 0, 0, 0]); // rest empty
     });
 
-    it('accumulates counters across calls before flush', async () => {
+    it('accumulates counters cumulatively across calls (never resets on flush)', async () => {
       const transport = new HttpTransport(makeConfig());
 
-      // First batch — send succeeds and clears accumulator
+      // First send: value 5
       await transport.sendMetrics(makeMetrics('counter'));
 
       mockFetch.mockClear();
       mockFetch.mockResolvedValue({ ok: true, status: 200, text: jest.fn() });
 
-      // Second batch — fresh accumulation after clear
+      // Second send: another 5 — the running total is now 10 (cumulative).
       await transport.sendMetrics(makeMetrics('counter'));
 
       const body = parseOtlpBody(mockFetch.mock.calls[0]);
       const metrics = getOtlpMetrics(body);
       const counter = metrics.find((m: any) => m.name === 'test_metric_total');
-      expect(counter.sum.dataPoints[0].asDouble).toBe(5);
+      expect(counter.sum.dataPoints[0].asDouble).toBe(10);
     });
 
-    it('clears accumulators after successful send', async () => {
+    it('re-sends the cumulative snapshot on a later flush (does not clear on success)', async () => {
       const transport = new HttpTransport(makeConfig());
 
-      await transport.sendMetrics(makeMetrics('gauge'));
+      await transport.sendMetrics(makeMetrics('gauge')); // value 5
 
-      // First send succeeds, accumulators cleared
       mockFetch.mockClear();
       mockFetch.mockResolvedValue({ ok: true, status: 200, text: jest.fn() });
 
-      // Send empty metrics — nothing accumulated
+      // Empty batch, but cumulative state is retained, so the snapshot re-ships.
+      await transport.sendMetrics([]);
+
+      expect(mockFetch).toHaveBeenCalled();
+      const body = parseOtlpBody(mockFetch.mock.calls[0]);
+      const metrics = getOtlpMetrics(body);
+      const gauge = metrics.find((m: any) => m.name === 'test_metric_total');
+      expect(gauge.gauge.dataPoints[0].asDouble).toBe(5);
+    });
+
+    it('sends nothing when no metrics have ever been recorded', async () => {
+      const transport = new HttpTransport(makeConfig());
+
       await transport.sendMetrics([]);
 
       expect(mockFetch).not.toHaveBeenCalled();
@@ -421,6 +462,36 @@ describe('HttpTransport', () => {
       expect(counts[0]).toBe(1); // 10 → (-Inf, 10]
       expect(counts[9]).toBe(1); // 10000 → (5000, 10000]
       expect(counts[10]).toBe(1); // 99999 → (10000, +Inf)
+    });
+
+    it('uses per-metric explicit bounds when provided', async () => {
+      const transport = new HttpTransport(makeConfig());
+
+      await transport.sendMetrics([
+        {
+          name: 'coverage_ratio',
+          value: 0.85,
+          labels: {},
+          timestamp: Date.now(),
+          type: 'histogram',
+          bounds: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
+        },
+      ]);
+
+      const body = parseOtlpBody(mockFetch.mock.calls[0]);
+      const histogram = getOtlpMetrics(body).find(
+        (m: any) => m.name === 'coverage_ratio',
+      );
+      const dp = histogram.histogram.dataPoints[0];
+
+      expect(dp.explicitBounds).toEqual([
+        0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0,
+      ]);
+      expect(dp.sum).toBe(0.85);
+      expect(dp.count).toBe('1');
+      const counts = dp.bucketCounts.map(Number);
+      expect(counts).toHaveLength(11); // 10 bounds + overflow
+      expect(counts[8]).toBe(1); // 0.85 ≤ 0.9 → bucket index 8
     });
   });
 });

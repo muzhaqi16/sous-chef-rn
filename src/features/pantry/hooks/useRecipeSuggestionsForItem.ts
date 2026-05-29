@@ -58,7 +58,7 @@ export function useRecipeSuggestionsForItem(
       },
       setLoadingRecipes,
       (error: unknown) => {
-        if ((error as any)?.name === 'AbortError') return;
+        if (error instanceof Error && error.name === 'AbortError') return;
         errorService.reportError(error, {
           operation: 'useRecipeSuggestionsForItem.fetch',
         });

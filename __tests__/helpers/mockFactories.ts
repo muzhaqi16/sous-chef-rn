@@ -6,7 +6,10 @@ import {
   StorageState,
   StorageType,
   CollaboratorStatus,
+  ProfileVisibility,
 } from '#/graphql/generated/schemaTypes';
+import type { GetUserProfileQuery } from '#operations/auth/user.generated';
+import type { GetHomesQuery } from '#operations/home/home.generated';
 
 let idCounter = 0;
 const nextId = () => `test-id-${++idCounter}`;
@@ -160,19 +163,10 @@ interface MockCollaborator {
   canMarkPurchased: boolean;
 }
 
-interface MockProfile {
-  firstName: string;
-  lastName: string;
-  displayName: string;
-  bio: string | null;
-  phone: string | null;
-  website: string | null;
-  dateOfBirth: string | null;
-  avatar: string | null;
-  coverImage: string | null;
-  gender: string | null;
-  profileVisibility: string;
-}
+// The full generated UserProfile shape that consumers like
+// useConfigurableSettings expect. Derived from GetUserProfileQuery so it stays
+// in sync with codegen — adding a profile field to the schema flags this factory.
+type MockProfile = NonNullable<NonNullable<GetUserProfileQuery['me']>['profile']>;
 
 interface MockMealPlanItem {
   id: string;
@@ -322,6 +316,47 @@ export function createMockHome(overrides?: Partial<MockHome>): MockHome {
     membersConnection: createMockConnection([]),
     invitesConnection: createMockConnection([]),
     pantriesConnection: createMockConnection([]),
+    ...overrides,
+  };
+}
+
+// The GetHomes connection-node shape consumed by the home hooks
+// (useHomeSelection, useHomeMutations, useDefaultHome). Derived from the
+// generated query so it stays in sync; `pantries` is the optional flat shape
+// useHomeSelection's HomeNode adds on top of the node.
+type MockHomeNode = GetHomesQuery['homes']['edges'][number]['node'] & {
+  pantries?: Array<{ id: string; isDefault?: boolean }>;
+};
+
+export function createMockHomeNode(
+  overrides?: Partial<MockHomeNode>,
+): MockHomeNode {
+  return {
+    __typename: 'Home',
+    id: nextId(),
+    name: 'Test Home',
+    isDefault: false,
+    version: 1,
+    myMembership: {
+      __typename: 'Membership',
+      id: nextId(),
+      role: MembershipRole.Member,
+      canManageHome: true,
+      canViewPantry: true,
+      canEditPantry: true,
+      canAddItems: true,
+      canRemoveItems: true,
+      canInviteOthers: true,
+    },
+    pantriesConnection: {
+      __typename: 'PantryConnection',
+      totalCount: 0,
+      edges: [],
+    },
+    membersConnection: {
+      __typename: 'MembershipConnection',
+      totalCount: 0,
+    },
     ...overrides,
   };
 }
@@ -476,6 +511,9 @@ export function createMockGraphQLError(
 
 export function createMockProfile(overrides?: Partial<MockProfile>): MockProfile {
   return {
+    __typename: 'UserProfile',
+    id: nextId(),
+    userId: nextId(),
     firstName: 'Test',
     lastName: 'User',
     displayName: 'testuser',
@@ -486,7 +524,11 @@ export function createMockProfile(overrides?: Partial<MockProfile>): MockProfile
     avatar: null,
     coverImage: null,
     gender: null,
-    profileVisibility: 'PUBLIC',
+    profileVisibility: ProfileVisibility.Public,
+    showEmail: false,
+    showPhone: false,
+    createdAt: '2025-01-01T00:00:00.000Z',
+    updatedAt: '2025-01-01T00:00:00.000Z',
     ...overrides,
   };
 }

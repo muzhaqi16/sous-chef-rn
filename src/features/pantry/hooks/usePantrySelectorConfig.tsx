@@ -5,13 +5,19 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import type {
   SelectorConfig,
+  SelectableItem,
   ItemSelectorRef,
 } from '#components/organisms/AnimatedItemSelector/types';
 import { SelectorItemContainer } from '#components/organisms/AnimatedItemSelector/SelectorItemContainer';
 import { Text } from '#components/atoms/Text';
 
+// Minimal shape the selector reads off each pantry (id + display name).
+interface PantrySelectorItem extends SelectableItem {
+  name?: string;
+}
+
 interface UsePantrySelectorConfigOptions {
-  pantries: any[];
+  pantries: PantrySelectorItem[];
   selectedPantryId?: string;
   loading: boolean;
   setSelectedPantryId: (id: string) => void;
@@ -22,7 +28,7 @@ interface UsePantrySelectorConfigOptions {
 
 export function usePantrySelectorConfig(
   options: UsePantrySelectorConfigOptions,
-): SelectorConfig<any> {
+): SelectorConfig<PantrySelectorItem> {
   const { t } = useTranslation();
   const {
     pantries,
@@ -35,7 +41,7 @@ export function usePantrySelectorConfig(
   } = options;
 
   const renderPantryItem = (
-    item: any,
+    item: PantrySelectorItem,
     isSelected: boolean,
     onPress: () => void,
   ) => {

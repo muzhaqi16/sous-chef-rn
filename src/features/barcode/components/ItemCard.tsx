@@ -5,6 +5,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
+import { formatQuantity } from '#utils/formatQuantity';
 
 interface Item {
   id: string;
@@ -25,11 +26,6 @@ interface ItemCardProps {
   onEditItem?: () => void;
   onCreateVariant?: () => void;
 }
-
-const formatWeight = (value: number): string => {
-  const rounded = Math.round(value * 100) / 100;
-  return parseFloat(rounded.toFixed(2)).toString();
-};
 
 export const ItemCard: React.FC<ItemCardProps> = ({
   item,
@@ -64,7 +60,7 @@ export const ItemCard: React.FC<ItemCardProps> = ({
         )}
         {item.netWeight != null && (
           <Text size="md" tone="secondary">
-            {formatWeight(item.netWeight)}
+            {formatQuantity(item.netWeight)}
             {item.displayUnit?.name ? ` ${item.displayUnit.name}` : ''}
           </Text>
         )}

@@ -89,6 +89,20 @@ interface NavigationStateManagerState {
   completeLogout: () => boolean;
 }
 
+// Minimal shape of the persisted user touched by the v8 → v9 migration.
+interface MigratableUser {
+  firstName?: string | null;
+  lastName?: string | null;
+  name?: string | null;
+  profilePicture?: string | null;
+  profile?: {
+    firstName?: string | null;
+    lastName?: string | null;
+    displayName?: string | null;
+    avatar?: string | null;
+  } | null;
+}
+
 export type RootState = AuthState &
   PreferencesState &
   AppState &
@@ -152,7 +166,7 @@ export const useStore = create<RootState>()(
         version: 9,
         storage: createJSONStorage(() => zustandStorage),
         // Do store migrations here
-        migrate: (persistedState: any, version: number) => {
+        migrate: (persistedState: unknown, version: number) => {
           // Migration from version 6 to 7: Clear home initialization flags
           // These are now transient and should not be persisted
           if (version < 7) {
@@ -163,7 +177,8 @@ export const useStore = create<RootState>()(
           // Existing users have user.profile.firstName etc. from the old schema, but
           // the greeting reads user.firstName / user.name directly.
           if (version < 9) {
-            const user = persistedState?.user;
+            const state = persistedState as { user?: MigratableUser } | null;
+            const user = state?.user;
             const profile = user?.profile;
             if (user && profile) {
               user.firstName = profile.firstName ?? user.firstName;

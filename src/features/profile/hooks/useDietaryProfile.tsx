@@ -1,6 +1,7 @@
 import { useUser } from '#store/useAppStore';
 import { usePreservedQueryData } from '#/hooks/apollo/usePreservedQueryData';
 import { useMutation, useQuery } from '@apollo/client/react';
+import type { Reference } from '@apollo/client';
 import {
   GetDietaryProfileDocument,
   UpdateDietaryProfileDocument,
@@ -98,15 +99,18 @@ export const useDietaryProfile = () => {
       cache.modify({
         id: cache.identify({ __typename: 'DietaryProfile', id: profile.id }),
         fields: {
-          restrictions(existingRestrictions = [], { toReference, readField }) {
+          restrictions(
+            existingRestrictions: readonly Reference[] = [],
+            { toReference, readField },
+          ) {
             const newRestrictionRef = toReference(newRestriction);
 
             // Check if restriction already exists (prevent duplicates)
             const exists = existingRestrictions.some(
-              (ref: any) => readField('id', ref) === newRestriction.id,
+              ref => readField('id', ref) === newRestriction.id,
             );
 
-            if (exists) return existingRestrictions;
+            if (exists || !newRestrictionRef) return existingRestrictions;
 
             // Add to end of array
             return [...existingRestrictions, newRestrictionRef];
@@ -161,9 +165,12 @@ export const useDietaryProfile = () => {
       cache.modify({
         id: cache.identify({ __typename: 'DietaryProfile', id: profile.id }),
         fields: {
-          restrictions(existingRestrictions = [], { readField }) {
+          restrictions(
+            existingRestrictions: readonly Reference[] = [],
+            { readField },
+          ) {
             return existingRestrictions.filter(
-              (ref: any) => readField('id', ref) !== restrictionId,
+              ref => readField('id', ref) !== restrictionId,
             );
           },
         },

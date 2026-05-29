@@ -26,6 +26,17 @@ import type {
   BlankRiskAssessment,
 } from '#/services/performance/types';
 
+// Explicit histogram bounds for non-latency metrics. The transport default is
+// in milliseconds, which collapses a 0-1 coverage ratio into one bucket and
+// caps multi-minute sessions; these let histogram_quantile resolve real
+// percentiles.
+const COVERAGE_RATIO_BOUNDS = [
+  0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0,
+];
+const SESSION_DURATION_BOUNDS = [
+  1000, 5000, 10000, 30000, 60000, 120000, 300000,
+];
+
 interface UseFlashListPerformanceOptions {
   componentName: string;
   /** ms between periodic reports. 0 = manual only. Default: 10000 */
@@ -114,9 +125,12 @@ export function useFlashListPerformance<T>(
 
       // Production: report session duration on unmount
       const duration = performance.now() - sessionStart;
-      Telemetry.histogram('flashlist_session_duration_ms', duration, {
-        component: options.componentName,
-      });
+      Telemetry.histogram(
+        'flashlist_session_duration_ms',
+        duration,
+        { component: options.componentName },
+        SESSION_DURATION_BOUNDS,
+      );
     };
   }, [
     diagnostics,
@@ -190,9 +204,12 @@ export function useFlashListPerformance<T>(
       lastCoverageReportRef.current = now;
       const coverageRatio =
         expectedCount > 0 ? viewableCount / expectedCount : 1;
-      Telemetry.histogram('flashlist_scroll_coverage_ratio', coverageRatio, {
-        component: options.componentName,
-      });
+      Telemetry.histogram(
+        'flashlist_scroll_coverage_ratio',
+        coverageRatio,
+        { component: options.componentName },
+        COVERAGE_RATIO_BOUNDS,
+      );
     }
 
     // DEV: rAF-deduplicated diagnostics — only record one metric per animation

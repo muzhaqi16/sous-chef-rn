@@ -1,9 +1,25 @@
 import { alertService } from '#/services/alertService';
+import type { useMutation } from '@apollo/client/react';
+import type {
+  CreatePantryMutation,
+  CreatePantryMutationVariables,
+} from '#features/pantry/graphql/pantry.generated';
+
+/** Mutate function returned by `useMutation(CreatePantryDocument)`. */
+export type CreatePantryFn = useMutation.MutationFunction<
+  CreatePantryMutation,
+  CreatePantryMutationVariables
+>;
+
+interface ResourceWithId {
+  id: string;
+  isDefault?: boolean;
+}
 
 // Resource checking helpers
 export const checkExistingResources = async (
-  homes: any[],
-  pantries: any[],
+  homes: ResourceWithId[],
+  pantries: ResourceWithId[],
   callbacks: {
     onComplete: () => void;
     onBothExist: () => void;
@@ -33,7 +49,7 @@ export const checkExistingResources = async (
 export const createPantryForHome = async (
   homeId: string,
   pantryName: string,
-  createPantry: any,
+  createPantry: CreatePantryFn,
   setSelectedPantryId: (id: string) => void,
 ): Promise<boolean> => {
   try {
@@ -50,7 +66,10 @@ export const createPantryForHome = async (
     });
 
     const pantryPayload = result.data?.createPantry;
-    if (pantryPayload?.success && pantryPayload.pantry) {
+    if (
+      pantryPayload?.__typename === 'CreatePantryPayload' &&
+      pantryPayload.pantry
+    ) {
       setSelectedPantryId(pantryPayload.pantry.id);
       return true;
     }

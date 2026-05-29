@@ -1,7 +1,7 @@
 import { SetContextLink } from '@apollo/client/link/context';
 import { jwtDecode } from 'jwt-decode';
 import { useStore } from '#store';
-import Config from 'react-native-config';
+import { env } from '#/config/env';
 import { LogoutCleanup } from '../logoutCleanup';
 import { getDeviceIdSync } from '#/utils/deviceId';
 import { proactiveTokenRefresh } from './refreshToken';
@@ -41,7 +41,7 @@ export const authLink = new SetContextLink(async ({ headers }, operation) => {
   }
 
   // Always include the API key for all requests
-  const apiKey = Config.API_KEY;
+  const apiKey = env.API_KEY;
 
   // Get device ID for subscription self-echo filtering
   // Server includes this in subscription payloads as originatorClientId

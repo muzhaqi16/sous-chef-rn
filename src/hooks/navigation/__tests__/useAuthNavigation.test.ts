@@ -1,5 +1,16 @@
 import { renderHook, act } from '@testing-library/react-native';
 import { useAuthNavigation } from '../useAuthNavigation';
+import type { AuthUserInput } from '#store/slices/authSlice';
+
+function makeUser(overrides?: Partial<AuthUserInput>): AuthUserInput {
+  return {
+    id: 'u1',
+    email: 'user@example.com',
+    emailVerified: true,
+    onBoarded: true,
+    ...overrides,
+  };
+}
 
 // Break circular dependency chain
 jest.mock('../../../apollo/links/tokenScheduler');
@@ -50,13 +61,13 @@ describe('useAuthNavigation', () => {
 
       act(() => {
         result.current.handleSuccessfulLogin({
-          user: { id: 'u1' },
+          user: makeUser(),
           accessToken: 'at',
           refreshToken: 'rt',
         });
       });
 
-      expect(mockSetAuth).toHaveBeenCalledWith({ id: 'u1' }, 'at', 'rt');
+      expect(mockSetAuth).toHaveBeenCalledWith(makeUser(), 'at', 'rt');
     });
 
     it('sets rememberMe when provided', () => {
@@ -64,7 +75,7 @@ describe('useAuthNavigation', () => {
 
       act(() => {
         result.current.handleSuccessfulLogin(
-          { user: { id: 'u1' }, accessToken: 'at', refreshToken: 'rt' },
+          { user: makeUser(), accessToken: 'at', refreshToken: 'rt' },
           true,
         );
       });
@@ -77,7 +88,7 @@ describe('useAuthNavigation', () => {
 
       act(() => {
         result.current.handleSuccessfulLogin({
-          user: { id: 'u1' },
+          user: makeUser(),
           accessToken: 'at',
           refreshToken: 'rt',
         });
@@ -94,7 +105,7 @@ describe('useAuthNavigation', () => {
 
       act(() => {
         result.current.handleSuccessfulLogin(
-          { user: { id: 'u1' }, accessToken: 'at', refreshToken: 'rt' },
+          { user: makeUser(), accessToken: 'at', refreshToken: 'rt' },
           true,
         );
       });
@@ -128,13 +139,17 @@ describe('useAuthNavigation', () => {
 
       act(() => {
         result.current.handleSuccessfulRegistration({
-          user: { id: 'u2' },
+          user: makeUser({ id: 'u2' }),
           accessToken: 'at2',
           refreshToken: 'rt2',
         });
       });
 
-      expect(mockSetAuth).toHaveBeenCalledWith({ id: 'u2' }, 'at2', 'rt2');
+      expect(mockSetAuth).toHaveBeenCalledWith(
+        makeUser({ id: 'u2' }),
+        'at2',
+        'rt2',
+      );
     });
 
     it('marks user as new user in navigation state', () => {
@@ -145,7 +160,11 @@ describe('useAuthNavigation', () => {
 
       act(() => {
         result.current.handleSuccessfulRegistration(
-          { user: { id: 'u2' }, accessToken: 'at2', refreshToken: 'rt2' },
+          {
+            user: makeUser({ id: 'u2' }),
+            accessToken: 'at2',
+            refreshToken: 'rt2',
+          },
           false,
         );
       });
@@ -164,7 +183,11 @@ describe('useAuthNavigation', () => {
 
       act(() => {
         result.current.handleSuccessfulRegistration(
-          { user: { id: 'u2' }, accessToken: 'at2', refreshToken: 'rt2' },
+          {
+            user: makeUser({ id: 'u2' }),
+            accessToken: 'at2',
+            refreshToken: 'rt2',
+          },
           true,
         );
       });

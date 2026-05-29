@@ -107,13 +107,10 @@ export const useDefaultHome = () => {
     } = useStore.getState();
     if (canAttemptQueries && !hasInitialized) {
       setHasInitializedHomeData(true);
-      // Pass network-only override to bypass cache on login
-      // This ensures we get fresh data for the new user, not cached data from previous user
-      // Type assertion needed because generated types are overly strict for queries with no variables
-      // Apollo docs confirm fetchPolicy is valid: https://www.apollographql.com/docs/react/api/react/hooks#uselazyquery
-      (getHomes as (options?: { fetchPolicy?: string }) => void)({
-        fetchPolicy: 'network-only',
-      });
+      // Logout calls client.clearStore(), so on a fresh login this cache-first
+      // read misses and fetches from the network (fresh data for the new user);
+      // on a same-user cold start it paints instantly from the persisted cache.
+      getHomes();
     }
   }, [canAttemptQueries, getHomes]);
 
@@ -129,22 +126,35 @@ export const useDefaultHome = () => {
     };
   };
 
+  // Minimal connection shape getDefaultPantry reads — satisfied by both the
+  // GetHomes node and GetHome's home (both select pantriesConnection).
+  type HomePantries = {
+    pantriesConnection?: {
+      edges?: Array<{
+        node?: { id: string; isDefault?: boolean } | null;
+      } | null>;
+    } | null;
+  };
+
+  // Flat home shape some callers (and tests) hand in instead of the
+  // connection-shaped node.
+  type FlatHome = { pantries?: Array<{ id: string; isDefault?: boolean }> };
+
   // Derive default home from isDefault field (no separate query needed)
   const remoteDefaultHomeId = homesList?.find(h => h.isDefault)?.id ?? null;
 
-  const pantriesOf = (home: HomeNode | undefined) => {
+  const pantriesOf = (home: HomePantries | FlatHome | undefined) => {
     if (!home) return [];
-    const fromConnection = extractNodes(home.pantriesConnection) as Array<{
+    const connection =
+      'pantriesConnection' in home ? home.pantriesConnection : undefined;
+    const fromConnection = extractNodes(connection) as Array<{
       id: string;
       isDefault?: boolean;
     }>;
     if (fromConnection.length) return fromConnection;
-    // Legacy callers (e.g. tests, residual callers passing the old flat shape
-    // from before view-model removal) hand in `{ pantries: [...] }`. Accept it.
-    const flat = (home as { pantries?: unknown }).pantries;
-    return Array.isArray(flat)
-      ? (flat as Array<{ id: string; isDefault?: boolean }>)
-      : [];
+    // Callers passing the flat shape hand in `{ pantries: [...] }`. Accept it.
+    const flat = 'pantries' in home ? home.pantries : undefined;
+    return Array.isArray(flat) ? flat : [];
   };
 
   // Extract default pantry ID (React Compiler auto-memoizes this derivation)
@@ -446,10 +456,13 @@ export const useDefaultHome = () => {
     needsClearing,
   ]);
 
-  // Helper function to get the default pantry from a home (connection-shape).
-  const getDefaultPantry = (homeData: any) => {
-    const home = homeData?.home ?? homeData;
-    const pantries = pantriesOf(home);
+  // Picks a home's default pantry from its pantries connection (or the flat
+  // `{ pantries }` shape). Callers holding a `{ home }` query result pass
+  // `result.home`.
+  const getDefaultPantry = (
+    home: HomePantries | FlatHome | null | undefined,
+  ) => {
+    const pantries = pantriesOf(home ?? undefined);
 
     if (!pantries.length) {
       return null;

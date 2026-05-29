@@ -36,7 +36,7 @@ describe('InfoRow', () => {
       <InfoRow
         label="Budget"
         value={15.5}
-        formatter={(val: number) => `$${val.toFixed(2)}`}
+        formatter={(val: string | number) => `$${Number(val).toFixed(2)}`}
       />,
     );
     expect(screen.getByText('$15.50')).toBeTruthy();

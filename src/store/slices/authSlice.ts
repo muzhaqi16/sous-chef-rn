@@ -72,6 +72,24 @@ export interface User {
   name?: string;
 }
 
+/**
+ * Shape accepted by `setAuth`. The login/register response (the `LoginUser`
+ * fragment) carries a nested `profile` that the persisted `User` doesn't model.
+ * Accept it explicitly so `setAuth` can flatten the profile fields the greeting
+ * reads (`user.firstName` / `user.name`) without an `as any`. Every profile
+ * field is optional — the LoginUser fragment currently only selects
+ * displayName/avatar, so name/lastName flattening is a no-op until the fragment
+ * is extended, but the mapping stays correct either way.
+ */
+export type AuthUserInput = User & {
+  profile?: {
+    displayName?: string | null;
+    avatar?: string | null;
+    firstName?: string | null;
+    lastName?: string | null;
+  } | null;
+};
+
 export interface AuthState {
   // Core auth state
   user: User | null;
@@ -93,7 +111,11 @@ export interface AuthState {
   getIsAuthenticated: () => boolean;
 
   // Actions
-  setAuth: (user: User, accessToken: string, refreshToken: string) => void;
+  setAuth: (
+    user: AuthUserInput,
+    accessToken: string,
+    refreshToken: string,
+  ) => void;
   updateUser: (updates: Partial<User>) => void;
   setTokens: (tokens: { accessToken?: string; refreshToken?: string }) => void;
   setEmailVerified: (verified: boolean) => void;
@@ -142,9 +164,9 @@ export const createAuthSlice: StateCreator<
         state.isHomeSelectionReady = false;
       }
 
-      // Flatten profile fields from login/register GraphQL response so the
+      // Flatten profile fields from the login/register GraphQL response so the
       // greeting can render the user's name immediately without a separate query.
-      const profile = (user as any).profile;
+      const profile = user.profile;
 
       // Normalize email to prevent validation issues (trim whitespace, lowercase)
       state.user = {

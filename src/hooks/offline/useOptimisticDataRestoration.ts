@@ -68,7 +68,7 @@ export function useOptimisticDataRestoration(
             const fieldUpdates = Object.keys(fields).reduce((acc, field) => {
               acc[field] = () => fields[field];
               return acc;
-            }, {} as Record<string, () => any>);
+            }, {} as Record<string, () => unknown>);
 
             // Apply to cache
             cache.modify({
@@ -137,13 +137,11 @@ export function useOptimisticDataRestorationMultiple(
               // This ensures API data (source of truth) is never overwritten by stale optimistic data
               if (cacheId && fields.version) {
                 // Read the current version from cache using readFragment (avoids unnecessary cache broadcasts)
-                const cached = cache.readFragment({
+                const cached = cache.readFragment<{ version?: number }>({
                   id: cacheId,
                   fragment: VERSION_FRAGMENT,
                 });
-                const currentVersion = (cached as any)?.version as
-                  | number
-                  | undefined;
+                const currentVersion = cached?.version;
 
                 // If cache has newer or equal version, skip restoration
                 if (
@@ -164,7 +162,7 @@ export function useOptimisticDataRestorationMultiple(
               const fieldUpdates = Object.keys(fields).reduce((acc, field) => {
                 acc[field] = () => fields[field];
                 return acc;
-              }, {} as Record<string, () => any>);
+              }, {} as Record<string, () => unknown>);
 
               cache.modify({
                 id: cacheId,

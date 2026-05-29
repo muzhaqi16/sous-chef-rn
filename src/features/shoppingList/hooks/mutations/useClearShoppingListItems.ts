@@ -15,29 +15,47 @@ import { useRef } from 'react';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import type { ApolloClient } from '@apollo/client';
 import { ClearShoppingListItemsDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { type ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import {
   clearAllPurchasedItemsFromCache,
   clearAllUnpurchasedItemsFromCache,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
 
+// The mutate function returned by useMutation for the clear operation. The
+// runtime call passes batch variables un-nested (shoppingListId/purchased)
+// rather than under the operation's `input` variable. Reconciling that requires
+// changing the graphql operation/call (cross-module), so the options bag is kept
+// loose here; only `variables` is untyped (see rule on cross-module refactors).
+// `variables` stays `any`: the real useMutation mutate fn requires the strict
+// `{ input }` shape, but the call passes un-nested fields. Bivariant assignment
+// of the real fn to this type is only possible with `any` here; fixing it means
+// changing the graphql operation/call (cross-module, out of scope).
+type ClearMutationFn = (options: {
+  variables: any;
+  update?: () => void;
+}) => Promise<unknown>;
+
+// The hook only reads `id` and the array length from the item lists.
+interface ClearableItem {
+  id: string;
+}
+
 interface UseClearShoppingListItemsOptions {
   listId: string | null | undefined;
-  unpurchasedItems: ShoppingListItemDisplayFragment[];
-  purchasedItems: ShoppingListItemDisplayFragment[];
-  refetch: () => Promise<any>;
+  unpurchasedItems: ClearableItem[];
+  purchasedItems: ClearableItem[];
+  refetch: () => Promise<unknown>;
 }
 
 // --- Module-level helper (outside hook body for React Compiler) ---
 
 async function executeClearItems(
   client: ApolloClient,
-  clearMutation: (options: any) => Promise<any>,
+  clearMutation: ClearMutationFn,
   listId: string,
   purchased: boolean,
   itemIds: string[],
-  refetch: () => Promise<any>,
+  refetch: () => Promise<unknown>,
   isClearingRef: React.RefObject<boolean>,
 ): Promise<void> {
   // 1. IMMEDIATE: Optimistic cache clear (instant UI feedback)

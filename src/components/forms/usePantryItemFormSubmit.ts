@@ -1,6 +1,7 @@
 import { alertService } from '#/services/alertService';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { parseFractionalInput as parseQuantityInput } from '#/utils/fractionUtils';
+import { StorageState } from '#/graphql/generated/schemaTypes';
 import type { UnitSelection } from '#features/pantry/hooks/mutations/types';
 import type { PantryItemForm_PantryItemFragment } from './PantryItemForm.generated';
 
@@ -17,11 +18,41 @@ export interface PantryItemFormData {
   netWeight?: string;
   netWeightUnit?: string;
   netWeightUnitId?: string;
-  storageState: string;
+  storageState: StorageState;
   location: string;
   expirationDate?: Date;
   notes: string;
   category: string;
+}
+
+/** Argument shapes for the mutation primitives, matching this hook's call sites. */
+interface CreatePantryItemArgs {
+  input: PantryItemFormData;
+  pantryId: string;
+  quantityValue: number;
+  unitId: string | null;
+  selectedLocationId: string | null;
+  selectedCategoryId: string | null;
+}
+
+interface UpdatePantryItemFieldsArgs {
+  itemId: string;
+  input: PantryItemFormData;
+  dirtyFields: Record<string, boolean>;
+  selectedLocationId: string | null;
+  selectedBrandId: string | null;
+  trackingUnit?: UnitSelection;
+  selectedStorageLocation: { id: string; name: string; type: string } | null;
+  unitSymbol?: string;
+}
+
+interface UpdateQuantityArgs {
+  itemId: string;
+  quantityInput: string;
+  quantityValue: number;
+  unitId: string | null;
+  unitSymbol: string;
+  trackingUnit: UnitSelection;
 }
 
 export interface UsePantryItemFormSubmitParams {
@@ -38,9 +69,9 @@ export interface UsePantryItemFormSubmitParams {
   selectedCategoryId: string | null;
   selectedStorageLocation: { id: string; name: string; type: string } | null;
   /** Mutation primitives. */
-  createPantryItem: (args: any) => Promise<unknown>;
-  updatePantryItemFields: (args: any) => unknown;
-  updateQuantity: (args: any) => unknown;
+  createPantryItem: (args: CreatePantryItemArgs) => Promise<unknown>;
+  updatePantryItemFields: (args: UpdatePantryItemFieldsArgs) => unknown;
+  updateQuantity: (args: UpdateQuantityArgs) => unknown;
   resolveUnitId: (id: string | null, symbol: string) => Promise<string | null>;
   /** Callback after a no-op edit. */
   onSuccess?: () => void;
@@ -67,6 +98,9 @@ export function usePantryItemFormSubmit(params: UsePantryItemFormSubmitParams) {
       );
       return;
     }
+    // Capture the narrowed (non-null) id so it survives into the async closure
+    // below, where property-access narrowing on `params` is not retained.
+    const currentPantryId = params.currentPantryId;
 
     executeMutation(
       async () => {
@@ -87,7 +121,7 @@ export function usePantryItemFormSubmit(params: UsePantryItemFormSubmitParams) {
         if (params.mode === 'add') {
           await params.createPantryItem({
             input: data,
-            pantryId: params.currentPantryId,
+            pantryId: currentPantryId,
             quantityValue,
             unitId,
             selectedLocationId: params.selectedLocationId,

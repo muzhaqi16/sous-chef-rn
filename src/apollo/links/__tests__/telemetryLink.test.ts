@@ -184,6 +184,62 @@ describe('createTelemetryLink', () => {
 
       jest.spyOn(Math, 'random').mockRestore();
     });
+
+    it('weights counters by 1/sampleRate in production so totals are not under-counted', done => {
+      mockedEnvironment.shouldEnableAnalytics.mockReturnValue(true);
+      mockedEnvironment.isDevelopment.mockReturnValue(false);
+      // Sampled in (0.05 < 0.1). Each sampled op stands for 10 real ones.
+      jest.spyOn(Math, 'random').mockReturnValue(0.05);
+
+      const link = createTelemetryLink();
+      const operation = createMockOperation('TestQuery');
+      const forward = createMockForward();
+
+      const result = (link as any).request(operation, forward);
+      result.subscribe({
+        next: () => {},
+        complete: () => {
+          expect(Telemetry.increment).toHaveBeenCalledWith(
+            'graphql_requests_total',
+            10,
+            expect.objectContaining({ type: 'query', name: 'TestQuery' }),
+          );
+          jest.spyOn(Math, 'random').mockRestore();
+          done();
+        },
+      });
+    });
+
+    it('weights graphql_errors_total by errors.length / sampleRate in production', done => {
+      mockedEnvironment.shouldEnableAnalytics.mockReturnValue(true);
+      mockedEnvironment.isDevelopment.mockReturnValue(false);
+      jest.spyOn(Math, 'random').mockReturnValue(0.05); // sampled in
+
+      const link = createTelemetryLink();
+      const operation = createMockOperation('FailQuery');
+      const forward = createMockForward({
+        data: null,
+        errors: [
+          { message: 'e1', path: ['a'] },
+          { message: 'e2', path: ['b'] },
+        ],
+      });
+
+      const result = (link as any).request(operation, forward);
+      result.subscribe({
+        next: () => {},
+        complete: () => {
+          // 2 errors × weight 10 = 20
+          expect(Telemetry.increment).toHaveBeenCalledWith(
+            'graphql_errors_total',
+            20,
+            expect.objectContaining({ name: 'FailQuery' }),
+          );
+          jest.spyOn(Math, 'random').mockRestore();
+          done();
+        },
+      });
+    });
   });
 
   describe('timing and reporting', () => {

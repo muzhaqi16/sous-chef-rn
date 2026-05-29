@@ -1,5 +1,5 @@
-jest.mock('react-native-config', () => ({
-  SPOONACULAR_API_KEY: 'test-api-key',
+jest.mock('#/config/env', () => ({
+  env: { SPOONACULAR_API_KEY: 'test-api-key' },
 }));
 
 const mockFetch = jest.fn();

@@ -7,7 +7,10 @@ import { useTranslation } from 'react-i18next';
 import { DetailTemplate } from '#components/templates/DetailTemplate';
 import { useStorageLocationManagement } from '#hooks/storageLocation/useStorageLocationManagement';
 import { StorageLocationCard } from '#components/organisms/storageLocation/StorageLocationCard';
-import { StorageLocationSheet } from '#components/modals/StorageLocationSheet/StorageLocationSheet';
+import {
+  StorageLocationSheet,
+  type StorageLocationInitialData,
+} from '#components/modals/StorageLocationSheet/StorageLocationSheet';
 import { useSelectedPantryId } from '#store/useAppStore';
 import { commonStyles } from '#/styles/commonStyles';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
@@ -22,6 +25,13 @@ type RouteParams = {
   homeId: string;
 };
 
+// `locations` is a single rich node type, but `tree` is a UNION of the
+// flat-built node (full fields) and the slim `storageLocationTree` query node
+// (no parentLocation/temperature/description). The edit handler also writes
+// into StorageLocationInitialData, whose `type`/`temperature` enums the slim
+// node doesn't carry — so the node-bridging handlers below stay `any`. The flat
+// `locations` array remains strongly typed via the hook return.
+
 export const StorageLocationsScreen: React.FC<
   StaticScreenProps<RouteParams>
 > = ({ route }) => {
@@ -31,7 +41,8 @@ export const StorageLocationsScreen: React.FC<
   const { goBack } = useAppNavigation();
   const selectedPantryId = useSelectedPantryId();
   const [sheetVisible, setSheetVisible] = useState(false);
-  const [editingLocation, setEditingLocation] = useState<any>(null);
+  const [editingLocation, setEditingLocation] =
+    useState<StorageLocationInitialData | null>(null);
   const [viewMode, setViewMode] = useState<'flat' | 'tree'>('flat');
   const [refreshing, setRefreshing] = useState(false);
 
@@ -49,7 +60,8 @@ export const StorageLocationsScreen: React.FC<
     refetch,
   } = useStorageLocationManagement(homeId, selectedPantryId ?? undefined);
 
-  // Open sheet for editing — map nested parentLocation to flat parentLocationId
+  // Open sheet for editing — map nested parentLocation to flat parentLocationId.
+  // node bridges flat-built and slim tree-query shapes — see the type note above
   const handleOpenEdit = (location: any) => {
     setEditingLocation({
       ...location,
@@ -65,6 +77,7 @@ export const StorageLocationsScreen: React.FC<
   };
 
   // Recursive component to render tree structure
+  // node bridges flat-built and slim tree-query shapes — see the type note above
   const renderTreeNode = (
     node: any,
     depth: number = 0,
@@ -86,16 +99,22 @@ export const StorageLocationsScreen: React.FC<
     );
   };
 
+  // formData flows from StorageLocationSheet's submit type (which has
+  // `type: string`) into the mutation inputs (which require `type: StorageType`
+  // enum). Reconciling the two contracts requires changing the sheet's exported
+  // data type — a cross-module refactor — so this stays `any`.
   const handleCreate = async (formData: any) => {
     const result = await createLocation(formData);
     return !!result;
   };
 
+  // See handleCreate: sheet submit type vs. mutation input type mismatch.
   const handleUpdate = async (id: string, formData: any) => {
     const result = await updateLocation(id, formData);
     return !!result;
   };
 
+  // See handleCreate: sheet submit type vs. mutation input type mismatch.
   const handleSubmit = async (formData: any) => {
     if (editingLocation) {
       return handleUpdate(editingLocation.id, formData);
@@ -103,6 +122,7 @@ export const StorageLocationsScreen: React.FC<
     return handleCreate(formData);
   };
 
+  // node bridges flat-built and slim tree-query shapes — see the type note above
   const handleDelete = (location: any) => {
     // Default location cannot be deleted
     if (location.isDefault) {
@@ -116,7 +136,7 @@ export const StorageLocationsScreen: React.FC<
 
     // Check for items or child locations
     const childCount = locations.filter(
-      (loc: any) => loc.parentLocation?.id === location.id,
+      loc => loc.parentLocation?.id === location.id,
     ).length;
     const itemCount = location.currentItemCount ?? 0;
 

@@ -5,7 +5,8 @@ import {
   LoginDocument,
   RegisterDocument,
 } from '#operations/auth/auth.generated';
-import { useAuthOperations } from '../useAuthOperations';
+import { useAuthOperations, type AuthSession } from '../useAuthOperations';
+import { UserRole } from '#/graphql/generated/schemaTypes';
 
 // Break circular dependency chain
 jest.mock('../../../apollo/links/tokenScheduler');
@@ -183,6 +184,33 @@ function buildAuthPayload(input: AuthPayloadInput = {}) {
   };
 }
 
+// Fully-typed AuthSession fixture for the handleLogin / handleRegistration
+// handlers (which read the cached LoginUser shape directly, not the masked
+// network payload).
+function buildSession(input: AuthPayloadInput = {}): AuthSession {
+  return {
+    accessToken: input.accessToken ?? 'at',
+    refreshToken: input.refreshToken ?? 'rt',
+    user: {
+      __typename: 'User',
+      id: input.userId ?? 'u1',
+      email: input.email ?? 'test@test.com',
+      emailVerified: input.emailVerified ?? true,
+      role: UserRole.User,
+      canAccessDevTools: false,
+      onBoarded: input.onBoarded ?? true,
+      createdAt: '2024-01-01T00:00:00Z',
+      updatedAt: '2024-01-01T00:00:00Z',
+      timezone: null,
+      defaultHomeId: null,
+      defaultShoppingListId: null,
+      defaultHome: null,
+      profile: null,
+      settings: null,
+    },
+  };
+}
+
 function buildLoginMock(
   email: string,
   password: string,
@@ -261,16 +289,7 @@ describe('useAuthOperations', () => {
       useAuthOperations(defaultProps),
     );
 
-    const loginResponse = {
-      user: {
-        id: 'u1',
-        email: 'test@test.com',
-        emailVerified: true,
-        onBoarded: true,
-      },
-      accessToken: 'at',
-      refreshToken: 'rt',
-    };
+    const loginResponse = buildSession();
 
     await act(async () => {
       await result.current.handleLogin(loginResponse, true);
@@ -294,16 +313,7 @@ describe('useAuthOperations', () => {
 
     await act(async () => {
       await result.current.handleLogin(
-        {
-          user: {
-            id: 'u1',
-            email: 'test@test.com',
-            emailVerified: false,
-            onBoarded: false,
-          },
-          accessToken: 'at',
-          refreshToken: 'rt',
-        },
+        buildSession({ emailVerified: false, onBoarded: false }),
         true,
       );
     });
@@ -318,16 +328,7 @@ describe('useAuthOperations', () => {
 
     await act(async () => {
       await result.current.handleLogin(
-        {
-          user: {
-            id: 'u1',
-            email: 'test@test.com',
-            emailVerified: true,
-            onBoarded: false,
-          },
-          accessToken: 'at',
-          refreshToken: 'rt',
-        },
+        buildSession({ onBoarded: false }),
         true,
       );
     });
@@ -341,19 +342,7 @@ describe('useAuthOperations', () => {
     );
 
     await act(async () => {
-      await result.current.handleLogin(
-        {
-          user: {
-            id: 'u1',
-            email: 'test@test.com',
-            emailVerified: true,
-            onBoarded: true,
-          },
-          accessToken: 'at',
-          refreshToken: 'rt',
-        },
-        true,
-      );
+      await result.current.handleLogin(buildSession(), true);
     });
 
     expect(mockOnNavigate).toHaveBeenCalledWith('main_app');
@@ -378,16 +367,14 @@ describe('useAuthOperations', () => {
       useAuthOperations(defaultProps),
     );
 
-    const registerResponse = {
-      user: {
-        id: 'u2',
-        email: 'new@test.com',
-        emailVerified: false,
-        onBoarded: false,
-      },
+    const registerResponse = buildSession({
+      userId: 'u2',
+      email: 'new@test.com',
+      emailVerified: false,
+      onBoarded: false,
       accessToken: 'at2',
       refreshToken: 'rt2',
-    };
+    });
 
     await act(async () => {
       await result.current.handleRegistration(registerResponse, true);
@@ -665,16 +652,7 @@ describe('useAuthOperations', () => {
     let returnVal: boolean = false;
     await act(async () => {
       returnVal = await result.current.handleLogin(
-        {
-          user: {
-            id: 'u1',
-            email: 'test@test.com',
-            emailVerified: true,
-            onBoarded: true,
-          },
-          accessToken: 'at',
-          refreshToken: 'rt',
-        },
+        buildSession(),
         true,
         credentials,
       );
@@ -690,16 +668,14 @@ describe('useAuthOperations', () => {
     );
 
     await act(async () => {
-      await result.current.handleRegistration({
-        user: {
-          id: 'u3',
+      await result.current.handleRegistration(
+        buildSession({
+          userId: 'u3',
           email: 'user@test.com',
-          emailVerified: true,
-          onBoarded: true,
-        },
-        accessToken: 'at3',
-        refreshToken: 'rt3',
-      });
+          accessToken: 'at3',
+          refreshToken: 'rt3',
+        }),
+      );
     });
 
     expect(mockOnNavigate).toHaveBeenCalledWith('main_app');

@@ -1,4 +1,5 @@
 import React from 'react';
+import type { UseFormReturn } from 'react-hook-form';
 import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
 import {
   DynamicFormFields,
@@ -14,7 +15,7 @@ export const FormContent = ({
   form,
   needsHome,
 }: {
-  form: any;
+  form: UseFormReturn<FormValues>;
   needsHome: boolean;
   existingHomeName?: string;
 }) => {

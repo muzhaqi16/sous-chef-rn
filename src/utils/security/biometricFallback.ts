@@ -7,8 +7,17 @@ import {
   setGenericPassword,
   getGenericPassword,
   type AuthenticationPrompt,
+  type SetOptions,
 } from 'react-native-keychain';
 import { Platform } from 'react-native';
+
+/** Read a human-readable message off an unknown thrown value. */
+const errorMessage = (error: unknown): string | undefined =>
+  error instanceof Error
+    ? error.message
+    : typeof error === 'object' && error !== null && 'message' in error
+    ? String((error as { message: unknown }).message)
+    : undefined;
 
 export interface BiometricCapability {
   isAvailable: boolean;
@@ -48,11 +57,11 @@ export class BiometricManager {
       // Cache the result
       BiometricManager.cachedCapability = capability;
       return capability;
-    } catch (error: any) {
+    } catch (error: unknown) {
       const capability: BiometricCapability = {
         isAvailable: false,
         biometryType: null,
-        error: error.message || 'Unknown biometric error',
+        error: errorMessage(error) || 'Unknown biometric error',
       };
 
       BiometricManager.cachedCapability = capability;
@@ -132,7 +141,7 @@ export class BiometricManager {
     const accessControl = await BiometricManager.getAccessControl(options);
     const securityLevel = await BiometricManager.getSecurityLevel();
 
-    const keychainOptions: any = {
+    const keychainOptions: SetOptions = {
       service,
       accessible: ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
     };
@@ -178,7 +187,7 @@ export class BiometricManager {
         if (success) {
           return { success: true, method: 'biometric' };
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.warn('Biometric save failed, trying fallback:', error);
       }
     }
@@ -202,7 +211,7 @@ export class BiometricManager {
         if (success) {
           return { success: true, method: 'passcode' };
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.warn('Passcode save failed, trying basic:', error);
       }
     }
@@ -223,11 +232,11 @@ export class BiometricManager {
         if (success) {
           return { success: true, method: 'basic' };
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         return {
           success: false,
           method: 'none',
-          error: error.message || 'All save strategies failed',
+          error: errorMessage(error) || 'All save strategies failed',
         };
       }
     }
@@ -289,23 +298,24 @@ export class BiometricManager {
         success: false,
         error: 'No credentials found or authentication cancelled',
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Handle specific error types
+      const message = errorMessage(error);
       if (
-        error.message?.includes('UserCancel') ||
-        error.message?.includes('UserFallback')
+        message?.includes('UserCancel') ||
+        message?.includes('UserFallback')
       ) {
         return { success: false, error: 'Authentication cancelled by user' };
       }
 
-      if (error.message?.includes('BiometryNotAvailable')) {
+      if (message?.includes('BiometryNotAvailable')) {
         return {
           success: false,
           error: 'Biometric authentication not available',
         };
       }
 
-      if (error.message?.includes('BiometryLockout')) {
+      if (message?.includes('BiometryLockout')) {
         return {
           success: false,
           error: 'Biometric authentication locked. Please use device passcode.',
@@ -314,7 +324,7 @@ export class BiometricManager {
 
       return {
         success: false,
-        error: error.message || 'Authentication failed',
+        error: message || 'Authentication failed',
       };
     }
   }

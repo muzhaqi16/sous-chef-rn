@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { alertService } from '#/services/alertService';
+import { errorMessageOr } from '#/services/errorService';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { Icon } from '#utils/iconUtils';
@@ -131,7 +132,7 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
       (error: unknown) => {
         alertService.alert(
           'Error',
-          (error as any)?.message || 'Failed to update collaborator role',
+          errorMessageOr(error, 'Failed to update collaborator role'),
         );
       },
     );

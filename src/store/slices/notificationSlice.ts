@@ -31,13 +31,16 @@ export interface NotificationItem {
   priority: NotificationPriority;
   title: string;
   message: string;
+  // GraphQL JSON scalar — generated as `any`; consumers (NotificationActionHandler,
+  // InvitationAcceptanceModal) read dynamic keys without narrowing, so a stricter
+  // type would require a cross-module refactor of those non-editable files.
   payload: any;
   sentAt: string;
   readAt?: string | null;
   isRead: boolean;
   requiresAction?: boolean;
   actionType?: string;
-  actionData?: any;
+  actionData?: Record<string, unknown>;
   expiresAt?: string | null;
   // Expiration notification enrichment (linked from expirationNotificationChanged subscription)
   expirationNotificationId?: string | null;

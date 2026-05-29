@@ -15,7 +15,11 @@ import {
   UserLifecycleEventsDocument,
   type UserLifecycleEventsSubscription,
 } from '#operations/auth/user.generated';
-import { GetHomesDocument } from '#operations/home/home.generated';
+import {
+  GetHomesDocument,
+  type GetHomesQuery,
+} from '#operations/home/home.generated';
+import { extractNodes } from '#/utils/connectionUtils';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import {
   CacheStrategy,
@@ -41,10 +45,15 @@ function handleRemovedFromHome(
   safeEvict(client.cache, 'Home', homeId);
 
   if (homeId === selectedHomeId) {
-    const cachedData = client.cache.readQuery({
+    // `homes` is a HomeConnection (edges/pageInfo), not a flat array — read it
+    // typed and unwrap via extractNodes. Exclude the home we were just removed
+    // from in case the eviction hasn't propagated to the connection yet.
+    const cachedData = client.cache.readQuery<GetHomesQuery>({
       query: GetHomesDocument,
-    }) as { homes: any[] } | null;
-    const remaining = cachedData?.homes ?? [];
+    });
+    const remaining = extractNodes(cachedData?.homes).filter(
+      home => home.id !== homeId,
+    );
 
     const store = useStore.getState();
     if (remaining.length > 0) {

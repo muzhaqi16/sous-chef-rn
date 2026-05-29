@@ -6,7 +6,7 @@ import {
 } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import Animated from 'react-native-reanimated';
-import { useApolloClient, useQuery } from '@apollo/client/react';
+import { useApolloClient, useFragment, useQuery } from '@apollo/client/react';
 import {
   PantryItemBatchFragmentDoc,
   type PantryItemBatchFragment,
@@ -100,18 +100,40 @@ export const PantryItemDetail: React.FC<
   };
 
   const permissions = usePantryPermissions();
+
+  // Live binding to the PantryItem entity. `livePantryItem.data` gets a fresh
+  // reference whenever the entity's PantryItemDetail_pantryItem fields change
+  // in the cache (quantity adjust, condition change, etc.). Under
+  // `dataMasking: true` the `useQuery` result's `data.pantryItem` is a masked
+  // ref whose identity is stable across those changes, so it cannot serve as
+  // the reactivity signal on its own.
+  const livePantryItem = useFragment({
+    fragment: PantryItemDetail_PantryItemFragmentDoc,
+    fragmentName: 'PantryItemDetail_pantryItem',
+    from: data?.pantryItem ?? null,
+  });
+
   // Materialize the masked PantryItem ref into a fully unmasked entity.
   // `cache.readFragment` returns the unmasked shape (Apollo's signature),
   // inlining nested fragment fields so the screen and downstream components
-  // can access them directly. The outer `useQuery` subscription drives
-  // re-renders when the entity changes.
-  const item = data?.pantryItem
-    ? client.cache.readFragment<PantryItemDetail_PantryItemFragment>({
-        fragment: PantryItemDetail_PantryItemFragmentDoc,
-        fragmentName: 'PantryItemDetail_pantryItem',
-        from: data.pantryItem,
-      })
-    : null;
+  // can access them directly.
+  //
+  // `readFragment` reads the mutable cache during render, so the React Compiler
+  // memoizes this derivation against the reactive values referenced here. The
+  // `livePantryItem.data` guard is the load-bearing dependency: gating only on
+  // the masked `data.pantryItem` (stable across field changes) would pin this
+  // read to a stale snapshot until a refetch, so in-place edits (quantity,
+  // condition, expiry) wouldn't surface until pull-to-refresh. Referencing
+  // `livePantryItem.data` (fresh on every relevant cache write) forces the
+  // unmasked read to re-run immediately.
+  const item =
+    data?.pantryItem && livePantryItem.complete && livePantryItem.data
+      ? client.cache.readFragment<PantryItemDetail_PantryItemFragment>({
+          fragment: PantryItemDetail_PantryItemFragmentDoc,
+          fragmentName: 'PantryItemDetail_pantryItem',
+          from: data.pantryItem,
+        })
+      : null;
 
   const { suggestedRecipes, loadingRecipes } = useRecipeSuggestionsForItem(
     item?.itemName ?? undefined,

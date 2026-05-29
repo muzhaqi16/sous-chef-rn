@@ -476,7 +476,9 @@ export class SubscriptionService {
 
     // Filter sortOrder-only updates (handled by optimistic mutations)
     if (this.isSortOrderOnlyUpdate(payload)) {
-      const itemId = (payload.item as any)?.id || (payload.node as any)?.id;
+      const itemId =
+        (payload.item as { id?: string } | undefined)?.id ||
+        (payload.node as { id?: string } | undefined)?.id;
 
       // Check if we recently reordered this item
       if (itemId) {

@@ -352,8 +352,14 @@ export class QueueManager {
       throw result.error;
     }
 
-    // justified: dynamic payload extraction — mutation field name varies per queued operation
-    const syncResult = Object.values(result.data || {})[0] as any;
+    // Dynamic payload extraction — the mutation field name varies per queued
+    // operation, so the value shape is only known structurally here.
+    const syncResult = Object.values(result.data || {})[0] as {
+      wasCreated?: boolean;
+      serverId?: string;
+      clientId?: string;
+      conflict?: { message?: string };
+    };
 
     // Handle ID mapping for creates
     if (syncResult.wasCreated && syncResult.serverId && syncResult.clientId) {

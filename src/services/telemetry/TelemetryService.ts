@@ -9,7 +9,20 @@ import {
 } from './types';
 import { ConsoleTransport } from './transports/ConsoleTransport';
 import { HttpTransport } from './transports/HttpTransport';
+import { scrubLogExtra, scrubString } from './scrub';
 import { logger } from '#/utils/environment';
+import { useStore } from '#store';
+
+const LOG_LEVEL_PRIORITY: Record<LogEntry['level'], number> = {
+  debug: 0,
+  info: 1,
+  warn: 2,
+  error: 3,
+};
+
+// Cap the in-memory log retry buffer so a downed OTLP gateway cannot grow
+// memory without bound on a phone. Oldest entries are dropped first.
+const MAX_LOG_BUFFER = 1000;
 
 export class TelemetryService {
   private config: TelemetryConfig;
@@ -18,6 +31,10 @@ export class TelemetryService {
   private metricBuffer: MetricEntry[] = [];
   private isInitialized = false;
   private flushTimers: { logs?: NodeJS.Timeout; metrics?: NodeJS.Timeout } = {};
+  // Guards against overlapping log flushes (the error-triggered immediate flush
+  // can race the interval timer); without it, concurrent flushes fire
+  // duplicate failing requests and invert the re-buffer order.
+  private logFlushInFlight = false;
 
   constructor(config: Partial<TelemetryConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
@@ -62,18 +79,30 @@ export class TelemetryService {
     message: string,
     extra?: Record<string, any>,
   ): void {
-    if (!this.config.enabled || !this.config.enableLogs) {
+    if (
+      !this.config.enabled ||
+      !this.config.enableLogs ||
+      this.isConsentDenied()
+    ) {
+      return;
+    }
+
+    // Drop entries below the configured floor (e.g. debug/info in production)
+    // so they never reach the buffer or get shipped to Loki.
+    if (
+      LOG_LEVEL_PRIORITY[level] < LOG_LEVEL_PRIORITY[this.config.minLogLevel]
+    ) {
       return;
     }
 
     const logEntry: LogEntry = {
       level,
-      message,
+      message: scrubString(message),
       timestamp: new Date().toISOString(),
       extra: {
         platform: Platform.OS,
         env: this.config.environment,
-        ...extra,
+        ...scrubLogExtra(extra),
       },
     };
 
@@ -84,12 +113,24 @@ export class TelemetryService {
     }
   }
 
+  // Defense-in-depth consent gate, evaluated live on every emit. Even if
+  // updateConfig has not yet reflected revoked consent (e.g. cold start before
+  // setup runs), nothing is emitted once the user has opted out. Mirrors the
+  // telemetryLink guard.
+  private isConsentDenied(): boolean {
+    return useStore.getState().userConsent === false;
+  }
+
   incrementCounter(
     name: string,
     value = 1,
     labels: Record<string, string> = {},
   ): void {
-    if (!this.config.enabled || !this.config.enableMetrics) {
+    if (
+      !this.config.enabled ||
+      !this.config.enableMetrics ||
+      this.isConsentDenied()
+    ) {
       return;
     }
 
@@ -111,7 +152,11 @@ export class TelemetryService {
     value: number,
     labels: Record<string, string> = {},
   ): void {
-    if (!this.config.enabled || !this.config.enableMetrics) {
+    if (
+      !this.config.enabled ||
+      !this.config.enableMetrics ||
+      this.isConsentDenied()
+    ) {
       return;
     }
 
@@ -132,8 +177,13 @@ export class TelemetryService {
     name: string,
     value: number,
     labels: Record<string, string> = {},
+    bounds?: number[],
   ): void {
-    if (!this.config.enabled || !this.config.enableMetrics) {
+    if (
+      !this.config.enabled ||
+      !this.config.enableMetrics ||
+      this.isConsentDenied()
+    ) {
       return;
     }
 
@@ -147,6 +197,7 @@ export class TelemetryService {
       },
       timestamp: Date.now(),
       type: 'histogram',
+      bounds,
     });
   }
 
@@ -167,7 +218,10 @@ export class TelemetryService {
   }
 
   trackEvent(eventName: string, properties: Record<string, any> = {}): void {
-    this.log('info', `Event: ${eventName}`, properties);
+    // `app_events_total` is the source of truth for the analytics dashboards.
+    // The breadcrumb is logged at debug level so `minLogLevel` drops it before
+    // Loki in staging/production — no write-amplification where volume matters.
+    this.log('debug', `Event: ${eventName}`, properties);
 
     // Build labels for the counter
     const labels: Record<string, string> = {
@@ -186,21 +240,11 @@ export class TelemetryService {
     screenName: string,
     properties: Record<string, any> = {},
   ): void {
-    this.log('info', `Screen: ${screenName}`, properties);
+    // `screen_views_total` is the source of truth; the breadcrumb is logged at
+    // debug level so `minLogLevel` drops it before Loki in staging/production.
+    this.log('debug', `Screen: ${screenName}`, properties);
     this.incrementCounter('screen_views_total', 1, {
       screen_name: screenName,
-    });
-  }
-
-  trackTiming(
-    category: string,
-    variable: string,
-    duration: number,
-    label?: string,
-  ): void {
-    this.recordHistogram(`app_timing_${category}_ms`, duration, {
-      variable,
-      label: label || 'default',
     });
   }
 
@@ -257,26 +301,40 @@ export class TelemetryService {
   }
 
   private async flushLogs(): Promise<void> {
-    if (this.logBuffer.length === 0) {
+    if (this.logBuffer.length === 0 || this.logFlushInFlight) {
       return;
     }
 
     const logs = [...this.logBuffer];
     this.logBuffer = [];
+    this.logFlushInFlight = true;
 
     const availableTransports = this.transports.filter(t => t.isAvailable());
 
-    await Promise.allSettled(
-      availableTransports.map(transport =>
-        transport.sendLogs(logs).catch(error => {
+    try {
+      const results = await Promise.allSettled(
+        availableTransports.map(transport => transport.sendLogs(logs)),
+      );
+
+      results.forEach((result, index) => {
+        if (result.status === 'rejected') {
           logger.error(
-            `Failed to send logs via ${transport.getName()}:`,
-            error,
+            `Failed to send logs via ${availableTransports[index].getName()}:`,
+            result.reason,
           );
-          this.logBuffer.unshift(...logs);
-        }),
-      ),
-    );
+        }
+      });
+
+      // Re-buffer the batch for retry on the next flush if any transport
+      // failed. Newer entries that arrived during the await are kept ahead of
+      // the retried batch, and the buffer is capped (oldest dropped) to bound
+      // memory during a sustained outage.
+      if (results.some(result => result.status === 'rejected')) {
+        this.logBuffer = [...logs, ...this.logBuffer].slice(-MAX_LOG_BUFFER);
+      }
+    } finally {
+      this.logFlushInFlight = false;
+    }
   }
 
   private async flushMetrics(): Promise<void> {
@@ -303,11 +361,20 @@ export class TelemetryService {
   }
 
   private setupErrorHandlers(): void {
-    // justified: HermesInternal is a Hermes engine-specific API not in TS type definitions
-    if (typeof global !== 'undefined' && (global as any).HermesInternal) {
-      (global as any).HermesInternal.enablePromiseRejectionTracker?.({
+    // HermesInternal is a Hermes engine-specific global not in the RN type defs;
+    // narrow it to just the API we touch instead of casting through `any`.
+    const hermesGlobal = global as typeof globalThis & {
+      HermesInternal?: {
+        enablePromiseRejectionTracker?: (options: {
+          allRejections: boolean;
+          onUnhandled: (id: unknown, reason: unknown) => void;
+        }) => void;
+      };
+    };
+    if (typeof global !== 'undefined' && hermesGlobal.HermesInternal) {
+      hermesGlobal.HermesInternal.enablePromiseRejectionTracker?.({
         allRejections: true,
-        onUnhandled: (id: any, reason: any) => {
+        onUnhandled: (id: unknown, reason: unknown) => {
           // Track dedicated counter for dashboard compatibility
           this.incrementCounter('unhandled_promise_rejections_total');
           this.trackError({

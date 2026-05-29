@@ -2,13 +2,15 @@ import { useRef, ComponentRef } from 'react';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { useRecyclingState } from '@shopify/flash-list';
 
+type SwipeableRef = React.RefObject<ComponentRef<typeof Swipeable> | null>;
+
 interface UseSwipeableActionsProps {
   /** Item ID for FlashList recycling reset */
   itemId?: string;
   onEdit?: () => void;
   onDelete?: () => void;
 
-  onSwipeableWillOpen?: (ref: any) => void;
+  onSwipeableWillOpen?: (ref: SwipeableRef) => void;
   onSwipeableClose?: () => void;
 }
 

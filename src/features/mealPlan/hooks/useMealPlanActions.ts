@@ -12,6 +12,7 @@ import {
   createAddToQueryConnectionUpdater,
   createRemoveFromQueryConnectionUpdater,
 } from '#/apollo/utils/cacheUpdaters';
+import { handleMutationError } from '#/utils/errorHandlers';
 
 const addToMealPlans = createAddToQueryConnectionUpdater(
   'mealPlans',
@@ -51,6 +52,9 @@ export function useMealPlanActions() {
           return;
         }
         removeFromMealPlans(cache, variables.input.id, { evictItem: true });
+      },
+      onError: error => {
+        handleMutationError(error, { operation: 'Delete Meal Plan' });
       },
     },
   );

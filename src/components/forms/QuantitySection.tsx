@@ -7,10 +7,11 @@ import { FractionInput } from '#components/molecules/FractionInput';
 import { UnitAutocompleteField } from '#components/molecules/AutocompleteField/UnitAutocompleteField';
 import { FieldRow } from '#components/molecules/FieldRow';
 import { Text } from '#components/atoms/Text';
+import type { PantryItemFormData } from './PantryItemForm';
 
 interface QuantitySectionProps {
-  control: Control<any>;
-  errors: FieldErrors<any>;
+  control: Control<PantryItemFormData>;
+  errors: FieldErrors<PantryItemFormData>;
   mode: 'add' | 'edit';
   onUnitSelected?: (
     unitId: string | null,
@@ -45,7 +46,7 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
           render={({ field: { onChange, value } }) => (
             <FractionInput
               label={mode === 'add' ? 'Quantity *' : 'Current Quantity'}
-              value={value}
+              value={value ?? ''}
               onChangeText={onChange}
               placeholder="e.g., 1, 1 1/4"
               error={errors.quantityInput?.message?.toString()}

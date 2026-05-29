@@ -12,6 +12,8 @@ import { useMutation } from '@apollo/client/react';
 import {
   VerifyEmailDocument,
   ResendVerificationEmailDocument,
+  type VerifyEmailMutation,
+  type VerifyEmailMutationVariables,
 } from '#operations/auth/auth.generated';
 import { errorService } from '#/services/errorService';
 import { logger } from '#/utils/environment';
@@ -35,11 +37,14 @@ function extractVerificationToken(url: string): string | null {
 
 /** Module-level async function to handle deep link auto-verification.
  *  Extracted from component body to avoid try-catch bailout. */
+type VerifyEmailFn = useMutation.MutationFunction<
+  VerifyEmailMutation,
+  VerifyEmailMutationVariables
+>;
+
 async function performAutoVerify(
   token: string,
-  verifyEmail: (opts: {
-    variables: { input: { code: string } };
-  }) => Promise<any>,
+  verifyEmail: VerifyEmailFn,
   updateUser: (patch: { emailVerified: boolean }) => void,
   toast: ToastFn,
   setIsAutoVerifying: (v: boolean) => void,
@@ -52,18 +57,19 @@ async function performAutoVerify(
 
     const result = await verifyEmail({ variables: { input: { code: token } } });
 
-    if (result.data?.verifyEmail?.success) {
+    const payload = result.data?.verifyEmail;
+    if (payload?.__typename === 'VerifyEmailPayload') {
       updateUser({ emailVerified: true });
       toast({ message: 'Email verified successfully!', type: 'success' });
     } else {
-      throw new Error(
-        result.data?.verifyEmail?.message || 'Verification failed',
-      );
+      const message =
+        payload && 'message' in payload ? payload.message : undefined;
+      throw new Error(message || 'Verification failed');
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Auto-verify failed', { error });
     const errorMsg =
-      error.message ||
+      (error instanceof Error ? error.message : undefined) ||
       'Verification failed. The link may be expired or invalid.';
     toast({ message: errorMsg, type: 'error' });
     setIsAutoVerifying(false);

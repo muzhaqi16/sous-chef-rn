@@ -428,6 +428,19 @@ export const getErrorMessage = (error: unknown): string => {
   return result.error?.message || 'An unexpected error occurred';
 };
 
+/**
+ * Pure extraction of a raw error message from an `unknown` value, with a
+ * caller-supplied fallback. Unlike `getErrorMessage`, this does NOT map to a
+ * user-friendly message or emit telemetry — use it at display/handler sites
+ * that already have their own fallback copy and just need the raw message
+ * (replaces the repeated `(error as any)?.message || fallback` pattern).
+ */
+export const errorMessageOr = (error: unknown, fallback: string): string => {
+  if (error instanceof Error && error.message) return error.message;
+  if (typeof error === 'string' && error) return error;
+  return fallback;
+};
+
 // Export hook for use in components
 // Returns an object matching the legacy useErrorHandler shape for easy migration
 export const useErrorService = () => {

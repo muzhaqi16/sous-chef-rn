@@ -12,7 +12,7 @@ const removeFromShoppingListsCache = createRemoveFromQueryConnectionUpdater(
 
 export function useDeleteShoppingList() {
   const [mutate, { loading }] = useMutation(DeleteShoppingListDocument, {
-    onError: (error: any) => {
+    onError: error => {
       toastService.error(getErrorMessage(error));
     },
     update: (cache, { data }, { variables }) => {

@@ -1,7 +1,7 @@
 import { GraphQLWsLink } from '@apollo/client/link/subscriptions';
 import { createClient, Client } from 'graphql-ws';
 import { Platform } from 'react-native';
-import Config from 'react-native-config';
+import { env } from '#/config/env';
 import { useStore } from '#store';
 import { Environment, logger } from '#/utils/environment';
 import { serializeError } from '#/utils/errorSerialization';
@@ -14,8 +14,8 @@ const webSocketImpl =
     ? WebSocket // for RN-Web
     : global.WebSocket; // for iOS & Android
 
-// Use Config.WEB_SOCKET_URL from .env if set, otherwise use environment-specific default
-const WS_URL = Config.WEB_SOCKET_URL || Environment.getApiConfig().wsUrl;
+// Use env.WEB_SOCKET_URL from .env if set, otherwise use environment-specific default
+const WS_URL = env.WEB_SOCKET_URL || Environment.getApiConfig().wsUrl;
 
 // Store the client instance so we can reconnect it
 let wsClient: Client;
@@ -103,7 +103,7 @@ const createWsClient = () => {
     keepAlive: getKeepAliveInterval(),
     connectionParams: () => {
       const { accessToken: token, refreshToken } = useStore.getState();
-      const apiKey = Config.API_KEY;
+      const apiKey = env.API_KEY;
       const deviceId = getDeviceIdSync();
 
       const params: Record<string, string | undefined> = {};

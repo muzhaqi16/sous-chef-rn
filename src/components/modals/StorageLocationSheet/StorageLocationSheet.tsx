@@ -10,21 +10,9 @@ import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import {
   StorageLocationForm,
   type StorageLocationFormRef,
+  type StorageLocationFormValues,
 } from '#components/organisms/storageLocation/StorageLocationForm';
 import { Text } from '#components/atoms/Text';
-
-interface StorageLocationData {
-  name: string;
-  type: string;
-  parentLocationId?: string;
-  description?: string | null;
-  temperature?: string | null;
-  color?: string | null;
-  isClimateControlled?: boolean | null;
-  capacity?: number | null;
-  capacityUnit?: string | null;
-  isDefault?: boolean | null;
-}
 
 import { StorageLocation } from '#/graphql/generated/schemaTypes';
 
@@ -55,7 +43,7 @@ export type StorageLocationInitialData = Partial<
 interface StorageLocationSheetProps {
   visible: boolean;
   onClose: () => void;
-  onSubmit: (data: StorageLocationData) => Promise<boolean | void>;
+  onSubmit: (data: StorageLocationFormValues) => Promise<boolean | void>;
   initialData?: StorageLocationInitialData | null;
   availableLocations: Array<{ id: string; name: string; type: string }>;
   isSubmitting?: boolean;
@@ -77,7 +65,7 @@ export const StorageLocationSheet: React.FC<StorageLocationSheetProps> = ({
   });
   const formRef = useRef<StorageLocationFormRef>(null);
 
-  const handleSubmit = async (data: StorageLocationData) => {
+  const handleSubmit = async (data: StorageLocationFormValues) => {
     const result = await onSubmit(data);
     if (result !== false) {
       onClose();

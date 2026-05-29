@@ -1,3 +1,15 @@
+# Ensures the modal's full read shape is in the cache regardless of how the
+# item arrived (list query, create mutation, subscription push). `cache-first`
+# returns instantly when the cache already satisfies the fragment and only
+# hits the network when a field is missing — so it self-heals partial entries
+# without a redundant fetch on every open.
+query GetPantryActionItem($id: ID!) {
+  pantryItem(id: $id) {
+    id
+    ...PantryActionModal_pantryItem
+  }
+}
+
 fragment PantryActionModal_pantryItem on PantryItem {
   id
   itemId

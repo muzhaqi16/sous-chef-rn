@@ -42,22 +42,13 @@ import { useMealPlanPermissions } from '#features/mealPlan/hooks/useMealPlanPerm
 import { DeferredScreen } from '#components/performance/DeferredScreen';
 import { MealPlanSkeleton } from '#components/base/Skeleton/MealPlanSkeleton';
 import { useAppStore } from '#store/useAppStore';
-import { useMutation } from '@apollo/client/react';
-import { DeleteMealPlanDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 import { MealType } from '#/graphql/generated/schemaTypes';
-import { createRemoveFromQueryConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
-
-const removeFromMealPlansForMain = createRemoveFromQueryConnectionUpdater(
-  'mealPlans',
-  'MealPlan',
-);
+import { useMealPlanActions } from '#features/mealPlan/hooks/useMealPlanActions';
 import { type MealTemplateDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import { type MealPlanMain_ItemFragment } from './MealPlanMain.generated';
 import { type EditCustomMealSheet_ItemFragment } from '#features/mealPlan/components/EditCustomMealSheet.generated';
 import { toastService } from '#/services/toastService';
-import { handleMutationError } from '#/utils/errorHandlers';
 import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
 
 async function executeMealPlanRefresh(
   refetchFn: () => Promise<unknown>,
@@ -218,22 +209,7 @@ const MealPlanMainInner: React.FC = () => {
   const { duplicatePlan, loading: duplicatingPlan } = useDuplicateMealPlan();
 
   // Delete meal plan
-  const [deletePlanMutation, { loading: deletingPlan }] = useMutation(
-    DeleteMealPlanDocument,
-    {
-      update(cache, { data }, { variables }) {
-        const result = data?.deleteMealPlan;
-        const id =
-          result?.__typename === 'DeleteMealPlanPayload'
-            ? result.mealPlan.id
-            : variables?.input?.id;
-        if (id) removeFromMealPlansForMain(cache, id, { evictItem: true });
-      },
-      onError: error => {
-        handleMutationError(error, { operation: 'Delete Meal Plan' });
-      },
-    },
-  );
+  const { deleteMealPlan, deleting: deletingPlan } = useMealPlanActions();
 
   // Compute days with meals for calendar indicators
   const daysWithMeals = (() => {
@@ -424,19 +400,11 @@ const MealPlanMainInner: React.FC = () => {
   };
 
   const handleDeletePlan = async (id: string) => {
-    const result = await executeMutation(
-      () => deletePlanMutation({ variables: { input: { id } } }),
-      // Error handled by onError callback on the mutation hook
-      () => {},
-    );
-    if (
-      result &&
-      result.data?.deleteMealPlan?.__typename === 'DeleteMealPlanPayload'
-    ) {
+    const success = await deleteMealPlan(id);
+    if (success) {
       toastService.success(t('mealPlanMain.mealPlanDeleted'));
       // If we deleted the active plan, clear the selection so the UI falls back
       // to the next available plan (or the empty state if none remain).
-      // awaitRefetchQueries ensures mealPlans is already updated at this point.
       if (id === activePlanId) {
         setSelectedMealPlanId(null);
       }

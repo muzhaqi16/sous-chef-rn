@@ -1,5 +1,6 @@
 import { createContext, useContext, useRef, useEffect, useState } from 'react';
 import type React from 'react';
+import type { SwipeableRef } from '#/components/molecules/SwipeableItem/types';
 
 /**
  * Action callbacks for shopping list item interactions.
@@ -18,7 +19,7 @@ export interface ShoppingListTabsActions {
     afterItemId: string | null,
     beforeItemId: string | null,
   ) => void;
-  onSwipeableWillOpen?: (ref: any) => void;
+  onSwipeableWillOpen?: (ref: SwipeableRef) => void;
   onSwipeableClose?: () => void;
 }
 
@@ -55,7 +56,7 @@ export const ShoppingListTabsActionsProvider: React.FC<ProviderProps> = ({
       beforeItemId: string | null,
     ) =>
       actionsRef.current.onSortOrderUpdate?.(itemId, afterItemId, beforeItemId),
-    onSwipeableWillOpen: (ref: any) =>
+    onSwipeableWillOpen: (ref: SwipeableRef) =>
       actionsRef.current.onSwipeableWillOpen?.(ref),
     onSwipeableClose: () => actionsRef.current.onSwipeableClose?.(),
   }));

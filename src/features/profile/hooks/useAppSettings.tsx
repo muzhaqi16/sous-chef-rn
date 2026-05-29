@@ -81,7 +81,10 @@ export const useAppSettings = () => {
     return input;
   };
 
-  const updateAppSetting = async (key: keyof AppSettings, value: any) => {
+  const updateAppSetting = async <K extends keyof AppSettings>(
+    key: K,
+    value: AppSettings[K],
+  ) => {
     const input = toSettingsInput({ [key]: value } as Partial<AppSettings>);
     const result = await executeMutation(
       () => updateSettings({ variables: { input } }),

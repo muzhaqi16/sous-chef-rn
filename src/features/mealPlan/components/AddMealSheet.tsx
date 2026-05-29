@@ -2,13 +2,15 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
-  ActivityIndicator,
   ScrollView,
   type NativeSyntheticEvent,
   type NativeScrollEvent,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Pressable } from '#components/atoms/themedComponents';
+import {
+  Pressable,
+  PrimaryActivityIndicator,
+} from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
@@ -198,7 +200,7 @@ const SavedRecipeRow: React.FC<SavedRecipeRowProps> = ({
           </Text>
         )}
       </View>
-      <Icon name="add-circle-outline" size={24} color={styles.addIcon.color} />
+      <Icon name="add-circle-outline" size={24} tone="primary" />
     </Pressable>
   );
 };
@@ -410,11 +412,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
                 pressed && styles.pressed,
               ]}
             >
-              <Icon
-                name="add-circle-outline"
-                size={24}
-                color={styles.addIcon.color}
-              />
+              <Icon name="add-circle-outline" size={24} tone="primary" />
               <Text style={styles.customMealText} numberOfLines={1}>
                 {t('addMealSheet.addCustom', { query: searchQuery.trim() })}
               </Text>
@@ -444,10 +442,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
             <>
               {searchingApi ? (
                 <View style={styles.loadingContainer}>
-                  <ActivityIndicator
-                    size="small"
-                    color={styles.addIcon.color}
-                  />
+                  <PrimaryActivityIndicator size="small" />
                 </View>
               ) : null}
 
@@ -490,16 +485,9 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
                     ) : null}
                   </View>
                   {loadingItemId === item.spoonacularId ? (
-                    <ActivityIndicator
-                      size="small"
-                      color={styles.addIcon.color}
-                    />
+                    <PrimaryActivityIndicator size="small" />
                   ) : (
-                    <Icon
-                      name="add-circle-outline"
-                      size={24}
-                      color={styles.addIcon.color}
-                    />
+                    <Icon name="add-circle-outline" size={24} tone="primary" />
                   )}
                 </Pressable>
               ))}
@@ -648,9 +636,6 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.xs,
     color: theme.colors.textTertiary,
     fontWeight: theme.fonts.weight.medium,
-  },
-  addIcon: {
-    color: theme.colors.primary,
   },
   loadingContainer: {
     paddingVertical: theme.spacing.md,

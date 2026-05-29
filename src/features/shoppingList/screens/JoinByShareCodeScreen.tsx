@@ -71,7 +71,7 @@ export const JoinByShareCodeScreen: React.FC<
 
       <View style={styles.content}>
         <View style={styles.iconContainer}>
-          <Icon name="link-outline" size={48} color="#6366f1" />
+          <Icon name="link-outline" size={48} tone="primary" />
         </View>
 
         <Text size="lg" weight="semibold" align="center" style={styles.title}>

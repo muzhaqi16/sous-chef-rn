@@ -1,6 +1,24 @@
 import { InMemoryCache } from '@apollo/client';
+import type { FieldFunctionOptions, Reference } from '@apollo/client';
 // Import generated fragment matcher for proper interface/union type handling
 import fragmentMatcherData from '#/graphql/generated/fragmentMatcher.json';
+
+// Apollo's `readField` accessor, extracted from the field-policy options bag.
+type ReadField = FieldFunctionOptions['readField'];
+
+// Minimal shape of a Relay-style connection as it lives in the normalized
+// cache: edges wrap normalized node references, plus pagination metadata.
+interface CachedEdge {
+  node?: Reference;
+}
+interface CachedConnection {
+  edges?: CachedEdge[];
+  pageInfo?: {
+    hasNextPage?: boolean;
+    endCursor?: string | null;
+  } | null;
+  totalCount?: number;
+}
 
 /**
  * Maximum number of edges to retain in an itemsConnection cache entry.
@@ -23,7 +41,7 @@ const MAX_WINDOW_EDGES = 100;
 function mergeArrayByIdIntelligent<T extends { id: string; __ref?: string }>(
   existing: T[] = [],
   incoming: T[] = [],
-  { readField }: { readField: (field: string, ref: any) => any },
+  { readField }: Pick<FieldFunctionOptions, 'readField'>,
 ): T[] {
   // If incoming is null/undefined, keep existing (preserves cache on network errors)
   // But if incoming is an explicit empty array [], the user genuinely has no items
@@ -46,12 +64,12 @@ function mergeArrayByIdIntelligent<T extends { id: string; __ref?: string }>(
     { item: T; version: number; updatedAt: string }
   >();
   existing.forEach(item => {
-    const id = readField('id', item) as string;
+    const id = readField<string>('id', item);
     if (id) {
       existingMap.set(id, {
         item,
-        version: (readField('version', item) as number) || 0,
-        updatedAt: (readField('updatedAt', item) as string) || '',
+        version: readField<number>('version', item) || 0,
+        updatedAt: readField<string>('updatedAt', item) || '',
       });
     }
   });
@@ -62,12 +80,12 @@ function mergeArrayByIdIntelligent<T extends { id: string; __ref?: string }>(
     { item: T; version: number; updatedAt: string }
   >();
   incoming.forEach(item => {
-    const id = readField('id', item) as string;
+    const id = readField<string>('id', item);
     if (id) {
       incomingMap.set(id, {
         item,
-        version: (readField('version', item) as number) || 0,
-        updatedAt: (readField('updatedAt', item) as string) || '',
+        version: readField<number>('version', item) || 0,
+        updatedAt: readField<string>('updatedAt', item) || '',
       });
     }
   });
@@ -133,12 +151,12 @@ function mergeArrayByIdIntelligent<T extends { id: string; __ref?: string }>(
  * those edges rather than treat them as deduplication keys.
  */
 function readEdgeNodeId(
-  edge: any,
-  readField: (field: string, ref: any) => any,
+  edge: CachedEdge | undefined,
+  readField: ReadField,
 ): string | undefined {
-  const node = readField('node', edge);
+  const node = edge?.node;
   if (!node) return undefined;
-  return readField('id', node) as string | undefined;
+  return readField<string>('id', node);
 }
 
 /**
@@ -148,9 +166,9 @@ function readEdgeNodeId(
  * pattern when only page 1 refreshes while cache holds pages 1+2.
  */
 function shouldPreservePageInfo(
-  existing: any,
-  incoming: any,
-  args: any,
+  existing: CachedConnection,
+  incoming: CachedConnection,
+  args: { after?: string | null } | null,
 ): boolean {
   const isBackgroundRefetch = !args?.after;
   const existingEdgeCount = (existing.edges || []).length;
@@ -180,9 +198,12 @@ function mergeConnectionByNodeId() {
     // Same self-healing read as itemsConnectionFieldPolicy — drop dangling
     // `edge.node` refs (post-eviction) and decrement totalCount accordingly.
     // See the read() comment in itemsConnectionFieldPolicy for context.
-    read(existing: any, { canRead }: any) {
+    read(
+      existing: CachedConnection | undefined,
+      { canRead }: FieldFunctionOptions,
+    ) {
       if (!existing?.edges?.length) return existing;
-      const validEdges = existing.edges.filter((edge: any) =>
+      const validEdges = existing.edges.filter((edge: CachedEdge) =>
         edge?.node ? canRead(edge.node) : false,
       );
       if (validEdges.length === existing.edges.length) return existing;
@@ -196,19 +217,23 @@ function mergeConnectionByNodeId() {
             : existing.totalCount,
       };
     },
-    merge(existing: any, incoming: any, { args, readField }: any) {
+    merge(
+      existing: CachedConnection | undefined,
+      incoming: CachedConnection | undefined,
+      { args, readField }: FieldFunctionOptions<{ after?: string | null }>,
+    ) {
       if (!incoming) return existing;
       if (!existing) return incoming;
       if (!args?.after && !incoming.pageInfo?.hasNextPage) return incoming;
 
-      const edgeMap = new Map();
+      const edgeMap = new Map<string, CachedEdge>();
       const existingEdges = existing.edges || [];
-      existingEdges.forEach((edge: any) => {
+      existingEdges.forEach((edge: CachedEdge) => {
         const id = readEdgeNodeId(edge, readField);
         if (id) edgeMap.set(id, edge);
       });
       const existingCount = edgeMap.size;
-      (incoming.edges || []).forEach((edge: any) => {
+      (incoming.edges || []).forEach((edge: CachedEdge) => {
         const id = readEdgeNodeId(edge, readField);
         if (id) edgeMap.set(id, edge);
       });
@@ -276,9 +301,12 @@ function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
     // Pattern A consumers render null → phantom rows + stale totalCount.
     // Filtering via `canRead` here drops those edges at the source and
     // decrements `totalCount` by however many were dropped.
-    read(existing: any, { canRead }: any) {
+    read(
+      existing: CachedConnection | undefined,
+      { canRead }: FieldFunctionOptions,
+    ) {
       if (!existing?.edges?.length) return existing;
-      const validEdges = existing.edges.filter((edge: any) =>
+      const validEdges = existing.edges.filter((edge: CachedEdge) =>
         edge?.node ? canRead(edge.node) : false,
       );
       if (validEdges.length === existing.edges.length) return existing;
@@ -297,7 +325,11 @@ function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
             : existing.totalCount,
       };
     },
-    merge(existing: any, incoming: any, { args, readField }: any) {
+    merge(
+      existing: CachedConnection | undefined,
+      incoming: CachedConnection | undefined,
+      { args, readField }: FieldFunctionOptions<{ after?: string | null }>,
+    ) {
       if (!incoming) return existing;
       if (!existing) return incoming;
       if (!args?.after && !incoming.pageInfo?.hasNextPage) return incoming;
@@ -309,7 +341,7 @@ function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
         if (id) existingIds.add(id);
       }
 
-      const newEdges = (incoming.edges || []).filter((edge: any) => {
+      const newEdges = (incoming.edges || []).filter((edge: CachedEdge) => {
         const id = readEdgeNodeId(edge, readField);
         return id && !existingIds.has(id);
       });

@@ -40,9 +40,8 @@ jest.mock('#/utils/deviceId', () => ({
   getDeviceIdSync: jest.fn(() => 'test-device-id'),
 }));
 
-jest.mock('react-native-config', () => ({
-  WEB_SOCKET_URL: 'ws://test-ws-url',
-  API_KEY: 'test-api-key',
+jest.mock('#/config/env', () => ({
+  env: { WEB_SOCKET_URL: 'ws://test-ws-url', API_KEY: 'test-api-key' },
 }));
 
 import { logger } from '#/utils/environment';

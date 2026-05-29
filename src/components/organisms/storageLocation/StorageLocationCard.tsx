@@ -14,8 +14,21 @@ const TEMPERATURE_LABELS: Record<string, string> = {
   AMBIENT: 'Ambient',
 };
 
+/** The storage-location fields this card renders. */
+interface StorageLocationCardLocation {
+  type: string;
+  name: string;
+  color?: string | null;
+  temperature?: string | null;
+  capacity?: number | null;
+  capacityUnit?: string | null;
+  currentItemCount?: number | null;
+  description?: string | null;
+  parentLocation?: { name?: string | null } | null;
+}
+
 interface StorageLocationCardProps {
-  location: any;
+  location: StorageLocationCardLocation;
   isDefault: boolean;
   onPress?: () => void;
   onEdit: () => void;
@@ -49,7 +62,10 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
       <View style={styles.cardContent}>
         {hasColor ? (
           <View
-            style={[styles.colorStrip, { backgroundColor: location.color }]}
+            style={[
+              styles.colorStrip,
+              { backgroundColor: location.color ?? undefined },
+            ]}
           />
         ) : null}
         <View style={styles.cardBody}>

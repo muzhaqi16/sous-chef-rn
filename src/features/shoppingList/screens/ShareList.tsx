@@ -1,9 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, RefreshControl, ScrollView } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, Text, ScrollView } from 'react-native';
 import {
   Pressable,
-  PrimaryActivityIndicator,
   WhiteActivityIndicator,
+  ThemedRefreshControl,
 } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import { Icon } from '#utils/iconUtils';
@@ -14,22 +14,17 @@ import { Header } from '#components/molecules/Header';
 import { LoadingInline } from '#components/base/Loading';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
-import Clipboard from '@react-native-clipboard/clipboard';
-import { useApolloClient, useMutation } from '@apollo/client/react';
+import { useMutation } from '@apollo/client/react';
 import {
   RemoveCollaboratorDocument,
   AddCollaboratorDocument,
-  ShareShoppingListDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import {
-  ShoppingListCollaboratorFragmentDoc,
-  type ShoppingListCollaboratorFragment,
-} from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { CollaboratorRole } from '#/graphql/generated/schemaTypes';
+import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import {
-  createAddToParentConnectionUpdater,
-  createRemoveFromParentConnectionUpdater,
-} from '#/apollo/utils/cacheUpdaters';
+  useLeaveShoppingList,
+  removeCollaboratorFromShoppingListCache,
+} from '#features/shoppingList/hooks/useLeaveShoppingList';
 import { useShoppingListDetails } from '#features/shoppingList/hooks/useShoppingListDetails';
 import CollaboratorPermissionsBottomSheet, {
   CollaboratorPermissionsBottomSheetRef,
@@ -40,22 +35,16 @@ import { OfflineGate } from '#components/atoms/OfflineGate';
 import { AlertBanner } from '#components/molecules/AlertBanner';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import {
+  executeMutation,
   executeWithLoadingState,
   unwrapPayload,
 } from '#/utils/compilerSafeWrappers';
 import { ROLE_PERMISSIONS, INVITE_ROLES } from '#/constants/collaboratorRoles';
 import { ChipScrollRow } from '#components/atoms/ChipScrollRow';
-import { getCollaboratorDisplayName } from '#/utils/formatters/memberFormatters';
-import Animated, { FadeIn } from 'react-native-reanimated';
-import { getFormAnimationPreset } from '#/constants/animations';
+import { CollaboratorMemberCard } from '#features/shoppingList/components/CollaboratorMemberCard';
+import { ShareCodeSection } from '#features/shoppingList/components/ShareCodeSection';
 
 const addCollaboratorToCache = createAddToParentConnectionUpdater(
-  'ShoppingList',
-  'collaboratorsConnection',
-  'ShoppingListCollaborator',
-);
-
-const removeCollaboratorFromCache = createRemoveFromParentConnectionUpdater(
   'ShoppingList',
   'collaboratorsConnection',
   'ShoppingListCollaborator',
@@ -70,6 +59,8 @@ const ROLE_LABEL_KEYS: Record<CollaboratorRole, string> = {
   [CollaboratorRole.Owner]: 'collaboratorRoles.owner',
 };
 
+type T = (key: string, opts?: Record<string, unknown>) => string;
+
 const buildRoleOptions = (t: T) =>
   INVITE_ROLES.map(role => ({
     key: role,
@@ -77,61 +68,10 @@ const buildRoleOptions = (t: T) =>
     label: t(ROLE_LABEL_KEYS[role]),
   }));
 
-type StatusVariant = 'active' | 'pending' | 'declined' | 'expired';
-
-const getStatusVariant = (status: string): StatusVariant => {
-  switch (status?.toUpperCase()) {
-    case 'ACCEPTED':
-    case 'ACTIVE':
-      return 'active';
-    case 'PENDING':
-      return 'pending';
-    case 'DECLINED':
-      return 'declined';
-    case 'EXPIRED':
-    default:
-      return 'expired';
-  }
-};
-
-function StatusBadge({
-  variant,
-  text,
-}: {
-  variant: StatusVariant;
-  text: string;
-}) {
-  styles.useVariants({ status: variant });
-  return (
-    <View style={styles.statusBadge}>
-      <Text style={styles.statusText}>{text}</Text>
-    </View>
-  );
-}
-
-type T = (key: string, opts?: Record<string, unknown>) => string;
-
-const getFormatStatus = (t: T) => (status: string) => {
-  switch (status?.toUpperCase()) {
-    case 'ACCEPTED':
-    case 'ACTIVE':
-      return t('shoppingListScreens.statusActive');
-    case 'PENDING':
-      return t('shoppingListScreens.statusInvited');
-    case 'DECLINED':
-      return t('shoppingListScreens.statusDeclined');
-    case 'EXPIRED':
-      return t('shoppingListScreens.statusExpired');
-    default:
-      return status || t('shoppingListScreens.statusUnknown');
-  }
-};
-
 export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
   route,
 }) => {
   const { t } = useTranslation();
-  const formatStatus = getFormatStatus(t);
   const roleOptions = buildRoleOptions(t);
   const { goBack } = useNavigation();
   const { toHomeDetail } = useAppNavigation();
@@ -142,9 +82,6 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
     CollaboratorRole.Contributor,
   );
   const [sharing, setSharing] = useState(false);
-  const [leaving, setLeaving] = useState(false);
-  const [togglingShareCode, setTogglingShareCode] = useState(false);
-  const [copied, setCopied] = useState(false);
   const permissionsBottomSheetRef =
     useRef<CollaboratorPermissionsBottomSheetRef>(null);
 
@@ -155,38 +92,19 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
     shoppingList,
     loading,
     isRefetching,
-    collaborators: collaboratorRefs,
+    collaborators,
     name: listName,
     refetch,
   } = useShoppingListDetails(listId);
 
   const isHomeLinked = !!shoppingList?.homeId;
 
-  const apolloClient = useApolloClient();
-
   const [shareList] = useMutation(AddCollaboratorDocument);
   const [removeMember] = useMutation(RemoveCollaboratorDocument);
-  const [shareShoppingList] = useMutation(ShareShoppingListDocument);
+  const { leaveList, leaving } = useLeaveShoppingList(listId);
 
-  // Materialize the masked ShoppingListCollaborator fragment refs once so we
-  // can read fields (id, email, role, status, ...) needed for owner detection,
-  // filtering, and rendering. Each edge also carries `invitedAt` directly on
-  // its selection, which we preserve alongside the materialized fragment.
-  const collaborators = collaboratorRefs
-    .map(ref => {
-      const fragment =
-        apolloClient.cache.readFragment<ShoppingListCollaboratorFragment>({
-          fragment: ShoppingListCollaboratorFragmentDoc,
-          fragmentName: 'ShoppingListCollaboratorFragment',
-          from: ref,
-        });
-      if (!fragment) return null;
-      return { ...fragment, invitedAt: ref.invitedAt };
-    })
-    .filter(
-      (c): c is ShoppingListCollaboratorFragment & { invitedAt: string } =>
-        c !== null,
-    );
+  // `collaborators` from useShoppingListDetails are already materialized
+  // ShoppingListCollaboratorFragments (with invitedAt) and null-filtered.
 
   // Check if current user is owner
   const currentUserCollaborator = collaborators.find(
@@ -200,54 +118,6 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
 
   const isPublic = !!shoppingList?.isPublic;
   const shareCode = shoppingList?.shareCode;
-
-  useEffect(() => {
-    if (copied) {
-      const timer = setTimeout(() => setCopied(false), 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [copied]);
-
-  const [prevShareCode, setPrevShareCode] = useState(shareCode);
-  if (shareCode !== prevShareCode) {
-    setPrevShareCode(shareCode);
-    setCopied(false);
-  }
-
-  const handleToggleShareCode = () => {
-    executeWithLoadingState(
-      async () => {
-        const { data } = await shareShoppingList({
-          variables: {
-            input: { id: listId, isPublic: !isPublic },
-          },
-        });
-        unwrapPayload(
-          data?.shareShoppingList,
-          'ShareShoppingListPayload',
-          t('shoppingListScreens.failedToUpdateShareSettings'),
-        );
-        // No refetch needed: the mutation returns shoppingList { id, shareCode, isPublic }
-        // which Apollo normalizes by ShoppingList:${id}, auto-updating the cache.
-      },
-      setTogglingShareCode,
-      error => {
-        alertService.alert(
-          t('labels.error'),
-          error instanceof Error
-            ? error.message
-            : t('shoppingListScreens.failedToUpdateShareSettings'),
-        );
-      },
-    );
-  };
-
-  const handleCopyShareCode = () => {
-    if (shareCode) {
-      Clipboard.setString(shareCode);
-      setCopied(true);
-    }
-  };
 
   const handleShare = () => {
     if (!email.trim()) {
@@ -312,25 +182,28 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
         {
           text: t('labels.remove'),
           style: 'destructive',
-          onPress: async () => {
-            try {
-              await removeMember({
-                variables: { input: { id: memberId } },
-                update(cache) {
-                  removeCollaboratorFromCache(cache, listId, memberId, {
-                    evictItem: true,
-                  });
-                },
-              });
-              // No refetch needed: the update() callback removes the
-              // collaborator from the cached connection in place.
-            } catch {
-              alertService.alert(
-                t('labels.error'),
-                t('shoppingListScreens.failedToRemoveMember'),
-              );
-            }
-          },
+          // No refetch needed: the update() callback removes the collaborator
+          // from the cached connection in place.
+          onPress: () =>
+            executeMutation(
+              () =>
+                removeMember({
+                  variables: { input: { id: memberId } },
+                  update(cache) {
+                    removeCollaboratorFromShoppingListCache(
+                      cache,
+                      listId,
+                      memberId,
+                      { evictItem: true },
+                    );
+                  },
+                }),
+              () =>
+                alertService.alert(
+                  t('labels.error'),
+                  t('shoppingListScreens.failedToRemoveMember'),
+                ),
+            ),
         },
       ],
     );
@@ -366,29 +239,14 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
               return;
             }
 
-            executeWithLoadingState(
-              async () => {
-                await removeMember({
-                  variables: { input: { id: currentUserCollaborator.id } },
-                  update(cache) {
-                    removeCollaboratorFromCache(
-                      cache,
-                      listId,
-                      currentUserCollaborator.id,
-                      { evictItem: true },
-                    );
-                  },
-                });
-                goBack();
-              },
-              setLeaving,
-              () => {
+            leaveList(currentUserCollaborator.id, {
+              onSuccess: goBack,
+              onError: () =>
                 alertService.alert(
                   t('labels.error'),
                   t('shoppingListScreens.failedToLeave'),
-                );
-              },
-            );
+                ),
+            });
           },
         },
       ],
@@ -417,7 +275,10 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
+            <ThemedRefreshControl
+              refreshing={isRefetching}
+              onRefresh={refetch}
+            />
           }
         >
           {isHomeLinked ? (
@@ -447,88 +308,11 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
             </View>
           ) : (
             <>
-              <View style={styles.shareCodeSection}>
-                <Text style={styles.sectionTitle}>
-                  {t('shoppingListScreens.shareViaCode')}
-                </Text>
-                <Text style={styles.shareCodeDescription}>
-                  {t('shoppingListScreens.shareCodeDescription')}
-                </Text>
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.shareCodeToggle,
-                    pressed && styles.pressed,
-                  ]}
-                  onPress={handleToggleShareCode}
-                  disabled={togglingShareCode}
-                >
-                  <Animated.View
-                    key={isPublic ? 'public-on' : 'public-off'}
-                    entering={FadeIn.duration(200)}
-                    style={styles.shareCodeToggleContent}
-                  >
-                    <Icon
-                      name={isPublic ? 'link-outline' : 'lock-closed-outline'}
-                      size={20}
-                      tone={isPublic ? 'primary' : 'textSecondary'}
-                    />
-                    <Text style={styles.shareCodeToggleText}>
-                      {isPublic
-                        ? t('shoppingListScreens.publicSharingEnabled')
-                        : t('shoppingListScreens.publicSharingDisabled')}
-                    </Text>
-                  </Animated.View>
-                  <View style={styles.toggleSlot}>
-                    {togglingShareCode ? (
-                      <PrimaryActivityIndicator size="small" />
-                    ) : (
-                      <View
-                        style={[
-                          styles.toggleTrack,
-                          isPublic && styles.toggleTrackActive,
-                        ]}
-                      >
-                        <View
-                          style={[
-                            styles.toggleThumb,
-                            isPublic && styles.toggleThumbActive,
-                          ]}
-                        />
-                      </View>
-                    )}
-                  </View>
-                </Pressable>
-                {isPublic && shareCode ? (
-                  <Animated.View {...getFormAnimationPreset()}>
-                    <Pressable
-                      style={({ pressed }) => [
-                        styles.shareCodeDisplay,
-                        pressed && styles.pressed,
-                      ]}
-                      onPress={handleCopyShareCode}
-                    >
-                      <Text style={styles.shareCodeValue}>{shareCode}</Text>
-                      <View style={styles.copyButton}>
-                        <Icon
-                          name={copied ? 'checkmark' : 'copy-outline'}
-                          size={18}
-                          tone={copied ? 'success' : 'primary'}
-                        />
-                        <Text
-                          style={[
-                            styles.copyText,
-                            copied && styles.copyTextCopied,
-                          ]}
-                        >
-                          {copied
-                            ? t('shoppingListScreens.copied')
-                            : t('shoppingListScreens.copy')}
-                        </Text>
-                      </View>
-                    </Pressable>
-                  </Animated.View>
-                ) : null}
-              </View>
+              <ShareCodeSection
+                listId={listId}
+                isPublic={isPublic}
+                shareCode={shareCode}
+              />
 
               <View style={styles.inviteSection}>
                 <Text style={styles.sectionTitle}>
@@ -575,71 +359,18 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
               <Text style={styles.sectionTitle}>
                 {t('shoppingListScreens.currentMembers')}
               </Text>
-              {activeCollaborators.map(member => {
-                const statusVariant = getStatusVariant(member.status);
-                const statusText = formatStatus(member.status);
-                const displayName = getCollaboratorDisplayName(
-                  member,
-                  currentUser?.id,
-                );
-                const memberEmail =
-                  member.collaborator?.email ?? member.email ?? '';
-                const showEmailRow =
-                  !!memberEmail && memberEmail !== displayName;
-                return (
-                  <Pressable
-                    key={member.id}
-                    style={({ pressed }) => [
-                      styles.memberCard,
-                      pressed && styles.pressed,
-                    ]}
-                    onPress={() =>
-                      permissionsBottomSheetRef.current?.open(member)
-                    }
-                  >
-                    <View style={styles.memberInfo}>
-                      <View style={styles.avatar}>
-                        <Text style={styles.avatarText}>
-                          {displayName[0]?.toUpperCase() || '?'}
-                        </Text>
-                      </View>
-                      <View style={styles.memberDetails}>
-                        <Text style={styles.memberName}>{displayName}</Text>
-                        {showEmailRow ? (
-                          <Text style={styles.memberEmail}>{memberEmail}</Text>
-                        ) : null}
-                        <View style={styles.statusContainer}>
-                          <StatusBadge
-                            variant={statusVariant}
-                            text={statusText}
-                          />
-                          {!!member.invitedAt && (
-                            <Text style={styles.invitedText}>
-                              {t('shoppingListScreens.invitedOn', {
-                                date: new Date(
-                                  member.invitedAt,
-                                ).toLocaleDateString(),
-                              })}
-                            </Text>
-                          )}
-                        </View>
-                      </View>
-                    </View>
-                    {!isHomeLinked && (
-                      <Pressable
-                        onPress={() => {
-                          if (member.id) {
-                            handleRemoveMember(member.id);
-                          }
-                        }}
-                        style={({ pressed }) => pressed && styles.pressed}
-                      >
-                        <Icon name="close" size={20} tone="error" />
-                      </Pressable>
-                    )}
-                  </Pressable>
-                );
-              })}
+              {activeCollaborators.map(member => (
+                <CollaboratorMemberCard
+                  key={member.id}
+                  member={member}
+                  currentUserId={currentUser?.id}
+                  isHomeLinked={isHomeLinked}
+                  onPress={() =>
+                    permissionsBottomSheetRef.current?.open(member)
+                  }
+                  onRemove={() => handleRemoveMember(member.id)}
+                />
+              ))}
             </View>
           )}
 
@@ -728,185 +459,8 @@ const styles = StyleSheet.create(theme => ({
   chipRowContent: {
     paddingHorizontal: theme.spacing.md,
   },
-  shareCodeSection: {
-    padding: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  shareCodeDescription: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.md,
-    lineHeight: theme.typography.fontSize.sm * 1.5,
-  },
-  shareCodeToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: theme.spacing['3'],
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.sm,
-  },
-  shareCodeToggleContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
-  },
-  shareCodeToggleText: {
-    fontSize: theme.typography.fontSize.md,
-    color: theme.colors.textPrimary,
-    fontWeight: theme.fonts.weight.medium,
-  },
-  toggleSlot: {
-    width: 44,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  toggleTrack: {
-    width: 44,
-    height: 24,
-    borderRadius: theme.radii.full,
-    backgroundColor: theme.colors.border,
-    justifyContent: 'center',
-    paddingHorizontal: 2,
-  },
-  toggleTrackActive: {
-    backgroundColor: theme.colors.primary,
-  },
-  toggleThumb: {
-    width: 20,
-    height: 20,
-    borderRadius: theme.radii.full,
-    backgroundColor: theme.colors.white,
-  },
-  toggleThumbActive: {
-    alignSelf: 'flex-end',
-  },
-  shareCodeDisplay: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: theme.spacing.md,
-    padding: theme.spacing['3'],
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.sm,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderStyle: 'dashed',
-  },
-  shareCodeValue: {
-    fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.fonts.weight.bold,
-    color: theme.colors.textPrimary,
-    letterSpacing: 2,
-  },
-  copyButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.xs,
-  },
-  copyText: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.medium,
-  },
-  copyTextCopied: {
-    color: theme.colors.success,
-  },
   membersSection: {
     padding: theme.spacing.md,
-  },
-  memberCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: theme.spacing['3'],
-    backgroundColor: theme.colors.surface,
-    marginBottom: theme.spacing.sm,
-    borderRadius: theme.radii.sm,
-  },
-  memberInfo: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    flex: 1,
-  },
-  memberDetails: {
-    flex: 1,
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: theme.radii.full,
-    backgroundColor: theme.colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: theme.spacing['3'],
-  },
-  avatarText: {
-    color: theme.colors.white,
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.fonts.weight.semibold,
-  },
-  memberName: {
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
-  },
-  memberEmail: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.textSecondary,
-    marginTop: 2,
-  },
-  statusContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: theme.spacing.sm,
-    flexWrap: 'wrap',
-    gap: theme.spacing.sm,
-  },
-  statusBadge: {
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs,
-    borderRadius: theme.radii.pill,
-    borderWidth: 1,
-    variants: {
-      status: {
-        active: {
-          backgroundColor: theme.colors.success + '20',
-          borderColor: theme.colors.success,
-        },
-        pending: {
-          backgroundColor: theme.colors.warning + '20',
-          borderColor: theme.colors.warning,
-        },
-        declined: {
-          backgroundColor: theme.colors.error + '20',
-          borderColor: theme.colors.error,
-        },
-        expired: {
-          backgroundColor: theme.colors.textTertiary + '20',
-          borderColor: theme.colors.textTertiary,
-        },
-      },
-    },
-  },
-  statusText: {
-    fontSize: theme.typography.fontSize.xs,
-    fontWeight: theme.fonts.weight.semibold,
-    variants: {
-      status: {
-        active: { color: theme.colors.success },
-        pending: { color: theme.colors.warning },
-        declined: { color: theme.colors.error },
-        expired: { color: theme.colors.textTertiary },
-      },
-    },
-  },
-  invitedText: {
-    fontSize: theme.typography.fontSize.xs,
-    color: theme.colors.textSecondary,
-    fontStyle: 'italic',
   },
   leaveSection: {
     padding: theme.spacing.md,

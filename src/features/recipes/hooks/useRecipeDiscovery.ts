@@ -191,7 +191,7 @@ async function fetchPantryDiscovery(
     },
     guardedSetLoading,
     (error: unknown) => {
-      if ((error as any).name === 'AbortError') return;
+      if (error instanceof Error && error.name === 'AbortError') return;
       console.error('Failed to fetch pantry-based recipes:', error);
     },
   );
@@ -234,7 +234,7 @@ async function fetchRandomDiscovery(
     },
     guardedSetLoading,
     (error: unknown) => {
-      if ((error as any).name === 'AbortError') return;
+      if (error instanceof Error && error.name === 'AbortError') return;
       console.error('Failed to fetch random recipes:', error);
     },
   );
@@ -261,7 +261,7 @@ export function useRecipeDiscovery(
     skip: !selectedHomeId,
   });
 
-  const defaultPantry = getDefaultPantry(homeData);
+  const defaultPantry = getDefaultPantry(homeData?.home);
   const {
     state: {
       items: pantryItems,

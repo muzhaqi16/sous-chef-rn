@@ -5,6 +5,11 @@ export interface TelemetryConfig {
   enableMetrics: boolean;
   enableLogs: boolean;
   enableConsoleInDev: boolean;
+  /**
+   * Lowest log level shipped to transports. Levels below this are dropped at
+   * `log()` time so debug/info chatter never reaches Loki in production.
+   */
+  minLogLevel: LogEntry['level'];
   appName: string;
   environment: string;
   platform: string;
@@ -44,6 +49,13 @@ export interface MetricEntry {
   labels: Record<string, string>;
   timestamp: number;
   type: 'counter' | 'gauge' | 'histogram';
+  /**
+   * Explicit histogram bucket upper bounds. Only meaningful for `histogram`
+   * metrics; when omitted the transport's default latency bounds are used. Set
+   * this for non-latency histograms (ratios 0-1, byte sizes, long durations)
+   * so `histogram_quantile` resolves real percentiles instead of saturating.
+   */
+  bounds?: number[];
 }
 
 export interface ErrorDetails {
@@ -77,13 +89,6 @@ export interface TelemetryEventData {
   timestamp?: string;
 }
 
-export interface PerformanceTimingData {
-  category: string;
-  variable: string;
-  duration: number;
-  label?: string;
-}
-
 export interface ScreenViewData {
   screenName: string;
   properties?: Record<string, any>;
@@ -94,6 +99,7 @@ export const DEFAULT_CONFIG: TelemetryConfig = {
   enableMetrics: false,
   enableLogs: false,
   enableConsoleInDev: true,
+  minLogLevel: 'debug',
   appName: 'sous-chef-app',
   environment: 'development',
   platform: Platform.OS,

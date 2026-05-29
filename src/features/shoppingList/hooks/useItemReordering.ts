@@ -20,7 +20,7 @@ interface ShoppingListItem {
   id: string;
   sortOrder?: string | null;
   version: number;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface UseItemReorderingOptions<T extends ShoppingListItem> {
@@ -248,7 +248,7 @@ export function useItemReordering<T extends ShoppingListItem>(
             },
           },
         }),
-      (error: any) => {
+      error => {
         handleMutationError(error, {
           operation: 'Move Item',
           checks: [versionConflictCheck({ onRefresh: () => refetch?.() })],

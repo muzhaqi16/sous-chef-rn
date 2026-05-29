@@ -8,6 +8,14 @@ interface RecipeInstructionsProps {
   instructionsHtml?: string;
 }
 
+// The two instruction shapes this component renders:
+// - Backend / user-created flat steps: { step, text } or { number, step }
+// - Spoonacular "analyzed instructions": [{ steps: [{ number, step }] }]
+type DisplayStep = { step?: number | string; text?: string; number?: number };
+type AnalyzedInstruction = {
+  steps: Array<{ number: number; step: string }>;
+};
+
 const Step: React.FC<{ num: number | string; text: string }> = ({
   num,
   text,
@@ -38,7 +46,8 @@ export const RecipeInstructions: React.FC<RecipeInstructionsProps> = ({
     !isBackendRecipe &&
     Array.isArray(instructions) &&
     instructions.length > 0 &&
-    (instructions[0] as any)?.steps?.length > 0;
+    ((instructions[0] as AnalyzedInstruction | undefined)?.steps?.length ?? 0) >
+      0;
   const hasHtmlInstructions =
     !isBackendRecipe &&
     !!instructionsHtml &&
@@ -56,11 +65,11 @@ export const RecipeInstructions: React.FC<RecipeInstructionsProps> = ({
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>Instructions</Text>
       {!!hasBackendInstructions &&
-        (instructions as any[]).map((step: any, index: number) => {
+        (instructions as DisplayStep[]).map((step, index) => {
           // Support both formats:
           // User-created: { step: number, text: string }
           // Preloaded external: { number: number, step: string }
-          const stepText = step.text ?? step.step;
+          const stepText = step.text ?? String(step.step ?? '');
           const stepNum =
             step.text != null
               ? step.step ?? index + 1
@@ -68,7 +77,7 @@ export const RecipeInstructions: React.FC<RecipeInstructionsProps> = ({
           return <Step key={index} num={stepNum} text={stepText} />;
         })}
       {!!hasAnalyzedInstructions &&
-        (instructions as any)[0].steps.map((step: any, index: number) => (
+        (instructions as AnalyzedInstruction[])[0].steps.map((step, index) => (
           <Step key={index} num={step.number} text={step.step} />
         ))}
       {!hasBackendInstructions &&

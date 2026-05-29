@@ -11,8 +11,8 @@ async function executeArrayOperation<T>(
 ): Promise<T | false> {
   try {
     return await operationFn();
-  } catch (err: any) {
-    onError(err.message || 'An error occurred');
+  } catch (err: unknown) {
+    onError((err instanceof Error && err.message) || 'An error occurred');
     return false;
   }
 }

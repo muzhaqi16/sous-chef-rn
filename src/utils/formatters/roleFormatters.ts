@@ -1,4 +1,7 @@
 import { t } from '#/i18n/t';
+import type { Theme } from '#/theme/themes';
+
+type RoleColorTheme = { colors: Pick<Theme['colors'], 'roles'> };
 
 /**
  * Format a role string from API format to display format
@@ -66,7 +69,7 @@ export function getRoleIcon(role: string): string {
  * @param theme - Unistyles theme object
  * @returns Color string from theme
  */
-export function getRoleColor(role: string, theme: any): string {
+export function getRoleColor(role: string, theme: RoleColorTheme): string {
   switch (role) {
     case 'OWNER':
       return theme.colors.roles.owner;
@@ -87,7 +90,7 @@ export function getRoleColor(role: string, theme: any): string {
  * @param theme - Unistyles theme object
  * @returns Object with backgroundColor and color for badge
  */
-export function getRoleBadgeStyle(role: string, theme: any) {
+export function getRoleBadgeStyle(role: string, theme: RoleColorTheme) {
   const color = getRoleColor(role, theme);
   return {
     backgroundColor: `${color}20`, // 20 = 12.5% opacity in hex

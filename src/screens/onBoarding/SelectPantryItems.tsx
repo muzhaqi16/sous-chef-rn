@@ -105,7 +105,7 @@ export const SelectPantryItems = () => {
   // Transform onboarding items into selectable items, pre-selecting existing pantry items
   const selectableItems = (
     data?.items?.edges?.map(edge => edge.node) || []
-  ).map((item: any) => ({
+  ).map(item => ({
     ...item,
     selected: existingCatalogIds.has(item.id),
   }));
@@ -253,7 +253,7 @@ export const SelectPantryItems = () => {
               selected={item.selected}
               onPress={() => toggleItem(item.id)}
               disabled={!item.selected && isMaxReached}
-              imageUrl={item.imageUrl}
+              imageUrl={item.imageUrl ?? undefined}
             />
           ))}
         </View>

@@ -1,9 +1,9 @@
 import { Platform } from 'react-native';
-import Config from 'react-native-config';
+import { env as buildEnv } from '#/config/env';
 import { TelemetryService } from './TelemetryService';
 import { TelemetryConfig } from './types';
+import { getVersion } from 'react-native-device-info';
 import { Environment } from '#/utils/environment';
-import { getDeviceId } from '#/utils/deviceId';
 
 const createTelemetryConfig = (): TelemetryConfig => {
   const env = Environment.getConfig();
@@ -14,6 +14,10 @@ const createTelemetryConfig = (): TelemetryConfig => {
       Environment.shouldEnableAnalytics() || Environment.isDevelopment(),
     enableLogs: true,
     enableConsoleInDev: false,
+    // Production ships only warn+error to Loki; staging adds info; dev keeps
+    // everything. Prevents debug/info chatter (e.g. GraphQL traces) from
+    // flooding Loki in production.
+    minLogLevel: env.isProduction ? 'warn' : env.isStaging ? 'info' : 'debug',
     appName: 'sous-chef-app',
     environment: env.isProduction
       ? 'production'
@@ -21,33 +25,37 @@ const createTelemetryConfig = (): TelemetryConfig => {
       ? 'staging'
       : 'development',
     platform: Platform.OS,
-    instanceId: `${Platform.OS}_${getDeviceId()}`,
+    // Coarse instance id (platform + app version), NOT per-device: a
+    // per-device id becomes the `instance` label on every series and
+    // multiplies active series by the install base in Prometheus. Per-device
+    // identity, when needed, belongs on logs (Loki), not metric labels.
+    instanceId: `${Platform.OS}_${getVersion()}`,
     flushIntervals: {
       metrics: env.isDevelopment ? 5000 : 10000,
       logs: env.isDevelopment ? 2000 : 5000,
     },
     endpoints: {
-      metrics: Config.OTLP_METRICS_ENDPOINT,
-      logs: Config.OTLP_LOGS_ENDPOINT,
+      metrics: buildEnv.OTLP_METRICS_ENDPOINT,
+      logs: buildEnv.OTLP_LOGS_ENDPOINT,
     },
     metricsAuth:
-      Config.OTLP_METRICS_AUTH_USERNAME && Config.OTLP_METRICS_AUTH_PASSWORD
+      buildEnv.OTLP_METRICS_AUTH_USERNAME && buildEnv.OTLP_METRICS_AUTH_PASSWORD
         ? {
-            username: Config.OTLP_METRICS_AUTH_USERNAME,
-            password: Config.OTLP_METRICS_AUTH_PASSWORD,
+            username: buildEnv.OTLP_METRICS_AUTH_USERNAME,
+            password: buildEnv.OTLP_METRICS_AUTH_PASSWORD,
           }
         : undefined,
     logsAuth:
-      Config.OTLP_LOGS_AUTH_USERNAME && Config.OTLP_LOGS_AUTH_PASSWORD
+      buildEnv.OTLP_LOGS_AUTH_USERNAME && buildEnv.OTLP_LOGS_AUTH_PASSWORD
         ? {
-            username: Config.OTLP_LOGS_AUTH_USERNAME,
-            password: Config.OTLP_LOGS_AUTH_PASSWORD,
+            username: buildEnv.OTLP_LOGS_AUTH_USERNAME,
+            password: buildEnv.OTLP_LOGS_AUTH_PASSWORD,
           }
         : undefined,
     transports: {
       http:
         (env.isDevelopment || env.isStaging || env.isProduction) &&
-        !!(Config.OTLP_METRICS_ENDPOINT || Config.OTLP_LOGS_ENDPOINT),
+        !!(buildEnv.OTLP_METRICS_ENDPOINT || buildEnv.OTLP_LOGS_ENDPOINT),
       console: false,
     },
   };
@@ -88,20 +96,14 @@ export const Telemetry = {
     name: string,
     value: number,
     labels: Record<string, string> = {},
-  ) => getService().recordHistogram(name, value, labels),
+    bounds?: number[],
+  ) => getService().recordHistogram(name, value, labels, bounds),
 
   trackEvent: (eventName: string, properties: Record<string, any> = {}) =>
     getService().trackEvent(eventName, properties),
 
   trackScreen: (screenName: string, properties: Record<string, any> = {}) =>
     getService().trackScreenView(screenName, properties),
-
-  trackTiming: (
-    category: string,
-    variable: string,
-    duration: number,
-    label?: string,
-  ) => getService().trackTiming(category, variable, duration, label),
 
   trackError: (error: Error | string, context?: Record<string, any>) => {
     const { component, operation, isFatal, ...rest } = context || {};

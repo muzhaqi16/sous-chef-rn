@@ -1,11 +1,14 @@
 import { Platform } from 'react-native';
-import Config from 'react-native-config';
+import { env, type Env } from '#/config/env';
 import { appConfig } from '#/config/appConfig';
 
-// justified: react-native-config doesn't provide typed keys — dynamic string access requires `as any`
-const getConfigValue = (key: string, fallback: any = undefined) => {
-  return (Config as any)[key] ?? fallback;
-};
+type ConfigValue = string | number | boolean | undefined;
+// Pure-JS build-time config (see scripts/generate-env.js). The return type
+// follows the fallback — a string fallback yields `string`.
+const getConfigValue = <T extends ConfigValue>(
+  key: keyof Env,
+  fallback: T,
+): string | T => env[key] ?? fallback;
 
 /**
  * Get web app URL for external links (privacy policy, terms, etc.)
@@ -201,27 +204,27 @@ export class Environment {
  * Conditional logging helper
  */
 export const logger = {
-  debug: (...args: any[]) => {
+  debug: (...args: unknown[]) => {
     if (Environment.getLogLevel() === 'debug') {
       console.log('[DEBUG]', ...args);
     }
   },
-  info: (...args: any[]) => {
+  info: (...args: unknown[]) => {
     if (['debug', 'info'].includes(Environment.getLogLevel())) {
       console.info('[INFO]', ...args);
     }
   },
-  warn: (...args: any[]) => {
+  warn: (...args: unknown[]) => {
     if (['debug', 'info', 'warn'].includes(Environment.getLogLevel())) {
       console.warn('[WARN]', ...args);
     }
   },
-  error: (...args: any[]) => {
+  error: (...args: unknown[]) => {
     if (Environment.getLogLevel() !== 'none') {
       console.error('[ERROR]', ...args);
     }
   },
-  production: (...args: any[]) => {
+  production: (...args: unknown[]) => {
     // Always log in production for critical issues
     if (Environment.isProduction()) {
       console.error('[PROD]', ...args);

@@ -15,6 +15,7 @@ import {
   Priority,
 } from '#/graphql/generated/schemaTypes';
 import { useAppStore } from '#store/useAppStore';
+import type { RootState } from '#store/index';
 import { useShallow } from 'zustand/react/shallow';
 import { showLocalNotification } from '#utils/notifications/localNotificationHelper';
 import {
@@ -30,12 +31,12 @@ import { useNotificationSettings } from './useNotificationSettings';
 import { useNotificationSync } from './useNotificationSync';
 
 // PERFORMANCE: Grouped selectors to reduce subscriptions from 7 to 2
-const selectNotificationState = (state: any) => ({
+const selectNotificationState = (state: RootState) => ({
   notifications: state.notifications,
   user: state.user,
 });
 
-const selectNotificationActions = (state: any) => ({
+const selectNotificationActions = (state: RootState) => ({
   addNotification: state.addNotification,
   markAsRead: state.markAsRead,
   removeNotification: state.removeNotification,
@@ -120,7 +121,16 @@ export const useNotifications = (config: NotificationConfig = {}) => {
   };
 
   const processNotification = (
-    notification: any,
+    notification: {
+      id?: string;
+      type?: NotificationType;
+      title?: string;
+      message?: string;
+      priority?: NotificationPriority;
+      payload?: Record<string, unknown> | null;
+      sentAt?: string;
+      expiresAt?: string | null;
+    },
     category: NotificationCategory,
     sourceUserId?: string,
   ) => {
@@ -131,16 +141,15 @@ export const useNotifications = (config: NotificationConfig = {}) => {
       return;
     }
 
+    const resolvedType = notification.type || NotificationType.HomeJoined;
+
     // Check if notification type is enabled in user preferences
-    if (!isNotificationTypeEnabled(notification.type)) {
+    if (!isNotificationTypeEnabled(resolvedType)) {
       return;
     }
 
-    const { requiresAction, actionType } = getNotificationAction(
-      notification.type,
-    );
+    const { requiresAction, actionType } = getNotificationAction(resolvedType);
 
-    const resolvedType = notification.type || NotificationType.HomeJoined;
     const processedNotification = {
       id: notification.id || Date.now().toString(),
       type: resolvedType,
@@ -154,7 +163,7 @@ export const useNotifications = (config: NotificationConfig = {}) => {
       isRead: false,
       requiresAction,
       actionType,
-      actionData: notification.payload,
+      actionData: notification.payload ?? undefined,
     };
 
     addNotification(processedNotification);
@@ -174,7 +183,7 @@ export const useNotifications = (config: NotificationConfig = {}) => {
   };
 
   // Error handler - suppresses expected network errors
-  const handleError = (subscriptionName: string, error: any) => {
+  const handleError = (subscriptionName: string, error: Error) => {
     const errorMessage = error?.message?.toLowerCase() || '';
     const isSocketClosed = errorMessage.includes('socket closed');
     const isNetworkError =

@@ -2,6 +2,7 @@ import React from 'react';
 import { useWindowDimensions } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { SwipeableItem } from '#components/molecules/SwipeableItem/SwipeableItem';
+import type { SwipeableRef } from '#components/molecules/SwipeableItem/types';
 import { ListItem } from '../molecules/ListItem';
 import { StyleSheet } from 'react-native-unistyles';
 import { useSlideAnimation } from '#hooks/animations/useSlideAnimation';
@@ -17,7 +18,7 @@ interface ItemCardProps {
   onConsume?: () => void;
   onWaste?: () => void;
   onRestock?: () => void;
-  onSwipeableWillOpen?: (ref: any) => void;
+  onSwipeableWillOpen?: (ref: SwipeableRef) => void;
   badge?: {
     text: string;
     variant?: 'default' | 'primary' | 'success' | 'warning' | 'danger';

@@ -24,6 +24,7 @@ import {
   executeCacheUpdate,
   executeMutation,
 } from '#/utils/compilerSafeWrappers';
+import { extractNodes } from '#/utils/connectionUtils';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
 import {
   handleMutationError,
@@ -204,8 +205,8 @@ export function useHomeDetailManagement(homeId: string) {
           // Read remaining homes from cache
           const cachedData = leaveClient.cache.readQuery({
             query: GetHomesDocument,
-          }) as { homes: any[] } | null;
-          const remainingHomes = cachedData?.homes ?? [];
+          });
+          const remainingHomes = extractNodes(cachedData?.homes);
 
           if (remainingHomes.length > 0) {
             const newDefaultHome = remainingHomes[0];

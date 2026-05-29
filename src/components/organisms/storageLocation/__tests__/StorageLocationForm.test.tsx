@@ -1,6 +1,11 @@
 'use no memo';
 import React from 'react';
-import { fireEvent, render, screen, userEvent } from '@testing-library/react-native';
+import {
+  fireEvent,
+  render,
+  screen,
+  userEvent,
+} from '@testing-library/react-native';
 import { StorageLocationForm } from '../StorageLocationForm';
 
 describe('StorageLocationForm', () => {
@@ -45,7 +50,6 @@ describe('StorageLocationForm', () => {
         initialData={{
           name: 'My Fridge',
           type: 'REFRIGERATOR',
-          icon: '\uD83E\uDDCA',
         }}
       />,
     );
@@ -71,7 +75,6 @@ describe('StorageLocationForm', () => {
         initialData={{
           name: 'Kitchen Fridge',
           type: 'REFRIGERATOR',
-          icon: '\uD83E\uDDCA',
         }}
       />,
     );

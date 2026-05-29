@@ -98,3 +98,6 @@ e2e/artifacts/
 **/*.generated.ts
 src/graphql/generated/schemaTypes.ts
 src/graphql/generated/fragmentMatcher.json
+
+# Generated build-time config (see scripts/generate-env.js)
+src/config/env.generated.ts

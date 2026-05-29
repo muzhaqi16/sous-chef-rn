@@ -54,16 +54,36 @@ jest.mock('#store/useAppStore', () => {
   return { useAppStore: fn, useUser: jest.fn(() => mockState.user) };
 });
 
+// useShoppingListDetails now returns already-materialized collaborator
+// fragments (with invitedAt), which ShareList consumes directly.
 const mockCollaborators = [
   {
     __typename: 'ShoppingListCollaborator',
     id: 'c1',
+    email: 'owner@test.com',
+    role: 'OWNER',
+    status: 'ACTIVE',
+    collaboratorId: 'u1',
+    canAddItems: true,
+    canRemoveItems: true,
+    canEditItems: true,
+    canMarkPurchased: true,
     invitedAt: '2024-01-01T00:00:00Z',
+    collaborator: null,
   },
   {
     __typename: 'ShoppingListCollaborator',
     id: 'c2',
+    email: 'member@test.com',
+    role: 'CONTRIBUTOR',
+    status: 'ACCEPTED',
+    collaboratorId: 'u2',
+    canAddItems: true,
+    canRemoveItems: false,
+    canEditItems: false,
+    canMarkPurchased: true,
     invitedAt: '2024-01-05T00:00:00Z',
+    collaborator: null,
   },
 ];
 

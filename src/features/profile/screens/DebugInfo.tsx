@@ -5,7 +5,7 @@ import { alertService } from '#/services/alertService';
 import { StyleSheet } from 'react-native-unistyles';
 import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
 import { Environment } from '#/utils/environment';
-import Config from 'react-native-config';
+import { env } from '#/config/env';
 import { Platform } from 'react-native';
 import DeviceInfo from 'react-native-device-info';
 import Clipboard from '@react-native-clipboard/clipboard';
@@ -18,8 +18,8 @@ export const DebugInfo: React.FC = () => {
   const apiConfig = Environment.getApiConfig();
 
   // Get actual API URL being used
-  const actualApiUrl = Config.API_URL || apiConfig.baseUrl;
-  const actualWsUrl = Config.WEB_SOCKET_URL || apiConfig.wsUrl;
+  const actualApiUrl = env.API_URL || apiConfig.baseUrl;
+  const actualWsUrl = env.WEB_SOCKET_URL || apiConfig.wsUrl;
 
   const debugData = {
     Environment: {
@@ -32,17 +32,15 @@ export const DebugInfo: React.FC = () => {
     'API Configuration': {
       'API URL': actualApiUrl,
       'WebSocket URL': actualWsUrl,
-      'API Key': Config.API_KEY
-        ? `${Config.API_KEY.substring(0, 20)}...`
-        : 'Not set',
+      'API Key': env.API_KEY ? `${env.API_KEY.substring(0, 20)}...` : 'Not set',
       Timeout: `${apiConfig.timeout}ms`,
       'Max Retries': apiConfig.retries.toString(),
     },
     Telemetry: {
-      'Metrics Endpoint': Config.OTLP_METRICS_ENDPOINT || 'Not set',
-      'Logs Endpoint': Config.OTLP_LOGS_ENDPOINT || 'Not set',
-      'Metrics Auth': Config.OTLP_METRICS_AUTH_USERNAME || 'Not set',
-      'Logs Auth': Config.OTLP_LOGS_AUTH_USERNAME || 'Not set',
+      'Metrics Endpoint': env.OTLP_METRICS_ENDPOINT || 'Not set',
+      'Logs Endpoint': env.OTLP_LOGS_ENDPOINT || 'Not set',
+      'Metrics Auth': env.OTLP_METRICS_AUTH_USERNAME || 'Not set',
+      'Logs Auth': env.OTLP_LOGS_AUTH_USERNAME || 'Not set',
     },
     'Device Info': {
       Platform: Platform.OS,
@@ -54,8 +52,8 @@ export const DebugInfo: React.FC = () => {
       'Device Model': DeviceInfo.getModel(),
     },
     'Build Configuration': {
-      NODE_ENV: Config.NODE_ENV || 'Not set',
-      'Web App URL': Config.WEB_APP_URL || 'Not set',
+      NODE_ENV: env.NODE_ENV || 'Not set',
+      'Web App URL': env.WEB_APP_URL || 'Not set',
     },
   };
 

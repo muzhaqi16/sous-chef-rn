@@ -11,12 +11,13 @@ import { SegmentedControl } from '#components/molecules/SegmentedControl';
 import { DatePickerField } from '#components/molecules/DatePickerField';
 import { StorageState, StorageLocation } from '#/graphql/generated/schemaTypes';
 import { Text } from '#components/atoms/Text';
+import type { PantryItemFormData } from './PantryItemForm';
 
 const STORAGE_STATES = Object.values(StorageState);
 
 interface StorageDetailsSectionProps {
-  control: Control<any>;
-  errors: FieldErrors<any>;
+  control: Control<PantryItemFormData>;
+  errors: FieldErrors<PantryItemFormData>;
   mode: 'add' | 'edit';
   storageState: StorageState;
   expirationDate?: Date;
@@ -42,7 +43,7 @@ export const StorageDetailsSection: React.FC<StorageDetailsSectionProps> = ({
   onStorageLocationSelected,
   onAddNewLocation,
 }) => {
-  const locationFields: FieldDef<any>[] = [
+  const locationFields: FieldDef<PantryItemFormData>[] = [
     {
       name: 'location',
       label: 'Location',
@@ -54,7 +55,7 @@ export const StorageDetailsSection: React.FC<StorageDetailsSectionProps> = ({
     },
   ];
 
-  const notesFields: FieldDef<any>[] = [
+  const notesFields: FieldDef<PantryItemFormData>[] = [
     {
       name: 'notes',
       label: mode === 'edit' ? 'Storage Notes' : 'Notes',

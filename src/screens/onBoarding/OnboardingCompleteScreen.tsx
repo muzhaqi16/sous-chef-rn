@@ -45,11 +45,10 @@ export const OnboardingCompleteScreen = () => {
     setIsCompleting(true);
     setError(null);
 
-    try {
-      await completeOnboardingMutation();
-    } catch (err) {
-      console.error('Error in handleComplete:', err);
-    }
+    // The mutation's onError handler (declared above) covers failures, and
+    // with errorPolicy:'all' the call doesn't throw — so no try/catch wrapper
+    // (which would bail the React Compiler out of this component) is needed.
+    await completeOnboardingMutation();
   };
 
   return (

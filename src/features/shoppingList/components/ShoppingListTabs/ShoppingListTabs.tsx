@@ -1,10 +1,12 @@
 import React, { useRef, useState } from 'react';
 import {
-  RefreshControl,
   useWindowDimensions,
   View,
   Platform,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
 } from 'react-native';
+import { ThemedRefreshControl } from '#components/atoms/themedComponents';
 import { useTranslation } from 'react-i18next';
 import { ScrollView } from 'react-native-gesture-handler';
 import { alertService } from '#/services/alertService';
@@ -13,8 +15,9 @@ import { FilterTabBar } from './FilterTabBar';
 import type { FilterTabActionButton } from '#components/molecules/FilterTabs/types';
 import { ShoppingTab } from './ShoppingTab';
 import { PurchasedTab } from './PurchasedTab';
-import { EmptyState } from '#components/base/EmptyState';
+import { EmptyState, type EmptyStateProps } from '#components/base/EmptyState';
 import type { ShoppingListRowItem } from '../SortableShoppingList/types';
+import type { SwipeableRef } from '#/components/molecules/SwipeableItem/types';
 import {
   ShoppingListTabsActionsProvider,
   type ShoppingListTabsActions,
@@ -61,10 +64,10 @@ interface ShoppingListTabsProps {
   refreshing?: boolean;
   loading?: boolean;
   disabled?: boolean;
-  emptyState?: any;
+  emptyState?: EmptyStateProps;
   onClearAllPurchased?: () => Promise<void>;
   onClearAllShopping?: () => Promise<void>;
-  onSwipeableWillOpen?: (ref: any) => void;
+  onSwipeableWillOpen?: (ref: SwipeableRef) => void;
   onSwipeableClose?: () => void;
   onCloseAllSwipeables?: () => void;
   // Pagination props for shopping tab
@@ -91,7 +94,7 @@ interface ShoppingListTabsProps {
   // Current search query for search-aware empty states in tabs
   searchQuery?: string;
   // Collapsible scroll handler — threaded to FlashList via data context
-  onScroll?: (event: any) => void;
+  onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
   scrollEventThrottle?: number;
 }
 
@@ -431,7 +434,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
               contentContainerStyle={{ flex: 1 }}
               refreshControl={
                 onRefresh ? (
-                  <RefreshControl
+                  <ThemedRefreshControl
                     refreshing={refreshing || false}
                     onRefresh={onRefresh}
                   />

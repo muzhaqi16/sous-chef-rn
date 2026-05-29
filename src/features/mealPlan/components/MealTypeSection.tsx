@@ -43,7 +43,7 @@ export const MealTypeSection: React.FC<MealTypeSectionProps> = ({
             style={styles.addButton}
             hitSlop={8}
           >
-            <Icon name="add" size={20} color={styles.addIcon.color} />
+            <Icon name="add" size={20} tone="primary" />
           </Pressable>
         )}
       </View>
@@ -77,8 +77,5 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.xs,
     borderRadius: theme.radii.full,
     backgroundColor: theme.colors.surface,
-  },
-  addIcon: {
-    color: theme.colors.primary,
   },
 }));

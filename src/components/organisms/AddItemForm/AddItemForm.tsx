@@ -58,11 +58,21 @@ export interface AddItemFormInitialData {
   netWeights?: Array<{ value: number; unitName: string; unitId?: string }>;
 }
 
+/**
+ * The assembled item payload AddItemForm emits on submit: a loose record (the
+ * consumer builds the CreateItem mutation input from it) plus the picked
+ * images. Kept structurally loose intentionally — typing it to the exact
+ * mutation input is a separate form-layer refactor.
+ */
+export type AddItemSubmitPayload = Record<string, unknown> & {
+  selectedImages: SelectedImage[];
+};
+
 interface AddItemFormProps {
   barcode?: string;
   format?: string;
   scannedValue?: string; // The actual scanned value (could be barcode or SKU)
-  onSubmit: (formData: CreateItemFormData) => void;
+  onSubmit: (formData: AddItemSubmitPayload) => void;
   onClose: () => void;
   loading?: boolean;
   title?: string;
@@ -189,7 +199,7 @@ const buildTabFieldGroups = (
     component: FormInput,
   };
   const storeField: FieldDef<CreateItemFormData> = {
-    name: 'storeName' as any,
+    name: 'storeName',
     label: 'Store (for SKU)',
     placeholder: 'Search for store',
     component: 'storeAutocomplete',
@@ -256,13 +266,13 @@ const buildTabFieldGroups = (
     placeholder: 'Comma-separated tags (e.g., organic, gluten-free)',
     component: FormTextArea,
     props: { numberOfLines: 2 },
-    renderValue: (value: any) => {
+    renderValue: (value: unknown) => {
       if (Array.isArray(value)) {
         return value.join(', ');
       }
-      return value || '';
+      return typeof value === 'string' ? value : '';
     },
-    transformValue: (value: string) => {
+    transformValue: (value: unknown) => {
       if (!value || typeof value !== 'string') return [];
       return value
         .split(',')
@@ -284,7 +294,7 @@ const buildTabFieldGroups = (
     props: { componentType: 'checkbox' },
   };
   const editReasonField: FieldDef<CreateItemFormData> = {
-    name: 'editReason' as any,
+    name: 'editReason',
     label: 'Reason for Edit',
     placeholder:
       'What needs to be corrected? (e.g., wrong weight, missing image)',
@@ -384,8 +394,8 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
 
   const modeConfig = MODE_CONFIG[mode];
 
-  const getInitialValues = () => {
-    const values: any = {
+  const getInitialValues = (): CreateItemFormData => {
+    const values: CreateItemFormData = {
       name: '',
       description: '',
       sku: '',
@@ -522,9 +532,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
         ? [...tags, ...systemTags]
         : undefined;
 
-    const processedData: Record<string, unknown> & {
-      selectedImages: SelectedImage[];
-    } = {
+    const processedData: AddItemSubmitPayload = {
       name: data.name,
       description: data.description || undefined,
       type: (data.type as ItemType) || undefined,
@@ -552,7 +560,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
       selectedImages,
     };
 
-    onSubmit(processedData as any);
+    onSubmit(processedData);
   };
 
   const activePage = PAGES[currentPage];

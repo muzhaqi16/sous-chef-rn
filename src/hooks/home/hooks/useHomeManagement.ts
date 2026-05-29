@@ -56,7 +56,6 @@ export function useHomeManagement() {
   // Mutations hook - CRUD operations
   const { createHome, updateHome, deleteHome, creating, updating, deleting } =
     useHomeMutations({
-      homes,
       refetch,
       setDefaultHome,
       setSelectedPantryId,

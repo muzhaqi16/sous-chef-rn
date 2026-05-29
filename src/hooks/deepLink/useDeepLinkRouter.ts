@@ -10,7 +10,8 @@ interface DeepLinkTokenPayload {
   exp: number;
   iat: number;
   type?: string;
-  [key: string]: any;
+  // Decoded JWT claims are open-ended; only exp/iat/type are read here.
+  [key: string]: unknown;
 }
 
 /**

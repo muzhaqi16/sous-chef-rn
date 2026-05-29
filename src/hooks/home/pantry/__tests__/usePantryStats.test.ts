@@ -3,6 +3,14 @@
 import { usePantryStats } from '../usePantryStats';
 import { StorageState } from '#/graphql/generated/schemaTypes';
 
+type PantryStatsItem = Parameters<
+  typeof usePantryStats
+>[0]['pantryItems'][number];
+
+function makeStatsItem(overrides?: Partial<PantryStatsItem>): PantryStatsItem {
+  return { storageState: StorageState.Ambient, ...overrides };
+}
+
 describe('usePantryStats', () => {
   describe('client-side fallback (no storageStateCounts)', () => {
     it('returns zero counts for empty array', () => {
@@ -55,9 +63,9 @@ describe('usePantryStats', () => {
 
     it('counts items with default/other storage states as pantry', () => {
       const items = [
-        { id: '1', storageState: StorageState.Ambient },
-        { id: '2', storageState: StorageState.None },
-        { id: '3', storageState: 'UNKNOWN' },
+        makeStatsItem({ storageState: StorageState.Ambient }),
+        makeStatsItem({ storageState: StorageState.None }),
+        makeStatsItem({ storageState: undefined }),
       ];
 
       const { locationCounts } = usePantryStats({ pantryItems: items });
@@ -145,7 +153,7 @@ describe('usePantryStats', () => {
     });
 
     it('falls back to pantryItems.length for all when totalCount is not provided', () => {
-      const items = [{ id: '1' }, { id: '2' }];
+      const items = [makeStatsItem(), makeStatsItem()];
 
       const { locationCounts } = usePantryStats({
         pantryItems: items,

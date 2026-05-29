@@ -1,5 +1,6 @@
 import { renderHook, waitFor } from '@testing-library/react-native';
 import { alertService } from '#/services/alertService';
+import { StorageState } from '#/graphql/generated/schemaTypes';
 import {
   usePantryItemFormSubmit,
   type PantryItemFormData,
@@ -37,7 +38,7 @@ const baseData: PantryItemFormData = {
   itemName: 'Milk',
   quantityInput: '2',
   unit: 'L',
-  storageState: 'AMBIENT',
+  storageState: StorageState.Ambient,
   location: '',
   notes: '',
   category: '',

@@ -33,8 +33,8 @@ jest.mock('#/services/telemetry', () => ({
   },
 }));
 
-jest.mock('react-native-config', () => ({
-  API_URL: 'https://api.example.com/graphql',
+jest.mock('#/config/env', () => ({
+  env: { API_URL: 'https://api.example.com/graphql' },
 }));
 
 // Environment is auto-mocked via jest.setup.js; override `getApiConfig` so

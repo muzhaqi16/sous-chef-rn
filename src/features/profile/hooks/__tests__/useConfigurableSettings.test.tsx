@@ -6,6 +6,9 @@ import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
+import { createMockProfile } from '#/test-utils/mockFactories';
+import { findByKey } from '#/test-utils/findByKey';
+import { ProfileVisibility } from '#/graphql/generated/schemaTypes';
 import {
   UpdateUserProfileDocument,
   UpdateUserPreferencesDocument,
@@ -110,7 +113,7 @@ jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
 }));
 
-const mockProfile = {
+const mockProfile = createMockProfile({
   firstName: 'John',
   lastName: 'Doe',
   displayName: 'johndoe',
@@ -119,8 +122,8 @@ const mockProfile = {
   website: 'https://example.com',
   showEmail: true,
   showPhone: false,
-  profileVisibility: 'PUBLIC',
-};
+  profileVisibility: ProfileVisibility.Public,
+});
 
 function buildMocks() {
   const profile = recordMock(UpdateUserProfileDocument, {
@@ -225,9 +228,7 @@ describe('useConfigurableSettings', () => {
     );
 
     const personalSection = result.current.sections[0];
-    const firstNameItem = personalSection.items.find(
-      (i: any) => i.key === 'firstName',
-    );
+    const firstNameItem = findByKey(personalSection.items, 'firstName');
 
     expect(firstNameItem).toBeDefined();
     expect(firstNameItem.value).toBe('John');
@@ -241,12 +242,13 @@ describe('useConfigurableSettings', () => {
       { operationMocks: [profile.mock, settings.mock] },
     );
 
-    const firstNameItem = result.current.sections[0].items.find(
-      (i: any) => i.key === 'firstName',
+    const firstNameItem = findByKey(
+      result.current.sections[0].items,
+      'firstName',
     );
 
     act(() => {
-      firstNameItem.onSave('Jane');
+      firstNameItem.onSave?.('Jane');
     });
 
     expect(profile.fired).toContainEqual({ input: { firstName: 'Jane' } });
@@ -260,9 +262,7 @@ describe('useConfigurableSettings', () => {
     );
 
     const appearanceSection = result.current.sections[1];
-    const appearanceItem = appearanceSection.items.find(
-      (i: any) => i.key === 'appearance',
-    );
+    const appearanceItem = findByKey(appearanceSection.items, 'appearance');
 
     expect(appearanceItem).toBeDefined();
     expect(appearanceItem.type).toBe('navigation');
@@ -276,12 +276,10 @@ describe('useConfigurableSettings', () => {
     );
 
     const accountSection = result.current.sections[3];
-    const logoutItem = accountSection.items.find(
-      (i: any) => i.key === 'logout',
-    );
+    const logoutItem = findByKey(accountSection.items, 'logout');
 
     act(() => {
-      logoutItem.onPress();
+      logoutItem.onPress?.();
     });
 
     expect(mockLogout).toHaveBeenCalled();
@@ -295,8 +293,9 @@ describe('useConfigurableSettings', () => {
     );
 
     const securitySection = result.current.sections[2];
-    const biometricItem = securitySection.items.find(
-      (i: any) => i.key === 'biometricAuthentication',
+    const biometricItem = findByKey(
+      securitySection.items,
+      'biometricAuthentication',
     );
 
     expect(biometricItem).toBeDefined();
@@ -310,8 +309,9 @@ describe('useConfigurableSettings', () => {
       { operationMocks: [profile.mock, settings.mock] },
     );
 
-    const firstNameItem = result.current.sections[0].items.find(
-      (i: any) => i.key === 'firstName',
+    const firstNameItem = findByKey(
+      result.current.sections[0].items,
+      'firstName',
     );
     expect(firstNameItem.value).toBe('');
   });
@@ -322,8 +322,9 @@ describe('useConfigurableSettings', () => {
       () => useConfigurableSettings(mockProfile),
       { operationMocks: [profile.mock, settings.mock] },
     );
-    const lastNameItem = result.current.sections[0].items.find(
-      (i: any) => i.key === 'lastName',
+    const lastNameItem = findByKey(
+      result.current.sections[0].items,
+      'lastName',
     );
     expect(lastNameItem.value).toBe('Doe');
   });
@@ -334,11 +335,12 @@ describe('useConfigurableSettings', () => {
       () => useConfigurableSettings(mockProfile),
       { operationMocks: [profile.mock, settings.mock] },
     );
-    const lastNameItem = result.current.sections[0].items.find(
-      (i: any) => i.key === 'lastName',
+    const lastNameItem = findByKey(
+      result.current.sections[0].items,
+      'lastName',
     );
     act(() => {
-      lastNameItem.onSave('Smith');
+      lastNameItem.onSave?.('Smith');
     });
     expect(profile.fired).toContainEqual({ input: { lastName: 'Smith' } });
   });
@@ -349,9 +351,7 @@ describe('useConfigurableSettings', () => {
       () => useConfigurableSettings(mockProfile),
       { operationMocks: [profile.mock, settings.mock] },
     );
-    const item = result.current.sections[0].items.find(
-      (i: any) => i.key === 'displayName',
-    );
+    const item = findByKey(result.current.sections[0].items, 'displayName');
     expect(item.value).toBe('johndoe');
   });
 
@@ -361,11 +361,9 @@ describe('useConfigurableSettings', () => {
       () => useConfigurableSettings(mockProfile),
       { operationMocks: [profile.mock, settings.mock] },
     );
-    const item = result.current.sections[0].items.find(
-      (i: any) => i.key === 'displayName',
-    );
+    const item = findByKey(result.current.sections[0].items, 'displayName');
     act(() => {
-      item.onSave('newdisplay');
+      item.onSave?.('newdisplay');
     });
     expect(profile.fired).toContainEqual({
       input: { displayName: 'newdisplay' },
@@ -378,9 +376,7 @@ describe('useConfigurableSettings', () => {
       () => useConfigurableSettings(mockProfile),
       { operationMocks: [profile.mock, settings.mock] },
     );
-    const langItem = result.current.sections[1].items.find(
-      (i: any) => i.key === 'language',
-    );
+    const langItem = findByKey(result.current.sections[1].items, 'language');
     expect(langItem).toBeDefined();
     expect(langItem.value).toBe('en');
     expect(langItem.options).toBeDefined();
@@ -392,11 +388,9 @@ describe('useConfigurableSettings', () => {
       () => useConfigurableSettings(mockProfile),
       { operationMocks: [profile.mock, settings.mock] },
     );
-    const langItem = result.current.sections[1].items.find(
-      (i: any) => i.key === 'language',
-    );
+    const langItem = findByKey(result.current.sections[1].items, 'language');
     act(() => {
-      langItem.onSave('es');
+      langItem.onSave?.('es');
     });
     expect(mockSetLanguage).toHaveBeenCalledWith('es');
     expect(settings.fired).toContainEqual({
@@ -422,8 +416,9 @@ describe('useConfigurableSettings', () => {
     });
     rerender(undefined);
 
-    const biometricItem = result.current.sections[2].items.find(
-      (i: any) => i.key === 'biometricAuthentication',
+    const biometricItem = findByKey(
+      result.current.sections[2].items,
+      'biometricAuthentication',
     );
     expect(biometricItem.disabled).toBe(false);
     expect(biometricItem.subtitle).toContain('FaceID');
@@ -436,8 +431,9 @@ describe('useConfigurableSettings', () => {
       () => useConfigurableSettings(mockProfile),
       { operationMocks: [profile.mock, settings.mock] },
     );
-    const biometricItem = result.current.sections[2].items.find(
-      (i: any) => i.key === 'biometricAuthentication',
+    const biometricItem = findByKey(
+      result.current.sections[2].items,
+      'biometricAuthentication',
     );
     // biometricLoading starts as true when user?.email is set
     expect(biometricItem.disabled).toBe(true);
@@ -462,8 +458,9 @@ describe('useConfigurableSettings', () => {
       await new Promise(resolve => setTimeout(resolve, 0));
     });
 
-    const biometricItem = result.current.sections[2].items.find(
-      (i: any) => i.key === 'biometricAuthentication',
+    const biometricItem = findByKey(
+      result.current.sections[2].items,
+      'biometricAuthentication',
     );
     expect(biometricItem.subtitle).toContain('Tap to enable');
   });
@@ -511,23 +508,21 @@ describe('useConfigurableSettings', () => {
         () => useConfigurableSettings(mockProfile),
         { operationMocks: [profile.mock, settings.mock] },
       );
-      const phoneItem = result.current.sections[0].items.find(
-        (i: any) => i.key === 'phone',
-      );
+      const phoneItem = findByKey(result.current.sections[0].items, 'phone');
       expect(phoneItem.value).toBe('555-1234');
 
-      const websiteItem = result.current.sections[0].items.find(
-        (i: any) => i.key === 'website',
+      const websiteItem = findByKey(
+        result.current.sections[0].items,
+        'website',
       );
       expect(websiteItem.value).toBe('https://example.com');
 
-      const bioItem = result.current.sections[0].items.find(
-        (i: any) => i.key === 'bio',
-      );
+      const bioItem = findByKey(result.current.sections[0].items, 'bio');
       expect(bioItem.value).toBe('Test bio');
 
-      const dobItem = result.current.sections[0].items.find(
-        (i: any) => i.key === 'dateOfBirth',
+      const dobItem = findByKey(
+        result.current.sections[0].items,
+        'dateOfBirth',
       );
       expect(dobItem).toBeDefined();
 
@@ -550,11 +545,9 @@ describe('useConfigurableSettings', () => {
         () => useConfigurableSettings(mockProfile),
         { operationMocks: [profile.mock, settings.mock] },
       );
-      const phoneItem = result.current.sections[0].items.find(
-        (i: any) => i.key === 'phone',
-      );
+      const phoneItem = findByKey(result.current.sections[0].items, 'phone');
       act(() => {
-        phoneItem.onSave('555-9999');
+        phoneItem.onSave?.('555-9999');
       });
       expect(profile.fired).toContainEqual({ input: { phone: '555-9999' } });
 
@@ -576,11 +569,9 @@ describe('useConfigurableSettings', () => {
         () => useConfigurableSettings(mockProfile),
         { operationMocks: [profile.mock, settings.mock] },
       );
-      const item = result.current.sections[0].items.find(
-        (i: any) => i.key === 'website',
-      );
+      const item = findByKey(result.current.sections[0].items, 'website');
       act(() => {
-        item.onSave('https://new.com');
+        item.onSave?.('https://new.com');
       });
       expect(profile.fired).toContainEqual({
         input: { website: 'https://new.com' },
@@ -604,11 +595,9 @@ describe('useConfigurableSettings', () => {
         () => useConfigurableSettings(mockProfile),
         { operationMocks: [profile.mock, settings.mock] },
       );
-      const item = result.current.sections[0].items.find(
-        (i: any) => i.key === 'bio',
-      );
+      const item = findByKey(result.current.sections[0].items, 'bio');
       act(() => {
-        item.onSave('New bio');
+        item.onSave?.('New bio');
       });
       expect(profile.fired).toContainEqual({ input: { bio: 'New bio' } });
 
@@ -631,11 +620,9 @@ describe('useConfigurableSettings', () => {
         () => useConfigurableSettings(mockProfile),
         { operationMocks: [profile.mock, settings.mock] },
       );
-      const item = result.current.sections[0].items.find(
-        (i: any) => i.key === 'dateOfBirth',
-      );
+      const item = findByKey(result.current.sections[0].items, 'dateOfBirth');
       act(() => {
-        item.onSave('1990-01-01');
+        item.onSave?.('1990-01-01');
       });
       expect(dateStringToISO).toHaveBeenCalledWith('1990-01-01');
       expect(profile.fired.length).toBeGreaterThan(0);
@@ -660,15 +647,13 @@ describe('useConfigurableSettings', () => {
         () => useConfigurableSettings({ ...mockProfile, gender: 'male' }),
         { operationMocks: [profile.mock, settings.mock] },
       );
-      const item = result.current.sections[0].items.find(
-        (i: any) => i.key === 'gender',
-      );
+      const item = findByKey(result.current.sections[0].items, 'gender');
       expect(item.value).toBe('male');
       expect(item.options).toBeDefined();
-      expect(item.options.length).toBe(5);
+      expect(item.options?.length).toBe(5);
 
       act(() => {
-        item.onSave('female');
+        item.onSave?.('female');
       });
       expect(profile.fired).toContainEqual({ input: { gender: 'female' } });
 
@@ -687,12 +672,10 @@ describe('useConfigurableSettings', () => {
 
       const { profile, settings } = buildMocks();
       const { result } = renderHookWithApollo(
-        () => useConfigurableSettings({ ...mockProfile, gender: undefined }),
+        () => useConfigurableSettings({ ...mockProfile, gender: null }),
         { operationMocks: [profile.mock, settings.mock] },
       );
-      const item = result.current.sections[0].items.find(
-        (i: any) => i.key === 'gender',
-      );
+      const item = findByKey(result.current.sections[0].items, 'gender');
       expect(item.value).toBe('');
 
       PROFILE_SETTINGS_CONFIG.length = 0;
@@ -721,14 +704,15 @@ describe('useConfigurableSettings', () => {
         () => useConfigurableSettings(mockProfile),
         { operationMocks: [profile.mock, settings.mock] },
       );
-      const item = result.current.sections[0].items.find(
-        (i: any) => i.key === 'profileVisibility',
+      const item = findByKey(
+        result.current.sections[0].items,
+        'profileVisibility',
       );
       expect(item.value).toBe('PUBLIC');
       expect(item.options).toBeDefined();
 
       act(() => {
-        item.onSave('PRIVATE');
+        item.onSave?.('PRIVATE');
       });
       expect(profile.fired).toContainEqual({
         input: { profileVisibility: 'PRIVATE' },
@@ -752,13 +736,11 @@ describe('useConfigurableSettings', () => {
         () => useConfigurableSettings(mockProfile),
         { operationMocks: [profile.mock, settings.mock] },
       );
-      const item = result.current.sections[0].items.find(
-        (i: any) => i.key === 'showEmail',
-      );
+      const item = findByKey(result.current.sections[0].items, 'showEmail');
       expect(item.value).toBe(true); // mockProfile.showEmail is true
 
       act(() => {
-        item.onPress();
+        item.onPress?.();
       });
       expect(profile.fired).toContainEqual({ input: { showEmail: false } });
 
@@ -780,13 +762,11 @@ describe('useConfigurableSettings', () => {
         () => useConfigurableSettings(mockProfile),
         { operationMocks: [profile.mock, settings.mock] },
       );
-      const item = result.current.sections[0].items.find(
-        (i: any) => i.key === 'showPhone',
-      );
+      const item = findByKey(result.current.sections[0].items, 'showPhone');
       expect(item.value).toBe(false); // mockProfile.showPhone is false
 
       act(() => {
-        item.onPress();
+        item.onPress?.();
       });
       expect(profile.fired).toContainEqual({ input: { showPhone: true } });
 
@@ -840,7 +820,7 @@ describe('useConfigurableSettings', () => {
         expect(typeof item.onPress).toBe('function');
         // Should not throw
         act(() => {
-          item.onPress();
+          item.onPress?.();
         });
       });
 
@@ -878,39 +858,29 @@ describe('useConfigurableSettings', () => {
       );
       const items = result.current.sections[0].items;
 
-      expect(
-        items.find((i: any) => i.key === 'personalInformation').testID,
-      ).toBe('profile-menu-personalInformation');
-      expect(items.find((i: any) => i.key === 'notifications').testID).toBe(
+      expect(findByKey(items, 'personalInformation').testID).toBe(
+        'profile-menu-personalInformation',
+      );
+      expect(findByKey(items, 'notifications').testID).toBe(
         'profile-menu-notifications',
       );
-      expect(items.find((i: any) => i.key === 'dietaryProfile').testID).toBe(
+      expect(findByKey(items, 'dietaryProfile').testID).toBe(
         'profile-menu-dietaryProfile',
       );
-      expect(items.find((i: any) => i.key === 'appSettings').testID).toBe(
+      expect(findByKey(items, 'appSettings').testID).toBe(
         'profile-menu-appSettings',
       );
-      expect(items.find((i: any) => i.key === 'debugInfo').testID).toBe(
+      expect(findByKey(items, 'debugInfo').testID).toBe(
         'profile-menu-debugInfo',
       );
-      expect(
-        items.find((i: any) => i.key === 'performanceDashboard').testID,
-      ).toBe('profile-menu-performanceDashboard');
-      expect(items.find((i: any) => i.key === 'logout').testID).toBe(
-        'profile-logout-button',
+      expect(findByKey(items, 'performanceDashboard').testID).toBe(
+        'profile-menu-performanceDashboard',
       );
-      expect(items.find((i: any) => i.key === 'privacy').testID).toBe(
-        'profile-menu-privacy',
-      );
-      expect(items.find((i: any) => i.key === 'help').testID).toBe(
-        'profile-menu-help',
-      );
-      expect(items.find((i: any) => i.key === 'about').testID).toBe(
-        'profile-menu-about',
-      );
-      expect(items.find((i: any) => i.key === 'feedback').testID).toBe(
-        'profile-menu-feedback',
-      );
+      expect(findByKey(items, 'logout').testID).toBe('profile-logout-button');
+      expect(findByKey(items, 'privacy').testID).toBe('profile-menu-privacy');
+      expect(findByKey(items, 'help').testID).toBe('profile-menu-help');
+      expect(findByKey(items, 'about').testID).toBe('profile-menu-about');
+      expect(findByKey(items, 'feedback').testID).toBe('profile-menu-feedback');
 
       PROFILE_SETTINGS_CONFIG.length = 0;
       original.forEach((item: any) => PROFILE_SETTINGS_CONFIG.push(item));
@@ -957,12 +927,13 @@ describe('useConfigurableSettings', () => {
         await new Promise(resolve => setTimeout(resolve, 0));
       });
 
-      const biometricItem = result.current.sections[2].items.find(
-        (i: any) => i.key === 'biometricAuthentication',
+      const biometricItem = findByKey(
+        result.current.sections[2].items,
+        'biometricAuthentication',
       );
 
       await act(async () => {
-        await biometricItem.onPress();
+        await biometricItem.onPress?.();
       });
 
       // Should not show modal or alert
@@ -985,12 +956,13 @@ describe('useConfigurableSettings', () => {
         await new Promise(resolve => setTimeout(resolve, 0));
       });
 
-      const biometricItem = result.current.sections[2].items.find(
-        (i: any) => i.key === 'biometricAuthentication',
+      const biometricItem = findByKey(
+        result.current.sections[2].items,
+        'biometricAuthentication',
       );
 
       await act(async () => {
-        await biometricItem.onPress();
+        await biometricItem.onPress?.();
       });
 
       // The modal state should be set (no alert, but modal opened)
@@ -1013,12 +985,13 @@ describe('useConfigurableSettings', () => {
         await new Promise(resolve => setTimeout(resolve, 0));
       });
 
-      const biometricItem = result.current.sections[2].items.find(
-        (i: any) => i.key === 'biometricAuthentication',
+      const biometricItem = findByKey(
+        result.current.sections[2].items,
+        'biometricAuthentication',
       );
 
       await act(async () => {
-        await biometricItem.onPress();
+        await biometricItem.onPress?.();
       });
 
       expect(alertService.alert).toHaveBeenCalledWith(
@@ -1044,12 +1017,13 @@ describe('useConfigurableSettings', () => {
         await new Promise(resolve => setTimeout(resolve, 0));
       });
 
-      const biometricItem = result.current.sections[2].items.find(
-        (i: any) => i.key === 'biometricAuthentication',
+      const biometricItem = findByKey(
+        result.current.sections[2].items,
+        'biometricAuthentication',
       );
 
       await act(async () => {
-        await biometricItem.onPress();
+        await biometricItem.onPress?.();
       });
 
       // Get the 'Disable' button from the alert
@@ -1059,7 +1033,7 @@ describe('useConfigurableSettings', () => {
       const disableButton = buttons.find((b: any) => b.text === 'Disable');
 
       await act(async () => {
-        await disableButton.onPress();
+        await disableButton.onPress?.();
       });
 
       expect(mockRemoveCredentials).toHaveBeenCalledWith('test@example.com');
@@ -1081,8 +1055,9 @@ describe('useConfigurableSettings', () => {
         await new Promise(resolve => setTimeout(resolve, 0));
       });
 
-      const biometricItem = result.current.sections[2].items.find(
-        (i: any) => i.key === 'biometricAuthentication',
+      const biometricItem = findByKey(
+        result.current.sections[2].items,
+        'biometricAuthentication',
       );
 
       expect(biometricItem.subtitle).toContain('biometric');
@@ -1145,11 +1120,12 @@ describe('useConfigurableSettings', () => {
       });
 
       // Trigger the modal open
-      const biometricItem = result.current.sections[2].items.find(
-        (i: any) => i.key === 'biometricAuthentication',
+      const biometricItem = findByKey(
+        result.current.sections[2].items,
+        'biometricAuthentication',
       );
       await act(async () => {
-        await biometricItem.onPress();
+        await biometricItem.onPress?.();
       });
 
       // Simulate BiometricSetupModal completing with enabled = true

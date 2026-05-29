@@ -23,6 +23,31 @@ module.exports = {
   // TypeScript-specific overrides with type-checked rules
   overrides: [
     {
+      // Test files legitimately use `as any` for mocks/fixtures, so the
+      // production-oriented no-restricted-syntax selectors (the `as any`/
+      // `as unknown` cast ban, scheduleOnRN/shadow/style hygiene, etc.) are
+      // relaxed here. The jest.mock(@apollo/client/react) ban is kept because
+      // it targets a test-specific anti-pattern. Full production enforcement
+      // lives in the global `rules` block below.
+      files: [
+        '**/__tests__/**/*.ts',
+        '**/__tests__/**/*.tsx',
+        '**/*.test.ts',
+        '**/*.test.tsx',
+      ],
+      rules: {
+        'no-restricted-syntax': [
+          'error',
+          {
+            selector:
+              'CallExpression[callee.object.name="jest"][callee.property.name="mock"][arguments.0.value="@apollo/client/react"]',
+            message:
+              'Use renderHookWithApollo / renderWithApollo from __tests__/helpers/apolloMockProvider.tsx instead. Direct jest.mock of @apollo/client/react couples tests to operation names, bypasses the real cache, and breaks under refactors. See CLAUDE.md "Apollo Test Patterns" for the migration recipe + 7 gotchas.',
+          },
+        ],
+      },
+    },
+    {
       // Apply to TypeScript source files only (not test files or config files)
       // These files must be included in tsconfig.json for type-checked rules.
       // Tests are intentionally INCLUDED so deprecation warnings catch e.g.
@@ -376,6 +401,13 @@ module.exports = {
     // Warn on unused variables (underscore prefix indicates intentionally unused)
     '@typescript-eslint/no-unused-vars': ['warn', { ignoreRestSiblings: true }],
 
+    // Surface `any` usage for gradual cleanup. Kept at 'warn' (not 'error')
+    // because a chunk of the existing ~395 sites are legitimate (e.g.
+    // `catch (e: any)`, loosely-typed third-party callbacks) and a hard error
+    // would break the build repo-wide. Prefer type inference / generics over
+    // `any`; the codebase already bans `as unknown as X` outright.
+    '@typescript-eslint/no-explicit-any': 'warn',
+
     // Disable rules not relevant for React Native
     'no-bitwise': 'off', // Allow bitwise operations for hash functions
     'no-void': ['error', { allowAsStatement: true }], // Allow void as statement (e.g. void expr to reference a value)
@@ -497,6 +529,22 @@ module.exports = {
           'Property[key.name="optimisticResponse"] TSAsExpression > ObjectExpression:has(Property[key.name="__typename"])',
         message:
           "Hand-rolled `{ __typename, id, ... } as TData['field']` shapes inside `optimisticResponse` write partial entities to the cache and break data-masking watchers (useFragment returns `complete: false` → phantom rows in lists). Read the current entity via `client.cache.readFragment(...)` (returning IGNORE when absent) and annotate the callback's return type as `Unmasked<TData>` so no cast is needed. See CLAUDE.md \"Apollo Mutation Patterns\" + `usePantryItemMutations.ts:updateItemMutation` for the pattern.",
+      },
+      {
+        selector: 'TSAsExpression[typeAnnotation.type="TSAnyKeyword"]',
+        message:
+          'Do not cast with `as any` — it hides real type errors. Type the value properly: generics (`readFragment<T>`, `extractNodes<T>`), narrow with `instanceof`, or assert a specific shape (`as { id?: string }`). `: any` annotations are tolerated where a value is genuinely untypeable, but `as any` casts are not. For library/platform boundaries with no clean type, use a narrow typed cast or a justified `// eslint-disable-next-line no-restricted-syntax -- <reason>`.',
+      },
+      {
+        selector:
+          'TSAsExpression[typeAnnotation.type="TSArrayType"][typeAnnotation.elementType.type="TSAnyKeyword"]',
+        message:
+          'Do not cast with `as any[]` — it hides real type errors. Supply the element type via a generic (`extractNodes<T>(...)`) or assert the concrete element shape.',
+      },
+      {
+        selector: 'TSAsExpression[typeAnnotation.type="TSUnknownKeyword"]',
+        message:
+          'Do not use `as unknown` (typically the `x as unknown as T` double-cast) — it fully defeats type checking and hides real errors. Fix the data flow or use a single honest assertion.',
       },
     ],
   },

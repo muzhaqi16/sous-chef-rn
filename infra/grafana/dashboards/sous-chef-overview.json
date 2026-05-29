@@ -573,7 +573,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "sum(count_over_time({service_name=\"sous-chef-app\", level=\"error\"}[5m]))",
+          "expr": "sum(count_over_time({service_name=\"sous-chef-app\"} | json | level=\"error\" [5m]))",
           "refId": "A",
           "legendFormat": "Errors"
         }
@@ -603,7 +603,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "{service_name=\"sous-chef-app\", level=\"error\"} | json",
+          "expr": "{service_name=\"sous-chef-app\"} | json | level=\"error\"",
           "refId": "A"
         }
       ],

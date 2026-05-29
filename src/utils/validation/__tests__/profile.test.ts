@@ -1,3 +1,4 @@
+import { Schema, ValidationError } from 'yup';
 import {
   profileFieldSchemas,
   getValidationSchemaForField,
@@ -5,12 +6,12 @@ import {
   getProfileValidationSchema,
 } from '../profile';
 
-const validate = async (schema: any, data: Record<string, unknown>) => {
+const validate = async (schema: Schema, data: Record<string, unknown>) => {
   try {
     await schema.validate(data);
     return null;
-  } catch (err: any) {
-    return err.message;
+  } catch (err) {
+    return err instanceof ValidationError ? err.message : String(err);
   }
 };
 

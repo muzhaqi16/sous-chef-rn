@@ -11,8 +11,14 @@
 import { StorageState } from '#/graphql/generated/schemaTypes';
 import type { LocationCounts } from './types';
 
+/** Minimal pantry-item shape this hook reads when counting client-side. */
+interface PantryStatsItem {
+  storageState?: StorageState | null;
+  storageLocation?: { id: string } | null;
+}
+
 interface UsePantryStatsOptions {
-  pantryItems: any[];
+  pantryItems: PantryStatsItem[];
   totalCount?: number;
   storageStateCounts?: {
     refrigerated: number;

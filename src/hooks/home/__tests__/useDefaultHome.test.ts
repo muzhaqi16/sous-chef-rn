@@ -309,19 +309,22 @@ describe('useDefaultHome', () => {
       expect(pantry).toBeNull();
     });
 
-    it('handles nested home property', () => {
+    it('reads pantries from the connection shape', () => {
       const { result } = renderHookWithApollo(() => useDefaultHome(), {
         operationMocks: [buildGetHomesMock([])],
       });
 
-      const homeData = {
-        home: {
-          pantries: [{ id: 'p-1', isDefault: true }],
+      const home = {
+        pantriesConnection: {
+          edges: [
+            { node: { id: 'p-1', isDefault: false } },
+            { node: { id: 'p-2', isDefault: true } },
+          ],
         },
       };
 
-      const pantry = result.current.actions.getDefaultPantry(homeData);
-      expect(pantry?.id).toBe('p-1');
+      const pantry = result.current.actions.getDefaultPantry(home);
+      expect(pantry?.id).toBe('p-2');
     });
 
     it('returns null for null input', () => {

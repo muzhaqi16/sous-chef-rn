@@ -18,7 +18,7 @@ export const MealPlanEmptyState: React.FC<MealPlanEmptyStateProps> = ({
   const { t } = useTranslation();
   return (
     <View style={styles.container}>
-      <Icon name="calendar-outline" size={64} color={styles.icon.color} />
+      <Icon name="calendar-outline" size={64} tone="textTertiary" />
       <Text size="xl" weight="bold" style={styles.title}>
         {t('mealPlanEmpty.title')}
       </Text>
@@ -29,7 +29,7 @@ export const MealPlanEmptyState: React.FC<MealPlanEmptyStateProps> = ({
         onPress={onCreatePlan}
         style={({ pressed }) => [styles.button, pressed && styles.pressed]}
       >
-        <Icon name="add" size={20} color={styles.buttonIcon.color} />
+        <Icon name="add" size={20} tone="white" />
         <Text size="md" weight="semibold" style={styles.buttonText}>
           {t('mealPlanEmpty.createFirst')}
         </Text>
@@ -42,11 +42,7 @@ export const MealPlanEmptyState: React.FC<MealPlanEmptyStateProps> = ({
             pressed && styles.pressed,
           ]}
         >
-          <Icon
-            name="document-text-outline"
-            size={20}
-            color={styles.templateButtonIcon.color}
-          />
+          <Icon name="document-text-outline" size={20} tone="primary" />
           <Text
             size="md"
             weight="semibold"
@@ -70,9 +66,6 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     paddingHorizontal: theme.spacing.xl,
   },
-  icon: {
-    color: theme.colors.textTertiary,
-  },
   title: {
     marginTop: theme.spacing.lg,
   },
@@ -92,9 +85,6 @@ const styles = StyleSheet.create(theme => ({
   pressed: {
     opacity: theme.opacity.pressed,
   },
-  buttonIcon: {
-    color: theme.colors.white,
-  },
   buttonText: {
     marginLeft: theme.spacing.sm,
     color: theme.colors.white,
@@ -108,9 +98,6 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.lg,
     borderWidth: 1,
     borderColor: theme.colors.primary,
-  },
-  templateButtonIcon: {
-    color: theme.colors.primary,
   },
   templateButtonText: {
     marginLeft: theme.spacing.sm,

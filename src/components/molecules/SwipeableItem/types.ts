@@ -1,5 +1,11 @@
+import type { ComponentRef } from 'react';
 import type { SharedValue } from 'react-native-reanimated';
+import type Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { Icon } from '#/utils/iconUtils';
+
+export type SwipeableRef = React.RefObject<ComponentRef<
+  typeof Swipeable
+> | null>;
 
 /**
  * Swipe mode controls the behavior of swipe actions:
@@ -26,7 +32,7 @@ export interface SwipeableItemProps {
   leftThreshold?: number;
   rightThreshold?: number;
   friction?: number;
-  onSwipeableWillOpen?: (ref: any) => void;
+  onSwipeableWillOpen?: (ref: SwipeableRef) => void;
   onSwipeableClose?: () => void;
   testIDPrefix?: string;
   /** Controls swipe action layout - 'shopping' puts edit on left, 'pantry' uses original layout */
@@ -55,7 +61,7 @@ export interface SwipeActionsProps {
   onRestock?: () => void;
   isPurchased?: boolean;
   onActionPress?: (action: 'edit' | 'delete') => void;
-  swipeableRef?: React.RefObject<any>;
+  swipeableRef?: SwipeableRef;
   testIDPrefix?: string;
   progress?: SharedValue<number>;
   /** Controls swipe action layout */

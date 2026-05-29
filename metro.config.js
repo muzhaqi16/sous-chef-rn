@@ -2,6 +2,13 @@ const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
 const {
   wrapWithReanimatedMetroConfig,
 } = require('react-native-reanimated/metro-config');
+const { generateEnv } = require('./scripts/generate-env');
+
+// Regenerate the build-time config (src/config/env.generated.ts) whenever Metro
+// starts or bundles — honors ENVFILE/process.env, so the dev server,
+// `run-ios/android`, release bundling, and CI all pick up the active env
+// without per-script wiring.
+generateEnv();
 
 const defaultConfig = getDefaultConfig(__dirname);
 

@@ -1,5 +1,8 @@
 import { useMutation } from '@apollo/client/react';
-import { CreateStorageLocationDocument } from '#operations/storageLocation/storageLocation.generated';
+import {
+  CreateStorageLocationDocument,
+  type CreateStorageLocationMutation,
+} from '#operations/storageLocation/storageLocation.generated';
 import { type CreateStorageLocationInput } from '#/graphql/generated/schemaTypes';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
 import {
@@ -66,7 +69,7 @@ export function useCreateStorageLocation(
       ...input,
       homeId,
     }),
-    onSuccess: (data: any) =>
+    onSuccess: (data: CreateStorageLocationMutation) =>
       data?.createStorageLocation?.__typename === 'CreateStorageLocationPayload'
         ? data.createStorageLocation.storageLocation
         : undefined,

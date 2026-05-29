@@ -2,11 +2,13 @@ import { act } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,
+  seedCache,
 } from '#/test-utils/apolloMockProvider';
 import {
   CreateHomeDocument,
   UpdateHomeDocument,
 } from '#operations/home/home.generated';
+import { UpdateHomeOptimistic_HomeFragmentDoc } from '../useHomeMutations.generated';
 import { alertService } from '#/services/alertService';
 import { useHomeMutations } from '../useHomeMutations';
 
@@ -33,16 +35,6 @@ jest.mock('#/services/errorService', () => ({
 jest.mock('#/utils/errors/versionConflict', () => ({
   handleVersionConflict: jest.fn(() => false),
   getVersionConflictMessage: jest.fn(() => 'Version conflict'),
-}));
-
-jest.mock('#/apollo/utils/createOptimisticResponse', () => ({
-  enhanceWithVersion: jest.fn((item, updates) => ({ ...item, ...updates })),
-  buildOptimisticMutationResponse: jest.fn(
-    (opName, payloadTypename, fields) => ({
-      __typename: 'Mutation',
-      [opName]: { __typename: payloadTypename, ...fields },
-    }),
-  ),
 }));
 
 jest.mock('#/utils/connectionUtils', () => ({
@@ -111,14 +103,6 @@ jest.mock('#/services/alertService', () => ({
 }));
 
 const createOptions = () => ({
-  homes: [
-    {
-      id: 'home-1',
-      name: 'Home 1',
-      pantries: [{ id: 'p-1', isDefault: true }],
-    },
-    { id: 'home-2', name: 'Home 2', pantries: [] },
-  ],
   refetch: jest.fn().mockResolvedValue(undefined),
   setDefaultHome: jest.fn().mockResolvedValue(true),
   setSelectedPantryId: jest.fn(),
@@ -294,6 +278,84 @@ describe('useHomeMutations', () => {
 
       expect(returnValue).toBe(true);
       expect(m.fired).toEqual([]);
+    });
+
+    it('optimistically updates the cached home before the server responds', async () => {
+      const cache = seedCache([
+        {
+          __typename: 'Home',
+          id: 'home-1',
+          name: 'Old Name',
+          allowJoinCode: false,
+          joinCode: null,
+          version: 1,
+          updatedAt: '2025-01-01T00:00:00.000Z',
+        },
+      ]);
+      const m = updateHomeMock({ id: 'home-1', name: 'New Name' });
+      const { result } = renderHookWithApollo(
+        () => useHomeMutations(createOptions()),
+        { operationMocks: [m.mock], cache },
+      );
+
+      let pending: Promise<unknown> | undefined;
+      act(() => {
+        pending = result.current.updateHome('home-1', { name: 'New Name' });
+      });
+
+      // The optimistic response is written synchronously from the cached home,
+      // before the server resolves. Read the optimistic layer explicitly.
+      const optimistic = cache.readFragment(
+        {
+          id: cache.identify({ __typename: 'Home', id: 'home-1' }),
+          fragment: UpdateHomeOptimistic_HomeFragmentDoc,
+        },
+        true,
+      );
+      expect(optimistic?.name).toBe('New Name');
+
+      await act(async () => {
+        await pending;
+      });
+    });
+
+    it('skips the optimistic update when enabling a join code', async () => {
+      const cache = seedCache([
+        {
+          __typename: 'Home',
+          id: 'home-1',
+          name: 'Home',
+          allowJoinCode: false,
+          joinCode: null,
+          version: 1,
+          updatedAt: '2025-01-01T00:00:00.000Z',
+        },
+      ]);
+      const m = updateHomeMock({ id: 'home-1', name: 'Home' });
+      const { result } = renderHookWithApollo(
+        () => useHomeMutations(createOptions()),
+        { operationMocks: [m.mock], cache },
+      );
+
+      let pending: Promise<unknown> | undefined;
+      act(() => {
+        pending = result.current.updateHome('home-1', { allowJoinCode: true });
+      });
+
+      // The server mints the join code, so there is no optimistic write —
+      // allowJoinCode stays at its cached value until the server responds.
+      const optimistic = cache.readFragment(
+        {
+          id: cache.identify({ __typename: 'Home', id: 'home-1' }),
+          fragment: UpdateHomeOptimistic_HomeFragmentDoc,
+        },
+        true,
+      );
+      expect(optimistic?.allowJoinCode).toBe(false);
+
+      await act(async () => {
+        await pending;
+      });
     });
   });
 

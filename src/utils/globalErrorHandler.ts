@@ -38,12 +38,14 @@ export function setupGlobalErrorHandler(): void {
   // React Native surfaces these via the global `unhandledrejection` event
   // or the `tracking-` polyfill. We use the event-based approach.
   if (typeof global !== 'undefined') {
-    const g = global as any;
+    const g = global as typeof globalThis & {
+      onunhandledrejection?: ((event: { reason: unknown }) => void) | null;
+    };
 
     // Some RN versions expose onunhandledrejection
     const existingHandler = g.onunhandledrejection;
 
-    g.onunhandledrejection = (event: { reason: any }) => {
+    g.onunhandledrejection = (event: { reason: unknown }) => {
       const reason = event?.reason;
       const message =
         reason instanceof Error ? reason.message : String(reason ?? 'Unknown');

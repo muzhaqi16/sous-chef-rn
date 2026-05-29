@@ -1,3 +1,14 @@
+import type { Theme } from '#/theme/themes';
+
+type StatusColorTheme = {
+  colors: {
+    status: Pick<
+      Theme['colors']['status'],
+      'pending' | 'accepted' | 'declined' | 'expired'
+    >;
+  };
+};
+
 /**
  * Format an invite status from API format to display format
  * @param status - Status in API format (PENDING, ACCEPTED, DECLINED, EXPIRED, REVOKED)
@@ -26,7 +37,10 @@ export function formatInviteStatus(status: string): string {
  * @param theme - Unistyles theme object
  * @returns Color string from theme
  */
-export function getInviteStatusColor(status: string, theme: any): string {
+export function getInviteStatusColor(
+  status: string,
+  theme: StatusColorTheme,
+): string {
   switch (status) {
     case 'PENDING':
       return theme.colors.status.pending;
@@ -66,7 +80,10 @@ export function getInviteDisplayName(invite: {
  * @param theme - Unistyles theme object
  * @returns Object with backgroundColor and color for badge
  */
-export function getInviteStatusBadgeStyle(status: string, theme: any) {
+export function getInviteStatusBadgeStyle(
+  status: string,
+  theme: StatusColorTheme,
+) {
   const color = getInviteStatusColor(status, theme);
   return {
     backgroundColor: `${color}20`, // 20 = 12.5% opacity in hex

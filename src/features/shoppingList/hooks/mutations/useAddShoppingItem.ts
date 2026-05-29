@@ -34,7 +34,7 @@ const ShoppingListStatsFragment = gql`
 
 interface UseAddShoppingItemOptions {
   listId: string | null | undefined;
-  refetch: () => Promise<any>;
+  refetch: () => Promise<unknown>;
 }
 
 /**

@@ -133,7 +133,6 @@ describe('useHomeManagement', () => {
 
     const { useHomeMutations } = jest.requireMock('../useHomeMutations');
     expect(useHomeMutations).toHaveBeenCalledWith({
-      homes: mockHomeQuery.homes,
       refetch: mockHomeQuery.refetch,
       setDefaultHome: mockHomeSelection.setDefaultHome,
       setSelectedPantryId: mockHomeSelection.setSelectedPantryId,

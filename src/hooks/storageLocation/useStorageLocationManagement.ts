@@ -8,6 +8,7 @@ import {
   UpdateStorageLocationDocument,
   DeleteStorageLocationDocument,
   SetDefaultStorageLocationDocument,
+  type GetStorageLocationsQuery,
 } from '#operations/storageLocation/storageLocation.generated';
 import { type UpdateStorageLocationInput } from '#/graphql/generated/schemaTypes';
 import { usePreservedArrayData } from '#/hooks/apollo/usePreservedQueryData';
@@ -22,19 +23,30 @@ import {
 } from '#/utils/compilerSafeWrappers';
 import { useCreateStorageLocation } from './useCreateStorageLocation';
 
+/** Flat storage-location node as returned by `GetStorageLocations`. */
+type FlatStorageLocation =
+  GetStorageLocationsQuery['storageLocations']['edges'][number]['node'];
+
+/** Flat node augmented with the nested children built by {@link buildTreeFromFlatList}. */
+type StorageLocationTreeNode = FlatStorageLocation & {
+  childLocations: StorageLocationTreeNode[];
+};
+
 /**
  * Build a tree structure from a flat list of locations using parentLocation references
  */
-function buildTreeFromFlatList(locations: any[]): any[] {
+function buildTreeFromFlatList(
+  locations: FlatStorageLocation[],
+): StorageLocationTreeNode[] {
   if (!locations || locations.length === 0) return [];
 
   // Create a map for quick lookup
-  const locationMap = new Map(
+  const locationMap = new Map<string, StorageLocationTreeNode>(
     locations.map(loc => [loc.id, { ...loc, childLocations: [] }]),
   );
 
   // Array to hold root locations (locations without a parent)
-  const roots: any[] = [];
+  const roots: StorageLocationTreeNode[] = [];
 
   // Build the tree structure
   locations.forEach(location => {
@@ -57,7 +69,10 @@ function buildTreeFromFlatList(locations: any[]): any[] {
   });
 
   // Sort roots and children by sortOrder
-  const sortBySortOrder = (a: any, b: any) => a.sortOrder - b.sortOrder;
+  const sortBySortOrder = (
+    a: StorageLocationTreeNode,
+    b: StorageLocationTreeNode,
+  ) => a.sortOrder - b.sortOrder;
   roots.sort(sortBySortOrder);
   roots.forEach(function sortChildren(node) {
     if (node.childLocations && node.childLocations.length > 0) {

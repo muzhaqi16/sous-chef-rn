@@ -23,6 +23,9 @@ import { useMutation } from '@apollo/client/react';
 import { AddItemToShoppingListFromFilteredPantryDocument } from './FilteredPantryItems.generated';
 import { useCurrentPantry } from '#features/pantry/hooks/useCurrentPantry';
 import { useAddLowStockToShoppingList } from '#features/pantry/hooks/useAddLowStockToShoppingList';
+import { useSelectedShoppingListId } from '#store/useAppStore';
+import { toastService } from '#/services/toastService';
+import { executeMutation } from '#/utils/compilerSafeWrappers';
 import {
   useTutorialSequence,
   type TutorialStep,
@@ -274,6 +277,7 @@ export const FilteredPantryItems: React.FC<
     useAddLowStockToShoppingList({ homeId: selectedHomeId ?? undefined });
 
   const permissions = usePantryPermissions();
+  const selectedShoppingListId = useSelectedShoppingListId();
 
   const {
     state: { items: allItems, loading, hasMore, isLoadingMore },
@@ -320,16 +324,24 @@ export const FilteredPantryItems: React.FC<
   };
 
   const handleAddToList = async (itemId: string) => {
-    try {
-      await addToShoppingList({
-        variables: { input: { shoppingListId: '', itemId } },
-      });
-    } catch {
-      alertService.alert(
-        t('labels.error'),
-        t('filteredPantry.addToShoppingFailed'),
-      );
+    if (!selectedShoppingListId) {
+      toastService.info(t('filteredPantry.noListSelected'));
+      return;
     }
+    await executeMutation(
+      async () => {
+        await addToShoppingList({
+          variables: {
+            input: { shoppingListId: selectedShoppingListId, itemId },
+          },
+        });
+      },
+      () =>
+        alertService.alert(
+          t('labels.error'),
+          t('filteredPantry.addToShoppingFailed'),
+        ),
+    );
   };
 
   const showCart = config.showCartAction && permissions.canAddItems;

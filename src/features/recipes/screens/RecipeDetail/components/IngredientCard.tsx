@@ -5,6 +5,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { Text } from '#components/atoms/Text';
+import { getSpoonacularIngredientImageUrl } from '#services/recipeApi/utils';
 
 interface IngredientCardProps {
   ingredient: any;
@@ -24,7 +25,7 @@ export const IngredientCard: React.FC<IngredientCardProps> = ({
   const imageUrl = ingredient.image
     ? ingredient.image.startsWith('http')
       ? ingredient.image // Already full URL from backend
-      : `https://spoonacular.com/cdn/ingredients_100x100/${ingredient.image}` // Filename needs URL
+      : getSpoonacularIngredientImageUrl(ingredient.image) // Filename needs URL
     : ingredient.item?.imageUrl;
 
   return (

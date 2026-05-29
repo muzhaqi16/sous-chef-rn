@@ -17,7 +17,7 @@ interface SortableItem {
 let _lastSortInput: unknown = null;
 let _lastSortOption: SortOption | null = null;
 let _lastSortDirection: SortDirection | null = null;
-let _lastSortResult: any[] = [];
+let _lastSortResult: SortableItem[] = [];
 
 function cachedSort<T extends SortableItem>(
   items: T[],

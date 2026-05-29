@@ -57,6 +57,8 @@ jest.mock('#features/shoppingList/hooks/useShoppingListsQuery', () => ({
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   createRemoveFromQueryConnectionUpdater: jest.fn(() => jest.fn()),
   createAddToQueryConnectionUpdater: jest.fn(() => jest.fn()),
+  createRemoveFromParentConnectionUpdater: jest.fn(() => jest.fn()),
+  createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),
 }));
 
 jest.mock('#/services/errorService', () => ({

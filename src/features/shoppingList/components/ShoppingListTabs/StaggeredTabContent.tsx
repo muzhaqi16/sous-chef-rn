@@ -1,13 +1,14 @@
 import React from 'react';
-import type { ReactElement, ComponentType } from 'react';
 import {
   View,
   type NativeSyntheticEvent,
   type NativeScrollEvent,
 } from 'react-native';
+import type { FlashListProps } from '@shopify/flash-list';
 import { StyleSheet } from 'react-native-unistyles';
 import { SortableShoppingList } from '../SortableShoppingList/SortableList';
 import type { ShoppingListRowItem } from '../SortableShoppingList/types';
+import type { SwipeableRef } from '#/components/molecules/SwipeableItem/types';
 import { PaginationFooter } from '#components/organisms/PaginationFooter';
 import { ShoppingListItemSkeleton } from '#components/base/Skeleton/ShoppingListItemSkeleton';
 
@@ -23,7 +24,7 @@ interface StaggeredTabContentProps {
   onRefresh?: () => void | Promise<void>;
   refreshing?: boolean;
   disabled?: boolean;
-  onSwipeableWillOpen?: (ref: any) => void;
+  onSwipeableWillOpen?: (ref: SwipeableRef) => void;
   onSwipeableClose?: () => void;
   onEndReached?: () => void;
   hasMore?: boolean;
@@ -38,7 +39,7 @@ interface StaggeredTabContentProps {
   ) => void;
   canReorderItems?: boolean;
   onMoveToPantry?: (id: string) => void;
-  listEmptyComponent?: ReactElement | ComponentType<any> | null;
+  listEmptyComponent?: FlashListProps<ShoppingListRowItem>['ListEmptyComponent'];
   // Scroll direction tracking
   onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
   onScrollEndDrag?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;

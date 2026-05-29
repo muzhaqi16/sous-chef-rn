@@ -14,6 +14,8 @@ import {
   SetDefaultHomeDocument,
   type SetDefaultHomeMutation,
 } from '#operations/home/userSettings.generated';
+import type { GetHomesQuery } from '#operations/home/home.generated';
+import type { Reference } from '@apollo/client';
 import {
   useHomeState,
   useSelectedHomeId,
@@ -25,8 +27,23 @@ import {
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { handleMutationError } from '#/utils/errorHandlers';
 
+/**
+ * Home node as returned by `GetHomes` (via `extractNodes`), widened with an
+ * optional flat `pantries` array for legacy callers that pass the pre-connection
+ * shape. Pantry lookups read either `pantries` or `pantriesConnection`.
+ */
+type HomeNode = GetHomesQuery['homes']['edges'][number]['node'] & {
+  pantries?: Array<{ id: string; isDefault?: boolean }>;
+};
+
+/**
+ * Cached `homes` connection edge. May be a normalized `{ node: Reference }`
+ * wrapper or, defensively, a bare `Reference` in older persisted shapes.
+ */
+type HomeEdge = { node?: Reference } | Reference;
+
 interface UseHomeSelectionOptions {
-  homes: any[] | null;
+  homes: HomeNode[] | null;
   remoteDefaultHomeId: string | null;
   loading: boolean;
 }
@@ -84,15 +101,18 @@ export function useHomeSelection({
       // Update isDefault field on all homes in cache
       cache.modify({
         fields: {
-          homes: (existingHomes, { readField }) => {
+          homes(
+            existingHomes: { edges?: HomeEdge[]; readonly __ref?: string },
+            { readField },
+          ) {
             // Handle connection type: homes has { edges: [...] }
             if (!existingHomes || !existingHomes.edges) {
               return existingHomes;
             }
 
             // Iterate through edges to update isDefault on each home
-            existingHomes.edges.forEach((edge: any) => {
-              const homeRef = edge?.node || edge;
+            existingHomes.edges.forEach((edge: HomeEdge) => {
+              const homeRef = ('node' in edge && edge.node) || edge;
               if (!homeRef) return;
 
               const homeId = readField('id', homeRef);
@@ -165,7 +185,7 @@ export function useHomeSelection({
 
     // Find the target home and its default pantry BEFORE mutation
     // This prevents race condition where cache updates but Zustand hasn't
-    const targetHome = homes?.find((home: any) => home.id === homeId);
+    const targetHome = homes?.find(home => home.id === homeId);
     if (!targetHome) {
       alertService.alert('Error', 'Home not found');
       return false;
@@ -173,8 +193,7 @@ export function useHomeSelection({
 
     // Get the default pantry from home data we already have
     const localDefaultPantry =
-      targetHome.pantries?.find((p: any) => p.isDefault) ||
-      targetHome.pantries?.[0];
+      targetHome.pantries?.find(p => p.isDefault) || targetHome.pantries?.[0];
 
     // Store old values for potential rollback
     const previousHomeId = selectedHomeId;
@@ -220,8 +239,7 @@ export function useHomeSelection({
   };
 
   // Computed value for current default home
-  const defaultHome =
-    homes?.find((home: any) => home.id === selectedHomeId) || null;
+  const defaultHome = homes?.find(home => home.id === selectedHomeId) || null;
   const isSynced = selectedHomeId === remoteDefaultHomeId;
 
   return {

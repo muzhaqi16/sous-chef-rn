@@ -93,6 +93,7 @@ describe('helpers', () => {
       const mockCreatePantry = jest.fn().mockResolvedValue({
         data: {
           createPantry: {
+            __typename: 'CreatePantryPayload',
             success: true,
             pantry: { id: 'pantry-1', name: 'Kitchen' },
           },

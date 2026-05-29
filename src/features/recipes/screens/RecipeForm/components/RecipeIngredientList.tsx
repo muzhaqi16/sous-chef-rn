@@ -51,11 +51,7 @@ export const RecipeIngredientList: React.FC<RecipeIngredientListProps> = ({
             hitSlop={8}
             style={styles.removeButton}
           >
-            <Icon
-              name="close-circle"
-              size={20}
-              color={styles.removeIcon.color}
-            />
+            <Icon name="close-circle" size={20} tone="error" />
           </Pressable>
         </Pressable>
       ))}
@@ -64,11 +60,7 @@ export const RecipeIngredientList: React.FC<RecipeIngredientListProps> = ({
         onPress={onAddIngredient}
         style={({ pressed }) => [styles.addButton, pressed && styles.pressed]}
       >
-        <Icon
-          name="add-circle-outline"
-          size={20}
-          color={styles.addIcon.color}
-        />
+        <Icon name="add-circle-outline" size={20} tone="primary" />
         <Text size="md" weight="medium" tone="accent" style={styles.addText}>
           Add Ingredient
         </Text>
@@ -105,9 +97,6 @@ const styles = StyleSheet.create(theme => ({
   removeButton: {
     padding: theme.spacing.xs,
   },
-  removeIcon: {
-    color: theme.colors.error,
-  },
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -118,9 +107,6 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.border,
     borderStyle: 'dashed',
     marginTop: theme.spacing.sm,
-  },
-  addIcon: {
-    color: theme.colors.primary,
   },
   addText: {
     marginLeft: theme.spacing.sm,

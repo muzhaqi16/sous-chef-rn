@@ -69,11 +69,7 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
           <Icon
             name={item.isCompleted ? 'checkmark-circle' : 'ellipse-outline'}
             size={24}
-            color={
-              item.isCompleted
-                ? styles.checkboxChecked.color
-                : styles.checkboxUnchecked.color
-            }
+            tone={item.isCompleted ? 'success' : 'border'}
           />
         </Pressable>
       ) : (
@@ -81,11 +77,7 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
           <Icon
             name={item.isCompleted ? 'checkmark-circle' : 'ellipse-outline'}
             size={24}
-            color={
-              item.isCompleted
-                ? styles.checkboxChecked.color
-                : styles.checkboxUnchecked.color
-            }
+            tone={item.isCompleted ? 'success' : 'border'}
           />
         </View>
       )}
@@ -130,11 +122,7 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
         )}
         {!!hasPantryDeductions && (
           <View style={styles.pantryBadge}>
-            <Icon
-              name="leaf-outline"
-              size={12}
-              color={styles.pantryBadgeText.color}
-            />
+            <Icon name="leaf-outline" size={12} tone="success" />
             <Text size="xs" weight="medium" style={styles.pantryBadgeText}>
               {t('mealPlanItem.pantryUpdated')}
             </Text>
@@ -149,11 +137,7 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
           style={styles.deleteButton}
           hitSlop={8}
         >
-          <Icon
-            name="close-circle-outline"
-            size={20}
-            color={styles.deleteIcon.color}
-          />
+          <Icon name="close-circle-outline" size={20} tone="textTertiary" />
         </Pressable>
       )}
     </Pressable>
@@ -178,12 +162,6 @@ const styles = StyleSheet.create(theme => ({
   },
   checkbox: {
     marginRight: theme.spacing.sm,
-  },
-  checkboxChecked: {
-    color: theme.colors.success,
-  },
-  checkboxUnchecked: {
-    color: theme.colors.border,
   },
   image: {
     width: 44,
@@ -216,8 +194,5 @@ const styles = StyleSheet.create(theme => ({
   },
   deleteButton: {
     padding: theme.spacing.xs,
-  },
-  deleteIcon: {
-    color: theme.colors.textTertiary,
   },
 }));

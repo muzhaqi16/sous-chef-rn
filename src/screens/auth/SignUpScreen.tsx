@@ -14,6 +14,7 @@ import { type RegisterInput } from '#/graphql/generated/schemaTypes';
 import { authService } from '#/services/authService';
 import { useAppStore } from '#store/useAppStore';
 import { useAuthNavigation } from '#hooks/navigation/useAuthNavigation';
+import { executeMutation } from '#/utils/compilerSafeWrappers';
 
 type SignUpValues = RegisterInput & { confirmPassword: string; name: string };
 
@@ -36,11 +37,11 @@ export const SignUpScreen = (): React.JSX.Element => {
     const { name, email, password } = data;
     const input: RegisterInput = { name, email, password };
 
-    try {
-      await authService.register(input); // Uses default rememberMe=true
-    } catch (err: any) {
-      authService.handleAuthError(err, 'Registration');
-    }
+    // Uses default rememberMe=true
+    await executeMutation(
+      () => authService.register(input),
+      err => authService.handleAuthError(err, 'Registration'),
+    );
   };
 
   return (

@@ -16,37 +16,42 @@ export function useMealPlan(id: string | null) {
 
   useApolloErrorLogger('GetMealPlan', error);
 
-  // Subscribe to the MealPlan entity so cache.modify writes from item
-  // mutations (e.g. createMealPlanItem appending to MealPlan.mealPlanItems)
-  // re-render this hook. Under `dataMasking: true` the parent useQuery's
-  // `data.mealPlan` is a masked ref whose identity is stable when only
-  // deeply-nested fragment-spread fields change, so a cache.modify on
-  // mealPlanItems alone does not trigger a useQuery re-emit. useFragment is
-  // the lightweight live binding documented for this case in
-  // CLAUDE.md (Apollo: Fragment composition + useFragment convention) and
-  // docs/apollo-client-patterns.md (AC 4.x: `useFragment` adopted). The
-  // result here is only used as a reactivity dependency — we still read
-  // through cache.readFragment below to get the Unmasked screen-level shape
-  // (cache.readFragment returns `Unmasked<TData>`; useFragment returns
-  // `MaybeMasked<TData>`, which would force the screen to drill into
-  // `$fragmentRefs` to read item.id/date/etc.).
-  useFragment({
+  // Live binding to the MealPlan entity. `liveMealPlan.data` gets a fresh
+  // reference whenever the MealPlan's selected fields change in the cache —
+  // including `mealPlanItems` membership when an item is added or removed.
+  // Under `dataMasking: true` the parent useQuery's `data.mealPlan` is a
+  // masked ref whose identity is stable when only deeply-nested fragment-spread
+  // fields change, so it cannot serve as that reactivity signal.
+  const liveMealPlan = useFragment({
     fragment: MealPlanMain_MealPlanFragmentDoc,
     fragmentName: 'MealPlanMain_mealPlan',
     from: id ? { __typename: 'MealPlan', id } : null,
   });
 
-  // Materialize the unmasked MealPlanMain_mealPlan shape. Cache-key `from`
-  // form — the masked-ref form silently returns partial/null data under
-  // dataMasking. The settings sheet does its own useFragment on the ref
-  // passed down to it.
-  const mealPlan = data?.mealPlan
-    ? client.cache.readFragment<MealPlanMain_MealPlanFragment>({
-        fragment: MealPlanMain_MealPlanFragmentDoc,
-        fragmentName: 'MealPlanMain_mealPlan',
-        from: { __typename: 'MealPlan', id: data.mealPlan.id },
-      }) ?? null
-    : null;
+  // Materialize the unmasked MealPlanMain_mealPlan shape (cache.readFragment
+  // returns `Unmasked<TData>`; useFragment returns `MaybeMasked<TData>`, which
+  // would force the screen to drill into `$fragmentRefs` to read
+  // item.id/date/etc.). Cache-key `from` form — the masked-ref form silently
+  // returns partial/null data under dataMasking. The settings sheet does its
+  // own useFragment on the ref passed down to it.
+  //
+  // `readFragment` reads the mutable cache during render, so the React Compiler
+  // memoizes this derivation against the reactive values referenced here. The
+  // `liveMealPlan.data` guard is the load-bearing dependency: because
+  // useQuery's masked `data.mealPlan` ref is stable across mealPlanItems
+  // add/remove, gating only on `data.mealPlan` would pin this read to a stale
+  // snapshot until a refetch produced a new reference — added items wouldn't
+  // appear and deleted items wouldn't disappear until pull-to-refresh.
+  // Referencing `liveMealPlan.data` (fresh on every relevant cache write)
+  // forces the unmasked read to re-run immediately.
+  const mealPlan =
+    id && liveMealPlan.complete && liveMealPlan.data
+      ? client.cache.readFragment<MealPlanMain_MealPlanFragment>({
+          fragment: MealPlanMain_MealPlanFragmentDoc,
+          fragmentName: 'MealPlanMain_mealPlan',
+          from: { __typename: 'MealPlan', id },
+        }) ?? null
+      : null;
 
   const items = mealPlan?.mealPlanItems ?? [];
 

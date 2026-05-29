@@ -8,7 +8,7 @@ import { Text } from '#components/atoms/Text';
 export const EmptyNotifications: React.FC = () => {
   return (
     <View style={styles.container}>
-      <Icon name="notifications-outline" size={64} color={styles.icon.color} />
+      <Icon name="notifications-outline" size={64} tone="textTertiary" />
       <Text size="lg" weight="bold" style={styles.title}>
         No notifications yet
       </Text>
@@ -25,10 +25,6 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     alignItems: 'center',
     padding: theme.spacing.xl,
-  },
-  icon: {
-    color: theme.colors.textTertiary,
-    marginBottom: theme.spacing.lg,
   },
   title: {
     marginBottom: theme.spacing.sm,

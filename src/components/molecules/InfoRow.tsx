@@ -1,5 +1,10 @@
 import React from 'react';
-import { View } from 'react-native';
+import {
+  View,
+  type StyleProp,
+  type TextStyle,
+  type ViewStyle,
+} from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { commonStyles } from '#/styles/commonStyles';
 import { Icon } from '#/utils/iconUtils';
@@ -24,7 +29,7 @@ export interface InfoRowProps {
   /**
    * Optional custom formatter for the value
    */
-  formatter?: (value: any) => string;
+  formatter?: (value: string | number) => string;
 
   /**
    * Show a bottom border (default: true)
@@ -34,17 +39,17 @@ export interface InfoRowProps {
   /**
    * Custom label style
    */
-  labelStyle?: any;
+  labelStyle?: StyleProp<TextStyle>;
 
   /**
    * Custom value style
    */
-  valueStyle?: any;
+  valueStyle?: StyleProp<TextStyle>;
 
   /**
    * Custom container style
    */
-  containerStyle?: any;
+  containerStyle?: StyleProp<ViewStyle>;
 
   /**
    * Append a colon after the label (default: true)

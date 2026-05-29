@@ -1099,7 +1099,8 @@
     "remaining": "{{quantity}} {{unit}} të mbetur",
     "expiringTitle": "Artikuj që po skadojnë",
     "expiringEmpty": "Asnjë artikull nuk po skadon së shpejti",
-    "addToShoppingFailed": "Shtimi në listën e blerjeve dështoi"
+    "addToShoppingFailed": "Shtimi në listën e blerjeve dështoi",
+    "noListSelected": "Zgjidh më parë një listë blerjesh"
   },
   "appearance": {
     "title": "Pamja",

@@ -13,6 +13,7 @@ import {
   InviteToHomeDocument,
   JoinHomeByCodeDocument,
   GetHomeByJoinCodeDocument,
+  type GetHomesQuery,
 } from '#operations/home/home.generated';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import {
@@ -28,8 +29,10 @@ const addInviteToHomeCache = createAddToParentConnectionUpdater(
   'HomeInvite',
 );
 
+type HomeNode = GetHomesQuery['homes']['edges'][number]['node'];
+
 interface UseHomeInvitationsOptions {
-  homes: any[] | null;
+  homes: HomeNode[] | null;
   refetch: () => Promise<void>;
   setDefaultHome: (homeId: string) => Promise<boolean>;
   setSelectedHomeId: (homeId: string) => void;
@@ -99,7 +102,7 @@ export function useHomeInvitations({
           const freshHomes = homes || [];
           if (freshHomes.length === 0) {
             setSelectedHomeId(homeId);
-            setDefaultHome(homeId).catch((error: any) => {
+            setDefaultHome(homeId).catch((error: unknown) => {
               console.warn('Failed to set default home after join:', error);
             });
           }

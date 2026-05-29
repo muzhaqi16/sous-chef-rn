@@ -1,5 +1,10 @@
 import React from 'react';
-import { ActivityIndicator } from 'react-native';
+import {
+  ActivityIndicator,
+  type StyleProp,
+  type TextStyle,
+  type ViewStyle,
+} from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import Animated, {
   useSharedValue,
@@ -23,9 +28,9 @@ interface ButtonProps {
   children?: React.ReactNode;
   fullWidth?: boolean;
   title?: string; // For backwards compatibility with atoms/Button
-  style?: any; // For custom styling
-  btnStyle?: any; // For backwards compatibility
-  txtStyle?: any; // For backwards compatibility
+  style?: StyleProp<ViewStyle>; // For custom styling
+  btnStyle?: StyleProp<ViewStyle>; // For backwards compatibility
+  txtStyle?: StyleProp<TextStyle>; // For backwards compatibility
   testID?: string;
   accessibilityLabel?: string;
   accessibilityHint?: string;

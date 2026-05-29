@@ -1,7 +1,9 @@
-import type { ComponentType, ReactElement, JSXElementConstructor } from 'react';
+import type { ReactElement } from 'react';
 import type { ScrollViewProps } from 'react-native';
+import type { FlashListProps } from '@shopify/flash-list';
 import type { FragmentType } from '@apollo/client/masking';
 import type { SortableItem_ItemFragmentDoc } from './SortableItem.generated';
+import type { SwipeableRef } from '#/components/molecules/SwipeableItem/types';
 
 // Positions type for drag-and-drop animation
 export type Positions = Record<number, number>;
@@ -61,11 +63,8 @@ export interface SortableShoppingListProps
   disabled?: boolean;
   groupByPurchased?: boolean;
   ListHeaderComponent?: ReactElement | null;
-  ListFooterComponent?:
-    | ReactElement<unknown, string | JSXElementConstructor<any>>
-    | ComponentType<any>
-    | null;
-  onSwipeableWillOpen?: (ref: any) => void;
+  ListFooterComponent?: FlashListProps<ShoppingListRowItem>['ListFooterComponent'];
+  onSwipeableWillOpen?: (ref: SwipeableRef) => void;
   onSwipeableClose?: () => void;
   onRefresh?: () => void | Promise<void>;
   refreshing?: boolean;
@@ -79,7 +78,7 @@ export interface SortableShoppingListProps
   // Drag-to-reorder permission (only for unpurchased items)
   canReorderItems?: boolean;
   // Empty state component shown when items array is empty
-  ListEmptyComponent?: ReactElement | ComponentType<any> | null;
+  ListEmptyComponent?: FlashListProps<ShoppingListRowItem>['ListEmptyComponent'];
   /**
    * Whether row cells render their product image. Threaded through context
    * so we keep a single list-level subscription on the user preference.

@@ -1,5 +1,8 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import { UseShoppingListActions_ItemFragmentDoc } from './useShoppingListActions.generated';
+import {
+  UseShoppingListActions_ItemFragmentDoc,
+  type UseShoppingListActions_ItemFragment,
+} from './useShoppingListActions.generated';
 import { UpdateShoppingListItemQuantityDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { toastService } from '#/services/toastService';
 import {
@@ -12,15 +15,16 @@ import { setCachedFields } from '#/apollo/utils/cacheUpdaters';
 import { useHaptic } from '#hooks/haptic/useHaptic';
 import { Telemetry } from '#/services/telemetry';
 import { useClearShoppingListItems } from './mutations/useClearShoppingListItems';
+import type { ShoppingListItemNode } from './usePaginatedShoppingItems';
 
 interface UseShoppingListActionsOptions {
   currentListId: string | undefined;
-  unpurchasedItems: any[];
-  purchasedItems: any[];
-  addItem: (input: { itemName: string; quantity?: number }) => Promise<any>;
-  toggleItem: (itemId: string) => Promise<any>;
-  removeItem: (itemId: string) => Promise<any>;
-  refetchItems: () => Promise<any>;
+  unpurchasedItems: ShoppingListItemNode[];
+  purchasedItems: ShoppingListItemNode[];
+  addItem: (input: { itemName: string; quantity?: number }) => Promise<unknown>;
+  toggleItem: (itemId: string) => Promise<unknown>;
+  removeItem: (itemId: string) => Promise<unknown>;
+  refetchItems: () => Promise<unknown>;
   setSearchQuery: (query: string) => void;
 }
 
@@ -30,9 +34,9 @@ async function executeQuantityUpdate(
   updateFn: () => Promise<void>,
   revertCache: () => void,
   clearPersistence: () => void,
-  refetchItems: () => Promise<any>,
+  refetchItems: () => Promise<unknown>,
 ): Promise<void> {
-  const result = await executeMutation(updateFn, (error: any) => {
+  const result = await executeMutation(updateFn, error => {
     revertCache();
     clearPersistence();
 
@@ -46,7 +50,7 @@ async function executeQuantityUpdate(
 
 async function executeTogglePurchase(
   haptic: { selection: () => void; error: () => void },
-  toggleItem: (itemId: string) => Promise<any>,
+  toggleItem: (itemId: string) => Promise<unknown>,
   itemId: string,
 ): Promise<void> {
   const result = await executeMutation(
@@ -69,7 +73,7 @@ async function executeTogglePurchase(
 
 async function executeDeleteItem(
   haptic: { warning: () => void; error: () => void },
-  removeItem: (itemId: string) => Promise<any>,
+  removeItem: (itemId: string) => Promise<unknown>,
   itemId: string,
 ): Promise<void> {
   const result = await executeMutation(
@@ -113,7 +117,7 @@ async function executeClearItems(
 }
 
 async function executeAddItemFromSearch(
-  addItem: (input: { itemName: string; quantity?: number }) => Promise<any>,
+  addItem: (input: { itemName: string; quantity?: number }) => Promise<unknown>,
   haptic: { success: () => void; error: () => void },
   itemName: string,
   setSearchQuery: (query: string) => void,
@@ -192,11 +196,13 @@ export function useShoppingListActions({
       return;
     }
 
-    const cachedItem = client.readFragment<any>({
-      id: cacheId,
-      fragment: UseShoppingListActions_ItemFragmentDoc,
-      fragmentName: 'useShoppingListActions_item',
-    });
+    const cachedItem = client.readFragment<UseShoppingListActions_ItemFragment>(
+      {
+        id: cacheId,
+        fragment: UseShoppingListActions_ItemFragmentDoc,
+        fragmentName: 'useShoppingListActions_item',
+      },
+    );
 
     if (!cachedItem) {
       console.warn('Item not in cache, cannot increment:', itemId);
@@ -263,11 +269,13 @@ export function useShoppingListActions({
       return;
     }
 
-    const cachedItem = client.readFragment<any>({
-      id: cacheId,
-      fragment: UseShoppingListActions_ItemFragmentDoc,
-      fragmentName: 'useShoppingListActions_item',
-    });
+    const cachedItem = client.readFragment<UseShoppingListActions_ItemFragment>(
+      {
+        id: cacheId,
+        fragment: UseShoppingListActions_ItemFragmentDoc,
+        fragmentName: 'useShoppingListActions_item',
+      },
+    );
 
     if (!cachedItem) {
       console.warn('Item not in cache, cannot decrement:', itemId);

@@ -1,4 +1,5 @@
 import type { CreateItemInput } from '#/graphql/generated/schemaTypes';
+import type { ImageFile } from '#hooks/useImageUpload';
 import { storage } from '#/storage/mmkv';
 
 /**
@@ -6,6 +7,10 @@ import { storage } from '#/storage/mmkv';
  * by the backend. Shared by both the barcode-scanned flow and the identified-
  * from-OCR flow so the mapping stays in one place.
  */
+// formData is a dynamic AddItemForm submission; each field is read untyped and
+// assigned to the strongly-typed CreateItemInput. Tightening to
+// Record<string, unknown> would require casting ~20 fields one-by-one, a
+// substantial refactor of the mapping body.
 export function mapFormToCreateItemInput(
   formData: Record<string, any>,
 ): CreateItemInput {
@@ -66,12 +71,12 @@ export function mapFormToCreateItemInput(
  * Stash images selected in the form into MMKV so the post-create upload step
  * can pick them up after the mutation returns with an item id.
  */
-export function stashPendingFormImages(formData: Record<string, any>): void {
-  if (formData.selectedImages && formData.selectedImages.length > 0) {
-    storage.set(
-      'temp_pending_item_images',
-      JSON.stringify(formData.selectedImages),
-    );
+export function stashPendingFormImages(
+  formData: Record<string, unknown>,
+): void {
+  const selectedImages = formData.selectedImages;
+  if (Array.isArray(selectedImages) && selectedImages.length > 0) {
+    storage.set('temp_pending_item_images', JSON.stringify(selectedImages));
   } else if (formData.selectedImage) {
     storage.set(
       'temp_pending_item_image',
@@ -88,7 +93,7 @@ export async function uploadPendingImages<
   T extends { id: string; imageUrl?: string | null },
 >(
   createdItem: T,
-  uploadItemImage: (image: any, itemId: string) => Promise<string | null>,
+  uploadItemImage: (image: ImageFile, itemId: string) => Promise<string | null>,
 ): Promise<T> {
   let finalItem = createdItem;
 

@@ -64,7 +64,9 @@ const EMPTY_SEARCH_RESULTS: never[] = [];
 // when items reference and search query haven't changed
 let _lastFilterItems: unknown = null;
 let _lastFilterQuery = '';
-let _lastFilterResult: any[] = [];
+// Heterogeneous across TItem instantiations of cachedLocalFilter; cast back to
+// TItem[] on read where the generic type is known.
+let _lastFilterResult: unknown[] = [];
 
 function cachedLocalFilter<TItem extends { id: string }>(
   items: TItem[],

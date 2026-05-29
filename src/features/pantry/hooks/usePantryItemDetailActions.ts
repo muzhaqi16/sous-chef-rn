@@ -103,7 +103,10 @@ export function usePantryItemDetailActions({
       cache.modify({
         id: cache.identify({ __typename: 'Pantry', id: selectedPantryId }),
         fields: {
-          stats(existingStats: any) {
+          stats(existingStats?: {
+            totalItems?: number;
+            readonly __ref?: string;
+          }) {
             if (!existingStats) return existingStats;
             return {
               ...existingStats,
@@ -128,15 +131,14 @@ export function usePantryItemDetailActions({
         }
         const shoppingListItem = payload.shoppingListItem;
 
-        try {
-          addNewItemToShoppingListCache(
-            cache,
-            selectedShoppingListId,
-            shoppingListItem,
-          );
-        } catch (error) {
-          console.warn('Cache update failed for addToShoppingList:', error);
-        }
+        // addNewItemToShoppingListCache swallows its own errors internally, so
+        // no try/catch wrapper is needed here — wrapping would bail the React
+        // Compiler out of this hook.
+        addNewItemToShoppingListCache(
+          cache,
+          selectedShoppingListId,
+          shoppingListItem,
+        );
       },
     },
   );

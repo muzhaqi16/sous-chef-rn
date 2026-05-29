@@ -1,13 +1,26 @@
 import { renderHook, act } from '@testing-library/react-native';
+import type { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { useSwipeableCoordinator } from '../useSwipeableCoordinator';
 
 beforeEach(() => {
   jest.clearAllMocks();
 });
 
+// Non-null `current` so call-site assertions (ref.current.close) don't trip
+// the null guard; assignable to SwipeableRef (RefObject<SwipeableMethods | null>).
+type MockSwipeableRef = { current: SwipeableMethods };
+
 describe('useSwipeableCoordinator', () => {
-  const createMockSwipeableRef = () => ({
-    current: { close: jest.fn() },
+  // SwipeableMethods exposes exactly close/openLeft/openRight/reset, so a
+  // fully-typed mock satisfies the ref contract without any cast. The hook
+  // only ever invokes close(); the others are present to keep the shape valid.
+  const createMockSwipeableRef = (): MockSwipeableRef => ({
+    current: {
+      close: jest.fn(),
+      openLeft: jest.fn(),
+      openRight: jest.fn(),
+      reset: jest.fn(),
+    },
   });
 
   it('returns handleSwipeableWillOpen, handleSwipeableClose, and closeAll', () => {

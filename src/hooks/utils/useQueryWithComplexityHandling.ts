@@ -106,9 +106,17 @@ export function useQueryWithComplexityHandling<
  * });
  * ```
  */
-export function useValidatedPagination<T extends Record<string, any>>(
-  variables: T,
-): T {
+/** Optional cursor/offset pagination fields capped by `validatePagination`. */
+interface PaginationVariables {
+  first?: number;
+  last?: number;
+  limit?: number;
+  take?: number;
+}
+
+export function useValidatedPagination<
+  T extends Record<string, unknown> & PaginationVariables,
+>(variables: T): T {
   return {
     ...variables,
     ...validatePagination({

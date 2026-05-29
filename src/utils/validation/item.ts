@@ -161,6 +161,9 @@ export const createItemSchema = object({
   upc: upcRule,
   sku: skuRule,
   editReason: editReasonRule,
+  // Display text for the store autocomplete. The resolved store id is tracked
+  // separately (selectedStoreId); this field only holds the searchable name.
+  storeName: string().optional(),
 
   // Net Weights (manufacturer-provided, e.g., dual-label packaging)
   netWeights: array()

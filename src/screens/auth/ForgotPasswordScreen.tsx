@@ -11,6 +11,7 @@ import { ForgotPasswordDocument } from '#operations/auth/auth.generated';
 import { useAuthNavigation } from '#hooks/navigation/useAuthNavigation';
 import { useToast } from '#/hooks/useToast';
 import { errorService } from '#/services/errorService';
+import { executeMutation } from '#/utils/compilerSafeWrappers';
 import {
   getRateLimitMessage,
   isRateLimitError,
@@ -36,27 +37,27 @@ export function ForgotPasswordScreen() {
 
   const sendResetEmail = async (data: ForgotPasswordValues) => {
     const { email } = data;
-    try {
-      const response = await forgotPasswordApi({
-        variables: { input: { email } },
-      });
+    const response = await executeMutation(
+      () => forgotPasswordApi({ variables: { input: { email } } }),
+      error =>
+        errorService.reportError(error, {
+          operation: 'ForgotPassword.sendResetEmail',
+        }),
+    );
+    // `false` means the mutation threw — already reported above.
+    if (!response) return;
 
-      // Rate-limit now arrives as a top-level GraphQL error, not a
-      // RateLimitError union variant.
-      if (isRateLimitError(response.error)) {
-        toast({
-          message: getRateLimitMessage(response.error),
-          type: 'error',
-        });
-        return;
-      }
-
-      navigateToLogin();
-    } catch (error) {
-      errorService.reportError(error, {
-        operation: 'ForgotPassword.sendResetEmail',
+    // Rate-limit now arrives as a top-level GraphQL error, not a
+    // RateLimitError union variant.
+    if (isRateLimitError(response.error)) {
+      toast({
+        message: getRateLimitMessage(response.error),
+        type: 'error',
       });
+      return;
     }
+
+    navigateToLogin();
   };
 
   return (

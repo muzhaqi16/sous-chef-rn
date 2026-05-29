@@ -1,5 +1,5 @@
 import { extractNodes, getConnectionTotalCount } from '#/utils/connectionUtils';
-import { usePagination } from '#hooks/utils/usePagination';
+import { usePagination, type FetchMoreFn } from '#hooks/utils/usePagination';
 
 /**
  * Structural constraint matching codegen connection types as they appear
@@ -11,7 +11,7 @@ import { usePagination } from '#hooks/utils/usePagination';
  * PantryItemConnection, etc.) satisfy this constraint.
  */
 export type ConnectionResult = {
-  edges: Array<{ node: any }>;
+  edges: Array<{ node: unknown }>;
   pageInfo: { hasNextPage: boolean; endCursor: string | null };
   totalCount?: number | null;
 };
@@ -28,9 +28,9 @@ export interface UseConnectionDataConfig<TData, C extends ConnectionResult> {
   /** Whether the query is currently loading */
   loading: boolean;
   /** Apollo fetchMore function */
-  fetchMore: (options: any) => Promise<any>;
+  fetchMore: FetchMoreFn;
   /** Additional variables for fetchMore (e.g., parent entity ID, filters) */
-  fetchMoreVariables?: Record<string, any>;
+  fetchMoreVariables?: Record<string, unknown>;
   /** Cursor variable name (default: 'after') */
   cursorVariableName?: string;
 }

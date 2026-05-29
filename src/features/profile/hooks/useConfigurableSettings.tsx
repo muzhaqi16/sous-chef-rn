@@ -13,9 +13,18 @@ import { useMutation } from '@apollo/client/react';
 import {
   UpdateUserProfileDocument,
   UpdateUserPreferencesDocument,
+  type GetUserProfileQuery,
 } from '#operations/auth/user.generated';
-import { ProfileVisibility } from '#/graphql/generated/schemaTypes';
+import {
+  ProfileVisibility,
+  type UpdateUserProfileInput,
+  type UpdateUserSettingsInput,
+} from '#/graphql/generated/schemaTypes';
 import { buildOptimisticMutationResponse } from '#/apollo/utils/createOptimisticResponse';
+import type {
+  SettingItem,
+  SettingOption,
+} from '#components/molecules/SettingRow';
 
 import { PROFILE_SETTINGS_CONFIG } from '#/config/settingsConfig';
 import { SUPPORTED_LANGUAGES } from '#/i18n/config';
@@ -51,7 +60,20 @@ const ITEM_LABEL_KEYS: Record<string, string> = {
   logout: 'profile.labels.logout',
 };
 
-export const useConfigurableSettings = (profile: any) => {
+type UserProfile = NonNullable<
+  NonNullable<GetUserProfileQuery['me']>['profile']
+>;
+
+// Shape of a single entry inside PROFILE_SETTINGS_CONFIG.
+interface SettingConfig {
+  key: string;
+  label: string;
+  type: string;
+  subtitle?: string;
+  options?: SettingOption[];
+}
+
+export const useConfigurableSettings = (profile: UserProfile | null) => {
   const { t } = useTranslation();
   const user = useUser();
   const logout = useAppStore(state => state.logout);
@@ -67,10 +89,27 @@ export const useConfigurableSettings = (profile: any) => {
     // No manual cache update needed (Pattern 2)
     optimisticResponse: (variables, { IGNORE }) => {
       if (!profile) return IGNORE;
-      return buildOptimisticMutationResponse('updateProfile', 'UserProfile', {
-        ...profile,
-        ...variables.input,
-      });
+      // updateProfile resolves to an UpdateProfilePayload (a result union),
+      // not a bare UserProfile — the optimistic shape must mirror that.
+      return buildOptimisticMutationResponse(
+        'updateProfile',
+        'UpdateProfilePayload',
+        {
+          userProfile: {
+            ...profile,
+            ...variables.input,
+            // These fields are non-null in the mutation's userProfile selection
+            // but nullable on the cached profile — default them for the
+            // optimistic shape so the types line up.
+            profileVisibility:
+              variables.input.profileVisibility ??
+              profile.profileVisibility ??
+              ProfileVisibility.Public,
+            showEmail: variables.input.showEmail ?? profile.showEmail ?? false,
+            showPhone: variables.input.showPhone ?? profile.showPhone ?? false,
+          },
+        },
+      );
     },
     onError: error => {
       handleMutationError(error, { operation: 'Update Profile' });
@@ -140,14 +179,14 @@ export const useConfigurableSettings = (profile: any) => {
     }
   };
 
-  const updateProfile = async (input: Partial<Record<any, any>>) => {
+  const updateProfile = async (input: UpdateUserProfileInput) => {
     await executeMutation(
       () => updateProfileMutation({ variables: { input } }),
       'Failed to update profile',
     );
   };
 
-  const updateUserPreferences = (input: any) => {
+  const updateUserPreferences = (input: UpdateUserSettingsInput) => {
     updateSettingsMutation({
       variables: {
         input,
@@ -157,7 +196,7 @@ export const useConfigurableSettings = (profile: any) => {
     // The individual setters will be called instead
   };
 
-  const createSettingItem = (config: any) => {
+  const createSettingItem = (config: SettingConfig): SettingItem => {
     // ==== TEST IDs for Detox ====
     const testIDMap: Record<string, string> = {
       personalInformation: 'profile-menu-personalInformation',
@@ -181,7 +220,7 @@ export const useConfigurableSettings = (profile: any) => {
       ? t(ITEM_LABEL_KEYS[config.key])
       : config.label;
 
-    const baseItem: any = {
+    const baseItem: SettingItem = {
       key: config.key,
       label: translatedLabel,
       type: config.type,
@@ -195,48 +234,42 @@ export const useConfigurableSettings = (profile: any) => {
         return {
           ...baseItem,
           value: profile?.firstName || '',
-          onSave: (v: string) =>
-            updateProfile({ firstName: v } as Partial<Record<any, any>>),
+          onSave: (v: string) => updateProfile({ firstName: v }),
         };
 
       case 'lastName':
         return {
           ...baseItem,
           value: profile?.lastName || '',
-          onSave: (v: string) =>
-            updateProfile({ lastName: v } as Partial<Record<any, any>>),
+          onSave: (v: string) => updateProfile({ lastName: v }),
         };
 
       case 'displayName':
         return {
           ...baseItem,
           value: profile?.displayName || '',
-          onSave: (v: string) =>
-            updateProfile({ displayName: v } as Partial<Record<any, any>>),
+          onSave: (v: string) => updateProfile({ displayName: v }),
         };
 
       case 'bio':
         return {
           ...baseItem,
           value: profile?.bio || '',
-          onSave: (v: string) =>
-            updateProfile({ bio: v } as Partial<Record<any, any>>),
+          onSave: (v: string) => updateProfile({ bio: v }),
         };
 
       case 'phone':
         return {
           ...baseItem,
           value: profile?.phone || '',
-          onSave: (v: string) =>
-            updateProfile({ phone: v } as Partial<Record<any, any>>),
+          onSave: (v: string) => updateProfile({ phone: v }),
         };
 
       case 'website':
         return {
           ...baseItem,
           value: profile?.website || '',
-          onSave: (v: string) =>
-            updateProfile({ website: v } as Partial<Record<any, any>>),
+          onSave: (v: string) => updateProfile({ website: v }),
         };
 
       case 'dateOfBirth':
@@ -261,8 +294,7 @@ export const useConfigurableSettings = (profile: any) => {
               { label: 'Other', value: 'other' },
               { label: 'Prefer not to say', value: 'prefer-not-to-say' },
             ],
-            onSave: (v: string) =>
-              updateProfile({ gender: v } as Partial<Record<any, any>>),
+            onSave: (v: string) => updateProfile({ gender: v }),
           };
         }
         break;
@@ -279,9 +311,7 @@ export const useConfigurableSettings = (profile: any) => {
               { label: 'Private', value: ProfileVisibility.Private },
             ],
             onSave: (v: string) =>
-              updateProfile({ profileVisibility: v } as Partial<
-                Record<any, any>
-              >),
+              updateProfile({ profileVisibility: v as ProfileVisibility }),
           };
         }
         break;
@@ -291,10 +321,7 @@ export const useConfigurableSettings = (profile: any) => {
           return {
             ...baseItem,
             value: profile?.showEmail || false,
-            onPress: () =>
-              updateProfile({ showEmail: !profile?.showEmail } as Partial<
-                Record<any, any>
-              >),
+            onPress: () => updateProfile({ showEmail: !profile?.showEmail }),
           };
         }
         break;
@@ -304,10 +331,7 @@ export const useConfigurableSettings = (profile: any) => {
           return {
             ...baseItem,
             value: profile?.showPhone || false,
-            onPress: () =>
-              updateProfile({ showPhone: !profile?.showPhone } as Partial<
-                Record<any, any>
-              >),
+            onPress: () => updateProfile({ showPhone: !profile?.showPhone }),
           };
         }
         break;
@@ -317,7 +341,7 @@ export const useConfigurableSettings = (profile: any) => {
           return {
             ...baseItem,
             value: language || 'en',
-            options: SUPPORTED_LANGUAGES,
+            options: [...SUPPORTED_LANGUAGES],
             onSave: (v: string) => {
               setLanguage(v);
               updateUserPreferences({ regional: { language: v } });

@@ -7,11 +7,23 @@ import { usePreservedArrayData } from './apollo/usePreservedQueryData';
 import { useSelectedHomeId } from '#store/useAppStore';
 import { extractNodes } from '#/utils/connectionUtils';
 
+/**
+ * Common selectable-item shape across the supported sources (shopping lists,
+ * pantries, homes, or custom data). Only `name`/`title` are read for logging;
+ * extra source-specific fields are preserved via the index signature.
+ */
+export interface SelectableItem {
+  id: string;
+  name?: string | null;
+  title?: string | null;
+  [key: string]: unknown;
+}
+
 interface UseItemSelectorConfig {
   type: 'shoppingList' | 'pantry' | 'home' | 'custom';
-  customData?: any[];
+  customData?: SelectableItem[];
   customLoading?: boolean;
-  onSelect?: (id: string, item: any) => void;
+  onSelect?: (id: string, item: SelectableItem) => void;
   initialSelected?: string;
 }
 
@@ -126,7 +138,7 @@ export const useItemSelector = ({
     }
   };
 
-  const handleSelect = (id: string, item: any) => {
+  const handleSelect = (id: string, item: SelectableItem) => {
     if (__DEV__) {
       console.log(
         `[useItemSelector:${type}] User selected: ${id}`,

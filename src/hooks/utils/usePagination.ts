@@ -1,7 +1,17 @@
 import { useRef, useEffect, useState } from 'react';
+import type { OperationVariables } from '@apollo/client';
 import { errorService } from '#/services/errorService';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import type { PaginationState } from '#hooks/types';
+
+/**
+ * Apollo `fetchMore` shape this hook invokes as `fetchMore({ variables })`.
+ * The result is only inspected for `=== false` (failure) by the caller, so the
+ * resolved value is left as `unknown`.
+ */
+export type FetchMoreFn = (options: {
+  variables?: OperationVariables;
+}) => Promise<unknown>;
 
 /**
  * Configuration for pagination from normalized data
@@ -17,9 +27,9 @@ export interface PaginationConfig {
   /** Current number of items (to determine if loading more) */
   itemCount: number;
   /** Apollo fetchMore function from query */
-  fetchMore: (options: any) => Promise<any>;
+  fetchMore: FetchMoreFn;
   /** Additional variables to pass to fetchMore (e.g., id, filters) */
-  fetchMoreVariables?: Record<string, any>;
+  fetchMoreVariables?: Record<string, unknown>;
   /** Name of the cursor variable (default: 'cursor') */
   cursorVariableName?: string;
 }

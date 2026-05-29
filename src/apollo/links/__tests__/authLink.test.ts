@@ -22,8 +22,8 @@ jest.mock('#store', () => ({
 }));
 
 // Mock other dependencies that authLink imports
-jest.mock('react-native-config', () => ({
-  API_KEY: 'test-api-key',
+jest.mock('#/config/env', () => ({
+  env: { API_KEY: 'test-api-key' },
 }));
 jest.mock('#/utils/deviceId', () => ({
   getDeviceIdSync: jest.fn(() => 'test-device-id'),

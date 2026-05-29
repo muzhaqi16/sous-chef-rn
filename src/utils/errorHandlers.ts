@@ -57,7 +57,7 @@ export interface ApolloErrorConfig {
  * ```
  */
 export const handleVersionConflictAlert = (
-  error: any,
+  error: unknown,
   config: VersionConflictConfig = {},
 ): boolean => {
   const { itemName = 'Item', onRefresh, customMessage } = config;
@@ -89,7 +89,7 @@ export const handleVersionConflictAlert = (
  * ```
  */
 export const handleMutationErrorAlert = (
-  error: any,
+  error: unknown,
   config: ApolloErrorConfig,
 ): void => {
   const { operation, customMessage, showAlert = true } = config;

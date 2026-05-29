@@ -27,7 +27,9 @@ export interface ToastOptions {
 }
 export type ToastFn = (options: ToastOptions) => void;
 
-const TOAST_ICONS: Partial<Record<ToastType, string>> = {
+const TOAST_ICONS: Partial<
+  Record<ToastType, React.ComponentProps<typeof Ionicons>['name']>
+> = {
   success: 'checkmark-circle',
   error: 'close-circle',
   warning: 'alert-circle-outline',
@@ -186,7 +188,7 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
         >
           {iconName ? (
             <ThemedToastIcon
-              name={iconName as any}
+              name={iconName}
               size={18}
               style={styles.icon}
               uniProps={t => ({

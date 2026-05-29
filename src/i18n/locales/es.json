@@ -1100,7 +1100,8 @@
     "remaining": "{{quantity}} {{unit}} restantes",
     "expiringTitle": "Artículos por caducar",
     "expiringEmpty": "No hay artículos por caducar pronto",
-    "addToShoppingFailed": "No se pudo añadir a la lista de la compra"
+    "addToShoppingFailed": "No se pudo añadir a la lista de la compra",
+    "noListSelected": "Selecciona primero una lista de la compra"
   },
   "appearance": {
     "title": "Apariencia",

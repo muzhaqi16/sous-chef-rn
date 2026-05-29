@@ -7,24 +7,6 @@ import { Icon } from '#utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { Text } from '#components/atoms/Text';
 
-/**
- * Greeting display-name text. Uses a top-level `StyleSheet.create` with a
- * direct `theme.colors.primary` read so the Unistyles babel plugin tracks the
- * dependency and the C++ ShadowTree updates the color when the user picks a
- * new App Color (no re-render, no reload).
- */
-const GreetingName: React.FC<{ name: string }> = ({ name }) => (
-  <Text weight="bold" size="2xl" style={greetingNameStyles.text}>
-    {name}
-  </Text>
-);
-
-const greetingNameStyles = StyleSheet.create(theme => ({
-  text: {
-    color: theme.colors.primary,
-  },
-}));
-
 // Matches theme.typography.fontSize.lg (18). Inlined so the component does not
 // need useUnistyles — the theme value is module-static.
 const ICON_SIZE_LG = 18;
@@ -87,11 +69,27 @@ export const PantryHeader: React.FC<PantryHeaderProps> = ({
   return (
     <View style={styles.greetingRow}>
       <View style={styles.greetingContent}>
-        <Text weight="bold" style={styles.greeting}>
-          {greetingBefore ?? ''}
-          <GreetingName name={userName} />
-          {greetingAfter ?? ''}
-        </Text>
+        {/* Greeting pieces render as separate, non-nested <Text> nodes. A
+            <Text> nested inside another <Text> becomes a virtual text node
+            that Unistyles' C++ ShadowTree color updates don't reach, so an
+            accent-colored name span goes stale on App Color changes until a
+            remount. Standalone host <Text> nodes update via the ShadowTree
+            without any re-render. */}
+        <View style={styles.greetingTextRow}>
+          {!!greetingBefore && (
+            <Text weight="bold" style={styles.greeting}>
+              {greetingBefore}
+            </Text>
+          )}
+          <Text weight="bold" size="2xl" tone="accent">
+            {userName}
+          </Text>
+          {!!greetingAfter && (
+            <Text weight="bold" style={styles.greeting}>
+              {greetingAfter}
+            </Text>
+          )}
+        </View>
         <Pressable onPress={onHomePress} style={styles.householdBadge}>
           <View
             ref={badgeRef}
@@ -182,6 +180,11 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     justifyContent: 'center',
     alignContent: 'center',
+  },
+  greetingTextRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    flexWrap: 'wrap',
   },
   greeting: {
     fontSize: theme.typography.fontSize['2xl'] + 2,

@@ -9,6 +9,7 @@ import {
 import { FormInput } from '#components/molecules/FormInput';
 import { ItemSuggestion } from '#/graphql/generated/schemaTypes';
 import { Text } from '#components/atoms/Text';
+import type { PantryItemFormData } from './PantryItemForm';
 
 type SuggestedBrand = {
   id: string;
@@ -16,8 +17,8 @@ type SuggestedBrand = {
 };
 
 interface ItemInformationSectionProps {
-  control: Control<any>;
-  errors: FieldErrors<any>;
+  control: Control<PantryItemFormData>;
+  errors: FieldErrors<PantryItemFormData>;
   onSelectItem?: (item: ItemSuggestion) => void;
   mode: 'add' | 'edit';
   suggestedBrands?: SuggestedBrand[];
@@ -36,7 +37,7 @@ export const ItemInformationSection: React.FC<ItemInformationSectionProps> = ({
   onBrandSelected,
   onCategorySelected,
 }) => {
-  const getFields = (): FieldDef<any>[] => {
+  const getFields = (): FieldDef<PantryItemFormData>[] => {
     if (mode === 'add') {
       return [
         {
