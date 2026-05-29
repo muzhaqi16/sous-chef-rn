@@ -1,26 +1,16 @@
-import React, { useState, useRef } from 'react';
+import React, { useRef } from 'react';
 import { View, Text, ScrollView } from 'react-native';
-import {
-  Pressable,
-  WhiteActivityIndicator,
-  ThemedRefreshControl,
-} from '#components/atoms/themedComponents';
+import { ThemedRefreshControl } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
-import { Icon } from '#utils/iconUtils';
 import { useTranslation } from 'react-i18next';
-import { EmailInput } from '#components/atoms/EmailInput';
 import { useNavigation } from '@react-navigation/native';
 import { Header } from '#components/molecules/Header';
 import { LoadingInline } from '#components/base/Loading';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useMutation } from '@apollo/client/react';
-import {
-  RemoveCollaboratorDocument,
-  AddCollaboratorDocument,
-} from '#features/shoppingList/graphql/shoppingList.generated';
+import { RemoveCollaboratorDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { CollaboratorRole } from '#/graphql/generated/schemaTypes';
-import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import {
   useLeaveShoppingList,
   removeCollaboratorFromShoppingListCache,
@@ -34,54 +24,19 @@ import { Button } from '#components/base/Button';
 import { OfflineGate } from '#components/atoms/OfflineGate';
 import { AlertBanner } from '#components/molecules/AlertBanner';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import {
-  executeMutation,
-  executeWithLoadingState,
-  unwrapPayload,
-} from '#/utils/compilerSafeWrappers';
-import { ROLE_PERMISSIONS, INVITE_ROLES } from '#/constants/collaboratorRoles';
-import { ChipScrollRow } from '#components/atoms/ChipScrollRow';
+import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { CollaboratorMemberCard } from '#features/shoppingList/components/CollaboratorMemberCard';
 import { ShareCodeSection } from '#features/shoppingList/components/ShareCodeSection';
-
-const addCollaboratorToCache = createAddToParentConnectionUpdater(
-  'ShoppingList',
-  'collaboratorsConnection',
-  'ShoppingListCollaborator',
-);
-
-const ROLE_LABEL_KEYS: Record<CollaboratorRole, string> = {
-  [CollaboratorRole.Viewer]: 'collaboratorRoles.viewer',
-  [CollaboratorRole.Shopper]: 'collaboratorRoles.shopper',
-  [CollaboratorRole.Contributor]: 'collaboratorRoles.contributor',
-  [CollaboratorRole.Editor]: 'collaboratorRoles.editor',
-  [CollaboratorRole.Admin]: 'collaboratorRoles.admin',
-  [CollaboratorRole.Owner]: 'collaboratorRoles.owner',
-};
-
-type T = (key: string, opts?: Record<string, unknown>) => string;
-
-const buildRoleOptions = (t: T) =>
-  INVITE_ROLES.map(role => ({
-    key: role,
-    icon: ROLE_PERMISSIONS[role].icon,
-    label: t(ROLE_LABEL_KEYS[role]),
-  }));
+import { ShareInviteSection } from '#features/shoppingList/components/ShareInviteSection';
 
 export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
   route,
 }) => {
   const { t } = useTranslation();
-  const roleOptions = buildRoleOptions(t);
   const { goBack } = useNavigation();
   const { toHomeDetail } = useAppNavigation();
   const { listId } = route.params;
 
-  const [email, setEmail] = useState('');
-  const [selectedRole, setSelectedRole] = useState<CollaboratorRole>(
-    CollaboratorRole.Contributor,
-  );
-  const [sharing, setSharing] = useState(false);
   const permissionsBottomSheetRef =
     useRef<CollaboratorPermissionsBottomSheetRef>(null);
 
@@ -99,7 +54,6 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
 
   const isHomeLinked = !!shoppingList?.homeId;
 
-  const [shareList] = useMutation(AddCollaboratorDocument);
   const [removeMember] = useMutation(RemoveCollaboratorDocument);
   const { leaveList, leaving } = useLeaveShoppingList(listId);
 
@@ -118,60 +72,6 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
 
   const isPublic = !!shoppingList?.isPublic;
   const shareCode = shoppingList?.shareCode;
-
-  const handleShare = () => {
-    if (!email.trim()) {
-      alertService.alert(
-        t('labels.error'),
-        t('shoppingListScreens.pleaseEnterEmail'),
-      );
-      return;
-    }
-
-    executeWithLoadingState(
-      async () => {
-        const { data } = await shareList({
-          variables: {
-            input: {
-              shoppingListId: listId,
-              email: email.trim(),
-              role: selectedRole,
-            },
-          },
-          update(cache, { data: updateData }) {
-            const invitePayload = updateData?.inviteToShoppingList;
-            if (invitePayload?.__typename === 'InviteToShoppingListPayload') {
-              addCollaboratorToCache(
-                cache,
-                listId,
-                invitePayload.collaborator,
-                {
-                  position: 'end',
-                },
-              );
-            }
-          },
-        });
-        unwrapPayload(
-          data?.inviteToShoppingList,
-          'InviteToShoppingListPayload',
-          t('shoppingListScreens.failedToSendInvitation'),
-        );
-        setEmail('');
-        // No refetch needed: the update() callback above already inserts the
-        // new collaborator into the cached collaboratorsConnection.
-      },
-      setSharing,
-      error => {
-        alertService.alert(
-          t('labels.error'),
-          error instanceof Error
-            ? error.message
-            : t('shoppingListScreens.failedToSendInvitation'),
-        );
-      },
-    );
-  };
 
   const handleRemoveMember = (memberId: string) => {
     alertService.alert(
@@ -314,43 +214,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
                 shareCode={shareCode}
               />
 
-              <View style={styles.inviteSection}>
-                <Text style={styles.sectionTitle}>
-                  {t('shoppingListScreens.inviteMembers')}
-                </Text>
-                <View style={styles.inputRow}>
-                  <EmailInput
-                    containerStyle={styles.emailInputContainer}
-                    value={email}
-                    onChangeText={setEmail}
-                  />
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.sendButton,
-                      pressed && styles.pressed,
-                    ]}
-                    onPress={handleShare}
-                    disabled={sharing}
-                  >
-                    {sharing ? (
-                      <WhiteActivityIndicator size="small" />
-                    ) : (
-                      <Icon name="send" size={20} tone="white" />
-                    )}
-                  </Pressable>
-                </View>
-                <Text style={styles.roleLabel}>
-                  {t('shoppingListScreens.role')}
-                </Text>
-                <ChipScrollRow
-                  options={roleOptions}
-                  selected={selectedRole}
-                  onSelect={setSelectedRole}
-                  size="md"
-                  style={styles.chipScroll}
-                  contentContainerStyle={styles.chipRowContent}
-                />
-              </View>
+              <ShareInviteSection listId={listId} />
             </>
           )}
 
@@ -419,45 +283,11 @@ const styles = StyleSheet.create(theme => ({
   homeLinkedButtonWrapper: {
     paddingHorizontal: theme.spacing.md,
   },
-  inviteSection: {
-    padding: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
   sectionTitle: {
     fontSize: theme.typography.fontSize.md,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing['3'],
-  },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  emailInputContainer: {
-    flex: 1,
-  },
-  sendButton: {
-    marginLeft: theme.spacing['3'],
-    backgroundColor: theme.colors.primary,
-    width: 44,
-    height: 44,
-    borderRadius: theme.radii.full,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  roleLabel: {
-    fontSize: theme.typography.fontSize.sm,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textSecondary,
-    marginTop: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
-  },
-  chipScroll: {
-    marginHorizontal: -theme.spacing.md,
-  },
-  chipRowContent: {
-    paddingHorizontal: theme.spacing.md,
   },
   membersSection: {
     padding: theme.spacing.md,
@@ -473,8 +303,5 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
     lineHeight: theme.typography.fontSize.sm * 1.5,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));
