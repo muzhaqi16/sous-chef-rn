@@ -26,6 +26,13 @@ interface FieldHelpers {
 /** A cache ref or normalized object the field helpers read from. */
 type MockRef = { __ref?: string; [key: string]: unknown };
 
+/**
+ * Entity shape the add-updaters operate on. The factories' `T` defaults to
+ * its `{ id: string }` constraint (T can't be inferred from the string args),
+ * so we pass this explicitly to allow the `__typename` the mock helpers read.
+ */
+type Entity = { id: string; __typename: string };
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -96,7 +103,7 @@ describe('createAddToQueryConnectionUpdater', () => {
   });
 
   it('adds a new edge at the start by default', () => {
-    const addToShoppingLists = createAddToQueryConnectionUpdater(
+    const addToShoppingLists = createAddToQueryConnectionUpdater<Entity>(
       'shoppingLists',
       'ShoppingList',
     );
@@ -134,12 +141,19 @@ describe('createAddToQueryConnectionUpdater', () => {
   });
 
   it('adds a new edge at the end when position is end', () => {
-    const addToLists = createAddToQueryConnectionUpdater('lists', 'List');
+    const addToLists = createAddToQueryConnectionUpdater<Entity>(
+      'lists',
+      'List',
+    );
     const cache = createMockCache();
 
-    addToLists(cache, { id: 'l-1', __typename: 'List' } as any, {
-      position: 'end',
-    });
+    addToLists(
+      cache,
+      { id: 'l-1', __typename: 'List' },
+      {
+        position: 'end',
+      },
+    );
 
     const helpers = createFieldHelpers();
     const existingConnection = {
@@ -158,10 +172,13 @@ describe('createAddToQueryConnectionUpdater', () => {
   });
 
   it('prevents duplicates by default', () => {
-    const addToLists = createAddToQueryConnectionUpdater('lists', 'List');
+    const addToLists = createAddToQueryConnectionUpdater<Entity>(
+      'lists',
+      'List',
+    );
     const cache = createMockCache();
 
-    addToLists(cache, { id: 'l-1', __typename: 'List' } as any);
+    addToLists(cache, { id: 'l-1', __typename: 'List' });
 
     const helpers = createFieldHelpers();
     helpers.readField.mockImplementation((field: string) => {
@@ -183,12 +200,19 @@ describe('createAddToQueryConnectionUpdater', () => {
   });
 
   it('does not update totalCount when updateTotalCount is false', () => {
-    const addToLists = createAddToQueryConnectionUpdater('lists', 'List');
+    const addToLists = createAddToQueryConnectionUpdater<Entity>(
+      'lists',
+      'List',
+    );
     const cache = createMockCache();
 
-    addToLists(cache, { id: 'l-1', __typename: 'List' } as any, {
-      updateTotalCount: false,
-    });
+    addToLists(
+      cache,
+      { id: 'l-1', __typename: 'List' },
+      {
+        updateTotalCount: false,
+      },
+    );
 
     const helpers = createFieldHelpers();
     const existingConnection = { edges: [], totalCount: 5 };
@@ -203,10 +227,13 @@ describe('createAddToQueryConnectionUpdater', () => {
   });
 
   it('returns existing connection when toReference returns undefined', () => {
-    const addToLists = createAddToQueryConnectionUpdater('lists', 'List');
+    const addToLists = createAddToQueryConnectionUpdater<Entity>(
+      'lists',
+      'List',
+    );
     const cache = createMockCache();
 
-    addToLists(cache, { id: 'l-1', __typename: 'List' } as any);
+    addToLists(cache, { id: 'l-1', __typename: 'List' });
 
     const helpers = createFieldHelpers();
     helpers.toReference.mockReturnValue(undefined);
@@ -222,10 +249,13 @@ describe('createAddToQueryConnectionUpdater', () => {
   });
 
   it('handles empty existing connection object', () => {
-    const addToLists = createAddToQueryConnectionUpdater('lists', 'List');
+    const addToLists = createAddToQueryConnectionUpdater<Entity>(
+      'lists',
+      'List',
+    );
     const cache = createMockCache();
 
-    addToLists(cache, { id: 'l-1', __typename: 'List' } as any);
+    addToLists(cache, { id: 'l-1', __typename: 'List' });
 
     const helpers = createFieldHelpers();
     const result = invokeFieldModifier(cache, 'lists', {}, helpers);
@@ -365,7 +395,7 @@ describe('createAddToParentConnectionUpdater', () => {
   });
 
   it('modifies the correct parent entity by cache id', () => {
-    const addToPantryItems = createAddToParentConnectionUpdater(
+    const addToPantryItems = createAddToParentConnectionUpdater<Entity>(
       'Pantry',
       'itemsConnection',
       'PantryItem',
@@ -385,7 +415,7 @@ describe('createAddToParentConnectionUpdater', () => {
   });
 
   it('adds a new edge at the start by default', () => {
-    const addToPantryItems = createAddToParentConnectionUpdater(
+    const addToPantryItems = createAddToParentConnectionUpdater<Entity>(
       'Pantry',
       'itemsConnection',
       'PantryItem',
@@ -416,16 +446,21 @@ describe('createAddToParentConnectionUpdater', () => {
   });
 
   it('adds a new edge at the end when position is end', () => {
-    const add = createAddToParentConnectionUpdater(
+    const add = createAddToParentConnectionUpdater<Entity>(
       'Pantry',
       'itemsConnection',
       'PantryItem',
     );
     const cache = createMockCache();
 
-    add(cache, 'p-1', { id: 'pi-new', __typename: 'PantryItem' } as any, {
-      position: 'end',
-    });
+    add(
+      cache,
+      'p-1',
+      { id: 'pi-new', __typename: 'PantryItem' },
+      {
+        position: 'end',
+      },
+    );
 
     const helpers = createFieldHelpers();
     const existing = {
@@ -444,14 +479,14 @@ describe('createAddToParentConnectionUpdater', () => {
   });
 
   it('prevents duplicates by default', () => {
-    const add = createAddToParentConnectionUpdater(
+    const add = createAddToParentConnectionUpdater<Entity>(
       'Pantry',
       'itemsConnection',
       'PantryItem',
     );
     const cache = createMockCache();
 
-    add(cache, 'p-1', { id: 'pi-1', __typename: 'PantryItem' } as any);
+    add(cache, 'p-1', { id: 'pi-1', __typename: 'PantryItem' });
 
     const helpers = createFieldHelpers();
     helpers.readField.mockImplementation((field: string) => {
@@ -473,7 +508,7 @@ describe('createAddToParentConnectionUpdater', () => {
   });
 
   it('warns and returns early when parent not found in cache', () => {
-    const add = createAddToParentConnectionUpdater(
+    const add = createAddToParentConnectionUpdater<Entity>(
       'Pantry',
       'itemsConnection',
       'PantryItem',
@@ -481,7 +516,7 @@ describe('createAddToParentConnectionUpdater', () => {
     const cache = createMockCache();
     cache.identify.mockReturnValue(undefined);
 
-    add(cache, 'p-missing', { id: 'pi-1', __typename: 'PantryItem' } as any);
+    add(cache, 'p-missing', { id: 'pi-1', __typename: 'PantryItem' });
 
     expect(cache.modify).not.toHaveBeenCalled();
     expect(console.warn).toHaveBeenCalledWith(
@@ -490,16 +525,21 @@ describe('createAddToParentConnectionUpdater', () => {
   });
 
   it('does not update totalCount when updateTotalCount is false', () => {
-    const add = createAddToParentConnectionUpdater(
+    const add = createAddToParentConnectionUpdater<Entity>(
       'Pantry',
       'itemsConnection',
       'PantryItem',
     );
     const cache = createMockCache();
 
-    add(cache, 'p-1', { id: 'pi-new', __typename: 'PantryItem' } as any, {
-      updateTotalCount: false,
-    });
+    add(
+      cache,
+      'p-1',
+      { id: 'pi-new', __typename: 'PantryItem' },
+      {
+        updateTotalCount: false,
+      },
+    );
 
     const helpers = createFieldHelpers();
     const existing = { edges: [], totalCount: 5 };
@@ -514,14 +554,14 @@ describe('createAddToParentConnectionUpdater', () => {
   });
 
   it('returns existing connection when toReference returns undefined', () => {
-    const add = createAddToParentConnectionUpdater(
+    const add = createAddToParentConnectionUpdater<Entity>(
       'Pantry',
       'itemsConnection',
       'PantryItem',
     );
     const cache = createMockCache();
 
-    add(cache, 'p-1', { id: 'pi-1', __typename: 'PantryItem' } as any);
+    add(cache, 'p-1', { id: 'pi-1', __typename: 'PantryItem' });
 
     const helpers = createFieldHelpers();
     helpers.toReference.mockReturnValue(undefined);
@@ -547,7 +587,7 @@ describe('createAddToParentArrayUpdater', () => {
   });
 
   it('adds a new item ref at the start by default', () => {
-    const addToItems = createAddToParentArrayUpdater('Pantry', 'items');
+    const addToItems = createAddToParentArrayUpdater<Entity>('Pantry', 'items');
     const cache = createMockCache();
 
     addToItems(cache, 'p-1', {
@@ -564,13 +604,13 @@ describe('createAddToParentArrayUpdater', () => {
   });
 
   it('adds at the end when position is end', () => {
-    const addToItems = createAddToParentArrayUpdater('Pantry', 'items');
+    const addToItems = createAddToParentArrayUpdater<Entity>('Pantry', 'items');
     const cache = createMockCache();
 
     addToItems(
       cache,
       'p-1',
-      { id: 'item-new', __typename: 'PantryItem' } as any,
+      { id: 'item-new', __typename: 'PantryItem' },
       { position: 'end' },
     );
 
@@ -583,10 +623,10 @@ describe('createAddToParentArrayUpdater', () => {
   });
 
   it('prevents duplicates by default', () => {
-    const addToItems = createAddToParentArrayUpdater('Pantry', 'items');
+    const addToItems = createAddToParentArrayUpdater<Entity>('Pantry', 'items');
     const cache = createMockCache();
 
-    addToItems(cache, 'p-1', { id: 'item-1', __typename: 'PantryItem' } as any);
+    addToItems(cache, 'p-1', { id: 'item-1', __typename: 'PantryItem' });
 
     const helpers = createFieldHelpers();
     helpers.readField.mockReturnValue('item-1');
@@ -597,10 +637,10 @@ describe('createAddToParentArrayUpdater', () => {
   });
 
   it('modifies the correct parent entity', () => {
-    const addToItems = createAddToParentArrayUpdater('Pantry', 'items');
+    const addToItems = createAddToParentArrayUpdater<Entity>('Pantry', 'items');
     const cache = createMockCache();
 
-    addToItems(cache, 'p-1', { id: 'item-1', __typename: 'PantryItem' } as any);
+    addToItems(cache, 'p-1', { id: 'item-1', __typename: 'PantryItem' });
 
     expect(cache.modify).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'Pantry:p-1' }),
@@ -608,7 +648,7 @@ describe('createAddToParentArrayUpdater', () => {
   });
 
   it('warns and returns early when parent not found', () => {
-    const addToItems = createAddToParentArrayUpdater('Pantry', 'items');
+    const addToItems = createAddToParentArrayUpdater<Entity>('Pantry', 'items');
     const cache = createMockCache();
     cache.identify.mockReturnValue(undefined);
 
@@ -624,10 +664,10 @@ describe('createAddToParentArrayUpdater', () => {
   });
 
   it('returns existing items when toReference returns undefined', () => {
-    const addToItems = createAddToParentArrayUpdater('Pantry', 'items');
+    const addToItems = createAddToParentArrayUpdater<Entity>('Pantry', 'items');
     const cache = createMockCache();
 
-    addToItems(cache, 'p-1', { id: 'item-1', __typename: 'PantryItem' } as any);
+    addToItems(cache, 'p-1', { id: 'item-1', __typename: 'PantryItem' });
 
     const helpers = createFieldHelpers();
     helpers.toReference.mockReturnValue(undefined);

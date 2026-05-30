@@ -29,7 +29,12 @@ const mockSetLanguage = jest.fn();
 jest.mock('#store/useAppStore', () => ({
   useAppStore: jest.fn(<T,>(selector: (state: RootState) => T) => {
     const state: Partial<RootState> = {
-      user: { id: 'user-1', email: 'test@example.com' },
+      user: {
+        id: 'user-1',
+        email: 'test@example.com',
+        emailVerified: true,
+        onBoarded: true,
+      },
       logout: mockLogout,
       getUserNavigationState: mockGetUserNavigationState,
       language: 'en',

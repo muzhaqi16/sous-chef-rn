@@ -3,6 +3,13 @@
 import { InMemoryCache } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 
+/** Shape read back by the `id imageUrl` fragments exercised below. */
+interface ItemImageResult {
+  __typename?: 'Item';
+  id: string;
+  imageUrl?: string | null;
+}
+
 // Mock the fragment matcher data
 jest.mock('#/graphql/generated/fragmentMatcher.json', () => ({
   possibleTypes: {
