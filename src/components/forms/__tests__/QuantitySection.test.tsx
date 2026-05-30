@@ -6,7 +6,7 @@ import { QuantitySection } from '../QuantitySection';
 jest.mock('#components/molecules/FormInput', () => {
   const { View, Text } = require('react-native');
   return {
-    FormInput: ({ label, value }: any) => (
+    FormInput: ({ label, value }: { label: string; value?: string }) => (
       <View testID={`form-input-${label}`}>
         <Text>{label}</Text>
         {value ? <Text>{value}</Text> : null}
@@ -18,7 +18,15 @@ jest.mock('#components/molecules/FormInput', () => {
 jest.mock('#components/molecules/FractionInput', () => {
   const { View, Text } = require('react-native');
   return {
-    FractionInput: ({ label, value, testID }: any) => (
+    FractionInput: ({
+      label,
+      value,
+      testID,
+    }: {
+      label: string;
+      value?: string;
+      testID?: string;
+    }) => (
       <View testID={testID || 'fraction-input'}>
         <Text>{label}</Text>
         {value ? <Text>{value}</Text> : null}
@@ -32,7 +40,15 @@ jest.mock(
   () => {
     const { View, Text } = require('react-native');
     return {
-      UnitAutocompleteField: ({ label, value, testID }: any) => (
+      UnitAutocompleteField: ({
+        label,
+        value,
+        testID,
+      }: {
+        label: string;
+        value?: string;
+        testID?: string;
+      }) => (
         <View testID={testID || 'unit-autocomplete'}>
           <Text>{label}</Text>
           {value ? <Text>{value}</Text> : null}

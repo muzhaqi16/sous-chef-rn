@@ -13,6 +13,9 @@ import {
   UpdateUserProfileDocument,
   UpdateUserPreferencesDocument,
 } from '#operations/auth/user.generated';
+import type { RootState } from '#store/index';
+import type { SettingItem } from '#components/molecules/SettingRow';
+import type { AlertButton } from '#/services/alertService';
 import { useConfigurableSettings } from '../useConfigurableSettings';
 
 // Mock token scheduler / refreshToken
@@ -24,15 +27,17 @@ const mockGetUserNavigationState = jest.fn(() => null);
 const mockSetLanguage = jest.fn();
 
 jest.mock('#store/useAppStore', () => ({
-  useAppStore: jest.fn((selector: any) => {
-    const state = {
+  useAppStore: jest.fn(<T,>(selector: (state: RootState) => T) => {
+    const state: Partial<RootState> = {
       user: { id: 'user-1', email: 'test@example.com' },
       logout: mockLogout,
       getUserNavigationState: mockGetUserNavigationState,
       language: 'en',
       setLanguage: mockSetLanguage,
     };
-    return typeof selector === 'function' ? selector(state) : state;
+    return typeof selector === 'function'
+      ? selector(state as RootState)
+      : state;
   }),
   useUser: jest.fn(() => ({ id: 'user-1', email: 'test@example.com' })),
   useNavigationUtils: jest.fn(() => ({

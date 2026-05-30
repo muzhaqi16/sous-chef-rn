@@ -1,6 +1,7 @@
 import { renderHook, act } from '@testing-library/react-native';
 import { createApolloTestWrapper } from '#/test-utils/apolloMockProvider';
 import { useItemSelector } from '../useItemSelector';
+import type { RootState } from '#store/index';
 
 const wrapper = createApolloTestWrapper();
 
@@ -9,12 +10,13 @@ jest.mock('#hooks/apollo/usePreservedQueryData', () => ({
 }));
 
 jest.mock('#utils/connectionUtils', () => ({
-  extractNodes: (connection: any) =>
-    connection?.edges?.map((e: any) => e.node) ?? [],
+  extractNodes: (
+    connection?: { edges?: Array<{ node: unknown }> | null } | null,
+  ) => connection?.edges?.map(e => e.node) ?? [],
 }));
 
 jest.mock('#store/useAppStore', () => ({
-  useAppStore: (selector: (state: any) => any) =>
+  useAppStore: (selector: (state: Partial<RootState>) => unknown) =>
     selector({ selectedHomeId: 'home-1' }),
   useSelectedHomeId: jest.fn(() => 'home-1'),
 }));
@@ -127,19 +129,24 @@ describe('useItemSelector', () => {
   });
 
   describe('emptyMessage', () => {
-    it.each([
+    const emptyMessageCases: Array<
+      ['shoppingList' | 'pantry' | 'home' | 'custom', string]
+    > = [
       ['shoppingList', 'No shopping lists available'],
       ['pantry', 'No pantries available'],
       ['home', 'No homes available'],
       ['custom', 'No items available'],
-    ])('returns correct message for type %s', (type, expected) => {
-      const { result } = renderHook(
-        () => useItemSelector({ type: type as any }),
-        { wrapper },
-      );
+    ];
+    it.each(emptyMessageCases)(
+      'returns correct message for type %s',
+      (type, expected) => {
+        const { result } = renderHook(() => useItemSelector({ type }), {
+          wrapper,
+        });
 
-      expect(result.current.emptyMessage).toBe(expected);
-    });
+        expect(result.current.emptyMessage).toBe(expected);
+      },
+    );
   });
 
   describe('setSelectedId', () => {

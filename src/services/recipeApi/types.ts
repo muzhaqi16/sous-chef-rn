@@ -121,6 +121,18 @@ export interface RecipeInstruction {
   steps: RecipeInstructionStep[];
 }
 
+export interface WineProductMatch {
+  id: number;
+  title: string;
+  description: string;
+  price: string;
+  imageUrl: string;
+  averageRating: number;
+  ratingCount: number;
+  score: number;
+  link: string;
+}
+
 export interface RecipeInformation {
   id: number;
   title: string;
@@ -162,7 +174,7 @@ export interface RecipeInformation {
   winePairing?: {
     pairedWines: string[];
     pairingText: string;
-    productMatches: any[];
+    productMatches: WineProductMatch[];
   };
   nutrition?: RecipeNutrition;
 }

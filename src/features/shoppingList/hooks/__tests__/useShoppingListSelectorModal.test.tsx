@@ -2,7 +2,63 @@
 
 import { act } from '@testing-library/react-native';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
-import { useShoppingListSelectorModal } from '../useShoppingListSelectorModal';
+import {
+  useShoppingListSelectorModal,
+  type ShoppingListSelectorItem,
+} from '../useShoppingListSelectorModal';
+
+// Section headers injected into the grouped data by the hook.
+interface SectionHeader {
+  _isHeader: true;
+  id: string;
+  title: string;
+}
+
+// Build a fully-typed ShoppingListSelectorItem so the hook input needs no cast.
+const makeList = (
+  overrides: Partial<ShoppingListSelectorItem>,
+): ShoppingListSelectorItem => ({
+  __typename: 'ShoppingList',
+  id: 'list-x',
+  name: 'List',
+  isDefault: false,
+  totalItems: 0,
+  completedItems: 0,
+  homeId: null,
+  home: null,
+  ownerships: [],
+  _isOwner: true,
+  ...overrides,
+});
+
+const makeHome = (name: string): ShoppingListSelectorItem['home'] => ({
+  __typename: 'Home',
+  id: 'home-1',
+  name,
+});
+
+const makeOwnership = (
+  email: string,
+  displayName: string | null,
+): ShoppingListSelectorItem['ownerships'][number] => ({
+  __typename: 'ShoppingListOwnership',
+  id: 'ownership-1',
+  userId: 'user-1',
+  user: {
+    __typename: 'User',
+    id: 'user-1',
+    email,
+    profile:
+      displayName === null
+        ? null
+        : {
+            __typename: 'UserProfile',
+            id: 'profile-1',
+            displayName,
+            avatar: null,
+          },
+  },
+});
 
 const renderHook = <TResult, TProps>(callback: (props: TProps) => TResult) =>
   renderHookWithApollo(callback);
@@ -85,8 +141,8 @@ jest.mock('#store', () => ({
   },
 }));
 
-const makeLists = () => [
-  {
+const makeLists = (): ShoppingListSelectorItem[] => [
+  makeList({
     id: 'list-1',
     name: 'Groceries',
     isDefault: true,
@@ -95,23 +151,19 @@ const makeLists = () => [
     totalItems: 5,
     completedItems: 2,
     _isOwner: true,
-    ownerships: [
-      { user: { email: 'me@test.com', profile: { displayName: 'Me' } } },
-    ],
-  },
-  {
+    ownerships: [makeOwnership('me@test.com', 'Me')],
+  }),
+  makeList({
     id: 'list-2',
     name: 'Party',
     isDefault: false,
     homeId: 'home-1',
-    home: { name: 'Family Home' },
+    home: makeHome('Family Home'),
     totalItems: 3,
     completedItems: 0,
     _isOwner: false,
-    ownerships: [
-      { user: { email: 'other@test.com', profile: { displayName: 'Other' } } },
-    ],
-  },
+    ownerships: [makeOwnership('other@test.com', 'Other')],
+  }),
 ];
 
 describe('useShoppingListSelectorModal', () => {
@@ -122,7 +174,7 @@ describe('useShoppingListSelectorModal', () => {
   it('returns expected API shape', () => {
     const { result } = renderHook(() =>
       useShoppingListSelectorModal({
-        listDataWithOwnership: makeLists() as any,
+        listDataWithOwnership: makeLists(),
         currentListId: 'list-1',
         setSelectedShoppingListId: jest.fn(),
       }),
@@ -138,7 +190,7 @@ describe('useShoppingListSelectorModal', () => {
   it('builds grouped data with section headers', () => {
     const { result } = renderHook(() =>
       useShoppingListSelectorModal({
-        listDataWithOwnership: makeLists() as any,
+        listDataWithOwnership: makeLists(),
         currentListId: 'list-1',
         setSelectedShoppingListId: jest.fn(),
       }),
@@ -147,16 +199,16 @@ describe('useShoppingListSelectorModal', () => {
     const { data } = result.current.listConfig;
     // Should have: personal header, list-1, home header, list-2
     expect(data).toHaveLength(4);
-    expect((data[0] as any)._isHeader).toBe(true);
-    expect((data[0] as any).title).toBe('Personal Lists');
-    expect((data[2] as any)._isHeader).toBe(true);
-    expect((data[2] as any).title).toBe('Family Home');
+    expect((data[0] as SectionHeader)._isHeader).toBe(true);
+    expect((data[0] as SectionHeader).title).toBe('Personal Lists');
+    expect((data[2] as SectionHeader)._isHeader).toBe(true);
+    expect((data[2] as SectionHeader).title).toBe('Family Home');
   });
 
   it('creates actions including create, share, and settings', () => {
     const { result } = renderHook(() =>
       useShoppingListSelectorModal({
-        listDataWithOwnership: makeLists() as any,
+        listDataWithOwnership: makeLists(),
         currentListId: 'list-1',
         setSelectedShoppingListId: jest.fn(),
       }),
@@ -173,7 +225,7 @@ describe('useShoppingListSelectorModal', () => {
   it('has only create action when no currentListId', () => {
     const { result } = renderHook(() =>
       useShoppingListSelectorModal({
-        listDataWithOwnership: makeLists() as any,
+        listDataWithOwnership: makeLists(),
         currentListId: undefined,
         setSelectedShoppingListId: jest.fn(),
       }),
@@ -187,7 +239,7 @@ describe('useShoppingListSelectorModal', () => {
   it('sets title to "Select Shopping List" when not in delete mode', () => {
     const { result } = renderHook(() =>
       useShoppingListSelectorModal({
-        listDataWithOwnership: makeLists() as any,
+        listDataWithOwnership: makeLists(),
         currentListId: 'list-1',
         setSelectedShoppingListId: jest.fn(),
       }),
@@ -199,7 +251,7 @@ describe('useShoppingListSelectorModal', () => {
   it('config selectedId matches currentListId', () => {
     const { result } = renderHook(() =>
       useShoppingListSelectorModal({
-        listDataWithOwnership: makeLists() as any,
+        listDataWithOwnership: makeLists(),
         currentListId: 'list-1',
         setSelectedShoppingListId: jest.fn(),
       }),
@@ -226,7 +278,7 @@ describe('useShoppingListSelectorModal', () => {
   it('provides renderCustomItem function', () => {
     const { result } = renderHook(() =>
       useShoppingListSelectorModal({
-        listDataWithOwnership: makeLists() as any,
+        listDataWithOwnership: makeLists(),
         currentListId: 'list-1',
         setSelectedShoppingListId: jest.fn(),
       }),
@@ -241,19 +293,19 @@ describe('useShoppingListSelectorModal', () => {
   it('renderCustomItem renders section header for header items', () => {
     const { result } = renderHook(() =>
       useShoppingListSelectorModal({
-        listDataWithOwnership: makeLists() as any,
+        listDataWithOwnership: makeLists(),
         currentListId: 'list-1',
         setSelectedShoppingListId: jest.fn(),
       }),
     );
 
-    const headerItem = {
+    const headerItem: SectionHeader = {
       _isHeader: true,
       id: 'header-personal',
       title: 'Personal Lists',
     };
     const rendered = result.current.listConfig.renderCustomItem!(
-      headerItem as any,
+      headerItem,
       false,
       jest.fn(),
     );
@@ -263,7 +315,7 @@ describe('useShoppingListSelectorModal', () => {
   it('renderCustomItem renders normal list item (non-owner) with shared text', () => {
     const { result } = renderHook(() =>
       useShoppingListSelectorModal({
-        listDataWithOwnership: makeLists() as any,
+        listDataWithOwnership: makeLists(),
         currentListId: 'list-1',
         setSelectedShoppingListId: jest.fn(),
       }),
@@ -271,7 +323,7 @@ describe('useShoppingListSelectorModal', () => {
 
     const lists = makeLists();
     const rendered = result.current.listConfig.renderCustomItem!(
-      lists[1] as any,
+      lists[1],
       false,
       jest.fn(),
     );
@@ -281,7 +333,7 @@ describe('useShoppingListSelectorModal', () => {
   it('renderCustomItem renders selected list item with checkmark', () => {
     const { result } = renderHook(() =>
       useShoppingListSelectorModal({
-        listDataWithOwnership: makeLists() as any,
+        listDataWithOwnership: makeLists(),
         currentListId: 'list-1',
         setSelectedShoppingListId: jest.fn(),
       }),
@@ -289,7 +341,7 @@ describe('useShoppingListSelectorModal', () => {
 
     const lists = makeLists();
     const rendered = result.current.listConfig.renderCustomItem!(
-      lists[0] as any,
+      lists[0],
       true,
       jest.fn(),
     );
@@ -297,38 +349,27 @@ describe('useShoppingListSelectorModal', () => {
   });
 
   it('renderCustomItem renders list item with 0 totalItems (no count shown)', () => {
+    const emptyList = makeList({
+      id: 'list-3',
+      name: 'Empty List',
+      isDefault: false,
+      homeId: null,
+      home: null,
+      totalItems: 0,
+      completedItems: 0,
+      _isOwner: true,
+      ownerships: [],
+    });
     const { result } = renderHook(() =>
       useShoppingListSelectorModal({
-        listDataWithOwnership: [
-          {
-            id: 'list-3',
-            name: 'Empty List',
-            isDefault: false,
-            homeId: null,
-            home: null,
-            totalItems: 0,
-            completedItems: 0,
-            _isOwner: true,
-            ownerships: [],
-          },
-        ] as any,
+        listDataWithOwnership: [emptyList],
         currentListId: undefined,
         setSelectedShoppingListId: jest.fn(),
       }),
     );
 
     const rendered = result.current.listConfig.renderCustomItem!(
-      {
-        id: 'list-3',
-        name: 'Empty List',
-        isDefault: false,
-        homeId: null,
-        home: null,
-        totalItems: 0,
-        completedItems: 0,
-        _isOwner: true,
-        ownerships: [],
-      } as any,
+      emptyList,
       false,
       jest.fn(),
     );
@@ -342,7 +383,7 @@ describe('useShoppingListSelectorModal', () => {
 
     const { result } = renderHook(() =>
       useShoppingListSelectorModal({
-        listDataWithOwnership: makeLists() as any,
+        listDataWithOwnership: makeLists(),
         currentListId: 'list-1',
         setSelectedShoppingListId: jest.fn(),
       }),
@@ -353,7 +394,7 @@ describe('useShoppingListSelectorModal', () => {
         _isHeader: true,
         id: 'header-personal',
         title: 'Personal',
-      } as any);
+      } satisfies SectionHeader);
     });
 
     expect(mockSetId).not.toHaveBeenCalled();
@@ -366,14 +407,14 @@ describe('useShoppingListSelectorModal', () => {
 
     const { result } = renderHook(() =>
       useShoppingListSelectorModal({
-        listDataWithOwnership: makeLists() as any,
+        listDataWithOwnership: makeLists(),
         currentListId: 'list-1',
         setSelectedShoppingListId: jest.fn(),
       }),
     );
 
     act(() => {
-      result.current.listConfig.onSelect('list-2', makeLists()[1] as any);
+      result.current.listConfig.onSelect('list-2', makeLists()[1]);
     });
 
     expect(mockSetId).toHaveBeenCalledWith('list-2');
@@ -382,7 +423,7 @@ describe('useShoppingListSelectorModal', () => {
   it('handleOverlayClose exits delete mode', () => {
     const { result } = renderHook(() =>
       useShoppingListSelectorModal({
-        listDataWithOwnership: makeLists() as any,
+        listDataWithOwnership: makeLists(),
         currentListId: 'list-1',
         setSelectedShoppingListId: jest.fn(),
       }),
@@ -399,22 +440,22 @@ describe('useShoppingListSelectorModal', () => {
   it('groups lists with home into their own section', () => {
     const lists = [
       ...makeLists(),
-      {
+      makeList({
         id: 'list-3',
         name: 'Home List',
         isDefault: false,
         homeId: 'home-1',
-        home: { name: 'Family Home' },
+        home: makeHome('Family Home'),
         totalItems: 0,
         completedItems: 0,
         _isOwner: true,
         ownerships: [],
-      },
+      }),
     ];
 
     const { result } = renderHook(() =>
       useShoppingListSelectorModal({
-        listDataWithOwnership: lists as any,
+        listDataWithOwnership: lists,
         currentListId: 'list-1',
         setSelectedShoppingListId: jest.fn(),
       }),
@@ -428,7 +469,7 @@ describe('useShoppingListSelectorModal', () => {
   it('headerRight is undefined when not in delete mode', () => {
     const { result } = renderHook(() =>
       useShoppingListSelectorModal({
-        listDataWithOwnership: makeLists() as any,
+        listDataWithOwnership: makeLists(),
         currentListId: 'list-1',
         setSelectedShoppingListId: jest.fn(),
       }),
@@ -440,7 +481,7 @@ describe('useShoppingListSelectorModal', () => {
   it('action navigates to ListSettings when Create New List pressed', () => {
     const { result } = renderHook(() =>
       useShoppingListSelectorModal({
-        listDataWithOwnership: makeLists() as any,
+        listDataWithOwnership: makeLists(),
         currentListId: 'list-1',
         setSelectedShoppingListId: jest.fn(),
       }),
@@ -457,7 +498,7 @@ describe('useShoppingListSelectorModal', () => {
   it('action navigates to ShareList when Share Current List pressed', () => {
     const { result } = renderHook(() =>
       useShoppingListSelectorModal({
-        listDataWithOwnership: makeLists() as any,
+        listDataWithOwnership: makeLists(),
         currentListId: 'list-1',
         setSelectedShoppingListId: jest.fn(),
       }),
@@ -475,7 +516,7 @@ describe('useShoppingListSelectorModal', () => {
   it('action navigates to ListSettings with listId when List Settings pressed', () => {
     const { result } = renderHook(() =>
       useShoppingListSelectorModal({
-        listDataWithOwnership: makeLists() as any,
+        listDataWithOwnership: makeLists(),
         currentListId: 'list-1',
         setSelectedShoppingListId: jest.fn(),
       }),
@@ -492,7 +533,7 @@ describe('useShoppingListSelectorModal', () => {
 
   it('renderCustomItem for non-owner shared list shows owner info fallback', () => {
     const listsNoProfile = [
-      {
+      makeList({
         id: 'list-4',
         name: 'Shared',
         isDefault: false,
@@ -501,20 +542,20 @@ describe('useShoppingListSelectorModal', () => {
         totalItems: 2,
         completedItems: 1,
         _isOwner: false,
-        ownerships: [{ user: { email: null, profile: null } }],
-      },
+        ownerships: [makeOwnership('', null)],
+      }),
     ];
 
     const { result } = renderHook(() =>
       useShoppingListSelectorModal({
-        listDataWithOwnership: listsNoProfile as any,
+        listDataWithOwnership: listsNoProfile,
         currentListId: undefined,
         setSelectedShoppingListId: jest.fn(),
       }),
     );
 
     const rendered = result.current.listConfig.renderCustomItem!(
-      listsNoProfile[0] as any,
+      listsNoProfile[0],
       false,
       jest.fn(),
     );
@@ -524,7 +565,7 @@ describe('useShoppingListSelectorModal', () => {
   it('renderCustomItem for home section header with non-Personal title uses home icon', () => {
     const { result } = renderHook(() =>
       useShoppingListSelectorModal({
-        listDataWithOwnership: makeLists() as any,
+        listDataWithOwnership: makeLists(),
         currentListId: 'list-1',
         setSelectedShoppingListId: jest.fn(),
       }),
@@ -549,7 +590,7 @@ describe('useShoppingListSelectorModal', () => {
     it('enters delete mode on long press of owner item', () => {
       const { result } = renderHook(() =>
         useShoppingListSelectorModal({
-          listDataWithOwnership: makeLists() as any,
+          listDataWithOwnership: makeLists(),
           currentListId: 'list-1',
           setSelectedShoppingListId: jest.fn(),
         }),
@@ -574,7 +615,7 @@ describe('useShoppingListSelectorModal', () => {
     it('does not enter delete mode on long press of non-owner item', () => {
       const { result } = renderHook(() =>
         useShoppingListSelectorModal({
-          listDataWithOwnership: makeLists() as any,
+          listDataWithOwnership: makeLists(),
           currentListId: 'list-1',
           setSelectedShoppingListId: jest.fn(),
         }),
@@ -588,7 +629,7 @@ describe('useShoppingListSelectorModal', () => {
     it('title changes to show count when in delete mode', () => {
       const { result } = renderHook(() =>
         useShoppingListSelectorModal({
-          listDataWithOwnership: makeLists() as any,
+          listDataWithOwnership: makeLists(),
           currentListId: 'list-1',
           setSelectedShoppingListId: jest.fn(),
         }),
@@ -609,7 +650,7 @@ describe('useShoppingListSelectorModal', () => {
 
       const { result } = renderHook(() =>
         useShoppingListSelectorModal({
-          listDataWithOwnership: makeLists() as any,
+          listDataWithOwnership: makeLists(),
           currentListId: 'list-1',
           setSelectedShoppingListId: jest.fn(),
         }),
@@ -618,7 +659,7 @@ describe('useShoppingListSelectorModal', () => {
       // The onSelect function checks isDeleteModeRef.current
       // Since we can't directly set the ref, we test the normal path
       act(() => {
-        result.current.listConfig.onSelect('list-1', makeLists()[0] as any);
+        result.current.listConfig.onSelect('list-1', makeLists()[0]);
       });
 
       // Normal mode: should set id
@@ -630,7 +671,7 @@ describe('useShoppingListSelectorModal', () => {
     it('does nothing when no items are selected for deletion', () => {
       const { result } = renderHook(() =>
         useShoppingListSelectorModal({
-          listDataWithOwnership: makeLists() as any,
+          listDataWithOwnership: makeLists(),
           currentListId: 'list-1',
           setSelectedShoppingListId: jest.fn(),
         }),
@@ -669,8 +710,8 @@ describe('useShoppingListSelectorModal', () => {
       const { data } = result.current.listConfig;
       // Should have: home header + list-h1 (no personal header)
       expect(data).toHaveLength(2);
-      expect((data[0] as any)._isHeader).toBe(true);
-      expect((data[0] as any).title).toBe('My Home');
+      expect((data[0] as SectionHeader)._isHeader).toBe(true);
+      expect((data[0] as SectionHeader).title).toBe('My Home');
     });
 
     it('handles multiple homes with multiple lists each', () => {
@@ -721,8 +762,8 @@ describe('useShoppingListSelectorModal', () => {
       const { data } = result.current.listConfig;
       // Home Alpha header + list-a + list-b + Home Beta header + list-c = 5
       expect(data).toHaveLength(5);
-      expect((data[0] as any).title).toBe('Home Alpha');
-      expect((data[3] as any).title).toBe('Home Beta');
+      expect((data[0] as SectionHeader).title).toBe('Home Alpha');
+      expect((data[3] as SectionHeader).title).toBe('Home Beta');
     });
 
     it('uses "Unknown Home" when home name is missing', () => {
@@ -749,7 +790,7 @@ describe('useShoppingListSelectorModal', () => {
       );
 
       const { data } = result.current.listConfig;
-      expect((data[0] as any).title).toBe('Unknown Home');
+      expect((data[0] as SectionHeader).title).toBe('Unknown Home');
     });
   });
 
@@ -821,7 +862,7 @@ describe('useShoppingListSelectorModal', () => {
     it('loading is always false', () => {
       const { result } = renderHook(() =>
         useShoppingListSelectorModal({
-          listDataWithOwnership: makeLists() as any,
+          listDataWithOwnership: makeLists(),
           currentListId: 'list-1',
           setSelectedShoppingListId: jest.fn(),
         }),
@@ -833,7 +874,7 @@ describe('useShoppingListSelectorModal', () => {
     it('displayProperty is "id"', () => {
       const { result } = renderHook(() =>
         useShoppingListSelectorModal({
-          listDataWithOwnership: makeLists() as any,
+          listDataWithOwnership: makeLists(),
           currentListId: 'list-1',
           setSelectedShoppingListId: jest.fn(),
         }),
@@ -845,7 +886,7 @@ describe('useShoppingListSelectorModal', () => {
     it('extraData reflects delete mode state', () => {
       const { result } = renderHook(() =>
         useShoppingListSelectorModal({
-          listDataWithOwnership: makeLists() as any,
+          listDataWithOwnership: makeLists(),
           currentListId: 'list-1',
           setSelectedShoppingListId: jest.fn(),
         }),
@@ -862,7 +903,7 @@ describe('useShoppingListSelectorModal', () => {
     it('renders owner item without checkmark when not selected', () => {
       const { result } = renderHook(() =>
         useShoppingListSelectorModal({
-          listDataWithOwnership: makeLists() as any,
+          listDataWithOwnership: makeLists(),
           currentListId: 'list-1',
           setSelectedShoppingListId: jest.fn(),
         }),
@@ -880,7 +921,7 @@ describe('useShoppingListSelectorModal', () => {
     it('renders owner item with checkmark when selected', () => {
       const { result } = renderHook(() =>
         useShoppingListSelectorModal({
-          listDataWithOwnership: makeLists() as any,
+          listDataWithOwnership: makeLists(),
           currentListId: 'list-1',
           setSelectedShoppingListId: jest.fn(),
         }),
@@ -934,8 +975,8 @@ describe('useShoppingListSelectorModal', () => {
       const { data } = result.current.listConfig;
       // Personal Lists header, personal-1, My Home header, home-list-1
       expect(data).toHaveLength(4);
-      expect((data[0] as any).title).toBe('Personal Lists');
-      expect((data[2] as any).title).toBe('My Home');
+      expect((data[0] as SectionHeader).title).toBe('Personal Lists');
+      expect((data[2] as SectionHeader).title).toBe('My Home');
     });
   });
 
@@ -943,7 +984,7 @@ describe('useShoppingListSelectorModal', () => {
     it('share action closes overlay and selector', () => {
       const { result } = renderHook(() =>
         useShoppingListSelectorModal({
-          listDataWithOwnership: makeLists() as any,
+          listDataWithOwnership: makeLists(),
           currentListId: 'list-1',
           setSelectedShoppingListId: jest.fn(),
         }),
@@ -962,7 +1003,7 @@ describe('useShoppingListSelectorModal', () => {
     it('settings action closes overlay and selector', () => {
       const { result } = renderHook(() =>
         useShoppingListSelectorModal({
-          listDataWithOwnership: makeLists() as any,
+          listDataWithOwnership: makeLists(),
           currentListId: 'list-1',
           setSelectedShoppingListId: jest.fn(),
         }),

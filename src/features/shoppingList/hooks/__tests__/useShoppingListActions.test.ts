@@ -49,20 +49,26 @@ jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
 }));
 
 jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeMutation: jest.fn(async (fn: any) => {
+  executeMutation: jest.fn(async (fn: () => Promise<unknown>) => {
     await fn();
     return true;
   }),
-  executeWithLoadingState: jest.fn(async (fn: any, setLoading: any) => {
-    setLoading(true);
-    try {
-      await fn();
-    } finally {
-      setLoading(false);
-    }
-  }),
+  executeWithLoadingState: jest.fn(
+    async (fn: () => Promise<void>, setLoading: (value: boolean) => void) => {
+      setLoading(true);
+      try {
+        await fn();
+      } finally {
+        setLoading(false);
+      }
+    },
+  ),
   executeAsyncWithCleanup: jest.fn(
-    async (fn: any, cleanup: any, onError: any) => {
+    async (
+      fn: () => Promise<void>,
+      cleanup: () => void,
+      onError?: (error: unknown) => void,
+    ) => {
       try {
         await fn();
       } catch (e) {
@@ -72,8 +78,8 @@ jest.mock('#/utils/compilerSafeWrappers', () => ({
       }
     },
   ),
-  executeCacheUpdate: jest.fn((fn: any) => fn()),
-  executeRefetch: jest.fn(async (fn: any) => fn()),
+  executeCacheUpdate: jest.fn((fn: () => void) => fn()),
+  executeRefetch: jest.fn(async (fn: () => Promise<unknown>) => fn()),
 }));
 
 jest.mock('#hooks/haptic/useHaptic', () => ({

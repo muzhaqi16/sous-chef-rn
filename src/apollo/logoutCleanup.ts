@@ -14,12 +14,19 @@ interface LogoutCleanupOptions {
 }
 
 /**
+ * A cleanup-registerable subscription: either an RxJS-style observer with an
+ * `unsubscribe` method, or a plain teardown function (e.g. a React Navigation
+ * listener cleanup).
+ */
+type CleanupSubscription = { unsubscribe: () => void } | (() => void);
+
+/**
  * Centralized Apollo cleanup utility for logout
  * Handles cache clearing, subscription cancellation, and error suppression
  */
 export class LogoutCleanup {
   private static isLoggingOut = false;
-  private static activeSubscriptions = new Set<any>();
+  private static activeSubscriptions = new Set<CleanupSubscription>();
 
   /**
    * Check if the app is currently in logout process
@@ -33,14 +40,14 @@ export class LogoutCleanup {
   /**
    * Register an active subscription for cleanup
    */
-  static registerSubscription(subscription: any): void {
+  static registerSubscription(subscription: CleanupSubscription): void {
     LogoutCleanup.activeSubscriptions.add(subscription);
   }
 
   /**
    * Unregister a subscription (when it naturally completes)
    */
-  static unregisterSubscription(subscription: any): void {
+  static unregisterSubscription(subscription: CleanupSubscription): void {
     LogoutCleanup.activeSubscriptions.delete(subscription);
   }
 
@@ -109,10 +116,10 @@ export class LogoutCleanup {
 
     LogoutCleanup.activeSubscriptions.forEach(subscription => {
       try {
-        if (subscription && typeof subscription.unsubscribe === 'function') {
-          subscription.unsubscribe();
-        } else if (subscription && typeof subscription === 'function') {
+        if (typeof subscription === 'function') {
           subscription(); // For React Navigation listeners
+        } else if (typeof subscription.unsubscribe === 'function') {
+          subscription.unsubscribe();
         }
       } catch (error) {
         logger.warn('Failed to unsubscribe:', error);
@@ -210,7 +217,7 @@ export class LogoutCleanup {
   /**
    * Handle errors that occur during logout gracefully
    */
-  static handleLogoutError(error: any, operationName?: string): boolean {
+  static handleLogoutError(error: unknown, operationName?: string): boolean {
     if (!LogoutCleanup.isLoggingOut) return false;
 
     // Suppress common logout-related errors
@@ -221,7 +228,7 @@ export class LogoutCleanup {
       'Request failed',
     ];
 
-    const errorMessage = error.message || error.toString();
+    const errorMessage = error instanceof Error ? error.message : String(error);
     const shouldSuppress = suppressibleErrors.some(msg =>
       errorMessage.includes(msg),
     );

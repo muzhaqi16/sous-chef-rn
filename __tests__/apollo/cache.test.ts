@@ -20,6 +20,10 @@ describe('cache.ts', () => {
 
   // ─── suggestions merge ─────────────────────────────────────────
 
+  interface ShoppingListResult {
+    shoppingList: { __typename: 'ShoppingList'; id: string; suggestions: string[] | null };
+  }
+
   describe('ShoppingList.suggestions merge', () => {
     let cache: InMemoryCache;
 
@@ -46,8 +50,8 @@ describe('cache.ts', () => {
         query: QUERY,
         data: { shoppingList: { __typename: 'ShoppingList', id: 'list-1', suggestions: null } },
       });
-      const result = cache.readQuery({ query: QUERY }) as any;
-      expect(result.shoppingList.suggestions).toEqual(['a', 'b']);
+      const result = cache.readQuery<ShoppingListResult>({ query: QUERY });
+      expect(result?.shoppingList.suggestions).toEqual(['a', 'b']);
     });
 
     it('replaces suggestions with new incoming data', () => {
@@ -59,8 +63,8 @@ describe('cache.ts', () => {
         query: QUERY,
         data: { shoppingList: { __typename: 'ShoppingList', id: 'list-1', suggestions: ['x', 'y'] } },
       });
-      const result = cache.readQuery({ query: QUERY }) as any;
-      expect(result.shoppingList.suggestions).toEqual(['x', 'y']);
+      const result = cache.readQuery<ShoppingListResult>({ query: QUERY });
+      expect(result?.shoppingList.suggestions).toEqual(['x', 'y']);
     });
   });
 
@@ -87,11 +91,11 @@ describe('cache.ts', () => {
         fragment: gql`fragment ItemName on Item { id }`,
         data: { __typename: 'Item', id: 'item-1' },
       });
-      const result = cache.readFragment({
+      const result = cache.readFragment<ItemImageResult>({
         id: cache.identify({ __typename: 'Item', id: 'item-1' }),
         fragment: gql`fragment ItemImgRead on Item { id imageUrl }`,
-      }) as any;
-      expect(result.imageUrl).toBe('http://img.png');
+      });
+      expect(result?.imageUrl).toBe('http://img.png');
     });
 
     it('allows explicit null through for imageUrl (user removes image)', () => {
@@ -105,11 +109,11 @@ describe('cache.ts', () => {
         fragment: gql`fragment ItemImgNull on Item { id imageUrl }`,
         data: { __typename: 'Item', id: 'item-1', imageUrl: null },
       });
-      const result = cache.readFragment({
+      const result = cache.readFragment<ItemImageResult>({
         id: cache.identify({ __typename: 'Item', id: 'item-1' }),
         fragment: gql`fragment ItemImgRead on Item { id imageUrl }`,
-      }) as any;
-      expect(result.imageUrl).toBeNull();
+      });
+      expect(result?.imageUrl).toBeNull();
     });
   });
 

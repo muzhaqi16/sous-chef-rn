@@ -1,3 +1,4 @@
+import type { ApolloCache } from '@apollo/client';
 import {
   createAddToQueryConnectionUpdater,
   createRemoveFromQueryConnectionUpdater,
@@ -6,6 +7,24 @@ import {
   createRemoveFromParentConnectionUpdater,
   createRemoveFromParentArrayUpdater,
 } from '../cacheUpdaters';
+
+/** Mock Apollo cache exposing the methods the updaters touch as jest mocks. */
+type MockedCache = ApolloCache & {
+  modify: jest.Mock;
+  evict: jest.Mock;
+  gc: jest.Mock;
+  identify: jest.Mock;
+};
+
+/** Field-modifier helpers passed to each `cache.modify` field function. */
+interface FieldHelpers {
+  toReference: jest.Mock;
+  readField: jest.Mock;
+  storeFieldName: string;
+}
+
+/** A cache ref or normalized object the field helpers read from. */
+type MockRef = { __ref?: string; [key: string]: unknown };
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -16,7 +35,7 @@ import {
  * `modify` captures the fields object so we can invoke field functions
  * in assertions.
  */
-function createMockCache() {
+function createMockCache(): MockedCache {
   return {
     modify: jest.fn(),
     evict: jest.fn(),
@@ -25,16 +44,18 @@ function createMockCache() {
       (obj: { __typename: string; id: string }) =>
         `${obj.__typename}:${obj.id}`,
     ),
-  } as any;
+  } as MockedCache;
 }
 
 /** Standard field helpers reused across tests */
-function createFieldHelpers(overrides: Record<string, any> = {}) {
+function createFieldHelpers(
+  overrides: Partial<FieldHelpers> = {},
+): FieldHelpers {
   return {
-    toReference: jest.fn((item: any) =>
+    toReference: jest.fn((item?: { __typename: string; id: string }) =>
       item ? { __ref: `${item.__typename}:${item.id}` } : undefined,
     ),
-    readField: jest.fn((fieldName: string, ref: any) => {
+    readField: jest.fn((fieldName: string, ref?: MockRef) => {
       if (!ref) return undefined;
       // For refs created by our mock toReference, pull id from __ref
       if (ref.__ref) {
@@ -54,10 +75,10 @@ function createFieldHelpers(overrides: Record<string, any> = {}) {
  * Returns the value returned by the field function.
  */
 function invokeFieldModifier(
-  mockCache: any,
+  mockCache: MockedCache,
   fieldName: string,
-  existingValue: any,
-  helpers: any,
+  existingValue: unknown,
+  helpers: FieldHelpers,
   callIndex = 0,
 ) {
   const modifyCall = mockCache.modify.mock.calls[callIndex];
@@ -354,7 +375,7 @@ describe('createAddToParentConnectionUpdater', () => {
     addToPantryItems(cache, 'pantry-1', {
       id: 'pi-1',
       __typename: 'PantryItem',
-    } as any);
+    });
 
     expect(cache.modify).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -374,7 +395,7 @@ describe('createAddToParentConnectionUpdater', () => {
     addToPantryItems(cache, 'pantry-1', {
       id: 'pi-new',
       __typename: 'PantryItem',
-    } as any);
+    });
 
     const helpers = createFieldHelpers();
     const existing = {
@@ -532,7 +553,7 @@ describe('createAddToParentArrayUpdater', () => {
     addToItems(cache, 'p-1', {
       id: 'item-new',
       __typename: 'PantryItem',
-    } as any);
+    });
 
     const helpers = createFieldHelpers();
     const existing = [{ __ref: 'PantryItem:item-old' }];
@@ -594,7 +615,7 @@ describe('createAddToParentArrayUpdater', () => {
     addToItems(cache, 'p-missing', {
       id: 'item-1',
       __typename: 'PantryItem',
-    } as any);
+    });
 
     expect(cache.modify).not.toHaveBeenCalled();
     expect(console.warn).toHaveBeenCalledWith(
