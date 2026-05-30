@@ -1,5 +1,8 @@
 import { renderHook, act } from '@testing-library/react-native';
-import { useCredentialStorage } from '../useCredentialStorage';
+import {
+  useCredentialStorage,
+  type Credentials,
+} from '../useCredentialStorage';
 
 // Break circular dependency chain
 jest.mock('../../../apollo/links/tokenScheduler');
@@ -18,18 +21,29 @@ const mockClearCredentials = jest.fn();
 const mockGetStoredAccounts = jest.fn();
 const mockGetBiometricCapability = jest.fn();
 
+type KeychainModule = typeof import('#/storage/keychain');
+
 jest.mock('#/storage/keychain', () => ({
-  loadCredentials: (...args: any[]) => mockLoadCredentials(...args),
-  loadCredentialsForAccount: (...args: any[]) =>
-    mockLoadCredentialsForAccount(...args),
-  saveCredentials: (...args: any[]) => mockSaveCredentials(...args),
-  hasCredentials: (...args: any[]) => mockHasCredentials(...args),
-  hasCredentialsForAccount: (...args: any[]) =>
-    mockHasCredentialsForAccount(...args),
-  clearCredentials: (...args: any[]) => mockClearCredentials(...args),
-  getStoredAccounts: (...args: any[]) => mockGetStoredAccounts(...args),
-  getBiometricCapability: (...args: any[]) =>
-    mockGetBiometricCapability(...args),
+  loadCredentials: (...args: Parameters<KeychainModule['loadCredentials']>) =>
+    mockLoadCredentials(...args),
+  loadCredentialsForAccount: (
+    ...args: Parameters<KeychainModule['loadCredentialsForAccount']>
+  ) => mockLoadCredentialsForAccount(...args),
+  saveCredentials: (...args: Parameters<KeychainModule['saveCredentials']>) =>
+    mockSaveCredentials(...args),
+  hasCredentials: (...args: Parameters<KeychainModule['hasCredentials']>) =>
+    mockHasCredentials(...args),
+  hasCredentialsForAccount: (
+    ...args: Parameters<KeychainModule['hasCredentialsForAccount']>
+  ) => mockHasCredentialsForAccount(...args),
+  clearCredentials: (...args: Parameters<KeychainModule['clearCredentials']>) =>
+    mockClearCredentials(...args),
+  getStoredAccounts: (
+    ...args: Parameters<KeychainModule['getStoredAccounts']>
+  ) => mockGetStoredAccounts(...args),
+  getBiometricCapability: (
+    ...args: Parameters<KeychainModule['getBiometricCapability']>
+  ) => mockGetBiometricCapability(...args),
 }));
 
 // Mock environment logger
@@ -104,7 +118,7 @@ describe('useCredentialStorage', () => {
     });
     const { result } = renderHook(() => useCredentialStorage());
 
-    let credentials: any;
+    let credentials: Credentials | null = null;
     await act(async () => {
       credentials = await result.current.loadStoredCredentials();
     });
@@ -119,7 +133,7 @@ describe('useCredentialStorage', () => {
     mockLoadCredentials.mockResolvedValue(null);
     const { result } = renderHook(() => useCredentialStorage());
 
-    let credentials: any;
+    let credentials: Credentials | null = null;
     await act(async () => {
       credentials = await result.current.loadStoredCredentials();
     });
@@ -134,7 +148,7 @@ describe('useCredentialStorage', () => {
     });
     const { result } = renderHook(() => useCredentialStorage());
 
-    let credentials: any;
+    let credentials: Credentials | null = null;
     await act(async () => {
       credentials = await result.current.loadStoredCredentials(
         'specific@test.com',

@@ -9,20 +9,23 @@ jest.mock('@react-navigation/native', () => {
   return {
     createNavigationContainerRef: () => ref,
     CommonActions: {
-      navigate: jest.fn((...args: any[]) => ({
+      navigate: jest.fn((...args: unknown[]) => ({
         type: 'NAVIGATE',
         payload: args,
       })),
-      reset: jest.fn((...args: any[]) => ({ type: 'RESET', payload: args })),
+      reset: jest.fn((...args: unknown[]) => ({
+        type: 'RESET',
+        payload: args,
+      })),
       goBack: jest.fn(() => ({ type: 'GO_BACK' })),
-      preload: jest.fn((...args: any[]) => ({
+      preload: jest.fn((...args: unknown[]) => ({
         type: 'PRELOAD',
         payload: args,
       })),
     },
     StackActions: {
-      push: jest.fn((...args: any[]) => ({ type: 'PUSH', payload: args })),
-      replace: jest.fn((...args: any[]) => ({
+      push: jest.fn((...args: unknown[]) => ({ type: 'PUSH', payload: args })),
+      replace: jest.fn((...args: unknown[]) => ({
         type: 'REPLACE',
         payload: args,
       })),
@@ -32,10 +35,11 @@ jest.mock('@react-navigation/native', () => {
     useRoute: jest.fn(),
     useFocusEffect: jest.fn(),
     useIsFocused: jest.fn(),
-    NavigationContainer: ({ children }: any) => children,
+    NavigationContainer: ({ children }: { children: ReactNode }) => children,
   };
 });
 
+import type { ReactNode } from 'react';
 import { CommonActions, StackActions } from '@react-navigation/native';
 import NavigationService, { navigationRef } from '../NavigationService';
 

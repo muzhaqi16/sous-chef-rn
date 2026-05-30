@@ -8,7 +8,17 @@ jest.mock('#hooks/useSharedBottomSheetConfigs', () => ({
 }));
 
 jest.mock('#components/molecules/FormInput', () => ({
-  FormInput: ({ label, value, onChangeText, placeholder }: any) => {
+  FormInput: ({
+    label,
+    value,
+    onChangeText,
+    placeholder,
+  }: {
+    label?: string;
+    value?: string;
+    onChangeText?: (text: string) => void;
+    placeholder?: string;
+  }) => {
     const RN = require('react-native');
     const R = require('react');
     return R.createElement(
@@ -26,7 +36,17 @@ jest.mock('#components/molecules/FormInput', () => ({
 }));
 
 jest.mock('#components/atoms/BottomSheetHeader', () => ({
-  BottomSheetHeader: ({ title, onCancel, onConfirm, confirmLabel }: any) => {
+  BottomSheetHeader: ({
+    title,
+    onCancel,
+    onConfirm,
+    confirmLabel,
+  }: {
+    title: string;
+    onCancel: () => void;
+    onConfirm: () => void;
+    confirmLabel?: string;
+  }) => {
     const RN = require('react-native');
     const R = require('react');
     return R.createElement(

@@ -18,7 +18,8 @@ jest.mock('#hooks/navigation/useOnboardingNavigation', () => ({
 }));
 
 jest.mock('#store/useAppStore', () => {
-  const fn = (selector: any) => selector({ selectedPantryId: 'p1' });
+  const fn = (selector: (state: { selectedPantryId: string }) => unknown) =>
+    selector({ selectedPantryId: 'p1' });
   fn.getState = () => ({});
   fn.setState = jest.fn();
   fn.subscribe = jest.fn();
@@ -50,18 +51,27 @@ const mockItems = [
 ];
 
 jest.mock('#/utils/connectionUtils', () => ({
-  extractNodes: jest.fn(c => c?.edges?.map((e: any) => e.node) || []),
+  extractNodes: jest.fn(
+    (c?: { edges?: Array<{ node: unknown }> | null } | null) =>
+      c?.edges?.map(e => e.node) || [],
+  ),
 }));
 jest.mock('#/hooks/home/pantry/utils', () => ({
   removeFromPantryItemsCache: jest.fn(),
 }));
 jest.mock('#hooks/useSelectableItems', () => ({
-  useSelectableItems: jest.fn(({ initialItems }: any) => ({
-    items: initialItems || [],
-    selectedItems: [],
-    toggleItem: jest.fn(),
-    isMaxReached: false,
-  })),
+  useSelectableItems: jest.fn(
+    ({
+      initialItems,
+    }: {
+      initialItems?: Array<{ id: string; selected: boolean }>;
+    }) => ({
+      items: initialItems || [],
+      selectedItems: [],
+      toggleItem: jest.fn(),
+      isMaxReached: false,
+    }),
+  ),
 }));
 jest.mock('#hooks/performance/useScreenTransition');
 jest.mock('#/services/errorService', () => ({
@@ -70,7 +80,17 @@ jest.mock('#/services/errorService', () => ({
 jest.mock('#/utils/compilerSafeWrappers');
 
 jest.mock('#components/templates/OnBoardingWrapper', () => ({
-  OnBoardingWrapper: ({ title, subtitle, children, testID }: any) => {
+  OnBoardingWrapper: ({
+    title,
+    subtitle,
+    children,
+    testID,
+  }: {
+    title?: string;
+    subtitle?: string;
+    children?: React.ReactNode;
+    testID?: string;
+  }) => {
     const { View, Text } = require('react-native');
     return (
       <View testID={testID || 'onboarding-wrapper'}>
@@ -82,7 +102,17 @@ jest.mock('#components/templates/OnBoardingWrapper', () => ({
   },
 }));
 jest.mock('#components/base/Button', () => ({
-  Button: ({ title, children, onPress, disabled }: any) => {
+  Button: ({
+    title,
+    children,
+    onPress,
+    disabled,
+  }: {
+    title?: string;
+    children?: React.ReactNode;
+    onPress?: () => void;
+    disabled?: boolean;
+  }) => {
     const { Pressable, Text } = require('react-native');
     return (
       <Pressable onPress={onPress} disabled={disabled} testID="action-button">
@@ -92,7 +122,13 @@ jest.mock('#components/base/Button', () => ({
   },
 }));
 jest.mock('#components/atoms/AnimatedChip', () => ({
-  AnimatedChip: ({ label, selected }: any) => {
+  AnimatedChip: ({
+    label,
+    selected,
+  }: {
+    label?: string;
+    selected?: boolean;
+  }) => {
     const { Text } = require('react-native');
     return (
       <Text>

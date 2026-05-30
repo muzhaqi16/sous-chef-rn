@@ -6,13 +6,13 @@ import { FilterTabBar } from '../FilterTabBar';
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 jest.mock('#utils/iconUtils', () => ({
-  Icon: ({ name }: any) => {
+  Icon: ({ name }: { name: string }) => {
     const { Text } = require('react-native');
     return <Text>{name}</Text>;
   },
 }));
 jest.mock('../FilterTabItem', () => ({
-  FilterTabItem: ({ title, testID }: any) => {
+  FilterTabItem: ({ title, testID }: { title: string; testID?: string }) => {
     const { Text } = require('react-native');
     return <Text testID={testID}>{title}</Text>;
   },

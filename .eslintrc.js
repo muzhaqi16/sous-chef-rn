@@ -45,6 +45,12 @@ module.exports = {
               'Use renderHookWithApollo / renderWithApollo from __tests__/helpers/apolloMockProvider.tsx instead. Direct jest.mock of @apollo/client/react couples tests to operation names, bypasses the real cache, and breaks under refactors. See CLAUDE.md "Apollo Test Patterns" for the migration recipe + 7 gotchas.',
           },
         ],
+        // Tests reach into private class members via bracket notation
+        // (e.g. `manager['privateMethod']`), which is the only type-safe way
+        // to exercise them — dot access on a private member is a TS2341 error.
+        // `dot-notation` would otherwise force the broken dot form, so it is
+        // off for tests.
+        'dot-notation': 'off',
       },
     },
     {

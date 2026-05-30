@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { useForm } from 'react-hook-form';
 import { QuantitySection } from '../QuantitySection';
+import type { PantryItemFormData } from '../PantryItemForm';
 
 jest.mock('#components/molecules/FormInput', () => {
   const { View, Text } = require('react-native');
@@ -61,15 +62,19 @@ jest.mock(
 jest.mock('#components/molecules/FieldRow', () => {
   const { View } = require('react-native');
   return {
-    FieldRow: ({ children }: any) => <View testID="field-row">{children}</View>,
+    FieldRow: ({ children }: { children?: React.ReactNode }) => (
+      <View testID="field-row">{children}</View>
+    ),
   };
 });
 
-function Wrapper(overrides: any) {
+function Wrapper(
+  overrides: Partial<React.ComponentProps<typeof QuantitySection>>,
+) {
   const {
     control,
     formState: { errors },
-  } = useForm({
+  } = useForm<PantryItemFormData>({
     defaultValues: {
       quantityInput: '1',
       unit: '',

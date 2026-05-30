@@ -2,6 +2,8 @@
 
 import React from 'react';
 import { render, userEvent } from '@testing-library/react-native';
+import type { RootState } from '#store/index';
+import type { PerformanceState } from '#/store/slices/performanceSlice';
 import { alertService } from '#/services/alertService';
 import { MemoryMonitor } from '#/services/performance/MemoryMonitor';
 import { PerformanceDashboard } from '../PerformanceDashboard';
@@ -45,21 +47,22 @@ const mockSetTrackScreens = jest.fn();
 const mockClearPerformanceData = jest.fn();
 
 jest.mock('#/store/performanceStore', () => ({
-  usePerformanceStore: jest.fn((selector: any) =>
-    selector({
-      isEnabled: true,
-      trackRenders: true,
-      trackMemory: true,
-      trackScreens: true,
-      setPerformanceEnabled: mockSetPerformanceEnabled,
-      setTrackRenders: mockSetTrackRenders,
-      setTrackMemory: mockSetTrackMemory,
-      setTrackScreens: mockSetTrackScreens,
-      componentMetrics: new Map(),
-      screenMetrics: new Map(),
-      memorySnapshots: [],
-      clearPerformanceData: mockClearPerformanceData,
-    }),
+  usePerformanceStore: jest.fn(
+    (selector: (state: Partial<PerformanceState>) => unknown) =>
+      selector({
+        isEnabled: true,
+        trackRenders: true,
+        trackMemory: true,
+        trackScreens: true,
+        setPerformanceEnabled: mockSetPerformanceEnabled,
+        setTrackRenders: mockSetTrackRenders,
+        setTrackMemory: mockSetTrackMemory,
+        setTrackScreens: mockSetTrackScreens,
+        componentMetrics: new Map(),
+        screenMetrics: new Map(),
+        memorySnapshots: [],
+        clearPerformanceData: mockClearPerformanceData,
+      }),
   ),
 }));
 
@@ -67,14 +70,24 @@ jest.mock('#/store/performanceStore', () => ({
 // `shouldEnableDebugFeatures` returns true, which is what this suite expects.
 
 jest.mock('#store/useAppStore', () => ({
-  useAppStore: jest.fn((selector: any) =>
-    selector({ canAccessDevTools: true }),
+  useAppStore: jest.fn((selector: (state: Partial<RootState>) => unknown) =>
+    selector({}),
   ),
   useCanAccessDevTools: jest.fn(() => true),
 }));
 
 jest.mock('#components/settings/SettingSwitch', () => ({
-  SettingSwitch: ({ title, value, onValueChange, disabled }: any) => {
+  SettingSwitch: ({
+    title,
+    value,
+    onValueChange,
+    disabled,
+  }: {
+    title: string;
+    value: boolean;
+    onValueChange: (value: boolean) => void;
+    disabled?: boolean;
+  }) => {
     const { View, Text, Pressable } = require('react-native');
     return (
       <View>
@@ -92,7 +105,13 @@ jest.mock('#components/settings/SettingSwitch', () => ({
 }));
 
 jest.mock('#components/settings/SettingSection', () => ({
-  SettingSection: ({ title, children }: any) => {
+  SettingSection: ({
+    title,
+    children,
+  }: {
+    title: string;
+    children: React.ReactNode;
+  }) => {
     const { View, Text } = require('react-native');
     return (
       <View>
@@ -104,7 +123,13 @@ jest.mock('#components/settings/SettingSection', () => ({
 }));
 
 jest.mock('#components/templates/ProfileScreenWrapper', () => ({
-  ProfileScreenWrapper: ({ title, children }: any) => {
+  ProfileScreenWrapper: ({
+    title,
+    children,
+  }: {
+    title?: string;
+    children: React.ReactNode;
+  }) => {
     const { View, Text } = require('react-native');
     return (
       <View testID="profile-wrapper">
@@ -136,26 +161,27 @@ beforeEach(() => {
   Environment.shouldEnableDebugFeatures.mockReturnValue(true);
 
   const { useAppStore } = require('#store/useAppStore');
-  useAppStore.mockImplementation((selector: any) =>
-    selector({ canAccessDevTools: true }),
+  useAppStore.mockImplementation(
+    (selector: (state: Partial<RootState>) => unknown) => selector({}),
   );
 
   const { usePerformanceStore } = require('#/store/performanceStore');
-  usePerformanceStore.mockImplementation((selector: any) =>
-    selector({
-      isEnabled: true,
-      trackRenders: true,
-      trackMemory: true,
-      trackScreens: true,
-      setPerformanceEnabled: mockSetPerformanceEnabled,
-      setTrackRenders: mockSetTrackRenders,
-      setTrackMemory: mockSetTrackMemory,
-      setTrackScreens: mockSetTrackScreens,
-      componentMetrics: new Map(),
-      screenMetrics: new Map(),
-      memorySnapshots: [],
-      clearPerformanceData: mockClearPerformanceData,
-    }),
+  usePerformanceStore.mockImplementation(
+    (selector: (state: Partial<PerformanceState>) => unknown) =>
+      selector({
+        isEnabled: true,
+        trackRenders: true,
+        trackMemory: true,
+        trackScreens: true,
+        setPerformanceEnabled: mockSetPerformanceEnabled,
+        setTrackRenders: mockSetTrackRenders,
+        setTrackMemory: mockSetTrackMemory,
+        setTrackScreens: mockSetTrackScreens,
+        componentMetrics: new Map(),
+        screenMetrics: new Map(),
+        memorySnapshots: [],
+        clearPerformanceData: mockClearPerformanceData,
+      }),
   );
 });
 
@@ -188,8 +214,8 @@ describe('PerformanceDashboard', () => {
     Environment.shouldEnableDebugFeatures.mockReturnValue(false);
 
     const storeModule = require('#store/useAppStore');
-    storeModule.useAppStore.mockImplementation((selector: any) =>
-      selector({ canAccessDevTools: false }),
+    storeModule.useAppStore.mockImplementation(
+      (selector: (state: Partial<RootState>) => unknown) => selector({}),
     );
     storeModule.useCanAccessDevTools.mockReturnValue(false);
 
@@ -210,21 +236,22 @@ describe('PerformanceDashboard', () => {
       renderCount: 5,
     });
 
-    usePerformanceStore.mockImplementation((selector: any) =>
-      selector({
-        isEnabled: true,
-        trackRenders: true,
-        trackMemory: false,
-        trackScreens: false,
-        setPerformanceEnabled: mockSetPerformanceEnabled,
-        setTrackRenders: mockSetTrackRenders,
-        setTrackMemory: mockSetTrackMemory,
-        setTrackScreens: mockSetTrackScreens,
-        componentMetrics: metrics,
-        screenMetrics: new Map(),
-        memorySnapshots: [],
-        clearPerformanceData: mockClearPerformanceData,
-      }),
+    usePerformanceStore.mockImplementation(
+      (selector: (state: Partial<PerformanceState>) => unknown) =>
+        selector({
+          isEnabled: true,
+          trackRenders: true,
+          trackMemory: false,
+          trackScreens: false,
+          setPerformanceEnabled: mockSetPerformanceEnabled,
+          setTrackRenders: mockSetTrackRenders,
+          setTrackMemory: mockSetTrackMemory,
+          setTrackScreens: mockSetTrackScreens,
+          componentMetrics: metrics,
+          screenMetrics: new Map(),
+          memorySnapshots: [],
+          clearPerformanceData: mockClearPerformanceData,
+        }),
     );
 
     const { getByText } = render(<PerformanceDashboard />);
@@ -242,21 +269,22 @@ describe('PerformanceDashboard', () => {
       renderCount: 5,
     });
 
-    usePerformanceStore.mockImplementation((selector: any) =>
-      selector({
-        isEnabled: true,
-        trackRenders: true,
-        trackMemory: false,
-        trackScreens: false,
-        setPerformanceEnabled: mockSetPerformanceEnabled,
-        setTrackRenders: mockSetTrackRenders,
-        setTrackMemory: mockSetTrackMemory,
-        setTrackScreens: mockSetTrackScreens,
-        componentMetrics: metrics,
-        screenMetrics: new Map(),
-        memorySnapshots: [],
-        clearPerformanceData: mockClearPerformanceData,
-      }),
+    usePerformanceStore.mockImplementation(
+      (selector: (state: Partial<PerformanceState>) => unknown) =>
+        selector({
+          isEnabled: true,
+          trackRenders: true,
+          trackMemory: false,
+          trackScreens: false,
+          setPerformanceEnabled: mockSetPerformanceEnabled,
+          setTrackRenders: mockSetTrackRenders,
+          setTrackMemory: mockSetTrackMemory,
+          setTrackScreens: mockSetTrackScreens,
+          componentMetrics: metrics,
+          screenMetrics: new Map(),
+          memorySnapshots: [],
+          clearPerformanceData: mockClearPerformanceData,
+        }),
     );
 
     const { getByText } = render(<PerformanceDashboard />);
@@ -280,21 +308,22 @@ describe('PerformanceDashboard', () => {
       renderCount: 1,
     });
 
-    usePerformanceStore.mockImplementation((selector: any) =>
-      selector({
-        isEnabled: true,
-        trackRenders: true,
-        trackMemory: false,
-        trackScreens: false,
-        setPerformanceEnabled: mockSetPerformanceEnabled,
-        setTrackRenders: mockSetTrackRenders,
-        setTrackMemory: mockSetTrackMemory,
-        setTrackScreens: mockSetTrackScreens,
-        componentMetrics: metrics,
-        screenMetrics: new Map(),
-        memorySnapshots: [],
-        clearPerformanceData: mockClearPerformanceData,
-      }),
+    usePerformanceStore.mockImplementation(
+      (selector: (state: Partial<PerformanceState>) => unknown) =>
+        selector({
+          isEnabled: true,
+          trackRenders: true,
+          trackMemory: false,
+          trackScreens: false,
+          setPerformanceEnabled: mockSetPerformanceEnabled,
+          setTrackRenders: mockSetTrackRenders,
+          setTrackMemory: mockSetTrackMemory,
+          setTrackScreens: mockSetTrackScreens,
+          componentMetrics: metrics,
+          screenMetrics: new Map(),
+          memorySnapshots: [],
+          clearPerformanceData: mockClearPerformanceData,
+        }),
     );
 
     const { getByText } = render(<PerformanceDashboard />);
@@ -310,21 +339,22 @@ describe('PerformanceDashboard', () => {
   it('starts MemoryMonitor when memory toggle is turned on', async () => {
     const user = userEvent.setup();
     const { usePerformanceStore } = require('#/store/performanceStore');
-    usePerformanceStore.mockImplementation((selector: any) =>
-      selector({
-        isEnabled: true,
-        trackRenders: true,
-        trackMemory: false,
-        trackScreens: true,
-        setPerformanceEnabled: mockSetPerformanceEnabled,
-        setTrackRenders: mockSetTrackRenders,
-        setTrackMemory: mockSetTrackMemory,
-        setTrackScreens: mockSetTrackScreens,
-        componentMetrics: new Map(),
-        screenMetrics: new Map(),
-        memorySnapshots: [],
-        clearPerformanceData: mockClearPerformanceData,
-      }),
+    usePerformanceStore.mockImplementation(
+      (selector: (state: Partial<PerformanceState>) => unknown) =>
+        selector({
+          isEnabled: true,
+          trackRenders: true,
+          trackMemory: false,
+          trackScreens: true,
+          setPerformanceEnabled: mockSetPerformanceEnabled,
+          setTrackRenders: mockSetTrackRenders,
+          setTrackMemory: mockSetTrackMemory,
+          setTrackScreens: mockSetTrackScreens,
+          componentMetrics: new Map(),
+          screenMetrics: new Map(),
+          memorySnapshots: [],
+          clearPerformanceData: mockClearPerformanceData,
+        }),
     );
 
     const { getByTestId } = render(<PerformanceDashboard />);
@@ -374,21 +404,22 @@ describe('PerformanceDashboard', () => {
       },
     ];
 
-    usePerformanceStore.mockImplementation((selector: any) =>
-      selector({
-        isEnabled: true,
-        trackRenders: false,
-        trackMemory: true,
-        trackScreens: false,
-        setPerformanceEnabled: mockSetPerformanceEnabled,
-        setTrackRenders: mockSetTrackRenders,
-        setTrackMemory: mockSetTrackMemory,
-        setTrackScreens: mockSetTrackScreens,
-        componentMetrics: new Map(),
-        screenMetrics: new Map(),
-        memorySnapshots: snapshots,
-        clearPerformanceData: mockClearPerformanceData,
-      }),
+    usePerformanceStore.mockImplementation(
+      (selector: (state: Partial<PerformanceState>) => unknown) =>
+        selector({
+          isEnabled: true,
+          trackRenders: false,
+          trackMemory: true,
+          trackScreens: false,
+          setPerformanceEnabled: mockSetPerformanceEnabled,
+          setTrackRenders: mockSetTrackRenders,
+          setTrackMemory: mockSetTrackMemory,
+          setTrackScreens: mockSetTrackScreens,
+          componentMetrics: new Map(),
+          screenMetrics: new Map(),
+          memorySnapshots: snapshots,
+          clearPerformanceData: mockClearPerformanceData,
+        }),
     );
 
     const { getByText, getAllByText } = render(<PerformanceDashboard />);

@@ -20,7 +20,7 @@ jest.mock('#hooks/useStandardBottomSheet', () => ({
       },
     },
   })),
-  BottomSheetModal: ({ children }: any) => children,
+  BottomSheetModal: ({ children }: { children?: React.ReactNode }) => children,
 }));
 
 jest.mock('#/utils/iconUtils', () => ({
@@ -28,7 +28,13 @@ jest.mock('#/utils/iconUtils', () => ({
 }));
 
 jest.mock('#components/molecules/TagInput', () => ({
-  TagInput: ({ tags, placeholder }: any) => {
+  TagInput: ({
+    tags,
+    placeholder,
+  }: {
+    tags: string[];
+    placeholder?: string;
+  }) => {
     const { View, Text } = require('react-native');
     return (
       <View testID="tag-input">

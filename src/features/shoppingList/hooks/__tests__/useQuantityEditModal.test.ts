@@ -4,6 +4,8 @@ import {
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
 import { UpdateShoppingListItemQuantityDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
+import { DisplayFormat } from '#/graphql/generated/schemaTypes';
 import { useQuantityEditModal } from '../useQuantityEditModal';
 
 function updateMock() {
@@ -36,21 +38,30 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
-function createItem(overrides: Record<string, unknown> = {}) {
+function createItem(
+  overrides: Partial<ShoppingListItemDisplayFragment> = {},
+): ShoppingListItemDisplayFragment {
   return {
+    __typename: 'ShoppingListItem',
     id: 'item-1',
     itemName: 'Milk',
     quantity: 2,
     quantityInput: '2',
-    unitName: 'gallon',
-    unit: { id: 'unit-1', name: 'gallon', symbol: 'gal' },
-    category: 'Dairy',
+    displayFormat: DisplayFormat.Auto,
     version: 3,
-    purchaseInfo: { isPurchased: false },
+    updatedAt: '2025-01-01T00:00:00.000Z',
+    category: 'Dairy',
+    notes: null,
+    unitName: 'gallon',
     sortOrder: 'aaa',
+    purchaseInfo: {
+      __typename: 'ShoppingListItemPurchaseInfo',
+      isPurchased: false,
+    },
+    unit: { __typename: 'Unit', id: 'unit-1', name: 'gallon', symbol: 'gal' },
     item: null,
     ...overrides,
-  } as any;
+  };
 }
 
 describe('useQuantityEditModal', () => {

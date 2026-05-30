@@ -14,7 +14,13 @@ jest.mock(
       onSelect,
       onClose,
       onDone,
-    }: any) => {
+    }: {
+      visible: boolean;
+      title: string;
+      onSelect: (items: string[]) => void;
+      onClose: () => void;
+      onDone: () => void;
+    }) => {
       const { View, Text, Pressable } = require('react-native');
       if (!visible) return null;
       return (

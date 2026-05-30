@@ -1,4 +1,10 @@
-import { ApolloClient, type NormalizedCacheObject } from '@apollo/client';
+import {
+  ApolloClient,
+  type Cache,
+  type NormalizedCacheObject,
+  type OperationVariables,
+  type Reference,
+} from '@apollo/client';
 import { logger } from '#/utils/environment';
 import { createLink } from './links/index';
 import { registerApolloClient } from './links/refreshToken';
@@ -155,15 +161,19 @@ function setupCachePersistence(client: ApolloClient) {
   const originalModify = cache.modify.bind(cache);
   const originalGc = cache.gc ? cache.gc.bind(cache) : null;
 
-  // Wrap cache methods to persist after writes. `write`/`modify`/`gc` are
-  // generic methods, so the wrapper takes `...args: any[]` (a concrete-param
-  // wrapper isn't assignable back to the generic method) and re-asserts the
-  // original's parameter tuple at the call site. `evict` is non-generic, so it
-  // stays fully typed via Parameters<>.
-  cache.write = function (...args: any[]) {
-    const result = originalWrite(...(args as Parameters<typeof originalWrite>));
+  // Wrap cache methods to persist after writes. `write`/`modify` keep their
+  // generic method signatures so the wrappers stay assignable back to the
+  // (generic) cache methods. `evict` is non-generic, so it stays fully typed
+  // via Parameters<>.
+  cache.write = function <
+    TData = unknown,
+    TVariables extends OperationVariables = OperationVariables,
+  >(
+    writeOptions: Cache.WriteOptions<TData, TVariables>,
+  ): Reference | undefined {
+    const result = originalWrite(writeOptions);
     // Mark the written entity's cache ID as dirty for incremental persistence
-    const dataId = args[0]?.dataId;
+    const dataId = writeOptions.dataId;
     if (dataId) {
       apolloCachePersistence.markDirty([dataId]);
     }
@@ -181,11 +191,11 @@ function setupCachePersistence(client: ApolloClient) {
     return result;
   };
 
-  cache.modify = function (...args: any[]) {
-    const result = originalModify(
-      ...(args as Parameters<typeof originalModify>),
-    );
-    const id = args[0]?.id;
+  cache.modify = function <
+    Entity extends Record<string, unknown> = Record<string, unknown>,
+  >(options: Cache.ModifyOptions<Entity>): boolean {
+    const result = originalModify(options);
+    const id = options.id;
     if (id) {
       apolloCachePersistence.markDirty([id]);
     }

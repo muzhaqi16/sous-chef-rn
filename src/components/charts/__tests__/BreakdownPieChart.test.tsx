@@ -4,7 +4,7 @@ import { render, screen } from '@testing-library/react-native';
 import { BreakdownPieChart } from '../BreakdownPieChart';
 
 jest.mock('victory-native', () => ({
-  PolarChart: ({ children }: any) => {
+  PolarChart: ({ children }: { children: React.ReactNode }) => {
     const { View } = require('react-native');
     const R = require('react');
     return R.createElement(View, { testID: 'polar-chart' }, children);

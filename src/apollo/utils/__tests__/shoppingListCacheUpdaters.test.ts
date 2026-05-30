@@ -1,3 +1,4 @@
+import type { ApolloCache } from '@apollo/client';
 import {
   removeFromShoppingListItemsConnection,
   clearAllPurchasedItemsFromCache,
@@ -15,7 +16,25 @@ import { clearAllUnpurchasedItemsFromCache } from '../shoppingListCacheUpdaters'
 // Helpers
 // ---------------------------------------------------------------------------
 
-function createMockCache() {
+/** Mock Apollo cache exposing the methods the updaters touch as jest mocks. */
+type MockedCache = ApolloCache & {
+  modify: jest.Mock;
+  evict: jest.Mock;
+  gc: jest.Mock;
+  identify: jest.Mock;
+};
+
+/** A cache ref or normalized object the field helpers read from. */
+type MockRef = { __ref?: string; [key: string]: unknown };
+
+/** Field-modifier helpers passed to each `cache.modify` field function. */
+interface FieldHelpers {
+  toReference: jest.Mock;
+  readField: jest.Mock;
+  storeFieldName: string;
+}
+
+function createMockCache(): MockedCache {
   return {
     modify: jest.fn(),
     evict: jest.fn(),
@@ -24,7 +43,7 @@ function createMockCache() {
       (obj: { __typename: string; id: string }) =>
         `${obj.__typename}:${obj.id}`,
     ),
-  } as any;
+  } as MockedCache;
 }
 
 /**
@@ -32,10 +51,10 @@ function createMockCache() {
  * a specific field function from the modify call.
  */
 function invokeFieldModifier(
-  mockCache: any,
+  mockCache: MockedCache,
   fieldName: string,
-  existingValue: any,
-  helpers: any,
+  existingValue: unknown,
+  helpers: Partial<FieldHelpers>,
   callIndex = 0,
 ) {
   const modifyCall = mockCache.modify.mock.calls[callIndex];
@@ -44,12 +63,14 @@ function invokeFieldModifier(
   return fields[fieldName](existingValue, helpers);
 }
 
-function createFieldHelpers(overrides: Record<string, any> = {}) {
+function createFieldHelpers(
+  overrides: Partial<FieldHelpers> = {},
+): FieldHelpers {
   return {
-    toReference: jest.fn((item: any) =>
+    toReference: jest.fn((item?: { __typename: string; id: string }) =>
       item ? { __ref: `${item.__typename}:${item.id}` } : undefined,
     ),
-    readField: jest.fn((fieldName: string, ref: any) => {
+    readField: jest.fn((fieldName: string, ref?: MockRef) => {
       if (!ref) return undefined;
       if (ref.__ref) {
         const parts = ref.__ref.split(':');
@@ -95,7 +116,7 @@ describe('removeFromShoppingListItemsConnection', () => {
     removeFromShoppingListItemsConnection(cache, 'sl-1', 'sli-1');
 
     const helpers = createFieldHelpers();
-    helpers.readField.mockImplementation((field: string, ref: any) => {
+    helpers.readField.mockImplementation((field: string, ref?: MockRef) => {
       if (field === 'id') {
         if (ref?.__ref === 'ShoppingListItem:sli-1') return 'sli-1';
         if (ref?.__ref === 'ShoppingListItem:sli-2') return 'sli-2';
@@ -349,7 +370,7 @@ describe('moveShoppingListItemToPurchased', () => {
     const helpers = createFieldHelpers({
       storeFieldName: 'itemsConnection:{"isPurchased":false}',
     });
-    helpers.readField.mockImplementation((field: string, ref: any) => {
+    helpers.readField.mockImplementation((field: string, ref?: MockRef) => {
       if (field === 'id') {
         if (ref?.__ref === 'ShoppingListItem:sli-1') return 'sli-1';
         if (ref?.__ref === 'ShoppingListItem:sli-2') return 'sli-2';
@@ -495,7 +516,7 @@ describe('moveShoppingListItemToUnpurchased', () => {
     const helpers = createFieldHelpers({
       storeFieldName: 'itemsConnection:{"isPurchased":true}',
     });
-    helpers.readField.mockImplementation((field: string, ref: any) => {
+    helpers.readField.mockImplementation((field: string, ref?: MockRef) => {
       if (field === 'id') {
         if (ref?.__ref === 'ShoppingListItem:sli-1') return 'sli-1';
       }
@@ -667,7 +688,7 @@ describe('addNewItemToShoppingListCache', () => {
     const helpers = createFieldHelpers({
       storeFieldName: 'itemsConnection:{"isPurchased":true}',
     });
-    helpers.readField.mockImplementation((field: string, ref: any) => {
+    helpers.readField.mockImplementation((field: string, ref?: MockRef) => {
       if (field === 'id') {
         if (ref?.__ref === 'ShoppingListItem:sli-repurchased')
           return 'sli-repurchased';
@@ -830,7 +851,7 @@ describe('removeItemFromShoppingListForMoveToPantry', () => {
     const helpers = createFieldHelpers({
       storeFieldName: 'itemsConnection:{"isPurchased":true}',
     });
-    helpers.readField.mockImplementation((field: string, ref: any) => {
+    helpers.readField.mockImplementation((field: string, ref?: MockRef) => {
       if (field === 'id') {
         if (ref?.__ref === 'ShoppingListItem:sli-1') return 'sli-1';
         if (ref?.__ref === 'ShoppingListItem:sli-2') return 'sli-2';
@@ -886,7 +907,7 @@ describe('removeItemFromShoppingListForMoveToPantry', () => {
     const helpers = createFieldHelpers({
       storeFieldName: 'itemsConnection:{"isPurchased":false}',
     });
-    helpers.readField.mockImplementation((field: string, ref: any) => {
+    helpers.readField.mockImplementation((field: string, ref?: MockRef) => {
       if (field === 'id') {
         if (ref?.__ref === 'ShoppingListItem:sli-1') return 'sli-1';
       }

@@ -2,6 +2,7 @@ import { waitFor } from '@testing-library/react-native';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { useRecipeSuggestionsForItem } from '../useRecipeSuggestionsForItem';
 import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
+import type { RecipeInformation } from '#/services/recipeApi/types';
 
 const mockGetCachedSuggestions = jest.fn();
 const mockSetCachedSuggestions = jest.fn();
@@ -32,13 +33,20 @@ jest.mock('#/services/recipeApi/SpoonacularService', () => {
 const mockReportError = jest.fn();
 jest.mock('#/services/errorService', () => ({
   errorService: {
-    reportError: (...args: any[]) => mockReportError(...args),
+    reportError: (
+      error: unknown,
+      context?: { operation?: string; [key: string]: unknown },
+    ) => mockReportError(error, context),
   },
 }));
 
 jest.mock('#/utils/compilerSafeWrappers', () => ({
   executeWithLoadingState: jest.fn(
-    async (fn: any, setLoading: any, onError: any) => {
+    async (
+      fn: () => Promise<void>,
+      setLoading: (value: boolean) => void,
+      onError?: (error: unknown) => void,
+    ) => {
       setLoading(true);
       try {
         await fn();
@@ -68,7 +76,9 @@ describe('useRecipeSuggestionsForItem', () => {
   });
 
   it('hits cache and skips API call on cache hit', async () => {
-    const cached = [{ id: 1, title: 'Cached Recipe' }] as any;
+    const cached = [
+      { id: 1, title: 'Cached Recipe' },
+    ] as Partial<RecipeInformation>[] as RecipeInformation[];
     mockGetCachedSuggestions.mockReturnValue(cached);
 
     const { result } = renderHookWithApollo(() =>
@@ -137,10 +147,10 @@ describe('useRecipeSuggestionsForItem', () => {
   });
 
   it('toggles loadingRecipes around the fetch', async () => {
-    let resolveFn: any;
+    let resolveFn!: (value: { results: RecipeInformation[] }) => void;
     (spoonacularService.searchRecipes as jest.Mock).mockImplementationOnce(
       () =>
-        new Promise(r => {
+        new Promise<{ results: RecipeInformation[] }>(r => {
           resolveFn = r;
         }),
     );

@@ -2,6 +2,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { Text, View } from 'react-native';
+import type { NavigationState } from 'react-native-tab-view';
 import { TabView } from '../TabView';
 import type { TabRoute } from '../TabView';
 
@@ -9,7 +10,15 @@ jest.mock('react-native-tab-view', () => {
   const RN = require('react-native');
   const R = require('react');
 
-  const MockTabView = ({ renderScene, navigationState, renderTabBar }: any) => {
+  const MockTabView = ({
+    renderScene,
+    navigationState,
+    renderTabBar,
+  }: {
+    renderScene: (props: unknown) => React.ReactNode;
+    navigationState: NavigationState<TabRoute>;
+    renderTabBar: (props: unknown) => React.ReactNode;
+  }) => {
     const tabBarProps = {
       navigationState,
       jumpTo: jest.fn(),
@@ -20,7 +29,7 @@ jest.mock('react-native-tab-view', () => {
       RN.View,
       { testID: 'tab-view' },
       renderTabBar(tabBarProps),
-      navigationState.routes.map((route: any, index: number) => {
+      navigationState.routes.map((route, index: number) => {
         if (index === navigationState.index) {
           return R.createElement(
             RN.View,
@@ -38,11 +47,15 @@ jest.mock('react-native-tab-view', () => {
     );
   };
 
-  const MockTabBar = ({ navigationState }: any) =>
+  const MockTabBar = ({
+    navigationState,
+  }: {
+    navigationState: NavigationState<TabRoute>;
+  }) =>
     R.createElement(
       RN.View,
       { testID: 'tab-bar' },
-      navigationState.routes.map((route: any) =>
+      navigationState.routes.map(route =>
         R.createElement(RN.Text, { key: route.key }, route.title),
       ),
     );

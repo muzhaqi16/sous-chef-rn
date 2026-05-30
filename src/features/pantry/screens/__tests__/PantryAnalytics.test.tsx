@@ -59,7 +59,11 @@ jest.mock('#features/pantry/hooks/usePantryAnalytics', () => ({
 }));
 
 jest.mock('#components/molecules/Header', () => ({
-  Header: ({ title }: any) => {
+  Header: ({
+    title,
+  }: React.ComponentProps<
+    typeof import('#components/molecules/Header').Header
+  >) => {
     const { View, Text } = require('react-native');
     return (
       <View testID="header">
@@ -75,7 +79,13 @@ jest.mock('#components/analytics/DateRangeFilter', () => ({
   },
 }));
 jest.mock('#components/analytics/AnalyticsSummaryCard', () => ({
-  AnalyticsSummaryCard: ({ title, value, subtitle }: any) => {
+  AnalyticsSummaryCard: ({
+    title,
+    value,
+    subtitle,
+  }: React.ComponentProps<
+    typeof import('#components/analytics/AnalyticsSummaryCard').AnalyticsSummaryCard
+  >) => {
     const { View, Text } = require('react-native');
     return (
       <View testID="summary-card">
@@ -87,7 +97,12 @@ jest.mock('#components/analytics/AnalyticsSummaryCard', () => ({
   },
 }));
 jest.mock('#components/analytics/ChartSection', () => ({
-  ChartSection: ({ title, children }: any) => {
+  ChartSection: ({
+    title,
+    children,
+  }: React.ComponentProps<
+    typeof import('#components/analytics/ChartSection').ChartSection
+  >) => {
     const { View, Text } = require('react-native');
     return (
       <View testID="chart-section">
@@ -107,11 +122,19 @@ jest.mock('#components/charts/TopItemsBarChart', () => ({
   TopItemsBarChart: () => null,
 }));
 jest.mock('#components/molecules/TabView/TabView', () => ({
-  TabView: ({ routes, renderScene }: any) => {
+  TabView: ({
+    routes,
+    renderScene,
+  }: {
+    routes: import('#components/molecules/TabView/TabView').TabRoute[];
+    renderScene: (props: {
+      route: import('#components/molecules/TabView/TabView').TabRoute;
+    }) => React.ReactNode;
+  }) => {
     const { View, Text } = require('react-native');
     return (
       <View testID="tab-view">
-        {routes.map((route: any) => (
+        {routes.map(route => (
           <View key={route.key}>
             <Text>{route.title}</Text>
             {renderScene({ route })}

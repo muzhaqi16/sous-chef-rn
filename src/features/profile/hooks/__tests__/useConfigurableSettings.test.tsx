@@ -1,7 +1,8 @@
 'use no memo';
 
 import { act } from '@testing-library/react-native';
-import { alertService } from '#/services/alertService';
+import { alertService, type AlertButton } from '#/services/alertService';
+import type { SettingItem } from '#components/molecules/SettingRow';
 import {
   recordMock,
   renderHookWithApollo,
@@ -14,16 +15,22 @@ import {
   UpdateUserPreferencesDocument,
 } from '#operations/auth/user.generated';
 import type { RootState } from '#store/index';
-import type { SettingItem } from '#components/molecules/SettingRow';
-import type { AlertButton } from '#/services/alertService';
 import { useConfigurableSettings } from '../useConfigurableSettings';
+
+// Shape of a single section entry in PROFILE_SETTINGS_CONFIG.
+interface ConfigSection {
+  title: string;
+  items: SettingItem[];
+}
 
 // Mock token scheduler / refreshToken
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 
 const mockLogout = jest.fn();
-const mockGetUserNavigationState = jest.fn(() => null);
+const mockGetUserNavigationState = jest.fn(
+  (): ReturnType<RootState['getUserNavigationState']> => null,
+);
 const mockSetLanguage = jest.fn();
 
 jest.mock('#store/useAppStore', () => ({
@@ -110,7 +117,7 @@ jest.mock('#/config/settingsConfig', () => ({
 
 jest.mock('#utils/dateUtils', () => ({
   dateStringToISO: jest.fn((v: string) => v),
-  extractDateString: jest.fn((v: any) => v || ''),
+  extractDateString: jest.fn((v: unknown) => v || ''),
 }));
 
 jest.mock('#components/organisms/BiometricSetupModal', () => ({
@@ -457,7 +464,7 @@ describe('useConfigurableSettings', () => {
     mockCheckStoredCredentials.mockResolvedValue(false);
     mockGetUserNavigationState.mockReturnValue({
       biometricDeclinedPermanently: true,
-    } as any);
+    });
 
     const { profile, settings } = buildMocks();
     const { result } = renderHookWithApollo(
@@ -538,7 +545,9 @@ describe('useConfigurableSettings', () => {
 
       // Restore config
       PROFILE_SETTINGS_CONFIG.length = 0;
-      original.forEach((item: any) => PROFILE_SETTINGS_CONFIG.push(item));
+      original.forEach((item: ConfigSection) =>
+        PROFILE_SETTINGS_CONFIG.push(item),
+      );
     });
 
     it('calls updateProfile when phone is saved', () => {
@@ -562,7 +571,9 @@ describe('useConfigurableSettings', () => {
       expect(profile.fired).toContainEqual({ input: { phone: '555-9999' } });
 
       PROFILE_SETTINGS_CONFIG.length = 0;
-      original.forEach((item: any) => PROFILE_SETTINGS_CONFIG.push(item));
+      original.forEach((item: ConfigSection) =>
+        PROFILE_SETTINGS_CONFIG.push(item),
+      );
     });
 
     it('calls updateProfile when website is saved', () => {
@@ -588,7 +599,9 @@ describe('useConfigurableSettings', () => {
       });
 
       PROFILE_SETTINGS_CONFIG.length = 0;
-      original.forEach((item: any) => PROFILE_SETTINGS_CONFIG.push(item));
+      original.forEach((item: ConfigSection) =>
+        PROFILE_SETTINGS_CONFIG.push(item),
+      );
     });
 
     it('calls updateProfile when bio is saved', () => {
@@ -612,7 +625,9 @@ describe('useConfigurableSettings', () => {
       expect(profile.fired).toContainEqual({ input: { bio: 'New bio' } });
 
       PROFILE_SETTINGS_CONFIG.length = 0;
-      original.forEach((item: any) => PROFILE_SETTINGS_CONFIG.push(item));
+      original.forEach((item: ConfigSection) =>
+        PROFILE_SETTINGS_CONFIG.push(item),
+      );
     });
 
     it('calls updateProfile when dateOfBirth is saved with ISO conversion', () => {
@@ -638,7 +653,9 @@ describe('useConfigurableSettings', () => {
       expect(profile.fired.length).toBeGreaterThan(0);
 
       PROFILE_SETTINGS_CONFIG.length = 0;
-      original.forEach((item: any) => PROFILE_SETTINGS_CONFIG.push(item));
+      original.forEach((item: ConfigSection) =>
+        PROFILE_SETTINGS_CONFIG.push(item),
+      );
     });
   });
 
@@ -668,7 +685,9 @@ describe('useConfigurableSettings', () => {
       expect(profile.fired).toContainEqual({ input: { gender: 'female' } });
 
       PROFILE_SETTINGS_CONFIG.length = 0;
-      original.forEach((item: any) => PROFILE_SETTINGS_CONFIG.push(item));
+      original.forEach((item: ConfigSection) =>
+        PROFILE_SETTINGS_CONFIG.push(item),
+      );
     });
 
     it('uses empty string when profile has no gender', () => {
@@ -689,7 +708,9 @@ describe('useConfigurableSettings', () => {
       expect(item.value).toBe('');
 
       PROFILE_SETTINGS_CONFIG.length = 0;
-      original.forEach((item: any) => PROFILE_SETTINGS_CONFIG.push(item));
+      original.forEach((item: ConfigSection) =>
+        PROFILE_SETTINGS_CONFIG.push(item),
+      );
     });
   });
 
@@ -729,7 +750,9 @@ describe('useConfigurableSettings', () => {
       });
 
       PROFILE_SETTINGS_CONFIG.length = 0;
-      original.forEach((item: any) => PROFILE_SETTINGS_CONFIG.push(item));
+      original.forEach((item: ConfigSection) =>
+        PROFILE_SETTINGS_CONFIG.push(item),
+      );
     });
 
     it('creates showEmail switch setting', () => {
@@ -755,7 +778,9 @@ describe('useConfigurableSettings', () => {
       expect(profile.fired).toContainEqual({ input: { showEmail: false } });
 
       PROFILE_SETTINGS_CONFIG.length = 0;
-      original.forEach((item: any) => PROFILE_SETTINGS_CONFIG.push(item));
+      original.forEach((item: ConfigSection) =>
+        PROFILE_SETTINGS_CONFIG.push(item),
+      );
     });
 
     it('creates showPhone switch setting', () => {
@@ -781,7 +806,9 @@ describe('useConfigurableSettings', () => {
       expect(profile.fired).toContainEqual({ input: { showPhone: true } });
 
       PROFILE_SETTINGS_CONFIG.length = 0;
-      original.forEach((item: any) => PROFILE_SETTINGS_CONFIG.push(item));
+      original.forEach((item: ConfigSection) =>
+        PROFILE_SETTINGS_CONFIG.push(item),
+      );
     });
   });
 
@@ -826,7 +853,7 @@ describe('useConfigurableSettings', () => {
       );
       const items = result.current.sections[0].items;
 
-      items.forEach((item: any) => {
+      items.forEach((item: SettingItem) => {
         expect(typeof item.onPress).toBe('function');
         // Should not throw
         act(() => {
@@ -835,7 +862,9 @@ describe('useConfigurableSettings', () => {
       });
 
       PROFILE_SETTINGS_CONFIG.length = 0;
-      original.forEach((item: any) => PROFILE_SETTINGS_CONFIG.push(item));
+      original.forEach((item: ConfigSection) =>
+        PROFILE_SETTINGS_CONFIG.push(item),
+      );
     });
   });
 
@@ -893,7 +922,9 @@ describe('useConfigurableSettings', () => {
       expect(findByKey(items, 'feedback').testID).toBe('profile-menu-feedback');
 
       PROFILE_SETTINGS_CONFIG.length = 0;
-      original.forEach((item: any) => PROFILE_SETTINGS_CONFIG.push(item));
+      original.forEach((item: ConfigSection) =>
+        PROFILE_SETTINGS_CONFIG.push(item),
+      );
     });
   });
 
@@ -916,7 +947,9 @@ describe('useConfigurableSettings', () => {
       );
 
       PROFILE_SETTINGS_CONFIG.length = 0;
-      original.forEach((item: any) => PROFILE_SETTINGS_CONFIG.push(item));
+      original.forEach((item: ConfigSection) =>
+        PROFILE_SETTINGS_CONFIG.push(item),
+      );
     });
   });
 
@@ -1039,11 +1072,11 @@ describe('useConfigurableSettings', () => {
       // Get the 'Disable' button from the alert
       const alertCalls = (alertService.alert as jest.Mock).mock.calls;
       const lastCall = alertCalls[alertCalls.length - 1];
-      const buttons = lastCall[2];
-      const disableButton = buttons.find((b: any) => b.text === 'Disable');
+      const buttons = lastCall[2] as AlertButton[];
+      const disableButton = buttons.find(b => b.text === 'Disable');
 
       await act(async () => {
-        await disableButton.onPress?.();
+        await disableButton?.onPress?.();
       });
 
       expect(mockRemoveCredentials).toHaveBeenCalledWith('test@example.com');
@@ -1075,16 +1108,25 @@ describe('useConfigurableSettings', () => {
 
     it('biometric loading starts false when no user email', () => {
       const storeModule = require('#store/useAppStore');
-      storeModule.useAppStore.mockImplementation((selector: any) => {
-        const state = {
-          user: { id: 'user-1', email: '' },
-          logout: mockLogout,
-          getUserNavigationState: mockGetUserNavigationState,
-          language: 'en',
-          setLanguage: mockSetLanguage,
-        };
-        return typeof selector === 'function' ? selector(state) : state;
-      });
+      storeModule.useAppStore.mockImplementation(
+        <T,>(selector: (state: RootState) => T) => {
+          const state: Partial<RootState> = {
+            user: {
+              id: 'user-1',
+              email: '',
+              emailVerified: true,
+              onBoarded: true,
+            },
+            logout: mockLogout,
+            getUserNavigationState: mockGetUserNavigationState,
+            language: 'en',
+            setLanguage: mockSetLanguage,
+          };
+          return typeof selector === 'function'
+            ? selector(state as RootState)
+            : state;
+        },
+      );
       storeModule.useUser.mockReturnValue({ id: 'user-1', email: '' });
 
       const { profile, settings } = buildMocks();
@@ -1095,16 +1137,25 @@ describe('useConfigurableSettings', () => {
       expect(result.current.biometricLoading).toBe(false);
 
       // Restore mock
-      storeModule.useAppStore.mockImplementation((selector: any) => {
-        const state = {
-          user: { id: 'user-1', email: 'test@example.com' },
-          logout: mockLogout,
-          getUserNavigationState: mockGetUserNavigationState,
-          language: 'en',
-          setLanguage: mockSetLanguage,
-        };
-        return typeof selector === 'function' ? selector(state) : state;
-      });
+      storeModule.useAppStore.mockImplementation(
+        <T,>(selector: (state: RootState) => T) => {
+          const state: Partial<RootState> = {
+            user: {
+              id: 'user-1',
+              email: 'test@example.com',
+              emailVerified: true,
+              onBoarded: true,
+            },
+            logout: mockLogout,
+            getUserNavigationState: mockGetUserNavigationState,
+            language: 'en',
+            setLanguage: mockSetLanguage,
+          };
+          return typeof selector === 'function'
+            ? selector(state as RootState)
+            : state;
+        },
+      );
       storeModule.useUser.mockReturnValue({
         id: 'user-1',
         email: 'test@example.com',

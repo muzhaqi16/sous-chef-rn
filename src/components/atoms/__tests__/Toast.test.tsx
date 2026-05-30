@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react-native';
 import { Text } from 'react-native';
 import { Gesture } from 'react-native-gesture-handler';
 import { scheduleOnRN } from 'react-native-worklets';
-import { ToastProvider } from '../Toast';
+import { ToastProvider, type ToastType } from '../Toast';
 import { useToast } from '../../../hooks/useToast';
 
 // Mock the toastService bridge — the Toast tests don't exercise the
@@ -28,7 +28,7 @@ const getLatestPanGesture = () => {
 // Helper component that triggers a toast once on mount
 const ToastTrigger: React.FC<{
   message: string;
-  type?: any;
+  type?: ToastType;
   action?: { label: string; onPress: () => void };
 }> = ({ message, type, action }) => {
   const showToast = useToast();

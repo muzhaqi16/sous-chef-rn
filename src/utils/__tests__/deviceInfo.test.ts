@@ -59,10 +59,12 @@ jest.mock('react-native-device-info', () => ({
 
 // Mock environment logger
 import DeviceInfo from 'react-native-device-info';
+import { DeviceType, MobilePlatform } from '#/graphql/generated/schemaTypes';
 import {
   generateDeviceFingerprint,
   collectDeviceInformation,
   validateDeviceInformation,
+  type DeviceInformation,
 } from '../deviceInfo';
 
 describe('deviceInfo', () => {
@@ -151,97 +153,97 @@ describe('deviceInfo', () => {
   // ==========================================================================
   describe('validateDeviceInformation', () => {
     it('returns true for valid device information', () => {
-      const info = {
+      const info: DeviceInformation = {
         deviceId: 'ios-abc123def456-xyz',
-        deviceType: 'MOBILE',
-        platform: 'IOS',
+        deviceType: DeviceType.Mobile,
+        platform: MobilePlatform.Ios,
         osName: 'iOS',
         osVersion: '17.0',
         appVersion: '1.0.0',
         timezone: 'UTC',
         language: 'en-US',
-      } as any;
+      };
       expect(validateDeviceInformation(info)).toBe(true);
     });
 
     it('returns false when required field is missing', () => {
-      const info = {
+      const info: Partial<DeviceInformation> = {
         deviceId: 'ios-abc123def456-xyz',
-        deviceType: 'MOBILE',
-        platform: 'IOS',
+        deviceType: DeviceType.Mobile,
+        platform: MobilePlatform.Ios,
         osName: 'iOS',
         // missing osVersion
         appVersion: '1.0.0',
         timezone: 'UTC',
         language: 'en-US',
-      } as any;
-      expect(validateDeviceInformation(info)).toBe(false);
+      };
+      expect(validateDeviceInformation(info as DeviceInformation)).toBe(false);
     });
 
     it('returns false when deviceId is too short', () => {
-      const info = {
+      const info: DeviceInformation = {
         deviceId: 'abc',
-        deviceType: 'MOBILE',
-        platform: 'IOS',
+        deviceType: DeviceType.Mobile,
+        platform: MobilePlatform.Ios,
         osName: 'iOS',
         osVersion: '17.0',
         appVersion: '1.0.0',
         timezone: 'UTC',
         language: 'en-US',
-      } as any;
+      };
       expect(validateDeviceInformation(info)).toBe(false);
     });
 
     it('returns false for empty deviceId', () => {
-      const info = {
+      const info: DeviceInformation = {
         deviceId: '',
-        deviceType: 'MOBILE',
-        platform: 'IOS',
+        deviceType: DeviceType.Mobile,
+        platform: MobilePlatform.Ios,
         osName: 'iOS',
         osVersion: '17.0',
         appVersion: '1.0.0',
         timezone: 'UTC',
         language: 'en-US',
-      } as any;
+      };
       expect(validateDeviceInformation(info)).toBe(false);
     });
 
     it('returns false when appVersion is missing', () => {
-      const info = {
+      const info: DeviceInformation = {
         deviceId: 'ios-abc123def456-xyz',
-        deviceType: 'MOBILE',
-        platform: 'IOS',
+        deviceType: DeviceType.Mobile,
+        platform: MobilePlatform.Ios,
         osName: 'iOS',
         osVersion: '17.0',
         appVersion: '',
         timezone: 'UTC',
         language: 'en-US',
-      } as any;
+      };
       expect(validateDeviceInformation(info)).toBe(false);
     });
 
     it('checks all required fields', () => {
-      const requiredFields = [
-        'deviceId',
-        'deviceType',
-        'platform',
-        'osName',
-        'osVersion',
-        'appVersion',
+      const base: DeviceInformation = {
+        deviceId: 'ios-abc123def456-xyz',
+        deviceType: DeviceType.Mobile,
+        platform: MobilePlatform.Ios,
+        osName: 'iOS',
+        osVersion: '17.0',
+        appVersion: '1.0.0',
+        timezone: 'UTC',
+        language: 'en-US',
+      };
+      // Each case empties one required field; validation must then fail.
+      const emptyRequiredFieldCases: Partial<DeviceInformation>[] = [
+        { deviceId: '' },
+        { deviceType: '' as DeviceType },
+        { platform: '' as MobilePlatform },
+        { osName: '' },
+        { osVersion: '' },
+        { appVersion: '' },
       ];
-      for (const field of requiredFields) {
-        const info: any = {
-          deviceId: 'ios-abc123def456-xyz',
-          deviceType: 'MOBILE',
-          platform: 'IOS',
-          osName: 'iOS',
-          osVersion: '17.0',
-          appVersion: '1.0.0',
-          timezone: 'UTC',
-          language: 'en-US',
-        };
-        info[field] = '';
-        expect(validateDeviceInformation(info)).toBe(false);
+      for (const override of emptyRequiredFieldCases) {
+        expect(validateDeviceInformation({ ...base, ...override })).toBe(false);
       }
     });
   });

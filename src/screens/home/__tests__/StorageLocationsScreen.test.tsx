@@ -3,7 +3,17 @@
 import React from 'react';
 import { render, userEvent } from '@testing-library/react-native';
 import { alertService } from '#/services/alertService';
+import type { DetailTemplate as DetailTemplateComponent } from '#components/templates/DetailTemplate';
+import type { StorageLocationCard as StorageLocationCardComponent } from '#components/organisms/storageLocation/StorageLocationCard';
 import { StorageLocationsScreen } from '../StorageLocationsScreen';
+
+type StorageLocationsScreenRoute = React.ComponentProps<
+  typeof StorageLocationsScreen
+>['route'];
+type DetailTemplateProps = React.ComponentProps<typeof DetailTemplateComponent>;
+type StorageLocationCardProps = React.ComponentProps<
+  typeof StorageLocationCardComponent
+>;
 
 // Mock token scheduler / refreshToken
 jest.mock('#/apollo/links/tokenScheduler');
@@ -37,12 +47,12 @@ jest.mock('#hooks/storageLocation/useStorageLocationManagement', () => ({
 jest.mock('#/utils/compilerSafeWrappers');
 
 jest.mock('#components/templates/DetailTemplate', () => ({
-  DetailTemplate: ({ title, sections }: any) => {
+  DetailTemplate: ({ title, sections }: DetailTemplateProps) => {
     const { View, Text } = require('react-native');
     return (
       <View testID="detail-template">
         <Text>{title}</Text>
-        {sections?.map((s: any, i: number) => (
+        {sections?.map((s, i: number) => (
           <View key={i}>{s.content}</View>
         ))}
       </View>
@@ -51,7 +61,12 @@ jest.mock('#components/templates/DetailTemplate', () => ({
 }));
 
 jest.mock('#components/organisms/storageLocation/StorageLocationCard', () => ({
-  StorageLocationCard: ({ location, onDelete }: any) => {
+  StorageLocationCard: ({
+    location,
+    onDelete,
+  }: Omit<StorageLocationCardProps, 'location'> & {
+    location: StorageLocationCardProps['location'] & { id: string };
+  }) => {
     const { Text, Pressable } = require('react-native');
     return (
       <>
@@ -313,7 +328,7 @@ describe('StorageLocationsScreen', () => {
   });
 
   it('renders without homeId in route params', () => {
-    const noParamsRoute = { params: {} } as any;
+    const noParamsRoute = { params: {} } as StorageLocationsScreenRoute;
     const tree = render(<StorageLocationsScreen route={noParamsRoute} />);
     expect(tree.toJSON()).toBeTruthy();
   });

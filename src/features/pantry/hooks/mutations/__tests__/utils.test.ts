@@ -8,6 +8,9 @@ import {
   addToPantryItemsCache,
 } from '../utils';
 import type { UnitSelection, FormDataInput } from '../types';
+import { StorageState, UnitType } from '#/graphql/generated/schemaTypes';
+
+type CurrentUnit = NonNullable<Parameters<typeof buildOptimisticUnit>[1]>;
 
 const { createAddToParentConnectionUpdater } = jest.requireMock(
   '#/apollo/utils/cacheUpdaters',
@@ -68,25 +71,12 @@ describe('pantry mutations utils', () => {
         symbol: null,
         type: null,
       };
-      const currentUnit: {
-        __typename: 'Unit';
-        id: string;
-        name: string;
-        symbol: string;
-        type: any;
-        isMetric: boolean;
-        baseUnitId: string;
-        conversionFactor: number;
-        isCommon: boolean;
-        displayAsFraction: boolean;
-        minPrecision: number;
-        autoConvertThreshold: number;
-      } = {
+      const currentUnit: CurrentUnit = {
         __typename: 'Unit',
         id: 'unit-1',
         name: 'Gram',
         symbol: 'g',
-        type: 'WEIGHT' as any,
+        type: UnitType.Weight,
         isMetric: true,
         baseUnitId: 'base-1',
         conversionFactor: 0.001,
@@ -164,7 +154,7 @@ describe('pantry mutations utils', () => {
   describe('buildDirtyUpdateInput', () => {
     const baseFormData: FormDataInput = {
       itemName: 'Milk',
-      storageState: 'PANTRY' as any,
+      storageState: 'PANTRY' as StorageState,
       location: 'Fridge',
       expirationDate: new Date('2026-06-01'),
       notes: 'Whole milk',

@@ -146,6 +146,7 @@ export function useOptimisticDataRestorationMultiple(
                 // If cache has newer or equal version, skip restoration
                 if (
                   currentVersion !== undefined &&
+                  typeof fields.version === 'number' &&
                   currentVersion >= fields.version
                 ) {
                   // Cache has newer or equal version - skip restoration

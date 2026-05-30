@@ -3,13 +3,14 @@ import React from 'react';
 import { Text } from 'react-native';
 import { render, screen, act } from '@testing-library/react-native';
 import { ActionTray } from '../ActionTray';
+import type { ActionTrayContentProps, ActionTrayRef } from '../types';
 
 jest.mock('#components/providers/OverlayBackdropProvider', () => ({
   useBackdropClaim: jest.fn(),
 }));
 
 jest.mock('../ActionTrayContent', () => ({
-  ActionTrayContent: ({ children, title }: any) => {
+  ActionTrayContent: ({ children, title }: ActionTrayContentProps) => {
     const RN = require('react-native');
     const R = require('react');
     return R.createElement(
@@ -32,75 +33,75 @@ describe('ActionTray', () => {
   });
 
   it('renders children after open', () => {
-    const ref = React.createRef<any>();
+    const ref = React.createRef<ActionTrayRef>();
     render(
       <ActionTray ref={ref}>
         <Text>Tray content</Text>
       </ActionTray>,
     );
     act(() => {
-      ref.current.open();
+      ref.current!.open();
     });
     expect(screen.getByText('Tray content')).toBeTruthy();
   });
 
   it('renders with title after open', () => {
-    const ref = React.createRef<any>();
+    const ref = React.createRef<ActionTrayRef>();
     render(
       <ActionTray ref={ref} title="Actions">
         <Text>Content</Text>
       </ActionTray>,
     );
     act(() => {
-      ref.current.open();
+      ref.current!.open();
     });
     expect(screen.getByText('Actions')).toBeTruthy();
   });
 
   it('exposes ref methods', () => {
-    const ref = React.createRef<any>();
+    const ref = React.createRef<ActionTrayRef>();
     render(
       <ActionTray ref={ref}>
         <Text>Content</Text>
       </ActionTray>,
     );
     expect(ref.current).toBeTruthy();
-    expect(ref.current.open).toBeDefined();
-    expect(ref.current.close).toBeDefined();
-    expect(ref.current.toggle).toBeDefined();
-    expect(ref.current.isActive).toBeDefined();
+    expect(ref.current!.open).toBeDefined();
+    expect(ref.current!.close).toBeDefined();
+    expect(ref.current!.toggle).toBeDefined();
+    expect(ref.current!.isActive).toBeDefined();
   });
 
   it('isActive returns false initially', () => {
-    const ref = React.createRef<any>();
+    const ref = React.createRef<ActionTrayRef>();
     render(
       <ActionTray ref={ref}>
         <Text>Content</Text>
       </ActionTray>,
     );
-    expect(ref.current.isActive()).toBe(false);
+    expect(ref.current!.isActive()).toBe(false);
   });
 
   it('isActive returns true after open', () => {
-    const ref = React.createRef<any>();
+    const ref = React.createRef<ActionTrayRef>();
     render(
       <ActionTray ref={ref}>
         <Text>Content</Text>
       </ActionTray>,
     );
     act(() => {
-      ref.current.open();
+      ref.current!.open();
     });
-    expect(ref.current.isActive()).toBe(true);
+    expect(ref.current!.isActive()).toBe(true);
   });
 
   it('close() does not throw when called while not open', () => {
-    const ref = React.createRef<any>();
+    const ref = React.createRef<ActionTrayRef>();
     render(
       <ActionTray ref={ref}>
         <Text>Content</Text>
       </ActionTray>,
     );
-    expect(() => ref.current.close()).not.toThrow();
+    expect(() => ref.current!.close()).not.toThrow();
   });
 });

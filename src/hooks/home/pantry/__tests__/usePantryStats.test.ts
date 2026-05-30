@@ -3,9 +3,9 @@
 import { usePantryStats } from '../usePantryStats';
 import { StorageState } from '#/graphql/generated/schemaTypes';
 
-type PantryStatsItem = Parameters<
-  typeof usePantryStats
->[0]['pantryItems'][number];
+type PantryStatsItem = NonNullable<
+  Parameters<typeof usePantryStats>[0]['pantryItems']
+>[number];
 
 function makeStatsItem(overrides?: Partial<PantryStatsItem>): PantryStatsItem {
   return { storageState: StorageState.Ambient, ...overrides };
@@ -24,7 +24,7 @@ describe('usePantryStats', () => {
 
     it('returns zero counts for null input', () => {
       const { locationCounts } = usePantryStats({
-        pantryItems: null as any,
+        pantryItems: null,
       });
 
       expect(locationCounts.all).toBe(0);

@@ -5,6 +5,7 @@ import { screen, userEvent, waitFor } from '@testing-library/react-native';
 import type { MockedResponse } from '#/test-utils/apolloMockProvider';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { CompleteOnboardingDocument } from '#operations/auth/user.generated';
+import { UserRole } from '#/graphql/generated/schemaTypes';
 import { OnboardingCompleteScreen } from '../OnboardingCompleteScreen';
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -13,8 +14,12 @@ jest.mock('#/apollo/links/refreshToken');
 jest.mock('#store/useAppStore', () => {
   const mockUpdateUser = jest.fn();
   const mockUser = { id: 'u1', onBoarded: false };
-  const fn = (selector: any) =>
-    selector({ user: mockUser, updateUser: mockUpdateUser });
+  const fn = (
+    selector: (state: {
+      user: typeof mockUser;
+      updateUser: typeof mockUpdateUser;
+    }) => unknown,
+  ) => selector({ user: mockUser, updateUser: mockUpdateUser });
   fn.getState = () => ({});
   fn.setState = jest.fn();
   fn.subscribe = jest.fn();
@@ -28,7 +33,17 @@ jest.mock('#store/useAppStore', () => {
 jest.mock('#hooks/performance/useScreenTransition');
 
 jest.mock('#components/templates/OnBoardingWrapper', () => ({
-  OnBoardingWrapper: ({ title, subtitle, children, testID }: any) => {
+  OnBoardingWrapper: ({
+    title,
+    subtitle,
+    children,
+    testID,
+  }: {
+    title?: string;
+    subtitle?: string;
+    children?: React.ReactNode;
+    testID?: string;
+  }) => {
     const { View, Text } = require('react-native');
     return (
       <View testID={testID || 'onboarding-wrapper'}>
@@ -40,7 +55,15 @@ jest.mock('#components/templates/OnBoardingWrapper', () => ({
   },
 }));
 jest.mock('#components/base/Button', () => ({
-  Button: ({ title, onPress, disabled }: any) => {
+  Button: ({
+    title,
+    onPress,
+    disabled,
+  }: {
+    title?: string;
+    onPress?: () => void;
+    disabled?: boolean;
+  }) => {
     const { Pressable, Text } = require('react-native');
     return (
       <Pressable onPress={onPress} disabled={disabled} testID="complete-button">
@@ -65,7 +88,7 @@ function buildCompleteOnboardingMock(): MockedResponse {
             id: 'u1',
             email: 'a@b.com',
             emailVerified: true,
-            role: 'USER' as any,
+            role: UserRole.User,
             canAccessDevTools: false,
             onBoarded: true,
             createdAt: '2025-01-01T00:00:00.000Z',

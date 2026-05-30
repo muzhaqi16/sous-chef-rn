@@ -4,6 +4,8 @@ import { Text } from 'react-native';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import { SwipeableItem } from '../SwipeableItem';
 
+type TestInstance = ReturnType<typeof screen.getByTestId>;
+
 jest.mock('../RightActions', () => ({
   RightActions: () => null,
 }));
@@ -13,7 +15,7 @@ jest.mock('../LeftActions', () => ({
 }));
 
 jest.mock('../SwipeableContent', () => ({
-  SwipeableContent: ({ children }: any) => {
+  SwipeableContent: ({ children }: { children: React.ReactNode }) => {
     const { View } = require('react-native');
     return require('react').createElement(
       View,
@@ -41,11 +43,12 @@ jest.mock('../styles', () => ({
 }));
 
 // Walk up from a known descendant to the view that owns onAccessibilityAction.
-const findA11yActionHost = (start: any): any => {
-  let node = start;
+const findA11yActionHost = (start: TestInstance): TestInstance => {
+  let node: TestInstance | null = start;
   while (node && !node.props?.onAccessibilityAction) {
     node = node.parent;
   }
+  if (!node) throw new Error('No accessibility action host found');
   return node;
 };
 

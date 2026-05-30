@@ -71,19 +71,19 @@ function getService(): TelemetryService {
 }
 
 export const Telemetry = {
-  log: (message: string, extra?: Record<string, any>) =>
+  log: (message: string, extra?: Record<string, unknown>) =>
     getService().log('info', message, extra),
 
-  info: (message: string, extra?: Record<string, any>) =>
+  info: (message: string, extra?: Record<string, unknown>) =>
     getService().log('info', message, extra),
 
-  warn: (message: string, extra?: Record<string, any>) =>
+  warn: (message: string, extra?: Record<string, unknown>) =>
     getService().log('warn', message, extra),
 
-  error: (message: string, extra?: Record<string, any>) =>
+  error: (message: string, extra?: Record<string, unknown>) =>
     getService().log('error', message, extra),
 
-  debug: (message: string, extra?: Record<string, any>) =>
+  debug: (message: string, extra?: Record<string, unknown>) =>
     getService().log('debug', message, extra),
 
   increment: (name: string, value = 1, labels: Record<string, string> = {}) =>
@@ -99,13 +99,13 @@ export const Telemetry = {
     bounds?: number[],
   ) => getService().recordHistogram(name, value, labels, bounds),
 
-  trackEvent: (eventName: string, properties: Record<string, any> = {}) =>
+  trackEvent: (eventName: string, properties: Record<string, unknown> = {}) =>
     getService().trackEvent(eventName, properties),
 
-  trackScreen: (screenName: string, properties: Record<string, any> = {}) =>
+  trackScreen: (screenName: string, properties: Record<string, unknown> = {}) =>
     getService().trackScreenView(screenName, properties),
 
-  trackError: (error: Error | string, context?: Record<string, any>) => {
+  trackError: (error: Error | string, context?: Record<string, unknown>) => {
     const { component, operation, isFatal, ...rest } = context || {};
     const details = {
       message: typeof error === 'string' ? error : error.message,

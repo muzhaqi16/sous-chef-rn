@@ -5,7 +5,7 @@ import { render, screen } from '@testing-library/react-native';
 import { CardLeftSlot } from '../CardLeftSlot';
 
 jest.mock('#utils/iconUtils', () => ({
-  Icon: ({ name }: any) => {
+  Icon: ({ name }: { name: string }) => {
     const { Text: RNText } = require('react-native');
     return require('react').createElement(RNText, null, `icon-${name}`);
   },
@@ -19,7 +19,7 @@ jest.mock('#/styles/commonStyles', () => ({
 }));
 
 jest.mock('#components/atoms/CachedImage', () => ({
-  CachedImage: ({ uri }: any) => {
+  CachedImage: ({ uri }: { uri: string }) => {
     const { Text: RNText } = require('react-native');
     return require('react').createElement(RNText, null, `image-${uri}`);
   },

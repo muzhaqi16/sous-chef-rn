@@ -1,5 +1,6 @@
 'use no memo';
 import { renderHook } from '@testing-library/react-native';
+import type { ShoppingListItemNode } from '../usePaginatedShoppingItems';
 import { useShoppingListTransformMulti } from '../useShoppingListTransform';
 
 /**
@@ -12,7 +13,12 @@ import { useShoppingListTransformMulti } from '../useShoppingListTransform';
 
 // Build a minimal ShoppingListItemNode-shaped stub that satisfies the wrap
 // helper (it only reads `id`, `itemName`, `sortOrder`).
-function node(overrides: Record<string, unknown> = {}) {
+// Allow `null` overrides so tests can exercise the "skip invalid item" path
+// (e.g. a missing `id` / `itemName`).
+type NodeOverrides = Partial<{
+  [K in keyof ShoppingListItemNode]: ShoppingListItemNode[K] | null;
+}>;
+function node(overrides: NodeOverrides = {}): ShoppingListItemNode {
   return {
     __typename: 'ShoppingListItem',
     id: 'item-1',
@@ -23,7 +29,7 @@ function node(overrides: Record<string, unknown> = {}) {
       isPurchased: false,
     },
     ...overrides,
-  } as any;
+  } as Partial<ShoppingListItemNode> as ShoppingListItemNode;
 }
 
 describe('useShoppingListTransformMulti', () => {
@@ -123,7 +129,7 @@ describe('useShoppingListTransformMulti', () => {
     const purchased = [node({ id: '2' })];
 
     const { result, rerender } = renderHook(
-      (props: { u: any[]; p: any[] }) =>
+      (props: { u: ShoppingListItemNode[]; p: ShoppingListItemNode[] }) =>
         useShoppingListTransformMulti({
           rawUnpurchasedItems: props.u,
           rawPurchasedItems: props.p,

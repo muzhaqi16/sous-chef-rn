@@ -25,8 +25,18 @@ const mockRemoveNotification = jest.fn();
 const mockClearAll = jest.fn();
 const mockGetNotificationsByCategory = jest.fn().mockReturnValue([]);
 
+type MockNotificationsState = {
+  notifications: unknown[];
+  user: { id: string };
+  addNotification: jest.Mock;
+  markAsRead: jest.Mock;
+  removeNotification: jest.Mock;
+  clearAll: jest.Mock;
+  getNotificationsByCategory: jest.Mock;
+};
+
 jest.mock('#store/useAppStore', () => ({
-  useAppStore: jest.fn((selector: any) =>
+  useAppStore: jest.fn((selector: (s: MockNotificationsState) => unknown) =>
     selector({
       notifications: [],
       user: { id: 'user-1' },
@@ -40,7 +50,7 @@ jest.mock('#store/useAppStore', () => ({
 }));
 
 jest.mock('zustand/react/shallow', () => ({
-  useShallow: (fn: any) => fn,
+  useShallow: <S, U>(fn: (state: S) => U) => fn,
 }));
 
 jest.mock('#store', () => ({

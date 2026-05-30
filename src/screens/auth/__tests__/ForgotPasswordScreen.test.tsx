@@ -26,9 +26,13 @@ jest.mock('#utils/validation/auth', () => ({
 jest.mock('#components/templates/AuthWrapper', () => {
   const { View } = require('react-native');
   return {
-    AuthWrapper: ({ children, testID }: any) => (
-      <View testID={testID}>{children}</View>
-    ),
+    AuthWrapper: ({
+      children,
+      testID,
+    }: {
+      children?: React.ReactNode;
+      testID?: string;
+    }) => <View testID={testID}>{children}</View>,
   };
 });
 
@@ -45,7 +49,17 @@ jest.mock('#components/templates/AuthFormTemplate', () => {
       footerLinkText,
       footerLinkTestID,
       onFooterLinkPress,
-    }: any) => (
+    }: {
+      title?: string;
+      subtitle?: string | React.ReactNode;
+      submitText?: string;
+      submitButtonTestID?: string;
+      onSubmit?: () => void;
+      footerText?: string;
+      footerLinkText?: string;
+      footerLinkTestID?: string;
+      onFooterLinkPress?: () => void;
+    }) => (
       <View testID="auth-form-template">
         <Text>{title}</Text>
         {subtitle ? <Text>{subtitle}</Text> : null}

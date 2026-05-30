@@ -1,4 +1,5 @@
 import { Observable, type ApolloClient } from '@apollo/client';
+import type { ApolloLink } from '@apollo/client/link';
 import { jwtDecode } from 'jwt-decode';
 import { logger } from '#/utils/environment';
 import { isNetworkError } from '#/utils/isNetworkError';
@@ -16,6 +17,17 @@ let apolloClient: ApolloClient | null = null;
 export const registerApolloClient = (clientInstance: ApolloClient): void => {
   apolloClient = clientInstance;
 };
+
+// Shape of the error thrown by the refresh mutation that the reactive logic
+// inspects. All fields are optional — reads are individually guarded.
+interface RefreshErrorLike {
+  message?: string;
+  networkError?: { statusCode?: number } | null;
+  graphQLErrors?: ReadonlyArray<{
+    extensions?: { code?: string };
+    message?: string;
+  }>;
+}
 
 // Enhanced token refresh with mutex pattern and retry logic
 interface RefreshState {
@@ -145,11 +157,14 @@ const performTokenRefresh = async (): Promise<string | null> => {
     logger.info('Token refresh successful');
 
     return newToken;
-  } catch (error: any) {
+  } catch (error) {
     logger.error(
       `Token refresh failed (attempt ${refreshState.retryCount}):`,
       error,
     );
+
+    // Legacy AC3-style error shape the reactive refresh logic inspects.
+    const refreshError = error as RefreshErrorLike;
 
     // IMPORTANT: Check network errors FIRST before auth errors
     // This prevents offline scenarios from incorrectly clearing the cache
@@ -158,7 +173,7 @@ const performTokenRefresh = async (): Promise<string | null> => {
     if (isNetworkFailure) {
       logger.warn(
         `Token refresh failed due to network error (attempt ${refreshState.retryCount}/${REFRESH_CONFIG.MAX_RETRIES}), cache will be preserved:`,
-        error.message,
+        refreshError.message,
       );
 
       // For network errors, we retry but DON'T trigger logout after max retries
@@ -179,9 +194,9 @@ const performTokenRefresh = async (): Promise<string | null> => {
 
     // ONLY check for auth errors if NOT a network error
     const isTokenExpiredError =
-      error?.networkError?.statusCode === 401 ||
-      error?.graphQLErrors?.some(
-        (e: any) =>
+      refreshError.networkError?.statusCode === 401 ||
+      refreshError.graphQLErrors?.some(
+        e =>
           e.extensions?.code === 'UNAUTHENTICATED' ||
           e.message?.toLowerCase().includes('expired'),
       );
@@ -204,10 +219,10 @@ const performTokenRefresh = async (): Promise<string | null> => {
 };
 
 export const attemptTokenRefresh = (
-  operation: any,
-  forward: any,
-): Observable<any> => {
-  return new Observable(observer => {
+  operation: ApolloLink.Operation,
+  forward: ApolloLink.ForwardFunction,
+): Observable<ApolloLink.Result> => {
+  return new Observable<ApolloLink.Result>(observer => {
     // If already refreshing, join the existing promise (don't throttle these)
     if (refreshState.isRefreshing && refreshState.refreshPromise) {
       refreshQueue.push((token: string | null) => {

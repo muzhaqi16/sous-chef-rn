@@ -13,6 +13,8 @@ import {
 } from '#operations/home/home.generated';
 import { CreatePantryDocument } from '#features/pantry/graphql/pantry.generated';
 import { alertService } from '#/services/alertService';
+import type { AlertButton } from '#/services/alertService';
+import type { RootState } from '#store/index';
 import { CreateHomeScreen } from '../CreateHomeScreen';
 
 jest.mock('../../../../apollo/links/tokenScheduler');
@@ -33,16 +35,27 @@ jest.mock('#hooks/navigation/useOnboardingNavigation', () => ({
 const mockSetSelectedHomeId = jest.fn();
 const mockSetSelectedPantryId = jest.fn();
 
+const mockUser = {
+  id: 'user-1',
+  email: 'user-1@test.com',
+  emailVerified: true,
+  onBoarded: true,
+};
+
+const mockBuildState = (overrides: Partial<RootState>): RootState =>
+  ({
+    user: mockUser,
+    setSelectedHomeId: mockSetSelectedHomeId,
+    setSelectedPantryId: mockSetSelectedPantryId,
+    ...overrides,
+  } as Partial<RootState> as RootState);
+
 jest.mock('#store/useAppStore', () => ({
-  useAppStore: jest.fn((selector: any) =>
-    selector({
-      user: { id: 'user-1' },
-      selectedHomeId: null,
-      setSelectedHomeId: mockSetSelectedHomeId,
-      setSelectedPantryId: mockSetSelectedPantryId,
-    }),
+  useAppStore: jest.fn(
+    <T,>(selector: (state: RootState) => T): T =>
+      selector(mockBuildState({ selectedHomeId: null })),
   ),
-  useUser: jest.fn(() => ({ id: 'user-1' })),
+  useUser: jest.fn(() => mockUser),
   useSelectedHomeId: jest.fn(() => null),
   useSetSelectedPantryId: jest.fn(() => mockSetSelectedPantryId),
 }));
@@ -65,7 +78,22 @@ jest.mock('../helpers', () => ({
 // `toHomeViewModels.mockReturnValue(…)` from before the view-model module
 // was removed.
 // Prefixed `mock*` so the jest.mock factory below is allowed to reference it.
-let mockStagedHomes: any[] | null = null;
+type StagedPantryNode = {
+  __typename?: string;
+  id: string;
+  name?: string;
+  isDefault?: boolean;
+};
+type StagedHome = {
+  id: string;
+  name: string;
+  pantriesConnection?: {
+    __typename?: string;
+    edges?: Array<{ __typename?: string; node?: StagedPantryNode } | null>;
+    totalCount?: number;
+  };
+};
+let mockStagedHomes: StagedHome[] | null = null;
 
 /**
  * `extractNodes` flattens Relay-style connections in production. The mock
@@ -81,35 +109,40 @@ let mockStagedHomes: any[] | null = null;
  * so the mock surfaces `home.pantries` when `pantriesConnection` is absent.
  */
 jest.mock('#/utils/connectionUtils', () => ({
-  extractNodes: jest.fn((data: any) => {
+  extractNodes: jest.fn((data: unknown) => {
     // When the input is a Connection-shape (has `edges`/`__typename`) and the
     // test staged homes, treat that input as the GetHomes connection and
     // return the staged data. Empty fixtures from `defaultOperationMocks`
     // would otherwise overwrite the staged value on a re-render.
+    const asConnection = data as {
+      __typename?: string;
+      edges?: Array<{ node?: unknown } | null>;
+    } | null;
     if (
       mockStagedHomes &&
-      data &&
-      typeof data === 'object' &&
-      'edges' in data &&
-      (data.__typename === 'HomeConnection' || !data.__typename)
+      asConnection &&
+      typeof asConnection === 'object' &&
+      'edges' in asConnection &&
+      (asConnection.__typename === 'HomeConnection' || !asConnection.__typename)
     ) {
       return mockStagedHomes;
     }
     if (!data) return mockStagedHomes ?? [];
-    if (Array.isArray(data.edges)) {
-      return data.edges.map((e: any) => e?.node).filter(Boolean);
+    if (Array.isArray(asConnection?.edges)) {
+      return asConnection.edges.map(e => e?.node).filter(Boolean);
     }
     if (Array.isArray(data)) return data;
     return [];
   }),
 }));
 
-function stageHomes(homes: any[]) {
+function stageHomes(homes: StagedHome[]) {
   mockStagedHomes = homes;
 }
 
 jest.mock('#/components/providers/ScreenErrorBoundary', () => ({
-  OnboardingErrorBoundary: ({ children }: any) => children,
+  OnboardingErrorBoundary: ({ children }: { children: React.ReactNode }) =>
+    children,
 }));
 
 jest.mock('#hooks/performance/useScreenTransition');
@@ -129,7 +162,7 @@ jest.mock('../FormContent', () => ({
 }));
 
 jest.mock('../LoadingView', () => ({
-  LoadingView: ({ onSkip }: any) => {
+  LoadingView: ({ onSkip }: { onSkip: () => void }) => {
     const { View, Text, Pressable } = require('react-native');
     return (
       <View testID="loading-view">
@@ -143,7 +176,17 @@ jest.mock('../LoadingView', () => ({
 }));
 
 jest.mock('#components/templates/OnBoardingWrapper', () => ({
-  OnBoardingWrapper: ({ title, subtitle, children, testID }: any) => {
+  OnBoardingWrapper: ({
+    title,
+    subtitle,
+    children,
+    testID,
+  }: {
+    title?: string;
+    subtitle?: string;
+    children?: React.ReactNode;
+    testID?: string;
+  }) => {
     const { View, Text } = require('react-native');
     return (
       <View testID={testID || 'onboarding-wrapper'}>
@@ -156,7 +199,13 @@ jest.mock('#components/templates/OnBoardingWrapper', () => ({
 }));
 
 jest.mock('../SubmitButton', () => ({
-  SubmitButton: ({ onPress, isCreating }: any) => {
+  SubmitButton: ({
+    onPress,
+    isCreating,
+  }: {
+    onPress: () => void;
+    isCreating: boolean;
+  }) => {
     const { Pressable, Text } = require('react-native');
     return (
       <Pressable testID="submit-button" onPress={onPress}>
@@ -167,14 +216,14 @@ jest.mock('../SubmitButton', () => ({
 }));
 
 jest.mock('../ErrorMessage', () => ({
-  ErrorMessage: ({ message }: any) => {
+  ErrorMessage: ({ message }: { message: string }) => {
     const { Text } = require('react-native');
     return <Text testID="error-message">{message}</Text>;
   },
 }));
 
 jest.mock('#components/base/Button', () => ({
-  Button: ({ title, onPress }: any) => {
+  Button: ({ title, onPress }: { title: string; onPress: () => void }) => {
     const { Pressable, Text } = require('react-native');
     return (
       <Pressable testID={`button-${title}`} onPress={onPress}>
@@ -191,8 +240,9 @@ jest.mock('#utils/formatters/roleFormatters', () => ({
 // Mock react-hook-form
 jest.mock('react-hook-form', () => ({
   useForm: () => ({
-    handleSubmit: (fn: any) => () =>
-      fn({ homeName: 'My Home', pantryName: 'Kitchen' }),
+    handleSubmit:
+      (fn: (values: { homeName: string; pantryName: string }) => void) => () =>
+        fn({ homeName: 'My Home', pantryName: 'Kitchen' }),
     control: {},
     formState: { errors: {} },
     register: jest.fn(),
@@ -219,16 +269,16 @@ type PendingInviteShape = {
   inviter: { email?: string; profile?: { displayName?: string } | null } | null;
 };
 
-let mockHomesData: any = { edges: [] };
+let mockHomesData: { edges: unknown[] } = { edges: [] };
 let mockHomesLoading = false;
 let mockPendingInvites: PendingInviteShape[] = [];
 
 // Records of mutation calls keyed by mutation name. Tests assert on these.
-type RecordedMutation = { name: string; variables: any };
+type RecordedMutation = { name: string; variables: Record<string, unknown> };
 let recordedMutations: RecordedMutation[] = [];
 
 // Per-mutation response control
-let mockCreateHomeResponse: any = {
+let mockCreateHomeResponse: Record<string, unknown> = {
   createHome: {
     __typename: 'CreateHomePayload',
     home: {
@@ -248,14 +298,14 @@ let mockCreateHomeResponse: any = {
 };
 let mockCreateHomeError: Error | null = null;
 
-let mockAcceptHomeInviteResponse: any = {
+let mockAcceptHomeInviteResponse: Record<string, unknown> = {
   acceptHomeInvite: {
     __typename: 'AcceptHomeInvitePayload',
     membership: { __typename: 'Membership', id: 'm1', homeId: 'home-1' },
   },
 };
 
-let mockDeclineHomeInviteResponse: any = {
+let mockDeclineHomeInviteResponse: Record<string, unknown> = {
   declineHomeInvite: {
     __typename: 'DeclineHomeInvitePayload',
     homeInvite: { __typename: 'HomeInvite', id: 'invite-1' },
@@ -377,9 +427,9 @@ function buildCreatePantryMock(): MockedResponse {
             name: 'Kitchen',
             isDefault: true,
             homeId: 'home-1',
-          } as any,
+          },
         },
-      } as any,
+      },
     },
   };
 }
@@ -992,9 +1042,9 @@ describe('CreateHomeScreen', () => {
 
     // Get the alertService.alert call and execute the "Decline" button's onPress
     const alertCall = (alertService.alert as jest.Mock).mock.calls[0];
-    const buttons = alertCall[2];
-    const declineButton = buttons.find((b: any) => b.text === 'Decline');
-    declineButton.onPress();
+    const buttons = alertCall[2] as AlertButton[];
+    const declineButton = buttons.find(b => b.text === 'Decline');
+    declineButton?.onPress?.();
 
     await waitFor(() => {
       expect(recordedMutations).toContainEqual({
@@ -1125,15 +1175,11 @@ describe('CreateHomeScreen', () => {
     ]);
 
     const storeModule = require('#store/useAppStore');
-    storeModule.useAppStore.mockImplementation((selector: any) =>
-      selector({
-        user: { id: 'user-1' },
-        selectedHomeId: 'home-1',
-        setSelectedHomeId: mockSetSelectedHomeId,
-        setSelectedPantryId: mockSetSelectedPantryId,
-      }),
+    storeModule.useAppStore.mockImplementation(
+      <T,>(selector: (state: RootState) => T): T =>
+        selector(mockBuildState({ selectedHomeId: 'home-1' })),
     );
-    storeModule.useUser.mockReturnValue({ id: 'user-1' });
+    storeModule.useUser.mockReturnValue(mockUser);
     storeModule.useSelectedHomeId.mockReturnValue('home-1');
 
     const { createPantryForHome } = require('../helpers');
@@ -1162,15 +1208,11 @@ describe('CreateHomeScreen', () => {
     ]);
 
     const storeModule = require('#store/useAppStore');
-    storeModule.useAppStore.mockImplementation((selector: any) =>
-      selector({
-        user: { id: 'user-1' },
-        selectedHomeId: 'home-1',
-        setSelectedHomeId: mockSetSelectedHomeId,
-        setSelectedPantryId: mockSetSelectedPantryId,
-      }),
+    storeModule.useAppStore.mockImplementation(
+      <T,>(selector: (state: RootState) => T): T =>
+        selector(mockBuildState({ selectedHomeId: 'home-1' })),
     );
-    storeModule.useUser.mockReturnValue({ id: 'user-1' });
+    storeModule.useUser.mockReturnValue(mockUser);
     storeModule.useSelectedHomeId.mockReturnValue('home-1');
 
     const {

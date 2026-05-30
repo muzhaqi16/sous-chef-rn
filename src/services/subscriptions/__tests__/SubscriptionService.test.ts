@@ -4,6 +4,7 @@ jest.mock('#/utils/errorSerialization', () => ({
   isTimerCircularStructureError: jest.fn(() => false),
 }));
 
+import type { StoreObject } from '@apollo/client';
 import { SubscriptionService } from '../SubscriptionService';
 import { CacheStrategy, LogLevel } from '../types';
 
@@ -478,6 +479,7 @@ describe('SubscriptionService', () => {
         evict: jest.fn(),
         gc: jest.fn(),
         data: { data: { 'TestEntity:del-item': { id: 'del-item' } } },
+        extract: jest.fn(() => ({ 'TestEntity:del-item': { id: 'del-item' } })),
       };
       handlers.onData({
         data: {
@@ -557,6 +559,9 @@ describe('SubscriptionService', () => {
         evict: jest.fn(),
         gc: jest.fn(),
         data: { data: { 'TestEntity:removed-item': { id: 'removed-item' } } },
+        extract: jest.fn(() => ({
+          'TestEntity:removed-item': { id: 'removed-item' },
+        })),
       };
       handlers.onData({
         data: {
@@ -655,7 +660,7 @@ describe('SubscriptionService', () => {
 
       const mockCache = {
         modify: jest.fn(),
-        identify: jest.fn((obj: any) => `${obj.__typename}:${obj.id}`),
+        identify: jest.fn((obj: StoreObject) => `${obj.__typename}:${obj.id}`),
         evict: jest.fn(),
         gc: jest.fn(),
         data: { data: {} },
@@ -1021,6 +1026,9 @@ describe('SubscriptionService', () => {
         evict: jest.fn(),
         gc: jest.fn(),
         data: { data: { 'Collaborator:collab-2': { id: 'collab-2' } } },
+        extract: jest.fn(() => ({
+          'Collaborator:collab-2': { id: 'collab-2' },
+        })),
       };
       handlers.onData({
         data: {

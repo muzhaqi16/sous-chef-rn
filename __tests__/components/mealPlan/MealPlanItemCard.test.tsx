@@ -3,6 +3,7 @@
 import React from 'react';
 import { userEvent } from '@testing-library/react-native';
 import { MealPlanItemCard } from '#features/mealPlan/components/MealPlanItemCard';
+import type { MealPlanItemCard_ItemFragment } from '#features/mealPlan/components/MealPlanItemCard.generated';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -12,7 +13,9 @@ jest.mock('#components/atoms/CachedImage', () => ({
   CachedImage: () => null,
 }));
 
-const makeItem = (overrides = {}) => ({
+const makeItem = (
+  overrides: Partial<MealPlanItemCard_ItemFragment> = {},
+): MealPlanItemCard_ItemFragment => ({
   __typename: 'MealPlanItem',
   id: 'mp1',
   isCompleted: false,
@@ -30,7 +33,7 @@ describe('MealPlanItemCard', () => {
   it('renders meal name', () => {
     const { getByText } = renderWithApollo(
       <MealPlanItemCard
-        item={makeItem() as any}
+        item={makeItem()}
         onToggleCompleted={onToggleCompleted}
       />,
     );
@@ -42,7 +45,7 @@ describe('MealPlanItemCard', () => {
       recipe: { __typename: 'Recipe', id: 'r1', name: 'Spaghetti Bolognese', imageUrl: null, totalTimeMinutes: 30 },
     });
     const { getByText } = renderWithApollo(
-      <MealPlanItemCard item={item as any} onToggleCompleted={onToggleCompleted} />,
+      <MealPlanItemCard item={item} onToggleCompleted={onToggleCompleted} />,
     );
     expect(getByText('Spaghetti Bolognese')).toBeTruthy();
   });
@@ -50,7 +53,7 @@ describe('MealPlanItemCard', () => {
   it('shows meta info with servings and calories', () => {
     const { getByText } = renderWithApollo(
       <MealPlanItemCard
-        item={makeItem() as any}
+        item={makeItem()}
         onToggleCompleted={onToggleCompleted}
       />,
     );
@@ -61,7 +64,7 @@ describe('MealPlanItemCard', () => {
     const onDelete = jest.fn();
     const { toJSON } = renderWithApollo(
       <MealPlanItemCard
-        item={makeItem() as any}
+        item={makeItem()}
         onToggleCompleted={onToggleCompleted}
         onDelete={onDelete}
       />,
@@ -75,7 +78,7 @@ describe('MealPlanItemCard', () => {
     const item = makeItem();
     const { getByText } = renderWithApollo(
       <MealPlanItemCard
-        item={item as any}
+        item={item}
         onToggleCompleted={onToggleCompleted}
         onPress={onPress}
       />,

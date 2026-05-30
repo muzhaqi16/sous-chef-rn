@@ -8,7 +8,17 @@ jest.mock('#utils/iconUtils', () => ({
 }));
 
 jest.mock('#/components/molecules/FormInput', () => ({
-  FormInput: ({ label, value, onChangeText, placeholder }: any) => {
+  FormInput: ({
+    label,
+    value,
+    onChangeText,
+    placeholder,
+  }: {
+    label: string;
+    value?: string;
+    onChangeText?: (text: string) => void;
+    placeholder?: string;
+  }) => {
     const RN = require('react-native');
     const R = require('react');
     return R.createElement(
@@ -33,7 +43,12 @@ jest.mock(
       value,
       onChangeText,
       placeholder,
-    }: any) => {
+    }: {
+      label?: string;
+      value: string;
+      onChangeText: (text: string) => void;
+      placeholder?: string;
+    }) => {
       const RN = require('react-native');
       const R = require('react');
       return R.createElement(
@@ -52,7 +67,15 @@ jest.mock(
 );
 
 jest.mock('#/components/base/Button', () => ({
-  Button: ({ children, onPress, disabled }: any) => {
+  Button: ({
+    children,
+    onPress,
+    disabled,
+  }: {
+    children?: React.ReactNode;
+    onPress: () => void;
+    disabled?: boolean;
+  }) => {
     const RN = require('react-native');
     const R = require('react');
     return R.createElement(

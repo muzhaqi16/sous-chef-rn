@@ -11,6 +11,8 @@ import {
   StorageLocationSheet,
   type StorageLocationInitialData,
 } from '#components/modals/StorageLocationSheet/StorageLocationSheet';
+import type { StorageLocationFormValues } from '#components/organisms/storageLocation/StorageLocationForm';
+import { StorageType } from '#/graphql/generated/schemaTypes';
 import { useSelectedPantryId } from '#store/useAppStore';
 import { commonStyles } from '#/styles/commonStyles';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
@@ -99,23 +101,29 @@ export const StorageLocationsScreen: React.FC<
     );
   };
 
-  // formData flows from StorageLocationSheet's submit type (which has
-  // `type: string`) into the mutation inputs (which require `type: StorageType`
-  // enum). Reconciling the two contracts requires changing the sheet's exported
-  // data type — a cross-module refactor — so this stays `any`.
-  const handleCreate = async (formData: any) => {
-    const result = await createLocation(formData);
+  // The sheet's form values carry `type` as a plain string; the mutation
+  // inputs expect the `StorageType` enum. The sheet only ever emits valid
+  // StorageType values, so narrow it as we hand off to the mutations.
+  const handleCreate = async (formData: StorageLocationFormValues) => {
+    const result = await createLocation({
+      ...formData,
+      type: formData.type as StorageType,
+    });
     return !!result;
   };
 
-  // See handleCreate: sheet submit type vs. mutation input type mismatch.
-  const handleUpdate = async (id: string, formData: any) => {
-    const result = await updateLocation(id, formData);
+  const handleUpdate = async (
+    id: string,
+    formData: StorageLocationFormValues,
+  ) => {
+    const result = await updateLocation(id, {
+      ...formData,
+      type: formData.type as StorageType,
+    });
     return !!result;
   };
 
-  // See handleCreate: sheet submit type vs. mutation input type mismatch.
-  const handleSubmit = async (formData: any) => {
+  const handleSubmit = async (formData: StorageLocationFormValues) => {
     if (editingLocation) {
       return handleUpdate(editingLocation.id, formData);
     }

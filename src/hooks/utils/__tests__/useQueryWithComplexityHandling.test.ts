@@ -1,11 +1,13 @@
 'use no memo';
 
 import { renderHook } from '@testing-library/react-native';
-import { alertService } from '#/services/alertService';
+import { alertService, type AlertButton } from '#/services/alertService';
 import {
   useQueryWithComplexityHandling,
   useValidatedPagination,
 } from '../useQueryWithComplexityHandling';
+
+type AlertArgs = Parameters<typeof alertService.alert>;
 
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
@@ -160,12 +162,13 @@ describe('useQueryWithComplexityHandling', () => {
 
     renderHook(() => useQueryWithComplexityHandling(queryResult, onRetry));
 
-    const alertCalls = (alertService.alert as jest.Mock).mock.calls;
-    const buttons = alertCalls[alertCalls.length - 1][2];
-    const retryButton = buttons.find((b: any) => b.text === 'Retry');
+    const alertCalls = (alertService.alert as jest.Mock).mock
+      .calls as AlertArgs[];
+    const buttons = alertCalls[alertCalls.length - 1][2] ?? [];
+    const retryButton = buttons.find((b: AlertButton) => b.text === 'Retry');
 
     expect(retryButton).toBeDefined();
-    retryButton.onPress();
+    retryButton?.onPress?.();
     expect(onRetry).toHaveBeenCalled();
   });
 
@@ -194,9 +197,9 @@ describe('useQueryWithComplexityHandling', () => {
     rerender({});
 
     // Count calls that match the complexity alert
-    const complexityCalls = (alertService.alert as jest.Mock).mock.calls.filter(
-      (call: any[]) => call[0] === 'Request Too Large',
-    );
+    const complexityCalls = (
+      (alertService.alert as jest.Mock).mock.calls as AlertArgs[]
+    ).filter((call: AlertArgs) => call[0] === 'Request Too Large');
     // Should be exactly 1 (deduped by same error reference)
     expect(complexityCalls.length).toBe(1);
   });
@@ -211,7 +214,12 @@ describe('useQueryWithComplexityHandling', () => {
       },
     ]);
 
-    let queryResult: any = {
+    let queryResult: {
+      data: undefined;
+      loading: boolean;
+      error?: ReturnType<typeof createError>;
+      refetch: jest.Mock;
+    } = {
       data: undefined,
       loading: false,
       error: complexityError,
@@ -238,9 +246,9 @@ describe('useQueryWithComplexityHandling', () => {
     queryResult = { ...queryResult, error: newError };
     rerender({});
 
-    const complexityCalls = (alertService.alert as jest.Mock).mock.calls.filter(
-      (call: any[]) => call[0] === 'Request Too Large',
-    );
+    const complexityCalls = (
+      (alertService.alert as jest.Mock).mock.calls as AlertArgs[]
+    ).filter((call: AlertArgs) => call[0] === 'Request Too Large');
     expect(complexityCalls.length).toBe(2);
   });
 

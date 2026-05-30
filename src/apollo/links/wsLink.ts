@@ -168,10 +168,15 @@ const createWsClient = () => {
           });
         }
       },
-      closed: (event: any) => {
+      closed: (event: unknown) => {
         isReconnecting = false;
-        const code = event?.code;
-        const reason = typeof event?.reason === 'string' ? event.reason : '';
+        const closeEvent =
+          event && typeof event === 'object'
+            ? (event as { code?: number; reason?: string; wasClean?: boolean })
+            : undefined;
+        const code = closeEvent?.code;
+        const reason =
+          typeof closeEvent?.reason === 'string' ? closeEvent.reason : '';
 
         // Auth error detection: 4500 (legacy), 4401 (new), or 1006+401
         const isAuthCode = code === 4500 || code === 4401;
@@ -187,8 +192,8 @@ const createWsClient = () => {
         if (__DEV__ && !isAuthCode) {
           logger.info('🔌 WebSocket closed:', {
             code,
-            reason: event?.reason,
-            wasClean: event?.wasClean,
+            reason: closeEvent?.reason,
+            wasClean: closeEvent?.wasClean,
             timestamp: new Date().toISOString(),
           });
         }
@@ -212,10 +217,17 @@ const createWsClient = () => {
         // Schedule automatic reconnection with backoff
         scheduleReconnect();
       },
-      error: (error: any) => {
+      error: (error: unknown) => {
         isReconnecting = false;
+        const message =
+          error &&
+          typeof error === 'object' &&
+          'message' in error &&
+          typeof error.message === 'string'
+            ? error.message
+            : 'Unknown error';
         logger.warn('❌ WebSocket error:', {
-          error: error?.message || 'Unknown error',
+          error: message,
           timestamp: new Date().toISOString(),
         });
       },

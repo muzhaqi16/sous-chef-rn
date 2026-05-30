@@ -95,7 +95,7 @@ describe('useTabBarAddButton', () => {
 
     // Get the stable handler that was passed to setAddProps
     const stableHandler = mockSetAddProps.mock.calls.find(
-      (call: any[]) => call[0] !== undefined && typeof call[0] === 'function',
+      call => call[0] !== undefined && typeof call[0] === 'function',
     )?.[0];
 
     expect(stableHandler).toBeDefined();

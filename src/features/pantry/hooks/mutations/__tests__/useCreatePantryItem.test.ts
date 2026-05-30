@@ -5,6 +5,7 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { alertService } from '#/services/alertService';
+import type { FormDataInput } from '../types';
 import { useCreatePantryItem } from '../useCreatePantryItem';
 
 jest.mock('#/utils/errorHandlers', () => ({
@@ -46,7 +47,37 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
-const createFormInput = (overrides: Record<string, any> = {}) =>
+// Shape of the mutation variables the tests assert on. The recorded `fired`
+// payload is `Record<string, unknown>`; this models the fields the assertions
+// read off `input` so they can be accessed without `any`.
+type FiredCreateVars = {
+  input: {
+    pantryId?: string;
+    quantity?: number;
+    itemId?: string;
+    unit?: { unitId?: string; unitSymbol?: string };
+    item?: { name?: string; brand?: string; category?: string };
+    storage?: {
+      storageState?: string;
+      storageLocationId?: string;
+      storageLocationName?: string;
+    };
+    thresholds?: { minQuantity?: number; restockQuantity?: number };
+    netWeight?: { netWeight?: number; netWeightUnitId?: string };
+  };
+};
+
+// The tests pass opaque `storageState` strings (e.g. 'PANTRY', 'REFRIGERATOR')
+// to assert they round-trip through the mutation input untouched, so the
+// fixture's `storageState` is widened to `string` and the assembled value is
+// cast to the real `FormDataInput` at the call boundary.
+type FormInputFixture = Omit<FormDataInput, 'storageState'> & {
+  storageState: string;
+};
+
+const createFormInput = (
+  overrides: Partial<FormInputFixture> = {},
+): FormDataInput =>
   ({
     itemName: 'Milk',
     selectedItemId: null,
@@ -63,7 +94,7 @@ const createFormInput = (overrides: Record<string, any> = {}) =>
     netWeight: '',
     netWeightUnitId: '',
     ...overrides,
-  } as any);
+  } as FormInputFixture as FormDataInput);
 
 function createMock(success = true) {
   if (success) {
@@ -206,14 +237,14 @@ describe('useCreatePantryItem', () => {
       });
     });
 
-    const input = (m.fired[0] as any).input;
+    const input = (m.fired[0] as FiredCreateVars).input;
     expect(input.pantryId).toBe('pantry-1');
     expect(input.quantity).toBe(12);
     expect(input.unit).toEqual({ unitId: 'unit-ea' });
-    expect(input.item.name).toBe('Eggs');
-    expect(input.item.brand).toBe('Free Range');
-    expect(input.item.category).toBe('Dairy');
-    expect(input.storage.storageState).toBe('REFRIGERATOR');
+    expect(input.item?.name).toBe('Eggs');
+    expect(input.item?.brand).toBe('Free Range');
+    expect(input.item?.category).toBe('Dairy');
+    expect(input.storage?.storageState).toBe('REFRIGERATOR');
   });
 
   it('sends itemId for existing catalog item', async () => {
@@ -234,7 +265,7 @@ describe('useCreatePantryItem', () => {
       });
     });
 
-    const input = (m.fired[0] as any).input;
+    const input = (m.fired[0] as FiredCreateVars).input;
     expect(input.itemId).toBe('catalog-item-1');
     expect(input.item).toBeUndefined();
   });
@@ -257,9 +288,9 @@ describe('useCreatePantryItem', () => {
       });
     });
 
-    const storage = (m.fired[0] as any).input.storage;
-    expect(storage.storageLocationId).toBe('loc-1');
-    expect(storage.storageLocationName).toBeUndefined();
+    const storage = (m.fired[0] as FiredCreateVars).input.storage;
+    expect(storage?.storageLocationId).toBe('loc-1');
+    expect(storage?.storageLocationName).toBeUndefined();
   });
 
   it('uses storageLocationName when no selectedLocationId', async () => {
@@ -280,8 +311,8 @@ describe('useCreatePantryItem', () => {
       });
     });
 
-    const storage = (m.fired[0] as any).input.storage;
-    expect(storage.storageLocationName).toBe('Top Shelf');
+    const storage = (m.fired[0] as FiredCreateVars).input.storage;
+    expect(storage?.storageLocationName).toBe('Top Shelf');
   });
 
   it('uses selectedCategoryId over inline category text', async () => {
@@ -302,8 +333,8 @@ describe('useCreatePantryItem', () => {
       });
     });
 
-    const item = (m.fired[0] as any).input.item;
-    expect(item.category).toBe('cat-1');
+    const item = (m.fired[0] as FiredCreateVars).input.item;
+    expect(item?.category).toBe('cat-1');
   });
 
   it('includes thresholds when minQuantity or restockQuantity provided', async () => {
@@ -324,7 +355,7 @@ describe('useCreatePantryItem', () => {
       });
     });
 
-    const input = (m.fired[0] as any).input;
+    const input = (m.fired[0] as FiredCreateVars).input;
     expect(input.thresholds).toEqual({ minQuantity: 2, restockQuantity: 5 });
   });
 
@@ -349,7 +380,7 @@ describe('useCreatePantryItem', () => {
       });
     });
 
-    const input = (m.fired[0] as any).input;
+    const input = (m.fired[0] as FiredCreateVars).input;
     expect(input.netWeight).toEqual({
       netWeight: 500,
       netWeightUnitId: 'unit-g',

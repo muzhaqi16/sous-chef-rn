@@ -6,15 +6,29 @@ import { PickerSelect } from '../Picker';
 jest.mock('@react-native-picker/picker', () => {
   const { View, Text } = require('react-native');
   const R = require('react');
-  const Picker = ({ children, selectedValue, testID, ...rest }: any) =>
+  const Picker = ({
+    children,
+    selectedValue,
+    testID,
+    ...rest
+  }: {
+    children?: React.ReactNode;
+    selectedValue?: string | number;
+    testID?: string;
+  }) =>
     R.createElement(
       View,
       { testID: testID || 'picker', ...rest },
       R.createElement(Text, null, selectedValue),
       children,
     );
-  Picker.Item = ({ label, value }: any) =>
-    R.createElement(Text, { testID: `picker-item-${value}` }, label);
+  Picker.Item = ({
+    label,
+    value,
+  }: {
+    label?: string;
+    value?: string | number;
+  }) => R.createElement(Text, { testID: `picker-item-${value}` }, label);
   return { Picker };
 });
 

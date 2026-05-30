@@ -1,6 +1,7 @@
 import { renderHook, waitFor } from '@testing-library/react-native';
 import { alertService } from '#/services/alertService';
 import { StorageState } from '#/graphql/generated/schemaTypes';
+import type { PantryItemForm_PantryItemFragment } from '../PantryItemForm.generated';
 import {
   usePantryItemFormSubmit,
   type PantryItemFormData,
@@ -12,15 +13,20 @@ jest.mock('#/services/alertService', () => ({
 }));
 
 jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeMutation: jest.fn(async (fn: any, onError: any) => {
-    try {
-      await fn();
-      return true;
-    } catch (e) {
-      onError?.(e);
-      return false;
-    }
-  }),
+  executeMutation: jest.fn(
+    async (
+      fn: () => Promise<unknown>,
+      onError: string | ((error: unknown) => void | Promise<void>),
+    ) => {
+      try {
+        await fn();
+        return true;
+      } catch (e) {
+        if (typeof onError === 'function') onError(e);
+        return false;
+      }
+    },
+  ),
 }));
 
 jest.mock('#/utils/fractionUtils', () => ({
@@ -189,7 +195,7 @@ describe('usePantryItemFormSubmit', () => {
         existingPantryItem: {
           id: 'item-1',
           unit: { symbol: 'L' },
-        } as any,
+        } as PantryItemForm_PantryItemFragment,
         ...overrides,
       });
 
@@ -309,7 +315,10 @@ describe('usePantryItemFormSubmit', () => {
       const params = defaults({
         mode: 'edit',
         itemId: 'item-1',
-        existingPantryItem: { id: 'item-1', unit: { symbol: 'L' } } as any,
+        existingPantryItem: {
+          id: 'item-1',
+          unit: { symbol: 'L' },
+        } as PantryItemForm_PantryItemFragment,
         dirtyFields: { quantityInput: true },
         updateQuantity: jest.fn(() => {
           throw new Error('boom');

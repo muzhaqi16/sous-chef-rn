@@ -1,6 +1,9 @@
 'use no memo';
 import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
+import { Diet, Intolerance, HealthGoal } from '#/graphql/generated/schemaTypes';
+import type { RestrictionSectionProps } from '#/components/molecules/RestrictionSection/RestrictionSection';
+import type { MultiSelectChipSheetProps } from '#/components/molecules/MultiSelectChipSheet/MultiSelectChipSheet';
 import { DietaryRestrictionSelector } from '../DietaryRestrictionSelector';
 
 jest.mock('#/utils/compilerSafeWrappers');
@@ -16,13 +19,13 @@ jest.mock(
         onRemove,
         onAddPress,
         emptyMessage,
-      }: any) => (
+      }: RestrictionSectionProps) => (
         <View testID={`restriction-section-${title}`}>
           <Text>{title}</Text>
           {existingItems.length === 0 ? (
             <Text>{emptyMessage}</Text>
           ) : (
-            existingItems.map((item: any) => (
+            existingItems.map(item => (
               <View key={item.id}>
                 <Text>{item.label}</Text>
                 <Pressable
@@ -48,11 +51,15 @@ jest.mock(
   () => {
     const { View, Text } = require('react-native');
     return {
-      MultiSelectChipSheet: ({ visible, title, items }: any) =>
+      MultiSelectChipSheet: ({
+        visible,
+        title,
+        items,
+      }: MultiSelectChipSheetProps) =>
         visible ? (
           <View testID="multi-select-sheet">
             <Text>{title}</Text>
-            {items.map((item: any) => (
+            {items.map(item => (
               <Text key={item.id}>{item.label}</Text>
             ))}
           </View>
@@ -90,11 +97,11 @@ describe('DietaryRestrictionSelector', () => {
     const restrictions = [
       {
         id: 'r1',
-        diet: 'VEGETARIAN' as any,
+        diet: Diet.Vegetarian,
         intolerance: null,
         healthGoal: null,
       },
-      { id: 'r2', diet: 'VEGAN' as any, intolerance: null, healthGoal: null },
+      { id: 'r2', diet: Diet.Vegan, intolerance: null, healthGoal: null },
     ];
     render(
       <DietaryRestrictionSelector
@@ -108,7 +115,12 @@ describe('DietaryRestrictionSelector', () => {
 
   it('renders existing intolerance restrictions', () => {
     const restrictions = [
-      { id: 'r3', diet: null, intolerance: 'DAIRY' as any, healthGoal: null },
+      {
+        id: 'r3',
+        diet: null,
+        intolerance: Intolerance.Dairy,
+        healthGoal: null,
+      },
     ];
     render(
       <DietaryRestrictionSelector
@@ -125,7 +137,7 @@ describe('DietaryRestrictionSelector', () => {
         id: 'r4',
         diet: null,
         intolerance: null,
-        healthGoal: 'LOW_CARB' as any,
+        healthGoal: HealthGoal.LowCarb,
       },
     ];
     render(
@@ -148,7 +160,7 @@ describe('DietaryRestrictionSelector', () => {
     const restrictions = [
       {
         id: 'r1',
-        diet: 'VEGETARIAN' as any,
+        diet: Diet.Vegetarian,
         intolerance: null,
         healthGoal: null,
       },
@@ -167,7 +179,7 @@ describe('DietaryRestrictionSelector', () => {
     const restrictions = [
       {
         id: 'r1',
-        diet: 'VEGETARIAN' as any,
+        diet: Diet.Vegetarian,
         intolerance: null,
         healthGoal: null,
       },

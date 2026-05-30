@@ -1,6 +1,7 @@
 'use no memo';
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
+import type { PickerProps, PickerItemProps } from '@react-native-picker/picker';
 import { AppSettingsScreen } from '../AppSettingsScreen';
 
 // --- Mocks ---
@@ -32,8 +33,10 @@ jest.mock('#store/useAppStore', () => {
     userConsent: true,
     setUserConsent: jest.fn(),
   });
+  type MockState = ReturnType<typeof getState>;
   return {
-    useAppStore: (selector: any) => selector(getState()),
+    useAppStore: (selector: (state: MockState) => unknown) =>
+      selector(getState()),
     useShowNavigationLabels: () => getState().showNavigationLabels,
   };
 });
@@ -65,7 +68,15 @@ jest.mock('#/styles/commonStyles', () => ({
 jest.mock('#components/templates/ProfileScreenWrapper', () => {
   const { View, Text } = require('react-native');
   return {
-    ProfileScreenWrapper: ({ children, title, testID }: any) => (
+    ProfileScreenWrapper: ({
+      children,
+      title,
+      testID,
+    }: {
+      children?: React.ReactNode;
+      title?: string;
+      testID?: string;
+    }) => (
       <View testID={testID}>
         <Text>{title}</Text>
         {children}
@@ -85,7 +96,13 @@ jest.mock('#components/settings/SettingSwitch', () => {
       value,
       onValueChange,
       testID,
-    }: any) => (
+    }: {
+      title: string;
+      description?: string;
+      value: boolean;
+      onValueChange: (value: boolean) => void;
+      testID?: string;
+    }) => (
       <View testID={testID || `switch-${title}`}>
         <Text>{title}</Text>
         {description ? <Text>{description}</Text> : null}
@@ -103,7 +120,13 @@ jest.mock('#components/settings/SettingSwitch', () => {
 jest.mock('#components/settings/SettingSection', () => {
   const { View, Text } = require('react-native');
   return {
-    SettingSection: ({ title, children }: any) => (
+    SettingSection: ({
+      title,
+      children,
+    }: {
+      title: string;
+      children?: React.ReactNode;
+    }) => (
       <View testID={`section-${title}`}>
         <Text>{title}</Text>
         {children}
@@ -114,13 +137,13 @@ jest.mock('#components/settings/SettingSection', () => {
 
 jest.mock('@react-native-picker/picker', () => {
   const { View, Text } = require('react-native');
-  const Picker = ({ children, testID, selectedValue }: any) => (
+  const Picker = ({ children, testID, selectedValue }: PickerProps) => (
     <View testID={testID}>
       <Text>{selectedValue}</Text>
       {children}
     </View>
   );
-  Picker.Item = ({ label }: any) => {
+  Picker.Item = ({ label }: PickerItemProps) => {
     const { Text: RNText } = require('react-native');
     return <RNText>{label}</RNText>;
   };

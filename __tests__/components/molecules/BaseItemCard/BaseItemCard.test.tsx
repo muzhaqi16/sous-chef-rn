@@ -3,13 +3,18 @@
 import React from 'react';
 import { Text } from 'react-native';
 import { render, userEvent } from '@testing-library/react-native';
+import type { Theme } from '../../../../src/theme/themes';
 import { BaseItemCard } from '../../../../src/components/molecules/BaseItemCard/BaseItemCard';
+
+type StyleSheetInput =
+  | Record<string, unknown>
+  | ((theme: Theme) => Record<string, unknown>);
 
 jest.mock('../../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../../src/apollo/links/refreshToken');
 
 jest.mock('../../../../src/components/molecules/SwipeableItem/SwipeableItem', () => ({
-  SwipeableItem: ({ children }: any) => children,
+  SwipeableItem: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 // Unistyles v2 useVariants is a method on the stylesheet - we need to add it
@@ -17,7 +22,7 @@ jest.mock('react-native-unistyles', () => {
   const { lightTheme } = require('../../../../src/theme/themes');
   return {
     StyleSheet: {
-      create: (styleFnOrObj: any) => {
+      create: (styleFnOrObj: StyleSheetInput) => {
         const result = typeof styleFnOrObj === 'function' ? styleFnOrObj(lightTheme) : styleFnOrObj;
         result.useVariants = jest.fn();
         return result;
@@ -28,12 +33,12 @@ jest.mock('react-native-unistyles', () => {
       theme: lightTheme,
       styles: {},
     })),
-    useStyles: jest.fn((stylesheet: any) => ({
+    useStyles: jest.fn((stylesheet: StyleSheetInput) => ({
       styles: typeof stylesheet === 'function' ? stylesheet(lightTheme) : stylesheet || {},
       theme: lightTheme,
     })),
     useInitialTheme: jest.fn(),
-    withUnistyles: jest.fn((component: any) => component),
+    withUnistyles: jest.fn(<C,>(component: C): C => component),
     UnistylesRuntime: {
       setTheme: jest.fn(),
       getTheme: jest.fn(() => lightTheme),

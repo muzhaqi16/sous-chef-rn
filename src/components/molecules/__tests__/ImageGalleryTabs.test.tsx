@@ -1,17 +1,18 @@
 'use no memo';
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
+import type { ItemImage } from '#/types/nutrition';
 import { ImageGalleryTabs } from '../ImageGalleryTabs';
 
 jest.mock('#utils/iconUtils', () => ({
-  Icon: ({ name }: any) => {
+  Icon: ({ name }: { name: string }) => {
     const { Text } = require('react-native');
     return require('react').createElement(Text, null, `icon-${name}`);
   },
 }));
 
 jest.mock('#components/atoms/CachedImage', () => ({
-  CachedImage: ({ uri }: any) => {
+  CachedImage: ({ uri }: { uri: string | null | undefined }) => {
     const { Text } = require('react-native');
     return require('react').createElement(
       Text,
@@ -23,13 +24,15 @@ jest.mock('#components/atoms/CachedImage', () => ({
 
 jest.mock('#utils/imageUtils', () => ({
   parseImages: jest.fn(() => []),
-  groupImagesByPerspective: jest.fn((images: any[]) => {
+  groupImagesByPerspective: jest.fn((images: ItemImage[]) => {
     if (images.length === 0) return [];
     return [{ key: 'front', images }];
   }),
-  getBestImageUrl: jest.fn((image: any) => image.url || 'mock-url'),
-  getPrimaryImage: jest.fn((images: any[]) => images[0] || null),
-  hasImages: jest.fn((images: any[]) => images.length > 0),
+  getBestImageUrl: jest.fn(
+    (image: ItemImage & { url?: string }) => image.url || 'mock-url',
+  ),
+  getPrimaryImage: jest.fn((images: ItemImage[]) => images[0] || null),
+  hasImages: jest.fn((images: ItemImage[]) => images.length > 0),
 }));
 
 describe('ImageGalleryTabs', () => {

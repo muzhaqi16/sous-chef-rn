@@ -1,4 +1,5 @@
 import { renderHook, act } from '@testing-library/react-native';
+import type { RootState } from '#store/index';
 import { useSettings, useShowTutorials } from '../useSettings';
 import { useShowNavigationLabels } from '#store/useAppStore';
 
@@ -29,20 +30,22 @@ const mockSetShowNavigationLabels = jest.fn();
 const mockResetPreferences = jest.fn();
 
 jest.mock('#store/useAppStore', () => {
-  const getState = () => ({
-    hapticFeedbackEnabled: mockHapticFeedbackEnabled,
-    setHapticFeedbackEnabled: mockSetHapticFeedbackEnabled,
-    showNavigationLabels: mockShowNavigationLabelsValue,
-    setShowNavigationLabels: mockSetShowNavigationLabels,
-    resetPreferences: mockResetPreferences,
-  });
+  const getState = (): RootState =>
+    ({
+      hapticFeedbackEnabled: mockHapticFeedbackEnabled,
+      setHapticFeedbackEnabled: mockSetHapticFeedbackEnabled,
+      showNavigationLabels: mockShowNavigationLabelsValue,
+      setShowNavigationLabels: mockSetShowNavigationLabels,
+      resetPreferences: mockResetPreferences,
+    } as Partial<RootState> as RootState);
   return {
-    useAppStore: (selector: (state: any) => any) => selector(getState()),
-    useShowNavigationLabels: () => (s => s.showNavigationLabels)(getState()),
+    useAppStore: <T>(selector: (state: RootState) => T): T =>
+      selector(getState()),
+    useShowNavigationLabels: () => getState().showNavigationLabels,
   };
 });
 
-let mockShowTutorialsMMKV = true;
+let mockShowTutorialsMMKV: boolean | undefined = true;
 
 jest.mock('#/storage/mmkv', () => ({
   storage: {
@@ -171,7 +174,7 @@ describe('useShowTutorials', () => {
   });
 
   it('defaults to true when MMKV value is undefined', () => {
-    mockShowTutorialsMMKV = undefined as any;
+    mockShowTutorialsMMKV = undefined;
     const { result } = renderHook(() => useShowTutorials());
     expect(result.current).toBe(true);
   });

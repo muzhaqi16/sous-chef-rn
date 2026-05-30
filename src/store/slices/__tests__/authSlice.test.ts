@@ -1,4 +1,5 @@
 import { createTestStore } from '#/test-utils/createTestStore';
+import type { AuthUserInput } from '#store/slices/authSlice';
 
 // Mock external dependencies that authSlice imports
 jest.mock('../../../apollo/links/tokenScheduler');
@@ -64,7 +65,7 @@ describe('authSlice', () => {
           avatar: 'avatar.jpg',
         },
       };
-      store.getState().setAuth(userWithProfile as any, 'a', 'r');
+      store.getState().setAuth(userWithProfile, 'a', 'r');
       const user = store.getState().user;
       expect(user?.firstName).toBe('Profile');
       expect(user?.lastName).toBe('Name');
@@ -77,7 +78,7 @@ describe('authSlice', () => {
         selectedHomeId: 'home-1',
         selectedPantryId: 'pantry-1',
         selectedShoppingListId: 'list-1',
-      } as any);
+      });
       store.getState().setAuth(testUser, 'a', 'r');
       expect(store.getState().selectedHomeId).toBeNull();
       expect(store.getState().selectedPantryId).toBeNull();
@@ -94,7 +95,7 @@ describe('authSlice', () => {
     });
 
     it('clears isAutoLoggingIn', () => {
-      const store = createTestStore({ isAutoLoggingIn: true } as any);
+      const store = createTestStore({ isAutoLoggingIn: true });
       store.getState().setAuth(testUser, 'a', 'r');
       expect(store.getState().isAutoLoggingIn).toBe(false);
     });
@@ -214,7 +215,10 @@ describe('authSlice', () => {
 
     it('handles user with no email gracefully', () => {
       const store = createTestStore();
-      const userNoEmail = { ...testUser, email: undefined as any };
+      const userNoEmail = {
+        ...testUser,
+        email: undefined,
+      } as Partial<AuthUserInput> as AuthUserInput;
       store.getState().setAuth(userNoEmail, 'a', 'r');
       // Should not throw
       expect(store.getState().user).toBeDefined();
@@ -286,7 +290,7 @@ describe('authSlice', () => {
       const store = createTestStore();
       store.getState().setAuth(testUser, 'a', 'r');
       // Manually clear token
-      store.getState().setTokens({ accessToken: undefined } as any);
+      store.getState().setTokens({ accessToken: undefined });
       // getIsAuthenticated should still work
       expect(typeof store.getState().getIsAuthenticated).toBe('function');
     });

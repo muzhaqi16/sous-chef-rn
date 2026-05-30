@@ -3,7 +3,11 @@ import {
   useUserPreferences,
   useShowShoppingListImages,
 } from '../useUserPreferences';
-import { defaultUserPreferences } from '#/store/slices/preferencesSlice';
+import {
+  defaultUserPreferences,
+  type UserPreferences,
+} from '#/store/slices/preferencesSlice';
+import type { RootState } from '#store/index';
 
 // Break circular dependency chain
 jest.mock('../../../apollo/links/tokenScheduler');
@@ -13,19 +17,21 @@ const mockSetUserPreference = jest.fn();
 const mockResetUserPreferences = jest.fn();
 
 let mockUserId: string | undefined = 'u1';
-let mockUserPreferencesMap: Record<string, any> = {};
+let mockUserPreferencesMap: Record<string, UserPreferences> = {};
 
 jest.mock('#store/useAppStore', () => {
-  const getState = () => ({
-    user: mockUserId ? { id: mockUserId } : null,
-    userPreferences: mockUserPreferencesMap,
-    setUserPreference: mockSetUserPreference,
-    resetUserPreferences: mockResetUserPreferences,
-  });
+  const getState = () =>
+    ({
+      user: mockUserId ? { id: mockUserId } : null,
+      userPreferences: mockUserPreferencesMap,
+      setUserPreference: mockSetUserPreference,
+      resetUserPreferences: mockResetUserPreferences,
+    } as Partial<RootState> as RootState);
   return {
-    useAppStore: (selector: (state: any) => any) => selector(getState()),
-    useUser: () => (s => s.user)(getState()),
-    useUserId: () => (s => s.user?.id)(getState()),
+    useAppStore: <T>(selector: (state: RootState) => T): T =>
+      selector(getState()),
+    useUser: () => getState().user,
+    useUserId: () => getState().user?.id,
   };
 });
 

@@ -10,7 +10,24 @@ import {
   UpdatePantryItemDocument,
   DeletePantryItemDocument,
 } from '#features/pantry/graphql/pantry.generated';
+import { StorageState } from '#/graphql/generated/schemaTypes';
+import type { VersionedEntity } from '#/apollo/utils/createOptimisticResponse';
+import type { PantryItemInput, PantryItemUpdate } from '../types';
 import { usePantryItemMutations } from '../usePantryItemMutations';
+
+/** Minimal config shapes the mocked CRUD operations read at call time. */
+interface MockAddConfig {
+  transformInput: (input: PantryItemInput) => Record<string, unknown>;
+  mutation: (options: {
+    variables: { input: Record<string, unknown> };
+  }) => Promise<unknown>;
+}
+interface MockUpdateConfig {
+  itemId: string;
+  mutation: (options: {
+    variables: { id: string; input: PantryItemUpdate };
+  }) => Promise<unknown>;
+}
 
 jest.mock('../../../../apollo/links/tokenScheduler');
 jest.mock('../../../../apollo/links/refreshToken');
@@ -26,19 +43,25 @@ jest.mock('#/utils/generateId', () => ({
 }));
 
 jest.mock('#/apollo/utils/createOptimisticResponse', () => ({
-  enhanceWithVersion: jest.fn((obj: any, updates: any) => ({
-    ...obj,
-    ...updates,
-  })),
+  enhanceWithVersion: jest.fn(
+    (obj: VersionedEntity, updates: Record<string, unknown>) => ({
+      ...obj,
+      ...updates,
+    }),
+  ),
   createOptimisticEntity: jest.fn(
-    (typename: string, id: string, fields: any) => ({
+    (typename: string, id: string, fields: Record<string, unknown>) => ({
       __typename: typename,
       id,
       ...fields,
     }),
   ),
   buildOptimisticMutationResponse: jest.fn(
-    (opName: string, payloadTypename: string, fields: any) => ({
+    (
+      opName: string,
+      payloadTypename: string,
+      fields: Record<string, unknown>,
+    ) => ({
       __typename: 'Mutation',
       [opName]: { __typename: payloadTypename, ...fields },
     }),
@@ -52,15 +75,19 @@ jest.mock('#/utils/errors/versionConflict', () => ({
 
 jest.mock('#/hooks/utils/useCrudOperations', () => ({
   useCrudOperations: () => ({
-    createAddOperation: jest.fn((config: any) => async (input: any) => {
-      const transformed = config.transformInput(input);
-      await config.mutation({ variables: { input: transformed } });
-    }),
-    createUpdateOperation: jest.fn((config: any) => async (updates: any) => {
-      await config.mutation({
-        variables: { id: config.itemId, input: updates },
-      });
-    }),
+    createAddOperation: jest.fn(
+      (config: MockAddConfig) => async (input: PantryItemInput) => {
+        const transformed = config.transformInput(input);
+        await config.mutation({ variables: { input: transformed } });
+      },
+    ),
+    createUpdateOperation: jest.fn(
+      (config: MockUpdateConfig) => async (updates: PantryItemUpdate) => {
+        await config.mutation({
+          variables: { id: config.itemId, input: updates },
+        });
+      },
+    ),
   }),
 }));
 
@@ -246,7 +273,7 @@ describe('usePantryItemMutations', () => {
     await act(async () => {
       await result.current.updateItem('item-1', {
         itemName: 'Updated Milk',
-      } as any);
+      });
     });
 
     expect(m.fired.length).toBeGreaterThanOrEqual(1);
@@ -263,8 +290,9 @@ describe('usePantryItemMutations', () => {
       await result.current.addItem({
         itemName: 'Bread',
         quantity: 2,
-        storageState: 'FRESH' as any,
-      } as any);
+        unitId: 'unit-1',
+        storageState: StorageState.Refrigerated,
+      });
     });
 
     expect(m.fired.length).toBeGreaterThanOrEqual(1);

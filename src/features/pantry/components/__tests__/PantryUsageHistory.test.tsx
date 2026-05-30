@@ -7,7 +7,14 @@ jest.mock('#features/pantry/hooks/usePantryItemTransformation', () => ({
   formatDate: jest.fn((d: string) => `formatted:${d}`),
 }));
 
-const makeRecord = (id: string, overrides: Record<string, any> = {}) => ({
+type UsageRecordNode = React.ComponentProps<
+  typeof PantryUsageHistory
+>['usageRecords'][number]['node'];
+
+const makeRecord = (
+  id: string,
+  overrides: Partial<UsageRecordNode> = {},
+): { node: UsageRecordNode } => ({
   node: {
     id,
     usedAt: `2024-01-0${id}`,

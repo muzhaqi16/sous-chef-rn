@@ -1,3 +1,4 @@
+import type { Schema } from 'yup';
 import {
   itemNameRule,
   descriptionRule,
@@ -9,12 +10,12 @@ import {
   createItemSchema,
 } from '../item';
 
-const validateRule = async (rule: any, value: unknown) => {
+const validateRule = async (rule: Schema, value: unknown) => {
   try {
     await rule.validate(value);
     return null;
-  } catch (err: any) {
-    return err.message;
+  } catch (err) {
+    return err instanceof Error ? err.message : String(err);
   }
 };
 
@@ -22,8 +23,8 @@ const validateSchema = async (data: Record<string, unknown>) => {
   try {
     await createItemSchema.validate(data);
     return null;
-  } catch (err: any) {
-    return err.message;
+  } catch (err) {
+    return err instanceof Error ? err.message : String(err);
   }
 };
 

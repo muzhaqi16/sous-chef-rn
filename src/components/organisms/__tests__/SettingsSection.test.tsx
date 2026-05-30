@@ -1,11 +1,12 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
+import type { SettingRowProps } from '../../molecules/SettingRow';
 import { SettingsSection } from '../SettingsSection';
 
 jest.mock('../../molecules/SettingRow', () => {
   const { Text, View } = require('react-native');
   return {
-    SettingRow: ({ item, isFirst, isLast }: any) => (
+    SettingRow: ({ item, isFirst, isLast }: SettingRowProps) => (
       <View testID={`setting-row-${item.key}`}>
         <Text>{item.label}</Text>
         {isFirst ? <Text>first</Text> : null}

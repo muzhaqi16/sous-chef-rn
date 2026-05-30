@@ -111,7 +111,7 @@ describe('useSlideAnimation', () => {
 
   it('resets animation state when itemId changes (view recycling)', () => {
     const { result, rerender } = renderHook(
-      ({ itemId }: any) => useSlideAnimation({ itemId }),
+      ({ itemId }: { itemId: string }) => useSlideAnimation({ itemId }),
       { initialProps: { itemId: 'item-1' } },
     );
 

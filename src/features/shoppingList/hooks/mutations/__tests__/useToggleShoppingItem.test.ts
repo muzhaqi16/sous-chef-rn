@@ -95,7 +95,7 @@ describe('useToggleShoppingItem', () => {
       },
     );
 
-    let toggleResult: any;
+    let toggleResult!: Awaited<ReturnType<typeof result.current.toggleItem>>;
     await act(async () => {
       toggleResult = await result.current.toggleItem('item-1');
     });
@@ -123,7 +123,7 @@ describe('useToggleShoppingItem', () => {
       },
     );
 
-    let toggleResult: any;
+    let toggleResult!: Awaited<ReturnType<typeof result.current.toggleItem>>;
     await act(async () => {
       toggleResult = await result.current.toggleItem('non-existent');
     });

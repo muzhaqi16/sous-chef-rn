@@ -3,7 +3,10 @@
 import React from 'react';
 import { Text } from 'react-native';
 import { render } from '@testing-library/react-native';
+import type { FragmentType } from '@apollo/client/masking';
 import { SortableShoppingList } from '../../../../src/features/shoppingList/components/SortableShoppingList/SortableList';
+import type { ShoppingListRowItem } from '../../../../src/features/shoppingList/components/SortableShoppingList/types';
+import { SortableItem_ItemFragmentDoc } from '../../../../src/features/shoppingList/components/SortableShoppingList/SortableItem.generated';
 
 jest.mock('../../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../../src/apollo/links/refreshToken');
@@ -51,17 +54,20 @@ describe('SortableShoppingList', () => {
   });
 
   it('renders list when items are provided', () => {
-    const items = [
+    const items: ShoppingListRowItem[] = [
       {
         id: '1',
-        name: 'Milk',
         isPurchased: false,
-        quantity: 1,
         sortOrder: 'a0',
+        // The masked ref is structurally a normalized ref: __typename + id is
+        // enough for useFragment's cache lookup.
+        itemRef: { __typename: 'ShoppingListItem', id: '1' } as FragmentType<
+          typeof SortableItem_ItemFragmentDoc
+        >,
       },
     ];
     const { toJSON } = render(
-      <SortableShoppingList {...defaultProps} items={items as any} />,
+      <SortableShoppingList {...defaultProps} items={items} />,
     );
     expect(toJSON()).toBeTruthy();
   });

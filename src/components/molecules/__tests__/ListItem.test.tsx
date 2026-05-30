@@ -7,7 +7,11 @@ jest.mock('react-native-unistyles', () => {
   const { lightTheme } = require('../../../theme/themes');
   return {
     StyleSheet: {
-      create: (styleFnOrObj: any) => {
+      create: (
+        styleFnOrObj:
+          | ((theme: unknown) => Record<string, unknown>)
+          | Record<string, unknown>,
+      ) => {
         const result =
           typeof styleFnOrObj === 'function'
             ? styleFnOrObj(lightTheme)
@@ -18,15 +22,21 @@ jest.mock('react-native-unistyles', () => {
       configure: jest.fn(),
     },
     useUnistyles: jest.fn(() => ({ theme: lightTheme, styles: {} })),
-    useStyles: jest.fn((stylesheet: any) => ({
-      styles:
-        typeof stylesheet === 'function'
-          ? stylesheet(lightTheme)
-          : stylesheet || {},
-      theme: lightTheme,
-    })),
+    useStyles: jest.fn(
+      (
+        stylesheet:
+          | ((theme: unknown) => Record<string, unknown>)
+          | Record<string, unknown>,
+      ) => ({
+        styles:
+          typeof stylesheet === 'function'
+            ? stylesheet(lightTheme)
+            : stylesheet || {},
+        theme: lightTheme,
+      }),
+    ),
     useInitialTheme: jest.fn(),
-    withUnistyles: jest.fn((component: any) => component),
+    withUnistyles: jest.fn(<C,>(component: C): C => component),
     UnistylesRuntime: {
       setTheme: jest.fn(),
       getTheme: jest.fn(() => lightTheme),

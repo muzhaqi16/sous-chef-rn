@@ -1,12 +1,14 @@
 'use no memo';
 
 import React from 'react';
+import type { TextInputProps } from 'react-native';
 import { screen, userEvent, waitFor } from '@testing-library/react-native';
 import type { MockedResponse } from '#/test-utils/apolloMockProvider';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { alertService } from '#/services/alertService';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { AddEditItem } from '../AddEditItem';
+import type { useShoppingListItemForm } from '#features/shoppingList/hooks/useShoppingListItemForm';
 import {
   AddItemToShoppingListDocument,
   UpdateShoppingListItemDocument,
@@ -69,7 +71,14 @@ jest.mock('#components/organisms/FormModal', () => ({
     onSave,
     testID,
     submitButtonTestID,
-  }: any) => {
+  }: {
+    title?: string;
+    children?: React.ReactNode;
+    onClose?: () => void;
+    onSave?: () => void;
+    testID?: string;
+    submitButtonTestID?: string;
+  }) => {
     const { View, Text, Pressable } = require('react-native');
     return (
       <View testID={testID}>
@@ -86,7 +95,11 @@ jest.mock('#components/organisms/FormModal', () => ({
   },
 }));
 jest.mock('#components/atoms/BaseInput/BaseInput', () => ({
-  BaseInput: ({ label, testID, ...props }: any) => {
+  BaseInput: ({
+    label,
+    testID,
+    ...props
+  }: TextInputProps & { label?: string }) => {
     const { View, Text, TextInput } = require('react-native');
     return (
       <View>
@@ -99,7 +112,13 @@ jest.mock('#components/atoms/BaseInput/BaseInput', () => ({
 jest.mock(
   '#components/molecules/AutocompleteField/ItemAutocompleteField',
   () => ({
-    ItemAutocompleteField: ({ label, testID }: any) => {
+    ItemAutocompleteField: ({
+      label,
+      testID,
+    }: {
+      label?: string;
+      testID?: string;
+    }) => {
       const { View, Text } = require('react-native');
       return (
         <View testID={testID}>
@@ -112,7 +131,13 @@ jest.mock(
 jest.mock(
   '#components/molecules/AutocompleteField/UnitAutocompleteField',
   () => ({
-    UnitAutocompleteField: ({ label, testID }: any) => {
+    UnitAutocompleteField: ({
+      label,
+      testID,
+    }: {
+      label?: string;
+      testID?: string;
+    }) => {
       const { View, Text } = require('react-native');
       return (
         <View testID={testID}>
@@ -125,7 +150,7 @@ jest.mock(
 jest.mock(
   '#components/molecules/AutocompleteField/CategoryAutocompleteField',
   () => ({
-    CategoryAutocompleteField: ({ label }: any) => {
+    CategoryAutocompleteField: ({ label }: { label?: string }) => {
       const { View, Text } = require('react-native');
       return (
         <View>
@@ -136,7 +161,7 @@ jest.mock(
   }),
 );
 jest.mock('#components/molecules/EditableCounter', () => ({
-  EditableCounter: ({ label, testID }: any) => {
+  EditableCounter: ({ label, testID }: { label?: string; testID?: string }) => {
     const { View, Text } = require('react-native');
     return (
       <View testID={testID}>
@@ -146,7 +171,7 @@ jest.mock('#components/molecules/EditableCounter', () => ({
   },
 }));
 jest.mock('#components/molecules/FieldRow', () => ({
-  FieldRow: ({ children }: any) => {
+  FieldRow: ({ children }: { children?: React.ReactNode }) => {
     const { View } = require('react-native');
     return <View>{children}</View>;
   },
@@ -225,7 +250,7 @@ function buildAddItemNullMock(): MockedResponse {
 function buildAddItemNoDataMock(): MockedResponse {
   return {
     request: { query: AddItemToShoppingListDocument, variables: () => true },
-    result: { data: null as any },
+    result: { data: null },
     maxUsageCount: 10,
   };
 }
@@ -290,7 +315,21 @@ function buildGetShoppingListItemMock(itemId: string): MockedResponse {
   };
 }
 
-const mockUseShoppingListItemForm = (overrides: Record<string, any> = {}) => ({
+const mockUseShoppingListItemForm = (
+  overrides: Partial<
+    Omit<ReturnType<typeof useShoppingListItemForm>, 'formState'>
+  > & {
+    formState?: Partial<
+      ReturnType<typeof useShoppingListItemForm>['formState']
+    >;
+  } = {},
+) => ({
+  updateField: mockUpdateField,
+  setFromItem: jest.fn(),
+  buildUnitInput: jest.fn(() => ({})),
+  buildDirtyInput: jest.fn(() => ({})),
+  hasDirtyFields: false,
+  ...overrides,
   formState: {
     itemName: '',
     quantityInput: '1',
@@ -300,12 +339,6 @@ const mockUseShoppingListItemForm = (overrides: Record<string, any> = {}) => ({
     estimatedPrice: '',
     ...(overrides.formState ?? {}),
   },
-  updateField: mockUpdateField,
-  setFromItem: jest.fn(),
-  buildUnitInput: jest.fn(() => ({})),
-  buildDirtyInput: jest.fn(() => ({})),
-  hasDirtyFields: false,
-  ...overrides,
 });
 
 // Force the next executeWithLoadingState invocation to immediately call its
@@ -316,7 +349,11 @@ const mockUseShoppingListItemForm = (overrides: Record<string, any> = {}) => ({
 function forceExecuteWithLoadingStateOnError(error: unknown) {
   const { executeWithLoadingState } = require('#/utils/compilerSafeWrappers');
   executeWithLoadingState.mockImplementationOnce(
-    (_fn: any, _setLoading: any, onError?: any) => {
+    (
+      _fn: () => Promise<void>,
+      _setLoading: (value: boolean) => void,
+      onError?: (error: unknown) => void,
+    ) => {
       onError?.(error);
     },
   );
@@ -648,7 +685,7 @@ describe('AddEditItem', () => {
     const networkError = {
       networkError: new Error('timeout'),
       message: 'Network error',
-    } as any;
+    };
     forceExecuteWithLoadingStateOnError(networkError);
 
     jest
@@ -681,7 +718,7 @@ describe('AddEditItem', () => {
       graphQLErrors: [
         { extensions: { code: 'VALIDATION_ERROR' }, message: 'Invalid' },
       ],
-    } as any;
+    };
     forceExecuteWithLoadingStateOnError(validationError);
 
     jest
@@ -714,7 +751,7 @@ describe('AddEditItem', () => {
       graphQLErrors: [
         { extensions: { code: 'UNAUTHENTICATED' }, message: 'Unauthorized' },
       ],
-    } as any;
+    };
     forceExecuteWithLoadingStateOnError(unauthError);
 
     jest
@@ -747,7 +784,7 @@ describe('AddEditItem', () => {
       graphQLErrors: [
         { extensions: { code: 'INTERNAL_ERROR' }, message: 'Something broke' },
       ],
-    } as any;
+    };
     forceExecuteWithLoadingStateOnError(genericError);
 
     jest

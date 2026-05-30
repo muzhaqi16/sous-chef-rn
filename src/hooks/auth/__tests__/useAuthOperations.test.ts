@@ -6,7 +6,7 @@ import {
   RegisterDocument,
 } from '#operations/auth/auth.generated';
 import { useAuthOperations, type AuthSession } from '../useAuthOperations';
-import { UserRole } from '#/graphql/generated/schemaTypes';
+import { UserRole, type RegisterInput } from '#/graphql/generated/schemaTypes';
 
 // Break circular dependency chain
 jest.mock('../../../apollo/links/tokenScheduler');
@@ -180,7 +180,7 @@ function buildAuthPayload(input: AuthPayloadInput = {}) {
       defaultHome: null,
       profile: null,
       settings: null,
-    } as any,
+    },
   };
 }
 
@@ -221,7 +221,7 @@ function buildLoginMock(
       query: LoginDocument,
       variables: { input: { email, password } },
     },
-    result: { data: { login: payload as any } },
+    result: { data: { login: payload } },
     maxUsageCount: 10,
   };
 }
@@ -246,7 +246,7 @@ function buildRegisterMock(
 ): MockLink.MockedResponse {
   return {
     request: { query: RegisterDocument, variables: () => true },
-    result: { data: { register: payload as any } },
+    result: { data: { register: payload } },
     maxUsageCount: 10,
   };
 }
@@ -546,7 +546,7 @@ describe('useAuthOperations', () => {
         email: 'new@test.com',
         password: 'pass123',
         displayName: 'New User',
-      } as any);
+      } as RegisterInput);
     });
 
     expect(success).toBe(true);
@@ -569,7 +569,7 @@ describe('useAuthOperations', () => {
         email: 'existing@test.com',
         password: 'pass123',
         displayName: 'Test',
-      } as any);
+      } as RegisterInput);
     });
 
     expect(success).toBe(false);

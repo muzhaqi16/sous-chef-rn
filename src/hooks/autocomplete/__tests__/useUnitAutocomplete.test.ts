@@ -1,5 +1,6 @@
 import { act } from '@testing-library/react-native';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import type { RootState } from '#store/index';
 import { useUnitAutocomplete, UnitItem } from '../useUnitAutocomplete';
 
 const mockCachedUnits: UnitItem[] = [
@@ -14,16 +15,18 @@ let mockIsOnline = true;
 const mockSetCachedUnits = jest.fn();
 const mockSetLastUnitsFetchedAt = jest.fn();
 jest.mock('#store/useAppStore', () => {
-  const getState = () => ({
-    isOnline: mockIsOnline,
-    cachedUnits: mockCachedUnits,
-    setCachedUnits: mockSetCachedUnits,
-    lastUnitsFetchedAt: Date.now(),
-    setLastUnitsFetchedAt: mockSetLastUnitsFetchedAt,
-  });
+  const getState = (): RootState =>
+    ({
+      isOnline: mockIsOnline,
+      cachedUnits: mockCachedUnits,
+      setCachedUnits: mockSetCachedUnits,
+      lastUnitsFetchedAt: Date.now(),
+      setLastUnitsFetchedAt: mockSetLastUnitsFetchedAt,
+    } as Partial<RootState> as RootState);
   return {
-    useAppStore: (selector: (state: any) => any) => selector(getState()),
-    useIsOnline: () => (s => s.isOnline)(getState()),
+    useAppStore: <T>(selector: (state: RootState) => T): T =>
+      selector(getState()),
+    useIsOnline: () => getState().isOnline,
   };
 });
 

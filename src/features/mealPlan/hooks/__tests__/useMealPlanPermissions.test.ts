@@ -1,5 +1,10 @@
 import { renderHook } from '@testing-library/react-native';
+import type { getMealPlanPermissions } from '#utils/permissions/mealPlanPermissions';
+import type { MealPlanDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
+import type { MealPlanMain_MealPlanFragment } from '#features/mealPlan/screens/MealPlanMain.generated';
 import { useMealPlanPermissions } from '../useMealPlanPermissions';
+
+type MealPlanLike = MealPlanDisplayFragment | MealPlanMain_MealPlanFragment;
 
 let mockUserId: string | undefined = 'user-1';
 
@@ -11,7 +16,10 @@ jest.mock('#hooks/auth/useAuth', () => ({
 
 jest.mock('#utils/permissions/mealPlanPermissions', () => ({
   getMealPlanPermissions: jest.fn(
-    (mealPlan: any, userId: string | undefined) => {
+    (
+      mealPlan: Parameters<typeof getMealPlanPermissions>[0],
+      userId: string | undefined,
+    ) => {
       // Simplified permission logic for testing
       if (!mealPlan.homeId) {
         return {
@@ -87,7 +95,7 @@ describe('useMealPlanPermissions', () => {
       useMealPlanPermissions({
         homeId: null,
         createdBy: { id: 'user-1' },
-      } as any),
+      } as Partial<MealPlanLike> as MealPlanLike),
     );
 
     expect(result.current.canEdit).toBe(true);
@@ -101,7 +109,7 @@ describe('useMealPlanPermissions', () => {
         homeId: 'home-1',
         createdBy: { id: 'user-1' },
         home: { myMembership: { role: 'MEMBER' } },
-      } as any),
+      } as Partial<MealPlanLike> as MealPlanLike),
     );
 
     expect(result.current.canEdit).toBe(true);
@@ -114,7 +122,7 @@ describe('useMealPlanPermissions', () => {
         homeId: 'home-1',
         createdBy: { id: 'other-user' },
         home: { myMembership: { role: 'GUEST' } },
-      } as any),
+      } as Partial<MealPlanLike> as MealPlanLike),
     );
 
     expect(result.current.canEdit).toBe(false);
@@ -128,7 +136,7 @@ describe('useMealPlanPermissions', () => {
         homeId: 'home-1',
         createdBy: { id: 'other-user' },
         home: { myMembership: null },
-      } as any),
+      } as Partial<MealPlanLike> as MealPlanLike),
     );
 
     expect(result.current.canEdit).toBe(false);

@@ -2,7 +2,11 @@
 import React from 'react';
 import { screen, userEvent } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import type { Header } from '#components/molecules/Header';
+import type { PasswordInputProps } from '#components/atoms/PasswordInput';
 import { ChangePasswordScreen } from '../ChangePasswordScreen';
+
+type HeaderProps = React.ComponentProps<typeof Header>;
 
 const mockToast = jest.fn();
 
@@ -24,7 +28,7 @@ jest.mock('#utils/validation/auth', () => ({
     __isYupSchema: true,
     validate: jest.fn().mockResolvedValue({}),
     validateSync: jest.fn(),
-    cast: jest.fn((v: any) => v),
+    cast: jest.fn((v: unknown) => v),
     describe: jest.fn(() => ({ type: 'object', fields: {} })),
   },
 }));
@@ -40,7 +44,7 @@ jest.mock('#/utils/iconUtils', () => ({
 jest.mock('#components/molecules/Header', () => {
   const { View, Text, Pressable } = require('react-native');
   return {
-    Header: ({ title, onBack }: any) => (
+    Header: ({ title, onBack }: Pick<HeaderProps, 'title' | 'onBack'>) => (
       <View testID="header">
         <Text>{title}</Text>
         {onBack ? (
@@ -56,7 +60,11 @@ jest.mock('#components/molecules/Header', () => {
 jest.mock('#components/atoms/PasswordInput', () => {
   const { TextInput } = require('react-native');
   return {
-    PasswordInput: ({ value, onChangeText, placeholder }: any) => (
+    PasswordInput: ({
+      value,
+      onChangeText,
+      placeholder,
+    }: Pick<PasswordInputProps, 'value' | 'onChangeText' | 'placeholder'>) => (
       <TextInput
         value={value}
         onChangeText={onChangeText}

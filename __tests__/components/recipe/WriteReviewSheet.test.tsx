@@ -23,10 +23,11 @@ jest.mock('../../../src/hooks/useStandardBottomSheet', () => ({
       },
     },
   }),
-  BottomSheetModal: ({ children }: any) => children,
+  BottomSheetModal: ({ children }: { children: React.ReactNode }) => children,
 }));
 jest.mock('../../../src/components/atoms/BottomSheetFormScrollView', () => ({
-  BottomSheetFormScrollView: ({ children }: any) => children,
+  BottomSheetFormScrollView: ({ children }: { children: React.ReactNode }) =>
+    children,
 }));
 jest.mock('../../../src/features/recipes/components/StarRatingInput', () => ({
   StarRatingInput: () => null,

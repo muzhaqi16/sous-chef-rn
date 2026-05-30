@@ -3,6 +3,8 @@ import { screen, userEvent, waitFor } from '@testing-library/react-native';
 import type { MockedResponse } from '#/test-utils/apolloMockProvider';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { VerifyEmailDocument } from '#operations/auth/auth.generated';
+import { UserRole, AppTheme } from '#/graphql/generated/schemaTypes';
+import type { RootState } from '#store/index';
 import { EmailVerificationDeepLinkScreen } from '../EmailVerificationDeepLinkScreen';
 
 // --- Mocks ---
@@ -34,13 +36,13 @@ const mockUserObject = {
 };
 
 jest.mock('#store/useAppStore', () => {
-  const getState = () => ({
-    updateUser: mockUpdateUser,
-  });
+  const getState = () =>
+    ({ updateUser: mockUpdateUser } as Partial<RootState> as RootState);
   return {
-    useAppStore: (selector: any) => selector(getState()),
+    useAppStore: <T,>(selector: (state: RootState) => T): T =>
+      selector(getState()),
     useUser: jest.fn(() => mockUserObject),
-    useUpdateUser: () => (s => s.updateUser)(getState()),
+    useUpdateUser: () => getState().updateUser,
   };
 });
 
@@ -59,7 +61,7 @@ jest.mock('#/utils/iconUtils', () => ({
 jest.mock('#components/molecules/Header', () => {
   const { View, Pressable, Text } = require('react-native');
   return {
-    Header: ({ onClose }: any) => (
+    Header: ({ onClose }: { onClose?: () => void }) => (
       <View testID="header">
         {onClose ? (
           <Pressable testID="header-close" onPress={onClose}>
@@ -74,7 +76,7 @@ jest.mock('#components/molecules/Header', () => {
 jest.mock('#/components/base/SousChefLoader', () => {
   const { Text } = require('react-native');
   return {
-    SousChefLoader: ({ message }: any) => (
+    SousChefLoader: ({ message }: { message?: string }) => (
       <Text testID="loader">{message}</Text>
     ),
   };
@@ -100,7 +102,7 @@ function buildVerifyMock(
             id: '1',
             email: 'test@example.com',
             emailVerified: true,
-            role: 'USER' as any,
+            role: UserRole.User,
             canAccessDevTools: false,
             onBoarded: true,
             createdAt: '2025-01-01T00:00:00.000Z',
@@ -118,7 +120,7 @@ function buildVerifyMock(
             settings: {
               __typename: 'UserSettings',
               id: 's1',
-              theme: 'LIGHT' as any,
+              theme: AppTheme.Light,
             },
           },
         },

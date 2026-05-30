@@ -1,4 +1,5 @@
 import { ApolloLink, Observable } from '@apollo/client';
+import type { GraphQLFormattedError } from 'graphql';
 import performance from 'react-native-performance';
 import { Telemetry } from '#/services/telemetry';
 import { Environment } from '#/utils/environment';
@@ -110,7 +111,7 @@ export const createTelemetryLink = () => {
             const duration = finalizeTiming(timing, hasErrors);
 
             if (response.errors && response.errors.length > 0) {
-              response.errors.forEach((error: any) => {
+              response.errors.forEach((error: GraphQLFormattedError) => {
                 // Safely serialize error.path
                 let errorPath: string | undefined;
                 if (error.path) {
@@ -172,7 +173,7 @@ export const createTelemetryLink = () => {
 
           observer.next(response);
         },
-        error: (error: any) => {
+        error: (error: unknown) => {
           const timing = timings.get(operationId);
           if (timing) {
             const duration = finalizeTiming(timing, true);

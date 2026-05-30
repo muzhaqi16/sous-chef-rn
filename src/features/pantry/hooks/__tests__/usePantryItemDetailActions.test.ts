@@ -2,7 +2,10 @@ import { act, waitFor } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,
+  type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
+import type { errorService } from '#/services/errorService';
+import type { executeMutation } from '#/utils/compilerSafeWrappers';
 import { DeletePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/screens/PantryItemDetail.generated';
 import { alertService } from '#/services/alertService';
@@ -27,19 +30,27 @@ jest.mock('#/services/alertService', () => ({
 
 const mockReportError = jest.fn();
 jest.mock('#/services/errorService', () => ({
-  errorService: { reportError: (...args: any[]) => mockReportError(...args) },
+  errorService: {
+    reportError: (...args: Parameters<typeof errorService.reportError>) =>
+      mockReportError(...args),
+  },
 }));
 
 jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeMutation: jest.fn(async (fn: any, onError: any) => {
-    try {
-      await fn();
-      return true;
-    } catch (e) {
-      onError?.(e);
-      return false;
-    }
-  }),
+  executeMutation: jest.fn(
+    async (
+      fn: Parameters<typeof executeMutation>[0],
+      onError: Parameters<typeof executeMutation>[1],
+    ) => {
+      try {
+        await fn();
+        return true;
+      } catch (e) {
+        if (typeof onError === 'function') await onError(e);
+        return false;
+      }
+    },
+  ),
 }));
 
 jest.mock('#hooks/home/pantry/utils', () => ({
@@ -103,7 +114,7 @@ const baseItem = {
 
 function setup(
   overrides: Partial<Parameters<typeof usePantryItemDetailActions>[0]> = {},
-  options: { operationMocks?: any[] } = {},
+  options: { operationMocks?: MockedResponse[] } = {},
 ) {
   const params = {
     itemId: 'item-1',

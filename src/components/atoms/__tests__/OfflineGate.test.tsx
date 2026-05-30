@@ -7,7 +7,7 @@ import { OfflineGate } from '../OfflineGate';
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 jest.mock('#utils/iconUtils', () => ({
-  Icon: ({ name }: any) => {
+  Icon: ({ name }: { name: string }) => {
     const { Text: RNText } = require('react-native');
     return <RNText>{name}</RNText>;
   },

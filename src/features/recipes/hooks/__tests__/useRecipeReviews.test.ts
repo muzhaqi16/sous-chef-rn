@@ -7,6 +7,8 @@ import {
   DeleteRecipeReviewDocument,
 } from '#features/recipes/graphql/recipeReview.generated';
 import { useRecipeReviews } from '../useRecipeReviews';
+import type { MaterializedRecipe } from '../useRecipeData';
+import type { toastService } from '#/services/toastService';
 
 jest.mock('#store/useAppStore', () => ({
   useUser: jest.fn(() => ({ id: 'user-1' })),
@@ -16,8 +18,10 @@ const mockToastSuccess = jest.fn();
 const mockToastError = jest.fn();
 jest.mock('#/services/toastService', () => ({
   toastService: {
-    success: (...args: any[]) => mockToastSuccess(...args),
-    error: (...args: any[]) => mockToastError(...args),
+    success: (...args: Parameters<typeof toastService.success>) =>
+      mockToastSuccess(...args),
+    error: (...args: Parameters<typeof toastService.error>) =>
+      mockToastError(...args),
     info: jest.fn(),
     warning: jest.fn(),
   },
@@ -159,7 +163,21 @@ function buildDeleteReviewMock(): MockedResponse {
   };
 }
 
-const makeBackendRecipe = (overrides?: any) => ({
+const makeBackendRecipe = (
+  overrides?: Partial<MaterializedRecipe>,
+): MaterializedRecipe => ({
+  __typename: 'Recipe',
+  id: 'recipe-1',
+  name: 'Test Recipe',
+  description: null,
+  imageUrl: null,
+  servings: 1,
+  totalTimeMinutes: null,
+  source: null,
+  sourceUrl: null,
+  instructions: null,
+  savedDetails: null,
+  ingredients: [],
   totalReviews: 3,
   averageRating: 4.2,
   rating1Count: 0,
@@ -167,7 +185,7 @@ const makeBackendRecipe = (overrides?: any) => ({
   rating3Count: 1,
   rating4Count: 1,
   rating5Count: 1,
-  createdBy: { id: 'other-user' },
+  createdBy: { __typename: 'User', id: 'other-user', email: 'other@test.com' },
   ...overrides,
 });
 
@@ -181,7 +199,7 @@ describe('useRecipeReviews', () => {
       () =>
         useRecipeReviews({
           recipeId: 'recipe-1',
-          backendRecipe: makeBackendRecipe() as any,
+          backendRecipe: makeBackendRecipe(),
         }),
       { operationMocks: [buildGetRecipeReviewsMock()] },
     );
@@ -198,7 +216,7 @@ describe('useRecipeReviews', () => {
       () =>
         useRecipeReviews({
           recipeId: 'recipe-1',
-          backendRecipe: makeBackendRecipe() as any,
+          backendRecipe: makeBackendRecipe(),
         }),
       { operationMocks: [buildGetRecipeReviewsMock()] },
     );
@@ -215,7 +233,7 @@ describe('useRecipeReviews', () => {
       () =>
         useRecipeReviews({
           recipeId: 'recipe-1',
-          backendRecipe: makeBackendRecipe() as any,
+          backendRecipe: makeBackendRecipe(),
         }),
       { operationMocks: [buildGetRecipeReviewsMock()] },
     );
@@ -232,8 +250,12 @@ describe('useRecipeReviews', () => {
         useRecipeReviews({
           recipeId: 'recipe-1',
           backendRecipe: makeBackendRecipe({
-            createdBy: { id: 'user-1' },
-          }) as any,
+            createdBy: {
+              __typename: 'User',
+              id: 'user-1',
+              email: 'user-1@test.com',
+            },
+          }),
         }),
       { operationMocks: [buildGetRecipeReviewsMock()] },
     );
@@ -247,7 +269,7 @@ describe('useRecipeReviews', () => {
       () =>
         useRecipeReviews({
           recipeId: 'recipe-1',
-          backendRecipe: makeBackendRecipe() as any,
+          backendRecipe: makeBackendRecipe(),
         }),
       { operationMocks: [buildGetRecipeReviewsMock()] },
     );
@@ -261,7 +283,7 @@ describe('useRecipeReviews', () => {
       () =>
         useRecipeReviews({
           recipeId: 'recipe-1',
-          backendRecipe: makeBackendRecipe() as any,
+          backendRecipe: makeBackendRecipe(),
         }),
       { operationMocks: [buildGetRecipeReviewsMock()] },
     );
@@ -283,7 +305,7 @@ describe('useRecipeReviews', () => {
       () =>
         useRecipeReviews({
           recipeId: 'recipe-1',
-          backendRecipe: makeBackendRecipe() as any,
+          backendRecipe: makeBackendRecipe(),
         }),
       {
         operationMocks: [
@@ -309,7 +331,7 @@ describe('useRecipeReviews', () => {
       () =>
         useRecipeReviews({
           recipeId: 'recipe-1',
-          backendRecipe: makeBackendRecipe() as any,
+          backendRecipe: makeBackendRecipe(),
         }),
       {
         operationMocks: [

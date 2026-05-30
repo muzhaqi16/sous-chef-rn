@@ -1,9 +1,11 @@
 import { renderHook, act } from '@testing-library/react-native';
+import { MealType } from '#/graphql/generated/schemaTypes';
+import type { toastService } from '#/services/toastService';
 import { useAddRecipeToMealPlan } from '../useAddRecipeToMealPlan';
 
 const mockCreateItem = jest.fn();
 
-const mockMealPlansState = (overrides: Record<string, any> = {}) => ({
+const mockMealPlansState = (overrides: Record<string, unknown> = {}) => ({
   state: {
     currentPlan: {
       id: 'plan-1',
@@ -41,8 +43,10 @@ const mockToastSuccess = jest.fn();
 const mockToastError = jest.fn();
 jest.mock('#/services/toastService', () => ({
   toastService: {
-    success: (...args: any[]) => mockToastSuccess(...args),
-    error: (...args: any[]) => mockToastError(...args),
+    success: (...args: Parameters<typeof toastService.success>) =>
+      mockToastSuccess(...args),
+    error: (...args: Parameters<typeof toastService.error>) =>
+      mockToastError(...args),
     info: jest.fn(),
     warning: jest.fn(),
   },
@@ -81,7 +85,7 @@ describe('useAddRecipeToMealPlan', () => {
     await act(async () => {
       success = await result.current.addRecipeToMealPlan({
         recipeId: 'r-1',
-        mealType: 'DINNER' as any,
+        mealType: MealType.Dinner,
         date: new Date('2025-06-03'),
       });
     });
@@ -106,7 +110,7 @@ describe('useAddRecipeToMealPlan', () => {
     await act(async () => {
       success = await result.current.addRecipeToMealPlan({
         recipeId: 'r-1',
-        mealType: 'DINNER' as any,
+        mealType: MealType.Dinner,
         date: new Date('2025-06-03'),
       });
     });
@@ -131,7 +135,7 @@ describe('useAddRecipeToMealPlan', () => {
     await act(async () => {
       success = await result.current.addRecipeToMealPlan({
         recipeId: 'r-1',
-        mealType: 'DINNER' as any,
+        mealType: MealType.Dinner,
         date: new Date(),
       });
     });

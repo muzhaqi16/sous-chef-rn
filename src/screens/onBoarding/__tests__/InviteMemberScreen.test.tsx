@@ -4,6 +4,7 @@ import React from 'react';
 import { fireEvent, screen, userEvent } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { alertService } from '#/services/alertService';
+import type { EmailInput as EmailInputComponent } from '#components/atoms/EmailInput';
 import { InviteMemberScreen } from '../InviteMemberScreen';
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -20,7 +21,12 @@ let mockSelectedHomeId: string | null = 'h1';
 let mockSelectedShoppingListId: string | null = 'sl1';
 
 jest.mock('#store/useAppStore', () => {
-  const fn = (selector: any) =>
+  const fn = (
+    selector: (state: {
+      selectedHomeId: string | null;
+      selectedShoppingListId: string | null;
+    }) => unknown,
+  ) =>
     selector({
       selectedHomeId: mockSelectedHomeId,
       selectedShoppingListId: mockSelectedShoppingListId,
@@ -43,13 +49,21 @@ jest.mock('#/services/alertService', () => ({
 }));
 
 jest.mock('#components/atoms/EmailInput', () => ({
-  EmailInput: (props: any) => {
+  EmailInput: (props: React.ComponentProps<typeof EmailInputComponent>) => {
     const { TextInput } = require('react-native');
     return <TextInput placeholder="Enter email address" {...props} />;
   },
 }));
 jest.mock('#components/templates/OnBoardingWrapper', () => ({
-  OnBoardingWrapper: ({ title, subtitle, children }: any) => {
+  OnBoardingWrapper: ({
+    title,
+    subtitle,
+    children,
+  }: {
+    title?: string;
+    subtitle?: string;
+    children?: React.ReactNode;
+  }) => {
     const { View, Text } = require('react-native');
     return (
       <View testID="onboarding-wrapper">
@@ -61,7 +75,17 @@ jest.mock('#components/templates/OnBoardingWrapper', () => ({
   },
 }));
 jest.mock('#components/base/Button', () => ({
-  Button: ({ title, onPress, disabled, testID }: any) => {
+  Button: ({
+    title,
+    onPress,
+    disabled,
+    testID,
+  }: {
+    title?: string;
+    onPress: () => void;
+    disabled?: boolean;
+    testID?: string;
+  }) => {
     const { Pressable, Text } = require('react-native');
     return (
       <Pressable onPress={onPress} disabled={disabled} testID={testID}>

@@ -3,16 +3,37 @@ import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { ShoppingListTabs } from '../ShoppingListTabs';
 
+type ShoppingListTabsProps = React.ComponentProps<typeof ShoppingListTabs>;
+
+type MockRoute = { key: string; title: string };
+type MockNavigationState = { index: number; routes: MockRoute[] };
+type RowItem = ShoppingListTabsProps['items'] extends (infer T)[] | undefined
+  ? T
+  : never;
+type MockItem = {
+  id: string;
+  title: string;
+  subtitle: string;
+  isPurchased: boolean;
+  sortKey: string;
+};
+
 jest.mock('#/utils/iconUtils', () => ({
   Icon: () => null,
 }));
 
 jest.mock('../FilterTabBar', () => ({
-  FilterTabBar: ({ navigationState, counts }: any) => {
+  FilterTabBar: ({
+    navigationState,
+    counts,
+  }: {
+    navigationState: MockNavigationState;
+    counts: Record<string, number>;
+  }) => {
     const { Text, View } = require('react-native');
     return (
       <View testID="filter-tab-bar">
-        {navigationState.routes.map((route: any) => (
+        {navigationState.routes.map((route: MockRoute) => (
           <Text key={route.key}>
             {route.title} ({counts[route.key] ?? 0})
           </Text>
@@ -29,7 +50,7 @@ jest.mock('../ShoppingTab', () => ({
     const { items } = useShoppingListData('shopping');
     return (
       <View testID="shopping-tab">
-        {(items ?? []).map((item: any) => (
+        {(items ?? []).map((item: MockItem) => (
           <Text key={item.id}>{item.title}</Text>
         ))}
       </View>
@@ -44,7 +65,7 @@ jest.mock('../PurchasedTab', () => ({
     const { items } = useShoppingListData('purchased');
     return (
       <View testID="purchased-tab">
-        {(items ?? []).map((item: any) => (
+        {(items ?? []).map((item: MockItem) => (
           <Text key={item.id}>{item.title}</Text>
         ))}
       </View>
@@ -53,7 +74,13 @@ jest.mock('../PurchasedTab', () => ({
 }));
 
 jest.mock('#components/base/EmptyState', () => ({
-  EmptyState: ({ title, description }: any) => {
+  EmptyState: ({
+    title,
+    description,
+  }: {
+    title: string;
+    description?: string;
+  }) => {
     const { Text, View } = require('react-native');
     return (
       <View testID="empty-state">
@@ -78,7 +105,17 @@ jest.mock('#components/base/Skeleton/ShoppingListItemSkeleton', () => ({
 jest.mock('react-native-tab-view', () => {
   const { View } = require('react-native');
   return {
-    TabView: ({ renderScene, renderTabBar, navigationState }: any) => {
+    TabView: ({
+      renderScene,
+      renderTabBar,
+      navigationState,
+    }: {
+      renderScene: (props: { route: MockRoute }) => React.ReactNode;
+      renderTabBar: (props: {
+        navigationState: MockNavigationState;
+      }) => React.ReactNode;
+      navigationState: MockNavigationState;
+    }) => {
       const tabBar = renderTabBar({ navigationState });
       const activeRoute = navigationState.routes[navigationState.index];
       const scene = renderScene({ route: activeRoute });
@@ -98,9 +135,11 @@ const makeItem = (id: string, title: string, isPurchased: boolean) => ({
   subtitle: 'some subtitle',
   isPurchased,
   sortKey: id,
+  sortOrder: id,
+  itemRef: {} as RowItem['itemRef'],
 });
 
-const defaultProps: any = {
+const defaultProps: ShoppingListTabsProps = {
   items: [
     makeItem('1', 'Milk', false),
     makeItem('2', 'Eggs', false),

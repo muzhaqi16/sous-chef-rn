@@ -5,7 +5,10 @@ import {
   CreateShoppingListItemsFromRecipeDocument,
   CreateShoppingListItemFromRecipeIngredientDocument,
 } from '#features/recipes/graphql/recipe.generated';
-import { type MaterializedRecipe } from './useRecipeData';
+import {
+  type MaterializedRecipe,
+  type DisplayIngredient,
+} from './useRecipeData';
 import {
   AddItemToShoppingListFromRecipeDocument,
   AddItemsToShoppingListDocument,
@@ -33,7 +36,7 @@ interface UseRecipeShoppingListOptions {
 }
 
 type PendingAction =
-  | { type: 'single'; ingredient?: any }
+  | { type: 'single'; ingredient?: DisplayIngredient }
   | { type: 'all' }
   | { type: 'selected' };
 
@@ -142,7 +145,7 @@ export function useRecipeShoppingList({
         executeCacheUpdate(() => {
           const result = data.createShoppingListItemsFromRecipe;
           const shoppingListId = variables.input.shoppingListId;
-          result.addedItems.forEach((item: any) => {
+          result.addedItems.forEach(item => {
             addNewItemToShoppingListCache(cache, shoppingListId, item);
           });
         }, 'Cache update failed for addRecipeToShoppingList:');
@@ -227,7 +230,7 @@ export function useRecipeShoppingList({
   );
 
   // Add a single ingredient to the user's default/selected list (no picker).
-  const handleAddSingleIngredient = (ingredient: any) => {
+  const handleAddSingleIngredient = (ingredient: DisplayIngredient) => {
     const targetList = getTargetShoppingList();
     if (!targetList) {
       toastService.error('Please create a shopping list first.');
@@ -240,18 +243,18 @@ export function useRecipeShoppingList({
           await addRecipeIngredientMutation({
             variables: {
               input: {
-                recipeIngredientId: ingredient.id,
+                recipeIngredientId: String(ingredient.id),
                 shoppingListId: targetList.id,
               },
             },
           });
-        } else {
+        } else if ('amount' in ingredient) {
           await addItemToShoppingListMutation({
             variables: {
               input: {
                 itemName:
                   ingredient.name ||
-                  ingredient.originalString ||
+                  ingredient.original ||
                   'Unknown ingredient',
                 quantity: ingredient.amount || 0,
                 unit: {

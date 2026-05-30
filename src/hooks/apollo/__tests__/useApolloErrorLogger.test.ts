@@ -92,7 +92,8 @@ describe('useApolloErrorLogger', () => {
   it('does not re-report when error stays the same on rerender', () => {
     const error = { message: 'Some error' };
     const { rerender } = renderHook(
-      ({ err }: any) => useApolloErrorLogger('Op', err),
+      ({ err }: { err: { message: string } | undefined }) =>
+        useApolloErrorLogger('Op', err),
       { initialProps: { err: error as { message: string } | undefined } },
     );
 

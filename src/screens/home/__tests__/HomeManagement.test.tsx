@@ -53,15 +53,16 @@ jest.mock('#/hooks/useInviteUserModal', () => ({
 }));
 
 jest.mock('#/utils/permissions/homePermissions', () => ({
-  findUserMembership: jest.fn((members: any[], userId: string) =>
-    members?.find((m: any) => m.user?.id === userId),
+  findUserMembership: jest.fn(
+    (members: Array<{ user?: { id?: string } }> | undefined, userId: string) =>
+      members?.find(m => m.user?.id === userId),
   ),
   getInvitableRoles: jest.fn(() => ['MEMBER']),
   canInviteToHome: jest.fn(() => true),
 }));
 
 jest.mock('#components/molecules/Header', () => ({
-  Header: ({ title }: any) => title,
+  Header: ({ title }: { title?: string }) => title,
 }));
 
 jest.mock('#/components/atoms/BaseInput/BaseInput', () => ({
@@ -81,7 +82,7 @@ jest.mock('#/components/organisms/home/CreateHomeForm', () => ({
 }));
 
 jest.mock('#/components/organisms/home/HomeCard', () => ({
-  HomeCard: ({ homeRef }: any) => homeRef?.name,
+  HomeCard: ({ homeRef }: { homeRef?: { name?: string } }) => homeRef?.name,
 }));
 
 jest.mock('#/services/toastService', () => ({

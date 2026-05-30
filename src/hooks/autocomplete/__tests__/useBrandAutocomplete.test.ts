@@ -4,6 +4,7 @@ import {
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import { SearchBrandsDocument } from '#operations/item/item.generated';
+import type { RootState } from '#store/index';
 import { useBrandAutocomplete } from '../useBrandAutocomplete';
 
 jest.mock('../../../apollo/links/tokenScheduler');
@@ -13,8 +14,9 @@ let mockIsOnline = true;
 jest.mock('#store/useAppStore', () => {
   const getState = () => ({ isOnline: mockIsOnline });
   return {
-    useAppStore: (selector: (state: any) => any) => selector(getState()),
-    useIsOnline: () => (s => s.isOnline)(getState()),
+    useAppStore: <T>(selector: (state: RootState) => T): T =>
+      selector(getState() as Partial<RootState> as RootState),
+    useIsOnline: () => getState().isOnline,
   };
 });
 

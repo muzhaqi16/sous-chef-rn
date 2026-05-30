@@ -1,5 +1,10 @@
 import { renderHook } from '@testing-library/react-native';
+import type { RootState } from '#store/index';
+import type { User } from '#store/slices/authSlice';
+import type { NavigationState } from '#store/slices/appSlice';
 import { useAuthState } from '../useAuthState';
+
+type PostLoginCredentials = { email: string; password: string } | null;
 
 // Break circular dependency chain
 jest.mock('../../../apollo/links/tokenScheduler');
@@ -19,19 +24,19 @@ const mockSetNavigationState = jest.fn();
 const mockSetShowBiometricSetup = jest.fn();
 const mockSetPostLoginCredentials = jest.fn();
 
-let mockUser: any = { id: 'u1', email: 'test@test.com' };
+let mockUser: Partial<User> | null = { id: 'u1', email: 'test@test.com' };
 let mockAccessToken: string | null = 'access-token';
 let mockRefreshToken: string | null = 'refresh-token';
 let mockIsLoggingOut = false;
 let mockIsAutoLoggingIn = false;
-let mockNavigationState = 'auth';
+let mockNavigationState: NavigationState = 'auth';
 let mockShowBiometricSetup = false;
-let mockPostLoginCredentials: any = null;
+let mockPostLoginCredentials: PostLoginCredentials = null;
 
 jest.mock('#store/useAppStore', () => ({
-  useAppStore: (selector: (state: any) => any) =>
-    selector({
-      user: mockUser,
+  useAppStore: <T>(selector: (state: RootState) => T): T => {
+    const state: Partial<RootState> = {
+      user: mockUser as User | null,
       accessToken: mockAccessToken,
       refreshToken: mockRefreshToken,
       isLoggingOut: mockIsLoggingOut,
@@ -51,7 +56,9 @@ jest.mock('#store/useAppStore', () => ({
       setNavigationState: mockSetNavigationState,
       setShowBiometricSetup: mockSetShowBiometricSetup,
       setPostLoginCredentials: mockSetPostLoginCredentials,
-    }),
+    };
+    return selector(state as RootState);
+  },
   useAuthTokens: jest.fn(() => ({
     user: mockUser,
     accessToken: mockAccessToken,

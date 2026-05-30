@@ -1,9 +1,12 @@
 'use no memo';
 
 import React from 'react';
+import type { ComponentProps } from 'react';
 import { render, userEvent } from '@testing-library/react-native';
 import { Image } from 'react-native';
 import { ImageCropScreen } from '../ImageCropScreen';
+
+type ImageCropScreenProps = ComponentProps<typeof ImageCropScreen>;
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
@@ -18,7 +21,7 @@ jest.mock('#utils/iconUtils', () => ({
 }));
 
 jest.mock('#components/molecules/Header', () => ({
-  Header: ({ title, onBack }: any) => {
+  Header: ({ title, onBack }: { title?: string; onBack?: () => void }) => {
     const { View, Text, Pressable } = require('react-native');
     return (
       <View>
@@ -54,11 +57,15 @@ jest.mock('#/utils/compilerSafeWrappers');
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
 }));
-jest.spyOn(Image, 'getSize').mockImplementation((uri: string, success: any) => {
-  success(800, 600);
-});
+jest
+  .spyOn(Image, 'getSize')
+  .mockImplementation(
+    (uri: string, success: (width: number, height: number) => void) => {
+      success(800, 600);
+    },
+  );
 
-const defaultProps = {
+const defaultProps: ImageCropScreenProps = {
   route: {
     params: {
       imageFile: {
@@ -69,7 +76,7 @@ const defaultProps = {
       },
     },
   },
-} as any;
+};
 
 beforeEach(() => {
   jest.clearAllMocks();

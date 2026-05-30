@@ -18,11 +18,16 @@ import {
   getScheduleState,
 } from '../tokenScheduler';
 import { useStore } from '#store';
+import type { RootState } from '#store/index';
 
 const mockedJwtDecode = jwtDecode as jest.MockedFunction<typeof jwtDecode>;
 const mockedGetState = useStore.getState as jest.MockedFunction<
   typeof useStore.getState
 >;
+
+// The scheduler only reads `isOnline`; build a minimal RootState for the mock.
+const stateWith = (overrides: Partial<RootState>): RootState =>
+  overrides as RootState;
 
 describe('tokenScheduler', () => {
   beforeEach(() => {
@@ -30,7 +35,7 @@ describe('tokenScheduler', () => {
     // Cancel any outstanding timers from previous tests
     cancelTokenRefresh();
     jest.clearAllMocks();
-    mockedGetState.mockReturnValue({ isOnline: true } as any);
+    mockedGetState.mockReturnValue(stateWith({ isOnline: true }));
   });
 
   afterEach(() => {
@@ -104,7 +109,7 @@ describe('tokenScheduler', () => {
     });
 
     it('skips callback when device is offline', () => {
-      mockedGetState.mockReturnValue({ isOnline: false } as any);
+      mockedGetState.mockReturnValue(stateWith({ isOnline: false }));
 
       const futureExp = Math.floor(Date.now() / 1000) + 1200;
       mockedJwtDecode.mockReturnValue({ exp: futureExp, iat: 0, userId: '1' });

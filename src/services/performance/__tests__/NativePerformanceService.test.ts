@@ -5,7 +5,15 @@ import performance, {
 import { Telemetry } from '#/services/telemetry';
 import { NativePerformanceService } from '../NativePerformanceService';
 
-const observers: any[] = [];
+interface MockObserver {
+  observe: jest.Mock;
+  disconnect: jest.Mock;
+  _callback: (list: {
+    getEntries: () => Array<Record<string, unknown>>;
+  }) => void;
+}
+
+const observers: MockObserver[] = [];
 
 jest.mock('react-native-performance', () => {
   return {

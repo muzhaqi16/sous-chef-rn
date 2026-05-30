@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
+import type { SharedValue } from 'react-native-reanimated';
 import { OnboardingSteps } from '../OnboardingSteps/OnboardingSteps';
 import { StepDot } from '../OnboardingSteps/StepDot';
 
@@ -24,7 +25,7 @@ const mockSteps = [
 ];
 
 describe('OnboardingSteps', () => {
-  const mockActiveIndex = {
+  const mockActiveIndex: SharedValue<number> = {
     value: 0,
     get: jest.fn(() => 0),
     set: jest.fn(),
@@ -35,20 +36,14 @@ describe('OnboardingSteps', () => {
 
   it('renders without crashing', () => {
     const { toJSON } = render(
-      <OnboardingSteps
-        steps={mockSteps}
-        activeIndex={mockActiveIndex as any}
-      />,
+      <OnboardingSteps steps={mockSteps} activeIndex={mockActiveIndex} />,
     );
     expect(toJSON()).toBeTruthy();
   });
 
   it('renders with default stepSize of 12', () => {
     const { toJSON } = render(
-      <OnboardingSteps
-        steps={mockSteps}
-        activeIndex={mockActiveIndex as any}
-      />,
+      <OnboardingSteps steps={mockSteps} activeIndex={mockActiveIndex} />,
     );
     expect(toJSON()).toBeTruthy();
   });
@@ -57,7 +52,7 @@ describe('OnboardingSteps', () => {
     const { toJSON } = render(
       <OnboardingSteps
         steps={mockSteps}
-        activeIndex={mockActiveIndex as any}
+        activeIndex={mockActiveIndex}
         stepSize={16}
       />,
     );
@@ -66,7 +61,7 @@ describe('OnboardingSteps', () => {
 });
 
 describe('StepDot', () => {
-  const mockActiveIndex = {
+  const mockActiveIndex: SharedValue<number> = {
     value: 1,
     get: jest.fn(() => 1),
     set: jest.fn(),
@@ -77,7 +72,7 @@ describe('StepDot', () => {
 
   const defaultStepDotProps = {
     index: 0,
-    activeIndex: mockActiveIndex as any,
+    activeIndex: mockActiveIndex,
     stepSize: 12,
     step: { id: 'step-1', title: 'Welcome' },
   };

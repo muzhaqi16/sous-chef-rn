@@ -1,4 +1,9 @@
 import { renderHook } from '@testing-library/react-native';
+import type { RootState } from '#store/index';
+import type {
+  hasCredentialsForAccount,
+  getBiometricCapability,
+} from '#/storage/keychain';
 import { useBiometricPrompting } from '../useBiometricPrompting';
 
 // Break circular dependency chain
@@ -10,27 +15,33 @@ const mockHasCredentialsForAccount = jest.fn();
 const mockGetBiometricCapability = jest.fn();
 
 jest.mock('#/storage/keychain', () => ({
-  hasCredentialsForAccount: (...args: any[]) =>
-    mockHasCredentialsForAccount(...args),
-  getBiometricCapability: (...args: any[]) =>
-    mockGetBiometricCapability(...args),
+  hasCredentialsForAccount: (
+    ...args: Parameters<typeof hasCredentialsForAccount>
+  ) => mockHasCredentialsForAccount(...args),
+  getBiometricCapability: (
+    ...args: Parameters<typeof getBiometricCapability>
+  ) => mockGetBiometricCapability(...args),
 }));
 
 // Mock store
-let mockUser: any = { id: 'u1', email: 'test@test.com' };
+let mockUser: { id: string; email: string } | null = {
+  id: 'u1',
+  email: 'test@test.com',
+};
 const mockSetUserNavigationState = jest.fn();
 const mockGetUserNavigationState = jest.fn();
 
 jest.mock('#store/useAppStore', () => {
-  const getState = () => ({
-    user: mockUser,
+  const getState = (): Partial<RootState> => ({
+    user: mockUser as RootState['user'],
     setUserNavigationState: mockSetUserNavigationState,
     getUserNavigationState: mockGetUserNavigationState,
   });
   return {
-    useAppStore: (selector: (state: any) => any) => selector(getState()),
-    useUser: () => (s => s.user)(getState()),
-    useUserId: () => (s => s.user?.id)(getState()),
+    useAppStore: (selector: (state: RootState) => unknown) =>
+      selector(getState() as RootState),
+    useUser: () => getState().user,
+    useUserId: () => getState().user?.id,
   };
 });
 

@@ -142,21 +142,21 @@ export function createEntityNormalizer<T extends Record<string, unknown>>(
 ) {
   // The returned object adds runtime-keyed array fields (named by each config's
   // `arrayName`), so those extra keys can't be expressed statically — the
-  // `Record<string, any>` intersection is the intentional escape hatch for
-  // ergonomic dynamic-key access by callers.
-  return (entity?: T | null): (T & Record<string, any>) | null => {
+  // `Record<string, unknown>` intersection covers ergonomic dynamic-key access
+  // by callers, who narrow the value at the read site.
+  return (entity?: T | null): (T & Record<string, unknown>) | null => {
     if (!entity) {
       return null;
     }
 
-    const normalized: Record<string, any> = { ...entity };
+    const normalized: Record<string, unknown> = { ...entity };
 
     configs.forEach(config => {
       const fields = normalizeConnectionField(entity, config);
       Object.assign(normalized, fields);
     });
 
-    return normalized as T & Record<string, any>;
+    return normalized as T & Record<string, unknown>;
   };
 }
 
@@ -175,8 +175,9 @@ export function normalizeConnection<T = unknown>(
   connection?: Connection<T> | null,
   arrayName: string = 'items',
   // The extracted array is keyed under a runtime-provided `arrayName`, so the
-  // dynamic field can't be typed statically — the `any` index value is intentional.
-): { [key: string]: any; totalCount: number; pageInfo?: PageInfo } | null {
+  // dynamic field can't be typed statically — callers narrow the value at the
+  // read site.
+): { [key: string]: unknown; totalCount: number; pageInfo?: PageInfo } | null {
   if (!connection) {
     return null;
   }

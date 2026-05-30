@@ -1,7 +1,9 @@
 'use no memo';
 import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
+import type { SharedValue } from 'react-native-reanimated';
 import { LeftActions } from '../LeftActions';
+import type { ActionButtonProps, SwipeableRef } from '../types';
 
 jest.mock('#/services/haptic/HapticService', () => ({
   HapticService: {
@@ -16,7 +18,7 @@ jest.mock('../AnimatedActionButton', () => {
   const RN = require('react-native');
   const R = require('react');
   return {
-    AnimatedActionButton: ({ onPress, icon, testID }: any) =>
+    AnimatedActionButton: ({ onPress, icon, testID }: ActionButtonProps) =>
       R.createElement(
         RN.Pressable,
         { onPress, testID: testID || `action-btn-${icon}` },
@@ -26,8 +28,16 @@ jest.mock('../AnimatedActionButton', () => {
 });
 
 describe('LeftActions', () => {
-  const mockSwipeableRef = { current: { close: jest.fn() } };
-  const mockProgress = {
+  const mockClose = jest.fn();
+  const mockSwipeableRef: SwipeableRef = {
+    current: {
+      close: mockClose,
+      openLeft: jest.fn(),
+      openRight: jest.fn(),
+      reset: jest.fn(),
+    },
+  };
+  const mockProgress: SharedValue<number> = {
     value: 0.5,
     addListener: jest.fn(),
     removeListener: jest.fn(),
@@ -41,7 +51,7 @@ describe('LeftActions', () => {
   });
 
   it('returns null when no action callbacks are provided', () => {
-    const { toJSON } = render(<LeftActions progress={mockProgress as any} />);
+    const { toJSON } = render(<LeftActions progress={mockProgress} />);
     expect(toJSON()).toBeNull();
   });
 
@@ -51,8 +61,8 @@ describe('LeftActions', () => {
       <LeftActions
         onTogglePurchase={onTogglePurchase}
         isPurchased={false}
-        swipeableRef={mockSwipeableRef as any}
-        progress={mockProgress as any}
+        swipeableRef={mockSwipeableRef}
+        progress={mockProgress}
       />,
     );
     expect(screen.getByText('checkmark-circle')).toBeTruthy();
@@ -63,8 +73,8 @@ describe('LeftActions', () => {
       <LeftActions
         onTogglePurchase={jest.fn()}
         isPurchased={true}
-        swipeableRef={mockSwipeableRef as any}
-        progress={mockProgress as any}
+        swipeableRef={mockSwipeableRef}
+        progress={mockProgress}
       />,
     );
     expect(screen.getByText('close-circle')).toBeTruthy();
@@ -77,21 +87,21 @@ describe('LeftActions', () => {
       <LeftActions
         onTogglePurchase={onTogglePurchase}
         isPurchased={false}
-        swipeableRef={mockSwipeableRef as any}
-        progress={mockProgress as any}
+        swipeableRef={mockSwipeableRef}
+        progress={mockProgress}
       />,
     );
     await user.press(screen.getByText('checkmark-circle'));
     expect(onTogglePurchase).toHaveBeenCalled();
-    expect(mockSwipeableRef.current.close).toHaveBeenCalled();
+    expect(mockClose).toHaveBeenCalled();
   });
 
   it('renders consume button when onConsume is provided alone', () => {
     render(
       <LeftActions
         onConsume={jest.fn()}
-        swipeableRef={mockSwipeableRef as any}
-        progress={mockProgress as any}
+        swipeableRef={mockSwipeableRef}
+        progress={mockProgress}
       />,
     );
     expect(screen.getByText('restaurant-outline')).toBeTruthy();
@@ -101,8 +111,8 @@ describe('LeftActions', () => {
     render(
       <LeftActions
         onWaste={jest.fn()}
-        swipeableRef={mockSwipeableRef as any}
-        progress={mockProgress as any}
+        swipeableRef={mockSwipeableRef}
+        progress={mockProgress}
       />,
     );
     expect(screen.getByText('warning-outline')).toBeTruthy();
@@ -113,8 +123,8 @@ describe('LeftActions', () => {
       <LeftActions
         onConsume={jest.fn()}
         onWaste={jest.fn()}
-        swipeableRef={mockSwipeableRef as any}
-        progress={mockProgress as any}
+        swipeableRef={mockSwipeableRef}
+        progress={mockProgress}
       />,
     );
     expect(screen.getByText('restaurant-outline')).toBeTruthy();
@@ -127,8 +137,8 @@ describe('LeftActions', () => {
         onConsume={jest.fn()}
         onWaste={jest.fn()}
         onRestock={jest.fn()}
-        swipeableRef={mockSwipeableRef as any}
-        progress={mockProgress as any}
+        swipeableRef={mockSwipeableRef}
+        progress={mockProgress}
       />,
     );
     expect(screen.getByText('restaurant-outline')).toBeTruthy();
@@ -142,13 +152,13 @@ describe('LeftActions', () => {
     render(
       <LeftActions
         onConsume={onConsume}
-        swipeableRef={mockSwipeableRef as any}
-        progress={mockProgress as any}
+        swipeableRef={mockSwipeableRef}
+        progress={mockProgress}
       />,
     );
     await user.press(screen.getByText('restaurant-outline'));
     expect(onConsume).toHaveBeenCalled();
-    expect(mockSwipeableRef.current.close).toHaveBeenCalled();
+    expect(mockClose).toHaveBeenCalled();
   });
 
   it('renders edit button in shopping mode', () => {
@@ -159,8 +169,8 @@ describe('LeftActions', () => {
         swipeMode="shopping"
         onEdit={onEdit}
         onActionPress={onActionPress}
-        swipeableRef={mockSwipeableRef as any}
-        progress={mockProgress as any}
+        swipeableRef={mockSwipeableRef}
+        progress={mockProgress}
       />,
     );
     expect(screen.getByText('create-outline')).toBeTruthy();
@@ -175,12 +185,12 @@ describe('LeftActions', () => {
         swipeMode="shopping"
         onEdit={onEdit}
         onActionPress={onActionPress}
-        swipeableRef={mockSwipeableRef as any}
-        progress={mockProgress as any}
+        swipeableRef={mockSwipeableRef}
+        progress={mockProgress}
       />,
     );
     await user.press(screen.getByText('create-outline'));
     expect(onActionPress).toHaveBeenCalledWith('edit');
-    expect(mockSwipeableRef.current.close).toHaveBeenCalled();
+    expect(mockClose).toHaveBeenCalled();
   });
 });

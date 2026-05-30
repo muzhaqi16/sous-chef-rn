@@ -18,7 +18,7 @@ jest.mock('react-native-worklets', () => ({
   createWorkletRuntime: jest.fn(),
   runOnRuntime: jest.fn(),
   useWorklet: jest.fn(),
-  scheduleOnRN: jest.fn((fn: any) => fn),
+  scheduleOnRN: jest.fn((fn: (...args: unknown[]) => unknown) => fn),
 }));
 
 jest.mock('#/constants/animations', () => ({
@@ -37,7 +37,13 @@ jest.mock('#components/molecules/BaseItemCard/BaseItemCard', () => {
       itemId,
       leftElement,
       rightElement,
-    }: any) =>
+    }: {
+      children?: React.ReactNode;
+      testID?: string;
+      itemId?: string;
+      leftElement?: React.ReactNode;
+      rightElement?: React.ReactNode;
+    }) =>
       R.createElement(
         RN.View,
         { testID: testID || `base-item-card-${itemId}` },
@@ -51,7 +57,13 @@ jest.mock('#components/molecules/BaseItemCard/BaseItemCard', () => {
 jest.mock('#components/molecules/BaseItemCard/CardLeftSlot', () => {
   const RN = require('react-native');
   return {
-    CardLeftSlot: ({ type, imageUrl }: any) =>
+    CardLeftSlot: ({
+      type,
+      imageUrl,
+    }: {
+      type?: string;
+      imageUrl?: string | null;
+    }) =>
       require('react').createElement(RN.View, {
         testID: `card-left-${type}`,
         accessibilityLabel: imageUrl,
@@ -63,7 +75,13 @@ jest.mock('#components/molecules/BaseItemCard/CardContent', () => {
   const RN = require('react-native');
   const R = require('react');
   return {
-    CardContent: ({ title, subtitle }: any) =>
+    CardContent: ({
+      title,
+      subtitle,
+    }: {
+      title?: string;
+      subtitle?: React.ReactNode;
+    }) =>
       R.createElement(
         RN.View,
         { testID: 'card-content' },
@@ -77,7 +95,15 @@ jest.mock('#components/molecules/BaseItemCard/CardRightSlot', () => {
   const RN = require('react-native');
   const R = require('react');
   return {
-    CardRightSlot: ({ primary, secondary, tertiary }: any) =>
+    CardRightSlot: ({
+      primary,
+      secondary,
+      tertiary,
+    }: {
+      primary?: React.ReactNode;
+      secondary?: React.ReactNode;
+      tertiary?: React.ReactNode;
+    }) =>
       R.createElement(
         RN.View,
         { testID: 'card-right-slot' },

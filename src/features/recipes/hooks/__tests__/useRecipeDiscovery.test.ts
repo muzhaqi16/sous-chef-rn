@@ -3,6 +3,7 @@ import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { useRecipeDiscovery } from '../useRecipeDiscovery';
 import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
 import { useRecipeCacheStore } from '#/store/useRecipeCacheStore';
+import type { SearchRecipesResult } from '#/services/recipeApi/types';
 
 jest.mock('#/services/recipeApi/SpoonacularService', () => ({
   spoonacularService: {
@@ -158,7 +159,8 @@ describe('useRecipeDiscovery', () => {
         servings: 2,
         readyInMinutes: 15,
         image: 'https://example.com/cr.jpg',
-      } as any,
+        imageType: 'jpg',
+      } satisfies SearchRecipesResult,
     ]);
 
     const { result } = renderHookWithApollo(() => useRecipeDiscovery());

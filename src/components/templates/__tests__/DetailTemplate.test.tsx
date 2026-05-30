@@ -2,17 +2,27 @@ import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
 import { Text } from 'react-native';
 import { DetailTemplate } from '../DetailTemplate';
+import type { HeaderAction } from '../../molecules/Header';
+import type { IconName } from '#utils/iconUtils';
 
 jest.mock('../../molecules/Header', () => {
   const { View, Text: RNText, Pressable } = require('react-native');
   return {
-    Header: ({ title, onBack, rightActions }: any) => (
+    Header: ({
+      title,
+      onBack,
+      rightActions,
+    }: {
+      title?: string;
+      onBack?: () => void;
+      rightActions?: HeaderAction[];
+    }) => (
       <View testID="header">
         <Pressable onPress={onBack} testID="header-back">
           <RNText>Back</RNText>
         </Pressable>
         {title ? <RNText>{title}</RNText> : null}
-        {rightActions?.map((action: any, i: number) => (
+        {rightActions?.map((action: HeaderAction, i: number) => (
           <Pressable
             key={i}
             onPress={action.onPress}
@@ -29,7 +39,13 @@ jest.mock('../../molecules/Header', () => {
 jest.mock('../../base/Button', () => {
   const { Pressable, Text: RNText } = require('react-native');
   return {
-    Button: ({ children, onPress }: any) => (
+    Button: ({
+      children,
+      onPress,
+    }: {
+      children?: React.ReactNode;
+      onPress: () => void;
+    }) => (
       <Pressable onPress={onPress} testID="primary-action-button">
         <RNText>{children}</RNText>
       </Pressable>
@@ -99,7 +115,7 @@ describe('DetailTemplate', () => {
 
   it('renders header actions', async () => {
     const user = userEvent.setup();
-    const headerAction = { icon: 'edit' as any, onPress: jest.fn() };
+    const headerAction = { icon: 'edit' as IconName, onPress: jest.fn() };
     render(<DetailTemplate {...defaultProps} headerActions={[headerAction]} />);
     await user.press(screen.getByTestId('header-action-0'));
     expect(headerAction.onPress).toHaveBeenCalledTimes(1);

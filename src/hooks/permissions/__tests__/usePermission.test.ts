@@ -10,7 +10,10 @@ jest.mock('#/services/permissions/PermissionService', () => ({
 
 import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { usePermission } from '../usePermission';
-import { PermissionService } from '#/services/permissions/PermissionService';
+import {
+  PermissionService,
+  type AppPermission,
+} from '#/services/permissions/PermissionService';
 
 describe('usePermission', () => {
   beforeEach(() => {
@@ -90,15 +93,15 @@ describe('usePermission', () => {
       .mockResolvedValueOnce('denied');
 
     const { result, rerender } = renderHook(
-      ({ perm }: { perm: any }) => usePermission(perm),
-      { initialProps: { perm: 'camera' as any } },
+      ({ perm }: { perm: AppPermission }) => usePermission(perm),
+      { initialProps: { perm: 'camera' } },
     );
 
     await waitFor(() => {
       expect(result.current.status).toBe('granted');
     });
 
-    rerender({ perm: 'photos' as any });
+    rerender({ perm: 'photos' as AppPermission });
 
     await waitFor(() => {
       expect(PermissionService.check).toHaveBeenCalledWith('photos');

@@ -77,7 +77,7 @@ export class TelemetryService {
   log(
     level: LogEntry['level'],
     message: string,
-    extra?: Record<string, any>,
+    extra?: Record<string, unknown>,
   ): void {
     if (
       !this.config.enabled ||
@@ -217,7 +217,10 @@ export class TelemetryService {
     });
   }
 
-  trackEvent(eventName: string, properties: Record<string, any> = {}): void {
+  trackEvent(
+    eventName: string,
+    properties: Record<string, unknown> = {},
+  ): void {
     // `app_events_total` is the source of truth for the analytics dashboards.
     // The breadcrumb is logged at debug level so `minLogLevel` drops it before
     // Loki in staging/production — no write-amplification where volume matters.
@@ -238,7 +241,7 @@ export class TelemetryService {
 
   trackScreenView(
     screenName: string,
-    properties: Record<string, any> = {},
+    properties: Record<string, unknown> = {},
   ): void {
     // `screen_views_total` is the source of truth; the breadcrumb is logged at
     // debug level so `minLogLevel` drops it before Loki in staging/production.

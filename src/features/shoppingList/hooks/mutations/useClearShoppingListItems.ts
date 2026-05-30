@@ -14,7 +14,10 @@
 import { useRef } from 'react';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import type { ApolloClient } from '@apollo/client';
-import { ClearShoppingListItemsDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import {
+  ClearShoppingListItemsDocument,
+  type ClearShoppingListItemsMutationVariables,
+} from '#features/shoppingList/graphql/shoppingList.generated';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import {
   clearAllPurchasedItemsFromCache,
@@ -22,16 +25,10 @@ import {
 } from '#/apollo/utils/shoppingListCacheUpdaters';
 
 // The mutate function returned by useMutation for the clear operation. The
-// runtime call passes batch variables un-nested (shoppingListId/purchased)
-// rather than under the operation's `input` variable. Reconciling that requires
-// changing the graphql operation/call (cross-module), so the options bag is kept
-// loose here; only `variables` is untyped (see rule on cross-module refactors).
-// `variables` stays `any`: the real useMutation mutate fn requires the strict
-// `{ input }` shape, but the call passes un-nested fields. Bivariant assignment
-// of the real fn to this type is only possible with `any` here; fixing it means
-// changing the graphql operation/call (cross-module, out of scope).
+// hook only ever passes `variables` (the operation's `input`) and a no-op
+// `update`, so this captures just that subset of the Apollo mutate options.
 type ClearMutationFn = (options: {
-  variables: any;
+  variables: ClearShoppingListItemsMutationVariables;
   update?: () => void;
 }) => Promise<unknown>;
 
@@ -69,7 +66,7 @@ async function executeClearItems(
   const result = await executeMutation(
     () =>
       clearMutation({
-        variables: { shoppingListId: listId, purchased },
+        variables: { input: { shoppingListId: listId, purchased } },
         update: () => {}, // Cache already cleared optimistically
       }),
     async error => {

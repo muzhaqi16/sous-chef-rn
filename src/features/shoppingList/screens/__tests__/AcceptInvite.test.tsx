@@ -5,6 +5,7 @@ import { userEvent, waitFor } from '@testing-library/react-native';
 import type { MockedResponse } from '#/test-utils/apolloMockProvider';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { alertService } from '#/services/alertService';
+import type { AlertButton } from '#/services/alertService';
 import {
   CollaboratorRole,
   CollaboratorStatus,
@@ -38,7 +39,9 @@ jest.mock('@react-navigation/native', () => ({
 
 jest.mock('#/services/errorService', () => ({
   errorService: { reportError: jest.fn() },
-  getErrorMessage: jest.fn((e: any) => e?.message || 'Unknown error'),
+  getErrorMessage: jest.fn((e: unknown) =>
+    e instanceof Error ? e.message : 'Unknown error',
+  ),
 }));
 
 jest.mock('#/services/alertService', () => ({
@@ -280,7 +283,11 @@ function buildDeclineShoppingListInviteErrorMock(
 }
 
 function makeExecuteWithLoadingStateImpl() {
-  return async (fn: any, setLoading: any, onError?: any) => {
+  return async (
+    fn: () => Promise<void>,
+    setLoading: (value: boolean) => void,
+    onError?: (error: unknown) => void,
+  ) => {
     setLoading(true);
     let result: unknown;
     let didError = false;
@@ -573,9 +580,9 @@ describe('AcceptInvite', () => {
     await waitFor(() => expect(tree.getByText('Decline')).toBeTruthy());
     await user.press(tree.getByText('Decline'));
     const alertCall = (alertService.alert as jest.Mock).mock.calls[0];
-    const buttons = alertCall[2];
-    const declineBtn = buttons.find((b: any) => b.text === 'Decline');
-    await declineBtn.onPress();
+    const buttons = alertCall[2] as AlertButton[];
+    const declineBtn = buttons.find(b => b.text === 'Decline');
+    await declineBtn?.onPress?.();
     await waitFor(() => expect(mockGoBack).toHaveBeenCalled());
   });
 
@@ -591,9 +598,9 @@ describe('AcceptInvite', () => {
     await waitFor(() => expect(tree.getByText(/join/)).toBeTruthy());
     await user.press(tree.getByText('Decline'));
     const alertCall = (alertService.alert as jest.Mock).mock.calls[0];
-    const buttons = alertCall[2];
-    const declineBtn = buttons.find((b: any) => b.text === 'Decline');
-    await declineBtn.onPress();
+    const buttons = alertCall[2] as AlertButton[];
+    const declineBtn = buttons.find(b => b.text === 'Decline');
+    await declineBtn?.onPress?.();
     await waitFor(() => expect(mockGoBack).toHaveBeenCalled());
   });
 
@@ -601,7 +608,11 @@ describe('AcceptInvite', () => {
     const user = userEvent.setup();
     const { executeWithLoadingState } = require('#/utils/compilerSafeWrappers');
     executeWithLoadingState.mockImplementationOnce(
-      (_fn: any, _setLoading: any, onError: any) => {
+      (
+        _fn: () => Promise<void>,
+        _setLoading: (value: boolean) => void,
+        onError: (error: unknown) => void,
+      ) => {
         onError(new Error('Network error'));
       },
     );
@@ -773,7 +784,11 @@ describe('AcceptInvite', () => {
     const user = userEvent.setup();
     const { executeWithLoadingState } = require('#/utils/compilerSafeWrappers');
     executeWithLoadingState.mockImplementation(
-      async (_fn: any, _setLoading: any, onError: any) => {
+      async (
+        _fn: () => Promise<void>,
+        _setLoading: (value: boolean) => void,
+        onError: (error: unknown) => void,
+      ) => {
         onError(new Error('decline failed'));
         return undefined;
       },
@@ -790,9 +805,9 @@ describe('AcceptInvite', () => {
     await waitFor(() => expect(tree.getByText('Decline')).toBeTruthy());
     await user.press(tree.getByText('Decline'));
     const alertCall = (alertService.alert as jest.Mock).mock.calls[0];
-    const buttons = alertCall[2];
-    const declineBtn = buttons.find((b: any) => b.text === 'Decline');
-    await declineBtn.onPress();
+    const buttons = alertCall[2] as AlertButton[];
+    const declineBtn = buttons.find(b => b.text === 'Decline');
+    await declineBtn?.onPress?.();
     await waitFor(() => {
       expect(alertService.alert).toHaveBeenCalledWith(
         'Error',

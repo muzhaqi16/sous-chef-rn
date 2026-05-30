@@ -1,4 +1,5 @@
 import { renderHook } from '@testing-library/react-native';
+import type { RootState } from '#store/index';
 import { useNetworkStatus } from '../useNetworkStatus';
 
 const mockUseNetInfo = jest.fn();
@@ -9,8 +10,10 @@ jest.mock('@react-native-community/netinfo', () => ({
 
 const mockSetNetworkStatus = jest.fn();
 jest.mock('#store/useAppStore', () => ({
-  useAppStore: (selector: (state: any) => any) =>
-    selector({ setNetworkStatus: mockSetNetworkStatus }),
+  useAppStore: <T>(selector: (state: RootState) => T): T =>
+    selector({
+      setNetworkStatus: mockSetNetworkStatus,
+    } as Partial<RootState> as RootState),
 }));
 
 beforeEach(() => {

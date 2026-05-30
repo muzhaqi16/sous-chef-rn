@@ -1,5 +1,6 @@
 import { renderHook, act } from '@testing-library/react-native';
 import { useShoppingListItemForm } from '../useShoppingListItemForm';
+import type { UseShoppingListItemForm_ItemFragment } from '../useShoppingListItemForm.generated';
 
 // Mock parseFractionalInput
 jest.mock('#/utils/fractionUtils', () => ({
@@ -70,18 +71,23 @@ describe('useShoppingListItemForm', () => {
   });
 
   describe('setFromItem', () => {
-    function createFragment(overrides: Record<string, unknown> = {}) {
+    function createFragment(
+      overrides: Partial<UseShoppingListItemForm_ItemFragment> = {},
+    ): UseShoppingListItemForm_ItemFragment {
       return {
+        __typename: 'ShoppingListItem',
+        id: 'sli-1',
+        version: 1,
         itemName: 'Butter',
         quantity: 2,
         quantityInput: '2',
         unitName: 'lb',
         notes: 'Unsalted',
         category: 'Dairy',
-        unit: { id: 'unit-1', name: 'pound', symbol: 'lb' },
-        priceEstimate: { estimated: 5.99 },
+        unit: { __typename: 'Unit', id: 'unit-1' },
+        priceEstimate: { __typename: 'PriceEstimate', estimated: 5.99 },
         ...overrides,
-      } as any;
+      };
     }
 
     it('populates form state from ShoppingListItemFragment', () => {
@@ -136,7 +142,11 @@ describe('useShoppingListItemForm', () => {
       const { result } = renderHook(() => useShoppingListItemForm());
 
       act(() => {
-        result.current.setFromItem(createFragment({ priceEstimate: null }));
+        result.current.setFromItem(
+          createFragment({
+            priceEstimate: { __typename: 'PriceEstimate', estimated: null },
+          }),
+        );
       });
 
       expect(result.current.formState.estimatedPrice).toBe('');
@@ -156,6 +166,9 @@ describe('useShoppingListItemForm', () => {
 
       act(() => {
         result.current.setFromItem({
+          __typename: 'ShoppingListItem',
+          id: 'sli-1',
+          version: 1,
           itemName: 'Milk',
           quantity: 1,
           quantityInput: '1',
@@ -163,8 +176,8 @@ describe('useShoppingListItemForm', () => {
           notes: '',
           category: '',
           unit: null,
-          priceEstimate: null,
-        } as any);
+          priceEstimate: { __typename: 'PriceEstimate', estimated: null },
+        });
       });
 
       // No changes yet
@@ -219,6 +232,9 @@ describe('useShoppingListItemForm', () => {
 
       act(() => {
         result.current.setFromItem({
+          __typename: 'ShoppingListItem',
+          id: 'sli-1',
+          version: 1,
           itemName: 'Milk',
           quantity: 1,
           quantityInput: '1',
@@ -226,8 +242,8 @@ describe('useShoppingListItemForm', () => {
           notes: '',
           category: '',
           unit: null,
-          priceEstimate: null,
-        } as any);
+          priceEstimate: { __typename: 'PriceEstimate', estimated: null },
+        });
       });
 
       expect(result.current.buildDirtyInput()).toEqual({});
@@ -238,6 +254,9 @@ describe('useShoppingListItemForm', () => {
 
       act(() => {
         result.current.setFromItem({
+          __typename: 'ShoppingListItem',
+          id: 'sli-1',
+          version: 1,
           itemName: 'Milk',
           quantity: 1,
           quantityInput: '1',
@@ -245,8 +264,8 @@ describe('useShoppingListItemForm', () => {
           notes: '',
           category: 'Dairy',
           unit: null,
-          priceEstimate: null,
-        } as any);
+          priceEstimate: { __typename: 'PriceEstimate', estimated: null },
+        });
       });
 
       act(() => {
@@ -265,6 +284,9 @@ describe('useShoppingListItemForm', () => {
 
       act(() => {
         result.current.setFromItem({
+          __typename: 'ShoppingListItem',
+          id: 'sli-1',
+          version: 1,
           itemName: 'Milk',
           quantity: 1,
           quantityInput: '1',
@@ -272,8 +294,8 @@ describe('useShoppingListItemForm', () => {
           notes: '',
           category: '',
           unit: null,
-          priceEstimate: null,
-        } as any);
+          priceEstimate: { __typename: 'PriceEstimate', estimated: null },
+        });
       });
 
       act(() => {
@@ -289,6 +311,9 @@ describe('useShoppingListItemForm', () => {
 
       act(() => {
         result.current.setFromItem({
+          __typename: 'ShoppingListItem',
+          id: 'sli-1',
+          version: 1,
           itemName: 'Milk',
           quantity: 1,
           quantityInput: '1',
@@ -296,8 +321,8 @@ describe('useShoppingListItemForm', () => {
           notes: '',
           category: '',
           unit: null,
-          priceEstimate: null,
-        } as any);
+          priceEstimate: { __typename: 'PriceEstimate', estimated: null },
+        });
       });
 
       act(() => {

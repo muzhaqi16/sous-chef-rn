@@ -68,7 +68,9 @@ describe('formatQuantityDisplay', () => {
 
 describe('formatQuantityAsFraction', () => {
   it('returns "0" for null/undefined/zero', () => {
-    expect(formatQuantityAsFraction(null as any)).toBe('0');
+    expect(
+      (formatQuantityAsFraction as (qty: number | null) => string)(null),
+    ).toBe('0');
     expect(formatQuantityAsFraction(0)).toBe('0');
   });
 

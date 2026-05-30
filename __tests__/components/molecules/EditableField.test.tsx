@@ -8,7 +8,10 @@ jest.mock('../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../src/apollo/links/refreshToken');
 
 jest.mock('../../../src/components/molecules/FormInput', () => ({
-  FormInput: (props: any) => {
+  FormInput: (props: {
+    value?: string;
+    onChangeText?: (text: string) => void;
+  }) => {
     const { TextInput } = require('react-native');
     return (
       <TextInput

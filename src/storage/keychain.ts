@@ -26,7 +26,7 @@ export interface SaveOptions {
 
 // Simple queue to prevent concurrent keychain access on Android
 let isOperationInProgress = false;
-const operationQueue: Array<() => Promise<any>> = [];
+const operationQueue: Array<() => Promise<void>> = [];
 
 // PERFORMANCE: Cache for hasCredentials() to avoid repeated native calls
 let credentialsExistCache: boolean | null = null;
@@ -185,9 +185,10 @@ export async function hasCredentials(): Promise<boolean> {
       credentialsExistCache = result;
 
       return result;
-    } catch (err: any) {
+    } catch (err) {
       // Handle Android DataStore concurrency issue
-      if (err?.message?.includes('multiple DataStores active')) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (message.includes('multiple DataStores active')) {
         // Wait a bit and retry once
         await new Promise(resolve => setTimeout(resolve, 100));
         try {

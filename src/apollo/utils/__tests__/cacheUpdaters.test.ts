@@ -284,7 +284,7 @@ describe('createRemoveFromQueryConnectionUpdater', () => {
     removeFromRecipes(cache, 'r-1');
 
     const helpers = createFieldHelpers();
-    helpers.readField.mockImplementation((field: string, ref: any) => {
+    helpers.readField.mockImplementation((field: string, ref: MockRef) => {
       if (field === 'id' && ref?.__ref === 'Recipe:r-1') return 'r-1';
       if (field === 'id' && ref?.__ref === 'Recipe:r-2') return 'r-2';
       return undefined;
@@ -698,7 +698,7 @@ describe('createRemoveFromParentConnectionUpdater', () => {
     remove(cache, 'p-1', 'pi-1');
 
     const helpers = createFieldHelpers();
-    helpers.readField.mockImplementation((field: string, ref: any) => {
+    helpers.readField.mockImplementation((field: string, ref: MockRef) => {
       if (field === 'id') {
         if (ref?.__ref === 'PantryItem:pi-1') return 'pi-1';
         if (ref?.__ref === 'PantryItem:pi-2') return 'pi-2';
@@ -870,7 +870,7 @@ describe('createRemoveFromParentArrayUpdater', () => {
     remove(cache, 'p-1', 'pi-1');
 
     const helpers = createFieldHelpers();
-    helpers.readField.mockImplementation((field: string, ref: any) => {
+    helpers.readField.mockImplementation((field: string, ref: MockRef) => {
       if (field === 'id') {
         if (ref.__ref === 'PantryItem:pi-1') return 'pi-1';
         if (ref.__ref === 'PantryItem:pi-2') return 'pi-2';

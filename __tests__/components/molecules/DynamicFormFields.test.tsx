@@ -24,7 +24,7 @@ jest.mock('../../../src/components/molecules/AutocompleteField/StorageLocationAu
   StorageLocationAutocompleteField: () => null,
 }));
 jest.mock('../../../src/components/molecules/FormInput', () => ({
-  FormInput: (props: any) => {
+  FormInput: (props: { label: string }) => {
     const { Text } = require('react-native');
     return <Text>{props.label}</Text>;
   },
@@ -54,7 +54,7 @@ describe('DynamicFormFields', () => {
   });
 
   it('renders field with custom component', () => {
-    const CustomInput = (props: any) => {
+    const CustomInput = (props: { label: string }) => {
       const { Text } = require('react-native');
       return <Text testID="custom">{props.label}</Text>;
     };

@@ -11,7 +11,13 @@ jest.mock('../../../src/features/mealPlan/components/NutritionGoalProgress', () 
   NutritionGoalProgress: () => null,
 }));
 
-const makeSummary = (overrides = {}) => ({
+type NutritionSummary = React.ComponentProps<
+  typeof NutritionSummaryCard
+>['nutritionSummary'];
+
+const makeSummary = (
+  overrides: Partial<NutritionSummary> = {},
+): NutritionSummary => ({
   avgDailyCalories: 2000,
   avgDailyProtein: 80,
   avgDailyCarbs: 250,
@@ -26,14 +32,14 @@ const makeSummary = (overrides = {}) => ({
 describe('NutritionSummaryCard', () => {
   it('renders title', () => {
     const { getByText } = render(
-      <NutritionSummaryCard nutritionSummary={makeSummary() as any} />,
+      <NutritionSummaryCard nutritionSummary={makeSummary()} />,
     );
     expect(getByText('Nutrition Summary')).toBeTruthy();
   });
 
   it('shows collapsed calories by default', () => {
     const { getByText } = render(
-      <NutritionSummaryCard nutritionSummary={makeSummary() as any} />,
+      <NutritionSummaryCard nutritionSummary={makeSummary()} />,
     );
     expect(getByText('2000 kcal/day')).toBeTruthy();
   });
@@ -41,7 +47,7 @@ describe('NutritionSummaryCard', () => {
   it('expands to show details when pressed', async () => {
     const user = userEvent.setup();
     const { getByText } = render(
-      <NutritionSummaryCard nutritionSummary={makeSummary() as any} />,
+      <NutritionSummaryCard nutritionSummary={makeSummary()} />,
     );
     await user.press(getByText('Nutrition Summary'));
     expect(getByText('Daily Averages')).toBeTruthy();
@@ -51,7 +57,7 @@ describe('NutritionSummaryCard', () => {
   it('shows macro stats when expanded', async () => {
     const user = userEvent.setup();
     const { getByText } = render(
-      <NutritionSummaryCard nutritionSummary={makeSummary() as any} />,
+      <NutritionSummaryCard nutritionSummary={makeSummary()} />,
     );
     await user.press(getByText('Nutrition Summary'));
     expect(getByText('Calories')).toBeTruthy();

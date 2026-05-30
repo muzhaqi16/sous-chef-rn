@@ -6,20 +6,45 @@ import {
   VerifyEmailDocument,
   ResendVerificationEmailDocument,
 } from '#operations/auth/auth.generated';
+import type { RootState } from '#store/index';
+import type * as UseAppStoreModule from '#store/useAppStore';
 import { CodeVerificationScreen } from '../CodeVerificationScreen';
+
+// Typed view over the mocked module so `jest.spyOn` keeps the real signatures
+// (the `require` call still returns the runtime-mutable mock object).
+const storeModule: typeof UseAppStoreModule = require('#store/useAppStore');
 
 // --- Mocks ---
 
 const mockUpdateUser = jest.fn();
 const mockToast = jest.fn();
 
+// Minimal prop shapes consumed by the mocked templates below.
+type MockAuthFormTemplateProps = {
+  title: string;
+  subtitle?: string | React.ReactNode;
+  submitText: string;
+  onSubmit: () => void;
+  footerText?: string;
+  footerLinkText?: string;
+  onFooterLinkPress?: () => void;
+  footerLinkDisabled?: boolean;
+  footerLinkCountdown?: number;
+};
+
 jest.mock('#store/useAppStore', () => {
   const getState = () => ({
-    user: { id: '1', email: 'test@example.com', emailVerified: false },
+    user: {
+      id: '1',
+      email: 'test@example.com',
+      emailVerified: false,
+      onBoarded: true,
+    },
     updateUser: mockUpdateUser,
   });
   return {
-    useAppStore: (selector: any) => selector(getState()),
+    useAppStore: <T,>(selector: (state: RootState) => T): T =>
+      selector(getState() as Partial<RootState> as RootState),
     useUser: () => getState().user,
     useUpdateUser: () => getState().updateUser,
   };
@@ -40,7 +65,7 @@ jest.mock('#/utils/compilerSafeWrappers');
 jest.mock('#components/templates/AuthWrapper', () => {
   const { View } = require('react-native');
   return {
-    AuthWrapper: ({ children }: any) => (
+    AuthWrapper: ({ children }: { children?: React.ReactNode }) => (
       <View testID="auth-wrapper">{children}</View>
     ),
   };
@@ -59,7 +84,7 @@ jest.mock('#components/templates/AuthFormTemplate', () => {
       onFooterLinkPress,
       footerLinkDisabled,
       footerLinkCountdown,
-    }: any) => (
+    }: MockAuthFormTemplateProps) => (
       <View testID="auth-form-template">
         <Text>{title}</Text>
         {typeof subtitle === 'string' ? (
@@ -78,7 +103,7 @@ jest.mock('#components/templates/AuthFormTemplate', () => {
             disabled={footerLinkDisabled}
           >
             <Text>{footerLinkText}</Text>
-            {footerLinkCountdown > 0 ? (
+            {(footerLinkCountdown ?? 0) > 0 ? (
               <Text testID="countdown">{footerLinkCountdown}</Text>
             ) : null}
           </Pressable>
@@ -183,27 +208,30 @@ describe('CodeVerificationScreen', () => {
       id: '1',
       email: 'test@example.com',
       emailVerified: true,
+      onBoarded: true,
     };
-    jest
-      .spyOn(require('#store/useAppStore'), 'useAppStore')
-      .mockImplementation((selector: any) =>
-        selector({ user: verifiedUser, updateUser: mockUpdateUser }),
-      );
-    jest
-      .spyOn(require('#store/useAppStore'), 'useUser')
-      .mockReturnValue(verifiedUser);
+    jest.spyOn(storeModule, 'useAppStore').mockImplementation(
+      <T,>(selector: (state: RootState) => T): T =>
+        selector({
+          user: verifiedUser,
+          updateUser: mockUpdateUser,
+        } as Partial<RootState> as RootState),
+    );
+    jest.spyOn(storeModule, 'useUser').mockReturnValue(verifiedUser);
 
     const { toJSON } = renderWithApollo(<CodeVerificationScreen />);
     expect(toJSON()).toBeNull();
   });
 
   it('returns null when there is no user', () => {
-    jest
-      .spyOn(require('#store/useAppStore'), 'useAppStore')
-      .mockImplementation((selector: any) =>
-        selector({ user: null, updateUser: mockUpdateUser }),
-      );
-    jest.spyOn(require('#store/useAppStore'), 'useUser').mockReturnValue(null);
+    jest.spyOn(storeModule, 'useAppStore').mockImplementation(
+      <T,>(selector: (state: RootState) => T): T =>
+        selector({
+          user: null,
+          updateUser: mockUpdateUser,
+        } as Partial<RootState> as RootState),
+    );
+    jest.spyOn(storeModule, 'useUser').mockReturnValue(null);
 
     const { toJSON } = renderWithApollo(<CodeVerificationScreen />);
     expect(toJSON()).toBeNull();

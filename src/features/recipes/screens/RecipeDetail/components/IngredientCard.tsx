@@ -6,27 +6,41 @@ import { Icon } from '#utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { Text } from '#components/atoms/Text';
 import { getSpoonacularIngredientImageUrl } from '#services/recipeApi/utils';
+import type { DisplayIngredient } from '#features/recipes/hooks/useRecipeData';
 
 interface IngredientCardProps {
-  ingredient: any;
+  ingredient: DisplayIngredient;
   isAdded: boolean;
   onPress: () => void;
 }
+
+// Backend ingredients carry the GraphQL `__typename`; Spoonacular's REST
+// `extendedIngredient` shape does not — use that to discriminate the union.
+const isBackendIngredient = (
+  ingredient: DisplayIngredient,
+): ingredient is Extract<
+  DisplayIngredient,
+  { __typename: 'RecipeIngredient' }
+> => '__typename' in ingredient && ingredient.__typename === 'RecipeIngredient';
 
 export const IngredientCard: React.FC<IngredientCardProps> = ({
   ingredient,
   isAdded,
   onPress,
 }) => {
+  const isBackend = isBackendIngredient(ingredient);
   const ingredientName = ingredient.name || 'Unknown';
-  const quantity = ingredient.quantity || ingredient.amount || '';
-  const unit =
-    ingredient.unit?.symbol || ingredient.measures?.us?.unitShort || '';
+  const quantity = (isBackend ? ingredient.quantity : ingredient.amount) || '';
+  const unit = isBackend
+    ? ingredient.unit?.symbol || ''
+    : ingredient.measures?.us?.unitShort || '';
   const imageUrl = ingredient.image
     ? ingredient.image.startsWith('http')
       ? ingredient.image // Already full URL from backend
       : getSpoonacularIngredientImageUrl(ingredient.image) // Filename needs URL
-    : ingredient.item?.imageUrl;
+    : isBackend
+    ? ingredient.item?.imageUrl
+    : undefined;
 
   return (
     <Pressable

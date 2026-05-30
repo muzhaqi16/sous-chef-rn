@@ -27,7 +27,9 @@ jest.mock('#features/pantry/hooks/usePantryItemTransformation', () => ({
 }));
 
 jest.mock('#utils/formatQuantity', () => ({
-  getUnitDisplayText: jest.fn((unit: any) => unit?.symbol || ''),
+  getUnitDisplayText: jest.fn(
+    (unit?: { symbol?: string; name?: string } | null) => unit?.symbol || '',
+  ),
 }));
 
 const baseItem = {

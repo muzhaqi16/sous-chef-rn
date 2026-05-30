@@ -54,7 +54,15 @@ function createPersistedStore(testKey: string) {
     subscribeWithSelector(
       persist(
         immer((set, get, api) =>
-          createPreferencesSlice(set as any, get as any, api as any),
+          createPreferencesSlice(
+            set as Parameters<typeof createPreferencesSlice>[0],
+            get as Parameters<typeof createPreferencesSlice>[1],
+            // The slice creator's store-api param is typed (invariantly) over
+            // the full RootState; this test deliberately builds a store with
+            // only the preferences slice, so the PreferencesState store api
+            // can't be bridged to it without a banned `as unknown as`.
+            api as any,
+          ),
         ),
         {
           name: testKey,

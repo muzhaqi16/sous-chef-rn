@@ -2,6 +2,13 @@
 
 import React from 'react';
 import { render } from '@testing-library/react-native';
+import type { User } from '#store/slices/authSlice';
+import type { NavigationState } from '#store/slices/appSlice';
+import type { RootState } from '#store/index';
+
+interface ChildrenProps {
+  children?: React.ReactNode;
+}
 
 // Mock tokenScheduler and refreshToken
 jest.mock('../../apollo/links/tokenScheduler');
@@ -40,11 +47,11 @@ jest.mock('#services/NavigationService', () => ({
 // Mock @react-navigation/native-stack
 jest.mock('@react-navigation/native-stack', () => ({
   createNativeStackNavigator: jest.fn(() => ({
-    Navigator: ({ children }: any) => children,
-    Screen: ({ children }: any) => children,
-    Group: ({ children }: any) => children,
+    Navigator: ({ children }: ChildrenProps) => children,
+    Screen: ({ children }: ChildrenProps) => children,
+    Group: ({ children }: ChildrenProps) => children,
   })),
-  createNativeStackScreen: jest.fn((config: any) => config),
+  createNativeStackScreen: jest.fn(<T,>(config: T): T => config),
 }));
 
 // Mock createStaticNavigation
@@ -55,8 +62,9 @@ jest.mock('@react-navigation/native', () => {
   return {
     ...actual,
     createStaticNavigation: jest.fn(() =>
-      ReactMock.forwardRef((props: any, ref: any) =>
-        ReactMock.createElement(View, { testID: 'static-navigation', ref }),
+      ReactMock.forwardRef(
+        (_props: Record<string, unknown>, ref: React.Ref<unknown>) =>
+          ReactMock.createElement(View, { testID: 'static-navigation', ref }),
       ),
     ),
     DefaultTheme: {
@@ -100,8 +108,8 @@ jest.mock('#screens/NotFoundScreen', () => ({
 
 // Mock ErrorBoundary
 jest.mock('#components/providers/ErrorBoundary', () => ({
-  NavigationErrorBoundary: ({ children }: any) => children,
-  AuthErrorBoundary: ({ children }: any) => children,
+  NavigationErrorBoundary: ({ children }: ChildrenProps) => children,
+  AuthErrorBoundary: ({ children }: ChildrenProps) => children,
 }));
 
 // Mock PostLoginBiometricPrompt
@@ -116,23 +124,23 @@ jest.mock('#/components/base/SousChefLoader', () => ({
 
 // Mock zustand/shallow
 jest.mock('zustand/shallow', () => ({
-  useShallow: jest.fn((fn: any) => fn),
+  useShallow: jest.fn(<S,>(fn: S): S => fn),
 }));
 
 // Track mock state
 let mockIsHydrated = false;
-let mockUser: any = null;
-let mockNavigationState = 'loading';
+let mockUser: User | null = null;
+let mockNavigationState: NavigationState = 'loading';
 let mockShowBiometricSetup = false;
-let mockPostLoginCredentials: any = null;
-const mockSetNavigationState = jest.fn((state: string) => {
+let mockPostLoginCredentials: { email: string; password: string } | null = null;
+const mockSetNavigationState = jest.fn((state: NavigationState) => {
   mockNavigationState = state;
 });
 
 // Mock useAppStore
 jest.mock('#store/useAppStore', () => ({
-  useAppStore: jest.fn((selector: any) => {
-    const state = {
+  useAppStore: jest.fn(<T,>(selector: (state: RootState) => T) => {
+    const state: Partial<RootState> = {
       isHydrated: mockIsHydrated,
       user: mockUser,
       navigationState: mockNavigationState,
@@ -142,7 +150,7 @@ jest.mock('#store/useAppStore', () => ({
       setShowBiometricSetup: jest.fn(),
       setPostLoginCredentials: jest.fn(),
     };
-    return selector(state);
+    return selector(state as RootState);
   }),
   useIsHydrated: jest.fn(() => mockIsHydrated),
   useUser: jest.fn(() => mockUser),
@@ -241,7 +249,12 @@ describe('Navigation (RootNavigator)', () => {
 
   it('sets navigation to verification for unverified user', () => {
     mockIsHydrated = true;
-    mockUser = { id: '1', emailVerified: false, onBoarded: false };
+    mockUser = {
+      id: '1',
+      email: 'test@example.com',
+      emailVerified: false,
+      onBoarded: false,
+    };
     mockNavigationState = 'auth'; // will be changed
     render(<Navigation />);
     expect(mockSetNavigationState).toHaveBeenCalledWith('verification');
@@ -249,7 +262,12 @@ describe('Navigation (RootNavigator)', () => {
 
   it('sets navigation to onboarding for verified but not onboarded user', () => {
     mockIsHydrated = true;
-    mockUser = { id: '1', emailVerified: true, onBoarded: false };
+    mockUser = {
+      id: '1',
+      email: 'test@example.com',
+      emailVerified: true,
+      onBoarded: false,
+    };
     mockNavigationState = 'auth';
     render(<Navigation />);
     expect(mockSetNavigationState).toHaveBeenCalledWith('onboarding');
@@ -257,7 +275,12 @@ describe('Navigation (RootNavigator)', () => {
 
   it('sets navigation to main_app for fully onboarded user', () => {
     mockIsHydrated = true;
-    mockUser = { id: '1', emailVerified: true, onBoarded: true };
+    mockUser = {
+      id: '1',
+      email: 'test@example.com',
+      emailVerified: true,
+      onBoarded: true,
+    };
     mockNavigationState = 'auth';
     render(<Navigation />);
     expect(mockSetNavigationState).toHaveBeenCalledWith('main_app');
@@ -267,7 +290,12 @@ describe('Navigation (RootNavigator)', () => {
     mockIsHydrated = true;
     mockNavigationState = 'main_app';
     mockShowBiometricSetup = false;
-    mockUser = { id: '1', emailVerified: true, onBoarded: true };
+    mockUser = {
+      id: '1',
+      email: 'test@example.com',
+      emailVerified: true,
+      onBoarded: true,
+    };
     const { queryByTestId } = render(<Navigation />);
     // PostLoginBiometricPrompt is mocked to return null, so it won't be in the tree
     expect(queryByTestId('biometric-prompt')).toBeNull();

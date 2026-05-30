@@ -19,7 +19,7 @@ import {
   InvitationAcceptanceModalDeclineShoppingListInviteDocument as DeclineShoppingListInviteDocument,
   MyShoppingListInvitesDocument,
 } from '../InvitationAcceptanceModal.generated';
-import { alertService } from '#/services/alertService';
+import { alertService, type AlertButton } from '#/services/alertService';
 
 jest.mock('#/utils/iconUtils', () => ({
   Icon: () => null,
@@ -65,7 +65,10 @@ jest.mock('#/utils/compilerSafeWrappers', () => ({
       setLoading(false);
     }
   },
-  executeMutation: async (fn: any, onErrorOrLog: any) => {
+  executeMutation: async <T,>(
+    fn: () => Promise<T>,
+    onErrorOrLog: string | ((error: unknown) => void | Promise<void>),
+  ) => {
     try {
       return await fn();
     } catch (e) {
@@ -616,12 +619,12 @@ describe('InvitationAcceptanceModal', () => {
 
     // Press 'Decline' in the confirmation alert
     const alertCall = (alertService.alert as jest.Mock).mock.calls[0];
-    const declineButton = (alertCall[2] as any).find(
-      (b: any) => b.text === 'Decline',
+    const declineButton = (alertCall[2] as AlertButton[]).find(
+      b => b.text === 'Decline',
     );
 
     await act(async () => {
-      declineButton.onPress();
+      declineButton?.onPress?.();
     });
 
     expect(declineMock.fired).toContainEqual({ input: { token: 'abc123' } });
@@ -646,12 +649,12 @@ describe('InvitationAcceptanceModal', () => {
     });
 
     const alertCall = (alertService.alert as jest.Mock).mock.calls[0];
-    const declineButton = (alertCall[2] as any).find(
-      (b: any) => b.text === 'Decline',
+    const declineButton = (alertCall[2] as AlertButton[]).find(
+      b => b.text === 'Decline',
     );
 
     await act(async () => {
-      declineButton.onPress();
+      declineButton?.onPress?.();
     });
 
     expect(declineMock.fired).toContainEqual({ input: { token: 'def456' } });
@@ -671,9 +674,9 @@ describe('InvitationAcceptanceModal', () => {
     });
 
     const declineButton = (
-      (alertService.alert as jest.Mock).mock.calls[0][2] as any
-    ).find((b: any) => b.text === 'Decline');
-    declineButton.onPress();
+      (alertService.alert as jest.Mock).mock.calls[0][2] as AlertButton[]
+    ).find(b => b.text === 'Decline');
+    declineButton?.onPress?.();
 
     await waitFor(() => {
       expect(toastService.error).toHaveBeenCalledWith(
@@ -696,9 +699,9 @@ describe('InvitationAcceptanceModal', () => {
     });
 
     const declineButton = (
-      (alertService.alert as jest.Mock).mock.calls[0][2] as any
-    ).find((b: any) => b.text === 'Decline');
-    declineButton.onPress();
+      (alertService.alert as jest.Mock).mock.calls[0][2] as AlertButton[]
+    ).find(b => b.text === 'Decline');
+    declineButton?.onPress?.();
 
     await waitFor(() => {
       expect(toastService.error).toHaveBeenCalledWith('Server error');
@@ -719,9 +722,9 @@ describe('InvitationAcceptanceModal', () => {
     });
 
     const declineButton = (
-      (alertService.alert as jest.Mock).mock.calls[0][2] as any
-    ).find((b: any) => b.text === 'Decline');
-    declineButton.onPress();
+      (alertService.alert as jest.Mock).mock.calls[0][2] as AlertButton[]
+    ).find(b => b.text === 'Decline');
+    declineButton?.onPress?.();
 
     await waitFor(() => {
       expect(toastService.error).toHaveBeenCalledWith(
@@ -748,9 +751,9 @@ describe('InvitationAcceptanceModal', () => {
     });
 
     const declineButton = (
-      (alertService.alert as jest.Mock).mock.calls[0][2] as any
-    ).find((b: any) => b.text === 'Decline');
-    declineButton.onPress();
+      (alertService.alert as jest.Mock).mock.calls[0][2] as AlertButton[]
+    ).find(b => b.text === 'Decline');
+    declineButton?.onPress?.();
 
     await waitFor(() => {
       expect(toastService.error).toHaveBeenCalledWith(
@@ -777,9 +780,9 @@ describe('InvitationAcceptanceModal', () => {
     });
 
     const declineButton = (
-      (alertService.alert as jest.Mock).mock.calls[0][2] as any
-    ).find((b: any) => b.text === 'Decline');
-    declineButton.onPress();
+      (alertService.alert as jest.Mock).mock.calls[0][2] as AlertButton[]
+    ).find(b => b.text === 'Decline');
+    declineButton?.onPress?.();
 
     await waitFor(() => {
       expect(toastService.error).toHaveBeenCalledWith('Server error');
@@ -804,9 +807,9 @@ describe('InvitationAcceptanceModal', () => {
     });
 
     const declineButton = (
-      (alertService.alert as jest.Mock).mock.calls[0][2] as any
-    ).find((b: any) => b.text === 'Decline');
-    declineButton.onPress();
+      (alertService.alert as jest.Mock).mock.calls[0][2] as AlertButton[]
+    ).find(b => b.text === 'Decline');
+    declineButton?.onPress?.();
 
     // Token resolution returns undefined → invitationUnavailable toast.
     await waitFor(() => {

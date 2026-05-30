@@ -2,7 +2,10 @@
 
 import React from 'react';
 import { render } from '@testing-library/react-native';
+import type { RootState } from '#store/index';
 import { SearchResultsScreen } from '../SearchResultsScreen';
+
+type ScreenProps = React.ComponentProps<typeof SearchResultsScreen>;
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
@@ -13,14 +16,15 @@ const mockHideBottomSheet = jest.fn();
 const mockShowBottomSheet = jest.fn();
 
 jest.mock('#store/useAppStore', () => ({
-  useAppStore: jest.fn((selector: any) =>
-    selector({
-      scannerSheetVisible: false,
-      searchError: null,
-      isSearching: false,
-      hideBottomSheet: mockHideBottomSheet,
-      showBottomSheet: mockShowBottomSheet,
-    }),
+  useAppStore: jest.fn(
+    <T,>(selector: (s: RootState) => T): T =>
+      selector({
+        scannerSheetVisible: false,
+        searchError: null,
+        isSearching: false,
+        hideBottomSheet: mockHideBottomSheet,
+        showBottomSheet: mockShowBottomSheet,
+      } as Partial<RootState> as RootState),
   ),
   useBottomSheetState: jest.fn(() => ({
     scannerSheetVisible: false,
@@ -32,7 +36,7 @@ jest.mock('#store/useAppStore', () => ({
 }));
 
 jest.mock('zustand/react/shallow', () => ({
-  useShallow: (fn: any) => fn,
+  useShallow: <T,>(fn: T): T => fn,
 }));
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
@@ -40,7 +44,7 @@ jest.mock('#hooks/useStandardBottomSheet', () => ({
     ref: { current: { present: jest.fn(), dismiss: jest.fn() } },
     modalProps: {},
   }),
-  BottomSheetModal: ({ children }: any) => children,
+  BottomSheetModal: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 jest.mock('../../hooks/useSearchResults', () => ({
@@ -55,35 +59,35 @@ jest.mock('../../hooks/useSearchResults', () => ({
 }));
 
 jest.mock('../../components/LoadingState', () => ({
-  LoadingState: ({ message }: any) => {
+  LoadingState: ({ message }: { message: string }) => {
     const { Text } = require('react-native');
     return <Text>{message}</Text>;
   },
 }));
 
 jest.mock('../../components/ErrorState', () => ({
-  ErrorState: ({ message }: any) => {
+  ErrorState: ({ message }: { message: string }) => {
     const { Text } = require('react-native');
     return <Text>{message}</Text>;
   },
 }));
 
 jest.mock('../../components/ItemNotFound', () => ({
-  ItemNotFound: ({ barcode }: any) => {
+  ItemNotFound: ({ barcode }: { barcode: string }) => {
     const { Text } = require('react-native');
     return <Text>No results for {barcode}</Text>;
   },
 }));
 
 jest.mock('../../components/SearchResults', () => ({
-  SearchResults: ({ item }: any) => {
+  SearchResults: ({ item }: { item: { name: string } }) => {
     const { Text } = require('react-native');
     return <Text>Found: {item.name}</Text>;
   },
 }));
 
 jest.mock('#components/molecules/Header', () => ({
-  Header: ({ title }: any) => {
+  Header: ({ title }: { title?: string }) => {
     const { Text } = require('react-native');
     return <Text>{title}</Text>;
   },
@@ -95,21 +99,26 @@ jest.mock('#components/organisms/AddItemForm/AddItemForm', () => {
 });
 
 jest.mock('#components/atoms/BottomSheetKeyboardAwareScrollView', () => ({
-  BottomSheetKeyboardAwareScrollView: ({ children }: any) => children,
+  BottomSheetKeyboardAwareScrollView: ({
+    children,
+  }: {
+    children: React.ReactNode;
+  }) => children,
 }));
 
 beforeEach(() => {
   jest.clearAllMocks();
   // Restore default mock implementations after clearAllMocks
   const storeModule = require('#store/useAppStore');
-  storeModule.useAppStore.mockImplementation((selector: any) =>
-    selector({
-      scannerSheetVisible: false,
-      searchError: null,
-      isSearching: false,
-      hideBottomSheet: mockHideBottomSheet,
-      showBottomSheet: mockShowBottomSheet,
-    }),
+  storeModule.useAppStore.mockImplementation(
+    <T,>(selector: (s: RootState) => T): T =>
+      selector({
+        scannerSheetVisible: false,
+        searchError: null,
+        isSearching: false,
+        hideBottomSheet: mockHideBottomSheet,
+        showBottomSheet: mockShowBottomSheet,
+      } as Partial<RootState> as RootState),
   );
   storeModule.useBottomSheetState.mockReturnValue({
     scannerSheetVisible: false,
@@ -131,14 +140,14 @@ beforeEach(() => {
 });
 
 describe('SearchResultsScreen', () => {
-  const defaultProps = {
+  const defaultProps: ScreenProps = {
     route: {
       params: {
         barcode: '1234567890',
         format: 'ean-13',
       },
     },
-  } as any;
+  };
 
   it('renders search results header', () => {
     const { getByText } = render(<SearchResultsScreen {...defaultProps} />);
@@ -182,14 +191,15 @@ describe('SearchResultsScreen', () => {
 
   it('shows error state when search error exists', () => {
     const storeModule = require('#store/useAppStore');
-    storeModule.useAppStore.mockImplementation((selector: any) =>
-      selector({
-        scannerSheetVisible: false,
-        searchError: 'Network error',
-        isSearching: false,
-        hideBottomSheet: mockHideBottomSheet,
-        showBottomSheet: mockShowBottomSheet,
-      }),
+    storeModule.useAppStore.mockImplementation(
+      <T,>(selector: (s: RootState) => T): T =>
+        selector({
+          scannerSheetVisible: false,
+          searchError: 'Network error',
+          isSearching: false,
+          hideBottomSheet: mockHideBottomSheet,
+          showBottomSheet: mockShowBottomSheet,
+        } as Partial<RootState> as RootState),
     );
     storeModule.useBottomSheetState.mockReturnValue({
       scannerSheetVisible: false,
@@ -214,7 +224,7 @@ describe('SearchResultsScreen', () => {
       clearSearch: jest.fn(),
     });
 
-    const propsWithSource = {
+    const propsWithSource: ScreenProps = {
       route: {
         params: {
           barcode: '123',
@@ -223,7 +233,7 @@ describe('SearchResultsScreen', () => {
           pantryId: 'pantry-1',
         },
       },
-    } as any;
+    };
 
     const { getByText } = render(<SearchResultsScreen {...propsWithSource} />);
     expect(getByText('Found: Test')).toBeTruthy();

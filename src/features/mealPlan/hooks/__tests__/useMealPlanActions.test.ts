@@ -8,6 +8,7 @@ import {
   UpdateMealPlanDocument,
   DeleteMealPlanDocument,
 } from '#features/mealPlan/graphql/mealPlan.generated';
+import type { CreateMealPlanInput } from '#/graphql/generated/schemaTypes';
 import { useMealPlanActions } from '../useMealPlanActions';
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -44,13 +45,14 @@ describe('useMealPlanActions', () => {
       operationMocks: [create.mock],
     });
 
-    let created: any;
+    let created: Awaited<ReturnType<typeof result.current.createMealPlan>> =
+      null;
     await act(async () => {
       created = await result.current.createMealPlan({
         name: 'Week Plan',
         startDate: '2025-06-01',
         endDate: '2025-06-07',
-      } as any);
+      } as CreateMealPlanInput);
     });
 
     expect(created).toMatchObject({
@@ -75,13 +77,14 @@ describe('useMealPlanActions', () => {
       operationMocks: [create.mock],
     });
 
-    let created: any;
+    let created: Awaited<ReturnType<typeof result.current.createMealPlan>> =
+      null;
     await act(async () => {
       created = await result.current.createMealPlan({
         name: 'X',
         startDate: '2025-06-01',
         endDate: '2025-06-07',
-      } as any);
+      } as CreateMealPlanInput);
     });
 
     expect(created).toBeNull();
@@ -105,11 +108,12 @@ describe('useMealPlanActions', () => {
       operationMocks: [update.mock],
     });
 
-    let updated: any;
+    let updated: Awaited<ReturnType<typeof result.current.updateMealPlan>> =
+      null;
     await act(async () => {
       updated = await result.current.updateMealPlan('plan-1', {
         name: 'Updated',
-      } as any);
+      });
     });
 
     expect(updated).toMatchObject({

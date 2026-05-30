@@ -26,6 +26,7 @@ import {
   CombinedGraphQLErrors,
   CombinedProtocolErrors,
 } from '@apollo/client/errors';
+import type { FormattedExecutionResult } from 'graphql';
 import { errorLink } from '../errorLink';
 import { LogoutCleanup } from '../../logoutCleanup';
 import { attemptTokenRefresh, getRefreshState } from '../refreshToken';
@@ -47,9 +48,11 @@ describe('errorLink helpers', () => {
     ['API_KEY_REQUIRED', 'INVALID_API_KEY', 'API_KEY_EXPIRED'].includes(code) ||
     msg.toLowerCase().includes('api key');
 
-  const isSubscription = (op: any) =>
+  type TestDefinition = { kind: string; operation?: string; name?: string };
+  type TestOperation = { query: { definitions: TestDefinition[] } };
+  const isSubscription = (op: TestOperation) =>
     op.query.definitions.some(
-      (def: any) =>
+      (def: TestDefinition) =>
         def.kind === 'OperationDefinition' && def.operation === 'subscription',
     );
 
@@ -270,9 +273,10 @@ describe('errorLink middleware', () => {
   });
 
   it('CombinedGraphQLErrors.is returns true for proper GraphQL errors', () => {
-    const gqlError = new CombinedGraphQLErrors({
+    const result: FormattedExecutionResult = {
       errors: [{ message: 'Test error', extensions: { code: 'TEST' } }],
-    } as any);
+    };
+    const gqlError = new CombinedGraphQLErrors(result);
     expect(CombinedGraphQLErrors.is(gqlError)).toBe(true);
   });
 });

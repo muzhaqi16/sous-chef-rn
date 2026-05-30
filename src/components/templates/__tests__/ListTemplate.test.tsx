@@ -3,6 +3,13 @@ import { render, screen } from '@testing-library/react-native';
 import { Text } from 'react-native';
 import { ListTemplate } from '../ListTemplate';
 
+type TestItem = { id: string; title?: string };
+type TestEmptyState = { title: string };
+type ListSlotComponent =
+  | React.ComponentType<unknown>
+  | React.ReactElement
+  | null;
+
 jest.mock('../../organisms/ItemList', () => {
   const { View, Text: RNText } = require('react-native');
   return {
@@ -12,7 +19,13 @@ jest.mock('../../organisms/ItemList', () => {
       testIDPrefix,
       ListHeaderComponent,
       ListFooterComponent,
-    }: any) => (
+    }: {
+      items: TestItem[];
+      emptyState?: TestEmptyState;
+      testIDPrefix?: string;
+      ListHeaderComponent?: ListSlotComponent;
+      ListFooterComponent?: ListSlotComponent;
+    }) => (
       <View testID="item-list">
         {ListHeaderComponent ? (
           typeof ListHeaderComponent === 'function' ? (
@@ -24,7 +37,7 @@ jest.mock('../../organisms/ItemList', () => {
         {items.length === 0 && emptyState ? (
           <RNText testID="empty-state">{emptyState.title}</RNText>
         ) : (
-          items.map((item: any, index: number) => (
+          items.map((item, index: number) => (
             <RNText
               key={item.id}
               testID={testIDPrefix ? `${testIDPrefix}-${index}` : undefined}
@@ -92,9 +105,9 @@ describe('ListTemplate', () => {
   });
 
   it('renders custom list component when provided', () => {
-    const CustomList = ({ items: listItems }: any) => (
+    const CustomList = ({ items: listItems }: { items: TestItem[] }) => (
       <>
-        {listItems.map((item: any) => (
+        {listItems.map(item => (
           <Text key={item.id}>{`custom-${item.title}`}</Text>
         ))}
       </>
@@ -105,7 +118,7 @@ describe('ListTemplate', () => {
   });
 
   it('does not show loading empty state when custom component provided', () => {
-    const CustomList = ({ emptyState }: any) => (
+    const CustomList = ({ emptyState }: { emptyState?: TestEmptyState }) => (
       <Text>{emptyState?.title || 'custom'}</Text>
     );
     render(

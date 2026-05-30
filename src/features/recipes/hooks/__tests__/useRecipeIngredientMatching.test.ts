@@ -5,10 +5,13 @@ import {
   seedCache,
 } from '#/test-utils/apolloMockProvider';
 import { MatchRecipeIngredientsToPantryDocument } from '#features/recipes/graphql/recipe.generated';
+import type { RootState } from '#store';
 import {
   useRecipeIngredientMatching,
   getAvailabilityStatus,
 } from '../useRecipeIngredientMatching';
+
+type IngredientMatch = Parameters<typeof getAvailabilityStatus>[0];
 
 function seedIngredientCache(ids: string[]) {
   return seedCache(
@@ -35,8 +38,8 @@ function seedIngredientCache(ids: string[]) {
 }
 
 jest.mock('#store/useAppStore', () => ({
-  useAppStore: (selector: (s: any) => any) =>
-    selector({ selectedPantryId: 'pantry-1' }),
+  useAppStore: (selector: (s: RootState) => unknown) =>
+    selector({ selectedPantryId: 'pantry-1' } as RootState),
   useSelectedPantryId: jest.fn(() => 'pantry-1'),
 }));
 
@@ -45,9 +48,9 @@ const mockToastError = jest.fn();
 const mockToastInfo = jest.fn();
 jest.mock('#/services/toastService', () => ({
   toastService: {
-    success: (...args: any[]) => mockToastSuccess(...args),
-    error: (...args: any[]) => mockToastError(...args),
-    info: (...args: any[]) => mockToastInfo(...args),
+    success: (...args: unknown[]) => mockToastSuccess(...args),
+    error: (...args: unknown[]) => mockToastError(...args),
+    info: (...args: unknown[]) => mockToastInfo(...args),
     warning: jest.fn(),
   },
 }));
@@ -64,7 +67,7 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
-function matchesMock(matches: any[]) {
+function matchesMock(matches: Record<string, unknown>[]) {
   return recordMock(MatchRecipeIngredientsToPantryDocument, {
     data: {
       matchRecipeIngredientsToPantry: matches.map(m => ({
@@ -83,7 +86,7 @@ describe('getAvailabilityStatus', () => {
         matchConfidence: 0.9,
         matchedPantryItem: { id: 'pi-1' },
         availableQuantity: 2,
-      } as any),
+      } as IngredientMatch),
     ).toBe('available');
   });
 
@@ -94,7 +97,7 @@ describe('getAvailabilityStatus', () => {
         matchConfidence: 0.5,
         matchedPantryItem: { id: 'pi-1' },
         availableQuantity: 1,
-      } as any),
+      } as IngredientMatch),
     ).toBe('partial');
   });
 
@@ -105,7 +108,7 @@ describe('getAvailabilityStatus', () => {
         matchConfidence: 0,
         matchedPantryItem: null,
         availableQuantity: 0,
-      } as any),
+      } as IngredientMatch),
     ).toBe('missing');
   });
 });

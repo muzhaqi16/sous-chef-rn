@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { render } from '@testing-library/react-native';
+import type { RootState } from '#store/index';
 import { HomeDetailScreen } from '../HomeDetailScreen';
 
 jest.mock('../../../apollo/links/tokenScheduler');
@@ -66,7 +67,10 @@ jest.mock('#hooks/home/useHomeDetailManagement', () => ({
 }));
 
 jest.mock('#store/useAppStore', () => ({
-  useAppStore: jest.fn((selector: any) => selector({ user: { id: 'user-1' } })),
+  useAppStore: jest.fn(
+    <T,>(selector: (state: RootState) => T): T =>
+      selector({ user: { id: 'user-1' } } as Partial<RootState> as RootState),
+  ),
   useUser: jest.fn(() => ({ id: 'user-1' })),
 }));
 
@@ -79,7 +83,15 @@ jest.mock('@react-native-clipboard/clipboard', () => ({
 }));
 
 jest.mock('#components/templates/DetailTemplate', () => ({
-  DetailTemplate: ({ title, sections, onBack }: any) => {
+  DetailTemplate: ({
+    title,
+    sections,
+    onBack,
+  }: {
+    title?: string;
+    sections: { title?: string; content: React.ReactNode }[];
+    onBack: () => void;
+  }) => {
     const { View, Text, Pressable } = require('react-native');
     return (
       <View testID="detail-template">
@@ -87,7 +99,7 @@ jest.mock('#components/templates/DetailTemplate', () => ({
         <Pressable testID="back-button" onPress={onBack}>
           <Text>Back</Text>
         </Pressable>
-        {sections?.map((s: any, i: number) => (
+        {sections?.map((s, i: number) => (
           <View key={i} testID={`section-${i}`}>
             {s.title ? <Text>{s.title}</Text> : null}
             {s.content}
@@ -99,7 +111,7 @@ jest.mock('#components/templates/DetailTemplate', () => ({
 }));
 
 jest.mock('#components/molecules/EditableField', () => ({
-  EditableField: ({ label, value }: any) => {
+  EditableField: ({ label, value }: { label: string; value: string }) => {
     const { View, Text } = require('react-native');
     return (
       <View testID="editable-field">
@@ -112,7 +124,13 @@ jest.mock('#components/molecules/EditableField', () => ({
 }));
 
 jest.mock('#components/molecules/NavigationRow', () => ({
-  NavigationRow: ({ title, onPress }: any) => {
+  NavigationRow: ({
+    title,
+    onPress,
+  }: {
+    title: string;
+    onPress: () => void;
+  }) => {
     const { Pressable, Text } = require('react-native');
     return (
       <Pressable testID="nav-row" onPress={onPress}>
@@ -134,7 +152,15 @@ jest.mock('#components/organisms/home/HomeMembersSection', () => ({
 }));
 
 jest.mock('#components/settings/SettingSwitch', () => ({
-  SettingSwitch: ({ title, value, onValueChange }: any) => {
+  SettingSwitch: ({
+    title,
+    value,
+    onValueChange,
+  }: {
+    title: string;
+    value: boolean;
+    onValueChange: (value: boolean) => void;
+  }) => {
     const { View, Text, Pressable } = require('react-native');
     return (
       <View>
@@ -151,7 +177,7 @@ jest.mock('#components/settings/SettingSwitch', () => ({
 }));
 
 jest.mock('#components/base/Button', () => ({
-  Button: ({ title, onPress }: any) => {
+  Button: ({ title, onPress }: { title?: string; onPress?: () => void }) => {
     const { Pressable, Text } = require('react-native');
     return (
       <Pressable testID={`button-${title}`} onPress={onPress}>
@@ -216,8 +242,9 @@ beforeEach(() => {
   });
 
   const { useAppStore } = require('#store/useAppStore');
-  useAppStore.mockImplementation((selector: any) =>
-    selector({ user: { id: 'user-1' } }),
+  useAppStore.mockImplementation(
+    <T,>(selector: (state: RootState) => T): T =>
+      selector({ user: { id: 'user-1' } } as Partial<RootState> as RootState),
   );
 });
 
@@ -321,8 +348,9 @@ describe('HomeDetailScreen', () => {
     });
 
     const { useAppStore } = require('#store/useAppStore');
-    useAppStore.mockImplementation((selector: any) =>
-      selector({ user: { id: 'user-2' } }),
+    useAppStore.mockImplementation(
+      <T,>(selector: (state: RootState) => T): T =>
+        selector({ user: { id: 'user-2' } } as Partial<RootState> as RootState),
     );
 
     const { getByText } = render(<HomeDetailScreen {...defaultProps} />);

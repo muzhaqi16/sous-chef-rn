@@ -37,21 +37,27 @@ jest.mock('#store/useAppStore', () => ({
 }));
 
 jest.mock('#components/organisms/FormModal', () => ({
-  FormModal: ({ children, testID }: any) => {
+  FormModal: ({
+    children,
+    testID,
+  }: {
+    children?: React.ReactNode;
+    testID?: string;
+  }) => {
     const { View } = require('react-native');
     return <View testID={testID}>{children}</View>;
   },
 }));
 
 jest.mock('#components/molecules/FormInput', () => ({
-  FormInput: ({ testID }: any) => {
+  FormInput: ({ testID }: { testID?: string }) => {
     const { View } = require('react-native');
     return <View testID={testID} />;
   },
 }));
 
 jest.mock('#components/molecules/FormTextArea', () => ({
-  FormTextArea: ({ testID }: any) => {
+  FormTextArea: ({ testID }: { testID?: string }) => {
     const { View } = require('react-native');
     return <View testID={testID} />;
   },

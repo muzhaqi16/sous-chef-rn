@@ -1,12 +1,14 @@
-import { Observable } from '@apollo/client';
+import { ApolloLink, Observable } from '@apollo/client';
+import type { ApolloClient, OperationVariables } from '@apollo/client';
+import { OperationTypeNode, parse } from 'graphql';
 import performance from 'react-native-performance';
 
 jest.mock('#/utils/errorSerialization', () => ({
-  serializeError: jest.fn((err: any) => ({
+  serializeError: jest.fn((err: { message?: string; name?: string }) => ({
     message: err?.message || 'Unknown',
     name: err?.name || 'Error',
   })),
-  safeStringifyError: jest.fn((val: any) => ({
+  safeStringifyError: jest.fn((val: unknown) => ({
     stringified: JSON.stringify(val),
     isCircular: false,
   })),
@@ -20,29 +22,24 @@ const mockedPerformance = performance as jest.Mocked<typeof performance>;
 // Helper to create a mock operation
 const createMockOperation = (
   name: string,
-  type: string = 'query',
-  variables: Record<string, any> = {},
-) => ({
+  type: OperationTypeNode = OperationTypeNode.QUERY,
+  variables: OperationVariables = {},
+): ApolloLink.Operation => ({
   operationName: name,
-  query: {
-    definitions: [
-      {
-        kind: 'OperationDefinition',
-        operation: type,
-      },
-    ],
-    loc: { source: { body: 'query { test }' } },
-  },
+  query: parse(`${type} ${name} { test }`),
+  operationType: type,
   variables,
+  extensions: {},
   setContext: jest.fn(),
   getContext: jest.fn(() => ({})),
+  client: {} as ApolloClient,
 });
 
 // Helper to create a mock forward function
-const createMockForward = (response: any = { data: {} }) => {
+const createMockForward = (response: ApolloLink.Result = { data: {} }) => {
   return jest.fn(
     () =>
-      new Observable(observer => {
+      new Observable<ApolloLink.Result>(observer => {
         observer.next(response);
         observer.complete();
       }),
@@ -66,7 +63,7 @@ describe('createConsoleLink', () => {
       const operation = createMockOperation('TestQuery');
       const forward = createMockForward();
 
-      const result = (link as any).request(operation, forward);
+      const result = link.request(operation, forward);
       result.subscribe({
         next: () => {},
         complete: () => {
@@ -81,7 +78,7 @@ describe('createConsoleLink', () => {
       const operation = createMockOperation('TestQuery');
       const forward = createMockForward();
 
-      const result = (link as any).request(operation, forward);
+      const result = link.request(operation, forward);
       result.subscribe({
         next: () => {},
         complete: () => {
@@ -98,14 +95,13 @@ describe('createConsoleLink', () => {
       const operation = createMockOperation('GetUser');
       const forward = createMockForward();
 
-      const result = (link as any).request(operation, forward);
+      const result = link.request(operation, forward);
       result.subscribe({
         next: () => {},
         complete: () => {
           const logCalls = jest.mocked(console.log).mock.calls;
           const timingLog = logCalls.find(
-            (call: any[]) =>
-              typeof call[0] === 'string' && call[0].includes('GetUser'),
+            call => typeof call[0] === 'string' && call[0].includes('GetUser'),
           );
           expect(timingLog).toBeDefined();
           expect(timingLog![0]).toContain('QUERY');
@@ -123,15 +119,14 @@ describe('createConsoleLink', () => {
       const operation = createMockOperation('TestQuery');
       const forward = createMockForward();
 
-      const result = (link as any).request(operation, forward);
+      const result = link.request(operation, forward);
       result.subscribe({
         next: () => {},
         complete: () => {
           // No timing log at all
           const logCalls = jest.mocked(console.log).mock.calls;
           const timingLog = logCalls.find(
-            (call: any[]) =>
-              typeof call[0] === 'string' && call[0].includes('QUERY'),
+            call => typeof call[0] === 'string' && call[0].includes('QUERY'),
           );
           expect(timingLog).toBeUndefined();
           done();
@@ -141,16 +136,19 @@ describe('createConsoleLink', () => {
 
     it('marks subscription operations without timing', done => {
       const link = createConsoleLink({ enabled: true, logTiming: true });
-      const operation = createMockOperation('OnItemUpdated', 'subscription');
+      const operation = createMockOperation(
+        'OnItemUpdated',
+        OperationTypeNode.SUBSCRIPTION,
+      );
       const forward = createMockForward();
 
-      const result = (link as any).request(operation, forward);
+      const result = link.request(operation, forward);
       result.subscribe({
         next: () => {},
         complete: () => {
           const logCalls = jest.mocked(console.log).mock.calls;
           const subLog = logCalls.find(
-            (call: any[]) =>
+            call =>
               typeof call[0] === 'string' && call[0].includes('SUBSCRIPTION'),
           );
           expect(subLog).toBeDefined();
@@ -169,19 +167,23 @@ describe('createConsoleLink', () => {
         logVariables: true,
         logTiming: false,
       });
-      const operation = createMockOperation('GetUser', 'query', {
-        id: '123',
-      });
+      const operation = createMockOperation(
+        'GetUser',
+        OperationTypeNode.QUERY,
+        {
+          id: '123',
+        },
+      );
       const forward = createMockForward();
 
-      const result = (link as any).request(operation, forward);
+      const result = link.request(operation, forward);
       result.subscribe({
         next: () => {},
         complete: () => {
           const varLog = jest
             .mocked(console.log)
             .mock.calls.find(
-              (call: any[]) =>
+              call =>
                 typeof call[0] === 'string' && call[0].includes('Variables'),
             );
           expect(varLog).toBeDefined();
@@ -196,17 +198,21 @@ describe('createConsoleLink', () => {
         logVariables: true,
         logTiming: false,
       });
-      const operation = createMockOperation('GetUser', 'query', {});
+      const operation = createMockOperation(
+        'GetUser',
+        OperationTypeNode.QUERY,
+        {},
+      );
       const forward = createMockForward();
 
-      const result = (link as any).request(operation, forward);
+      const result = link.request(operation, forward);
       result.subscribe({
         next: () => {},
         complete: () => {
           const varLog = jest
             .mocked(console.log)
             .mock.calls.find(
-              (call: any[]) =>
+              call =>
                 typeof call[0] === 'string' && call[0].includes('Variables'),
             );
           expect(varLog).toBeUndefined();
@@ -227,15 +233,14 @@ describe('createConsoleLink', () => {
       const operation = createMockOperation('GetUser');
       const forward = createMockForward({ data: { user: { name: 'Test' } } });
 
-      const result = (link as any).request(operation, forward);
+      const result = link.request(operation, forward);
       result.subscribe({
         next: () => {},
         complete: () => {
           const dataLog = jest
             .mocked(console.log)
             .mock.calls.find(
-              (call: any[]) =>
-                typeof call[0] === 'string' && call[0].includes('Data'),
+              call => typeof call[0] === 'string' && call[0].includes('Data'),
             );
           expect(dataLog).toBeDefined();
           done();
@@ -253,15 +258,14 @@ describe('createConsoleLink', () => {
       const operation = createMockOperation('GetUser');
       const forward = createMockForward({ data: { user: { name: 'Test' } } });
 
-      const result = (link as any).request(operation, forward);
+      const result = link.request(operation, forward);
       result.subscribe({
         next: () => {},
         complete: () => {
           const dataLog = jest
             .mocked(console.log)
             .mock.calls.find(
-              (call: any[]) =>
-                typeof call[0] === 'string' && call[0].includes('Data'),
+              call => typeof call[0] === 'string' && call[0].includes('Data'),
             );
           expect(dataLog).toBeUndefined();
           done();
@@ -281,15 +285,14 @@ describe('createConsoleLink', () => {
       const operation = createMockOperation('GetUser');
       const forward = createMockForward();
 
-      const result = (link as any).request(operation, forward);
+      const result = link.request(operation, forward);
       result.subscribe({
         next: () => {},
         complete: () => {
           const queryLog = jest
             .mocked(console.log)
             .mock.calls.find(
-              (call: any[]) =>
-                typeof call[0] === 'string' && call[0].includes('Query'),
+              call => typeof call[0] === 'string' && call[0].includes('Query'),
             );
           expect(queryLog).toBeDefined();
           done();
@@ -311,7 +314,7 @@ describe('createConsoleLink', () => {
         errors: [{ message: 'Something went wrong' }],
       });
 
-      const result = (link as any).request(operation, forward);
+      const result = link.request(operation, forward);
       result.subscribe({
         next: () => {},
         complete: () => {
@@ -331,12 +334,12 @@ describe('createConsoleLink', () => {
 
       const forward = jest.fn(
         () =>
-          new Observable(observer => {
+          new Observable<ApolloLink.Result>(observer => {
             observer.error(testError);
           }),
       );
 
-      const result = (link as any).request(operation, forward);
+      const result = link.request(operation, forward);
       result.subscribe({
         error: (err: Error) => {
           expect(err.message).toBe('Network failure');
@@ -362,7 +365,7 @@ describe('createConsoleLink', () => {
       const operation = createMockOperation('SlowQuery');
       const forward = createMockForward();
 
-      const result = (link as any).request(operation, forward);
+      const result = link.request(operation, forward);
       result.subscribe({
         next: () => {},
         complete: () => {
@@ -370,7 +373,7 @@ describe('createConsoleLink', () => {
           const timingCall = jest
             .mocked(console.log)
             .mock.calls.find(
-              (call: any[]) =>
+              call =>
                 typeof call[0] === 'string' && call[0].includes('SlowQuery'),
             );
           expect(timingCall).toBeDefined();
@@ -395,14 +398,14 @@ describe('createConsoleLink', () => {
         extensions: { traceId: 'abc-123' },
       });
 
-      const result = (link as any).request(operation, forward);
+      const result = link.request(operation, forward);
       result.subscribe({
         next: () => {},
         complete: () => {
           const extLog = jest
             .mocked(console.log)
             .mock.calls.find(
-              (call: any[]) =>
+              call =>
                 typeof call[0] === 'string' && call[0].includes('Extensions'),
             );
           expect(extLog).toBeDefined();

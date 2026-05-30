@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { ReviewCard } from '#features/recipes/components/ReviewCard';
+import type { RecipeReviewFragment } from '#features/recipes/graphql/recipeFragments.generated';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -11,7 +12,9 @@ jest.mock('#components/atoms/CachedImage', () => ({
   CachedImage: () => null,
 }));
 
-const makeReview = (overrides = {}) => ({
+const makeReview = (
+  overrides: Partial<RecipeReviewFragment> = {},
+): RecipeReviewFragment => ({
   __typename: 'RecipeReview',
   id: 'r1',
   rating: 4,
@@ -37,7 +40,7 @@ const makeReview = (overrides = {}) => ({
 
 describe('ReviewCard', () => {
   const defaultProps = {
-    review: makeReview() as any,
+    review: makeReview(),
     isOwn: false,
     hasVotedHelpful: false,
     onToggleHelpful: jest.fn(),
@@ -68,7 +71,7 @@ describe('ReviewCard', () => {
       },
     });
     const { getByText } = renderWithApollo(
-      <ReviewCard {...defaultProps} review={review as any} />,
+      <ReviewCard {...defaultProps} review={review} />,
     );
     expect(getByText('fallback@test.com')).toBeTruthy();
   });

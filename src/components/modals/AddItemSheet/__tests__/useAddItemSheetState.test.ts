@@ -6,15 +6,15 @@ jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 
 // Mock requestAnimationFrame and requestIdleCallback
-global.requestAnimationFrame = ((cb: () => void) => {
-  cb();
+global.requestAnimationFrame = (cb: (time: number) => void) => {
+  cb(0);
   return 0;
-}) as any;
+};
 global.cancelAnimationFrame = jest.fn();
-global.requestIdleCallback = ((cb: () => void) => {
-  cb();
+global.requestIdleCallback = (cb: IdleRequestCallback) => {
+  cb({ didTimeout: false, timeRemaining: () => 0 });
   return 0;
-}) as any;
+};
 global.cancelIdleCallback = jest.fn();
 
 describe('useAddItemSheetState', () => {

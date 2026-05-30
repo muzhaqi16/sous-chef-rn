@@ -62,7 +62,7 @@ export interface InvitationData {
   inviterName?: string;
   entityName: string; // Home name or Shopping List name
   token?: string;
-  payload: any;
+  payload: Record<string, unknown>;
 }
 
 interface InvitationAcceptanceModalProps {

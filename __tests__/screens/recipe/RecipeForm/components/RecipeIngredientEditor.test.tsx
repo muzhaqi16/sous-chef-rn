@@ -8,37 +8,61 @@ jest.mock('../../../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../../../src/apollo/links/refreshToken');
 
 jest.mock('../../../../../src/components/molecules/AutocompleteField/ItemAutocompleteField', () => ({
-  ItemAutocompleteField: (props: any) => {
+  ItemAutocompleteField: (
+    props: React.ComponentProps<
+      typeof import('../../../../../src/components/molecules/AutocompleteField/ItemAutocompleteField').ItemAutocompleteField
+    >,
+  ) => {
     const { Text } = require('react-native');
     return <Text>{props.label}</Text>;
   },
 }));
 jest.mock('../../../../../src/components/molecules/AutocompleteField/UnitAutocompleteField', () => ({
-  UnitAutocompleteField: (props: any) => {
+  UnitAutocompleteField: (
+    props: React.ComponentProps<
+      typeof import('../../../../../src/components/molecules/AutocompleteField/UnitAutocompleteField').UnitAutocompleteField
+    >,
+  ) => {
     const { Text } = require('react-native');
     return <Text>{props.label}</Text>;
   },
 }));
 jest.mock('../../../../../src/components/molecules/FormInput', () => ({
-  FormInput: (props: any) => {
+  FormInput: (
+    props: React.ComponentProps<
+      typeof import('../../../../../src/components/molecules/FormInput').FormInput
+    >,
+  ) => {
     const { Text } = require('react-native');
     return <Text>{props.label}</Text>;
   },
 }));
 jest.mock('../../../../../src/components/molecules/EditableCounter', () => ({
-  EditableCounter: (props: any) => {
+  EditableCounter: (
+    props: React.ComponentProps<
+      typeof import('../../../../../src/components/molecules/EditableCounter').EditableCounter
+    >,
+  ) => {
     const { Text } = require('react-native');
     return <Text>{props.label}</Text>;
   },
 }));
 jest.mock('../../../../../src/components/molecules/FieldRow', () => ({
-  FieldRow: (props: any) => {
+  FieldRow: (
+    props: React.ComponentProps<
+      typeof import('../../../../../src/components/molecules/FieldRow').FieldRow
+    >,
+  ) => {
     const { View } = require('react-native');
     return <View>{props.children}</View>;
   },
 }));
 jest.mock('../../../../../src/components/molecules/Header', () => ({
-  Header: (props: any) => {
+  Header: (
+    props: React.ComponentProps<
+      typeof import('../../../../../src/components/molecules/Header').Header
+    >,
+  ) => {
     const { Text } = require('react-native');
     return <Text>{props.title}</Text>;
   },

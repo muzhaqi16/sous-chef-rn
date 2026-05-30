@@ -2,7 +2,9 @@
 
 import React from 'react';
 import { render } from '@testing-library/react-native';
+import { MealType } from '../../../src/graphql/generated/schemaTypes';
 import { EditCustomMealSheet } from '../../../src/features/mealPlan/components/EditCustomMealSheet';
+import type { EditCustomMealSheet_ItemFragment } from '../../../src/features/mealPlan/components/EditCustomMealSheet.generated';
 
 jest.mock('../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../src/apollo/links/refreshToken');
@@ -14,19 +16,20 @@ jest.mock('../../../src/hooks/useStandardBottomSheet', () => ({
     contentContainerStyle: {},
     theme: { colors: {} },
   }),
-  BottomSheetModal: ({ children }: any) => children,
+  BottomSheetModal: ({ children }: { children: React.ReactNode }) => children,
 }));
 jest.mock('../../../src/components/atoms/BottomSheetFormScrollView', () => ({
-  BottomSheetFormScrollView: ({ children }: any) => children,
+  BottomSheetFormScrollView: ({ children }: { children: React.ReactNode }) =>
+    children,
 }));
 jest.mock('../../../src/components/atoms/BottomSheetHeader', () => ({
-  BottomSheetHeader: (props: any) => {
+  BottomSheetHeader: (props: { title: string }) => {
     const { Text } = require('react-native');
     return <Text>{props.title}</Text>;
   },
 }));
 jest.mock('../../../src/components/molecules/FormInput', () => ({
-  FormInput: (props: any) => {
+  FormInput: (props: { label: string }) => {
     const { Text } = require('react-native');
     return <Text>{props.label}</Text>;
   },
@@ -36,16 +39,12 @@ describe('EditCustomMealSheet', () => {
   const defaultProps = {
     visible: true,
     item: {
+      __typename: 'MealPlanItem',
       id: 'mp1',
-      mealType: 'DINNER',
+      mealType: MealType.Dinner,
       customMealName: 'Pasta Night',
       notes: 'With garlic bread',
-      isCompleted: false,
-      recipe: null,
-      servings: null,
-      calories: null,
-      usedPantryItems: [],
-    } as any,
+    } satisfies EditCustomMealSheet_ItemFragment,
     onClose: jest.fn(),
     onSave: jest.fn(),
   };

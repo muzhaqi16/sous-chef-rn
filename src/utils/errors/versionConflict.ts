@@ -8,20 +8,46 @@ export interface VersionConflictDetails {
 }
 
 /**
+ * Minimal shape of a GraphQL error carrying conflict metadata in `extensions`.
+ */
+interface GraphQLErrorLike {
+  extensions?: Record<string, unknown>;
+}
+
+/**
+ * Error shapes accepted by the version-conflict helpers: either an Apollo-style
+ * error wrapping `graphQLErrors`, or a single GraphQL error with `extensions`.
+ */
+interface ConflictErrorLike extends GraphQLErrorLike {
+  graphQLErrors?: GraphQLErrorLike[];
+}
+
+function asConflictError(error: unknown): ConflictErrorLike | null {
+  return error && typeof error === 'object'
+    ? (error as ConflictErrorLike)
+    : null;
+}
+
+/**
  * Check if an error is a CONFLICT error from the API (Apollo error level)
  *
  * @param error - Error object that may contain GraphQL errors
  * @returns True if the error is a version conflict
  */
-export function isVersionConflictError(error: any): boolean {
-  if ('graphQLErrors' in error && error.graphQLErrors) {
-    return error.graphQLErrors.some(
-      (err: any) => err.extensions?.code === 'CONFLICT',
+export function isVersionConflictError(error: unknown): boolean {
+  const err = asConflictError(error);
+  if (!err) {
+    return false;
+  }
+
+  if (err.graphQLErrors) {
+    return err.graphQLErrors.some(
+      gqlErr => gqlErr.extensions?.code === 'CONFLICT',
     );
   }
 
-  if ('extensions' in error && error.extensions) {
-    return error.extensions.code === 'CONFLICT';
+  if (err.extensions) {
+    return err.extensions.code === 'CONFLICT';
   }
 
   return false;
@@ -46,16 +72,21 @@ export function isVersionConflictPayload(payload: {
  * @returns Version conflict details or null if not a version conflict
  */
 export function getVersionConflictDetails(
-  error: any,
+  error: unknown,
 ): VersionConflictDetails | null {
-  let versionError: any | undefined;
+  const err = asConflictError(error);
+  if (!err) {
+    return null;
+  }
 
-  if ('graphQLErrors' in error && error.graphQLErrors) {
-    versionError = error.graphQLErrors.find(
-      (err: any) => err.extensions?.code === 'CONFLICT',
+  let versionError: GraphQLErrorLike | undefined;
+
+  if (err.graphQLErrors) {
+    versionError = err.graphQLErrors.find(
+      gqlErr => gqlErr.extensions?.code === 'CONFLICT',
     );
-  } else if ('extensions' in error && error.extensions) {
-    versionError = error;
+  } else if (err.extensions) {
+    versionError = err;
   }
 
   if (!versionError || !versionError.extensions) {
@@ -86,7 +117,7 @@ export function getVersionConflictDetails(
  * @param error - Error containing CONFLICT
  * @returns User-friendly error message
  */
-export function getVersionConflictMessage(error: any): string {
+export function getVersionConflictMessage(error: unknown): string {
   const details = getVersionConflictDetails(error);
 
   if (!details) {
@@ -115,7 +146,7 @@ export function getVersionConflictMessage(error: any): string {
  * }
  * ```
  */
-export function handleVersionConflict(error: any): boolean {
+export function handleVersionConflict(error: unknown): boolean {
   if (!isVersionConflictError(error)) {
     return false;
   }

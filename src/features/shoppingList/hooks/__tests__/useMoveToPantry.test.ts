@@ -4,6 +4,8 @@ import {
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
 import { MoveShoppingItemToPantryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
+import { StorageState } from '#/graphql/generated/schemaTypes';
 import { useMoveToPantry } from '../useMoveToPantry';
 
 jest.mock('#/services/telemetry', () => ({
@@ -26,15 +28,21 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
-function createItem(overrides: Record<string, unknown> = {}) {
+function createItem(
+  overrides: Partial<ShoppingListItemDisplayFragment> = {},
+): ShoppingListItemDisplayFragment {
   return {
+    __typename: 'ShoppingListItem',
     id: 'item-1',
     itemName: 'Milk',
     quantity: 2,
-    purchaseInfo: { isPurchased: true },
+    purchaseInfo: {
+      __typename: 'ShoppingListItemPurchaseInfo',
+      isPurchased: true,
+    },
     version: 1,
     ...overrides,
-  } as any;
+  } as Partial<ShoppingListItemDisplayFragment> as ShoppingListItemDisplayFragment;
 }
 
 function moveMock() {
@@ -65,7 +73,7 @@ describe('useMoveToPantry', () => {
       { operationMocks: [move.mock] },
     );
 
-    let moveResult: any;
+    let moveResult: boolean = false;
     await act(async () => {
       moveResult = await result.current.moveToPantry(createItem(), {
         pantryId: 'pantry-1',
@@ -102,7 +110,7 @@ describe('useMoveToPantry', () => {
         pantryId: 'pantry-1',
         actualQuantity: 3,
         actualUnitId: 'unit-2',
-        storageState: 'FROZEN' as any,
+        storageState: StorageState.Frozen,
         expiresAt: '2024-12-31',
         removeFromList: false,
         actualPrice: 5.99,
@@ -130,7 +138,7 @@ describe('useMoveToPantry', () => {
       useMoveToPantry({ currentListId: 'list-1' }),
     );
 
-    let moveResult: any;
+    let moveResult: boolean = false;
     await act(async () => {
       moveResult = await result.current.moveToPantry(createItem(), {
         pantryId: 'pantry-1',

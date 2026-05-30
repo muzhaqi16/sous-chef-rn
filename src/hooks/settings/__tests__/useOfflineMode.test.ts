@@ -18,7 +18,8 @@ jest.mock('#store/useAppStore', () => {
     offlineModeEnabled: mockOfflineModeEnabled,
   });
   return {
-    useAppStore: (selector: (state: any) => any) => selector(getState()),
+    useAppStore: <T>(selector: (state: ReturnType<typeof getState>) => T) =>
+      selector(getState()),
     useIsOnline: () => (s => s.isOnline)(getState()),
   };
 });

@@ -6,7 +6,9 @@ import { BottomSheetAction } from '../BottomSheetAction';
 jest.mock('../../atoms/Title', () => {
   const { Text: RNText } = require('react-native');
   return {
-    Title: ({ children }: any) => <RNText>{children}</RNText>,
+    Title: ({ children }: { children: React.ReactNode }) => (
+      <RNText>{children}</RNText>
+    ),
   };
 });
 
@@ -20,7 +22,7 @@ jest.mock('#hooks/useStandardBottomSheet', () => ({
     insets: { top: 0, bottom: 0, left: 0, right: 0 },
     theme: {},
   }),
-  BottomSheetModal: ({ children }: any) => children,
+  BottomSheetModal: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 describe('BottomSheetAction', () => {

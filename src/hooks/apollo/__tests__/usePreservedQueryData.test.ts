@@ -26,7 +26,8 @@ describe('usePreservedQueryData', () => {
   it('preserves the updated value when data becomes undefined', () => {
     // Start undefined, then get data, then lose it
     const { result, rerender } = renderHook(
-      ({ data }: any) => usePreservedQueryData(data, 'initial'),
+      ({ data }: { data: string | undefined }) =>
+        usePreservedQueryData(data, 'initial'),
       { initialProps: { data: undefined as string | undefined } },
     );
 
@@ -43,7 +44,8 @@ describe('usePreservedQueryData', () => {
 
   it('updates when new data becomes available after an error', () => {
     const { result, rerender } = renderHook(
-      ({ data }: any) => usePreservedQueryData(data, 'initial'),
+      ({ data }: { data: string | undefined }) =>
+        usePreservedQueryData(data, 'initial'),
       { initialProps: { data: undefined as string | undefined } },
     );
 
@@ -61,7 +63,8 @@ describe('usePreservedQueryData', () => {
     // When data starts with a value, prevData is initialized to that value
     // so lastSuccessfulValue is only set on CHANGES
     const { result, rerender } = renderHook(
-      ({ data }: any) => usePreservedQueryData(data, 'initial'),
+      ({ data }: { data: string | undefined }) =>
+        usePreservedQueryData(data, 'initial'),
       { initialProps: { data: 'same' as string | undefined } },
     );
 
@@ -79,7 +82,8 @@ describe('usePreservedQueryData', () => {
     const obj2 = { count: 10 };
 
     const { result, rerender } = renderHook(
-      ({ data }: any) => usePreservedQueryData(data, { count: 0 }),
+      ({ data }: { data: { count: number } | undefined }) =>
+        usePreservedQueryData(data, { count: 0 }),
       { initialProps: { data: undefined as { count: number } | undefined } },
     );
 
@@ -119,7 +123,8 @@ describe('usePreservedArrayData', () => {
   it('preserves last successful array when data changes then becomes undefined', () => {
     const items = [{ id: '1' }, { id: '2' }];
     const { result, rerender } = renderHook(
-      ({ data }: any) => usePreservedArrayData(data),
+      ({ data }: { data: { id: string }[] | null | undefined }) =>
+        usePreservedArrayData(data),
       {
         initialProps: {
           data: undefined as { id: string }[] | undefined | null,
@@ -139,7 +144,8 @@ describe('usePreservedArrayData', () => {
   it('preserves last successful array when data changes then becomes null', () => {
     const items = [{ id: '1' }];
     const { result, rerender } = renderHook(
-      ({ data }: any) => usePreservedArrayData(data),
+      ({ data }: { data: { id: string }[] | null | undefined }) =>
+        usePreservedArrayData(data),
       {
         initialProps: {
           data: undefined as { id: string }[] | null | undefined,

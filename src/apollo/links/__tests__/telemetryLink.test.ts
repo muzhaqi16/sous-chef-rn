@@ -1,4 +1,4 @@
-import { Observable } from '@apollo/client';
+import { ApolloLink, Observable } from '@apollo/client';
 import performance from 'react-native-performance';
 import { Telemetry } from '#/services/telemetry';
 import { Environment } from '#/utils/environment';
@@ -26,11 +26,13 @@ jest.mock('#store', () => ({
 }));
 
 jest.mock('#/utils/errorSerialization', () => ({
-  serializeError: jest.fn((err: any) => ({
-    message: err?.message || 'Unknown',
-    name: err?.name || 'Error',
-    stack: err?.stack,
-  })),
+  serializeError: jest.fn(
+    (err: { message?: string; name?: string; stack?: string } | null) => ({
+      message: err?.message || 'Unknown',
+      name: err?.name || 'Error',
+      stack: err?.stack,
+    }),
+  ),
 }));
 
 import { createTelemetryLink } from '../telemetryLink';
@@ -38,8 +40,23 @@ import { createTelemetryLink } from '../telemetryLink';
 const mockedEnvironment = Environment as jest.Mocked<typeof Environment>;
 const mockedPerformance = performance as jest.Mocked<typeof performance>;
 
+// The mock operation/forward are intentionally partial fixtures.
+interface MockOperation {
+  operationName: string;
+  query: {
+    definitions: Array<{ kind: string; operation: string }>;
+  };
+  variables: Record<string, unknown>;
+  setContext: jest.Mock;
+  getContext: jest.Mock;
+}
+type MockForward = jest.Mock<Observable<ApolloLink.Result>, []>;
+
 // Helper to create a mock operation
-const createMockOperation = (name: string, type: string = 'query') => ({
+const createMockOperation = (
+  name: string,
+  type: string = 'query',
+): MockOperation => ({
   operationName: name,
   query: {
     definitions: [
@@ -55,14 +72,34 @@ const createMockOperation = (name: string, type: string = 'query') => ({
 });
 
 // Helper to create a mock forward function
-const createMockForward = (response: any = { data: {} }) => {
-  return jest.fn(
-    () =>
+const createMockForward = (
+  response: ApolloLink.Result = { data: {} },
+): MockForward =>
+  jest.fn(
+    (): Observable<ApolloLink.Result> =>
       new Observable(observer => {
         observer.next(response);
         observer.complete();
       }),
   );
+
+// `runRequest` drives the link's public `request` handler with those fixtures,
+// keeping every call site free of explicit `any` while reflecting the real
+// argument shapes. The link only reads `operationName` / `query` / `variables`
+// off the operation; the full `ApolloLink.Operation` additionally requires a
+// live `ApolloClient` (and the overloaded `setContext`), which the partial
+// fixtures intentionally omit, so the single residual cast lives here.
+type RunRequest = (
+  operation: MockOperation,
+  forward: MockForward,
+) => Observable<ApolloLink.Result>;
+const runRequest = (
+  link: ApolloLink,
+  operation: MockOperation,
+  forward: MockForward,
+): Observable<ApolloLink.Result> => {
+  const request: RunRequest = (link as { request: any }).request;
+  return request(operation, forward);
 };
 
 describe('createTelemetryLink', () => {
@@ -85,7 +122,7 @@ describe('createTelemetryLink', () => {
       const operation = createMockOperation('TestQuery');
       const forward = createMockForward();
 
-      (link as any).request(operation, forward);
+      runRequest(link, operation, forward);
 
       // Should just forward without wrapping
       expect(forward).toHaveBeenCalledWith(operation);
@@ -102,7 +139,7 @@ describe('createTelemetryLink', () => {
       const operation = createMockOperation('TestQuery');
       const forward = createMockForward();
 
-      const result = (link as any).request(operation, forward);
+      const result = runRequest(link, operation, forward);
       result.subscribe({
         next: () => {},
         complete: () => {
@@ -128,7 +165,7 @@ describe('createTelemetryLink', () => {
       const operation = createMockOperation('TestQuery');
       const forward = createMockForward();
 
-      const result = (link as any).request(operation, forward);
+      const result = runRequest(link, operation, forward);
       result.subscribe({
         next: () => {},
         complete: () => {
@@ -153,7 +190,7 @@ describe('createTelemetryLink', () => {
       const operation = createMockOperation('TestQuery');
       const forward = createMockForward();
 
-      (link as any).request(operation, forward);
+      runRequest(link, operation, forward);
 
       expect(forward).toHaveBeenCalledWith(operation);
       // Telemetry should not be invoked since sampled out
@@ -173,7 +210,7 @@ describe('createTelemetryLink', () => {
       const operation = createMockOperation('TestQuery');
       const forward = createMockForward();
 
-      const result = (link as any).request(operation, forward);
+      const result = runRequest(link, operation, forward);
       result.subscribe({
         next: () => {},
         complete: () => {
@@ -195,7 +232,7 @@ describe('createTelemetryLink', () => {
       const operation = createMockOperation('TestQuery');
       const forward = createMockForward();
 
-      const result = (link as any).request(operation, forward);
+      const result = runRequest(link, operation, forward);
       result.subscribe({
         next: () => {},
         complete: () => {
@@ -225,7 +262,7 @@ describe('createTelemetryLink', () => {
         ],
       });
 
-      const result = (link as any).request(operation, forward);
+      const result = runRequest(link, operation, forward);
       result.subscribe({
         next: () => {},
         complete: () => {
@@ -251,7 +288,7 @@ describe('createTelemetryLink', () => {
       const operation = createMockOperation('GetUser', 'query');
       const forward = createMockForward({ data: { user: { id: '1' } } });
 
-      const result = (link as any).request(operation, forward);
+      const result = runRequest(link, operation, forward);
       result.subscribe({
         next: () => {},
         complete: () => {
@@ -277,7 +314,7 @@ describe('createTelemetryLink', () => {
       const operation = createMockOperation('GetItems');
       const forward = createMockForward();
 
-      const result = (link as any).request(operation, forward);
+      const result = runRequest(link, operation, forward);
       result.subscribe({
         next: () => {},
         complete: () => {
@@ -302,7 +339,7 @@ describe('createTelemetryLink', () => {
       };
       const forward = createMockForward(errorResponse);
 
-      const result = (link as any).request(operation, forward);
+      const result = runRequest(link, operation, forward);
       result.subscribe({
         next: () => {},
         complete: () => {
@@ -338,7 +375,7 @@ describe('createTelemetryLink', () => {
       const operation = createMockOperation('SlowQuery');
       const forward = createMockForward();
 
-      const result = (link as any).request(operation, forward);
+      const result = runRequest(link, operation, forward);
       result.subscribe({
         next: () => {},
         complete: () => {
@@ -364,14 +401,14 @@ describe('createTelemetryLink', () => {
       const operation = createMockOperation('NetworkFailQuery');
       const networkError = new Error('Network request failed');
 
-      const forward = jest.fn(
-        () =>
+      const forward: MockForward = jest.fn(
+        (): Observable<ApolloLink.Result> =>
           new Observable(observer => {
             observer.error(networkError);
           }),
       );
 
-      const result = (link as any).request(operation, forward);
+      const result = runRequest(link, operation, forward);
       result.subscribe({
         error: () => {
           expect(Telemetry.error).toHaveBeenCalledWith(
@@ -400,7 +437,7 @@ describe('createTelemetryLink', () => {
       mockedEnvironment.isDevelopment.mockReturnValue(true);
 
       const link = createTelemetryLink();
-      const operation = {
+      const operation: MockOperation = {
         operationName: '',
         query: {
           definitions: [{ kind: 'OperationDefinition', operation: 'query' }],
@@ -411,7 +448,7 @@ describe('createTelemetryLink', () => {
       };
       const forward = createMockForward();
 
-      const result = (link as any).request(operation, forward);
+      const result = runRequest(link, operation, forward);
       result.subscribe({
         next: () => {},
         complete: () => {
@@ -432,7 +469,7 @@ describe('createTelemetryLink', () => {
       const operation = createMockOperation('CreateItem', 'mutation');
       const forward = createMockForward();
 
-      const result = (link as any).request(operation, forward);
+      const result = runRequest(link, operation, forward);
       result.subscribe({
         next: () => {},
         complete: () => {

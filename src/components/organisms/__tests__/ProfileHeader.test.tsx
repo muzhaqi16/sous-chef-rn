@@ -1,11 +1,13 @@
 import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
 import { ProfileHeader } from '../ProfileHeader';
+import type { IconButtonProps } from '../../atoms/IconButton';
+import type { BackButtonProps } from '../../atoms/BackButton';
 
 jest.mock('../../atoms/IconButton', () => {
   const { Pressable, Text } = require('react-native');
   return {
-    IconButton: ({ onPress, accessibilityLabel }: any) => (
+    IconButton: ({ onPress, accessibilityLabel }: IconButtonProps) => (
       <Pressable onPress={onPress} accessibilityLabel={accessibilityLabel}>
         <Text>IconButton</Text>
       </Pressable>
@@ -16,7 +18,7 @@ jest.mock('../../atoms/IconButton', () => {
 jest.mock('../../atoms/BackButton', () => {
   const { Pressable, Text } = require('react-native');
   return {
-    BackButton: ({ onPress }: any) => (
+    BackButton: ({ onPress }: BackButtonProps) => (
       <Pressable onPress={onPress} accessibilityLabel="Go back">
         <Text>Back</Text>
       </Pressable>

@@ -1,6 +1,12 @@
 import { renderHook, act } from '@testing-library/react-native';
 import { useTheme } from '../useTheme';
 
+type MockStoreState = {
+  theme: string;
+  setTheme: jest.Mock;
+  isHydrated: boolean;
+};
+
 const mockSetTheme = jest.fn();
 const mockSetAdaptiveThemes = jest.fn();
 const mockSetUnistylesTheme = jest.fn();
@@ -8,7 +14,7 @@ const mockSetUnistylesTheme = jest.fn();
 let mockUserThemePreference = 'SYSTEM';
 
 jest.mock('#store/useAppStore', () => ({
-  useAppStore: (selector: (s: any) => any) =>
+  useAppStore: (selector: (s: MockStoreState) => unknown) =>
     selector({
       theme: mockUserThemePreference,
       setTheme: mockSetTheme,
@@ -22,7 +28,7 @@ jest.mock('#store/useAppStore', () => ({
 }));
 
 jest.mock('zustand/shallow', () => ({
-  useShallow: (fn: any) => fn,
+  useShallow: <S, U>(fn: (state: S) => U) => fn,
 }));
 
 jest.mock('react-native-unistyles', () => ({
@@ -33,8 +39,8 @@ jest.mock('react-native-unistyles', () => ({
     },
   })),
   UnistylesRuntime: {
-    setAdaptiveThemes: (...args: any[]) => mockSetAdaptiveThemes(...args),
-    setTheme: (...args: any[]) => mockSetUnistylesTheme(...args),
+    setAdaptiveThemes: (isEnabled: boolean) => mockSetAdaptiveThemes(isEnabled),
+    setTheme: (themeName: string) => mockSetUnistylesTheme(themeName),
     themeName: 'light',
   },
 }));

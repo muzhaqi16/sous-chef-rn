@@ -48,7 +48,7 @@ export interface UserContext {
   userId?: string;
   email?: string;
   role?: string;
-  customAttributes?: Record<string, any>;
+  customAttributes?: Record<string, unknown>;
 }
 
 /**

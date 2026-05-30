@@ -1,6 +1,7 @@
 import React from 'react';
 import { screen, userEvent } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import type { RootState } from '#store';
 import { ResetPasswordScreen } from '../ResetPasswordScreen';
 
 // --- Mocks ---
@@ -27,7 +28,7 @@ jest.mock('@react-navigation/native', () => ({
 }));
 
 jest.mock('#store/useAppStore', () => ({
-  useAppStore: (selector: any) =>
+  useAppStore: (selector: (s: Pick<RootState, 'clearAuth'>) => unknown) =>
     selector({
       clearAuth: mockClearAuth,
     }),
@@ -52,7 +53,7 @@ jest.mock('#/utils/iconUtils', () => ({
 jest.mock('#components/molecules/Header', () => {
   const { View, Pressable, Text } = require('react-native');
   return {
-    Header: ({ onClose }: any) => (
+    Header: ({ onClose }: { onClose?: () => void }) => (
       <View testID="header">
         {onClose ? (
           <Pressable testID="header-close" onPress={onClose}>
@@ -72,7 +73,12 @@ jest.mock('#components/atoms/PasswordInput', () => {
       onChangeText,
       placeholder,
       errorMessage,
-    }: any) => (
+    }: {
+      value?: string;
+      onChangeText?: (text: string) => void;
+      placeholder?: string;
+      errorMessage?: string;
+    }) => (
       <TextInput
         value={value}
         onChangeText={onChangeText}
@@ -87,7 +93,17 @@ jest.mock('#components/atoms/PasswordInput', () => {
 jest.mock('#components/base/Button', () => {
   const { Pressable, Text } = require('react-native');
   return {
-    Button: ({ children, onPress, disabled, loading }: any) => (
+    Button: ({
+      children,
+      onPress,
+      disabled,
+      loading,
+    }: {
+      children?: React.ReactNode;
+      onPress: () => void;
+      disabled?: boolean;
+      loading?: boolean;
+    }) => (
       <Pressable
         onPress={onPress}
         disabled={disabled || loading}

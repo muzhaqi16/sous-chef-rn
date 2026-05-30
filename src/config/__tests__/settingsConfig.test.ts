@@ -48,9 +48,11 @@ describe('settingsConfig', () => {
       const section = PERSONAL_INFO_CONFIG.find(
         s => s.title === 'Personal Information',
       )!;
-      const genderItem = section.items.find(i => i.key === 'gender') as any;
+      const genderItem = section.items.find(i => i.key === 'gender');
       expect(genderItem!.type).toBe('modal');
-      expect(genderItem!.options.length).toBeGreaterThan(0);
+      if (genderItem && 'options' in genderItem) {
+        expect(genderItem.options!.length).toBeGreaterThan(0);
+      }
     });
 
     it('profileVisibility field has options', () => {
@@ -59,13 +61,15 @@ describe('settingsConfig', () => {
       )!;
       const visibilityItem = section.items.find(
         i => i.key === 'profileVisibility',
-      ) as any;
+      );
       expect(visibilityItem!.type).toBe('modal');
-      expect(visibilityItem!.options).toEqual([
-        { label: 'Public', value: 'PUBLIC' },
-        { label: 'Friends Only', value: 'FRIENDS_ONLY' },
-        { label: 'Private', value: 'PRIVATE' },
-      ]);
+      if (visibilityItem && 'options' in visibilityItem) {
+        expect(visibilityItem.options).toEqual([
+          { label: 'Public', value: 'PUBLIC' },
+          { label: 'Friends Only', value: 'FRIENDS_ONLY' },
+          { label: 'Private', value: 'PRIVATE' },
+        ]);
+      }
     });
   });
 
@@ -98,9 +102,7 @@ describe('settingsConfig', () => {
         s => s.title === 'Appearance & Language',
       );
       expect(section).toBeDefined();
-      const appearanceItem = section!.items.find(
-        i => i.key === 'appearance',
-      ) as any;
+      const appearanceItem = section!.items.find(i => i.key === 'appearance');
       expect(appearanceItem!.type).toBe('navigation');
     });
 

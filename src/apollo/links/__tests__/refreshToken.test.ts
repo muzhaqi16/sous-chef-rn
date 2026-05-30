@@ -1,4 +1,4 @@
-import { jwtDecode } from 'jwt-decode';
+import { jwtDecode, type JwtPayload } from 'jwt-decode';
 
 // Mock jwt-decode
 jest.mock('jwt-decode', () => ({
@@ -39,6 +39,7 @@ jest.mock('../../client', () => ({
   },
 }));
 
+import type { ApolloLink } from '@apollo/client/link';
 import {
   isRefreshTokenValid,
   getRefreshState,
@@ -79,14 +80,14 @@ describe('refreshToken', () => {
   describe('isRefreshTokenValid', () => {
     it('returns true when refresh token is valid and not expired', () => {
       const futureExp = Math.floor(Date.now() / 1000) + 86400; // 24 hours
-      mockedJwtDecode.mockReturnValue({ exp: futureExp } as any);
+      mockedJwtDecode.mockReturnValue({ exp: futureExp } as JwtPayload);
 
       expect(isRefreshTokenValid('valid-refresh-token')).toBe(true);
     });
 
     it('returns false when refresh token is expired', () => {
       const pastExp = Math.floor(Date.now() / 1000) - 3600; // 1 hour ago
-      mockedJwtDecode.mockReturnValue({ exp: pastExp } as any);
+      mockedJwtDecode.mockReturnValue({ exp: pastExp } as JwtPayload);
 
       expect(isRefreshTokenValid('expired-refresh-token')).toBe(false);
     });
@@ -114,14 +115,14 @@ describe('refreshToken', () => {
 
     it('returns true when token expires exactly 1 second from now', () => {
       const exp = Math.floor(Date.now() / 1000) + 1;
-      mockedJwtDecode.mockReturnValue({ exp } as any);
+      mockedJwtDecode.mockReturnValue({ exp } as JwtPayload);
 
       expect(isRefreshTokenValid('almost-expired')).toBe(true);
     });
 
     it('returns false when token just expired (1 second ago)', () => {
       const exp = Math.floor(Date.now() / 1000) - 1;
-      mockedJwtDecode.mockReturnValue({ exp } as any);
+      mockedJwtDecode.mockReturnValue({ exp } as JwtPayload);
 
       expect(isRefreshTokenValid('just-expired')).toBe(false);
     });
@@ -174,16 +175,25 @@ describe('refreshToken', () => {
     const mockOperation = {
       setContext: jest.fn(),
       getContext: jest.fn(() => ({ headers: {} })),
+    } as Partial<ApolloLink.Operation> as ApolloLink.Operation & {
+      setContext: jest.Mock;
+      getContext: jest.Mock;
     };
 
     const createMockForward = () => {
       const mockForward = jest.fn(() => ({
-        subscribe: jest.fn((observer: any) => {
-          observer.next({ data: 'result' });
-          observer.complete();
-        }),
+        subscribe: jest.fn(
+          (observer: {
+            next: (value: { data: string }) => void;
+            complete: () => void;
+          }) => {
+            observer.next({ data: 'result' });
+            observer.complete();
+          },
+        ),
       }));
-      return mockForward;
+      return mockForward as Partial<ApolloLink.ForwardFunction> as ApolloLink.ForwardFunction &
+        jest.Mock;
     };
 
     beforeEach(() => {
@@ -281,7 +291,7 @@ describe('refreshToken', () => {
 
       const observable = attemptTokenRefresh(mockOperation, mockForward);
       observable.subscribe({
-        error: (err: any) => {
+        error: (err: Error) => {
           expect(err).toBeDefined();
           expect(mockSetNeedsTokenRefresh).toHaveBeenCalledWith(true);
           done();
@@ -304,7 +314,7 @@ describe('refreshToken', () => {
 
       const observable = attemptTokenRefresh(mockOperation, mockForward);
       observable.subscribe({
-        error: (err: any) => {
+        error: (err: Error) => {
           expect(err.message).toContain('Missing tokens');
           done();
         },

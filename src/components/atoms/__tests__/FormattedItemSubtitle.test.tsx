@@ -4,7 +4,13 @@ import { render, screen } from '@testing-library/react-native';
 import { FormattedItemSubtitle } from '../FormattedItemSubtitle';
 
 jest.mock('#/components/molecules/QuantityDisplay', () => ({
-  QuantityDisplay: ({ quantity, unitSymbol }: any) => {
+  QuantityDisplay: ({
+    quantity,
+    unitSymbol,
+  }: {
+    quantity: number | null | undefined;
+    unitSymbol?: string | null;
+  }) => {
     const { Text } = require('react-native');
     return require('react').createElement(
       Text,

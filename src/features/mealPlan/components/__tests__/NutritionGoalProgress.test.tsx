@@ -2,13 +2,15 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { NutritionGoalProgress } from '../NutritionGoalProgress';
+import { GoalStatus, type GoalProgress } from '#/graphql/generated/schemaTypes';
 
 const makeProgress = (
   current: number,
   target: number,
   percentage: number,
-  status: string,
-) => ({
+  status: GoalStatus,
+): GoalProgress => ({
+  __typename: 'GoalProgress',
   current,
   target,
   percentage,
@@ -16,12 +18,12 @@ const makeProgress = (
 });
 
 describe('NutritionGoalProgress', () => {
-  const defaultProps: any = {
+  const defaultProps: React.ComponentProps<typeof NutritionGoalProgress> = {
     overallScore: 85,
-    caloriesProgress: makeProgress(1800, 2000, 90, 'ON_TARGET'),
-    proteinProgress: makeProgress(120, 150, 80, 'UNDER_TARGET'),
-    carbsProgress: makeProgress(250, 200, 125, 'OVER_TARGET'),
-    fatProgress: makeProgress(60, 70, 86, 'ON_TARGET'),
+    caloriesProgress: makeProgress(1800, 2000, 90, GoalStatus.OnTarget),
+    proteinProgress: makeProgress(120, 150, 80, GoalStatus.UnderTarget),
+    carbsProgress: makeProgress(250, 200, 125, GoalStatus.OverTarget),
+    fatProgress: makeProgress(60, 70, 86, GoalStatus.OnTarget),
   };
 
   it('renders the overall score', () => {

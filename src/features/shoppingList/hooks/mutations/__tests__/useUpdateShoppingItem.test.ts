@@ -6,6 +6,10 @@ import {
 import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useUpdateShoppingItem } from '../useUpdateShoppingItem';
 
+type UpdateItemResult = Awaited<
+  ReturnType<ReturnType<typeof useUpdateShoppingItem>['updateItem']>
+>;
+
 const mockHandleApolloError = jest.fn(() => ({ message: 'Update error' }));
 
 jest.mock('#/services/errorService', () => ({
@@ -72,7 +76,7 @@ describe('useUpdateShoppingItem', () => {
       { operationMocks: [createUpdateMock(recorded)] },
     );
 
-    let updateResult: any;
+    let updateResult!: UpdateItemResult;
     await act(async () => {
       updateResult = await result.current.updateItem('item-1', { quantity: 3 });
     });
@@ -89,7 +93,7 @@ describe('useUpdateShoppingItem', () => {
       { operationMocks: [createUpdateMock(recorded)] },
     );
 
-    let updateResult: any;
+    let updateResult!: UpdateItemResult;
     await act(async () => {
       updateResult = await result.current.updateItem('non-existent', {
         quantity: 3,

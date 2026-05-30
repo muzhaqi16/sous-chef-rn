@@ -17,8 +17,11 @@ jest.mock('#/apollo/client', () => ({
 }));
 
 import { RESET_SCENARIOS, createResetManager } from '../resetManager';
+import type { RootState } from '#store/index';
 import { storage } from '#/storage/mmkv';
 import { clearTempRegistrationPassword } from '#/storage/keychain';
+
+type SetCall = [Partial<RootState>];
 
 describe('resetManager', () => {
   describe('RESET_SCENARIOS', () => {
@@ -259,7 +262,7 @@ describe('resetManager', () => {
         await resetManager.tokenRefreshFailed('auth_rejected');
         // Should reset auth state
         const authCall = mockSet.mock.calls.find(
-          (call: any[]) =>
+          (call: SetCall) =>
             call[0]?.user === null && call[0]?.accessToken === null,
         );
         expect(authCall).toBeDefined();
@@ -273,13 +276,13 @@ describe('resetManager', () => {
         await resetManager.tokenRefreshFailed('network');
         // Should NOT reset auth state
         const authCall = mockSet.mock.calls.find(
-          (call: any[]) =>
+          (call: SetCall) =>
             call[0]?.user === null && call[0]?.accessToken === null,
         );
         expect(authCall).toBeUndefined();
         // Should set needsTokenRefresh flag
         const flagCall = mockSet.mock.calls.find(
-          (call: any[]) => call[0]?.needsTokenRefresh === true,
+          (call: SetCall) => call[0]?.needsTokenRefresh === true,
         );
         expect(flagCall).toBeDefined();
       });
@@ -288,13 +291,13 @@ describe('resetManager', () => {
         await resetManager.tokenRefreshFailed('unknown');
         // Should NOT reset auth state
         const authCall = mockSet.mock.calls.find(
-          (call: any[]) =>
+          (call: SetCall) =>
             call[0]?.user === null && call[0]?.accessToken === null,
         );
         expect(authCall).toBeUndefined();
         // Should set needsTokenRefresh flag
         const flagCall = mockSet.mock.calls.find(
-          (call: any[]) => call[0]?.needsTokenRefresh === true,
+          (call: SetCall) => call[0]?.needsTokenRefresh === true,
         );
         expect(flagCall).toBeDefined();
       });

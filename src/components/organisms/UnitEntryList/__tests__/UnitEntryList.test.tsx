@@ -9,7 +9,17 @@ jest.mock('#utils/iconUtils', () => ({
 jest.mock('#/components/molecules/FormInput', () => {
   const { View, Text, TextInput } = require('react-native');
   return {
-    FormInput: ({ label, value, onChangeText, placeholder }: any) => (
+    FormInput: ({
+      label,
+      value,
+      onChangeText,
+      placeholder,
+    }: {
+      label: string;
+      value?: string;
+      onChangeText?: (text: string) => void;
+      placeholder?: string;
+    }) => (
       <View>
         <Text>{label}</Text>
         <TextInput
@@ -33,7 +43,12 @@ jest.mock(
         value,
         onChangeText,
         placeholder,
-      }: any) => (
+      }: {
+        label?: string;
+        value: string;
+        onChangeText: (text: string) => void;
+        placeholder?: string;
+      }) => (
         <View>
           <Text>{label}</Text>
           <TextInput
@@ -51,7 +66,15 @@ jest.mock(
 jest.mock('#/components/base/Button', () => {
   const { Pressable, Text } = require('react-native');
   return {
-    Button: ({ children, onPress, disabled }: any) => (
+    Button: ({
+      children,
+      onPress,
+      disabled,
+    }: {
+      children?: React.ReactNode;
+      onPress: () => void;
+      disabled?: boolean;
+    }) => (
       <Pressable onPress={onPress} disabled={disabled} testID="add-unit-btn">
         <Text>{children}</Text>
       </Pressable>

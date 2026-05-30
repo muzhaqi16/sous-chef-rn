@@ -9,6 +9,14 @@
  * HomeListFragment selects `pantriesConnection.edges.node`, not `pantries`.
  */
 
+import type { Unmasked } from '@apollo/client/masking';
+import {
+  InviteStatus,
+  MembershipRole,
+  MembershipStatus,
+} from '#/graphql/generated/schemaTypes';
+import type { GetHomesQuery } from '#operations/home/home.generated';
+
 export interface PantryFixture {
   id: string;
   name?: string;
@@ -36,18 +44,14 @@ export interface HomeFixture {
   }>;
 }
 
-interface ConnectionData<T> {
-  __typename: string;
-  edges: Array<{ __typename: string; cursor: string; node: T }>;
-  pageInfo: { __typename: 'PageInfo'; hasNextPage: boolean; endCursor: string | null };
-  totalCount: number;
-}
-
-function connection<T>(
-  typename: string,
-  edgeTypename: string,
+// Generic over the literal typename strings so the inferred return preserves
+// `__typename: 'MembershipConnection'` (etc.) rather than widening to `string`,
+// which lets the builders below satisfy the generated query types.
+function connection<TN extends string, ET extends string, T>(
+  typename: TN,
+  edgeTypename: ET,
   nodes: T[],
-): ConnectionData<T> {
+) {
   return {
     __typename: typename,
     edges: nodes.map((node, i) => ({
@@ -56,9 +60,9 @@ function connection<T>(
       node,
     })),
     pageInfo: {
-      __typename: 'PageInfo',
+      __typename: 'PageInfo' as const,
       hasNextPage: false,
-      endCursor: null,
+      endCursor: null as string | null,
     },
     totalCount: nodes.length,
   };
@@ -71,48 +75,75 @@ function connection<T>(
  */
 export function homeNode(home: HomeFixture) {
   return {
-    __typename: 'Home',
+    __typename: 'Home' as const,
     id: home.id,
     name: home.name ?? `Home ${home.id}`,
+    description: null,
+    timezone: 'UTC',
+    currency: 'USD',
+    isPublic: false,
+    joinCode: null,
+    allowJoinCode: false,
+    maxMembers: 10,
     isDefault: home.isDefault ?? false,
     version: home.version ?? 1,
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
     membersConnection: connection(
-      'HomeMembershipConnection',
-      'HomeMembershipEdge',
+      'MembershipConnection',
+      'MembershipEdge',
       (home.members ?? []).map(m => ({
-        __typename: 'HomeMembership',
+        __typename: 'Membership' as const,
         id: m.id,
-        role: m.role ?? 'MEMBER',
-        status: m.status ?? 'active',
+        homeId: home.id,
         userId: m.userId ?? `user-${m.id}`,
+        role: (m.role as MembershipRole | undefined) ?? MembershipRole.Member,
+        status:
+          (m.status as MembershipStatus | undefined) ?? MembershipStatus.Active,
         displayName: m.displayName ?? null,
+        canManageHome: false,
+        canViewPantry: true,
+        canEditPantry: true,
+        canAddItems: true,
+        canRemoveItems: true,
+        canInviteOthers: false,
+        user: {
+          __typename: 'User' as const,
+          id: m.userId ?? `user-${m.id}`,
+          email: `${m.userId ?? `user-${m.id}`}@example.com`,
+        },
       })),
     ),
     invitesConnection: connection(
       'HomeInviteConnection',
       'HomeInviteEdge',
       (home.invites ?? []).map(i => ({
-        __typename: 'HomeInvite',
+        __typename: 'HomeInvite' as const,
         id: i.id,
-        email: i.email ?? null,
+        email: i.email ?? `invite-${i.id}@example.com`,
         recipientName: i.recipientName ?? null,
-        status: i.status ?? 'PENDING',
+        role: MembershipRole.Member,
+        status: (i.status as InviteStatus | undefined) ?? InviteStatus.Pending,
+        expiresAt: '2099-01-01T00:00:00Z',
+        message: null,
       })),
     ),
     pantriesConnection: connection(
       'PantryConnection',
       'PantryEdge',
       (home.pantries ?? []).map(p => ({
-        __typename: 'Pantry',
+        __typename: 'Pantry' as const,
         id: p.id,
         name: p.name ?? `Pantry ${p.id}`,
         isDefault: p.isDefault ?? false,
       })),
     ),
     myMembership: {
-      __typename: 'HomeMembership',
+      __typename: 'Membership' as const,
       id: `mm-${home.id}`,
-      role: 'OWNER',
+      role: MembershipRole.Owner,
+      status: MembershipStatus.Active,
+      displayName: null,
       canManageHome: true,
       canViewPantry: true,
       canEditPantry: true,
@@ -127,12 +158,9 @@ export function homeNode(home: HomeFixture) {
  * Build the full GetHomes query result. Pass to `cache.writeQuery({ query: GetHomesDocument, data: ... })`
  * or to `recordMock(GetHomesDocument, { data: ... })`.
  */
-export function homesData(homes: HomeFixture[]) {
+export function homesData(homes: HomeFixture[]): Unmasked<GetHomesQuery> {
   return {
-    homes: connection(
-      'HomeConnection',
-      'HomeEdge',
-      homes.map(homeNode),
-    ),
+    __typename: 'Query',
+    homes: connection('HomeConnection', 'HomeEdge', homes.map(homeNode)),
   };
 }

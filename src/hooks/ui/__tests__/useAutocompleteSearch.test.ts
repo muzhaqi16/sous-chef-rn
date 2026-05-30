@@ -1,4 +1,5 @@
 import { renderHook, act } from '@testing-library/react-native';
+import type { RootState } from '#store/index';
 import {
   useAutocompleteSearch,
   AutocompleteSearchConfig,
@@ -7,10 +8,12 @@ import {
 // Mock useAppStore to control isOnline
 let mockIsOnline = true;
 jest.mock('#store/useAppStore', () => {
-  const getState = () => ({ isOnline: mockIsOnline });
+  const getState = () =>
+    ({ isOnline: mockIsOnline } as Partial<RootState> as RootState);
   return {
-    useAppStore: (selector: (state: any) => any) => selector(getState()),
-    useIsOnline: () => (s => s.isOnline)(getState()),
+    useAppStore: <T>(selector: (state: RootState) => T): T =>
+      selector(getState()),
+    useIsOnline: () => getState().isOnline,
   };
 });
 

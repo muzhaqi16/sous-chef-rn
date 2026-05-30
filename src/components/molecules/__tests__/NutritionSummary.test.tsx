@@ -4,7 +4,7 @@ import { NutritionSummary } from '../NutritionSummary';
 
 // Mock the nutritionUtils to control outputs
 jest.mock('#utils/nutritionUtils', () => ({
-  parseNutritions: jest.fn((raw: any) => raw),
+  parseNutritions: jest.fn((raw: unknown) => raw),
   extractMacroSummary: jest.fn(() => ({
     calories: 250,
     protein: 15,

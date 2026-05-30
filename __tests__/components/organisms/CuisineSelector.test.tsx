@@ -2,13 +2,14 @@
 
 import React from 'react';
 import { render } from '@testing-library/react-native';
+import type { AnimatedChip as AnimatedChipComponent } from '../../../src/components/atoms/AnimatedChip';
 import { CuisineSelector } from '../../../src/components/organisms/CuisineSelector';
 
 jest.mock('../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../src/apollo/links/refreshToken');
 
 jest.mock('../../../src/components/atoms/AnimatedChip', () => ({
-  AnimatedChip: (props: any) => {
+  AnimatedChip: (props: React.ComponentProps<typeof AnimatedChipComponent>) => {
     const { Text } = require('react-native');
     return <Text>{props.label}</Text>;
   },

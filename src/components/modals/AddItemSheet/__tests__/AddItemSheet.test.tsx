@@ -25,20 +25,25 @@ jest.mock('#components/molecules/BottomSheetSearchBar', () => {
   const R = require('react');
   const RN = require('react-native');
   return {
-    BottomSheetSearchBar: R.forwardRef((props: any, ref: any) => {
-      R.useImperativeHandle(ref, () => ({
-        clear: jest.fn(),
-        focus: jest.fn(),
-        blur: jest.fn(),
-        getValue: jest.fn(() => 'search value'),
-        setValue: jest.fn(),
-      }));
-      return R.createElement(RN.TextInput, {
-        testID: 'search-bar',
-        placeholder: props.placeholder,
-        onChangeText: props.onChangeText,
-      });
-    }),
+    BottomSheetSearchBar: R.forwardRef(
+      (
+        props: { placeholder?: string; onChangeText?: (text: string) => void },
+        ref: React.Ref<unknown>,
+      ) => {
+        R.useImperativeHandle(ref, () => ({
+          clear: jest.fn(),
+          focus: jest.fn(),
+          blur: jest.fn(),
+          getValue: jest.fn(() => 'search value'),
+          setValue: jest.fn(),
+        }));
+        return R.createElement(RN.TextInput, {
+          testID: 'search-bar',
+          placeholder: props.placeholder,
+          onChangeText: props.onChangeText,
+        });
+      },
+    ),
   };
 });
 
@@ -57,7 +62,11 @@ jest.mock('#components/molecules/ActionCard', () => {
   const R = require('react');
   const RN = require('react-native');
   return {
-    ActionCard: (props: any) =>
+    ActionCard: (props: {
+      testID?: string;
+      label?: string;
+      onPress?: () => void;
+    }) =>
       R.createElement(
         RN.Pressable,
         {
@@ -74,7 +83,7 @@ jest.mock('#components/molecules/SuggestionListItem', () => {
   const R = require('react');
   const RN = require('react-native');
   return {
-    SuggestionListItem: (props: any) =>
+    SuggestionListItem: (props: { title?: string; onQuickAdd?: () => void }) =>
       R.createElement(
         RN.Pressable,
         { testID: `suggestion-${props.title}`, onPress: props.onQuickAdd },

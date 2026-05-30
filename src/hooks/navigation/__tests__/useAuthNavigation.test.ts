@@ -33,7 +33,13 @@ const mockSetRememberMe = jest.fn();
 const mockSetUserNavigationState = jest.fn();
 
 jest.mock('#store/useAppStore', () => ({
-  useAppStore: (selector: (state: any) => any) =>
+  useAppStore: (
+    selector: (state: {
+      setAuth: typeof mockSetAuth;
+      setRememberMe: typeof mockSetRememberMe;
+      setUserNavigationState: typeof mockSetUserNavigationState;
+    }) => unknown,
+  ) =>
     selector({
       setAuth: mockSetAuth,
       setRememberMe: mockSetRememberMe,

@@ -1,4 +1,5 @@
 'use no memo';
+import type { ReactNode } from 'react';
 import { HomeTabs } from '../HomeTabs';
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -9,7 +10,7 @@ jest.mock('@react-navigation/bottom-tabs', () => ({
     Screen: 'Screen',
     Group: 'Group',
   }),
-  createBottomTabScreen: (config: any) => config,
+  createBottomTabScreen: <T,>(config: T): T => config,
 }));
 jest.mock('../PantryStack', () => ({ PantryStack: 'PantryStack' }));
 jest.mock('../ShoppingListStack', () => ({
@@ -18,7 +19,7 @@ jest.mock('../ShoppingListStack', () => ({
 jest.mock('../RecipeStack', () => ({ RecipeStack: 'RecipeStack' }));
 jest.mock('../MealPlanStack', () => ({ MealPlanStack: 'MealPlanStack' }));
 jest.mock('#/context/TabBarActionsContext', () => ({
-  TabBarActionsProvider: ({ children }: any) => children,
+  TabBarActionsProvider: ({ children }: { children: ReactNode }) => children,
 }));
 jest.mock('#components/navigation/FloatingTabBar/FloatingTabBar', () => ({
   FloatingTabBar: 'FloatingTabBar',

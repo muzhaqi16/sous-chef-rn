@@ -6,7 +6,9 @@ import { EmptyDayState } from '../EmptyDayState';
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 jest.mock('#utils/iconUtils', () => ({
-  Icon: ({ name }: any) => {
+  Icon: ({
+    name,
+  }: React.ComponentProps<typeof import('#utils/iconUtils').Icon>) => {
     const { Text } = require('react-native');
     return <Text>{name}</Text>;
   },

@@ -4,6 +4,8 @@ import {
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import { AutocompleteCategoriesDocument } from '#operations/item/item.generated';
+import { CategoryType } from '#/graphql/generated/schemaTypes';
+import type { RootState } from '#store/index';
 import { useCategoryAutocomplete } from '../useCategoryAutocomplete';
 
 jest.mock('../../../apollo/links/tokenScheduler');
@@ -11,10 +13,11 @@ jest.mock('../../../apollo/links/refreshToken');
 
 let mockIsOnline = true;
 jest.mock('#store/useAppStore', () => {
-  const getState = () => ({ isOnline: mockIsOnline });
+  const getState = (): Partial<RootState> => ({ isOnline: mockIsOnline });
   return {
-    useAppStore: (selector: (state: any) => any) => selector(getState()),
-    useIsOnline: () => (s => s.isOnline)(getState()),
+    useAppStore: (selector: (state: RootState) => unknown) =>
+      selector(getState() as RootState),
+    useIsOnline: () => getState().isOnline,
   };
 });
 
@@ -93,7 +96,7 @@ describe('useCategoryAutocomplete', () => {
   it('uses custom categoryType when provided', () => {
     const recorded: Array<Record<string, unknown>> = [];
     const { result } = renderHookWithApollo(
-      () => useCategoryAutocomplete({ categoryType: 'CUISINE' as any }),
+      () => useCategoryAutocomplete({ categoryType: CategoryType.Cuisine }),
       { operationMocks: [createMock(recorded)] },
     );
 

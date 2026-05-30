@@ -6,6 +6,7 @@ const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
 import { spoonacularService } from '../SpoonacularService';
+import type { SpoonacularApiError } from '../types';
 import { logger } from '#/utils/environment';
 
 describe('SpoonacularService', () => {
@@ -176,9 +177,10 @@ describe('SpoonacularService', () => {
         });
         // Should not reach here
         expect(true).toBe(false);
-      } catch (error: any) {
-        expect(error.isQuotaExceeded).toBe(true);
-        expect(error.message).toBe('Spoonacular API quota exceeded');
+      } catch (error) {
+        const apiError = error as SpoonacularApiError;
+        expect(apiError.isQuotaExceeded).toBe(true);
+        expect(apiError.message).toBe('Spoonacular API quota exceeded');
       }
     });
 
@@ -195,9 +197,10 @@ describe('SpoonacularService', () => {
         });
         // Should not reach here
         expect(true).toBe(false);
-      } catch (error: any) {
-        expect(error.isRateLimitError).toBe(true);
-        expect(error.message).toBe('Spoonacular API rate limit exceeded');
+      } catch (error) {
+        const apiError = error as SpoonacularApiError;
+        expect(apiError.isRateLimitError).toBe(true);
+        expect(apiError.message).toBe('Spoonacular API rate limit exceeded');
       }
     });
   });

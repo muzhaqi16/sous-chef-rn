@@ -4,7 +4,7 @@ import { TelemetryConfig, LogEntry, MetricEntry } from '../../types';
 import { logger } from '#/utils/environment';
 
 const mockFetch = jest.fn();
-(global as any).fetch = mockFetch;
+global.fetch = mockFetch;
 
 const makeConfig = (overrides?: Partial<TelemetryConfig>): TelemetryConfig => ({
   enabled: true,
@@ -41,12 +41,54 @@ const makeMetrics = (type: MetricEntry['type'] = 'counter'): MetricEntry[] => [
   },
 ];
 
-function parseOtlpBody(call: any): any {
+interface OtlpAttribute {
+  key: string;
+  value: { stringValue: string };
+}
+
+interface OtlpDataPoint {
+  asDouble: number;
+  count: string;
+  sum: number;
+  explicitBounds: number[];
+  bucketCounts: string[];
+}
+
+interface OtlpMetric {
+  name: string;
+  sum: {
+    isMonotonic: boolean;
+    aggregationTemporality: number;
+    dataPoints: OtlpDataPoint[];
+  };
+  gauge: { dataPoints: OtlpDataPoint[] };
+  histogram: {
+    aggregationTemporality: number;
+    dataPoints: OtlpDataPoint[];
+  };
+}
+
+interface OtlpBody {
+  resourceMetrics: Array<{
+    resource: { attributes: OtlpAttribute[] };
+    scopeMetrics: Array<{ metrics: OtlpMetric[] }>;
+  }>;
+}
+
+function parseOtlpBody(call: [string, { body: string }]): OtlpBody {
   return JSON.parse(call[1].body);
 }
 
-function getOtlpMetrics(body: any): any[] {
+function getOtlpMetrics(body: OtlpBody): OtlpMetric[] {
   return body.resourceMetrics[0].scopeMetrics[0].metrics;
+}
+
+function findMetric(metrics: OtlpMetric[], name: string): OtlpMetric {
+  const metric = metrics.find(m => m.name === name);
+  if (!metric) {
+    throw new Error(`metric ${name} not found`);
+  }
+  return metric;
 }
 
 describe('HttpTransport', () => {
@@ -182,7 +224,7 @@ describe('HttpTransport', () => {
       const resource = body.resourceMetrics[0].resource;
 
       const attrs = Object.fromEntries(
-        resource.attributes.map((a: any) => [a.key, a.value.stringValue]),
+        resource.attributes.map(a => [a.key, a.value.stringValue]),
       );
 
       expect(attrs['service.name']).toBe('test-app');
@@ -207,7 +249,7 @@ describe('HttpTransport', () => {
       const body = parseOtlpBody(mockFetch.mock.calls[0]);
       const metrics = getOtlpMetrics(body);
 
-      const counter = metrics.find((m: any) => m.name === 'requests_total');
+      const counter = findMetric(metrics, 'requests_total');
       expect(counter).toBeDefined();
       expect(counter.sum).toBeDefined();
       expect(counter.sum.isMonotonic).toBe(true);
@@ -232,7 +274,7 @@ describe('HttpTransport', () => {
       const body = parseOtlpBody(mockFetch.mock.calls[0]);
       const metrics = getOtlpMetrics(body);
 
-      const gauge = metrics.find((m: any) => m.name === 'memory_bytes');
+      const gauge = findMetric(metrics, 'memory_bytes');
       expect(gauge).toBeDefined();
       expect(gauge.gauge).toBeDefined();
       expect(gauge.gauge.dataPoints).toHaveLength(1);
@@ -270,9 +312,7 @@ describe('HttpTransport', () => {
       const body = parseOtlpBody(mockFetch.mock.calls[0]);
       const metrics = getOtlpMetrics(body);
 
-      const histogram = metrics.find(
-        (m: any) => m.name === 'request_duration_ms',
-      );
+      const histogram = findMetric(metrics, 'request_duration_ms');
       expect(histogram).toBeDefined();
       expect(histogram.histogram).toBeDefined();
       expect(histogram.histogram.aggregationTemporality).toBe(2); // CUMULATIVE
@@ -313,7 +353,7 @@ describe('HttpTransport', () => {
 
       const body = parseOtlpBody(mockFetch.mock.calls[0]);
       const metrics = getOtlpMetrics(body);
-      const counter = metrics.find((m: any) => m.name === 'test_metric_total');
+      const counter = findMetric(metrics, 'test_metric_total');
       expect(counter.sum.dataPoints[0].asDouble).toBe(10);
     });
 
@@ -331,7 +371,7 @@ describe('HttpTransport', () => {
       expect(mockFetch).toHaveBeenCalled();
       const body = parseOtlpBody(mockFetch.mock.calls[0]);
       const metrics = getOtlpMetrics(body);
-      const gauge = metrics.find((m: any) => m.name === 'test_metric_total');
+      const gauge = findMetric(metrics, 'test_metric_total');
       expect(gauge.gauge.dataPoints[0].asDouble).toBe(5);
     });
 
@@ -366,7 +406,7 @@ describe('HttpTransport', () => {
       expect(mockFetch).toHaveBeenCalled();
       const body = parseOtlpBody(mockFetch.mock.calls[0]);
       const metrics = getOtlpMetrics(body);
-      const gauge = metrics.find((m: any) => m.name === 'test_metric_total');
+      const gauge = findMetric(metrics, 'test_metric_total');
       expect(gauge.gauge.dataPoints[0].asDouble).toBe(5);
     });
 
@@ -409,9 +449,7 @@ describe('HttpTransport', () => {
       const metrics = getOtlpMetrics(body);
 
       // Should be one metric with two data points
-      const httpRequests = metrics.filter(
-        (m: any) => m.name === 'http_requests',
-      );
+      const httpRequests = metrics.filter(m => m.name === 'http_requests');
       expect(httpRequests).toHaveLength(1);
       expect(httpRequests[0].sum.dataPoints).toHaveLength(2);
     });
@@ -456,7 +494,7 @@ describe('HttpTransport', () => {
 
       const body = parseOtlpBody(mockFetch.mock.calls[0]);
       const metrics = getOtlpMetrics(body);
-      const histogram = metrics.find((m: any) => m.name === 'timing_ms');
+      const histogram = findMetric(metrics, 'timing_ms');
       const counts = histogram.histogram.dataPoints[0].bucketCounts.map(Number);
 
       expect(counts[0]).toBe(1); // 10 → (-Inf, 10]
@@ -479,9 +517,7 @@ describe('HttpTransport', () => {
       ]);
 
       const body = parseOtlpBody(mockFetch.mock.calls[0]);
-      const histogram = getOtlpMetrics(body).find(
-        (m: any) => m.name === 'coverage_ratio',
-      );
+      const histogram = findMetric(getOtlpMetrics(body), 'coverage_ratio');
       const dp = histogram.histogram.dataPoints[0];
 
       expect(dp.explicitBounds).toEqual([

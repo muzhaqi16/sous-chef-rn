@@ -3,6 +3,8 @@
 import React from 'react';
 import { screen } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import type { RootState } from '#store/index';
+import type { User } from '#store/slices/authSlice';
 import { CreateShoppingListScreen } from '../CreateShoppingListScreen';
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -18,12 +20,13 @@ jest.mock('#hooks/navigation/useOnboardingNavigation', () => ({
 }));
 
 jest.mock('#store/useAppStore', () => {
-  const mockState = {
-    user: { id: 'u1' },
+  const mockState: Partial<RootState> = {
+    user: { id: 'u1' } as Partial<User> as User,
     selectedHomeId: 'h1',
     setSelectedShoppingListId: jest.fn(),
   };
-  const fn = (selector: any) => selector(mockState);
+  const fn = <T,>(selector: (state: RootState) => T): T =>
+    selector(mockState as RootState);
   fn.getState = () => ({});
   fn.setState = jest.fn();
   fn.subscribe = jest.fn();
@@ -35,7 +38,10 @@ jest.mock('#store/useAppStore', () => {
 });
 
 jest.mock('#/utils/connectionUtils', () => ({
-  extractNodes: jest.fn(c => c?.edges?.map((e: any) => e.node) || []),
+  extractNodes: jest.fn(
+    (c?: { edges?: Array<{ node: unknown }> }) =>
+      c?.edges?.map(e => e.node) || [],
+  ),
 }));
 jest.mock('#utils/validation/onboarding', () => ({
   createShoppingListSchema: {
@@ -51,7 +57,17 @@ jest.mock('#/services/errorService', () => ({
 jest.mock('#/utils/compilerSafeWrappers');
 
 jest.mock('#components/templates/OnBoardingWrapper', () => ({
-  OnBoardingWrapper: ({ title, subtitle, children, testID }: any) => {
+  OnBoardingWrapper: ({
+    title,
+    subtitle,
+    children,
+    testID,
+  }: {
+    title?: string;
+    subtitle?: string;
+    children?: React.ReactNode;
+    testID?: string;
+  }) => {
     const { View, Text } = require('react-native');
     return (
       <View testID={testID || 'onboarding-wrapper'}>
@@ -76,7 +92,15 @@ jest.mock('#components/atoms/BaseInput/BaseInput', () => ({
   BaseInput: () => null,
 }));
 jest.mock('#components/base/Button', () => ({
-  Button: ({ title, onPress, disabled }: any) => {
+  Button: ({
+    title,
+    onPress,
+    disabled,
+  }: {
+    title?: string;
+    onPress: () => void;
+    disabled?: boolean;
+  }) => {
     const { Pressable, Text } = require('react-native');
     return (
       <Pressable onPress={onPress} disabled={disabled} testID="action-button">

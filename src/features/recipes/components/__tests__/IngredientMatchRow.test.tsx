@@ -1,17 +1,28 @@
 'use no memo';
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
+import type { getAvailabilityStatus as getAvailabilityStatusFn } from '#features/recipes/hooks/useRecipeIngredientMatching';
 import { IngredientMatchRow } from '../IngredientMatchRow';
 
 jest.mock('#features/recipes/hooks/useRecipeIngredientMatching', () => ({
-  getAvailabilityStatus: jest.fn((match: any) => {
-    if (match.matchedPantryItem) return 'available';
-    return 'missing';
-  }),
+  getAvailabilityStatus: jest.fn(
+    (match: Parameters<typeof getAvailabilityStatusFn>[0]) => {
+      if (match.matchedPantryItem) return 'available';
+      return 'missing';
+    },
+  ),
 }));
 
 describe('IngredientMatchRow', () => {
-  const makeMatch = (name: string, overrides: any = {}) => ({
+  // Minimal structural fixtures: the strict `EditableMatch` type requires
+  // fully-materialized masked-fragment shapes (RecipeIngredientFragment, full
+  // RecipeIngredientMatch, typed Unit) that these tests intentionally omit.
+  const makeMatch = (
+    name: string,
+    overrides: Record<string, unknown> & {
+      ingredient?: Record<string, unknown>;
+    } = {},
+  ) => ({
     match: {
       ingredient: { __typename: 'RecipeIngredient', id: 'i1' },
       matchedPantryItem: null,

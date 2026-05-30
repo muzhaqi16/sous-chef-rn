@@ -7,7 +7,13 @@ import { OnBoardingWrapper } from '../OnBoardingWrapper';
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 jest.mock('#components/atoms/BackButton', () => ({
-  BackButton: ({ onPress, testID }: any) => {
+  BackButton: ({
+    onPress,
+    testID,
+  }: {
+    onPress?: () => void;
+    testID?: string;
+  }) => {
     const { Pressable, Text: RNText } = require('react-native');
     return (
       <Pressable onPress={onPress} testID={testID}>
@@ -29,7 +35,11 @@ jest.mock(
       showBackButton,
       showContinueButton,
       showSkipButton,
-    }: any) => {
+    }: {
+      showBackButton?: boolean;
+      showContinueButton?: boolean;
+      showSkipButton?: boolean;
+    }) => {
       const { Text: RNText } = require('react-native');
       return (
         <>
@@ -42,7 +52,21 @@ jest.mock(
   }),
 );
 
-const mockOnboardingContext = jest.fn<any, []>(() => null);
+interface MockOnboardingContextValue {
+  steps: { id: string; title: string }[];
+  activeStepIndex: number;
+  currentStep: { title: string; subtitle?: string } | null;
+  canGoBack: boolean;
+  canGoNext: boolean;
+  isLastStep: boolean;
+  goToStep: jest.Mock;
+  goToNextStep: jest.Mock;
+  goToPreviousStep: jest.Mock;
+}
+
+const mockOnboardingContext = jest.fn<MockOnboardingContextValue | null, []>(
+  () => null,
+);
 jest.mock('#/context/OnboardingContext', () => ({
   useOnboardingContextSafe: () => mockOnboardingContext(),
 }));

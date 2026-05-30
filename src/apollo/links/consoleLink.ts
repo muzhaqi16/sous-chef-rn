@@ -48,14 +48,14 @@ export const createConsoleLink = (
 
     return new Observable(observer => {
       const subscription = forward(operation).subscribe({
-        next: (result: any) => {
+        next: result => {
           const hasErrors = result.errors && result.errors.length > 0;
 
           // Check for timer errors FIRST - skip ALL logging for these
           // These are expected during subscription teardown/setup due to graphql-ws internals
           if (hasErrors) {
             const safeErrors = result.errors?.map(serializeError);
-            const isTimerError = safeErrors?.some((err: any) =>
+            const isTimerError = safeErrors?.some(err =>
               isTimerCircularStructureError(err),
             );
             if (isTimerError) {
@@ -114,7 +114,7 @@ export const createConsoleLink = (
             if (isCircular) {
               // Log actual error details for non-timer circular errors
               console.warn('   ⚠️ GraphQL errors (may have circular refs):');
-              safeErrors?.forEach((err: any, i: number) => {
+              safeErrors?.forEach((err, i: number) => {
                 console.warn(
                   `      [${i}] message: ${err?.message || 'No message'}`,
                 );

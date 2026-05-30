@@ -1,4 +1,5 @@
 import React from 'react';
+import type { ViewProps } from 'react-native';
 import { render, screen } from '@testing-library/react-native';
 import { QuantityEditSheet } from '../QuantityEditSheet/QuantityEditSheet';
 
@@ -20,13 +21,13 @@ jest.mock('#hooks/useStandardBottomSheet', () => ({
       spacing: { sm: 4, md: 8, lg: 16 },
     },
   })),
-  BottomSheetModal: ({ children }: any) => children,
+  BottomSheetModal: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 jest.mock('#components/atoms/BottomSheetFormScrollView', () => {
   const RN = require('react-native');
   return {
-    BottomSheetFormScrollView: (props: any) =>
+    BottomSheetFormScrollView: (props: ViewProps) =>
       require('react').createElement(RN.View, props),
   };
 });
@@ -35,12 +36,18 @@ jest.mock('#/components/molecules/Header', () => {
   const RN = require('react-native');
   const R = require('react');
   return {
-    Header: ({ title, rightActions }: any) =>
+    Header: ({
+      title,
+      rightActions,
+    }: {
+      title?: string;
+      rightActions?: unknown[];
+    }) =>
       R.createElement(
         RN.View,
         { testID: 'header' },
         R.createElement(RN.Text, null, title),
-        rightActions?.map((action: any, i: number) =>
+        rightActions?.map((_action, i: number) =>
           R.createElement(RN.View, { key: i, testID: `header-action-${i}` }),
         ),
       ),
@@ -52,7 +59,7 @@ jest.mock(
   () => {
     const RN = require('react-native');
     return {
-      UnitAutocompleteField: (props: any) =>
+      UnitAutocompleteField: (props: Record<string, unknown>) =>
         require('react').createElement(RN.View, {
           testID: 'unit-autocomplete',
           ...props,
@@ -66,7 +73,15 @@ jest.mock('#/components/atoms/Chip', () => {
   const R = require('react');
   return {
     __esModule: true,
-    default: ({ label, selected, onPress }: any) =>
+    default: ({
+      label,
+      selected,
+      onPress,
+    }: {
+      label: string;
+      selected?: boolean;
+      onPress: () => void;
+    }) =>
       R.createElement(
         RN.Pressable,
         { onPress, testID: `chip-${label}`, accessibilityState: { selected } },

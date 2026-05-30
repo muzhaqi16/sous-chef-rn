@@ -4,9 +4,11 @@ jest.mock('react-native-worklets', () => ({
   createWorkletRuntime: jest.fn(),
   runOnRuntime: jest.fn(),
   useWorklet: jest.fn(),
-  scheduleOnRN: jest.fn((fn: Function, ...args: any[]) => {
-    fn(...args);
-  }),
+  scheduleOnRN: jest.fn(
+    (fn: (...args: unknown[]) => void, ...args: unknown[]) => {
+      fn(...args);
+    },
+  ),
 }));
 
 import { renderHook, act } from '@testing-library/react-native';

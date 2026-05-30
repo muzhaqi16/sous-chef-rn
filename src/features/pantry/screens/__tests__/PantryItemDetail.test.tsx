@@ -2,10 +2,8 @@
 
 import React from 'react';
 import { screen } from '@testing-library/react-native';
-import {
-  recordMock,
-  renderWithApollo,
-} from '#/test-utils/apolloMockProvider';
+import type { HeaderAction } from '#components/molecules/Header';
+import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { GetPantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import {
   pantryItemData,
@@ -65,11 +63,11 @@ jest.mock('#store/useAppStore', () => ({
 }));
 
 jest.mock('#components/molecules/Header', () => ({
-  Header: ({ rightActions }: any) => {
+  Header: ({ rightActions }: { rightActions?: HeaderAction[] }) => {
     const { View } = require('react-native');
     return (
       <View testID="header">
-        {(rightActions ?? []).map((a: any, i: number) => (
+        {(rightActions ?? []).map((a, i) => (
           <View key={i} testID={a.testID} />
         ))}
       </View>

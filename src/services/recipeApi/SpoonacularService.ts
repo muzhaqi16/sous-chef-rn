@@ -54,7 +54,7 @@ class SpoonacularService {
    */
   private async fetch<T>(
     endpoint: string,
-    params: Record<string, any> = {},
+    params: Record<string, unknown> = {},
     signal?: AbortSignal,
   ): Promise<T> {
     this.checkRateLimit();

@@ -1,8 +1,12 @@
 import { transformRecipeForDisplay } from '../recipeTransform';
+import type {
+  RecipeSearchResult,
+  SearchRecipesResult,
+} from '#/services/recipeApi/types';
 
 describe('transformRecipeForDisplay', () => {
   describe('ingredient-based search results', () => {
-    const ingredientRecipe = {
+    const ingredientRecipe: RecipeSearchResult = {
       id: 42,
       title: 'Pasta Primavera',
       image: 'https://img.example.com/pasta.jpg',
@@ -48,7 +52,7 @@ describe('transformRecipeForDisplay', () => {
 
     it('omits badge when likes is missing', () => {
       const { likes, ...noLikes } = ingredientRecipe;
-      const result = transformRecipeForDisplay(noLikes as any);
+      const result = transformRecipeForDisplay(noLikes);
       expect(result.badge).toBeUndefined();
     });
 
@@ -66,7 +70,7 @@ describe('transformRecipeForDisplay', () => {
   });
 
   describe('text-based search results', () => {
-    const textRecipe = {
+    const textRecipe: SearchRecipesResult = {
       id: 99,
       title: 'Chicken Salad',
       image: 'https://img.example.com/salad.jpg',
@@ -84,16 +88,12 @@ describe('transformRecipeForDisplay', () => {
 
     it('shows only time when servings is missing', () => {
       const { servings, ...noServings } = textRecipe;
-      expect(transformRecipeForDisplay(noServings as any).subtitle).toBe(
-        '⏱ 30 min',
-      );
+      expect(transformRecipeForDisplay(noServings).subtitle).toBe('⏱ 30 min');
     });
 
     it('shows only servings when time is missing', () => {
       const { readyInMinutes, ...noTime } = textRecipe;
-      expect(transformRecipeForDisplay(noTime as any).subtitle).toBe(
-        '4 servings',
-      );
+      expect(transformRecipeForDisplay(noTime).subtitle).toBe('4 servings');
     });
 
     it('includes aggregateLikes badge', () => {

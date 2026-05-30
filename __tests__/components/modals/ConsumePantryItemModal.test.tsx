@@ -8,7 +8,11 @@ jest.mock('../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../src/apollo/links/refreshToken');
 
 jest.mock('../../../src/components/modals/PantryActionModal', () => ({
-  PantryActionModal: (props: any) => {
+  PantryActionModal: (
+    props: React.ComponentProps<
+      typeof import('../../../src/components/modals/PantryActionModal').PantryActionModal
+    >,
+  ) => {
     const { Text, View } = require('react-native');
     return (
       <View>

@@ -74,7 +74,7 @@ describe('authLink helpers', () => {
     it('returns false when token is not expiring soon', () => {
       // Token expires in 1 hour
       const futureExp = Math.floor(Date.now() / 1000) + 3600;
-      mockedJwtDecode.mockReturnValue({ exp: futureExp } as any);
+      mockedJwtDecode.mockReturnValue({ exp: futureExp });
 
       const bufferMs = 5 * 60 * 1000; // 5 minutes
       expect(isTokenExpiringSoon('valid-token', bufferMs)).toBe(false);
@@ -83,7 +83,7 @@ describe('authLink helpers', () => {
     it('returns true when token expires within the buffer', () => {
       // Token expires in 2 minutes, buffer is 5 minutes
       const soonExp = Math.floor(Date.now() / 1000) + 120;
-      mockedJwtDecode.mockReturnValue({ exp: soonExp } as any);
+      mockedJwtDecode.mockReturnValue({ exp: soonExp });
 
       const bufferMs = 5 * 60 * 1000;
       expect(isTokenExpiringSoon('expiring-token', bufferMs)).toBe(true);
@@ -91,7 +91,7 @@ describe('authLink helpers', () => {
 
     it('returns true when token is already expired', () => {
       const pastExp = Math.floor(Date.now() / 1000) - 60;
-      mockedJwtDecode.mockReturnValue({ exp: pastExp } as any);
+      mockedJwtDecode.mockReturnValue({ exp: pastExp });
 
       const bufferMs = 5 * 60 * 1000;
       expect(isTokenExpiringSoon('expired-token', bufferMs)).toBe(true);
@@ -109,7 +109,7 @@ describe('authLink helpers', () => {
       // Buffer = 5 min = 300,000ms. Token expires in 5min + 1s => not expiring soon
       const bufferMs = 5 * 60 * 1000;
       const expAtBoundary = Math.floor((Date.now() + bufferMs + 1000) / 1000);
-      mockedJwtDecode.mockReturnValue({ exp: expAtBoundary } as any);
+      mockedJwtDecode.mockReturnValue({ exp: expAtBoundary });
 
       expect(isTokenExpiringSoon('boundary-token', bufferMs)).toBe(false);
     });
@@ -117,7 +117,7 @@ describe('authLink helpers', () => {
     it('works with zero buffer', () => {
       // Token expires in 10 seconds, buffer = 0
       const futureExp = Math.floor(Date.now() / 1000) + 10;
-      mockedJwtDecode.mockReturnValue({ exp: futureExp } as any);
+      mockedJwtDecode.mockReturnValue({ exp: futureExp });
 
       expect(isTokenExpiringSoon('token', 0)).toBe(false);
     });
@@ -135,14 +135,14 @@ describe('authLink helpers', () => {
 
     it('returns false when refresh token is not expired', () => {
       const futureExp = Math.floor(Date.now() / 1000) + 86400; // 24 hours
-      mockedJwtDecode.mockReturnValue({ exp: futureExp } as any);
+      mockedJwtDecode.mockReturnValue({ exp: futureExp });
 
       expect(isRefreshTokenExpired('valid-refresh')).toBe(false);
     });
 
     it('returns true when refresh token is expired', () => {
       const pastExp = Math.floor(Date.now() / 1000) - 60;
-      mockedJwtDecode.mockReturnValue({ exp: pastExp } as any);
+      mockedJwtDecode.mockReturnValue({ exp: pastExp });
 
       expect(isRefreshTokenExpired('expired-refresh')).toBe(true);
     });
@@ -158,7 +158,7 @@ describe('authLink helpers', () => {
     it('returns true when token just expired (boundary)', () => {
       // exp is 1 second in the past
       const justExpired = Math.floor(Date.now() / 1000) - 1;
-      mockedJwtDecode.mockReturnValue({ exp: justExpired } as any);
+      mockedJwtDecode.mockReturnValue({ exp: justExpired });
 
       expect(isRefreshTokenExpired('just-expired')).toBe(true);
     });
@@ -184,8 +184,15 @@ describe('authLink middleware', () => {
     const { authLink } = require('../authLink');
     // The SetContextLink takes (prevContext, operation) and returns new context
     // We can test the function returned by the link
-    const linkFn =
-      (authLink as any).contextSetter || (authLink as any).setContext;
+    type ContextSetterFn = (
+      prevContext: Record<string, unknown>,
+      operation: { operationName: string },
+    ) => Promise<unknown>;
+    const linkProbe = authLink as {
+      contextSetter?: ContextSetterFn;
+      setContext?: ContextSetterFn;
+    };
+    const linkFn = linkProbe.contextSetter || linkProbe.setContext;
 
     // When shouldSkipOperation is true, it should throw
     if (linkFn) {

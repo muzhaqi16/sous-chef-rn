@@ -8,28 +8,32 @@ jest.mock('../../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../../src/apollo/links/refreshToken');
 
 jest.mock('../../../../src/components/atoms/BottomSheetKeyboardAwareScrollView', () => ({
-  BottomSheetKeyboardAwareScrollView: ({ children }: any) => children,
+  BottomSheetKeyboardAwareScrollView: ({
+    children,
+  }: {
+    children?: React.ReactNode;
+  }) => children,
 }));
 jest.mock('../../../../src/components/molecules/FormInput', () => ({
-  FormInput: (props: any) => {
+  FormInput: (props: { label?: string }) => {
     const { Text } = require('react-native');
     return <Text>{props.label}</Text>;
   },
 }));
 jest.mock('../../../../src/components/molecules/EditableCounter', () => ({
-  EditableCounter: (props: any) => {
+  EditableCounter: (props: { label?: string }) => {
     const { Text } = require('react-native');
     return <Text>{props.label}</Text>;
   },
 }));
 jest.mock('../../../../src/components/molecules/AutocompleteField/UnitAutocompleteField', () => ({
-  UnitAutocompleteField: (props: any) => {
+  UnitAutocompleteField: (props: { label?: string }) => {
     const { Text } = require('react-native');
     return <Text>{props.label}</Text>;
   },
 }));
 jest.mock('../../../../src/components/molecules/FieldRow', () => ({
-  FieldRow: ({ children }: any) => children,
+  FieldRow: ({ children }: { children?: React.ReactNode }) => children,
 }));
 
 describe('DetailsPage', () => {

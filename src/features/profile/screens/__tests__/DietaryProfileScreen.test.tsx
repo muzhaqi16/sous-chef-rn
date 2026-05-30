@@ -64,7 +64,13 @@ jest.mock('#hooks/navigation/useAppNavigation');
 jest.mock('#components/templates/ProfileScreenWrapper', () => {
   const { View, Text } = require('react-native');
   return {
-    ProfileScreenWrapper: ({ children, title }: any) => (
+    ProfileScreenWrapper: ({
+      children,
+      title,
+    }: {
+      children?: React.ReactNode;
+      title?: string;
+    }) => (
       <View testID="profile-screen-wrapper">
         <Text>{title}</Text>
         {children}
@@ -87,7 +93,7 @@ jest.mock('#/components/organisms/DietaryRestrictionSelector', () => {
 jest.mock('#/components/organisms/CuisineSelector', () => {
   const { View, Text } = require('react-native');
   return {
-    CuisineSelector: ({ selectedCuisines }: any) => (
+    CuisineSelector: ({ selectedCuisines }: { selectedCuisines: string[] }) => (
       <View testID="cuisine-selector">
         <Text>CuisineSelector</Text>
         <Text>{selectedCuisines.join(', ')}</Text>
@@ -101,7 +107,13 @@ jest.mock(
   () => {
     const { View, Text } = require('react-native');
     return {
-      StringArrayManager: ({ title, items }: any) => (
+      StringArrayManager: ({
+        title,
+        items,
+      }: {
+        title: string;
+        items?: string[];
+      }) => (
         <View testID={`string-array-${title}`}>
           <Text>{title}</Text>
           {items
@@ -116,15 +128,26 @@ jest.mock(
 jest.mock('#/components/modals/NumberInputSheet/NumberInputSheet', () => {
   const { View } = require('react-native');
   return {
-    NumberInputSheet: ({ visible, title }: any) =>
-      visible ? <View testID={`sheet-${title}`} /> : null,
+    NumberInputSheet: ({
+      visible,
+      title,
+    }: {
+      visible?: boolean;
+      title?: string;
+    }) => (visible ? <View testID={`sheet-${title}`} /> : null),
   };
 });
 
 jest.mock('#/components/molecules/InfoRow', () => {
   const { View, Text } = require('react-native');
   return {
-    InfoRow: ({ label, value }: any) => (
+    InfoRow: ({
+      label,
+      value,
+    }: {
+      label: string;
+      value: string | number | null | undefined;
+    }) => (
       <View testID={`info-row-${label}`}>
         <Text>{label}</Text>
         <Text>{String(value)}</Text>

@@ -4,7 +4,14 @@ import {
   enhanceWithVersion,
   createOptimisticEntity,
   isVersionedEntity,
+  type VersionedEntity,
 } from '../createOptimisticResponse';
+
+interface OptimisticShoppingListItem extends VersionedEntity {
+  itemName: string;
+  isPurchased: boolean;
+  quantity: number;
+}
 
 describe('enhanceWithVersion', () => {
   beforeEach(() => {
@@ -129,15 +136,19 @@ describe('createOptimisticEntity', () => {
   });
 
   it('includes all provided data fields', () => {
-    const result = createOptimisticEntity('ShoppingListItem', 'temp-1', {
-      itemName: 'Butter',
-      isPurchased: false,
-      quantity: 2,
-    });
+    const result = createOptimisticEntity<OptimisticShoppingListItem>(
+      'ShoppingListItem',
+      'temp-1',
+      {
+        itemName: 'Butter',
+        isPurchased: false,
+        quantity: 2,
+      },
+    );
 
-    expect((result as any).itemName).toBe('Butter');
-    expect((result as any).isPurchased).toBe(false);
-    expect((result as any).quantity).toBe(2);
+    expect(result.itemName).toBe('Butter');
+    expect(result.isPurchased).toBe(false);
+    expect(result.quantity).toBe(2);
   });
 
   it('allows data fields to override version and updatedAt', () => {
@@ -145,7 +156,7 @@ describe('createOptimisticEntity', () => {
     const result = createOptimisticEntity('Item', 'id-1', {
       // Note: because of Omit in the type signature, these can't be directly
       // typed, but at runtime the spread order means data wins
-    } as any);
+    });
 
     // version and updatedAt are set before ...data spread
     expect(result.version).toBe(1);

@@ -2,13 +2,20 @@ import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
 import { useForm } from 'react-hook-form';
 import { AuthFormTemplate } from '../AuthFormTemplate';
+import type { FieldDef } from '../../molecules/DynamicFormFields';
+
+type AuthFormValues = { email: string; password: string };
 
 jest.mock('../../molecules/DynamicFormFields', () => {
   const { View, Text } = require('react-native');
   return {
-    DynamicFormFields: ({ fields }: any) => (
+    DynamicFormFields: ({
+      fields,
+    }: {
+      fields: Array<{ name: string; label?: string }>;
+    }) => (
       <View testID="dynamic-form-fields">
-        {fields.map((f: any) => (
+        {fields.map(f => (
           <Text key={f.name}>{f.label || f.name}</Text>
         ))}
       </View>
@@ -19,7 +26,17 @@ jest.mock('../../molecules/DynamicFormFields', () => {
 jest.mock('../../base/Button', () => {
   const { Pressable, Text } = require('react-native');
   return {
-    Button: ({ title, onPress, disabled, testID }: any) => (
+    Button: ({
+      title,
+      onPress,
+      disabled,
+      testID,
+    }: {
+      title?: string;
+      onPress: () => void;
+      disabled?: boolean;
+      testID?: string;
+    }) => (
       <Pressable
         onPress={onPress}
         disabled={disabled}
@@ -35,7 +52,7 @@ jest.mock('../../base/Button', () => {
 jest.mock('../../atoms/BackButton', () => {
   const { Pressable, Text } = require('react-native');
   return {
-    BackButton: ({ onPress }: any) => (
+    BackButton: ({ onPress }: { onPress: () => void }) => (
       <Pressable onPress={onPress} testID="back-button">
         <Text>Back</Text>
       </Pressable>
@@ -44,16 +61,29 @@ jest.mock('../../atoms/BackButton', () => {
 });
 
 // Helper wrapper to provide react-hook-form control
-function Wrapper({ children: _children, ...overrides }: any) {
+interface WrapperProps {
+  children?: React.ReactNode;
+  subtitle?: string | React.ReactNode;
+  onBackPress?: () => void;
+  footerText?: string;
+  footerLinkText?: string;
+  footerLinkTestID?: string;
+  onFooterLinkPress?: () => void;
+  onLinkPress?: () => void;
+  linkText?: string;
+  linkTestID?: string;
+}
+
+function Wrapper({ children: _children, ...overrides }: WrapperProps) {
   const {
     control,
     formState: { errors },
     handleSubmit,
-  } = useForm({
+  } = useForm<AuthFormValues>({
     defaultValues: { email: '', password: '' },
   });
 
-  const fields = [
+  const fields: FieldDef<AuthFormValues>[] = [
     { name: 'email', label: 'Email', placeholder: 'Enter email' },
     { name: 'password', label: 'Password', placeholder: 'Enter password' },
   ];

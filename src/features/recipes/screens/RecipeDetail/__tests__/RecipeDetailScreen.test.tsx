@@ -108,7 +108,8 @@ jest.mock('#features/recipes/hooks/useRecipeReviews', () => ({
 }));
 
 jest.mock('#/components/providers/ScreenErrorBoundary', () => ({
-  RecipeDetailErrorBoundary: ({ children }: any) => children,
+  RecipeDetailErrorBoundary: ({ children }: { children: React.ReactNode }) =>
+    children,
 }));
 
 jest.mock('#/components/base/SousChefLoader', () => ({

@@ -30,26 +30,58 @@ export interface QueryComplexityDetails {
 }
 
 /**
+ * GraphQL error `extensions` payload carried by query complexity errors.
+ */
+interface QueryComplexityExtensions {
+  code?: string;
+  maxDepth?: number;
+  actualDepth?: number;
+  maxFields?: number;
+  actualFields?: number;
+  maxPagination?: number;
+  requestedPagination?: number;
+}
+
+/** A single GraphQL error entry that may describe a complexity violation. */
+interface ComplexityErrorEntry {
+  extensions?: QueryComplexityExtensions;
+  message?: string;
+}
+
+/** Loose shape of the error objects this module inspects. */
+interface ComplexityErrorLike extends ComplexityErrorEntry {
+  graphQLErrors?: ReadonlyArray<ComplexityErrorEntry>;
+}
+
+/** Narrow an unknown error to the loose complexity-error shape, or null. */
+function toComplexityError(error: unknown): ComplexityErrorLike | null {
+  if (typeof error !== 'object' || error === null) return null;
+  return error as ComplexityErrorLike;
+}
+
+/**
  * Check if an error is a query complexity error
  *
  * @param error - Error object to check
  * @returns True if the error is a query complexity error
  */
-export function isQueryComplexityError(error: any): boolean {
-  if ('graphQLErrors' in error && error.graphQLErrors) {
-    return error.graphQLErrors.some(
-      (err: any) =>
-        err.extensions?.code === QueryComplexityErrorType.TOO_COMPLEX ||
-        err.extensions?.code ===
+export function isQueryComplexityError(error: unknown): boolean {
+  const err = toComplexityError(error);
+  if (!err) return false;
+
+  if (err.graphQLErrors) {
+    return err.graphQLErrors.some(
+      e =>
+        e.extensions?.code === QueryComplexityErrorType.TOO_COMPLEX ||
+        e.extensions?.code ===
           QueryComplexityErrorType.PAGINATION_LIMIT_EXCEEDED,
     );
   }
 
-  if ('extensions' in error && error.extensions) {
+  if (err.extensions) {
     return (
-      error.extensions.code === QueryComplexityErrorType.TOO_COMPLEX ||
-      error.extensions.code ===
-        QueryComplexityErrorType.PAGINATION_LIMIT_EXCEEDED
+      err.extensions.code === QueryComplexityErrorType.TOO_COMPLEX ||
+      err.extensions.code === QueryComplexityErrorType.PAGINATION_LIMIT_EXCEEDED
     );
   }
 
@@ -63,19 +95,22 @@ export function isQueryComplexityError(error: any): boolean {
  * @returns Query complexity details or null
  */
 export function getQueryComplexityDetails(
-  error: any,
+  error: unknown,
 ): QueryComplexityDetails | null {
-  let complexityError: any | undefined;
+  const err = toComplexityError(error);
+  if (!err) return null;
 
-  if ('graphQLErrors' in error && error.graphQLErrors) {
-    complexityError = error.graphQLErrors.find(
-      (err: any) =>
-        err.extensions?.code === QueryComplexityErrorType.TOO_COMPLEX ||
-        err.extensions?.code ===
+  let complexityError: ComplexityErrorEntry | undefined;
+
+  if (err.graphQLErrors) {
+    complexityError = err.graphQLErrors.find(
+      e =>
+        e.extensions?.code === QueryComplexityErrorType.TOO_COMPLEX ||
+        e.extensions?.code ===
           QueryComplexityErrorType.PAGINATION_LIMIT_EXCEEDED,
     );
-  } else if ('extensions' in error && error.extensions) {
-    complexityError = error;
+  } else if (err.extensions) {
+    complexityError = err;
   }
 
   if (!complexityError || !complexityError.extensions) {
@@ -99,7 +134,7 @@ export function getQueryComplexityDetails(
  * @param error - Error containing query complexity issue
  * @returns User-friendly error message
  */
-export function getQueryComplexityMessage(error: any): string {
+export function getQueryComplexityMessage(error: unknown): string {
   const details = getQueryComplexityDetails(error);
 
   if (!details) {
@@ -147,7 +182,7 @@ export function getQueryComplexityMessage(error: any): string {
  * ```
  */
 export function handleQueryComplexityError(
-  error: any,
+  error: unknown,
   onRetryWithReducedComplexity?: () => void | Promise<void>,
 ): boolean {
   if (!isQueryComplexityError(error)) {

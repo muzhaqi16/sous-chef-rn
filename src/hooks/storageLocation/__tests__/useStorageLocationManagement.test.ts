@@ -1,8 +1,23 @@
 'use no memo';
 
 // Polyfill requestIdleCallback / cancelIdleCallback for test env
-(globalThis as any).requestIdleCallback = (cb: () => void) => setTimeout(cb, 0);
-(globalThis as any).cancelIdleCallback = (id: number) => clearTimeout(id);
+let idleHandleSeq = 0;
+const idleTimers = new Map<number, ReturnType<typeof setTimeout>>();
+globalThis.requestIdleCallback = (cb: IdleRequestCallback): number => {
+  const handle = ++idleHandleSeq;
+  idleTimers.set(
+    handle,
+    setTimeout(() => cb({ didTimeout: false, timeRemaining: () => 0 }), 0),
+  );
+  return handle;
+};
+globalThis.cancelIdleCallback = (handle: number): void => {
+  const timer = idleTimers.get(handle);
+  if (timer) {
+    clearTimeout(timer);
+    idleTimers.delete(handle);
+  }
+};
 
 import { act, waitFor } from '@testing-library/react-native';
 import type { MockedResponse } from '#/test-utils/apolloMockProvider';
@@ -16,20 +31,34 @@ import {
 import { StorageType } from '#/graphql/generated/schemaTypes';
 import { useStorageLocationManagement } from '../useStorageLocationManagement';
 
+type ManagementApi = ReturnType<typeof useStorageLocationManagement>;
+
 jest.mock('#/hooks/apollo/usePreservedQueryData', () => ({
-  usePreservedArrayData: jest.fn((data: any) => data || []),
+  usePreservedArrayData: jest.fn(
+    <T>(data: T[] | null | undefined) => data || [],
+  ),
 }));
+
+type MockAddOperationConfig<TInput, TResult> = {
+  mutation: (options: {
+    variables: { input: Record<string, unknown> };
+  }) => Promise<{ data?: TResult }>;
+  transformInput: (input: TInput) => Record<string, unknown>;
+  onSuccess: (data?: TResult) => unknown;
+};
 
 jest.mock('#/hooks/utils/useCrudOperations', () => ({
   useCrudOperations: jest.fn(() => ({
-    createAddOperation: jest.fn((config: any) => {
-      return async (input: any) => {
-        const result = await config.mutation({
-          variables: { input: config.transformInput(input) },
-        });
-        return config.onSuccess(result.data);
-      };
-    }),
+    createAddOperation: jest.fn(
+      <TInput, TResult>(config: MockAddOperationConfig<TInput, TResult>) => {
+        return async (input: TInput) => {
+          const result = await config.mutation({
+            variables: { input: config.transformInput(input) },
+          });
+          return config.onSuccess(result.data);
+        };
+      },
+    ),
   })),
 }));
 
@@ -47,8 +76,8 @@ const mockToastError = jest.fn();
 
 jest.mock('#/services/toastService', () => ({
   toastService: {
-    success: (...args: any[]) => mockToastSuccess(...args),
-    error: (...args: any[]) => mockToastError(...args),
+    success: (...args: unknown[]) => mockToastSuccess(...args),
+    error: (...args: unknown[]) => mockToastError(...args),
     info: jest.fn(),
     warning: jest.fn(),
   },
@@ -252,7 +281,7 @@ describe('useStorageLocationManagement', () => {
 
     await waitFor(() => expect(result.current.locations).toHaveLength(2));
 
-    let updated: any;
+    let updated!: Awaited<ReturnType<ManagementApi['updateLocation']>>;
     await act(async () => {
       updated = await result.current.updateLocation('loc-1', {
         name: 'Updated Fridge',
@@ -260,7 +289,7 @@ describe('useStorageLocationManagement', () => {
     });
 
     expect(updated).not.toBe(false);
-    expect(updated?.name).toBe('Updated Fridge');
+    expect(updated !== false && updated.name).toBe('Updated Fridge');
   });
 
   it('deleteLocation calls mutation', async () => {
@@ -276,7 +305,7 @@ describe('useStorageLocationManagement', () => {
 
     await waitFor(() => expect(result.current.locations).toHaveLength(2));
 
-    let deleted: any;
+    let deleted!: Awaited<ReturnType<ManagementApi['deleteLocation']>>;
     await act(async () => {
       deleted = await result.current.deleteLocation('loc-1');
     });
@@ -294,7 +323,7 @@ describe('useStorageLocationManagement', () => {
 
     await waitFor(() => expect(result.current.locations).toHaveLength(2));
 
-    let setDefault: any;
+    let setDefault!: Awaited<ReturnType<ManagementApi['setDefaultLocation']>>;
     await act(async () => {
       setDefault = await result.current.setDefaultLocation('loc-2');
     });

@@ -1,4 +1,9 @@
 import { act } from '@testing-library/react-native';
+import type { RootState } from '#store/index';
+import type {
+  CreateOperationConfig,
+  RemoveOperationConfig,
+} from '#/hooks/utils/useCrudOperations';
 import {
   recordMock,
   renderHookWithApollo,
@@ -18,7 +23,8 @@ const mockStoreState = {
 };
 
 jest.mock('#store/useAppStore', () => ({
-  useAppStore: (selector: (state: any) => any) => selector(mockStoreState),
+  useAppStore: (selector: (state: Partial<RootState>) => unknown) =>
+    selector(mockStoreState),
   useSelectedHomeId: jest.fn(() => mockStoreState.selectedHomeId),
   useHomeState: jest.fn(() => ({
     selectedHomeId: mockStoreState.selectedHomeId,
@@ -38,51 +44,58 @@ jest.mock('#/utils/errors/versionConflict', () => ({
 }));
 
 jest.mock('#/utils/connectionUtils', () => ({
-  extractNodes: jest.fn((conn: any) =>
-    conn?.edges ? conn.edges.map((e: any) => e?.node).filter(Boolean) : [],
+  extractNodes: jest.fn(
+    (conn?: { edges?: Array<{ node?: unknown } | null> | null } | null) =>
+      conn?.edges ? conn.edges.map(e => e?.node).filter(Boolean) : [],
   ),
-  getConnectionTotalCount: jest.fn((conn: any) => conn?.totalCount ?? 0),
+  getConnectionTotalCount: jest.fn(
+    (conn?: { totalCount?: number | null } | null) => conn?.totalCount ?? 0,
+  ),
 }));
 
-const mockCreateAddOperation = jest.fn((config: any) => {
-  return async (input: any) => {
-    const validation = config.validateInput?.(input);
-    if (typeof validation === 'string') {
-      alertService.alert('Validation Error', validation);
+const mockCreateAddOperation = jest.fn(
+  (config: CreateOperationConfig<unknown, unknown>) => {
+    return async (input: unknown) => {
+      const validation = config.validateInput?.(input);
+      if (typeof validation === 'string') {
+        alertService.alert('Validation Error', validation);
+        return false;
+      }
+      const transformedInput = config.transformInput
+        ? config.transformInput(input)
+        : input;
+      const result = await config.mutation({
+        variables: { input: transformedInput },
+      });
+      if (result.data) {
+        config.onSuccess?.(result.data);
+        return result.data;
+      }
       return false;
-    }
-    const transformedInput = config.transformInput
-      ? config.transformInput(input)
-      : input;
-    const result = await config.mutation({
-      variables: { input: transformedInput },
-    });
-    if (result.data) {
-      config.onSuccess?.(result.data);
-      return result.data;
-    }
-    return false;
-  };
-});
+    };
+  },
+);
 
-const mockCreateRemoveOperation = jest.fn((config: any) => {
-  return async () => {
-    return new Promise(resolve => {
-      alertService.alert(config.operationName, 'Confirm?', [
-        { text: 'Cancel', onPress: () => resolve(false) },
-        {
-          text: 'Delete',
-          onPress: async () => {
-            const result = await config.mutation({
-              variables: { id: config.itemId },
-            });
-            resolve(result?.data || false);
+const mockCreateRemoveOperation = jest.fn(
+  (config: RemoveOperationConfig<unknown>) => {
+    return async () => {
+      return new Promise(resolve => {
+        alertService.alert(config.operationName ?? '', 'Confirm?', [
+          { text: 'Cancel', onPress: () => resolve(false) },
+          {
+            text: 'Delete',
+            onPress: async () => {
+              const result = await config.mutation({
+                variables: { id: config.itemId },
+              });
+              resolve(result?.data || false);
+            },
           },
-        },
-      ]);
-    });
-  };
-});
+        ]);
+      });
+    };
+  },
+);
 
 jest.mock('#/hooks/utils/useCrudOperations', () => ({
   useCrudOperations: () => ({
@@ -204,7 +217,7 @@ describe('useHomeMutations', () => {
         useHomeMutations(createOptions()),
       );
 
-      let returnValue: any;
+      let returnValue!: Awaited<ReturnType<typeof result.current.createHome>>;
       await act(async () => {
         returnValue = await result.current.createHome('   ');
       });
@@ -252,7 +265,7 @@ describe('useHomeMutations', () => {
         { operationMocks: [m.mock] },
       );
 
-      let returnValue: any;
+      let returnValue!: Awaited<ReturnType<typeof result.current.updateHome>>;
       await act(async () => {
         returnValue = await result.current.updateHome('home-1', {
           name: 'Test',
@@ -269,7 +282,7 @@ describe('useHomeMutations', () => {
         operationMocks: [m.mock],
       });
 
-      let returnValue: any;
+      let returnValue!: Awaited<ReturnType<typeof result.current.updateHome>>;
       await act(async () => {
         returnValue = await result.current.updateHome('home-1', {
           isDefault: true,

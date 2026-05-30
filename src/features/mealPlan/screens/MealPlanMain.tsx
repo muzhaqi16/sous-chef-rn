@@ -42,7 +42,10 @@ import { useMealPlanPermissions } from '#features/mealPlan/hooks/useMealPlanPerm
 import { DeferredScreen } from '#components/performance/DeferredScreen';
 import { MealPlanSkeleton } from '#components/base/Skeleton/MealPlanSkeleton';
 import { useAppStore } from '#store/useAppStore';
-import { MealType } from '#/graphql/generated/schemaTypes';
+import {
+  MealType,
+  type TemplateCategory,
+} from '#/graphql/generated/schemaTypes';
 import { useMealPlanActions } from '#features/mealPlan/hooks/useMealPlanActions';
 import { type MealTemplateDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import { type MealPlanMain_ItemFragment } from './MealPlanMain.generated';
@@ -344,7 +347,7 @@ const MealPlanMainInner: React.FC = () => {
     mealPlanId: string;
     name: string;
     description?: string;
-    category?: any;
+    category?: TemplateCategory;
     tags?: string[];
   }) => {
     const result = await createTemplateFromPlan(input);

@@ -27,12 +27,18 @@ jest.mock('#/styles/commonStyles', () => ({
 }));
 
 jest.mock('#components/templates/DetailTemplate', () => ({
-  DetailTemplate: ({ title, sections }: any) => {
+  DetailTemplate: ({
+    title,
+    sections,
+  }: {
+    title?: string;
+    sections: Array<{ title?: string; content: React.ReactNode }>;
+  }) => {
     const { View, Text } = require('react-native');
     return (
       <View testID="detail-template">
         <Text>{title}</Text>
-        {sections.map((section: any, i: number) => (
+        {sections.map((section, i) => (
           <View key={i}>
             {section.title ? <Text>{section.title}</Text> : null}
             {section.content}
@@ -43,7 +49,13 @@ jest.mock('#components/templates/DetailTemplate', () => ({
   },
 }));
 jest.mock('#components/molecules/ClickableInfoPanel', () => ({
-  ClickableInfoPanel: ({ title, emptyMessage }: any) => {
+  ClickableInfoPanel: ({
+    title,
+    emptyMessage,
+  }: {
+    title: string;
+    emptyMessage?: string;
+  }) => {
     const { View, Text } = require('react-native');
     return (
       <View>
@@ -69,7 +81,7 @@ jest.mock('#components/atoms/CachedImage', () => ({
   CachedImage: () => null,
 }));
 
-function buildShoppingListItem(overrides: Partial<Record<string, any>> = {}) {
+function buildShoppingListItem(overrides: Record<string, unknown> = {}) {
   return {
     __typename: 'ShoppingListItem',
     id: 'si1',
@@ -112,7 +124,7 @@ function buildShoppingListItem(overrides: Partial<Record<string, any>> = {}) {
 
 function buildItemMock(
   itemId: string,
-  item: any | null,
+  item: Record<string, unknown> | null,
 ): MockLink.MockedResponse {
   return {
     request: { query: GetShoppingListItemDocument, variables: { id: itemId } },

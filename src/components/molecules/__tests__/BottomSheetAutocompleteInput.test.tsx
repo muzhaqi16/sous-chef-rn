@@ -1,6 +1,7 @@
 'use no memo';
 
 import React from 'react';
+import type { ScrollViewProps, ViewProps } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { BottomSheetAutocompleteInput } from '../BottomSheetAutocompleteInput';
 
@@ -11,7 +12,7 @@ jest.mock('@gorhom/bottom-sheet', () => {
 
   return {
     __esModule: true,
-    default: R.forwardRef((props: any, ref: any) => {
+    default: R.forwardRef((props: ViewProps, ref: React.Ref<unknown>) => {
       R.useImperativeHandle(ref, () => ({
         snapToIndex: jest.fn(),
         expand: jest.fn(),
@@ -21,26 +22,30 @@ jest.mock('@gorhom/bottom-sheet', () => {
       }));
       return R.createElement(RN.View, props);
     }),
-    BottomSheetModal: R.forwardRef((props: any, ref: any) => {
-      R.useImperativeHandle(ref, () => ({
-        present: jest.fn(),
-        dismiss: jest.fn(),
-        snapToIndex: jest.fn(),
-        expand: jest.fn(),
-        collapse: jest.fn(),
-        close: jest.fn(),
-        forceClose: jest.fn(),
-      }));
-      return R.createElement(RN.View, props);
-    }),
-    BottomSheetModalProvider: ({ children }: any) => children,
-    BottomSheetBackdrop: (props: any) => R.createElement(RN.View, props),
-    BottomSheetView: (props: any) => R.createElement(RN.View, props),
-    BottomSheetScrollView: (props: any) => R.createElement(RN.View, props),
+    BottomSheetModal: R.forwardRef(
+      (props: ViewProps, ref: React.Ref<unknown>) => {
+        R.useImperativeHandle(ref, () => ({
+          present: jest.fn(),
+          dismiss: jest.fn(),
+          snapToIndex: jest.fn(),
+          expand: jest.fn(),
+          collapse: jest.fn(),
+          close: jest.fn(),
+          forceClose: jest.fn(),
+        }));
+        return R.createElement(RN.View, props);
+      },
+    ),
+    BottomSheetModalProvider: ({ children }: { children: React.ReactNode }) =>
+      children,
+    BottomSheetBackdrop: (props: ViewProps) => R.createElement(RN.View, props),
+    BottomSheetView: (props: ViewProps) => R.createElement(RN.View, props),
+    BottomSheetScrollView: (props: ViewProps) =>
+      R.createElement(RN.View, props),
     BottomSheetFlatList: RN.FlatList,
     BottomSheetTextInput: RN.TextInput,
-    BottomSheetFooter: (props: any) => R.createElement(RN.View, props),
-    BottomSheetHandle: (props: any) => R.createElement(RN.View, props),
+    BottomSheetFooter: (props: ViewProps) => R.createElement(RN.View, props),
+    BottomSheetHandle: (props: ViewProps) => R.createElement(RN.View, props),
     useBottomSheet: jest.fn(() => ({
       snapToIndex: jest.fn(),
       expand: jest.fn(),
@@ -52,7 +57,7 @@ jest.mock('@gorhom/bottom-sheet', () => {
       dismissAll: jest.fn(),
     })),
     useBottomSheetScrollableCreator: jest.fn(() => {
-      const ScrollableMock = (props: any) =>
+      const ScrollableMock = (props: ScrollViewProps) =>
         R.createElement(RN.ScrollView, props);
       return ScrollableMock;
     }),
@@ -74,7 +79,15 @@ jest.mock('#components/atoms/FormFieldWrapper', () => {
   const R = require('react');
   const RN = require('react-native');
   return {
-    FormFieldWrapper: ({ children, label, error }: any) =>
+    FormFieldWrapper: ({
+      children,
+      label,
+      error,
+    }: {
+      children?: React.ReactNode;
+      label?: string;
+      error?: string;
+    }) =>
       R.createElement(
         RN.View,
         { testID: 'form-field-wrapper' },
@@ -106,7 +119,7 @@ jest.mock('#hooks/useStandardBottomSheet', () => ({
       opacity: { pressed: 0.7 },
     },
   })),
-  BottomSheetModal: ({ children }: any) => children,
+  BottomSheetModal: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 // Mock useAppStore

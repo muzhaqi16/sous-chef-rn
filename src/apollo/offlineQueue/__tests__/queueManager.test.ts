@@ -1,7 +1,14 @@
+import { Kind, type DocumentNode } from 'graphql';
+import type { StoreObject } from '@apollo/client';
 import { QueueManager } from '../queueManager';
 import { queueStore } from '../queueStore';
 import { useStore } from '#store';
-import { QueuedMutation, QueueStatus } from '../types';
+import {
+  QueuedMutation,
+  QueueStatus,
+  QueueError,
+  ProcessingResult,
+} from '../types';
 
 // Mock the store module
 jest.mock('#store', () => ({
@@ -20,7 +27,7 @@ jest.mock('../../client', () => ({
     mutate: jest.fn(),
     cache: {
       readFragment: jest.fn(),
-      identify: jest.fn((obj: any) => `${obj.__typename}:${obj.id}`),
+      identify: jest.fn((obj: StoreObject) => `${obj.__typename}:${obj.id}`),
     },
   },
 }));
@@ -62,7 +69,7 @@ function makeMutation(overrides: Partial<QueuedMutation> = {}): QueuedMutation {
     id: `mut-${Math.random().toString(36).slice(2, 8)}`,
     userId: 'user-1',
     operationName: 'TestMutation',
-    mutation: { kind: 'Document', definitions: [] } as any,
+    mutation: { kind: Kind.DOCUMENT, definitions: [] },
     variables: {},
     status: QueueStatus.PENDING,
     createdAt: Date.now(),
@@ -171,10 +178,10 @@ describe('QueueManager', () => {
   // -------------------------------------------------------------------------
   describe('classifyError', () => {
     // Access private method via any cast for unit testing
-    let classifyError: (error: any) => any;
+    let classifyError: (error: unknown) => QueueError;
 
     beforeEach(() => {
-      classifyError = (manager as any).classifyError.bind(manager);
+      classifyError = manager['classifyError'].bind(manager);
     });
 
     it('classifies UNAUTHENTICATED as auth error', () => {
@@ -266,9 +273,7 @@ describe('QueueManager', () => {
     };
 
     beforeEach(() => {
-      mergeMoveItemMutations = (manager as any).mergeMoveItemMutations.bind(
-        manager,
-      );
+      mergeMoveItemMutations = manager['mergeMoveItemMutations'].bind(manager);
     });
 
     it('merges multiple move mutations for the same item', () => {
@@ -380,11 +385,11 @@ describe('QueueManager', () => {
   describe('handleMutationError', () => {
     let handleMutationError: (
       mutation: QueuedMutation,
-      error: any,
-    ) => Promise<any>;
+      error: unknown,
+    ) => Promise<ProcessingResult>;
 
     beforeEach(() => {
-      handleMutationError = (manager as any).handleMutationError.bind(manager);
+      handleMutationError = manager['handleMutationError'].bind(manager);
       // Default: online
       mockedGetState.mockReturnValue({
         user: { id: 'user-1' },
@@ -474,11 +479,13 @@ describe('QueueManager', () => {
   // processMutation
   // -------------------------------------------------------------------------
   describe('processMutation', () => {
-    let processMutation: (mutation: QueuedMutation) => Promise<any>;
+    let processMutation: (
+      mutation: QueuedMutation,
+    ) => Promise<ProcessingResult>;
     const { client } = require('../../client');
 
     beforeEach(() => {
-      processMutation = (manager as any).processMutation.bind(manager);
+      processMutation = manager['processMutation'].bind(manager);
       mockedGetState.mockReturnValue({
         user: { id: 'user-1' },
         accessToken: 'token',
@@ -529,7 +536,7 @@ describe('QueueManager', () => {
     let createBatches: <T>(items: T[], size: number) => T[][];
 
     beforeEach(() => {
-      createBatches = (manager as any).createBatches.bind(manager);
+      createBatches = manager['createBatches'].bind(manager);
     });
 
     it('splits items into batches of given size', () => {
@@ -554,7 +561,7 @@ describe('QueueManager', () => {
     };
 
     beforeEach(() => {
-      groupByEntity = (manager as any).groupByEntity.bind(manager);
+      groupByEntity = manager['groupByEntity'].bind(manager);
     });
 
     it('groups mutations by entity id', () => {
@@ -597,7 +604,7 @@ describe('QueueManager', () => {
     let calculateRetryDelay: (retryCount: number) => number;
 
     beforeEach(() => {
-      calculateRetryDelay = (manager as any).calculateRetryDelay.bind(manager);
+      calculateRetryDelay = manager['calculateRetryDelay'].bind(manager);
     });
 
     it('uses exponential backoff', () => {
@@ -625,10 +632,10 @@ describe('QueueManager', () => {
   // resolveIds
   // -------------------------------------------------------------------------
   describe('resolveIds', () => {
-    let resolveIds: (variables: any) => any;
+    let resolveIds: <T>(variables: T) => T;
 
     beforeEach(() => {
-      resolveIds = (manager as any).resolveIds.bind(manager);
+      resolveIds = manager['resolveIds'].bind(manager);
     });
 
     it('returns null/undefined variables as-is', () => {
@@ -638,7 +645,7 @@ describe('QueueManager', () => {
 
     it('resolves temp-IDs from idMapping', () => {
       // Set up a mapping
-      const idMapping = (manager as any).idMapping as Map<string, string>;
+      const idMapping = manager['idMapping'];
       idMapping.set('temp-abc123', 'real-server-id');
 
       const result = resolveIds({ id: 'temp-abc123', name: 'test' });
@@ -651,7 +658,7 @@ describe('QueueManager', () => {
     });
 
     it('resolves IDs nested in objects', () => {
-      const idMapping = (manager as any).idMapping as Map<string, string>;
+      const idMapping = manager['idMapping'];
       idMapping.set('temp-nested', 'real-nested');
 
       const result = resolveIds({ input: { id: 'temp-nested' } });
@@ -659,7 +666,7 @@ describe('QueueManager', () => {
     });
 
     it('resolves keys ending in Id', () => {
-      const idMapping = (manager as any).idMapping as Map<string, string>;
+      const idMapping = manager['idMapping'];
       idMapping.set('temp-item', 'real-item');
 
       const result = resolveIds({ input: { itemId: 'temp-item' } });
@@ -667,7 +674,7 @@ describe('QueueManager', () => {
     });
 
     it('handles arrays inside variables', () => {
-      const idMapping = (manager as any).idMapping as Map<string, string>;
+      const idMapping = manager['idMapping'];
       idMapping.set('temp-arr', 'real-arr');
 
       const result = resolveIds({ ids: [{ id: 'temp-arr' }] });
@@ -684,16 +691,11 @@ describe('QueueManager', () => {
   // convertToSyncMutation
   // -------------------------------------------------------------------------
   describe('convertToSyncMutation', () => {
-    let convertToSyncMutation: (mutation: QueuedMutation) => {
-      syncMutation: any;
-      syncVariables: any;
-    };
+    let convertToSyncMutation: QueueManager['convertToSyncMutation'];
     const { client: mockClient } = require('../../client');
 
     beforeEach(() => {
-      convertToSyncMutation = (manager as any).convertToSyncMutation.bind(
-        manager,
-      );
+      convertToSyncMutation = manager['convertToSyncMutation'].bind(manager);
     });
 
     it('converts CreatePantryItem to SyncPantryItemDocument', () => {
@@ -748,9 +750,10 @@ describe('QueueManager', () => {
         variables: { id: 'sl-item-1', quantity: '5', version: 3 },
       });
       const { syncVariables } = convertToSyncMutation(mutation);
-      expect(syncVariables.input.shoppingListId).toBe('list-99');
-      expect(syncVariables.input.quantity).toBe('5');
-      expect(syncVariables.input.version).toBe(3);
+      const input = syncVariables.input as Record<string, unknown>;
+      expect(input.shoppingListId).toBe('list-99');
+      expect(input.quantity).toBe('5');
+      expect(input.version).toBe(3);
     });
 
     it('converts ToggleShoppingListItemPurchased with cache read', () => {
@@ -763,8 +766,9 @@ describe('QueueManager', () => {
         variables: { id: 'sl-item-2', purchased: true, version: 1 },
       });
       const { syncVariables } = convertToSyncMutation(mutation);
-      expect(syncVariables.input.shoppingListId).toBe('list-88');
-      expect(syncVariables.input.isPurchased).toBe(true);
+      const input = syncVariables.input as Record<string, unknown>;
+      expect(input.shoppingListId).toBe('list-88');
+      expect(input.isPurchased).toBe(true);
     });
 
     it('throws when cache has no shoppingList data for quantity update', () => {
@@ -803,7 +807,10 @@ describe('QueueManager', () => {
     });
 
     it('falls back to original mutation for unknown operation', () => {
-      const originalMutation = { kind: 'Document', definitions: [] } as any;
+      const originalMutation: DocumentNode = {
+        kind: Kind.DOCUMENT,
+        definitions: [],
+      };
       const mutation = makeMutation({
         operationName: 'UnknownOperation',
         mutation: originalMutation,
@@ -828,11 +835,11 @@ describe('QueueManager', () => {
   // executeSyncMutation - ID mapping and conflict handling
   // -------------------------------------------------------------------------
   describe('executeSyncMutation', () => {
-    let executeSyncMutation: (mutation: QueuedMutation) => Promise<any>;
+    let executeSyncMutation: (mutation: QueuedMutation) => Promise<unknown>;
     const { client: mockClient } = require('../../client');
 
     beforeEach(() => {
-      executeSyncMutation = (manager as any).executeSyncMutation.bind(manager);
+      executeSyncMutation = manager['executeSyncMutation'].bind(manager);
     });
 
     it('stores ID mapping when wasCreated is true', async () => {
@@ -855,7 +862,7 @@ describe('QueueManager', () => {
       await executeSyncMutation(mutation);
       jest.useFakeTimers();
 
-      const idMapping = (manager as any).idMapping as Map<string, string>;
+      const idMapping = manager['idMapping'];
       expect(idMapping.get('temp-client-1')).toBe('server-1');
     });
 
@@ -1049,9 +1056,8 @@ describe('QueueManager', () => {
     let validateTokenBeforeReplay: () => Promise<boolean>;
 
     beforeEach(() => {
-      validateTokenBeforeReplay = (
-        manager as any
-      ).validateTokenBeforeReplay.bind(manager);
+      validateTokenBeforeReplay =
+        manager['validateTokenBeforeReplay'].bind(manager);
     });
 
     it('returns true when accessToken exists', async () => {
@@ -1071,10 +1077,13 @@ describe('QueueManager', () => {
   // handleAuthError
   // -------------------------------------------------------------------------
   describe('handleAuthError', () => {
-    let handleAuthError: (mutation: QueuedMutation, error: any) => Promise<any>;
+    let handleAuthError: (
+      mutation: QueuedMutation,
+      error: QueueError,
+    ) => Promise<ProcessingResult>;
 
     beforeEach(() => {
-      handleAuthError = (manager as any).handleAuthError.bind(manager);
+      handleAuthError = manager['handleAuthError'].bind(manager);
       mockedGetState.mockReturnValue({
         user: { id: 'user-1' },
         accessToken: 'token',
@@ -1090,7 +1099,7 @@ describe('QueueManager', () => {
 
       jest.useRealTimers();
       const mutation = makeMutation({ id: 'auth-retry-1' });
-      const error = {
+      const error: QueueError = {
         type: 'auth',
         message: 'Unauthorized',
         timestamp: Date.now(),
@@ -1112,7 +1121,7 @@ describe('QueueManager', () => {
 
       jest.useRealTimers();
       const mutation = makeMutation({ id: 'auth-fail-1' });
-      const error = {
+      const error: QueueError = {
         type: 'auth',
         message: 'Unauthorized',
         timestamp: Date.now(),
@@ -1133,17 +1142,18 @@ describe('QueueManager', () => {
   // setFailureHandler / invokeFailureHandler / extractEntityInfo
   // -------------------------------------------------------------------------
   describe('setFailureHandler and failure invocation', () => {
-    let invokeFailureHandler: (mutation: QueuedMutation, error: any) => void;
+    let invokeFailureHandler: (
+      mutation: QueuedMutation,
+      error: QueueError,
+    ) => void;
     let extractEntityInfo: (mutation: QueuedMutation) => {
       entityType: string | null;
       entityId: string | null;
     };
 
     beforeEach(() => {
-      invokeFailureHandler = (manager as any).invokeFailureHandler.bind(
-        manager,
-      );
-      extractEntityInfo = (manager as any).extractEntityInfo.bind(manager);
+      invokeFailureHandler = manager['invokeFailureHandler'].bind(manager);
+      extractEntityInfo = manager['extractEntityInfo'].bind(manager);
     });
 
     it('stores the failure handler via setFailureHandler', () => {
@@ -1234,7 +1244,7 @@ describe('QueueManager', () => {
       const handler = jest.fn();
       manager.setFailureHandler(handler);
 
-      const error = {
+      const error: QueueError = {
         type: 'network',
         message: 'timeout',
         code: 'TIMEOUT',
@@ -1421,7 +1431,7 @@ describe('QueueManager', () => {
       it('returns nulls when variables are undefined', () => {
         const mutation = makeMutation({
           operationName: 'UnknownOp',
-          variables: undefined as any,
+          variables: undefined,
         });
         expect(extractEntityInfo(mutation)).toEqual({
           entityType: null,
@@ -1434,13 +1444,11 @@ describe('QueueManager', () => {
     describe('handleMutationError invokes failure handler', () => {
       let handleMutationError: (
         mutation: QueuedMutation,
-        error: any,
-      ) => Promise<any>;
+        error: unknown,
+      ) => Promise<ProcessingResult>;
 
       beforeEach(() => {
-        handleMutationError = (manager as any).handleMutationError.bind(
-          manager,
-        );
+        handleMutationError = manager['handleMutationError'].bind(manager);
         mockedGetState.mockReturnValue({
           user: { id: 'user-1' },
           accessToken: 'token',
@@ -1502,11 +1510,11 @@ describe('QueueManager', () => {
     describe('handleAuthError invokes failure handler on token refresh failure', () => {
       let handleAuthError: (
         mutation: QueuedMutation,
-        error: any,
-      ) => Promise<any>;
+        error: QueueError,
+      ) => Promise<ProcessingResult>;
 
       beforeEach(() => {
-        handleAuthError = (manager as any).handleAuthError.bind(manager);
+        handleAuthError = manager['handleAuthError'].bind(manager);
         // Token refresh will fail (no accessToken)
         mockedGetState.mockReturnValue({
           user: { id: 'user-1' },
@@ -1525,7 +1533,7 @@ describe('QueueManager', () => {
           operationName: 'FavoriteRecipe',
           variables: { input: { recipeId: 'r-10' } },
         });
-        const error = {
+        const error: QueueError = {
           type: 'auth',
           message: 'Unauthorized',
           timestamp: Date.now(),
@@ -1557,9 +1565,7 @@ describe('QueueManager', () => {
     };
 
     beforeEach(() => {
-      mergeMoveItemMutations = (manager as any).mergeMoveItemMutations.bind(
-        manager,
-      );
+      mergeMoveItemMutations = manager['mergeMoveItemMutations'].bind(manager);
     });
 
     it('keeps legacy ReorderShoppingListItems mutations as-is', () => {

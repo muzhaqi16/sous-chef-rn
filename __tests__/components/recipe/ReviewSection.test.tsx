@@ -3,6 +3,7 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
 import { ReviewSection } from '../../../src/features/recipes/components/ReviewSection';
+import type { RecipeReviewFragment } from '../../../src/features/recipes/graphql/recipeFragments.generated';
 
 jest.mock('../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../src/apollo/links/refreshToken');
@@ -72,14 +73,14 @@ describe('ReviewSection', () => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       user: { id: 'u1', email: 'test@test.com', profile: null },
-    };
+    } as RecipeReviewFragment;
     const { getByText } = render(
       <ReviewSection
         {...defaultProps}
         hasReviewed={true}
-        userReview={userReview as any}
+        userReview={userReview}
         totalReviews={1}
-        reviews={[userReview as any]}
+        reviews={[userReview]}
       />,
     );
     expect(getByText('Your Review')).toBeTruthy();

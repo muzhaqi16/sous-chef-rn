@@ -40,6 +40,8 @@ import {
   ACCESSIBLE,
   ACCESS_CONTROL,
   SECURITY_LEVEL,
+  BIOMETRY_TYPE,
+  STORAGE_TYPE,
 } from 'react-native-keychain';
 
 import { BiometricManager } from '../biometricFallback';
@@ -71,7 +73,7 @@ describe('BiometricManager', () => {
   // ==========================================================================
   describe('getBiometricCapability', () => {
     it('returns available=true when biometry is supported', async () => {
-      mockedGetSupportedBiometryType.mockResolvedValue('FaceID' as any);
+      mockedGetSupportedBiometryType.mockResolvedValue(BIOMETRY_TYPE.FACE_ID);
       const result = await BiometricManager.getBiometricCapability();
       expect(result.isAvailable).toBe(true);
       expect(result.biometryType).toBe('FaceID');
@@ -86,14 +88,14 @@ describe('BiometricManager', () => {
     });
 
     it('caches the result on subsequent calls', async () => {
-      mockedGetSupportedBiometryType.mockResolvedValue('FaceID' as any);
+      mockedGetSupportedBiometryType.mockResolvedValue(BIOMETRY_TYPE.FACE_ID);
       await BiometricManager.getBiometricCapability();
       await BiometricManager.getBiometricCapability();
       expect(mockedGetSupportedBiometryType).toHaveBeenCalledTimes(1);
     });
 
     it('returns cached result without querying again', async () => {
-      mockedGetSupportedBiometryType.mockResolvedValue('TouchID' as any);
+      mockedGetSupportedBiometryType.mockResolvedValue(BIOMETRY_TYPE.TOUCH_ID);
       const first = await BiometricManager.getBiometricCapability();
       mockedGetSupportedBiometryType.mockResolvedValue(null); // wouldn't matter since cached
       const second = await BiometricManager.getBiometricCapability();
@@ -122,7 +124,7 @@ describe('BiometricManager', () => {
   // ==========================================================================
   describe('clearCapabilityCache', () => {
     it('clears cached capability so next call queries again', async () => {
-      mockedGetSupportedBiometryType.mockResolvedValue('FaceID' as any);
+      mockedGetSupportedBiometryType.mockResolvedValue(BIOMETRY_TYPE.FACE_ID);
       await BiometricManager.getBiometricCapability();
       BiometricManager.clearCapabilityCache();
       mockedGetSupportedBiometryType.mockResolvedValue(null);
@@ -137,7 +139,7 @@ describe('BiometricManager', () => {
   // ==========================================================================
   describe('getAccessControl', () => {
     it('returns BIOMETRY_ANY_OR_DEVICE_PASSCODE when biometric available and allowDevicePasscode', async () => {
-      mockedGetSupportedBiometryType.mockResolvedValue('FaceID' as any);
+      mockedGetSupportedBiometryType.mockResolvedValue(BIOMETRY_TYPE.FACE_ID);
       const result = await BiometricManager.getAccessControl({
         allowDevicePasscode: true,
       });
@@ -145,7 +147,7 @@ describe('BiometricManager', () => {
     });
 
     it('returns BIOMETRY_ANY when biometric available but no passcode fallback', async () => {
-      mockedGetSupportedBiometryType.mockResolvedValue('FaceID' as any);
+      mockedGetSupportedBiometryType.mockResolvedValue(BIOMETRY_TYPE.FACE_ID);
       const result = await BiometricManager.getAccessControl({
         allowDevicePasscode: false,
       });
@@ -187,7 +189,7 @@ describe('BiometricManager', () => {
     });
 
     it('uses default options when none provided', async () => {
-      mockedGetSupportedBiometryType.mockResolvedValue('FaceID' as any);
+      mockedGetSupportedBiometryType.mockResolvedValue(BIOMETRY_TYPE.FACE_ID);
       const result = await BiometricManager.getAccessControl();
       expect(result).toBe(ACCESS_CONTROL.BIOMETRY_ANY_OR_DEVICE_PASSCODE);
     });
@@ -221,7 +223,7 @@ describe('BiometricManager', () => {
   // ==========================================================================
   describe('createKeychainOptions', () => {
     it('creates options with access control when available', async () => {
-      mockedGetSupportedBiometryType.mockResolvedValue('FaceID' as any);
+      mockedGetSupportedBiometryType.mockResolvedValue(BIOMETRY_TYPE.FACE_ID);
       const options = await BiometricManager.createKeychainOptions(
         'test-service',
       );
@@ -261,11 +263,11 @@ describe('BiometricManager', () => {
   // ==========================================================================
   describe('saveCredentialsWithFallback', () => {
     it('saves with biometric when available and fallbackToPassword is false', async () => {
-      mockedGetSupportedBiometryType.mockResolvedValue('FaceID' as any);
+      mockedGetSupportedBiometryType.mockResolvedValue(BIOMETRY_TYPE.FACE_ID);
       mockedSetGenericPassword.mockResolvedValue({
         service: 'test',
-        storage: 'keychain',
-      } as any);
+        storage: 'keychain' as STORAGE_TYPE,
+      });
       const result = await BiometricManager.saveCredentialsWithFallback(
         'svc',
         'user',
@@ -277,10 +279,13 @@ describe('BiometricManager', () => {
     });
 
     it('falls back to passcode when biometric save fails', async () => {
-      mockedGetSupportedBiometryType.mockResolvedValue('FaceID' as any);
+      mockedGetSupportedBiometryType.mockResolvedValue(BIOMETRY_TYPE.FACE_ID);
       mockedSetGenericPassword
         .mockRejectedValueOnce(new Error('Biometric failed'))
-        .mockResolvedValueOnce({ service: 'test', storage: 'keychain' } as any);
+        .mockResolvedValueOnce({
+          service: 'test',
+          storage: 'keychain' as STORAGE_TYPE,
+        });
       const result = await BiometricManager.saveCredentialsWithFallback(
         'svc',
         'user',
@@ -296,11 +301,14 @@ describe('BiometricManager', () => {
     });
 
     it('falls back to basic when passcode also fails', async () => {
-      mockedGetSupportedBiometryType.mockResolvedValue('FaceID' as any);
+      mockedGetSupportedBiometryType.mockResolvedValue(BIOMETRY_TYPE.FACE_ID);
       mockedSetGenericPassword
         .mockRejectedValueOnce(new Error('Biometric failed'))
         .mockRejectedValueOnce(new Error('Passcode failed'))
-        .mockResolvedValueOnce({ service: 'test', storage: 'keychain' } as any);
+        .mockResolvedValueOnce({
+          service: 'test',
+          storage: 'keychain' as STORAGE_TYPE,
+        });
       // fallbackToPassword defaults to true, so strategy 3 is tried
       const result = await BiometricManager.saveCredentialsWithFallback(
         'svc',
@@ -321,7 +329,7 @@ describe('BiometricManager', () => {
     });
 
     it('returns error when all strategies fail', async () => {
-      mockedGetSupportedBiometryType.mockResolvedValue('FaceID' as any);
+      mockedGetSupportedBiometryType.mockResolvedValue(BIOMETRY_TYPE.FACE_ID);
       mockedSetGenericPassword.mockRejectedValue(new Error('All failed'));
       // fallbackToPassword defaults to true, so all 3 strategies are tried and all fail
       const result = await BiometricManager.saveCredentialsWithFallback(
@@ -347,8 +355,8 @@ describe('BiometricManager', () => {
       mockedGetSupportedBiometryType.mockResolvedValue(null);
       mockedSetGenericPassword.mockResolvedValue({
         service: 'test',
-        storage: 'keychain',
-      } as any);
+        storage: 'keychain' as STORAGE_TYPE,
+      });
       const result = await BiometricManager.saveCredentialsWithFallback(
         'svc',
         'user',
@@ -363,8 +371,8 @@ describe('BiometricManager', () => {
       mockedGetSupportedBiometryType.mockResolvedValue(null);
       mockedSetGenericPassword.mockResolvedValue({
         service: 'test',
-        storage: 'keychain',
-      } as any);
+        storage: 'keychain' as STORAGE_TYPE,
+      });
       const result = await BiometricManager.saveCredentialsWithFallback(
         'svc',
         'user',
@@ -379,8 +387,8 @@ describe('BiometricManager', () => {
       mockedGetSupportedBiometryType.mockResolvedValue(null);
       mockedSetGenericPassword.mockResolvedValue({
         service: 'test',
-        storage: 'keychain',
-      } as any);
+        storage: 'keychain' as STORAGE_TYPE,
+      });
       const result = await BiometricManager.saveCredentialsWithFallback(
         'svc',
         'user',
@@ -397,13 +405,13 @@ describe('BiometricManager', () => {
   // ==========================================================================
   describe('loadCredentialsWithFallback', () => {
     it('loads credentials with biometric prompt', async () => {
-      mockedGetSupportedBiometryType.mockResolvedValue('FaceID' as any);
+      mockedGetSupportedBiometryType.mockResolvedValue(BIOMETRY_TYPE.FACE_ID);
       mockedGetGenericPassword.mockResolvedValue({
         username: 'user',
         password: 'pass',
         service: 'svc',
-        storage: 'keychain',
-      } as any);
+        storage: 'keychain' as STORAGE_TYPE,
+      });
       const result = await BiometricManager.loadCredentialsWithFallback('svc');
       expect(result.success).toBe(true);
       expect(result.credentials).toEqual({
@@ -419,8 +427,8 @@ describe('BiometricManager', () => {
         username: 'user',
         password: 'pass',
         service: 'svc',
-        storage: 'keychain',
-      } as any);
+        storage: 'keychain' as STORAGE_TYPE,
+      });
       const result = await BiometricManager.loadCredentialsWithFallback('svc');
       expect(result.success).toBe(true);
       expect(result.method).toBe('passcode');
@@ -428,7 +436,7 @@ describe('BiometricManager', () => {
 
     it('returns error when no credentials found', async () => {
       mockedGetSupportedBiometryType.mockResolvedValue(null);
-      mockedGetGenericPassword.mockResolvedValue(false as any);
+      mockedGetGenericPassword.mockResolvedValue(false);
       const result = await BiometricManager.loadCredentialsWithFallback('svc');
       expect(result.success).toBe(false);
       expect(result.error).toContain('No credentials found');
@@ -496,13 +504,13 @@ describe('BiometricManager', () => {
         username: 'user',
         password: 'pass',
         service: 'svc',
-        storage: 'keychain',
-      } as any);
+        storage: 'keychain' as STORAGE_TYPE,
+      });
       expect(await BiometricManager.hasCredentials('svc')).toBe(true);
     });
 
     it('returns false when no credentials exist', async () => {
-      mockedGetGenericPassword.mockResolvedValue(false as any);
+      mockedGetGenericPassword.mockResolvedValue(false);
       expect(await BiometricManager.hasCredentials('svc')).toBe(false);
     });
 
@@ -517,31 +525,31 @@ describe('BiometricManager', () => {
   // ==========================================================================
   describe('getBiometricTypeName', () => {
     it('returns Touch ID', () => {
-      expect(BiometricManager.getBiometricTypeName('TouchID' as any)).toBe(
-        'Touch ID',
-      );
+      expect(
+        BiometricManager.getBiometricTypeName(BIOMETRY_TYPE.TOUCH_ID),
+      ).toBe('Touch ID');
     });
 
     it('returns Face ID', () => {
-      expect(BiometricManager.getBiometricTypeName('FaceID' as any)).toBe(
+      expect(BiometricManager.getBiometricTypeName(BIOMETRY_TYPE.FACE_ID)).toBe(
         'Face ID',
       );
     });
 
     it('returns Fingerprint', () => {
-      expect(BiometricManager.getBiometricTypeName('Fingerprint' as any)).toBe(
-        'Fingerprint',
-      );
+      expect(
+        BiometricManager.getBiometricTypeName(BIOMETRY_TYPE.FINGERPRINT),
+      ).toBe('Fingerprint');
     });
 
     it('returns Face Recognition', () => {
-      expect(BiometricManager.getBiometricTypeName('Face' as any)).toBe(
+      expect(BiometricManager.getBiometricTypeName(BIOMETRY_TYPE.FACE)).toBe(
         'Face Recognition',
       );
     });
 
     it('returns Iris Recognition', () => {
-      expect(BiometricManager.getBiometricTypeName('Iris' as any)).toBe(
+      expect(BiometricManager.getBiometricTypeName(BIOMETRY_TYPE.IRIS)).toBe(
         'Iris Recognition',
       );
     });
@@ -553,9 +561,9 @@ describe('BiometricManager', () => {
     });
 
     it('returns default for unknown type', () => {
-      expect(BiometricManager.getBiometricTypeName('Unknown' as any)).toBe(
-        'Biometric Authentication',
-      );
+      expect(
+        BiometricManager.getBiometricTypeName('Unknown' as BIOMETRY_TYPE),
+      ).toBe('Biometric Authentication');
     });
   });
 });

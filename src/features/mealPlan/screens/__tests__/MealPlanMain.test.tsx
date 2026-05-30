@@ -37,7 +37,12 @@ jest.mock('#hooks/ui/useSelectorManagement', () => ({
   })),
 }));
 
-const mockMealPlansState = (overrides: Record<string, any> = {}) => ({
+type DeferredScreenMockProps = {
+  fallback: React.ReactNode;
+  component: React.ComponentType;
+};
+
+const mockMealPlansState = (overrides: Record<string, unknown> = {}) => ({
   state: {
     currentPlan: null,
     mealPlans: [],
@@ -144,7 +149,9 @@ jest.mock('#hooks/performance/useTabScreenLifecycle', () => ({
   useTabScreenLifecycle: jest.fn(),
 }));
 
-const mockDeferredScreen = jest.fn(({ fallback }: any) => fallback);
+const mockDeferredScreen = jest.fn(
+  ({ fallback }: DeferredScreenMockProps) => fallback,
+);
 jest.mock('#components/molecules/WeekStrip', () => ({
   WeekStrip: () => null,
 }));
@@ -199,7 +206,7 @@ jest.mock(
 );
 
 jest.mock('#components/performance/DeferredScreen', () => ({
-  DeferredScreen: (props: any) => mockDeferredScreen(props),
+  DeferredScreen: (props: DeferredScreenMockProps) => mockDeferredScreen(props),
 }));
 
 jest.mock('#components/base/Skeleton/MealPlanSkeleton', () => ({
@@ -207,7 +214,7 @@ jest.mock('#components/base/Skeleton/MealPlanSkeleton', () => ({
 }));
 
 jest.mock('#components/molecules/TabScreenHeader', () => ({
-  TabScreenHeader: ({ title }: any) => title,
+  TabScreenHeader: ({ title }: { title: string }) => title,
 }));
 
 describe('MealPlanMain', () => {
@@ -227,9 +234,9 @@ describe('MealPlanMain', () => {
 
   it('renders inner component when DeferredScreen renders component', () => {
     // Override to render the component prop
-    mockDeferredScreen.mockImplementation(({ component: Component }: any) => (
-      <Component />
-    ));
+    mockDeferredScreen.mockImplementation(
+      ({ component: Component }: DeferredScreenMockProps) => <Component />,
+    );
 
     const { useMealPlans } = jest.requireMock(
       '#features/mealPlan/hooks/useMealPlans',
@@ -241,9 +248,9 @@ describe('MealPlanMain', () => {
   });
 
   it('shows empty state when no meal plans exist', () => {
-    mockDeferredScreen.mockImplementation(({ component: Component }: any) => (
-      <Component />
-    ));
+    mockDeferredScreen.mockImplementation(
+      ({ component: Component }: DeferredScreenMockProps) => <Component />,
+    );
 
     const { useMealPlans } = jest.requireMock(
       '#features/mealPlan/hooks/useMealPlans',
@@ -255,9 +262,9 @@ describe('MealPlanMain', () => {
   });
 
   it('renders meal plan content when plans exist', () => {
-    mockDeferredScreen.mockImplementation(({ component: Component }: any) => (
-      <Component />
-    ));
+    mockDeferredScreen.mockImplementation(
+      ({ component: Component }: DeferredScreenMockProps) => <Component />,
+    );
 
     const { useMealPlans } = jest.requireMock(
       '#features/mealPlan/hooks/useMealPlans',
@@ -274,9 +281,9 @@ describe('MealPlanMain', () => {
   });
 
   it('renders with loading state from useMealPlans', () => {
-    mockDeferredScreen.mockImplementation(({ component: Component }: any) => (
-      <Component />
-    ));
+    mockDeferredScreen.mockImplementation(
+      ({ component: Component }: DeferredScreenMockProps) => <Component />,
+    );
 
     const { useMealPlans } = jest.requireMock(
       '#features/mealPlan/hooks/useMealPlans',
@@ -288,9 +295,9 @@ describe('MealPlanMain', () => {
   });
 
   it('renders with non-empty daily meals', () => {
-    mockDeferredScreen.mockImplementation(({ component: Component }: any) => (
-      <Component />
-    ));
+    mockDeferredScreen.mockImplementation(
+      ({ component: Component }: DeferredScreenMockProps) => <Component />,
+    );
 
     const { useMealPlans } = jest.requireMock(
       '#features/mealPlan/hooks/useMealPlans',
@@ -318,9 +325,9 @@ describe('MealPlanMain', () => {
   });
 
   it('renders with multiple meal plans', () => {
-    mockDeferredScreen.mockImplementation(({ component: Component }: any) => (
-      <Component />
-    ));
+    mockDeferredScreen.mockImplementation(
+      ({ component: Component }: DeferredScreenMockProps) => <Component />,
+    );
 
     const { useMealPlans } = jest.requireMock(
       '#features/mealPlan/hooks/useMealPlans',
@@ -340,9 +347,9 @@ describe('MealPlanMain', () => {
   });
 
   it('renders with month view mode', () => {
-    mockDeferredScreen.mockImplementation(({ component: Component }: any) => (
-      <Component />
-    ));
+    mockDeferredScreen.mockImplementation(
+      ({ component: Component }: DeferredScreenMockProps) => <Component />,
+    );
 
     const { useMealPlans } = jest.requireMock(
       '#features/mealPlan/hooks/useMealPlans',
@@ -376,9 +383,9 @@ describe('MealPlanMain', () => {
   });
 
   it('renders with nutrition summary from meal plan', () => {
-    mockDeferredScreen.mockImplementation(({ component: Component }: any) => (
-      <Component />
-    ));
+    mockDeferredScreen.mockImplementation(
+      ({ component: Component }: DeferredScreenMockProps) => <Component />,
+    );
 
     const { useMealPlans } = jest.requireMock(
       '#features/mealPlan/hooks/useMealPlans',
@@ -405,9 +412,9 @@ describe('MealPlanMain', () => {
   });
 
   it('renders with limited permissions', () => {
-    mockDeferredScreen.mockImplementation(({ component: Component }: any) => (
-      <Component />
-    ));
+    mockDeferredScreen.mockImplementation(
+      ({ component: Component }: DeferredScreenMockProps) => <Component />,
+    );
 
     const { useMealPlans } = jest.requireMock(
       '#features/mealPlan/hooks/useMealPlans',

@@ -14,13 +14,14 @@ jest.mock('../../../src/hooks/useStandardBottomSheet', () => ({
     contentContainerStyle: {},
     theme: { colors: {} },
   }),
-  BottomSheetModal: ({ children }: any) => children,
+  BottomSheetModal: ({ children }: { children: React.ReactNode }) => children,
 }));
 jest.mock('../../../src/components/atoms/BottomSheetFormScrollView', () => ({
-  BottomSheetFormScrollView: ({ children }: any) => children,
+  BottomSheetFormScrollView: ({ children }: { children: React.ReactNode }) =>
+    children,
 }));
 jest.mock('../../../src/components/atoms/BottomSheetHeader', () => ({
-  BottomSheetHeader: (props: any) => {
+  BottomSheetHeader: (props: { title: string }) => {
     const { Text } = require('react-native');
     return <Text>{props.title}</Text>;
   },
@@ -29,13 +30,13 @@ jest.mock('../../../src/components/atoms/ChipScrollRow', () => ({
   ChipScrollRow: () => null,
 }));
 jest.mock('../../../src/components/molecules/FormInput', () => ({
-  FormInput: (props: any) => {
+  FormInput: (props: { label: string }) => {
     const { Text } = require('react-native');
     return <Text>{props.label}</Text>;
   },
 }));
 jest.mock('../../../src/components/molecules/FormTextArea', () => ({
-  FormTextArea: (props: any) => {
+  FormTextArea: (props: { label: string }) => {
     const { Text } = require('react-native');
     return <Text>{props.label}</Text>;
   },

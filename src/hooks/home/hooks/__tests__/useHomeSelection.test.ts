@@ -1,4 +1,5 @@
 import { act } from '@testing-library/react-native';
+import type { RootState } from '#store/index';
 import {
   recordMock,
   renderHookWithApollo,
@@ -18,7 +19,8 @@ const mockStoreState = {
 };
 
 jest.mock('#store/useAppStore', () => ({
-  useAppStore: (selector: (state: any) => any) => selector(mockStoreState),
+  useAppStore: <T>(selector: (state: RootState) => T): T =>
+    selector(mockStoreState as Partial<RootState> as RootState),
   useSelectedHomeId: jest.fn(() => mockStoreState.selectedHomeId),
   useSelectedPantryId: jest.fn(() => mockStoreState.selectedPantryId),
   useSetSelectedPantryId: jest.fn(() => mockStoreState.setSelectedPantryId),

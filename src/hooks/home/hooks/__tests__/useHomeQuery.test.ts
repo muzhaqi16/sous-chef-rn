@@ -9,7 +9,9 @@ import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import { useHomeQuery } from '../useHomeQuery';
 
 jest.mock('#/hooks/apollo/usePreservedQueryData', () => ({
-  usePreservedArrayData: jest.fn((data: any) => data ?? []),
+  usePreservedArrayData: jest.fn(
+    <T>(data: T[] | undefined | null) => data ?? [],
+  ),
 }));
 
 beforeEach(() => {

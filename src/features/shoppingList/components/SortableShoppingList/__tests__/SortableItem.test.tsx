@@ -15,7 +15,7 @@ import { renderWithApollo, seedCache } from '#/test-utils/apolloMockProvider';
  */
 
 jest.mock('#/components/molecules/SwipeableItem/SwipeableItem', () => ({
-  SwipeableItem: ({ children }: any) => {
+  SwipeableItem: ({ children }: { children?: React.ReactNode }) => {
     const { View } = require('react-native');
     return <View testID="swipeable-item">{children}</View>;
   },
@@ -28,7 +28,13 @@ jest.mock('#/components/molecules/ListItem', () => ({
     checkboxElement,
     leftElement,
     rightElement,
-  }: any) => {
+  }: {
+    title?: React.ReactNode;
+    subtitle?: React.ReactNode;
+    checkboxElement?: React.ReactNode;
+    leftElement?: React.ReactNode;
+    rightElement?: React.ReactNode;
+  }) => {
     const { Text, View } = require('react-native');
     return (
       <View testID="list-item">
@@ -43,7 +49,13 @@ jest.mock('#/components/molecules/ListItem', () => ({
 }));
 
 jest.mock('#/components/atoms/AnimatedCheckbox', () => ({
-  AnimatedCheckbox: ({ checked, testID }: any) => {
+  AnimatedCheckbox: ({
+    checked,
+    testID,
+  }: {
+    checked?: boolean;
+    testID?: string;
+  }) => {
     const { View, Text } = require('react-native');
     return (
       <View testID={testID}>
@@ -54,7 +66,13 @@ jest.mock('#/components/atoms/AnimatedCheckbox', () => ({
 }));
 
 jest.mock('#/components/atoms/QuantityBadge', () => ({
-  QuantityBadge: ({ quantity, unit }: any) => {
+  QuantityBadge: ({
+    quantity,
+    unit,
+  }: {
+    quantity?: number;
+    unit?: string | null;
+  }) => {
     const { Text, View } = require('react-native');
     return (
       <View testID="quantity-badge">
@@ -144,8 +162,10 @@ jest.mock('../SortableListThemeContext', () => ({
 }));
 
 // Import after mocks
-import { SwipeableListItem as _SwipeableListItem } from '../SortableItem';
-const SwipeableListItem = _SwipeableListItem as any;
+import { SwipeableListItem } from '../SortableItem';
+import { SortableItem_ItemFragmentDoc } from '../SortableItem.generated';
+import type { FragmentType } from '@apollo/client/masking';
+import type { ShoppingListRowItem } from '../types';
 
 // Build a ShoppingListItem cache entry that satisfies the SortableItem_item
 // fragment selection. Passing the entry's `__typename`/`id` ref as `itemRef`
@@ -173,14 +193,19 @@ function seedItem(overrides: Record<string, unknown> = {}) {
   return entry;
 }
 
-function rowItem(entry: ReturnType<typeof seedItem>, isPurchased = false) {
+function rowItem(
+  entry: ReturnType<typeof seedItem>,
+  isPurchased = false,
+): ShoppingListRowItem {
   return {
     id: entry.id,
     isPurchased,
     sortOrder: 'a',
     // The masked ref is structurally a normalized ref: __typename + id is
     // enough for useFragment's cache lookup.
-    itemRef: { __typename: entry.__typename, id: entry.id } as any,
+    itemRef: { __typename: entry.__typename, id: entry.id } as FragmentType<
+      typeof SortableItem_ItemFragmentDoc
+    >,
   };
 }
 
@@ -191,41 +216,56 @@ describe('SwipeableListItem (SortableItem)', () => {
 
   it('renders the item title from the fragment', () => {
     const entry = seedItem();
-    renderWithApollo(<SwipeableListItem item={rowItem(entry)} index={0} />, {
-      cache: seedCache([entry]),
-    });
+    renderWithApollo(
+      <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
+      {
+        cache: seedCache([entry]),
+      },
+    );
     expect(screen.getByText('Milk')).toBeTruthy();
   });
 
   it('renders the item subtitle derived from category', () => {
     const entry = seedItem();
-    renderWithApollo(<SwipeableListItem item={rowItem(entry)} index={0} />, {
-      cache: seedCache([entry]),
-    });
+    renderWithApollo(
+      <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
+      {
+        cache: seedCache([entry]),
+      },
+    );
     expect(screen.getByText('2 liters')).toBeTruthy();
   });
 
   it('renders a swipeable wrapper', () => {
     const entry = seedItem();
-    renderWithApollo(<SwipeableListItem item={rowItem(entry)} index={0} />, {
-      cache: seedCache([entry]),
-    });
+    renderWithApollo(
+      <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
+      {
+        cache: seedCache([entry]),
+      },
+    );
     expect(screen.getByTestId('swipeable-item')).toBeTruthy();
   });
 
   it('renders a list item', () => {
     const entry = seedItem();
-    renderWithApollo(<SwipeableListItem item={rowItem(entry)} index={0} />, {
-      cache: seedCache([entry]),
-    });
+    renderWithApollo(
+      <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
+      {
+        cache: seedCache([entry]),
+      },
+    );
     expect(screen.getByTestId('list-item')).toBeTruthy();
   });
 
   it('renders checkbox with unchecked state for unpurchased items', () => {
     const entry = seedItem();
-    renderWithApollo(<SwipeableListItem item={rowItem(entry)} index={0} />, {
-      cache: seedCache([entry]),
-    });
+    renderWithApollo(
+      <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
+      {
+        cache: seedCache([entry]),
+      },
+    );
     expect(screen.getByTestId('shopping-item-checkbox-item-1')).toBeTruthy();
     expect(screen.getByText('unchecked')).toBeTruthy();
   });
@@ -233,7 +273,7 @@ describe('SwipeableListItem (SortableItem)', () => {
   it('renders checkbox with checked state for purchased items', () => {
     const entry = seedItem();
     renderWithApollo(
-      <SwipeableListItem item={rowItem(entry, true)} index={0} />,
+      <SwipeableListItem item={rowItem(entry, true)} index={0} target="Cell" />,
       { cache: seedCache([entry]) },
     );
     expect(screen.getByText('checked')).toBeTruthy();
@@ -241,9 +281,12 @@ describe('SwipeableListItem (SortableItem)', () => {
 
   it('renders the quantity badge with the cached quantity + unit', () => {
     const entry = seedItem({ quantity: 3, unitName: 'pcs' });
-    renderWithApollo(<SwipeableListItem item={rowItem(entry)} index={0} />, {
-      cache: seedCache([entry]),
-    });
+    renderWithApollo(
+      <SwipeableListItem item={rowItem(entry)} index={0} target="Cell" />,
+      {
+        cache: seedCache([entry]),
+      },
+    );
     expect(screen.getByTestId('quantity-badge')).toBeTruthy();
     expect(screen.getByText('3 pcs')).toBeTruthy();
   });

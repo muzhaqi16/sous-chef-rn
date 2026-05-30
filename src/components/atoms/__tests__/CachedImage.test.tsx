@@ -3,7 +3,10 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import TurboImage from 'react-native-turbo-image';
+import type { Theme } from '../../../theme/themes';
 import { CachedImage, preloadImages } from '../CachedImage';
+
+type StyleSheetArg = object | ((theme: Theme) => object);
 
 // Override unistyles mock to add flatten (global mock only has create/configure)
 jest.mock('react-native-unistyles', () => {
@@ -11,7 +14,7 @@ jest.mock('react-native-unistyles', () => {
   const RN = require('react-native');
   return {
     StyleSheet: {
-      create: (styleFnOrObj: any) => {
+      create: (styleFnOrObj: StyleSheetArg) => {
         if (typeof styleFnOrObj === 'function') {
           return styleFnOrObj(lightTheme);
         }
@@ -24,7 +27,7 @@ jest.mock('react-native-unistyles', () => {
       theme: lightTheme,
       styles: {},
     })),
-    useStyles: jest.fn((stylesheet: any) => ({
+    useStyles: jest.fn((stylesheet: StyleSheetArg) => ({
       styles:
         typeof stylesheet === 'function'
           ? stylesheet(lightTheme)
@@ -32,7 +35,9 @@ jest.mock('react-native-unistyles', () => {
       theme: lightTheme,
     })),
     useInitialTheme: jest.fn(),
-    withUnistyles: jest.fn((component: any) => component),
+    withUnistyles: jest.fn(
+      (component: React.ComponentType<unknown>) => component,
+    ),
     UnistylesRuntime: {
       setTheme: jest.fn(),
       getTheme: jest.fn(() => lightTheme),
@@ -57,7 +62,7 @@ jest.mock('#components/base/Skeleton/SkeletonBase', () => {
   const R = require('react');
   const RN = require('react-native');
   return {
-    SkeletonBase: (props: any) =>
+    SkeletonBase: (props: Record<string, unknown>) =>
       R.createElement(RN.View, { testID: 'skeleton', ...props }),
   };
 });
@@ -251,7 +256,12 @@ describe('preloadImages', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     // Add prefetch to TurboImage mock since global mock doesn't have it
-    (TurboImage as any).prefetch = jest.fn();
+    TurboImage.prefetch = jest
+      .fn<
+        ReturnType<typeof TurboImage.prefetch>,
+        Parameters<typeof TurboImage.prefetch>
+      >()
+      .mockResolvedValue(true);
   });
 
   it('calls TurboImage.prefetch with filtered sources', () => {
@@ -261,7 +271,7 @@ describe('preloadImages', () => {
       'https://example.com/b.jpg',
     ]);
 
-    expect((TurboImage as any).prefetch).toHaveBeenCalledWith(
+    expect(TurboImage.prefetch).toHaveBeenCalledWith(
       [
         { uri: 'https://example.com/a.jpg' },
         { uri: 'https://example.com/b.jpg' },
@@ -272,17 +282,17 @@ describe('preloadImages', () => {
 
   it('handles empty array', () => {
     preloadImages([]);
-    expect((TurboImage as any).prefetch).not.toHaveBeenCalled();
+    expect(TurboImage.prefetch).not.toHaveBeenCalled();
   });
 
   it('filters out falsy URIs', () => {
     preloadImages(['', '', '']);
-    expect((TurboImage as any).prefetch).not.toHaveBeenCalled();
+    expect(TurboImage.prefetch).not.toHaveBeenCalled();
   });
 
   it('preloads single URI', () => {
     preloadImages(['https://example.com/single.jpg']);
-    expect((TurboImage as any).prefetch).toHaveBeenCalledWith(
+    expect(TurboImage.prefetch).toHaveBeenCalledWith(
       [{ uri: 'https://example.com/single.jpg' }],
       'dataCache',
     );

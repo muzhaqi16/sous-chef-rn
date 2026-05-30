@@ -71,7 +71,7 @@ jest.mock('#utils/iconUtils', () => ({
 }));
 
 jest.mock('#components/atoms/BackButton', () => ({
-  BackButton: ({ onPress }: any) => {
+  BackButton: ({ onPress }: { onPress?: () => void }) => {
     const { Pressable, Text } = require('react-native');
     return (
       <Pressable onPress={onPress} testID="back-button">

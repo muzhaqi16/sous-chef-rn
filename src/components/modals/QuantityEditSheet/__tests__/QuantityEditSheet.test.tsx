@@ -2,6 +2,14 @@
 import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
 import { QuantityEditSheet } from '../QuantityEditSheet';
+import type { HeaderAction } from '#/components/molecules/Header';
+
+type QuantityEditSheetProps = React.ComponentProps<typeof QuantityEditSheet>;
+type QuantityEditSheetItem = NonNullable<QuantityEditSheetProps['item']>;
+
+interface ChildrenProps {
+  children?: React.ReactNode;
+}
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
   useStandardBottomSheet: jest.fn(() => ({
@@ -23,7 +31,7 @@ jest.mock('#hooks/useStandardBottomSheet', () => ({
       },
     },
   })),
-  BottomSheetModal: ({ children }: any) => children,
+  BottomSheetModal: ({ children }: ChildrenProps) => children,
 }));
 
 jest.mock('#/utils/iconUtils', () => ({
@@ -31,12 +39,18 @@ jest.mock('#/utils/iconUtils', () => ({
 }));
 
 jest.mock('#/components/molecules/Header', () => ({
-  Header: ({ title, rightActions }: any) => {
+  Header: ({
+    title,
+    rightActions,
+  }: {
+    title?: string;
+    rightActions?: HeaderAction[];
+  }) => {
     const { Text, View, Pressable } = require('react-native');
     return (
       <View testID="header">
         <Text>{title}</Text>
-        {rightActions?.map((action: any, i: number) => (
+        {rightActions?.map((action: HeaderAction, i: number) => (
           <Pressable
             key={i}
             testID={`header-action-${i}`}
@@ -54,7 +68,15 @@ jest.mock('#/components/molecules/Header', () => ({
 jest.mock(
   '#/components/molecules/AutocompleteField/UnitAutocompleteField',
   () => ({
-    UnitAutocompleteField: ({ value, onChangeText, placeholder }: any) => {
+    UnitAutocompleteField: ({
+      value,
+      onChangeText,
+      placeholder,
+    }: {
+      value: string;
+      onChangeText: (text: string) => void;
+      placeholder?: string;
+    }) => {
       const { TextInput, View } = require('react-native');
       return (
         <View testID="unit-autocomplete">
@@ -72,7 +94,15 @@ jest.mock(
 
 jest.mock('#/components/atoms/Chip', () => {
   const { Text, Pressable } = require('react-native');
-  return ({ label, selected, onPress }: any) => (
+  return ({
+    label,
+    selected,
+    onPress,
+  }: {
+    label: string;
+    selected?: boolean;
+    onPress: () => void;
+  }) => (
     <Pressable testID={`chip-${label}`} onPress={onPress}>
       <Text>
         {label}
@@ -83,7 +113,7 @@ jest.mock('#/components/atoms/Chip', () => {
 });
 
 jest.mock('#components/atoms/BottomSheetFormScrollView', () => ({
-  BottomSheetFormScrollView: ({ children }: any) => {
+  BottomSheetFormScrollView: ({ children }: ChildrenProps) => {
     const { View } = require('react-native');
     return <View testID="form-scroll-view">{children}</View>;
   },
@@ -93,7 +123,9 @@ jest.mock('#/utils/formatQuantity', () => ({
   formatQuantity: jest.fn((v: number) => String(v)),
 }));
 
-const makeItem = (overrides: any = {}) => ({
+const makeItem = (
+  overrides: Partial<QuantityEditSheetItem> = {},
+): QuantityEditSheetItem => ({
   id: 'item-1',
   itemName: 'Milk',
   quantity: 2,
@@ -120,7 +152,7 @@ const defaultProps = {
  * The component only initializes state when `visible` transitions from false to true,
  * so we first render hidden, then rerender as visible.
  */
-const renderWithInit = (props: any = defaultProps) => {
+const renderWithInit = (props: QuantityEditSheetProps = defaultProps) => {
   const result = render(<QuantityEditSheet {...props} visible={false} />);
   result.rerender(<QuantityEditSheet {...props} visible={true} />);
   return result;

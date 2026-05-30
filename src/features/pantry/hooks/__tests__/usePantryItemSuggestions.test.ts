@@ -12,7 +12,7 @@ jest.mock('#hooks/settings/useOfflineMode', () => ({
 }));
 
 jest.mock('#utils/imageUtils', () => ({
-  resolveImageUrl: (item: any) =>
+  resolveImageUrl: (item: { imageUrl?: string | null } | null | undefined) =>
     item?.imageUrl ? `https://cdn.test/${item.imageUrl}` : null,
 }));
 

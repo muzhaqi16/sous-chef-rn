@@ -14,6 +14,12 @@ interface SectionHeader {
   title: string;
 }
 
+// Shape of the `extraData` the hook passes to the selector config.
+interface SelectorExtraData {
+  isDeleteMode: boolean;
+  selectedForDeletion: Set<string>;
+}
+
 // Build a fully-typed ShoppingListSelectorItem so the hook input needs no cast.
 const makeList = (
   overrides: Partial<ShoppingListSelectorItem>,
@@ -571,13 +577,13 @@ describe('useShoppingListSelectorModal', () => {
       }),
     );
 
-    const headerItem = {
+    const headerItem: SectionHeader = {
       _isHeader: true,
       id: 'header-home-1',
       title: 'Family Home',
     };
     const rendered = result.current.listConfig.renderCustomItem!(
-      headerItem as any,
+      headerItem,
       false,
       jest.fn(),
     );
@@ -599,7 +605,7 @@ describe('useShoppingListSelectorModal', () => {
       const lists = makeLists();
       const onPress = jest.fn();
       const rendered = result.current.listConfig.renderCustomItem!(
-        lists[0] as any,
+        lists[0],
         false,
         onPress,
       );
@@ -686,22 +692,19 @@ describe('useShoppingListSelectorModal', () => {
   describe('groupedData edge cases', () => {
     it('handles only home lists (no personal lists)', () => {
       const homeLists = [
-        {
+        makeList({
           id: 'list-h1',
           name: 'Home List 1',
-          isDefault: false,
           homeId: 'home-1',
-          home: { name: 'My Home' },
+          home: makeHome('My Home'),
           totalItems: 3,
           completedItems: 1,
-          _isOwner: true,
-          ownerships: [],
-        },
+        }),
       ];
 
       const { result } = renderHook(() =>
         useShoppingListSelectorModal({
-          listDataWithOwnership: homeLists as any,
+          listDataWithOwnership: homeLists,
           currentListId: 'list-h1',
           setSelectedShoppingListId: jest.fn(),
         }),
@@ -716,44 +719,29 @@ describe('useShoppingListSelectorModal', () => {
 
     it('handles multiple homes with multiple lists each', () => {
       const multiHomeLists = [
-        {
+        makeList({
           id: 'list-a',
           name: 'List A',
-          isDefault: false,
           homeId: 'home-1',
-          home: { name: 'Home Alpha' },
-          totalItems: 0,
-          completedItems: 0,
-          _isOwner: true,
-          ownerships: [],
-        },
-        {
+          home: makeHome('Home Alpha'),
+        }),
+        makeList({
           id: 'list-b',
           name: 'List B',
-          isDefault: false,
           homeId: 'home-1',
-          home: { name: 'Home Alpha' },
-          totalItems: 0,
-          completedItems: 0,
-          _isOwner: true,
-          ownerships: [],
-        },
-        {
+          home: makeHome('Home Alpha'),
+        }),
+        makeList({
           id: 'list-c',
           name: 'List C',
-          isDefault: false,
           homeId: 'home-2',
-          home: { name: 'Home Beta' },
-          totalItems: 0,
-          completedItems: 0,
-          _isOwner: true,
-          ownerships: [],
-        },
+          home: makeHome('Home Beta'),
+        }),
       ];
 
       const { result } = renderHook(() =>
         useShoppingListSelectorModal({
-          listDataWithOwnership: multiHomeLists as any,
+          listDataWithOwnership: multiHomeLists,
           currentListId: undefined,
           setSelectedShoppingListId: jest.fn(),
         }),
@@ -768,22 +756,17 @@ describe('useShoppingListSelectorModal', () => {
 
     it('uses "Unknown Home" when home name is missing', () => {
       const lists = [
-        {
+        makeList({
           id: 'list-x',
           name: 'List X',
-          isDefault: false,
           homeId: 'home-unknown',
           home: null,
-          totalItems: 0,
-          completedItems: 0,
-          _isOwner: true,
-          ownerships: [],
-        },
+        }),
       ];
 
       const { result } = renderHook(() =>
         useShoppingListSelectorModal({
-          listDataWithOwnership: lists as any,
+          listDataWithOwnership: lists,
           currentListId: undefined,
           setSelectedShoppingListId: jest.fn(),
         }),
@@ -797,29 +780,26 @@ describe('useShoppingListSelectorModal', () => {
   describe('renderCustomItem shared list owner info fallbacks', () => {
     it('shows "someone" when ownerships is empty', () => {
       const lists = [
-        {
+        makeList({
           id: 'list-shared',
           name: 'Shared List',
-          isDefault: false,
-          homeId: null,
-          home: null,
           totalItems: 1,
           completedItems: 0,
           _isOwner: false,
           ownerships: [],
-        },
+        }),
       ];
 
       const { result } = renderHook(() =>
         useShoppingListSelectorModal({
-          listDataWithOwnership: lists as any,
+          listDataWithOwnership: lists,
           currentListId: undefined,
           setSelectedShoppingListId: jest.fn(),
         }),
       );
 
       const rendered = result.current.listConfig.renderCustomItem!(
-        lists[0] as any,
+        lists[0],
         false,
         jest.fn(),
       );
@@ -828,29 +808,26 @@ describe('useShoppingListSelectorModal', () => {
 
     it('shows email when displayName is missing', () => {
       const lists = [
-        {
+        makeList({
           id: 'list-email',
           name: 'Email List',
-          isDefault: false,
-          homeId: null,
-          home: null,
           totalItems: 2,
           completedItems: 1,
           _isOwner: false,
-          ownerships: [{ user: { email: 'friend@test.com', profile: null } }],
-        },
+          ownerships: [makeOwnership('friend@test.com', null)],
+        }),
       ];
 
       const { result } = renderHook(() =>
         useShoppingListSelectorModal({
-          listDataWithOwnership: lists as any,
+          listDataWithOwnership: lists,
           currentListId: undefined,
           setSelectedShoppingListId: jest.fn(),
         }),
       );
 
       const rendered = result.current.listConfig.renderCustomItem!(
-        lists[0] as any,
+        lists[0],
         false,
         jest.fn(),
       );
@@ -892,7 +869,8 @@ describe('useShoppingListSelectorModal', () => {
         }),
       );
 
-      const extraData = result.current.listConfig.extraData as any;
+      const extraData = result.current.listConfig
+        .extraData as SelectorExtraData;
       expect(extraData.isDeleteMode).toBe(false);
       expect(extraData.selectedForDeletion).toBeDefined();
       expect(extraData.selectedForDeletion.size).toBe(0);
@@ -911,7 +889,7 @@ describe('useShoppingListSelectorModal', () => {
 
       const lists = makeLists();
       const rendered = result.current.listConfig.renderCustomItem!(
-        lists[0] as any,
+        lists[0],
         false,
         jest.fn(),
       );
@@ -929,7 +907,7 @@ describe('useShoppingListSelectorModal', () => {
 
       const lists = makeLists();
       const rendered = result.current.listConfig.renderCustomItem!(
-        lists[0] as any,
+        lists[0],
         true,
         jest.fn(),
       );
@@ -940,33 +918,22 @@ describe('useShoppingListSelectorModal', () => {
   describe('mixed personal and home lists', () => {
     it('orders personal lists before home lists', () => {
       const mixedLists = [
-        {
+        makeList({
           id: 'personal-1',
           name: 'My List',
           isDefault: true,
-          homeId: null,
-          home: null,
-          totalItems: 0,
-          completedItems: 0,
-          _isOwner: true,
-          ownerships: [],
-        },
-        {
+        }),
+        makeList({
           id: 'home-list-1',
           name: 'Home List',
-          isDefault: false,
           homeId: 'home-1',
-          home: { name: 'My Home' },
-          totalItems: 0,
-          completedItems: 0,
-          _isOwner: true,
-          ownerships: [],
-        },
+          home: makeHome('My Home'),
+        }),
       ];
 
       const { result } = renderHook(() =>
         useShoppingListSelectorModal({
-          listDataWithOwnership: mixedLists as any,
+          listDataWithOwnership: mixedLists,
           currentListId: 'personal-1',
           setSelectedShoppingListId: jest.fn(),
         }),

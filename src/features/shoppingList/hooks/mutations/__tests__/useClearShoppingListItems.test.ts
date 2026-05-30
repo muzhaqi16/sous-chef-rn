@@ -22,13 +22,19 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
-function createItem(overrides: Record<string, unknown> = {}) {
+interface TestClearItem {
+  id: string;
+  itemName: string;
+  purchaseInfo: { isPurchased: boolean };
+}
+
+function createItem(overrides: Partial<TestClearItem> = {}): TestClearItem {
   return {
     id: 'item-1',
     itemName: 'Milk',
     purchaseInfo: { isPurchased: false },
     ...overrides,
-  } as any;
+  };
 }
 
 function createClearMock(
@@ -138,8 +144,10 @@ describe('useClearShoppingListItems', () => {
     );
 
     expect(recorded).toContainEqual({
-      shoppingListId: 'list-1',
-      purchased: true,
+      input: {
+        shoppingListId: 'list-1',
+        purchased: true,
+      },
     });
   });
 
@@ -172,8 +180,10 @@ describe('useClearShoppingListItems', () => {
     );
 
     expect(recorded).toContainEqual({
-      shoppingListId: 'list-1',
-      purchased: false,
+      input: {
+        shoppingListId: 'list-1',
+        purchased: false,
+      },
     });
   });
 

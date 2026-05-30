@@ -6,6 +6,15 @@ import {
   FloatingTabBar as _FloatingTabBar,
   TAB_BAR_HEIGHT,
 } from '../FloatingTabBar';
+
+// NOTE: the real `FloatingTabBarProps` (extends BottomTabBarProps) omits the
+// `insets` prop the tests pass and does not structurally overlap the simplified
+// mock navigation/descriptor shapes (mock `state.type` is `string` not `'tab'`,
+// `preloadedRouteKeys` is absent, navigation/descriptors are partial jest mocks),
+// so the reference stays loosely typed. A precise cast is impossible without
+// editing the component source or using a banned `as unknown as` form — tsc's
+// own diagnostic on a two-step `Partial<>` widening recommends exactly that
+// banned form.
 const FloatingTabBar = _FloatingTabBar as any;
 
 // Mock TabBarActionsContext
@@ -75,7 +84,7 @@ jest.mock('../AddButton', () => {
   const R = require('react');
   const RN = require('react-native');
   return {
-    AddButton: ({ onPress }: any) =>
+    AddButton: ({ onPress }: { onPress: () => void }) =>
       R.createElement(
         RN.Pressable,
         { testID: 'add-button', onPress },
@@ -89,7 +98,15 @@ jest.mock('../TabItem', () => {
   const R = require('react');
   const RN = require('react-native');
   return {
-    TabItem: ({ route, isFocused, onPress }: any) =>
+    TabItem: ({
+      route,
+      isFocused,
+      onPress,
+    }: {
+      route: { name: string };
+      isFocused: boolean;
+      onPress: () => void;
+    }) =>
       R.createElement(
         RN.Pressable,
         {
@@ -119,14 +136,20 @@ function createNavigationState(
     routeNames,
     stale: false,
     history: [],
-  } as any;
+  };
 }
+
+type MockDescriptor = {
+  options: Record<string, unknown>;
+  render: jest.Mock;
+  navigation: object;
+};
 
 function createDescriptors(
   routeNames = ['Pantry', 'ShoppingList', 'Recipe', 'MealPlan'],
-  overrides: Record<string, any> = {},
-) {
-  const descriptors: Record<string, any> = {};
+  overrides: Record<string, Record<string, unknown>> = {},
+): Record<string, MockDescriptor> {
+  const descriptors: Record<string, MockDescriptor> = {};
   routeNames.forEach((name, i) => {
     const key = `${name}-key-${i}`;
     descriptors[key] = {
@@ -177,7 +200,7 @@ describe('FloatingTabBar', () => {
       <FloatingTabBar
         state={state}
         descriptors={createDescriptors()}
-        navigation={createNavigation() as any}
+        navigation={createNavigation()}
         insets={{ top: 0, bottom: 0, left: 0, right: 0 }}
       />,
     );
@@ -190,7 +213,7 @@ describe('FloatingTabBar', () => {
       <FloatingTabBar
         state={state}
         descriptors={createDescriptors()}
-        navigation={createNavigation() as any}
+        navigation={createNavigation()}
         insets={{ top: 0, bottom: 0, left: 0, right: 0 }}
       />,
     );
@@ -206,7 +229,7 @@ describe('FloatingTabBar', () => {
       <FloatingTabBar
         state={state}
         descriptors={createDescriptors()}
-        navigation={createNavigation() as any}
+        navigation={createNavigation()}
         insets={{ top: 0, bottom: 0, left: 0, right: 0 }}
       />,
     );
@@ -220,7 +243,7 @@ describe('FloatingTabBar', () => {
       <FloatingTabBar
         state={state}
         descriptors={createDescriptors()}
-        navigation={createNavigation() as any}
+        navigation={createNavigation()}
         insets={{ top: 0, bottom: 0, left: 0, right: 0 }}
       />,
     );
@@ -234,7 +257,7 @@ describe('FloatingTabBar', () => {
       <FloatingTabBar
         state={state}
         descriptors={createDescriptors()}
-        navigation={createNavigation() as any}
+        navigation={createNavigation()}
         insets={{ top: 0, bottom: 0, left: 0, right: 0 }}
       />,
     );
@@ -253,7 +276,7 @@ describe('FloatingTabBar', () => {
       <FloatingTabBar
         state={state}
         descriptors={createDescriptors()}
-        navigation={createNavigation() as any}
+        navigation={createNavigation()}
         insets={{ top: 0, bottom: 0, left: 0, right: 0 }}
       />,
     );
@@ -273,7 +296,7 @@ describe('FloatingTabBar', () => {
       <FloatingTabBar
         state={state}
         descriptors={createDescriptors()}
-        navigation={createNavigation() as any}
+        navigation={createNavigation()}
         insets={{ top: 0, bottom: 0, left: 0, right: 0 }}
       />,
     );
@@ -291,7 +314,7 @@ describe('FloatingTabBar', () => {
       <FloatingTabBar
         state={state}
         descriptors={createDescriptors()}
-        navigation={nav as any}
+        navigation={nav}
         insets={{ top: 0, bottom: 0, left: 0, right: 0 }}
       />,
     );
@@ -313,7 +336,7 @@ describe('FloatingTabBar', () => {
       <FloatingTabBar
         state={state}
         descriptors={createDescriptors()}
-        navigation={nav as any}
+        navigation={nav}
         insets={{ top: 0, bottom: 0, left: 0, right: 0 }}
       />,
     );
@@ -336,7 +359,7 @@ describe('FloatingTabBar', () => {
       <FloatingTabBar
         state={state}
         descriptors={createDescriptors()}
-        navigation={nav as any}
+        navigation={nav}
         insets={{ top: 0, bottom: 0, left: 0, right: 0 }}
       />,
     );
@@ -358,7 +381,7 @@ describe('FloatingTabBar', () => {
       <FloatingTabBar
         state={state}
         descriptors={createDescriptors()}
-        navigation={nav as any}
+        navigation={nav}
         insets={{ top: 0, bottom: 0, left: 0, right: 0 }}
       />,
     );
@@ -377,7 +400,7 @@ describe('FloatingTabBar', () => {
       <FloatingTabBar
         state={state}
         descriptors={createDescriptors()}
-        navigation={createNavigation() as any}
+        navigation={createNavigation()}
         insets={{ top: 0, bottom: 0, left: 0, right: 0 }}
       />,
     );
@@ -390,7 +413,7 @@ describe('FloatingTabBar', () => {
       <FloatingTabBar
         state={state}
         descriptors={createDescriptors()}
-        navigation={createNavigation() as any}
+        navigation={createNavigation()}
         insets={{ top: 0, bottom: 0, left: 0, right: 0 }}
       />,
     );
@@ -409,7 +432,7 @@ describe('FloatingTabBar', () => {
       <FloatingTabBar
         state={state}
         descriptors={createDescriptors()}
-        navigation={createNavigation() as any}
+        navigation={createNavigation()}
         insets={{ top: 0, bottom: 0, left: 0, right: 0 }}
       />,
     );
@@ -427,7 +450,7 @@ describe('FloatingTabBar', () => {
       <FloatingTabBar
         state={state}
         descriptors={createDescriptors(routeNames)}
-        navigation={nav as any}
+        navigation={nav}
         insets={{ top: 0, bottom: 0, left: 0, right: 0 }}
       />,
     );
@@ -454,7 +477,7 @@ describe('FloatingTabBar', () => {
       <FloatingTabBar
         state={state}
         descriptors={createDescriptors(routeNames)}
-        navigation={nav as any}
+        navigation={nav}
         insets={{ top: 0, bottom: 0, left: 0, right: 0 }}
       />,
     );

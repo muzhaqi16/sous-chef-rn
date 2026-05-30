@@ -18,7 +18,7 @@ interface PantryStatsItem {
 }
 
 interface UsePantryStatsOptions {
-  pantryItems: PantryStatsItem[];
+  pantryItems: PantryStatsItem[] | null;
   totalCount?: number;
   storageStateCounts?: {
     refrigerated: number;
@@ -63,7 +63,7 @@ export function usePantryStats(options: UsePantryStatsOptions) {
 
       return {
         locationCounts: {
-          all: totalCount ?? pantryItems.length,
+          all: totalCount ?? pantryItems?.length ?? 0,
           fridge: storageStateCounts.refrigerated,
           freezer: storageStateCounts.frozen,
           pantry: storageStateCounts.ambient,

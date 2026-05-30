@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 
 import { useDefaultHome } from '#hooks/home/useDefaultHome';
 import { usePantryManagement } from '#hooks/home/pantry/usePantryManagement';
+import type { PantryListItemNode } from '#hooks/home/pantry/usePantryQuery';
 import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
 import type {
   RecipeSearchResult,
@@ -50,14 +51,14 @@ const INITIAL_DISCOVERY_STATE: DiscoveryState = {
   loading: true,
 };
 
-const EMPTY_PANTRY_ITEMS: any[] = [];
+const EMPTY_PANTRY_ITEMS: PantryListItemNode[] = [];
 
 interface UseRecipeDiscoveryResult {
   mode: DiscoveryMode;
   items: DiscoveryItem[];
   loading: boolean;
   refresh: () => void;
-  pantryItems: any[];
+  pantryItems: PantryListItemNode[];
   hasPantryItems: boolean;
   pantryHasMore: boolean;
   pantryLoadingMore: boolean;

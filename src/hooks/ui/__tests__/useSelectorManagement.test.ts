@@ -1,4 +1,5 @@
 import { renderHook, act } from '@testing-library/react-native';
+import type { ItemSelectorRef } from '#components/organisms/AnimatedItemSelector/types';
 import { useSelectorManagement } from '../useSelectorManagement';
 
 beforeEach(() => {
@@ -118,7 +119,7 @@ describe('useSelectorManagement', () => {
 
   it('works with a fresh ref after re-render', () => {
     const setOverlayOpen = jest.fn();
-    const selectorRef = { current: null as any };
+    const selectorRef: { current: ItemSelectorRef | null } = { current: null };
 
     const { result } = renderHook(() =>
       useSelectorManagement({ selectorRef, setOverlayOpen }),

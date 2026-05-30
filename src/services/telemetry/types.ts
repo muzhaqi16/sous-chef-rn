@@ -40,7 +40,7 @@ export interface LogEntry {
   level: 'debug' | 'info' | 'warn' | 'error';
   message: string;
   timestamp: string;
-  extra?: Record<string, any>;
+  extra?: Record<string, unknown>;
 }
 
 export interface MetricEntry {
@@ -64,13 +64,13 @@ export interface ErrorDetails {
   component?: string;
   operation?: string;
   isFatal?: boolean;
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
 }
 
 export interface GraphQLOperationDetails {
   operationName: string;
   operationType: 'query' | 'mutation' | 'subscription';
-  variables?: Record<string, any>;
+  variables?: Record<string, unknown>;
   duration?: number;
   hasErrors?: boolean;
   errorCount?: number;
@@ -85,13 +85,13 @@ export interface TelemetryTransport {
 
 export interface TelemetryEventData {
   eventName: string;
-  properties?: Record<string, any>;
+  properties?: Record<string, unknown>;
   timestamp?: string;
 }
 
 export interface ScreenViewData {
   screenName: string;
-  properties?: Record<string, any>;
+  properties?: Record<string, unknown>;
 }
 
 export const DEFAULT_CONFIG: TelemetryConfig = {

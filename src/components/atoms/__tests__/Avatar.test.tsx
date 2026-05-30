@@ -6,7 +6,11 @@ import { Avatar } from '../Avatar';
 jest.mock('#components/atoms/CachedImage', () => {
   const { View } = require('react-native');
   return {
-    CachedImage: (props: any) => <View testID="cached-image" {...props} />,
+    CachedImage: (
+      props: React.ComponentProps<
+        typeof import('#components/atoms/CachedImage').CachedImage
+      >,
+    ) => <View testID="cached-image" {...props} />,
   };
 });
 

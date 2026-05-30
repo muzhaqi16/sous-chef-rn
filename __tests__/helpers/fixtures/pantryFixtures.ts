@@ -8,6 +8,13 @@
  * shape so the real `normalizePantry` runs end-to-end in tests.
  */
 
+import type { Unmasked } from '@apollo/client/masking';
+import {
+  StorageState,
+  StorageType,
+} from '#/graphql/generated/schemaTypes';
+import type { GetPantryQuery } from '#features/pantry/graphql/pantry.generated';
+
 export interface PantryItemFixture {
   id: string;
   itemName?: string;
@@ -32,19 +39,15 @@ export interface PantryFixture {
   totalItems?: number;
 }
 
-interface ConnectionData<T> {
-  __typename: string;
-  edges: Array<{ __typename: string; cursor: string; node: T }>;
-  pageInfo: { __typename: 'PageInfo'; hasNextPage: boolean; endCursor: string | null };
-  totalCount: number;
-}
-
-function connection<T>(
-  typename: string,
-  edgeTypename: string,
+// Generic over the literal typename strings so the inferred return preserves
+// `__typename: 'PantryItemConnection'` (etc.) rather than widening to `string`,
+// which lets the builders below satisfy the generated query types.
+function connection<TN extends string, ET extends string, T>(
+  typename: TN,
+  edgeTypename: ET,
   nodes: T[],
   totalCount?: number,
-): ConnectionData<T> {
+) {
   return {
     __typename: typename,
     edges: nodes.map((node, i) => ({
@@ -53,9 +56,9 @@ function connection<T>(
       node,
     })),
     pageInfo: {
-      __typename: 'PageInfo',
+      __typename: 'PageInfo' as const,
       hasNextPage: false,
-      endCursor: null,
+      endCursor: null as string | null,
     },
     totalCount: totalCount ?? nodes.length,
   };
@@ -64,16 +67,16 @@ function connection<T>(
 /** Build a single PantryItem node matching PantryItemDisplay fragment selection. */
 function pantryItemNode(item: PantryItemFixture) {
   return {
-    __typename: 'PantryItem',
+    __typename: 'PantryItem' as const,
     id: item.id,
     pantryId: 'p1',
-    itemId: null,
+    itemId: `item-${item.id}`,
     itemName: item.itemName ?? `Item ${item.id}`,
     quantity: item.quantity ?? 1,
     version: 1,
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',
-    storageState: 'AMBIENT',
+    storageState: StorageState.Ambient,
     expiresAt: null,
     lowStockAlert: false,
     isLowStock: false,
@@ -83,7 +86,12 @@ function pantryItemNode(item: PantryItemFixture) {
     remainingNetWeight: null,
     activeBatchCount: 0,
     earliestBatchExpiration: null,
-    item: null,
+    item: {
+      __typename: 'Item' as const,
+      id: `item-${item.id}`,
+      imageUrl: null,
+      images: [],
+    },
     unit: null,
     netWeightUnit: null,
     storageLocation: null,
@@ -94,10 +102,10 @@ function pantryItemNode(item: PantryItemFixture) {
 
 function storageLocationNode(loc: StorageLocationFixture) {
   return {
-    __typename: 'StorageLocation',
+    __typename: 'StorageLocation' as const,
     id: loc.id,
     name: loc.name ?? `Location ${loc.id}`,
-    type: loc.type ?? 'PANTRY',
+    type: (loc.type as StorageType | undefined) ?? StorageType.PantryShelf,
     icon: null,
     color: null,
     isDefault: false,
@@ -110,10 +118,11 @@ function storageLocationNode(loc: StorageLocationFixture) {
  * Build the full `GetPantry` query result. Pass to
  * `cache.writeQuery({ query: GetPantryDocument, variables: { id }, data: ... })`.
  */
-export function pantryData(pantry: PantryFixture) {
+export function pantryData(pantry: PantryFixture): Unmasked<GetPantryQuery> {
   const items = pantry.items ?? [];
   const storageLocations = pantry.storageLocations ?? [];
   return {
+    __typename: 'Query',
     pantry: {
       __typename: 'Pantry',
       id: pantry.id,

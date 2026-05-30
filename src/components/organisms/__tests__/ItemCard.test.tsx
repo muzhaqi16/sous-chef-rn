@@ -1,11 +1,22 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
+import type { SwipeableItemProps } from '#components/molecules/SwipeableItem/types';
 import { ItemCard } from '../ItemCard';
+
+type MockListItemProps = {
+  title?: string;
+  subtitle?: string | React.ReactNode;
+  badge?: { text: string };
+};
 
 jest.mock('#components/molecules/SwipeableItem/SwipeableItem', () => {
   const { View } = require('react-native');
   return {
-    SwipeableItem: ({ children, onPress, testIDPrefix }: any) => (
+    SwipeableItem: ({
+      children,
+      onPress,
+      testIDPrefix,
+    }: Pick<SwipeableItemProps, 'children' | 'onPress' | 'testIDPrefix'>) => (
       <View
         testID={testIDPrefix ? `${testIDPrefix}-swipeable` : 'swipeable'}
         onTouchEnd={onPress}
@@ -19,7 +30,7 @@ jest.mock('#components/molecules/SwipeableItem/SwipeableItem', () => {
 jest.mock('../../molecules/ListItem', () => {
   const { Text, View } = require('react-native');
   return {
-    ListItem: ({ title, subtitle, badge }: any) => (
+    ListItem: ({ title, subtitle, badge }: MockListItemProps) => (
       <View>
         <Text>{title}</Text>
         <Text>{subtitle}</Text>

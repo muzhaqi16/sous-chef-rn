@@ -2,7 +2,18 @@
 
 import { act, waitFor } from '@testing-library/react-native';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  type PantryItemOrderBy,
+  SortOrder,
+} from '#/graphql/generated/schemaTypes';
+import type { RootState } from '#store/index';
 import { usePantryQuery } from '../usePantryQuery';
+
+type MockEdge = { node?: { id?: string } | null } | null;
+type MockConnection = {
+  edges?: MockEdge[] | null;
+  totalCount?: number | null;
+};
 
 jest.mock('../../../../apollo/links/tokenScheduler');
 jest.mock('../../../../apollo/links/refreshToken');
@@ -12,13 +23,13 @@ jest.mock('#hooks/auth/useIsLoggedOut', () => ({
 }));
 
 jest.mock('#/utils/connectionUtils', () => ({
-  extractNodes: jest.fn((connection: any) => {
+  extractNodes: jest.fn((connection: MockConnection) => {
     if (!connection?.edges) return [];
     return connection.edges
-      .map((edge: any) => edge?.node)
-      .filter((node: any) => node != null);
+      .map((edge: MockEdge) => edge?.node)
+      .filter((node: { id?: string } | null | undefined) => node != null);
   }),
-  getConnectionTotalCount: jest.fn((connection: any) => {
+  getConnectionTotalCount: jest.fn((connection: MockConnection) => {
     if (typeof connection?.totalCount === 'number')
       return connection.totalCount;
     return connection?.edges?.length ?? 0;
@@ -41,28 +52,29 @@ jest.mock('#/services/subscriptions/SubscriptionService', () => ({
 }));
 
 jest.mock('#/hooks/apollo/usePreservedQueryData', () => ({
-  usePreservedArrayData: (data: any) => data || [],
-  usePreservedQueryData: (data: any, initial: any) =>
+  usePreservedArrayData: <T>(data: T[] | null | undefined) => data || [],
+  usePreservedQueryData: <T>(data: T | undefined, initial: T) =>
     data !== undefined ? data : initial,
 }));
 
 const mockSetIsPantryQueryComplete = jest.fn();
 jest.mock('#store/useAppStore', () => ({
-  useAppStore: jest.fn((selector: any) =>
-    selector({
-      isHomeSelectionReady: true,
-      setIsPantryQueryComplete: mockSetIsPantryQueryComplete,
-    }),
+  useAppStore: jest.fn(
+    <T>(selector: (state: RootState) => T): T =>
+      selector({
+        isHomeSelectionReady: true,
+        setIsPantryQueryComplete: mockSetIsPantryQueryComplete,
+      } as Partial<RootState> as RootState),
   ),
   useIsHomeSelectionReady: jest.fn(() => true),
   useSetIsPantryQueryComplete: jest.fn(() => mockSetIsPantryQueryComplete),
 }));
 
-(global as any).requestIdleCallback = jest.fn((cb: any) => {
-  cb();
+global.requestIdleCallback = jest.fn((cb: IdleRequestCallback) => {
+  cb({ didTimeout: false, timeRemaining: () => 0 });
   return 1;
 });
-(global as any).cancelIdleCallback = jest.fn();
+global.cancelIdleCallback = jest.fn();
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -108,7 +120,7 @@ describe('usePantryQuery', () => {
     // implicitly correct (the schema doesn't validate variable values, only
     // shape — so this test mainly ensures no runtime error from passing
     // orderBy through).
-    const orderBy = { itemName: 'ASC' as any };
+    const orderBy: PantryItemOrderBy = { itemName: SortOrder.Asc };
     const { result } = renderHookWithApollo(
       () => usePantryQuery('pantry-1', null, orderBy),
       {

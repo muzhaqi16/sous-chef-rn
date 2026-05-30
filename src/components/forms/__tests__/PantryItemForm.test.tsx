@@ -8,6 +8,7 @@ import { GetHomeDocument } from '#operations/home/home.generated';
 import {
   GetPantryDocument,
   GetPantryItemDocument,
+  type GetPantryItemQuery,
 } from '#features/pantry/graphql/pantry.generated';
 import { homeNode } from '../../../../__tests__/helpers/fixtures/homeFixtures';
 import { pantryData } from '../../../../__tests__/helpers/fixtures/pantryFixtures';
@@ -68,7 +69,13 @@ jest.mock('#/utils/compilerSafeWrappers');
 
 // Form sub-sections — exercised via their own focused tests.
 jest.mock('#components/molecules/FormInput', () => ({
-  FormInput: ({ label, placeholder }: any) => {
+  FormInput: ({
+    label,
+    placeholder,
+  }: {
+    label?: string;
+    placeholder?: string;
+  }) => {
     const { TextInput, Text, View } = require('react-native');
     return (
       <View>
@@ -82,7 +89,7 @@ jest.mock('#components/molecules/FormInput', () => ({
 jest.mock(
   '#components/molecules/AutocompleteField/UnitAutocompleteField',
   () => ({
-    UnitAutocompleteField: ({ label }: any) => {
+    UnitAutocompleteField: ({ label }: { label?: string }) => {
       const { Text, View } = require('react-native');
       return (
         <View testID="unit-autocomplete">
@@ -94,7 +101,7 @@ jest.mock(
 );
 
 jest.mock('#components/molecules/Header', () => ({
-  Header: ({ title }: any) => {
+  Header: ({ title }: { title?: string }) => {
     const { Text, View } = require('react-native');
     return (
       <View testID="header">
@@ -105,11 +112,17 @@ jest.mock('#components/molecules/Header', () => ({
 }));
 
 jest.mock('#components/molecules/PageIndicator/PageIndicator', () => ({
-  PageIndicator: ({ pages, onPagePress }: any) => {
+  PageIndicator: ({
+    pages,
+    onPagePress,
+  }: {
+    pages: { label: string }[];
+    onPagePress: (index: number) => void;
+  }) => {
     const { Text, View, Pressable } = require('react-native');
     return (
       <View testID="page-indicator">
-        {pages.map((p: any, i: number) => (
+        {pages.map((p, i) => (
           <Pressable key={p.label} onPress={() => onPagePress(i)}>
             <Text>{p.label}</Text>
           </Pressable>
@@ -120,7 +133,13 @@ jest.mock('#components/molecules/PageIndicator/PageIndicator', () => ({
 }));
 
 jest.mock('#components/molecules/CollapsibleSection', () => ({
-  CollapsibleSection: ({ children, title }: any) => {
+  CollapsibleSection: ({
+    children,
+    title,
+  }: {
+    children?: React.ReactNode;
+    title?: string;
+  }) => {
     const { Text, View } = require('react-native');
     return (
       <View>
@@ -132,11 +151,15 @@ jest.mock('#components/molecules/CollapsibleSection', () => ({
 }));
 
 jest.mock('#components/molecules/DynamicFormFields', () => ({
-  DynamicFormFields: ({ fields }: any) => {
+  DynamicFormFields: ({
+    fields,
+  }: {
+    fields: { name: string; label: string }[];
+  }) => {
     const { Text, View } = require('react-native');
     return (
       <View>
-        {fields.map((f: any) => (
+        {fields.map(f => (
           <Text key={f.name}>{f.label}</Text>
         ))}
       </View>
@@ -145,14 +168,14 @@ jest.mock('#components/molecules/DynamicFormFields', () => ({
 }));
 
 jest.mock('#components/molecules/FieldRow', () => ({
-  FieldRow: ({ children }: any) => {
+  FieldRow: ({ children }: { children?: React.ReactNode }) => {
     const { View } = require('react-native');
     return <View>{children}</View>;
   },
 }));
 
 jest.mock('../ItemInformationSection', () => ({
-  ItemInformationSection: ({ mode }: any) => {
+  ItemInformationSection: ({ mode }: { mode: 'add' | 'edit' }) => {
     const { Text, View } = require('react-native');
     return (
       <View testID="item-information-section">
@@ -163,7 +186,13 @@ jest.mock('../ItemInformationSection', () => ({
 }));
 
 jest.mock('../QuantitySection', () => ({
-  QuantitySection: ({ mode, testID }: any) => {
+  QuantitySection: ({
+    mode,
+    testID,
+  }: {
+    mode: 'add' | 'edit';
+    testID?: string;
+  }) => {
     const { Text, View } = require('react-native');
     return (
       <View testID={testID || 'quantity-section'}>
@@ -174,7 +203,7 @@ jest.mock('../QuantitySection', () => ({
 }));
 
 jest.mock('../StorageDetailsSection', () => ({
-  StorageDetailsSection: ({ mode }: any) => {
+  StorageDetailsSection: ({ mode }: { mode: 'add' | 'edit' }) => {
     const { Text, View } = require('react-native');
     return (
       <View testID="storage-details-section">
@@ -210,30 +239,28 @@ function buildCache(opts: {
     query: GetHomeDocument,
     variables: { homeId: 'h1' },
     data: {
+      __typename: 'Query',
       home: homeNode({
         id: 'h1',
         pantries: [{ id: 'p1', name: 'Main', isDefault: true }],
       }),
-    } as any,
+    },
   });
 
   cache.writeQuery({
     query: GetPantryDocument,
     variables: { id: 'p1', itemsFirst: 50, storageLocationsFirst: 20 },
-    data: pantryData({ id: 'p1' }) as any,
+    data: pantryData({ id: 'p1' }),
   });
 
   if (opts.itemId) {
     cache.writeQuery({
       query: GetPantryItemDocument,
       variables: { id: opts.itemId },
-      // `writeQuery` accepts the unmasked shape; codegen emits masked types
-      // for fragment spreads, so we cast to match the same pattern as
-      // `pantryData` above.
       data: pantryItemData({
         id: opts.itemId,
         ...(opts.itemFixture ?? {}),
-      }) as any,
+      }),
     });
   }
 
@@ -313,8 +340,8 @@ describe('PantryItemForm — edit mode', () => {
     renderWithApollo(<PantryItemForm mode="edit" itemId="missing" />, {
       cache: buildCache({}),
       operationMocks: [
-        recordMock(GetPantryItemDocument, {
-          data: { pantryItem: null } as any,
+        recordMock<GetPantryItemQuery>(GetPantryItemDocument, {
+          data: { __typename: 'Query', pantryItem: null },
         }).mock,
       ],
     });
