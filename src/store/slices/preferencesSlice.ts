@@ -2,6 +2,13 @@ import { StateCreator } from 'zustand';
 import { UnistylesRuntime } from 'react-native-unistyles';
 import { getI18n } from '#/i18n/config';
 import { applyAppearanceToRuntime } from '#/theme/applyAppearance';
+import { ThemePreference, PREFERENCE_DEFAULTS } from './preferenceTypes';
+import type {
+  FontScalePreference,
+  DensityPreference,
+  PantrySortOption,
+  PantrySortDirection,
+} from './preferenceTypes';
 import { RootState } from '../index';
 
 /**
@@ -27,10 +34,6 @@ export function applyThemePreferenceToRuntime(theme: ThemePreference): void {
   }
 }
 
-// Pantry sort preferences
-export type PantrySortOption = 'name' | 'expiry' | 'quantity' | 'recent';
-export type PantrySortDirection = 'asc' | 'desc';
-
 // Per-user preferences (keyed by userId)
 export interface UserPreferences {
   showShoppingListImages: boolean;
@@ -39,15 +42,6 @@ export interface UserPreferences {
 export const defaultUserPreferences: UserPreferences = {
   showShoppingListImages: true,
 };
-
-export enum ThemePreference {
-  LIGHT = 'LIGHT',
-  DARK = 'DARK',
-  SYSTEM = 'SYSTEM',
-}
-
-export type DensityPreference = 'compact' | 'comfortable' | 'spacious';
-export type FontScalePreference = 'system' | 'sm' | 'md' | 'lg' | 'xl';
 
 export interface PreferencesState {
   // Theme
@@ -103,20 +97,20 @@ export interface PreferencesState {
 }
 
 const initialPreferencesState = {
-  theme: ThemePreference.SYSTEM,
+  theme: PREFERENCE_DEFAULTS.theme,
   language: undefined,
   emailNotifications: false,
   pushNotifications: false,
   rememberMe: undefined,
   hapticFeedbackEnabled: true, // Enabled by default
   showNavigationLabels: true, // Enabled by default
-  pantrySortOption: 'recent' as PantrySortOption,
-  pantrySortDirection: 'desc' as PantrySortDirection, // Newest first
-  primaryColorOverride: null as string | null,
-  densityPreference: 'comfortable' as DensityPreference,
-  fontScalePreference: 'system' as FontScalePreference,
+  pantrySortOption: PREFERENCE_DEFAULTS.pantrySortOption,
+  pantrySortDirection: PREFERENCE_DEFAULTS.pantrySortDirection, // Newest first
+  primaryColorOverride: null,
+  densityPreference: PREFERENCE_DEFAULTS.density,
+  fontScalePreference: PREFERENCE_DEFAULTS.fontScale,
   highContrast: false,
-};
+} satisfies Partial<PreferencesState>;
 
 export const createPreferencesSlice: StateCreator<
   RootState,

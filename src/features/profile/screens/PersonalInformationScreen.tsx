@@ -1,13 +1,20 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SettingsSection } from '#components/organisms/SettingsSection';
+import type {
+  SettingItem,
+  SettingOption,
+} from '#components/molecules/SettingRow';
 import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
 import { useProfileData } from '#features/profile/hooks/useProfileData';
 import { useUser } from '#store/useAppStore';
 import { PERSONAL_INFO_CONFIG } from '#/config/settingsConfig';
 import { useMutation } from '@apollo/client/react';
 import { UpdateUserProfileDocument } from '#operations/auth/user.generated';
-import { ProfileVisibility } from '#/graphql/generated/schemaTypes';
+import {
+  ProfileVisibility,
+  type UpdateUserProfileInput,
+} from '#/graphql/generated/schemaTypes';
 import { dateStringToISO, extractDateString } from '#utils/dateUtils';
 import { errorService } from '#/services/errorService';
 import {
@@ -46,6 +53,14 @@ const OPTION_LABEL_KEYS: Record<string, string> = {
   Private: 'personalInformation.visibilityPrivate',
 };
 
+// Shape of a single entry inside PERSONAL_INFO_CONFIG.
+interface SettingConfig {
+  key: string;
+  label: string;
+  type: string;
+  options?: SettingOption[];
+}
+
 export const PersonalInformationScreen: React.FC = () => {
   const { t } = useTranslation();
   const { profile, refetch } = useProfileData();
@@ -57,7 +72,7 @@ export const PersonalInformationScreen: React.FC = () => {
     executeRefreshWithFinally(() => refetch(), setRefreshing);
   };
 
-  const updateProfile = (input: Partial<Record<any, any>>) => {
+  const updateProfile = (input: UpdateUserProfileInput) => {
     if (!profile) return;
     executeMutation(
       () =>
@@ -72,6 +87,14 @@ export const PersonalInformationScreen: React.FC = () => {
               userProfile: {
                 ...profile,
                 ...input,
+                // Non-null in the mutation's userProfile selection but nullable
+                // on the cached profile — default them for the optimistic shape.
+                profileVisibility:
+                  input.profileVisibility ??
+                  profile.profileVisibility ??
+                  ProfileVisibility.Public,
+                showEmail: input.showEmail ?? profile.showEmail ?? false,
+                showPhone: input.showPhone ?? profile.showPhone ?? false,
               },
             },
           },
@@ -94,8 +117,8 @@ export const PersonalInformationScreen: React.FC = () => {
         : opt.label,
     }));
 
-  const createSettingItem = (config: any) => {
-    const baseItem: any = {
+  const createSettingItem = (config: SettingConfig): SettingItem => {
+    const baseItem: SettingItem = {
       key: config.key,
       label: FIELD_LABEL_KEYS[config.key]
         ? t(FIELD_LABEL_KEYS[config.key])
@@ -165,7 +188,8 @@ export const PersonalInformationScreen: React.FC = () => {
           ...baseItem,
           value: profile?.profileVisibility || ProfileVisibility.Public,
           options: translateOptions(config.options),
-          onSave: (v: string) => updateProfile({ profileVisibility: v }),
+          onSave: (v: string) =>
+            updateProfile({ profileVisibility: v as ProfileVisibility }),
         };
 
       case 'showEmail':

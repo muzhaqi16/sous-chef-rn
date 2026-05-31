@@ -1,11 +1,13 @@
 'use no memo';
 
 import React from 'react';
+import type { TextInputProps } from 'react-native';
 import { screen } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import type { InfoRowProps } from '#components/molecules/InfoRow';
 import { ListSettings } from '../ListSettings';
 
-const render = (ui: any) => renderWithApollo(ui);
+const render = (ui: React.ReactElement) => renderWithApollo(ui);
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
@@ -13,7 +15,9 @@ jest.mock('#/apollo/links/refreshToken');
 jest.mock('#hooks/navigation/useAppNavigation');
 
 jest.mock('#store/useAppStore', () => {
-  const fn = (selector: any) =>
+  const fn = <T,>(
+    selector: (state: { setSelectedShoppingListId: () => void }) => T,
+  ): T =>
     selector({
       setSelectedShoppingListId: jest.fn(),
     });
@@ -57,6 +61,8 @@ jest.mock('#features/shoppingList/hooks/useShoppingListsQuery', () => ({
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   createRemoveFromQueryConnectionUpdater: jest.fn(() => jest.fn()),
   createAddToQueryConnectionUpdater: jest.fn(() => jest.fn()),
+  createRemoveFromParentConnectionUpdater: jest.fn(() => jest.fn()),
+  createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),
 }));
 
 jest.mock('#/services/errorService', () => ({
@@ -82,7 +88,13 @@ jest.mock('#utils/ownershipHelpers', () => ({
 }));
 
 jest.mock('#components/molecules/ScreenHeader', () => ({
-  ScreenHeader: ({ title, rightElement }: any) => {
+  ScreenHeader: ({
+    title,
+    rightElement,
+  }: {
+    title: string;
+    rightElement?: React.ReactNode;
+  }) => {
     const { View, Text } = require('react-native');
     return (
       <View testID="screen-header">
@@ -93,7 +105,7 @@ jest.mock('#components/molecules/ScreenHeader', () => ({
   },
 }));
 jest.mock('#components/molecules/InfoRow', () => ({
-  InfoRow: ({ label, value }: any) => {
+  InfoRow: ({ label, value }: Pick<InfoRowProps, 'label' | 'value'>) => {
     const { View, Text } = require('react-native');
     return (
       <View>
@@ -107,7 +119,7 @@ jest.mock('#components/molecules/ModalPicker', () => ({
   ModalPicker: () => null,
 }));
 jest.mock('#components/atoms/BaseInput/BaseInput', () => ({
-  BaseInput: ({ label, ...props }: any) => {
+  BaseInput: ({ label, ...props }: { label?: string } & TextInputProps) => {
     const { View, Text, TextInput } = require('react-native');
     return (
       <View>

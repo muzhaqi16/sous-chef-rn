@@ -3,7 +3,7 @@ import {
   CommonActions,
   StackActions,
 } from '@react-navigation/native';
-import type { ParamListBase } from '@react-navigation/native';
+import type { ParamListBase, Route } from '@react-navigation/native';
 
 // Typed as ParamListBase because createStaticNavigation's ref prop expects it.
 export const navigationRef = createNavigationContainerRef<ParamListBase>();
@@ -21,7 +21,7 @@ class NavigationServiceClass {
     }
   }
 
-  reset(routes: any[]) {
+  reset(routes: Omit<Route<string>, 'key'>[]) {
     if (navigationRef.isReady()) {
       navigationRef.dispatch(
         CommonActions.reset({

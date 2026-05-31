@@ -242,7 +242,7 @@ export function usePantryItemActions({
             },
           },
         }),
-      (error: any) => {
+      (error: unknown) => {
         revertOptimistic?.();
         if (!isNetworkError(error)) {
           if (isVersionConflictError(error)) {
@@ -257,7 +257,8 @@ export function usePantryItemActions({
             return;
           }
           const errorMessage =
-            error.message || 'Failed to record item usage. Please try again.';
+            (error instanceof Error && error.message) ||
+            'Failed to record item usage. Please try again.';
           console.error('Error consuming pantry item:', error);
           alertService.alert('Error', errorMessage);
         }
@@ -317,7 +318,7 @@ export function usePantryItemActions({
             },
           },
         }),
-      (error: any) => {
+      (error: unknown) => {
         revertOptimistic?.();
         if (!isNetworkError(error)) {
           if (isVersionConflictError(error)) {
@@ -332,7 +333,8 @@ export function usePantryItemActions({
             return;
           }
           const errorMessage =
-            error.message || 'Failed to record item waste. Please try again.';
+            (error instanceof Error && error.message) ||
+            'Failed to record item waste. Please try again.';
           console.error('Error recording pantry item waste:', error);
           alertService.alert('Error', errorMessage);
         }
@@ -418,7 +420,7 @@ export function usePantryItemActions({
             },
           },
         }),
-      (error: any) => {
+      (error: unknown) => {
         revertOptimistic();
         if (!isNetworkError(error)) {
           if (isVersionConflictError(error)) {
@@ -433,7 +435,8 @@ export function usePantryItemActions({
             return;
           }
           const errorMessage =
-            error.message || 'Failed to restock item. Please try again.';
+            (error instanceof Error && error.message) ||
+            'Failed to restock item. Please try again.';
           console.error('Error restocking pantry item:', error);
           alertService.alert('Error', errorMessage);
         }

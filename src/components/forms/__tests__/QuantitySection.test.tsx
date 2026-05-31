@@ -2,11 +2,12 @@ import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { useForm } from 'react-hook-form';
 import { QuantitySection } from '../QuantitySection';
+import type { PantryItemFormData } from '../PantryItemForm';
 
 jest.mock('#components/molecules/FormInput', () => {
   const { View, Text } = require('react-native');
   return {
-    FormInput: ({ label, value }: any) => (
+    FormInput: ({ label, value }: { label: string; value?: string }) => (
       <View testID={`form-input-${label}`}>
         <Text>{label}</Text>
         {value ? <Text>{value}</Text> : null}
@@ -18,7 +19,15 @@ jest.mock('#components/molecules/FormInput', () => {
 jest.mock('#components/molecules/FractionInput', () => {
   const { View, Text } = require('react-native');
   return {
-    FractionInput: ({ label, value, testID }: any) => (
+    FractionInput: ({
+      label,
+      value,
+      testID,
+    }: {
+      label: string;
+      value?: string;
+      testID?: string;
+    }) => (
       <View testID={testID || 'fraction-input'}>
         <Text>{label}</Text>
         {value ? <Text>{value}</Text> : null}
@@ -32,7 +41,15 @@ jest.mock(
   () => {
     const { View, Text } = require('react-native');
     return {
-      UnitAutocompleteField: ({ label, value, testID }: any) => (
+      UnitAutocompleteField: ({
+        label,
+        value,
+        testID,
+      }: {
+        label: string;
+        value?: string;
+        testID?: string;
+      }) => (
         <View testID={testID || 'unit-autocomplete'}>
           <Text>{label}</Text>
           {value ? <Text>{value}</Text> : null}
@@ -45,15 +62,19 @@ jest.mock(
 jest.mock('#components/molecules/FieldRow', () => {
   const { View } = require('react-native');
   return {
-    FieldRow: ({ children }: any) => <View testID="field-row">{children}</View>,
+    FieldRow: ({ children }: { children?: React.ReactNode }) => (
+      <View testID="field-row">{children}</View>
+    ),
   };
 });
 
-function Wrapper(overrides: any) {
+function Wrapper(
+  overrides: Partial<React.ComponentProps<typeof QuantitySection>>,
+) {
   const {
     control,
     formState: { errors },
-  } = useForm({
+  } = useForm<PantryItemFormData>({
     defaultValues: {
       quantityInput: '1',
       unit: '',

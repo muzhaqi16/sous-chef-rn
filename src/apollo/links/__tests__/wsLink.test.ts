@@ -20,7 +20,9 @@ beforeAll(() => {
 
 // Mock errorSerialization
 jest.mock('#/utils/errorSerialization', () => ({
-  serializeError: jest.fn((e: any) => e?.message || 'unknown'),
+  serializeError: jest.fn((e: unknown) =>
+    e instanceof Error ? e.message : 'unknown',
+  ),
 }));
 
 // Mock deviceId

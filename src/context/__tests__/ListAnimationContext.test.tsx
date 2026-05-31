@@ -172,7 +172,9 @@ describe('ListAnimationContext', () => {
         result.current.scheduleEntryAnimation('item-1', 1);
       });
 
-      let claimed: any;
+      let claimed!: ReturnType<
+        ReturnType<typeof useListAnimation>['claimEntryAnimation']
+      >;
       act(() => {
         claimed = result.current.claimEntryAnimation('item-1');
       });
@@ -187,7 +189,9 @@ describe('ListAnimationContext', () => {
         ),
       });
 
-      let claimed: any;
+      let claimed!: ReturnType<
+        ReturnType<typeof useListAnimation>['claimEntryAnimation']
+      >;
       act(() => {
         claimed = result.current.claimEntryAnimation('nonexistent');
       });
@@ -211,7 +215,9 @@ describe('ListAnimationContext', () => {
         jest.advanceTimersByTime(1100);
       });
 
-      let claimed: any;
+      let claimed!: ReturnType<
+        ReturnType<typeof useListAnimation>['claimEntryAnimation']
+      >;
       act(() => {
         claimed = result.current.claimEntryAnimation('item-1');
       });
@@ -232,7 +238,9 @@ describe('ListAnimationContext', () => {
         result.current.scheduleEntryAnimation('item-1', 1);
       });
 
-      let claimed: any;
+      let claimed!: ReturnType<
+        ReturnType<typeof useListAnimation>['claimEntryAnimation']
+      >;
       act(() => {
         claimed = result.current.claimEntryAnimation('item-1');
       });

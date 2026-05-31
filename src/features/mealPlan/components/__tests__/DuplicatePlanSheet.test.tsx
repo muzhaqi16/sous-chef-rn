@@ -1,6 +1,9 @@
 'use no memo';
 import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
+import type { ViewProps } from 'react-native';
+import type { MealPlanDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
+import { MealPlanType, MembershipRole } from '#/graphql/generated/schemaTypes';
 import { DuplicatePlanSheet } from '../DuplicatePlanSheet';
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
@@ -9,13 +12,13 @@ jest.mock('#hooks/useStandardBottomSheet', () => ({
     modalProps: {},
     contentContainerStyle: {},
   })),
-  BottomSheetModal: ({ children }: any) => children,
+  BottomSheetModal: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 jest.mock('#components/atoms/BottomSheetFormScrollView', () => {
   const RN = require('react-native');
   return {
-    BottomSheetFormScrollView: (props: any) =>
+    BottomSheetFormScrollView: (props: ViewProps) =>
       require('react').createElement(RN.View, props),
   };
 });
@@ -30,7 +33,13 @@ jest.mock('#components/atoms/BottomSheetHeader', () => {
       onConfirm,
       confirmLabel,
       confirmDisabled,
-    }: any) =>
+    }: {
+      title: string;
+      onCancel: () => void;
+      onConfirm: () => void;
+      confirmLabel?: string;
+      confirmDisabled?: boolean;
+    }) =>
       R.createElement(
         RN.View,
         { testID: 'bottom-sheet-header' },
@@ -57,7 +66,17 @@ jest.mock('#components/molecules/FormInput', () => {
   const RN = require('react-native');
   const R = require('react');
   return {
-    FormInput: ({ label, value, onChangeText, placeholder }: any) =>
+    FormInput: ({
+      label,
+      value,
+      onChangeText,
+      placeholder,
+    }: {
+      label: string;
+      value?: string;
+      onChangeText?: (text: string) => void;
+      placeholder?: string;
+    }) =>
       R.createElement(
         RN.View,
         null,
@@ -73,7 +92,7 @@ jest.mock('#components/molecules/FormInput', () => {
 });
 
 jest.mock('#utils/iconUtils', () => ({
-  Icon: (props: any) => {
+  Icon: (props: { name: string }) => {
     const RN = require('react-native');
     return require('react').createElement(
       RN.Text,
@@ -84,17 +103,45 @@ jest.mock('#utils/iconUtils', () => ({
 }));
 
 describe('DuplicatePlanSheet', () => {
-  const mockMealPlan = {
+  const mockMealPlan: MealPlanDisplayFragment = {
+    __typename: 'MealPlan',
     id: 'mp-1',
     name: 'Weekly Plan',
+    description: null,
+    planType: MealPlanType.Weekly,
     startDate: '2025-03-01T00:00:00.000Z',
     endDate: '2025-03-07T00:00:00.000Z',
-    __typename: 'MealPlan',
+    servings: 4,
+    totalCalories: null,
+    totalProtein: null,
+    totalCarbs: null,
+    totalFat: null,
+    actualCost: 0,
+    budgetAmount: null,
+    homeId: null,
+    version: 1,
+    createdAt: '2025-03-01T00:00:00.000Z',
+    updatedAt: '2025-03-01T00:00:00.000Z',
+    home: {
+      __typename: 'Home',
+      id: 'home-1',
+      name: 'Test Home',
+      myMembership: {
+        __typename: 'Membership',
+        id: 'm-1',
+        role: MembershipRole.Owner,
+      },
+    },
+    createdBy: {
+      __typename: 'User',
+      id: 'user-1',
+      profile: null,
+    },
   };
 
   const defaultProps = {
     visible: true,
-    mealPlan: mockMealPlan as any,
+    mealPlan: mockMealPlan,
     onClose: jest.fn(),
     onDuplicate: jest.fn(),
     loading: false,

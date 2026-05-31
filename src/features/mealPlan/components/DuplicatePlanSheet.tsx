@@ -134,11 +134,7 @@ export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
               style={styles.dateButton}
               hitSlop={8}
             >
-              <Icon
-                name="chevron-back"
-                size={20}
-                color={styles.dateButtonIcon.color}
-              />
+              <Icon name="chevron-back" size={20} tone="primary" />
             </Pressable>
             <View style={styles.dateDisplay}>
               <Text size="md" weight="semibold">
@@ -153,11 +149,7 @@ export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
               style={styles.dateButton}
               hitSlop={8}
             >
-              <Icon
-                name="chevron-forward"
-                size={20}
-                color={styles.dateButtonIcon.color}
-              />
+              <Icon name="chevron-forward" size={20} tone="primary" />
             </Pressable>
           </View>
         </View>
@@ -166,7 +158,7 @@ export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
           <Icon
             name="information-circle-outline"
             size={18}
-            color={styles.infoText.color}
+            tone="textSecondary"
           />
           <Text size="sm" style={styles.infoText}>
             {t('duplicatePlan.infoText')}
@@ -208,9 +200,6 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.sm,
     borderRadius: theme.radii.full,
     backgroundColor: theme.colors.background,
-  },
-  dateButtonIcon: {
-    color: theme.colors.primary,
   },
   dateDisplay: {
     alignItems: 'center',

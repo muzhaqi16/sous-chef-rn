@@ -15,11 +15,11 @@ import type { RootState } from '#store/index';
  */
 export function mockAppStore(state: Partial<RootState>) {
   const useAppStore: jest.Mock & {
-    getState: () => unknown;
+    getState: () => Partial<RootState>;
     setState: jest.Mock;
     subscribe: jest.Mock;
   } = Object.assign(
-    jest.fn((selector: (s: any) => any) => selector(state)),
+    jest.fn(<T>(selector: (s: RootState) => T): T => selector(state as RootState)),
     {
       getState: jest.fn(() => state),
       setState: jest.fn(),
@@ -31,104 +31,104 @@ export function mockAppStore(state: Partial<RootState>) {
     useAppStore,
 
     // ── Atomic hooks ─────────────────────────────────────────────────────
-    useUser: jest.fn(() => (state as any).user),
-    useSelectedHomeId: jest.fn(() => (state as any).selectedHomeId),
-    useSelectedPantryId: jest.fn(() => (state as any).selectedPantryId),
+    useUser: jest.fn(() => state.user),
+    useSelectedHomeId: jest.fn(() => state.selectedHomeId),
+    useSelectedPantryId: jest.fn(() => state.selectedPantryId),
     useSelectedShoppingListId: jest.fn(
-      () => (state as any).selectedShoppingListId,
+      () => state.selectedShoppingListId,
     ),
-    useIsLoggingOut: jest.fn(() => (state as any).isLoggingOut),
-    useIsHydrated: jest.fn(() => (state as any).isHydrated),
-    useIsOnline: jest.fn(() => (state as any).isOnline),
+    useIsLoggingOut: jest.fn(() => state.isLoggingOut),
+    useIsHydrated: jest.fn(() => state.isHydrated),
+    useIsOnline: jest.fn(() => state.isOnline),
     useCanAccessDevTools: jest.fn(
-      () => (state as any).user?.canAccessDevTools === true,
+      () => state.user?.canAccessDevTools === true,
     ),
     useIsAdminUser: jest.fn(
       () =>
-        (state as any).user?.role === 'ADMIN' ||
-        (state as any).user?.role === 'SUPER_ADMIN',
+        state.user?.role === 'ADMIN' ||
+        state.user?.role === 'SUPER_ADMIN',
     ),
     useIsHomeSelectionReady: jest.fn(
-      () => (state as any).isHomeSelectionReady,
+      () => state.isHomeSelectionReady,
     ),
     useSetIsHomeSelectionReady: jest.fn(
-      () => (state as any).setIsHomeSelectionReady,
+      () => state.setIsHomeSelectionReady,
     ),
     useSetIsPantryQueryComplete: jest.fn(
-      () => (state as any).setIsPantryQueryComplete,
+      () => state.setIsPantryQueryComplete,
     ),
-    useSetHomeAndPantry: jest.fn(() => (state as any).setHomeAndPantry),
+    useSetHomeAndPantry: jest.fn(() => state.setHomeAndPantry),
 
     // ── Grouped hooks ────────────────────────────────────────────────────
     useAuthTokens: jest.fn(() => ({
-      user: (state as any).user,
-      accessToken: (state as any).accessToken,
-      refreshToken: (state as any).refreshToken,
-      isAutoLoggingIn: (state as any).isAutoLoggingIn,
-      isLoggingOut: (state as any).isLoggingOut,
+      user: state.user,
+      accessToken: state.accessToken,
+      refreshToken: state.refreshToken,
+      isAutoLoggingIn: state.isAutoLoggingIn,
+      isLoggingOut: state.isLoggingOut,
     })),
     useAuthActions: jest.fn(() => ({
-      setAuth: (state as any).setAuth,
-      clearAuth: (state as any).clearAuth,
-      setTokens: (state as any).setTokens,
-      updateUser: (state as any).updateUser,
-      setEmailVerified: (state as any).setEmailVerified,
-      setOnboarded: (state as any).setOnboarded,
-      setRememberMe: (state as any).setRememberMe,
-      setIsAutoLoggingIn: (state as any).setIsAutoLoggingIn,
-      setUserNavigationState: (state as any).setUserNavigationState,
+      setAuth: state.setAuth,
+      clearAuth: state.clearAuth,
+      setTokens: state.setTokens,
+      updateUser: state.updateUser,
+      setEmailVerified: state.setEmailVerified,
+      setOnboarded: state.setOnboarded,
+      setRememberMe: state.setRememberMe,
+      setIsAutoLoggingIn: state.setIsAutoLoggingIn,
+      setUserNavigationState: state.setUserNavigationState,
     })),
     usePostLoginState: jest.fn(() => ({
-      navigationState: (state as any).navigationState,
-      showBiometricSetup: (state as any).showBiometricSetup,
-      postLoginCredentials: (state as any).postLoginCredentials,
-      setNavigationState: (state as any).setNavigationState,
-      setShowBiometricSetup: (state as any).setShowBiometricSetup,
-      setPostLoginCredentials: (state as any).setPostLoginCredentials,
+      navigationState: state.navigationState,
+      showBiometricSetup: state.showBiometricSetup,
+      postLoginCredentials: state.postLoginCredentials,
+      setNavigationState: state.setNavigationState,
+      setShowBiometricSetup: state.setShowBiometricSetup,
+      setPostLoginCredentials: state.setPostLoginCredentials,
     })),
     useBottomSheetState: jest.fn(() => ({
-      scannerSheetVisible: (state as any).scannerSheetVisible,
-      searchError: (state as any).searchError,
-      scannerSheetIndex: (state as any).scannerSheetIndex,
-      isSearching: (state as any).isSearching,
-      hideBottomSheet: (state as any).hideBottomSheet,
-      showBottomSheet: (state as any).showBottomSheet,
+      scannerSheetVisible: state.scannerSheetVisible,
+      searchError: state.searchError,
+      scannerSheetIndex: state.scannerSheetIndex,
+      isSearching: state.isSearching,
+      hideBottomSheet: state.hideBottomSheet,
+      showBottomSheet: state.showBottomSheet,
     })),
     usePantryState: jest.fn(() => ({
-      selectedPantryId: (state as any).selectedPantryId,
-      setSelectedPantryId: (state as any).setSelectedPantryId,
-      selectedHomeId: (state as any).selectedHomeId,
-      setSelectedHomeId: (state as any).setSelectedHomeId,
+      selectedPantryId: state.selectedPantryId,
+      setSelectedPantryId: state.setSelectedPantryId,
+      selectedHomeId: state.selectedHomeId,
+      setSelectedHomeId: state.setSelectedHomeId,
     })),
     useShoppingListState: jest.fn(() => ({
-      selectedShoppingListId: (state as any).selectedShoppingListId,
-      setSelectedShoppingListId: (state as any).setSelectedShoppingListId,
+      selectedShoppingListId: state.selectedShoppingListId,
+      setSelectedShoppingListId: state.setSelectedShoppingListId,
     })),
     useHomeState: jest.fn(() => ({
-      selectedHomeId: (state as any).selectedHomeId,
-      setSelectedHomeId: (state as any).setSelectedHomeId,
+      selectedHomeId: state.selectedHomeId,
+      setSelectedHomeId: state.setSelectedHomeId,
     })),
     usePreferences: jest.fn(() => ({
-      theme: (state as any).theme,
-      language: (state as any).language,
-      setTheme: (state as any).setTheme,
-      setLanguage: (state as any).setLanguage,
+      theme: state.theme,
+      language: state.language,
+      setTheme: state.setTheme,
+      setLanguage: state.setLanguage,
     })),
     useNavigationUtils: jest.fn(() => ({
-      getUserNavigationState: (state as any).getUserNavigationState,
-      setUserNavigationState: (state as any).setUserNavigationState,
-      setOnBoardingStep: (state as any).setOnBoardingStep,
-      setOnboarded: (state as any).setOnboarded,
+      getUserNavigationState: state.getUserNavigationState,
+      setUserNavigationState: state.setUserNavigationState,
+      setOnBoardingStep: state.setOnBoardingStep,
+      setOnboarded: state.setOnboarded,
     })),
     useSearchState: jest.fn(() => ({
-      searchResults: (state as any).searchResults,
-      isSearching: (state as any).isSearching,
-      searchError: (state as any).searchError,
-      setSearchResults: (state as any).setSearchResults,
-      setSearching: (state as any).setSearching,
-      setSearchError: (state as any).setSearchError,
-      clearSearch: (state as any).clearSearch,
-      addToRecentlyScanned: (state as any).addToRecentlyScanned,
+      searchResults: state.searchResults,
+      isSearching: state.isSearching,
+      searchError: state.searchError,
+      setSearchResults: state.setSearchResults,
+      setSearching: state.setSearching,
+      setSearchError: state.setSearchError,
+      clearSearch: state.clearSearch,
+      addToRecentlyScanned: state.addToRecentlyScanned,
     })),
   };
 }

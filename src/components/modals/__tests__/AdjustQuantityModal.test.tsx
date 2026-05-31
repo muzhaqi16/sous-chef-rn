@@ -9,14 +9,17 @@ jest.mock('#hooks/useStandardBottomSheet', () => ({
     modalProps: {},
     contentContainerStyle: {},
   })),
-  BottomSheetModal: ({ children }: any) => children,
+  BottomSheetModal: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 jest.mock('#components/atoms/BottomSheetKeyboardAwareScrollView', () => {
   const RN = require('react-native');
   return {
-    BottomSheetKeyboardAwareScrollView: (props: any) =>
-      require('react').createElement(RN.View, props),
+    BottomSheetKeyboardAwareScrollView: (
+      props: React.ComponentProps<
+        typeof import('#components/atoms/BottomSheetKeyboardAwareScrollView').BottomSheetKeyboardAwareScrollView
+      >,
+    ) => require('react').createElement(RN.View, props),
   };
 });
 
@@ -24,7 +27,14 @@ jest.mock('#components/atoms/BottomSheetHeader', () => {
   const RN = require('react-native');
   const R = require('react');
   return {
-    BottomSheetHeader: ({ title, onCancel, onConfirm, confirmLabel }: any) =>
+    BottomSheetHeader: ({
+      title,
+      onCancel,
+      onConfirm,
+      confirmLabel,
+    }: React.ComponentProps<
+      typeof import('#components/atoms/BottomSheetHeader').BottomSheetHeader
+    >) =>
       R.createElement(
         RN.View,
         { testID: 'header' },
@@ -47,7 +57,14 @@ jest.mock('#components/molecules/FractionInput', () => {
   const RN = require('react-native');
   const R = require('react');
   return {
-    FractionInput: ({ label, value, onChangeText, placeholder }: any) =>
+    FractionInput: ({
+      label,
+      value,
+      onChangeText,
+      placeholder,
+    }: React.ComponentProps<
+      typeof import('#components/molecules/FractionInput').FractionInput
+    >) =>
       R.createElement(
         RN.View,
         null,
@@ -66,7 +83,14 @@ jest.mock('#components/molecules/FormInput', () => {
   const RN = require('react-native');
   const R = require('react');
   return {
-    FormInput: ({ label, value, onChangeText, placeholder }: any) =>
+    FormInput: ({
+      label,
+      value,
+      onChangeText,
+      placeholder,
+    }: React.ComponentProps<
+      typeof import('#components/molecules/FormInput').FormInput
+    >) =>
       R.createElement(
         RN.View,
         null,
@@ -84,7 +108,12 @@ jest.mock('#components/molecules/FormInput', () => {
 jest.mock('#components/atoms/FormattedItemSubtitle', () => {
   const RN = require('react-native');
   return {
-    FormattedItemSubtitle: ({ quantity, unitSymbol }: any) =>
+    FormattedItemSubtitle: ({
+      quantity,
+      unitSymbol,
+    }: React.ComponentProps<
+      typeof import('#components/atoms/FormattedItemSubtitle').FormattedItemSubtitle
+    >) =>
       require('react').createElement(
         RN.Text,
         null,
@@ -106,8 +135,11 @@ jest.mock('#/styles/commonStyles', () => ({
 }));
 
 jest.mock('#features/pantry/hooks/usePantryItemTransformation', () => ({
-  formatNetWeightDisplay: (weight: any, unit: any) =>
-    weight != null ? `${weight} ${unit?.symbol || ''}` : '',
+  formatNetWeightDisplay: (
+    ...[weight, unit]: Parameters<
+      typeof import('#features/pantry/hooks/usePantryItemTransformation').formatNetWeightDisplay
+    >
+  ) => (weight != null ? `${weight} ${unit?.symbol || ''}` : ''),
 }));
 
 jest.mock('#/utils/fractionUtils', () => ({

@@ -9,6 +9,7 @@ import {
 import { Text } from '#components/atoms/Text';
 import { alertService } from '#/services/alertService';
 import { handleMutationError } from '#/utils/errorHandlers';
+import { errorMessageOr } from '#/services/errorService';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from 'react-i18next';
 import { formatRole } from '#utils/formatters/roleFormatters';
@@ -29,6 +30,8 @@ import { Button } from '#components/base/Button';
 
 // GraphQL
 import { useFragment, useMutation, useQuery } from '@apollo/client/react';
+import { ApolloCache, type Reference } from '@apollo/client';
+import type { ModifierDetails } from '@apollo/client/cache';
 import { HomeType } from '#/graphql/generated/schemaTypes';
 import {
   CreateHomeDocument,
@@ -36,6 +39,9 @@ import {
   GetMyPendingInvitesDocument,
   AcceptHomeInviteDocument,
   DeclineHomeInviteDocument,
+  type AcceptHomeInviteMutation,
+  type CreateHomeMutation,
+  type CreateHomeMutationVariables,
 } from '#operations/home/home.generated';
 import { CreatePantryDocument } from '#features/pantry/graphql/pantry.generated';
 
@@ -51,7 +57,11 @@ import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigati
 // Validation & Helpers
 import { getCreateHomeSchema } from '#/utils/validation/onboarding';
 import { logValidationErrors } from '#/utils/validation/common';
-import { createPantryForHome, showPantryCreationError } from './helpers';
+import {
+  createPantryForHome,
+  showPantryCreationError,
+  type CreatePantryFn,
+} from './helpers';
 import { extractNodes } from '#/utils/connectionUtils';
 import { OnboardingErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
@@ -65,10 +75,19 @@ import {
  *  Extracted from the component body to keep the surrounding try/catch outside
  *  hook call sites (React Compiler bailout). */
 function buildAcceptHomeInviteUpdater(userId: string | undefined) {
-  return function acceptHomeInviteUpdater(cache: any, { data }: any) {
-    if (!data?.acceptHomeInvite?.membership?.homeId || !userId) return;
+  return function acceptHomeInviteUpdater(
+    cache: ApolloCache,
+    { data }: { data?: AcceptHomeInviteMutation | null },
+  ) {
+    const acceptPayload = data?.acceptHomeInvite;
+    if (
+      acceptPayload?.__typename !== 'AcceptHomeInvitePayload' ||
+      !acceptPayload.membership?.homeId ||
+      !userId
+    )
+      return;
     try {
-      const homeId = data.acceptHomeInvite.membership.homeId;
+      const homeId = acceptPayload.membership.homeId;
       const userCacheId = cache.identify({
         __typename: 'User',
         id: userId,
@@ -78,16 +97,19 @@ function buildAcceptHomeInviteUpdater(userId: string | undefined) {
       cache.modify({
         id: userCacheId,
         fields: {
-          homes(existingHomes: any[] = [], { readField, toReference }: any) {
+          homes(
+            existingHomes: readonly Reference[] = [],
+            { readField, toReference }: ModifierDetails,
+          ) {
             const homeRef = toReference({
               __typename: 'Home',
               id: homeId,
             });
             const exists = existingHomes.some(
-              (ref: any) => readField('id', ref) === homeId,
+              ref => readField('id', ref) === homeId,
             );
             if (exists) return existingHomes;
-            return [...existingHomes, homeRef];
+            return homeRef ? [...existingHomes, homeRef] : existingHomes;
           },
         },
       });
@@ -100,15 +122,20 @@ function buildAcceptHomeInviteUpdater(userId: string | undefined) {
 
 /** Module-level async function for home/pantry creation.
  *  Extracted from component body to avoid ThrowStatement-in-try-catch bailout. */
+type CreateHomeFn = useMutation.MutationFunction<
+  CreateHomeMutation,
+  CreateHomeMutationVariables
+>;
+
 async function performCreateHome(
   data: FormValues,
   deps: {
     needsHome: boolean;
     needsPantry: boolean;
     selectedHomeId: string | null;
-    createHome: (opts: { variables: any }) => Promise<any>;
-    createPantry: any;
-    refetchHomes: () => Promise<any>;
+    createHome: CreateHomeFn;
+    createPantry: CreatePantryFn;
+    refetchHomes: () => Promise<unknown>;
     setSelectedHomeId: (id: string) => void;
     setSelectedPantryId: (id: string) => void;
     skipToStep: (step: string) => void;
@@ -141,9 +168,10 @@ async function performCreateHome(
 
     deps.setSelectedHomeId(payload.home.id);
 
-    const pantries = extractNodes(payload.home.pantriesConnection) as any[];
-    const defaultPantry =
-      pantries.find((p: { isDefault: boolean }) => p.isDefault) || pantries[0];
+    const pantries = extractNodes<{ id: string; isDefault: boolean }>(
+      payload.home.pantriesConnection,
+    );
+    const defaultPantry = pantries.find(p => p.isDefault) || pantries[0];
     if (defaultPantry) {
       deps.setSelectedPantryId(defaultPantry.id);
     }
@@ -476,7 +504,7 @@ const CreateHomeScreenComponent = () => {
         }),
       setIsCreating,
       (error: unknown) => {
-        setGraphqlError((error as any)?.message || t('onBoarding.setupError'));
+        setGraphqlError(errorMessageOr(error, t('onBoarding.setupError')));
       },
     );
   };

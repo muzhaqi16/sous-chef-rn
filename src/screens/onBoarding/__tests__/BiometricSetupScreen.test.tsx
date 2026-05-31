@@ -2,7 +2,13 @@
 
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
+import type { RootState } from '#store/index';
+import type { OnBoardingWrapper as OnBoardingWrapperComponent } from '#components/templates/OnBoardingWrapper';
 import { BiometricSetupScreen } from '../BiometricSetupScreen';
+
+type OnBoardingWrapperProps = React.ComponentProps<
+  typeof OnBoardingWrapperComponent
+>;
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
@@ -16,20 +22,30 @@ jest.mock('#hooks/navigation/useOnboardingNavigation', () => ({
 
 const mockClearRegistrationPassword = jest.fn();
 jest.mock('#store/useAppStore', () => {
-  const mockState = {
-    user: { id: 'u1', email: 'test@test.com' },
+  const mockState: Partial<RootState> = {
+    user: { id: 'u1', email: 'test@test.com' } as RootState['user'],
     setUserNavigationState: jest.fn(),
     registrationPassword: 'password123',
     clearRegistrationPassword: mockClearRegistrationPassword,
   };
-  const fn = jest.fn((selector: any) => selector(mockState));
-  (fn as any).getState = jest.fn(() => ({}));
-  (fn as any).setState = jest.fn();
-  (fn as any).subscribe = jest.fn();
+  const fn = Object.assign(
+    jest.fn(
+      <T,>(selector: (state: RootState) => T): T =>
+        selector(mockState as RootState),
+    ),
+    {
+      getState: jest.fn(() => ({})),
+      setState: jest.fn(),
+      subscribe: jest.fn(),
+    },
+  );
   return { useAppStore: fn, useUser: jest.fn(() => mockState.user) };
 });
 
-let mockBiometricInfo = { isAvailable: true, biometryType: 'Face ID' };
+let mockBiometricInfo: { isAvailable: boolean; biometryType: string | null } = {
+  isAvailable: true,
+  biometryType: 'Face ID',
+};
 
 jest.mock('#/services/authService', () => ({
   authService: {
@@ -62,7 +78,12 @@ jest.mock('#/storage/keychain', () => ({
 jest.mock('#/utils/compilerSafeWrappers');
 
 jest.mock('#components/templates/OnBoardingWrapper', () => ({
-  OnBoardingWrapper: ({ title, subtitle, children, testID }: any) => {
+  OnBoardingWrapper: ({
+    title,
+    subtitle,
+    children,
+    testID,
+  }: OnBoardingWrapperProps) => {
     const { View, Text } = require('react-native');
     return (
       <View testID={testID || 'onboarding-wrapper'}>
@@ -79,15 +100,19 @@ describe('BiometricSetupScreen', () => {
     jest.clearAllMocks();
     mockBiometricInfo = { isAvailable: true, biometryType: 'Face ID' };
     // Restore mocks after clearAllMocks
-    const storeModule = require('#store/useAppStore');
-    const mockState = {
-      user: { id: 'u1', email: 'test@test.com' },
+    const storeModule = jest.requireMock('#store/useAppStore') as {
+      useAppStore: jest.Mock;
+      useUser: jest.Mock;
+    };
+    const mockState: Partial<RootState> = {
+      user: { id: 'u1', email: 'test@test.com' } as RootState['user'],
       setUserNavigationState: jest.fn(),
       registrationPassword: 'password123',
       clearRegistrationPassword: mockClearRegistrationPassword,
     };
-    storeModule.useAppStore.mockImplementation((selector: any) =>
-      selector(mockState),
+    storeModule.useAppStore.mockImplementation(
+      (selector: (state: RootState) => unknown) =>
+        selector(mockState as RootState),
     );
     storeModule.useUser.mockReturnValue(mockState.user);
   });
@@ -126,7 +151,7 @@ describe('BiometricSetupScreen', () => {
   });
 
   it('auto-skips when biometric not available', async () => {
-    mockBiometricInfo = { isAvailable: false, biometryType: null as any };
+    mockBiometricInfo = { isAvailable: false, biometryType: null };
     render(<BiometricSetupScreen />);
 
     // Should auto-navigate to next step

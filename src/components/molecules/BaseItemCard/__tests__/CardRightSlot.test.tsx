@@ -3,9 +3,12 @@ import React from 'react';
 import { Text } from 'react-native';
 import { render, screen, userEvent } from '@testing-library/react-native';
 import { CardRightSlot } from '../CardRightSlot';
+import type { CardRightSlotProps } from '../types';
 
 jest.mock('#utils/iconUtils', () => ({
-  Icon: ({ name }: any) => {
+  Icon: ({
+    name,
+  }: React.ComponentProps<typeof import('#utils/iconUtils').Icon>) => {
     const { Text: RNText } = require('react-native');
     return require('react').createElement(RNText, null, `icon-${name}`);
   },
@@ -80,7 +83,11 @@ describe('CardRightSlot', () => {
   });
 
   it('falls back to meta when no type specified', () => {
-    render(<CardRightSlot type={undefined as any} primary="Fallback" />);
+    // Intentionally omit `type` to exercise the runtime fallback branch.
+    const propsWithoutType: Omit<CardRightSlotProps, 'type'> & {
+      type?: CardRightSlotProps['type'];
+    } = { type: undefined, primary: 'Fallback' };
+    render(<CardRightSlot {...(propsWithoutType as CardRightSlotProps)} />);
     expect(screen.getByText('Fallback')).toBeTruthy();
   });
 });

@@ -8,16 +8,19 @@ import {
   SearchItemsSemanticDocument,
 } from '#operations/item/item.generated';
 import { useItemAutocomplete } from '../useItemAutocomplete';
+import type { RootState } from '#store/index';
 
 jest.mock('../../../apollo/links/tokenScheduler');
 jest.mock('../../../apollo/links/refreshToken');
 
 let mockIsOnline = true;
 jest.mock('#store/useAppStore', () => {
-  const getState = () => ({ isOnline: mockIsOnline });
+  const getState = () =>
+    ({ isOnline: mockIsOnline } as Partial<RootState> as RootState);
   return {
-    useAppStore: (selector: (state: any) => any) => selector(getState()),
-    useIsOnline: () => (s => s.isOnline)(getState()),
+    useAppStore: <T>(selector: (state: RootState) => T): T =>
+      selector(getState()),
+    useIsOnline: () => getState().isOnline,
   };
 });
 

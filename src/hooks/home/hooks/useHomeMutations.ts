@@ -9,23 +9,22 @@
 
 import type { ErrorLike } from '@apollo/client';
 import { alertService } from '#/services/alertService';
-import { useMutation } from '@apollo/client/react';
+import { useApolloClient, useMutation } from '@apollo/client/react';
 import {
   CreateHomeDocument,
   UpdateHomeDocument,
   DeleteHomeDocument,
   GetHomesDocument,
+  type CreateHomeMutation,
 } from '#operations/home/home.generated';
+import { UpdateHomeOptimistic_HomeFragmentDoc } from './useHomeMutations.generated';
 import { useSelectedHomeId, useHomeState } from '#store/useAppStore';
 import {
   handleMutationError,
   versionConflictCheck,
 } from '#/utils/errorHandlers';
-import {
-  enhanceWithVersion,
-  buildOptimisticMutationResponse,
-} from '#/apollo/utils/createOptimisticResponse';
 import { extractNodes } from '#/utils/connectionUtils';
+import { buildOptimisticMutationResponse } from '#/apollo/utils/createOptimisticResponse';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
 import { addToHomesCache, removeFromHomesCache } from './utils';
 import {
@@ -34,7 +33,6 @@ import {
 } from '#/utils/compilerSafeWrappers';
 
 interface UseHomeMutationsOptions {
-  homes: any[] | null;
   refetch: () => Promise<void>;
   setDefaultHome: (homeId: string) => Promise<boolean>;
   setSelectedPantryId: (pantryId: string | null) => void;
@@ -46,7 +44,6 @@ interface UseHomeMutationsOptions {
  * @example
  * ```tsx
  * const { createHome, updateHome, deleteHome, creating, updating, deleting } = useHomeMutations({
- *   homes,
  *   refetch,
  *   setDefaultHome,
  *   setSelectedPantryId,
@@ -54,7 +51,6 @@ interface UseHomeMutationsOptions {
  * ```
  */
 export function useHomeMutations({
-  homes,
   refetch,
   setDefaultHome,
   setSelectedPantryId,
@@ -62,6 +58,7 @@ export function useHomeMutations({
   const selectedHomeId = useSelectedHomeId();
   const { setSelectedHomeId } = useHomeState();
   const { createAddOperation, createRemoveOperation } = useCrudOperations();
+  const apolloClient = useApolloClient();
 
   const [createHomeMutation, { loading: creating, client }] = useMutation(
     CreateHomeDocument,
@@ -84,13 +81,13 @@ export function useHomeMutations({
           // Read fresh data from Apollo cache (no refetch needed!)
           const cachedData = client.cache.readQuery({
             query: GetHomesDocument,
-          }) as { homes: any[] } | null;
-          const freshHomes = cachedData?.homes ?? [];
+          });
+          const freshHomes = extractNodes(cachedData?.homes);
 
           // Only set as default if this is truly the first/only home
           if (freshHomes.length === 1 && freshHomes[0].id === newHome.id) {
             setSelectedHomeId(newHome.id);
-            setDefaultHome(newHome.id).catch((error: any) => {
+            setDefaultHome(newHome.id).catch((error: unknown) => {
               console.warn(
                 'Failed to set newly created home as default:',
                 error,
@@ -99,9 +96,7 @@ export function useHomeMutations({
           }
 
           // If a default pantry was created, set it as selected
-          const pantries = extractNodes(
-            (newHome as { pantriesConnection?: any }).pantriesConnection,
-          ) as Array<{ id: string; isDefault?: boolean }>;
+          const pantries = extractNodes(newHome.pantriesConnection);
           const defaultPantry = pantries.find(p => p.isDefault);
           if (defaultPantry) {
             setSelectedPantryId(defaultPantry.id);
@@ -118,14 +113,36 @@ export function useHomeMutations({
     UpdateHomeDocument,
     {
       optimisticResponse: (variables, { IGNORE }) => {
-        const currentHome = homes?.find(
-          (h: any) => h.id === variables.input.id,
-        );
-        if (!currentHome) return IGNORE;
+        // Read the home's current payload fields from cache (populated by the
+        // home-detail query). Without them we can't predict the response shape.
+        const current = apolloClient.cache.readFragment({
+          id: apolloClient.cache.identify({
+            __typename: 'Home',
+            id: variables.input.id,
+          }),
+          fragment: UpdateHomeOptimistic_HomeFragmentDoc,
+        });
+        if (!current) return IGNORE;
+        // Enabling a join code mints a server-generated code — wait for the
+        // server rather than predicting it. Every other field is known.
+        if (variables.input.allowJoinCode === true && !current.joinCode) {
+          return IGNORE;
+        }
         return buildOptimisticMutationResponse(
           'updateHome',
           'UpdateHomePayload',
-          { home: enhanceWithVersion(currentHome, variables.input) },
+          {
+            home: {
+              __typename: current.__typename,
+              id: current.id,
+              name: variables.input.name ?? current.name,
+              allowJoinCode:
+                variables.input.allowJoinCode ?? current.allowJoinCode,
+              joinCode: current.joinCode,
+              version: current.version,
+              updatedAt: new Date().toISOString(),
+            },
+          },
         );
       },
       onCompleted: data => {
@@ -173,8 +190,8 @@ export function useHomeMutations({
             // Read fresh data from Apollo cache (no refetch needed!)
             const cachedData = deleteClient.cache.readQuery({
               query: GetHomesDocument,
-            }) as { homes: any[] } | null;
-            const remainingHomes = cachedData?.homes ?? [];
+            });
+            const remainingHomes = extractNodes(cachedData?.homes);
 
             if (remainingHomes.length > 0) {
               // Set first remaining home as default
@@ -182,7 +199,7 @@ export function useHomeMutations({
               setSelectedHomeId(newDefaultHome.id);
               // Clear orphaned pantry selection - useDefaultHome will auto-select new home's default
               setSelectedPantryId(null);
-              setDefaultHome(newDefaultHome.id).catch((error: any) => {
+              setDefaultHome(newDefaultHome.id).catch((error: unknown) => {
                 console.warn(
                   'Failed to set new default home after delete:',
                   error,
@@ -219,7 +236,7 @@ export function useHomeMutations({
       }
       return true;
     },
-    onSuccess: (data: any) =>
+    onSuccess: (data: CreateHomeMutation) =>
       data?.createHome?.__typename === 'CreateHomePayload'
         ? data.createHome.home
         : undefined,
@@ -245,7 +262,7 @@ export function useHomeMutations({
 
   const updateHome = async (
     homeId: string,
-    updates: { name?: string; isDefault?: boolean },
+    updates: { name?: string; isDefault?: boolean; allowJoinCode?: boolean },
   ) => {
     // Handle default home update separately if needed
     if (updates.isDefault !== undefined && updates.isDefault) {

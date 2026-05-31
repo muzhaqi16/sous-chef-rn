@@ -5,7 +5,15 @@ import performance, {
 import { Telemetry } from '#/services/telemetry';
 import { NativePerformanceService } from '../NativePerformanceService';
 
-const observers: any[] = [];
+interface MockObserver {
+  observe: jest.Mock;
+  disconnect: jest.Mock;
+  _callback: (list: {
+    getEntries: () => Array<Record<string, unknown>>;
+  }) => void;
+}
+
+const observers: MockObserver[] = [];
 
 jest.mock('react-native-performance', () => {
   return {
@@ -33,8 +41,8 @@ jest.mock('#/services/telemetry', () => ({
   },
 }));
 
-jest.mock('react-native-config', () => ({
-  API_URL: 'https://api.example.com/graphql',
+jest.mock('#/config/env', () => ({
+  env: { API_URL: 'https://api.example.com/graphql' },
 }));
 
 // Environment is auto-mocked via jest.setup.js; override `getApiConfig` so

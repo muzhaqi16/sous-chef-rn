@@ -10,7 +10,7 @@ type PickerSelectProps = {
   style: ViewStyle;
 };
 
-const Item: any = Picker.Item;
+const Item = Picker.Item;
 
 export const PickerSelect = ({
   items,
@@ -31,7 +31,7 @@ export const PickerSelect = ({
           key={item.id}
           label={item.label}
           value={item.id}
-          color={styles.item}
+          color={styles.item.color}
         />
       ))}
     </Picker>

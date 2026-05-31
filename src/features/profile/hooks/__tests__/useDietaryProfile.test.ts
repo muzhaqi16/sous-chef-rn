@@ -11,28 +11,35 @@ import {
   RemoveDietaryRestrictionDocument,
 } from '#operations/user/user.generated';
 import { Diet, RestrictionSeverity } from '#/graphql/generated/schemaTypes';
+import type { RootState } from '#store/index';
 import { useDietaryProfile } from '../useDietaryProfile';
 
 jest.mock('#store/useAppStore', () => {
-  const getState = () => ({ user: { id: 'user-1' } });
+  const getState = () => ({ user: { id: 'user-1' } } as Partial<RootState>);
   return {
-    useAppStore: jest.fn((selector: any) => selector(getState())),
-    useUser: () => (s => s.user)(getState()),
-    useUserId: () => (s => s.user?.id)(getState()),
+    useAppStore: jest.fn(
+      <T>(selector: (state: RootState) => T): T =>
+        selector(getState() as RootState),
+    ),
+    useUser: () => getState().user,
+    useUserId: () => getState().user?.id,
   };
 });
 
 jest.mock('#/hooks/apollo/usePreservedQueryData', () => ({
-  usePreservedQueryData: (data: any, fallback: any) => data ?? fallback,
+  usePreservedQueryData: <T>(data: T | undefined, fallback: T): T =>
+    data ?? fallback,
 }));
 
 jest.mock('#/apollo/utils/createOptimisticResponse', () => ({
-  enhanceWithVersion: jest.fn((obj: any, updates: any) => ({
-    ...obj,
-    ...updates,
-  })),
+  enhanceWithVersion: jest.fn(
+    (obj: Record<string, unknown>, updates: Record<string, unknown>) => ({
+      ...obj,
+      ...updates,
+    }),
+  ),
   buildOptimisticMutationResponse: jest.fn(
-    (opName: string, typeName: string, fields: any) => ({
+    (opName: string, typeName: string, fields: Record<string, unknown>) => ({
       __typename: 'Mutation',
       [opName]: { __typename: typeName, ...fields },
     }),
@@ -79,8 +86,12 @@ const mockProfileData = {
   ],
 };
 
+type ProfileMockOverrides = {
+  [K in keyof typeof mockProfileData]: (typeof mockProfileData)[K] | null;
+};
+
 function buildGetProfileMock(
-  profile: typeof mockProfileData | null = mockProfileData,
+  profile: Partial<ProfileMockOverrides> | null = mockProfileData,
 ): MockedResponse {
   return {
     request: { query: GetDietaryProfileDocument },
@@ -324,15 +335,15 @@ describe('useDietaryProfile', () => {
   });
 
   it('provides defaults for missing profile fields', async () => {
-    const sparseProfile = {
+    const sparseProfile: Partial<ProfileMockOverrides> = {
       ...mockProfileData,
       id: 'dp-2',
-      restrictions: null as any,
-      preferredCuisines: null as any,
-      dislikedIngredients: null as any,
-      favoriteIngredients: null as any,
-      mealsPerDay: null as any,
-      snacksPerDay: null as any,
+      restrictions: null,
+      preferredCuisines: null,
+      dislikedIngredients: null,
+      favoriteIngredients: null,
+      mealsPerDay: null,
+      snacksPerDay: null,
     };
 
     const { result } = renderHookWithApollo(() => useDietaryProfile(), {

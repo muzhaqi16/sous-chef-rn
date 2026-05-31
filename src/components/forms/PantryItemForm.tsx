@@ -24,6 +24,8 @@ import {
 import {
   PantryItemForm_PantryItemFragmentDoc,
   type PantryItemForm_PantryItemFragment,
+  PantryItemForm_HomeFragmentDoc,
+  type PantryItemForm_HomeFragment,
 } from './PantryItemForm.generated';
 import {
   StorageState,
@@ -73,7 +75,7 @@ const TAB_FIELDS: Record<PageName, readonly string[]> = {
 };
 const INVENTORY_ADVANCED_FIELDS: readonly string[] = ['tags'];
 
-interface PantryItemFormData {
+export interface PantryItemFormData {
   // Item information (add mode)
   itemName?: string;
   selectedItemId?: string;
@@ -179,12 +181,8 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   const selectedHomeId = useSelectedHomeId();
 
   // Helper to get default pantry (inline to avoid useDefaultHome dependency)
-  const getDefaultPantry = (data: any) => {
-    const home = data?.home ?? data;
-    const pantries = extractNodes(home?.pantriesConnection) as Array<{
-      id: string;
-      isDefault?: boolean;
-    }>;
+  const getDefaultPantry = (home: PantryItemForm_HomeFragment | null) => {
+    const pantries = extractNodes(home?.pantriesConnection);
     if (!pantries.length) return null;
     return pantries.find(p => p.isDefault) ?? pantries[0] ?? null;
   };
@@ -216,7 +214,16 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
       })
     : null;
 
-  const pantry = getDefaultPantry(homeData);
+  // Resolve the masked `home` ref to the form's own fragment so we can read
+  // pantriesConnection (data masking hides it on the raw query result).
+  const home = homeData?.home
+    ? apolloClient.cache.readFragment<PantryItemForm_HomeFragment>({
+        fragment: PantryItemForm_HomeFragmentDoc,
+        fragmentName: 'PantryItemForm_home',
+        from: homeData.home,
+      })
+    : null;
+  const pantry = getDefaultPantry(home);
   const currentPantryId =
     selectedPantryId || pantry?.id || existingPantryItem?.pantryId;
 
@@ -393,7 +400,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
 
   const handleStorageLocationSelect = (
     locationId: string | null,
-    location: any,
+    location: StorageLocation | null,
   ) => {
     setSelectedLocationId(locationId);
     setSelectedStorageLocation(
@@ -485,18 +492,18 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   // Tags section fields (edit mode only)
   const tagsFields: FieldDef<PantryItemFormData>[] = [
     {
-      name: 'tags' as any,
+      name: 'tags',
       label: 'Tags',
       placeholder: 'Enter tags separated by commas',
       component: FormInput,
-      renderValue: (value: string[] | string) =>
+      renderValue: (value: unknown) =>
         Array.isArray(value)
           ? value.join(', ')
           : typeof value === 'string'
           ? value
           : '',
-      transformValue: (value: string) => {
-        return value
+      transformValue: (value: unknown) => {
+        return String(value ?? '')
           .split(',')
           .map(t => t.trim())
           .filter(Boolean);

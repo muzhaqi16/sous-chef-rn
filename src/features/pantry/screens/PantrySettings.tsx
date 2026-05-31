@@ -12,12 +12,18 @@ import { ScreenHeader } from '#components/molecules/ScreenHeader';
 import { LoadingInline } from '#components/base/Loading';
 import { InfoRow } from '#components/molecules/InfoRow';
 import { useQuery, useMutation } from '@apollo/client/react';
+import type { ApolloCache, Reference } from '@apollo/client';
+import type { ModifierDetails } from '@apollo/client/cache';
+import type { ConnectionData } from '#/apollo/utils/cacheUpdaters';
 import {
   GetPantryDocument,
   UpdatePantryDocument,
   DeletePantryDocument,
   CreatePantryDocument,
   SetDefaultPantryDocument,
+  type DeletePantryMutation,
+  type DeletePantryMutationVariables,
+  type CreatePantryMutation,
 } from '#features/pantry/graphql/pantry.generated';
 import { useSelectedHomeId, useSetSelectedPantryId } from '#store/useAppStore';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -38,11 +44,15 @@ import { Text } from '#components/atoms/Text';
  *  trigger a React Compiler bailout. */
 function buildDeletePantryUpdater(selectedHomeId: string | null | undefined) {
   return function deletePantryUpdater(
-    cache: any,
-    { data }: any,
-    { variables }: any,
+    cache: ApolloCache,
+    { data }: { data?: DeletePantryMutation | null },
+    { variables }: { variables?: DeletePantryMutationVariables },
   ) {
-    if (!data?.deletePantry?.pantry || !variables?.input?.id || !selectedHomeId)
+    const deletePayload =
+      data?.deletePantry?.__typename === 'DeletePantryPayload'
+        ? data.deletePantry
+        : null;
+    if (!deletePayload?.pantry || !variables?.input?.id || !selectedHomeId)
       return;
     try {
       const deletedPantryId = variables.input.id;
@@ -55,19 +65,21 @@ function buildDeletePantryUpdater(selectedHomeId: string | null | undefined) {
       cache.modify({
         id: homeCacheId,
         fields: {
-          pantries(existingPantries: any[] = [], { readField }: any) {
+          pantries(
+            existingPantries: readonly Reference[] = [],
+            { readField }: ModifierDetails,
+          ) {
             return existingPantries.filter(
-              (pantryRef: any) =>
-                readField('id', pantryRef) !== deletedPantryId,
+              pantryRef => readField('id', pantryRef) !== deletedPantryId,
             );
           },
           pantriesConnection(
-            existingConnection: any = null,
-            { readField }: any,
+            existingConnection: ConnectionData | null = null,
+            { readField }: ModifierDetails,
           ) {
             if (!existingConnection?.edges) return existingConnection;
             const filteredEdges = existingConnection.edges.filter(
-              (edge: any) => readField('id', edge?.node) !== deletedPantryId,
+              edge => readField('id', edge?.node) !== deletedPantryId,
             );
             return {
               ...existingConnection,
@@ -95,8 +107,14 @@ function buildDeletePantryUpdater(selectedHomeId: string | null | undefined) {
  *  Extracted from the component body so the surrounding try/catch does not
  *  trigger a React Compiler bailout. */
 function buildCreatePantryUpdater(selectedHomeId: string | null | undefined) {
-  return function createPantryUpdater(cache: any, { data }: any) {
-    const newPantry = data?.createPantry?.pantry;
+  return function createPantryUpdater(
+    cache: ApolloCache,
+    { data }: { data?: CreatePantryMutation | null },
+  ) {
+    const newPantry =
+      data?.createPantry?.__typename === 'CreatePantryPayload'
+        ? data.createPantry.pantry
+        : null;
     if (!newPantry || !selectedHomeId) return;
     try {
       const homeCacheId = cache.identify({
@@ -109,22 +127,27 @@ function buildCreatePantryUpdater(selectedHomeId: string | null | undefined) {
         id: homeCacheId,
         fields: {
           pantries(
-            existingPantries: any[] = [],
-            { readField, toReference }: any,
+            existingPantries: readonly Reference[] = [],
+            { readField, toReference }: ModifierDetails,
           ) {
             const newPantryRef = toReference(newPantry);
             const exists = existingPantries.some(
-              (pantryRef: any) => readField('id', pantryRef) === newPantry.id,
+              pantryRef => readField('id', pantryRef) === newPantry.id,
             );
-            if (exists) return existingPantries;
+            if (exists || !newPantryRef) return existingPantries;
             return [...existingPantries, newPantryRef];
           },
-          pantriesConnection(existingConnection: any = null) {
+          pantriesConnection(
+            existingConnection: ConnectionData | null = null,
+            { toReference }: ModifierDetails,
+          ) {
             if (!existingConnection) return existingConnection;
+            const newPantryRef = toReference(newPantry);
+            if (!newPantryRef) return existingConnection;
             const newEdge = {
               __typename: 'PantryEdge',
               cursor: newPantry.id,
-              node: newPantry,
+              node: newPantryRef,
             };
             return {
               ...existingConnection,

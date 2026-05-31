@@ -37,7 +37,7 @@ import { Telemetry } from '#/services/telemetry';
 /**
  * Result type for error operations
  */
-export interface ErrorResult<T = any> {
+export interface ErrorResult<T = unknown> {
   success: boolean;
   data?: T;
   error?: {
@@ -232,7 +232,7 @@ class ErrorService {
    */
   reportError(
     error: unknown,
-    context?: { operation?: string; [key: string]: any },
+    context?: { operation?: string; [key: string]: unknown },
   ): void {
     const operation = context?.operation || 'Unknown';
     const serialized = serializeError(error);
@@ -261,7 +261,10 @@ class ErrorService {
   /**
    * Parse Apollo error into structured result
    */
-  parseApolloError(error: unknown, config: ErrorConfig = {}): ErrorResult {
+  parseApolloError(
+    error: unknown,
+    config: ErrorConfig = {},
+  ): ErrorResult<never> {
     const { operation = 'Unknown', customMessage, logError = true } = config;
 
     let errorCode = 'UNKNOWN_ERROR';
@@ -426,6 +429,19 @@ export const errorService = new ErrorService();
 export const getErrorMessage = (error: unknown): string => {
   const result = errorService.parseApolloError(error, { logError: false });
   return result.error?.message || 'An unexpected error occurred';
+};
+
+/**
+ * Pure extraction of a raw error message from an `unknown` value, with a
+ * caller-supplied fallback. Unlike `getErrorMessage`, this does NOT map to a
+ * user-friendly message or emit telemetry — use it at display/handler sites
+ * that already have their own fallback copy and just need the raw message
+ * (replaces the repeated `(error as any)?.message || fallback` pattern).
+ */
+export const errorMessageOr = (error: unknown, fallback: string): string => {
+  if (error instanceof Error && error.message) return error.message;
+  if (typeof error === 'string' && error) return error;
+  return fallback;
 };
 
 // Export hook for use in components

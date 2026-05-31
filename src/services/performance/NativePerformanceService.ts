@@ -12,7 +12,7 @@ import performance, {
 import type { PerformanceEntry } from 'react-native-performance';
 import { Telemetry } from '#/services/telemetry';
 import { Environment } from '#/utils/environment';
-import Config from 'react-native-config';
+import { env } from '#/config/env';
 
 let initialized = false;
 let nativeMarkObserver: InstanceType<typeof PerformanceObserver> | null = null;
@@ -26,7 +26,7 @@ let reportedBundleLoad = false;
 function getGraphQLHost(): string {
   const apiConfig = Environment.getApiConfig();
   try {
-    return new URL(Config.API_URL || apiConfig.baseUrl).host;
+    return new URL(env.API_URL || apiConfig.baseUrl).host;
   } catch {
     return '';
   }

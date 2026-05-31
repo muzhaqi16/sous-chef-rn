@@ -16,7 +16,17 @@ jest.mock('#components/molecules/FormInput', () => {
   const RN = require('react-native');
   const R = require('react');
   return {
-    FormInput: ({ label, value, onChangeText, placeholder }: any) =>
+    FormInput: ({
+      label,
+      value,
+      onChangeText,
+      placeholder,
+    }: {
+      label?: string;
+      value?: string;
+      onChangeText?: (text: string) => void;
+      placeholder?: string;
+    }) =>
       R.createElement(
         RN.View,
         null,
@@ -35,7 +45,7 @@ jest.mock('#components/molecules/DatePickerField', () => {
   const RN = require('react-native');
   const R = require('react');
   return {
-    DatePickerField: ({ label }: any) =>
+    DatePickerField: ({ label }: { label?: string }) =>
       R.createElement(RN.View, null, R.createElement(RN.Text, null, label)),
   };
 });
@@ -44,7 +54,15 @@ jest.mock('#components/molecules/EditableCounter', () => {
   const RN = require('react-native');
   const R = require('react');
   return {
-    EditableCounter: ({ label, value, onChangeText }: any) =>
+    EditableCounter: ({
+      label,
+      value,
+      onChangeText,
+    }: {
+      label?: string;
+      value?: string;
+      onChangeText?: (text: string) => void;
+    }) =>
       R.createElement(
         RN.View,
         null,
@@ -66,7 +84,7 @@ jest.mock('#features/mealPlan/hooks/useMealTemplate', () => ({
 }));
 
 jest.mock('#utils/iconUtils', () => ({
-  Icon: (props: any) => {
+  Icon: (props: { name: string }) => {
     const RN = require('react-native');
     return require('react').createElement(
       RN.Text,
@@ -225,10 +243,7 @@ describe('TemplatePreviewSheet', () => {
   it('renders meta text without home name when home is null', () => {
     const templateNoHome = { ...mockTemplate, home: null };
     render(
-      <TemplatePreviewSheet
-        {...defaultProps}
-        template={templateNoHome as any}
-      />,
+      <TemplatePreviewSheet {...defaultProps} template={templateNoHome} />,
     );
     expect(screen.getByText('7 days · 4 servings')).toBeTruthy();
   });

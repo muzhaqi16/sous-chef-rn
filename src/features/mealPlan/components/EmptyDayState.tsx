@@ -28,7 +28,7 @@ export const EmptyDayState: React.FC<EmptyDayStateProps> = ({
         { paddingBottom: getTabBarBottomPadding(safeBottom) },
       ]}
     >
-      <Icon name="restaurant-outline" size={48} color={styles.icon.color} />
+      <Icon name="restaurant-outline" size={48} tone="textTertiary" />
       <Text size="lg" weight="semibold" style={styles.title}>
         {t('emptyDay.title')}
       </Text>
@@ -40,7 +40,7 @@ export const EmptyDayState: React.FC<EmptyDayStateProps> = ({
           onPress={() => onAddMeal()}
           style={({ pressed }) => [styles.button, pressed && styles.pressed]}
         >
-          <Icon name="add" size={20} color={styles.buttonIcon.color} />
+          <Icon name="add" size={20} tone="white" />
           <Text size="md" weight="semibold" style={styles.buttonText}>
             {t('emptyDay.addMeal')}
           </Text>
@@ -59,9 +59,6 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     paddingHorizontal: theme.spacing.xl,
   },
-  icon: {
-    color: theme.colors.textTertiary,
-  },
   title: {
     marginTop: theme.spacing.md,
   },
@@ -79,9 +76,6 @@ const styles = StyleSheet.create(theme => ({
   },
   pressed: {
     opacity: theme.opacity.pressed,
-  },
-  buttonIcon: {
-    color: theme.colors.white,
   },
   buttonText: {
     marginLeft: theme.spacing.xs,

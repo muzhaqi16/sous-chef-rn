@@ -7,7 +7,10 @@ import {
   executeCacheUpdate,
   executeMutation,
 } from '#/utils/compilerSafeWrappers';
-import { safeEvictMany } from '#/apollo/utils/cacheUpdaters';
+import {
+  safeEvictMany,
+  type ConnectionData,
+} from '#/apollo/utils/cacheUpdaters';
 import { isPurchasedVariant } from '#/apollo/utils/shoppingListCacheUpdaters';
 
 interface UseBatchMoveToPantryOptions {
@@ -50,8 +53,8 @@ export function useBatchMoveToPantry({
             id: parentCacheId,
             fields: {
               itemsConnection(
-                existing: any,
-                { readField, storeFieldName }: any,
+                existing: ConnectionData | undefined,
+                { readField, storeFieldName },
               ) {
                 if (!isPurchasedVariant(storeFieldName) || !existing?.edges)
                   return existing;
@@ -59,8 +62,7 @@ export function useBatchMoveToPantry({
                 return {
                   ...existing,
                   edges: existing.edges.filter(
-                    (edge: any) =>
-                      !movedIds.has(readField('id', edge?.node) as string),
+                    edge => !movedIds.has(readField<string>('id', edge?.node)!),
                   ),
                   totalCount: Math.max(
                     0,

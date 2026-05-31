@@ -3,7 +3,7 @@ import { serializeError } from './errorSerialization';
 // Define a simple error interface instead of importing ApolloError
 interface SubscriptionError {
   message?: string;
-  networkError?: any;
+  networkError?: { message?: string } | null;
 }
 
 interface RetryState {

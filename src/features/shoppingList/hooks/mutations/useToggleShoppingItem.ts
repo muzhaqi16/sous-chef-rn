@@ -35,7 +35,7 @@ import { PAGINATION } from '#/constants/shoppingList';
 
 interface UseToggleShoppingItemOptions {
   listId: string | null | undefined;
-  refetch: () => Promise<any>;
+  refetch: () => Promise<unknown>;
 }
 
 /**

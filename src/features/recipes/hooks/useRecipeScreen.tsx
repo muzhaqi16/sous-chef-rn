@@ -19,6 +19,7 @@ import {
 } from '#/store/useRecipeCacheStore';
 import { useUserId } from '#store/useAppStore';
 import type { IconName } from '#/utils/iconUtils';
+import type { Diet, Intolerance } from '#/graphql/generated/schemaTypes';
 
 // ── Filter types ──
 
@@ -173,9 +174,7 @@ export function useRecipeScreen() {
   const { profile: dietaryProfile } = useDietaryProfile();
 
   // Compute dietary tags once for discovery (random recipe API)
-  const dietRestriction = dietaryProfile?.restrictions?.find(
-    (r: any) => r.diet,
-  );
+  const dietRestriction = dietaryProfile?.restrictions?.find(r => r.diet);
   const dietaryTags = dietRestriction?.diet
     ? dietRestriction.diet.toLowerCase()
     : undefined;
@@ -224,13 +223,15 @@ export function useRecipeScreen() {
   };
 
   const profileDiets = (dietaryProfile?.restrictions ?? [])
-    .filter((r: any) => r.diet)
-    .map((r: any) => dietMap[r.diet] ?? r.diet.toLowerCase())
+    .filter((r): r is typeof r & { diet: Diet } => Boolean(r.diet))
+    .map(r => dietMap[r.diet] ?? r.diet.toLowerCase())
     .filter(Boolean);
 
   const profileIntolerances = (dietaryProfile?.restrictions ?? [])
-    .filter((r: any) => r.intolerance)
-    .map((r: any) => {
+    .filter((r): r is typeof r & { intolerance: Intolerance } =>
+      Boolean(r.intolerance),
+    )
+    .map(r => {
       const intoleranceMap: Record<string, string> = {
         DAIRY: 'dairy',
         EGG: 'egg',

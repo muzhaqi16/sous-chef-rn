@@ -8,7 +8,7 @@ describe('useToast', () => {
 
     expect(typeof result.current).toBe('function');
     // Calling the default should not throw
-    result.current('test message' as any);
+    result.current({ message: 'test message' });
   });
 
   it('returns the toast function from context provider', () => {

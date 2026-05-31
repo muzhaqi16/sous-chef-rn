@@ -1,4 +1,8 @@
 import { useRef } from 'react';
+import type { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
+
+/** Ref to a RNGH Swipeable's imperative methods (passed by the list rows). */
+type SwipeableRef = React.RefObject<SwipeableMethods | null>;
 
 /**
  * Hook to coordinate swipeable items, ensuring only one is open at a time
@@ -20,7 +24,7 @@ import { useRef } from 'react';
  * ```
  */
 export function useSwipeableCoordinator() {
-  const openSwipeableRef = useRef<any>(null);
+  const openSwipeableRef = useRef<SwipeableRef | null>(null);
 
   /**
    * Handler to be called when a swipeable item is about to open
@@ -30,7 +34,7 @@ export function useSwipeableCoordinator() {
    *
    * @param ref - Reference to the swipeable component being opened
    */
-  const handleSwipeableWillOpen = (ref: any) => {
+  const handleSwipeableWillOpen = (ref: SwipeableRef) => {
     // If there's a currently open swipeable and it's different from the new one
     if (openSwipeableRef.current && openSwipeableRef.current !== ref) {
       // Close the previously open swipeable

@@ -2,11 +2,16 @@ import type { NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import { type PantryStats } from '#/graphql/generated/schemaTypes';
 import type { LocationFilter } from '#features/pantry/utils/pantryFilters';
 import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
+import type {
+  PantrySortOption,
+  PantrySortDirection,
+} from '#store/slices/preferenceTypes';
 import type { PantryListNode } from './renderItem';
 
-// Sort types (exported for use in other components)
-export type SortOption = 'name' | 'expiry' | 'quantity' | 'recent';
-export type SortDirection = 'asc' | 'desc';
+// Sort types — aliases of the store preference enums so the display layer and
+// the persisted preference share one nominal source of truth.
+export type SortOption = PantrySortOption;
+export type SortDirection = PantrySortDirection;
 
 export interface PantryContentRef {
   scrollToTop(): void;

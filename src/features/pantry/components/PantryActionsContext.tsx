@@ -6,6 +6,7 @@ import React, {
   type ReactNode,
 } from 'react';
 import type { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
+import type { SwipeableRef } from '#components/molecules/SwipeableItem/types';
 
 /**
  * Actions available for pantry items
@@ -23,7 +24,7 @@ export interface PantryItemActions {
  * Swipeable coordination for closing other swipeables
  */
 export interface SwipeableCoordination {
-  onSwipeableWillOpen: (ref: React.RefObject<SwipeableMethods>) => void;
+  onSwipeableWillOpen: (ref: SwipeableRef) => void;
 }
 
 /**
@@ -81,7 +82,7 @@ export const PantryActionsProvider: React.FC<PantryActionsProviderProps> = ({
 
   // swipeable only captures openSwipeableRef (a ref) — compiler auto-memoizes
   const swipeable: SwipeableCoordination = {
-    onSwipeableWillOpen: (ref: React.RefObject<SwipeableMethods>) => {
+    onSwipeableWillOpen: (ref: SwipeableRef) => {
       if (
         openSwipeableRef.current &&
         openSwipeableRef.current !== ref.current

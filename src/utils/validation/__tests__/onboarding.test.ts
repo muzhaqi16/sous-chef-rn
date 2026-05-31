@@ -1,3 +1,4 @@
+import type { Schema } from 'yup';
 import {
   getCreateHomeSchema,
   createShoppingListSchema,
@@ -8,12 +9,12 @@ import {
   getSelectPantryItemsSchema,
 } from '../onboarding';
 
-const validate = async (schema: any, data: Record<string, unknown>) => {
+const validate = async (schema: Schema, data: Record<string, unknown>) => {
   try {
     await schema.validate(data);
     return null;
-  } catch (err: any) {
-    return err.message;
+  } catch (err) {
+    return err instanceof Error ? err.message : String(err);
   }
 };
 

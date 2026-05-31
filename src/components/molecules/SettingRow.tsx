@@ -18,8 +18,30 @@ import { Pressable } from '#components/atoms/themedComponents';
 import { RIPPLE } from '#constants/ripple';
 import { Text } from '#components/atoms/Text';
 
+/** A single option for a `modal`/`radio` setting row. */
+export interface SettingOption {
+  label: string;
+  value: string;
+}
+
+/** Runtime descriptor consumed by SettingRow / SettingsSection. */
+export interface SettingItem {
+  key: string;
+  label: string;
+  type: string;
+  testID?: string;
+  subtitle?: string;
+  disabled?: boolean;
+  value?: string | boolean;
+  selected?: string;
+  options?: SettingOption[];
+  icon?: React.ReactNode;
+  onSave?: (value: string) => void;
+  onPress?: () => void;
+}
+
 export interface SettingRowProps {
-  item: any;
+  item: SettingItem;
   isFirst: boolean;
   isLast: boolean;
 }
@@ -87,7 +109,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
       }`;
     } else if (item.type === 'modal' && item.options) {
       const selectedOption =
-        item.options?.find((opt: any) => opt.value === item.value)?.label ||
+        item.options?.find(opt => opt.value === item.value)?.label ||
         t('labels.select');
       return t('settingRow.currentlySelected', {
         label: baseLabel,
@@ -180,8 +202,8 @@ export const SettingRow: React.FC<SettingRowProps> = ({
                 numberOfLines={1}
                 ellipsizeMode="tail"
               >
-                {item.options?.find((opt: any) => opt.value === item.value)
-                  ?.label || t('labels.select')}
+                {item.options?.find(opt => opt.value === item.value)?.label ||
+                  t('labels.select')}
               </Text>
               <Icon name="chevron-forward" size={20} tone="textSecondary" />
             </View>
@@ -203,7 +225,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
         title={inputLabel}
         label={inputLabel}
         placeholder={placeholder}
-        initialValue={item.value || ''}
+        initialValue={typeof item.value === 'string' ? item.value : ''}
         fieldKey={item.key}
         // @ts-expect-error - yup schema type compatibility
         validationSchema={getValidationSchemaForField(item.key)}
@@ -226,7 +248,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
               {item.label}
             </Text>
             <View style={styles.sheetDivider} />
-            {item.options.map((opt: any) => (
+            {item.options.map(opt => (
               <Pressable
                 key={opt.value}
                 style={({ pressed }) => [

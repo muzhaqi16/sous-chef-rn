@@ -24,11 +24,11 @@ export const getCuisineLabel = (value: Cuisine): string => {
 
 // Helper function to get all cuisine options (popular + remaining)
 export const getAllCuisineOptions = () => {
-  const popularValues = POPULAR_CUISINES.map(c => c.value);
+  const popularValues: Cuisine[] = POPULAR_CUISINES.map(c => c.value);
   const allCuisines = Object.values(Cuisine) as Cuisine[];
 
   const remainingCuisines = allCuisines
-    .filter(c => !popularValues.includes(c as any))
+    .filter(c => !popularValues.includes(c))
     .map(value => ({
       label: formatCuisineLabel(value),
       value,

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { useFragment } from '@apollo/client/react';
+import { useFragment, useQuery } from '@apollo/client/react';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { FormattedItemSubtitle } from '#components/atoms/FormattedItemSubtitle';
@@ -16,7 +16,9 @@ import {
 import { useConvertAvailableQuantity } from '#features/pantry/hooks/useConvertAvailableQuantity';
 import { commonStyles } from '#/styles/commonStyles';
 import { Text } from '#components/atoms/Text';
+import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
 import {
+  GetPantryActionItemDocument,
   PantryActionModal_PantryItemFragmentDoc,
   type PantryActionModal_PantryItemFragment,
 } from './PantryActionModal.generated';
@@ -120,6 +122,17 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
     visible: visible && !!pantryItemId,
     onDismiss: onClose,
     snapPoints,
+  });
+
+  // Guarantee the modal's full read shape is in the cache regardless of how
+  // the item arrived (list query, create mutation, subscription push).
+  // `cache-first` is a no-op when the cache already satisfies the fragment and
+  // only fetches when a field is missing — so partial entries self-heal.
+  const { loading: itemQueryLoading } = useQuery(GetPantryActionItemDocument, {
+    variables: { id: pantryItemId ?? '' },
+    skip: !pantryItemId,
+    fetchPolicy: 'cache-first',
+    errorPolicy: 'all',
   });
 
   const { data, complete } = useFragment({
@@ -345,6 +358,12 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
             {renderActionFields(shared, pantryItem)}
           </>
         )}
+
+        {!pantryItem && !!pantryItemId && itemQueryLoading ? (
+          <View style={commonStyles.bottomSheetLoading}>
+            <ThemedActivityIndicator />
+          </View>
+        ) : null}
       </BottomSheetKeyboardAwareScrollView>
     </BottomSheetModal>
   );

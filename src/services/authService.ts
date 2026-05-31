@@ -293,12 +293,12 @@ function registerDeviceInBackground(): void {
 
 // --- Store bootstrap (pre-populate Zustand from auth response) ---
 
-function bootstrapUserStore(user: any): void {
+function bootstrapUserStore(user: LoginUserFragment): void {
   const storeState = useStore.getState();
   if (user.defaultHomeId) {
     const pantries = user.defaultHome?.pantriesConnection?.edges;
     const defaultPantry =
-      pantries?.find((e: any) => e.node.isDefault)?.node ?? pantries?.[0]?.node;
+      pantries?.find(e => e.node.isDefault)?.node ?? pantries?.[0]?.node;
     const pantryId = defaultPantry?.id ?? null;
 
     storeState.setHomeAndPantry(user.defaultHomeId, pantryId);
@@ -344,6 +344,13 @@ function getUserPreferences(userId?: string) {
   };
 }
 
+// The masked AuthPayload resolved into a plain LoginUser via the Apollo cache.
+interface ResolvedAuthPayload {
+  accessToken: string;
+  refreshToken: string;
+  user: LoginUserFragment;
+}
+
 // Resolve the masked AuthPayload.user ref into a plain LoginUser by reading
 // from the Apollo cache. The mutation has already written the user entity to
 // the normalized cache, so this read is synchronous.
@@ -353,13 +360,7 @@ function unmaskAuthPayload<
     refreshToken: string;
     user: { __typename: 'User'; id: string };
   },
->(
-  payload: T,
-): {
-  accessToken: string;
-  refreshToken: string;
-  user: LoginUserFragment;
-} | null {
+>(payload: T): ResolvedAuthPayload | null {
   const user = client.cache.readFragment<LoginUserFragment>({
     fragment: LoginUserFragmentDoc,
     fragmentName: 'LoginUser',
@@ -375,7 +376,7 @@ function unmaskAuthPayload<
 
 // --- Core auth operations ---
 
-function handleAuthError(error: any, operation = 'Authentication'): void {
+function handleAuthError(error: unknown, operation = 'Authentication'): void {
   try {
     const { message, code, isAuthError } = errorService.handleApolloError(
       error,
@@ -400,7 +401,7 @@ function handleAuthError(error: any, operation = 'Authentication'): void {
 }
 
 async function handleLogin(
-  loginResponse: any,
+  loginResponse: ResolvedAuthPayload,
   shouldRemember?: boolean,
   loginCredentials?: LoginCredentials,
 ): Promise<boolean> {
@@ -459,7 +460,7 @@ async function handleLogin(
 }
 
 async function handleRegistration(
-  registerResponse: any,
+  registerResponse: ResolvedAuthPayload,
   shouldRemember?: boolean,
 ): Promise<void> {
   if (!registerResponse?.user) return;

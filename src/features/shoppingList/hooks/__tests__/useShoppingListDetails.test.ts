@@ -6,7 +6,8 @@ import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import { useShoppingListDetails } from '../useShoppingListDetails';
 
 jest.mock('#/hooks/apollo/usePreservedQueryData', () => ({
-  usePreservedQueryData: (data: any, fallback: any) => data ?? fallback,
+  usePreservedQueryData: <T>(data: T | undefined, fallback: T): T =>
+    data ?? fallback,
 }));
 
 interface BuildShoppingListArgs {

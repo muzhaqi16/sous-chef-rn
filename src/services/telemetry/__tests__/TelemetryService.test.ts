@@ -1,5 +1,12 @@
 import { TelemetryService } from '../TelemetryService';
 
+// Mutable so individual tests can simulate consent being granted/denied.
+// Name is `mock`-prefixed so it may be referenced inside the jest.mock factory.
+let mockUserConsent: boolean | null = null;
+jest.mock('#store', () => ({
+  useStore: { getState: () => ({ userConsent: mockUserConsent }) },
+}));
+
 const mockSendLogs = jest.fn().mockResolvedValue(undefined);
 const mockSendMetrics = jest.fn().mockResolvedValue(undefined);
 const mockIsAvailable = jest.fn(() => true);
@@ -26,6 +33,7 @@ describe('TelemetryService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.useFakeTimers();
+    mockUserConsent = null; // default: consent not denied
   });
 
   afterEach(() => {
@@ -223,6 +231,60 @@ describe('TelemetryService', () => {
       );
     });
 
+    it('drops entries below minLogLevel before buffering', async () => {
+      const service = new TelemetryService({
+        enabled: true,
+        enableLogs: true,
+        minLogLevel: 'warn',
+      });
+      service.log('debug', 'dbg');
+      service.log('info', 'nfo');
+      await service.flush();
+      expect(mockSendLogs).not.toHaveBeenCalled();
+
+      service.log('warn', 'warning');
+      await service.flush();
+      expect(mockSendLogs).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({ level: 'warn', message: 'warning' }),
+        ]),
+      );
+    });
+
+    it('emits nothing when the user has denied consent', async () => {
+      mockUserConsent = false;
+      const service = new TelemetryService({
+        enabled: true,
+        enableLogs: true,
+        enableMetrics: true,
+      });
+
+      service.log('error', 'should not ship'); // error would normally auto-flush
+      service.incrementCounter('should_not_ship_total');
+      await service.flush();
+
+      expect(mockSendLogs).not.toHaveBeenCalled();
+      expect(mockSendMetrics).not.toHaveBeenCalled();
+    });
+
+    it('redacts sensitive values before buffering', async () => {
+      const service = new TelemetryService({
+        enabled: true,
+        enableLogs: true,
+      });
+
+      service.log('warn', 'login for jane@example.com failed', {
+        password: 'hunter2',
+        note: 'contact bob@corp.io',
+      });
+      await service.flush();
+
+      const sent = mockSendLogs.mock.calls[0][0][0];
+      expect(sent.message).toBe('login for [REDACTED] failed');
+      expect(sent.extra.password).toBe('[REDACTED]');
+      expect(sent.extra.note).toBe('contact [REDACTED]');
+    });
+
     it('includes platform and environment in extra', async () => {
       const service = new TelemetryService({
         enabled: true,
@@ -350,6 +412,18 @@ describe('TelemetryService', () => {
       );
     });
 
+    it('forwards explicit histogram bounds to the metric entry', async () => {
+      const service = new TelemetryService({
+        enabled: true,
+        enableMetrics: true,
+      });
+      service.recordHistogram('ratio', 0.5, {}, [0.25, 0.5, 0.75, 1.0]);
+      await service.flush();
+
+      const metrics = mockSendMetrics.mock.calls[0][0];
+      expect(metrics[0].bounds).toEqual([0.25, 0.5, 0.75, 1.0]);
+    });
+
     it('includes platform and environment labels', async () => {
       const service = new TelemetryService({
         enabled: true,
@@ -423,23 +497,18 @@ describe('TelemetryService', () => {
 
   // ------------------------------------------------------------------ trackEvent
   describe('trackEvent', () => {
-    it('logs info and increments app_events_total', async () => {
+    it('increments app_events_total without shipping a duplicate log to Loki', async () => {
       const service = new TelemetryService({
         enabled: true,
         enableLogs: true,
         enableMetrics: true,
+        minLogLevel: 'warn', // prod-like: the debug breadcrumb is dropped
       });
       service.trackEvent('button_click', { screen: 'home' });
       await service.flush();
 
-      expect(mockSendLogs).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          expect.objectContaining({
-            level: 'info',
-            message: 'Event: button_click',
-          }),
-        ]),
-      );
+      // The debug breadcrumb is filtered by minLogLevel — no write-amplification.
+      expect(mockSendLogs).not.toHaveBeenCalled();
 
       expect(mockSendMetrics).toHaveBeenCalledWith(
         expect.arrayContaining([
@@ -475,23 +544,18 @@ describe('TelemetryService', () => {
 
   // ------------------------------------------------------------------ trackScreenView
   describe('trackScreenView', () => {
-    it('logs info and increments screen_views_total with screen_name', async () => {
+    it('increments screen_views_total with screen_name without shipping a duplicate log', async () => {
       const service = new TelemetryService({
         enabled: true,
         enableLogs: true,
         enableMetrics: true,
+        minLogLevel: 'warn', // prod-like: the debug breadcrumb is dropped
       });
       service.trackScreenView('HomeScreen', { tab: 'recipes' });
       await service.flush();
 
-      expect(mockSendLogs).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          expect.objectContaining({
-            level: 'info',
-            message: 'Screen: HomeScreen',
-          }),
-        ]),
-      );
+      // The debug breadcrumb is filtered by minLogLevel — no write-amplification.
+      expect(mockSendLogs).not.toHaveBeenCalled();
 
       expect(mockSendMetrics).toHaveBeenCalledWith(
         expect.arrayContaining([
@@ -501,44 +565,6 @@ describe('TelemetryService', () => {
           }),
         ]),
       );
-    });
-  });
-
-  // ------------------------------------------------------------------ trackTiming
-  describe('trackTiming', () => {
-    it('records histogram with correct name and labels', async () => {
-      const service = new TelemetryService({
-        enabled: true,
-        enableMetrics: true,
-      });
-      service.trackTiming('api', 'fetchRecipes', 350, 'graphql');
-      await service.flush();
-
-      const metrics = mockSendMetrics.mock.calls[0][0];
-      const histogramMetric = metrics.find(
-        (m: { name: string }) => m.name === 'app_timing_api_ms',
-      );
-      expect(histogramMetric).toBeDefined();
-      expect(histogramMetric.value).toBe(350);
-      expect(histogramMetric.type).toBe('histogram');
-      expect(histogramMetric.labels).toEqual(
-        expect.objectContaining({ variable: 'fetchRecipes', label: 'graphql' }),
-      );
-    });
-
-    it('uses "default" as label when none is provided', async () => {
-      const service = new TelemetryService({
-        enabled: true,
-        enableMetrics: true,
-      });
-      service.trackTiming('render', 'component', 120);
-      await service.flush();
-
-      const metrics = mockSendMetrics.mock.calls[0][0];
-      const histogramMetric = metrics.find(
-        (m: { name: string }) => m.name === 'app_timing_render_ms',
-      );
-      expect(histogramMetric.labels.label).toBe('default');
     });
   });
 
@@ -567,6 +593,28 @@ describe('TelemetryService', () => {
       await service.flush();
       expect(mockSendLogs).not.toHaveBeenCalled();
       expect(mockSendMetrics).not.toHaveBeenCalled();
+    });
+
+    it('re-buffers logs for retry when a transport send fails (no data loss)', async () => {
+      const service = new TelemetryService({
+        enabled: true,
+        enableLogs: true,
+      });
+
+      // First flush rejects → the batch must be re-queued, not dropped.
+      mockSendLogs.mockRejectedValueOnce(new Error('gateway down'));
+      service.log('warn', 'keep me');
+      await service.flush();
+
+      // Next successful flush ships the re-buffered batch.
+      mockSendLogs.mockResolvedValue(undefined);
+      await service.flush();
+
+      expect(mockSendLogs).toHaveBeenLastCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({ level: 'warn', message: 'keep me' }),
+        ]),
+      );
     });
   });
 

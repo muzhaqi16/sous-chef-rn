@@ -7,10 +7,15 @@ jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 
 jest.mock('#components/atoms/BottomSheetFormScrollView', () => ({
-  BottomSheetFormScrollView: ({ children }: any) => children,
+  BottomSheetFormScrollView: ({ children }: { children?: React.ReactNode }) =>
+    children,
 }));
 jest.mock('#components/molecules/FormTextArea', () => ({
-  FormTextArea: (props: any) => {
+  FormTextArea: (props: {
+    value?: string;
+    onChangeText?: (text: string) => void;
+    placeholder?: string;
+  }) => {
     const { View, TextInput } = require('react-native');
     return (
       <View>
@@ -25,7 +30,7 @@ jest.mock('#components/molecules/FormTextArea', () => ({
   },
 }));
 jest.mock('#components/molecules/Header', () => ({
-  Header: ({ title }: any) => {
+  Header: ({ title }: { title?: string }) => {
     const { Text } = require('react-native');
     return <Text>{title}</Text>;
   },

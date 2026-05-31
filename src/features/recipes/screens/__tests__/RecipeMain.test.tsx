@@ -3,6 +3,31 @@
 import React from 'react';
 import { render, userEvent, act } from '@testing-library/react-native';
 import { RecipeMain } from '../RecipeMain';
+import type { transformRecipeForDisplay } from '#/utils/recipeTransform';
+import type {
+  SearchRecipesResult,
+  RecipeSearchResult,
+} from '#/services/recipeApi/types';
+
+type RecipeMainItem = ReturnType<typeof transformRecipeForDisplay>;
+
+interface ItemListMockProps {
+  items?: RecipeMainItem[];
+  onItemPress?: (id: string | number) => void;
+  onRefresh?: () => Promise<void>;
+  ListHeaderComponent?: React.ReactElement | null;
+  emptyState?: { title: string; description?: string };
+}
+
+interface DeferredScreenMockProps {
+  fallback: React.ReactNode;
+  component: React.ComponentType;
+}
+
+interface TabScreenHeaderMockProps {
+  title?: string;
+  headerRight?: React.ReactNode;
+}
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
@@ -92,14 +117,16 @@ jest.mock('#hooks/ui/useTutorialSequence', () => ({
 }));
 jest.mock('#hooks/useFeatureHint', () => ({}));
 jest.mock('#/utils/recipeTransform', () => ({
-  transformRecipeForDisplay: jest.fn((r: any) => ({
-    id: String(r.id),
-    title: r.title,
-    subtitle: 'test',
-    badge: undefined,
-    imageUrl: r.image,
-    spoonacularId: r.id,
-  })),
+  transformRecipeForDisplay: jest.fn(
+    (r: SearchRecipesResult | RecipeSearchResult) => ({
+      id: String(r.id),
+      title: r.title,
+      subtitle: 'test',
+      badge: undefined,
+      imageUrl: r.image,
+      spoonacularId: r.id,
+    }),
+  ),
 }));
 jest.mock('@gorhom/bottom-sheet', () => ({
   BottomSheetModal: () => null,
@@ -115,23 +142,25 @@ jest.mock('../RecipeSearch/IngredientSelectorSheet', () => {
   };
 });
 
-type AnyProps = Record<string, any>;
-let mockItemListImpl: (props: AnyProps) => React.ReactElement | null = () =>
-  null;
+let mockItemListImpl: (
+  props: ItemListMockProps,
+) => React.ReactElement | null = () => null;
 
 jest.mock('#components/organisms/ItemList', () => ({
-  ItemList: (props: AnyProps) => mockItemListImpl(props),
+  ItemList: (props: ItemListMockProps) => mockItemListImpl(props),
 }));
 
-const mockDeferredScreen = jest.fn(({ fallback }: any) => fallback);
+const mockDeferredScreen = jest.fn(
+  ({ fallback }: DeferredScreenMockProps) => fallback,
+);
 jest.mock('#components/performance/DeferredScreen', () => ({
-  DeferredScreen: (props: any) => mockDeferredScreen(props),
+  DeferredScreen: (props: DeferredScreenMockProps) => mockDeferredScreen(props),
 }));
 jest.mock('#components/base/Skeleton/RecipeSkeleton', () => ({
   RecipeSkeleton: () => 'RecipeSkeleton',
 }));
 jest.mock('#components/molecules/TabScreenHeader', () => ({
-  TabScreenHeader: ({ title, headerRight }: any) => {
+  TabScreenHeader: ({ title, headerRight }: TabScreenHeaderMockProps) => {
     const R = require('react');
     const { View, Text } = require('react-native');
     return R.createElement(
@@ -153,7 +182,8 @@ jest.mock('#components/templates/BottomSheetAction', () => ({
   BottomSheetAction: () => null,
 }));
 jest.mock('../RecipeSearch/IngredientSelectorContext', () => ({
-  IngredientSelectorProvider: ({ children }: any) => children,
+  IngredientSelectorProvider: ({ children }: { children: React.ReactNode }) =>
+    children,
   useIngredientSelector: jest.fn(() => ({
     selectedIngredients: new Set(),
     toggleIngredient: jest.fn(),
@@ -161,7 +191,7 @@ jest.mock('../RecipeSearch/IngredientSelectorContext', () => ({
 }));
 
 // Helper to create a useRecipeScreen mock with overrides
-function mockScreenWith(overrides: Record<string, any>) {
+function mockScreenWith(overrides: Record<string, unknown>) {
   const { useRecipeScreen } = jest.requireMock(
     '#features/recipes/hooks/useRecipeScreen',
   );
@@ -204,7 +234,8 @@ function mockScreenWith(overrides: Record<string, any>) {
 describe('RecipeMain', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockItemListImpl = (props: AnyProps) => props.ListHeaderComponent ?? null;
+    mockItemListImpl = (props: ItemListMockProps) =>
+      props.ListHeaderComponent ?? null;
     mockScreenWith({});
   });
 
@@ -214,17 +245,21 @@ describe('RecipeMain', () => {
   });
 
   it('renders inner component when DeferredScreen renders component', () => {
-    mockDeferredScreen.mockImplementation(({ component: Component }: any) => (
-      <Component />
-    ));
+    mockDeferredScreen.mockImplementation(
+      ({ component: Component }: { component: React.ComponentType }) => (
+        <Component />
+      ),
+    );
     const { getByTestId } = render(<RecipeMain />);
     expect(getByTestId('recipes-screen')).toBeTruthy();
   });
 
   it('shows header with saved, my recipes, and advanced search navigation', () => {
-    mockDeferredScreen.mockImplementation(({ component: Component }: any) => (
-      <Component />
-    ));
+    mockDeferredScreen.mockImplementation(
+      ({ component: Component }: { component: React.ComponentType }) => (
+        <Component />
+      ),
+    );
     const tree = render(<RecipeMain />);
     expect(tree.getByLabelText('Saved recipes')).toBeTruthy();
     expect(tree.getByLabelText('My recipes')).toBeTruthy();
@@ -233,9 +268,11 @@ describe('RecipeMain', () => {
 
   it('navigates to SavedRecipes when bookmark icon pressed', async () => {
     const user = userEvent.setup();
-    mockDeferredScreen.mockImplementation(({ component: Component }: any) => (
-      <Component />
-    ));
+    mockDeferredScreen.mockImplementation(
+      ({ component: Component }: { component: React.ComponentType }) => (
+        <Component />
+      ),
+    );
     const mockToSavedRecipes = jest.fn();
     const { useAppNavigation } = jest.requireMock(
       '#hooks/navigation/useAppNavigation',
@@ -255,9 +292,11 @@ describe('RecipeMain', () => {
 
   it('navigates to MyRecipes when create icon pressed', async () => {
     const user = userEvent.setup();
-    mockDeferredScreen.mockImplementation(({ component: Component }: any) => (
-      <Component />
-    ));
+    mockDeferredScreen.mockImplementation(
+      ({ component: Component }: { component: React.ComponentType }) => (
+        <Component />
+      ),
+    );
     const mockToMyRecipes = jest.fn();
     const { useAppNavigation } = jest.requireMock(
       '#hooks/navigation/useAppNavigation',
@@ -276,9 +315,11 @@ describe('RecipeMain', () => {
   });
 
   it('shows discovery items from useRecipeScreen', () => {
-    mockDeferredScreen.mockImplementation(({ component: Component }: any) => (
-      <Component />
-    ));
+    mockDeferredScreen.mockImplementation(
+      ({ component: Component }: { component: React.ComponentType }) => (
+        <Component />
+      ),
+    );
     mockScreenWith({
       showDiscovery: true,
       discovery: {
@@ -301,8 +342,8 @@ describe('RecipeMain', () => {
       ],
     });
 
-    let capturedItems: any[] | undefined;
-    mockItemListImpl = (props: AnyProps) => {
+    let capturedItems: RecipeMainItem[] | undefined;
+    mockItemListImpl = (props: ItemListMockProps) => {
       capturedItems = props.items;
       return null;
     };
@@ -313,9 +354,11 @@ describe('RecipeMain', () => {
   });
 
   it('shows pantry discovery header', () => {
-    mockDeferredScreen.mockImplementation(({ component: Component }: any) => (
-      <Component />
-    ));
+    mockDeferredScreen.mockImplementation(
+      ({ component: Component }: { component: React.ComponentType }) => (
+        <Component />
+      ),
+    );
     mockScreenWith({
       showDiscovery: true,
       discovery: {
@@ -334,9 +377,11 @@ describe('RecipeMain', () => {
   });
 
   it('shows random discovery header', () => {
-    mockDeferredScreen.mockImplementation(({ component: Component }: any) => (
-      <Component />
-    ));
+    mockDeferredScreen.mockImplementation(
+      ({ component: Component }: { component: React.ComponentType }) => (
+        <Component />
+      ),
+    );
     mockScreenWith({
       showDiscovery: true,
       discovery: {
@@ -355,9 +400,11 @@ describe('RecipeMain', () => {
   });
 
   it('navigates to RecipeDetail with externalSource for items', () => {
-    mockDeferredScreen.mockImplementation(({ component: Component }: any) => (
-      <Component />
-    ));
+    mockDeferredScreen.mockImplementation(
+      ({ component: Component }: { component: React.ComponentType }) => (
+        <Component />
+      ),
+    );
     const mockToRecipeDetail = jest.fn();
     const { useAppNavigation } = jest.requireMock(
       '#hooks/navigation/useAppNavigation',
@@ -383,7 +430,7 @@ describe('RecipeMain', () => {
     });
 
     let capturedOnItemPress: ((id: string | number) => void) | undefined;
-    mockItemListImpl = (props: AnyProps) => {
+    mockItemListImpl = (props: ItemListMockProps) => {
       capturedOnItemPress = props.onItemPress;
       return null;
     };
@@ -399,28 +446,32 @@ describe('RecipeMain', () => {
   });
 
   it('shows empty state from useRecipeScreen', () => {
-    mockDeferredScreen.mockImplementation(({ component: Component }: any) => (
-      <Component />
-    ));
-    let capturedEmptyState: any;
-    mockItemListImpl = (props: AnyProps) => {
+    mockDeferredScreen.mockImplementation(
+      ({ component: Component }: { component: React.ComponentType }) => (
+        <Component />
+      ),
+    );
+    let capturedEmptyState: ItemListMockProps['emptyState'];
+    mockItemListImpl = (props: ItemListMockProps) => {
       capturedEmptyState = props.emptyState;
       return null;
     };
 
     render(<RecipeMain />);
-    expect(capturedEmptyState.title).toBe('Discover Recipes');
+    expect(capturedEmptyState!.title).toBe('Discover Recipes');
   });
 
   it('calls handleRefresh from useRecipeScreen on pull-to-refresh', () => {
-    mockDeferredScreen.mockImplementation(({ component: Component }: any) => (
-      <Component />
-    ));
+    mockDeferredScreen.mockImplementation(
+      ({ component: Component }: { component: React.ComponentType }) => (
+        <Component />
+      ),
+    );
     const mockRefresh = jest.fn();
     mockScreenWith({ handleRefresh: mockRefresh });
 
     let capturedOnRefresh: (() => Promise<void>) | undefined;
-    mockItemListImpl = (props: AnyProps) => {
+    mockItemListImpl = (props: ItemListMockProps) => {
       capturedOnRefresh = props.onRefresh;
       return null;
     };

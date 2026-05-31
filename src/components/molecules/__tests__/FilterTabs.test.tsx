@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
 import { FilterTabs } from '../FilterTabs/FilterTabs';
+import type { FilterTabConfig, FilterTabsProps } from '../FilterTabs/types';
 
 describe('FilterTabs', () => {
   const tabs = [
@@ -9,7 +10,7 @@ describe('FilterTabs', () => {
     { id: 'freezer', label: 'Freezer' },
   ];
 
-  const defaultProps: any = {
+  const defaultProps: FilterTabsProps = {
     tabs,
     activeTabId: 'all',
     onTabChange: jest.fn(),
@@ -100,14 +101,14 @@ describe('FilterTabs', () => {
   it('uses custom tab onPress when provided instead of onTabChange', async () => {
     const user = userEvent.setup();
     const customPress = jest.fn();
-    const tabsWithAction = [
+    const tabsWithAction: FilterTabConfig[] = [
       { id: 'all', label: 'All' },
       { id: 'custom', label: 'Custom', onPress: customPress },
     ];
 
     render(
       <FilterTabs
-        tabs={tabsWithAction as any}
+        tabs={tabsWithAction}
         activeTabId="all"
         onTabChange={defaultProps.onTabChange}
       />,

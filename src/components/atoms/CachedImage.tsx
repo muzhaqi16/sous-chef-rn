@@ -99,11 +99,7 @@ export const CachedImage = ({
           containerStyle,
         ]}
       >
-        <Icon
-          name="image-outline"
-          size={24}
-          color={styles.placeholderIcon.color}
-        />
+        <Icon name="image-outline" size={24} tone="textTertiary" />
       </View>
     );
   }
@@ -157,11 +153,7 @@ export const CachedImage = ({
           loadState !== 'error' && HIDDEN,
         ]}
       >
-        <Icon
-          name="image-outline"
-          size={24}
-          color={styles.placeholderIcon.color}
-        />
+        <Icon name="image-outline" size={24} tone="textTertiary" />
       </View>
     </View>
   );
@@ -196,9 +188,6 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surfaceVariant,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  placeholderIcon: {
-    color: theme.colors.textTertiary,
   },
 }));
 

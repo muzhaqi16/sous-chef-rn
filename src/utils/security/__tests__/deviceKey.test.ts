@@ -7,6 +7,7 @@ import {
   getGenericPassword,
   resetGenericPassword,
 } from 'react-native-keychain';
+import type { STORAGE_TYPE, BIOMETRY_TYPE } from 'react-native-keychain';
 
 import { DeviceKeyManager } from '../deviceKey';
 
@@ -45,8 +46,8 @@ describe('DeviceKeyManager', () => {
     mockedGetGenericPassword.mockResolvedValue(false);
     mockedSetGenericPassword.mockResolvedValue({
       service: 'dev.souschef.app.devicekey',
-      storage: 'keychain' as any,
-    } as any);
+      storage: 'keychain' as STORAGE_TYPE,
+    });
     mockedResetGenericPassword.mockResolvedValue(true);
   });
 
@@ -86,8 +87,8 @@ describe('DeviceKeyManager', () => {
         service: 'dev.souschef.app.devicekey',
         username: 'device_key',
         password: 'existing-key-from-keychain',
-        storage: 'keychain' as any,
-      } as any);
+        storage: 'keychain' as STORAGE_TYPE,
+      });
 
       const key = await DeviceKeyManager.getDeviceEncryptionKey();
       expect(key).toBe('existing-key-from-keychain');
@@ -119,8 +120,8 @@ describe('DeviceKeyManager', () => {
         service: 'dev.souschef.app.devicekey',
         username: 'device_key',
         password: 'old-key',
-        storage: 'keychain' as any,
-      } as any);
+        storage: 'keychain' as STORAGE_TYPE,
+      });
 
       const key = await DeviceKeyManager.getDeviceEncryptionKey({
         forceRegenerate: true,
@@ -135,7 +136,9 @@ describe('DeviceKeyManager', () => {
   // ==========================================================================
   describe('isBiometricAvailable', () => {
     it('returns true when biometry is supported', async () => {
-      mockedGetSupportedBiometryType.mockResolvedValue('FaceID' as any);
+      mockedGetSupportedBiometryType.mockResolvedValue(
+        'FaceID' as BIOMETRY_TYPE,
+      );
       expect(await DeviceKeyManager.isBiometricAvailable()).toBe(true);
     });
 

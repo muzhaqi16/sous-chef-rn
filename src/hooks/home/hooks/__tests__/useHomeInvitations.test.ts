@@ -10,6 +10,34 @@ import { alertService } from '#/services/alertService';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import { useHomeInvitations } from '../useHomeInvitations';
 
+type HomeInvitationsApi = ReturnType<typeof useHomeInvitations>;
+type JoinResult = Awaited<ReturnType<HomeInvitationsApi['joinHomeByCode']>>;
+// On the success path `joinHomeByCode` resolves to the membership, whose `role`
+// is a masked fragment field. Optional fields (plus `__typename`) let the masked
+// value be read for assertions without unmasking.
+type JoinMembershipData = {
+  __typename?: string;
+  homeId?: string;
+  role?: MembershipRole;
+};
+// `inviteToHome` is a result union and `homeInvite` is a masked fragment ref, so
+// `id`/`role` aren't statically present on the precise type. These fields are
+// optional here so the masked mutation data assigns through while keeping the
+// success-path reads type-checked against the runtime mock values.
+type InviteResultData = {
+  inviteToHome?: {
+    __typename?: string;
+    homeInvite?: {
+      __typename?: string;
+      id?: string;
+      role?: MembershipRole;
+    } | null;
+  } | null;
+};
+type PreviewResult = Awaited<
+  ReturnType<HomeInvitationsApi['previewHomeByCode']>
+>;
+
 jest.mock('#/services/errorService', () => ({
   useErrorService: () => ({
     handleApolloError: jest.fn(() => ({ message: 'Error occurred' })),
@@ -17,7 +45,7 @@ jest.mock('#/services/errorService', () => ({
 }));
 
 jest.mock('#/utils/connectionUtils', () => ({
-  normalizeHome: jest.fn((home: any) => home),
+  normalizeHome: jest.fn((home: unknown) => home),
 }));
 
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
@@ -31,7 +59,7 @@ jest.mock('#/services/alertService', () => ({
 }));
 
 const createOptions = () => ({
-  homes: [] as any[],
+  homes: [],
   refetch: jest.fn().mockResolvedValue(undefined),
   setDefaultHome: jest.fn().mockResolvedValue(true),
   setSelectedHomeId: jest.fn(),
@@ -207,7 +235,7 @@ describe('useHomeInvitations', () => {
         },
       );
 
-      let returnValue: any;
+      let returnValue: InviteResultData | null | undefined;
       await act(async () => {
         returnValue = await result.current.inviteUserToHome(
           'home-1',
@@ -234,7 +262,7 @@ describe('useHomeInvitations', () => {
         },
       );
 
-      let returnValue: any;
+      let returnValue: InviteResultData | null | undefined;
       await act(async () => {
         returnValue = await result.current.inviteUserToHome(
           'home-1',
@@ -267,7 +295,7 @@ describe('useHomeInvitations', () => {
         },
       );
 
-      let returnValue: any;
+      let returnValue: InviteResultData | null | undefined;
       await act(async () => {
         returnValue = await result.current.inviteUserToHome(
           'home-1',
@@ -285,7 +313,7 @@ describe('useHomeInvitations', () => {
         useHomeInvitations(createOptions()),
       );
 
-      let success: any;
+      let success: JoinResult | undefined;
       await act(async () => {
         success = await result.current.joinHomeByCode('   ');
       });
@@ -310,14 +338,15 @@ describe('useHomeInvitations', () => {
         },
       );
 
-      let returnValue: any;
+      let returnValue: JoinResult | undefined;
       await act(async () => {
         returnValue = await result.current.joinHomeByCode('  ABC123  ');
       });
 
       // Receiving membership confirms the mutation matched the trimmed code.
-      expect(returnValue?.homeId).toBe('home-1');
-      expect(returnValue?.role).toBe(MembershipRole.Member);
+      const membership = returnValue as JoinMembershipData | undefined;
+      expect(membership?.homeId).toBe('home-1');
+      expect(membership?.role).toBe(MembershipRole.Member);
     });
 
     it('returns false when no membership returned', async () => {
@@ -328,7 +357,7 @@ describe('useHomeInvitations', () => {
         },
       );
 
-      let returnValue: any;
+      let returnValue: JoinResult | undefined;
       await act(async () => {
         returnValue = await result.current.joinHomeByCode('ABC123');
       });
@@ -343,7 +372,7 @@ describe('useHomeInvitations', () => {
         useHomeInvitations(createOptions()),
       );
 
-      let returnValue: any;
+      let returnValue: PreviewResult | undefined;
       await act(async () => {
         returnValue = await result.current.previewHomeByCode('  ');
       });
@@ -364,7 +393,7 @@ describe('useHomeInvitations', () => {
         },
       );
 
-      let returnValue: any;
+      let returnValue: PreviewResult | undefined;
       await act(async () => {
         returnValue = await result.current.previewHomeByCode('  XYZ789  ');
       });
@@ -381,7 +410,7 @@ describe('useHomeInvitations', () => {
         },
       );
 
-      let returnValue: any;
+      let returnValue: PreviewResult | undefined;
       await act(async () => {
         returnValue = await result.current.previewHomeByCode('INVALID');
       });
@@ -400,7 +429,7 @@ describe('useHomeInvitations', () => {
         useHomeInvitations(createOptions()),
       );
 
-      let returnValue: any;
+      let returnValue: PreviewResult | undefined;
       await act(async () => {
         returnValue = await result.current.previewHomeByCode('ABC123');
       });

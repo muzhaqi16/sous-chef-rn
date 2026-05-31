@@ -222,7 +222,7 @@ describe('imageUtils', () => {
         perspective: 'front',
         featured: false,
         sourcePriority: 0,
-        sizes: [{ size: 'thumbnail' as any, url: 'http://a.com/thumb.jpg' }],
+        sizes: [{ size: 'thumbnail', url: 'http://a.com/thumb.jpg' }],
       };
       // 'thumbnail' is in SIZE_PRIORITY so it should be found
       expect(getBestImageUrl(image, 'xlarge')).toBe('http://a.com/thumb.jpg');

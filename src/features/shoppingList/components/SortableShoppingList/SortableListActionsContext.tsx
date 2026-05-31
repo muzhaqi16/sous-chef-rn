@@ -6,6 +6,7 @@ import React, {
   useState,
   type ReactNode,
 } from 'react';
+import type { SwipeableRef } from '#/components/molecules/SwipeableItem/types';
 
 /**
  * Actions available for list items.
@@ -18,7 +19,7 @@ export interface SortableListActions {
   onTogglePurchase?: (id: string) => void;
   onMoveToPantry?: (id: string) => void;
   onQuantityPress?: (id: string) => void;
-  onSwipeableWillOpen?: (ref: any) => void;
+  onSwipeableWillOpen?: (ref: SwipeableRef) => void;
   onSwipeableClose?: () => void;
   /**
    * Callback for reordering items via drag-to-reorder.
@@ -119,7 +120,7 @@ export const SortableListActionsProvider: React.FC<
     onTogglePurchase: (id: string) => actionsRef.current.onTogglePurchase?.(id),
     onMoveToPantry: (id: string) => actionsRef.current.onMoveToPantry?.(id),
     onQuantityPress: (id: string) => actionsRef.current.onQuantityPress?.(id),
-    onSwipeableWillOpen: (ref: any) =>
+    onSwipeableWillOpen: (ref: SwipeableRef) =>
       actionsRef.current.onSwipeableWillOpen?.(ref),
     onSwipeableClose: () => actionsRef.current.onSwipeableClose?.(),
     onSortOrderUpdate: (

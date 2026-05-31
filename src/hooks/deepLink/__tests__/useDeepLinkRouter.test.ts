@@ -1,6 +1,7 @@
 'use no memo';
 
 import { renderHook, act } from '@testing-library/react-native';
+import type { RootState } from '#store/index';
 import { useDeepLinkRouter } from '../useDeepLinkRouter';
 
 // Mock the centralized navigation facade — the only navigation API used by
@@ -30,7 +31,10 @@ jest.mock('#store/useAppStore', () => {
     clearPendingDeepLinkAction: mockClearPending,
   });
   return {
-    useAppStore: jest.fn((selector: any) => selector(getState())),
+    useAppStore: jest.fn(
+      <T>(selector: (state: RootState) => T): T =>
+        selector(getState() as Partial<RootState> as RootState),
+    ),
     useIsHydrated: jest.fn(() => getState().isHydrated),
   };
 });
@@ -52,7 +56,7 @@ jest.mock('#/services/toastService', () => ({
 jest.mock('#store/slices/navigationSlice', () => ({}));
 
 // Helper to create a valid JWT token (3 parts separated by dots)
-const createMockToken = (payload: Record<string, any> = {}) => {
+const createMockToken = (payload: Record<string, unknown> = {}) => {
   const now = Math.floor(Date.now() / 1000);
   const defaultPayload = { exp: now + 3600, iat: now, ...payload };
   const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
@@ -145,13 +149,14 @@ describe('useDeepLinkRouter', () => {
   it('triggerDeepLinkAction queues action when not hydrated', () => {
     const { useAppStore, useIsHydrated } =
       jest.requireMock('#store/useAppStore');
-    useAppStore.mockImplementation((selector: any) =>
-      selector({
-        isHydrated: false,
-        pendingDeepLinkAction: null,
-        setPendingDeepLinkAction: mockSetPending,
-        clearPendingDeepLinkAction: mockClearPending,
-      }),
+    useAppStore.mockImplementation(
+      <T>(selector: (state: RootState) => T): T =>
+        selector({
+          isHydrated: false,
+          pendingDeepLinkAction: null,
+          setPendingDeepLinkAction: mockSetPending,
+          clearPendingDeepLinkAction: mockClearPending,
+        } as Partial<RootState> as RootState),
     );
     useIsHydrated.mockReturnValue(false);
 

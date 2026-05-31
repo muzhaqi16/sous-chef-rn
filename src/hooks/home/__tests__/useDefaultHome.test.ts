@@ -4,7 +4,16 @@ import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { GetHomesDocument } from '#operations/home/home.generated';
 import { SetDefaultHomeDocument } from '#operations/home/userSettings.generated';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
+import type { RootState } from '#store/index';
 import { useDefaultHome } from '../useDefaultHome';
+
+// Minimal shapes the connectionUtils mock operates on (home/connection nodes).
+type MockEdge = { node?: { id: string; isDefault?: boolean } | null } | null;
+type MockConnection = { edges?: MockEdge[] | null } | null | undefined;
+type MockHome = {
+  pantries?: Array<{ id: string; isDefault?: boolean }>;
+  pantriesConnection?: { edges?: MockEdge[] | null };
+} | null;
 
 // Store mock state — mutable so each test can prep its own scenario
 const mockStoreState = {
@@ -22,7 +31,8 @@ const mockStoreState = {
 };
 
 jest.mock('#store/useAppStore', () => ({
-  useAppStore: (selector: (state: any) => any) => selector(mockStoreState),
+  useAppStore: <T>(selector: (state: RootState) => T): T =>
+    selector(mockStoreState as Partial<RootState> as RootState),
   usePantryState: jest.fn(() => ({
     selectedPantryId: mockStoreState.selectedPantryId,
     setSelectedPantryId: mockStoreState.setSelectedPantryId,
@@ -46,31 +56,33 @@ jest.mock('#store', () => ({
 }));
 
 jest.mock('#/hooks/apollo/usePreservedQueryData', () => ({
-  usePreservedArrayData: jest.fn((data: any) => data ?? []),
+  usePreservedArrayData: jest.fn(
+    <T>(data: T[] | undefined | null): T[] => data ?? [],
+  ),
 }));
 
 jest.mock('#/utils/connectionUtils', () => {
   // normalizeHomes flattens each home's `pantriesConnection.edges[].node`
   // into a `pantries` array so the hook (which reads `home.pantries`
   // directly) doesn't need to know about the underlying connection shape.
-  const flattenPantries = (home: any) => {
+  const flattenPantries = (home: MockHome) => {
     if (!home) return home;
     if (home.pantries) return home;
     const edges = home.pantriesConnection?.edges;
     if (!Array.isArray(edges)) return home;
     return {
       ...home,
-      pantries: edges.map((e: any) => e?.node).filter(Boolean),
+      pantries: edges.map(e => e?.node).filter(Boolean),
     };
   };
   return {
-    normalizeHomes: jest.fn((homes: any) =>
+    normalizeHomes: jest.fn((homes: MockHome[] | null | undefined) =>
       Array.isArray(homes) ? homes.map(flattenPantries) : homes ?? [],
     ),
-    normalizeHome: jest.fn((home: any) => flattenPantries(home)),
-    extractNodes: jest.fn((connection: any) => {
+    normalizeHome: jest.fn((home: MockHome) => flattenPantries(home)),
+    extractNodes: jest.fn((connection: MockConnection) => {
       if (!connection?.edges) return [];
-      return connection.edges.map((e: any) => e?.node).filter(Boolean);
+      return connection.edges.map(e => e?.node).filter(Boolean);
     }),
   };
 });
@@ -309,19 +321,22 @@ describe('useDefaultHome', () => {
       expect(pantry).toBeNull();
     });
 
-    it('handles nested home property', () => {
+    it('reads pantries from the connection shape', () => {
       const { result } = renderHookWithApollo(() => useDefaultHome(), {
         operationMocks: [buildGetHomesMock([])],
       });
 
-      const homeData = {
-        home: {
-          pantries: [{ id: 'p-1', isDefault: true }],
+      const home = {
+        pantriesConnection: {
+          edges: [
+            { node: { id: 'p-1', isDefault: false } },
+            { node: { id: 'p-2', isDefault: true } },
+          ],
         },
       };
 
-      const pantry = result.current.actions.getDefaultPantry(homeData);
-      expect(pantry?.id).toBe('p-1');
+      const pantry = result.current.actions.getDefaultPantry(home);
+      expect(pantry?.id).toBe('p-2');
     });
 
     it('returns null for null input', () => {

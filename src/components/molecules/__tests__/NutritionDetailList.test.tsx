@@ -4,7 +4,7 @@ import { NutritionDetailList } from '../NutritionDetailList';
 
 // Mock the nutritionUtils
 jest.mock('#utils/nutritionUtils', () => ({
-  parseNutritions: jest.fn((raw: any) => raw),
+  parseNutritions: jest.fn((raw: unknown) => raw),
   getNutrientEntries: jest.fn(() => [
     {
       key: 'protein',

@@ -39,22 +39,24 @@ import {
 } from 'zustand/middleware';
 import {
   createPreferencesSlice,
-  ThemePreference,
   type PreferencesState,
 } from '#/store/slices/preferencesSlice';
+import {
+  ThemePreference,
+  PantrySortOption,
+} from '#/store/slices/preferenceTypes';
 import { zustandStorage, STORAGE_KEY } from '#/storage/mmkv';
 
-// We only need the preferences slice for this test. The full RootState is
-// the union of every slice; reconstructing all of them just to test theme
-// persistence would conflate the seam under test with unrelated state.
-type SliceState = PreferencesState;
-
 function createPersistedStore(testKey: string) {
-  return create<SliceState>()(
+  return create<PreferencesState>()(
     subscribeWithSelector(
       persist(
         immer((set, get, api) =>
-          createPreferencesSlice(set as any, get as any, api as any),
+          createPreferencesSlice(
+            set as Parameters<typeof createPreferencesSlice>[0],
+            get as Parameters<typeof createPreferencesSlice>[1],
+            api as unknown as Parameters<typeof createPreferencesSlice>[2],
+          ),
         ),
         {
           name: testKey,
@@ -116,7 +118,7 @@ describe('integration: theme preference persistence round-trip', () => {
     session1.getState().setTheme(ThemePreference.LIGHT);
     session1.getState().setLanguage('fr');
     session1.getState().setHapticFeedbackEnabled(false);
-    session1.getState().setPantrySortOption('expiry');
+    session1.getState().setPantrySortOption(PantrySortOption.EXPIRY);
     await flushPersist();
 
     const session2 = createPersistedStore(key);
@@ -126,7 +128,7 @@ describe('integration: theme preference persistence round-trip', () => {
     expect(restored.theme).toBe(ThemePreference.LIGHT);
     expect(restored.language).toBe('fr');
     expect(restored.hapticFeedbackEnabled).toBe(false);
-    expect(restored.pantrySortOption).toBe('expiry');
+    expect(restored.pantrySortOption).toBe(PantrySortOption.EXPIRY);
   });
 
   it('starts at the slice default when no persisted state exists', async () => {

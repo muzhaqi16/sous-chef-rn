@@ -1100,7 +1100,8 @@
     "remaining": "{{quantity}} {{unit}} rimanenti",
     "expiringTitle": "Articoli in scadenza",
     "expiringEmpty": "Nessun articolo in scadenza a breve",
-    "addToShoppingFailed": "Impossibile aggiungere alla lista della spesa"
+    "addToShoppingFailed": "Impossibile aggiungere alla lista della spesa",
+    "noListSelected": "Seleziona prima una lista della spesa"
   },
   "appearance": {
     "title": "Aspetto",

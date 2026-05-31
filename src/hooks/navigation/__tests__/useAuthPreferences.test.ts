@@ -1,5 +1,13 @@
 import { renderHook, act } from '@testing-library/react-native';
+import type { RootState } from '#store';
 import { useAuthPreferences } from '../useAuthPreferences';
+
+type MockUser = RootState['user'];
+type MockStoreState = {
+  user: MockUser;
+  getUserNavigationState: RootState['getUserNavigationState'];
+  setUserNavigationState: RootState['setUserNavigationState'];
+};
 
 // Break circular dependency chain
 jest.mock('../../../apollo/links/tokenScheduler');
@@ -8,24 +16,25 @@ jest.mock('../../../apollo/links/refreshToken');
 const mockSetUserNavigationState = jest.fn();
 const mockGetUserNavigationState = jest.fn();
 
-let mockUser: any = { id: 'u1', email: 'test@test.com' };
+let mockUser: MockUser = { id: 'u1', email: 'test@test.com' } as MockUser;
 
 jest.mock('#store/useAppStore', () => {
-  const getState = () => ({
+  const getState = (): MockStoreState => ({
     user: mockUser,
     getUserNavigationState: mockGetUserNavigationState,
     setUserNavigationState: mockSetUserNavigationState,
   });
   return {
-    useAppStore: (selector: (state: any) => any) => selector(getState()),
-    useUser: () => (s => s.user)(getState()),
-    useUserId: () => (s => s.user?.id)(getState()),
+    useAppStore: (selector: (state: MockStoreState) => unknown) =>
+      selector(getState()),
+    useUser: () => getState().user,
+    useUserId: () => getState().user?.id,
   };
 });
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockUser = { id: 'u1', email: 'test@test.com' };
+  mockUser = { id: 'u1', email: 'test@test.com' } as MockUser;
   mockGetUserNavigationState.mockReturnValue(null);
 });
 

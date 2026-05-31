@@ -6,7 +6,7 @@ interface OptimisticFieldUpdate {
   entityType: string; // 'ShoppingListItem', 'ShoppingList', 'PantryItem', etc.
   entityId: string;
   field: string;
-  value: any;
+  value: unknown;
   timestamp: number;
 }
 
@@ -38,7 +38,7 @@ interface OptimisticFieldUpdate {
  */
 class OptimisticDataPersistence {
   private flushScheduled = false;
-  private pendingUpdates: Record<string, any> = {};
+  private pendingUpdates: Record<string, OptimisticFieldUpdate> = {};
 
   // PERFORMANCE: In-memory cache to avoid repeated MMKV reads and JSON parsing
   // Cache is invalidated on writes and has no TTL (data is small and static until updated)
@@ -54,7 +54,12 @@ class OptimisticDataPersistence {
    * @param field - Field name (e.g., 'sortOrder', 'quantity', 'name')
    * @param value - The optimistic value to persist
    */
-  save(entityType: string, entityId: string, field: string, value: any): void {
+  save(
+    entityType: string,
+    entityId: string,
+    field: string,
+    value: unknown,
+  ): void {
     try {
       const key = `${entityType}:${entityId}:${field}`;
 
@@ -140,9 +145,9 @@ class OptimisticDataPersistence {
    * // { sortOrder: 'a5', quantity: 2 }
    * ```
    */
-  get(entityType: string, entityId: string): Record<string, any> {
+  get(entityType: string, entityId: string): Record<string, unknown> {
     const all = this.loadAll();
-    const updates: Record<string, any> = {};
+    const updates: Record<string, unknown> = {};
 
     Object.entries(all).forEach(([, data]) => {
       if (data.entityType === entityType && data.entityId === entityId) {
@@ -169,9 +174,9 @@ class OptimisticDataPersistence {
    * // }
    * ```
    */
-  getAllForType(entityType: string): Map<string, Record<string, any>> {
+  getAllForType(entityType: string): Map<string, Record<string, unknown>> {
     const all = this.loadAll();
-    const byEntity = new Map<string, Record<string, any>>();
+    const byEntity = new Map<string, Record<string, unknown>>();
 
     Object.entries(all).forEach(([, data]) => {
       if (data.entityType === entityType) {
@@ -200,7 +205,7 @@ class OptimisticDataPersistence {
     entityType: string,
     entityId: string,
     field: string,
-    value: any,
+    value: unknown,
   ): () => void {
     this.save(entityType, entityId, field, value);
     return () => this.clear(entityType, entityId, field);

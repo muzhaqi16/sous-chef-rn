@@ -51,6 +51,10 @@ query MyRecipes(
         id
         category
         difficulty
+        savedDetails {
+          id
+          folder
+        }
         ...MyRecipeCard_recipe
       }
       cursor
@@ -77,6 +81,13 @@ query GetRecipeReviews($id: ID!) {
       edges {
         node {
           id
+          # Reactivity signals: helpful/updatedAt also live in
+          # ...RecipeReviewFragment, but selecting them inline keeps them in the
+          # (unmasked) query result so useQuery re-emits when a review is edited
+          # or its helpful count changes. Otherwise the list sorted in
+          # useRecipeReviews.ts stays stale until the next refetch.
+          helpful
+          updatedAt
           ...RecipeReviewFragment
         }
       }

@@ -2,13 +2,18 @@ import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { useForm } from 'react-hook-form';
 import { ItemInformationSection } from '../ItemInformationSection';
+import type { PantryItemFormData } from '../PantryItemForm';
 
 jest.mock('#components/molecules/DynamicFormFields', () => {
   const { View, Text } = require('react-native');
   return {
-    DynamicFormFields: ({ fields }: any) => (
+    DynamicFormFields: ({
+      fields,
+    }: {
+      fields: Array<{ name: string; label: string }>;
+    }) => (
       <View testID="dynamic-fields">
-        {fields.map((f: any) => (
+        {fields.map(f => (
           <Text key={f.name}>{f.label}</Text>
         ))}
       </View>
@@ -22,11 +27,13 @@ jest.mock('#components/molecules/FormInput', () => ({
 }));
 
 // Helper wrapper to provide react-hook-form control
-function Wrapper(overrides: any) {
+function Wrapper(
+  overrides: Partial<React.ComponentProps<typeof ItemInformationSection>> = {},
+) {
   const {
     control,
     formState: { errors },
-  } = useForm({
+  } = useForm<PantryItemFormData>({
     defaultValues: {
       itemName: '',
       category: '',

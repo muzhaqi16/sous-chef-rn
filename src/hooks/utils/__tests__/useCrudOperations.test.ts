@@ -1,7 +1,7 @@
 'use no memo';
 
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
-import { alertService } from '#/services/alertService';
+import { alertService, type AlertButton } from '#/services/alertService';
 import { useCrudOperations } from '../useCrudOperations';
 
 jest.mock('#/services/alertService', () => ({
@@ -10,7 +10,9 @@ jest.mock('#/services/alertService', () => ({
 
 jest.mock('#/services/errorService', () => ({
   errorService: { reportError: jest.fn() },
-  getErrorMessage: jest.fn((e: any) => e?.message || 'An error occurred'),
+  getErrorMessage: jest.fn((e: unknown) =>
+    e instanceof Error ? e.message : 'An error occurred',
+  ),
 }));
 
 jest.mock('#/utils/compilerSafeWrappers');
@@ -323,10 +325,10 @@ describe('useCrudOperations', () => {
 
       // Simulate pressing 'Delete' button
       const alertCalls = (alertService.alert as jest.Mock).mock.calls;
-      const buttons = alertCalls[alertCalls.length - 1][2];
-      const deleteButton = buttons.find((b: any) => b.text === 'Delete');
+      const buttons = alertCalls[alertCalls.length - 1][2] as AlertButton[];
+      const deleteButton = buttons.find(b => b.text === 'Delete');
 
-      await deleteButton.onPress();
+      await deleteButton?.onPress?.();
       const data = await deletePromise;
 
       expect(mockMutation).toHaveBeenCalledWith({

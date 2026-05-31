@@ -85,7 +85,7 @@ export const NutritionSummaryCard: React.FC<NutritionSummaryCardProps> = ({
           <Icon
             name={expanded ? 'chevron-up' : 'chevron-down'}
             size={20}
-            color={styles.chevron.color}
+            tone="textTertiary"
           />
         </View>
       </Pressable>
@@ -207,9 +207,6 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.xs,
-  },
-  chevron: {
-    color: theme.colors.textTertiary,
   },
   body: {
     gap: theme.spacing.lg,

@@ -7,6 +7,7 @@ import {
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import { GetMealPlansDocument } from '#features/mealPlan/graphql/mealPlan.generated';
+import type { PaginationConfig } from '#hooks/utils/usePagination';
 import { useMealPlans } from '../useMealPlans';
 
 function seedPlanCache(
@@ -49,11 +50,11 @@ jest.mock('#hooks/apollo/useApolloErrorLogger', () => ({
 }));
 
 jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeMutation: jest.fn((fn: any) => fn()),
+  executeMutation: jest.fn(<T>(fn: () => Promise<T>) => fn()),
 }));
 
 jest.mock('#hooks/utils/usePagination', () => ({
-  usePagination: jest.fn((config: any) => ({
+  usePagination: jest.fn((config: PaginationConfig) => ({
     hasMore: config.pageInfo?.hasNextPage ?? false,
     endCursor: config.pageInfo?.endCursor ?? null,
     loadMore: jest.fn(),

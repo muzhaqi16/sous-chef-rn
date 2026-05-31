@@ -1,12 +1,19 @@
 import { act } from '@testing-library/react-native';
+import type { RootState } from '#store/index';
+import type {
+  CreateOperationConfig,
+  RemoveOperationConfig,
+} from '#/hooks/utils/useCrudOperations';
 import {
   recordMock,
   renderHookWithApollo,
+  seedCache,
 } from '#/test-utils/apolloMockProvider';
 import {
   CreateHomeDocument,
   UpdateHomeDocument,
 } from '#operations/home/home.generated';
+import { UpdateHomeOptimistic_HomeFragmentDoc } from '../useHomeMutations.generated';
 import { alertService } from '#/services/alertService';
 import { useHomeMutations } from '../useHomeMutations';
 
@@ -16,7 +23,8 @@ const mockStoreState = {
 };
 
 jest.mock('#store/useAppStore', () => ({
-  useAppStore: (selector: (state: any) => any) => selector(mockStoreState),
+  useAppStore: (selector: (state: Partial<RootState>) => unknown) =>
+    selector(mockStoreState),
   useSelectedHomeId: jest.fn(() => mockStoreState.selectedHomeId),
   useHomeState: jest.fn(() => ({
     selectedHomeId: mockStoreState.selectedHomeId,
@@ -35,62 +43,59 @@ jest.mock('#/utils/errors/versionConflict', () => ({
   getVersionConflictMessage: jest.fn(() => 'Version conflict'),
 }));
 
-jest.mock('#/apollo/utils/createOptimisticResponse', () => ({
-  enhanceWithVersion: jest.fn((item, updates) => ({ ...item, ...updates })),
-  buildOptimisticMutationResponse: jest.fn(
-    (opName, payloadTypename, fields) => ({
-      __typename: 'Mutation',
-      [opName]: { __typename: payloadTypename, ...fields },
-    }),
-  ),
-}));
-
 jest.mock('#/utils/connectionUtils', () => ({
-  extractNodes: jest.fn((conn: any) =>
-    conn?.edges ? conn.edges.map((e: any) => e?.node).filter(Boolean) : [],
+  extractNodes: jest.fn(
+    (conn?: { edges?: Array<{ node?: unknown } | null> | null } | null) =>
+      conn?.edges ? conn.edges.map(e => e?.node).filter(Boolean) : [],
   ),
-  getConnectionTotalCount: jest.fn((conn: any) => conn?.totalCount ?? 0),
+  getConnectionTotalCount: jest.fn(
+    (conn?: { totalCount?: number | null } | null) => conn?.totalCount ?? 0,
+  ),
 }));
 
-const mockCreateAddOperation = jest.fn((config: any) => {
-  return async (input: any) => {
-    const validation = config.validateInput?.(input);
-    if (typeof validation === 'string') {
-      alertService.alert('Validation Error', validation);
+const mockCreateAddOperation = jest.fn(
+  (config: CreateOperationConfig<unknown, unknown>) => {
+    return async (input: unknown) => {
+      const validation = config.validateInput?.(input);
+      if (typeof validation === 'string') {
+        alertService.alert('Validation Error', validation);
+        return false;
+      }
+      const transformedInput = config.transformInput
+        ? config.transformInput(input)
+        : input;
+      const result = await config.mutation({
+        variables: { input: transformedInput },
+      });
+      if (result.data) {
+        config.onSuccess?.(result.data);
+        return result.data;
+      }
       return false;
-    }
-    const transformedInput = config.transformInput
-      ? config.transformInput(input)
-      : input;
-    const result = await config.mutation({
-      variables: { input: transformedInput },
-    });
-    if (result.data) {
-      config.onSuccess?.(result.data);
-      return result.data;
-    }
-    return false;
-  };
-});
+    };
+  },
+);
 
-const mockCreateRemoveOperation = jest.fn((config: any) => {
-  return async () => {
-    return new Promise(resolve => {
-      alertService.alert(config.operationName, 'Confirm?', [
-        { text: 'Cancel', onPress: () => resolve(false) },
-        {
-          text: 'Delete',
-          onPress: async () => {
-            const result = await config.mutation({
-              variables: { id: config.itemId },
-            });
-            resolve(result?.data || false);
+const mockCreateRemoveOperation = jest.fn(
+  (config: RemoveOperationConfig<unknown>) => {
+    return async () => {
+      return new Promise(resolve => {
+        alertService.alert(config.operationName ?? '', 'Confirm?', [
+          { text: 'Cancel', onPress: () => resolve(false) },
+          {
+            text: 'Delete',
+            onPress: async () => {
+              const result = await config.mutation({
+                variables: { id: config.itemId },
+              });
+              resolve(result?.data || false);
+            },
           },
-        },
-      ]);
-    });
-  };
-});
+        ]);
+      });
+    };
+  },
+);
 
 jest.mock('#/hooks/utils/useCrudOperations', () => ({
   useCrudOperations: () => ({
@@ -111,14 +116,6 @@ jest.mock('#/services/alertService', () => ({
 }));
 
 const createOptions = () => ({
-  homes: [
-    {
-      id: 'home-1',
-      name: 'Home 1',
-      pantries: [{ id: 'p-1', isDefault: true }],
-    },
-    { id: 'home-2', name: 'Home 2', pantries: [] },
-  ],
   refetch: jest.fn().mockResolvedValue(undefined),
   setDefaultHome: jest.fn().mockResolvedValue(true),
   setSelectedPantryId: jest.fn(),
@@ -220,7 +217,7 @@ describe('useHomeMutations', () => {
         useHomeMutations(createOptions()),
       );
 
-      let returnValue: any;
+      let returnValue!: Awaited<ReturnType<typeof result.current.createHome>>;
       await act(async () => {
         returnValue = await result.current.createHome('   ');
       });
@@ -268,7 +265,7 @@ describe('useHomeMutations', () => {
         { operationMocks: [m.mock] },
       );
 
-      let returnValue: any;
+      let returnValue!: Awaited<ReturnType<typeof result.current.updateHome>>;
       await act(async () => {
         returnValue = await result.current.updateHome('home-1', {
           name: 'Test',
@@ -285,7 +282,7 @@ describe('useHomeMutations', () => {
         operationMocks: [m.mock],
       });
 
-      let returnValue: any;
+      let returnValue!: Awaited<ReturnType<typeof result.current.updateHome>>;
       await act(async () => {
         returnValue = await result.current.updateHome('home-1', {
           isDefault: true,
@@ -294,6 +291,84 @@ describe('useHomeMutations', () => {
 
       expect(returnValue).toBe(true);
       expect(m.fired).toEqual([]);
+    });
+
+    it('optimistically updates the cached home before the server responds', async () => {
+      const cache = seedCache([
+        {
+          __typename: 'Home',
+          id: 'home-1',
+          name: 'Old Name',
+          allowJoinCode: false,
+          joinCode: null,
+          version: 1,
+          updatedAt: '2025-01-01T00:00:00.000Z',
+        },
+      ]);
+      const m = updateHomeMock({ id: 'home-1', name: 'New Name' });
+      const { result } = renderHookWithApollo(
+        () => useHomeMutations(createOptions()),
+        { operationMocks: [m.mock], cache },
+      );
+
+      let pending: Promise<unknown> | undefined;
+      act(() => {
+        pending = result.current.updateHome('home-1', { name: 'New Name' });
+      });
+
+      // The optimistic response is written synchronously from the cached home,
+      // before the server resolves. Read the optimistic layer explicitly.
+      const optimistic = cache.readFragment(
+        {
+          id: cache.identify({ __typename: 'Home', id: 'home-1' }),
+          fragment: UpdateHomeOptimistic_HomeFragmentDoc,
+        },
+        true,
+      );
+      expect(optimistic?.name).toBe('New Name');
+
+      await act(async () => {
+        await pending;
+      });
+    });
+
+    it('skips the optimistic update when enabling a join code', async () => {
+      const cache = seedCache([
+        {
+          __typename: 'Home',
+          id: 'home-1',
+          name: 'Home',
+          allowJoinCode: false,
+          joinCode: null,
+          version: 1,
+          updatedAt: '2025-01-01T00:00:00.000Z',
+        },
+      ]);
+      const m = updateHomeMock({ id: 'home-1', name: 'Home' });
+      const { result } = renderHookWithApollo(
+        () => useHomeMutations(createOptions()),
+        { operationMocks: [m.mock], cache },
+      );
+
+      let pending: Promise<unknown> | undefined;
+      act(() => {
+        pending = result.current.updateHome('home-1', { allowJoinCode: true });
+      });
+
+      // The server mints the join code, so there is no optimistic write —
+      // allowJoinCode stays at its cached value until the server responds.
+      const optimistic = cache.readFragment(
+        {
+          id: cache.identify({ __typename: 'Home', id: 'home-1' }),
+          fragment: UpdateHomeOptimistic_HomeFragmentDoc,
+        },
+        true,
+      );
+      expect(optimistic?.allowJoinCode).toBe(false);
+
+      await act(async () => {
+        await pending;
+      });
     });
   });
 

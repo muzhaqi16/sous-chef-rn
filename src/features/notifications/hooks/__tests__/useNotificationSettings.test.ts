@@ -14,7 +14,10 @@ jest.mock('#/apollo/links/refreshToken');
 jest.mock('#store/useAppStore', () => {
   const getState = () => ({ user: { id: 'user-1' } });
   return {
-    useAppStore: jest.fn((selector: any) => selector(getState())),
+    useAppStore: jest.fn(
+      (selector: (state: ReturnType<typeof getState>) => unknown) =>
+        selector(getState()),
+    ),
     useUser: () => (s => s.user)(getState()),
     useUserId: () => (s => s.user?.id)(getState()),
   };

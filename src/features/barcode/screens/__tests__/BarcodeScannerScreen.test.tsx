@@ -45,7 +45,13 @@ jest.mock('../../hooks/useBarcodeOutput', () => ({
 jest.mock('#components/organisms/BarcodeMask', () => 'BarcodeMask');
 
 jest.mock('#components/base/Button', () => ({
-  Button: ({ children, onPress }: any) => {
+  Button: ({
+    children,
+    onPress,
+  }: {
+    children?: React.ReactNode;
+    onPress?: () => void;
+  }) => {
     const { Text, Pressable } = require('react-native');
     return (
       <Pressable onPress={onPress}>

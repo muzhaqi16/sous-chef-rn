@@ -15,7 +15,7 @@ function seedData(
     entityType: string;
     entityId: string;
     field: string;
-    value: any;
+    value: string | number;
   }>,
 ) {
   for (const entry of entries) {
@@ -73,11 +73,11 @@ describe('OptimisticDataPersistence', () => {
       // Track how many times storage.set is called for the data key
       let dataKeySetCount = 0;
       const originalSet = storage.set.bind(storage);
-      const wrappedSet = jest.fn((...args: any[]) => {
+      const wrappedSet = jest.fn((...args: Parameters<typeof storage.set>) => {
         if (args[0] === DATA_KEY) dataKeySetCount++;
-        return (originalSet as any)(...args);
+        return originalSet(...args);
       });
-      storage.set = wrappedSet as any;
+      storage.set = wrappedSet;
 
       optimisticDataPersistence.save(
         'ShoppingListItem',
@@ -102,7 +102,7 @@ describe('OptimisticDataPersistence', () => {
       expect(Object.keys(stored)).toHaveLength(3);
 
       // Restore
-      storage.set = originalSet as any;
+      storage.set = originalSet;
     });
 
     it('merges with existing data in storage', async () => {

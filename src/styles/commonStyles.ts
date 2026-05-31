@@ -450,6 +450,11 @@ export const commonStyles = StyleSheet.create(theme => ({
   bottomSheetContent: {
     padding: theme.spacing.md,
   },
+  bottomSheetLoading: {
+    paddingVertical: theme.spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   bottomSheetItemInfo: {
     marginBottom: theme.spacing.sm,
     paddingVertical: theme.spacing.md,

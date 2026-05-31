@@ -5,6 +5,12 @@ import { screen } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { PantryContent } from '../PantryContent';
 import { PantryItem, StorageState } from '#/graphql/generated/schemaTypes';
+import type { EmptyStateProps } from '#components/base/EmptyState';
+import type { SectionHeaderProps } from '#components/molecules/SectionHeader';
+import type {
+  FilterTabConfig,
+  FilterTabsProps,
+} from '#components/molecules/FilterTabs/types';
 import {
   PantryItemCard_PantryItemFragmentDoc,
   type PantryItemCard_PantryItemFragment,
@@ -171,7 +177,12 @@ jest.mock('#components/base/Skeleton/PantryScreenSkeleton', () => ({
 }));
 
 jest.mock('#components/base/EmptyState', () => ({
-  EmptyState: ({ title, description, action, testID }: any) => {
+  EmptyState: ({
+    title,
+    description,
+    action,
+    testID,
+  }: Pick<EmptyStateProps, 'title' | 'description' | 'action' | 'testID'>) => {
     const { Text, View, Pressable } = require('react-native');
     return (
       <View testID={testID}>
@@ -192,7 +203,13 @@ jest.mock('#components/organisms/PaginationFooter', () => ({
 }));
 
 jest.mock('../PantryHeader', () => ({
-  PantryHeader: ({ userName, householdName }: any) => {
+  PantryHeader: ({
+    userName,
+    householdName,
+  }: {
+    userName: string;
+    householdName: string;
+  }) => {
     const { Text, View } = require('react-native');
     return (
       <View testID="pantry-header">
@@ -204,7 +221,7 @@ jest.mock('../PantryHeader', () => ({
 }));
 
 jest.mock('../PantrySortModal', () => ({
-  PantrySortModal: ({ visible }: any) => {
+  PantrySortModal: ({ visible }: { visible: boolean }) => {
     const { View } = require('react-native');
     return visible ? <View testID="sort-modal" /> : null;
   },
@@ -216,7 +233,11 @@ jest.mock('../PantryItemCard', () => ({
   // reading `id` / `itemName` off it works directly in tests. Mirror the
   // production "Unknown Item" fallback so the corresponding test still asserts
   // the same behavior.
-  PantryItemCard: ({ pantryItemRef }: any) => {
+  PantryItemCard: ({
+    pantryItemRef,
+  }: {
+    pantryItemRef?: Pick<PantryItemCard_PantryItemFragment, 'id' | 'itemName'>;
+  }) => {
     const { Text, View } = require('react-native');
     const name = pantryItemRef?.itemName || 'Unknown Item';
     return (
@@ -230,18 +251,28 @@ jest.mock('../PantryItemCard', () => ({
 }));
 
 jest.mock('#components/molecules/SearchBar', () => ({
-  SearchBar: ({ placeholder, testID }: any) => {
+  SearchBar: ({
+    placeholder,
+    testID,
+  }: {
+    placeholder?: string;
+    testID?: string;
+  }) => {
     const { TextInput } = require('react-native');
     return <TextInput testID={testID} placeholder={placeholder} />;
   },
 }));
 
 jest.mock('#components/molecules/FilterTabs/FilterTabs', () => ({
-  FilterTabs: ({ tabs, onTabChange, testIDPrefix }: any) => {
+  FilterTabs: ({
+    tabs,
+    onTabChange,
+    testIDPrefix,
+  }: Pick<FilterTabsProps, 'tabs' | 'onTabChange' | 'testIDPrefix'>) => {
     const { Text, Pressable, View } = require('react-native');
     return (
       <View testID="filter-tabs">
-        {tabs.map((tab: any) => (
+        {tabs.map((tab: FilterTabConfig) => (
           <Pressable
             key={tab.id}
             testID={`${testIDPrefix}-${tab.id}`}
@@ -256,7 +287,15 @@ jest.mock('#components/molecules/FilterTabs/FilterTabs', () => ({
 }));
 
 jest.mock('#components/molecules/SectionHeader', () => ({
-  SectionHeader: ({ title, actionLabel, onActionPress, testID }: any) => {
+  SectionHeader: ({
+    title,
+    actionLabel,
+    onActionPress,
+    testID,
+  }: Pick<
+    SectionHeaderProps,
+    'title' | 'actionLabel' | 'onActionPress' | 'testID'
+  >) => {
     const { Text, Pressable, View } = require('react-native');
     return (
       <View>
@@ -270,7 +309,13 @@ jest.mock('#components/molecules/SectionHeader', () => ({
 }));
 
 jest.mock('../PantryAlertBar', () => ({
-  PantryAlertBar: ({ stats, sortLabel }: any) => {
+  PantryAlertBar: ({
+    stats,
+    sortLabel,
+  }: {
+    stats: { expiringCount: number };
+    sortLabel?: string;
+  }) => {
     const { Text, View } = require('react-native');
     return (
       <View testID="pantry-alert-bar">
@@ -305,7 +350,7 @@ jest.mock('../hooks/usePantrySorting', () => ({
     openSortModal: jest.fn(),
     closeSortModal: jest.fn(),
     handleSortSelect: jest.fn(),
-    sortItems: jest.fn((items: any[]) => items),
+    sortItems: jest.fn(<T,>(items: T[]): T[] => items),
   })),
 }));
 
@@ -467,7 +512,7 @@ describe('PantryContent', () => {
       openSortModal: jest.fn(),
       closeSortModal: jest.fn(),
       handleSortSelect: jest.fn(),
-      sortItems: jest.fn((items: any[]) => items),
+      sortItems: jest.fn(<T,>(items: T[]): T[] => items),
     });
 
     const sortItems = [createMockPantryItem({ id: '1' })];
@@ -483,7 +528,7 @@ describe('PantryContent', () => {
       openSortModal: jest.fn(),
       closeSortModal: jest.fn(),
       handleSortSelect: jest.fn(),
-      sortItems: jest.fn((items: any[]) => items),
+      sortItems: jest.fn(<T,>(items: T[]): T[] => items),
     });
   });
 

@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleProp, ViewStyle } from 'react-native';
+import type { SwipeableRef } from '../SwipeableItem/types';
 
 /**
  * Visual variant for the card
@@ -49,7 +50,7 @@ export interface BaseItemCardProps {
 
   // Swipeable coordination
   /** Callback when swipeable begins to open */
-  onSwipeableWillOpen?: (ref: React.RefObject<any>) => void;
+  onSwipeableWillOpen?: (ref: SwipeableRef) => void;
   /** Callback when swipeable closes */
   onSwipeableClose?: () => void;
 

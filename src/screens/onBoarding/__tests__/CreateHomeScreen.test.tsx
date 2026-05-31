@@ -25,7 +25,8 @@ jest.mock('#store/useAppStore', () => {
     setSelectedHomeId: jest.fn(),
     setSelectedPantryId: jest.fn(),
   };
-  const fn = (selector: any) => selector(mockState);
+  const fn = (selector: (state: typeof mockState) => unknown) =>
+    selector(mockState);
   fn.getState = () => ({});
   fn.setState = jest.fn();
   fn.subscribe = jest.fn();
@@ -46,7 +47,10 @@ jest.mock('#/utils/validation/onboarding', () => ({
   })),
 }));
 jest.mock('#/utils/connectionUtils', () => ({
-  extractNodes: jest.fn(c => c?.edges?.map((e: any) => e.node) || []),
+  extractNodes: jest.fn(
+    (c?: { edges?: { node: unknown }[] | null } | null) =>
+      c?.edges?.map(e => e.node) || [],
+  ),
 }));
 jest.mock('#/utils/compilerSafeWrappers');
 jest.mock('#utils/formatters/roleFormatters', () => ({
@@ -63,7 +67,17 @@ jest.mock('#/components/providers/ScreenErrorBoundary', () => ({
   ),
 }));
 jest.mock('#components/templates/OnBoardingWrapper', () => ({
-  OnBoardingWrapper: ({ title, subtitle, children, testID }: any) => {
+  OnBoardingWrapper: ({
+    title,
+    subtitle,
+    children,
+    testID,
+  }: {
+    title?: string;
+    subtitle?: string;
+    children?: React.ReactNode;
+    testID?: string;
+  }) => {
     const { View, Text } = require('react-native');
     return (
       <View testID={testID || 'onboarding-wrapper'}>
@@ -95,19 +109,19 @@ jest.mock('../createHome/LoadingView', () => ({
   },
 }));
 jest.mock('../createHome/SubmitButton', () => ({
-  SubmitButton: ({ isCreating }: any) => {
+  SubmitButton: ({ isCreating }: { isCreating: boolean }) => {
     const { Text } = require('react-native');
     return <Text>{isCreating ? 'Creating...' : 'Create'}</Text>;
   },
 }));
 jest.mock('../createHome/ErrorMessage', () => ({
-  ErrorMessage: ({ message }: any) => {
+  ErrorMessage: ({ message }: { message: string }) => {
     const { Text } = require('react-native');
     return <Text>{message}</Text>;
   },
 }));
 jest.mock('#components/base/Button', () => ({
-  Button: ({ title, onPress }: any) => {
+  Button: ({ title, onPress }: { title?: string; onPress: () => void }) => {
     const { Pressable, Text } = require('react-native');
     return (
       <Pressable onPress={onPress}>

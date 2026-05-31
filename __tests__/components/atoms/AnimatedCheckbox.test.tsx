@@ -10,7 +10,7 @@ jest.mock('../../../src/apollo/links/refreshToken');
 jest.mock('@shopify/flash-list', () => ({
   FlashList: require('react-native').FlatList,
   MasonryFlashList: require('react-native').FlatList,
-  useRecyclingState: (initial: any) => {
+  useRecyclingState: <T,>(initial: T | (() => T)) => {
     const { useState } = require('react');
     return useState(initial);
   },

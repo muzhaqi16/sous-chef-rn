@@ -3,7 +3,18 @@
 import React from 'react';
 import { screen } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import type { HeaderAction } from '#components/molecules/Header';
 import { FilteredPantryItems } from '../FilteredPantryItems';
+
+// Structural shape consumed by the screen via the mocked `usePantryManagement`.
+type MockPantryItem = {
+  id: string;
+  itemName: string;
+  quantity: number;
+  unit: { symbol: string } | null;
+  isLowStock: boolean;
+  expiresAt?: string;
+};
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
@@ -88,7 +99,7 @@ const mockExpiringItems = [
   },
 ];
 
-let mockAllItems: any[] | null = mockLowStockItems;
+let mockAllItems: MockPantryItem[] | null = mockLowStockItems;
 let mockLoading = false;
 
 jest.mock('#hooks/home/pantry/usePantryManagement', () => ({
@@ -107,12 +118,18 @@ jest.mock('#hooks/home/pantry/usePantryManagement', () => ({
 }));
 
 jest.mock('#components/molecules/Header', () => ({
-  Header: ({ title, rightActions }: any) => {
+  Header: ({
+    title,
+    rightActions,
+  }: {
+    title?: string;
+    rightActions?: HeaderAction[];
+  }) => {
     const { View, Text } = require('react-native');
     return (
       <View testID="header">
         <Text>{title}</Text>
-        {rightActions?.map((a: any, i: number) => (
+        {rightActions?.map((a, i) => (
           <View key={i} testID={a.testID} />
         ))}
       </View>
@@ -120,7 +137,13 @@ jest.mock('#components/molecules/Header', () => ({
   },
 }));
 jest.mock('#components/molecules/SwipeableItem/SwipeableItem', () => ({
-  SwipeableItem: ({ children, onPress }: any) => {
+  SwipeableItem: ({
+    children,
+    onPress,
+  }: {
+    children?: React.ReactNode;
+    onPress?: () => void;
+  }) => {
     const { Pressable } = require('react-native');
     return <Pressable onPress={onPress}>{children}</Pressable>;
   },
@@ -139,10 +162,11 @@ jest.mock('#/styles/commonStyles', () => ({
   },
 }));
 
-const makeRoute = (mode?: 'lowStock' | 'expiring') =>
-  ({
-    params: mode ? { mode } : undefined,
-  } as any);
+const makeRoute = (
+  mode?: 'lowStock' | 'expiring',
+): React.ComponentProps<typeof FilteredPantryItems>['route'] => ({
+  params: mode ? { mode } : undefined,
+});
 
 describe('FilteredPantryItems', () => {
   beforeEach(() => {

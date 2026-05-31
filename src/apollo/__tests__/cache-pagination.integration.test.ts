@@ -8,6 +8,43 @@ import { gql } from '@apollo/client';
 import { makeCache } from '../cache';
 
 // ---------------------------------------------------------------------------
+// Local result types for untyped (raw gql) cache reads
+// ---------------------------------------------------------------------------
+
+interface TestNode {
+  id: string;
+  [key: string]: unknown;
+}
+interface TestEdge {
+  node: TestNode;
+  [key: string]: unknown;
+}
+interface TestPageInfo {
+  hasNextPage: boolean;
+  endCursor: string | null;
+}
+interface TestConnection {
+  edges: TestEdge[];
+  pageInfo: TestPageInfo;
+  totalCount: number;
+}
+interface HomeShoppingListsResult {
+  home?: { shoppingListsConnection?: TestConnection };
+}
+interface HomeMembersResult {
+  home?: { membersConnection?: TestConnection };
+}
+interface ShoppingListItemsResult {
+  shoppingList?: { itemsConnection?: TestConnection };
+}
+interface PantryItemsResult {
+  pantry?: { itemsConnection?: TestConnection };
+}
+interface RecipesResult {
+  recipes?: TestConnection;
+}
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
@@ -97,7 +134,7 @@ describe('cache pagination integration', () => {
     };
 
     const readEdges = (cache: ReturnType<typeof makeCache>) => {
-      const result: any = cache.readQuery({
+      const result = cache.readQuery<HomeShoppingListsResult>({
         query: QUERY,
         variables: { id: 'home-1' },
       });
@@ -133,7 +170,7 @@ describe('cache pagination integration', () => {
 
       const edges = readEdges(cache);
       expect(edges).toHaveLength(5);
-      const ids = edges.map((e: any) => e.node.id);
+      const ids = edges.map(e => e.node.id);
       expect(ids).toEqual(
         expect.arrayContaining(['sl-1', 'sl-2', 'sl-3', 'sl-4', 'sl-5']),
       );
@@ -162,7 +199,7 @@ describe('cache pagination integration', () => {
 
       const edges = readEdges(cache);
       expect(edges).toHaveLength(2);
-      const ids = edges.map((e: any) => e.node.id);
+      const ids = edges.map(e => e.node.id);
       expect(ids).toContain('sl-1');
       expect(ids).toContain('sl-3');
       expect(ids).not.toContain('sl-2');
@@ -191,10 +228,10 @@ describe('cache pagination integration', () => {
       const edges = readEdges(cache);
       expect(edges).toHaveLength(2);
       // Incoming edges replace existing for same id in mergeConnectionByNodeId
-      const sl1 = edges.find((e: any) => e.node.id === 'sl-1');
-      expect(sl1.node.name).toBe('New Name');
+      const sl1 = edges.find(e => e.node.id === 'sl-1');
+      expect(sl1?.node.name).toBe('New Name');
       // Page 2 preserved
-      expect(edges.find((e: any) => e.node.id === 'sl-2')).toBeTruthy();
+      expect(edges.find(e => e.node.id === 'sl-2')).toBeTruthy();
     });
 
     it('overlap deduplication: page 2 overlapping with page 1 produces no duplicates', () => {
@@ -214,7 +251,7 @@ describe('cache pagination integration', () => {
 
       const edges = readEdges(cache);
       expect(edges).toHaveLength(3);
-      const ids = edges.map((e: any) => e.node.id);
+      const ids = edges.map(e => e.node.id);
       expect(ids.filter((id: string) => id === 'sl-2')).toHaveLength(1);
     });
   });
@@ -273,7 +310,7 @@ describe('cache pagination integration', () => {
     };
 
     const readEdges = (cache: ReturnType<typeof makeCache>) => {
-      const result: any = cache.readQuery({
+      const result = cache.readQuery<HomeMembersResult>({
         query: QUERY,
         variables: { id: 'home-1' },
       });
@@ -301,7 +338,7 @@ describe('cache pagination integration', () => {
         endCursor: 'mc2',
       });
 
-      const ids = readEdges(cache).map((e: any) => e.node.id);
+      const ids = readEdges(cache).map(e => e.node.id);
       expect(ids).toEqual(expect.arrayContaining(['m-1', 'm-2', 'm-3']));
     });
 
@@ -412,7 +449,7 @@ describe('cache pagination integration', () => {
     };
 
     const readEdges = (cache: ReturnType<typeof makeCache>) => {
-      const result: any = cache.readQuery({
+      const result = cache.readQuery<ShoppingListItemsResult>({
         query: QUERY,
         variables: { id: 'list-1' },
       });
@@ -439,11 +476,7 @@ describe('cache pagination integration', () => {
       let edges = readEdges(cache);
       expect(edges).toHaveLength(3);
       // Append-only: page 1 edges come first, then page 2
-      expect(edges.map((e: any) => e.node.id)).toEqual([
-        'si-1',
-        'si-2',
-        'si-3',
-      ]);
+      expect(edges.map(e => e.node.id)).toEqual(['si-1', 'si-2', 'si-3']);
 
       // Refetch page 1 (no cursor, hasNextPage:true) — must preserve page 2
       writeConn(cache, [itemEdge('si-1', 'Milk'), itemEdge('si-2', 'Bread')], {
@@ -453,11 +486,7 @@ describe('cache pagination integration', () => {
 
       edges = readEdges(cache);
       expect(edges).toHaveLength(3);
-      expect(edges.map((e: any) => e.node.id)).toEqual([
-        'si-1',
-        'si-2',
-        'si-3',
-      ]);
+      expect(edges.map(e => e.node.id)).toEqual(['si-1', 'si-2', 'si-3']);
     });
 
     it('overlap deduplication: existing position kept', () => {
@@ -478,7 +507,7 @@ describe('cache pagination integration', () => {
       const edges = readEdges(cache);
       // Append-only: si-2 already exists at position 1, not appended again
       expect(edges).toHaveLength(3);
-      const ids = edges.map((e: any) => e.node.id);
+      const ids = edges.map(e => e.node.id);
       expect(ids.filter((id: string) => id === 'si-2')).toHaveLength(1);
       // Existing position preserved (si-2 stays at index 1)
       expect(ids[1]).toBe('si-2');
@@ -541,7 +570,7 @@ describe('cache pagination integration', () => {
       expect(defaultEdges[0].node.id).toBe('si-1');
 
       // Read filtered — should only have si-2
-      const filteredResult: any = cache.readQuery({
+      const filteredResult = cache.readQuery<ShoppingListItemsResult>({
         query: QUERY_WITH_FILTER,
         variables: { id: 'list-1', filters: { purchased: true } },
       });
@@ -569,15 +598,17 @@ describe('cache pagination integration', () => {
       );
 
       // Verify final state: 3 edges, hasNextPage=false
-      let result: any = cache.readQuery({
+      let result = cache.readQuery<ShoppingListItemsResult>({
         query: QUERY,
         variables: { id: 'list-1' },
       });
-      expect(result.shoppingList.itemsConnection.edges).toHaveLength(3);
-      expect(result.shoppingList.itemsConnection.pageInfo.hasNextPage).toBe(
+      expect(result?.shoppingList?.itemsConnection?.edges).toHaveLength(3);
+      expect(result?.shoppingList?.itemsConnection?.pageInfo.hasNextPage).toBe(
         false,
       );
-      expect(result.shoppingList.itemsConnection.pageInfo.endCursor).toBe('c3');
+      expect(result?.shoppingList?.itemsConnection?.pageInfo.endCursor).toBe(
+        'c3',
+      );
 
       // Duplicate cursor request: same cursor c2 sent again due to race condition.
       // Server returns items after c2 with hasNextPage=true (correct from c2's perspective).
@@ -589,16 +620,18 @@ describe('cache pagination integration', () => {
         { after: 'c2' },
       );
 
-      result = cache.readQuery({
+      result = cache.readQuery<ShoppingListItemsResult>({
         query: QUERY,
         variables: { id: 'list-1' },
       });
-      expect(result.shoppingList.itemsConnection.edges).toHaveLength(3);
+      expect(result?.shoppingList?.itemsConnection?.edges).toHaveLength(3);
       // Existing pageInfo preserved — hasNextPage stays false
-      expect(result.shoppingList.itemsConnection.pageInfo.hasNextPage).toBe(
+      expect(result?.shoppingList?.itemsConnection?.pageInfo.hasNextPage).toBe(
         false,
       );
-      expect(result.shoppingList.itemsConnection.pageInfo.endCursor).toBe('c3');
+      expect(result?.shoppingList?.itemsConnection?.pageInfo.endCursor).toBe(
+        'c3',
+      );
     });
   });
 
@@ -658,7 +691,7 @@ describe('cache pagination integration', () => {
     };
 
     const readEdges = (cache: ReturnType<typeof makeCache>) => {
-      const result: any = cache.readQuery({
+      const result = cache.readQuery<ShoppingListItemsResult>({
         query: QUERY,
         variables: { id: 'list-1' },
       });
@@ -713,7 +746,7 @@ describe('cache pagination integration', () => {
       // Should be capped at 100 (MAX_WINDOW_EDGES)
       expect(edges).toHaveLength(100);
       // Oldest 20 edges (si-0 through si-19) should be evicted
-      const ids = edges.map((e: any) => e.node.id);
+      const ids = edges.map(e => e.node.id);
       expect(ids).not.toContain('si-0');
       expect(ids).not.toContain('si-19');
       expect(ids).toContain('si-20');
@@ -827,7 +860,7 @@ describe('cache pagination integration', () => {
     };
 
     const readEdges = (cache: ReturnType<typeof makeCache>) => {
-      const result: any = cache.readQuery({
+      const result = cache.readQuery<PantryItemsResult>({
         query: QUERY,
         variables: { id: 'p-1' },
       });
@@ -855,7 +888,7 @@ describe('cache pagination integration', () => {
         endCursor: 'c2',
       });
 
-      const ids = readEdges(cache).map((e: any) => e.node.id);
+      const ids = readEdges(cache).map(e => e.node.id);
       expect(ids).toEqual(expect.arrayContaining(['pi-1', 'pi-2', 'pi-3']));
     });
 
@@ -922,22 +955,22 @@ describe('cache pagination integration', () => {
       });
 
       // Read NAME_ASC — order should be [Apple, Banana]
-      const ascResult: any = cache.readQuery({
+      const ascResult = cache.readQuery<PantryItemsResult>({
         query: QUERY_WITH_ORDER,
         variables: { id: 'p-1', orderBy: 'NAME_ASC' },
       });
       const ascIds = ascResult?.pantry?.itemsConnection?.edges?.map(
-        (e: any) => e.node.id,
+        e => e.node.id,
       );
       expect(ascIds).toEqual(['pi-1', 'pi-2']);
 
       // Read NAME_DESC — order should be [Banana, Apple]
-      const descResult: any = cache.readQuery({
+      const descResult = cache.readQuery<PantryItemsResult>({
         query: QUERY_WITH_ORDER,
         variables: { id: 'p-1', orderBy: 'NAME_DESC' },
       });
       const descIds = descResult?.pantry?.itemsConnection?.edges?.map(
-        (e: any) => e.node.id,
+        e => e.node.id,
       );
       expect(descIds).toEqual(['pi-2', 'pi-1']);
     });
@@ -986,7 +1019,7 @@ describe('cache pagination integration', () => {
     };
 
     const readEdges = (cache: ReturnType<typeof makeCache>) => {
-      const result: any = cache.readQuery({
+      const result = cache.readQuery<RecipesResult>({
         query: QUERY,
         variables: {},
       });
@@ -1016,7 +1049,7 @@ describe('cache pagination integration', () => {
         { hasNextPage: true, endCursor: 'rc2' },
       );
 
-      const ids = readEdges(cache).map((e: any) => e.node.id);
+      const ids = readEdges(cache).map(e => e.node.id);
       expect(ids).toEqual(expect.arrayContaining(['r-1', 'r-2', 'r-3']));
     });
 
@@ -1096,11 +1129,11 @@ describe('cache pagination integration', () => {
         },
       });
 
-      let result: any = cache.readQuery({
+      let result = cache.readQuery<HomeShoppingListsResult>({
         query: QUERY,
         variables: { id: 'home-1' },
       });
-      expect(result?.home.shoppingListsConnection.totalCount).toBe(5);
+      expect(result?.home?.shoppingListsConnection?.totalCount).toBe(5);
 
       // Page 2: server says totalCount=5 still
       cache.writeQuery({
@@ -1120,12 +1153,12 @@ describe('cache pagination integration', () => {
         },
       });
 
-      result = cache.readQuery({
+      result = cache.readQuery<HomeShoppingListsResult>({
         query: QUERY,
         variables: { id: 'home-1' },
       });
       // After merge, totalCount comes from ...incoming spread
-      expect(result?.home.shoppingListsConnection.totalCount).toBe(5);
+      expect(result?.home?.shoppingListsConnection?.totalCount).toBe(5);
 
       // Refetch: totalCount changed to 3 (items were deleted)
       cache.writeQuery({
@@ -1145,11 +1178,11 @@ describe('cache pagination integration', () => {
         },
       });
 
-      result = cache.readQuery({
+      result = cache.readQuery<HomeShoppingListsResult>({
         query: QUERY,
         variables: { id: 'home-1' },
       });
-      expect(result?.home.shoppingListsConnection.totalCount).toBe(3);
+      expect(result?.home?.shoppingListsConnection?.totalCount).toBe(3);
     });
   });
 
@@ -1212,7 +1245,7 @@ describe('cache pagination integration', () => {
     };
 
     const readConnection = (cache: ReturnType<typeof makeCache>) => {
-      const result: any = cache.readQuery({
+      const result = cache.readQuery<PantryItemsResult>({
         query: QUERY,
         variables: { id: 'p-1' },
       });
@@ -1241,9 +1274,9 @@ describe('cache pagination integration', () => {
       );
 
       let conn = readConnection(cache);
-      expect(conn.edges).toHaveLength(5);
-      expect(conn.pageInfo.hasNextPage).toBe(false);
-      expect(conn.pageInfo.endCursor).toBe('c5');
+      expect(conn?.edges).toHaveLength(5);
+      expect(conn?.pageInfo.hasNextPage).toBe(false);
+      expect(conn?.pageInfo.endCursor).toBe('c5');
 
       // Background refetch: page 1 only (hasNextPage:true)
       // This simulates cache-and-network re-fetching the initial query
@@ -1257,10 +1290,10 @@ describe('cache pagination integration', () => {
 
       conn = readConnection(cache);
       // Edges must be preserved
-      expect(conn.edges).toHaveLength(5);
+      expect(conn?.edges).toHaveLength(5);
       // pageInfo must NOT be overwritten — hasNextPage should remain false
-      expect(conn.pageInfo.hasNextPage).toBe(false);
-      expect(conn.pageInfo.endCursor).toBe('c5');
+      expect(conn?.pageInfo.hasNextPage).toBe(false);
+      expect(conn?.pageInfo.endCursor).toBe('c5');
     });
 
     it('does NOT preserve pageInfo when refetch has hasNextPage:false (shrinkage)', () => {
@@ -1291,9 +1324,9 @@ describe('cache pagination integration', () => {
       );
 
       const conn = readConnection(cache);
-      expect(conn.edges).toHaveLength(1);
-      expect(conn.pageInfo.hasNextPage).toBe(false);
-      expect(conn.pageInfo.endCursor).toBe('c1');
+      expect(conn?.edges).toHaveLength(1);
+      expect(conn?.pageInfo.hasNextPage).toBe(false);
+      expect(conn?.pageInfo.endCursor).toBe('c1');
     });
   });
 
@@ -1350,7 +1383,7 @@ describe('cache pagination integration', () => {
         },
       });
 
-      const result1: any = cache.readQuery({
+      const result1 = cache.readQuery<HomeShoppingListsResult>({
         query: QUERY,
         variables: { id: 'home-1' },
       });
@@ -1374,7 +1407,7 @@ describe('cache pagination integration', () => {
         },
       });
 
-      const result2: any = cache.readQuery({
+      const result2 = cache.readQuery<HomeShoppingListsResult>({
         query: QUERY,
         variables: { id: 'home-1' },
       });
@@ -1404,7 +1437,7 @@ describe('cache pagination integration', () => {
         },
       });
 
-      const result1: any = cache.readQuery({
+      const result1 = cache.readQuery<HomeShoppingListsResult>({
         query: QUERY,
         variables: { id: 'home-1' },
       });
@@ -1428,7 +1461,7 @@ describe('cache pagination integration', () => {
         },
       });
 
-      const result2: any = cache.readQuery({
+      const result2 = cache.readQuery<HomeShoppingListsResult>({
         query: QUERY,
         variables: { id: 'home-1' },
       });
@@ -1436,7 +1469,7 @@ describe('cache pagination integration', () => {
 
       // Should be a new reference since totalCount changed
       expect(conn2).not.toBe(conn1);
-      expect(conn2.totalCount).toBe(5);
+      expect(conn2?.totalCount).toBe(5);
     });
   });
 
@@ -1538,7 +1571,7 @@ describe('cache pagination integration', () => {
       await observable.fetchMore({ variables: { after: 'c1' } });
 
       // Read accumulated result from cache
-      const result: any = cache.readQuery({
+      const result = cache.readQuery<ShoppingListItemsResult>({
         query: QUERY,
         variables: { id: 'list-1' },
       });
@@ -1546,7 +1579,7 @@ describe('cache pagination integration', () => {
       const edges = result?.shoppingList?.itemsConnection?.edges ?? [];
       expect(edges).toHaveLength(2);
 
-      const ids = edges.map((e: any) => e.node.id);
+      const ids = edges.map(e => e.node.id);
       expect(ids).toContain('si-1');
       expect(ids).toContain('si-2');
     });

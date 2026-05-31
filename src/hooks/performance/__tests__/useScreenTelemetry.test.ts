@@ -17,14 +17,19 @@ const mockRequestIdleCallback = jest.fn(
 );
 const mockCancelIdleCallback = jest.fn();
 
+type IdleGlobal = typeof globalThis & {
+  requestIdleCallback: typeof requestIdleCallback;
+  cancelIdleCallback: typeof cancelIdleCallback;
+};
+
 beforeAll(() => {
-  (globalThis as any).requestIdleCallback = mockRequestIdleCallback;
-  (globalThis as any).cancelIdleCallback = mockCancelIdleCallback;
+  (globalThis as IdleGlobal).requestIdleCallback = mockRequestIdleCallback;
+  (globalThis as IdleGlobal).cancelIdleCallback = mockCancelIdleCallback;
 });
 
 afterAll(() => {
-  delete (globalThis as any).requestIdleCallback;
-  delete (globalThis as any).cancelIdleCallback;
+  Reflect.deleteProperty(globalThis, 'requestIdleCallback');
+  Reflect.deleteProperty(globalThis, 'cancelIdleCallback');
 });
 
 describe('useScreenTelemetry', () => {

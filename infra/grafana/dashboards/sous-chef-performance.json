@@ -1050,11 +1050,6 @@
           "expr": "histogram_quantile(0.95, sum(rate(app_js_bundle_load_ms_bucket{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le))",
           "refId": "D",
           "legendFormat": "Bundle Load P95"
-        },
-        {
-          "expr": "histogram_quantile(0.95, sum(rate(app_content_appeared_ms_bucket{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le))",
-          "refId": "E",
-          "legendFormat": "Content Appeared P95"
         }
       ],
       "title": "App Startup (P50/P95)",
@@ -1137,11 +1132,6 @@
           "expr": "histogram_quantile(0.5, sum(rate(app_startup_duration_ms_bucket{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le))",
           "refId": "C",
           "legendFormat": "JS→Hydrated"
-        },
-        {
-          "expr": "histogram_quantile(0.5, sum(rate(app_content_appeared_ms_bucket{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le))",
-          "refId": "D",
-          "legendFormat": "Content Appeared"
         }
       ],
       "title": "Cold Start Breakdown",
@@ -1314,7 +1304,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "95th percentile time to content appeared (from process start)",
+      "description": "95th percentile end-to-end app startup time (JS entry → store hydrated)",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1355,12 +1345,12 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(app_content_appeared_ms_bucket{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(app_startup_duration_ms_bucket{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le))",
           "refId": "A",
-          "legendFormat": "Content Appeared P95"
+          "legendFormat": "Startup P95"
         }
       ],
-      "title": "Content Appeared P95",
+      "title": "Startup P95",
       "type": "stat"
     },
     {
@@ -1642,6 +1632,313 @@
       ],
       "title": "App-Level Error Boundary (1h)",
       "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 56 },
+      "id": 61,
+      "panels": [],
+      "title": "FlashList Performance",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "description": "Time to first render of each FlashList (P50/P95)",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": { "tooltip": false, "viz": false, "legend": false },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "never",
+            "spanNulls": true
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }]
+          },
+          "unit": "ms"
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 57 },
+      "id": 62,
+      "options": {
+        "legend": {
+          "calcs": ["mean", "max"],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": { "mode": "single" }
+      },
+      "pluginVersion": "9.0.0",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.5, sum(rate(flashlist_initial_load_ms_bucket{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le, component))",
+          "refId": "A",
+          "legendFormat": "{{component}} P50"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(flashlist_initial_load_ms_bucket{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le, component))",
+          "refId": "B",
+          "legendFormat": "{{component}} P95"
+        }
+      ],
+      "title": "FlashList Initial Load (P50/P95)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "description": "FlashList mounted-session duration, P50/P95 (uses per-metric bounds extending to 5 min)",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": { "tooltip": false, "viz": false, "legend": false },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "never",
+            "spanNulls": true
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }]
+          },
+          "unit": "ms"
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 57 },
+      "id": 63,
+      "options": {
+        "legend": {
+          "calcs": ["mean", "max"],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": { "mode": "single" }
+      },
+      "pluginVersion": "9.0.0",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.5, sum(rate(flashlist_session_duration_ms_bucket{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le, component))",
+          "refId": "A",
+          "legendFormat": "{{component}} P50"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(flashlist_session_duration_ms_bucket{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le, component))",
+          "refId": "B",
+          "legendFormat": "{{component}} P95"
+        }
+      ],
+      "title": "FlashList Session Duration (P50/P95)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "description": "Fraction of scrolled distance with rendered cells (1.0 = no blank cells). P05 is the worst-case tail; P50 the median. Uses per-metric 0-1 bounds.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": { "tooltip": false, "viz": false, "legend": false },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "never",
+            "spanNulls": true
+          },
+          "mappings": [],
+          "max": 1,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 0.8 },
+              { "color": "green", "value": 0.95 }
+            ]
+          },
+          "unit": "percentunit"
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 65 },
+      "id": 64,
+      "options": {
+        "legend": {
+          "calcs": ["mean", "min"],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": { "mode": "single" }
+      },
+      "pluginVersion": "9.0.0",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.05, sum(rate(flashlist_scroll_coverage_ratio_bucket{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le, component))",
+          "refId": "A",
+          "legendFormat": "{{component}} P05 (worst)"
+        },
+        {
+          "expr": "histogram_quantile(0.5, sum(rate(flashlist_scroll_coverage_ratio_bucket{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le, component))",
+          "refId": "B",
+          "legendFormat": "{{component}} P50"
+        }
+      ],
+      "title": "FlashList Scroll Coverage (P05/P50)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "description": "Blank-cell occurrences and data-reference churn per minute, by list",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": { "tooltip": false, "viz": false, "legend": false },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "never",
+            "spanNulls": true
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }]
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 65 },
+      "id": 65,
+      "options": {
+        "legend": {
+          "calcs": ["mean", "max"],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": { "mode": "single" }
+      },
+      "pluginVersion": "9.0.0",
+      "targets": [
+        {
+          "expr": "sum(rate(flashlist_blank_cells_total{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (component) * 60",
+          "refId": "A",
+          "legendFormat": "{{component}} blank cells/min"
+        },
+        {
+          "expr": "sum(rate(flashlist_data_reference_changes{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (component) * 60",
+          "refId": "B",
+          "legendFormat": "{{component}} data changes/min"
+        }
+      ],
+      "title": "FlashList Blank Cells & Data Churn (per min)",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 73 },
+      "id": 66,
+      "panels": [],
+      "title": "Cold-Start Cache Restore",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "description": "P95 cold-start cache/store restore timings (Apollo cache restore variants + Zustand/MMKV hydration)",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": { "tooltip": false, "viz": false, "legend": false },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "never",
+            "spanNulls": true
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }]
+          },
+          "unit": "ms"
+        }
+      },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 74 },
+      "id": 67,
+      "options": {
+        "legend": {
+          "calcs": ["mean", "max"],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": { "mode": "multi" }
+      },
+      "pluginVersion": "9.0.0",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(app_apollo_restore_ms_bucket{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le))",
+          "refId": "A",
+          "legendFormat": "Apollo restore P95"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(app_apollo_deferred_restore_ms_bucket{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le))",
+          "refId": "B",
+          "legendFormat": "Apollo deferred restore P95"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(app_apollo_legacy_restore_ms_bucket{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le))",
+          "refId": "C",
+          "legendFormat": "Apollo legacy restore P95"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(app_zustand_hydration_ms_bucket{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le))",
+          "refId": "D",
+          "legendFormat": "Zustand hydration P95"
+        }
+      ],
+      "title": "Cache & Store Restore (P95)",
+      "type": "timeseries"
     }
   ],
   "refresh": "10s",

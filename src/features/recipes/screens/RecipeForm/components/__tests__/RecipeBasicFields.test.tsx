@@ -1,12 +1,20 @@
 'use no memo';
 
 import React from 'react';
-import { fireEvent, render} from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 import { RecipeBasicFields } from '../RecipeBasicFields';
 import { RecipeStatus } from '#/graphql/generated/schemaTypes';
 
 jest.mock('#components/molecules/FormInput', () => ({
-  FormInput: ({ label, value, onChangeText, placeholder, testID }: any) => {
+  FormInput: ({
+    label,
+    value,
+    onChangeText,
+    placeholder,
+    testID,
+  }: React.ComponentProps<
+    typeof import('#components/molecules/FormInput').FormInput
+  >) => {
     const { View, Text, TextInput } = require('react-native');
     return (
       <View>
@@ -23,7 +31,14 @@ jest.mock('#components/molecules/FormInput', () => ({
 }));
 
 jest.mock('#components/molecules/FormTextArea', () => ({
-  FormTextArea: ({ label, value, onChangeText, placeholder }: any) => {
+  FormTextArea: ({
+    label,
+    value,
+    onChangeText,
+    placeholder,
+  }: React.ComponentProps<
+    typeof import('#components/molecules/FormTextArea').FormTextArea
+  >) => {
     const { View, Text, TextInput } = require('react-native');
     return (
       <View>
@@ -40,7 +55,13 @@ jest.mock('#components/molecules/FormTextArea', () => ({
 }));
 
 jest.mock('#components/molecules/EditableCounter', () => ({
-  EditableCounter: ({ label, value, onChangeText }: any) => {
+  EditableCounter: ({
+    label,
+    value,
+    onChangeText,
+  }: React.ComponentProps<
+    typeof import('#components/molecules/EditableCounter').EditableCounter
+  >) => {
     const { View, Text, TextInput } = require('react-native');
     return (
       <View>

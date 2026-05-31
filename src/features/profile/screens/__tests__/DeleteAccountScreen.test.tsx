@@ -8,6 +8,8 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { CanDeleteAccountDocument } from '#operations/auth/user.generated';
 import { DeleteAccountScreen } from '../DeleteAccountScreen';
+import type { BaseInputProps } from '#components/atoms/BaseInput/BaseInput';
+import type { LoadingProps } from '#components/base/Loading';
 
 const mockLogout = jest.fn();
 
@@ -37,7 +39,7 @@ jest.mock('#/utils/iconUtils', () => ({
 jest.mock('#components/molecules/Header', () => {
   const { View, Text, Pressable } = require('react-native');
   return {
-    Header: ({ title, onBack }: any) => (
+    Header: ({ title, onBack }: { title?: string; onBack?: () => void }) => (
       <View testID="header">
         <Text>{title}</Text>
         {onBack ? (
@@ -51,7 +53,7 @@ jest.mock('#components/molecules/Header', () => {
 });
 
 jest.mock('#components/atoms/BaseInput/BaseInput', () => ({
-  BaseInput: ({ label, ...props }: any) => {
+  BaseInput: ({ label, ...props }: BaseInputProps) => {
     const { View, Text, TextInput } = require('react-native');
     return (
       <View>
@@ -64,7 +66,7 @@ jest.mock('#components/atoms/BaseInput/BaseInput', () => ({
 jest.mock('#components/base/Loading', () => {
   const { Text } = require('react-native');
   return {
-    LoadingInline: ({ message }: any) => (
+    LoadingInline: ({ message }: LoadingProps) => (
       <Text testID="loading">{message}</Text>
     ),
   };

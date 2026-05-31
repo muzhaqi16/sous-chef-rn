@@ -4,6 +4,10 @@ import { useApolloClient, useMutation } from '@apollo/client/react';
 import {
   LoginDocument,
   RegisterDocument,
+  type LoginMutation,
+  type LoginMutationVariables,
+  type RegisterMutation,
+  type RegisterMutationVariables,
 } from '#operations/auth/auth.generated';
 import {
   LoginUserFragmentDoc,
@@ -14,6 +18,7 @@ import {
   type LoginInput,
   type RegisterInput,
 } from '#/graphql/generated/schemaTypes';
+import type { NavigationState } from '#store/slices/appSlice';
 import { logger } from '#/utils/environment';
 import { useErrorService } from '#/services/errorService';
 import { useAuthPreferences } from '#/hooks/navigation/useAuthPreferences';
@@ -52,17 +57,39 @@ export interface BiometricSetupEvents {
   onShowBiometricSetup: (credentials: LoginCredentials) => void;
 }
 
+// The bootstrap session produced by unmaskAuthPayload: tokens + the cached
+// LoginUser entity read back from the normalized cache.
+export interface AuthSession {
+  accessToken: string;
+  refreshToken: string;
+  user: LoginUserFragment;
+}
+
+// Subset of the store's UserNavigationState that the auth flow writes.
+interface UserNavigationStateInput {
+  lastLoginTimestamp: number;
+  rememberMeChoice?: boolean;
+  isNewUser?: boolean;
+}
+
 // Events interface for navigation
 export interface NavigationEvents {
-  onNavigate: (state: any) => void;
+  onNavigate: (state: NavigationState) => void;
 }
 
 // Events interface for auth state
 export interface AuthStateEvents {
+  // `user` is typed `any` deliberately: the store's `setAuth` expects a full
+  // `AuthUserInput` (User & profile) while the auth flow only has the narrower
+  // `LoginUserFragment`. The two shapes don't unify without a store refactor,
+  // so this stays the bridge between them.
   onSetAuth: (user: any, accessToken: string, refreshToken: string) => void;
   onClearAuth: () => void;
   onSetRememberMe: (flag: boolean) => void;
-  onSetUserNavigationState: (userId: string, state: any) => void;
+  onSetUserNavigationState: (
+    userId: string,
+    state: UserNavigationStateInput,
+  ) => void;
   onSetRegistrationPassword: (password: string | null) => void;
   onClearRegistrationPassword: () => void;
 }
@@ -86,19 +113,22 @@ export interface AuthOperationsReturn {
     input: RegisterInput,
     shouldRemember?: boolean,
   ) => Promise<boolean>;
-  logout: (user: any, clearAllCredentials?: boolean) => Promise<void>;
+  logout: (
+    user: { id?: string; email?: string } | null | undefined,
+    clearAllCredentials?: boolean,
+  ) => Promise<void>;
   autoLogin: () => Promise<boolean>;
   handleLogin: (
-    loginResponse: any,
+    loginResponse: AuthSession | null | undefined,
     shouldRemember?: boolean,
     loginCredentials?: LoginCredentials,
   ) => Promise<boolean>;
   handleRegistration: (
-    registerResponse: any,
+    registerResponse: AuthSession | null | undefined,
     shouldRemember?: boolean,
   ) => Promise<void>;
   handleAuthSuccess: (message: string) => void;
-  handleAuthError: (error: any, operation?: string) => void;
+  handleAuthError: (error: unknown, operation?: string) => void;
   clearRegistrationPassword: () => void;
 }
 
@@ -115,11 +145,7 @@ function unmaskAuthPayload(
       }
     | null
     | undefined,
-): {
-  accessToken: string;
-  refreshToken: string;
-  user: LoginUserFragment;
-} | null {
+): AuthSession | null {
   if (!payload) return null;
   const user = apolloClient.cache.readFragment<LoginUserFragment>({
     fragment: LoginUserFragmentDoc,
@@ -137,7 +163,7 @@ function unmaskAuthPayload(
 // --- Module-level helpers (outside hook body for React Compiler) ---
 
 function handleAuthErrorImpl(
-  error: any,
+  error: unknown,
   handleApolloError: ReturnType<typeof useErrorService>['handleApolloError'],
   toast: ReturnType<typeof useToast>,
   onClearAuth: () => void,
@@ -176,9 +202,15 @@ function handleAuthErrorImpl(
 async function autoLoginImpl(
   apolloClient: ApolloClient,
   credentialStorage: CredentialStorageEvents,
-  loginMutation: (opts: any) => Promise<any>,
-  handleLogin: (response: any, shouldRemember?: boolean) => Promise<boolean>,
-  handleAuthError: (error: any, operation?: string) => void,
+  loginMutation: useMutation.MutationFunction<
+    LoginMutation,
+    LoginMutationVariables
+  >,
+  handleLogin: (
+    response: AuthSession | null | undefined,
+    shouldRemember?: boolean,
+  ) => Promise<boolean>,
+  handleAuthError: (error: unknown, operation?: string) => void,
 ): Promise<boolean> {
   const result = await executeMutation(
     async () => {
@@ -248,13 +280,16 @@ async function loginImpl(
   apolloClient: ApolloClient,
   input: LoginInput,
   showRememberPrompt: boolean,
-  loginMutation: (opts: any) => Promise<any>,
+  loginMutation: useMutation.MutationFunction<
+    LoginMutation,
+    LoginMutationVariables
+  >,
   handleLogin: (
-    response: any,
+    response: AuthSession | null | undefined,
     shouldRemember?: boolean,
     credentials?: LoginCredentials,
   ) => Promise<boolean>,
-  handleAuthError: (error: any, operation?: string) => void,
+  handleAuthError: (error: unknown, operation?: string) => void,
   credentialStorage: CredentialStorageEvents,
   rememberMe: RememberMeEvents,
   shouldShowCredentialPrompt: () => boolean,
@@ -314,12 +349,15 @@ async function registerImpl(
   apolloClient: ApolloClient,
   input: RegisterInput,
   shouldRemember: boolean,
-  registerMutation: (opts: any) => Promise<any>,
+  registerMutation: useMutation.MutationFunction<
+    RegisterMutation,
+    RegisterMutationVariables
+  >,
   handleRegistration: (
-    response: any,
+    response: AuthSession | null | undefined,
     shouldRemember?: boolean,
   ) => Promise<void>,
-  handleAuthError: (error: any, operation?: string) => void,
+  handleAuthError: (error: unknown, operation?: string) => void,
   authState: AuthStateEvents,
   clearRegistrationPreferences: (userId: string) => void,
   setIsLoading: (v: boolean) => void,
@@ -373,7 +411,7 @@ async function registerImpl(
 }
 
 async function logoutImpl(
-  user: any,
+  user: { id?: string; email?: string } | null | undefined,
   clearAllCredentials: boolean,
   authState: AuthStateEvents,
   navigation: NavigationEvents,
@@ -411,12 +449,12 @@ async function logoutImpl(
  * Eliminates the GetHomes → GetPantry waterfall by letting
  * pantry and shopping list queries fire immediately in parallel.
  */
-const bootstrapUserStore = (user: any): void => {
+const bootstrapUserStore = (user: LoginUserFragment): void => {
   const storeState = useStore.getState();
   if (user.defaultHomeId) {
     const pantries = user.defaultHome?.pantriesConnection?.edges;
     const defaultPantry =
-      pantries?.find((e: any) => e.node.isDefault)?.node ?? pantries?.[0]?.node;
+      pantries?.find(e => e.node.isDefault)?.node ?? pantries?.[0]?.node;
     const pantryId = defaultPantry?.id ?? null;
 
     storeState.setHomeAndPantry(user.defaultHomeId, pantryId);
@@ -467,7 +505,7 @@ export const useAuthOperations = ({
   };
 
   const handleAuthError = (
-    error: any,
+    error: unknown,
     operation: string = 'Authentication',
   ) => {
     handleAuthErrorImpl(
@@ -481,7 +519,7 @@ export const useAuthOperations = ({
   };
 
   const handleLogin = async (
-    loginResponse: any,
+    loginResponse: AuthSession | null | undefined,
     shouldRemember?: boolean,
     loginCredentials?: LoginCredentials,
   ): Promise<boolean> => {
@@ -557,7 +595,7 @@ export const useAuthOperations = ({
   };
 
   const handleRegistration = async (
-    registerResponse: any,
+    registerResponse: AuthSession | null | undefined,
     shouldRemember?: boolean,
   ) => {
     if (!registerResponse?.user) return;
@@ -648,7 +686,10 @@ export const useAuthOperations = ({
     );
   };
 
-  const logout = async (user: any, clearAllCredentials = false) => {
+  const logout = async (
+    user: { id?: string; email?: string } | null | undefined,
+    clearAllCredentials = false,
+  ) => {
     await logoutImpl(
       user,
       clearAllCredentials,

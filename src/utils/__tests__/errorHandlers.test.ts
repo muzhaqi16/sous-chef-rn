@@ -1,4 +1,4 @@
-import { alertService } from '#/services/alertService';
+import { alertService, type AlertButton } from '#/services/alertService';
 import {
   handleVersionConflictAlert,
   handleMutationErrorAlert,
@@ -11,7 +11,10 @@ jest.mock('../errors/versionConflict', () => ({
 
 jest.mock('#/services/errorService', () => ({
   errorService: { reportError: jest.fn() },
-  getErrorMessage: jest.fn((err: any) => err?.message || 'Unknown error'),
+  getErrorMessage: jest.fn(
+    (err: unknown) =>
+      (err instanceof Error ? err.message : '') || 'Unknown error',
+  ),
 }));
 
 const { handleVersionConflict } = require('../errors/versionConflict');
@@ -45,7 +48,9 @@ describe('handleVersionConflictAlert', () => {
     const onRefresh = jest.fn();
     handleVersionConflictAlert(new Error('conflict'), { onRefresh });
     const buttons = (alertService.alert as jest.Mock).mock.calls[0][2];
-    const refreshButton = buttons.find((b: any) => b.text === 'Refresh');
+    const refreshButton = buttons.find(
+      (b: AlertButton) => b.text === 'Refresh',
+    );
     refreshButton.onPress();
     expect(onRefresh).toHaveBeenCalled();
   });

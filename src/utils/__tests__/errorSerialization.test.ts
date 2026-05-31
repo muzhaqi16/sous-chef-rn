@@ -46,9 +46,11 @@ describe('errorSerialization', () => {
       };
       const result = serializeError(error);
       expect(result.graphQLErrors).toHaveLength(1);
-      expect(result.graphQLErrors[0].message).toBe('Not found');
-      expect(result.graphQLErrors[0].path).toEqual(['query', 'user']);
-      expect(result.graphQLErrors[0].extensions).toEqual({ code: 'NOT_FOUND' });
+      expect(result.graphQLErrors?.[0].message).toBe('Not found');
+      expect(result.graphQLErrors?.[0].path).toEqual(['query', 'user']);
+      expect(result.graphQLErrors?.[0].extensions).toEqual({
+        code: 'NOT_FOUND',
+      });
     });
 
     it('serializes networkError', () => {
@@ -62,8 +64,8 @@ describe('errorSerialization', () => {
         },
       };
       const result = serializeError(error);
-      expect(result.networkError.name).toBe('ServerError');
-      expect(result.networkError.statusCode).toBe(500);
+      expect(result.networkError?.name).toBe('ServerError');
+      expect(result.networkError?.statusCode).toBe(500);
     });
 
     it('serializes operation info', () => {
@@ -75,8 +77,8 @@ describe('errorSerialization', () => {
         },
       };
       const result = serializeError(error);
-      expect(result.operation.operationName).toBe('GetUser');
-      expect(result.operation.variables).toEqual({ id: '123' });
+      expect(result.operation?.operationName).toBe('GetUser');
+      expect(result.operation?.variables).toEqual({ id: '123' });
     });
 
     it('serializes extraInfo', () => {
@@ -109,13 +111,15 @@ describe('errorSerialization', () => {
       const date = new Date('2024-01-01T00:00:00.000Z');
       const error = { message: 'Error', extraInfo: { created: date } };
       const result = serializeError(error);
-      expect(result.extraInfo.created).toBe('2024-01-01T00:00:00.000Z');
+      const extraInfo = result.extraInfo as { created: string };
+      expect(extraInfo.created).toBe('2024-01-01T00:00:00.000Z');
     });
 
     it('serializes arrays in extraInfo', () => {
       const error = { message: 'Error', extraInfo: { items: [1, 2, 3] } };
       const result = serializeError(error);
-      expect(result.extraInfo.items).toEqual([1, 2, 3]);
+      const extraInfo = result.extraInfo as { items: number[] };
+      expect(extraInfo.items).toEqual([1, 2, 3]);
     });
   });
 

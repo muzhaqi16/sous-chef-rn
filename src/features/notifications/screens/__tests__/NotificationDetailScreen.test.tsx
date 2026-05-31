@@ -7,7 +7,7 @@ import { NotificationDetailScreen } from '../NotificationDetailScreen';
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 jest.mock('#utils/iconUtils', () => ({
-  Icon: ({ name }: any) => {
+  Icon: ({ name }: { name: string }) => {
     const { Text } = require('react-native');
     return <Text>{name}</Text>;
   },
@@ -15,17 +15,32 @@ jest.mock('#utils/iconUtils', () => ({
 jest.mock(
   '#features/notifications/components/NotificationActionHandler',
   () => ({
-    NotificationActionHandler: ({ children }: any) =>
-      children({ handleNotificationAction: jest.fn() }),
+    NotificationActionHandler: ({
+      children,
+    }: {
+      children: (props: {
+        handleNotificationAction: () => void;
+      }) => React.ReactNode;
+    }) => children({ handleNotificationAction: jest.fn() }),
   }),
 );
 jest.mock('date-fns/format', () => ({
   format: () => 'Jan 1, 2026',
 }));
 
+type DetailRoute = React.ComponentProps<
+  typeof NotificationDetailScreen
+>['route'];
+
+type DetailParams = DetailRoute['params'];
+
+const makeRoute = (params: Partial<DetailParams> = {}): DetailRoute => ({
+  params: params as DetailParams,
+});
+
 describe('NotificationDetailScreen', () => {
   it('shows error when notification is missing', () => {
-    render(<NotificationDetailScreen route={{ params: {} } as any} />);
+    render(<NotificationDetailScreen route={makeRoute()} />);
     expect(screen.getByText('Notification not found')).toBeTruthy();
   });
 
@@ -38,10 +53,8 @@ describe('NotificationDetailScreen', () => {
       message: 'Test message',
       payload: JSON.stringify({ message: 'Milk is expiring soon' }),
       requiresAction: false,
-    };
-    render(
-      <NotificationDetailScreen route={{ params: { notification } } as any} />,
-    );
+    } as DetailParams['notification'];
+    render(<NotificationDetailScreen route={makeRoute({ notification })} />);
     expect(screen.getByText('Items Expiring Soon')).toBeTruthy();
     expect(screen.getByText('Milk is expiring soon')).toBeTruthy();
   });
@@ -55,10 +68,8 @@ describe('NotificationDetailScreen', () => {
       message: 'Stock alert',
       payload: { message: 'Low stock detected' },
       requiresAction: false,
-    };
-    render(
-      <NotificationDetailScreen route={{ params: { notification } } as any} />,
-    );
+    } as DetailParams['notification'];
+    render(<NotificationDetailScreen route={makeRoute({ notification })} />);
     expect(screen.getByText('Low Stock Alert')).toBeTruthy();
     expect(screen.getByText('Low stock detected')).toBeTruthy();
   });

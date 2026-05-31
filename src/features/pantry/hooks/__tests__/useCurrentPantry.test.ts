@@ -17,7 +17,8 @@ const mockStoreState = {
 };
 
 jest.mock('#store/useAppStore', () => ({
-  useAppStore: (selector: (state: any) => any) => selector(mockStoreState),
+  useAppStore: <T>(selector: (state: typeof mockStoreState) => T): T =>
+    selector(mockStoreState),
   useSelectedHomeId: jest.fn(() => mockStoreState.selectedHomeId),
   usePantryState: jest.fn(() => ({
     selectedPantryId: mockStoreState.selectedPantryId,
@@ -42,7 +43,7 @@ function cacheWithHomes(homes: HomeFixture[]): InMemoryCache {
   const cache = new InMemoryCache();
   cache.writeQuery({
     query: GetHomesDocument,
-    data: homesData(homes) as any,
+    data: homesData(homes),
   });
   return cache;
 }

@@ -3,7 +3,13 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
 import { Text } from 'react-native';
+import type { ComponentProps } from 'react';
+import type { RootState } from '../../../src/store';
 import { NotificationActionHandler } from '../../../src/features/notifications/components/NotificationActionHandler';
+
+type NotificationActionRenderProps = Parameters<
+  ComponentProps<typeof NotificationActionHandler>['children']
+>[0];
 
 jest.mock('../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../src/apollo/links/refreshToken');
@@ -31,8 +37,8 @@ jest.mock('../../../src/features/notifications/hooks/useNotificationSync', () =>
 }));
 jest.mock('../../../src/hooks/navigation/useAppNavigation');
 jest.mock('../../../src/store/useAppStore', () => ({
-  useAppStore: (selector: any) =>
-    selector({ setSelectedHomeId: jest.fn() }),
+  useAppStore: <T,>(selector: (state: RootState) => T): T =>
+    selector({ setSelectedHomeId: jest.fn() } as Partial<RootState> as RootState),
 }));
 
 describe('NotificationActionHandler', () => {
@@ -46,7 +52,7 @@ describe('NotificationActionHandler', () => {
   });
 
   it('provides showInvitationModal to children', () => {
-    let receivedProps: any;
+    let receivedProps!: NotificationActionRenderProps;
     render(
       <NotificationActionHandler>
         {(props) => {
@@ -59,7 +65,7 @@ describe('NotificationActionHandler', () => {
   });
 
   it('provides handleNotificationAction to children', () => {
-    let receivedProps: any;
+    let receivedProps!: NotificationActionRenderProps;
     render(
       <NotificationActionHandler>
         {(props) => {

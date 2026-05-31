@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
+import type { SharedValue } from 'react-native-reanimated';
 import { AddButton } from '../FloatingTabBar/AddButton';
 import { TabItem } from '../FloatingTabBar/TabItem';
 
@@ -88,7 +89,11 @@ describe('AddButton', () => {
 });
 
 describe('TabItem', () => {
-  const mockSharedValue = { value: 0, get: jest.fn(() => 0), set: jest.fn() };
+  const mockSharedValue = {
+    value: 0,
+    get: jest.fn(() => 0),
+    set: jest.fn(),
+  } as Partial<SharedValue<number>> as SharedValue<number>;
 
   const defaultTabProps = {
     route: { key: 'pantry-key', name: 'Pantry' },
@@ -96,7 +101,7 @@ describe('TabItem', () => {
     options: { title: 'Pantry', tabBarAccessibilityLabel: 'Pantry tab' },
     onPress: jest.fn(),
     showLabel: true,
-    activeTabIndex: mockSharedValue as any,
+    activeTabIndex: mockSharedValue,
     tabIndex: 0,
   };
 

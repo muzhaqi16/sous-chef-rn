@@ -23,7 +23,17 @@ jest.mock('#components/base/BaseSwitch', () => {
   const RN = require('react-native');
   const R = require('react');
   return {
-    BaseSwitch: ({ value, onValueChange, disabled, testID }: any) =>
+    BaseSwitch: ({
+      value,
+      onValueChange,
+      disabled,
+      testID,
+    }: {
+      value: boolean;
+      onValueChange: (value: boolean) => void;
+      disabled?: boolean;
+      testID?: string;
+    }) =>
       R.createElement(RN.Switch, {
         value,
         onValueChange,

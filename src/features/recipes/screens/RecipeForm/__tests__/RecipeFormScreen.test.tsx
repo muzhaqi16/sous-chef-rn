@@ -2,10 +2,15 @@
 
 import React from 'react';
 import { userEvent } from '@testing-library/react-native';
+import type { StaticScreenProps } from '@react-navigation/native';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { CreateRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import { alertService } from '#/services/alertService';
 import { RecipeFormScreen } from '../index';
+
+type RecipeFormScreenProps = StaticScreenProps<
+  { recipeId?: string } | undefined
+>;
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
@@ -36,7 +41,17 @@ jest.mock('../components/RecipeTagsSection', () => ({
   RecipeTagsSection: () => null,
 }));
 jest.mock('#components/organisms/FormModal', () => ({
-  FormModal: ({ children, onSave, title, testID }: any) => {
+  FormModal: ({
+    children,
+    onSave,
+    title,
+    testID,
+  }: {
+    children?: React.ReactNode;
+    onSave: () => void;
+    title: string;
+    testID?: string;
+  }) => {
     const { View, Text, Pressable } = require('react-native');
     return (
       <View testID={testID}>
@@ -59,9 +74,9 @@ beforeEach(() => {
 });
 
 describe('RecipeFormScreen', () => {
-  const defaultProps = {
+  const defaultProps: RecipeFormScreenProps = {
     route: { params: undefined },
-  } as any;
+  };
 
   it('renders in create mode', () => {
     const { getByText } = renderWithApollo(
@@ -71,7 +86,9 @@ describe('RecipeFormScreen', () => {
   });
 
   it('renders in edit mode with recipeId', () => {
-    const props = { route: { params: { recipeId: 'recipe-1' } } } as any;
+    const props: RecipeFormScreenProps = {
+      route: { params: { recipeId: 'recipe-1' } },
+    };
     const { getByText } = renderWithApollo(<RecipeFormScreen {...props} />);
     expect(getByText('Edit Recipe')).toBeTruthy();
   });

@@ -1,5 +1,7 @@
 import React from 'react';
+import type { ViewProps } from 'react-native';
 import { render, screen } from '@testing-library/react-native';
+import type { TagInputProps } from '#components/molecules/TagInput';
 import { ManageRecipeSheet } from '../ManageRecipeSheet/ManageRecipeSheet';
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
@@ -23,13 +25,13 @@ jest.mock('#hooks/useStandardBottomSheet', () => ({
       spacing: { xs: 2, sm: 4, md: 8, lg: 16, xl: 24 },
     },
   })),
-  BottomSheetModal: ({ children }: any) => children,
+  BottomSheetModal: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 jest.mock('#components/atoms/BottomSheetKeyboardAwareScrollView', () => {
   const RN = require('react-native');
   return {
-    BottomSheetKeyboardAwareScrollView: (props: any) =>
+    BottomSheetKeyboardAwareScrollView: (props: ViewProps) =>
       require('react').createElement(RN.View, props),
   };
 });
@@ -38,7 +40,10 @@ jest.mock('#components/molecules/TagInput', () => {
   const RN = require('react-native');
   const R = require('react');
   return {
-    TagInput: ({ tags, placeholder }: any) =>
+    TagInput: ({
+      tags,
+      placeholder,
+    }: Pick<TagInputProps, 'tags' | 'placeholder'>) =>
       R.createElement(
         RN.View,
         { testID: 'tag-input' },

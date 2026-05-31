@@ -26,6 +26,14 @@
  * ```
  */
 
+import type {
+  ApolloCache,
+  ErrorLike,
+  Reference,
+  StoreObject,
+} from '@apollo/client';
+import type { NormalizedCacheObject } from '@apollo/client';
+import type { ModifierDetails } from '@apollo/client/cache';
 import {
   SubscriptionConfig,
   SubscriptionHandlers,
@@ -41,7 +49,14 @@ import {
   isCircularStructureError,
   isTimerCircularStructureError,
 } from '#/utils/errorSerialization';
-import { safeEvict } from '#/apollo/utils/cacheUpdaters';
+import { safeEvict, type ConnectionData } from '#/apollo/utils/cacheUpdaters';
+
+/**
+ * Entity shape extracted from a subscription payload's `item`/`node`.
+ * Extends `StoreObject` so it can be passed to `toReference`, while
+ * surfacing the `id` the service reads for cache identification.
+ */
+type PayloadEntity = StoreObject & { id?: string };
 
 export class SubscriptionService {
   private static instance: SubscriptionService;
@@ -233,7 +248,7 @@ export class SubscriptionService {
    */
   private createOnDataHandler<TData>(
     config: SubscriptionConfig<TData>,
-  ): (context: { data: any; client: any }) => void {
+  ): SubscriptionHandlers['onData'] {
     return ({ data, client }) => {
       try {
         // Skip processing if parent entity is being deleted
@@ -299,7 +314,7 @@ export class SubscriptionService {
         this.updateSubscriptionStats(config, 'update');
 
         // Step 3: Log subscription update
-        const item: any = payload.item || payload.node;
+        const item = this.getPayloadEntity(payload);
 
         this.log(config, LogLevel.INFO, 'Subscription update received', {
           mutation: payload.mutation,
@@ -360,8 +375,8 @@ export class SubscriptionService {
    */
   private createOnErrorHandler<TData>(
     config: SubscriptionConfig<TData>,
-  ): (error: any) => void {
-    return (error: any) => {
+  ): SubscriptionHandlers['onError'] {
+    return (error: ErrorLike) => {
       // Check if this is a network-related error that will be auto-recovered
       const errorMessage = error?.message?.toLowerCase() || '';
       const isSocketClosed = errorMessage.includes('socket closed');
@@ -437,7 +452,9 @@ export class SubscriptionService {
    * Check if subscription update is ONLY for sortOrder changes
    * These should be ignored since we handle reordering optimistically
    */
-  private isSortOrderOnlyUpdate(payload: SubscriptionPayload<any>): boolean {
+  private isSortOrderOnlyUpdate<TData>(
+    payload: SubscriptionPayload<TData>,
+  ): boolean {
     // Only filter ITEM_UPDATED mutations
     if (payload.mutation !== MutationType.ItemUpdated) {
       return false;
@@ -476,7 +493,9 @@ export class SubscriptionService {
 
     // Filter sortOrder-only updates (handled by optimistic mutations)
     if (this.isSortOrderOnlyUpdate(payload)) {
-      const itemId = (payload.item as any)?.id || (payload.node as any)?.id;
+      const itemId =
+        (payload.item as { id?: string } | undefined)?.id ||
+        (payload.node as { id?: string } | undefined)?.id;
 
       // Check if we recently reordered this item
       if (itemId) {
@@ -529,7 +548,7 @@ export class SubscriptionService {
    * - DELETE: Remove item from array and evict from cache
    */
   private updateCache<TData>(
-    cache: any,
+    cache: ApolloCache,
     config: SubscriptionConfig<TData>,
     payload: SubscriptionPayload<TData>,
   ): void {
@@ -542,11 +561,11 @@ export class SubscriptionService {
       return;
     }
 
-    const item: any = payload.item || payload.node;
+    const item = this.getPayloadEntity(payload);
     const mutation = payload.mutation || config.mutation;
     const itemId = item?.id;
 
-    if (!itemId) {
+    if (!item || !itemId) {
       this.log(config, LogLevel.WARN, 'No item ID found in payload', payload);
       return;
     }
@@ -560,14 +579,15 @@ export class SubscriptionService {
           cache.modify({
             fields: {
               [config.cacheFieldName]: (
-                existingItems = [],
-                { toReference, readField }: any,
+                existingItems: readonly Reference[] = [],
+                { toReference, readField }: ModifierDetails,
               ) => {
                 const newItemRef = toReference(item);
+                if (!newItemRef) return existingItems;
 
                 // Check if item already exists (prevent duplicates)
                 const exists = existingItems.some(
-                  (itemRef: any) => readField('id', itemRef) === itemId,
+                  (itemRef: Reference) => readField('id', itemRef) === itemId,
                 );
 
                 if (exists) {
@@ -639,12 +659,12 @@ export class SubscriptionService {
                   id: parentCacheId,
                   fields: {
                     [pendingDelete.connectionField]: (
-                      existingConnection: any = {},
-                      { readField }: any,
+                      existingConnection: ConnectionData = {},
+                      { readField }: ModifierDetails,
                     ) => {
                       const existingEdges = existingConnection?.edges || [];
                       const edges = existingEdges.filter(
-                        (edge: any) => readField('id', edge?.node) !== itemId,
+                        edge => readField('id', edge?.node) !== itemId,
                       );
 
                       // If edges didn't change, no need to update
@@ -680,7 +700,11 @@ export class SubscriptionService {
           }
 
           // Check if item is already evicted (e.g., from a previous operation)
-          const itemExists = cacheId && cache.data?.data?.[cacheId];
+          const normalizedCache =
+            cacheId && typeof cache.extract === 'function'
+              ? (cache.extract() as NormalizedCacheObject)
+              : undefined;
+          const itemExists = cacheId ? normalizedCache?.[cacheId] : undefined;
           if (!itemExists) {
             this.log(
               config,
@@ -696,11 +720,11 @@ export class SubscriptionService {
           cache.modify({
             fields: {
               [config.cacheFieldName]: (
-                existingItems = [],
-                { readField }: any,
+                existingItems: readonly Reference[] = [],
+                { readField }: ModifierDetails,
               ) => {
                 return existingItems.filter(
-                  (itemRef: any) => readField('id', itemRef) !== itemId,
+                  (itemRef: Reference) => readField('id', itemRef) !== itemId,
                 );
               },
             },
@@ -739,13 +763,30 @@ export class SubscriptionService {
   }
 
   /**
+   * Extract the entity (`item` or `node`) from a subscription payload.
+   * Returns the entity as a `StoreObject` (so it can be passed to
+   * `toReference`) carrying an optional `id`, or `undefined` when neither
+   * field holds an object.
+   */
+  private getPayloadEntity<TData>(
+    payload: SubscriptionPayload<TData>,
+  ): PayloadEntity | undefined {
+    const candidate = payload.item ?? payload.node;
+    if (candidate && typeof candidate === 'object') {
+      const entity = candidate as PayloadEntity;
+      return entity;
+    }
+    return undefined;
+  }
+
+  /**
    * Unified logging
    */
   private log<TData>(
     config: SubscriptionConfig<TData>,
     level: LogLevel,
     message: string,
-    data?: any,
+    data?: unknown,
   ): void {
     if (!config.enableLogging && level !== LogLevel.ERROR) {
       return;
@@ -769,19 +810,26 @@ export class SubscriptionService {
       return;
     }
 
+    // Extract a `message` string from `data` when present (errors, payloads)
+    const dataMessage =
+      typeof data === 'object' &&
+      data !== null &&
+      'message' in data &&
+      typeof (data as { message: unknown }).message === 'string'
+        ? (data as { message: string }).message
+        : undefined;
+
     // Check if this is a circular structure error - downgrade to warning
     const isCircular =
       level === LogLevel.ERROR &&
-      data &&
+      Boolean(data) &&
       (isCircularStructureError(data) ||
-        (typeof data === 'object' &&
-          data.message &&
-          isCircularStructureError(data.message)));
+        (dataMessage !== undefined && isCircularStructureError(dataMessage)));
 
     // Extract raw error message for visibility even when circular refs detected
     const rawErrorMessage =
-      typeof data === 'object' && data?.message
-        ? data.message
+      dataMessage !== undefined
+        ? dataMessage
         : typeof data === 'string'
         ? data
         : 'Unknown error';

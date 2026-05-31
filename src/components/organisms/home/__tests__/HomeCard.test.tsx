@@ -31,7 +31,7 @@ jest.mock('../HomeActions', () => {
       isDefault,
       canInvite,
       canDelete,
-    }: any) => (
+    }: React.ComponentProps<typeof import('../HomeActions').HomeActions>) => (
       <View testID="home-actions">
         {!isDefault && (
           <Pressable
@@ -59,9 +59,11 @@ jest.mock('../HomeActions', () => {
 jest.mock('../MembersList', () => {
   const { View, Text } = require('react-native');
   return {
-    MembersList: ({ members }: any) => (
+    MembersList: ({
+      members,
+    }: React.ComponentProps<typeof import('../MembersList').MembersList>) => (
       <View testID="members-list">
-        {members.map((m: any) => (
+        {members.map(m => (
           <Text key={m.id}>{m.displayName || m.id}</Text>
         ))}
       </View>

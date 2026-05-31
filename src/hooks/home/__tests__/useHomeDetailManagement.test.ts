@@ -9,6 +9,8 @@ import {
   UpdateHomeDocument,
 } from '#operations/home/home.generated';
 import { alertService } from '#/services/alertService';
+import type { RootState } from '#store/index';
+import type { RemoveOperationConfig } from '#/hooks/utils/useCrudOperations';
 import { useHomeDetailManagement } from '../useHomeDetailManagement';
 
 const mockStoreState = {
@@ -19,7 +21,8 @@ const mockStoreState = {
 };
 
 jest.mock('#store/useAppStore', () => ({
-  useAppStore: (selector: (state: any) => any) => selector(mockStoreState),
+  useAppStore: <T>(selector: (state: RootState) => T): T =>
+    selector(mockStoreState as Partial<RootState> as RootState),
   useSelectedHomeId: jest.fn(() => mockStoreState.selectedHomeId),
   useSetSelectedPantryId: jest.fn(() => mockStoreState.setSelectedPantryId),
   useHomeState: jest.fn(() => ({
@@ -30,12 +33,12 @@ jest.mock('#store/useAppStore', () => ({
 
 jest.mock('#/hooks/apollo/usePreservedQueryData', () => ({
   usePreservedQueryData: jest.fn(
-    (data: any, fallback: any) => data ?? fallback,
+    <T>(data: T | undefined, fallback: T): T => data ?? fallback,
   ),
 }));
 
 jest.mock('#/utils/connectionUtils', () => ({
-  normalizeHome: jest.fn((home: any) => home),
+  normalizeHome: jest.fn(<T>(home: T): T => home),
 }));
 
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
@@ -55,27 +58,29 @@ jest.mock('#utils/formatters/roleFormatters', () => ({
   formatRole: jest.fn((role: string) => role),
 }));
 
-const mockCreateRemoveOperation = jest.fn((config: any) => {
-  return async () => {
-    const {
-      alertService: mockAlertService,
-    } = require('#/services/alertService');
-    return new Promise(resolve => {
-      mockAlertService.alert(config.operationName, 'Confirm?', [
-        { text: 'Cancel', onPress: () => resolve(false) },
-        {
-          text: 'Delete',
-          onPress: async () => {
-            const result = await config.mutation({
-              variables: { id: config.itemId },
-            });
-            resolve(result?.data || false);
+const mockCreateRemoveOperation = jest.fn(
+  (config: RemoveOperationConfig<{ data?: unknown }>) => {
+    return async () => {
+      const {
+        alertService: mockAlertService,
+      } = require('#/services/alertService');
+      return new Promise(resolve => {
+        mockAlertService.alert(config.operationName, 'Confirm?', [
+          { text: 'Cancel', onPress: () => resolve(false) },
+          {
+            text: 'Delete',
+            onPress: async () => {
+              const result = await config.mutation({
+                variables: { id: config.itemId },
+              });
+              resolve(result?.data || false);
+            },
           },
-        },
-      ]);
-    });
-  };
-});
+        ]);
+      });
+    };
+  },
+);
 
 jest.mock('#/hooks/utils/useCrudOperations', () => ({
   useCrudOperations: () => ({
@@ -158,7 +163,7 @@ const DEFAULT_HOME_DATA = {
 };
 
 function getHomeMock(
-  data: any = DEFAULT_HOME_DATA,
+  data: Record<string, unknown> = DEFAULT_HOME_DATA,
   options: { delay?: number; error?: Error } = {},
 ): MockedResponse {
   return recordMock(GetHomeDocument, {

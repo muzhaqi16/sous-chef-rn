@@ -8,6 +8,23 @@ import { UpdateItemImageDocument } from '#operations/image/imageUpload.generated
 import { alertService } from '#/services/alertService';
 import { useImageUpload } from '../useImageUpload';
 
+type ImageUploadApi = ReturnType<typeof useImageUpload>;
+type ProfileResult = Awaited<
+  ReturnType<ImageUploadApi['updateProfileAvatarUrl']>
+>;
+type ProfileUploadResult = Awaited<
+  ReturnType<ImageUploadApi['uploadProfileImage']>
+>;
+type ItemUploadResult = Awaited<ReturnType<ImageUploadApi['uploadItemImage']>>;
+type ItemImagesResult = Awaited<ReturnType<ImageUploadApi['uploadItemImages']>>;
+// `updateItemImageUrl` resolves to the `updateItem` result union; `item` exists
+// only on the success member. Optional fields (plus `__typename`) let the
+// success-path mock value be read for assertions.
+type ItemImageData = {
+  __typename?: string;
+  item?: { id?: string; imageUrl?: string | null } | null;
+} | null;
+
 jest.mock('../../apollo/links/tokenScheduler');
 jest.mock('../../apollo/links/refreshToken');
 
@@ -30,22 +47,23 @@ jest.mock('#/services/alertService', () => ({
 }));
 
 // Mock XMLHttpRequest
+type XhrEventHandler = ((event: ProgressEvent) => void) | null;
 const mockXhr = {
   open: jest.fn(),
   send: jest.fn(),
   setRequestHeader: jest.fn(),
   abort: jest.fn(),
-  upload: { onprogress: null as any },
-  onload: null as any,
-  onerror: null as any,
-  ontimeout: null as any,
-  onabort: null as any,
+  upload: { onprogress: null as XhrEventHandler },
+  onload: null as XhrEventHandler,
+  onerror: null as XhrEventHandler,
+  ontimeout: null as XhrEventHandler,
+  onabort: null as XhrEventHandler,
   status: 200,
   statusText: 'OK',
   responseText: '',
   timeout: 0,
 };
-(global as any).XMLHttpRequest = jest.fn(() => mockXhr);
+(global as { XMLHttpRequest: unknown }).XMLHttpRequest = jest.fn(() => mockXhr);
 
 // Helper builders for MockedResponse — these avoid spelling out the full
 // generated payload shape inline at every test.
@@ -167,7 +185,7 @@ describe('useImageUpload', () => {
       ],
     });
 
-    let profile: any;
+    let profile: ProfileResult | undefined;
     await act(async () => {
       profile = await result.current.updateProfileAvatarUrl('http://img.jpg');
     });
@@ -183,7 +201,7 @@ describe('useImageUpload', () => {
 
     const { result } = renderHookWithApollo(() => useImageUpload());
 
-    let profile: any;
+    let profile: ProfileResult | undefined;
     await act(async () => {
       profile = await result.current.updateProfileAvatarUrl('http://img.jpg');
     });
@@ -201,7 +219,7 @@ describe('useImageUpload', () => {
       ],
     });
 
-    let profile: any;
+    let profile: ProfileResult | undefined;
     await act(async () => {
       profile = await result.current.updateProfileCoverUrl('http://cover.jpg');
     });
@@ -219,7 +237,7 @@ describe('useImageUpload', () => {
       ],
     });
 
-    let item: any;
+    let item: ItemImageData | undefined;
     await act(async () => {
       item = await result.current.updateItemImageUrl(
         'item1',
@@ -238,7 +256,7 @@ describe('useImageUpload', () => {
     const { result } = renderHookWithApollo(() => useImageUpload());
     const onError = jest.fn();
 
-    let returnVal: any;
+    let returnVal: ProfileUploadResult | undefined;
     await act(async () => {
       returnVal = await result.current.uploadProfileImage(
         { uri: 'file://img.jpg', fileSize: 1000, type: 'image/jpeg' },
@@ -260,7 +278,7 @@ describe('useImageUpload', () => {
 
     const { result } = renderHookWithApollo(() => useImageUpload());
 
-    let returnVal: any;
+    let returnVal: ItemUploadResult | undefined;
     await act(async () => {
       returnVal = await result.current.uploadItemImage(
         { uri: 'file://img.jpg', fileSize: 1000, type: 'image/jpeg' },
@@ -277,7 +295,7 @@ describe('useImageUpload', () => {
 
     const { result } = renderHookWithApollo(() => useImageUpload());
 
-    let results: any;
+    let results: ItemImagesResult | undefined;
     await act(async () => {
       results = await result.current.uploadItemImages(
         [{ uri: 'file://a.jpg', perspective: 'front' }],
@@ -300,7 +318,7 @@ describe('useImageUpload', () => {
 
     const { result } = renderHookWithApollo(() => useImageUpload());
 
-    let profile: any;
+    let profile: ProfileResult | undefined;
     await act(async () => {
       profile = await result.current.updateProfileCoverUrl('http://cover.jpg');
     });
@@ -314,7 +332,7 @@ describe('useImageUpload', () => {
     // our test wrapper's errorPolicy: 'all' default.
     const { executeMutation } = require('#/utils/compilerSafeWrappers');
     executeMutation.mockImplementationOnce(
-      async (_fn: any, onError: (e: unknown) => void) => {
+      async (_fn: () => Promise<unknown>, onError: (e: unknown) => void) => {
         onError(new Error('fail'));
         return false;
       },
@@ -322,7 +340,7 @@ describe('useImageUpload', () => {
 
     const { result } = renderHookWithApollo(() => useImageUpload());
 
-    let item: any;
+    let item: ItemImageData | undefined;
     await act(async () => {
       item = await result.current.updateItemImageUrl(
         'item1',

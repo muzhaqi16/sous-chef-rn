@@ -16,11 +16,21 @@ jest.mock('#hooks/useStandardBottomSheet', () => ({
       },
     },
   })),
-  BottomSheetModal: ({ children }: any) => children,
+  BottomSheetModal: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 jest.mock('#/components/atoms/BottomSheetHeader', () => ({
-  BottomSheetHeader: ({ title, onCancel, onConfirm, confirmLabel }: any) => {
+  BottomSheetHeader: ({
+    title,
+    onCancel,
+    onConfirm,
+    confirmLabel,
+  }: {
+    title: string;
+    onCancel: () => void;
+    onConfirm: () => void;
+    confirmLabel: string;
+  }) => {
     const RN = require('react-native');
     const R = require('react');
     return R.createElement(
@@ -42,7 +52,13 @@ jest.mock('#/components/atoms/BottomSheetHeader', () => ({
 }));
 
 jest.mock('#/components/atoms/AnimatedChip', () => ({
-  AnimatedChip: ({ label, onPress }: any) => {
+  AnimatedChip: ({
+    label,
+    onPress,
+  }: {
+    label: string;
+    onPress: () => void;
+  }) => {
     const RN = require('react-native');
     const R = require('react');
     return R.createElement(

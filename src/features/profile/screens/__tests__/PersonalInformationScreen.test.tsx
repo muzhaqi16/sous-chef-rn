@@ -3,6 +3,7 @@ import React from 'react';
 import { screen } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { PersonalInformationScreen } from '../PersonalInformationScreen';
+import type { SettingsSectionProps } from '#components/organisms/SettingsSection';
 
 jest.mock('#features/profile/hooks/useProfileData', () => ({
   useProfileData: () => ({
@@ -65,7 +66,13 @@ jest.mock('#hooks/navigation/useAppNavigation');
 jest.mock('#components/templates/ProfileScreenWrapper', () => {
   const { View, Text } = require('react-native');
   return {
-    ProfileScreenWrapper: ({ children, title }: any) => (
+    ProfileScreenWrapper: ({
+      children,
+      title,
+    }: {
+      children?: React.ReactNode;
+      title?: string;
+    }) => (
       <View testID="profile-screen-wrapper">
         <Text>{title}</Text>
         {children}
@@ -77,10 +84,10 @@ jest.mock('#components/templates/ProfileScreenWrapper', () => {
 jest.mock('#components/organisms/SettingsSection', () => {
   const { View, Text } = require('react-native');
   return {
-    SettingsSection: ({ title, items }: any) => (
+    SettingsSection: ({ title, items }: SettingsSectionProps) => (
       <View testID={`section-${title}`}>
         <Text>{title}</Text>
-        {items.map((item: any) => (
+        {items.map(item => (
           <View key={item.key} testID={`setting-${item.key}`}>
             <Text>{item.label}</Text>
             {item.value !== undefined && (

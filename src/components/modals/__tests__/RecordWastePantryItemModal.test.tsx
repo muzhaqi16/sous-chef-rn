@@ -2,17 +2,49 @@
 import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
 import { RecordWastePantryItemModal } from '../RecordWastePantryItemModal';
+import type { PantryActionSharedState } from '../PantryActionModal';
+
+// The mock supplies a simplified subset of the real shared state / pantry item
+// that the consumer's renderActionFields reads. Pick the fields it provides plus
+// a partial selectedUnitInfo.
+type MockSharedState = Pick<
+  PantryActionSharedState,
+  | 'trackingQuantity'
+  | 'trackingUnitSymbol'
+  | 'trackingUnitId'
+  | 'activeUnitSymbol'
+  | 'activeUnitId'
+  | 'isConvertedUnit'
+  | 'setSelectedUnitInfo'
+  | 'notes'
+  | 'setNotes'
+  | 'defaultUnit'
+> & {
+  selectedUnitInfo: {
+    unitId: string;
+    unitSymbol: string;
+    unitName: string;
+    unitType: string;
+    isTrackingUnit: boolean;
+    conversionConfidence: number | null;
+  };
+  itemId: string;
+};
+type MockPantryItem = { id: string; quantity: number };
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 jest.mock('#/utils/iconUtils', () => ({
-  Icon: ({ name }: any) => {
+  Icon: ({ name }: { name: string }) => {
     const { Text } = require('react-native');
     return <Text>{name}</Text>;
   },
 }));
 jest.mock('#components/molecules/FractionInput', () => ({
-  FractionInput: (props: any) => {
+  FractionInput: (props: {
+    value: string;
+    onChangeText: (text: string) => void;
+  }) => {
     const { TextInput } = require('react-native');
     return (
       <TextInput
@@ -24,7 +56,10 @@ jest.mock('#components/molecules/FractionInput', () => ({
   },
 }));
 jest.mock('#components/molecules/FormInput', () => ({
-  FormInput: (props: any) => {
+  FormInput: (props: {
+    value?: string;
+    onChangeText?: (text: string) => void;
+  }) => {
     const { TextInput } = require('react-native');
     return (
       <TextInput
@@ -36,13 +71,24 @@ jest.mock('#components/molecules/FormInput', () => ({
   },
 }));
 jest.mock('#components/molecules/FormCheckbox', () => ({
-  FormCheckbox: ({ label }: any) => {
+  FormCheckbox: ({ label }: { label: string }) => {
     const { Text } = require('react-native');
     return <Text>{label}</Text>;
   },
 }));
 jest.mock('../PantryActionModal', () => ({
-  PantryActionModal: ({ title, renderActionFields, pantryItemId }: any) => {
+  PantryActionModal: ({
+    title,
+    renderActionFields,
+    pantryItemId,
+  }: {
+    title: string;
+    pantryItemId: string | null;
+    renderActionFields: (
+      shared: MockSharedState,
+      pantryItem: MockPantryItem,
+    ) => React.ReactNode;
+  }) => {
     const { View, Text } = require('react-native');
     const sharedState = {
       trackingQuantity: 10,

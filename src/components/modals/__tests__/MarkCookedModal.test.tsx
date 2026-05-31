@@ -1,5 +1,9 @@
 import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
+import type { BottomSheetFormScrollView as BottomSheetFormScrollViewComponent } from '#components/atoms/BottomSheetFormScrollView';
+import type { BottomSheetHeader as BottomSheetHeaderComponent } from '#components/atoms/BottomSheetHeader';
+import type { FractionInput as FractionInputComponent } from '#components/molecules/FractionInput';
+import type { FormInput as FormInputComponent } from '#components/molecules/FormInput';
 import { MarkCookedModal } from '../MarkCookedModal';
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
@@ -21,14 +25,15 @@ jest.mock('#hooks/useStandardBottomSheet', () => ({
       spacing: { xs: 2, sm: 4, md: 8, lg: 16, xl: 24 },
     },
   })),
-  BottomSheetModal: ({ children }: any) => children,
+  BottomSheetModal: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 jest.mock('#components/atoms/BottomSheetFormScrollView', () => {
   const RN = require('react-native');
   return {
-    BottomSheetFormScrollView: (props: any) =>
-      require('react').createElement(RN.View, props),
+    BottomSheetFormScrollView: (
+      props: React.ComponentProps<typeof BottomSheetFormScrollViewComponent>,
+    ) => require('react').createElement(RN.View, props),
   };
 });
 
@@ -36,7 +41,12 @@ jest.mock('#components/atoms/BottomSheetHeader', () => {
   const RN = require('react-native');
   const R = require('react');
   return {
-    BottomSheetHeader: ({ title, onCancel, onConfirm, confirmLabel }: any) =>
+    BottomSheetHeader: ({
+      title,
+      onCancel,
+      onConfirm,
+      confirmLabel,
+    }: React.ComponentProps<typeof BottomSheetHeaderComponent>) =>
       R.createElement(
         RN.View,
         { testID: 'bottom-sheet-header' },
@@ -59,7 +69,12 @@ jest.mock('#components/molecules/FractionInput', () => {
   const RN = require('react-native');
   const R = require('react');
   return {
-    FractionInput: ({ label, value, onChangeText, placeholder }: any) =>
+    FractionInput: ({
+      label,
+      value,
+      onChangeText,
+      placeholder,
+    }: React.ComponentProps<typeof FractionInputComponent>) =>
       R.createElement(
         RN.View,
         null,
@@ -78,7 +93,12 @@ jest.mock('#components/molecules/FormInput', () => {
   const RN = require('react-native');
   const R = require('react');
   return {
-    FormInput: ({ label, value, onChangeText, placeholder }: any) =>
+    FormInput: ({
+      label,
+      value,
+      onChangeText,
+      placeholder,
+    }: React.ComponentProps<typeof FormInputComponent>) =>
       R.createElement(
         RN.View,
         null,

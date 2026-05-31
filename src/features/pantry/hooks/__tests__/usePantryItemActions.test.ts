@@ -10,6 +10,7 @@ import {
   CreatePantryItemUsageDocument,
   RestockPantryItemDocument,
 } from '#features/pantry/graphql/pantry.generated';
+import { UsagePurpose, WasteReason } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
 import { usePantryItemActions } from '../usePantryItemActions';
 
@@ -76,7 +77,7 @@ function consumeMock(payload?: Record<string, unknown>) {
   };
   return recordMock(CreatePantryItemUsageDocument, {
     data: {
-      createPantryItemUsage: (payload ?? defaultPayload) as any,
+      createPantryItemUsage: payload ?? defaultPayload,
     },
   });
 }
@@ -110,7 +111,7 @@ function restockMock(payload?: Record<string, unknown>) {
   };
   return recordMock(RestockPantryItemDocument, {
     data: {
-      restockPantryItem: (payload ?? defaultPayload) as any,
+      restockPantryItem: payload ?? defaultPayload,
     },
   });
 }
@@ -262,7 +263,7 @@ describe('usePantryItemActions', () => {
         await result.current.handleConfirmConsume(
           2,
           '2',
-          'COOK' as any,
+          'COOK' as UsagePurpose,
           'For dinner',
         );
       });
@@ -288,7 +289,12 @@ describe('usePantryItemActions', () => {
       );
 
       await act(async () => {
-        await result.current.handleConfirmConsume(1, '1', 'COOK' as any, '');
+        await result.current.handleConfirmConsume(
+          1,
+          '1',
+          'COOK' as UsagePurpose,
+          '',
+        );
       });
 
       expect(m.fired).toEqual([]);
@@ -297,7 +303,7 @@ describe('usePantryItemActions', () => {
     it('reverts quantity and shows error on failure', async () => {
       const { executeMutation } = require('#/utils/compilerSafeWrappers');
       executeMutation.mockImplementationOnce(
-        async (_fn: any, onError: (e: unknown) => void) => {
+        async (_fn: () => Promise<unknown>, onError: (e: unknown) => void) => {
           onError(new Error('Failed'));
           return false;
         },
@@ -313,7 +319,12 @@ describe('usePantryItemActions', () => {
       });
 
       await act(async () => {
-        await result.current.handleConfirmConsume(2, '2', 'COOK' as any, '');
+        await result.current.handleConfirmConsume(
+          2,
+          '2',
+          'COOK' as UsagePurpose,
+          '',
+        );
       });
 
       expect(alertService.alert).toHaveBeenCalledWith(
@@ -342,7 +353,7 @@ describe('usePantryItemActions', () => {
       await act(async () => {
         await result.current.handleConfirmWaste(
           1,
-          'EXPIRED' as any,
+          'EXPIRED' as WasteReason,
           true,
           false,
           'Past date',
@@ -421,7 +432,7 @@ describe('usePantryItemActions', () => {
         );
       });
 
-      const input = (m.fired[0] as any).input;
+      const input = m.fired[0].input as Record<string, unknown>;
       expect(input.unitId).toBe('unit-kg');
       expect(input.costPerUnit).toBe(2.5);
       expect(input.totalCost).toBe(12.5);
@@ -447,7 +458,12 @@ describe('usePantryItemActions', () => {
       });
 
       await act(async () => {
-        await result.current.handleConfirmConsume(2, '2', 'COOK' as any, '');
+        await result.current.handleConfirmConsume(
+          2,
+          '2',
+          'COOK' as UsagePurpose,
+          '',
+        );
       });
 
       expect(alertService.alert).toHaveBeenCalledWith(
@@ -477,7 +493,7 @@ describe('usePantryItemActions', () => {
       await act(async () => {
         await result.current.handleConfirmWaste(
           1,
-          'EXPIRED' as any,
+          'EXPIRED' as WasteReason,
           false,
           false,
           '',
@@ -507,7 +523,12 @@ describe('usePantryItemActions', () => {
       });
 
       await act(async () => {
-        await result.current.handleConfirmConsume(1, '1', 'COOK' as any, '');
+        await result.current.handleConfirmConsume(
+          1,
+          '1',
+          'COOK' as UsagePurpose,
+          '',
+        );
       });
 
       expect(alertService.alert).toHaveBeenCalledWith(
@@ -589,7 +610,7 @@ describe('usePantryItemActions', () => {
         await result.current.handleConfirmConsume(
           100,
           '100',
-          'COOK' as any,
+          'COOK' as UsagePurpose,
           '',
         );
       });

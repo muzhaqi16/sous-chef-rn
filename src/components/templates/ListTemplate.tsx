@@ -15,11 +15,10 @@ interface EmptyStateConfig {
   };
 }
 
-interface ListTemplateProps {
-  // Core list functionality — items are typed loosely because the template
-  // passes them through to either ItemList or a custom list component,
-  // each with its own item type.
-  items?: { id: string }[];
+interface ListTemplateProps<TItem extends { id: string } = { id: string }> {
+  // Items flow through to either ItemList or a custom list component; the item
+  // type `TItem` is inferred from `items`/`customListComponent` at the call site.
+  items?: TItem[];
   onItemPress?: (id: string) => void;
   onItemEdit?: (id: string) => void;
   onItemDelete?: (id: string) => void;
@@ -42,11 +41,33 @@ interface ListTemplateProps {
   // Test IDs
   testIDPrefix?: string;
 
-  customListComponent?: React.ComponentType<any>;
+  customListComponent?: React.ComponentType<CustomListComponentProps<TItem>>;
   customListProps?: Record<string, unknown>;
 }
 
-export const ListTemplate: React.FC<ListTemplateProps> = ({
+/** Props the template injects into a `customListComponent`. */
+interface CustomListComponentProps<
+  TItem extends { id: string } = { id: string },
+> {
+  items: TItem[];
+  onItemPress: (id: string) => void;
+  onItemEdit: (id: string) => void;
+  onItemDelete: (id: string) => void;
+  onRefresh: () => Promise<void>;
+  ListHeaderComponent?:
+    | React.ComponentType<unknown>
+    | React.ReactElement
+    | null;
+  ListFooterComponent?:
+    | React.ComponentType<unknown>
+    | React.ReactElement
+    | null;
+  testIDPrefix?: string;
+  emptyState?: EmptyStateConfig;
+  [key: string]: unknown;
+}
+
+export const ListTemplate = <TItem extends { id: string } = { id: string }>({
   items = [],
   onItemPress = () => {},
   onItemEdit = () => {},
@@ -63,7 +84,7 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
 
   customListComponent: CustomListComponent,
   customListProps = {},
-}) => {
+}: ListTemplateProps<TItem>) => {
   // Don't show loading state if custom component exists - let it handle its own loading
   const isLoading = loading && items.length === 0 && !CustomListComponent;
 
@@ -93,7 +114,11 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
         />
       ) : (
         <ItemList
-          items={items as Parameters<typeof ItemList>[0]['items']}
+          // The template only guarantees `{ id: string }`; ItemList narrows to
+          // its own item type for the default (non-custom) rendering path.
+          items={
+            items as { id: string }[] as Parameters<typeof ItemList>[0]['items']
+          }
           onItemPress={isLoading ? () => {} : onItemPress}
           onItemEdit={isLoading ? () => {} : onItemEdit}
           onItemDelete={isLoading ? () => {} : onItemDelete}

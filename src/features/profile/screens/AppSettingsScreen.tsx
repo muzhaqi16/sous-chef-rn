@@ -6,7 +6,10 @@ import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { SettingSwitch } from '#components/settings/SettingSwitch';
 import { SettingSection } from '#components/settings/SettingSection';
 import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
-import { useAppSettings } from '#features/profile/hooks/useAppSettings';
+import {
+  useAppSettings,
+  type AppSettings,
+} from '#features/profile/hooks/useAppSettings';
 import { UnitSystem } from '#/graphql/generated/schemaTypes';
 import { Picker } from '@react-native-picker/picker';
 
@@ -59,11 +62,14 @@ export const AppSettingsScreen: React.FC = () => {
     Telemetry.updateConfig(config);
   };
 
-  const handleSettingChange = (key: string, value: any) => {
+  const handleSettingChange = <K extends keyof AppSettings>(
+    key: K,
+    value: AppSettings[K],
+  ) => {
     setUpdating(key);
     executeAsyncWithCleanup(
       async () => {
-        const success = await updateAppSetting(key as any, value);
+        const success = await updateAppSetting(key, value);
         if (!success) {
           alertService.alert(t('labels.error'), t('settings.updateFailed'));
         }

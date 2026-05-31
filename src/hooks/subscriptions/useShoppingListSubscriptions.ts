@@ -9,7 +9,9 @@
  * deduplication to prevent self-echo and duplicate updates.
  */
 
-import type { ApolloCache } from '@apollo/client';
+import type { ApolloCache, Reference } from '@apollo/client';
+import type { ModifierDetails } from '@apollo/client/cache';
+import type { ConnectionData } from '#/apollo/utils/cacheUpdaters';
 import { useSelectedShoppingListId } from '#store/useAppStore';
 import { useSubscription } from '@apollo/client/react';
 import {
@@ -69,6 +71,15 @@ import {
   createRemoveFromParentConnectionUpdater,
 } from '#/apollo/utils/cacheUpdaters';
 
+/**
+ * Cached `itemsConnection` shape as seen inside a `cache.modify` field
+ * function — edges wrap normalized node references. `readField` is used to
+ * read `sortOrder` off each node ref rather than indexing the object directly.
+ */
+// Reuses the shared cache.modify connection shape (carries `readonly __ref?`
+// so it stays structurally compatible with Apollo's `Reference` value type).
+type CachedItemsConnection = ConnectionData;
+
 /** Re-sort shopping list edges by sortOrder after a subscription update.
  *
  * Uses cache.modify so the modifier runs once per storeFieldName variant.
@@ -95,7 +106,10 @@ function resortEdges(
     cache.modify({
       id: parentCacheId,
       fields: {
-        itemsConnection(existing: any, { readField, storeFieldName }: any) {
+        itemsConnection(
+          existing: CachedItemsConnection | undefined,
+          { readField, storeFieldName }: ModifierDetails,
+        ) {
           if (!existing?.edges?.length) return existing;
 
           // Skip sorting for non-matching variants when a target is specified
@@ -122,13 +136,13 @@ function resortEdges(
             );
           }
 
-          const sortedEdges = [...existing.edges].sort((a: any, b: any) => {
-            const nodeA = readField('node', a);
-            const nodeB = readField('node', b);
+          const sortedEdges = [...existing.edges].sort((a, b) => {
+            const nodeA = readField<Reference>('node', a);
+            const nodeB = readField<Reference>('node', b);
             const sortA =
-              ((nodeA ? readField('sortOrder', nodeA) : '') as string) || '';
+              (nodeA ? readField<string>('sortOrder', nodeA) : '') || '';
             const sortB =
-              ((nodeB ? readField('sortOrder', nodeB) : '') as string) || '';
+              (nodeB ? readField<string>('sortOrder', nodeB) : '') || '';
             if (sortA < sortB) return -1;
             if (sortA > sortB) return 1;
             return 0;

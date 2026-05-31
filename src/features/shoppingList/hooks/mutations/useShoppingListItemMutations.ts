@@ -30,7 +30,7 @@ import { useToggleShoppingItem } from './useToggleShoppingItem';
 
 export function useShoppingListItemMutations(
   listId: string | null | undefined,
-  refetch: () => Promise<any>,
+  refetch: () => Promise<unknown>,
 ) {
   const { addItem } = useAddShoppingItem({ listId, refetch });
   const { updateItem } = useUpdateShoppingItem({ listId, refetch });

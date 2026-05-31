@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 
 import { useDefaultHome } from '#hooks/home/useDefaultHome';
 import { usePantryManagement } from '#hooks/home/pantry/usePantryManagement';
+import type { PantryListItemNode } from '#hooks/home/pantry/usePantryQuery';
 import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
 import type {
   RecipeSearchResult,
@@ -50,14 +51,14 @@ const INITIAL_DISCOVERY_STATE: DiscoveryState = {
   loading: true,
 };
 
-const EMPTY_PANTRY_ITEMS: any[] = [];
+const EMPTY_PANTRY_ITEMS: PantryListItemNode[] = [];
 
 interface UseRecipeDiscoveryResult {
   mode: DiscoveryMode;
   items: DiscoveryItem[];
   loading: boolean;
   refresh: () => void;
-  pantryItems: any[];
+  pantryItems: PantryListItemNode[];
   hasPantryItems: boolean;
   pantryHasMore: boolean;
   pantryLoadingMore: boolean;
@@ -191,7 +192,7 @@ async function fetchPantryDiscovery(
     },
     guardedSetLoading,
     (error: unknown) => {
-      if ((error as any).name === 'AbortError') return;
+      if (error instanceof Error && error.name === 'AbortError') return;
       console.error('Failed to fetch pantry-based recipes:', error);
     },
   );
@@ -234,7 +235,7 @@ async function fetchRandomDiscovery(
     },
     guardedSetLoading,
     (error: unknown) => {
-      if ((error as any).name === 'AbortError') return;
+      if (error instanceof Error && error.name === 'AbortError') return;
       console.error('Failed to fetch random recipes:', error);
     },
   );
@@ -261,7 +262,7 @@ export function useRecipeDiscovery(
     skip: !selectedHomeId,
   });
 
-  const defaultPantry = getDefaultPantry(homeData);
+  const defaultPantry = getDefaultPantry(homeData?.home);
   const {
     state: {
       items: pantryItems,

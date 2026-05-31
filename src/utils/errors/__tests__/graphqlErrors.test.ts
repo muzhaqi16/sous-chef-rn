@@ -1,3 +1,4 @@
+import type { FormattedExecutionResult } from 'graphql';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import {
   GraphQLDomainError,
@@ -53,7 +54,7 @@ describe('getTopLevelGraphQLError', () => {
         { message: 'Token expired', extensions: { code: 'UNAUTHENTICATED' } },
         { message: 'Second', extensions: { code: 'OTHER' } },
       ],
-    } as any);
+    } satisfies FormattedExecutionResult);
 
     expect(getTopLevelGraphQLError(error)).toEqual({
       code: 'UNAUTHENTICATED',
@@ -62,7 +63,9 @@ describe('getTopLevelGraphQLError', () => {
   });
 
   it('defaults code/message to empty strings when missing', () => {
-    const error = new CombinedGraphQLErrors({ errors: [{}] } as any);
+    const error = new CombinedGraphQLErrors({
+      errors: [{ message: '' }],
+    } satisfies FormattedExecutionResult);
     expect(getTopLevelGraphQLError(error)).toEqual({ code: '', message: '' });
   });
 

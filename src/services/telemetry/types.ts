@@ -5,6 +5,11 @@ export interface TelemetryConfig {
   enableMetrics: boolean;
   enableLogs: boolean;
   enableConsoleInDev: boolean;
+  /**
+   * Lowest log level shipped to transports. Levels below this are dropped at
+   * `log()` time so debug/info chatter never reaches Loki in production.
+   */
+  minLogLevel: LogEntry['level'];
   appName: string;
   environment: string;
   platform: string;
@@ -35,7 +40,7 @@ export interface LogEntry {
   level: 'debug' | 'info' | 'warn' | 'error';
   message: string;
   timestamp: string;
-  extra?: Record<string, any>;
+  extra?: Record<string, unknown>;
 }
 
 export interface MetricEntry {
@@ -44,6 +49,13 @@ export interface MetricEntry {
   labels: Record<string, string>;
   timestamp: number;
   type: 'counter' | 'gauge' | 'histogram';
+  /**
+   * Explicit histogram bucket upper bounds. Only meaningful for `histogram`
+   * metrics; when omitted the transport's default latency bounds are used. Set
+   * this for non-latency histograms (ratios 0-1, byte sizes, long durations)
+   * so `histogram_quantile` resolves real percentiles instead of saturating.
+   */
+  bounds?: number[];
 }
 
 export interface ErrorDetails {
@@ -52,13 +64,13 @@ export interface ErrorDetails {
   component?: string;
   operation?: string;
   isFatal?: boolean;
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
 }
 
 export interface GraphQLOperationDetails {
   operationName: string;
   operationType: 'query' | 'mutation' | 'subscription';
-  variables?: Record<string, any>;
+  variables?: Record<string, unknown>;
   duration?: number;
   hasErrors?: boolean;
   errorCount?: number;
@@ -73,20 +85,13 @@ export interface TelemetryTransport {
 
 export interface TelemetryEventData {
   eventName: string;
-  properties?: Record<string, any>;
+  properties?: Record<string, unknown>;
   timestamp?: string;
-}
-
-export interface PerformanceTimingData {
-  category: string;
-  variable: string;
-  duration: number;
-  label?: string;
 }
 
 export interface ScreenViewData {
   screenName: string;
-  properties?: Record<string, any>;
+  properties?: Record<string, unknown>;
 }
 
 export const DEFAULT_CONFIG: TelemetryConfig = {
@@ -94,6 +99,7 @@ export const DEFAULT_CONFIG: TelemetryConfig = {
   enableMetrics: false,
   enableLogs: false,
   enableConsoleInDev: true,
+  minLogLevel: 'debug',
   appName: 'sous-chef-app',
   environment: 'development',
   platform: Platform.OS,

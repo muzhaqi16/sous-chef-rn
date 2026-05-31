@@ -13,7 +13,7 @@ jest.mock('../../../apollo/links/refreshToken');
 let mockNavigationState = 'auth';
 
 jest.mock('#store/useAppStore', () => ({
-  useAppStore: (selector: (state: any) => any) =>
+  useAppStore: (selector: (state: { navigationState: string }) => unknown) =>
     selector({
       navigationState: mockNavigationState,
     }),

@@ -13,7 +13,15 @@ jest.mock('#/utils/iconUtils', () => ({
 }));
 
 jest.mock('#components/atoms/PasswordInput', () => ({
-  PasswordInput: ({ value, onChangeText, placeholder }: any) => {
+  PasswordInput: ({
+    value,
+    onChangeText,
+    placeholder,
+  }: {
+    value?: string;
+    onChangeText?: (text: string) => void;
+    placeholder?: string;
+  }) => {
     const { TextInput } = require('react-native');
     return (
       <TextInput
@@ -51,7 +59,10 @@ const mockStoreCredentials = mockAuthService.storeCredentials;
 const mockCheckStoredCredentials = mockAuthService.checkStoredCredentials;
 
 jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeMutation: async (fn: () => Promise<any>, onError?: any) => {
+  executeMutation: async <T,>(
+    fn: () => Promise<T>,
+    onError?: string | ((error: unknown) => void | Promise<void>),
+  ) => {
     try {
       return await fn();
     } catch (error) {

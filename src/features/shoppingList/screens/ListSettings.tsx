@@ -15,10 +15,8 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useLazyHomeData } from '#/hooks/home/useLazyHomeData';
 import { ModalPicker } from '#components/molecules/ModalPicker';
 import { useMutation } from '@apollo/client/react';
-import {
-  UpdateShoppingListDocument,
-  RemoveCollaboratorDocument,
-} from '#features/shoppingList/graphql/shoppingList.generated';
+import { UpdateShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { useLeaveShoppingList } from '#features/shoppingList/hooks/useLeaveShoppingList';
 import { useCreateShoppingList } from '#features/shoppingList/hooks/mutations/useCreateShoppingList';
 import { useDeleteShoppingList } from '#features/shoppingList/hooks/mutations/useDeleteShoppingList';
 import { useAppStore } from '#store/useAppStore';
@@ -73,7 +71,6 @@ export const ListSettings: React.FC<
   const [name, setName] = useState('');
   const [isDefault, setIsDefault] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [leaving, setLeaving] = useState(false);
   const [selectedHomeId, setSelectedHomeId] = useState<string | null>(null);
   const [showHomePicker, setShowHomePicker] = useState(false);
 
@@ -118,7 +115,7 @@ export const ListSettings: React.FC<
   );
   const isHomeLinked = !!shoppingList?.homeId;
 
-  const [removeMember] = useMutation(RemoveCollaboratorDocument);
+  const { leaveList, leaving } = useLeaveShoppingList(listId || '');
   const [updateList] = useMutation(UpdateShoppingListDocument);
   const { deleteShoppingList } = useDeleteShoppingList();
   const { createShoppingList } = useCreateShoppingList(
@@ -231,19 +228,14 @@ export const ListSettings: React.FC<
               return;
             }
 
-            executeWithLoadingState(
-              async () => {
-                await removeMember({
-                  variables: { input: { id: currentUserCollaborator.id } },
-                });
+            leaveList(currentUserCollaborator.id, {
+              onSuccess: () => {
                 setSelectedShoppingListId(null);
                 goBack();
               },
-              setLeaving,
-              () => {
-                toastService.error(t('shoppingListScreens.failedToLeave'));
-              },
-            );
+              onError: () =>
+                toastService.error(t('shoppingListScreens.failedToLeave')),
+            });
           },
         },
       ],

@@ -1,6 +1,14 @@
 import { useAppStore } from '#store/useAppStore';
 import { useStore } from '#store';
 import { useAppNavigation } from './useAppNavigation';
+import type { AuthUserInput } from '#store/slices/authSlice';
+
+/** Auth response payload accepted by the login/registration handlers. */
+interface AuthData {
+  user: AuthUserInput | null;
+  accessToken: string;
+  refreshToken: string;
+}
 
 export function useAuthNavigation() {
   const { toLogin, toSignUp, toForgotPassword } = useAppNavigation();
@@ -10,7 +18,7 @@ export function useAuthNavigation() {
     state => state.setUserNavigationState,
   );
 
-  const handleSuccessfulLogin = (authData: any, rememberMe?: boolean) => {
+  const handleSuccessfulLogin = (authData: AuthData, rememberMe?: boolean) => {
     const { user, accessToken, refreshToken } = authData;
     // Save preferences
     if (rememberMe !== undefined) {
@@ -24,11 +32,13 @@ export function useAuthNavigation() {
       });
     }
     // Update auth state - navigation happens automatically
-    setAuth(user, accessToken, refreshToken);
+    if (user) {
+      setAuth(user, accessToken, refreshToken);
+    }
   };
 
   const handleSuccessfulRegistration = (
-    authData: any,
+    authData: AuthData,
     rememberMe?: boolean,
   ) => {
     const { user, accessToken, refreshToken } = authData;
@@ -45,7 +55,9 @@ export function useAuthNavigation() {
       });
     }
     // Update auth state - navigation happens automatically
-    setAuth(user, accessToken, refreshToken);
+    if (user) {
+      setAuth(user, accessToken, refreshToken);
+    }
   };
 
   const handleLogout = async () => {

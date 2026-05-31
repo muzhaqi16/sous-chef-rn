@@ -1,8 +1,17 @@
+import type { DocumentNode } from 'graphql';
 import { storage } from '#storage/mmkv';
 import { QueuedMutation, QueueStats, QueueStatus } from './types';
 
 const QUEUE_STORAGE_KEY = 'apollo-mutation-queue';
 const CURRENT_USER_KEY = 'apollo-queue-current-user';
+
+/**
+ * On-disk shape of a queued mutation: identical to {@link QueuedMutation}
+ * except the `mutation` DocumentNode is stored as a serialized JSON string.
+ */
+type SerializedQueuedMutation = Omit<QueuedMutation, 'mutation'> & {
+  mutation: string;
+};
 
 /**
  * Persistent queue store using MMKV
@@ -45,12 +54,12 @@ export class QueueStore {
         return [];
       }
 
-      const parsed = JSON.parse(queueJson);
+      const parsed = JSON.parse(queueJson) as SerializedQueuedMutation[];
 
       // Reconstruct DocumentNode from serialized string
-      const queue = parsed.map((item: any) => ({
+      const queue: QueuedMutation[] = parsed.map(item => ({
         ...item,
-        mutation: JSON.parse(item.mutation), // Restore the mutation DocumentNode
+        mutation: JSON.parse(item.mutation) as DocumentNode, // Restore the mutation DocumentNode
       }));
 
       // Populate cache for future reads

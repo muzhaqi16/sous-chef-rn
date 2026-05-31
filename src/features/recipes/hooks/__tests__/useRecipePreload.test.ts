@@ -2,14 +2,23 @@ import { act } from '@testing-library/react-native';
 import type { MockedResponse } from '#/test-utils/apolloMockProvider';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { UpsertExternalRecipeDocument } from '#features/recipes/graphql/recipe.generated';
-import { useRecipePreload } from '../useRecipePreload';
+import type { RecipeInformation } from '#/services/recipeApi/types';
+import { useRecipePreload, type PreloadedRecipe } from '../useRecipePreload';
 
 const mockToastSuccess = jest.fn();
 const mockToastError = jest.fn();
 jest.mock('#/services/toastService', () => ({
   toastService: {
-    success: (...args: any[]) => mockToastSuccess(...args),
-    error: (...args: any[]) => mockToastError(...args),
+    success: (
+      ...args: Parameters<
+        typeof import('#/services/toastService').toastService.success
+      >
+    ) => mockToastSuccess(...args),
+    error: (
+      ...args: Parameters<
+        typeof import('#/services/toastService').toastService.error
+      >
+    ) => mockToastError(...args),
     info: jest.fn(),
     warning: jest.fn(),
   },
@@ -48,7 +57,7 @@ const makeSpoonacularRecipe = (id = 123) =>
         },
       },
     ],
-  } as any);
+  } as Partial<RecipeInformation> as RecipeInformation);
 
 /**
  * Build a MockedResponse for UpsertExternalRecipe.
@@ -122,7 +131,7 @@ describe('useRecipePreload', () => {
       },
     );
 
-    let preloaded: any;
+    let preloaded!: PreloadedRecipe | null;
     await act(async () => {
       preloaded = await result.current.preloadRecipe(makeSpoonacularRecipe());
     });
@@ -154,7 +163,7 @@ describe('useRecipePreload', () => {
       await result.current.preloadRecipe(makeSpoonacularRecipe(99));
     });
 
-    let secondResult: any;
+    let secondResult!: PreloadedRecipe | null;
     await act(async () => {
       secondResult = await result.current.preloadRecipe(
         makeSpoonacularRecipe(99),
@@ -170,7 +179,7 @@ describe('useRecipePreload', () => {
 
     const { result } = renderHookWithApollo(() => useRecipePreload());
 
-    let preloaded: any;
+    let preloaded!: PreloadedRecipe | null;
     await act(async () => {
       preloaded = await result.current.preloadRecipe(
         makeSpoonacularRecipe(200),

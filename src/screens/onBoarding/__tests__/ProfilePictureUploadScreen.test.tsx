@@ -2,7 +2,14 @@
 
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
+import type { OnBoardingWrapper as OnBoardingWrapperComponent } from '#components/templates/OnBoardingWrapper';
+import type { Button as ButtonComponent } from '#components/base/Button';
 import { ProfilePictureUploadScreen } from '../ProfilePictureUploadScreen';
+
+type OnBoardingWrapperProps = React.ComponentProps<
+  typeof OnBoardingWrapperComponent
+>;
+type ButtonProps = React.ComponentProps<typeof ButtonComponent>;
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
@@ -46,7 +53,11 @@ jest.mock('#utils/imageValidation', () => ({
 }));
 
 jest.mock('#components/templates/OnBoardingWrapper', () => ({
-  OnBoardingWrapper: ({ title, subtitle, children }: any) => {
+  OnBoardingWrapper: ({
+    title,
+    subtitle,
+    children,
+  }: OnBoardingWrapperProps) => {
     const { View, Text } = require('react-native');
     return (
       <View testID="onboarding-wrapper">
@@ -58,7 +69,7 @@ jest.mock('#components/templates/OnBoardingWrapper', () => ({
   },
 }));
 jest.mock('#components/base/Button', () => ({
-  Button: ({ title, onPress, disabled }: any) => {
+  Button: ({ title, onPress, disabled }: ButtonProps) => {
     const { Pressable, Text } = require('react-native');
     return (
       <Pressable onPress={onPress} disabled={disabled} testID="upload-button">

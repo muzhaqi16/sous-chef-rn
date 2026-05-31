@@ -9,7 +9,13 @@ import {
   ItemBySkuFilterDocument,
   CreateItemDocument,
 } from '#operations/item/item.generated';
+import type { RootState } from '#store/index';
 import { useSearchResults } from '../useSearchResults';
+
+// Partial item-node shapes for mock connection edges. Kept as a loose record
+// because the fixtures deliberately omit required Item fields (type,
+// storageState, …) that the hook under test never reads.
+type MockItemNode = Record<string, unknown>;
 
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
@@ -24,7 +30,7 @@ const mockShowBottomSheet = jest.fn();
 const mockHideBottomSheet = jest.fn();
 
 jest.mock('#store/useAppStore', () => ({
-  useAppStore: (selector: (s: any) => any) =>
+  useAppStore: <T>(selector: (s: RootState) => T): T =>
     selector({
       searchResults: [],
       setSearchResults: mockSetSearchResults,
@@ -34,7 +40,7 @@ jest.mock('#store/useAppStore', () => ({
       setSearchError: mockSetSearchError,
       showBottomSheet: mockShowBottomSheet,
       hideBottomSheet: mockHideBottomSheet,
-    }),
+    } as Partial<RootState> as RootState),
   useSearchState: jest.fn(() => ({
     searchResults: [],
     setSearchResults: mockSetSearchResults,
@@ -50,7 +56,7 @@ jest.mock('#store/useAppStore', () => ({
 }));
 
 jest.mock('zustand/shallow', () => ({
-  useShallow: (fn: any) => fn,
+  useShallow: <T>(fn: T): T => fn,
 }));
 
 jest.mock('#hooks/useImageUpload', () => ({
@@ -69,15 +75,20 @@ jest.mock('#/storage/mmkv', () => ({
 }));
 
 jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeMutation: jest.fn(async (fn: any, onError: any) => {
-    try {
-      await fn();
-      return true;
-    } catch (e) {
-      onError?.(e);
-      return false;
-    }
-  }),
+  executeMutation: jest.fn(
+    async <T>(
+      fn: () => Promise<T>,
+      onError: string | ((error: unknown) => void | Promise<void>),
+    ) => {
+      try {
+        await fn();
+        return true;
+      } catch (e) {
+        if (typeof onError === 'function') onError(e);
+        return false;
+      }
+    },
+  ),
 }));
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -88,7 +99,7 @@ beforeEach(() => {
 
 // --- Mock builders ---
 
-function upcMock(items: any[]): MockedResponse {
+function upcMock(items: MockItemNode[]): MockedResponse {
   return recordMock(ItemByUpcFilterDocument, {
     data: {
       items: {
@@ -103,7 +114,7 @@ function upcMock(items: any[]): MockedResponse {
   }).mock;
 }
 
-function skuMock(items: any[]): MockedResponse {
+function skuMock(items: MockItemNode[]): MockedResponse {
   return recordMock(ItemBySkuFilterDocument, {
     data: {
       items: {

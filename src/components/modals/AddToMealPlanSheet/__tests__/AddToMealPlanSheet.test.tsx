@@ -9,7 +9,7 @@ jest.mock('#hooks/useStandardBottomSheet', () => ({
     modalProps: {},
     contentContainerStyle: {},
   })),
-  BottomSheetModal: ({ children }: any) => children,
+  BottomSheetModal: ({ children }: { children?: React.ReactNode }) => children,
 }));
 
 jest.mock('#components/atoms/BottomSheetHeader', () => ({
@@ -19,7 +19,13 @@ jest.mock('#components/atoms/BottomSheetHeader', () => ({
     onConfirm,
     confirmLabel,
     confirmDisabled,
-  }: any) => {
+  }: {
+    title: string;
+    onCancel: () => void;
+    onConfirm: () => void;
+    confirmLabel?: string;
+    confirmDisabled?: boolean;
+  }) => {
     const RN = require('react-native');
     const R = require('react');
     return R.createElement(

@@ -1,7 +1,16 @@
 'use no memo';
 
 import { renderHook, act } from '@testing-library/react-native';
+import {
+  Difficulty,
+  RecipeCategory,
+  RecipeStatus,
+  Diet,
+  HealthGoal,
+  Intolerance,
+} from '#/graphql/generated/schemaTypes';
 import { useRecipeForm } from '../useRecipeForm';
+import type { RecipeForm_RecipeFragment } from '../RecipeForm.generated';
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -229,7 +238,9 @@ describe('useRecipeForm', () => {
   it('populateFromRecipe fills form from recipe data', () => {
     const { result } = renderHook(() => useRecipeForm());
 
-    const recipe = {
+    const recipe: RecipeForm_RecipeFragment = {
+      __typename: 'Recipe',
+      id: 'recipe-1',
       name: 'Existing Recipe',
       description: 'A recipe',
       imageUrl: 'http://img.jpg',
@@ -237,14 +248,17 @@ describe('useRecipeForm', () => {
       prepTimeMinutes: 10,
       cookTimeMinutes: 20,
       caloriesPerServing: 300,
-      difficulty: 'EASY',
-      category: 'MAIN_COURSE',
+      difficulty: Difficulty.Easy,
+      category: RecipeCategory.MainCourse,
       cuisine: 'Italian',
-      status: 'PUBLISHED',
+      status: RecipeStatus.Published,
       ingredients: [
         {
+          __typename: 'RecipeIngredient',
+          id: 'ing-1',
           name: 'Salt',
           quantity: 1,
+          image: null,
           unit: null,
           item: null,
           preparation: null,
@@ -256,7 +270,7 @@ describe('useRecipeForm', () => {
       ],
       instructions: [{ text: 'Add salt' }],
       notes: 'A note',
-    } as any;
+    };
 
     act(() => {
       result.current.populateFromRecipe(recipe);
@@ -272,7 +286,9 @@ describe('useRecipeForm', () => {
   it('populateFromRecipe handles { number, step } instruction format', () => {
     const { result } = renderHook(() => useRecipeForm());
 
-    const recipe = {
+    const recipe: RecipeForm_RecipeFragment = {
+      __typename: 'Recipe',
+      id: 'recipe-2',
       name: 'External Recipe',
       description: '',
       imageUrl: null,
@@ -280,17 +296,17 @@ describe('useRecipeForm', () => {
       prepTimeMinutes: null,
       cookTimeMinutes: null,
       caloriesPerServing: null,
-      difficulty: null,
-      category: null,
+      difficulty: Difficulty.Easy,
+      category: RecipeCategory.MainCourse,
       cuisine: null,
-      status: 'PUBLISHED',
+      status: RecipeStatus.Published,
       ingredients: [],
       instructions: [
         { number: 1, step: 'Boil the water' },
         { number: 2, step: 'Cook the pasta' },
       ],
       notes: null,
-    } as any;
+    };
 
     act(() => {
       result.current.populateFromRecipe(recipe);
@@ -305,14 +321,14 @@ describe('useRecipeForm', () => {
     const { result } = renderHook(() => useRecipeForm());
 
     act(() => {
-      result.current.setDiets(['VEGAN' as any]);
-      result.current.setHealthGoals(['WEIGHT_LOSS' as any]);
-      result.current.setIntolerances(['GLUTEN_FREE' as any]);
+      result.current.setDiets([Diet.Vegan]);
+      result.current.setHealthGoals([HealthGoal.HighProtein]);
+      result.current.setIntolerances([Intolerance.Gluten]);
     });
 
-    expect(result.current.state.diets).toEqual(['VEGAN']);
-    expect(result.current.state.healthGoals).toEqual(['WEIGHT_LOSS']);
-    expect(result.current.state.intolerances).toEqual(['GLUTEN_FREE']);
+    expect(result.current.state.diets).toEqual([Diet.Vegan]);
+    expect(result.current.state.healthGoals).toEqual([HealthGoal.HighProtein]);
+    expect(result.current.state.intolerances).toEqual([Intolerance.Gluten]);
   });
 
   it('hasDirtyFields detects changes from initial state', () => {

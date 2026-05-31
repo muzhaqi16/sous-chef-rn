@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
-import { View, ActivityIndicator } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { View } from 'react-native';
+import {
+  Pressable,
+  WhiteActivityIndicator,
+} from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { FormInput } from './FormInput';
@@ -102,7 +105,7 @@ export const EditableField: React.FC<EditableFieldProps> = ({
             disabled={saving}
           >
             {saving ? (
-              <ActivityIndicator size="small" color="#fff" />
+              <WhiteActivityIndicator size="small" />
             ) : (
               <Text weight="semibold" style={styles.saveButtonText}>
                 Save

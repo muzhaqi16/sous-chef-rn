@@ -12,8 +12,13 @@ import { PasswordInput } from '#components/atoms/PasswordInput';
 import { Button } from '#components/base/Button';
 import { useAppStore } from '#store/useAppStore';
 import { useMutation } from '@apollo/client/react';
-import { ResetPasswordDocument } from '#operations/auth/auth.generated';
+import {
+  ResetPasswordDocument,
+  type ResetPasswordMutation,
+  type ResetPasswordMutationVariables,
+} from '#operations/auth/auth.generated';
 import { logger } from '#/utils/environment';
+import { errorMessageOr } from '#/services/errorService';
 import { logValidationErrors } from '#/utils/validation/common';
 import { useToast } from '#/hooks/useToast';
 import { useAuthNavigation } from '#hooks/navigation/useAuthNavigation';
@@ -23,12 +28,15 @@ import { Text } from '#components/atoms/Text';
 
 /** Module-level async function for password reset submission.
  *  Extracted from component body to avoid ThrowStatement-in-try-catch bailout. */
+type ResetPasswordFn = useMutation.MutationFunction<
+  ResetPasswordMutation,
+  ResetPasswordMutationVariables
+>;
+
 async function performPasswordReset(
   token: string,
   newPassword: string,
-  resetPassword: (opts: {
-    variables: { input: { token: string; newPassword: string } };
-  }) => Promise<any>,
+  resetPassword: ResetPasswordFn,
   toast: ToastFn,
   navigateToLogin: () => void,
   successMessage: string,
@@ -134,8 +142,10 @@ export const ResetPasswordScreen: React.FC = () => {
       (error: unknown) => {
         logger.error('Password reset failed', { error });
 
-        const errorMessage =
-          (error as any)?.message || t('auth.resetPasswordFailedFallback');
+        const errorMessage = errorMessageOr(
+          error,
+          t('auth.resetPasswordFailedFallback'),
+        );
 
         toast({
           message: errorMessage,

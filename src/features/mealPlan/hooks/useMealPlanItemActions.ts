@@ -16,7 +16,7 @@ import {
   createRemoveFromParentArrayUpdater,
 } from '#/apollo/utils/cacheUpdaters';
 
-const addToMealPlanItems = createAddToParentArrayUpdater<any>(
+const addToMealPlanItems = createAddToParentArrayUpdater<{ id: string }>(
   'MealPlan',
   'mealPlanItems',
 );

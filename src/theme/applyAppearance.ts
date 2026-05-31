@@ -3,24 +3,12 @@ import { derivePalette } from './derivePalette';
 import { spacing as baseSpacing } from './foundations/spacing';
 import { typography as baseTypography } from './foundations/typography';
 import { lightTheme, darkTheme } from './themes';
+import { PREFERENCE_DEFAULTS } from '#store/slices/preferenceTypes';
 import type {
-  DensityPreference,
   FontScalePreference,
-} from '#store/slices/preferencesSlice';
-
-const DENSITY_MULTIPLIER: Record<DensityPreference, number> = {
-  compact: 0.85,
-  comfortable: 1.0,
-  spacious: 1.15,
-};
-
-const FONT_SCALE_MULTIPLIER: Record<FontScalePreference, number> = {
-  system: 1.0,
-  sm: 0.9,
-  md: 1.0,
-  lg: 1.15,
-  xl: 1.3,
-};
+  DensityPreference,
+} from '#store/slices/preferenceTypes';
+import { DENSITY_META, FONT_SCALE_META } from './appearanceConfig';
 
 function scaleObject<T extends Record<string, number>>(
   obj: T,
@@ -54,8 +42,11 @@ export interface AppearancePreferences {
  */
 export function applyAppearanceToRuntime(prefs: AppearancePreferences): void {
   const densityMul =
-    DENSITY_MULTIPLIER[prefs.densityPreference ?? 'comfortable'];
-  const fontMul = FONT_SCALE_MULTIPLIER[prefs.fontScalePreference ?? 'system'];
+    DENSITY_META[prefs.densityPreference ?? PREFERENCE_DEFAULTS.density]
+      .multiplier;
+  const fontMul =
+    FONT_SCALE_META[prefs.fontScalePreference ?? PREFERENCE_DEFAULTS.fontScale]
+      .multiplier;
 
   const buildNext = (themeName: 'light' | 'dark') => {
     const base = themeName === 'light' ? lightTheme : darkTheme;

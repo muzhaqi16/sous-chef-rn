@@ -13,6 +13,7 @@
 
 import type { ApolloCache } from '@apollo/client';
 import {
+  type ConnectionData,
   createRemoveFromParentConnectionUpdater,
   safeEvict,
   safeEvictMany,
@@ -89,7 +90,10 @@ function clearItemsFromCache(
   cache.modify({
     id: parentCacheId,
     fields: {
-      itemsConnection(existing: any, { storeFieldName }: any) {
+      itemsConnection(
+        existing: ConnectionData | undefined,
+        { storeFieldName },
+      ) {
         if (
           !matchesFilter(storeFieldName, 'isPurchased', isPurchased) ||
           !existing
@@ -158,8 +162,8 @@ function updateItemsConnectionForPurchaseStatusChange(
       id: parentCacheId,
       fields: {
         itemsConnection(
-          existing: any,
-          { readField, storeFieldName, toReference }: any,
+          existing: ConnectionData | undefined,
+          { readField, storeFieldName, toReference },
         ) {
           // Detect which filtered variant this is by checking storeFieldName
           const isUnpurchasedConnection = isUnpurchasedVariant(storeFieldName);
@@ -167,70 +171,44 @@ function updateItemsConnectionForPurchaseStatusChange(
 
           if (!existing?.edges) return existing;
 
+          const removeItemEdges = () => ({
+            ...existing,
+            edges: existing.edges!.filter(
+              edge => readField<string>('id', edge?.node) !== itemId,
+            ),
+            totalCount: Math.max(0, (existing.totalCount || 0) - 1),
+          });
+
+          const addItemEdge = () => {
+            const alreadyExists = existing.edges!.some(
+              edge => readField<string>('id', edge?.node) === itemId,
+            );
+            if (alreadyExists) return existing;
+            const node = toReference({
+              __typename: 'ShoppingListItem',
+              id: itemId,
+            });
+            if (!node) return existing;
+            const newEdge = {
+              __typename: 'ShoppingListItemEdge',
+              cursor: itemId,
+              node,
+            };
+            return {
+              ...existing,
+              edges: [newEdge, ...existing.edges!],
+              totalCount: (existing.totalCount || 0) + 1,
+            };
+          };
+
           if (movingToPurchased) {
             // Moving to purchased: remove from unpurchased, add to purchased
-            if (isUnpurchasedConnection) {
-              return {
-                ...existing,
-                edges: existing.edges.filter(
-                  (edge: any) => readField('id', edge?.node) !== itemId,
-                ),
-                totalCount: Math.max(0, (existing.totalCount || 0) - 1),
-              };
-            }
-            if (isPurchasedConnection) {
-              const alreadyExists = existing.edges.some(
-                (edge: any) => readField('id', edge?.node) === itemId,
-              );
-              if (alreadyExists) return existing;
-              return {
-                ...existing,
-                edges: [
-                  {
-                    __typename: 'ShoppingListItemEdge',
-                    cursor: itemId,
-                    node: toReference({
-                      __typename: 'ShoppingListItem',
-                      id: itemId,
-                    }),
-                  },
-                  ...existing.edges,
-                ],
-                totalCount: (existing.totalCount || 0) + 1,
-              };
-            }
+            if (isUnpurchasedConnection) return removeItemEdges();
+            if (isPurchasedConnection) return addItemEdge();
           } else {
             // Moving to unpurchased: remove from purchased, add to unpurchased
-            if (isPurchasedConnection) {
-              return {
-                ...existing,
-                edges: existing.edges.filter(
-                  (edge: any) => readField('id', edge?.node) !== itemId,
-                ),
-                totalCount: Math.max(0, (existing.totalCount || 0) - 1),
-              };
-            }
-            if (isUnpurchasedConnection) {
-              const alreadyExists = existing.edges.some(
-                (edge: any) => readField('id', edge?.node) === itemId,
-              );
-              if (alreadyExists) return existing;
-              return {
-                ...existing,
-                edges: [
-                  {
-                    __typename: 'ShoppingListItemEdge',
-                    cursor: itemId,
-                    node: toReference({
-                      __typename: 'ShoppingListItem',
-                      id: itemId,
-                    }),
-                  },
-                  ...existing.edges,
-                ],
-                totalCount: (existing.totalCount || 0) + 1,
-              };
-            }
+            if (isPurchasedConnection) return removeItemEdges();
+            if (isUnpurchasedConnection) return addItemEdge();
           }
 
           return existing;
@@ -295,21 +273,21 @@ export function addNewItemToShoppingListCache(
       id: parentCacheId,
       fields: {
         itemsConnection(
-          existing: any,
-          { readField, storeFieldName, toReference }: any,
+          existing: ConnectionData | undefined,
+          { readField, storeFieldName, toReference },
         ) {
           if (!existing?.edges) return existing;
 
           if (isPurchasedVariant(storeFieldName)) {
             // REMOVE from purchased variant (handles re-add of previously purchased item)
             const hadItem = existing.edges.some(
-              (edge: any) => readField('id', edge?.node) === item.id,
+              edge => readField<string>('id', edge?.node) === item.id,
             );
             if (!hadItem) return existing;
             return {
               ...existing,
               edges: existing.edges.filter(
-                (edge: any) => readField('id', edge?.node) !== item.id,
+                edge => readField<string>('id', edge?.node) !== item.id,
               ),
               totalCount: Math.max(0, (existing.totalCount || 0) - 1),
             };
@@ -317,23 +295,23 @@ export function addNewItemToShoppingListCache(
 
           // ADD to unfiltered and unpurchased variants
           const alreadyExists = existing.edges.some(
-            (edge: any) => readField('id', edge?.node) === item.id,
+            edge => readField<string>('id', edge?.node) === item.id,
           );
           if (alreadyExists) return existing;
 
+          const node = toReference(
+            { __typename: 'ShoppingListItem', id: item.id },
+            true,
+          );
+          if (!node) return existing;
+          const newEdge = {
+            __typename: 'ShoppingListItemEdge',
+            cursor: item.id,
+            node,
+          };
           return {
             ...existing,
-            edges: [
-              {
-                __typename: 'ShoppingListItemEdge',
-                cursor: item.id,
-                node: toReference(
-                  { __typename: 'ShoppingListItem', id: item.id },
-                  true,
-                ),
-              },
-              ...existing.edges,
-            ],
+            edges: [newEdge, ...existing.edges],
             totalCount: (existing.totalCount || 0) + 1,
           };
         },
@@ -374,7 +352,10 @@ export function removeItemFromShoppingListForMoveToPantry(
     cache.modify({
       id: parentCacheId,
       fields: {
-        itemsConnection(existing: any, { readField, storeFieldName }: any) {
+        itemsConnection(
+          existing: ConnectionData | undefined,
+          { readField, storeFieldName },
+        ) {
           if (
             !matchesFilter(storeFieldName, 'isPurchased', wasPurchased) ||
             !existing?.edges
@@ -384,7 +365,7 @@ export function removeItemFromShoppingListForMoveToPantry(
           return {
             ...existing,
             edges: existing.edges.filter(
-              (edge: any) => readField('id', edge?.node) !== itemId,
+              edge => readField<string>('id', edge?.node) !== itemId,
             ),
             totalCount: Math.max(0, (existing.totalCount || 0) - 1),
           };

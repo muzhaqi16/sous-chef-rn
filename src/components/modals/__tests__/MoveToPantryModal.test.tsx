@@ -1,5 +1,6 @@
 import React from 'react';
 import { screen } from '@testing-library/react-native';
+import type { ViewProps } from 'react-native';
 import { MoveToPantryModal } from '../MoveToPantryModal';
 import { renderWithApollo, seedCache } from '#/test-utils/apolloMockProvider';
 
@@ -23,13 +24,13 @@ jest.mock('#hooks/useStandardBottomSheet', () => ({
       spacing: { xs: 2, sm: 4, md: 8, lg: 16, xl: 24 },
     },
   })),
-  BottomSheetModal: ({ children }: any) => children,
+  BottomSheetModal: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 jest.mock('#components/atoms/BottomSheetFormScrollView', () => {
   const RN = require('react-native');
   return {
-    BottomSheetFormScrollView: (props: any) =>
+    BottomSheetFormScrollView: (props: ViewProps) =>
       require('react').createElement(RN.View, props),
   };
 });
@@ -38,7 +39,7 @@ jest.mock('#components/molecules/Header', () => {
   const RN = require('react-native');
   const R = require('react');
   return {
-    Header: ({ title }: any) =>
+    Header: ({ title }: { title: string }) =>
       R.createElement(RN.View, null, R.createElement(RN.Text, null, title)),
   };
 });
@@ -47,7 +48,15 @@ jest.mock('#components/molecules/FractionInput', () => {
   const RN = require('react-native');
   const R = require('react');
   return {
-    FractionInput: ({ label, value, onChangeText }: any) =>
+    FractionInput: ({
+      label,
+      value,
+      onChangeText,
+    }: {
+      label: string;
+      value?: string;
+      onChangeText?: (text: string) => void;
+    }) =>
       R.createElement(
         RN.View,
         null,
@@ -74,7 +83,17 @@ jest.mock('#components/molecules/FormInput', () => {
   const RN = require('react-native');
   const R = require('react');
   return {
-    FormInput: ({ label, value, onChangeText, placeholder }: any) =>
+    FormInput: ({
+      label,
+      value,
+      onChangeText,
+      placeholder,
+    }: {
+      label: string;
+      value?: string;
+      onChangeText?: (text: string) => void;
+      placeholder?: string;
+    }) =>
       R.createElement(
         RN.View,
         null,

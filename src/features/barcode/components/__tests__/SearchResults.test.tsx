@@ -21,23 +21,34 @@ jest.mock('#/utils/errors/pantryItemDuplicate', () => ({
 }));
 
 jest.mock('#store/useAppStore', () => ({
-  useAppStore: jest.fn((selector: any) => {
-    const state = { setPendingPantryScrollToTop: jest.fn() };
-    return selector(state);
-  }),
+  useAppStore: jest.fn(
+    (
+      selector: (state: { setPendingPantryScrollToTop: () => void }) => unknown,
+    ) => {
+      const state = { setPendingPantryScrollToTop: jest.fn() };
+      return selector(state);
+    },
+  ),
 }));
 
 jest.mock('#/utils/compilerSafeWrappers');
 
 jest.mock('../ItemCard', () => ({
-  ItemCard: ({ item }: any) => {
+  ItemCard: ({ item }: { item: { name: string } }) => {
     const { Text } = require('react-native');
     return require('react').createElement(Text, null, item.name);
   },
 }));
 
+type MockAction = { label: string; onPress: () => void };
 jest.mock('../ActionButtons', () => ({
-  ActionButtons: ({ primaryAction, secondaryAction }: any) => {
+  ActionButtons: ({
+    primaryAction,
+    secondaryAction,
+  }: {
+    primaryAction: MockAction;
+    secondaryAction: MockAction;
+  }) => {
     const RN = require('react-native');
     const R = require('react');
     return R.createElement(

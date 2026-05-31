@@ -1,7 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useApolloClient, useQuery } from '@apollo/client/react';
 import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
-import type { RecipeInformation } from '#/services/recipeApi/types';
+import type {
+  RecipeInformation,
+  RecipeIngredient as ExternalRecipeIngredient,
+  RecipeInstruction as ExternalRecipeInstruction,
+} from '#/services/recipeApi/types';
 import { GetRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import type {
   GetRecipeQuery,
@@ -15,6 +19,23 @@ import {
 export type MaterializedRecipe = NonNullable<
   ReturnType<typeof readRecipeFragment>
 >;
+
+/** Backend recipe ingredient (from the GraphQL RecipeFragment). */
+type BackendRecipeIngredient = MaterializedRecipe['ingredients'][number];
+
+/**
+ * Normalized display ingredient: either a backend `RecipeIngredient` or an
+ * external Spoonacular `extendedIngredient`. Consumers read the fields that
+ * exist on whichever source produced `displayData`.
+ */
+export type DisplayIngredient =
+  | BackendRecipeIngredient
+  | ExternalRecipeIngredient;
+
+/** Backend `instructions` is a schema `JSON` scalar; external is a step list. */
+export type DisplayInstructions =
+  | MaterializedRecipe['instructions']
+  | ExternalRecipeInstruction[];
 
 function readRecipeFragment(
   client: ReturnType<typeof useApolloClient>,
@@ -35,8 +56,8 @@ export interface RecipeDisplayData {
   readyInMinutes?: number;
   healthScore?: number;
   summary?: string;
-  ingredients: any[];
-  instructions?: any;
+  ingredients: DisplayIngredient[];
+  instructions?: DisplayInstructions;
   instructionsHtml?: string;
   vegetarian?: boolean;
   vegan?: boolean;
@@ -113,8 +134,8 @@ async function fetchRecipeData(
     } else {
       throw new Error(`Unsupported external source: ${params.externalSource}`);
     }
-  } catch (err: any) {
-    if (err.name === 'AbortError') return;
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') return;
     console.error('Failed to fetch recipe:', err);
     setError('Failed to load recipe. Please try again.');
   } finally {

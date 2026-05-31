@@ -3,6 +3,12 @@ import React from 'react';
 import { screen } from '@testing-library/react-native';
 import { renderWithApollo as render } from '#/test-utils/apolloMockProvider';
 import { MealPlanSettingsSheet } from '../MealPlanSettingsSheet';
+import type { MealPlanSettingsSheet_MealPlanFragment } from '../MealPlanSettingsSheet.generated';
+import type { MealPlanPermissions } from '#utils/permissions/mealPlanPermissions';
+
+type MealPlanSettingsSheetProps = React.ComponentProps<
+  typeof MealPlanSettingsSheet
+>;
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
   useStandardBottomSheet: jest.fn(() => ({
@@ -10,7 +16,7 @@ jest.mock('#hooks/useStandardBottomSheet', () => ({
     modalProps: {},
     contentContainerStyle: {},
   })),
-  BottomSheetModal: ({ children }: any) => children,
+  BottomSheetModal: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 jest.mock('#/utils/iconUtils', () => ({
@@ -18,7 +24,17 @@ jest.mock('#/utils/iconUtils', () => ({
 }));
 
 jest.mock('#components/atoms/BottomSheetHeader', () => ({
-  BottomSheetHeader: ({ title, onCancel, onConfirm, confirmLabel }: any) => {
+  BottomSheetHeader: ({
+    title,
+    onCancel,
+    onConfirm,
+    confirmLabel,
+  }: {
+    title: string;
+    onCancel: () => void;
+    onConfirm: () => void;
+    confirmLabel: string;
+  }) => {
     const { View, Text, Pressable } = require('react-native');
     return (
       <View testID="bottom-sheet-header">
@@ -45,30 +61,50 @@ jest.mock('../NutritionSummaryCard', () => ({
   },
 }));
 
-const makeMealPlan = (overrides?: any) => ({
+const makeMealPlan = (
+  overrides?: Partial<MealPlanSettingsSheet_MealPlanFragment>,
+): MealPlanSettingsSheet_MealPlanFragment => ({
   __typename: 'MealPlan',
   id: 'mp-1',
   name: 'Weekly Plan',
   description: 'My meal plan description',
   startDate: '2024-03-01',
   endDate: '2024-03-07',
-  home: { name: 'My Home' },
-  createdBy: { profile: { displayName: 'John Doe' } },
-  nutritionSummary: null,
+  home: { __typename: 'Home', id: 'home-1', name: 'My Home' },
+  createdBy: {
+    __typename: 'User',
+    id: 'user-1',
+    profile: {
+      __typename: 'UserProfile',
+      id: 'profile-1',
+      displayName: 'John Doe',
+    },
+  },
+  nutritionSummary: {
+    __typename: 'MealPlanNutritionSummary',
+    totalCalories: 0,
+    avgDailyCalories: 0,
+    avgDailyProtein: 0,
+    avgDailyCarbs: 0,
+    avgDailyFat: 0,
+    totalMeals: 0,
+    mealsWithNutrition: 0,
+    coveragePercentage: 0,
+  },
   nutritionGoalProgress: null,
   generatedShoppingLists: [],
   ...overrides,
 });
 
-const defaultPermissions = {
+const defaultPermissions: MealPlanPermissions = {
   canDelete: true,
   canEdit: true,
-  canShare: true,
   canDuplicate: true,
-  isOwner: true,
+  canGenerateShoppingList: true,
+  canSaveAsTemplate: true,
 };
 
-const defaultProps: any = {
+const defaultProps: MealPlanSettingsSheetProps = {
   visible: true,
   mealPlanRef: makeMealPlan(),
   permissions: defaultPermissions,
@@ -135,7 +171,7 @@ describe('MealPlanSettingsSheet', () => {
     render(
       <MealPlanSettingsSheet
         {...defaultProps}
-        permissions={{ ...defaultPermissions, canDelete: false } as any}
+        permissions={{ ...defaultPermissions, canDelete: false }}
       />,
     );
     expect(screen.queryByText('Delete Plan')).toBeNull();
@@ -159,8 +195,8 @@ describe('MealPlanSettingsSheet', () => {
   it('renders generated shopping lists when they exist', () => {
     const mealPlan = makeMealPlan({
       generatedShoppingLists: [
-        { id: 'sl-1', name: 'Grocery Run 1' },
-        { id: 'sl-2', name: 'Grocery Run 2' },
+        { __typename: 'ShoppingList', id: 'sl-1', name: 'Grocery Run 1' },
+        { __typename: 'ShoppingList', id: 'sl-2', name: 'Grocery Run 2' },
       ],
     });
     render(<MealPlanSettingsSheet {...defaultProps} mealPlanRef={mealPlan} />);

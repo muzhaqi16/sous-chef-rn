@@ -12,7 +12,11 @@ query GetMealPlans(
     edges {
       node {
         id
-        ...MealPlanDisplay      }
+        name
+        startDate
+        endDate
+        ...MealPlanDisplay
+      }
       cursor
     }
     pageInfo {

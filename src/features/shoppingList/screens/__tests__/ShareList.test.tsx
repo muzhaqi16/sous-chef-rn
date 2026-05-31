@@ -1,6 +1,7 @@
 'use no memo';
 
 import React from 'react';
+import type { TextInputProps } from 'react-native';
 import { screen } from '@testing-library/react-native';
 import { renderWithApollo, seedCache } from '#/test-utils/apolloMockProvider';
 import { ShareList } from '../ShareList';
@@ -37,7 +38,7 @@ const seedCollaboratorCache = () =>
     },
   ]);
 
-const render = (ui: any) =>
+const render = (ui: React.ReactElement) =>
   renderWithApollo(ui, { cache: seedCollaboratorCache() });
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -47,23 +48,44 @@ jest.mock('#hooks/navigation/useAppNavigation');
 
 jest.mock('#store/useAppStore', () => {
   const mockState = { user: { id: 'u1', email: 'owner@test.com' } };
-  const fn = (selector: any) => selector(mockState);
+  const fn = <T,>(selector: (state: typeof mockState) => T): T =>
+    selector(mockState);
   fn.getState = () => ({});
   fn.setState = jest.fn();
   fn.subscribe = jest.fn();
   return { useAppStore: fn, useUser: jest.fn(() => mockState.user) };
 });
 
+// useShoppingListDetails now returns already-materialized collaborator
+// fragments (with invitedAt), which ShareList consumes directly.
 const mockCollaborators = [
   {
     __typename: 'ShoppingListCollaborator',
     id: 'c1',
+    email: 'owner@test.com',
+    role: 'OWNER',
+    status: 'ACTIVE',
+    collaboratorId: 'u1',
+    canAddItems: true,
+    canRemoveItems: true,
+    canEditItems: true,
+    canMarkPurchased: true,
     invitedAt: '2024-01-01T00:00:00Z',
+    collaborator: null,
   },
   {
     __typename: 'ShoppingListCollaborator',
     id: 'c2',
+    email: 'member@test.com',
+    role: 'CONTRIBUTOR',
+    status: 'ACCEPTED',
+    collaboratorId: 'u2',
+    canAddItems: true,
+    canRemoveItems: false,
+    canEditItems: false,
+    canMarkPurchased: true,
     invitedAt: '2024-01-05T00:00:00Z',
+    collaborator: null,
   },
 ];
 
@@ -90,13 +112,13 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
 jest.mock('#/utils/compilerSafeWrappers');
 
 jest.mock('#components/atoms/EmailInput', () => ({
-  EmailInput: (props: any) => {
+  EmailInput: (props: TextInputProps) => {
     const { TextInput } = require('react-native');
     return <TextInput placeholder="Enter email address" {...props} />;
   },
 }));
 jest.mock('#components/molecules/Header', () => ({
-  Header: ({ title }: any) => {
+  Header: ({ title }: { title?: string }) => {
     const { View, Text } = require('react-native');
     return (
       <View testID="header">
@@ -109,7 +131,7 @@ jest.mock('#components/base/Loading', () => ({
   LoadingInline: () => null,
 }));
 jest.mock('#components/base/Button', () => ({
-  Button: ({ title, onPress }: any) => {
+  Button: ({ title, onPress }: { title?: string; onPress: () => void }) => {
     const { Pressable, Text } = require('react-native');
     return (
       <Pressable onPress={onPress}>
@@ -119,10 +141,10 @@ jest.mock('#components/base/Button', () => ({
   },
 }));
 jest.mock('#components/atoms/OfflineGate', () => ({
-  OfflineGate: ({ children }: any) => children,
+  OfflineGate: ({ children }: { children: React.ReactNode }) => children,
 }));
 jest.mock('#components/molecules/AlertBanner', () => ({
-  AlertBanner: ({ title }: any) => {
+  AlertBanner: ({ title }: { title: string }) => {
     const { Text } = require('react-native');
     return <Text>{title}</Text>;
   },
@@ -130,7 +152,7 @@ jest.mock('#components/molecules/AlertBanner', () => ({
 jest.mock('#/components/organisms/CollaboratorPermissionsBottomSheet', () => {
   const { forwardRef, useImperativeHandle } = require('react');
   const { View } = require('react-native');
-  const comp = forwardRef((_: any, ref: any) => {
+  const comp = forwardRef((_: object, ref: React.Ref<{ open: () => void }>) => {
     useImperativeHandle(ref, () => ({ open: jest.fn() }));
     return <View testID="permissions-sheet" />;
   });

@@ -2,6 +2,14 @@
 
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { useShoppingListSubscriptions } from '../useShoppingListSubscriptions';
+import type { SubscriptionConfig } from '#/services/subscriptions/types';
+import type { RootState } from '#store/index';
+
+type CapturedOnData = (data: unknown, client: unknown) => void;
+
+type MockBatchCache = {
+  batch: jest.Mock;
+};
 
 jest.mock('../../../apollo/links/tokenScheduler');
 jest.mock('../../../apollo/links/refreshToken');
@@ -10,8 +18,8 @@ const mockRegister = jest.fn().mockReturnValue({});
 const mockIsParentDeleting = jest.fn().mockReturnValue(false);
 jest.mock('#/services/subscriptions/SubscriptionService', () => ({
   subscriptionService: {
-    register: (...args: any[]) => mockRegister(...args),
-    isParentDeleting: (...args: any[]) => mockIsParentDeleting(...args),
+    register: (config: SubscriptionConfig) => mockRegister(config),
+    isParentDeleting: (entityId: string) => mockIsParentDeleting(entityId),
   },
 }));
 
@@ -20,9 +28,12 @@ jest.mock('#/services/subscriptions/types', () => ({
 }));
 
 jest.mock('#store/useAppStore', () => {
-  const getState = () => ({ selectedShoppingListId: 'list-1' });
+  const getState = () =>
+    ({ selectedShoppingListId: 'list-1' } as Partial<RootState> as RootState);
   return {
-    useAppStore: jest.fn((selector: any) => selector(getState())),
+    useAppStore: jest.fn(
+      <T>(selector: (state: RootState) => T): T => selector(getState()),
+    ),
     useSelectedShoppingListId: jest.fn(() => getState().selectedShoppingListId),
   };
 });
@@ -53,8 +64,11 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockRegister.mockReturnValue({});
   mockIsParentDeleting.mockReturnValue(false);
-  mockUseAppStore.mockImplementation((selector: any) =>
-    selector({ selectedShoppingListId: 'list-1' }),
+  mockUseAppStore.mockImplementation(
+    <T>(selector: (state: RootState) => T): T =>
+      selector({
+        selectedShoppingListId: 'list-1',
+      } as Partial<RootState> as RootState),
   );
 });
 
@@ -63,13 +77,16 @@ beforeEach(() => {
 // subscriptions (ShoppingListItemChanged, ShoppingListUpdated,
 // ShoppingListItemsBatchCleared, etc.); pass the desired subscriptionName.
 function captureCustomOnData(subscriptionName: string) {
-  let customOnData: any;
-  mockRegister.mockImplementation((config: any) => {
+  let customOnData: CapturedOnData | undefined;
+  mockRegister.mockImplementation((config: SubscriptionConfig) => {
     if (config.subscriptionName === subscriptionName)
-      customOnData = config.customOnData;
+      customOnData = config.customOnData as CapturedOnData | undefined;
     return {};
   });
-  return () => customOnData;
+  return (): CapturedOnData => {
+    if (!customOnData) throw new Error('customOnData was not captured');
+    return customOnData;
+  };
 }
 
 describe('useShoppingListSubscriptions', () => {
@@ -92,8 +109,11 @@ describe('useShoppingListSubscriptions', () => {
       useAppStore,
       useSelectedShoppingListId,
     } = require('#store/useAppStore');
-    useAppStore.mockImplementationOnce((selector: any) =>
-      selector({ selectedShoppingListId: null }),
+    useAppStore.mockImplementationOnce(
+      <T>(selector: (state: RootState) => T): T =>
+        selector({
+          selectedShoppingListId: null,
+        } as Partial<RootState> as RootState),
     );
     useSelectedShoppingListId.mockReturnValueOnce(null);
 
@@ -115,8 +135,11 @@ describe('useShoppingListSubscriptions', () => {
     const getOnData = captureCustomOnData('ShoppingListItemChanged');
     renderHookWithApollo(() => useShoppingListSubscriptions('user-1'));
 
-    const mockCache: any = {
-      batch: jest.fn(({ update }: any) => update(mockCache)),
+    const mockCache: MockBatchCache = {
+      batch: jest.fn(
+        ({ update }: { update: (cache: MockBatchCache) => void }) =>
+          update(mockCache),
+      ),
     };
     const mockClient = { cache: mockCache };
 
@@ -161,8 +184,11 @@ describe('useShoppingListSubscriptions', () => {
     const getOnData = captureCustomOnData('ShoppingListItemChanged');
     renderHookWithApollo(() => useShoppingListSubscriptions('user-1'));
 
-    const mockCache: any = {
-      batch: jest.fn(({ update }: any) => update(mockCache)),
+    const mockCache: MockBatchCache = {
+      batch: jest.fn(
+        ({ update }: { update: (cache: MockBatchCache) => void }) =>
+          update(mockCache),
+      ),
     };
     const mockClient = { cache: mockCache };
 
@@ -248,8 +274,11 @@ describe('useShoppingListSubscriptions', () => {
       useShoppingListSubscriptions('user-1', scheduleAnimation),
     );
 
-    const mockCache: any = {
-      batch: jest.fn(({ update }: any) => update(mockCache)),
+    const mockCache: MockBatchCache = {
+      batch: jest.fn(
+        ({ update }: { update: (cache: MockBatchCache) => void }) =>
+          update(mockCache),
+      ),
     };
     const mockClient = { cache: mockCache };
 

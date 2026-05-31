@@ -3,6 +3,30 @@
 import { InMemoryCache } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 
+/** Shape read back by the `id imageUrl` fragments exercised below. */
+interface ItemImageResult {
+  __typename?: 'Item';
+  id: string;
+  imageUrl?: string | null;
+}
+
+/** Shape read back from the Home.membersConnection query. */
+interface HomeMembersResult {
+  home: {
+    membersConnection: {
+      edges: unknown[];
+    };
+  };
+}
+
+/** Shape read back from the User.profile merge fragment. */
+interface UserProfileResult {
+  profile: {
+    firstName?: string;
+    avatar?: string;
+  };
+}
+
 // Mock the fragment matcher data
 jest.mock('#/graphql/generated/fragmentMatcher.json', () => ({
   possibleTypes: {
@@ -19,6 +43,10 @@ describe('cache.ts', () => {
   });
 
   // ─── suggestions merge ─────────────────────────────────────────
+
+  interface ShoppingListResult {
+    shoppingList: { __typename: 'ShoppingList'; id: string; suggestions: string[] | null };
+  }
 
   describe('ShoppingList.suggestions merge', () => {
     let cache: InMemoryCache;
@@ -46,8 +74,8 @@ describe('cache.ts', () => {
         query: QUERY,
         data: { shoppingList: { __typename: 'ShoppingList', id: 'list-1', suggestions: null } },
       });
-      const result = cache.readQuery({ query: QUERY }) as any;
-      expect(result.shoppingList.suggestions).toEqual(['a', 'b']);
+      const result = cache.readQuery<ShoppingListResult>({ query: QUERY });
+      expect(result?.shoppingList.suggestions).toEqual(['a', 'b']);
     });
 
     it('replaces suggestions with new incoming data', () => {
@@ -59,8 +87,8 @@ describe('cache.ts', () => {
         query: QUERY,
         data: { shoppingList: { __typename: 'ShoppingList', id: 'list-1', suggestions: ['x', 'y'] } },
       });
-      const result = cache.readQuery({ query: QUERY }) as any;
-      expect(result.shoppingList.suggestions).toEqual(['x', 'y']);
+      const result = cache.readQuery<ShoppingListResult>({ query: QUERY });
+      expect(result?.shoppingList.suggestions).toEqual(['x', 'y']);
     });
   });
 
@@ -87,11 +115,11 @@ describe('cache.ts', () => {
         fragment: gql`fragment ItemName on Item { id }`,
         data: { __typename: 'Item', id: 'item-1' },
       });
-      const result = cache.readFragment({
+      const result = cache.readFragment<ItemImageResult>({
         id: cache.identify({ __typename: 'Item', id: 'item-1' }),
         fragment: gql`fragment ItemImgRead on Item { id imageUrl }`,
-      }) as any;
-      expect(result.imageUrl).toBe('http://img.png');
+      });
+      expect(result?.imageUrl).toBe('http://img.png');
     });
 
     it('allows explicit null through for imageUrl (user removes image)', () => {
@@ -105,11 +133,11 @@ describe('cache.ts', () => {
         fragment: gql`fragment ItemImgNull on Item { id imageUrl }`,
         data: { __typename: 'Item', id: 'item-1', imageUrl: null },
       });
-      const result = cache.readFragment({
+      const result = cache.readFragment<ItemImageResult>({
         id: cache.identify({ __typename: 'Item', id: 'item-1' }),
         fragment: gql`fragment ItemImgRead on Item { id imageUrl }`,
-      }) as any;
-      expect(result.imageUrl).toBeNull();
+      });
+      expect(result?.imageUrl).toBeNull();
     });
   });
 
@@ -158,8 +186,8 @@ describe('cache.ts', () => {
           },
         },
       });
-      const result = cache.readQuery({ query: QUERY, variables: {} }) as any;
-      expect(result.home.membersConnection.edges).toHaveLength(1);
+      const result = cache.readQuery<HomeMembersResult>({ query: QUERY, variables: {} });
+      expect(result?.home.membersConnection.edges).toHaveLength(1);
     });
 
     it('deduplicates edges by node ID on pagination', () => {
@@ -198,9 +226,9 @@ describe('cache.ts', () => {
           },
         },
       });
-      const result = cache.readQuery({ query: QUERY, variables: { membersCursor: 'cursor-1' } }) as any;
+      const result = cache.readQuery<HomeMembersResult>({ query: QUERY, variables: { membersCursor: 'cursor-1' } });
       // m-1 should be deduplicated (incoming wins)
-      expect(result.home.membersConnection.edges).toHaveLength(2);
+      expect(result?.home.membersConnection.edges).toHaveLength(2);
     });
 
     it('returns existing when incoming is falsy', () => {
@@ -222,12 +250,15 @@ describe('cache.ts', () => {
       // The merge function returns existing if !incoming
       // We can't easily write null via writeQuery since the cache policy kicks in,
       // but the unit behavior is covered by the code logic
-      const result = cache.readQuery({ query: QUERY, variables: {} }) as any;
-      expect(result.home.membersConnection.edges).toHaveLength(1);
+      const result = cache.readQuery<HomeMembersResult>({ query: QUERY, variables: {} });
+      expect(result?.home.membersConnection.edges).toHaveLength(1);
     });
   });
 
   // ─── Query-level merge policies ────────────────────────────────
+
+  /** Result shape for the single-list query merge policies below. */
+  type ListResult<K extends string> = Record<K, { id: string }[] | null>;
 
   describe('Query-level merge policies', () => {
     let cache: InMemoryCache;
@@ -250,8 +281,8 @@ describe('cache.ts', () => {
         variables: { filters: { homeId: 'h-1' } },
         data: { shoppingLists: null },
       });
-      const result = cache.readQuery({ query: QUERY, variables: { filters: { homeId: 'h-1' } } }) as any;
-      expect(result.shoppingLists).toHaveLength(1);
+      const result = cache.readQuery<ListResult<'shoppingLists'>>({ query: QUERY, variables: { filters: { homeId: 'h-1' } } });
+      expect(result?.shoppingLists).toHaveLength(1);
     });
 
     it('Query.shoppingLists allows empty array through', () => {
@@ -266,8 +297,8 @@ describe('cache.ts', () => {
         variables: { filters: { homeId: 'h-1' } },
         data: { shoppingLists: [] },
       });
-      const result = cache.readQuery({ query: QUERY, variables: { filters: { homeId: 'h-1' } } }) as any;
-      expect(result.shoppingLists).toEqual([]);
+      const result = cache.readQuery<ListResult<'shoppingLists'>>({ query: QUERY, variables: { filters: { homeId: 'h-1' } } });
+      expect(result?.shoppingLists).toEqual([]);
     });
 
     it('Query.pantries preserves existing on null incoming', () => {
@@ -282,8 +313,8 @@ describe('cache.ts', () => {
         variables: { homeId: 'h-1' },
         data: { pantries: null },
       });
-      const result = cache.readQuery({ query: QUERY, variables: { homeId: 'h-1' } }) as any;
-      expect(result.pantries).toHaveLength(1);
+      const result = cache.readQuery<ListResult<'pantries'>>({ query: QUERY, variables: { homeId: 'h-1' } });
+      expect(result?.pantries).toHaveLength(1);
     });
 
     it('Query.storageLocations preserves existing on null incoming', () => {
@@ -298,8 +329,8 @@ describe('cache.ts', () => {
         variables: { homeId: 'h-1' },
         data: { storageLocations: null },
       });
-      const result = cache.readQuery({ query: QUERY, variables: { homeId: 'h-1' } }) as any;
-      expect(result.storageLocations).toHaveLength(1);
+      const result = cache.readQuery<ListResult<'storageLocations'>>({ query: QUERY, variables: { homeId: 'h-1' } });
+      expect(result?.storageLocations).toHaveLength(1);
     });
 
     it('Query.storageLocationTree preserves existing on null incoming', () => {
@@ -314,8 +345,8 @@ describe('cache.ts', () => {
         variables: { homeId: 'h-1' },
         data: { storageLocationTree: null },
       });
-      const result = cache.readQuery({ query: QUERY, variables: { homeId: 'h-1' } }) as any;
-      expect(result.storageLocationTree).toHaveLength(1);
+      const result = cache.readQuery<ListResult<'storageLocationTree'>>({ query: QUERY, variables: { homeId: 'h-1' } });
+      expect(result?.storageLocationTree).toHaveLength(1);
     });
 
     it('Query.pantryItemSuggestions preserves existing on null', () => {
@@ -330,8 +361,8 @@ describe('cache.ts', () => {
         variables: { pantryId: 'p-1' },
         data: { pantryItemSuggestions: null },
       });
-      const result = cache.readQuery({ query: QUERY, variables: { pantryId: 'p-1' } }) as any;
-      expect(result.pantryItemSuggestions).toHaveLength(1);
+      const result = cache.readQuery<ListResult<'pantryItemSuggestions'>>({ query: QUERY, variables: { pantryId: 'p-1' } });
+      expect(result?.pantryItemSuggestions).toHaveLength(1);
     });
 
     it('Query.shoppingListSuggestions preserves existing on null', () => {
@@ -346,8 +377,8 @@ describe('cache.ts', () => {
         variables: { shoppingListId: 'sl-1' },
         data: { shoppingListSuggestions: null },
       });
-      const result = cache.readQuery({ query: QUERY, variables: { shoppingListId: 'sl-1' } }) as any;
-      expect(result.shoppingListSuggestions).toHaveLength(1);
+      const result = cache.readQuery<ListResult<'shoppingListSuggestions'>>({ query: QUERY, variables: { shoppingListId: 'sl-1' } });
+      expect(result?.shoppingListSuggestions).toHaveLength(1);
     });
   });
 
@@ -374,12 +405,12 @@ describe('cache.ts', () => {
         fragment: gql`fragment UserAvatar on User { id profile { id avatar } }`,
         data: { __typename: 'User', id: 'u-1', profile: { __typename: 'UserProfile', id: 'up-1', avatar: 'avatar.png' } },
       });
-      const result = cache.readFragment({
+      const result = cache.readFragment<UserProfileResult>({
         id: cache.identify({ __typename: 'User', id: 'u-1' }),
         fragment: gql`fragment UserFull on User { id profile { id firstName lastName avatar } }`,
-      }) as any;
-      expect(result.profile.firstName).toBe('John');
-      expect(result.profile.avatar).toBe('avatar.png');
+      });
+      expect(result?.profile.firstName).toBe('John');
+      expect(result?.profile.avatar).toBe('avatar.png');
     });
   });
 });

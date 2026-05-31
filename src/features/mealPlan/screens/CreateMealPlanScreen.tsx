@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 
 import { Pressable } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
+import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from 'react-i18next';
 import { Icon } from '#utils/iconUtils';
@@ -126,22 +127,25 @@ export const CreateMealPlanScreen: React.FC = () => {
     const descriptionValue = description.trim() || undefined;
     const servingsValue = parseInt(servings) || 2;
 
-    let result;
-    try {
-      result = await createMealPlan({
-        name: name.trim(),
-        description: descriptionValue,
-        planType,
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
-        servings: servingsValue,
-        homeId,
-      });
-    } catch (error: any) {
-      const errorMessage = error.message ?? t('mealPlan.failedToCreate');
-      alertService.alert(t('labels.error'), errorMessage);
-      return;
-    }
+    const result = await executeMutation(
+      () =>
+        createMealPlan({
+          name: name.trim(),
+          description: descriptionValue,
+          planType,
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
+          servings: servingsValue,
+          homeId,
+        }),
+      error => {
+        const errorMessage =
+          error instanceof Error ? error.message : t('mealPlan.failedToCreate');
+        alertService.alert(t('labels.error'), errorMessage);
+      },
+    );
+    // `false` means the mutation threw — the onError above already alerted.
+    if (result === false) return;
 
     if (result?.__typename === 'CreateMealPlanPayload') {
       goBack();

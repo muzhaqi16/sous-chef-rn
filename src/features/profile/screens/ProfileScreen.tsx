@@ -87,9 +87,7 @@ export const ProfileScreen = () => {
     // Find and execute logout action — match the section by its stable `key`,
     // not the translated `title` (which differs per locale).
     const logoutSection = sections.find(s => s.key === '');
-    const logoutItem = logoutSection?.items.find(
-      (i: any) => i.key === 'logout',
-    );
+    const logoutItem = logoutSection?.items.find(i => i.key === 'logout');
 
     if (logoutItem?.onPress) {
       logoutItem.onPress();
@@ -166,7 +164,7 @@ export const ProfileScreen = () => {
             <SettingsSection
               key={`section-${index}`}
               title={section.title}
-              items={section.items.map((item: any) => {
+              items={section.items.map(item => {
                 // Override logout handler to include navigation
                 if (item.key === 'logout') {
                   return {

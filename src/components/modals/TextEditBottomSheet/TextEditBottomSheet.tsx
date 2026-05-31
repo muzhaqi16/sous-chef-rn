@@ -6,7 +6,7 @@ import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
-import { Controller, useForm } from 'react-hook-form';
+import { Controller, useForm, type FieldValues } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { object, string, type AnyObjectSchema } from 'yup';
 import { Button } from '#components/base/Button';
@@ -78,7 +78,7 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
     }
   }, [visible, initialValue, fieldKey, form]);
 
-  const handleSave = (data: any) => {
+  const handleSave = (data: FieldValues) => {
     onSave(data[fieldKey]);
     onClose();
   };

@@ -56,7 +56,7 @@ export enum LogLevel {
  * Standard subscription payload structure
  * Most subscriptions follow this pattern
  */
-export interface SubscriptionPayload<T = any> {
+export interface SubscriptionPayload<T = unknown> {
   mutation?: MutationType | string;
   userId?: string;
   timestamp?: string;
@@ -69,7 +69,7 @@ export interface SubscriptionPayload<T = any> {
 /**
  * Configuration for registering a subscription with the service
  */
-export interface SubscriptionConfig<TData = any> {
+export interface SubscriptionConfig<TData = unknown> {
   /**
    * Unique name for this subscription (e.g., 'ShoppingListItemsChanged')
    * Used for logging and debugging

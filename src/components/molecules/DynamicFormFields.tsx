@@ -19,6 +19,10 @@ import { StorageLocationAutocompleteField } from './AutocompleteField/StorageLoc
 import { StoreAutocompleteField } from './AutocompleteField/StoreAutocompleteField';
 import { FormInput } from './FormInput';
 import { Text } from '#components/atoms/Text';
+import type {
+  ItemSuggestion,
+  StorageLocation,
+} from '#/graphql/generated/schemaTypes';
 
 const MemoizedItemAutocomplete = ItemAutocompleteField;
 const MemoizedBrandAutocomplete = BrandAutocompleteField;
@@ -31,36 +35,39 @@ export type FieldDef<T extends FieldValues> = {
   name: Path<T>;
   label: string;
   placeholder?: string;
+  // Dynamic dispatch: the component is rendered with a prop bag assembled at
+  // runtime (value/onChangeText/error/...). `React.ElementType` accepts any
+  // component while keeping the JSX spread type-checkable without `any`.
   component?:
-    | React.ComponentType<any>
+    | React.ElementType
     | 'itemAutocomplete'
     | 'brandAutocomplete'
     | 'unitAutocomplete'
     | 'categoryAutocomplete'
     | 'storageLocationAutocomplete'
     | 'storeAutocomplete';
-  props?: Record<string, any>;
+  props?: Record<string, unknown>;
   // For select fields
   options?: Array<{ label: string; value: string }>;
   // For checkbox fields
-  onValueChange?: (value: any) => void;
+  onValueChange?: (value: unknown) => void;
   // For custom rendering logic
-  renderValue?: (value: any) => string;
+  renderValue?: (value: unknown) => string;
   // For custom value transformation before validation
-  transformValue?: (value: any) => any;
+  transformValue?: (value: unknown) => unknown;
   // Transform only on blur, not on every keystroke
   transformOnBlur?: boolean;
   // Autocomplete specific props
-  onSelectItem?: (item: any) => void;
+  onSelectItem?: (item: ItemSuggestion) => void;
   onUnitSelected?: (unitId: string | null, unitName: string | null) => void;
   onCategorySelected?: (categoryId: string | null) => void;
   onStorageLocationSelected?: (
     locationId: string | null,
-    location: any,
+    location: StorageLocation | null,
   ) => void;
   onStoreSelected?: (storeId: string | null, storeName: string | null) => void;
   onAddNewLocation?: (name: string) => void;
-  storageLocations?: any[];
+  storageLocations?: StorageLocation[];
   testID?: string;
 };
 
@@ -153,7 +160,7 @@ export function DynamicFormFields<T extends FieldValues>({
               name={name}
               render={({ field: { onChange, onBlur, value } }) => {
                 // Custom onChange handler that transforms value if needed
-                const handleChange = (newValue: any) => {
+                const handleChange = (newValue: unknown) => {
                   const transformedValue =
                     transformValue && !transformOnBlur
                       ? transformValue(newValue)
@@ -182,7 +189,7 @@ export function DynamicFormFields<T extends FieldValues>({
                       value={displayValue || ''}
                       onChangeText={handleChange}
                       placeholder={placeholder}
-                      required={props?.required}
+                      required={Boolean(props?.required)}
                       error={errors[name]?.message?.toString()}
                       onSelectItem={onSelectItem}
                       testID={testID}
@@ -199,7 +206,7 @@ export function DynamicFormFields<T extends FieldValues>({
                       value={displayValue || ''}
                       onChangeText={handleChange}
                       placeholder={placeholder}
-                      required={props?.required}
+                      required={Boolean(props?.required)}
                       error={errors[name]?.message?.toString()}
                       {...props}
                     />
@@ -229,7 +236,7 @@ export function DynamicFormFields<T extends FieldValues>({
                       value={displayValue || ''}
                       onChangeText={handleChange}
                       placeholder={placeholder}
-                      required={props?.required}
+                      required={Boolean(props?.required)}
                       error={errors[name]?.message?.toString()}
                       onCategorySelected={onCategorySelected}
                       {...props}
@@ -245,7 +252,7 @@ export function DynamicFormFields<T extends FieldValues>({
                       value={displayValue || ''}
                       onChangeText={handleChange}
                       placeholder={placeholder}
-                      required={props?.required}
+                      required={Boolean(props?.required)}
                       error={errors[name]?.message?.toString()}
                       storageLocations={storageLocations || []}
                       onStorageLocationSelected={onStorageLocationSelected}
@@ -263,7 +270,7 @@ export function DynamicFormFields<T extends FieldValues>({
                       value={displayValue || ''}
                       onChangeText={handleChange}
                       placeholder={placeholder}
-                      required={props?.required}
+                      required={Boolean(props?.required)}
                       error={errors[name]?.message?.toString()}
                       onStoreSelected={onStoreSelected}
                       {...props}
@@ -285,7 +292,7 @@ export function DynamicFormFields<T extends FieldValues>({
                   }
 
                   // Handle different input types and their specific props
-                  const inputProps: any = {
+                  const inputProps: Record<string, unknown> = {
                     label,
                     ...(placeholder && { placeholder }),
                     ...(testID && { testID }),

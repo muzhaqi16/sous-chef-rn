@@ -1,8 +1,10 @@
 import { ErrorLink } from '@apollo/client/link/error';
+import type { ApolloLink } from '@apollo/client/link';
 import {
   CombinedGraphQLErrors,
   CombinedProtocolErrors,
 } from '@apollo/client/errors';
+import type { DefinitionNode } from 'graphql';
 import { isKnownServerError } from '#utils/subscriptionErrorHandler';
 import { isNetworkError } from '#/utils/isNetworkError';
 import {
@@ -28,9 +30,9 @@ const isApiKeyError = (code: string, msg: string) =>
   ['API_KEY_REQUIRED', 'INVALID_API_KEY', 'API_KEY_EXPIRED'].includes(code) ||
   msg.toLowerCase().includes('api key');
 
-const isSubscription = (op: any) =>
+const isSubscription = (op: Pick<ApolloLink.Operation, 'query'>) =>
   op.query.definitions.some(
-    (def: any) =>
+    (def: DefinitionNode) =>
       def.kind === 'OperationDefinition' && def.operation === 'subscription',
   );
 

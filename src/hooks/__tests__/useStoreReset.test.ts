@@ -1,16 +1,20 @@
 import { renderHook, act } from '@testing-library/react-native';
+import type { RootState } from '#store/index';
 import { useStoreReset, useSession } from '../useStoreReset';
 
 const mockResetStore = jest.fn();
 const mockGetIsAuthenticated = jest.fn(() => true);
 
 jest.mock('#store/useAppStore', () => ({
-  useAppStore: (selector: (state: any) => any) =>
+  // Build the state lazily inside the selector so the `mock*` jest.fn()s are
+  // read at call time. Referencing them when the factory runs (before the
+  // consts initialize, due to jest hoisting) would capture `undefined`.
+  useAppStore: (selector: (state: RootState) => unknown) =>
     selector({
       resetStore: mockResetStore,
-      user: { id: 'user-1', email: 'test@test.com' },
+      user: { id: 'user-1', email: 'test@test.com' } as RootState['user'],
       getIsAuthenticated: mockGetIsAuthenticated,
-    }),
+    } as Partial<RootState> as RootState),
 }));
 
 jest.mock('#store/resetManager', () => ({

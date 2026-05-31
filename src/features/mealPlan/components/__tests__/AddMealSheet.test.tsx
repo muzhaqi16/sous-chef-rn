@@ -9,7 +9,7 @@ jest.mock('#hooks/useStandardBottomSheet', () => ({
     modalProps: {},
     contentContainerStyle: {},
   })),
-  BottomSheetModal: ({ children }: any) => children,
+  BottomSheetModal: ({ children }: { children?: React.ReactNode }) => children,
 }));
 
 jest.mock('#/utils/iconUtils', () => ({
@@ -24,22 +24,33 @@ jest.mock('#components/molecules/BottomSheetSearchBar', () => {
   const R = require('react');
   const { TextInput } = require('react-native');
   return {
-    BottomSheetSearchBar: R.forwardRef((props: any, ref: any) => {
-      R.useImperativeHandle(ref, () => ({
-        clear: jest.fn(),
-        focus: jest.fn(),
-        blur: jest.fn(),
-        getValue: jest.fn(() => ''),
-        setValue: jest.fn(),
-      }));
-      return (
-        <TextInput
-          placeholder={props.placeholder}
-          onChangeText={props.onChangeText}
-          testID="search-bar"
-        />
-      );
-    }),
+    BottomSheetSearchBar: R.forwardRef(
+      (
+        props: { placeholder?: string; onChangeText?: (text: string) => void },
+        ref: React.Ref<{
+          clear: () => void;
+          focus: () => void;
+          blur: () => void;
+          getValue: () => string;
+          setValue: (value: string) => void;
+        }>,
+      ) => {
+        R.useImperativeHandle(ref, () => ({
+          clear: jest.fn(),
+          focus: jest.fn(),
+          blur: jest.fn(),
+          getValue: jest.fn(() => ''),
+          setValue: jest.fn(),
+        }));
+        return (
+          <TextInput
+            placeholder={props.placeholder}
+            onChangeText={props.onChangeText}
+            testID="search-bar"
+          />
+        );
+      },
+    ),
   };
 });
 
@@ -149,7 +160,7 @@ jest.mock('#services/recipeApi/SpoonacularService', () => ({
 }));
 
 jest.mock('#utils/recipeTransform', () => ({
-  transformRecipeForDisplay: jest.fn((r: any) => r),
+  transformRecipeForDisplay: jest.fn((r: unknown) => r),
 }));
 
 jest.mock('#/services/toastService', () => ({

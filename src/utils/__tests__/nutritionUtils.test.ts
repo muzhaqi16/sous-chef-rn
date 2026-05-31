@@ -11,9 +11,9 @@ import {
   groupNutrientsByCategory,
   getCategoryLabel,
 } from '../nutritionUtils';
-import type { NutrientCategory } from '#/types/nutrition';
+import type { NutrientCategory, NutritionsData } from '#/types/nutrition';
 
-const mockNutritions = {
+const mockNutritions: NutritionsData = {
   servingSize: '100g',
   servingSizeGrams: 100,
   calories: { amount: 200, unit: 'kcal', name: 'Calories' },
@@ -50,27 +50,27 @@ describe('hasNutritionData', () => {
   });
 
   it('returns true when protein has amount', () => {
-    expect(hasNutritionData(mockNutritions as any)).toBe(true);
+    expect(hasNutritionData(mockNutritions)).toBe(true);
   });
 
   it('returns false when no nutrient keys have amounts', () => {
-    expect(hasNutritionData({ servingSize: '100g' } as any)).toBe(false);
+    expect(hasNutritionData({ servingSize: '100g' })).toBe(false);
   });
 });
 
 describe('getScaleFactor', () => {
   it('returns 1 when no actual serving grams', () => {
-    expect(getScaleFactor(mockNutritions as any)).toBe(1);
-    expect(getScaleFactor(mockNutritions as any, null)).toBe(1);
+    expect(getScaleFactor(mockNutritions)).toBe(1);
+    expect(getScaleFactor(mockNutritions, null)).toBe(1);
   });
 
   it('returns 1 when no servingSizeGrams', () => {
-    expect(getScaleFactor({} as any, 200)).toBe(1);
+    expect(getScaleFactor({}, 200)).toBe(1);
   });
 
   it('scales correctly', () => {
-    expect(getScaleFactor(mockNutritions as any, 200)).toBe(2);
-    expect(getScaleFactor(mockNutritions as any, 50)).toBe(0.5);
+    expect(getScaleFactor(mockNutritions, 200)).toBe(2);
+    expect(getScaleFactor(mockNutritions, 50)).toBe(0.5);
   });
 });
 
@@ -100,7 +100,7 @@ describe('extractMacroSummary', () => {
   });
 
   it('extracts macros without scaling', () => {
-    const result = extractMacroSummary(mockNutritions as any);
+    const result = extractMacroSummary(mockNutritions);
     expect(result.calories).toBe(200);
     expect(result.protein).toBe(15);
     expect(result.carbs).toBe(25);
@@ -109,7 +109,7 @@ describe('extractMacroSummary', () => {
   });
 
   it('scales macros based on actual serving', () => {
-    const result = extractMacroSummary(mockNutritions as any, 200);
+    const result = extractMacroSummary(mockNutritions, 200);
     expect(result.calories).toBe(400);
     expect(result.protein).toBe(30);
     expect(result.servingSize).toBe('200g');
@@ -122,7 +122,7 @@ describe('generateHighlights', () => {
   });
 
   it('detects High Protein (>= 10g)', () => {
-    const highlights = generateHighlights(mockNutritions as any);
+    const highlights = generateHighlights(mockNutritions);
     expect(highlights).toContainEqual({
       label: 'High Protein',
       type: 'positive',
@@ -130,7 +130,7 @@ describe('generateHighlights', () => {
   });
 
   it('detects Good Fiber (>= 3g)', () => {
-    const highlights = generateHighlights(mockNutritions as any);
+    const highlights = generateHighlights(mockNutritions);
     expect(highlights).toContainEqual({
       label: 'Good Fiber',
       type: 'positive',
@@ -138,12 +138,12 @@ describe('generateHighlights', () => {
   });
 
   it('detects Low Sugar (<= 5g)', () => {
-    const highlights = generateHighlights(mockNutritions as any);
+    const highlights = generateHighlights(mockNutritions);
     expect(highlights).toContainEqual({ label: 'Low Sugar', type: 'positive' });
   });
 
   it('detects High Sodium (>= 600mg) as caution', () => {
-    const highlights = generateHighlights(mockNutritions as any);
+    const highlights = generateHighlights(mockNutritions);
     expect(highlights).toContainEqual({
       label: 'High Sodium',
       type: 'caution',
@@ -151,27 +151,27 @@ describe('generateHighlights', () => {
   });
 
   it('detects Vitamin C (>= 9mg)', () => {
-    const highlights = generateHighlights(mockNutritions as any);
+    const highlights = generateHighlights(mockNutritions);
     expect(highlights).toContainEqual({ label: 'Vitamin C', type: 'positive' });
   });
 
   it('detects Iron (>= 1.8mg)', () => {
-    const highlights = generateHighlights(mockNutritions as any);
+    const highlights = generateHighlights(mockNutritions);
     expect(highlights).toContainEqual({ label: 'Iron', type: 'positive' });
   });
 
   it('detects Calcium (>= 130mg)', () => {
-    const highlights = generateHighlights(mockNutritions as any);
+    const highlights = generateHighlights(mockNutritions);
     expect(highlights).toContainEqual({ label: 'Calcium', type: 'positive' });
   });
 
   it('detects Potassium (>= 470mg)', () => {
-    const highlights = generateHighlights(mockNutritions as any);
+    const highlights = generateHighlights(mockNutritions);
     expect(highlights).toContainEqual({ label: 'Potassium', type: 'positive' });
   });
 
   it('does not detect Low Fat when fat is > 3g', () => {
-    const highlights = generateHighlights(mockNutritions as any);
+    const highlights = generateHighlights(mockNutritions);
     expect(highlights).not.toContainEqual(
       expect.objectContaining({ label: 'Low Fat' }),
     );
@@ -217,7 +217,7 @@ describe('getNutrientEntries', () => {
   });
 
   it('returns entries sorted by category (macro first)', () => {
-    const entries = getNutrientEntries(mockNutritions as any);
+    const entries = getNutrientEntries(mockNutritions);
     expect(entries.length).toBeGreaterThan(0);
 
     // First entry should be a macro
@@ -235,13 +235,13 @@ describe('getNutrientEntries', () => {
   });
 
   it('scales entries with actual serving grams', () => {
-    const entries = getNutrientEntries(mockNutritions as any, 200);
+    const entries = getNutrientEntries(mockNutritions, 200);
     const protein = entries.find(e => e.key === 'protein');
     expect(protein?.amount).toBe(30); // 15 * 2
   });
 
   it('skips servingSize and servingSizeGrams keys', () => {
-    const entries = getNutrientEntries(mockNutritions as any);
+    const entries = getNutrientEntries(mockNutritions);
     expect(entries.find(e => e.key === 'servingSize')).toBeUndefined();
     expect(entries.find(e => e.key === 'servingSizeGrams')).toBeUndefined();
   });
@@ -249,7 +249,7 @@ describe('getNutrientEntries', () => {
 
 describe('groupNutrientsByCategory', () => {
   it('groups entries correctly', () => {
-    const entries = getNutrientEntries(mockNutritions as any);
+    const entries = getNutrientEntries(mockNutritions);
     const grouped = groupNutrientsByCategory(entries);
     expect(grouped.macro?.length).toBeGreaterThan(0);
     expect(grouped.mineral?.length).toBeGreaterThan(0);

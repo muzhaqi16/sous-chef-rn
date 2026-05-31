@@ -2,7 +2,12 @@
 
 import React from 'react';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
-import { ShoppingListMainContent } from '../ShoppingListMainContent';
+import {
+  ShoppingListMainContent,
+  type ShoppingListMainContentProps,
+} from '../ShoppingListMainContent';
+
+type ScreenData = ShoppingListMainContentProps['screenData'];
 
 const render = (ui: React.ReactElement) => renderWithApollo(ui);
 
@@ -133,7 +138,7 @@ jest.mock('#components/templates/ListTemplate', () => ({
 }));
 
 jest.mock('#components/molecules/TabScreenHeader', () => ({
-  TabScreenHeader: ({ title }: any) => title,
+  TabScreenHeader: ({ title }: { title: string }) => title,
 }));
 
 jest.mock('#components/molecules/SearchBar', () => ({
@@ -161,13 +166,19 @@ jest.mock(
   }),
 );
 
-const makeScreenData = (overrides: any = {}) => {
+type ScreenDataOverrides = {
+  state?: Record<string, unknown>;
+  actions?: Record<string, unknown>;
+  [key: string]: unknown;
+};
+
+const makeScreenData = (overrides: ScreenDataOverrides = {}): ScreenData => {
   const {
     state: stateOverrides,
     actions: actionsOverrides,
     ...legacyOverrides
   } = overrides;
-  return {
+  const data: Record<string, unknown> = {
     state: {
       lists: [{ id: 'list-1', name: 'Groceries' }],
       listDataWithOwnership: [
@@ -205,6 +216,7 @@ const makeScreenData = (overrides: any = {}) => {
       ...actionsOverrides,
     },
   };
+  return data as ScreenData;
 };
 
 describe('ShoppingListMainContent', () => {

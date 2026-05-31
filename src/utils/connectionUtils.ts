@@ -13,7 +13,7 @@ type PageInfo = {
   endCursor?: string | null | undefined;
 };
 
-type Connection<T = any> = {
+type Connection<T = unknown> = {
   edges?: Array<Edge<T>> | null;
   totalCount?: number | null;
   pageInfo?: PageInfo | null;
@@ -32,7 +32,7 @@ const isDefined = <T>(value: T | null | undefined): value is T => value != null;
  * reference is passed. This prevents unnecessary re-renders downstream when
  * Apollo re-delivers the same edge objects from its normalized cache.
  */
-const extractNodesCache = new WeakMap<readonly any[], any[]>();
+const extractNodesCache = new WeakMap<readonly unknown[], unknown[]>();
 
 export const extractNodes = <T>(
   connection?: {
@@ -59,7 +59,7 @@ export const extractNodes = <T>(
 export const getConnectionTotalCount = (
   connection?: {
     totalCount?: number | null;
-    edges?: Array<Edge<any>> | null;
+    edges?: Array<Edge<unknown>> | null;
   } | null,
 ): number => {
   if (typeof connection?.totalCount === 'number') {
@@ -100,13 +100,13 @@ export interface ConnectionFieldConfig {
  * const result = normalizeConnectionField(pantry, config);
  * // Returns: { items: [...], itemsTotalCount: 10, itemsPageInfo: {...} }
  */
-export function normalizeConnectionField<T extends Record<string, any>>(
+export function normalizeConnectionField<T extends Record<string, unknown>>(
   entity: T,
   config: ConnectionFieldConfig,
-): Record<string, any> {
+): Record<string, unknown> {
   const connection = entity[config.connectionField] as Connection | undefined;
 
-  const result: Record<string, any> = {
+  const result: Record<string, unknown> = {
     [config.arrayName]: extractNodes(connection),
   };
 
@@ -137,22 +137,26 @@ export function normalizeConnectionField<T extends Record<string, any>>(
  * const normalized = normalizeShoppingList(shoppingList);
  * // Returns: { ...shoppingList, items: [...], itemsTotalCount: 10, itemsPageInfo: {...} }
  */
-export function createEntityNormalizer<T extends Record<string, any>>(
+export function createEntityNormalizer<T extends Record<string, unknown>>(
   configs: ConnectionFieldConfig[],
 ) {
-  return (entity?: T | null): (T & Record<string, any>) | null => {
+  // The returned object adds runtime-keyed array fields (named by each config's
+  // `arrayName`), so those extra keys can't be expressed statically — the
+  // `Record<string, unknown>` intersection covers ergonomic dynamic-key access
+  // by callers, who narrow the value at the read site.
+  return (entity?: T | null): (T & Record<string, unknown>) | null => {
     if (!entity) {
       return null;
     }
 
-    const normalized: Record<string, any> = { ...entity };
+    const normalized: Record<string, unknown> = { ...entity };
 
     configs.forEach(config => {
       const fields = normalizeConnectionField(entity, config);
       Object.assign(normalized, fields);
     });
 
-    return normalized as T & Record<string, any>;
+    return normalized as T & Record<string, unknown>;
   };
 }
 
@@ -167,10 +171,13 @@ export function createEntityNormalizer<T extends Record<string, any>>(
  * const result = normalizeConnection(recipesConnection, 'recipes');
  * // Returns: { recipes: [...], totalCount: 25, pageInfo: {...} }
  */
-export function normalizeConnection<T = any>(
+export function normalizeConnection<T = unknown>(
   connection?: Connection<T> | null,
   arrayName: string = 'items',
-): { [key: string]: any; totalCount: number; pageInfo?: PageInfo } | null {
+  // The extracted array is keyed under a runtime-provided `arrayName`, so the
+  // dynamic field can't be typed statically — callers narrow the value at the
+  // read site.
+): { [key: string]: unknown; totalCount: number; pageInfo?: PageInfo } | null {
   if (!connection) {
     return null;
   }

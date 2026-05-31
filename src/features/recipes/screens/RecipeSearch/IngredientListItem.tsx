@@ -37,9 +37,15 @@ const IngredientItemComponent: React.FC<{
 
 const IngredientItem = IngredientItemComponent;
 
-export const ingredientKeyExtractor = (item: any) => item.id;
+/** Minimal shape the ingredient list cell reads from each pantry item. */
+interface IngredientListItemData {
+  id: string;
+  itemName?: string | null;
+}
 
-const IngredientRenderItem = ({ item }: { item: any }) => {
+export const ingredientKeyExtractor = (item: IngredientListItemData) => item.id;
+
+const IngredientRenderItem = ({ item }: { item: IngredientListItemData }) => {
   const { selectedIngredients, toggleIngredient } = useIngredientSelector();
   const itemName = item.itemName || '';
   return (
@@ -51,9 +57,11 @@ const IngredientRenderItem = ({ item }: { item: any }) => {
   );
 };
 
-export const renderIngredientItem = ({ item }: { item: any }) => (
-  <IngredientRenderItem item={item} />
-);
+export const renderIngredientItem = ({
+  item,
+}: {
+  item: IngredientListItemData;
+}) => <IngredientRenderItem item={item} />;
 
 const styles = StyleSheet.create(theme => ({
   ingredientItem: {

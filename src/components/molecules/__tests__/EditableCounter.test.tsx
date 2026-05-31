@@ -1,6 +1,11 @@
 'use no memo';
 import React from 'react';
-import { fireEvent, render, screen, userEvent } from '@testing-library/react-native';
+import {
+  fireEvent,
+  render,
+  screen,
+  userEvent,
+} from '@testing-library/react-native';
 import { EditableCounter } from '../EditableCounter';
 
 jest.mock('@react-native-vector-icons/ionicons', () => ({
@@ -17,7 +22,7 @@ jest.mock('#/utils/fractionUtils', () => ({
 }));
 
 jest.mock('#components/atoms/Label', () => ({
-  Label: ({ children }: any) => {
+  Label: ({ children }: { children: React.ReactNode }) => {
     const { Text } = require('react-native');
     return require('react').createElement(Text, null, children);
   },

@@ -1,15 +1,18 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
-import { useForm } from 'react-hook-form';
+import { useForm, type FieldValues } from 'react-hook-form';
 import { StorageDetailsSection } from '../StorageDetailsSection';
+import type { FieldDef } from '#components/molecules/DynamicFormFields';
+import type { PantryItemFormData } from '../PantryItemForm';
+import { StorageState } from '#/graphql/generated/schemaTypes';
 
 jest.mock('#components/molecules/DynamicFormFields', () => {
   const { View, Text } = require('react-native');
   return {
-    DynamicFormFields: ({ fields }: any) => (
+    DynamicFormFields: ({ fields }: { fields: FieldDef<FieldValues>[] }) => (
       <View testID="dynamic-fields">
-        {fields.map((f: any) => (
-          <Text key={f.name}>{f.label}</Text>
+        {fields.map((f: FieldDef<FieldValues>) => (
+          <Text key={String(f.name)}>{f.label}</Text>
         ))}
       </View>
     ),
@@ -24,7 +27,7 @@ jest.mock('#components/molecules/FormTextArea', () => ({
 jest.mock('#components/molecules/SegmentedControl', () => {
   const { View, Text } = require('react-native');
   return {
-    SegmentedControl: ({ label, value }: any) => (
+    SegmentedControl: ({ label, value }: { label?: string; value: string }) => (
       <View testID="segmented-control">
         <Text>{label}</Text>
         <Text>{value}</Text>
@@ -36,7 +39,13 @@ jest.mock('#components/molecules/SegmentedControl', () => {
 jest.mock('#components/molecules/DatePickerField', () => {
   const { View, Text } = require('react-native');
   return {
-    DatePickerField: ({ label, placeholder }: any) => (
+    DatePickerField: ({
+      label,
+      placeholder,
+    }: {
+      label?: string;
+      placeholder?: string;
+    }) => (
       <View testID="date-picker">
         <Text>{label}</Text>
         <Text>{placeholder}</Text>
@@ -45,15 +54,17 @@ jest.mock('#components/molecules/DatePickerField', () => {
   };
 });
 
-function Wrapper(overrides: any) {
+function Wrapper(
+  overrides: Partial<React.ComponentProps<typeof StorageDetailsSection>>,
+) {
   const {
     control,
     formState: { errors },
-  } = useForm({
+  } = useForm<PantryItemFormData>({
     defaultValues: {
       location: '',
       notes: '',
-      storageState: 'AMBIENT',
+      storageState: StorageState.Ambient,
     },
   });
 
@@ -62,7 +73,7 @@ function Wrapper(overrides: any) {
       control={control}
       errors={errors}
       mode="add"
-      storageState="AMBIENT"
+      storageState={StorageState.Ambient}
       onStorageStateChange={jest.fn()}
       onDateChange={jest.fn()}
       {...overrides}

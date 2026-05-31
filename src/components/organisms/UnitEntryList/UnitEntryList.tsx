@@ -51,10 +51,10 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
     onEntriesChanged(updated);
   };
 
-  const handleEntryChange = (
+  const handleEntryChange = <K extends keyof UnitEntry>(
     index: number,
-    field: keyof UnitEntry,
-    value: any,
+    field: K,
+    value: UnitEntry[K],
   ) => {
     const updated = entries.map((entry, i) =>
       i === index ? { ...entry, [field]: value } : entry,

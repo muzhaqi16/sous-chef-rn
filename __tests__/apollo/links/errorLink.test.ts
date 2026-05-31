@@ -9,14 +9,14 @@ const { attemptTokenRefresh: mockAttemptTokenRefresh, getRefreshState: mockGetRe
   jest.requireMock('#/apollo/links/refreshToken') as { attemptTokenRefresh: jest.Mock; getRefreshState: jest.Mock };
 
 jest.mock('#utils/subscriptionErrorHandler', () => ({
-  isKnownServerError: jest.fn((error: any) => {
+  isKnownServerError: jest.fn((error: { message?: string }) => {
     const msg = (error?.message || '').toLowerCase();
     return msg.includes('known server error');
   }),
 }));
 
 jest.mock('#/utils/isNetworkError', () => ({
-  isNetworkError: jest.fn((error: any) => {
+  isNetworkError: jest.fn((error: { message?: string }) => {
     const msg = (error?.message || '').toLowerCase();
     return msg.includes('network') || msg.includes('timeout');
   }),
@@ -29,9 +29,15 @@ jest.mock('#/apollo/logoutCleanup', () => ({
   },
 }));
 
+interface MockOperation {
+  operationName: string;
+  getContext: jest.Mock;
+  query: { definitions: Array<{ kind: string; operation: string }> };
+}
+
 describe('errorLink.ts', () => {
   let mockForward: jest.Mock;
-  let mockOperation: any;
+  let mockOperation: MockOperation;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -53,14 +59,19 @@ describe('errorLink.ts', () => {
   // by examining its constructor argument behavior. We re-create the link to test.
 
   describe('error handler function', () => {
-    let errorHandler: (...args: any[]) => any;
+    type HandlerArgs = {
+      error: { message?: string };
+      operation: MockOperation;
+      forward: jest.Mock;
+    };
+    let errorHandler: (args: HandlerArgs) => unknown;
 
     beforeEach(() => {
       jest.isolateModules(() => {
         // Capture the handler passed to ErrorLink constructor
         jest.doMock('@apollo/client/link/error', () => ({
           ErrorLink: class {
-            constructor(fn: any) {
+            constructor(fn: (args: HandlerArgs) => unknown) {
               errorHandler = fn;
             }
           },
@@ -85,7 +96,7 @@ describe('errorLink.ts', () => {
     it('handles API key error in GraphQL errors', () => {
       const error = new CombinedGraphQLErrors({
         errors: [{ message: 'API key required', extensions: { code: 'API_KEY_REQUIRED' } }],
-      } as any);
+      });
       errorHandler({ error, operation: mockOperation, forward: mockForward });
       expect(console.error).toHaveBeenCalledWith('API Key error:', expect.any(String));
     });
@@ -93,7 +104,7 @@ describe('errorLink.ts', () => {
     it('handles INVALID_API_KEY code', () => {
       const error = new CombinedGraphQLErrors({
         errors: [{ message: 'Invalid key', extensions: { code: 'INVALID_API_KEY' } }],
-      } as any);
+      });
       errorHandler({ error, operation: mockOperation, forward: mockForward });
       expect(console.error).toHaveBeenCalledWith('API Key error:', expect.any(String));
     });
@@ -101,7 +112,7 @@ describe('errorLink.ts', () => {
     it('handles API_KEY_EXPIRED code', () => {
       const error = new CombinedGraphQLErrors({
         errors: [{ message: 'Expired key', extensions: { code: 'API_KEY_EXPIRED' } }],
-      } as any);
+      });
       errorHandler({ error, operation: mockOperation, forward: mockForward });
       expect(console.error).toHaveBeenCalledWith('API Key error:', expect.any(String));
     });
@@ -109,7 +120,7 @@ describe('errorLink.ts', () => {
     it('detects api key error from message (lowercase check)', () => {
       const error = new CombinedGraphQLErrors({
         errors: [{ message: 'Please provide an API key for authentication', extensions: { code: 'SOME_CODE' } }],
-      } as any);
+      });
       errorHandler({ error, operation: mockOperation, forward: mockForward });
       expect(console.error).toHaveBeenCalledWith('API Key error:', expect.any(String));
     });
@@ -117,7 +128,7 @@ describe('errorLink.ts', () => {
     it('handles FORBIDDEN as resource access error (not auth error)', () => {
       const error = new CombinedGraphQLErrors({
         errors: [{ message: 'Access denied', extensions: { code: 'FORBIDDEN' } }],
-      } as any);
+      });
       const result = errorHandler({ error, operation: mockOperation, forward: mockForward });
       expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('Access denied'));
       expect(mockAttemptTokenRefresh).not.toHaveBeenCalled();
@@ -128,7 +139,7 @@ describe('errorLink.ts', () => {
       mockAttemptTokenRefresh.mockReturnValue('observable');
       const error = new CombinedGraphQLErrors({
         errors: [{ message: 'Token expired', extensions: { code: 'UNAUTHENTICATED' } }],
-      } as any);
+      });
       const result = errorHandler({ error, operation: mockOperation, forward: mockForward });
       expect(mockAttemptTokenRefresh).toHaveBeenCalledWith(mockOperation, mockForward);
       expect(result).toBe('observable');
@@ -141,7 +152,7 @@ describe('errorLink.ts', () => {
       mockAttemptTokenRefresh.mockReturnValue('observable');
       const error = new CombinedGraphQLErrors({
         errors: [{ message: 'Token has expired please login again', extensions: { code: 'SOME_CODE' } }],
-      } as any);
+      });
       errorHandler({ error, operation: mockOperation, forward: mockForward });
       expect(mockAttemptTokenRefresh).toHaveBeenCalled();
       expect(console.warn).toHaveBeenCalledWith(
@@ -153,7 +164,7 @@ describe('errorLink.ts', () => {
       mockAttemptTokenRefresh.mockReturnValue('observable');
       const error = new CombinedGraphQLErrors({
         errors: [{ message: 'Unauthorized access', extensions: { code: 'OTHER' } }],
-      } as any);
+      });
       errorHandler({ error, operation: mockOperation, forward: mockForward });
       expect(mockAttemptTokenRefresh).toHaveBeenCalled();
       expect(console.warn).toHaveBeenCalledWith(
@@ -165,7 +176,7 @@ describe('errorLink.ts', () => {
       mockAttemptTokenRefresh.mockReturnValue('observable');
       const error = new CombinedGraphQLErrors({
         errors: [{ message: 'The provided invalid token was rejected', extensions: { code: 'OTHER' } }],
-      } as any);
+      });
       errorHandler({ error, operation: mockOperation, forward: mockForward });
       expect(mockAttemptTokenRefresh).toHaveBeenCalled();
       expect(console.warn).toHaveBeenCalledWith(
@@ -177,7 +188,7 @@ describe('errorLink.ts', () => {
       mockAttemptTokenRefresh.mockReturnValue('observable');
       const error = new CombinedGraphQLErrors({
         errors: [{ message: 'jwt malformed', extensions: { code: 'OTHER' } }],
-      } as any);
+      });
       errorHandler({ error, operation: mockOperation, forward: mockForward });
       expect(mockAttemptTokenRefresh).toHaveBeenCalled();
       expect(console.warn).toHaveBeenCalledWith(
@@ -189,7 +200,7 @@ describe('errorLink.ts', () => {
       mockOperation.operationName = 'RefreshToken';
       const error = new CombinedGraphQLErrors({
         errors: [{ message: 'expired', extensions: { code: 'UNAUTHENTICATED' } }],
-      } as any);
+      });
       errorHandler({ error, operation: mockOperation, forward: mockForward });
       expect(mockAttemptTokenRefresh).not.toHaveBeenCalled();
     });
@@ -199,7 +210,7 @@ describe('errorLink.ts', () => {
       mockAttemptTokenRefresh.mockReturnValue('observable');
       const error = new CombinedGraphQLErrors({
         errors: [{ message: 'expired', extensions: { code: 'UNAUTHENTICATED' } }],
-      } as any);
+      });
       errorHandler({ error, operation: mockOperation, forward: mockForward });
       // Should NOT have the "Auth error detected" warning
       const authWarning = jest.mocked(console.warn).mock.calls.find(

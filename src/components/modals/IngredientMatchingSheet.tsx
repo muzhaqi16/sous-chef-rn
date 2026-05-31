@@ -1,7 +1,10 @@
 import React from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Pressable } from '#components/atoms/themedComponents';
+import {
+  Pressable,
+  WhiteActivityIndicator,
+} from '#components/atoms/themedComponents';
 import { FlashList, type ListRenderItemInfo } from '@shopify/flash-list';
 import {
   BottomSheetView,
@@ -165,7 +168,7 @@ export const IngredientMatchingSheet: React.FC<
             ]}
           >
             {confirmLoading ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
+              <WhiteActivityIndicator size="small" />
             ) : (
               <Text size="base" weight="semibold" style={styles.confirmText}>
                 {t('ingredientMatching.confirmAndDeductCount', {

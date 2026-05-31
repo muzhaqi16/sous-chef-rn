@@ -112,14 +112,6 @@ export function useStartupInit(): void {
           type: 'js_to_hydrated',
         });
 
-        const contentAppearedDuration =
-          Date.now() - global.__APP_START_TIMESTAMP;
-        Telemetry.histogram(
-          'app_content_appeared_ms',
-          contentAppearedDuration,
-          { type: 'full' },
-        );
-
         global.__APP_START_TIMESTAMP = undefined; // Prevent re-reporting on HMR
       }
 

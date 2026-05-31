@@ -14,7 +14,7 @@ jest.mock('../../../../src/hooks/useStandardBottomSheet', () => ({
     modalProps: {},
     contentContainerStyle: {},
   }),
-  BottomSheetModal: ({ children }: any) => children,
+  BottomSheetModal: ({ children }: { children: React.ReactNode }) => children,
 }));
 jest.mock('../../../../src/components/organisms/storageLocation/StorageLocationForm', () => {
   const { forwardRef } = require('react');

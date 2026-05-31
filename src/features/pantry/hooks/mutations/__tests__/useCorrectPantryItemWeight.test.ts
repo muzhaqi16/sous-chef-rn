@@ -1,6 +1,7 @@
 import { renderHook, act, waitFor } from '@testing-library/react-native';
 import type { MockedResponse } from '#/test-utils/apolloMockProvider';
 import { alertService } from '#/services/alertService';
+import type { CorrectPantryItemWeightInput } from '#/graphql/generated/schemaTypes';
 import { CorrectPantryItemWeightDocument } from '#features/pantry/graphql/pantry.generated';
 import { createApolloTestWrapper } from '#/test-utils/apolloMockProvider';
 import { useCorrectPantryItemWeight } from '../useCorrectPantryItemWeight';
@@ -20,7 +21,9 @@ jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
 }));
 
-const successMock = (variables: { input: any }): MockedResponse => ({
+const successMock = (variables: {
+  input: CorrectPantryItemWeightInput;
+}): MockedResponse => ({
   request: { query: CorrectPantryItemWeightDocument, variables },
   result: {
     data: {
@@ -48,12 +51,16 @@ const successMock = (variables: { input: any }): MockedResponse => ({
   },
 });
 
-const errorMock = (variables: { input: any }): MockedResponse => ({
+const errorMock = (variables: {
+  input: CorrectPantryItemWeightInput;
+}): MockedResponse => ({
   request: { query: CorrectPantryItemWeightDocument, variables },
   error: new Error('Network error'),
 });
 
-const validationErrorMock = (variables: { input: any }): MockedResponse => ({
+const validationErrorMock = (variables: {
+  input: CorrectPantryItemWeightInput;
+}): MockedResponse => ({
   request: { query: CorrectPantryItemWeightDocument, variables },
   result: {
     data: {

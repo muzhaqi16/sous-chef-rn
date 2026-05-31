@@ -9,19 +9,24 @@ jest.mock('../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../src/apollo/links/refreshToken');
 
 jest.mock('../../../src/components/atoms/Label', () => ({
-  Label: ({ children }: any) => {
+  Label: ({ children }: { children: React.ReactNode }) => {
     const { Text: RNText } = require('react-native');
     return <RNText>{children}</RNText>;
   },
 }));
 
+interface AutocompleteItem {
+  id: string;
+  name: string;
+}
+
 describe('InlineAutocomplete', () => {
   const defaultProps = {
     value: '',
     onChangeText: jest.fn(),
-    items: [],
-    renderItem: (item: any) => <Text>{item.name}</Text>,
-    keyExtractor: (item: any) => item.id,
+    items: [] as AutocompleteItem[],
+    renderItem: (item: AutocompleteItem) => <Text>{item.name}</Text>,
+    keyExtractor: (item: AutocompleteItem) => item.id,
     onSelect: jest.fn(),
   };
 

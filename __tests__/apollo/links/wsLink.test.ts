@@ -33,23 +33,24 @@ beforeAll(() => {
 });
 
 jest.mock('#/utils/errorSerialization', () => ({
-  serializeError: jest.fn((e: any) => ({ message: e?.message || 'unknown' })),
+  serializeError: jest.fn((e: { message?: string } | null | undefined) => ({
+    message: e?.message || 'unknown',
+  })),
 }));
 
 jest.mock('#/utils/deviceId', () => ({
   getDeviceIdSync: jest.fn(() => 'test-device-id'),
 }));
 
-jest.mock('react-native-config', () => ({
-  WEB_SOCKET_URL: 'ws://test-ws-url',
-  API_KEY: 'test-api-key',
+jest.mock('#/config/env', () => ({
+  env: { WEB_SOCKET_URL: 'ws://test-ws-url', API_KEY: 'test-api-key' },
 }));
 
 import { logger } from '#/utils/environment';
 
 describe('wsLink.ts', () => {
   // We need to re-import for each test to get fresh module state
-  let wsLinkModule: any;
+  let wsLinkModule: typeof import('#/apollo/links/wsLink');
 
   beforeEach(() => {
     jest.useFakeTimers();

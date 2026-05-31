@@ -2,6 +2,8 @@ import {
   renderHookWithApollo,
   seedCache,
 } from '#/test-utils/apolloMockProvider';
+import { StorageState } from '#/graphql/generated/schemaTypes';
+import type { FormDataInput } from '../types';
 import { useUpdatePantryItem } from '../useUpdatePantryItem';
 
 jest.mock('#/services/errorService', () => ({
@@ -26,12 +28,14 @@ jest.mock('#/apollo/utils/createOptimisticResponse', () => ({
 }));
 
 jest.mock('../utils', () => ({
-  buildDirtyUpdateInput: jest.fn((data: any, dirtyFields: any) => {
-    const input: Record<string, any> = {};
-    if (dirtyFields.itemName) input.itemName = data.itemName;
-    if (dirtyFields.notes) input.storageNotes = data.notes;
-    return input;
-  }),
+  buildDirtyUpdateInput: jest.fn(
+    (data: FormDataInput, dirtyFields: Record<string, boolean>) => {
+      const input: Record<string, unknown> = {};
+      if (dirtyFields.itemName) input.itemName = data.itemName;
+      if (dirtyFields.notes) input.storageNotes = data.notes;
+      return input;
+    },
+  ),
   buildOptimisticUnit: jest.fn(() => ({
     __typename: 'Unit',
     id: 'new-unit-id',
@@ -48,7 +52,7 @@ jest.mock('#/services/alertService', () => ({
 // Hook reads currentItem from the cache via cache.readFragment, so tests
 // must seed the cache with a matching entity. The optimistic response is
 // then computed from the cached values plus the dirty-field updates.
-const buildPantryItem = (overrides: Record<string, any> = {}) => ({
+const buildPantryItem = (overrides: Record<string, unknown> = {}) => ({
   __typename: 'PantryItem',
   id: 'item-1',
   pantryId: 'pantry-1',
@@ -95,16 +99,17 @@ const buildPantryItem = (overrides: Record<string, any> = {}) => ({
 
 const seedItem = () => seedCache([buildPantryItem()]);
 
-const createFormData = (overrides: Record<string, any> = {}) =>
-  ({
-    itemName: 'Milk',
-    storageState: 'PANTRY',
-    location: '',
-    notes: 'Fresh milk',
-    category: '',
-    unit: 'kg',
-    ...overrides,
-  } as any);
+const createFormData = (
+  overrides: Partial<FormDataInput> = {},
+): FormDataInput => ({
+  itemName: 'Milk',
+  storageState: StorageState.Ambient,
+  location: '',
+  notes: 'Fresh milk',
+  category: '',
+  unit: 'kg',
+  ...overrides,
+});
 
 beforeEach(() => {
   jest.clearAllMocks();

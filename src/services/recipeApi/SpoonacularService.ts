@@ -1,4 +1,4 @@
-import Config from 'react-native-config';
+import { env } from '#/config/env';
 import { logger } from '#/utils/environment';
 import type {
   SearchRecipesByIngredientsParams,
@@ -30,7 +30,7 @@ class SpoonacularService {
   private dailyLimit: number = 150;
 
   constructor() {
-    this.apiKey = Config.SPOONACULAR_API_KEY || '';
+    this.apiKey = env.SPOONACULAR_API_KEY || '';
     if (!this.apiKey) {
       logger.warn('Spoonacular API key not configured');
     }
@@ -54,7 +54,7 @@ class SpoonacularService {
    */
   private async fetch<T>(
     endpoint: string,
-    params: Record<string, any> = {},
+    params: Record<string, unknown> = {},
     signal?: AbortSignal,
   ): Promise<T> {
     this.checkRateLimit();

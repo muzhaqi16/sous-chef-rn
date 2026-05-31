@@ -1,7 +1,14 @@
 'use no memo';
 import React from 'react';
+import type { StyleProp, ViewStyle } from 'react-native';
 import { render, screen, userEvent } from '@testing-library/react-native';
 import { AddDetailsSheet } from '../AddDetailsSheet';
+
+type PagerViewMockProps = {
+  children?: React.ReactNode;
+  style?: StyleProp<ViewStyle>;
+};
+type PagerViewMockRef = React.Ref<{ setPage: (page: number) => void }>;
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
   useStandardBottomSheet: jest.fn(() => ({
@@ -10,7 +17,7 @@ jest.mock('#hooks/useStandardBottomSheet', () => ({
     contentContainerStyle: {},
     insets: { top: 0, bottom: 0, left: 0, right: 0 },
   })),
-  BottomSheetModal: ({ children }: any) => children,
+  BottomSheetModal: ({ children }: { children?: React.ReactNode }) => children,
 }));
 
 jest.mock('#/utils/iconUtils', () => ({
@@ -22,12 +29,14 @@ jest.mock('react-native-pager-view', () => {
   const { View } = require('react-native');
   return {
     __esModule: true,
-    default: R.forwardRef(({ children, style }: any, ref: any) => {
-      R.useImperativeHandle(ref, () => ({
-        setPage: jest.fn(),
-      }));
-      return <View style={style}>{children}</View>;
-    }),
+    default: R.forwardRef(
+      ({ children, style }: PagerViewMockProps, ref: PagerViewMockRef) => {
+        R.useImperativeHandle(ref, () => ({
+          setPage: jest.fn(),
+        }));
+        return <View style={style}>{children}</View>;
+      },
+    ),
   };
 });
 

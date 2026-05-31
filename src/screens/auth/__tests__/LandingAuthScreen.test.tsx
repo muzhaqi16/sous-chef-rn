@@ -15,16 +15,28 @@ jest.mock('#hooks/navigation/useAppNavigation', () => ({
 jest.mock('#components/templates/AuthWrapper', () => {
   const { View } = require('react-native');
   return {
-    AuthWrapper: ({ children, testID }: any) => (
-      <View testID={testID}>{children}</View>
-    ),
+    AuthWrapper: ({
+      children,
+      testID,
+    }: {
+      children?: React.ReactNode;
+      testID?: string;
+    }) => <View testID={testID}>{children}</View>,
   };
 });
 
 jest.mock('#components/base/Button', () => {
   const { Pressable, Text } = require('react-native');
   return {
-    Button: ({ title, onPress, testID }: any) => (
+    Button: ({
+      title,
+      onPress,
+      testID,
+    }: {
+      title?: string;
+      onPress: () => void;
+      testID?: string;
+    }) => (
       <Pressable onPress={onPress} testID={testID} accessibilityRole="button">
         <Text>{title}</Text>
       </Pressable>

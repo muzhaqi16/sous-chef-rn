@@ -24,7 +24,7 @@ export const NotificationHeader: React.FC<NotificationHeaderProps> = ({
         style={({ pressed }) => [styles.button, pressed && styles.pressed]}
         onPress={onMarkAllRead}
       >
-        <Icon name="checkmark-done" size={20} color={styles.buttonText.color} />
+        <Icon name="checkmark-done" size={20} tone="primary" />
         <Text size="sm" weight="medium" style={styles.buttonText}>
           Mark all read
         </Text>
@@ -34,7 +34,7 @@ export const NotificationHeader: React.FC<NotificationHeaderProps> = ({
         style={({ pressed }) => [styles.button, pressed && styles.pressed]}
         onPress={onClearAll}
       >
-        <Icon name="list-outline" size={20} color={styles.buttonText.color} />
+        <Icon name="list-outline" size={20} tone="primary" />
         <Text size="sm" weight="medium" style={styles.buttonText}>
           Clear all
         </Text>

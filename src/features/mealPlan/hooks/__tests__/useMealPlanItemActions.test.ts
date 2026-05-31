@@ -11,6 +11,11 @@ import {
   UpdateMealPlanItemDocument,
   DeleteMealPlanItemDocument,
 } from '#features/mealPlan/graphql/mealPlan.generated';
+import {
+  MealType,
+  type CreateMealPlanItemInput,
+  type UpdateMealPlanItemInput,
+} from '#/graphql/generated/schemaTypes';
 import { useMealPlanItemActions } from '../useMealPlanItemActions';
 
 const seedToggleItem = (overrides: Record<string, unknown> = {}) =>
@@ -43,8 +48,10 @@ const mockToastSuccess = jest.fn();
 const mockToastError = jest.fn();
 jest.mock('#/services/toastService', () => ({
   toastService: {
-    success: (...args: any[]) => mockToastSuccess(...args),
-    error: (...args: any[]) => mockToastError(...args),
+    success: (...args: [message: string, opts?: Record<string, unknown>]) =>
+      mockToastSuccess(...args),
+    error: (...args: [message: string, opts?: Record<string, unknown>]) =>
+      mockToastError(...args),
     info: jest.fn(),
     warning: jest.fn(),
   },
@@ -88,14 +95,14 @@ describe('useMealPlanItemActions', () => {
         { operationMocks: [create.mock] },
       );
 
-      let created: any;
+      let created!: Awaited<ReturnType<typeof result.current.createItem>>;
       await act(async () => {
         created = await result.current.createItem({
           mealPlanId: 'plan-1',
           recipeId: 'r-1',
-          mealType: 'DINNER',
+          mealType: MealType.Dinner,
           date: '2025-06-15',
-        } as any);
+        } satisfies CreateMealPlanItemInput);
       });
 
       expect(created).toEqual(payload);
@@ -123,14 +130,14 @@ describe('useMealPlanItemActions', () => {
         { operationMocks: [create.mock], cache },
       );
 
-      let created: any;
+      let created!: Awaited<ReturnType<typeof result.current.createItem>>;
       await act(async () => {
         created = await result.current.createItem({
           mealPlanId: 'plan-1',
           recipeId: 'r-1',
-          mealType: 'DINNER',
+          mealType: MealType.Dinner,
           date: '2025-06-15',
-        } as any);
+        } satisfies CreateMealPlanItemInput);
       });
 
       expect(created).toBeNull();
@@ -153,11 +160,11 @@ describe('useMealPlanItemActions', () => {
         { operationMocks: [update.mock] },
       );
 
-      let updated: any;
+      let updated!: Awaited<ReturnType<typeof result.current.updateItem>>;
       await act(async () => {
         updated = await result.current.updateItem('mpi-1', {
           servings: 3,
-        } as any);
+        } satisfies Omit<UpdateMealPlanItemInput, 'id'>);
       });
 
       expect(updated).toEqual(payload);

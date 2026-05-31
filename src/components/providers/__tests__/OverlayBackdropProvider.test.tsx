@@ -9,7 +9,10 @@ import {
 } from '../OverlayBackdropProvider';
 
 jest.mock('react-native-worklets', () => ({
-  scheduleOnRN: jest.fn((fn: any, ...args: any[]) => fn(...args)),
+  scheduleOnRN: jest.fn(
+    <Args extends unknown[], R>(fn: (...args: Args) => R, ...args: Args) =>
+      fn(...args),
+  ),
 }));
 
 jest.mock('#constants/animations', () => ({

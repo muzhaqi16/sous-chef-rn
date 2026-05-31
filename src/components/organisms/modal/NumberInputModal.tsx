@@ -5,6 +5,7 @@ import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { commonStyles } from '#/styles/commonStyles';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+import { errorMessageOr } from '#/services/errorService';
 import { OnPrimaryActivityIndicator } from '#components/atoms/themedComponents';
 
 export interface NumberInputModalProps {
@@ -244,7 +245,7 @@ export const NumberInputModal: React.FC<NumberInputModalProps> = ({
       },
       setLoading,
       (err: unknown) => {
-        setError((err as any).message || t('numberInputModal.genericError'));
+        setError(errorMessageOr(err, t('numberInputModal.genericError')));
       },
     );
   };

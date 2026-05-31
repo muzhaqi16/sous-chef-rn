@@ -21,9 +21,8 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   createRemoveFromParentConnectionUpdater: jest.fn(() => jest.fn()),
 }));
 
-/** Cast entity to any so we can access mocked fields */
 function getEntity(fields: { itemName: string; [key: string]: unknown }) {
-  return createOptimisticShoppingListItem(fields).entity as any;
+  return createOptimisticShoppingListItem(fields).entity;
 }
 
 describe('createOptimisticShoppingListItem', () => {

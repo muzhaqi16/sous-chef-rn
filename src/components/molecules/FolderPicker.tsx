@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import {
@@ -14,6 +14,7 @@ import { FlashList } from '@shopify/flash-list';
 import { StyleSheet } from 'react-native-unistyles';
 import {
   ThemedActivityIndicator,
+  WhiteActivityIndicator,
   ThemedBottomSheetTextInput,
 } from '#components/atoms/themedComponents';
 import { Icon } from '#utils/iconUtils';
@@ -494,7 +495,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
                   disabled={folderActionLoading}
                 >
                   {folderActionLoading ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
+                    <WhiteActivityIndicator size="small" />
                   ) : (
                     <Text
                       size="base"
@@ -546,7 +547,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
                       }
                     >
                       {folderActionLoading ? (
-                        <ActivityIndicator size="small" color="#FFFFFF" />
+                        <WhiteActivityIndicator size="small" />
                       ) : (
                         <Text
                           size="base"

@@ -39,7 +39,7 @@ const ShoppingListItemPurchaseFragment = gql`
 
 interface UseRemoveShoppingItemOptions {
   listId: string | null | undefined;
-  refetch: () => Promise<any>;
+  refetch: () => Promise<unknown>;
 }
 
 /**

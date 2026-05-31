@@ -1,3 +1,18 @@
+# Narrow Home fragment for the form's "default pantry" lookup. Read off the
+# cache via `apolloClient.cache.readFragment` (the cache is populated by
+# `GetHome`/`HomeDetailScreen_home`) so the masked `home` ref resolves to the
+# pantry ids the form needs.
+fragment PantryItemForm_home on Home {
+  pantriesConnection(first: 20) {
+    edges {
+      node {
+        id
+        isDefault
+      }
+    }
+  }
+}
+
 # Component fragment for the edit-mode PantryItemForm. The form reads these
 # fields off the cache via `apolloClient.cache.readFragment` to populate
 # initial values and to detect "dirty" changes. Mutation calls pass only the

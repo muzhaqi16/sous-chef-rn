@@ -1,0 +1,112 @@
+import React from 'react';
+import { AutocompleteField } from './AutocompleteField';
+
+export interface GenericAutocompleteFieldProps<T> {
+  variant: 'inline' | 'modal';
+  label?: string;
+  value: string;
+  /**
+   * Called on every keystroke. Each field wires this to its hook's
+   * search-term handler and clears any previous selection.
+   */
+  onChangeText: (text: string) => void;
+  placeholder?: string;
+  required?: boolean;
+  error?: string;
+  testID?: string;
+  items: T[];
+  loading?: boolean;
+  renderItem: (item: T) => React.ReactElement;
+  keyExtractor: (item: T) => string;
+  onSelect: (item: T) => void;
+  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
+  // Inline-variant tuning.
+  inlineMinSearchLength?: number;
+  maxResults?: number;
+  // Modal-variant copy + tuning.
+  modalTitle: string;
+  modalSearchPlaceholder: string;
+  modalEmptyText: string;
+  modalEmptySubtext?: string;
+  modalMinSearchLength?: number;
+  onSearchChange?: (text: string) => void;
+}
+
+/**
+ * Wraps `AutocompleteField` with the inline/modal variant branch that every
+ * `*AutocompleteField` wrapper used to duplicate. A wrapper now only supplies
+ * its hook's items + the field-specific handlers and copy; this component picks
+ * the correct discriminated-union shape for `AutocompleteField`.
+ */
+export function GenericAutocompleteField<T>({
+  variant,
+  label,
+  value,
+  onChangeText,
+  placeholder,
+  required,
+  error,
+  testID,
+  items,
+  loading,
+  renderItem,
+  keyExtractor,
+  onSelect,
+  autoCapitalize,
+  inlineMinSearchLength,
+  maxResults,
+  modalTitle,
+  modalSearchPlaceholder,
+  modalEmptyText,
+  modalEmptySubtext,
+  modalMinSearchLength,
+  onSearchChange,
+}: GenericAutocompleteFieldProps<T>) {
+  if (variant === 'inline') {
+    return (
+      <AutocompleteField<T>
+        variant="inline"
+        label={label}
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        required={required}
+        error={error}
+        testID={testID}
+        items={items}
+        loading={loading}
+        minSearchLength={inlineMinSearchLength}
+        maxResults={maxResults}
+        renderItem={renderItem}
+        keyExtractor={keyExtractor}
+        onSelect={onSelect}
+        autoCapitalize={autoCapitalize}
+      />
+    );
+  }
+
+  return (
+    <AutocompleteField<T>
+      variant="modal"
+      label={label}
+      value={value}
+      onChangeText={onChangeText}
+      placeholder={placeholder}
+      required={required}
+      error={error}
+      testID={testID}
+      title={modalTitle}
+      searchPlaceholder={modalSearchPlaceholder}
+      items={items}
+      loading={loading}
+      renderItem={renderItem}
+      keyExtractor={keyExtractor}
+      onSelect={onSelect}
+      emptyText={modalEmptyText}
+      emptySubtext={modalEmptySubtext}
+      onSearchChange={onSearchChange}
+      minSearchLength={modalMinSearchLength}
+      autoCapitalize={autoCapitalize}
+    />
+  );
+}

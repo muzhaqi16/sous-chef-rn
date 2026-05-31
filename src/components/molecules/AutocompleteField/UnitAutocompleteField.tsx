@@ -3,7 +3,7 @@ import {
   useUnitAutocomplete,
   type UnitItem,
 } from '#hooks/autocomplete/useUnitAutocomplete';
-import { AutocompleteField } from './AutocompleteField';
+import { GenericAutocompleteField } from './GenericAutocompleteField';
 import { AutocompleteRow } from './AutocompleteRow';
 
 interface UnitAutocompleteFieldProps {
@@ -36,74 +36,47 @@ export const UnitAutocompleteField: React.FC<UnitAutocompleteFieldProps> = ({
 }) => {
   const unit = useUnitAutocomplete();
 
-  const handleTextChange = (text: string) => {
-    onChangeText(text);
-    unit.handleSearchTermChange(text);
-    // Any manual typing invalidates the previous autocomplete selection
-    onUnitSelected?.(null, null, null);
-  };
-
-  const handleSelect = (item: UnitItem) => {
-    onChangeText(item.symbol);
-    onUnitSelected?.(item.id, item.name, item.type, item.symbol);
-    unit.setSearchTerm('');
-  };
-
-  const renderItem = (item: UnitItem) => (
-    <AutocompleteRow
-      symbolText={item.symbol}
-      title={item.name}
-      trailingText={item.abbreviation ? `(${item.abbreviation})` : undefined}
-    />
-  );
-
-  const keyExtractor = (item: UnitItem) => item.id;
-
-  if (variant === 'inline') {
-    return (
-      <AutocompleteField<UnitItem>
-        variant="inline"
-        label={label}
-        value={value}
-        onChangeText={handleTextChange}
-        placeholder={placeholder}
-        required={required}
-        error={error}
-        testID={testID}
-        items={unit.displayItems}
-        loading={unit.isLoading}
-        minSearchLength={1}
-        maxResults={6}
-        renderItem={renderItem}
-        keyExtractor={keyExtractor}
-        onSelect={handleSelect}
-        autoCapitalize="none"
-      />
-    );
-  }
-
   return (
-    <AutocompleteField<UnitItem>
-      variant="modal"
+    <GenericAutocompleteField<UnitItem>
+      variant={variant}
       label={label}
       value={value}
-      onChangeText={handleTextChange}
       placeholder={placeholder}
       required={required}
       error={error}
       testID={testID}
-      title="Select a unit"
-      searchPlaceholder="Type to search units..."
+      onChangeText={text => {
+        onChangeText(text);
+        unit.handleSearchTermChange(text);
+        // Any manual typing invalidates the previous autocomplete selection
+        onUnitSelected?.(null, null, null);
+      }}
       items={unit.displayItems}
       loading={unit.isLoading}
-      renderItem={renderItem}
-      keyExtractor={keyExtractor}
-      onSelect={handleSelect}
-      emptyText="No units found"
-      emptySubtext="Try a different search term"
-      onSearchChange={unit.handleSearchTermChange}
-      minSearchLength={1}
+      renderItem={item => (
+        <AutocompleteRow
+          symbolText={item.symbol}
+          title={item.name}
+          trailingText={
+            item.abbreviation ? `(${item.abbreviation})` : undefined
+          }
+        />
+      )}
+      keyExtractor={item => item.id}
+      onSelect={item => {
+        onChangeText(item.symbol);
+        onUnitSelected?.(item.id, item.name, item.type, item.symbol);
+        unit.setSearchTerm('');
+      }}
       autoCapitalize="none"
+      inlineMinSearchLength={1}
+      maxResults={6}
+      modalTitle="Select a unit"
+      modalSearchPlaceholder="Type to search units..."
+      modalEmptyText="No units found"
+      modalEmptySubtext="Try a different search term"
+      modalMinSearchLength={1}
+      onSearchChange={unit.handleSearchTermChange}
     />
   );
 };

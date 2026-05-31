@@ -1,5 +1,9 @@
 import React from 'react';
-import { Calendar, type DateData } from 'react-native-calendars';
+import {
+  Calendar,
+  type DateData,
+  type CalendarProps,
+} from 'react-native-calendars';
 import { withUnistyles } from 'react-native-unistyles';
 import { format } from 'date-fns';
 
@@ -53,7 +57,7 @@ export const MonthCalendar: React.FC<MonthCalendarProps> = ({
       onDayPress={handleDayPress}
       uniProps={t => ({
         markedDates: (() => {
-          const marks: Record<string, any> = {};
+          const marks: NonNullable<CalendarProps['markedDates']> = {};
           if (daysWithMeals) {
             daysWithMeals.forEach(dateStr => {
               marks[dateStr] = { marked: true, dotColor: t.colors.primary };

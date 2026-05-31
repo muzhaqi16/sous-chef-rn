@@ -8,7 +8,17 @@ jest.mock('#hooks/useSharedBottomSheetConfigs', () => ({
 }));
 
 jest.mock('#components/molecules/FormInput', () => ({
-  FormInput: ({ label, value, onChangeText, placeholder }: any) => {
+  FormInput: ({
+    label,
+    value,
+    onChangeText,
+    placeholder,
+  }: {
+    label: string;
+    value?: string;
+    onChangeText?: (text: string) => void;
+    placeholder?: string;
+  }) => {
     const RN = require('react-native');
     const R = require('react');
     return R.createElement(
@@ -26,7 +36,17 @@ jest.mock('#components/molecules/FormInput', () => ({
 }));
 
 jest.mock('#components/atoms/BottomSheetHeader', () => ({
-  BottomSheetHeader: ({ title, onCancel, onConfirm, confirmLabel }: any) => {
+  BottomSheetHeader: ({
+    title,
+    onCancel,
+    onConfirm,
+    confirmLabel,
+  }: {
+    title: string;
+    onCancel: () => void;
+    onConfirm: () => void;
+    confirmLabel?: string;
+  }) => {
     const RN = require('react-native');
     const R = require('react');
     return R.createElement(
@@ -50,9 +70,9 @@ jest.mock('#components/atoms/BottomSheetHeader', () => ({
 jest.mock('@react-native-picker/picker', () => {
   const RN = require('react-native');
   const R = require('react');
-  const Picker = ({ children }: any) =>
+  const Picker = ({ children }: { children: React.ReactNode }) =>
     R.createElement(RN.View, { testID: 'picker' }, children);
-  Picker.Item = ({ label, value }: any) =>
+  Picker.Item = ({ label, value }: { label: string; value: string }) =>
     R.createElement(RN.Text, { key: value }, label);
   return { Picker };
 });

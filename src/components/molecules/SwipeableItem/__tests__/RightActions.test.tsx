@@ -1,7 +1,9 @@
 'use no memo';
 import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
+import type { SharedValue } from 'react-native-reanimated';
 import { RightActions } from '../RightActions';
+import type { ActionButtonProps } from '../types';
 
 jest.mock('#/services/haptic/HapticService', () => ({
   HapticService: {
@@ -16,7 +18,7 @@ jest.mock('../AnimatedActionButton', () => {
   const RN = require('react-native');
   const R = require('react');
   return {
-    AnimatedActionButton: ({ onPress, icon, testID }: any) =>
+    AnimatedActionButton: ({ onPress, icon, testID }: ActionButtonProps) =>
       R.createElement(
         RN.Pressable,
         { onPress, testID: testID || `action-btn-${icon}` },
@@ -26,21 +28,21 @@ jest.mock('../AnimatedActionButton', () => {
 });
 
 describe('RightActions', () => {
-  const mockProgress = {
+  const mockProgress: SharedValue<number> = {
     value: 0.5,
     addListener: jest.fn(),
     removeListener: jest.fn(),
     modify: jest.fn(),
     get: jest.fn(),
     set: jest.fn(),
-  };
+  } as Partial<SharedValue<number>> as SharedValue<number>;
 
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   it('returns null when no edit or delete callbacks are provided', () => {
-    const { toJSON } = render(<RightActions progress={mockProgress as any} />);
+    const { toJSON } = render(<RightActions progress={mockProgress} />);
     expect(toJSON()).toBeNull();
   });
 
@@ -49,7 +51,7 @@ describe('RightActions', () => {
       <RightActions
         onEdit={jest.fn()}
         onActionPress={jest.fn()}
-        progress={mockProgress as any}
+        progress={mockProgress}
       />,
     );
     expect(screen.getByText('create-outline')).toBeTruthy();
@@ -60,7 +62,7 @@ describe('RightActions', () => {
       <RightActions
         onDelete={jest.fn()}
         onActionPress={jest.fn()}
-        progress={mockProgress as any}
+        progress={mockProgress}
       />,
     );
     expect(screen.getByText('trash-outline')).toBeTruthy();
@@ -72,7 +74,7 @@ describe('RightActions', () => {
         onEdit={jest.fn()}
         onDelete={jest.fn()}
         onActionPress={jest.fn()}
-        progress={mockProgress as any}
+        progress={mockProgress}
       />,
     );
     expect(screen.getByText('create-outline')).toBeTruthy();
@@ -86,7 +88,7 @@ describe('RightActions', () => {
       <RightActions
         onEdit={jest.fn()}
         onActionPress={onActionPress}
-        progress={mockProgress as any}
+        progress={mockProgress}
       />,
     );
     await user.press(screen.getByText('create-outline'));
@@ -100,7 +102,7 @@ describe('RightActions', () => {
       <RightActions
         onDelete={jest.fn()}
         onActionPress={onActionPress}
-        progress={mockProgress as any}
+        progress={mockProgress}
       />,
     );
     await user.press(screen.getByText('trash-outline'));
@@ -114,7 +116,7 @@ describe('RightActions', () => {
       <RightActions
         onEdit={jest.fn()}
         onActionPress={jest.fn()}
-        progress={mockProgress as any}
+        progress={mockProgress}
       />,
     );
     await user.press(screen.getByText('create-outline'));
@@ -128,7 +130,7 @@ describe('RightActions', () => {
       <RightActions
         onDelete={jest.fn()}
         onActionPress={jest.fn()}
-        progress={mockProgress as any}
+        progress={mockProgress}
       />,
     );
     await user.press(screen.getByText('trash-outline'));
@@ -142,7 +144,7 @@ describe('RightActions', () => {
         onDelete={jest.fn()}
         onEdit={jest.fn()}
         onActionPress={jest.fn()}
-        progress={mockProgress as any}
+        progress={mockProgress}
       />,
     );
     expect(screen.getByText('trash-outline')).toBeTruthy();
@@ -155,7 +157,7 @@ describe('RightActions', () => {
         swipeMode="shopping"
         onEdit={jest.fn()}
         onActionPress={jest.fn()}
-        progress={mockProgress as any}
+        progress={mockProgress}
       />,
     );
     expect(toJSON()).toBeNull();
@@ -167,7 +169,7 @@ describe('RightActions', () => {
         onEdit={jest.fn()}
         onActionPress={jest.fn()}
         testIDPrefix="item-1"
-        progress={mockProgress as any}
+        progress={mockProgress}
       />,
     );
     expect(screen.getByTestId('item-1-edit')).toBeTruthy();
@@ -179,7 +181,7 @@ describe('RightActions', () => {
         onDelete={jest.fn()}
         onActionPress={jest.fn()}
         testIDPrefix="item-1"
-        progress={mockProgress as any}
+        progress={mockProgress}
       />,
     );
     expect(screen.getByTestId('item-1-delete')).toBeTruthy();

@@ -5,6 +5,8 @@ import {
   seedCache,
 } from '#/test-utils/apolloMockProvider';
 import { MyRecipesDocument } from '#features/recipes/graphql/recipe.generated';
+import type { RecipeInformation } from '#/services/recipeApi/types';
+import type { MaterializedRecipe } from '#features/recipes/hooks/useRecipeData';
 import { useRecipeFavoriteState } from '../useRecipeFavoriteState';
 
 function seedRecipeCache(
@@ -54,7 +56,11 @@ function seedRecipeCache(
 
 jest.mock('#/utils/compilerSafeWrappers', () => ({
   executeWithLoadingState: jest.fn(
-    async (fn: any, setLoading: any, onError: any) => {
+    async (
+      fn: () => Promise<void>,
+      setLoading: (value: boolean) => void,
+      onError?: (error: unknown) => void,
+    ) => {
       setLoading(true);
       try {
         await fn();
@@ -134,7 +140,7 @@ function myRecipesMock(
 const minimalExternalRecipe = {
   id: 12345,
   title: 'External',
-} as any;
+} as Partial<RecipeInformation> as RecipeInformation;
 
 const noopSave = jest.fn();
 
@@ -150,7 +156,7 @@ describe('useRecipeFavoriteState', () => {
           backendRecipe: {
             id: 'r1',
             savedDetails: { folder: 'F' },
-          } as any,
+          } as Partial<MaterializedRecipe> as MaterializedRecipe,
           saveRecipeToFavorites: noopSave,
           savingToFavorites: false,
         }),
@@ -166,7 +172,10 @@ describe('useRecipeFavoriteState', () => {
           externalId: undefined,
           externalRecipe: null,
           isBackendRecipe: true,
-          backendRecipe: { id: 'r1', savedDetails: null } as any,
+          backendRecipe: {
+            id: 'r1',
+            savedDetails: null,
+          } as Partial<MaterializedRecipe> as MaterializedRecipe,
           saveRecipeToFavorites: noopSave,
           savingToFavorites: false,
         }),

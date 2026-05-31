@@ -5,6 +5,8 @@ import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { GetShoppingListsLiteDocument } from '../GenerateShoppingListSheet.generated';
 import { GenerateShoppingListSheet } from '../GenerateShoppingListSheet';
 
+type SheetProps = React.ComponentProps<typeof GenerateShoppingListSheet>;
+
 function listsMock() {
   return recordMock(GetShoppingListsLiteDocument, {
     data: {
@@ -42,7 +44,7 @@ function listsMock() {
   }).mock;
 }
 
-function renderSheet(props: any = {}) {
+function renderSheet(props: Partial<SheetProps> = {}) {
   return renderWithApollo(
     <GenerateShoppingListSheet {...defaultProps} {...props} />,
     { operationMocks: [listsMock()] },
@@ -55,7 +57,7 @@ jest.mock('#hooks/useStandardBottomSheet', () => ({
     modalProps: {},
     contentContainerStyle: {},
   })),
-  BottomSheetModal: ({ children }: any) => children,
+  BottomSheetModal: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 jest.mock('#/utils/iconUtils', () => ({
@@ -63,7 +65,13 @@ jest.mock('#/utils/iconUtils', () => ({
 }));
 
 jest.mock('#components/base/BaseSwitch', () => ({
-  BaseSwitch: ({ value, onValueChange }: any) => {
+  BaseSwitch: ({
+    value,
+    onValueChange,
+  }: {
+    value: boolean;
+    onValueChange: (value: boolean) => void;
+  }) => {
     const { Pressable, Text } = require('react-native');
     return (
       <Pressable testID="base-switch" onPress={() => onValueChange(!value)}>
@@ -80,7 +88,13 @@ jest.mock('#components/atoms/BottomSheetHeader', () => ({
     onConfirm,
     confirmLabel,
     confirmDisabled,
-  }: any) => {
+  }: {
+    title: string;
+    onCancel: () => void;
+    onConfirm: () => void;
+    confirmLabel?: string;
+    confirmDisabled?: boolean;
+  }) => {
     const { View, Text, Pressable } = require('react-native');
     return (
       <View testID="bottom-sheet-header">
@@ -101,14 +115,29 @@ jest.mock('#components/atoms/BottomSheetHeader', () => ({
 }));
 
 jest.mock('#components/atoms/BottomSheetFormScrollView', () => ({
-  BottomSheetFormScrollView: ({ children, ...props }: any) => {
+  BottomSheetFormScrollView: ({
+    children,
+    ...props
+  }: {
+    children: React.ReactNode;
+  }) => {
     const { View } = require('react-native');
     return <View {...props}>{children}</View>;
   },
 }));
 
 jest.mock('#components/molecules/FormInput', () => ({
-  FormInput: ({ label, value, onChangeText, placeholder }: any) => {
+  FormInput: ({
+    label,
+    value,
+    onChangeText,
+    placeholder,
+  }: {
+    label: string;
+    value?: string;
+    onChangeText?: (text: string) => void;
+    placeholder?: string;
+  }) => {
     const { TextInput, Text, View } = require('react-native');
     return (
       <View>

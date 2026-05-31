@@ -124,7 +124,7 @@ describe('LogoutCleanup', () => {
     it('clears Apollo cache by default', async () => {
       await LogoutCleanup.performLogoutCleanup();
       expect(client.clearStore).toHaveBeenCalled();
-      expect((client.cache as any).gc).toHaveBeenCalledWith({
+      expect(client.cache.gc).toHaveBeenCalledWith({
         resetResultCache: true,
       });
       expect(apolloCachePersistence.clear).toHaveBeenCalled();

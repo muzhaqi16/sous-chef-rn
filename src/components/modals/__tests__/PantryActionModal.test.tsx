@@ -1,6 +1,11 @@
 import React from 'react';
+import type { ViewProps } from 'react-native';
 import { screen, userEvent } from '@testing-library/react-native';
-import { PantryActionModal } from '../PantryActionModal';
+import {
+  PantryActionModal,
+  type PantryActionSharedState,
+} from '../PantryActionModal';
+import type { PantryActionModal_PantryItemFragment } from '../PantryActionModal.generated';
 import { PantryOperation } from '#features/pantry/hooks/useOperationUnits';
 import { renderWithApollo, seedCache } from '#/test-utils/apolloMockProvider';
 
@@ -19,13 +24,13 @@ jest.mock('#hooks/useStandardBottomSheet', () => ({
       },
     },
   })),
-  BottomSheetModal: ({ children }: any) => children,
+  BottomSheetModal: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 jest.mock('#components/atoms/BottomSheetKeyboardAwareScrollView', () => {
   const RN = require('react-native');
   return {
-    BottomSheetKeyboardAwareScrollView: (props: any) =>
+    BottomSheetKeyboardAwareScrollView: (props: ViewProps) =>
       require('react').createElement(RN.View, props),
   };
 });
@@ -34,7 +39,17 @@ jest.mock('#components/atoms/BottomSheetHeader', () => {
   const RN = require('react-native');
   const R = require('react');
   return {
-    BottomSheetHeader: ({ title, onCancel, onConfirm, confirmLabel }: any) =>
+    BottomSheetHeader: ({
+      title,
+      onCancel,
+      onConfirm,
+      confirmLabel,
+    }: {
+      title: string;
+      onCancel: () => void;
+      onConfirm: () => void;
+      confirmLabel?: string;
+    }) =>
       R.createElement(
         RN.View,
         { testID: 'bottom-sheet-header' },
@@ -56,7 +71,13 @@ jest.mock('#components/atoms/BottomSheetHeader', () => {
 jest.mock('#components/atoms/FormattedItemSubtitle', () => {
   const RN = require('react-native');
   return {
-    FormattedItemSubtitle: ({ quantity, unitSymbol }: any) =>
+    FormattedItemSubtitle: ({
+      quantity,
+      unitSymbol,
+    }: {
+      quantity?: number | null;
+      unitSymbol?: string | null;
+    }) =>
       require('react').createElement(
         RN.Text,
         null,
@@ -142,7 +163,10 @@ function makeCache(overrides: Record<string, unknown> = {}) {
 }
 
 describe('PantryActionModal', () => {
-  const mockRenderActionFields = jest.fn<any, [any]>(() => {
+  const mockRenderActionFields = jest.fn<
+    React.ReactNode,
+    [PantryActionSharedState, PantryActionModal_PantryItemFragment]
+  >(() => {
     const RN = require('react-native');
     return require('react').createElement(
       RN.Text,

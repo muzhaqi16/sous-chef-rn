@@ -1,4 +1,5 @@
 import React, { createContext, useContext, type ReactNode } from 'react';
+import type { SwipeableRef } from '#components/molecules/SwipeableItem/types';
 
 /**
  * Actions available for item list items
@@ -10,7 +11,7 @@ export interface ItemListActions {
   onItemConsume?: (id: string) => void;
   onItemWaste?: (id: string) => void;
   onItemRestock?: (id: string) => void;
-  onSwipeableWillOpen?: (ref: any) => void;
+  onSwipeableWillOpen?: (ref: SwipeableRef) => void;
   testIDPrefix?: string;
 }
 

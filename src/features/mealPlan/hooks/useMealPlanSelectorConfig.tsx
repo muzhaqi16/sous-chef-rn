@@ -34,7 +34,7 @@ function formatPlanType(planType: string): string {
 
 export function useMealPlanSelectorConfig(
   options: UseMealPlanSelectorConfigOptions,
-): SelectorConfig<any> {
+): SelectorConfig<MealPlanDisplayFragment> {
   const { t } = useTranslation();
   const {
     mealPlans,

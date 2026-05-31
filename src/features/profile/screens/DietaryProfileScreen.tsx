@@ -28,7 +28,7 @@ import { CuisineSelector } from '#/components/organisms/CuisineSelector';
 import { DietaryRestrictionSelector } from '#/components/organisms/DietaryRestrictionSelector';
 import { CookingPreferencesSheet } from '#/components/modals/CookingPreferencesSheet/CookingPreferencesSheet';
 import { MacroTargetsSheet } from '#/components/modals/MacroTargetsSheet/MacroTargetsSheet';
-import { errorService } from '#/services/errorService';
+import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { Text } from '#components/atoms/Text';
 
 export const DietaryProfileScreen: React.FC = () => {
@@ -77,22 +77,18 @@ export const DietaryProfileScreen: React.FC = () => {
     }[],
     severity: RestrictionSeverity,
   ) => {
-    try {
+    const allSucceeded = await executeMutation(async () => {
       // Add all restrictions in sequence
       const results = await Promise.all(
         restrictions.map(restriction =>
           addDietaryRestriction(restriction, severity),
         ),
       );
-
       // Check if all succeeded
       return results.every(result => result === true);
-    } catch (error) {
-      errorService.reportError(error, {
-        operation: 'DietaryProfile.addRestrictions',
-      });
-      return false;
-    }
+    }, 'DietaryProfile.addRestrictions');
+    // executeMutation returns false on throw — matches the "not all succeeded".
+    return allSucceeded === true;
   };
 
   // Cooking preferences state

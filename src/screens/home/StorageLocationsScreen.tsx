@@ -7,7 +7,13 @@ import { useTranslation } from 'react-i18next';
 import { DetailTemplate } from '#components/templates/DetailTemplate';
 import { useStorageLocationManagement } from '#hooks/storageLocation/useStorageLocationManagement';
 import { StorageLocationCard } from '#components/organisms/storageLocation/StorageLocationCard';
-import { StorageLocationSheet } from '#components/modals/StorageLocationSheet/StorageLocationSheet';
+import {
+  StorageLocationSheet,
+  type StorageLocationInitialData,
+} from '#components/modals/StorageLocationSheet/StorageLocationSheet';
+import type { StorageLocationFormValues } from '#components/organisms/storageLocation/StorageLocationForm';
+import { StorageType } from '#/graphql/generated/schemaTypes';
+import type { GetStorageLocationsQuery } from '#operations/storageLocation/storageLocation.generated';
 import { useSelectedPantryId } from '#store/useAppStore';
 import { commonStyles } from '#/styles/commonStyles';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
@@ -22,6 +28,24 @@ type RouteParams = {
   homeId: string;
 };
 
+/** Flat storage-location node from `GetStorageLocations` — the richest shape. */
+type FlatStorageLocationNode =
+  GetStorageLocationsQuery['storageLocations']['edges'][number]['node'];
+
+/**
+ * Superset node the render/edit/delete handlers accept. The flat
+ * `GetStorageLocations` node and the slim `GetStorageLocationTree` node diverge
+ * (the tree node omits parentLocation/temperature/description and nests via
+ * `childLocations`), so every diverging field is optional while id/name/type —
+ * always present on both — stay required. Field types are inherited from the
+ * generated node, so spreading into `StorageLocationInitialData` preserves the
+ * StorageType/StorageState enums without casts.
+ */
+type StorageNode = Partial<FlatStorageLocationNode> &
+  Pick<FlatStorageLocationNode, 'id' | 'name' | 'type'> & {
+    childLocations?: StorageNode[] | null;
+  };
+
 export const StorageLocationsScreen: React.FC<
   StaticScreenProps<RouteParams>
 > = ({ route }) => {
@@ -31,7 +55,8 @@ export const StorageLocationsScreen: React.FC<
   const { goBack } = useAppNavigation();
   const selectedPantryId = useSelectedPantryId();
   const [sheetVisible, setSheetVisible] = useState(false);
-  const [editingLocation, setEditingLocation] = useState<any>(null);
+  const [editingLocation, setEditingLocation] =
+    useState<StorageLocationInitialData | null>(null);
   const [viewMode, setViewMode] = useState<'flat' | 'tree'>('flat');
   const [refreshing, setRefreshing] = useState(false);
 
@@ -49,8 +74,8 @@ export const StorageLocationsScreen: React.FC<
     refetch,
   } = useStorageLocationManagement(homeId, selectedPantryId ?? undefined);
 
-  // Open sheet for editing — map nested parentLocation to flat parentLocationId
-  const handleOpenEdit = (location: any) => {
+  // Open sheet for editing — map nested parentLocation to flat parentLocationId.
+  const handleOpenEdit = (location: StorageNode) => {
     setEditingLocation({
       ...location,
       parentLocationId: location.parentLocation?.id ?? null,
@@ -66,7 +91,7 @@ export const StorageLocationsScreen: React.FC<
 
   // Recursive component to render tree structure
   const renderTreeNode = (
-    node: any,
+    node: StorageNode,
     depth: number = 0,
   ): React.ReactElement | null => {
     if (!node?.id) return null;
@@ -74,36 +99,46 @@ export const StorageLocationsScreen: React.FC<
       <View key={node.id} style={{ marginLeft: depth * 16 }}>
         <StorageLocationCard
           location={node}
-          isDefault={node.isDefault}
+          isDefault={node.isDefault ?? false}
           onEdit={() => handleOpenEdit(node)}
           onDelete={() => handleDelete(node)}
           onSetDefault={() => handleSetDefault(node.id)}
         />
-        {node.childLocations?.map((child: any) =>
-          renderTreeNode(child, depth + 1),
-        )}
+        {node.childLocations?.map(child => renderTreeNode(child, depth + 1))}
       </View>
     );
   };
 
-  const handleCreate = async (formData: any) => {
-    const result = await createLocation(formData);
+  // The sheet's form values carry `type` as a plain string; the mutation
+  // inputs expect the `StorageType` enum. The sheet only ever emits valid
+  // StorageType values, so narrow it as we hand off to the mutations.
+  const handleCreate = async (formData: StorageLocationFormValues) => {
+    const result = await createLocation({
+      ...formData,
+      type: formData.type as StorageType,
+    });
     return !!result;
   };
 
-  const handleUpdate = async (id: string, formData: any) => {
-    const result = await updateLocation(id, formData);
+  const handleUpdate = async (
+    id: string,
+    formData: StorageLocationFormValues,
+  ) => {
+    const result = await updateLocation(id, {
+      ...formData,
+      type: formData.type as StorageType,
+    });
     return !!result;
   };
 
-  const handleSubmit = async (formData: any) => {
+  const handleSubmit = async (formData: StorageLocationFormValues) => {
     if (editingLocation) {
       return handleUpdate(editingLocation.id, formData);
     }
     return handleCreate(formData);
   };
 
-  const handleDelete = (location: any) => {
+  const handleDelete = (location: StorageNode) => {
     // Default location cannot be deleted
     if (location.isDefault) {
       alertService.alert(
@@ -116,7 +151,7 @@ export const StorageLocationsScreen: React.FC<
 
     // Check for items or child locations
     const childCount = locations.filter(
-      (loc: any) => loc.parentLocation?.id === location.id,
+      loc => loc.parentLocation?.id === location.id,
     ).length;
     const itemCount = location.currentItemCount ?? 0;
 

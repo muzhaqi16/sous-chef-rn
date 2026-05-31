@@ -1100,7 +1100,8 @@
     "remaining": "{{quantity}} {{unit}} remaining",
     "expiringTitle": "Expiring Items",
     "expiringEmpty": "No items are expiring soon",
-    "addToShoppingFailed": "Failed to add to shopping list"
+    "addToShoppingFailed": "Failed to add to shopping list",
+    "noListSelected": "Select a shopping list first"
   },
   "appearance": {
     "title": "Appearance",

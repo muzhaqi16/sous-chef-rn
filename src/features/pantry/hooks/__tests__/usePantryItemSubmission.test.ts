@@ -6,6 +6,7 @@ import {
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
 import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
+import { StorageState } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
 import { usePantryItemSubmission } from '../usePantryItemSubmission';
 
@@ -43,7 +44,7 @@ const defaultParams = {
   quantityInput: '2',
   unit: 'cups',
   unitId: 'unit-1',
-  storageState: 'FRESH' as any,
+  storageState: StorageState.Refrigerated,
   showPackageDetails: false,
   packageSize: '',
   contentUnit: '',

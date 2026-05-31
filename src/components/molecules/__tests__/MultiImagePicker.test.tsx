@@ -2,6 +2,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { MultiImagePicker, type SelectedImage } from '../MultiImagePicker';
+import type { ImageFile } from '../ImagePicker';
 
 jest.mock('#/utils/iconUtils', () => ({
   Icon: () => null,
@@ -22,7 +23,13 @@ jest.mock('#utils/imageUtils', () => ({
 }));
 
 jest.mock('../ImagePicker', () => ({
-  ImagePicker: ({ children, onImageSelected }: any) => {
+  ImagePicker: ({
+    children,
+    onImageSelected,
+  }: {
+    children?: React.ReactNode;
+    onImageSelected?: (image: ImageFile) => void;
+  }) => {
     const { Pressable } = require('react-native');
     return (
       <Pressable
@@ -31,7 +38,7 @@ jest.mock('../ImagePicker', () => ({
           onImageSelected?.({
             uri: 'file://new-image.jpg',
             type: 'image/jpeg',
-            name: 'new.jpg',
+            fileName: 'new.jpg',
           })
         }
       >
@@ -42,13 +49,23 @@ jest.mock('../ImagePicker', () => ({
 }));
 
 jest.mock('../ModalPicker', () => ({
-  ModalPicker: ({ visible, label, options, onSelect }: any) => {
+  ModalPicker: ({
+    visible,
+    label,
+    options,
+    onSelect,
+  }: {
+    visible: boolean;
+    label: string;
+    options: { label: string; value: string }[];
+    onSelect: (value: string) => void;
+  }) => {
     const { View, Text, Pressable } = require('react-native');
     if (!visible) return null;
     return (
       <View testID="modal-picker">
         <Text>{label}</Text>
-        {options.map((opt: any) => (
+        {options.map(opt => (
           <Pressable key={opt.value} onPress={() => onSelect(opt.value)}>
             <Text>{opt.label}</Text>
           </Pressable>
@@ -90,17 +107,17 @@ describe('MultiImagePicker', () => {
   });
 
   it('renders images when provided', () => {
-    const images: any[] = [
+    const images: SelectedImage[] = [
       {
         uri: 'file://img1.jpg',
         type: 'image/jpeg',
-        name: 'img1.jpg',
+        fileName: 'img1.jpg',
         perspective: 'front',
       },
       {
         uri: 'file://img2.jpg',
         type: 'image/jpeg',
-        name: 'img2.jpg',
+        fileName: 'img2.jpg',
         perspective: 'back',
       },
     ];
@@ -109,17 +126,17 @@ describe('MultiImagePicker', () => {
   });
 
   it('shows perspective labels for each image', () => {
-    const images: any[] = [
+    const images: SelectedImage[] = [
       {
         uri: 'file://img1.jpg',
         type: 'image/jpeg',
-        name: 'img1.jpg',
+        fileName: 'img1.jpg',
         perspective: 'front',
       },
       {
         uri: 'file://img2.jpg',
         type: 'image/jpeg',
-        name: 'img2.jpg',
+        fileName: 'img2.jpg',
         perspective: 'back',
       },
     ];
@@ -129,11 +146,11 @@ describe('MultiImagePicker', () => {
   });
 
   it('shows Add More button when under max images', () => {
-    const images: any[] = [
+    const images: SelectedImage[] = [
       {
         uri: 'file://img1.jpg',
         type: 'image/jpeg',
-        name: 'img1.jpg',
+        fileName: 'img1.jpg',
         perspective: 'front',
       },
     ];
@@ -142,10 +159,10 @@ describe('MultiImagePicker', () => {
   });
 
   it('does not show Add More button when at max images', () => {
-    const images: any[] = Array.from({ length: 6 }, (_, i) => ({
+    const images: SelectedImage[] = Array.from({ length: 6 }, (_, i) => ({
       uri: `file://img${i}.jpg`,
       type: 'image/jpeg',
-      name: `img${i}.jpg`,
+      fileName: `img${i}.jpg`,
       perspective: 'front',
     }));
     render(<MultiImagePicker {...defaultProps} images={images} />);
@@ -153,11 +170,11 @@ describe('MultiImagePicker', () => {
   });
 
   it('renders remove buttons with correct accessibility label', () => {
-    const images: any[] = [
+    const images: SelectedImage[] = [
       {
         uri: 'file://img1.jpg',
         type: 'image/jpeg',
-        name: 'img1.jpg',
+        fileName: 'img1.jpg',
         perspective: 'front',
       },
     ];

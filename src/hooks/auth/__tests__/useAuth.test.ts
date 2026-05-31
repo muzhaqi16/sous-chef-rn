@@ -1,4 +1,6 @@
 import { renderHook, act } from '@testing-library/react-native';
+import type { User } from '#store/slices/authSlice';
+import type { RootState } from '#store/index';
 import { useAuth } from '../useAuth';
 
 // Break circular dependency chain
@@ -19,7 +21,10 @@ const mockSetNavigationState = jest.fn();
 const mockSetShowBiometricSetup = jest.fn();
 const mockSetPostLoginCredentials = jest.fn();
 
-let mockUser: any = { id: 'u1', email: 'test@test.com' };
+let mockUser: User | null = {
+  id: 'u1',
+  email: 'test@test.com',
+} as Partial<User> as User;
 let mockNavigationState = 'auth';
 let mockShowBiometricSetup = false;
 
@@ -148,17 +153,17 @@ const mockSetRegistrationPassword = jest.fn();
 const mockStoreClearRegistrationPassword = jest.fn();
 
 jest.mock('#store/useAppStore', () => ({
-  useAppStore: (selector: (state: any) => any) =>
+  useAppStore: <T>(selector: (state: RootState) => T): T =>
     selector({
       registrationPassword: mockRegistrationPassword,
       setRegistrationPassword: mockSetRegistrationPassword,
       clearRegistrationPassword: mockStoreClearRegistrationPassword,
-    }),
+    } as Partial<RootState> as RootState),
 }));
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockUser = { id: 'u1', email: 'test@test.com' };
+  mockUser = { id: 'u1', email: 'test@test.com' } as Partial<User> as User;
   mockNavigationState = 'auth';
   mockShowBiometricSetup = false;
   mockRegistrationPassword = null;

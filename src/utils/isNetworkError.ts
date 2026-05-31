@@ -26,14 +26,19 @@ const NETWORK_ERROR_PATTERNS = [
   'offline',
 ];
 
-export function isNetworkError(error: any): boolean {
+interface NetworkErrorLike {
+  message?: string;
+  networkError?: { message?: string } | null;
+}
+
+export function isNetworkError(error: unknown): boolean {
+  const err = (error ?? {}) as NetworkErrorLike;
   const message = (
-    error?.message ||
-    error?.networkError?.message ||
+    err.message ||
+    err.networkError?.message ||
     ''
   ).toLowerCase();
   return (
-    NETWORK_ERROR_PATTERNS.some(p => message.includes(p)) ||
-    !!error?.networkError
+    NETWORK_ERROR_PATTERNS.some(p => message.includes(p)) || !!err.networkError
   );
 }

@@ -2,6 +2,10 @@
 import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
 import { IngredientMatchingSheet } from '../IngredientMatchingSheet';
+import type {
+  EditableMatch,
+  MatchSummary,
+} from '#features/recipes/hooks/useRecipeIngredientMatching';
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
   useStandardBottomSheet: jest.fn(() => ({
@@ -18,11 +22,21 @@ jest.mock('#hooks/useStandardBottomSheet', () => ({
       },
     },
   })),
-  BottomSheetModal: ({ children }: any) => children,
+  BottomSheetModal: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 jest.mock('#components/atoms/BottomSheetHeader', () => ({
-  BottomSheetHeader: ({ title, onCancel, onConfirm, confirmLabel }: any) => {
+  BottomSheetHeader: ({
+    title,
+    onCancel,
+    onConfirm,
+    confirmLabel,
+  }: {
+    title: string;
+    onCancel: () => void;
+    onConfirm: () => void;
+    confirmLabel?: string;
+  }) => {
     const RN = require('react-native');
     const R = require('react');
     return R.createElement(
@@ -44,7 +58,11 @@ jest.mock('#components/atoms/BottomSheetHeader', () => ({
 }));
 
 jest.mock('#features/recipes/components/IngredientMatchRow', () => ({
-  IngredientMatchRow: ({ editableMatch }: any) => {
+  IngredientMatchRow: ({
+    editableMatch,
+  }: {
+    editableMatch: Pick<EditableMatch, 'ingredient'>;
+  }) => {
     const { Text } = require('react-native');
     return require('react').createElement(
       Text,
@@ -55,8 +73,14 @@ jest.mock('#features/recipes/components/IngredientMatchRow', () => ({
 }));
 
 describe('IngredientMatchingSheet', () => {
-  const makeMatch = (name: string, id: string) => ({
+  const makeMatch = (name: string, id: string): EditableMatch => ({
     match: {
+      __typename: 'RecipeIngredientMatch',
+      isAvailable: true,
+      matchConfidence: 1,
+      availableQuantity: 1,
+      suggestedQuantity: 1,
+      shortfall: null,
       ingredient: { __typename: 'RecipeIngredient', id },
       matchedPantryItem: null,
       suggestedUnit: null,
@@ -65,7 +89,14 @@ describe('IngredientMatchingSheet', () => {
       __typename: 'RecipeIngredient',
       id,
       name,
+      quantity: 1,
+      image: null,
       isOptional: false,
+      notes: null,
+      preparation: null,
+      sortOrder: 0,
+      section: null,
+      item: null,
       unit: null,
     },
     adjustedQuantity: 1,
@@ -73,16 +104,18 @@ describe('IngredientMatchingSheet', () => {
     isIncluded: true,
   });
 
-  const defaultProps: any = {
+  const matchSummary: MatchSummary = {
+    available: 1,
+    partial: 0,
+    missing: 1,
+    included: 2,
+    total: 2,
+  };
+
+  const defaultProps = {
     visible: true,
     editableMatches: [makeMatch('Sugar', 'i1'), makeMatch('Flour', 'i2')],
-    matchSummary: {
-      available: 1,
-      partial: 0,
-      missing: 1,
-      included: 2,
-      total: 2,
-    },
+    matchSummary,
     onUpdate: jest.fn(),
     onConfirm: jest.fn(),
     onSkip: jest.fn(),

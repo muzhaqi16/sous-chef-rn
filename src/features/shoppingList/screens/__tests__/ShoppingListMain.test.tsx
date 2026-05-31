@@ -29,7 +29,8 @@ jest.mock('#features/shoppingList/hooks/useShoppingListScreen', () => ({
 }));
 
 jest.mock('#features/shoppingList/context/ShoppingListModalsContext', () => ({
-  ShoppingListModalsProvider: ({ children }: any) => children,
+  ShoppingListModalsProvider: ({ children }: { children: React.ReactNode }) =>
+    children,
 }));
 
 jest.mock('#hooks/performance/useTabScreenLifecycle', () => ({
@@ -57,7 +58,7 @@ jest.mock('#components/performance/DeferredScreen', () => ({
     component: Component,
   }: {
     component: React.FC;
-    fallback: any;
+    fallback: React.ReactNode;
   }) => <Component />,
 }));
 jest.mock('#components/molecules/TabScreenHeader', () => ({

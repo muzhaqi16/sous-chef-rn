@@ -10,13 +10,14 @@ import {
   type MyRecipeCard_RecipeFragment,
 } from '#features/recipes/components/MyRecipeCard.generated';
 import { useRecipeManagement } from '../useRecipeManagement';
+import { RecipeCategory, Difficulty } from '#/graphql/generated/schemaTypes';
 
 jest.mock('#hooks/auth/useIsLoggedOut', () => ({
   useIsLoggedOut: () => false,
 }));
 
 jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeMutation: jest.fn((fn: any) => fn()),
+  executeMutation: jest.fn((fn: () => unknown) => fn()),
 }));
 
 jest.mock('#hooks/apollo/useApolloErrorLogger', () => ({
@@ -141,7 +142,7 @@ describe('useRecipeManagement', () => {
   it('getRecipesByCategory filters by category', async () => {
     const result = await renderReady();
     const mainCourses = result.current.actions.getRecipesByCategory(
-      'MAIN_COURSE' as any,
+      RecipeCategory.MainCourse,
     );
     expect(mainCourses).toHaveLength(1);
     expect(readName(result, mainCourses[0].id)).toBe('Pasta');
@@ -149,7 +150,7 @@ describe('useRecipeManagement', () => {
 
   it('getRecipesByDifficulty filters by difficulty', async () => {
     const result = await renderReady();
-    const easy = result.current.actions.getRecipesByDifficulty('EASY' as any);
+    const easy = result.current.actions.getRecipesByDifficulty(Difficulty.Easy);
     expect(easy).toHaveLength(2);
   });
 

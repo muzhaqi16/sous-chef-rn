@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView } from 'react-native';
+import { View, ScrollView, type StyleProp, type TextStyle } from 'react-native';
 import {
   Pressable,
   ThemedRefreshControl,
@@ -96,7 +96,7 @@ const ThresholdText: React.FC<{
   usagePercent: number;
   size?: 'md';
   weight?: 'semibold' | 'bold';
-  baseStyle?: any;
+  baseStyle?: StyleProp<TextStyle>;
 }> = ({ children, usagePercent, weight = 'semibold', baseStyle }) => {
   const tone =
     usagePercent > 95 ? 'error' : usagePercent > 80 ? 'warning' : undefined;

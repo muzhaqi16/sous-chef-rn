@@ -8,6 +8,14 @@ import { logger } from '#/utils/environment';
 
 const HISTOGRAM_BOUNDS = [10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000];
 
+// OTLP SeverityNumber values (logs data model) keyed by our log level.
+const LOG_SEVERITY_NUMBER: Record<LogEntry['level'], number> = {
+  debug: 5,
+  info: 9,
+  warn: 13,
+  error: 17,
+};
+
 interface MetricMeta {
   name: string;
   labels: Record<string, string>;
@@ -16,12 +24,20 @@ interface MetricMeta {
 export class HttpTransport implements TelemetryTransport {
   private readonly config: TelemetryConfig;
 
-  // Accumulated state between flushes
+  // Cumulative state accumulated over the process lifetime. It is NOT reset on
+  // flush — each flush re-sends the running totals, which is what Mimir /
+  // Prometheus expect (the Grafana Cloud OTLP gateway ingests cumulative only;
+  // delta temporality is rejected). Storing histograms as running bucket counts
+  // (not raw observation arrays) keeps memory bounded by series count.
   private counterAccumulator: Map<string, number> = new Map();
   private gaugeAccumulator: Map<string, number> = new Map();
-  private histogramObservations: Map<string, number[]> = new Map();
+  private histogramAccumulator: Map<
+    string,
+    { buckets: number[]; sum: number; count: number; bounds: number[] }
+  > = new Map();
   private metricMeta: Map<string, MetricMeta> = new Map();
-  private flushStartTime: string = `${Date.now()}000000`;
+  // Pinned at process start — the cumulative series' start anchor.
+  private readonly startTimeNano: string = `${Date.now()}000000`;
 
   constructor(config: TelemetryConfig) {
     this.config = config;
@@ -66,30 +82,42 @@ export class HttpTransport implements TelemetryTransport {
             scopeLogs: [
               {
                 scope: { name: 'sous-chef-telemetry', version: '1.0.0' },
-                logRecords: logs.map(log => ({
-                  timeUnixNano: nowNano,
-                  body: {
-                    stringValue: JSON.stringify({
-                      message: log.message,
-                      ...log.extra,
-                    }),
-                  },
-                  severityText: log.level.toUpperCase(),
-                  attributes: [
-                    {
-                      key: 'level',
-                      value: { stringValue: log.level },
+                logRecords: logs.map(log => {
+                  // Use each record's real emission time, not the flush time,
+                  // so Loki preserves ordering within a batch.
+                  const parsedMs = Date.parse(log.timestamp);
+                  const recordNano = Number.isFinite(parsedMs)
+                    ? `${parsedMs}000000`
+                    : nowNano;
+                  return {
+                    timeUnixNano: recordNano,
+                    body: {
+                      stringValue: JSON.stringify({
+                        // `level` lives in the body so LogQL `| json |
+                        // level="error"` works; it is also an attribute below.
+                        level: log.level,
+                        message: log.message,
+                        ...log.extra,
+                      }),
                     },
-                    {
-                      key: 'environment',
-                      value: { stringValue: this.config.environment },
-                    },
-                    {
-                      key: 'platform',
-                      value: { stringValue: this.config.platform },
-                    },
-                  ],
-                })),
+                    severityText: log.level.toUpperCase(),
+                    severityNumber: LOG_SEVERITY_NUMBER[log.level],
+                    attributes: [
+                      {
+                        key: 'level',
+                        value: { stringValue: log.level },
+                      },
+                      {
+                        key: 'environment',
+                        value: { stringValue: this.config.environment },
+                      },
+                      {
+                        key: 'platform',
+                        value: { stringValue: this.config.platform },
+                      },
+                    ],
+                  };
+                }),
               },
             ],
           },
@@ -121,17 +149,16 @@ export class HttpTransport implements TelemetryTransport {
         const responseText = await response
           .text()
           .catch(() => 'Unable to read response');
-        logger.warn('Failed to send logs via OTLP:', {
-          status: response.status,
-          statusText: response.statusText,
-          response: responseText,
-          url: otlpUrl,
-        });
-      } else {
-        logger.debug(`✅ Logs sent via OTLP (${logs.length} entries)`);
+        // Throw so TelemetryService re-buffers the batch for retry instead of
+        // dropping it (the caller's catch is the only retry path for logs).
+        throw new Error(
+          `OTLP logs HTTP ${response.status} ${response.statusText}: ${responseText} (${otlpUrl})`,
+        );
       }
+      logger.debug(`✅ Logs sent via OTLP (${logs.length} entries)`);
     } catch (error) {
       logger.error('Failed to send logs via OTLP:', error);
+      throw error;
     }
   }
 
@@ -158,16 +185,28 @@ export class HttpTransport implements TelemetryTransport {
         } else if (metric.type === 'gauge') {
           this.gaugeAccumulator.set(key, metric.value);
         } else if (metric.type === 'histogram') {
-          const observations = this.histogramObservations.get(key) || [];
-          observations.push(metric.value);
-          this.histogramObservations.set(key, observations);
+          let agg = this.histogramAccumulator.get(key);
+          if (!agg) {
+            // First observation fixes this series' bounds (per metric, stable).
+            const bounds = metric.bounds ?? HISTOGRAM_BOUNDS;
+            agg = {
+              buckets: new Array(bounds.length + 1).fill(0),
+              sum: 0,
+              count: 0,
+              bounds,
+            };
+            this.histogramAccumulator.set(key, agg);
+          }
+          agg.buckets[this.bucketIndex(metric.value, agg.bounds)] += 1;
+          agg.sum += metric.value;
+          agg.count += 1;
         }
       }
 
       const totalMetrics =
         this.counterAccumulator.size +
         this.gaugeAccumulator.size +
-        this.histogramObservations.size;
+        this.histogramAccumulator.size;
 
       if (totalMetrics === 0) {
         logger.debug('No metrics to send');
@@ -216,11 +255,11 @@ export class HttpTransport implements TelemetryTransport {
           response: responseText,
           url: otlpUrl,
         });
-        // Don't clear accumulators on failure — retry on next flush
       } else {
         logger.debug(`✅ Metrics sent via OTLP (${totalMetrics} metrics)`);
-        this.clearAccumulators();
       }
+      // Cumulative totals are retained either way: the next flush re-sends the
+      // running totals, so a failed send self-heals without losing data.
     } catch (error) {
       logger.error('❌ Failed to send metrics via OTLP:', error);
     }
@@ -233,14 +272,6 @@ export class HttpTransport implements TelemetryTransport {
       .map(([k, v]) => `${k}="${v}"`)
       .join(',');
     return labelStr ? `${name}{${labelStr}}` : name;
-  }
-
-  private clearAccumulators(): void {
-    this.counterAccumulator.clear();
-    this.gaugeAccumulator.clear();
-    this.histogramObservations.clear();
-    this.metricMeta.clear();
-    this.flushStartTime = `${Date.now()}000000`;
   }
 
   private buildOtlpPayload(): Record<string, unknown> {
@@ -259,10 +290,13 @@ export class HttpTransport implements TelemetryTransport {
         sum: {
           dataPoints: dataPoints.map(dp => ({
             asDouble: dp.value,
-            startTimeUnixNano: this.flushStartTime,
+            startTimeUnixNano: this.startTimeNano,
             timeUnixNano: nowNano,
             attributes: this.toOtlpAttributes(dp.labels),
           })),
+          // CUMULATIVE running total re-sent each flush with a fixed
+          // startTimeUnixNano (process start). Grafana Cloud / Mimir ingests
+          // cumulative only; rate()/increase() handle a process-restart reset.
           aggregationTemporality: 2, // CUMULATIVE
           isMonotonic: true,
         },
@@ -288,18 +322,17 @@ export class HttpTransport implements TelemetryTransport {
       otlpMetrics.push({
         name,
         histogram: {
-          dataPoints: dataPoints.map(dp => {
-            const bucketCounts = this.computeBucketCounts(dp.values);
-            return {
-              startTimeUnixNano: this.flushStartTime,
-              timeUnixNano: nowNano,
-              count: `${dp.values.length}`,
-              sum: dp.values.reduce((a, b) => a + b, 0),
-              bucketCounts: bucketCounts.map(String),
-              explicitBounds: HISTOGRAM_BOUNDS,
-              attributes: this.toOtlpAttributes(dp.labels),
-            };
-          }),
+          dataPoints: dataPoints.map(dp => ({
+            startTimeUnixNano: this.startTimeNano,
+            timeUnixNano: nowNano,
+            count: `${dp.count}`,
+            sum: dp.sum,
+            bucketCounts: dp.buckets.map(String),
+            explicitBounds: dp.bounds,
+            attributes: this.toOtlpAttributes(dp.labels),
+          })),
+          // CUMULATIVE: bucket counts/sum/count are running totals over the
+          // process lifetime, re-sent each flush (same model as counters).
           aggregationTemporality: 2, // CUMULATIVE
         },
       });
@@ -366,48 +399,54 @@ export class HttpTransport implements TelemetryTransport {
 
   private groupHistogramsByName(): Map<
     string,
-    { values: number[]; labels: Record<string, string> }[]
+    {
+      buckets: number[];
+      sum: number;
+      count: number;
+      bounds: number[];
+      labels: Record<string, string>;
+    }[]
   > {
     const grouped = new Map<
       string,
-      { values: number[]; labels: Record<string, string> }[]
+      {
+        buckets: number[];
+        sum: number;
+        count: number;
+        bounds: number[];
+        labels: Record<string, string>;
+      }[]
     >();
 
-    for (const [key, values] of this.histogramObservations) {
+    for (const [key, agg] of this.histogramAccumulator) {
       const meta = this.metricMeta.get(key);
       if (!meta) {
         continue;
       }
       const existing = grouped.get(meta.name) || [];
-      existing.push({ values, labels: meta.labels });
+      existing.push({
+        buckets: agg.buckets,
+        sum: agg.sum,
+        count: agg.count,
+        bounds: agg.bounds,
+        labels: meta.labels,
+      });
       grouped.set(meta.name, existing);
     }
 
     return grouped;
   }
 
-  private computeBucketCounts(values: number[]): number[] {
-    // OTLP: N+1 buckets for N bounds
-    // bucket[0] = count of values <= bounds[0]
-    // bucket[i] = count of values in (bounds[i-1], bounds[i]]
-    // bucket[N] = count of values > bounds[N-1]
-    const counts = new Array(HISTOGRAM_BOUNDS.length + 1).fill(0);
-
-    for (const value of values) {
-      let placed = false;
-      for (let i = 0; i < HISTOGRAM_BOUNDS.length; i++) {
-        if (value <= HISTOGRAM_BOUNDS[i]) {
-          counts[i]++;
-          placed = true;
-          break;
-        }
-      }
-      if (!placed) {
-        counts[HISTOGRAM_BOUNDS.length]++;
+  // OTLP histogram bucket index for a value within the given bounds:
+  // N+1 buckets for N bounds. index i = first bound the value is <= ;
+  // index N = above all bounds.
+  private bucketIndex(value: number, bounds: number[]): number {
+    for (let i = 0; i < bounds.length; i++) {
+      if (value <= bounds[i]) {
+        return i;
       }
     }
-
-    return counts;
+    return bounds.length;
   }
 
   private toOtlpAttributes(

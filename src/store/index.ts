@@ -41,6 +41,7 @@ import {
   createPreferencesSlice,
   PreferencesState,
 } from './slices/preferencesSlice';
+import { FontScalePreference } from './slices/preferenceTypes';
 import {
   BarcodeScannerState,
   createBarcodeScannerSlice,
@@ -87,6 +88,20 @@ interface ResetManagerState {
 interface NavigationStateManagerState {
   initiateLogout: () => boolean;
   completeLogout: () => boolean;
+}
+
+// Minimal shape of the persisted user touched by the v8 → v9 migration.
+interface MigratableUser {
+  firstName?: string | null;
+  lastName?: string | null;
+  name?: string | null;
+  profilePicture?: string | null;
+  profile?: {
+    firstName?: string | null;
+    lastName?: string | null;
+    displayName?: string | null;
+    avatar?: string | null;
+  } | null;
 }
 
 export type RootState = AuthState &
@@ -149,10 +164,10 @@ export const useStore = create<RootState>()(
       ),
       {
         name: STORAGE_KEY,
-        version: 9,
+        version: 10,
         storage: createJSONStorage(() => zustandStorage),
         // Do store migrations here
-        migrate: (persistedState: any, version: number) => {
+        migrate: (persistedState: unknown, version: number) => {
           // Migration from version 6 to 7: Clear home initialization flags
           // These are now transient and should not be persisted
           if (version < 7) {
@@ -163,13 +178,27 @@ export const useStore = create<RootState>()(
           // Existing users have user.profile.firstName etc. from the old schema, but
           // the greeting reads user.firstName / user.name directly.
           if (version < 9) {
-            const user = persistedState?.user;
+            const state = persistedState as { user?: MigratableUser } | null;
+            const user = state?.user;
             const profile = user?.profile;
             if (user && profile) {
               user.firstName = profile.firstName ?? user.firstName;
               user.lastName = profile.lastName ?? user.lastName;
               user.name = profile.displayName ?? user.name;
               user.profilePicture = profile.avatar ?? user.profilePicture;
+            }
+          }
+
+          // Migration v9 → v10: the 'system' font scale option was removed
+          // (it was a redundant 1.0 alias for the new default 'md', since
+          // allowFontScaling already follows the OS size). Remap any persisted
+          // value so it resolves to a valid FontScalePreference member.
+          if (version < 10) {
+            const state = persistedState as {
+              fontScalePreference?: string;
+            } | null;
+            if (state?.fontScalePreference === 'system') {
+              state.fontScalePreference = FontScalePreference.MD;
             }
           }
 

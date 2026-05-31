@@ -7,6 +7,11 @@ import {
   StyleProp,
   ViewStyle,
 } from 'react-native';
+
+/** The event passed to TextInput's onFocus/onBlur, derived from RN's own prop type. */
+type TextInputFocusEvent = Parameters<
+  NonNullable<TextInputProps['onFocus']>
+>[0];
 import { Pressable } from '#components/atoms/themedComponents';
 import { withUnistyles } from 'react-native-unistyles';
 import styles from './BaseInput.styles';
@@ -53,12 +58,12 @@ export const BaseInput: React.FC<BaseInputProps> = ({
     rightIcon: rightIcon != null,
   });
 
-  const handleFocus = (e: any) => {
+  const handleFocus = (e: TextInputFocusEvent) => {
     setIsFocused(true);
     onFocus?.(e);
   };
 
-  const handleBlur = (e: any) => {
+  const handleBlur = (e: TextInputFocusEvent) => {
     setIsFocused(false);
     onBlur?.(e);
   };

@@ -1,6 +1,12 @@
 'use no memo';
 import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
+import type { RootState } from '#store/index';
+import type { SettingsSectionProps } from '#components/organisms/SettingsSection';
+import type {
+  ActionTrayProps,
+  ActionTrayRef,
+} from '#/components/templates/ActionTray/types';
 import { ProfileScreen } from '../ProfileScreen';
 
 // --- Mocks ---
@@ -83,9 +89,9 @@ jest.mock('#features/profile/hooks/useConfigurableSettings', () => ({
 }));
 
 jest.mock('#store/useAppStore', () => ({
-  useAppStore: (selector: any) => {
+  useAppStore: <T,>(selector: (state: RootState) => T): T => {
     const state = { canAccessDevTools: false };
-    return selector(state);
+    return selector(state as Partial<RootState> as RootState);
   },
   useCanAccessDevTools: jest.fn(() => false),
 }));
@@ -114,7 +120,19 @@ jest.mock('#/utils/iconUtils', () => ({
 jest.mock('#components/organisms/ProfileHeader', () => {
   const { View, Text, Pressable } = require('react-native');
   return {
-    ProfileHeader: ({ name, subtitle, onBack, onMore, onAvatarPress }: any) => (
+    ProfileHeader: ({
+      name,
+      subtitle,
+      onBack,
+      onMore,
+      onAvatarPress,
+    }: {
+      name?: string;
+      subtitle?: string;
+      onBack?: () => void;
+      onMore?: () => void;
+      onAvatarPress?: () => void;
+    }) => (
       <View testID="profile-header">
         <Text>{name}</Text>
         {subtitle ? <Text>{subtitle}</Text> : null}
@@ -135,10 +153,16 @@ jest.mock('#components/organisms/ProfileHeader', () => {
 jest.mock('#components/organisms/SettingsSection', () => {
   const { View, Text, Pressable } = require('react-native');
   return {
-    SettingsSection: ({ title, items }: any) => (
+    SettingsSection: ({
+      title,
+      items,
+    }: {
+      title?: SettingsSectionProps['title'];
+      items: SettingsSectionProps['items'];
+    }) => (
       <View testID={`settings-section-${title || 'actions'}`}>
         {title ? <Text>{title}</Text> : null}
-        {items.map((item: any) => (
+        {items.map(item => (
           <Pressable
             key={item.key}
             testID={item.testID || `setting-${item.key}`}
@@ -156,8 +180,8 @@ jest.mock('#/components/templates/ActionTray/ActionTray', () => {
   const R = require('react');
   const RN = require('react-native');
   const ActionTray = R.forwardRef(function MockActionTray(
-    props: any,
-    ref: any,
+    props: ActionTrayProps,
+    ref: React.Ref<ActionTrayRef>,
   ) {
     R.useImperativeHandle(ref, () => ({
       open: jest.fn(),

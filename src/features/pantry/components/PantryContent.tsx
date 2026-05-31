@@ -18,6 +18,10 @@ import { StyleSheet } from 'react-native-unistyles';
 import { getTabBarBottomPadding } from '#constants/layout';
 import { Icon } from '#utils/iconUtils';
 import { LocationFilter } from '#features/pantry/utils/pantryFilters';
+import {
+  PantrySortDirection,
+  PREFERENCE_DEFAULTS,
+} from '#store/slices/preferenceTypes';
 import { SearchBar } from '#components/molecules/SearchBar';
 import { FilterTabs } from '#components/molecules/FilterTabs/FilterTabs';
 import { PantryHeader } from './PantryHeader';
@@ -89,8 +93,8 @@ export const PantryContent = React.forwardRef<
       onAddLocation,
       searchQuery,
       onSearchChange,
-      initialSortOption = 'recent',
-      initialSortDirection = 'desc',
+      initialSortOption = PREFERENCE_DEFAULTS.pantrySortOption,
+      initialSortDirection = PREFERENCE_DEFAULTS.pantrySortDirection,
       onSortChange,
       useServerSort = false,
       onItemPress,
@@ -424,7 +428,9 @@ export const PantryContent = React.forwardRef<
                           onLowStockNavigate={onLowStockNavigate}
                           onExpiringNavigate={onExpiringNavigate}
                           sortLabel={`${t('pantryScreen.sort')} ${
-                            sortDirection === 'asc' ? '↑' : '↓'
+                            sortDirection === PantrySortDirection.ASC
+                              ? '↑'
+                              : '↓'
                           }`}
                           onSortPress={openSortModal}
                         />

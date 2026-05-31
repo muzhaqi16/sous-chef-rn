@@ -3,6 +3,7 @@
  */
 
 import type { ApolloCache } from '@apollo/client';
+import type { Modifiers } from '@apollo/client/cache';
 import { type UseUpdatePantryItem_PantryItemFragment } from './useUpdatePantryItem.generated';
 import {
   StorageState,
@@ -16,11 +17,9 @@ import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters
 import type { UnitSelection, FormDataInput } from './types';
 
 // Cache updater for adding items to Pantry.itemsConnection
-export const addToPantryItemsCache = createAddToParentConnectionUpdater<any>(
-  'Pantry',
-  'itemsConnection',
-  'PantryItem',
-);
+export const addToPantryItemsCache = createAddToParentConnectionUpdater<{
+  id: string;
+}>('Pantry', 'itemsConnection', 'PantryItem');
 
 /**
  * Build optimistic Unit object for cache updates.
@@ -161,15 +160,19 @@ export function stateToCountKey(
  * The updater receives the existing `stats` value and returns a replacement;
  * if it returns `undefined`, the existing value is kept (no-op).
  */
-export function modifyPantryStats(
+export function modifyPantryStats<TStats extends Record<string, unknown>>(
   cache: ApolloCache,
   pantryId: string,
-  updater: (stats: any) => any,
+  updater: (stats: TStats) => TStats | undefined,
 ): void {
   cache.modify({
     id: cache.identify({ __typename: 'Pantry', id: pantryId }),
+    // Apollo types the modifier value as `Reference | AsStoreObject<TStats>`,
+    // which can't be reconciled with the caller's concrete `TStats` generic
+    // without a store-wide refactor. The runtime value is always the inline
+    // stats object, so the field map is asserted to the `Modifiers` contract.
     fields: {
-      stats: (existing: any) => updater(existing) ?? existing,
-    },
+      stats: (existing: TStats) => updater(existing) ?? existing,
+    } as Modifiers,
   });
 }

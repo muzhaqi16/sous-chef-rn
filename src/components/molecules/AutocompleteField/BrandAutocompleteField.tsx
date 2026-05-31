@@ -3,7 +3,7 @@ import {
   useBrandAutocomplete,
   type BrandItem,
 } from '#hooks/autocomplete/useBrandAutocomplete';
-import { AutocompleteField } from './AutocompleteField';
+import { GenericAutocompleteField } from './GenericAutocompleteField';
 import { AutocompleteRow } from './AutocompleteRow';
 
 interface BrandAutocompleteFieldProps {
@@ -33,79 +33,50 @@ export const BrandAutocompleteField: React.FC<BrandAutocompleteFieldProps> = ({
 }) => {
   const brand = useBrandAutocomplete({ suggestedBrands });
 
-  const handleTextChange = (text: string) => {
-    onChangeText(text);
-    brand.handleSearchTermChange(text);
-    onBrandSelected?.(null, null);
-  };
-
-  const handleSelect = (item: BrandItem) => {
-    onChangeText(item.name);
-    onBrandSelected?.(item.id, item.name);
-    brand.setSearchTerm('');
-  };
-
-  const renderItem = (item: BrandItem) => (
-    <AutocompleteRow
-      title={item.name}
-      badge={item.isSuggested ? 'Suggested' : undefined}
-      highlighted={item.isSuggested}
-    />
-  );
-
-  const keyExtractor = (item: BrandItem) => item.id;
-
-  if (variant === 'inline') {
-    return (
-      <AutocompleteField<BrandItem>
-        variant="inline"
-        label={label}
-        value={value}
-        onChangeText={handleTextChange}
-        placeholder={placeholder}
-        required={required}
-        error={error}
-        testID={testID}
-        items={brand.displayItems}
-        loading={brand.isLoading}
-        minSearchLength={1}
-        maxResults={6}
-        renderItem={renderItem}
-        keyExtractor={keyExtractor}
-        onSelect={handleSelect}
-        autoCapitalize="words"
-      />
-    );
-  }
-
   return (
-    <AutocompleteField<BrandItem>
-      variant="modal"
+    <GenericAutocompleteField<BrandItem>
+      variant={variant}
       label={label}
       value={value}
-      onChangeText={handleTextChange}
       placeholder={placeholder}
       required={required}
       error={error}
       testID={testID}
-      title="Select a brand"
-      searchPlaceholder="Type to search brands..."
+      onChangeText={text => {
+        onChangeText(text);
+        brand.handleSearchTermChange(text);
+        onBrandSelected?.(null, null);
+      }}
       items={brand.displayItems}
       loading={brand.isLoading}
-      renderItem={renderItem}
-      keyExtractor={keyExtractor}
-      onSelect={handleSelect}
-      emptyText={
+      renderItem={item => (
+        <AutocompleteRow
+          title={item.name}
+          badge={item.isSuggested ? 'Suggested' : undefined}
+          highlighted={item.isSuggested}
+        />
+      )}
+      keyExtractor={item => item.id}
+      onSelect={item => {
+        onChangeText(item.name);
+        onBrandSelected?.(item.id, item.name);
+        brand.setSearchTerm('');
+      }}
+      autoCapitalize="words"
+      inlineMinSearchLength={1}
+      maxResults={6}
+      modalTitle="Select a brand"
+      modalSearchPlaceholder="Type to search brands..."
+      modalEmptyText={
         suggestedBrands.length > 0 ? 'No matching brands' : 'No brands found'
       }
-      emptySubtext={
+      modalEmptySubtext={
         brand.shouldSearch
           ? `Continue typing to add "${brand.searchTerm}" as a custom brand`
           : 'Type at least 2 characters to search'
       }
+      modalMinSearchLength={suggestedBrands.length > 0 ? 0 : 2}
       onSearchChange={brand.handleSearchTermChange}
-      minSearchLength={suggestedBrands.length > 0 ? 0 : 2}
-      autoCapitalize="words"
     />
   );
 };

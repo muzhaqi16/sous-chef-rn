@@ -1,0 +1,12 @@
+# Narrow fragment for useHomeMutations' updateHome optimistic-response shape.
+# Mirrors what the UpdateHome mutation selects on `home` — keep them in sync.
+# The hook reads these fields from cache to build the optimistic response for
+# every update except enabling a join code (joinCode is server-generated).
+fragment UpdateHomeOptimistic_home on Home {
+  id
+  name
+  allowJoinCode
+  joinCode
+  version
+  updatedAt
+}

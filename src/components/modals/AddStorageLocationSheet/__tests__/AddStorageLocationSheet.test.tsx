@@ -1,6 +1,11 @@
 'use no memo';
 import React from 'react';
-import { fireEvent, render, screen, userEvent } from '@testing-library/react-native';
+import {
+  fireEvent,
+  render,
+  screen,
+  userEvent,
+} from '@testing-library/react-native';
 import { AddStorageLocationSheet } from '../AddStorageLocationSheet';
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
@@ -20,11 +25,14 @@ jest.mock('#hooks/useStandardBottomSheet', () => ({
       },
     },
   })),
-  BottomSheetModal: ({ children }: any) => children,
+  BottomSheetModal: ({ children }: { children?: React.ReactNode }) => children,
 }));
 
 // requestIdleCallback is not available in the test environment
-global.requestIdleCallback = ((cb: any) => setTimeout(cb, 0)) as any;
+global.requestIdleCallback = (cb: IdleRequestCallback): number => {
+  setTimeout(() => cb({ didTimeout: false, timeRemaining: () => 0 }), 0);
+  return 0;
+};
 
 describe('AddStorageLocationSheet', () => {
   const defaultProps = {

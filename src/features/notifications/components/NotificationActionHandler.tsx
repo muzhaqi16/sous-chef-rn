@@ -139,7 +139,8 @@ export const NotificationActionHandler: React.FC<
     // Handle successful acceptance
     if (invitation.type === 'HOME_INVITE') {
       // Set the newly accepted home as selected
-      const acceptedHomeId = (invitation as any).acceptedHomeId;
+      const acceptedHomeId = (invitation as { acceptedHomeId?: string })
+        .acceptedHomeId;
 
       if (acceptedHomeId) {
         setHomeAndPantry(acceptedHomeId, null);

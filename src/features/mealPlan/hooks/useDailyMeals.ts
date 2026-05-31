@@ -1,4 +1,5 @@
 import { isSameDay } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 import { MealType } from '#/graphql/generated/schemaTypes';
 import { type DailyMeals_ItemFragment } from './useDailyMeals.generated';
 import { type MealPlanItemCard_ItemFragment } from '#features/mealPlan/components/MealPlanItemCard.generated';
@@ -24,26 +25,19 @@ export interface MealTypeGroup {
   items: DailyMealsItem[];
 }
 
-function getMealTypeLabel(mealType: MealType): string {
-  switch (mealType) {
-    case MealType.Breakfast:
-      return 'Breakfast';
-    case MealType.Brunch:
-      return 'Brunch';
-    case MealType.Lunch:
-      return 'Lunch';
-    case MealType.Snack:
-      return 'Snack';
-    case MealType.Dinner:
-      return 'Dinner';
-    case MealType.Dessert:
-      return 'Dessert';
-    default:
-      return mealType;
-  }
-}
+// i18n keys for meal-type section headers (reuses the AddMealSheet set, which
+// is complete and present in every locale).
+const MEAL_TYPE_LABEL_KEYS: Partial<Record<MealType, string>> = {
+  [MealType.Breakfast]: 'addMealSheet.mealBreakfast',
+  [MealType.Brunch]: 'addMealSheet.mealBrunch',
+  [MealType.Lunch]: 'addMealSheet.mealLunch',
+  [MealType.Snack]: 'addMealSheet.mealSnack',
+  [MealType.Dinner]: 'addMealSheet.mealDinner',
+  [MealType.Dessert]: 'addMealSheet.mealDessert',
+};
 
 export function useDailyMeals(items: DailyMealsItem[], selectedDate: Date) {
+  const { t } = useTranslation();
   const dailyMeals = (() => {
     // Filter items for the selected date
     const dayItems = items.filter(item =>
@@ -53,7 +47,7 @@ export function useDailyMeals(items: DailyMealsItem[], selectedDate: Date) {
     // Group by meal type, maintaining defined order
     const groups: MealTypeGroup[] = MEAL_TYPE_ORDER.map(mealType => ({
       mealType,
-      label: getMealTypeLabel(mealType),
+      label: t(MEAL_TYPE_LABEL_KEYS[mealType] ?? mealType),
       items: dayItems
         .filter(item => item.mealType === mealType)
         .sort((a, b) => {

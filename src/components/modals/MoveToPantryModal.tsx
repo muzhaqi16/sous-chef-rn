@@ -9,7 +9,9 @@ import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScro
 import { StyleSheet } from 'react-native-unistyles';
 import { BaseSwitch } from '#components/base/BaseSwitch';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DateTimePicker, {
+  type DateTimePickerEvent,
+} from '@react-native-community/datetimepicker';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/molecules/FormInput';
 import { Header } from '#components/molecules/Header';
@@ -157,7 +159,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
     onClose();
   };
 
-  const handleDateChange = (_event: any, date?: Date) => {
+  const handleDateChange = (_event: DateTimePickerEvent, date?: Date) => {
     setShowDatePicker(false);
     if (date) {
       setExpirationDate(date);

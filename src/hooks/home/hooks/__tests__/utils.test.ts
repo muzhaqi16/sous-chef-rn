@@ -3,6 +3,7 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   createRemoveFromQueryConnectionUpdater: jest.fn(() => jest.fn()),
 }));
 
+import type { ApolloCache } from '@apollo/client';
 import { addToHomesCache, removeFromHomesCache } from '../utils';
 
 // Access mock fns AFTER module-level code has executed
@@ -28,7 +29,9 @@ describe('home hooks utils', () => {
     });
 
     it('passes arguments through to the updater', () => {
-      const mockCache = { modify: jest.fn() } as any;
+      const mockCache = {
+        modify: jest.fn(),
+      } as Partial<ApolloCache> as ApolloCache;
       const mockItem = { id: 'home-1' };
       const options: { position: 'end' } = { position: 'end' };
 
@@ -53,7 +56,9 @@ describe('home hooks utils', () => {
     });
 
     it('can be called with expected arguments', () => {
-      const mockCache = { modify: jest.fn() } as any;
+      const mockCache = {
+        modify: jest.fn(),
+      } as Partial<ApolloCache> as ApolloCache;
 
       removeFromHomesCache(mockCache, 'home-1', { evictItem: true });
 

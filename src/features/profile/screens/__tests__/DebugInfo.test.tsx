@@ -2,18 +2,26 @@
 import React from 'react';
 import { Platform } from 'react-native';
 import { render, screen } from '@testing-library/react-native';
+import type { RootState } from '#store/index';
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 
 jest.mock('#store/useAppStore', () => ({
-  useAppStore: jest.fn((selector: any) =>
-    selector({ canAccessDevTools: false }),
+  useAppStore: jest.fn(
+    <T,>(selector: (state: RootState) => T): T =>
+      selector({ user: { canAccessDevTools: false } } as RootState),
   ),
   useCanAccessDevTools: jest.fn(() => false),
 }));
 jest.mock('#components/templates/ProfileScreenWrapper', () => ({
-  ProfileScreenWrapper: ({ title, children }: any) => {
+  ProfileScreenWrapper: ({
+    title,
+    children,
+  }: {
+    title?: string;
+    children?: React.ReactNode;
+  }) => {
     const { View, Text } = require('react-native');
     return (
       <View>

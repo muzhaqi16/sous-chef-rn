@@ -5,7 +5,10 @@ import {
   NotificationCategory,
   NotificationType,
 } from '#/graphql/generated/schemaTypes';
-import { NotificationPriority } from '#store/slices/notificationSlice';
+import {
+  NotificationPriority,
+  type NotificationItem as NotificationItemData,
+} from '#store/slices/notificationSlice';
 
 jest.mock('#utils/iconUtils', () => {
   const R = require('react');
@@ -28,7 +31,7 @@ jest.mock('date-fns/formatDistanceToNow', () => ({
   formatDistanceToNow: jest.fn(() => '1 day ago'),
 }));
 
-const makeNotification = (overrides?: any) => ({
+const makeNotification = (overrides?: Partial<NotificationItemData>) => ({
   id: 'notif-1',
   type: NotificationType.HomeInvitation,
   category: NotificationCategory.Shopping,

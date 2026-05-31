@@ -39,6 +39,13 @@ jobs:
     name: ESLint
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # Type-aware linting (@typescript-eslint/no-deprecated + the import/resolver
+    # TS program) holds the full TypeScript program(s) in memory. A fresh,
+    # cacheless `eslint .` over the whole repo peaks at ~3.5GB RSS, which
+    # overruns Node's default old-space heap on the runner and aborts with
+    # "Ineffective mark-compacts near heap limit". Match the build-android jobs.
+    env:
+      NODE_OPTIONS: --max-old-space-size=4096
 
     steps:
       - name: Checkout code

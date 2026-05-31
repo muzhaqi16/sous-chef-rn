@@ -1,4 +1,5 @@
 import { ApolloLink, Observable } from '@apollo/client';
+import type { GraphQLFormattedError } from 'graphql';
 import performance from 'react-native-performance';
 import { Telemetry } from '#/services/telemetry';
 import { Environment } from '#/utils/environment';
@@ -43,6 +44,14 @@ export const createTelemetryLink = () => {
         ? operation.query.definitions[0]?.operation || 'unknown'
         : 'unknown';
 
+    // In production only 1-in-PRODUCTION_SAMPLE_RATE operations reach this
+    // point (see sampling gate above), so each sampled operation stands in for
+    // 1/sampleRate real ones. Weight counter increments accordingly so totals
+    // estimate true volume instead of under-reporting ~10×. Dev is unsampled.
+    const sampleWeight = Environment.isDevelopment()
+      ? 1
+      : Math.round(1 / PRODUCTION_SAMPLE_RATE);
+
     const operationId = `${operationName}_${startTime}`;
     const markName = `gql:${operationName}:${operationId}`;
 
@@ -62,7 +71,7 @@ export const createTelemetryLink = () => {
       variables: operation.variables ? Object.keys(operation.variables) : [],
     });
 
-    Telemetry.increment('graphql_requests_total', 1, {
+    Telemetry.increment('graphql_requests_total', sampleWeight, {
       type: operationType,
       name: operationName,
     });
@@ -79,7 +88,11 @@ export const createTelemetryLink = () => {
       }
       performance.clearMarks(timing.markName);
 
-      // Report directly with full labels (central observer skips gql:* measures)
+      // Report directly with full labels (central observer skips gql:* measures).
+      // Intentionally NOT sample-weighted: latency quantiles are scale-invariant,
+      // so one observation per sampled op is correct. Its _count/_sum therefore
+      // under-report by the sample rate in prod — read request VOLUME from the
+      // weighted graphql_requests_total counter, not from this histogram.
       Telemetry.histogram('graphql_request_duration_ms', duration, {
         type: operationType,
         name: operationName,
@@ -98,7 +111,7 @@ export const createTelemetryLink = () => {
             const duration = finalizeTiming(timing, hasErrors);
 
             if (response.errors && response.errors.length > 0) {
-              response.errors.forEach((error: any) => {
+              response.errors.forEach((error: GraphQLFormattedError) => {
                 // Safely serialize error.path
                 let errorPath: string | undefined;
                 if (error.path) {
@@ -132,7 +145,7 @@ export const createTelemetryLink = () => {
 
               Telemetry.increment(
                 'graphql_errors_total',
-                response.errors.length,
+                response.errors.length * sampleWeight,
                 {
                   type: operationType,
                   name: operationName,
@@ -151,7 +164,7 @@ export const createTelemetryLink = () => {
                 operation_type: operationType,
               });
 
-              Telemetry.increment('graphql_slow_queries_total', 1, {
+              Telemetry.increment('graphql_slow_queries_total', sampleWeight, {
                 type: operationType,
                 name: operationName,
               });
@@ -160,7 +173,7 @@ export const createTelemetryLink = () => {
 
           observer.next(response);
         },
-        error: (error: any) => {
+        error: (error: unknown) => {
           const timing = timings.get(operationId);
           if (timing) {
             const duration = finalizeTiming(timing, true);
@@ -178,7 +191,7 @@ export const createTelemetryLink = () => {
               network_error: true,
             });
 
-            Telemetry.increment('graphql_network_errors_total', 1, {
+            Telemetry.increment('graphql_network_errors_total', sampleWeight, {
               type: operationType,
               name: operationName,
             });

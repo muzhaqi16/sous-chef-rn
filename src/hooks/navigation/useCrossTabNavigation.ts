@@ -6,7 +6,7 @@ export type SourceTab = 'Pantry' | 'ShoppingList' | 'Recipe';
 export interface CrossTabSource {
   sourceTab?: SourceTab;
   sourceScreen?: string;
-  sourceParams?: Record<string, any>;
+  sourceParams?: Record<string, unknown>;
   /** Set to true when navigating from a modal stack (like Barcode) that needs full reset */
   fromModalStack?: boolean;
 }

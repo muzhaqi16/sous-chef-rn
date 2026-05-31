@@ -47,11 +47,12 @@ type ExpirationCreatedPayload =
 type ExpirationActionPayload =
   ExpirationNotificationActionTakenSubscription['expirationNotificationActionTaken'];
 
-const addToPantryItemsConnection = createAddToParentConnectionUpdater<any>(
-  'Pantry',
-  'itemsConnection',
-  'PantryItem',
-);
+const addToPantryItemsConnection =
+  createAddToParentConnectionUpdater<UsePantrySubscriptions_PantryItemFragment>(
+    'Pantry',
+    'itemsConnection',
+    'PantryItem',
+  );
 
 const removeFromPantryItemsConnection = createRemoveFromParentConnectionUpdater(
   'Pantry',

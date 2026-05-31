@@ -1,11 +1,27 @@
 import React from 'react';
 import { renderHook } from '@testing-library/react-native';
 import { NavigationContext } from '@react-navigation/native';
-import { useStandardBottomSheet } from '../useStandardBottomSheet';
+import type { ParamListBase, NavigationProp } from '@react-navigation/native';
+import {
+  useStandardBottomSheet,
+  type BottomSheetModalRef,
+} from '../useStandardBottomSheet';
 
 // Track present/dismiss calls on the BottomSheetModal ref
 const mockPresent = jest.fn();
 const mockDismiss = jest.fn();
+
+// The hook only invokes `present` / `dismiss` on the ref, so the test attaches
+// just those methods through a ref typed to that subset.
+type SheetRefMethods = Pick<BottomSheetModalRef, 'present' | 'dismiss'>;
+const attachRefMocks = (
+  ref: React.RefObject<BottomSheetModalRef | null>,
+): void => {
+  (ref as React.RefObject<SheetRefMethods | null>).current = {
+    present: mockPresent,
+    dismiss: mockDismiss,
+  };
+};
 
 // Mock the hooks this depends on
 jest.mock('#hooks/useSharedBottomSheetConfigs', () => ({
@@ -130,10 +146,7 @@ describe('useStandardBottomSheet', () => {
       );
 
       // Attach mock methods to the ref
-      (result.current.ref as any).current = {
-        present: mockPresent,
-        dismiss: mockDismiss,
-      };
+      attachRefMocks(result.current.ref);
 
       rerender({ visible: true });
 
@@ -147,10 +160,7 @@ describe('useStandardBottomSheet', () => {
         { initialProps: { visible: true } },
       );
 
-      (result.current.ref as any).current = {
-        present: mockPresent,
-        dismiss: mockDismiss,
-      };
+      attachRefMocks(result.current.ref);
 
       rerender({ visible: false });
 
@@ -163,10 +173,7 @@ describe('useStandardBottomSheet', () => {
       );
 
       // Attach mocks to verify no calls happen
-      (result.current.ref as any).current = {
-        present: mockPresent,
-        dismiss: mockDismiss,
-      };
+      attachRefMocks(result.current.ref);
 
       // visible is not provided, so effect should not call present/dismiss
       expect(mockPresent).not.toHaveBeenCalled();
@@ -185,9 +192,15 @@ describe('useStandardBottomSheet', () => {
     // The hook uses useContext(NavigationContext) + addListener, so tests
     // provide a mock navigation via context wrapper.
     type Listener = () => void;
+    // The hook only reads `isFocused` / `addListener` off navigation, so the
+    // mock implements exactly that subset of the real prop.
+    type MockNavigation = Pick<
+      NavigationProp<ParamListBase>,
+      'isFocused' | 'addListener'
+    >;
     const createMockNavigation = () => {
       const listeners: Record<string, Listener[]> = {};
-      const navigation = {
+      const navigation: MockNavigation = {
         isFocused: jest.fn(() => true),
         addListener: jest.fn((event: string, cb: Listener) => {
           if (!listeners[event]) listeners[event] = [];
@@ -196,7 +209,7 @@ describe('useStandardBottomSheet', () => {
             listeners[event] = listeners[event].filter(l => l !== cb);
           };
         }),
-      };
+      } as MockNavigation;
       return {
         navigation,
         emit: (event: string) => {
@@ -206,11 +219,11 @@ describe('useStandardBottomSheet', () => {
     };
 
     const navWrapper =
-      (nav: unknown) =>
+      (nav: MockNavigation) =>
       ({ children }: { children: React.ReactNode }) =>
         React.createElement(
           NavigationContext.Provider,
-          { value: nav as any },
+          { value: nav as NavigationProp<ParamListBase> },
           children,
         );
 
@@ -221,10 +234,7 @@ describe('useStandardBottomSheet', () => {
         { wrapper: navWrapper(navigation) },
       );
 
-      (result.current.ref as any).current = {
-        present: mockPresent,
-        dismiss: mockDismiss,
-      };
+      attachRefMocks(result.current.ref);
 
       emit('focus');
 
@@ -238,10 +248,7 @@ describe('useStandardBottomSheet', () => {
         { wrapper: navWrapper(navigation) },
       );
 
-      (result.current.ref as any).current = {
-        present: mockPresent,
-        dismiss: mockDismiss,
-      };
+      attachRefMocks(result.current.ref);
 
       emit('blur');
 
@@ -255,10 +262,7 @@ describe('useStandardBottomSheet', () => {
         { wrapper: navWrapper(navigation) },
       );
 
-      (result.current.ref as any).current = {
-        present: mockPresent,
-        dismiss: mockDismiss,
-      };
+      attachRefMocks(result.current.ref);
 
       emit('focus');
       expect(mockPresent).not.toHaveBeenCalled();
@@ -274,10 +278,7 @@ describe('useStandardBottomSheet', () => {
         { wrapper: navWrapper(navigation) },
       );
 
-      (result.current.ref as any).current = {
-        present: mockPresent,
-        dismiss: mockDismiss,
-      };
+      attachRefMocks(result.current.ref);
 
       emit('focus');
       emit('blur');

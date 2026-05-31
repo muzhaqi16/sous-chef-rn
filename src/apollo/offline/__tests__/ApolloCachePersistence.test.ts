@@ -1,7 +1,22 @@
 'use no memo';
 
+import type {
+  ApolloCache,
+  NormalizedCacheObject,
+  StoreObject,
+} from '@apollo/client';
 import { storage } from '#storage/mmkv';
 import { apolloCachePersistence } from '../ApolloCachePersistence';
+
+/**
+ * `restoreDeferred` accepts a full `ApolloCache` but only calls
+ * `extract`/`restore`. This handle is assignable to `ApolloCache` while
+ * exposing those two methods as jest mocks for `.mock.calls` assertions.
+ */
+type MockCacheHandle = ApolloCache & {
+  restore: jest.Mock;
+  extract: jest.Mock;
+};
 
 const CACHE_KEY = 'apollo-cache-v1';
 const CRITICAL_KEY = 'apollo-cache-v1-critical';
@@ -105,11 +120,11 @@ describe('ApolloCachePersistence', () => {
     });
 
     it('debounces multiple rapid saves', () => {
-      apolloCachePersistence.save({ a: 1 } as any);
+      apolloCachePersistence.save({ 'A:1': { id: '1' } });
       jest.advanceTimersByTime(1000);
-      apolloCachePersistence.save({ b: 2 } as any);
+      apolloCachePersistence.save({ 'B:2': { id: '2' } });
       jest.advanceTimersByTime(1000);
-      apolloCachePersistence.save({ c: 3 } as any);
+      apolloCachePersistence.save({ 'C:3': { id: '3' } });
 
       // Advance fully
       jest.advanceTimersByTime(3000);
@@ -117,7 +132,7 @@ describe('ApolloCachePersistence', () => {
 
       // Only the last cache should be saved (all deferred since no critical typenames)
       const deferred = JSON.parse(storage.getString(DEFERRED_KEY)!);
-      expect(deferred).toEqual({ c: 3 });
+      expect(deferred).toEqual({ 'C:3': { id: '3' } });
     });
   });
 
@@ -141,22 +156,22 @@ describe('ApolloCachePersistence', () => {
     });
 
     it('cancels any pending debounced save', () => {
-      apolloCachePersistence.save({ old: true } as any);
-      apolloCachePersistence.saveImmediate({ immediate: true } as any);
+      apolloCachePersistence.save({ 'Old:1': { id: '1' } });
+      apolloCachePersistence.saveImmediate({ 'Immediate:1': { id: '1' } });
 
       // Advance timers to ensure debounced save does not fire
       jest.runAllTimers();
 
       const deferred = JSON.parse(storage.getString(DEFERRED_KEY)!);
-      expect(deferred).toEqual({ immediate: true });
+      expect(deferred).toEqual({ 'Immediate:1': { id: '1' } });
     });
 
     it('handles serialization errors gracefully', () => {
-      const circular: any = {};
+      const circular: StoreObject = {};
       circular.self = circular;
 
       // Should not throw
-      apolloCachePersistence.saveImmediate(circular);
+      apolloCachePersistence.saveImmediate({ 'Circular:1': circular });
       expect(console.error).toHaveBeenCalled();
     });
   });
@@ -164,7 +179,7 @@ describe('ApolloCachePersistence', () => {
   describe('pause / resume', () => {
     it('suppresses saves while paused', () => {
       apolloCachePersistence.pause();
-      apolloCachePersistence.save({ paused: true } as any);
+      apolloCachePersistence.save({ 'Paused:1': { id: '1' } });
 
       jest.runAllTimers();
       expect(storage.getString(CACHE_KEY)).toBeUndefined();
@@ -172,14 +187,14 @@ describe('ApolloCachePersistence', () => {
 
     it('flushes pending save on resume', () => {
       apolloCachePersistence.pause();
-      apolloCachePersistence.save({ pausedData: true } as any);
+      apolloCachePersistence.save({ 'PausedData:1': { id: '1' } });
       apolloCachePersistence.resume();
 
       jest.advanceTimersByTime(3000);
       jest.runAllTimers();
 
       const deferred = JSON.parse(storage.getString(DEFERRED_KEY)!);
-      expect(deferred).toEqual({ pausedData: true });
+      expect(deferred).toEqual({ 'PausedData:1': { id: '1' } });
     });
 
     it('does nothing on resume if nothing was queued while paused', () => {
@@ -197,7 +212,7 @@ describe('ApolloCachePersistence', () => {
     });
 
     it('cancels pending debounced save when pausing', () => {
-      apolloCachePersistence.save({ before_pause: true } as any);
+      apolloCachePersistence.save({ 'BeforePause:1': { id: '1' } });
       // Pause before debounce fires
       jest.advanceTimersByTime(1000);
       apolloCachePersistence.pause();
@@ -208,8 +223,8 @@ describe('ApolloCachePersistence', () => {
 
     it('uses the latest extractor when multiple saves happen while paused', () => {
       apolloCachePersistence.pause();
-      apolloCachePersistence.save({ first: true } as any);
-      apolloCachePersistence.save({ second: true } as any);
+      apolloCachePersistence.save({ 'First:1': { id: '1' } });
+      apolloCachePersistence.save({ 'Second:2': { id: '2' } });
       apolloCachePersistence.resume();
 
       jest.advanceTimersByTime(3000);
@@ -217,13 +232,13 @@ describe('ApolloCachePersistence', () => {
 
       // The last extractor should win
       const deferred = JSON.parse(storage.getString(DEFERRED_KEY)!);
-      expect(deferred).toEqual({ second: true });
+      expect(deferred).toEqual({ 'Second:2': { id: '2' } });
     });
   });
 
   describe('cancel', () => {
     it('cancels pending debounced save', () => {
-      apolloCachePersistence.save({ should_cancel: true } as any);
+      apolloCachePersistence.save({ 'ShouldCancel:1': { id: '1' } });
       apolloCachePersistence.cancel();
 
       jest.runAllTimers();
@@ -247,7 +262,7 @@ describe('ApolloCachePersistence', () => {
     });
 
     it('cancels pending saves', () => {
-      apolloCachePersistence.save({ before_clear: true } as any);
+      apolloCachePersistence.save({ 'BeforeClear:1': { id: '1' } });
       apolloCachePersistence.clear();
 
       jest.runAllTimers();
@@ -260,8 +275,11 @@ describe('ApolloCachePersistence', () => {
       storage.set(VERSION_KEY, CURRENT_VERSION);
       storage.set(DEFERRED_KEY, JSON.stringify(deferredData));
 
-      const cache = { restore: jest.fn() };
-      apolloCachePersistence.restoreDeferred(cache as any);
+      const cache = {
+        restore: jest.fn(),
+        extract: jest.fn(() => ({})),
+      } as MockCacheHandle;
+      apolloCachePersistence.restoreDeferred(cache);
 
       // clear() should cancel the pending idle callback
       apolloCachePersistence.clear();
@@ -361,14 +379,17 @@ describe('ApolloCachePersistence', () => {
     });
 
     it('returns false on storage error', () => {
+      // Direct reassign + restore (not jest.spyOn, whose mockRestore fails to
+      // restore the MMKV mock's getString and leaves it throwing for later
+      // tests).
       const originalGetString = storage.getString;
-      (storage as any).getString = jest.fn(() => {
+      storage.getString = jest.fn(() => {
         throw new Error('storage error');
       });
 
       expect(apolloCachePersistence.isValid()).toBe(false);
 
-      (storage as any).getString = originalGetString;
+      storage.getString = originalGetString;
     });
   });
 
@@ -532,10 +553,13 @@ describe('ApolloCachePersistence', () => {
   describe('restoreDeferred', () => {
     // requestIdleCallback is polyfilled in __tests__/setup/globals.js as
     // setTimeout(cb, 0), so advancing timers fires the idle callback.
-    const makeFakeCache = (existingData: Record<string, any> = {}) => ({
-      restore: jest.fn(),
-      extract: jest.fn(() => existingData),
-    });
+    const makeFakeCache = (
+      existingData: NormalizedCacheObject = {},
+    ): MockCacheHandle =>
+      ({
+        restore: jest.fn(),
+        extract: jest.fn(() => existingData),
+      } as MockCacheHandle);
 
     it('schedules an idle callback and merges deferred entities with existing cache', () => {
       const deferredData = {
@@ -547,7 +571,7 @@ describe('ApolloCachePersistence', () => {
 
       const existingData = { 'User:1': { id: '1' }, ROOT_QUERY: {} };
       const cache = makeFakeCache(existingData);
-      apolloCachePersistence.restoreDeferred(cache as any);
+      apolloCachePersistence.restoreDeferred(cache);
 
       // Idle callback hasn't fired yet
       expect(cache.restore).not.toHaveBeenCalled();
@@ -564,7 +588,7 @@ describe('ApolloCachePersistence', () => {
 
     it('does nothing when there are no deferred entities to restore', () => {
       const cache = makeFakeCache();
-      apolloCachePersistence.restoreDeferred(cache as any);
+      apolloCachePersistence.restoreDeferred(cache);
 
       jest.advanceTimersByTime(0);
 
@@ -577,7 +601,7 @@ describe('ApolloCachePersistence', () => {
       storage.set(DEFERRED_KEY, JSON.stringify(deferredData));
 
       const cache = makeFakeCache();
-      apolloCachePersistence.restoreDeferred(cache as any);
+      apolloCachePersistence.restoreDeferred(cache);
       apolloCachePersistence.cancel();
 
       jest.advanceTimersByTime(0);
@@ -592,8 +616,8 @@ describe('ApolloCachePersistence', () => {
 
       const cache1 = makeFakeCache();
       const cache2 = makeFakeCache();
-      apolloCachePersistence.restoreDeferred(cache1 as any);
-      apolloCachePersistence.restoreDeferred(cache2 as any);
+      apolloCachePersistence.restoreDeferred(cache1);
+      apolloCachePersistence.restoreDeferred(cache2);
 
       jest.advanceTimersByTime(0);
 
@@ -609,7 +633,7 @@ describe('ApolloCachePersistence', () => {
 
       const cache = makeFakeCache();
       const onComplete = jest.fn();
-      apolloCachePersistence.restoreDeferred(cache as any, onComplete);
+      apolloCachePersistence.restoreDeferred(cache, onComplete);
 
       expect(onComplete).not.toHaveBeenCalled();
       jest.advanceTimersByTime(0);
@@ -621,7 +645,7 @@ describe('ApolloCachePersistence', () => {
     it('calls onComplete when there are no deferred entities', () => {
       const cache = makeFakeCache();
       const onComplete = jest.fn();
-      apolloCachePersistence.restoreDeferred(cache as any, onComplete);
+      apolloCachePersistence.restoreDeferred(cache, onComplete);
 
       jest.advanceTimersByTime(0);
 
@@ -633,14 +657,12 @@ describe('ApolloCachePersistence', () => {
       storage.set(VERSION_KEY, CURRENT_VERSION);
       storage.set(DEFERRED_KEY, JSON.stringify({ 'X:1': {} }));
 
-      const cache = {
-        extract: jest.fn(() => ({})),
-        restore: jest.fn(() => {
-          throw new Error('boom');
-        }),
-      };
+      const cache = makeFakeCache();
+      cache.restore.mockImplementation(() => {
+        throw new Error('boom');
+      });
       const onComplete = jest.fn();
-      apolloCachePersistence.restoreDeferred(cache as any, onComplete);
+      apolloCachePersistence.restoreDeferred(cache, onComplete);
 
       jest.advanceTimersByTime(0);
 
@@ -654,7 +676,7 @@ describe('ApolloCachePersistence', () => {
 
       const cache = makeFakeCache();
       const onComplete = jest.fn();
-      apolloCachePersistence.restoreDeferred(cache as any, onComplete);
+      apolloCachePersistence.restoreDeferred(cache, onComplete);
       apolloCachePersistence.cancel();
 
       jest.advanceTimersByTime(0);
@@ -676,7 +698,7 @@ describe('ApolloCachePersistence', () => {
       // Pre-populate old key
       storage.set(CACHE_KEY, '{"old":"data"}');
 
-      apolloCachePersistence.save({ ROOT_QUERY: {}, 'Item:1': {} } as any);
+      apolloCachePersistence.save({ ROOT_QUERY: {}, 'Item:1': {} });
       jest.advanceTimersByTime(3000);
       jest.runAllTimers();
 

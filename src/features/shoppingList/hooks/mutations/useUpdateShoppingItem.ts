@@ -22,7 +22,7 @@ import { executeMutation } from '#/utils/compilerSafeWrappers';
 
 interface UseUpdateShoppingItemOptions {
   listId: string | null | undefined;
-  refetch: () => Promise<any>;
+  refetch: () => Promise<unknown>;
 }
 
 const OPTIMISTIC_FIELDS: ReadonlyArray<

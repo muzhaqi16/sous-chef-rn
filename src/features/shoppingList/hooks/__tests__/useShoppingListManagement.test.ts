@@ -9,13 +9,31 @@ const mockRemoveItem = jest.fn();
 const mockToggleItem = jest.fn();
 const mockRefetch = jest.fn().mockResolvedValue(undefined);
 
-const mockShoppingList = {
+interface MockShoppingItem {
+  id: string;
+  itemName: string;
+  quantity: number;
+  category: string;
+  purchaseInfo: { isPurchased: boolean };
+  sortOrder: string;
+}
+
+interface MockShoppingList {
+  id: string;
+  name: string;
+  isDefault: boolean;
+  completedItems?: number;
+}
+
+const mockShoppingList: MockShoppingList = {
   id: 'list-1',
   name: 'Groceries',
   isDefault: true,
 };
 
-function createItem(overrides: Record<string, unknown> = {}) {
+function createItem(
+  overrides: Partial<MockShoppingItem> = {},
+): MockShoppingItem {
   return {
     id: 'item-1',
     itemName: 'Milk',
@@ -24,7 +42,7 @@ function createItem(overrides: Record<string, unknown> = {}) {
     purchaseInfo: { isPurchased: false },
     sortOrder: 'aaa',
     ...overrides,
-  } as any;
+  };
 }
 
 const mockUnpurchasedItems = [
@@ -41,7 +59,7 @@ const mockPurchasedItems = [
   }),
 ];
 
-let mockShoppingListResult: any = mockShoppingList;
+let mockShoppingListResult: MockShoppingList = mockShoppingList;
 
 jest.mock('../useShoppingListItemsQuery', () => ({
   useShoppingListItemsQuery: () => ({
@@ -89,7 +107,7 @@ jest.mock('../mutations/useShoppingListItemMutations', () => ({
 }));
 
 jest.mock('#hooks/useSearchableList', () => ({
-  useSearchableList: (items: any[]) => ({
+  useSearchableList: <T>(items: T[]) => ({
     query: '',
     setQuery: jest.fn(),
     filtered: items,
@@ -97,7 +115,7 @@ jest.mock('#hooks/useSearchableList', () => ({
 }));
 
 jest.mock('#/utils/searchUtils', () => ({
-  shoppingListItemSearch: jest.fn((item: any, query: string) =>
+  shoppingListItemSearch: jest.fn((item: { itemName: string }, query: string) =>
     item.itemName.toLowerCase().includes(query.toLowerCase()),
   ),
 }));

@@ -1,6 +1,6 @@
 import { ApolloLink, HttpLink } from '@apollo/client';
 import { BatchHttpLink } from '@apollo/client/link/batch-http';
-import Config from 'react-native-config';
+import { env } from '#/config/env';
 import { Environment } from '#/utils/environment';
 
 /**
@@ -30,7 +30,7 @@ const createTimeoutFetch = (timeoutMs: number): typeof fetch => {
 
 const apiConfig = Environment.getApiConfig();
 const baseOptions = {
-  uri: Config.API_URL || apiConfig.baseUrl,
+  uri: env.API_URL || apiConfig.baseUrl,
   headers: { 'Content-Type': 'application/json' },
   fetch: createTimeoutFetch(apiConfig.timeout),
 };
@@ -41,7 +41,7 @@ const baseOptions = {
 // every operation will fail. Subscriptions are unaffected (routed via wsLink).
 // File-upload mutations (if added later) need `context: { batchMax: 1 }` to
 // bypass batching and send a multipart request individually.
-const batchEnabled = Config.GRAPHQL_BATCH_ENABLED === 'true';
+const batchEnabled = env.GRAPHQL_BATCH_ENABLED === 'true';
 
 export const httpLink: ApolloLink = batchEnabled
   ? new BatchHttpLink({ ...baseOptions, batchMax: 10, batchInterval: 20 })

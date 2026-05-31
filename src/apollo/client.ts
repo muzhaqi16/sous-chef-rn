@@ -1,4 +1,10 @@
-import { ApolloClient } from '@apollo/client';
+import {
+  ApolloClient,
+  type Cache,
+  type NormalizedCacheObject,
+  type OperationVariables,
+  type Reference,
+} from '@apollo/client';
 import { logger } from '#/utils/environment';
 import { createLink } from './links/index';
 import { registerApolloClient } from './links/refreshToken';
@@ -130,7 +136,7 @@ function setupCachePersistence(client: ApolloClient) {
   // not on every cache operation (write, evict, modify, gc)
   const schedulePersistence = () => {
     apolloCachePersistence.scheduleExtractAndSave(
-      () => client.cache.extract() as any, // justified: NormalizedCacheObject shape varies by Apollo version
+      () => client.cache.extract() as NormalizedCacheObject,
     );
   };
 
@@ -155,11 +161,19 @@ function setupCachePersistence(client: ApolloClient) {
   const originalModify = cache.modify.bind(cache);
   const originalGc = cache.gc ? cache.gc.bind(cache) : null;
 
-  // justified: wrapping Apollo cache methods requires `any` — internal method signatures are not public API
-  cache.write = function (...args: any) {
-    const result = (originalWrite as any)(...args);
+  // Wrap cache methods to persist after writes. `write`/`modify` keep their
+  // generic method signatures so the wrappers stay assignable back to the
+  // (generic) cache methods. `evict` is non-generic, so it stays fully typed
+  // via Parameters<>.
+  cache.write = function <
+    TData = unknown,
+    TVariables extends OperationVariables = OperationVariables,
+  >(
+    writeOptions: Cache.WriteOptions<TData, TVariables>,
+  ): Reference | undefined {
+    const result = originalWrite(writeOptions);
     // Mark the written entity's cache ID as dirty for incremental persistence
-    const dataId = args[0]?.dataId;
+    const dataId = writeOptions.dataId;
     if (dataId) {
       apolloCachePersistence.markDirty([dataId]);
     }
@@ -167,8 +181,8 @@ function setupCachePersistence(client: ApolloClient) {
     return result;
   };
 
-  cache.evict = function (...args: any) {
-    const result = (originalEvict as any)(...args);
+  cache.evict = function (...args: Parameters<typeof originalEvict>) {
+    const result = originalEvict(...args);
     const id = args[0]?.id;
     if (id) {
       apolloCachePersistence.markDirty([id]);
@@ -177,9 +191,11 @@ function setupCachePersistence(client: ApolloClient) {
     return result;
   };
 
-  cache.modify = function (...args: any) {
-    const result = (originalModify as any)(...args);
-    const id = args[0]?.id;
+  cache.modify = function <
+    Entity extends Record<string, unknown> = Record<string, unknown>,
+  >(options: Cache.ModifyOptions<Entity>): boolean {
+    const result = originalModify(options);
+    const id = options.id;
     if (id) {
       apolloCachePersistence.markDirty([id]);
     }
@@ -188,13 +204,17 @@ function setupCachePersistence(client: ApolloClient) {
   };
 
   if (originalGc) {
-    cache.gc = function (...args: any) {
+    cache.gc = function (gcOptions?: { resetResultCache?: boolean }) {
       // Always reset the result cache so stale query results referencing
       // evicted entities are discarded immediately. Without this, components
       // can read dangling __ref pointers and crash (production-only because
       // dev mode's loadDevMessages() masks the error).
-      const options = { resetResultCache: true, ...args[0] };
-      const result = (originalGc as any)(options);
+      const options = { resetResultCache: true, ...gcOptions };
+      // gc's options-param type varies across Apollo versions — assert a
+      // structural callable signature rather than `as any`.
+      const result = (
+        originalGc as (o?: { resetResultCache?: boolean }) => string[]
+      )(options);
       schedulePersistence();
       return result;
     };

@@ -21,8 +21,16 @@ const mockToastSuccess = jest.fn();
 const mockToastError = jest.fn();
 jest.mock('#/services/toastService', () => ({
   toastService: {
-    success: (...args: any[]) => mockToastSuccess(...args),
-    error: (...args: any[]) => mockToastError(...args),
+    success: (
+      ...args: Parameters<
+        typeof import('#/services/toastService').toastService.success
+      >
+    ) => mockToastSuccess(...args),
+    error: (
+      ...args: Parameters<
+        typeof import('#/services/toastService').toastService.error
+      >
+    ) => mockToastError(...args),
     info: jest.fn(),
     warning: jest.fn(),
   },

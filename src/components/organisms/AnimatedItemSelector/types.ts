@@ -2,7 +2,6 @@ import type { IconLibrary } from '#utils/iconUtils';
 
 export interface SelectableItem {
   id: string;
-  [key: string]: any;
 }
 
 export interface ActionButtonConfig {
@@ -31,7 +30,7 @@ export interface SelectorConfig<T extends SelectableItem> {
     isSelected: boolean,
     onPress: () => void,
   ) => React.ReactElement;
-  extraData?: any;
+  extraData?: unknown;
   /** Cap the visible list area to this many items, then scroll */
   maxVisibleItems?: number;
 }
@@ -41,6 +40,7 @@ export interface AnimatedItemSelectorProps<T extends SelectableItem> {
   isVisible?: boolean;
   onClose?: () => void;
   onOpen?: (afterDone?: () => void) => void;
+  ref?: React.Ref<ItemSelectorRef>;
 }
 
 export interface ItemSelectorRef {

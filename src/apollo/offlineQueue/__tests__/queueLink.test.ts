@@ -1,4 +1,7 @@
-import { Observable } from '@apollo/client';
+import { ApolloLink, Observable } from '@apollo/client';
+import type { ApolloClient, OperationVariables } from '@apollo/client';
+import { OperationTypeNode } from 'graphql';
+import type { DocumentNode } from 'graphql';
 import { createQueueLink } from '../queueLink';
 import { queueStore } from '../queueStore';
 import { useStore } from '#store';
@@ -56,27 +59,31 @@ const MOCK_LOGIN_MUTATION = gql`
 
 /** Build a minimal Apollo Operation */
 function makeOperation(options: {
-  query: any;
+  query: DocumentNode;
   operationName?: string;
-  variables?: Record<string, any>;
-  context?: Record<string, any>;
-}) {
-  const contextMap: Record<string, any> = options.context || {};
+  variables?: OperationVariables;
+  context?: ApolloLink.OperationContext;
+}): ApolloLink.Operation {
+  const contextMap: ApolloLink.OperationContext = options.context || {};
   return {
     query: options.query,
     operationName: options.operationName ?? '',
+    operationType: OperationTypeNode.MUTATION,
     variables: options.variables ?? {},
     getContext: () => contextMap,
     setContext: jest.fn(),
     extensions: {},
+    client: {} as ApolloClient,
   };
 }
 
 /** Forward function that returns a simple observable */
-function makeForward(data: any = { testData: true }) {
+function makeForward(
+  data: ApolloLink.Result['data'] = { testData: true },
+): ApolloLink.ForwardFunction {
   return jest.fn(
     () =>
-      new Observable(observer => {
+      new Observable<ApolloLink.Result>(observer => {
         observer.next({ data });
         observer.complete();
       }),
@@ -104,7 +111,7 @@ describe('createQueueLink', () => {
       });
       const forward = makeForward();
 
-      const observable = link.request(operation as any, forward as any);
+      const observable = link.request(operation, forward);
       observable!.subscribe({
         next(result) {
           expect(result.data).toEqual({ testData: true });
@@ -133,7 +140,7 @@ describe('createQueueLink', () => {
       });
       const forward = makeForward({ addItem: { id: '1', name: 'Apple' } });
 
-      const observable = link.request(operation as any, forward as any);
+      const observable = link.request(operation, forward);
       observable!.subscribe({
         next(result) {
           expect(result.data).toEqual({ addItem: { id: '1', name: 'Apple' } });
@@ -165,7 +172,7 @@ describe('createQueueLink', () => {
       });
       const forward = makeForward();
 
-      const observable = link.request(operation as any, forward as any);
+      const observable = link.request(operation, forward);
       observable!.subscribe({
         next(result) {
           expect(result.data).toEqual(optimistic);
@@ -196,7 +203,7 @@ describe('createQueueLink', () => {
       });
       const forward = makeForward();
 
-      const observable = link.request(operation as any, forward as any);
+      const observable = link.request(operation, forward);
       observable!.subscribe({
         next(result) {
           expect(result.data).toBeNull();
@@ -221,7 +228,7 @@ describe('createQueueLink', () => {
       });
       const forward = makeForward();
 
-      const observable = link.request(operation as any, forward as any);
+      const observable = link.request(operation, forward);
       observable!.subscribe({
         error(err) {
           expect(err.message).toBe(
@@ -259,7 +266,7 @@ describe('createQueueLink', () => {
         });
         const forward = makeForward({ [opName.toLowerCase()]: { ok: true } });
 
-        const observable = link.request(operation as any, forward as any);
+        const observable = link.request(operation, forward);
         observable!.subscribe({
           complete() {
             expect(forward).toHaveBeenCalledTimes(1);
@@ -287,7 +294,7 @@ describe('createQueueLink', () => {
       });
       const forward = makeForward();
 
-      const observable = link.request(operation as any, forward as any);
+      const observable = link.request(operation, forward);
       observable!.subscribe({
         complete() {
           expect(forward).toHaveBeenCalledTimes(1);

@@ -1,5 +1,43 @@
-import type { CreateItemInput } from '#/graphql/generated/schemaTypes';
+import type {
+  BaseDimension,
+  CreateItemInput,
+  ItemNetWeightInput,
+  ItemType,
+  ItemUnitInput,
+  StorageState,
+} from '#/graphql/generated/schemaTypes';
+import type { ImageFile } from '#hooks/useImageUpload';
 import { storage } from '#/storage/mmkv';
+
+/**
+ * Shape of the dynamic AddItemForm submission fields this mapper reads. The
+ * form collects an open-ended bag of values (hence the index signature); the
+ * named fields document the ones the mapper assigns into the strongly-typed
+ * CreateItemInput.
+ */
+export interface AddItemFormData {
+  [key: string]: unknown;
+  name: string;
+  description?: string;
+  type?: ItemType;
+  brandId?: string;
+  brandName?: string;
+  storageState?: StorageState;
+  tags?: string[];
+  categoryIds?: string[];
+  primaryUpc?: string;
+  vendor?: string;
+  shelfLifeDays?: number;
+  shelfLifeOpenedDays?: number;
+  baseDimension?: BaseDimension;
+  defaultConsumeIncrement?: number;
+  defaultConsumeUnitId?: string;
+  netWeights?: ItemNetWeightInput[];
+  units?: ItemUnitInput[];
+  imageUrl?: string;
+  sku?: string;
+  storeId?: string;
+}
 
 /**
  * Maps an AddItemForm submission to the nested CreateItemInput shape accepted
@@ -7,57 +45,55 @@ import { storage } from '#/storage/mmkv';
  * from-OCR flow so the mapping stays in one place.
  */
 export function mapFormToCreateItemInput(
-  formData: Record<string, any>,
+  formData: Record<string, unknown>,
 ): CreateItemInput {
+  const data = formData as AddItemFormData;
   return {
-    name: formData.name,
-    description: formData.description || undefined,
-    type: formData.type || undefined,
+    name: data.name,
+    description: data.description || undefined,
+    type: data.type || undefined,
     brand:
-      formData.brandId || formData.brandName
-        ? { brandId: formData.brandId, brandName: formData.brandName }
+      data.brandId || data.brandName
+        ? { brandId: data.brandId, brandName: data.brandName }
         : undefined,
     classification:
-      formData.storageState ||
-      formData.tags?.length ||
-      formData.categoryIds?.length
+      data.storageState || data.tags?.length || data.categoryIds?.length
         ? {
-            storageState: formData.storageState || undefined,
-            tags: formData.tags?.length ? formData.tags : undefined,
-            categoryIds: formData.categoryIds?.length
-              ? formData.categoryIds
+            storageState: data.storageState || undefined,
+            tags: data.tags?.length ? data.tags : undefined,
+            categoryIds: data.categoryIds?.length
+              ? data.categoryIds
               : undefined,
           }
         : undefined,
     productDetails:
-      formData.primaryUpc ||
-      formData.vendor ||
-      formData.shelfLifeDays ||
-      formData.shelfLifeOpenedDays
+      data.primaryUpc ||
+      data.vendor ||
+      data.shelfLifeDays ||
+      data.shelfLifeOpenedDays
         ? {
-            primaryUpc: formData.primaryUpc || undefined,
-            vendor: formData.vendor || undefined,
-            shelfLifeDays: formData.shelfLifeDays || undefined,
-            shelfLifeOpenedDays: formData.shelfLifeOpenedDays || undefined,
+            primaryUpc: data.primaryUpc || undefined,
+            vendor: data.vendor || undefined,
+            shelfLifeDays: data.shelfLifeDays || undefined,
+            shelfLifeOpenedDays: data.shelfLifeOpenedDays || undefined,
           }
         : undefined,
     packageInfo:
-      formData.baseDimension ||
-      formData.defaultConsumeIncrement ||
-      formData.defaultConsumeUnitId
+      data.baseDimension ||
+      data.defaultConsumeIncrement ||
+      data.defaultConsumeUnitId
         ? {
-            baseDimension: formData.baseDimension || undefined,
-            defaultConsumeIncrement:
-              formData.defaultConsumeIncrement || undefined,
-            defaultConsumeUnitId: formData.defaultConsumeUnitId || undefined,
+            baseDimension: data.baseDimension || undefined,
+            defaultConsumeIncrement: data.defaultConsumeIncrement || undefined,
+            defaultConsumeUnitId: data.defaultConsumeUnitId || undefined,
           }
         : undefined,
-    netWeights: formData.netWeights?.length ? formData.netWeights : undefined,
-    unitConfig: formData.units?.length ? { units: formData.units } : undefined,
-    media: formData.imageUrl ? { imageUrl: formData.imageUrl } : undefined,
+    netWeights: data.netWeights?.length ? data.netWeights : undefined,
+    unitConfig: data.units?.length ? { units: data.units } : undefined,
+    media: data.imageUrl ? { imageUrl: data.imageUrl } : undefined,
     storeSkus:
-      formData.sku && formData.storeId
-        ? [{ sku: formData.sku, storeId: formData.storeId }]
+      data.sku && data.storeId
+        ? [{ sku: data.sku, storeId: data.storeId }]
         : undefined,
   };
 }
@@ -66,12 +102,12 @@ export function mapFormToCreateItemInput(
  * Stash images selected in the form into MMKV so the post-create upload step
  * can pick them up after the mutation returns with an item id.
  */
-export function stashPendingFormImages(formData: Record<string, any>): void {
-  if (formData.selectedImages && formData.selectedImages.length > 0) {
-    storage.set(
-      'temp_pending_item_images',
-      JSON.stringify(formData.selectedImages),
-    );
+export function stashPendingFormImages(
+  formData: Record<string, unknown>,
+): void {
+  const selectedImages = formData.selectedImages;
+  if (Array.isArray(selectedImages) && selectedImages.length > 0) {
+    storage.set('temp_pending_item_images', JSON.stringify(selectedImages));
   } else if (formData.selectedImage) {
     storage.set(
       'temp_pending_item_image',
@@ -88,7 +124,7 @@ export async function uploadPendingImages<
   T extends { id: string; imageUrl?: string | null },
 >(
   createdItem: T,
-  uploadItemImage: (image: any, itemId: string) => Promise<string | null>,
+  uploadItemImage: (image: ImageFile, itemId: string) => Promise<string | null>,
 ): Promise<T> {
   let finalItem = createdItem;
 

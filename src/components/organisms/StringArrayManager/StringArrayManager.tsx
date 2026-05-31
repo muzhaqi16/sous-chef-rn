@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View } from 'react-native';
+import { View, type StyleProp, type ViewStyle } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { BottomSheetTextInput, BottomSheetView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
@@ -9,6 +9,7 @@ const ThemedSheetTextInput = withUnistyles(BottomSheetTextInput, theme => ({
   placeholderTextColor: theme.colors.inputPlaceholder,
 }));
 import { Icon } from '#/utils/iconUtils';
+import { errorMessageOr } from '#/services/errorService';
 import { commonStyles } from '#/styles/commonStyles';
 import {
   executeWithLoadingState,
@@ -81,7 +82,7 @@ export interface StringArrayManagerProps {
   /**
    * Custom style for the container
    */
-  containerStyle?: any;
+  containerStyle?: StyleProp<ViewStyle>;
 }
 
 /**
@@ -208,7 +209,7 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
       },
       setLoading,
       (err: unknown) => {
-        setError((err as any).message || 'An error occurred');
+        setError(errorMessageOr(err, 'An error occurred'));
       },
     );
   };

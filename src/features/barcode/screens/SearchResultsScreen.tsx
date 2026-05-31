@@ -14,6 +14,7 @@ import { Header } from '#components/molecules/Header';
 import AddItemForm, {
   type AddItemFormMode,
   type AddItemFormInitialData,
+  type AddItemSubmitPayload,
 } from '#components/organisms/AddItemForm/AddItemForm';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { useBottomSheetState } from '#store/useAppStore';
@@ -124,7 +125,7 @@ export const SearchResultsScreen: React.FC<
     showBottomSheet(1);
   };
 
-  const handleFormSubmit = (formData: any) => {
+  const handleFormSubmit = (formData: AddItemSubmitPayload) => {
     if (sheetMode === 'edit' && searchResults[0]) {
       handleSuggestEdit(searchResults[0].id, formData);
     } else {

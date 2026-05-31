@@ -7,8 +7,9 @@ import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
 import { useHybridPantrySearch } from '../useHybridPantrySearch';
 
 jest.mock('#/utils/searchUtils', () => ({
-  pantryItemSearch: jest.fn((item: any, query: string) =>
-    (item.itemName ?? '').toLowerCase().includes(query.toLowerCase()),
+  pantryItemSearch: jest.fn(
+    (item: { itemName?: string | null }, query: string) =>
+      (item.itemName ?? '').toLowerCase().includes(query.toLowerCase()),
   ),
 }));
 
@@ -18,7 +19,7 @@ jest.mock('#hooks/utils/useDebouncedValue', () => ({
 
 jest.mock('#/utils/compilerSafeWrappers', () => ({
   executeSearchQuery: async (
-    queryFn: () => Promise<{ data?: any }>,
+    queryFn: () => Promise<{ data?: unknown }>,
     cancelled: () => boolean,
   ) => {
     try {
@@ -211,7 +212,7 @@ describe('useHybridPantrySearch', () => {
 
     it('skips the server query when pantryId is missing', async () => {
       const m = recordMock(GetPantryDocument, {
-        data: { pantry: null } as any,
+        data: { pantry: null },
       });
 
       const { result } = renderHookWithApollo(

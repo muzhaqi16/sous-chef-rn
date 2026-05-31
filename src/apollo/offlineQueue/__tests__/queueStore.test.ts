@@ -1,3 +1,4 @@
+import type { DocumentNode } from 'graphql';
 import { QueueStore } from '../queueStore';
 import { QueuedMutation, QueueStatus } from '../types';
 import { storage } from '#storage/mmkv';
@@ -14,7 +15,7 @@ function makeMutation(overrides: Partial<QueuedMutation> = {}): QueuedMutation {
     mutation: {
       kind: 'Document',
       definitions: [],
-    } as any,
+    } as DocumentNode,
     variables: {},
     status: QueueStatus.PENDING,
     createdAt: Date.now(),
@@ -196,7 +197,7 @@ describe('QueueStore', () => {
       store.addMutation(original);
 
       // Attempt to update with forbidden fields (type system prevents, but test runtime)
-      store.updateMutation('upd-2', { status: QueueStatus.SUCCESS } as any);
+      store.updateMutation('upd-2', { status: QueueStatus.SUCCESS });
 
       const m = store.getMutation('upd-2');
       expect(m?.id).toBe('upd-2');

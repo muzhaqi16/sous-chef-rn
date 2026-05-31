@@ -11,7 +11,7 @@ describe('unistyles configuration', () => {
   });
 
   it('StyleSheet.create works with the mock (function form)', () => {
-    const styles = StyleSheet.create((theme: any) => ({
+    const styles = StyleSheet.create(theme => ({
       container: {
         padding: theme.spacing.md,
       },

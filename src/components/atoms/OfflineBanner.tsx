@@ -1,9 +1,18 @@
 import React from 'react';
 import { View } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { useAppStore, useIsOnline } from '#store/useAppStore';
-import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
+
+// The banner icon matches the warning text color, which differs between light
+// and dark themes. `<Icon tone>` only exposes flat top-level theme colors, not
+// the nested `alertBanner.warning.text` path, so wrap Ionicons directly with
+// withUnistyles — it re-resolves the color on theme change so the icon stays
+// in sync with the text instead of going stale until a remount.
+const BannerIcon = withUnistyles(Ionicons, theme => ({
+  color: theme.colors.alertBanner.warning.text,
+}));
 
 /**
  * Persistent banner displayed when the app is offline.
@@ -33,7 +42,7 @@ export const OfflineBanner: React.FC = () => {
       accessibilityRole="alert"
       accessibilityLiveRegion="polite"
     >
-      <Icon name={iconName} size={16} color={styles.text.color} />
+      <BannerIcon name={iconName} size={16} />
       <Text
         size="xs"
         weight="medium"

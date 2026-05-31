@@ -3,22 +3,47 @@ import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { RestockPantryItemModal } from '../RestockPantryItemModal';
 
+// Minimal stand-ins for the props the mocked PantryActionModal feeds back to
+// `renderActionFields`; matches exactly what this stub constructs.
+type RestockMockSharedState = {
+  trackingQuantity: number;
+  trackingUnitSymbol: string;
+  trackingUnitId: string;
+  activeUnitSymbol: string;
+  activeUnitId: string;
+  isConvertedUnit: boolean;
+  selectedUnitInfo: {
+    unitId: string;
+    unitSymbol: string;
+    unitName: string;
+    unitType: string;
+    isTrackingUnit: boolean;
+    conversionConfidence: number | null;
+  };
+  setSelectedUnitInfo: jest.Mock;
+  notes: string;
+  setNotes: jest.Mock;
+  itemId: string;
+  defaultUnit: null;
+};
+type RestockMockPantryItem = { id: string; quantity: number } | null;
+
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 jest.mock('#components/molecules/FractionInput', () => ({
-  FractionInput: ({ label }: any) => {
+  FractionInput: ({ label }: { label: string }) => {
     const { Text } = require('react-native');
     return <Text>{label}</Text>;
   },
 }));
 jest.mock('#components/molecules/FormInput', () => ({
-  FormInput: ({ label }: any) => {
+  FormInput: ({ label }: { label: string }) => {
     const { Text } = require('react-native');
     return <Text>{label}</Text>;
   },
 }));
 jest.mock('#components/molecules/DatePickerField', () => ({
-  DatePickerField: ({ label }: any) => {
+  DatePickerField: ({ label }: { label: string }) => {
     const { Text } = require('react-native');
     return <Text>{label}</Text>;
   },
@@ -30,9 +55,20 @@ jest.mock('#/utils/formatQuantity', () => ({
   formatQuantity: (v: number) => v.toString(),
 }));
 jest.mock('../PantryActionModal', () => ({
-  PantryActionModal: ({ title, renderActionFields, pantryItemId }: any) => {
+  PantryActionModal: ({
+    title,
+    renderActionFields,
+    pantryItemId,
+  }: {
+    title: string;
+    pantryItemId: string | null;
+    renderActionFields: (
+      shared: RestockMockSharedState,
+      pantryItem: RestockMockPantryItem,
+    ) => React.ReactNode;
+  }) => {
     const { View, Text } = require('react-native');
-    const sharedState = {
+    const sharedState: RestockMockSharedState = {
       trackingQuantity: 5,
       trackingUnitSymbol: 'oz',
       trackingUnitId: 'unit-1',
@@ -53,7 +89,7 @@ jest.mock('../PantryActionModal', () => ({
       itemId: 'item-1',
       defaultUnit: null,
     };
-    const fakePantryItem = pantryItemId
+    const fakePantryItem: RestockMockPantryItem = pantryItemId
       ? { id: pantryItemId, quantity: 5 }
       : null;
     return (

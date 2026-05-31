@@ -58,15 +58,16 @@ jest.mock('#features/notifications/hooks/useNotificationPermissions', () => ({
 }));
 
 jest.mock('#components/settings/SettingSwitch', () => ({
-  SettingSwitch: ({ title }: any) => title,
+  SettingSwitch: ({ title }: { title: string }) => title,
 }));
 
 jest.mock('#components/settings/SettingSection', () => ({
-  SettingSection: ({ children }: any) => children,
+  SettingSection: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 jest.mock('#components/templates/ProfileScreenWrapper', () => ({
-  ProfileScreenWrapper: ({ children }: any) => children,
+  ProfileScreenWrapper: ({ children }: { children: React.ReactNode }) =>
+    children,
 }));
 
 jest.mock('#components/molecules/ModalPicker', () => ({

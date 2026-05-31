@@ -5,7 +5,11 @@ import {
   renderHookWithApollo,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
-import { GetShoppingListItemsFilteredDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import {
+  GetShoppingListItemsFilteredDocument,
+  type GetShoppingListItemsFilteredQueryVariables,
+} from '#features/shoppingList/graphql/shoppingList.generated';
+import type { PaginationConfig } from '#hooks/utils/usePagination';
 import { usePaginatedShoppingItems } from '../usePaginatedShoppingItems';
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -28,12 +32,12 @@ jest.mock('#hooks/apollo/useApolloErrorLogger', () => ({
 }));
 
 jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeRefetch: jest.fn((fn: any) => fn()),
-  executeMutation: jest.fn((fn: any) => fn()),
+  executeRefetch: jest.fn((fn: () => unknown) => fn()),
+  executeMutation: jest.fn((fn: () => unknown) => fn()),
 }));
 
 jest.mock('#hooks/utils/usePagination', () => ({
-  usePagination: jest.fn((config: any) => ({
+  usePagination: jest.fn((config: PaginationConfig) => ({
     hasMore: config.pageInfo?.hasNextPage ?? false,
     endCursor: config.pageInfo?.endCursor ?? null,
     loadMore: jest.fn(),
@@ -42,11 +46,11 @@ jest.mock('#hooks/utils/usePagination', () => ({
   })),
 }));
 
-(global as any).requestIdleCallback = jest.fn((cb: any) => {
-  cb();
+globalThis.requestIdleCallback = jest.fn((cb: IdleRequestCallback) => {
+  cb({ didTimeout: false, timeRemaining: () => 0 });
   return 1;
 });
-(global as any).cancelIdleCallback = jest.fn();
+globalThis.cancelIdleCallback = jest.fn();
 
 function buildConnectionData(
   edges: Array<{ id: string; itemName: string; sortOrder: string }>,
@@ -86,10 +90,12 @@ function buildListMock(
   return {
     request: {
       query: GetShoppingListItemsFilteredDocument,
-      variables: vars => (vars as any).isPurchased === isPurchased,
+      variables: vars =>
+        (vars as GetShoppingListItemsFilteredQueryVariables).isPurchased ===
+        isPurchased,
     },
     maxUsageCount: Number.POSITIVE_INFINITY,
-    result: { data: data as any },
+    result: { data },
   };
 }
 
@@ -199,7 +205,7 @@ describe('usePaginatedShoppingItems', () => {
   it('delegates loadMore to usePagination', async () => {
     const mockLoadMore = jest.fn();
     const { usePagination } = require('#hooks/utils/usePagination');
-    usePagination.mockImplementation((config: any) => ({
+    usePagination.mockImplementation((config: PaginationConfig) => ({
       hasMore: config.pageInfo?.hasNextPage ?? false,
       endCursor: config.pageInfo?.endCursor ?? null,
       loadMore: mockLoadMore,
@@ -266,7 +272,9 @@ describe('usePaginatedShoppingItems', () => {
           {
             request: {
               query: GetShoppingListItemsFilteredDocument,
-              variables: vars => (vars as any).isPurchased === false,
+              variables: vars =>
+                (vars as GetShoppingListItemsFilteredQueryVariables)
+                  .isPurchased === false,
             },
             maxUsageCount: Number.POSITIVE_INFINITY,
             error: new Error('Network error'),

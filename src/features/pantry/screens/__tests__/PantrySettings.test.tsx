@@ -22,7 +22,8 @@ jest.mock('#store/useAppStore', () => {
     selectedHomeId: 'h1',
     setSelectedPantryId: jest.fn(),
   };
-  const fn = (selector: any) => selector(mockState);
+  const fn = (selector: (state: typeof mockState) => unknown) =>
+    selector(mockState);
   fn.getState = () => ({});
   fn.setState = jest.fn();
   fn.subscribe = jest.fn();
@@ -53,7 +54,13 @@ jest.mock('#/services/alertService', () => ({
 }));
 
 jest.mock('#components/molecules/ScreenHeader', () => ({
-  ScreenHeader: ({ title, rightElement }: any) => {
+  ScreenHeader: ({
+    title,
+    rightElement,
+  }: {
+    title?: string;
+    rightElement?: React.ReactNode;
+  }) => {
     const { View, Text } = require('react-native');
     return (
       <View testID="screen-header">
@@ -67,7 +74,7 @@ jest.mock('#components/base/Loading', () => ({
   LoadingInline: () => null,
 }));
 jest.mock('#components/molecules/InfoRow', () => ({
-  InfoRow: ({ label, value }: any) => {
+  InfoRow: ({ label, value }: { label?: string; value?: string }) => {
     const { View, Text } = require('react-native');
     return (
       <View>
@@ -78,7 +85,13 @@ jest.mock('#components/molecules/InfoRow', () => ({
   },
 }));
 jest.mock('#components/atoms/BaseInput/BaseInput', () => ({
-  BaseInput: ({ label, ...props }: any) => {
+  BaseInput: ({
+    label,
+    ...props
+  }: {
+    label?: string;
+    [key: string]: unknown;
+  }) => {
     const { View, Text, TextInput } = require('react-native');
     return (
       <View>
@@ -106,7 +119,7 @@ function cacheWithPantry(pantry: PantryFixture): InMemoryCache {
   cache.writeQuery({
     query: GetPantryDocument,
     variables: { id: pantry.id, itemsFirst: 25, storageLocationsFirst: 15 },
-    data: pantryData(pantry) as any,
+    data: pantryData(pantry),
   });
   return cache;
 }
@@ -266,12 +279,15 @@ describe('PantrySettings', () => {
 
   it('shows no home selected error when saving without selectedHomeId', () => {
     const storeModule = require('#store/useAppStore');
-    jest.spyOn(storeModule, 'useAppStore').mockImplementation((selector: any) =>
-      selector({
-        selectedHomeId: null,
-        setSelectedPantryId: jest.fn(),
-      }),
-    );
+    const noHomeState = {
+      selectedHomeId: null,
+      setSelectedPantryId: jest.fn(),
+    };
+    jest
+      .spyOn(storeModule, 'useAppStore')
+      .mockImplementation((selector: unknown) =>
+        typeof selector === 'function' ? selector(noHomeState) : undefined,
+      );
     jest.spyOn(storeModule, 'useSelectedHomeId').mockReturnValue(null);
 
     renderWithApollo(<PantrySettings route={createRoute} />, {

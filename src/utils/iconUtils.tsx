@@ -20,6 +20,7 @@ const ThemedIonicons = withUnistyles(Ionicons);
 const TONE_TO_COLOR: Record<string, (t: Theme) => string> = {
   primary: t => t.colors.primary,
   secondary: t => t.colors.secondary,
+  border: t => t.colors.border,
   textPrimary: t => t.colors.textPrimary,
   textSecondary: t => t.colors.textSecondary,
   textTertiary: t => t.colors.textTertiary,
@@ -75,7 +76,16 @@ export const Icon: React.FC<IconProps> = ({ name, size = 24, color, tone }) => {
       />
     );
   }
-  return <Ionicons name={name as IoniconsIconName} size={size} color="#000" />;
+  // No explicit `color` or `tone` → default to the theme's primary text color
+  // so icons stay visible in dark mode (previously a hardcoded #000 that
+  // rendered near-invisible on dark surfaces).
+  return (
+    <ThemedIonicons
+      name={name as IoniconsIconName}
+      size={size}
+      uniProps={t => ({ color: (t as Theme).colors.textPrimary })}
+    />
+  );
 };
 
 // Imperative API — kept for the few callsites that build icon elements

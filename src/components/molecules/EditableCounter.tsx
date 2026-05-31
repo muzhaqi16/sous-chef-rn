@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View } from 'react-native';
+import { View, type GestureResponderEvent } from 'react-native';
 import { Pressable, ThemedTextInput } from '#components/atoms/themedComponents';
 import { Icon } from '#utils/iconUtils';
 import { StyleSheet } from 'react-native-unistyles';
@@ -47,7 +47,7 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
 
   styles.useVariants({ focused: isFocused, disabled });
 
-  const handleIncrement = (e: any) => {
+  const handleIncrement = (e?: GestureResponderEvent) => {
     e?.stopPropagation?.();
     if (disabled) return;
     const currentValue = parseFractionalInput(value) ?? 0;
@@ -55,7 +55,7 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
     onChangeText(String(newValue));
   };
 
-  const handleDecrement = (e: any) => {
+  const handleDecrement = (e?: GestureResponderEvent) => {
     e?.stopPropagation?.();
     if (disabled) return;
     const currentValue = parseFractionalInput(value) ?? 0;
@@ -83,10 +83,10 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
         onAccessibilityAction={event => {
           switch (event.nativeEvent.actionName) {
             case 'increment':
-              handleIncrement(null);
+              handleIncrement();
               break;
             case 'decrement':
-              handleDecrement(null);
+              handleDecrement();
               break;
           }
         }}

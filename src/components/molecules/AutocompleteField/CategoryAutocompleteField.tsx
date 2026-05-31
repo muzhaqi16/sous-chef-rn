@@ -4,7 +4,7 @@ import {
   CategoryType,
 } from '#/graphql/generated/schemaTypes';
 import { useCategoryAutocomplete } from '#hooks/autocomplete/useCategoryAutocomplete';
-import { AutocompleteField } from './AutocompleteField';
+import { GenericAutocompleteField } from './GenericAutocompleteField';
 import { AutocompleteRow } from './AutocompleteRow';
 
 interface CategoryAutocompleteFieldProps {
@@ -36,64 +36,37 @@ export const CategoryAutocompleteField: React.FC<
 }) => {
   const category = useCategoryAutocomplete({ categoryType });
 
-  const handleTextChange = (text: string) => {
-    onChangeText(text);
-    category.handleSearchTermChange(text);
-    onCategorySelected?.(null);
-  };
-
-  const handleSelect = (item: CategorySuggestion) => {
-    onChangeText(item.name);
-    onCategorySelected?.(item.id);
-    category.setSearchTerm('');
-  };
-
-  const renderItem = (item: CategorySuggestion) => (
-    <AutocompleteRow icon={item.icon ?? undefined} title={item.name} />
-  );
-
-  const keyExtractor = (item: CategorySuggestion) => item.id;
-
-  if (variant === 'inline') {
-    return (
-      <AutocompleteField<CategorySuggestion>
-        variant="inline"
-        label={label}
-        value={value}
-        onChangeText={handleTextChange}
-        placeholder={placeholder}
-        required={required}
-        error={error}
-        testID={testID}
-        items={category.displayItems}
-        loading={category.isLoading}
-        minSearchLength={2}
-        maxResults={5}
-        renderItem={renderItem}
-        keyExtractor={keyExtractor}
-        onSelect={handleSelect}
-      />
-    );
-  }
-
   return (
-    <AutocompleteField<CategorySuggestion>
-      variant="modal"
+    <GenericAutocompleteField<CategorySuggestion>
+      variant={variant}
       label={label}
       value={value}
-      onChangeText={handleTextChange}
       placeholder={placeholder}
       required={required}
       error={error}
-      title="Select a category"
-      searchPlaceholder="Type to search categories..."
+      testID={testID}
+      onChangeText={text => {
+        onChangeText(text);
+        category.handleSearchTermChange(text);
+        onCategorySelected?.(null);
+      }}
       items={category.displayItems}
       loading={category.isLoading}
-      renderItem={renderItem}
-      keyExtractor={keyExtractor}
-      onSelect={handleSelect}
-      emptyText="No categories found"
-      emptySubtext={`Continue typing to use "${category.searchTerm}" as a custom category`}
+      renderItem={item => (
+        <AutocompleteRow icon={item.icon ?? undefined} title={item.name} />
+      )}
+      keyExtractor={item => item.id}
+      onSelect={item => {
+        onChangeText(item.name);
+        onCategorySelected?.(item.id);
+        category.setSearchTerm('');
+      }}
+      inlineMinSearchLength={2}
+      maxResults={5}
+      modalTitle="Select a category"
+      modalSearchPlaceholder="Type to search categories..."
+      modalEmptyText="No categories found"
+      modalEmptySubtext={`Continue typing to use "${category.searchTerm}" as a custom category`}
       onSearchChange={category.handleSearchTermChange}
     />
   );

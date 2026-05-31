@@ -8,20 +8,25 @@ const origRequestIdleCallback = globalThis.requestIdleCallback;
 const origCancelIdleCallback = globalThis.cancelIdleCallback;
 
 // Replace globally for all tests - track calls manually
-let requestIdleCalls: Array<(deadline?: any) => void> = [];
+let requestIdleCalls: IdleRequestCallback[] = [];
 let cancelIdleCalls: number[] = [];
 let idleCounter = 0;
 
-globalThis.requestIdleCallback = ((cb: any) => {
+const mockDeadline: IdleDeadline = {
+  didTimeout: false,
+  timeRemaining: () => 50,
+};
+
+globalThis.requestIdleCallback = (cb: IdleRequestCallback): number => {
   const id = ++idleCounter;
   requestIdleCalls.push(cb);
-  cb(); // execute immediately for test purposes
+  cb(mockDeadline); // execute immediately for test purposes
   return id;
-}) as any;
+};
 
-globalThis.cancelIdleCallback = ((id: number) => {
+globalThis.cancelIdleCallback = (id: number): void => {
   cancelIdleCalls.push(id);
-}) as any;
+};
 
 afterAll(() => {
   globalThis.requestIdleCallback = origRequestIdleCallback;
@@ -69,7 +74,8 @@ describe('useAfterInteraction', () => {
   it('re-invokes when enabled changes from false to true', () => {
     const callback = jest.fn();
     const { rerender } = renderHook(
-      ({ enabled }: any) => useAfterInteraction(callback, { enabled }),
+      ({ enabled }: { enabled: boolean }) =>
+        useAfterInteraction(callback, { enabled }),
       { initialProps: { enabled: false } },
     );
 

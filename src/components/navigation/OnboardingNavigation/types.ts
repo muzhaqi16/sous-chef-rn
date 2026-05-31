@@ -1,3 +1,5 @@
+import type { StyleProp, TextStyle, ViewStyle } from 'react-native';
+
 export interface NavigationAction {
   label: string;
   labelColor?: string;
@@ -20,6 +22,6 @@ export interface OnboardingNavigationProps {
 
 export interface NavigationButtonProps {
   action: NavigationAction;
-  style?: any;
-  textStyle?: any;
+  style?: StyleProp<ViewStyle>;
+  textStyle?: StyleProp<TextStyle>;
 }

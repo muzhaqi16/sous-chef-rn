@@ -87,10 +87,10 @@ export function useMoveToPantry({
               id: selectedItem.id,
             });
             if (cacheId) {
-              cache.modify({
+              cache.modify<ShoppingListItemDisplayFragment>({
                 id: cacheId,
                 fields: {
-                  purchaseInfo(existing: any) {
+                  purchaseInfo(existing) {
                     return { ...existing, isPurchased: false };
                   },
                   version(existingVersion = 0) {

@@ -2,10 +2,15 @@
 
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
+import type { ErrorLike } from '@apollo/client';
 import { PantryMain } from '../PantryMain';
+import type {
+  PantryContentProps,
+  PantryContentRef,
+} from '#features/pantry/components/pantryDisplay/types';
 
 // --- Prop capture for PantryContent ---
-let capturedPantryContentProps: Record<string, any> = {};
+let capturedPantryContentProps: Partial<PantryContentProps> = {};
 
 // --- Break circular deps ---
 jest.mock('#/apollo/links/tokenScheduler');
@@ -53,10 +58,10 @@ const defaultPantryScreen = {
   householdName: 'My Home',
 
   // Home / Pantry resolution
-  pantry: { id: 'p1', name: 'Kitchen' },
+  pantry: { id: 'p1', name: 'Kitchen' } as { id: string; name: string } | null,
   pantries: [{ id: 'p1', name: 'Kitchen' }],
-  currentHome: { name: 'My Home' },
-  selectedHomeId: 'h1',
+  currentHome: { name: 'My Home' } as { name: string } | null,
+  selectedHomeId: 'h1' as string | null,
   setSelectedPantryId: jest.fn(),
   homeCount: 1,
   isReady: true,
@@ -90,7 +95,7 @@ const defaultPantryScreen = {
     lowStockCount: number;
   } | null,
   totalCount: 0,
-  pantryError: null as any,
+  pantryError: null as ErrorLike | null,
 
   // Loading states
   loading: false,
@@ -199,7 +204,7 @@ jest.mock('#components/performance/DeferredScreen', () => ({
     component: Component,
   }: {
     component: React.FC;
-    fallback: any;
+    fallback: React.ReactNode;
   }) => <Component />,
 }));
 
@@ -208,26 +213,30 @@ jest.mock('#features/pantry/components/PantryContent', () => {
   const { forwardRef, useImperativeHandle, useEffect } = require('react');
   const { View, Text } = require('react-native');
   return {
-    PantryContent: forwardRef((props: any, ref: any) => {
-      useImperativeHandle(ref, () => ({ scrollToTop: jest.fn() }));
-      useEffect(() => {
-        capturedPantryContentProps = props;
-      });
-      return (
-        <View testID="pantry-content">
-          <Text>{props.userName}</Text>
-          <Text>{props.householdName}</Text>
-          <Text testID="prop-stats">{JSON.stringify(props.stats)}</Text>
-          <Text testID="prop-totalCount">{String(props.totalCount)}</Text>
-          <Text testID="prop-loading">{String(props.loading)}</Text>
-          <Text testID="prop-itemCount">
-            {String(props.items?.length ?? 0)}
-          </Text>
-          <Text testID="prop-hasMore">{String(props.hasMore)}</Text>
-          <Text testID="prop-isLoadingMore">{String(props.isLoadingMore)}</Text>
-        </View>
-      );
-    }),
+    PantryContent: forwardRef(
+      (props: PantryContentProps, ref: React.Ref<PantryContentRef>) => {
+        useImperativeHandle(ref, () => ({ scrollToTop: jest.fn() }));
+        useEffect(() => {
+          capturedPantryContentProps = props;
+        });
+        return (
+          <View testID="pantry-content">
+            <Text>{props.userName}</Text>
+            <Text>{props.householdName}</Text>
+            <Text testID="prop-stats">{JSON.stringify(props.stats)}</Text>
+            <Text testID="prop-totalCount">{String(props.totalCount)}</Text>
+            <Text testID="prop-loading">{String(props.loading)}</Text>
+            <Text testID="prop-itemCount">
+              {String(props.items?.length ?? 0)}
+            </Text>
+            <Text testID="prop-hasMore">{String(props.hasMore)}</Text>
+            <Text testID="prop-isLoadingMore">
+              {String(props.isLoadingMore)}
+            </Text>
+          </View>
+        );
+      },
+    ),
   };
 });
 jest.mock(
@@ -360,10 +369,10 @@ describe('PantryMain', () => {
   describe('no-home states', () => {
     it('passes noHomeSelected=true when ready, no home selected, but homes exist', () => {
       mockPantryScreen({
-        pantry: null as any,
+        pantry: null,
         pantries: [],
-        currentHome: null as any,
-        selectedHomeId: null as any,
+        currentHome: null,
+        selectedHomeId: null,
         homeCount: 3,
         isReady: true,
         noHomeSelected: true,
@@ -380,10 +389,10 @@ describe('PantryMain', () => {
 
     it('passes noHomes=true when ready, no home selected, and no homes exist', () => {
       mockPantryScreen({
-        pantry: null as any,
+        pantry: null,
         pantries: [],
-        currentHome: null as any,
-        selectedHomeId: null as any,
+        currentHome: null,
+        selectedHomeId: null,
         homeCount: 0,
         isReady: true,
         noHomeSelected: false,
@@ -398,10 +407,10 @@ describe('PantryMain', () => {
 
     it('passes onSelectHome callback that navigates to HomeManagement', () => {
       mockPantryScreen({
-        pantry: null as any,
+        pantry: null,
         pantries: [],
-        currentHome: null as any,
-        selectedHomeId: null as any,
+        currentHome: null,
+        selectedHomeId: null,
         homeCount: 3,
         isReady: true,
         noHomeSelected: true,
@@ -420,7 +429,7 @@ describe('PantryMain', () => {
 
     it('passes noPantries=true and onCreatePantry when home has no pantries', () => {
       mockPantryScreen({
-        pantry: null as any,
+        pantry: null,
         pantries: [],
         currentHome: { name: 'My Home' },
         selectedHomeId: 'h1',

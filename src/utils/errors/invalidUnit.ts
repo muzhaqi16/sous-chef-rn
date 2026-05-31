@@ -7,20 +7,49 @@ export interface InvalidUnitDetails {
 }
 
 /**
+ * Shape of a single GraphQL error carrying a UNIT_INVALID extension.
+ */
+interface GraphQLErrorLike {
+  message?: string;
+  extensions?: {
+    code?: string;
+    validUnits?: unknown;
+  };
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function getGraphQLErrors(error: unknown): GraphQLErrorLike[] | undefined {
+  if (isObject(error) && Array.isArray(error.graphQLErrors)) {
+    return error.graphQLErrors as GraphQLErrorLike[];
+  }
+  return undefined;
+}
+
+function getSingleError(error: unknown): GraphQLErrorLike | undefined {
+  if (isObject(error) && isObject(error.extensions)) {
+    return error as GraphQLErrorLike;
+  }
+  return undefined;
+}
+
+/**
  * Check if an error is a UNIT_INVALID error from the API (Apollo error level)
  *
  * @param error - Error object that may contain GraphQL errors
  * @returns True if the error is an invalid unit error
  */
-export function isInvalidUnitError(error: any): boolean {
-  if ('graphQLErrors' in error && error.graphQLErrors) {
-    return error.graphQLErrors.some(
-      (err: any) => err.extensions?.code === 'UNIT_INVALID',
-    );
+export function isInvalidUnitError(error: unknown): boolean {
+  const graphQLErrors = getGraphQLErrors(error);
+  if (graphQLErrors) {
+    return graphQLErrors.some(err => err.extensions?.code === 'UNIT_INVALID');
   }
 
-  if ('extensions' in error && error.extensions) {
-    return error.extensions.code === 'UNIT_INVALID';
+  const single = getSingleError(error);
+  if (single) {
+    return single.extensions?.code === 'UNIT_INVALID';
   }
 
   return false;
@@ -44,22 +73,19 @@ export function isInvalidUnitPayload(payload: {
  * @param error - Error containing UNIT_INVALID
  * @returns Array of valid unit symbols, or null if not a UNIT_INVALID error
  */
-export function getValidUnits(error: any): string[] | null {
-  let unitError: any | undefined;
+export function getValidUnits(error: unknown): string[] | null {
+  let unitError: GraphQLErrorLike | undefined;
 
-  if ('graphQLErrors' in error && error.graphQLErrors) {
-    unitError = error.graphQLErrors.find(
-      (err: any) => err.extensions?.code === 'UNIT_INVALID',
+  const graphQLErrors = getGraphQLErrors(error);
+  if (graphQLErrors) {
+    unitError = graphQLErrors.find(
+      err => err.extensions?.code === 'UNIT_INVALID',
     );
-  } else if ('extensions' in error && error.extensions) {
-    unitError = error;
+  } else {
+    unitError = getSingleError(error);
   }
 
-  if (!unitError?.extensions?.validUnits) {
-    return null;
-  }
-
-  const { validUnits } = unitError.extensions;
+  const validUnits = unitError?.extensions?.validUnits;
   if (Array.isArray(validUnits)) {
     return validUnits;
   }
@@ -73,15 +99,16 @@ export function getValidUnits(error: any): string[] | null {
  * @param error - Error containing UNIT_INVALID
  * @returns User-friendly error message
  */
-export function getInvalidUnitMessage(error: any): string {
-  let unitError: any | undefined;
+export function getInvalidUnitMessage(error: unknown): string {
+  let unitError: GraphQLErrorLike | undefined;
 
-  if ('graphQLErrors' in error && error.graphQLErrors) {
-    unitError = error.graphQLErrors.find(
-      (err: any) => err.extensions?.code === 'UNIT_INVALID',
+  const graphQLErrors = getGraphQLErrors(error);
+  if (graphQLErrors) {
+    unitError = graphQLErrors.find(
+      err => err.extensions?.code === 'UNIT_INVALID',
     );
-  } else if ('extensions' in error && error.extensions) {
-    unitError = error;
+  } else {
+    unitError = getSingleError(error);
   }
 
   if (unitError?.message) {
@@ -97,7 +124,7 @@ export function getInvalidUnitMessage(error: any): string {
  * @param error - Apollo error to check
  * @returns True if error was an invalid unit error
  */
-export function handleInvalidUnit(error: any): boolean {
+export function handleInvalidUnit(error: unknown): boolean {
   if (!isInvalidUnitError(error)) {
     return false;
   }

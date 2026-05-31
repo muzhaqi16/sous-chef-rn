@@ -1,4 +1,5 @@
 import { DocumentNode } from 'graphql';
+import type { DefaultContext, OperationVariables } from '@apollo/client';
 
 /**
  * Status of a queued mutation
@@ -33,9 +34,9 @@ export interface QueuedMutation {
 
   // Mutation details
   mutation: DocumentNode; // GraphQL mutation document
-  variables: Record<string, any>; // Mutation variables
-  optimisticResponse?: any; // Optimistic response for cache updates
-  context?: Record<string, any>; // Additional context (e.g., headers)
+  variables: OperationVariables; // Mutation variables
+  optimisticResponse?: Record<string, unknown> | null; // Optimistic response for cache updates
+  context?: DefaultContext; // Additional context (e.g., headers)
 
   // Status tracking
   status: QueueStatus;
@@ -83,7 +84,7 @@ export interface ProcessingResult {
   success: boolean;
   mutationId: string;
   error?: QueueError;
-  serverResponse?: any;
+  serverResponse?: Record<string, unknown>;
 }
 
 /**

@@ -10,6 +10,7 @@ import {
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import { useIsEffectivelyOffline } from '#hooks/settings/useOfflineMode';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+import { errorMessageOr } from '#/services/errorService';
 
 type TFn = ReturnType<typeof useTranslation>['t'];
 
@@ -170,21 +171,14 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
       },
       setIsSubmitting,
       (err: unknown) => {
-        // Extract the actual error message from the API
-        let errorMessage = t('inviteUser.sendFailed');
-        const error = err as any;
-
-        if (error?.message) {
-          errorMessage = error.message.replace('ApolloError: ', '');
-        } else if (error?.graphQLErrors?.length > 0) {
-          errorMessage = error.graphQLErrors[0].message;
-        } else if (error?.networkError?.message) {
-          errorMessage = error.networkError.message;
-        } else if (typeof error === 'string') {
-          errorMessage = error;
-        }
-
-        setError(errorMessage);
+        // Extract the actual error message from the API (errorMessageOr reads
+        // Error.message / string and falls back to the localized default).
+        setError(
+          errorMessageOr(err, t('inviteUser.sendFailed')).replace(
+            'ApolloError: ',
+            '',
+          ),
+        );
       },
     );
   };

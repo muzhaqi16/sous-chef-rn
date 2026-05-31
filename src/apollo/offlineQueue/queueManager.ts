@@ -1,4 +1,5 @@
 import { gql } from '@apollo/client';
+import type { DocumentNode } from 'graphql';
 import { client } from '../client';
 import { useStore } from '#store';
 import { queueStore } from './queueStore';
@@ -296,8 +297,11 @@ export class QueueManager {
         mutationId,
         serverResponse: result,
       };
-    } catch (error: any) {
-      logger.error(`❌ Queue: Mutation ${mutationId} failed:`, error.message);
+    } catch (error) {
+      logger.error(
+        `❌ Queue: Mutation ${mutationId} failed:`,
+        error instanceof Error ? error.message : String(error),
+      );
       return await this.handleMutationError(mutation, error);
     }
   }
@@ -306,7 +310,9 @@ export class QueueManager {
    * Execute a mutation via Apollo Client
    * Uses sync mutations for offline-queued items to handle temp-IDs
    */
-  private async executeMutation(mutation: QueuedMutation): Promise<any> {
+  private async executeMutation(
+    mutation: QueuedMutation,
+  ): Promise<Record<string, unknown> | undefined> {
     const useSyncMutation = this.shouldUseSync();
 
     if (useSyncMutation) {
@@ -314,7 +320,7 @@ export class QueueManager {
     }
 
     // Fallback to regular mutation (shouldn't happen for offline-queued items)
-    const result = await client.mutate({
+    const result = await client.mutate<Record<string, unknown>>({
       mutation: mutation.mutation,
       variables: mutation.variables,
       context: {
@@ -333,13 +339,15 @@ export class QueueManager {
   /**
    * Execute sync mutation and handle ID mapping
    */
-  private async executeSyncMutation(mutation: QueuedMutation): Promise<any> {
+  private async executeSyncMutation(
+    mutation: QueuedMutation,
+  ): Promise<Record<string, unknown> | undefined> {
     const { syncMutation, syncVariables } =
       this.convertToSyncMutation(mutation);
 
     logger.info(`🔄 Queue: Using sync mutation for ${mutation.operationName}`);
 
-    const result = await client.mutate({
+    const result = await client.mutate<Record<string, unknown>>({
       mutation: syncMutation,
       variables: syncVariables,
       context: {
@@ -352,8 +360,14 @@ export class QueueManager {
       throw result.error;
     }
 
-    // justified: dynamic payload extraction — mutation field name varies per queued operation
-    const syncResult = Object.values(result.data || {})[0] as any;
+    // Dynamic payload extraction — the mutation field name varies per queued
+    // operation, so the value shape is only known structurally here.
+    const syncResult = Object.values(result.data || {})[0] as {
+      wasCreated?: boolean;
+      serverId?: string;
+      clientId?: string;
+      conflict?: { message?: string };
+    };
 
     // Handle ID mapping for creates
     if (syncResult.wasCreated && syncResult.serverId && syncResult.clientId) {
@@ -379,8 +393,8 @@ export class QueueManager {
    * Convert regular mutation to sync mutation
    */
   private convertToSyncMutation(mutation: QueuedMutation): {
-    syncMutation: any;
-    syncVariables: any;
+    syncMutation: DocumentNode;
+    syncVariables: Record<string, unknown>;
   } {
     const operationName = mutation.operationName;
     const variables = this.resolveIds(mutation.variables);
@@ -502,20 +516,21 @@ export class QueueManager {
   /**
    * Resolve temp-IDs to real IDs in variables
    */
-  private resolveIds(variables: any): any {
+  private resolveIds<T>(variables: T): T {
     if (!variables) return variables;
 
     const resolved = JSON.parse(JSON.stringify(variables)); // Deep clone
 
     // Recursively replace temp-IDs with real IDs
-    const replaceIds = (obj: any): any => {
+    const replaceIds = (obj: unknown): unknown => {
       if (!obj || typeof obj !== 'object') return obj;
 
       if (Array.isArray(obj)) {
         return obj.map(replaceIds);
       }
 
-      for (const [key, value] of Object.entries(obj)) {
+      const record = obj as Record<string, unknown>;
+      for (const [key, value] of Object.entries(record)) {
         if (
           (key === 'id' || key.endsWith('Id')) &&
           typeof value === 'string' &&
@@ -524,17 +539,17 @@ export class QueueManager {
           const realId = this.idMapping.get(value);
           if (realId) {
             logger.info(`🔄 Queue: Resolved ${value} → ${realId}`);
-            obj[key] = realId;
+            record[key] = realId;
           }
         } else if (typeof value === 'object') {
-          obj[key] = replaceIds(value);
+          record[key] = replaceIds(value);
         }
       }
 
-      return obj;
+      return record;
     };
 
-    return replaceIds(resolved);
+    return replaceIds(resolved) as T;
   }
 
   /**
@@ -551,7 +566,7 @@ export class QueueManager {
    */
   private async handleMutationError(
     mutation: QueuedMutation,
-    error: any,
+    error: unknown,
   ): Promise<ProcessingResult> {
     const queueError = this.classifyError(error);
 
@@ -740,9 +755,15 @@ export class QueueManager {
   /**
    * Classify error type
    */
-  private classifyError(error: any): QueueError {
-    const message = error.message || error.toString();
-    const code = error.extensions?.code || error.code;
+  private classifyError(error: unknown): QueueError {
+    const err = (error ?? {}) as {
+      message?: string;
+      code?: string;
+      extensions?: { code?: string };
+      networkError?: { statusCode?: number };
+    };
+    const message = err.message || String(error);
+    const code = err.extensions?.code || err.code;
 
     // Auth errors
     if (
@@ -776,7 +797,7 @@ export class QueueManager {
     }
 
     // Server errors (5xx)
-    if (error.networkError?.statusCode >= 500) {
+    if ((err.networkError?.statusCode ?? 0) >= 500) {
       return {
         type: 'server',
         message,

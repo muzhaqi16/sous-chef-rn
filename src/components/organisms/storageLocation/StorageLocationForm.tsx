@@ -31,6 +31,36 @@ export interface StorageLocationFormRef {
   isValid: () => boolean;
 }
 
+/** Fields the form reads to seed its initial state. */
+export interface StorageLocationFormInitialData {
+  id?: string;
+  name?: string;
+  type?: string;
+  parentLocationId?: string | null;
+  description?: string | null;
+  temperature?: StorageState | null;
+  color?: string | null;
+  isClimateControlled?: boolean | null;
+  capacity?: number | null;
+  capacityUnit?: string | null;
+  isDefault?: boolean | null;
+}
+
+/** Payload emitted by the form's `onSubmit`. */
+export interface StorageLocationFormValues {
+  name: string;
+  type: string;
+  icon: string | null;
+  parentLocationId: string | null;
+  description: string | null;
+  temperature: StorageState | null;
+  color: string | null;
+  isClimateControlled: boolean | null;
+  capacity: number | null;
+  capacityUnit: string | null;
+  isDefault: boolean | null;
+}
+
 type TFn = ReturnType<typeof useTranslation>['t'];
 
 const STORAGE_TYPE_VALUES = [
@@ -84,8 +114,8 @@ const buildCapacityUnitOptions = (t: TFn) =>
   }));
 
 interface StorageLocationFormProps {
-  initialData?: any;
-  onSubmit: (data: any) => void;
+  initialData?: StorageLocationFormInitialData | null;
+  onSubmit: (data: StorageLocationFormValues) => void;
   onCancel: () => void;
   isSubmitting: boolean;
   availableLocations?: Array<{ id: string; name: string; type: string }>;

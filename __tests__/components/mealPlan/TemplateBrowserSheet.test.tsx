@@ -23,7 +23,7 @@ jest.mock('../../../src/hooks/useStandardBottomSheet', () => ({
       },
     },
   }),
-  BottomSheetModal: ({ children }: any) => children,
+  BottomSheetModal: ({ children }: { children: React.ReactNode }) => children,
 }));
 jest.mock('../../../src/features/mealPlan/hooks/useMealTemplates', () => ({
   useMealTemplates: () => ({

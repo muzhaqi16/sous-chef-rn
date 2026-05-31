@@ -4,12 +4,13 @@ import {
   NotificationType,
 } from '#/graphql/generated/schemaTypes';
 import { NotificationPriority, NotificationItem } from '../notificationSlice';
+import type { User } from '../authSlice';
 
 // Mock authSlice dependencies
 jest.mock('../../../apollo/links/tokenScheduler');
 jest.mock('../../../apollo/links/refreshToken');
 
-const testUser = {
+const testUser: User = {
   id: 'user-1',
   email: 'test@example.com',
   emailVerified: true,
@@ -33,9 +34,11 @@ function createNotification(
 }
 
 describe('notificationSlice', () => {
-  function createAuthenticatedStore(overrides?: any) {
+  function createAuthenticatedStore(
+    overrides?: Parameters<typeof createTestStore>[0],
+  ) {
     const store = createTestStore(overrides);
-    store.getState().setAuth(testUser as any, 'access', 'refresh');
+    store.getState().setAuth(testUser, 'access', 'refresh');
     return store;
   }
 
@@ -50,9 +53,7 @@ describe('notificationSlice', () => {
 
     it('does not add if user email is not verified', () => {
       const store = createTestStore();
-      store
-        .getState()
-        .setAuth({ ...testUser, emailVerified: false } as any, 'a', 'r');
+      store.getState().setAuth({ ...testUser, emailVerified: false }, 'a', 'r');
       store.getState().addNotification(createNotification());
       expect(store.getState().notifications).toHaveLength(0);
     });
@@ -322,9 +323,7 @@ describe('notificationSlice', () => {
   describe('addMultipleNotifications - additional branches', () => {
     it('does not add if user email is not verified', () => {
       const store = createTestStore();
-      store
-        .getState()
-        .setAuth({ ...testUser, emailVerified: false } as any, 'a', 'r');
+      store.getState().setAuth({ ...testUser, emailVerified: false }, 'a', 'r');
       store.getState().addMultipleNotifications([createNotification()]);
       expect(store.getState().notifications).toHaveLength(0);
     });
@@ -515,7 +514,7 @@ describe('notificationSlice', () => {
           category: NotificationCategory.Pantry,
         }),
       );
-      store.getState().setSelectedPantryId(null as any);
+      store.getState().setSelectedPantryId(null);
       store.getState().cleanupOrphanedSubscriptions();
       expect(store.getState().notifications).toHaveLength(0);
     });
@@ -529,7 +528,7 @@ describe('notificationSlice', () => {
           category: NotificationCategory.Shopping,
         }),
       );
-      store.getState().setSelectedShoppingListId(null as any);
+      store.getState().setSelectedShoppingListId(null);
       store.getState().cleanupOrphanedSubscriptions();
       expect(store.getState().notifications).toHaveLength(0);
     });
@@ -544,7 +543,7 @@ describe('notificationSlice', () => {
           category: NotificationCategory.Home,
         }),
       );
-      store.getState().setSelectedHomeId(null as any);
+      store.getState().setSelectedHomeId(null);
       store.getState().cleanupOrphanedSubscriptions();
       expect(store.getState().notifications).toHaveLength(0);
     });
@@ -573,7 +572,7 @@ describe('notificationSlice', () => {
         }),
       );
       expect(store.getState().urgentCount).toBe(1);
-      store.getState().setSelectedPantryId(null as any);
+      store.getState().setSelectedPantryId(null);
       store.getState().cleanupOrphanedSubscriptions();
       expect(store.getState().urgentCount).toBe(0);
       expect(store.getState().unreadCount).toBe(0);

@@ -1,13 +1,16 @@
 import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
+import type DateTimePicker from '@react-native-community/datetimepicker';
 import { DatePickerField } from '../DatePickerField';
+
+type DateTimePickerProps = React.ComponentProps<typeof DateTimePicker>;
 
 // Mock the DateTimePicker since it's a native component
 jest.mock('@react-native-community/datetimepicker', () => {
   const { View } = require('react-native');
   return {
     __esModule: true,
-    default: (props: any) =>
+    default: (props: DateTimePickerProps) =>
       require('react').createElement(View, { testID: 'date-picker', ...props }),
   };
 });

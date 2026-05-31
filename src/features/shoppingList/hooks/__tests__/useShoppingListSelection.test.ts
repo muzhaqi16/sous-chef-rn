@@ -1,15 +1,21 @@
 import { renderHook } from '@testing-library/react-native';
 import { useShoppingListSelection } from '../useShoppingListSelection';
+import type { ShoppingListFromQuery } from '../useShoppingListsQuery';
 
 const mockSetSelectedShoppingListId = jest.fn();
 let mockSelectedShoppingListId: string | null = null;
 
+type MockState = {
+  selectedShoppingListId: string | null;
+  setSelectedShoppingListId: typeof mockSetSelectedShoppingListId;
+};
+
 jest.mock('zustand/react/shallow', () => ({
-  useShallow: (fn: any) => fn,
+  useShallow: <S, U>(fn: (state: S) => U) => fn,
 }));
 
 jest.mock('#store/useAppStore', () => ({
-  useAppStore: (selector: (state: any) => any) =>
+  useAppStore: (selector: (state: MockState) => unknown) =>
     selector({
       selectedShoppingListId: mockSelectedShoppingListId,
       setSelectedShoppingListId: mockSetSelectedShoppingListId,
@@ -20,16 +26,18 @@ jest.mock('#store/useAppStore', () => ({
   })),
 }));
 
-type MockList = {
-  id: string;
-  name: string;
-  isDefault: boolean;
-};
-
-function createList(overrides: Partial<MockList> & { id: string }): MockList {
+function createList(
+  overrides: Partial<ShoppingListFromQuery> & { id: string },
+): ShoppingListFromQuery {
   return {
+    __typename: 'ShoppingList',
     name: `List ${overrides.id}`,
     isDefault: false,
+    totalItems: 0,
+    completedItems: 0,
+    homeId: null,
+    home: null,
+    ownerships: [],
     ...overrides,
   };
 }
@@ -47,7 +55,7 @@ describe('useShoppingListSelection', () => {
       createList({ id: 'list-3' }),
     ];
 
-    renderHook(() => useShoppingListSelection(lists as any));
+    renderHook(() => useShoppingListSelection(lists));
 
     expect(mockSetSelectedShoppingListId).toHaveBeenCalledWith('list-2');
   });
@@ -55,7 +63,7 @@ describe('useShoppingListSelection', () => {
   it('auto-selects the first list when no default flag exists', () => {
     const lists = [createList({ id: 'list-1' }), createList({ id: 'list-2' })];
 
-    renderHook(() => useShoppingListSelection(lists as any));
+    renderHook(() => useShoppingListSelection(lists));
 
     expect(mockSetSelectedShoppingListId).toHaveBeenCalledWith('list-1');
   });
@@ -68,7 +76,7 @@ describe('useShoppingListSelection', () => {
       createList({ id: 'list-3' }),
     ];
 
-    const { result } = renderHook(() => useShoppingListSelection(lists as any));
+    const { result } = renderHook(() => useShoppingListSelection(lists));
 
     // Should NOT call setSelectedShoppingListId since selection is valid
     expect(mockSetSelectedShoppingListId).not.toHaveBeenCalled();
@@ -79,7 +87,7 @@ describe('useShoppingListSelection', () => {
     mockSelectedShoppingListId = 'list-2';
     const lists = [createList({ id: 'list-1' }), createList({ id: 'list-2' })];
 
-    const { result } = renderHook(() => useShoppingListSelection(lists as any));
+    const { result } = renderHook(() => useShoppingListSelection(lists));
 
     expect(result.current.currentListId).toBe('list-2');
   });
@@ -91,7 +99,7 @@ describe('useShoppingListSelection', () => {
       createList({ id: 'list-2', isDefault: true }),
     ];
 
-    const { result } = renderHook(() => useShoppingListSelection(lists as any));
+    const { result } = renderHook(() => useShoppingListSelection(lists));
 
     // currentListId should fall back to default
     expect(result.current.currentListId).toBe('list-2');
@@ -105,7 +113,7 @@ describe('useShoppingListSelection', () => {
       createList({ id: 'list-2', isDefault: true }),
     ];
 
-    const { result } = renderHook(() => useShoppingListSelection(lists as any));
+    const { result } = renderHook(() => useShoppingListSelection(lists));
 
     expect(result.current.defaultList?.id).toBe('list-2');
   });
@@ -113,13 +121,13 @@ describe('useShoppingListSelection', () => {
   it('returns first list as defaultList when no isDefault flag', () => {
     const lists = [createList({ id: 'list-1' }), createList({ id: 'list-2' })];
 
-    const { result } = renderHook(() => useShoppingListSelection(lists as any));
+    const { result } = renderHook(() => useShoppingListSelection(lists));
 
     expect(result.current.defaultList?.id).toBe('list-1');
   });
 
   it('does not auto-select when lists array is empty', () => {
-    renderHook(() => useShoppingListSelection([] as any));
+    renderHook(() => useShoppingListSelection([]));
 
     expect(mockSetSelectedShoppingListId).not.toHaveBeenCalled();
   });
@@ -127,7 +135,7 @@ describe('useShoppingListSelection', () => {
   it('exposes setSelectedShoppingListId for manual selection', () => {
     const lists = [createList({ id: 'list-1' })];
 
-    const { result } = renderHook(() => useShoppingListSelection(lists as any));
+    const { result } = renderHook(() => useShoppingListSelection(lists));
 
     expect(result.current.setSelectedShoppingListId).toBe(
       mockSetSelectedShoppingListId,
@@ -141,7 +149,7 @@ describe('useShoppingListSelection', () => {
       createList({ id: 'list-2', name: 'Weekly' }),
     ];
 
-    const { result } = renderHook(() => useShoppingListSelection(lists as any));
+    const { result } = renderHook(() => useShoppingListSelection(lists));
 
     expect(result.current.currentList?.name).toBe('Weekly');
   });

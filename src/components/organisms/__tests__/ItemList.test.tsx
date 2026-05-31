@@ -1,6 +1,10 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
+import type { ItemCard as ItemCardComponent } from '../ItemCard';
+import type { EmptyStateProps } from '../../base/EmptyState';
 import { ItemList } from '../ItemList';
+
+type ItemCardProps = React.ComponentProps<typeof ItemCardComponent>;
 
 jest.mock('#hooks/performance/useFlashListPerformance', () => ({
   useFlashListPerformance: () => ({
@@ -27,7 +31,11 @@ jest.mock('#components/atoms/CachedImage', () => ({
 jest.mock('../ItemCard', () => {
   const { Text, View } = require('react-native');
   return {
-    ItemCard: ({ title, subtitle, testID }: any) => (
+    ItemCard: ({
+      title,
+      subtitle,
+      testID,
+    }: Pick<ItemCardProps, 'title' | 'subtitle' | 'testID'>) => (
       <View testID={testID}>
         <Text>{title}</Text>
         <Text>{subtitle}</Text>
@@ -39,7 +47,10 @@ jest.mock('../ItemCard', () => {
 jest.mock('../../base/EmptyState', () => {
   const { Text } = require('react-native');
   return {
-    EmptyState: ({ title, description }: any) => (
+    EmptyState: ({
+      title,
+      description,
+    }: Pick<EmptyStateProps, 'title' | 'description'>) => (
       <>
         <Text>{title}</Text>
         {description ? <Text>{description}</Text> : null}

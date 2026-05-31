@@ -1,4 +1,5 @@
 import { useRecipeSuggestionsStore } from '../useRecipeSuggestionsStore';
+import type { RecipeInformation } from '#/services/recipeApi/types';
 
 describe('useRecipeSuggestionsStore', () => {
   beforeEach(() => {
@@ -7,7 +8,9 @@ describe('useRecipeSuggestionsStore', () => {
 
   describe('setCachedSuggestions', () => {
     it('caches recipes by item name', () => {
-      const recipes = [{ id: 1, title: 'Pasta' }] as any;
+      const recipes = [
+        { id: 1, title: 'Pasta' },
+      ] as Partial<RecipeInformation>[] as RecipeInformation[];
       useRecipeSuggestionsStore
         .getState()
         .setCachedSuggestions('Tomato', recipes);
@@ -18,7 +21,9 @@ describe('useRecipeSuggestionsStore', () => {
     });
 
     it('normalizes key to lowercase and trimmed', () => {
-      const recipes = [{ id: 1, title: 'Soup' }] as any;
+      const recipes = [
+        { id: 1, title: 'Soup' },
+      ] as Partial<RecipeInformation>[] as RecipeInformation[];
       useRecipeSuggestionsStore
         .getState()
         .setCachedSuggestions('  CHICKEN  ', recipes);
@@ -37,7 +42,9 @@ describe('useRecipeSuggestionsStore', () => {
     });
 
     it('returns null for expired cache', () => {
-      const recipes = [{ id: 1, title: 'Old' }] as any;
+      const recipes = [
+        { id: 1, title: 'Old' },
+      ] as Partial<RecipeInformation>[] as RecipeInformation[];
       useRecipeSuggestionsStore
         .getState()
         .setCachedSuggestions('item', recipes);
@@ -58,7 +65,9 @@ describe('useRecipeSuggestionsStore', () => {
     });
 
     it('removes expired entry from cache', () => {
-      const recipes = [{ id: 1 }] as any;
+      const recipes = [
+        { id: 1 },
+      ] as Partial<RecipeInformation>[] as RecipeInformation[];
       useRecipeSuggestionsStore
         .getState()
         .setCachedSuggestions('item', recipes);
@@ -78,7 +87,9 @@ describe('useRecipeSuggestionsStore', () => {
 
   describe('clearExpiredCache', () => {
     it('removes only expired entries', () => {
-      const recipes = [{ id: 1 }] as any;
+      const recipes = [
+        { id: 1 },
+      ] as Partial<RecipeInformation>[] as RecipeInformation[];
       useRecipeSuggestionsStore
         .getState()
         .setCachedSuggestions('fresh', recipes);
@@ -103,7 +114,9 @@ describe('useRecipeSuggestionsStore', () => {
 
   describe('clearAllCache', () => {
     it('clears all cached data', () => {
-      const recipes = [{ id: 1 }] as any;
+      const recipes = [
+        { id: 1 },
+      ] as Partial<RecipeInformation>[] as RecipeInformation[];
       useRecipeSuggestionsStore.getState().setCachedSuggestions('a', recipes);
       useRecipeSuggestionsStore.getState().setCachedSuggestions('b', recipes);
       useRecipeSuggestionsStore.getState().clearAllCache();

@@ -57,7 +57,10 @@ query GetPantry(
           # location filtering (storageState, storageLocation.id), stats
           # (isLowStock), and `FilteredPantryItems`' subtitle (unit.symbol).
           # Leaf rendering lives in the masked `PantryItemCard_pantryItem`
-          # spread.
+          # spread; the Consume/Waste/Restock action modals (opened from this
+          # list) read the cache via `PantryActionModal_pantryItem`, so it is
+          # spread here too — otherwise those modals open with an incomplete
+          # cache read and render blank.
           id
           itemName
           quantity
@@ -74,6 +77,7 @@ query GetPantry(
             symbol
           }
           ...PantryItemCard_pantryItem
+          ...PantryActionModal_pantryItem
         }
         cursor
       }

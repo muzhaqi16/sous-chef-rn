@@ -43,7 +43,7 @@ export const NotificationDetailScreen: React.FC<
         <ScrollView style={styles.container}>
           <View style={styles.header}>
             <View style={styles.iconContainer}>
-              <Icon name="notifications" size={32} color={styles.icon.color} />
+              <Icon name="notifications" size={32} tone="primary" />
             </View>
             <Text variant="subtitle" weight="bold" style={styles.title}>
               {notification.title || 'Notification'}
@@ -127,9 +127,6 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: theme.spacing.md,
-  },
-  icon: {
-    color: theme.colors.primary,
   },
   title: {
     marginBottom: theme.spacing.sm,

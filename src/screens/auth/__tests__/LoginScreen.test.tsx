@@ -53,9 +53,13 @@ jest.mock('#/utils/compilerSafeWrappers');
 jest.mock('#components/templates/AuthWrapper', () => {
   const { View } = require('react-native');
   return {
-    AuthWrapper: ({ children, testID }: any) => (
-      <View testID={testID}>{children}</View>
-    ),
+    AuthWrapper: ({
+      children,
+      testID,
+    }: {
+      children?: React.ReactNode;
+      testID?: string;
+    }) => <View testID={testID}>{children}</View>,
   };
 });
 
@@ -75,7 +79,20 @@ jest.mock('#components/templates/AuthFormTemplate', () => {
       footerLinkText,
       footerLinkTestID,
       onFooterLinkPress,
-    }: any) => (
+    }: {
+      title?: string;
+      subtitle?: string;
+      submitText?: string;
+      submitButtonTestID?: string;
+      onSubmit?: () => void;
+      linkText?: string;
+      linkTestID?: string;
+      onLinkPress?: () => void;
+      footerText?: string;
+      footerLinkText?: string;
+      footerLinkTestID?: string;
+      onFooterLinkPress?: () => void;
+    }) => (
       <View testID="auth-form-template">
         <Text>{title}</Text>
         {subtitle ? <Text>{subtitle}</Text> : null}
@@ -101,7 +118,7 @@ jest.mock('#components/templates/AuthFormTemplate', () => {
 jest.mock('#components/organisms/RememberMeModal', () => {
   const { View } = require('react-native');
   return {
-    RememberMeModal: ({ visible }: any) =>
+    RememberMeModal: ({ visible }: { visible?: boolean }) =>
       visible ? <View testID="remember-me-modal" /> : null,
   };
 });

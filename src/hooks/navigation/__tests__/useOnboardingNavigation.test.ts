@@ -2,6 +2,7 @@ import { renderHook, act } from '@testing-library/react-native';
 import { CommonActions } from '@react-navigation/native';
 import { useOnboardingNavigation } from '../useOnboardingNavigation';
 import { OnBoardingSteps } from '#store/slices/navigationSlice';
+import type { User } from '#store/slices/authSlice';
 
 // Break circular dependency chain
 jest.mock('../../../apollo/links/tokenScheduler');
@@ -26,10 +27,23 @@ const mockSetOnboarded = jest.fn();
 const mockSetUserNavigationState = jest.fn();
 const mockGetUserNavigationState = jest.fn();
 
-let mockUser: any = { id: 'u1', email: 'test@test.com' };
+let mockUser: User | null = {
+  id: 'u1',
+  email: 'test@test.com',
+  emailVerified: true,
+  onBoarded: false,
+};
 
 jest.mock('#store/useAppStore', () => ({
-  useAppStore: (selectorOrFn: any) => {
+  useAppStore: <T>(
+    selectorOrFn: (state: {
+      user: User | null;
+      getUserNavigationState: jest.Mock;
+      setUserNavigationState: jest.Mock;
+      setOnBoardingStep: jest.Mock;
+      setOnboarded: jest.Mock;
+    }) => T,
+  ): T => {
     const state = {
       user: mockUser,
       getUserNavigationState: mockGetUserNavigationState,
@@ -49,12 +63,17 @@ jest.mock('#store/useAppStore', () => ({
 }));
 
 jest.mock('zustand/shallow', () => ({
-  useShallow: (fn: any) => fn,
+  useShallow: <S, U>(fn: (state: S) => U): ((state: S) => U) => fn,
 }));
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockUser = { id: 'u1', email: 'test@test.com' };
+  mockUser = {
+    id: 'u1',
+    email: 'test@test.com',
+    emailVerified: true,
+    onBoarded: false,
+  };
   mockGetState.mockReturnValue({
     routes: [{ name: 'CreateHome' }],
     index: 0,

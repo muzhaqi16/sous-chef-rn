@@ -1,6 +1,6 @@
 import { useUnistyles } from 'react-native-unistyles';
 import { usePreferences } from '#store/useAppStore';
-import { ThemePreference } from '#/store/slices/preferencesSlice';
+import { ThemePreference } from '#/store/slices/preferenceTypes';
 
 /**
  * Pure derivation hook over the active theme.

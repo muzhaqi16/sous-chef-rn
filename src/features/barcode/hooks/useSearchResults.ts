@@ -180,7 +180,10 @@ function buildSuggestEditReason(formData: Record<string, unknown>): string {
     formData.netWeights.length > 0
   ) {
     const weights = formData.netWeights
-      .map((w: any) => `${w.value} ${w.unitName}`)
+      .map(
+        (w: { value?: unknown; unitName?: unknown }) =>
+          `${String(w.value)} ${String(w.unitName)}`,
+      )
       .join(', ');
     parts.push(`Net Weight: ${weights}`);
   }
@@ -411,9 +414,9 @@ export const useSearchResults = (barcode: string, format?: string) => {
     }
   }, [upcLoading, skuLoading, setSearching]);
 
-  const handleAddItem = async (formData: any) => {
+  const handleAddItem = async (formData: Record<string, unknown>) => {
     // Store brand name for use in mutation callback
-    pendingBrandNameRef.current = formData.brandName;
+    pendingBrandNameRef.current = formData.brandName as string | undefined;
 
     stashPendingFormImages(formData);
 
@@ -430,15 +433,18 @@ export const useSearchResults = (barcode: string, format?: string) => {
     FlagItemForReviewDocument,
   );
 
-  const handleSuggestEdit = async (itemId: string, formData: any) => {
+  const handleSuggestEdit = async (
+    itemId: string,
+    formData: Record<string, unknown>,
+  ) => {
     const reason = buildSuggestEditReason(formData);
+    const selectedImages = Array.isArray(formData.selectedImages)
+      ? formData.selectedImages
+      : [];
 
     // Store images for upload if provided
-    if (formData.selectedImages && formData.selectedImages.length > 0) {
-      storage.set(
-        'temp_pending_item_images',
-        JSON.stringify(formData.selectedImages),
-      );
+    if (selectedImages.length > 0) {
+      storage.set('temp_pending_item_images', JSON.stringify(selectedImages));
     }
 
     const result = await executeMutation(
@@ -448,7 +454,7 @@ export const useSearchResults = (barcode: string, format?: string) => {
 
     if (result !== false) {
       // Upload images if any were selected
-      if (formData.selectedImages?.length > 0) {
+      if (selectedImages.length > 0) {
         await executeMutation(
           () =>
             uploadPendingImages(

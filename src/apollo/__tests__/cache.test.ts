@@ -8,6 +8,75 @@ jest.mock('#/graphql/generated/fragmentMatcher.json', () => ({
 import { gql, InMemoryCache } from '@apollo/client';
 import { makeCache } from '../cache';
 
+type NodeRef = { __typename: string; id: string; name?: string };
+type Edge = { __typename: string; node: NodeRef };
+type Connection = {
+  __typename: string;
+  edges: Edge[];
+  pageInfo: { __typename: string; hasNextPage: boolean; endCursor: string };
+};
+type HomeConnectionResult = {
+  home: { __typename: string; id: string; shoppingListsConnection: Connection };
+};
+type ListItemsConnectionResult = {
+  shoppingList: {
+    __typename: string;
+    id: string;
+    itemsConnection: Connection;
+  };
+};
+type PantryItemsConnectionResult = {
+  pantry: { __typename: string; id: string; itemsConnection: Connection };
+};
+type ShoppingListsResult = { shoppingLists: NodeRef[] | null };
+type PantriesResult = { pantries: NodeRef[] | null };
+type StorageLocationsResult = { storageLocations: NodeRef[] | null };
+type PantrySuggestionsResult = { pantryItemSuggestions: NodeRef[] | null };
+type ListSuggestionsResult = {
+  shoppingList: {
+    __typename: string;
+    id: string;
+    suggestions: NodeRef[] | null;
+  };
+};
+type MealPlanResult = {
+  mealPlan: {
+    __typename: string;
+    id: string;
+    mealPlanItems: {
+      __typename: string;
+      id: string;
+      version: number;
+      updatedAt: string;
+      name: string;
+    }[];
+  };
+};
+type UserProfileFragmentResult = {
+  __typename: string;
+  id: string;
+  profile: {
+    __typename: string;
+    id: string;
+    displayName: string;
+    avatar: string;
+  };
+};
+type ItemFragmentResult = {
+  __typename: string;
+  id: string;
+  name?: string;
+  nutritions?: { calories: number };
+  images?: { url: string; kind: string }[];
+  imageUrl?: string | null;
+};
+type ShoppingListItemFragmentResult = {
+  __typename: string;
+  id: string;
+  name?: string;
+  version?: number;
+};
+
 describe('cache', () => {
   describe('makeCache', () => {
     it('returns an InMemoryCache instance', () => {
@@ -89,7 +158,7 @@ describe('cache', () => {
         },
       });
 
-      const result: any = cache.readQuery({
+      const result = cache.readQuery<HomeConnectionResult>({
         query: HOME_QUERY_INITIAL,
         variables: { id: 'home-1' },
       });
@@ -163,15 +232,15 @@ describe('cache', () => {
         },
       });
 
-      const result: any = cache.readQuery({
+      const result = cache.readQuery<HomeConnectionResult>({
         query: HOME_QUERY_PAGINATED,
         variables: { id: 'home-1' },
       });
 
       // sl-1, sl-2 (deduplicated with incoming), sl-3
-      const edges = result?.home.shoppingListsConnection.edges;
+      const edges = result?.home.shoppingListsConnection.edges ?? [];
       expect(edges).toHaveLength(3);
-      const ids = edges.map((e: any) => e.node.id);
+      const ids = edges.map((e: Edge) => e.node.id);
       expect(ids).toContain('sl-1');
       expect(ids).toContain('sl-2');
       expect(ids).toContain('sl-3');
@@ -259,7 +328,7 @@ describe('cache', () => {
       });
 
       // Verify all 3 items exist
-      let result: any = cache.readQuery({
+      let result = cache.readQuery<HomeConnectionResult>({
         query: HOME_QUERY,
         variables: { id: 'home-1' },
       });
@@ -295,12 +364,12 @@ describe('cache', () => {
         },
       });
 
-      result = cache.readQuery({
+      result = cache.readQuery<HomeConnectionResult>({
         query: HOME_QUERY,
         variables: { id: 'home-1' },
       });
       const ids = result?.home.shoppingListsConnection.edges.map(
-        (e: any) => e.node.id,
+        (e: Edge) => e.node.id,
       );
       expect(ids).toContain('sl-1');
       expect(ids).toContain('sl-2');
@@ -387,7 +456,7 @@ describe('cache', () => {
         },
       });
 
-      const result: any = cache.readQuery({
+      const result = cache.readQuery<HomeConnectionResult>({
         query: HOME_QUERY,
         variables: { id: 'home-1' },
       });
@@ -451,7 +520,7 @@ describe('cache', () => {
         },
       });
 
-      const result: any = cache.readQuery({
+      const result = cache.readQuery<ListItemsConnectionResult>({
         query: gql`
           query GetList($id: ID!) {
             shoppingList(id: $id) {
@@ -510,7 +579,7 @@ describe('cache', () => {
         },
       });
 
-      const result: any = cache.readQuery({
+      const result = cache.readQuery<ShoppingListsResult>({
         query: QUERY,
         variables: { filters: { homeId: 'h1' } },
       });
@@ -547,7 +616,7 @@ describe('cache', () => {
         },
       });
 
-      const result: any = cache.readQuery({
+      const result = cache.readQuery<ShoppingListsResult>({
         query: QUERY,
         variables: { filters: { homeId: 'h1' } },
       });
@@ -579,7 +648,7 @@ describe('cache', () => {
         variables: { homeId: 'h1' },
         data: { pantries: null },
       });
-      const result: any = cache.readQuery({
+      const result = cache.readQuery<PantriesResult>({
         query: PANTRIES_QUERY,
         variables: { homeId: 'h1' },
       });
@@ -602,12 +671,12 @@ describe('cache', () => {
           pantries: [{ __typename: 'Pantry', id: 'p2', name: 'Garage' }],
         },
       });
-      const result: any = cache.readQuery({
+      const result = cache.readQuery<PantriesResult>({
         query: PANTRIES_QUERY,
         variables: { homeId: 'h1' },
       });
       expect(result?.pantries).toHaveLength(1);
-      expect(result?.pantries[0].name).toBe('Garage');
+      expect(result?.pantries?.[0].name).toBe('Garage');
     });
   });
 
@@ -637,7 +706,7 @@ describe('cache', () => {
         variables: { homeId: 'h1' },
         data: { storageLocations: null },
       });
-      const result: any = cache.readQuery({
+      const result = cache.readQuery<StorageLocationsResult>({
         query: STORAGE_QUERY,
         variables: { homeId: 'h1' },
       });
@@ -671,7 +740,7 @@ describe('cache', () => {
         variables: { pantryId: 'p1' },
         data: { pantryItemSuggestions: null },
       });
-      const result: any = cache.readQuery({
+      const result = cache.readQuery<PantrySuggestionsResult>({
         query: PANTRY_SUGGESTIONS_QUERY,
         variables: { pantryId: 'p1' },
       });
@@ -698,12 +767,12 @@ describe('cache', () => {
           ],
         },
       });
-      const result: any = cache.readQuery({
+      const result = cache.readQuery<PantrySuggestionsResult>({
         query: PANTRY_SUGGESTIONS_QUERY,
         variables: { pantryId: 'p1' },
       });
       expect(result?.pantryItemSuggestions).toHaveLength(1);
-      expect(result?.pantryItemSuggestions[0].name).toBe('Eggs');
+      expect(result?.pantryItemSuggestions?.[0].name).toBe('Eggs');
     });
   });
 
@@ -746,7 +815,7 @@ describe('cache', () => {
           },
         },
       });
-      const result: any = cache.readQuery({
+      const result = cache.readQuery<ListSuggestionsResult>({
         query: LIST_SUGGESTIONS_QUERY,
         variables: { id: 'list-1' },
       });
@@ -839,7 +908,7 @@ describe('cache', () => {
       });
 
       // Verify all 3 items
-      let result: any = cache.readQuery({
+      let result = cache.readQuery<PantryItemsConnectionResult>({
         query: PANTRY_CONNECTION_QUERY,
         variables: { id: 'p1' },
       });
@@ -875,12 +944,12 @@ describe('cache', () => {
         },
       });
 
-      result = cache.readQuery({
+      result = cache.readQuery<PantryItemsConnectionResult>({
         query: PANTRY_CONNECTION_QUERY,
         variables: { id: 'p1' },
       });
       const ids = result?.pantry.itemsConnection.edges.map(
-        (e: any) => e.node.id,
+        (e: Edge) => e.node.id,
       );
       expect(ids).toContain('pi-1');
       expect(ids).toContain('pi-2');
@@ -968,7 +1037,7 @@ describe('cache', () => {
         },
       });
 
-      const result: any = cache.readQuery({
+      const result = cache.readQuery<PantryItemsConnectionResult>({
         query: PANTRY_CONNECTION_QUERY,
         variables: { id: 'p1' },
       });
@@ -1062,7 +1131,7 @@ describe('cache', () => {
       });
 
       // Verify both pages present
-      let result: any = cache.readQuery({
+      let result = cache.readQuery<ListItemsConnectionResult>({
         query: LIST_CONNECTION_QUERY,
         variables: { id: 'list-1' },
       });
@@ -1098,12 +1167,12 @@ describe('cache', () => {
         },
       });
 
-      result = cache.readQuery({
+      result = cache.readQuery<ListItemsConnectionResult>({
         query: LIST_CONNECTION_QUERY,
         variables: { id: 'list-1' },
       });
       const ids = result?.shoppingList.itemsConnection.edges.map(
-        (e: any) => e.node.id,
+        (e: Edge) => e.node.id,
       );
       expect(ids).toContain('si-1');
       expect(ids).toContain('si-2');
@@ -1202,7 +1271,7 @@ describe('cache', () => {
         },
       });
 
-      const result: any = cache.readQuery({
+      const result = cache.readQuery<ListItemsConnectionResult>({
         query: LIST_CONNECTION_QUERY,
         variables: { id: 'list-1' },
       });
@@ -1275,7 +1344,7 @@ describe('cache', () => {
           },
         },
       });
-      const result: any = cache.readQuery({
+      const result = cache.readQuery<MealPlanResult>({
         query: MEAL_PLAN_QUERY,
         variables: { id: 'mp1' },
       });
@@ -1329,7 +1398,7 @@ describe('cache', () => {
           },
         },
       });
-      const result: any = cache.readFragment({
+      const result = cache.readFragment<UserProfileFragmentResult>({
         id: 'User:user-1',
         fragment: gql`
           fragment UserProfileFull on User {
@@ -1377,7 +1446,7 @@ describe('cache', () => {
           name: 'Updated Name',
         },
       });
-      const result: any = cache.readFragment({
+      const result = cache.readFragment<ItemFragmentResult>({
         id: 'Item:item-1',
         fragment: gql`
           fragment ItemFull on Item {
@@ -1421,7 +1490,7 @@ describe('cache', () => {
           name: 'Updated',
         },
       });
-      const result: any = cache.readFragment({
+      const result = cache.readFragment<ItemFragmentResult>({
         id: 'Item:item-1',
         fragment: gql`
           fragment ItemAllFields on Item {
@@ -1465,7 +1534,7 @@ describe('cache', () => {
           imageUrl: null,
         },
       });
-      const result: any = cache.readFragment({
+      const result = cache.readFragment<ItemFragmentResult>({
         id: 'Item:item-1',
         fragment: gql`
           fragment ItemCheck on Item {
@@ -1515,7 +1584,7 @@ describe('cache', () => {
       });
 
       // Both fields should be present (merge:true enables field-level merging)
-      const result: any = cache.readFragment({
+      const result = cache.readFragment<ShoppingListItemFragmentResult>({
         id: 'ShoppingListItem:item-1',
         fragment: gql`
           fragment ItemMerged on ShoppingListItem {
@@ -1568,7 +1637,7 @@ describe('cache', () => {
       });
 
       // imageUrl should still be preserved
-      const result: any = cache.readFragment({
+      const result = cache.readFragment<ItemFragmentResult>({
         id: 'Item:item-1',
         fragment: gql`
           fragment ItemWithAllFields on Item {

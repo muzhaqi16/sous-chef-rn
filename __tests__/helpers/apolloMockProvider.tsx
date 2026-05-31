@@ -23,6 +23,7 @@ import {
   type IMocks,
   type IMockStore,
 } from '@graphql-tools/mock';
+import type { IResolvers } from '@graphql-tools/utils';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
@@ -91,7 +92,7 @@ export interface ApolloTestOptions {
    * Custom resolvers fed to `addMocksToSchema`. Use when you need access to
    * the mock store (e.g. to wire mutation responses back into reads).
    */
-  resolvers?: (store: IMockStore) => Record<string, any>;
+  resolvers?: (store: IMockStore) => Partial<IResolvers>;
   /**
    * Per-operation request/response pairs. These take priority over the
    * schema-driven layer and behave exactly like a vanilla `MockedProvider`
@@ -223,7 +224,7 @@ import type { TypedDocumentNode } from '@graphql-typed-document-node/core';
  *   <PantryItemCard pantryItemRef={toFragmentRef<typeof PantryItemCard_PantryItemFragmentDoc>(item)} />
  */
 export function toFragmentRef<
-  TDoc extends TypedDocumentNode<any, any>,
+  TDoc extends TypedDocumentNode,
 >(data: Record<string, unknown> & { __typename: string; id: string }): FragmentType<TDoc> {
   return data as FragmentType<TDoc>;
 }

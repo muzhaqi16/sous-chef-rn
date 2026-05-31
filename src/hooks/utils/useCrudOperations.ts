@@ -30,12 +30,29 @@ import {
 } from '#/utils/errorHandlers';
 
 /**
+ * Resolved value these CRUD helpers read off an Apollo mutate call — `data`
+ * plus, under `errorPolicy: 'all'`, an `errors` array.
+ */
+type MutateResultLike<TResult> = {
+  data?: TResult | null;
+  errors?: readonly { message: string }[];
+};
+
+/**
+ * Minimal Apollo mutate option shape. The config interfaces declare `mutation`
+ * as a **method** so the parameter is checked bivariantly: this lets a mutate
+ * function returned by `useMutation()[0]` (which has strongly-typed,
+ * operation-specific required variables) stay assignable, while these helpers
+ * invoke it with a dynamically-built `{ variables }` record. A full
+ * `MutationFunctionOptions<TResult, …>` would be too strict to accept both.
+ */
+type MutateOptions = { variables?: Record<string, unknown> };
+
+/**
  * Configuration for create operation
  */
 export interface CreateOperationConfig<TInput, TResult> {
-  mutation: (
-    ...args: any[]
-  ) => Promise<{ data?: TResult; errors?: readonly { message: string }[] }>;
+  mutation(options: MutateOptions): Promise<MutateResultLike<TResult>>;
   parentId?: string | null | (() => string | null | undefined);
   transformInput?: (input: TInput) => Record<string, unknown>;
   validateInput?: (input: TInput) => boolean | string;
@@ -48,7 +65,7 @@ export interface CreateOperationConfig<TInput, TResult> {
  * Configuration for update operation
  */
 export interface UpdateOperationConfig<TInput, TResult> {
-  mutation: (...args: any[]) => Promise<{ data?: TResult }>;
+  mutation(options: MutateOptions): Promise<MutateResultLike<TResult>>;
   parentId?: string | null | (() => string | null | undefined);
   itemId: string;
   transformInput?: (input: TInput) => Record<string, unknown>;
@@ -69,7 +86,7 @@ export interface UpdateOperationConfig<TInput, TResult> {
  * Configuration for remove operation
  */
 export interface RemoveOperationConfig<TResult> {
-  mutation: (...args: any[]) => Promise<{ data?: TResult }>;
+  mutation(options: MutateOptions): Promise<MutateResultLike<TResult>>;
   parentId?: string | null | (() => string | null | undefined);
   itemId: string;
   confirmMessage?: string;
@@ -251,7 +268,7 @@ function createUpdateOperationImpl<TInput, TResult>(
 }
 
 async function executeRemoveImpl<TResult>(
-  mutation: (...args: any[]) => Promise<{ data?: TResult }>,
+  mutation: (options: MutateOptions) => Promise<MutateResultLike<TResult>>,
   itemId: string,
   operationName: string,
   onSuccess?: (data: TResult) => void,

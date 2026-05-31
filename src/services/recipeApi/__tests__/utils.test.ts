@@ -9,6 +9,7 @@ import {
   parseDietaryRestrictions,
   parseIntolerances,
 } from '../utils';
+import type { RecipeInformation, RecipeIngredient } from '../types';
 
 const mockRecipe = {
   id: 123,
@@ -48,7 +49,7 @@ const mockRecipe = {
       { name: 'Fat', amount: 12 },
     ],
   },
-} as any;
+} as Partial<RecipeInformation> as RecipeInformation;
 
 const mockIngredient = {
   id: 1,
@@ -63,7 +64,7 @@ const mockIngredient = {
   },
   meta: ['al dente'],
   image: 'pasta.png',
-} as any;
+} as Partial<RecipeIngredient> as RecipeIngredient;
 
 describe('recipeApi utils', () => {
   describe('transformSpoonacularToRecipeInput', () => {
@@ -106,7 +107,11 @@ describe('recipeApi utils', () => {
     });
 
     it('handles missing optional fields', () => {
-      const minimal = { id: 1, title: 'Min', summary: '' } as any;
+      const minimal = {
+        id: 1,
+        title: 'Min',
+        summary: '',
+      } as Partial<RecipeInformation> as RecipeInformation;
       const result = transformSpoonacularToRecipeInput(minimal);
       expect(result.name).toBe('Min');
       expect(result.prepTimeMinutes).toBeNull();
@@ -115,7 +120,10 @@ describe('recipeApi utils', () => {
     });
 
     it('sets default source when sourceName is missing', () => {
-      const noSource = { ...mockRecipe, sourceName: undefined };
+      const noSource = {
+        ...mockRecipe,
+        sourceName: undefined,
+      } as Partial<RecipeInformation> as RecipeInformation;
       const result = transformSpoonacularToRecipeInput(noSource);
       expect(result.source).toBe('Spoonacular');
     });
@@ -180,7 +188,7 @@ describe('recipeApi utils', () => {
       const ingredients = [
         { id: 1, name: 'Pasta' },
         { id: 2, name: 'Tomato Sauce' },
-      ] as any;
+      ] as Partial<RecipeIngredient>[] as RecipeIngredient[];
       const pantryItems = [
         { id: 'p1', name: 'pasta' },
         { id: 'p2', name: 'olive oil' },
@@ -191,21 +199,27 @@ describe('recipeApi utils', () => {
     });
 
     it('matches case-insensitively', () => {
-      const ingredients = [{ id: 1, name: 'GARLIC' }] as any;
+      const ingredients = [
+        { id: 1, name: 'GARLIC' },
+      ] as Partial<RecipeIngredient>[] as RecipeIngredient[];
       const pantryItems = [{ id: 'p1', name: 'garlic' }];
       const matches = matchPantryItemsToIngredients(ingredients, pantryItems);
       expect(matches.get(1)).toEqual(['p1']);
     });
 
     it('matches partial names', () => {
-      const ingredients = [{ id: 1, name: 'fresh tomatoes' }] as any;
+      const ingredients = [
+        { id: 1, name: 'fresh tomatoes' },
+      ] as Partial<RecipeIngredient>[] as RecipeIngredient[];
       const pantryItems = [{ id: 'p1', name: 'tomatoes' }];
       const matches = matchPantryItemsToIngredients(ingredients, pantryItems);
       expect(matches.get(1)).toEqual(['p1']);
     });
 
     it('returns empty map when no matches', () => {
-      const ingredients = [{ id: 1, name: 'saffron' }] as any;
+      const ingredients = [
+        { id: 1, name: 'saffron' },
+      ] as Partial<RecipeIngredient>[] as RecipeIngredient[];
       const pantryItems = [{ id: 'p1', name: 'salt' }];
       const matches = matchPantryItemsToIngredients(ingredients, pantryItems);
       expect(matches.size).toBe(0);

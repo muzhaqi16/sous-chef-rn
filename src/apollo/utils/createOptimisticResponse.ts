@@ -104,10 +104,10 @@ export function createOptimisticEntity<T extends VersionedEntity>(
  * @param entity - Entity to check
  * @returns True if entity has version and updatedAt fields
  */
-export function isVersionedEntity(entity: any): entity is VersionedEntity {
+export function isVersionedEntity(entity: unknown): entity is VersionedEntity {
   return (
-    entity &&
     typeof entity === 'object' &&
+    entity !== null &&
     'id' in entity &&
     'version' in entity &&
     'updatedAt' in entity

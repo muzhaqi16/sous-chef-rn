@@ -8,7 +8,17 @@ jest.mock('#/utils/iconUtils', () => ({
 }));
 
 jest.mock('#/components/base/Button', () => ({
-  Button: ({ children, onPress, disabled, loading }: any) => {
+  Button: ({
+    children,
+    onPress,
+    disabled,
+    loading,
+  }: {
+    children: string;
+    onPress?: () => void;
+    disabled?: boolean;
+    loading?: boolean;
+  }) => {
     const { Pressable, Text } = require('react-native');
     return (
       <Pressable
@@ -23,7 +33,17 @@ jest.mock('#/components/base/Button', () => ({
 }));
 
 jest.mock('#/components/molecules/FormInput', () => ({
-  FormInput: ({ label, placeholder, value, onChangeText }: any) => {
+  FormInput: ({
+    label,
+    placeholder,
+    value,
+    onChangeText,
+  }: {
+    label: string;
+    placeholder?: string;
+    value?: string;
+    onChangeText?: (text: string) => void;
+  }) => {
     const { TextInput, Text, View } = require('react-native');
     return (
       <View>
@@ -40,7 +60,13 @@ jest.mock('#/components/molecules/FormInput', () => ({
 }));
 
 jest.mock('#/components/molecules/FormTextArea', () => ({
-  FormTextArea: ({ label, placeholder }: any) => {
+  FormTextArea: ({
+    label,
+    placeholder,
+  }: {
+    label: string;
+    placeholder?: string;
+  }) => {
     const { TextInput, Text, View } = require('react-native');
     return (
       <View>
@@ -52,7 +78,13 @@ jest.mock('#/components/molecules/FormTextArea', () => ({
 }));
 
 jest.mock('#/components/molecules/FormNumberInput', () => ({
-  FormNumberInput: ({ label, placeholder }: any) => {
+  FormNumberInput: ({
+    label,
+    placeholder,
+  }: {
+    label: string;
+    placeholder?: string;
+  }) => {
     const { TextInput, Text, View } = require('react-native');
     return (
       <View>
@@ -64,7 +96,7 @@ jest.mock('#/components/molecules/FormNumberInput', () => ({
 }));
 
 jest.mock('#/components/molecules/FormSelect', () => ({
-  FormSelect: ({ label }: any) => {
+  FormSelect: ({ label }: { label: string }) => {
     const { Text, View } = require('react-native');
     return (
       <View>
@@ -75,7 +107,7 @@ jest.mock('#/components/molecules/FormSelect', () => ({
 }));
 
 jest.mock('#/components/molecules/FormCheckbox', () => ({
-  FormCheckbox: ({ label }: any) => {
+  FormCheckbox: ({ label }: { label: string }) => {
     const { Text, View } = require('react-native');
     return (
       <View>
@@ -110,11 +142,11 @@ jest.mock(
 );
 
 jest.mock('#/components/molecules/DynamicFormFields', () => ({
-  DynamicFormFields: ({ fields }: any) => {
+  DynamicFormFields: ({ fields }: { fields: { label: string }[] }) => {
     const { Text, View } = require('react-native');
     return (
       <View testID="dynamic-form-fields">
-        {fields.map((field: any, i: number) => (
+        {fields.map((field, i: number) => (
           <Text key={i}>{field.label}</Text>
         ))}
       </View>
@@ -389,7 +421,7 @@ describe('AddItemForm', () => {
 
   describe('getFormSections field configuration', () => {
     it('includes all expected form field labels across tabs and advanced sections', async () => {
-    const user = userEvent.setup();
+      const user = userEvent.setup();
       render(<AddItemForm {...defaultProps} />);
 
       // Basics tab (default active)
@@ -423,7 +455,7 @@ describe('AddItemForm', () => {
 
   describe('renderValue and transformValue in Tags field', () => {
     it('renderValue converts array to comma-separated string', async () => {
-    const user = userEvent.setup();
+      const user = userEvent.setup();
       render(<AddItemForm {...defaultProps} />);
       await user.press(screen.getByText('Inventory'));
       await user.press(screen.getByText('More options'));

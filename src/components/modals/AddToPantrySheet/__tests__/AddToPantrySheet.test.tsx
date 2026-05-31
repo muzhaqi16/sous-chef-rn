@@ -38,7 +38,7 @@ jest.mock('#/services/toastService', () => ({
 }));
 
 jest.mock('../../AddItemSheet/AddItemSheet', () => ({
-  AddItemSheet: ({ children }: any) => {
+  AddItemSheet: ({ children }: { children: React.ReactNode }) => {
     const { View, Text } = require('react-native');
     return require('react').createElement(
       View,

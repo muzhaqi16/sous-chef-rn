@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { render } from '@testing-library/react-native';
+import type { NotificationItem } from '#store/slices/notificationSlice';
 import { NotificationListScreen } from '../NotificationListScreen';
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -34,7 +35,7 @@ jest.mock('#features/notifications/components/EmptyNotifications', () => ({
 }));
 
 jest.mock('#features/notifications/components/NotificationHeader', () => ({
-  NotificationHeader: ({ hasNotifications }: any) => {
+  NotificationHeader: ({ hasNotifications }: { hasNotifications: boolean }) => {
     const { View, Text } = require('react-native');
     return (
       <View>
@@ -47,7 +48,7 @@ jest.mock('#features/notifications/components/NotificationHeader', () => ({
 }));
 
 jest.mock('#features/notifications/components/NotificationGroupHeader', () => ({
-  NotificationGroupHeader: ({ title }: any) => {
+  NotificationGroupHeader: ({ title }: { title: string }) => {
     const { Text } = require('react-native');
     return <Text>{title}</Text>;
   },
@@ -72,7 +73,7 @@ jest.mock(
 );
 
 jest.mock('#components/molecules/Header', () => ({
-  Header: ({ title }: any) => {
+  Header: ({ title }: { title?: string }) => {
     const { Text } = require('react-native');
     return <Text>{title}</Text>;
   },
@@ -81,8 +82,13 @@ jest.mock('#components/molecules/Header', () => ({
 jest.mock(
   '#features/notifications/components/NotificationActionHandler',
   () => ({
-    NotificationActionHandler: ({ children }: any) =>
-      children({ handleNotificationAction: jest.fn() }),
+    NotificationActionHandler: ({
+      children,
+    }: {
+      children: (props: {
+        handleNotificationAction: () => void;
+      }) => React.ReactNode;
+    }) => children({ handleNotificationAction: jest.fn() }),
   }),
 );
 
@@ -155,25 +161,26 @@ describe('NotificationListScreen', () => {
       },
     ]);
 
-    const {
-      useNotifications,
-    } = require('#features/notifications/hooks/useNotifications');
+    const { useNotifications } =
+      require('#features/notifications/hooks/useNotifications') as typeof import('#features/notifications/hooks/useNotifications');
+    type UseNotificationsReturn = ReturnType<typeof useNotifications>;
+    const notifications = [
+      {
+        id: 'n1',
+        title: 'Test',
+        message: 'msg',
+        category: 'PANTRY',
+        isRead: false,
+      },
+    ] as Partial<NotificationItem>[] as NotificationItem[];
     jest.mocked(useNotifications).mockReturnValue({
-      notifications: [
-        {
-          id: 'n1',
-          title: 'Test',
-          message: 'msg',
-          category: 'PANTRY',
-          isRead: false,
-        },
-      ],
+      notifications,
       handleMarkAsRead: jest.fn(),
       handleMarkAllAsRead: jest.fn(),
       handleRemoveNotification: jest.fn(),
       clearAll: jest.fn(),
       getNotificationsByCategory: jest.fn().mockReturnValue([]),
-    } as any);
+    } as Partial<UseNotificationsReturn> as UseNotificationsReturn);
 
     const { getByText } = render(<NotificationListScreen />);
     expect(getByText('Today')).toBeTruthy();

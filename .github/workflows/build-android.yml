@@ -188,9 +188,12 @@ jobs:
             echo "OTLP_LOGS_AUTH_PASSWORD=${{ secrets.OTLP_LOGS_AUTH_PASSWORD }}" >> "$ENV_FILE"
           fi
 
-          # Copy to .env for react-native-config
+          # Copy to .env (the env generator reads .env by default)
           cp "$ENV_FILE" .env
           echo "Generated $ENV_FILE and copied to .env"
+
+      - name: Generate build-time config from .env
+        run: node scripts/generate-env.js
 
       - name: Build Play Store AAB
         if: env.IS_PLAYSTORE == 'true'
@@ -447,9 +450,12 @@ jobs:
             echo "OTLP_LOGS_AUTH_PASSWORD=${{ secrets.OTLP_LOGS_AUTH_PASSWORD }}" >> "$ENV_FILE"
           fi
 
-          # Copy to .env for react-native-config
+          # Copy to .env (the env generator reads .env by default)
           cp "$ENV_FILE" .env
           echo "Generated $ENV_FILE and copied to .env"
+
+      - name: Generate build-time config from .env
+        run: node scripts/generate-env.js
 
       - name: Build Play Store AAB
         if: env.IS_PLAYSTORE == 'true'

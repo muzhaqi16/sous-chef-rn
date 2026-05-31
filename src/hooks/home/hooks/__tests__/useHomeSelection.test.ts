@@ -1,10 +1,12 @@
 import { act } from '@testing-library/react-native';
+import type { RootState } from '#store/index';
 import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
 import { SetDefaultHomeDocument } from '#operations/home/userSettings.generated';
 import { alertService } from '#/services/alertService';
+import { createMockHomeNode } from '#/test-utils/mockFactories';
 import { useHomeSelection } from '../useHomeSelection';
 
 const mockStoreState = {
@@ -17,7 +19,8 @@ const mockStoreState = {
 };
 
 jest.mock('#store/useAppStore', () => ({
-  useAppStore: (selector: (state: any) => any) => selector(mockStoreState),
+  useAppStore: <T>(selector: (state: RootState) => T): T =>
+    selector(mockStoreState as Partial<RootState> as RootState),
   useSelectedHomeId: jest.fn(() => mockStoreState.selectedHomeId),
   useSelectedPantryId: jest.fn(() => mockStoreState.selectedPantryId),
   useSetSelectedPantryId: jest.fn(() => mockStoreState.setSelectedPantryId),
@@ -44,19 +47,19 @@ jest.mock('#/services/alertService', () => ({
 }));
 
 const createHomes = () => [
-  {
+  createMockHomeNode({
     id: 'home-1',
     name: 'Home 1',
     pantries: [
       { id: 'pantry-1', isDefault: true },
       { id: 'pantry-2', isDefault: false },
     ],
-  },
-  {
+  }),
+  createMockHomeNode({
     id: 'home-2',
     name: 'Home 2',
     pantries: [{ id: 'pantry-3', isDefault: true }],
-  },
+  }),
 ];
 
 beforeEach(() => {
