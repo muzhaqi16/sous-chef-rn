@@ -2,10 +2,10 @@ import { StateCreator } from 'zustand';
 import { UnistylesRuntime } from 'react-native-unistyles';
 import { getI18n } from '#/i18n/config';
 import { applyAppearanceToRuntime } from '#/theme/applyAppearance';
-import {
+import { ThemePreference, PREFERENCE_DEFAULTS } from './preferenceTypes';
+import type {
   FontScalePreference,
   DensityPreference,
-  ThemePreference,
   PantrySortOption,
   PantrySortDirection,
 } from './preferenceTypes';
@@ -97,20 +97,20 @@ export interface PreferencesState {
 }
 
 const initialPreferencesState = {
-  theme: ThemePreference.SYSTEM,
+  theme: PREFERENCE_DEFAULTS.theme,
   language: undefined,
   emailNotifications: false,
   pushNotifications: false,
   rememberMe: undefined,
   hapticFeedbackEnabled: true, // Enabled by default
   showNavigationLabels: true, // Enabled by default
-  pantrySortOption: PantrySortOption.RECENT,
-  pantrySortDirection: PantrySortDirection.DESC, // Newest first
+  pantrySortOption: PREFERENCE_DEFAULTS.pantrySortOption,
+  pantrySortDirection: PREFERENCE_DEFAULTS.pantrySortDirection, // Newest first
   primaryColorOverride: null,
-  densityPreference: DensityPreference.COMFORTABLE,
-  fontScalePreference: FontScalePreference.SYSTEM,
+  densityPreference: PREFERENCE_DEFAULTS.density,
+  fontScalePreference: PREFERENCE_DEFAULTS.fontScale,
   highContrast: false,
-};
+} satisfies Partial<PreferencesState>;
 
 export const createPreferencesSlice: StateCreator<
   RootState,

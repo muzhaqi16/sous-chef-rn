@@ -3,6 +3,7 @@ import type { SortOption, SortDirection } from '../pantryDisplay/types';
 import {
   PantrySortOption,
   PantrySortDirection,
+  PREFERENCE_DEFAULTS,
 } from '#store/slices/preferenceTypes';
 
 // Item type for sorting (minimal interface)
@@ -139,8 +140,8 @@ export function usePantrySorting<T extends SortableItem>(
   options: UsePantrySortingOptions = {},
 ): UsePantrySortingResult<T> {
   const {
-    initialSortOption = PantrySortOption.RECENT,
-    initialSortDirection = PantrySortDirection.DESC,
+    initialSortOption = PREFERENCE_DEFAULTS.pantrySortOption,
+    initialSortDirection = PREFERENCE_DEFAULTS.pantrySortDirection,
     onSortChange,
   } = options;
 

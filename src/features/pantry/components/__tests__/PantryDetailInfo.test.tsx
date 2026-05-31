@@ -3,6 +3,11 @@ import React from 'react';
 import { screen } from '@testing-library/react-native';
 import { renderWithApollo as render } from '#/test-utils/apolloMockProvider';
 import { PantryDetailInfo } from '../PantryDetailInfo';
+import type { PantryDetailInfo_PantryItemFragment } from '../PantryDetailInfo.generated';
+import {
+  AcquisitionMethod,
+  ItemCondition,
+} from '#/graphql/generated/schemaTypes';
 
 jest.mock('#features/pantry/hooks/usePantryItemTransformation', () => ({
   formatCondition: jest.fn((c: string | null | undefined) => {
@@ -32,17 +37,20 @@ jest.mock('#utils/formatQuantity', () => ({
   ),
 }));
 
-const baseItem = {
+// Typed against the component's own generated fragment — only the fields the
+// fragment actually selects, with the real enum/nullability shapes. (`condition`
+// and `acquisitionMethod` are non-null enums; `tags` is a non-null array; nested
+// entities carry `__typename` + `id`.)
+const baseItem: PantryDetailInfo_PantryItemFragment = {
   __typename: 'PantryItem',
   id: 'pi1',
-  itemName: 'Milk',
   quantity: 2,
-  unit: { id: 'u1', name: 'liters', symbol: 'L' },
+  unit: { __typename: 'Unit', id: 'u1', name: 'liters', symbol: 'L' },
   storageLocation: null,
   brand: null,
   store: null,
-  condition: 'GOOD',
-  acquisitionMethod: null,
+  condition: ItemCondition.Good,
+  acquisitionMethod: AcquisitionMethod.Purchased,
   costPerUnit: null,
   totalCost: null,
   minQuantity: null,
@@ -50,14 +58,9 @@ const baseItem = {
   purchase: null,
   lastUsedAt: null,
   storageNotes: null,
-  tags: null,
+  tags: [],
   createdAt: '2024-01-01',
-  netWeight: null,
-  netWeightUnit: null,
-  remainingNetWeight: null,
-  packageBreakdown: null,
-  quantityBreakdown: null,
-} as any;
+};
 
 describe('PantryDetailInfo', () => {
   const defaultProps = {
@@ -131,14 +134,24 @@ describe('PantryDetailInfo', () => {
   });
 
   it('renders Storage row when storageLocation is set', () => {
-    const item = { ...baseItem, storageLocation: { name: 'Top shelf' } };
+    const item = {
+      ...baseItem,
+      storageLocation: {
+        __typename: 'StorageLocation' as const,
+        id: 'sl1',
+        name: 'Top shelf',
+      },
+    };
     render(<PantryDetailInfo {...defaultProps} itemRef={item} />);
     expect(screen.getByText('Storage')).toBeTruthy();
     expect(screen.getByText('Top shelf')).toBeTruthy();
   });
 
   it('renders Store row when store name exists', () => {
-    const item = { ...baseItem, store: { name: 'Whole Foods' } };
+    const item = {
+      ...baseItem,
+      store: { __typename: 'Store' as const, id: 'st1', name: 'Whole Foods' },
+    };
     render(<PantryDetailInfo {...defaultProps} itemRef={item} />);
     expect(screen.getByText('Store')).toBeTruthy();
     expect(screen.getByText('Whole Foods')).toBeTruthy();
@@ -150,29 +163,34 @@ describe('PantryDetailInfo', () => {
   });
 
   it('renders Condition row with error styling for SPOILED', () => {
-    const item = { ...baseItem, condition: 'SPOILED' };
+    const item = { ...baseItem, condition: ItemCondition.Spoiled };
     render(<PantryDetailInfo {...defaultProps} itemRef={item} />);
     expect(screen.getByText('Condition')).toBeTruthy();
     expect(screen.getByText('Spoiled')).toBeTruthy();
   });
 
   it('renders Condition row for EXPIRED', () => {
-    const item = { ...baseItem, condition: 'EXPIRED' };
+    const item = { ...baseItem, condition: ItemCondition.Expired };
     render(<PantryDetailInfo {...defaultProps} itemRef={item} />);
     expect(screen.getByText('Condition')).toBeTruthy();
     expect(screen.getByText('Expired')).toBeTruthy();
   });
 
-  it('renders Acquired row when acquisitionMethod is set', () => {
-    const item = { ...baseItem, acquisitionMethod: 'HOME_GROWN' };
+  it('renders Acquired row with a multi-word acquisition method', () => {
+    const item = {
+      ...baseItem,
+      acquisitionMethod: AcquisitionMethod.ShoppingList,
+    };
     render(<PantryDetailInfo {...defaultProps} itemRef={item} />);
     expect(screen.getByText('Acquired')).toBeTruthy();
-    expect(screen.getByText('Home Grown')).toBeTruthy();
+    expect(screen.getByText('Shopping List')).toBeTruthy();
   });
 
-  it('does not render Acquired row when acquisitionMethod is null', () => {
+  // acquisitionMethod is non-null in the schema, so the row always renders.
+  it('renders Acquired row for the item acquisition method', () => {
     render(<PantryDetailInfo {...defaultProps} />);
-    expect(screen.queryByText('Acquired')).toBeNull();
+    expect(screen.getByText('Acquired')).toBeTruthy();
+    expect(screen.getByText('Purchased')).toBeTruthy();
   });
 
   it('renders Cost/Unit row when costPerUnit is positive', () => {

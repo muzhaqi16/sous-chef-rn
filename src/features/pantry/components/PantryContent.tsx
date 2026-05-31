@@ -19,8 +19,8 @@ import { getTabBarBottomPadding } from '#constants/layout';
 import { Icon } from '#utils/iconUtils';
 import { LocationFilter } from '#features/pantry/utils/pantryFilters';
 import {
-  PantrySortOption,
   PantrySortDirection,
+  PREFERENCE_DEFAULTS,
 } from '#store/slices/preferenceTypes';
 import { SearchBar } from '#components/molecules/SearchBar';
 import { FilterTabs } from '#components/molecules/FilterTabs/FilterTabs';
@@ -93,8 +93,8 @@ export const PantryContent = React.forwardRef<
       onAddLocation,
       searchQuery,
       onSearchChange,
-      initialSortOption = PantrySortOption.RECENT,
-      initialSortDirection = PantrySortDirection.DESC,
+      initialSortOption = PREFERENCE_DEFAULTS.pantrySortOption,
+      initialSortDirection = PREFERENCE_DEFAULTS.pantrySortDirection,
       onSortChange,
       useServerSort = false,
       onItemPress,

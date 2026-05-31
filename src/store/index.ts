@@ -41,6 +41,7 @@ import {
   createPreferencesSlice,
   PreferencesState,
 } from './slices/preferencesSlice';
+import { FontScalePreference } from './slices/preferenceTypes';
 import {
   BarcodeScannerState,
   createBarcodeScannerSlice,
@@ -163,7 +164,7 @@ export const useStore = create<RootState>()(
       ),
       {
         name: STORAGE_KEY,
-        version: 9,
+        version: 10,
         storage: createJSONStorage(() => zustandStorage),
         // Do store migrations here
         migrate: (persistedState: unknown, version: number) => {
@@ -185,6 +186,19 @@ export const useStore = create<RootState>()(
               user.lastName = profile.lastName ?? user.lastName;
               user.name = profile.displayName ?? user.name;
               user.profilePicture = profile.avatar ?? user.profilePicture;
+            }
+          }
+
+          // Migration v9 → v10: the 'system' font scale option was removed
+          // (it was a redundant 1.0 alias for the new default 'md', since
+          // allowFontScaling already follows the OS size). Remap any persisted
+          // value so it resolves to a valid FontScalePreference member.
+          if (version < 10) {
+            const state = persistedState as {
+              fontScalePreference?: string;
+            } | null;
+            if (state?.fontScalePreference === 'system') {
+              state.fontScalePreference = FontScalePreference.MD;
             }
           }
 

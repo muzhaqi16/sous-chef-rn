@@ -16,6 +16,7 @@ import {
   DensityPreference,
   FontScalePreference,
 } from '#store/slices/preferenceTypes';
+import { DENSITY_META, FONT_SCALE_META } from '#/theme/appearanceConfig';
 import { Text } from '#components/atoms/Text';
 
 const APP_COLORS: {
@@ -36,24 +37,19 @@ const APP_COLORS: {
   },
 ];
 
-const DENSITY_OPTIONS_KEYS: { labelKey: string; value: DensityPreference }[] = [
-  { labelKey: 'appearance.densityCompact', value: DensityPreference.COMPACT },
-  {
-    labelKey: 'appearance.densityComfortable',
-    value: DensityPreference.COMFORTABLE,
-  },
-  { labelKey: 'appearance.densitySpacious', value: DensityPreference.SPACIOUS },
-];
+// Derived from the metadata tables so the picker stays in sync with the enum —
+// add/remove a member and the option list follows automatically (enum order).
+const DENSITY_OPTIONS_KEYS = Object.values(DensityPreference).map(value => ({
+  value,
+  labelKey: DENSITY_META[value].labelKey,
+}));
 
-const FONT_SCALE_OPTION_KEYS: {
-  labelKey: string;
-  value: FontScalePreference;
-}[] = [
-  { labelKey: 'appearance.fontSmall', value: FontScalePreference.SM },
-  { labelKey: 'appearance.fontDefault', value: FontScalePreference.SYSTEM },
-  { labelKey: 'appearance.fontLarge', value: FontScalePreference.LG },
-  { labelKey: 'appearance.fontExtraLarge', value: FontScalePreference.XL },
-];
+const FONT_SCALE_OPTION_KEYS = Object.values(FontScalePreference).map(
+  value => ({
+    value,
+    labelKey: FONT_SCALE_META[value].labelKey,
+  }),
+);
 
 function SegmentedControl<T extends string>({
   options,
