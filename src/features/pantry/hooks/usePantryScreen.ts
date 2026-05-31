@@ -15,10 +15,10 @@ import {
 } from '#features/pantry/utils/pantryFilters';
 import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
 import { StorageLocationIcon } from '#components/atoms/StorageLocationIcon';
-import type {
+import {
   PantrySortOption,
   PantrySortDirection,
-} from '#store/slices/preferencesSlice';
+} from '#store/slices/preferenceTypes';
 
 /**
  * usePantryScreen - Facade hook for the PantryMain screen
@@ -76,8 +76,8 @@ export function usePantryScreen() {
     useShallow(s => ({
       showBiometricSetup: s.showBiometricSetup,
       unreadCount: s.unreadCount,
-      pantrySortOption: s.pantrySortOption ?? 'recent',
-      pantrySortDirection: s.pantrySortDirection ?? 'desc',
+      pantrySortOption: s.pantrySortOption ?? PantrySortOption.RECENT,
+      pantrySortDirection: s.pantrySortDirection ?? PantrySortDirection.DESC,
       setPantrySortOption: s.setPantrySortOption,
       setPantrySortDirection: s.setPantrySortDirection,
       pendingPantryScrollToTop: s.pendingPantryScrollToTop,

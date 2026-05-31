@@ -1,5 +1,9 @@
 import { useState } from 'react';
 import type { SortOption, SortDirection } from '../pantryDisplay/types';
+import {
+  PantrySortOption,
+  PantrySortDirection,
+} from '#store/slices/preferenceTypes';
 
 // Item type for sorting (minimal interface)
 interface SortableItem {
@@ -36,12 +40,12 @@ function cachedSort<T extends SortableItem>(
   const expiryMap = new Map<string, number>();
   const createdMap = new Map<string, number>();
   for (const item of items) {
-    if (option === 'expiry') {
+    if (option === PantrySortOption.EXPIRY) {
       expiryMap.set(
         item.id,
         item.expiresAt ? new Date(item.expiresAt).getTime() : Infinity,
       );
-    } else if (option === 'recent') {
+    } else if (option === PantrySortOption.RECENT) {
       createdMap.set(
         item.id,
         item.createdAt ? new Date(item.createdAt).getTime() : 0,
@@ -54,20 +58,20 @@ function cachedSort<T extends SortableItem>(
   sorted.sort((a, b) => {
     let comparison = 0;
     switch (option) {
-      case 'name':
+      case PantrySortOption.NAME:
         comparison = (a.itemName || '').localeCompare(b.itemName || '');
         break;
-      case 'expiry':
+      case PantrySortOption.EXPIRY:
         comparison = expiryMap.get(a.id)! - expiryMap.get(b.id)!;
         break;
-      case 'quantity':
+      case PantrySortOption.QUANTITY:
         comparison = a.quantity - b.quantity;
         break;
-      case 'recent':
+      case PantrySortOption.RECENT:
         comparison = createdMap.get(b.id)! - createdMap.get(a.id)!;
         break;
     }
-    return direction === 'asc' ? comparison : -comparison;
+    return direction === PantrySortDirection.ASC ? comparison : -comparison;
   });
 
   _lastSortInput = items;
@@ -123,8 +127,8 @@ interface UsePantrySortingResult<T extends SortableItem> {
  *   handleSortSelect,
  *   sortItems,
  * } = usePantrySorting({
- *   initialSortOption: 'recent',
- *   initialSortDirection: 'desc',
+ *   initialSortOption: PantrySortOption.RECENT,
+ *   initialSortDirection: PantrySortDirection.DESC,
  *   onSortChange: persistToStore,
  * });
  *
@@ -135,8 +139,8 @@ export function usePantrySorting<T extends SortableItem>(
   options: UsePantrySortingOptions = {},
 ): UsePantrySortingResult<T> {
   const {
-    initialSortOption = 'recent',
-    initialSortDirection = 'desc',
+    initialSortOption = PantrySortOption.RECENT,
+    initialSortDirection = PantrySortDirection.DESC,
     onSortChange,
   } = options;
 
@@ -162,12 +166,15 @@ export function usePantrySorting<T extends SortableItem>(
 
     if (sortOption === option) {
       // Toggle direction if same option selected
-      newDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+      newDirection =
+        sortDirection === PantrySortDirection.ASC
+          ? PantrySortDirection.DESC
+          : PantrySortDirection.ASC;
       setSortDirection(newDirection);
     } else {
       // Set new option and reset to ascending
       newOption = option;
-      newDirection = 'asc';
+      newDirection = PantrySortDirection.ASC;
       setSortOption(newOption);
       setSortDirection(newDirection);
     }

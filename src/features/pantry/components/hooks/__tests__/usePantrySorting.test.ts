@@ -2,6 +2,10 @@
 
 import { renderHook, act } from '@testing-library/react-native';
 import { usePantrySorting } from '../usePantrySorting';
+import {
+  PantrySortOption,
+  PantrySortDirection,
+} from '#store/slices/preferenceTypes';
 
 interface TestItem {
   id: string;
@@ -31,8 +35,8 @@ describe('usePantrySorting', () => {
   it('respects initial sort options', () => {
     const { result } = renderHook(() =>
       usePantrySorting({
-        initialSortOption: 'name',
-        initialSortDirection: 'asc',
+        initialSortOption: PantrySortOption.NAME,
+        initialSortDirection: PantrySortDirection.ASC,
       }),
     );
     expect(result.current.sortOption).toBe('name');
@@ -57,14 +61,14 @@ describe('usePantrySorting', () => {
     const onSortChange = jest.fn();
     const { result } = renderHook(() =>
       usePantrySorting({
-        initialSortOption: 'name',
-        initialSortDirection: 'asc',
+        initialSortOption: PantrySortOption.NAME,
+        initialSortDirection: PantrySortDirection.ASC,
         onSortChange,
       }),
     );
 
     act(() => {
-      result.current.handleSortSelect('name');
+      result.current.handleSortSelect(PantrySortOption.NAME);
     });
     expect(result.current.sortDirection).toBe('desc');
     expect(onSortChange).toHaveBeenCalledWith('name', 'desc');
@@ -75,14 +79,14 @@ describe('usePantrySorting', () => {
     const onSortChange = jest.fn();
     const { result } = renderHook(() =>
       usePantrySorting({
-        initialSortOption: 'name',
-        initialSortDirection: 'desc',
+        initialSortOption: PantrySortOption.NAME,
+        initialSortDirection: PantrySortDirection.DESC,
         onSortChange,
       }),
     );
 
     act(() => {
-      result.current.handleSortSelect('quantity');
+      result.current.handleSortSelect(PantrySortOption.QUANTITY);
     });
     expect(result.current.sortOption).toBe('quantity');
     expect(result.current.sortDirection).toBe('asc');
@@ -92,8 +96,8 @@ describe('usePantrySorting', () => {
   it('sorts items by name ascending', () => {
     const { result } = renderHook(() =>
       usePantrySorting<TestItem>({
-        initialSortOption: 'name',
-        initialSortDirection: 'asc',
+        initialSortOption: PantrySortOption.NAME,
+        initialSortDirection: PantrySortDirection.ASC,
       }),
     );
 
@@ -110,8 +114,8 @@ describe('usePantrySorting', () => {
   it('sorts items by quantity descending', () => {
     const { result } = renderHook(() =>
       usePantrySorting<TestItem>({
-        initialSortOption: 'quantity',
-        initialSortDirection: 'desc',
+        initialSortOption: PantrySortOption.QUANTITY,
+        initialSortDirection: PantrySortDirection.DESC,
       }),
     );
 
@@ -128,8 +132,8 @@ describe('usePantrySorting', () => {
   it('sorts items by expiry with missing dates pushed to end', () => {
     const { result } = renderHook(() =>
       usePantrySorting<TestItem>({
-        initialSortOption: 'expiry',
-        initialSortDirection: 'asc',
+        initialSortOption: PantrySortOption.EXPIRY,
+        initialSortDirection: PantrySortDirection.ASC,
       }),
     );
 
@@ -146,8 +150,8 @@ describe('usePantrySorting', () => {
   it('sorts items by recent (createdAt) ascending shows most recent first', () => {
     const { result } = renderHook(() =>
       usePantrySorting<TestItem>({
-        initialSortOption: 'recent',
-        initialSortDirection: 'asc',
+        initialSortOption: PantrySortOption.RECENT,
+        initialSortDirection: PantrySortDirection.ASC,
       }),
     );
 

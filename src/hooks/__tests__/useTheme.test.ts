@@ -45,14 +45,6 @@ jest.mock('react-native-unistyles', () => ({
   },
 }));
 
-jest.mock('#/store/slices/preferencesSlice', () => ({
-  ThemePreference: {
-    LIGHT: 'LIGHT',
-    DARK: 'DARK',
-    SYSTEM: 'SYSTEM',
-  },
-}));
-
 // Break circular dependency
 jest.mock('../../apollo/links/tokenScheduler');
 

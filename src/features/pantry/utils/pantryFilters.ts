@@ -4,10 +4,10 @@ import {
   type PantryItemFilters,
   type PantryItemOrderBy,
 } from '#/graphql/generated/schemaTypes';
-import type {
+import {
   PantrySortOption,
   PantrySortDirection,
-} from '#store/slices/preferencesSlice';
+} from '#store/slices/preferenceTypes';
 
 /** Built-in temperature-based filters */
 export type BuiltInLocationFilter = 'all' | 'fridge' | 'freezer' | 'pantry';
@@ -57,16 +57,17 @@ export function sortOptionToOrderBy(
   option: PantrySortOption,
   direction: PantrySortDirection,
 ): PantryItemOrderBy {
-  const sortOrder = direction === 'asc' ? SortOrder.Asc : SortOrder.Desc;
+  const sortOrder =
+    direction === PantrySortDirection.ASC ? SortOrder.Asc : SortOrder.Desc;
 
   switch (option) {
-    case 'name':
+    case PantrySortOption.NAME:
       return { itemName: sortOrder };
-    case 'expiry':
+    case PantrySortOption.EXPIRY:
       return { expiresAt: sortOrder };
-    case 'quantity':
+    case PantrySortOption.QUANTITY:
       return { currentQuantity: sortOrder };
-    case 'recent':
+    case PantrySortOption.RECENT:
       return { addedAt: sortOrder };
   }
 }

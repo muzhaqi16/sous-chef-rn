@@ -11,11 +11,11 @@ import {
   useThemePreferences,
 } from '#store/useAppStore';
 import { useTheme } from '#hooks/useTheme';
-import { ThemePreference } from '#store/slices/preferencesSlice';
-import type {
+import {
+  ThemePreference,
   DensityPreference,
   FontScalePreference,
-} from '#store/slices/preferencesSlice';
+} from '#store/slices/preferenceTypes';
 import { Text } from '#components/atoms/Text';
 
 const APP_COLORS: {
@@ -37,19 +37,22 @@ const APP_COLORS: {
 ];
 
 const DENSITY_OPTIONS_KEYS: { labelKey: string; value: DensityPreference }[] = [
-  { labelKey: 'appearance.densityCompact', value: 'compact' },
-  { labelKey: 'appearance.densityComfortable', value: 'comfortable' },
-  { labelKey: 'appearance.densitySpacious', value: 'spacious' },
+  { labelKey: 'appearance.densityCompact', value: DensityPreference.COMPACT },
+  {
+    labelKey: 'appearance.densityComfortable',
+    value: DensityPreference.COMFORTABLE,
+  },
+  { labelKey: 'appearance.densitySpacious', value: DensityPreference.SPACIOUS },
 ];
 
 const FONT_SCALE_OPTION_KEYS: {
   labelKey: string;
   value: FontScalePreference;
 }[] = [
-  { labelKey: 'appearance.fontSmall', value: 'sm' },
-  { labelKey: 'appearance.fontDefault', value: 'system' },
-  { labelKey: 'appearance.fontLarge', value: 'lg' },
-  { labelKey: 'appearance.fontExtraLarge', value: 'xl' },
+  { labelKey: 'appearance.fontSmall', value: FontScalePreference.SM },
+  { labelKey: 'appearance.fontDefault', value: FontScalePreference.SYSTEM },
+  { labelKey: 'appearance.fontLarge', value: FontScalePreference.LG },
+  { labelKey: 'appearance.fontExtraLarge', value: FontScalePreference.XL },
 ];
 
 function SegmentedControl<T extends string>({

@@ -114,16 +114,10 @@ export const createConsoleLink = (
             if (isCircular) {
               // Log actual error details for non-timer circular errors
               console.warn('   ⚠️ GraphQL errors (may have circular refs):');
-              safeErrors?.forEach((err, i: number) => {
+              safeErrors?.forEach((err, i) => {
                 console.warn(
                   `      [${i}] message: ${err?.message || 'No message'}`,
                 );
-                if (err?.path) {
-                  console.warn(`          path: ${JSON.stringify(err.path)}`);
-                }
-                if (err?.extensions?.code) {
-                  console.warn(`          code: ${err.extensions.code}`);
-                }
               });
             } else {
               console.error('   ❌ Errors:', stringified);

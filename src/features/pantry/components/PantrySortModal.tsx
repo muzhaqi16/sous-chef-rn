@@ -5,6 +5,10 @@ import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import type { SortOption, SortDirection } from './pantryDisplay/types';
+import {
+  PantrySortOption,
+  PantrySortDirection,
+} from '#store/slices/preferenceTypes';
 
 interface PantrySortModalProps {
   /** Whether the modal is visible */
@@ -27,22 +31,22 @@ const SORT_OPTIONS: Array<{
   library?: string;
 }> = [
   {
-    key: 'name',
+    key: PantrySortOption.NAME,
     labelKey: 'pantrySort.sortName',
     icon: 'text-outline',
   },
   {
-    key: 'expiry',
+    key: PantrySortOption.EXPIRY,
     labelKey: 'pantrySort.sortExpiryDate',
     icon: 'calendar-outline',
   },
   {
-    key: 'quantity',
+    key: PantrySortOption.QUANTITY,
     labelKey: 'pantrySort.sortQuantity',
     icon: 'bar-chart',
   },
   {
-    key: 'recent',
+    key: PantrySortOption.RECENT,
     labelKey: 'pantrySort.sortRecentlyAdded',
     icon: 'time-outline',
   },
@@ -104,7 +108,11 @@ export const PantrySortModal: React.FC<PantrySortModalProps> = ({
                   </Text>
                   {sortOption === option.key && (
                     <Icon
-                      name={sortDirection === 'asc' ? 'arrow-up' : 'arrow-down'}
+                      name={
+                        sortDirection === PantrySortDirection.ASC
+                          ? 'arrow-up'
+                          : 'arrow-down'
+                      }
                       size={18}
                       tone="primary"
                     />

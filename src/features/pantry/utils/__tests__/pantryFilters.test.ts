@@ -4,6 +4,10 @@ import {
   sortOptionToOrderBy,
 } from '../pantryFilters';
 import { StorageState, SortOrder } from '#/graphql/generated/schemaTypes';
+import {
+  PantrySortOption,
+  PantrySortDirection,
+} from '#store/slices/preferenceTypes';
 
 describe('isBuiltInFilter', () => {
   it('returns true for "all"', () => {
@@ -75,49 +79,65 @@ describe('filterByLocation', () => {
 
 describe('sortOptionToOrderBy', () => {
   it('maps "name" + "asc" to { itemName: SortOrder.Asc }', () => {
-    expect(sortOptionToOrderBy('name', 'asc')).toEqual({
+    expect(
+      sortOptionToOrderBy(PantrySortOption.NAME, PantrySortDirection.ASC),
+    ).toEqual({
       itemName: SortOrder.Asc,
     });
   });
 
   it('maps "name" + "desc" to { itemName: SortOrder.Desc }', () => {
-    expect(sortOptionToOrderBy('name', 'desc')).toEqual({
+    expect(
+      sortOptionToOrderBy(PantrySortOption.NAME, PantrySortDirection.DESC),
+    ).toEqual({
       itemName: SortOrder.Desc,
     });
   });
 
   it('maps "expiry" + "asc" to { expiresAt: SortOrder.Asc }', () => {
-    expect(sortOptionToOrderBy('expiry', 'asc')).toEqual({
+    expect(
+      sortOptionToOrderBy(PantrySortOption.EXPIRY, PantrySortDirection.ASC),
+    ).toEqual({
       expiresAt: SortOrder.Asc,
     });
   });
 
   it('maps "expiry" + "desc" to { expiresAt: SortOrder.Desc }', () => {
-    expect(sortOptionToOrderBy('expiry', 'desc')).toEqual({
+    expect(
+      sortOptionToOrderBy(PantrySortOption.EXPIRY, PantrySortDirection.DESC),
+    ).toEqual({
       expiresAt: SortOrder.Desc,
     });
   });
 
   it('maps "quantity" + "asc" to { currentQuantity: SortOrder.Asc }', () => {
-    expect(sortOptionToOrderBy('quantity', 'asc')).toEqual({
+    expect(
+      sortOptionToOrderBy(PantrySortOption.QUANTITY, PantrySortDirection.ASC),
+    ).toEqual({
       currentQuantity: SortOrder.Asc,
     });
   });
 
   it('maps "quantity" + "desc" to { currentQuantity: SortOrder.Desc }', () => {
-    expect(sortOptionToOrderBy('quantity', 'desc')).toEqual({
+    expect(
+      sortOptionToOrderBy(PantrySortOption.QUANTITY, PantrySortDirection.DESC),
+    ).toEqual({
       currentQuantity: SortOrder.Desc,
     });
   });
 
   it('maps "recent" + "asc" to { addedAt: SortOrder.Asc }', () => {
-    expect(sortOptionToOrderBy('recent', 'asc')).toEqual({
+    expect(
+      sortOptionToOrderBy(PantrySortOption.RECENT, PantrySortDirection.ASC),
+    ).toEqual({
       addedAt: SortOrder.Asc,
     });
   });
 
   it('maps "recent" + "desc" to { addedAt: SortOrder.Desc }', () => {
-    expect(sortOptionToOrderBy('recent', 'desc')).toEqual({
+    expect(
+      sortOptionToOrderBy(PantrySortOption.RECENT, PantrySortDirection.DESC),
+    ).toEqual({
       addedAt: SortOrder.Desc,
     });
   });

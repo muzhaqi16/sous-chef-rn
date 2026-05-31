@@ -13,6 +13,7 @@ import {
 } from '#components/modals/StorageLocationSheet/StorageLocationSheet';
 import type { StorageLocationFormValues } from '#components/organisms/storageLocation/StorageLocationForm';
 import { StorageType } from '#/graphql/generated/schemaTypes';
+import type { GetStorageLocationsQuery } from '#operations/storageLocation/storageLocation.generated';
 import { useSelectedPantryId } from '#store/useAppStore';
 import { commonStyles } from '#/styles/commonStyles';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
@@ -27,12 +28,23 @@ type RouteParams = {
   homeId: string;
 };
 
-// `locations` is a single rich node type, but `tree` is a UNION of the
-// flat-built node (full fields) and the slim `storageLocationTree` query node
-// (no parentLocation/temperature/description). The edit handler also writes
-// into StorageLocationInitialData, whose `type`/`temperature` enums the slim
-// node doesn't carry — so the node-bridging handlers below stay `any`. The flat
-// `locations` array remains strongly typed via the hook return.
+/** Flat storage-location node from `GetStorageLocations` — the richest shape. */
+type FlatStorageLocationNode =
+  GetStorageLocationsQuery['storageLocations']['edges'][number]['node'];
+
+/**
+ * Superset node the render/edit/delete handlers accept. The flat
+ * `GetStorageLocations` node and the slim `GetStorageLocationTree` node diverge
+ * (the tree node omits parentLocation/temperature/description and nests via
+ * `childLocations`), so every diverging field is optional while id/name/type —
+ * always present on both — stay required. Field types are inherited from the
+ * generated node, so spreading into `StorageLocationInitialData` preserves the
+ * StorageType/StorageState enums without casts.
+ */
+type StorageNode = Partial<FlatStorageLocationNode> &
+  Pick<FlatStorageLocationNode, 'id' | 'name' | 'type'> & {
+    childLocations?: StorageNode[] | null;
+  };
 
 export const StorageLocationsScreen: React.FC<
   StaticScreenProps<RouteParams>
@@ -63,8 +75,7 @@ export const StorageLocationsScreen: React.FC<
   } = useStorageLocationManagement(homeId, selectedPantryId ?? undefined);
 
   // Open sheet for editing — map nested parentLocation to flat parentLocationId.
-  // node bridges flat-built and slim tree-query shapes — see the type note above
-  const handleOpenEdit = (location: any) => {
+  const handleOpenEdit = (location: StorageNode) => {
     setEditingLocation({
       ...location,
       parentLocationId: location.parentLocation?.id ?? null,
@@ -79,9 +90,8 @@ export const StorageLocationsScreen: React.FC<
   };
 
   // Recursive component to render tree structure
-  // node bridges flat-built and slim tree-query shapes — see the type note above
   const renderTreeNode = (
-    node: any,
+    node: StorageNode,
     depth: number = 0,
   ): React.ReactElement | null => {
     if (!node?.id) return null;
@@ -89,14 +99,12 @@ export const StorageLocationsScreen: React.FC<
       <View key={node.id} style={{ marginLeft: depth * 16 }}>
         <StorageLocationCard
           location={node}
-          isDefault={node.isDefault}
+          isDefault={node.isDefault ?? false}
           onEdit={() => handleOpenEdit(node)}
           onDelete={() => handleDelete(node)}
           onSetDefault={() => handleSetDefault(node.id)}
         />
-        {node.childLocations?.map((child: any) =>
-          renderTreeNode(child, depth + 1),
-        )}
+        {node.childLocations?.map(child => renderTreeNode(child, depth + 1))}
       </View>
     );
   };
@@ -130,8 +138,7 @@ export const StorageLocationsScreen: React.FC<
     return handleCreate(formData);
   };
 
-  // node bridges flat-built and slim tree-query shapes — see the type note above
-  const handleDelete = (location: any) => {
+  const handleDelete = (location: StorageNode) => {
     // Default location cannot be deleted
     if (location.isDefault) {
       alertService.alert(

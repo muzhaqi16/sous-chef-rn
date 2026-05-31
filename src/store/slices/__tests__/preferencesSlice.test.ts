@@ -1,5 +1,10 @@
 import { createTestStore } from '#/test-utils/createTestStore';
-import { ThemePreference, defaultUserPreferences } from '../preferencesSlice';
+import { defaultUserPreferences } from '../preferencesSlice';
+import {
+  ThemePreference,
+  PantrySortOption,
+  PantrySortDirection,
+} from '../preferenceTypes';
 
 // Mock authSlice dependencies
 jest.mock('../../../apollo/links/tokenScheduler');
@@ -86,14 +91,16 @@ describe('preferencesSlice', () => {
   describe('pantry sort', () => {
     it('sets sort option', () => {
       const store = createTestStore();
-      store.getState().setPantrySortOption('name');
-      expect(store.getState().pantrySortOption).toBe('name');
+      store.getState().setPantrySortOption(PantrySortOption.NAME);
+      expect(store.getState().pantrySortOption).toBe(PantrySortOption.NAME);
     });
 
     it('sets sort direction', () => {
       const store = createTestStore();
-      store.getState().setPantrySortDirection('asc');
-      expect(store.getState().pantrySortDirection).toBe('asc');
+      store.getState().setPantrySortDirection(PantrySortDirection.ASC);
+      expect(store.getState().pantrySortDirection).toBe(
+        PantrySortDirection.ASC,
+      );
     });
   });
 

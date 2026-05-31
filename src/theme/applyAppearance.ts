@@ -3,23 +3,21 @@ import { derivePalette } from './derivePalette';
 import { spacing as baseSpacing } from './foundations/spacing';
 import { typography as baseTypography } from './foundations/typography';
 import { lightTheme, darkTheme } from './themes';
-import type {
-  DensityPreference,
-  FontScalePreference,
-} from '#store/slices/preferencesSlice';
+import { FontScalePreference } from '#store/slices/preferenceTypes';
+import { DensityPreference } from '#store/slices/preferenceTypes';
 
 const DENSITY_MULTIPLIER: Record<DensityPreference, number> = {
-  compact: 0.85,
-  comfortable: 1.0,
-  spacious: 1.15,
+  [DensityPreference.COMPACT]: 0.85,
+  [DensityPreference.COMFORTABLE]: 1.0,
+  [DensityPreference.SPACIOUS]: 1.15,
 };
 
 const FONT_SCALE_MULTIPLIER: Record<FontScalePreference, number> = {
-  system: 1.0,
-  sm: 0.9,
-  md: 1.0,
-  lg: 1.15,
-  xl: 1.3,
+  [FontScalePreference.SYSTEM]: 1.0,
+  [FontScalePreference.SM]: 0.9,
+  [FontScalePreference.MD]: 1.0,
+  [FontScalePreference.LG]: 1.15,
+  [FontScalePreference.XL]: 1.3,
 };
 
 function scaleObject<T extends Record<string, number>>(
@@ -54,8 +52,13 @@ export interface AppearancePreferences {
  */
 export function applyAppearanceToRuntime(prefs: AppearancePreferences): void {
   const densityMul =
-    DENSITY_MULTIPLIER[prefs.densityPreference ?? 'comfortable'];
-  const fontMul = FONT_SCALE_MULTIPLIER[prefs.fontScalePreference ?? 'system'];
+    DENSITY_MULTIPLIER[
+      prefs.densityPreference ?? DensityPreference.COMFORTABLE
+    ];
+  const fontMul =
+    FONT_SCALE_MULTIPLIER[
+      prefs.fontScalePreference ?? FontScalePreference.SYSTEM
+    ];
 
   const buildNext = (themeName: 'light' | 'dark') => {
     const base = themeName === 'light' ? lightTheme : darkTheme;

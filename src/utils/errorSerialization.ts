@@ -25,16 +25,49 @@ function getErrorMessage(error: unknown): string {
   return '';
 }
 
-// The return type is intentionally `Record<string, any>`: this serialized
-// error object is consumed by loggers and tests that index dynamic,
-// error-shaped fields (`result.graphQLErrors[0].message`,
-// `result.networkError.name`). Narrowing it to `Record<string, unknown>`
-// would force unsafe casts on every reader. The internal serialization below
-// is fully `unknown`-typed and narrowed.
-export function serializeError(
-  error: unknown,
-  maxDepth = 4,
-): Record<string, any> {
+/** One normalized Apollo GraphQL error entry within {@link SerializedError}. */
+interface SerializedGraphQLError {
+  message: string;
+  path: unknown;
+  extensions: unknown;
+}
+
+/** Normalized Apollo network-error shape within {@link SerializedError}. */
+interface SerializedNetworkError {
+  name: string;
+  message: string;
+  statusCode: unknown;
+  result: unknown;
+}
+
+/** Normalized Apollo operation context within {@link SerializedError}. */
+interface SerializedOperation {
+  operationName: string;
+  variables: unknown;
+}
+
+/**
+ * JSON-friendly, fully-narrowed error shape returned by {@link serializeError}.
+ *
+ * The well-known Apollo/JS error fields are typed so readers index them
+ * (`result.graphQLErrors?.[0].message`, `result.networkError?.name`) without
+ * casts. The index signature keeps the object open for the dynamic
+ * `additionalProperties` capture and any logger that reads ad-hoc keys.
+ */
+export interface SerializedError {
+  name?: string;
+  message: string;
+  code?: unknown;
+  stack?: string;
+  graphQLErrors?: SerializedGraphQLError[];
+  networkError?: SerializedNetworkError;
+  operation?: SerializedOperation;
+  extraInfo?: unknown;
+  additionalProperties?: Record<string, unknown> | string;
+  [key: string]: unknown;
+}
+
+export function serializeError(error: unknown, maxDepth = 4): SerializedError {
   if (!error) return { message: 'Unknown error' };
   if (typeof error === 'string') return { message: error };
   if (!isRecord(error)) return { message: String(error) };
@@ -82,7 +115,7 @@ export function serializeError(
   }
 
   // Build the serialized error object
-  const serialized: Record<string, unknown> = {
+  const serialized: SerializedError = {
     name: typeof error.name === 'string' && error.name ? error.name : 'Error',
     message:
       typeof error.message === 'string' && error.message
