@@ -1,5 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
@@ -26,12 +27,16 @@ export const BottomSheetHeader: React.FC<BottomSheetHeaderProps> = ({
   title,
   onCancel,
   onConfirm,
-  cancelLabel = 'Cancel',
-  confirmLabel = 'Save',
+  cancelLabel,
+  confirmLabel,
   confirmDisabled = false,
   confirmColor = 'primary',
 }) => {
+  const { t } = useTranslation();
   styles.useVariants({ confirmColor, confirmDisabled });
+
+  const resolvedCancelLabel = cancelLabel ?? t('labels.cancel');
+  const resolvedConfirmLabel = confirmLabel ?? t('labels.save');
 
   return (
     <View style={styles.container}>
@@ -40,10 +45,10 @@ export const BottomSheetHeader: React.FC<BottomSheetHeaderProps> = ({
           onPress={onCancel}
           style={({ pressed }) => [styles.button, pressed && styles.pressed]}
           accessibilityRole="button"
-          accessibilityLabel={cancelLabel}
+          accessibilityLabel={resolvedCancelLabel}
         >
           <Text size="md" tone="secondary">
-            {cancelLabel}
+            {resolvedCancelLabel}
           </Text>
         </Pressable>
 
@@ -62,7 +67,7 @@ export const BottomSheetHeader: React.FC<BottomSheetHeaderProps> = ({
           style={({ pressed }) => [styles.button, pressed && styles.pressed]}
           disabled={confirmDisabled}
           accessibilityRole="button"
-          accessibilityLabel={confirmLabel}
+          accessibilityLabel={resolvedConfirmLabel}
           accessibilityState={{ disabled: confirmDisabled }}
         >
           <Text
@@ -71,7 +76,7 @@ export const BottomSheetHeader: React.FC<BottomSheetHeaderProps> = ({
             align="right"
             style={styles.confirmText}
           >
-            {confirmLabel}
+            {resolvedConfirmLabel}
           </Text>
         </Pressable>
       </View>
