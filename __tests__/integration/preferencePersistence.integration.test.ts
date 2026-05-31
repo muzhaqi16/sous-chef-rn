@@ -44,24 +44,15 @@ import {
 } from '#/store/slices/preferencesSlice';
 import { zustandStorage, STORAGE_KEY } from '#/storage/mmkv';
 
-// We only need the preferences slice for this test. The full RootState is
-// the union of every slice; reconstructing all of them just to test theme
-// persistence would conflate the seam under test with unrelated state.
-type SliceState = PreferencesState;
-
 function createPersistedStore(testKey: string) {
-  return create<SliceState>()(
+  return create<PreferencesState>()(
     subscribeWithSelector(
       persist(
         immer((set, get, api) =>
           createPreferencesSlice(
             set as Parameters<typeof createPreferencesSlice>[0],
             get as Parameters<typeof createPreferencesSlice>[1],
-            // The slice creator's store-api param is typed (invariantly) over
-            // the full RootState; this test deliberately builds a store with
-            // only the preferences slice, so the PreferencesState store api
-            // can't be bridged to it without a banned `as unknown as`.
-            api as any,
+            api as unknown as Parameters<typeof createPreferencesSlice>[2],
           ),
         ),
         {

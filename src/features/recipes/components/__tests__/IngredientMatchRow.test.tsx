@@ -1,7 +1,10 @@
 'use no memo';
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
-import type { getAvailabilityStatus as getAvailabilityStatusFn } from '#features/recipes/hooks/useRecipeIngredientMatching';
+import type {
+  getAvailabilityStatus as getAvailabilityStatusFn,
+  EditableMatch,
+} from '#features/recipes/hooks/useRecipeIngredientMatching';
 import { IngredientMatchRow } from '../IngredientMatchRow';
 
 jest.mock('#features/recipes/hooks/useRecipeIngredientMatching', () => ({
@@ -19,30 +22,57 @@ describe('IngredientMatchRow', () => {
   // RecipeIngredientMatch, typed Unit) that these tests intentionally omit.
   const makeMatch = (
     name: string,
-    overrides: Record<string, unknown> & {
-      ingredient?: Record<string, unknown>;
+    overrides: Partial<EditableMatch['match']> & {
+      ingredient?: Partial<EditableMatch['ingredient']>;
     } = {},
-  ) => ({
-    match: {
+  ): EditableMatch => {
+    const matchDefaults: EditableMatch['match'] = {
+      __typename: 'RecipeIngredientMatch',
+      isAvailable: false,
+      matchConfidence: 0,
+      availableQuantity: 0,
+      suggestedQuantity: 2,
+      shortfall: null,
       ingredient: { __typename: 'RecipeIngredient', id: 'i1' },
-      matchedPantryItem: null,
       suggestedUnit: null,
-      ...overrides,
-    },
-    ingredient: {
+      matchedPantryItem: null,
+    };
+
+    const ingredientDefaults: EditableMatch['ingredient'] = {
       __typename: 'RecipeIngredient',
       id: 'i1',
       name,
+      quantity: 0,
+      image: null,
       isOptional: false,
+      notes: null,
+      preparation: null,
+      sortOrder: 0,
+      section: null,
+      item: null,
       unit: null,
-      ...(overrides.ingredient ?? {}),
-    },
-    adjustedQuantity: 2,
-    adjustedUnitId: null,
-    isIncluded: true,
-  });
+    };
 
-  const defaultProps: any = {
+    const match: EditableMatch['match'] = { ...matchDefaults, ...overrides };
+    const ingredient: EditableMatch['ingredient'] = {
+      ...ingredientDefaults,
+      ...(overrides.ingredient ?? {}),
+    };
+
+    return {
+      match,
+      ingredient,
+      adjustedQuantity: 2,
+      adjustedUnitId: null,
+      isIncluded: true,
+    };
+  };
+
+  const defaultProps: {
+    editableMatch: EditableMatch;
+    index: number;
+    onUpdate: jest.Mock;
+  } = {
     editableMatch: makeMatch('Sugar'),
     index: 0,
     onUpdate: jest.fn(),
@@ -86,9 +116,11 @@ describe('IngredientMatchRow', () => {
   it('renders matched pantry item info', () => {
     const matched = makeMatch('Sugar', {
       matchedPantryItem: {
+        __typename: 'PantryItem',
+        id: 'p1',
         itemName: 'White Sugar',
         quantity: 5,
-        unit: { symbol: 'cups' },
+        unit: { __typename: 'Unit', id: 'u1', name: 'cup', symbol: 'cups' },
       },
     });
     render(<IngredientMatchRow {...defaultProps} editableMatch={matched} />);
@@ -96,7 +128,14 @@ describe('IngredientMatchRow', () => {
   });
 
   it('renders suggested unit symbol', () => {
-    const withUnit = makeMatch('Flour', { suggestedUnit: { symbol: 'cups' } });
+    const withUnit = makeMatch('Flour', {
+      suggestedUnit: {
+        __typename: 'Unit',
+        id: 'u2',
+        name: 'cup',
+        symbol: 'cups',
+      },
+    });
     render(<IngredientMatchRow {...defaultProps} editableMatch={withUnit} />);
     expect(screen.getByText('cups')).toBeTruthy();
   });
