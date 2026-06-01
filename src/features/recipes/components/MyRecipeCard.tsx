@@ -1,5 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useFragment } from '@apollo/client/react';
 import { type FragmentType } from '@apollo/client/masking';
 import { Pressable } from '#components/atoms/themedComponents';
@@ -23,6 +24,7 @@ export const MyRecipeCard: React.FC<MyRecipeCardProps> = ({
   onEdit,
   onDelete,
 }) => {
+  const { t } = useTranslation();
   // Per-entity cache subscription: this card re-renders only when this Recipe's
   // MyRecipeCard_recipe fields change.
   const { data: recipe, complete } = useFragment({
@@ -60,8 +62,8 @@ export const MyRecipeCard: React.FC<MyRecipeCardProps> = ({
           {recipe.name}
         </Text>
         <Text size="sm" tone="secondary" numberOfLines={1}>
-          {recipe.servings} servings
-          {totalTime != null ? ` • ${totalTime} min` : ''}
+          {recipe.servings} {t('recipes.servingsSuffix')}
+          {totalTime != null ? ` • ${totalTime} ${t('recipes.minutes')}` : ''}
         </Text>
       </View>
       <View style={styles.actions}>
@@ -70,7 +72,7 @@ export const MyRecipeCard: React.FC<MyRecipeCardProps> = ({
             onPress={() => onEdit(recipe.id)}
             hitSlop={8}
             style={({ pressed }) => pressed && styles.pressed}
-            accessibilityLabel="Edit recipe"
+            accessibilityLabel={t('recipes.editRecipeA11y')}
           >
             <Icon name="create-outline" size={20} tone="textSecondary" />
           </Pressable>
@@ -80,7 +82,7 @@ export const MyRecipeCard: React.FC<MyRecipeCardProps> = ({
             onPress={() => onDelete(recipe.id)}
             hitSlop={8}
             style={({ pressed }) => pressed && styles.pressed}
-            accessibilityLabel="Delete recipe"
+            accessibilityLabel={t('recipes.deleteRecipeA11y')}
           >
             <Icon name="trash-outline" size={20} tone="error" />
           </Pressable>

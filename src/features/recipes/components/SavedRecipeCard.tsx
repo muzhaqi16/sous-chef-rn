@@ -1,5 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useFragment } from '@apollo/client/react';
 import { type FragmentType } from '@apollo/client/masking';
 import { Pressable } from '#components/atoms/themedComponents';
@@ -21,6 +22,7 @@ export const SavedRecipeCard: React.FC<SavedRecipeCardProps> = ({
   onPress,
   onRemove,
 }) => {
+  const { t } = useTranslation();
   // Per-entity cache subscription: re-renders only when this SavedRecipe (or
   // its nested recipe scalars) change in the cache.
   const { data: saved, complete } = useFragment({
@@ -59,8 +61,8 @@ export const SavedRecipeCard: React.FC<SavedRecipeCardProps> = ({
           {recipe.name}
         </Text>
         <Text size="sm" tone="secondary" numberOfLines={1}>
-          {recipe.servings} servings
-          {totalTime != null ? ` • ${totalTime} min` : ''}
+          {recipe.servings} {t('recipes.servingsSuffix')}
+          {totalTime != null ? ` • ${totalTime} ${t('recipes.minutes')}` : ''}
         </Text>
       </View>
       {!!onRemove && (
@@ -68,7 +70,7 @@ export const SavedRecipeCard: React.FC<SavedRecipeCardProps> = ({
           onPress={() => onRemove(recipe.id)}
           hitSlop={8}
           style={({ pressed }) => pressed && styles.pressed}
-          accessibilityLabel="Remove from saved"
+          accessibilityLabel={t('recipes.removeFromSavedA11y')}
         >
           <Icon name="trash-outline" size={20} tone="error" />
         </Pressable>

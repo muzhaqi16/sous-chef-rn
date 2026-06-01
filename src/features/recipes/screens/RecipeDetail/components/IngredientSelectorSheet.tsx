@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import {
   OnPrimaryActivityIndicator,
   Pressable,
@@ -82,49 +83,55 @@ export const IngredientSelectorSheet: React.FC<
   onAddSelected,
   onDismiss,
   BottomSheetScrollable,
-}) => (
-  <BottomSheetAction
-    sheetRef={sheetRef}
-    sheetTitle="Select Ingredients"
-    snapPoints={['50%', '75%', '90%']}
-    onDismiss={onDismiss}
-  >
-    <SelectableIngredientProvider
-      selectedIngredients={selectedIngredients}
-      toggleIngredient={toggleIngredient}
+}) => {
+  const { t } = useTranslation();
+  return (
+    <BottomSheetAction
+      sheetRef={sheetRef}
+      sheetTitle={t('recipes.selectIngredients')}
+      snapPoints={['50%', '75%', '90%']}
+      onDismiss={onDismiss}
     >
-      <FlashList
-        renderScrollComponent={BottomSheetScrollable}
-        data={ingredients}
-        keyExtractor={ingredientKeyExtractor}
-        renderItem={renderItem}
-        getItemType={getItemType}
-        extraData={selectedIngredients.size}
-        {...FLASHLIST_DEFAULTS.fullScreen}
-        ListEmptyComponent={
-          <Text style={styles.emptyText}>No ingredients available</Text>
-        }
-      />
-    </SelectableIngredientProvider>
-    <Pressable
-      style={({ pressed }) => [
-        styles.addSelectedButton,
-        pressed && { opacity: 0.7 },
-      ]}
-      onPress={onAddSelected}
-      disabled={selectedIngredients.size === 0 || addingToList}
-    >
-      {addingToList ? (
-        <OnPrimaryActivityIndicator />
-      ) : (
-        <Text style={styles.addSelectedButtonText}>
-          Add {selectedIngredients.size} ingredient
-          {selectedIngredients.size !== 1 ? 's' : ''}
-        </Text>
-      )}
-    </Pressable>
-  </BottomSheetAction>
-);
+      <SelectableIngredientProvider
+        selectedIngredients={selectedIngredients}
+        toggleIngredient={toggleIngredient}
+      >
+        <FlashList
+          renderScrollComponent={BottomSheetScrollable}
+          data={ingredients}
+          keyExtractor={ingredientKeyExtractor}
+          renderItem={renderItem}
+          getItemType={getItemType}
+          extraData={selectedIngredients.size}
+          {...FLASHLIST_DEFAULTS.fullScreen}
+          ListEmptyComponent={
+            <Text style={styles.emptyText}>
+              {t('recipes.noIngredientsAvailable')}
+            </Text>
+          }
+        />
+      </SelectableIngredientProvider>
+      <Pressable
+        style={({ pressed }) => [
+          styles.addSelectedButton,
+          pressed && { opacity: 0.7 },
+        ]}
+        onPress={onAddSelected}
+        disabled={selectedIngredients.size === 0 || addingToList}
+      >
+        {addingToList ? (
+          <OnPrimaryActivityIndicator />
+        ) : (
+          <Text style={styles.addSelectedButtonText}>
+            {t('recipes.addIngredientsCount', {
+              count: selectedIngredients.size,
+            })}
+          </Text>
+        )}
+      </Pressable>
+    </BottomSheetAction>
+  );
+};
 
 const styles = StyleSheet.create(theme => ({
   ingredientItem: {

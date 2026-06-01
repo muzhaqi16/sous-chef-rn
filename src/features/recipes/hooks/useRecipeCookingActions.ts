@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useMutation } from '@apollo/client/react';
 import { MarkRecipeAsCookedDocument } from '#features/recipes/graphql/recipe.generated';
 import { useRecipeIngredientMatching } from '#features/recipes/hooks/useRecipeIngredientMatching';
@@ -19,6 +20,7 @@ interface MarkCookedInput {
 export function useRecipeCookingActions({
   recipeId,
 }: UseRecipeCookingActionsOptions) {
+  const { t } = useTranslation();
   const [cookedModalVisible, setCookedModalVisible] = useState(false);
   const [markingAsCooked, setMarkingAsCooked] = useState(false);
 
@@ -27,15 +29,13 @@ export function useRecipeCookingActions({
   const [markRecipeAsCookedMutation] = useMutation(MarkRecipeAsCookedDocument, {
     onError: err => {
       console.error('Mark recipe as cooked error:', err);
-      toastService.error(err.message || 'Failed to mark recipe as cooked');
+      toastService.error(err.message || t('recipes.markCookedFailed'));
     },
   });
 
   const handleMarkAsCooked = (input: MarkCookedInput) => {
     if (!recipeId) {
-      toastService.error(
-        'Cannot mark external recipes as cooked. Please save the recipe first.',
-      );
+      toastService.error(t('recipes.cookExternalError'));
       return;
     }
 
@@ -55,9 +55,7 @@ export function useRecipeCookingActions({
               },
             },
           });
-          toastService.success(
-            'Recipe marked as cooked! Ingredients deducted from pantry.',
-          );
+          toastService.success(t('recipes.markedCookedDeducted'));
         }
       }, setMarkingAsCooked);
       return;
@@ -77,11 +75,9 @@ export function useRecipeCookingActions({
       });
 
       if (input.deductFromPantry) {
-        toastService.success(
-          'Recipe marked as cooked! Ingredients deducted from pantry.',
-        );
+        toastService.success(t('recipes.markedCookedDeducted'));
       } else {
-        toastService.success('Recipe marked as cooked!');
+        toastService.success(t('recipes.markedCooked'));
       }
     }, setMarkingAsCooked);
   };

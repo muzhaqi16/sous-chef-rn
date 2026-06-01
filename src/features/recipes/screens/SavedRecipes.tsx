@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { FlashList } from '@shopify/flash-list';
 import { useFragment } from '@apollo/client/react';
 import { StyleSheet } from 'react-native-unistyles';
@@ -71,6 +72,7 @@ const SavedRecipeRow: React.FC<{
 
 export const SavedRecipes: React.FC = () => {
   useScreenTransition('SavedRecipes');
+  const { t } = useTranslation();
   const { toRecipeDetail, goBack } = useAppNavigation();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -167,10 +169,7 @@ export const SavedRecipes: React.FC = () => {
       () => unfavoriteRecipeMutation({ variables: { input: { recipeId } } }),
       (error: unknown) => {
         console.error('Failed to remove recipe:', error);
-        alertService.alert(
-          'Error',
-          'Failed to remove recipe. Please try again.',
-        );
+        alertService.alert(t('labels.error'), t('recipes.removeRecipeFailed'));
       },
     );
     optimisticDataPersistence.clear('SavedRecipe', recipeId, 'isFavorited');
@@ -188,14 +187,14 @@ export const SavedRecipes: React.FC = () => {
     const tabs: FilterTabConfig<string>[] = [
       {
         id: 'all',
-        label: 'All',
+        label: t('recipes.filterAll'),
       },
     ];
 
     if (folders.length > 0) {
       tabs.push({
         id: 'folder',
-        label: selectedFolder || 'Folders',
+        label: selectedFolder || t('recipes.folders'),
         icon: 'folder',
         onPress: () => setShowFolderPicker(true),
         showDropdownIndicator: true,
@@ -207,8 +206,8 @@ export const SavedRecipes: React.FC = () => {
         id: 'tags',
         label:
           selectedTags.length > 0
-            ? `${selectedTags.length} Tag${selectedTags.length > 1 ? 's' : ''}`
-            : 'Tags',
+            ? t('recipes.tagCount', { count: selectedTags.length })
+            : t('recipes.tags'),
         icon: 'pricetag-outline',
         onPress: () => setShowTagPicker(true),
         showDropdownIndicator: true,
@@ -272,12 +271,12 @@ export const SavedRecipes: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <Header title="Saved Recipes" onBack={goBack} />
+      <Header title={t('recipes.savedRecipesTitle')} onBack={goBack} />
       <View style={styles.searchBarContainer}>
         <SearchBar
           value={searchQuery}
           onChangeText={setSearchQuery}
-          placeholder="Search saved recipes..."
+          placeholder={t('recipes.savedRecipesSearchPlaceholder')}
           showSearchIcon
         />
       </View>
@@ -285,8 +284,8 @@ export const SavedRecipes: React.FC = () => {
       {filteredRecipes.length === 0 ? (
         <EmptyState
           icon="bookmark-outline"
-          title="No saved recipes"
-          description="Save recipes from search to see them here"
+          title={t('recipes.savedRecipesEmptyTitle')}
+          description={t('recipes.savedRecipesEmptyDescription')}
         />
       ) : (
         <FlashList

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import {
   OnPrimaryActivityIndicator,
   Pressable,
@@ -42,6 +43,7 @@ export const ShoppingListPickerSheet: React.FC<
   onDismiss,
   BottomSheetScrollable,
 }) => {
+  const { t } = useTranslation();
   const [newListName, setNewListName] = useState(defaultNewListName);
 
   const renderListItem = ({ item }: { item: ShoppingList }) => (
@@ -54,11 +56,15 @@ export const ShoppingListPickerSheet: React.FC<
     >
       <View style={styles.listPickerInfo}>
         <Text style={styles.listPickerName}>{item.name}</Text>
-        <Text style={styles.listPickerCount}>{item.totalItems ?? 0} items</Text>
+        <Text style={styles.listPickerCount}>
+          {t('recipes.listItemCount', { count: item.totalItems ?? 0 })}
+        </Text>
       </View>
       {!!item.isDefault && (
         <View style={styles.defaultBadge}>
-          <Text style={styles.defaultBadgeText}>Default</Text>
+          <Text style={styles.defaultBadgeText}>
+            {t('recipes.defaultBadge')}
+          </Text>
         </View>
       )}
       <Icon name="chevron-forward" size={20} tone="textSecondary" />
@@ -68,7 +74,7 @@ export const ShoppingListPickerSheet: React.FC<
   return (
     <BottomSheetAction
       sheetRef={sheetRef}
-      sheetTitle="Add to Shopping List"
+      sheetTitle={t('recipes.addToShoppingList')}
       snapPoints={['60%']}
       scrollable={false}
       onDismiss={() => {
@@ -90,7 +96,7 @@ export const ShoppingListPickerSheet: React.FC<
                 style={styles.createListInput}
                 value={newListName}
                 onChangeText={setNewListName}
-                placeholder="New list name"
+                placeholder={t('recipes.newListNamePlaceholder')}
                 autoCapitalize="words"
                 maxLength={100}
               />
@@ -120,7 +126,7 @@ export const ShoppingListPickerSheet: React.FC<
                 <OnPrimaryActivityIndicator />
               ) : (
                 <Text style={styles.createListButtonText}>
-                  Create & Add Ingredients
+                  {t('recipes.createAndAddIngredients')}
                 </Text>
               )}
             </Pressable>
@@ -128,7 +134,7 @@ export const ShoppingListPickerSheet: React.FC<
         }
         ListEmptyComponent={
           <View style={styles.emptyListPicker}>
-            <Text style={styles.emptyText}>No existing lists</Text>
+            <Text style={styles.emptyText}>{t('recipes.noExistingLists')}</Text>
           </View>
         }
       />

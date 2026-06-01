@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { alertService } from '#/services/alertService';
+import { t as tGlobal } from '#/i18n/t';
 import { useDeferredSearch } from '#hooks/performance/useDeferredSearch';
 import { pantryItemSearch } from '#utils/searchUtils';
 import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
@@ -47,18 +48,18 @@ function handleSearchError(error: unknown, label: string): void {
   console.error(`${label}:`, error);
   if (err.isQuotaExceeded) {
     alertService.alert(
-      'API Limit Reached',
-      'Spoonacular API quota exceeded. Please try again later.',
+      tGlobal('recipes.apiLimitTitle'),
+      tGlobal('recipes.apiLimitMessage'),
     );
   } else if (err.isRateLimitError) {
     alertService.alert(
-      'Rate Limit',
-      'Too many requests. Please try again in a moment.',
+      tGlobal('recipes.rateLimitTitle'),
+      tGlobal('recipes.rateLimitMessage'),
     );
   } else {
     alertService.alert(
-      'Search Error',
-      'Failed to search recipes. Please try again.',
+      tGlobal('recipes.searchErrorTitle'),
+      tGlobal('recipes.searchErrorMessage'),
     );
   }
 }
@@ -345,8 +346,8 @@ export function useRecipeScreen() {
   const handleIngredientSearch = async () => {
     if (selectedIngredients.size === 0) {
       alertService.alert(
-        'No Ingredients Selected',
-        'Please select at least one ingredient',
+        tGlobal('recipes.noIngredientsSelectedTitle'),
+        tGlobal('recipes.selectAtLeastOneIngredient'),
       );
       return;
     }

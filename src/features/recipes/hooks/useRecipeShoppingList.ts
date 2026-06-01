@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery } from '@apollo/client/react';
 import type { BottomSheetModalRef } from '#hooks/useStandardBottomSheet';
 import {
@@ -46,6 +47,7 @@ export function useRecipeShoppingList({
   backendRecipe,
   externalRecipe,
 }: UseRecipeShoppingListOptions) {
+  const { t } = useTranslation();
   const { data: shoppingListsData, loading: shoppingListsLoading } = useQuery(
     GetShoppingListsLiteDocument,
     {},
@@ -113,7 +115,7 @@ export function useRecipeShoppingList({
 
   const openListPicker = (action: PendingAction) => {
     if (shoppingListsLoading) {
-      toastService.info('Loading shopping lists...');
+      toastService.info(t('recipes.loadingShoppingLists'));
       return;
     }
     setPendingAction(action);
@@ -133,7 +135,7 @@ export function useRecipeShoppingList({
       }
     },
     onError: () => {
-      toastService.error('Failed to create list');
+      toastService.error(t('recipes.createListFailed'));
     },
   });
 
@@ -153,8 +155,10 @@ export function useRecipeShoppingList({
       onError: err => {
         console.error('Add recipe to shopping list error:', err);
         const errorMessage =
-          err.message || 'Failed to add ingredients to shopping list';
-        toastService.error(`Could not add ingredients: ${errorMessage}`);
+          err.message || t('recipes.addIngredientsToListFailed');
+        toastService.error(
+          t('recipes.couldNotAddIngredients', { error: errorMessage }),
+        );
       },
     },
   );
@@ -223,8 +227,10 @@ export function useRecipeShoppingList({
       onError: err => {
         console.error('Batch add items to shopping list error:', err);
         const errorMessage =
-          err.message || 'Failed to add ingredients to shopping list';
-        toastService.error(`Could not add ingredients: ${errorMessage}`);
+          err.message || t('recipes.addIngredientsToListFailed');
+        toastService.error(
+          t('recipes.couldNotAddIngredients', { error: errorMessage }),
+        );
       },
     },
   );
@@ -233,7 +239,7 @@ export function useRecipeShoppingList({
   const handleAddSingleIngredient = (ingredient: DisplayIngredient) => {
     const targetList = getTargetShoppingList();
     if (!targetList) {
-      toastService.error('Please create a shopping list first.');
+      toastService.error(t('recipes.createListFirst'));
       return;
     }
 
@@ -273,11 +279,13 @@ export function useRecipeShoppingList({
         }
 
         setAddedIngredients(prev => new Set(prev).add(ingredient.id));
-        toastService.success(`Added to "${targetList.name}"`);
+        toastService.success(
+          t('recipes.addedToList', { listName: targetList.name }),
+        );
       },
       err => {
         console.error('Failed to add ingredient:', err);
-        toastService.error('Failed to add ingredient to shopping list.');
+        toastService.error(t('recipes.addIngredientToListFailed'));
       },
     );
   };
@@ -288,7 +296,7 @@ export function useRecipeShoppingList({
   const addAllIngredientsToList = (listId: string, listName?: string) => {
     const resolvedName = listName ?? getShoppingListById(listId)?.name;
     if (!resolvedName) {
-      toastService.error('Shopping list not found.');
+      toastService.error(t('recipes.shoppingListNotFound'));
       return;
     }
 
@@ -316,9 +324,16 @@ export function useRecipeShoppingList({
               return next;
             });
             toastService.success(
-              `Added ${data.totalAdded} items to "${resolvedName}"${
-                data.totalUpdated > 0 ? `, updated ${data.totalUpdated}` : ''
-              }`,
+              data.totalUpdated > 0
+                ? t('recipes.addedItemsToListUpdated', {
+                    count: data.totalAdded,
+                    listName: resolvedName,
+                    updated: data.totalUpdated,
+                  })
+                : t('recipes.addedItemsToList', {
+                    count: data.totalAdded,
+                    listName: resolvedName,
+                  }),
             );
           }
         } else if (externalRecipe?.extendedIngredients) {
@@ -359,21 +374,26 @@ export function useRecipeShoppingList({
               return next;
             });
             toastService.success(
-              `Added ${data.successCount} items to "${resolvedName}"${
-                data.incrementedCount > 0
-                  ? `, updated ${data.incrementedCount}`
-                  : ''
-              }`,
+              data.incrementedCount > 0
+                ? t('recipes.addedItemsToListUpdated', {
+                    count: data.successCount,
+                    listName: resolvedName,
+                    updated: data.incrementedCount,
+                  })
+                : t('recipes.addedItemsToList', {
+                    count: data.successCount,
+                    listName: resolvedName,
+                  }),
             );
           }
         } else {
-          toastService.error('No ingredients available to add.');
+          toastService.error(t('recipes.noIngredientsToAdd'));
         }
       },
       setAddingToList,
       err => {
         console.error('Failed to add ingredients:', err);
-        toastService.error('Failed to add ingredients to shopping list.');
+        toastService.error(t('recipes.addIngredientsToListFailed'));
       },
     );
   };
@@ -384,7 +404,7 @@ export function useRecipeShoppingList({
 
     const resolvedName = listName ?? getShoppingListById(listId)?.name;
     if (!resolvedName) {
-      toastService.error('Shopping list not found.');
+      toastService.error(t('recipes.shoppingListNotFound'));
       return;
     }
 
@@ -418,16 +438,23 @@ export function useRecipeShoppingList({
         }
 
         toastService.success(
-          `Added ${addedCount} items to "${resolvedName}"${
-            updatedCount > 0 ? `, updated ${updatedCount}` : ''
-          }`,
+          updatedCount > 0
+            ? t('recipes.addedItemsToListUpdated', {
+                count: addedCount,
+                listName: resolvedName,
+                updated: updatedCount,
+              })
+            : t('recipes.addedItemsToList', {
+                count: addedCount,
+                listName: resolvedName,
+              }),
         );
         setSelectedIngredients(new Set());
       },
       setAddingToList,
       err => {
         console.error('Failed to add selected ingredients:', err);
-        toastService.error('Failed to add ingredients to shopping list.');
+        toastService.error(t('recipes.addIngredientsToListFailed'));
       },
     );
   };
@@ -452,7 +479,7 @@ export function useRecipeShoppingList({
   // Create a new shopping list and route the pending action into it.
   const handleCreateListAndAddIngredients = (name: string) => {
     if (!name.trim()) {
-      toastService.error('List name cannot be empty');
+      toastService.error(t('recipes.listNameEmpty'));
       return;
     }
 
@@ -473,7 +500,7 @@ export function useRecipeShoppingList({
 
         const createPayload = result.data?.createShoppingList;
         if (createPayload?.__typename !== 'CreateShoppingListPayload') {
-          toastService.error('Failed to create shopping list');
+          toastService.error(t('recipes.createShoppingListFailed'));
           return;
         }
         const newList = createPayload.shoppingList;
@@ -491,7 +518,7 @@ export function useRecipeShoppingList({
       setCreatingList,
       err => {
         console.error('Failed to create list and add ingredients:', err);
-        toastService.error('Failed to create shopping list');
+        toastService.error(t('recipes.createShoppingListFailed'));
       },
     );
   };
@@ -500,9 +527,7 @@ export function useRecipeShoppingList({
   // Dismisses the options sheet first; the dismiss callback then opens the picker.
   const handleAddAllFromSheet = () => {
     if (!backendRecipe || !recipeId) {
-      toastService.error(
-        'Cannot add ingredients from external recipes yet. Please save the recipe first.',
-      );
+      toastService.error(t('recipes.cannotAddExternalIngredients'));
       return;
     }
     pendingDismissActionRef.current = () => openListPicker({ type: 'all' });
@@ -529,7 +554,7 @@ export function useRecipeShoppingList({
   const handleAddSelectedIngredients = () => {
     if (!backendRecipe || !recipeId) return;
     if (selectedIngredients.size === 0) {
-      toastService.error('Please select at least one ingredient.');
+      toastService.error(t('recipes.selectAtLeastOneIngredient'));
       return;
     }
 

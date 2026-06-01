@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { alertService } from '#/services/alertService';
@@ -52,6 +53,7 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
   hasVotedHelpful,
   submitting,
 }) => {
+  const { t } = useTranslation();
   const [sheetVisible, setSheetVisible] = useState(false);
 
   // Other reviews (excluding user's own)
@@ -70,12 +72,12 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
   const handleDelete = () => {
     if (!userReview) return;
     alertService.alert(
-      'Delete Review',
-      'Are you sure you want to delete your review?',
+      t('recipes.deleteReviewTitle'),
+      t('recipes.deleteReviewConfirm'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('labels.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('labels.delete'),
           style: 'destructive',
           onPress: () => deleteReview(userReview.id),
         },
@@ -88,7 +90,7 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
   return (
     <View style={styles.container}>
       <Text size="lg" weight="semibold" style={styles.sectionTitle}>
-        Reviews
+        {t('recipes.reviews')}
       </Text>
 
       {/* Rating Breakdown */}
@@ -111,7 +113,7 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
             tone="accent"
             style={styles.ownReviewLabel}
           >
-            Your Review
+            {t('recipes.yourReview')}
           </Text>
           <ReviewCard
             review={userReview}
@@ -132,7 +134,7 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
         >
           <Icon name="create-outline" size={18} tone="primary" />
           <Text size="sm" weight="semibold" tone="accent">
-            Write a Review
+            {t('recipes.writeReview')}
           </Text>
         </Pressable>
       )}
@@ -161,7 +163,7 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
           align="center"
           style={styles.emptyText}
         >
-          No reviews yet. Be the first to review this recipe!
+          {t('recipes.noReviews')}
         </Text>
       )}
 

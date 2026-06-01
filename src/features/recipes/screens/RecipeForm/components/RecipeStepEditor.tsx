@@ -1,4 +1,5 @@
 import React, { forwardRef, useImperativeHandle, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
@@ -21,6 +22,7 @@ export const RecipeStepEditor = forwardRef<
   RecipeStepEditorRef,
   RecipeStepEditorProps
 >(({ onSave }, ref) => {
+  const { t } = useTranslation();
   // Per CLAUDE.md: never call present()/dismiss() outside an effect.
   // Drive sheet visibility from internal state, dispatched via effect.
   const [visible, setVisible] = useState(false);
@@ -59,7 +61,7 @@ export const RecipeStepEditor = forwardRef<
   return (
     <BottomSheetModal ref={bottomSheetRef} {...modalProps} index={0}>
       <Header
-        title={editingId ? 'Edit Step' : 'Add Step'}
+        title={editingId ? t('recipes.editStep') : t('recipes.addStep')}
         centerTitle
         leftActions={[
           {
@@ -77,10 +79,10 @@ export const RecipeStepEditor = forwardRef<
 
       <BottomSheetView style={styles.content}>
         <FormTextArea
-          label="Instruction"
+          label={t('recipes.instruction')}
           value={instruction}
           onChangeText={setInstruction}
-          placeholder="Describe what to do in this step..."
+          placeholder={t('recipes.stepInstructionPlaceholder')}
           required
           useBottomSheetInput
         />

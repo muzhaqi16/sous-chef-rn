@@ -4,7 +4,8 @@ import React, {
   forwardRef,
   useImperativeHandle,
 } from 'react';
-import { View, TextInput, ActivityIndicator, ScrollView } from 'react-native';
+import { View, TextInput, ActivityIndicator } from 'react-native';
+import { ScrollView } from 'react-native-gesture-handler';
 import { useTranslation } from 'react-i18next';
 import Animated, {
   useSharedValue,

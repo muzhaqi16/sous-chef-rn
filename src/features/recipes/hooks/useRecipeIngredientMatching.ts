@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   useApolloClient,
   useLazyQuery,
@@ -58,6 +59,7 @@ export function getAvailabilityStatus(
 }
 
 export function useRecipeIngredientMatching(recipeId: string | undefined) {
+  const { t } = useTranslation();
   const pantryId = useSelectedPantryId();
   const client = useApolloClient();
   const [editableMatches, setEditableMatches] = useState<EditableMatch[]>([]);
@@ -81,7 +83,7 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
 
   const loadMatches = async (servings: number) => {
     if (!recipeId || !pantryId) {
-      toastService.error('Recipe or pantry not available');
+      toastService.error(t('recipes.recipeOrPantryUnavailable'));
       return false;
     }
 
@@ -96,7 +98,7 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
 
     const matches = result.data?.matchRecipeIngredientsToPantry;
     if (!matches || matches.length === 0) {
-      toastService.info('No ingredients to match');
+      toastService.info(t('recipes.noIngredientsToMatch'));
       return false;
     }
 
@@ -175,7 +177,7 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
       }));
 
     if (consumptions.length === 0) {
-      toastService.info('No ingredients selected for deduction');
+      toastService.info(t('recipes.noIngredientsForDeduction'));
       return;
     }
 
@@ -190,12 +192,13 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
 
     const data = result.data?.confirmRecipeConsumption;
     if (data?.success) {
-      const failedText =
-        data.totalFailed > 0 ? ` (${data.totalFailed} failed)` : '';
       toastService.success(
-        `Deducted ${data.totalConsumed} ingredient${
-          data.totalConsumed !== 1 ? 's' : ''
-        } from pantry${failedText}`,
+        data.totalFailed > 0
+          ? t('recipes.deductedFromPantryFailed', {
+              count: data.totalConsumed,
+              failed: data.totalFailed,
+            })
+          : t('recipes.deductedFromPantry', { count: data.totalConsumed }),
       );
     }
 

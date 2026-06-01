@@ -281,8 +281,6 @@ export function Navigation() {
     enabled: boolean,
     declined?: boolean,
   ) => {
-    setShowBiometricSetup(false);
-
     recordBiometricPromptResponse(enabled, declined);
 
     if (enabled) {
@@ -291,8 +289,21 @@ export function Navigation() {
       markBiometricDeclined();
     }
 
-    setNavigationState('main_app');
-    setPostLoginCredentials(null);
+    // Dismiss through RN Modal's supported `visible` → false path so the
+    // Android Dialog window animates out and tears down cleanly. The Modal
+    // stays mounted (gated on postLoginCredentials below), so this does not
+    // yank the native Dialog from the tree while it is still visible.
+    setShowBiometricSetup(false);
+
+    // Clearing postLoginCredentials is what finally unmounts the now-hidden
+    // Modal. Defer it (and the idempotent main_app settle) to the next frame
+    // so the native Dialog dismissal lands on its own commit instead of
+    // racing PantryMain's mount — that race intermittently orphaned the dim
+    // scrim (rgba(0,0,0,0.8)) on top of the screen on Android.
+    requestAnimationFrame(() => {
+      setNavigationState('main_app');
+      setPostLoginCredentials(null);
+    });
   };
 
   // Track focused-route changes for screen-view analytics + crash breadcrumbs.
@@ -394,8 +405,12 @@ export function Navigation() {
         />
       </Suspense>
 
-      {/* Global Biometric Setup Modal - shows on auth screen when triggered */}
-      {!!showBiometricSetup && !!user && !!postLoginCredentials && (
+      {/* Global biometric setup prompt. Mounted while a post-login session
+          exists; visibility is driven by `showBiometricSetup` so the native
+          Modal dismisses through RN's supported `visible` → false path.
+          Unmounting it while still visible races PantryMain's mount on
+          Android and can leave the dim scrim stuck over the screen. */}
+      {!!user && !!postLoginCredentials && (
         <PostLoginBiometricPrompt
           visible={showBiometricSetup}
           onComplete={handlePostLoginBiometricComplete}

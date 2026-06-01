@@ -21,6 +21,7 @@ import { ExternalSource } from '#/graphql/generated/schemaTypes';
 import { RecipeInformation } from '#/services/recipeApi/types';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { toastService } from '#/services/toastService';
+import { useTranslation } from 'react-i18next';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 
 /**
@@ -62,6 +63,7 @@ export interface SaveToFavoritesOptions {
 }
 
 export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
+  const { t } = useTranslation();
   const { onPreloadSuccess, onFavoriteSuccess, onFavoriteError } = options;
 
   // State
@@ -299,7 +301,7 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
       );
       if (!preloaded) {
         setSavingToFavorites(false);
-        toastService.error('Failed to save recipe. Please try again.');
+        toastService.error(t('recipes.saveRecipeFailed'));
         return { success: false };
       }
       cached = preloaded;
@@ -323,7 +325,7 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
         const errorMessage =
           error instanceof Error ? error.message : 'Unknown error';
         console.error('Failed to save recipe to favorites:', errorMessage);
-        toastService.error('Failed to save recipe. Please try again.');
+        toastService.error(t('recipes.saveRecipeFailed'));
 
         if (error instanceof Error) {
           onFavoriteError?.(error);
@@ -338,7 +340,7 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
     // Clear persisted optimistic favorite state on server confirmation
     optimisticDataPersistence.clear('SavedRecipe', recipeId, 'isFavorited');
 
-    toastService.success('Recipe saved to your collection!');
+    toastService.success(t('recipes.recipeSavedToCollection'));
     onFavoriteSuccess?.();
 
     return { success: true, recipeId };
