@@ -532,14 +532,6 @@ export const useAuthOperations = ({
     // Get previous user ID from queue store to detect user changes
     const previousUserId = queueStore.getCurrentUserId();
 
-    // A session-expiry logout preserves the Apollo cache (see resetManager
-    // tokenRefreshFailed) so the same user re-logs in instantly. If a DIFFERENT
-    // user logs in without an explicit logout, wipe the previous account's
-    // cached data first to prevent cross-account leakage.
-    if (previousUserId && previousUserId !== user.id) {
-      await apolloClient.clearStore();
-    }
-
     // Set auth state first
     authState.onSetAuth(user, accessToken, refreshToken);
 

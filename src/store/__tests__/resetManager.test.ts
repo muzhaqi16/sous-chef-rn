@@ -258,7 +258,7 @@ describe('resetManager', () => {
         expect(mockSet).toHaveBeenCalled();
       });
 
-      it('tokenRefreshFailed with auth_rejected resets auth but preserves Apollo cache', async () => {
+      it('tokenRefreshFailed with auth_rejected resets auth with clearApolloCache', async () => {
         await resetManager.tokenRefreshFailed('auth_rejected');
         // Should reset auth state
         const authCall = mockSet.mock.calls.find(
@@ -266,9 +266,7 @@ describe('resetManager', () => {
             call[0]?.user === null && call[0]?.accessToken === null,
         );
         expect(authCall).toBeDefined();
-        // Cache is preserved for offline reuse / fast re-login — the
-        // cache-clear path (which errors in the test env) is not taken.
-        expect(console.error).not.toHaveBeenCalledWith(
+        expect(console.error).toHaveBeenCalledWith(
           expect.stringContaining('Error clearing Apollo cache:'),
           expect.anything(),
         );

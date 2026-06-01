@@ -158,17 +158,13 @@ export const createResetManager = (
     reason: 'auth_rejected' | 'network' | 'unknown',
   ) => {
     if (reason === 'auth_rejected') {
-      // Refresh token rejected — clear auth but PRESERVE the Apollo cache so a
-      // re-login (same user) paints instantly and an outage that lapsed the
-      // refresh token doesn't wipe offline data. The cache is wiped on an
-      // explicit user logout (LOGOUT scenario) and when a different user logs
-      // in (handleLogin guards cross-account leakage).
+      // Server confirmed invalid refresh token — genuine logout
       const resetManager = createResetManager(set, get);
       await resetManager.resetStore({
         auth: true,
         ui: false,
         preferences: false,
-        clearApolloCache: false,
+        clearApolloCache: true,
       });
     } else {
       // Network or unknown error — preserve auth state, defer refresh
