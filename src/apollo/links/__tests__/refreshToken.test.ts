@@ -404,7 +404,7 @@ describe('refreshToken', () => {
       });
     });
 
-    it('does not pass errorPolicy: "all" to client.mutate (regression: would swallow auth errors)', done => {
+    it('passes errorPolicy: "none" to client.mutate so errors reject and can be classified (not swallowed by the global "all")', done => {
       (mockedUseStore.getState as jest.Mock).mockReturnValue({
         refreshToken: 'mock-refresh-token',
         tokenRefreshFailed: jest.fn(),
@@ -426,7 +426,7 @@ describe('refreshToken', () => {
         next: () => {
           const mutateArgs = (mockedClient.mutate as jest.Mock).mock
             .calls[0][0];
-          expect(mutateArgs.errorPolicy).toBeUndefined();
+          expect(mutateArgs.errorPolicy).toBe('none');
           done();
         },
         error: done,

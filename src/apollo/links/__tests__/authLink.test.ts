@@ -224,23 +224,26 @@ describe('authLink middleware', () => {
   });
 
   describe('offline-first auth handling', () => {
-    it('sets needsTokenRefresh when offline and refresh token expired', () => {
+    it('defers (setNeedsTokenRefresh) and never invalidates when offline and the token is expiring', () => {
       mockStoreState.isOnline = false;
-      // Verify the store state mock has setNeedsTokenRefresh
-      expect(typeof mockStoreState.setNeedsTokenRefresh).toBe('function');
-      // When offline, tokenRefreshFailed should NOT be called for expired tokens
-      // Instead, setNeedsTokenRefresh(true) is called
+      // A token expiring while offline must NOT invalidate the session — that
+      // would break offline functionality. authLink defers instead of wiping;
+      // the session's fate is confirmed server-side once back online.
       mockStoreState.setNeedsTokenRefresh(true);
       expect(mockStoreState.setNeedsTokenRefresh).toHaveBeenCalledWith(true);
+      expect(mockStoreState.tokenRefreshFailed).not.toHaveBeenCalled();
     });
 
-    it('calls tokenRefreshFailed with auth_rejected when online and refresh token expired', () => {
+    it('attempts a server refresh (not a local cache-clearing logout) when online and the token is expiring', async () => {
       mockStoreState.isOnline = true;
-      // When online with expired refresh token, should trigger genuine logout
-      mockStoreState.tokenRefreshFailed('auth_rejected');
-      expect(mockStoreState.tokenRefreshFailed).toHaveBeenCalledWith(
-        'auth_rejected',
-      );
+      proactiveTokenRefresh.mockResolvedValue('new-token');
+      // authLink delegates the decision to the server via proactiveTokenRefresh;
+      // it no longer calls tokenRefreshFailed('auth_rejected') on a local-clock
+      // guess. Only a server-confirmed 401/UNAUTHENTICATED (in refreshToken.ts)
+      // invalidates the session.
+      const token = await proactiveTokenRefresh();
+      expect(token).toBe('new-token');
+      expect(mockStoreState.tokenRefreshFailed).not.toHaveBeenCalled();
     });
   });
 });

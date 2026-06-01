@@ -112,7 +112,14 @@ export const createResetManager = (
       try {
         const { client } = await import('#/apollo/client');
         await client.clearStore();
-        storage.remove('apollo-cache-1.0');
+        // Explicitly clear the persisted blob via the persistence module, which
+        // removes the real MMKV keys (apollo-cache-v1 / -critical / -deferred /
+        // -version). Don't rely solely on the onClearStore handler, and don't
+        // target a stale key name.
+        const { apolloCachePersistence } = await import(
+          '#/apollo/offline/ApolloCachePersistence'
+        );
+        apolloCachePersistence.clear();
       } catch (error) {
         console.error('Error clearing Apollo cache:', error);
       }
