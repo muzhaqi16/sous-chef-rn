@@ -10873,8 +10873,9 @@ export type Query = {
    * distance. Intended as an augmentation to exact-match paths (UPC, tsvector)
    * — use when text search fails or OCR is noisy.
    *
-   * Items without a cached embedding are excluded until the enrichment
-   * pipeline populates them. Auth-gated to bound embedding-service spend.
+   * Items without a cached embedding are excluded; the catalog has been
+   * backfilled, and new or edited items are embedded asynchronously by the
+   * ITEM_EMBEDDING job. Auth-gated to bound embedding-service spend.
    */
   searchItemsSemantic: ItemConnection;
   searchRecipes: RecipeConnection;
