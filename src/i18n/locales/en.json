@@ -310,6 +310,8 @@
     "tagCount_other": "{{count}} Tags",
     "editRecipeA11y": "Edit recipe",
     "deleteRecipeA11y": "Delete recipe",
+    "editReviewA11y": "Edit review",
+    "deleteReviewA11y": "Delete review",
     "removeFromSavedA11y": "Remove from saved",
     "instructions": "Instructions",
     "addToMealPlanA11y": "Add to meal plan",
@@ -553,6 +555,7 @@
     "shareHomeLinkedNotice": "This list belongs to the home \"{{name}}\". Members are managed through home settings.",
     "pleaseEnterEmail": "Please enter an email address",
     "removeMemberTitle": "Remove Member",
+    "removeMemberA11y": "Remove member",
     "removeMemberMessage": "Are you sure you want to remove this member?",
     "cannotLeaveTitle": "Cannot Leave",
     "cannotLeaveOwnerMessage": "Owners cannot leave the list. Please transfer ownership to another member or delete the list.",
@@ -860,6 +863,7 @@
     "general": "General Notifications",
     "pushNotifications": "Push Notifications",
     "pushNotificationsDesc": "Receive push notifications on your device",
+    "dismissA11y": "Dismiss notification",
     "emailNotifications": "Email Notifications",
     "emailNotificationsDesc": "Receive notifications via email",
     "smsNotifications": "SMS Notifications",
@@ -1084,7 +1088,11 @@
     "passwordPromptInitial": "Enter your password to enable biometric authentication:",
     "passwordPlaceholder": "Current password",
     "settingUp": "Setting up...",
-    "setupLater": "Set up later"
+    "setupLater": "Set up later",
+    "benefitQuickAccess": "Quick and secure access",
+    "benefitNoPassword": "No password required",
+    "benefitEnhancedSecurity": "Enhanced security",
+    "footer": "You can always enable this later in Settings"
   },
   "postLoginBiometric": {
     "title": "Set up {{type}} Login?",

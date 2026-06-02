@@ -3,11 +3,21 @@ import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { SwipeableItem } from '#/components/molecules/SwipeableItem/SwipeableItem';
+import { HapticService } from '#services/haptic/HapticService';
+import { RIPPLE } from '#constants/ripple';
 import type { BaseItemCardProps } from './types';
 
 /**
  * Base item card component with swipeable actions
  * Provides a flexible slot-based layout for different item types
+ *
+ * When to use which card:
+ * - Use `BaseItemCard` when you need full slot-based flexibility — custom
+ *   left/right slots, counters, purchase toggles, per-slot variants. The
+ *   caller owns any exit animation.
+ * - Use `ItemCard` (`#components/organisms/ItemCard`) for the common
+ *   title/subtitle/badge list row that needs the standard slide-off-screen
+ *   exit animation on delete/consume/waste handled automatically.
  *
  * @example
  * // Pantry item
@@ -112,9 +122,19 @@ export const BaseItemCard: React.FC<BaseItemCardProps> = ({
   }
 
   if (onPress) {
+    const handlePress = () => {
+      HapticService.selection();
+      onPress();
+    };
     return (
       <View style={styles.swipeableWrapper}>
-        <Pressable onPress={onPress}>{cardContent}</Pressable>
+        <Pressable
+          onPress={handlePress}
+          android_ripple={RIPPLE.SUBTLE}
+          style={({ pressed }) => [pressed && styles.pressed]}
+        >
+          {cardContent}
+        </Pressable>
       </View>
     );
   }
@@ -126,6 +146,9 @@ const styles = StyleSheet.create(theme => ({
   swipeableWrapper: {
     marginBottom: theme.spacing.sm,
     marginHorizontal: theme.spacing['3'],
+  },
+  pressed: {
+    opacity: theme.opacity.pressed,
   },
   container: {
     flexDirection: 'row',

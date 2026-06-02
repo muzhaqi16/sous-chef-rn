@@ -19,17 +19,11 @@ jest.mock('#hooks/deepLink/useDeepLinkRouter', () => ({
   useDeepLinkRouter: jest.fn(),
 }));
 
-// Mock useAuth
-jest.mock('#hooks/auth/useAuth', () => ({
-  useAuth: jest.fn(() => ({
-    handlePostLoginBiometricComplete: jest.fn(),
-  })),
-}));
-
 // Mock navigation guards
 jest.mock('#hooks/navigation/useNavigationGuards', () => ({
   useIsAuth: jest.fn(() => true),
   useIsVerification: jest.fn(() => false),
+  useIsBiometricSetup: jest.fn(() => false),
   useIsOnboarding: jest.fn(() => false),
   useIsMainApp: jest.fn(() => false),
 }));
@@ -112,9 +106,9 @@ jest.mock('#components/providers/ErrorBoundary', () => ({
   AuthErrorBoundary: ({ children }: ChildrenProps) => children,
 }));
 
-// Mock PostLoginBiometricPrompt
-jest.mock('#components/organisms/PostLoginBiometricPrompt', () => ({
-  PostLoginBiometricPrompt: () => null,
+// Mock the post-login biometric screen (rendered only in the biometric_setup group)
+jest.mock('#screens/auth/PostLoginBiometricScreen', () => ({
+  PostLoginBiometricScreen: () => null,
 }));
 
 // Mock SousChefLoader
@@ -297,7 +291,8 @@ describe('Navigation (RootNavigator)', () => {
       onBoarded: true,
     };
     const { queryByTestId } = render(<Navigation />);
-    // PostLoginBiometricPrompt is mocked to return null, so it won't be in the tree
+    // In main_app the biometric gate is not rendered (it's its own screen under
+    // the biometric_setup state, not an overlay), so nothing biometric appears.
     expect(queryByTestId('biometric-prompt')).toBeNull();
   });
 });

@@ -441,13 +441,16 @@ export class QueueManager {
       if (!input) {
         // Read item from cache to get shoppingListId (required by sync mutation)
         const itemId = variables.id;
-        const itemData = client.cache.readFragment({
+        const itemData = client.cache.readFragment<{
+          id: string;
+          shoppingList: { id: string };
+        }>({
           id: client.cache.identify({
             __typename: 'ShoppingListItem',
             id: itemId,
           }),
           fragment: QUEUE_ITEM_DATA_FRAGMENT,
-        }) as { id: string; shoppingList: { id: string } } | null;
+        });
 
         if (!itemData?.shoppingList?.id) {
           throw new Error(

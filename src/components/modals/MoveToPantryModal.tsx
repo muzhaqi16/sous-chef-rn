@@ -2,27 +2,24 @@ import React, { useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useFragment } from '@apollo/client/react';
-import { Pressable } from '#components/atoms/themedComponents';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { alertService } from '#/services/alertService';
 import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { StyleSheet } from 'react-native-unistyles';
 import { BaseSwitch } from '#components/base/BaseSwitch';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
-import DateTimePicker, {
-  type DateTimePickerEvent,
-} from '@react-native-community/datetimepicker';
+import { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/molecules/FormInput';
 import { Header } from '#components/molecules/Header';
 import { UnitAutocompleteField } from '#components/molecules/AutocompleteField/UnitAutocompleteField';
-import { Icon } from '#utils/iconUtils';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { Text } from '#components/atoms/Text';
 import { StorageState } from '#/graphql/generated/schemaTypes';
 import { MoveToPantryModal_ShoppingListItemFragmentDoc } from './MoveToPantryModal.generated';
-
-const STORAGE_STATES = Object.values(StorageState);
+import { PantrySelector } from './moveToPantry/PantrySelector';
+import { StorageStateControl } from './moveToPantry/StorageStateControl';
+import { ExpirationDateField } from './moveToPantry/ExpirationDateField';
 
 interface MoveToPantryModalProps {
   visible: boolean;
@@ -170,13 +167,6 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
     setExpirationDate(undefined);
   };
 
-  const storageStateLabel: Record<StorageState, string> = {
-    [StorageState.Ambient]: t('moveToPantry.stateAmbient'),
-    [StorageState.Refrigerated]: t('moveToPantry.stateRefrigerated'),
-    [StorageState.Frozen]: t('moveToPantry.stateFrozen'),
-    [StorageState.None]: '',
-  };
-
   return (
     <BottomSheetModal ref={ref} {...modalProps}>
       <BottomSheetFormScrollView
@@ -219,63 +209,11 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
             </View>
 
             {/* Pantry Selector */}
-            {pantries.length > 0 && (
-              <View style={styles.section}>
-                <Text size="md" weight="medium" style={styles.sectionLabel}>
-                  {t('moveToPantry.selectPantry')}
-                  <Text tone="error">{t('moveToPantry.requiredAsterisk')}</Text>
-                </Text>
-                <View style={styles.pantryList}>
-                  {pantries.map(pantry => (
-                    <Pressable
-                      key={pantry.id}
-                      style={({ pressed }) => [
-                        styles.pantryOption,
-                        pantryId === pantry.id && styles.pantryOptionActive,
-                        pressed && styles.pressed,
-                      ]}
-                      onPress={() => setPantryId(pantry.id)}
-                    >
-                      <Icon
-                        name="cube-outline"
-                        size={20}
-                        tone={
-                          pantryId === pantry.id ? 'white' : 'textSecondary'
-                        }
-                      />
-                      <Text
-                        style={[
-                          styles.pantryOptionText,
-                          pantryId === pantry.id &&
-                            styles.pantryOptionTextActive,
-                        ]}
-                        numberOfLines={1}
-                      >
-                        {pantry.name}
-                      </Text>
-                      {!!pantry.isDefault && (
-                        <View
-                          style={[
-                            styles.defaultBadge,
-                            pantryId === pantry.id && styles.defaultBadgeActive,
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.defaultBadgeText,
-                              pantryId === pantry.id &&
-                                styles.defaultBadgeTextActive,
-                            ]}
-                          >
-                            {t('moveToPantry.defaultLabel')}
-                          </Text>
-                        </View>
-                      )}
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-            )}
+            <PantrySelector
+              pantries={pantries}
+              selectedPantryId={pantryId}
+              onSelect={setPantryId}
+            />
 
             {/* Quantity and Unit Input */}
             <View style={styles.section}>
@@ -307,80 +245,19 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
             </View>
 
             {/* Storage State */}
-            <View style={styles.section}>
-              <Text size="md" weight="medium" style={styles.sectionLabel}>
-                {t('moveToPantry.storageType')}
-              </Text>
-              <View style={styles.segmentedControl}>
-                {STORAGE_STATES.map(state => (
-                  <Pressable
-                    key={state}
-                    style={({ pressed }) => [
-                      styles.segment,
-                      storageState === state && styles.segmentActive,
-                      pressed && styles.pressed,
-                    ]}
-                    onPress={() => setStorageState(state)}
-                  >
-                    <Text
-                      style={[
-                        styles.segmentText,
-                        storageState === state && styles.segmentTextActive,
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {storageStateLabel[state]}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
+            <StorageStateControl
+              value={storageState}
+              onChange={setStorageState}
+            />
 
             {/* Expiration Date */}
-            <View style={styles.section}>
-              <Text size="md" weight="medium" style={styles.sectionLabel}>
-                {t('moveToPantry.expirationDate')}
-              </Text>
-              <View style={styles.dateRow}>
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.dateInput,
-                    pressed && styles.pressed,
-                  ]}
-                  onPress={() => setShowDatePicker(true)}
-                >
-                  <Icon
-                    name="calendar-outline"
-                    size={20}
-                    tone="textSecondary"
-                  />
-                  <Text style={styles.dateText}>
-                    {expirationDate
-                      ? expirationDate.toLocaleDateString()
-                      : t('moveToPantry.selectDate')}
-                  </Text>
-                </Pressable>
-                {!!expirationDate && (
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.clearDateButton,
-                      pressed && styles.pressed,
-                    ]}
-                    onPress={clearExpirationDate}
-                  >
-                    <Icon name="close" size={20} tone="textSecondary" />
-                  </Pressable>
-                )}
-              </View>
-              {!!showDatePicker && (
-                <DateTimePicker
-                  value={expirationDate || new Date()}
-                  mode="date"
-                  minimumDate={new Date()}
-                  onChange={handleDateChange}
-                />
-              )}
-            </View>
+            <ExpirationDateField
+              expirationDate={expirationDate}
+              showPicker={showDatePicker}
+              onOpenPicker={() => setShowDatePicker(true)}
+              onChange={handleDateChange}
+              onClear={clearExpirationDate}
+            />
 
             {/* Purchase Price (Optional) */}
             <View style={styles.section}>
@@ -452,9 +329,6 @@ const styles = StyleSheet.create(theme => ({
   section: {
     marginBottom: theme.spacing.lg,
   },
-  sectionLabel: {
-    marginBottom: theme.spacing.sm,
-  },
   quantityUnitRow: {
     flexDirection: 'row',
     gap: theme.spacing.md,
@@ -465,100 +339,6 @@ const styles = StyleSheet.create(theme => ({
   unitField: {
     flex: 0.6,
     zIndex: 10,
-  },
-  pantryList: {
-    gap: theme.spacing.sm,
-  },
-  pantryOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radii.md,
-    gap: theme.spacing.sm,
-  },
-  pantryOptionActive: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
-  pantryOptionText: {
-    flex: 1,
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
-  },
-  pantryOptionTextActive: {
-    color: theme.colors.white,
-  },
-  defaultBadge: {
-    paddingVertical: theme.spacing.xs / 2,
-    paddingHorizontal: theme.spacing.sm,
-    backgroundColor: theme.colors.surfaceVariant,
-    borderRadius: theme.radii.sm,
-  },
-  defaultBadgeActive: {
-    backgroundColor: theme.colors.overlays.light,
-  },
-  defaultBadgeText: {
-    fontSize: theme.fonts.size.xs,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textSecondary,
-  },
-  defaultBadgeTextActive: {
-    color: theme.colors.white,
-  },
-  segmentedControl: {
-    flexDirection: 'row',
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radii.md,
-    overflow: 'hidden',
-  },
-  segment: {
-    flex: 1,
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.xs,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: theme.colors.surface,
-  },
-  segmentActive: {
-    backgroundColor: theme.colors.primary,
-  },
-  segmentText: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
-  },
-  segmentTextActive: {
-    color: theme.colors.white,
-  },
-  dateRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
-  },
-  dateInput: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radii.md,
-  },
-  dateText: {
-    fontSize: theme.fonts.size.base,
-    color: theme.colors.textPrimary,
-    marginLeft: theme.spacing.md,
-  },
-  clearDateButton: {
-    padding: theme.spacing.sm,
   },
   toggleSection: {
     flexDirection: 'row',
@@ -576,8 +356,5 @@ const styles = StyleSheet.create(theme => ({
   },
   toggleDescription: {
     marginTop: theme.spacing.xs,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

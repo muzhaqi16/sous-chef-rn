@@ -50,6 +50,11 @@ const MAX_LOADED_URIS = 500;
 
 const HIDDEN: { display: 'none' } = { display: 'none' };
 
+// Cross-fade duration for a freshly-decoded image. Applied only on first load;
+// images already in `loadedUris` (e.g. scrolled back into view) render instantly
+// so the list doesn't flicker on recycle.
+const IMAGE_FADE_MS = 200;
+
 export const CachedImage = ({
   uri,
   style,
@@ -105,6 +110,8 @@ export const CachedImage = ({
   }
 
   const source = { uri };
+  // Fade in only the first time this URI decodes; cached re-appearances are instant.
+  const isPreloaded = loadedUris.has(uri);
 
   const flat = StyleSheet.flatten(style as StyleProp<ViewStyle>);
   const borderRadius = (flat?.borderRadius as number) ?? 0;
@@ -118,7 +125,7 @@ export const CachedImage = ({
   return (
     <View style={[style as StyleProp<ViewStyle>, containerStyle]}>
       <TurboImage
-        fadeDuration={0}
+        fadeDuration={isPreloaded ? 0 : IMAGE_FADE_MS}
         style={[styles.image, innerRadius > 0 && { borderRadius: innerRadius }]}
         source={source}
         cachePolicy={cachePolicy}

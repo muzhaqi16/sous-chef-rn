@@ -2,11 +2,9 @@ import React, { useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable } from '#components/atoms/themedComponents';
-import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
-import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
+import { BottomSheetLayout } from '#components/atoms/BottomSheetLayout';
 import { StyleSheet } from 'react-native-unistyles';
 import { format, addDays, differenceInDays, parseISO } from 'date-fns';
-import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { FormInput } from '#components/molecules/FormInput';
 import { Icon } from '#utils/iconUtils';
@@ -34,12 +32,6 @@ export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
   loading,
 }) => {
   const { t } = useTranslation();
-  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
-    visible,
-    onDismiss: onClose,
-    snapPoints: ['55%'],
-    keyboardAware: true,
-  });
 
   const [name, setName] = useState('');
   const [startDateOffset, setStartDateOffset] = useState(0);
@@ -84,88 +76,90 @@ export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
   };
 
   return (
-    <BottomSheetModal ref={ref} {...modalProps}>
-      <BottomSheetFormScrollView
-        style={styles.scrollView}
-        contentContainerStyle={[styles.contentContainer, contentContainerStyle]}
-        showsVerticalScrollIndicator={false}
-      >
-        <BottomSheetHeader
-          title={t('duplicatePlan.title')}
-          onCancel={onClose}
-          onConfirm={handleDuplicate}
-          confirmLabel={
-            loading
-              ? t('duplicatePlan.duplicating')
-              : t('duplicatePlan.duplicate')
-          }
-          confirmDisabled={loading || !name.trim()}
-          confirmColor="primary"
-        />
+    <BottomSheetLayout
+      visible={visible}
+      onDismiss={onClose}
+      snapPoints={['55%']}
+      keyboardAware
+      mode="form"
+      style={styles.scrollView}
+      contentContainerStyle={styles.contentContainer}
+    >
+      <BottomSheetHeader
+        title={t('duplicatePlan.title')}
+        onCancel={onClose}
+        onConfirm={handleDuplicate}
+        confirmLabel={
+          loading
+            ? t('duplicatePlan.duplicating')
+            : t('duplicatePlan.duplicate')
+        }
+        confirmDisabled={loading || !name.trim()}
+        confirmColor="primary"
+      />
 
-        {!!mealPlan && !!mealPlan.startDate && !!mealPlan.endDate && (
-          <View style={styles.currentInfo}>
-            <Text size="sm" tone="secondary" style={styles.currentLabel}>
-              {t('duplicatePlan.currentPlanLabel')}
-            </Text>
-            <Text size="md" weight="medium">
-              {format(parseISO(mealPlan.startDate), 'MMM d')} -{' '}
-              {format(parseISO(mealPlan.endDate), 'MMM d, yyyy')}
-            </Text>
-          </View>
-        )}
-
-        <FormInput
-          label={t('duplicatePlan.newNameLabel')}
-          value={name}
-          onChangeText={setName}
-          placeholder={t('duplicatePlan.newNamePlaceholder')}
-          required
-        />
-
-        {/* Date adjustment */}
-        <View style={styles.section}>
-          <Text size="sm" weight="medium" tone="secondary">
-            {t('duplicatePlan.startDateLabel')}
+      {!!mealPlan && !!mealPlan.startDate && !!mealPlan.endDate && (
+        <View style={styles.currentInfo}>
+          <Text size="sm" tone="secondary" style={styles.currentLabel}>
+            {t('duplicatePlan.currentPlanLabel')}
           </Text>
-          <View style={styles.dateAdjust}>
-            <Pressable
-              onPress={() => setStartDateOffset(prev => prev - 7)}
-              style={styles.dateButton}
-              hitSlop={8}
-            >
-              <Icon name="chevron-back" size={20} tone="primary" />
-            </Pressable>
-            <View style={styles.dateDisplay}>
-              <Text size="md" weight="semibold">
-                {format(newStartDate, 'EEE, MMM d')}
-              </Text>
-              <Text size="sm" tone="secondary" style={styles.dateSubtext}>
-                to {format(newEndDate, 'EEE, MMM d')}
-              </Text>
-            </View>
-            <Pressable
-              onPress={() => setStartDateOffset(prev => prev + 7)}
-              style={styles.dateButton}
-              hitSlop={8}
-            >
-              <Icon name="chevron-forward" size={20} tone="primary" />
-            </Pressable>
-          </View>
-        </View>
-
-        <View style={styles.infoCard}>
-          <Icon
-            name="information-circle-outline"
-            size={18}
-            tone="textSecondary"
-          />
-          <Text size="sm" style={styles.infoText}>
-            {t('duplicatePlan.infoText')}
+          <Text size="md" weight="medium">
+            {format(parseISO(mealPlan.startDate), 'MMM d')} -{' '}
+            {format(parseISO(mealPlan.endDate), 'MMM d, yyyy')}
           </Text>
         </View>
-      </BottomSheetFormScrollView>
-    </BottomSheetModal>
+      )}
+
+      <FormInput
+        label={t('duplicatePlan.newNameLabel')}
+        value={name}
+        onChangeText={setName}
+        placeholder={t('duplicatePlan.newNamePlaceholder')}
+        required
+      />
+
+      {/* Date adjustment */}
+      <View style={styles.section}>
+        <Text size="sm" weight="medium" tone="secondary">
+          {t('duplicatePlan.startDateLabel')}
+        </Text>
+        <View style={styles.dateAdjust}>
+          <Pressable
+            onPress={() => setStartDateOffset(prev => prev - 7)}
+            style={styles.dateButton}
+            hitSlop={8}
+          >
+            <Icon name="chevron-back" size={20} tone="primary" />
+          </Pressable>
+          <View style={styles.dateDisplay}>
+            <Text size="md" weight="semibold">
+              {format(newStartDate, 'EEE, MMM d')}
+            </Text>
+            <Text size="sm" tone="secondary" style={styles.dateSubtext}>
+              to {format(newEndDate, 'EEE, MMM d')}
+            </Text>
+          </View>
+          <Pressable
+            onPress={() => setStartDateOffset(prev => prev + 7)}
+            style={styles.dateButton}
+            hitSlop={8}
+          >
+            <Icon name="chevron-forward" size={20} tone="primary" />
+          </Pressable>
+        </View>
+      </View>
+
+      <View style={styles.infoCard}>
+        <Icon
+          name="information-circle-outline"
+          size={18}
+          tone="textSecondary"
+        />
+        <Text size="sm" style={styles.infoText}>
+          {t('duplicatePlan.infoText')}
+        </Text>
+      </View>
+    </BottomSheetLayout>
   );
 };
 

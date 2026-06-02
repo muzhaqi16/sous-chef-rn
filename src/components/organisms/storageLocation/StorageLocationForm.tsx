@@ -1,31 +1,20 @@
-import React, {
-  useState,
-  useLayoutEffect,
-  forwardRef,
-  useImperativeHandle,
-} from 'react';
+import React, { useState, forwardRef, useImperativeHandle } from 'react';
 import { View, TextInput, ActivityIndicator } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { useTranslation } from 'react-i18next';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  FadeIn,
-  FadeOut,
-} from 'react-native-reanimated';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { commonStyles } from '#/styles/commonStyles';
 import { StorageState } from '#/graphql/generated/schemaTypes';
 import { FormTextArea } from '#components/molecules/FormTextArea';
-import { FormCheckbox } from '#components/molecules/FormCheckbox';
-import { FormNumberInput } from '#components/molecules/FormNumberInput';
-import { FormSelect } from '#components/molecules/FormSelect';
-import { Icon } from '#utils/iconUtils';
 import { StorageLocationIcon } from '#components/atoms/StorageLocationIcon';
-import { SPRING, TIMING } from '#/constants/animations';
 import { Text } from '#components/atoms/Text';
+import {
+  STORAGE_TYPE_VALUES,
+  TEMPERATURE_OPTION_VALUES,
+  COLOR_PRESETS,
+} from './storageLocationFormConfig';
+import { StorageLocationAdvancedSection } from './StorageLocationAdvancedSection';
 
 export interface StorageLocationFormRef {
   submit: () => void;
@@ -62,58 +51,6 @@ export interface StorageLocationFormValues {
   isDefault: boolean | null;
 }
 
-type TFn = ReturnType<typeof useTranslation>['t'];
-
-const STORAGE_TYPE_VALUES = [
-  { key: 'typeRefrigerator', value: 'REFRIGERATOR' },
-  { key: 'typeFreezer', value: 'FREEZER' },
-  { key: 'typePantryShelf', value: 'PANTRY_SHELF' },
-  { key: 'typeCabinet', value: 'CABINET' },
-  { key: 'typeDrawer', value: 'DRAWER' },
-  { key: 'typeCounter', value: 'COUNTER' },
-  { key: 'typeBasement', value: 'BASEMENT' },
-  { key: 'typeGarage', value: 'GARAGE' },
-  { key: 'typeCloset', value: 'CLOSET' },
-  { key: 'typeOutdoor', value: 'OUTDOOR' },
-  { key: 'typeBoatStorage', value: 'BOAT_STORAGE' },
-  { key: 'typeRvStorage', value: 'RV_STORAGE' },
-  { key: 'typeCustom', value: 'CUSTOM' },
-];
-
-const TEMPERATURE_OPTION_VALUES: Array<{ key: string; value: StorageState }> = [
-  { key: 'tempNone', value: StorageState.None },
-  { key: 'tempAmbient', value: StorageState.Ambient },
-  { key: 'tempRefrigerated', value: StorageState.Refrigerated },
-  { key: 'tempFrozen', value: StorageState.Frozen },
-];
-
-const COLOR_PRESETS = [
-  { key: 'colorRed', value: '#E53935' },
-  { key: 'colorPink', value: '#D81B60' },
-  { key: 'colorPurple', value: '#8E24AA' },
-  { key: 'colorBlue', value: '#1E88E5' },
-  { key: 'colorTeal', value: '#00897B' },
-  { key: 'colorGreen', value: '#43A047' },
-  { key: 'colorOrange', value: '#FB8C00' },
-  { key: 'colorBrown', value: '#6D4C41' },
-  { key: 'colorGrey', value: '#757575' },
-  { key: 'colorIndigo', value: '#3949AB' },
-];
-
-const CAPACITY_UNIT_VALUES = [
-  { key: 'capacityLiters', value: 'liters' },
-  { key: 'capacityGallons', value: 'gallons' },
-  { key: 'capacityCubicFeet', value: 'cubic_feet' },
-  { key: 'capacityCubicMeters', value: 'cubic_meters' },
-  { key: 'capacityItems', value: 'items' },
-];
-
-const buildCapacityUnitOptions = (t: TFn) =>
-  CAPACITY_UNIT_VALUES.map(opt => ({
-    label: t(`storageLocationForm.${opt.key}`),
-    value: opt.value,
-  }));
-
 interface StorageLocationFormProps {
   initialData?: StorageLocationFormInitialData | null;
   onSubmit: (data: StorageLocationFormValues) => void;
@@ -139,8 +76,6 @@ export const StorageLocationForm = forwardRef<
     ref,
   ) => {
     const { t } = useTranslation();
-    const [advancedExpanded, setAdvancedExpanded] = useState(false);
-    const chevronRotation = useSharedValue(0);
 
     const [formData, setFormData] = useState({
       name: initialData?.name || '',
@@ -176,16 +111,6 @@ export const StorageLocationForm = forwardRef<
         });
       }
     }
-
-    useLayoutEffect(() => {
-      chevronRotation.set(
-        withSpring(advancedExpanded ? 180 : 0, SPRING.EXPAND),
-      );
-    }, [advancedExpanded, chevronRotation]);
-
-    const animatedChevronStyle = useAnimatedStyle(() => ({
-      transform: [{ rotate: `${chevronRotation.get()}deg` }],
-    }));
 
     // Filter out current location from parent options (can't be its own parent)
     const parentOptions = availableLocations.filter(
@@ -472,69 +397,25 @@ export const StorageLocationForm = forwardRef<
         </View>
 
         {/* Advanced Settings Collapsible */}
-        <Pressable
-          style={({ pressed }) => [
-            styles.advancedHeader,
-            pressed && styles.pressed,
-          ]}
-          onPress={() => setAdvancedExpanded(!advancedExpanded)}
-        >
-          <Text size="sm" weight="semibold" tone="secondary">
-            {t('storageLocationForm.advancedSettings')}
-          </Text>
-          <Animated.View style={animatedChevronStyle}>
-            <Icon name="chevron-down" size={20} tone="textSecondary" />
-          </Animated.View>
-        </Pressable>
-
-        {advancedExpanded ? (
-          <Animated.View
-            entering={FadeIn.duration(TIMING.STANDARD)}
-            exiting={FadeOut.duration(TIMING.FAST)}
-          >
-            <FormCheckbox
-              label={t('storageLocationForm.climateControlled')}
-              checked={formData.isClimateControlled}
-              onPress={() =>
-                setFormData({
-                  ...formData,
-                  isClimateControlled: !formData.isClimateControlled,
-                })
-              }
-            />
-
-            <View style={styles.capacityRow}>
-              <FormNumberInput
-                label={t('storageLocationForm.capacity')}
-                value={formData.capacity}
-                onChangeText={capacity =>
-                  setFormData({ ...formData, capacity })
-                }
-                placeholder={t('storageLocationForm.capacityPlaceholder')}
-                keyboardType="decimal-pad"
-                containerStyle={styles.capacityInput}
-              />
-              <FormSelect
-                label={t('storageLocationForm.unit')}
-                value={formData.capacityUnit}
-                onValueChange={capacityUnit =>
-                  setFormData({ ...formData, capacityUnit })
-                }
-                options={buildCapacityUnitOptions(t)}
-                placeholder={t('storageLocationForm.unitPlaceholder')}
-                containerStyle={styles.capacityUnit}
-              />
-            </View>
-
-            <FormCheckbox
-              label={t('storageLocationForm.setAsDefault')}
-              checked={formData.isDefault}
-              onPress={() =>
-                setFormData({ ...formData, isDefault: !formData.isDefault })
-              }
-            />
-          </Animated.View>
-        ) : null}
+        <StorageLocationAdvancedSection
+          isClimateControlled={formData.isClimateControlled}
+          capacity={formData.capacity}
+          capacityUnit={formData.capacityUnit}
+          isDefault={formData.isDefault}
+          onToggleClimateControlled={() =>
+            setFormData({
+              ...formData,
+              isClimateControlled: !formData.isClimateControlled,
+            })
+          }
+          onCapacityChange={capacity => setFormData({ ...formData, capacity })}
+          onCapacityUnitChange={capacityUnit =>
+            setFormData({ ...formData, capacityUnit })
+          }
+          onToggleDefault={() =>
+            setFormData({ ...formData, isDefault: !formData.isDefault })
+          }
+        />
 
         {!hideActions && (
           <View style={[commonStyles.row, styles.formActions]}>
@@ -694,26 +575,6 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     borderWidth: 3,
     borderColor: theme.colors.textPrimary,
-  },
-  advancedHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: theme.spacing.md,
-    marginTop: theme.spacing.xs,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-  },
-  capacityRow: {
-    flexDirection: 'row',
-    gap: theme.spacing.sm,
-    alignItems: 'flex-end',
-  },
-  capacityInput: {
-    flex: 1,
-  },
-  capacityUnit: {
-    flex: 1,
   },
   formActions: {
     gap: theme.spacing.sm,

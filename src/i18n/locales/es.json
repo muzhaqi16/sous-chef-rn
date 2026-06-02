@@ -310,6 +310,8 @@
     "tagCount_other": "{{count}} Etiquetas",
     "editRecipeA11y": "Editar receta",
     "deleteRecipeA11y": "Eliminar receta",
+    "editReviewA11y": "Editar reseña",
+    "deleteReviewA11y": "Eliminar reseña",
     "removeFromSavedA11y": "Quitar de guardadas",
     "instructions": "Instrucciones",
     "addToMealPlanA11y": "Añadir al plan de comidas",
@@ -553,6 +555,7 @@
     "shareHomeLinkedNotice": "Esta lista pertenece al hogar \"{{name}}\". Los miembros se gestionan desde los ajustes del hogar.",
     "pleaseEnterEmail": "Introduce una dirección de email",
     "removeMemberTitle": "Eliminar miembro",
+    "removeMemberA11y": "Eliminar miembro",
     "removeMemberMessage": "¿Seguro que quieres eliminar este miembro?",
     "cannotLeaveTitle": "No puedes abandonar",
     "cannotLeaveOwnerMessage": "Los propietarios no pueden abandonar la lista. Transfiere la propiedad a otro miembro o elimina la lista.",
@@ -860,6 +863,7 @@
     "general": "Notificaciones generales",
     "pushNotifications": "Notificaciones push",
     "pushNotificationsDesc": "Recibe notificaciones push en tu dispositivo",
+    "dismissA11y": "Descartar notificación",
     "emailNotifications": "Notificaciones por email",
     "emailNotificationsDesc": "Recibe notificaciones por correo electrónico",
     "smsNotifications": "Notificaciones SMS",
@@ -1084,7 +1088,11 @@
     "passwordPromptInitial": "Introduce tu contraseña para activar la autenticación biométrica:",
     "passwordPlaceholder": "Contraseña actual",
     "settingUp": "Configurando...",
-    "setupLater": "Configurar más tarde"
+    "setupLater": "Configurar más tarde",
+    "benefitQuickAccess": "Acceso rápido y seguro",
+    "benefitNoPassword": "Sin contraseña",
+    "benefitEnhancedSecurity": "Seguridad mejorada",
+    "footer": "Siempre puedes activarlo más tarde en Ajustes"
   },
   "postLoginBiometric": {
     "title": "¿Configurar inicio de sesión con {{type}}?",

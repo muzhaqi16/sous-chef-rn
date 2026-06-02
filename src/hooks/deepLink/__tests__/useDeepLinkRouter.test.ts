@@ -39,12 +39,6 @@ jest.mock('#store/useAppStore', () => {
   };
 });
 
-jest.mock('#hooks/auth/useAuth', () => ({
-  useAuth: jest.fn(() => ({
-    isAuthenticated: true,
-  })),
-}));
-
 jest.mock('#/services/toastService', () => ({
   toastService: {
     error: jest.fn(),

@@ -14,6 +14,8 @@ type TextInputFocusEvent = Parameters<
 >[0];
 import { Pressable } from '#components/atoms/themedComponents';
 import { withUnistyles } from 'react-native-unistyles';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import { TIMING } from '#constants/animations';
 import styles from './BaseInput.styles';
 import { Icon } from '#/utils/iconUtils';
 
@@ -112,14 +114,21 @@ export const BaseInput: React.FC<BaseInputProps> = ({
         )}
       </View>
       {!!hasError && (
-        <Text
-          testID={
-            textInputProps.testID ? `${textInputProps.testID}-error` : undefined
-          }
-          style={styles.errorText}
+        <Animated.View
+          entering={FadeIn.duration(TIMING.FAST)}
+          exiting={FadeOut.duration(TIMING.FAST)}
         >
-          {errorMessage}
-        </Text>
+          <Text
+            testID={
+              textInputProps.testID
+                ? `${textInputProps.testID}-error`
+                : undefined
+            }
+            style={styles.errorText}
+          >
+            {errorMessage}
+          </Text>
+        </Animated.View>
       )}
     </View>
   );

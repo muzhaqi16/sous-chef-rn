@@ -14,13 +14,14 @@ import { FlashList } from '@shopify/flash-list';
 import { StyleSheet } from 'react-native-unistyles';
 import {
   ThemedActivityIndicator,
-  WhiteActivityIndicator,
   ThemedBottomSheetTextInput,
 } from '#components/atoms/themedComponents';
 import { Icon } from '#utils/iconUtils';
 import { toastService } from '#/services/toastService';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { Text } from '#components/atoms/Text';
+import { FolderListItem } from './FolderPicker/FolderListItem';
+import { ManageFolderSheet } from './FolderPicker/ManageFolderSheet';
 
 /** Protected folders that cannot be renamed or deleted */
 const PROTECTED_FOLDERS = ['Favorites'];
@@ -221,40 +222,15 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
     setShowDeleteConfirm(false);
   };
 
-  const renderFolderItem = ({ item }: { item: string }) => {
-    const isSelected = item === selectedFolder;
-    return (
-      <Pressable
-        style={({ pressed }) => [
-          styles.folderItem,
-          isSelected && styles.folderItemSelected,
-          pressed && styles.pressed,
-        ]}
-        onPress={() => handleSelectFolder(item)}
-        onLongPress={
-          hasFolderActions ? () => handleFolderLongPress(item) : undefined
-        }
-        delayLongPress={500}
-        disabled={folderActionLoading}
-      >
-        <Icon
-          name="folder-outline"
-          size={20}
-          tone={isSelected ? 'primary' : 'textSecondary'}
-        />
-        <Text
-          size="base"
-          weight={isSelected ? 'semibold' : 'regular'}
-          tone={isSelected ? 'accent' : 'primary'}
-          style={styles.folderName}
-          numberOfLines={1}
-        >
-          {item}
-        </Text>
-        {!!isSelected && <Icon name="checkmark" size={20} tone="primary" />}
-      </Pressable>
-    );
-  };
+  const renderFolderItem = ({ item }: { item: string }) => (
+    <FolderListItem
+      folder={item}
+      isSelected={item === selectedFolder}
+      onPress={handleSelectFolder}
+      onLongPress={hasFolderActions ? handleFolderLongPress : undefined}
+      disabled={folderActionLoading}
+    />
+  );
 
   return (
     <>
@@ -415,10 +391,10 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
       </BottomSheetModal>
 
       {/* Manage Folder Bottom Sheet */}
-      <BottomSheetModal
-        ref={manageSheetRef}
-        {...modalProps}
-        snapPoints={['45%']}
+      <ManageFolderSheet
+        sheetRef={manageSheetRef}
+        modalProps={modalProps}
+        contentContainerStyle={contentContainerStyle}
         onDismiss={() => {
           setManagingFolder(null);
           setRenameValue('');
@@ -428,175 +404,18 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
           // dismiss event has flushed so the present call lands cleanly.
           queueMicrotask(() => folderPickerRef.current?.present());
         }}
-      >
-        <BottomSheetView
-          style={[styles.bottomSheetContent, contentContainerStyle]}
-        >
-          {/* Header */}
-          <View style={styles.manageFolderHeader}>
-            <Text size="lg" weight="semibold">
-              Manage Folder
-            </Text>
-            <Pressable
-              onPress={handleManageFolderClose}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              style={({ pressed }) => pressed && styles.pressed}
-            >
-              <Icon name="close" size={24} tone="textPrimary" />
-            </Pressable>
-          </View>
-
-          {/* Current folder name */}
-          <View style={styles.currentFolderContainer}>
-            <Icon name="folder-outline" size={20} tone="primary" />
-            <Text size="base" weight="semibold" tone="accent">
-              {managingFolder}
-            </Text>
-          </View>
-
-          {/* Delete Confirmation View */}
-          {showDeleteConfirm ? (
-            <View style={styles.deleteConfirmContainer}>
-              <Icon name="warning-outline" size={32} tone="error" />
-              <Text
-                size="lg"
-                weight="semibold"
-                style={styles.deleteConfirmTitle}
-              >
-                Delete this folder?
-              </Text>
-              <Text
-                size="base"
-                tone="secondary"
-                align="center"
-                style={styles.deleteConfirmText}
-              >
-                Recipes in this folder will be moved to "No Folder".
-              </Text>
-              <View style={styles.deleteConfirmButtons}>
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.deleteConfirmCancelButton,
-                    pressed && styles.pressed,
-                  ]}
-                  onPress={() => setShowDeleteConfirm(false)}
-                  disabled={folderActionLoading}
-                >
-                  <Text size="base" weight="medium">
-                    Cancel
-                  </Text>
-                </Pressable>
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.deleteConfirmDeleteButton,
-                    pressed && styles.pressed,
-                  ]}
-                  onPress={handleDeleteConfirm}
-                  disabled={folderActionLoading}
-                >
-                  {folderActionLoading ? (
-                    <WhiteActivityIndicator size="small" />
-                  ) : (
-                    <Text
-                      size="base"
-                      weight="semibold"
-                      style={styles.deleteConfirmDeleteText}
-                    >
-                      Delete
-                    </Text>
-                  )}
-                </Pressable>
-              </View>
-            </View>
-          ) : (
-            <>
-              {/* Rename Section */}
-              {!!onRenameFolder && (
-                <View style={styles.renameSection}>
-                  <Text
-                    size="sm"
-                    weight="semibold"
-                    tone="secondary"
-                    style={styles.sectionLabel}
-                  >
-                    Rename
-                  </Text>
-                  <View style={styles.renameInputRow}>
-                    <ThemedBottomSheetTextInput
-                      style={styles.renameInput}
-                      defaultValue={renameValue}
-                      onChangeText={setRenameValue}
-                      placeholder="Enter new folder name..."
-                      autoCapitalize="words"
-                      onSubmitEditing={handleRenameConfirm}
-                      editable={!folderActionLoading}
-                    />
-                    <Pressable
-                      style={({ pressed }) => [
-                        styles.renameButton,
-                        (!renameValue.trim() ||
-                          renameValue.trim() === managingFolder) &&
-                          styles.renameButtonDisabled,
-                        pressed && styles.pressed,
-                      ]}
-                      onPress={handleRenameConfirm}
-                      disabled={
-                        !renameValue.trim() ||
-                        renameValue.trim() === managingFolder ||
-                        folderActionLoading
-                      }
-                    >
-                      {folderActionLoading ? (
-                        <WhiteActivityIndicator size="small" />
-                      ) : (
-                        <Text
-                          size="base"
-                          weight="semibold"
-                          style={[
-                            styles.renameButtonText,
-                            (!renameValue.trim() ||
-                              renameValue.trim() === managingFolder) &&
-                              styles.renameButtonTextDisabled,
-                          ]}
-                        >
-                          Rename
-                        </Text>
-                      )}
-                    </Pressable>
-                  </View>
-                </View>
-              )}
-
-              {/* Delete Section */}
-              {!!onDeleteFolder && (
-                <View style={styles.deleteSection}>
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.deleteButton,
-                      pressed && styles.pressed,
-                    ]}
-                    onPress={() => setShowDeleteConfirm(true)}
-                    disabled={folderActionLoading}
-                  >
-                    <Icon name="trash-outline" size={18} tone="error" />
-                    <Text size="base" weight="medium" tone="error">
-                      Delete Folder
-                    </Text>
-                  </Pressable>
-                  <Text
-                    size="sm"
-                    tone="secondary"
-                    align="center"
-                    style={styles.deleteDescription}
-                  >
-                    Recipes will be moved to No Folder
-                  </Text>
-                </View>
-              )}
-            </>
-          )}
-        </BottomSheetView>
-      </BottomSheetModal>
+        managingFolder={managingFolder}
+        renameValue={renameValue}
+        onRenameValueChange={setRenameValue}
+        showDeleteConfirm={showDeleteConfirm}
+        onShowDeleteConfirm={setShowDeleteConfirm}
+        onRenameConfirm={handleRenameConfirm}
+        onDeleteConfirm={handleDeleteConfirm}
+        onClose={handleManageFolderClose}
+        folderActionLoading={folderActionLoading}
+        canRename={Boolean(onRenameFolder)}
+        canDelete={Boolean(onDeleteFolder)}
+      />
     </>
   );
 };
@@ -699,7 +518,6 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.md,
     fontStyle: 'italic',
   },
-  // Loading overlay
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(255, 255, 255, 0.8)',
@@ -707,115 +525,8 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     borderRadius: theme.radii.lg,
   },
-  // Bottom sheet content
   bottomSheetContent: {
     padding: theme.spacing['5'],
-  },
-  // Manage folder styles
-  manageFolderHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: theme.spacing.md,
-  },
-  currentFolderContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
-    backgroundColor: theme.colors.primaryLight,
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    marginBottom: theme.spacing.lg,
-  },
-  sectionLabel: {
-    marginBottom: theme.spacing.sm,
-  },
-  renameSection: {
-    marginBottom: theme.spacing.lg,
-  },
-  renameInputRow: {
-    flexDirection: 'row',
-    gap: theme.spacing.sm,
-  },
-  renameInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radii.md,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing['3'],
-    fontSize: theme.typography.fontSize.base,
-    color: theme.colors.textPrimary,
-    backgroundColor: theme.colors.background,
-  },
-  renameButton: {
-    backgroundColor: theme.colors.primary,
-    paddingVertical: theme.spacing['3'],
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    justifyContent: 'center',
-    alignItems: 'center',
-    minWidth: 80,
-  },
-  renameButtonDisabled: {
-    backgroundColor: theme.colors.border,
-  },
-  renameButtonText: {
-    color: theme.colors.white,
-  },
-  renameButtonTextDisabled: {
-    color: theme.colors.textSecondary,
-  },
-  deleteSection: {
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.divider,
-    paddingTop: theme.spacing.md,
-  },
-  deleteButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: theme.spacing.sm,
-    paddingVertical: theme.spacing.md,
-  },
-  deleteDescription: {
-    marginTop: theme.spacing.xs,
-  },
-  // Delete confirmation styles
-  deleteConfirmContainer: {
-    alignItems: 'center',
-    paddingVertical: theme.spacing.md,
-  },
-  deleteConfirmTitle: {
-    marginTop: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
-  },
-  deleteConfirmText: {
-    marginBottom: theme.spacing.lg,
-  },
-  deleteConfirmButtons: {
-    flexDirection: 'row',
-    gap: theme.spacing.md,
-    width: '100%',
-  },
-  deleteConfirmCancelButton: {
-    flex: 1,
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    alignItems: 'center',
-  },
-  deleteConfirmDeleteButton: {
-    flex: 1,
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    backgroundColor: theme.colors.error,
-    alignItems: 'center',
-  },
-  deleteConfirmDeleteText: {
-    color: theme.colors.white,
   },
   pressed: {
     opacity: theme.opacity.pressed,

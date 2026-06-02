@@ -4,29 +4,18 @@ import { LoginScreen } from '../LoginScreen';
 
 // --- Mocks ---
 
-const mockLogin = jest.fn();
-const mockHandleAuthError = jest.fn();
-const mockLoadStoredCredentials = jest.fn();
-const mockCheckStoredCredentials = jest.fn().mockResolvedValue(false);
-const mockGetBiometricInfo = jest.fn().mockResolvedValue({
-  isAvailable: false,
-  biometryType: null,
-});
 const mockHandleRememberMeAccept = jest.fn();
 const mockHandleRememberMeDecline = jest.fn();
 
-jest.mock('#hooks/auth/useAuth', () => ({
-  useAuth: () => ({
-    login: mockLogin,
-    handleAuthError: mockHandleAuthError,
-    isLoading: false,
-    loadStoredCredentials: mockLoadStoredCredentials,
-    checkStoredCredentials: mockCheckStoredCredentials,
-    getBiometricInfo: mockGetBiometricInfo,
+// LoginScreen drives login/biometric through `authService` directly; it only
+// consumes `useRememberMe` for the RememberMe modal.
+jest.mock('#hooks/auth/useRememberMe', () => ({
+  useRememberMe: () => ({
     showRememberMeModal: false,
     pendingCredentials: null,
     handleRememberMeAccept: mockHandleRememberMeAccept,
     handleRememberMeDecline: mockHandleRememberMeDecline,
+    showRememberMePrompt: jest.fn(),
   }),
 }));
 

@@ -11,7 +11,10 @@ import { useQuery } from '@apollo/client/react';
 import { GetNotificationStatsDocument } from '#features/notifications/graphql/notificationStats.generated';
 
 export function useNotificationStats(skip?: boolean) {
-  const { data } = useQuery(GetNotificationStatsDocument, {
+  // errorPolicy:'all' (global) means a failed poll resolves with data+error
+  // rather than throwing — surface `error` so consumers can react instead of
+  // silently rendering stale counts.
+  const { data, error } = useQuery(GetNotificationStatsDocument, {
     pollInterval: 60_000,
     skip,
   });
@@ -21,5 +24,6 @@ export function useNotificationStats(skip?: boolean) {
     totalCount: data?.notificationStats?.total ?? 0,
     readCount: data?.notificationStats?.read ?? 0,
     stats: data?.notificationStats ?? null,
+    error,
   };
 }

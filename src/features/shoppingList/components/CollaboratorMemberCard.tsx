@@ -117,6 +117,7 @@ export const CollaboratorMemberCard: React.FC<CollaboratorMemberCardProps> = ({
         <Pressable
           onPress={onRemove}
           style={({ pressed }) => pressed && styles.pressed}
+          accessibilityLabel={t('shoppingListScreens.removeMemberA11y')}
         >
           <Icon name="close" size={20} tone="error" />
         </Pressable>

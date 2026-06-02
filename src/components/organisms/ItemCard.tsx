@@ -8,6 +8,17 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useSlideAnimation } from '#hooks/animations/useSlideAnimation';
 import { SLIDE_PRESETS } from '#/constants/animations';
 
+/**
+ * Themed list-row card with a built-in full-width slide-out animation on
+ * delete/consume/waste, composed from {@link ListItem} + {@link SwipeableItem}.
+ *
+ * When to use which card:
+ * - Use `ItemCard` for the common title/subtitle/badge list row where you want
+ *   the standard slide-off-screen exit animation handled for you.
+ * - Use {@link BaseItemCard} when you need full slot-based flexibility
+ *   (custom left/right slots, counters, purchase toggles) and will own the
+ *   exit animation (if any) yourself.
+ */
 interface ItemCardProps {
   id: string;
   title: string;
@@ -128,15 +139,6 @@ const styles = StyleSheet.create(theme => ({
     marginVertical: theme.spacing.xs,
     borderRadius: theme.radii.md,
     boxSizing: 'border-box',
-    // Shadow inlined from commonStyles to avoid multiple unistyles on Animated.View
-    boxShadow: [
-      {
-        offsetX: 0,
-        offsetY: 4,
-        blurRadius: 15,
-        spreadDistance: 1,
-        color: 'rgba(0, 0, 0, 0.1)',
-      },
-    ],
+    ...theme.shadows.card,
   },
 }));

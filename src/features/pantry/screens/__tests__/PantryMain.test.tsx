@@ -70,7 +70,6 @@ const defaultPantryScreen = {
   noPantries: false,
 
   // Store state
-  showBiometricSetup: false,
   unreadCount: 0,
   pantrySortOption: 'recent',
   pantrySortDirection: 'desc',

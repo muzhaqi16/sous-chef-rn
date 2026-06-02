@@ -25,6 +25,7 @@ import {
   safeEvict,
 } from '#/apollo/utils/cacheUpdaters';
 import { useUser } from '#store/useAppStore';
+import type { NotificationPayload } from '#store/slices/notificationSlice';
 import { executeAsyncWithCleanup } from '#/utils/compilerSafeWrappers';
 import { Text } from '#components/atoms/Text';
 
@@ -62,7 +63,7 @@ export interface InvitationData {
   inviterName?: string;
   entityName: string; // Home name or Shopping List name
   token?: string;
-  payload: Record<string, unknown>;
+  payload: NotificationPayload;
 }
 
 interface InvitationAcceptanceModalProps {
@@ -91,7 +92,7 @@ export const InvitationAcceptanceModal: React.FC<
       if (payload?.__typename === 'AcceptHomeInvitePayload') {
         addToHomes(cache, payload.membership.home, { position: 'end' });
       }
-      const inviteId = invitation?.payload?.inviteId as string | undefined;
+      const inviteId = invitation?.payload?.inviteId;
       if (inviteId && userId) {
         removePendingHomeInvite(cache, userId, inviteId, { evictItem: true });
       }
@@ -107,7 +108,7 @@ export const InvitationAcceptanceModal: React.FC<
         ) {
           return;
         }
-        const inviteId = invitation?.payload?.inviteId as string | undefined;
+        const inviteId = invitation?.payload?.inviteId;
         if (inviteId && userId) {
           // Don't evict — accepting transitions the pending collaborator record
           // to active state. Apollo's normalized response already updated the
@@ -133,7 +134,7 @@ export const InvitationAcceptanceModal: React.FC<
     InvitationAcceptanceModalDeclineShoppingListInviteDocument,
     {
       update: cache => {
-        const inviteId = invitation?.payload?.inviteId as string | undefined;
+        const inviteId = invitation?.payload?.inviteId;
         if (inviteId && userId) {
           removePendingCollaborationInvite(cache, userId, inviteId, {
             evictItem: true,
@@ -360,6 +361,7 @@ export const InvitationAcceptanceModal: React.FC<
                 pressed && styles.pressed,
               ]}
               onPress={onClose}
+              accessibilityLabel={t('labels.close')}
             >
               <Icon name="close" size={24} tone="textSecondary" />
             </Pressable>

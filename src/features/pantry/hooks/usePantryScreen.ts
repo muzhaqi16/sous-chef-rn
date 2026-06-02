@@ -27,7 +27,7 @@ import type {
  * Orchestrates all data-fetching and state management:
  * 1. useAuthUser - User info for greeting/avatar
  * 2. useCurrentPantry - Home/pantry resolution with fallback chain
- * 3. Zustand store - Sort prefs, unread count, scroll-to-top, biometric setup
+ * 3. Zustand store - Sort prefs, unread count, scroll-to-top
  * 4. Location filter + usePantryManagement + useHybridSearch
  * 5. useCreateStorageLocation + tab construction + location count merging
  * 6. Derived states (loading, no-home, user/household names)
@@ -65,7 +65,6 @@ export function usePantryScreen() {
   // 3. Zustand store — consolidated selector
   // -------------------------------------------------------------------------
   const {
-    showBiometricSetup,
     unreadCount,
     pantrySortOption,
     pantrySortDirection,
@@ -75,7 +74,6 @@ export function usePantryScreen() {
     setPendingPantryScrollToTop,
   } = useAppStore(
     useShallow(s => ({
-      showBiometricSetup: s.showBiometricSetup,
       unreadCount: s.unreadCount,
       pantrySortOption:
         s.pantrySortOption ?? PREFERENCE_DEFAULTS.pantrySortOption,
@@ -286,7 +284,6 @@ export function usePantryScreen() {
     noPantries,
 
     // Store state
-    showBiometricSetup,
     unreadCount,
     pantrySortOption,
     pantrySortDirection,

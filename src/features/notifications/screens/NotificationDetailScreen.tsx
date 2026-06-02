@@ -32,10 +32,9 @@ export const NotificationDetailScreen: React.FC<
     );
   }
 
-  const payload =
-    typeof notification.payload === 'string'
-      ? JSON.parse(notification.payload)
-      : notification.payload;
+  // payload is always a NotificationPayload object (narrowed at the ingestion
+  // boundary), so it can be read directly.
+  const payload = notification.payload;
 
   return (
     <NotificationActionHandler>

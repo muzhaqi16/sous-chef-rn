@@ -1,9 +1,9 @@
 import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
+import { Button } from '#components/base/Button';
 import { Text } from '#components/atoms/Text';
 
 interface MealPlanEmptyStateProps {
@@ -25,33 +25,21 @@ export const MealPlanEmptyState: React.FC<MealPlanEmptyStateProps> = ({
       <Text size="md" tone="secondary" align="center" style={styles.subtitle}>
         {t('mealPlanEmpty.subtitle')}
       </Text>
-      <Pressable
+      <Button
+        variant="primary"
+        icon="add"
+        title={t('mealPlanEmpty.createFirst')}
         onPress={onCreatePlan}
-        style={({ pressed }) => [styles.button, pressed && styles.pressed]}
-      >
-        <Icon name="add" size={20} tone="white" />
-        <Text size="md" weight="semibold" style={styles.buttonText}>
-          {t('mealPlanEmpty.createFirst')}
-        </Text>
-      </Pressable>
+        style={styles.button}
+      />
       {!!onCreateFromTemplate && (
-        <Pressable
+        <Button
+          variant="outline"
+          icon="document-text-outline"
+          title={t('mealPlanEmpty.createFromTemplate')}
           onPress={onCreateFromTemplate}
-          style={({ pressed }) => [
-            styles.templateButton,
-            pressed && styles.pressed,
-          ]}
-        >
-          <Icon name="document-text-outline" size={20} tone="primary" />
-          <Text
-            size="md"
-            weight="semibold"
-            tone="accent"
-            style={styles.templateButtonText}
-          >
-            {t('mealPlanEmpty.createFromTemplate')}
-          </Text>
-        </Pressable>
+          style={styles.templateButton}
+        />
       )}
     </View>
   );
@@ -74,32 +62,11 @@ const styles = StyleSheet.create(theme => ({
     lineHeight: 22,
   },
   button: {
-    flexDirection: 'row',
-    alignItems: 'center',
     marginTop: theme.spacing.xl,
     paddingHorizontal: theme.spacing.xl,
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.radii.lg,
-    backgroundColor: theme.colors.primary,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
-  buttonText: {
-    marginLeft: theme.spacing.sm,
-    color: theme.colors.white,
   },
   templateButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
     marginTop: theme.spacing.md,
     paddingHorizontal: theme.spacing.xl,
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.radii.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.primary,
-  },
-  templateButtonText: {
-    marginLeft: theme.spacing.sm,
   },
 }));

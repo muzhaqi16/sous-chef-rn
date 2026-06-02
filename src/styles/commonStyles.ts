@@ -17,21 +17,6 @@ import { StyleSheet } from 'react-native-unistyles';
  *   still propagates updates to consumers.
  */
 
-// Plain-object spread inside the factory is fine — the babel plugin can
-// statically resolve identifier references; only opaque function CALLS break
-// its analysis.
-const SHADOW = {
-  boxShadow: [
-    {
-      offsetX: 0,
-      offsetY: 4,
-      blurRadius: 15,
-      spreadDistance: 1,
-      color: 'rgba(0, 0, 0, 0.1)',
-    },
-  ],
-};
-
 export const commonStyles = StyleSheet.create(theme => ({
   // ── Containers ─────────────────────────────────────────────────────────
   container: {
@@ -357,7 +342,7 @@ export const commonStyles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: theme.colors.primary,
-    ...SHADOW,
+    ...theme.shadows.card,
   },
   listItemImage: {
     width: theme.sizes.listImage.width,
@@ -376,7 +361,7 @@ export const commonStyles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: theme.colors.primary,
-    ...SHADOW,
+    ...theme.shadows.card,
   },
   listItemImageCompact: {
     width: theme.sizes.itemCard.compact.image,
@@ -384,7 +369,7 @@ export const commonStyles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.md,
     resizeMode: 'cover',
   },
-  shadow: SHADOW,
+  shadow: theme.shadows.card,
 
   // ── Empty / loading states ─────────────────────────────────────────────
   emptyState: {

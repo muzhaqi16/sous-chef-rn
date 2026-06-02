@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useShoppingListState } from '#store/useAppStore';
 import type { ShoppingListFromQuery } from './useShoppingListsQuery';
 
+const EMPTY_DENIED: ReadonlySet<string> = new Set();
+
 /**
  * useShoppingListSelection - Centralized shopping list selection
  *
@@ -13,12 +15,24 @@ import type { ShoppingListFromQuery } from './useShoppingListsQuery';
  * - Pending selections: when the user switches to a newly created list that
  *   hasn't appeared in query results yet, the auto-select is suppressed
  * - Stale detection: when a list is removed (subscription/deletion), auto-select fires
+ * - Denied lists: ids the caller knows the user can no longer access (a read
+ *   returned AUTHZ_FORBIDDEN/RESOURCE_NOT_FOUND) are excluded from selection so
+ *   auto-select never re-picks a dead list while its cache entry lingers.
  *
  * Deletion callers should set selectedShoppingListId to null — auto-select handles the rest.
  */
-export function useShoppingListSelection(lists: ShoppingListFromQuery[]) {
+export function useShoppingListSelection(
+  allLists: ShoppingListFromQuery[],
+  deniedListIds: ReadonlySet<string> = EMPTY_DENIED,
+) {
   const { selectedShoppingListId, setSelectedShoppingListId } =
     useShoppingListState();
+
+  // Exclude lists the user has lost access to but whose cache entry hasn't been
+  // dropped from the lite query yet. Skip the filter allocation when none denied.
+  const lists = deniedListIds.size
+    ? allLists.filter(l => !deniedListIds.has(l.id))
+    : allLists;
 
   // Default: first with isDefault flag, or first list
   const defaultList = lists.find(list => list.isDefault) || lists[0];

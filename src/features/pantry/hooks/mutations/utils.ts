@@ -2,8 +2,6 @@
  * Shared utilities for pantry item mutations
  */
 
-import type { ApolloCache } from '@apollo/client';
-import type { Modifiers } from '@apollo/client/cache';
 import { type UseUpdatePantryItem_PantryItemFragment } from './useUpdatePantryItem.generated';
 import {
   StorageState,
@@ -153,26 +151,4 @@ export function stateToCountKey(
     default:
       return 'ambient';
   }
-}
-
-/**
- * Apply an in-place patch to a Pantry's `stats` field via `cache.modify`.
- * The updater receives the existing `stats` value and returns a replacement;
- * if it returns `undefined`, the existing value is kept (no-op).
- */
-export function modifyPantryStats<TStats extends Record<string, unknown>>(
-  cache: ApolloCache,
-  pantryId: string,
-  updater: (stats: TStats) => TStats | undefined,
-): void {
-  cache.modify({
-    id: cache.identify({ __typename: 'Pantry', id: pantryId }),
-    // Apollo types the modifier value as `Reference | AsStoreObject<TStats>`,
-    // which can't be reconciled with the caller's concrete `TStats` generic
-    // without a store-wide refactor. The runtime value is always the inline
-    // stats object, so the field map is asserted to the `Modifiers` contract.
-    fields: {
-      stats: (existing: TStats) => updater(existing) ?? existing,
-    } as Modifiers,
-  });
 }

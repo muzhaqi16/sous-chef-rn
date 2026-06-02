@@ -15,7 +15,7 @@ import { RememberMeModal } from '#components/organisms/RememberMeModal';
 import { getLoginValidationSchema } from '#/utils/validation/auth';
 import { logValidationErrors } from '#/utils/validation/common';
 import { type LoginInput } from '#/graphql/generated/schemaTypes';
-import { useAuth } from '#hooks/auth/useAuth';
+import { useRememberMe } from '#hooks/auth/useRememberMe';
 import { useAuthNavigation } from '#hooks/navigation/useAuthNavigation';
 import { useAppStore } from '#store/useAppStore';
 import { authService } from '#/services/authService';
@@ -69,12 +69,40 @@ export function LoginScreen(): React.JSX.Element {
   const { t } = useTranslation();
   const { navigateToForgotPassword, navigateToSignUp } = useAuthNavigation();
   const isLoggingIn = useAppStore(state => state.authIsLoading);
+  const postLoginCredentials = useAppStore(state => state.postLoginCredentials);
+  const setPostLoginCredentials = useAppStore(
+    state => state.setPostLoginCredentials,
+  );
+  const setNavigationState = useAppStore(state => state.setNavigationState);
+
+  // RememberMe: on an eligible login, authService stashes the credentials and
+  // keeps us on the auth screen (rather than routing to main_app). Surface the
+  // modal here; on a response we save credentials (accept) or not (decline),
+  // then clear the stash and enter the app.
+  const finishRememberMe = () => {
+    setPostLoginCredentials(null);
+    setNavigationState('main_app');
+  };
+
   const {
     showRememberMeModal,
     pendingCredentials,
     handleRememberMeAccept,
     handleRememberMeDecline,
-  } = useAuth();
+    showRememberMePrompt,
+  } = useRememberMe({
+    onAccept: async ({ email, password }) => {
+      await authService.storeCredentials(email, password);
+      finishRememberMe();
+    },
+    onDecline: finishRememberMe,
+  });
+
+  useEffect(() => {
+    if (postLoginCredentials) {
+      showRememberMePrompt(postLoginCredentials);
+    }
+  }, [postLoginCredentials, showRememberMePrompt]);
 
   const [shouldShowBiometricButton, setShouldShowBiometricButton] =
     useState(false);

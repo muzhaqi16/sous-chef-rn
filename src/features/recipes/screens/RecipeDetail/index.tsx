@@ -45,6 +45,7 @@ import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useUser } from '#store/useAppStore';
 import { SousChefLoader } from '#/components/base/SousChefLoader';
+import { EmptyState } from '#components/base/EmptyState';
 
 const IngredientSeparator = () => <View style={{ width: 12 }} />;
 
@@ -224,7 +225,11 @@ const RecipeDetailScreen: React.FC = () => {
     },
   });
 
-  if (loading) {
+  // Only block on the full-screen loader during a true cold load. On a
+  // cache-and-network refetch `loading` is true while `displayData` is already
+  // materialized from cache — showing the loader there wipes the rendered
+  // recipe and pops it back, which is the most-felt skeleton↔content flicker.
+  if (loading && !displayData) {
     return (
       <View style={styles.centerContainer}>
         <SousChefLoader
@@ -246,12 +251,12 @@ const RecipeDetailScreen: React.FC = () => {
 
     return (
       <View style={styles.centerContainer}>
-        <Text style={styles.errorText}>{errorMessage}</Text>
-        {!!backendError && (
-          <Text style={styles.errorDetails}>
-            {JSON.stringify(backendError, null, 2)}
-          </Text>
-        )}
+        <EmptyState
+          icon="alert-circle-outline"
+          title={errorMessage}
+          description={t('errors.somethingWentWrong')}
+          action={{ label: t('labels.goBack'), onPress: goBack }}
+        />
       </View>
     );
   }
@@ -610,18 +615,6 @@ const styles = StyleSheet.create(theme => ({
   },
   scrollContent: {
     paddingBottom: theme.spacing.xl,
-  },
-  errorText: {
-    fontSize: theme.fonts.size.md,
-    color: theme.colors.error,
-    textAlign: 'center',
-  },
-  errorDetails: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-    marginTop: theme.spacing.md,
-    fontFamily: 'monospace',
-    textAlign: 'left',
   },
   content: {
     padding: theme.spacing.lg,

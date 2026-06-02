@@ -1,9 +1,11 @@
 import { useEffect, useDeferredValue, useState } from 'react';
+import { useApolloClient } from '@apollo/client/react';
 
 import { useUser } from '#store/useAppStore';
 import { preloadImages } from '#components/atoms/CachedImage';
 import { isShoppingListOwner } from '#utils/ownershipHelpers';
 import { resolveImageUrl } from '#utils/imageUtils';
+import { isResourceAccessLostError } from '#/utils/errors/graphqlErrors';
 import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
 import { useShoppingListsQuery } from './useShoppingListsQuery';
 import { useShoppingListSelection } from './useShoppingListSelection';
@@ -24,9 +26,17 @@ import { useShoppingListManagement } from './useShoppingListManagement';
  */
 export function useShoppingListScreen() {
   const user = useUser();
+  const client = useApolloClient();
 
   // 1. Query: Fetch all user's shopping lists (independent of home)
   const { lists, loading: listsLoading } = useShoppingListsQuery();
+
+  // Lists whose read came back AUTHZ_FORBIDDEN/RESOURCE_NOT_FOUND this session.
+  // Excluded from selection so auto-select can't re-pick a list the user lost
+  // access to while its (cache-only) entry lingers before the lite query drops it.
+  const [deniedListIds, setDeniedListIds] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
 
   // 2. Selection: Determine current list with auto-select
   const {
@@ -36,7 +46,7 @@ export function useShoppingListScreen() {
     defaultList,
     selectedShoppingListId,
     setSelectedShoppingListId,
-  } = useShoppingListSelection(lists);
+  } = useShoppingListSelection(lists, deniedListIds);
 
   // 3. Items: Fetch and manage items for current list (with pagination)
   // Returns paginated unpurchasedItems and purchasedItems
@@ -67,6 +77,34 @@ export function useShoppingListScreen() {
     toggleItem,
     refetch,
   } = useShoppingListManagement(optimisticListId);
+
+  // 3b. Access-loss detection. When the selected list's read is rejected because
+  // the user can no longer access it (a collaborator on a list that became
+  // home-linked — collaborators are ignored on home-linked lists) or it was
+  // deleted/unshared, record its id. useShoppingListSelection then excludes it
+  // and auto-selects the next valid list, instead of the cache-and-network +
+  // previousData fallback keeping the stale, now-inaccessible list on screen.
+  // "Adjusting state during render" (not an effect) per project conventions.
+  if (
+    optimisticListId &&
+    !deniedListIds.has(optimisticListId) &&
+    isResourceAccessLostError(error)
+  ) {
+    const deniedId = optimisticListId;
+    setDeniedListIds(prev => new Set(prev).add(deniedId));
+  }
+
+  // Evict denied lists from the (persisted) cache so they don't resurface from a
+  // cold-start hydrate. Pure cache side-effect — no React state set here.
+  useEffect(() => {
+    if (deniedListIds.size === 0) return;
+    deniedListIds.forEach(id => {
+      client.cache.evict({
+        id: client.cache.identify({ __typename: 'ShoppingList', id }),
+      });
+    });
+    client.cache.gc();
+  }, [deniedListIds, client]);
 
   // 4a. Image preference: defer "disable" to pull-to-refresh, apply "enable" immediately
   const showImagesPreference = useShowShoppingListImages();

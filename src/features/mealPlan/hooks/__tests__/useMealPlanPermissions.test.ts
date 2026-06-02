@@ -6,14 +6,6 @@ import { useMealPlanPermissions } from '../useMealPlanPermissions';
 
 type MealPlanLike = MealPlanDisplayFragment | MealPlanMain_MealPlanFragment;
 
-let mockUserId: string | undefined = 'user-1';
-
-jest.mock('#hooks/auth/useAuth', () => ({
-  useAuth: jest.fn(() => ({
-    user: mockUserId ? { id: mockUserId } : undefined,
-  })),
-}));
-
 jest.mock('#utils/permissions/mealPlanPermissions', () => ({
   getMealPlanPermissions: jest.fn(
     (
@@ -74,7 +66,6 @@ jest.mock('#/apollo/links/tokenScheduler');
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockUserId = 'user-1';
 });
 
 describe('useMealPlanPermissions', () => {

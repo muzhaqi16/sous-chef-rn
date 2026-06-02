@@ -7,6 +7,36 @@
       "skillPath": "skills/apollo-client/SKILL.md",
       "computedHash": "008c067a3d480ab905aa37aab113b8dc54028e29e593610866b7ea8131377ce1"
     },
+    "argent-native-profiler": {
+      "source": "software-mansion/argent",
+      "sourceType": "github",
+      "skillPath": "packages/skills/skills/argent-native-profiler/SKILL.md",
+      "computedHash": "a6230e85a2a61112e3aaa593ec33fc63e4206593ef5cabaaa289d086945e6be7"
+    },
+    "argent-react-native-app-workflow": {
+      "source": "software-mansion/argent",
+      "sourceType": "github",
+      "skillPath": "packages/skills/skills/argent-react-native-app-workflow/SKILL.md",
+      "computedHash": "3bf1f291ebba37bf9b37c71099128e2bd4a549a969916ccd6e392bbb222b6eae"
+    },
+    "argent-react-native-optimization": {
+      "source": "software-mansion/argent",
+      "sourceType": "github",
+      "skillPath": "packages/skills/skills/argent-react-native-optimization/SKILL.md",
+      "computedHash": "fc04dda9d52c5add1ddb226c6bcc2a984bbd066bda44461f48311de9c2524049"
+    },
+    "argent-react-native-profiler": {
+      "source": "software-mansion/argent",
+      "sourceType": "github",
+      "skillPath": "packages/skills/skills/argent-react-native-profiler/SKILL.md",
+      "computedHash": "553945dae8b923dc37bff5e7251e615f5191dcf8c668663ddf4b10e18754f734"
+    },
+    "grafana-dashboards": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "skillPath": "plugins/observability-monitoring/skills/grafana-dashboards/SKILL.md",
+      "computedHash": "e9b692daf06faf96fa28b2b98f50b362e68b974db5ab503963a610c719cda79b"
+    },
     "graphql-operations": {
       "source": "apollographql/skills",
       "sourceType": "github",
@@ -19,11 +49,23 @@
       "skillPath": "skills/graphql-schema/SKILL.md",
       "computedHash": "95f5384cc907635fc31121648dffffed0bb6f773ee594cbfe9be9e5e4a0e6aba"
     },
+    "react-native-architecture": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "skillPath": "plugins/frontend-mobile-development/skills/react-native-architecture/SKILL.md",
+      "computedHash": "a83762db6ab371eb25e1b33e49d7895bb73df9d3952e26a3bdca90903d6ac91a"
+    },
     "react-native-best-practices": {
       "source": "software-mansion-labs/skills",
       "sourceType": "github",
       "skillPath": "skills/react-native-best-practices/SKILL.md",
       "computedHash": "37bd8599a1d4a8ee8bd0e3a6f416f32c7a1f26491a8142d7acab0a9e995e4f1a"
+    },
+    "react-native-design": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "skillPath": "plugins/ui-design/skills/react-native-design/SKILL.md",
+      "computedHash": "8a044b22f5296c463d328ba6144d978b15b382754344e596bce8e827c4ca699f"
     },
     "react-native-unistyles-v3": {
       "source": "jpudysz/react-native-unistyles",

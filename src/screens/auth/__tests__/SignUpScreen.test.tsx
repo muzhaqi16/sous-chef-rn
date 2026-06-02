@@ -4,18 +4,8 @@ import { SignUpScreen } from '../SignUpScreen';
 
 // --- Mocks ---
 
-const mockRegister = jest.fn();
-const mockHandleAuthError = jest.fn();
 const mockGoBack = jest.fn();
 const mockNavigateToLogin = jest.fn();
-
-jest.mock('#hooks/auth/useAuth', () => ({
-  useAuth: () => ({
-    register: mockRegister,
-    handleAuthError: mockHandleAuthError,
-    isLoading: false,
-  }),
-}));
 
 jest.mock('#hooks/navigation/useAuthNavigation', () => ({
   useAuthNavigation: () => ({

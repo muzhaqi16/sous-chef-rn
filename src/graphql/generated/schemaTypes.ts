@@ -17,7 +17,7 @@ export type Scalars = {
   /** Quantity input that accepts both strings and numbers. Strings can be fractions like "1/3" or "1 1/4". */
   FlexibleQuantity: { input: string | number; output: string; }
   /** The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf). */
-  JSON: { input: any; output: any; }
+  JSON: { input: JsonInput; output: JsonValue; }
   Upload: { input: { uri: string; type: string; name: string }; output: { uri: string; type: string; name: string }; }
 };
 

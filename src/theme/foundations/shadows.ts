@@ -44,4 +44,20 @@ export const shadows = {
       },
     ],
   },
+  /**
+   * Floating-card elevation. Soft, wide, low-opacity — the geometry the
+   * primary cards (HomeCard, ItemCard, list thumbnails) were each inlining
+   * with inconsistent color encoding. Use this for any resting surface card.
+   */
+  card: {
+    boxShadow: [
+      {
+        offsetX: 0,
+        offsetY: 4,
+        blurRadius: 15,
+        spreadDistance: 1,
+        color: 'rgba(0, 0, 0, 0.1)',
+      },
+    ],
+  },
 };

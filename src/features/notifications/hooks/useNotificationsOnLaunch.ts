@@ -31,7 +31,9 @@ import {
 import { useAppStore } from '#store/useAppStore';
 import {
   NotificationPriority,
+  isNotificationPayload,
   type NotificationItem,
+  type NotificationPayload,
 } from '#store/slices/notificationSlice';
 import { useDeferredCallback } from '#hooks/performance/useDeferredCallback';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
@@ -102,7 +104,9 @@ export function useNotificationsOnLaunch(userId?: string) {
       )
       .map(n => {
         const type = n.type;
-        const payload = (n.payload ?? {}) as Record<string, unknown>;
+        const payload: NotificationPayload = isNotificationPayload(n.payload)
+          ? n.payload
+          : {};
 
         const { requiresAction, actionType } = getNotificationAction(type);
 

@@ -1,5 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useFragment } from '@apollo/client/react';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
@@ -29,6 +30,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
   onEdit,
   onDelete,
 }) => {
+  const { t } = useTranslation();
   // Per-entity cache subscription: re-renders only when this review's
   // RecipeReviewFragment fields change (e.g., helpful count after a
   // toggleHelpful mutation, or comment/rating after an updateReview).
@@ -79,6 +81,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
                 onPress={onEdit}
                 hitSlop={8}
                 style={({ pressed }) => pressed && styles.pressed}
+                accessibilityLabel={t('recipes.editReviewA11y')}
               >
                 <Icon name="create-outline" size={18} tone="primary" />
               </Pressable>
@@ -88,6 +91,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
                 onPress={onDelete}
                 hitSlop={8}
                 style={({ pressed }) => pressed && styles.pressed}
+                accessibilityLabel={t('recipes.deleteReviewA11y')}
               >
                 <Icon name="trash-outline" size={18} tone="error" />
               </Pressable>

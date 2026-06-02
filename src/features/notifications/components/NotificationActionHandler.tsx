@@ -53,12 +53,15 @@ export const NotificationActionHandler: React.FC<
 
       const invitation: InvitationData = {
         type: invitationType,
-        id: notification.payload.inviteId || notification.payload.membershipId,
+        id:
+          notification.payload.inviteId ||
+          notification.payload.membershipId ||
+          '',
         title: notification.title,
         description: notification.message,
         inviterName: notification.payload.inviterName,
         entityName:
-          notification.payload.homeName || notification.payload.listName,
+          notification.payload.homeName || notification.payload.listName || '',
         token: notification.payload.token,
         payload: notification.payload,
       };

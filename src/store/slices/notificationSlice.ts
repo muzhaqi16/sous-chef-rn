@@ -24,6 +24,38 @@ export enum NotificationPriority {
 /** Category values derived from the server enum — used by filter UI */
 export const NOTIFICATION_CATEGORIES = Object.values(NotificationCategory);
 
+/**
+ * Typed shape of a notification's JSON payload. The server delivers this as a
+ * `JSON` scalar (untyped), but every payload is an object map whose well-known
+ * keys are read across the notification UI. Declaring those keys here gives the
+ * consumers (NotificationActionHandler, InvitationAcceptanceModal,
+ * NotificationDetailScreen) real types instead of `any`; the index signature
+ * keeps room for notification-type-specific keys read dynamically.
+ */
+export interface NotificationPayload {
+  inviteId?: string;
+  membershipId?: string;
+  inviterName?: string;
+  homeName?: string;
+  listName?: string;
+  token?: string;
+  message?: string;
+  details?: string;
+  [key: string]: unknown;
+}
+
+/**
+ * Runtime guard that narrows an untyped JSON scalar value to NotificationPayload
+ * at the ingestion boundary — no cast required. Any non-null, non-array object
+ * is a valid payload (all typed keys are optional); primitives/arrays/null
+ * collapse to an empty payload at the call site.
+ */
+export function isNotificationPayload(
+  value: unknown,
+): value is NotificationPayload {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 export interface NotificationItem {
   id: string;
   type: NotificationType;
@@ -31,16 +63,18 @@ export interface NotificationItem {
   priority: NotificationPriority;
   title: string;
   message: string;
-  // GraphQL JSON scalar — generated as `any`; consumers (NotificationActionHandler,
-  // InvitationAcceptanceModal) read dynamic keys without narrowing, so a stricter
-  // type would require a cross-module refactor of those non-editable files.
-  payload: any;
+  // The notification's JSON payload, typed via NotificationPayload (the server
+  // delivers it as an untyped JSON scalar; it's narrowed at the ingestion
+  // boundary via isNotificationPayload).
+  payload: NotificationPayload;
   sentAt: string;
   readAt?: string | null;
   isRead: boolean;
   requiresAction?: boolean;
   actionType?: string;
-  actionData?: Record<string, unknown>;
+  // Carries the notification's JSON payload for action handling. Write-only in
+  // practice (no current readers).
+  actionData?: NotificationPayload;
   expiresAt?: string | null;
   // Expiration notification enrichment (linked from expirationNotificationChanged subscription)
   expirationNotificationId?: string | null;
@@ -111,6 +145,30 @@ export interface NotificationState {
  * Prevents unbounded memory growth from immer patches and persist serialization.
  */
 const MAX_NOTIFICATIONS = 100;
+
+/**
+ * Recomputes `unreadCount` / `urgentCount` from the `notifications` list in a
+ * single pass. This is the one source of truth for the derived counts — every
+ * mutator routes through it instead of hand-maintaining `±1` deltas, which
+ * removes the drift risk of keeping derived state in sync across many call
+ * sites. Behavior is identical to the previous per-site recomputation; it just
+ * lives in one place.
+ */
+const recomputeCounts = (state: {
+  notifications: NotificationItem[];
+  unreadCount: number;
+  urgentCount: number;
+}): void => {
+  let unread = 0;
+  let urgent = 0;
+  for (const n of state.notifications) {
+    if (n.isRead) continue;
+    unread += 1;
+    if (n.priority === NotificationPriority.URGENT) urgent += 1;
+  }
+  state.unreadCount = unread;
+  state.urgentCount = urgent;
+};
 
 const initialNotificationState: Omit<
   NotificationState,
@@ -233,10 +291,7 @@ export const createNotificationSlice: StateCreator<
         state.notifications = keep.slice(0, MAX_NOTIFICATIONS);
       }
 
-      state.unreadCount = state.notifications.filter(n => !n.isRead).length;
-      state.urgentCount = state.notifications.filter(
-        n => !n.isRead && n.priority === NotificationPriority.URGENT,
-      ).length;
+      recomputeCounts(state);
     });
   },
 
@@ -309,10 +364,7 @@ export const createNotificationSlice: StateCreator<
         state.notifications = keep.slice(0, MAX_NOTIFICATIONS);
       }
 
-      state.unreadCount = state.notifications.filter(n => !n.isRead).length;
-      state.urgentCount = state.notifications.filter(
-        n => !n.isRead && n.priority === NotificationPriority.URGENT,
-      ).length;
+      recomputeCounts(state);
     });
   },
 
@@ -349,10 +401,7 @@ export const createNotificationSlice: StateCreator<
       });
 
       // Recalculate counts
-      draft.unreadCount = draft.notifications.filter(n => !n.isRead).length;
-      draft.urgentCount = draft.notifications.filter(
-        n => !n.isRead && n.priority === NotificationPriority.URGENT,
-      ).length;
+      recomputeCounts(draft);
     });
   },
 
@@ -364,10 +413,7 @@ export const createNotificationSlice: StateCreator<
       if (notification && !notification.isRead) {
         notification.isRead = true;
         notification.readAt = new Date().toISOString();
-        state.unreadCount = Math.max(0, state.unreadCount - 1);
-        if (notification.priority === NotificationPriority.URGENT) {
-          state.urgentCount = Math.max(0, state.urgentCount - 1);
-        }
+        recomputeCounts(state);
       }
     });
   },
@@ -380,10 +426,7 @@ export const createNotificationSlice: StateCreator<
       if (notification && notification.isRead) {
         notification.isRead = false;
         notification.readAt = undefined;
-        state.unreadCount += 1;
-        if (notification.priority === NotificationPriority.URGENT) {
-          state.urgentCount += 1;
-        }
+        recomputeCounts(state);
       }
     });
   },
@@ -407,8 +450,7 @@ export const createNotificationSlice: StateCreator<
           n.readAt = now;
         }
       });
-      state.unreadCount = 0;
-      state.urgentCount = 0;
+      recomputeCounts(state);
     });
   },
 
@@ -416,18 +458,8 @@ export const createNotificationSlice: StateCreator<
     set(state => {
       const index = state.notifications.findIndex(n => n.id === notificationId);
       if (index !== -1) {
-        const notification = state.notifications[index];
-        const wasUnread = !notification.isRead;
-        const wasUrgent = notification.priority === NotificationPriority.URGENT;
-
         state.notifications.splice(index, 1);
-
-        if (wasUnread) {
-          state.unreadCount = Math.max(0, state.unreadCount - 1);
-          if (wasUrgent) {
-            state.urgentCount = Math.max(0, state.urgentCount - 1);
-          }
-        }
+        recomputeCounts(state);
       }
     });
   },
@@ -442,10 +474,7 @@ export const createNotificationSlice: StateCreator<
 
   updateUnreadCount: () => {
     set(state => {
-      state.unreadCount = state.notifications.filter(n => !n.isRead).length;
-      state.urgentCount = state.notifications.filter(
-        n => !n.isRead && n.priority === NotificationPriority.URGENT,
-      ).length;
+      recomputeCounts(state);
     });
   },
 

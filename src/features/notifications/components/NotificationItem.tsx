@@ -1,5 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Icon } from '#utils/iconUtils';
 import { StyleSheet } from 'react-native-unistyles';
 import { formatDistanceToNow } from 'date-fns/formatDistanceToNow';
@@ -21,6 +22,8 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
   onPress,
   onDismiss,
 }) => {
+  const { t } = useTranslation();
+
   const handlePress = () => {
     onPress(notification);
   };
@@ -88,6 +91,7 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
           ]}
           onPress={handleDismiss}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          accessibilityLabel={t('notifications.dismissA11y')}
         >
           <Icon name="close" size={20} tone="textTertiary" />
         </Pressable>

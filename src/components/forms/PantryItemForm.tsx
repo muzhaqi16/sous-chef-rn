@@ -6,9 +6,8 @@ import {
   Text,
   ScrollView,
 } from 'react-native';
-import { useForm, useWatch, Controller, type Resolver } from 'react-hook-form';
+import { useForm, useWatch, type Resolver } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { object, string } from 'yup';
 import { StyleSheet } from 'react-native-unistyles';
 import { PrimaryActivityIndicator } from '#components/atoms/themedComponents';
 import { useNavigation } from '@react-navigation/native';
@@ -45,35 +44,23 @@ import {
   FieldDef,
 } from '#components/molecules/DynamicFormFields';
 import { FormInput } from '#components/molecules/FormInput';
-import { UnitAutocompleteField } from '#components/molecules/AutocompleteField/UnitAutocompleteField';
-import { FieldRow } from '#components/molecules/FieldRow';
 import { Header } from '#components/molecules/Header';
 import { PageIndicator } from '#components/molecules/PageIndicator/PageIndicator';
 import { CollapsibleSection } from '#components/molecules/CollapsibleSection';
 import { ItemInformationSection } from './ItemInformationSection';
 import { QuantitySection } from './QuantitySection';
 import { StorageDetailsSection } from './StorageDetailsSection';
+import { NetWeightSection } from './NetWeightSection';
 import { usePantryItemFormSubmit } from './usePantryItemFormSubmit';
 import { logValidationErrors } from '#utils/validation/common';
-
-type PageName = 'Basics' | 'Product' | 'Storage' | 'Inventory';
-const PAGES: readonly PageName[] = [
-  'Basics',
-  'Product',
-  'Storage',
-  'Inventory',
-];
-
-// Maps each tab to the form field names it owns — drives per-tab error
-// indicators on PageIndicator. Tags lives inside the Inventory "More options"
-// expander.
-const TAB_FIELDS: Record<PageName, readonly string[]> = {
-  Basics: ['itemName', 'brand', 'category'],
-  Product: ['netWeight', 'netWeightUnit'],
-  Storage: ['storageState', 'location', 'expirationDate', 'notes'],
-  Inventory: ['quantityInput', 'unit', 'minQuantity', 'restockQuantity'],
-};
-const INVENTORY_ADVANCED_FIELDS: readonly string[] = ['tags'];
+import {
+  type PageName,
+  PAGES,
+  TAB_FIELDS,
+  INVENTORY_ADVANCED_FIELDS,
+  addItemSchema,
+  editItemSchema,
+} from './pantryItemFormConfig';
 
 export interface PantryItemFormData {
   // Item information (add mode)
@@ -104,40 +91,6 @@ export interface PantryItemFormData {
   notes: string;
   category: string;
 }
-
-// Schema for add mode
-const addItemSchema = object({
-  itemName: string().required('Item name is required'),
-  quantityInput: string().required('Quantity is required'),
-  unit: string(), // Tracking unit
-  minQuantity: string(),
-  restockQuantity: string(),
-  netWeight: string(),
-  netWeightUnit: string(),
-  netWeightUnitId: string(),
-  storageState: string().oneOf(Object.values(StorageState)),
-  location: string(),
-  notes: string(),
-  category: string(),
-  brand: string(),
-});
-
-// Schema for edit mode
-const editItemSchema = object({
-  itemName: string(),
-  quantityInput: string().required('Quantity is required'),
-  unit: string(), // Tracking unit
-  minQuantity: string(),
-  restockQuantity: string(),
-  netWeight: string(),
-  netWeightUnit: string(),
-  netWeightUnitId: string(),
-  storageState: string().oneOf(Object.values(StorageState)),
-  location: string(),
-  notes: string(),
-  category: string(),
-  brand: string(),
-});
 
 interface PantryItemFormProps {
   mode: 'add' | 'edit';
@@ -591,53 +544,11 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
               ))}
 
             {currentPage === 1 && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Net Weight</Text>
-                <Text style={styles.sectionDescription}>
-                  Net weight is used for consumption tracking and is optional.
-                </Text>
-                <View
-                  pointerEvents={isWeightLocked ? 'none' : 'auto'}
-                  style={isWeightLocked ? styles.lockedSection : undefined}
-                >
-                  <FieldRow>
-                    <Controller
-                      control={control}
-                      name="netWeight"
-                      render={({ field: { onChange, onBlur, value } }) => (
-                        <FormInput
-                          label="Net Weight"
-                          value={value || ''}
-                          onChangeText={onChange}
-                          onBlur={onBlur}
-                          placeholder="e.g., 14.5"
-                          keyboardType="decimal-pad"
-                          editable={!isWeightLocked}
-                        />
-                      )}
-                    />
-                    <Controller
-                      control={control}
-                      name="netWeightUnit"
-                      render={({ field: { onChange, value } }) => (
-                        <UnitAutocompleteField
-                          variant="modal"
-                          label="Unit"
-                          value={value || ''}
-                          onChangeText={onChange}
-                          onUnitSelected={handleNetWeightUnitSelected}
-                          placeholder="oz, g, ml"
-                        />
-                      )}
-                    />
-                  </FieldRow>
-                </View>
-                {!!isWeightLocked && (
-                  <Text style={styles.lockedHint}>
-                    Weight locked after use — correct from item details
-                  </Text>
-                )}
-              </View>
+              <NetWeightSection
+                control={control}
+                isWeightLocked={isWeightLocked}
+                onNetWeightUnitSelected={handleNetWeightUnitSelected}
+              />
             )}
 
             {currentPage === 2 && (
@@ -712,35 +623,9 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
-  section: {
-    marginBottom: theme.spacing.lg,
-  },
-  sectionTitle: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.md,
-    paddingBottom: theme.spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
   errorText: {
     fontSize: theme.fonts.size.lg,
     color: theme.colors.error,
-  },
-  sectionDescription: {
-    fontSize: theme.fonts.size.sm,
-    fontStyle: 'italic',
-    color: theme.colors.textTertiary,
-    marginBottom: theme.spacing.sm,
-  },
-  lockedSection: {
-    opacity: theme.opacity.disabled,
-  },
-  lockedHint: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textTertiary,
-    fontStyle: 'italic',
   },
   advancedContent: {
     paddingTop: theme.spacing.md,

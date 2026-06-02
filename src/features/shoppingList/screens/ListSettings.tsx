@@ -113,7 +113,13 @@ export const ListSettings: React.FC<
   const currentUserCollaborator = collaborators.find(
     c => c.email === user?.email || c.collaboratorId === user?.id,
   );
-  const isHomeLinked = !!shoppingList?.homeId;
+  // Only members of the linked home are told to "leave the home first" — that's
+  // the only case where list access actually derives from home membership. A
+  // direct collaborator who isn't a member of the home (e.g. the list was shared
+  // while personal, then later linked to a home) has an orphaned collaborator
+  // row and must be able to leave the list directly. Gating on homeId alone
+  // dead-ends those users: they can't leave a home they were never in.
+  const isHomeMember = !!shoppingList?.home?.myMembership;
 
   const { leaveList, leaving } = useLeaveShoppingList(listId || '');
   const [updateList] = useMutation(UpdateShoppingListDocument);
@@ -315,7 +321,7 @@ export const ListSettings: React.FC<
                 {t('shoppingListScreens.leaveListSection')}
               </Text>
 
-              {isHomeLinked ? (
+              {isHomeMember ? (
                 <>
                   <View style={styles.disabledLeaveButton}>
                     <Icon

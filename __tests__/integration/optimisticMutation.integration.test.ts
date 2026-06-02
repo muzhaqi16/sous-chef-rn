@@ -42,7 +42,7 @@ import {
   ToggleShoppingListItemPurchasedDocument,
   type ToggleShoppingListItemPurchasedMutation,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import { DisplayFormat } from '#/graphql/generated/baseTypes';
+import { DisplayFormat } from '#/graphql/generated/schemaTypes';
 import {
   ShoppingListItemDisplayFragmentDoc,
   type ShoppingListItemDisplayFragment,

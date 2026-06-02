@@ -1,8 +1,9 @@
-# Domain-level shape for recipe ingredients. Spread by GetRecipe and
-# UpdateRecipeIngredients — both operations populate the cache with this
-# shape, and useRecipeIngredientMatching materializes it for matching logic.
-# Stays shared because the operation-populated shape IS the consumer shape;
-# splitting per-hook would duplicate the selection set.
+# Domain-level shape for recipe ingredients. Spread directly by
+# UpdateRecipeIngredients and MatchRecipeIngredientsToPantry, and pulled
+# transitively by GetRecipe via useRecipeData_recipe — all populate the cache
+# with this shape, and useRecipeIngredientMatching materializes it for matching
+# logic. Stays shared because the operation-populated shape IS the consumer
+# shape; splitting per-hook would duplicate the selection set.
 fragment RecipeIngredientFragment on RecipeIngredient {
   id
   name

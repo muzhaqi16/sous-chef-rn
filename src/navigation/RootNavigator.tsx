@@ -13,8 +13,7 @@ import {
 } from '@react-navigation/native-stack';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useIsHydrated, useUser, usePostLoginState } from '#store/useAppStore';
-import { useBiometricPrompting } from '#hooks/auth/useBiometricPrompting';
-import { useAuthPreferences } from '#hooks/navigation/useAuthPreferences';
+import type { NavigationState } from '#store/slices/appSlice';
 import { SplashScreen } from '#screens/SplashScreen';
 import { NotFoundScreen } from '#screens/NotFoundScreen';
 import { AuthStack } from './stacks/AuthStack';
@@ -71,11 +70,12 @@ import {
   NavigationErrorBoundary,
   AuthErrorBoundary,
 } from '#components/providers/ErrorBoundary';
-import { PostLoginBiometricPrompt } from '#components/organisms/PostLoginBiometricPrompt';
+import { PostLoginBiometricScreen } from '#screens/auth/PostLoginBiometricScreen';
 import { useDeepLinkRouter } from '#hooks/deepLink/useDeepLinkRouter';
 import {
   useIsAuth,
   useIsVerification,
+  useIsBiometricSetup,
   useIsOnboarding,
   useIsMainApp,
 } from '#hooks/navigation/useNavigationGuards';
@@ -133,6 +133,20 @@ const RootStack = createNativeStackNavigator({
       ),
       screens: {
         Onboarding: createNativeStackScreen({ screen: OnboardingStack }),
+      },
+    },
+    // Post-login biometric enrollment gate for returning users. Its own screen
+    // (not a modal over PantryMain) so it appears between auth and the main app
+    // — see PostLoginBiometricScreen. New users enroll inside Onboarding.
+    BiometricSetup: {
+      if: useIsBiometricSetup,
+      screenLayout: ({ children }) => (
+        <NavigationErrorBoundary>{children}</NavigationErrorBoundary>
+      ),
+      screens: {
+        BiometricSetup: createNativeStackScreen({
+          screen: PostLoginBiometricScreen,
+        }),
       },
     },
     MainApp: {
@@ -257,6 +271,20 @@ declare module '@react-navigation/core' {
 
 const StaticNavigation = createStaticNavigation(RootStack);
 
+/**
+ * Derive the navigation state implied purely by the current user. The
+ * post-login `biometric_setup` gate is NOT derivable from `user` (it depends on
+ * device capability + stored credentials), so it's set explicitly by
+ * `authService.handleLogin` and must not be clobbered here — see the guard in
+ * the user-change effect below.
+ */
+function resolveNavTarget(user: ReturnType<typeof useUser>): NavigationState {
+  if (!user) return 'auth';
+  if (!user.emailVerified) return 'verification';
+  if (!user.onBoarded) return 'onboarding';
+  return 'main_app';
+}
+
 export function Navigation() {
   // `useUnistyles()` is required here because the React Navigation `theme`
   // prop must be a plain object (not a Unistyles StyleSheet). Read access is
@@ -266,45 +294,8 @@ export function Navigation() {
   const { theme } = useUnistyles();
   const isHydrated = useIsHydrated();
   const user = useUser();
-  const {
-    navigationState,
-    showBiometricSetup,
-    postLoginCredentials,
-    setNavigationState,
-    setShowBiometricSetup,
-    setPostLoginCredentials,
-  } = usePostLoginState();
-  const { recordBiometricPromptResponse } = useBiometricPrompting();
-  const { markBiometricDeclined, markBiometricEnabled } = useAuthPreferences();
-
-  const handlePostLoginBiometricComplete = (
-    enabled: boolean,
-    declined?: boolean,
-  ) => {
-    recordBiometricPromptResponse(enabled, declined);
-
-    if (enabled) {
-      markBiometricEnabled();
-    } else if (declined) {
-      markBiometricDeclined();
-    }
-
-    // Dismiss through RN Modal's supported `visible` → false path so the
-    // Android Dialog window animates out and tears down cleanly. The Modal
-    // stays mounted (gated on postLoginCredentials below), so this does not
-    // yank the native Dialog from the tree while it is still visible.
-    setShowBiometricSetup(false);
-
-    // Clearing postLoginCredentials is what finally unmounts the now-hidden
-    // Modal. Defer it (and the idempotent main_app settle) to the next frame
-    // so the native Dialog dismissal lands on its own commit instead of
-    // racing PantryMain's mount — that race intermittently orphaned the dim
-    // scrim (rgba(0,0,0,0.8)) on top of the screen on Android.
-    requestAnimationFrame(() => {
-      setNavigationState('main_app');
-      setPostLoginCredentials(null);
-    });
-  };
+  const { navigationState, postLoginCredentials, setNavigationState } =
+    usePostLoginState();
 
   // Track focused-route changes for screen-view analytics + crash breadcrumbs.
   // Only emits when the route name actually changes; intermediate state ticks
@@ -325,46 +316,42 @@ export function Navigation() {
   // Track initialization
   const hasInitialized = useRef(false);
 
-  // Initialize navigation state after hydration
+  // Initialize navigation state after hydration. Cold start never enters the
+  // post-login biometric gate (that's only set by an interactive login), so a
+  // straight derive-from-user is correct here.
   useEffect(() => {
     if (isHydrated && !hasInitialized.current) {
       hasInitialized.current = true;
-
-      // Determine initial navigation state based on current store state
-      if (user) {
-        // User exists in store - determine their state
-        if (!user.emailVerified) {
-          setNavigationState('verification');
-        } else if (!user.onBoarded) {
-          setNavigationState('onboarding');
-        } else {
-          setNavigationState('main_app');
-        }
-      } else {
-        // No user - go directly to auth screen
-        setNavigationState('auth');
-      }
+      setNavigationState(resolveNavTarget(user));
     }
   }, [isHydrated, user, setNavigationState]);
 
-  // React to user state changes after initialization
+  // React to user state changes after initialization.
   useEffect(() => {
-    if (isHydrated && hasInitialized.current) {
-      if (user) {
-        // Update navigation state when specific user properties change
-        if (!user.emailVerified) {
-          setNavigationState('verification');
-        } else if (!user.onBoarded) {
-          setNavigationState('onboarding');
-        } else {
-          setNavigationState('main_app');
-        }
-      } else {
-        // User logged out or cleared
-        setNavigationState('auth');
-      }
+    if (!isHydrated || !hasInitialized.current) return;
+    const target = resolveNavTarget(user);
+    // Don't let a user-prop change yank the user out of a pending post-login
+    // gate into main_app. Two gates own that transition themselves:
+    //   • biometric enrollment — its own `biometric_setup` screen, and
+    //   • the RememberMe prompt — still on the auth screen, signalled by
+    //     pending `postLoginCredentials` (LoginScreen clears it + routes to
+    //     main_app once the user responds).
+    // (setAuth fires before the gate is committed; without this the main app
+    // would briefly mount behind the gate.)
+    if (
+      target === 'main_app' &&
+      (navigationState === 'biometric_setup' || postLoginCredentials != null)
+    ) {
+      return;
     }
-  }, [user, isHydrated, setNavigationState]);
+    setNavigationState(target);
+  }, [
+    user,
+    isHydrated,
+    navigationState,
+    postLoginCredentials,
+    setNavigationState,
+  ]);
 
   // Create navigation theme based on current Unistyles theme
   const navigationTheme: Theme = {
@@ -404,20 +391,6 @@ export function Navigation() {
           }}
         />
       </Suspense>
-
-      {/* Global biometric setup prompt. Mounted while a post-login session
-          exists; visibility is driven by `showBiometricSetup` so the native
-          Modal dismisses through RN's supported `visible` → false path.
-          Unmounting it while still visible races PantryMain's mount on
-          Android and can leave the dim scrim stuck over the screen. */}
-      {!!user && !!postLoginCredentials && (
-        <PostLoginBiometricPrompt
-          visible={showBiometricSetup}
-          onComplete={handlePostLoginBiometricComplete}
-          userEmail={postLoginCredentials.email}
-          userPassword={postLoginCredentials.password}
-        />
-      )}
     </NavigationErrorBoundary>
   );
 }

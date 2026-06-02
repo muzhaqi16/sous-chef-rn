@@ -1,8 +1,9 @@
 /**
  * Auth Service - Singleton service for authentication operations.
  *
- * Extracts business logic from useAuthOperations + useCredentialStorage into
- * a testable, non-React service. All dependencies are singletons:
+ * The single source of truth for login/register/logout business logic, as a
+ * testable, non-React service (replacing the former useAuth/useAuthOperations
+ * hooks). All dependencies are singletons:
  * - Apollo client for mutations
  * - toastService for user feedback
  * - errorService for structured error handling
@@ -404,12 +405,45 @@ async function handleLogin(
   loginResponse: ResolvedAuthPayload,
   shouldRemember?: boolean,
   loginCredentials?: LoginCredentials,
+  showRememberPrompt = false,
 ): Promise<boolean> {
   if (!loginResponse?.user) return false;
 
   const { user, accessToken, refreshToken } = loginResponse;
   const store = useStore.getState();
   const previousUserId = queueStore.getCurrentUserId();
+
+  // Resolve the post-login gates BEFORE mutating auth state. RootNavigator
+  // derives its target route from `user`; if we set auth first and then resolve
+  // these (async) checks, the navigator briefly routes to main_app and flashes
+  // the home screen behind the gate. Deciding first lets us commit auth + the
+  // final navigation state together.
+  let showBiometricGate = false;
+  if (loginCredentials && user.emailVerified && user.onBoarded) {
+    try {
+      const biometricResult = await shouldShowPostLoginBiometricPrompt(user);
+      showBiometricGate = biometricResult.shouldShow;
+    } catch {
+      logger.error('Error checking biometric eligibility');
+    }
+  }
+
+  // RememberMe prompt is the no-biometrics fallback: offer to save credentials
+  // when the device can't (or the user hasn't) set up biometric login, the user
+  // has no stored credentials yet, and they haven't previously declined.
+  let showRememberMeGate = false;
+  if (
+    showRememberPrompt &&
+    !showBiometricGate &&
+    loginCredentials &&
+    user.emailVerified &&
+    user.onBoarded
+  ) {
+    const hasStoredCreds = await checkStoredCredentials(loginCredentials.email);
+    const prefs = getUserPreferences(user.id);
+    showRememberMeGate =
+      !hasStoredCreds && !!prefs?.shouldShowCredentialPrompt();
+  }
 
   // Set auth state
   store.setAuth(user, accessToken, refreshToken);
@@ -441,18 +475,25 @@ async function handleLogin(
     return false;
   }
 
-  // Check biometric setup eligibility (skip during registration)
-  if (loginCredentials && user.emailVerified && user.onBoarded) {
-    try {
-      const biometricResult = await shouldShowPostLoginBiometricPrompt(user);
-      if (biometricResult.shouldShow) {
-        store.setPostLoginCredentials(loginCredentials);
-        store.setShowBiometricSetup(true);
-        return true;
-      }
-    } catch {
-      logger.error('Error checking biometric eligibility');
-    }
+  // Eligible returning user → route to the dedicated biometric enrollment
+  // screen (the `biometric_setup` nav state) instead of straight to main_app,
+  // so it renders as its own step, not a modal over PantryMain.
+  if (showBiometricGate && loginCredentials) {
+    store.setPostLoginCredentials(loginCredentials);
+    store.setShowBiometricSetup(true);
+    store.setNavigationState('biometric_setup');
+    return true;
+  }
+
+  // RememberMe fallback → stash credentials and stay on the auth screen so
+  // LoginScreen surfaces the RememberMe modal. We intentionally do NOT navigate
+  // to main_app here; LoginScreen transitions there once the user responds (and
+  // RootNavigator's postLoginCredentials guard keeps the user-change effect
+  // from forcing main_app in the meantime).
+  if (showRememberMeGate && loginCredentials) {
+    store.setPostLoginCredentials(loginCredentials);
+    getUserPreferences(user.id)?.trackCredentialPromptShown();
+    return true;
   }
 
   store.setNavigationState('main_app');
@@ -564,20 +605,16 @@ async function login(
       };
 
       const unmaskedLogin = unmaskAuthPayload(result.data.login);
-      const biometricTriggered = unmaskedLogin
-        ? await handleLogin(unmaskedLogin, true, loginCredentials)
-        : false;
-
-      if (showRememberPrompt && !biometricTriggered) {
-        const hasStoredCreds = await checkStoredCredentials(input.email);
-        const prefs = getUserPreferences();
-        if (!hasStoredCreds && prefs?.shouldShowCredentialPrompt()) {
-          // Store pending credentials in Zustand for the RememberMe modal
-          store.setPostLoginCredentials(loginCredentials);
-          // Signal that RememberMe prompt should show
-          // (useRememberMe hook in useAuth reads this)
-          prefs.trackCredentialPromptShown();
-        }
+      if (unmaskedLogin) {
+        // handleLogin owns all post-login routing — verification, onboarding,
+        // the biometric gate, and the RememberMe gate (driven by
+        // showRememberPrompt) — so navigation is decided in one place.
+        await handleLogin(
+          unmaskedLogin,
+          true,
+          loginCredentials,
+          showRememberPrompt,
+        );
       }
 
       store.setAuthIsLoading(false);

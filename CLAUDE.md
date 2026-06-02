@@ -312,7 +312,7 @@ Pick the cache-update pattern based on what the mutation changes:
 | Pattern | Use when | Example |
 |---|---|---|
 | **No `update` callback** (preferred default) | Mutation returns the entity and Apollo auto-normalizes by `__typename + id` | `useAdjustPantryItemQuantity` — the mutation spreads the hook's fragment on the response; Apollo writes through automatically |
-| **`cache.modify` on parent aggregates** | Need to update parent stat fields not in the response | `useUpdatePantryItem` — patches `Pantry.stats` counts (`modifyPantryStats`) after a location change |
+| **`cache.modify` on parent aggregates** | Need to update parent stat fields not in the response | `useRecipeReviews` — patches `Recipe.totalReviews` / `averageRating` / `rating{N}Count` aggregates (`recipeReviewCacheUpdaters`) after create/update/delete review. (`Pantry.stats` is instead kept current via the `Pantry.stats` `mergeObjects` field policy + mutation responses — no manual `cache.modify`.) |
 | **`cache.modify` on entity fields BEFORE firing the mutation** | Optimistic UI without a callback — set fields synchronously, revert from a snapshot on error | `useToggleShoppingItem` — flips `purchaseInfo.isPurchased` + moves the item between purchased/unpurchased connections immediately, reverts in `onError` |
 | **`cache.modify` on connection edges + parent counts** | Entity moves between filtered connections (purchased ↔ unpurchased, list ↔ list) | `useToggleShoppingItem`, `useRemoveShoppingItem` — `moveShoppingListItemTo*` helpers |
 | **`writeFragment`** | Subscription handler receives an entity push and writes it through | `usePantrySubscriptions`, `useShoppingListSubscriptions` |

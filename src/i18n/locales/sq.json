@@ -309,6 +309,8 @@
     "tagCount_other": "{{count}} Etiketa",
     "editRecipeA11y": "Modifiko recetën",
     "deleteRecipeA11y": "Fshi recetën",
+    "editReviewA11y": "Modifiko vlerësimin",
+    "deleteReviewA11y": "Fshi vlerësimin",
     "removeFromSavedA11y": "Hiq nga të ruajturat",
     "instructions": "Udhëzimet",
     "addToMealPlanA11y": "Shto te plani i vakteve",
@@ -552,6 +554,7 @@
     "shareHomeLinkedNotice": "Kjo listë i përket shtëpisë \"{{name}}\". Anëtarët menaxhohen nga cilësimet e shtëpisë.",
     "pleaseEnterEmail": "Shkruaj një adresë email",
     "removeMemberTitle": "Hiq anëtarin",
+    "removeMemberA11y": "Hiq anëtarin",
     "removeMemberMessage": "Je i sigurt që do ta heqësh këtë anëtar?",
     "cannotLeaveTitle": "Nuk mund të largohesh",
     "cannotLeaveOwnerMessage": "Pronarët nuk mund të largohen nga lista. Transfero pronësinë te një anëtar tjetër ose fshi listën.",
@@ -859,6 +862,7 @@
     "general": "Njoftime të përgjithshme",
     "pushNotifications": "Njoftime push",
     "pushNotificationsDesc": "Merr njoftime push në pajisjen tënde",
+    "dismissA11y": "Hiq njoftimin",
     "emailNotifications": "Njoftime me email",
     "emailNotificationsDesc": "Merr njoftime përmes email-it",
     "smsNotifications": "Njoftime SMS",
@@ -1083,7 +1087,11 @@
     "passwordPromptInitial": "Fut fjalëkalimin tënd për të aktivizuar autentifikimin biometrik:",
     "passwordPlaceholder": "Fjalëkalimi aktual",
     "settingUp": "Po konfigurohet...",
-    "setupLater": "Konfiguro më vonë"
+    "setupLater": "Konfiguro më vonë",
+    "benefitQuickAccess": "Qasje e shpejtë dhe e sigurt",
+    "benefitNoPassword": "Pa fjalëkalim",
+    "benefitEnhancedSecurity": "Siguri e shtuar",
+    "footer": "Mund ta aktivizosh gjithmonë më vonë te Cilësimet"
   },
   "postLoginBiometric": {
     "title": "Të konfigurojmë hyrjen me {{type}}?",

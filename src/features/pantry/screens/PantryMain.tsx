@@ -161,8 +161,7 @@ const PantryMainInner: React.FC = () => {
   });
 
   // Tutorial trigger conditions (passed to usePantryTutorial in PantryMainContent)
-  const canStartTutorial =
-    !!screen.selectedHomeId && !screen.showBiometricSetup;
+  const canStartTutorial = !!screen.selectedHomeId;
 
   // ── Navigation callbacks ──
   const handleItemPress = (id: string) => toPantryItemDetail({ itemId: id });

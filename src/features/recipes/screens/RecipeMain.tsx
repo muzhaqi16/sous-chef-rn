@@ -459,7 +459,8 @@ const RecipeMainInner: React.FC = () => {
   return (
     <TabMainScreen testID="recipes-screen">
       {(screen.discovery.loading || screen.searchLoading) &&
-      !screen.showSearchResults ? (
+      !screen.showSearchResults &&
+      screen.items.length === 0 ? (
         <>
           {recipeListHeader}
           <RecipeSkeleton />

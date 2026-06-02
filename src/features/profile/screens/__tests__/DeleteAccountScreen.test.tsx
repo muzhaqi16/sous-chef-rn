@@ -11,20 +11,12 @@ import { DeleteAccountScreen } from '../DeleteAccountScreen';
 import type { BaseInputProps } from '#components/atoms/BaseInput/BaseInput';
 import type { LoadingProps } from '#components/base/Loading';
 
-const mockLogout = jest.fn();
-
 jest.mock('#hooks/navigation/useAppNavigation');
 const mockNav = (
   jest.requireMock('#hooks/navigation/useAppNavigation') as {
     useAppNavigation: jest.Mock;
   }
 ).useAppNavigation();
-
-jest.mock('#hooks/auth/useAuth', () => ({
-  useAuth: () => ({
-    logout: mockLogout,
-  }),
-}));
 
 jest.mock('#/services/errorService', () => ({
   errorService: {

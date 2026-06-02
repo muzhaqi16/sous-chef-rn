@@ -1,7 +1,7 @@
 # Bootstrap fragment for login/register responses.
 # Spread by: auth.graphql (Login, Register, RefreshToken — 3 operations)
-# Read via cache.readFragment by: useAuthOperations.ts, authService.ts
-# Kept shared — all 5 consumers need the identical bootstrap shape.
+# Read via cache.readFragment by: authService.ts
+# Kept shared — all consumers need the identical bootstrap shape.
 fragment LoginUser on User {
   id
   email

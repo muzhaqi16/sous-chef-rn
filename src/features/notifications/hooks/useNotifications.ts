@@ -22,7 +22,11 @@ import {
   getNotificationAction,
   getNotificationTitle,
 } from '#utils/notifications/notificationHelpers';
-import { NotificationPriority } from '#store/slices/notificationSlice';
+import {
+  NotificationPriority,
+  isNotificationPayload,
+  type NotificationPayload,
+} from '#store/slices/notificationSlice';
 import {
   handleSubscriptionError,
   clearAllRetryStates,
@@ -127,13 +131,19 @@ export const useNotifications = (config: NotificationConfig = {}) => {
       title?: string;
       message?: string;
       priority?: NotificationPriority;
-      payload?: Record<string, unknown> | null;
+      payload?: JsonValue | null;
       sentAt?: string;
       expiresAt?: string | null;
     },
     category: NotificationCategory,
     sourceUserId?: string,
   ) => {
+    // Narrow the untyped JSON payload to NotificationPayload at the boundary.
+    const payload: NotificationPayload = isNotificationPayload(
+      notification.payload,
+    )
+      ? notification.payload
+      : {};
     if (!finalConfig.showInAppNotifications) return;
 
     // Filter out notifications triggered by the current user
@@ -157,13 +167,13 @@ export const useNotifications = (config: NotificationConfig = {}) => {
       message: notification.message || '',
       category,
       priority: notification.priority ?? NotificationPriority.MEDIUM,
-      payload: notification.payload || {},
+      payload,
       sentAt: notification.sentAt || new Date().toISOString(),
       expiresAt: notification.expiresAt,
       isRead: false,
       requiresAction,
       actionType,
-      actionData: notification.payload ?? undefined,
+      actionData: payload,
     };
 
     addNotification(processedNotification);
