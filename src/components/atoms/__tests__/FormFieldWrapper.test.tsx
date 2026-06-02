@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
-import { Text } from 'react-native';
 import { FormFieldWrapper } from '../FormFieldWrapper';
+import { Text } from '#components/atoms/Text';
 
 describe('FormFieldWrapper', () => {
   it('renders the label text', () => {

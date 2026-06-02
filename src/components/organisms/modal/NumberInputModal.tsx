@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Modal, TextInput } from 'react-native';
+import { View, Modal, TextInput } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { AppPressable } from '#components/atoms/AppPressable';
+import { Text } from '#components/atoms/Text';
 import { StyleSheet } from 'react-native-unistyles';
 import { commonStyles } from '#/styles/commonStyles';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';

@@ -1,12 +1,6 @@
 import React from 'react';
-import { Text } from 'react-native';
-import {
-  render,
-  screen,
-  fireEvent,
-  userEvent,
-} from '@testing-library/react-native';
-import { SettingRow } from '../SettingRow';
+import { render, screen, fireEvent } from '@testing-library/react-native';
+import { Text } from '#components/atoms/Text';
 import { SettingSection } from '../SettingSection';
 import { SettingSwitch } from '../SettingSwitch';
 
@@ -41,64 +35,6 @@ jest.mock('#components/base/BaseSwitch', () => {
         testID: testID || 'base-switch',
       }),
   };
-});
-
-describe('SettingRow', () => {
-  const defaultProps = {
-    title: 'Dark Mode',
-    onPress: jest.fn(),
-  };
-
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it('renders title', () => {
-    render(<SettingRow {...defaultProps} />);
-    expect(screen.getByText('Dark Mode')).toBeTruthy();
-  });
-
-  it('renders description when provided', () => {
-    render(<SettingRow {...defaultProps} description="Enable dark theme" />);
-    expect(screen.getByText('Enable dark theme')).toBeTruthy();
-  });
-
-  it('does not render description when not provided', () => {
-    render(<SettingRow {...defaultProps} />);
-    expect(screen.queryByText('Enable dark theme')).toBeNull();
-  });
-
-  it('renders value when provided', () => {
-    render(<SettingRow {...defaultProps} value="On" />);
-    expect(screen.getByText('On')).toBeTruthy();
-  });
-
-  it('renders icon when provided', () => {
-    render(<SettingRow {...defaultProps} icon="moon-outline" />);
-    expect(screen.getByTestId('icon-moon-outline')).toBeTruthy();
-  });
-
-  it('renders arrow by default', () => {
-    render(<SettingRow {...defaultProps} />);
-    expect(screen.getByTestId('icon-chevron-right')).toBeTruthy();
-  });
-
-  it('does not render arrow when showArrow is false', () => {
-    render(<SettingRow {...defaultProps} showArrow={false} />);
-    expect(screen.queryByTestId('icon-chevron-right')).toBeNull();
-  });
-
-  it('calls onPress when pressed', async () => {
-    const user = userEvent.setup();
-    render(<SettingRow {...defaultProps} />);
-    await user.press(screen.getByText('Dark Mode'));
-    expect(defaultProps.onPress).toHaveBeenCalled();
-  });
-
-  it('renders when disabled', () => {
-    render(<SettingRow {...defaultProps} disabled />);
-    expect(screen.getByText('Dark Mode')).toBeTruthy();
-  });
 });
 
 describe('SettingSection', () => {

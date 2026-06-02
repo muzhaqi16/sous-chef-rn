@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import {
   View,
-  Text,
   Image,
   Dimensions,
   Platform,
   ScrollView,
   Linking,
 } from 'react-native';
+import { Text } from '#components/atoms/Text';
 import { getWebAppUrl } from '#utils/environment';
 import { PrimaryActivityIndicator } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';

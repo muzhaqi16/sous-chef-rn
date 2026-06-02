@@ -1,8 +1,8 @@
 'use no memo';
 
 import React from 'react';
-import { Text } from 'react-native';
 import { render } from '@testing-library/react-native';
+import { Text } from '#components/atoms/Text';
 import type { FragmentType } from '@apollo/client/masking';
 import { SortableShoppingList } from '../../../../src/features/shoppingList/components/SortableShoppingList/SortableList';
 import type { ShoppingListRowItem } from '../../../../src/features/shoppingList/components/SortableShoppingList/types';

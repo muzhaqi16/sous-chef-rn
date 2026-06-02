@@ -1,13 +1,8 @@
 import { BackButton } from '#components/atoms/BackButton';
 import React, { ReactNode } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  View,
-  Text,
-  ScrollView,
-} from 'react-native';
+import { KeyboardAvoidingView, Platform, View, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Text } from '#components/atoms/Text';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { OnboardingSteps } from '#components/navigation/OnboardingSteps/OnboardingSteps';
 import { OnboardingNavigation } from '#components/navigation/OnboardingNavigation/OnboardingNavigation';

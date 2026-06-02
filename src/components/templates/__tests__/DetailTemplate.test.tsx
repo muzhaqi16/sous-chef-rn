@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
-import { Text } from 'react-native';
+import { Text } from '#components/atoms/Text';
 import { DetailTemplate } from '../DetailTemplate';
 import type { HeaderAction } from '../../molecules/Header';
 import type { IconName } from '#utils/iconUtils';

@@ -165,6 +165,19 @@ module.exports = {
         ],
       },
     },
+    {
+      // The canonical re-export / wrapper atoms MUST import the RN primitives
+      // they re-export (themedComponents → Pressable; Text → RN Text). They
+      // contain no other restricted imports, so the rule is off for just these
+      // two files. The exemption lives in config — no inline eslint-disable.
+      files: [
+        'src/components/atoms/themedComponents.tsx',
+        'src/components/atoms/Text.tsx',
+      ],
+      rules: {
+        'no-restricted-imports': 'off',
+      },
+    },
   ],
   rules: {
     // Prevent barrel file imports for better tree shaking
@@ -194,8 +207,17 @@ module.exports = {
         paths: [
           {
             name: 'react-native',
-            importNames: ['StyleSheet'],
-            message: 'Import StyleSheet from "react-native-unistyles" instead.',
+            importNames: [
+              'StyleSheet',
+              'Text',
+              'Pressable',
+              'TouchableOpacity',
+              'TouchableHighlight',
+              'TouchableNativeFeedback',
+              'TouchableWithoutFeedback',
+            ],
+            message:
+              'Use the project re-exports/atoms for app-wide consistency: StyleSheet → "react-native-unistyles"; Text → "#components/atoms/Text" (variant/tone/weight typography with consistent line-heights); Pressable → "#components/atoms/themedComponents" (or AppPressable/PressableScale for press feedback, or react-native-gesture-handler\'s Pressable for gesture composition). Touchables are deprecated — use Pressable. For RN Text/Pressable *types*, import `type { TextProps, TextStyle, PressableProps }` (type-only imports are fine).',
           },
           {
             name: 'react',

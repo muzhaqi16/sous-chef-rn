@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import {
   OnPrimaryActivityIndicator,
   Pressable,
 } from '#components/atoms/themedComponents';
+import { Text } from '#components/atoms/Text';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { FlashList, type ListRenderItemInfo } from '@shopify/flash-list';

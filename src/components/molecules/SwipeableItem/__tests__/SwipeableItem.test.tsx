@@ -1,8 +1,8 @@
 'use no memo';
 import React from 'react';
-import { Text } from 'react-native';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import { SwipeableItem } from '../SwipeableItem';
+import { Text } from '#components/atoms/Text';
 
 type TestInstance = ReturnType<typeof screen.getByTestId>;
 

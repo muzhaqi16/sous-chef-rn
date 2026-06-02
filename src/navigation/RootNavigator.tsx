@@ -30,6 +30,8 @@ import { EmailVerificationDeepLinkScreen } from '#screens/auth/EmailVerification
 import { ResetPasswordScreen } from '#screens/auth/ResetPasswordScreen';
 import { AcceptInvite } from '#features/shoppingList/screens/AcceptInvite';
 import { JoinByShareCodeScreen } from '#features/shoppingList/screens/JoinByShareCodeScreen';
+import { JoinHomeByCodeScreen } from '#screens/home/JoinHomeByCodeScreen';
+import { JoinByLinkScreen } from '#screens/home/JoinByLinkScreen';
 
 // Lazy-loaded screens (infrequently visited, reduces cold start JS parsing)
 const ProfilePhotoUploadScreen = React.lazy(
@@ -251,6 +253,16 @@ const RootStack = createNativeStackNavigator({
         JoinByShareCode: createNativeStackScreen({
           screen: JoinByShareCodeScreen,
           linking: 'join-list/:shareCode',
+        }),
+        JoinHomeByCode: createNativeStackScreen({
+          screen: JoinHomeByCodeScreen,
+          linking: 'join-home/:joinCode?',
+        }),
+        // Generic anyone-with-link entry: resolves the code's type via
+        // resolveShareLink and replaces itself with the matching join screen.
+        JoinByLink: createNativeStackScreen({
+          screen: JoinByLinkScreen,
+          linking: 'join/:code',
         }),
         // Catch-all (must be last)
         NotFound: createNativeStackScreen({

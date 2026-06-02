@@ -1,6 +1,8 @@
 import React, { useEffect } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View } from 'react-native';
 import { render, screen, userEvent, act } from '@testing-library/react-native';
+import { Text } from '#components/atoms/Text';
+import { Pressable } from '#components/atoms/themedComponents';
 import {
   OverlayBackdropProvider,
   useOverlayBackdrop,

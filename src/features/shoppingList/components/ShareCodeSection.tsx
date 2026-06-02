@@ -16,11 +16,14 @@ import {
 } from '#/utils/compilerSafeWrappers';
 import { alertService } from '#/services/alertService';
 import { getFormAnimationPreset } from '#/constants/animations';
+import { buildJoinListUrl, shareUrl } from '#/utils/deepLinkUrls';
 
 interface ShareCodeSectionProps {
   listId: string;
   isPublic: boolean;
   shareCode: string | null | undefined;
+  /** Server-built universal share link; falls back to the client builder. */
+  shareLinkUrl?: string | null;
 }
 
 /**
@@ -32,6 +35,7 @@ export const ShareCodeSection: React.FC<ShareCodeSectionProps> = ({
   listId,
   isPublic,
   shareCode,
+  shareLinkUrl,
 }) => {
   const { t } = useTranslation();
   const [shareShoppingList] = useMutation(ShareShoppingListDocument);
@@ -82,6 +86,14 @@ export const ShareCodeSection: React.FC<ShareCodeSectionProps> = ({
     if (shareCode) {
       Clipboard.setString(shareCode);
       setCopied(true);
+    }
+  };
+
+  const handleShareLink = () => {
+    if (shareCode) {
+      // Prefer the server-built link; fall back to the client builder.
+      const url = shareLinkUrl ?? buildJoinListUrl(shareCode);
+      void shareUrl(url, t('shoppingListScreens.shareLinkMessage'));
     }
   };
 
@@ -150,6 +162,15 @@ export const ShareCodeSection: React.FC<ShareCodeSectionProps> = ({
                   : t('shoppingListScreens.copy')}
               </Text>
             </View>
+          </AppPressable>
+          <AppPressable
+            style={styles.shareLinkButton}
+            onPress={handleShareLink}
+          >
+            <Icon name="share-outline" size={18} tone="primary" />
+            <Text style={styles.shareLinkText}>
+              {t('shoppingListScreens.shareLink')}
+            </Text>
           </AppPressable>
         </Animated.View>
       ) : null}
@@ -249,6 +270,21 @@ const styles = StyleSheet.create(theme => ({
   },
   copyTextCopied: {
     color: theme.colors.success,
+  },
+  shareLinkButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing.xs,
+    marginTop: theme.spacing.sm,
+    paddingVertical: theme.spacing['3'],
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radii.sm,
+  },
+  shareLinkText: {
+    fontSize: theme.typography.fontSize.md,
+    color: theme.colors.primary,
+    fontWeight: theme.fonts.weight.medium,
   },
   pressed: {
     opacity: theme.opacity.pressed,

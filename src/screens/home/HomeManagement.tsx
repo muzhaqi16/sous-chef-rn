@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import { View, ScrollView } from 'react-native';
+import { Text } from '#components/atoms/Text';
 import { useTranslation } from 'react-i18next';
 import {
   PrimaryActivityIndicator,

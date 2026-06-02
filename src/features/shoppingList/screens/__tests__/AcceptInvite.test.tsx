@@ -22,6 +22,10 @@ import {
   AcceptHomeInviteDocument,
   DeclineHomeInviteDocument,
 } from '#operations/home/home.generated';
+import {
+  GetHomeInviteByTokenDocument,
+  GetShoppingListInviteByTokenDocument,
+} from '../AcceptInvite.generated';
 
 // Mock token scheduler / refreshToken
 jest.mock('#/apollo/links/tokenScheduler');
@@ -191,6 +195,70 @@ function buildHomeInvitesMock(
 const buildEmptyShoppingListInvitesMock = () =>
   buildShoppingListInvitesMock([]);
 const buildEmptyHomeInvitesMock = () => buildHomeInvitesMock([]);
+
+function buildHomeInviteByTokenMock(
+  token: string,
+  homeName: string | null,
+): MockedResponse {
+  return {
+    request: { query: GetHomeInviteByTokenDocument, variables: { token } },
+    result: {
+      data: {
+        homeInviteByToken: homeName
+          ? {
+              __typename: 'HomeInvite',
+              id: 'home-invite-9',
+              role: MembershipRole.Member,
+              home: { __typename: 'Home', id: 'home-9', name: homeName },
+              inviter: {
+                __typename: 'User',
+                id: 'inviter-9',
+                email: 'owner@test.com',
+                profile: null,
+              },
+            }
+          : null,
+      },
+    },
+    maxUsageCount: 10,
+  };
+}
+
+function buildShoppingListInviteByTokenMock(
+  token: string,
+  listName: string | null,
+): MockedResponse {
+  return {
+    request: {
+      query: GetShoppingListInviteByTokenDocument,
+      variables: { token },
+    },
+    result: {
+      data: {
+        shoppingListInviteByToken: listName
+          ? {
+              __typename: 'ShoppingListCollaborator',
+              id: 'list-invite-9',
+              role: CollaboratorRole.Editor,
+              invitedBy: {
+                __typename: 'User',
+                id: 'inviter-9',
+                email: 'host@test.com',
+                profile: null,
+              },
+              shoppingList: {
+                __typename: 'ShoppingList',
+                id: 'list-9',
+                name: listName,
+                description: null,
+              },
+            }
+          : null,
+      },
+    },
+    maxUsageCount: 10,
+  };
+}
 
 function buildAcceptShoppingListInviteMock(token: string): MockedResponse {
   return {
@@ -768,6 +836,43 @@ describe('AcceptInvite', () => {
         expect.any(Array),
       ),
     );
+  });
+
+  it('resolves a home invite from a token deep link with no inviteId', async () => {
+    const { useRoute } = jest.requireMock('@react-navigation/native');
+    useRoute.mockReturnValue({ params: { token: 'home-token' } });
+    const tree = renderWithApollo(<AcceptInvite />, {
+      operationMocks: [
+        buildEmptyShoppingListInvitesMock(),
+        buildEmptyHomeInvitesMock(),
+        buildHomeInviteByTokenMock('home-token', 'Beach House'),
+        buildShoppingListInviteByTokenMock('home-token', null),
+      ],
+    });
+    await waitFor(() =>
+      expect(tree.getByText("You've been invited!")).toBeTruthy(),
+    );
+    expect(tree.getByText('Beach House')).toBeTruthy();
+    useRoute.mockReturnValue({ params: { inviteId: 'invite-1' } });
+  });
+
+  it('resolves a shopping-list invite from a token deep link with no inviteId', async () => {
+    const { useRoute } = jest.requireMock('@react-navigation/native');
+    useRoute.mockReturnValue({ params: { token: 'list-token' } });
+    const tree = renderWithApollo(<AcceptInvite />, {
+      operationMocks: [
+        buildEmptyShoppingListInvitesMock(),
+        buildEmptyHomeInvitesMock(),
+        buildHomeInviteByTokenMock('list-token', null),
+        buildShoppingListInviteByTokenMock('list-token', 'Camping Trip'),
+      ],
+    });
+    await waitFor(() =>
+      expect(tree.getByText("You've been invited!")).toBeTruthy(),
+    );
+    expect(tree.getByText('Camping Trip')).toBeTruthy();
+    expect(tree.getByText(/collaborate on/)).toBeTruthy();
+    useRoute.mockReturnValue({ params: { inviteId: 'invite-1' } });
   });
 
   it('shows "join" text for home invite and "collaborate on" for shopping list', async () => {

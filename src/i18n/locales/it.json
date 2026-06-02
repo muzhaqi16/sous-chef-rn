@@ -475,6 +475,17 @@
     "recipesToTry": "Ricette da provare"
   },
   "shoppingListScreens": {
+    "joinTitle": "Unisciti alla lista",
+    "joinEnterCodeTitle": "Inserisci il codice",
+    "joinEnterCodeDescription": "Inserisci il codice che hai ricevuto per unirti a una lista della spesa.",
+    "joinCodePlaceholder": "Inserisci il codice",
+    "joinEmptyCodeError": "Inserisci un codice",
+    "joinButton": "Unisciti alla lista",
+    "joinFailed": "Impossibile unirsi alla lista. Il codice potrebbe non essere valido o scaduto.",
+    "joinedToast": "Ti sei unito a \"{{name}}\"",
+    "listFallback": "Lista della spesa",
+    "shareLink": "Condividi link",
+    "shareLinkMessage": "Unisciti alla mia lista della spesa",
     "createNewList": "Crea nuova lista",
     "listSettings": "Impostazioni lista",
     "listInfo": "Info lista",
@@ -1128,6 +1139,24 @@
     "selectRole": "Seleziona ruolo"
   },
   "invitationAcceptance": {
+    "successTitle": "Successo",
+    "invalidInvitation": "Invito non valido",
+    "shoppingListAccepted": "Invito alla lista della spesa accettato!",
+    "homeAccepted": "Invito alla casa accettato!",
+    "unknownType": "Tipo di invito sconosciuto",
+    "declineConfirm": "Sei sicuro di voler rifiutare questo invito?",
+    "declineFailedShort": "Impossibile rifiutare l'invito",
+    "loadingMessage": "Caricamento",
+    "notFound": "Invito non trovato o scaduto",
+    "loadingDetails": "Caricamento dettagli dell'invito...",
+    "invitedHeading": "Sei stato invitato!",
+    "someone": "Qualcuno",
+    "homeInviteText": "{{inviter}} ti ha invitato a unirti",
+    "listInviteText": "{{inviter}} ti ha invitato a collaborare a",
+    "resourceHome": "Casa",
+    "resourceList": "Lista della spesa",
+    "roleLabel": "Ruolo: {{role}}",
+    "descriptionLabel": "Descrizione:",
     "acceptFailed": "Impossibile accettare l'invito. Riprova.",
     "declineFailed": "Impossibile rifiutare l'invito. Riprova."
   },
@@ -1902,6 +1931,8 @@
     "cardMembersSectionTitle": "Membri"
   },
   "homeDetail": {
+    "shareLink": "Condividi link",
+    "shareLinkMessage": "Unisciti alla mia casa",
     "title": "Dettagli Casa",
     "loadingMessage": "Caricamento",
     "errorFailedToLoad": "Caricamento dei dettagli della casa non riuscito",
@@ -1924,6 +1955,36 @@
     "ownerCannotLeaveTitle": "Impossibile Lasciare",
     "ownerCannotLeaveMessage": "I proprietari non possono lasciare la casa. Trasferisci la proprietà a un altro membro o elimina la casa.",
     "selectRoleLabel": "Seleziona Ruolo"
+  },
+  "joinHome": {
+    "homeFallback": "Casa",
+    "title": "Unisciti alla Casa",
+    "enterCodeTitle": "Inserisci il Codice",
+    "enterCodeDescription": "Inserisci il codice di accesso che hai ricevuto per unirti a una casa.",
+    "codePlaceholder": "Inserisci il codice di accesso",
+    "emptyCodeError": "Inserisci un codice di accesso",
+    "findHome": "Trova Casa",
+    "notFoundTitle": "Casa non trovata",
+    "notFoundDescription": "Non abbiamo trovato una casa per quel codice. Potrebbe non essere valido o il codice potrebbe essere stato disattivato.",
+    "tryDifferentCode": "Prova un altro codice",
+    "invitedToJoin": "Sei stato invitato a unirti a",
+    "joinButton": "Unisciti alla Casa",
+    "enterDifferentCode": "Inserisci un altro codice",
+    "joinFailed": "Impossibile unirsi alla casa. Il codice potrebbe non essere valido o scaduto.",
+    "joinedToast": "Ti sei unito a \"{{name}}\"",
+    "memberCount_one": "{{count}} membro",
+    "memberCount_other": "{{count}} membri",
+    "pantryCount_one": "{{count}} dispensa",
+    "pantryCount_other": "{{count}} dispense"
+  },
+  "joinLink": {
+    "title": "Apri link",
+    "invalidTitle": "Link non trovato",
+    "invalidDescription": "Questo link non è valido o è scaduto.",
+    "signInHome": "Accedi per unirti a questa casa.",
+    "signInList": "Accedi per unirti a questa lista.",
+    "staleHome": "Questo link di invito alla casa è scaduto. Richiedi un nuovo link per unirti.",
+    "staleList": "Questo link di invito alla lista è scaduto. Richiedi un nuovo link per unirti."
   },
   "roles": {
     "owner": "Proprietario",

@@ -63,6 +63,10 @@ export function useAppNavigation() {
       navigation.navigate('ResetPassword', { token }),
     toAcceptInvitation: (token: string) =>
       navigation.navigate('AcceptInvitation', { token }),
+    toJoinHomeByCode: (joinCode?: string) =>
+      navigation.navigate('JoinHomeByCode', joinCode ? { joinCode } : {}),
+    toJoinByShareCode: (shareCode: string) =>
+      navigation.navigate('JoinByShareCode', { shareCode }),
 
     // ─── Main-app root screens ────────────────────────────────────────────
     toProfile: () => navigation.navigate('Profile'),

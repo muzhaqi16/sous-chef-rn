@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Controller, type Control } from 'react-hook-form';
 import { StyleSheet } from 'react-native-unistyles';
+import { Text } from '#components/atoms/Text';
 import { FormInput } from '#components/molecules/FormInput';
 import { UnitAutocompleteField } from '#components/molecules/AutocompleteField/UnitAutocompleteField';
 import { FieldRow } from '#components/molecules/FieldRow';

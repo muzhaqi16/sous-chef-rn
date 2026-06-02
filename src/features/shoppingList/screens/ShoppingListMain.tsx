@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { useRoute } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
 import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
 import { SearchBar } from '#components/molecules/SearchBar';
@@ -11,6 +12,7 @@ import { ShoppingListSkeleton } from '#components/base/Skeleton/ShoppingListSkel
 import { TabMainScreen } from '#components/templates/TabMainScreen';
 
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { useStore } from '#store';
 import { useShoppingListScreen } from '#features/shoppingList/hooks/useShoppingListScreen';
 import { ShoppingListModalsProvider } from '#features/shoppingList/context/ShoppingListModalsContext';
 import { ShoppingListTutorialProvider } from '#features/shoppingList/context/ShoppingListTutorialContext';
@@ -24,6 +26,19 @@ import { ShoppingListMainContent } from './ShoppingListMainContent';
  */
 const ShoppingListMainInner: React.FC = () => {
   const { toListSettings } = useAppNavigation();
+
+  // Deep link `shopping/:listId` selects that list; the selection store drives
+  // which list `useShoppingListScreen` resolves. RN's global param-list
+  // registration types tab-route params as `object`, so read the segment off
+  // the route directly.
+  const route = useRoute();
+  const deepLinkedListId = (route.params as { listId?: string } | undefined)
+    ?.listId;
+  useEffect(() => {
+    if (deepLinkedListId) {
+      useStore.getState().setSelectedShoppingListId(deepLinkedListId);
+    }
+  }, [deepLinkedListId]);
 
   // --- Screen Data Hook ---
   const screenData = useShoppingListScreen();

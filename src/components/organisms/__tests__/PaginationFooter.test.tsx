@@ -1,7 +1,8 @@
 import React from 'react';
-import { ActivityIndicator, View, Text } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 import { render } from '@testing-library/react-native';
 import { PaginationFooter } from '../PaginationFooter';
+import { Text } from '#components/atoms/Text';
 
 const MockSkeleton: React.FC<{ animated?: boolean }> = ({ animated }) => (
   <View testID="skeleton-item">

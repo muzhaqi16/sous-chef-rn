@@ -10,6 +10,8 @@ const mockToAuth = jest.fn();
 const mockToEmailVerification = jest.fn();
 const mockToResetPassword = jest.fn();
 const mockToAcceptInvitation = jest.fn();
+const mockToJoinHomeByCode = jest.fn();
+const mockToJoinByShareCode = jest.fn();
 
 jest.mock('#hooks/navigation/useAppNavigation', () => ({
   useAppNavigation: () => ({
@@ -17,6 +19,8 @@ jest.mock('#hooks/navigation/useAppNavigation', () => ({
     toEmailVerification: mockToEmailVerification,
     toResetPassword: mockToResetPassword,
     toAcceptInvitation: mockToAcceptInvitation,
+    toJoinHomeByCode: mockToJoinHomeByCode,
+    toJoinByShareCode: mockToJoinByShareCode,
   }),
 }));
 
@@ -181,6 +185,69 @@ describe('useDeepLinkRouter', () => {
     });
 
     expect(toastService.error).toHaveBeenCalled();
+  });
+
+  it('queues a join_home code and routes to auth when logged out', () => {
+    // Hydrated but unauthenticated (no user/accessToken).
+    const { useAppStore, useIsHydrated } =
+      jest.requireMock('#store/useAppStore');
+    useAppStore.mockImplementation(
+      <T>(selector: (state: RootState) => T): T =>
+        selector({
+          isHydrated: true,
+          pendingDeepLinkAction: null,
+          setPendingDeepLinkAction: mockSetPending,
+          clearPendingDeepLinkAction: mockClearPending,
+        } as Partial<RootState> as RootState),
+    );
+    useIsHydrated.mockReturnValue(true);
+
+    const { result } = renderHook(() => useDeepLinkRouter());
+
+    act(() => {
+      result.current.triggerDeepLinkAction({
+        type: 'join_home',
+        code: 'HOME123',
+        timestamp: Date.now(),
+      });
+    });
+
+    expect(mockSetPending).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'join_home', code: 'HOME123' }),
+    );
+    expect(mockToAuth).toHaveBeenCalled();
+    expect(mockToJoinHomeByCode).not.toHaveBeenCalled();
+  });
+
+  it('replays a pending join_list once authenticated', () => {
+    const { useAppStore, useIsHydrated } =
+      jest.requireMock('#store/useAppStore');
+    useAppStore.mockImplementation(
+      <T>(selector: (state: RootState) => T): T =>
+        selector({
+          isHydrated: true,
+          user: {
+            id: 'u1',
+            email: 'a@b.c',
+            emailVerified: true,
+            onBoarded: true,
+          },
+          accessToken: 'token',
+          pendingDeepLinkAction: {
+            type: 'join_list',
+            code: 'LIST123',
+            timestamp: Date.now(),
+          },
+          setPendingDeepLinkAction: mockSetPending,
+          clearPendingDeepLinkAction: mockClearPending,
+        } as Partial<RootState> as RootState),
+    );
+    useIsHydrated.mockReturnValue(true);
+
+    renderHook(() => useDeepLinkRouter());
+
+    expect(mockToJoinByShareCode).toHaveBeenCalledWith('LIST123');
+    expect(mockClearPending).toHaveBeenCalled();
   });
 
   it('rejects tokens with wrong type', () => {

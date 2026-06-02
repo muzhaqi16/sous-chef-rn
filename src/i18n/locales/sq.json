@@ -474,6 +474,17 @@
     "recipesToTry": "Recetat për të provuar"
   },
   "shoppingListScreens": {
+    "joinTitle": "Bashkohu me listën",
+    "joinEnterCodeTitle": "Fut kodin",
+    "joinEnterCodeDescription": "Fut kodin që more për t'u bashkuar me një listë blerjesh.",
+    "joinCodePlaceholder": "Fut kodin",
+    "joinEmptyCodeError": "Të lutemi fut një kod",
+    "joinButton": "Bashkohu me listën",
+    "joinFailed": "Bashkimi me listën dështoi. Kodi mund të jetë i pavlefshëm ose i skaduar.",
+    "joinedToast": "U bashkove me \"{{name}}\"",
+    "listFallback": "Listë blerjesh",
+    "shareLink": "Ndaj lidhjen",
+    "shareLinkMessage": "Bashkohu me listën time të blerjeve",
     "createNewList": "Krijo listë të re",
     "listSettings": "Cilësimet e listës",
     "listInfo": "Info e listës",
@@ -1127,6 +1138,24 @@
     "selectRole": "Zgjidh rolin"
   },
   "invitationAcceptance": {
+    "successTitle": "Sukses",
+    "invalidInvitation": "Ftesë e pavlefshme",
+    "shoppingListAccepted": "Ftesa për listën e blerjeve u pranua!",
+    "homeAccepted": "Ftesa për shtëpinë u pranua!",
+    "unknownType": "Lloj ftese i panjohur",
+    "declineConfirm": "Je i sigurt që dëshiron ta refuzosh këtë ftesë?",
+    "declineFailedShort": "Refuzimi i ftesës dështoi",
+    "loadingMessage": "Duke ngarkuar",
+    "notFound": "Ftesa nuk u gjet ose ka skaduar",
+    "loadingDetails": "Duke ngarkuar detajet e ftesës...",
+    "invitedHeading": "Je ftuar!",
+    "someone": "Dikush",
+    "homeInviteText": "{{inviter}} të ka ftuar të bashkohesh",
+    "listInviteText": "{{inviter}} të ka ftuar të bashkëpunosh në",
+    "resourceHome": "Shtëpia",
+    "resourceList": "Listë blerjesh",
+    "roleLabel": "Roli: {{role}}",
+    "descriptionLabel": "Përshkrim:",
     "acceptFailed": "Pranimi i ftesës dështoi. Provo sërish.",
     "declineFailed": "Refuzimi i ftesës dështoi. Provo sërish."
   },
@@ -1901,6 +1930,8 @@
     "cardMembersSectionTitle": "Anëtarët"
   },
   "homeDetail": {
+    "shareLink": "Ndaj lidhjen",
+    "shareLinkMessage": "Bashkohu me shtëpinë time",
     "title": "Detajet e Shtëpisë",
     "loadingMessage": "Po ngarkohet",
     "errorFailedToLoad": "Ngarkimi i detajeve të shtëpisë dështoi",
@@ -1923,6 +1954,36 @@
     "ownerCannotLeaveTitle": "Nuk Mund të Largohesh",
     "ownerCannotLeaveMessage": "Pronarët nuk mund të largohen nga shtëpia. Transfero pronësinë tek një anëtar tjetër ose fshi shtëpinë.",
     "selectRoleLabel": "Zgjidh Rolin"
+  },
+  "joinHome": {
+    "homeFallback": "Shtëpia",
+    "title": "Bashkohu me Shtëpinë",
+    "enterCodeTitle": "Fut Kodin e Bashkimit",
+    "enterCodeDescription": "Fut kodin e bashkimit që more për t'u bashkuar me një shtëpi.",
+    "codePlaceholder": "Fut kodin e bashkimit",
+    "emptyCodeError": "Të lutemi fut një kod bashkimi",
+    "findHome": "Gjej Shtëpinë",
+    "notFoundTitle": "Shtëpia nuk u gjet",
+    "notFoundDescription": "Nuk gjetëm një shtëpi për atë kod. Mund të jetë i pavlefshëm ose kodi mund të jetë çaktivizuar.",
+    "tryDifferentCode": "Provo një kod tjetër",
+    "invitedToJoin": "Je ftuar të bashkohesh me",
+    "joinButton": "Bashkohu me Shtëpinë",
+    "enterDifferentCode": "Fut një kod tjetër",
+    "joinFailed": "Bashkimi me shtëpinë dështoi. Kodi mund të jetë i pavlefshëm ose i skaduar.",
+    "joinedToast": "U bashkove me \"{{name}}\"",
+    "memberCount_one": "{{count}} anëtar",
+    "memberCount_other": "{{count}} anëtarë",
+    "pantryCount_one": "{{count}} qilar",
+    "pantryCount_other": "{{count}} qilarë"
+  },
+  "joinLink": {
+    "title": "Hap lidhjen",
+    "invalidTitle": "Lidhja nuk u gjet",
+    "invalidDescription": "Kjo lidhje është e pavlefshme ose ka skaduar.",
+    "signInHome": "Hyr për t'u bashkuar me këtë shtëpi.",
+    "signInList": "Hyr për t'u bashkuar me këtë listë.",
+    "staleHome": "Ky link ftese për shtëpinë ka skaduar. Kërko një link të ri për t'u bashkuar.",
+    "staleList": "Ky link ftese për listën ka skaduar. Kërko një link të ri për t'u bashkuar."
   },
   "roles": {
     "owner": "Pronar",

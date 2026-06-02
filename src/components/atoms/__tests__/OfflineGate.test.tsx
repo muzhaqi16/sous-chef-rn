@@ -1,8 +1,8 @@
 'use no memo';
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
-import { Text } from 'react-native';
 import { OfflineGate } from '../OfflineGate';
+import { Text } from '#components/atoms/Text';
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');

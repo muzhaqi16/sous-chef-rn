@@ -31,6 +31,7 @@ import { SousChefLoader } from '#/components/base/SousChefLoader';
 import { Text } from '#components/atoms/Text';
 import { getInviteDisplayName } from '#/utils/formatters/inviteFormatters';
 import { getMemberDisplayName } from '#/utils/formatters/memberFormatters';
+import { buildJoinHomeUrl, shareUrl } from '#/utils/deepLinkUrls';
 
 type RouteParams = {
   homeId: string;
@@ -84,6 +85,14 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
     if (home?.joinCode) {
       Clipboard.setString(home.joinCode);
       setCopied(true);
+    }
+  };
+
+  const handleShareJoinLink = () => {
+    if (home?.joinCode) {
+      // Prefer the server-built link; fall back to the client builder.
+      const url = home.joinLink?.universal ?? buildJoinHomeUrl(home.joinCode);
+      void shareUrl(url, t('homeDetail.shareLinkMessage'));
     }
   };
 
@@ -214,12 +223,20 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
               <AppPressable
                 style={styles.copyButton}
                 onPress={handleCopyJoinCode}
+                accessibilityLabel={t('homeDetail.labelJoinCode')}
               >
                 <Icon
                   name={copied ? 'checkmark-circle' : 'copy-outline'}
                   size={20}
                   tone={copied ? 'success' : 'textPrimary'}
                 />
+              </AppPressable>
+              <AppPressable
+                style={styles.copyButton}
+                onPress={handleShareJoinLink}
+                accessibilityLabel={t('homeDetail.shareLink')}
+              >
+                <Icon name="share-outline" size={20} tone="primary" />
               </AppPressable>
             </View>
           ) : null}

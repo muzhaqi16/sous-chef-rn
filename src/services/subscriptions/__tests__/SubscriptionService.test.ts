@@ -6,7 +6,20 @@ jest.mock('#/utils/errorSerialization', () => ({
 
 import type { StoreObject } from '@apollo/client';
 import { SubscriptionService } from '../SubscriptionService';
-import { CacheStrategy, LogLevel } from '../types';
+import { CacheStrategy, LogLevel, type SubscriptionConfig } from '../types';
+
+// Production `SubscriptionHandlers` types `onData` as Apollo's `OnDataOptions`
+// and `onError` as `ErrorLike`. These tests exercise the handlers directly with
+// minimal mock payloads/clients, so `reg()` returns this looser view of the
+// handlers (test files may cast mocks). The production types stay strict.
+type LooseHandlers = {
+  onData: (arg: {
+    data: { data?: unknown };
+    client: { cache?: unknown };
+  }) => void;
+  onError: (error: { message?: string }) => void;
+  onComplete: () => void;
+};
 
 describe('SubscriptionService', () => {
   let service: SubscriptionService;
@@ -21,6 +34,10 @@ describe('SubscriptionService', () => {
     service.cleanup();
     jest.useRealTimers();
   });
+
+  // Register + cast to the loose handler view used throughout these tests.
+  const reg = <T>(config: SubscriptionConfig<T>): LooseHandlers =>
+    service.register(config) as unknown as LooseHandlers;
 
   describe('singleton', () => {
     it('getInstance returns same instance', () => {
@@ -142,7 +159,7 @@ describe('SubscriptionService', () => {
         cacheUpdateStrategy: CacheStrategy.NONE,
         enableLogging: false,
       };
-      const handlers = service.register(config);
+      const handlers = reg(config);
 
       expect(handlers).toHaveProperty('onData');
       expect(handlers).toHaveProperty('onError');
@@ -170,7 +187,7 @@ describe('SubscriptionService', () => {
         entityId: 'entity-1',
         customOnData,
       });
-      const handlers = service.register(config);
+      const handlers = reg(config);
 
       service.registerParentDeletion('entity-1');
 
@@ -194,7 +211,7 @@ describe('SubscriptionService', () => {
     it('skips if no subscription data', () => {
       const customOnData = jest.fn();
       const config = createConfig({ customOnData });
-      const handlers = service.register(config);
+      const handlers = reg(config);
 
       handlers.onData({ data: {}, client: { cache: {} } });
       handlers.onData({ data: { data: null }, client: { cache: {} } });
@@ -205,7 +222,7 @@ describe('SubscriptionService', () => {
     it('deduplicates based on timestamp+mutation+userId', () => {
       const customOnData = jest.fn();
       const config = createConfig({ customOnData });
-      const handlers = service.register(config);
+      const handlers = reg(config);
 
       const payload = {
         data: {
@@ -231,7 +248,7 @@ describe('SubscriptionService', () => {
     it('calls customOnData if provided', () => {
       const customOnData = jest.fn();
       const config = createConfig({ customOnData });
-      const handlers = service.register(config);
+      const handlers = reg(config);
 
       handlers.onData({
         data: {
@@ -272,7 +289,7 @@ describe('SubscriptionService', () => {
     it('handles socket closed errors as warnings and does not count as error', () => {
       const customOnError = jest.fn();
       const config = createConfig({ customOnError });
-      const handlers = service.register(config);
+      const handlers = reg(config);
 
       handlers.onError({ message: 'Socket closed' });
 
@@ -283,7 +300,7 @@ describe('SubscriptionService', () => {
     it('counts non-network errors in stats and calls customOnError', () => {
       const customOnError = jest.fn();
       const config = createConfig({ customOnError });
-      const handlers = service.register(config);
+      const handlers = reg(config);
 
       handlers.onError({ message: 'GraphQL validation error' });
 
@@ -313,7 +330,7 @@ describe('SubscriptionService', () => {
 
     it('removes subscription from registry', () => {
       const config = createConfig();
-      const handlers = service.register(config);
+      const handlers = reg(config);
 
       expect(service.getActiveSubscriptions()).toContain('TestSubscription');
 
@@ -327,7 +344,7 @@ describe('SubscriptionService', () => {
     it('calls customOnComplete', () => {
       const customOnComplete = jest.fn();
       const config = createConfig({ customOnComplete });
-      const handlers = service.register(config);
+      const handlers = reg(config);
 
       handlers.onComplete();
 
@@ -355,7 +372,7 @@ describe('SubscriptionService', () => {
     it('clears all tracking data', () => {
       service.registerPendingDelete('item-1', 'parent-1', 'PantryItem');
       service.registerParentDeletion('parent-1');
-      service.register({
+      reg({
         subscriptionName: 'TestSub',
         entityType: 'TestEntity',
         cacheUpdateStrategy: CacheStrategy.NONE,
@@ -378,13 +395,13 @@ describe('SubscriptionService', () => {
 
   describe('getActiveSubscriptions', () => {
     it('returns subscription names', () => {
-      service.register({
+      reg({
         subscriptionName: 'Sub1',
         entityType: 'Entity1',
         cacheUpdateStrategy: CacheStrategy.NONE,
         enableLogging: false,
       });
-      service.register({
+      reg({
         subscriptionName: 'Sub2',
         entityType: 'Entity2',
         cacheUpdateStrategy: CacheStrategy.NONE,
@@ -416,7 +433,7 @@ describe('SubscriptionService', () => {
 
     it('uses Apollo normalization for UPDATE with AUTOMATIC strategy', () => {
       const config = createConfig();
-      const handlers = service.register(config);
+      const handlers = reg(config);
 
       const mockCache = {
         modify: jest.fn(),
@@ -444,7 +461,7 @@ describe('SubscriptionService', () => {
 
     it('handles CREATED mutation with AUTOMATIC strategy - adds to cache', () => {
       const config = createConfig();
-      const handlers = service.register(config);
+      const handlers = reg(config);
 
       const mockCache = {
         modify: jest.fn(),
@@ -471,7 +488,7 @@ describe('SubscriptionService', () => {
 
     it('handles DELETED mutation - evicts from cache', () => {
       const config = createConfig();
-      const handlers = service.register(config);
+      const handlers = reg(config);
 
       const mockCache = {
         modify: jest.fn(),
@@ -501,7 +518,7 @@ describe('SubscriptionService', () => {
 
     it('skips delete when item already evicted', () => {
       const config = createConfig();
-      const handlers = service.register(config);
+      const handlers = reg(config);
 
       const mockCache = {
         modify: jest.fn(),
@@ -529,7 +546,7 @@ describe('SubscriptionService', () => {
 
     it('handles ITEM_ADDED like CREATED', () => {
       const config = createConfig();
-      const handlers = service.register(config);
+      const handlers = reg(config);
 
       const mockCache = { modify: jest.fn() };
       handlers.onData({
@@ -551,7 +568,7 @@ describe('SubscriptionService', () => {
 
     it('handles ITEM_REMOVED like DELETED', () => {
       const config = createConfig();
-      const handlers = service.register(config);
+      const handlers = reg(config);
 
       const mockCache = {
         modify: jest.fn(),
@@ -585,7 +602,7 @@ describe('SubscriptionService', () => {
         cacheFieldName: '',
         cacheUpdateStrategy: CacheStrategy.MANUAL,
       });
-      const handlers = service.register(config);
+      const handlers = reg(config);
 
       handlers.onData({
         data: {
@@ -606,7 +623,7 @@ describe('SubscriptionService', () => {
       const config = createConfig({
         cacheUpdateStrategy: CacheStrategy.MANUAL,
       });
-      const handlers = service.register(config);
+      const handlers = reg(config);
 
       handlers.onData({
         data: {
@@ -625,7 +642,7 @@ describe('SubscriptionService', () => {
 
     it('skips cache update with CacheStrategy.NONE', () => {
       const config = createConfig({ cacheUpdateStrategy: CacheStrategy.NONE });
-      const handlers = service.register(config);
+      const handlers = reg(config);
 
       const mockCache = { modify: jest.fn() };
       handlers.onData({
@@ -647,7 +664,7 @@ describe('SubscriptionService', () => {
 
     it('handles pending delete item in DELETED mutation', () => {
       const config = createConfig();
-      const handlers = service.register(config);
+      const handlers = reg(config);
 
       // Register a pending delete
       service.registerPendingDelete(
@@ -690,7 +707,7 @@ describe('SubscriptionService', () => {
       const config = createConfig({
         cacheUpdateStrategy: CacheStrategy.MANUAL,
       });
-      const handlers = service.register(config);
+      const handlers = reg(config);
 
       handlers.onData({
         data: {
@@ -720,7 +737,7 @@ describe('SubscriptionService', () => {
         cacheUpdateStrategy: CacheStrategy.MANUAL,
         enableLogging: true,
       });
-      const handlers = service.register(config);
+      const handlers = reg(config);
 
       const mockCache = {
         modify: jest.fn(() => {
@@ -746,7 +763,7 @@ describe('SubscriptionService', () => {
   describe('onData handler - deduplication edge cases', () => {
     it('filters empty payload', () => {
       const customOnData = jest.fn();
-      const handlers = service.register({
+      const handlers = reg({
         subscriptionName: 'DedupTest',
         entityType: 'TestEntity',
         enableDeduplication: true,
@@ -771,7 +788,7 @@ describe('SubscriptionService', () => {
       service.markItemReordered('reorder-item');
 
       const customOnData = jest.fn();
-      const handlers = service.register({
+      const handlers = reg({
         subscriptionName: 'SortTest',
         entityType: 'TestEntity',
         enableDeduplication: true,
@@ -802,7 +819,7 @@ describe('SubscriptionService', () => {
       service.markItemReordered('reorder-item-2');
 
       const customOnData = jest.fn();
-      const handlers = service.register({
+      const handlers = reg({
         subscriptionName: 'SortTest2',
         entityType: 'TestEntity',
         enableDeduplication: true,
@@ -830,7 +847,7 @@ describe('SubscriptionService', () => {
     });
 
     it('cleans up old processed mutations when exceeding max', () => {
-      const handlers = service.register({
+      const handlers = reg({
         subscriptionName: 'CleanupTest',
         entityType: 'TestEntity',
         enableDeduplication: true,
@@ -873,7 +890,7 @@ describe('SubscriptionService', () => {
 
     it('treats websocket errors as network (no custom handler called)', () => {
       const customOnError = jest.fn();
-      const handlers = service.register(createConfig({ customOnError }));
+      const handlers = reg(createConfig({ customOnError }));
 
       handlers.onError({ message: 'WebSocket connection failed' });
 
@@ -882,7 +899,7 @@ describe('SubscriptionService', () => {
 
     it('treats connection errors as network', () => {
       const customOnError = jest.fn();
-      const handlers = service.register(createConfig({ customOnError }));
+      const handlers = reg(createConfig({ customOnError }));
 
       handlers.onError({ message: 'Connection lost to server' });
 
@@ -891,7 +908,7 @@ describe('SubscriptionService', () => {
 
     it('treats network word errors as network', () => {
       const customOnError = jest.fn();
-      const handlers = service.register(createConfig({ customOnError }));
+      const handlers = reg(createConfig({ customOnError }));
 
       handlers.onError({ message: 'Network request failed' });
 
@@ -900,7 +917,7 @@ describe('SubscriptionService', () => {
 
     it('handles null error message gracefully', () => {
       const customOnError = jest.fn();
-      const handlers = service.register(createConfig({ customOnError }));
+      const handlers = reg(createConfig({ customOnError }));
 
       handlers.onError({ message: undefined });
 
@@ -911,7 +928,7 @@ describe('SubscriptionService', () => {
   describe('onData handler - node field in payload', () => {
     it('uses node field when item is not present', () => {
       const customOnData = jest.fn();
-      const handlers = service.register({
+      const handlers = reg({
         subscriptionName: 'NodeTest',
         entityType: 'TestEntity',
         enableDeduplication: false,
@@ -943,7 +960,7 @@ describe('SubscriptionService', () => {
 
   describe('register defaults', () => {
     it('uses default values for optional config fields', () => {
-      const handlers = service.register({
+      const handlers = reg({
         subscriptionName: 'DefaultsTest',
         entityType: 'Entity',
       });
@@ -959,7 +976,7 @@ describe('SubscriptionService', () => {
 
   describe('onData handler - error inside handler', () => {
     it('catches errors in onData without crashing', () => {
-      const handlers = service.register({
+      const handlers = reg({
         subscriptionName: 'CrashTest',
         entityType: 'TestEntity',
         enableDeduplication: false,
@@ -1000,7 +1017,7 @@ describe('SubscriptionService', () => {
     });
 
     it('handles COLLABORATOR_ADDED like CREATED', () => {
-      const handlers = service.register(createConfig());
+      const handlers = reg(createConfig());
       const mockCache = { modify: jest.fn() };
       handlers.onData({
         data: {
@@ -1019,7 +1036,7 @@ describe('SubscriptionService', () => {
     });
 
     it('handles COLLABORATOR_REMOVED like DELETED', () => {
-      const handlers = service.register(createConfig());
+      const handlers = reg(createConfig());
       const mockCache = {
         modify: jest.fn(),
         identify: jest.fn(() => 'Collaborator:collab-2'),
@@ -1061,7 +1078,7 @@ describe('SubscriptionService', () => {
     it.each(['ITEM_UPDATED', 'STATUS_CHANGED', 'ITEM_COMPLETED', 'COMPLETED'])(
       'uses Apollo normalization for %s',
       mutation => {
-        const handlers = service.register(createConfig());
+        const handlers = reg(createConfig());
         const mockCache = { modify: jest.fn() };
         handlers.onData({
           data: {

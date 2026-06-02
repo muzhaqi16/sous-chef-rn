@@ -1,6 +1,6 @@
 import React from 'react';
-import { Text } from 'react-native';
 import { render, fireEvent, screen } from '@testing-library/react-native';
+import { Text } from '#components/atoms/Text';
 import { AppPressable } from '../AppPressable';
 import { HapticService } from '#services/haptic/HapticService';
 

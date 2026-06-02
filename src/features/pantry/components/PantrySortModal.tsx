@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, Modal } from 'react-native';
+import { View, Modal } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
+import { Text } from '#components/atoms/Text';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import type { SortOption, SortDirection } from './pantryDisplay/types';

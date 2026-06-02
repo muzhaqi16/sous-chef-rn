@@ -73,7 +73,7 @@ const SegmentedTab = <T extends string>({
     <AppPressable style={styles.segment} onPress={onPress}>
       <Animated.Text
         style={[styles.segmentText, textAnimatedStyle]}
-        numberOfLines={1}
+        numberOfLines={2}
       >
         {formatLabel(option)}
       </Animated.Text>
@@ -198,6 +198,7 @@ const styles = StyleSheet.create(theme => ({
   segmentText: {
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.medium,
+    textAlign: 'center',
   },
   pressed: {
     opacity: theme.opacity.pressed,

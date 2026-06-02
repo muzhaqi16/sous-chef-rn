@@ -2,7 +2,7 @@
 import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
 import { CollapsibleSection } from '../CollapsibleSection';
-import { Text } from 'react-native';
+import { Text } from '#components/atoms/Text';
 
 describe('CollapsibleSection', () => {
   const defaultProps = {

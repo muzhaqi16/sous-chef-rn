@@ -3048,6 +3048,11 @@ export type EffectiveUsageRate = {
   unitName: Maybe<Scalars['String']['output']>;
 };
 
+export type EnableHomeJoinLinkInput = {
+  /** ID of the home to enable the join link for. */
+  id: Scalars['ID']['input'];
+};
+
 /**
  * Base interface for every mutation error variant. Every concrete error
  * type implements this so clients can write a generic
@@ -3517,6 +3522,12 @@ export type Home = {
   isDefault: Scalars['Boolean']['output'];
   isPublic: Scalars['Boolean']['output'];
   joinCode: Maybe<Scalars['String']['output']>;
+  /**
+   * Anyone-with-link join link for this home. Joining the home also grants
+   * access to its pantry, so this doubles as the pantry-share link. Null
+   * unless allowJoinCode is enabled and a joinCode is set.
+   */
+  joinLink: Maybe<ShareLink>;
   lowStockItems: Array<LowStockItem>;
   maxMembers: Maybe<Scalars['Int']['output']>;
   mealPlansConnection: MealPlanConnection;
@@ -3526,7 +3537,11 @@ export type Home = {
   metadata: Maybe<Scalars['JSON']['output']>;
   myMembership: Maybe<Membership>;
   name: Scalars['String']['output'];
+  /** Deep link that opens this home in the app (for existing members). */
+  navigateLink: ShareLink;
   pantriesConnection: PantryConnection;
+  /** Deep link that opens this home's pantry in the app (for existing members). */
+  pantryLink: ShareLink;
   shoppingListsConnection: ShoppingListConnection;
   tags: Array<Scalars['String']['output']>;
   timezone: Maybe<Scalars['String']['output']>;
@@ -5950,6 +5965,12 @@ export type Mutation = {
   duplicateMealPlan: DuplicateMealPlanResult;
   /** Duplicate a template with a new name */
   duplicateTemplate: DuplicateTemplateResult;
+  /**
+   * Enable the anyone-with-link join code for a home (doubles as the
+   * pantry-share link). Idempotent — preserves an existing code so links
+   * already shared keep working. Read the resulting link via home.joinLink.
+   */
+  enableHomeJoinLink: UpdateHomeResult;
   /** Save a recipe as a favorite. */
   favoriteRecipe: FavoriteRecipeResult;
   /** Flag an item for review */
@@ -6046,6 +6067,8 @@ export type Mutation = {
   recordPriceObservation: RecordPriceObservationResult;
   /** Refresh an expired access token using a refresh token. */
   refresh: RefreshTokenPayload;
+  /** Rotate a home's join code, invalidating any previously shared join link. */
+  regenerateHomeJoinCode: UpdateHomeResult;
   /** Register a new user account and return tokens. */
   register: AuthPayload;
   /**
@@ -7647,6 +7670,19 @@ export type MutationDuplicateTemplateArgs = {
  * win, so payload types that genuinely benefit from caching (e.g. read-
  * through reservation tokens) can opt back in.
  */
+export type MutationEnableHomeJoinLinkArgs = {
+  input: EnableHomeJoinLinkInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
 export type MutationFavoriteRecipeArgs = {
   input: FavoriteRecipeInput;
 };
@@ -8091,6 +8127,19 @@ export type MutationRecordPriceObservationArgs = {
  */
 export type MutationRefreshArgs = {
   input: RefreshTokenInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
+export type MutationRegenerateHomeJoinCodeArgs = {
+  input: RegenerateHomeJoinCodeInput;
 };
 
 
@@ -10770,7 +10819,10 @@ export type Query = {
   expirationNotification: Maybe<ExpirationNotification>;
   /** Fetch a single home by its ID. */
   home: Maybe<Home>;
-  /** Fetch a single home by its join code. */
+  /**
+   * Fetch a single home by its join code. Reachable anonymously so a
+   * not-yet-signed-up recipient of a join link can preview the home.
+   */
   homeByJoinCode: Maybe<Home>;
   /** Fetch a home invite by its token for the acceptance flow. */
   homeInviteByToken: Maybe<HomeInvite>;
@@ -10857,6 +10909,12 @@ export type Query = {
   /** Fetch personalized item recommendations for a user. */
   recommendedItems: Array<ItemSuggestion>;
   /**
+   * Resolve an anyone-with-link code (home join code or list share code)
+   * without knowing its type. Returns null when the code matches nothing.
+   * Reachable anonymously so a not-yet-signed-up recipient can preview.
+   */
+  resolveShareLink: Maybe<ResolveShareLinkResult>;
+  /**
    * Get ranked restock-eligible units for a pantry item.
    * Returns units in priority order: tracking unit → curated retail → auto measurement.
    */
@@ -10887,8 +10945,16 @@ export type Query = {
   searchUnits: Array<Unit>;
   /** Fetch a single shopping list by its ID. */
   shoppingList: Maybe<ShoppingList>;
-  /** Fetch a shopping list by its share code. */
+  /**
+   * Fetch a shopping list by its share code. Reachable anonymously so a
+   * not-yet-signed-up recipient of a share link can preview the list.
+   */
   shoppingListByShareCode: Maybe<ShoppingList>;
+  /**
+   * Fetch a shopping list collaborator invite by its token for the
+   * acceptance-flow preview (parity with homeInviteByToken).
+   */
+  shoppingListInviteByToken: Maybe<ShoppingListCollaborator>;
   /** Fetch a single shopping list item by its ID. */
   shoppingListItem: Maybe<ShoppingListItem>;
   /**
@@ -11447,6 +11513,11 @@ export type QueryRecommendedItemsArgs = {
 };
 
 
+export type QueryResolveShareLinkArgs = {
+  code: Scalars['String']['input'];
+};
+
+
 export type QueryRestockUnitsForItemArgs = {
   pantryItemId: Scalars['ID']['input'];
 };
@@ -11503,6 +11574,11 @@ export type QueryShoppingListArgs = {
 
 export type QueryShoppingListByShareCodeArgs = {
   shareCode: Scalars['String']['input'];
+};
+
+
+export type QueryShoppingListInviteByTokenArgs = {
+  token: Scalars['String']['input'];
 };
 
 
@@ -12072,6 +12148,11 @@ export type RefreshTokenPayload = {
   refreshToken: Scalars['String']['output'];
 };
 
+export type RegenerateHomeJoinCodeInput = {
+  /** ID of the home whose join code to rotate. */
+  id: Scalars['ID']['input'];
+};
+
 /** Sub-input for regional/locale settings */
 export type RegionalSettingsInput = {
   language?: InputMaybe<Scalars['String']['input']>;
@@ -12256,6 +12337,30 @@ export type ResetPasswordResponse = {
 export type ResetPasswordWithTokenInput = {
   newPassword: Scalars['String']['input'];
   token: Scalars['String']['input'];
+};
+
+/**
+ * Resolution of a shareable code (home join code or list share code) into a
+ * preview plus the deep link to follow. Lets the app and the web fallback
+ * handle any link without knowing its type up front.
+ */
+export type ResolveShareLinkResult = {
+  __typename: 'ResolveShareLinkResult';
+  /** Whether the (authenticated) caller already has access to this resource. */
+  alreadyMember: Scalars['Boolean']['output'];
+  /** Present when targetType is HOME_JOIN. */
+  homeId: Maybe<Scalars['ID']['output']>;
+  /** Item count (LIST_JOIN only). */
+  itemCount: Maybe<Scalars['Int']['output']>;
+  /** Deep link to follow to join/open the target. */
+  link: ShareLink;
+  /** Present when targetType is LIST_JOIN. */
+  listId: Maybe<Scalars['ID']['output']>;
+  /** Active member count (HOME_JOIN only). */
+  memberCount: Maybe<Scalars['Int']['output']>;
+  /** Display name of the home or list. */
+  name: Scalars['String']['output'];
+  targetType: ShareLinkTargetType;
 };
 
 /** Input for restocking a pantry item - adds quantity and creates ledger record */
@@ -12537,6 +12642,24 @@ export type SetupUnitConversionPayload = {
 
 export type SetupUnitConversionResult = ConflictError | ForbiddenError | NotFoundError | SetupUnitConversionPayload | ValidationError;
 
+/**
+ * A shareable deep link expressed in both forms so clients can choose:
+ * - universal: an https:// Universal Link / App Link (opens the installed app,
+ *   falls back to the web page when the app is absent).
+ * - scheme: a souschef:// custom-scheme URL (force-launches an installed app).
+ */
+export type ShareLink = {
+  __typename: 'ShareLink';
+  scheme: Scalars['String']['output'];
+  universal: Scalars['String']['output'];
+};
+
+/** What kind of resource an anyone-with-link code points at. */
+export enum ShareLinkTargetType {
+  HomeJoin = 'HOME_JOIN',
+  ListJoin = 'LIST_JOIN'
+}
+
 export type ShareShoppingListInput = {
   id: Scalars['ID']['input'];
   isPublic?: InputMaybe<Scalars['Boolean']['input']>;
@@ -12597,6 +12720,8 @@ export type ShoppingList = {
   mealPlan: Maybe<MealPlan>;
   metadata: Maybe<Scalars['JSON']['output']>;
   name: Scalars['String']['output'];
+  /** Deep link that opens this list in the app (for existing collaborators). */
+  navigateLink: ShareLink;
   nextRecurringDate: Maybe<Scalars['DateTime']['output']>;
   ownerships: Array<ShoppingListOwnership>;
   plannedShopDate: Maybe<Scalars['DateTime']['output']>;
@@ -12611,6 +12736,11 @@ export type ShoppingList = {
   reminderEnabled: Scalars['Boolean']['output'];
   shareCode: Maybe<Scalars['String']['output']>;
   shareCount: Scalars['Int']['output'];
+  /**
+   * Anyone-with-link share/join link for this list. Null unless the list is
+   * public (isPublic) and a shareCode is set.
+   */
+  shareLink: Maybe<ShareLink>;
   smartSorting: Scalars['Boolean']['output'];
   sortOrder: Scalars['Int']['output'];
   status: ListStatus;

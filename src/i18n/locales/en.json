@@ -475,6 +475,17 @@
     "recipesToTry": "Recipes to try"
   },
   "shoppingListScreens": {
+    "joinTitle": "Join Shopping List",
+    "joinEnterCodeTitle": "Enter Share Code",
+    "joinEnterCodeDescription": "Enter the share code you received to join a shopping list.",
+    "joinCodePlaceholder": "Enter share code",
+    "joinEmptyCodeError": "Please enter a share code",
+    "joinButton": "Join List",
+    "joinFailed": "Failed to join list. The code may be invalid or expired.",
+    "joinedToast": "Joined \"{{name}}\"",
+    "listFallback": "Shopping List",
+    "shareLink": "Share link",
+    "shareLinkMessage": "Join my shopping list",
     "createNewList": "Create New List",
     "listSettings": "List Settings",
     "listInfo": "List Info",
@@ -1128,6 +1139,24 @@
     "selectRole": "Select Role"
   },
   "invitationAcceptance": {
+    "successTitle": "Success",
+    "invalidInvitation": "Invalid invitation",
+    "shoppingListAccepted": "Shopping list invitation accepted!",
+    "homeAccepted": "Home invitation accepted!",
+    "unknownType": "Unknown invitation type",
+    "declineConfirm": "Are you sure you want to decline this invitation?",
+    "declineFailedShort": "Failed to decline invitation",
+    "loadingMessage": "Loading",
+    "notFound": "Invitation not found or expired",
+    "loadingDetails": "Loading invitation details...",
+    "invitedHeading": "You've been invited!",
+    "someone": "Someone",
+    "homeInviteText": "{{inviter}} has invited you to join",
+    "listInviteText": "{{inviter}} has invited you to collaborate on",
+    "resourceHome": "Home",
+    "resourceList": "Shopping List",
+    "roleLabel": "Role: {{role}}",
+    "descriptionLabel": "Description:",
     "acceptFailed": "Failed to accept invitation. Please try again.",
     "declineFailed": "Failed to decline invitation. Please try again."
   },
@@ -1902,6 +1931,8 @@
     "cardMembersSectionTitle": "Members"
   },
   "homeDetail": {
+    "shareLink": "Share link",
+    "shareLinkMessage": "Join my home",
     "title": "Home Details",
     "loadingMessage": "Loading",
     "errorFailedToLoad": "Failed to load home details",
@@ -1924,6 +1955,36 @@
     "ownerCannotLeaveTitle": "Cannot Leave",
     "ownerCannotLeaveMessage": "Owners cannot leave the home. Please transfer ownership to another member or delete the home.",
     "selectRoleLabel": "Select Role"
+  },
+  "joinHome": {
+    "homeFallback": "Home",
+    "title": "Join Home",
+    "enterCodeTitle": "Enter Join Code",
+    "enterCodeDescription": "Enter the join code you received to join a home.",
+    "codePlaceholder": "Enter join code",
+    "emptyCodeError": "Please enter a join code",
+    "findHome": "Find Home",
+    "notFoundTitle": "Home not found",
+    "notFoundDescription": "We couldn't find a home for that code. It may be invalid or the code may have been turned off.",
+    "tryDifferentCode": "Try a different code",
+    "invitedToJoin": "You've been invited to join",
+    "joinButton": "Join Home",
+    "enterDifferentCode": "Enter a different code",
+    "joinFailed": "Failed to join home. The code may be invalid or expired.",
+    "joinedToast": "Joined \"{{name}}\"",
+    "memberCount_one": "{{count}} member",
+    "memberCount_other": "{{count}} members",
+    "pantryCount_one": "{{count}} pantry",
+    "pantryCount_other": "{{count}} pantries"
+  },
+  "joinLink": {
+    "title": "Open link",
+    "invalidTitle": "Link not found",
+    "invalidDescription": "This link is invalid or has expired.",
+    "signInHome": "Sign in to join this home.",
+    "signInList": "Sign in to join this list.",
+    "staleHome": "This home invite link expired. Ask for a new link to join.",
+    "staleList": "This list invite link expired. Ask for a new link to join."
   },
   "roles": {
     "owner": "Owner",

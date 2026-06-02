@@ -475,6 +475,17 @@
     "recipesToTry": "Recetas para probar"
   },
   "shoppingListScreens": {
+    "joinTitle": "Unirse a la lista",
+    "joinEnterCodeTitle": "Introduce el código",
+    "joinEnterCodeDescription": "Introduce el código que recibiste para unirte a una lista de la compra.",
+    "joinCodePlaceholder": "Introduce el código",
+    "joinEmptyCodeError": "Introduce un código",
+    "joinButton": "Unirse a la lista",
+    "joinFailed": "No se pudo unir a la lista. El código puede no ser válido o haber caducado.",
+    "joinedToast": "Te has unido a \"{{name}}\"",
+    "listFallback": "Lista de la compra",
+    "shareLink": "Compartir enlace",
+    "shareLinkMessage": "Únete a mi lista de la compra",
     "createNewList": "Crear nueva lista",
     "listSettings": "Ajustes de la lista",
     "listInfo": "Información de la lista",
@@ -1128,6 +1139,24 @@
     "selectRole": "Seleccionar rol"
   },
   "invitationAcceptance": {
+    "successTitle": "Éxito",
+    "invalidInvitation": "Invitación no válida",
+    "shoppingListAccepted": "¡Invitación a la lista de la compra aceptada!",
+    "homeAccepted": "¡Invitación al hogar aceptada!",
+    "unknownType": "Tipo de invitación desconocido",
+    "declineConfirm": "¿Seguro que quieres rechazar esta invitación?",
+    "declineFailedShort": "No se pudo rechazar la invitación",
+    "loadingMessage": "Cargando",
+    "notFound": "Invitación no encontrada o caducada",
+    "loadingDetails": "Cargando detalles de la invitación...",
+    "invitedHeading": "¡Has sido invitado!",
+    "someone": "Alguien",
+    "homeInviteText": "{{inviter}} te ha invitado a unirte",
+    "listInviteText": "{{inviter}} te ha invitado a colaborar en",
+    "resourceHome": "Hogar",
+    "resourceList": "Lista de la compra",
+    "roleLabel": "Rol: {{role}}",
+    "descriptionLabel": "Descripción:",
     "acceptFailed": "No se pudo aceptar la invitación. Inténtalo de nuevo.",
     "declineFailed": "No se pudo rechazar la invitación. Inténtalo de nuevo."
   },
@@ -1902,6 +1931,8 @@
     "cardMembersSectionTitle": "Miembros"
   },
   "homeDetail": {
+    "shareLink": "Compartir enlace",
+    "shareLinkMessage": "Únete a mi hogar",
     "title": "Detalles del Hogar",
     "loadingMessage": "Cargando",
     "errorFailedToLoad": "No se pudieron cargar los detalles del hogar",
@@ -1924,6 +1955,36 @@
     "ownerCannotLeaveTitle": "No Puedes Salir",
     "ownerCannotLeaveMessage": "Los propietarios no pueden salir del hogar. Transfiere la propiedad a otro miembro o elimina el hogar.",
     "selectRoleLabel": "Seleccionar Rol"
+  },
+  "joinHome": {
+    "homeFallback": "Hogar",
+    "title": "Unirse al Hogar",
+    "enterCodeTitle": "Introduce el Código",
+    "enterCodeDescription": "Introduce el código de acceso que recibiste para unirte a un hogar.",
+    "codePlaceholder": "Introduce el código de acceso",
+    "emptyCodeError": "Introduce un código de acceso",
+    "findHome": "Buscar Hogar",
+    "notFoundTitle": "Hogar no encontrado",
+    "notFoundDescription": "No pudimos encontrar un hogar para ese código. Puede que no sea válido o que el código se haya desactivado.",
+    "tryDifferentCode": "Probar otro código",
+    "invitedToJoin": "Te han invitado a unirte a",
+    "joinButton": "Unirse al Hogar",
+    "enterDifferentCode": "Introducir otro código",
+    "joinFailed": "No se pudo unir al hogar. El código puede no ser válido o haber caducado.",
+    "joinedToast": "Te has unido a \"{{name}}\"",
+    "memberCount_one": "{{count}} miembro",
+    "memberCount_other": "{{count}} miembros",
+    "pantryCount_one": "{{count}} despensa",
+    "pantryCount_other": "{{count}} despensas"
+  },
+  "joinLink": {
+    "title": "Abrir enlace",
+    "invalidTitle": "Enlace no encontrado",
+    "invalidDescription": "Este enlace no es válido o ha caducado.",
+    "signInHome": "Inicia sesión para unirte a este hogar.",
+    "signInList": "Inicia sesión para unirte a esta lista.",
+    "staleHome": "Este enlace de invitación al hogar ha caducado. Pide un nuevo enlace para unirte.",
+    "staleList": "Este enlace de invitación a la lista ha caducado. Pide un nuevo enlace para unirte."
   },
   "roles": {
     "owner": "Propietario",

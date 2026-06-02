@@ -1,12 +1,12 @@
 import React, { ReactNode, useState } from 'react';
 import {
   View,
-  Text,
   TextInput,
   TextInputProps,
   StyleProp,
   ViewStyle,
 } from 'react-native';
+import { Text } from '#components/atoms/Text';
 
 /** The event passed to TextInput's onFocus/onBlur, derived from RN's own prop type. */
 type TextInputFocusEvent = Parameters<

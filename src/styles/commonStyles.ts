@@ -543,19 +543,6 @@ export const commonStyles = StyleSheet.create(theme => ({
   chipTextSelected: {
     color: theme.colors.chipSelectedText,
   },
-  fab: {
-    position: 'absolute',
-    bottom: theme.spacing['5'],
-    right: theme.spacing['5'],
-    width: 56,
-    height: 56,
-    borderRadius: theme.radii.full,
-    backgroundColor: theme.colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...theme.shadows.lg,
-  },
-
   // ── Typography presets ─────────────────────────────────────────────────
   h1: {
     fontSize: theme.fonts.size['4xl'],

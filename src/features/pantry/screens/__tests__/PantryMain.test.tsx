@@ -21,6 +21,7 @@ jest.mock('#hooks/navigation/useAppNavigation');
 jest.mock('#features/pantry/hooks/usePantryPermissions');
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: jest.fn(),
+  useRoute: jest.fn(() => ({ params: {} })),
 }));
 
 // --- Tab bar ---

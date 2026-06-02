@@ -22,7 +22,9 @@ export const ShoppingListStack = createNativeStackNavigator({
   screens: {
     ShoppingListMain: createNativeStackScreen({
       screen: ShoppingListMain,
-      linking: 'shopping',
+      // `:listId?` selects a specific list on open (souschef://shopping/{listId});
+      // bare `shopping` opens the last-selected list.
+      linking: 'shopping/:listId?',
     }),
     // Wrapped without a `linking` key — intentionally not deep-linkable;
     // reachable only from within the shopping list flow.

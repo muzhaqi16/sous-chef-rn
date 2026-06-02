@@ -1,7 +1,7 @@
 'use no memo';
 import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
-import { Text } from 'react-native';
+import { Text } from '#components/atoms/Text';
 import { OnBoardingWrapper } from '../OnBoardingWrapper';
 
 jest.mock('#/apollo/links/tokenScheduler');

@@ -1,12 +1,7 @@
 import React, { useState } from 'react';
-import {
-  View,
-  KeyboardAvoidingView,
-  Platform,
-  Text,
-  ScrollView,
-} from 'react-native';
+import { View, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useForm, useWatch, type Resolver } from 'react-hook-form';
+import { Text } from '#components/atoms/Text';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { StyleSheet } from 'react-native-unistyles';
 import { PrimaryActivityIndicator } from '#components/atoms/themedComponents';

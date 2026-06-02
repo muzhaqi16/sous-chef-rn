@@ -34,7 +34,7 @@ success toast) is what reads as "not premium." This is **hardening, not a rewrit
 | 5 | List motion (reflow/layout) — **device-tested → reverted** | ⏸️ Blocked (needs data-pipeline rework) |
 | 6 | Scrim / alpha-color token migration (`withAlpha` + named scrims, ~40 files) | ⬜ Not started (deferred from P3) |
 | 7 | Token enforcement — ESLint guards + spacing-scale purification + raw-`Text` migration | ⬜ Not started (deferred from P3, depends on P6) |
-| 8 | **Consistency: canonical `AppPressable`** + full sweep | 🟡 In progress (foundation ✅ device-verified; 119-file sweep pending theme-reactivity device check) |
+| 8 | **Consistency: `AppPressable` + `PressableScale` + `SegmentedControl` reuse + `SettingRow` dedup** | ✅ Done (all device-verified) |
 
 Legend: ⬜ Not started · 🟡 In progress · ✅ Done · ⏸️ Blocked
 
@@ -74,8 +74,55 @@ Three approaches were agent-validated **before** any change (per owner directive
   since `AppPressable` wraps RN `Pressable` — the blessed array-merge pattern). Verifying theme/color
   switching still updates migrated screens on device before declaring the sweep done.
 - Validation so far: typecheck ✅ · lint ✅ (0 errors) · **full suite 5972/5972 ✅**.
-- Known follow-up: 119 now-unused local `pressed: { opacity }` styles remain (harmless, lint-clean) —
-  a second codemod pass can remove them once the sweep is confirmed.
+- **Device-verified ✅:** theme/app-color switching updates migrated screens correctly (reactivity
+  intact) and press feedback is unchanged. Confirms the RN-`Pressable` wrapper keeps Unistyles
+  reactivity. Committed by owner as `92a81e9d "feat: standarize pressable"`.
+- Dead-style cleanup: ran a second conservative codemod — only **1** file (`ExpirationActionSheet`,
+  which also normalized its divergent `opacity: 0.6` → standard `0.7`). The rest of the local
+  `pressed` styles are NOT dead (still used by non-migrated variant/gesture pressables in the same
+  files), so no churn. One-time codemod scripts removed afterward (they tripped the RN
+  `no-restricted-syntax` `.value` rule and were single-use).
+- **Final validation:** typecheck ✅ · lint ✅ (0 errors) · full suite **5972/5972** ✅ · device ✅.
+
+#### T8a-scale — `PressableScale` (scale press feedback) ✅
+**Agent validation refuted the premise:** there are **not 13 scale-press sites — only 2** (`Button`
+the reference, `AddButton` the one clean target). The other ~11 `withSpring`+`scale` hits are *non-press*
+animations (parallax, sliding indicators, value bounces, swipe-progress, pinch) and were correctly
+**excluded** — forcing them onto a press-scale atom would regress (combined worklets, recycling resets,
+RNGH gesture coordination). No card uses scale (the FlashList-leak worry was theoretical).
+- Built `src/components/atoms/PressableScale.tsx` (+ test): `Animated.createAnimatedComponent(RN Pressable)`,
+  spring scale on `onPressIn/Out` (JS-thread — no `scheduleOnRN`/worklet boundary), `activeScale` +
+  opt-in `haptic`; compiler-clean; theme-reactive (same shape `Button` already shipped).
+- Migrated `AddButton` (`activeScale={0.9}`, `haptic="medium"`) and **dogfooded `Button`**
+  (`activeScale={0.97}`, `haptic="light"`) onto it → single source of truth for scale-press mechanics.
+  Per-site scale values preserved (depth is element-size-dependent, unlike the opacity 0.7 normalization).
+- Validation: typecheck ✅ · lint ✅ (0 errors) · full suite **5976/5976** ✅ · **device-verified ✅**
+  (Button scale+light haptic, + FAB scale 0.9+medium haptic + App-Color reactivity — owner confirmed).
+
+**Pressable centralization COMPLETE & device-verified:** `AppPressable` (opacity, 119 sites) +
+`PressableScale` (scale, Button + AddButton + future). RNGH gesture-composition sites stay on RNGH
+`Pressable` by design. One consistent touch model app-wide.
+
+#### T8b — AppearanceScreen → shared `SegmentedControl` ✅
+- Added 2-line label support to the shared `SegmentedTab` (`numberOfLines={2}` + `textAlign:'center'`)
+  — fixes the truncation regression for the 4-segment Font-scale row in SQ/ES/IT/EN.
+- Migrated AppearanceScreen's 3 inline segmented controls (theme/density/font) to the shared
+  component (premium sliding spring indicator + selection haptic); deleted the inline copy + `segStyles`.
+- Validation: my files typecheck-clean · lint 0 errors · full suite **5983/5983** ✅ · **device-verified ✅**.
+
+#### T8c — `SettingRow` dedup ✅
+- Deleted dead `components/settings/SettingRow.tsx` (zero prod consumers) + its test `describe` block.
+- Canonical `molecules/SettingRow`: now renders `item.subtitle` (fixes the latent biometric-subtitle
+  dead data) and fires a gated `selection()` haptic (skips `info`/`switch`/`disabled`).
+- Validation: typecheck-clean · lint 0 errors · full suite ✅ · **device-verified ✅**.
+
+> ⚠️ **Repo typecheck is currently RED from unrelated parallel work** — `useDeepLinkRouter.test.ts:227`
+> (a `Partial<RootState>` cast that broke when `navigationSlice` added `pendingDeepLinkAction`). NOT
+> from the consistency work; flagged to owner. The suggested `as unknown` fix violates the no-`as
+> unknown as` rule — needs proper mock typing.
+
+**Premium-consistency pass essentially complete:** Phases 1–4 + full pressable centralization
+(`AppPressable` + `PressableScale`) + `SegmentedControl` reuse + `SettingRow` dedup.
 
 ---
 

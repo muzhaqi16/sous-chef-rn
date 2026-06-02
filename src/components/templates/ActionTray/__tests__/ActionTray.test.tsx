@@ -1,7 +1,7 @@
 'use no memo';
 import React from 'react';
-import { Text } from 'react-native';
 import { render, screen, act } from '@testing-library/react-native';
+import { Text } from '#components/atoms/Text';
 import { ActionTray } from '../ActionTray';
 import type { ActionTrayContentProps, ActionTrayRef } from '../types';
 

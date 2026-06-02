@@ -5,17 +5,10 @@ import {
   type TextStyle,
   type ViewStyle,
 } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-} from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
-import { SPRING } from '#constants/animations';
 import { RIPPLE } from '#constants/ripple';
 import { Icon } from '#utils/iconUtils';
-import { HapticService } from '#services/haptic/HapticService';
+import { PressableScale } from '#components/atoms/PressableScale';
 import { Text } from '#components/atoms/Text';
 
 interface ButtonProps {
@@ -36,8 +29,6 @@ interface ButtonProps {
   accessibilityHint?: string;
 }
 
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-
 export const Button: React.FC<ButtonProps> = ({
   onPress,
   variant = 'primary',
@@ -55,25 +46,6 @@ export const Button: React.FC<ButtonProps> = ({
   accessibilityLabel,
   accessibilityHint,
 }) => {
-  const scale = useSharedValue(1);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.get() }],
-  }));
-
-  const handlePressIn = () => {
-    scale.set(withSpring(0.97, SPRING.PRESS));
-  };
-
-  const handlePressOut = () => {
-    scale.set(withSpring(1, SPRING.PRESS));
-  };
-
-  const handlePress = () => {
-    HapticService.light();
-    onPress();
-  };
-
   // Use title/children as fallback for accessibility label
   const buttonLabel =
     accessibilityLabel ||
@@ -90,12 +62,11 @@ export const Button: React.FC<ButtonProps> = ({
   });
 
   return (
-    <AnimatedPressable
+    <PressableScale
       testID={testID}
-      style={[styles.button, animatedStyle, style, btnStyle]}
-      onPress={handlePress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
+      style={[styles.button, style, btnStyle]}
+      onPress={onPress}
+      haptic="light"
       disabled={disabled || loading}
       android_ripple={useWhiteRipple ? RIPPLE.PRIMARY : RIPPLE.DEFAULT}
       accessibilityRole="button"
@@ -124,7 +95,7 @@ export const Button: React.FC<ButtonProps> = ({
           <Text style={[styles.text, txtStyle]}>{title || children}</Text>
         </>
       )}
-    </AnimatedPressable>
+    </PressableScale>
   );
 };
 

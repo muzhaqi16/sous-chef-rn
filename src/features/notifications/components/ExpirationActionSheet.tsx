@@ -174,15 +174,19 @@ const styles = StyleSheet.create(theme => ({
   scrollView: {
     flex: 1,
   },
+
   contentContainer: {
     padding: theme.spacing.md,
   },
+
   title: {
     marginBottom: theme.spacing.xs,
   },
+
   subtitle: {
     marginBottom: theme.spacing.md,
   },
+
   optionsList: {
     borderRadius: theme.radii.lg,
     overflow: 'hidden',
@@ -190,6 +194,7 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: 1,
     borderColor: theme.colors.borderLight,
   },
+
   optionButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -204,6 +209,7 @@ const styles = StyleSheet.create(theme => ({
       },
     },
   },
+
   optionLabel: {
     flex: 1,
     variants: {
@@ -211,8 +217,5 @@ const styles = StyleSheet.create(theme => ({
         true: { color: theme.colors.error },
       },
     },
-  },
-  pressed: {
-    opacity: 0.6,
   },
 }));

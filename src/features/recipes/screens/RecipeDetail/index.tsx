@@ -1,13 +1,8 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  ActivityIndicator,
-  Linking,
-  ScrollView,
-} from 'react-native';
+import { View, ActivityIndicator, Linking, ScrollView } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable } from '#components/atoms/themedComponents';
+import { Text } from '#components/atoms/Text';
 import Animated, {
   useAnimatedScrollHandler,
   useSharedValue,

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, RefreshControl, ScrollView } from 'react-native';
+import { View, RefreshControl, ScrollView } from 'react-native';
 import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
+import { Text } from '#components/atoms/Text';
 import { alertService } from '#/services/alertService';
 import Animated from 'react-native-reanimated';
 import { useApolloClient, useFragment, useQuery } from '@apollo/client/react';

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   type NativeSyntheticEvent,
@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useAnimatedReaction } from 'react-native-reanimated';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useRoute } from '@react-navigation/native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
 import { StyleSheet } from 'react-native-unistyles';
@@ -84,6 +84,19 @@ const PantryMainInner: React.FC = () => {
     toPantryItemDetail,
   } = useAppNavigation();
   const { setOverlayOpen, scrollTabBarHidden } = useTabBarSetters();
+
+  // Deep link `pantry?homeId=` switches the active home; `useCurrentPantry`
+  // then resolves that home's default pantry. RN's global param-list
+  // registration types tab-route params as `object`, so read the query param
+  // off the route directly.
+  const route = useRoute();
+  const deepLinkedHomeId = (route.params as { homeId?: string } | undefined)
+    ?.homeId;
+  useEffect(() => {
+    if (deepLinkedHomeId) {
+      useStore.getState().setSelectedHomeId(deepLinkedHomeId);
+    }
+  }, [deepLinkedHomeId]);
 
   // ── Scroll direction tracking (tab bar hide on scroll down) ──
   const {
