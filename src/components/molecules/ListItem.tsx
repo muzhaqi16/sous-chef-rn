@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, TextStyle } from 'react-native';
-import { Pressable, ThemedIcon } from '#components/atoms/themedComponents';
+import { ThemedIcon } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { Icon } from '#utils/iconUtils';
 import { StyleSheet } from 'react-native-unistyles';
 import { Badge } from '../base/Badge';
@@ -118,11 +119,8 @@ const ListItemComponent: React.FC<ListItemProps> = ({
 
     return (
       <View style={styles.container}>
-        <Pressable
-          style={({ pressed }) => [
-            styles.contentContainer,
-            pressed && styles.pressed,
-          ]}
+        <AppPressable
+          style={styles.contentContainer}
           onPress={onPress}
           accessibilityRole="button"
           accessibilityLabel={accessibilityLabel}
@@ -130,7 +128,7 @@ const ListItemComponent: React.FC<ListItemProps> = ({
           accessibilityState={{ disabled: isPurchased }}
         >
           {content}
-        </Pressable>
+        </AppPressable>
       </View>
     );
   }

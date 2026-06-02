@@ -1,6 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import type { IngredientFormState } from '../useRecipeForm';
@@ -24,15 +25,11 @@ export const RecipeIngredientList: React.FC<RecipeIngredientListProps> = ({
       <Text size="lg" weight="semibold" style={styles.sectionTitle}>
         Ingredients ({ingredients.length})
       </Text>
-
       {ingredients.map(ingredient => (
-        <Pressable
+        <AppPressable
           key={ingredient.id}
           onPress={() => onEditIngredient(ingredient)}
-          style={({ pressed }) => [
-            styles.ingredientRow,
-            pressed && styles.pressed,
-          ]}
+          style={styles.ingredientRow}
         >
           <View style={styles.ingredientInfo}>
             <Text size="md" weight="medium">
@@ -53,18 +50,14 @@ export const RecipeIngredientList: React.FC<RecipeIngredientListProps> = ({
           >
             <Icon name="close-circle" size={20} tone="error" />
           </Pressable>
-        </Pressable>
+        </AppPressable>
       ))}
-
-      <Pressable
-        onPress={onAddIngredient}
-        style={({ pressed }) => [styles.addButton, pressed && styles.pressed]}
-      >
+      <AppPressable onPress={onAddIngredient} style={styles.addButton}>
         <Icon name="add-circle-outline" size={20} tone="primary" />
         <Text size="md" weight="medium" tone="accent" style={styles.addText}>
           Add Ingredient
         </Text>
-      </Pressable>
+      </AppPressable>
     </View>
   );
 };

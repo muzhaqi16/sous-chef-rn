@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import {
-  Pressable,
-  WhiteActivityIndicator,
-} from '#components/atoms/themedComponents';
+import { WhiteActivityIndicator } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { FormInput } from './FormInput';
@@ -84,23 +82,17 @@ export const EditableField: React.FC<EditableFieldProps> = ({
           error={error ?? undefined}
         />
         <View style={styles.editActions}>
-          <Pressable
-            style={({ pressed }) => [
-              styles.cancelButton,
-              pressed && styles.pressed,
-            ]}
+          <AppPressable
+            style={styles.cancelButton}
             onPress={handleCancel}
             disabled={saving}
           >
             <Text weight="semibold" tone="secondary">
               Cancel
             </Text>
-          </Pressable>
-          <Pressable
-            style={({ pressed }) => [
-              styles.saveButton,
-              pressed && styles.pressed,
-            ]}
+          </AppPressable>
+          <AppPressable
+            style={styles.saveButton}
             onPress={handleSave}
             disabled={saving}
           >
@@ -111,7 +103,7 @@ export const EditableField: React.FC<EditableFieldProps> = ({
                 Save
               </Text>
             )}
-          </Pressable>
+          </AppPressable>
         </View>
       </View>
     );
@@ -128,15 +120,9 @@ export const EditableField: React.FC<EditableFieldProps> = ({
         </Text>
       </View>
       {!readOnly && (
-        <Pressable
-          style={({ pressed }) => [
-            styles.editIconButton,
-            pressed && styles.pressed,
-          ]}
-          onPress={handleStartEdit}
-        >
+        <AppPressable style={styles.editIconButton} onPress={handleStartEdit}>
           <Icon name="create-outline" size={20} />
-        </Pressable>
+        </AppPressable>
       )}
     </View>
   );

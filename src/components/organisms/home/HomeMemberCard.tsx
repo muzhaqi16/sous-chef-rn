@@ -2,7 +2,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { useFragment } from '@apollo/client/react';
 import { type FragmentType } from '@apollo/client/masking';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { formatRole } from '#/utils/formatters/roleFormatters';
@@ -67,33 +67,20 @@ export const HomeMemberCard: React.FC<HomeMemberCardProps> = ({
           </Text>
         )}
       </View>
-
       {!!canManageMember && (
         <View style={styles.memberActions}>
-          <Pressable
-            style={({ pressed }) => [
-              styles.actionButton,
-              pressed && styles.pressed,
-            ]}
-            onPress={onChangeRole}
-          >
+          <AppPressable style={styles.actionButton} onPress={onChangeRole}>
             <Icon name="swap-horizontal" size={18} />
             <Text size="sm" weight="medium" style={styles.actionButtonText}>
               Change Role
             </Text>
-          </Pressable>
-          <Pressable
-            style={({ pressed }) => [
-              styles.actionButton,
-              pressed && styles.pressed,
-            ]}
-            onPress={onRemove}
-          >
+          </AppPressable>
+          <AppPressable style={styles.actionButton} onPress={onRemove}>
             <Icon name="person-remove" size={18} />
             <Text size="sm" weight="medium" tone="error">
               Remove
             </Text>
-          </Pressable>
+          </AppPressable>
         </View>
       )}
     </View>

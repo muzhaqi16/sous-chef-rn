@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Image, Dimensions, Platform } from 'react-native';
-import {
-  Pressable,
-  ThemedBackButton,
-} from '#components/atoms/themedComponents';
+import { ThemedBackButton } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -240,24 +238,21 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
 
           {/* Show crop icon below image if not cropped yet */}
           {!!selectedImage && !croppedImage && (
-            <Pressable
+            <AppPressable
               onPress={handleCropImage}
-              style={({ pressed }) => [
-                styles.cropIconButton,
-                pressed && styles.pressed,
-              ]}
+              style={styles.cropIconButton}
               disabled={isUploading}
             >
               <Icon tone="background" name="crop" size={20} />
-            </Pressable>
+            </AppPressable>
           )}
         </View>
 
         {selectedImage ? (
           <View style={styles.buttonContainer}>
-            <Pressable
+            <AppPressable
               onPress={handleUpload}
-              style={({ pressed }) => [styles.btn, pressed && styles.pressed]}
+              style={styles.btn}
               disabled={isUploading}
             >
               <Text
@@ -268,14 +263,11 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
               >
                 {isUploading ? 'Uploading...' : 'Upload Photo'}
               </Text>
-            </Pressable>
+            </AppPressable>
 
-            <Pressable
+            <AppPressable
               onPress={handleRetake}
-              style={({ pressed }) => [
-                styles.btnSecondary,
-                pressed && styles.pressed,
-              ]}
+              style={styles.btnSecondary}
               disabled={isUploading}
             >
               <Text
@@ -287,13 +279,13 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
               >
                 Choose Different Photo
               </Text>
-            </Pressable>
+            </AppPressable>
           </View>
         ) : (
           <View style={styles.buttonContainer}>
-            <Pressable
+            <AppPressable
               onPress={handleTakePhoto}
-              style={({ pressed }) => [styles.btn, pressed && styles.pressed]}
+              style={styles.btn}
               disabled={isUploading}
             >
               <Text
@@ -304,14 +296,11 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
               >
                 Take Photo
               </Text>
-            </Pressable>
+            </AppPressable>
 
-            <Pressable
+            <AppPressable
               onPress={handleSelectPhoto}
-              style={({ pressed }) => [
-                styles.btnSecondary,
-                pressed && styles.pressed,
-              ]}
+              style={styles.btnSecondary}
               disabled={isUploading}
             >
               <Text
@@ -322,7 +311,7 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
               >
                 Select Photo
               </Text>
-            </Pressable>
+            </AppPressable>
           </View>
         )}
       </View>

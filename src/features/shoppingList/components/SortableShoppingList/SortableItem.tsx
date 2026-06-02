@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { View } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { useFragment } from '@apollo/client/react';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
@@ -220,19 +220,16 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
         collapsable={false}
         onLayout={isTutorialArchiveTarget ? handleArchiveIconLayout : undefined}
       >
-        <Pressable
+        <AppPressable
           onPress={() => {
             onMoveToPantry(itemId);
             tutorialActions?.notifyMoveToPantryTapped();
           }}
-          style={({ pressed }) => [
-            styles.moveToPantryButton,
-            pressed && styles.pressed,
-          ]}
+          style={styles.moveToPantryButton}
           hitSlop={HIT_SLOP}
         >
           <Icon name="archive-outline" size={24} color={themeColors?.primary} />
-        </Pressable>
+        </AppPressable>
       </View>
     );
 

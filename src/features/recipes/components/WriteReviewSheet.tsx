@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useFragment } from '@apollo/client/react';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { BottomSheetView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
@@ -118,13 +118,12 @@ export const WriteReviewSheet: React.FC<WriteReviewSheetProps> = ({
         </View>
 
         {/* Submit */}
-        <Pressable
+        <AppPressable
           onPress={handleSubmit}
           disabled={rating === 0 || submitting}
-          style={({ pressed }) => [
+          style={[
             styles.submitButton,
             rating === 0 && styles.submitButtonDisabled,
-            pressed && styles.pressed,
           ]}
         >
           {submitting ? (
@@ -136,7 +135,7 @@ export const WriteReviewSheet: React.FC<WriteReviewSheetProps> = ({
                 : t('recipes.submitReview')}
             </Text>
           )}
-        </Pressable>
+        </AppPressable>
       </BottomSheetView>
     </BottomSheetModal>
   );

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { SwipeableItem } from '#/components/molecules/SwipeableItem/SwipeableItem';
 import { HapticService } from '#services/haptic/HapticService';
@@ -128,13 +128,13 @@ export const BaseItemCard: React.FC<BaseItemCardProps> = ({
     };
     return (
       <View style={styles.swipeableWrapper}>
-        <Pressable
+        <AppPressable
           onPress={handlePress}
           android_ripple={RIPPLE.SUBTLE}
-          style={({ pressed }) => [pressed && styles.pressed]}
+          style={[]}
         >
           {cardContent}
-        </Pressable>
+        </AppPressable>
       </View>
     );
   }

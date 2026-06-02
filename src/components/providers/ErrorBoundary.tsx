@@ -1,6 +1,6 @@
 import React, { Component, ReactNode } from 'react';
 import { View } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Telemetry } from '#/services/telemetry';
 import { Text } from '#components/atoms/Text';
@@ -50,17 +50,11 @@ const DefaultErrorFallback: React.FC<{
             Context: {context}
           </Text>
         )}
-        <Pressable
-          style={({ pressed }) => [
-            styles.retryButton,
-            pressed && styles.pressed,
-          ]}
-          onPress={retry}
-        >
+        <AppPressable style={styles.retryButton} onPress={retry}>
           <Text size="md" weight="semibold" style={styles.retryButtonText}>
             Try Again
           </Text>
-        </Pressable>
+        </AppPressable>
       </View>
     </View>
   );

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import Animated, {
   FadeIn,
@@ -35,15 +35,9 @@ export const ActionTrayContent: React.FC<ActionTrayContentProps> = ({
           <View style={styles.fill} />
           {!!headerRight && headerRight}
           {!!showCloseButton && !!onClose && (
-            <Pressable
-              onPress={onClose}
-              style={({ pressed }) => [
-                styles.closeButton,
-                pressed && styles.pressed,
-              ]}
-            >
+            <AppPressable onPress={onClose} style={styles.closeButton}>
               <Icon name="close" size={16} tone="textSecondary" />
-            </Pressable>
+            </AppPressable>
           )}
         </View>
       )}

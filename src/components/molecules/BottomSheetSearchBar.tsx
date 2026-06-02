@@ -6,10 +6,10 @@ import React, {
 } from 'react';
 import { View } from 'react-native';
 import {
-  Pressable,
   ThemedActivityIndicator,
   ThemedBottomSheetTextInput,
 } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon, type IconLibrary } from '#utils/iconUtils';
@@ -199,24 +199,18 @@ export const BottomSheetSearchBar = forwardRef<
           />
         )}
         {!!hasText && (
-          <Pressable
-            style={({ pressed }) => [
-              styles.clearButton,
-              pressed && styles.pressed,
-            ]}
+          <AppPressable
+            style={styles.clearButton}
             onPress={handleClear}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <Icon name="close" size={20} tone="textSecondary" />
-          </Pressable>
+          </AppPressable>
         )}
         {rightActions?.map((action, index) => (
-          <Pressable
+          <AppPressable
             key={index}
-            style={({ pressed }) => [
-              styles.actionButton,
-              pressed && styles.pressed,
-            ]}
+            style={styles.actionButton}
             onPress={action.onPress}
             testID={action.testID}
           >
@@ -227,7 +221,7 @@ export const BottomSheetSearchBar = forwardRef<
               tone="primary"
               library={action.library || 'Ionicons'}
             />
-          </Pressable>
+          </AppPressable>
         ))}
       </View>
     );

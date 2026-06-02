@@ -2,6 +2,7 @@ import React, { forwardRef, useImperativeHandle, useRef } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { useBottomSheetScrollableCreator } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { FlashList } from '@shopify/flash-list';
@@ -80,12 +81,11 @@ export const IngredientSelectorSheet = forwardRef<
       <View style={styles.header}>
         <View style={styles.headerRow}>
           <Title style={styles.title}>{t('recipes.selectIngredients')}</Title>
-          <Pressable
-            style={({ pressed }) => [
+          <AppPressable
+            style={[
               styles.searchButton,
               screen.selectedIngredients.size === 0 &&
                 styles.searchButtonDisabled,
-              pressed && styles.pressed,
             ]}
             onPress={handleSearchAndClose}
             disabled={screen.selectedIngredients.size === 0}
@@ -95,7 +95,7 @@ export const IngredientSelectorSheet = forwardRef<
                 count: screen.selectedIngredients.size,
               })}
             </Text>
-          </Pressable>
+          </AppPressable>
         </View>
 
         {/* Search bar — shown when > 8 items */}
@@ -124,7 +124,6 @@ export const IngredientSelectorSheet = forwardRef<
           </View>
         )}
       </View>
-
       {/* Scrollable list — direct child of BottomSheetModal */}
       <IngredientSelectorProvider
         selectedIngredients={screen.selectedIngredients}

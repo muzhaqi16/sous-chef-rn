@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 // BottomSheetTextInput is typed against RNGH's TextInput (it uses RNGH
 // internally for gesture coordination inside the sheet).
 import { TextInput } from 'react-native-gesture-handler';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
@@ -256,9 +256,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
           },
         ]}
       />
-
       <View style={styles.headerSpacer} />
-
       <BottomSheetScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
@@ -276,11 +274,8 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
           </Text>
           <View style={styles.counterContainer}>
             {/* Decrement Button */}
-            <Pressable
-              style={({ pressed }) => [
-                styles.counterButton,
-                pressed && styles.pressed,
-              ]}
+            <AppPressable
+              style={styles.counterButton}
               onPress={handleDecrement}
               disabled={decrementDisabled}
             >
@@ -289,14 +284,11 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
                 size={24}
                 tone={decrementDisabled ? 'textTertiary' : 'textPrimary'}
               />
-            </Pressable>
+            </AppPressable>
 
             {/* Quantity Display - Tappable for direct input */}
-            <Pressable
-              style={({ pressed }) => [
-                styles.quantityDisplay,
-                pressed && styles.pressed,
-              ]}
+            <AppPressable
+              style={styles.quantityDisplay}
               onPress={handleQuantityPress}
             >
               {isEditing ? (
@@ -315,18 +307,15 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
                   {quantityInput || '0'}
                 </Text>
               )}
-            </Pressable>
+            </AppPressable>
 
             {/* Increment Button */}
-            <Pressable
-              style={({ pressed }) => [
-                styles.incrementButton,
-                pressed && styles.pressed,
-              ]}
+            <AppPressable
+              style={styles.incrementButton}
               onPress={handleIncrement}
             >
               <Icon name="add" size={24} tone="white" />
-            </Pressable>
+            </AppPressable>
           </View>
         </View>
 

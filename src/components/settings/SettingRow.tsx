@@ -2,7 +2,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { Icon } from '#utils/iconUtils';
 import { StyleSheet } from 'react-native-unistyles';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
 
 interface SettingRowProps {
@@ -25,12 +25,8 @@ export const SettingRow: React.FC<SettingRowProps> = ({
   disabled = false,
 }) => {
   return (
-    <Pressable
-      style={({ pressed }) => [
-        styles.container,
-        disabled && styles.containerDisabled,
-        pressed && styles.pressed,
-      ]}
+    <AppPressable
+      style={[styles.container, disabled && styles.containerDisabled]}
       onPress={onPress}
       disabled={disabled}
     >
@@ -39,7 +35,6 @@ export const SettingRow: React.FC<SettingRowProps> = ({
           <Icon name={icon} size={24} tone="textSecondary" />
         </View>
       )}
-
       <View style={styles.contentContainer}>
         <Text
           size="base"
@@ -57,17 +52,15 @@ export const SettingRow: React.FC<SettingRowProps> = ({
           </Text>
         )}
       </View>
-
       {value ? (
         <Text size="sm" tone="secondary" style={styles.value}>
           {value}
         </Text>
       ) : null}
-
       {!!showArrow && (
         <Icon name="chevron-right" size={24} tone="textTertiary" />
       )}
-    </Pressable>
+    </AppPressable>
   );
 };
 

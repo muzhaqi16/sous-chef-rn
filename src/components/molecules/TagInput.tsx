@@ -4,6 +4,7 @@ import {
   Pressable,
   ThemedBottomSheetTextInput,
 } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
@@ -128,14 +129,12 @@ export const TagInput: React.FC<TagInputProps> = ({
           />
         )}
       </View>
-
       {/* Tag limit indicator */}
       {!!editable && tags.length >= maxTags && (
         <Text size="sm" tone="secondary" align="right">
           Maximum {maxTags} tags reached
         </Text>
       )}
-
       {/* Suggestions dropdown */}
       {!!isFocused && filteredSuggestions.length > 0 && (
         <View style={styles.suggestionsContainer}>
@@ -145,12 +144,9 @@ export const TagInput: React.FC<TagInputProps> = ({
             keyboardShouldPersistTaps="handled"
           >
             {filteredSuggestions.map((suggestion, index) => (
-              <Pressable
+              <AppPressable
                 key={`${suggestion}-${index}`}
-                style={({ pressed }) => [
-                  styles.suggestionChip,
-                  pressed && styles.pressed,
-                ]}
+                style={styles.suggestionChip}
                 onPress={() => {
                   handleAddTag(suggestion);
                   Keyboard.dismiss();
@@ -159,7 +155,7 @@ export const TagInput: React.FC<TagInputProps> = ({
                 <Text size="sm" tone="secondary">
                   {suggestion}
                 </Text>
-              </Pressable>
+              </AppPressable>
             ))}
           </ScrollView>
         </View>

@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { Icon } from '#utils/iconUtils';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
@@ -32,48 +32,37 @@ export const HomeActions: React.FC<HomeActionsProps> = ({
   return (
     <View style={styles.homeActions}>
       {!isDefault && (
-        <Pressable
-          style={({ pressed }) => [
-            styles.actionButton,
-            pressed && styles.pressed,
-          ]}
+        <AppPressable
+          style={styles.actionButton}
           onPress={() => onSetDefault(homeId)}
         >
           <Icon name="star-outline" size={20} tone="textSecondary" />
           <Text size="sm" tone="secondary" style={styles.actionText}>
             {t('homeManagement.cardSetDefault')}
           </Text>
-        </Pressable>
+        </AppPressable>
       )}
-
       {!!canInvite && (
-        <Pressable
-          style={({ pressed }) => [
-            styles.actionButton,
-            pressed && styles.pressed,
-          ]}
+        <AppPressable
+          style={styles.actionButton}
           onPress={() => onInvite(homeId)}
         >
           <Icon name="person-add" size={20} tone="textSecondary" />
           <Text size="sm" tone="secondary" style={styles.actionText}>
             {t('homeManagement.cardInvite')}
           </Text>
-        </Pressable>
+        </AppPressable>
       )}
-
       {!!canDelete && (
-        <Pressable
-          style={({ pressed }) => [
-            styles.actionButton,
-            pressed && styles.pressed,
-          ]}
+        <AppPressable
+          style={styles.actionButton}
           onPress={() => onDelete(homeId)}
         >
           <Icon name="trash-outline" size={20} tone="error" />
           <Text size="sm" tone="error" style={styles.actionText}>
             {t('homeManagement.cardDelete')}
           </Text>
-        </Pressable>
+        </AppPressable>
       )}
     </View>
   );

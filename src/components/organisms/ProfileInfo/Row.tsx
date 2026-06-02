@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { View, TextInput } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
 
 export interface RowProps {
@@ -56,18 +57,12 @@ export const Row: React.FC<RowProps> = ({
           onChangeText={setText}
           autoFocus
         />
-        <Pressable
-          onPress={handleSave}
-          style={({ pressed }) => [styles.editIcon, pressed && styles.pressed]}
-        >
+        <AppPressable onPress={handleSave} style={styles.editIcon}>
           <Icon name="checkmark" size={20} tone="primary" />
-        </Pressable>
-        <Pressable
-          onPress={handleCancel}
-          style={({ pressed }) => [styles.editIcon, pressed && styles.pressed]}
-        >
+        </AppPressable>
+        <AppPressable onPress={handleCancel} style={styles.editIcon}>
           <Icon name="close" size={20} tone="error" />
-        </Pressable>
+        </AppPressable>
       </View>
     );
   }

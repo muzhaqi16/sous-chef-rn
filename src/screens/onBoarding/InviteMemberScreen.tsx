@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
@@ -254,17 +254,14 @@ export const InviteMemberScreen = () => {
                   <Text size="md" style={styles.inviteEmail}>
                     {invite.email}
                   </Text>
-                  <Pressable
+                  <AppPressable
                     onPress={() => removeInvite(invite.id)}
-                    style={({ pressed }) => [
-                      styles.removeButton,
-                      pressed && styles.pressed,
-                    ]}
+                    style={styles.removeButton}
                   >
                     <Text size="xl" tone="tertiary">
                       ✕
                     </Text>
-                  </Pressable>
+                  </AppPressable>
                 </View>
               ))}
             </>
@@ -282,7 +279,6 @@ export const InviteMemberScreen = () => {
           </Text>
         </View>
       </View>
-
       <Button
         title={
           isInviting

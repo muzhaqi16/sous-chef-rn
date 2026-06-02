@@ -8,7 +8,7 @@ import Animated, {
   FadeIn,
   FadeOut,
 } from 'react-native-reanimated';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { FormCheckbox } from '#components/molecules/FormCheckbox';
 import { FormNumberInput } from '#components/molecules/FormNumberInput';
@@ -60,11 +60,8 @@ export const StorageLocationAdvancedSection: React.FC<
 
   return (
     <>
-      <Pressable
-        style={({ pressed }) => [
-          styles.advancedHeader,
-          pressed && styles.pressed,
-        ]}
+      <AppPressable
+        style={styles.advancedHeader}
         onPress={() => setAdvancedExpanded(!advancedExpanded)}
       >
         <Text size="sm" weight="semibold" tone="secondary">
@@ -73,8 +70,7 @@ export const StorageLocationAdvancedSection: React.FC<
         <Animated.View style={animatedChevronStyle}>
           <Icon name="chevron-down" size={20} tone="textSecondary" />
         </Animated.View>
-      </Pressable>
-
+      </AppPressable>
       {advancedExpanded ? (
         <Animated.View
           entering={FadeIn.duration(TIMING.STANDARD)}

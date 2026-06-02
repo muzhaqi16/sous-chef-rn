@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import PagerView from 'react-native-pager-view';
 import { StyleSheet } from 'react-native-unistyles';
@@ -39,16 +39,10 @@ function PageIndicatorItem({
 }) {
   indicatorStyles.useVariants({ active: isActive });
   return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [
-        indicatorStyles.item,
-        pressed && indicatorStyles.pressed,
-      ]}
-    >
+    <AppPressable onPress={onPress} style={indicatorStyles.item}>
       <View style={indicatorStyles.dot} />
       <Text style={indicatorStyles.label}>{label}</Text>
-    </Pressable>
+    </AppPressable>
   );
 }
 
@@ -338,26 +332,16 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
       <View style={styles.container} testID="add-pantry-item-details-modal">
         {/* Header */}
         <View style={styles.header}>
-          <Pressable
-            onPress={onClose}
-            style={({ pressed }) => [
-              styles.cancelButton,
-              pressed && styles.pressed,
-            ]}
-          >
+          <AppPressable onPress={onClose} style={styles.cancelButton}>
             <Text size="md" weight="medium" tone="secondary">
               {t('addToPantry.cancel')}
             </Text>
-          </Pressable>
+          </AppPressable>
           <Text size="lg" weight="bold" align="center" style={styles.title}>
             {t('addToPantry.addItemDetails')}
           </Text>
-          <Pressable
-            style={({ pressed }) => [
-              styles.saveButton,
-              loading && styles.saveButtonDisabled,
-              pressed && styles.pressed,
-            ]}
+          <AppPressable
+            style={[styles.saveButton, loading && styles.saveButtonDisabled]}
             onPress={handleConfirm}
             disabled={loading}
             testID="add-pantry-item-submit-button"
@@ -365,7 +349,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
             <Text size="md" weight="semibold" style={styles.saveButtonText}>
               {loading ? t('addToPantry.adding') : t('addToPantry.add')}
             </Text>
-          </Pressable>
+          </AppPressable>
         </View>
 
         {/* Page Indicators */}

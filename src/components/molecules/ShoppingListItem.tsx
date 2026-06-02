@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, TextStyle } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import Animated from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import { SwipeableItem } from './SwipeableItem/SwipeableItem';
@@ -115,11 +116,8 @@ export const ShoppingListItem = ({
     }
 
     return (
-      <Pressable
-        style={({ pressed }) => [
-          styles.quantityContainer,
-          pressed && styles.pressed,
-        ]}
+      <AppPressable
+        style={styles.quantityContainer}
         onPress={() => setIsEditingQuantity(true)}
         accessibilityRole="button"
         accessibilityLabel={`Edit quantity: ${quantity} ${unit || ''}`}
@@ -134,7 +132,7 @@ export const ShoppingListItem = ({
           style={styles.quantityText}
         />
         <Icon name="create-outline" size={14} tone="textSecondary" />
-      </Pressable>
+      </AppPressable>
     );
   };
 
@@ -142,11 +140,8 @@ export const ShoppingListItem = ({
     <Animated.View style={animatedSlideStyle} testID={`shopping-item-${id}`}>
       <SwipeableItem onDelete={handleDelete} onEdit={() => onEdit(id)}>
         <View style={styles.container}>
-          <Pressable
-            style={({ pressed }) => [
-              styles.checkboxContainer,
-              pressed && styles.pressed,
-            ]}
+          <AppPressable
+            style={styles.checkboxContainer}
             onPress={() => onToggle(id)}
             accessibilityRole="checkbox"
             accessibilityLabel={`${name} ${
@@ -165,7 +160,7 @@ export const ShoppingListItem = ({
                 <Icon name="checkmark" size={16} color="white" />
               )}
             </View>
-          </Pressable>
+          </AppPressable>
 
           {!!imageUrl && (
             <CachedImage

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Platform, Linking, AppState } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from 'react-i18next';
@@ -420,7 +420,8 @@ export const NotificationSettingsScreen: React.FC = () => {
 
         {!!settings.expirationNotifications && (
           <>
-            <Pressable
+            <AppPressable
+              haptic
               style={styles.pickerRow}
               onPress={() => setFrequencyPickerVisible(true)}
             >
@@ -432,7 +433,7 @@ export const NotificationSettingsScreen: React.FC = () => {
                   o => o.value === settings.expirationNotificationFrequency,
                 )?.label ?? t('notifications.select')}
               </Text>
-            </Pressable>
+            </AppPressable>
             <ModalPicker
               label={t('notifications.notificationFrequency')}
               visible={frequencyPickerVisible}
@@ -445,7 +446,8 @@ export const NotificationSettingsScreen: React.FC = () => {
               onCancel={() => setFrequencyPickerVisible(false)}
             />
 
-            <Pressable
+            <AppPressable
+              haptic
               style={styles.pickerRow}
               onPress={() => setThresholdPickerVisible(true)}
             >
@@ -457,7 +459,7 @@ export const NotificationSettingsScreen: React.FC = () => {
                   o => o.value === String(settings.expirationDaysThreshold),
                 )?.label ?? t('notifications.select')}
               </Text>
-            </Pressable>
+            </AppPressable>
             <ModalPicker
               label={t('notifications.alertThreshold')}
               visible={thresholdPickerVisible}

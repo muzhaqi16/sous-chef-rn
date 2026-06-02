@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import {
   BottomSheetView,
   useBottomSheetScrollableCreator,
@@ -69,12 +70,8 @@ export const TagPicker: React.FC<TagPickerProps> = ({
   const renderTagItem = ({ item }: { item: string }) => {
     const isSelected = selectedTags.includes(item);
     return (
-      <Pressable
-        style={({ pressed }) => [
-          styles.tagItem,
-          isSelected && styles.tagItemSelected,
-          pressed && styles.pressed,
-        ]}
+      <AppPressable
+        style={[styles.tagItem, isSelected && styles.tagItemSelected]}
         onPress={() => handleToggleTag(item)}
       >
         <Icon
@@ -92,7 +89,7 @@ export const TagPicker: React.FC<TagPickerProps> = ({
           {item}
         </Text>
         {!!isSelected && <Icon name="checkmark" size={20} tone="primary" />}
-      </Pressable>
+      </AppPressable>
     );
   };
 

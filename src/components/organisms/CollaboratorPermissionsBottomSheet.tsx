@@ -1,6 +1,6 @@
 import React, { useState, forwardRef, useImperativeHandle } from 'react';
 import { View } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { alertService } from '#/services/alertService';
 import { errorMessageOr } from '#/services/errorService';
@@ -42,13 +42,13 @@ function RoleCard({
 }) {
   styles.useVariants({ selected: isSelected });
   return (
-    <Pressable
-      style={({ pressed }) => [styles.roleCard, pressed && styles.pressed]}
+    <AppPressable
+      style={styles.roleCard}
       onPress={onSelect}
       disabled={isSubmitting}
     >
       {children}
-    </Pressable>
+    </AppPressable>
   );
 }
 

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { alertService } from '#/services/alertService';
 import { Icon } from '#utils/iconUtils';
@@ -92,7 +92,6 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
       <Text size="lg" weight="semibold" style={styles.sectionTitle}>
         {t('recipes.reviews')}
       </Text>
-
       {/* Rating Breakdown */}
       <RatingBreakdown
         averageRating={averageRating}
@@ -103,7 +102,6 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
         rating4Count={rating4Count}
         rating5Count={rating5Count}
       />
-
       {/* User's own review or Write button */}
       {hasReviewed && userReview ? (
         <View style={styles.ownReviewSection}>
@@ -125,20 +123,16 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
           />
         </View>
       ) : (
-        <Pressable
+        <AppPressable
           onPress={() => setSheetVisible(true)}
-          style={({ pressed }) => [
-            styles.writeButton,
-            pressed && styles.pressed,
-          ]}
+          style={styles.writeButton}
         >
           <Icon name="create-outline" size={18} tone="primary" />
           <Text size="sm" weight="semibold" tone="accent">
             {t('recipes.writeReview')}
           </Text>
-        </Pressable>
+        </AppPressable>
       )}
-
       {/* Other reviews */}
       {otherReviews.length > 0 && (
         <View style={styles.reviewsList}>
@@ -155,7 +149,6 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
           ))}
         </View>
       )}
-
       {totalReviews === 0 && !hasReviewed && (
         <Text
           size="sm"
@@ -166,7 +159,6 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
           {t('recipes.noReviews')}
         </Text>
       )}
-
       {/* Write/Edit Review Sheet */}
       <WriteReviewSheet
         visible={sheetVisible}

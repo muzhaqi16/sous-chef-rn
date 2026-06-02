@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { alertService } from '#/services/alertService';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
@@ -211,11 +211,8 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
                   {home.joinCode}
                 </Text>
               </View>
-              <Pressable
-                style={({ pressed }) => [
-                  styles.copyButton,
-                  pressed && styles.pressed,
-                ]}
+              <AppPressable
+                style={styles.copyButton}
                 onPress={handleCopyJoinCode}
               >
                 <Icon
@@ -223,7 +220,7 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
                   size={20}
                   tone={copied ? 'success' : 'textPrimary'}
                 />
-              </Pressable>
+              </AppPressable>
             </View>
           ) : null}
         </>

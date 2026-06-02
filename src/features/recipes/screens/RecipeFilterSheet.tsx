@@ -1,6 +1,7 @@
 import React, { useState, type RefObject } from 'react';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import type { BottomSheetModalRef } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from 'react-i18next';
@@ -178,12 +179,11 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
                 {DIET_OPTIONS.map(diet => {
                   const isSelected = draftFilters.diet.includes(diet.value);
                   return (
-                    <Pressable
+                    <AppPressable
                       key={diet.value}
-                      style={({ pressed }) => [
+                      style={[
                         styles.filterChip,
                         isSelected && styles.filterChipActive,
-                        pressed && styles.pressed,
                       ]}
                       onPress={() =>
                         setDraftFilters(prev => ({
@@ -203,7 +203,7 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
                       >
                         {t(diet.labelKey)}
                       </Text>
-                    </Pressable>
+                    </AppPressable>
                   );
                 })}
               </View>
@@ -227,12 +227,9 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
                     intolerance.value,
                   );
                   return (
-                    <Pressable
+                    <AppPressable
                       key={intolerance.value}
-                      style={({ pressed }) => [
-                        styles.checkboxItem,
-                        pressed && styles.pressed,
-                      ]}
+                      style={styles.checkboxItem}
                       onPress={() =>
                         setDraftFilters(prev => ({
                           ...prev,
@@ -252,7 +249,7 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
                       <Text size="sm" style={styles.checkboxText}>
                         {t(intolerance.labelKey)}
                       </Text>
-                    </Pressable>
+                    </AppPressable>
                   );
                 })}
               </View>
@@ -274,12 +271,11 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
                 {MEAL_TYPES.map(type => {
                   const isSelected = draftFilters.mealType === type.value;
                   return (
-                    <Pressable
+                    <AppPressable
                       key={type.value}
-                      style={({ pressed }) => [
+                      style={[
                         styles.filterChip,
                         isSelected && styles.filterChipActive,
-                        pressed && styles.pressed,
                       ]}
                       onPress={() =>
                         setDraftFilters(prev => ({
@@ -298,7 +294,7 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
                       >
                         {t(type.labelKey)}
                       </Text>
-                    </Pressable>
+                    </AppPressable>
                   );
                 })}
               </View>
@@ -320,12 +316,11 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
                 {COOK_TIMES.map(minutes => {
                   const isSelected = draftFilters.maxReadyTime === minutes;
                   return (
-                    <Pressable
+                    <AppPressable
                       key={minutes}
-                      style={({ pressed }) => [
+                      style={[
                         styles.filterChip,
                         isSelected && styles.filterChipActive,
-                        pressed && styles.pressed,
                       ]}
                       onPress={() =>
                         setDraftFilters(prev => ({
@@ -344,7 +339,7 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
                       >
                         {t('recipeFilters.cookTimeOption', { minutes })}
                       </Text>
-                    </Pressable>
+                    </AppPressable>
                   );
                 })}
               </View>

@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
@@ -93,12 +93,9 @@ export const StorageLocationSheet: React.FC<StorageLocationSheetProps> = ({
       >
         {/* Header */}
         <View style={styles.header}>
-          <Pressable
+          <AppPressable
             onPress={onClose}
-            style={({ pressed }) => [
-              styles.headerButton,
-              pressed && styles.pressed,
-            ]}
+            style={styles.headerButton}
             accessibilityRole="button"
             accessibilityLabel={t('storageLocationSheet.cancel')}
             disabled={isSubmitting}
@@ -106,18 +103,15 @@ export const StorageLocationSheet: React.FC<StorageLocationSheetProps> = ({
             <Text size="md" tone="secondary">
               {t('storageLocationSheet.cancel')}
             </Text>
-          </Pressable>
+          </AppPressable>
 
           <Text size="lg" weight="semibold" align="center" style={styles.title}>
             {title}
           </Text>
 
-          <Pressable
+          <AppPressable
             onPress={handleHeaderSave}
-            style={({ pressed }) => [
-              styles.headerButton,
-              pressed && styles.pressed,
-            ]}
+            style={styles.headerButton}
             accessibilityRole="button"
             accessibilityLabel={saveText}
             disabled={isSubmitting}
@@ -129,7 +123,7 @@ export const StorageLocationSheet: React.FC<StorageLocationSheetProps> = ({
                 {saveText}
               </Text>
             )}
-          </Pressable>
+          </AppPressable>
         </View>
 
         {/* Divider */}

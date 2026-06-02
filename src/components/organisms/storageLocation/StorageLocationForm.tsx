@@ -2,7 +2,7 @@ import React, { useState, forwardRef, useImperativeHandle } from 'react';
 import { View, TextInput, ActivityIndicator } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { useTranslation } from 'react-i18next';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { commonStyles } from '#/styles/commonStyles';
 import { StorageState } from '#/graphql/generated/schemaTypes';
@@ -168,7 +168,6 @@ export const StorageLocationForm = forwardRef<
             autoFocus
           />
         </View>
-
         {/* Type Carousel */}
         <View style={[commonStyles.inputGroup, styles.carouselInputGroup]}>
           <Text style={commonStyles.label}>
@@ -182,14 +181,13 @@ export const StorageLocationForm = forwardRef<
               contentContainerStyle={styles.typeScrollContent}
             >
               {STORAGE_TYPE_VALUES.map(type => (
-                <Pressable
+                <AppPressable
                   key={type.value}
-                  style={({ pressed }) => [
+                  style={
                     formData.type === type.value
                       ? styles.typeButtonSelected
-                      : styles.typeButton,
-                    pressed && styles.pressed,
-                  ]}
+                      : styles.typeButton
+                  }
                   onPress={() =>
                     setFormData({
                       ...formData,
@@ -211,12 +209,11 @@ export const StorageLocationForm = forwardRef<
                   >
                     {t(`storageLocationForm.${type.key}`)}
                   </Text>
-                </Pressable>
+                </AppPressable>
               ))}
             </ScrollView>
           </View>
         </View>
-
         {/* Parent Location Selector */}
         {parentOptions.length > 0 && (
           <View style={[commonStyles.inputGroup, styles.carouselInputGroup]}>
@@ -230,13 +227,12 @@ export const StorageLocationForm = forwardRef<
                 style={styles.parentScroll}
                 contentContainerStyle={styles.typeScrollContent}
               >
-                <Pressable
-                  style={({ pressed }) => [
+                <AppPressable
+                  style={
                     !formData.parentLocationId
                       ? styles.parentButtonSelected
-                      : styles.parentButton,
-                    pressed && styles.pressed,
-                  ]}
+                      : styles.parentButton
+                  }
                   onPress={() =>
                     setFormData({ ...formData, parentLocationId: undefined })
                   }
@@ -252,16 +248,15 @@ export const StorageLocationForm = forwardRef<
                   >
                     {t('storageLocationForm.parentNone')}
                   </Text>
-                </Pressable>
+                </AppPressable>
                 {parentOptions.map(location => (
-                  <Pressable
+                  <AppPressable
                     key={location.id}
-                    style={({ pressed }) => [
+                    style={
                       formData.parentLocationId === location.id
                         ? styles.parentButtonSelected
-                        : styles.parentButton,
-                      pressed && styles.pressed,
-                    ]}
+                        : styles.parentButton
+                    }
                     onPress={() =>
                       setFormData({
                         ...formData,
@@ -284,7 +279,7 @@ export const StorageLocationForm = forwardRef<
                     >
                       {location.name}
                     </Text>
-                  </Pressable>
+                  </AppPressable>
                 ))}
               </ScrollView>
             </View>
@@ -293,7 +288,6 @@ export const StorageLocationForm = forwardRef<
             </Text>
           </View>
         )}
-
         {/* Description */}
         <FormTextArea
           label={t('storageLocationForm.descriptionLabel')}
@@ -304,7 +298,6 @@ export const StorageLocationForm = forwardRef<
           placeholder={t('storageLocationForm.descriptionPlaceholder')}
           numberOfLines={2}
         />
-
         {/* Temperature */}
         <View style={[commonStyles.inputGroup, styles.carouselInputGroup]}>
           <Text style={commonStyles.label}>
@@ -318,14 +311,13 @@ export const StorageLocationForm = forwardRef<
               contentContainerStyle={styles.typeScrollContent}
             >
               {TEMPERATURE_OPTION_VALUES.map(option => (
-                <Pressable
+                <AppPressable
                   key={option.value}
-                  style={({ pressed }) => [
+                  style={
                     formData.temperature === option.value
                       ? styles.parentButtonSelected
-                      : styles.parentButton,
-                    pressed && styles.pressed,
-                  ]}
+                      : styles.parentButton
+                  }
                   onPress={() =>
                     setFormData({ ...formData, temperature: option.value })
                   }
@@ -345,12 +337,11 @@ export const StorageLocationForm = forwardRef<
                   >
                     {t(`storageLocationForm.${option.key}`)}
                   </Text>
-                </Pressable>
+                </AppPressable>
               ))}
             </ScrollView>
           </View>
         </View>
-
         {/* Color */}
         <View style={[commonStyles.inputGroup, styles.carouselInputGroup]}>
           <Text style={commonStyles.label}>
@@ -363,28 +354,26 @@ export const StorageLocationForm = forwardRef<
               style={styles.typeScroll}
               contentContainerStyle={styles.typeScrollContent}
             >
-              <Pressable
-                style={({ pressed }) => [
+              <AppPressable
+                style={
                   !formData.color
                     ? styles.colorSwatchNoneSelected
-                    : styles.colorSwatchNone,
-                  pressed && styles.pressed,
-                ]}
+                    : styles.colorSwatchNone
+                }
                 onPress={() => setFormData({ ...formData, color: null })}
               >
                 <Text size="sm" tone="secondary" weight="medium">
                   -
                 </Text>
-              </Pressable>
+              </AppPressable>
               {COLOR_PRESETS.map(preset => (
-                <Pressable
+                <AppPressable
                   key={preset.value}
-                  style={({ pressed }) => [
+                  style={[
                     formData.color === preset.value
                       ? styles.colorSwatchSelected
                       : styles.colorSwatch,
                     { backgroundColor: preset.value },
-                    pressed && styles.pressed,
                   ]}
                   onPress={() =>
                     setFormData({ ...formData, color: preset.value })
@@ -395,7 +384,6 @@ export const StorageLocationForm = forwardRef<
             </ScrollView>
           </View>
         </View>
-
         {/* Advanced Settings Collapsible */}
         <StorageLocationAdvancedSection
           isClimateControlled={formData.isClimateControlled}
@@ -416,28 +404,19 @@ export const StorageLocationForm = forwardRef<
             setFormData({ ...formData, isDefault: !formData.isDefault })
           }
         />
-
         {!hideActions && (
           <View style={[commonStyles.row, styles.formActions]}>
-            <Pressable
-              style={({ pressed }) => [
-                commonStyles.button,
-                commonStyles.buttonSecondary,
-                pressed && styles.pressed,
-              ]}
+            <AppPressable
+              style={[commonStyles.button, commonStyles.buttonSecondary]}
               onPress={onCancel}
               disabled={isSubmitting}
             >
               <Text style={commonStyles.buttonTextSecondary}>
                 {t('labels.cancel')}
               </Text>
-            </Pressable>
-            <Pressable
-              style={({ pressed }) => [
-                commonStyles.button,
-                commonStyles.buttonPrimary,
-                pressed && styles.pressed,
-              ]}
+            </AppPressable>
+            <AppPressable
+              style={[commonStyles.button, commonStyles.buttonPrimary]}
               onPress={handleSubmit}
               disabled={isSubmitting || !formData.name.trim()}
             >
@@ -448,7 +427,7 @@ export const StorageLocationForm = forwardRef<
                   {initialData ? t('labels.update') : t('labels.create')}
                 </Text>
               )}
-            </Pressable>
+            </AppPressable>
           </View>
         )}
       </View>

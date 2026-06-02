@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useFragment } from '@apollo/client/react';
 import { type FragmentType } from '@apollo/client/masking';
 import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { Icon } from '#utils/iconUtils';
@@ -42,9 +43,9 @@ export const MyRecipeCard: React.FC<MyRecipeCardProps> = ({
       : recipe.prepTimeMinutes ?? recipe.cookTimeMinutes ?? null);
 
   return (
-    <Pressable
+    <AppPressable
       onPress={() => onPress(recipe.id)}
-      style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+      style={styles.card}
       accessibilityRole="button"
       accessibilityLabel={recipe.name}
     >
@@ -88,7 +89,7 @@ export const MyRecipeCard: React.FC<MyRecipeCardProps> = ({
           </Pressable>
         )}
       </View>
-    </Pressable>
+    </AppPressable>
   );
 };
 

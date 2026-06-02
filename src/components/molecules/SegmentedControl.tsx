@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, type LayoutChangeEvent } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { useAnimatedTheme } from 'react-native-unistyles/reanimated';
 import Animated, {
@@ -70,17 +70,14 @@ const SegmentedTab = <T extends string>({
   styles.useVariants({ compact: isCompact });
 
   return (
-    <Pressable
-      style={({ pressed }) => [styles.segment, pressed && styles.pressed]}
-      onPress={onPress}
-    >
+    <AppPressable style={styles.segment} onPress={onPress}>
       <Animated.Text
         style={[styles.segmentText, textAnimatedStyle]}
         numberOfLines={1}
       >
         {formatLabel(option)}
       </Animated.Text>
-    </Pressable>
+    </AppPressable>
   );
 };
 

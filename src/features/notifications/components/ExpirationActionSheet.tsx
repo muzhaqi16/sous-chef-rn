@@ -11,7 +11,7 @@
 
 import React from 'react';
 import { View } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
@@ -96,8 +96,8 @@ function OptionRow({
     destructive: option.destructive ?? false,
   });
   return (
-    <Pressable
-      style={({ pressed }) => [styles.optionButton, pressed && styles.pressed]}
+    <AppPressable
+      style={styles.optionButton}
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={option.label}
@@ -110,7 +110,7 @@ function OptionRow({
       <Text size="md" weight="medium" style={styles.optionLabel}>
         {option.label}
       </Text>
-    </Pressable>
+    </AppPressable>
   );
 }
 

@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import Animated, {
   useSharedValue,
   useAnimatedScrollHandler,
@@ -138,7 +138,6 @@ export const ProfileScreen = () => {
         onAvatarPress={handleAvatarPress}
         progress={headerProgress}
       />
-
       <Animated.ScrollView
         testID="profile-scroll-view"
         onScroll={scrollHandler}
@@ -204,18 +203,13 @@ export const ProfileScreen = () => {
             />
           ))}
       </Animated.ScrollView>
-
       {BiometricModal}
-
       <ActionTray
         ref={actionTrayRef}
         onOpen={handleOverlayOpen}
         onClose={handleOverlayClose}
       >
-        <Pressable
-          style={({ pressed }) => [styles.menuItem, pressed && styles.pressed]}
-          onPress={handleDeleteAccount}
-        >
+        <AppPressable style={styles.menuItem} onPress={handleDeleteAccount}>
           <Icon name="trash-outline" size={20} tone="error" />
           <Text
             size="md"
@@ -225,7 +219,7 @@ export const ProfileScreen = () => {
           >
             {t('account.deleteTitle')}
           </Text>
-        </Pressable>
+        </AppPressable>
       </ActionTray>
     </SafeAreaView>
   );

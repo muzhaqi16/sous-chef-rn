@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 
 import { StyleSheet } from 'react-native-unistyles';
 import { BaseInput, BaseInputProps } from './BaseInput/BaseInput';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { Icon } from '#/utils/iconUtils';
 
 export interface PasswordInputProps
@@ -34,20 +34,17 @@ export const PasswordInput: React.FC<PasswordInputProps> = ({
       autoCapitalize="none"
       placeholder="••••••••"
       rightIcon={
-        <Pressable
+        <AppPressable
           onPress={() => setVisible(v => !v)}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          style={({ pressed }) => [
-            pressedStyles.toggle,
-            pressed && pressedStyles.pressed,
-          ]}
+          style={pressedStyles.toggle}
         >
           <Icon
             name={visible ? 'eye-outline' : 'eye-off-outline'}
             size={20}
             tone={visible ? 'textPrimary' : 'textTertiary'}
           />
-        </Pressable>
+        </AppPressable>
       }
       {...props}
     />

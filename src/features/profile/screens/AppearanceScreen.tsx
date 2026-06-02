@@ -2,6 +2,7 @@ import React from 'react';
 import { View, ScrollView } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { BaseSwitch } from '#components/base/BaseSwitch';
 import { Header } from '#components/molecules/Header';
@@ -138,8 +139,9 @@ export default function AppearanceScreen() {
         </Text>
         <View style={styles.colorRow}>
           {APP_COLORS.map(c => (
-            <Pressable
+            <AppPressable
               key={c.labelKey}
+              haptic
               onPress={() => setPrimaryColorOverride(c.value)}
               accessibilityLabel={t(c.labelKey)}
               style={[

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, Modal, FlatList, ViewStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { FormFieldWrapper } from '../atoms/FormFieldWrapper';
@@ -46,12 +46,8 @@ export const FormSelect: React.FC<FormSelectProps> = ({
   const renderOption = ({ item }: { item: SelectOption }) => {
     const isSelected = item.value === value;
     return (
-      <Pressable
-        style={({ pressed }) => [
-          styles.option,
-          isSelected && styles.selectedOption,
-          pressed && styles.pressed,
-        ]}
+      <AppPressable
+        style={[styles.option, isSelected && styles.selectedOption]}
         onPress={() => handleSelect(item.value)}
       >
         <Text
@@ -59,7 +55,7 @@ export const FormSelect: React.FC<FormSelectProps> = ({
         >
           {item.label}
         </Text>
-      </Pressable>
+      </AppPressable>
     );
   };
 
@@ -70,12 +66,8 @@ export const FormSelect: React.FC<FormSelectProps> = ({
       required={required}
       containerStyle={containerStyle}
     >
-      <Pressable
-        style={({ pressed }) => [
-          styles.selectButton,
-          error && styles.selectButtonError,
-          pressed && styles.pressed,
-        ]}
+      <AppPressable
+        style={[styles.selectButton, error && styles.selectButtonError]}
         onPress={() => setModalVisible(true)}
       >
         <Text
@@ -87,8 +79,7 @@ export const FormSelect: React.FC<FormSelectProps> = ({
           {selectedOption ? selectedOption.label : resolvedPlaceholder}
         </Text>
         <Icon name="chevron-down" size={24} tone="textSecondary" />
-      </Pressable>
-
+      </AppPressable>
       {modalVisible ? (
         <Modal
           visible
@@ -107,15 +98,12 @@ export const FormSelect: React.FC<FormSelectProps> = ({
                 keyExtractor={item => item.value}
                 showsVerticalScrollIndicator={false}
               />
-              <Pressable
-                style={({ pressed }) => [
-                  styles.closeButton,
-                  pressed && styles.pressed,
-                ]}
+              <AppPressable
+                style={styles.closeButton}
                 onPress={() => setModalVisible(false)}
               >
                 <Text style={styles.closeButtonText}>{t('labels.close')}</Text>
-              </Pressable>
+              </AppPressable>
             </View>
           </View>
         </Modal>

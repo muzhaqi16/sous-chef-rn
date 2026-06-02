@@ -2,10 +2,10 @@ import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import {
-  Pressable,
   PrimaryActivityIndicator,
   ThemedRefreshControl,
 } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import Animated, {
   LinearTransition,
   FadeInDown,
@@ -252,11 +252,10 @@ export const HomeManagement: React.FC = () => {
           >
             {/* Mode Switcher */}
             <View style={styles.modeSwitcher}>
-              <Pressable
-                style={({ pressed }) => [
+              <AppPressable
+                style={[
                   styles.modeButton,
                   mode === 'create' && styles.modeButtonActive,
-                  pressed && styles.pressed,
                 ]}
                 onPress={() => setMode('create')}
               >
@@ -268,12 +267,11 @@ export const HomeManagement: React.FC = () => {
                 >
                   {t('homeManagement.modeCreate')}
                 </Text>
-              </Pressable>
-              <Pressable
-                style={({ pressed }) => [
+              </AppPressable>
+              <AppPressable
+                style={[
                   styles.modeButton,
                   mode === 'join' && styles.modeButtonActive,
-                  pressed && styles.pressed,
                 ]}
                 onPress={() => setMode('join')}
               >
@@ -285,7 +283,7 @@ export const HomeManagement: React.FC = () => {
                 >
                   {t('homeManagement.modeJoin')}
                 </Text>
-              </Pressable>
+              </AppPressable>
             </View>
 
             {mode === 'create' ? (
@@ -309,7 +307,6 @@ export const HomeManagement: React.FC = () => {
                   placeholder={t('homeManagement.joinCodePlaceholder')}
                   autoCapitalize="characters"
                 />
-
                 {/* Preview - only shows when code is validated */}
                 {!!loadingPreview && (
                   <PrimaryActivityIndicator
@@ -327,7 +324,6 @@ export const HomeManagement: React.FC = () => {
                     </Text>
                   </View>
                 )}
-
                 {/* Actions - same as CreateHomeForm */}
                 <View style={styles.formActions}>
                   <Button

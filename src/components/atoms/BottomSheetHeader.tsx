@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
 
@@ -41,16 +41,16 @@ export const BottomSheetHeader: React.FC<BottomSheetHeaderProps> = ({
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Pressable
+        <AppPressable
           onPress={onCancel}
-          style={({ pressed }) => [styles.button, pressed && styles.pressed]}
+          style={styles.button}
           accessibilityRole="button"
           accessibilityLabel={resolvedCancelLabel}
         >
           <Text size="md" tone="secondary">
             {resolvedCancelLabel}
           </Text>
-        </Pressable>
+        </AppPressable>
 
         <Text
           size="lg"
@@ -62,9 +62,9 @@ export const BottomSheetHeader: React.FC<BottomSheetHeaderProps> = ({
           {title}
         </Text>
 
-        <Pressable
+        <AppPressable
           onPress={onConfirm}
-          style={({ pressed }) => [styles.button, pressed && styles.pressed]}
+          style={styles.button}
           disabled={confirmDisabled}
           accessibilityRole="button"
           accessibilityLabel={resolvedConfirmLabel}
@@ -78,7 +78,7 @@ export const BottomSheetHeader: React.FC<BottomSheetHeaderProps> = ({
           >
             {resolvedConfirmLabel}
           </Text>
-        </Pressable>
+        </AppPressable>
       </View>
       <View style={styles.divider} />
     </View>

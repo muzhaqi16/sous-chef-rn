@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#/utils/iconUtils';
 import { Text } from '#components/atoms/Text';
@@ -22,10 +22,7 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
 }) => {
   return (
     <>
-      <Pressable
-        style={({ pressed }) => [styles.header, pressed && styles.pressed]}
-        onPress={onToggle}
-      >
+      <AppPressable style={styles.header} onPress={onToggle}>
         <Text size="base" weight="semibold">
           {title}
           {count != null ? ` (${count})` : ''}
@@ -35,7 +32,7 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
           size={20}
           tone="textSecondary"
         />
-      </Pressable>
+      </AppPressable>
       {!!expanded && children}
     </>
   );

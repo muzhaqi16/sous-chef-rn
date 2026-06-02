@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import type { CreateItemFormData } from '#utils/validation/item';
 import {
@@ -43,18 +43,15 @@ export const ScanUpcButton: React.FC<{ onPress: () => void }> = ({
   onPress,
 }) => {
   return (
-    <Pressable
+    <AppPressable
       onPress={onPress}
       hitSlop={8}
       accessibilityRole="button"
       accessibilityLabel="Scan UPC with camera"
-      style={({ pressed }) => [
-        scanButtonStyles.button,
-        pressed && scanButtonStyles.pressed,
-      ]}
+      style={scanButtonStyles.button}
     >
       <Icon name="barcode-outline" size={22} tone="primary" />
-    </Pressable>
+    </AppPressable>
   );
 };
 

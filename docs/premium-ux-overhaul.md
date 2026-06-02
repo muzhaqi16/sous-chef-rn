@@ -34,8 +34,48 @@ success toast) is what reads as "not premium." This is **hardening, not a rewrit
 | 5 | List motion (reflow/layout) — **device-tested → reverted** | ⏸️ Blocked (needs data-pipeline rework) |
 | 6 | Scrim / alpha-color token migration (`withAlpha` + named scrims, ~40 files) | ⬜ Not started (deferred from P3) |
 | 7 | Token enforcement — ESLint guards + spacing-scale purification + raw-`Text` migration | ⬜ Not started (deferred from P3, depends on P6) |
+| 8 | **Consistency: canonical `AppPressable`** + full sweep | 🟡 In progress (foundation ✅ device-verified; 119-file sweep pending theme-reactivity device check) |
 
 Legend: ⬜ Not started · 🟡 In progress · ✅ Done · ⏸️ Blocked
+
+### Consistency tracks (validated by pre-refactor agents, 2026-06-02)
+Three approaches were agent-validated **before** any change (per owner directive). All came back
+**GO-with-mitigation**:
+- **T8a — `AppPressable` canonical pressable** (this phase): `opacity: theme.opacity.pressed` (0.7)
+  is already hand-rolled in **145/151** files. Haptic (5/151) and ripple (9 total) are opt-in. Safe
+  API wraps RN `Pressable`, appends `pressed` via the array pattern (composes with `useVariants`).
+  Excludes the 13 scale sites (→ future `PressableScale`) and 6 RNGH gesture-composition sites.
+- **T8b — AppearanceScreen → shared `SegmentedControl`**: GO, but **must first add 2-line label
+  support** to the shared `SegmentedTab` (`numberOfLines={1}` truncates the 4-segment Font-scale row
+  for SQ/ES/IT/EN — a layout regression invisible to unit tests). Not started.
+- **T8c — `SettingRow` consolidation**: `components/settings/SettingRow.tsx` is **dead code** (zero
+  prod consumers) → safe delete; `molecules/SettingRow` is canonical. Latent bug: it never renders
+  `item.subtitle`. Not started.
+- **Correction logged:** the earlier filter-tab "regression" was most likely the `android_ripple` +
+  `overflow:'hidden'` I added (and/or an RNGH-Pressable path), **not** function-style + `useVariants`
+  — that combo works on RN `Pressable` (live in `Counter`, `SegmentedControl`, `ExpirationActionSheet`).
+
+#### T8a execution — full sweep via deterministic codemod
+- Wrote `scripts/codemods/pressable-to-app-pressable.js` (jscodeshift). Conservative: transforms ONLY
+  `<Pressable style={({ pressed }) => [A, …, pressed && _.pressed]}>` → `<AppPressable style={[A, …]}>`;
+  skips files importing RNGH `Pressable`; skips any non-canonical shape. Ran via `npx` (no dep added).
+- Result: **119 files migrated, 0 errors, 555 conservatively skipped.** Manual settings adoption
+  (AppearanceScreen swatches, NotificationSettings picker rows) + the `AppPressable` atom remain.
+- **Edge case found by the test suite (agents missed it):** `StorageLocationForm` uses a *dynamic
+  inline* style (`{ backgroundColor: preset.value }`) inside the pressable. After migration, the
+  Unistyles babel plugin processes `<AppPressable>`'s style via the generic component path and injects
+  a **Reanimated dev-helper call** (`getUseOfValueInStyleWarning`) that a bare `<Pressable>` (core
+  component, special ShadowTree path) did not. The project's custom Reanimated **test mock** lacked
+  that export → 14 tests in 1 suite threw `not a function`. The **real app is unaffected** (Reanimated
+  exports it; it's a no-op SharedValue-misuse check). Fix: added `getUseOfValueInStyleWarning` to
+  `__tests__/setup/mocks/react-native-reanimated.js`.
+- **Open question being device-verified:** the generic-path processing means `AppPressable` styles may
+  re-render on theme change rather than ShadowTree-update (a minor perf delta, NOT a correctness bug,
+  since `AppPressable` wraps RN `Pressable` — the blessed array-merge pattern). Verifying theme/color
+  switching still updates migrated screens on device before declaring the sweep done.
+- Validation so far: typecheck ✅ · lint ✅ (0 errors) · **full suite 5972/5972 ✅**.
+- Known follow-up: 119 now-unused local `pressed: { opacity }` styles remain (harmless, lint-clean) —
+  a second codemod pass can remove them once the sweep is confirmed.
 
 ---
 

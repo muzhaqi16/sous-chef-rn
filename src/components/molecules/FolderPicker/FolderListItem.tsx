@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
@@ -26,12 +26,8 @@ export const FolderListItem: React.FC<FolderListItemProps> = ({
   disabled = false,
 }) => {
   return (
-    <Pressable
-      style={({ pressed }) => [
-        styles.folderItem,
-        isSelected && styles.folderItemSelected,
-        pressed && styles.pressed,
-      ]}
+    <AppPressable
+      style={[styles.folderItem, isSelected && styles.folderItemSelected]}
       onPress={() => onPress(folder)}
       onLongPress={onLongPress ? () => onLongPress(folder) : undefined}
       delayLongPress={500}
@@ -52,7 +48,7 @@ export const FolderListItem: React.FC<FolderListItemProps> = ({
         {folder}
       </Text>
       {!!isSelected && <Icon name="checkmark" size={20} tone="primary" />}
-    </Pressable>
+    </AppPressable>
   );
 };
 

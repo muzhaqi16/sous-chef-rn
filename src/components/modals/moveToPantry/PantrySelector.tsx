@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
@@ -33,12 +33,11 @@ export const PantrySelector: React.FC<PantrySelectorProps> = ({
       </Text>
       <View style={styles.pantryList}>
         {pantries.map(pantry => (
-          <Pressable
+          <AppPressable
             key={pantry.id}
-            style={({ pressed }) => [
+            style={[
               styles.pantryOption,
               selectedPantryId === pantry.id && styles.pantryOptionActive,
-              pressed && styles.pressed,
             ]}
             onPress={() => onSelect(pantry.id)}
           >
@@ -74,7 +73,7 @@ export const PantrySelector: React.FC<PantrySelectorProps> = ({
                 </Text>
               </View>
             )}
-          </Pressable>
+          </AppPressable>
         ))}
       </View>
     </View>

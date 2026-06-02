@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Modal, View, Text, ScrollView } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import {
   ThemedTextInput,
@@ -73,8 +73,8 @@ const RoleOption: React.FC<RoleOptionProps> = ({
 }) => {
   styles.useVariants({ selected });
   return (
-    <Pressable
-      style={({ pressed }) => [styles.roleOption, pressed && styles.pressed]}
+    <AppPressable
+      style={styles.roleOption}
       onPress={onPress}
       disabled={disabled}
     >
@@ -95,7 +95,7 @@ const RoleOption: React.FC<RoleOptionProps> = ({
           <Text style={styles.warningText}>{warningText}</Text>
         ) : null}
       </View>
-    </Pressable>
+    </AppPressable>
   );
 };
 
@@ -241,24 +241,20 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
 
             {/* Action Buttons */}
             <View style={styles.buttonContainer}>
-              <Pressable
-                style={({ pressed }) => [
-                  styles.cancelButton,
-                  pressed && styles.pressed,
-                ]}
+              <AppPressable
+                style={styles.cancelButton}
                 onPress={handleClose}
                 disabled={isSubmitting}
               >
                 <Text style={styles.cancelButtonText}>
                   {resolvedCancelText}
                 </Text>
-              </Pressable>
+              </AppPressable>
 
-              <Pressable
-                style={({ pressed }) => [
+              <AppPressable
+                style={[
                   styles.submitButton,
                   (isSubmitting || isOffline) && styles.disabledButton,
-                  pressed && styles.pressed,
                 ]}
                 onPress={handleSubmit}
                 disabled={isSubmitting || isOffline}
@@ -270,7 +266,7 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
                     {resolvedSubmitText}
                   </Text>
                 )}
-              </Pressable>
+              </AppPressable>
             </View>
           </ScrollView>
         </View>

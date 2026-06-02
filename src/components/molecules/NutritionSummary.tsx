@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, ViewStyle, ScrollView } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import type { NutritionsData, NutritionHighlight } from '#/types/nutrition';
@@ -183,17 +183,14 @@ export const NutritionSummary: React.FC<NutritionSummaryProps> = ({
 
   if (onPress) {
     return (
-      <Pressable
+      <AppPressable
         onPress={onPress}
         android_ripple={null}
         needsOffscreenAlphaCompositing
-        style={({ pressed }) => [
-          styles.pressableWrapper,
-          pressed && styles.pressed,
-        ]}
+        style={styles.pressableWrapper}
       >
         {content}
-      </Pressable>
+      </AppPressable>
     );
   }
 

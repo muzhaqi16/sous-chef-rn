@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { useMappingHelper } from '@shopify/flash-list';
 import { useFragment } from '@apollo/client/react';
@@ -38,10 +38,7 @@ const TemplateCardComponent: React.FC<TemplateCardProps> = ({
 
   const { getMappingKey } = useMappingHelper();
   return (
-    <Pressable
-      onPress={() => onPress(template)}
-      style={({ pressed }) => [styles.card, pressed && styles.pressed]}
-    >
+    <AppPressable onPress={() => onPress(template)} style={styles.card}>
       <View style={styles.header}>
         <Text
           size="base"
@@ -57,7 +54,6 @@ const TemplateCardComponent: React.FC<TemplateCardProps> = ({
           </Text>
         )}
       </View>
-
       {!!template.description && (
         <Text
           size="sm"
@@ -68,7 +64,6 @@ const TemplateCardComponent: React.FC<TemplateCardProps> = ({
           {template.description}
         </Text>
       )}
-
       <View style={styles.metaRow}>
         <View style={styles.metaItem}>
           <Icon name="calendar-outline" size={14} tone="textTertiary" />
@@ -97,7 +92,6 @@ const TemplateCardComponent: React.FC<TemplateCardProps> = ({
           </Text>
         </View>
       </View>
-
       {template.tags.length > 0 && (
         <View style={styles.tagRow}>
           {template.tags.slice(0, 3).map((tag, index) => (
@@ -114,7 +108,7 @@ const TemplateCardComponent: React.FC<TemplateCardProps> = ({
           )}
         </View>
       )}
-    </Pressable>
+    </AppPressable>
   );
 };
 

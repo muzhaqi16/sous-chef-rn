@@ -13,7 +13,7 @@ import { OnboardingSteps } from '#components/navigation/OnboardingSteps/Onboardi
 import { OnboardingNavigation } from '#components/navigation/OnboardingNavigation/OnboardingNavigation';
 import { useOnboardingContextSafe } from '#/context/OnboardingContext';
 import type { NavigationAction } from '#components/navigation/OnboardingNavigation/types';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 
 const ThemedBackButton = withUnistyles(BackButton, theme => ({
   color: theme.colors.primary,
@@ -80,7 +80,6 @@ export const OnBoardingWrapper = ({
         )}
         <View style={styles.iconButton} />
       </View>
-
       {/* Animated Step Indicator */}
       {!!showSteps && !isLegacyMode && !!onboardingContext && (
         <View style={styles.stepsContainer}>
@@ -95,7 +94,6 @@ export const OnBoardingWrapper = ({
           />
         </View>
       )}
-
       <KeyboardAvoidingView
         style={styles.keyboardAvoid}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -138,16 +136,13 @@ export const OnBoardingWrapper = ({
       ) : (
         <View style={styles.bottomNavigation}>
           {!!onSkip && (
-            <Pressable
+            <AppPressable
               onPress={onSkip}
-              style={({ pressed }) => [
-                styles.skipButton,
-                pressed && styles.pressed,
-              ]}
+              style={styles.skipButton}
               testID={testID ? `${testID}-skip-button` : undefined}
             >
               <Text style={styles.skipText}>Skip</Text>
-            </Pressable>
+            </AppPressable>
           )}
           {step != null && totalSteps != null && (
             <View style={styles.progressBarBackground}>

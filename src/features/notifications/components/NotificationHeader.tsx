@@ -2,7 +2,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { Icon } from '#utils/iconUtils';
 import { StyleSheet } from 'react-native-unistyles';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
 
 interface NotificationHeaderProps {
@@ -20,25 +20,18 @@ export const NotificationHeader: React.FC<NotificationHeaderProps> = ({
 
   return (
     <View style={styles.container}>
-      <Pressable
-        style={({ pressed }) => [styles.button, pressed && styles.pressed]}
-        onPress={onMarkAllRead}
-      >
+      <AppPressable style={styles.button} onPress={onMarkAllRead}>
         <Icon name="checkmark-done" size={20} tone="primary" />
         <Text size="sm" weight="medium" style={styles.buttonText}>
           Mark all read
         </Text>
-      </Pressable>
-
-      <Pressable
-        style={({ pressed }) => [styles.button, pressed && styles.pressed]}
-        onPress={onClearAll}
-      >
+      </AppPressable>
+      <AppPressable style={styles.button} onPress={onClearAll}>
         <Icon name="list-outline" size={20} tone="primary" />
         <Text size="sm" weight="medium" style={styles.buttonText}>
           Clear all
         </Text>
-      </Pressable>
+      </AppPressable>
     </View>
   );
 };

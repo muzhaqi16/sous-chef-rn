@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
@@ -162,7 +162,6 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       <Header onClose={handleGoBack} />
-
       <View style={styles.content}>
         {!!isVerifying && (
           <>
@@ -235,11 +234,8 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
             </Text>
 
             <View style={styles.actions}>
-              <Pressable
-                style={({ pressed }) => [
-                  styles.retryButton,
-                  pressed && styles.pressed,
-                ]}
+              <AppPressable
+                style={styles.retryButton}
                 onPress={performVerification}
               >
                 <Text
@@ -249,7 +245,7 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
                 >
                   Try Again
                 </Text>
-              </Pressable>
+              </AppPressable>
             </View>
           </>
         )}

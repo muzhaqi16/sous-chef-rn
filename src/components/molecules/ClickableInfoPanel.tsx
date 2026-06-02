@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, ViewStyle } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { commonStyles } from '#/styles/commonStyles';
@@ -33,11 +33,7 @@ export const ClickableInfoPanel: React.FC<ClickableInfoPanelProps> = ({
       <Text size="md" weight="semibold" style={styles.title}>
         {title}
       </Text>
-
-      <Pressable
-        style={({ pressed }) => [styles.panel, pressed && styles.pressed]}
-        onPress={onPress}
-      >
+      <AppPressable style={styles.panel} onPress={onPress}>
         {hasItems ? (
           <>
             {items.map((item, index) => (
@@ -76,7 +72,7 @@ export const ClickableInfoPanel: React.FC<ClickableInfoPanelProps> = ({
             </Text>
           </View>
         )}
-      </Pressable>
+      </AppPressable>
     </View>
   );
 };

@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View } from 'react-native';
-import {
-  Pressable,
-  PrimaryActivityIndicator,
-} from '#components/atoms/themedComponents';
+import { PrimaryActivityIndicator } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from 'react-i18next';
 import { useMutation } from '@apollo/client/react';
@@ -95,11 +93,8 @@ export const ShareCodeSection: React.FC<ShareCodeSectionProps> = ({
       <Text style={styles.shareCodeDescription}>
         {t('shoppingListScreens.shareCodeDescription')}
       </Text>
-      <Pressable
-        style={({ pressed }) => [
-          styles.shareCodeToggle,
-          pressed && styles.pressed,
-        ]}
+      <AppPressable
+        style={styles.shareCodeToggle}
         onPress={handleToggleShareCode}
         disabled={togglingShareCode}
       >
@@ -135,14 +130,11 @@ export const ShareCodeSection: React.FC<ShareCodeSectionProps> = ({
             </View>
           )}
         </View>
-      </Pressable>
+      </AppPressable>
       {isPublic && shareCode ? (
         <Animated.View {...getFormAnimationPreset()}>
-          <Pressable
-            style={({ pressed }) => [
-              styles.shareCodeDisplay,
-              pressed && styles.pressed,
-            ]}
+          <AppPressable
+            style={styles.shareCodeDisplay}
             onPress={handleCopyShareCode}
           >
             <Text style={styles.shareCodeValue}>{shareCode}</Text>
@@ -158,7 +150,7 @@ export const ShareCodeSection: React.FC<ShareCodeSectionProps> = ({
                   : t('shoppingListScreens.copy')}
               </Text>
             </View>
-          </Pressable>
+          </AppPressable>
         </Animated.View>
       ) : null}
     </View>

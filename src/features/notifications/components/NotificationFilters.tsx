@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, ScrollView } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { NotificationCategory } from '#/graphql/generated/schemaTypes';
 import { NOTIFICATION_CATEGORIES } from '#store/slices/notificationSlice';
@@ -22,11 +22,10 @@ export const NotificationFilters: React.FC<NotificationFiltersProps> = ({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.filterScroll}
       >
-        <Pressable
-          style={({ pressed }) => [
+        <AppPressable
+          style={[
             styles.filterPill,
             !selectedCategory && styles.filterPillActive,
-            pressed && styles.pressed,
           ]}
           onPress={() => onCategoryChange(null)}
         >
@@ -39,15 +38,14 @@ export const NotificationFilters: React.FC<NotificationFiltersProps> = ({
           >
             All
           </Text>
-        </Pressable>
+        </AppPressable>
 
         {NOTIFICATION_CATEGORIES.map(category => (
-          <Pressable
+          <AppPressable
             key={category}
-            style={({ pressed }) => [
+            style={[
               styles.filterPill,
               selectedCategory === category && styles.filterPillActive,
-              pressed && styles.pressed,
             ]}
             onPress={() => onCategoryChange(category)}
           >
@@ -60,7 +58,7 @@ export const NotificationFilters: React.FC<NotificationFiltersProps> = ({
             >
               {category.replace('_', ' ')}
             </Text>
-          </Pressable>
+          </AppPressable>
         ))}
       </ScrollView>
     </View>

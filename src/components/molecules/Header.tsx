@@ -1,6 +1,7 @@
 import React, { useRef } from 'react';
 import { View, ActivityIndicator } from 'react-native';
-import { Pressable, ThemedIcon } from '#components/atoms/themedComponents';
+import { ThemedIcon } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { Icon, IconName, IconLibrary } from '#utils/iconUtils';
 import { commonStyles } from '#/styles/commonStyles';
@@ -170,9 +171,9 @@ export const Header: React.FC<HeaderProps> = ({
   // Render a single action button
   const renderAction = (action: HeaderAction, index: number) => {
     const pressable = (
-      <Pressable
+      <AppPressable
         key={action.onMeasure ? undefined : index}
-        style={({ pressed }) => [styles.action, pressed && styles.pressed]}
+        style={styles.action}
         onPress={action.onPress}
         disabled={action.disabled || action.loading}
         testID={action.testID}
@@ -203,7 +204,7 @@ export const Header: React.FC<HeaderProps> = ({
             <Text style={commonStyles.badgeText}>{action.badge}</Text>
           </View>
         )}
-      </Pressable>
+      </AppPressable>
     );
 
     if (action.onMeasure) {
@@ -222,28 +223,27 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Left side */}
       <View style={styles.actions}>
         {!!showCloseButton && (
-          <Pressable
-            style={({ pressed }) => [styles.action, pressed && styles.pressed]}
+          <AppPressable
+            style={styles.action}
             onPress={onClose}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             testID="header-close-button"
           >
             <Icon name="close" size={24} tone="textPrimary" />
-          </Pressable>
+          </AppPressable>
         )}
         {!!showBackButton && (
-          <Pressable
-            style={({ pressed }) => [styles.action, pressed && styles.pressed]}
+          <AppPressable
+            style={styles.action}
             onPress={onBack}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             testID="header-back-button"
           >
             <Icon name="arrow-back" size={24} tone="textPrimary" />
-          </Pressable>
+          </AppPressable>
         )}
         {leftActions.map(renderAction)}
       </View>
-
       {/* Title */}
       {showTitle ? (
         <Text
@@ -258,7 +258,6 @@ export const Header: React.FC<HeaderProps> = ({
       ) : (
         <View style={styles.titleSpacer} />
       )}
-
       {/* Right side */}
       <View style={styles.actions}>{rightActions.map(renderAction)}</View>
     </View>

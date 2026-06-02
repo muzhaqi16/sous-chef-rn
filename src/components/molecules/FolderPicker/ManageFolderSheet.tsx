@@ -1,6 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import {
   BottomSheetView,
   type BottomSheetModalProps,
@@ -113,23 +114,17 @@ export const ManageFolderSheet: React.FC<ManageFolderSheetProps> = ({
               Recipes in this folder will be moved to "No Folder".
             </Text>
             <View style={styles.deleteConfirmButtons}>
-              <Pressable
-                style={({ pressed }) => [
-                  styles.deleteConfirmCancelButton,
-                  pressed && styles.pressed,
-                ]}
+              <AppPressable
+                style={styles.deleteConfirmCancelButton}
                 onPress={() => onShowDeleteConfirm(false)}
                 disabled={folderActionLoading}
               >
                 <Text size="base" weight="medium">
                   Cancel
                 </Text>
-              </Pressable>
-              <Pressable
-                style={({ pressed }) => [
-                  styles.deleteConfirmDeleteButton,
-                  pressed && styles.pressed,
-                ]}
+              </AppPressable>
+              <AppPressable
+                style={styles.deleteConfirmDeleteButton}
                 onPress={onDeleteConfirm}
                 disabled={folderActionLoading}
               >
@@ -144,7 +139,7 @@ export const ManageFolderSheet: React.FC<ManageFolderSheetProps> = ({
                     Delete
                   </Text>
                 )}
-              </Pressable>
+              </AppPressable>
             </View>
           </View>
         ) : (
@@ -170,11 +165,10 @@ export const ManageFolderSheet: React.FC<ManageFolderSheetProps> = ({
                     onSubmitEditing={onRenameConfirm}
                     editable={!folderActionLoading}
                   />
-                  <Pressable
-                    style={({ pressed }) => [
+                  <AppPressable
+                    style={[
                       styles.renameButton,
                       renameDisabled && styles.renameButtonDisabled,
-                      pressed && styles.pressed,
                     ]}
                     onPress={onRenameConfirm}
                     disabled={renameDisabled || folderActionLoading}
@@ -193,7 +187,7 @@ export const ManageFolderSheet: React.FC<ManageFolderSheetProps> = ({
                         Rename
                       </Text>
                     )}
-                  </Pressable>
+                  </AppPressable>
                 </View>
               </View>
             )}
@@ -201,11 +195,8 @@ export const ManageFolderSheet: React.FC<ManageFolderSheetProps> = ({
             {/* Delete Section */}
             {!!canDelete && (
               <View style={styles.deleteSection}>
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.deleteButton,
-                    pressed && styles.pressed,
-                  ]}
+                <AppPressable
+                  style={styles.deleteButton}
                   onPress={() => onShowDeleteConfirm(true)}
                   disabled={folderActionLoading}
                 >
@@ -213,7 +204,7 @@ export const ManageFolderSheet: React.FC<ManageFolderSheetProps> = ({
                   <Text size="base" weight="medium" tone="error">
                     Delete Folder
                   </Text>
-                </Pressable>
+                </AppPressable>
                 <Text
                   size="sm"
                   tone="secondary"

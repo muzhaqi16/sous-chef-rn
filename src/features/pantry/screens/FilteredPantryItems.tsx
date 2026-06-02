@@ -1,10 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import {
-  Pressable,
-  ThemedRefreshControl,
-} from '#components/atoms/themedComponents';
+import { ThemedRefreshControl } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
 import { alertService } from '#/services/alertService';
@@ -166,15 +164,12 @@ const FilteredRenderItemComponent: React.FC<FilteredRenderItemProps> = ({
 
   const cartButton =
     showCart && handleAddToList ? (
-      <Pressable
+      <AppPressable
         onPress={() => handleAddToList(item.id)}
-        style={({ pressed }) => [
-          styles.actionButton,
-          pressed && styles.pressed,
-        ]}
+        style={styles.actionButton}
       >
         <Icon name="cart-outline" size={20} tone="primary" />
-      </Pressable>
+      </AppPressable>
     ) : null;
 
   return (

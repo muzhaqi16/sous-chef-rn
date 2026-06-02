@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { StyleSheet } from 'react-native-unistyles';
@@ -258,16 +258,12 @@ export function LoginScreen(): React.JSX.Element {
         }}
         isLoading={isLoggingIn}
       />
-
       {/* Biometric Authentication Section */}
       {!!shouldShowBiometricButton && (
         <View style={styles.biometricContainer}>
           {/* Main Biometric Login Button */}
-          <Pressable
-            style={({ pressed }) => [
-              styles.biometricButton,
-              pressed && styles.pressed,
-            ]}
+          <AppPressable
+            style={styles.biometricButton}
             onPress={() => handleBiometricLogin()}
             disabled={isBiometricLoading || isLoggingIn}
             accessibilityRole="button"
@@ -294,10 +290,9 @@ export function LoginScreen(): React.JSX.Element {
             >
               {getBiometricButtonText()}
             </Text>
-          </Pressable>
+          </AppPressable>
         </View>
       )}
-
       {/* RememberMe Modal */}
       <RememberMeModal
         visible={showRememberMeModal}

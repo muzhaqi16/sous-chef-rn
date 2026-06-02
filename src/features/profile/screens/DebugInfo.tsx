@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, ScrollView } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
 import { StyleSheet } from 'react-native-unistyles';
 import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
@@ -109,17 +109,11 @@ export const DebugInfo: React.FC = () => {
             Detailed debug information for troubleshooting API connections and
             app configuration.
           </Text>
-          <Pressable
-            style={({ pressed }) => [
-              styles.copyAllButton,
-              pressed && styles.pressed,
-            ]}
-            onPress={handleCopyAll}
-          >
+          <AppPressable style={styles.copyAllButton} onPress={handleCopyAll}>
             <Text size="sm" weight="semibold" style={styles.copyAllButtonText}>
               Copy All Info
             </Text>
-          </Pressable>
+          </AppPressable>
         </View>
 
         {Object.entries(debugData).map(([sectionName, sectionData]) => (
@@ -128,17 +122,14 @@ export const DebugInfo: React.FC = () => {
               <Text size="lg" weight="semibold">
                 {sectionName}
               </Text>
-              <Pressable
-                style={({ pressed }) => [
-                  styles.copySectionButton,
-                  pressed && styles.pressed,
-                ]}
+              <AppPressable
+                style={styles.copySectionButton}
                 onPress={() => handleCopySection(sectionName, sectionData)}
               >
                 <Text size="xs" weight="semibold" tone="accent">
                   Copy
                 </Text>
-              </Pressable>
+              </AppPressable>
             </View>
             <View style={styles.infoContainer}>
               {Object.entries(sectionData).map(([key, value]) => (

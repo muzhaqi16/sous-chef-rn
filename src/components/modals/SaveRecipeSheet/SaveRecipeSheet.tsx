@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
@@ -168,12 +169,11 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
               folder === null ? !selectedFolder : selectedFolder === folder;
             const isNoFolder = folder === null;
             return (
-              <Pressable
+              <AppPressable
                 key={folder ?? 'no-folder'}
-                style={({ pressed }) => [
+                style={[
                   styles.folderOption,
                   isSelected && styles.folderOptionSelected,
-                  pressed && styles.pressed,
                 ]}
                 onPress={() => handleSelectFolder(folder)}
               >
@@ -193,7 +193,7 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
                 {!!isSelected && (
                   <Icon name="checkmark" size={18} tone="primary" />
                 )}
-              </Pressable>
+              </AppPressable>
             );
           })}
         </View>
@@ -210,11 +210,10 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
               autoCapitalize="words"
               onSubmitEditing={handleCreateFolder}
             />
-            <Pressable
-              style={({ pressed }) => [
+            <AppPressable
+              style={[
                 styles.createButton,
                 !newFolderName.trim() && styles.createButtonDisabled,
-                pressed && styles.pressed,
               ]}
               onPress={handleCreateFolder}
               disabled={!newFolderName.trim()}
@@ -227,21 +226,18 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
               >
                 {t('saveRecipe.create')}
               </Text>
-            </Pressable>
+            </AppPressable>
           </View>
         ) : (
-          <Pressable
-            style={({ pressed }) => [
-              styles.newFolderButton,
-              pressed && styles.pressed,
-            ]}
+          <AppPressable
+            style={styles.newFolderButton}
             onPress={() => setShowNewFolder(true)}
           >
             <Icon name="add" size={18} tone="primary" />
             <Text size="base" weight="medium" tone="accent">
               {t('saveRecipe.createNewFolder')}
             </Text>
-          </Pressable>
+          </AppPressable>
         )}
 
         {/* Tags */}

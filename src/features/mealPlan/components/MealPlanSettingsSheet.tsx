@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { alertService } from '#/services/alertService';
@@ -52,12 +52,9 @@ function ActionItem({
 }) {
   actionStyles.useVariants({ tone: tone === 'error' ? 'error' : undefined });
   return (
-    <Pressable
+    <AppPressable
       onPress={onPress}
-      style={({ pressed }) => [
-        actionStyles.item,
-        pressed && actionStyles.pressed,
-      ]}
+      style={actionStyles.item}
       disabled={disabled}
     >
       <Icon name={icon} size={22} tone={tone} />
@@ -72,7 +69,7 @@ function ActionItem({
         )}
       </View>
       <Icon name="chevron-forward" size={18} tone="textTertiary" />
-    </Pressable>
+    </AppPressable>
   );
 }
 

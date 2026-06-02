@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
 import {
   BottomSheetView,
@@ -266,11 +267,10 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
           )}
 
           {/* No Folder Option */}
-          <Pressable
-            style={({ pressed }) => [
+          <AppPressable
+            style={[
               styles.folderItem,
               !selectedFolder && styles.folderItemSelected,
-              pressed && styles.pressed,
             ]}
             onPress={() => handleSelectFolder(null)}
           >
@@ -290,7 +290,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
             {!selectedFolder && (
               <Icon name="checkmark" size={20} tone="primary" />
             )}
-          </Pressable>
+          </AppPressable>
 
           {/* Divider */}
           <View style={styles.divider} />
@@ -308,11 +308,10 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
                   autoCapitalize="words"
                   onSubmitEditing={handleCreateFolder}
                 />
-                <Pressable
-                  style={({ pressed }) => [
+                <AppPressable
+                  style={[
                     styles.createButton,
                     !newFolderName.trim() && styles.createButtonDisabled,
-                    pressed && styles.pressed,
                   ]}
                   onPress={handleCreateFolder}
                   disabled={!newFolderName.trim()}
@@ -327,21 +326,18 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
                   >
                     Create
                   </Text>
-                </Pressable>
+                </AppPressable>
               </View>
             ) : (
-              <Pressable
-                style={({ pressed }) => [
-                  styles.newFolderButton,
-                  pressed && styles.pressed,
-                ]}
+              <AppPressable
+                style={styles.newFolderButton}
                 onPress={() => setShowNewFolder(true)}
               >
                 <Icon name="add" size={20} tone="primary" />
                 <Text size="base" weight="medium" tone="accent">
                   Create New Folder
                 </Text>
-              </Pressable>
+              </AppPressable>
             ))}
 
           {/* Existing Folders */}
@@ -389,7 +385,6 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
           )}
         </BottomSheetView>
       </BottomSheetModal>
-
       {/* Manage Folder Bottom Sheet */}
       <ManageFolderSheet
         sheetRef={manageSheetRef}

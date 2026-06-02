@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
 import { StorageState } from '#/graphql/generated/schemaTypes';
@@ -37,13 +37,9 @@ export const StorageStateControl: React.FC<StorageStateControlProps> = ({
       </Text>
       <View style={styles.segmentedControl}>
         {STORAGE_STATES.map(state => (
-          <Pressable
+          <AppPressable
             key={state}
-            style={({ pressed }) => [
-              styles.segment,
-              value === state && styles.segmentActive,
-              pressed && styles.pressed,
-            ]}
+            style={[styles.segment, value === state && styles.segmentActive]}
             onPress={() => onChange(state)}
           >
             <Text
@@ -55,7 +51,7 @@ export const StorageStateControl: React.FC<StorageStateControlProps> = ({
             >
               {storageStateLabel[state]}
             </Text>
-          </Pressable>
+          </AppPressable>
         ))}
       </View>
     </View>

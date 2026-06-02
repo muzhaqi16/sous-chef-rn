@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Modal } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import type { SortOption, SortDirection } from './pantryDisplay/types';
@@ -82,12 +83,11 @@ export const PantrySortModal: React.FC<PantrySortModalProps> = ({
         <View style={styles.sortModal} onStartShouldSetResponder={() => true}>
           <Text style={styles.sortModalTitle}>{t('pantrySort.title')}</Text>
           {SORT_OPTIONS.map(option => (
-            <Pressable
+            <AppPressable
               key={option.key}
-              style={({ pressed }) => [
+              style={[
                 styles.sortOption,
                 sortOption === option.key && styles.sortOptionActive,
-                pressed && styles.pressed,
               ]}
               onPress={() => onSelect(option.key)}
             >
@@ -116,7 +116,7 @@ export const PantrySortModal: React.FC<PantrySortModalProps> = ({
                   tone="primary"
                 />
               )}
-            </Pressable>
+            </AppPressable>
           ))}
         </View>
       </Pressable>

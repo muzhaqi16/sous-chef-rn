@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useFragment } from '@apollo/client/react';
 import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { formatDistanceToNow } from 'date-fns/formatDistanceToNow';
 import { CachedImage } from '#components/atoms/CachedImage';
@@ -99,7 +100,6 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
           </View>
         )}
       </View>
-
       {/* Stars */}
       <View style={styles.starsRow}>
         {[1, 2, 3, 4, 5].map(star => (
@@ -111,21 +111,18 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
           />
         ))}
       </View>
-
       {/* Comment */}
       {!!review.comment && (
         <Text size="sm" lineHeight="tight" style={styles.comment}>
           {review.comment}
         </Text>
       )}
-
       {/* Helpful button */}
-      <Pressable
+      <AppPressable
         onPress={onToggleHelpful}
-        style={({ pressed }) => [
-          hasVotedHelpful ? styles.helpfulButtonActive : styles.helpfulButton,
-          pressed && styles.pressed,
-        ]}
+        style={
+          hasVotedHelpful ? styles.helpfulButtonActive : styles.helpfulButton
+        }
       >
         <Icon
           name={hasVotedHelpful ? 'thumbs-up' : 'thumbs-up-outline'}
@@ -135,7 +132,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
         <Text size="xs" tone={hasVotedHelpful ? 'accent' : 'secondary'}>
           Helpful{review.helpful > 0 ? ` (${review.helpful})` : ''}
         </Text>
-      </Pressable>
+      </AppPressable>
     </View>
   );
 };

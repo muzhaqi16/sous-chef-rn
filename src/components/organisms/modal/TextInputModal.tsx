@@ -7,7 +7,7 @@ import {
   Platform,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import {
   ThemedTextInput,
@@ -153,23 +153,19 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
           ) : null}
 
           <View style={styles.buttonContainer}>
-            <Pressable
-              style={({ pressed }) => [
-                styles.cancelButton,
-                pressed && styles.pressed,
-              ]}
+            <AppPressable
+              style={styles.cancelButton}
               onPress={handleClose}
               disabled={isSubmitting}
             >
               <Text style={styles.cancelButtonText}>{resolvedCancelText}</Text>
-            </Pressable>
+            </AppPressable>
 
-            <Pressable
-              style={({ pressed }) => [
+            <AppPressable
+              style={[
                 styles.submitButton,
                 primaryOverrideStyle,
                 isSubmitting && styles.disabledButton,
-                pressed && styles.pressed,
               ]}
               onPress={handleSubmit}
               disabled={isSubmitting || loading}
@@ -181,7 +177,7 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
                   {resolvedSubmitText}
                 </Text>
               )}
-            </Pressable>
+            </AppPressable>
           </View>
         </View>
       </KeyboardAvoidingView>

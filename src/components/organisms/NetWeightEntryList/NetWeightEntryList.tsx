@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { FormInput } from '#/components/molecules/FormInput';
@@ -77,7 +77,6 @@ export const NetWeightEntryList: React.FC<NetWeightEntryListProps> = ({
       <Text size="lg" weight="semibold" style={styles.sectionTitle}>
         Net Weights
       </Text>
-
       {entries.map((entry, index) => (
         <View key={entry.id} style={styles.entryRow}>
           <View style={styles.valueField}>
@@ -101,19 +100,15 @@ export const NetWeightEntryList: React.FC<NetWeightEntryListProps> = ({
               }
             />
           </View>
-          <Pressable
+          <AppPressable
             onPress={() => handleRemoveEntry(index)}
             disabled={disabled}
-            style={({ pressed }) => [
-              styles.deleteButton,
-              pressed && styles.pressed,
-            ]}
+            style={styles.deleteButton}
           >
             <Icon name="trash-outline" size={20} tone="error" />
-          </Pressable>
+          </AppPressable>
         </View>
       ))}
-
       <Button variant="secondary" onPress={handleAddEntry} disabled={disabled}>
         Add Net Weight
       </Button>

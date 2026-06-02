@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { BottomSheetTextInput, BottomSheetView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
@@ -121,30 +121,24 @@ export const AddStorageLocationSheet: React.FC<
       <BottomSheetView style={[styles.content, contentContainerStyle]}>
         {/* Header with Cancel/Create */}
         <View style={styles.header}>
-          <Pressable
+          <AppPressable
             onPress={handleCancel}
-            style={({ pressed }) => [
-              styles.headerButton,
-              pressed && styles.pressed,
-            ]}
+            style={styles.headerButton}
             accessibilityRole="button"
             accessibilityLabel={t('addStorageLocation.cancel')}
           >
             <Text size="md" tone="secondary">
               {t('addStorageLocation.cancel')}
             </Text>
-          </Pressable>
+          </AppPressable>
 
           <Text size="lg" weight="semibold" align="center" style={styles.title}>
             {t('addStorageLocation.addLocation')}
           </Text>
 
-          <Pressable
+          <AppPressable
             onPress={handleCreate}
-            style={({ pressed }) => [
-              styles.headerButton,
-              pressed && styles.pressed,
-            ]}
+            style={styles.headerButton}
             accessibilityRole="button"
             accessibilityLabel={t('addStorageLocation.create')}
             disabled={isCreateDisabled}
@@ -161,7 +155,7 @@ export const AddStorageLocationSheet: React.FC<
                 {t('addStorageLocation.create')}
               </Text>
             )}
-          </Pressable>
+          </AppPressable>
         </View>
 
         {/* Divider */}

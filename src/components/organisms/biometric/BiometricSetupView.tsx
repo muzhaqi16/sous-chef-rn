@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 import { PasswordInput } from '#components/atoms/PasswordInput';
@@ -101,11 +101,8 @@ export const BiometricSetupView: React.FC<BiometricSetupViewProps> = ({
     )}
 
     <View style={styles.buttons}>
-      <Pressable
-        style={({ pressed }) => [
-          styles.primaryButton,
-          pressed && styles.pressed,
-        ]}
+      <AppPressable
+        style={styles.primaryButton}
         onPress={onEnable}
         disabled={isEnabling}
         testID={testID ? `${testID}-enable` : undefined}
@@ -114,13 +111,10 @@ export const BiometricSetupView: React.FC<BiometricSetupViewProps> = ({
         <Text size="md" weight="semibold" style={styles.primaryButtonText}>
           {enableLabel}
         </Text>
-      </Pressable>
+      </AppPressable>
 
-      <Pressable
-        style={({ pressed }) => [
-          styles.secondaryButton,
-          pressed && styles.pressed,
-        ]}
+      <AppPressable
+        style={styles.secondaryButton}
         onPress={onSkip}
         disabled={isEnabling}
         testID={testID ? `${testID}-skip` : undefined}
@@ -129,7 +123,7 @@ export const BiometricSetupView: React.FC<BiometricSetupViewProps> = ({
         <Text size="md" weight="semibold" tone="secondary">
           {skipLabel}
         </Text>
-      </Pressable>
+      </AppPressable>
     </View>
 
     {!!footer && (

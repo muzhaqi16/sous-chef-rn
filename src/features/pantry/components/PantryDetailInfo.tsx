@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { InfoRow } from '#components/molecules/InfoRow';
 
@@ -73,7 +73,6 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
         valueStyle={styles.valueText}
         containerStyle={styles.rowContainer}
       />
-
       {/* Net Weight Row */}
       {!!netWeightText && (
         <InfoRow
@@ -88,20 +87,16 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
             {netWeightText}
           </Text>
           {!!item.lastUsedAt && !!onCorrectWeight && (
-            <Pressable
+            <AppPressable
               onPress={onCorrectWeight}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              style={({ pressed }) => [
-                styles.correctWeightButton,
-                pressed && styles.pressed,
-              ]}
+              style={styles.correctWeightButton}
             >
               <Icon name="create-outline" size={16} tone="primary" />
-            </Pressable>
+            </AppPressable>
           )}
         </InfoRow>
       )}
-
       {/* Remaining Weight Row */}
       {!!remainingNetWeightText && (
         <InfoRow
@@ -114,7 +109,6 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           containerStyle={styles.rowContainer}
         />
       )}
-
       {/* Inventory Breakdown Row */}
       {!!quantityBreakdownText && (
         <InfoRow
@@ -127,7 +121,6 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           containerStyle={styles.rowContainer}
         />
       )}
-
       {/* Package Details Row */}
       {!!packageBreakdownText && (
         <InfoRow
@@ -140,7 +133,6 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           containerStyle={styles.rowContainer}
         />
       )}
-
       {/* Shelf Life Row */}
       {(shelfLifeDays != null || shelfLifeOpenedDays != null) && (
         <InfoRow
@@ -159,7 +151,6 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           containerStyle={styles.rowContainer}
         />
       )}
-
       {/* Brand Row */}
       {!!brandName && (
         <InfoRow
@@ -172,7 +163,6 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           containerStyle={styles.rowContainer}
         />
       )}
-
       {/* Storage Location */}
       {!!item.storageLocation && (
         <InfoRow
@@ -189,7 +179,6 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           containerStyle={styles.rowContainer}
         />
       )}
-
       {/* Store Row */}
       {!!item.store?.name && (
         <InfoRow
@@ -202,7 +191,6 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           containerStyle={styles.rowContainer}
         />
       )}
-
       {/* Condition Row - only show if not GOOD */}
       {!!formatCondition(item.condition) && (
         <ThemedConditionInfoRow
@@ -221,7 +209,6 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           containerStyle={styles.rowContainer}
         />
       )}
-
       {/* Acquired Via Row */}
       {!!formatAcquisitionMethod(item.acquisitionMethod) && (
         <InfoRow
@@ -234,7 +221,6 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           containerStyle={styles.rowContainer}
         />
       )}
-
       {/* Cost Per Unit Row */}
       {!!formatCurrency(item.costPerUnit) && (
         <InfoRow
@@ -247,7 +233,6 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           containerStyle={styles.rowContainer}
         />
       )}
-
       {/* Total Cost Row */}
       {!!formatCurrency(item.totalCost) && (
         <InfoRow
@@ -260,7 +245,6 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           containerStyle={styles.rowContainer}
         />
       )}
-
       {/* Min Stock Row */}
       {item.minQuantity != null && item.minQuantity > 0 && (
         <InfoRow
@@ -273,7 +257,6 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           containerStyle={styles.rowContainer}
         />
       )}
-
       {/* Restock At Row */}
       {item.restockQuantity != null && item.restockQuantity > 0 && (
         <InfoRow
@@ -286,7 +269,6 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           containerStyle={styles.rowContainer}
         />
       )}
-
       {/* Purchase Date Row */}
       {!!item.purchase?.purchaseDate && (
         <InfoRow
@@ -303,7 +285,6 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           containerStyle={styles.rowContainer}
         />
       )}
-
       {/* Usage Info Row */}
       {!!item.lastUsedAt && (
         <InfoRow
@@ -316,7 +297,6 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           containerStyle={styles.rowContainer}
         />
       )}
-
       {/* Notes Section */}
       {!!item.storageNotes && (
         <View style={styles.notesSection}>
@@ -336,7 +316,6 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           </Text>
         </View>
       )}
-
       {/* Tags Section */}
       {!!item.tags && item.tags.length > 0 && (
         <View style={styles.tagsSection}>
@@ -354,7 +333,6 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           </View>
         </View>
       )}
-
       {/* Added Info */}
       <InfoRow
         label="Added"

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
 import { StyleSheet } from 'react-native-unistyles';
@@ -258,12 +259,11 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
               folder === null ? !selectedFolder : selectedFolder === folder;
             const isNoFolder = folder === null;
             return (
-              <Pressable
+              <AppPressable
                 key={folder ?? 'no-folder'}
-                style={({ pressed }) => [
+                style={[
                   styles.folderOption,
                   isSelected && styles.folderOptionSelected,
-                  pressed && styles.pressed,
                 ]}
                 onPress={() => handleSelectFolder(folder)}
                 disabled={updating}
@@ -284,7 +284,7 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
                 {!!isSelected && (
                   <Icon name="checkmark" size={18} tone="primary" />
                 )}
-              </Pressable>
+              </AppPressable>
             );
           })}
         </View>
@@ -301,11 +301,10 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
               autoCapitalize="words"
               onSubmitEditing={handleCreateFolder}
             />
-            <Pressable
-              style={({ pressed }) => [
+            <AppPressable
+              style={[
                 styles.createButton,
                 !newFolderName.trim() && styles.createButtonDisabled,
-                pressed && styles.pressed,
               ]}
               onPress={handleCreateFolder}
               disabled={!newFolderName.trim() || updating}
@@ -318,14 +317,11 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
               >
                 {t('manageRecipe.create')}
               </Text>
-            </Pressable>
+            </AppPressable>
           </View>
         ) : (
-          <Pressable
-            style={({ pressed }) => [
-              styles.newFolderButton,
-              pressed && styles.pressed,
-            ]}
+          <AppPressable
+            style={styles.newFolderButton}
             onPress={() => setShowNewFolder(true)}
             disabled={updating}
           >
@@ -333,7 +329,7 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
             <Text size="base" weight="medium" tone="accent">
               {t('manageRecipe.createNewFolder')}
             </Text>
-          </Pressable>
+          </AppPressable>
         )}
 
         {/* Tags */}

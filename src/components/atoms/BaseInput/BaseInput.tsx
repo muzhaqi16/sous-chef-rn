@@ -12,7 +12,7 @@ import {
 type TextInputFocusEvent = Parameters<
   NonNullable<TextInputProps['onFocus']>
 >[0];
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { withUnistyles } from 'react-native-unistyles';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { TIMING } from '#constants/animations';
@@ -96,18 +96,15 @@ export const BaseInput: React.FC<BaseInputProps> = ({
           {...textInputProps}
         />
         {!!showClear && (
-          <Pressable
-            style={({ pressed }) => [
-              styles.leftIconWrapper,
-              pressed && styles.pressed,
-            ]}
+          <AppPressable
+            style={styles.leftIconWrapper}
             onPress={onClear}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             accessibilityRole="button"
             accessibilityLabel="Clear input"
           >
             <Icon name="close" size={18} tone="textSecondary" />
-          </Pressable>
+          </AppPressable>
         )}
         {rightIcon != null && (
           <View style={styles.rightIconWrapper}>{rightIcon}</View>

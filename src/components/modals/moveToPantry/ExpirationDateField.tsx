@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import DateTimePicker, {
   type DateTimePickerEvent,
@@ -35,27 +35,18 @@ export const ExpirationDateField: React.FC<ExpirationDateFieldProps> = ({
         {t('moveToPantry.expirationDate')}
       </Text>
       <View style={styles.dateRow}>
-        <Pressable
-          style={({ pressed }) => [styles.dateInput, pressed && styles.pressed]}
-          onPress={onOpenPicker}
-        >
+        <AppPressable style={styles.dateInput} onPress={onOpenPicker}>
           <Icon name="calendar-outline" size={20} tone="textSecondary" />
           <Text style={styles.dateText}>
             {expirationDate
               ? expirationDate.toLocaleDateString()
               : t('moveToPantry.selectDate')}
           </Text>
-        </Pressable>
+        </AppPressable>
         {!!expirationDate && (
-          <Pressable
-            style={({ pressed }) => [
-              styles.clearDateButton,
-              pressed && styles.pressed,
-            ]}
-            onPress={onClear}
-          >
+          <AppPressable style={styles.clearDateButton} onPress={onClear}>
             <Icon name="close" size={20} tone="textSecondary" />
-          </Pressable>
+          </AppPressable>
         )}
       </View>
       {!!showPicker && (

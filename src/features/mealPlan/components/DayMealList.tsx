@@ -1,9 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Pressable,
-  ThemedRefreshControl,
-} from '#components/atoms/themedComponents';
+import { ThemedRefreshControl } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import Animated, {
   type useAnimatedScrollHandler,
 } from 'react-native-reanimated';
@@ -61,7 +59,6 @@ export const DayMealList: React.FC<DayMealListProps> = ({
       }
     >
       {!!listHeader && listHeader}
-
       {isEmpty ? (
         <EmptyDayState selectedDate={selectedDate} onAddMeal={onAddMeal} />
       ) : (
@@ -84,12 +81,9 @@ export const DayMealList: React.FC<DayMealListProps> = ({
 
           {/* Add a meal button */}
           {!!onAddMeal && (
-            <Pressable
+            <AppPressable
               onPress={() => onAddMeal()}
-              style={({ pressed }) => [
-                styles.addMealButton,
-                pressed && styles.pressed,
-              ]}
+              style={styles.addMealButton}
             >
               <Icon name="add-circle-outline" size={20} tone="primary" />
               <Text
@@ -100,7 +94,7 @@ export const DayMealList: React.FC<DayMealListProps> = ({
               >
                 {t('emptyDay.addMeal')}
               </Text>
-            </Pressable>
+            </AppPressable>
           )}
         </>
       )}

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Modal, ActivityIndicator } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { WhiteActivityIndicator } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
@@ -355,16 +355,13 @@ export const InvitationAcceptanceModal: React.FC<
             <Text size="lg" weight="semibold" style={styles.title}>
               {invitation.title}
             </Text>
-            <Pressable
-              style={({ pressed }) => [
-                styles.closeButton,
-                pressed && styles.pressed,
-              ]}
+            <AppPressable
+              style={styles.closeButton}
               onPress={onClose}
               accessibilityLabel={t('labels.close')}
             >
               <Icon name="close" size={24} tone="textSecondary" />
-            </Pressable>
+            </AppPressable>
           </View>
 
           {/* Content */}
@@ -401,11 +398,8 @@ export const InvitationAcceptanceModal: React.FC<
 
           {/* Actions */}
           <View style={styles.actions}>
-            <Pressable
-              style={({ pressed }) => [
-                styles.rejectButton,
-                pressed && styles.pressed,
-              ]}
+            <AppPressable
+              style={styles.rejectButton}
               onPress={handleReject}
               disabled={accepting || rejecting}
             >
@@ -419,13 +413,10 @@ export const InvitationAcceptanceModal: React.FC<
                   </Text>
                 </>
               )}
-            </Pressable>
+            </AppPressable>
 
-            <Pressable
-              style={({ pressed }) => [
-                styles.acceptButton,
-                pressed && styles.pressed,
-              ]}
+            <AppPressable
+              style={styles.acceptButton}
               onPress={handleAccept}
               disabled={accepting || rejecting}
             >
@@ -439,7 +430,7 @@ export const InvitationAcceptanceModal: React.FC<
                   </Text>
                 </>
               )}
-            </Pressable>
+            </AppPressable>
           </View>
         </View>
       </View>
