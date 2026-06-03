@@ -83,14 +83,17 @@ const SlideAnimatedWrapper: React.FC<{
     opacity: slide.get().opacity,
   }));
 
-  // Synchronous reset on FlashList cell recycling — fires during render (before paint)
+  // Reset slide/animation state whenever this cell is recycled for a new item
+  // (FlashList reuses cell instances). Keyed by itemId so a reused — or
+  // reappearing (failed/reverted delete) — cell never stays mid-slide.
   useRecyclingState(undefined, [itemId], () => {
     cancelAnimation(slide);
     slide.set(SLIDE_INITIAL);
     isAnimating.set(false);
   });
 
-  // Stable callback for scheduleOnRN — captures onDelete/itemId via closure
+  // Stable RN-scope callback for scheduleOnRN (captures onDelete/itemId via
+  // closure — no args cross the worklet boundary).
   const doDelete = () => {
     onDelete(itemId);
   };

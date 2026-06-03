@@ -1046,6 +1046,176 @@ describe('cache', () => {
     });
   });
 
+  describe('Pantry.itemsConnection - resilience guard (connection blip)', () => {
+    const PANTRY_CONNECTION_QUERY = gql`
+      query GetPantryItems($id: ID!, $after: String) {
+        pantry(id: $id) {
+          id
+          itemsConnection(after: $after) {
+            edges {
+              node {
+                id
+                name
+              }
+            }
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
+          }
+        }
+      }
+    `;
+
+    const PANTRY_CONNECTION_QUERY_WITH_COUNT = gql`
+      query GetPantryItemsCount($id: ID!, $after: String) {
+        pantry(id: $id) {
+          id
+          itemsConnection(after: $after) {
+            totalCount
+            edges {
+              node {
+                id
+                name
+              }
+            }
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
+          }
+        }
+      }
+    `;
+
+    it('preserves cached items when a refetch returns an EMPTY/partial connection (no authoritative totalCount)', () => {
+      const cache = makeCache();
+
+      // Initial single-page load: 2 items cached
+      cache.writeQuery({
+        query: PANTRY_CONNECTION_QUERY,
+        variables: { id: 'p1' },
+        data: {
+          pantry: {
+            __typename: 'Pantry',
+            id: 'p1',
+            itemsConnection: {
+              __typename: 'PantryItemsConnection',
+              edges: [
+                {
+                  __typename: 'PantryItemEdge',
+                  node: { __typename: 'PantryItem', id: 'pi-1', name: 'Flour' },
+                },
+                {
+                  __typename: 'PantryItemEdge',
+                  node: { __typename: 'PantryItem', id: 'pi-2', name: 'Sugar' },
+                },
+              ],
+              pageInfo: {
+                __typename: 'PageInfo',
+                hasNextPage: false,
+                endCursor: 'c1',
+              },
+            },
+          },
+        },
+      });
+
+      // Transient/partial refetch (connection blip): no cursor, hasNextPage:false,
+      // EMPTY edges, and no authoritative totalCount. Must NOT wipe the cache.
+      cache.writeQuery({
+        query: PANTRY_CONNECTION_QUERY,
+        variables: { id: 'p1' },
+        data: {
+          pantry: {
+            __typename: 'Pantry',
+            id: 'p1',
+            itemsConnection: {
+              __typename: 'PantryItemsConnection',
+              edges: [],
+              pageInfo: {
+                __typename: 'PageInfo',
+                hasNextPage: false,
+                endCursor: null,
+              },
+            },
+          },
+        },
+      });
+
+      const result = cache.readQuery<PantryItemsConnectionResult>({
+        query: PANTRY_CONNECTION_QUERY,
+        variables: { id: 'p1' },
+      });
+      // The cached pantry survives the connection blip.
+      expect(result?.pantry.itemsConnection.edges).toHaveLength(2);
+    });
+
+    it('honors an AUTHORITATIVE empty list (totalCount: 0) and clears the connection', () => {
+      const cache = makeCache();
+
+      // Initial load: 2 items, totalCount 2
+      cache.writeQuery({
+        query: PANTRY_CONNECTION_QUERY_WITH_COUNT,
+        variables: { id: 'p1' },
+        data: {
+          pantry: {
+            __typename: 'Pantry',
+            id: 'p1',
+            itemsConnection: {
+              __typename: 'PantryItemsConnection',
+              totalCount: 2,
+              edges: [
+                {
+                  __typename: 'PantryItemEdge',
+                  node: { __typename: 'PantryItem', id: 'pi-1', name: 'Flour' },
+                },
+                {
+                  __typename: 'PantryItemEdge',
+                  node: { __typename: 'PantryItem', id: 'pi-2', name: 'Sugar' },
+                },
+              ],
+              pageInfo: {
+                __typename: 'PageInfo',
+                hasNextPage: false,
+                endCursor: 'c1',
+              },
+            },
+          },
+        },
+      });
+
+      // Server authoritatively reports an empty list (everything removed).
+      cache.writeQuery({
+        query: PANTRY_CONNECTION_QUERY_WITH_COUNT,
+        variables: { id: 'p1' },
+        data: {
+          pantry: {
+            __typename: 'Pantry',
+            id: 'p1',
+            itemsConnection: {
+              __typename: 'PantryItemsConnection',
+              totalCount: 0,
+              edges: [],
+              pageInfo: {
+                __typename: 'PageInfo',
+                hasNextPage: false,
+                endCursor: null,
+              },
+            },
+          },
+        },
+      });
+
+      const result = cache.readQuery<PantryItemsConnectionResult>({
+        query: PANTRY_CONNECTION_QUERY_WITH_COUNT,
+        variables: { id: 'p1' },
+      });
+      // Authoritative empty is honored — the list clears.
+      expect(result?.pantry.itemsConnection.edges).toHaveLength(0);
+    });
+  });
+
   describe('itemsConnectionFieldPolicy - refetch preserves paginated items', () => {
     const LIST_CONNECTION_QUERY = gql`
       query GetList($id: ID!, $after: String) {

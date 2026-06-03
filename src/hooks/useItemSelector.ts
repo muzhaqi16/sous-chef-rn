@@ -3,9 +3,8 @@ import { useQuery } from '@apollo/client/react';
 import { GetShoppingListsLiteDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { GetHomesDocument } from '#operations/home/home.generated';
 import { GetPantriesDocument } from '#features/pantry/graphql/pantry.generated';
-import { usePreservedArrayData } from './apollo/usePreservedQueryData';
+import { usePreservedNodes } from './apollo/usePreservedConnection';
 import { useSelectedHomeId } from '#store/useAppStore';
-import { extractNodes } from '#/utils/connectionUtils';
 
 /**
  * Common selectable-item shape across the supported sources (shopping lists,
@@ -79,13 +78,11 @@ export const useItemSelector = ({
     skip: type !== 'home',
   });
 
-  // Preserve data even when queries fail
-  // Extract nodes from connection types (all return Connection types)
-  const shoppingLists = usePreservedArrayData(
-    extractNodes(shoppingListData?.shoppingLists),
-  );
-  const pantries = usePreservedArrayData(extractNodes(pantryData?.pantries));
-  const homes = usePreservedArrayData(extractNodes(homeData?.homes));
+  // Preserve list data across error-driven `undefined` connections (preserve
+  // the connection BEFORE extracting nodes — see usePreservedConnection).
+  const shoppingLists = usePreservedNodes(shoppingListData?.shoppingLists);
+  const pantries = usePreservedNodes(pantryData?.pantries);
+  const homes = usePreservedNodes(homeData?.homes);
 
   // Get the appropriate data and loading state
   const getData = () => {

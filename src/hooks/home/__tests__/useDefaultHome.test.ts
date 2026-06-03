@@ -59,6 +59,10 @@ jest.mock('#/hooks/apollo/usePreservedQueryData', () => ({
   usePreservedArrayData: jest.fn(
     <T>(data: T[] | undefined | null): T[] => data ?? [],
   ),
+  // usePreservedNodes composes usePreservedQueryData internally — passthrough.
+  usePreservedQueryData: jest.fn(
+    <T>(data: T | undefined, initial: T): T => data ?? initial,
+  ),
 }));
 
 jest.mock('#/utils/connectionUtils', () => {

@@ -332,7 +332,33 @@ function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
     ) {
       if (!incoming) return existing;
       if (!existing) return incoming;
-      if (!args?.after && !incoming.pageInfo?.hasNextPage) return incoming;
+      if (!args?.after && !incoming.pageInfo?.hasNextPage) {
+        // Resilience guard: never let an empty/partial incoming page wipe a
+        // populated cached connection. `itemsConnection` is the only cache
+        // field with an active replace rule, so a transient/partial response
+        // (API briefly unreachable, an `errorPolicy: 'ignore'` fallback, or a
+        // 200 that arrives mid-token-refresh carrying no edges) would otherwise
+        // empty the list on a connection blip — while every other cached field
+        // (stats, home, profile, entities) survives untouched. Keep the cached
+        // edges unless the server AUTHORITATIVELY reports an empty list
+        // (`totalCount === 0`), which is a real "everything was removed" state.
+        const incomingHasEdges = (incoming.edges?.length ?? 0) > 0;
+        const existingHasEdges = (existing.edges?.length ?? 0) > 0;
+        const authoritativeEmpty = incoming.totalCount === 0;
+        if (!incomingHasEdges && existingHasEdges && !authoritativeEmpty) {
+          if (__DEV__) {
+            console.log(
+              `🛡️ [Cache] itemsConnection: preserved ${
+                existing.edges?.length ?? 0
+              } cached edge(s) — ignored empty/partial incoming (totalCount=${
+                incoming.totalCount
+              })`,
+            );
+          }
+          return existing;
+        }
+        return incoming;
+      }
 
       // Append-only: keep existing edges in place, add only new incoming edges
       const existingIds = new Set<string>();

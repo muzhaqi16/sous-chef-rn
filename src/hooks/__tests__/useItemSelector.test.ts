@@ -7,6 +7,10 @@ const wrapper = createApolloTestWrapper();
 
 jest.mock('#hooks/apollo/usePreservedQueryData', () => ({
   usePreservedArrayData: <T>(data: T[] | undefined | null) => data ?? [],
+  // usePreservedNodes (used by useItemSelector) composes usePreservedQueryData
+  // internally — provide a passthrough so the real helper works in tests.
+  usePreservedQueryData: <T>(data: T | undefined, initial: T) =>
+    data ?? initial,
 }));
 
 jest.mock('#utils/connectionUtils', () => ({

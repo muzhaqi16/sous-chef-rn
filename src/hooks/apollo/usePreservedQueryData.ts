@@ -32,7 +32,12 @@ export function usePreservedQueryData<T>(
   // (https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes)
   const [lastSuccessfulValue, setLastSuccessfulValue] =
     useState<T>(initialValue);
-  const [prevData, setPrevData] = useState<T | undefined>(currentData);
+  // Initialize the "previous" marker to `undefined` (NOT `currentData`) so the
+  // FIRST defined value is detected as a change and recorded. On a cold start
+  // the persisted cache can resolve `currentData` synchronously on render #1;
+  // initializing to `currentData` would skip storing it, so a later network
+  // error would have nothing to preserve and the list/value would wipe.
+  const [prevData, setPrevData] = useState<T | undefined>(undefined);
 
   if (currentData !== prevData) {
     setPrevData(currentData);

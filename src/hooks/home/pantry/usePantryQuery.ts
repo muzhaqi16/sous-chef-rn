@@ -20,12 +20,9 @@ import type {
   PantryItemOrderBy,
 } from '#/graphql/generated/schemaTypes';
 import { useIsLoggedOut } from '#hooks/auth/useIsLoggedOut';
-import { extractNodes, getConnectionTotalCount } from '#/utils/connectionUtils';
 import { usePagination } from '#/hooks/utils/usePagination';
-import {
-  usePreservedArrayData,
-  usePreservedQueryData,
-} from '#/hooks/apollo/usePreservedQueryData';
+import { usePreservedQueryData } from '#/hooks/apollo/usePreservedQueryData';
+import { usePreservedConnection } from '#/hooks/apollo/usePreservedConnection';
 import {
   useIsHomeSelectionReady,
   useSetIsPantryQueryComplete,
@@ -133,20 +130,28 @@ export function usePantryQuery(
   const isRefreshing = networkStatus === NetworkStatus.refetch;
 
   const pantry = data?.pantry;
-  const itemsConnection = pantry?.itemsConnection;
-  const storageLocationsConnection = pantry?.storageLocationsConnection;
 
-  // Pass connection edges through as opaque fragment refs — each leaf cell
-  // unmasks its own slice via `useFragment` inside `PantryItemCard`. The
-  // parent operation also selects screen-level fields (id, itemName,
-  // quantity, expiresAt, storageState, storageLocation.id, createdAt,
-  // updatedAt, isLowStock) directly on each node, so local sort/search and
-  // hook logic don't need to materialize.
-  const pantryItems = usePreservedArrayData(extractNodes(itemsConnection));
+  // Preserve the connections BEFORE extracting nodes. With `errorPolicy: 'ignore'`,
+  // a transient network failure surfaces `data === undefined` even though the
+  // persisted cache still holds the items; extracting first would flatten that
+  // to `[]` and silently wipe the list (count, list, AND pagination state) while
+  // `stats` below survives. See `usePreservedConnection` for the full rationale.
+  //
+  // Each node is passed through as an opaque fragment ref — the leaf cell unmasks
+  // its own slice via `useFragment` inside `PantryItemCard`. The parent operation
+  // also selects screen-level fields (id, itemName, quantity, expiresAt,
+  // storageState, storageLocation.id, createdAt, updatedAt, isLowStock) directly
+  // on each node, so local sort/search and hook logic don't need to materialize.
+  const items = usePreservedConnection(pantry?.itemsConnection);
+  const storageLocations = usePreservedConnection(
+    pantry?.storageLocationsConnection,
+  );
+
+  const pantryItems = items.nodes;
 
   // Pagination using generic utility hook
   const { hasMore, loadMore, isLoadingMore } = usePagination({
-    pageInfo: itemsConnection?.pageInfo ?? undefined,
+    pageInfo: items.pageInfo,
     loading,
     itemCount: pantryItems.length,
     fetchMore,
@@ -157,12 +162,10 @@ export function usePantryQuery(
     cursorVariableName: 'itemsCursor',
   });
 
-  const pantryStorageLocations = usePreservedArrayData(
-    extractNodes(storageLocationsConnection),
-  );
+  const pantryStorageLocations = storageLocations.nodes;
 
   const stats = usePreservedQueryData(pantry?.stats ?? undefined, null);
-  const totalCount = getConnectionTotalCount(itemsConnection);
+  const totalCount = items.totalCount ?? 0;
 
   const setIsPantryQueryComplete = useSetIsPantryQueryComplete();
 

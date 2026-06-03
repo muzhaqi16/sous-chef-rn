@@ -10,8 +10,8 @@
 import { useState } from 'react';
 import { useQuery } from '@apollo/client/react';
 import { GetHomesDocument } from '#operations/home/home.generated';
-import { usePreservedArrayData } from '#/hooks/apollo/usePreservedQueryData';
-import { extractNodes, getConnectionTotalCount } from '#/utils/connectionUtils';
+import { usePreservedNodes } from '#/hooks/apollo/usePreservedConnection';
+import { getConnectionTotalCount } from '#/utils/connectionUtils';
 
 /**
  * Hook for fetching and managing homes query
@@ -39,7 +39,7 @@ export function useHomeQuery() {
   // Preserve homes data even when query fails to prevent cascade failures.
   // Each node carries `id` + `isDefault` directly plus masked refs for the
   // leaf fragments (`HomeCard_home`, `HomeForHookLogic_home`).
-  const homes = usePreservedArrayData(extractNodes(data?.homes));
+  const homes = usePreservedNodes(data?.homes);
 
   // Derive default home from isDefault field (no separate query needed)
   const remoteDefaultHomeId = homes?.find(h => h.isDefault)?.id ?? null;

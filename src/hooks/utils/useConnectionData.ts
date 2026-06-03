@@ -1,5 +1,5 @@
-import { extractNodes, getConnectionTotalCount } from '#/utils/connectionUtils';
 import { usePagination, type FetchMoreFn } from '#hooks/utils/usePagination';
+import { usePreservedConnection } from '#hooks/apollo/usePreservedConnection';
 
 /**
  * Structural constraint matching codegen connection types as they appear
@@ -77,13 +77,16 @@ export function useConnectionData<TData, C extends ConnectionResult>(
   } = config;
 
   const connection = data ? selector(data) : undefined;
-  const items = extractNodes(connection) as NodeOfConnection<C>[];
-  const totalCount = connection
-    ? getConnectionTotalCount(connection)
-    : undefined;
+  // Preserve across error-driven `undefined` connections (errorPolicy:'ignore' /
+  // a failed refetch) BEFORE extracting nodes — see `usePreservedConnection`.
+  // Without this, a transient network blip would flatten `undefined → []` and
+  // wipe a list whose items are still safely in the cache.
+  const preserved = usePreservedConnection(connection);
+  const items = preserved.nodes;
+  const totalCount = preserved.totalCount;
 
   const pagination = usePagination({
-    pageInfo: connection?.pageInfo,
+    pageInfo: preserved.pageInfo,
     loading,
     itemCount: items.length,
     fetchMore,

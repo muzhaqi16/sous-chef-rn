@@ -33,7 +33,8 @@ success toast) is what reads as "not premium." This is **hardening, not a rewrit
 | 4 | Refinement — image fade-in + RecipeDetail error state | ✅ Done (re-scoped) |
 | 5 | List motion (reflow/layout) — **device-tested → reverted** | ⏸️ Blocked (needs data-pipeline rework) |
 | 6 | Scrim / alpha-color token migration (`withAlpha` + named scrims, ~40 files) | ⬜ Not started (deferred from P3) |
-| 7 | Token enforcement — ESLint guards + spacing-scale purification + raw-`Text` migration | ⬜ Not started (deferred from P3, depends on P6) |
+| 7 | **Enforcement — ESLint import bans** (`Text`/`Pressable`/`Touchable` → atoms/re-exports) + `any`-warning root-cause fix | ✅ Done (56 files migrated; lint 0 warnings) |
+| 7b | Token enforcement tail — spacing-scale purification + raw-hex→token guards | ⬜ Not started (not cleanly lint-enforceable — see notes) |
 | 8 | **Consistency: `AppPressable` + `PressableScale` + `SegmentedControl` reuse + `SettingRow` dedup** | ✅ Done (all device-verified) |
 
 Legend: ⬜ Not started · 🟡 In progress · ✅ Done · ⏸️ Blocked
@@ -45,12 +46,11 @@ Three approaches were agent-validated **before** any change (per owner directive
   is already hand-rolled in **145/151** files. Haptic (5/151) and ripple (9 total) are opt-in. Safe
   API wraps RN `Pressable`, appends `pressed` via the array pattern (composes with `useVariants`).
   Excludes the 13 scale sites (→ future `PressableScale`) and 6 RNGH gesture-composition sites.
-- **T8b — AppearanceScreen → shared `SegmentedControl`**: GO, but **must first add 2-line label
-  support** to the shared `SegmentedTab` (`numberOfLines={1}` truncates the 4-segment Font-scale row
-  for SQ/ES/IT/EN — a layout regression invisible to unit tests). Not started.
-- **T8c — `SettingRow` consolidation**: `components/settings/SettingRow.tsx` is **dead code** (zero
-  prod consumers) → safe delete; `molecules/SettingRow` is canonical. Latent bug: it never renders
-  `item.subtitle`. Not started.
+- **T8b — AppearanceScreen → shared `SegmentedControl`**: ✅ Done (device-verified). Added 2-line label
+  support to the shared `SegmentedTab` first (the `numberOfLines={1}` truncation regression for the
+  4-segment Font-scale row in SQ/ES/IT/EN), then migrated all 3 inline controls to the shared one.
+- **T8c — `SettingRow` consolidation**: ✅ Done. Deleted dead `components/settings/SettingRow.tsx`;
+  canonical `molecules/SettingRow` now renders `item.subtitle` + a gated selection haptic.
 - **Correction logged:** the earlier filter-tab "regression" was most likely the `android_ripple` +
   `overflow:'hidden'` I added (and/or an RNGH-Pressable path), **not** function-style + `useVariants`
   — that combo works on RN `Pressable` (live in `Counter`, `SegmentedControl`, `ExpirationActionSheet`).
@@ -386,4 +386,136 @@ delete path that commits synchronously, or moving the reflow concern into the sw
 itself). validation: typecheck ✅ · lint ✅ · tests ✅.
 
 **Net:** Phases 1–4 (with the tab-regression fix + smooth tab centering) are the shipped premium
-deliverable. Phases 5 (this), 6 (scrim migration), 7 (enforcement) remain documented backlog.
+deliverable. Phase 5 (list reflow) stays blocked on the `useDeferredValue` rework; Phase 6 (scrim
+migration) and Phase 7b (token guards) remain documented backlog.
+
+#### Phase 5 — second attempt: row-collapse ("Variant B"), reverted ⏸️
+
+**Approach (agent-validated):** keep the UI-thread slide+fade, then on animation finish set a
+`collapsed` (`height: 0`) flag stored in FlashList's `useRecyclingState` (its setter triggers the
+`layout()` commit that reflows rows below — a UI-thread Reanimated height change is invisible to
+FlashList's layout manager and just leaves a gap), then drop the row from data on the next frame via
+`requestAnimationFrame(() => onDelete(id))`. Three parallel agents validated this over the per-frame
+collapse ("Variant A", rejected as janky).
+
+**Why reverted:**
+1. **New failure mode on a failed/reverted delete.** `collapsed` is keyed by `itemId` in
+   `useRecyclingState`, which only resets the flag when the cell is *recycled for a different item*.
+   If a delete mutation fails and the item reappears in the **same** cell instance (same `itemId`),
+   the reset never fires → the row stays `height: 0` = an invisible zero-height row. The
+   slide-and-fade baseline doesn't add a persistent React height state, so it doesn't have this hole.
+2. **Could not be cleanly device-verified.** The test sessions were repeatedly disrupted by a flaky
+   emulator API connection (`adb reverse tcp:4000` dropping → **"Network request failed"**) and an
+   unrelated **manual Logout** (the profile Logout button clears the persisted cache by design), which
+   made it impossible to isolate the animation's behavior. Per project discipline (*validate before
+   committing; if unsure, don't ship*), shipping an unverified change that adds a failure mode is the
+   wrong trade.
+
+**Decision: reverted** `PantryItemCard.tsx` to the committed slide-and-fade baseline (code now
+identical; only comments improved to document the recycle-reset covering the reappear case).
+validation: typecheck ✅ · lint ✅ · PantryItemCard tests 11/11 ✅.
+
+**Diagnostic note (out of Phase 5 scope → candidate future phase):** the "delete broke the app"
+report traced to **network resilience**, not the delete path. On a transient "Network request failed"
+the pantry list went empty (`items=0`) while the header count stayed `11` (`totalCount` from cache).
+Commit `8408d9aa` ("keep auth/cache valid on offline or unreachable API") was meant to prevent the
+cache from emptying on an unreachable API — this looks like a gap worth a dedicated investigation,
+but it is unrelated to the list-motion work and is logged here rather than fixed in-phase.
+
+### Phase 7 — Enforcement (ESLint import bans + `any`-warning root-cause fix) ✅
+
+To make the consistency *stick*, lint now enforces using the atoms/re-exports instead of raw RN
+primitives — protecting the typography (Phase 3) and pressable (Phase 8) work from regressing.
+
+**Rule (`.eslintrc.js`, global `no-restricted-imports`):** ban VALUE imports of `Text`, `Pressable`,
+and `TouchableOpacity/Highlight/NativeFeedback/WithoutFeedback` from `'react-native'`. Message points
+to `#components/atoms/Text`, `#components/atoms/themedComponents` (or `AppPressable`/`PressableScale`
+for feedback, or RNGH's `Pressable` for gesture composition). Type-only imports (`type TextStyle`,
+`PressableProps`) stay allowed.
+
+**No `eslint-disable` anywhere** (owner directive). The 2 canonical re-export atoms that *must* import
+the primitives they wrap (`themedComponents.tsx` → `Pressable`, `atoms/Text.tsx` → RN `Text`) are
+exempted via a **config `overrides` block**, not inline disables.
+
+**Fix-up: 56 files** flagged (23 production + 33 test). Migrated by **5 parallel agents** on disjoint
+file sets (production: visual-preserving — `atoms/Text` applies the typography line-heights, which is
+the intended consistency; tests: drop-in). Result: **lint 0 errors**.
+
+**`any`-warning root-cause fix (the 6 `no-explicit-any` warnings → 0):** these were in the
+subscription service, stubbed with `any` instead of typed from Apollo's actual hook types. Root cause
+fixed (not `unknown` band-aids):
+- `SubscriptionHandlers.onData` → `useSubscription.OnDataOptions<Record<string, unknown>>` (the
+  non-deprecated AC4 namespace type; the top-level `OnDataOptions` is `@deprecated`). The service
+  extracts the payload field generically, so the open `Record` form is the correct erased-generic
+  shape (assignable from any concrete `OnDataOptions<TSubscription>` when spread into `useSubscription`).
+- `onData`/`customOnError` error params → **`ErrorLike`** (the impl already used it).
+- `register<TData = unknown>` (matches Apollo's own generic-default convention).
+- Cascade contained to 2 test files: a single typed `reg()` wrapper in `SubscriptionService.test.ts`
+  + a sanctioned test cast (the lint config permits mock casts in tests); `telemetryLink` test
+  `{ request: any }` → typed `RunRequest`.
+
+**Deferred → Phase 7b (NOT cleanly lint-enforceable):** raw-hex→token and raw-numeric-spacing→token
+guards. A blanket rule flags legitimate hex (Skia/charts/color-picker data) and numeric values that
+map to *no* token without changing the rendered look — so these need a curated cleanup pass, not a
+lint rule that would block the gate with un-fixable false positives.
+
+**Validation:** `npm run test` ✅ **5985/5985** · `npm run lint` ✅ **0 errors, 0 warnings** ·
+`npm run typecheck` ✅ **0 errors**.
+
+---
+
+## Final status (2026-06-02)
+
+**Shipped & validated:** Phases 1–4 (flicker/transitions, tactile feedback, typography + elevation,
+refinement) · Phase 7 (enforcement + `any` root-cause fix) · Phase 8 (pressable centralization
+`AppPressable`+`PressableScale`, `SegmentedControl` reuse, `SettingRow` dedup). All device-verified
+where visual; full suite, lint (0 warnings), and typecheck all green.
+
+**Backlog:** Phase 5 (list reflow — both the cell-`layout` and the row-collapse approaches were
+attempted and reverted; needs a delete path that commits synchronously, i.e. a `useDeferredValue`
+rework, before the reflow can animate) · Phase 6 (scrim/alpha token migration, ~40 files) · Phase 7b
+(hex/spacing token guards, curated).
+
+### Cache resilience — transient connection loss no longer wipes the pantry ✅ (2026-06-02)
+
+**Symptom:** deleting a pantry item (or merely losing the API connection) intermittently emptied the
+whole list — header still showed "N items" (from `Pantry.stats`, preserved) while the list went blank.
+
+**Two root causes, both confirmed:**
+1. **Dev-only:** `adb reverse tcp:4000` kept dropping because two adb versions were installed — the
+   Debian `adb` package (v34) and Android Studio's SDK adb (v37). A client/server version mismatch
+   makes adb kill+restart the server, which wipes all `reverse` forwards → the emulator lost the API.
+   Fixed by removing the stale Debian `adb` so only the SDK v37 remains.
+2. **Real app bug:** `Pantry.itemsConnection` is the only cache field with an *active replace rule*
+   (`cache.ts` `itemsConnectionFieldPolicy.merge`: `return incoming` on a page-1 fetch with
+   `hasNextPage` falsy). The pantry is single-page in practice (`first: 50`), so every refetch hit
+   that path — and a transient/partial response with **empty edges** replaced the populated cache,
+   emptying the list. Every *other* cached field (stats, home, profile, entities) survived because
+   Apollo only updates plain fields, never wipes them.
+
+3. **The actual culprit — a HOOK-level ordering defect (found via live diagnostics).** The cache was
+   never wiped: on a failed fetch `errorPolicy: 'ignore'` returns `data === undefined`, but the hook
+   did `usePreservedArrayData(extractNodes(connection))` — `extractNodes(undefined) === []` flattened
+   the "no data" signal to an empty array **before** preservation ran, so the preservation (which only
+   keys off `undefined`) never fired and the list rendered empty. `stats` survived only because it was
+   preserved *before* any transform. Compounded by a second defect in `usePreservedQueryData`: it
+   initialized `prevData = currentData`, so on a cold start (cache resolves synchronously on render #1)
+   the **first** value was never stored — a later error had nothing to preserve.
+
+**Fixes (validated against Apollo's official guidance to preserve at the raw data/connection level):**
+- **New centralized `usePreservedConnection` / `usePreservedNodes`** (`src/hooks/apollo/`) — preserve
+  the connection OBJECT across `undefined`, THEN derive nodes/totalCount/pageInfo. The flatten
+  (edges→nodes) is correct and Apollo-standard; only its ORDER relative to preservation was wrong.
+- **`usePreservedQueryData`** now initializes `prevData = undefined` so the first (cold-start) value is
+  always stored. Strict improvement — fixes latent cold-start wipes in every consumer.
+- **Migrated 8 hooks** off the buggy `usePreservedArrayData(extractNodes(…))` pattern: `usePantryQuery`
+  (+ pagination/totalCount preserved), the shared `useConnectionData`, `useItemSelector`, `useHomeQuery`,
+  `useDefaultHome`, `useCurrentPantry`, `useLazyHomeData`, `useStorageLocationManagement`.
+- **Defense-in-depth:** the `itemsConnectionFieldPolicy.merge` guard stays — when incoming has no edges
+  but existing is populated, preserve cached edges unless the server authoritatively reports
+  `totalCount === 0`. Guards a *partial cache write* (the hook fix guards the `undefined` read).
+
+**Validation:** full suite **503 suites / 5992 tests** ✅ (incl. new `usePreservedConnection` + cache
+guard tests) · typecheck ✅ · lint ✅. The flatten question was explicitly validated against Apollo
+docs (relay connections require flattening; Apollo doesn't auto-flatten; `data ?? previousData` /
+preserve-before-transform is the idiomatic pattern).

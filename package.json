@@ -1,6 +1,6 @@
 {
   "name": "sous-chef-app",
-  "version": "3.5.12",
+  "version": "3.5.13",
   "private": true,
   "scripts": {
     "android": "react-native run-android",
