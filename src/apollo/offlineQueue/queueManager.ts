@@ -1,5 +1,4 @@
 import { gql } from '@apollo/client';
-import type { DocumentNode } from 'graphql';
 import { client } from '../client';
 import { useStore } from '#store';
 import { isApiUnavailable } from '#store/slices/networkSlice';
@@ -13,15 +12,7 @@ import {
   type FailedMutationInfo,
   type FailureHandler,
 } from './types';
-import {
-  SyncPantryItemDocument,
-  SyncDeletePantryItemDocument,
-} from '#features/pantry/graphql/pantry.generated';
-import {
-  SyncShoppingListItemDocument,
-  SyncDeleteShoppingListItemDocument,
-  SyncMoveShoppingListItemDocument,
-} from '#features/shoppingList/graphql/shoppingList.generated';
+import { convertToSyncMutation } from './convertToSyncMutation';
 import { logger } from '#/utils/environment';
 
 /** Module-level fragment for reading ShoppingListItem data from cache during queue processing */
@@ -327,8 +318,10 @@ export class QueueManager {
   private async executeMutation(
     mutation: QueuedMutation,
   ): Promise<Record<string, unknown> | undefined> {
-    const { syncMutation, syncVariables } =
-      this.convertToSyncMutation(mutation);
+    const { syncMutation, syncVariables } = convertToSyncMutation(mutation, {
+      readPantryId: clientId => this.readPantryId(clientId),
+      readShoppingListId: clientId => this.readShoppingListId(clientId),
+    });
 
     logger.info(`🔄 Queue: Replaying ${mutation.operationName} via sync`);
 
@@ -361,190 +354,6 @@ export class QueueManager {
     }
 
     return result.data;
-  }
-
-  /**
-   * Convert regular mutation to sync mutation
-   */
-  private convertToSyncMutation(mutation: QueuedMutation): {
-    syncMutation: DocumentNode;
-    syncVariables: Record<string, unknown>;
-  } {
-    const operationName = mutation.operationName;
-    const variables = mutation.variables;
-    const input = (variables.input ?? {}) as {
-      id?: string;
-      itemId?: string;
-      version?: number;
-      shoppingListId?: string;
-      itemName?: string;
-      category?: string;
-      notes?: string;
-      quantity?: number | string;
-      unit?: { unitId?: string; unitName?: string };
-      // Quantity/update shopping ops send the unit as flat scalars rather than a
-      // `unit` object; the converter normalizes both into `unit` (see below).
-      unitId?: string;
-      unitName?: string;
-      purchased?: boolean;
-      afterItemId?: string;
-      beforeItemId?: string;
-      [key: string]: unknown;
-    };
-
-    // The client-minted permanent cuid id IS the sync `clientId`. It rides on the
-    // mutation input as `id` (create/update/toggle/delete) or `itemId` (qty/move).
-    // Sync inputs are single-arg with `clientId` INSIDE `input` (1-arg API).
-    const clientId =
-      input.id ?? input.itemId ?? (variables.id as string | undefined);
-
-    // PantryItem sync mutations. SyncPantryItemInput mirrors CreatePantryItemInput
-    // with `id` → `clientId` (pantry quantity is a plain Float — no QuantityInput).
-    // `BarcodeCreatePantryItem` creates the same entity from the same input shape,
-    // so it syncs through here too (rather than replaying the original barcode
-    // create, which is also id-idempotent but skips the conflict envelope).
-    if (
-      operationName === 'CreatePantryItem' ||
-      operationName === 'UpdatePantryItem' ||
-      operationName === 'BarcodeCreatePantryItem'
-    ) {
-      const { id: _omitId, itemName, ...rest } = input;
-
-      // SyncPantryItemInput requires `pantryId`. Create inputs already carry it;
-      // `UpdatePantryItemInput` does not — backfill it from the cached PantryItem
-      // (keyed by the client id), the same way `readShoppingListId` backfills the
-      // shopping list. Without this the replay omits a required field and the
-      // server rejects the offline edit.
-      const pantryId =
-        (rest.pantryId as string | undefined) ?? this.readPantryId(clientId);
-      if (!pantryId) {
-        throw new Error(
-          `Cannot sync ${operationName}: pantryId not found for item ${clientId}`,
-        );
-      }
-
-      // SyncPantryItemInput has no flat `itemName` field — it takes
-      // `item: InlineItemInput` ({ name }). `UpdatePantryItem` sends a flat
-      // `itemName`; fold it into `item` so a renamed item syncs (and an unknown
-      // field isn't sent). Create inputs already use `item`, so this preserves it.
-      const existingItem = rest.item as Record<string, unknown> | undefined;
-      const item =
-        itemName != null
-          ? { ...(existingItem ?? {}), name: itemName as string }
-          : existingItem;
-
-      return {
-        syncMutation: SyncPantryItemDocument,
-        syncVariables: {
-          input: {
-            ...rest,
-            pantryId,
-            ...(item != null && { item }),
-            clientId,
-          },
-        },
-      };
-    }
-
-    if (operationName === 'DeletePantryItem') {
-      return {
-        syncMutation: SyncDeletePantryItemDocument,
-        syncVariables: { input: { clientId, version: input.version } },
-      };
-    }
-
-    // ShoppingListItem create/update sync. SyncShoppingListItemFullInput =
-    // { clientId, item: SyncShoppingListItemInput }. `shoppingListId` is required
-    // on the item — present on a create input, else read from cache. The
-    // specialized single-item creates (barcode, add-from-filtered-pantry,
-    // add-from-pantry-item) produce a ShoppingListItem from the same fields, so
-    // they sync through here too.
-    if (
-      operationName === 'AddItemToShoppingList' ||
-      operationName === 'UpdateShoppingListItem' ||
-      operationName === 'UpdateShoppingListItemQuantity' ||
-      operationName === 'ToggleShoppingListItemPurchased' ||
-      operationName === 'BarcodeAddItemToShoppingList' ||
-      operationName === 'AddItemToShoppingListFromFilteredPantry' ||
-      operationName === 'AddItemToShoppingListFromPantryItem'
-    ) {
-      const shoppingListId =
-        input.shoppingListId ?? this.readShoppingListId(clientId);
-      if (!shoppingListId) {
-        throw new Error(
-          `Cannot sync ${operationName}: shoppingListId not found for item ${clientId}`,
-        );
-      }
-      // `SyncShoppingListItemInput.unit` is a UnitSpecInput object. AddItem sends
-      // it as `unit`, but UpdateShoppingListItem(Quantity) sends flat `unitId` /
-      // `unitName` — normalize both so an offline unit change isn't dropped on
-      // replay.
-      const unit =
-        input.unit ??
-        (input.unitId != null || input.unitName != null
-          ? {
-              ...(input.unitId != null && { unitId: input.unitId }),
-              ...(input.unitName != null && { unitName: input.unitName }),
-            }
-          : undefined);
-
-      const item: Record<string, unknown> = {
-        shoppingListId,
-        ...(input.itemName != null && { itemName: input.itemName }),
-        ...(input.itemId != null && { itemId: input.itemId }),
-        ...(input.category != null && { category: input.category }),
-        ...(input.notes != null && { notes: input.notes }),
-        ...(unit && { unit }),
-        // `quantity` is the FlexibleQuantity scalar (string | number, e.g. "1/3"
-        // or 2) — pass it through directly; no unitId needed.
-        ...(input.quantity != null && { quantity: input.quantity }),
-        ...(input.purchased != null && {
-          purchaseTracking: { isPurchased: input.purchased },
-        }),
-        // Carried by the barcode add (and accepted by SyncShoppingListItemInput)
-        // so replaying through sync doesn't drop them vs. the original mutation.
-        ...(input.brand != null && { brand: input.brand }),
-        ...(input.netWeight != null && { netWeight: input.netWeight }),
-        ...(input.storePrefs != null && { storePrefs: input.storePrefs }),
-        ...(input.pricing != null && { pricing: input.pricing }),
-        ...(input.version != null && { version: input.version }),
-      };
-      return {
-        syncMutation: SyncShoppingListItemDocument,
-        syncVariables: { input: { clientId, item } },
-      };
-    }
-
-    if (operationName === 'RemoveItemFromShoppingList') {
-      return {
-        syncMutation: SyncDeleteShoppingListItemDocument,
-        syncVariables: { input: { clientId, version: input.version } },
-      };
-    }
-
-    if (operationName === 'MoveShoppingListItem') {
-      return {
-        syncMutation: SyncMoveShoppingListItemDocument,
-        syncVariables: {
-          input: {
-            clientId,
-            afterId: input.afterItemId,
-            beforeId: input.beforeItemId,
-            version: input.version,
-          },
-        },
-      };
-    }
-
-    // Fallback: For mutations without Sync versions, replay the original mutation
-    // This allows all queued mutations to be replayed when coming back online
-    logger.info(
-      `ℹ️ Queue: No sync mutation for ${operationName}, using original mutation`,
-    );
-    return {
-      syncMutation: mutation.mutation,
-      syncVariables: variables,
-    };
   }
 
   /**

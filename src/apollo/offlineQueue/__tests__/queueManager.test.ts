@@ -9,6 +9,7 @@ import {
   QueueError,
   ProcessingResult,
 } from '../types';
+import { convertToSyncMutation as convertToSyncMutationFn } from '../convertToSyncMutation';
 
 // Mock the store module
 jest.mock('#store', () => ({
@@ -641,11 +642,22 @@ describe('QueueManager', () => {
   // convertToSyncMutation
   // -------------------------------------------------------------------------
   describe('convertToSyncMutation', () => {
-    let convertToSyncMutation: QueueManager['convertToSyncMutation'];
+    let convertToSyncMutation: (mutation: QueuedMutation) => {
+      syncMutation: DocumentNode;
+      syncVariables: Record<string, unknown>;
+    };
     const { client: mockClient } = require('../../client');
 
     beforeEach(() => {
-      convertToSyncMutation = manager['convertToSyncMutation'].bind(manager);
+      // convertToSyncMutation is now a standalone function taking cache readers;
+      // the manager still owns the cache backfill (readPantryId/readShoppingListId),
+      // so inject those to preserve the backfill-from-cache behavior under test.
+      const readers = {
+        readPantryId: manager['readPantryId'].bind(manager),
+        readShoppingListId: manager['readShoppingListId'].bind(manager),
+      };
+      convertToSyncMutation = mutation =>
+        convertToSyncMutationFn(mutation, readers);
     });
 
     // The current 1-arg sync API: variables ride inside `input`, and the output
