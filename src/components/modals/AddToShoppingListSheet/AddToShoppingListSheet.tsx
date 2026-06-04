@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -16,9 +16,10 @@ import { ItemSuggestion } from '#/graphql/generated/schemaTypes';
 import {
   addNewItemToShoppingListCache,
   addOptimisticShoppingListItem,
+  createOptimisticShoppingListItem,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
-import { createOptimisticShoppingListItem } from '#features/shoppingList/hooks/mutations/utils';
+import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
@@ -98,10 +99,6 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
     );
   };
 
-  // The client cuid of the most recent add — read in update() to detect a
-  // server catalog-merge (returned id !== our cuid) and evict the stale entity.
-  const lastClientIdRef = useRef<string | null>(null);
-
   // Each handler writes the new item into the cache before this mutation fires
   // and leaves it there, so it appears instantly and stays even when the create
   // is queued offline (the queue replays it later, keyed by the item's id). An
@@ -110,30 +107,30 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
   const [addItemMutation, { loading: adding }] = useMutation(
     AddItemToShoppingListDocument,
     {
-      update(cache, { data }) {
+      update(cache, { data }, { variables }) {
         const payload = data?.addItemToShoppingList;
         if (
           payload?.__typename !== 'AddItemToShoppingListPayload' ||
-          !shoppingListId
+          !shoppingListId ||
+          !variables
         ) {
           return;
         }
         const newItem = payload.shoppingListItem;
 
         // Catalog-merge: the server merged into an existing row → its id differs
-        // from our optimistic cuid. Adopt the server id; evict the stale cuid.
-        if (lastClientIdRef.current && newItem.id !== lastClientIdRef.current) {
-          safeEvict(cache, 'ShoppingListItem', lastClientIdRef.current);
-          lastClientIdRef.current = null;
+        // from the client cuid we sent on THIS mutation. Adopt the server id;
+        // evict the stale cuid entity. Reading the id off this mutation's own
+        // variables (not a shared ref) keeps it correct when adds overlap.
+        const clientId = variables.input.id;
+        if (clientId && newItem.id !== clientId) {
+          safeEvict(cache, 'ShoppingListItem', clientId);
         }
 
         executeCacheUpdate(
           () => addNewItemToShoppingListCache(cache, shoppingListId, newItem),
           'Cache update failed for addItem:',
         );
-      },
-      onError: () => {
-        lastClientIdRef.current = null;
       },
     },
   );
@@ -175,18 +172,18 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
     // shows immediately and stays if the create is queued offline (the queue
     // replays it later, keyed by this id).
     const id = generateEntityId();
-    const { entity } = createOptimisticShoppingListItem({
+    const optimisticItem = createOptimisticShoppingListItem(id, {
       itemName: item.name,
       itemId: item.id,
       unitId: item.defaultUnit?.id,
     });
-    lastClientIdRef.current = id;
     executeCacheUpdate(
       () =>
-        addOptimisticShoppingListItem(client.cache, shoppingListId, {
-          ...entity,
-          id,
-        }),
+        addOptimisticShoppingListItem(
+          client.cache,
+          shoppingListId,
+          optimisticItem,
+        ),
       'Add Shopping List Item (optimistic)',
     );
 
@@ -206,11 +203,27 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
       },
       context: { localFirst: true },
     })
-      .then(() => {
+      .then(result => {
+        // A queued create (offline / API down) resolves with no data and no
+        // error — keep the item. A real rejection (e.g. validation) must evict
+        // the optimistic item; with errorPolicy:'all' that lands here in `.then`,
+        // not `.catch`, so classify the result rather than relying on a throw.
+        if (
+          classifyCreateResult(
+            result,
+            'addItemToShoppingList',
+            'AddItemToShoppingListPayload',
+          ) === 'rejected'
+        ) {
+          safeEvict(client.cache, 'ShoppingListItem', id);
+          toastService.error(t('addToShoppingListSheet.addFailedRetry'));
+          return;
+        }
         onItemAdded?.();
         tutorial?.notifyItemAdded();
       })
       .catch(() => {
+        safeEvict(client.cache, 'ShoppingListItem', id);
         toastService.error(t('addToShoppingListSheet.addFailedRetry'));
       });
   };
@@ -242,18 +255,18 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
     // shows immediately and stays if the create is queued offline (the queue
     // replays it later, keyed by this id).
     const id = generateEntityId();
-    const { entity } = createOptimisticShoppingListItem({
+    const optimisticItem = createOptimisticShoppingListItem(id, {
       itemName: shoppingItem.name,
       itemId: shoppingItem.itemId,
       unitId,
     });
-    lastClientIdRef.current = id;
     executeCacheUpdate(
       () =>
-        addOptimisticShoppingListItem(client.cache, shoppingListId, {
-          ...entity,
-          id,
-        }),
+        addOptimisticShoppingListItem(
+          client.cache,
+          shoppingListId,
+          optimisticItem,
+        ),
       'Add Shopping List Item (optimistic)',
     );
 
@@ -271,12 +284,28 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
       },
       context: { localFirst: true },
     })
-      .then(() => {
+      .then(result => {
+        // Rejected (not merely queued offline) → evict the optimistic item and
+        // restore the suggestion. errorPolicy:'all' delivers rejections to
+        // `.then`, so classify rather than relying on `.catch`.
+        if (
+          classifyCreateResult(
+            result,
+            'addItemToShoppingList',
+            'AddItemToShoppingListPayload',
+          ) === 'rejected'
+        ) {
+          safeEvict(client.cache, 'ShoppingListItem', id);
+          state.completeExitAnimation(shoppingItem.itemId);
+          toastService.error(t('addToShoppingListSheet.addFailedRetry'));
+          return;
+        }
         onItemAdded?.();
         tutorial?.notifyItemAdded();
       })
       .catch(() => {
         // On error: remove from exiting, show error toast
+        safeEvict(client.cache, 'ShoppingListItem', id);
         state.completeExitAnimation(shoppingItem.itemId);
         toastService.error(t('addToShoppingListSheet.addFailedRetry'));
       });

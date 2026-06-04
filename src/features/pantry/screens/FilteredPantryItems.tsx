@@ -17,14 +17,24 @@ import { PantryItemSkeleton } from '#components/base/Skeleton/PantryItemSkeleton
 import { SpotlightCoachMark } from '#/components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 import { usePantryManagement } from '#hooks/home/pantry/usePantryManagement';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { useMutation } from '@apollo/client/react';
+import { useApolloClient, useMutation } from '@apollo/client/react';
 import { AddItemToShoppingListFromFilteredPantryDocument } from './FilteredPantryItems.generated';
 import { useCurrentPantry } from '#features/pantry/hooks/useCurrentPantry';
 import { useAddLowStockToShoppingList } from '#features/pantry/hooks/useAddLowStockToShoppingList';
 import { useSelectedShoppingListId } from '#store/useAppStore';
 import { toastService } from '#/services/toastService';
 import { generateEntityId } from '#/utils/generateEntityId';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
+import {
+  executeCacheUpdate,
+  executeMutation,
+} from '#/utils/compilerSafeWrappers';
+import {
+  addNewItemToShoppingListCache,
+  addOptimisticShoppingListItem,
+  createOptimisticShoppingListItem,
+} from '#/apollo/utils/shoppingListCacheUpdaters';
+import { safeEvict } from '#/apollo/utils/cacheUpdaters';
+import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import {
   useTutorialSequence,
   type TutorialStep,
@@ -166,7 +176,12 @@ const FilteredRenderItemComponent: React.FC<FilteredRenderItemProps> = ({
   const cartButton =
     showCart && handleAddToList ? (
       <AppPressable
-        onPress={() => handleAddToList(item.id)}
+        onPress={() =>
+          handleAddToList(item.id, {
+            itemName: item.itemName,
+            unitId: item.unit?.id,
+          })
+        }
         style={styles.actionButton}
       >
         <Icon name="cart-outline" size={20} tone="primary" />
@@ -274,6 +289,7 @@ export const FilteredPantryItems: React.FC<
 
   const permissions = usePantryPermissions();
   const selectedShoppingListId = useSelectedShoppingListId();
+  const client = useApolloClient();
 
   const {
     state: { items: allItems, loading, hasMore, isLoadingMore },
@@ -281,6 +297,19 @@ export const FilteredPantryItems: React.FC<
   } = usePantryManagement(pantry?.id);
   const [addToShoppingList] = useMutation(
     AddItemToShoppingListFromFilteredPantryDocument,
+    {
+      // Add the created item to the list connection so it appears when the list
+      // comes into view (the mutation returns the full item). Reads the list id
+      // from the mutation's own variables to stay correct across re-renders.
+      update: (cache, { data }, { variables }) => {
+        const payload = data?.addItemToShoppingList;
+        const listId = variables?.input.shoppingListId;
+        if (payload?.__typename !== 'AddItemToShoppingListPayload' || !listId) {
+          return;
+        }
+        addNewItemToShoppingListCache(cache, listId, payload.shoppingListItem);
+      },
+    },
   );
 
   // Progressively load all pages so the filter sees every item
@@ -319,7 +348,10 @@ export const FilteredPantryItems: React.FC<
     setRefreshing(false);
   };
 
-  const handleAddToList = async (itemId: string) => {
+  const handleAddToList = async (
+    itemId: string,
+    display: { itemName: string; unitId?: string },
+  ) => {
     if (!selectedShoppingListId) {
       toastService.info(t('filteredPantry.noListSelected'));
       return;
@@ -327,21 +359,56 @@ export const FilteredPantryItems: React.FC<
     // Generate the new item's id so a create that gets queued (offline / API
     // down) replays idempotently, keyed by this id.
     const id = generateEntityId();
-    await executeMutation(
-      async () => {
-        await addToShoppingList({
+
+    // Write the item into the cache before firing so it's on the list when it
+    // comes into view — and survives a queued (offline / API-down) create.
+    executeCacheUpdate(
+      () =>
+        addOptimisticShoppingListItem(
+          client.cache,
+          selectedShoppingListId,
+          createOptimisticShoppingListItem(id, {
+            itemName: display.itemName,
+            unitId: display.unitId,
+          }),
+        ),
+      'Add Shopping List Item (optimistic)',
+    );
+
+    const result = await executeMutation(
+      () =>
+        addToShoppingList({
           variables: {
             input: { id, shoppingListId: selectedShoppingListId, itemId },
           },
           context: { localFirst: true },
-        });
-      },
-      () =>
+        }),
+      () => {
+        safeEvict(client.cache, 'ShoppingListItem', id);
         alertService.alert(
           t('labels.error'),
           t('filteredPantry.addToShoppingFailed'),
-        ),
+        );
+      },
     );
+    // A queued create (offline / API down) replays later — treat as success.
+    // Only a real rejection surfaces an error; errorPolicy:'all' resolves
+    // rejections, so executeMutation's onError never fires for them — classify
+    // the result instead and discard the item we wrote.
+    if (
+      result &&
+      classifyCreateResult(
+        result,
+        'addItemToShoppingList',
+        'AddItemToShoppingListPayload',
+      ) === 'rejected'
+    ) {
+      safeEvict(client.cache, 'ShoppingListItem', id);
+      alertService.alert(
+        t('labels.error'),
+        t('filteredPantry.addToShoppingFailed'),
+      );
+    }
   };
 
   const showCart = config.showCartAction && permissions.canAddItems;

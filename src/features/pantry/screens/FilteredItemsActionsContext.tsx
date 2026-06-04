@@ -8,7 +8,12 @@ import React, {
 
 export interface FilteredItemsActions {
   navigateTo: (params: { itemId: string }) => void;
-  handleAddToList?: (itemId: string) => void;
+  // `display` carries the fields needed to write the optimistic shopping-list
+  // item (the row only has these; the catalog item id isn't in the minimal shape).
+  handleAddToList?: (
+    itemId: string,
+    display: { itemName: string; unitId?: string },
+  ) => void;
 }
 
 const FilteredItemsActionsContext = createContext<FilteredItemsActions | null>(
@@ -26,7 +31,8 @@ export const FilteredItemsActionsProvider: React.FC<{
 
   const stableActions: FilteredItemsActions = {
     navigateTo: params => actionsRef.current.navigateTo(params),
-    handleAddToList: itemId => actionsRef.current.handleAddToList?.(itemId),
+    handleAddToList: (itemId, display) =>
+      actionsRef.current.handleAddToList?.(itemId, display),
   };
 
   return (

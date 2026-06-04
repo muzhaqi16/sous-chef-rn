@@ -18,7 +18,11 @@ import {
   createAddToParentConnectionUpdater,
   safeEvict,
 } from '#/apollo/utils/cacheUpdaters';
-import { addNewItemToShoppingListCache } from '#/apollo/utils/shoppingListCacheUpdaters';
+import {
+  addNewItemToShoppingListCache,
+  addOptimisticShoppingListItem,
+  createOptimisticShoppingListItem,
+} from '#/apollo/utils/shoppingListCacheUpdaters';
 import { addToPantryItemsCache } from '#hooks/home/pantry/utils';
 import { buildOptimisticPantryItem } from '#hooks/home/pantry/buildOptimisticPantryItem';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
@@ -99,13 +103,21 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   const [addToShoppingList] = useMutation(
     BarcodeAddItemToShoppingListDocument,
     {
-      update: (cache, { data }) => {
+      update: (cache, { data }, { variables }) => {
         const payload = data?.addItemToShoppingList;
         if (
           payload?.__typename === 'AddItemToShoppingListPayload' &&
-          shoppingListId
+          shoppingListId &&
+          variables
         ) {
           const maskedItem = payload.shoppingListItem;
+          // Catalog-merge: the server merged into an existing row → its id
+          // differs from the client cuid we wrote optimistically. Adopt the
+          // server id; evict the stale cuid entity.
+          const clientId = variables.input.id;
+          if (clientId && maskedItem.id !== clientId) {
+            safeEvict(cache, 'ShoppingListItem', clientId);
+          }
           const shoppingListItem =
             cache.readFragment<SearchResults_ShoppingListItemFragment>({
               fragment: SearchResults_ShoppingListItemFragmentDoc,
@@ -277,7 +289,26 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
           // Generate the item's id so a create that gets queued (API blips after
           // the barcode lookup) replays idempotently, keyed by this id.
           const id = generateEntityId();
-          await addToShoppingList({
+          // Write the item into the cache before firing, so it's on the list
+          // when it comes into view — and survives a queued (offline / API-down)
+          // create that replays later.
+          executeCacheUpdate(
+            () =>
+              addOptimisticShoppingListItem(
+                client.cache,
+                shoppingListId,
+                createOptimisticShoppingListItem(id, {
+                  itemName: item.name,
+                  quantity: item.netWeight ?? 1,
+                  itemId: item.id,
+                  unitId: item.displayUnit?.id ?? item.unitId,
+                  unitName: item.displayUnit?.name,
+                }),
+              ),
+            'Add Shopping List Item (optimistic)',
+          );
+
+          const result = await addToShoppingList({
             variables: {
               input: {
                 id,
@@ -303,6 +334,27 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
             },
             context: { localFirst: true },
           });
+
+          // A queued create (offline / API down) resolves with no data and no
+          // error — that's success, it replays. Only a real rejection should
+          // surface an error instead of a false "Added". errorPolicy:'all'
+          // delivers rejections to the resolved result, so classify it rather
+          // than relying on a throw.
+          if (
+            classifyCreateResult(
+              result,
+              'addItemToShoppingList',
+              'AddItemToShoppingListPayload',
+            ) === 'rejected'
+          ) {
+            // The server refused the create — discard the item we wrote.
+            safeEvict(client.cache, 'ShoppingListItem', id);
+            alertService.alert(
+              'Error',
+              'Failed to add item. Please try again.',
+            );
+            return;
+          }
           setIsAdded(true);
           onScanAnother();
         } else {

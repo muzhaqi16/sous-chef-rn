@@ -37,6 +37,7 @@ jest.mock('#/services/errorService', () => ({
 }));
 
 jest.mock('#/utils/compilerSafeWrappers', () => ({
+  executeCacheUpdate: jest.fn((fn: () => void) => fn()),
   executeMutation: jest.fn(
     async (
       fn: Parameters<typeof executeMutation>[0],
@@ -59,6 +60,11 @@ jest.mock('#hooks/home/pantry/utils', () => ({
 
 jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => ({
   addNewItemToShoppingListCache: jest.fn(),
+  addOptimisticShoppingListItem: jest.fn(),
+  createOptimisticShoppingListItem: jest.fn((id: string) => ({
+    __typename: 'ShoppingListItem',
+    id,
+  })),
 }));
 
 const mockConvertExpiredToWaste = jest.fn();

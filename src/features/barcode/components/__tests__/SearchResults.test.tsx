@@ -15,6 +15,11 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
 
 jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => ({
   addNewItemToShoppingListCache: jest.fn(),
+  addOptimisticShoppingListItem: jest.fn(),
+  createOptimisticShoppingListItem: jest.fn((id: string) => ({
+    __typename: 'ShoppingListItem',
+    id,
+  })),
 }));
 
 jest.mock('#/utils/errors/pantryItemDuplicate', () => ({

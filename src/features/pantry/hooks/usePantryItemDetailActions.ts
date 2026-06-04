@@ -1,13 +1,22 @@
 import { useState, useEffect, useRef } from 'react';
-import { useMutation } from '@apollo/client/react';
+import { useApolloClient, useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
 import { errorService } from '#/services/errorService';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
+import {
+  executeCacheUpdate,
+  executeMutation,
+} from '#/utils/compilerSafeWrappers';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/screens/PantryItemDetail.generated';
 import { DeletePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { removeFromPantryItemsCache } from '#hooks/home/pantry/utils';
-import { addNewItemToShoppingListCache } from '#/apollo/utils/shoppingListCacheUpdaters';
+import {
+  addNewItemToShoppingListCache,
+  addOptimisticShoppingListItem,
+  createOptimisticShoppingListItem,
+} from '#/apollo/utils/shoppingListCacheUpdaters';
+import { safeEvict } from '#/apollo/utils/cacheUpdaters';
+import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { useConvertExpiredToWaste } from '#features/pantry/hooks/mutations/useConvertExpiredToWaste';
 import { useConvertExpiredBatchesToWaste } from '#features/pantry/hooks/mutations/useConvertExpiredBatchesToWaste';
 import { useAdjustPantryItemQuantity } from '#features/pantry/hooks/mutations/useAdjustPantryItemQuantity';
@@ -75,6 +84,7 @@ export function usePantryItemDetailActions({
   goBack,
   onAddToShoppingListNeedsList,
 }: UsePantryItemDetailActionsParams): UsePantryItemDetailActionsResult {
+  const client = useApolloClient();
   const [addToListStatus, setAddToListStatus] =
     useState<AddToListStatus>('idle');
   const [adjustModalVisible, setAdjustModalVisible] = useState(false);
@@ -122,15 +132,24 @@ export function usePantryItemDetailActions({
   const [addToShoppingList] = useMutation(
     AddItemToShoppingListFromPantryItemDocument,
     {
-      update: (cache, { data: mutationData }) => {
+      update: (cache, { data: mutationData }, { variables }) => {
         const payload = mutationData?.addItemToShoppingList;
         if (
           payload?.__typename !== 'AddItemToShoppingListPayload' ||
-          !selectedShoppingListId
+          !selectedShoppingListId ||
+          !variables
         ) {
           return;
         }
         const shoppingListItem = payload.shoppingListItem;
+
+        // Catalog-merge: the server merged into an existing row → its id differs
+        // from the client cuid we wrote optimistically. Adopt the server id;
+        // evict the stale cuid entity.
+        const clientId = variables.input.id;
+        if (clientId && shoppingListItem.id !== clientId) {
+          safeEvict(cache, 'ShoppingListItem', clientId);
+        }
 
         // addNewItemToShoppingListCache swallows its own errors internally, so
         // no try/catch wrapper is needed here — wrapping would bail the React
@@ -203,9 +222,28 @@ export function usePantryItemDetailActions({
     // down) replays idempotently, keyed by this id.
     const id = generateEntityId();
 
+    // Write the item into the cache before firing so it's on the list when it
+    // comes into view — and survives a queued (offline / API-down) create that
+    // replays later.
+    executeCacheUpdate(
+      () =>
+        addOptimisticShoppingListItem(
+          client.cache,
+          selectedShoppingListId,
+          createOptimisticShoppingListItem(id, {
+            itemName,
+            quantity,
+            itemId: catalogItemId || undefined,
+            unitId: item?.unit?.id,
+            unitName: item?.unit?.name,
+          }),
+        ),
+      'Add Shopping List Item (optimistic)',
+    );
+
     executeMutation(
       async () => {
-        await addToShoppingList({
+        const result = await addToShoppingList({
           variables: {
             input: {
               id,
@@ -218,7 +256,22 @@ export function usePantryItemDetailActions({
           },
           context: { localFirst: true },
         });
-        setAddToListStatus('success');
+        // Queued (offline / API down) counts as success — it replays. Only a
+        // real rejection is an error; don't show the success check on a refused
+        // create (and discard the item we wrote). errorPolicy:'all' resolves
+        // rejections, so classify the result rather than relying on a throw.
+        if (
+          classifyCreateResult(
+            result,
+            'addItemToShoppingList',
+            'AddItemToShoppingListPayload',
+          ) === 'rejected'
+        ) {
+          safeEvict(client.cache, 'ShoppingListItem', id);
+          setAddToListStatus('error');
+        } else {
+          setAddToListStatus('success');
+        }
         statusTimeoutRef.current = setTimeout(
           () => setAddToListStatus('idle'),
           3000,

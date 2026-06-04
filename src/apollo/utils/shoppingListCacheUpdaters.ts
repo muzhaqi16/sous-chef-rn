@@ -16,12 +16,69 @@ import {
   ShoppingListItemDisplayFragmentDoc,
   type ShoppingListItemDisplayFragment,
 } from '#features/shoppingList/graphql/shoppingListFragments.generated';
+import { DisplayFormat } from '#/graphql/generated/schemaTypes';
+import { createOptimisticEntity } from './createOptimisticResponse';
 import {
   type ConnectionData,
   createRemoveFromParentConnectionUpdater,
   safeEvict,
   safeEvictMany,
 } from './cacheUpdaters';
+
+export interface OptimisticShoppingListItemFields {
+  itemName: string;
+  quantity?: number | null;
+  quantityInput?: string | null;
+  unitName?: string | null;
+  category?: string | null;
+  itemId?: string | null;
+  unitId?: string | null;
+}
+
+/**
+ * Build a complete optimistic `ShoppingListItem` for local-first creates.
+ *
+ * `id` is the client-minted cuid (the row's real PK), baked straight into the
+ * entity so the online create and the queued replay converge on one row. The
+ * full display shape is mandatory offline, where no server response arrives to
+ * materialize the row (an incomplete shape makes a list cell's `useFragment`
+ * report `complete: false` and blank the row). Pass the result to
+ * {@link addOptimisticShoppingListItem}.
+ *
+ * Lives here (a shared apollo util) rather than inside the shoppingList feature
+ * so every add surface — including ones in other features (barcode,
+ * pantry-detail, filtered-pantry) — can build the same entity without crossing
+ * a feature boundary.
+ */
+export function createOptimisticShoppingListItem(
+  id: string,
+  fields: OptimisticShoppingListItemFields,
+): ShoppingListItemDisplayFragment {
+  return createOptimisticEntity<ShoppingListItemDisplayFragment>(
+    'ShoppingListItem',
+    id,
+    {
+      itemName: fields.itemName,
+      quantity: fields.quantity ?? 1,
+      quantityInput: fields.quantityInput ?? null,
+      displayFormat: DisplayFormat.Auto,
+      unitName: fields.unitName ?? null,
+      category: fields.category ?? null,
+      notes: null,
+      sortOrder: '',
+      purchaseInfo: {
+        __typename: 'ShoppingListItemPurchaseInfo',
+        isPurchased: false,
+      },
+      item: fields.itemId
+        ? { __typename: 'Item', id: fields.itemId, imageUrl: null, images: [] }
+        : null,
+      unit: fields.unitId
+        ? { __typename: 'Unit', id: fields.unitId, name: '', symbol: '' }
+        : null,
+    },
+  );
+}
 
 /**
  * Minimal stats read used by {@link addOptimisticShoppingListItem} to recompute

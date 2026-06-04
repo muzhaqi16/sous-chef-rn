@@ -20,17 +20,14 @@ jest.mock('#/utils/compilerSafeWrappers', () => ({
 jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => ({
   addNewItemToShoppingListCache: jest.fn(),
   addOptimisticShoppingListItem: jest.fn(),
-}));
-
-jest.mock('../utils', () => ({
-  createOptimisticShoppingListItem: jest.fn(() => ({
-    tempId: 'temp-123',
-    entity: {
-      id: 'temp-123',
-      itemName: 'Milk',
+  // New signature: (id, fields) => entity (the cuid is baked straight in).
+  createOptimisticShoppingListItem: jest.fn(
+    (id: string, fields: { itemName?: string }) => ({
       __typename: 'ShoppingListItem',
-    },
-  })),
+      id,
+      itemName: fields?.itemName ?? '',
+    }),
+  ),
 }));
 
 beforeEach(() => {

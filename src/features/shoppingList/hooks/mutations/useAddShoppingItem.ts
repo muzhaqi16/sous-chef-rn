@@ -13,7 +13,6 @@
  * adopt the server `serverId` and evict the optimistic cuid entity.
  */
 
-import { useRef } from 'react';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
@@ -24,8 +23,8 @@ import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import {
   addNewItemToShoppingListCache,
   addOptimisticShoppingListItem,
+  createOptimisticShoppingListItem,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
-import { createOptimisticShoppingListItem } from './utils';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { generateEntityId } from '#/utils/generateEntityId';
@@ -41,23 +40,26 @@ export function useAddShoppingItem({
   refetch,
 }: UseAddShoppingItemOptions) {
   const client = useApolloClient();
-  // The client cuid of the most recent add — read in update() to detect a
-  // server catalog-merge (returned id !== our cuid) and evict the stale entity.
-  const lastClientIdRef = useRef<string | null>(null);
 
   const [addItemMutation] = useMutation(AddItemToShoppingListDocument, {
-    update(cache, { data }) {
+    update(cache, { data }, { variables }) {
       const payload = data?.addItemToShoppingList;
-      if (payload?.__typename !== 'AddItemToShoppingListPayload' || !listId) {
+      if (
+        payload?.__typename !== 'AddItemToShoppingListPayload' ||
+        !listId ||
+        !variables
+      ) {
         return;
       }
       const item = payload.shoppingListItem;
 
       // Catalog-merge: the server merged into an existing row → its id differs
-      // from our optimistic cuid. Adopt the server id; evict the stale cuid item.
-      if (lastClientIdRef.current && item.id !== lastClientIdRef.current) {
-        safeEvict(cache, 'ShoppingListItem', lastClientIdRef.current);
-        lastClientIdRef.current = null;
+      // from the client cuid we sent on THIS mutation. Adopt the server id;
+      // evict the stale cuid entity. Reading the id off this mutation's own
+      // variables (not a shared ref) keeps it correct when adds overlap.
+      const clientId = variables.input.id;
+      if (clientId && item.id !== clientId) {
+        safeEvict(cache, 'ShoppingListItem', clientId);
       }
 
       executeCacheUpdate(
@@ -67,7 +69,6 @@ export function useAddShoppingItem({
       );
     },
     onError: error => {
-      lastClientIdRef.current = null;
       // Network/transient error: queueLink queued the create for replay — keep
       // the optimistic item; do NOT alert.
       if (isNetworkError(error)) return;
@@ -80,7 +81,6 @@ export function useAddShoppingItem({
 
     // Local-first: mint the permanent cuid id (the row's real PK).
     const id = generateEntityId();
-    lastClientIdRef.current = id;
 
     const createInput = {
       id,
@@ -97,7 +97,7 @@ export function useAddShoppingItem({
       ...(input.category && { category: input.category }),
     };
 
-    const { entity } = createOptimisticShoppingListItem({
+    const optimisticItem = createOptimisticShoppingListItem(id, {
       itemName: input.itemName ?? '',
       quantity: input.quantity ?? 1,
       quantityInput: null,
@@ -106,7 +106,6 @@ export function useAddShoppingItem({
       itemId: undefined,
       unitId: input.unitId,
     });
-    const optimisticItem = { ...entity, id };
 
     // Write the item into the cache (full entity + connection edge + recomputed
     // list stats) before firing, so it shows immediately and stays if the create

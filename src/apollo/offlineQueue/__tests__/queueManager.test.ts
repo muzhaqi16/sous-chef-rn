@@ -656,24 +656,59 @@ describe('QueueManager', () => {
     it('converts CreatePantryItem → SyncPantryItem (id → clientId inside input)', () => {
       const mutation = makeMutation({
         operationName: 'CreatePantryItem',
-        variables: { input: { id: 'item-1', name: 'Milk' } },
+        // Real CreatePantryItemInput carries pantryId + item:{name}.
+        variables: {
+          input: { id: 'item-1', pantryId: 'pan-1', item: { name: 'Milk' } },
+        },
       });
       const { syncVariables } = convertToSyncMutation(mutation);
       const input = wrapper(syncVariables);
       expect(input.clientId).toBe('item-1');
-      expect(input.name).toBe('Milk');
+      expect(input.pantryId).toBe('pan-1');
+      expect(input.item).toEqual({ name: 'Milk' });
       expect(input.id).toBeUndefined();
     });
 
-    it('converts UpdatePantryItem → SyncPantryItem', () => {
+    // UpdatePantryItemInput has no pantryId and sends a flat itemName, but
+    // SyncPantryItemInput requires pantryId and takes item:{name}. The converter
+    // backfills pantryId from the cached PantryItem and folds itemName into item.
+    it('converts UpdatePantryItem → SyncPantryItem (backfills pantryId, folds itemName→item)', () => {
+      mockClient.cache.readFragment.mockReturnValue({
+        id: 'item-2',
+        pantryId: 'pan-2',
+      });
       const mutation = makeMutation({
         operationName: 'UpdatePantryItem',
-        variables: { input: { id: 'item-2', name: 'Eggs', version: 4 } },
+        variables: {
+          input: {
+            id: 'item-2',
+            itemName: 'Eggs',
+            storage: { storageState: 'OPENED' },
+            version: 4,
+          },
+        },
       });
       const { syncVariables } = convertToSyncMutation(mutation);
       const input = wrapper(syncVariables);
       expect(input.clientId).toBe('item-2');
       expect(input.version).toBe(4);
+      // pantryId backfilled from cache (required by SyncPantryItemInput).
+      expect(input.pantryId).toBe('pan-2');
+      // itemName folded into item:{name}; no flat itemName forwarded.
+      expect(input.item).toEqual({ name: 'Eggs' });
+      expect(input.itemName).toBeUndefined();
+      expect(input.storage).toEqual({ storageState: 'OPENED' });
+    });
+
+    it('throws when pantryId cannot be resolved for a pantry-item sync', () => {
+      mockClient.cache.readFragment.mockReturnValue(null);
+      const mutation = makeMutation({
+        operationName: 'UpdatePantryItem',
+        variables: { input: { id: 'orphan-item', itemName: 'Ghost' } },
+      });
+      expect(() => convertToSyncMutation(mutation)).toThrow(
+        'Cannot sync UpdatePantryItem: pantryId not found',
+      );
     });
 
     it('converts DeletePantryItem → SyncDeletePantryItem', () => {
@@ -727,6 +762,25 @@ describe('QueueManager', () => {
       expect(item.shoppingListId).toBe('list-99');
       expect(item.quantity).toBe('5');
       expect(item.version).toBe(3);
+    });
+
+    // UpdateShoppingListItemQuantity sends a flat `unitId`, but
+    // SyncShoppingListItemInput.unit is a UnitSpecInput object — the converter
+    // normalizes the flat scalar into `unit` so an offline unit change isn't lost.
+    it('normalizes a flat unitId into unit:{unitId} for a quantity sync', () => {
+      mockClient.cache.readFragment.mockReturnValue({
+        id: 'sl-item-1',
+        shoppingList: { id: 'list-99' },
+      });
+      const mutation = makeMutation({
+        operationName: 'UpdateShoppingListItemQuantity',
+        variables: {
+          input: { itemId: 'sl-item-1', quantity: '5', unitId: 'unit-7' },
+        },
+      });
+      const { syncVariables } = convertToSyncMutation(mutation);
+      const item = wrapper(syncVariables).item as Record<string, unknown>;
+      expect(item.unit).toEqual({ unitId: 'unit-7' });
     });
 
     it('converts ToggleShoppingListItemPurchased with cache read', () => {
@@ -808,7 +862,9 @@ describe('QueueManager', () => {
       // a missing id surfaces as undefined rather than a fabricated temp- id.
       const mutation = makeMutation({
         operationName: 'CreatePantryItem',
-        variables: { input: { name: 'No ID item' } },
+        variables: {
+          input: { pantryId: 'pan-1', item: { name: 'No ID item' } },
+        },
       });
       const { syncVariables } = convertToSyncMutation(mutation);
       const input = syncVariables.input as Record<string, unknown>;
@@ -913,6 +969,10 @@ describe('QueueManager', () => {
         },
       });
 
+      mockClient.cache.readFragment.mockReturnValue({
+        id: 'item-1',
+        pantryId: 'pan-1',
+      });
       jest.useRealTimers();
       const mutation = makeMutation({
         operationName: 'UpdatePantryItem',
@@ -932,7 +992,7 @@ describe('QueueManager', () => {
       jest.useRealTimers();
       const mutation = makeMutation({
         operationName: 'CreatePantryItem',
-        variables: { input: { id: 'item-1' } },
+        variables: { input: { id: 'item-1', pantryId: 'pan-1' } },
       });
       await expect(executeSyncMutation(mutation)).rejects.toThrow(
         'Server error',

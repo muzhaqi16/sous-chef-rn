@@ -46,6 +46,11 @@ jest.mock('#features/shoppingList/hooks/useShoppingListItemForm', () => ({
 
 jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => ({
   addNewItemToShoppingListCache: jest.fn(),
+  addOptimisticShoppingListItem: jest.fn(),
+  createOptimisticShoppingListItem: jest.fn((id: string) => ({
+    __typename: 'ShoppingListItem',
+    id,
+  })),
 }));
 jest.mock('#/utils/errorHandlers', () => ({
   handleMutationError: jest.fn(),

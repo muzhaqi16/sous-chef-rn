@@ -1,4 +1,5 @@
 import { createTestStore } from '#/test-utils/createTestStore';
+import { isApiUnavailable } from '../networkSlice';
 
 jest.mock('../../../apollo/links/tokenScheduler');
 jest.mock('../../../apollo/links/refreshToken');
@@ -85,6 +86,41 @@ describe('networkSlice', () => {
       const store = createTestStore({ isOnline: false });
       store.getState().setOffline();
       expect(store.getState().lastOfflineTime).toBeNull();
+    });
+  });
+
+  describe('apiReachable', () => {
+    it('defaults to true (reachable until proven otherwise)', () => {
+      const store = createTestStore();
+      expect(store.getState().apiReachable).toBe(true);
+    });
+
+    it('setApiReachable toggles the flag', () => {
+      const store = createTestStore();
+      store.getState().setApiReachable(false);
+      expect(store.getState().apiReachable).toBe(false);
+      store.getState().setApiReachable(true);
+      expect(store.getState().apiReachable).toBe(true);
+    });
+  });
+
+  describe('isApiUnavailable', () => {
+    it('is true when the device is offline', () => {
+      expect(isApiUnavailable({ isOnline: false, apiReachable: true })).toBe(
+        true,
+      );
+    });
+
+    it('is true when the breaker is open (apiReachable === false)', () => {
+      expect(isApiUnavailable({ isOnline: true, apiReachable: false })).toBe(
+        true,
+      );
+    });
+
+    it('is false when online and reachable', () => {
+      expect(isApiUnavailable({ isOnline: true, apiReachable: true })).toBe(
+        false,
+      );
     });
   });
 });

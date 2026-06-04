@@ -367,6 +367,60 @@ describe('createQueueLink', () => {
   // -------------------------------------------------------------------------
   // Never-queue operations
   // -------------------------------------------------------------------------
+  // -------------------------------------------------------------------------
+  // API unreachable while online (reachability circuit breaker open)
+  // -------------------------------------------------------------------------
+  describe('api-unreachable interception (apiReachable === false)', () => {
+    it('queues a localFirst mutation immediately, without firing a doomed request', done => {
+      mockedGetState.mockReturnValue({
+        isOnline: true,
+        apiReachable: false,
+        user: { id: 'user-1' },
+      });
+      const operation = makeOperation({
+        query: MOCK_MUTATION,
+        operationName: 'AddItem',
+        variables: { input: { name: 'Apple' } },
+        context: { localFirst: true },
+      });
+      const forward = makeForward();
+
+      link.request(operation, forward)!.subscribe({
+        next(result) {
+          expect(result.extensions).toEqual({ queued: true });
+        },
+        complete() {
+          expect(forward).not.toHaveBeenCalled();
+          expect(queueStore.addMutation).toHaveBeenCalledTimes(1);
+          done();
+        },
+      });
+    });
+
+    it('does NOT queue a non-localFirst mutation — it fires (and may fail) as before', done => {
+      mockedGetState.mockReturnValue({
+        isOnline: true,
+        apiReachable: false,
+        user: { id: 'user-1' },
+      });
+      const operation = makeOperation({
+        query: MOCK_MUTATION,
+        operationName: 'AddItem',
+        variables: { input: { name: 'Apple' } },
+        // no localFirst
+      });
+      const forward = makeForward();
+
+      link.request(operation, forward)!.subscribe({
+        complete() {
+          expect(forward).toHaveBeenCalledTimes(1);
+          expect(queueStore.addMutation).not.toHaveBeenCalled();
+          done();
+        },
+      });
+    });
+  });
+
   describe('never-queue operations', () => {
     const neverQueueOps = [
       'RefreshToken',

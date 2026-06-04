@@ -2,6 +2,7 @@ import { gql } from '@apollo/client';
 import type { DocumentNode } from 'graphql';
 import { client } from '../client';
 import { useStore } from '#store';
+import { isApiUnavailable } from '#store/slices/networkSlice';
 import { queueStore } from './queueStore';
 import {
   QueuedMutation,
@@ -30,6 +31,19 @@ const QUEUE_ITEM_DATA_FRAGMENT = gql`
     shoppingList {
       id
     }
+  }
+`;
+
+/**
+ * Reads a PantryItem's `pantryId` from cache during queue processing.
+ * `UpdatePantryItemInput` carries no `pantryId`, but `SyncPantryItemInput`
+ * requires it, so the update→sync replay backfills it from the cached entity
+ * (mirrors {@link QUEUE_ITEM_DATA_FRAGMENT} for shopping items).
+ */
+const QUEUE_PANTRY_ITEM_FRAGMENT = gql`
+  fragment QueuePantryItemData on PantryItem {
+    id
+    pantryId
   }
 `;
 
@@ -92,9 +106,10 @@ export class QueueManager {
       return;
     }
 
-    // Check if online
-    if (!state.isOnline) {
-      logger.debug('📴 Queue: Offline, skipping processing');
+    // Don't replay when the server is unreachable (device offline OR the API
+    // reachability breaker is open) — replays would just fail and re-trip it.
+    if (isApiUnavailable(state)) {
+      logger.debug('📴 Queue: Server unreachable, skipping processing');
       return;
     }
 
@@ -204,10 +219,10 @@ export class QueueManager {
     const batches = this.createBatches(mergedMutations, this.config.batchSize);
 
     for (const batch of batches) {
-      // Check if still online before each batch
+      // Check the server is still reachable before each batch
       const state = useStore.getState();
-      if (!state.isOnline) {
-        logger.info('📴 Queue: Went offline during processing, pausing');
+      if (isApiUnavailable(state)) {
+        logger.info('📴 Queue: Server became unreachable, pausing');
         break;
       }
 
@@ -367,6 +382,10 @@ export class QueueManager {
       notes?: string;
       quantity?: number | string;
       unit?: { unitId?: string; unitName?: string };
+      // Quantity/update shopping ops send the unit as flat scalars rather than a
+      // `unit` object; the converter normalizes both into `unit` (see below).
+      unitId?: string;
+      unitName?: string;
       purchased?: boolean;
       afterItemId?: string;
       beforeItemId?: string;
@@ -389,10 +408,41 @@ export class QueueManager {
       operationName === 'UpdatePantryItem' ||
       operationName === 'BarcodeCreatePantryItem'
     ) {
-      const { id: _omitId, ...rest } = input;
+      const { id: _omitId, itemName, ...rest } = input;
+
+      // SyncPantryItemInput requires `pantryId`. Create inputs already carry it;
+      // `UpdatePantryItemInput` does not — backfill it from the cached PantryItem
+      // (keyed by the client id), the same way `readShoppingListId` backfills the
+      // shopping list. Without this the replay omits a required field and the
+      // server rejects the offline edit.
+      const pantryId =
+        (rest.pantryId as string | undefined) ?? this.readPantryId(clientId);
+      if (!pantryId) {
+        throw new Error(
+          `Cannot sync ${operationName}: pantryId not found for item ${clientId}`,
+        );
+      }
+
+      // SyncPantryItemInput has no flat `itemName` field — it takes
+      // `item: InlineItemInput` ({ name }). `UpdatePantryItem` sends a flat
+      // `itemName`; fold it into `item` so a renamed item syncs (and an unknown
+      // field isn't sent). Create inputs already use `item`, so this preserves it.
+      const existingItem = rest.item as Record<string, unknown> | undefined;
+      const item =
+        itemName != null
+          ? { ...(existingItem ?? {}), name: itemName as string }
+          : existingItem;
+
       return {
         syncMutation: SyncPantryItemDocument,
-        syncVariables: { input: { ...rest, clientId } },
+        syncVariables: {
+          input: {
+            ...rest,
+            pantryId,
+            ...(item != null && { item }),
+            clientId,
+          },
+        },
       };
     }
 
@@ -425,13 +475,26 @@ export class QueueManager {
           `Cannot sync ${operationName}: shoppingListId not found for item ${clientId}`,
         );
       }
+      // `SyncShoppingListItemInput.unit` is a UnitSpecInput object. AddItem sends
+      // it as `unit`, but UpdateShoppingListItem(Quantity) sends flat `unitId` /
+      // `unitName` — normalize both so an offline unit change isn't dropped on
+      // replay.
+      const unit =
+        input.unit ??
+        (input.unitId != null || input.unitName != null
+          ? {
+              ...(input.unitId != null && { unitId: input.unitId }),
+              ...(input.unitName != null && { unitName: input.unitName }),
+            }
+          : undefined);
+
       const item: Record<string, unknown> = {
         shoppingListId,
         ...(input.itemName != null && { itemName: input.itemName }),
         ...(input.itemId != null && { itemId: input.itemId }),
         ...(input.category != null && { category: input.category }),
         ...(input.notes != null && { notes: input.notes }),
-        ...(input.unit && { unit: input.unit }),
+        ...(unit && { unit }),
         // `quantity` is the FlexibleQuantity scalar (string | number, e.g. "1/3"
         // or 2) — pass it through directly; no unitId needed.
         ...(input.quantity != null && { quantity: input.quantity }),
@@ -502,6 +565,25 @@ export class QueueManager {
       fragment: QUEUE_ITEM_DATA_FRAGMENT,
     });
     return itemData?.shoppingList?.id;
+  }
+
+  /**
+   * Read a pantry item's `pantryId` from cache — `SyncPantryItemInput` requires
+   * it, but `UpdatePantryItem` variables only carry the item id.
+   */
+  private readPantryId(itemId: string | undefined): string | undefined {
+    if (!itemId) return undefined;
+    const itemData = client.cache.readFragment<{
+      id: string;
+      pantryId: string;
+    }>({
+      id: client.cache.identify({
+        __typename: 'PantryItem',
+        id: itemId,
+      }),
+      fragment: QUEUE_PANTRY_ITEM_FRAGMENT,
+    });
+    return itemData?.pantryId ?? undefined;
   }
 
   /**

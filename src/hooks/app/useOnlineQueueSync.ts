@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useIsOnline } from '#store/useAppStore';
 import { useStore } from '#store';
 import { queueManager } from '#/apollo/offlineQueue/queueManager';
+import { apiReachabilityBreaker } from '#/apollo/links/apiReachabilityBreaker';
 import { proactiveTokenRefresh } from '#/apollo/links/refreshToken';
 
 /**
@@ -20,6 +21,11 @@ export function useOnlineQueueSync(): void {
   // would override the full handler with a lesser one.
 
   useEffect(() => {
+    // Reset the API-reachability breaker on every connectivity transition so a
+    // reconnect starts optimistic — a stale open circuit would otherwise keep
+    // serving cache for up to the half-open delay after the network is back.
+    apiReachabilityBreaker.reset();
+
     if (!isOnline) {
       queueManager.onOffline();
       return;

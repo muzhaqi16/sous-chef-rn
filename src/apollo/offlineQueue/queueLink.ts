@@ -63,7 +63,7 @@ export const createQueueLink = () => {
 
     const state = useStore.getState();
 
-    // Offline — queue immediately.
+    // Device offline — queue every mutation; it can't reach the server.
     if (!state.isOnline) {
       logger.info(
         `Queue Link: Offline, queuing mutation ${operation.operationName}`,
@@ -73,10 +73,25 @@ export const createQueueLink = () => {
       });
     }
 
+    const localFirst = operation.getContext().localFirst;
+
+    // API unreachable while the device is online (reachability circuit breaker
+    // open) — queue local-first mutations immediately instead of firing a doomed
+    // request. Non-local-first mutations fall through and fire (and surface their
+    // error) as before; they aren't safe to auto-replay.
+    if (state.apiReachable === false && localFirst) {
+      logger.info(
+        `Queue Link: API unreachable, queuing local-first mutation ${operation.operationName}`,
+      );
+      return new Observable(observer => {
+        enqueueAndComplete(operation, observer, 'online-network-error');
+      });
+    }
+
     // Online — pass through, UNLESS the mutation opts into local-first. Without
     // the opt-in we keep current behavior (so un-migrated mutations and creates
     // are unaffected).
-    if (!operation.getContext().localFirst) {
+    if (!localFirst) {
       return forward(operation);
     }
 

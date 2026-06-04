@@ -26,11 +26,11 @@ import type { StaticScreenProps } from '@react-navigation/native';
 import {
   addNewItemToShoppingListCache,
   addOptimisticShoppingListItem,
+  createOptimisticShoppingListItem,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { useShoppingListItemForm } from '#features/shoppingList/hooks/useShoppingListItemForm';
-import { createOptimisticShoppingListItem } from '#features/shoppingList/hooks/mutations/utils';
 import {
   handleMutationError,
   versionConflictCheck,
@@ -81,9 +81,6 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
 
   // Store version for optimistic concurrency control (strict version checking)
   const itemVersionRef = useRef<number | undefined>(undefined);
-  // The client cuid of the optimistic add — read in update() to detect a server
-  // catalog-merge (returned id !== our cuid) and evict the stale entity.
-  const lastClientIdRef = useRef<string | null>(null);
 
   // GraphQL hooks
   const { data } = useQuery(GetShoppingListItemDocument, {
@@ -108,22 +105,28 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
   const [addItem] = useMutation(AddItemToShoppingListDocument, {
     // Reconcile the server response with the item written into the cache before
     // the create fired.
-    update: (cache, { data: mutationData }) => {
+    update: (cache, { data: mutationData }, { variables }) => {
       const payload = mutationData?.addItemToShoppingList;
-      if (payload?.__typename !== 'AddItemToShoppingListPayload') return;
+      if (
+        payload?.__typename !== 'AddItemToShoppingListPayload' ||
+        !variables
+      ) {
+        return;
+      }
       const newItem = payload.shoppingListItem;
 
       // Catalog-merge: the server merged into an existing row → its id differs
-      // from our optimistic cuid. Adopt the server id; evict the stale cuid.
-      if (lastClientIdRef.current && newItem.id !== lastClientIdRef.current) {
-        safeEvict(cache, 'ShoppingListItem', lastClientIdRef.current);
-        lastClientIdRef.current = null;
+      // from the client cuid we sent on THIS mutation. Adopt the server id;
+      // evict the stale cuid entity. Reading the id off this mutation's own
+      // variables (not a shared ref) keeps it correct when adds overlap.
+      const clientId = variables.input.id;
+      if (clientId && newItem.id !== clientId) {
+        safeEvict(cache, 'ShoppingListItem', clientId);
       }
 
       addNewItemToShoppingListCache(cache, listId, newItem);
     },
     onError: error => {
-      lastClientIdRef.current = null;
       errorService.reportError(error, {
         operation: 'ShoppingListItem.addItem',
       });
@@ -245,7 +248,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
         // shows immediately and stays if the create is queued offline (the queue
         // replays it later, keyed by this id).
         const id = generateEntityId();
-        const { entity } = createOptimisticShoppingListItem({
+        const optimisticItem = createOptimisticShoppingListItem(id, {
           itemName,
           quantity: parseFloat(quantityInput) || 1,
           quantityInput,
@@ -253,13 +256,9 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
           category: category || null,
           unitId: 'unit' in unitData ? unitData.unit.unitId : undefined,
         });
-        lastClientIdRef.current = id;
         executeCacheUpdate(
           () =>
-            addOptimisticShoppingListItem(client.cache, listId, {
-              ...entity,
-              id,
-            }),
+            addOptimisticShoppingListItem(client.cache, listId, optimisticItem),
           'Add Shopping List Item (optimistic)',
         );
 

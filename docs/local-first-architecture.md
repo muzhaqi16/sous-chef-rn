@@ -151,11 +151,32 @@ through directly, no `unitId` wrapper. Pantry quantity is a plain `Float`.
 - **Pantry duplicates.** A same-item create returns a duplicate error; the add sites evict the optimistic
   cuid item and offer restock / add-anyway (online), since the server keeps the existing row.
 
-## 8. Connectivity
+## 8. Connectivity — two failure modes, one signal
 
-`NetInfo → networkSlice.isOnline` (`isConnected && isInternetReachable !== false`) detects *internet*,
-not "our API is reachable." The API-down-while-online gap (timeout / captive portal / API down) is
-covered by queueLink's `localFirst` network-error branch (§5) plus the drain-on-recovery.
+`NetInfo → networkSlice.isOnline` detects *device internet*, not "our API is reachable." The two
+"can't reach the server" cases are unified behind one predicate
+`isApiUnavailable(state) = !isOnline || apiReachable === false`:
+
+- **Device offline (`isOnline === false`):** `NetInfo` drives `isOnline`. (`isOnline` errs toward
+  "online" — only false when NetInfo is confident — so a transient unknown doesn't wrongly block.)
+- **API down while online (timeout / captive portal / 5xx):** the **`apiReachabilityBreaker`** circuit
+  breaker drives `apiReachable`. `networkStatusLink` (above `retryLink`, so one outcome per operation)
+  feeds it: a real response → success; a network error or a queued-mutation result (`extensions.queued`)
+  → failure. After **3 consecutive failures** it opens (`apiReachable = false`); after ~20s it half-opens
+  (`apiReachable = true`) so normal traffic re-probes — one success closes it (and drains the queue), one
+  failure re-opens. `useOnlineQueueSync` resets it on every connectivity transition.
+
+Both cases behave identically because `isApiUnavailable` is read by everything:
+- **`offlineModeLink`** (first in chain) short-circuits queries → serves the cache Apollo already read; no
+  spinner, no error, and blocked queries never reach `retryLink`/`errorLink` (no doomed requests, no retry
+  storm).
+- **`queueLink`** queues `localFirst` mutations immediately instead of firing doomed requests (non-`localFirst`
+  mutations still fire and surface their error — they aren't safe to auto-replay).
+- **`queueManager.processQueue`** skips replay (a replay to a down API would just fail and re-trip the breaker);
+  recovery (`requestDrain` on breaker close) re-drains.
+
+The user-toggled **offline mode** (`offlineModeEnabled`) is a third input to `offlineModeLink`'s
+query-blocking, orthogonal to connectivity.
 
 ## 9. Failure handling & UX
 
@@ -164,16 +185,12 @@ covered by queueLink's `localFirst` network-error branch (§5) plus the drain-on
   reconnected" when the device is offline (or "offline mode" when toggled on). It keys on `isOnline`
   (device internet), so it does **not** cover the API-down-while-online case, and shows no
   pending-change count — those are the natural next iteration.
-- **Permanent failure — KNOWN ISSUE (competing handlers).** `setFailureHandler` is registered twice and
-  the second registration wins:
-  - `App.tsx` (module scope) registers a full handler — evict the stale optimistic entity, clear
-    persisted optimistic fields, toast, and **remove the entry from the queue**.
-  - `useOnlineQueueSync` (a `useEffect`, runs after mount) **overrides** it with a toast-only handler.
-
-  `setFailureHandler` replaces (single handler), so the effective behavior is **toast-only**: the
-  permanently-failed entry is **not** evicted/reverted and **not** dequeued (so it can linger in MMKV).
-  The sophisticated `App.tsx` handler is effectively dead code. This needs a decision: keep the full
-  handler (and drop the `useOnlineQueueSync` override) or keep toast-only (and delete the dead handler).
+- **Permanent failure.** `setFailureHandler` is registered exactly once, at module scope in `App.tsx`
+  (`handleFailedMutation`): it evicts the stale optimistic entity, clears persisted optimistic fields,
+  toasts the user, and **removes the entry from the queue**. `useOnlineQueueSync` intentionally does
+  **not** register a handler (a comment there documents why — it mounts after `App.tsx`, so registering
+  one would shadow the full handler). So a permanently-failed (validation/4xx) mutation is fully
+  reverted and dequeued.
 - **Network errors** no longer raise a blocking alert for opted-in mutations — they queue silently.
 - **Not yet shipped:** an API-reachability-aware indicator and a pending-changes count; a uniform
   offline-degraded affordance for online-only features.
@@ -245,8 +262,6 @@ their hooks adopt the pattern and the queue gets Sync mappings (or uses the fall
 - **Offline-UX partially shipped** (planned Phase 4): the device-offline `OfflineBanner` is mounted (§9);
   the API-reachability-aware indicator and pending-changes count are not.
 - **Granular pantry deltas deliberately deferred** — no idempotent Sync mapping yet.
-- **Two competing `setFailureHandler` registrations** (§9) — the full revert+dequeue handler is shadowed
-  by a toast-only one; needs a decision.
 
 ## 14. Key files
 
@@ -263,4 +278,7 @@ their hooks adopt the pattern and the queue gets Sync mappings (or uses the fall
 | Shared pantry builder | `src/hooks/home/pantry/buildOptimisticPantryItem.ts` |
 | Create-result classifier | `src/apollo/utils/classifyCreateResult.ts` |
 | Offline banner (mounted in `App.tsx`) | `src/components/atoms/OfflineBanner.tsx` |
+| Query short-circuit when offline | `src/apollo/links/offlineModeLink.ts` |
+| API-reachability circuit breaker | `src/apollo/links/apiReachabilityBreaker.ts`, `networkStatusLink.ts` |
+| Unified `isApiUnavailable` predicate | `src/store/slices/networkSlice.ts` |
 | Primary add hooks | `src/features/shoppingList/hooks/mutations/useAddShoppingItem.ts`, `src/hooks/home/pantry/usePantryItemMutations.ts` |
