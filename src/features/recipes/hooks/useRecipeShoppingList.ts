@@ -28,6 +28,7 @@ import {
   executeMutation,
   executeWithLoadingState,
 } from '#/utils/compilerSafeWrappers';
+import { generateEntityId } from '#/utils/generateEntityId';
 
 interface UseRecipeShoppingListOptions {
   recipeId: string | undefined;
@@ -246,18 +247,23 @@ export function useRecipeShoppingList({
     executeMutation(
       async () => {
         if (isBackendRecipe) {
+          // Generate the new item's id so a create that gets queued (offline /
+          // API down) replays idempotently, keyed by this id.
           await addRecipeIngredientMutation({
             variables: {
               input: {
+                id: generateEntityId(),
                 recipeIngredientId: String(ingredient.id),
                 shoppingListId: targetList.id,
               },
             },
+            context: { localFirst: true },
           });
         } else if ('amount' in ingredient) {
           await addItemToShoppingListMutation({
             variables: {
               input: {
+                id: generateEntityId(),
                 itemName:
                   ingredient.name ||
                   ingredient.original ||
@@ -275,6 +281,7 @@ export function useRecipeShoppingList({
                   : undefined,
               },
             },
+            context: { localFirst: true },
           });
         }
 
@@ -339,6 +346,10 @@ export function useRecipeShoppingList({
         } else if (externalRecipe?.extendedIngredients) {
           const items: BatchAddShoppingListItemInput[] =
             externalRecipe.extendedIngredients.map((ingredient, index) => ({
+              // `id` is the row's primary key (so a queued batch replays
+              // idempotently); `clientId` stays the ingredient index used below
+              // to match each result back to its ingredient.
+              id: generateEntityId(),
               clientId: String(ingredient.id || index),
               itemName:
                 ingredient.name || ingredient.original || 'Unknown ingredient',
@@ -361,6 +372,7 @@ export function useRecipeShoppingList({
                 items,
               },
             },
+            context: { localFirst: true },
           });
 
           const data = result.data?.addItemsToShoppingList;
@@ -384,6 +396,23 @@ export function useRecipeShoppingList({
                     count: data.successCount,
                     listName: resolvedName,
                   }),
+            );
+          } else if (!result.error) {
+            // No data and no error → the batch was queued while offline / the API
+            // was unreachable. The items replay later; mark them all added and
+            // confirm so the recipe reflects the request.
+            setAddedIngredients(prev => {
+              const next = new Set(prev);
+              externalRecipe.extendedIngredients.forEach(ing =>
+                next.add(ing.id),
+              );
+              return next;
+            });
+            toastService.success(
+              t('recipes.addedItemsToList', {
+                count: items.length,
+                listName: resolvedName,
+              }),
             );
           }
         } else {
@@ -417,10 +446,12 @@ export function useRecipeShoppingList({
           const result = await addRecipeIngredientMutation({
             variables: {
               input: {
+                id: generateEntityId(),
                 recipeIngredientId: ingredientId,
                 shoppingListId: listId,
               },
             },
+            context: { localFirst: true },
           });
 
           const response =

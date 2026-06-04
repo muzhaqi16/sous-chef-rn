@@ -40,6 +40,10 @@ jest.mock('#store', () => ({
       setSelectedHomeId: mockSetSelectedHomeId,
       setPendingDeepLinkAction: mockSetPendingDeepLinkAction,
     }),
+    // HapticService.initialize subscribes to hapticFeedbackEnabled on first
+    // trigger; provide a no-op so the join→navigate→haptic path doesn't depend
+    // on cross-test init order.
+    subscribe: () => () => {},
   },
 }));
 

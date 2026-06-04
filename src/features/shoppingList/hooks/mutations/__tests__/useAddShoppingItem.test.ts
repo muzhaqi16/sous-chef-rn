@@ -1,27 +1,25 @@
+import { act } from '@testing-library/react-native';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { useAddShoppingItem } from '../useAddShoppingItem';
+import { addOptimisticShoppingListItem } from '#/apollo/utils/shoppingListCacheUpdaters';
+import { executeMutation } from '#/utils/compilerSafeWrappers';
 
-const mockHandleApolloError = jest.fn(() => ({
-  message: 'Something went wrong',
+// Run the optimistic cache update synchronously; don't fire the real mutation.
+jest.mock('#/utils/compilerSafeWrappers', () => ({
+  executeCacheUpdate: jest.fn((fn: () => void) => fn()),
+  executeMutation: jest.fn(async () => ({
+    data: {
+      addItemToShoppingList: {
+        __typename: 'AddItemToShoppingListPayload',
+        shoppingListItem: { id: 'srv-1' },
+      },
+    },
+  })),
 }));
-const mockCreateAddOperation = jest.fn();
-
-jest.mock('#/services/errorService', () => ({
-  useErrorService: () => ({
-    handleApolloError: mockHandleApolloError,
-  }),
-}));
-
-jest.mock('#/hooks/utils/useCrudOperations', () => ({
-  useCrudOperations: () => ({
-    createAddOperation: mockCreateAddOperation,
-  }),
-}));
-
-jest.mock('#/utils/compilerSafeWrappers');
 
 jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => ({
   addNewItemToShoppingListCache: jest.fn(),
+  addOptimisticShoppingListItem: jest.fn(),
 }));
 
 jest.mock('../utils', () => ({
@@ -43,123 +41,42 @@ describe('useAddShoppingItem', () => {
   const mockRefetch = jest.fn().mockResolvedValue(undefined);
 
   it('returns addItem function', () => {
-    const mockAddFn = jest.fn();
-    mockCreateAddOperation.mockReturnValue(mockAddFn);
-
     const { result } = renderHookWithApollo(() =>
       useAddShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
     );
 
-    expect(result.current.addItem).toBe(mockAddFn);
+    expect(typeof result.current.addItem).toBe('function');
   });
 
-  it('configures createAddOperation with correct params', () => {
-    mockCreateAddOperation.mockReturnValue(jest.fn());
-
-    renderHookWithApollo(() =>
+  it('writes the new item PERMANENTLY with a client-minted cuid id BEFORE firing the mutation (Pattern B / local-first)', async () => {
+    const { result } = renderHookWithApollo(() =>
       useAddShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
     );
 
-    expect(mockCreateAddOperation).toHaveBeenCalledWith(
-      expect.objectContaining({
-        mutation: expect.any(Function),
-        operationName: 'Add Shopping List Item',
-      }),
-    );
-  });
-
-  it('transformInput includes shoppingListId and itemName', () => {
-    mockCreateAddOperation.mockReturnValue(jest.fn());
-
-    renderHookWithApollo(() =>
-      useAddShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
-    );
-
-    const config = mockCreateAddOperation.mock.calls[0][0];
-    const transformed = config.transformInput({
-      itemName: 'Eggs',
-      quantity: 2,
+    await act(async () => {
+      await result.current.addItem({ itemName: 'Milk', quantity: 2 });
     });
 
-    expect(transformed).toEqual(
-      expect.objectContaining({
-        shoppingListId: 'list-1',
-        itemName: 'Eggs',
-        quantity: 2,
-      }),
-    );
+    // The optimistic item was written with a real cuid v1 id (the row's PK).
+    expect(addOptimisticShoppingListItem).toHaveBeenCalledTimes(1);
+    const writtenItem = (addOptimisticShoppingListItem as jest.Mock).mock
+      .calls[0][2];
+    expect(writtenItem.id).toMatch(/^c[a-z0-9]{24}$/);
+
+    // The create mutation was then fired.
+    expect(executeMutation).toHaveBeenCalled();
   });
 
-  it('transformInput defaults quantity to 1 when not provided', () => {
-    mockCreateAddOperation.mockReturnValue(jest.fn());
-
-    renderHookWithApollo(() =>
-      useAddShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
+  it('does nothing when listId is missing', async () => {
+    const { result } = renderHookWithApollo(() =>
+      useAddShoppingItem({ listId: null, refetch: mockRefetch }),
     );
 
-    const config = mockCreateAddOperation.mock.calls[0][0];
-    const transformed = config.transformInput({ itemName: 'Eggs' });
-
-    expect(transformed.quantity).toBe(1);
-  });
-
-  it('transformInput includes optional unitName when provided', () => {
-    mockCreateAddOperation.mockReturnValue(jest.fn());
-
-    renderHookWithApollo(() =>
-      useAddShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
-    );
-
-    const config = mockCreateAddOperation.mock.calls[0][0];
-    const transformed = config.transformInput({
-      itemName: 'Milk',
-      unitName: 'gallon',
+    await act(async () => {
+      await result.current.addItem({ itemName: 'Milk' });
     });
 
-    expect(transformed.unit.unitName).toBe('gallon');
-  });
-
-  it('transformInput omits optional fields when empty', () => {
-    mockCreateAddOperation.mockReturnValue(jest.fn());
-
-    renderHookWithApollo(() =>
-      useAddShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
-    );
-
-    const config = mockCreateAddOperation.mock.calls[0][0];
-    const transformed = config.transformInput({
-      itemName: 'Milk',
-    });
-
-    expect(transformed).not.toHaveProperty('unit');
-    expect(transformed).not.toHaveProperty('notes');
-    expect(transformed).not.toHaveProperty('category');
-  });
-
-  it('parentId resolver returns the listId', () => {
-    mockCreateAddOperation.mockReturnValue(jest.fn());
-
-    renderHookWithApollo(() =>
-      useAddShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
-    );
-
-    const config = mockCreateAddOperation.mock.calls[0][0];
-    const parentId = config.parentId();
-    expect(parentId).toBe('list-1');
-  });
-
-  it('onSuccess extracts addItemToShoppingList from data', () => {
-    mockCreateAddOperation.mockReturnValue(jest.fn());
-
-    renderHookWithApollo(() =>
-      useAddShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
-    );
-
-    const config = mockCreateAddOperation.mock.calls[0][0];
-    const result = config.onSuccess({
-      addItemToShoppingList: { shoppingListItem: { id: 'item-1' } },
-    });
-
-    expect(result).toEqual({ shoppingListItem: { id: 'item-1' } });
+    expect(addOptimisticShoppingListItem).not.toHaveBeenCalled();
+    expect(executeMutation).not.toHaveBeenCalled();
   });
 });

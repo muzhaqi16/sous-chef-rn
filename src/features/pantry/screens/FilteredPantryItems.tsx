@@ -23,6 +23,7 @@ import { useCurrentPantry } from '#features/pantry/hooks/useCurrentPantry';
 import { useAddLowStockToShoppingList } from '#features/pantry/hooks/useAddLowStockToShoppingList';
 import { useSelectedShoppingListId } from '#store/useAppStore';
 import { toastService } from '#/services/toastService';
+import { generateEntityId } from '#/utils/generateEntityId';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import {
   useTutorialSequence,
@@ -323,12 +324,16 @@ export const FilteredPantryItems: React.FC<
       toastService.info(t('filteredPantry.noListSelected'));
       return;
     }
+    // Generate the new item's id so a create that gets queued (offline / API
+    // down) replays idempotently, keyed by this id.
+    const id = generateEntityId();
     await executeMutation(
       async () => {
         await addToShoppingList({
           variables: {
-            input: { shoppingListId: selectedShoppingListId, itemId },
+            input: { id, shoppingListId: selectedShoppingListId, itemId },
           },
+          context: { localFirst: true },
         });
       },
       () =>

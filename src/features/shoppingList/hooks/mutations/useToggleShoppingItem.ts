@@ -120,6 +120,10 @@ export function useToggleShoppingItem({
       () =>
         togglePurchasedMutation({
           variables: { input: { id: itemId, purchased: newStatus } },
+          // Local-first: if the API is unreachable while "online", queueLink
+          // queues this for replay (toggle is idempotent on a real id) instead
+          // of surfacing a blocking error. Offline already queues via queueLink.
+          context: { localFirst: true },
           onCompleted: () => {
             clearPersistence();
 

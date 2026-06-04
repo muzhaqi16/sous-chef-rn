@@ -411,7 +411,7 @@ describe('QueueManager', () => {
       );
     });
 
-    it('marks as failed when max retries exceeded', async () => {
+    it('defers a transient network error to PENDING after max retries (local-first — not lost)', async () => {
       const mutation = makeMutation({
         id: 'maxed-out',
         retryCount: 3,
@@ -422,7 +422,16 @@ describe('QueueManager', () => {
       const result = await handleMutationError(mutation, error);
 
       expect(result.success).toBe(false);
-      expect(queueStore.markMutationFailed).toHaveBeenCalled();
+      // A transient network error must NOT permanently fail the mutation — it
+      // stays PENDING (reset retryCount) for the next drain/recovery.
+      expect(queueStore.markMutationFailed).not.toHaveBeenCalled();
+      expect(queueStore.updateMutation).toHaveBeenCalledWith(
+        'maxed-out',
+        expect.objectContaining({
+          status: QueueStatus.PENDING,
+          retryCount: 0,
+        }),
+      );
     });
   });
 
@@ -698,46 +707,65 @@ describe('QueueManager', () => {
       convertToSyncMutation = manager['convertToSyncMutation'].bind(manager);
     });
 
-    it('converts CreatePantryItem to SyncPantryItemDocument', () => {
+    // The current 1-arg sync API: variables ride inside `input`, and the output
+    // is `{ input: { clientId, ... } }` (clientId INSIDE input).
+    const wrapper = (syncVariables: Record<string, unknown>) =>
+      syncVariables.input as Record<string, unknown>;
+
+    it('converts CreatePantryItem → SyncPantryItem (id → clientId inside input)', () => {
       const mutation = makeMutation({
         operationName: 'CreatePantryItem',
         variables: { input: { id: 'item-1', name: 'Milk' } },
       });
       const { syncVariables } = convertToSyncMutation(mutation);
-      expect(syncVariables.clientId).toBe('item-1');
-      expect(syncVariables.input).toEqual({ id: 'item-1', name: 'Milk' });
+      const input = wrapper(syncVariables);
+      expect(input.clientId).toBe('item-1');
+      expect(input.name).toBe('Milk');
+      expect(input.id).toBeUndefined();
     });
 
-    it('converts UpdatePantryItem to SyncPantryItemDocument', () => {
+    it('converts UpdatePantryItem → SyncPantryItem', () => {
       const mutation = makeMutation({
         operationName: 'UpdatePantryItem',
-        variables: { input: { id: 'item-2', name: 'Eggs' } },
+        variables: { input: { id: 'item-2', name: 'Eggs', version: 4 } },
       });
       const { syncVariables } = convertToSyncMutation(mutation);
-      expect(syncVariables.clientId).toBe('item-2');
+      const input = wrapper(syncVariables);
+      expect(input.clientId).toBe('item-2');
+      expect(input.version).toBe(4);
     });
 
-    it('converts DeletePantryItem to SyncDeletePantryItemDocument', () => {
+    it('converts DeletePantryItem → SyncDeletePantryItem', () => {
       const mutation = makeMutation({
         operationName: 'DeletePantryItem',
-        variables: { id: 'item-3', version: 2 },
+        variables: { input: { id: 'item-3', version: 2 } },
       });
       const { syncVariables } = convertToSyncMutation(mutation);
-      expect(syncVariables.clientId).toBe('item-3');
-      expect(syncVariables.version).toBe(2);
+      const input = wrapper(syncVariables);
+      expect(input.clientId).toBe('item-3');
+      expect(input.version).toBe(2);
     });
 
-    it('converts AddItemToShoppingList to SyncShoppingListItemDocument', () => {
+    it('converts AddItemToShoppingList → SyncShoppingListItem ({ clientId, item })', () => {
       const mutation = makeMutation({
         operationName: 'AddItemToShoppingList',
-        variables: { input: { id: 'sl-1', shoppingListId: 'list-1' } },
+        variables: {
+          input: {
+            id: 'sl-1',
+            shoppingListId: 'list-1',
+            itemName: 'Bread',
+            quantity: 2,
+          },
+        },
       });
       const { syncVariables } = convertToSyncMutation(mutation);
-      expect(syncVariables.clientId).toBe('sl-1');
-      expect(syncVariables.input).toEqual({
-        id: 'sl-1',
-        shoppingListId: 'list-1',
-      });
+      const input = wrapper(syncVariables);
+      expect(input.clientId).toBe('sl-1');
+      const item = input.item as Record<string, unknown>;
+      expect(item.shoppingListId).toBe('list-1');
+      expect(item.itemName).toBe('Bread');
+      // FlexibleQuantity scalar — passed through, no unitId needed.
+      expect(item.quantity).toBe(2);
     });
 
     it('converts UpdateShoppingListItemQuantity with cache read', () => {
@@ -747,13 +775,17 @@ describe('QueueManager', () => {
       });
       const mutation = makeMutation({
         operationName: 'UpdateShoppingListItemQuantity',
-        variables: { id: 'sl-item-1', quantity: '5', version: 3 },
+        variables: {
+          input: { itemId: 'sl-item-1', quantity: '5', version: 3 },
+        },
       });
       const { syncVariables } = convertToSyncMutation(mutation);
-      const input = syncVariables.input as Record<string, unknown>;
-      expect(input.shoppingListId).toBe('list-99');
-      expect(input.quantity).toBe('5');
-      expect(input.version).toBe(3);
+      const input = wrapper(syncVariables);
+      expect(input.clientId).toBe('sl-item-1');
+      const item = input.item as Record<string, unknown>;
+      expect(item.shoppingListId).toBe('list-99');
+      expect(item.quantity).toBe('5');
+      expect(item.version).toBe(3);
     });
 
     it('converts ToggleShoppingListItemPurchased with cache read', () => {
@@ -763,47 +795,56 @@ describe('QueueManager', () => {
       });
       const mutation = makeMutation({
         operationName: 'ToggleShoppingListItemPurchased',
-        variables: { id: 'sl-item-2', purchased: true, version: 1 },
+        variables: { input: { id: 'sl-item-2', purchased: true } },
       });
       const { syncVariables } = convertToSyncMutation(mutation);
-      const input = syncVariables.input as Record<string, unknown>;
-      expect(input.shoppingListId).toBe('list-88');
-      expect(input.isPurchased).toBe(true);
+      const input = wrapper(syncVariables);
+      expect(input.clientId).toBe('sl-item-2');
+      const item = input.item as Record<string, unknown>;
+      expect(item.shoppingListId).toBe('list-88');
+      expect(item.purchaseTracking).toEqual({ isPurchased: true });
     });
 
     it('throws when cache has no shoppingList data for quantity update', () => {
       mockClient.cache.readFragment.mockReturnValue(null);
       const mutation = makeMutation({
         operationName: 'UpdateShoppingListItemQuantity',
-        variables: { id: 'missing-item', quantity: '2' },
+        variables: { input: { itemId: 'missing-item', quantity: '2' } },
       });
       expect(() => convertToSyncMutation(mutation)).toThrow(
         'Cannot sync UpdateShoppingListItemQuantity',
       );
     });
 
-    it('converts RemoveItemFromShoppingList to SyncDeleteShoppingListItemDocument', () => {
+    it('converts RemoveItemFromShoppingList → SyncDeleteShoppingListItem', () => {
       const mutation = makeMutation({
         operationName: 'RemoveItemFromShoppingList',
-        variables: { id: 'del-item', version: 5 },
+        variables: { input: { id: 'del-item', version: 5 } },
       });
       const { syncVariables } = convertToSyncMutation(mutation);
-      expect(syncVariables.clientId).toBe('del-item');
-      expect(syncVariables.version).toBe(5);
+      const input = wrapper(syncVariables);
+      expect(input.clientId).toBe('del-item');
+      expect(input.version).toBe(5);
     });
 
-    it('converts MoveShoppingListItem to SyncMoveShoppingListItemDocument', () => {
+    it('converts MoveShoppingListItem → SyncMoveShoppingListItem (afterItemId → afterId)', () => {
       const mutation = makeMutation({
         operationName: 'MoveShoppingListItem',
         variables: {
-          input: { itemId: 'mv-1', afterId: 'a', beforeId: 'b', version: 2 },
+          input: {
+            itemId: 'mv-1',
+            afterItemId: 'a',
+            beforeItemId: 'b',
+            version: 2,
+          },
         },
       });
       const { syncVariables } = convertToSyncMutation(mutation);
-      expect(syncVariables.clientId).toBe('mv-1');
-      expect(syncVariables.afterId).toBe('a');
-      expect(syncVariables.beforeId).toBe('b');
-      expect(syncVariables.version).toBe(2);
+      const input = wrapper(syncVariables);
+      expect(input.clientId).toBe('mv-1');
+      expect(input.afterId).toBe('a');
+      expect(input.beforeId).toBe('b');
+      expect(input.version).toBe(2);
     });
 
     it('falls back to original mutation for unknown operation', () => {
@@ -821,13 +862,16 @@ describe('QueueManager', () => {
       expect(syncVariables.foo).toBe('bar');
     });
 
-    it('generates temp clientId when no id is available', () => {
+    it('leaves clientId undefined when the input has no id (no temp- fallback)', () => {
+      // temp- ids are rejected by the server now (client mints permanent cuids);
+      // a missing id surfaces as undefined rather than a fabricated temp- id.
       const mutation = makeMutation({
         operationName: 'CreatePantryItem',
         variables: { input: { name: 'No ID item' } },
       });
       const { syncVariables } = convertToSyncMutation(mutation);
-      expect(syncVariables.clientId).toMatch(/^temp-/);
+      const input = syncVariables.input as Record<string, unknown>;
+      expect(input.clientId).toBeUndefined();
     });
   });
 
@@ -1480,7 +1524,7 @@ describe('QueueManager', () => {
         );
       });
 
-      it('invokes failure handler when max retries exceeded', async () => {
+      it('invokes failure handler on a permanent (non-retryable) error', async () => {
         const handler = jest.fn();
         manager.setFailureHandler(handler);
 
@@ -1488,10 +1532,11 @@ describe('QueueManager', () => {
           id: 'max-retry-1',
           operationName: 'ToggleShoppingListItemPurchased',
           variables: { id: 'sli-99' },
-          retryCount: 3,
+          retryCount: 0,
           maxRetries: 3,
         });
-        const error = { message: 'Network error' };
+        // Non-retryable (validation) error → permanent failure → notify.
+        const error = { message: 'Validation error: invalid input' };
 
         await handleMutationError(mutation, error);
 
@@ -1503,6 +1548,22 @@ describe('QueueManager', () => {
             entityId: 'sli-99',
           }),
         );
+      });
+
+      it('does NOT invoke failure handler for a transient network error (deferred, not failed)', async () => {
+        const handler = jest.fn();
+        manager.setFailureHandler(handler);
+
+        const mutation = makeMutation({
+          id: 'net-defer-1',
+          retryCount: 3,
+          maxRetries: 3,
+        });
+
+        await handleMutationError(mutation, { message: 'Network error' });
+
+        expect(handler).not.toHaveBeenCalled();
+        expect(queueStore.markMutationFailed).not.toHaveBeenCalled();
       });
     });
 

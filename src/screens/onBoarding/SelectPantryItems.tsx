@@ -32,6 +32,7 @@ import { Button } from '#components/base/Button';
 import { AnimatedChip } from '#components/atoms/AnimatedChip';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { errorService } from '#/services/errorService';
+import { generateEntityId } from '#/utils/generateEntityId';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 import { SousChefLoader } from '#/components/base/SousChefLoader';
 
@@ -172,10 +173,12 @@ export const SelectPantryItems = () => {
       executeWithLoadingState(
         async () => {
           await Promise.all([
-            ...itemsToAdd.map(item =>
-              addItemToPantry({
+            ...itemsToAdd.map(item => {
+              const id = generateEntityId();
+              return addItemToPantry({
                 variables: {
                   input: {
+                    id,
                     pantryId: selectedPantryId,
                     itemId: item.id,
                     ...(item.displayUnit?.id && {
@@ -191,8 +194,9 @@ export const SelectPantryItems = () => {
                     },
                   },
                 },
-              }),
-            ),
+                context: { localFirst: true },
+              });
+            }),
             ...itemsToRemove.map(catalogId => {
               const pantryItemId = existingItemMap.get(catalogId)!;
               return deletePantryItem({

@@ -11,13 +11,16 @@ import {
   AddItemToShoppingListDocument,
   GetShoppingListSuggestionsDocument,
   type GetShoppingListSuggestionsQuery,
-  type AddItemToShoppingListMutation,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { ItemSuggestion } from '#/graphql/generated/schemaTypes';
-import { addNewItemToShoppingListCache } from '#/apollo/utils/shoppingListCacheUpdaters';
+import {
+  addNewItemToShoppingListCache,
+  addOptimisticShoppingListItem,
+} from '#/apollo/utils/shoppingListCacheUpdaters';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { createOptimisticShoppingListItem } from '#features/shoppingList/hooks/mutations/utils';
 import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
+import { generateEntityId } from '#/utils/generateEntityId';
 import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
 import {
   useShoppingListTutorial,
@@ -95,39 +98,18 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
     );
   };
 
-  // Track temp ID for optimistic response cleanup
-  const lastTempIdRef = useRef<string | null>(null);
+  // The client cuid of the most recent add — read in update() to detect a
+  // server catalog-merge (returned id !== our cuid) and evict the stale entity.
+  const lastClientIdRef = useRef<string | null>(null);
 
-  // Add shopping list item mutation with optimistic response for instant UI
+  // Each handler writes the new item into the cache before this mutation fires
+  // and leaves it there, so it appears instantly and stays even when the create
+  // is queued offline (the queue replays it later, keyed by the item's id). An
+  // `optimisticResponse` can't do this — Apollo rolls it back the moment the
+  // offline queue completes the request with a null result.
   const [addItemMutation, { loading: adding }] = useMutation(
     AddItemToShoppingListDocument,
     {
-      optimisticResponse: variables => {
-        const { tempId, entity } = createOptimisticShoppingListItem({
-          itemName: variables.input.itemName ?? '',
-          itemId: variables.input.itemId,
-          unitId: variables.input.unit?.unitId,
-        });
-        lastTempIdRef.current = tempId;
-        const optimistic: AddItemToShoppingListMutation = {
-          __typename: 'Mutation',
-          addItemToShoppingList: {
-            __typename: 'AddItemToShoppingListPayload',
-            shoppingListItem: {
-              ...entity,
-              shoppingList: {
-                __typename: 'ShoppingList',
-                id: shoppingListId ?? '',
-                totalItems: 0,
-                completedItems: 0,
-                remainingItems: 0,
-                completionRate: 0,
-              },
-            },
-          },
-        };
-        return optimistic;
-      },
       update(cache, { data }) {
         const payload = data?.addItemToShoppingList;
         if (
@@ -138,10 +120,11 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
         }
         const newItem = payload.shoppingListItem;
 
-        // Evict temp-ID entity when the real server response arrives
-        if (lastTempIdRef.current && !newItem.id.startsWith('temp-')) {
-          safeEvict(cache, 'ShoppingListItem', lastTempIdRef.current);
-          lastTempIdRef.current = null;
+        // Catalog-merge: the server merged into an existing row → its id differs
+        // from our optimistic cuid. Adopt the server id; evict the stale cuid.
+        if (lastClientIdRef.current && newItem.id !== lastClientIdRef.current) {
+          safeEvict(cache, 'ShoppingListItem', lastClientIdRef.current);
+          lastClientIdRef.current = null;
         }
 
         executeCacheUpdate(
@@ -150,7 +133,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
         );
       },
       onError: () => {
-        lastTempIdRef.current = null;
+        lastClientIdRef.current = null;
       },
     },
   );
@@ -188,10 +171,30 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
       shoppingListSheetConfig.quickAdd.toastMessage(item.name),
     );
 
-    // 2. Fire mutation without await
+    // 2. Generate the item's id and write it into the cache before firing, so it
+    // shows immediately and stays if the create is queued offline (the queue
+    // replays it later, keyed by this id).
+    const id = generateEntityId();
+    const { entity } = createOptimisticShoppingListItem({
+      itemName: item.name,
+      itemId: item.id,
+      unitId: item.defaultUnit?.id,
+    });
+    lastClientIdRef.current = id;
+    executeCacheUpdate(
+      () =>
+        addOptimisticShoppingListItem(client.cache, shoppingListId, {
+          ...entity,
+          id,
+        }),
+      'Add Shopping List Item (optimistic)',
+    );
+
+    // 3. Fire mutation without await.
     addItemMutation({
       variables: {
         input: {
+          id,
           shoppingListId,
           itemId: item.id,
           itemName: item.name,
@@ -201,6 +204,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
             : undefined,
         },
       },
+      context: { localFirst: true },
     })
       .then(() => {
         onItemAdded?.();
@@ -234,10 +238,30 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
       shoppingListSheetConfig.quickAdd.toastMessage(shoppingItem.name),
     );
 
-    // 3. Fire mutation without await
+    // 3. Generate the item's id and write it into the cache before firing, so it
+    // shows immediately and stays if the create is queued offline (the queue
+    // replays it later, keyed by this id).
+    const id = generateEntityId();
+    const { entity } = createOptimisticShoppingListItem({
+      itemName: shoppingItem.name,
+      itemId: shoppingItem.itemId,
+      unitId,
+    });
+    lastClientIdRef.current = id;
+    executeCacheUpdate(
+      () =>
+        addOptimisticShoppingListItem(client.cache, shoppingListId, {
+          ...entity,
+          id,
+        }),
+      'Add Shopping List Item (optimistic)',
+    );
+
+    // 4. Fire mutation without await.
     addItemMutation({
       variables: {
         input: {
+          id,
           shoppingListId,
           itemId: shoppingItem.itemId,
           itemName: shoppingItem.name,
@@ -245,6 +269,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
           unit: unitId ? { unitId } : undefined,
         },
       },
+      context: { localFirst: true },
     })
       .then(() => {
         onItemAdded?.();

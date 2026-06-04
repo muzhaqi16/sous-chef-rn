@@ -852,6 +852,7 @@ mutation ConvertExpiredToWaste($input: ConvertExpiredToWasteInput!) {
 
 query GetPantryItemBatches($pantryItemId: ID!, $status: BatchStatus) {
   pantryItemBatches(pantryItemId: $pantryItemId, status: $status) {
+    id
     ...PantryItemBatchFragment
   }
 }

@@ -682,6 +682,12 @@ input BatchAddShoppingListItemInput {
   category: String
   """Client-provided ID for matching results (optional)"""
   clientId: String
+  """
+  Optional client-generated permanent ID (CUID v1) for this item. Persisted as
+  the row primary key so a re-synced batch resolves to the same rows (idempotent).
+  Distinct from clientId below, which is only a response-matching token.
+  """
+  id: ID
   itemId: ID
   itemName: String
   netWeight: NetWeightInput
@@ -1650,6 +1656,10 @@ input CreateHomeInput {
   currency: String
   defaultPantryName: String
   description: String
+  """
+  Optional client-generated permanent ID (CUID v1) for offline-first idempotency.
+  """
+  id: ID
   isPublic: Boolean
   maxMembers: Int
   name: String!
@@ -1728,6 +1738,10 @@ input CreateMealPlanInput {
   If not provided, the plan is personal (user-scoped only).
   """
   homeId: ID
+  """
+  Optional client-generated permanent ID (CUID v1) for offline-first idempotency.
+  """
+  id: ID
   name: String!
   planType: MealPlanType!
   servings: Int
@@ -1744,6 +1758,12 @@ input CreateMealPlanItemInput {
   date: DateTime!
   estimatedCost: Float
   fat: Float
+  """
+  Optional client-generated permanent ID (CUID v1) for offline-first idempotency.
+  On a retry that collides with the (mealPlanId, date, mealType, recipeId) unique
+  key, the existing row is returned (its original id wins).
+  """
+  id: ID
   mealPlanId: ID!
   mealType: MealType!
   notes: String
@@ -1776,6 +1796,10 @@ input CreateMealTemplateInput {
   If not provided, the template is personal (user-scoped only).
   """
   homeId: ID
+  """
+  Optional client-generated permanent ID (CUID v1) for offline-first idempotency.
+  """
+  id: ID
   """Initial items to add to the template"""
   items: [MealTemplateItemInput!]
   name: String!
@@ -1864,6 +1888,14 @@ input CreatePantryItemInput {
   brand: BrandReferenceInput
   expiresAt: String
   forceAdd: Boolean
+  """
+  Optional client-generated permanent ID (CUID v1, e.g. "c…", 25 chars).
+  Offline-first clients mint this as the row's permanent primary key so a
+  re-synced create resolves to the same row (idempotent) instead of duplicating.
+  When omitted, the server generates one via @default(cuid()). Must match the
+  CUID v1 format; invalid formats are rejected by ID validation.
+  """
+  id: ID
   item: InlineItemInput
   itemId: ID
   lastUsedAt: DateTime
@@ -1944,6 +1976,10 @@ input CreateRecipeInput {
   externalSourceId: String
   externalSourceUrl: String
   healthGoals: [HealthGoal!]
+  """
+  Optional client-generated permanent ID (CUID v1) for offline-first idempotency.
+  """
+  id: ID
   imageUrl: String
   ingredients: [RecipeIngredientInput!]!
   instructions: JSON!
@@ -1992,6 +2028,11 @@ input CreateShoppingListInput {
 }
 
 input CreateShoppingListItemFromRecipeIngredientInput {
+  """
+  Optional client-generated permanent ID (CUID v1) for the created item;
+  persisted as the row primary key for offline-first idempotency.
+  """
+  id: ID
   quantityOverride: Float
   recipeIngredientId: ID!
   shoppingListId: ID!
@@ -2006,6 +2047,14 @@ union CreateShoppingListItemFromRecipeIngredientResult = ConflictError | CreateS
 input CreateShoppingListItemInput {
   brand: BrandReferenceInput
   category: String
+  """
+  Optional client-generated permanent ID (CUID v1, e.g. "c…", 25 chars).
+  Offline-first clients mint this as the row's permanent primary key so a
+  re-synced create resolves to the same row (idempotent) instead of duplicating.
+  When omitted, the server generates one via @default(cuid()). Must match the
+  CUID v1 format; invalid formats are rejected by ID validation.
+  """
+  id: ID
   itemId: ID
   itemName: String
   netWeight: NetWeightInput
@@ -2047,6 +2096,10 @@ input CreateStorageLocationInput {
   homeId: ID!
   """Optional icon identifier"""
   icon: String
+  """
+  Optional client-generated permanent ID (CUID v1) for offline-first idempotency.
+  """
+  id: ID
   """Whether the location has climate control (default: false)"""
   isClimateControlled: Boolean
   """Set as default location for the home (default: false)"""
@@ -2145,6 +2198,12 @@ input CreateUserProfileInput {
   displayName: String
   firstName: String
   gender: String
+  """
+  Optional client-generated permanent ID (CUID v1). Note: a profile is 1:1 with
+  the user (userId is unique), so creation is already idempotent per user; this
+  is accepted for consistency with other offline-first creates.
+  """
+  id: ID
   lastName: String
   phone: String
   profileVisibility: ProfileVisibility
@@ -9709,9 +9768,11 @@ input SyncShoppingListItemInput {
   priority: Int
   purchaseTracking: PurchaseTrackingInput
   """
-  Quantity of the item. Accepts: "1/3", "1 1/4", "0.5", "2", or numbers like 1, 1.5
+  Quantity of the item. Accepts: "1/3", "1 1/4", "0.5", "2", or numbers like 1, 1.5.
+  Unitless by default; specify a unit via the unit field when needed (shopping
+  items are frequently unitless, e.g. Milk x2). Mirrors CreateShoppingListItemInput.
   """
-  quantity: QuantityInput
+  quantity: FlexibleQuantity
   recipeContext: RecipeContextInput
   """Required: ID of the shopping list this item belongs to"""
   shoppingListId: ID!
@@ -9724,7 +9785,7 @@ input SyncShoppingListItemInput {
 
 """Result of syncing a shopping list item"""
 type SyncShoppingListItemResult {
-  """The client-provided ID (may be temp ID like 'temp-uuid')"""
+  """The client-provided permanent ID (CUID) echoed back for correlation"""
   clientId: ID!
   """Conflict information if version mismatch occurred"""
   conflict: SyncConflictInfo
@@ -9733,7 +9794,7 @@ type SyncShoppingListItemResult {
   """The operation that was performed"""
   operation: SyncOperation!
   """
-  The server-assigned database ID (null if item was deleted before reaching server)
+  The server-assigned database ID (equals clientId; null if item was deleted before reaching server)
   """
   serverId: ID
   """Whether this was a create (true) or update (false) operation"""

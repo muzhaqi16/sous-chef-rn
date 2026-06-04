@@ -25,6 +25,12 @@ jest.mock('../queueStore', () => ({
   },
 }));
 
+// Mock queueManager (queueLink calls requestDrain on a successful local-first
+// mutation — keep it a no-op spy so no real timer/processing is scheduled).
+jest.mock('../queueManager', () => ({
+  queueManager: { requestDrain: jest.fn() },
+}));
+
 // Mock generateId
 jest.mock('#/utils/generateId', () => ({
   generateId: jest.fn(() => 'test-uuid'),
@@ -147,6 +153,120 @@ describe('createQueueLink', () => {
         },
         complete() {
           expect(forward).toHaveBeenCalledTimes(1);
+          expect(queueStore.addMutation).not.toHaveBeenCalled();
+          done();
+        },
+      });
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Online network-error → queue (opt-in via context.localFirst)
+  // -------------------------------------------------------------------------
+  describe('online network-error interception (localFirst)', () => {
+    const failingForward = (error: unknown): ApolloLink.ForwardFunction =>
+      jest.fn(
+        () =>
+          new Observable<ApolloLink.Result>(observer => {
+            observer.error(error);
+          }),
+      );
+
+    it('queues a localFirst mutation when online and the request fails with a network error', done => {
+      mockedGetState.mockReturnValue({
+        isOnline: true,
+        user: { id: 'user-1' },
+      });
+      const operation = makeOperation({
+        query: MOCK_MUTATION,
+        operationName: 'DeleteItem',
+        variables: { input: { id: 'item-1' } },
+        context: { localFirst: true },
+      });
+      const forward = failingForward(new Error('Network request failed'));
+
+      let sawQueued = false;
+      link.request(operation, forward)!.subscribe({
+        next(result) {
+          sawQueued = result.extensions?.queued === true;
+        },
+        error(err) {
+          done(new Error(`should not error — should queue instead: ${err}`));
+        },
+        complete() {
+          expect(sawQueued).toBe(true);
+          expect(queueStore.addMutation).toHaveBeenCalledTimes(1);
+          const queued = (queueStore.addMutation as jest.Mock).mock.calls[0][0];
+          expect(queued.operationName).toBe('DeleteItem');
+          done();
+        },
+      });
+    });
+
+    it('propagates the error (current behavior) when localFirst is NOT set', done => {
+      mockedGetState.mockReturnValue({
+        isOnline: true,
+        user: { id: 'user-1' },
+      });
+      const operation = makeOperation({
+        query: MOCK_MUTATION,
+        operationName: 'DeleteItem',
+        variables: { input: { id: 'item-1' } },
+        // no localFirst
+      });
+      const forward = failingForward(new Error('Network request failed'));
+
+      link.request(operation, forward)!.subscribe({
+        error(err) {
+          expect((err as Error).message).toBe('Network request failed');
+          expect(queueStore.addMutation).not.toHaveBeenCalled();
+          done();
+        },
+      });
+    });
+
+    it('propagates a non-network (validation) error even with localFirst — does NOT queue', done => {
+      mockedGetState.mockReturnValue({
+        isOnline: true,
+        user: { id: 'user-1' },
+      });
+      const operation = makeOperation({
+        query: MOCK_MUTATION,
+        operationName: 'UpdateItem',
+        variables: { input: { id: 'item-1' } },
+        context: { localFirst: true },
+      });
+      const forward = failingForward(
+        new Error('Validation failed: name required'),
+      );
+
+      link.request(operation, forward)!.subscribe({
+        error(err) {
+          expect((err as Error).message).toContain('Validation failed');
+          expect(queueStore.addMutation).not.toHaveBeenCalled();
+          done();
+        },
+      });
+    });
+
+    it('passes a successful localFirst mutation through without queuing', done => {
+      mockedGetState.mockReturnValue({
+        isOnline: true,
+        user: { id: 'user-1' },
+      });
+      const operation = makeOperation({
+        query: MOCK_MUTATION,
+        operationName: 'UpdateItem',
+        variables: { input: { id: 'item-1' } },
+        context: { localFirst: true },
+      });
+      const forward = makeForward({ updateItem: { id: 'item-1' } });
+
+      link.request(operation, forward)!.subscribe({
+        next(result) {
+          expect(result.data).toEqual({ updateItem: { id: 'item-1' } });
+        },
+        complete() {
           expect(queueStore.addMutation).not.toHaveBeenCalled();
           done();
         },

@@ -21,7 +21,6 @@ import {
   SyncDeleteShoppingListItemDocument,
   SyncMoveShoppingListItemDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import { generateId } from '#/utils/generateId';
 import { logger } from '#/utils/environment';
 
 /** Module-level fragment for reading ShoppingListItem data from cache during queue processing */
@@ -62,6 +61,7 @@ export class QueueManager {
   private processingPromise: Promise<void> | null = null;
   private idMapping = new Map<string, string>(); // temp-ID → real-ID
   private failureHandler: FailureHandler | null = null;
+  private drainTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(config: Partial<QueueConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
@@ -398,98 +398,89 @@ export class QueueManager {
   } {
     const operationName = mutation.operationName;
     const variables = this.resolveIds(mutation.variables);
+    const input = (variables.input ?? {}) as {
+      id?: string;
+      itemId?: string;
+      version?: number;
+      shoppingListId?: string;
+      itemName?: string;
+      category?: string;
+      notes?: string;
+      quantity?: number | string;
+      unit?: { unitId?: string; unitName?: string };
+      purchased?: boolean;
+      afterItemId?: string;
+      beforeItemId?: string;
+      [key: string]: unknown;
+    };
 
-    // Determine clientId (temp-ID or real ID)
+    // The client-minted permanent cuid id IS the sync `clientId`. It rides on the
+    // mutation input as `id` (create/update/toggle/delete) or `itemId` (qty/move).
+    // Sync inputs are single-arg with `clientId` INSIDE `input` (1-arg API).
     const clientId =
-      variables.id || variables.input?.id || `temp-${generateId()}`;
+      input.id ?? input.itemId ?? (variables.id as string | undefined);
 
-    // PantryItem sync mutations
+    // PantryItem sync mutations. SyncPantryItemInput mirrors CreatePantryItemInput
+    // with `id` → `clientId` (pantry quantity is a plain Float — no QuantityInput).
     if (
       operationName === 'CreatePantryItem' ||
       operationName === 'UpdatePantryItem'
     ) {
+      const { id: _omitId, ...rest } = input;
       return {
         syncMutation: SyncPantryItemDocument,
-        syncVariables: {
-          clientId,
-          input: variables.input,
-        },
+        syncVariables: { input: { ...rest, clientId } },
       };
     }
 
     if (operationName === 'DeletePantryItem') {
       return {
         syncMutation: SyncDeletePantryItemDocument,
-        syncVariables: {
-          clientId: variables.id,
-          version: variables.version,
-        },
+        syncVariables: { input: { clientId, version: input.version } },
       };
     }
 
-    // ShoppingListItem sync mutations
+    // ShoppingListItem create/update sync. SyncShoppingListItemFullInput =
+    // { clientId, item: SyncShoppingListItemInput }. `shoppingListId` is required
+    // on the item — present on a create input, else read from cache.
     if (
       operationName === 'AddItemToShoppingList' ||
       operationName === 'UpdateShoppingListItem' ||
       operationName === 'UpdateShoppingListItemQuantity' ||
       operationName === 'ToggleShoppingListItemPurchased'
     ) {
-      let input = variables.input;
-
-      // For specialized mutations like UpdateShoppingListItemQuantity and ToggleShoppingListItemPurchased
-      // that don't have input wrapper
-      if (!input) {
-        // Read item from cache to get shoppingListId (required by sync mutation)
-        const itemId = variables.id;
-        const itemData = client.cache.readFragment<{
-          id: string;
-          shoppingList: { id: string };
-        }>({
-          id: client.cache.identify({
-            __typename: 'ShoppingListItem',
-            id: itemId,
-          }),
-          fragment: QUEUE_ITEM_DATA_FRAGMENT,
-        });
-
-        if (!itemData?.shoppingList?.id) {
-          throw new Error(
-            `Cannot sync ${operationName}: shoppingListId not found in cache for item ${itemId}`,
-          );
-        }
-
-        // Construct input based on mutation type
-        if (operationName === 'UpdateShoppingListItemQuantity') {
-          input = {
-            shoppingListId: itemData.shoppingList.id,
-            quantity: variables.quantity,
-            version: variables.version,
-          };
-        } else if (operationName === 'ToggleShoppingListItemPurchased') {
-          input = {
-            shoppingListId: itemData.shoppingList.id,
-            isPurchased: variables.purchased,
-            version: variables.version,
-          };
-        }
+      const shoppingListId =
+        input.shoppingListId ?? this.readShoppingListId(clientId);
+      if (!shoppingListId) {
+        throw new Error(
+          `Cannot sync ${operationName}: shoppingListId not found for item ${clientId}`,
+        );
       }
-
+      const item: Record<string, unknown> = {
+        shoppingListId,
+        ...(input.itemName != null && { itemName: input.itemName }),
+        ...(input.itemId != null && { itemId: input.itemId }),
+        ...(input.category != null && { category: input.category }),
+        ...(input.notes != null && { notes: input.notes }),
+        ...(input.unit && { unit: input.unit }),
+        // `quantity` is the FlexibleQuantity scalar (string | number, e.g. "1/3"
+        // or 2) — pass it through directly; no unitId needed.
+        ...(input.quantity != null && { quantity: input.quantity }),
+        ...(input.purchased != null && {
+          purchaseTracking: { isPurchased: input.purchased },
+        }),
+        ...(input.version != null && { version: input.version }),
+      };
       return {
         syncMutation: SyncShoppingListItemDocument,
-        syncVariables: {
-          clientId,
-          input,
-        },
+        syncVariables: { input: { clientId, item } },
       };
     }
 
     if (operationName === 'RemoveItemFromShoppingList') {
       return {
         syncMutation: SyncDeleteShoppingListItemDocument,
-        syncVariables: {
-          clientId: variables.id,
-          version: variables.version,
-        },
+        syncVariables: { input: { clientId, version: input.version } },
       };
     }
 
@@ -497,10 +488,12 @@ export class QueueManager {
       return {
         syncMutation: SyncMoveShoppingListItemDocument,
         syncVariables: {
-          clientId: variables.input?.itemId,
-          afterId: variables.input?.afterId,
-          beforeId: variables.input?.beforeId,
-          version: variables.input?.version,
+          input: {
+            clientId,
+            afterId: input.afterItemId,
+            beforeId: input.beforeItemId,
+            version: input.version,
+          },
         },
       };
     }
@@ -514,6 +507,26 @@ export class QueueManager {
       syncMutation: mutation.mutation,
       syncVariables: variables,
     };
+  }
+
+  /**
+   * Read a shopping-list item's `shoppingListId` from cache — the sync input
+   * requires it, but update/toggle/quantity mutation variables only carry the
+   * item id.
+   */
+  private readShoppingListId(itemId: string | undefined): string | undefined {
+    if (!itemId) return undefined;
+    const itemData = client.cache.readFragment<{
+      id: string;
+      shoppingList: { id: string };
+    }>({
+      id: client.cache.identify({
+        __typename: 'ShoppingListItem',
+        id: itemId,
+      }),
+      fragment: QUEUE_ITEM_DATA_FRAGMENT,
+    });
+    return itemData?.shoppingList?.id;
   }
 
   /**
@@ -603,7 +616,28 @@ export class QueueManager {
       }
     }
 
-    // Max retries exceeded or non-retryable error
+    // Transient (network / 5xx server) errors that exhausted the in-run retries:
+    // keep the mutation PENDING so the change survives for the next drain /
+    // recovery trigger instead of being permanently dropped. Local-first: a
+    // queued change must not be lost just because the API was unreachable for a
+    // while. (Reset retryCount so the next drain gets a fresh attempt.)
+    if (queueError.type === 'network' || queueError.type === 'server') {
+      queueStore.updateMutation(mutation.id, {
+        status: QueueStatus.PENDING,
+        retryCount: 0,
+      });
+      logger.info(
+        `🕓 Queue: ${mutation.id} deferred (transient ${queueError.type}) — stays PENDING for next drain`,
+      );
+      return {
+        success: false,
+        mutationId: mutation.id,
+        error: queueError,
+      };
+    }
+
+    // Non-retryable (validation / client / 4xx / GraphQL) error → permanent
+    // failure: mark failed and notify so the optimistic change can be reverted.
     queueStore.markMutationFailed(mutation.id, queueError);
     this.invokeFailureHandler(mutation, queueError);
 
@@ -904,6 +938,23 @@ export class QueueManager {
     this.processQueue().catch(error => {
       logger.error('Failed to process queue on online:', error);
     });
+  }
+
+  /**
+   * Debounced drain — call when there's positive evidence the API is reachable
+   * again (e.g. a successful network response) while `isOnline` never flipped:
+   * the "API-down-while-online" recovery case that the offline→online trigger
+   * misses. Coalesces bursts; `processQueue` itself no-ops when offline, empty,
+   * or already processing, so this is safe to call liberally.
+   */
+  requestDrain(delayMs = 600): void {
+    if (this.drainTimer) return;
+    this.drainTimer = setTimeout(() => {
+      this.drainTimer = null;
+      this.processQueue().catch(error => {
+        logger.error('Failed to drain queue:', error);
+      });
+    }, delayMs);
   }
 
   /**

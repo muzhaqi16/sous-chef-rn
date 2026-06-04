@@ -1,11 +1,14 @@
-import { useMutation } from '@apollo/client/react';
+import { useApolloClient, useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
 import {
   CreatePantryItemDocument,
   RestockPantryItemDocument,
 } from '#features/pantry/graphql/pantry.generated';
 import { StorageState } from '#/graphql/generated/schemaTypes';
-import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
+import { generateEntityId } from '#/utils/generateEntityId';
+import { addToPantryItemsCache } from '#hooks/home/pantry/utils';
+import { buildOptimisticPantryItem } from '#hooks/home/pantry/buildOptimisticPantryItem';
+import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import {
   isPantryItemDuplicateError,
@@ -71,6 +74,8 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
     handlePageChange,
   } = params;
 
+  const client = useApolloClient();
+
   // Create mutation
   const [createPantryItem, { loading }] = useMutation(
     CreatePantryItemDocument,
@@ -81,14 +86,12 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
           return;
         const pantryItem = payload.pantryItem;
 
-        executeCacheUpdate(() => {
-          const addToPantryCache = createAddToParentConnectionUpdater(
-            'Pantry',
-            'itemsConnection',
-            'PantryItem',
-          );
-          addToPantryCache(cache, pantryId, pantryItem);
-        }, 'Cache update failed for createPantryItem:');
+        // Idempotent re-add (same cuid id) so the connection holds the
+        // authoritative server entity.
+        executeCacheUpdate(
+          () => addToPantryItemsCache(cache, pantryId, pantryItem),
+          'Cache update failed for createPantryItem:',
+        );
       },
     },
   );
@@ -157,7 +160,9 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
       pantryNetWeightUnitId ||
       (totalPackageNetWeight ? displayUnitId : undefined);
 
+    const id = generateEntityId();
     const mutationInput = {
+      id,
       pantryId,
       quantity,
       unit:
@@ -210,14 +215,43 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
       },
     };
 
+    // Write the item into the cache before firing, so it shows immediately and
+    // stays if the create is queued offline (the queue replays it later, keyed by
+    // this id).
+    executeCacheUpdate(
+      () =>
+        addToPantryItemsCache(
+          client.cache,
+          pantryId,
+          buildOptimisticPantryItem(id, {
+            pantryId,
+            itemName: itemName.trim(),
+            quantity,
+            unitId,
+            unitName: unit.trim() || null,
+            storageState,
+            expiresAt: expirationDate ? expirationDate.toISOString() : null,
+            location:
+              !selectedStorageLocationId && storageLocation.trim()
+                ? storageLocation.trim()
+                : null,
+            minQuantity: minQuantity ? parseFloat(minQuantity) : null,
+          }),
+        ),
+      'Add Pantry Item (optimistic)',
+    );
+
     const result = await executeMutation(
       () =>
         createPantryItem({
           variables: { input: mutationInput },
+          context: { localFirst: true },
         }),
       'Create pantry item error:',
     );
     if (!result) {
+      // Hard failure (threw) → revert the optimistic item.
+      safeEvict(client.cache, 'PantryItem', id);
       alertService.alert('Error', 'Failed to add item. Please try again.');
       return;
     }
@@ -226,6 +260,9 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
     if (result.error && isPantryItemDuplicateError(result.error)) {
       const duplicateInfo = getPantryItemDuplicateInfo(result.error);
       if (duplicateInfo) {
+        // Already in the pantry → the server keeps the existing row, not our
+        // optimistic cuid. Evict the phantom optimistic item.
+        safeEvict(client.cache, 'PantryItem', id);
         alertService.alert(
           'Item Already in Pantry',
           'This item is already in your pantry. Would you like to restock it or add a separate entry?',
@@ -297,9 +334,17 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
     if (
       result.data?.createPantryItem?.__typename === 'CreatePantryItemPayload'
     ) {
+      // Created server-side.
       onSuccess();
-    } else if (result.error) {
+    } else if (result.error || result.data) {
+      // A real error, or a non-success payload (e.g. ValidationError) — the
+      // server rejected the create. Discard the item we showed immediately.
+      safeEvict(client.cache, 'PantryItem', id);
       alertService.alert('Error', 'Failed to add item. Please try again.');
+    } else {
+      // No data and no error means the request was queued while offline or the
+      // API was unreachable. The item we wrote stays and the queue replays it.
+      onSuccess();
     }
   };
 

@@ -25,22 +25,24 @@ export const MealPlanEmptyState: React.FC<MealPlanEmptyStateProps> = ({
       <Text size="md" tone="secondary" align="center" style={styles.subtitle}>
         {t('mealPlanEmpty.subtitle')}
       </Text>
-      <Button
-        variant="primary"
-        icon="add"
-        title={t('mealPlanEmpty.createFirst')}
-        onPress={onCreatePlan}
-        style={styles.button}
-      />
-      {!!onCreateFromTemplate && (
+      <View style={styles.actions}>
         <Button
-          variant="outline"
-          icon="document-text-outline"
-          title={t('mealPlanEmpty.createFromTemplate')}
-          onPress={onCreateFromTemplate}
-          style={styles.templateButton}
+          variant="primary"
+          icon="add"
+          title={t('mealPlanEmpty.createFirst')}
+          onPress={onCreatePlan}
+          style={styles.button}
         />
-      )}
+        {!!onCreateFromTemplate && (
+          <Button
+            variant="outline"
+            icon="document-text-outline"
+            title={t('mealPlanEmpty.createFromTemplate')}
+            onPress={onCreateFromTemplate}
+            style={styles.button}
+          />
+        )}
+      </View>
     </View>
   );
 };
@@ -61,12 +63,12 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.sm,
     lineHeight: 22,
   },
-  button: {
+  actions: {
     marginTop: theme.spacing.xl,
-    paddingHorizontal: theme.spacing.xl,
+    alignItems: 'center',
+    gap: theme.spacing.lg,
   },
-  templateButton: {
-    marginTop: theme.spacing.md,
+  button: {
     paddingHorizontal: theme.spacing.xl,
   },
 }));

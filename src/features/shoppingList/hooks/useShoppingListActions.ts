@@ -232,6 +232,9 @@ export function useShoppingListActions({
               version: cachedItem.version,
             },
           },
+          // Local-first: queue on an API-down-while-online failure (absolute
+          // quantity → idempotent on replay via SyncShoppingListItem).
+          context: { localFirst: true },
           onCompleted: data => {
             const payload = data?.updateShoppingListItemQuantity;
             if (
@@ -305,6 +308,9 @@ export function useShoppingListActions({
               version: cachedItem.version,
             },
           },
+          // Local-first: queue on an API-down-while-online failure (absolute
+          // quantity → idempotent on replay via SyncShoppingListItem).
+          context: { localFirst: true },
           onCompleted: data => {
             const payload = data?.updateShoppingListItemQuantity;
             if (

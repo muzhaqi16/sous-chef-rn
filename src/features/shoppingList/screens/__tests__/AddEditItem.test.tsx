@@ -594,7 +594,10 @@ describe('AddEditItem', () => {
     await waitFor(() => expect(mockNav.goBack).toHaveBeenCalled());
   });
 
-  it('shows error alert when addItem returns no data', async () => {
+  it('navigates back when the add is queued offline (null data, no error)', async () => {
+    // Local-first (Pattern B): the item is written to cache optimistically BEFORE
+    // the mutation fires. A queued create resolves with null data and no error —
+    // that's success (the queue replays it), so we navigate back, NOT alert.
     const user = userEvent.setup();
     jest
       .spyOn(
@@ -612,12 +615,8 @@ describe('AddEditItem', () => {
     });
     await user.press(screen.getByTestId('add-item-submit-button'));
 
-    await waitFor(() =>
-      expect(alertService.alert).toHaveBeenCalledWith(
-        'Error',
-        expect.stringContaining('Failed to add item'),
-      ),
-    );
+    await waitFor(() => expect(mockNav.goBack).toHaveBeenCalled());
+    expect(alertService.alert).not.toHaveBeenCalled();
   });
 
   it('shows error alert when mutation returns data but no item', async () => {

@@ -1,6 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { alertService } from '#/services/alertService';
-import { useFragment, useMutation, useQuery } from '@apollo/client/react';
+import {
+  useApolloClient,
+  useFragment,
+  useMutation,
+  useQuery,
+} from '@apollo/client/react';
 import { useTranslation } from 'react-i18next';
 import {
   AddItemToShoppingListDocument,
@@ -18,14 +23,23 @@ import { EditableCounter } from '#components/molecules/EditableCounter';
 import { FieldRow } from '#components/molecules/FieldRow';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import type { StaticScreenProps } from '@react-navigation/native';
-import { addNewItemToShoppingListCache } from '#/apollo/utils/shoppingListCacheUpdaters';
+import {
+  addNewItemToShoppingListCache,
+  addOptimisticShoppingListItem,
+} from '#/apollo/utils/shoppingListCacheUpdaters';
+import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { useShoppingListItemForm } from '#features/shoppingList/hooks/useShoppingListItemForm';
+import { createOptimisticShoppingListItem } from '#features/shoppingList/hooks/mutations/utils';
 import {
   handleMutationError,
   versionConflictCheck,
 } from '#/utils/errorHandlers';
 import { errorService } from '#/services/errorService';
-import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+import {
+  executeCacheUpdate,
+  executeWithLoadingState,
+} from '#/utils/compilerSafeWrappers';
+import { generateEntityId } from '#/utils/generateEntityId';
 
 type RouteParams = {
   listId: string;
@@ -38,6 +52,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
 }) => {
   const { t } = useTranslation();
   const navigation = useAppNavigation();
+  const client = useApolloClient();
   const { listId, itemId } = route.params;
   // Extract initialItemName (only present when navigating from AddItem route)
   const initialItemName =
@@ -65,6 +80,9 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
 
   // Store version for optimistic concurrency control (strict version checking)
   const itemVersionRef = useRef<number | undefined>(undefined);
+  // The client cuid of the optimistic add — read in update() to detect a server
+  // catalog-merge (returned id !== our cuid) and evict the stale entity.
+  const lastClientIdRef = useRef<string | null>(null);
 
   // GraphQL hooks
   const { data } = useQuery(GetShoppingListItemDocument, {
@@ -87,15 +105,24 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
       : null;
 
   const [addItem] = useMutation(AddItemToShoppingListDocument, {
-    // Update cache immediately for optimistic UI
+    // Reconcile the server response with the item written into the cache before
+    // the create fired.
     update: (cache, { data: mutationData }) => {
       const payload = mutationData?.addItemToShoppingList;
       if (payload?.__typename !== 'AddItemToShoppingListPayload') return;
       const newItem = payload.shoppingListItem;
 
+      // Catalog-merge: the server merged into an existing row → its id differs
+      // from our optimistic cuid. Adopt the server id; evict the stale cuid.
+      if (lastClientIdRef.current && newItem.id !== lastClientIdRef.current) {
+        safeEvict(cache, 'ShoppingListItem', lastClientIdRef.current);
+        lastClientIdRef.current = null;
+      }
+
       addNewItemToShoppingListCache(cache, listId, newItem);
     },
     onError: error => {
+      lastClientIdRef.current = null;
       errorService.reportError(error, {
         operation: 'ShoppingListItem.addItem',
       });
@@ -173,11 +200,10 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
       async () => {
         const unitData = buildUnitInput();
 
-        let result;
         if (isEdit) {
           // Only send changed fields - sends raw quantityInput string
           const input = buildDirtyInput();
-          result = await updateItem({
+          const result = await updateItem({
             variables: {
               input: {
                 ...input,
@@ -187,66 +213,95 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
               },
             },
           });
-        } else {
-          result = await addItem({
-            variables: {
-              input: {
-                shoppingListId: listId,
-                itemName,
-                // Send raw string - server accepts FlexibleQuantity ("1/3", "1 1/4", "0.5", etc.)
-                quantity: quantityInput,
-                ...unitData,
-                notes,
-                category,
-                ...(estimatedPrice && {
-                  pricing: { estimatedPrice: parseFloat(estimatedPrice) },
-                }),
-              },
-            },
-          });
-        }
 
-        // Only navigate back if mutation succeeded
-        if (result.data) {
+          // Only navigate back if the update succeeded.
           const updatePayload =
-            'updateShoppingListItem' in result.data
-              ? result.data.updateShoppingListItem
+            result.data?.updateShoppingListItem?.__typename ===
+            'UpdateShoppingListItemPayload'
+              ? result.data.updateShoppingListItem.shoppingListItem
               : null;
-          const addPayload =
-            'addItemToShoppingList' in result.data
-              ? result.data.addItemToShoppingList
-              : null;
-          const mutationData = isEdit
-            ? updatePayload?.__typename === 'UpdateShoppingListItemPayload'
-              ? updatePayload.shoppingListItem
-              : null
-            : addPayload?.__typename === 'AddItemToShoppingListPayload'
-            ? addPayload.shoppingListItem
-            : null;
-
-          if (mutationData) {
+          if (updatePayload) {
             navigation.goBack();
-          } else {
-            // PERFORMANCE: Specific error message - server returned success but no data
+          } else if (result.data) {
             alertService.alert(
               t('labels.error'),
               t('shoppingListScreens.serverNotUpdated', {
-                action: isEdit
-                  ? t('shoppingListScreens.updated')
-                  : t('shoppingListScreens.added'),
+                action: t('shoppingListScreens.updated'),
+              }),
+            );
+          } else {
+            alertService.alert(
+              t('labels.error'),
+              t('shoppingListScreens.failedToUpdateAdd', {
+                action: t('shoppingListScreens.actionUpdate'),
               }),
             );
           }
-        } else {
-          // PERFORMANCE: Specific error message - mutation failed without data
+          return;
+        }
+
+        // Generate the item's id and write it into the cache before firing, so it
+        // shows immediately and stays if the create is queued offline (the queue
+        // replays it later, keyed by this id).
+        const id = generateEntityId();
+        const { entity } = createOptimisticShoppingListItem({
+          itemName,
+          quantity: parseFloat(quantityInput) || 1,
+          quantityInput,
+          unitName: unit || null,
+          category: category || null,
+          unitId: 'unit' in unitData ? unitData.unit.unitId : undefined,
+        });
+        lastClientIdRef.current = id;
+        executeCacheUpdate(
+          () =>
+            addOptimisticShoppingListItem(client.cache, listId, {
+              ...entity,
+              id,
+            }),
+          'Add Shopping List Item (optimistic)',
+        );
+
+        const result = await addItem({
+          variables: {
+            input: {
+              id,
+              shoppingListId: listId,
+              itemName,
+              // Send raw string - server accepts FlexibleQuantity ("1/3", "1 1/4", "0.5", etc.)
+              quantity: quantityInput,
+              ...unitData,
+              notes,
+              category,
+              ...(estimatedPrice && {
+                pricing: { estimatedPrice: parseFloat(estimatedPrice) },
+              }),
+            },
+          },
+          context: { localFirst: true },
+        });
+
+        const payload = result.data?.addItemToShoppingList;
+        if (payload?.__typename === 'AddItemToShoppingListPayload') {
+          // Created server-side → reconciled in cache by update(); navigate.
+          navigation.goBack();
+        } else if (result.error || result.data) {
+          // Real (non-network) error or a non-success payload (e.g. ConflictError)
+          // → the server rejected the create. Revert the optimistic item.
+          executeCacheUpdate(
+            () => safeEvict(client.cache, 'ShoppingListItem', id),
+            'Revert optimistic add',
+          );
           alertService.alert(
             t('labels.error'),
-            t('shoppingListScreens.failedToUpdateAdd', {
-              action: isEdit
-                ? t('shoppingListScreens.actionUpdate')
-                : t('shoppingListScreens.actionAdd'),
+            t('shoppingListScreens.serverNotUpdated', {
+              action: t('shoppingListScreens.added'),
             }),
           );
+        } else {
+          // No data + no error → the create was queued offline / on API-down. The
+          // optimistic item persists and the queue replays it; navigate back.
+          navigation.goBack();
         }
       },
       setSaving,

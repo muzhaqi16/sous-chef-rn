@@ -11,13 +11,30 @@
  * `storeFieldName` to distinguish filtered variants.
  */
 
-import type { ApolloCache } from '@apollo/client';
+import { gql, type ApolloCache } from '@apollo/client';
+import {
+  ShoppingListItemDisplayFragmentDoc,
+  type ShoppingListItemDisplayFragment,
+} from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import {
   type ConnectionData,
   createRemoveFromParentConnectionUpdater,
   safeEvict,
   safeEvictMany,
 } from './cacheUpdaters';
+
+/**
+ * Minimal stats read used by {@link addOptimisticShoppingListItem} to recompute
+ * `remainingItems` / `completionRate` after an optimistic add.
+ */
+const ShoppingListStatsForOptimisticAddFragment = gql`
+  fragment _ShoppingListStatsForOptimisticAdd on ShoppingList {
+    totalItems
+    completedItems
+    remainingItems
+    completionRate
+  }
+`;
 
 // =============================================================================
 // storeFieldName filter detection
@@ -323,6 +340,71 @@ export function addNewItemToShoppingListCache(
   } catch (error) {
     console.warn('Failed to update cache for new shopping list item:', error);
   }
+}
+
+/**
+ * Local-first optimistic add: write a new ShoppingListItem to the cache
+ * PERMANENTLY (full entity + connection edge + recomputed list stats) BEFORE the
+ * create mutation fires, so it survives a fully-offline / API-down create (the
+ * queue replays via `SyncShoppingListItem(clientId = id)`).
+ *
+ * Unlike {@link addNewItemToShoppingListCache} — which only wires a bare-ref
+ * edge and relies on the mutation *response* to materialize the entity — this
+ * `writeFragment`s the full display entity first. That step is mandatory
+ * offline, where no response ever arrives to fill the entity's fields (without
+ * it the row renders blank).
+ *
+ * `item.id` MUST be the client-minted cuid sent as `input.id`, so the online
+ * create and the queued replay converge on the same row (no duplicate).
+ */
+export function addOptimisticShoppingListItem(
+  cache: ApolloCache,
+  listId: string,
+  item: ShoppingListItemDisplayFragment,
+): void {
+  // 1. Write the full entity so the (bare-ref) edge resolves with display
+  //    fields even fully offline.
+  cache.writeFragment({
+    id: cache.identify(item),
+    fragment: ShoppingListItemDisplayFragmentDoc,
+    fragmentName: 'ShoppingListItemDisplayFragment',
+    data: item,
+  });
+
+  const parentCacheId = cache.identify({
+    __typename: 'ShoppingList',
+    id: listId,
+  });
+
+  // 2. Snapshot completedItems BEFORE the add (new items are unpurchased, so
+  //    completedItems is unchanged; remaining/completion derive from it).
+  const stats = parentCacheId
+    ? cache.readFragment<{ completedItems: number }>({
+        id: parentCacheId,
+        fragment: ShoppingListStatsForOptimisticAddFragment,
+        fragmentName: '_ShoppingListStatsForOptimisticAdd',
+      })
+    : null;
+  const completed = stats?.completedItems ?? 0;
+
+  // 3. Add the edge + bump totalItems.
+  addNewItemToShoppingListCache(cache, listId, item);
+
+  // 4. Recompute remaining / completion from the now-bumped total.
+  if (!parentCacheId) return;
+  cache.modify({
+    id: parentCacheId,
+    fields: {
+      remainingItems(_existing: number, { readField }) {
+        const total = readField<number>('totalItems') ?? 0;
+        return Math.max(0, total - completed);
+      },
+      completionRate(_existing: number, { readField }) {
+        const total = readField<number>('totalItems') ?? 0;
+        return total > 0 ? completed / total : 0;
+      },
+    },
+  });
 }
 
 /**

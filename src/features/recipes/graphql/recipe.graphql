@@ -69,6 +69,7 @@ query MyRecipes(
 
 query GetRecipe($id: ID!) {
   recipe(id: $id) {
+    id
     ...useRecipeData_recipe
     ...RecipeForm_recipe
   }
@@ -175,6 +176,7 @@ mutation UpdateRecipe($input: UpdateRecipeInput!) {
     __typename
     ... on UpdateRecipePayload {
       recipe {
+        id
         ...useRecipeData_recipe
         ...RecipeForm_recipe
       }

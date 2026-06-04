@@ -9,6 +9,8 @@ jest.mock('#/apollo/links/refreshToken');
 
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),
+  createRemoveFromParentConnectionUpdater: jest.fn(() => jest.fn()),
+  safeEvict: jest.fn(),
 }));
 
 jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => ({

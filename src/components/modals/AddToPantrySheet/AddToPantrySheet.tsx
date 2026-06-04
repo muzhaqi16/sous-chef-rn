@@ -25,7 +25,10 @@ import {
   getPantryItemDuplicateInfo,
 } from '#/utils/errors/pantryItemDuplicate';
 import { addToPantryItemsCache } from '#hooks/home/pantry/utils';
+import { buildOptimisticPantryItem } from '#hooks/home/pantry/buildOptimisticPantryItem';
+import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
+import { generateEntityId } from '#/utils/generateEntityId';
 import { AddItemSheet } from '../AddItemSheet/AddItemSheet';
 import { useAddItemSheetState } from '../AddItemSheet/useAddItemSheetState';
 import type { SuggestionsHookResult } from '../AddItemSheet/types';
@@ -173,8 +176,10 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   const handleQuickAddSearchSuggestion = (item: ItemSuggestion) => {
     if (!pantryId || pendingItemIds.current.has(item.id)) return;
 
+    const id = generateEntityId();
     const variables = {
       input: {
+        id,
         pantryId,
         itemId: item.id,
       },
@@ -189,12 +194,32 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     // 2. Remove suggestion from cache immediately
     removeSuggestionFromCache(item.id);
 
-    // 3. Fire mutation without await (cache update handled by mutation's update callback)
-    createPantryItem({ variables })
+    // 3. Write the item into the cache before firing, so it shows immediately and
+    // stays if the create is queued offline (the queue replays it later, keyed by
+    // this id).
+    executeCacheUpdate(
+      () =>
+        addToPantryItemsCache(
+          client.cache,
+          pantryId,
+          buildOptimisticPantryItem(id, {
+            pantryId,
+            itemName: item.name,
+            itemId: item.id,
+          }),
+        ),
+      'Add Pantry Item (optimistic)',
+    );
+
+    // 4. Fire mutation without await (cache update handled by mutation's update callback)
+    createPantryItem({ variables, context: { localFirst: true } })
       .then(result => {
         if (result.error && isPantryItemDuplicateError(result.error)) {
           const duplicateInfo = getPantryItemDuplicateInfo(result.error);
           if (duplicateInfo) {
+            // Already in the pantry → the server restocks the existing row, not
+            // our optimistic cuid. Evict the phantom optimistic item.
+            safeEvict(client.cache, 'PantryItem', id);
             // Auto-restock by 1 for quick-add
             restockPantryItem({
               variables: {
@@ -211,12 +236,17 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
           }
         }
         pendingItemIds.current.delete(item.id);
-        if (!result.error) {
+        if (result.error) {
+          // Real (non-network) error → revert the optimistic item.
+          safeEvict(client.cache, 'PantryItem', id);
+        } else {
           onItemAdded?.();
         }
       })
       .catch(() => {
         pendingItemIds.current.delete(item.id);
+        // Real failure → revert the optimistic item.
+        safeEvict(client.cache, 'PantryItem', id);
         toastService.error(t('addToPantry.addFailedRetry'));
       });
   };
@@ -232,8 +262,10 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
       return;
     pendingItemIds.current.add(pantryItem.itemId);
 
+    const id = generateEntityId();
     const variables = {
       input: {
+        id,
         pantryId,
         itemId: pantryItem.itemId,
       },
@@ -247,12 +279,32 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
       pantrySheetConfig.quickAdd.toastMessage(pantryItem.name),
     );
 
-    // 3. Fire mutation without await (cache update handled by mutation's update callback)
-    createPantryItem({ variables })
+    // 3. Write the item into the cache before firing, so it shows immediately and
+    // stays if the create is queued offline (the queue replays it later, keyed by
+    // this id).
+    executeCacheUpdate(
+      () =>
+        addToPantryItemsCache(
+          client.cache,
+          pantryId,
+          buildOptimisticPantryItem(id, {
+            pantryId,
+            itemName: pantryItem.name,
+            itemId: pantryItem.itemId,
+          }),
+        ),
+      'Add Pantry Item (optimistic)',
+    );
+
+    // 4. Fire mutation without await (cache update handled by mutation's update callback)
+    createPantryItem({ variables, context: { localFirst: true } })
       .then(result => {
         if (result.error && isPantryItemDuplicateError(result.error)) {
           const duplicateInfo = getPantryItemDuplicateInfo(result.error);
           if (duplicateInfo) {
+            // Already in the pantry → the server restocks the existing row, not
+            // our optimistic cuid. Evict the phantom optimistic item.
+            safeEvict(client.cache, 'PantryItem', id);
             // Auto-restock by 1 for quick-add
             restockPantryItem({
               variables: {
@@ -269,12 +321,19 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
           }
         }
         pendingItemIds.current.delete(pantryItem.itemId);
-        if (!result.error) {
+        if (result.error) {
+          // Real (non-network) error → revert the optimistic item + restore the
+          // suggestion (undo the exit animation).
+          safeEvict(client.cache, 'PantryItem', id);
+          state.completeExitAnimation(pantryItem.itemId);
+        } else {
           onItemAdded?.();
         }
       })
       .catch(() => {
         pendingItemIds.current.delete(pantryItem.itemId);
+        // Real failure → revert the optimistic item.
+        safeEvict(client.cache, 'PantryItem', id);
         state.completeExitAnimation(pantryItem.itemId);
         toastService.error(t('addToPantry.addFailed'));
       });

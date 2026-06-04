@@ -3,6 +3,7 @@ import { useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
 import { errorService } from '#/services/errorService';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
+import { generateEntityId } from '#/utils/generateEntityId';
 import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/screens/PantryItemDetail.generated';
 import { DeletePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { removeFromPantryItemsCache } from '#hooks/home/pantry/utils';
@@ -198,12 +199,16 @@ export function usePantryItemDetailActions({
     const quantity = item?.quantity || 1;
     const unitInput = item?.unit?.id ? { unitId: item.unit.id } : undefined;
     const itemName = item?.itemName || '';
+    // Generate the new item's id so a create that gets queued (offline / API
+    // down) replays idempotently, keyed by this id.
+    const id = generateEntityId();
 
     executeMutation(
       async () => {
         await addToShoppingList({
           variables: {
             input: {
+              id,
               shoppingListId: selectedShoppingListId,
               itemId: catalogItemId,
               quantity,
@@ -211,6 +216,7 @@ export function usePantryItemDetailActions({
               itemName,
             },
           },
+          context: { localFirst: true },
         });
         setAddToListStatus('success');
         statusTimeoutRef.current = setTimeout(

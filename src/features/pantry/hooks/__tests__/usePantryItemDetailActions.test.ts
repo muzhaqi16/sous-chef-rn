@@ -225,6 +225,8 @@ describe('usePantryItemDetailActions', () => {
 
       expect(addMock.fired).toContainEqual({
         input: {
+          // Client-generated cuid v1 so a queued create replays idempotently.
+          id: expect.stringMatching(/^c[a-z0-9]{24}$/),
           shoppingListId: 'list-1',
           itemId: 'catalog-1',
           quantity: 3,

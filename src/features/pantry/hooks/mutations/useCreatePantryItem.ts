@@ -9,7 +9,7 @@
  * - Handles PANTRY_ITEM_ALREADY_EXISTS with restock/force-add options
  */
 
-import { useMutation } from '@apollo/client/react';
+import { useApolloClient, useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
 import {
   CreatePantryItemDocument,
@@ -21,12 +21,15 @@ import {
   getPantryItemDuplicateInfo,
 } from '#/utils/errors/pantryItemDuplicate';
 import { addToPantryItemsCache } from './utils';
+import { buildOptimisticPantryItem } from '#hooks/home/pantry/buildOptimisticPantryItem';
+import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import {
   executeCacheUpdate,
   executeMutation,
   isSuccessPayload,
 } from '#/utils/compilerSafeWrappers';
 import { handleMutationError } from '#/utils/errorHandlers';
+import { generateEntityId } from '#/utils/generateEntityId';
 import type { CreatePantryItemParams } from './types';
 
 interface UseCreatePantryItemOptions {
@@ -54,6 +57,8 @@ export function useCreatePantryItem({
   pantryId,
   onSuccess,
 }: UseCreatePantryItemOptions) {
+  const client = useApolloClient();
+
   const [createMutation] = useMutation(CreatePantryItemDocument, {
     update: (cache, { data: mutationData }) => {
       const payload = mutationData?.createPantryItem;
@@ -89,7 +94,11 @@ export function useCreatePantryItem({
       ? { storageLocationName: input.location.trim() }
       : {};
 
+    // Local-first: mint the permanent cuid id (server stores it as the PK; the
+    // offline queue replays via SyncPantryItem(clientId = id) → idempotent).
+    const id = generateEntityId();
     const baseInput = {
+      id,
       pantryId: targetPantryId,
       ...(unitId
         ? { unit: { unitId } }
@@ -152,8 +161,35 @@ export function useCreatePantryItem({
       };
     }
 
+    // Write the item into the cache before firing, so it shows immediately and
+    // stays if the create is queued offline (the queue replays it later, keyed by
+    // this id).
+    executeCacheUpdate(
+      () =>
+        addToPantryItemsCache(
+          client.cache,
+          targetPantryId,
+          buildOptimisticPantryItem(id, {
+            pantryId: targetPantryId,
+            itemName: input.itemName?.trim() ?? '',
+            quantity: quantityValue,
+            itemId: input.selectedItemId,
+            unitId,
+            unitName: input.unit?.trim() || null,
+            storageState: input.storageState,
+            expiresAt: input.expirationDate?.toISOString() ?? null,
+            location: input.location?.trim() || null,
+            minQuantity: input.minQuantity
+              ? parseFloat(input.minQuantity)
+              : null,
+          }),
+        ),
+      'Add Pantry Item (optimistic)',
+    );
+
     const result = await createMutation({
       variables: { input: mutationInput },
+      context: { localFirst: true },
     });
 
     if (
@@ -167,6 +203,9 @@ export function useCreatePantryItem({
     if (result.error && isPantryItemDuplicateError(result.error)) {
       const duplicateInfo = getPantryItemDuplicateInfo(result.error);
       if (duplicateInfo) {
+        // Already in the pantry → the server keeps the existing row, not our
+        // optimistic cuid. Evict the phantom optimistic item.
+        safeEvict(client.cache, 'PantryItem', id);
         return new Promise<boolean>(resolve => {
           alertService.alert(
             'Item Already in Pantry',
@@ -249,10 +288,25 @@ export function useCreatePantryItem({
     }
 
     if (result.error) {
+      // A real (non-network) error came back — the create was rejected. Discard
+      // the item we showed immediately and surface the error.
+      safeEvict(client.cache, 'PantryItem', id);
       handleMutationError(result.error, { operation: 'Create Pantry Item' });
+      return false;
     }
 
-    return false;
+    if (result.data) {
+      // The server returned a non-success payload (e.g. ValidationError) without
+      // a GraphQL error — also a rejection. Discard the item we showed.
+      safeEvict(client.cache, 'PantryItem', id);
+      return false;
+    }
+
+    // No data and no error means the request was queued while offline or the API
+    // was unreachable. The item we wrote stays in the cache and the queue replays
+    // the create once connectivity returns, so this counts as success.
+    onSuccess?.();
+    return true;
   };
 
   return { createPantryItem };

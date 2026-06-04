@@ -247,6 +247,9 @@ export function useItemReordering<T extends ShoppingListItem>(
               beforeItemId: moveBeforeItemId,
             },
           },
+          // Local-first: queue on an API-down-while-online failure (moves are
+          // coalesced latest-wins on replay via SyncMoveShoppingListItem).
+          context: { localFirst: true },
         }),
       error => {
         handleMutationError(error, {
