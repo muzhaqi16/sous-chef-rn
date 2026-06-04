@@ -15,9 +15,8 @@ import {
   addOptimisticShoppingListItem,
   adoptServerShoppingListItemId,
   createOptimisticShoppingListItem,
-  revertOptimisticShoppingListItem,
+  reconcileShoppingCreate,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { useConvertExpiredToWaste } from '#features/pantry/hooks/mutations/useConvertExpiredToWaste';
 import { useConvertExpiredBatchesToWaste } from '#features/pantry/hooks/mutations/useConvertExpiredBatchesToWaste';
 import { useAdjustPantryItemQuantity } from '#features/pantry/hooks/mutations/useAdjustPantryItemQuantity';
@@ -260,19 +259,16 @@ export function usePantryItemDetailActions({
         // Queued (offline / API down) counts as success — it replays. Only a
         // real rejection is an error; don't show the success check on a refused
         // create (and discard the item we wrote). errorPolicy:'all' resolves
-        // rejections, so classify the result rather than relying on a throw.
+        // rejections, so the reconciler classifies the result rather than relying
+        // on a throw.
         if (
-          classifyCreateResult(
-            result,
-            'addItemToShoppingList',
-            'AddItemToShoppingListPayload',
-          ) === 'rejected'
-        ) {
-          revertOptimisticShoppingListItem(
+          reconcileShoppingCreate(
             client.cache,
             selectedShoppingListId,
             id,
-          );
+            result,
+          ) === 'reverted'
+        ) {
           setAddToListStatus('error');
         } else {
           setAddToListStatus('success');

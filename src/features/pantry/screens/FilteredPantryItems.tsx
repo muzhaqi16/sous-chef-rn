@@ -33,9 +33,9 @@ import {
   addOptimisticShoppingListItem,
   adoptServerShoppingListItemId,
   createOptimisticShoppingListItem,
+  reconcileShoppingCreate,
   revertOptimisticShoppingListItem,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import {
   useTutorialSequence,
   type TutorialStep,
@@ -407,21 +407,17 @@ export const FilteredPantryItems: React.FC<
     );
     // A queued create (offline / API down) replays later — treat as success.
     // Only a real rejection surfaces an error; errorPolicy:'all' resolves
-    // rejections, so executeMutation's onError never fires for them — classify
-    // the result instead and discard the item we wrote.
+    // rejections, so executeMutation's onError never fires for them — the
+    // reconciler classifies the result instead and discards the item we wrote.
     if (
       result &&
-      classifyCreateResult(
-        result,
-        'addItemToShoppingList',
-        'AddItemToShoppingListPayload',
-      ) === 'rejected'
-    ) {
-      revertOptimisticShoppingListItem(
+      reconcileShoppingCreate(
         client.cache,
         selectedShoppingListId,
         id,
-      );
+        result,
+      ) === 'reverted'
+    ) {
       alertService.alert(
         t('labels.error'),
         t('filteredPantry.addToShoppingFailed'),

@@ -27,6 +27,10 @@ jest.mock('#/utils/fractionUtils', () => ({
 }));
 
 jest.mock('#/utils/errors/pantryItemDuplicate', () => ({
+  // Keep the real `promptPantryDuplicate` so it calls the (mocked) alertService
+  // with the standard duplicate copy the tests assert on; only the detection
+  // helpers are stubbed per-test.
+  ...jest.requireActual('#/utils/errors/pantryItemDuplicate'),
   isPantryItemDuplicateError: jest.fn().mockReturnValue(false),
   getPantryItemDuplicateInfo: jest.fn().mockReturnValue(null),
 }));

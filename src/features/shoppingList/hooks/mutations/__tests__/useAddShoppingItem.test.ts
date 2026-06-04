@@ -17,20 +17,43 @@ jest.mock('#/utils/compilerSafeWrappers', () => ({
   })),
 }));
 
-jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => ({
-  addNewItemToShoppingListCache: jest.fn(),
-  adoptServerShoppingListItemId: jest.fn(),
-  revertOptimisticShoppingListItem: jest.fn(),
-  addOptimisticShoppingListItem: jest.fn(),
-  // New signature: (id, fields) => entity (the cuid is baked straight in).
-  createOptimisticShoppingListItem: jest.fn(
-    (id: string, fields: { itemName?: string }) => ({
-      __typename: 'ShoppingListItem',
-      id,
-      itemName: fields?.itemName ?? '',
-    }),
-  ),
-}));
+jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => {
+  const { classifyCreateResult } = jest.requireActual(
+    '#/apollo/utils/classifyCreateResult',
+  );
+  const revertOptimisticShoppingListItem = jest.fn();
+  return {
+    addNewItemToShoppingListCache: jest.fn(),
+    adoptServerShoppingListItemId: jest.fn(),
+    revertOptimisticShoppingListItem,
+    addOptimisticShoppingListItem: jest.fn(),
+    // New signature: (id, fields) => entity (the cuid is baked straight in).
+    createOptimisticShoppingListItem: jest.fn(
+      (id: string, fields: { itemName?: string }) => ({
+        __typename: 'ShoppingListItem',
+        id,
+        itemName: fields?.itemName ?? '',
+      }),
+    ),
+    // Mirror the real reconciler (real classify + mocked revert) so the
+    // keep/revert decision under test matches production.
+    reconcileShoppingCreate: jest.fn(
+      (cache: unknown, listId: string, id: string, result: unknown) => {
+        if (
+          classifyCreateResult(
+            result,
+            'addItemToShoppingList',
+            'AddItemToShoppingListPayload',
+          ) === 'rejected'
+        ) {
+          revertOptimisticShoppingListItem(cache, listId, id);
+          return 'reverted';
+        }
+        return 'kept';
+      },
+    ),
+  };
+});
 
 beforeEach(() => {
   jest.clearAllMocks();

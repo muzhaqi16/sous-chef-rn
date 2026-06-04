@@ -24,9 +24,8 @@ import {
   addOptimisticShoppingListItem,
   adoptServerShoppingListItemId,
   createOptimisticShoppingListItem,
-  revertOptimisticShoppingListItem,
+  reconcileShoppingCreate,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { generateEntityId } from '#/utils/generateEntityId';
@@ -124,21 +123,13 @@ export function useAddShoppingItem({
     if (!result) return undefined;
 
     // A non-success payload (e.g. ValidationError / ConflictError) resolves under
-    // errorPolicy:'all' with no thrown error, so `onError` never fires — classify
-    // the result and fully revert the optimistic item (entity + list stats) on a
-    // real rejection. A queued create (offline / API down) resolves with no data
-    // and no error → it stays and replays.
+    // errorPolicy:'all' with no thrown error, so `onError` never fires — the
+    // reconciler classifies the result and fully reverts the optimistic item
+    // (entity + list stats) on a real rejection. A queued create (offline / API
+    // down) resolves with no data and no error → it stays and replays.
     if (
-      classifyCreateResult(
-        result,
-        'addItemToShoppingList',
-        'AddItemToShoppingListPayload',
-      ) === 'rejected'
+      reconcileShoppingCreate(client.cache, listId, id, result) === 'reverted'
     ) {
-      executeCacheUpdate(
-        () => revertOptimisticShoppingListItem(client.cache, listId, id),
-        'Revert rejected Shopping List Item',
-      );
       return undefined;
     }
     return result.data?.addItemToShoppingList;

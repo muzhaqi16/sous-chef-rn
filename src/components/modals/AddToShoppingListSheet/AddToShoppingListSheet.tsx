@@ -18,9 +18,9 @@ import {
   addOptimisticShoppingListItem,
   adoptServerShoppingListItemId,
   createOptimisticShoppingListItem,
+  reconcileShoppingCreate,
   revertOptimisticShoppingListItem,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
@@ -204,15 +204,12 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
         // A queued create (offline / API down) resolves with no data and no
         // error — keep the item. A real rejection (e.g. validation) must evict
         // the optimistic item; with errorPolicy:'all' that lands here in `.then`,
-        // not `.catch`, so classify the result rather than relying on a throw.
+        // not `.catch`, so the reconciler classifies the result rather than
+        // relying on a throw.
         if (
-          classifyCreateResult(
-            result,
-            'addItemToShoppingList',
-            'AddItemToShoppingListPayload',
-          ) === 'rejected'
+          reconcileShoppingCreate(client.cache, shoppingListId, id, result) ===
+          'reverted'
         ) {
-          revertOptimisticShoppingListItem(client.cache, shoppingListId, id);
           toastService.error(t('addToShoppingListSheet.addFailedRetry'));
           return;
         }
@@ -284,15 +281,11 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
       .then(result => {
         // Rejected (not merely queued offline) → evict the optimistic item and
         // restore the suggestion. errorPolicy:'all' delivers rejections to
-        // `.then`, so classify rather than relying on `.catch`.
+        // `.then`, so the reconciler classifies rather than relying on `.catch`.
         if (
-          classifyCreateResult(
-            result,
-            'addItemToShoppingList',
-            'AddItemToShoppingListPayload',
-          ) === 'rejected'
+          reconcileShoppingCreate(client.cache, shoppingListId, id, result) ===
+          'reverted'
         ) {
-          revertOptimisticShoppingListItem(client.cache, shoppingListId, id);
           state.completeExitAnimation(shoppingItem.itemId);
           toastService.error(t('addToShoppingListSheet.addFailedRetry'));
           return;

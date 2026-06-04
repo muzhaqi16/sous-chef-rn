@@ -28,9 +28,8 @@ import {
   addOptimisticShoppingListItem,
   adoptServerShoppingListItemId,
   createOptimisticShoppingListItem,
-  revertOptimisticShoppingListItem,
+  reconcileShoppingCreate,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { useShoppingListItemForm } from '#features/shoppingList/hooks/useShoppingListItemForm';
 import {
   handleMutationError,
@@ -278,18 +277,13 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
           context: { localFirst: true },
         });
 
-        const outcome = classifyCreateResult(
-          result,
-          'addItemToShoppingList',
-          'AddItemToShoppingListPayload',
-        );
-        if (outcome === 'rejected') {
-          // The server refused the create — fully revert the optimistic item
-          // (entity + list-stat scalars, which a bare evict would leave inflated).
-          executeCacheUpdate(
-            () => revertOptimisticShoppingListItem(client.cache, listId, id),
-            'Revert optimistic add',
-          );
+        if (
+          reconcileShoppingCreate(client.cache, listId, id, result) ===
+          'reverted'
+        ) {
+          // The server refused the create — the reconciler fully reverted the
+          // optimistic item (entity + list-stat scalars a bare evict would leave
+          // inflated); surface the failure.
           alertService.alert(
             t('labels.error'),
             t('shoppingListScreens.serverNotUpdated', {

@@ -19,6 +19,7 @@ import type { CreatePantryItemInput } from '#/graphql/generated/schemaTypes';
 import {
   isPantryItemDuplicateError,
   getPantryItemDuplicateInfo,
+  promptPantryDuplicate,
 } from '#/utils/errors/pantryItemDuplicate';
 import { addToPantryItemsCache } from './utils';
 import { buildOptimisticPantryItem } from '#hooks/home/pantry/buildOptimisticPantryItem';
@@ -212,82 +213,68 @@ export function useCreatePantryItem({
         // optimistic cuid. Evict the phantom optimistic item.
         safeEvict(client.cache, 'PantryItem', id);
         return new Promise<boolean>(resolve => {
-          alertService.alert(
-            'Item Already in Pantry',
-            'This item is already in your pantry. Would you like to restock it or add a separate entry?',
-            [
-              {
-                text: 'Cancel',
-                style: 'cancel',
-                onPress: () => resolve(false),
-              },
-              {
-                text: 'Restock',
-                onPress: async () => {
-                  const restockQuantity = quantityValue ?? 1;
-                  const restockResult = await executeMutation(
-                    () =>
-                      restockMutation({
-                        variables: {
-                          input: {
-                            id: duplicateInfo.existingPantryItemId,
-                            quantity: restockQuantity,
-                          },
-                        },
-                      }),
-                    'Restock pantry item error:',
-                  );
-                  if (!restockResult) {
-                    alertService.alert(
-                      'Error',
-                      'Failed to restock item. Please try again.',
-                    );
-                    resolve(false);
-                    return;
-                  }
-                  onSuccess?.();
-                  resolve(true);
-                },
-              },
-              {
-                text: 'Add Anyway',
-                onPress: async () => {
-                  const retryResult = await executeMutation(
-                    () =>
-                      createMutation({
-                        variables: {
-                          input: { ...mutationInput, forceAdd: true },
-                        },
-                      }),
-                    'Force add pantry item error:',
-                  );
-                  if (!retryResult) {
-                    alertService.alert(
-                      'Error',
-                      'Failed to add item. Please try again.',
-                    );
-                    resolve(false);
-                    return;
-                  }
-                  if (
-                    isSuccessPayload(
-                      retryResult.data?.createPantryItem,
-                      'CreatePantryItemPayload',
-                    )
-                  ) {
-                    onSuccess?.();
-                    resolve(true);
-                  } else {
-                    alertService.alert(
-                      'Error',
-                      'Failed to add item. Please try again.',
-                    );
-                    resolve(false);
-                  }
-                },
-              },
-            ],
-          );
+          promptPantryDuplicate({
+            onCancel: () => resolve(false),
+            onRestock: async () => {
+              const restockQuantity = quantityValue ?? 1;
+              const restockResult = await executeMutation(
+                () =>
+                  restockMutation({
+                    variables: {
+                      input: {
+                        id: duplicateInfo.existingPantryItemId,
+                        quantity: restockQuantity,
+                      },
+                    },
+                  }),
+                'Restock pantry item error:',
+              );
+              if (!restockResult) {
+                alertService.alert(
+                  'Error',
+                  'Failed to restock item. Please try again.',
+                );
+                resolve(false);
+                return;
+              }
+              onSuccess?.();
+              resolve(true);
+            },
+            onAddAnyway: async () => {
+              const retryResult = await executeMutation(
+                () =>
+                  createMutation({
+                    variables: {
+                      input: { ...mutationInput, forceAdd: true },
+                    },
+                  }),
+                'Force add pantry item error:',
+              );
+              if (!retryResult) {
+                alertService.alert(
+                  'Error',
+                  'Failed to add item. Please try again.',
+                );
+                resolve(false);
+                return;
+              }
+              if (
+                isSuccessPayload(
+                  retryResult.data?.createPantryItem,
+                  'CreatePantryItemPayload',
+                )
+              ) {
+                onSuccess?.();
+                resolve(true);
+              } else {
+                alertService.alert(
+                  'Error',
+                  'Failed to add item. Please try again.',
+                );
+                resolve(false);
+              }
+            },
+          });
         });
       }
     }

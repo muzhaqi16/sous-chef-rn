@@ -14,6 +14,7 @@ import { parseFractionalInput } from '#/utils/fractionUtils';
 import {
   isPantryItemDuplicateError,
   getPantryItemDuplicateInfo,
+  promptPantryDuplicate,
 } from '#/utils/errors/pantryItemDuplicate';
 import {
   executeCacheUpdate,
@@ -264,70 +265,59 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
         // Already in the pantry → the server keeps the existing row, not our
         // optimistic cuid. Evict the phantom optimistic item.
         safeEvict(client.cache, 'PantryItem', id);
-        alertService.alert(
-          'Item Already in Pantry',
-          'This item is already in your pantry. Would you like to restock it or add a separate entry?',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            {
-              text: 'Restock',
-              onPress: async () => {
-                const restockResult = await executeMutation(
-                  () =>
-                    restockPantryItem({
-                      variables: {
-                        input: {
-                          id: duplicateInfo.existingPantryItemId,
-                          quantity,
-                        },
-                      },
-                    }),
-                  'Restock pantry item error:',
-                );
-                if (!restockResult) {
-                  alertService.alert(
-                    'Error',
-                    'Failed to restock item. Please try again.',
-                  );
-                  return;
-                }
-                onSuccess();
-              },
-            },
-            {
-              text: 'Add Anyway',
-              onPress: async () => {
-                const retryResult = await executeMutation(
-                  () =>
-                    createPantryItem({
-                      variables: {
-                        input: { ...mutationInput, forceAdd: true },
-                      },
-                    }),
-                  'Force add pantry item error:',
-                );
-                if (!retryResult) {
-                  alertService.alert(
-                    'Error',
-                    'Failed to add item. Please try again.',
-                  );
-                  return;
-                }
-                if (
-                  retryResult.data?.createPantryItem?.__typename ===
-                  'CreatePantryItemPayload'
-                ) {
-                  onSuccess();
-                } else {
-                  alertService.alert(
-                    'Error',
-                    'Failed to add item. Please try again.',
-                  );
-                }
-              },
-            },
-          ],
-        );
+        promptPantryDuplicate({
+          onRestock: async () => {
+            const restockResult = await executeMutation(
+              () =>
+                restockPantryItem({
+                  variables: {
+                    input: {
+                      id: duplicateInfo.existingPantryItemId,
+                      quantity,
+                    },
+                  },
+                }),
+              'Restock pantry item error:',
+            );
+            if (!restockResult) {
+              alertService.alert(
+                'Error',
+                'Failed to restock item. Please try again.',
+              );
+              return;
+            }
+            onSuccess();
+          },
+          onAddAnyway: async () => {
+            const retryResult = await executeMutation(
+              () =>
+                createPantryItem({
+                  variables: {
+                    input: { ...mutationInput, forceAdd: true },
+                  },
+                }),
+              'Force add pantry item error:',
+            );
+            if (!retryResult) {
+              alertService.alert(
+                'Error',
+                'Failed to add item. Please try again.',
+              );
+              return;
+            }
+            if (
+              retryResult.data?.createPantryItem?.__typename ===
+              'CreatePantryItemPayload'
+            ) {
+              onSuccess();
+            } else {
+              alertService.alert(
+                'Error',
+                'Failed to add item. Please try again.',
+              );
+            }
+          },
+        });
         return;
       }
     }

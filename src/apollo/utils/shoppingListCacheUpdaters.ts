@@ -18,6 +18,8 @@ import {
 } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { DisplayFormat } from '#/graphql/generated/schemaTypes';
 import { createOptimisticEntity } from './createOptimisticResponse';
+import { classifyCreateResult } from './classifyCreateResult';
+import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
 import {
   type ConnectionData,
   createRemoveFromParentConnectionUpdater,
@@ -509,6 +511,39 @@ export function revertOptimisticShoppingListItem(
       completionRate: () => (newTotal > 0 ? completed / newTotal : 0),
     },
   });
+}
+
+/**
+ * Reconcile a local-first shopping-list create after its mutation resolves.
+ *
+ * Every shopping add surface writes the item to the cache before firing and
+ * shares one keep/revert rule: a `'rejected'` result (a real error, or a
+ * non-success payload such as ConflictError/ValidationError) discards the
+ * optimistic item; `'created'` / `'queued'` keep it — a queued create replays
+ * later, keyed by the same `id`. Centralizing the payload key, success typename,
+ * and the stat-aware revert here keeps them in one place so they can't drift
+ * across the many add sites. Returns whether the optimistic item was kept or
+ * reverted so the caller can drive its own success / error UX.
+ */
+export function reconcileShoppingCreate(
+  cache: ApolloCache,
+  listId: string,
+  optimisticId: string,
+  result: { data?: unknown; error?: unknown } | null | undefined,
+): 'kept' | 'reverted' {
+  const outcome = classifyCreateResult(
+    result,
+    'addItemToShoppingList',
+    'AddItemToShoppingListPayload',
+  );
+  if (outcome === 'rejected') {
+    executeCacheUpdate(
+      () => revertOptimisticShoppingListItem(cache, listId, optimisticId),
+      'Revert rejected Shopping List Item',
+    );
+    return 'reverted';
+  }
+  return 'kept';
 }
 
 /**
