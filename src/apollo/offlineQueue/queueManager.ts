@@ -59,7 +59,6 @@ export class QueueManager {
   private config: QueueConfig;
   private isProcessing = false;
   private processingPromise: Promise<void> | null = null;
-  private idMapping = new Map<string, string>(); // clientId → serverId (from sync results)
   private failureHandler: FailureHandler | null = null;
   private drainTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -103,7 +102,6 @@ export class QueueManager {
     logger.info(`🔄 Queue: Starting processing for user ${userId}`);
 
     this.isProcessing = true;
-    this.idMapping.clear(); // Reset ID mappings for fresh processing session
     this.processingPromise = this._processQueueInternal(userId);
 
     try {
@@ -334,28 +332,17 @@ export class QueueManager {
 
     // Dynamic payload extraction — the mutation field name varies per queued
     // operation, so the value shape is only known structurally here.
-    const syncResult = Object.values(result.data || {})[0] as {
-      wasCreated?: boolean;
-      serverId?: string;
-      clientId?: string;
-      conflict?: { message?: string };
-    };
+    const syncResult = Object.values(result.data || {})[0] as
+      | { conflict?: { message?: string } }
+      | undefined;
 
-    // Record the server-assigned id (clientId → serverId) for creates.
-    if (syncResult.wasCreated && syncResult.serverId && syncResult.clientId) {
-      this.idMapping.set(syncResult.clientId, syncResult.serverId);
-      logger.info(
-        `🔗 Queue: Mapped ${syncResult.clientId} → ${syncResult.serverId}`,
-      );
-    }
-
-    // Handle conflicts
-    if (syncResult.conflict) {
+    // Server wins on conflict — the server's version already rides back in the
+    // response; just surface it for diagnostics.
+    if (syncResult?.conflict) {
       logger.warn(
         `⚠️ Queue: Conflict detected for ${mutation.operationName}:`,
         syncResult.conflict.message,
       );
-      // Server wins - return server's version (already in syncResult.item)
     }
 
     return result.data;
@@ -369,7 +356,7 @@ export class QueueManager {
     syncVariables: Record<string, unknown>;
   } {
     const operationName = mutation.operationName;
-    const variables = this.resolveIds(mutation.variables);
+    const variables = mutation.variables;
     const input = (variables.input ?? {}) as {
       id?: string;
       itemId?: string;
@@ -515,51 +502,6 @@ export class QueueManager {
       fragment: QUEUE_ITEM_DATA_FRAGMENT,
     });
     return itemData?.shoppingList?.id;
-  }
-
-  /**
-   * Remap id references the server reassigned (clientId → serverId, recorded in
-   * `idMapping` from sync results) within a queued mutation's variables.
-   *
-   * NOTE: this keys off the legacy `temp-` prefix. With client-generated permanent
-   * cuid ids the id never changes between create and replay, so there is nothing to
-   * remap and this is effectively inert — retained only to migrate any pre-cuid
-   * `temp-` values still sitting in a persisted queue.
-   */
-  private resolveIds<T>(variables: T): T {
-    if (!variables) return variables;
-
-    const resolved = JSON.parse(JSON.stringify(variables)); // Deep clone
-
-    // Replace any legacy temp- id reference with its mapped server id.
-    const replaceIds = (obj: unknown): unknown => {
-      if (!obj || typeof obj !== 'object') return obj;
-
-      if (Array.isArray(obj)) {
-        return obj.map(replaceIds);
-      }
-
-      const record = obj as Record<string, unknown>;
-      for (const [key, value] of Object.entries(record)) {
-        if (
-          (key === 'id' || key.endsWith('Id')) &&
-          typeof value === 'string' &&
-          value.startsWith('temp-')
-        ) {
-          const realId = this.idMapping.get(value);
-          if (realId) {
-            logger.info(`🔄 Queue: Resolved ${value} → ${realId}`);
-            record[key] = realId;
-          }
-        } else if (typeof value === 'object') {
-          record[key] = replaceIds(value);
-        }
-      }
-
-      return record;
-    };
-
-    return replaceIds(resolved) as T;
   }
 
   /**
@@ -852,7 +794,7 @@ export class QueueManager {
   /**
    * Group mutations by entity ID for safe ordering.
    * Same-entity mutations must be processed sequentially to prevent race conditions
-   * (e.g., create followed by update on the same temp-id entity).
+   * (e.g., create followed by update on the same entity id).
    * Mutations targeting different entities can run concurrently.
    */
   private groupByEntity(mutations: QueuedMutation[]): {

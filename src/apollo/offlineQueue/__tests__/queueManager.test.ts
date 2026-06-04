@@ -638,65 +638,6 @@ describe('QueueManager', () => {
   });
 
   // -------------------------------------------------------------------------
-  // resolveIds
-  // -------------------------------------------------------------------------
-  describe('resolveIds', () => {
-    let resolveIds: <T>(variables: T) => T;
-
-    beforeEach(() => {
-      resolveIds = manager['resolveIds'].bind(manager);
-    });
-
-    it('returns null/undefined variables as-is', () => {
-      expect(resolveIds(null)).toBeNull();
-      expect(resolveIds(undefined)).toBeUndefined();
-    });
-
-    it('resolves temp-IDs from idMapping', () => {
-      // Set up a mapping
-      const idMapping = manager['idMapping'];
-      idMapping.set('temp-abc123', 'real-server-id');
-
-      const result = resolveIds({ id: 'temp-abc123', name: 'test' });
-      expect(result.id).toBe('real-server-id');
-    });
-
-    it('does not resolve non-temp IDs', () => {
-      const result = resolveIds({ id: 'regular-id', name: 'test' });
-      expect(result.id).toBe('regular-id');
-    });
-
-    it('resolves IDs nested in objects', () => {
-      const idMapping = manager['idMapping'];
-      idMapping.set('temp-nested', 'real-nested');
-
-      const result = resolveIds({ input: { id: 'temp-nested' } });
-      expect(result.input.id).toBe('real-nested');
-    });
-
-    it('resolves keys ending in Id', () => {
-      const idMapping = manager['idMapping'];
-      idMapping.set('temp-item', 'real-item');
-
-      const result = resolveIds({ input: { itemId: 'temp-item' } });
-      expect(result.input.itemId).toBe('real-item');
-    });
-
-    it('handles arrays inside variables', () => {
-      const idMapping = manager['idMapping'];
-      idMapping.set('temp-arr', 'real-arr');
-
-      const result = resolveIds({ ids: [{ id: 'temp-arr' }] });
-      expect(result.ids[0].id).toBe('real-arr');
-    });
-
-    it('leaves unmapped temp-IDs unchanged', () => {
-      const result = resolveIds({ id: 'temp-unmapped' });
-      expect(result.id).toBe('temp-unmapped');
-    });
-  });
-
-  // -------------------------------------------------------------------------
   // convertToSyncMutation
   // -------------------------------------------------------------------------
   describe('convertToSyncMutation', () => {
@@ -951,7 +892,7 @@ describe('QueueManager', () => {
   });
 
   // -------------------------------------------------------------------------
-  // executeMutation - sync replay, ID mapping and conflict handling
+  // executeMutation - sync replay and conflict handling
   // -------------------------------------------------------------------------
   describe('executeMutation', () => {
     let executeSyncMutation: (mutation: QueuedMutation) => Promise<unknown>;
@@ -959,30 +900,6 @@ describe('QueueManager', () => {
 
     beforeEach(() => {
       executeSyncMutation = manager['executeMutation'].bind(manager);
-    });
-
-    it('stores ID mapping when wasCreated is true', async () => {
-      mockClient.mutate.mockResolvedValue({
-        data: {
-          syncPantryItem: {
-            item: { id: 'server-1' },
-            wasCreated: true,
-            serverId: 'server-1',
-            clientId: 'temp-client-1',
-          },
-        },
-      });
-
-      jest.useRealTimers();
-      const mutation = makeMutation({
-        operationName: 'CreatePantryItem',
-        variables: { input: { id: 'temp-client-1', name: 'Milk' } },
-      });
-      await executeSyncMutation(mutation);
-      jest.useFakeTimers();
-
-      const idMapping = manager['idMapping'];
-      expect(idMapping.get('temp-client-1')).toBe('server-1');
     });
 
     it('handles conflict in sync response', async () => {

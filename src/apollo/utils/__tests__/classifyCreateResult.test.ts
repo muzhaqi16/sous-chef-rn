@@ -16,6 +16,13 @@ describe('classifyCreateResult', () => {
     expect(classifyCreateResult({}, KEY, SUCCESS)).toBe('queued');
   });
 
+  it("returns 'queued' for the queue's null-field result shape", () => {
+    // The offline queue emits each top-level field as null (so Apollo's mutation
+    // result write doesn't warn). A null payload field means queued, not rejected.
+    const result = { data: { createPantryItem: null } };
+    expect(classifyCreateResult(result, KEY, SUCCESS)).toBe('queued');
+  });
+
   it("returns 'rejected' for a non-success payload (e.g. ValidationError)", () => {
     const result = {
       data: { createPantryItem: { __typename: 'ValidationError' } },
@@ -49,7 +56,8 @@ describe('classifyCreateResult', () => {
         'AddItemToShoppingListPayload',
       ),
     ).toBe('created');
-    // Wrong key → the success payload isn't found → treated as rejected (data present).
-    expect(classifyCreateResult(result, KEY, SUCCESS)).toBe('rejected');
+    // Wrong key → the looked-up payload field is absent → indistinguishable from
+    // a queued result, so 'queued' (callers always pass the matching key).
+    expect(classifyCreateResult(result, KEY, SUCCESS)).toBe('queued');
   });
 });

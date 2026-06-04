@@ -312,7 +312,7 @@ describe('createQueueLink', () => {
       });
     });
 
-    it('queues mutation without optimistic response, returns null data', done => {
+    it('queues mutation without optimistic response, returns null-field data', done => {
       mockedGetState.mockReturnValue({
         isOnline: false,
         user: { id: 'user-1' },
@@ -326,7 +326,10 @@ describe('createQueueLink', () => {
       const observable = link.request(operation, forward);
       observable!.subscribe({
         next(result) {
-          expect(result.data).toBeNull();
+          // Each top-level mutation field is emitted as null so Apollo's result
+          // write doesn't warn "Missing field"; the classifier reads a null
+          // payload field as queued.
+          expect(result.data).toEqual({ addItem: null });
           expect(result.extensions).toEqual({ queued: true });
         },
         complete() {

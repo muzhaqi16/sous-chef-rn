@@ -1,6 +1,6 @@
 import { ApolloLink, Observable } from '@apollo/client';
 import { getMainDefinition } from '@apollo/client/utilities';
-import type { DocumentNode } from 'graphql';
+import { Kind, type DocumentNode } from 'graphql';
 import { generateId } from '#/utils/generateId';
 import { logger } from '#/utils/environment';
 import { isNetworkError } from '#/utils/isNetworkError';
@@ -156,10 +156,14 @@ function enqueueAndComplete(
 
     queueStore.addMutation(queuedMutation);
 
-    // Return the optimistic response (or null) so cache updaters receive it; the
-    // `queued` marker lets components show pending UI.
+    // Apollo writes a mutation's result into the cache against its selection set.
+    // A bare `null`/`{}` result makes InMemoryCache warn "Missing field <field>
+    // while writing result {}", so emit each top-level field as `null` instead —
+    // a present-but-null field is a valid, quiet write (Apollo doesn't recurse
+    // into the unselected subfields). The actual UI change comes from each hook's
+    // own optimistic cache write; the `queued` extension marks this as deferred.
     observer.next({
-      data: optimisticResponse ?? null,
+      data: optimisticResponse ?? buildQueuedResultData(operation.query),
       errors: undefined,
       extensions: { queued: true },
     });
@@ -175,6 +179,25 @@ function enqueueAndComplete(
   } catch (error) {
     observer.error(error);
   }
+}
+
+/**
+ * Build a queued mutation's result `data`: each top-level field set to `null`.
+ * See the call site for why a present-but-null field is required (avoids Apollo's
+ * "Missing field" cache-write warning). The classifier treats a `null` payload
+ * field as "queued" and a non-null non-success payload as "rejected".
+ */
+function buildQueuedResultData(query: DocumentNode): Record<string, null> {
+  const definition = getMainDefinition(query);
+  const data: Record<string, null> = {};
+  if (definition.kind === Kind.OPERATION_DEFINITION) {
+    for (const selection of definition.selectionSet.selections) {
+      if (selection.kind === Kind.FIELD) {
+        data[selection.alias?.value ?? selection.name.value] = null;
+      }
+    }
+  }
+  return data;
 }
 
 /**

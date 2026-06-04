@@ -30,11 +30,17 @@ export function classifyCreateResult(
   if (!result) return 'rejected';
 
   const data = result.data as Record<string, unknown> | null | undefined;
-  const payload = data?.[payloadKey] as { __typename?: string } | undefined;
+  const payload = data?.[payloadKey] as
+    | { __typename?: string }
+    | null
+    | undefined;
 
   if (payload?.__typename === successTypename) return 'created';
-  // Data present but not the success payload, or a surfaced error → refused.
-  if (result.error || data) return 'rejected';
-  // Neither data nor error → the request was queued for later replay.
+  // A surfaced error, or a non-success payload object (e.g. ConflictError /
+  // ValidationError) → the server refused it.
+  if (result.error || payload) return 'rejected';
+  // No payload object (the field is null or absent) and no error → the create was
+  // queued for later replay (the offline queue emits each field as null). Keep
+  // the optimistic item.
   return 'queued';
 }
