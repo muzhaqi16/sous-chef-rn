@@ -59,7 +59,7 @@ export class QueueManager {
   private config: QueueConfig;
   private isProcessing = false;
   private processingPromise: Promise<void> | null = null;
-  private idMapping = new Map<string, string>(); // temp-ID → real-ID
+  private idMapping = new Map<string, string>(); // clientId → serverId (from sync results)
   private failureHandler: FailureHandler | null = null;
   private drainTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -307,45 +307,17 @@ export class QueueManager {
   }
 
   /**
-   * Execute a mutation via Apollo Client
-   * Uses sync mutations for offline-queued items to handle temp-IDs
+   * Execute a mutation via Apollo Client.
+   * Replays offline-queued items through their sync mutation (idempotent by the
+   * client-generated id, which rides the replay as `clientId`).
    */
   private async executeMutation(
-    mutation: QueuedMutation,
-  ): Promise<Record<string, unknown> | undefined> {
-    const useSyncMutation = this.shouldUseSync();
-
-    if (useSyncMutation) {
-      return await this.executeSyncMutation(mutation);
-    }
-
-    // Fallback to regular mutation (shouldn't happen for offline-queued items)
-    const result = await client.mutate<Record<string, unknown>>({
-      mutation: mutation.mutation,
-      variables: mutation.variables,
-      context: {
-        ...mutation.context,
-        skipQueueLink: true,
-      },
-    });
-
-    if (result.error) {
-      throw result.error;
-    }
-
-    return result.data;
-  }
-
-  /**
-   * Execute sync mutation and handle ID mapping
-   */
-  private async executeSyncMutation(
     mutation: QueuedMutation,
   ): Promise<Record<string, unknown> | undefined> {
     const { syncMutation, syncVariables } =
       this.convertToSyncMutation(mutation);
 
-    logger.info(`🔄 Queue: Using sync mutation for ${mutation.operationName}`);
+    logger.info(`🔄 Queue: Replaying ${mutation.operationName} via sync`);
 
     const result = await client.mutate<Record<string, unknown>>({
       mutation: syncMutation,
@@ -369,7 +341,7 @@ export class QueueManager {
       conflict?: { message?: string };
     };
 
-    // Handle ID mapping for creates
+    // Record the server-assigned id (clientId → serverId) for creates.
     if (syncResult.wasCreated && syncResult.serverId && syncResult.clientId) {
       this.idMapping.set(syncResult.clientId, syncResult.serverId);
       logger.info(
@@ -422,9 +394,13 @@ export class QueueManager {
 
     // PantryItem sync mutations. SyncPantryItemInput mirrors CreatePantryItemInput
     // with `id` → `clientId` (pantry quantity is a plain Float — no QuantityInput).
+    // `BarcodeCreatePantryItem` creates the same entity from the same input shape,
+    // so it syncs through here too (rather than replaying the original barcode
+    // create, which is also id-idempotent but skips the conflict envelope).
     if (
       operationName === 'CreatePantryItem' ||
-      operationName === 'UpdatePantryItem'
+      operationName === 'UpdatePantryItem' ||
+      operationName === 'BarcodeCreatePantryItem'
     ) {
       const { id: _omitId, ...rest } = input;
       return {
@@ -442,12 +418,18 @@ export class QueueManager {
 
     // ShoppingListItem create/update sync. SyncShoppingListItemFullInput =
     // { clientId, item: SyncShoppingListItemInput }. `shoppingListId` is required
-    // on the item — present on a create input, else read from cache.
+    // on the item — present on a create input, else read from cache. The
+    // specialized single-item creates (barcode, add-from-filtered-pantry,
+    // add-from-pantry-item) produce a ShoppingListItem from the same fields, so
+    // they sync through here too.
     if (
       operationName === 'AddItemToShoppingList' ||
       operationName === 'UpdateShoppingListItem' ||
       operationName === 'UpdateShoppingListItemQuantity' ||
-      operationName === 'ToggleShoppingListItemPurchased'
+      operationName === 'ToggleShoppingListItemPurchased' ||
+      operationName === 'BarcodeAddItemToShoppingList' ||
+      operationName === 'AddItemToShoppingListFromFilteredPantry' ||
+      operationName === 'AddItemToShoppingListFromPantryItem'
     ) {
       const shoppingListId =
         input.shoppingListId ?? this.readShoppingListId(clientId);
@@ -469,6 +451,12 @@ export class QueueManager {
         ...(input.purchased != null && {
           purchaseTracking: { isPurchased: input.purchased },
         }),
+        // Carried by the barcode add (and accepted by SyncShoppingListItemInput)
+        // so replaying through sync doesn't drop them vs. the original mutation.
+        ...(input.brand != null && { brand: input.brand }),
+        ...(input.netWeight != null && { netWeight: input.netWeight }),
+        ...(input.storePrefs != null && { storePrefs: input.storePrefs }),
+        ...(input.pricing != null && { pricing: input.pricing }),
         ...(input.version != null && { version: input.version }),
       };
       return {
@@ -530,14 +518,20 @@ export class QueueManager {
   }
 
   /**
-   * Resolve temp-IDs to real IDs in variables
+   * Remap id references the server reassigned (clientId → serverId, recorded in
+   * `idMapping` from sync results) within a queued mutation's variables.
+   *
+   * NOTE: this keys off the legacy `temp-` prefix. With client-generated permanent
+   * cuid ids the id never changes between create and replay, so there is nothing to
+   * remap and this is effectively inert — retained only to migrate any pre-cuid
+   * `temp-` values still sitting in a persisted queue.
    */
   private resolveIds<T>(variables: T): T {
     if (!variables) return variables;
 
     const resolved = JSON.parse(JSON.stringify(variables)); // Deep clone
 
-    // Recursively replace temp-IDs with real IDs
+    // Replace any legacy temp- id reference with its mapped server id.
     const replaceIds = (obj: unknown): unknown => {
       if (!obj || typeof obj !== 'object') return obj;
 
@@ -566,15 +560,6 @@ export class QueueManager {
     };
 
     return replaceIds(resolved) as T;
-  }
-
-  /**
-   * Determine if mutation should use sync endpoint
-   */
-  private shouldUseSync(): boolean {
-    // Always use sync for offline-queued mutations
-    // The sync mutations handle temp-IDs, version conflicts, and idempotency
-    return true;
   }
 
   /**

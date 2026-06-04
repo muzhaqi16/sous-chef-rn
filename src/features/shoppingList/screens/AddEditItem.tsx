@@ -28,6 +28,7 @@ import {
   addOptimisticShoppingListItem,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
+import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { useShoppingListItemForm } from '#features/shoppingList/hooks/useShoppingListItemForm';
 import { createOptimisticShoppingListItem } from '#features/shoppingList/hooks/mutations/utils';
 import {
@@ -281,13 +282,13 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
           context: { localFirst: true },
         });
 
-        const payload = result.data?.addItemToShoppingList;
-        if (payload?.__typename === 'AddItemToShoppingListPayload') {
-          // Created server-side → reconciled in cache by update(); navigate.
-          navigation.goBack();
-        } else if (result.error || result.data) {
-          // Real (non-network) error or a non-success payload (e.g. ConflictError)
-          // → the server rejected the create. Revert the optimistic item.
+        const outcome = classifyCreateResult(
+          result,
+          'addItemToShoppingList',
+          'AddItemToShoppingListPayload',
+        );
+        if (outcome === 'rejected') {
+          // The server refused the create — revert the optimistic item.
           executeCacheUpdate(
             () => safeEvict(client.cache, 'ShoppingListItem', id),
             'Revert optimistic add',
@@ -299,8 +300,8 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
             }),
           );
         } else {
-          // No data + no error → the create was queued offline / on API-down. The
-          // optimistic item persists and the queue replays it; navigate back.
+          // 'created' or 'queued' — the item is in the cache (and replays if it
+          // was queued offline); navigate back.
           navigation.goBack();
         }
       },

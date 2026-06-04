@@ -9,6 +9,7 @@ import { generateEntityId } from '#/utils/generateEntityId';
 import { addToPantryItemsCache } from '#hooks/home/pantry/utils';
 import { buildOptimisticPantryItem } from '#hooks/home/pantry/buildOptimisticPantryItem';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
+import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import {
   isPantryItemDuplicateError,
@@ -331,19 +332,17 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
       }
     }
 
-    if (
-      result.data?.createPantryItem?.__typename === 'CreatePantryItemPayload'
-    ) {
-      // Created server-side.
-      onSuccess();
-    } else if (result.error || result.data) {
-      // A real error, or a non-success payload (e.g. ValidationError) — the
-      // server rejected the create. Discard the item we showed immediately.
+    const outcome = classifyCreateResult(
+      result,
+      'createPantryItem',
+      'CreatePantryItemPayload',
+    );
+    if (outcome === 'rejected') {
+      // The server refused the create — discard the item we showed.
       safeEvict(client.cache, 'PantryItem', id);
       alertService.alert('Error', 'Failed to add item. Please try again.');
     } else {
-      // No data and no error means the request was queued while offline or the
-      // API was unreachable. The item we wrote stays and the queue replays it.
+      // 'created' or 'queued' — the item stays (and replays if queued offline).
       onSuccess();
     }
   };

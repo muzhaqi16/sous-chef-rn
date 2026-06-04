@@ -873,17 +873,92 @@ describe('QueueManager', () => {
       const input = syncVariables.input as Record<string, unknown>;
       expect(input.clientId).toBeUndefined();
     });
+
+    // Specialized single-item creates map onto the same sync mutations as their
+    // canonical counterparts (they create the same entity from the same fields).
+    it('converts BarcodeCreatePantryItem → SyncPantryItem', () => {
+      const mutation = makeMutation({
+        operationName: 'BarcodeCreatePantryItem',
+        variables: {
+          input: { id: 'p-1', pantryId: 'pan-1', itemId: 'cat-1', quantity: 2 },
+        },
+      });
+      const input = wrapper(convertToSyncMutation(mutation).syncVariables);
+      expect(input.clientId).toBe('p-1');
+      expect(input.pantryId).toBe('pan-1');
+      expect(input.itemId).toBe('cat-1');
+      expect(input.id).toBeUndefined();
+    });
+
+    it('converts BarcodeAddItemToShoppingList → SyncShoppingListItem (keeps brand + netWeight)', () => {
+      const mutation = makeMutation({
+        operationName: 'BarcodeAddItemToShoppingList',
+        variables: {
+          input: {
+            id: 'sl-9',
+            shoppingListId: 'list-1',
+            itemId: 'cat-1',
+            itemName: 'Cereal',
+            quantity: 1,
+            brand: { brandId: 'b1' },
+            netWeight: { netWeight: 500 },
+          },
+        },
+      });
+      const input = wrapper(convertToSyncMutation(mutation).syncVariables);
+      expect(input.clientId).toBe('sl-9');
+      const item = input.item as Record<string, unknown>;
+      expect(item.shoppingListId).toBe('list-1');
+      expect(item.itemName).toBe('Cereal');
+      // Not dropped on sync replay (would be lost if it fell back to replay-original).
+      expect(item.brand).toEqual({ brandId: 'b1' });
+      expect(item.netWeight).toEqual({ netWeight: 500 });
+    });
+
+    it('converts AddItemToShoppingListFromFilteredPantry → SyncShoppingListItem', () => {
+      const mutation = makeMutation({
+        operationName: 'AddItemToShoppingListFromFilteredPantry',
+        variables: {
+          input: { id: 'sl-10', shoppingListId: 'list-1', itemId: 'cat-2' },
+        },
+      });
+      const input = wrapper(convertToSyncMutation(mutation).syncVariables);
+      expect(input.clientId).toBe('sl-10');
+      const item = input.item as Record<string, unknown>;
+      expect(item.shoppingListId).toBe('list-1');
+      expect(item.itemId).toBe('cat-2');
+    });
+
+    it('converts AddItemToShoppingListFromPantryItem → SyncShoppingListItem', () => {
+      const mutation = makeMutation({
+        operationName: 'AddItemToShoppingListFromPantryItem',
+        variables: {
+          input: {
+            id: 'sl-11',
+            shoppingListId: 'list-1',
+            itemId: 'cat-3',
+            itemName: 'Rice',
+            quantity: 3,
+          },
+        },
+      });
+      const input = wrapper(convertToSyncMutation(mutation).syncVariables);
+      expect(input.clientId).toBe('sl-11');
+      const item = input.item as Record<string, unknown>;
+      expect(item.itemName).toBe('Rice');
+      expect(item.quantity).toBe(3);
+    });
   });
 
   // -------------------------------------------------------------------------
-  // executeSyncMutation - ID mapping and conflict handling
+  // executeMutation - sync replay, ID mapping and conflict handling
   // -------------------------------------------------------------------------
-  describe('executeSyncMutation', () => {
+  describe('executeMutation', () => {
     let executeSyncMutation: (mutation: QueuedMutation) => Promise<unknown>;
     const { client: mockClient } = require('../../client');
 
     beforeEach(() => {
-      executeSyncMutation = manager['executeSyncMutation'].bind(manager);
+      executeSyncMutation = manager['executeMutation'].bind(manager);
     });
 
     it('stores ID mapping when wasCreated is true', async () => {

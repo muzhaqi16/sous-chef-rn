@@ -23,6 +23,7 @@ import {
 import { addToPantryItemsCache } from './utils';
 import { buildOptimisticPantryItem } from '#hooks/home/pantry/buildOptimisticPantryItem';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
+import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import {
   executeCacheUpdate,
   executeMutation,
@@ -192,14 +193,18 @@ export function useCreatePantryItem({
       context: { localFirst: true },
     });
 
-    if (
-      isSuccessPayload(result.data?.createPantryItem, 'CreatePantryItemPayload')
-    ) {
+    const outcome = classifyCreateResult(
+      result,
+      'createPantryItem',
+      'CreatePantryItemPayload',
+    );
+
+    if (outcome === 'created') {
       onSuccess?.();
       return true;
     }
 
-    // Check for duplicate pantry item error
+    // Duplicate is a rejection with a recoverable path (restock / add-anyway).
     if (result.error && isPantryItemDuplicateError(result.error)) {
       const duplicateInfo = getPantryItemDuplicateInfo(result.error);
       if (duplicateInfo) {
@@ -287,24 +292,18 @@ export function useCreatePantryItem({
       }
     }
 
-    if (result.error) {
-      // A real (non-network) error came back — the create was rejected. Discard
-      // the item we showed immediately and surface the error.
+    if (outcome === 'rejected') {
+      // The server refused the create — discard the item we showed. Surface a
+      // real (non-network) error; a non-success payload has none.
       safeEvict(client.cache, 'PantryItem', id);
-      handleMutationError(result.error, { operation: 'Create Pantry Item' });
+      if (result.error) {
+        handleMutationError(result.error, { operation: 'Create Pantry Item' });
+      }
       return false;
     }
 
-    if (result.data) {
-      // The server returned a non-success payload (e.g. ValidationError) without
-      // a GraphQL error — also a rejection. Discard the item we showed.
-      safeEvict(client.cache, 'PantryItem', id);
-      return false;
-    }
-
-    // No data and no error means the request was queued while offline or the API
-    // was unreachable. The item we wrote stays in the cache and the queue replays
-    // the create once connectivity returns, so this counts as success.
+    // Queued offline / API unreachable — the item stays in the cache and the
+    // queue replays the create once connectivity returns; count it as success.
     onSuccess?.();
     return true;
   };

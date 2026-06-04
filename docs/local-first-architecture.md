@@ -48,9 +48,12 @@ Lifecycle of a local-first mutation:
 ```
 
 **There is no unified `useLocalFirstMutation` primitive.** The original plan proposed one; in practice
-each hook applies this lifecycle directly, sharing only the cache-write helpers (§3, §5). This kept the
-migration incremental and avoided a heavy abstraction over hooks whose optimistic shapes differ widely
-(rich pantry forms vs. one-line quick-adds vs. batch recipe adds).
+each hook applies this lifecycle directly, sharing only the helpers where the logic is genuinely
+identical: the cache-write helpers (§3, §5) and `classifyCreateResult(result, payloadKey,
+successTypename) → 'created' | 'queued' | 'rejected'` (`apollo/utils/classifyCreateResult.ts`), which
+centralizes the "queued create is success / non-success payload is a rejection" decision so it can't
+drift between sites. What stays per-site — input construction and success UX (navigate / close / toast /
+restock) — is irreducibly site-specific, so a single primitive would be the wrong abstraction over it.
 
 ## 3. Identity — client-generated permanent ids
 
@@ -109,12 +112,16 @@ for qty/move). Replay is single-arg with `clientId` **inside** `input` (the 1-ar
 
 | Tier | Ops | Replay |
 |---|---|---|
-| **Sync-mapped (fast path)** | `CreatePantryItem`, `UpdatePantryItem`, `DeletePantryItem`, `AddItemToShoppingList`, `UpdateShoppingListItem`, `UpdateShoppingListItemQuantity`, `ToggleShoppingListItemPurchased`, `RemoveItemFromShoppingList`, `MoveShoppingListItem`, `ReorderShoppingListItems` | dedicated `Sync*` mutation (`SyncPantryItem`, `SyncShoppingListItem`, `SyncDelete*`, `SyncMove*`), idempotent by `clientId` |
-| **Fallback (replay original)** | the specialized creates — `BarcodeCreatePantryItem`, `BarcodeAddItemToShoppingList`, `AddItemToShoppingListFromRecipe`, `CreateShoppingListItemFromRecipeIngredient`, `AddItemsToShoppingList` (batch), `AddItemToShoppingListFromFilteredPantry`, `AddItemToShoppingListFromPantryItem` | re-sends the **original** mutation; relies on the server's direct-create idempotency (find-by-id → update, by the client-supplied `id` / per-item `id`) |
+| **Sync-mapped (fast path)** | `CreatePantryItem`, `UpdatePantryItem`, `DeletePantryItem`, `AddItemToShoppingList`, `UpdateShoppingListItem`, `UpdateShoppingListItemQuantity`, `ToggleShoppingListItemPurchased`, `RemoveItemFromShoppingList`, `MoveShoppingListItem`, `ReorderShoppingListItems` — **plus the specialized single-item creates** `BarcodeCreatePantryItem` (→ `SyncPantryItem`) and `BarcodeAddItemToShoppingList` / `AddItemToShoppingListFromFilteredPantry` / `AddItemToShoppingListFromPantryItem` (→ `SyncShoppingListItem`) | dedicated `Sync*` mutation, idempotent by `clientId` |
+| **Fallback (replay original)** | `AddItemToShoppingListFromRecipe`, `CreateShoppingListItemFromRecipeIngredient`, `AddItemsToShoppingList` (batch) | re-sends the **original** mutation; relies on the server's direct-create idempotency (find-by-id → update, by the client-supplied `id` / per-item `id`) |
 
-Both tiers are duplicate-safe because the row's PK is the client cuid. The fallback tier exists because
-the specialized inputs don't have a dedicated `Sync*` shape — their server-side create path is itself
-idempotent by id, so re-sending the original is safe.
+Both tiers are duplicate-safe because the row's PK is the client cuid. The specialized single-item
+creates produce the same entity (`PantryItem` / `ShoppingListItem`) from the same input fields as their
+canonical counterparts, so they map onto the same `Sync*` mutation — the shopping item-builder carries
+`brand` / `netWeight` / `storePrefs` / `pricing` through so the barcode add loses nothing on replay. The
+remaining fallback ops genuinely have no clean `Sync*` shape: the recipe-ingredient input is a
+*resolution request* (a `recipeIngredientId`, not a materialized item), and the batch is N items; their
+server create path is itself id-idempotent, so re-sending the original is safe.
 
 Shopping quantity rides the `FlexibleQuantity` scalar (`string | number`, e.g. `"1/3"` or `2`) — passed
 through directly, no `unitId` wrapper. Pantry quantity is a plain `Float`.
@@ -152,13 +159,24 @@ covered by queueLink's `localFirst` network-error branch (§5) plus the drain-on
 
 ## 9. Failure handling & UX
 
-- **Permanent failure.** `queueManager.setFailureHandler` is wired in `useOnlineQueueSync` → a
-  non-blocking toast on a real (non-network) permanent failure. (Automatic per-entity cache revert on
-  permanent failure is a future enhancement; today the toast notifies and the entry is dropped.)
+- **Offline banner.** `OfflineBanner` (`components/atoms/OfflineBanner.tsx`) is mounted in `App.tsx`
+  (inside the SafeAreaView, above `<Navigation />`). It shows "You're offline — changes will sync when
+  reconnected" when the device is offline (or "offline mode" when toggled on). It keys on `isOnline`
+  (device internet), so it does **not** cover the API-down-while-online case, and shows no
+  pending-change count — those are the natural next iteration.
+- **Permanent failure — KNOWN ISSUE (competing handlers).** `setFailureHandler` is registered twice and
+  the second registration wins:
+  - `App.tsx` (module scope) registers a full handler — evict the stale optimistic entity, clear
+    persisted optimistic fields, toast, and **remove the entry from the queue**.
+  - `useOnlineQueueSync` (a `useEffect`, runs after mount) **overrides** it with a toast-only handler.
+
+  `setFailureHandler` replaces (single handler), so the effective behavior is **toast-only**: the
+  permanently-failed entry is **not** evicted/reverted and **not** dequeued (so it can linger in MMKV).
+  The sophisticated `App.tsx` handler is effectively dead code. This needs a decision: keep the full
+  handler (and drop the `useOnlineQueueSync` override) or keep toast-only (and delete the dead handler).
 - **Network errors** no longer raise a blocking alert for opted-in mutations — they queue silently.
-- **Not yet shipped:** a sync-status / pending-changes indicator. `OfflineBanner`
-  (`components/atoms/OfflineBanner.tsx`) exists but is **not mounted** anywhere. Online-only features do
-  not yet have a uniform offline-degraded affordance.
+- **Not yet shipped:** an API-reachability-aware indicator and a pending-changes count; a uniform
+  offline-degraded affordance for online-only features.
 
 ## 10. Scope
 
@@ -219,13 +237,16 @@ their hooks adopt the pattern and the queue gets Sync mappings (or uses the fall
 
 ## 13. Divergences from the original plan (for the record)
 
-- **No `useLocalFirstMutation` primitive** (planned §3.1). Replaced by per-site Pattern B + the two shared
-  cache-writers (§2, §4).
+- **No `useLocalFirstMutation` primitive** (planned §3.1). Replaced by per-site Pattern B + the shared
+  cache-writers (§2, §4) and the `classifyCreateResult` helper.
 - **Identity is client-generated cuid** (planned §8), not temp-id + reconciliation. This removed the
-  largest planned subsystem (`idMapping`, temp→real re-keying).
-- **Offline-UX (sync indicator, graceful-degrade) not shipped** (planned Phase 4). Only the
-  permanent-failure toast exists; `OfflineBanner` is unmounted.
+  largest planned subsystem — `idMapping` + `resolveIds` survive only to migrate any pre-cuid `temp-`
+  values left in a persisted queue, and are otherwise inert.
+- **Offline-UX partially shipped** (planned Phase 4): the device-offline `OfflineBanner` is mounted (§9);
+  the API-reachability-aware indicator and pending-changes count are not.
 - **Granular pantry deltas deliberately deferred** — no idempotent Sync mapping yet.
+- **Two competing `setFailureHandler` registrations** (§9) — the full revert+dequeue handler is shadowed
+  by a toast-only one; needs a decision.
 
 ## 14. Key files
 
@@ -240,4 +261,6 @@ their hooks adopt the pattern and the queue gets Sync mappings (or uses the fall
 | Cache persistence | `src/apollo/ApolloCachePersistence.ts`, `src/apollo/client.ts` |
 | Shared shopping writer | `src/apollo/utils/shoppingListCacheUpdaters.ts` (`addOptimisticShoppingListItem`) |
 | Shared pantry builder | `src/hooks/home/pantry/buildOptimisticPantryItem.ts` |
+| Create-result classifier | `src/apollo/utils/classifyCreateResult.ts` |
+| Offline banner (mounted in `App.tsx`) | `src/components/atoms/OfflineBanner.tsx` |
 | Primary add hooks | `src/features/shoppingList/hooks/mutations/useAddShoppingItem.ts`, `src/hooks/home/pantry/usePantryItemMutations.ts` |
