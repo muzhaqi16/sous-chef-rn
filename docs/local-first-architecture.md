@@ -61,8 +61,9 @@ Lifecycle of a local-first mutation:
 Every add site — **including the primary `useAddShoppingItem` / `usePantryItemMutations.addItem`** —
 classifies the resolved result and reverts on a non-success payload. This matters because under the
 global `errorPolicy: 'all'` a `ValidationError` / `ConflictError` **resolves** (it's a valid union member,
-not a thrown error), so `onError` never fires; only inspecting `result` via `classifyCreateResult` catches
-it. Skipping this is what would leave a permanent phantom row.
+not a thrown error), so `onError` never fires; only inspecting `result` catches it. Skipping this is what
+would leave a permanent phantom row. Shopping sites do this through `reconcileShoppingCreate` (§4); pantry
+sites call `classifyCreateResult` directly and evict.
 
 **There is no unified `useLocalFirstMutation` primitive.** The original plan proposed one; in practice
 each hook applies this lifecycle directly, sharing only the helpers where the logic is genuinely
@@ -104,11 +105,18 @@ the item into the cache before firing. Two shared writers keep this DRY:
   builds the complete `PantryItem` shape that `addToPantryItemsCache` writes (an incomplete shape makes a
   list cell's `useFragment` report `complete: false` and blank the row).
 
-Two shared reconcilers keep the response path DRY across all shopping add sites:
+Three shared reconcilers keep the response path DRY across all shopping add sites:
+- **`reconcileShoppingCreate(cache, listId, id, result) → 'kept' | 'reverted'`** — the keep/revert
+  decision every shopping add site applies to its resolved create. Classifies the result and, on a
+  rejection, reverts (entity + stats); returns the outcome so the caller drives its own success / error UX.
+  Centralizes the payload key (`addItemToShoppingList`), success typename, and the stat-aware revert in one
+  place so they can't drift across sites.
 - **`adoptServerShoppingListItemId(cache, serverId, clientId)`** — catalog-merge: evicts the optimistic
   cuid when the server returned a different (merged) id. Reads `clientId` off the mutation's own
   `variables.input.id` (never a shared ref), so it stays correct when adds overlap.
-- **`revertOptimisticShoppingListItem(cache, listId, clientId)`** — the stat-aware rejection revert (§2).
+- **`revertOptimisticShoppingListItem(cache, listId, clientId)`** — the stat-aware revert primitive that
+  `reconcileShoppingCreate` calls; also used directly on the thrown-error (`.catch` / `onError`) path,
+  where there's no result to classify (§2).
 
 The primary hooks (`useAddShoppingItem`, `usePantryItemMutations`) and the secondary add sites all route
 through these.
@@ -324,7 +332,7 @@ their hooks adopt the pattern and the queue gets Sync mappings (or uses the fall
 | Cache persistence (debounce + `flushPending`) | `src/apollo/offline/ApolloCachePersistence.ts`, `src/apollo/client.ts` (`flushCachePersistence`) |
 | Background flush trigger | `src/hooks/app/useAppStateLifecycle.ts` |
 | Pending-aware connection merge | `src/apollo/cache.ts` (`itemsConnectionFieldPolicy`) + `queueStore.getPendingClientIds()` |
-| Shared shopping writers/reconcilers | `src/apollo/utils/shoppingListCacheUpdaters.ts` (`createOptimisticShoppingListItem`, `addOptimisticShoppingListItem`, `adoptServerShoppingListItemId`, `revertOptimisticShoppingListItem`) |
+| Shared shopping writers/reconcilers | `src/apollo/utils/shoppingListCacheUpdaters.ts` (`createOptimisticShoppingListItem`, `addOptimisticShoppingListItem`, `reconcileShoppingCreate`, `adoptServerShoppingListItemId`, `revertOptimisticShoppingListItem`) |
 | Shared pantry builder | `src/hooks/home/pantry/buildOptimisticPantryItem.ts` |
 | Create-result classifier | `src/apollo/utils/classifyCreateResult.ts` |
 | Offline banner (mounted in `App.tsx`) | `src/components/atoms/OfflineBanner.tsx` |
