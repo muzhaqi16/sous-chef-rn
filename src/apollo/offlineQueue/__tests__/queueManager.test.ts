@@ -10,6 +10,10 @@ import {
   ProcessingResult,
 } from '../types';
 import { convertToSyncMutation as convertToSyncMutationFn } from '../convertToSyncMutation';
+import {
+  classifyError as classifyErrorFn,
+  calculateRetryDelay as calculateRetryDelayFn,
+} from '../queueErrorPolicy';
 
 // Mock the store module
 jest.mock('#store', () => ({
@@ -178,12 +182,8 @@ describe('QueueManager', () => {
   // classifyError (tested through handleMutationError behavior)
   // -------------------------------------------------------------------------
   describe('classifyError', () => {
-    // Access private method via any cast for unit testing
-    let classifyError: (error: unknown) => QueueError;
-
-    beforeEach(() => {
-      classifyError = manager['classifyError'].bind(manager);
-    });
+    // classifyError is now a standalone pure function in queueErrorPolicy.
+    const classifyError = classifyErrorFn;
 
     it('classifies UNAUTHENTICATED as auth error', () => {
       const result = classifyError({
@@ -611,11 +611,10 @@ describe('QueueManager', () => {
   });
 
   describe('calculateRetryDelay', () => {
-    let calculateRetryDelay: (retryCount: number) => number;
-
-    beforeEach(() => {
-      calculateRetryDelay = manager['calculateRetryDelay'].bind(manager);
-    });
+    // calculateRetryDelay is now a standalone function taking the base delay
+    // explicitly; the manager passes config.retryDelayMs (10 in this suite).
+    const calculateRetryDelay = (retryCount: number) =>
+      calculateRetryDelayFn(retryCount, 10);
 
     it('uses exponential backoff', () => {
       // With retryDelayMs = 10
