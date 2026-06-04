@@ -1,6 +1,6 @@
 import React, { useState, useLayoutEffect } from 'react';
 import { View } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -54,11 +54,8 @@ export const CollapsibleChipPicker = <T extends string>({
   return (
     <View style={commonStyles.bottomSheetSection}>
       {/* Collapsed header row */}
-      <Pressable
-        style={({ pressed }) => [
-          styles.collapsedRow,
-          pressed && styles.pressed,
-        ]}
+      <AppPressable
+        style={styles.collapsedRow}
         onPress={() => setExpanded(prev => !prev)}
       >
         <Text style={commonStyles.bottomSheetSectionLabel}>{label}</Text>
@@ -72,8 +69,7 @@ export const CollapsibleChipPicker = <T extends string>({
             <Icon name="chevron-down" size={20} tone="textSecondary" />
           </Animated.View>
         </View>
-      </Pressable>
-
+      </AppPressable>
       {/* Expanded chip grid */}
       {!!expanded && (
         <Animated.View
@@ -85,12 +81,11 @@ export const CollapsibleChipPicker = <T extends string>({
             {options.map(option => {
               const selected = option.value === selectedValue;
               return (
-                <Pressable
+                <AppPressable
                   key={option.value}
-                  style={({ pressed }) => [
+                  style={[
                     commonStyles.bottomSheetOption,
                     selected && commonStyles.bottomSheetOptionSelected,
-                    pressed && styles.pressed,
                   ]}
                   onPress={() => handleSelect(option.value)}
                 >
@@ -105,7 +100,7 @@ export const CollapsibleChipPicker = <T extends string>({
                   {selected ? (
                     <Icon name="checkmark" size={16} tone="primary" />
                   ) : null}
-                </Pressable>
+                </AppPressable>
               );
             })}
           </View>

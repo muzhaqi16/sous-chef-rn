@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { FormInput } from '#/components/molecules/FormInput';
@@ -101,7 +101,6 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
       <Text size="lg" weight="semibold" style={styles.sectionTitle}>
         Units
       </Text>
-
       {entries.map((entry, index) => (
         <View key={entry.id}>
           <View style={styles.entryRow}>
@@ -130,16 +129,13 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
                 }
               />
             </View>
-            <Pressable
+            <AppPressable
               onPress={() => handleRemoveEntry(index)}
               disabled={disabled}
-              style={({ pressed }) => [
-                styles.deleteButton,
-                pressed && styles.pressed,
-              ]}
+              style={styles.deleteButton}
             >
               <Icon name="trash-outline" size={20} tone="error" />
-            </Pressable>
+            </AppPressable>
           </View>
           {!!entry.packageSize && parseFloat(entry.packageSize) > 0 && (
             <View style={styles.contentUnitRow}>
@@ -159,7 +155,6 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
           )}
         </View>
       ))}
-
       <Button variant="secondary" onPress={handleAddEntry} disabled={disabled}>
         Add Unit
       </Button>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Platform } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import DateTimePicker, {
   DateTimePickerEvent,
 } from '@react-native-community/datetimepicker';
@@ -71,25 +71,20 @@ export const DatePickerField: React.FC<DatePickerFieldProps> = ({
   return (
     <View style={styles.container} testID={testID}>
       {label ? <Label required={required}>{label}</Label> : null}
-      <Pressable
-        style={({ pressed }) => [
-          styles.input,
-          error && styles.inputError,
-          pressed && styles.pressed,
-        ]}
+      <AppPressable
+        style={[styles.input, error && styles.inputError]}
         onPress={handlePress}
       >
         <Icon name="calendar-outline" size={20} tone="textSecondary" />
         <Text size="md" style={[styles.dateText, !value && styles.placeholder]}>
           {value ? formatDate(value) : placeholder}
         </Text>
-      </Pressable>
+      </AppPressable>
       {error ? (
         <Text size="sm" tone="error" style={styles.errorText}>
           {error}
         </Text>
       ) : null}
-
       {!!showPicker && (
         <DateTimePicker
           style={styles.calendarPicker}

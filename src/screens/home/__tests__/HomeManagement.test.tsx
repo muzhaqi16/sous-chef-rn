@@ -12,12 +12,6 @@ jest.mock('#hooks/navigation/useAppNavigation');
 
 jest.mock('#hooks/performance/useScreenTransition');
 
-jest.mock('#/hooks/auth/useAuth', () => ({
-  useAuth: jest.fn(() => ({
-    user: { id: 'user-1', email: 'test@example.com' },
-  })),
-}));
-
 jest.mock('#hooks/home/hooks/useHomeManagement', () => ({
   useHomeManagement: jest.fn(() => ({
     homes: [

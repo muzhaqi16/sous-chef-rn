@@ -75,6 +75,8 @@ jest.mock('#store/slices/notificationSlice', () => ({
     HIGH: 'HIGH',
     URGENT: 'URGENT',
   },
+  isNotificationPayload: (value: unknown): boolean =>
+    typeof value === 'object' && value !== null && !Array.isArray(value),
 }));
 
 jest.mock('#utils/subscriptionErrorHandler', () => ({

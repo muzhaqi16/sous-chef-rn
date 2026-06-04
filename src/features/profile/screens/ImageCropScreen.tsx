@@ -3,7 +3,7 @@ import { View, Image, Dimensions } from 'react-native';
 import { alertService } from '#/services/alertService';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -332,7 +332,6 @@ export const ImageCropScreen: React.FC<
           },
         ]}
       />
-
       <View style={styles.content}>
         <Text
           size="sm"
@@ -387,18 +386,15 @@ export const ImageCropScreen: React.FC<
         </View>
 
         <View style={styles.buttonContainer}>
-          <Pressable
+          <AppPressable
             onPress={handleCrop}
-            style={({ pressed }) => [
-              styles.cropButton,
-              pressed && styles.pressed,
-            ]}
+            style={styles.cropButton}
             disabled={isCropping || !imageLoaded}
           >
             <Text size="md" weight="semibold" style={styles.cropButtonText}>
               {isCropping ? 'Cropping...' : 'Crop Photo'}
             </Text>
-          </Pressable>
+          </AppPressable>
         </View>
       </View>
     </SafeAreaView>

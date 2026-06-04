@@ -157,16 +157,7 @@ const styles = StyleSheet.create(theme => ({
     marginVertical: theme.spacing.sm,
     // borderRadius needed for shadow to follow card shape
     borderRadius: theme.radii.md,
-    // Shadow styles
-    boxShadow: [
-      {
-        offsetX: 0,
-        offsetY: 4,
-        blurRadius: 15,
-        spreadDistance: 1,
-        color: theme.colors.black + '1A',
-      },
-    ],
+    ...theme.shadows.card,
   },
   highlightOverlay: {
     position: 'absolute',

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 
 import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
 import {
   launchCamera,
@@ -180,12 +181,8 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
 
   return (
     <>
-      <Pressable
-        style={({ pressed }) => [
-          styles.pickerButton,
-          disabled && styles.pickerButtonDisabled,
-          pressed && styles.pressed,
-        ]}
+      <AppPressable
+        style={[styles.pickerButton, disabled && styles.pickerButtonDisabled]}
         onPress={showImagePicker}
         disabled={disabled}
       >
@@ -193,7 +190,7 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
         <Text size="base" weight="medium" tone="accent">
           Add Photo
         </Text>
-      </Pressable>
+      </AppPressable>
       {renderSheet()}
     </>
   );

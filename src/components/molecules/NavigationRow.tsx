@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import type { Icon as IconType } from '#utils/iconUtils';
@@ -29,8 +29,8 @@ export const NavigationRow: React.FC<NavigationRowProps> = ({
   const accessibilityLabel = subtitle ? `${title}, ${subtitle}` : title;
 
   return (
-    <Pressable
-      style={({ pressed }) => [styles.navigationRow, pressed && styles.pressed]}
+    <AppPressable
+      style={styles.navigationRow}
       onPress={onPress}
       android_ripple={RIPPLE.SUBTLE}
       accessibilityRole="button"
@@ -51,7 +51,7 @@ export const NavigationRow: React.FC<NavigationRowProps> = ({
         </View>
       </View>
       <Icon name="chevron-forward" size={20} />
-    </Pressable>
+    </AppPressable>
   );
 };
 

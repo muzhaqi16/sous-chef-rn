@@ -12,6 +12,10 @@ export function useIsOnboarding(): boolean {
   return useNavigationState() === 'onboarding';
 }
 
+export function useIsBiometricSetup(): boolean {
+  return useNavigationState() === 'biometric_setup';
+}
+
 export function useIsMainApp(): boolean {
   return useNavigationState() === 'main_app';
 }

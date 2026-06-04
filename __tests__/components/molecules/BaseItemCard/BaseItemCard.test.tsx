@@ -1,8 +1,8 @@
 'use no memo';
 
 import React from 'react';
-import { Text } from 'react-native';
 import { render, userEvent } from '@testing-library/react-native';
+import { Text } from '#components/atoms/Text';
 import type { Theme } from '../../../../src/theme/themes';
 import { BaseItemCard } from '../../../../src/components/molecules/BaseItemCard/BaseItemCard';
 

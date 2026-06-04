@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon, type IconLibrary } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
@@ -29,12 +29,8 @@ export const ActionCard: React.FC<ActionCardProps> = ({
   testID,
 }) => {
   return (
-    <Pressable
-      style={({ pressed }) => [
-        styles.container,
-        disabled && styles.disabled,
-        pressed && styles.pressed,
-      ]}
+    <AppPressable
+      style={[styles.container, disabled && styles.disabled]}
       onPress={onPress}
       disabled={disabled}
       testID={testID}
@@ -56,7 +52,7 @@ export const ActionCard: React.FC<ActionCardProps> = ({
       >
         {label}
       </Text>
-    </Pressable>
+    </AppPressable>
   );
 };
 

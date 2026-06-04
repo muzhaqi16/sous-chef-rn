@@ -218,7 +218,11 @@ describe('useRecipeForm', () => {
     expect(input.servings).toBe(6);
     expect(input.ingredients).toHaveLength(1);
     expect(input.instructions).toHaveLength(1);
-    expect(input.instructions[0].step).toBe(1);
+    // instructions is a JSON scalar (JsonInput union); narrow via Array.isArray.
+    expect(Array.isArray(input.instructions)).toBe(true);
+    if (Array.isArray(input.instructions)) {
+      expect(input.instructions[0].step).toBe(1);
+    }
   });
 
   it('buildUpdateInput creates update structure', () => {

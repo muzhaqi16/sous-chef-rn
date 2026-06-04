@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { InlineAutocomplete } from '../InlineAutocomplete';
 import { BottomSheetAutocompleteInput } from '../BottomSheetAutocompleteInput';
@@ -57,13 +57,7 @@ function AddNewFooter({
   onPress: () => void;
 }) {
   return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [
-        footerStyles.container,
-        pressed && footerStyles.pressed,
-      ]}
-    >
+    <AppPressable onPress={onPress} style={footerStyles.container}>
       <Text
         size="xl"
         weight="semibold"
@@ -76,7 +70,7 @@ function AddNewFooter({
       <Text size="md" weight="semibold" tone="accent">
         {label}
       </Text>
-    </Pressable>
+    </AppPressable>
   );
 }
 

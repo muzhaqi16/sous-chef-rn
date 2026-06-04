@@ -20,13 +20,13 @@ jest.mock(
 );
 
 import React from 'react';
-import { Text } from 'react-native';
 import {
   render,
   screen,
   userEvent,
   waitFor,
 } from '@testing-library/react-native';
+import { Text } from '#components/atoms/Text';
 import { NavigationContainer } from '@react-navigation/native';
 import {
   createBottomTabNavigator,

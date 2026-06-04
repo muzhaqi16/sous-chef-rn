@@ -33,7 +33,7 @@ export { ThemedBottomSheetModal as BottomSheetModal };
  */
 export type BottomSheetModalRef = GorhomBottomSheetModal;
 
-interface UseStandardBottomSheetOptions {
+export interface UseStandardBottomSheetOptions {
   /** When provided, auto-manages present/dismiss. Omit to manage presentation manually via ref. */
   visible?: boolean;
   onDismiss: () => void;

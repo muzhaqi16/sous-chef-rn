@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import Animated, {
   FadeIn,
@@ -27,12 +27,11 @@ const ActionButton: React.FC<{
       entering={FadeInUp.delay(index * 15).duration(TIMING.FAST)}
       layout={LinearTransition}
     >
-      <Pressable
-        style={({ pressed }) => [
+      <AppPressable
+        style={[
           styles.actionButton,
           variant === 'primary' ? styles.primaryButton : styles.secondaryButton,
           action.disabled && styles.disabledButton,
-          pressed && styles.pressed,
         ]}
         onPress={action.onPress}
         disabled={action.disabled}
@@ -57,7 +56,7 @@ const ActionButton: React.FC<{
         >
           {action.label}
         </Text>
-      </Pressable>
+      </AppPressable>
     </Animated.View>
   );
 };

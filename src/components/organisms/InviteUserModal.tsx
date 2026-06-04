@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { Modal, View, Text, ScrollView } from 'react-native';
+import { Modal, View, ScrollView } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
+import { Text } from '#components/atoms/Text';
 import { StyleSheet } from 'react-native-unistyles';
 import {
   ThemedTextInput,
   WhiteActivityIndicator as ThemedActivityIndicator,
 } from '#components/atoms/themedComponents';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
+import { Icon } from '#/utils/iconUtils';
 import { useIsEffectivelyOffline } from '#hooks/settings/useOfflineMode';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 import { errorMessageOr } from '#/services/errorService';
@@ -30,25 +32,25 @@ function buildRoleOptions(t: TFn) {
       value: MembershipRole.Member,
       label: t('inviteUser.roleMemberLabel'),
       description: t('inviteUser.roleMemberDescription'),
-      icon: '👤',
+      icon: 'person',
     },
     {
       value: MembershipRole.Admin,
       label: t('inviteUser.roleAdminLabel'),
       description: t('inviteUser.roleAdminDescription'),
-      icon: '⚙️',
+      icon: 'settings-outline',
     },
     {
       value: MembershipRole.Guest,
       label: t('inviteUser.roleGuestLabel'),
       description: t('inviteUser.roleGuestDescription'),
-      icon: '👁️',
+      icon: 'eye-outline',
     },
     {
       value: MembershipRole.Owner,
       label: t('inviteUser.roleOwnerLabel'),
       description: t('inviteUser.roleOwnerDescription'),
-      icon: '👑',
+      icon: 'key',
       warning: true,
     },
   ];
@@ -73,29 +75,33 @@ const RoleOption: React.FC<RoleOptionProps> = ({
 }) => {
   styles.useVariants({ selected });
   return (
-    <Pressable
-      style={({ pressed }) => [styles.roleOption, pressed && styles.pressed]}
+    <AppPressable
+      style={styles.roleOption}
       onPress={onPress}
       disabled={disabled}
     >
       <View style={styles.roleOptionContent}>
-        <View style={styles.roleHeader}>
+        <View style={styles.roleMain}>
           <View style={styles.roleHeaderLeft}>
-            <Text style={styles.roleIcon}>{role.icon}</Text>
+            <Icon
+              name={role.icon}
+              size={22}
+              tone={selected ? 'primary' : 'textSecondary'}
+            />
             <Text style={styles.roleOptionLabel}>{role.label}</Text>
           </View>
-          <View style={styles.radioContainer}>
-            <View style={styles.radioOuter}>
-              {selected ? <View style={styles.radioInner} /> : null}
-            </View>
+          <Text style={styles.roleDescription}>{role.description}</Text>
+          {!!role.warning && selected ? (
+            <Text style={styles.warningText}>{warningText}</Text>
+          ) : null}
+        </View>
+        <View style={styles.radioContainer}>
+          <View style={styles.radioOuter}>
+            {selected ? <View style={styles.radioInner} /> : null}
           </View>
         </View>
-        <Text style={styles.roleDescription}>{role.description}</Text>
-        {!!role.warning && selected ? (
-          <Text style={styles.warningText}>{warningText}</Text>
-        ) : null}
       </View>
-    </Pressable>
+    </AppPressable>
   );
 };
 
@@ -241,24 +247,20 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
 
             {/* Action Buttons */}
             <View style={styles.buttonContainer}>
-              <Pressable
-                style={({ pressed }) => [
-                  styles.cancelButton,
-                  pressed && styles.pressed,
-                ]}
+              <AppPressable
+                style={styles.cancelButton}
                 onPress={handleClose}
                 disabled={isSubmitting}
               >
                 <Text style={styles.cancelButtonText}>
                   {resolvedCancelText}
                 </Text>
-              </Pressable>
+              </AppPressable>
 
-              <Pressable
-                style={({ pressed }) => [
+              <AppPressable
+                style={[
                   styles.submitButton,
                   (isSubmitting || isOffline) && styles.disabledButton,
-                  pressed && styles.pressed,
                 ]}
                 onPress={handleSubmit}
                 disabled={isSubmitting || isOffline}
@@ -270,7 +272,7 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
                     {resolvedSubmitText}
                   </Text>
                 )}
-              </Pressable>
+              </AppPressable>
             </View>
           </ScrollView>
         </View>
@@ -349,16 +351,13 @@ const styles = StyleSheet.create(theme => ({
     },
   },
   roleOptionContent: {
-    position: 'relative',
-  },
-  roleHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: theme.spacing.xs,
+    gap: theme.spacing.sm,
   },
-  roleIcon: {
-    fontSize: theme.typography.fontSize.xl,
+  roleMain: {
+    flex: 1,
   },
   radioContainer: {},
   radioOuter: {
@@ -385,6 +384,7 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.sm,
+    marginBottom: theme.spacing.xs,
   },
   roleOptionLabel: {
     fontSize: theme.typography.fontSize.md,

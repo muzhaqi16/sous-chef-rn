@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Modal } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
@@ -40,25 +40,16 @@ export const RememberMeModal: React.FC<{
           </Text>
 
           <View style={styles.modalButtons}>
-            <Pressable
-              style={({ pressed }) => [
-                styles.modalButtonSecondary,
-                pressed && styles.pressed,
-              ]}
+            <AppPressable
+              style={styles.modalButtonSecondary}
               onPress={onDecline}
             >
               <Text size="md" weight="semibold">
                 {t('rememberMe.notNow')}
               </Text>
-            </Pressable>
+            </AppPressable>
 
-            <Pressable
-              style={({ pressed }) => [
-                styles.modalButtonPrimary,
-                pressed && styles.pressed,
-              ]}
-              onPress={onAccept}
-            >
+            <AppPressable style={styles.modalButtonPrimary} onPress={onAccept}>
               <Text
                 size="md"
                 weight="semibold"
@@ -66,7 +57,7 @@ export const RememberMeModal: React.FC<{
               >
                 {t('rememberMe.remember')}
               </Text>
-            </Pressable>
+            </AppPressable>
           </View>
         </View>
       </View>

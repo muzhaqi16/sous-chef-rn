@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
+import { useTranslation } from 'react-i18next';
 import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
 import { useNavigation } from '@react-navigation/native';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { Header } from '#components/molecules/Header';
 import { Button } from '#components/base/Button';
 import { Icon } from '#utils/iconUtils';
+import { SousChefLoader } from '#/components/base/SousChefLoader';
 import { useMutation } from '@apollo/client/react';
 import { JoinShoppingListByShareCodeDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { useJoinLinkAuthGate } from '#hooks/deepLink/useJoinLinkAuthGate';
 import { useStore } from '#store';
 import { toastService } from '#/services/toastService';
 import {
@@ -21,9 +24,14 @@ import { Text } from '#components/atoms/Text';
 export const JoinByShareCodeScreen: React.FC<
   StaticScreenProps<{ shareCode?: string }>
 > = ({ route }) => {
+  const { t } = useTranslation();
   const { goBack } = useNavigation();
   const { toShoppingListMain } = useAppNavigation();
   const initialCode = route.params?.shareCode ?? '';
+
+  // Joining requires auth — queue the code and redirect to sign-in when logged
+  // out (replayed after login by useDeepLinkRouter).
+  const isLoggedOut = useJoinLinkAuthGate('join_list', initialCode);
 
   const [code, setCode] = useState(initialCode);
   const [joining, setJoining] = useState(false);
@@ -33,7 +41,7 @@ export const JoinByShareCodeScreen: React.FC<
   const handleJoin = () => {
     const trimmed = code.trim();
     if (!trimmed) {
-      toastService.error('Please enter a share code');
+      toastService.error(t('shoppingListScreens.joinEmptyCodeError'));
       return;
     }
 
@@ -46,28 +54,48 @@ export const JoinByShareCodeScreen: React.FC<
         const result = unwrapPayload(
           data?.joinShoppingListByShareCode,
           'JoinShoppingListByShareCodePayload',
-          'Failed to join list. The code may be invalid or expired.',
+          t('shoppingListScreens.joinFailed'),
         );
 
         useStore.getState().setSelectedShoppingListId(result.shoppingList.id);
         goBack();
         toShoppingListMain();
         toastService.success(
-          `Joined "${result.shoppingList.name || 'Shopping List'}"`,
+          t('shoppingListScreens.joinedToast', {
+            name:
+              result.shoppingList.name || t('shoppingListScreens.listFallback'),
+          }),
         );
       },
       setJoining,
       () => {
-        toastService.error(
-          'Failed to join list. The code may be invalid or expired.',
-        );
+        toastService.error(t('shoppingListScreens.joinFailed'));
       },
     );
   };
 
+  if (isLoggedOut) {
+    return (
+      <View style={styles.container}>
+        <Header
+          title={t('shoppingListScreens.joinTitle')}
+          onBack={() => goBack()}
+          centerTitle
+        />
+        <View style={styles.loader}>
+          <SousChefLoader size="small" showBrand={false} />
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      <Header title="Join Shopping List" onBack={() => goBack()} centerTitle />
+      <Header
+        title={t('shoppingListScreens.joinTitle')}
+        onBack={() => goBack()}
+        centerTitle
+      />
 
       <View style={styles.content}>
         <View style={styles.iconContainer}>
@@ -75,7 +103,7 @@ export const JoinByShareCodeScreen: React.FC<
         </View>
 
         <Text size="lg" weight="semibold" align="center" style={styles.title}>
-          Enter Share Code
+          {t('shoppingListScreens.joinEnterCodeTitle')}
         </Text>
         <Text
           size="md"
@@ -83,7 +111,7 @@ export const JoinByShareCodeScreen: React.FC<
           align="center"
           style={styles.description}
         >
-          Enter the share code you received to join a shopping list.
+          {t('shoppingListScreens.joinEnterCodeDescription')}
         </Text>
 
         <BaseInput
@@ -91,24 +119,19 @@ export const JoinByShareCodeScreen: React.FC<
           style={styles.inputText}
           value={code}
           onChangeText={setCode}
-          placeholder="Enter share code"
+          placeholder={t('shoppingListScreens.joinCodePlaceholder')}
           autoCapitalize="none"
           autoCorrect={false}
           editable={!joining}
         />
 
         <Button
-          title={joining ? '' : 'Join List'}
+          title={t('shoppingListScreens.joinButton')}
           onPress={handleJoin}
-          disabled={joining || !code.trim()}
+          loading={joining}
+          disabled={!code.trim()}
           style={styles.joinButton}
-        >
-          {joining ? (
-            <ActivityIndicator size="small" color="white" />
-          ) : (
-            'Join List'
-          )}
-        </Button>
+        />
       </View>
     </View>
   );
@@ -118,6 +141,11 @@ const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  loader: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   content: {
     flex: 1,

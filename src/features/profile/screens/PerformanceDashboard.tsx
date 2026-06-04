@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, ScrollView, type StyleProp, type TextStyle } from 'react-native';
-import {
-  Pressable,
-  ThemedRefreshControl,
-} from '#components/atoms/themedComponents';
+import { ThemedRefreshControl } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from 'react-i18next';
@@ -672,17 +670,11 @@ export const PerformanceDashboard: React.FC = () => {
         {(slowestComponents.length > 0 ||
           slowestScreens.length > 0 ||
           recentMemorySnapshots.length > 0) && (
-          <Pressable
-            style={({ pressed }) => [
-              styles.clearButton,
-              pressed && styles.pressed,
-            ]}
-            onPress={handleClearData}
-          >
+          <AppPressable style={styles.clearButton} onPress={handleClearData}>
             <Text size="md" weight="semibold" style={styles.clearButtonText}>
               {t('performance.clearData')}
             </Text>
-          </Pressable>
+          </AppPressable>
         )}
       </ScrollView>
     </ProfileScreenWrapper>

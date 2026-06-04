@@ -81,36 +81,48 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.base,
     fontWeight: theme.fonts.weight.regular,
     variants: {
+      // Every variant carries a default lineHeight (leading) so text isn't
+      // cramped at the platform default (~1.0–1.2×). Large display variants
+      // also get slight negative tracking, which reads as more premium.
+      // Leading ratios: headings ~1.2–1.3×, body/label ~1.4–1.5×.
       variant: {
         title: {
           fontSize: theme.fonts.size['2xl'],
           fontWeight: theme.fonts.weight.bold,
           lineHeight: theme.fonts.size['2xl'] * 1.2,
+          letterSpacing: theme.typography.letterSpacing.tight,
         },
         subtitle: {
           fontSize: theme.fonts.size.xl,
           fontWeight: theme.fonts.weight.semibold,
+          lineHeight: theme.fonts.size.xl * 1.25,
+          letterSpacing: theme.typography.letterSpacing.tight,
         },
         heading: {
           fontSize: theme.fonts.size.lg,
           fontWeight: theme.fonts.weight.semibold,
+          lineHeight: theme.fonts.size.lg * 1.3,
         },
         body: {
           fontSize: theme.fonts.size.md,
           fontWeight: theme.fonts.weight.regular,
+          lineHeight: theme.fonts.size.md * 1.5,
         },
         caption: {
           fontSize: theme.fonts.size.sm,
           fontWeight: theme.fonts.weight.regular,
+          lineHeight: theme.fonts.size.sm * 1.4,
           color: theme.colors.textSecondary,
         },
         label: {
           fontSize: theme.fonts.size.md,
           fontWeight: theme.fonts.weight.medium,
+          lineHeight: theme.fonts.size.md * 1.4,
         },
         error: {
           fontSize: theme.fonts.size.sm,
           fontWeight: theme.fonts.weight.regular,
+          lineHeight: theme.fonts.size.sm * 1.4,
           color: theme.colors.error,
         },
       },

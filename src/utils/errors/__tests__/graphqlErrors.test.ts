@@ -4,6 +4,7 @@ import {
   GraphQLDomainError,
   GraphQLNetworkError,
   getTopLevelGraphQLError,
+  isResourceAccessLostError,
 } from '../graphqlErrors';
 
 describe('GraphQLDomainError', () => {
@@ -73,5 +74,34 @@ describe('getTopLevelGraphQLError', () => {
     expect(getTopLevelGraphQLError(new Error('network'))).toBeNull();
     expect(getTopLevelGraphQLError(undefined)).toBeNull();
     expect(getTopLevelGraphQLError(null)).toBeNull();
+  });
+});
+
+describe('isResourceAccessLostError', () => {
+  const errorWithCode = (code: string) =>
+    new CombinedGraphQLErrors({
+      errors: [{ message: 'denied', extensions: { code } }],
+    } satisfies FormattedExecutionResult);
+
+  it.each(['AUTHZ_FORBIDDEN', 'FORBIDDEN', 'RESOURCE_NOT_FOUND'])(
+    'is true for %s',
+    code => {
+      expect(isResourceAccessLostError(errorWithCode(code))).toBe(true);
+    },
+  );
+
+  it('is false for unrelated GraphQL error codes', () => {
+    expect(isResourceAccessLostError(errorWithCode('VALIDATION_FAILED'))).toBe(
+      false,
+    );
+    expect(isResourceAccessLostError(errorWithCode('UNAUTHENTICATED'))).toBe(
+      false,
+    );
+  });
+
+  it('is false for network/non-GraphQL errors (no eviction when offline)', () => {
+    expect(isResourceAccessLostError(new Error('network'))).toBe(false);
+    expect(isResourceAccessLostError(undefined)).toBe(false);
+    expect(isResourceAccessLostError(null)).toBe(false);
   });
 });

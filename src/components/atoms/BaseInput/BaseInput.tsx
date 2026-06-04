@@ -1,19 +1,21 @@
 import React, { ReactNode, useState } from 'react';
 import {
   View,
-  Text,
   TextInput,
   TextInputProps,
   StyleProp,
   ViewStyle,
 } from 'react-native';
+import { Text } from '#components/atoms/Text';
 
 /** The event passed to TextInput's onFocus/onBlur, derived from RN's own prop type. */
 type TextInputFocusEvent = Parameters<
   NonNullable<TextInputProps['onFocus']>
 >[0];
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { withUnistyles } from 'react-native-unistyles';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import { TIMING } from '#constants/animations';
 import styles from './BaseInput.styles';
 import { Icon } from '#/utils/iconUtils';
 
@@ -94,32 +96,36 @@ export const BaseInput: React.FC<BaseInputProps> = ({
           {...textInputProps}
         />
         {!!showClear && (
-          <Pressable
-            style={({ pressed }) => [
-              styles.leftIconWrapper,
-              pressed && styles.pressed,
-            ]}
+          <AppPressable
+            style={styles.leftIconWrapper}
             onPress={onClear}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             accessibilityRole="button"
             accessibilityLabel="Clear input"
           >
             <Icon name="close" size={18} tone="textSecondary" />
-          </Pressable>
+          </AppPressable>
         )}
         {rightIcon != null && (
           <View style={styles.rightIconWrapper}>{rightIcon}</View>
         )}
       </View>
       {!!hasError && (
-        <Text
-          testID={
-            textInputProps.testID ? `${textInputProps.testID}-error` : undefined
-          }
-          style={styles.errorText}
+        <Animated.View
+          entering={FadeIn.duration(TIMING.FAST)}
+          exiting={FadeOut.duration(TIMING.FAST)}
         >
-          {errorMessage}
-        </Text>
+          <Text
+            testID={
+              textInputProps.testID
+                ? `${textInputProps.testID}-error`
+                : undefined
+            }
+            style={styles.errorText}
+          >
+            {errorMessage}
+          </Text>
+        </Animated.View>
       )}
     </View>
   );

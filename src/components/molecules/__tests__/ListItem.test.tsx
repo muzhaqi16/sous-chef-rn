@@ -1,6 +1,6 @@
 import React from 'react';
-import { Text } from 'react-native';
 import { render, screen, userEvent } from '@testing-library/react-native';
+import { Text } from '#components/atoms/Text';
 
 // Override the global unistyles mock to add useVariants (needed by ListItem's style variants)
 jest.mock('react-native-unistyles', () => {

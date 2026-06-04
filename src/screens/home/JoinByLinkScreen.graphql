@@ -1,0 +1,12 @@
+# Resolve an anyone-with-link code (home join code OR list share code) without
+# knowing its type up front, then route by `targetType`. `@optionalAuth` on the
+# server means this resolves even for logged-out recipients (preview).
+query ResolveShareLink($code: String!) {
+  resolveShareLink(code: $code) {
+    targetType
+    homeId
+    listId
+    name
+    alreadyMember
+  }
+}

@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { useFragment } from '@apollo/client/react';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#/utils/iconUtils';
 import { BatchStatus } from '#/graphql/generated/schemaTypes';
@@ -135,32 +135,25 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
           </Text>
         ) : null}
       </View>
-
       {!!isActive && (
         <View style={styles.actions}>
           {!batch.isOpened && !!onOpen && (
-            <Pressable
+            <AppPressable
               onPress={() => onOpen(batch.id)}
-              style={({ pressed }) => [
-                styles.actionButton,
-                pressed && styles.pressed,
-              ]}
+              style={styles.actionButton}
               hitSlop={8}
             >
               <Icon name="open-outline" size={18} tone="primary" />
-            </Pressable>
+            </AppPressable>
           )}
           {!!onWaste && (
-            <Pressable
+            <AppPressable
               onPress={() => onWaste(batch.id)}
-              style={({ pressed }) => [
-                styles.actionButton,
-                pressed && styles.pressed,
-              ]}
+              style={styles.actionButton}
               hitSlop={8}
             >
               <Icon name="trash-outline" size={18} tone="error" />
-            </Pressable>
+            </AppPressable>
           )}
         </View>
       )}

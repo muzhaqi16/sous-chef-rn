@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useMutation } from '@apollo/client/react';
 import {
   UpdateFavoriteRecipeDocument,
@@ -24,6 +25,7 @@ export function useRecipeSavedMetadata({
   preloadedRecipeId,
   onUnfavoriteSuccess,
 }: UseRecipeSavedMetadataOptions) {
+  const { t } = useTranslation();
   const [showFolderPicker, setShowFolderPicker] = useState(false);
   const [updatingFolderTags, setUpdatingFolderTags] = useState(false);
 
@@ -82,7 +84,7 @@ export function useRecipeSavedMetadata({
       },
       onError: err => {
         console.error('Update favorite recipe error:', err);
-        toastService.error(err.message || 'Failed to update recipe');
+        toastService.error(err.message || t('recipes.updateRecipeMetaFailed'));
       },
     },
   );
@@ -131,7 +133,7 @@ export function useRecipeSavedMetadata({
     },
     onError: err => {
       console.error('Unfavorite recipe error:', err);
-      toastService.error(err.message || 'Failed to remove recipe from saved');
+      toastService.error(err.message || t('recipes.removeFromSavedFailed'));
     },
   });
 
@@ -149,7 +151,9 @@ export function useRecipeSavedMetadata({
         },
       });
       toastService.success(
-        folder ? `Moved to "${folder}"` : 'Removed from folder',
+        folder
+          ? t('recipes.movedToFolder', { folder })
+          : t('recipes.removedFromFolder'),
       );
     }, setUpdatingFolderTags);
   };
@@ -166,7 +170,7 @@ export function useRecipeSavedMetadata({
           },
         },
       });
-      toastService.success('Tags updated');
+      toastService.success(t('recipes.tagsUpdated'));
     }, setUpdatingFolderTags);
   };
 
@@ -182,7 +186,7 @@ export function useRecipeSavedMetadata({
           },
         },
       });
-      toastService.success('Notes updated');
+      toastService.success(t('recipes.notesUpdated'));
     }, setUpdatingFolderTags);
   };
 
@@ -198,7 +202,11 @@ export function useRecipeSavedMetadata({
           },
         },
       });
-      toastService.success(rating ? `Rated ${rating}/5` : 'Rating removed');
+      toastService.success(
+        rating
+          ? t('recipes.ratedValue', { rating })
+          : t('recipes.ratingRemoved'),
+      );
     }, setUpdatingFolderTags);
   };
 
@@ -208,7 +216,7 @@ export function useRecipeSavedMetadata({
     const targetRecipeId = recipeId || preloadedRecipeId;
 
     if (!targetRecipeId) {
-      toastService.error('Cannot remove: recipe ID not found');
+      toastService.error(t('recipes.cannotRemoveNoId'));
       return Promise.resolve();
     }
 
@@ -217,7 +225,7 @@ export function useRecipeSavedMetadata({
         variables: { input: { recipeId: targetRecipeId } },
       });
       onUnfavoriteSuccess();
-      toastService.success('Recipe removed from saved');
+      toastService.success(t('recipes.recipeRemovedFromSaved'));
     }, setUpdatingFolderTags);
   };
 

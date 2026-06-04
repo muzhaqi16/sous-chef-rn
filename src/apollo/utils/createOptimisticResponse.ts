@@ -99,22 +99,6 @@ export function createOptimisticEntity<T extends VersionedEntity>(
 }
 
 /**
- * Type guard to check if an entity has version and updatedAt fields
- *
- * @param entity - Entity to check
- * @returns True if entity has version and updatedAt fields
- */
-export function isVersionedEntity(entity: unknown): entity is VersionedEntity {
-  return (
-    typeof entity === 'object' &&
-    entity !== null &&
-    'id' in entity &&
-    'version' in entity &&
-    'updatedAt' in entity
-  );
-}
-
-/**
  * Builds the standard optimistic mutation response wrapper.
  *
  * Eliminates the repetitive `{ __typename: 'Mutation', opName: { __typename: 'PayloadType', ... } }`

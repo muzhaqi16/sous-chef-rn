@@ -7,7 +7,7 @@ export const useProfileData = () => {
   const user = useUser();
   const isLoggingOut = useIsLoggingOut();
 
-  const { data, loading, refetch } = useQuery(GetUserProfileDocument, {
+  const { data, loading, error, refetch } = useQuery(GetUserProfileDocument, {
     // First mount: read cache + fire one network request to refresh.
     // Subsequent re-renders: serve from cache only (no network thrash).
     // Per CLAUDE.md cache persistence convention.
@@ -22,6 +22,9 @@ export const useProfileData = () => {
     user,
     profile,
     loading,
+    // errorPolicy:'all' (global) resolves failures with data+error rather than
+    // throwing — expose `error` so consumers can surface a refresh failure.
+    error,
     refetch,
   };
 };

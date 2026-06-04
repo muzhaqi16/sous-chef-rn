@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
@@ -231,7 +232,6 @@ export const DietaryProfileScreen: React.FC = () => {
           />
         </View>
       </Animated.View>
-
       {/* Food Preferences Section */}
       <Animated.View
         entering={FadeIn.duration(TIMING.SLOW).delay(100)}
@@ -271,7 +271,6 @@ export const DietaryProfileScreen: React.FC = () => {
           />
         </View>
       </Animated.View>
-
       {/* Nutrition Goals Section */}
       <Animated.View
         entering={FadeIn.duration(TIMING.SLOW).delay(200)}
@@ -303,7 +302,6 @@ export const DietaryProfileScreen: React.FC = () => {
           </Pressable>
         </View>
       </Animated.View>
-
       {/* Cooking Preferences Section */}
       <Animated.View
         entering={FadeIn.duration(TIMING.SLOW).delay(300)}
@@ -315,15 +313,12 @@ export const DietaryProfileScreen: React.FC = () => {
             <Text style={commonStyles.subtitle}>
               {t('dietary.cookingPreferences')}
             </Text>
-            <Pressable
+            <AppPressable
               onPress={handleOpenCookingPrefs}
-              style={({ pressed }) => [
-                styles.editButton,
-                pressed && styles.pressed,
-              ]}
+              style={styles.editButton}
             >
               <Icon name="create-outline" size={20} tone="primary" />
-            </Pressable>
+            </AppPressable>
           </View>
           {!!profile.cookingSkillLevel && (
             <InfoRow
@@ -355,7 +350,6 @@ export const DietaryProfileScreen: React.FC = () => {
           )}
         </View>
       </Animated.View>
-
       {/* Macro Targets Section (Advanced) */}
       {!!(
         profile.calorieTarget ||
@@ -373,15 +367,12 @@ export const DietaryProfileScreen: React.FC = () => {
               <Text style={commonStyles.subtitle}>
                 {t('dietary.macroTargets')}
               </Text>
-              <Pressable
+              <AppPressable
                 onPress={handleOpenMacros}
-                style={({ pressed }) => [
-                  styles.editButton,
-                  pressed && styles.pressed,
-                ]}
+                style={styles.editButton}
               >
                 <Icon name="create-outline" size={20} tone="primary" />
-              </Pressable>
+              </AppPressable>
             </View>
             {!!profile.calorieTarget && (
               <InfoRow
@@ -415,7 +406,6 @@ export const DietaryProfileScreen: React.FC = () => {
           </View>
         </Animated.View>
       )}
-
       {/* Nutrition Goals Sheets */}
       <NumberInputSheet
         visible={editingMeals}
@@ -427,7 +417,6 @@ export const DietaryProfileScreen: React.FC = () => {
         max={6}
         placeholder={t('dietary.mealsPlaceholder')}
       />
-
       <NumberInputSheet
         visible={editingSnacks}
         title={t('dietary.snacksPerDayTitle')}
@@ -438,7 +427,6 @@ export const DietaryProfileScreen: React.FC = () => {
         max={5}
         placeholder={t('dietary.snacksPlaceholder')}
       />
-
       {/* Cooking Preferences Sheet */}
       <CookingPreferencesSheet
         visible={editingCookingPrefs}
@@ -451,7 +439,6 @@ export const DietaryProfileScreen: React.FC = () => {
           budgetPerMeal: profile?.budgetPerMeal,
         }}
       />
-
       {/* Macro Targets Sheet */}
       <MacroTargetsSheet
         visible={editingMacros}

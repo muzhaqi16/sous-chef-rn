@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text } from 'react-native';
-import {
-  Pressable,
-  WhiteActivityIndicator,
-} from '#components/atoms/themedComponents';
+import { View } from 'react-native';
+import { Text } from '#components/atoms/Text';
+import { WhiteActivityIndicator } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from 'react-i18next';
 import { useMutation } from '@apollo/client/react';
@@ -132,11 +131,8 @@ export const ShareInviteSection: React.FC<ShareInviteSectionProps> = ({
           value={email}
           onChangeText={setEmail}
         />
-        <Pressable
-          style={({ pressed }) => [
-            styles.sendButton,
-            pressed && styles.pressed,
-          ]}
+        <AppPressable
+          style={styles.sendButton}
           onPress={handleShare}
           disabled={sharing}
         >
@@ -145,7 +141,7 @@ export const ShareInviteSection: React.FC<ShareInviteSectionProps> = ({
           ) : (
             <Icon name="send" size={20} tone="white" />
           )}
-        </Pressable>
+        </AppPressable>
       </View>
       <Text style={styles.roleLabel}>{t('shoppingListScreens.role')}</Text>
       <ChipScrollRow

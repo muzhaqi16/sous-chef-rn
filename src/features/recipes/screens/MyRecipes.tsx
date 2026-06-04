@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { FlashList } from '@shopify/flash-list';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { StyleSheet } from 'react-native-unistyles';
@@ -68,6 +69,7 @@ const MyRecipeRow: React.FC<{
 
 export const MyRecipes: React.FC = () => {
   useScreenTransition('MyRecipes');
+  const { t } = useTranslation();
   const { toRecipeDetail, toRecipeEdit, toRecipeCreate, goBack } =
     useAppNavigation();
   const [searchQuery, setSearchQuery] = useState('');
@@ -117,10 +119,7 @@ export const MyRecipes: React.FC = () => {
       () => deleteRecipeMutation({ variables: { input: { id } } }),
       (error: unknown) => {
         console.error('Failed to delete recipe:', error);
-        alertService.alert(
-          'Error',
-          'Failed to delete recipe. Please try again.',
-        );
+        alertService.alert(t('labels.error'), t('recipes.deleteRecipeFailed'));
       },
     );
   };
@@ -141,21 +140,21 @@ export const MyRecipes: React.FC = () => {
 
   return (
     <View style={styles.container} testID="my-recipes-screen">
-      <Header title="My Recipes" onBack={goBack} />
+      <Header title={t('recipes.myRecipesTitle')} onBack={goBack} />
       <View style={styles.searchBarContainer}>
         <SearchBar
           value={searchQuery}
           onChangeText={setSearchQuery}
-          placeholder="Search my recipes..."
+          placeholder={t('recipes.myRecipesSearchPlaceholder')}
           showSearchIcon
         />
       </View>
       {myRecipes.length === 0 ? (
         <EmptyState
           icon="create-outline"
-          title="No recipes yet"
-          description="Create your first recipe"
-          action={{ label: 'Create Recipe', onPress: toRecipeCreate }}
+          title={t('recipes.myRecipesEmptyTitle')}
+          description={t('recipes.myRecipesEmptyDescription')}
+          action={{ label: t('recipes.createRecipe'), onPress: toRecipeCreate }}
         />
       ) : (
         <FlashList

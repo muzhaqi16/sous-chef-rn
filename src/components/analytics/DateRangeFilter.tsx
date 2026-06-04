@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, ScrollView } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { DateRange } from '#/graphql/generated/schemaTypes';
 import { Text } from '#components/atoms/Text';
@@ -33,14 +33,11 @@ function DateRangeChip({
 }) {
   styles.useVariants({ selected: isSelected });
   return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [styles.chip, pressed && styles.pressed]}
-    >
+    <AppPressable onPress={onPress} style={styles.chip}>
       <Text size="sm" weight="medium" style={styles.chipText}>
         {option.label}
       </Text>
-    </Pressable>
+    </AppPressable>
   );
 }
 

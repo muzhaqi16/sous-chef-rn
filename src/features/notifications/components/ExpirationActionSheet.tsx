@@ -11,7 +11,7 @@
 
 import React from 'react';
 import { View } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
@@ -96,8 +96,8 @@ function OptionRow({
     destructive: option.destructive ?? false,
   });
   return (
-    <Pressable
-      style={({ pressed }) => [styles.optionButton, pressed && styles.pressed]}
+    <AppPressable
+      style={styles.optionButton}
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={option.label}
@@ -110,7 +110,7 @@ function OptionRow({
       <Text size="md" weight="medium" style={styles.optionLabel}>
         {option.label}
       </Text>
-    </Pressable>
+    </AppPressable>
   );
 }
 
@@ -174,15 +174,19 @@ const styles = StyleSheet.create(theme => ({
   scrollView: {
     flex: 1,
   },
+
   contentContainer: {
     padding: theme.spacing.md,
   },
+
   title: {
     marginBottom: theme.spacing.xs,
   },
+
   subtitle: {
     marginBottom: theme.spacing.md,
   },
+
   optionsList: {
     borderRadius: theme.radii.lg,
     overflow: 'hidden',
@@ -190,6 +194,7 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: 1,
     borderColor: theme.colors.borderLight,
   },
+
   optionButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -204,6 +209,7 @@ const styles = StyleSheet.create(theme => ({
       },
     },
   },
+
   optionLabel: {
     flex: 1,
     variants: {
@@ -211,8 +217,5 @@ const styles = StyleSheet.create(theme => ({
         true: { color: theme.colors.error },
       },
     },
-  },
-  pressed: {
-    opacity: 0.6,
   },
 }));

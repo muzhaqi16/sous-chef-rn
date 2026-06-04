@@ -682,6 +682,12 @@ input BatchAddShoppingListItemInput {
   category: String
   """Client-provided ID for matching results (optional)"""
   clientId: String
+  """
+  Optional client-generated permanent ID (CUID v1) for this item. Persisted as
+  the row primary key so a re-synced batch resolves to the same rows (idempotent).
+  Distinct from clientId below, which is only a response-matching token.
+  """
+  id: ID
   itemId: ID
   itemName: String
   netWeight: NetWeightInput
@@ -1650,6 +1656,10 @@ input CreateHomeInput {
   currency: String
   defaultPantryName: String
   description: String
+  """
+  Optional client-generated permanent ID (CUID v1) for offline-first idempotency.
+  """
+  id: ID
   isPublic: Boolean
   maxMembers: Int
   name: String!
@@ -1728,6 +1738,10 @@ input CreateMealPlanInput {
   If not provided, the plan is personal (user-scoped only).
   """
   homeId: ID
+  """
+  Optional client-generated permanent ID (CUID v1) for offline-first idempotency.
+  """
+  id: ID
   name: String!
   planType: MealPlanType!
   servings: Int
@@ -1744,6 +1758,12 @@ input CreateMealPlanItemInput {
   date: DateTime!
   estimatedCost: Float
   fat: Float
+  """
+  Optional client-generated permanent ID (CUID v1) for offline-first idempotency.
+  On a retry that collides with the (mealPlanId, date, mealType, recipeId) unique
+  key, the existing row is returned (its original id wins).
+  """
+  id: ID
   mealPlanId: ID!
   mealType: MealType!
   notes: String
@@ -1776,6 +1796,10 @@ input CreateMealTemplateInput {
   If not provided, the template is personal (user-scoped only).
   """
   homeId: ID
+  """
+  Optional client-generated permanent ID (CUID v1) for offline-first idempotency.
+  """
+  id: ID
   """Initial items to add to the template"""
   items: [MealTemplateItemInput!]
   name: String!
@@ -1864,6 +1888,14 @@ input CreatePantryItemInput {
   brand: BrandReferenceInput
   expiresAt: String
   forceAdd: Boolean
+  """
+  Optional client-generated permanent ID (CUID v1, e.g. "c…", 25 chars).
+  Offline-first clients mint this as the row's permanent primary key so a
+  re-synced create resolves to the same row (idempotent) instead of duplicating.
+  When omitted, the server generates one via @default(cuid()). Must match the
+  CUID v1 format; invalid formats are rejected by ID validation.
+  """
+  id: ID
   item: InlineItemInput
   itemId: ID
   lastUsedAt: DateTime
@@ -1944,6 +1976,10 @@ input CreateRecipeInput {
   externalSourceId: String
   externalSourceUrl: String
   healthGoals: [HealthGoal!]
+  """
+  Optional client-generated permanent ID (CUID v1) for offline-first idempotency.
+  """
+  id: ID
   imageUrl: String
   ingredients: [RecipeIngredientInput!]!
   instructions: JSON!
@@ -1992,6 +2028,11 @@ input CreateShoppingListInput {
 }
 
 input CreateShoppingListItemFromRecipeIngredientInput {
+  """
+  Optional client-generated permanent ID (CUID v1) for the created item;
+  persisted as the row primary key for offline-first idempotency.
+  """
+  id: ID
   quantityOverride: Float
   recipeIngredientId: ID!
   shoppingListId: ID!
@@ -2006,6 +2047,14 @@ union CreateShoppingListItemFromRecipeIngredientResult = ConflictError | CreateS
 input CreateShoppingListItemInput {
   brand: BrandReferenceInput
   category: String
+  """
+  Optional client-generated permanent ID (CUID v1, e.g. "c…", 25 chars).
+  Offline-first clients mint this as the row's permanent primary key so a
+  re-synced create resolves to the same row (idempotent) instead of duplicating.
+  When omitted, the server generates one via @default(cuid()). Must match the
+  CUID v1 format; invalid formats are rejected by ID validation.
+  """
+  id: ID
   itemId: ID
   itemName: String
   netWeight: NetWeightInput
@@ -2047,6 +2096,10 @@ input CreateStorageLocationInput {
   homeId: ID!
   """Optional icon identifier"""
   icon: String
+  """
+  Optional client-generated permanent ID (CUID v1) for offline-first idempotency.
+  """
+  id: ID
   """Whether the location has climate control (default: false)"""
   isClimateControlled: Boolean
   """Set as default location for the home (default: false)"""
@@ -2145,6 +2198,12 @@ input CreateUserProfileInput {
   displayName: String
   firstName: String
   gender: String
+  """
+  Optional client-generated permanent ID (CUID v1). Note: a profile is 1:1 with
+  the user (userId is unique), so creation is already idempotent per user; this
+  is accepted for consistency with other offline-first creates.
+  """
+  id: ID
   lastName: String
   phone: String
   profileVisibility: ProfileVisibility
@@ -3058,6 +3117,11 @@ type EffectiveUsageRate {
   unitName: String
 }
 
+input EnableHomeJoinLinkInput {
+  """ID of the home to enable the join link for."""
+  id: ID!
+}
+
 """
 Base interface for every mutation error variant. Every concrete error
 type implements this so clients can write a generic
@@ -3508,6 +3572,12 @@ type Home {
   isDefault: Boolean!
   isPublic: Boolean!
   joinCode: String
+  """
+  Anyone-with-link join link for this home. Joining the home also grants
+  access to its pantry, so this doubles as the pantry-share link. Null
+  unless allowJoinCode is enabled and a joinCode is set.
+  """
+  joinLink: ShareLink
   lowStockItems: [LowStockItem!]!
   maxMembers: Int
   mealPlansConnection(after: String, before: String, filters: MealPlanFilters, first: Int, last: Int): MealPlanConnection!
@@ -3517,7 +3587,13 @@ type Home {
   metadata: JSON
   myMembership: Membership
   name: String!
+  """Deep link that opens this home in the app (for existing members)."""
+  navigateLink: ShareLink!
   pantriesConnection(after: String, before: String, first: Int, last: Int): PantryConnection!
+  """
+  Deep link that opens this home's pantry in the app (for existing members).
+  """
+  pantryLink: ShareLink!
   shoppingListsConnection(after: String, before: String, filters: ShoppingListFilters, first: Int, last: Int): ShoppingListConnection!
   tags: [String!]!
   timezone: String
@@ -5726,6 +5802,12 @@ type Mutation {
   duplicateMealPlan(input: DuplicateMealPlanInput!): DuplicateMealPlanResult!
   """Duplicate a template with a new name"""
   duplicateTemplate(input: DuplicateTemplateInput!): DuplicateTemplateResult!
+  """
+  Enable the anyone-with-link join code for a home (doubles as the
+  pantry-share link). Idempotent — preserves an existing code so links
+  already shared keep working. Read the resulting link via home.joinLink.
+  """
+  enableHomeJoinLink(input: EnableHomeJoinLinkInput!): UpdateHomeResult!
   """Save a recipe as a favorite."""
   favoriteRecipe(input: FavoriteRecipeInput!): FavoriteRecipeResult!
   """Flag an item for review"""
@@ -5822,6 +5904,10 @@ type Mutation {
   recordPriceObservation(input: RecordPriceObservationInput!): RecordPriceObservationResult!
   """Refresh an expired access token using a refresh token."""
   refresh(input: RefreshTokenInput!): RefreshTokenPayload!
+  """
+  Rotate a home's join code, invalidating any previously shared join link.
+  """
+  regenerateHomeJoinCode(input: RegenerateHomeJoinCodeInput!): UpdateHomeResult!
   """Register a new user account and return tokens."""
   register(input: RegisterInput!): AuthPayload!
   """
@@ -7464,7 +7550,10 @@ type Query {
   expirationNotification(id: ID!): ExpirationNotification
   """Fetch a single home by its ID."""
   home(id: ID!): Home
-  """Fetch a single home by its join code."""
+  """
+  Fetch a single home by its join code. Reachable anonymously so a
+  not-yet-signed-up recipient of a join link can preview the home.
+  """
   homeByJoinCode(joinCode: String!): Home
   """Fetch a home invite by its token for the acceptance flow."""
   homeInviteByToken(token: String!): HomeInvite
@@ -7551,6 +7640,12 @@ type Query {
   """Fetch personalized item recommendations for a user."""
   recommendedItems(limit: Int, userId: ID): [ItemSuggestion!]!
   """
+  Resolve an anyone-with-link code (home join code or list share code)
+  without knowing its type. Returns null when the code matches nothing.
+  Reachable anonymously so a not-yet-signed-up recipient can preview.
+  """
+  resolveShareLink(code: String!): ResolveShareLinkResult
+  """
   Get ranked restock-eligible units for a pantry item.
   Returns units in priority order: tracking unit → curated retail → auto measurement.
   """
@@ -7567,8 +7662,9 @@ type Query {
   distance. Intended as an augmentation to exact-match paths (UPC, tsvector)
   — use when text search fails or OCR is noisy.
   
-  Items without a cached embedding are excluded until the enrichment
-  pipeline populates them. Auth-gated to bound embedding-service spend.
+  Items without a cached embedding are excluded; the catalog has been
+  backfilled, and new or edited items are embedded asynchronously by the
+  ITEM_EMBEDDING job. Auth-gated to bound embedding-service spend.
   """
   searchItemsSemantic(after: String, before: String, filters: ItemFilters, first: Int, last: Int, maxDistance: Float, prompt: String!): ItemConnection!
   searchRecipes(after: String, before: String, first: Int, last: Int, query: String!): RecipeConnection!
@@ -7580,8 +7676,16 @@ type Query {
   searchUnits(limit: Int = 10, prioritizeCommon: Boolean, query: String!, type: UnitType): [Unit!]!
   """Fetch a single shopping list by its ID."""
   shoppingList(id: ID!): ShoppingList
-  """Fetch a shopping list by its share code."""
+  """
+  Fetch a shopping list by its share code. Reachable anonymously so a
+  not-yet-signed-up recipient of a share link can preview the list.
+  """
   shoppingListByShareCode(shareCode: String!): ShoppingList
+  """
+  Fetch a shopping list collaborator invite by its token for the
+  acceptance-flow preview (parity with homeInviteByToken).
+  """
+  shoppingListInviteByToken(token: String!): ShoppingListCollaborator
   """Fetch a single shopping list item by its ID."""
   shoppingListItem(id: ID!): ShoppingListItem
   """
@@ -8044,6 +8148,11 @@ type RefreshTokenPayload {
   refreshToken: String!
 }
 
+input RegenerateHomeJoinCodeInput {
+  """ID of the home whose join code to rotate."""
+  id: ID!
+}
+
 """Sub-input for regional/locale settings"""
 input RegionalSettingsInput {
   language: String
@@ -8215,6 +8324,31 @@ type ResetPasswordResponse {
 input ResetPasswordWithTokenInput {
   newPassword: String!
   token: String!
+}
+
+"""
+Resolution of a shareable code (home join code or list share code) into a
+preview plus the deep link to follow. Lets the app and the web fallback
+handle any link without knowing its type up front.
+"""
+type ResolveShareLinkResult {
+  """
+  Whether the (authenticated) caller already has access to this resource.
+  """
+  alreadyMember: Boolean!
+  """Present when targetType is HOME_JOIN."""
+  homeId: ID
+  """Item count (LIST_JOIN only)."""
+  itemCount: Int
+  """Deep link to follow to join/open the target."""
+  link: ShareLink!
+  """Present when targetType is LIST_JOIN."""
+  listId: ID
+  """Active member count (HOME_JOIN only)."""
+  memberCount: Int
+  """Display name of the home or list."""
+  name: String!
+  targetType: ShareLinkTargetType!
 }
 
 """
@@ -8480,6 +8614,23 @@ type SetupUnitConversionPayload {
 
 union SetupUnitConversionResult = ConflictError | ForbiddenError | NotFoundError | SetupUnitConversionPayload | ValidationError
 
+"""
+A shareable deep link expressed in both forms so clients can choose:
+- universal: an https:// Universal Link / App Link (opens the installed app,
+  falls back to the web page when the app is absent).
+- scheme: a souschef:// custom-scheme URL (force-launches an installed app).
+"""
+type ShareLink {
+  scheme: String!
+  universal: String!
+}
+
+"""What kind of resource an anyone-with-link code points at."""
+enum ShareLinkTargetType {
+  HOME_JOIN
+  LIST_JOIN
+}
+
 input ShareShoppingListInput {
   id: ID!
   isPublic: Boolean
@@ -8538,6 +8689,10 @@ type ShoppingList {
   mealPlan: MealPlan
   metadata: JSON
   name: String!
+  """
+  Deep link that opens this list in the app (for existing collaborators).
+  """
+  navigateLink: ShareLink!
   nextRecurringDate: DateTime
   ownerships: [ShoppingListOwnership!]!
   plannedShopDate: DateTime
@@ -8552,6 +8707,11 @@ type ShoppingList {
   reminderEnabled: Boolean!
   shareCode: String
   shareCount: Int!
+  """
+  Anyone-with-link share/join link for this list. Null unless the list is
+  public (isPublic) and a shareCode is set.
+  """
+  shareLink: ShareLink
   smartSorting: Boolean!
   sortOrder: Int!
   status: ListStatus!
@@ -9608,9 +9768,11 @@ input SyncShoppingListItemInput {
   priority: Int
   purchaseTracking: PurchaseTrackingInput
   """
-  Quantity of the item. Accepts: "1/3", "1 1/4", "0.5", "2", or numbers like 1, 1.5
+  Quantity of the item. Accepts: "1/3", "1 1/4", "0.5", "2", or numbers like 1, 1.5.
+  Unitless by default; specify a unit via the unit field when needed (shopping
+  items are frequently unitless, e.g. Milk x2). Mirrors CreateShoppingListItemInput.
   """
-  quantity: QuantityInput
+  quantity: FlexibleQuantity
   recipeContext: RecipeContextInput
   """Required: ID of the shopping list this item belongs to"""
   shoppingListId: ID!
@@ -9623,7 +9785,7 @@ input SyncShoppingListItemInput {
 
 """Result of syncing a shopping list item"""
 type SyncShoppingListItemResult {
-  """The client-provided ID (may be temp ID like 'temp-uuid')"""
+  """The client-provided permanent ID (CUID) echoed back for correlation"""
   clientId: ID!
   """Conflict information if version mismatch occurred"""
   conflict: SyncConflictInfo
@@ -9632,7 +9794,7 @@ type SyncShoppingListItemResult {
   """The operation that was performed"""
   operation: SyncOperation!
   """
-  The server-assigned database ID (null if item was deleted before reaching server)
+  The server-assigned database ID (equals clientId; null if item was deleted before reaching server)
   """
   serverId: ID
   """Whether this was a create (true) or update (false) operation"""

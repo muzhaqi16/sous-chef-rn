@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Modal, TextInput } from 'react-native';
+import { View, Modal, TextInput } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
+import { Text } from '#components/atoms/Text';
 import { StyleSheet } from 'react-native-unistyles';
 import { commonStyles } from '#/styles/commonStyles';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
@@ -333,25 +334,20 @@ export const NumberInputModal: React.FC<NumberInputModalProps> = ({
 
           {/* Buttons */}
           <View style={localStyles.modalButtons}>
-            <Pressable
-              style={({ pressed }) => [
-                commonStyles.button,
-                localStyles.modalButton,
-                pressed && localStyles.pressed,
-              ]}
+            <AppPressable
+              style={[commonStyles.button, localStyles.modalButton]}
               onPress={handleCancel}
               disabled={loading}
             >
               <Text style={commonStyles.buttonText}>{resolvedCancelLabel}</Text>
-            </Pressable>
+            </AppPressable>
 
-            <Pressable
-              style={({ pressed }) => [
+            <AppPressable
+              style={[
                 commonStyles.button,
                 commonStyles.buttonPrimary,
                 localStyles.modalButton,
                 loading && localStyles.buttonDisabled,
-                pressed && localStyles.pressed,
               ]}
               onPress={handleSave}
               disabled={loading}
@@ -368,7 +364,7 @@ export const NumberInputModal: React.FC<NumberInputModalProps> = ({
                   {resolvedSaveLabel}
                 </Text>
               )}
-            </Pressable>
+            </AppPressable>
           </View>
         </View>
       </View>

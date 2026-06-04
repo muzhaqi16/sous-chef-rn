@@ -1,8 +1,8 @@
 'use no memo';
 import React from 'react';
-import { Text } from 'react-native';
 import { render, screen, userEvent } from '@testing-library/react-native';
 import { CardRightSlot } from '../CardRightSlot';
+import { Text } from '#components/atoms/Text';
 import type { CardRightSlotProps } from '../types';
 
 jest.mock('#utils/iconUtils', () => ({

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Image } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { getPerspectiveLabel } from '#utils/imageUtils';
@@ -150,11 +150,8 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
                 style={styles.thumbnail}
                 resizeMode="cover"
               />
-              <Pressable
-                style={({ pressed }) => [
-                  styles.removeButton,
-                  pressed && styles.pressed,
-                ]}
+              <AppPressable
+                style={styles.removeButton}
                 onPress={() => handleRemoveImage(index)}
                 disabled={disabled}
                 hitSlop={11}
@@ -162,13 +159,10 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
                 accessibilityLabel="Remove image"
               >
                 <Icon name="close" size={14} tone="white" />
-              </Pressable>
+              </AppPressable>
             </View>
-            <Pressable
-              style={({ pressed }) => [
-                styles.perspectiveButton,
-                pressed && styles.pressed,
-              ]}
+            <AppPressable
+              style={styles.perspectiveButton}
               onPress={() => setPickerIndex(index)}
               disabled={disabled}
               accessibilityRole="button"
@@ -183,7 +177,7 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
                 {getPerspectiveLabel(image.perspective)}
               </Text>
               <Icon name="chevron-down" size={14} tone="textSecondary" />
-            </Pressable>
+            </AppPressable>
           </View>
         ))}
 
@@ -205,7 +199,6 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
           </ImagePicker>
         )}
       </ScrollView>
-
       <ModalPicker
         label="Select Perspective"
         visible={pickerIndex !== null}

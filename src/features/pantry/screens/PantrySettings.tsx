@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, ScrollView } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
 import { Icon } from '#/utils/iconUtils';
 import { useTranslation } from 'react-i18next';
@@ -447,7 +448,6 @@ export const PantrySettings: React.FC<
           ) : undefined
         }
       />
-
       <ScrollView style={styles.content}>
         <View style={commonStyles.settingsSection}>
           <Text style={commonStyles.settingsSectionTitle}>
@@ -505,13 +505,7 @@ export const PantrySettings: React.FC<
               {t('pantrySettings.dangerZone')}
             </Text>
 
-            <Pressable
-              style={({ pressed }) => [
-                styles.deleteButton,
-                pressed && styles.pressed,
-              ]}
-              onPress={handleDelete}
-            >
+            <AppPressable style={styles.deleteButton} onPress={handleDelete}>
               <Icon name="trash-outline" size={20} tone="error" />
               <Text
                 size="md"
@@ -521,7 +515,7 @@ export const PantrySettings: React.FC<
               >
                 {t('pantrySettings.deletePantry')}
               </Text>
-            </Pressable>
+            </AppPressable>
 
             <Text
               size="sm"

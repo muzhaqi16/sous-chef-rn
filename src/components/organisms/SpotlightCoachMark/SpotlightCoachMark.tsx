@@ -1,6 +1,6 @@
 import React, { useLayoutEffect, useRef, useState } from 'react';
 import { View, Modal, useWindowDimensions } from 'react-native';
-import Animated, {
+import {
   useSharedValue,
   useDerivedValue,
   useAnimatedStyle,
@@ -28,9 +28,18 @@ import {
 import { scheduleOnRN } from 'react-native-worklets';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useTranslation } from 'react-i18next';
-import { SPRING, TIMING, standardEasing } from '#constants/animations';
+import { SPRING, TIMING } from '#constants/animations';
 import { Text } from '#components/atoms/Text';
 import { useShowTutorials } from '#hooks/settings/useSettings';
+import {
+  HOLE_PADDING,
+  TOOLTIP_MARGIN,
+  TOOLTIP_WIDTH,
+  ARROW_SIZE,
+  SWIPE_THRESHOLD,
+  HOLE_TIMING_CONFIG,
+} from './spotlightConstants';
+import { SpotlightTooltip } from './SpotlightTooltip';
 
 export interface TargetRect {
   x: number;
@@ -56,13 +65,6 @@ export interface SpotlightCoachMarkProps {
   /** Called when the user swipes left to advance to the next step */
   onNext?: () => void;
 }
-
-const HOLE_PADDING = 8;
-const TOOLTIP_MARGIN = 12;
-const TOOLTIP_WIDTH = 275;
-const ARROW_SIZE = 10;
-const SWIPE_THRESHOLD = 50;
-const HOLE_TIMING_CONFIG = { duration: TIMING.SLOW, easing: standardEasing };
 
 /**
  * Spotlight overlay that highlights a target element with a dimmed background.
@@ -351,82 +353,28 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
         )}
 
         {/* Tooltip card */}
-        <Animated.View
-          style={[
-            styles.tooltip,
-            {
-              left: tooltipLeft,
-              width: TOOLTIP_WIDTH,
-              ...(showAbove
-                ? {
-                    bottom:
-                      screenHeight - holeTop + TOOLTIP_MARGIN + ARROW_SIZE,
-                  }
-                : { top: holeBottom + TOOLTIP_MARGIN + ARROW_SIZE }),
-            },
-            tooltipAnimatedStyle,
-          ]}
-        >
-          {/* Arrow */}
-          <View
-            style={[
-              styles.arrow,
-              {
-                left: arrowLeft,
-                backgroundColor: theme.colors.surface,
-                ...(showAbove
-                  ? { bottom: -ARROW_SIZE / 2 }
-                  : { top: -ARROW_SIZE / 2 }),
-              },
-            ]}
-          />
-
-          <Text size="lg" weight="bold" style={styles.tooltipTitle}>
-            {title}
-          </Text>
-          {subtitle ? (
-            <Text size="md" tone="secondary">
-              {subtitle}
-            </Text>
-          ) : null}
-          {totalSteps != null && stepIndex != null && totalSteps > 1 ? (
-            <View style={styles.stepIndicator}>
-              {Array.from({ length: totalSteps }, (_, i) => (
-                <View
-                  key={i}
-                  style={[
-                    styles.stepDot,
-                    {
-                      backgroundColor:
-                        i === stepIndex
-                          ? theme.colors.primary
-                          : theme.colors.border,
-                    },
-                  ]}
-                />
-              ))}
-            </View>
-          ) : null}
-          {totalSteps != null &&
-          stepIndex != null &&
-          stepIndex >= totalSteps - 1 ? (
-            <Pressable
-              onPress={onDismiss}
-              style={styles.nextButton}
-              hitSlop={8}
-            >
-              <Text size="md" weight="medium" tone="accent">
-                Done
-              </Text>
-            </Pressable>
-          ) : onNext ? (
-            <Pressable onPress={onNext} style={styles.nextButton} hitSlop={8}>
-              <Text size="md" weight="medium" tone="accent">
-                {t('labels.next')} ›
-              </Text>
-            </Pressable>
-          ) : null}
-        </Animated.View>
+        <SpotlightTooltip
+          containerStyle={{
+            left: tooltipLeft,
+            width: TOOLTIP_WIDTH,
+            ...(showAbove
+              ? { bottom: screenHeight - holeTop + TOOLTIP_MARGIN + ARROW_SIZE }
+              : { top: holeBottom + TOOLTIP_MARGIN + ARROW_SIZE }),
+          }}
+          arrowStyle={{
+            left: arrowLeft,
+            ...(showAbove
+              ? { bottom: -ARROW_SIZE / 2 }
+              : { top: -ARROW_SIZE / 2 }),
+          }}
+          animatedStyle={tooltipAnimatedStyle}
+          title={title}
+          subtitle={subtitle}
+          stepIndex={stepIndex}
+          totalSteps={totalSteps}
+          onDismiss={onDismiss}
+          onNext={onNext}
+        />
 
         {/* Skip button — position adapts to avoid overlapping the target hole */}
         <Pressable
@@ -516,47 +464,6 @@ const styles = StyleSheet.create(theme => ({
   },
   holeTap: {
     position: 'absolute',
-  },
-  tooltip: {
-    position: 'absolute',
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.lg,
-    padding: theme.spacing.lg,
-    boxShadow: [
-      {
-        offsetX: 0,
-        offsetY: 4,
-        blurRadius: 12,
-        spreadDistance: 0,
-        color: 'rgba(0, 0, 0, 0.3)',
-      },
-    ],
-  },
-  arrow: {
-    position: 'absolute',
-    width: ARROW_SIZE,
-    height: ARROW_SIZE,
-    transform: [{ rotate: '45deg' }],
-  },
-  tooltipTitle: {
-    marginBottom: theme.spacing.xs,
-  },
-  stepIndicator: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: theme.spacing.xs,
-    marginTop: theme.spacing.md,
-  },
-  nextButton: {
-    alignSelf: 'flex-end',
-    marginTop: theme.spacing.md,
-    paddingVertical: theme.spacing.xs,
-    paddingHorizontal: theme.spacing.sm,
-  },
-  stepDot: {
-    width: 8,
-    height: 8,
-    borderRadius: theme.radii.sm,
   },
   skipButton: {
     position: 'absolute',

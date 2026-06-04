@@ -1,5 +1,5 @@
 import { View } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';
@@ -82,16 +82,13 @@ const SuggestionRow = ({
           </Text>
         )}
       </View>
-      <Pressable
-        style={({ pressed }) => [
-          styles.quickAddButton,
-          pressed && styles.pressed,
-        ]}
+      <AppPressable
+        style={styles.quickAddButton}
         onPress={handlePress}
         disabled={quickAddDisabled}
       >
         <Icon name="add" size={20} tone="primary" />
-      </Pressable>
+      </AppPressable>
     </View>
   );
 };
@@ -112,12 +109,9 @@ const AddManuallyOption = ({
   styles.useVariants({ withBorder: !isLast, disabled: false });
 
   return (
-    <Pressable
+    <AppPressable
       key="add-manually"
-      style={({ pressed }) => [
-        styles.addManuallyOption,
-        pressed && styles.pressed,
-      ]}
+      style={styles.addManuallyOption}
       onPress={onPress}
     >
       <Icon name="add-circle-outline" size={20} tone="primary" />
@@ -126,7 +120,7 @@ const AddManuallyOption = ({
           ? `Add "${searchQuery}" manually`
           : `No matches. Add "${searchQuery}" manually`}
       </Text>
-    </Pressable>
+    </AppPressable>
   );
 };
 

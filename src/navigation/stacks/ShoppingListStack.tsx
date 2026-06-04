@@ -22,10 +22,14 @@ export const ShoppingListStack = createNativeStackNavigator({
   screens: {
     ShoppingListMain: createNativeStackScreen({
       screen: ShoppingListMain,
-      linking: 'shopping',
+      // `:listId?` selects a specific list on open (souschef://shopping/{listId});
+      // bare `shopping` opens the last-selected list.
+      linking: 'shopping/:listId?',
     }),
-    ListSettings: ListSettings,
-    ShareList: ShareList,
+    // Wrapped without a `linking` key — intentionally not deep-linkable;
+    // reachable only from within the shopping list flow.
+    ListSettings: createNativeStackScreen({ screen: ListSettings }),
+    ShareList: createNativeStackScreen({ screen: ShareList }),
     AddItem: createNativeStackScreen({
       screen: AddEditItem,
       linking: 'shopping/add',
@@ -34,8 +38,10 @@ export const ShoppingListStack = createNativeStackNavigator({
       screen: AddEditItem,
       linking: 'shopping/edit/:itemId',
     }),
-    ItemDetail: ShoppingListItemDetail,
-    PurchaseHistory: PurchaseHistoryScreen,
+    // Wrapped without a `linking` key — intentionally not deep-linkable
+    // (see note above).
+    ItemDetail: createNativeStackScreen({ screen: ShoppingListItemDetail }),
+    PurchaseHistory: createNativeStackScreen({ screen: PurchaseHistoryScreen }),
   },
 });
 

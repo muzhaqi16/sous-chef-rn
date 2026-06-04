@@ -12,7 +12,7 @@ import {
 } from '#operations/storageLocation/storageLocation.generated';
 import { type UpdateStorageLocationInput } from '#/graphql/generated/schemaTypes';
 import { usePreservedArrayData } from '#/hooks/apollo/usePreservedQueryData';
-import { extractNodes } from '#/utils/connectionUtils';
+import { usePreservedNodes } from '#/hooks/apollo/usePreservedConnection';
 import {
   createRemoveFromQueryConnectionUpdater,
   createRemoveFromParentConnectionUpdater,
@@ -258,7 +258,7 @@ export function useStorageLocationManagement(
   };
 
   // Preserve data even when query fails to prevent cascade failures
-  const locations = usePreservedArrayData(extractNodes(data?.storageLocations));
+  const locations = usePreservedNodes(data?.storageLocations);
   const treeFromQuery = usePreservedArrayData(treeData?.storageLocationTree);
 
   // Build tree from flat list if tree query returns empty

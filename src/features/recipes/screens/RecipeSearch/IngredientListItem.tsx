@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 
@@ -16,13 +16,7 @@ const IngredientItemComponent: React.FC<{
 }> = ({ name, selected, onToggle }) => {
   const handlePress = () => onToggle(name);
   return (
-    <Pressable
-      style={({ pressed }) => [
-        styles.ingredientItem,
-        pressed && styles.pressed,
-      ]}
-      onPress={handlePress}
-    >
+    <AppPressable style={styles.ingredientItem} onPress={handlePress}>
       <Icon
         name={selected ? 'checkbox' : 'square-outline'}
         size={24}
@@ -31,7 +25,7 @@ const IngredientItemComponent: React.FC<{
       <Text size="md" style={styles.ingredientText}>
         {name}
       </Text>
-    </Pressable>
+    </AppPressable>
   );
 };
 

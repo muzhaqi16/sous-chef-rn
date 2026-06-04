@@ -1,18 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import {
   View,
-  Text,
   Image,
   Dimensions,
   Platform,
   ScrollView,
   Linking,
 } from 'react-native';
+import { Text } from '#components/atoms/Text';
 import { getWebAppUrl } from '#utils/environment';
-import {
-  Pressable,
-  PrimaryActivityIndicator,
-} from '#components/atoms/themedComponents';
+import { PrimaryActivityIndicator } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
 import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
 import { Button } from '#components/base/Button';
@@ -249,16 +247,13 @@ export const ProfilePictureUploadScreen = () => {
                 source={{ uri: croppedImage?.uri || selectedImage?.uri }}
                 style={styles.avatarImage}
               />
-              <Pressable
+              <AppPressable
                 onPress={handleRemoveImage}
-                style={({ pressed }) => [
-                  styles.avatarRemove,
-                  pressed && styles.pressed,
-                ]}
+                style={styles.avatarRemove}
                 disabled={isUploading}
               >
                 <Icon tone="error" name="close-circle" size={24} />
-              </Pressable>
+              </AppPressable>
             </>
           ) : hasExistingAvatar ? (
             <>
@@ -267,15 +262,12 @@ export const ProfilePictureUploadScreen = () => {
                 style={styles.avatarImage}
                 displaySize={200}
               />
-              <Pressable
+              <AppPressable
                 onPress={handleRemoveImage}
-                style={({ pressed }) => [
-                  styles.avatarRemove,
-                  pressed && styles.pressed,
-                ]}
+                style={styles.avatarRemove}
               >
                 <Icon tone="error" name="close-circle" size={24} />
-              </Pressable>
+              </AppPressable>
             </>
           ) : profileLoading ? (
             <View style={styles.avatarPlaceholder}>
@@ -290,16 +282,13 @@ export const ProfilePictureUploadScreen = () => {
 
         {!!selectedImage && !croppedImage && (
           <View style={styles.cropContainer}>
-            <Pressable
+            <AppPressable
               onPress={handleCropImage}
-              style={({ pressed }) => [
-                styles.cropButton,
-                pressed && styles.pressed,
-              ]}
+              style={styles.cropButton}
               disabled={isUploading}
             >
               <Text style={styles.cropButtonText}>Crop & Center</Text>
-            </Pressable>
+            </AppPressable>
             <Text style={styles.cropHint}>
               Recommended to optimize your photo
             </Text>
@@ -308,12 +297,9 @@ export const ProfilePictureUploadScreen = () => {
 
         {!hasAnyImage && !profileLoading && (
           <View style={styles.formAction}>
-            <Pressable
+            <AppPressable
               onPress={handleSelectPhoto}
-              style={({ pressed }) => [
-                styles.uploadOption,
-                pressed && styles.pressed,
-              ]}
+              style={styles.uploadOption}
               disabled={isUploading}
             >
               <View style={styles.uploadOptionIcon}>
@@ -331,14 +317,11 @@ export const ProfilePictureUploadScreen = () => {
               </View>
 
               <Icon tone="textSecondary" name="chevron-forward" size={20} />
-            </Pressable>
+            </AppPressable>
 
-            <Pressable
+            <AppPressable
               onPress={handleTakePhoto}
-              style={({ pressed }) => [
-                styles.uploadOption,
-                pressed && styles.pressed,
-              ]}
+              style={styles.uploadOption}
               disabled={isUploading}
             >
               <View style={styles.uploadOptionIcon}>
@@ -354,7 +337,7 @@ export const ProfilePictureUploadScreen = () => {
               </View>
 
               <Icon tone="textSecondary" name="chevron-forward" size={20} />
-            </Pressable>
+            </AppPressable>
           </View>
         )}
 
@@ -396,7 +379,6 @@ export const ProfilePictureUploadScreen = () => {
           </View>
         </View>
       </ScrollView>
-
       <Button
         title={
           isUploading

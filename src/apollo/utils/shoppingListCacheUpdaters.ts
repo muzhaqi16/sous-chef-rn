@@ -11,13 +11,89 @@
  * `storeFieldName` to distinguish filtered variants.
  */
 
-import type { ApolloCache } from '@apollo/client';
+import { gql, type ApolloCache } from '@apollo/client';
+import {
+  ShoppingListItemDisplayFragmentDoc,
+  type ShoppingListItemDisplayFragment,
+} from '#features/shoppingList/graphql/shoppingListFragments.generated';
+import { DisplayFormat } from '#/graphql/generated/schemaTypes';
+import { createOptimisticEntity } from './createOptimisticResponse';
+import { classifyCreateResult } from './classifyCreateResult';
+import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
 import {
   type ConnectionData,
   createRemoveFromParentConnectionUpdater,
   safeEvict,
   safeEvictMany,
 } from './cacheUpdaters';
+
+export interface OptimisticShoppingListItemFields {
+  itemName: string;
+  quantity?: number | null;
+  quantityInput?: string | null;
+  unitName?: string | null;
+  category?: string | null;
+  itemId?: string | null;
+  unitId?: string | null;
+}
+
+/**
+ * Build a complete optimistic `ShoppingListItem` for local-first creates.
+ *
+ * `id` is the client-minted cuid (the row's real PK), baked straight into the
+ * entity so the online create and the queued replay converge on one row. The
+ * full display shape is mandatory offline, where no server response arrives to
+ * materialize the row (an incomplete shape makes a list cell's `useFragment`
+ * report `complete: false` and blank the row). Pass the result to
+ * {@link addOptimisticShoppingListItem}.
+ *
+ * Lives here (a shared apollo util) rather than inside the shoppingList feature
+ * so every add surface — including ones in other features (barcode,
+ * pantry-detail, filtered-pantry) — can build the same entity without crossing
+ * a feature boundary.
+ */
+export function createOptimisticShoppingListItem(
+  id: string,
+  fields: OptimisticShoppingListItemFields,
+): ShoppingListItemDisplayFragment {
+  return createOptimisticEntity<ShoppingListItemDisplayFragment>(
+    'ShoppingListItem',
+    id,
+    {
+      itemName: fields.itemName,
+      quantity: fields.quantity ?? 1,
+      quantityInput: fields.quantityInput ?? null,
+      displayFormat: DisplayFormat.Auto,
+      unitName: fields.unitName ?? null,
+      category: fields.category ?? null,
+      notes: null,
+      sortOrder: '',
+      purchaseInfo: {
+        __typename: 'ShoppingListItemPurchaseInfo',
+        isPurchased: false,
+      },
+      item: fields.itemId
+        ? { __typename: 'Item', id: fields.itemId, imageUrl: null, images: [] }
+        : null,
+      unit: fields.unitId
+        ? { __typename: 'Unit', id: fields.unitId, name: '', symbol: '' }
+        : null,
+    },
+  );
+}
+
+/**
+ * Minimal stats read used by {@link addOptimisticShoppingListItem} to recompute
+ * `remainingItems` / `completionRate` after an optimistic add.
+ */
+const ShoppingListStatsForOptimisticAddFragment = gql`
+  fragment _ShoppingListStatsForOptimisticAdd on ShoppingList {
+    totalItems
+    completedItems
+    remainingItems
+    completionRate
+  }
+`;
 
 // =============================================================================
 // storeFieldName filter detection
@@ -322,6 +398,171 @@ export function addNewItemToShoppingListCache(
     });
   } catch (error) {
     console.warn('Failed to update cache for new shopping list item:', error);
+  }
+}
+
+/**
+ * Local-first optimistic add: write a new ShoppingListItem to the cache
+ * PERMANENTLY (full entity + connection edge + recomputed list stats) BEFORE the
+ * create mutation fires, so it survives a fully-offline / API-down create (the
+ * queue replays via `SyncShoppingListItem(clientId = id)`).
+ *
+ * Unlike {@link addNewItemToShoppingListCache} — which only wires a bare-ref
+ * edge and relies on the mutation *response* to materialize the entity — this
+ * `writeFragment`s the full display entity first. That step is mandatory
+ * offline, where no response ever arrives to fill the entity's fields (without
+ * it the row renders blank).
+ *
+ * `item.id` MUST be the client-minted cuid sent as `input.id`, so the online
+ * create and the queued replay converge on the same row (no duplicate).
+ */
+export function addOptimisticShoppingListItem(
+  cache: ApolloCache,
+  listId: string,
+  item: ShoppingListItemDisplayFragment,
+): void {
+  // 1. Write the full entity so the (bare-ref) edge resolves with display
+  //    fields even fully offline.
+  cache.writeFragment({
+    id: cache.identify(item),
+    fragment: ShoppingListItemDisplayFragmentDoc,
+    fragmentName: 'ShoppingListItemDisplayFragment',
+    data: item,
+  });
+
+  const parentCacheId = cache.identify({
+    __typename: 'ShoppingList',
+    id: listId,
+  });
+
+  // 2. Snapshot completedItems BEFORE the add (new items are unpurchased, so
+  //    completedItems is unchanged; remaining/completion derive from it).
+  const stats = parentCacheId
+    ? cache.readFragment<{ completedItems: number }>({
+        id: parentCacheId,
+        fragment: ShoppingListStatsForOptimisticAddFragment,
+        fragmentName: '_ShoppingListStatsForOptimisticAdd',
+      })
+    : null;
+  const completed = stats?.completedItems ?? 0;
+
+  // 3. Add the edge + bump totalItems.
+  addNewItemToShoppingListCache(cache, listId, item);
+
+  // 4. Recompute remaining / completion from the now-bumped total.
+  if (!parentCacheId) return;
+  cache.modify({
+    id: parentCacheId,
+    fields: {
+      remainingItems(_existing: number, { readField }) {
+        const total = readField<number>('totalItems') ?? 0;
+        return Math.max(0, total - completed);
+      },
+      completionRate(_existing: number, { readField }) {
+        const total = readField<number>('totalItems') ?? 0;
+        return total > 0 ? completed / total : 0;
+      },
+    },
+  });
+}
+
+/**
+ * Reverse {@link addOptimisticShoppingListItem} when a local-first create is
+ * rejected by the server (e.g. `ValidationError` / `ConflictError`).
+ *
+ * Evicting the entity alone is NOT a full revert: `addOptimisticShoppingListItem`
+ * also bumped the `ShoppingList.totalItems` / `remainingItems` / `completionRate`
+ * scalars, and the self-healing `itemsConnection` read only repairs the
+ * connection's own `totalCount` — not those sibling scalars. So an evict-only
+ * revert leaves the list header showing an inflated count until the next stats
+ * refetch. This reverses the scalar bump too (the item was unpurchased, so
+ * `completedItems` is unchanged). The dangling connection edge is dropped by the
+ * self-healing read.
+ */
+export function revertOptimisticShoppingListItem(
+  cache: ApolloCache,
+  listId: string,
+  clientId: string,
+): void {
+  safeEvict(cache, 'ShoppingListItem', clientId);
+
+  const parentCacheId = cache.identify({
+    __typename: 'ShoppingList',
+    id: listId,
+  });
+  if (!parentCacheId) return;
+
+  const stats = cache.readFragment<{
+    totalItems: number;
+    completedItems: number;
+  }>({
+    id: parentCacheId,
+    fragment: ShoppingListStatsForOptimisticAddFragment,
+    fragmentName: '_ShoppingListStatsForOptimisticAdd',
+  });
+  const newTotal = Math.max(0, (stats?.totalItems ?? 0) - 1);
+  const completed = stats?.completedItems ?? 0;
+
+  cache.modify({
+    id: parentCacheId,
+    fields: {
+      totalItems: () => newTotal,
+      remainingItems: () => Math.max(0, newTotal - completed),
+      completionRate: () => (newTotal > 0 ? completed / newTotal : 0),
+    },
+  });
+}
+
+/**
+ * Reconcile a local-first shopping-list create after its mutation resolves.
+ *
+ * Every shopping add surface writes the item to the cache before firing and
+ * shares one keep/revert rule: a `'rejected'` result (a real error, or a
+ * non-success payload such as ConflictError/ValidationError) discards the
+ * optimistic item; `'created'` / `'queued'` keep it — a queued create replays
+ * later, keyed by the same `id`. Centralizing the payload key, success typename,
+ * and the stat-aware revert here keeps them in one place so they can't drift
+ * across the many add sites. Returns whether the optimistic item was kept or
+ * reverted so the caller can drive its own success / error UX.
+ */
+export function reconcileShoppingCreate(
+  cache: ApolloCache,
+  listId: string,
+  optimisticId: string,
+  result: { data?: unknown; error?: unknown } | null | undefined,
+): 'kept' | 'reverted' {
+  const outcome = classifyCreateResult(
+    result,
+    'addItemToShoppingList',
+    'AddItemToShoppingListPayload',
+  );
+  if (outcome === 'rejected') {
+    executeCacheUpdate(
+      () => revertOptimisticShoppingListItem(cache, listId, optimisticId),
+      'Revert rejected Shopping List Item',
+    );
+    return 'reverted';
+  }
+  return 'kept';
+}
+
+/**
+ * Catalog-merge reconciliation: when the server merges a client-created item
+ * into an existing catalog row, the returned id differs from the client cuid we
+ * wrote optimistically. Evict the stale cuid entity so its (now-dangling)
+ * connection edge is dropped by the self-healing read and the server row stands.
+ *
+ * `clientId` is read off the mutation's own `variables` at the call site (never a
+ * shared ref), so this stays correct when adds overlap. A no-op when the server
+ * echoed the same id (no merge).
+ */
+export function adoptServerShoppingListItemId(
+  cache: ApolloCache,
+  serverId: string,
+  clientId: string | null | undefined,
+): void {
+  if (clientId && serverId !== clientId) {
+    safeEvict(cache, 'ShoppingListItem', clientId);
   }
 }
 

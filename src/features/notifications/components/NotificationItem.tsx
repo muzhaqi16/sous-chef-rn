@@ -1,5 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Icon } from '#utils/iconUtils';
 import { StyleSheet } from 'react-native-unistyles';
 import { formatDistanceToNow } from 'date-fns/formatDistanceToNow';
@@ -7,7 +8,7 @@ import { NotificationItem as NotificationType } from '#store/slices/notification
 import { getNotificationIcon } from '#utils/notifications/notificationHelpers';
 import { safeParseDate } from '#utils/dateUtils';
 
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
 
 interface NotificationItemProps {
@@ -21,6 +22,8 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
   onPress,
   onDismiss,
 }) => {
+  const { t } = useTranslation();
+
   const handlePress = () => {
     onPress(notification);
   };
@@ -35,12 +38,8 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
   })();
 
   return (
-    <Pressable
-      style={({ pressed }) => [
-        styles.container,
-        !notification.isRead && styles.unreadContainer,
-        pressed && styles.pressed,
-      ]}
+    <AppPressable
+      style={[styles.container, !notification.isRead && styles.unreadContainer]}
       onPress={handlePress}
     >
       <View
@@ -55,7 +54,6 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
           tone={!notification.isRead ? 'primary' : 'textSecondary'}
         />
       </View>
-
       <View style={styles.contentContainer}>
         <Text
           size="md"
@@ -79,20 +77,17 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
           {formattedTimestamp}
         </Text>
       </View>
-
       {!!onDismiss && (
-        <Pressable
-          style={({ pressed }) => [
-            styles.dismissButton,
-            pressed && styles.pressed,
-          ]}
+        <AppPressable
+          style={styles.dismissButton}
           onPress={handleDismiss}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          accessibilityLabel={t('notifications.dismissA11y')}
         >
           <Icon name="close" size={20} tone="textTertiary" />
-        </Pressable>
+        </AppPressable>
       )}
-    </Pressable>
+    </AppPressable>
   );
 };
 

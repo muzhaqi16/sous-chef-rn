@@ -2,6 +2,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { useFragment } from '@apollo/client/react';
 import { Icon } from '#utils/iconUtils';
@@ -52,8 +53,8 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
     usedPantryItems.length > 0;
 
   return (
-    <Pressable
-      style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+    <AppPressable
+      style={styles.card}
       onPress={() => onPress?.(item.id)}
       android_ripple={RIPPLE.SUBTLE}
     >
@@ -81,12 +82,10 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
           />
         </View>
       )}
-
       {/* Image */}
       {!!imageUrl && (
         <CachedImage uri={imageUrl} style={styles.image} displaySize={44} />
       )}
-
       {/* Content */}
       <View style={styles.content}>
         <Text
@@ -129,7 +128,6 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
           </View>
         )}
       </View>
-
       {/* Delete */}
       {!!onDelete && (
         <Pressable
@@ -140,7 +138,7 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
           <Icon name="close-circle-outline" size={20} tone="textTertiary" />
         </Pressable>
       )}
-    </Pressable>
+    </AppPressable>
   );
 };
 

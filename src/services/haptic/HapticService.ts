@@ -67,14 +67,16 @@ class HapticFeedbackService {
   }
 
   isEnabled(): boolean {
-    if (this.initialized) {
-      return (this.enabledPreference ?? true) && this.supported;
+    // `initialize()` is deliberately deferred to the idle queue in
+    // useStartupInit (haptics aren't needed for first paint), so an early tap
+    // — e.g. a tab press that beats the idle callback — can reach here before
+    // init. Self-initialize on first use so the preference is cached and the
+    // store subscription is wired up, rather than reading a one-off uncached
+    // value on every early call. `initialize()` is idempotent.
+    if (!this.initialized) {
+      this.initialize();
     }
-    if (__DEV__) {
-      console.warn('[HapticService] isEnabled() called before initialize()');
-    }
-    const stored = useStore.getState().hapticFeedbackEnabled;
-    return (stored ?? true) && this.supported;
+    return (this.enabledPreference ?? true) && this.supported;
   }
 
   isSupported(): boolean {

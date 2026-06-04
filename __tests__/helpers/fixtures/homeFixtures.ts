@@ -84,6 +84,7 @@ export function homeNode(home: HomeFixture) {
     isPublic: false,
     joinCode: null,
     allowJoinCode: false,
+    joinLink: null,
     maxMembers: 10,
     isDefault: home.isDefault ?? false,
     version: home.version ?? 1,

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, ScrollView } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
@@ -32,10 +32,9 @@ export const NotificationDetailScreen: React.FC<
     );
   }
 
-  const payload =
-    typeof notification.payload === 'string'
-      ? JSON.parse(notification.payload)
-      : notification.payload;
+  // payload is always a NotificationPayload object (narrowed at the ingestion
+  // boundary), so it can be read directly.
+  const payload = notification.payload;
 
   return (
     <NotificationActionHandler>
@@ -76,11 +75,8 @@ export const NotificationDetailScreen: React.FC<
             )}
 
             {!!notification.requiresAction && !!notification.actionType && (
-              <Pressable
-                style={({ pressed }) => [
-                  styles.actionButton,
-                  pressed && styles.pressed,
-                ]}
+              <AppPressable
+                style={styles.actionButton}
                 onPress={() =>
                   notification.actionType === 'VIEW_EXPIRING_ITEMS'
                     ? showExpirationActionSheet(notification)
@@ -98,7 +94,7 @@ export const NotificationDetailScreen: React.FC<
                     ? 'Take Action'
                     : 'Accept Invitation'}
                 </Text>
-              </Pressable>
+              </AppPressable>
             )}
           </View>
         </ScrollView>

@@ -1,23 +1,25 @@
 /**
  * useRemoveShoppingItem - Remove item mutation for shopping list
  *
- * Single responsibility:
- * - Remove mutation with optimistic response
- * - Cache eviction for removed item
- * - Error handling with user feedback
+ * Evicts the item and decrements the list stats in the cache before firing the
+ * mutation, and leaves those changes in place. The removal persists even when the
+ * delete is queued offline or the API is unreachable — the queue replays it,
+ * idempotent by the item's id. An `optimisticResponse` can't be used here: Apollo
+ * would roll it back the moment the request is queued (null result). On a real
+ * (non-network) error the item still exists server-side, so it's restored via
+ * refetch.
  */
 
 import { gql } from '@apollo/client';
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import type { Unmasked } from '@apollo/client/masking';
-import {
-  RemoveItemFromShoppingListDocument,
-  type RemoveItemFromShoppingListMutation,
-} from '#features/shoppingList/graphql/shoppingList.generated';
-import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
+import { RemoveItemFromShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { removeFromShoppingListItemsCache } from './utils';
-import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
+import {
+  executeCacheUpdate,
+  executeMutation,
+} from '#/utils/compilerSafeWrappers';
 import { handleMutationError } from '#/utils/errorHandlers';
+import { isNetworkError } from '#/utils/isNetworkError';
 
 // Minimal cache-read fragments — only the fields the optimistic-update path needs.
 const ShoppingListStatsFragment = gql`
@@ -42,15 +44,6 @@ interface UseRemoveShoppingItemOptions {
   refetch: () => Promise<unknown>;
 }
 
-/**
- * Hook for removing items from a shopping list
- *
- * @example
- * ```tsx
- * const { removeItem } = useRemoveShoppingItem({ listId, items, refetch });
- * await removeItem('item-123');
- * ```
- */
 interface UseRemoveShoppingItemReturn {
   removeItem: (itemId: string) => Promise<unknown>;
 }
@@ -59,72 +52,13 @@ export function useRemoveShoppingItem({
   listId,
   refetch,
 }: UseRemoveShoppingItemOptions): UseRemoveShoppingItemReturn {
-  const { createRemoveOperation } = useCrudOperations();
   const client = useApolloClient();
 
   const [removeItemMutation] = useMutation(RemoveItemFromShoppingListDocument, {
-    optimisticResponse: (
-      variables,
-    ): Unmasked<RemoveItemFromShoppingListMutation> => {
-      // Read current aggregates from cache so the optimistic response
-      // reflects correct counts instead of hardcoded zeros.
-      const listStats = listId
-        ? client.cache.readFragment<{
-            totalItems: number;
-            completedItems: number;
-            remainingItems: number;
-            completionRate: number;
-          }>({
-            id: client.cache.identify({
-              __typename: 'ShoppingList',
-              id: listId,
-            }),
-            fragment: ShoppingListStatsFragment,
-            fragmentName: '_RemoveShoppingItemStats',
-          })
-        : null;
-
-      const itemPurchase = client.cache.readFragment<{
-        purchaseInfo: { isPurchased: boolean } | null;
-      }>({
-        id: client.cache.identify({
-          __typename: 'ShoppingListItem',
-          id: variables.input.id,
-        }),
-        fragment: ShoppingListItemPurchaseFragment,
-        fragmentName: '_RemoveShoppingItemPurchase',
-      });
-
-      const wasPurchased = itemPurchase?.purchaseInfo?.isPurchased ?? false;
-      const prevTotal = listStats?.totalItems ?? 0;
-      const prevCompleted = listStats?.completedItems ?? 0;
-      const newTotal = Math.max(0, prevTotal - 1);
-      const newCompleted = wasPurchased
-        ? Math.max(0, prevCompleted - 1)
-        : prevCompleted;
-      const newRemaining = Math.max(0, newTotal - newCompleted);
-      const newCompletionRate = newTotal > 0 ? newCompleted / newTotal : 0;
-
-      return {
-        __typename: 'Mutation',
-        removeItemFromShoppingList: {
-          __typename: 'RemoveItemFromShoppingListPayload',
-          shoppingListItem: {
-            __typename: 'ShoppingListItem',
-            id: variables.input.id,
-            shoppingList: {
-              __typename: 'ShoppingList',
-              id: listId ?? '',
-              totalItems: newTotal,
-              completedItems: newCompleted,
-              remainingItems: newRemaining,
-              completionRate: newCompletionRate,
-            },
-          },
-        },
-      };
-    },
     update(cache, { data }, { variables }) {
+      // Re-evict on the server response: Apollo re-normalizes the
+      // `shoppingListItem { id }` payload, which would otherwise resurrect the
+      // (already optimistically evicted) entity into its connection.
       if (
         data?.removeItemFromShoppingList?.__typename !==
           'RemoveItemFromShoppingListPayload' ||
@@ -133,31 +67,84 @@ export function useRemoveShoppingItem({
       ) {
         return;
       }
-
       executeCacheUpdate(
-        () => {
-          const itemId = variables.input.id;
-          removeFromShoppingListItemsCache(cache, listId, itemId, {
+        () =>
+          removeFromShoppingListItemsCache(cache, listId, variables.input.id, {
             evictItem: true,
-          });
-        },
-        'Cache update failed for removeItem, will refetch:',
-        refetch,
+          }),
+        'Cache cleanup failed for removeItem:',
       );
     },
     onError: error => {
+      // Network/transient error: queueLink queued the delete for replay — keep
+      // the optimistic eviction; do NOT restore.
+      if (isNetworkError(error)) return;
+      // Real (server/validation) error: the item still exists → restore.
       handleMutationError(error, { operation: 'Remove Shopping List Item' });
+      refetch();
     },
   });
 
   const removeItem = async (itemId: string) => {
-    const operation = createRemoveOperation({
-      mutation: removeItemMutation,
-      parentId: listId,
-      itemId,
-      operationName: 'Delete Shopping List Item',
+    if (!listId) return false;
+
+    // Snapshot list stats + purchased state to compute the decremented
+    // aggregates (the old optimisticResponse path did this via the response).
+    const listStats = client.cache.readFragment<{
+      totalItems: number;
+      completedItems: number;
+      remainingItems: number;
+      completionRate: number;
+    }>({
+      id: client.cache.identify({ __typename: 'ShoppingList', id: listId }),
+      fragment: ShoppingListStatsFragment,
+      fragmentName: '_RemoveShoppingItemStats',
     });
-    return operation();
+    const itemPurchase = client.cache.readFragment<{
+      purchaseInfo: { isPurchased: boolean } | null;
+    }>({
+      id: client.cache.identify({
+        __typename: 'ShoppingListItem',
+        id: itemId,
+      }),
+      fragment: ShoppingListItemPurchaseFragment,
+      fragmentName: '_RemoveShoppingItemPurchase',
+    });
+
+    const wasPurchased = itemPurchase?.purchaseInfo?.isPurchased ?? false;
+    const prevTotal = listStats?.totalItems ?? 0;
+    const prevCompleted = listStats?.completedItems ?? 0;
+    const newTotal = Math.max(0, prevTotal - 1);
+    const newCompleted = wasPurchased
+      ? Math.max(0, prevCompleted - 1)
+      : prevCompleted;
+    const newRemaining = Math.max(0, newTotal - newCompleted);
+    const newCompletionRate = newTotal > 0 ? newCompleted / newTotal : 0;
+
+    // Apply the removal to the cache before the mutation, and leave it in place.
+    executeCacheUpdate(() => {
+      removeFromShoppingListItemsCache(client.cache, listId, itemId, {
+        evictItem: true,
+      });
+      client.cache.modify({
+        id: client.cache.identify({ __typename: 'ShoppingList', id: listId }),
+        fields: {
+          totalItems: () => newTotal,
+          completedItems: () => newCompleted,
+          remainingItems: () => newRemaining,
+          completionRate: () => newCompletionRate,
+        },
+      });
+    }, 'Remove Shopping List Item (optimistic evict + stats)');
+
+    return executeMutation(
+      () =>
+        removeItemMutation({
+          variables: { input: { id: itemId } },
+          context: { localFirst: true },
+        }),
+      'Remove Shopping List Item error:',
+    );
   };
 
   return { removeItem };

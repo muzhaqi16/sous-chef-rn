@@ -98,7 +98,8 @@ const runRequest = (
   operation: MockOperation,
   forward: MockForward,
 ): Observable<ApolloLink.Result> => {
-  const request: RunRequest = (link as { request: any }).request;
+  const request: RunRequest = (link as unknown as { request: RunRequest })
+    .request;
   return request(operation, forward);
 };
 

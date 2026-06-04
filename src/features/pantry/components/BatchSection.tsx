@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { useApolloClient, useLazyQuery } from '@apollo/client/react';
 import { Icon } from '#/utils/iconUtils';
@@ -95,11 +95,8 @@ export const BatchSection: React.FC<BatchSectionProps> = ({
   return (
     <View>
       {/* Section Header */}
-      <Pressable
-        style={({ pressed }) => [
-          styles.sectionHeader,
-          pressed && styles.pressed,
-        ]}
+      <AppPressable
+        style={styles.sectionHeader}
         onPress={() => setExpanded(!expanded)}
       >
         <Text size="base" weight="semibold">
@@ -110,8 +107,7 @@ export const BatchSection: React.FC<BatchSectionProps> = ({
           size={20}
           tone="textSecondary"
         />
-      </Pressable>
-
+      </AppPressable>
       {!!expanded && (
         <View style={styles.content}>
           {activeBatches.map(batch => (
@@ -134,17 +130,14 @@ export const BatchSection: React.FC<BatchSectionProps> = ({
 
           {/* Show all toggle — only when inactive batches exist */}
           {!!hasInactiveBatches && (
-            <Pressable
+            <AppPressable
               onPress={handleToggleShowAll}
-              style={({ pressed }) => [
-                styles.showAllButton,
-                pressed && styles.pressed,
-              ]}
+              style={styles.showAllButton}
             >
               <Text size="sm" weight="medium" tone="accent">
                 {showAll ? 'Hide inactive batches' : 'Show all batches'}
               </Text>
-            </Pressable>
+            </AppPressable>
           )}
         </View>
       )}

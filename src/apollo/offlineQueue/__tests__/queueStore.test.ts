@@ -518,23 +518,6 @@ describe('QueueStore', () => {
   });
 
   // -------------------------------------------------------------------------
-  // Cache statistics
-  // -------------------------------------------------------------------------
-  describe('getCacheStats', () => {
-    it('tracks hits and misses', () => {
-      // First load is a miss
-      store.getMutationsForUser('user-1');
-      // Second load hits cache
-      store.getMutationsForUser('user-1');
-
-      const stats = store.getCacheStats();
-      expect(stats.misses).toBeGreaterThanOrEqual(1);
-      expect(stats.hits).toBeGreaterThanOrEqual(1);
-      expect(stats.hitRate).toBeGreaterThan(0);
-    });
-  });
-
-  // -------------------------------------------------------------------------
   // clearAllQueues
   // -------------------------------------------------------------------------
   describe('clearAllQueues', () => {
@@ -550,38 +533,37 @@ describe('QueueStore', () => {
   });
 
   // -------------------------------------------------------------------------
-  // getExceededRetryMutations
+  // getPendingClientIds
   // -------------------------------------------------------------------------
-  describe('getExceededRetryMutations', () => {
-    it('returns failed mutations that exceeded max retries', () => {
+  describe('getPendingClientIds', () => {
+    it('collects input.id and input.itemId from the current user pending queue', () => {
+      store.setCurrentUserId('user-1');
       store.addMutation(
-        makeMutation({
-          id: 'exceeded',
-          retryCount: 3,
-          maxRetries: 3,
-          status: QueueStatus.FAILED,
-        }),
+        makeMutation({ id: 'm1', variables: { input: { id: 'cuid-create' } } }),
       );
       store.addMutation(
         makeMutation({
-          id: 'not-exceeded',
-          retryCount: 1,
-          maxRetries: 3,
-          status: QueueStatus.FAILED,
-        }),
-      );
-      store.addMutation(
-        makeMutation({
-          id: 'pending-high-retries',
-          retryCount: 5,
-          maxRetries: 3,
-          status: QueueStatus.PENDING,
+          id: 'm2',
+          operationName: 'MoveShoppingListItem',
+          variables: { input: { itemId: 'cuid-move' } },
         }),
       );
 
-      const result = store.getExceededRetryMutations('user-1');
-      expect(result).toHaveLength(1);
-      expect(result[0].id).toBe('exceeded');
+      const ids = store.getPendingClientIds();
+      expect(ids).toEqual(new Set(['cuid-create', 'cuid-move']));
+    });
+
+    it('returns an empty set when no current user is set', () => {
+      store.addMutation(
+        makeMutation({ variables: { input: { id: 'cuid-x' } } }),
+      );
+      expect(store.getPendingClientIds().size).toBe(0);
+    });
+
+    it('ignores mutations with no resolvable client id', () => {
+      store.setCurrentUserId('user-1');
+      store.addMutation(makeMutation({ id: 'no-id', variables: {} }));
+      expect(store.getPendingClientIds().size).toBe(0);
     });
   });
 });

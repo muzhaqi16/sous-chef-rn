@@ -5,6 +5,7 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { logger } from '#/utils/environment';
 import { DeepLinkAction } from '#store/slices/navigationSlice';
 import { toastService } from '#/services/toastService';
+import { t } from '#/i18n/t';
 
 interface DeepLinkTokenPayload {
   exp: number;
@@ -87,8 +88,14 @@ const validateDeepLinkToken = (
  * Queues deep link actions until app is hydrated and routes to appropriate handlers.
  */
 export const useDeepLinkRouter = () => {
-  const { toAuth, toEmailVerification, toResetPassword, toAcceptInvitation } =
-    useAppNavigation();
+  const {
+    toAuth,
+    toEmailVerification,
+    toResetPassword,
+    toAcceptInvitation,
+    toJoinHomeByCode,
+    toJoinByShareCode,
+  } = useAppNavigation();
   const isHydrated = useIsHydrated();
   const isAuthenticated = useAppStore(
     state => !!(state.user && state.accessToken),
@@ -183,21 +190,53 @@ export const useDeepLinkRouter = () => {
     toAcceptInvitation(token);
   };
 
-  const routeDeepLink = (action: DeepLinkAction) => {
-    const { type, token } = action;
+  const handleJoinHome = (code: string) => {
+    if (!isAuthenticated) {
+      setPendingDeepLinkAction({
+        type: 'join_home',
+        code,
+        timestamp: Date.now(),
+      });
+      toastService.info(t('joinLink.signInHome'));
+      toAuth();
+      return;
+    }
+    toJoinHomeByCode(code);
+  };
 
-    switch (type) {
+  const handleJoinList = (code: string) => {
+    if (!isAuthenticated) {
+      setPendingDeepLinkAction({
+        type: 'join_list',
+        code,
+        timestamp: Date.now(),
+      });
+      toastService.info(t('joinLink.signInList'));
+      toAuth();
+      return;
+    }
+    toJoinByShareCode(code);
+  };
+
+  const routeDeepLink = (action: DeepLinkAction) => {
+    switch (action.type) {
       case 'email_verification':
-        handleEmailVerification(token);
+        handleEmailVerification(action.token);
         break;
       case 'password_reset':
-        handlePasswordReset(token);
+        handlePasswordReset(action.token);
         break;
       case 'accept_invitation':
-        handleAcceptInvitation(token);
+        handleAcceptInvitation(action.token);
+        break;
+      case 'join_home':
+        handleJoinHome(action.code);
+        break;
+      case 'join_list':
+        handleJoinList(action.code);
         break;
       default:
-        logger.warn('Unknown deep link action type', { type });
+        logger.warn('Unknown deep link action type', { action });
     }
   };
 
@@ -220,28 +259,54 @@ export const useDeepLinkRouter = () => {
           'Your password reset link expired. Request a new one to continue.',
         accept_invitation:
           'Your invitation expired. Ask the household to send a new one.',
+        join_home: t('joinLink.staleHome'),
+        join_list: t('joinLink.staleList'),
       };
       toastService.warning(staleCopy[pendingDeepLinkAction.type]);
       clearPendingDeepLinkAction();
       return;
     }
 
-    // For email verification and invitations, wait until user is authenticated
+    // Verification, invitations, and share-code joins all require the user to
+    // be signed in first; wait until authenticated before routing them.
+    const action = pendingDeepLinkAction;
     if (
-      (pendingDeepLinkAction.type === 'email_verification' ||
-        pendingDeepLinkAction.type === 'accept_invitation') &&
+      (action.type === 'email_verification' ||
+        action.type === 'accept_invitation' ||
+        action.type === 'join_home' ||
+        action.type === 'join_list') &&
       !isAuthenticated
     ) {
       return; // Wait for authentication
     }
 
     // Process the pending action
-    logger.info('Processing pending deep link action', {
-      action: pendingDeepLinkAction,
-    });
+    logger.info('Processing pending deep link action', { action });
 
-    // Route deep link inline to avoid dependency on handler functions
-    const { type, token } = pendingDeepLinkAction;
+    // Share-code joins carry no JWT — navigate straight to the join screen,
+    // now reachable because the user is authenticated.
+    if (action.type === 'join_home') {
+      toJoinHomeByCode(action.code);
+      clearPendingDeepLinkAction();
+      return;
+    }
+    if (action.type === 'join_list') {
+      toJoinByShareCode(action.code);
+      clearPendingDeepLinkAction();
+      return;
+    }
+
+    // Token-based actions: validate the JWT inline, then route. The join
+    // branches returned above; this positive check narrows `action` to the
+    // token-carrying shape for the destructure below.
+    if (
+      action.type !== 'email_verification' &&
+      action.type !== 'password_reset' &&
+      action.type !== 'accept_invitation'
+    ) {
+      return;
+    }
+    const { type, token } = action;
     const routeAction = (actionToken: string, actionType: string) => {
       const validation = validateDeepLinkToken(
         actionToken,
@@ -298,6 +363,8 @@ export const useDeepLinkRouter = () => {
     toEmailVerification,
     toResetPassword,
     toAcceptInvitation,
+    toJoinHomeByCode,
+    toJoinByShareCode,
   ]);
 
   // Public API for triggering deep link actions

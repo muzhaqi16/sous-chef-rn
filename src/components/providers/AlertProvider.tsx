@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Modal, View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -94,7 +95,6 @@ const AlertCard: React.FC<AlertCardProps> = ({
       >
         {entry.title}
       </Text>
-
       {entry.message ? (
         <Text
           size="base"
@@ -105,7 +105,6 @@ const AlertCard: React.FC<AlertCardProps> = ({
           {entry.message}
         </Text>
       ) : null}
-
       <View
         style={[
           styles.buttonContainer,
@@ -117,16 +116,15 @@ const AlertCard: React.FC<AlertCardProps> = ({
           const isDestructive = button.style === 'destructive';
 
           return (
-            <Pressable
+            <AppPressable
               key={index}
               accessibilityRole="button"
-              style={({ pressed }) => [
+              style={[
                 styles.button,
                 !isVerticalLayout && styles.buttonFlex,
                 isCancel && styles.cancelButton,
                 !isCancel && !isDestructive && styles.defaultButton,
                 isDestructive && styles.destructiveButton,
-                pressed && styles.pressed,
               ]}
               onPress={() => handleButtonPress(button)}
             >
@@ -141,7 +139,7 @@ const AlertCard: React.FC<AlertCardProps> = ({
               >
                 {button.text}
               </Text>
-            </Pressable>
+            </AppPressable>
           );
         })}
       </View>

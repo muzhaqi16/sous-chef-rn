@@ -55,3 +55,24 @@ export function getTopLevelGraphQLError(
     message: String(first.message ?? ''),
   };
 }
+
+// Codes the API returns when a read can no longer reach the resource:
+// AUTHZ_FORBIDDEN — access revoked (e.g. a collaborator on a list that became
+// home-linked; collaborators are ignored on home-linked lists). FORBIDDEN —
+// legacy alias still emitted by some resolvers. RESOURCE_NOT_FOUND — the entity
+// was deleted/unshared. In all three cases the client should stop showing the
+// (now stale, cache-only) entity rather than preserve it.
+const RESOURCE_ACCESS_LOST_CODES = new Set([
+  'AUTHZ_FORBIDDEN',
+  'FORBIDDEN',
+  'RESOURCE_NOT_FOUND',
+]);
+
+/** True when a query error means the requesting user can no longer read the
+ *  resource — access was revoked, or it was deleted/unshared. Network and other
+ *  errors return false, so callers won't evict cached data merely because the
+ *  device went offline. */
+export function isResourceAccessLostError(error: unknown): boolean {
+  const top = getTopLevelGraphQLError(error);
+  return top !== null && RESOURCE_ACCESS_LOST_CODES.has(top.code);
+}

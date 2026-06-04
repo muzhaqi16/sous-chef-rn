@@ -53,6 +53,10 @@ function FilterTabsComponent<T extends string = string>({
 }: FilterTabsProps<T>): React.ReactElement {
   // ── Auto-scroll to keep active tab visible ──
   const scrollViewRef = useRef<ScrollView>(null);
+  // Gates the centering animation: the first positioning (mount) is instant so
+  // the strip doesn't visibly scroll when the screen appears; subsequent
+  // activeTabId changes (user taps a tab) slide smoothly to center.
+  const hasAutoCenteredRef = useRef(false);
   const cacheKey = testIDPrefix;
 
   // Compute initial content offset from cache to avoid flicker on sticky header mount.
@@ -67,7 +71,11 @@ function FilterTabsComponent<T extends string = string>({
   useEffect(() => {
     const id = requestAnimationFrame(() => {
       const offset = computeScrollOffset(activeTabId, cacheKey);
-      scrollViewRef.current?.scrollTo({ x: offset, animated: false });
+      scrollViewRef.current?.scrollTo({
+        x: offset,
+        animated: hasAutoCenteredRef.current,
+      });
+      hasAutoCenteredRef.current = true;
     });
     return () => cancelAnimationFrame(id);
   }, [activeTabId, cacheKey]);

@@ -1,3 +1,5 @@
+import { alertService } from '#/services/alertService';
+
 export interface PantryItemDuplicateInfo {
   existingPantryItemId: string;
   existingPantryItemIds: string[];
@@ -92,4 +94,29 @@ export function getPantryItemDuplicateInfo(
   }
 
   return null;
+}
+
+/**
+ * Standard "Item Already in Pantry" recovery prompt shown when a create is
+ * refused as a duplicate. The title, message, and Cancel / Restock / Add Anyway
+ * buttons are identical across every add surface (create form, multi-page
+ * submission, barcode scan), so the copy lives here once and can't drift. The
+ * Restock and Add Anyway actions are genuinely site-specific — different
+ * mutations, loading state, and success UX — so the caller supplies them.
+ * `onCancel` is optional, for sites that resolve a promise when dismissed.
+ */
+export function promptPantryDuplicate(opts: {
+  onRestock: () => void;
+  onAddAnyway: () => void;
+  onCancel?: () => void;
+}): void {
+  alertService.alert(
+    'Item Already in Pantry',
+    'This item is already in your pantry. Would you like to restock it or add a separate entry?',
+    [
+      { text: 'Cancel', style: 'cancel', onPress: opts.onCancel },
+      { text: 'Restock', onPress: opts.onRestock },
+      { text: 'Add Anyway', onPress: opts.onAddAnyway },
+    ],
+  );
 }

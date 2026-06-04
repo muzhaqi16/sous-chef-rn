@@ -26,10 +26,15 @@ const ALL_OPERATIONS = [
 const SCALARS = {
   DateTime: 'string',
   Date: 'string',
-  JSON: 'any',
+  // Mapped to global ambient types declared in src/types/graphqlScalars.d.ts.
+  // Referenced by bare name — no import — because the `module#Type` import
+  // syntax collides with the project's `#/` path alias. JSON uses the
+  // input/output split (like FlexibleQuantity below): reads get the narrow,
+  // indexable `JsonValue`; writes get the permissive `JsonInput`.
+  JSON: { input: 'JsonInput', output: 'JsonValue' },
   Upload: '{ uri: string; type: string; name: string }',
   BigInt: 'string',
-  IPv4: 'string',
+  IPv4: 'IPv4',
   FlexibleQuantity: {
     input: 'string | number',
     output: 'string',

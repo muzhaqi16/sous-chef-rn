@@ -1,7 +1,7 @@
 import React from 'react';
-import { Text } from 'react-native';
 import { render, screen, userEvent } from '@testing-library/react-native';
 import { SettingRow } from '../SettingRow';
+import { Text } from '#components/atoms/Text';
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
   useStandardBottomSheet: jest.fn(() => ({

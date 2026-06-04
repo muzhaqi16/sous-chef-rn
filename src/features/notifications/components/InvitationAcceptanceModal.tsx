@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Modal, ActivityIndicator } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { WhiteActivityIndicator } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
@@ -25,6 +25,7 @@ import {
   safeEvict,
 } from '#/apollo/utils/cacheUpdaters';
 import { useUser } from '#store/useAppStore';
+import type { NotificationPayload } from '#store/slices/notificationSlice';
 import { executeAsyncWithCleanup } from '#/utils/compilerSafeWrappers';
 import { Text } from '#components/atoms/Text';
 
@@ -62,7 +63,7 @@ export interface InvitationData {
   inviterName?: string;
   entityName: string; // Home name or Shopping List name
   token?: string;
-  payload: Record<string, unknown>;
+  payload: NotificationPayload;
 }
 
 interface InvitationAcceptanceModalProps {
@@ -91,7 +92,7 @@ export const InvitationAcceptanceModal: React.FC<
       if (payload?.__typename === 'AcceptHomeInvitePayload') {
         addToHomes(cache, payload.membership.home, { position: 'end' });
       }
-      const inviteId = invitation?.payload?.inviteId as string | undefined;
+      const inviteId = invitation?.payload?.inviteId;
       if (inviteId && userId) {
         removePendingHomeInvite(cache, userId, inviteId, { evictItem: true });
       }
@@ -107,7 +108,7 @@ export const InvitationAcceptanceModal: React.FC<
         ) {
           return;
         }
-        const inviteId = invitation?.payload?.inviteId as string | undefined;
+        const inviteId = invitation?.payload?.inviteId;
         if (inviteId && userId) {
           // Don't evict — accepting transitions the pending collaborator record
           // to active state. Apollo's normalized response already updated the
@@ -133,7 +134,7 @@ export const InvitationAcceptanceModal: React.FC<
     InvitationAcceptanceModalDeclineShoppingListInviteDocument,
     {
       update: cache => {
-        const inviteId = invitation?.payload?.inviteId as string | undefined;
+        const inviteId = invitation?.payload?.inviteId;
         if (inviteId && userId) {
           removePendingCollaborationInvite(cache, userId, inviteId, {
             evictItem: true,
@@ -354,15 +355,13 @@ export const InvitationAcceptanceModal: React.FC<
             <Text size="lg" weight="semibold" style={styles.title}>
               {invitation.title}
             </Text>
-            <Pressable
-              style={({ pressed }) => [
-                styles.closeButton,
-                pressed && styles.pressed,
-              ]}
+            <AppPressable
+              style={styles.closeButton}
               onPress={onClose}
+              accessibilityLabel={t('labels.close')}
             >
               <Icon name="close" size={24} tone="textSecondary" />
-            </Pressable>
+            </AppPressable>
           </View>
 
           {/* Content */}
@@ -399,11 +398,8 @@ export const InvitationAcceptanceModal: React.FC<
 
           {/* Actions */}
           <View style={styles.actions}>
-            <Pressable
-              style={({ pressed }) => [
-                styles.rejectButton,
-                pressed && styles.pressed,
-              ]}
+            <AppPressable
+              style={styles.rejectButton}
               onPress={handleReject}
               disabled={accepting || rejecting}
             >
@@ -417,13 +413,10 @@ export const InvitationAcceptanceModal: React.FC<
                   </Text>
                 </>
               )}
-            </Pressable>
+            </AppPressable>
 
-            <Pressable
-              style={({ pressed }) => [
-                styles.acceptButton,
-                pressed && styles.pressed,
-              ]}
+            <AppPressable
+              style={styles.acceptButton}
               onPress={handleAccept}
               disabled={accepting || rejecting}
             >
@@ -437,7 +430,7 @@ export const InvitationAcceptanceModal: React.FC<
                   </Text>
                 </>
               )}
-            </Pressable>
+            </AppPressable>
           </View>
         </View>
       </View>

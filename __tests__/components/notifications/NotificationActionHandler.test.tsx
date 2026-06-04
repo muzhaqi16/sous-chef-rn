@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import { Text } from 'react-native';
+import { Text } from '#components/atoms/Text';
 import type { ComponentProps } from 'react';
 import type { RootState } from '../../../src/store';
 import { NotificationActionHandler } from '../../../src/features/notifications/components/NotificationActionHandler';

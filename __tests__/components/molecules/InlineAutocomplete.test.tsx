@@ -1,8 +1,8 @@
 'use no memo';
 
 import React from 'react';
-import { Text } from 'react-native';
 import { render } from '@testing-library/react-native';
+import { Text } from '#components/atoms/Text';
 import { InlineAutocomplete } from '../../../src/components/molecules/InlineAutocomplete';
 
 jest.mock('../../../src/apollo/links/tokenScheduler');

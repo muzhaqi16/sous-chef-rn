@@ -444,19 +444,4 @@ describe('OptimisticDataPersistence', () => {
       expect(stats.newestTimestamp).toEqual(expect.any(Number));
     });
   });
-
-  describe('getCacheStats', () => {
-    it('tracks cache hits and misses', () => {
-      seedData([{ entityType: 'A', entityId: '1', field: 'f', value: 'v' }]);
-
-      // After seedData, the cache is populated.
-      // Each subsequent get() call hits the cache.
-      optimisticDataPersistence.get('A', '1');
-      optimisticDataPersistence.get('A', '1');
-
-      const stats = optimisticDataPersistence.getCacheStats();
-      expect(stats.hits).toBeGreaterThan(0);
-      expect(stats.hitRate).toBeGreaterThan(0);
-    });
-  });
 });

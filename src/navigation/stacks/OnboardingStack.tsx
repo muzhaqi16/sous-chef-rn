@@ -38,7 +38,9 @@ export const OnboardingStack = createNativeStackNavigator({
       screen: ProfilePictureUploadScreen,
       linking: 'onboarding/profile-picture',
     }),
-    ImageCrop: ImageCropScreen,
+    // Wrapped without a `linking` key — intentionally not deep-linkable;
+    // only reachable mid-onboarding from ProfilePictureUpload.
+    ImageCrop: createNativeStackScreen({ screen: ImageCropScreen }),
     InviteMembers: createNativeStackScreen({
       screen: InviteMemberScreen,
       linking: 'onboarding/invite',
@@ -47,7 +49,9 @@ export const OnboardingStack = createNativeStackNavigator({
       screen: OnboardingCompleteScreen,
       linking: 'onboarding/complete',
     }),
-    BiometricSetup: BiometricSetupScreen,
+    // Wrapped without a `linking` key — intentionally not deep-linkable; reached
+    // only at the end of the onboarding flow.
+    BiometricSetup: createNativeStackScreen({ screen: BiometricSetupScreen }),
   },
 });
 

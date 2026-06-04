@@ -1,5 +1,6 @@
 import { Observable, type ApolloClient } from '@apollo/client';
 import type { ApolloLink } from '@apollo/client/link';
+import { CombinedGraphQLErrors, ServerError } from '@apollo/client/errors';
 import { jwtDecode } from 'jwt-decode';
 import { logger } from '#/utils/environment';
 import { isNetworkError } from '#/utils/isNetworkError';
@@ -28,6 +29,34 @@ interface RefreshErrorLike {
     message?: string;
   }>;
 }
+
+// A genuine, server-confirmed refresh-token rejection (vs a network failure,
+// which is handled separately and must preserve the cache). Checked only AFTER
+// isNetworkError, so transient/offline failures never reach here. Recognizes
+// AC4 error types (CombinedGraphQLErrors / ServerError) and falls back to the
+// legacy AC3-style shape.
+const isAuthRejectionError = (error: unknown): boolean => {
+  if (ServerError.is(error)) {
+    return error.statusCode === 401;
+  }
+  if (CombinedGraphQLErrors.is(error)) {
+    return error.errors.some(
+      e =>
+        e.extensions?.code === 'UNAUTHENTICATED' ||
+        (e.message ?? '').toLowerCase().includes('expired'),
+    );
+  }
+  const legacy = error as RefreshErrorLike;
+  return (
+    legacy.networkError?.statusCode === 401 ||
+    (legacy.graphQLErrors?.some(
+      e =>
+        e.extensions?.code === 'UNAUTHENTICATED' ||
+        (e.message ?? '').toLowerCase().includes('expired'),
+    ) ??
+      false)
+  );
+};
 
 // Enhanced token refresh with mutex pattern and retry logic
 interface RefreshState {
@@ -129,6 +158,12 @@ const performTokenRefresh = async (): Promise<string | null> => {
     const response = await apolloClient.mutate({
       mutation: RefreshTokenDocument,
       variables: { input: { token: refreshToken } },
+      // 'none' (not the global 'all') so the mutation REJECTS on error and the
+      // catch below can classify it. Under 'all', errors resolve into
+      // response.error and the generic "Missing tokens" throw loses the real
+      // error, collapsing every failure (including genuine 401s) into 'unknown'
+      // and never logging the user out on a real rejection.
+      errorPolicy: 'none',
       context: { skipErrorLink: true },
     });
 
@@ -193,15 +228,7 @@ const performTokenRefresh = async (): Promise<string | null> => {
     }
 
     // ONLY check for auth errors if NOT a network error
-    const isTokenExpiredError =
-      refreshError.networkError?.statusCode === 401 ||
-      refreshError.graphQLErrors?.some(
-        e =>
-          e.extensions?.code === 'UNAUTHENTICATED' ||
-          e.message?.toLowerCase().includes('expired'),
-      );
-
-    if (isTokenExpiredError) {
+    if (isAuthRejectionError(error)) {
       logger.info(
         'Refresh token expired (genuine auth error), triggering logout with cache clear',
       );

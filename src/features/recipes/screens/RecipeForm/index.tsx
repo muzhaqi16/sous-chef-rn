@@ -1,4 +1,5 @@
 import React, { useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { alertService } from '#/services/alertService';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { FormModal } from '#components/organisms/FormModal';
@@ -39,6 +40,7 @@ export const RecipeFormScreen: React.FC<
   const recipeId = route.params?.recipeId;
   const isEditMode = !!recipeId;
 
+  const { t } = useTranslation();
   const { goBack } = useAppNavigation();
   const ingredientEditorRef = useRef<RecipeIngredientEditorRef>(null);
   const stepEditorRef = useRef<RecipeStepEditorRef>(null);
@@ -110,7 +112,7 @@ export const RecipeFormScreen: React.FC<
   const handleSave = () => {
     const error = form.validate();
     if (error) {
-      alertService.alert('Validation Error', error);
+      alertService.alert(t('recipes.validationError'), error);
       return;
     }
 
@@ -150,8 +152,8 @@ export const RecipeFormScreen: React.FC<
                 ? ingredientsPayload.message
                 : null;
             alertService.alert(
-              'Error',
-              updateMsg ?? ingredientsMsg ?? 'Failed to update recipe.',
+              t('labels.error'),
+              updateMsg ?? ingredientsMsg ?? t('recipes.updateRecipeFailed'),
             );
           }
         } else {
@@ -167,14 +169,17 @@ export const RecipeFormScreen: React.FC<
               createPayload && 'message' in createPayload
                 ? createPayload.message
                 : null;
-            alertService.alert('Error', message ?? 'Failed to create recipe.');
+            alertService.alert(
+              t('labels.error'),
+              message ?? t('recipes.createRecipeFailed'),
+            );
           }
         }
       },
       (err: unknown) => {
         const message =
-          err instanceof Error ? err.message : 'An unexpected error occurred.';
-        alertService.alert('Error', message);
+          err instanceof Error ? err.message : t('recipes.unexpectedError');
+        alertService.alert(t('labels.error'), message);
       },
     );
   };
@@ -219,7 +224,7 @@ export const RecipeFormScreen: React.FC<
   return (
     <>
       <FormModal
-        title={isEditMode ? 'Edit Recipe' : 'Create Recipe'}
+        title={isEditMode ? t('recipes.editRecipe') : t('recipes.createRecipe')}
         onClose={goBack}
         onSave={handleSave}
         loading={loading}

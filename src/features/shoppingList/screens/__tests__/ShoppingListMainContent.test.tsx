@@ -100,12 +100,6 @@ jest.mock('#features/shoppingList/context/ShoppingListModalsContext', () => ({
   })),
 }));
 
-jest.mock('#/hooks/auth/useAuth', () => ({
-  useAuth: jest.fn(() => ({
-    user: { id: 'user-1' },
-  })),
-}));
-
 jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
   optimisticDataPersistence: { clearType: jest.fn() },
 }));

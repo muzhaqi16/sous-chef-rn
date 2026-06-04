@@ -3,7 +3,6 @@
 import {
   enhanceWithVersion,
   createOptimisticEntity,
-  isVersionedEntity,
   type VersionedEntity,
 } from '../createOptimisticResponse';
 
@@ -161,63 +160,5 @@ describe('createOptimisticEntity', () => {
     // version and updatedAt are set before ...data spread
     expect(result.version).toBe(1);
     expect(result.updatedAt).toBeDefined();
-  });
-});
-
-describe('isVersionedEntity', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it('returns true for an object with id, version, and updatedAt', () => {
-    const entity = { id: '1', version: 2, updatedAt: '2024-01-01' };
-    expect(isVersionedEntity(entity)).toBe(true);
-  });
-
-  it('returns true when version is 0', () => {
-    expect(
-      isVersionedEntity({ id: '1', version: 0, updatedAt: '2024-01-01' }),
-    ).toBe(true);
-  });
-
-  it('returns true when updatedAt is null', () => {
-    // 'updatedAt' key is present even though value is null
-    expect(isVersionedEntity({ id: '1', version: 1, updatedAt: null })).toBe(
-      true,
-    );
-  });
-
-  it('returns false when id is missing', () => {
-    expect(isVersionedEntity({ version: 1, updatedAt: '2024-01-01' })).toBe(
-      false,
-    );
-  });
-
-  it('returns false when version is missing', () => {
-    expect(isVersionedEntity({ id: '1', updatedAt: '2024-01-01' })).toBe(false);
-  });
-
-  it('returns false when updatedAt is missing', () => {
-    expect(isVersionedEntity({ id: '1', version: 1 })).toBe(false);
-  });
-
-  it('returns falsy for null', () => {
-    expect(isVersionedEntity(null)).toBeFalsy();
-  });
-
-  it('returns falsy for undefined', () => {
-    expect(isVersionedEntity(undefined)).toBeFalsy();
-  });
-
-  it('returns false for a string', () => {
-    expect(isVersionedEntity('hello')).toBe(false);
-  });
-
-  it('returns false for a number', () => {
-    expect(isVersionedEntity(42)).toBe(false);
-  });
-
-  it('returns false for an empty object', () => {
-    expect(isVersionedEntity({})).toBe(false);
   });
 });

@@ -1,6 +1,7 @@
 import { ApolloLink, Observable } from '@apollo/client';
 import { getMainDefinition } from '@apollo/client/utilities';
 import { useStore } from '#store';
+import { isApiUnavailable } from '#store/slices/networkSlice';
 
 /**
  * Operations that must always reach the network, even in offline mode.
@@ -10,21 +11,32 @@ import { useStore } from '#store';
 const ALWAYS_ALLOW = ['RefreshToken', 'GetUserSettings'];
 
 /**
- * Apollo Link that blocks query network requests when the user has enabled offline mode.
+ * Apollo Link that blocks query network requests when the network leg can only
+ * fail — i.e. the user enabled offline mode, OR the API is unavailable
+ * (`isApiUnavailable`: the device is offline, or the reachability circuit breaker
+ * has opened because the API is down while the device is online). In all cases
+ * Apollo has already read from cache before the link chain fires, so
+ * short-circuiting serves cached data without firing a doomed request (and
+ * without the retryLink/errorLink retry+warn noise that doomed attempts produce).
  *
- * - Queries: Short-circuited (completes without forwarding). Apollo has already read
- *   from cache before the link chain fires for cache-and-network/cache-first policies,
- *   so the UI still renders cached data.
+ * - Queries: Short-circuited (completes without forwarding). Cached data still
+ *   renders; the query settles with no loading spinner and no network error.
  * - Mutations: Pass through to queueLink which handles offline queuing.
  * - Subscriptions: Pass through (WebSocket connection handles its own lifecycle).
+ *
+ * `isOnline` errs toward "online" (only false when NetInfo is confident the device
+ * is offline — `isConnected === false` or `isInternetReachable === false`), so a
+ * transient unknown state doesn't wrongly block. The "API-down-while-online" case
+ * (`isOnline === true`, API unreachable) is intentionally NOT covered here — those
+ * requests still flow through retryLink/errorLink as before.
  *
  * This approach avoids the query cascade issue caused by dynamic fetchPolicy changes
  * (see docs/apollo-client-patterns.md "Why NOT useOfflinePresetPolicy").
  */
 export const createOfflineModeLink = () => {
   return new ApolloLink((operation, forward) => {
-    const { offlineModeEnabled } = useStore.getState();
-    if (!offlineModeEnabled) {
+    const state = useStore.getState();
+    if (!state.offlineModeEnabled && !isApiUnavailable(state)) {
       return forward(operation);
     }
 

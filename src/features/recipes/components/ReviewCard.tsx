@@ -1,7 +1,9 @@
 import React from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useFragment } from '@apollo/client/react';
 import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { formatDistanceToNow } from 'date-fns/formatDistanceToNow';
 import { CachedImage } from '#components/atoms/CachedImage';
@@ -29,6 +31,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
   onEdit,
   onDelete,
 }) => {
+  const { t } = useTranslation();
   // Per-entity cache subscription: re-renders only when this review's
   // RecipeReviewFragment fields change (e.g., helpful count after a
   // toggleHelpful mutation, or comment/rating after an updateReview).
@@ -79,6 +82,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
                 onPress={onEdit}
                 hitSlop={8}
                 style={({ pressed }) => pressed && styles.pressed}
+                accessibilityLabel={t('recipes.editReviewA11y')}
               >
                 <Icon name="create-outline" size={18} tone="primary" />
               </Pressable>
@@ -88,6 +92,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
                 onPress={onDelete}
                 hitSlop={8}
                 style={({ pressed }) => pressed && styles.pressed}
+                accessibilityLabel={t('recipes.deleteReviewA11y')}
               >
                 <Icon name="trash-outline" size={18} tone="error" />
               </Pressable>
@@ -95,7 +100,6 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
           </View>
         )}
       </View>
-
       {/* Stars */}
       <View style={styles.starsRow}>
         {[1, 2, 3, 4, 5].map(star => (
@@ -107,21 +111,18 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
           />
         ))}
       </View>
-
       {/* Comment */}
       {!!review.comment && (
         <Text size="sm" lineHeight="tight" style={styles.comment}>
           {review.comment}
         </Text>
       )}
-
       {/* Helpful button */}
-      <Pressable
+      <AppPressable
         onPress={onToggleHelpful}
-        style={({ pressed }) => [
-          hasVotedHelpful ? styles.helpfulButtonActive : styles.helpfulButton,
-          pressed && styles.pressed,
-        ]}
+        style={
+          hasVotedHelpful ? styles.helpfulButtonActive : styles.helpfulButton
+        }
       >
         <Icon
           name={hasVotedHelpful ? 'thumbs-up' : 'thumbs-up-outline'}
@@ -131,7 +132,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
         <Text size="xs" tone={hasVotedHelpful ? 'accent' : 'secondary'}>
           Helpful{review.helpful > 0 ? ` (${review.helpful})` : ''}
         </Text>
-      </Pressable>
+      </AppPressable>
     </View>
   );
 };

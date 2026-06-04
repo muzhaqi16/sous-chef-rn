@@ -1,6 +1,6 @@
 {
   "name": "sous-chef-app",
-  "version": "3.5.9",
+  "version": "3.6.4",
   "private": true,
   "scripts": {
     "android": "react-native run-android",
@@ -83,6 +83,7 @@
   },
   "dependencies": {
     "@apollo/client": "~4.1.7",
+    "@bugsnag/cuid": "^3.2.2",
     "@callstack/liquid-glass": "^0.7.0",
     "@gorhom/bottom-sheet": "^5.2.8",
     "@hookform/resolvers": "^5.2.2",

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useFragment } from '@apollo/client/react';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { BottomSheetView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
@@ -37,6 +38,7 @@ export const WriteReviewSheet: React.FC<WriteReviewSheetProps> = ({
   onClose,
   submitting,
 }) => {
+  const { t } = useTranslation();
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible,
     onDismiss: onClose,
@@ -83,13 +85,13 @@ export const WriteReviewSheet: React.FC<WriteReviewSheetProps> = ({
     <BottomSheetModal ref={ref} {...modalProps} index={0}>
       <BottomSheetView style={[styles.content, contentContainerStyle]}>
         <Text size="lg" weight="semibold" style={styles.title}>
-          {isEditing ? 'Edit Review' : 'Write a Review'}
+          {isEditing ? t('recipes.editReview') : t('recipes.writeReview')}
         </Text>
 
         {/* Rating */}
         <View style={styles.ratingSection}>
           <Text size="sm" weight="medium" tone="secondary">
-            Rating
+            {t('recipes.rating')}
           </Text>
           <StarRatingInput
             value={rating}
@@ -102,12 +104,12 @@ export const WriteReviewSheet: React.FC<WriteReviewSheetProps> = ({
         {/* Comment */}
         <View style={styles.commentSection}>
           <Text size="sm" weight="medium" tone="secondary">
-            Comment (optional)
+            {t('recipes.commentOptional')}
           </Text>
           <ThemedBottomSheetTextInput
             defaultValue={comment}
             onChangeText={setComment}
-            placeholder="Share your thoughts about this recipe..."
+            placeholder={t('recipes.reviewPlaceholder')}
             multiline
             numberOfLines={4}
             style={styles.textInput}
@@ -116,23 +118,24 @@ export const WriteReviewSheet: React.FC<WriteReviewSheetProps> = ({
         </View>
 
         {/* Submit */}
-        <Pressable
+        <AppPressable
           onPress={handleSubmit}
           disabled={rating === 0 || submitting}
-          style={({ pressed }) => [
+          style={[
             styles.submitButton,
             rating === 0 && styles.submitButtonDisabled,
-            pressed && styles.pressed,
           ]}
         >
           {submitting ? (
             <OnPrimaryActivityIndicator />
           ) : (
             <Text size="md" weight="semibold" style={styles.submitText}>
-              {isEditing ? 'Update Review' : 'Submit Review'}
+              {isEditing
+                ? t('recipes.updateReview')
+                : t('recipes.submitReview')}
             </Text>
           )}
-        </Pressable>
+        </AppPressable>
       </BottomSheetView>
     </BottomSheetModal>
   );

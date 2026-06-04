@@ -7,6 +7,7 @@ jest.mock('#/graphql/generated/fragmentMatcher.json', () => ({
 
 import { gql, InMemoryCache } from '@apollo/client';
 import { makeCache } from '../cache';
+import { queueStore } from '../offlineQueue/queueStore';
 
 type NodeRef = { __typename: string; id: string; name?: string };
 type Edge = { __typename: string; node: NodeRef };
@@ -545,6 +546,101 @@ describe('cache', () => {
 
       expect(result?.shoppingList.itemsConnection.edges).toHaveLength(1);
     });
+
+    const SINGLE_PAGE_QUERY = gql`
+      query GetList($id: ID!) {
+        shoppingList(id: $id) {
+          id
+          itemsConnection {
+            edges {
+              node {
+                id
+                name
+              }
+            }
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
+          }
+        }
+      }
+    `;
+
+    const writeSinglePage = (
+      cache: InMemoryCache,
+      nodes: { id: string; name: string }[],
+    ) =>
+      cache.writeQuery({
+        query: SINGLE_PAGE_QUERY,
+        variables: { id: 'list-1' },
+        data: {
+          shoppingList: {
+            __typename: 'ShoppingList',
+            id: 'list-1',
+            itemsConnection: {
+              __typename: 'ShoppingListItemsConnection',
+              edges: nodes.map(n => ({
+                __typename: 'ShoppingListItemEdge',
+                node: { __typename: 'ShoppingListItem', ...n },
+              })),
+              pageInfo: {
+                __typename: 'PageInfo',
+                hasNextPage: false,
+                endCursor: '',
+              },
+            },
+          },
+        },
+      });
+
+    const readIds = (cache: InMemoryCache): string[] =>
+      cache
+        .readQuery<ListItemsConnectionResult>({
+          query: SINGLE_PAGE_QUERY,
+          variables: { id: 'list-1' },
+        })
+        ?.shoppingList.itemsConnection.edges.map(e => e.node.id) ?? [];
+
+    it('preserves an un-replayed local edge over an authoritative single-page refetch', () => {
+      const spy = jest
+        .spyOn(queueStore, 'getPendingClientIds')
+        .mockReturnValue(new Set(['cuid-pending']));
+      const cache = makeCache();
+
+      // Initial: a server item + an offline-created (still-queued) item.
+      writeSinglePage(cache, [
+        { id: 'server-1', name: 'Eggs' },
+        { id: 'cuid-pending', name: 'Milk' },
+      ]);
+      // Authoritative refetch that doesn't yet include the un-replayed item.
+      writeSinglePage(cache, [{ id: 'server-1', name: 'Eggs' }]);
+
+      // The pending local item is kept (its create is still queued).
+      expect(readIds(cache)).toEqual(
+        expect.arrayContaining(['server-1', 'cuid-pending']),
+      );
+      expect(readIds(cache)).toHaveLength(2);
+      spy.mockRestore();
+    });
+
+    it('drops a server-removed edge that has no pending mutation', () => {
+      const spy = jest
+        .spyOn(queueStore, 'getPendingClientIds')
+        .mockReturnValue(new Set()); // nothing queued
+      const cache = makeCache();
+
+      writeSinglePage(cache, [
+        { id: 'server-1', name: 'Eggs' },
+        { id: 'gone-1', name: 'Deleted elsewhere' },
+      ]);
+      // Authoritative refetch no longer has gone-1 (e.g. a collaborator deleted
+      // it). With no pending op for it, the page stays authoritative → dropped.
+      writeSinglePage(cache, [{ id: 'server-1', name: 'Eggs' }]);
+
+      expect(readIds(cache)).toEqual(['server-1']);
+      spy.mockRestore();
+    });
   });
 
   describe('Query-level simple merge policies', () => {
@@ -1043,6 +1139,176 @@ describe('cache', () => {
       });
       expect(result?.pantry.itemsConnection.edges).toHaveLength(1);
       expect(result?.pantry.itemsConnection.edges[0].node.id).toBe('pi-1');
+    });
+  });
+
+  describe('Pantry.itemsConnection - resilience guard (connection blip)', () => {
+    const PANTRY_CONNECTION_QUERY = gql`
+      query GetPantryItems($id: ID!, $after: String) {
+        pantry(id: $id) {
+          id
+          itemsConnection(after: $after) {
+            edges {
+              node {
+                id
+                name
+              }
+            }
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
+          }
+        }
+      }
+    `;
+
+    const PANTRY_CONNECTION_QUERY_WITH_COUNT = gql`
+      query GetPantryItemsCount($id: ID!, $after: String) {
+        pantry(id: $id) {
+          id
+          itemsConnection(after: $after) {
+            totalCount
+            edges {
+              node {
+                id
+                name
+              }
+            }
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
+          }
+        }
+      }
+    `;
+
+    it('preserves cached items when a refetch returns an EMPTY/partial connection (no authoritative totalCount)', () => {
+      const cache = makeCache();
+
+      // Initial single-page load: 2 items cached
+      cache.writeQuery({
+        query: PANTRY_CONNECTION_QUERY,
+        variables: { id: 'p1' },
+        data: {
+          pantry: {
+            __typename: 'Pantry',
+            id: 'p1',
+            itemsConnection: {
+              __typename: 'PantryItemsConnection',
+              edges: [
+                {
+                  __typename: 'PantryItemEdge',
+                  node: { __typename: 'PantryItem', id: 'pi-1', name: 'Flour' },
+                },
+                {
+                  __typename: 'PantryItemEdge',
+                  node: { __typename: 'PantryItem', id: 'pi-2', name: 'Sugar' },
+                },
+              ],
+              pageInfo: {
+                __typename: 'PageInfo',
+                hasNextPage: false,
+                endCursor: 'c1',
+              },
+            },
+          },
+        },
+      });
+
+      // Transient/partial refetch (connection blip): no cursor, hasNextPage:false,
+      // EMPTY edges, and no authoritative totalCount. Must NOT wipe the cache.
+      cache.writeQuery({
+        query: PANTRY_CONNECTION_QUERY,
+        variables: { id: 'p1' },
+        data: {
+          pantry: {
+            __typename: 'Pantry',
+            id: 'p1',
+            itemsConnection: {
+              __typename: 'PantryItemsConnection',
+              edges: [],
+              pageInfo: {
+                __typename: 'PageInfo',
+                hasNextPage: false,
+                endCursor: null,
+              },
+            },
+          },
+        },
+      });
+
+      const result = cache.readQuery<PantryItemsConnectionResult>({
+        query: PANTRY_CONNECTION_QUERY,
+        variables: { id: 'p1' },
+      });
+      // The cached pantry survives the connection blip.
+      expect(result?.pantry.itemsConnection.edges).toHaveLength(2);
+    });
+
+    it('honors an AUTHORITATIVE empty list (totalCount: 0) and clears the connection', () => {
+      const cache = makeCache();
+
+      // Initial load: 2 items, totalCount 2
+      cache.writeQuery({
+        query: PANTRY_CONNECTION_QUERY_WITH_COUNT,
+        variables: { id: 'p1' },
+        data: {
+          pantry: {
+            __typename: 'Pantry',
+            id: 'p1',
+            itemsConnection: {
+              __typename: 'PantryItemsConnection',
+              totalCount: 2,
+              edges: [
+                {
+                  __typename: 'PantryItemEdge',
+                  node: { __typename: 'PantryItem', id: 'pi-1', name: 'Flour' },
+                },
+                {
+                  __typename: 'PantryItemEdge',
+                  node: { __typename: 'PantryItem', id: 'pi-2', name: 'Sugar' },
+                },
+              ],
+              pageInfo: {
+                __typename: 'PageInfo',
+                hasNextPage: false,
+                endCursor: 'c1',
+              },
+            },
+          },
+        },
+      });
+
+      // Server authoritatively reports an empty list (everything removed).
+      cache.writeQuery({
+        query: PANTRY_CONNECTION_QUERY_WITH_COUNT,
+        variables: { id: 'p1' },
+        data: {
+          pantry: {
+            __typename: 'Pantry',
+            id: 'p1',
+            itemsConnection: {
+              __typename: 'PantryItemsConnection',
+              totalCount: 0,
+              edges: [],
+              pageInfo: {
+                __typename: 'PageInfo',
+                hasNextPage: false,
+                endCursor: null,
+              },
+            },
+          },
+        },
+      });
+
+      const result = cache.readQuery<PantryItemsConnectionResult>({
+        query: PANTRY_CONNECTION_QUERY_WITH_COUNT,
+        variables: { id: 'p1' },
+      });
+      // Authoritative empty is honored — the list clears.
+      expect(result?.pantry.itemsConnection.edges).toHaveLength(0);
     });
   });
 

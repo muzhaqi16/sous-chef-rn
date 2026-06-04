@@ -1,6 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from 'react-i18next';
 import { Text } from '#components/atoms/Text';
@@ -86,10 +87,7 @@ export const CollaboratorMemberCard: React.FC<CollaboratorMemberCardProps> = ({
   const showEmailRow = !!memberEmail && memberEmail !== displayName;
 
   return (
-    <Pressable
-      style={({ pressed }) => [styles.memberCard, pressed && styles.pressed]}
-      onPress={onPress}
-    >
+    <AppPressable style={styles.memberCard} onPress={onPress}>
       <View style={styles.memberInfo}>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>
@@ -117,11 +115,12 @@ export const CollaboratorMemberCard: React.FC<CollaboratorMemberCardProps> = ({
         <Pressable
           onPress={onRemove}
           style={({ pressed }) => pressed && styles.pressed}
+          accessibilityLabel={t('shoppingListScreens.removeMemberA11y')}
         >
           <Icon name="close" size={20} tone="error" />
         </Pressable>
       )}
-    </Pressable>
+    </AppPressable>
   );
 };
 

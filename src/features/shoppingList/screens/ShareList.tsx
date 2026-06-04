@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import { View, ScrollView } from 'react-native';
+import { Text } from '#components/atoms/Text';
 import { ThemedRefreshControl } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import { useTranslation } from 'react-i18next';
@@ -212,6 +213,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
                 listId={listId}
                 isPublic={isPublic}
                 shareCode={shareCode}
+                shareLinkUrl={shoppingList?.shareLink?.universal}
               />
 
               <ShareInviteSection listId={listId} />

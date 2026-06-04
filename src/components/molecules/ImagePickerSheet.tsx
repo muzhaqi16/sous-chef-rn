@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { View } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { BottomSheetView } from '@gorhom/bottom-sheet';
 import {
   BottomSheetModal,
@@ -59,40 +59,28 @@ export const ImagePickerSheet: React.FC<ImagePickerSheetProps> = ({
           Add Photo
         </Text>
         <View style={styles.optionsContainer}>
-          <Pressable
-            style={({ pressed }) => [styles.option, pressed && styles.pressed]}
-            onPress={handleCamera}
-          >
+          <AppPressable style={styles.option} onPress={handleCamera}>
             <View style={styles.iconContainer}>
               <Icon name="camera" size={24} tone="primary" />
             </View>
             <Text size="md" weight="medium">
               Take Photo
             </Text>
-          </Pressable>
-          <Pressable
-            style={({ pressed }) => [styles.option, pressed && styles.pressed]}
-            onPress={handleLibrary}
-          >
+          </AppPressable>
+          <AppPressable style={styles.option} onPress={handleLibrary}>
             <View style={styles.iconContainer}>
               <Icon name="image" size={24} tone="primary" />
             </View>
             <Text size="md" weight="medium">
               Choose from Library
             </Text>
-          </Pressable>
+          </AppPressable>
         </View>
-        <Pressable
-          style={({ pressed }) => [
-            styles.cancelButton,
-            pressed && styles.pressed,
-          ]}
-          onPress={dismiss}
-        >
+        <AppPressable style={styles.cancelButton} onPress={dismiss}>
           <Text size="md" weight="medium" tone="secondary">
             Cancel
           </Text>
-        </Pressable>
+        </AppPressable>
       </BottomSheetView>
     </VariantBottomSheetModal>
   );

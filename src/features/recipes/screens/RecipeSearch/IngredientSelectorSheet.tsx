@@ -1,6 +1,8 @@
 import React, { forwardRef, useImperativeHandle, useRef } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { useBottomSheetScrollableCreator } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { FlashList } from '@shopify/flash-list';
@@ -38,6 +40,7 @@ export const IngredientSelectorSheet = forwardRef<
   IngredientSelectorSheetRef,
   IngredientSelectorSheetProps
 >(({ screen, onSheetChange }, ref) => {
+  const { t } = useTranslation();
   const BottomSheetScrollable = useBottomSheetScrollableCreator();
   const ingredientSearchBarRef = useRef<BottomSheetSearchBarRef>(null);
 
@@ -77,28 +80,29 @@ export const IngredientSelectorSheet = forwardRef<
       {/* Non-scrollable header */}
       <View style={styles.header}>
         <View style={styles.headerRow}>
-          <Title style={styles.title}>Select Ingredients</Title>
-          <Pressable
-            style={({ pressed }) => [
+          <Title style={styles.title}>{t('recipes.selectIngredients')}</Title>
+          <AppPressable
+            style={[
               styles.searchButton,
               screen.selectedIngredients.size === 0 &&
                 styles.searchButtonDisabled,
-              pressed && styles.pressed,
             ]}
             onPress={handleSearchAndClose}
             disabled={screen.selectedIngredients.size === 0}
           >
             <Text size="sm" weight="semibold" style={styles.searchButtonText}>
-              Search ({screen.selectedIngredients.size})
+              {t('recipes.searchWithCount', {
+                count: screen.selectedIngredients.size,
+              })}
             </Text>
-          </Pressable>
+          </AppPressable>
         </View>
 
         {/* Search bar — shown when > 8 items */}
         {screen.pantryItems.length > 8 && (
           <BottomSheetSearchBar
             ref={ingredientSearchBarRef}
-            placeholder="Search ingredients..."
+            placeholder={t('recipes.searchIngredientsPlaceholder')}
             onChangeText={screen.setIngredientSearchQuery}
             autoCapitalize="none"
           />
@@ -108,17 +112,18 @@ export const IngredientSelectorSheet = forwardRef<
         {screen.selectedIngredients.size > 0 && (
           <View style={styles.selectionRow}>
             <Text size="sm" tone="secondary">
-              {screen.selectedIngredients.size} selected
+              {t('recipes.selectedCount', {
+                count: screen.selectedIngredients.size,
+              })}
             </Text>
             <Pressable onPress={screen.clearSelectedIngredients} hitSlop={8}>
               <Text size="sm" weight="medium" tone="accent">
-                Clear all
+                {t('recipes.clearAll')}
               </Text>
             </Pressable>
           </View>
         )}
       </View>
-
       {/* Scrollable list — direct child of BottomSheetModal */}
       <IngredientSelectorProvider
         selectedIngredients={screen.selectedIngredients}
@@ -146,7 +151,9 @@ export const IngredientSelectorSheet = forwardRef<
                 align="center"
                 style={styles.emptyText}
               >
-                No ingredients match &quot;{screen.ingredientSearchQuery}&quot;
+                {t('recipes.noIngredientsMatch', {
+                  query: screen.ingredientSearchQuery,
+                })}
               </Text>
             ) : (
               <Text
@@ -155,7 +162,7 @@ export const IngredientSelectorSheet = forwardRef<
                 align="center"
                 style={styles.emptyText}
               >
-                No pantry items available
+                {t('recipes.noPantryItemsAvailable')}
               </Text>
             )
           }

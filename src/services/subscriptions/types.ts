@@ -6,7 +6,8 @@
  * all domains (shopping lists, pantry, home, notifications).
  */
 
-import type { ApolloClient } from '@apollo/client';
+import type { ApolloClient, ErrorLike } from '@apollo/client';
+import type { useSubscription } from '@apollo/client/react';
 import { type MutationType } from '#/graphql/generated/schemaTypes';
 
 /**
@@ -128,7 +129,7 @@ export interface SubscriptionConfig<TData = unknown> {
    * Custom onError handler
    * If not provided, uses standard error handling
    */
-  customOnError?: (error: any) => void;
+  customOnError?: (error: ErrorLike) => void;
 
   /**
    * Custom onComplete handler
@@ -159,8 +160,15 @@ export interface SubscriptionConfig<TData = unknown> {
  * Contains configured handlers ready to spread into Apollo subscription hooks
  */
 export interface SubscriptionHandlers {
-  onData: (context: { data: any; client: any }) => void;
-  onError: (error: any) => void;
+  // Spread directly into `useSubscription(DOC, { ...handlers })`, so these match
+  // Apollo's own handler types. `onData` receives the FULL subscription result
+  // (`{ data: { data?: <subscription> } }`); the service extracts the payload
+  // field generically, so the data shape is the open `Record<string, unknown>`
+  // form (assignable from any concrete `OnDataOptions<TSubscription>`).
+  onData: (
+    options: useSubscription.OnDataOptions<Record<string, unknown>>,
+  ) => void;
+  onError: (error: ErrorLike) => void;
   onComplete: () => void;
 }
 

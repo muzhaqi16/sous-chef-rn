@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { alertService } from '#/services/alertService';
 import { AnimatedChip } from '#/components/atoms/AnimatedChip';
@@ -49,7 +49,6 @@ export const CuisineSelector: React.FC<CuisineSelectorProps> = ({
       <Text style={[commonStyles.bodySecondary, styles.subtitle]}>
         Select your favorite cuisines
       </Text>
-
       {/* Cuisine Chips Grid */}
       <View style={styles.chipGrid}>
         {cuisinesToShow.map(cuisine => (
@@ -63,11 +62,8 @@ export const CuisineSelector: React.FC<CuisineSelectorProps> = ({
 
         {/* Show More/Less Button */}
         {!showAllCuisines && (
-          <Pressable
-            style={({ pressed }) => [
-              styles.showMoreButton,
-              pressed && styles.pressed,
-            ]}
+          <AppPressable
+            style={styles.showMoreButton}
             onPress={() => setShowAllCuisines(true)}
           >
             <Icon name="add-circle-outline" size={18} tone="primary" />
@@ -79,20 +75,17 @@ export const CuisineSelector: React.FC<CuisineSelectorProps> = ({
             >
               Show All Cuisines
             </Text>
-          </Pressable>
+          </AppPressable>
         )}
 
         {!!showAllCuisines && (
-          <Pressable
-            style={({ pressed }) => [
-              styles.showMoreButton,
-              pressed && styles.pressed,
-            ]}
+          <AppPressable
+            style={styles.showMoreButton}
             onPress={() => setShowAllCuisines(false)}
           >
             <Icon name="remove-circle-outline" size={18} tone="textSecondary" />
             <Text style={styles.showMoreText}>Show Less</Text>
-          </Pressable>
+          </AppPressable>
         )}
       </View>
     </View>

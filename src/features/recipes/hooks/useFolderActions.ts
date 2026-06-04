@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useMutation } from '@apollo/client/react';
 import {
   DeleteRecipeFolderDocument,
@@ -15,6 +16,7 @@ import { toastService } from '#/services/toastService';
  * - Rename: deleteRecipeFolder(folder, moveTo) - recipes move to new folder
  */
 export function useFolderActions() {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
 
   const [deleteRecipeFolderMutation] = useMutation(DeleteRecipeFolderDocument, {
@@ -59,7 +61,7 @@ export function useFolderActions() {
         }),
       error => {
         console.error('Failed to rename folder:', error);
-        toastService.error('Failed to rename folder. Please try again.');
+        toastService.error(t('recipes.renameFolderFailedRetry'));
       },
     );
 
@@ -69,11 +71,11 @@ export function useFolderActions() {
 
     const payload = result.data?.deleteRecipeFolder;
     if (payload?.__typename === 'DeleteRecipeFolderPayload') {
-      toastService.success(`Renamed "${oldName}" to "${newName}"`);
+      toastService.success(t('recipes.folderRenamed', { oldName, newName }));
       return true;
     }
     const message = payload && 'message' in payload ? payload.message : null;
-    toastService.error(message ?? 'Failed to rename folder.');
+    toastService.error(message ?? t('recipes.renameFolderFailed'));
     return false;
   };
 
@@ -109,7 +111,7 @@ export function useFolderActions() {
         }),
       error => {
         console.error('Failed to delete folder:', error);
-        toastService.error('Failed to delete folder. Please try again.');
+        toastService.error(t('recipes.deleteFolderFailedRetry'));
       },
     );
 
@@ -119,11 +121,11 @@ export function useFolderActions() {
 
     const payload = result.data?.deleteRecipeFolder;
     if (payload?.__typename === 'DeleteRecipeFolderPayload') {
-      toastService.success(`Deleted "${folderName}"`);
+      toastService.success(t('recipes.folderDeleted', { folderName }));
       return true;
     }
     const message = payload && 'message' in payload ? payload.message : null;
-    toastService.error(message ?? 'Failed to delete folder.');
+    toastService.error(message ?? t('recipes.deleteFolderFailed'));
     return false;
   };
 

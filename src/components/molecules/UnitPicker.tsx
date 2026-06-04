@@ -1,6 +1,6 @@
 import React, { useState, useLayoutEffect } from 'react';
 import { View, ActivityIndicator } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -115,11 +115,8 @@ export const UnitPicker: React.FC<UnitPickerProps> = ({
   return (
     <View style={commonStyles.bottomSheetSection}>
       {/* Collapsed header row */}
-      <Pressable
-        style={({ pressed }) => [
-          styles.collapsedRow,
-          pressed && styles.pressed,
-        ]}
+      <AppPressable
+        style={styles.collapsedRow}
         onPress={() => setExpanded(prev => !prev)}
       >
         <Text style={commonStyles.bottomSheetSectionLabel}>{label}</Text>
@@ -134,8 +131,7 @@ export const UnitPicker: React.FC<UnitPickerProps> = ({
             <Icon name="chevron-down" size={20} tone="textSecondary" />
           </Animated.View>
         </View>
-      </Pressable>
-
+      </AppPressable>
       {/* Expanded chip grid */}
       {!!expanded && (
         <Animated.View
@@ -158,13 +154,12 @@ export const UnitPicker: React.FC<UnitPickerProps> = ({
                     unit.conversionConfidence < 0.8 &&
                     !unit.isTrackingUnit;
                   return (
-                    <Pressable
+                    <AppPressable
                       key={unit.unitId}
-                      style={({ pressed }) => [
+                      style={[
                         commonStyles.bottomSheetOption,
                         selected && commonStyles.bottomSheetOptionSelected,
                         unit.isTrackingUnit && styles.trackingUnit,
-                        pressed && styles.pressed,
                       ]}
                       onPress={() =>
                         handleSelect({
@@ -191,7 +186,7 @@ export const UnitPicker: React.FC<UnitPickerProps> = ({
                       {selected ? (
                         <Icon name="checkmark" size={16} tone="primary" />
                       ) : null}
-                    </Pressable>
+                    </AppPressable>
                   );
                 })}
               </View>

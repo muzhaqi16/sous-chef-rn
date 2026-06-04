@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useApolloClient, useMutation, useQuery } from '@apollo/client/react';
 import {
   CreateRecipeReviewDocument,
@@ -40,6 +41,7 @@ export function useRecipeReviews({
   recipeId,
   backendRecipe,
 }: UseRecipeReviewsOptions) {
+  const { t } = useTranslation();
   const user = useUser();
   const userId = user?.id;
   const apolloClient = useApolloClient();
@@ -102,7 +104,7 @@ export function useRecipeReviews({
         }
       },
       onError: err => {
-        toastService.error(err.message || 'Failed to submit review');
+        toastService.error(err.message || t('recipes.submitReviewFailed'));
       },
     },
   );
@@ -111,7 +113,7 @@ export function useRecipeReviews({
     UpdateRecipeReviewDocument,
     {
       onError: err => {
-        toastService.error(err.message || 'Failed to update review');
+        toastService.error(err.message || t('recipes.updateReviewFailed'));
       },
     },
   );
@@ -130,7 +132,7 @@ export function useRecipeReviews({
         removeReviewFromRecipe(cache, recipeId, variables.input.id);
       },
       onError: err => {
-        toastService.error(err.message || 'Failed to delete review');
+        toastService.error(err.message || t('recipes.deleteReviewFailed'));
       },
     },
   );
@@ -156,7 +158,7 @@ export function useRecipeReviews({
       });
     },
     onError: err => {
-      toastService.error(err.message || 'Failed to update helpful vote');
+      toastService.error(err.message || t('recipes.helpfulVoteFailed'));
     },
   });
 
@@ -171,7 +173,7 @@ export function useRecipeReviews({
     });
     const payload = result.data?.createRecipeReview;
     if (payload?.__typename === 'CreateRecipeReviewPayload') {
-      toastService.success('Review submitted');
+      toastService.success(t('recipes.reviewSubmitted'));
       return;
     }
     // Rate-limit now arrives as a top-level GraphQL error, not a RateLimitError
@@ -181,7 +183,7 @@ export function useRecipeReviews({
       return;
     }
     const message = payload && 'message' in payload ? payload.message : null;
-    toastService.error(message ?? 'Failed to submit review');
+    toastService.error(message ?? t('recipes.submitReviewFailed'));
   };
 
   const updateReview = async (
@@ -209,22 +211,22 @@ export function useRecipeReviews({
     });
     const payload = result.data?.updateRecipeReview;
     if (payload?.__typename === 'UpdateRecipeReviewPayload') {
-      toastService.success('Review updated');
+      toastService.success(t('recipes.reviewUpdated'));
       return;
     }
     const message = payload && 'message' in payload ? payload.message : null;
-    toastService.error(message ?? 'Failed to update review');
+    toastService.error(message ?? t('recipes.updateReviewFailed'));
   };
 
   const deleteReview = async (id: string) => {
     const result = await deleteReviewMutation({ variables: { input: { id } } });
     const payload = result.data?.deleteRecipeReview;
     if (payload?.__typename === 'DeleteRecipeReviewPayload') {
-      toastService.success('Review deleted');
+      toastService.success(t('recipes.reviewDeleted'));
       return;
     }
     const message = payload && 'message' in payload ? payload.message : null;
-    toastService.error(message ?? 'Failed to delete review');
+    toastService.error(message ?? t('recipes.deleteReviewFailed'));
   };
 
   const toggleHelpful = async (reviewId: string, isHelpful: boolean) => {

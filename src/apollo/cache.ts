@@ -2,6 +2,7 @@ import { InMemoryCache } from '@apollo/client';
 import type { FieldFunctionOptions, Reference } from '@apollo/client';
 // Import generated fragment matcher for proper interface/union type handling
 import fragmentMatcherData from '#/graphql/generated/fragmentMatcher.json';
+import { queueStore } from './offlineQueue/queueStore';
 
 // Apollo's `readField` accessor, extracted from the field-policy options bag.
 type ReadField = FieldFunctionOptions['readField'];
@@ -332,7 +333,63 @@ function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
     ) {
       if (!incoming) return existing;
       if (!existing) return incoming;
-      if (!args?.after && !incoming.pageInfo?.hasNextPage) return incoming;
+      if (!args?.after && !incoming.pageInfo?.hasNextPage) {
+        // Resilience guard: never let an empty/partial incoming page wipe a
+        // populated cached connection. `itemsConnection` is the only cache
+        // field with an active replace rule, so a transient/partial response
+        // (API briefly unreachable, an `errorPolicy: 'ignore'` fallback, or a
+        // 200 that arrives mid-token-refresh carrying no edges) would otherwise
+        // empty the list on a connection blip — while every other cached field
+        // (stats, home, profile, entities) survives untouched. Keep the cached
+        // edges unless the server AUTHORITATIVELY reports an empty list
+        // (`totalCount === 0`), which is a real "everything was removed" state.
+        const incomingHasEdges = (incoming.edges?.length ?? 0) > 0;
+        const existingHasEdges = (existing.edges?.length ?? 0) > 0;
+        const authoritativeEmpty = incoming.totalCount === 0;
+        if (!incomingHasEdges && existingHasEdges && !authoritativeEmpty) {
+          if (__DEV__) {
+            console.log(
+              `🛡️ [Cache] itemsConnection: preserved ${
+                existing.edges?.length ?? 0
+              } cached edge(s) — ignored empty/partial incoming (totalCount=${
+                incoming.totalCount
+              })`,
+            );
+          }
+          return existing;
+        }
+
+        // Preserve un-replayed local creates. An offline-created item lives in
+        // `existing` but isn't in this authoritative page until the queue
+        // replays it; a first-page refetch that wins the race against the replay
+        // would otherwise drop it (a visible disappear/reappear). Keep ONLY edges
+        // whose id still has a PENDING mutation queued — a genuinely
+        // server-deleted item has no pending op and is still dropped, so the page
+        // stays authoritative. Falls straight through to `return incoming` once
+        // the queue drains (pendingIds empty).
+        const pendingIds = queueStore.getPendingClientIds();
+        if (pendingIds.size === 0) return incoming;
+        const incomingIds = new Set<string>();
+        for (const edge of incoming.edges || []) {
+          const id = readEdgeNodeId(edge, readField);
+          if (id) incomingIds.add(id);
+        }
+        const preservedEdges = (existing.edges || []).filter(edge => {
+          const id = readEdgeNodeId(edge, readField);
+          return id != null && pendingIds.has(id) && !incomingIds.has(id);
+        });
+        if (preservedEdges.length === 0) return incoming;
+        if (__DEV__) {
+          console.log(
+            `🛡️ [Cache] itemsConnection: preserved ${preservedEdges.length} un-replayed local edge(s) over the authoritative page`,
+          );
+        }
+        return {
+          ...incoming,
+          edges: [...preservedEdges, ...(incoming.edges || [])],
+          totalCount: (incoming.totalCount ?? 0) + preservedEdges.length,
+        };
+      }
 
       // Append-only: keep existing edges in place, add only new incoming edges
       const existingIds = new Set<string>();

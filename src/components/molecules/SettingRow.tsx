@@ -14,7 +14,7 @@ import { getValidationSchemaForField } from '#/utils/validation/profile';
 import { Icon } from '#/utils/iconUtils';
 import { TextEditBottomSheet } from '#/components/modals/TextEditBottomSheet/TextEditBottomSheet';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { RIPPLE } from '#constants/ripple';
 import { Text } from '#components/atoms/Text';
 
@@ -140,16 +140,21 @@ export const SettingRow: React.FC<SettingRowProps> = ({
 
   return (
     <>
-      <Pressable
+      <AppPressable
         testID={item.testID || `profile-${item.key}-button`}
         onPress={item.type === 'info' ? undefined : handlePress}
+        // Selection tick on rows that do something on press. Info rows aren't
+        // pressable; switch rows toggle via the switch widget (a row-level
+        // haptic there would double-fire with the switch's own feedback).
+        haptic={
+          item.type !== 'info' && item.type !== 'switch' && !item.disabled
+        }
         disabled={item.type === 'info'}
         android_ripple={item.type === 'info' ? null : RIPPLE.SUBTLE}
-        style={({ pressed }) => [
+        style={[
           styles.rowWrapper,
           isFirst && styles.rowFirst,
           isLast && styles.rowLast,
-          pressed && styles.pressed,
         ]}
         accessibilityRole={item.type === 'info' ? 'text' : 'button'}
         accessibilityLabel={getAccessibilityLabel()}
@@ -158,9 +163,19 @@ export const SettingRow: React.FC<SettingRowProps> = ({
       >
         <View style={styles.row}>
           {item.icon}
-          <Text size="md" style={styles.rowLabel}>
-            {item.label}
-          </Text>
+          <View style={styles.rowLabelColumn}>
+            <Text size="md">{item.label}</Text>
+            {!!item.subtitle && (
+              <Text
+                size="sm"
+                tone="secondary"
+                lineHeight="tight"
+                style={styles.rowSubtitle}
+              >
+                {item.subtitle}
+              </Text>
+            )}
+          </View>
           <View style={styles.rowSpacer} />
 
           {item.type === 'info' && (
@@ -217,8 +232,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
             <Icon name="chevron-forward" size={20} tone="textSecondary" />
           )}
         </View>
-      </Pressable>
-
+      </AppPressable>
       {/* Text Edit Bottom Sheet */}
       <TextEditBottomSheet
         visible={textEditVisible}
@@ -234,7 +248,6 @@ export const SettingRow: React.FC<SettingRowProps> = ({
         multiline={item.key === 'bio'}
         keyboardType={item.key === 'phone' ? 'phone-pad' : 'default'}
       />
-
       {/* Selection Bottom Sheet */}
       {item.type === 'modal' && !!item.options && (
         <BottomSheetModal ref={ref} {...modalProps}>
@@ -249,12 +262,9 @@ export const SettingRow: React.FC<SettingRowProps> = ({
             </Text>
             <View style={styles.sheetDivider} />
             {item.options.map(opt => (
-              <Pressable
+              <AppPressable
                 key={opt.value}
-                style={({ pressed }) => [
-                  styles.sheetOption,
-                  pressed && styles.pressed,
-                ]}
+                style={styles.sheetOption}
                 onPress={handleModalOptionPress(opt.value)}
                 android_ripple={RIPPLE.SUBTLE}
                 accessibilityRole="button"
@@ -270,7 +280,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
                 {item.value === opt.value && (
                   <Icon name="checkmark" size={20} tone="primary" />
                 )}
-              </Pressable>
+              </AppPressable>
             ))}
           </BottomSheetView>
         </BottomSheetModal>
@@ -297,8 +307,12 @@ const styles = StyleSheet.create(theme => ({
     borderBottomWidth: 0,
   },
   row: { flexDirection: 'row', alignItems: 'center' },
-  rowLabel: {
+  rowLabelColumn: {
     marginLeft: theme.spacing.sm,
+    flexShrink: 1,
+  },
+  rowSubtitle: {
+    marginTop: theme.spacing.xs,
   },
   rowSpacer: { flex: 1 },
   modalValueContainer: {

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { BottomSheetTextInput, BottomSheetView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
@@ -229,18 +229,11 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
       <View style={styles.header}>
         <Text style={commonStyles.subtitle}>{title}</Text>
         {!!showAddButton && (
-          <Pressable
-            onPress={handleAddPress}
-            style={({ pressed }) => [
-              styles.addButton,
-              pressed && styles.pressed,
-            ]}
-          >
+          <AppPressable onPress={handleAddPress} style={styles.addButton}>
             <Icon name="add" size={20} tone="primary" />
-          </Pressable>
+          </AppPressable>
         )}
       </View>
-
       {/* Chip grid using static chips */}
       <View style={styles.chipContainer}>
         {items.map((item, index) => (
@@ -248,15 +241,12 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
             <View style={styles.displayChip}>
               <Text style={styles.displayChipText}>{item}</Text>
             </View>
-            <Pressable
-              style={({ pressed }) => [
-                styles.removeButton,
-                pressed && styles.pressed,
-              ]}
+            <AppPressable
+              style={styles.removeButton}
               onPress={() => handleRemove(item)}
             >
               <Icon name="close-circle-outline" size={18} tone="error" />
-            </Pressable>
+            </AppPressable>
           </View>
         ))}
 
@@ -265,7 +255,6 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
           <Text style={commonStyles.bodySecondary}>{emptyMessage}</Text>
         )}
       </View>
-
       {/* Add bottom sheet */}
       <BottomSheetModal ref={ref} {...modalProps}>
         <BottomSheetView style={[styles.sheetContent, contentContainerStyle]}>

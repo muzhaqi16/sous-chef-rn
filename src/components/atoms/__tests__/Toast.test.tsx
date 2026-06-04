@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { render, screen } from '@testing-library/react-native';
-import { Text } from 'react-native';
 import { Gesture } from 'react-native-gesture-handler';
+import { Text } from '#components/atoms/Text';
 import { scheduleOnRN } from 'react-native-worklets';
 import { ToastProvider, type ToastType } from '../Toast';
 import { useToast } from '../../../hooks/useToast';

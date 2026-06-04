@@ -1,10 +1,10 @@
 import React from 'react';
 import { View } from 'react-native';
 import {
-  Pressable,
   ThemedBackButton,
   ThemedIconButton,
 } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import Animated, {
   useAnimatedStyle,
   interpolate,
@@ -106,13 +106,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
           onPress={onBack}
           uniProps={t => ({ color: t.colors.textPrimary })}
         />
-        <Pressable
-          onPress={onAvatarPress}
-          style={({ pressed }) => [
-            styles.avatarContainer,
-            pressed && styles.pressed,
-          ]}
-        >
+        <AppPressable onPress={onAvatarPress} style={styles.avatarContainer}>
           <Animated.View
             collapsable={false}
             style={[styles.avatarScaleWrapper, avatarScaleStyle]}
@@ -140,7 +134,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
           >
             <Icon tone="iconOnPrimary" name="create" size={15} />
           </Animated.View>
-        </Pressable>
+        </AppPressable>
         <ThemedIconButton
           name="ellipsis-vertical"
           onPress={onMore}

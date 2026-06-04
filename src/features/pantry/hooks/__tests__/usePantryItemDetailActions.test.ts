@@ -37,6 +37,7 @@ jest.mock('#/services/errorService', () => ({
 }));
 
 jest.mock('#/utils/compilerSafeWrappers', () => ({
+  executeCacheUpdate: jest.fn((fn: () => void) => fn()),
   executeMutation: jest.fn(
     async (
       fn: Parameters<typeof executeMutation>[0],
@@ -57,9 +58,39 @@ jest.mock('#hooks/home/pantry/utils', () => ({
   removeFromPantryItemsCache: jest.fn(),
 }));
 
-jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => ({
-  addNewItemToShoppingListCache: jest.fn(),
-}));
+jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => {
+  const { classifyCreateResult } = jest.requireActual(
+    '#/apollo/utils/classifyCreateResult',
+  );
+  const revertOptimisticShoppingListItem = jest.fn();
+  return {
+    addNewItemToShoppingListCache: jest.fn(),
+    adoptServerShoppingListItemId: jest.fn(),
+    revertOptimisticShoppingListItem,
+    addOptimisticShoppingListItem: jest.fn(),
+    createOptimisticShoppingListItem: jest.fn((id: string) => ({
+      __typename: 'ShoppingListItem',
+      id,
+    })),
+    // Mirror the real reconciler (real classify + mocked revert) so the
+    // keep/revert decision under test matches production.
+    reconcileShoppingCreate: jest.fn(
+      (cache: unknown, listId: string, id: string, result: unknown) => {
+        if (
+          classifyCreateResult(
+            result,
+            'addItemToShoppingList',
+            'AddItemToShoppingListPayload',
+          ) === 'rejected'
+        ) {
+          revertOptimisticShoppingListItem(cache, listId, id);
+          return 'reverted';
+        }
+        return 'kept';
+      },
+    ),
+  };
+});
 
 const mockConvertExpiredToWaste = jest.fn();
 const mockConvertExpiredBatches = jest.fn();
@@ -225,6 +256,8 @@ describe('usePantryItemDetailActions', () => {
 
       expect(addMock.fired).toContainEqual({
         input: {
+          // Client-generated cuid v1 so a queued create replays idempotently.
+          id: expect.stringMatching(/^c[a-z0-9]{24}$/),
           shoppingListId: 'list-1',
           itemId: 'catalog-1',
           quantity: 3,

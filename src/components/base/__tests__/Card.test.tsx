@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
-import { Text } from 'react-native';
 import { Card } from '../Card';
+import { Text } from '#components/atoms/Text';
 
 describe('Card', () => {
   it('renders title text', () => {

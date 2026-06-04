@@ -21,8 +21,6 @@ export class QueueStore {
   // PERFORMANCE: In-memory cache to avoid repeated MMKV reads and JSON parsing
   // Write-through pattern: cache is updated on every write and invalidated on user change
   private cache: QueuedMutation[] | null = null;
-  private cacheHits = 0;
-  private cacheMisses = 0;
 
   /**
    * Load all mutations from storage
@@ -32,22 +30,10 @@ export class QueueStore {
     try {
       // Return cached queue if available
       if (this.cache !== null) {
-        this.cacheHits++;
-        if (__DEV__ && this.cacheHits % 50 === 0) {
-          console.log(
-            `⚡ Queue cache stats: ${this.cacheHits} hits, ${
-              this.cacheMisses
-            } misses (${(
-              (this.cacheHits / (this.cacheHits + this.cacheMisses)) *
-              100
-            ).toFixed(1)}% hit rate)`,
-          );
-        }
         return this.cache;
       }
 
       // Cache miss - load from storage
-      this.cacheMisses++;
       const queueJson = storage.getString(QUEUE_STORAGE_KEY);
       if (!queueJson) {
         this.cache = [];
@@ -231,6 +217,31 @@ export class QueueStore {
   }
 
   /**
+   * Client-generated entity ids that still have a PENDING mutation in the
+   * current user's queue. The cache merge uses this to avoid dropping an
+   * un-replayed optimistic item when a first-page background refetch lands
+   * before the queue replays (a server-deleted item, by contrast, has no
+   * pending op and is correctly dropped). Reads the id from the queued input
+   * (`input.id`, else `input.itemId`, else top-level `id`). Returns an empty set
+   * when no user is set or the queue is empty.
+   */
+  getPendingClientIds(): Set<string> {
+    const userId = this.getCurrentUserId();
+    if (!userId) return new Set();
+
+    const ids = new Set<string>();
+    for (const mutation of this.getPendingMutationsForUser(userId)) {
+      const variables = mutation.variables as
+        | { id?: unknown; input?: { id?: unknown; itemId?: unknown } }
+        | undefined;
+      const candidate =
+        variables?.input?.id ?? variables?.input?.itemId ?? variables?.id;
+      if (typeof candidate === 'string' && candidate) ids.add(candidate);
+    }
+    return ids;
+  }
+
+  /**
    * Get a specific mutation by ID
    */
   getMutation(mutationId: string): QueuedMutation | null {
@@ -321,15 +332,6 @@ export class QueueStore {
   }
 
   /**
-   * Get mutations that have exceeded max retries
-   */
-  getExceededRetryMutations(userId: string): QueuedMutation[] {
-    return this.getMutationsForUser(userId).filter(
-      m => m.retryCount >= m.maxRetries && m.status === QueueStatus.FAILED,
-    );
-  }
-
-  /**
    * Clean up old successful mutations (keep last 24 hours for reconciliation)
    */
   cleanupSuccessful(): number {
@@ -363,18 +365,6 @@ export class QueueStore {
     if (__DEV__) {
       console.log('🔄 Queue: Cache invalidated');
     }
-  }
-
-  /**
-   * Get cache statistics for monitoring
-   */
-  getCacheStats(): { hits: number; misses: number; hitRate: number } {
-    const total = this.cacheHits + this.cacheMisses;
-    return {
-      hits: this.cacheHits,
-      misses: this.cacheMisses,
-      hitRate: total > 0 ? (this.cacheHits / total) * 100 : 0,
-    };
   }
 }
 

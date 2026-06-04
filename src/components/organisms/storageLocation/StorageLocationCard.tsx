@@ -1,6 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { StorageLocationIcon } from '#components/atoms/StorageLocationIcon';
@@ -124,46 +125,34 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
 
           <View style={[commonStyles.row, styles.actions]}>
             {!isDefault && (
-              <Pressable
-                style={({ pressed }) => [
-                  commonStyles.row,
-                  styles.actionButton,
-                  pressed && styles.pressed,
-                ]}
+              <AppPressable
+                style={[commonStyles.row, styles.actionButton]}
                 onPress={onSetDefault}
               >
                 <Icon name="star-outline" size={18} />
                 <Text size="sm" weight="medium">
                   Set Default
                 </Text>
-              </Pressable>
+              </AppPressable>
             )}
-            <Pressable
-              style={({ pressed }) => [
-                commonStyles.row,
-                styles.actionButton,
-                pressed && styles.pressed,
-              ]}
+            <AppPressable
+              style={[commonStyles.row, styles.actionButton]}
               onPress={onEdit}
             >
               <Icon name="create-outline" size={18} />
               <Text size="sm" weight="medium">
                 Edit
               </Text>
-            </Pressable>
-            <Pressable
-              style={({ pressed }) => [
-                commonStyles.row,
-                styles.deleteActionButton,
-                pressed && styles.pressed,
-              ]}
+            </AppPressable>
+            <AppPressable
+              style={[commonStyles.row, styles.deleteActionButton]}
               onPress={onDelete}
             >
               <Icon name="trash-outline" size={18} tone="error" />
               <Text size="sm" weight="medium" tone="error">
                 Delete
               </Text>
-            </Pressable>
+            </AppPressable>
           </View>
         </View>
       </View>

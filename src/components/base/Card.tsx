@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   View,
-  Text,
   Image,
   StyleProp,
   ViewStyle,
@@ -10,6 +9,7 @@ import {
   ImageSourcePropType,
 } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
+import { Text } from '#components/atoms/Text';
 import { StyleSheet } from 'react-native-unistyles';
 import { Badge } from './Badge';
 

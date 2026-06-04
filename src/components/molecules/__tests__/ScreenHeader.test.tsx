@@ -1,7 +1,7 @@
 import React from 'react';
-import { Text } from 'react-native';
 import { render, screen, userEvent } from '@testing-library/react-native';
 import { ScreenHeader } from '../ScreenHeader';
+import { Text } from '#components/atoms/Text';
 
 jest.mock('#services/haptic/HapticService', () => ({
   HapticService: {

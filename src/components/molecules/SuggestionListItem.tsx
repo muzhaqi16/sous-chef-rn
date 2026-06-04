@@ -1,6 +1,6 @@
 import React, { useEffect, useLayoutEffect, useRef } from 'react';
 import { View } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import Animated, {
   useSharedValue,
@@ -109,8 +109,8 @@ export const SuggestionListItem = ({
 
   return (
     <Animated.View style={animatedStyle}>
-      <Pressable
-        style={({ pressed }) => [styles.container, pressed && styles.pressed]}
+      <AppPressable
+        style={styles.container}
         onPress={handlePress}
         disabled={!onPress && !onQuickAdd}
         testID={testID}
@@ -151,11 +151,8 @@ export const SuggestionListItem = ({
           )}
         </View>
         {!!onQuickAdd && (
-          <Pressable
-            style={({ pressed }) => [
-              styles.quickAddButton,
-              pressed && styles.pressed,
-            ]}
+          <AppPressable
+            style={styles.quickAddButton}
             onPress={onQuickAdd}
             disabled={disabled}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -165,9 +162,9 @@ export const SuggestionListItem = ({
               size={20}
               tone={disabled ? 'iconDisabled' : 'primary'}
             />
-          </Pressable>
+          </AppPressable>
         )}
-      </Pressable>
+      </AppPressable>
     </Animated.View>
   );
 };

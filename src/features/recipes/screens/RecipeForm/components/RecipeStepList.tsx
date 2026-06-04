@@ -1,6 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import type { StepFormState } from '../useRecipeForm';
@@ -24,12 +25,11 @@ export const RecipeStepList: React.FC<RecipeStepListProps> = ({
       <Text size="lg" weight="semibold" style={styles.sectionTitle}>
         Instructions ({steps.length})
       </Text>
-
       {steps.map((step, index) => (
-        <Pressable
+        <AppPressable
           key={step.id}
           onPress={() => onEditStep(step)}
-          style={({ pressed }) => [styles.stepRow, pressed && styles.pressed]}
+          style={styles.stepRow}
         >
           <View style={styles.stepNumber}>
             <Text size="sm" weight="bold" style={styles.stepNumberText}>
@@ -46,18 +46,14 @@ export const RecipeStepList: React.FC<RecipeStepListProps> = ({
           >
             <Icon name="close-circle" size={20} tone="error" />
           </Pressable>
-        </Pressable>
+        </AppPressable>
       ))}
-
-      <Pressable
-        onPress={onAddStep}
-        style={({ pressed }) => [styles.addButton, pressed && styles.pressed]}
-      >
+      <AppPressable onPress={onAddStep} style={styles.addButton}>
         <Icon name="add-circle-outline" size={20} tone="primary" />
         <Text size="md" weight="medium" tone="accent" style={styles.addText}>
           Add Step
         </Text>
-      </Pressable>
+      </AppPressable>
     </View>
   );
 };

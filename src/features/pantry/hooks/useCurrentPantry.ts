@@ -7,7 +7,7 @@ import {
 import { useQuery } from '@apollo/client/react';
 import { GetHomesDocument } from '#operations/home/home.generated';
 import { extractNodes } from '#/utils/connectionUtils';
-import { usePreservedArrayData } from '#/hooks/apollo/usePreservedQueryData';
+import { usePreservedNodes } from '#/hooks/apollo/usePreservedConnection';
 
 type PantryNode = { id: string; name?: string; isDefault?: boolean };
 
@@ -33,7 +33,7 @@ export function useCurrentPantry() {
   });
 
   // Preserve homes (connection-shape nodes).
-  const homes = usePreservedArrayData(extractNodes(homesData?.homes));
+  const homes = usePreservedNodes(homesData?.homes);
 
   type HomeNode = (typeof homes)[number] & {
     name?: string;

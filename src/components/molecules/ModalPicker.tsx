@@ -5,7 +5,7 @@ import { Icon } from '#/utils/iconUtils';
 import { Button } from '#components/base/Button';
 import { ActionTray } from '#components/templates/ActionTray/ActionTray';
 import type { ActionTrayRef } from '#components/templates/ActionTray/types';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
 
 export interface ModalPickerProps {
@@ -55,9 +55,9 @@ export const ModalPicker: React.FC<ModalPickerProps> = ({
     <ActionTray ref={trayRef} title={label} onClose={onCancel}>
       <ScrollView>
         {options.map(opt => (
-          <Pressable
+          <AppPressable
             key={opt.value}
-            style={({ pressed }) => [styles.option, pressed && styles.pressed]}
+            style={styles.option}
             onPress={() => {
               if (confirmLabel) {
                 setPendingValue(opt.value);
@@ -72,7 +72,7 @@ export const ModalPicker: React.FC<ModalPickerProps> = ({
             {activeValue === opt.value && (
               <Icon name="checkmark" size={20} tone="primary" />
             )}
-          </Pressable>
+          </AppPressable>
         ))}
       </ScrollView>
       {confirmLabel ? (

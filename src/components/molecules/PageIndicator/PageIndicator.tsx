@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
 
@@ -35,12 +35,12 @@ const PageIndicatorItemRow: React.FC<{
   styles.useVariants({ state });
 
   return (
-    <Pressable
+    <AppPressable
       onPress={onPress}
       accessibilityRole="tab"
       accessibilityLabel={label}
       accessibilityState={{ selected }}
-      style={({ pressed }) => [styles.item, pressed && styles.pressed]}
+      style={styles.item}
     >
       <View style={styles.dot} />
       <Text
@@ -50,7 +50,7 @@ const PageIndicatorItemRow: React.FC<{
       >
         {label}
       </Text>
-    </Pressable>
+    </AppPressable>
   );
 };
 

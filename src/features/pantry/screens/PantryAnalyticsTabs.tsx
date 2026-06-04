@@ -2,10 +2,8 @@ import React from 'react';
 import { View, ScrollView } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
-import {
-  Pressable,
-  ThemedRefreshControl,
-} from '#components/atoms/themedComponents';
+import { ThemedRefreshControl } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
 import { AnalyticsSummaryCard as BaseAnalyticsSummaryCard } from '#components/analytics/AnalyticsSummaryCard';
 import { ChartSection } from '#components/analytics/ChartSection';
@@ -90,13 +88,7 @@ const GranularityButton: React.FC<{
 }> = ({ label, isActive, onPress }) => {
   styles.useVariants({ active: isActive });
   return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.granularityButton,
-        pressed && styles.pressed,
-      ]}
-    >
+    <AppPressable onPress={onPress} style={styles.granularityButton}>
       <Text
         size="xs"
         weight="medium"
@@ -105,7 +97,7 @@ const GranularityButton: React.FC<{
       >
         {label}
       </Text>
-    </Pressable>
+    </AppPressable>
   );
 };
 

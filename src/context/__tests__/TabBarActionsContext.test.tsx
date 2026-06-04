@@ -1,7 +1,7 @@
 import React from 'react';
-import { Text } from 'react-native';
 import { render, screen } from '@testing-library/react-native';
 import { renderHook, act } from '@testing-library/react-native';
+import { Text } from '#components/atoms/Text';
 import {
   TabBarActionsProvider,
   useTabBarSetters,

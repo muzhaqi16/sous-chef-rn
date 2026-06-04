@@ -15,6 +15,11 @@ query GetShoppingListDetails($id: ID!) {
     homeId
     shareCode
     isPublic
+    # Server-built anyone-with-link share URL. Non-null only when isPublic and a
+    # shareCode is set — the share UI gates on the same condition.
+    shareLink {
+      universal
+    }
     home {
       id
       name
@@ -605,6 +610,10 @@ mutation ShareShoppingList($input: ShareShoppingListInput!) {
         id
         shareCode
         isPublic
+        # Keep the cached link in sync when public sharing is toggled on/off.
+        shareLink {
+          universal
+        }
       }
     }
     ... on Error {

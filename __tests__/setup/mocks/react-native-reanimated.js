@@ -21,6 +21,11 @@ jest.mock('react-native-reanimated', () => {
 
   return {
     __esModule: true,
+    // Dev-only helper the Unistyles babel plugin invokes when processing a
+    // dynamic `style` prop on a non-core component (e.g. a Pressable wrapper
+    // like AppPressable). Real Reanimated exports it; the mock must too or any
+    // component with a dynamic inline style throws "not a function" at render.
+    getUseOfValueInStyleWarning: jest.fn(() => ''),
     default: {
       createAnimatedComponent: component => component,
       addWhitelistedNativeProps: noOp,

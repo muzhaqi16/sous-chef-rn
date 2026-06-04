@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from 'react-i18next';
 import { MultiSelectChipSheet } from '#components/molecules/MultiSelectChipSheet/MultiSelectChipSheet';
@@ -124,10 +124,7 @@ const ChipGroup: React.FC<ChipGroupProps> = ({
 }) => {
   const { t } = useTranslation();
   return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [styles.chipGroup, pressed && styles.pressed]}
-    >
+    <AppPressable onPress={onPress} style={styles.chipGroup}>
       <Text
         size="sm"
         weight="medium"
@@ -151,7 +148,7 @@ const ChipGroup: React.FC<ChipGroupProps> = ({
           </Text>
         )}
       </View>
-    </Pressable>
+    </AppPressable>
   );
 };
 

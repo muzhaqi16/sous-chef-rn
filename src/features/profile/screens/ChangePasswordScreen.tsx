@@ -1,11 +1,6 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-} from 'react-native';
+import { View, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { Text } from '#components/atoms/Text';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';

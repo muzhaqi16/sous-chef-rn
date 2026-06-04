@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';
@@ -43,11 +43,7 @@ export const IngredientCard: React.FC<IngredientCardProps> = ({
     : undefined;
 
   return (
-    <Pressable
-      style={({ pressed }) => [styles.card, pressed && styles.pressed]}
-      onPress={onPress}
-      disabled={isAdded}
-    >
+    <AppPressable style={styles.card} onPress={onPress} disabled={isAdded}>
       {imageUrl ? (
         <CachedImage uri={imageUrl} style={styles.image} displaySize={64} />
       ) : (
@@ -75,7 +71,7 @@ export const IngredientCard: React.FC<IngredientCardProps> = ({
           <Icon name="add" size={16} tone="primary" />
         </View>
       )}
-    </Pressable>
+    </AppPressable>
   );
 };
 

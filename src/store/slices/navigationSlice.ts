@@ -6,11 +6,27 @@
 import { StateCreator } from 'zustand';
 import { RootState } from '../index';
 
-export interface DeepLinkAction {
+/**
+ * A deep-link intent queued while the app is hydrating or the user is logged
+ * out, replayed by `useDeepLinkRouter` once conditions are met.
+ *
+ * Two shapes: JWT-token actions (auth lifecycle + person-specific invites) and
+ * share-code actions (anyone-with-link joins). Codes are not JWTs, so they skip
+ * `validateDeepLinkToken`.
+ */
+export interface TokenDeepLinkAction {
   type: 'email_verification' | 'password_reset' | 'accept_invitation';
   token: string;
   timestamp: number;
 }
+
+export interface CodeDeepLinkAction {
+  type: 'join_home' | 'join_list';
+  code: string;
+  timestamp: number;
+}
+
+export type DeepLinkAction = TokenDeepLinkAction | CodeDeepLinkAction;
 
 export enum OnBoardingSteps {
   createHome = 'createHome',

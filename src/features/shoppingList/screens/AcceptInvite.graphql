@@ -16,6 +16,19 @@ fragment AcceptInvite_shoppingListInvite on ShoppingListCollaborator {
   }
 }
 
+# Resolve a shopping-list collaborator invite straight from a deep-link token
+# (accept-invitation?token=…) when it isn't in the cached pending list. Mirrors
+# GetHomeInviteByToken. `shoppingListInviteByToken` is `@auth` — the deep-link
+# router gates accept_invitation on auth, so the screen is always authenticated
+# by the time it queries.
+query GetShoppingListInviteByToken($token: String!) {
+  shoppingListInviteByToken(token: $token) {
+    id
+    role
+    ...AcceptInvite_shoppingListInvite
+  }
+}
+
 # Only selects fields that the `GetMyPendingInvites` query (via
 # `InviteCard_invite`) writes to cache: id, role, home {id name},
 # inviter {id email profile {id displayName avatar}}.
@@ -36,5 +49,17 @@ fragment AcceptInvite_homeInvite on HomeInvite {
       id
       displayName
     }
+  }
+}
+
+# Resolve a home invite straight from a deep-link token (accept-invitation?token=…),
+# for the case where the invite isn't in the user's cached pending list (e.g. a
+# fresh device or a not-yet-loaded list). id + role are selected directly so the
+# screen can read them off the unmasked result; the rest displays via the spread.
+query GetHomeInviteByToken($token: String!) {
+  homeInviteByToken(token: $token) {
+    id
+    role
+    ...AcceptInvite_homeInvite
   }
 }

@@ -276,7 +276,10 @@ describe('ListSettings', () => {
         name: 'Weekly Groceries',
         isDefault: true,
         homeId: 'h1',
-        home: { name: 'Family Home', myMembership: null },
+        home: {
+          name: 'Family Home',
+          myMembership: { id: 'm1', role: 'MEMBER' },
+        },
         createdBy: { id: 'u2' },
         collaboratorsConnection: { edges: [], totalCount: 0 },
       },

@@ -15,6 +15,8 @@ jest.mock('#/apollo/links/refreshToken');
 
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),
+  createRemoveFromParentConnectionUpdater: jest.fn(() => jest.fn()),
+  safeEvict: jest.fn(),
 }));
 
 jest.mock('#/utils/fractionUtils', () => ({
@@ -25,6 +27,10 @@ jest.mock('#/utils/fractionUtils', () => ({
 }));
 
 jest.mock('#/utils/errors/pantryItemDuplicate', () => ({
+  // Keep the real `promptPantryDuplicate` so it calls the (mocked) alertService
+  // with the standard duplicate copy the tests assert on; only the detection
+  // helpers are stubbed per-test.
+  ...jest.requireActual('#/utils/errors/pantryItemDuplicate'),
   isPantryItemDuplicateError: jest.fn().mockReturnValue(false),
   getPantryItemDuplicateInfo: jest.fn().mockReturnValue(null),
 }));

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { alertService } from '#/services/alertService';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
@@ -31,6 +31,7 @@ import { SousChefLoader } from '#/components/base/SousChefLoader';
 import { Text } from '#components/atoms/Text';
 import { getInviteDisplayName } from '#/utils/formatters/inviteFormatters';
 import { getMemberDisplayName } from '#/utils/formatters/memberFormatters';
+import { buildJoinHomeUrl, shareUrl } from '#/utils/deepLinkUrls';
 
 type RouteParams = {
   homeId: string;
@@ -84,6 +85,14 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
     if (home?.joinCode) {
       Clipboard.setString(home.joinCode);
       setCopied(true);
+    }
+  };
+
+  const handleShareJoinLink = () => {
+    if (home?.joinCode) {
+      // Prefer the server-built link; fall back to the client builder.
+      const url = home.joinLink?.universal ?? buildJoinHomeUrl(home.joinCode);
+      void shareUrl(url, t('homeDetail.shareLinkMessage'));
     }
   };
 
@@ -211,19 +220,24 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
                   {home.joinCode}
                 </Text>
               </View>
-              <Pressable
-                style={({ pressed }) => [
-                  styles.copyButton,
-                  pressed && styles.pressed,
-                ]}
+              <AppPressable
+                style={styles.copyButton}
                 onPress={handleCopyJoinCode}
+                accessibilityLabel={t('homeDetail.labelJoinCode')}
               >
                 <Icon
                   name={copied ? 'checkmark-circle' : 'copy-outline'}
                   size={20}
                   tone={copied ? 'success' : 'textPrimary'}
                 />
-              </Pressable>
+              </AppPressable>
+              <AppPressable
+                style={styles.copyButton}
+                onPress={handleShareJoinLink}
+                accessibilityLabel={t('homeDetail.shareLink')}
+              >
+                <Icon name="share-outline" size={20} tone="primary" />
+              </AppPressable>
             </View>
           ) : null}
         </>

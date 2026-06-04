@@ -1,12 +1,7 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-} from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { View, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { Text } from '#components/atoms/Text';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native-unistyles';
@@ -114,12 +109,12 @@ export const DeleteAccountScreen: React.FC = () => {
       <Text style={styles.errorText}>
         {eligibilityError?.message || t('account.deleteGenericError')}
       </Text>
-      <Pressable
-        style={({ pressed }) => [styles.retryButton, pressed && styles.pressed]}
+      <AppPressable
+        style={styles.retryButton}
         onPress={() => refetchEligibility()}
       >
         <Text style={styles.retryButtonText}>{t('account.deleteRetry')}</Text>
-      </Pressable>
+      </AppPressable>
     </View>
   );
 
@@ -165,15 +160,9 @@ export const DeleteAccountScreen: React.FC = () => {
         </View>
       ))}
 
-      <Pressable
-        style={({ pressed }) => [
-          styles.goBackButton,
-          pressed && styles.pressed,
-        ]}
-        onPress={goBack}
-      >
+      <AppPressable style={styles.goBackButton} onPress={goBack}>
         <Text style={styles.goBackButtonText}>{t('account.deleteGoBack')}</Text>
-      </Pressable>
+      </AppPressable>
     </ScrollView>
   );
 
@@ -250,12 +239,11 @@ export const DeleteAccountScreen: React.FC = () => {
           />
         </View>
 
-        <Pressable
-          style={({ pressed }) => [
+        <AppPressable
+          style={[
             styles.deleteButton,
             (confirmText.trim().toUpperCase() !== 'DELETE' || isDeleting) &&
               styles.deleteButtonDisabled,
-            pressed && styles.pressed,
           ]}
           onPress={handleDeleteAccount}
           disabled={confirmText.trim().toUpperCase() !== 'DELETE' || isDeleting}
@@ -265,18 +253,15 @@ export const DeleteAccountScreen: React.FC = () => {
               ? t('account.deleteInProgress')
               : t('account.deleteForever')}
           </Text>
-        </Pressable>
+        </AppPressable>
 
-        <Pressable
-          style={({ pressed }) => [
-            styles.cancelButton,
-            pressed && styles.pressed,
-          ]}
+        <AppPressable
+          style={styles.cancelButton}
           onPress={goBack}
           disabled={isDeleting}
         >
           <Text style={styles.cancelButtonText}>{t('labels.cancel')}</Text>
-        </Pressable>
+        </AppPressable>
       </ScrollView>
     </KeyboardAvoidingView>
   );

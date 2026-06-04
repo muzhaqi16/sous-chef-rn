@@ -27,7 +27,7 @@ export interface AppSettings {
 
 export const useAppSettings = () => {
   const user = useUser();
-  const { data, loading, refetch } = useQuery(GetUserSettingsDocument, {
+  const { data, loading, error, refetch } = useQuery(GetUserSettingsDocument, {
     skip: !user?.id,
   });
   const [updateSettings] = useMutation(UpdateUserPreferencesDocument);
@@ -133,6 +133,9 @@ export const useAppSettings = () => {
   return {
     settings: memoizedSettings,
     loading,
+    // errorPolicy:'all' (global) resolves failures with data+error rather than
+    // throwing — expose `error` so consumers can surface a load failure.
+    error,
     updateAppSetting,
     updateMultipleSettings,
     resetToDefaults,

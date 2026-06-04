@@ -1,25 +1,15 @@
 import { act } from '@testing-library/react-native';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { useRemoveShoppingItem } from '../useRemoveShoppingItem';
+import { removeFromShoppingListItemsCache } from '../utils';
+import { executeMutation } from '#/utils/compilerSafeWrappers';
 
-const mockHandleApolloError = jest.fn(() => ({
-  message: 'Something went wrong',
+// Run the optimistic cache update synchronously; don't actually fire the network
+// mutation (return a truthy result) so no operation mock is required.
+jest.mock('#/utils/compilerSafeWrappers', () => ({
+  executeCacheUpdate: jest.fn((fn: () => void) => fn()),
+  executeMutation: jest.fn(async () => true),
 }));
-const mockCreateRemoveOperation = jest.fn();
-
-jest.mock('#/services/errorService', () => ({
-  useErrorService: () => ({
-    handleApolloError: mockHandleApolloError,
-  }),
-}));
-
-jest.mock('#/hooks/utils/useCrudOperations', () => ({
-  useCrudOperations: () => ({
-    createRemoveOperation: mockCreateRemoveOperation,
-  }),
-}));
-
-jest.mock('#/utils/compilerSafeWrappers');
 
 jest.mock('../utils', () => ({
   removeFromShoppingListItemsCache: jest.fn(),
@@ -33,9 +23,6 @@ describe('useRemoveShoppingItem', () => {
   const mockRefetch = jest.fn().mockResolvedValue(undefined);
 
   it('returns removeItem function', () => {
-    const mockRemoveFn = jest.fn().mockResolvedValue(undefined);
-    mockCreateRemoveOperation.mockReturnValue(mockRemoveFn);
-
     const { result } = renderHookWithApollo(() =>
       useRemoveShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
     );
@@ -43,10 +30,7 @@ describe('useRemoveShoppingItem', () => {
     expect(typeof result.current.removeItem).toBe('function');
   });
 
-  it('calls createRemoveOperation with correct itemId', async () => {
-    const mockRemoveFn = jest.fn().mockResolvedValue(true);
-    mockCreateRemoveOperation.mockReturnValue(mockRemoveFn);
-
+  it('optimistically evicts the item BEFORE firing the mutation (Pattern B / local-first)', async () => {
     const { result } = renderHookWithApollo(() =>
       useRemoveShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
     );
@@ -55,35 +39,16 @@ describe('useRemoveShoppingItem', () => {
       await result.current.removeItem('item-123');
     });
 
-    expect(mockCreateRemoveOperation).toHaveBeenCalledWith(
-      expect.objectContaining({
-        mutation: expect.any(Function),
-        parentId: 'list-1',
-        itemId: 'item-123',
-        operationName: 'Delete Shopping List Item',
-      }),
+    expect(removeFromShoppingListItemsCache).toHaveBeenCalledWith(
+      expect.anything(),
+      'list-1',
+      'item-123',
+      { evictItem: true },
     );
+    expect(executeMutation).toHaveBeenCalled();
   });
 
-  it('calls the created operation function', async () => {
-    const mockRemoveFn = jest.fn().mockResolvedValue(true);
-    mockCreateRemoveOperation.mockReturnValue(mockRemoveFn);
-
-    const { result } = renderHookWithApollo(() =>
-      useRemoveShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
-    );
-
-    await act(async () => {
-      await result.current.removeItem('item-123');
-    });
-
-    expect(mockRemoveFn).toHaveBeenCalled();
-  });
-
-  it('creates a new remove operation for each call with different itemId', async () => {
-    const mockRemoveFn = jest.fn().mockResolvedValue(true);
-    mockCreateRemoveOperation.mockReturnValue(mockRemoveFn);
-
+  it('evicts each item on successive calls', async () => {
     const { result } = renderHookWithApollo(() =>
       useRemoveShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
     );
@@ -91,19 +56,36 @@ describe('useRemoveShoppingItem', () => {
     await act(async () => {
       await result.current.removeItem('item-1');
     });
-
     await act(async () => {
       await result.current.removeItem('item-2');
     });
 
-    expect(mockCreateRemoveOperation).toHaveBeenCalledTimes(2);
-    expect(mockCreateRemoveOperation).toHaveBeenNthCalledWith(
+    expect(removeFromShoppingListItemsCache).toHaveBeenNthCalledWith(
       1,
-      expect.objectContaining({ itemId: 'item-1' }),
+      expect.anything(),
+      'list-1',
+      'item-1',
+      { evictItem: true },
     );
-    expect(mockCreateRemoveOperation).toHaveBeenNthCalledWith(
+    expect(removeFromShoppingListItemsCache).toHaveBeenNthCalledWith(
       2,
-      expect.objectContaining({ itemId: 'item-2' }),
+      expect.anything(),
+      'list-1',
+      'item-2',
+      { evictItem: true },
     );
+  });
+
+  it('does nothing when listId is missing', async () => {
+    const { result } = renderHookWithApollo(() =>
+      useRemoveShoppingItem({ listId: null, refetch: mockRefetch }),
+    );
+
+    await act(async () => {
+      await result.current.removeItem('item-1');
+    });
+
+    expect(removeFromShoppingListItemsCache).not.toHaveBeenCalled();
+    expect(executeMutation).not.toHaveBeenCalled();
   });
 });

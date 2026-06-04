@@ -23,8 +23,11 @@ const isAuthError = (code: string, msg: string) =>
     msg.toLowerCase().includes(term),
   );
 
-// FORBIDDEN means user doesn't have access to the resource - not an auth issue
-const isResourceAccessError = (code: string) => code === 'FORBIDDEN';
+// FORBIDDEN / AUTHZ_FORBIDDEN mean the user doesn't have access to the resource
+// — not an auth issue (no token refresh). AUTHZ_FORBIDDEN is the API's current
+// code; FORBIDDEN is the legacy alias still emitted by some resolvers.
+const isResourceAccessError = (code: string) =>
+  code === 'FORBIDDEN' || code === 'AUTHZ_FORBIDDEN';
 
 const isApiKeyError = (code: string, msg: string) =>
   ['API_KEY_REQUIRED', 'INVALID_API_KEY', 'API_KEY_EXPIRED'].includes(code) ||

@@ -1,7 +1,7 @@
 import { gql } from '@apollo/client';
-import type { DocumentNode } from 'graphql';
 import { client } from '../client';
 import { useStore } from '#store';
+import { isApiUnavailable } from '#store/slices/networkSlice';
 import { queueStore } from './queueStore';
 import {
   QueuedMutation,
@@ -12,16 +12,8 @@ import {
   type FailedMutationInfo,
   type FailureHandler,
 } from './types';
-import {
-  SyncPantryItemDocument,
-  SyncDeletePantryItemDocument,
-} from '#features/pantry/graphql/pantry.generated';
-import {
-  SyncShoppingListItemDocument,
-  SyncDeleteShoppingListItemDocument,
-  SyncMoveShoppingListItemDocument,
-} from '#features/shoppingList/graphql/shoppingList.generated';
-import { generateId } from '#/utils/generateId';
+import { convertToSyncMutation } from './convertToSyncMutation';
+import { classifyError, calculateRetryDelay } from './queueErrorPolicy';
 import { logger } from '#/utils/environment';
 
 /** Module-level fragment for reading ShoppingListItem data from cache during queue processing */
@@ -31,6 +23,19 @@ const QUEUE_ITEM_DATA_FRAGMENT = gql`
     shoppingList {
       id
     }
+  }
+`;
+
+/**
+ * Reads a PantryItem's `pantryId` from cache during queue processing.
+ * `UpdatePantryItemInput` carries no `pantryId`, but `SyncPantryItemInput`
+ * requires it, so the update→sync replay backfills it from the cached entity
+ * (mirrors {@link QUEUE_ITEM_DATA_FRAGMENT} for shopping items).
+ */
+const QUEUE_PANTRY_ITEM_FRAGMENT = gql`
+  fragment QueuePantryItemData on PantryItem {
+    id
+    pantryId
   }
 `;
 
@@ -60,8 +65,8 @@ export class QueueManager {
   private config: QueueConfig;
   private isProcessing = false;
   private processingPromise: Promise<void> | null = null;
-  private idMapping = new Map<string, string>(); // temp-ID → real-ID
   private failureHandler: FailureHandler | null = null;
+  private drainTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(config: Partial<QueueConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
@@ -93,9 +98,10 @@ export class QueueManager {
       return;
     }
 
-    // Check if online
-    if (!state.isOnline) {
-      logger.debug('📴 Queue: Offline, skipping processing');
+    // Don't replay when the server is unreachable (device offline OR the API
+    // reachability breaker is open) — replays would just fail and re-trip it.
+    if (isApiUnavailable(state)) {
+      logger.debug('📴 Queue: Server unreachable, skipping processing');
       return;
     }
 
@@ -103,7 +109,6 @@ export class QueueManager {
     logger.info(`🔄 Queue: Starting processing for user ${userId}`);
 
     this.isProcessing = true;
-    this.idMapping.clear(); // Reset ID mappings for fresh processing session
     this.processingPromise = this._processQueueInternal(userId);
 
     try {
@@ -206,10 +211,10 @@ export class QueueManager {
     const batches = this.createBatches(mergedMutations, this.config.batchSize);
 
     for (const batch of batches) {
-      // Check if still online before each batch
+      // Check the server is still reachable before each batch
       const state = useStore.getState();
-      if (!state.isOnline) {
-        logger.info('📴 Queue: Went offline during processing, pausing');
+      if (isApiUnavailable(state)) {
+        logger.info('📴 Queue: Server became unreachable, pausing');
         break;
       }
 
@@ -307,45 +312,19 @@ export class QueueManager {
   }
 
   /**
-   * Execute a mutation via Apollo Client
-   * Uses sync mutations for offline-queued items to handle temp-IDs
+   * Execute a mutation via Apollo Client.
+   * Replays offline-queued items through their sync mutation (idempotent by the
+   * client-generated id, which rides the replay as `clientId`).
    */
   private async executeMutation(
     mutation: QueuedMutation,
   ): Promise<Record<string, unknown> | undefined> {
-    const useSyncMutation = this.shouldUseSync();
-
-    if (useSyncMutation) {
-      return await this.executeSyncMutation(mutation);
-    }
-
-    // Fallback to regular mutation (shouldn't happen for offline-queued items)
-    const result = await client.mutate<Record<string, unknown>>({
-      mutation: mutation.mutation,
-      variables: mutation.variables,
-      context: {
-        ...mutation.context,
-        skipQueueLink: true,
-      },
+    const { syncMutation, syncVariables } = convertToSyncMutation(mutation, {
+      readPantryId: clientId => this.readPantryId(clientId),
+      readShoppingListId: clientId => this.readShoppingListId(clientId),
     });
 
-    if (result.error) {
-      throw result.error;
-    }
-
-    return result.data;
-  }
-
-  /**
-   * Execute sync mutation and handle ID mapping
-   */
-  private async executeSyncMutation(
-    mutation: QueuedMutation,
-  ): Promise<Record<string, unknown> | undefined> {
-    const { syncMutation, syncVariables } =
-      this.convertToSyncMutation(mutation);
-
-    logger.info(`🔄 Queue: Using sync mutation for ${mutation.operationName}`);
+    logger.info(`🔄 Queue: Replaying ${mutation.operationName} via sync`);
 
     const result = await client.mutate<Record<string, unknown>>({
       mutation: syncMutation,
@@ -362,203 +341,59 @@ export class QueueManager {
 
     // Dynamic payload extraction — the mutation field name varies per queued
     // operation, so the value shape is only known structurally here.
-    const syncResult = Object.values(result.data || {})[0] as {
-      wasCreated?: boolean;
-      serverId?: string;
-      clientId?: string;
-      conflict?: { message?: string };
-    };
+    const syncResult = Object.values(result.data || {})[0] as
+      | { conflict?: { message?: string } }
+      | undefined;
 
-    // Handle ID mapping for creates
-    if (syncResult.wasCreated && syncResult.serverId && syncResult.clientId) {
-      this.idMapping.set(syncResult.clientId, syncResult.serverId);
-      logger.info(
-        `🔗 Queue: Mapped ${syncResult.clientId} → ${syncResult.serverId}`,
-      );
-    }
-
-    // Handle conflicts
-    if (syncResult.conflict) {
+    // Server wins on conflict — the server's version already rides back in the
+    // response; just surface it for diagnostics.
+    if (syncResult?.conflict) {
       logger.warn(
         `⚠️ Queue: Conflict detected for ${mutation.operationName}:`,
         syncResult.conflict.message,
       );
-      // Server wins - return server's version (already in syncResult.item)
     }
 
     return result.data;
   }
 
   /**
-   * Convert regular mutation to sync mutation
+   * Read a shopping-list item's `shoppingListId` from cache — the sync input
+   * requires it, but update/toggle/quantity mutation variables only carry the
+   * item id.
    */
-  private convertToSyncMutation(mutation: QueuedMutation): {
-    syncMutation: DocumentNode;
-    syncVariables: Record<string, unknown>;
-  } {
-    const operationName = mutation.operationName;
-    const variables = this.resolveIds(mutation.variables);
-
-    // Determine clientId (temp-ID or real ID)
-    const clientId =
-      variables.id || variables.input?.id || `temp-${generateId()}`;
-
-    // PantryItem sync mutations
-    if (
-      operationName === 'CreatePantryItem' ||
-      operationName === 'UpdatePantryItem'
-    ) {
-      return {
-        syncMutation: SyncPantryItemDocument,
-        syncVariables: {
-          clientId,
-          input: variables.input,
-        },
-      };
-    }
-
-    if (operationName === 'DeletePantryItem') {
-      return {
-        syncMutation: SyncDeletePantryItemDocument,
-        syncVariables: {
-          clientId: variables.id,
-          version: variables.version,
-        },
-      };
-    }
-
-    // ShoppingListItem sync mutations
-    if (
-      operationName === 'AddItemToShoppingList' ||
-      operationName === 'UpdateShoppingListItem' ||
-      operationName === 'UpdateShoppingListItemQuantity' ||
-      operationName === 'ToggleShoppingListItemPurchased'
-    ) {
-      let input = variables.input;
-
-      // For specialized mutations like UpdateShoppingListItemQuantity and ToggleShoppingListItemPurchased
-      // that don't have input wrapper
-      if (!input) {
-        // Read item from cache to get shoppingListId (required by sync mutation)
-        const itemId = variables.id;
-        const itemData = client.cache.readFragment({
-          id: client.cache.identify({
-            __typename: 'ShoppingListItem',
-            id: itemId,
-          }),
-          fragment: QUEUE_ITEM_DATA_FRAGMENT,
-        }) as { id: string; shoppingList: { id: string } } | null;
-
-        if (!itemData?.shoppingList?.id) {
-          throw new Error(
-            `Cannot sync ${operationName}: shoppingListId not found in cache for item ${itemId}`,
-          );
-        }
-
-        // Construct input based on mutation type
-        if (operationName === 'UpdateShoppingListItemQuantity') {
-          input = {
-            shoppingListId: itemData.shoppingList.id,
-            quantity: variables.quantity,
-            version: variables.version,
-          };
-        } else if (operationName === 'ToggleShoppingListItemPurchased') {
-          input = {
-            shoppingListId: itemData.shoppingList.id,
-            isPurchased: variables.purchased,
-            version: variables.version,
-          };
-        }
-      }
-
-      return {
-        syncMutation: SyncShoppingListItemDocument,
-        syncVariables: {
-          clientId,
-          input,
-        },
-      };
-    }
-
-    if (operationName === 'RemoveItemFromShoppingList') {
-      return {
-        syncMutation: SyncDeleteShoppingListItemDocument,
-        syncVariables: {
-          clientId: variables.id,
-          version: variables.version,
-        },
-      };
-    }
-
-    if (operationName === 'MoveShoppingListItem') {
-      return {
-        syncMutation: SyncMoveShoppingListItemDocument,
-        syncVariables: {
-          clientId: variables.input?.itemId,
-          afterId: variables.input?.afterId,
-          beforeId: variables.input?.beforeId,
-          version: variables.input?.version,
-        },
-      };
-    }
-
-    // Fallback: For mutations without Sync versions, replay the original mutation
-    // This allows all queued mutations to be replayed when coming back online
-    logger.info(
-      `ℹ️ Queue: No sync mutation for ${operationName}, using original mutation`,
-    );
-    return {
-      syncMutation: mutation.mutation,
-      syncVariables: variables,
-    };
+  private readShoppingListId(itemId: string | undefined): string | undefined {
+    if (!itemId) return undefined;
+    const itemData = client.cache.readFragment<{
+      id: string;
+      shoppingList: { id: string };
+    }>({
+      id: client.cache.identify({
+        __typename: 'ShoppingListItem',
+        id: itemId,
+      }),
+      fragment: QUEUE_ITEM_DATA_FRAGMENT,
+    });
+    return itemData?.shoppingList?.id;
   }
 
   /**
-   * Resolve temp-IDs to real IDs in variables
+   * Read a pantry item's `pantryId` from cache — `SyncPantryItemInput` requires
+   * it, but `UpdatePantryItem` variables only carry the item id.
    */
-  private resolveIds<T>(variables: T): T {
-    if (!variables) return variables;
-
-    const resolved = JSON.parse(JSON.stringify(variables)); // Deep clone
-
-    // Recursively replace temp-IDs with real IDs
-    const replaceIds = (obj: unknown): unknown => {
-      if (!obj || typeof obj !== 'object') return obj;
-
-      if (Array.isArray(obj)) {
-        return obj.map(replaceIds);
-      }
-
-      const record = obj as Record<string, unknown>;
-      for (const [key, value] of Object.entries(record)) {
-        if (
-          (key === 'id' || key.endsWith('Id')) &&
-          typeof value === 'string' &&
-          value.startsWith('temp-')
-        ) {
-          const realId = this.idMapping.get(value);
-          if (realId) {
-            logger.info(`🔄 Queue: Resolved ${value} → ${realId}`);
-            record[key] = realId;
-          }
-        } else if (typeof value === 'object') {
-          record[key] = replaceIds(value);
-        }
-      }
-
-      return record;
-    };
-
-    return replaceIds(resolved) as T;
-  }
-
-  /**
-   * Determine if mutation should use sync endpoint
-   */
-  private shouldUseSync(): boolean {
-    // Always use sync for offline-queued mutations
-    // The sync mutations handle temp-IDs, version conflicts, and idempotency
-    return true;
+  private readPantryId(itemId: string | undefined): string | undefined {
+    if (!itemId) return undefined;
+    const itemData = client.cache.readFragment<{
+      id: string;
+      pantryId: string;
+    }>({
+      id: client.cache.identify({
+        __typename: 'PantryItem',
+        id: itemId,
+      }),
+      fragment: QUEUE_PANTRY_ITEM_FRAGMENT,
+    });
+    return itemData?.pantryId ?? undefined;
   }
 
   /**
@@ -568,7 +403,7 @@ export class QueueManager {
     mutation: QueuedMutation,
     error: unknown,
   ): Promise<ProcessingResult> {
-    const queueError = this.classifyError(error);
+    const queueError = classifyError(error);
 
     // Handle auth errors specially
     if (queueError.type === 'auth') {
@@ -587,12 +422,19 @@ export class QueueManager {
       queueStore.incrementRetry(mutation.id);
 
       // Schedule retry with exponential backoff
-      const delay = this.calculateRetryDelay(mutation.retryCount);
+      const delay = calculateRetryDelay(
+        mutation.retryCount,
+        this.config.retryDelayMs,
+      );
       await new Promise(resolve => setTimeout(resolve, delay));
 
-      // Retry immediately if still online
+      // Retry immediately only if the API is actually reachable. Gating on
+      // `isApiUnavailable` (not bare `isOnline`) means an open reachability
+      // breaker — device online but API down — defers instead of firing a
+      // doomed retry that would just re-trip the breaker, matching every other
+      // gate in this file.
       const state = useStore.getState();
-      if (state.isOnline) {
+      if (!isApiUnavailable(state)) {
         return await this.processMutation({
           ...mutation,
           retryCount: mutation.retryCount + 1,
@@ -600,7 +442,28 @@ export class QueueManager {
       }
     }
 
-    // Max retries exceeded or non-retryable error
+    // Transient (network / 5xx server) errors that exhausted the in-run retries:
+    // keep the mutation PENDING so the change survives for the next drain /
+    // recovery trigger instead of being permanently dropped. Local-first: a
+    // queued change must not be lost just because the API was unreachable for a
+    // while. (Reset retryCount so the next drain gets a fresh attempt.)
+    if (queueError.type === 'network' || queueError.type === 'server') {
+      queueStore.updateMutation(mutation.id, {
+        status: QueueStatus.PENDING,
+        retryCount: 0,
+      });
+      logger.info(
+        `🕓 Queue: ${mutation.id} deferred (transient ${queueError.type}) — stays PENDING for next drain`,
+      );
+      return {
+        success: false,
+        mutationId: mutation.id,
+        error: queueError,
+      };
+    }
+
+    // Non-retryable (validation / client / 4xx / GraphQL) error → permanent
+    // failure: mark failed and notify so the optimistic change can be reverted.
     queueStore.markMutationFailed(mutation.id, queueError);
     this.invokeFailureHandler(mutation, queueError);
 
@@ -680,6 +543,29 @@ export class QueueManager {
   }
 
   /**
+   * The client entity id a queued mutation targets, across every variable shape
+   * the app enqueues: create `input.id`, qty/move `input.itemId` or top-level
+   * `itemId`, recipe/meal/batch inputs, or a sync `clientId`. One source of truth
+   * so replay ordering (`groupByEntity`) and failure reporting
+   * (`extractEntityInfo`) always agree on which entity a mutation belongs to.
+   */
+  private getEntityId(mutation: QueuedMutation): string | null {
+    const vars = mutation.variables ?? {};
+    return (
+      vars.id ??
+      vars.input?.id ??
+      vars.input?.pantryItemId ??
+      vars.input?.itemId ??
+      vars.itemId ??
+      vars.input?.recipeId ??
+      vars.input?.mealPlanId ??
+      vars.input?.batchId ??
+      vars.clientId ??
+      null
+    );
+  }
+
+  /**
    * Extract entity type and ID from a mutation's variables.
    * Inspects common variable patterns used across the app.
    */
@@ -687,20 +573,9 @@ export class QueueManager {
     entityType: string | null;
     entityId: string | null;
   } {
-    const vars = mutation.variables ?? {};
     const opName = mutation.operationName;
 
-    // Extract entity ID from common variable shapes
-    const entityId =
-      vars.id ??
-      vars.input?.id ??
-      vars.input?.pantryItemId ??
-      vars.input?.itemId ??
-      vars.input?.recipeId ??
-      vars.input?.mealPlanId ??
-      vars.input?.batchId ??
-      vars.clientId ??
-      null;
+    const entityId = this.getEntityId(mutation);
 
     // Infer entity type from operation name
     let entityType: string | null = null;
@@ -753,84 +628,9 @@ export class QueueManager {
   }
 
   /**
-   * Classify error type
-   */
-  private classifyError(error: unknown): QueueError {
-    const err = (error ?? {}) as {
-      message?: string;
-      code?: string;
-      extensions?: { code?: string };
-      networkError?: { statusCode?: number };
-    };
-    const message = err.message || String(error);
-    const code = err.extensions?.code || err.code;
-
-    // Auth errors
-    if (
-      code === 'UNAUTHENTICATED' ||
-      code === 'FORBIDDEN' ||
-      message.toLowerCase().includes('expired') ||
-      message.toLowerCase().includes('unauthorized')
-    ) {
-      return {
-        type: 'auth',
-        message,
-        code,
-        timestamp: Date.now(),
-        retryable: true, // Can retry after token refresh
-      };
-    }
-
-    // Network errors
-    if (
-      message.toLowerCase().includes('network') ||
-      message.toLowerCase().includes('timeout') ||
-      message.toLowerCase().includes('econnrefused')
-    ) {
-      return {
-        type: 'network',
-        message,
-        code,
-        timestamp: Date.now(),
-        retryable: true,
-      };
-    }
-
-    // Server errors (5xx)
-    if ((err.networkError?.statusCode ?? 0) >= 500) {
-      return {
-        type: 'server',
-        message,
-        code,
-        timestamp: Date.now(),
-        retryable: true,
-      };
-    }
-
-    // Unknown/client errors (4xx, GraphQL errors)
-    return {
-      type: 'unknown',
-      message,
-      code,
-      timestamp: Date.now(),
-      retryable: false, // Don't retry client errors
-    };
-  }
-
-  /**
-   * Calculate retry delay with exponential backoff
-   */
-  private calculateRetryDelay(retryCount: number): number {
-    const baseDelay = this.config.retryDelayMs;
-    const exponentialDelay = baseDelay * Math.pow(2, retryCount);
-    const jitter = Math.random() * 500; // Add jitter to prevent thundering herd
-    return Math.min(exponentialDelay + jitter, 30000); // Max 30 seconds
-  }
-
-  /**
    * Group mutations by entity ID for safe ordering.
    * Same-entity mutations must be processed sequentially to prevent race conditions
-   * (e.g., create followed by update on the same temp-id entity).
+   * (e.g., create followed by update on the same entity id).
    * Mutations targeting different entities can run concurrently.
    */
   private groupByEntity(mutations: QueuedMutation[]): {
@@ -840,13 +640,7 @@ export class QueueManager {
     const entityMap = new Map<string, QueuedMutation[]>();
 
     for (const mutation of mutations) {
-      const entityId =
-        mutation.variables?.id ||
-        mutation.variables?.input?.id ||
-        mutation.variables?.clientId ||
-        mutation.variables?.input?.pantryItemId ||
-        mutation.variables?.input?.itemId ||
-        mutation.variables?.itemId;
+      const entityId = this.getEntityId(mutation);
 
       if (entityId) {
         const group = entityMap.get(entityId) || [];
@@ -901,6 +695,23 @@ export class QueueManager {
     this.processQueue().catch(error => {
       logger.error('Failed to process queue on online:', error);
     });
+  }
+
+  /**
+   * Debounced drain — call when there's positive evidence the API is reachable
+   * again (e.g. a successful network response) while `isOnline` never flipped:
+   * the "API-down-while-online" recovery case that the offline→online trigger
+   * misses. Coalesces bursts; `processQueue` itself no-ops when offline, empty,
+   * or already processing, so this is safe to call liberally.
+   */
+  requestDrain(delayMs = 600): void {
+    if (this.drainTimer) return;
+    this.drainTimer = setTimeout(() => {
+      this.drainTimer = null;
+      this.processQueue().catch(error => {
+        logger.error('Failed to drain queue:', error);
+      });
+    }, delayMs);
   }
 
   /**

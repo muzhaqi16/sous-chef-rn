@@ -15,7 +15,7 @@ import {
   useAppStore,
 } from '#store/useAppStore';
 import { useStore } from '#store';
-import { usePreservedArrayData } from '#/hooks/apollo/usePreservedQueryData';
+import { usePreservedNodes } from '#/hooks/apollo/usePreservedConnection';
 import { extractNodes } from '#/utils/connectionUtils';
 
 /**
@@ -118,7 +118,7 @@ export const useDefaultHome = () => {
   // Each node carries `id`, `isDefault`, `myMembership`, and
   // `pantriesConnection` from the operation plus a masked `HomeCard_home`
   // ref. Pantry lookups read the connection nodes via `extractNodes`.
-  const homesList = usePreservedArrayData(extractNodes(homes?.homes));
+  const homesList = usePreservedNodes(homes?.homes);
 
   type HomeNode = (typeof homesList)[number] & {
     pantriesConnection?: {

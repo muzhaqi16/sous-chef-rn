@@ -14,6 +14,13 @@ export interface NetworkState {
   needsTokenRefresh: boolean;
   /** User-enabled offline mode (from app settings) */
   offlineModeEnabled: boolean;
+  /**
+   * Whether our GraphQL API is currently reachable. Distinct from `isOnline`
+   * (device internet): the device can be online while the API is down /
+   * timing out / behind a captive portal. Driven by `apiReachabilityBreaker`
+   * (a circuit breaker over network outcomes), NOT by NetInfo.
+   */
+  apiReachable: boolean;
 
   // Actions
   setNetworkStatus: (status: {
@@ -25,7 +32,18 @@ export interface NetworkState {
   setOffline: () => void;
   setNeedsTokenRefresh: (value: boolean) => void;
   setOfflineModeEnabled: (enabled: boolean) => void;
+  setApiReachable: (reachable: boolean) => void;
 }
+
+/**
+ * The server can't be reached right now — either the device is offline or our
+ * API is unreachable (circuit breaker tripped). Both cases should behave the
+ * same: serve queries from cache, queue mutations. Shared by `offlineModeLink`,
+ * `queueLink`, and the queue manager so the policy stays consistent.
+ */
+export const isApiUnavailable = (
+  state: Pick<NetworkState, 'isOnline' | 'apiReachable'>,
+): boolean => !state.isOnline || state.apiReachable === false;
 
 const initialNetworkState = {
   isOnline: true, // Assume online until proven otherwise (per Apollo best practices)
@@ -35,6 +53,7 @@ const initialNetworkState = {
   lastOfflineTime: null,
   needsTokenRefresh: false,
   offlineModeEnabled: false,
+  apiReachable: true,
 };
 
 export const createNetworkSlice: StateCreator<
@@ -92,6 +111,13 @@ export const createNetworkSlice: StateCreator<
       draft.offlineModeEnabled = enabled;
     });
     storage.set(OFFLINE_MODE_KEY, enabled);
+  },
+
+  setApiReachable: (reachable: boolean) => {
+    if (get().apiReachable === reachable) return;
+    set(draft => {
+      draft.apiReachable = reachable;
+    });
   },
 });
 

@@ -1,8 +1,9 @@
 'use no memo';
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 import type { NavigationState } from 'react-native-tab-view';
+import { Text } from '#components/atoms/Text';
 import { TabView } from '../TabView';
 import type { TabRoute } from '../TabView';
 

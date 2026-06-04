@@ -1,5 +1,7 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { Text } from '#components/atoms/Text';
 import { StyleSheet } from 'react-native-unistyles';
 
 interface RecipeInstructionsProps {
@@ -40,6 +42,7 @@ export const RecipeInstructions: React.FC<RecipeInstructionsProps> = ({
   instructions,
   instructionsHtml,
 }) => {
+  const { t } = useTranslation();
   const hasBackendInstructions =
     isBackendRecipe && Array.isArray(instructions) && instructions.length > 0;
   const hasAnalyzedInstructions =
@@ -63,7 +66,7 @@ export const RecipeInstructions: React.FC<RecipeInstructionsProps> = ({
 
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Instructions</Text>
+      <Text style={styles.sectionTitle}>{t('recipes.instructions')}</Text>
       {!!hasBackendInstructions &&
         (instructions as DisplayStep[]).map((step, index) => {
           // Support both formats:

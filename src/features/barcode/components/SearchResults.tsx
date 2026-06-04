@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useMutation } from '@apollo/client/react';
+import { useApolloClient, useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
 import { ItemCard } from './ItemCard';
 import { ActionButtons } from './ActionButtons';
@@ -14,14 +14,31 @@ import {
   type SearchResults_ShoppingListItemFragment,
 } from './SearchResults.generated';
 import type { CreatePantryItemInput } from '#/graphql/generated/schemaTypes';
-import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
-import { addNewItemToShoppingListCache } from '#/apollo/utils/shoppingListCacheUpdaters';
+import {
+  createAddToParentConnectionUpdater,
+  safeEvict,
+} from '#/apollo/utils/cacheUpdaters';
+import {
+  addNewItemToShoppingListCache,
+  addOptimisticShoppingListItem,
+  adoptServerShoppingListItemId,
+  createOptimisticShoppingListItem,
+  reconcileShoppingCreate,
+} from '#/apollo/utils/shoppingListCacheUpdaters';
+import { addToPantryItemsCache } from '#hooks/home/pantry/utils';
+import { buildOptimisticPantryItem } from '#hooks/home/pantry/buildOptimisticPantryItem';
+import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import {
   isPantryItemDuplicateError,
   getPantryItemDuplicateInfo,
+  promptPantryDuplicate,
 } from '#/utils/errors/pantryItemDuplicate';
 import { useAppStore } from '#store/useAppStore';
-import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+import { generateEntityId } from '#/utils/generateEntityId';
+import {
+  executeCacheUpdate,
+  executeWithLoadingState,
+} from '#/utils/compilerSafeWrappers';
 import type { ScannedItem } from '#store/slices/barcodeScannerSlice';
 import type { BarcodeSource } from '#/types/navigation';
 import { ScrollView } from 'react-native';
@@ -58,6 +75,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
 }) => {
   const [isAdded, setIsAdded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const client = useApolloClient();
   const setPendingPantryScrollToTop = useAppStore(
     s => s.setPendingPantryScrollToTop,
   );
@@ -88,13 +106,21 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   const [addToShoppingList] = useMutation(
     BarcodeAddItemToShoppingListDocument,
     {
-      update: (cache, { data }) => {
+      update: (cache, { data }, { variables }) => {
         const payload = data?.addItemToShoppingList;
         if (
           payload?.__typename === 'AddItemToShoppingListPayload' &&
-          shoppingListId
+          shoppingListId &&
+          variables
         ) {
           const maskedItem = payload.shoppingListItem;
+          // Catalog-merge: adopt the server id, evicting the optimistic cuid if
+          // the server merged into an existing row.
+          adoptServerShoppingListItemId(
+            cache,
+            maskedItem.id,
+            variables.input.id,
+          );
           const shoppingListItem =
             cache.readFragment<SearchResults_ShoppingListItemFragment>({
               fragment: SearchResults_ShoppingListItemFragmentDoc,
@@ -122,7 +148,11 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
       async () => {
         if (source === 'pantry' && pantryId) {
           const quantity = item.netWeight ?? 1;
+          // Generate the item's id so a create that gets queued (API blips after
+          // the barcode lookup) replays idempotently, keyed by this id.
+          const id = generateEntityId();
           const mutationInput: CreatePantryItemInput = {
+            id,
             pantryId,
             itemId: item.id,
             quantity,
@@ -136,8 +166,27 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
               : {}),
           };
 
+          // Write the item into the cache before firing, so it's already there
+          // when the pantry comes into view — and survives a queued create.
+          executeCacheUpdate(
+            () =>
+              addToPantryItemsCache(
+                client.cache,
+                pantryId,
+                buildOptimisticPantryItem(id, {
+                  pantryId,
+                  itemName: item.name,
+                  itemId: item.id,
+                  quantity,
+                  unitId: item.displayUnit?.id ?? item.unitId,
+                }),
+              ),
+            'Add Pantry Item (optimistic)',
+          );
+
           const result = await addToPantry({
             variables: { input: mutationInput },
+            context: { localFirst: true },
           });
 
           // Handle duplicate pantry item
@@ -145,95 +194,116 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
             const duplicateInfo = getPantryItemDuplicateInfo(result.error);
             if (duplicateInfo) {
               setIsLoading(false);
-              alertService.alert(
-                'Item Already in Pantry',
-                'This item is already in your pantry. Would you like to restock it or add a separate entry?',
-                [
-                  { text: 'Cancel', style: 'cancel' },
-                  {
-                    text: 'Restock',
-                    onPress: () => {
-                      executeWithLoadingState(
-                        async () => {
-                          await restockPantryItem({
-                            variables: {
-                              input: {
-                                id: duplicateInfo.existingPantryItemId,
-                                quantity,
-                              },
-                            },
-                          });
-                          setIsAdded(true);
-                          setPendingPantryScrollToTop(true);
-                          onScanAnother();
+              // Already in the pantry → the server keeps the existing row, not
+              // our optimistic item. Discard the one we wrote.
+              safeEvict(client.cache, 'PantryItem', id);
+              promptPantryDuplicate({
+                onRestock: () => {
+                  executeWithLoadingState(
+                    async () => {
+                      await restockPantryItem({
+                        variables: {
+                          input: {
+                            id: duplicateInfo.existingPantryItemId,
+                            quantity,
+                          },
                         },
-                        setIsLoading,
-                        () => {
-                          alertService.alert(
-                            'Error',
-                            'Failed to restock item. Please try again.',
-                          );
-                        },
+                      });
+                      setIsAdded(true);
+                      setPendingPantryScrollToTop(true);
+                      onScanAnother();
+                    },
+                    setIsLoading,
+                    () => {
+                      alertService.alert(
+                        'Error',
+                        'Failed to restock item. Please try again.',
                       );
                     },
-                  },
-                  {
-                    text: 'Add Anyway',
-                    onPress: () => {
-                      executeWithLoadingState(
-                        async () => {
-                          const retryResult = await addToPantry({
-                            variables: {
-                              input: { ...mutationInput, forceAdd: true },
-                            },
-                          });
-                          if (
-                            retryResult.data?.createPantryItem?.__typename ===
-                            'CreatePantryItemPayload'
-                          ) {
-                            setIsAdded(true);
-                            setPendingPantryScrollToTop(true);
-                            onScanAnother();
-                          } else {
-                            alertService.alert(
-                              'Error',
-                              'Failed to add item. Please try again.',
-                            );
-                          }
+                  );
+                },
+                onAddAnyway: () => {
+                  executeWithLoadingState(
+                    async () => {
+                      const retryResult = await addToPantry({
+                        variables: {
+                          input: { ...mutationInput, forceAdd: true },
                         },
-                        setIsLoading,
-                        () => {
-                          alertService.alert(
-                            'Error',
-                            'Failed to add item. Please try again.',
-                          );
-                        },
+                      });
+                      if (
+                        retryResult.data?.createPantryItem?.__typename ===
+                        'CreatePantryItemPayload'
+                      ) {
+                        setIsAdded(true);
+                        setPendingPantryScrollToTop(true);
+                        onScanAnother();
+                      } else {
+                        alertService.alert(
+                          'Error',
+                          'Failed to add item. Please try again.',
+                        );
+                      }
+                    },
+                    setIsLoading,
+                    () => {
+                      alertService.alert(
+                        'Error',
+                        'Failed to add item. Please try again.',
                       );
                     },
-                  },
-                ],
-              );
+                  );
+                },
+              });
               return;
             }
           }
 
-          if (
-            result.data?.createPantryItem?.__typename ===
-            'CreatePantryItemPayload'
-          ) {
-            setIsAdded(true);
-            setPendingPantryScrollToTop(true);
-            onScanAnother();
-          } else if (result.error) {
+          const outcome = classifyCreateResult(
+            result,
+            'createPantryItem',
+            'CreatePantryItemPayload',
+          );
+          if (outcome === 'rejected') {
+            // The server refused the create — discard the item we wrote.
+            safeEvict(client.cache, 'PantryItem', id);
             alertService.alert(
               'Error',
               'Failed to add item. Please try again.',
             );
+          } else {
+            // 'created' or 'queued' — the item stays (and replays if it was
+            // queued offline); confirm and move on.
+            setIsAdded(true);
+            setPendingPantryScrollToTop(true);
+            onScanAnother();
           }
         } else if (source === 'shoppingList' && shoppingListId) {
-          await addToShoppingList({
+          // Generate the item's id so a create that gets queued (API blips after
+          // the barcode lookup) replays idempotently, keyed by this id.
+          const id = generateEntityId();
+          // Write the item into the cache before firing, so it's on the list
+          // when it comes into view — and survives a queued (offline / API-down)
+          // create that replays later.
+          executeCacheUpdate(
+            () =>
+              addOptimisticShoppingListItem(
+                client.cache,
+                shoppingListId,
+                createOptimisticShoppingListItem(id, {
+                  itemName: item.name,
+                  quantity: item.netWeight ?? 1,
+                  itemId: item.id,
+                  unitId: item.displayUnit?.id ?? item.unitId,
+                  unitName: item.displayUnit?.name,
+                }),
+              ),
+            'Add Shopping List Item (optimistic)',
+          );
+
+          const result = await addToShoppingList({
             variables: {
               input: {
+                id,
                 shoppingListId,
                 itemId: item.id,
                 quantity: item.netWeight ?? 1,
@@ -254,7 +324,29 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                   : undefined,
               },
             },
+            context: { localFirst: true },
           });
+
+          // A queued create (offline / API down) resolves with no data and no
+          // error — that's success, it replays. Only a real rejection should
+          // surface an error instead of a false "Added". errorPolicy:'all'
+          // delivers rejections to the resolved result, so the reconciler
+          // classifies it (and fully reverts the item — entity + list-stat
+          // scalars) rather than relying on a throw.
+          if (
+            reconcileShoppingCreate(
+              client.cache,
+              shoppingListId,
+              id,
+              result,
+            ) === 'reverted'
+          ) {
+            alertService.alert(
+              'Error',
+              'Failed to add item. Please try again.',
+            );
+            return;
+          }
           setIsAdded(true);
           onScanAnother();
         } else {

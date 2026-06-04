@@ -7,6 +7,12 @@ fragment HomeDetailScreen_home on Home {
   isPublic
   joinCode
   allowJoinCode
+  # Server-built anyone-with-link join URL (universal + scheme). Non-null only
+  # when allowJoinCode is on and a joinCode is set — the same condition the
+  # share UI gates on. Source of truth for the shared link.
+  joinLink {
+    universal
+  }
   maxMembers
   version
   createdAt

@@ -44,9 +44,39 @@ jest.mock('#features/shoppingList/hooks/useShoppingListItemForm', () => ({
   }),
 }));
 
-jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => ({
-  addNewItemToShoppingListCache: jest.fn(),
-}));
+jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => {
+  const { classifyCreateResult } = jest.requireActual(
+    '#/apollo/utils/classifyCreateResult',
+  );
+  const revertOptimisticShoppingListItem = jest.fn();
+  return {
+    addNewItemToShoppingListCache: jest.fn(),
+    adoptServerShoppingListItemId: jest.fn(),
+    revertOptimisticShoppingListItem,
+    addOptimisticShoppingListItem: jest.fn(),
+    createOptimisticShoppingListItem: jest.fn((id: string) => ({
+      __typename: 'ShoppingListItem',
+      id,
+    })),
+    // Mirror the real reconciler (real classify + mocked revert) so the
+    // keep/revert decision under test matches production.
+    reconcileShoppingCreate: jest.fn(
+      (cache: unknown, listId: string, id: string, result: unknown) => {
+        if (
+          classifyCreateResult(
+            result,
+            'addItemToShoppingList',
+            'AddItemToShoppingListPayload',
+          ) === 'rejected'
+        ) {
+          revertOptimisticShoppingListItem(cache, listId, id);
+          return 'reverted';
+        }
+        return 'kept';
+      },
+    ),
+  };
+});
 jest.mock('#/utils/errorHandlers', () => ({
   handleMutationError: jest.fn(),
   versionConflictCheck: jest.fn(() => ({
@@ -594,7 +624,10 @@ describe('AddEditItem', () => {
     await waitFor(() => expect(mockNav.goBack).toHaveBeenCalled());
   });
 
-  it('shows error alert when addItem returns no data', async () => {
+  it('navigates back when the add is queued offline (null data, no error)', async () => {
+    // Local-first (Pattern B): the item is written to cache optimistically BEFORE
+    // the mutation fires. A queued create resolves with null data and no error —
+    // that's success (the queue replays it), so we navigate back, NOT alert.
     const user = userEvent.setup();
     jest
       .spyOn(
@@ -612,12 +645,8 @@ describe('AddEditItem', () => {
     });
     await user.press(screen.getByTestId('add-item-submit-button'));
 
-    await waitFor(() =>
-      expect(alertService.alert).toHaveBeenCalledWith(
-        'Error',
-        expect.stringContaining('Failed to add item'),
-      ),
-    );
+    await waitFor(() => expect(mockNav.goBack).toHaveBeenCalled());
+    expect(alertService.alert).not.toHaveBeenCalled();
   });
 
   it('shows error alert when mutation returns data but no item', async () => {

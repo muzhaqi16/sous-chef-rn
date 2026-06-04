@@ -1,134 +1,63 @@
 /**
- * useAddShoppingItem - Add item mutation for shopping list
+ * useAddShoppingItem - Add item mutation for shopping list (local-first).
  *
- * Single responsibility:
- * - Add mutation with optimistic response
- * - Cache update for instant UI
- * - Error handling with user feedback
+ * Generates the item's id client-side and writes the item into the cache before
+ * firing the create, leaving it there. The item shows instantly and stays if the
+ * create is queued offline or the API is unreachable — the server stores
+ * `input.id` as the primary key and the queue replays the create keyed by that
+ * same id, so they converge on one row. An `optimisticResponse` can't be used
+ * here: Apollo would roll it back the moment the request is queued (null result).
+ *
+ * Catalog-merge caveat (shopping only): if the server merges the new item into an
+ * existing catalog row on the list, the returned `id` differs from our cuid — we
+ * adopt the server `serverId` and evict the optimistic cuid entity.
  */
 
-import { useRef } from 'react';
-import { gql } from '@apollo/client';
 import { useApolloClient, useMutation } from '@apollo/client/react';
+import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
-  AddItemToShoppingListDocument,
-  type AddItemToShoppingListMutation,
-} from '#features/shoppingList/graphql/shoppingList.generated';
-import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
-import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
-import { safeEvict } from '#/apollo/utils/cacheUpdaters';
-import { addNewItemToShoppingListCache } from '#/apollo/utils/shoppingListCacheUpdaters';
-import { createOptimisticShoppingListItem } from './utils';
+  executeCacheUpdate,
+  executeMutation,
+} from '#/utils/compilerSafeWrappers';
+import {
+  addNewItemToShoppingListCache,
+  addOptimisticShoppingListItem,
+  adoptServerShoppingListItemId,
+  createOptimisticShoppingListItem,
+  reconcileShoppingCreate,
+} from '#/apollo/utils/shoppingListCacheUpdaters';
 import { handleMutationError } from '#/utils/errorHandlers';
+import { isNetworkError } from '#/utils/isNetworkError';
+import { generateEntityId } from '#/utils/generateEntityId';
 import type { ShoppingListItemInput } from './types';
-
-// Minimal cache-read fragment — only the fields the optimistic-update path needs.
-const ShoppingListStatsFragment = gql`
-  fragment _AddShoppingItemStats on ShoppingList {
-    totalItems
-    completedItems
-    remainingItems
-    completionRate
-  }
-`;
 
 interface UseAddShoppingItemOptions {
   listId: string | null | undefined;
   refetch: () => Promise<unknown>;
 }
 
-/**
- * Hook for adding items to a shopping list
- *
- * @example
- * ```tsx
- * const { addItem } = useAddShoppingItem({ listId, refetch });
- * await addItem({ itemName: 'Milk', quantity: 2 });
- * ```
- */
 export function useAddShoppingItem({
   listId,
   refetch,
 }: UseAddShoppingItemOptions) {
-  const { createAddOperation } = useCrudOperations();
   const client = useApolloClient();
-  // Track the most recently generated temp ID for cleanup in update()
-  // A ref is necessary here because optimisticResponse and update are separate
-  // callbacks configured at hook level that need to share per-mutation state
-  const lastTempIdRef = useRef<string | null>(null);
 
   const [addItemMutation] = useMutation(AddItemToShoppingListDocument, {
-    optimisticResponse: variables => {
-      const { tempId, entity } = createOptimisticShoppingListItem({
-        itemName: variables.input.itemName ?? '',
-        quantity: Number(variables.input.quantity) || 1,
-        quantityInput: null,
-        unitName: variables.input.unit?.unitName || null,
-        category: variables.input.category || null,
-        itemId: variables.input.itemId,
-        unitId: variables.input.unit?.unitId,
-      });
-      lastTempIdRef.current = tempId;
-
-      // Read current aggregates from cache so the optimistic response
-      // reflects correct counts instead of hardcoded zeros.
-      const listStats = listId
-        ? client.cache.readFragment<{
-            totalItems: number;
-            completedItems: number;
-            remainingItems: number;
-            completionRate: number;
-          }>({
-            id: client.cache.identify({
-              __typename: 'ShoppingList',
-              id: listId,
-            }),
-            fragment: ShoppingListStatsFragment,
-            fragmentName: '_AddShoppingItemStats',
-          })
-        : null;
-
-      const prevTotal = listStats?.totalItems ?? 0;
-      const prevCompleted = listStats?.completedItems ?? 0;
-      const newTotal = prevTotal + 1;
-      // New items are always unpurchased, so completedItems stays the same
-      const newRemaining = newTotal - prevCompleted;
-      const newCompletionRate = newTotal > 0 ? prevCompleted / newTotal : 0;
-
-      const optimistic: AddItemToShoppingListMutation = {
-        __typename: 'Mutation',
-        addItemToShoppingList: {
-          __typename: 'AddItemToShoppingListPayload',
-          shoppingListItem: {
-            ...entity,
-            shoppingList: {
-              __typename: 'ShoppingList',
-              id: listId ?? '',
-              totalItems: newTotal,
-              completedItems: prevCompleted,
-              remainingItems: newRemaining,
-              completionRate: newCompletionRate,
-            },
-          },
-        },
-      };
-      return optimistic;
-    },
-    update(cache, { data }) {
+    update(cache, { data }, { variables }) {
       const payload = data?.addItemToShoppingList;
-      if (payload?.__typename !== 'AddItemToShoppingListPayload' || !listId) {
+      if (
+        payload?.__typename !== 'AddItemToShoppingListPayload' ||
+        !listId ||
+        !variables
+      ) {
         return;
       }
-
       const item = payload.shoppingListItem;
 
-      // Evict temp-ID entity when the real server response arrives
-      // update() runs twice: once for the optimistic response (item.id starts with "temp-"),
-      // once for the server response (real ID). On the server response, evict the stale temp entity.
-      if (lastTempIdRef.current && !item.id.startsWith('temp-')) {
-        safeEvict(cache, 'ShoppingListItem', lastTempIdRef.current);
-        lastTempIdRef.current = null;
-      }
+      // Catalog-merge: adopt the server id, evicting the optimistic cuid if the
+      // server merged into an existing row. Reads the id off this mutation's own
+      // variables (not a shared ref) so it stays correct when adds overlap.
+      adoptServerShoppingListItemId(cache, item.id, variables.input.id);
 
       executeCacheUpdate(
         () => addNewItemToShoppingListCache(cache, listId, item),
@@ -137,15 +66,21 @@ export function useAddShoppingItem({
       );
     },
     onError: error => {
-      lastTempIdRef.current = null;
+      // Network/transient error: queueLink queued the create for replay — keep
+      // the optimistic item; do NOT alert.
+      if (isNetworkError(error)) return;
       handleMutationError(error, { operation: 'Add Shopping List Item' });
     },
   });
 
-  const addItem = createAddOperation({
-    mutation: addItemMutation,
-    parentId: () => listId,
-    transformInput: (input: ShoppingListItemInput) => ({
+  const addItem = async (input: ShoppingListItemInput) => {
+    if (!listId) return undefined;
+
+    // Local-first: mint the permanent cuid id (the row's real PK).
+    const id = generateEntityId();
+
+    const createInput = {
+      id,
       shoppingListId: listId,
       itemName: input.itemName,
       quantity: input.quantity ?? 1,
@@ -157,11 +92,48 @@ export function useAddShoppingItem({
       }),
       ...(input.notes && { notes: input.notes }),
       ...(input.category && { category: input.category }),
-    }),
-    onSuccess: (data: AddItemToShoppingListMutation) =>
-      data?.addItemToShoppingList,
-    operationName: 'Add Shopping List Item',
-  });
+    };
+
+    const optimisticItem = createOptimisticShoppingListItem(id, {
+      itemName: input.itemName ?? '',
+      quantity: input.quantity ?? 1,
+      quantityInput: null,
+      unitName: input.unitName ?? null,
+      category: input.category ?? null,
+      itemId: undefined,
+      unitId: input.unitId,
+    });
+
+    // Write the item into the cache (full entity + connection edge + recomputed
+    // list stats) before firing, so it shows immediately and stays if the create
+    // is queued offline.
+    executeCacheUpdate(
+      () => addOptimisticShoppingListItem(client.cache, listId, optimisticItem),
+      'Add Shopping List Item (optimistic)',
+    );
+
+    const result = await executeMutation(
+      () =>
+        addItemMutation({
+          variables: { input: createInput },
+          context: { localFirst: true },
+        }),
+      'Add Shopping List Item error:',
+    );
+    if (!result) return undefined;
+
+    // A non-success payload (e.g. ValidationError / ConflictError) resolves under
+    // errorPolicy:'all' with no thrown error, so `onError` never fires — the
+    // reconciler classifies the result and fully reverts the optimistic item
+    // (entity + list stats) on a real rejection. A queued create (offline / API
+    // down) resolves with no data and no error → it stays and replays.
+    if (
+      reconcileShoppingCreate(client.cache, listId, id, result) === 'reverted'
+    ) {
+      return undefined;
+    }
+    return result.data?.addItemToShoppingList;
+  };
 
   return { addItem };
 }

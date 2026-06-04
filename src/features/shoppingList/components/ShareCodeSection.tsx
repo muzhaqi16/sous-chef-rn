@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View } from 'react-native';
-import {
-  Pressable,
-  PrimaryActivityIndicator,
-} from '#components/atoms/themedComponents';
+import { PrimaryActivityIndicator } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from 'react-i18next';
 import { useMutation } from '@apollo/client/react';
@@ -18,11 +16,14 @@ import {
 } from '#/utils/compilerSafeWrappers';
 import { alertService } from '#/services/alertService';
 import { getFormAnimationPreset } from '#/constants/animations';
+import { buildJoinListUrl, shareUrl } from '#/utils/deepLinkUrls';
 
 interface ShareCodeSectionProps {
   listId: string;
   isPublic: boolean;
   shareCode: string | null | undefined;
+  /** Server-built universal share link; falls back to the client builder. */
+  shareLinkUrl?: string | null;
 }
 
 /**
@@ -34,6 +35,7 @@ export const ShareCodeSection: React.FC<ShareCodeSectionProps> = ({
   listId,
   isPublic,
   shareCode,
+  shareLinkUrl,
 }) => {
   const { t } = useTranslation();
   const [shareShoppingList] = useMutation(ShareShoppingListDocument);
@@ -87,6 +89,14 @@ export const ShareCodeSection: React.FC<ShareCodeSectionProps> = ({
     }
   };
 
+  const handleShareLink = () => {
+    if (shareCode) {
+      // Prefer the server-built link; fall back to the client builder.
+      const url = shareLinkUrl ?? buildJoinListUrl(shareCode);
+      void shareUrl(url, t('shoppingListScreens.shareLinkMessage'));
+    }
+  };
+
   return (
     <View style={styles.shareCodeSection}>
       <Text style={styles.sectionTitle}>
@@ -95,11 +105,8 @@ export const ShareCodeSection: React.FC<ShareCodeSectionProps> = ({
       <Text style={styles.shareCodeDescription}>
         {t('shoppingListScreens.shareCodeDescription')}
       </Text>
-      <Pressable
-        style={({ pressed }) => [
-          styles.shareCodeToggle,
-          pressed && styles.pressed,
-        ]}
+      <AppPressable
+        style={styles.shareCodeToggle}
         onPress={handleToggleShareCode}
         disabled={togglingShareCode}
       >
@@ -135,14 +142,11 @@ export const ShareCodeSection: React.FC<ShareCodeSectionProps> = ({
             </View>
           )}
         </View>
-      </Pressable>
+      </AppPressable>
       {isPublic && shareCode ? (
         <Animated.View {...getFormAnimationPreset()}>
-          <Pressable
-            style={({ pressed }) => [
-              styles.shareCodeDisplay,
-              pressed && styles.pressed,
-            ]}
+          <AppPressable
+            style={styles.shareCodeDisplay}
             onPress={handleCopyShareCode}
           >
             <Text style={styles.shareCodeValue}>{shareCode}</Text>
@@ -158,7 +162,16 @@ export const ShareCodeSection: React.FC<ShareCodeSectionProps> = ({
                   : t('shoppingListScreens.copy')}
               </Text>
             </View>
-          </Pressable>
+          </AppPressable>
+          <AppPressable
+            style={styles.shareLinkButton}
+            onPress={handleShareLink}
+          >
+            <Icon name="share-outline" size={18} tone="primary" />
+            <Text style={styles.shareLinkText}>
+              {t('shoppingListScreens.shareLink')}
+            </Text>
+          </AppPressable>
         </Animated.View>
       ) : null}
     </View>
@@ -257,6 +270,21 @@ const styles = StyleSheet.create(theme => ({
   },
   copyTextCopied: {
     color: theme.colors.success,
+  },
+  shareLinkButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing.xs,
+    marginTop: theme.spacing.sm,
+    paddingVertical: theme.spacing['3'],
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radii.sm,
+  },
+  shareLinkText: {
+    fontSize: theme.typography.fontSize.md,
+    color: theme.colors.primary,
+    fontWeight: theme.fonts.weight.medium,
   },
   pressed: {
     opacity: theme.opacity.pressed,

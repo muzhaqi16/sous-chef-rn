@@ -96,6 +96,9 @@ export function useUpdateShoppingItem({
           variables: {
             input: { ...updates, id: itemId, version: snapshot.version },
           },
+          // Local-first: queue on an API-down-while-online failure (idempotent
+          // field update by real id → replays via SyncShoppingListItem).
+          context: { localFirst: true },
         }),
       error => {
         revertSnapshot();

@@ -21,6 +21,7 @@ jest.mock('#hooks/navigation/useAppNavigation');
 jest.mock('#features/pantry/hooks/usePantryPermissions');
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: jest.fn(),
+  useRoute: jest.fn(() => ({ params: {} })),
 }));
 
 // --- Tab bar ---
@@ -70,7 +71,6 @@ const defaultPantryScreen = {
   noPantries: false,
 
   // Store state
-  showBiometricSetup: false,
   unreadCount: 0,
   pantrySortOption: 'recent',
   pantrySortDirection: 'desc',

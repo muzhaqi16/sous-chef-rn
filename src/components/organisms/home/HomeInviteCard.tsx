@@ -2,7 +2,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { useFragment } from '@apollo/client/react';
 import { type FragmentType } from '@apollo/client/masking';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { formatInviteStatus } from '#/utils/formatters/inviteFormatters';
@@ -76,15 +76,9 @@ export const HomeInviteCard: React.FC<HomeInviteCardProps> = ({
           </Text>
         </View>
         {!!canRevoke && invite.status === InviteStatus.Pending && (
-          <Pressable
-            style={({ pressed }) => [
-              styles.revokeButton,
-              pressed && styles.pressed,
-            ]}
-            onPress={onRevoke}
-          >
+          <AppPressable style={styles.revokeButton} onPress={onRevoke}>
             <Icon name="close" size={20} />
-          </Pressable>
+          </AppPressable>
         )}
       </View>
     </View>

@@ -5,10 +5,8 @@ import {
   Pressable,
   PrimaryActivityIndicator,
 } from '#components/atoms/themedComponents';
-import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
-import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
+import { BottomSheetLayout } from '#components/atoms/BottomSheetLayout';
 import { StyleSheet } from 'react-native-unistyles';
-import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { BaseSwitch } from '#components/base/BaseSwitch';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { FormInput } from '#components/molecules/FormInput';
@@ -33,12 +31,6 @@ export const GenerateShoppingListSheet: React.FC<
   GenerateShoppingListSheetProps
 > = ({ visible, onClose, onGenerate, loading, homeName }) => {
   const { t } = useTranslation();
-  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
-    visible,
-    onDismiss: onClose,
-    snapPoints: ['65%'],
-    keyboardAware: true,
-  });
 
   const [checkPantry, setCheckPantry] = useState(true);
   const [mode, setMode] = useState<'new' | 'existing'>('new');
@@ -76,175 +68,172 @@ export const GenerateShoppingListSheet: React.FC<
   const canGenerate = mode === 'new' || (mode === 'existing' && selectedListId);
 
   return (
-    <BottomSheetModal ref={ref} {...modalProps}>
-      <BottomSheetFormScrollView
-        style={styles.scrollView}
-        contentContainerStyle={[styles.contentContainer, contentContainerStyle]}
-        showsVerticalScrollIndicator={false}
-      >
-        <BottomSheetHeader
-          title={t('generateShoppingList.title')}
-          onCancel={onClose}
-          onConfirm={handleGenerate}
-          confirmLabel={
-            loading
-              ? t('generateShoppingList.generating')
-              : t('generateShoppingList.generate')
-          }
-          confirmDisabled={loading || !canGenerate}
-          confirmColor="primary"
-        />
+    <BottomSheetLayout
+      visible={visible}
+      onDismiss={onClose}
+      snapPoints={['65%']}
+      keyboardAware
+      mode="form"
+      style={styles.scrollView}
+      contentContainerStyle={styles.contentContainer}
+    >
+      <BottomSheetHeader
+        title={t('generateShoppingList.title')}
+        onCancel={onClose}
+        onConfirm={handleGenerate}
+        confirmLabel={
+          loading
+            ? t('generateShoppingList.generating')
+            : t('generateShoppingList.generate')
+        }
+        confirmDisabled={loading || !canGenerate}
+        confirmColor="primary"
+      />
 
-        {/* Home sharing info */}
-        {!!homeName && (
-          <View style={styles.infoNote}>
-            <Icon name="information-circle-outline" size={18} tone="primary" />
-            <Text size="sm" tone="accent" style={styles.infoNoteText}>
-              {t('generateShoppingList.sharedWithHome', { name: homeName })}
-            </Text>
-          </View>
-        )}
-
-        {/* Check pantry toggle */}
-        <View style={styles.toggleRow}>
-          <View style={styles.toggleInfo}>
-            <Text size="md" weight="medium">
-              {t('generateShoppingList.checkPantry')}
-            </Text>
-            <Text size="sm" tone="secondary" style={styles.toggleDescription}>
-              {t('generateShoppingList.checkPantryDesc')}
-            </Text>
-          </View>
-          <BaseSwitch value={checkPantry} onValueChange={setCheckPantry} />
+      {/* Home sharing info */}
+      {!!homeName && (
+        <View style={styles.infoNote}>
+          <Icon name="information-circle-outline" size={18} tone="primary" />
+          <Text size="sm" tone="accent" style={styles.infoNoteText}>
+            {t('generateShoppingList.sharedWithHome', { name: homeName })}
+          </Text>
         </View>
+      )}
 
-        {/* Mode selector */}
+      {/* Check pantry toggle */}
+      <View style={styles.toggleRow}>
+        <View style={styles.toggleInfo}>
+          <Text size="md" weight="medium">
+            {t('generateShoppingList.checkPantry')}
+          </Text>
+          <Text size="sm" tone="secondary" style={styles.toggleDescription}>
+            {t('generateShoppingList.checkPantryDesc')}
+          </Text>
+        </View>
+        <BaseSwitch value={checkPantry} onValueChange={setCheckPantry} />
+      </View>
+
+      {/* Mode selector */}
+      <View style={styles.section}>
+        <Text size="sm" weight="medium" tone="secondary">
+          {t('generateShoppingList.destination')}
+        </Text>
+        <View style={styles.modeRow}>
+          <Pressable
+            onPress={() => setMode('new')}
+            style={[
+              styles.modeOption,
+              mode === 'new' && styles.modeOptionActive,
+            ]}
+          >
+            <Icon
+              name="add-circle-outline"
+              size={20}
+              tone={mode === 'new' ? 'white' : 'textSecondary'}
+            />
+            <Text
+              size="sm"
+              weight="medium"
+              style={[styles.modeText, mode === 'new' && styles.modeTextActive]}
+            >
+              {t('generateShoppingList.newList')}
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => setMode('existing')}
+            style={[
+              styles.modeOption,
+              mode === 'existing' && styles.modeOptionActive,
+            ]}
+          >
+            <Icon
+              name="list-outline"
+              size={20}
+              tone={mode === 'existing' ? 'white' : 'textSecondary'}
+            />
+            <Text
+              size="sm"
+              weight="medium"
+              style={[
+                styles.modeText,
+                mode === 'existing' && styles.modeTextActive,
+              ]}
+            >
+              {t('generateShoppingList.existingList')}
+            </Text>
+          </Pressable>
+        </View>
+      </View>
+
+      {/* Custom name for new list */}
+      {mode === 'new' && (
+        <FormInput
+          label={t('generateShoppingList.listNameLabel')}
+          value={customName}
+          onChangeText={setCustomName}
+          placeholder={t('generateShoppingList.listNamePlaceholder')}
+        />
+      )}
+
+      {/* Existing list picker */}
+      {mode === 'existing' && (
         <View style={styles.section}>
           <Text size="sm" weight="medium" tone="secondary">
-            {t('generateShoppingList.destination')}
+            {t('generateShoppingList.selectListLabel')}
           </Text>
-          <View style={styles.modeRow}>
-            <Pressable
-              onPress={() => setMode('new')}
-              style={[
-                styles.modeOption,
-                mode === 'new' && styles.modeOptionActive,
-              ]}
+          {shoppingLists.length === 0 ? (
+            <Text
+              size="sm"
+              tone="tertiary"
+              align="center"
+              style={styles.emptyText}
             >
-              <Icon
-                name="add-circle-outline"
-                size={20}
-                tone={mode === 'new' ? 'white' : 'textSecondary'}
-              />
-              <Text
-                size="sm"
-                weight="medium"
+              {t('generateShoppingList.noLists')}
+            </Text>
+          ) : (
+            shoppingLists.map(list => (
+              <Pressable
+                key={list.id}
+                onPress={() => setSelectedListId(list.id)}
                 style={[
-                  styles.modeText,
-                  mode === 'new' && styles.modeTextActive,
+                  styles.listItem,
+                  selectedListId === list.id && styles.listItemSelected,
                 ]}
               >
-                {t('generateShoppingList.newList')}
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={() => setMode('existing')}
-              style={[
-                styles.modeOption,
-                mode === 'existing' && styles.modeOptionActive,
-              ]}
-            >
-              <Icon
-                name="list-outline"
-                size={20}
-                tone={mode === 'existing' ? 'white' : 'textSecondary'}
-              />
-              <Text
-                size="sm"
-                weight="medium"
-                style={[
-                  styles.modeText,
-                  mode === 'existing' && styles.modeTextActive,
-                ]}
-              >
-                {t('generateShoppingList.existingList')}
-              </Text>
-            </Pressable>
-          </View>
+                <Icon
+                  name={
+                    selectedListId === list.id
+                      ? 'radio-button-on'
+                      : 'radio-button-off'
+                  }
+                  size={20}
+                  tone={selectedListId === list.id ? 'primary' : 'textTertiary'}
+                />
+                <View style={styles.listItemContent}>
+                  <Text size="md" weight="medium">
+                    {list.name}
+                  </Text>
+                  <Text size="sm" tone="secondary">
+                    {t('generateShoppingList.itemsCount', {
+                      count: list.totalItems,
+                    })}
+                  </Text>
+                </View>
+              </Pressable>
+            ))
+          )}
         </View>
+      )}
 
-        {/* Custom name for new list */}
-        {mode === 'new' && (
-          <FormInput
-            label={t('generateShoppingList.listNameLabel')}
-            value={customName}
-            onChangeText={setCustomName}
-            placeholder={t('generateShoppingList.listNamePlaceholder')}
-          />
-        )}
-
-        {/* Existing list picker */}
-        {mode === 'existing' && (
-          <View style={styles.section}>
-            <Text size="sm" weight="medium" tone="secondary">
-              {t('generateShoppingList.selectListLabel')}
-            </Text>
-            {shoppingLists.length === 0 ? (
-              <Text
-                size="sm"
-                tone="tertiary"
-                align="center"
-                style={styles.emptyText}
-              >
-                {t('generateShoppingList.noLists')}
-              </Text>
-            ) : (
-              shoppingLists.map(list => (
-                <Pressable
-                  key={list.id}
-                  onPress={() => setSelectedListId(list.id)}
-                  style={[
-                    styles.listItem,
-                    selectedListId === list.id && styles.listItemSelected,
-                  ]}
-                >
-                  <Icon
-                    name={
-                      selectedListId === list.id
-                        ? 'radio-button-on'
-                        : 'radio-button-off'
-                    }
-                    size={20}
-                    tone={
-                      selectedListId === list.id ? 'primary' : 'textTertiary'
-                    }
-                  />
-                  <View style={styles.listItemContent}>
-                    <Text size="md" weight="medium">
-                      {list.name}
-                    </Text>
-                    <Text size="sm" tone="secondary">
-                      {t('generateShoppingList.itemsCount', {
-                        count: list.totalItems,
-                      })}
-                    </Text>
-                  </View>
-                </Pressable>
-              ))
-            )}
-          </View>
-        )}
-
-        {!!loading && (
-          <View style={styles.loadingContainer}>
-            <PrimaryActivityIndicator size="small" />
-            <Text size="sm" tone="secondary">
-              {t('generateShoppingList.generatingMessage')}
-            </Text>
-          </View>
-        )}
-      </BottomSheetFormScrollView>
-    </BottomSheetModal>
+      {!!loading && (
+        <View style={styles.loadingContainer}>
+          <PrimaryActivityIndicator size="small" />
+          <Text size="sm" tone="secondary">
+            {t('generateShoppingList.generatingMessage')}
+          </Text>
+        </View>
+      )}
+    </BottomSheetLayout>
   );
 };
 

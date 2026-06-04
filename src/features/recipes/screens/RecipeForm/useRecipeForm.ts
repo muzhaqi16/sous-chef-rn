@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   RecipeStatus,
   type CreateRecipeInput,
@@ -62,6 +63,7 @@ function generateTempId(): string {
 }
 
 export function useRecipeForm() {
+  const { t } = useTranslation();
   const [state, setState] = useState<RecipeFormState>({
     name: '',
     description: '',
@@ -194,17 +196,15 @@ export function useRecipeForm() {
 
   // Validation
   const validate = (): string | null => {
-    if (!state.name.trim()) return 'Recipe name is required';
-    if (state.ingredients.length === 0)
-      return 'At least one ingredient is required';
-    if (state.steps.length === 0)
-      return 'At least one instruction step is required';
+    if (!state.name.trim()) return t('recipes.nameRequired');
+    if (state.ingredients.length === 0) return t('recipes.ingredientRequired');
+    if (state.steps.length === 0) return t('recipes.stepRequired');
     // Check all ingredients have names
     const emptyIngredient = state.ingredients.find(i => !i.name.trim());
-    if (emptyIngredient) return 'All ingredients must have a name';
+    if (emptyIngredient) return t('recipes.ingredientNameRequired');
     // Check all steps have text
     const emptyStep = state.steps.find(s => !s.instruction.trim());
-    if (emptyStep) return 'All steps must have instructions';
+    if (emptyStep) return t('recipes.stepInstructionsRequired');
     return null;
   };
 

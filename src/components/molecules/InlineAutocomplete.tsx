@@ -1,9 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, ScrollView } from 'react-native';
-import {
-  Pressable,
-  ThemedActivityIndicator,
-} from '#components/atoms/themedComponents';
+import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { Label } from '#components/atoms/Label';
@@ -171,7 +169,6 @@ export function InlineAutocomplete<T>({
           {error}
         </Text>
       ) : null}
-
       {!!shouldShowDropdown &&
         !!(slicedItems.length > 0 || footerComponent) && (
           <View style={styles.suggestionsContainer}>
@@ -183,15 +180,12 @@ export function InlineAutocomplete<T>({
             >
               {slicedItems.map((item, index) => (
                 <React.Fragment key={keyExtractor(item)}>
-                  <Pressable
+                  <AppPressable
                     onPress={() => handleSelect(item)}
-                    style={({ pressed }) => [
-                      styles.suggestion,
-                      pressed && styles.pressed,
-                    ]}
+                    style={styles.suggestion}
                   >
                     {renderItem(item, index)}
-                  </Pressable>
+                  </AppPressable>
                   {index < slicedItems.length - 1 && (
                     <View style={styles.separator} />
                   )}

@@ -7,6 +7,7 @@ import React, {
 } from 'react';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAnimatedReaction } from 'react-native-reanimated';
 import type { BottomSheetModalRef } from '#hooks/useStandardBottomSheet';
@@ -387,11 +388,8 @@ const RecipeMainInner: React.FC = () => {
               : t('recipes.recipeIdeasToTry')}
           </Text>
         </View>
-        <Pressable
-          style={({ pressed }) => [
-            styles.refreshButton,
-            pressed && styles.pressed,
-          ]}
+        <AppPressable
+          style={styles.refreshButton}
           onPress={screen.discovery.refresh}
           disabled={screen.discovery.loading}
           accessibilityRole="button"
@@ -402,7 +400,7 @@ const RecipeMainInner: React.FC = () => {
             size={20}
             tone={screen.discovery.loading ? 'textSecondary' : 'primary'}
           />
-        </Pressable>
+        </AppPressable>
       </View>
     );
   })();
@@ -459,7 +457,8 @@ const RecipeMainInner: React.FC = () => {
   return (
     <TabMainScreen testID="recipes-screen">
       {(screen.discovery.loading || screen.searchLoading) &&
-      !screen.showSearchResults ? (
+      !screen.showSearchResults &&
+      screen.items.length === 0 ? (
         <>
           {recipeListHeader}
           <RecipeSkeleton />

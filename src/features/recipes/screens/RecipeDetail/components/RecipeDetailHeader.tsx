@@ -1,5 +1,6 @@
 import React from 'react';
 import { ActivityIndicator, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import {
   Pressable,
   ThemedBackButton,
@@ -55,6 +56,7 @@ export const RecipeDetailHeader: React.FC<RecipeDetailHeaderProps> = ({
   onFolderPress,
   onHeartPress,
 }) => {
+  const { t } = useTranslation();
   const imageAnimatedStyle = useAnimatedStyle(() => {
     const scale = interpolate(
       scrollY.get(),
@@ -74,7 +76,7 @@ export const RecipeDetailHeader: React.FC<RecipeDetailHeaderProps> = ({
             styles.actionButton,
             pressed && { opacity: 0.7 },
           ]}
-          accessibilityLabel="Add to meal plan"
+          accessibilityLabel={t('recipes.addToMealPlanA11y')}
         >
           <Icon name="calendar-outline" size={22} tone="primary" />
         </Pressable>

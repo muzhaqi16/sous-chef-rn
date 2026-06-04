@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, TextStyle } from 'react-native';
-import { Pressable, ThemedIcon } from '#components/atoms/themedComponents';
+import { ThemedIcon } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { Icon } from '#utils/iconUtils';
 import { StyleSheet } from 'react-native-unistyles';
 import { Badge } from '../base/Badge';
@@ -118,11 +119,8 @@ const ListItemComponent: React.FC<ListItemProps> = ({
 
     return (
       <View style={styles.container}>
-        <Pressable
-          style={({ pressed }) => [
-            styles.contentContainer,
-            pressed && styles.pressed,
-          ]}
+        <AppPressable
+          style={styles.contentContainer}
           onPress={onPress}
           accessibilityRole="button"
           accessibilityLabel={accessibilityLabel}
@@ -130,7 +128,7 @@ const ListItemComponent: React.FC<ListItemProps> = ({
           accessibilityState={{ disabled: isPurchased }}
         >
           {content}
-        </Pressable>
+        </AppPressable>
       </View>
     );
   }
@@ -158,7 +156,11 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     padding: theme.spacing.sm,
-    height: theme.sizes.itemCard.compact.height, // Compact height for drag-to-reorder calculations
+    // `minHeight` (not a fixed `height`) so single-line rows stay compact but
+    // a title that wraps to 2 lines + subtitle can grow instead of being
+    // squashed/clipped inside a fixed box. Matches BaseItemCard / MockItemCard;
+    // FlashList v2 handles variable row heights natively.
+    minHeight: theme.sizes.itemCard.compact.height,
     gap: theme.spacing.sm, // Better spacing between elements
   },
   checkboxContainer: {

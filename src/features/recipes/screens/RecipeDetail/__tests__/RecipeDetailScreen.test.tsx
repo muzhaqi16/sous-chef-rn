@@ -23,12 +23,6 @@ jest.mock('#hooks/navigation/useAppNavigation');
 
 jest.mock('#hooks/performance/useScreenTransition');
 
-jest.mock('#hooks/auth/useAuth', () => ({
-  useAuth: jest.fn(() => ({
-    user: { id: 'user-1' },
-  })),
-}));
-
 // Mock the hook fully
 jest.mock('../../../hooks/useRecipeDetail', () => ({
   useRecipeDetail: jest.fn(() => ({

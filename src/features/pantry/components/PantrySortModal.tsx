@@ -1,7 +1,9 @@
 import React from 'react';
-import { View, Text, Modal, TouchableWithoutFeedback } from 'react-native';
+import { View, Modal } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
+import { Text } from '#components/atoms/Text';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import type { SortOption, SortDirection } from './pantryDisplay/types';
@@ -77,52 +79,48 @@ export const PantrySortModal: React.FC<PantrySortModalProps> = ({
       statusBarTranslucent
       navigationBarTranslucent
     >
-      <TouchableWithoutFeedback onPress={onClose}>
-        <View style={styles.modalOverlay}>
-          <TouchableWithoutFeedback>
-            <View style={styles.sortModal}>
-              <Text style={styles.sortModalTitle}>{t('pantrySort.title')}</Text>
-              {SORT_OPTIONS.map(option => (
-                <Pressable
-                  key={option.key}
-                  style={({ pressed }) => [
-                    styles.sortOption,
-                    sortOption === option.key && styles.sortOptionActive,
-                    pressed && styles.pressed,
-                  ]}
-                  onPress={() => onSelect(option.key)}
-                >
-                  <Icon
-                    name={option.icon}
-                    size={18}
-                    library={option.library}
-                    tone="primary"
-                  />
-                  <Text
-                    style={[
-                      styles.sortOptionLabel,
-                      sortOption === option.key && styles.sortOptionLabelActive,
-                    ]}
-                  >
-                    {t(option.labelKey)}
-                  </Text>
-                  {sortOption === option.key && (
-                    <Icon
-                      name={
-                        sortDirection === PantrySortDirection.ASC
-                          ? 'arrow-up'
-                          : 'arrow-down'
-                      }
-                      size={18}
-                      tone="primary"
-                    />
-                  )}
-                </Pressable>
-              ))}
-            </View>
-          </TouchableWithoutFeedback>
+      <Pressable style={styles.modalOverlay} onPress={onClose}>
+        {/* Absorb taps on the card so they don't bubble to the backdrop and close it */}
+        <View style={styles.sortModal} onStartShouldSetResponder={() => true}>
+          <Text style={styles.sortModalTitle}>{t('pantrySort.title')}</Text>
+          {SORT_OPTIONS.map(option => (
+            <AppPressable
+              key={option.key}
+              style={[
+                styles.sortOption,
+                sortOption === option.key && styles.sortOptionActive,
+              ]}
+              onPress={() => onSelect(option.key)}
+            >
+              <Icon
+                name={option.icon}
+                size={18}
+                library={option.library}
+                tone="primary"
+              />
+              <Text
+                style={[
+                  styles.sortOptionLabel,
+                  sortOption === option.key && styles.sortOptionLabelActive,
+                ]}
+              >
+                {t(option.labelKey)}
+              </Text>
+              {sortOption === option.key && (
+                <Icon
+                  name={
+                    sortDirection === PantrySortDirection.ASC
+                      ? 'arrow-up'
+                      : 'arrow-down'
+                  }
+                  size={18}
+                  tone="primary"
+                />
+              )}
+            </AppPressable>
+          ))}
         </View>
-      </TouchableWithoutFeedback>
+      </Pressable>
     </Modal>
   );
 };

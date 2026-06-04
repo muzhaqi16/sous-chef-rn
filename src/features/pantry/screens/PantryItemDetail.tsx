@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, RefreshControl, ScrollView } from 'react-native';
-import {
-  Pressable,
-  ThemedActivityIndicator,
-} from '#components/atoms/themedComponents';
+import { View, RefreshControl, ScrollView } from 'react-native';
+import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
+import { Text } from '#components/atoms/Text';
 import { alertService } from '#/services/alertService';
 import Animated from 'react-native-reanimated';
 import { useApolloClient, useFragment, useQuery } from '@apollo/client/react';
@@ -285,7 +284,6 @@ export const PantryItemDetail: React.FC<
         borderless
         rightActions={headerActions}
       />
-
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -418,12 +416,9 @@ export const PantryItemDetail: React.FC<
               contentContainerStyle={styles.recipesList}
             >
               {suggestedRecipes.map(recipe => (
-                <Pressable
+                <AppPressable
                   key={String(recipe.id)}
-                  style={({ pressed }) => [
-                    styles.recipeCard,
-                    pressed && styles.pressed,
-                  ]}
+                  style={styles.recipeCard}
                   onPress={() => handleRecipePress(recipe.id)}
                 >
                   <Animated.Image
@@ -435,7 +430,7 @@ export const PantryItemDetail: React.FC<
                   <Text style={styles.recipeTitle} numberOfLines={2}>
                     {recipe.title}
                   </Text>
-                </Pressable>
+                </AppPressable>
               ))}
             </ScrollView>
           ) : (
@@ -447,7 +442,6 @@ export const PantryItemDetail: React.FC<
 
         <View style={{ height: insets.bottom + 20 }} />
       </ScrollView>
-
       {!!actions.adjustModalVisible && (
         <AdjustQuantityModal
           visible={actions.adjustModalVisible}
@@ -456,7 +450,6 @@ export const PantryItemDetail: React.FC<
           onConfirm={actions.handleConfirmAdjust}
         />
       )}
-
       {!!actions.correctWeightVisible && (
         <CorrectWeightModal
           visible={actions.correctWeightVisible}

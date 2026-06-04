@@ -1,17 +1,8 @@
 import React from 'react';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-} from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
-import { HapticService } from '#services/haptic/HapticService';
-import { SPRING } from '#/constants/animations';
+import { PressableScale } from '#components/atoms/PressableScale';
 import type { AddButtonProps } from './types';
-import { Pressable } from '#components/atoms/themedComponents';
-
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export const AddButton: React.FC<AddButtonProps> = ({
   onPress,
@@ -19,34 +10,15 @@ export const AddButton: React.FC<AddButtonProps> = ({
   iconLibrary,
   disabled = false,
 }) => {
-  const scale = useSharedValue(1);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.get() }],
-  }));
-
-  const handlePressIn = () => {
-    scale.set(withSpring(0.9, SPRING.PRESS));
-  };
-
-  const handlePressOut = () => {
-    scale.set(withSpring(1, SPRING.PRESS));
-  };
-
-  const handlePress = () => {
-    HapticService.medium();
-    onPress();
-  };
-
   styles.useVariants({ disabled });
 
   return (
-    <AnimatedPressable
+    <PressableScale
       testID="tab-bar-add-button"
-      onPress={handlePress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      style={[styles.addButton, animatedStyle]}
+      onPress={onPress}
+      activeScale={0.9}
+      haptic="medium"
+      style={styles.addButton}
       accessibilityRole="button"
       accessibilityLabel="Action button"
       accessibilityHint="Opens the action for the current tab"
@@ -54,7 +26,7 @@ export const AddButton: React.FC<AddButtonProps> = ({
       disabled={disabled}
     >
       <Icon name={icon} size={28} tone="white" library={iconLibrary} />
-    </AnimatedPressable>
+    </PressableScale>
   );
 };
 

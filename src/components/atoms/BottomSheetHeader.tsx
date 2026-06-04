@@ -1,6 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { useTranslation } from 'react-i18next';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
 
@@ -26,26 +27,30 @@ export const BottomSheetHeader: React.FC<BottomSheetHeaderProps> = ({
   title,
   onCancel,
   onConfirm,
-  cancelLabel = 'Cancel',
-  confirmLabel = 'Save',
+  cancelLabel,
+  confirmLabel,
   confirmDisabled = false,
   confirmColor = 'primary',
 }) => {
+  const { t } = useTranslation();
   styles.useVariants({ confirmColor, confirmDisabled });
+
+  const resolvedCancelLabel = cancelLabel ?? t('labels.cancel');
+  const resolvedConfirmLabel = confirmLabel ?? t('labels.save');
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Pressable
+        <AppPressable
           onPress={onCancel}
-          style={({ pressed }) => [styles.button, pressed && styles.pressed]}
+          style={styles.button}
           accessibilityRole="button"
-          accessibilityLabel={cancelLabel}
+          accessibilityLabel={resolvedCancelLabel}
         >
           <Text size="md" tone="secondary">
-            {cancelLabel}
+            {resolvedCancelLabel}
           </Text>
-        </Pressable>
+        </AppPressable>
 
         <Text
           size="lg"
@@ -57,12 +62,12 @@ export const BottomSheetHeader: React.FC<BottomSheetHeaderProps> = ({
           {title}
         </Text>
 
-        <Pressable
+        <AppPressable
           onPress={onConfirm}
-          style={({ pressed }) => [styles.button, pressed && styles.pressed]}
+          style={styles.button}
           disabled={confirmDisabled}
           accessibilityRole="button"
-          accessibilityLabel={confirmLabel}
+          accessibilityLabel={resolvedConfirmLabel}
           accessibilityState={{ disabled: confirmDisabled }}
         >
           <Text
@@ -71,9 +76,9 @@ export const BottomSheetHeader: React.FC<BottomSheetHeaderProps> = ({
             align="right"
             style={styles.confirmText}
           >
-            {confirmLabel}
+            {resolvedConfirmLabel}
           </Text>
-        </Pressable>
+        </AppPressable>
       </View>
       <View style={styles.divider} />
     </View>

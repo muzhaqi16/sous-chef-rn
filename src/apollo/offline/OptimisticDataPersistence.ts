@@ -43,8 +43,6 @@ class OptimisticDataPersistence {
   // PERFORMANCE: In-memory cache to avoid repeated MMKV reads and JSON parsing
   // Cache is invalidated on writes and has no TTL (data is small and static until updated)
   private cache: Record<string, OptimisticFieldUpdate> | null = null;
-  private cacheHits = 0;
-  private cacheMisses = 0;
 
   /**
    * Save an optimistic field update (batched for performance)
@@ -374,22 +372,10 @@ class OptimisticDataPersistence {
     try {
       // Return cached data if available
       if (this.cache !== null) {
-        this.cacheHits++;
-        if (__DEV__ && this.cacheHits % 100 === 0) {
-          console.log(
-            `⚡ Optimistic cache stats: ${this.cacheHits} hits, ${
-              this.cacheMisses
-            } misses (${(
-              (this.cacheHits / (this.cacheHits + this.cacheMisses)) *
-              100
-            ).toFixed(1)}% hit rate)`,
-          );
-        }
         return this.cache;
       }
 
       // Cache miss - load from storage
-      this.cacheMisses++;
       const data = storage.getString(OPTIMISTIC_DATA_KEY);
       const parsed = data ? JSON.parse(data) : {};
 
@@ -401,19 +387,6 @@ class OptimisticDataPersistence {
       console.error('Failed to load optimistic data:', error);
       return {};
     }
-  }
-
-  /**
-   * Get cache statistics for monitoring
-   * Useful for performance debugging
-   */
-  getCacheStats(): { hits: number; misses: number; hitRate: number } {
-    const total = this.cacheHits + this.cacheMisses;
-    return {
-      hits: this.cacheHits,
-      misses: this.cacheMisses,
-      hitRate: total > 0 ? (this.cacheHits / total) * 100 : 0,
-    };
   }
 }
 

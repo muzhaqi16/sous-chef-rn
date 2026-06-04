@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
 import { FormInput } from '#components/molecules/FormInput';
@@ -99,7 +99,6 @@ export const DetailsPage: React.FC<DetailsPageProps> = ({
           />
         </FieldRow>
       </View>
-
       {/* Net Weight */}
       <View style={{ zIndex: 5 }}>
         <FieldRow containerStyle={{ marginBottom: 4 }}>
@@ -125,22 +124,18 @@ export const DetailsPage: React.FC<DetailsPageProps> = ({
           {t('addToPantry.netWeightHint')}
         </Text>
       </View>
-
       {/* Package Details - Progressive Disclosure */}
       <View style={styles.section}>
-        <Pressable
+        <AppPressable
           onPress={() => setShowPackageDetails(!showPackageDetails)}
-          style={({ pressed }) => [
-            styles.toggleButton,
-            pressed && styles.pressed,
-          ]}
+          style={styles.toggleButton}
         >
           <Text size="md" weight="medium" tone="accent">
             {showPackageDetails
               ? t('addToPantry.hidePackageDetails')
               : t('addToPantry.addPackageDetails')}
           </Text>
-        </Pressable>
+        </AppPressable>
 
         {!!showPackageDetails && (
           <View style={styles.packageDetailsContainer}>

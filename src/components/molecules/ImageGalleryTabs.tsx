@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
 import { View, ViewStyle } from 'react-native';
-import {
-  Pressable,
-  ThemedActivityIndicator,
-} from '#components/atoms/themedComponents';
+import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';
@@ -147,12 +145,9 @@ const DotItem: React.FC<{ isActive: boolean; onPress: () => void }> = ({
 }) => {
   styles.useVariants({ active: isActive });
   return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [styles.dotTouchable, pressed && styles.pressed]}
-    >
+    <AppPressable onPress={onPress} style={styles.dotTouchable}>
       <View style={styles.dot} />
-    </Pressable>
+    </AppPressable>
   );
 };
 

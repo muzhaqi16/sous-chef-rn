@@ -51,7 +51,7 @@ describe('NotificationDetailScreen', () => {
       title: 'Items Expiring Soon',
       sentAt: '2026-01-01T00:00:00Z',
       message: 'Test message',
-      payload: JSON.stringify({ message: 'Milk is expiring soon' }),
+      payload: { message: 'Milk is expiring soon' },
       requiresAction: false,
     } as DetailParams['notification'];
     render(<NotificationDetailScreen route={makeRoute({ notification })} />);

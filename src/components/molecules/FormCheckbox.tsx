@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, ViewStyle } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
@@ -24,8 +24,8 @@ export const FormCheckbox: React.FC<FormCheckboxProps> = ({
 }) => {
   return (
     <View style={[styles.container, containerStyle]}>
-      <Pressable
-        style={({ pressed }) => [styles.checkboxRow, pressed && styles.pressed]}
+      <AppPressable
+        style={styles.checkboxRow}
         onPress={onPress}
         disabled={disabled}
       >
@@ -44,7 +44,7 @@ export const FormCheckbox: React.FC<FormCheckboxProps> = ({
         >
           {label}
         </Text>
-      </Pressable>
+      </AppPressable>
       {error ? (
         <Text size="sm" tone="error" style={styles.errorText}>
           {error}

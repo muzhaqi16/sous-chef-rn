@@ -17,7 +17,7 @@ export type Scalars = {
   /** Quantity input that accepts both strings and numbers. Strings can be fractions like "1/3" or "1 1/4". */
   FlexibleQuantity: { input: string | number; output: string; }
   /** The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf). */
-  JSON: { input: any; output: any; }
+  JSON: { input: JsonInput; output: JsonValue; }
   Upload: { input: { uri: string; type: string; name: string }; output: { uri: string; type: string; name: string }; }
 };
 
@@ -559,6 +559,12 @@ export type BatchAddShoppingListItemInput = {
   category?: InputMaybe<Scalars['String']['input']>;
   /** Client-provided ID for matching results (optional) */
   clientId?: InputMaybe<Scalars['String']['input']>;
+  /**
+   * Optional client-generated permanent ID (CUID v1) for this item. Persisted as
+   * the row primary key so a re-synced batch resolves to the same rows (idempotent).
+   * Distinct from clientId below, which is only a response-matching token.
+   */
+  id?: InputMaybe<Scalars['ID']['input']>;
   itemId?: InputMaybe<Scalars['ID']['input']>;
   itemName?: InputMaybe<Scalars['String']['input']>;
   netWeight?: InputMaybe<NetWeightInput>;
@@ -1583,6 +1589,8 @@ export type CreateHomeInput = {
   currency?: InputMaybe<Scalars['String']['input']>;
   defaultPantryName?: InputMaybe<Scalars['String']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
+  /** Optional client-generated permanent ID (CUID v1) for offline-first idempotency. */
+  id?: InputMaybe<Scalars['ID']['input']>;
   isPublic?: InputMaybe<Scalars['Boolean']['input']>;
   maxMembers?: InputMaybe<Scalars['Int']['input']>;
   name: Scalars['String']['input'];
@@ -1664,6 +1672,8 @@ export type CreateMealPlanInput = {
    * If not provided, the plan is personal (user-scoped only).
    */
   homeId?: InputMaybe<Scalars['ID']['input']>;
+  /** Optional client-generated permanent ID (CUID v1) for offline-first idempotency. */
+  id?: InputMaybe<Scalars['ID']['input']>;
   name: Scalars['String']['input'];
   planType: MealPlanType;
   servings?: InputMaybe<Scalars['Int']['input']>;
@@ -1678,6 +1688,12 @@ export type CreateMealPlanItemInput = {
   date: Scalars['DateTime']['input'];
   estimatedCost?: InputMaybe<Scalars['Float']['input']>;
   fat?: InputMaybe<Scalars['Float']['input']>;
+  /**
+   * Optional client-generated permanent ID (CUID v1) for offline-first idempotency.
+   * On a retry that collides with the (mealPlanId, date, mealType, recipeId) unique
+   * key, the existing row is returned (its original id wins).
+   */
+  id?: InputMaybe<Scalars['ID']['input']>;
   mealPlanId: Scalars['ID']['input'];
   mealType: MealType;
   notes?: InputMaybe<Scalars['String']['input']>;
@@ -1712,6 +1728,8 @@ export type CreateMealTemplateInput = {
    * If not provided, the template is personal (user-scoped only).
    */
   homeId?: InputMaybe<Scalars['ID']['input']>;
+  /** Optional client-generated permanent ID (CUID v1) for offline-first idempotency. */
+  id?: InputMaybe<Scalars['ID']['input']>;
   /** Initial items to add to the template */
   items?: InputMaybe<Array<MealTemplateItemInput>>;
   name: Scalars['String']['input'];
@@ -1804,6 +1822,14 @@ export type CreatePantryItemInput = {
   brand?: InputMaybe<BrandReferenceInput>;
   expiresAt?: InputMaybe<Scalars['String']['input']>;
   forceAdd?: InputMaybe<Scalars['Boolean']['input']>;
+  /**
+   * Optional client-generated permanent ID (CUID v1, e.g. "c…", 25 chars).
+   * Offline-first clients mint this as the row's permanent primary key so a
+   * re-synced create resolves to the same row (idempotent) instead of duplicating.
+   * When omitted, the server generates one via @default(cuid()). Must match the
+   * CUID v1 format; invalid formats are rejected by ID validation.
+   */
+  id?: InputMaybe<Scalars['ID']['input']>;
   item?: InputMaybe<InlineItemInput>;
   itemId?: InputMaybe<Scalars['ID']['input']>;
   lastUsedAt?: InputMaybe<Scalars['DateTime']['input']>;
@@ -1889,6 +1915,8 @@ export type CreateRecipeInput = {
   externalSourceId?: InputMaybe<Scalars['String']['input']>;
   externalSourceUrl?: InputMaybe<Scalars['String']['input']>;
   healthGoals?: InputMaybe<Array<HealthGoal>>;
+  /** Optional client-generated permanent ID (CUID v1) for offline-first idempotency. */
+  id?: InputMaybe<Scalars['ID']['input']>;
   imageUrl?: InputMaybe<Scalars['String']['input']>;
   ingredients: Array<RecipeIngredientInput>;
   instructions: Scalars['JSON']['input'];
@@ -1939,6 +1967,11 @@ export type CreateShoppingListInput = {
 };
 
 export type CreateShoppingListItemFromRecipeIngredientInput = {
+  /**
+   * Optional client-generated permanent ID (CUID v1) for the created item;
+   * persisted as the row primary key for offline-first idempotency.
+   */
+  id?: InputMaybe<Scalars['ID']['input']>;
   quantityOverride?: InputMaybe<Scalars['Float']['input']>;
   recipeIngredientId: Scalars['ID']['input'];
   shoppingListId: Scalars['ID']['input'];
@@ -1954,6 +1987,14 @@ export type CreateShoppingListItemFromRecipeIngredientResult = ConflictError | C
 export type CreateShoppingListItemInput = {
   brand?: InputMaybe<BrandReferenceInput>;
   category?: InputMaybe<Scalars['String']['input']>;
+  /**
+   * Optional client-generated permanent ID (CUID v1, e.g. "c…", 25 chars).
+   * Offline-first clients mint this as the row's permanent primary key so a
+   * re-synced create resolves to the same row (idempotent) instead of duplicating.
+   * When omitted, the server generates one via @default(cuid()). Must match the
+   * CUID v1 format; invalid formats are rejected by ID validation.
+   */
+  id?: InputMaybe<Scalars['ID']['input']>;
   itemId?: InputMaybe<Scalars['ID']['input']>;
   itemName?: InputMaybe<Scalars['String']['input']>;
   netWeight?: InputMaybe<NetWeightInput>;
@@ -1996,6 +2037,8 @@ export type CreateStorageLocationInput = {
   homeId: Scalars['ID']['input'];
   /** Optional icon identifier */
   icon?: InputMaybe<Scalars['String']['input']>;
+  /** Optional client-generated permanent ID (CUID v1) for offline-first idempotency. */
+  id?: InputMaybe<Scalars['ID']['input']>;
   /** Whether the location has climate control (default: false) */
   isClimateControlled?: InputMaybe<Scalars['Boolean']['input']>;
   /** Set as default location for the home (default: false) */
@@ -2098,6 +2141,12 @@ export type CreateUserProfileInput = {
   displayName?: InputMaybe<Scalars['String']['input']>;
   firstName?: InputMaybe<Scalars['String']['input']>;
   gender?: InputMaybe<Scalars['String']['input']>;
+  /**
+   * Optional client-generated permanent ID (CUID v1). Note: a profile is 1:1 with
+   * the user (userId is unique), so creation is already idempotent per user; this
+   * is accepted for consistency with other offline-first creates.
+   */
+  id?: InputMaybe<Scalars['ID']['input']>;
   lastName?: InputMaybe<Scalars['String']['input']>;
   phone?: InputMaybe<Scalars['String']['input']>;
   profileVisibility?: InputMaybe<ProfileVisibility>;
@@ -3048,6 +3097,11 @@ export type EffectiveUsageRate = {
   unitName: Maybe<Scalars['String']['output']>;
 };
 
+export type EnableHomeJoinLinkInput = {
+  /** ID of the home to enable the join link for. */
+  id: Scalars['ID']['input'];
+};
+
 /**
  * Base interface for every mutation error variant. Every concrete error
  * type implements this so clients can write a generic
@@ -3517,6 +3571,12 @@ export type Home = {
   isDefault: Scalars['Boolean']['output'];
   isPublic: Scalars['Boolean']['output'];
   joinCode: Maybe<Scalars['String']['output']>;
+  /**
+   * Anyone-with-link join link for this home. Joining the home also grants
+   * access to its pantry, so this doubles as the pantry-share link. Null
+   * unless allowJoinCode is enabled and a joinCode is set.
+   */
+  joinLink: Maybe<ShareLink>;
   lowStockItems: Array<LowStockItem>;
   maxMembers: Maybe<Scalars['Int']['output']>;
   mealPlansConnection: MealPlanConnection;
@@ -3526,7 +3586,11 @@ export type Home = {
   metadata: Maybe<Scalars['JSON']['output']>;
   myMembership: Maybe<Membership>;
   name: Scalars['String']['output'];
+  /** Deep link that opens this home in the app (for existing members). */
+  navigateLink: ShareLink;
   pantriesConnection: PantryConnection;
+  /** Deep link that opens this home's pantry in the app (for existing members). */
+  pantryLink: ShareLink;
   shoppingListsConnection: ShoppingListConnection;
   tags: Array<Scalars['String']['output']>;
   timezone: Maybe<Scalars['String']['output']>;
@@ -5950,6 +6014,12 @@ export type Mutation = {
   duplicateMealPlan: DuplicateMealPlanResult;
   /** Duplicate a template with a new name */
   duplicateTemplate: DuplicateTemplateResult;
+  /**
+   * Enable the anyone-with-link join code for a home (doubles as the
+   * pantry-share link). Idempotent — preserves an existing code so links
+   * already shared keep working. Read the resulting link via home.joinLink.
+   */
+  enableHomeJoinLink: UpdateHomeResult;
   /** Save a recipe as a favorite. */
   favoriteRecipe: FavoriteRecipeResult;
   /** Flag an item for review */
@@ -6046,6 +6116,8 @@ export type Mutation = {
   recordPriceObservation: RecordPriceObservationResult;
   /** Refresh an expired access token using a refresh token. */
   refresh: RefreshTokenPayload;
+  /** Rotate a home's join code, invalidating any previously shared join link. */
+  regenerateHomeJoinCode: UpdateHomeResult;
   /** Register a new user account and return tokens. */
   register: AuthPayload;
   /**
@@ -7647,6 +7719,19 @@ export type MutationDuplicateTemplateArgs = {
  * win, so payload types that genuinely benefit from caching (e.g. read-
  * through reservation tokens) can opt back in.
  */
+export type MutationEnableHomeJoinLinkArgs = {
+  input: EnableHomeJoinLinkInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
 export type MutationFavoriteRecipeArgs = {
   input: FavoriteRecipeInput;
 };
@@ -8091,6 +8176,19 @@ export type MutationRecordPriceObservationArgs = {
  */
 export type MutationRefreshArgs = {
   input: RefreshTokenInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
+export type MutationRegenerateHomeJoinCodeArgs = {
+  input: RegenerateHomeJoinCodeInput;
 };
 
 
@@ -10770,7 +10868,10 @@ export type Query = {
   expirationNotification: Maybe<ExpirationNotification>;
   /** Fetch a single home by its ID. */
   home: Maybe<Home>;
-  /** Fetch a single home by its join code. */
+  /**
+   * Fetch a single home by its join code. Reachable anonymously so a
+   * not-yet-signed-up recipient of a join link can preview the home.
+   */
   homeByJoinCode: Maybe<Home>;
   /** Fetch a home invite by its token for the acceptance flow. */
   homeInviteByToken: Maybe<HomeInvite>;
@@ -10857,6 +10958,12 @@ export type Query = {
   /** Fetch personalized item recommendations for a user. */
   recommendedItems: Array<ItemSuggestion>;
   /**
+   * Resolve an anyone-with-link code (home join code or list share code)
+   * without knowing its type. Returns null when the code matches nothing.
+   * Reachable anonymously so a not-yet-signed-up recipient can preview.
+   */
+  resolveShareLink: Maybe<ResolveShareLinkResult>;
+  /**
    * Get ranked restock-eligible units for a pantry item.
    * Returns units in priority order: tracking unit → curated retail → auto measurement.
    */
@@ -10873,8 +10980,9 @@ export type Query = {
    * distance. Intended as an augmentation to exact-match paths (UPC, tsvector)
    * — use when text search fails or OCR is noisy.
    *
-   * Items without a cached embedding are excluded until the enrichment
-   * pipeline populates them. Auth-gated to bound embedding-service spend.
+   * Items without a cached embedding are excluded; the catalog has been
+   * backfilled, and new or edited items are embedded asynchronously by the
+   * ITEM_EMBEDDING job. Auth-gated to bound embedding-service spend.
    */
   searchItemsSemantic: ItemConnection;
   searchRecipes: RecipeConnection;
@@ -10886,8 +10994,16 @@ export type Query = {
   searchUnits: Array<Unit>;
   /** Fetch a single shopping list by its ID. */
   shoppingList: Maybe<ShoppingList>;
-  /** Fetch a shopping list by its share code. */
+  /**
+   * Fetch a shopping list by its share code. Reachable anonymously so a
+   * not-yet-signed-up recipient of a share link can preview the list.
+   */
   shoppingListByShareCode: Maybe<ShoppingList>;
+  /**
+   * Fetch a shopping list collaborator invite by its token for the
+   * acceptance-flow preview (parity with homeInviteByToken).
+   */
+  shoppingListInviteByToken: Maybe<ShoppingListCollaborator>;
   /** Fetch a single shopping list item by its ID. */
   shoppingListItem: Maybe<ShoppingListItem>;
   /**
@@ -11446,6 +11562,11 @@ export type QueryRecommendedItemsArgs = {
 };
 
 
+export type QueryResolveShareLinkArgs = {
+  code: Scalars['String']['input'];
+};
+
+
 export type QueryRestockUnitsForItemArgs = {
   pantryItemId: Scalars['ID']['input'];
 };
@@ -11502,6 +11623,11 @@ export type QueryShoppingListArgs = {
 
 export type QueryShoppingListByShareCodeArgs = {
   shareCode: Scalars['String']['input'];
+};
+
+
+export type QueryShoppingListInviteByTokenArgs = {
+  token: Scalars['String']['input'];
 };
 
 
@@ -12071,6 +12197,11 @@ export type RefreshTokenPayload = {
   refreshToken: Scalars['String']['output'];
 };
 
+export type RegenerateHomeJoinCodeInput = {
+  /** ID of the home whose join code to rotate. */
+  id: Scalars['ID']['input'];
+};
+
 /** Sub-input for regional/locale settings */
 export type RegionalSettingsInput = {
   language?: InputMaybe<Scalars['String']['input']>;
@@ -12255,6 +12386,30 @@ export type ResetPasswordResponse = {
 export type ResetPasswordWithTokenInput = {
   newPassword: Scalars['String']['input'];
   token: Scalars['String']['input'];
+};
+
+/**
+ * Resolution of a shareable code (home join code or list share code) into a
+ * preview plus the deep link to follow. Lets the app and the web fallback
+ * handle any link without knowing its type up front.
+ */
+export type ResolveShareLinkResult = {
+  __typename: 'ResolveShareLinkResult';
+  /** Whether the (authenticated) caller already has access to this resource. */
+  alreadyMember: Scalars['Boolean']['output'];
+  /** Present when targetType is HOME_JOIN. */
+  homeId: Maybe<Scalars['ID']['output']>;
+  /** Item count (LIST_JOIN only). */
+  itemCount: Maybe<Scalars['Int']['output']>;
+  /** Deep link to follow to join/open the target. */
+  link: ShareLink;
+  /** Present when targetType is LIST_JOIN. */
+  listId: Maybe<Scalars['ID']['output']>;
+  /** Active member count (HOME_JOIN only). */
+  memberCount: Maybe<Scalars['Int']['output']>;
+  /** Display name of the home or list. */
+  name: Scalars['String']['output'];
+  targetType: ShareLinkTargetType;
 };
 
 /** Input for restocking a pantry item - adds quantity and creates ledger record */
@@ -12536,6 +12691,24 @@ export type SetupUnitConversionPayload = {
 
 export type SetupUnitConversionResult = ConflictError | ForbiddenError | NotFoundError | SetupUnitConversionPayload | ValidationError;
 
+/**
+ * A shareable deep link expressed in both forms so clients can choose:
+ * - universal: an https:// Universal Link / App Link (opens the installed app,
+ *   falls back to the web page when the app is absent).
+ * - scheme: a souschef:// custom-scheme URL (force-launches an installed app).
+ */
+export type ShareLink = {
+  __typename: 'ShareLink';
+  scheme: Scalars['String']['output'];
+  universal: Scalars['String']['output'];
+};
+
+/** What kind of resource an anyone-with-link code points at. */
+export enum ShareLinkTargetType {
+  HomeJoin = 'HOME_JOIN',
+  ListJoin = 'LIST_JOIN'
+}
+
 export type ShareShoppingListInput = {
   id: Scalars['ID']['input'];
   isPublic?: InputMaybe<Scalars['Boolean']['input']>;
@@ -12596,6 +12769,8 @@ export type ShoppingList = {
   mealPlan: Maybe<MealPlan>;
   metadata: Maybe<Scalars['JSON']['output']>;
   name: Scalars['String']['output'];
+  /** Deep link that opens this list in the app (for existing collaborators). */
+  navigateLink: ShareLink;
   nextRecurringDate: Maybe<Scalars['DateTime']['output']>;
   ownerships: Array<ShoppingListOwnership>;
   plannedShopDate: Maybe<Scalars['DateTime']['output']>;
@@ -12610,6 +12785,11 @@ export type ShoppingList = {
   reminderEnabled: Scalars['Boolean']['output'];
   shareCode: Maybe<Scalars['String']['output']>;
   shareCount: Scalars['Int']['output'];
+  /**
+   * Anyone-with-link share/join link for this list. Null unless the list is
+   * public (isPublic) and a shareCode is set.
+   */
+  shareLink: Maybe<ShareLink>;
   smartSorting: Scalars['Boolean']['output'];
   sortOrder: Scalars['Int']['output'];
   status: ListStatus;
@@ -13992,8 +14172,12 @@ export type SyncShoppingListItemInput = {
   pricing?: InputMaybe<PricingEstimatesInput>;
   priority?: InputMaybe<Scalars['Int']['input']>;
   purchaseTracking?: InputMaybe<PurchaseTrackingInput>;
-  /** Quantity of the item. Accepts: "1/3", "1 1/4", "0.5", "2", or numbers like 1, 1.5 */
-  quantity?: InputMaybe<QuantityInput>;
+  /**
+   * Quantity of the item. Accepts: "1/3", "1 1/4", "0.5", "2", or numbers like 1, 1.5.
+   * Unitless by default; specify a unit via the unit field when needed (shopping
+   * items are frequently unitless, e.g. Milk x2). Mirrors CreateShoppingListItemInput.
+   */
+  quantity?: InputMaybe<Scalars['FlexibleQuantity']['input']>;
   recipeContext?: InputMaybe<RecipeContextInput>;
   /** Required: ID of the shopping list this item belongs to */
   shoppingListId: Scalars['ID']['input'];
@@ -14007,7 +14191,7 @@ export type SyncShoppingListItemInput = {
 /** Result of syncing a shopping list item */
 export type SyncShoppingListItemResult = {
   __typename: 'SyncShoppingListItemResult';
-  /** The client-provided ID (may be temp ID like 'temp-uuid') */
+  /** The client-provided permanent ID (CUID) echoed back for correlation */
   clientId: Scalars['ID']['output'];
   /** Conflict information if version mismatch occurred */
   conflict: Maybe<SyncConflictInfo>;
@@ -14015,7 +14199,7 @@ export type SyncShoppingListItemResult = {
   item: Maybe<ShoppingListItem>;
   /** The operation that was performed */
   operation: SyncOperation;
-  /** The server-assigned database ID (null if item was deleted before reaching server) */
+  /** The server-assigned database ID (equals clientId; null if item was deleted before reaching server) */
   serverId: Maybe<Scalars['ID']['output']>;
   /** Whether this was a create (true) or update (false) operation */
   wasCreated: Scalars['Boolean']['output'];

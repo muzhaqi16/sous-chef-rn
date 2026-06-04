@@ -59,9 +59,11 @@ describe('usePreservedQueryData', () => {
     expect(result.current).toBe('second');
   });
 
-  it('returns initialValue when data starts defined then goes undefined without change', () => {
-    // When data starts with a value, prevData is initialized to that value
-    // so lastSuccessfulValue is only set on CHANGES
+  it('preserves the FIRST value when data starts defined (cold-start cache) then goes undefined', () => {
+    // Cold start: the persisted cache resolves data synchronously on render #1,
+    // so `currentData` is defined immediately. `prevData` initializes to
+    // `undefined`, so the first defined value IS detected as a change and stored
+    // — a subsequent network error then preserves it instead of wiping.
     const { result, rerender } = renderHook(
       ({ data }: { data: string | undefined }) =>
         usePreservedQueryData(data, 'initial'),
@@ -71,10 +73,8 @@ describe('usePreservedQueryData', () => {
     expect(result.current).toBe('same');
 
     rerender({ data: undefined });
-    // lastSuccessfulValue was updated because data changed from 'same' to undefined
-    // but since currentData is undefined, it doesn't update lastSuccessful
-    // However, 'same' was never stored because prevData started as 'same' (no change detected)
-    expect(result.current).toBe('initial');
+    // 'same' was stored on the first render, so it survives the error.
+    expect(result.current).toBe('same');
   });
 
   it('works with object data when data changes', () => {

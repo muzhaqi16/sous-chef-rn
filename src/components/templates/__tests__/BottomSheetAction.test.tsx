@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
-import { Text } from 'react-native';
+import { Text } from '#components/atoms/Text';
 import { BottomSheetAction } from '../BottomSheetAction';
 
 jest.mock('../../atoms/Title', () => {

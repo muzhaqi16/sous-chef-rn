@@ -2,10 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useForm, type Resolver } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { View } from 'react-native';
-import {
-  Pressable,
-  WhiteActivityIndicator,
-} from '#components/atoms/themedComponents';
+import { WhiteActivityIndicator } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
 import { alertService } from '#/services/alertService';
 import { handleMutationError } from '#/utils/errorHandlers';
@@ -245,7 +243,6 @@ const InviteCard: React.FC<{
       >
         {inviteHomeName}
       </Text>
-
       <View style={styles.inviteDetailsContainer}>
         <Text size="sm" lineHeight="tight">
           <Text weight="medium" tone="secondary">
@@ -263,25 +260,18 @@ const InviteCard: React.FC<{
           </Text>
         </Text>
       </View>
-
       <View style={styles.inviteActions}>
-        <Pressable
-          style={({ pressed }) => [
-            styles.inviteDeclineButton,
-            pressed && styles.pressed,
-          ]}
+        <AppPressable
+          style={styles.inviteDeclineButton}
           onPress={() => handleDeclineInvite(invite.token, inviteHomeName)}
           disabled={accepting}
         >
           <Text size="sm" weight="semibold">
             {t('labels.decline')}
           </Text>
-        </Pressable>
-        <Pressable
-          style={({ pressed }) => [
-            styles.inviteAcceptButton,
-            pressed && styles.pressed,
-          ]}
+        </AppPressable>
+        <AppPressable
+          style={styles.inviteAcceptButton}
           onPress={() => handleAcceptInvite(invite.token)}
           disabled={accepting}
         >
@@ -296,7 +286,7 @@ const InviteCard: React.FC<{
               {t('labels.accept')}
             </Text>
           )}
-        </Pressable>
+        </AppPressable>
       </View>
     </View>
   );

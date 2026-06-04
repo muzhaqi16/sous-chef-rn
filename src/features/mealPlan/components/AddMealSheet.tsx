@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
-  Text,
   ScrollView,
   type NativeSyntheticEvent,
   type NativeScrollEvent,
@@ -11,6 +10,8 @@ import {
   Pressable,
   PrimaryActivityIndicator,
 } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
+import { Text } from '#components/atoms/Text';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
@@ -172,10 +173,7 @@ const SavedRecipeRow: React.FC<SavedRecipeRowProps> = ({
 
   const { recipe } = data;
   return (
-    <Pressable
-      onPress={() => onPress(recipe.id)}
-      style={({ pressed }) => [styles.recipeItem, pressed && styles.pressed]}
-    >
+    <AppPressable onPress={() => onPress(recipe.id)} style={styles.recipeItem}>
       {!!recipe.imageUrl && (
         <CachedImage
           uri={recipe.imageUrl}
@@ -201,7 +199,7 @@ const SavedRecipeRow: React.FC<SavedRecipeRowProps> = ({
         )}
       </View>
       <Icon name="add-circle-outline" size={24} tone="primary" />
-    </Pressable>
+    </AppPressable>
   );
 };
 
@@ -405,18 +403,15 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
         >
           {/* Custom meal row */}
           {hasQuery ? (
-            <Pressable
+            <AppPressable
               onPress={handleAddCustomMeal}
-              style={({ pressed }) => [
-                styles.customMealRow,
-                pressed && styles.pressed,
-              ]}
+              style={styles.customMealRow}
             >
               <Icon name="add-circle-outline" size={24} tone="primary" />
               <Text style={styles.customMealText} numberOfLines={1}>
                 {t('addMealSheet.addCustom', { query: searchQuery.trim() })}
               </Text>
-            </Pressable>
+            </AppPressable>
           ) : null}
 
           {/* Your Recipes section — header only when NOT searching.
@@ -447,14 +442,11 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
               ) : null}
 
               {spoonacularResults.map(item => (
-                <Pressable
+                <AppPressable
                   key={item.id}
                   onPress={() => handleSelectSpoonacularRecipe(item)}
                   disabled={loadingItemId === item.spoonacularId}
-                  style={({ pressed }) => [
-                    styles.recipeItem,
-                    pressed && styles.pressed,
-                  ]}
+                  style={styles.recipeItem}
                 >
                   {item.imageUrl ? (
                     <CachedImage
@@ -489,7 +481,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
                   ) : (
                     <Icon name="add-circle-outline" size={24} tone="primary" />
                   )}
-                </Pressable>
+                </AppPressable>
               ))}
             </>
           ) : null}

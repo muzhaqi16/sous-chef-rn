@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { commonStyles } from '#/styles/commonStyles';
@@ -31,14 +31,10 @@ export const RestrictionSection: React.FC<RestrictionSectionProps> = ({
       {/* Header with title and add button */}
       <View style={styles.header}>
         <Text style={commonStyles.subtitle}>{title}</Text>
-        <Pressable
-          onPress={onAddPress}
-          style={({ pressed }) => [styles.addButton, pressed && styles.pressed]}
-        >
+        <AppPressable onPress={onAddPress} style={styles.addButton}>
           <Icon name="add" size={18} tone="primary" />
-        </Pressable>
+        </AppPressable>
       </View>
-
       {/* Chip grid showing existing items */}
       {existingItems.length > 0 ? (
         <View style={styles.chipContainer}>
@@ -47,15 +43,12 @@ export const RestrictionSection: React.FC<RestrictionSectionProps> = ({
               <View style={styles.displayChip}>
                 <Text style={styles.displayChipText}>{item.label}</Text>
               </View>
-              <Pressable
-                style={({ pressed }) => [
-                  styles.removeButton,
-                  pressed && styles.pressed,
-                ]}
+              <AppPressable
+                style={styles.removeButton}
                 onPress={() => onRemove(item.id)}
               >
                 <Icon name="close-circle-outline" size={18} tone="error" />
-              </Pressable>
+              </AppPressable>
             </View>
           ))}
         </View>

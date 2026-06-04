@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Modal } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import Animated, { FadeOut } from 'react-native-reanimated';
 import { TIMING } from '#constants/animations';
@@ -88,11 +89,8 @@ export const FeatureHintOverlay: React.FC<FeatureHintOverlayProps> = ({
               ) : null}
             </View>
 
-            <Pressable
-              style={({ pressed }) => [
-                styles.dismissButton,
-                pressed && styles.pressed,
-              ]}
+            <AppPressable
+              style={styles.dismissButton}
               onPress={onDismiss}
               testID="feature-hint-overlay-dismiss"
             >
@@ -104,7 +102,7 @@ export const FeatureHintOverlay: React.FC<FeatureHintOverlayProps> = ({
               >
                 {resolvedDismissText}
               </Text>
-            </Pressable>
+            </AppPressable>
           </Animated.View>
         </Pressable>
       </Animated.View>
