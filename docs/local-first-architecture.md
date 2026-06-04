@@ -18,11 +18,19 @@ notes; where the implementation diverged from the plan, the divergence is called
 - Apollo `InMemoryCache` is persisted to MMKV as-is (`ApolloCachePersistence.ts`): `cache.extract()` /
   `cache.restore()` with no transformation, so connection wrappers (`edges`, `pageInfo`) survive across
   launches. `cache.write/modify/evict/gc` are wrapped in `client.ts` to re-persist (debounced ~3s). Cold
-  start paints from disk.
+  start paints from disk. On app **background**, `useAppStateLifecycle` calls `flushCachePersistence()`
+  (`ApolloCachePersistence.flushPending`) to write the pending debounced snapshot immediately — so the
+  last few seconds of writes (including optimistic creates) survive a fast app-kill; no-op when nothing is
+  pending (see §6).
 - Default fetch policy `cache-and-network` → instant cache read + background refresh.
 - A transient API failure does not wipe cached lists: `usePreservedConnection` /
   `usePreservedQueryData` keep the last good value, and the `itemsConnection.merge` guard only honors an
   **authoritative** `totalCount: 0` (see the cache-connection-resilience note).
+- A first-page background refetch that lands **before** the queue replays an offline create no longer
+  drops that item. The `itemsConnection.merge` first-page branch preserves existing edges whose id still
+  has a PENDING mutation in the queue (`queueStore.getPendingClientIds()`), then falls straight through to
+  the authoritative page once the queue drains. A genuinely **server-deleted** item (no pending op) is
+  still dropped, so the page stays authoritative.
 
 ## 2. Write path — the implemented pattern
 
@@ -44,8 +52,17 @@ Lifecycle of a local-first mutation:
 3. fire the mutation with context: { localFirst: true } and input.id = id
    ├─ success            → server response reconciles (idempotent: same id); catalog-merge adopts serverId
    ├─ network error      → queueLink queued it; KEEP the cache write (no revert, no alert)
-   └─ real / non-success → revert the cache write (evict) + surface the error
+   └─ real / non-success → revert the cache write + surface the error. Revert is stat-aware:
+                           `revertOptimisticShoppingListItem` evicts the entity AND reverses the
+                           `totalItems` / `remainingItems` / `completionRate` bump (a bare evict would
+                           leave the list header inflated until the next stats refetch).
 ```
+
+Every add site — **including the primary `useAddShoppingItem` / `usePantryItemMutations.addItem`** —
+classifies the resolved result and reverts on a non-success payload. This matters because under the
+global `errorPolicy: 'all'` a `ValidationError` / `ConflictError` **resolves** (it's a valid union member,
+not a thrown error), so `onError` never fires; only inspecting `result` via `classifyCreateResult` catches
+it. Skipping this is what would leave a permanent phantom row.
 
 **There is no unified `useLocalFirstMutation` primitive.** The original plan proposed one; in practice
 each hook applies this lifecycle directly, sharing only the helpers where the logic is genuinely
