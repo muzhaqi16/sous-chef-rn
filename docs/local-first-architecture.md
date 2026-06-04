@@ -93,19 +93,30 @@ The same cuid rides the create input as `input.id` and, on queue replay, becomes
 So a newly-added item is visible immediately and survives a fully-offline create, every add site writes
 the item into the cache before firing. Two shared writers keep this DRY:
 
-- **`addOptimisticShoppingListItem(cache, listId, item)`** (`apollo/utils/shoppingListCacheUpdaters.ts`)
-  — `writeFragment`s the **full** display entity (mandatory offline, where no server response arrives to
-  materialise it; without it the row renders blank), adds the connection edge, and recomputes list stats.
+- **`createOptimisticShoppingListItem(id, fields)` + `addOptimisticShoppingListItem(cache, listId, item)`**
+  (both `apollo/utils/shoppingListCacheUpdaters.ts`) — the builder mints the **full** display entity with
+  the client cuid baked in (mandatory offline, where no server response arrives to materialise it; without
+  it the row renders blank); the writer `writeFragment`s it, adds the connection edge, and recomputes list
+  stats. The builder lives in the shared apollo util (not the shoppingList feature) so add surfaces in
+  other features (barcode, pantry-detail, filtered-pantry) build the same entity without crossing a
+  feature boundary.
 - **`buildOptimisticPantryItem(id, fields)`** (`src/hooks/home/pantry/buildOptimisticPantryItem.ts`) —
   builds the complete `PantryItem` shape that `addToPantryItemsCache` writes (an incomplete shape makes a
   list cell's `useFragment` report `complete: false` and blank the row).
+
+Two shared reconcilers keep the response path DRY across all shopping add sites:
+- **`adoptServerShoppingListItemId(cache, serverId, clientId)`** — catalog-merge: evicts the optimistic
+  cuid when the server returned a different (merged) id. Reads `clientId` off the mutation's own
+  `variables.input.id` (never a shared ref), so it stays correct when adds overlap.
+- **`revertOptimisticShoppingListItem(cache, listId, clientId)`** — the stat-aware rejection revert (§2).
 
 The primary hooks (`useAddShoppingItem`, `usePantryItemMutations`) and the secondary add sites all route
 through these.
 
 **Success is decoupled from `result.data`.** A queued create resolves with `data: null` and no error —
 that counts as success (the cache write stays; the queue replays). A **real error** or a **non-success
-payload** (e.g. `ConflictError` / `ValidationError`) is a rejection: revert (evict) the optimistic item.
+payload** (e.g. `ConflictError` / `ValidationError`) is a rejection: revert the optimistic item
+(`revertOptimisticShoppingListItem` for shopping — entity + stats; evict for pantry).
 
 ## 5. Offline queue
 
@@ -141,13 +152,22 @@ remaining fallback ops genuinely have no clean `Sync*` shape: the recipe-ingredi
 server create path is itself id-idempotent, so re-sending the original is safe.
 
 Shopping quantity rides the `FlexibleQuantity` scalar (`string | number`, e.g. `"1/3"` or `2`) — passed
-through directly, no `unitId` wrapper. Pantry quantity is a plain `Float`.
+through directly, no `unitId` wrapper. Pantry quantity is a plain `Float`. `convertToSyncMutation`
+normalizes the **unit** into the `unit: UnitSpecInput` object the `Sync*` inputs expect — folding a flat
+`unitId`/`unitName` (sent by `UpdateShoppingListItem(Quantity)`) into it so an offline unit change isn't
+dropped on replay, and folding `UpdatePantryItem`'s flat `itemName` into `item: { name }` while backfilling
+the required `pantryId` from cache.
 
 ## 6. Persistence — two mechanisms
 
 1. **Raw cache persistence** (`ApolloCachePersistence` + the `client.ts` write wrapper). The permanent
-   cache writes from §2 are re-persisted to MMKV (debounced). This is what the **add/remove** path relies
-   on — the entity is in the normalized cache, so it survives app-kill and the queue can read it.
+   cache writes from §2 are re-persisted to MMKV (debounced ~3s, and flushed immediately on app
+   **background** via `flushCachePersistence()` so a write inside the debounce window isn't lost to a fast
+   kill — §1). This is what paints the optimistic add/remove from disk on cold start.
+   **The durable backstop is the queue, not the cache:** even if a cache write were lost to a kill before
+   the flush, `queueStore` persisted the *mutation* synchronously on enqueue, so the queue replays it on
+   next launch and re-writes the cache. The cache flush optimizes cold-start UX (item visible
+   immediately); the queue guarantees the change isn't lost.
 2. **`OptimisticDataPersistence`** (`apollo/offline/OptimisticDataPersistence.ts`,
    `apollo-optimistic-data-v1`). Field-level tracking with a microtask flush (beats the cache debounce on
    a fast app-kill), restored on launch by `useOptimisticDataRestoration`. Used by the **numeric / toggle**
@@ -261,13 +281,24 @@ their hooks adopt the pattern and the queue gets Sync mappings (or uses the fall
 - **Ghost temp rows / temp→real remap** — eliminated (no temp ids exist).
 - **Add-then-edit/delete offline** — the real id exists immediately; later ops reference it; the queue
   sequences per-entity by that id.
-- **Catalog-merge id divergence** (shopping) — adopt the returned `serverId`, evict the cuid (§7).
-- **`totalCount` / stats drift** — the permanent cache writes adjust list counts (`addOptimisticShoppingListItem`
-  recomputes; the connection updater bumps `totalCount`).
+- **Catalog-merge id divergence** (shopping) — `adoptServerShoppingListItemId` adopts the returned
+  `serverId` and evicts the cuid, reading the cuid off the mutation's own variables (§4, §7).
+- **`totalCount` / stats drift** — the optimistic write adjusts list counts (`addOptimisticShoppingListItem`
+  bumps `totalItems` + recomputes `remainingItems` / `completionRate`); a **rejection reverses them**
+  symmetrically via `revertOptimisticShoppingListItem` (a bare evict would leave the header inflated until
+  the next stats refetch).
+- **Rejected-create phantom** — a non-success payload resolves under `errorPolicy: 'all'` without throwing;
+  every add site (incl. the primary hooks) classifies the result and reverts, so a server-refused create
+  never lingers (§2, §4).
+- **First-page refetch dropping an un-replayed offline create** — the `itemsConnection.merge` preserves
+  existing edges whose id is still PENDING in the queue (§1); drains to the authoritative page once
+  replayed.
 - **Stale persisted optimistic value on restart** — version guards + `clearPersistence` for the
   `OptimisticDataPersistence` consumers.
-- **App-kill within the cache persist debounce** — `OptimisticDataPersistence`'s microtask flush covers
-  the numeric/toggle ops.
+- **App-kill within the cache persist debounce** — covered two ways: the background flush
+  (`flushCachePersistence`, §1/§6) writes the raw cache snapshot before a kill, and `OptimisticDataPersistence`'s
+  microtask flush covers the numeric/toggle ops; in the worst case the **queue replays** the change on next
+  launch regardless.
 
 ## 13. Divergences from the original plan (for the record)
 
@@ -290,8 +321,10 @@ their hooks adopt the pattern and the queue gets Sync mappings (or uses the fall
 | Replay + `convertToSyncMutation` | `src/apollo/offlineQueue/queueManager.ts` |
 | Queue triggers / failure toast | `src/hooks/app/useOnlineQueueSync.ts` |
 | Field-level persistence | `src/apollo/offline/OptimisticDataPersistence.ts`, `src/hooks/offline/useOptimisticDataRestoration.ts` |
-| Cache persistence | `src/apollo/ApolloCachePersistence.ts`, `src/apollo/client.ts` |
-| Shared shopping writer | `src/apollo/utils/shoppingListCacheUpdaters.ts` (`addOptimisticShoppingListItem`) |
+| Cache persistence (debounce + `flushPending`) | `src/apollo/offline/ApolloCachePersistence.ts`, `src/apollo/client.ts` (`flushCachePersistence`) |
+| Background flush trigger | `src/hooks/app/useAppStateLifecycle.ts` |
+| Pending-aware connection merge | `src/apollo/cache.ts` (`itemsConnectionFieldPolicy`) + `queueStore.getPendingClientIds()` |
+| Shared shopping writers/reconcilers | `src/apollo/utils/shoppingListCacheUpdaters.ts` (`createOptimisticShoppingListItem`, `addOptimisticShoppingListItem`, `adoptServerShoppingListItemId`, `revertOptimisticShoppingListItem`) |
 | Shared pantry builder | `src/hooks/home/pantry/buildOptimisticPantryItem.ts` |
 | Create-result classifier | `src/apollo/utils/classifyCreateResult.ts` |
 | Offline banner (mounted in `App.tsx`) | `src/components/atoms/OfflineBanner.tsx` |
