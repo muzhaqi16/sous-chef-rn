@@ -615,9 +615,13 @@ export class QueueManager {
       const delay = this.calculateRetryDelay(mutation.retryCount);
       await new Promise(resolve => setTimeout(resolve, delay));
 
-      // Retry immediately if still online
+      // Retry immediately only if the API is actually reachable. Gating on
+      // `isApiUnavailable` (not bare `isOnline`) means an open reachability
+      // breaker — device online but API down — defers instead of firing a
+      // doomed retry that would just re-trip the breaker, matching every other
+      // gate in this file.
       const state = useStore.getState();
-      if (state.isOnline) {
+      if (!isApiUnavailable(state)) {
         return await this.processMutation({
           ...mutation,
           retryCount: mutation.retryCount + 1,
@@ -726,6 +730,29 @@ export class QueueManager {
   }
 
   /**
+   * The client entity id a queued mutation targets, across every variable shape
+   * the app enqueues: create `input.id`, qty/move `input.itemId` or top-level
+   * `itemId`, recipe/meal/batch inputs, or a sync `clientId`. One source of truth
+   * so replay ordering (`groupByEntity`) and failure reporting
+   * (`extractEntityInfo`) always agree on which entity a mutation belongs to.
+   */
+  private getEntityId(mutation: QueuedMutation): string | null {
+    const vars = mutation.variables ?? {};
+    return (
+      vars.id ??
+      vars.input?.id ??
+      vars.input?.pantryItemId ??
+      vars.input?.itemId ??
+      vars.itemId ??
+      vars.input?.recipeId ??
+      vars.input?.mealPlanId ??
+      vars.input?.batchId ??
+      vars.clientId ??
+      null
+    );
+  }
+
+  /**
    * Extract entity type and ID from a mutation's variables.
    * Inspects common variable patterns used across the app.
    */
@@ -733,20 +760,9 @@ export class QueueManager {
     entityType: string | null;
     entityId: string | null;
   } {
-    const vars = mutation.variables ?? {};
     const opName = mutation.operationName;
 
-    // Extract entity ID from common variable shapes
-    const entityId =
-      vars.id ??
-      vars.input?.id ??
-      vars.input?.pantryItemId ??
-      vars.input?.itemId ??
-      vars.input?.recipeId ??
-      vars.input?.mealPlanId ??
-      vars.input?.batchId ??
-      vars.clientId ??
-      null;
+    const entityId = this.getEntityId(mutation);
 
     // Infer entity type from operation name
     let entityType: string | null = null;
@@ -886,13 +902,7 @@ export class QueueManager {
     const entityMap = new Map<string, QueuedMutation[]>();
 
     for (const mutation of mutations) {
-      const entityId =
-        mutation.variables?.id ||
-        mutation.variables?.input?.id ||
-        mutation.variables?.clientId ||
-        mutation.variables?.input?.pantryItemId ||
-        mutation.variables?.input?.itemId ||
-        mutation.variables?.itemId;
+      const entityId = this.getEntityId(mutation);
 
       if (entityId) {
         const group = entityMap.get(entityId) || [];

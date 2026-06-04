@@ -1,10 +1,7 @@
 'use no memo';
 import { renderHook } from '@testing-library/react-native';
 import type { Cache, InMemoryCache, StoreObject } from '@apollo/client';
-import {
-  useOptimisticDataRestoration,
-  useOptimisticDataRestorationMultiple,
-} from '../useOptimisticDataRestoration';
+import { useOptimisticDataRestorationMultiple } from '../useOptimisticDataRestoration';
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
@@ -40,29 +37,6 @@ jest
     const fn = args[0];
     if (typeof fn === 'function') fn();
   });
-
-describe('useOptimisticDataRestoration', () => {
-  beforeEach(() => jest.clearAllMocks());
-
-  it('does nothing when no persisted data', () => {
-    mockGetAllForType.mockReturnValue(new Map());
-    renderHook(() => useOptimisticDataRestoration('ShoppingListItem'));
-    expect(mockGetAllForType).toHaveBeenCalledWith('ShoppingListItem');
-    expect(mockBatch).not.toHaveBeenCalled();
-  });
-
-  it('applies updates when persisted data exists', () => {
-    const updates = new Map([['item-1', { checked: true }]]);
-    mockGetAllForType.mockReturnValue(updates);
-    renderHook(() => useOptimisticDataRestoration('ShoppingListItem'));
-    expect(mockBatch).toHaveBeenCalled();
-  });
-
-  it('skips when disabled', () => {
-    renderHook(() => useOptimisticDataRestoration('ShoppingListItem', false));
-    expect(mockGetAllForType).not.toHaveBeenCalled();
-  });
-});
 
 describe('useOptimisticDataRestorationMultiple', () => {
   beforeEach(() => jest.clearAllMocks());

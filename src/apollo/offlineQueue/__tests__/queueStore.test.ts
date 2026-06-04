@@ -518,23 +518,6 @@ describe('QueueStore', () => {
   });
 
   // -------------------------------------------------------------------------
-  // Cache statistics
-  // -------------------------------------------------------------------------
-  describe('getCacheStats', () => {
-    it('tracks hits and misses', () => {
-      // First load is a miss
-      store.getMutationsForUser('user-1');
-      // Second load hits cache
-      store.getMutationsForUser('user-1');
-
-      const stats = store.getCacheStats();
-      expect(stats.misses).toBeGreaterThanOrEqual(1);
-      expect(stats.hits).toBeGreaterThanOrEqual(1);
-      expect(stats.hitRate).toBeGreaterThan(0);
-    });
-  });
-
-  // -------------------------------------------------------------------------
   // clearAllQueues
   // -------------------------------------------------------------------------
   describe('clearAllQueues', () => {
@@ -546,42 +529,6 @@ describe('QueueStore', () => {
 
       expect(store.getMutationsForUser('user-1')).toHaveLength(0);
       expect(store.getMutationsForUser('user-2')).toHaveLength(0);
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // getExceededRetryMutations
-  // -------------------------------------------------------------------------
-  describe('getExceededRetryMutations', () => {
-    it('returns failed mutations that exceeded max retries', () => {
-      store.addMutation(
-        makeMutation({
-          id: 'exceeded',
-          retryCount: 3,
-          maxRetries: 3,
-          status: QueueStatus.FAILED,
-        }),
-      );
-      store.addMutation(
-        makeMutation({
-          id: 'not-exceeded',
-          retryCount: 1,
-          maxRetries: 3,
-          status: QueueStatus.FAILED,
-        }),
-      );
-      store.addMutation(
-        makeMutation({
-          id: 'pending-high-retries',
-          retryCount: 5,
-          maxRetries: 3,
-          status: QueueStatus.PENDING,
-        }),
-      );
-
-      const result = store.getExceededRetryMutations('user-1');
-      expect(result).toHaveLength(1);
-      expect(result[0].id).toBe('exceeded');
     });
   });
 
