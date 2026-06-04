@@ -84,6 +84,14 @@ const getQueuedInput = (mutation: QueuedMutation): QueuedInput =>
 /**
  * The client-minted permanent cuid IS the sync `clientId`. It rides on the
  * mutation input as `id` (create/update/toggle/delete) or `itemId` (qty/move).
+ *
+ * Returns `undefined` for a malformed queued input with no id. That is
+ * deliberate: the client mints permanent cuids, so a missing id surfaces as
+ * `undefined` (the server rejects it as a permanent failure) rather than being
+ * back-filled with a fabricated `temp-` id. Builders therefore cast it to the
+ * generated `Sync*Input`'s required `clientId: ID` — the cast preserves the
+ * undefined-flows-through behavior (a compile-time cast doesn't coerce at
+ * runtime) while satisfying the schema type.
  */
 const getClientId = (
   mutation: QueuedMutation,
