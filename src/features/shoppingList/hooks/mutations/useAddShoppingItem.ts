@@ -19,12 +19,14 @@ import {
   executeCacheUpdate,
   executeMutation,
 } from '#/utils/compilerSafeWrappers';
-import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import {
   addNewItemToShoppingListCache,
   addOptimisticShoppingListItem,
+  adoptServerShoppingListItemId,
   createOptimisticShoppingListItem,
+  revertOptimisticShoppingListItem,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
+import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { generateEntityId } from '#/utils/generateEntityId';
@@ -53,14 +55,10 @@ export function useAddShoppingItem({
       }
       const item = payload.shoppingListItem;
 
-      // Catalog-merge: the server merged into an existing row → its id differs
-      // from the client cuid we sent on THIS mutation. Adopt the server id;
-      // evict the stale cuid entity. Reading the id off this mutation's own
-      // variables (not a shared ref) keeps it correct when adds overlap.
-      const clientId = variables.input.id;
-      if (clientId && item.id !== clientId) {
-        safeEvict(cache, 'ShoppingListItem', clientId);
-      }
+      // Catalog-merge: adopt the server id, evicting the optimistic cuid if the
+      // server merged into an existing row. Reads the id off this mutation's own
+      // variables (not a shared ref) so it stays correct when adds overlap.
+      adoptServerShoppingListItemId(cache, item.id, variables.input.id);
 
       executeCacheUpdate(
         () => addNewItemToShoppingListCache(cache, listId, item),
@@ -124,6 +122,25 @@ export function useAddShoppingItem({
       'Add Shopping List Item error:',
     );
     if (!result) return undefined;
+
+    // A non-success payload (e.g. ValidationError / ConflictError) resolves under
+    // errorPolicy:'all' with no thrown error, so `onError` never fires — classify
+    // the result and fully revert the optimistic item (entity + list stats) on a
+    // real rejection. A queued create (offline / API down) resolves with no data
+    // and no error → it stays and replays.
+    if (
+      classifyCreateResult(
+        result,
+        'addItemToShoppingList',
+        'AddItemToShoppingListPayload',
+      ) === 'rejected'
+    ) {
+      executeCacheUpdate(
+        () => revertOptimisticShoppingListItem(client.cache, listId, id),
+        'Revert rejected Shopping List Item',
+      );
+      return undefined;
+    }
     return result.data?.addItemToShoppingList;
   };
 

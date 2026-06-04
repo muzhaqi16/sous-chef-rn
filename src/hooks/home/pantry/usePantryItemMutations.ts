@@ -30,6 +30,7 @@ import {
   versionConflictCheck,
 } from '#/utils/errorHandlers';
 import { isNetworkError } from '#/utils/isNetworkError';
+import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
@@ -226,6 +227,28 @@ export function usePantryItemMutations({
       'Add Pantry Item error:',
     );
     if (!result) return undefined;
+
+    // A non-success payload (e.g. duplicate / validation) resolves under
+    // errorPolicy:'all' with no thrown error, so `onError` never fires — evict
+    // the optimistic item on a real rejection so it doesn't linger. A queued
+    // create (offline / API down) stays and replays. (Pantry has no parent stat
+    // scalar to revert; the connection totalCount self-heals on the evict.)
+    if (
+      classifyCreateResult(
+        result,
+        'createPantryItem',
+        'CreatePantryItemPayload',
+      ) === 'rejected'
+    ) {
+      executeCacheUpdate(
+        () =>
+          removeFromPantryItemsCache(client.cache, pantryId, id, {
+            evictItem: true,
+          }),
+        'Revert rejected Pantry Item',
+      );
+      return undefined;
+    }
     const payload = result.data?.createPantryItem;
     return payload?.__typename === 'CreatePantryItemPayload'
       ? payload.pantryItem

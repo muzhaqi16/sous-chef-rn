@@ -465,6 +465,73 @@ export function addOptimisticShoppingListItem(
 }
 
 /**
+ * Reverse {@link addOptimisticShoppingListItem} when a local-first create is
+ * rejected by the server (e.g. `ValidationError` / `ConflictError`).
+ *
+ * Evicting the entity alone is NOT a full revert: `addOptimisticShoppingListItem`
+ * also bumped the `ShoppingList.totalItems` / `remainingItems` / `completionRate`
+ * scalars, and the self-healing `itemsConnection` read only repairs the
+ * connection's own `totalCount` — not those sibling scalars. So an evict-only
+ * revert leaves the list header showing an inflated count until the next stats
+ * refetch. This reverses the scalar bump too (the item was unpurchased, so
+ * `completedItems` is unchanged). The dangling connection edge is dropped by the
+ * self-healing read.
+ */
+export function revertOptimisticShoppingListItem(
+  cache: ApolloCache,
+  listId: string,
+  clientId: string,
+): void {
+  safeEvict(cache, 'ShoppingListItem', clientId);
+
+  const parentCacheId = cache.identify({
+    __typename: 'ShoppingList',
+    id: listId,
+  });
+  if (!parentCacheId) return;
+
+  const stats = cache.readFragment<{
+    totalItems: number;
+    completedItems: number;
+  }>({
+    id: parentCacheId,
+    fragment: ShoppingListStatsForOptimisticAddFragment,
+    fragmentName: '_ShoppingListStatsForOptimisticAdd',
+  });
+  const newTotal = Math.max(0, (stats?.totalItems ?? 0) - 1);
+  const completed = stats?.completedItems ?? 0;
+
+  cache.modify({
+    id: parentCacheId,
+    fields: {
+      totalItems: () => newTotal,
+      remainingItems: () => Math.max(0, newTotal - completed),
+      completionRate: () => (newTotal > 0 ? completed / newTotal : 0),
+    },
+  });
+}
+
+/**
+ * Catalog-merge reconciliation: when the server merges a client-created item
+ * into an existing catalog row, the returned id differs from the client cuid we
+ * wrote optimistically. Evict the stale cuid entity so its (now-dangling)
+ * connection edge is dropped by the self-healing read and the server row stands.
+ *
+ * `clientId` is read off the mutation's own `variables` at the call site (never a
+ * shared ref), so this stays correct when adds overlap. A no-op when the server
+ * echoed the same id (no merge).
+ */
+export function adoptServerShoppingListItemId(
+  cache: ApolloCache,
+  serverId: string,
+  clientId: string | null | undefined,
+): void {
+  if (clientId && serverId !== clientId) {
+    safeEvict(cache, 'ShoppingListItem', clientId);
+  }
+}
+
+/**
  * Remove a single item from ShoppingList cache when moving to pantry.
  *
  * Unlike the generic `createRemoveFromParentConnectionUpdater`, this only

@@ -21,7 +21,9 @@ import {
 import {
   addNewItemToShoppingListCache,
   addOptimisticShoppingListItem,
+  adoptServerShoppingListItemId,
   createOptimisticShoppingListItem,
+  revertOptimisticShoppingListItem,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { addToPantryItemsCache } from '#hooks/home/pantry/utils';
 import { buildOptimisticPantryItem } from '#hooks/home/pantry/buildOptimisticPantryItem';
@@ -111,13 +113,13 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
           variables
         ) {
           const maskedItem = payload.shoppingListItem;
-          // Catalog-merge: the server merged into an existing row → its id
-          // differs from the client cuid we wrote optimistically. Adopt the
-          // server id; evict the stale cuid entity.
-          const clientId = variables.input.id;
-          if (clientId && maskedItem.id !== clientId) {
-            safeEvict(cache, 'ShoppingListItem', clientId);
-          }
+          // Catalog-merge: adopt the server id, evicting the optimistic cuid if
+          // the server merged into an existing row.
+          adoptServerShoppingListItemId(
+            cache,
+            maskedItem.id,
+            variables.input.id,
+          );
           const shoppingListItem =
             cache.readFragment<SearchResults_ShoppingListItemFragment>({
               fragment: SearchResults_ShoppingListItemFragmentDoc,
@@ -347,8 +349,9 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
               'AddItemToShoppingListPayload',
             ) === 'rejected'
           ) {
-            // The server refused the create — discard the item we wrote.
-            safeEvict(client.cache, 'ShoppingListItem', id);
+            // The server refused the create — fully revert the item we wrote
+            // (entity + list-stat scalars).
+            revertOptimisticShoppingListItem(client.cache, shoppingListId, id);
             alertService.alert(
               'Error',
               'Failed to add item. Please try again.',

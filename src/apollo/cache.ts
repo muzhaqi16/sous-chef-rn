@@ -2,6 +2,7 @@ import { InMemoryCache } from '@apollo/client';
 import type { FieldFunctionOptions, Reference } from '@apollo/client';
 // Import generated fragment matcher for proper interface/union type handling
 import fragmentMatcherData from '#/graphql/generated/fragmentMatcher.json';
+import { queueStore } from './offlineQueue/queueStore';
 
 // Apollo's `readField` accessor, extracted from the field-policy options bag.
 type ReadField = FieldFunctionOptions['readField'];
@@ -357,7 +358,37 @@ function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
           }
           return existing;
         }
-        return incoming;
+
+        // Preserve un-replayed local creates. An offline-created item lives in
+        // `existing` but isn't in this authoritative page until the queue
+        // replays it; a first-page refetch that wins the race against the replay
+        // would otherwise drop it (a visible disappear/reappear). Keep ONLY edges
+        // whose id still has a PENDING mutation queued — a genuinely
+        // server-deleted item has no pending op and is still dropped, so the page
+        // stays authoritative. Falls straight through to `return incoming` once
+        // the queue drains (pendingIds empty).
+        const pendingIds = queueStore.getPendingClientIds();
+        if (pendingIds.size === 0) return incoming;
+        const incomingIds = new Set<string>();
+        for (const edge of incoming.edges || []) {
+          const id = readEdgeNodeId(edge, readField);
+          if (id) incomingIds.add(id);
+        }
+        const preservedEdges = (existing.edges || []).filter(edge => {
+          const id = readEdgeNodeId(edge, readField);
+          return id != null && pendingIds.has(id) && !incomingIds.has(id);
+        });
+        if (preservedEdges.length === 0) return incoming;
+        if (__DEV__) {
+          console.log(
+            `🛡️ [Cache] itemsConnection: preserved ${preservedEdges.length} un-replayed local edge(s) over the authoritative page`,
+          );
+        }
+        return {
+          ...incoming,
+          edges: [...preservedEdges, ...(incoming.edges || [])],
+          totalCount: (incoming.totalCount ?? 0) + preservedEdges.length,
+        };
       }
 
       // Append-only: keep existing edges in place, add only new incoming edges

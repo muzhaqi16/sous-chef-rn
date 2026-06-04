@@ -136,6 +136,35 @@ describe('ApolloCachePersistence', () => {
     });
   });
 
+  describe('flushPending', () => {
+    it('writes a pending debounced save immediately', () => {
+      apolloCachePersistence.save({
+        ROOT_QUERY: { __typename: 'Query' },
+        'Recipe:1': { id: '1' },
+      });
+      // Still debounced — nothing on disk yet.
+      expect(storage.getString(CRITICAL_KEY)).toBeUndefined();
+
+      apolloCachePersistence.flushPending(() => ({
+        ROOT_QUERY: { __typename: 'Query' },
+        'Recipe:1': { id: '1' },
+      }));
+
+      // Flushed synchronously, before the debounce timer fires.
+      const critical = JSON.parse(storage.getString(CRITICAL_KEY)!);
+      expect(critical).toEqual({ ROOT_QUERY: { __typename: 'Query' } });
+      expect(storage.getString(VERSION_KEY)).toBe(CURRENT_VERSION);
+    });
+
+    it('is a no-op (and skips extraction) when nothing is pending', () => {
+      apolloCachePersistence.cancel(); // ensure no pending timer
+      const extractor = jest.fn(() => ({}));
+      apolloCachePersistence.flushPending(extractor);
+      expect(extractor).not.toHaveBeenCalled();
+      expect(storage.getString(CRITICAL_KEY)).toBeUndefined();
+    });
+  });
+
   describe('saveImmediate', () => {
     it('persists immediately without debounce (split keys)', () => {
       const cache = {

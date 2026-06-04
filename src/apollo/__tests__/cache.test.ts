@@ -7,6 +7,7 @@ jest.mock('#/graphql/generated/fragmentMatcher.json', () => ({
 
 import { gql, InMemoryCache } from '@apollo/client';
 import { makeCache } from '../cache';
+import { queueStore } from '../offlineQueue/queueStore';
 
 type NodeRef = { __typename: string; id: string; name?: string };
 type Edge = { __typename: string; node: NodeRef };
@@ -544,6 +545,101 @@ describe('cache', () => {
       });
 
       expect(result?.shoppingList.itemsConnection.edges).toHaveLength(1);
+    });
+
+    const SINGLE_PAGE_QUERY = gql`
+      query GetList($id: ID!) {
+        shoppingList(id: $id) {
+          id
+          itemsConnection {
+            edges {
+              node {
+                id
+                name
+              }
+            }
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
+          }
+        }
+      }
+    `;
+
+    const writeSinglePage = (
+      cache: InMemoryCache,
+      nodes: { id: string; name: string }[],
+    ) =>
+      cache.writeQuery({
+        query: SINGLE_PAGE_QUERY,
+        variables: { id: 'list-1' },
+        data: {
+          shoppingList: {
+            __typename: 'ShoppingList',
+            id: 'list-1',
+            itemsConnection: {
+              __typename: 'ShoppingListItemsConnection',
+              edges: nodes.map(n => ({
+                __typename: 'ShoppingListItemEdge',
+                node: { __typename: 'ShoppingListItem', ...n },
+              })),
+              pageInfo: {
+                __typename: 'PageInfo',
+                hasNextPage: false,
+                endCursor: '',
+              },
+            },
+          },
+        },
+      });
+
+    const readIds = (cache: InMemoryCache): string[] =>
+      cache
+        .readQuery<ListItemsConnectionResult>({
+          query: SINGLE_PAGE_QUERY,
+          variables: { id: 'list-1' },
+        })
+        ?.shoppingList.itemsConnection.edges.map(e => e.node.id) ?? [];
+
+    it('preserves an un-replayed local edge over an authoritative single-page refetch', () => {
+      const spy = jest
+        .spyOn(queueStore, 'getPendingClientIds')
+        .mockReturnValue(new Set(['cuid-pending']));
+      const cache = makeCache();
+
+      // Initial: a server item + an offline-created (still-queued) item.
+      writeSinglePage(cache, [
+        { id: 'server-1', name: 'Eggs' },
+        { id: 'cuid-pending', name: 'Milk' },
+      ]);
+      // Authoritative refetch that doesn't yet include the un-replayed item.
+      writeSinglePage(cache, [{ id: 'server-1', name: 'Eggs' }]);
+
+      // The pending local item is kept (its create is still queued).
+      expect(readIds(cache)).toEqual(
+        expect.arrayContaining(['server-1', 'cuid-pending']),
+      );
+      expect(readIds(cache)).toHaveLength(2);
+      spy.mockRestore();
+    });
+
+    it('drops a server-removed edge that has no pending mutation', () => {
+      const spy = jest
+        .spyOn(queueStore, 'getPendingClientIds')
+        .mockReturnValue(new Set()); // nothing queued
+      const cache = makeCache();
+
+      writeSinglePage(cache, [
+        { id: 'server-1', name: 'Eggs' },
+        { id: 'gone-1', name: 'Deleted elsewhere' },
+      ]);
+      // Authoritative refetch no longer has gone-1 (e.g. a collaborator deleted
+      // it). With no pending op for it, the page stays authoritative → dropped.
+      writeSinglePage(cache, [{ id: 'server-1', name: 'Eggs' }]);
+
+      expect(readIds(cache)).toEqual(['server-1']);
+      spy.mockRestore();
     });
   });
 

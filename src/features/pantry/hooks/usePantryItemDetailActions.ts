@@ -13,9 +13,10 @@ import { removeFromPantryItemsCache } from '#hooks/home/pantry/utils';
 import {
   addNewItemToShoppingListCache,
   addOptimisticShoppingListItem,
+  adoptServerShoppingListItemId,
   createOptimisticShoppingListItem,
+  revertOptimisticShoppingListItem,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
-import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { useConvertExpiredToWaste } from '#features/pantry/hooks/mutations/useConvertExpiredToWaste';
 import { useConvertExpiredBatchesToWaste } from '#features/pantry/hooks/mutations/useConvertExpiredBatchesToWaste';
@@ -143,13 +144,13 @@ export function usePantryItemDetailActions({
         }
         const shoppingListItem = payload.shoppingListItem;
 
-        // Catalog-merge: the server merged into an existing row → its id differs
-        // from the client cuid we wrote optimistically. Adopt the server id;
-        // evict the stale cuid entity.
-        const clientId = variables.input.id;
-        if (clientId && shoppingListItem.id !== clientId) {
-          safeEvict(cache, 'ShoppingListItem', clientId);
-        }
+        // Catalog-merge: adopt the server id, evicting the optimistic cuid if the
+        // server merged into an existing row.
+        adoptServerShoppingListItemId(
+          cache,
+          shoppingListItem.id,
+          variables.input.id,
+        );
 
         // addNewItemToShoppingListCache swallows its own errors internally, so
         // no try/catch wrapper is needed here — wrapping would bail the React
@@ -267,7 +268,11 @@ export function usePantryItemDetailActions({
             'AddItemToShoppingListPayload',
           ) === 'rejected'
         ) {
-          safeEvict(client.cache, 'ShoppingListItem', id);
+          revertOptimisticShoppingListItem(
+            client.cache,
+            selectedShoppingListId,
+            id,
+          );
           setAddToListStatus('error');
         } else {
           setAddToListStatus('success');

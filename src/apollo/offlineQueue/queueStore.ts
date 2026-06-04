@@ -231,6 +231,31 @@ export class QueueStore {
   }
 
   /**
+   * Client-generated entity ids that still have a PENDING mutation in the
+   * current user's queue. The cache merge uses this to avoid dropping an
+   * un-replayed optimistic item when a first-page background refetch lands
+   * before the queue replays (a server-deleted item, by contrast, has no
+   * pending op and is correctly dropped). Reads the id from the queued input
+   * (`input.id`, else `input.itemId`, else top-level `id`). Returns an empty set
+   * when no user is set or the queue is empty.
+   */
+  getPendingClientIds(): Set<string> {
+    const userId = this.getCurrentUserId();
+    if (!userId) return new Set();
+
+    const ids = new Set<string>();
+    for (const mutation of this.getPendingMutationsForUser(userId)) {
+      const variables = mutation.variables as
+        | { id?: unknown; input?: { id?: unknown; itemId?: unknown } }
+        | undefined;
+      const candidate =
+        variables?.input?.id ?? variables?.input?.itemId ?? variables?.id;
+      if (typeof candidate === 'string' && candidate) ids.add(candidate);
+    }
+    return ids;
+  }
+
+  /**
    * Get a specific mutation by ID
    */
   getMutation(mutationId: string): QueuedMutation | null {

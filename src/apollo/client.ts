@@ -125,6 +125,18 @@ export function cancelCachePersistence() {
 }
 
 /**
+ * Flush any pending (debounced) cache write to disk immediately. Call when the
+ * app backgrounds so the last few seconds of cache writes — including
+ * optimistic local-first creates — survive a fast app-kill and paint from disk
+ * on the next cold start. No-op when nothing is pending.
+ */
+export function flushCachePersistence() {
+  apolloCachePersistence.flushPending(
+    () => client.cache.extract() as NormalizedCacheObject,
+  );
+}
+
+/**
  * Set up automatic cache persistence
  *
  * Wraps cache methods to persist after each operation

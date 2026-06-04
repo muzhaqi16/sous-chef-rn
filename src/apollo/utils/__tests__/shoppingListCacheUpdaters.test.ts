@@ -7,6 +7,8 @@ import {
   addNewItemToShoppingListCache,
   removeItemFromShoppingListForMoveToPantry,
   createOptimisticShoppingListItem,
+  adoptServerShoppingListItemId,
+  revertOptimisticShoppingListItem,
 } from '../shoppingListCacheUpdaters';
 
 // Also test the unexported clearAllUnpurchasedItemsFromCache indirectly
@@ -1083,5 +1085,59 @@ describe('createOptimisticShoppingListItem', () => {
       name: '',
       symbol: '',
     });
+  });
+});
+
+describe('adoptServerShoppingListItemId', () => {
+  it('evicts the client cuid when the server returned a different id', () => {
+    const cache = createMockCache();
+    adoptServerShoppingListItemId(cache, 'server-id', 'client-cuid');
+    expect(cache.evict).toHaveBeenCalledWith({
+      id: 'ShoppingListItem:client-cuid',
+    });
+  });
+
+  it('is a no-op when the server echoed the same id (no merge)', () => {
+    const cache = createMockCache();
+    adoptServerShoppingListItemId(cache, 'same-id', 'same-id');
+    expect(cache.evict).not.toHaveBeenCalled();
+  });
+
+  it('is a no-op when there is no client id', () => {
+    const cache = createMockCache();
+    adoptServerShoppingListItemId(cache, 'server-id', undefined);
+    expect(cache.evict).not.toHaveBeenCalled();
+  });
+});
+
+describe('revertOptimisticShoppingListItem', () => {
+  function createCacheWithStats(stats: {
+    totalItems: number;
+    completedItems: number;
+  }): MockedCache {
+    return {
+      ...createMockCache(),
+      readFragment: jest.fn(() => stats),
+    } as MockedCache & { readFragment: jest.Mock };
+  }
+
+  it('evicts the entity and decrements the list stat scalars', () => {
+    const cache = createCacheWithStats({ totalItems: 5, completedItems: 2 });
+    revertOptimisticShoppingListItem(cache, 'list-1', 'cuid-1');
+
+    // entity evicted (a bare safeEvict would stop here, leaving stats inflated)
+    expect(cache.evict).toHaveBeenCalledWith({ id: 'ShoppingListItem:cuid-1' });
+
+    // and the parent scalars are reversed (mirror of the optimistic add bump)
+    expect(invokeFieldModifier(cache, 'totalItems', 5, {})).toBe(4);
+    expect(invokeFieldModifier(cache, 'remainingItems', 3, {})).toBe(2); // 4 - 2
+    expect(invokeFieldModifier(cache, 'completionRate', 0.4, {})).toBe(0.5); // 2 / 4
+  });
+
+  it('floors totalItems at 0 and yields completionRate 0 on an empty list', () => {
+    const cache = createCacheWithStats({ totalItems: 0, completedItems: 0 });
+    revertOptimisticShoppingListItem(cache, 'list-1', 'cuid-1');
+    expect(invokeFieldModifier(cache, 'totalItems', 0, {})).toBe(0);
+    expect(invokeFieldModifier(cache, 'completionRate', 0, {})).toBe(0);
   });
 });

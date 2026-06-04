@@ -16,9 +16,10 @@ import { ItemSuggestion } from '#/graphql/generated/schemaTypes';
 import {
   addNewItemToShoppingListCache,
   addOptimisticShoppingListItem,
+  adoptServerShoppingListItemId,
   createOptimisticShoppingListItem,
+  revertOptimisticShoppingListItem,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
-import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
 import { generateEntityId } from '#/utils/generateEntityId';
@@ -118,14 +119,10 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
         }
         const newItem = payload.shoppingListItem;
 
-        // Catalog-merge: the server merged into an existing row → its id differs
-        // from the client cuid we sent on THIS mutation. Adopt the server id;
-        // evict the stale cuid entity. Reading the id off this mutation's own
-        // variables (not a shared ref) keeps it correct when adds overlap.
-        const clientId = variables.input.id;
-        if (clientId && newItem.id !== clientId) {
-          safeEvict(cache, 'ShoppingListItem', clientId);
-        }
+        // Catalog-merge: adopt the server id, evicting the optimistic cuid if the
+        // server merged into an existing row. Reads the id off this mutation's
+        // own variables (not a shared ref) so it stays correct when adds overlap.
+        adoptServerShoppingListItemId(cache, newItem.id, variables.input.id);
 
         executeCacheUpdate(
           () => addNewItemToShoppingListCache(cache, shoppingListId, newItem),
@@ -215,7 +212,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
             'AddItemToShoppingListPayload',
           ) === 'rejected'
         ) {
-          safeEvict(client.cache, 'ShoppingListItem', id);
+          revertOptimisticShoppingListItem(client.cache, shoppingListId, id);
           toastService.error(t('addToShoppingListSheet.addFailedRetry'));
           return;
         }
@@ -223,7 +220,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
         tutorial?.notifyItemAdded();
       })
       .catch(() => {
-        safeEvict(client.cache, 'ShoppingListItem', id);
+        revertOptimisticShoppingListItem(client.cache, shoppingListId, id);
         toastService.error(t('addToShoppingListSheet.addFailedRetry'));
       });
   };
@@ -295,7 +292,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
             'AddItemToShoppingListPayload',
           ) === 'rejected'
         ) {
-          safeEvict(client.cache, 'ShoppingListItem', id);
+          revertOptimisticShoppingListItem(client.cache, shoppingListId, id);
           state.completeExitAnimation(shoppingItem.itemId);
           toastService.error(t('addToShoppingListSheet.addFailedRetry'));
           return;
@@ -305,7 +302,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
       })
       .catch(() => {
         // On error: remove from exiting, show error toast
-        safeEvict(client.cache, 'ShoppingListItem', id);
+        revertOptimisticShoppingListItem(client.cache, shoppingListId, id);
         state.completeExitAnimation(shoppingItem.itemId);
         toastService.error(t('addToShoppingListSheet.addFailedRetry'));
       });

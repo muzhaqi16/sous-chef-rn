@@ -19,6 +19,8 @@ jest.mock('#/utils/compilerSafeWrappers', () => ({
 
 jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => ({
   addNewItemToShoppingListCache: jest.fn(),
+  adoptServerShoppingListItemId: jest.fn(),
+  revertOptimisticShoppingListItem: jest.fn(),
   addOptimisticShoppingListItem: jest.fn(),
   // New signature: (id, fields) => entity (the cuid is baked straight in).
   createOptimisticShoppingListItem: jest.fn(

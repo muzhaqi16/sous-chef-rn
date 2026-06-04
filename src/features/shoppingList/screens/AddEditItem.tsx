@@ -26,9 +26,10 @@ import type { StaticScreenProps } from '@react-navigation/native';
 import {
   addNewItemToShoppingListCache,
   addOptimisticShoppingListItem,
+  adoptServerShoppingListItemId,
   createOptimisticShoppingListItem,
+  revertOptimisticShoppingListItem,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
-import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { useShoppingListItemForm } from '#features/shoppingList/hooks/useShoppingListItemForm';
 import {
@@ -115,14 +116,10 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
       }
       const newItem = payload.shoppingListItem;
 
-      // Catalog-merge: the server merged into an existing row → its id differs
-      // from the client cuid we sent on THIS mutation. Adopt the server id;
-      // evict the stale cuid entity. Reading the id off this mutation's own
-      // variables (not a shared ref) keeps it correct when adds overlap.
-      const clientId = variables.input.id;
-      if (clientId && newItem.id !== clientId) {
-        safeEvict(cache, 'ShoppingListItem', clientId);
-      }
+      // Catalog-merge: adopt the server id, evicting the optimistic cuid if the
+      // server merged into an existing row. Reads the id off this mutation's own
+      // variables (not a shared ref) so it stays correct when adds overlap.
+      adoptServerShoppingListItemId(cache, newItem.id, variables.input.id);
 
       addNewItemToShoppingListCache(cache, listId, newItem);
     },
@@ -287,9 +284,10 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
           'AddItemToShoppingListPayload',
         );
         if (outcome === 'rejected') {
-          // The server refused the create — revert the optimistic item.
+          // The server refused the create — fully revert the optimistic item
+          // (entity + list-stat scalars, which a bare evict would leave inflated).
           executeCacheUpdate(
-            () => safeEvict(client.cache, 'ShoppingListItem', id),
+            () => revertOptimisticShoppingListItem(client.cache, listId, id),
             'Revert optimistic add',
           );
           alertService.alert(

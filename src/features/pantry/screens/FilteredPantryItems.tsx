@@ -31,9 +31,10 @@ import {
 import {
   addNewItemToShoppingListCache,
   addOptimisticShoppingListItem,
+  adoptServerShoppingListItemId,
   createOptimisticShoppingListItem,
+  revertOptimisticShoppingListItem,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
-import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import {
   useTutorialSequence,
@@ -303,11 +304,20 @@ export const FilteredPantryItems: React.FC<
       // from the mutation's own variables to stay correct across re-renders.
       update: (cache, { data }, { variables }) => {
         const payload = data?.addItemToShoppingList;
-        const listId = variables?.input.shoppingListId;
-        if (payload?.__typename !== 'AddItemToShoppingListPayload' || !listId) {
+        if (
+          payload?.__typename !== 'AddItemToShoppingListPayload' ||
+          !variables
+        ) {
           return;
         }
-        addNewItemToShoppingListCache(cache, listId, payload.shoppingListItem);
+        const item = payload.shoppingListItem;
+        // Catalog-merge: adopt the server id if it differs from our cuid.
+        adoptServerShoppingListItemId(cache, item.id, variables.input.id);
+        addNewItemToShoppingListCache(
+          cache,
+          variables.input.shoppingListId,
+          item,
+        );
       },
     },
   );
@@ -384,7 +394,11 @@ export const FilteredPantryItems: React.FC<
           context: { localFirst: true },
         }),
       () => {
-        safeEvict(client.cache, 'ShoppingListItem', id);
+        revertOptimisticShoppingListItem(
+          client.cache,
+          selectedShoppingListId,
+          id,
+        );
         alertService.alert(
           t('labels.error'),
           t('filteredPantry.addToShoppingFailed'),
@@ -403,7 +417,11 @@ export const FilteredPantryItems: React.FC<
         'AddItemToShoppingListPayload',
       ) === 'rejected'
     ) {
-      safeEvict(client.cache, 'ShoppingListItem', id);
+      revertOptimisticShoppingListItem(
+        client.cache,
+        selectedShoppingListId,
+        id,
+      );
       alertService.alert(
         t('labels.error'),
         t('filteredPantry.addToShoppingFailed'),

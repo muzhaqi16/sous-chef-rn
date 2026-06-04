@@ -584,4 +584,39 @@ describe('QueueStore', () => {
       expect(result[0].id).toBe('exceeded');
     });
   });
+
+  // -------------------------------------------------------------------------
+  // getPendingClientIds
+  // -------------------------------------------------------------------------
+  describe('getPendingClientIds', () => {
+    it('collects input.id and input.itemId from the current user pending queue', () => {
+      store.setCurrentUserId('user-1');
+      store.addMutation(
+        makeMutation({ id: 'm1', variables: { input: { id: 'cuid-create' } } }),
+      );
+      store.addMutation(
+        makeMutation({
+          id: 'm2',
+          operationName: 'MoveShoppingListItem',
+          variables: { input: { itemId: 'cuid-move' } },
+        }),
+      );
+
+      const ids = store.getPendingClientIds();
+      expect(ids).toEqual(new Set(['cuid-create', 'cuid-move']));
+    });
+
+    it('returns an empty set when no current user is set', () => {
+      store.addMutation(
+        makeMutation({ variables: { input: { id: 'cuid-x' } } }),
+      );
+      expect(store.getPendingClientIds().size).toBe(0);
+    });
+
+    it('ignores mutations with no resolvable client id', () => {
+      store.setCurrentUserId('user-1');
+      store.addMutation(makeMutation({ id: 'no-id', variables: {} }));
+      expect(store.getPendingClientIds().size).toBe(0);
+    });
+  });
 });

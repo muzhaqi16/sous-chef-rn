@@ -440,6 +440,27 @@ class ApolloCachePersistence {
   }
 
   /**
+   * Flush a pending debounced save immediately — call when the app goes to
+   * background, where a fast kill could otherwise lose the last ≤3s of cache
+   * writes. The offline queue durably persists the mutations regardless, but
+   * without this the optimistic cache state only reappears after the queue
+   * replays on next launch; flushing keeps it visible from disk on cold start.
+   *
+   * No-op when nothing is pending (no debounced save and no scheduled idle
+   * serialization), so it's cheap to call on every background transition.
+   *
+   * @param extractor - Lazy cache extractor; only invoked when a save is pending.
+   */
+  flushPending(extractor: () => NormalizedCacheObject): void {
+    if (this.saveTimeout == null && this.idleCallbackId == null) return;
+    if (this.idleCallbackId != null) {
+      cancelIdleCallback(this.idleCallbackId);
+      this.idleCallbackId = null;
+    }
+    this.saveImmediate(extractor());
+  }
+
+  /**
    * Save cache immediately without debouncing
    * Use for critical operations like logout or app termination
    *
