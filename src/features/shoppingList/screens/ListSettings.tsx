@@ -14,9 +14,8 @@ import { useShoppingListDetails } from '#features/shoppingList/hooks/useShopping
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useLazyHomeData } from '#/hooks/home/useLazyHomeData';
 import { ModalPicker } from '#components/molecules/ModalPicker';
-import { useMutation } from '@apollo/client/react';
-import { UpdateShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useLeaveShoppingList } from '#features/shoppingList/hooks/useLeaveShoppingList';
+import { useUpdateShoppingList } from '#features/shoppingList/hooks/mutations/useUpdateShoppingList';
 import { useCreateShoppingList } from '#features/shoppingList/hooks/mutations/useCreateShoppingList';
 import { useDeleteShoppingList } from '#features/shoppingList/hooks/mutations/useDeleteShoppingList';
 import { useAppStore } from '#store/useAppStore';
@@ -122,7 +121,9 @@ export const ListSettings: React.FC<
   const isHomeMember = !!shoppingList?.home?.myMembership;
 
   const { leaveList, leaving } = useLeaveShoppingList(listId || '');
-  const [updateList] = useMutation(UpdateShoppingListDocument);
+  const { updateShoppingList } = useUpdateShoppingList(
+    t('shoppingListScreens.failedToSave'),
+  );
   const { deleteShoppingList } = useDeleteShoppingList();
   const { createShoppingList } = useCreateShoppingList(
     t('shoppingListScreens.failedToCreate'),
@@ -152,12 +153,9 @@ export const ListSettings: React.FC<
           setSelectedShoppingListId(newList.id);
           goBack();
         } else {
-          // Update existing list
-          await updateList({
-            variables: {
-              input: { id: listId!, name: name.trim(), isDefault },
-            },
-          });
+          // Update existing list (local-first: a queued offline save keeps the
+          // permanent cache write and replays on reconnect)
+          await updateShoppingList(listId!, { name: name.trim(), isDefault });
         }
       },
       setSaving,

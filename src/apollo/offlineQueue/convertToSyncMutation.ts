@@ -12,6 +12,7 @@ import type {
   SyncDeletePantryItemInput,
   SyncDeleteShoppingListItemInput,
   SyncMoveShoppingListItemInput,
+  SyncPantryItemInput,
   SyncShoppingListItemInput,
 } from '#/graphql/generated/schemaTypes';
 import type { QueuedMutation } from './types';
@@ -56,6 +57,7 @@ export interface SyncReaders {
 interface QueuedInput {
   id?: string;
   itemId?: string;
+  pantryItemId?: string;
   version?: number;
   shoppingListId?: string;
   pantryId?: string;
@@ -145,6 +147,42 @@ const buildPantryItemSync: SyncBuilder = (mutation, readers) => {
         clientId,
       },
     },
+  };
+};
+
+/**
+ * Pantry quantity sync. `UpdatePantryItemQuantityInput` doesn't align with
+ * `SyncPantryItemInput`: the item id rides as `pantryItemId` (not `id`), the
+ * quantity is a string (the raw quantity-box value), and the unit is a flat
+ * `unitId`. Map each explicitly; `pantryId` is backfilled from the cached
+ * PantryItem like the other pantry syncs.
+ */
+const buildPantryItemQuantitySync: SyncBuilder = (mutation, readers) => {
+  const input = getQueuedInput(mutation);
+  const clientId = input.pantryItemId ?? getClientId(mutation, input);
+
+  const pantryId = input.pantryId ?? readers.readPantryId(clientId);
+  if (!pantryId) {
+    throw new Error(
+      `Cannot sync ${mutation.operationName}: pantryId not found for item ${clientId}`,
+    );
+  }
+
+  const quantity =
+    typeof input.quantity === 'string'
+      ? parseFloat(input.quantity)
+      : input.quantity;
+
+  const syncInput: SyncPantryItemInput = {
+    clientId: clientId as string,
+    pantryId,
+    ...(quantity != null && Number.isFinite(quantity) && { quantity }),
+    ...(input.unitId != null && { unit: { unitId: input.unitId } }),
+    ...(input.version != null && { version: input.version }),
+  };
+  return {
+    syncMutation: SyncPantryItemDocument,
+    syncVariables: { input: syncInput },
   };
 };
 
@@ -265,6 +303,7 @@ const SYNC_REGISTRY: Record<string, SyncBuilder> = {
   // PantryItem
   CreatePantryItem: buildPantryItemSync,
   UpdatePantryItem: buildPantryItemSync,
+  UpdatePantryItemQuantity: buildPantryItemQuantitySync,
   BarcodeCreatePantryItem: buildPantryItemSync,
   DeletePantryItem: buildDeletePantryItemSync,
   // ShoppingListItem create / update
@@ -279,6 +318,16 @@ const SYNC_REGISTRY: Record<string, SyncBuilder> = {
   RemoveItemFromShoppingList: buildDeleteShoppingItemSync,
   MoveShoppingListItem: buildMoveShoppingItemSync,
 };
+
+/**
+ * Whether an operation has a `Sync*` replay mapping. Used by queueLink as the
+ * "replay-safe even without an explicit `context.localFirst` opt-in" half of
+ * the offline queueing allowlist — these ops replay through idempotent
+ * `Sync*` upserts, so queueing them can never ghost-duplicate.
+ */
+export function hasSyncMapping(operationName: string): boolean {
+  return SYNC_REGISTRY[operationName] != null;
+}
 
 /**
  * Convert a queued mutation to its sync replay. Falls back to replaying the

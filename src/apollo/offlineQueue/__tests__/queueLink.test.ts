@@ -5,6 +5,7 @@ import type { DocumentNode } from 'graphql';
 import { createQueueLink } from '../queueLink';
 import { queueStore } from '../queueStore';
 import { useStore } from '#store';
+import { isNetworkError } from '#/utils/isNetworkError';
 import { gql } from '@apollo/client';
 
 // Mock the store module
@@ -278,7 +279,7 @@ describe('createQueueLink', () => {
   // Offline interception
   // -------------------------------------------------------------------------
   describe('offline interception', () => {
-    it('queues mutation when offline and returns optimistic response', done => {
+    it('queues a localFirst mutation when offline and returns optimistic response', done => {
       mockedGetState.mockReturnValue({
         isOnline: false,
         user: { id: 'user-1' },
@@ -288,7 +289,7 @@ describe('createQueueLink', () => {
         query: MOCK_MUTATION,
         operationName: 'AddItem',
         variables: { input: { name: 'Apple' } },
-        context: { optimisticResponse: optimistic },
+        context: { localFirst: true, optimisticResponse: optimistic },
       });
       const forward = makeForward();
 
@@ -312,7 +313,7 @@ describe('createQueueLink', () => {
       });
     });
 
-    it('queues mutation without optimistic response, returns null-field data', done => {
+    it('queues a localFirst mutation without optimistic response, returns null-field data', done => {
       mockedGetState.mockReturnValue({
         isOnline: false,
         user: { id: 'user-1' },
@@ -320,6 +321,7 @@ describe('createQueueLink', () => {
       const operation = makeOperation({
         query: MOCK_MUTATION,
         operationName: 'AddItem',
+        context: { localFirst: true },
       });
       const forward = makeForward();
 
@@ -340,6 +342,59 @@ describe('createQueueLink', () => {
       });
     });
 
+    it('queues a Sync*-mapped operation even WITHOUT localFirst (idempotent replay)', done => {
+      mockedGetState.mockReturnValue({
+        isOnline: false,
+        user: { id: 'user-1' },
+      });
+      const operation = makeOperation({
+        query: MOCK_MUTATION,
+        operationName: 'UpdatePantryItem',
+        variables: { input: { id: 'item-1', quantity: 2 } },
+        // no localFirst — allowlisted via SYNC_REGISTRY
+      });
+      const forward = makeForward();
+
+      link.request(operation, forward)!.subscribe({
+        next(result) {
+          expect(result.extensions).toEqual({ queued: true });
+        },
+        complete() {
+          expect(forward).not.toHaveBeenCalled();
+          expect(queueStore.addMutation).toHaveBeenCalledTimes(1);
+          done();
+        },
+      });
+    });
+
+    it('rejects a non-allowlisted mutation with a network-shaped error instead of ghost-queueing it', done => {
+      mockedGetState.mockReturnValue({
+        isOnline: false,
+        user: { id: 'user-1' },
+      });
+      const operation = makeOperation({
+        query: MOCK_MUTATION,
+        operationName: 'CreateRecipeReview',
+        variables: { input: { rating: 5 } },
+        // no localFirst, no Sync* mapping → online-only
+      });
+      const forward = makeForward();
+
+      link.request(operation, forward)!.subscribe({
+        next() {
+          done(new Error('should not emit a result'));
+        },
+        error(err) {
+          // The hook's error path shows an honest failure; nothing replays later.
+          expect(isNetworkError(err)).toBe(true);
+          expect((err as Error).message).toContain('CreateRecipeReview');
+          expect(forward).not.toHaveBeenCalled();
+          expect(queueStore.addMutation).not.toHaveBeenCalled();
+          done();
+        },
+      });
+    });
+
     it('errors when offline with no authenticated user', done => {
       mockedGetState.mockReturnValue({
         isOnline: false,
@@ -348,6 +403,7 @@ describe('createQueueLink', () => {
       const operation = makeOperation({
         query: MOCK_MUTATION,
         operationName: 'AddItem',
+        context: { localFirst: true },
       });
       const forward = makeForward();
 

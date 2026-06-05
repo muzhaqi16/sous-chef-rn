@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Image, Dimensions } from 'react-native';
 import { alertService } from '#/services/alertService';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ThemedSafeAreaView } from '#components/atoms/themedComponents';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { AppPressable } from '#components/atoms/AppPressable';
 import Animated, {
@@ -318,7 +318,7 @@ export const ImageCropScreen: React.FC<
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['left', 'right']}>
+    <ThemedSafeAreaView style={styles.container} edges={['left', 'right']}>
       <Header
         title="Crop Photo"
         onBack={goBack}
@@ -397,7 +397,7 @@ export const ImageCropScreen: React.FC<
           </AppPressable>
         </View>
       </View>
-    </SafeAreaView>
+    </ThemedSafeAreaView>
   );
 };
 

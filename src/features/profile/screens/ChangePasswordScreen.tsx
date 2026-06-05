@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { Text } from '#components/atoms/Text';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ThemedSafeAreaView } from '#components/atoms/themedComponents';
 import { useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { StyleSheet } from 'react-native-unistyles';
@@ -114,7 +114,7 @@ export const ChangePasswordScreen: React.FC = () => {
   const isFormValid = form.formState.isValid;
 
   return (
-    <SafeAreaView style={styles.container} edges={['left', 'right']}>
+    <ThemedSafeAreaView style={styles.container} edges={['left', 'right']}>
       <Header title={t('changePassword.title')} onBack={goBack} centerTitle />
 
       <KeyboardAvoidingView
@@ -193,7 +193,7 @@ export const ChangePasswordScreen: React.FC = () => {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </ThemedSafeAreaView>
   );
 };
 

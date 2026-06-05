@@ -59,11 +59,13 @@ describe('useMealPlanActions', () => {
       __typename: 'CreateMealPlanPayload',
       mealPlan: { id: 'plan-1', name: 'Week Plan' },
     });
+    // Local-first: the hook mints a permanent cuid id into the input.
     expect(create.fired).toContainEqual({
       input: {
         name: 'Week Plan',
         startDate: '2025-06-01',
         endDate: '2025-06-07',
+        id: expect.stringMatching(/^c[a-z0-9]{24}$/),
       },
     });
   });

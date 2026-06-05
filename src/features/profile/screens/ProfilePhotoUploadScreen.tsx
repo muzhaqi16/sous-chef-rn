@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { View, Image, Dimensions, Platform } from 'react-native';
-import { ThemedBackButton } from '#components/atoms/themedComponents';
+import {
+  ThemedBackButton,
+  ThemedSafeAreaView,
+} from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { Icon } from '#utils/iconUtils';
@@ -202,7 +204,7 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['left', 'right']}>
+    <ThemedSafeAreaView style={styles.container} edges={['left', 'right']}>
       <View style={styles.content}>
         <View style={styles.header}>
           <ThemedBackButton
@@ -315,7 +317,7 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
           </View>
         )}
       </View>
-    </SafeAreaView>
+    </ThemedSafeAreaView>
   );
 };
 

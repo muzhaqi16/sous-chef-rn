@@ -13,6 +13,9 @@ jest.mock('react-native-unistyles', () => {
         return result;
       },
       configure: jest.fn(),
+      // Unistyles' StyleSheet is a superset of RN's — delegate the
+      // original utilities so tests can flatten style arrays.
+      flatten: style => require('react-native').StyleSheet.flatten(style),
     },
     useUnistyles: jest.fn(() => ({
       theme: lightTheme,

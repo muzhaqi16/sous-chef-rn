@@ -6,6 +6,16 @@ query SearchRecipes($query: String!, $first: Int, $after: String) {
   searchRecipes(query: $query, first: $first, after: $after) {
     edges {
       node {
+        # Inline fields read imperatively by useRecipeScreen's combined
+        # search (operation results are masked; fragment fields are not
+        # readable at query time) — same pattern as MyRecipes.
+        id
+        name
+        imageUrl
+        servings
+        totalTimeMinutes
+        externalSource
+        externalId
         ...BasicRecipeFragment
       }
       cursor

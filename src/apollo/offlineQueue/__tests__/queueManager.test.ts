@@ -179,6 +179,108 @@ describe('QueueManager', () => {
   });
 
   // -------------------------------------------------------------------------
+  // Parent-create FIFO ordering
+  // -------------------------------------------------------------------------
+  describe('parent-create FIFO ordering', () => {
+    /**
+     * Instrument processMutation to record start/end interleaving: a
+     * concurrent batch shows all starts before the first end, a sequential
+     * batch strictly alternates start → end per mutation.
+     */
+    function instrumentProcessing(events: string[]) {
+      manager['processMutation'] = jest.fn(
+        async (mutation: QueuedMutation): Promise<ProcessingResult> => {
+          events.push(`start:${mutation.id}`);
+          await Promise.resolve();
+          events.push(`end:${mutation.id}`);
+          return { success: true, mutationId: mutation.id };
+        },
+      );
+    }
+
+    beforeEach(() => {
+      mockedGetState.mockReturnValue({
+        user: { id: 'user-1' },
+        accessToken: 'token',
+        isOnline: true,
+        apiReachable: true,
+      });
+      manager['validateTokenBeforeReplay'] = jest.fn().mockResolvedValue(true);
+    });
+
+    it('replays a batch containing CreateShoppingList strictly in FIFO order', async () => {
+      // A list created offline + items added to it (still offline): the items
+      // reference the list's client-minted id, so the create MUST land first —
+      // entity grouping alone can't see that dependency (each op keys on its
+      // own id) and would replay them concurrently.
+      const createList = makeMutation({
+        id: 'mut-create-list',
+        operationName: 'CreateShoppingList',
+        variables: { input: { id: 'list-1', name: 'Offline list' } },
+      });
+      const addA = makeMutation({
+        id: 'mut-add-a',
+        operationName: 'AddItemToShoppingList',
+        variables: { input: { id: 'item-a', shoppingListId: 'list-1' } },
+      });
+      const addB = makeMutation({
+        id: 'mut-add-b',
+        operationName: 'AddItemToShoppingList',
+        variables: { input: { id: 'item-b', shoppingListId: 'list-1' } },
+      });
+      (queueStore.getPendingMutationsForUser as jest.Mock).mockReturnValue([
+        createList,
+        addA,
+        addB,
+      ]);
+
+      const events: string[] = [];
+      instrumentProcessing(events);
+
+      await manager.processQueue();
+
+      expect(events).toEqual([
+        'start:mut-create-list',
+        'end:mut-create-list',
+        'start:mut-add-a',
+        'end:mut-add-a',
+        'start:mut-add-b',
+        'end:mut-add-b',
+      ]);
+    });
+
+    it('keeps different-entity mutations concurrent when no parent create is queued', async () => {
+      const addA = makeMutation({
+        id: 'mut-add-a',
+        operationName: 'AddItemToShoppingList',
+        variables: { input: { id: 'item-a', shoppingListId: 'list-1' } },
+      });
+      const addB = makeMutation({
+        id: 'mut-add-b',
+        operationName: 'AddItemToShoppingList',
+        variables: { input: { id: 'item-b', shoppingListId: 'list-1' } },
+      });
+      (queueStore.getPendingMutationsForUser as jest.Mock).mockReturnValue([
+        addA,
+        addB,
+      ]);
+
+      const events: string[] = [];
+      instrumentProcessing(events);
+
+      await manager.processQueue();
+
+      // Independent items replay concurrently: both start before either ends.
+      expect(events).toEqual([
+        'start:mut-add-a',
+        'start:mut-add-b',
+        'end:mut-add-a',
+        'end:mut-add-b',
+      ]);
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // classifyError (tested through handleMutationError behavior)
   // -------------------------------------------------------------------------
   describe('classifyError', () => {
@@ -720,6 +822,53 @@ describe('QueueManager', () => {
       expect(() => convertToSyncMutation(mutation)).toThrow(
         'Cannot sync UpdatePantryItem: pantryId not found',
       );
+    });
+
+    // UpdatePantryItemQuantityInput carries the item id as `pantryItemId`, the
+    // quantity as a raw string, and the unit as a flat `unitId` — none of which
+    // align with SyncPantryItemInput. The dedicated builder maps each field.
+    it('converts UpdatePantryItemQuantity → SyncPantryItem (pantryItemId → clientId, string → Float, unitId → unit)', () => {
+      mockClient.cache.readFragment.mockReturnValue({
+        id: 'item-q',
+        pantryId: 'pan-q',
+      });
+      const mutation = makeMutation({
+        operationName: 'UpdatePantryItemQuantity',
+        variables: {
+          input: {
+            pantryItemId: 'item-q',
+            quantity: '2.5',
+            unitId: 'unit-7',
+            version: 3,
+          },
+        },
+      });
+      const { syncVariables } = convertToSyncMutation(mutation);
+      const input = wrapper(syncVariables);
+      expect(input.clientId).toBe('item-q');
+      expect(input.pantryId).toBe('pan-q');
+      expect(input.quantity).toBe(2.5);
+      expect(input.unit).toEqual({ unitId: 'unit-7' });
+      expect(input.version).toBe(3);
+      expect(input.pantryItemId).toBeUndefined();
+    });
+
+    it('omits quantity/unit from the quantity sync when absent or unparsable', () => {
+      mockClient.cache.readFragment.mockReturnValue({
+        id: 'item-q2',
+        pantryId: 'pan-q2',
+      });
+      const mutation = makeMutation({
+        operationName: 'UpdatePantryItemQuantity',
+        variables: {
+          input: { pantryItemId: 'item-q2', quantity: '', unitId: null },
+        },
+      });
+      const { syncVariables } = convertToSyncMutation(mutation);
+      const input = wrapper(syncVariables);
+      expect(input.clientId).toBe('item-q2');
+      expect(input.quantity).toBeUndefined();
+      expect(input.unit).toBeUndefined();
     });
 
     it('converts DeletePantryItem → SyncDeletePantryItem', () => {

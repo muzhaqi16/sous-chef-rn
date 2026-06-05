@@ -23,3 +23,14 @@ fragment MealPlanItemActions_optimisticFullItem on MealPlanItem {
   ...MealPlanMain_item
   ...MealPlanItemActions_item
 }
+
+# Recipe display fields an optimistic meal needs — the union of the `recipe`
+# selections across the item display fragments above, resolved from the
+# cache's canonical Recipe entity for a local-first create.
+fragment MealPlanItemActions_recipeRef on Recipe {
+  id
+  name
+  imageUrl
+  totalTimeMinutes
+  servings
+}

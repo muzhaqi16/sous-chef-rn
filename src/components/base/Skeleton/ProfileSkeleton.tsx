@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ThemedSafeAreaView } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { SkeletonCircle } from './SkeletonCircle';
 import { SkeletonLine } from './SkeletonLine';
@@ -33,7 +33,7 @@ const SECTIONS: ReadonlyArray<{ rows: number; hasTitle: boolean }> = [
  */
 export const ProfileSkeleton: React.FC = () => {
   return (
-    <SafeAreaView style={styles.container} edges={['left', 'right']}>
+    <ThemedSafeAreaView style={styles.container} edges={['left', 'right']}>
       {/* Header row: back button (44) / avatar (80) / more button (44).
           Avatar overlaps the smaller buttons vertically — same as the real
           ProfileHeader. */}
@@ -73,7 +73,7 @@ export const ProfileSkeleton: React.FC = () => {
           </View>
         </View>
       ))}
-    </SafeAreaView>
+    </ThemedSafeAreaView>
   );
 };
 

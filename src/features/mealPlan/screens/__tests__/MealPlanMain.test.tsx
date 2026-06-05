@@ -139,6 +139,9 @@ jest.mock('#features/mealPlan/hooks/useMealPlanPermissions', () => ({
 
 jest.mock('#store/useAppStore', () => ({
   useAppStore: jest.fn(() => null),
+  // useMealPlanActions reads the auth identity to materialize local-first
+  // optimistic plans; null keeps the legacy online-only path in these tests.
+  useUser: jest.fn(() => null),
 }));
 
 jest.mock('#/services/toastService', () => ({

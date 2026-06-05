@@ -7,6 +7,7 @@ import { isNetworkError } from '#/utils/isNetworkError';
 import { useStore } from '#store';
 import { queueStore } from './queueStore';
 import { queueManager } from './queueManager';
+import { hasSyncMapping } from './convertToSyncMutation';
 import { QueuedMutation, QueueStatus } from './types';
 
 /**
@@ -26,8 +27,13 @@ const NEVER_QUEUE_OPERATIONS = [
  *
  * Behavior:
  * - **Offline** (`isOnline === false`): queue immediately and complete without
- *   hitting the network. Each mutation hook has already written its change to the
- *   cache, so the UI reflects it; the queue replays when back online.
+ *   hitting the network — but ONLY for mutations on the replay allowlist:
+ *   `context.localFirst` opt-ins (their hooks wrote the change to the cache
+ *   permanently and treat the queued result as success) or operations with a
+ *   `Sync*` replay mapping (idempotent upserts, safe even without the opt-in).
+ *   Every other mutation fails fast with a network error so its hook surfaces
+ *   an HONEST failure — queueing it would show a failure toast and then
+ *   ghost-execute the change on reconnect (reviews, invites, etc.).
  * - **Online but the request fails with a NETWORK error** (API unreachable while
  *   the device still reports "online" — API down, timeout, captive portal): queue
  *   the mutation for replay instead of surfacing the error — but ONLY when the
@@ -62,9 +68,25 @@ export const createQueueLink = () => {
     }
 
     const state = useStore.getState();
+    const localFirst = operation.getContext().localFirst === true;
 
-    // Device offline — queue every mutation; it can't reach the server.
+    // Device offline — queue only mutations the queue can replay correctly:
+    // local-first opt-ins and Sync*-mapped operations. Anything else fails fast
+    // with a network-shaped error (instant honest toast, no doomed request, and
+    // no ghost replay on reconnect).
     if (!state.isOnline) {
+      if (!localFirst && !hasSyncMapping(operation.operationName ?? '')) {
+        logger.info(
+          `Queue Link: Offline, rejecting online-only mutation ${operation.operationName}`,
+        );
+        return new Observable(observer => {
+          observer.error(
+            new Error(
+              `Network unavailable: device is offline and ${operation.operationName} cannot be queued for replay`,
+            ),
+          );
+        });
+      }
       logger.info(
         `Queue Link: Offline, queuing mutation ${operation.operationName}`,
       );
@@ -72,8 +94,6 @@ export const createQueueLink = () => {
         enqueueAndComplete(operation, observer, 'offline');
       });
     }
-
-    const localFirst = operation.getContext().localFirst;
 
     // API unreachable while the device is online (reachability circuit breaker
     // open) — queue local-first mutations immediately instead of firing a doomed

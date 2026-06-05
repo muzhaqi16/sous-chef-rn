@@ -19,17 +19,20 @@ import {
   type ClearShoppingListItemsMutationVariables,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
+import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import {
   clearAllPurchasedItemsFromCache,
   clearAllUnpurchasedItemsFromCache,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
 
 // The mutate function returned by useMutation for the clear operation. The
-// hook only ever passes `variables` (the operation's `input`) and a no-op
-// `update`, so this captures just that subset of the Apollo mutate options.
+// hook only ever passes `variables` (the operation's `input`), a no-op
+// `update`, and the local-first context, so this captures just that subset of
+// the Apollo mutate options.
 type ClearMutationFn = (options: {
   variables: ClearShoppingListItemsMutationVariables;
   update?: () => void;
+  context?: { localFirst: boolean };
 }) => Promise<unknown>;
 
 // The hook only reads `id` and the array length from the item lists.
@@ -62,12 +65,15 @@ async function executeClearItems(
     clearAllUnpurchasedItemsFromCache(client.cache, listId, itemIds);
   }
 
-  // 2. Fire single batch mutation
+  // 2. Fire single batch mutation. Local-first: a queued offline clear keeps
+  //    the cache cleared and replays later (clearing an already-cleared list
+  //    is a no-op, so the replay is idempotent).
   const result = await executeMutation(
     () =>
       clearMutation({
         variables: { input: { shoppingListId: listId, purchased } },
         update: () => {}, // Cache already cleared optimistically
+        context: { localFirst: true },
       }),
     async error => {
       console.warn(
@@ -82,6 +88,18 @@ async function executeClearItems(
 
   isClearingRef.current = false;
   if (result === false) return;
+
+  // 'queued' (null payload, no error) keeps the cleared cache — the clear
+  // replays later. A rejection means the server refused it: the evicted items
+  // still exist server-side, so refetch to restore them.
+  const outcome = classifyCreateResult(
+    result as { data?: unknown; error?: unknown },
+    'clearShoppingListItems',
+    'ClearItemsResponse',
+  );
+  if (outcome === 'rejected') {
+    await refetch();
+  }
 }
 
 /**

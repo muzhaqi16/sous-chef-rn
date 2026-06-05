@@ -1,7 +1,7 @@
 import { BackButton } from '#components/atoms/BackButton';
 import React, { ReactNode } from 'react';
 import { KeyboardAvoidingView, Platform, View, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ThemedSafeAreaView } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { OnboardingSteps } from '#components/navigation/OnboardingSteps/OnboardingSteps';
@@ -59,7 +59,7 @@ export const OnBoardingWrapper = ({
   const displaySubtitle = subtitle || onboardingContext?.currentStep?.subtitle;
 
   return (
-    <SafeAreaView style={styles.safeArea} testID={testID}>
+    <ThemedSafeAreaView style={styles.safeArea} testID={testID}>
       <View style={styles.headerContainer}>
         {onBack ? (
           <ThemedBackButton
@@ -148,7 +148,7 @@ export const OnBoardingWrapper = ({
           )}
         </View>
       )}
-    </SafeAreaView>
+    </ThemedSafeAreaView>
   );
 };
 

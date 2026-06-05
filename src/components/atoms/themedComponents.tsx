@@ -5,6 +5,7 @@ import {
   TextInput,
 } from 'react-native';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { withUnistyles } from 'react-native-unistyles';
 
 import { BackButton } from './BackButton';
@@ -88,3 +89,13 @@ export const ThemedIconButton = withUnistyles(IconButton);
 export const ThemedBackButton = withUnistyles(BackButton, theme => ({
   color: theme.colors.textPrimary,
 }));
+
+/** Theme-reactive SafeAreaView for screen containers. The safe-area-context
+ * SafeAreaView is a third-party native component, so the Unistyles babel
+ * plugin does not bind it to the ShadowTree — a `styles.container` background
+ * passed to it resolves once at render and never receives native theme
+ * updates (the screen keeps the old background after a light/dark switch
+ * until something re-renders it). The `withUnistyles` wrapper re-renders on
+ * theme change, re-resolving the style. Use this for any SafeAreaView whose
+ * style reads theme values. */
+export const ThemedSafeAreaView = withUnistyles(SafeAreaView);

@@ -40,6 +40,22 @@ const QUEUE_PANTRY_ITEM_FRAGMENT = gql`
 `;
 
 /**
+ * Operations that create a PARENT entity other queued mutations may depend on.
+ * A shopping list created offline can have items added to it (still offline)
+ * whose variables reference its client-minted id. Entity grouping can't see
+ * that dependency — the list create keys on the list id while each item add
+ * keys on its own item id — so a batch containing one of these is processed
+ * strictly in FIFO order instead of concurrently (insertion order is causal
+ * order: the user can't act on an entity before creating it).
+ */
+const PARENT_CREATE_OPERATIONS = [
+  'CreateShoppingList',
+  'CreateMealPlan',
+  'CreateRecipe',
+  'CreatePantry',
+];
+
+/**
  * Default configuration for the queue manager
  */
 const DEFAULT_CONFIG: QueueConfig = {
@@ -218,9 +234,19 @@ export class QueueManager {
         break;
       }
 
+      // A parent-entity create (an offline-created shopping list) may have
+      // dependents queued behind it (items added to it while offline) that
+      // entity grouping can't chain — replay the whole batch in FIFO order so
+      // the create lands before anything referencing its id.
+      const hasParentCreate = batch.some(mutation =>
+        PARENT_CREATE_OPERATIONS.includes(mutation.operationName),
+      );
+
       // Group mutations by entity ID to process same-entity operations sequentially
       // This prevents race conditions like create-then-update on the same entity
-      const { independent, entityGroups } = this.groupByEntity(batch);
+      const { independent, entityGroups } = hasParentCreate
+        ? { independent: [], entityGroups: [batch] }
+        : this.groupByEntity(batch);
 
       // Process independent mutations (different entities) concurrently
       const independentResults = await Promise.allSettled(

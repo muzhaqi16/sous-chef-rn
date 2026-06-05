@@ -94,6 +94,8 @@ jest.mock('#features/recipes/hooks/useRecipeScreen', () => ({
     setActiveFilters: jest.fn(),
     activeFilterCount: 0,
     clearFilters: jest.fn(),
+    removeFilter: jest.fn(),
+    clearFiltersAndSearchAgain: jest.fn(),
     handleTextSearch: jest.fn(),
     handleIngredientSearch: jest.fn(),
     handleRefresh: jest.fn(),
@@ -222,6 +224,8 @@ function mockScreenWith(overrides: Record<string, unknown>) {
     setActiveFilters: jest.fn(),
     activeFilterCount: 0,
     clearFilters: jest.fn(),
+    removeFilter: jest.fn(),
+    clearFiltersAndSearchAgain: jest.fn(),
     handleTextSearch: jest.fn(),
     handleIngredientSearch: jest.fn(),
     handleRefresh: jest.fn(),
@@ -443,6 +447,151 @@ describe('RecipeMain', () => {
       externalSource: 'SPOONACULAR',
       externalId: '999',
     });
+  });
+
+  it('navigates to RecipeDetail with recipeId for local- prefixed items', () => {
+    mockDeferredScreen.mockImplementation(
+      ({ component: Component }: { component: React.ComponentType }) => (
+        <Component />
+      ),
+    );
+    const mockToRecipeDetail = jest.fn();
+    const { useAppNavigation } = jest.requireMock(
+      '#hooks/navigation/useAppNavigation',
+    );
+    useAppNavigation.mockReturnValue({
+      toRecipeCreate: jest.fn(),
+      toRecipeDetail: mockToRecipeDetail,
+      toSavedRecipes: jest.fn(),
+      toMyRecipes: jest.fn(),
+      goBack: jest.fn(),
+    });
+
+    let capturedOnItemPress: ((id: string | number) => void) | undefined;
+    mockItemListImpl = (props: ItemListMockProps) => {
+      capturedOnItemPress = props.onItemPress;
+      return null;
+    };
+
+    render(<RecipeMain />);
+    act(() => {
+      capturedOnItemPress!('local-abc123');
+    });
+    expect(mockToRecipeDetail).toHaveBeenCalledWith({ recipeId: 'abc123' });
+  });
+
+  it('shows the filter count badge when filters are active', () => {
+    mockDeferredScreen.mockImplementation(
+      ({ component: Component }: { component: React.ComponentType }) => (
+        <Component />
+      ),
+    );
+    mockScreenWith({
+      activeFilterCount: 3,
+      activeFilters: {
+        diet: ['vegetarian'],
+        intolerances: ['dairy'],
+        mealType: null,
+        maxReadyTime: 30,
+      },
+    });
+
+    const tree = render(<RecipeMain />);
+    expect(tree.getByTestId('filter-count-badge')).toBeTruthy();
+    expect(tree.getByText('3')).toBeTruthy();
+  });
+
+  it('hides the filter count badge when no filters are active', () => {
+    mockDeferredScreen.mockImplementation(
+      ({ component: Component }: { component: React.ComponentType }) => (
+        <Component />
+      ),
+    );
+
+    const tree = render(<RecipeMain />);
+    expect(tree.queryByTestId('filter-count-badge')).toBeNull();
+  });
+
+  it('shows a collapsed filter summary during text search that expands to removable chips', async () => {
+    const user = userEvent.setup();
+    mockDeferredScreen.mockImplementation(
+      ({ component: Component }: { component: React.ComponentType }) => (
+        <Component />
+      ),
+    );
+    const mockRemoveFilter = jest.fn();
+    const mockClearAndSearch = jest.fn();
+    mockScreenWith({
+      searchPerformed: true,
+      searchQuery: 'pasta',
+      activeFilterCount: 3,
+      activeFilters: {
+        diet: ['vegetarian'],
+        intolerances: ['dairy'],
+        mealType: null,
+        maxReadyTime: 30,
+      },
+      removeFilter: mockRemoveFilter,
+      clearFiltersAndSearchAgain: mockClearAndSearch,
+    });
+
+    const tree = render(<RecipeMain />);
+
+    // Collapsed by default: summary visible, chips hidden
+    expect(tree.getByText('3 filters active')).toBeTruthy();
+    expect(tree.queryByText('Vegetarian')).toBeNull();
+
+    await user.press(tree.getByTestId('active-filters-summary'));
+
+    expect(tree.getByText('Vegetarian')).toBeTruthy();
+    expect(tree.getByText('Dairy')).toBeTruthy();
+    expect(tree.getByText('≤ 30 min')).toBeTruthy();
+
+    await user.press(tree.getByText('Vegetarian'));
+    expect(mockRemoveFilter).toHaveBeenCalledWith('diet', 'vegetarian');
+
+    await user.press(tree.getByText('≤ 30 min'));
+    expect(mockRemoveFilter).toHaveBeenCalledWith('maxReadyTime', undefined);
+
+    await user.press(tree.getByText('Clear'));
+    expect(mockClearAndSearch).toHaveBeenCalledTimes(1);
+  });
+
+  it('hides the filter row on the discovery feed even with filters active', () => {
+    mockDeferredScreen.mockImplementation(
+      ({ component: Component }: { component: React.ComponentType }) => (
+        <Component />
+      ),
+    );
+    // Filters set, but no text search performed — discovery/ingredient
+    // results don't take filters, so the row must not render.
+    mockScreenWith({
+      searchPerformed: false,
+      searchQuery: '',
+      activeFilterCount: 2,
+      activeFilters: {
+        diet: ['vegan'],
+        intolerances: [],
+        mealType: null,
+        maxReadyTime: 30,
+      },
+    });
+
+    const tree = render(<RecipeMain />);
+    expect(tree.queryByTestId('active-filters-summary')).toBeNull();
+  });
+
+  it('renders no filter row when no filters are active', () => {
+    mockDeferredScreen.mockImplementation(
+      ({ component: Component }: { component: React.ComponentType }) => (
+        <Component />
+      ),
+    );
+    mockScreenWith({ searchPerformed: true, searchQuery: 'pasta' });
+
+    const tree = render(<RecipeMain />);
+    expect(tree.queryByTestId('active-filters-summary')).toBeNull();
+    expect(tree.queryByText('Clear')).toBeNull();
   });
 
   it('shows empty state from useRecipeScreen', () => {

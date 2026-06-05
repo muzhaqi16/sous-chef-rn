@@ -1,10 +1,30 @@
+/**
+ * useMealPlanItemActions - Meal plan item create / update / toggle / delete
+ * (local-first).
+ *
+ * Each operation writes its change to the cache PERMANENTLY before firing, so
+ * it survives an offline / API-down queue (an `optimisticResponse` would roll
+ * back the moment the queue completes the request with a null result):
+ * - create: mints the permanent cuid PK and materializes the full item display
+ *   shape (recipe resolved from cache); a replay that collides with the
+ *   (mealPlanId, date, mealType, recipeId) unique key returns the existing row
+ *   server-side, so the queued create is idempotent.
+ * - update / toggle: merge over a snapshot; a rejection restores it.
+ * - delete: removes the item up front; a rejection restores the snapshot.
+ */
+
 import { useApolloClient, useMutation } from '@apollo/client/react';
+import type { ApolloCache } from '@apollo/client';
 import {
   CreateMealPlanItemDocument,
   UpdateMealPlanItemDocument,
   DeleteMealPlanItemDocument,
 } from '#features/mealPlan/graphql/mealPlan.generated';
-import { MealPlanItemActions_OptimisticFullItemFragmentDoc } from './useMealPlanItemActions.generated';
+import {
+  MealPlanItemActions_OptimisticFullItemFragmentDoc,
+  MealPlanItemActions_RecipeRefFragmentDoc,
+  type MealPlanItemActions_RecipeRefFragment,
+} from './useMealPlanItemActions.generated';
 import {
   type CreateMealPlanItemInput,
   type UpdateMealPlanItemInput,
@@ -15,6 +35,12 @@ import {
   createAddToParentArrayUpdater,
   createRemoveFromParentArrayUpdater,
 } from '#/apollo/utils/cacheUpdaters';
+import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import {
+  executeCacheUpdate,
+  executeMutation,
+} from '#/utils/compilerSafeWrappers';
+import { generateEntityId } from '#/utils/generateEntityId';
 
 const addToMealPlanItems = createAddToParentArrayUpdater<{ id: string }>(
   'MealPlan',
@@ -25,6 +51,68 @@ const removeFromMealPlanItems = createRemoveFromParentArrayUpdater(
   'mealPlanItems',
   'MealPlanItem',
 );
+
+/** Queued create/update results reported to callers as success. */
+const QUEUED_CREATE_PAYLOAD: { __typename: 'CreateMealPlanItemPayload' } = {
+  __typename: 'CreateMealPlanItemPayload',
+};
+const QUEUED_UPDATE_PAYLOAD: { __typename: 'UpdateMealPlanItemPayload' } = {
+  __typename: 'UpdateMealPlanItemPayload',
+};
+
+/** The flat field union of the five item display fragments. */
+type OptimisticMealPlanItem = {
+  __typename: 'MealPlanItem';
+  id: string;
+  date: string;
+  mealType: CreateMealPlanItemInput['mealType'];
+  customMealName: string | null;
+  servings: number | null;
+  calories: number | null;
+  usedPantryItems: JsonValue;
+  notes: string | null;
+  isCompleted: boolean;
+  completedAt: string | null;
+  recipe: MealPlanItemActions_RecipeRefFragment | null;
+};
+
+/**
+ * Materialize a complete optimistic MealPlanItem for a local-first create.
+ * The recipe ref resolves from the cache's canonical Recipe entity (the user
+ * just picked it, so it's cached); a miss degrades to a recipe-less card that
+ * the post-replay refetch heals.
+ */
+function buildOptimisticMealPlanItem(
+  cache: ApolloCache,
+  id: string,
+  input: CreateMealPlanItemInput,
+): OptimisticMealPlanItem {
+  const recipeCacheId = input.recipeId
+    ? cache.identify({ __typename: 'Recipe', id: input.recipeId })
+    : undefined;
+  const recipe = recipeCacheId
+    ? cache.readFragment<MealPlanItemActions_RecipeRefFragment>({
+        id: recipeCacheId,
+        fragment: MealPlanItemActions_RecipeRefFragmentDoc,
+        fragmentName: 'MealPlanItemActions_recipeRef',
+      })
+    : null;
+
+  return {
+    __typename: 'MealPlanItem',
+    id,
+    date: input.date,
+    mealType: input.mealType,
+    customMealName: input.customMealName ?? null,
+    servings: input.servings ?? null,
+    calories: input.calories ?? null,
+    usedPantryItems: [],
+    notes: input.notes ?? null,
+    isCompleted: false,
+    completedAt: null,
+    recipe,
+  };
+}
 
 export function useMealPlanItemActions(mealPlanId: string | null) {
   const client = useApolloClient();
@@ -51,60 +139,143 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
 
   const [deleteItemMutation, { loading: deleting }] = useMutation(
     DeleteMealPlanItemDocument,
-    {
-      update(cache, { data }) {
-        const result = data?.deleteMealPlanItem;
-        if (result?.__typename !== 'DeleteMealPlanItemPayload' || !mealPlanId) {
-          return;
-        }
-        removeFromMealPlanItems(cache, mealPlanId, result.mealPlanItem.id, {
-          evictItem: true,
-        });
-      },
-    },
   );
 
-  const createItem = async (input: CreateMealPlanItemInput) => {
-    const result = await createItemMutation({
-      variables: { input },
+  const writeItem = (data: OptimisticMealPlanItem) =>
+    client.cache.writeFragment({
+      id: client.cache.identify(data),
+      fragment: MealPlanItemActions_OptimisticFullItemFragmentDoc,
+      fragmentName: 'MealPlanItemActions_optimisticFullItem',
+      data,
     });
-    const payload = result.data?.createMealPlanItem;
-    if (payload?.__typename !== 'CreateMealPlanItemPayload') {
+
+  const readItemSnapshot = (id: string) =>
+    client.cache.readFragment({
+      fragment: MealPlanItemActions_OptimisticFullItemFragmentDoc,
+      fragmentName: 'MealPlanItemActions_optimisticFullItem',
+      from: { __typename: 'MealPlanItem', id },
+    });
+
+  const createItem = async (input: CreateMealPlanItemInput) => {
+    // Local-first: mint the permanent cuid (the row's real PK) and write the
+    // meal into the cache before firing, so adding works fully offline.
+    const id = generateEntityId();
+    const optimisticItem = buildOptimisticMealPlanItem(client.cache, id, input);
+    executeCacheUpdate(() => {
+      writeItem(optimisticItem);
+      if (mealPlanId) {
+        addToMealPlanItems(client.cache, mealPlanId, optimisticItem, {
+          position: 'end',
+        });
+      }
+    }, 'Add Meal (optimistic)');
+
+    const result = await executeMutation(
+      () =>
+        createItemMutation({
+          variables: { input: { ...input, id } },
+          context: { localFirst: true },
+        }),
+      'Create Meal Plan Item error:',
+    );
+
+    const outcome = !result
+      ? 'rejected'
+      : classifyCreateResult(
+          result,
+          'createMealPlanItem',
+          'CreateMealPlanItemPayload',
+        );
+
+    if (outcome === 'rejected') {
+      executeCacheUpdate(() => {
+        if (mealPlanId) {
+          removeFromMealPlanItems(client.cache, mealPlanId, id, {
+            evictItem: true,
+          });
+        }
+      }, 'Revert rejected Meal Plan Item');
+      const payload = result ? result.data?.createMealPlanItem : null;
       const message = payload && 'message' in payload ? payload.message : null;
       toastService.error(message ?? 'Failed to add meal');
       return null;
     }
-    return payload;
+    if (outcome === 'queued') {
+      // Offline / API down: the meal stays in cache and the create replays
+      // keyed by the same id — report success to the caller.
+      return QUEUED_CREATE_PAYLOAD;
+    }
+    const payload = result ? result.data?.createMealPlanItem : null;
+    return payload?.__typename === 'CreateMealPlanItemPayload' ? payload : null;
   };
 
   const updateItem = async (
     id: string,
     input: Omit<UpdateMealPlanItemInput, 'id'>,
   ) => {
-    const result = await updateItemMutation({
-      variables: { input: { ...input, id } },
-    });
-    const payload = result.data?.updateMealPlanItem;
-    if (payload?.__typename !== 'UpdateMealPlanItemPayload') {
+    // Permanent write BEFORE firing — survives an offline/API-down queue.
+    const snapshot = readItemSnapshot(id) as OptimisticMealPlanItem | null;
+    if (snapshot) {
+      executeCacheUpdate(
+        () =>
+          writeItem({
+            ...snapshot,
+            ...(input.customMealName !== undefined && {
+              customMealName: input.customMealName,
+            }),
+            ...(input.servings !== undefined && { servings: input.servings }),
+            ...(input.notes !== undefined && { notes: input.notes }),
+            ...(input.mealType != null && { mealType: input.mealType }),
+            ...(input.date != null && { date: input.date }),
+          }),
+        'Update Meal (optimistic)',
+      );
+    }
+
+    const result = await executeMutation(
+      () =>
+        updateItemMutation({
+          variables: { input: { ...input, id } },
+          context: { localFirst: true },
+        }),
+      'Update Meal Plan Item error:',
+    );
+
+    const outcome = !result
+      ? 'rejected'
+      : classifyCreateResult(
+          result,
+          'updateMealPlanItem',
+          'UpdateMealPlanItemPayload',
+        );
+
+    if (outcome === 'rejected') {
+      if (snapshot) {
+        executeCacheUpdate(
+          () => writeItem(snapshot),
+          'Revert rejected Meal update',
+        );
+      }
+      const payload = result ? result.data?.updateMealPlanItem : null;
       const message = payload && 'message' in payload ? payload.message : null;
       toastService.error(message ?? 'Failed to update meal');
       return null;
     }
-    return payload;
+    if (outcome === 'queued') {
+      return QUEUED_UPDATE_PAYLOAD;
+    }
+    const payload = result ? result.data?.updateMealPlanItem : null;
+    return payload?.__typename === 'UpdateMealPlanItemPayload' ? payload : null;
   };
 
   const toggleCompleted = async (
     id: string,
     options?: { deductFromPantry?: boolean; servings?: number; notes?: string },
   ) => {
-    // Materialize the full optimistic shape from cache — callers only pass an
-    // id, so we read here to get isCompleted/recipe for branching and a
-    // complete payload to spread into the optimistic response.
-    const fullItem = client.cache.readFragment({
-      fragment: MealPlanItemActions_OptimisticFullItemFragmentDoc,
-      fragmentName: 'MealPlanItemActions_optimisticFullItem',
-      from: { __typename: 'MealPlanItem', id },
-    });
+    // Materialize the full shape from cache — callers only pass an id, so we
+    // read here to get isCompleted/recipe for branching and a complete entity
+    // for the permanent write.
+    const fullItem = readItemSnapshot(id) as OptimisticMealPlanItem | null;
     if (!fullItem) {
       toastService.error('Failed to update meal');
       return null;
@@ -123,44 +294,73 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
       markingComplete,
     );
 
-    const result = await updateItemMutation({
-      variables: {
-        input: {
-          id: fullItem.id,
+    // Permanent write BEFORE firing — survives an offline/API-down queue.
+    executeCacheUpdate(
+      () =>
+        writeItem({
+          ...fullItem,
           isCompleted: markingComplete,
           completedAt,
-          ...(markingComplete &&
-            deductFromPantry != null && { deductFromPantry }),
-          ...(markingComplete &&
-            options?.servings != null && { servings: options.servings }),
-          ...(markingComplete &&
-            options?.notes != null && { notes: options.notes }),
-        },
-      },
-      optimisticResponse: {
-        __typename: 'Mutation',
-        updateMealPlanItem: {
-          __typename: 'UpdateMealPlanItemPayload',
-          mealPlanItem: {
-            ...fullItem,
-            isCompleted: markingComplete,
-            completedAt,
-            ...(options?.servings != null && { servings: options.servings }),
-            ...(options?.notes != null && { notes: options.notes }),
-          },
-        },
-      },
-    });
+          ...(options?.servings != null && { servings: options.servings }),
+          ...(options?.notes != null && { notes: options.notes }),
+        }),
+      'Toggle Meal completed (optimistic)',
+    );
 
-    const payload = result.data?.updateMealPlanItem;
-    if (payload?.__typename !== 'UpdateMealPlanItemPayload') {
+    const result = await executeMutation(
+      () =>
+        updateItemMutation({
+          variables: {
+            input: {
+              id: fullItem.id,
+              isCompleted: markingComplete,
+              completedAt,
+              ...(markingComplete &&
+                deductFromPantry != null && { deductFromPantry }),
+              ...(markingComplete &&
+                options?.servings != null && { servings: options.servings }),
+              ...(markingComplete &&
+                options?.notes != null && { notes: options.notes }),
+            },
+          },
+          context: { localFirst: true },
+        }),
+      'Toggle Meal Plan Item error:',
+    );
+
+    const outcome = !result
+      ? 'rejected'
+      : classifyCreateResult(
+          result,
+          'updateMealPlanItem',
+          'UpdateMealPlanItemPayload',
+        );
+
+    if (outcome === 'rejected') {
+      executeCacheUpdate(
+        () => writeItem(fullItem),
+        'Revert rejected Meal toggle',
+      );
+      optimisticDataPersistence.clear(
+        'MealPlanItem',
+        fullItem.id,
+        'isCompleted',
+      );
+      const payload = result ? result.data?.updateMealPlanItem : null;
       const message = payload && 'message' in payload ? payload.message : null;
       toastService.error(message ?? 'Failed to update meal');
       return null;
     }
 
-    // Clear persisted optimistic state on server confirmation
-    optimisticDataPersistence.clear('MealPlanItem', fullItem.id, 'isCompleted');
+    if (outcome === 'created') {
+      // Clear persisted optimistic state on server confirmation; a queued
+      // toggle keeps it until the replay confirms.
+      optimisticDataPersistence.clear(
+        'MealPlanItem',
+        fullItem.id,
+        'isCompleted',
+      );
+    }
 
     if (markingComplete) {
       if (hasRecipe && deductFromPantry) {
@@ -170,17 +370,59 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
       }
     }
 
-    return payload;
+    if (outcome === 'queued') {
+      return QUEUED_UPDATE_PAYLOAD;
+    }
+    const payload = result ? result.data?.updateMealPlanItem : null;
+    return payload?.__typename === 'UpdateMealPlanItemPayload' ? payload : null;
   };
 
   const deleteItem = async (id: string) => {
-    const result = await deleteItemMutation({
-      variables: { input: { id } },
-    });
-    return (
-      result.data?.deleteMealPlanItem?.__typename ===
-      'DeleteMealPlanItemPayload'
+    // Snapshot first so a server rejection can restore the meal.
+    const snapshot = readItemSnapshot(id) as OptimisticMealPlanItem | null;
+
+    // Local-first: remove from the cache BEFORE firing, so the deletion is
+    // visible immediately and survives an offline queue (a duplicate replay
+    // surfaces as NotFound, which the queue drops).
+    executeCacheUpdate(() => {
+      if (mealPlanId) {
+        removeFromMealPlanItems(client.cache, mealPlanId, id, {
+          evictItem: true,
+        });
+      }
+    }, 'Delete Meal (optimistic)');
+
+    const result = await executeMutation(
+      () =>
+        deleteItemMutation({
+          variables: { input: { id } },
+          context: { localFirst: true },
+        }),
+      'Delete Meal Plan Item error:',
     );
+
+    const outcome = !result
+      ? 'rejected'
+      : classifyCreateResult(
+          result,
+          'deleteMealPlanItem',
+          'DeleteMealPlanItemPayload',
+        );
+
+    if (outcome === 'rejected') {
+      if (snapshot) {
+        executeCacheUpdate(() => {
+          writeItem(snapshot);
+          if (mealPlanId) {
+            addToMealPlanItems(client.cache, mealPlanId, snapshot, {
+              position: 'end',
+            });
+          }
+        }, 'Restore refused Meal delete');
+      }
+      return false;
+    }
+    return true;
   };
 
   return {

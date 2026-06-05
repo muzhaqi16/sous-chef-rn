@@ -1,5 +1,8 @@
 import { useState } from 'react';
 
+import { useTranslation } from 'react-i18next';
+import { useApolloClient } from '@apollo/client/react';
+import type { ApolloClient } from '@apollo/client';
 import { alertService } from '#/services/alertService';
 import { t as tGlobal } from '#/i18n/t';
 import { useDeferredSearch } from '#hooks/performance/useDeferredSearch';
@@ -12,7 +15,14 @@ import type {
 import { useRecipeDiscovery } from '#features/recipes/hooks/useRecipeDiscovery';
 import { useDietaryProfile } from '#features/profile/hooks/useDietaryProfile';
 import { transformRecipeForDisplay } from '#/utils/recipeTransform';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
+import {
+  executeMutation,
+  executeSearchQuery,
+} from '#/utils/compilerSafeWrappers';
+import {
+  SearchRecipesDocument,
+  type SearchRecipesQuery,
+} from '#features/recipes/graphql/recipe.generated';
 import {
   useRecipeCacheStore,
   textSearchCacheKey,
@@ -20,7 +30,11 @@ import {
 } from '#/store/useRecipeCacheStore';
 import { useUserId } from '#store/useAppStore';
 import type { IconName } from '#/utils/iconUtils';
-import type { Diet, Intolerance } from '#/graphql/generated/schemaTypes';
+import {
+  ExternalSource,
+  type Diet,
+  type Intolerance,
+} from '#/graphql/generated/schemaTypes';
 
 // ── Filter types ──
 
@@ -67,48 +81,160 @@ function handleSearchError(error: unknown, label: string): void {
 const SEARCH_FETCH_SIZE = 25;
 const SEARCH_PAGE_SIZE = 15;
 
+type LocalRecipeNode =
+  SearchRecipesQuery['searchRecipes']['edges'][number]['node'];
+
+/** Transform Spoonacular search results into display items */
+function toSpoonacularDisplayItems(
+  results: (SearchRecipesResult | RecipeSearchResult)[],
+): DisplayItem[] {
+  return results.map(recipe => {
+    const t = transformRecipeForDisplay(recipe);
+    return {
+      id: t.id,
+      title: t.title,
+      subtitle: t.subtitle,
+      badge: t.badge
+        ? ({
+            text: t.badge.text,
+            variant: 'primary',
+          } satisfies DisplayItem['badge'])
+        : undefined,
+      imageUrl: t.imageUrl,
+    };
+  });
+}
+
+/** Transform local API recipe nodes into display items, mirroring the
+ * Spoonacular subtitle format. The `local-` id prefix keeps these
+ * collision-free against `spoonacular-<n>` ids and lets the press handler
+ * route to the backend recipe detail view. */
+function toLocalDisplayItems(nodes: LocalRecipeNode[]): DisplayItem[] {
+  return nodes.map(node => {
+    const subtitleParts: string[] = [];
+    if (node.totalTimeMinutes) {
+      subtitleParts.push(
+        `⏱ ${node.totalTimeMinutes} ${tGlobal('recipes.minutes')}`,
+      );
+    }
+    if (node.servings) {
+      subtitleParts.push(
+        `${node.servings} ${tGlobal('recipes.servingsSuffix')}`,
+      );
+    }
+    return {
+      id: `local-${node.id}`,
+      title: node.name,
+      subtitle: subtitleParts.join(' • '),
+      badge: {
+        text: tGlobal('recipes.myRecipeBadge'),
+        variant: 'success',
+      } satisfies DisplayItem['badge'],
+      imageUrl: node.imageUrl ?? undefined,
+    };
+  });
+}
+
 async function executeRecipeTextSearch(
   query: string,
   filters: RecipeFilters,
+  client: ApolloClient,
   setLoading: (v: boolean) => void,
   setSearchPerformed: (v: boolean) => void,
-  setSearchResults: (v: (SearchRecipesResult | RecipeSearchResult)[]) => void,
+  setDisplayResults: (v: DisplayItem[]) => void,
 ): Promise<void> {
   setLoading(true);
   setSearchPerformed(true);
 
-  // Check cache first
+  // Local API search — the user's own recipes. `searchRecipes` takes only a
+  // text query (no diet/intolerance params), so local results are shown
+  // regardless of active filters. Failures (offline, API unreachable) resolve
+  // to null and degrade silently — Spoonacular results still display.
+  const localPromise = executeSearchQuery<SearchRecipesQuery>(
+    () =>
+      client.query<SearchRecipesQuery>({
+        query: SearchRecipesDocument,
+        variables: { query, first: SEARCH_FETCH_SIZE },
+        fetchPolicy: 'network-only',
+      }),
+    () => false,
+  );
+
+  // Spoonacular search — served from the 24h cache when available. Errors
+  // are captured (not alerted) so the local source can still render; the
+  // alert only fires when the combined list would otherwise be empty.
+  let spoonacularError: unknown = null;
   const cacheKey = textSearchCacheKey(query, filters);
   const cacheStore = useRecipeCacheStore.getState();
   const cached = cacheStore.getCached(cacheKey);
 
-  if (cached) {
-    setSearchResults(cached.results);
-    setLoading(false);
-    return;
-  }
+  const spoonacularPromise: Promise<
+    (SearchRecipesResult | RecipeSearchResult)[]
+  > = cached
+    ? Promise.resolve(cached.results)
+    : (async () => {
+        let results: (SearchRecipesResult | RecipeSearchResult)[] = [];
+        await executeMutation(
+          async () => {
+            const data = await spoonacularService.searchRecipesWithInfo({
+              query,
+              number: SEARCH_FETCH_SIZE,
+              ...(filters.diet.length > 0 && { diet: filters.diet.join('|') }),
+              ...(filters.intolerances.length > 0 && {
+                intolerances: filters.intolerances.join(','),
+              }),
+              ...(filters.mealType && { type: filters.mealType }),
+              ...(filters.maxReadyTime && {
+                maxReadyTime: filters.maxReadyTime,
+              }),
+            });
+            results = data.results || [];
+            cacheStore.setCached(cacheKey, results);
+            return data;
+          },
+          error => {
+            spoonacularError = error;
+          },
+        );
+        return results;
+      })();
 
-  await executeMutation(
-    async () => {
-      const data = await spoonacularService.searchRecipesWithInfo({
-        query,
-        number: SEARCH_FETCH_SIZE,
-        ...(filters.diet.length > 0 && { diet: filters.diet.join('|') }),
-        ...(filters.intolerances.length > 0 && {
-          intolerances: filters.intolerances.join(','),
-        }),
-        ...(filters.mealType && { type: filters.mealType }),
-        ...(filters.maxReadyTime && {
-          maxReadyTime: filters.maxReadyTime,
-        }),
-      });
-      const results = data.results || [];
-      setSearchResults(results);
-      cacheStore.setCached(cacheKey, results);
-      return data;
-    },
-    error => handleSearchError(error, 'Search error'),
+  const [localData, spoonacularResults] = await Promise.all([
+    localPromise,
+    spoonacularPromise,
+  ]);
+
+  const localNodes =
+    localData?.searchRecipes.edges.map(edge => edge.node) ?? [];
+
+  // Drop Spoonacular results the backend already knows about (viewed external
+  // recipes are upserted server-side) so they don't appear twice.
+  const localSpoonacularIds = new Set(
+    localNodes
+      .filter(
+        node =>
+          node.externalSource === ExternalSource.Spoonacular && node.externalId,
+      )
+      .map(node => node.externalId),
   );
+  const dedupedSpoonacular = spoonacularResults.filter(
+    recipe => !localSpoonacularIds.has(String(recipe.id)),
+  );
+
+  const combined = [
+    ...toLocalDisplayItems(localNodes),
+    ...toSpoonacularDisplayItems(dedupedSpoonacular),
+  ];
+  setDisplayResults(combined);
+
+  if (spoonacularError) {
+    if (combined.length === 0) {
+      handleSearchError(spoonacularError, 'Search error');
+    } else {
+      // Local results are on screen — degrade silently.
+      console.error('Search error (Spoonacular degraded):', spoonacularError);
+    }
+  }
 
   setLoading(false);
 }
@@ -117,7 +243,7 @@ async function executeRecipeIngredientSearch(
   ingredientString: string,
   setLoading: (v: boolean) => void,
   setSearchPerformed: (v: boolean) => void,
-  setSearchResults: (v: (SearchRecipesResult | RecipeSearchResult)[]) => void,
+  setDisplayResults: (v: DisplayItem[]) => void,
 ): Promise<void> {
   setLoading(true);
   setSearchPerformed(true);
@@ -128,7 +254,7 @@ async function executeRecipeIngredientSearch(
   const cached = cacheStore.getCached(cacheKey);
 
   if (cached) {
-    setSearchResults(cached.results);
+    setDisplayResults(toSpoonacularDisplayItems(cached.results));
     setLoading(false);
     return;
   }
@@ -142,7 +268,7 @@ async function executeRecipeIngredientSearch(
         ranking: 1,
         ignorePantry: true,
       });
-      setSearchResults(results);
+      setDisplayResults(toSpoonacularDisplayItems(results));
       cacheStore.setCached(cacheKey, results);
       return results;
     },
@@ -168,8 +294,13 @@ interface DisplayItem {
 // ── Facade hook ──
 
 export function useRecipeScreen() {
+  const { t } = useTranslation();
+
   // ── User ──
   const userId = useUserId();
+
+  // Apollo client for the imperative local-API search in executeRecipeTextSearch
+  const client = useApolloClient();
 
   // ── Dietary profile (for filter defaults + discovery tags) ──
   const { profile: dietaryProfile } = useDietaryProfile();
@@ -337,10 +468,50 @@ export function useRecipeScreen() {
     await executeRecipeTextSearch(
       query,
       activeFilters,
+      client,
       setSearchLoading,
       setSearchPerformed,
-      setSearchResultsAndResetPage,
+      setDisplayResultsAndResetPage,
     );
+  };
+
+  // Re-run the current search with an explicit filter set (state updates are
+  // async, so the caller passes the next filters rather than reading state).
+  const rerunSearchWithFilters = async (nextFilters: RecipeFilters) => {
+    if (!searchPerformed || !searchQuery.trim()) return;
+    await executeRecipeTextSearch(
+      searchQuery,
+      nextFilters,
+      client,
+      setSearchLoading,
+      setSearchPerformed,
+      setDisplayResultsAndResetPage,
+    );
+  };
+
+  const removeFilter = (
+    kind: 'diet' | 'intolerance' | 'mealType' | 'maxReadyTime',
+    value?: string,
+  ) => {
+    const next: RecipeFilters = {
+      diet:
+        kind === 'diet'
+          ? activeFilters.diet.filter(d => d !== value)
+          : activeFilters.diet,
+      intolerances:
+        kind === 'intolerance'
+          ? activeFilters.intolerances.filter(i => i !== value)
+          : activeFilters.intolerances,
+      mealType: kind === 'mealType' ? null : activeFilters.mealType,
+      maxReadyTime: kind === 'maxReadyTime' ? null : activeFilters.maxReadyTime,
+    };
+    setActiveFilters(next);
+    rerunSearchWithFilters(next);
+  };
+
+  const clearFiltersAndSearchAgain = () => {
+    setActiveFilters(DEFAULT_FILTERS);
+    rerunSearchWithFilters(DEFAULT_FILTERS);
   };
 
   const handleIngredientSearch = async () => {
@@ -354,11 +525,16 @@ export function useRecipeScreen() {
 
     const ingredientString = Array.from(selectedIngredients).join(',');
 
+    // Ingredient results aren't driven by the text query, and filters don't
+    // apply to them — clearing the query keeps the active-filter row and the
+    // filtered empty state scoped to text searches only.
+    setSearchQuery('');
+
     await executeRecipeIngredientSearch(
       ingredientString,
       setSearchLoading,
       setSearchPerformed,
-      setSearchResultsAndResetPage,
+      setDisplayResultsAndResetPage,
     );
   };
 
@@ -368,9 +544,10 @@ export function useRecipeScreen() {
         await executeRecipeTextSearch(
           searchQuery,
           activeFilters,
+          client,
           setSearchLoading,
           setSearchPerformed,
-          setSearchResultsAndResetPage,
+          setDisplayResultsAndResetPage,
         );
       }
     } else {
@@ -378,26 +555,10 @@ export function useRecipeScreen() {
     }
   };
 
-  // Transform + store results at data arrival time (avoids per-render transformation)
-  const setSearchResultsAndResetPage = (
-    results: (SearchRecipesResult | RecipeSearchResult)[],
-  ) => {
-    const transformed = results.map(recipe => {
-      const t = transformRecipeForDisplay(recipe);
-      return {
-        id: t.id,
-        title: t.title,
-        subtitle: t.subtitle,
-        badge: t.badge
-          ? ({
-              text: t.badge.text,
-              variant: 'primary',
-            } satisfies DisplayItem['badge'])
-          : undefined,
-        imageUrl: t.imageUrl,
-      };
-    });
-    setSearchResults(transformed);
+  // Results arrive pre-transformed into DisplayItems (see the module-level
+  // transforms) — store them and reset the client-side pagination window.
+  const setDisplayResultsAndResetPage = (displayItems: DisplayItem[]) => {
+    setSearchResults(displayItems);
     setVisibleSearchCount(SEARCH_PAGE_SIZE);
   };
 
@@ -417,19 +578,35 @@ export function useRecipeScreen() {
   } = searchLoading
     ? {
         icon: 'search',
-        title: 'Searching...',
-        description: 'Finding recipes for you',
+        title: t('recipes.searchingTitle'),
+        description: t('recipes.searchingDescription'),
+      }
+    : searchPerformed && activeFilterCount > 0 && searchQuery.trim() !== ''
+    ? {
+        // Zero TEXT-search results with dietary filters narrowing the search —
+        // tell the user why and offer a one-tap recovery instead of a dead
+        // end. Ingredient search never applies filters (searchQuery stays
+        // empty), so it falls through to the plain empty state.
+        icon: 'search-outline',
+        title: t('recipes.noRecipesFoundTitle'),
+        description: t('recipes.noResultsFiltered', {
+          count: activeFilterCount,
+        }),
+        action: {
+          label: t('recipes.clearFiltersAction'),
+          onPress: clearFiltersAndSearchAgain,
+        },
       }
     : searchPerformed
     ? {
         icon: 'search-outline',
-        title: 'No recipes found',
-        description: 'Try a different search term or different ingredients',
+        title: t('recipes.noRecipesFoundTitle'),
+        description: t('recipes.noRecipesFoundDescription'),
       }
     : {
         icon: 'restaurant-outline',
-        title: 'Discover Recipes',
-        description: 'Search for recipes or browse suggestions',
+        title: t('recipes.discoverTitle'),
+        description: t('recipes.discoverDescription'),
       };
 
   return {
@@ -468,6 +645,8 @@ export function useRecipeScreen() {
     setActiveFilters,
     activeFilterCount,
     clearFilters,
+    removeFilter,
+    clearFiltersAndSearchAgain,
 
     // Actions
     handleTextSearch,

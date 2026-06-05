@@ -22,7 +22,9 @@ import { classifyCreateResult } from './classifyCreateResult';
 import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
 import {
   type ConnectionData,
+  createAddToQueryConnectionUpdater,
   createRemoveFromParentConnectionUpdater,
+  createRemoveFromQueryConnectionUpdater,
   safeEvict,
   safeEvictMany,
 } from './cacheUpdaters';
@@ -630,4 +632,324 @@ export function removeItemFromShoppingListForMoveToPantry(
       error,
     );
   }
+}
+
+// =============================================================================
+// Shopping list local-first create (the list itself, not its items)
+// =============================================================================
+
+/**
+ * Display shape of the optimistic `ShoppingList` entity written by
+ * {@link addOptimisticShoppingList}. Mirrors what the lists-overview query
+ * (`GetShoppingListsLite`) selects per node, so the overview reads complete
+ * from cache while fully offline.
+ */
+export type OptimisticShoppingList = {
+  __typename: 'ShoppingList';
+  id: string;
+  version: number;
+  updatedAt: string;
+  name: string;
+  isDefault: boolean;
+  totalItems: number;
+  completedItems: number;
+  remainingItems: number;
+  completionRate: number;
+  homeId: string | null;
+  home: { __typename: 'Home'; id: string; name: string } | null;
+  ownerships: Array<{
+    __typename: 'ShoppingListOwnership';
+    id: string;
+    userId: string;
+    user: OptimisticShoppingListUser;
+  }>;
+};
+
+type OptimisticShoppingListUser = {
+  __typename: 'User';
+  id: string;
+  email: string;
+  profile: {
+    __typename: 'UserProfile';
+    id: string;
+    displayName: string | null;
+    avatar: string | null;
+  } | null;
+};
+
+/** Entity write shape for {@link addOptimisticShoppingList}. */
+const OptimisticShoppingListFragment = gql`
+  fragment _OptimisticShoppingList on ShoppingList {
+    id
+    name
+    isDefault
+    totalItems
+    completedItems
+    remainingItems
+    completionRate
+    homeId
+    version
+    updatedAt
+    home {
+      id
+      name
+    }
+    ownerships {
+      id
+      userId
+      user {
+        id
+        email
+        profile {
+          id
+          displayName
+          avatar
+        }
+      }
+    }
+  }
+`;
+
+/** Owner display data read from the cache's canonical `User` entity. */
+const OptimisticListOwnerUserFragment = gql`
+  fragment _OptimisticListOwnerUser on User {
+    id
+    email
+    profile {
+      id
+      displayName
+      avatar
+    }
+  }
+`;
+
+/** Linked-home name read for the overview card's home chip. */
+const OptimisticListHomeFragment = gql`
+  fragment _OptimisticListHome on Home {
+    id
+    name
+  }
+`;
+
+/**
+ * One filtered `itemsConnection` variant, addressed by the same
+ * `filters: { isPurchased }` keyArgs the items screen queries with.
+ */
+const ShoppingListEmptyItemsVariantFragment = gql`
+  fragment _ShoppingListEmptyItemsVariant on ShoppingList {
+    itemsConnection(filters: { isPurchased: $isPurchased }) {
+      totalCount
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      edges {
+        cursor
+      }
+    }
+  }
+`;
+
+/** Adds a list to `Query.shoppingLists` (every cached filter variant). */
+export const addShoppingListToQueryCache = createAddToQueryConnectionUpdater(
+  'shoppingLists',
+  'ShoppingList',
+);
+
+const removeShoppingListFromQueryCache = createRemoveFromQueryConnectionUpdater(
+  'shoppingLists',
+  'ShoppingList',
+);
+
+/**
+ * Build a complete optimistic `ShoppingList` for a local-first create.
+ *
+ * `id` is the client-minted cuid sent as `input.id` — the row's permanent PK —
+ * so the online create and the queued offline replay converge on one row.
+ * Owner display data (avatar, display name) comes from the cache's canonical
+ * `User` entity; when that copy is incomplete, falls back to the auth-store
+ * identity with a `null` profile rather than risk clobbering cached profile
+ * fields with stubs — the post-replay refetch heals the gap. The home chip is
+ * resolved the same way and degrades to `null` when the `Home` entity isn't
+ * cached.
+ */
+export function buildOptimisticShoppingList(
+  cache: ApolloCache,
+  id: string,
+  input: { name: string; isDefault?: boolean | null; homeId?: string | null },
+  owner: { id: string; email: string },
+): OptimisticShoppingList {
+  const userCacheId = cache.identify({ __typename: 'User', id: owner.id });
+  const cachedUser = userCacheId
+    ? cache.readFragment<OptimisticShoppingListUser>({
+        id: userCacheId,
+        fragment: OptimisticListOwnerUserFragment,
+        fragmentName: '_OptimisticListOwnerUser',
+      })
+    : null;
+  const user: OptimisticShoppingListUser = cachedUser ?? {
+    __typename: 'User',
+    id: owner.id,
+    email: owner.email,
+    profile: null,
+  };
+
+  const homeId = input.homeId ?? null;
+  const homeCacheId = homeId
+    ? cache.identify({ __typename: 'Home', id: homeId })
+    : undefined;
+  const home = homeCacheId
+    ? cache.readFragment<{ __typename: 'Home'; id: string; name: string }>({
+        id: homeCacheId,
+        fragment: OptimisticListHomeFragment,
+        fragmentName: '_OptimisticListHome',
+      })
+    : null;
+
+  return createOptimisticEntity<OptimisticShoppingList>('ShoppingList', id, {
+    name: input.name,
+    isDefault: input.isDefault ?? false,
+    totalItems: 0,
+    completedItems: 0,
+    remainingItems: 0,
+    completionRate: 0,
+    homeId,
+    home,
+    ownerships: [
+      {
+        __typename: 'ShoppingListOwnership',
+        // Client-only placeholder row: the server creates its own ownership
+        // row, and the first write-through replaces this array (the orphaned
+        // entity is gc'd later).
+        id: `${id}:owner`,
+        userId: owner.id,
+        user,
+      },
+    ],
+  });
+}
+
+/**
+ * Local-first optimistic add: write a new ShoppingList to the cache
+ * PERMANENTLY (full entity + overview connection edge + empty filtered
+ * `itemsConnection` variants) BEFORE the create mutation fires, so it survives
+ * a fully-offline / API-down create. The queue replays the original
+ * `CreateShoppingList` keyed by `input.id`; a duplicate replay surfaces as a
+ * ConflictError, which the queue drops — the first attempt's row stands.
+ *
+ * Seeding both `filters: { isPurchased }` variants empty is what makes the
+ * fresh list immediately usable offline: the items screen reads complete from
+ * cache, and local-first item adds have an existing variant for their
+ * `cache.modify` edge writes (a modifier never creates a missing variant).
+ *
+ * Caveat: `isDefault: true` doesn't clear the flag on other cached lists; the
+ * server resolves the single-default rule on replay and the next refetch
+ * reconciles the flags.
+ */
+export function addOptimisticShoppingList(
+  cache: ApolloCache,
+  list: OptimisticShoppingList,
+): void {
+  // 1. Full entity write — mandatory offline, where no response ever arrives
+  //    to materialize the row.
+  cache.writeFragment({
+    id: cache.identify(list),
+    fragment: OptimisticShoppingListFragment,
+    fragmentName: '_OptimisticShoppingList',
+    data: list,
+  });
+
+  // 2. Seed both filtered itemsConnection variants as authoritatively empty.
+  for (const isPurchased of [false, true]) {
+    cache.writeFragment({
+      id: cache.identify(list),
+      fragment: ShoppingListEmptyItemsVariantFragment,
+      fragmentName: '_ShoppingListEmptyItemsVariant',
+      variables: { isPurchased },
+      data: {
+        itemsConnection: {
+          __typename: 'ShoppingListItemConnection',
+          totalCount: 0,
+          pageInfo: {
+            __typename: 'PageInfo',
+            hasNextPage: false,
+            endCursor: null,
+          },
+          edges: [],
+        },
+      },
+    });
+  }
+
+  // 3. Edge into the lists overview (every cached filter variant).
+  addShoppingListToQueryCache(cache, list);
+}
+
+/**
+ * Remove a list from the cache entirely: the overview connection edge is
+ * filtered + `totalCount` decremented explicitly (`Query.shoppingLists` has no
+ * dangling-edge read filter, unlike `itemsConnection`'s self-healing read),
+ * then the entity is evicted. Used both to revert a rejected optimistic create
+ * and as the local-first removal for a list delete.
+ */
+export function removeShoppingListFromCache(
+  cache: ApolloCache,
+  listId: string,
+): void {
+  removeShoppingListFromQueryCache(cache, listId, { evictItem: false });
+  safeEvict(cache, 'ShoppingList', listId);
+}
+
+/** Reverse {@link addOptimisticShoppingList} when the create is rejected. */
+export function revertOptimisticShoppingList(
+  cache: ApolloCache,
+  listId: string,
+): void {
+  removeShoppingListFromCache(cache, listId);
+}
+
+/**
+ * Snapshot a list's display shape before a local-first delete, so a server
+ * rejection can restore it via {@link addOptimisticShoppingList} (items
+ * repopulate on the next visit's refetch). Null when the cache copy is
+ * incomplete — the caller then relies on the next overview refetch instead.
+ */
+export function readShoppingListSnapshot(
+  cache: ApolloCache,
+  listId: string,
+): OptimisticShoppingList | null {
+  const cacheId = cache.identify({ __typename: 'ShoppingList', id: listId });
+  if (!cacheId) return null;
+  return cache.readFragment<OptimisticShoppingList>({
+    id: cacheId,
+    fragment: OptimisticShoppingListFragment,
+    fragmentName: '_OptimisticShoppingList',
+  });
+}
+
+/**
+ * Reconcile a local-first list create after its mutation resolves. Same
+ * keep/revert rule as {@link reconcileShoppingCreate}: a `'rejected'` result
+ * (a surfaced error, or a non-success payload such as
+ * ConflictError/ValidationError) discards the optimistic list; `'created'` /
+ * `'queued'` keep it — a queued create replays later, keyed by the same `id`.
+ */
+export function reconcileShoppingListCreate(
+  cache: ApolloCache,
+  optimisticId: string,
+  result: { data?: unknown; error?: unknown } | null | undefined,
+): 'kept' | 'reverted' {
+  const outcome = classifyCreateResult(
+    result,
+    'createShoppingList',
+    'CreateShoppingListPayload',
+  );
+  if (outcome === 'rejected') {
+    executeCacheUpdate(
+      () => revertOptimisticShoppingList(cache, optimisticId),
+      'Revert rejected Shopping List',
+    );
+    return 'reverted';
+  }
+  return 'kept';
 }
