@@ -12,7 +12,7 @@ import { commonStyles } from '#/styles/commonStyles';
 import { ScreenHeader } from '#components/molecules/ScreenHeader';
 import { LoadingInline } from '#components/base/Loading';
 import { InfoRow } from '#components/molecules/InfoRow';
-import { useQuery, useMutation } from '@apollo/client/react';
+import { useApolloClient, useQuery, useMutation } from '@apollo/client/react';
 import type { ApolloCache, Reference } from '@apollo/client';
 import type { ModifierDetails } from '@apollo/client/cache';
 import type { ConnectionData } from '#/apollo/utils/cacheUpdaters';
@@ -34,9 +34,18 @@ import { handleMutationError } from '#/utils/errorHandlers';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import {
+  executeCacheUpdate,
   executeWithLoadingState,
   executeAsyncWithCleanup,
 } from '#/utils/compilerSafeWrappers';
+import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { generateEntityId } from '#/utils/generateEntityId';
+import {
+  addPantryToHomeCache,
+  buildOptimisticPantry,
+  removeOptimisticPantry,
+  writeOptimisticPantry,
+} from '#features/pantry/utils/optimisticPantry';
 import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
 import { Text } from '#components/atoms/Text';
 
@@ -106,7 +115,8 @@ function buildDeletePantryUpdater(selectedHomeId: string | null | undefined) {
 
 /** Module-level cache update closure for `useCreatePantryMutation`.
  *  Extracted from the component body so the surrounding try/catch does not
- *  trigger a React Compiler bailout. */
+ *  trigger a React Compiler bailout. Idempotent by pantry id — the
+ *  local-first pre-fire write already inserted the same client-minted id. */
 function buildCreatePantryUpdater(selectedHomeId: string | null | undefined) {
   return function createPantryUpdater(
     cache: ApolloCache,
@@ -118,48 +128,7 @@ function buildCreatePantryUpdater(selectedHomeId: string | null | undefined) {
         : null;
     if (!newPantry || !selectedHomeId) return;
     try {
-      const homeCacheId = cache.identify({
-        __typename: 'Home',
-        id: selectedHomeId,
-      });
-      if (!homeCacheId) return;
-
-      cache.modify({
-        id: homeCacheId,
-        fields: {
-          pantries(
-            existingPantries: readonly Reference[] = [],
-            { readField, toReference }: ModifierDetails,
-          ) {
-            const newPantryRef = toReference(newPantry);
-            const exists = existingPantries.some(
-              pantryRef => readField('id', pantryRef) === newPantry.id,
-            );
-            if (exists || !newPantryRef) return existingPantries;
-            return [...existingPantries, newPantryRef];
-          },
-          pantriesConnection(
-            existingConnection: ConnectionData | null = null,
-            { toReference }: ModifierDetails,
-          ) {
-            if (!existingConnection) return existingConnection;
-            const newPantryRef = toReference(newPantry);
-            if (!newPantryRef) return existingConnection;
-            const newEdge = {
-              __typename: 'PantryEdge',
-              cursor: newPantry.id,
-              node: newPantryRef,
-            };
-            return {
-              ...existingConnection,
-              edges: [...(existingConnection.edges || []), newEdge],
-              totalCount:
-                (existingConnection.totalCount ??
-                  (existingConnection.edges?.length || 0)) + 1,
-            };
-          },
-        },
-      });
+      addPantryToHomeCache(cache, selectedHomeId, newPantry);
     } catch (error) {
       console.warn('Cache update failed for createPantry:', error);
     }
@@ -224,6 +193,7 @@ export const PantrySettings: React.FC<
 
   const selectedHomeId = useSelectedHomeId();
   const setSelectedPantryId = useSetSelectedPantryId();
+  const apolloClient = useApolloClient();
   const permissions = usePantryPermissions();
 
   const [name, setName] = useState('');
@@ -278,13 +248,6 @@ export const PantrySettings: React.FC<
     // Update cache directly instead of refetching. Builder is module-scope to
     // keep try/catch out of the component body (React Compiler bailout).
     update: buildCreatePantryUpdater(selectedHomeId),
-    onCompleted: data => {
-      const payload = data?.createPantry;
-      if (payload?.__typename === 'CreatePantryPayload') {
-        setSelectedPantryId(payload.pantry.id);
-      }
-      goBack();
-    },
     onError: () => {
       alertService.alert(t('labels.error'), t('pantrySettings.createFailed'));
     },
@@ -340,19 +303,58 @@ export const PantrySettings: React.FC<
     executeWithLoadingState(
       async () => {
         if (!pantryId) {
-          await createPantry({
-            variables: {
-              input: {
-                homeId: selectedHomeId,
-                name: name.trim(),
-                description:
-                  description.trim() ||
-                  t('pantrySettings.userCreatedDescription'),
-                isDefault,
-                tags: ['user-created'],
-              },
-            },
+          // Local-first: mint the permanent cuid (the row's real PK) and
+          // write the pantry — entity, zeroed stats, empty item/storage
+          // connections, home membership lists — before firing, so creation
+          // works fully offline and items can be added to it immediately.
+          const id = generateEntityId();
+          const input = {
+            id,
+            homeId: selectedHomeId,
+            name: name.trim(),
+            description:
+              description.trim() || t('pantrySettings.userCreatedDescription'),
+            isDefault,
+            tags: ['user-created'],
+          };
+          const optimisticPantry = buildOptimisticPantry(id, input);
+          executeCacheUpdate(() => {
+            writeOptimisticPantry(apolloClient.cache, optimisticPantry);
+            addPantryToHomeCache(
+              apolloClient.cache,
+              selectedHomeId,
+              optimisticPantry,
+            );
+          }, 'Create Pantry (optimistic)');
+
+          const result = await createPantry({
+            variables: { input },
+            context: { localFirst: true },
           });
+          const outcome = classifyCreateResult(
+            result,
+            'createPantry',
+            'CreatePantryPayload',
+          );
+          if (outcome === 'rejected') {
+            executeCacheUpdate(
+              () =>
+                removeOptimisticPantry(apolloClient.cache, selectedHomeId, id),
+              'Revert rejected Pantry create',
+            );
+            const payload = result.data?.createPantry;
+            const message =
+              payload && 'message' in payload ? payload.message : null;
+            alertService.alert(
+              t('labels.error'),
+              message ?? t('pantrySettings.createFailed'),
+            );
+            return;
+          }
+          // Online success echoes the same id; queued keeps the local entity
+          // and replays keyed by it — select it and leave either way.
+          setSelectedPantryId(id);
+          goBack();
         } else {
           await updatePantry({
             variables: {

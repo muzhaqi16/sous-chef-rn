@@ -1,0 +1,10 @@
+# Snapshot/write shape for useUpdateShoppingList's permanent local-first
+# write: the settings the screen edits plus the version/updatedAt pair the
+# revert restores.
+fragment useUpdateShoppingList_list on ShoppingList {
+  id
+  name
+  isDefault
+  version
+  updatedAt
+}

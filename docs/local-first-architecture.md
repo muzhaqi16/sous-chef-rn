@@ -129,10 +129,13 @@ payload** (e.g. `ConflictError` / `ValidationError`) is a rejection: revert the 
 ## 5. Offline queue
 
 - **`queueLink`** (in the link chain, after `errorLink`/`authLink`, before transport) queues a mutation
-  when: (a) `isOnline === false` — any mutation; or (b) online but the request fails with a network error
-  **and** the mutation opted in via `context: { localFirst: true }`. On success it calls
+  when: (a) `isOnline === false` **and** the mutation is on the replay allowlist — `context:
+  { localFirst: true }` opt-ins or `Sync*`-mapped operations (`hasSyncMapping`); or (b) online but the
+  request fails with a network error **and** the mutation opted in via `context: { localFirst: true }`.
+  Offline mutations NOT on the allowlist fail fast with a network-shaped error — an honest immediate
+  failure instead of the old "failure toast + ghost replay on reconnect" behavior. On success it calls
   `queueManager.requestDrain()` (covers API-recovery where `isOnline` never flipped). GraphQL/validation
-  errors pass through to the hook. `NEVER_QUEUE_OPERATIONS` (auth) are excluded.
+  errors pass through to the hook. `NEVER_QUEUE_OPERATIONS` (auth) forward straight to transport.
 - **`queueStore`** persists the queue — including each mutation `DocumentNode` and variables — to MMKV,
   user-scoped. Survives restart.
 - **`queueManager`** replays with batching, exponential backoff + jitter, token-refresh-before-replay,
@@ -248,34 +251,74 @@ query-blocking, orthogonal to connectivity.
 - **Shopping:** add (every add surface — `useAddShoppingItem`, `AddToShoppingListSheet`, `AddEditItem`,
   barcode, filtered-pantry, pantry-item-detail, recipe single + batch), remove, toggle-purchased, update,
   quantity ±, reorder/move.
+- **Shopping list create** (`useCreateShoppingList`) — the list itself. Plain-create tier: the queue
+  replays the original `CreateShoppingList` keyed by the client-minted `input.id`; a duplicate replay
+  surfaces as a ConflictError, which the queue drops (non-retryable) — the first attempt's row stands.
+  The optimistic write also seeds both empty `itemsConnection` variants and the `Query.shoppingList`
+  cache redirect serves by-id reads, so a list created offline is immediately usable (items can be
+  added to it offline; the FIFO queue replays the list create before its items). Known limits:
+  `isDefault: true` doesn't clear the flag on other cached lists until the post-replay refetch, and the
+  list-settings screen for a fresh offline list still needs the network for collaborator/share fields.
+
+- **Pantry update** (`useUpdatePantryItem` / `useUpdatePantryItemQuantity`) — permanent write + revert
+  snapshot; replays through the idempotent `SyncPantryItem` upsert (`UpdatePantryItemQuantity` has its
+  own registry builder mapping `pantryItemId`/string-quantity/flat-`unitId` onto `SyncPantryItemInput`).
+- **Pantry create** (`PantrySettings` + `src/features/pantry/utils/optimisticPantry.ts`) — the pantry
+  container itself. Client-minted id; the optimistic write materializes the entity, zeroed `stats`,
+  empty `itemsConnection` (no-args variant — matches the screen's undefined filters/orderBy) and
+  `storageLocationsConnection(first: PAGE_SIZE.COMPACT)` variants, plus the home's `pantries` /
+  `pantriesConnection` membership, and the `Query.pantry` cache redirect serves by-id reads — so a
+  pantry created offline is immediately usable and items added to it queue behind its create
+  (`CreatePantry` is in `PARENT_CREATE_OPERATIONS`).
+- **Shopping list update / delete / clear** (`useUpdateShoppingList`, `useDeleteShoppingList`,
+  `useClearShoppingListItems`) — update merges over a snapshot; delete removes edge + entity up front
+  and restores the snapshot on rejection; clear keeps its eager cache eviction and refetches on a
+  rejection.
+- **Meal plans** (`useMealPlanActions`, `useMealPlanItemActions`) — plan create (client-minted id,
+  `MealPlanDisplay` materialized from cache, FIFO parent-create guard) + update/delete; item create
+  (client-minted id; a replay collision on the (mealPlanId, date, mealType, recipeId) unique key
+  returns the existing row), update, toggle-completed (keeps `optimisticDataPersistence` until the
+  replay confirms), delete.
+- **Recipes** — create (`RecipeForm`; client-minted id, list-visible offline via the MyRecipes edge
+  upsert; the detail view needs the post-replay sync), delete (`MyRecipes`; eager removal, refetch on
+  rejection), update + ingredients (`RecipeForm` edit; queue-only — both ops queue atomically and
+  replay FIFO against the same recipe id, but the local display catches up only when the replay syncs).
 
 **In scope but not yet opted in:**
-- Pantry **update** (`useUpdatePantryItem` / `useUpdatePantryItemQuantity`) — Sync-mapped server-side, just
-  needs the hook to write permanently + send `localFirst`.
-- Shopping **clear** (`useClearShoppingListItems`).
+- **Storage location create** (`useCreateStorageLocation`) — server accepts `id`; hook still online-only.
 - Pantry **granular ops** (adjust-qty, open/waste batch, consume/waste/restock) — these are deltas, not
   absolute values, and have **no `Sync*` mapping**; the fallback would replay the original delta, which is
   not idempotent. Need server-side Sync mappings or absolute-value reframing first. **Do not opt in yet.**
 
 **Online-only (degrade, not queued):** auth, invites/share-codes/collaboration/membership, image upload,
-barcode/smart-search lookup, recipe discovery/AI, recipe reviews, `markRecipeAsCooked` + pantry
-deduction, server-aggregation (generate-list-from-meal-plan, add-low-stock), and the recipe **fan-out**
-mutations `addRecipeToShoppingList` / `createShoppingListItemsFromRecipe` (they expand into N
-server-derived items with no per-item id slot — the offline path is the client expanding the recipe
-locally and using the now-id-capable batch `addItemsToShoppingList`).
+barcode/smart-search lookup, recipe discovery/AI, recipe reviews, recipe favorite/saved-metadata/folders,
+`markRecipeAsCooked` + pantry deduction, server-aggregation (generate-list-from-meal-plan, add-low-stock,
+meal templates), and the recipe **fan-out** mutations `addRecipeToShoppingList` /
+`createShoppingListItemsFromRecipe` (they expand into N server-derived items with no per-item id slot —
+the offline path is the client expanding the recipe locally and using the now-id-capable batch
+`addItemsToShoppingList`).
+**Home create/update/delete are deliberately online-only** even though `createHome` accepts a client id:
+a usable home requires the server-created membership row (permission checks read `myMembership`) and the
+server-created default pantry — an offline-materialized home would be an unusable husk until sync.
+This is **enforced in code**, not just convention: `queueLink` only queues allowlisted mutations
+(`localFirst` opt-ins + `Sync*`-mapped ops) when the device is offline; everything else fails fast with
+a network error so the hook's normal error path shows a truthful failure and nothing ghost-replays.
 
-**Out of current scope (own server work pending):** meal plan, storage locations, recipes-own, home-own
-fields, profile, notifications. The server already accepts `id` on `createHome`, `createStorageLocation`,
-`createMealPlan(Item)`, `createMealTemplate`, `createRecipe` (top-level) — so these can be migrated when
-their hooks adopt the pattern and the queue gets Sync mappings (or uses the fallback tier).
+**Out of current scope (own server work pending):** profile, notifications. `PARENT_CREATE_OPERATIONS`
+in `queueManager.ts` (`CreateShoppingList`, `CreateMealPlan`, `CreateRecipe`) forces strict FIFO replay
+for any batch containing a parent-entity create, so dependents queued behind it (items in a new list,
+meals in a new plan, meals referencing a new recipe) always replay after their parent exists.
 
 ## 11. Server contract (verified)
 
 - **Client-supplied `id`** is accepted on every named client-create input: `CreatePantryItemInput`,
   `CreateShoppingListItemInput`, `BatchAddShoppingListItemInput`,
-  `CreateShoppingListItemFromRecipeIngredientInput`, plus `createHome` / `createStorageLocation` /
-  `createMealPlan(Item)` / `createMealTemplate` / `createRecipe` (top-level). Format: CUID v1
-  `/^c[a-z0-9]{24}$/`; omitted → Prisma `@default(cuid())`.
+  `CreateShoppingListItemFromRecipeIngredientInput`, `CreateShoppingListInput`, plus `createHome` /
+  `createStorageLocation` / `createMealPlan(Item)` / `createMealTemplate` / `createRecipe` (top-level).
+  Format: CUID v1 `/^c[a-z0-9]{24}$/`; omitted → Prisma `@default(cuid())`. Note `createShoppingList`
+  (like `createHome` & co.) is the **plain-create tier** — a duplicate replay surfaces as a
+  ConflictError rather than the find-by-id → update upsert of the `Sync*` mutations; the queue treats
+  that conflict as already-synced and drops the op.
 - **NOT id-capable by design:** `createNotification` (system/cross-user generated) and the recipe fan-out
   mutations above.
 - **Idempotency = find-by-id → update**, in place for both the `Sync*` mutations and the direct-create

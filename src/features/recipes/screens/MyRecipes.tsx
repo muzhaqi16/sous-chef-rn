@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { FlashList } from '@shopify/flash-list';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { StyleSheet } from 'react-native-unistyles';
-import { useFragment } from '@apollo/client/react';
+import { useApolloClient, useFragment } from '@apollo/client/react';
 import { SearchBar } from '#components/molecules/SearchBar';
 import { Header } from '#components/molecules/Header';
 import { EmptyState } from '#components/base/EmptyState';
@@ -22,7 +22,11 @@ import {
 } from '#features/recipes/hooks/useRecipeManagement';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { alertService } from '#services/alertService';
-import { executeMutation } from '#utils/compilerSafeWrappers';
+import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import {
+  executeCacheUpdate,
+  executeMutation,
+} from '#utils/compilerSafeWrappers';
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 
 const keyExtractor = (item: MyRecipeNode) => item.id;
@@ -79,32 +83,29 @@ export const MyRecipes: React.FC = () => {
     actions: { refetch },
   } = useRecipeManagement();
 
-  const [deleteRecipeMutation] = useMutation(DeleteRecipeDocument, {
-    update: (cache, { data }, { variables }) => {
-      if (
-        data?.deleteRecipe?.__typename !== 'DeleteRecipePayload' ||
-        !variables?.input?.id
-      ) {
-        return;
-      }
-      cache.updateQuery<MyRecipesQuery>(
-        { query: MyRecipesDocument },
-        existing => {
-          if (!existing?.recipes) return existing;
-          return {
-            ...existing,
-            recipes: {
-              ...existing.recipes,
-              edges: existing.recipes.edges.filter(
-                edge => edge.node.id !== variables.input.id,
-              ),
-              totalCount: (existing.recipes.totalCount ?? 0) - 1,
-            },
-          };
-        },
-      );
-    },
-  });
+  const apolloClient = useApolloClient();
+  const [deleteRecipeMutation] = useMutation(DeleteRecipeDocument);
+
+  const removeRecipeEdge = (id: string) => {
+    apolloClient.cache.updateQuery<MyRecipesQuery>(
+      { query: MyRecipesDocument },
+      existing => {
+        if (!existing?.recipes) return existing;
+        const present = existing.recipes.edges.some(
+          edge => edge.node.id === id,
+        );
+        if (!present) return existing;
+        return {
+          ...existing,
+          recipes: {
+            ...existing.recipes,
+            edges: existing.recipes.edges.filter(edge => edge.node.id !== id),
+            totalCount: (existing.recipes.totalCount ?? 0) - 1,
+          },
+        };
+      },
+    );
+  };
 
   const handleItemPress = (id: string) => {
     toRecipeDetail({ recipeId: id });
@@ -115,13 +116,35 @@ export const MyRecipes: React.FC = () => {
   };
 
   const handleDeleteRecipe = async (id: string) => {
-    await executeMutation(
-      () => deleteRecipeMutation({ variables: { input: { id } } }),
+    // Local-first: remove from the list BEFORE firing, so the deletion is
+    // visible immediately and survives an offline queue (a duplicate replay
+    // surfaces as NotFound, which the queue drops).
+    executeCacheUpdate(
+      () => removeRecipeEdge(id),
+      'Delete Recipe (optimistic)',
+    );
+
+    const result = await executeMutation(
+      () =>
+        deleteRecipeMutation({
+          variables: { input: { id } },
+          context: { localFirst: true },
+        }),
       (error: unknown) => {
         console.error('Failed to delete recipe:', error);
         alertService.alert(t('labels.error'), t('recipes.deleteRecipeFailed'));
       },
     );
+    // A rejection means the recipe still exists server-side — refetch to
+    // restore the authoritative list. A queued result keeps the removal and
+    // replays later.
+    const rejected =
+      !result ||
+      classifyCreateResult(result, 'deleteRecipe', 'DeleteRecipePayload') ===
+        'rejected';
+    if (rejected) {
+      await refetch();
+    }
   };
 
   const handleRefresh = async () => {

@@ -41,6 +41,7 @@ import {
 } from './RecipeSearch/IngredientSelectorSheet';
 import { useRecipeScreen } from '#features/recipes/hooks/useRecipeScreen';
 import { RecipeFilterSheet } from './RecipeFilterSheet';
+import { ActiveFilterChipsRow } from '#features/recipes/components/ActiveFilterChipsRow';
 import { Text } from '#components/atoms/Text';
 
 // ── Recipe tutorial steps (titles/subtitles resolved at usage via t()) ──
@@ -255,6 +256,12 @@ const RecipeMainInner: React.FC = () => {
 
   const handleItemPress = (id: string | number) => {
     const idStr = String(id);
+    // `local-` ids come from the local-API portion of combined search results
+    // and open the backend recipe detail view.
+    if (idStr.startsWith('local-')) {
+      toRecipeDetail({ recipeId: idStr.slice('local-'.length) });
+      return;
+    }
     const externalId = idStr.startsWith('spoonacular-')
       ? idStr.replace('spoonacular-', '')
       : idStr;
@@ -361,11 +368,20 @@ const RecipeMainInner: React.FC = () => {
           accessibilityRole="button"
           accessibilityLabel={t('recipes.dietaryRestrictions')}
         >
-          <Icon
-            name="options-outline"
-            size={24}
-            tone={screen.activeFilterCount > 0 ? 'primary' : 'textSecondary'}
-          />
+          <View style={styles.filterIconWrapper}>
+            <Icon
+              name="options-outline"
+              size={24}
+              tone={screen.activeFilterCount > 0 ? 'primary' : 'textSecondary'}
+            />
+            {screen.activeFilterCount > 0 ? (
+              <View style={styles.filterCountBadge} testID="filter-count-badge">
+                <Text style={styles.filterCountBadgeText}>
+                  {String(screen.activeFilterCount)}
+                </Text>
+              </View>
+            ) : null}
+          </View>
         </Pressable>
       </View>
     </View>
@@ -450,6 +466,17 @@ const RecipeMainInner: React.FC = () => {
         onSearch={screen.handleTextSearch}
         extraActions={searchBarExtraActions}
       />
+      {/* Filters only apply to text search (discovery + ingredient search
+          can't take them) — only surface the active-filter row when a text
+          search drives what's on screen. The header badge stays as the
+          always-on indicator. */}
+      {screen.searchPerformed && screen.searchQuery.trim() !== '' ? (
+        <ActiveFilterChipsRow
+          filters={screen.activeFilters}
+          onRemoveFilter={screen.removeFilter}
+          onClearAll={screen.clearFiltersAndSearchAgain}
+        />
+      ) : null}
       {ListHeader}
     </>
   );
@@ -607,6 +634,28 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.sm,
     marginHorizontal: theme.spacing['3'],
     marginTop: theme.spacing.sm,
+  },
+  filterIconWrapper: {
+    // Anchors the absolutely-positioned count badge to the icon bounds
+    position: 'relative',
+  },
+  filterCountBadge: {
+    position: 'absolute',
+    top: -5,
+    right: -7,
+    minWidth: 16,
+    height: 16,
+    borderRadius: theme.radii.full,
+    backgroundColor: theme.colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+  },
+  filterCountBadgeText: {
+    color: theme.colors.onPrimary,
+    fontSize: 10,
+    fontWeight: '700',
+    lineHeight: 12,
   },
   pressed: { opacity: theme.opacity.pressed },
 }));

@@ -381,10 +381,13 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
           onPress={onDismiss}
           style={[
             styles.skipButton,
-            // If hole overlaps the default skip position (top-right),
-            // move skip to the left side
+            // When the hole is near the top, place skip in whichever top
+            // corner is farther from the hole's center: a hole centered on
+            // the right half would cover the default top-right spot, so move
+            // skip to the left; a left-anchored hole (even a wide one) keeps
+            // skip at its default top-right.
             holeTop < theme.spacing.xl * 3 &&
-            holeLeft + holeWidth > screenWidth / 2
+            holeLeft + holeWidth / 2 > screenWidth / 2
               ? { right: undefined, left: theme.spacing.lg }
               : undefined,
           ]}

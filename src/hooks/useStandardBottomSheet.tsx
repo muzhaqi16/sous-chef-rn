@@ -29,9 +29,11 @@ export { ThemedBottomSheetModal as BottomSheetModal };
 /**
  * Type re-export for `useRef<BottomSheetModal>(null)` callsites — points at the
  * underlying gorhom class, since the wrapped component's value type isn't a
- * usable type position.
+ * usable type position. The `unknown` type argument matches the ref type the
+ * wrapped component expects (gorhom 5.2.14 defaults the `present(data)` payload
+ * generic to `never`, which a bare `BottomSheetModal` ref no longer satisfies).
  */
-export type BottomSheetModalRef = GorhomBottomSheetModal;
+export type BottomSheetModalRef = GorhomBottomSheetModal<unknown>;
 
 export interface UseStandardBottomSheetOptions {
   /** When provided, auto-manages present/dismiss. Omit to manage presentation manually via ref. */
@@ -109,7 +111,7 @@ export function useStandardBottomSheet({
   onChange: userOnChange,
 }: UseStandardBottomSheetOptions) {
   const insets = useSafeAreaInsets();
-  const ref = useRef<GorhomBottomSheetModal>(null);
+  const ref = useRef<GorhomBottomSheetModal<unknown>>(null);
   const animationConfigs = useSharedBottomSheetConfigs();
   useBottomSheetBackHandler(ref, visible ?? false);
 

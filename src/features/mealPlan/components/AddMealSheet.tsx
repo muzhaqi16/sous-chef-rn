@@ -399,7 +399,6 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
         <BottomSheetScrollView
           contentContainerStyle={styles.listContent}
           onScroll={handleScrollEndReached}
-          scrollEventThrottle={400}
         >
           {/* Custom meal row */}
           {hasQuery ? (

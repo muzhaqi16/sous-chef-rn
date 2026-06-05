@@ -1877,6 +1877,13 @@ input CreatePantryActivityInput {
 input CreatePantryInput {
   description: String
   homeId: ID!
+  """
+  Optional client-generated permanent ID (CUID v1, e.g. "c…", 25 chars).
+  Offline-first clients mint this as the row's permanent primary key so a
+  re-synced create resolves to the same row (idempotent) instead of duplicating.
+  When omitted, the server generates one via @default(cuid()).
+  """
+  id: ID
   isDefault: Boolean
   location: String
   name: String!
@@ -2022,6 +2029,13 @@ input CreateShoppingListInput {
   budgetAmount: Float
   description: String
   homeId: ID
+  """
+  Optional client-generated permanent ID (CUID v1, e.g. "c…", 25 chars).
+  Offline-first clients mint this as the row's permanent primary key so a
+  re-synced create resolves to the same row (idempotent) instead of duplicating.
+  When omitted, the server generates one via @default(cuid()).
+  """
+  id: ID
   isDefault: Boolean
   name: String!
   tags: [String!]

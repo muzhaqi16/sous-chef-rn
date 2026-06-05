@@ -9,51 +9,11 @@ import { BottomSheetAction } from '#components/templates/BottomSheetAction';
 import { Icon } from '#/utils/iconUtils';
 import type { RecipeFilters } from '#features/recipes/hooks/useRecipeScreen';
 import { Text } from '#components/atoms/Text';
-
-// ── Filter options — synced with DietaryRestrictionSelector + Spoonacular API values ──
-// `value` is the Spoonacular API value (do not translate). `labelKey` resolves
-// to the translated chip label via i18n.
-
-const DIET_OPTIONS = [
-  { labelKey: 'recipeFilters.diets.vegetarian', value: 'vegetarian' },
-  { labelKey: 'recipeFilters.diets.vegan', value: 'vegan' },
-  { labelKey: 'recipeFilters.diets.glutenFree', value: 'gluten free' },
-  { labelKey: 'recipeFilters.diets.ketogenic', value: 'ketogenic' },
-  { labelKey: 'recipeFilters.diets.paleo', value: 'paleo' },
-  { labelKey: 'recipeFilters.diets.pescetarian', value: 'pescetarian' },
-  {
-    labelKey: 'recipeFilters.diets.lactoVegetarian',
-    value: 'lacto-vegetarian',
-  },
-  { labelKey: 'recipeFilters.diets.ovoVegetarian', value: 'ovo-vegetarian' },
-  { labelKey: 'recipeFilters.diets.primal', value: 'primal' },
-  { labelKey: 'recipeFilters.diets.lowFodmap', value: 'low fodmap' },
-  { labelKey: 'recipeFilters.diets.whole30', value: 'whole30' },
-];
-
-const INTOLERANCE_OPTIONS = [
-  { labelKey: 'recipeFilters.intolerances.dairy', value: 'dairy' },
-  { labelKey: 'recipeFilters.intolerances.egg', value: 'egg' },
-  { labelKey: 'recipeFilters.intolerances.gluten', value: 'gluten' },
-  { labelKey: 'recipeFilters.intolerances.grain', value: 'grain' },
-  { labelKey: 'recipeFilters.intolerances.peanut', value: 'peanut' },
-  { labelKey: 'recipeFilters.intolerances.seafood', value: 'seafood' },
-  { labelKey: 'recipeFilters.intolerances.sesame', value: 'sesame' },
-  { labelKey: 'recipeFilters.intolerances.shellfish', value: 'shellfish' },
-  { labelKey: 'recipeFilters.intolerances.soy', value: 'soy' },
-  { labelKey: 'recipeFilters.intolerances.sulfite', value: 'sulfite' },
-  { labelKey: 'recipeFilters.intolerances.treeNut', value: 'tree nut' },
-  { labelKey: 'recipeFilters.intolerances.wheat', value: 'wheat' },
-  { labelKey: 'recipeFilters.intolerances.fish', value: 'fish' },
-];
-
-const MEAL_TYPES = [
-  { labelKey: 'recipeFilters.mealTypes.breakfast', value: 'breakfast' },
-  { labelKey: 'recipeFilters.mealTypes.lunch', value: 'lunch' },
-  { labelKey: 'recipeFilters.mealTypes.dinner', value: 'dinner' },
-  { labelKey: 'recipeFilters.mealTypes.snack', value: 'snack' },
-  { labelKey: 'recipeFilters.mealTypes.dessert', value: 'dessert' },
-];
+import {
+  DIET_OPTIONS,
+  INTOLERANCE_OPTIONS,
+  MEAL_TYPES,
+} from '#features/recipes/utils/recipeFilterOptions';
 
 const COOK_TIMES = [15, 30, 45, 60];
 

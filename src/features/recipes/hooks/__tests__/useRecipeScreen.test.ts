@@ -1,7 +1,11 @@
 import { act, waitFor } from '@testing-library/react-native';
 
-import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  renderHookWithApollo,
+  type MockedResponse,
+} from '#/test-utils/apolloMockProvider';
 import { useRecipeCacheStore } from '#/store/useRecipeCacheStore';
+import { SearchRecipesDocument } from '#features/recipes/graphql/recipe.generated';
 import { useRecipeScreen } from '../useRecipeScreen';
 
 // ── Mock external Spoonacular HTTP service ──
@@ -149,6 +153,76 @@ const sampleIngredientSearchResponse = [
   },
 ];
 
+// ── Local GraphQL SearchRecipes mocks ──
+// Node fixtures must include every field the document selects: the inline
+// display fields plus all BasicRecipeFragment fields (Apollo can't cache
+// partially-specified entities in operationMocks).
+function makeLocalRecipeNode(overrides: Record<string, unknown> = {}) {
+  return {
+    __typename: 'Recipe',
+    id: 'r1',
+    name: 'Family Lasagna',
+    description: null,
+    imageUrl: 'https://img/local-r1.jpg',
+    servings: 6,
+    prepTimeMinutes: 20,
+    cookTimeMinutes: 40,
+    totalTimeMinutes: 60,
+    difficulty: null,
+    category: null,
+    cuisine: null,
+    status: 'PUBLISHED',
+    isExternal: false,
+    externalSource: null,
+    externalId: null,
+    primarySource: null,
+    caloriesPerServing: null,
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
+    savedDetails: null,
+    ...overrides,
+  };
+}
+
+function searchRecipesMockWith(
+  nodes: Record<string, unknown>[],
+): MockedResponse {
+  return {
+    request: { query: SearchRecipesDocument, variables: () => true },
+    maxUsageCount: Number.POSITIVE_INFINITY,
+    result: {
+      data: {
+        searchRecipes: {
+          __typename: 'RecipeConnection',
+          edges: nodes.map(node => ({
+            __typename: 'RecipeEdge',
+            cursor: `cursor-${node.id}`,
+            node,
+          })),
+          pageInfo: {
+            __typename: 'PageInfo',
+            hasNextPage: false,
+            endCursor: null,
+          },
+          totalCount: nodes.length,
+        },
+      },
+    },
+  };
+}
+
+/** Catch-all local-API mock returning no recipes — the default for tests that
+ * focus on the Spoonacular half of the combined search. */
+function emptySearchRecipesMock(): MockedResponse {
+  return searchRecipesMockWith([]);
+}
+
+function renderRecipeScreen(
+  operationMocks: MockedResponse[] = [emptySearchRecipesMock()],
+) {
+  return renderHookWithApollo(() => useRecipeScreen(), { operationMocks });
+}
+
 beforeEach(() => {
   jest.clearAllMocks();
   // Reset cache store between tests so cached results from prior tests
@@ -161,7 +235,7 @@ beforeEach(() => {
 
 describe('useRecipeScreen', () => {
   it('exposes initial state shape', () => {
-    const { result } = renderHookWithApollo(() => useRecipeScreen());
+    const { result } = renderRecipeScreen();
 
     expect(result.current.userId).toBe('user-123');
     expect(result.current.searchQuery).toBe('');
@@ -187,7 +261,7 @@ describe('useRecipeScreen', () => {
       makeDiscovery({ items: [sampleDiscoveryItem] }),
     );
 
-    const { result } = renderHookWithApollo(() => useRecipeScreen());
+    const { result } = renderRecipeScreen();
 
     expect(result.current.showDiscovery).toBe(true);
     expect(result.current.items).toEqual([sampleDiscoveryItem]);
@@ -205,7 +279,7 @@ describe('useRecipeScreen', () => {
       loading: false,
     });
 
-    const { result } = renderHookWithApollo(() => useRecipeScreen());
+    const { result } = renderRecipeScreen();
 
     expect(result.current.activeFilters.diet).toEqual(['vegan']);
     expect(result.current.activeFilters.intolerances).toEqual(['gluten']);
@@ -223,7 +297,7 @@ describe('useRecipeScreen', () => {
       loading: false,
     });
 
-    const { result } = renderHookWithApollo(() => useRecipeScreen());
+    const { result } = renderRecipeScreen();
 
     expect(result.current.activeFilterCount).toBe(2);
 
@@ -241,7 +315,7 @@ describe('useRecipeScreen', () => {
   });
 
   it('toggleIngredient adds and removes ingredients from the selection', () => {
-    const { result } = renderHookWithApollo(() => useRecipeScreen());
+    const { result } = renderRecipeScreen();
 
     act(() => {
       result.current.toggleIngredient('Tomato');
@@ -268,7 +342,7 @@ describe('useRecipeScreen', () => {
   it('handleTextSearch calls Spoonacular and populates transformed results', async () => {
     mockSearchRecipes.mockResolvedValueOnce(sampleTextSearchResponse);
 
-    const { result } = renderHookWithApollo(() => useRecipeScreen());
+    const { result } = renderRecipeScreen();
 
     await act(async () => {
       await result.current.handleTextSearch('pasta');
@@ -291,7 +365,7 @@ describe('useRecipeScreen', () => {
   });
 
   it('handleTextSearch is a no-op for empty/whitespace queries', async () => {
-    const { result } = renderHookWithApollo(() => useRecipeScreen());
+    const { result } = renderRecipeScreen();
 
     await act(async () => {
       await result.current.handleTextSearch('   ');
@@ -307,7 +381,7 @@ describe('useRecipeScreen', () => {
     });
     mockSearchRecipes.mockRejectedValueOnce(quotaError);
 
-    const { result } = renderHookWithApollo(() => useRecipeScreen());
+    const { result } = renderRecipeScreen();
 
     await act(async () => {
       await result.current.handleTextSearch('pasta');
@@ -326,7 +400,7 @@ describe('useRecipeScreen', () => {
   });
 
   it('handleIngredientSearch alerts when no ingredients are selected', async () => {
-    const { result } = renderHookWithApollo(() => useRecipeScreen());
+    const { result } = renderRecipeScreen();
 
     await act(async () => {
       await result.current.handleIngredientSearch();
@@ -344,7 +418,7 @@ describe('useRecipeScreen', () => {
       sampleIngredientSearchResponse,
     );
 
-    const { result } = renderHookWithApollo(() => useRecipeScreen());
+    const { result } = renderRecipeScreen();
 
     act(() => {
       result.current.toggleIngredient('Tomato');
@@ -375,7 +449,7 @@ describe('useRecipeScreen', () => {
     );
     mockSearchRecipes.mockResolvedValue(sampleTextSearchResponse);
 
-    const { result } = renderHookWithApollo(() => useRecipeScreen());
+    const { result } = renderRecipeScreen();
 
     // Perform a search first
     return (async () => {
@@ -402,7 +476,7 @@ describe('useRecipeScreen', () => {
   it('handleRefresh re-runs the last text search when one was performed', async () => {
     mockSearchRecipes.mockResolvedValue(sampleTextSearchResponse);
 
-    const { result } = renderHookWithApollo(() => useRecipeScreen());
+    const { result } = renderRecipeScreen();
 
     await act(async () => {
       await result.current.handleTextSearch('pasta');
@@ -425,7 +499,7 @@ describe('useRecipeScreen', () => {
   });
 
   it('handleRefresh delegates to discovery.refresh when no search performed', async () => {
-    const { result } = renderHookWithApollo(() => useRecipeScreen());
+    const { result } = renderRecipeScreen();
 
     await act(async () => {
       await result.current.handleRefresh();
@@ -443,7 +517,7 @@ describe('useRecipeScreen', () => {
       totalResults: 0,
     });
 
-    const { result } = renderHookWithApollo(() => useRecipeScreen());
+    const { result } = renderRecipeScreen();
 
     expect(result.current.emptyStateConfig.title).toBe('Discover Recipes');
 
@@ -462,7 +536,7 @@ describe('useRecipeScreen', () => {
   it('uses cached search results on a repeated query without hitting the API again', async () => {
     mockSearchRecipes.mockResolvedValueOnce(sampleTextSearchResponse);
 
-    const { result } = renderHookWithApollo(() => useRecipeScreen());
+    const { result } = renderRecipeScreen();
 
     await act(async () => {
       await result.current.handleTextSearch('pasta');
@@ -482,5 +556,267 @@ describe('useRecipeScreen', () => {
     expect(mockSearchRecipes).toHaveBeenCalledTimes(1);
     expect(result.current.searchResults).toHaveLength(2);
     expect(result.current.searchPerformed).toBe(true);
+  });
+
+  it('does not cache empty Spoonacular responses — a retry hits the API again', async () => {
+    mockSearchRecipes.mockResolvedValue({
+      results: [],
+      offset: 0,
+      number: 0,
+      totalResults: 0,
+    });
+
+    const { result } = renderRecipeScreen();
+
+    await act(async () => {
+      await result.current.handleTextSearch('zzznothing');
+    });
+    expect(mockSearchRecipes).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      await result.current.handleTextSearch('zzznothing');
+    });
+
+    // Empty result was not cached, so the same query fires the API again
+    expect(mockSearchRecipes).toHaveBeenCalledTimes(2);
+  });
+
+  describe('combined local + Spoonacular search', () => {
+    it('shows local results first, then Spoonacular results', async () => {
+      mockSearchRecipes.mockResolvedValueOnce(sampleTextSearchResponse);
+
+      const { result } = renderRecipeScreen([
+        searchRecipesMockWith([makeLocalRecipeNode()]),
+      ]);
+
+      await act(async () => {
+        await result.current.handleTextSearch('lasagna');
+      });
+
+      await waitFor(() => {
+        expect(result.current.searchLoading).toBe(false);
+      });
+
+      expect(result.current.searchResults.map(r => r.id)).toEqual([
+        'local-r1',
+        'spoonacular-7001',
+        'spoonacular-7002',
+      ]);
+      expect(result.current.searchResults[0].title).toBe('Family Lasagna');
+      expect(result.current.searchResults[0].badge?.text).toBe('My recipe');
+      expect(result.current.searchResults[0].subtitle).toContain('60');
+    });
+
+    it('shows local results without an alert when Spoonacular fails', async () => {
+      mockSearchRecipes.mockRejectedValueOnce(new Error('network down'));
+
+      const { result } = renderRecipeScreen([
+        searchRecipesMockWith([makeLocalRecipeNode()]),
+      ]);
+
+      await act(async () => {
+        await result.current.handleTextSearch('lasagna');
+      });
+
+      await waitFor(() => {
+        expect(result.current.searchLoading).toBe(false);
+      });
+
+      expect(mockAlert).not.toHaveBeenCalled();
+      expect(result.current.searchResults.map(r => r.id)).toEqual(['local-r1']);
+    });
+
+    it('alerts exactly once when Spoonacular fails and no local results exist', async () => {
+      mockSearchRecipes.mockRejectedValueOnce(new Error('network down'));
+
+      const { result } = renderRecipeScreen();
+
+      await act(async () => {
+        await result.current.handleTextSearch('lasagna');
+      });
+
+      await waitFor(() => {
+        expect(result.current.searchLoading).toBe(false);
+      });
+
+      expect(mockAlert).toHaveBeenCalledTimes(1);
+      expect(result.current.searchResults).toEqual([]);
+    });
+
+    it('dedupes Spoonacular results the backend already knows about', async () => {
+      mockSearchRecipes.mockResolvedValueOnce(sampleTextSearchResponse);
+
+      // The backend has already upserted Spoonacular recipe 7001
+      const { result } = renderRecipeScreen([
+        searchRecipesMockWith([
+          makeLocalRecipeNode({
+            id: 'r-ext',
+            name: 'Pasta Carbonara (saved)',
+            isExternal: true,
+            externalSource: 'SPOONACULAR',
+            externalId: '7001',
+          }),
+        ]),
+      ]);
+
+      await act(async () => {
+        await result.current.handleTextSearch('carbonara');
+      });
+
+      await waitFor(() => {
+        expect(result.current.searchLoading).toBe(false);
+      });
+
+      // 7001 appears only as the local entry; 7002 stays
+      expect(result.current.searchResults.map(r => r.id)).toEqual([
+        'local-r-ext',
+        'spoonacular-7002',
+      ]);
+    });
+  });
+
+  describe('filter actions', () => {
+    const veganProfile = {
+      profile: {
+        restrictions: [{ id: 'r1', diet: 'VEGAN' }],
+        maxCookTimeMinutes: 30,
+      },
+      loading: false,
+    };
+
+    it('removeFilter narrows filters and re-runs the active search', async () => {
+      mockUseDietaryProfile.mockReturnValue(veganProfile);
+      mockSearchRecipes.mockResolvedValue(sampleTextSearchResponse);
+
+      const { result } = renderRecipeScreen();
+
+      await act(async () => {
+        await result.current.handleTextSearch('pasta');
+      });
+      expect(mockSearchRecipes).toHaveBeenCalledWith(
+        expect.objectContaining({ diet: 'vegan', maxReadyTime: 30 }),
+      );
+
+      await act(async () => {
+        result.current.removeFilter('diet', 'vegan');
+      });
+
+      await waitFor(() => {
+        expect(mockSearchRecipes).toHaveBeenCalledTimes(2);
+      });
+      const secondCall = mockSearchRecipes.mock.calls[1][0] as Record<
+        string,
+        unknown
+      >;
+      expect(secondCall.diet).toBeUndefined();
+      expect(secondCall.maxReadyTime).toBe(30);
+      expect(result.current.activeFilters.diet).toEqual([]);
+      expect(result.current.activeFilterCount).toBe(1);
+    });
+
+    it('clearFiltersAndSearchAgain clears all filters and re-runs the search', async () => {
+      mockUseDietaryProfile.mockReturnValue(veganProfile);
+      mockSearchRecipes.mockResolvedValue(sampleTextSearchResponse);
+
+      const { result } = renderRecipeScreen();
+
+      await act(async () => {
+        await result.current.handleTextSearch('pasta');
+      });
+
+      await act(async () => {
+        result.current.clearFiltersAndSearchAgain();
+      });
+
+      await waitFor(() => {
+        expect(mockSearchRecipes).toHaveBeenCalledTimes(2);
+      });
+      const secondCall = mockSearchRecipes.mock.calls[1][0] as Record<
+        string,
+        unknown
+      >;
+      expect(secondCall.diet).toBeUndefined();
+      expect(secondCall.intolerances).toBeUndefined();
+      expect(secondCall.maxReadyTime).toBeUndefined();
+      expect(result.current.activeFilterCount).toBe(0);
+    });
+
+    it('does not re-run a search when filters change before any search', async () => {
+      mockUseDietaryProfile.mockReturnValue(veganProfile);
+
+      const { result } = renderRecipeScreen();
+
+      await act(async () => {
+        result.current.removeFilter('maxReadyTime');
+      });
+
+      expect(mockSearchRecipes).not.toHaveBeenCalled();
+      expect(result.current.activeFilters.maxReadyTime).toBeNull();
+    });
+
+    it('ingredient-search empty state does not blame filters (they never apply)', async () => {
+      mockUseDietaryProfile.mockReturnValue(veganProfile);
+      mockSearchRecipesByIngredients.mockResolvedValue([]);
+
+      const { result } = renderRecipeScreen();
+
+      act(() => {
+        result.current.toggleIngredient('Durian');
+      });
+      await act(async () => {
+        await result.current.handleIngredientSearch();
+      });
+
+      await waitFor(() => {
+        expect(result.current.searchLoading).toBe(false);
+      });
+
+      // Filters are active but don't apply to ingredient search — the empty
+      // state must use the plain copy with no clear-filters action.
+      expect(result.current.activeFilterCount).toBe(2);
+      expect(result.current.searchQuery).toBe('');
+      expect(result.current.emptyStateConfig.action).toBeUndefined();
+      expect(result.current.emptyStateConfig.description).not.toContain(
+        'filter',
+      );
+    });
+
+    it('empty state explains active filters and offers clear-and-retry', async () => {
+      mockUseDietaryProfile.mockReturnValue(veganProfile);
+      mockSearchRecipes.mockResolvedValue({
+        results: [],
+        offset: 0,
+        number: 0,
+        totalResults: 0,
+      });
+
+      const { result } = renderRecipeScreen();
+
+      await act(async () => {
+        await result.current.handleTextSearch('zzznothing');
+      });
+
+      await waitFor(() => {
+        expect(result.current.searchLoading).toBe(false);
+      });
+
+      expect(result.current.emptyStateConfig.title).toBe('No recipes found');
+      expect(result.current.emptyStateConfig.description).toContain(
+        '2 dietary filters',
+      );
+      expect(result.current.emptyStateConfig.action?.label).toBe(
+        'Clear filters & search again',
+      );
+
+      // The action clears filters and re-fires the search without them
+      await act(async () => {
+        result.current.emptyStateConfig.action?.onPress();
+      });
+
+      await waitFor(() => {
+        expect(mockSearchRecipes).toHaveBeenCalledTimes(2);
+      });
+      expect(result.current.activeFilterCount).toBe(0);
+    });
   });
 });

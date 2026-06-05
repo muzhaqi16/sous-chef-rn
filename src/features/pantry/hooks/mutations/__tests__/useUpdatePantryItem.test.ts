@@ -1,8 +1,11 @@
+import { act, waitFor } from '@testing-library/react-native';
 import {
   renderHookWithApollo,
   seedCache,
 } from '#/test-utils/apolloMockProvider';
 import { StorageState } from '#/graphql/generated/schemaTypes';
+import { UpdatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
+import { UseUpdatePantryItem_PantryItemFragmentDoc } from '../useUpdatePantryItem.generated';
 import type { FormDataInput } from '../types';
 import { useUpdatePantryItem } from '../useUpdatePantryItem';
 
@@ -221,5 +224,88 @@ describe('useUpdatePantryItem', () => {
 
     const { buildOptimisticUnit } = jest.requireMock('../utils');
     expect(buildOptimisticUnit).not.toHaveBeenCalled();
+  });
+});
+
+describe('useUpdatePantryItem — local-first cache behavior', () => {
+  const readItemName = (cache: ReturnType<typeof seedCache>) =>
+    cache.readFragment<{ itemName: string }>({
+      id: cache.identify({ __typename: 'PantryItem', id: 'item-1' }),
+      fragment: UseUpdatePantryItem_PantryItemFragmentDoc,
+      fragmentName: 'useUpdatePantryItem_pantryItem',
+    })?.itemName;
+
+  const fireRename = (
+    result: { current: ReturnType<typeof useUpdatePantryItem> },
+    itemName: string,
+  ) => {
+    result.current.updatePantryItemFields({
+      itemId: 'item-1',
+      input: createFormData({ itemName }),
+      dirtyFields: { itemName: true },
+      selectedLocationId: null,
+      selectedBrandId: null,
+    });
+  };
+
+  it('writes the update to the cache PERMANENTLY before the mutation settles, and a queued (null) result keeps it', async () => {
+    const cache = seedItem();
+    const { result } = renderHookWithApollo(() => useUpdatePantryItem({}), {
+      cache,
+      operationMocks: [
+        {
+          request: {
+            query: UpdatePantryItemDocument,
+            variables: () => true,
+          },
+          // The offline queue completes an intercepted mutation with each
+          // top-level field null — the classifier reads that as 'queued'.
+          result: { data: { updatePantryItem: null } },
+        },
+      ],
+    });
+
+    await act(async () => {
+      fireRename(result, 'Oat Milk');
+      // Synchronous permanent write — visible before the mutation settles.
+      expect(readItemName(cache)).toBe('Oat Milk');
+    });
+
+    // Queued result keeps the write (no rollback).
+    expect(readItemName(cache)).toBe('Oat Milk');
+  });
+
+  it('restores the pre-edit snapshot when the server rejects the update', async () => {
+    const cache = seedItem();
+    const { result } = renderHookWithApollo(() => useUpdatePantryItem({}), {
+      cache,
+      operationMocks: [
+        {
+          request: {
+            query: UpdatePantryItemDocument,
+            variables: () => true,
+          },
+          result: {
+            data: {
+              updatePantryItem: {
+                __typename: 'ValidationError',
+                code: 'VALIDATION_ERROR',
+                message: 'Name is invalid',
+                field: 'itemName',
+              },
+            },
+          },
+        },
+      ],
+    });
+
+    await act(async () => {
+      fireRename(result, 'Bad Name');
+      expect(readItemName(cache)).toBe('Bad Name');
+    });
+
+    await waitFor(() => {
+      expect(readItemName(cache)).toBe('Milk');
+    });
   });
 });

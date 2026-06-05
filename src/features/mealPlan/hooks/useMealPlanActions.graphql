@@ -1,0 +1,20 @@
+# Cache reads for materializing an optimistic MealPlan (local-first create):
+# the creator's display identity and the linked home's display fields, both
+# resolved from cache so the overview card renders complete while offline.
+fragment useMealPlanActions_creator on User {
+  id
+  profile {
+    id
+    displayName
+    avatar
+  }
+}
+
+fragment useMealPlanActions_home on Home {
+  id
+  name
+  myMembership {
+    id
+    role
+  }
+}

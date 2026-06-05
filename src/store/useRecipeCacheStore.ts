@@ -92,10 +92,23 @@ export const useRecipeCacheStore = create<RecipeCacheState>()(
           return null;
         }
 
+        // Empty result sets are never written (see setCached), but entries
+        // persisted before that guard existed may still be in MMKV — purge
+        // them on read so a transient zero-result response doesn't stick.
+        if (cached.results.length === 0) {
+          set(state => {
+            delete state.cache[key];
+          });
+          return null;
+        }
+
         return cached;
       },
 
       setCached: (key, results, enrichment = {}) => {
+        // Don't cache empty result sets: a transient zero (API hiccup,
+        // over-restrictive filters) would otherwise stick for the full TTL.
+        if (results.length === 0) return;
         set(state => {
           state.cache[key] = { results, enrichment, cachedAt: Date.now() };
         });

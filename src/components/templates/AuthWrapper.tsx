@@ -1,6 +1,6 @@
 import React, { ReactNode } from 'react';
 import { View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ThemedSafeAreaView } from '#components/atoms/themedComponents';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { StyleSheet } from 'react-native-unistyles';
@@ -12,7 +12,7 @@ interface AuthWrapperProps {
 
 export const AuthWrapper = ({ children, testID }: AuthWrapperProps) => {
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <ThemedSafeAreaView style={styles.safeArea}>
       <KeyboardAwareScrollView
         contentContainerStyle={styles.scrollContainer}
         bottomOffset={16}
@@ -23,7 +23,7 @@ export const AuthWrapper = ({ children, testID }: AuthWrapperProps) => {
           {children}
         </View>
       </KeyboardAwareScrollView>
-    </SafeAreaView>
+    </ThemedSafeAreaView>
   );
 };
 

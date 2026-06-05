@@ -653,6 +653,37 @@ export function makeCache(): InMemoryCache {
       },
       Query: {
         fields: {
+          // Cache redirects: by-id lookups (GetShoppingListItemsFiltered,
+          // GetPantry, the detail queries) resolve to the normalized entity
+          // when ROOT_QUERY has never seen this id — essential for entities
+          // created local-first while offline, where no server response ever
+          // writes the ROOT_QUERY field.
+          shoppingList: {
+            read(
+              existing: unknown,
+              { args, toReference, canRead }: FieldFunctionOptions,
+            ) {
+              if (existing !== undefined) return existing;
+              const ref = toReference({
+                __typename: 'ShoppingList',
+                id: args?.id as string,
+              });
+              return canRead(ref) ? ref : existing;
+            },
+          },
+          pantry: {
+            read(
+              existing: unknown,
+              { args, toReference, canRead }: FieldFunctionOptions,
+            ) {
+              if (existing !== undefined) return existing;
+              const ref = toReference({
+                __typename: 'Pantry',
+                id: args?.id as string,
+              });
+              return canRead(ref) ? ref : existing;
+            },
+          },
           // List-level queries (return collections of lists/homes)
           shoppingLists: {
             // Different homes have different shopping lists - cache separately per filter

@@ -8,10 +8,8 @@ import Animated, {
   withTiming,
   Easing,
 } from 'react-native-reanimated';
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ThemedSafeAreaView } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { ProfileHeader } from '#components/organisms/ProfileHeader';
 import { SettingsSection } from '#components/organisms/SettingsSection';
@@ -121,7 +119,7 @@ export const ProfileScreen = () => {
     return <ProfileSkeleton />;
   }
   return (
-    <SafeAreaView
+    <ThemedSafeAreaView
       style={styles.container}
       edges={['left', 'right']}
       testID="profile-screen"
@@ -221,7 +219,7 @@ export const ProfileScreen = () => {
           </Text>
         </AppPressable>
       </ActionTray>
-    </SafeAreaView>
+    </ThemedSafeAreaView>
   );
 };
 

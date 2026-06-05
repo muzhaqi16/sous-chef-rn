@@ -3,7 +3,7 @@ import { View, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { Text } from '#components/atoms/Text';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ThemedSafeAreaView } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from 'react-i18next';
 import { Icon } from '#/utils/iconUtils';
@@ -283,11 +283,11 @@ export const DeleteAccountScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['left', 'right']}>
+    <ThemedSafeAreaView style={styles.container} edges={['left', 'right']}>
       <Header title={t('account.deleteTitle')} onBack={goBack} centerTitle />
 
       {renderContent()}
-    </SafeAreaView>
+    </ThemedSafeAreaView>
   );
 };
 

@@ -1811,6 +1811,13 @@ export type CreatePantryActivityInput = {
 export type CreatePantryInput = {
   description?: InputMaybe<Scalars['String']['input']>;
   homeId: Scalars['ID']['input'];
+  /**
+   * Optional client-generated permanent ID (CUID v1, e.g. "c…", 25 chars).
+   * Offline-first clients mint this as the row's permanent primary key so a
+   * re-synced create resolves to the same row (idempotent) instead of duplicating.
+   * When omitted, the server generates one via @default(cuid()).
+   */
+  id?: InputMaybe<Scalars['ID']['input']>;
   isDefault?: InputMaybe<Scalars['Boolean']['input']>;
   location?: InputMaybe<Scalars['String']['input']>;
   name: Scalars['String']['input'];
@@ -1961,6 +1968,13 @@ export type CreateShoppingListInput = {
   budgetAmount?: InputMaybe<Scalars['Float']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
   homeId?: InputMaybe<Scalars['ID']['input']>;
+  /**
+   * Optional client-generated permanent ID (CUID v1, e.g. "c…", 25 chars).
+   * Offline-first clients mint this as the row's permanent primary key so a
+   * re-synced create resolves to the same row (idempotent) instead of duplicating.
+   * When omitted, the server generates one via @default(cuid()).
+   */
+  id?: InputMaybe<Scalars['ID']['input']>;
   isDefault?: InputMaybe<Scalars['Boolean']['input']>;
   name: Scalars['String']['input'];
   tags?: InputMaybe<Array<Scalars['String']['input']>>;

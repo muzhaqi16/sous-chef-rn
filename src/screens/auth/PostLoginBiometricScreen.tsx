@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { View, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ThemedSafeAreaView } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { usePostLoginState } from '#store/useAppStore';
 import { useBiometricPrompting } from '#hooks/auth/useBiometricPrompting';
@@ -56,7 +56,10 @@ export const PostLoginBiometricScreen = () => {
   }, [postLoginCredentials, setNavigationState]);
 
   return (
-    <SafeAreaView style={styles.safeArea} testID="post-login-biometric-screen">
+    <ThemedSafeAreaView
+      style={styles.safeArea}
+      testID="post-login-biometric-screen"
+    >
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -82,7 +85,7 @@ export const PostLoginBiometricScreen = () => {
           />
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </ThemedSafeAreaView>
   );
 };
 

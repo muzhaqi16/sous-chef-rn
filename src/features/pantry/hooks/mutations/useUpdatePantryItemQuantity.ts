@@ -1,11 +1,15 @@
 /**
  * useUpdatePantryItemQuantity - Update mutation for pantry item quantity/unit
+ * (local-first).
  *
  * Single responsibility:
  * - Update quantity and unit fields via dedicated endpoint
  * - Version conflict handling
- * - Optimistic response built from the hook's own narrow fragment read from
- *   cache — callers pass only `itemId`.
+ * - Writes the updated quantity/unit to the cache PERMANENTLY before firing
+ *   (an `optimisticResponse` would roll back the moment the offline queue
+ *   completes the request with a null result). A queued update stays visible
+ *   and replays via the idempotent `SyncPantryItem` upsert; a real rejection
+ *   restores the pre-edit snapshot.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
@@ -18,10 +22,9 @@ import {
   handleMutationError,
   versionConflictCheck,
 } from '#/utils/errorHandlers';
-import {
-  enhanceWithVersion,
-  buildOptimisticMutationResponse,
-} from '#/apollo/utils/createOptimisticResponse';
+import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
+import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
 import { buildOptimisticUnit } from './utils';
 import type { UnitSelection } from './types';
 
@@ -89,6 +92,25 @@ export function useUpdatePantryItemQuantity({
       quantity: newQuantity,
       unit: buildOptimisticUnit(trackingUnit, currentItem.unit),
     });
+
+    // Permanent write BEFORE firing: survives an offline/API-down queue
+    // (where no response ever arrives to materialize the change).
+    const cacheId = client.cache.identify({
+      __typename: 'PantryItem',
+      id: itemId,
+    });
+    const writeItem = (data: UseUpdatePantryItemQuantity_PantryItemFragment) =>
+      client.cache.writeFragment({
+        id: cacheId,
+        fragment: UseUpdatePantryItemQuantity_PantryItemFragmentDoc,
+        fragmentName: 'useUpdatePantryItemQuantity_pantryItem',
+        data,
+      });
+    executeCacheUpdate(
+      () => writeItem(optimisticPantryItem),
+      'Update Pantry Item Quantity (optimistic)',
+    );
+
     updateQuantityMutation({
       variables: {
         input: {
@@ -98,15 +120,33 @@ export function useUpdatePantryItemQuantity({
           version: currentItem.version ?? undefined,
         },
       },
-      optimisticResponse: buildOptimisticMutationResponse(
-        'updatePantryItemQuantity',
-        'UpdatePantryItemQuantityPayload',
-        { pantryItem: optimisticPantryItem },
-      ),
-    }).catch(error => {
-      console.error('Quantity update failed:', error);
-      // Error already handled by mutation's onError
-    });
+      // Queue offline / on API-down — replays via the idempotent SyncPantryItem.
+      context: { localFirst: true },
+    })
+      .then(result => {
+        // 'queued' (null payload, no error) keeps the permanent write — the
+        // change replays later. A rejection restores the pre-edit snapshot;
+        // the user-facing alert comes from the mutation's onError.
+        const outcome = classifyCreateResult(
+          result,
+          'updatePantryItemQuantity',
+          'UpdatePantryItemQuantityPayload',
+        );
+        if (outcome === 'rejected') {
+          executeCacheUpdate(
+            () => writeItem(currentItem),
+            'Revert rejected Pantry Item quantity update',
+          );
+        }
+      })
+      .catch(error => {
+        executeCacheUpdate(
+          () => writeItem(currentItem),
+          'Revert failed Pantry Item quantity update',
+        );
+        console.error('Quantity update failed:', error);
+        // Error already handled by mutation's onError
+      });
 
     onSuccess?.();
   };
