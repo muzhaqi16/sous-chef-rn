@@ -3259,7 +3259,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
-  - RNReanimated (4.3.0):
+  - RNReanimated (4.3.1):
     - boost
     - DoubleConversion
     - fast_float
@@ -3286,12 +3286,12 @@ PODS:
     - ReactCodegen
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
-    - RNReanimated/apple (= 4.3.0)
-    - RNReanimated/common (= 4.3.0)
+    - RNReanimated/apple (= 4.3.1)
+    - RNReanimated/common (= 4.3.1)
     - RNWorklets
     - SocketRocket
     - Yoga
-  - RNReanimated/apple (4.3.0):
+  - RNReanimated/apple (4.3.1):
     - boost
     - DoubleConversion
     - fast_float
@@ -3321,7 +3321,7 @@ PODS:
     - RNWorklets
     - SocketRocket
     - Yoga
-  - RNReanimated/common (4.3.0):
+  - RNReanimated/common (4.3.1):
     - boost
     - DoubleConversion
     - fast_float
@@ -3467,7 +3467,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
-  - RNWorklets (0.8.1):
+  - RNWorklets (0.8.3):
     - boost
     - DoubleConversion
     - fast_float
@@ -3494,11 +3494,11 @@ PODS:
     - ReactCodegen
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
-    - RNWorklets/apple (= 0.8.1)
-    - RNWorklets/common (= 0.8.1)
+    - RNWorklets/apple (= 0.8.3)
+    - RNWorklets/common (= 0.8.3)
     - SocketRocket
     - Yoga
-  - RNWorklets/apple (0.8.1):
+  - RNWorklets/apple (0.8.3):
     - boost
     - DoubleConversion
     - fast_float
@@ -3527,7 +3527,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
-  - RNWorklets/common (0.8.1):
+  - RNWorklets/common (0.8.3):
     - boost
     - DoubleConversion
     - fast_float
@@ -4076,10 +4076,10 @@ SPEC CHECKSUMS:
   RNNotifee: 5e3b271e8ea7456a36eec994085543c9adca9168
   RNPermissions: 3654751993ed3c1229fa5ce90a03d774bd01dfc1
   RNReactNativeHapticFeedback: b309b317c95fc3b9bc8276da1a78dae34b6ed46e
-  RNReanimated: 4e6187f2ba1e30e6ddc7c8fc9f19b2dd2b6b2532
+  RNReanimated: ce6c58c02bd76d8d1017bf07d04ed4a7c387801e
   RNScreens: 7f643ee0fd1407dc5085c7795460bd93da113b8f
   RNSVG: 3405336c4507ee0bafb02b08058d57216daa2c50
-  RNWorklets: 6daa3975bebe6047822c7485666d501a716674ca
+  RNWorklets: 534af667da0c0049e0060ae43f03c7df8cc9a6e0
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
   Unistyles: bf8c783c1a45745290e665eee628b2888d31e8b6
   VisionCamera: 8c913d0cb2c868f779035fb69a1e0ab69e10f1c3
