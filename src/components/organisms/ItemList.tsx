@@ -248,6 +248,11 @@ export const ItemList: React.FC<ItemListProps> = ({
         onScrollEndDrag={onScrollEndDrag}
         onMomentumScrollEnd={onMomentumScrollEnd}
         scrollEventThrottle={scrollEventThrottle}
+        // Deliver taps on header/row buttons on the first touch even while the
+        // keyboard is up (default "never" swallows the first tap to dismiss the
+        // keyboard, forcing a second tap on the search button). Taps on empty
+        // space still dismiss the keyboard.
+        keyboardShouldPersistTaps="handled"
         refreshControl={
           onRefresh ? (
             <ThemedRefreshControl
@@ -282,6 +287,11 @@ export const ItemList: React.FC<ItemListProps> = ({
         onScrollEndDrag={onScrollEndDrag}
         onMomentumScrollEnd={onMomentumScrollEnd}
         scrollEventThrottle={scrollEventThrottle}
+        // Deliver taps on header/row buttons on the first touch even while the
+        // keyboard is up (default "never" swallows the first tap to dismiss the
+        // keyboard, forcing a second tap on the search button). Taps on empty
+        // space still dismiss the keyboard.
+        keyboardShouldPersistTaps="handled"
         refreshControl={
           onRefresh ? (
             <ThemedRefreshControl

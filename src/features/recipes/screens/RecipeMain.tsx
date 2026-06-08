@@ -483,9 +483,13 @@ const RecipeMainInner: React.FC = () => {
 
   return (
     <TabMainScreen testID="recipes-screen">
-      {(screen.discovery.loading || screen.searchLoading) &&
-      !screen.showSearchResults &&
-      screen.items.length === 0 ? (
+      {/* A search in flight always shows the skeleton so the tap gets instant
+          feedback (and any stale prior results are replaced); discovery's
+          initial load only skeletons when there's nothing on screen yet. */}
+      {screen.searchLoading ||
+      (screen.discovery.loading &&
+        !screen.showSearchResults &&
+        screen.items.length === 0) ? (
         <>
           {recipeListHeader}
           <RecipeSkeleton />

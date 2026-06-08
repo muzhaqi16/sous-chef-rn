@@ -266,7 +266,7 @@
     "noResultsFiltered_one": "Asnjë përputhje — {{count}} filtër dietik aktiv",
     "noResultsFiltered_other": "Asnjë përputhje — {{count}} filtra dietikë aktivë",
     "clearFiltersAction": "Pastro filtrat dhe kërko përsëri",
-    "myRecipeBadge": "Receta ime",
+    "savedBadge": "Ruajtur",
     "maxTimeChip": "≤ {{count}} min",
     "removeFilterA11y": "Hiq filtrin {{filter}}",
     "filtersActiveSummary_one": "{{count}} filtër aktiv",

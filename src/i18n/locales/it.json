@@ -267,7 +267,7 @@
     "noResultsFiltered_one": "Nessun risultato — {{count}} filtro alimentare attivo",
     "noResultsFiltered_other": "Nessun risultato — {{count}} filtri alimentari attivi",
     "clearFiltersAction": "Cancella i filtri e cerca di nuovo",
-    "myRecipeBadge": "La mia ricetta",
+    "savedBadge": "Salvata",
     "maxTimeChip": "≤ {{count}} min",
     "removeFilterA11y": "Rimuovi il filtro {{filter}}",
     "filtersActiveSummary_one": "{{count}} filtro attivo",

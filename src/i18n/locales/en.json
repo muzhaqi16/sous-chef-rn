@@ -267,7 +267,7 @@
     "noResultsFiltered_one": "No matches — {{count}} dietary filter is active",
     "noResultsFiltered_other": "No matches — {{count}} dietary filters are active",
     "clearFiltersAction": "Clear filters & search again",
-    "myRecipeBadge": "My recipe",
+    "savedBadge": "Saved",
     "maxTimeChip": "≤ {{count}} min",
     "removeFilterA11y": "Remove {{filter}} filter",
     "filtersActiveSummary_one": "{{count}} filter active",

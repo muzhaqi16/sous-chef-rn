@@ -16,6 +16,7 @@ query SearchRecipes($query: String!, $first: Int, $after: String) {
         totalTimeMinutes
         externalSource
         externalId
+        isSaved
         ...BasicRecipeFragment
       }
       cursor

@@ -267,7 +267,7 @@
     "noResultsFiltered_one": "Sin resultados — {{count}} filtro dietético activo",
     "noResultsFiltered_other": "Sin resultados — {{count}} filtros dietéticos activos",
     "clearFiltersAction": "Borrar filtros y buscar de nuevo",
-    "myRecipeBadge": "Mi receta",
+    "savedBadge": "Guardada",
     "maxTimeChip": "≤ {{count}} min",
     "removeFilterA11y": "Quitar el filtro {{filter}}",
     "filtersActiveSummary_one": "{{count}} filtro activo",

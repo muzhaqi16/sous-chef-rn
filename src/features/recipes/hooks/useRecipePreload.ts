@@ -177,6 +177,12 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
       servings: spoonacularRecipe.servings,
       prepTimeMinutes: spoonacularRecipe.preparationMinutes || undefined,
       cookTimeMinutes: spoonacularRecipe.cookingMinutes || undefined,
+      // Spoonacular usually omits the prep/cook breakdown but always provides
+      // readyInMinutes — persist it as the total time so the imported recipe
+      // carries a time of its own (otherwise it shows servings only).
+      timing: spoonacularRecipe.readyInMinutes
+        ? { totalTimeMinutes: spoonacularRecipe.readyInMinutes }
+        : undefined,
       imageUrl: spoonacularRecipe.image,
       instructions,
       caloriesPerServing: caloriesPerServing

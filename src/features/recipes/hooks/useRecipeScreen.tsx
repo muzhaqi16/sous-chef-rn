@@ -105,31 +105,62 @@ function toSpoonacularDisplayItems(
   });
 }
 
+type SpoonacularRecipe = SearchRecipesResult | RecipeSearchResult;
+
+/** Spoonacular's popularity count — `likes` on ingredient-search results,
+ * `aggregateLikes` on text-search results. `usedIngredientCount` is the
+ * required field that distinguishes the two shapes (same discriminant as
+ * recipeTransform). */
+function spoonacularLikes(recipe: SpoonacularRecipe): number | undefined {
+  return 'usedIngredientCount' in recipe ? recipe.likes : recipe.aggregateLikes;
+}
+
 /** Transform local API recipe nodes into display items, mirroring the
  * Spoonacular subtitle format. The `local-` id prefix keeps these
  * collision-free against `spoonacular-<n>` ids and lets the press handler
- * route to the backend recipe detail view. */
-function toLocalDisplayItems(nodes: LocalRecipeNode[]): DisplayItem[] {
+ * route to the backend recipe detail view.
+ *
+ * Backend (imported) recipes are missing time/likes — the import only stores
+ * Spoonacular's prep/cook breakdown (usually empty) and keeps the like count
+ * inside an opaque JSON blob. `enrichmentFor` supplies the matching live
+ * Spoonacular result so the row can borrow its `readyInMinutes` + like count
+ * and look identical to a native Spoonacular row. */
+function toLocalDisplayItems(
+  nodes: LocalRecipeNode[],
+  enrichmentFor: (node: LocalRecipeNode) => SpoonacularRecipe | undefined,
+): DisplayItem[] {
   return nodes.map(node => {
+    const match = enrichmentFor(node);
+    const matchTime =
+      match && 'readyInMinutes' in match ? match.readyInMinutes : undefined;
+    const matchLikes = match ? spoonacularLikes(match) : undefined;
+
+    const totalTime = node.totalTimeMinutes ?? matchTime;
     const subtitleParts: string[] = [];
-    if (node.totalTimeMinutes) {
-      subtitleParts.push(
-        `⏱ ${node.totalTimeMinutes} ${tGlobal('recipes.minutes')}`,
-      );
+    if (totalTime) {
+      subtitleParts.push(`⏱ ${totalTime} ${tGlobal('recipes.minutes')}`);
     }
     if (node.servings) {
       subtitleParts.push(
         `${node.servings} ${tGlobal('recipes.servingsSuffix')}`,
       );
     }
+
+    // Saved recipes keep the green "Saved" badge; otherwise borrow the live
+    // Spoonacular like count so the row carries the same ❤️ as its twin.
+    // Backend search results are the app's recipe corpus, not the user's own,
+    // so an unconditional "My recipe" badge would mislabel them.
+    const badge: DisplayItem['badge'] = node.isSaved
+      ? { text: tGlobal('recipes.savedBadge'), variant: 'success' }
+      : matchLikes && matchLikes > 0
+      ? { text: `❤️ ${matchLikes}`, variant: 'primary' }
+      : undefined;
+
     return {
       id: `local-${node.id}`,
       title: node.name,
       subtitle: subtitleParts.join(' • '),
-      badge: {
-        text: tGlobal('recipes.myRecipeBadge'),
-        variant: 'success',
-      } satisfies DisplayItem['badge'],
+      badge,
       imageUrl: node.imageUrl ?? undefined,
     };
   });
@@ -207,8 +238,12 @@ async function executeRecipeTextSearch(
   const localNodes =
     localData?.searchRecipes.edges.map(edge => edge.node) ?? [];
 
-  // Drop Spoonacular results the backend already knows about (viewed external
-  // recipes are upserted server-side) so they don't appear twice.
+  // Drop Spoonacular results the backend already knows about so they don't
+  // appear twice. Two guards: (1) by Spoonacular id when the backend recipe
+  // is linked (viewed external recipes are upserted server-side); (2) by
+  // normalized title, which catches the same recipe surfaced from both
+  // sources without an external-id link. Backend results render first, so the
+  // backend copy is the one kept.
   const localSpoonacularIds = new Set(
     localNodes
       .filter(
@@ -217,12 +252,39 @@ async function executeRecipeTextSearch(
       )
       .map(node => node.externalId),
   );
+  const normalizeTitle = (title: string) =>
+    title.trim().toLowerCase().replace(/\s+/g, ' ');
+  const localTitles = new Set(
+    localNodes.map(node => normalizeTitle(node.name)),
+  );
   const dedupedSpoonacular = spoonacularResults.filter(
-    recipe => !localSpoonacularIds.has(String(recipe.id)),
+    recipe =>
+      !localSpoonacularIds.has(String(recipe.id)) &&
+      !localTitles.has(normalizeTitle(recipe.title)),
   );
 
+  // Index the live Spoonacular results so each backend row can borrow the
+  // time + like count from its twin (matched by external id, then by title).
+  const spoonacularById = new Map<string, SpoonacularRecipe>();
+  const spoonacularByTitle = new Map<string, SpoonacularRecipe>();
+  for (const recipe of spoonacularResults) {
+    spoonacularById.set(String(recipe.id), recipe);
+    const titleKey = normalizeTitle(recipe.title);
+    if (!spoonacularByTitle.has(titleKey))
+      spoonacularByTitle.set(titleKey, recipe);
+  }
+  const enrichmentFor = (
+    node: LocalRecipeNode,
+  ): SpoonacularRecipe | undefined => {
+    if (node.externalSource === ExternalSource.Spoonacular && node.externalId) {
+      const byId = spoonacularById.get(node.externalId);
+      if (byId) return byId;
+    }
+    return spoonacularByTitle.get(normalizeTitle(node.name));
+  };
+
   const combined = [
-    ...toLocalDisplayItems(localNodes),
+    ...toLocalDisplayItems(localNodes, enrichmentFor),
     ...toSpoonacularDisplayItems(dedupedSpoonacular),
   ];
   setDisplayResults(combined);
