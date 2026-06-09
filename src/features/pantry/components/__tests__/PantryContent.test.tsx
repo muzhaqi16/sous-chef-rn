@@ -16,6 +16,15 @@ import {
   type PantryItemCard_PantryItemFragment,
 } from '../PantryItemCard.generated';
 
+// useDeferredValue defaults to passthrough (identical to real behavior in the
+// sync test renderer) so existing tests are unaffected; a single test overrides
+// it to simulate the one-render lag where items have arrived but the deferred
+// value hasn't caught up.
+jest.mock('react', () => {
+  const actual = jest.requireActual('react');
+  return { ...actual, useDeferredValue: jest.fn((value: unknown) => value) };
+});
+
 // PantryContent now reads `useApolloClient` for the image-preload effect and
 // each `PantryItemCard` cell subscribes to its own entity via `useFragment`.
 // Seed the cache with the items so the cells unmask successfully.
@@ -552,7 +561,7 @@ describe('PantryContent', () => {
         />,
       );
       // data = sticky-header sentinel + first 24 items (INITIAL_RENDER_WINDOW)
-      expect(screen.getByTestId('pantry-list').props.data).toHaveLength(1 + 24);
+      expect(screen.getByTestId('pantry-list').props.data).toHaveLength(24);
     });
 
     it('grows the window on end-reached until the loaded set is exhausted', () => {
@@ -567,7 +576,29 @@ describe('PantryContent', () => {
         screen.getByTestId('pantry-list').props.onEndReached?.();
       });
       // window grows by RENDER_WINDOW_STEP (24), capped at the 30 loaded items
-      expect(screen.getByTestId('pantry-list').props.data).toHaveLength(1 + 30);
+      expect(screen.getByTestId('pantry-list').props.data).toHaveLength(30);
+    });
+
+    it('bridges the useDeferredValue render lag with skeletons (items present, deferred slice still empty)', () => {
+      // Simulate the empty→populated lag: items have arrived (sortedItems > 0)
+      // but useDeferredValue still returns the previous (empty) value, so the
+      // windowed slice is empty for this render. The list must hold a skeleton,
+      // not flash the empty body the user reported.
+      const deferred = React.useDeferredValue as jest.Mock;
+      deferred.mockReturnValue([]);
+      try {
+        render(
+          <PantryContent
+            {...defaultProps}
+            items={manyItems}
+            locationCounts={{ all: 30, fridge: 0, freezer: 0, pantry: 0 }}
+          />,
+        );
+        expect(screen.getByTestId('pantry-skeleton')).toBeTruthy();
+        expect(screen.queryByText('Your pantry is empty')).toBeNull();
+      } finally {
+        deferred.mockImplementation((value: unknown) => value);
+      }
     });
 
     it('prefers server pagination over growing the local window', () => {
@@ -586,7 +617,7 @@ describe('PantryContent', () => {
       });
       // server fetch fired; local window stays at the initial size
       expect(onEndReached).toHaveBeenCalledTimes(1);
-      expect(screen.getByTestId('pantry-list').props.data).toHaveLength(1 + 24);
+      expect(screen.getByTestId('pantry-list').props.data).toHaveLength(24);
     });
   });
 
@@ -806,6 +837,45 @@ describe('PantryContent', () => {
   it('renders with notification count', () => {
     render(<PantryContent {...defaultProps} notificationCount={5} />);
     expect(screen.getByText('John')).toBeTruthy();
+  });
+
+  describe('body skeleton overlay (FlashList paint gap)', () => {
+    it('covers the rows with a skeleton until FlashList paints, then lifts on onLoad', () => {
+      const items = [
+        createMockPantryItem({ id: '1', itemName: 'Milk' }),
+        createMockPantryItem({ id: '2', itemName: 'Eggs' }),
+      ];
+      render(
+        <PantryContent
+          {...defaultProps}
+          items={items}
+          locationCounts={{ all: 2, fridge: 0, freezer: 0, pantry: 0 }}
+        />,
+      );
+      // rows are in the list, but FlashList hasn't reported onLoad yet → the
+      // body overlay skeleton covers the in-progress paint
+      expect(screen.getByTestId('pantry-skeleton')).toBeTruthy();
+      expect(screen.getByText('Milk')).toBeTruthy();
+
+      // FlashList finishes its first paint → overlay lifts
+      act(() => {
+        screen.getByTestId('pantry-list').props.onLoad({ elapsedTimeInMs: 0 });
+      });
+      expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
+      expect(screen.getByText('Milk')).toBeTruthy();
+    });
+
+    it('shows no overlay for a genuinely empty pantry', () => {
+      render(
+        <PantryContent
+          {...defaultProps}
+          items={[]}
+          locationCounts={{ all: 0, fridge: 0, freezer: 0, pantry: 0 }}
+        />,
+      );
+      expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
+      expect(screen.getByText('Your pantry is empty')).toBeTruthy();
+    });
   });
 
   describe('no-home empty states', () => {

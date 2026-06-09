@@ -6,14 +6,11 @@ import React, {
   useImperativeHandle,
 } from 'react';
 import { View, RefreshControl } from 'react-native';
+import Animated, { FadeOut } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 import { useApolloClient } from '@apollo/client/react';
 import { Pressable } from '#components/atoms/themedComponents';
-import {
-  FlashList,
-  type FlashListRef,
-  ListRenderItemInfo,
-} from '@shopify/flash-list';
+import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native-unistyles';
 import { getTabBarBottomPadding } from '#constants/layout';
@@ -39,20 +36,15 @@ import {
 import { PantryAlertBar } from '#features/pantry/components/PantryAlertBar';
 import { PaginationFooter } from '#components/organisms/PaginationFooter';
 import { PantryItemSkeleton } from '#components/base/Skeleton/PantryItemSkeleton';
+import { PantryScreenSkeleton } from '#components/base/Skeleton/PantryScreenSkeleton';
+import { TIMING } from '#constants/animations';
 import { AnimatedCellRenderer } from '#components/atoms/AnimatedCellRenderer';
 import { preloadImages } from '#components/atoms/CachedImage';
 import { resolveImageUrl } from '#utils/imageUtils';
 import { useRenderTime } from '#hooks/performance/useRenderTime';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
 import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
-import {
-  type StickyHeaderSentinel,
-  STICKY_HEADER_SENTINEL,
-  isStickyHeaderSentinel,
-  STICKY_HEADER_INDICES,
-  STICKY_HEADER_CONFIG,
-  FLASHLIST_DEFAULTS,
-} from '#utils/flashListDefaults';
+import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 
 // Extracted modules
 import {
@@ -68,8 +60,6 @@ import type {
   PantryContentProps,
   PantryContentRef,
 } from './pantryDisplay/types';
-
-type PantryListItem = PantryListNode | StickyHeaderSentinel;
 
 // Module-level flag: once pantry content has been shown, skip skeletons on remount.
 // Persists across component unmount/remount (stack navigation), resets on app restart.
@@ -139,7 +129,7 @@ export const PantryContent = React.forwardRef<
     // Apollo cache reads run inside the image-preload effect; each leaf
     // computes its own display data via `useFragment`.
     const client = useApolloClient();
-    const flashListRef = useRef<FlashListRef<PantryListItem>>(null);
+    const flashListRef = useRef<FlashListRef<PantryListNode>>(null);
     const settingsIconRef = useRef<View>(null);
 
     const perfCallbacks = useFlashListPerformance(flashListRef, {
@@ -194,7 +184,8 @@ export const PantryContent = React.forwardRef<
       !noHomeSelected &&
       !noHomes &&
       !noPantries;
-    const showSkeletons = awaitingItems || (!hasShownContent && loading);
+    // `showSkeletons` is computed below, after `windowedItems`, so it can also
+    // bridge the useDeferredValue render lag (items present but not yet windowed).
 
     const {
       sortOption,
@@ -249,9 +240,21 @@ export const PantryContent = React.forwardRef<
     const windowedItems = deferredSortedItems.slice(0, clientWindow);
     const clientHasMore = clientWindow < deferredSortedItems.length;
 
-    const listData: PantryListItem[] = showSkeletons
-      ? [STICKY_HEADER_SENTINEL]
-      : [STICKY_HEADER_SENTINEL, ...windowedItems];
+    // Items exist but the deferred/windowed slice hasn't caught up to them yet —
+    // a one-render `useDeferredValue` lag on the empty→populated transition (e.g.
+    // a cache-cleared cold start where items arrive over the network: `items` is
+    // already 18 while `deferredSortedItems` is still 0). Without this the list
+    // flashes empty for that render; skeletons bridge it until the rows are
+    // actually in the window. Transient by construction (the deferred value
+    // always catches up on the next render), so it cannot stick.
+    const renderLag = sortedItems.length > 0 && windowedItems.length === 0;
+    const showSkeletons =
+      awaitingItems || renderLag || (!hasShownContent && loading);
+
+    // The FlashList holds only item rows now — header/search/stats/tabs render
+    // as fixed chrome above it. Empty/loading states are handled by the footer
+    // (PantryEmptyState) + the body overlay, not by blanking the data.
+    const listData: PantryListNode[] = windowedItems;
 
     // End-reached: fetch the next server page if one exists, otherwise grow the
     // local window. `onEndReached` (prop) is defined only when the server has
@@ -269,6 +272,36 @@ export const PantryContent = React.forwardRef<
     };
 
     const hasMoreToRender = hasMore || clientHasMore;
+
+    // ── Body skeleton overlay ──
+    // PantryContent commits fast with the rows already in the list, but FlashList
+    // then spends a while mounting/painting the cells on a cold JS thread. By then
+    // the DeferredScreen fallback has faded, so the row area is blank with nothing
+    // covering it. The chrome (header / stats / tabs) renders ABOVE the list, so
+    // the FlashList holds only rows and this overlay can absolutely-fill its
+    // container (`contentFill`) — the exact row area — with no layout measurement
+    // (the measurement callback can't run during the JS-blocked paint anyway). It
+    // lifts on FlashList's `onLoad` (first paint), one-shot per mount; the screen
+    // stays mounted under the tab navigator, so there's no remount and we never
+    // reset `listPainted` (sort/tab switches reuse already-painted cells).
+    const [listPainted, setListPainted] = useState(false);
+
+    const handleListLoad = (info: { elapsedTimeInMs: number }) => {
+      perfCallbacks.onLoad(info);
+      setListPainted(true);
+    };
+
+    // Show the overlay only when REAL rows are present and FlashList is still
+    // painting them — not while the in-list skeleton (`showSkeletons`) is up
+    // (data not ready / deferred lag), and not for search / no-home / empty
+    // states. Keeps the two skeleton layers mutually exclusive.
+    const hasRowsToPaint =
+      items.length > 0 &&
+      !searchQuery &&
+      !noHomeSelected &&
+      !noHomes &&
+      !noPantries;
+    const showLoadingOverlay = !listPainted && !showSkeletons && hasRowsToPaint;
 
     // DEV: window/perf tracking — confirms FlashList is handed a bounded window
     // (not the whole load-all page) and surfaces how sort/filter sizes the set.
@@ -362,7 +395,10 @@ export const PantryContent = React.forwardRef<
     // contextual empty / no-results state. (Previously this was gated on
     // `!showSkeletons`, which made PantryEmptyState's skeleton branch unreachable
     // and left a blank body — just the sticky tabs — during loading.)
-    const isEmpty = sortedItems.length === 0;
+    // Based on what's actually RENDERED (the window), not the full sorted set, so
+    // the deferred-render lag (sortedItems > 0 but windowedItems still 0) routes
+    // to PantryEmptyState's skeleton branch instead of the empty/PaginationFooter.
+    const isEmpty = windowedItems.length === 0;
 
     const listContentStyle = isEmpty
       ? styles.listContentEmpty
@@ -371,30 +407,85 @@ export const PantryContent = React.forwardRef<
           paddingBottom: getTabBarBottomPadding(safeBottom),
         };
 
-    const getListItemType = (item: PantryListItem) => {
-      if (isStickyHeaderSentinel(item)) return 'stickyHeader';
-      return 'item';
-    };
+    const listKeyExtractor = (item: PantryListNode) => item.id;
 
-    const listKeyExtractor = (item: PantryListItem) => {
-      if (isStickyHeaderSentinel(item)) return '__stickyHeader__';
-      return item.id;
-    };
-
-    const renderListItem = ({
-      item,
-      index,
-      target,
-      extraData: extra,
-    }: ListRenderItemInfo<PantryListItem>) => {
-      if (isStickyHeaderSentinel(item)) {
-        return (
-          <View
-            style={[
-              styles.stickySection,
-              target === 'StickyHeader' && styles.stickyHeaderActive,
-            ]}
-          >
+    return (
+      <PantryActionsProvider actions={itemActions}>
+        <View style={styles.container}>
+          {/* Fixed chrome above the list — keeps the FlashList to rows only, so
+              the loading overlay can cover exactly the row area (no measurement)
+              and the header/stats/tabs paint instantly and stay visible. */}
+          <View style={styles.header}>
+            <PantryHeader
+              userName={userName}
+              householdName={householdName}
+              avatarUrl={avatarUrl}
+              notificationCount={notificationCount}
+              onAvatarPress={onAvatarPress}
+              onHomePress={onHomePress}
+              onNotificationPress={onNotificationPress}
+              onHomeBadgeLayout={onHomeBadgeLayout}
+            />
+          </View>
+          <View style={styles.searchContainer}>
+            <SearchBar
+              value={searchQuery}
+              onChangeText={onSearchChange}
+              placeholder={t('pantryScreen.searchPlaceholder')}
+              showSearchIcon={true}
+              testID="pantry-search-input"
+              innerRightIcon={
+                <View
+                  ref={settingsIconRef}
+                  collapsable={false}
+                  onLayout={() => {
+                    if (onSettingsIconLayout) {
+                      requestAnimationFrame(() => {
+                        settingsIconRef.current?.measure(
+                          (_x, _y, w, h, pageX, pageY) => {
+                            if (w > 0 && h > 0) {
+                              onSettingsIconLayout({
+                                x: pageX,
+                                y: pageY,
+                                width: w,
+                                height: h,
+                              });
+                            }
+                          },
+                        );
+                      });
+                    }
+                  }}
+                >
+                  <Pressable
+                    onPress={onSettingsPress}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('pantryScreen.settingsAccessibility')}
+                  >
+                    <Icon
+                      name="settings-outline"
+                      size={18}
+                      tone="textTertiary"
+                    />
+                  </Pressable>
+                </View>
+              }
+            />
+            {!!stats && (
+              <PantryAlertBar
+                stats={stats}
+                onAnalyticsPress={onAnalyticsPress}
+                onLowStockNavigate={onLowStockNavigate}
+                onExpiringNavigate={onExpiringNavigate}
+                sortLabel={`${t('pantryScreen.sort')} ${
+                  sortDirection === PantrySortDirection.ASC ? '↑' : '↓'
+                }`}
+                onSortPress={openSortModal}
+              />
+            )}
+          </View>
+          <View style={styles.tabsBar}>
             <FilterTabs<LocationFilter>
               tabs={tabsWithAddButton}
               activeTabId={locationFilter}
@@ -403,27 +494,15 @@ export const PantryContent = React.forwardRef<
               testIDPrefix="pantry-location-tab"
             />
           </View>
-        );
-      }
-
-      return renderItem({ item, index: index - 1, target, extraData: extra });
-    };
-
-    return (
-      <PantryActionsProvider actions={itemActions}>
-        <View style={styles.container}>
           <View style={styles.listContainer}>
             <View style={styles.contentFill}>
-              <FlashList<PantryListItem>
+              <FlashList<PantryListNode>
                 ref={flashListRef}
                 CellRendererComponent={AnimatedCellRenderer}
                 testID="pantry-list"
                 data={listData}
-                renderItem={renderListItem}
+                renderItem={renderItem}
                 keyExtractor={listKeyExtractor}
-                getItemType={getListItemType}
-                stickyHeaderIndices={STICKY_HEADER_INDICES}
-                stickyHeaderConfig={STICKY_HEADER_CONFIG}
                 drawDistance={DRAW_DISTANCE}
                 maxItemsInRecyclePool={15}
                 extraData={extraData}
@@ -442,84 +521,6 @@ export const PantryContent = React.forwardRef<
                       progressViewOffset={100}
                     />
                   ) : undefined
-                }
-                ListHeaderComponent={
-                  <>
-                    <View style={styles.header}>
-                      <PantryHeader
-                        userName={userName}
-                        householdName={householdName}
-                        avatarUrl={avatarUrl}
-                        notificationCount={notificationCount}
-                        onAvatarPress={onAvatarPress}
-                        onHomePress={onHomePress}
-                        onNotificationPress={onNotificationPress}
-                        onHomeBadgeLayout={onHomeBadgeLayout}
-                      />
-                    </View>
-                    <View style={styles.searchContainer}>
-                      <SearchBar
-                        value={searchQuery}
-                        onChangeText={onSearchChange}
-                        placeholder={t('pantryScreen.searchPlaceholder')}
-                        showSearchIcon={true}
-                        testID="pantry-search-input"
-                        innerRightIcon={
-                          <View
-                            ref={settingsIconRef}
-                            collapsable={false}
-                            onLayout={() => {
-                              if (onSettingsIconLayout) {
-                                requestAnimationFrame(() => {
-                                  settingsIconRef.current?.measure(
-                                    (_x, _y, w, h, pageX, pageY) => {
-                                      if (w > 0 && h > 0) {
-                                        onSettingsIconLayout({
-                                          x: pageX,
-                                          y: pageY,
-                                          width: w,
-                                          height: h,
-                                        });
-                                      }
-                                    },
-                                  );
-                                });
-                              }
-                            }}
-                          >
-                            <Pressable
-                              onPress={onSettingsPress}
-                              hitSlop={8}
-                              accessibilityRole="button"
-                              accessibilityLabel={t(
-                                'pantryScreen.settingsAccessibility',
-                              )}
-                            >
-                              <Icon
-                                name="settings-outline"
-                                size={18}
-                                tone="textTertiary"
-                              />
-                            </Pressable>
-                          </View>
-                        }
-                      />
-                      {!!stats && (
-                        <PantryAlertBar
-                          stats={stats}
-                          onAnalyticsPress={onAnalyticsPress}
-                          onLowStockNavigate={onLowStockNavigate}
-                          onExpiringNavigate={onExpiringNavigate}
-                          sortLabel={`${t('pantryScreen.sort')} ${
-                            sortDirection === PantrySortDirection.ASC
-                              ? '↑'
-                              : '↓'
-                          }`}
-                          onSortPress={openSortModal}
-                        />
-                      )}
-                    </View>
-                  </>
                 }
                 ListFooterComponent={
                   isEmpty ? (
@@ -551,10 +552,22 @@ export const PantryContent = React.forwardRef<
                   FLASHLIST_DEFAULTS.analyticsHeavyFullScreen
                     .onEndReachedThreshold
                 }
-                onLoad={perfCallbacks.onLoad}
+                onLoad={handleListLoad}
                 onViewableItemsChanged={perfCallbacks.onViewableItemsChanged}
                 maintainVisibleContentPosition={MVCP_DISABLED}
               />
+              {/* Body skeleton overlay — absolutely fills the list (rows only;
+                  chrome is above), covering the in-progress FlashList paint until
+                  `onLoad` fires, then crossfades out. */}
+              {showLoadingOverlay ? (
+                <Animated.View
+                  exiting={FadeOut.duration(TIMING.STANDARD)}
+                  style={styles.bodyOverlay}
+                  pointerEvents="none"
+                >
+                  <PantryScreenSkeleton />
+                </Animated.View>
+              ) : null}
             </View>
           </View>
 
@@ -582,13 +595,9 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.background,
     paddingHorizontal: theme.spacing.md,
   },
-  stickySection: {
+  tabsBar: {
     backgroundColor: theme.colors.background,
-    zIndex: theme.zIndex.sticky,
     paddingBottom: theme.spacing.sm,
-  },
-  stickyHeaderActive: {
-    backgroundColor: theme.colors.background,
   },
   searchContainer: {
     paddingHorizontal: theme.spacing['3'],
@@ -602,5 +611,16 @@ const styles = StyleSheet.create(theme => ({
   listContentEmpty: {
     paddingHorizontal: 0,
     flexGrow: 1,
+  },
+  // Loading overlay: absolutely fills the list container (which holds only rows
+  // now — chrome is above it) and fully occludes the in-progress FlashList paint
+  // until `onLoad` fires.
+  bodyOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: theme.colors.background,
   },
 }));

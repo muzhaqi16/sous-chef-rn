@@ -25,6 +25,8 @@ interface ImageGalleryTabsProps {
   style?: ViewStyle;
   /** Image height (default: 200) */
   imageHeight?: number;
+  /** How the image fills its band (default: 'contain') */
+  resizeMode?: 'cover' | 'contain';
 }
 
 export const ImageGalleryTabs: React.FC<ImageGalleryTabsProps> = ({
@@ -32,6 +34,7 @@ export const ImageGalleryTabs: React.FC<ImageGalleryTabsProps> = ({
   fallbackImageUrl,
   style,
   imageHeight = 200,
+  resizeMode = 'contain',
 }) => {
   const parsedImages = Array.isArray(imagesRaw)
     ? (imagesRaw as ItemImage[])
@@ -106,7 +109,7 @@ export const ImageGalleryTabs: React.FC<ImageGalleryTabsProps> = ({
             uri={currentImageUrl}
             style={styles.image}
             displaySize={imageHeight}
-            resizeMode="contain"
+            resizeMode={resizeMode}
             onStart={() => {
               setImageLoading(true);
               setImageError(false);

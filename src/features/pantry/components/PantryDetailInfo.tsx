@@ -349,10 +349,9 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   rowContainer: {
-    paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: theme.colors.divider,
   },
   labelText: {
     color: theme.colors.textSecondary,
@@ -376,7 +375,6 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.warning,
   },
   notesSection: {
-    marginHorizontal: theme.spacing.lg,
     marginTop: theme.spacing.md,
     padding: theme.spacing.md,
     backgroundColor: theme.colors.surfaceVariant,
@@ -394,7 +392,6 @@ const styles = StyleSheet.create(theme => ({
     lineHeight: 22,
   },
   tagsSection: {
-    paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.md,
   },
   tagsLabel: {

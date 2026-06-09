@@ -7,6 +7,8 @@ import Animated, {
   useAnimatedScrollHandler,
   useSharedValue,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 
@@ -31,7 +33,11 @@ import { ReviewSection } from '#features/recipes/components/ReviewSection';
 
 import { useRecipeDetail } from '../../hooks/useRecipeDetail';
 import { IngredientCard } from './components/IngredientCard';
-import { RecipeDetailHeader } from './components/RecipeDetailHeader';
+import { RecipeHeroImage } from './components/RecipeHeroImage';
+import {
+  RecipeDetailTopBar,
+  BAR_CONTENT_HEIGHT,
+} from './components/RecipeDetailTopBar';
 import { SavedRecipeMetadataPanel } from './components/SavedRecipeMetadataPanel';
 import { RecipeInstructions } from './components/RecipeInstructions';
 import { IngredientSelectorSheet } from './components/IngredientSelectorSheet';
@@ -212,11 +218,35 @@ const RecipeDetailScreen: React.FC = () => {
     setShowManageSheet(false);
   };
 
-  // Scroll animation for parallax effect (consumed by RecipeDetailHeader)
+  // Scroll position drives the pinned top bar: the hero scrolls away while the
+  // bar background + title fade in (see RecipeDetailTopBar).
+  const insets = useSafeAreaInsets();
   const scrollY = useSharedValue(0);
+  // Worklet-side flag (with hysteresis) so we only toggle the React title state
+  // on threshold crossings, not every frame. The title is mounted only while
+  // collapsed — otherwise it duplicates the content card's title in the tree.
+  const collapsedFlag = useSharedValue(false);
+  const [titleVisible, setTitleVisible] = useState(false);
+  const showTitle = () => setTitleVisible(true);
+  const hideTitle = () => setTitleVisible(false);
+
+  const hasHeroImage = !!displayData?.image;
+  // With a hero photo the title only appears once the image has mostly scrolled
+  // away; with no photo the (short) spacer means it collapses almost immediately.
+  const collapseShowAt = hasHeroImage ? 190 : 30;
+  const collapseHideAt = hasHeroImage ? 150 : 12;
+
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: event => {
-      scrollY.set(event.contentOffset.y);
+      const y = event.contentOffset.y;
+      scrollY.set(y);
+      if (y > collapseShowAt && !collapsedFlag.get()) {
+        collapsedFlag.set(true);
+        scheduleOnRN(showTitle);
+      } else if (y < collapseHideAt && collapsedFlag.get()) {
+        collapsedFlag.set(false);
+        scheduleOnRN(hideTitle);
+      }
     },
   });
 
@@ -264,23 +294,15 @@ const RecipeDetailScreen: React.FC = () => {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
       >
-        <RecipeDetailHeader
-          imageUrl={displayData.image}
-          externalId={externalId}
-          scrollY={scrollY}
-          onBack={goBack}
-          showMealPlanButton={!!recipeId}
-          showEditButton={!!isOwner}
-          showFolderButton={!!showFolderIcon}
-          showHeartButton={!!showHeartIcon}
-          isInOtherFolder={isInOtherFolder}
-          isInFavorites={isInFavorites}
-          busy={saving || updatingFolderTags}
-          onMealPlanPress={() => setShowAddToMealPlanSheet(true)}
-          onEditPress={handleEditRecipe}
-          onFolderPress={handleFolderPress}
-          onHeartPress={handleHeartPress}
-        />
+        {displayData.image ? (
+          <RecipeHeroImage
+            imageUrl={displayData.image}
+            externalId={externalId}
+          />
+        ) : (
+          // Reserve space for the pinned bar so the title isn't hidden behind it.
+          <View style={{ height: insets.top + BAR_CONTENT_HEIGHT }} />
+        )}
 
         <View style={[styles.content, !displayData.image && { marginTop: 0 }]}>
           <Text style={styles.title}>{displayData.title}</Text>
@@ -468,6 +490,27 @@ const RecipeDetailScreen: React.FC = () => {
           )}
         </View>
       </Animated.ScrollView>
+
+      {/* Pinned header: back + action buttons stay fixed while the hero scrolls
+          away; a solid bar + recipe title fade in once collapsed. */}
+      <RecipeDetailTopBar
+        scrollY={scrollY}
+        hasImage={!!displayData.image}
+        title={displayData.title ?? ''}
+        titleVisible={titleVisible}
+        onBack={goBack}
+        showMealPlanButton={!!recipeId}
+        showEditButton={!!isOwner}
+        showFolderButton={!!showFolderIcon}
+        showHeartButton={!!showHeartIcon}
+        isInOtherFolder={isInOtherFolder}
+        isInFavorites={isInFavorites}
+        busy={saving || updatingFolderTags}
+        onMealPlanPress={() => setShowAddToMealPlanSheet(true)}
+        onEditPress={handleEditRecipe}
+        onFolderPress={handleFolderPress}
+        onHeartPress={handleHeartPress}
+      />
 
       {/* Shopping List Options Bottom Sheet */}
       <BottomSheetAction

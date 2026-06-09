@@ -4,7 +4,13 @@ import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
 import { alertService } from '#/services/alertService';
-import Animated from 'react-native-reanimated';
+import Animated, {
+  Extrapolation,
+  interpolate,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+} from 'react-native-reanimated';
 import { useApolloClient, useFragment, useQuery } from '@apollo/client/react';
 import {
   PantryItemBatchFragmentDoc,
@@ -39,6 +45,7 @@ import { PantryUsageHistory } from '#features/pantry/components/PantryUsageHisto
 import { parseNutritions, hasNutritionData } from '#utils/nutritionUtils';
 import { NutritionSummary } from '#components/molecules/NutritionSummary';
 import { ImageGalleryTabs } from '#components/molecules/ImageGalleryTabs';
+import { StatusBarScrim } from '#components/molecules/StatusBarScrim';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Header, type HeaderAction } from '#components/molecules/Header';
 import { Icon } from '#/utils/iconUtils';
@@ -51,6 +58,22 @@ import { SousChefLoader } from '#/components/base/SousChefLoader';
 import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
 import { useRecipeSuggestionsForItem } from '#features/pantry/hooks/useRecipeSuggestionsForItem';
 import { usePantryItemDetailActions } from '#features/pantry/hooks/usePantryItemDetailActions';
+
+// Visible hero height below the status bar. The image is grown by the top inset
+// so it fills edge-to-edge behind the status bar.
+const HERO_IMAGE_HEIGHT = 280;
+
+// Height of the overlaid action-button band below the status-bar inset. Used to
+// reserve space when there's no image and to size the legibility scrim.
+const HEADER_BAND_HEIGHT = 56;
+
+// As the hero collapses, the pinned action bar's solid background fades in over
+// this scroll range — so the buttons stay legible and content scrolls beneath
+// an opaque bar instead of under floating icons (standard collapsing-toolbar
+// behavior). The range ends roughly where the content meets the bar.
+const COLLAPSE_DISTANCE = HERO_IMAGE_HEIGHT - HEADER_BAND_HEIGHT;
+const BAR_FADE_START = COLLAPSE_DISTANCE * 0.4;
+const BAR_FADE_END = COLLAPSE_DISTANCE * 0.9;
 
 /**
  * Expiry column text. Extracted so `styles.useVariants` is called once per
@@ -66,6 +89,22 @@ const ExpiryColumnText: React.FC<{
   styles.useVariants({ expiryStatus: status });
   return <Text style={styles.infoColumnValue}>{text}</Text>;
 };
+
+/**
+ * Groups a block of detail content on its own elevated card. `flush` drops the
+ * card's horizontal padding for children (batches, usage history) that already
+ * inset their content and render their own header.
+ */
+const Section: React.FC<{
+  title?: string;
+  flush?: boolean;
+  children: React.ReactNode;
+}> = ({ title, flush, children }) => (
+  <View style={flush ? styles.sectionFlush : styles.section}>
+    {!!title && <Text style={styles.sectionHeading}>{title}</Text>}
+    {children}
+  </View>
+);
 
 export const PantryItemDetail: React.FC<
   StaticScreenProps<{
@@ -85,6 +124,22 @@ export const PantryItemDetail: React.FC<
   const insets = useSafeAreaInsets();
   const selectedShoppingListId = useSelectedShoppingListId();
   const selectedPantryId = useSelectedPantryId();
+
+  // Parallax hero: the image recedes at half the scroll speed as content
+  // scrolls up, and zooms to fill when the user pulls past the top.
+  const scrollY = useSharedValue(0);
+  const onHeroScroll = useAnimatedScrollHandler(event => {
+    scrollY.set(event.contentOffset.y);
+  });
+  const heroAnimatedStyle = useAnimatedStyle(() => {
+    const y = scrollY.get();
+    if (y < 0) {
+      return {
+        transform: [{ translateY: y }, { scale: 1 + -y / HERO_IMAGE_HEIGHT }],
+      };
+    }
+    return { transform: [{ translateY: y * 0.5 }] };
+  });
 
   const [purchaseHistoryExpanded, setPurchaseHistoryExpanded] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -195,10 +250,27 @@ export const PantryItemDetail: React.FC<
     item?.quantityBreakdown,
   );
 
+  // Solid background for the pinned action bar: transparent while the hero is
+  // visible, fading to opaque as it collapses (or solid from the start when
+  // there's no image).
+  const barBgStyle = useAnimatedStyle(() => {
+    if (!showImages) return { opacity: 1 };
+    return {
+      opacity: interpolate(
+        scrollY.get(),
+        [BAR_FADE_START, BAR_FADE_END],
+        [0, 1],
+        Extrapolation.CLAMP,
+      ),
+    };
+  });
+
   if (!item) {
     return (
       <View style={styles.container}>
-        <Header variant="detail" onBack={goBack} borderless />
+        <View style={{ paddingTop: insets.top }}>
+          <Header variant="detail" onBack={goBack} borderless />
+        </View>
         <View style={styles.loadingContainer}>
           <SousChefLoader
             size="small"
@@ -278,170 +350,202 @@ export const PantryItemDetail: React.FC<
 
   return (
     <View style={styles.container}>
-      <Header
-        variant="detail"
-        onBack={goBack}
-        borderless
-        rightActions={headerActions}
-      />
-      <ScrollView
+      <Animated.ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        onScroll={onHeroScroll}
+        scrollEventThrottle={16}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
       >
-        {!!showImages && (
-          <View style={styles.imageSection}>
+        {showImages ? (
+          <Animated.View style={[styles.heroImage, heroAnimatedStyle]}>
             <ImageGalleryTabs
               images={itemImages}
               fallbackImageUrl={imageUrl}
-              imageHeight={200}
+              imageHeight={HERO_IMAGE_HEIGHT + insets.top}
+              resizeMode="cover"
+              style={styles.heroInner}
             />
-          </View>
+          </Animated.View>
+        ) : (
+          <View style={{ height: insets.top + HEADER_BAND_HEIGHT }} />
         )}
 
-        <View style={styles.titleRow}>
-          <Text style={styles.itemTitle} numberOfLines={2}>
-            {item.itemName}
-          </Text>
-        </View>
-
-        {!!(categoryName || storageStateDisplay) && (
-          <View style={styles.categoryBadge}>
-            <Icon name="restaurant-outline" size={16} tone="primary" />
-            <Text style={styles.categoryText}>
-              {categoryName || t('pantryItemDetail.item')}
-              {storageStateDisplay
-                ? t('pantryItemDetail.inLocation', {
-                    location: storageStateDisplay,
-                  })
-                : ''}
+        <View
+          style={[
+            styles.contentBelow,
+            !showImages && styles.contentBelowNoImage,
+          ]}
+        >
+          <View style={styles.titleRow}>
+            <Text style={styles.itemTitle} numberOfLines={2}>
+              {item.itemName}
             </Text>
-          </View>
-        )}
-
-        <View style={styles.infoColumns}>
-          <View style={styles.infoColumn}>
-            <Text style={styles.infoColumnLabel}>
-              {t('pantryItemDetail.inThePantry')}
-            </Text>
-            <Text style={styles.infoColumnValue}>
-              {formatDaysInPantry(daysInPantry)}
-            </Text>
-          </View>
-          <View style={styles.infoColumn}>
-            <Text style={styles.infoColumnLabel}>
-              {t('pantryItemDetail.expiring')}
-            </Text>
-            <ExpiryColumnText
-              text={expiryInfo?.text || t('pantryItemDetail.noExpiry')}
-              isUrgent={!!expiryInfo?.isUrgent}
-              isExpired={!!expiryInfo?.isExpired}
-            />
-          </View>
-          <View style={styles.infoColumn}>
-            <Text style={styles.infoColumnLabel}>
-              {t('pantryItemDetail.amount')}
-            </Text>
-            <Text style={styles.infoColumnValue}>
+            <Text style={styles.quantityBadge}>
               {item.quantity} {getUnitDisplayText(item.unit)}
             </Text>
           </View>
-        </View>
 
-        {!!showNutrition && (
-          <View style={styles.nutritionSection}>
-            <Text style={styles.nutritionTitle}>
-              {t('pantryItemDetail.nutrition')}
-            </Text>
-            <NutritionSummary
-              nutritions={itemNutritions}
-              showHighlights
-              onPress={() =>
-                toNutritionScreen({
-                  itemId: item.id,
-                  itemName: item.itemName,
-                  nutritions: item.item?.nutritions,
-                })
-              }
-            />
-          </View>
-        )}
-
-        <PantryDetailInfo
-          itemRef={item}
-          brandName={brandName}
-          netWeightText={netWeightText}
-          remainingNetWeightText={remainingNetWeightText}
-          quantityBreakdownText={quantityBreakdownText}
-          packageBreakdownText={packageBreakdownText}
-          shelfLifeDays={item.item?.shelfLifeDays}
-          shelfLifeOpenedDays={item.item?.shelfLifeOpenedDays}
-          onCorrectWeight={() => actions.setCorrectWeightVisible(true)}
-        />
-
-        {!!item.batches && item.batches.length > 1 && (
-          <BatchSection
-            batches={item.batches}
-            pantryItemId={item.id}
-            unitSymbol={item.unit?.symbol ?? undefined}
-          />
-        )}
-
-        {!!item.usageRecords && item.usageRecords.edges.length > 0 && (
-          <PantryUsageHistory
-            usageRecords={item.usageRecords.edges}
-            expanded={purchaseHistoryExpanded}
-            onToggle={() =>
-              setPurchaseHistoryExpanded(!purchaseHistoryExpanded)
-            }
-          />
-        )}
-
-        <View style={styles.recipesSection}>
-          <Text style={styles.sectionTitle}>
-            {t('pantryItemDetail.recipesToTry')}
-          </Text>
-          {loadingRecipes ? (
-            <ThemedActivityIndicator
-              size="small"
-              style={styles.recipesLoading}
-            />
-          ) : suggestedRecipes.length > 0 ? (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.recipesList}
-            >
-              {suggestedRecipes.map(recipe => (
-                <AppPressable
-                  key={String(recipe.id)}
-                  style={styles.recipeCard}
-                  onPress={() => handleRecipePress(recipe.id)}
-                >
-                  <Animated.Image
-                    source={{ uri: recipe.image }}
-                    style={styles.recipeImage}
-                    resizeMode="cover"
-                    sharedTransitionTag={`recipe-image-${recipe.id}`}
-                  />
-                  <Text style={styles.recipeTitle} numberOfLines={2}>
-                    {recipe.title}
-                  </Text>
-                </AppPressable>
-              ))}
-            </ScrollView>
-          ) : (
-            <Text style={styles.noRecipes}>
-              {t('pantryItemDetail.noRecipeSuggestions')}
-            </Text>
+          {!!(categoryName || storageStateDisplay) && (
+            <View style={styles.categoryBadge}>
+              <Icon name="restaurant-outline" size={16} tone="primary" />
+              <Text style={styles.categoryText}>
+                {categoryName || t('pantryItemDetail.item')}
+                {storageStateDisplay
+                  ? t('pantryItemDetail.inLocation', {
+                      location: storageStateDisplay,
+                    })
+                  : ''}
+              </Text>
+            </View>
           )}
-        </View>
 
-        <View style={{ height: insets.bottom + 20 }} />
-      </ScrollView>
+          <Section>
+            <View style={styles.infoColumns}>
+              <View style={styles.infoColumn}>
+                <Text style={styles.infoColumnLabel}>
+                  {t('pantryItemDetail.inThePantry')}
+                </Text>
+                <Text style={styles.infoColumnValue}>
+                  {formatDaysInPantry(daysInPantry)}
+                </Text>
+              </View>
+              <View style={styles.infoColumn}>
+                <Text style={styles.infoColumnLabel}>
+                  {t('pantryItemDetail.expiring')}
+                </Text>
+                <ExpiryColumnText
+                  text={expiryInfo?.text || t('pantryItemDetail.noExpiry')}
+                  isUrgent={!!expiryInfo?.isUrgent}
+                  isExpired={!!expiryInfo?.isExpired}
+                />
+              </View>
+              <View style={styles.infoColumn}>
+                <Text style={styles.infoColumnLabel}>
+                  {t('pantryItemDetail.amount')}
+                </Text>
+                <Text style={styles.infoColumnValue}>
+                  {item.quantity} {getUnitDisplayText(item.unit)}
+                </Text>
+              </View>
+            </View>
+          </Section>
+
+          {!!showNutrition && (
+            <Section title={t('pantryItemDetail.nutrition')}>
+              <NutritionSummary
+                nutritions={itemNutritions}
+                showHighlights
+                onPress={() =>
+                  toNutritionScreen({
+                    itemId: item.id,
+                    itemName: item.itemName,
+                    nutritions: item.item?.nutritions,
+                  })
+                }
+              />
+            </Section>
+          )}
+
+          <Section>
+            <PantryDetailInfo
+              itemRef={item}
+              brandName={brandName}
+              netWeightText={netWeightText}
+              remainingNetWeightText={remainingNetWeightText}
+              quantityBreakdownText={quantityBreakdownText}
+              packageBreakdownText={packageBreakdownText}
+              shelfLifeDays={item.item?.shelfLifeDays}
+              shelfLifeOpenedDays={item.item?.shelfLifeOpenedDays}
+              onCorrectWeight={() => actions.setCorrectWeightVisible(true)}
+            />
+          </Section>
+
+          {!!item.batches && item.batches.length > 1 && (
+            <Section flush>
+              <BatchSection
+                batches={item.batches}
+                pantryItemId={item.id}
+                unitSymbol={item.unit?.symbol ?? undefined}
+              />
+            </Section>
+          )}
+
+          {!!item.usageRecords && item.usageRecords.edges.length > 0 && (
+            <Section flush>
+              <PantryUsageHistory
+                usageRecords={item.usageRecords.edges}
+                expanded={purchaseHistoryExpanded}
+                onToggle={() =>
+                  setPurchaseHistoryExpanded(!purchaseHistoryExpanded)
+                }
+              />
+            </Section>
+          )}
+
+          <Section title={t('pantryItemDetail.recipesToTry')}>
+            {loadingRecipes ? (
+              <ThemedActivityIndicator
+                size="small"
+                style={styles.recipesLoading}
+              />
+            ) : suggestedRecipes.length > 0 ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.recipesList}
+              >
+                {suggestedRecipes.map(recipe => (
+                  <AppPressable
+                    key={String(recipe.id)}
+                    style={styles.recipeCard}
+                    onPress={() => handleRecipePress(recipe.id)}
+                  >
+                    <Animated.Image
+                      source={{ uri: recipe.image }}
+                      style={styles.recipeImage}
+                      resizeMode="cover"
+                      sharedTransitionTag={`recipe-image-${recipe.id}`}
+                    />
+                    <Text style={styles.recipeTitle} numberOfLines={2}>
+                      {recipe.title}
+                    </Text>
+                  </AppPressable>
+                ))}
+              </ScrollView>
+            ) : (
+              <Text style={styles.noRecipes}>
+                {t('pantryItemDetail.noRecipeSuggestions')}
+              </Text>
+            )}
+          </Section>
+
+          <View style={{ height: insets.bottom + 20 }} />
+        </View>
+      </Animated.ScrollView>
+
+      {/* Pinned action buttons float over the hero; the scrim keeps them and
+          the status-bar icons legible against the photo. */}
+      <View pointerEvents="box-none" style={styles.topBarOverlay}>
+        <Animated.View
+          pointerEvents="none"
+          style={[styles.topBarSolid, barBgStyle]}
+        />
+        {!!showImages && <StatusBarScrim extraHeight={HEADER_BAND_HEIGHT} />}
+        <View pointerEvents="box-none" style={{ paddingTop: insets.top }}>
+          <Header
+            variant="detail"
+            onBack={goBack}
+            transparent
+            borderless
+            rightActions={headerActions}
+          />
+        </View>
+      </View>
+
       {!!actions.adjustModalVisible && (
         <AdjustQuantityModal
           visible={actions.adjustModalVisible}
@@ -478,8 +582,43 @@ const styles = StyleSheet.create(theme => ({
   scrollContent: {
     flexGrow: 1,
   },
-  imageSection: {
-    marginBottom: theme.spacing.md,
+  heroImage: {
+    width: '100%',
+  },
+  heroInner: {
+    borderRadius: 0,
+  },
+  // Opaque card that slides up over the parallaxing hero as you scroll; the
+  // rounded top and slight overlap make the image-to-content transition.
+  contentBelow: {
+    flexGrow: 1,
+    backgroundColor: theme.colors.background,
+    borderTopLeftRadius: theme.radii.xl,
+    borderTopRightRadius: theme.radii.xl,
+    marginTop: -theme.spacing['5'],
+    paddingTop: theme.spacing.sm,
+  },
+  contentBelowNoImage: {
+    marginTop: 0,
+  },
+  topBarOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: theme.zIndex.sticky,
+  },
+  // Fades in behind the pinned buttons as the hero collapses, so they stay
+  // legible and content scrolls beneath an opaque bar.
+  topBarSolid: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: theme.colors.background,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
   },
   titleRow: {
     flexDirection: 'row',
@@ -512,14 +651,32 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.primary,
     fontWeight: theme.fonts.weight.medium,
   },
+  section: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radii.xl,
+    marginHorizontal: theme.spacing.sm,
+    marginBottom: theme.spacing.md,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
+    ...theme.shadows.card,
+  },
+  sectionFlush: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radii.xl,
+    marginHorizontal: theme.spacing.sm,
+    marginBottom: theme.spacing.md,
+    paddingVertical: theme.spacing.xs,
+    ...theme.shadows.card,
+  },
+  sectionHeading: {
+    fontSize: theme.fonts.size.base,
+    fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.sm,
+  },
   infoColumns: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    marginTop: theme.spacing.sm,
   },
   infoColumn: {
     alignItems: 'center',
@@ -545,31 +702,11 @@ const styles = StyleSheet.create(theme => ({
       },
     },
   },
-  nutritionSection: {
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-  },
-  nutritionTitle: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.sm,
-  },
-  sectionTitle: {
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-  },
-  recipesSection: {
-    marginTop: theme.spacing.lg,
-    paddingHorizontal: theme.spacing.lg,
-  },
   recipesLoading: {
-    marginTop: theme.spacing.md,
+    marginTop: theme.spacing.sm,
   },
   recipesList: {
-    paddingTop: theme.spacing.md,
-    paddingRight: theme.spacing.lg,
+    paddingTop: theme.spacing.xs,
   },
   recipeCard: {
     width: 140,

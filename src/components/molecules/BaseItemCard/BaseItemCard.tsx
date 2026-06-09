@@ -144,7 +144,9 @@ export const BaseItemCard: React.FC<BaseItemCardProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   swipeableWrapper: {
-    marginBottom: theme.spacing.sm,
+    marginBottom: theme.spacing['2.5'],
+    // Match the search bar inset so rows line up with it and the floating
+    // tab bar instead of sitting narrower.
     marginHorizontal: theme.spacing['3'],
   },
   pressed: {
@@ -154,17 +156,20 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     minHeight: theme.sizes.itemCard.compact.height,
-    padding: theme.spacing.sm,
+    padding: theme.spacing['2.5'],
     borderRadius: theme.radii.lg,
     borderWidth: 1,
-    // Default styles (applied when no variant matches)
+    // Soft floating elevation instead of a hard outline. Status variants below
+    // keep a colored border to stay distinguishable; the default row relies on
+    // the shadow alone (transparent border preserves consistent sizing).
+    ...theme.shadows.card,
     backgroundColor: theme.colors.surface,
-    borderColor: theme.colors.borderLight,
+    borderColor: 'transparent',
     variants: {
       variant: {
         normal: {
           backgroundColor: theme.colors.surface,
-          borderColor: theme.colors.borderLight,
+          borderColor: 'transparent',
         },
         warning: {
           backgroundColor: theme.colors.expiration.warningBg,

@@ -91,8 +91,8 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
   const translateY = useSharedValue(0);
   const opacity = useSharedValue(1);
 
-  // Tracks whether navigation/overlay is actively hiding the tab bar.
-  // Used to prevent the scroll reaction from overriding the navigation hide.
+  // True while navigation or an overlay is hiding the tab bar. Combined with
+  // the scroll state below so navigation hiding always wins over scroll.
   const navHidden = useSharedValue(false);
 
   // Track active tab for scanner visibility
@@ -111,44 +111,29 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
   const shouldHideFromNavigation =
     nestedRouteName != null && !MAIN_SCREENS.has(nestedRouteName);
 
-  // Animate tab bar visibility (overlay/navigation-driven — React state)
-  // Takes priority over scroll-driven hide.
+  // Mirror navigation/overlay hide intent into navHidden. The animation itself
+  // runs in the reaction below, which combines this with the scroll state.
   useLayoutEffect(() => {
     const shouldHide = isOverlayOpen || shouldHideFromNavigation;
 
-    // Update navHidden BEFORE resetting scrollTabBarHidden so the scroll
-    // reaction can check this guard and skip the show animation.
     navHidden.set(!!shouldHide);
 
-    // Fast timing for opacity (linear, no spring)
-    opacity.set(withTiming(shouldHide ? 0 : 1, { duration: TIMING.FAST }));
-
-    // Snappy spring with subtle bounce (higher damping = less bounce)
-    translateY.set(withSpring(shouldHide ? 150 : 0, SPRING.HEAVY));
-
-    // Reset scroll state when overlay/nav takes priority — prevents stale
-    // scroll-hidden state from persisting when the user returns.
+    // Clear any scroll-hidden state so the bar reappears when the user returns
+    // to a main screen instead of staying hidden from an earlier scroll.
     if (shouldHide) {
       scrollTabBarHidden.set(false);
     }
-  }, [
-    isOverlayOpen,
-    shouldHideFromNavigation,
-    translateY,
-    opacity,
-    scrollTabBarHidden,
-    navHidden,
-  ]);
+  }, [isOverlayOpen, shouldHideFromNavigation, scrollTabBarHidden, navHidden]);
 
-  // Scroll-driven tab bar hide (SharedValue from screen scroll handlers).
-  // Skips when navigation/overlay is hiding the bar to prevent race conditions.
+  // Drive the bar from both inputs: hidden when navigation/overlay OR scroll
+  // asks to hide, visible only when both allow it. Updating navHidden above
+  // re-runs this reaction, so navigation hiding can never be undone by scroll.
   useAnimatedReaction(
-    () => scrollTabBarHidden.get(),
-    (hidden, prevHidden) => {
-      if (hidden === prevHidden) return;
-      if (navHidden.get()) return;
-      translateY.set(withSpring(hidden ? 150 : 0, SPRING.HEAVY));
-      opacity.set(withTiming(hidden ? 0 : 1, { duration: TIMING.FAST }));
+    () => navHidden.get() || scrollTabBarHidden.get(),
+    (hide, prevHide) => {
+      if (hide === prevHide) return;
+      translateY.set(withSpring(hide ? 150 : 0, SPRING.HEAVY));
+      opacity.set(withTiming(hide ? 0 : 1, { duration: TIMING.FAST }));
     },
   );
 

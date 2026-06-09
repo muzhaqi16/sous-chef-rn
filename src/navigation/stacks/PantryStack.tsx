@@ -43,10 +43,11 @@ export const PantryStack = createNativeStackNavigator({
       linking: 'pantry/item/:itemId?',
       layout: topInsetScreenLayout,
     }),
+    // No top-inset layout: like RecipeDetail, this screen draws its hero image
+    // edge-to-edge behind the status bar and applies insets itself.
     PantryItemDetail: createNativeStackScreen({
       screen: PantryItemDetail,
       linking: 'pantry/detail/:itemId',
-      layout: topInsetScreenLayout,
     }),
     FilteredPantryItems: createNativeStackScreen({
       screen: FilteredPantryItems,
