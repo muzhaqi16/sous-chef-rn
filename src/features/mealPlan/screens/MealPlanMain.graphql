@@ -36,6 +36,7 @@ fragment MealPlanMain_mealPlan on MealPlan {
     }
   }
   mealPlanItems {
+    id
     ...MealPlanItemCard_item
     ...EditCustomMealSheet_item
     ...DailyMeals_item

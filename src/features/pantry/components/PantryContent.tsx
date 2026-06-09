@@ -5,8 +5,18 @@ import React, {
   useState,
   useImperativeHandle,
 } from 'react';
-import { View, RefreshControl } from 'react-native';
-import Animated, { FadeOut } from 'react-native-reanimated';
+import {
+  View,
+  RefreshControl,
+  type LayoutChangeEvent,
+  type NativeSyntheticEvent,
+  type NativeScrollEvent,
+} from 'react-native';
+import Animated, {
+  FadeOut,
+  useSharedValue,
+  useAnimatedStyle,
+} from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 import { useApolloClient } from '@apollo/client/react';
 import { Pressable } from '#components/atoms/themedComponents';
@@ -64,6 +74,12 @@ import type {
 // Module-level flag: once pantry content has been shown, skip skeletons on remount.
 // Persists across component unmount/remount (stack navigation), resets on app restart.
 let hasEverShownContent = false;
+
+// Initial estimates for the collapsing chrome so the list's top padding is close
+// on the first frame; refined once measured via onLayout (the chrome lives
+// outside the list, so its layout isn't blocked by the cell paint).
+const ESTIMATED_BANNER_HEIGHT = 196; // greeting + search + stats (collapses)
+const ESTIMATED_TOOLBAR_HEIGHT = 60; // filter tabs (pinned)
 
 // --- Main component ---
 
@@ -303,6 +319,79 @@ export const PantryContent = React.forwardRef<
       !noPantries;
     const showLoadingOverlay = !listPainted && !showSkeletons && hasRowsToPaint;
 
+    // ── Collapsing header ──
+    // Chrome stays OUTSIDE the FlashList (so the list paints only rows and the
+    // overlay/measurement stay clean). The "banner" (greeting + search + stats)
+    // slides up off-screen as you scroll while the "toolbar" (filter tabs) pins
+    // at the top. Both are absolutely positioned and share one transform —
+    // translateY by up to the banner's height. The list (and overlay) get
+    // `paddingTop = chromeHeight` so rows start below the chrome and reclaim the
+    // banner's space once it's gone. The container clips (overflow: hidden) so
+    // the banner can't bleed up into the status-bar inset.
+    const headerScrollY = useSharedValue(0);
+    const bannerHeightSV = useSharedValue(ESTIMATED_BANNER_HEIGHT);
+    const searchActiveSV = useSharedValue(false);
+    const [bannerHeight, setBannerHeight] = useState(ESTIMATED_BANNER_HEIGHT);
+    const [toolbarHeight, setToolbarHeight] = useState(
+      ESTIMATED_TOOLBAR_HEIGHT,
+    );
+    const chromeHeight = bannerHeight + toolbarHeight;
+
+    // While searching, keep the header fully expanded so the search field (in the
+    // banner) stays put and visible as results filter in.
+    useEffect(() => {
+      searchActiveSV.set(searchQuery.length > 0);
+    }, [searchQuery, searchActiveSV]);
+
+    const onBannerLayout = (e: LayoutChangeEvent) => {
+      const h = e.nativeEvent.layout.height;
+      if (h > 0 && h !== bannerHeight) {
+        setBannerHeight(h);
+        bannerHeightSV.set(h);
+      }
+    };
+    const onToolbarLayout = (e: LayoutChangeEvent) => {
+      const h = e.nativeEvent.layout.height;
+      if (h > 0 && h !== toolbarHeight) setToolbarHeight(h);
+    };
+
+    // Track scroll offset for the collapse, then delegate to the prop handler
+    // (tab-bar direction tracking) — FlashList takes a single onScroll.
+    const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      headerScrollY.set(Math.max(0, e.nativeEvent.contentOffset.y));
+      scrollHandler?.(e);
+    };
+
+    // Snap the banner fully open/closed when scrolling settles mid-collapse.
+    const snapHeader = () => {
+      const y = headerScrollY.get();
+      const bh = bannerHeightSV.get();
+      if (y > 0 && y < bh) {
+        flashListRef.current?.scrollToOffset({
+          offset: y < bh / 2 ? 0 : bh,
+          animated: true,
+        });
+      }
+    };
+    const handleScrollEndDrag = (
+      e: NativeSyntheticEvent<NativeScrollEvent>,
+    ) => {
+      // Snap now only when no momentum follows; otherwise momentum-end handles it.
+      if (Math.abs(e.nativeEvent.velocity?.y ?? 0) < 0.5) snapHeader();
+      onScrollEndDrag?.(e);
+    };
+    const handleMomentumEnd = () => {
+      snapHeader();
+      onMomentumScrollEnd?.();
+    };
+
+    const collapseStyle = useAnimatedStyle(() => {
+      const translateY = searchActiveSV.get()
+        ? 0
+        : -Math.min(headerScrollY.get(), bannerHeightSV.get());
+      return { transform: [{ translateY }] };
+    });
+
     // DEV: window/perf tracking — confirms FlashList is handed a bounded window
     // (not the whole load-all page) and surfaces how sort/filter sizes the set.
     useEffect(() => {
@@ -412,88 +501,6 @@ export const PantryContent = React.forwardRef<
     return (
       <PantryActionsProvider actions={itemActions}>
         <View style={styles.container}>
-          {/* Fixed chrome above the list — keeps the FlashList to rows only, so
-              the loading overlay can cover exactly the row area (no measurement)
-              and the header/stats/tabs paint instantly and stay visible. */}
-          <View style={styles.header}>
-            <PantryHeader
-              userName={userName}
-              householdName={householdName}
-              avatarUrl={avatarUrl}
-              notificationCount={notificationCount}
-              onAvatarPress={onAvatarPress}
-              onHomePress={onHomePress}
-              onNotificationPress={onNotificationPress}
-              onHomeBadgeLayout={onHomeBadgeLayout}
-            />
-          </View>
-          <View style={styles.searchContainer}>
-            <SearchBar
-              value={searchQuery}
-              onChangeText={onSearchChange}
-              placeholder={t('pantryScreen.searchPlaceholder')}
-              showSearchIcon={true}
-              testID="pantry-search-input"
-              innerRightIcon={
-                <View
-                  ref={settingsIconRef}
-                  collapsable={false}
-                  onLayout={() => {
-                    if (onSettingsIconLayout) {
-                      requestAnimationFrame(() => {
-                        settingsIconRef.current?.measure(
-                          (_x, _y, w, h, pageX, pageY) => {
-                            if (w > 0 && h > 0) {
-                              onSettingsIconLayout({
-                                x: pageX,
-                                y: pageY,
-                                width: w,
-                                height: h,
-                              });
-                            }
-                          },
-                        );
-                      });
-                    }
-                  }}
-                >
-                  <Pressable
-                    onPress={onSettingsPress}
-                    hitSlop={8}
-                    accessibilityRole="button"
-                    accessibilityLabel={t('pantryScreen.settingsAccessibility')}
-                  >
-                    <Icon
-                      name="settings-outline"
-                      size={18}
-                      tone="textTertiary"
-                    />
-                  </Pressable>
-                </View>
-              }
-            />
-            {!!stats && (
-              <PantryAlertBar
-                stats={stats}
-                onAnalyticsPress={onAnalyticsPress}
-                onLowStockNavigate={onLowStockNavigate}
-                onExpiringNavigate={onExpiringNavigate}
-                sortLabel={`${t('pantryScreen.sort')} ${
-                  sortDirection === PantrySortDirection.ASC ? '↑' : '↓'
-                }`}
-                onSortPress={openSortModal}
-              />
-            )}
-          </View>
-          <View style={styles.tabsBar}>
-            <FilterTabs<LocationFilter>
-              tabs={tabsWithAddButton}
-              activeTabId={locationFilter}
-              onTabChange={onLocationFilterChange}
-              counts={locationCounts}
-              testIDPrefix="pantry-location-tab"
-            />
-          </View>
           <View style={styles.listContainer}>
             <View style={styles.contentFill}>
               <FlashList<PantryListNode>
@@ -506,11 +513,14 @@ export const PantryContent = React.forwardRef<
                 drawDistance={DRAW_DISTANCE}
                 maxItemsInRecyclePool={15}
                 extraData={extraData}
-                contentContainerStyle={listContentStyle}
+                contentContainerStyle={[
+                  listContentStyle,
+                  { paddingTop: chromeHeight },
+                ]}
                 showsVerticalScrollIndicator={false}
-                onScroll={scrollHandler}
-                onScrollEndDrag={onScrollEndDrag}
-                onMomentumScrollEnd={onMomentumScrollEnd}
+                onScroll={handleScroll}
+                onScrollEndDrag={handleScrollEndDrag}
+                onMomentumScrollEnd={handleMomentumEnd}
                 scrollEventThrottle={16}
                 refreshControl={
                   onRefresh ? (
@@ -518,7 +528,7 @@ export const PantryContent = React.forwardRef<
                       testID="pantry-refresh-control"
                       refreshing={refreshing}
                       onRefresh={onRefresh}
-                      progressViewOffset={100}
+                      progressViewOffset={chromeHeight}
                     />
                   ) : undefined
                 }
@@ -556,13 +566,14 @@ export const PantryContent = React.forwardRef<
                 onViewableItemsChanged={perfCallbacks.onViewableItemsChanged}
                 maintainVisibleContentPosition={MVCP_DISABLED}
               />
-              {/* Body skeleton overlay — absolutely fills the list (rows only;
-                  chrome is above), covering the in-progress FlashList paint until
-                  `onLoad` fires, then crossfades out. */}
+              {/* Loading overlay — fills the list; `paddingTop` aligns the
+                  skeleton rows with the real rows (below the chrome), and the
+                  absolutely-positioned chrome occludes its top edge so it reads
+                  as body-only. Lifts on `onLoad`, then crossfades out. */}
               {showLoadingOverlay ? (
                 <Animated.View
                   exiting={FadeOut.duration(TIMING.STANDARD)}
-                  style={styles.bodyOverlay}
+                  style={[styles.bodyOverlay, { paddingTop: chromeHeight }]}
                   pointerEvents="none"
                 >
                   <PantryScreenSkeleton />
@@ -570,6 +581,108 @@ export const PantryContent = React.forwardRef<
               ) : null}
             </View>
           </View>
+
+          {/* Pinned toolbar (tabs only) — slides up with the banner until the
+              banner is fully collapsed, then stays pinned at the top so the
+              filter tabs are always reachable. */}
+          <Animated.View
+            onLayout={onToolbarLayout}
+            style={[styles.toolbar, { top: bannerHeight }, collapseStyle]}
+          >
+            <View style={styles.tabsBar}>
+              <FilterTabs<LocationFilter>
+                tabs={tabsWithAddButton}
+                activeTabId={locationFilter}
+                onTabChange={onLocationFilterChange}
+                counts={locationCounts}
+                testIDPrefix="pantry-location-tab"
+              />
+            </View>
+          </Animated.View>
+
+          {/* Collapsible banner (greeting + search + stats, in that order) —
+              slides up off-screen as you scroll, reclaiming its space for rows.
+              Forced back open while a search query is active so the field stays
+              editable. */}
+          <Animated.View
+            onLayout={onBannerLayout}
+            style={[styles.banner, collapseStyle]}
+          >
+            <View style={styles.header}>
+              <PantryHeader
+                userName={userName}
+                householdName={householdName}
+                avatarUrl={avatarUrl}
+                notificationCount={notificationCount}
+                onAvatarPress={onAvatarPress}
+                onHomePress={onHomePress}
+                onNotificationPress={onNotificationPress}
+                onHomeBadgeLayout={onHomeBadgeLayout}
+              />
+            </View>
+            <View style={styles.searchContainer}>
+              <SearchBar
+                value={searchQuery}
+                onChangeText={onSearchChange}
+                placeholder={t('pantryScreen.searchPlaceholder')}
+                showSearchIcon={true}
+                testID="pantry-search-input"
+                innerRightIcon={
+                  <View
+                    ref={settingsIconRef}
+                    collapsable={false}
+                    onLayout={() => {
+                      if (onSettingsIconLayout) {
+                        requestAnimationFrame(() => {
+                          settingsIconRef.current?.measure(
+                            (_x, _y, w, h, pageX, pageY) => {
+                              if (w > 0 && h > 0) {
+                                onSettingsIconLayout({
+                                  x: pageX,
+                                  y: pageY,
+                                  width: w,
+                                  height: h,
+                                });
+                              }
+                            },
+                          );
+                        });
+                      }
+                    }}
+                  >
+                    <Pressable
+                      onPress={onSettingsPress}
+                      hitSlop={8}
+                      accessibilityRole="button"
+                      accessibilityLabel={t(
+                        'pantryScreen.settingsAccessibility',
+                      )}
+                    >
+                      <Icon
+                        name="settings-outline"
+                        size={18}
+                        tone="textTertiary"
+                      />
+                    </Pressable>
+                  </View>
+                }
+              />
+            </View>
+            {!!stats && (
+              <View style={styles.statsContainer}>
+                <PantryAlertBar
+                  stats={stats}
+                  onAnalyticsPress={onAnalyticsPress}
+                  onLowStockNavigate={onLowStockNavigate}
+                  onExpiringNavigate={onExpiringNavigate}
+                  sortLabel={`${t('pantryScreen.sort')} ${
+                    sortDirection === PantrySortDirection.ASC ? '↑' : '↓'
+                  }`}
+                  onSortPress={openSortModal}
+                />
+              </View>
+            )}
+          </Animated.View>
 
           {!!sortModalVisible && (
             <PantrySortModal
@@ -590,6 +703,9 @@ const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
+    // Clip the collapsing banner as it translates up so it doesn't bleed
+    // over the top safe-area inset applied by the screen layout.
+    overflow: 'hidden',
   },
   header: {
     backgroundColor: theme.colors.background,
@@ -601,6 +717,29 @@ const styles = StyleSheet.create(theme => ({
   },
   searchContainer: {
     paddingHorizontal: theme.spacing['3'],
+  },
+  statsContainer: {
+    paddingHorizontal: theme.spacing['3'],
+  },
+  // Collapsing banner (greeting + stats) — absolutely pinned to the top; slides
+  // up via the shared `collapseStyle` transform as the list scrolls.
+  banner: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: theme.zIndex.sticky,
+    backgroundColor: theme.colors.background,
+  },
+  // Pinned toolbar (search + tabs) — `top` is set inline to the banner height;
+  // it shares the same transform so it slides up with the banner, then stays at
+  // the top once the banner is fully collapsed.
+  toolbar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    zIndex: theme.zIndex.sticky,
+    backgroundColor: theme.colors.background,
   },
   listContainer: {
     flex: 1,

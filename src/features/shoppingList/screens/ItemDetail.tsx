@@ -56,10 +56,15 @@ export const ShoppingListItemDetail: React.FC<
   const { toEditItem, toPurchaseHistory, goBack } = useAppNavigation();
   const { listId, itemId } = route.params;
 
-  // Use cache-first policy - offlineQueryLink will handle offline behavior automatically
+  // cache-and-network: the detail selects fields the list never caches
+  // (createdAt, priority, source, addedBy, purchase history, nutrition,
+  // displayUnit), so it must hit the network to fill them. cache-first would
+  // skip the fetch whenever a partial entity already looks "complete" and leave
+  // the screen blank. When the API is unavailable, offlineModeLink still serves
+  // this from cache automatically.
   const { data } = useQuery(GetShoppingListItemDocument, {
     variables: { id: itemId },
-    fetchPolicy: 'cache-first',
+    fetchPolicy: 'cache-and-network',
   });
 
   // The detail screen owns its own narrow fragment. useFragment subscribes
@@ -333,6 +338,9 @@ const styles = StyleSheet.create(theme => ({
   itemName: {
     flex: 1,
     fontSize: theme.fonts.size['2xl'],
+    // Explicit line height so bold descenders (g, p, y) aren't clipped on
+    // Android, where an unset lineHeight on a large bold Text crops the glyph box.
+    lineHeight: theme.typography.lineHeight.loose,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
   },

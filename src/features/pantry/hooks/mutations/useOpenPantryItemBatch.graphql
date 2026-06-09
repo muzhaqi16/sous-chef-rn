@@ -6,6 +6,7 @@ fragment useOpenPantryItemBatch_pantryItem on PantryItem {
   version
   activeBatchCount
   batches {
+    id
     ...PantryItemBatchFragment
   }
 }

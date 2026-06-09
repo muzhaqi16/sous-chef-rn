@@ -76,6 +76,7 @@ mutation BarcodeRestockPantryItem($input: RestockPantryItemInput!) {
         costPerUnit
         totalCost
         pantryItem {
+          id
           ...SearchResults_pantryItem
         }
       }

@@ -36,6 +36,7 @@ mutation VerifyEmail($input: VerifyEmailInput!) {
     __typename
     ... on VerifyEmailPayload {
       user {
+        id
         ...LoginUser
       }
     }

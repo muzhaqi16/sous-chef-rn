@@ -3,6 +3,7 @@
 
 query GetMe {
   me {
+    id
     ...PartialUser
   }
 }

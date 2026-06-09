@@ -676,6 +676,19 @@ export function makeCache(): InMemoryCache {
               return canRead(ref) ? ref : existing;
             },
           },
+          shoppingListItem: {
+            read(
+              existing: unknown,
+              { args, toReference, canRead }: FieldFunctionOptions,
+            ) {
+              if (existing !== undefined) return existing;
+              const ref = toReference({
+                __typename: 'ShoppingListItem',
+                id: args?.id as string,
+              });
+              return canRead(ref) ? ref : existing;
+            },
+          },
           pantry: {
             read(
               existing: unknown,

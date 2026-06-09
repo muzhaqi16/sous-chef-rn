@@ -33,6 +33,7 @@ query SuggestedRecipes($first: Int, $after: String) {
   recipeSuggestions(first: $first, after: $after) {
     edges {
       node {
+        id
         ...BasicRecipeFragment
       }
       cursor
@@ -148,6 +149,7 @@ mutation CreateRecipe($input: CreateRecipeInput!) {
     __typename
     ... on CreateRecipePayload {
       recipe {
+        id
         ...BasicRecipeFragment
       }
     }
@@ -213,6 +215,7 @@ mutation UpdateRecipeIngredients($input: UpdateRecipeIngredientsInput!) {
       recipe {
         id
         ingredients {
+          id
           ...RecipeIngredientFragment
         }
       }
@@ -265,6 +268,7 @@ mutation FavoriteRecipe($input: FavoriteRecipeInput!) {
         createdAt
         updatedAt
         recipe {
+          id
           ...BasicRecipeFragment
         }
       }

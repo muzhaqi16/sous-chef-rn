@@ -669,6 +669,7 @@ mutation RestockPantryItem($input: RestockPantryItemInput!) {
         costPerUnit
         totalCost
         pantryItem {
+          id
           ...useRestockPantryItem_pantryItem
         }
       }
@@ -715,6 +716,7 @@ mutation AdjustPantryItemQuantity($input: AdjustPantryItemQuantityInput!) {
     __typename
     ... on AdjustPantryItemQuantityPayload {
       pantryItem {
+        id
         ...useAdjustPantryItemQuantity_pantryItem
       }
     }
@@ -737,6 +739,7 @@ mutation CorrectPantryItemWeight($input: CorrectPantryItemWeightInput!) {
     __typename
     ... on CorrectPantryItemWeightPayload {
       pantryItem {
+        id
         ...useCorrectPantryItemWeight_pantryItem
       }
     }
@@ -813,6 +816,7 @@ mutation OpenPantryItem($input: OpenPantryItemInput!) {
     __typename
     ... on OpenPantryItemPayload {
       pantryItem {
+        id
         ...useOpenPantryItem_pantryItem
       }
     }
@@ -832,6 +836,7 @@ mutation ConvertExpiredToWaste($input: ConvertExpiredToWasteInput!) {
     __typename
     ... on ConvertExpiredToWastePayload {
       pantryItem {
+        id
         ...useConvertExpiredToWaste_pantryItem
       }
     }
@@ -862,6 +867,7 @@ mutation OpenPantryItemBatch($input: OpenBatchInput!) {
     __typename
     ... on OpenPantryItemBatchPayload {
       pantryItem {
+        id
         ...useOpenPantryItemBatch_pantryItem
       }
     }
@@ -884,6 +890,7 @@ mutation WastePantryItemBatch($input: WasteBatchInput!) {
     __typename
     ... on WastePantryItemBatchPayload {
       pantryItem {
+        id
         ...useWastePantryItemBatch_pantryItem
       }
     }
@@ -906,6 +913,7 @@ mutation ConvertExpiredBatchesToWaste($input: ConvertExpiredBatchesToWasteInput!
     __typename
     ... on ConvertExpiredBatchesToWastePayload {
       pantryItem {
+        id
         ...useConvertExpiredBatchesToWaste_pantryItem
       }
     }
@@ -931,6 +939,7 @@ mutation SyncPantryItem($input: SyncPantryItemInput!) {
     operation
     wasCreated
     item {
+      id
       ...queueManager_syncPantryItem
     }
     conflict {
@@ -974,6 +983,7 @@ mutation SyncAdjustPantryItemQuantity(
     operationId
     wasApplied
     pantryItem {
+      id
       ...queueManager_syncPantryItem
     }
     pantry {
@@ -987,6 +997,7 @@ mutation SyncRestockPantryItem($input: SyncRestockPantryItemInput!) {
     operationId
     wasApplied
     pantryItem {
+      id
       ...queueManager_syncPantryItem
     }
     pantry {
@@ -1000,6 +1011,7 @@ mutation SyncConsumePantryItem($input: SyncConsumePantryItemInput!) {
     operationId
     wasApplied
     pantryItem {
+      id
       ...queueManager_syncPantryItem
     }
     pantry {
@@ -1013,6 +1025,7 @@ mutation SyncOpenPantryItemBatch($input: SyncOpenPantryItemBatchInput!) {
     operationId
     wasApplied
     pantryItem {
+      id
       ...queueManager_syncPantryItem
     }
     pantry {
@@ -1026,6 +1039,7 @@ mutation SyncWastePantryItemBatch($input: SyncWastePantryItemBatchInput!) {
     operationId
     wasApplied
     pantryItem {
+      id
       ...queueManager_syncPantryItem
     }
     pantry {

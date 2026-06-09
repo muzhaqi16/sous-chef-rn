@@ -195,6 +195,7 @@ mutation InviteToHome($input: InviteToHomeInput!) {
     __typename
     ... on InviteToHomePayload {
       homeInvite {
+        id
         ...InviteCard_invite
         ...HomeInviteCard_invite
       }

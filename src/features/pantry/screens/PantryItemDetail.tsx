@@ -496,6 +496,9 @@ const styles = StyleSheet.create(theme => ({
   itemTitle: {
     flex: 1,
     fontSize: theme.fonts.size['2xl'],
+    // Explicit line height so bold descenders (g, p, y) aren't clipped on
+    // Android, where an unset lineHeight on a large bold Text crops the glyph box.
+    lineHeight: theme.typography.lineHeight.loose,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     marginRight: theme.spacing.md,
