@@ -127,6 +127,28 @@ describe('useStandardBottomSheet', () => {
     ).toBeGreaterThanOrEqual(16);
   });
 
+  it('wires onAnimate into modalProps so the backdrop claims at open start', () => {
+    // The slot is claimed on gorhom's onAnimate (open-animation start) rather
+    // than onChange (settle), so the dim ramps in lockstep with the sheet.
+    const { result } = renderHook(() => useStandardBottomSheet(defaultOptions));
+
+    expect(typeof result.current.modalProps.onAnimate).toBe('function');
+    // Callable without a provider mounted (falls back to a no-op claim).
+    expect(() =>
+      result.current.modalProps.onAnimate?.(-1, 0, 1000, 0),
+    ).not.toThrow();
+  });
+
+  it('forwards a user-supplied onAnimate alongside the backdrop claim', () => {
+    const onAnimate = jest.fn();
+    const { result } = renderHook(() =>
+      useStandardBottomSheet({ ...defaultOptions, onAnimate }),
+    );
+
+    result.current.modalProps.onAnimate?.(-1, 0, 1000, 0);
+    expect(onAnimate).toHaveBeenCalledWith(-1, 0, 1000, 0);
+  });
+
   it('omits backdropComponent (global dim layer drives itself)', () => {
     const { result } = renderHook(() => useStandardBottomSheet(defaultOptions));
 

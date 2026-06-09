@@ -5,10 +5,11 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useAnimatedTheme } from 'react-native-unistyles/reanimated';
 import Animated, {
   useSharedValue,
+  useDerivedValue,
   useAnimatedStyle,
   withSpring,
   interpolateColor,
-  type SharedValue,
+  type DerivedValue,
 } from 'react-native-reanimated';
 import { HapticService } from '#services/haptic/HapticService';
 import { Label } from '#components/atoms/Label';
@@ -33,7 +34,7 @@ interface SegmentedTabProps<T extends string> {
   isCompact: boolean;
   formatLabel: (value: T) => string;
   onPress: () => void;
-  indicatorX: SharedValue<number>;
+  indicatorX: DerivedValue<number>;
   tabWidth: number;
 }
 
@@ -102,26 +103,38 @@ export const SegmentedControl = <T extends string>({
 
   // Layout measurement — subtract border (1px each side) for inner content width
   const [contentWidth, setContentWidth] = useState(0);
-  const indicatorX = useSharedValue(0);
   const tabWidth = contentWidth > 0 ? contentWidth / options.length : 0;
-  const selectedIndex = options.indexOf(value);
+  const selectedIndex = Math.max(0, options.indexOf(value));
 
-  // Adjusting state during render — detect value/layout changes (AnimatedChip pattern)
-  const [prev, setPrev] = useState({ value, hasLayout: false });
+  // The pill's resting position is derived live from the selected segment and
+  // the measured width, so it is correct on the first measured frame (including
+  // the first cold-boot frame) and re-derives after any relayout such as a
+  // rotation — nothing is stored to go stale or be dropped while Reanimated's
+  // runtime is still warming up. `offset` is a transient slide delta: on a
+  // selection change we seed it with the distance back to the old segment and
+  // spring it to 0, which slides the pill from the old segment to the new one.
+  const offset = useSharedValue(0);
+  const indicatorX = useDerivedValue(
+    () => selectedIndex * tabWidth + offset.get(),
+    [selectedIndex, tabWidth],
+  );
 
-  if (contentWidth > 0 && !prev.hasLayout) {
-    // First layout: instant position, no animation
-    setPrev({ value, hasLayout: true });
-    indicatorX.set(selectedIndex * tabWidth);
-  } else if (value !== prev.value && prev.hasLayout) {
-    // Value changed after layout: animate with spring
-    setPrev({ value, hasLayout: true });
-    indicatorX.set(withSpring(selectedIndex * tabWidth, SPRING.GENTLE));
+  const [prevIndex, setPrevIndex] = useState(selectedIndex);
+  if (prevIndex !== selectedIndex) {
+    const fromDelta = (prevIndex - selectedIndex) * tabWidth;
+    setPrevIndex(selectedIndex);
+    if (tabWidth > 0) {
+      offset.set(fromDelta);
+      offset.set(withSpring(0, SPRING.GENTLE));
+    }
   }
 
   const indicatorAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: indicatorX.get() }],
     width: tabWidth,
+    // Width is 0 until measured; gate opacity too so the always-mounted pill
+    // never paints at the left edge before the first measurement.
+    opacity: tabWidth > 0 ? 1 : 0,
   }));
 
   const handleLayout = (event: LayoutChangeEvent) => {
@@ -134,9 +147,7 @@ export const SegmentedControl = <T extends string>({
     <View style={styles.container} testID={testID}>
       {label ? <Label required={required}>{label}</Label> : null}
       <View style={styles.segmentedControl} onLayout={handleLayout}>
-        {contentWidth > 0 && (
-          <Animated.View style={[styles.indicator, indicatorAnimatedStyle]} />
-        )}
+        <Animated.View style={[styles.indicator, indicatorAnimatedStyle]} />
         {options.map((option, index) => (
           <SegmentedTab
             key={option}

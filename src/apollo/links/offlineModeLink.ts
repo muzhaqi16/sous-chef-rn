@@ -19,8 +19,12 @@ const ALWAYS_ALLOW = ['RefreshToken', 'GetUserSettings'];
  * short-circuiting serves cached data without firing a doomed request (and
  * without the retryLink/errorLink retry+warn noise that doomed attempts produce).
  *
- * - Queries: Short-circuited (completes without forwarding). Cached data still
- *   renders; the query settles with no loading spinner and no network error.
+ * - Queries: Served from cache. The link reads the query back out of the cache
+ *   and emits it as the result, then completes — no network request. Apollo
+ *   Client 4.x requires a link to emit a value before completing (it errors
+ *   with "link chain completed without emitting a value" otherwise), and
+ *   re-emitting the cached data is an idempotent write that never clobbers the
+ *   populated cache. The query settles with no loading spinner and no error.
  * - Mutations: Pass through to queueLink which handles offline queuing.
  * - Subscriptions: Pass through (WebSocket connection handles its own lifecycle).
  *
@@ -56,9 +60,23 @@ export const createOfflineModeLink = () => {
       return forward(operation);
     }
 
-    // Short-circuit: complete without data. Apollo uses cached data already read
-    // before the link chain fires.
-    return new Observable(observer => {
+    // Serve the query from cache instead of forwarding to the network. Read the
+    // query back out of the cache and emit it as the result — Apollo Client 4.x
+    // throws "link chain completed without emitting a value" if a link completes
+    // without emitting, and re-emitting the cached data is an idempotent write
+    // (it never clobbers a populated cache, unlike emitting `{}`/`null`). On a
+    // cache miss readQuery returns null, which the consumer hooks already guard.
+    return new Observable<ApolloLink.Result>(observer => {
+      let cached: Record<string, unknown> | null = null;
+      try {
+        cached = operation.client.cache.readQuery<Record<string, unknown>>({
+          query: operation.query,
+          variables: operation.variables,
+        });
+      } catch {
+        cached = null;
+      }
+      observer.next({ data: cached });
       observer.complete();
     });
   });
