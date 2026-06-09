@@ -31,18 +31,23 @@ const BUTTON_SIZE = 40;
 // Reserved above the title when there's no hero, and used to size the bar.
 export const HEADER_BAND_HEIGHT = HEADER_TOP_GAP + BUTTON_SIZE + HEADER_TOP_GAP;
 
-// As the hero collapses, the inline title fades in over this scroll range. The
-// image is never dimmed and there's no bar background over it — the buttons stay
-// legible via their chip backgrounds and the opaque content card that rises to
-// cover the hero. (Image-less screens get a solid header instead.)
 const COLLAPSE_DISTANCE = HERO_IMAGE_HEIGHT - HEADER_BAND_HEIGHT;
-const TITLE_FADE_START = COLLAPSE_DISTANCE * 0.55;
-const TITLE_FADE_END = COLLAPSE_DISTANCE * 0.9;
+// The content card overlaps the hero by `theme.spacing['5']` (its negative
+// marginTop), so its top reaches the bar at this scroll offset. The photo stays
+// un-dimmed until then; the solid bar + inline title fade in over a short window
+// just before it, so the bar is opaque exactly as content arrives to scroll
+// beneath it (no overlap), tinting only a small top strip briefly.
+const CONTENT_OVERLAP = 20;
+const COLLAPSE_POINT = COLLAPSE_DISTANCE - CONTENT_OVERLAP;
+const BAR_FADE_END = COLLAPSE_POINT;
+const BAR_FADE_START = COLLAPSE_POINT - 24;
+const TITLE_FADE_START = BAR_FADE_START;
+const TITLE_FADE_END = BAR_FADE_END;
 // Hysteresis bounds for mounting the inline title (mount on the way in, unmount
 // a bit earlier on the way out) so it's never in the tree alongside the
 // content's own title while the hero is expanded.
-const TITLE_MOUNT_AT = TITLE_FADE_START;
-const TITLE_UNMOUNT_AT = TITLE_FADE_START * 0.6;
+const TITLE_MOUNT_AT = BAR_FADE_START;
+const TITLE_UNMOUNT_AT = BAR_FADE_START - 20;
 
 const TONE_BY_VARIANT: Record<ActionVariant, IconTone> = {
   default: 'textPrimary',
@@ -188,6 +193,21 @@ export const CollapsingHeroDetail: React.FC<CollapsingHeroDetailProps> = ({
     return { transform: [{ translateY: y * 0.5 }] };
   });
 
+  // Solid bar background: transparent over the prominent hero, fading to opaque
+  // right as the content card reaches the bar so content scrolls beneath it.
+  // Image-less screens are solid from the start.
+  const barBgStyle = useAnimatedStyle(() => {
+    if (!hasHero) return { opacity: 1 };
+    return {
+      opacity: interpolate(
+        scrollY.get(),
+        [BAR_FADE_START, BAR_FADE_END],
+        [0, 1],
+        Extrapolation.CLAMP,
+      ),
+    };
+  });
+
   const titleStyle = useAnimatedStyle(() => {
     if (!hasHero) return { opacity: title ? 1 : 0 };
     return {
@@ -244,9 +264,9 @@ export const CollapsingHeroDetail: React.FC<CollapsingHeroDetailProps> = ({
         pointerEvents="box-none"
         style={[styles.bar, { height: insets.top + HEADER_BAND_HEIGHT }]}
       >
-        <View
+        <Animated.View
           pointerEvents="none"
-          style={[styles.barSolid, hasHero && styles.barSolidHidden]}
+          style={[styles.barSolid, barBgStyle]}
         />
         <View style={[styles.barRow, { top: insets.top + HEADER_TOP_GAP }]}>
           <HeroChip icon="arrow-back" onPress={onBack} tone="textPrimary" />
@@ -323,11 +343,6 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.background,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
-  },
-  // Hero screens have no bar background (the buttons float over the photo and
-  // the content card backs them as it rises); only image-less screens show it.
-  barSolidHidden: {
-    opacity: 0,
   },
   barRow: {
     position: 'absolute',

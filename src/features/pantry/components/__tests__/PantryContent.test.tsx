@@ -1,7 +1,7 @@
 'use no memo';
 import React from 'react';
 import { InMemoryCache } from '@apollo/client';
-import { screen, act } from '@testing-library/react-native';
+import { screen, act, fireEvent } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { PantryContent } from '../PantryContent';
 import { PantryItem, StorageState } from '#/graphql/generated/schemaTypes';
@@ -561,7 +561,7 @@ describe('PantryContent', () => {
         />,
       );
       // data = sticky-header sentinel + first 24 items (INITIAL_RENDER_WINDOW)
-      expect(screen.getByTestId('pantry-list').props.data).toHaveLength(24);
+      expect(screen.getByTestId('pantry-list').props.data).toHaveLength(25);
     });
 
     it('grows the window on end-reached until the loaded set is exhausted', () => {
@@ -576,7 +576,8 @@ describe('PantryContent', () => {
         screen.getByTestId('pantry-list').props.onEndReached?.();
       });
       // window grows by RENDER_WINDOW_STEP (24), capped at the 30 loaded items
-      expect(screen.getByTestId('pantry-list').props.data).toHaveLength(30);
+      // (+1 for the sticky-header sentinel at index 0)
+      expect(screen.getByTestId('pantry-list').props.data).toHaveLength(31);
     });
 
     it('bridges the useDeferredValue render lag with skeletons (items present, deferred slice still empty)', () => {
@@ -616,8 +617,9 @@ describe('PantryContent', () => {
         screen.getByTestId('pantry-list').props.onEndReached?.();
       });
       // server fetch fired; local window stays at the initial size
+      // (sentinel + 24 items)
       expect(onEndReached).toHaveBeenCalledTimes(1);
-      expect(screen.getByTestId('pantry-list').props.data).toHaveLength(24);
+      expect(screen.getByTestId('pantry-list').props.data).toHaveLength(25);
     });
   });
 
@@ -839,8 +841,23 @@ describe('PantryContent', () => {
     expect(screen.getByText('John')).toBeTruthy();
   });
 
-  describe('body skeleton overlay (FlashList paint gap)', () => {
-    it('covers the rows with a skeleton until FlashList paints, then lifts on onLoad', () => {
+  describe('loading skeleton (chrome stays, skeleton rows below)', () => {
+    it('shows skeleton rows below the visible chrome while the first load is in flight', () => {
+      render(
+        <PantryContent
+          {...defaultProps}
+          items={[]}
+          loading={true}
+          locationCounts={{ all: 2, fridge: 0, freezer: 0, pantry: 0 }}
+        />,
+      );
+      // The chrome (header/search/tabs) renders as the list header and stays
+      // visible; the skeleton fills the body below the sticky tabs.
+      expect(screen.getByTestId('pantry-skeleton')).toBeTruthy();
+      expect(screen.getByTestId('pantry-search-input')).toBeTruthy();
+    });
+
+    it('shows rows with no skeleton once items are present', () => {
       const items = [
         createMockPantryItem({ id: '1', itemName: 'Milk' }),
         createMockPantryItem({ id: '2', itemName: 'Eggs' }),
@@ -852,20 +869,11 @@ describe('PantryContent', () => {
           locationCounts={{ all: 2, fridge: 0, freezer: 0, pantry: 0 }}
         />,
       );
-      // rows are in the list, but FlashList hasn't reported onLoad yet → the
-      // body overlay skeleton covers the in-progress paint
-      expect(screen.getByTestId('pantry-skeleton')).toBeTruthy();
-      expect(screen.getByText('Milk')).toBeTruthy();
-
-      // FlashList finishes its first paint → overlay lifts
-      act(() => {
-        screen.getByTestId('pantry-list').props.onLoad({ elapsedTimeInMs: 0 });
-      });
       expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
       expect(screen.getByText('Milk')).toBeTruthy();
     });
 
-    it('shows no overlay for a genuinely empty pantry', () => {
+    it('shows no skeleton for a genuinely empty pantry', () => {
       render(
         <PantryContent
           {...defaultProps}
@@ -875,6 +883,60 @@ describe('PantryContent', () => {
       );
       expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
       expect(screen.getByText('Your pantry is empty')).toBeTruthy();
+    });
+  });
+
+  describe('switch skeleton (server-mode tab fetch)', () => {
+    const items = [createMockPantryItem({ id: '1', itemName: 'Milk' })];
+    const counts = { all: 1, fridge: 0, freezer: 0, pantry: 0 };
+
+    it('covers the stale rows with a skeleton while the new tab is fetching, then lifts when it settles', () => {
+      const view = render(
+        <PantryContent
+          {...defaultProps}
+          items={items}
+          fetching={true}
+          locationCounts={counts}
+        />,
+      );
+      // Items are present and not switching yet → real rows, no skeleton.
+      expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
+
+      // Switch tabs while a fetch is in flight → skeleton covers the old rows.
+      act(() => {
+        fireEvent.press(screen.getByTestId('pantry-location-tab-fridge'));
+      });
+      expect(screen.getByTestId('pantry-skeleton')).toBeTruthy();
+
+      // The fetch settles (fetching → false) → the skeleton lifts.
+      view.rerender(
+        <PantryContent
+          {...defaultProps}
+          items={items}
+          fetching={false}
+          locationCounts={counts}
+        />,
+      );
+      expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
+      expect(screen.getByText('Milk')).toBeTruthy();
+    });
+
+    it('does not flash a skeleton when switching in client mode (no fetch)', () => {
+      render(
+        <PantryContent
+          {...defaultProps}
+          items={items}
+          fetching={false}
+          locationCounts={counts}
+        />,
+      );
+      expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
+
+      // Instant client-side switch — no fetch, so no skeleton.
+      act(() => {
+        fireEvent.press(screen.getByTestId('pantry-location-tab-fridge'));
+      });
+      expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
     });
   });
 

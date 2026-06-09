@@ -95,6 +95,14 @@ export interface PantryContentProps {
   // State
   refreshing?: boolean;
   loading?: boolean;
+  /**
+   * True while a server-mode tab/sort switch is re-fetching the filtered page
+   * (the previous tab's items linger until it lands). Drives the switch skeleton
+   * overlay so the stale list doesn't show through during the fetch. Always
+   * false in client mode, where switching filters the already-loaded set
+   * instantly.
+   */
+  fetching?: boolean;
 
   /** Callback with screen-coordinate rect when the home badge lays out */
   onHomeBadgeLayout?: (rect: {
