@@ -82,14 +82,21 @@ interface RecipeSearchInputRef {
 interface RecipeSearchInputProps {
   onSearch: (query: string) => void;
   extraActions: SearchBarAction[];
+  /** Seeds the field so the submitted query survives the screen's
+   * skeleton↔list remounts (this component is rendered in two tree positions).
+   * Read once on mount — keystrokes stay local to keep the parent from
+   * re-rendering on every character. */
+  initialQuery: string;
+  /** Tapped the ✕ — clear the field and cancel the active search. */
+  onClear: () => void;
 }
 
 const RecipeSearchInput = forwardRef<
   RecipeSearchInputRef,
   RecipeSearchInputProps
->(({ onSearch, extraActions }, ref) => {
+>(({ onSearch, extraActions, initialQuery, onClear }, ref) => {
   const { t } = useTranslation();
-  const [inputQuery, setInputQuery] = useState('');
+  const [inputQuery, setInputQuery] = useState(initialQuery);
   // `useUnistyles()` is intentional: theme colors are constructed into the
   // dynamic `SearchBarAction[]` prop array passed to `<SearchBar>`. The action
   // shape carries `color`/`backgroundColor` strings, so a `withUnistyles`
@@ -116,6 +123,7 @@ const RecipeSearchInput = forwardRef<
       <SearchBar
         value={inputQuery}
         onChangeText={setInputQuery}
+        onClear={onClear}
         onSubmitEditing={() => onSearch(inputQuery)}
         returnKeyType="search"
         placeholder={t('recipes.searchPlaceholder')}
@@ -464,6 +472,8 @@ const RecipeMainInner: React.FC = () => {
       <RecipeSearchInput
         ref={searchInputRef}
         onSearch={screen.handleTextSearch}
+        initialQuery={screen.searchQuery}
+        onClear={screen.clearSearch}
         extraActions={searchBarExtraActions}
       />
       {/* Filters only apply to text search (discovery + ingredient search

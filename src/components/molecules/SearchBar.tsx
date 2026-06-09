@@ -48,6 +48,10 @@ type SearchBarProps = Omit<TextInputProps, 'style'> & {
   showSearchIcon?: boolean;
   /** Custom icon/element to show inside the input field (right side, when not showing clear) */
   innerRightIcon?: ReactNode;
+  /** Extra handler invoked when the clear (✕) button is tapped, in addition to
+   * emptying the field. Use to also reset dependent state (e.g. cancel a search
+   * and return to the default list). */
+  onClear?: () => void;
 };
 
 const ThemedActionButton = withUnistyles(ActionButton);
@@ -128,6 +132,7 @@ export const SearchBar: FC<SearchBarProps> = ({
   rightActions = [],
   showSearchIcon = false,
   innerRightIcon,
+  onClear,
   ...textInputProps
 }) => {
   const { t } = useTranslation();
@@ -208,7 +213,10 @@ export const SearchBar: FC<SearchBarProps> = ({
         style={inputStyle}
         containerStyle={[styles.inputContainer, commonStyles.shadow]}
         showClearIcon={true}
-        onClear={() => onChangeText('')}
+        onClear={() => {
+          onChangeText('');
+          onClear?.();
+        }}
         leftIcon={
           showSearchIcon ? (
             <Icon name="search" size={16} tone="textTertiary" />

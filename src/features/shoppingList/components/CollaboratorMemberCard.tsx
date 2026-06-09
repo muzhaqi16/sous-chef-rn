@@ -64,6 +64,8 @@ interface CollaboratorMemberCardProps {
   currentUserId: string | undefined;
   /** When true (home-linked list), the remove button is hidden. */
   isHomeLinked: boolean;
+  /** When true, this member owns the list — shows an Owner tag, hides remove. */
+  isOwner?: boolean;
   /** Open the permissions sheet for this member. */
   onPress: () => void;
   /** Remove this member from the list. */
@@ -74,6 +76,7 @@ export const CollaboratorMemberCard: React.FC<CollaboratorMemberCardProps> = ({
   member,
   currentUserId,
   isHomeLinked,
+  isOwner = false,
   onPress,
   onRemove,
 }) => {
@@ -85,6 +88,12 @@ export const CollaboratorMemberCard: React.FC<CollaboratorMemberCardProps> = ({
   const displayName = getCollaboratorDisplayName(member, currentUserId);
   const memberEmail = member.collaborator?.email ?? member.email ?? '';
   const showEmailRow = !!memberEmail && memberEmail !== displayName;
+
+  // The owner can't be removed, and you leave the list via the dedicated Leave
+  // button rather than removing your own row here.
+  const isCurrentUser =
+    !!currentUserId && member.collaboratorId === currentUserId;
+  const canRemove = !isHomeLinked && !isOwner && !isCurrentUser;
 
   return (
     <AppPressable style={styles.memberCard} onPress={onPress}>
@@ -101,6 +110,13 @@ export const CollaboratorMemberCard: React.FC<CollaboratorMemberCardProps> = ({
           ) : null}
           <View style={styles.statusContainer}>
             <StatusBadge variant={statusVariant} text={statusText} />
+            {!!isOwner && (
+              <View style={styles.ownerTag}>
+                <Text style={styles.ownerTagText}>
+                  {t('shoppingListScreens.owner')}
+                </Text>
+              </View>
+            )}
             {!!member.invitedAt && (
               <Text style={styles.invitedText}>
                 {t('shoppingListScreens.invitedOn', {
@@ -111,7 +127,7 @@ export const CollaboratorMemberCard: React.FC<CollaboratorMemberCardProps> = ({
           </View>
         </View>
       </View>
-      {!isHomeLinked && (
+      {!!canRemove && (
         <Pressable
           onPress={onRemove}
           style={({ pressed }) => pressed && styles.pressed}
@@ -215,6 +231,19 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.xs,
     color: theme.colors.textSecondary,
     fontStyle: 'italic',
+  },
+  ownerTag: {
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
+    borderRadius: theme.radii.pill,
+    borderWidth: 1,
+    backgroundColor: theme.colors.primary + '20',
+    borderColor: theme.colors.primary,
+  },
+  ownerTagText: {
+    fontSize: theme.typography.fontSize.xs,
+    fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.primary,
   },
   pressed: {
     opacity: theme.opacity.pressed,

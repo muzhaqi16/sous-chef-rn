@@ -11,7 +11,7 @@ import type { StaticScreenProps } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useMutation } from '@apollo/client/react';
 import { RemoveCollaboratorDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { CollaboratorRole } from '#/graphql/generated/schemaTypes';
+import { isShoppingListOwner } from '#utils/ownershipHelpers';
 import {
   useLeaveShoppingList,
   removeCollaboratorFromShoppingListCache,
@@ -49,6 +49,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
     loading,
     isRefetching,
     collaborators,
+    ownerships,
     name: listName,
     refetch,
   } = useShoppingListDetails(listId);
@@ -61,11 +62,18 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
   // `collaborators` from useShoppingListDetails are already materialized
   // ShoppingListCollaboratorFragments (with invitedAt) and null-filtered.
 
-  // Check if current user is owner
+  // Ownership is a separate ShoppingListOwnership record, not the collaborator
+  // `role` field — the list creator's collaborator row is not necessarily role
+  // OWNER. Read ownership from `ownerships` (the same signal ListSettings uses)
+  // so both screens agree on who the owner is.
+  const isOwner = isShoppingListOwner({ ownerships }, currentUser?.id);
+  const ownerUserIds = new Set(ownerships.map(o => o.userId));
+
+  // Still needed for the leave flow, which removes the current user's own
+  // collaborator entry by id.
   const currentUserCollaborator = collaborators.find(
     c => c.email === currentUser?.email || c.collaboratorId === currentUser?.id,
   );
-  const isOwner = currentUserCollaborator?.role === CollaboratorRole.Owner;
 
   const activeCollaborators = collaborators.filter(c =>
     ['ACCEPTED', 'ACTIVE', 'PENDING'].includes(c.status?.toUpperCase()),
@@ -231,6 +239,10 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
                   member={member}
                   currentUserId={currentUser?.id}
                   isHomeLinked={isHomeLinked}
+                  isOwner={
+                    !!member.collaboratorId &&
+                    ownerUserIds.has(member.collaboratorId)
+                  }
                   onPress={() =>
                     permissionsBottomSheetRef.current?.open(member)
                   }
