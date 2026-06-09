@@ -20,6 +20,10 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
   onToggle,
   children,
 }) => {
+  // The header's bottom border is a separator between it and the content, so it
+  // only shows while expanded — collapsed, it's just the header (no stray
+  // divider over an empty body).
+  styles.useVariants({ expanded });
   return (
     <>
       <AppPressable style={styles.header} onPress={onToggle}>
@@ -46,8 +50,15 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.md,
     marginTop: theme.spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    variants: {
+      expanded: {
+        true: {
+          borderBottomWidth: 1,
+          borderBottomColor: theme.colors.border,
+        },
+        false: {},
+      },
+    },
   },
   pressed: {
     opacity: theme.opacity.pressed,

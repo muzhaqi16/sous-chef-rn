@@ -9,11 +9,15 @@ import { ShareList } from '#features/shoppingList/screens/ShareList';
 import { AddEditItem } from '#features/shoppingList/screens/AddEditItem';
 import { ShoppingListItemDetail } from '#features/shoppingList/screens/ItemDetail';
 import { PurchaseHistoryScreen } from '#features/shoppingList/screens/PurchaseHistoryScreen';
-import { topInsetScreenLayout } from '#navigation/layouts/TopInsetLayout';
+import {
+  topInsetScreenLayout,
+  noInsetScreenLayout,
+} from '#navigation/layouts/TopInsetLayout';
 
 export const ShoppingListStack = createNativeStackNavigator({
   // Top safe-area inset, applied per screen (it's no longer global — see
-  // TopInsetLayout). No immersive screen here, so inset every screen.
+  // TopInsetLayout). Every screen gets it EXCEPT ItemDetail, which draws its
+  // hero image edge-to-edge behind the status bar.
   screenLayout: topInsetScreenLayout,
   screenOptions: ({ theme }) => ({
     headerShown: false,
@@ -44,7 +48,10 @@ export const ShoppingListStack = createNativeStackNavigator({
     }),
     // Wrapped without a `linking` key — intentionally not deep-linkable
     // (see note above).
-    ItemDetail: createNativeStackScreen({ screen: ShoppingListItemDetail }),
+    ItemDetail: createNativeStackScreen({
+      screen: ShoppingListItemDetail,
+      layout: noInsetScreenLayout,
+    }),
     PurchaseHistory: createNativeStackScreen({ screen: PurchaseHistoryScreen }),
   },
 });

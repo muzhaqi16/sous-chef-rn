@@ -3,7 +3,7 @@ import { View, ActivityIndicator } from 'react-native';
 import { ThemedIcon } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
-import { Icon, IconName, IconLibrary } from '#utils/iconUtils';
+import { Icon, IconName, IconLibrary, type IconTone } from '#utils/iconUtils';
 import { commonStyles } from '#/styles/commonStyles';
 import { Text } from '#components/atoms/Text';
 
@@ -69,10 +69,15 @@ export interface HeaderAction {
   variant?: ActionVariant;
   /** Direct color override (takes precedence over variant) */
   color?: string;
+  /** Theme tone for the icon — used by chip-style renderers like
+   *  `CollapsingHeroDetail` (takes precedence over `variant`). */
+  tone?: IconTone;
   /** Disable the action */
   disabled?: boolean;
   /** Show loading spinner instead of icon */
   loading?: boolean;
+  /** Accessibility label for screen readers (chip-style renderers). */
+  accessibilityLabel?: string;
   /** Badge count to display */
   badge?: number;
   /** Icon size (default: 24) */

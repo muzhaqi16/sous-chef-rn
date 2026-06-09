@@ -3,12 +3,6 @@ import { View, ActivityIndicator, Linking, ScrollView } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
-import Animated, {
-  useAnimatedScrollHandler,
-  useSharedValue,
-} from 'react-native-reanimated';
-import { scheduleOnRN } from 'react-native-worklets';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 
@@ -34,10 +28,8 @@ import { ReviewSection } from '#features/recipes/components/ReviewSection';
 import { useRecipeDetail } from '../../hooks/useRecipeDetail';
 import { IngredientCard } from './components/IngredientCard';
 import { RecipeHeroImage } from './components/RecipeHeroImage';
-import {
-  RecipeDetailTopBar,
-  BAR_CONTENT_HEIGHT,
-} from './components/RecipeDetailTopBar';
+import { CollapsingHeroDetail } from '#components/templates/CollapsingHeroDetail';
+import type { HeaderAction } from '#components/molecules/Header';
 import { SavedRecipeMetadataPanel } from './components/SavedRecipeMetadataPanel';
 import { RecipeInstructions } from './components/RecipeInstructions';
 import { IngredientSelectorSheet } from './components/IngredientSelectorSheet';
@@ -218,37 +210,52 @@ const RecipeDetailScreen: React.FC = () => {
     setShowManageSheet(false);
   };
 
-  // Scroll position drives the pinned top bar: the hero scrolls away while the
-  // bar background + title fade in (see RecipeDetailTopBar).
-  const insets = useSafeAreaInsets();
-  const scrollY = useSharedValue(0);
-  // Worklet-side flag (with hysteresis) so we only toggle the React title state
-  // on threshold crossings, not every frame. The title is mounted only while
-  // collapsed — otherwise it duplicates the content card's title in the tree.
-  const collapsedFlag = useSharedValue(false);
-  const [titleVisible, setTitleVisible] = useState(false);
-  const showTitle = () => setTitleVisible(true);
-  const hideTitle = () => setTitleVisible(false);
-
-  const hasHeroImage = !!displayData?.image;
-  // With a hero photo the title only appears once the image has mostly scrolled
-  // away; with no photo the (short) spacer means it collapses almost immediately.
-  const collapseShowAt = hasHeroImage ? 190 : 30;
-  const collapseHideAt = hasHeroImage ? 150 : 12;
-
-  const scrollHandler = useAnimatedScrollHandler({
-    onScroll: event => {
-      const y = event.contentOffset.y;
-      scrollY.set(y);
-      if (y > collapseShowAt && !collapsedFlag.get()) {
-        collapsedFlag.set(true);
-        scheduleOnRN(showTitle);
-      } else if (y < collapseHideAt && collapsedFlag.get()) {
-        collapsedFlag.set(false);
-        scheduleOnRN(hideTitle);
-      }
-    },
-  });
+  // Pinned action chips for the collapsing hero bar.
+  const headerActions: HeaderAction[] = [
+    ...(recipeId
+      ? [
+          {
+            icon: 'calendar-outline',
+            onPress: () => setShowAddToMealPlanSheet(true),
+            variant: 'primary',
+            accessibilityLabel: t('recipes.addToMealPlanA11y'),
+            testID: 'recipe-mealplan-button',
+          } satisfies HeaderAction,
+        ]
+      : []),
+    ...(isOwner
+      ? [
+          {
+            icon: 'create-outline',
+            onPress: handleEditRecipe,
+            variant: 'primary',
+            testID: 'recipe-edit-button',
+          } satisfies HeaderAction,
+        ]
+      : []),
+    ...(showFolderIcon
+      ? [
+          {
+            icon: isInOtherFolder ? 'folder' : 'folder-outline',
+            onPress: handleFolderPress,
+            variant: 'primary',
+            disabled: saving || updatingFolderTags,
+            testID: 'recipe-folder-button',
+          } satisfies HeaderAction,
+        ]
+      : []),
+    ...(showHeartIcon
+      ? [
+          {
+            icon: isInFavorites ? 'heart' : 'heart-outline',
+            onPress: handleHeartPress,
+            tone: 'favorite',
+            loading: saving || updatingFolderTags,
+            testID: 'recipe-heart-button',
+          } satisfies HeaderAction,
+        ]
+      : []),
+  ];
 
   // Only block on the full-screen loader during a true cold load. On a
   // cache-and-network refetch `loading` is true while `displayData` is already
@@ -286,231 +293,214 @@ const RecipeDetailScreen: React.FC = () => {
     );
   }
 
+  const heroImage = displayData.image;
+
   return (
-    <View style={styles.container}>
-      <Animated.ScrollView
-        onScroll={scrollHandler}
-        scrollEventThrottle={16}
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+    <>
+      <CollapsingHeroDetail
+        testID="recipe-detail"
+        onBack={goBack}
+        actions={headerActions}
+        title={displayData.title ?? ''}
+        contentStyle={styles.recipeContent}
+        renderHero={
+          heroImage
+            ? heroHeight => (
+                <RecipeHeroImage
+                  imageUrl={heroImage}
+                  externalId={externalId}
+                  height={heroHeight}
+                />
+              )
+            : undefined
+        }
       >
-        {displayData.image ? (
-          <RecipeHeroImage
-            imageUrl={displayData.image}
-            externalId={externalId}
-          />
-        ) : (
-          // Reserve space for the pinned bar so the title isn't hidden behind it.
-          <View style={{ height: insets.top + BAR_CONTENT_HEIGHT }} />
+        {!!displayData.image && (
+          <Text style={styles.title}>{displayData.title}</Text>
         )}
 
-        <View style={[styles.content, !displayData.image && { marginTop: 0 }]}>
-          <Text style={styles.title}>{displayData.title}</Text>
-
-          {/* Recipe Metadata */}
-          <View style={styles.metadata}>
-            {displayData.servings != null && (
+        {/* Recipe Metadata */}
+        <View style={styles.metadata}>
+          {displayData.servings != null && (
+            <Text style={styles.metadataText}>
+              🍽️ {displayData.servings} {t('recipes.servingsSuffix')}
+            </Text>
+          )}
+          {!!displayData.readyInMinutes && (
+            <Text style={styles.metadataText}>
+              ⏱️ {displayData.readyInMinutes} {t('recipes.minutes')}
+            </Text>
+          )}
+          {displayData.healthScore != null &&
+            !isNaN(displayData.healthScore) && (
               <Text style={styles.metadataText}>
-                🍽️ {displayData.servings} {t('recipes.servingsSuffix')}
+                💚 {Math.round(displayData.healthScore)}
+                {t('recipes.percentHealthy')}
               </Text>
             )}
-            {!!displayData.readyInMinutes && (
-              <Text style={styles.metadataText}>
-                ⏱️ {displayData.readyInMinutes} {t('recipes.minutes')}
-              </Text>
-            )}
-            {displayData.healthScore != null &&
-              !isNaN(displayData.healthScore) && (
-                <Text style={styles.metadataText}>
-                  💚 {Math.round(displayData.healthScore)}
-                  {t('recipes.percentHealthy')}
-                </Text>
-              )}
-            {/* Cooked count - inline with metadata */}
-            {!!isBackendRecipe && !!recipeId && !!isSaved && (
-              <Pressable
-                style={({ pressed }) => [
-                  styles.cookedMetadata,
-                  pressed && { opacity: 0.7 },
-                ]}
-                onPress={() => setCookedModalVisible(true)}
-                disabled={markingAsCooked}
-              >
-                {markingAsCooked ? (
-                  <SuccessActivityIndicator size="small" />
-                ) : (
-                  <>
-                    <Icon
-                      name={
-                        cookedCount > 0
-                          ? 'checkmark-circle'
-                          : 'checkmark-circle-outline'
-                      }
-                      size={14}
-                      tone={cookedCount > 0 ? 'success' : 'textSecondary'}
-                    />
-                    <Text
-                      style={[
-                        styles.metadataText,
-                        cookedCount > 0 && styles.metadataTextSuccess,
-                      ]}
-                    >
-                      {cookedCount > 0
-                        ? t('recipes.cookedCount', { count: cookedCount })
-                        : t('recipes.markCooked')}
-                    </Text>
-                  </>
-                )}
-              </Pressable>
-            )}
-          </View>
-
+          {/* Cooked count - inline with metadata */}
           {!!isBackendRecipe && !!recipeId && !!isSaved && (
-            <SavedRecipeMetadataPanel
-              savedFolder={savedFolder}
-              savedTags={savedTags}
-              savedNotes={savedNotes}
-              savedRating={savedRating}
-              updatingFolderTags={updatingFolderTags}
-              onUpdateRating={handleUpdateRating}
-            />
-          )}
-
-          {/* Dietary Tags */}
-          {!isBackendRecipe && (
-            <View style={styles.tags}>
-              {!!displayData.vegetarian && (
-                <View style={styles.tag}>
-                  <Text style={styles.tagText}>{t('recipes.vegetarian')}</Text>
-                </View>
-              )}
-              {!!displayData.vegan && (
-                <View style={styles.tag}>
-                  <Text style={styles.tagText}>{t('recipes.vegan')}</Text>
-                </View>
-              )}
-              {!!displayData.glutenFree && (
-                <View style={styles.tag}>
-                  <Text style={styles.tagText}>{t('recipes.glutenFree')}</Text>
-                </View>
-              )}
-              {!!displayData.dairyFree && (
-                <View style={styles.tag}>
-                  <Text style={styles.tagText}>{t('recipes.dairyFree')}</Text>
-                </View>
-              )}
-            </View>
-          )}
-
-          {/* Description */}
-          {!!displayData.summary && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>{t('recipes.about')}</Text>
-              <Text style={styles.description}>
-                {typeof displayData.summary === 'string'
-                  ? displayData.summary.replace(/<[^>]*>/g, '')
-                  : displayData.summary}
-              </Text>
-            </View>
-          )}
-
-          {/* Ingredients */}
-          {!!displayData.ingredients && displayData.ingredients.length > 0 && (
-            <View style={styles.ingredientsSection}>
-              <View style={styles.ingredientsSectionHeader}>
-                <Text style={styles.sectionTitle}>
-                  {t('recipes.ingredients')}
-                </Text>
-                <Pressable
-                  onPress={handleAddAll}
-                  disabled={addingToList}
-                  style={({ pressed }) => pressed && { opacity: 0.7 }}
-                >
-                  <Text style={styles.addAllButton}>
-                    {addingToList ? t('recipes.adding') : t('recipes.addAll')}
-                  </Text>
-                </Pressable>
-              </View>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.ingredientsList}
-              >
-                {displayData.ingredients.map((ingredient, index) => (
-                  <React.Fragment key={`${ingredient.id}-${index}`}>
-                    {index > 0 && <IngredientSeparator />}
-                    <IngredientCard
-                      ingredient={ingredient}
-                      isAdded={addedIngredients.has(ingredient.id)}
-                      onPress={() => handleAddSingleIngredient(ingredient)}
-                    />
-                  </React.Fragment>
-                ))}
-              </ScrollView>
-            </View>
-          )}
-
-          <RecipeInstructions
-            isBackendRecipe={isBackendRecipe}
-            instructions={displayData.instructions}
-            instructionsHtml={displayData.instructionsHtml}
-          />
-
-          {/* Reviews Section */}
-          {!!isBackendRecipe && !!recipeId && (
-            <ReviewSection {...reviewState} {...reviewActions} />
-          )}
-
-          {/* Source Attribution */}
-          {!!(displayData.sourceName || displayData.sourceUrl) && (
             <Pressable
               style={({ pressed }) => [
-                styles.attribution,
-                displayData.sourceUrl && pressed && { opacity: 0.7 },
+                styles.cookedMetadata,
+                pressed && { opacity: 0.7 },
               ]}
-              onPress={() =>
-                displayData.sourceUrl && Linking.openURL(displayData.sourceUrl)
-              }
-              disabled={!displayData.sourceUrl}
+              onPress={() => setCookedModalVisible(true)}
+              disabled={markingAsCooked}
             >
-              <Text style={styles.attributionText}>
-                {t('recipes.recipeFrom', {
-                  source: displayData.sourceName || t('recipes.externalSource'),
-                })}
-              </Text>
-              {!!displayData.sourceUrl && (
-                <View style={styles.viewOriginalLink}>
-                  <Text style={styles.viewOriginalText}>
-                    {t('recipes.viewOriginalRecipe')}
+              {markingAsCooked ? (
+                <SuccessActivityIndicator size="small" />
+              ) : (
+                <>
+                  <Icon
+                    name={
+                      cookedCount > 0
+                        ? 'checkmark-circle'
+                        : 'checkmark-circle-outline'
+                    }
+                    size={14}
+                    tone={cookedCount > 0 ? 'success' : 'textSecondary'}
+                  />
+                  <Text
+                    style={[
+                      styles.metadataText,
+                      cookedCount > 0 && styles.metadataTextSuccess,
+                    ]}
+                  >
+                    {cookedCount > 0
+                      ? t('recipes.cookedCount', { count: cookedCount })
+                      : t('recipes.markCooked')}
                   </Text>
-                  <Icon name="open-outline" size={14} tone="primary" />
-                </View>
+                </>
               )}
             </Pressable>
           )}
         </View>
-      </Animated.ScrollView>
 
-      {/* Pinned header: back + action buttons stay fixed while the hero scrolls
-          away; a solid bar + recipe title fade in once collapsed. */}
-      <RecipeDetailTopBar
-        scrollY={scrollY}
-        hasImage={!!displayData.image}
-        title={displayData.title ?? ''}
-        titleVisible={titleVisible}
-        onBack={goBack}
-        showMealPlanButton={!!recipeId}
-        showEditButton={!!isOwner}
-        showFolderButton={!!showFolderIcon}
-        showHeartButton={!!showHeartIcon}
-        isInOtherFolder={isInOtherFolder}
-        isInFavorites={isInFavorites}
-        busy={saving || updatingFolderTags}
-        onMealPlanPress={() => setShowAddToMealPlanSheet(true)}
-        onEditPress={handleEditRecipe}
-        onFolderPress={handleFolderPress}
-        onHeartPress={handleHeartPress}
-      />
+        {!!isBackendRecipe && !!recipeId && !!isSaved && (
+          <SavedRecipeMetadataPanel
+            savedFolder={savedFolder}
+            savedTags={savedTags}
+            savedNotes={savedNotes}
+            savedRating={savedRating}
+            updatingFolderTags={updatingFolderTags}
+            onUpdateRating={handleUpdateRating}
+          />
+        )}
+
+        {/* Dietary Tags */}
+        {!isBackendRecipe && (
+          <View style={styles.tags}>
+            {!!displayData.vegetarian && (
+              <View style={styles.tag}>
+                <Text style={styles.tagText}>{t('recipes.vegetarian')}</Text>
+              </View>
+            )}
+            {!!displayData.vegan && (
+              <View style={styles.tag}>
+                <Text style={styles.tagText}>{t('recipes.vegan')}</Text>
+              </View>
+            )}
+            {!!displayData.glutenFree && (
+              <View style={styles.tag}>
+                <Text style={styles.tagText}>{t('recipes.glutenFree')}</Text>
+              </View>
+            )}
+            {!!displayData.dairyFree && (
+              <View style={styles.tag}>
+                <Text style={styles.tagText}>{t('recipes.dairyFree')}</Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Description */}
+        {!!displayData.summary && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>{t('recipes.about')}</Text>
+            <Text style={styles.description}>
+              {typeof displayData.summary === 'string'
+                ? displayData.summary.replace(/<[^>]*>/g, '')
+                : displayData.summary}
+            </Text>
+          </View>
+        )}
+
+        {/* Ingredients */}
+        {!!displayData.ingredients && displayData.ingredients.length > 0 && (
+          <View style={styles.ingredientsSection}>
+            <View style={styles.ingredientsSectionHeader}>
+              <Text style={styles.sectionTitle}>
+                {t('recipes.ingredients')}
+              </Text>
+              <Pressable
+                onPress={handleAddAll}
+                disabled={addingToList}
+                style={({ pressed }) => pressed && { opacity: 0.7 }}
+              >
+                <Text style={styles.addAllButton}>
+                  {addingToList ? t('recipes.adding') : t('recipes.addAll')}
+                </Text>
+              </Pressable>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.ingredientsList}
+            >
+              {displayData.ingredients.map((ingredient, index) => (
+                <React.Fragment key={`${ingredient.id}-${index}`}>
+                  {index > 0 && <IngredientSeparator />}
+                  <IngredientCard
+                    ingredient={ingredient}
+                    isAdded={addedIngredients.has(ingredient.id)}
+                    onPress={() => handleAddSingleIngredient(ingredient)}
+                  />
+                </React.Fragment>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
+        <RecipeInstructions
+          isBackendRecipe={isBackendRecipe}
+          instructions={displayData.instructions}
+          instructionsHtml={displayData.instructionsHtml}
+        />
+
+        {/* Reviews Section */}
+        {!!isBackendRecipe && !!recipeId && (
+          <ReviewSection {...reviewState} {...reviewActions} />
+        )}
+
+        {/* Source Attribution */}
+        {!!(displayData.sourceName || displayData.sourceUrl) && (
+          <Pressable
+            style={({ pressed }) => [
+              styles.attribution,
+              displayData.sourceUrl && pressed && { opacity: 0.7 },
+            ]}
+            onPress={() =>
+              displayData.sourceUrl && Linking.openURL(displayData.sourceUrl)
+            }
+            disabled={!displayData.sourceUrl}
+          >
+            <Text style={styles.attributionText}>
+              {t('recipes.recipeFrom', {
+                source: displayData.sourceName || t('recipes.externalSource'),
+              })}
+            </Text>
+            {!!displayData.sourceUrl && (
+              <View style={styles.viewOriginalLink}>
+                <Text style={styles.viewOriginalText}>
+                  {t('recipes.viewOriginalRecipe')}
+                </Text>
+                <Icon name="open-outline" size={14} tone="primary" />
+              </View>
+            )}
+          </Pressable>
+        )}
+      </CollapsingHeroDetail>
 
       {/* Shopping List Options Bottom Sheet */}
       <BottomSheetAction
@@ -626,7 +616,7 @@ const RecipeDetailScreen: React.FC = () => {
         updating={updatingFolderTags}
         recipeName={displayData?.title}
       />
-    </View>
+    </>
   );
 };
 
@@ -637,10 +627,6 @@ export const RecipeDetail: React.FC = () => (
 );
 
 const styles = StyleSheet.create(theme => ({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
   centerContainer: {
     flex: 1,
     backgroundColor: theme.colors.background,
@@ -648,18 +634,9 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     padding: theme.spacing.xl,
   },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: theme.spacing.xl,
-  },
-  content: {
-    padding: theme.spacing.lg,
-    backgroundColor: theme.colors.background,
-    borderTopLeftRadius: theme.radii.xl,
-    borderTopRightRadius: theme.radii.xl,
-    marginTop: -20,
+  recipeContent: {
+    paddingHorizontal: theme.spacing.lg,
+    paddingTop: theme.spacing.md,
   },
   title: {
     fontSize: theme.fonts.size['2xl'],

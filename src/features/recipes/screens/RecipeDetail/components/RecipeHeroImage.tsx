@@ -17,16 +17,18 @@ const AnimatedTurboImage = Animated.createAnimatedComponent(TurboImage);
 interface RecipeHeroImageProps {
   imageUrl: string;
   externalId?: string;
+  /** Override the image height (e.g. supplied by `CollapsingHeroDetail`). */
+  height?: number;
 }
 
 /**
  * The recipe hero photo. Rendered as the first child of the detail ScrollView so
- * it scrolls away naturally; the action buttons live in the pinned
- * `RecipeDetailTopBar` instead.
+ * it scrolls away naturally; the action buttons live in the pinned action bar.
  */
 export const RecipeHeroImage: React.FC<RecipeHeroImageProps> = ({
   imageUrl,
   externalId,
+  height,
 }) => {
   const insets = useSafeAreaInsets();
   return (
@@ -35,7 +37,10 @@ export const RecipeHeroImage: React.FC<RecipeHeroImageProps> = ({
         source={{ uri: imageUrl }}
         cachePolicy="dataCache"
         resizeMode="cover"
-        style={[styles.image, { height: HERO_IMAGE_HEIGHT + insets.top }]}
+        style={[
+          styles.image,
+          { height: height ?? HERO_IMAGE_HEIGHT + insets.top },
+        ]}
         sharedTransitionTag={
           externalId ? `recipe-image-${externalId}` : undefined
         }

@@ -1,16 +1,10 @@
 import React, { useState } from 'react';
-import { View, RefreshControl, ScrollView } from 'react-native';
+import { View, ScrollView } from 'react-native';
 import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
 import { alertService } from '#/services/alertService';
-import Animated, {
-  Extrapolation,
-  interpolate,
-  useAnimatedScrollHandler,
-  useAnimatedStyle,
-  useSharedValue,
-} from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 import { useApolloClient, useFragment, useQuery } from '@apollo/client/react';
 import {
   PantryItemBatchFragmentDoc,
@@ -45,9 +39,8 @@ import { PantryUsageHistory } from '#features/pantry/components/PantryUsageHisto
 import { parseNutritions, hasNutritionData } from '#utils/nutritionUtils';
 import { NutritionSummary } from '#components/molecules/NutritionSummary';
 import { ImageGalleryTabs } from '#components/molecules/ImageGalleryTabs';
-import { StatusBarScrim } from '#components/molecules/StatusBarScrim';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Header, type HeaderAction } from '#components/molecules/Header';
+import { CollapsingHeroDetail } from '#components/templates/CollapsingHeroDetail';
+import { type HeaderAction } from '#components/molecules/Header';
 import { Icon } from '#/utils/iconUtils';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { BatchSection } from '#features/pantry/components/BatchSection';
@@ -58,22 +51,6 @@ import { SousChefLoader } from '#/components/base/SousChefLoader';
 import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
 import { useRecipeSuggestionsForItem } from '#features/pantry/hooks/useRecipeSuggestionsForItem';
 import { usePantryItemDetailActions } from '#features/pantry/hooks/usePantryItemDetailActions';
-
-// Visible hero height below the status bar. The image is grown by the top inset
-// so it fills edge-to-edge behind the status bar.
-const HERO_IMAGE_HEIGHT = 280;
-
-// Height of the overlaid action-button band below the status-bar inset. Used to
-// reserve space when there's no image and to size the legibility scrim.
-const HEADER_BAND_HEIGHT = 56;
-
-// As the hero collapses, the pinned action bar's solid background fades in over
-// this scroll range — so the buttons stay legible and content scrolls beneath
-// an opaque bar instead of under floating icons (standard collapsing-toolbar
-// behavior). The range ends roughly where the content meets the bar.
-const COLLAPSE_DISTANCE = HERO_IMAGE_HEIGHT - HEADER_BAND_HEIGHT;
-const BAR_FADE_START = COLLAPSE_DISTANCE * 0.4;
-const BAR_FADE_END = COLLAPSE_DISTANCE * 0.9;
 
 /**
  * Expiry column text. Extracted so `styles.useVariants` is called once per
@@ -121,25 +98,8 @@ export const PantryItemDetail: React.FC<
     toPantryRecipeDetail,
     toNutritionScreen,
   } = useAppNavigation();
-  const insets = useSafeAreaInsets();
   const selectedShoppingListId = useSelectedShoppingListId();
   const selectedPantryId = useSelectedPantryId();
-
-  // Parallax hero: the image recedes at half the scroll speed as content
-  // scrolls up, and zooms to fill when the user pulls past the top.
-  const scrollY = useSharedValue(0);
-  const onHeroScroll = useAnimatedScrollHandler(event => {
-    scrollY.set(event.contentOffset.y);
-  });
-  const heroAnimatedStyle = useAnimatedStyle(() => {
-    const y = scrollY.get();
-    if (y < 0) {
-      return {
-        transform: [{ translateY: y }, { scale: 1 + -y / HERO_IMAGE_HEIGHT }],
-      };
-    }
-    return { transform: [{ translateY: y * 0.5 }] };
-  });
 
   const [purchaseHistoryExpanded, setPurchaseHistoryExpanded] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -250,27 +210,9 @@ export const PantryItemDetail: React.FC<
     item?.quantityBreakdown,
   );
 
-  // Solid background for the pinned action bar: transparent while the hero is
-  // visible, fading to opaque as it collapses (or solid from the start when
-  // there's no image).
-  const barBgStyle = useAnimatedStyle(() => {
-    if (!showImages) return { opacity: 1 };
-    return {
-      opacity: interpolate(
-        scrollY.get(),
-        [BAR_FADE_START, BAR_FADE_END],
-        [0, 1],
-        Extrapolation.CLAMP,
-      ),
-    };
-  });
-
   if (!item) {
     return (
-      <View style={styles.container}>
-        <View style={{ paddingTop: insets.top }}>
-          <Header variant="detail" onBack={goBack} borderless />
-        </View>
+      <CollapsingHeroDetail onBack={goBack} testID="pantry-item-detail">
         <View style={styles.loadingContainer}>
           <SousChefLoader
             size="small"
@@ -278,7 +220,7 @@ export const PantryItemDetail: React.FC<
             message={t('pantryItemDetail.loading')}
           />
         </View>
-      </View>
+      </CollapsingHeroDetail>
     );
   }
 
@@ -349,202 +291,171 @@ export const PantryItemDetail: React.FC<
   ];
 
   return (
-    <View style={styles.container}>
-      <Animated.ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        onScroll={onHeroScroll}
-        scrollEventThrottle={16}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+    <>
+      <CollapsingHeroDetail
+        testID="pantry-item-detail"
+        onBack={goBack}
+        actions={headerActions}
+        refreshing={refreshing}
+        onRefresh={handleRefresh}
+        parallax
+        renderHero={
+          showImages
+            ? heroHeight => (
+                <ImageGalleryTabs
+                  images={itemImages}
+                  fallbackImageUrl={imageUrl}
+                  imageHeight={heroHeight}
+                  resizeMode="cover"
+                  style={styles.heroInner}
+                />
+              )
+            : undefined
         }
       >
-        {showImages ? (
-          <Animated.View style={[styles.heroImage, heroAnimatedStyle]}>
-            <ImageGalleryTabs
-              images={itemImages}
-              fallbackImageUrl={imageUrl}
-              imageHeight={HERO_IMAGE_HEIGHT + insets.top}
-              resizeMode="cover"
-              style={styles.heroInner}
-            />
-          </Animated.View>
-        ) : (
-          <View style={{ height: insets.top + HEADER_BAND_HEIGHT }} />
-        )}
+        <View style={styles.titleRow}>
+          <Text style={styles.itemTitle} numberOfLines={2}>
+            {item.itemName}
+          </Text>
+          <Text style={styles.quantityBadge}>
+            {item.quantity} {getUnitDisplayText(item.unit)}
+          </Text>
+        </View>
 
-        <View
-          style={[
-            styles.contentBelow,
-            !showImages && styles.contentBelowNoImage,
-          ]}
-        >
-          <View style={styles.titleRow}>
-            <Text style={styles.itemTitle} numberOfLines={2}>
-              {item.itemName}
-            </Text>
-            <Text style={styles.quantityBadge}>
-              {item.quantity} {getUnitDisplayText(item.unit)}
+        {!!(categoryName || storageStateDisplay) && (
+          <View style={styles.categoryBadge}>
+            <Icon name="restaurant-outline" size={16} tone="primary" />
+            <Text style={styles.categoryText}>
+              {categoryName || t('pantryItemDetail.item')}
+              {storageStateDisplay
+                ? t('pantryItemDetail.inLocation', {
+                    location: storageStateDisplay,
+                  })
+                : ''}
             </Text>
           </View>
+        )}
 
-          {!!(categoryName || storageStateDisplay) && (
-            <View style={styles.categoryBadge}>
-              <Icon name="restaurant-outline" size={16} tone="primary" />
-              <Text style={styles.categoryText}>
-                {categoryName || t('pantryItemDetail.item')}
-                {storageStateDisplay
-                  ? t('pantryItemDetail.inLocation', {
-                      location: storageStateDisplay,
-                    })
-                  : ''}
+        <Section>
+          <View style={styles.infoColumns}>
+            <View style={styles.infoColumn}>
+              <Text style={styles.infoColumnLabel}>
+                {t('pantryItemDetail.inThePantry')}
+              </Text>
+              <Text style={styles.infoColumnValue}>
+                {formatDaysInPantry(daysInPantry)}
               </Text>
             </View>
-          )}
-
-          <Section>
-            <View style={styles.infoColumns}>
-              <View style={styles.infoColumn}>
-                <Text style={styles.infoColumnLabel}>
-                  {t('pantryItemDetail.inThePantry')}
-                </Text>
-                <Text style={styles.infoColumnValue}>
-                  {formatDaysInPantry(daysInPantry)}
-                </Text>
-              </View>
-              <View style={styles.infoColumn}>
-                <Text style={styles.infoColumnLabel}>
-                  {t('pantryItemDetail.expiring')}
-                </Text>
-                <ExpiryColumnText
-                  text={expiryInfo?.text || t('pantryItemDetail.noExpiry')}
-                  isUrgent={!!expiryInfo?.isUrgent}
-                  isExpired={!!expiryInfo?.isExpired}
-                />
-              </View>
-              <View style={styles.infoColumn}>
-                <Text style={styles.infoColumnLabel}>
-                  {t('pantryItemDetail.amount')}
-                </Text>
-                <Text style={styles.infoColumnValue}>
-                  {item.quantity} {getUnitDisplayText(item.unit)}
-                </Text>
-              </View>
-            </View>
-          </Section>
-
-          {!!showNutrition && (
-            <Section title={t('pantryItemDetail.nutrition')}>
-              <NutritionSummary
-                nutritions={itemNutritions}
-                showHighlights
-                onPress={() =>
-                  toNutritionScreen({
-                    itemId: item.id,
-                    itemName: item.itemName,
-                    nutritions: item.item?.nutritions,
-                  })
-                }
+            <View style={styles.infoColumn}>
+              <Text style={styles.infoColumnLabel}>
+                {t('pantryItemDetail.expiring')}
+              </Text>
+              <ExpiryColumnText
+                text={expiryInfo?.text || t('pantryItemDetail.noExpiry')}
+                isUrgent={!!expiryInfo?.isUrgent}
+                isExpired={!!expiryInfo?.isExpired}
               />
-            </Section>
-          )}
+            </View>
+            <View style={styles.infoColumn}>
+              <Text style={styles.infoColumnLabel}>
+                {t('pantryItemDetail.amount')}
+              </Text>
+              <Text style={styles.infoColumnValue}>
+                {item.quantity} {getUnitDisplayText(item.unit)}
+              </Text>
+            </View>
+          </View>
+        </Section>
 
-          <Section>
-            <PantryDetailInfo
-              itemRef={item}
-              brandName={brandName}
-              netWeightText={netWeightText}
-              remainingNetWeightText={remainingNetWeightText}
-              quantityBreakdownText={quantityBreakdownText}
-              packageBreakdownText={packageBreakdownText}
-              shelfLifeDays={item.item?.shelfLifeDays}
-              shelfLifeOpenedDays={item.item?.shelfLifeOpenedDays}
-              onCorrectWeight={() => actions.setCorrectWeightVisible(true)}
+        {!!showNutrition && (
+          <Section title={t('pantryItemDetail.nutrition')}>
+            <NutritionSummary
+              nutritions={itemNutritions}
+              showHighlights
+              onPress={() =>
+                toNutritionScreen({
+                  itemId: item.id,
+                  itemName: item.itemName,
+                  nutritions: item.item?.nutritions,
+                })
+              }
             />
           </Section>
+        )}
 
-          {!!item.batches && item.batches.length > 1 && (
-            <Section flush>
-              <BatchSection
-                batches={item.batches}
-                pantryItemId={item.id}
-                unitSymbol={item.unit?.symbol ?? undefined}
-              />
-            </Section>
-          )}
-
-          {!!item.usageRecords && item.usageRecords.edges.length > 0 && (
-            <Section flush>
-              <PantryUsageHistory
-                usageRecords={item.usageRecords.edges}
-                expanded={purchaseHistoryExpanded}
-                onToggle={() =>
-                  setPurchaseHistoryExpanded(!purchaseHistoryExpanded)
-                }
-              />
-            </Section>
-          )}
-
-          <Section title={t('pantryItemDetail.recipesToTry')}>
-            {loadingRecipes ? (
-              <ThemedActivityIndicator
-                size="small"
-                style={styles.recipesLoading}
-              />
-            ) : suggestedRecipes.length > 0 ? (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.recipesList}
-              >
-                {suggestedRecipes.map(recipe => (
-                  <AppPressable
-                    key={String(recipe.id)}
-                    style={styles.recipeCard}
-                    onPress={() => handleRecipePress(recipe.id)}
-                  >
-                    <Animated.Image
-                      source={{ uri: recipe.image }}
-                      style={styles.recipeImage}
-                      resizeMode="cover"
-                      sharedTransitionTag={`recipe-image-${recipe.id}`}
-                    />
-                    <Text style={styles.recipeTitle} numberOfLines={2}>
-                      {recipe.title}
-                    </Text>
-                  </AppPressable>
-                ))}
-              </ScrollView>
-            ) : (
-              <Text style={styles.noRecipes}>
-                {t('pantryItemDetail.noRecipeSuggestions')}
-              </Text>
-            )}
-          </Section>
-
-          <View style={{ height: insets.bottom + 20 }} />
-        </View>
-      </Animated.ScrollView>
-
-      {/* Pinned action buttons float over the hero; the scrim keeps them and
-          the status-bar icons legible against the photo. */}
-      <View pointerEvents="box-none" style={styles.topBarOverlay}>
-        <Animated.View
-          pointerEvents="none"
-          style={[styles.topBarSolid, barBgStyle]}
-        />
-        {!!showImages && <StatusBarScrim extraHeight={HEADER_BAND_HEIGHT} />}
-        <View pointerEvents="box-none" style={{ paddingTop: insets.top }}>
-          <Header
-            variant="detail"
-            onBack={goBack}
-            transparent
-            borderless
-            rightActions={headerActions}
+        <Section>
+          <PantryDetailInfo
+            itemRef={item}
+            brandName={brandName}
+            netWeightText={netWeightText}
+            remainingNetWeightText={remainingNetWeightText}
+            quantityBreakdownText={quantityBreakdownText}
+            packageBreakdownText={packageBreakdownText}
+            shelfLifeDays={item.item?.shelfLifeDays}
+            shelfLifeOpenedDays={item.item?.shelfLifeOpenedDays}
+            onCorrectWeight={() => actions.setCorrectWeightVisible(true)}
           />
-        </View>
-      </View>
+        </Section>
+
+        {!!item.batches && item.batches.length > 1 && (
+          <Section flush>
+            <BatchSection
+              batches={item.batches}
+              pantryItemId={item.id}
+              unitSymbol={item.unit?.symbol ?? undefined}
+            />
+          </Section>
+        )}
+
+        {!!item.usageRecords && item.usageRecords.edges.length > 0 && (
+          <Section flush>
+            <PantryUsageHistory
+              usageRecords={item.usageRecords.edges}
+              expanded={purchaseHistoryExpanded}
+              onToggle={() =>
+                setPurchaseHistoryExpanded(!purchaseHistoryExpanded)
+              }
+            />
+          </Section>
+        )}
+
+        <Section title={t('pantryItemDetail.recipesToTry')}>
+          {loadingRecipes ? (
+            <ThemedActivityIndicator
+              size="small"
+              style={styles.recipesLoading}
+            />
+          ) : suggestedRecipes.length > 0 ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.recipesList}
+            >
+              {suggestedRecipes.map(recipe => (
+                <AppPressable
+                  key={String(recipe.id)}
+                  style={styles.recipeCard}
+                  onPress={() => handleRecipePress(recipe.id)}
+                >
+                  <Animated.Image
+                    source={{ uri: recipe.image }}
+                    style={styles.recipeImage}
+                    resizeMode="cover"
+                    sharedTransitionTag={`recipe-image-${recipe.id}`}
+                  />
+                  <Text style={styles.recipeTitle} numberOfLines={2}>
+                    {recipe.title}
+                  </Text>
+                </AppPressable>
+              ))}
+            </ScrollView>
+          ) : (
+            <Text style={styles.noRecipes}>
+              {t('pantryItemDetail.noRecipeSuggestions')}
+            </Text>
+          )}
+        </Section>
+      </CollapsingHeroDetail>
 
       {!!actions.adjustModalVisible && (
         <AdjustQuantityModal
@@ -562,63 +473,18 @@ export const PantryItemDetail: React.FC<
           onConfirm={actions.handleCorrectWeight}
         />
       )}
-    </View>
+    </>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-  },
-  heroImage: {
-    width: '100%',
-  },
   heroInner: {
     borderRadius: 0,
-  },
-  // Opaque card that slides up over the parallaxing hero as you scroll; the
-  // rounded top and slight overlap make the image-to-content transition.
-  contentBelow: {
-    flexGrow: 1,
-    backgroundColor: theme.colors.background,
-    borderTopLeftRadius: theme.radii.xl,
-    borderTopRightRadius: theme.radii.xl,
-    marginTop: -theme.spacing['5'],
-    paddingTop: theme.spacing.sm,
-  },
-  contentBelowNoImage: {
-    marginTop: 0,
-  },
-  topBarOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: theme.zIndex.sticky,
-  },
-  // Fades in behind the pinned buttons as the hero collapses, so they stay
-  // legible and content scrolls beneath an opaque bar.
-  topBarSolid: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: theme.colors.background,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
   },
   titleRow: {
     flexDirection: 'row',

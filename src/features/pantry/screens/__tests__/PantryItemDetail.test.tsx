@@ -182,7 +182,7 @@ describe('PantryItemDetail (integration)', () => {
         }).mock,
       ],
     });
-    expect(screen.getByTestId('header')).toBeTruthy();
+    expect(screen.getByTestId('pantry-item-detail')).toBeTruthy();
     expect(screen.queryByText('Milk')).toBeNull();
   });
 

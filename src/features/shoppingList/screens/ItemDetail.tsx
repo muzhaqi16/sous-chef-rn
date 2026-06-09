@@ -8,12 +8,11 @@ import { GetShoppingListItemDocument } from '#features/shoppingList/graphql/shop
 import { ItemDetail_ShoppingListItemFragmentDoc } from './ItemDetail.generated';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { Icon } from '#utils/iconUtils';
-import { DetailTemplate } from '#components/templates/DetailTemplate';
+import { CollapsingHeroDetail } from '#components/templates/CollapsingHeroDetail';
 import { ClickableInfoPanel } from '#components/molecules/ClickableInfoPanel';
 import { NutritionSummary } from '#components/molecules/NutritionSummary';
 import { ImageGalleryTabs } from '#components/molecules/ImageGalleryTabs';
 import { FormattedItemSubtitle } from '#components/atoms/FormattedItemSubtitle';
-import { commonStyles } from '#/styles/commonStyles';
 import { resolveImageUrl, parseImages, hasImages } from '#utils/imageUtils';
 import { parseNutritions, hasNutritionData } from '#utils/nutritionUtils';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
@@ -24,6 +23,30 @@ type RouteParams = {
   listId: string;
   itemId: string;
 };
+
+/** Elevated card grouping a block of detail content. */
+const Section: React.FC<{ title?: string; children: React.ReactNode }> = ({
+  title,
+  children,
+}) => (
+  <View style={styles.section}>
+    {!!title && <Text style={styles.sectionHeading}>{title}</Text>}
+    {children}
+  </View>
+);
+
+/** Label/value row used inside the detail cards. */
+const DetailRow: React.FC<{ label: string; children: React.ReactNode }> = ({
+  label,
+  children,
+}) => (
+  <View style={styles.detailRow}>
+    <Text size="sm" tone="secondary" style={styles.detailLabel}>
+      {label}
+    </Text>
+    {children}
+  </View>
+);
 
 export const ShoppingListItemDetail: React.FC<
   StaticScreenProps<RouteParams>
@@ -74,147 +97,29 @@ export const ShoppingListItemDetail: React.FC<
 
   if (!item) {
     return (
-      <DetailTemplate
-        title={t('shoppingListScreens.itemDetailsTitle')}
+      <CollapsingHeroDetail
+        testID="shopping-item-detail"
         onBack={() => goBack()}
-        headerActions={[]}
-        sections={[
-          {
-            content: (
-              <Text style={[commonStyles.body, { textAlign: 'center' }]}>
-                {data === undefined
-                  ? t('shoppingListScreens.loading')
-                  : t('shoppingListScreens.itemNotFound')}
-              </Text>
-            ),
-          },
-        ]}
-      />
+        title={t('shoppingListScreens.itemDetailsTitle')}
+      >
+        <View style={styles.centerMessage}>
+          <Text style={styles.centerMessageText}>
+            {data === undefined
+              ? t('shoppingListScreens.loading')
+              : t('shoppingListScreens.itemNotFound')}
+          </Text>
+        </View>
+      </CollapsingHeroDetail>
     );
   }
 
-  const imageUrl = resolveImageUrl(item, 'large');
+  // Prefer the large variant for the hero, but fall back to the default
+  // resolution the list card uses — some catalog items only have a THUMBNAIL
+  // variant, for which the 'large' (SIZE_512) lookup returns null.
+  const imageUrl = resolveImageUrl(item, 'large') ?? resolveImageUrl(item);
+  const hasHero = showImages || !!imageUrl;
 
-  const sections = [
-    {
-      content: (
-        <View>
-          <View style={styles.headerSection}>
-            {showImages ? (
-              <ImageGalleryTabs
-                images={itemImages}
-                fallbackImageUrl={imageUrl}
-                imageHeight={160}
-              />
-            ) : imageUrl ? (
-              <CachedImage
-                uri={imageUrl}
-                style={styles.itemImage}
-                displaySize={120}
-              />
-            ) : (
-              <View style={styles.imagePlaceholder}>
-                <Icon name="basket-outline" size={48} tone="textSecondary" />
-              </View>
-            )}
-          </View>
-          <Text style={[commonStyles.title, styles.itemName]}>
-            {item.itemName}
-          </Text>
-          {item.quantity != null ? (
-            <View style={styles.itemDescription}>
-              <FormattedItemSubtitle
-                quantity={item.quantity}
-                quantityInput={item.quantityInput}
-                displayFormat={item.displayFormat}
-                unitSymbol={item.unitName || item.item?.displayUnit?.symbol}
-              />
-            </View>
-          ) : null}
-          {/* Status Badge */}
-          {item.purchaseInfo?.isPurchased ? (
-            <View style={styles.statusBadge}>
-              <Icon name="checkmark-circle" size={20} tone="success" />
-              <Text
-                size="md"
-                weight="semibold"
-                tone="success"
-                style={styles.statusBadgeText}
-              >
-                {t('shoppingListScreens.purchased')}
-              </Text>
-            </View>
-          ) : null}
-        </View>
-      ),
-    },
-    {
-      title: t('shoppingListScreens.information'),
-      content: (
-        <View>
-          <View style={styles.detailRow}>
-            <Text style={[commonStyles.caption, styles.detailLabel]}>
-              {t('shoppingListScreens.quantity')}
-            </Text>
-            <View>
-              <FormattedItemSubtitle
-                quantity={item.quantity}
-                quantityInput={item.quantityInput}
-                displayFormat={item.displayFormat}
-                unitSymbol={item.unitName || item.item?.displayUnit?.symbol}
-              />
-            </View>
-          </View>
-
-          {item.category ? (
-            <View style={styles.detailRow}>
-              <Text style={[commonStyles.caption, styles.detailLabel]}>
-                {t('shoppingListScreens.category')}
-              </Text>
-              <Text size="sm" weight="medium">
-                {item.category}
-              </Text>
-            </View>
-          ) : null}
-
-          {item.priority ? (
-            <View style={styles.detailRow}>
-              <Text style={[commonStyles.caption, styles.detailLabel]}>
-                {t('shoppingListScreens.priority')}
-              </Text>
-              <Text size="sm" weight="medium">
-                {item.priority}
-              </Text>
-            </View>
-          ) : null}
-
-          {item.notes ? (
-            <View style={styles.notesRow}>
-              <Text style={commonStyles.caption}>
-                {t('shoppingListScreens.notes')}
-              </Text>
-              <Text size="sm" weight="medium">
-                {item.notes}
-              </Text>
-            </View>
-          ) : null}
-        </View>
-      ),
-    },
-  ];
-
-  // Nutrition section (inline display, no navigation for shopping list)
-  if (showNutrition) {
-    sections.push({
-      title: t('dietary.nutritionGoals'),
-      content: (
-        <NutritionSummary nutritions={itemNutritions} showHighlights compact />
-      ),
-    });
-  }
-
-  // Purchase History section - Clickable panel
-  // Extract purchases from paginated connection
+  // Purchase History - extract purchases from paginated connection
   const purchases =
     item.purchasesConnection?.edges?.map(edge => edge.node) || [];
   const purchaseCount = item.purchasesConnection?.totalCount || 0;
@@ -241,153 +146,240 @@ export const ShoppingListItemDetail: React.FC<
       ]
     : [];
 
-  sections.push({
-    content: (
-      <ClickableInfoPanel
-        title={t('shoppingListScreens.purchaseHistoryTitle')}
-        items={purchaseHistoryItems}
-        onPress={handleViewHistory}
-        emptyMessage={t('shoppingListScreens.noPurchaseHistory')}
-      />
-    ),
-  });
-
-  // Additional Details section
-  sections.push({
-    title: t('shoppingListScreens.additionalDetails'),
-    content: (
-      <View>
-        {item.addedBy ? (
-          <View style={styles.detailRow}>
-            <Text style={[commonStyles.caption, styles.detailLabel]}>
-              {t('shoppingListScreens.addedBy')}
-            </Text>
-            <Text size="sm" weight="medium">
-              {item.addedBy.profile?.displayName || item.addedBy.email}
-            </Text>
-          </View>
-        ) : null}
-
-        <View style={styles.detailRow}>
-          <Text style={[commonStyles.caption, styles.detailLabel]}>
-            {t('shoppingListScreens.addedOn')}
-          </Text>
-          <Text size="sm" weight="medium">
-            {formatDate(item.createdAt)}
-          </Text>
-        </View>
-
-        {item.updatedAt !== item.createdAt ? (
-          <View style={styles.detailRow}>
-            <Text style={[commonStyles.caption, styles.detailLabel]}>
-              {t('shoppingListScreens.lastUpdated')}
-            </Text>
-            <Text size="sm" weight="medium">
-              {formatDate(item.updatedAt)}
-            </Text>
-          </View>
-        ) : null}
-
-        {item.source?.isAutoAdded ? (
-          <View style={styles.detailRow}>
-            <Text style={[commonStyles.caption, styles.detailLabel]}>
-              {t('shoppingListScreens.autoAdded')}
-            </Text>
-            <Text size="sm" weight="medium">
-              {item.source?.autoAddReason || t('shoppingListScreens.yes')}
-            </Text>
-          </View>
-        ) : null}
-
-        {item.source?.isFromMealPlan ? (
-          <View style={styles.detailRow}>
-            <Text style={[commonStyles.caption, styles.detailLabel]}>
-              {t('shoppingListScreens.fromMealPlan')}
-            </Text>
-            <Text size="sm" weight="medium">
-              {t('shoppingListScreens.yes')}
-            </Text>
-          </View>
-        ) : null}
-      </View>
-    ),
-  });
+  const unitSymbol = item.unitName || item.item?.displayUnit?.symbol;
 
   return (
-    <DetailTemplate
-      title={t('shoppingListScreens.itemDetailsTitle')}
+    <CollapsingHeroDetail
+      testID="shopping-item-detail"
       onBack={() => goBack()}
-      headerActions={[
+      title={item.itemName ?? ''}
+      actions={[
         {
           icon: 'create-outline',
           onPress: handleEdit,
+          testID: 'shopping-item-edit-button',
         },
       ]}
-      sections={sections}
-    />
+      renderHero={
+        hasHero
+          ? heroHeight =>
+              showImages ? (
+                <ImageGalleryTabs
+                  images={itemImages}
+                  fallbackImageUrl={imageUrl}
+                  imageHeight={heroHeight}
+                  resizeMode="cover"
+                  style={styles.heroInner}
+                />
+              ) : (
+                <CachedImage
+                  uri={imageUrl ?? ''}
+                  style={[styles.heroFull, { height: heroHeight }]}
+                  displaySize={heroHeight}
+                  resizeMode="cover"
+                />
+              )
+          : undefined
+      }
+    >
+      {!!hasHero && (
+        <View style={styles.titleRow}>
+          <Text style={styles.itemName} numberOfLines={2}>
+            {item.itemName}
+          </Text>
+          {item.quantity != null && (
+            <FormattedItemSubtitle
+              quantity={item.quantity}
+              quantityInput={item.quantityInput}
+              displayFormat={item.displayFormat}
+              unitSymbol={unitSymbol}
+            />
+          )}
+        </View>
+      )}
+
+      {!!item.purchaseInfo?.isPurchased && (
+        <View style={styles.statusBadge}>
+          <Icon name="checkmark-circle" size={18} tone="success" />
+          <Text
+            size="sm"
+            weight="semibold"
+            tone="success"
+            style={styles.statusBadgeText}
+          >
+            {t('shoppingListScreens.purchased')}
+          </Text>
+        </View>
+      )}
+
+      <Section title={t('shoppingListScreens.information')}>
+        <DetailRow label={t('shoppingListScreens.quantity')}>
+          <FormattedItemSubtitle
+            quantity={item.quantity}
+            quantityInput={item.quantityInput}
+            displayFormat={item.displayFormat}
+            unitSymbol={unitSymbol}
+          />
+        </DetailRow>
+        {!!item.category && (
+          <DetailRow label={t('shoppingListScreens.category')}>
+            <Text size="sm" weight="medium">
+              {item.category}
+            </Text>
+          </DetailRow>
+        )}
+        {!!item.priority && (
+          <DetailRow label={t('shoppingListScreens.priority')}>
+            <Text size="sm" weight="medium">
+              {item.priority}
+            </Text>
+          </DetailRow>
+        )}
+        {!!item.notes && (
+          <View style={styles.notesRow}>
+            <Text size="sm" tone="secondary">
+              {t('shoppingListScreens.notes')}
+            </Text>
+            <Text size="sm" weight="medium">
+              {item.notes}
+            </Text>
+          </View>
+        )}
+      </Section>
+
+      {!!showNutrition && (
+        <Section title={t('dietary.nutritionGoals')}>
+          <NutritionSummary
+            nutritions={itemNutritions}
+            showHighlights
+            compact
+          />
+        </Section>
+      )}
+
+      <Section>
+        <ClickableInfoPanel
+          title={t('shoppingListScreens.purchaseHistoryTitle')}
+          items={purchaseHistoryItems}
+          onPress={handleViewHistory}
+          emptyMessage={t('shoppingListScreens.noPurchaseHistory')}
+        />
+      </Section>
+
+      <Section title={t('shoppingListScreens.additionalDetails')}>
+        {!!item.addedBy && (
+          <DetailRow label={t('shoppingListScreens.addedBy')}>
+            <Text size="sm" weight="medium">
+              {item.addedBy.profile?.displayName || item.addedBy.email}
+            </Text>
+          </DetailRow>
+        )}
+        <DetailRow label={t('shoppingListScreens.addedOn')}>
+          <Text size="sm" weight="medium">
+            {formatDate(item.createdAt)}
+          </Text>
+        </DetailRow>
+        {item.updatedAt !== item.createdAt && (
+          <DetailRow label={t('shoppingListScreens.lastUpdated')}>
+            <Text size="sm" weight="medium">
+              {formatDate(item.updatedAt)}
+            </Text>
+          </DetailRow>
+        )}
+        {!!item.source?.isAutoAdded && (
+          <DetailRow label={t('shoppingListScreens.autoAdded')}>
+            <Text size="sm" weight="medium">
+              {item.source?.autoAddReason || t('shoppingListScreens.yes')}
+            </Text>
+          </DetailRow>
+        )}
+        {!!item.source?.isFromMealPlan && (
+          <DetailRow label={t('shoppingListScreens.fromMealPlan')}>
+            <Text size="sm" weight="medium">
+              {t('shoppingListScreens.yes')}
+            </Text>
+          </DetailRow>
+        )}
+      </Section>
+    </CollapsingHeroDetail>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  headerSection: {
-    alignItems: 'center',
-    marginBottom: theme.spacing.md,
+  heroInner: {
+    borderRadius: 0,
   },
-  itemImage: {
-    width: 120,
-    height: 120,
-    borderRadius: theme.radii.md,
-    marginBottom: theme.spacing.md,
+  heroFull: {
+    width: '100%',
   },
-  imagePlaceholder: {
-    width: 120,
-    height: 120,
-    borderRadius: theme.radii.md,
-    backgroundColor: theme.colors.background,
+  centerMessage: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: theme.spacing.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    padding: theme.spacing.lg,
+  },
+  centerMessageText: {
+    textAlign: 'center',
+    color: theme.colors.textSecondary,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
+    paddingTop: theme.spacing.sm,
   },
   itemName: {
+    flex: 1,
     fontSize: theme.fonts.size['2xl'],
-    textAlign: 'center',
-  },
-  itemDescription: {
-    marginTop: theme.spacing.xs,
-    alignItems: 'center',
-    justifyContent: 'center',
+    fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.textPrimary,
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
+    alignSelf: 'flex-start',
+    gap: theme.spacing.xs,
+    marginHorizontal: theme.spacing.lg,
+    marginTop: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.sm,
     backgroundColor: theme.colors.successLight,
-    marginTop: theme.spacing.md,
     borderRadius: theme.radii.md,
   },
   statusBadgeText: {
     marginLeft: theme.spacing.xs,
   },
+  section: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radii.xl,
+    marginHorizontal: theme.spacing.sm,
+    marginTop: theme.spacing.md,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
+    ...theme.shadows.card,
+  },
+  sectionHeading: {
+    fontSize: theme.fonts.size.base,
+    fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.sm,
+  },
   detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: theme.spacing.sm,
+    paddingVertical: theme.spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: theme.colors.divider,
   },
   detailLabel: {
     flex: 1,
   },
   notesRow: {
     flexDirection: 'column',
-    paddingVertical: theme.spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    paddingVertical: theme.spacing.md,
     gap: theme.spacing.xs,
   },
 }));
