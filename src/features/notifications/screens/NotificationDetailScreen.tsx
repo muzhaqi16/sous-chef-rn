@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { View, ScrollView } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
@@ -15,6 +16,7 @@ export const NotificationDetailScreen: React.FC<
     notification: NotificationItem;
   }>
 > = ({ route }) => {
+  const { t } = useTranslation();
   const notification = route.params?.notification;
 
   if (!notification) {
@@ -26,7 +28,7 @@ export const NotificationDetailScreen: React.FC<
           align="center"
           style={styles.errorText}
         >
-          Notification not found
+          {t('notifications.notFound')}
         </Text>
       </View>
     );
@@ -45,7 +47,7 @@ export const NotificationDetailScreen: React.FC<
               <Icon name="notifications" size={32} tone="primary" />
             </View>
             <Text variant="subtitle" weight="bold" style={styles.title}>
-              {notification.title || 'Notification'}
+              {notification.title || t('notifications.titleFallback')}
             </Text>
             <Text variant="caption">
               {format(new Date(notification.sentAt), 'PPpp')}
@@ -56,7 +58,7 @@ export const NotificationDetailScreen: React.FC<
             <Text variant="body" lineHeight="relaxed" style={styles.message}>
               {payload.message ||
                 notification.message ||
-                'No message available'}
+                t('notifications.noMessageAvailable')}
             </Text>
 
             {!!payload.details && (
@@ -66,7 +68,7 @@ export const NotificationDetailScreen: React.FC<
                   weight="bold"
                   style={styles.detailsTitle}
                 >
-                  Details
+                  {t('notifications.detailsSection')}
                 </Text>
                 <Text variant="caption" tone="primary">
                   {payload.details}
@@ -89,10 +91,10 @@ export const NotificationDetailScreen: React.FC<
                   style={styles.actionButtonText}
                 >
                   {notification.actionType === 'ACCEPT_HOME_INVITE'
-                    ? 'Accept Home Invitation'
+                    ? t('notifications.acceptHomeInvitation')
                     : notification.actionType === 'VIEW_EXPIRING_ITEMS'
-                    ? 'Take Action'
-                    : 'Accept Invitation'}
+                    ? t('notifications.takeAction')
+                    : t('notifications.acceptInvitation')}
                 </Text>
               </AppPressable>
             )}

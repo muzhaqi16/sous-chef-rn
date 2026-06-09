@@ -40,11 +40,12 @@ jest.mock('../../molecules/ListItem', () => {
   };
 });
 
+const mockUseSlideAnimation = jest.fn(() => ({
+  animatedSlideStyle: {},
+  triggerSlide: jest.fn((_: number, cb?: () => void) => cb?.()),
+}));
 jest.mock('#hooks/animations/useSlideAnimation', () => ({
-  useSlideAnimation: () => ({
-    animatedSlideStyle: {},
-    triggerSlide: jest.fn((_, cb) => cb?.()),
-  }),
+  useSlideAnimation: () => mockUseSlideAnimation(),
 }));
 
 describe('ItemCard', () => {
@@ -93,6 +94,18 @@ describe('ItemCard', () => {
   it('renders without SwipeableItem when no swipe actions provided', () => {
     render(<ItemCard {...defaultProps} testID="item" />);
     expect(screen.queryByTestId('item-swipeable')).toBeNull();
+  });
+
+  it('skips the reanimated slide hook on the lightweight (no-action) path', () => {
+    // Non-interactive rows (e.g. recipe discovery) must NOT spin up per-row
+    // reanimated shared values — the hook only mounts for swipeable rows.
+    render(<ItemCard {...defaultProps} testID="item" />);
+    expect(mockUseSlideAnimation).not.toHaveBeenCalled();
+  });
+
+  it('mounts the reanimated slide hook only when a swipe action is provided', () => {
+    render(<ItemCard {...defaultProps} onDelete={jest.fn()} testID="item" />);
+    expect(mockUseSlideAnimation).toHaveBeenCalledTimes(1);
   });
 
   it('renders right element when provided', () => {

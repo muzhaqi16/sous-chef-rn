@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import { t as tGlobal } from '#/i18n/t';
 import { View, Image, Dimensions, Platform } from 'react-native';
 import {
   ThemedBackButton,
@@ -80,23 +82,24 @@ async function requestCameraAndLaunch(
     launchCamera(DEFAULT_OPTIONS, handleImageResponse);
   } else if (result === RESULTS.DENIED) {
     alertService.alert(
-      'Camera Permission Denied',
-      'Camera permission is required to take photos. Please enable it in your device settings.',
+      tGlobal('profile.cameraPermissionDeniedTitle'),
+      tGlobal('profile.cameraPermissionDeniedMessage'),
     );
   } else if (result === RESULTS.BLOCKED) {
     alertService.alert(
-      'Camera Permission Blocked',
-      'Camera access is blocked. Please go to Settings > Apps > Sous Chef > Permissions to enable camera access.',
+      tGlobal('profile.cameraPermissionBlockedTitle'),
+      tGlobal('profile.cameraPermissionBlockedMessage'),
     );
   } else {
     alertService.alert(
-      'Camera Permission',
-      'Camera permission is required to take photos. Please enable it in your device settings.',
+      tGlobal('profile.cameraPermissionTitle'),
+      tGlobal('profile.cameraPermissionMessage'),
     );
   }
 }
 
 export const ProfilePhotoUploadScreen: React.FC = () => {
+  const { t } = useTranslation();
   const { goBack, toImageCrop } = useAppNavigation();
   const { uploadProfileImage, updateProfileAvatarUrl } = useImageUpload();
 
@@ -138,7 +141,7 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
       setCroppedImage(null); // Reset cropped image when new image is selected
     } catch (error) {
       const validationError = error as ImageValidationError;
-      alertService.alert('Invalid Image', validationError.message);
+      alertService.alert(t('profile.invalidImage'), validationError.message);
     }
   };
 
@@ -150,8 +153,8 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
           operation: 'ProfilePhotoUpload.cameraPermission',
         });
         alertService.alert(
-          'Permission Error',
-          'Failed to request camera permission. Please try again or check your device settings.',
+          t('profile.permissionErrorTitle'),
+          t('profile.permissionErrorMessage'),
         );
       },
     );
@@ -180,7 +183,7 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
           ImageUploadPurpose.ProfileAvatar,
           {
             onError: (error: Error) => {
-              alertService.alert('Upload Failed', error.message);
+              alertService.alert(t('profile.uploadFailedTitle'), error.message);
             },
           },
         );
@@ -193,7 +196,10 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
       },
       setIsUploading,
       () => {
-        alertService.alert('Upload Failed', 'Failed to update profile photo');
+        alertService.alert(
+          t('profile.uploadFailedTitle'),
+          t('profile.updatePhotoFailed'),
+        );
       },
     );
   };
@@ -213,16 +219,16 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
             disabled={isUploading}
           />
           <Text size="3xl" weight="bold" align="center" style={styles.title}>
-            Upload Your Photo
+            {t('profile.uploadYourPhoto')}
           </Text>
         </View>
 
         <Text size="base" weight="medium" align="center" tone="secondary">
           {croppedImage
-            ? 'Photo cropped and ready to upload!'
+            ? t('profile.photoReadyToUpload')
             : selectedImage
-            ? 'Tap the crop icon below to adjust your photo.'
-            : 'Choose a profile picture to personalize your account.'}
+            ? t('profile.tapCropToAdjust')
+            : t('profile.choosePicturePersonalize')}
         </Text>
 
         <View style={styles.avatar}>
@@ -263,7 +269,9 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
                 weight="semibold"
                 style={styles.btnText}
               >
-                {isUploading ? 'Uploading...' : 'Upload Photo'}
+                {isUploading
+                  ? t('loading.uploading')
+                  : t('profile.uploadPhoto')}
               </Text>
             </AppPressable>
 
@@ -279,7 +287,7 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
                 tone="accent"
                 style={styles.btnSecondaryText}
               >
-                Choose Different Photo
+                {t('profile.chooseDifferentPhoto')}
               </Text>
             </AppPressable>
           </View>
@@ -296,7 +304,7 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
                 weight="semibold"
                 style={styles.btnText}
               >
-                Take Photo
+                {t('profile.takePhoto')}
               </Text>
             </AppPressable>
 
@@ -311,7 +319,7 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
                 weight="semibold"
                 style={styles.btnSecondaryText}
               >
-                Select Photo
+                {t('profile.selectPhoto')}
               </Text>
             </AppPressable>
           </View>

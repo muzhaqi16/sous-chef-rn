@@ -9,7 +9,7 @@ import {
   usePreferences,
 } from '#store/useAppStore';
 import { useCredentialStorage } from '#hooks/auth/useCredentialStorage';
-import { useMutation } from '@apollo/client/react';
+import { useApolloClient, useMutation } from '@apollo/client/react';
 import {
   UpdateUserProfileDocument,
   UpdateUserPreferencesDocument,
@@ -20,7 +20,8 @@ import {
   type UpdateUserProfileInput,
   type UpdateUserSettingsInput,
 } from '#/graphql/generated/schemaTypes';
-import { buildOptimisticMutationResponse } from '#/apollo/utils/createOptimisticResponse';
+import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { optimisticFieldUpdate } from '#/apollo/utils/optimisticFieldUpdate';
 import type {
   SettingItem,
   SettingOption,
@@ -75,6 +76,7 @@ interface SettingConfig {
 
 export const useConfigurableSettings = (profile: UserProfile | null) => {
   const { t } = useTranslation();
+  const client = useApolloClient();
   const user = useUser();
   const logout = useAppStore(state => state.logout);
   const { getUserNavigationState } = useNavigationUtils();
@@ -84,33 +86,12 @@ export const useConfigurableSettings = (profile: UserProfile | null) => {
   const { resetBiometricDeclination, markBiometricEnabled } =
     useAuthPreferences();
   // ===== MUTATION 1: Update User Profile =====
+  // Local-first: the edited fields are written to the cached UserProfile
+  // PERMANENTLY before firing (an optimisticResponse would be torn down the
+  // moment the offline queue completes the request with a null result). The
+  // update is idempotent server-side (keyed by the authenticated userId), so a
+  // queued replay is safe; a real rejection restores the pre-edit values.
   const [updateProfileMutation] = useMutation(UpdateUserProfileDocument, {
-    // Uses automatic normalization - mutation returns full UserProfile fragment
-    // No manual cache update needed (Pattern 2)
-    optimisticResponse: (variables, { IGNORE }) => {
-      if (!profile) return IGNORE;
-      // updateProfile resolves to an UpdateProfilePayload (a result union),
-      // not a bare UserProfile — the optimistic shape must mirror that.
-      return buildOptimisticMutationResponse(
-        'updateProfile',
-        'UpdateProfilePayload',
-        {
-          userProfile: {
-            ...profile,
-            ...variables.input,
-            // These fields are non-null in the mutation's userProfile selection
-            // but nullable on the cached profile — default them for the
-            // optimistic shape so the types line up.
-            profileVisibility:
-              variables.input.profileVisibility ??
-              profile.profileVisibility ??
-              ProfileVisibility.Public,
-            showEmail: variables.input.showEmail ?? profile.showEmail ?? false,
-            showPhone: variables.input.showPhone ?? profile.showPhone ?? false,
-          },
-        },
-      );
-    },
     onError: error => {
       handleMutationError(error, { operation: 'Update Profile' });
     },
@@ -120,7 +101,7 @@ export const useConfigurableSettings = (profile: UserProfile | null) => {
   const [updateSettingsMutation] = useMutation(UpdateUserPreferencesDocument, {
     // Note: No optimistic response - UserSettings has many required fields that are difficult to predict
     // Automatic normalization handles UI updates when server responds (~100-200ms)
-    // No manual cache update needed (Pattern 2)
+    // No manual cache update — automatic normalization writes the response by id
     onError: error => {
       handleMutationError(error, { operation: 'Update Preferences' });
     },
@@ -180,20 +161,48 @@ export const useConfigurableSettings = (profile: UserProfile | null) => {
   };
 
   const updateProfile = async (input: UpdateUserProfileInput) => {
-    await executeMutation(
-      () => updateProfileMutation({ variables: { input } }),
+    const cacheId = profile
+      ? client.cache.identify({ __typename: 'UserProfile', id: profile.id })
+      : undefined;
+    const { revert } = optimisticFieldUpdate(
+      client.cache,
+      cacheId,
+      profile,
+      input,
+      'Update Profile',
+    );
+
+    const result = await executeMutation(
+      () =>
+        updateProfileMutation({
+          variables: { input },
+          context: { localFirst: true },
+        }),
       'Failed to update profile',
     );
+
+    // Rejection (real error / non-success payload) → restore the snapshot.
+    // Queued (null payload, no error) keeps the write; the replay is idempotent.
+    if (
+      classifyCreateResult(
+        result || null,
+        'updateProfile',
+        'UpdateProfilePayload',
+      ) === 'rejected'
+    ) {
+      revert();
+    }
   };
 
   const updateUserPreferences = (input: UpdateUserSettingsInput) => {
+    // No optimisticResponse here (UserSettings input is nested and doesn't map
+    // 1:1 onto the flat cached entity), so there's nothing to tear down —
+    // queueing it offline is safe and the change applies on replay (idempotent,
+    // keyed by userId). The individual preference setters drive the local UI.
     updateSettingsMutation({
-      variables: {
-        input,
-      },
+      variables: { input },
+      context: { localFirst: true },
     });
-    // Don't call store.updatePreferences since it doesn't exist
-    // The individual setters will be called instead
   };
 
   const createSettingItem = (config: SettingConfig): SettingItem => {

@@ -47,7 +47,7 @@ MMKV and is what the queue later reads to replay. This is the house pattern docu
 Lifecycle of a local-first mutation:
 
 ```
-1. id = generateEntityId()                      // creates only — a permanent CUID v1 (the row's PK)
+1. id = generateEntityId()                      // creates only — a permanent cuid2 (the row's PK)
 2. write the entity/change PERMANENTLY to cache  // shows instantly, persisted to MMKV
 3. fire the mutation with context: { localFirst: true } and input.id = id
    ├─ success            → server response reconciles (idempotent: same id); catalog-merge adopts serverId
@@ -77,9 +77,10 @@ restock) — is irreducibly site-specific, so a single primitive would be the wr
 
 Rather than temp-ids + server reconciliation, **the client mints the real id at create time** and sends
 it as the create input's `id`. `generateEntityId()` (`src/utils/generateEntityId.ts`, backed by
-`@bugsnag/cuid`) returns a classic **CUID v1** matching `/^c[a-z0-9]{24}$/` (Prisma's
-`@default(cuid())` fallback format). **Not** cuid2 — `@paralleldrive/cuid2` emits a different format that
-fails the server's id shape.
+`@paralleldrive/cuid2`) returns a **cuid2** matching the backend's current `@default(cuid(2))` format.
+The server's id validator (`sous-chef-api/src/utils/common/validateId.ts`,
+`/^(?:[a-z][0-9a-z]{23,31}|[0-9a-fA-F]{24})$/`) accepts both cuid2 **and** the older cuid v1
+(`c` + 24 chars), so ids minted by a previous app version stay valid; only new ids use cuid2.
 
 Consequences (this dissolves the entire temp-id problem class):
 - **Idempotency via the primary key.** A re-sent create (lost-after-commit) carries the same id; the
@@ -315,7 +316,8 @@ meals in a new plan, meals referencing a new recipe) always replay after their p
   `CreateShoppingListItemInput`, `BatchAddShoppingListItemInput`,
   `CreateShoppingListItemFromRecipeIngredientInput`, `CreateShoppingListInput`, plus `createHome` /
   `createStorageLocation` / `createMealPlan(Item)` / `createMealTemplate` / `createRecipe` (top-level).
-  Format: CUID v1 `/^c[a-z0-9]{24}$/`; omitted → Prisma `@default(cuid())`. Note `createShoppingList`
+  Format: cuid2 (validator `/^(?:[a-z][0-9a-z]{23,31}|[0-9a-fA-F]{24})$/` also accepts legacy cuid v1
+  and 24-char hex); omitted → Prisma `@default(cuid(2))`. Note `createShoppingList`
   (like `createHome` & co.) is the **plain-create tier** — a duplicate replay surfaces as a
   ConflictError rather than the find-by-id → update upsert of the `Sync*` mutations; the queue treats
   that conflict as already-synced and drops the op.
@@ -355,9 +357,9 @@ meals in a new plan, meals referencing a new recipe) always replay after their p
 
 - **No `useLocalFirstMutation` primitive** (planned §3.1). Replaced by per-site Pattern B + the shared
   cache-writers (§2, §4) and the `classifyCreateResult` helper.
-- **Identity is client-generated cuid** (planned §8), not temp-id + reconciliation. This removed the
-  largest planned subsystem — `idMapping` + `resolveIds` survive only to migrate any pre-cuid `temp-`
-  values left in a persisted queue, and are otherwise inert.
+- **Identity is client-generated cuid2** (planned §8), not temp-id + reconciliation. This removed the
+  largest planned subsystem — the `idMapping` / `resolveIds` / temp-id machinery has been fully deleted
+  (no references remain in the codebase).
 - **Offline-UX partially shipped** (planned Phase 4): the device-offline `OfflineBanner` is mounted (§9);
   the API-reachability-aware indicator and pending-changes count are not.
 - **Granular pantry deltas deliberately deferred** — no idempotent Sync mapping yet.

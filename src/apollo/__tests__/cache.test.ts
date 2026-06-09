@@ -1616,6 +1616,72 @@ describe('cache', () => {
       });
       expect(result?.mealPlan.mealPlanItems).toHaveLength(2);
     });
+
+    const readItemIds = (cache: ReturnType<typeof makeCache>) =>
+      cache
+        .readQuery<MealPlanResult>({
+          query: MEAL_PLAN_QUERY,
+          variables: { id: 'mp1' },
+        })
+        ?.mealPlan.mealPlanItems.map(i => i.id) ?? [];
+
+    const writeItems = (
+      cache: ReturnType<typeof makeCache>,
+      items: Array<{ id: string; name: string }>,
+    ) =>
+      cache.writeQuery({
+        query: MEAL_PLAN_QUERY,
+        variables: { id: 'mp1' },
+        data: {
+          mealPlan: {
+            __typename: 'MealPlan',
+            id: 'mp1',
+            mealPlanItems: items.map(i => ({
+              __typename: 'MealPlanItem',
+              id: i.id,
+              version: 1,
+              updatedAt: '2024-01-01',
+              name: i.name,
+            })),
+          },
+        },
+      });
+
+    it('preserves an un-replayed local meal item over an authoritative refetch', () => {
+      const spy = jest
+        .spyOn(queueStore, 'getPendingClientIds')
+        .mockReturnValue(new Set(['mpi-local']));
+      const cache = makeCache();
+
+      writeItems(cache, [
+        { id: 'mpi-server', name: 'Monday Dinner' },
+        { id: 'mpi-local', name: 'Tuesday Lunch (offline)' },
+      ]);
+      // Refetch that doesn't yet include the still-queued local item.
+      writeItems(cache, [{ id: 'mpi-server', name: 'Monday Dinner' }]);
+
+      expect(readItemIds(cache)).toEqual(
+        expect.arrayContaining(['mpi-server', 'mpi-local']),
+      );
+      expect(readItemIds(cache)).toHaveLength(2);
+      spy.mockRestore();
+    });
+
+    it('drops a server-removed meal item with no pending mutation', () => {
+      const spy = jest
+        .spyOn(queueStore, 'getPendingClientIds')
+        .mockReturnValue(new Set());
+      const cache = makeCache();
+
+      writeItems(cache, [
+        { id: 'mpi-server', name: 'Monday Dinner' },
+        { id: 'mpi-gone', name: 'Deleted elsewhere' },
+      ]);
+      writeItems(cache, [{ id: 'mpi-server', name: 'Monday Dinner' }]);
+
+      expect(readItemIds(cache)).toEqual(['mpi-server']);
+      spy.mockRestore();
+    });
   });
 
   describe('User.profile merge', () => {

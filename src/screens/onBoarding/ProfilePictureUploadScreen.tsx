@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   View,
   Image,
@@ -87,6 +88,7 @@ const { width: screenWidth } = Dimensions.get('window');
 const AVATAR_SIZE = Math.min(screenWidth * 0.4, 200);
 
 export const ProfilePictureUploadScreen = () => {
+  const { t } = useTranslation();
   useScreenTransition('ProfilePictureUploadScreen');
   const { toImageCrop } = useAppNavigation();
   const { uploadProfileImage, updateProfileAvatarUrl } = useImageUpload();
@@ -147,7 +149,10 @@ export const ProfilePictureUploadScreen = () => {
       setCroppedImage(null); // Reset cropped image when new image is selected
     } catch (error) {
       const validationError = error as ImageValidationError;
-      alertService.alert('Invalid Image', validationError.message);
+      alertService.alert(
+        t('onBoarding.invalidImageTitle'),
+        validationError.message,
+      );
     }
   };
 
@@ -165,8 +170,8 @@ export const ProfilePictureUploadScreen = () => {
           launchCamera(DEFAULT_OPTIONS, handleImageResponse);
         } else {
           alertService.alert(
-            'Camera Permission',
-            'Camera permission is required to take photos. Please enable it in your device settings.',
+            t('onBoarding.cameraPermissionTitle'),
+            t('onBoarding.cameraPermissionTakePhotoMessage'),
           );
         }
       },
@@ -201,7 +206,10 @@ export const ProfilePictureUploadScreen = () => {
           ImageUploadPurpose.ProfileAvatar,
           {
             onError: (error: Error) => {
-              alertService.alert('Upload Failed', error.message);
+              alertService.alert(
+                t('onBoarding.uploadFailedTitle'),
+                error.message,
+              );
             },
           },
         );
@@ -214,7 +222,10 @@ export const ProfilePictureUploadScreen = () => {
       setIsUploading,
       error => {
         console.error('Avatar upload error:', error);
-        alertService.alert('Upload Failed', 'Failed to update profile photo');
+        alertService.alert(
+          t('onBoarding.uploadFailedTitle'),
+          t('onBoarding.updateProfilePhotoFailed'),
+        );
       },
     );
   };
@@ -227,8 +238,8 @@ export const ProfilePictureUploadScreen = () => {
 
   return (
     <OnBoardingWrapper
-      title="Profile Picture"
-      subtitle="Add a photo to personalize your profile"
+      title={t('onBoarding.profilePictureTitle')}
+      subtitle={t('onBoarding.profilePictureSubtitle')}
       step={4}
       totalSteps={7}
       onBack={() => navigateToPreviousStep('ProfilePictureUpload')}
@@ -287,11 +298,11 @@ export const ProfilePictureUploadScreen = () => {
               style={styles.cropButton}
               disabled={isUploading}
             >
-              <Text style={styles.cropButtonText}>Crop & Center</Text>
+              <Text style={styles.cropButtonText}>
+                {t('onBoarding.cropAndCenter')}
+              </Text>
             </AppPressable>
-            <Text style={styles.cropHint}>
-              Recommended to optimize your photo
-            </Text>
+            <Text style={styles.cropHint}>{t('onBoarding.cropHint')}</Text>
           </View>
         )}
 
@@ -308,11 +319,11 @@ export const ProfilePictureUploadScreen = () => {
 
               <View style={styles.uploadOptionContent}>
                 <Text style={styles.uploadOptionLabel}>
-                  Choose from Gallery
+                  {t('onBoarding.chooseFromGallery')}
                 </Text>
 
                 <Text style={styles.uploadOptionDescription}>
-                  Select a photo from your device
+                  {t('onBoarding.chooseFromGalleryDescription')}
                 </Text>
               </View>
 
@@ -329,10 +340,12 @@ export const ProfilePictureUploadScreen = () => {
               </View>
 
               <View style={styles.uploadOptionContent}>
-                <Text style={styles.uploadOptionLabel}>Take a Photo</Text>
+                <Text style={styles.uploadOptionLabel}>
+                  {t('onBoarding.takeAPhoto')}
+                </Text>
 
                 <Text style={styles.uploadOptionDescription}>
-                  Use your camera to take a new photo
+                  {t('onBoarding.takeAPhotoDescription')}
                 </Text>
               </View>
 
@@ -343,7 +356,7 @@ export const ProfilePictureUploadScreen = () => {
 
         <View style={styles.formFooter}>
           <Text style={styles.formFooterText}>
-            By continuing you agree to our
+            {t('onBoarding.legalNotice')}
           </Text>
 
           <View style={styles.formFooterLinks}>
@@ -356,12 +369,12 @@ export const ProfilePictureUploadScreen = () => {
               }
               style={styles.formFooterLinkText}
             >
-              Terms of Service
+              {t('onBoarding.termsOfService')}
             </Link>
 
             <Text style={styles.formFooterText}>
               {' '}
-              and
+              {t('auth.legalAnd')}
               {'   '}
             </Text>
 
@@ -374,7 +387,7 @@ export const ProfilePictureUploadScreen = () => {
               }
               style={styles.formFooterLinkText}
             >
-              Privacy Policy
+              {t('auth.privacyLink')}
             </Link>
           </View>
         </View>
@@ -382,10 +395,10 @@ export const ProfilePictureUploadScreen = () => {
       <Button
         title={
           isUploading
-            ? 'Uploading...'
+            ? t('loading.uploading')
             : hasExistingAvatar
-            ? 'Continue'
-            : 'Upload & Continue'
+            ? t('labels.continue')
+            : t('onBoarding.uploadAndContinue')
         }
         onPress={
           hasExistingAvatar

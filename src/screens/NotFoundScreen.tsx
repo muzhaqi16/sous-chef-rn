@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useNavigation, CommonActions } from '@react-navigation/native';
@@ -6,6 +7,7 @@ import { Button } from '#/components/base/Button';
 import { Text } from '#components/atoms/Text';
 
 export const NotFoundScreen = () => {
+  const { t } = useTranslation();
   const { dispatch } = useNavigation();
 
   const handleGoHome = () => {
@@ -20,12 +22,11 @@ export const NotFoundScreen = () => {
   return (
     <View style={styles.container}>
       <Text size="md" align="center" style={styles.text}>
-        This screen doesn't exist. Please check the URL or navigate back to a
-        valid screen.
+        {t('notFound.message')}
       </Text>
       <View style={styles.buttonContainer}>
         <Button onPress={handleGoHome} variant="primary">
-          Go to Home
+          {t('notFound.goToHome')}
         </Button>
       </View>
     </View>

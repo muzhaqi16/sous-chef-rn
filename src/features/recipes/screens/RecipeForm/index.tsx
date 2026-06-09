@@ -10,13 +10,12 @@ import {
   CreateRecipeDocument,
   UpdateRecipeDocument,
   UpdateRecipeIngredientsDocument,
-  MyRecipesDocument,
-  type MyRecipesQuery,
 } from '#features/recipes/graphql/recipe.generated';
 import {
   RecipeForm_RecipeFragmentDoc,
   type RecipeForm_RecipeFragment,
 } from './RecipeForm.generated';
+import { useUser } from '#store/useAppStore';
 import { useRecipeForm } from './useRecipeForm';
 import { RecipeBasicFields } from './components/RecipeBasicFields';
 import { RecipeCategoryFields } from './components/RecipeCategoryFields';
@@ -32,116 +31,18 @@ import {
 } from './components/RecipeStepEditor';
 import { RecipeTagsSection } from './components/RecipeTagsSection';
 import type { IngredientFormState, StepFormState } from './useRecipeForm';
-import type { ApolloCache } from '@apollo/client';
-import {
-  Difficulty,
-  RecipeCategory,
-  type CreateRecipeInput,
-} from '#/graphql/generated/schemaTypes';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import {
   executeCacheUpdate,
   executeMutation,
 } from '#/utils/compilerSafeWrappers';
 import { generateEntityId } from '#/utils/generateEntityId';
-
-/** The (unmasked) MyRecipes edge node shape the list reads per row. */
-type MyRecipesEdgeNode = {
-  __typename: 'Recipe';
-  id: string;
-  name: string;
-  description: string | null;
-  imageUrl: string | null;
-  servings: number;
-  prepTimeMinutes: number | null;
-  cookTimeMinutes: number | null;
-  totalTimeMinutes: number | null;
-  category: RecipeCategory;
-  difficulty: Difficulty;
-  savedDetails: {
-    __typename: 'SavedRecipe';
-    id: string;
-    folder: string | null;
-  } | null;
-};
-
-/** The MyRecipes edge node a local-first create materializes. */
-function buildOptimisticRecipeNode(
-  id: string,
-  input: CreateRecipeInput,
-): MyRecipesEdgeNode {
-  const prep = input.prepTimeMinutes ?? null;
-  const cook = input.cookTimeMinutes ?? null;
-  return {
-    __typename: 'Recipe',
-    id,
-    name: input.name,
-    description: input.description ?? null,
-    imageUrl: input.imageUrl ?? null,
-    servings: input.servings ?? 4,
-    prepTimeMinutes: prep,
-    cookTimeMinutes: cook,
-    totalTimeMinutes:
-      prep != null || cook != null ? (prep ?? 0) + (cook ?? 0) : null,
-    // The list node selects these non-null; mirror the server-side defaults
-    // when the form leaves them unset.
-    category: input.category ?? RecipeCategory.MainCourse,
-    difficulty: input.difficulty ?? Difficulty.Easy,
-    savedDetails: null,
-  };
-}
-
-/**
- * Insert-or-replace a recipe edge in MyRecipes. Shared by the local-first
- * pre-fire write (insert) and the mutation's update callback (replace — the
- * server row carries the same client-minted id, so the optimistic node is
- * upgraded in place instead of duplicated).
- */
-function upsertMyRecipesEdge(
-  cache: ApolloCache,
-  node: MyRecipesEdgeNode,
-): void {
-  cache.updateQuery<MyRecipesQuery>({ query: MyRecipesDocument }, existing => {
-    if (!existing?.recipes) return existing;
-    const present = existing.recipes.edges.some(
-      edge => edge.node.id === node.id,
-    );
-    return {
-      ...existing,
-      recipes: {
-        ...existing.recipes,
-        edges: present
-          ? existing.recipes.edges.map(edge =>
-              edge.node.id === node.id ? { ...edge, node } : edge,
-            )
-          : [
-              { __typename: 'RecipeEdge', cursor: node.id, node },
-              ...existing.recipes.edges,
-            ],
-        totalCount: present
-          ? existing.recipes.totalCount
-          : (existing.recipes.totalCount ?? 0) + 1,
-      },
-    };
-  });
-}
-
-/** Remove a recipe edge from MyRecipes (revert of a rejected create). */
-function removeMyRecipesEdge(cache: ApolloCache, id: string): void {
-  cache.updateQuery<MyRecipesQuery>({ query: MyRecipesDocument }, existing => {
-    if (!existing?.recipes) return existing;
-    const present = existing.recipes.edges.some(edge => edge.node.id === id);
-    if (!present) return existing;
-    return {
-      ...existing,
-      recipes: {
-        ...existing.recipes,
-        edges: existing.recipes.edges.filter(edge => edge.node.id !== id),
-        totalCount: (existing.recipes.totalCount ?? 0) - 1,
-      },
-    };
-  });
-}
+import {
+  upsertMyRecipesEdge,
+  writeOptimisticRecipe,
+  revertOptimisticRecipe,
+  type RecipeCreatedBy,
+} from './recipeCacheWriters';
 
 export const RecipeFormScreen: React.FC<
   StaticScreenProps<{ recipeId?: string } | undefined>
@@ -166,6 +67,7 @@ export const RecipeFormScreen: React.FC<
   // populateFromRecipe sees the fields it needs (non-render context —
   // useFragment is a hook and can't run inside useEffect).
   const apolloClient = useApolloClient();
+  const user = useUser();
   const recipeRef = recipeData?.recipe ?? null;
 
   // Populate form when recipe data arrives
@@ -267,12 +169,14 @@ export const RecipeFormScreen: React.FC<
           // the recipe into My Recipes before firing, so creating works fully
           // offline — the queued create replays keyed by this same id.
           const id = generateEntityId();
+          const createdBy: RecipeCreatedBy = user
+            ? { __typename: 'User', id: user.id, email: user.email }
+            : null;
+          // Writes the MyRecipes edge + the full detail entity, so creating a
+          // recipe works fully offline (the detail screen is complete-gated).
           executeCacheUpdate(
             () =>
-              upsertMyRecipesEdge(
-                apolloClient.cache,
-                buildOptimisticRecipeNode(id, input),
-              ),
+              writeOptimisticRecipe(apolloClient.cache, id, input, createdBy),
             'Create Recipe (optimistic)',
           );
           const result = await createRecipeMutation({
@@ -290,7 +194,7 @@ export const RecipeFormScreen: React.FC<
             goBack();
           } else {
             executeCacheUpdate(
-              () => removeMyRecipesEdge(apolloClient.cache, id),
+              () => revertOptimisticRecipe(apolloClient.cache, id),
               'Revert rejected Recipe create',
             );
             const createPayload = result.data?.createRecipe;

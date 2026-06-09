@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '#components/base/Button';
 
 export const SubmitButton = ({
@@ -9,17 +10,20 @@ export const SubmitButton = ({
   isCreating: boolean;
   needsHome: boolean;
   onPress: () => void;
-}) => (
-  <Button
-    title={
-      isCreating
-        ? needsHome
-          ? 'Creating Home & Pantry...'
-          : 'Creating Pantry...'
-        : 'Next'
-    }
-    onPress={onPress}
-    variant="primary"
-    disabled={isCreating}
-  />
-);
+}) => {
+  const { t } = useTranslation();
+  return (
+    <Button
+      title={
+        isCreating
+          ? needsHome
+            ? t('onBoarding.creatingHomeAndPantry')
+            : t('onBoarding.creatingPantry')
+          : t('labels.next')
+      }
+      onPress={onPress}
+      variant="primary"
+      disabled={isCreating}
+    />
+  );
+};

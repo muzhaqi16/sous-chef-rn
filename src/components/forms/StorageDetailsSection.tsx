@@ -7,13 +7,19 @@ import {
   FieldDef,
 } from '#components/molecules/DynamicFormFields';
 import { FormTextArea } from '#components/molecules/FormTextArea';
-import { SegmentedControl } from '#components/molecules/SegmentedControl';
+import {
+  ChipScrollRow,
+  type ChipOption,
+} from '#components/atoms/ChipScrollRow';
 import { DatePickerField } from '#components/molecules/DatePickerField';
 import { StorageState, StorageLocation } from '#/graphql/generated/schemaTypes';
 import { Text } from '#components/atoms/Text';
+import { Label } from '#components/atoms/Label';
 import type { PantryItemFormData } from './PantryItemForm';
 
-const STORAGE_STATES = Object.values(StorageState);
+const STORAGE_STATE_OPTIONS: ChipOption<StorageState>[] = Object.values(
+  StorageState,
+).map(state => ({ key: state, label: state }));
 
 interface StorageDetailsSectionProps {
   control: Control<PantryItemFormData>;
@@ -71,13 +77,18 @@ export const StorageDetailsSection: React.FC<StorageDetailsSectionProps> = ({
         Storage Details
       </Text>
 
-      {/* Storage State - using reusable SegmentedControl molecule */}
-      <SegmentedControl
-        label="Storage State"
-        options={STORAGE_STATES}
-        value={storageState}
-        onChange={onStorageStateChange}
-      />
+      {/* Storage State - horizontally scrollable pills, matching the
+          Storage Locations Type/Temperature selectors. Long options like
+          REFRIGERATED scroll off the edge instead of wrapping. */}
+      <View style={styles.field}>
+        <Label>Storage State</Label>
+        <ChipScrollRow
+          chipStyle={styles.statePill}
+          options={STORAGE_STATE_OPTIONS}
+          selected={storageState}
+          onSelect={onStorageStateChange}
+        />
+      </View>
 
       {/* Location */}
       <DynamicFormFields
@@ -113,5 +124,15 @@ const styles = StyleSheet.create(theme => ({
     paddingBottom: theme.spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
+  },
+  field: {
+    marginBottom: theme.spacing.lg,
+  },
+  // Content-sized pill (not a fixed-height box) with the same md corner radius
+  // as the sibling input fields; tighter vertical padding so it doesn't read
+  // taller than them.
+  statePill: {
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.radii.md,
   },
 }));

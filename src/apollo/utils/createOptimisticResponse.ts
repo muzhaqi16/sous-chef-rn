@@ -71,7 +71,8 @@ export function enhanceWithVersion<T extends VersionedEntity>(
  *
  * @template T - Fragment / mutation selection type (must be passed explicitly)
  * @param typename - GraphQL typename (e.g., 'ShoppingListItem')
- * @param id - Entity ID (use 'temp-{uuid}' for new items)
+ * @param id - Entity ID — the client-minted permanent cuid2 from
+ *   `generateEntityId()` (also sent as the create `input.id`)
  * @param data - All selected fields except id/version/updatedAt/__typename
  * @returns Entity with version 1 and current timestamp merged in
  *
@@ -79,7 +80,7 @@ export function enhanceWithVersion<T extends VersionedEntity>(
  * ```typescript
  * createOptimisticEntity<ShoppingListItemDisplayFragment>(
  *   'ShoppingListItem',
- *   tempId,
+ *   generateEntityId(),
  *   { itemName, quantity, displayFormat: DisplayFormat.Auto, ... },
  * )
  * ```

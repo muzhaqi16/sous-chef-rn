@@ -2,6 +2,7 @@ import React, {
   useDeferredValue,
   useEffect,
   useRef,
+  useState,
   useImperativeHandle,
 } from 'react';
 import { View, RefreshControl } from 'react-native';
@@ -58,6 +59,8 @@ import {
   DRAW_DISTANCE,
   MVCP_DISABLED,
   DEFAULT_PANTRY_TABS,
+  INITIAL_RENDER_WINDOW,
+  RENDER_WINDOW_STEP,
 } from './pantryDisplay/constants';
 import { renderItem, type PantryListNode } from './pantryDisplay/renderItem';
 import { PantryEmptyState } from './PantryEmptyState';
@@ -167,10 +170,31 @@ export const PantryContent = React.forwardRef<
       }
     }, [hasShownContent]);
 
-    const awaitingDeferredItems =
-      items.length === 0 && (totalCount ?? 0) > 0 && !loading;
-    const showSkeletons =
-      !hasShownContent && (loading || awaitingDeferredItems);
+    // Expected item count for the ACTIVE tab, read from the stats-backed
+    // `locationCounts`. `pantry.stats` is a separate field that survives when
+    // `itemsConnection` reads empty (the connection's own `totalCount` is 0 in
+    // that case — e.g. dangling edge refs filtered by the cache read policy, or
+    // an offline cold-start — so it can't be the wait signal).
+    const expectedCount = locationCounts?.[locationFilter] ?? totalCount ?? 0;
+
+    // "Items are expected here but haven't arrived yet" — show skeletons while
+    // the query is still settling (`loading` is `isLoadingInitial`: true only
+    // while items are empty AND the query is in-flight/not-ready). Gating on
+    // `loading` is what keeps this from sticking: once the query settles the
+    // list is authoritative, so an emptied tab (e.g. last item removed offline,
+    // where stale stats still report a count) falls through to the real empty
+    // state instead of skeletons forever. Excluded: an active search (empty =
+    // "no results") and the no-home/no-pantry states (their own empty states
+    // must win even if stale stats linger).
+    const awaitingItems =
+      loading &&
+      items.length === 0 &&
+      expectedCount > 0 &&
+      !searchQuery &&
+      !noHomeSelected &&
+      !noHomes &&
+      !noPantries;
+    const showSkeletons = awaitingItems || (!hasShownContent && loading);
 
     const {
       sortOption,
@@ -207,9 +231,61 @@ export const PantryContent = React.forwardRef<
 
     const deferredSortedItems = useDeferredValue(sortedItems);
 
+    // Client-side render window: hand FlashList only a growing slice of the
+    // loaded set so it never mounts the whole load-all page (~100 cells) at once.
+    // Reset to the initial window whenever the view changes (tab / sort / search)
+    // so a fresh view starts light — done during render (no effect) so listData
+    // is correct on the same commit. Server pagination still drives `onEndReached`
+    // when there are more pages to fetch; otherwise we grow the window locally.
+    const [clientWindow, setClientWindow] = useState(INITIAL_RENDER_WINDOW);
+    const windowSignature = `${locationFilter}|${sortOption}|${sortDirection}|${searchQuery}`;
+    const [prevWindowSignature, setPrevWindowSignature] =
+      useState(windowSignature);
+    if (prevWindowSignature !== windowSignature) {
+      setPrevWindowSignature(windowSignature);
+      setClientWindow(INITIAL_RENDER_WINDOW);
+    }
+
+    const windowedItems = deferredSortedItems.slice(0, clientWindow);
+    const clientHasMore = clientWindow < deferredSortedItems.length;
+
     const listData: PantryListItem[] = showSkeletons
       ? [STICKY_HEADER_SENTINEL]
-      : [STICKY_HEADER_SENTINEL, ...deferredSortedItems];
+      : [STICKY_HEADER_SENTINEL, ...windowedItems];
+
+    // End-reached: fetch the next server page if one exists, otherwise grow the
+    // local window. `onEndReached` (prop) is defined only when the server has
+    // more pages; below the load window it's undefined and we reveal locally.
+    const handleEndReached = () => {
+      if (onEndReached) {
+        onEndReached();
+        return;
+      }
+      if (clientWindow < deferredSortedItems.length) {
+        setClientWindow(w =>
+          Math.min(w + RENDER_WINDOW_STEP, deferredSortedItems.length),
+        );
+      }
+    };
+
+    const hasMoreToRender = hasMore || clientHasMore;
+
+    // DEV: window/perf tracking — confirms FlashList is handed a bounded window
+    // (not the whole load-all page) and surfaces how sort/filter sizes the set.
+    useEffect(() => {
+      if (__DEV__) {
+        console.log(
+          `📊 [PantryWindow] loaded=${items.length} sorted=${deferredSortedItems.length} rendered=${windowedItems.length} window=${clientWindow} serverHasMore=${hasMore} clientHasMore=${clientHasMore}`,
+        );
+      }
+    }, [
+      items.length,
+      deferredSortedItems.length,
+      windowedItems.length,
+      clientWindow,
+      hasMore,
+      clientHasMore,
+    ]);
 
     useDataReferenceTracker(
       sortedItems,
@@ -226,7 +302,9 @@ export const PantryContent = React.forwardRef<
 
       const handle = requestIdleCallback(() => {
         const urls: string[] = [];
-        for (const node of sortedItems) {
+        // Only preload images for the items actually rendered (the current
+        // window), not the entire loaded set.
+        for (const node of sortedItems.slice(0, clientWindow)) {
           const item =
             client.cache.readFragment<PantryContent_PantryItemFragment>({
               fragment: PantryContent_PantryItemFragmentDoc,
@@ -242,7 +320,7 @@ export const PantryContent = React.forwardRef<
         }
       });
       return () => cancelIdleCallback(handle);
-    }, [sortedItems, client]);
+    }, [sortedItems, clientWindow, client]);
 
     const prevLocationFilter = useRef(locationFilter);
     const prevSortOption = useRef(sortOption);
@@ -279,7 +357,12 @@ export const PantryContent = React.forwardRef<
 
     const extraData = `${sortOption}-${sortDirection}-${locationFilter}`;
 
-    const isEmpty = !showSkeletons && sortedItems.length === 0;
+    // Render the footer "empty area" whenever there are no rows. PantryEmptyState
+    // shows skeleton placeholders while `showSkeletons` is true, otherwise the
+    // contextual empty / no-results state. (Previously this was gated on
+    // `!showSkeletons`, which made PantryEmptyState's skeleton branch unreachable
+    // and left a blank body — just the sticky tabs — during loading.)
+    const isEmpty = sortedItems.length === 0;
 
     const listContentStyle = isEmpty
       ? styles.listContentEmpty
@@ -456,14 +539,14 @@ export const PantryContent = React.forwardRef<
                     />
                   ) : (
                     <PaginationFooter
-                      hasMore={hasMore}
-                      itemCount={deferredSortedItems.length}
+                      hasMore={hasMoreToRender}
+                      itemCount={windowedItems.length}
                       SkeletonComponent={PantryItemSkeleton}
                       skeletonCount={3}
                     />
                   )
                 }
-                onEndReached={onEndReached}
+                onEndReached={handleEndReached}
                 onEndReachedThreshold={
                   FLASHLIST_DEFAULTS.analyticsHeavyFullScreen
                     .onEndReachedThreshold

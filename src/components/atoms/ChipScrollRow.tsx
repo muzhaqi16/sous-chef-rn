@@ -18,6 +18,8 @@ interface ChipScrollRowProps<T> {
   size?: 'sm' | 'md';
   style?: StyleProp<ViewStyle>;
   contentContainerStyle?: StyleProp<ViewStyle>;
+  /** Per-chip style override — e.g. a fixed height to match form inputs. */
+  chipStyle?: StyleProp<ViewStyle>;
 }
 
 export function ChipScrollRow<T>({
@@ -27,6 +29,7 @@ export function ChipScrollRow<T>({
   size = 'sm',
   style,
   contentContainerStyle,
+  chipStyle,
 }: ChipScrollRowProps<T>) {
   styles.useVariants({ size });
   return (
@@ -40,7 +43,9 @@ export function ChipScrollRow<T>({
         const isActive = selected === opt.key;
         return (
           <Pressable key={opt.label} onPress={() => onSelect(opt.key)}>
-            <View style={[styles.chip, isActive && styles.chipActive]}>
+            <View
+              style={[styles.chip, isActive && styles.chipActive, chipStyle]}
+            >
               {opt.icon ? (
                 <Icon
                   name={opt.icon}

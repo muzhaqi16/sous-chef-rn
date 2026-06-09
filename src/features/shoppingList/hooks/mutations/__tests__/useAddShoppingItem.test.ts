@@ -79,11 +79,14 @@ describe('useAddShoppingItem', () => {
       await result.current.addItem({ itemName: 'Milk', quantity: 2 });
     });
 
-    // The optimistic item was written with a real cuid v1 id (the row's PK).
+    // The optimistic item was written with a real cuid2 id (the row's PK).
     expect(addOptimisticShoppingListItem).toHaveBeenCalledTimes(1);
     const writtenItem = (addOptimisticShoppingListItem as jest.Mock).mock
       .calls[0][2];
-    expect(writtenItem.id).toMatch(/^c[a-z0-9]{24}$/);
+    // Matches the server id validator (cuid2 or legacy cuid v1 / 24-char hex).
+    expect(writtenItem.id).toMatch(
+      /^(?:[a-z][0-9a-z]{23,31}|[0-9a-fA-F]{24})$/,
+    );
 
     // The create mutation was then fired.
     expect(executeMutation).toHaveBeenCalled();

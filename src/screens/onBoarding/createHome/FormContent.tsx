@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import type { UseFormReturn } from 'react-hook-form';
 import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
 import {
@@ -19,10 +20,12 @@ export const FormContent = ({
   needsHome: boolean;
   existingHomeName?: string;
 }) => {
+  const { t } = useTranslation();
+
   const homeField: FieldDef<FormValues> = {
     name: 'homeName',
-    label: 'Home Name',
-    placeholder: 'e.g. Smith Family Home',
+    label: t('onBoarding.homeNameLabel'),
+    placeholder: t('onBoarding.homeNamePlaceholder'),
     component: BaseInput,
   };
 
@@ -30,8 +33,10 @@ export const FormContent = ({
     ...(needsHome ? [homeField] : []),
     {
       name: 'pantryName',
-      label: needsHome ? 'Default Pantry Name' : 'Pantry Name',
-      placeholder: 'e.g. Kitchen Pantry',
+      label: needsHome
+        ? t('onBoarding.defaultPantryNameLabel')
+        : t('onBoarding.pantryNameLabel'),
+      placeholder: t('onBoarding.pantryNamePlaceholder'),
       component: BaseInput,
     },
   ];

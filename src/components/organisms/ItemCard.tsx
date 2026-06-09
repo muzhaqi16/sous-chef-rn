@@ -1,5 +1,5 @@
 import React from 'react';
-import { useWindowDimensions } from 'react-native';
+import { View, useWindowDimensions } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { SwipeableItem } from '#components/molecules/SwipeableItem/SwipeableItem';
 import type { SwipeableRef } from '#components/molecules/SwipeableItem/types';
@@ -39,7 +39,16 @@ interface ItemCardProps {
   testID?: string;
 }
 
-const ItemCardComponent: React.FC<ItemCardProps> = ({
+/**
+ * Interactive variant — owns the swipe gestures and the slide-out exit
+ * animation. Split out from {@link ItemCard} so it (and the per-row reanimated
+ * shared values + `Animated.View` + `SwipeableItem` it sets up) is mounted
+ * ONLY for rows that actually have swipe actions. Read-only lists (recipe
+ * discovery, search results) render the lightweight path below instead, which
+ * matters at scale: a full screen of ~17 rows would otherwise spin up ~17
+ * unused animated styles + gesture handlers on first paint.
+ */
+const SwipeableItemCard: React.FC<ItemCardProps> = ({
   id,
   title,
   subtitle,
@@ -66,29 +75,21 @@ const ItemCardComponent: React.FC<ItemCardProps> = ({
     opacityTarget: SLIDE_PRESETS.exitWithFade.opacityTarget,
   });
 
-  // Wrap delete action with slide animation
   const handleDelete = () => {
-    if (onDelete) {
-      triggerSlide(1, onDelete);
-    }
+    if (onDelete) triggerSlide(1, onDelete);
   };
-
-  // Wrap consume action with slide animation
   const handleConsume = () => {
-    if (onConsume) {
-      triggerSlide(1, onConsume);
-    }
+    if (onConsume) triggerSlide(1, onConsume);
   };
-
-  // Wrap waste action with slide animation
   const handleWaste = () => {
-    if (onWaste) {
-      triggerSlide(1, onWaste);
-    }
+    if (onWaste) triggerSlide(1, onWaste);
   };
 
-  const innerContent =
-    onEdit || onDelete || onConsume || onWaste || onRestock ? (
+  return (
+    <Animated.View
+      style={[styles.container, animatedSlideStyle]}
+      testID={testID}
+    >
       <SwipeableItem
         onPress={onPress}
         onEdit={onEdit}
@@ -107,25 +108,53 @@ const ItemCardComponent: React.FC<ItemCardProps> = ({
           leftElement={leftElement}
         />
       </SwipeableItem>
-    ) : (
-      <ListItem
-        title={title}
-        subtitle={subtitle}
-        onPress={onPress}
-        badge={badge}
-        rightElement={rightElement}
-        leftElement={leftElement}
-      />
-    );
-
-  return (
-    <Animated.View
-      style={[styles.container, animatedSlideStyle]}
-      testID={testID}
-    >
-      {innerContent}
     </Animated.View>
   );
+};
+
+const ItemCardComponent: React.FC<ItemCardProps> = props => {
+  const {
+    title,
+    subtitle,
+    onPress,
+    onEdit,
+    onDelete,
+    onConsume,
+    onWaste,
+    onRestock,
+    badge,
+    rightElement,
+    leftElement,
+    testID,
+  } = props;
+
+  const hasSwipeActions = !!(
+    onEdit ||
+    onDelete ||
+    onConsume ||
+    onWaste ||
+    onRestock
+  );
+
+  // Lightweight path: a row with no swipe actions can never slide, so skip the
+  // per-row reanimated machinery (3 shared values + an animated style worklet)
+  // and the `Animated.View` wrapper entirely — a plain styled row is enough.
+  if (!hasSwipeActions) {
+    return (
+      <View style={styles.container} testID={testID}>
+        <ListItem
+          title={title}
+          subtitle={subtitle}
+          onPress={onPress}
+          badge={badge}
+          rightElement={rightElement}
+          leftElement={leftElement}
+        />
+      </View>
+    );
+  }
+
+  return <SwipeableItemCard {...props} />;
 };
 
 // React Compiler memoizes JSX at the parent call site, so React.memo is

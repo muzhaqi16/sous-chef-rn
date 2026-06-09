@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
@@ -34,6 +35,7 @@ async function tryLoadTempPassword(email: string): Promise<string | null> {
  * advancing the onboarding flow.
  */
 export const BiometricSetupScreen = () => {
+  const { t } = useTranslation();
   useScreenTransition('BiometricSetupScreen');
   const { navigateToNextStep } = useOnboardingNavigation();
   const user = useUser();
@@ -89,10 +91,14 @@ export const BiometricSetupScreen = () => {
   // Still probing device capability.
   if (bio.checking) {
     return (
-      <OnBoardingWrapper subtitle="Setting up security" step={7} totalSteps={7}>
+      <OnBoardingWrapper
+        subtitle={t('onBoarding.settingUpSecurity')}
+        step={7}
+        totalSteps={7}
+      >
         <View style={styles.loadingContainer}>
           <Text size="md" tone="secondary" align="center">
-            Checking biometric availability...
+            {t('onBoarding.checkingBiometricAvailability')}
           </Text>
         </View>
       </OnBoardingWrapper>
@@ -104,7 +110,7 @@ export const BiometricSetupScreen = () => {
 
   return (
     <OnBoardingWrapper
-      subtitle="Secure your account"
+      subtitle={t('onBoarding.secureYourAccount')}
       step={7}
       totalSteps={7}
       testID="biometric-setup-screen"

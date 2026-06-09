@@ -17,6 +17,14 @@ export const EMPTY_STATE_MIN_HEIGHT = Math.round(
 // Module-level constant — avoids creating a new object reference per render
 export const MVCP_DISABLED = { disabled: true };
 
+// Client-side render windowing. With load-all, the full item set (up to the
+// API page max) lives in memory so sort/filter/search are instant — but we hand
+// FlashList only a growing slice so it never has to mount ~100 cells at once.
+// The window starts at INITIAL_RENDER_WINDOW and grows by RENDER_WINDOW_STEP
+// each time the user scrolls to the end (until the loaded set is exhausted).
+export const INITIAL_RENDER_WINDOW = 24;
+export const RENDER_WINDOW_STEP = 24;
+
 // Default filter tabs for pantry (fallback if none provided)
 export const DEFAULT_PANTRY_TABS: FilterTabConfig<LocationFilter>[] = [
   { id: 'all', label: 'All' },

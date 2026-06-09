@@ -2,6 +2,11 @@ import type { DocumentNode } from 'graphql';
 import {
   SyncPantryItemDocument,
   SyncDeletePantryItemDocument,
+  SyncAdjustPantryItemQuantityDocument,
+  SyncRestockPantryItemDocument,
+  SyncConsumePantryItemDocument,
+  SyncOpenPantryItemBatchDocument,
+  SyncWastePantryItemBatchDocument,
 } from '#features/pantry/graphql/pantry.generated';
 import {
   SyncShoppingListItemDocument,
@@ -100,6 +105,43 @@ const getClientId = (
   input: QueuedInput,
 ): string | undefined =>
   input.id ?? input.itemId ?? (mutation.variables.id as string | undefined);
+
+/**
+ * The per-operation `operationId` for a granular pantry delta (adjust / restock
+ * / consume / open / waste). The delta hooks mint it (cuid2) and ride it on the
+ * mutation `context` so it survives queueing; the server dedups by it, making a
+ * queued replay apply the delta exactly once. Throwing on a missing id mirrors
+ * `buildPantryItemSync`'s missing-`pantryId` guard — a delta queued without one
+ * can't replay safely, so it surfaces as a permanent failure rather than a
+ * silently double-applied op.
+ */
+const getOperationId = (mutation: QueuedMutation): string => {
+  const operationId = (mutation.context as { operationId?: string } | undefined)
+    ?.operationId;
+  if (!operationId) {
+    throw new Error(
+      `Cannot sync ${mutation.operationName}: missing operationId in context`,
+    );
+  }
+  return operationId;
+};
+
+/**
+ * Builder for granular pantry deltas. The `Sync*` delta inputs wrap the original
+ * delta input verbatim (`{ input: <original>, operationId }`), so the queued
+ * variables pass straight through under `input.input`.
+ */
+const buildPantryDeltaSync =
+  (syncMutation: DocumentNode): SyncBuilder =>
+  mutation => ({
+    syncMutation,
+    syncVariables: {
+      input: {
+        input: mutation.variables.input,
+        operationId: getOperationId(mutation),
+      },
+    },
+  });
 
 /**
  * PantryItem create/update sync. `SyncPantryItemInput` mirrors
@@ -306,6 +348,14 @@ const SYNC_REGISTRY: Record<string, SyncBuilder> = {
   UpdatePantryItemQuantity: buildPantryItemQuantitySync,
   BarcodeCreatePantryItem: buildPantryItemSync,
   DeletePantryItem: buildDeletePantryItemSync,
+  // PantryItem granular deltas — idempotent replay keyed by operationId
+  AdjustPantryItemQuantity: buildPantryDeltaSync(
+    SyncAdjustPantryItemQuantityDocument,
+  ),
+  RestockPantryItem: buildPantryDeltaSync(SyncRestockPantryItemDocument),
+  CreatePantryItemUsage: buildPantryDeltaSync(SyncConsumePantryItemDocument),
+  OpenPantryItemBatch: buildPantryDeltaSync(SyncOpenPantryItemBatchDocument),
+  WastePantryItemBatch: buildPantryDeltaSync(SyncWastePantryItemBatchDocument),
   // ShoppingListItem create / update
   AddItemToShoppingList: buildShoppingItemSync,
   UpdateShoppingListItem: buildShoppingItemSync,

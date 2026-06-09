@@ -12,7 +12,7 @@ jest.mock('../../../apollo/links/refreshToken');
 
 let mockIsOnline = true;
 jest.mock('#store/useAppStore', () => {
-  const getState = () => ({ isOnline: mockIsOnline });
+  const getState = () => ({ isOnline: mockIsOnline, cachedBrands: [] });
   return {
     useAppStore: <T>(selector: (state: RootState) => T): T =>
       selector(getState() as Partial<RootState> as RootState),
@@ -79,7 +79,10 @@ describe('useBrandAutocomplete', () => {
     expect(result.current.displayItems).toEqual([]);
   });
 
-  it('filters suggested brands by search term', () => {
+  it('filters suggested brands by search term (offline, served locally)', () => {
+    // Offline → localFirst, so the curated suggestions are filtered without a
+    // network call. (Online the full-catalog search fires instead.)
+    mockIsOnline = false;
     const { result } = renderHookWithApollo(() =>
       useBrandAutocomplete({ suggestedBrands }),
     );
@@ -142,7 +145,10 @@ describe('useBrandAutocomplete', () => {
     expect(recordedVariables).toContainEqual({ search: 'xy', limit: 20 });
   });
 
-  it('does NOT trigger lazy query when local suggestions match the search term', () => {
+  it('offline: serves local suggestions without firing the lazy query', () => {
+    // Offline → localFirst short-circuits the network so cached/suggested
+    // brands resolve instantly with no request.
+    mockIsOnline = false;
     const recordedVariables: Array<Record<string, unknown>> = [];
     const { result } = renderHookWithApollo(
       () => useBrandAutocomplete({ suggestedBrands }),
@@ -161,6 +167,28 @@ describe('useBrandAutocomplete', () => {
     const names = result.current.displayItems.map(i => i.name);
     expect(names).toContain('Heinz');
     expect(names).toContain('Hellmann');
+  });
+
+  it('online: fires the lazy query even when local suggestions match the term', () => {
+    // Online must hit the full-catalog search rather than capping results to the
+    // curated suggestions — a brand outside the suggested/cached slice would
+    // otherwise be unreachable.
+    mockIsOnline = true;
+    const recordedVariables: Array<Record<string, unknown>> = [];
+    const { result } = renderHookWithApollo(
+      () => useBrandAutocomplete({ suggestedBrands }),
+      { operationMocks: [createSearchBrandsMock(recordedVariables)] },
+    );
+
+    act(() => {
+      result.current.handleSearchTermChange('he');
+    });
+
+    act(() => {
+      jest.advanceTimersByTime(300);
+    });
+
+    expect(recordedVariables).toContainEqual({ search: 'he', limit: 20 });
   });
 
   it('resets state when reset is called', () => {

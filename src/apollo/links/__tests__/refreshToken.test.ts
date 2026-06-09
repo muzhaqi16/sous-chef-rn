@@ -404,6 +404,34 @@ describe('refreshToken', () => {
       });
     });
 
+    it('handles AUTH_TOKEN_EXPIRED on the refresh mutation itself by triggering logout with auth_rejected', done => {
+      const mockTokenRefreshFailed = jest.fn();
+      (mockedUseStore.getState as jest.Mock).mockReturnValue({
+        refreshToken: 'expired-refresh-token',
+        tokenRefreshFailed: mockTokenRefreshFailed,
+        setTokens: jest.fn(),
+        setNeedsTokenRefresh: jest.fn(),
+      });
+      (mockedClient.mutate as jest.Mock).mockRejectedValue({
+        graphQLErrors: [
+          {
+            extensions: { code: 'AUTH_TOKEN_EXPIRED' },
+            message: 'Session ended',
+          },
+        ],
+      });
+      (mockedIsNetworkError as jest.Mock).mockReturnValue(false);
+      const mockForward = createMockForward();
+
+      const observable = attemptTokenRefresh(mockOperation, mockForward);
+      observable.subscribe({
+        error: () => {
+          expect(mockTokenRefreshFailed).toHaveBeenCalledWith('auth_rejected');
+          done();
+        },
+      });
+    });
+
     it('passes errorPolicy: "none" to client.mutate so errors reject and can be classified (not swallowed by the global "all")', done => {
       (mockedUseStore.getState as jest.Mock).mockReturnValue({
         refreshToken: 'mock-refresh-token',

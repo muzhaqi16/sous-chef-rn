@@ -2,6 +2,7 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useNavigation } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 
 import { AuthFormTemplate } from '#components/templates/AuthFormTemplate';
 import { AuthWrapper } from '#components/templates/AuthWrapper';
@@ -19,6 +20,7 @@ import { executeMutation } from '#/utils/compilerSafeWrappers';
 type SignUpValues = RegisterInput & { confirmPassword: string; name: string };
 
 export const SignUpScreen = (): React.JSX.Element => {
+  const { t } = useTranslation();
   const { goBack } = useNavigation();
   const isRegistering = useAppStore(state => state.authIsLoading);
   const { navigateToLogin } = useAuthNavigation();
@@ -47,43 +49,45 @@ export const SignUpScreen = (): React.JSX.Element => {
   return (
     <AuthWrapper testID="signup-screen">
       <AuthFormTemplate<SignUpValues>
-        title="Create account"
-        subtitle="Join Sous Chef today"
+        title={t('auth.signupTitle')}
+        subtitle={t('auth.signupSubtitle')}
         onBackPress={() => goBack()}
         fields={[
           {
             name: 'name',
-            label: 'Name',
-            placeholder: 'e.g John Doe',
+            label: t('auth.name'),
+            placeholder: t('auth.namePlaceholder'),
             component: NameInput,
             props: { testID: 'signup-name-input' },
           },
           {
             name: 'email',
-            label: 'Email address',
+            label: t('auth.emailAddress'),
             component: EmailInput,
             props: { testID: 'signup-email-input' },
           },
           {
             name: 'password',
-            label: 'Password',
+            label: t('auth.password'),
             component: PasswordInput,
             props: { testID: 'signup-password-input' },
           },
           {
             name: 'confirmPassword',
-            label: 'Confirm Password',
+            label: t('auth.confirmPassword'),
             component: PasswordInput,
             props: { testID: 'signup-confirm-password-input' },
           },
         ]}
         control={form.control}
         errors={form.formState.errors}
-        submitText={isRegistering ? 'Creating account…' : 'Sign Up'}
+        submitText={
+          isRegistering ? t('auth.creatingAccount') : t('auth.signUp')
+        }
         submitButtonTestID="signup-submit-button"
         onSubmit={form.handleSubmit(onSubmit, logValidationErrors)}
-        footerText="Already have an account?"
-        footerLinkText="Sign In"
+        footerText={t('auth.haveAccount')}
+        footerLinkText={t('auth.signIn')}
         footerLinkTestID="signup-login-link"
         onFooterLinkPress={() => navigateToLogin()}
         isLoading={isRegistering}

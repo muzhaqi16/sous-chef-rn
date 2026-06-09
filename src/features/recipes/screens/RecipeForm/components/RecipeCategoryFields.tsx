@@ -34,6 +34,12 @@ export const RecipeCategoryFields: React.FC<RecipeCategoryFieldsProps> = ({
   updateField,
 }) => {
   const { t } = useTranslation();
+  // Translate enum values via per-value keys, falling back to the formatted
+  // raw value (e.g. "Very Easy") when no translation is registered.
+  const formatDifficulty = (value: string) =>
+    t(`recipes.difficultyLabel.${value}`, formatEnum(value));
+  const formatStatus = (value: string) =>
+    t(`recipes.recipeStatus.${value}`, formatEnum(value));
   return (
     <>
       {!!state.difficulty && (
@@ -42,7 +48,7 @@ export const RecipeCategoryFields: React.FC<RecipeCategoryFieldsProps> = ({
           options={DIFFICULTIES}
           value={state.difficulty}
           onChange={v => updateField('difficulty', v)}
-          formatLabel={formatEnum}
+          formatLabel={formatDifficulty}
         />
       )}
       {!state.difficulty && (
@@ -51,7 +57,7 @@ export const RecipeCategoryFields: React.FC<RecipeCategoryFieldsProps> = ({
           options={DIFFICULTIES}
           value={Difficulty.Medium}
           onChange={v => updateField('difficulty', v)}
-          formatLabel={formatEnum}
+          formatLabel={formatDifficulty}
         />
       )}
 
@@ -67,7 +73,7 @@ export const RecipeCategoryFields: React.FC<RecipeCategoryFieldsProps> = ({
         options={STATUSES}
         value={state.status}
         onChange={v => updateField('status', v)}
-        formatLabel={formatEnum}
+        formatLabel={formatStatus}
       />
     </>
   );

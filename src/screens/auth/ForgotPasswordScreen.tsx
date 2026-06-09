@@ -1,6 +1,7 @@
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
+import { useTranslation } from 'react-i18next';
 import { AuthFormTemplate } from '../../components/templates/AuthFormTemplate';
 import { EmailInput } from '../../components/atoms/EmailInput';
 import { getForgotPasswordValidationSchema } from '#utils/validation/auth';
@@ -22,6 +23,7 @@ type ForgotPasswordValues = {
 };
 
 export function ForgotPasswordScreen() {
+  const { t } = useTranslation();
   const { navigateToLogin } = useAuthNavigation();
   const [forgotPasswordApi] = useMutation(ForgotPasswordDocument);
   const toast = useToast();
@@ -63,23 +65,23 @@ export function ForgotPasswordScreen() {
   return (
     <AuthWrapper testID="forgot-password-screen">
       <AuthFormTemplate<ForgotPasswordValues>
-        title="Forgot password"
-        subtitle="Enter your email to reset"
+        title={t('auth.forgotPasswordTitle')}
+        subtitle={t('auth.forgotPasswordSubtitle')}
         fields={[
           {
             name: 'email',
-            label: 'Email address',
+            label: t('auth.emailAddress'),
             component: EmailInput,
             props: { testID: 'forgot-password-email-input' },
           },
         ]}
         control={control}
         errors={errors}
-        submitText="Send Reset Link"
+        submitText={t('auth.sendResetLink')}
         submitButtonTestID="forgot-password-submit-button"
         onSubmit={handleSubmit(sendResetEmail, logValidationErrors)}
-        footerText="Remembered it?"
-        footerLinkText="Sign In"
+        footerText={t('auth.rememberedIt')}
+        footerLinkText={t('auth.signIn')}
         footerLinkTestID="forgot-password-login-link"
         onFooterLinkPress={() => navigateToLogin()}
       />

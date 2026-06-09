@@ -328,21 +328,29 @@ Defaults:
 
 All autocomplete hooks use `useAutocompleteSearch` from `src/hooks/ui/useAutocompleteSearch.ts`.
 When a hook provides `fallbackItems` + `filterFallback`, it can opt into **local-first** search
-by passing `localFirst: true`. This filters cached/local items first and only fires the API
-if no local matches exist — eliminating unnecessary network requests for common lookups.
+via `localFirst`. When `localFirst` is true, a local match short-circuits the network query
+entirely. That is only safe when the warmed cache is **complete** for the dataset — otherwise an
+online user whose term collides with a cached entry never reaches the rest of the catalog. So:
+
+- **Complete reference set → `localFirst: true`.** Small, fully-warmed sets (units).
+- **Bounded slice of a larger catalog → `localFirst: !isOnline`.** Warm the cache for offline use,
+  but online always hit the full-catalog search. Stores/brands/categories warm only the first
+  ~100 rows (`GetStores`/`GetBrands`/`GetCategories first: 100`), and items keep an LRU of only
+  what the user has seen, so all four use `!isOnline`.
 
 **Current status:**
 
 | Hook                             | `localFirst` | Notes                                       |
 |----------------------------------|:------------:|---------------------------------------------|
-| `useUnitAutocomplete`            | `true`       | Uses `cachedUnits` from Zustand             |
-| `useBrandAutocomplete`           | `true`       | Uses `suggestedBrands` fallback              |
-| `useCategoryAutocomplete`        | `false`      | No cached data yet — add when categories are cached |
-| `useItemAutocomplete`            | `false`      | No cached data yet — add when items are cached |
+| `useUnitAutocomplete`            | `true`       | `cachedUnits` is the complete common-units set |
+| `useBrandAutocomplete`           | `!isOnline`  | Warmed cache is first ~100 brands; full search online |
+| `useCategoryAutocomplete`        | `!isOnline`  | Warmed cache is first ~100 categories; full search online |
+| `useStoreAutocomplete`           | `!isOnline`  | Warmed cache is first ~100 stores; full search online |
+| `useItemAutocomplete`            | `!isOnline`  | Seen-items LRU only; full catalog search online |
 | `useStorageLocationAutocomplete` | N/A          | Fully local, doesn't use `useAutocompleteSearch` |
 
-When adding cached data to a new autocomplete hook, pass `localFirst: true` along with
-`fallbackItems` and `filterFallback` to enable local-first behavior.
+When adding cached data to a new autocomplete hook, pass `localFirst: !isOnline` unless the warmed
+cache is provably complete for the dataset (only then is unconditional `true` correct).
 
 **Staleness guard:** `useAutocompleteSearch` tracks the last term sent to `search()` via
 `lastFiredTerm` state. API results are only displayed when `searchTerm.startsWith(lastFiredTerm)`

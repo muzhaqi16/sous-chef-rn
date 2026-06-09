@@ -172,7 +172,7 @@ export function usePantryItemMutations({
   const addItem = async (input: PantryItemInput) => {
     if (!pantryId) return undefined;
 
-    // Local-first: mint the permanent id client-side (cuid v1). The server stores
+    // Local-first: mint the permanent id client-side (cuid2). The server stores
     // it as the PK; queue replay sends it as `clientId` → idempotent re-sends.
     const id = generateEntityId();
 

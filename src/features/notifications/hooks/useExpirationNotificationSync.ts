@@ -7,7 +7,9 @@
  * - Mark an expiration notification as read
  *
  * Mirrors useNotificationSync pattern: optimistic local update via Zustand,
- * then fire GraphQL mutation. Rollback on server error (not network).
+ * then fire GraphQL mutation with `context: { localFirst: true }` so an offline
+ * action is queued and replayed on reconnect (idempotent server-side) instead
+ * of being lost. Rollback on server error (not network).
  *
  * Uses executeMutation from compilerSafeWrappers to avoid try-catch in the hook body.
  */
@@ -59,6 +61,7 @@ export function useExpirationNotificationSync() {
           variables: {
             input: { notificationId: expirationNotificationId, action },
           },
+          context: { localFirst: true },
         }),
       (error: unknown) => {
         errorService.reportError(error, {
@@ -80,6 +83,7 @@ export function useExpirationNotificationSync() {
       () =>
         dismissMutation({
           variables: { input: { notificationId: expirationNotificationId } },
+          context: { localFirst: true },
         }),
       (error: unknown) => {
         errorService.reportError(error, {
@@ -95,6 +99,7 @@ export function useExpirationNotificationSync() {
       () =>
         markReadMutation({
           variables: { input: { notificationId: expirationNotificationId } },
+          context: { localFirst: true },
         }),
       (error: unknown) => {
         errorService.reportError(error, {

@@ -1,5 +1,10 @@
-import { ApolloLink, Observable, gql } from '@apollo/client';
-import type { ApolloClient } from '@apollo/client';
+import {
+  ApolloClient,
+  ApolloLink,
+  InMemoryCache,
+  Observable,
+  gql,
+} from '@apollo/client';
 import { OperationTypeNode, type DocumentNode } from 'graphql';
 import { createOfflineModeLink } from '../offlineModeLink';
 import { useStore } from '#store';
@@ -35,6 +40,7 @@ const GET_USER_SETTINGS = gql`
 function makeOperation(
   query: DocumentNode,
   operationName: string,
+  cache: InMemoryCache = new InMemoryCache(),
 ): ApolloLink.Operation {
   return {
     query,
@@ -44,7 +50,9 @@ function makeOperation(
     getContext: () => ({}),
     setContext: jest.fn(),
     extensions: {},
-    client: {} as ApolloClient,
+    // The offline short-circuit reads the query back out of the cache via
+    // operation.client.cache, so the operation needs a real client + cache.
+    client: new ApolloClient({ cache, link: ApolloLink.empty() }),
   };
 }
 
@@ -64,19 +72,21 @@ describe('createOfflineModeLink', () => {
 
   beforeEach(() => jest.clearAllMocks());
 
-  /** Subscribe and report whether the observable emitted data / completed. */
+  /** Subscribe and report whether the observable emitted / completed + the value. */
   function observe(observable: ReturnType<ApolloLink['request']>) {
     let emitted = false;
     let completed = false;
+    let value: ApolloLink.Result | undefined;
     observable?.subscribe({
-      next: () => {
+      next: result => {
         emitted = true;
+        value = result;
       },
       complete: () => {
         completed = true;
       },
     });
-    return { emitted, completed };
+    return { emitted, completed, value };
   }
 
   it('forwards queries when online and offline mode disabled', () => {
@@ -89,18 +99,19 @@ describe('createOfflineModeLink', () => {
     expect(forward).toHaveBeenCalled();
   });
 
-  it('blocks queries when offline mode is enabled', () => {
+  it('blocks queries when offline mode is enabled (emits cache-miss null, then completes)', () => {
     mockedGetState.mockReturnValue({
       offlineModeEnabled: true,
       isOnline: true,
     });
     const forward = makeForward();
-    const { emitted, completed } = observe(
+    const { emitted, completed, value } = observe(
       link.request(makeOperation(MOCK_QUERY, 'GetItems'), forward),
     );
     expect(forward).not.toHaveBeenCalled();
-    expect(emitted).toBe(false);
+    expect(emitted).toBe(true);
     expect(completed).toBe(true);
+    expect(value).toEqual({ data: null });
   });
 
   it('blocks queries when the device is offline (isOnline === false)', () => {
@@ -109,12 +120,13 @@ describe('createOfflineModeLink', () => {
       isOnline: false,
     });
     const forward = makeForward();
-    const { emitted, completed } = observe(
+    const { emitted, completed, value } = observe(
       link.request(makeOperation(MOCK_QUERY, 'GetItems'), forward),
     );
     expect(forward).not.toHaveBeenCalled();
-    expect(emitted).toBe(false);
+    expect(emitted).toBe(true);
     expect(completed).toBe(true);
+    expect(value).toEqual({ data: null });
   });
 
   it('blocks queries when the API circuit breaker is open (apiReachable === false)', () => {
@@ -124,12 +136,32 @@ describe('createOfflineModeLink', () => {
       apiReachable: false,
     });
     const forward = makeForward();
-    const { emitted, completed } = observe(
+    const { emitted, completed, value } = observe(
       link.request(makeOperation(MOCK_QUERY, 'GetItems'), forward),
     );
     expect(forward).not.toHaveBeenCalled();
-    expect(emitted).toBe(false);
+    expect(emitted).toBe(true);
     expect(completed).toBe(true);
+    expect(value).toEqual({ data: null });
+  });
+
+  it('serves cached data for blocked queries (idempotent re-emit, no clobber)', () => {
+    mockedGetState.mockReturnValue({
+      offlineModeEnabled: false,
+      isOnline: false,
+    });
+    const cache = new InMemoryCache();
+    const cachedData = { items: [{ __typename: 'Item', id: '1' }] };
+    cache.writeQuery({ query: MOCK_QUERY, data: cachedData });
+
+    const forward = makeForward();
+    const { emitted, completed, value } = observe(
+      link.request(makeOperation(MOCK_QUERY, 'GetItems', cache), forward),
+    );
+    expect(forward).not.toHaveBeenCalled();
+    expect(emitted).toBe(true);
+    expect(completed).toBe(true);
+    expect(value?.data).toEqual(cachedData);
   });
 
   it('lets allow-listed queries through even when offline', () => {

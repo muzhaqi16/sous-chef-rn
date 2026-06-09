@@ -9,7 +9,7 @@ import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper
 import { useProfileData } from '#features/profile/hooks/useProfileData';
 import { useUser } from '#store/useAppStore';
 import { PERSONAL_INFO_CONFIG } from '#/config/settingsConfig';
-import { useMutation } from '@apollo/client/react';
+import { useApolloClient, useMutation } from '@apollo/client/react';
 import { UpdateUserProfileDocument } from '#operations/auth/user.generated';
 import {
   ProfileVisibility,
@@ -17,6 +17,8 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import { dateStringToISO, extractDateString } from '#utils/dateUtils';
 import { errorService } from '#/services/errorService';
+import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { optimisticFieldUpdate } from '#/apollo/utils/optimisticFieldUpdate';
 import {
   executeMutation,
   executeRefreshWithFinally,
@@ -65,6 +67,7 @@ export const PersonalInformationScreen: React.FC = () => {
   const { t } = useTranslation();
   const { profile, refetch } = useProfileData();
   const user = useUser();
+  const client = useApolloClient();
   const [updateProfileMutation] = useMutation(UpdateUserProfileDocument);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -72,32 +75,25 @@ export const PersonalInformationScreen: React.FC = () => {
     executeRefreshWithFinally(() => refetch(), setRefreshing);
   };
 
-  const updateProfile = (input: UpdateUserProfileInput) => {
+  const updateProfile = async (input: UpdateUserProfileInput) => {
     if (!profile) return;
-    executeMutation(
+    const cacheId = client.cache.identify({
+      __typename: 'UserProfile',
+      id: profile.id,
+    });
+    const { revert } = optimisticFieldUpdate(
+      client.cache,
+      cacheId,
+      profile,
+      input,
+      'Update Profile',
+    );
+
+    const result = await executeMutation(
       () =>
         updateProfileMutation({
           variables: { input },
-          // Apollo auto-normalizes the UserProfile by id from the mutation
-          // response, so the cached `me.profile` updates without a refetch.
-          optimisticResponse: {
-            __typename: 'Mutation',
-            updateProfile: {
-              __typename: 'UpdateProfilePayload',
-              userProfile: {
-                ...profile,
-                ...input,
-                // Non-null in the mutation's userProfile selection but nullable
-                // on the cached profile — default them for the optimistic shape.
-                profileVisibility:
-                  input.profileVisibility ??
-                  profile.profileVisibility ??
-                  ProfileVisibility.Public,
-                showEmail: input.showEmail ?? profile.showEmail ?? false,
-                showPhone: input.showPhone ?? profile.showPhone ?? false,
-              },
-            },
-          },
+          context: { localFirst: true },
         }),
       error => {
         errorService.reportError(error, {
@@ -105,6 +101,17 @@ export const PersonalInformationScreen: React.FC = () => {
         });
       },
     );
+
+    // Rejection restores the snapshot; a queued (null) result keeps the write.
+    if (
+      classifyCreateResult(
+        result || null,
+        'updateProfile',
+        'UpdateProfilePayload',
+      ) === 'rejected'
+    ) {
+      revert();
+    }
   };
 
   const translateOptions = (

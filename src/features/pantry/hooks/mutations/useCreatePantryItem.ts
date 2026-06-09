@@ -226,6 +226,12 @@ export function useCreatePantryItem({
                         quantity: restockQuantity,
                       },
                     },
+                    // Local-first: replay-safe via syncRestockPantryItem
+                    // (operationId dedups the restock ledger row if queued).
+                    context: {
+                      localFirst: true,
+                      operationId: generateEntityId(),
+                    },
                   }),
                 'Restock pantry item error:',
               );

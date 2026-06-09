@@ -101,12 +101,13 @@ describe('useCreateShoppingList', () => {
       created = await result.current.createShoppingList({ name: 'Weekly' });
     });
 
-    // The optimistic list was built with a real cuid v1 id (the row's PK)
+    // The optimistic list was built with a real cuid2 id (the row's PK)
     // from the create input and the auth identity.
     expect(buildOptimisticShoppingList).toHaveBeenCalledTimes(1);
     const [, mintedId, input, owner] = jest.mocked(buildOptimisticShoppingList)
       .mock.calls[0];
-    expect(mintedId).toMatch(/^c[a-z0-9]{24}$/);
+    // Matches the server id validator (cuid2 or legacy cuid v1 / 24-char hex).
+    expect(mintedId).toMatch(/^(?:[a-z][0-9a-z]{23,31}|[0-9a-fA-F]{24})$/);
     expect(input).toEqual({ name: 'Weekly' });
     expect(owner).toEqual(mockUser);
 
@@ -139,7 +140,7 @@ describe('useCreateShoppingList', () => {
       created = await result.current.createShoppingList({ name: 'Offline' });
     });
 
-    expect(created?.id).toMatch(/^c[a-z0-9]{24}$/);
+    expect(created?.id).toMatch(/^(?:[a-z][0-9a-z]{23,31}|[0-9a-fA-F]{24})$/);
     expect(created?.name).toBe('Offline');
     expect(revertOptimisticShoppingList).not.toHaveBeenCalled();
   });

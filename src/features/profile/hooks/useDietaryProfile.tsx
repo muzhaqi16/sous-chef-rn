@@ -1,6 +1,6 @@
 import { useUser } from '#store/useAppStore';
 import { usePreservedQueryData } from '#/hooks/apollo/usePreservedQueryData';
-import { useMutation, useQuery } from '@apollo/client/react';
+import { useApolloClient, useMutation, useQuery } from '@apollo/client/react';
 import type { Reference } from '@apollo/client';
 import {
   GetDietaryProfileDocument,
@@ -15,10 +15,8 @@ import {
   HealthGoal,
   RestrictionSeverity,
 } from '#/graphql/generated/schemaTypes';
-import {
-  enhanceWithVersion,
-  buildOptimisticMutationResponse,
-} from '#/apollo/utils/createOptimisticResponse';
+import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { optimisticFieldUpdate } from '#/apollo/utils/optimisticFieldUpdate';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { handleMutationError } from '#/utils/errorHandlers';
@@ -65,18 +63,13 @@ export const useDietaryProfile = () => {
   // Preserve last successful data when errorPolicy: 'ignore' returns undefined on error
   const profile = usePreservedQueryData(data?.me?.dietaryProfile, null);
 
+  const client = useApolloClient();
+
   // ===== MUTATION 1: Update Dietary Profile =====
+  // Local-first: the wrapper writes the changed fields to the cached
+  // DietaryProfile PERMANENTLY before firing (an optimisticResponse would be
+  // torn down on the offline queue's null result) and reverts on rejection.
   const [updateProfile] = useMutation(UpdateDietaryProfileDocument, {
-    // Uses automatic normalization - mutation returns full DietaryProfile fragment
-    // No manual cache update needed (Pattern 2)
-    optimisticResponse: (variables, { IGNORE }) => {
-      if (!profile) return IGNORE;
-      return buildOptimisticMutationResponse(
-        'updateDietaryProfile',
-        'UpdateDietaryProfilePayload',
-        { dietaryProfile: enhanceWithVersion(profile, variables.input) },
-      );
-    },
     onError: error => {
       handleMutationError(error, { operation: 'Update Dietary Profile' });
     },
@@ -95,7 +88,7 @@ export const useDietaryProfile = () => {
 
       const newRestriction = data.addRestriction.dietaryRestriction;
 
-      // Add restriction to DietaryProfile.restrictions array (Pattern 1)
+      // Add the new restriction reference to DietaryProfile.restrictions
       cache.modify({
         id: cache.identify({ __typename: 'DietaryProfile', id: profile.id }),
         fields: {
@@ -124,25 +117,9 @@ export const useDietaryProfile = () => {
   });
 
   // ===== MUTATION 3: Update Dietary Restriction =====
+  // Local-first: the wrapper writes the changed restriction fields to cache
+  // PERMANENTLY before firing and reverts on rejection.
   const [updateRestriction] = useMutation(UpdateDietaryRestrictionDocument, {
-    // Uses automatic normalization - mutation returns full DietaryRestriction fragment
-    // No manual cache update needed (Pattern 2)
-    optimisticResponse: (variables, { IGNORE }) => {
-      const currentRestriction = profile?.restrictions?.find(
-        r => r.id === variables.input.id,
-      );
-      if (!currentRestriction) return IGNORE;
-      return buildOptimisticMutationResponse(
-        'updateRestriction',
-        'UpdateRestrictionPayload',
-        {
-          dietaryRestriction: enhanceWithVersion(
-            currentRestriction,
-            variables.input,
-          ),
-        },
-      );
-    },
     onError: error => {
       handleMutationError(error, { operation: 'Update Dietary Restriction' });
     },
@@ -150,7 +127,7 @@ export const useDietaryProfile = () => {
 
   // ===== MUTATION 4: Remove Dietary Restriction =====
   const [removeRestriction] = useMutation(RemoveDietaryRestrictionDocument, {
-    // No optimistic response for deletes (following Pattern 4 recommendation)
+    // No optimistic response for deletes — the cache removal runs on the response
     update: (cache, { data }, { variables }) => {
       if (
         data?.removeRestriction?.__typename !== 'RemoveRestrictionPayload' ||
@@ -161,7 +138,7 @@ export const useDietaryProfile = () => {
 
       const restrictionId = variables.input.id;
 
-      // Step 1: Remove from DietaryProfile.restrictions array (Pattern 4)
+      // Step 1: Remove the restriction reference from DietaryProfile.restrictions
       cache.modify({
         id: cache.identify({ __typename: 'DietaryProfile', id: profile.id }),
         fields: {
@@ -239,10 +216,35 @@ export const useDietaryProfile = () => {
       ]),
     );
 
+    // Permanent optimistic write of the changed (flat) fields + snapshot revert.
+    const cacheId = profile
+      ? client.cache.identify({ __typename: 'DietaryProfile', id: profile.id })
+      : undefined;
+    const { revert } = optimisticFieldUpdate(
+      client.cache,
+      cacheId,
+      profile,
+      cleanedUpdates,
+      'Update Dietary Profile',
+    );
+
     const result = await executeMutation(
-      () => updateProfile({ variables: { input: cleanedUpdates } }),
+      () =>
+        updateProfile({
+          variables: { input: cleanedUpdates },
+          context: { localFirst: true },
+        }),
       'Failed to update dietary profile',
     );
+    if (
+      classifyCreateResult(
+        result || null,
+        'updateDietaryProfile',
+        'UpdateDietaryProfilePayload',
+      ) === 'rejected'
+    ) {
+      revert();
+    }
     return result ? !!result.data : false;
   };
 
@@ -262,6 +264,9 @@ export const useDietaryProfile = () => {
           variables: {
             input: { ...restriction, severity, notes, appliesToHomeId },
           },
+          // No optimisticResponse to tear down — queue offline and replay
+          // idempotently; the cache update runs on the (replayed) response.
+          context: { localFirst: true },
         }),
       'Failed to add dietary restriction',
     );
@@ -275,13 +280,37 @@ export const useDietaryProfile = () => {
       notes?: string;
     },
   ) => {
+    // Permanent optimistic write of the changed restriction fields + revert.
+    const cacheId = client.cache.identify({
+      __typename: 'DietaryRestriction',
+      id,
+    });
+    const currentRestriction = profile?.restrictions?.find(r => r.id === id);
+    const { revert } = optimisticFieldUpdate(
+      client.cache,
+      cacheId,
+      currentRestriction,
+      updates,
+      'Update Dietary Restriction',
+    );
+
     const result = await executeMutation(
       () =>
         updateRestriction({
           variables: { input: { id, ...updates } },
+          context: { localFirst: true },
         }),
       'Failed to update dietary restriction',
     );
+    if (
+      classifyCreateResult(
+        result || null,
+        'updateRestriction',
+        'UpdateRestrictionPayload',
+      ) === 'rejected'
+    ) {
+      revert();
+    }
     return result ? !!result.data : false;
   };
 
@@ -290,6 +319,9 @@ export const useDietaryProfile = () => {
       () =>
         removeRestriction({
           variables: { input: { id } },
+          // No optimisticResponse to tear down — queue offline and replay
+          // idempotently; the cache removal runs on the (replayed) response.
+          context: { localFirst: true },
         }),
       'Failed to remove dietary restriction',
     );

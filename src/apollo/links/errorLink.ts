@@ -19,6 +19,7 @@ import { attemptTokenRefresh, getRefreshState } from './refreshToken';
 // Treating FORBIDDEN as auth error causes unnecessary token refresh cycles
 const isAuthError = (code: string, msg: string) =>
   code === 'UNAUTHENTICATED' ||
+  code === 'AUTH_TOKEN_EXPIRED' ||
   ['expired', 'unauthorized', 'invalid token', 'jwt'].some(term =>
     msg.toLowerCase().includes(term),
   );

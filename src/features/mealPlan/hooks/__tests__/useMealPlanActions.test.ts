@@ -65,7 +65,7 @@ describe('useMealPlanActions', () => {
         name: 'Week Plan',
         startDate: '2025-06-01',
         endDate: '2025-06-07',
-        id: expect.stringMatching(/^c[a-z0-9]{24}$/),
+        id: expect.stringMatching(/^(?:[a-z][0-9a-z]{23,31}|[0-9a-fA-F]{24})$/),
       },
     });
   });

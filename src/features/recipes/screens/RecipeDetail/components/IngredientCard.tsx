@@ -1,5 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
@@ -28,8 +29,9 @@ export const IngredientCard: React.FC<IngredientCardProps> = ({
   isAdded,
   onPress,
 }) => {
+  const { t } = useTranslation();
   const isBackend = isBackendIngredient(ingredient);
-  const ingredientName = ingredient.name || 'Unknown';
+  const ingredientName = ingredient.name || t('recipes.unknownIngredient');
   const quantity = (isBackend ? ingredient.quantity : ingredient.amount) || '';
   const unit = isBackend
     ? ingredient.unit?.symbol || ''

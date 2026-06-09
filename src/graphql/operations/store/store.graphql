@@ -10,3 +10,17 @@ query SearchStores($search: String!, $limit: Int) {
     totalCount
   }
 }
+
+# Warm the store autocomplete cache for offline use (API caps `first` at 100 per
+# page). Reference data preloaded by useDataPreloading while online.
+query GetStores($first: Int = 100) {
+  stores(first: $first) {
+    edges {
+      node {
+        id
+        name
+        address
+      }
+    }
+  }
+}

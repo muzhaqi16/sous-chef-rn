@@ -560,7 +560,7 @@ export type BatchAddShoppingListItemInput = {
   /** Client-provided ID for matching results (optional) */
   clientId?: InputMaybe<Scalars['String']['input']>;
   /**
-   * Optional client-generated permanent ID (CUID v1) for this item. Persisted as
+   * Optional client-generated permanent ID (CUID2) for this item. Persisted as
    * the row primary key so a re-synced batch resolves to the same rows (idempotent).
    * Distinct from clientId below, which is only a response-matching token.
    */
@@ -1589,7 +1589,7 @@ export type CreateHomeInput = {
   currency?: InputMaybe<Scalars['String']['input']>;
   defaultPantryName?: InputMaybe<Scalars['String']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
-  /** Optional client-generated permanent ID (CUID v1) for offline-first idempotency. */
+  /** Optional client-generated permanent ID (CUID2) for offline-first idempotency. */
   id?: InputMaybe<Scalars['ID']['input']>;
   isPublic?: InputMaybe<Scalars['Boolean']['input']>;
   maxMembers?: InputMaybe<Scalars['Int']['input']>;
@@ -1672,7 +1672,7 @@ export type CreateMealPlanInput = {
    * If not provided, the plan is personal (user-scoped only).
    */
   homeId?: InputMaybe<Scalars['ID']['input']>;
-  /** Optional client-generated permanent ID (CUID v1) for offline-first idempotency. */
+  /** Optional client-generated permanent ID (CUID2) for offline-first idempotency. */
   id?: InputMaybe<Scalars['ID']['input']>;
   name: Scalars['String']['input'];
   planType: MealPlanType;
@@ -1689,7 +1689,7 @@ export type CreateMealPlanItemInput = {
   estimatedCost?: InputMaybe<Scalars['Float']['input']>;
   fat?: InputMaybe<Scalars['Float']['input']>;
   /**
-   * Optional client-generated permanent ID (CUID v1) for offline-first idempotency.
+   * Optional client-generated permanent ID (CUID2) for offline-first idempotency.
    * On a retry that collides with the (mealPlanId, date, mealType, recipeId) unique
    * key, the existing row is returned (its original id wins).
    */
@@ -1728,7 +1728,7 @@ export type CreateMealTemplateInput = {
    * If not provided, the template is personal (user-scoped only).
    */
   homeId?: InputMaybe<Scalars['ID']['input']>;
-  /** Optional client-generated permanent ID (CUID v1) for offline-first idempotency. */
+  /** Optional client-generated permanent ID (CUID2) for offline-first idempotency. */
   id?: InputMaybe<Scalars['ID']['input']>;
   /** Initial items to add to the template */
   items?: InputMaybe<Array<MealTemplateItemInput>>;
@@ -1812,10 +1812,10 @@ export type CreatePantryInput = {
   description?: InputMaybe<Scalars['String']['input']>;
   homeId: Scalars['ID']['input'];
   /**
-   * Optional client-generated permanent ID (CUID v1, e.g. "c…", 25 chars).
+   * Optional client-generated permanent ID (CUID2).
    * Offline-first clients mint this as the row's permanent primary key so a
    * re-synced create resolves to the same row (idempotent) instead of duplicating.
-   * When omitted, the server generates one via @default(cuid()).
+   * When omitted, the server generates one via @default(cuid(2)).
    */
   id?: InputMaybe<Scalars['ID']['input']>;
   isDefault?: InputMaybe<Scalars['Boolean']['input']>;
@@ -1830,11 +1830,11 @@ export type CreatePantryItemInput = {
   expiresAt?: InputMaybe<Scalars['String']['input']>;
   forceAdd?: InputMaybe<Scalars['Boolean']['input']>;
   /**
-   * Optional client-generated permanent ID (CUID v1, e.g. "c…", 25 chars).
+   * Optional client-generated permanent ID (CUID2).
    * Offline-first clients mint this as the row's permanent primary key so a
    * re-synced create resolves to the same row (idempotent) instead of duplicating.
-   * When omitted, the server generates one via @default(cuid()). Must match the
-   * CUID v1 format; invalid formats are rejected by ID validation.
+   * When omitted, the server generates one via @default(cuid(2)). Must match the
+   * CUID2 format; invalid formats are rejected by ID validation.
    */
   id?: InputMaybe<Scalars['ID']['input']>;
   item?: InputMaybe<InlineItemInput>;
@@ -1922,7 +1922,7 @@ export type CreateRecipeInput = {
   externalSourceId?: InputMaybe<Scalars['String']['input']>;
   externalSourceUrl?: InputMaybe<Scalars['String']['input']>;
   healthGoals?: InputMaybe<Array<HealthGoal>>;
-  /** Optional client-generated permanent ID (CUID v1) for offline-first idempotency. */
+  /** Optional client-generated permanent ID (CUID2) for offline-first idempotency. */
   id?: InputMaybe<Scalars['ID']['input']>;
   imageUrl?: InputMaybe<Scalars['String']['input']>;
   ingredients: Array<RecipeIngredientInput>;
@@ -1969,10 +1969,10 @@ export type CreateShoppingListInput = {
   description?: InputMaybe<Scalars['String']['input']>;
   homeId?: InputMaybe<Scalars['ID']['input']>;
   /**
-   * Optional client-generated permanent ID (CUID v1, e.g. "c…", 25 chars).
+   * Optional client-generated permanent ID (CUID2).
    * Offline-first clients mint this as the row's permanent primary key so a
    * re-synced create resolves to the same row (idempotent) instead of duplicating.
-   * When omitted, the server generates one via @default(cuid()).
+   * When omitted, the server generates one via @default(cuid(2)).
    */
   id?: InputMaybe<Scalars['ID']['input']>;
   isDefault?: InputMaybe<Scalars['Boolean']['input']>;
@@ -1982,7 +1982,7 @@ export type CreateShoppingListInput = {
 
 export type CreateShoppingListItemFromRecipeIngredientInput = {
   /**
-   * Optional client-generated permanent ID (CUID v1) for the created item;
+   * Optional client-generated permanent ID (CUID2) for the created item;
    * persisted as the row primary key for offline-first idempotency.
    */
   id?: InputMaybe<Scalars['ID']['input']>;
@@ -2002,11 +2002,11 @@ export type CreateShoppingListItemInput = {
   brand?: InputMaybe<BrandReferenceInput>;
   category?: InputMaybe<Scalars['String']['input']>;
   /**
-   * Optional client-generated permanent ID (CUID v1, e.g. "c…", 25 chars).
+   * Optional client-generated permanent ID (CUID2).
    * Offline-first clients mint this as the row's permanent primary key so a
    * re-synced create resolves to the same row (idempotent) instead of duplicating.
-   * When omitted, the server generates one via @default(cuid()). Must match the
-   * CUID v1 format; invalid formats are rejected by ID validation.
+   * When omitted, the server generates one via @default(cuid(2)). Must match the
+   * CUID2 format; invalid formats are rejected by ID validation.
    */
   id?: InputMaybe<Scalars['ID']['input']>;
   itemId?: InputMaybe<Scalars['ID']['input']>;
@@ -2051,7 +2051,7 @@ export type CreateStorageLocationInput = {
   homeId: Scalars['ID']['input'];
   /** Optional icon identifier */
   icon?: InputMaybe<Scalars['String']['input']>;
-  /** Optional client-generated permanent ID (CUID v1) for offline-first idempotency. */
+  /** Optional client-generated permanent ID (CUID2) for offline-first idempotency. */
   id?: InputMaybe<Scalars['ID']['input']>;
   /** Whether the location has climate control (default: false) */
   isClimateControlled?: InputMaybe<Scalars['Boolean']['input']>;
@@ -2156,7 +2156,7 @@ export type CreateUserProfileInput = {
   firstName?: InputMaybe<Scalars['String']['input']>;
   gender?: InputMaybe<Scalars['String']['input']>;
   /**
-   * Optional client-generated permanent ID (CUID v1). Note: a profile is 1:1 with
+   * Optional client-generated permanent ID (CUID2). Note: a profile is 1:1 with
    * the user (userId is unique), so creation is already idempotent per user; this
    * is accepted for consistency with other offline-first creates.
    */
@@ -6196,18 +6196,42 @@ export type Mutation = {
   setupUnitConversion: SetupUnitConversionResult;
   /** Share a shopping list publicly with an optional share code. */
   shareShoppingList: ShareShoppingListResult;
+  /**
+   * Idempotent offline-sync quantity adjustment to a physical count. Replaying
+   * the same operationId does not re-scale batches or pollute the ledger.
+   */
+  syncAdjustPantryItemQuantity: SyncPantryDeltaResult;
+  /**
+   * Idempotent offline-sync consumption/usage (incl. waste-via-usage).
+   * Replaying the same operationId does not decrement quantity twice.
+   */
+  syncConsumePantryItem: SyncPantryDeltaResult;
   /** Sync a pantry item deletion from an offline client. */
   syncDeletePantryItem: SyncPantryItemResult;
   /** Sync a shopping list item deletion from an offline client. */
   syncDeleteShoppingListItem: SyncShoppingListItemResult;
-  /** Sync a pantry item reorder from an offline client. */
-  syncMovePantryItem: SyncPantryItemResult;
   /** Sync a shopping list item reorder from an offline client. */
   syncMoveShoppingListItem: SyncShoppingListItemResult;
+  /**
+   * Idempotent offline-sync open-batch. Naturally idempotent — replaying (or
+   * opening an already-open batch) returns current state as a no-op.
+   */
+  syncOpenPantryItemBatch: SyncPantryDeltaResult;
   /** Sync a pantry item from an offline client. */
   syncPantryItem: SyncPantryItemResult;
+  /**
+   * Idempotent offline-sync restock. Replaying the same operationId returns
+   * current state without adding inventory again (no double-count).
+   * Authorization is enforced at the service layer.
+   */
+  syncRestockPantryItem: SyncPantryDeltaResult;
   /** Sync a shopping list item from an offline client. */
   syncShoppingListItem: SyncShoppingListItemResult;
+  /**
+   * Idempotent offline-sync whole-batch waste. Replaying the same operationId
+   * returns current state without writing a phantom waste ledger entry.
+   */
+  syncWastePantryItemBatch: SyncPantryDeltaResult;
   /** Toggle a helpful vote on a recipe review. */
   toggleReviewHelpful: ToggleReviewHelpfulResult;
   /** Toggle the purchased state of a shopping list item. */
@@ -8539,6 +8563,32 @@ export type MutationShareShoppingListArgs = {
  * win, so payload types that genuinely benefit from caching (e.g. read-
  * through reservation tokens) can opt back in.
  */
+export type MutationSyncAdjustPantryItemQuantityArgs = {
+  input: SyncAdjustPantryItemQuantityInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
+export type MutationSyncConsumePantryItemArgs = {
+  input: SyncConsumePantryItemInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
 export type MutationSyncDeletePantryItemArgs = {
   input: SyncDeletePantryItemInput;
 };
@@ -8565,8 +8615,8 @@ export type MutationSyncDeleteShoppingListItemArgs = {
  * win, so payload types that genuinely benefit from caching (e.g. read-
  * through reservation tokens) can opt back in.
  */
-export type MutationSyncMovePantryItemArgs = {
-  input: SyncMovePantryItemInput;
+export type MutationSyncMoveShoppingListItemArgs = {
+  input: SyncMoveShoppingListItemInput;
 };
 
 
@@ -8578,8 +8628,8 @@ export type MutationSyncMovePantryItemArgs = {
  * win, so payload types that genuinely benefit from caching (e.g. read-
  * through reservation tokens) can opt back in.
  */
-export type MutationSyncMoveShoppingListItemArgs = {
-  input: SyncMoveShoppingListItemInput;
+export type MutationSyncOpenPantryItemBatchArgs = {
+  input: SyncOpenPantryItemBatchInput;
 };
 
 
@@ -8604,8 +8654,34 @@ export type MutationSyncPantryItemArgs = {
  * win, so payload types that genuinely benefit from caching (e.g. read-
  * through reservation tokens) can opt back in.
  */
+export type MutationSyncRestockPantryItemArgs = {
+  input: SyncRestockPantryItemInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
 export type MutationSyncShoppingListItemArgs = {
   input: SyncShoppingListItemFullInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
+export type MutationSyncWastePantryItemBatchArgs = {
+  input: SyncWastePantryItemBatchInput;
 };
 
 
@@ -14084,6 +14160,12 @@ export type SuspiciousInviteActivity = {
   summary: SuspiciousActivitySummary;
 };
 
+export type SyncAdjustPantryItemQuantityInput = {
+  input: AdjustPantryItemQuantityInput;
+  /** Client-minted permanent CUID2 identifying this adjustment; replay-safe. */
+  operationId: Scalars['ID']['input'];
+};
+
 /** Information about a sync conflict */
 export type SyncConflictInfo = {
   __typename: 'SyncConflictInfo';
@@ -14097,19 +14179,18 @@ export type SyncConflictInfo = {
   serverVersion: Scalars['Int']['output'];
 };
 
+export type SyncConsumePantryItemInput = {
+  input: RecordPantryItemUsageInput;
+  /** Client-minted permanent CUID2 identifying this usage; replay-safe. */
+  operationId: Scalars['ID']['input'];
+};
+
 export type SyncDeletePantryItemInput = {
   clientId: Scalars['ID']['input'];
   version?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type SyncDeleteShoppingListItemInput = {
-  clientId: Scalars['ID']['input'];
-  version?: InputMaybe<Scalars['Int']['input']>;
-};
-
-export type SyncMovePantryItemInput = {
-  afterId?: InputMaybe<Scalars['ID']['input']>;
-  beforeId?: InputMaybe<Scalars['ID']['input']>;
   clientId: Scalars['ID']['input'];
   version?: InputMaybe<Scalars['Int']['input']>;
 };
@@ -14121,12 +14202,36 @@ export type SyncMoveShoppingListItemInput = {
   version?: InputMaybe<Scalars['Int']['input']>;
 };
 
+export type SyncOpenPantryItemBatchInput = {
+  input: OpenBatchInput;
+  /**
+   * Client-minted permanent CUID2 for client-queue uniformity. openBatch writes
+   * no ledger row and is naturally idempotent (re-opening is a no-op), so dedup
+   * is by batch state rather than operationId.
+   */
+  operationId: Scalars['ID']['input'];
+};
+
 export enum SyncOperation {
   Create = 'CREATE',
   Delete = 'DELETE',
   Move = 'MOVE',
   Update = 'UPDATE'
 }
+
+/**
+ * Result of an idempotent offline-sync pantry delta (restock / consume / waste /
+ * adjust / open-batch). wasApplied is false when the operationId was already
+ * processed (replay) — the delta is applied at most once regardless of retries,
+ * and pantryItem reflects the current server state either way.
+ */
+export type SyncPantryDeltaResult = {
+  __typename: 'SyncPantryDeltaResult';
+  operationId: Scalars['ID']['output'];
+  pantry: Maybe<Pantry>;
+  pantryItem: Maybe<PantryItem>;
+  wasApplied: Scalars['Boolean']['output'];
+};
 
 export type SyncPantryItemInput = {
   brand?: InputMaybe<BrandReferenceInput>;
@@ -14160,6 +14265,12 @@ export type SyncPantryItemResult = {
   operation: SyncOperation;
   serverId: Maybe<Scalars['ID']['output']>;
   wasCreated: Scalars['Boolean']['output'];
+};
+
+export type SyncRestockPantryItemInput = {
+  input: RestockPantryItemInput;
+  /** Client-minted permanent CUID2 identifying this restock; replay-safe. */
+  operationId: Scalars['ID']['input'];
 };
 
 /** Sub-input for sync settings */
@@ -14217,6 +14328,12 @@ export type SyncShoppingListItemResult = {
   serverId: Maybe<Scalars['ID']['output']>;
   /** Whether this was a create (true) or update (false) operation */
   wasCreated: Scalars['Boolean']['output'];
+};
+
+export type SyncWastePantryItemBatchInput = {
+  input: WasteBatchInput;
+  /** Client-minted permanent CUID2 identifying this batch waste; replay-safe. */
+  operationId: Scalars['ID']['input'];
 };
 
 /** Sub-input for tag-based filters */

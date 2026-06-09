@@ -34,6 +34,12 @@ import { PantryItemCard_PantryItemFragmentDoc } from './PantryItemCard.generated
 // Module-level constant — only used for slide animation distance, no need for reactive updates
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
+// Only surface the expiry label on a list row once an item is within this many
+// days of expiring (or already expired). Far-out dates like "113 days left" are
+// noise on the main pantry list — the dedicated "expiring" filter covers the
+// full horizon.
+const EXPIRATION_DISPLAY_THRESHOLD_DAYS = 10;
+
 export type ItemVariant = 'normal' | 'warning' | 'expired';
 
 export type ExpirationVariant = 'normal' | 'warning' | 'critical' | 'expired';
@@ -190,13 +196,14 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
     : isExpiringSoon
     ? 'warning'
     : 'normal';
-  const hasExpiry = expiresAt != null;
-  const expirationText = hasExpiry ? expStatus.text : null;
-  const expirationVariant: ExpirationVariant | undefined = hasExpiry
+  const showExpiration =
+    expiresIn !== null && expiresIn <= EXPIRATION_DISPLAY_THRESHOLD_DAYS;
+  const expirationText = showExpiration ? expStatus.text : null;
+  const expirationVariant: ExpirationVariant | undefined = showExpiration
     ? expStatus.type
     : undefined;
   const expiryStatusKey: ExpiryStatus = (() => {
-    if (!hasExpiry) return 'normal';
+    if (!showExpiration) return 'normal';
     if (expStatus.type === 'expired' || expStatus.type === 'critical')
       return 'expired';
     if (expStatus.type === 'warning') return 'warning';

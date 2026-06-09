@@ -175,6 +175,7 @@ function makeLocalRecipeNode(overrides: Record<string, unknown> = {}) {
     isExternal: false,
     externalSource: null,
     externalId: null,
+    isSaved: false,
     primarySource: null,
     caloriesPerServing: null,
     createdAt: '2026-01-01T00:00:00Z',
@@ -603,8 +604,93 @@ describe('useRecipeScreen', () => {
         'spoonacular-7002',
       ]);
       expect(result.current.searchResults[0].title).toBe('Family Lasagna');
-      expect(result.current.searchResults[0].badge?.text).toBe('My recipe');
+      // Backend results are the app's recipe corpus, not the user's own —
+      // a non-saved result with no live match carries no badge.
+      expect(result.current.searchResults[0].badge).toBeUndefined();
       expect(result.current.searchResults[0].subtitle).toContain('60');
+    });
+
+    it('dedupes Spoonacular results that share a backend title', async () => {
+      mockSearchRecipes.mockResolvedValueOnce(sampleTextSearchResponse);
+
+      // Backend recipe shares "Pasta Carbonara" with Spoonacular 7001 but has
+      // no external-id link — the title guard must still drop the duplicate.
+      const { result } = renderRecipeScreen([
+        searchRecipesMockWith([
+          makeLocalRecipeNode({ id: 'r-pc', name: 'Pasta Carbonara' }),
+        ]),
+      ]);
+
+      await act(async () => {
+        await result.current.handleTextSearch('carbonara');
+      });
+
+      await waitFor(() => {
+        expect(result.current.searchLoading).toBe(false);
+      });
+
+      // 'Pasta Carbonara' appears only as the local entry; 7002 stays
+      expect(result.current.searchResults.map(r => r.id)).toEqual([
+        'local-r-pc',
+        'spoonacular-7002',
+      ]);
+    });
+
+    it('enriches a backend result with time + likes from its live Spoonacular match', async () => {
+      mockSearchRecipes.mockResolvedValueOnce(sampleTextSearchResponse);
+
+      // Imported backend recipe with no stored time, sharing a title with
+      // Spoonacular 7001 (readyInMinutes 25, aggregateLikes 12).
+      const { result } = renderRecipeScreen([
+        searchRecipesMockWith([
+          makeLocalRecipeNode({
+            id: 'r-pc',
+            name: 'Pasta Carbonara',
+            totalTimeMinutes: null,
+          }),
+        ]),
+      ]);
+
+      await act(async () => {
+        await result.current.handleTextSearch('carbonara');
+      });
+
+      await waitFor(() => {
+        expect(result.current.searchLoading).toBe(false);
+      });
+
+      const local = result.current.searchResults.find(
+        r => r.id === 'local-r-pc',
+      );
+      expect(local?.subtitle).toContain('25'); // readyInMinutes from the match
+      expect(local?.badge?.text).toBe('❤️ 12'); // aggregateLikes from the match
+    });
+
+    it('keeps the Saved badge over likes when a matched backend result is saved', async () => {
+      mockSearchRecipes.mockResolvedValueOnce(sampleTextSearchResponse);
+
+      const { result } = renderRecipeScreen([
+        searchRecipesMockWith([
+          makeLocalRecipeNode({
+            id: 'r-pc',
+            name: 'Pasta Carbonara',
+            isSaved: true,
+          }),
+        ]),
+      ]);
+
+      await act(async () => {
+        await result.current.handleTextSearch('carbonara');
+      });
+
+      await waitFor(() => {
+        expect(result.current.searchLoading).toBe(false);
+      });
+
+      const local = result.current.searchResults.find(
+        r => r.id === 'local-r-pc',
+      );
+      expect(local?.badge?.text).toBe('Saved');
     });
 
     it('shows local results without an alert when Spoonacular fails', async () => {

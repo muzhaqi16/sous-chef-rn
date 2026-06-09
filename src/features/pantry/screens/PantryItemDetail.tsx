@@ -146,12 +146,12 @@ export const PantryItemDetail: React.FC<
     goBack,
     onAddToShoppingListNeedsList: () =>
       alertService.alert(
-        'No Shopping List Selected',
-        'Please select a shopping list first.',
+        t('pantryItemDetail.noShoppingListSelectedTitle'),
+        t('pantryItemDetail.noShoppingListSelectedMessage'),
         [
-          { text: 'Cancel', style: 'cancel' },
+          { text: t('labels.cancel'), style: 'cancel' },
           {
-            text: 'Go to Shopping Lists',
+            text: t('pantryItemDetail.goToShoppingLists'),
             onPress: toShoppingListMain,
           },
         ],
@@ -435,7 +435,7 @@ export const PantryItemDetail: React.FC<
             </ScrollView>
           ) : (
             <Text style={styles.noRecipes}>
-              No recipe suggestions available
+              {t('pantryItemDetail.noRecipeSuggestions')}
             </Text>
           )}
         </View>

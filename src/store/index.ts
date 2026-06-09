@@ -316,6 +316,13 @@ export const useStore = create<RootState>()(
             // Logout state (session-only flag)
             isLoggingOut,
 
+            // Seen-items LRU: a within-session warmth cache for catalog item
+            // autocomplete. Kept transient so it isn't serialized into MMKV on
+            // every search result (each ItemSuggestion is large). The persisted
+            // reference caches (cachedCategories/Brands/Stores, units) cover
+            // offline autocomplete across cold starts.
+            cachedItemSuggestions,
+
             // Passwords (must not persist to MMKV — keychain only)
             registrationPassword,
             postLoginCredentials,

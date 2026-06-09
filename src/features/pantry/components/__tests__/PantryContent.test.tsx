@@ -1,7 +1,7 @@
 'use no memo';
 import React from 'react';
 import { InMemoryCache } from '@apollo/client';
-import { screen } from '@testing-library/react-native';
+import { screen, act } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { PantryContent } from '../PantryContent';
 import { PantryItem, StorageState } from '#/graphql/generated/schemaTypes';
@@ -364,7 +364,12 @@ const defaultProps = {
   items: [] as PantryItem[],
   locationFilter: 'all',
   onLocationFilterChange: jest.fn(),
-  locationCounts: { all: 5, fridge: 2, freezer: 1, pantry: 2 },
+  // Default to an empty pantry (all counts 0). While `loading`, the skeleton
+  // gate holds skeletons whenever stats-backed `locationCounts[filter]` says
+  // items exist but `items` is empty, so tests asserting the *empty state* must
+  // use counts that agree there are no items. Tests that expect items pass them
+  // explicitly.
+  locationCounts: { all: 0, fridge: 0, freezer: 0, pantry: 0 },
   searchQuery: '',
   onSearchChange: jest.fn(),
   onItemPress: jest.fn(),
@@ -441,18 +446,86 @@ describe('PantryContent', () => {
       />,
     );
     unmount();
-    // Now render with empty items in a specific location.
-    // totalCount may be 0 (filtered query), but locationCounts.all > 0 triggers
-    // the location-specific message via overallItemCount.
+    // Now render with empty items in a specific location. The fridge filter is
+    // genuinely empty (locationCounts.fridge === 0) while the pantry overall has
+    // items (locationCounts.all > 0), which triggers the location-specific
+    // message via overallItemCount — and keeps the skeleton-gate from firing,
+    // since the active tab's expected count is 0.
     render(
       <PantryContent
         {...defaultProps}
         items={[]}
         locationFilter={'fridge'}
+        locationCounts={{ all: 5, fridge: 0, freezer: 1, pantry: 4 }}
         totalCount={0}
       />,
     );
     expect(screen.getByText('No items in Fridge')).toBeTruthy();
+  });
+
+  describe('skeleton hold (offline-first cache gap)', () => {
+    it('holds skeletons while loading when stats say items exist but the list is momentarily empty', () => {
+      // Cold-start cache gap: `pantry.stats` resolves so locationCounts is
+      // populated, but `itemsConnection` reads empty while the query is still
+      // settling (`loading` is true — `isLoadingInitial` stays true until items
+      // arrive). The list must show skeletons, NOT a blank / "empty" state.
+      render(
+        <PantryContent
+          {...defaultProps}
+          items={[]}
+          loading={true}
+          locationCounts={{ all: 18, fridge: 3, freezer: 0, pantry: 15 }}
+        />,
+      );
+      expect(screen.getByTestId('pantry-skeleton')).toBeTruthy();
+      expect(screen.queryByText('Your pantry is empty')).toBeNull();
+    });
+
+    it('shows the empty state (not skeletons) once settled, even if stats are stale', () => {
+      // The query has settled (`loading=false`) with an empty list while stats
+      // still report items — e.g. the last item in a tab was removed offline,
+      // where `pantry.stats` can't re-sync. The list is now authoritative, so
+      // the real empty state must win rather than skeletons that would otherwise
+      // never clear.
+      render(
+        <PantryContent
+          {...defaultProps}
+          items={[]}
+          loading={false}
+          locationCounts={{ all: 18, fridge: 3, freezer: 0, pantry: 15 }}
+        />,
+      );
+      expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
+      expect(screen.getByText('Your pantry is empty')).toBeTruthy();
+    });
+
+    it('shows the empty state (not skeletons) when counts agree the pantry is empty', () => {
+      render(
+        <PantryContent
+          {...defaultProps}
+          items={[]}
+          loading={false}
+          locationCounts={{ all: 0, fridge: 0, freezer: 0, pantry: 0 }}
+        />,
+      );
+      expect(screen.getByText('Your pantry is empty')).toBeTruthy();
+      expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
+    });
+
+    it('does not hold skeletons for an empty search result even when items exist', () => {
+      render(
+        <PantryContent
+          {...defaultProps}
+          items={[]}
+          loading={false}
+          searchQuery="zzz"
+          locationCounts={{ all: 18, fridge: 3, freezer: 0, pantry: 15 }}
+          onAddItem={jest.fn()}
+        />,
+      );
+      expect(screen.getByText('No results for "zzz"')).toBeTruthy();
+      expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
+    });
   });
 
   it('renders pantry items when provided', () => {
@@ -463,6 +536,58 @@ describe('PantryContent', () => {
     render(<PantryContent {...defaultProps} items={items} />);
     expect(screen.getByText('Milk')).toBeTruthy();
     expect(screen.getByText('Eggs')).toBeTruthy();
+  });
+
+  describe('client-side render windowing', () => {
+    const manyItems = Array.from({ length: 30 }, (_, i) =>
+      createMockPantryItem({ id: String(i + 1), itemName: `Item-${i + 1}` }),
+    );
+
+    it('hands the list only the initial window (not the whole loaded set)', () => {
+      render(
+        <PantryContent
+          {...defaultProps}
+          items={manyItems}
+          locationCounts={{ all: 30, fridge: 0, freezer: 0, pantry: 0 }}
+        />,
+      );
+      // data = sticky-header sentinel + first 24 items (INITIAL_RENDER_WINDOW)
+      expect(screen.getByTestId('pantry-list').props.data).toHaveLength(1 + 24);
+    });
+
+    it('grows the window on end-reached until the loaded set is exhausted', () => {
+      render(
+        <PantryContent
+          {...defaultProps}
+          items={manyItems}
+          locationCounts={{ all: 30, fridge: 0, freezer: 0, pantry: 0 }}
+        />,
+      );
+      act(() => {
+        screen.getByTestId('pantry-list').props.onEndReached?.();
+      });
+      // window grows by RENDER_WINDOW_STEP (24), capped at the 30 loaded items
+      expect(screen.getByTestId('pantry-list').props.data).toHaveLength(1 + 30);
+    });
+
+    it('prefers server pagination over growing the local window', () => {
+      const onEndReached = jest.fn();
+      render(
+        <PantryContent
+          {...defaultProps}
+          items={manyItems}
+          hasMore
+          onEndReached={onEndReached}
+          locationCounts={{ all: 30, fridge: 0, freezer: 0, pantry: 0 }}
+        />,
+      );
+      act(() => {
+        screen.getByTestId('pantry-list').props.onEndReached?.();
+      });
+      // server fetch fired; local window stays at the initial size
+      expect(onEndReached).toHaveBeenCalledTimes(1);
+      expect(screen.getByTestId('pantry-list').props.data).toHaveLength(1 + 24);
+    });
   });
 
   it('renders alert bar when stats are provided', () => {

@@ -11,6 +11,7 @@ import { useShowTutorials } from '#hooks/settings/useSettings';
 import { useUserId } from '#store/useAppStore';
 import type { TargetRect } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 import { useTutorialResetSignal } from '#hooks/ui/useTutorialResetSignal';
+import { markTutorialsSeen } from '#hooks/ui/markTutorialsSeen';
 
 // ── Storage key helpers (compatible with useFeatureHint / resetAllFeatureHints) ──
 
@@ -27,6 +28,18 @@ function buildStorageKey(userId: string | undefined, featureId: string) {
   return userId
     ? `${HINT_PREFIX}${userId}_${featureId}`
     : `${HINT_PREFIX}${featureId}`;
+}
+
+// Completed if the interactive tutorial's flag (or an old static-tutorial flag)
+// is set in MMKV. Read both on mount and on a reset signal so the two reset
+// paths behave correctly: resetAllFeatureHints clears the flags (→ replay),
+// while markTutorialsSeen leaves them set (→ stays completed).
+function readCompletedFromStorage(userId: string | undefined): boolean {
+  if (storage.getBoolean(buildStorageKey(userId, FEATURE_ID))) return true;
+  for (const oldId of OLD_TUTORIAL_IDS) {
+    if (storage.getBoolean(buildStorageKey(userId, oldId))) return true;
+  }
+  return false;
 }
 
 // ── Public types ──
@@ -181,15 +194,9 @@ export function ShoppingListTutorialProvider({
   const tutorialsEnabled = useShowTutorials();
 
   // Check if tutorial (or old tutorial) was already completed — once, on mount
-  const [isCompleted, setIsCompleted] = useState(() => {
-    const key = buildStorageKey(userId, FEATURE_ID);
-    if (storage.getBoolean(key)) return true;
-    // Skip for users who already saw the old static tutorial
-    for (const oldId of OLD_TUTORIAL_IDS) {
-      if (storage.getBoolean(buildStorageKey(userId, oldId))) return true;
-    }
-    return false;
-  });
+  const [isCompleted, setIsCompleted] = useState(() =>
+    readCompletedFromStorage(userId),
+  );
 
   const [currentStep, setCurrentStep] = useState(ShoppingListTutorialStep.IDLE);
   const [hasStarted, setHasStarted] = useState(false);
@@ -208,10 +215,12 @@ export function ShoppingListTutorialProvider({
     };
   }, []);
 
-  // React to external resets (centralized signal hook)
+  // React to external resets (centralized signal hook). Re-derive completion
+  // from MMKV rather than forcing it false: resetAllFeatureHints clears the
+  // flags (→ replay) while markTutorialsSeen leaves them set (→ stays done).
   const wasReset = useTutorialResetSignal();
   if (wasReset) {
-    setIsCompleted(false);
+    setIsCompleted(readCompletedFromStorage(userId));
     setCurrentStep(ShoppingListTutorialStep.IDLE);
     setHasStarted(false);
     setIsTransitioning(false);
@@ -262,6 +271,9 @@ export function ShoppingListTutorialProvider({
       buildStorageKey(userIdRef.current, 'shopping_list_swipe'),
       true,
     );
+    // Record completion at the account level so the tutorial doesn't replay on
+    // the user's other devices.
+    markTutorialsSeen();
     setIsCompleted(true);
     setCurrentStep(ShoppingListTutorialStep.COMPLETED);
   };
