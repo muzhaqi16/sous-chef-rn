@@ -299,6 +299,22 @@ describe('PantryItemCard', () => {
     expect(screen.getAllByText(/day/i).length).toBeGreaterThan(0);
   });
 
+  it('hides expiration text for items expiring far in the future', () => {
+    // Well beyond the ~10-day display window — "113 days left" is noise on the
+    // list row and must not render.
+    const expires = new Date();
+    expires.setDate(expires.getDate() + 113);
+    renderCard({ expiresAt: expires.toISOString() });
+    expect(screen.queryByText(/day/i)).toBeNull();
+  });
+
+  it('shows expiration text at the edge of the display window', () => {
+    const expires = new Date();
+    expires.setDate(expires.getDate() + 10);
+    renderCard({ expiresAt: expires.toISOString() });
+    expect(screen.getAllByText(/day/i).length).toBeGreaterThan(0);
+  });
+
   it('renders image left slot when item has imageUrl', () => {
     renderCard({ imageUrl: 'https://example.com/milk.jpg' });
     expect(screen.getByTestId('card-left-image')).toBeTruthy();
