@@ -59,6 +59,10 @@ export function usePantryQuery(
   pantryId: string | undefined,
   itemsFilter?: PantryItemFilters | null,
   itemsOrderBy?: PantryItemOrderBy | null,
+  // Page size for the initial fetch. Defaults to the API max (100) so typical
+  // pantries arrive in one page for instant client-side sort/filter/search;
+  // a consumer that only needs a sample can pass a smaller value.
+  itemsFirst: number = PAGE_SIZE.MAX,
 ) {
   const isLoggedOut = useIsLoggedOut();
   const isHomeSelectionReady = useIsHomeSelectionReady();
@@ -103,7 +107,7 @@ export function usePantryQuery(
     {
       variables: {
         id: pantryId || '',
-        itemsFirst: PAGE_SIZE.DEFAULT,
+        itemsFirst,
         itemsFilter: itemsFilter ?? undefined,
         itemsOrderBy: itemsOrderBy ?? undefined,
         storageLocationsFirst: PAGE_SIZE.COMPACT,

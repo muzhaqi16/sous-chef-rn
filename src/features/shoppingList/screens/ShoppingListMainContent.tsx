@@ -363,7 +363,7 @@ export const ShoppingListMainContent: React.FC<
     !permissions.canAddItems,
     permissions.canAddItems
       ? undefined
-      : "You don't have permission to add items to this list",
+      : t('shoppingListScreen.noAddPermission'),
   );
 
   // Empty state when no lists exist (gated on loading to prevent flash)

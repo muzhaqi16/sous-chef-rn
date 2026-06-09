@@ -24,18 +24,6 @@ jest.mock('#components/molecules/FormTextArea', () => ({
   FormTextArea: 'FormTextArea',
 }));
 
-jest.mock('#components/molecules/SegmentedControl', () => {
-  const { View, Text } = require('react-native');
-  return {
-    SegmentedControl: ({ label, value }: { label?: string; value: string }) => (
-      <View testID="segmented-control">
-        <Text>{label}</Text>
-        <Text>{value}</Text>
-      </View>
-    ),
-  };
-});
-
 jest.mock('#components/molecules/DatePickerField', () => {
   const { View, Text } = require('react-native');
   return {
@@ -87,10 +75,11 @@ describe('StorageDetailsSection', () => {
     expect(screen.getByText('Storage Details')).toBeTruthy();
   });
 
-  it('renders segmented control for storage state', () => {
+  it('renders storage state options', () => {
     render(<Wrapper />);
-    expect(screen.getByTestId('segmented-control')).toBeTruthy();
     expect(screen.getByText('Storage State')).toBeTruthy();
+    // Each StorageState value renders as a selectable pill.
+    expect(screen.getByText(StorageState.Refrigerated)).toBeTruthy();
   });
 
   it('renders date picker', () => {

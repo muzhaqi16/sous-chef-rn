@@ -362,3 +362,36 @@ mutation FlagItemForReview($input: FlagItemForReviewInput!) {
     }
   }
 }
+
+# Warm the category autocomplete cache so it works offline. Fetches a bounded
+# slice of all categories (with `type`, so the hook can filter by category type
+# locally). The API caps `first` at 100 per page. Reference data preloaded by
+# useDataPreloading while online.
+query GetCategories($first: Int = 100) {
+  categories(first: $first) {
+    edges {
+      node {
+        id
+        name
+        type
+        icon
+        color
+        slug
+      }
+    }
+  }
+}
+
+# Warm the brand autocomplete cache for offline use. No popularity ordering is
+# exposed by the API, so this fetches the first page of brands (API caps `first`
+# at 100 per page). Reference data preloaded by useDataPreloading while online.
+query GetBrands($first: Int = 100) {
+  brands(first: $first) {
+    edges {
+      node {
+        id
+        name
+      }
+    }
+  }
+}

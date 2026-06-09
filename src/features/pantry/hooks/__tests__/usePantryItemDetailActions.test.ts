@@ -256,8 +256,10 @@ describe('usePantryItemDetailActions', () => {
 
       expect(addMock.fired).toContainEqual({
         input: {
-          // Client-generated cuid v1 so a queued create replays idempotently.
-          id: expect.stringMatching(/^c[a-z0-9]{24}$/),
+          // Client-generated cuid2 so a queued create replays idempotently.
+          id: expect.stringMatching(
+            /^(?:[a-z][0-9a-z]{23,31}|[0-9a-fA-F]{24})$/,
+          ),
           shoppingListId: 'list-1',
           itemId: 'catalog-1',
           quantity: 3,

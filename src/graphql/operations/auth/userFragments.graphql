@@ -35,6 +35,7 @@ fragment LoginUser on User {
   settings {
     id
     theme
+    showTutorials
   }
 }
 
@@ -62,5 +63,6 @@ fragment PartialUser on User {
   settings {
     id
     theme
+    showTutorials
   }
 }

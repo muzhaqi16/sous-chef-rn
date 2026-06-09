@@ -12,7 +12,7 @@ jest.mock('../../../apollo/links/refreshToken');
 
 let mockIsOnline = true;
 jest.mock('#store/useAppStore', () => {
-  const getState = () => ({ isOnline: mockIsOnline });
+  const getState = () => ({ isOnline: mockIsOnline, cachedBrands: [] });
   return {
     useAppStore: <T>(selector: (state: RootState) => T): T =>
       selector(getState() as Partial<RootState> as RootState),

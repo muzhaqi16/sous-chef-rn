@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
@@ -11,6 +12,7 @@ import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { Text } from '#components/atoms/Text';
 
 export const OnboardingCompleteScreen = () => {
+  const { t } = useTranslation();
   useScreenTransition('OnboardingCompleteScreen');
   const user = useUser();
   const updateUser = useUpdateUser();
@@ -31,14 +33,14 @@ export const OnboardingCompleteScreen = () => {
     },
     onError: error => {
       handleMutationError(error, { operation: 'Complete Onboarding' });
-      setError('Failed to complete onboarding. Please try again.');
+      setError(t('onBoarding.completeOnboardingError'));
       setIsCompleting(false);
     },
   });
 
   const handleComplete = async () => {
     if (!user?.id) {
-      setError('User not found. Please try again.');
+      setError(t('onBoarding.userNotFoundError'));
       return;
     }
 
@@ -53,8 +55,8 @@ export const OnboardingCompleteScreen = () => {
 
   return (
     <OnBoardingWrapper
-      title="All set!"
-      subtitle="Your home is ready to use"
+      title={t('onBoarding.completeTitle')}
+      subtitle={t('onBoarding.completeSubtitle')}
       step={7}
       totalSteps={7}
       testID="onboarding-complete-screen"
@@ -72,21 +74,21 @@ export const OnboardingCompleteScreen = () => {
           align="center"
           style={styles.congratsText}
         >
-          Congratulations! You've successfully set up:
+          {t('onBoarding.congratulations')}
         </Text>
 
         <View style={styles.summaryList}>
           <Text size="md" tone="secondary" style={styles.summaryItem}>
-            • Your home and pantry
+            {`• ${t('onBoarding.summaryHomeAndPantry')}`}
           </Text>
           <Text size="md" tone="secondary" style={styles.summaryItem}>
-            • Your shopping list
+            {`• ${t('onBoarding.summaryShoppingList')}`}
           </Text>
           <Text size="md" tone="secondary" style={styles.summaryItem}>
-            • Initial pantry items
+            {`• ${t('onBoarding.summaryInitialPantryItems')}`}
           </Text>
           <Text size="md" tone="secondary" style={styles.summaryItem}>
-            • Invited family & friends
+            {`• ${t('onBoarding.summaryInvitedFamily')}`}
           </Text>
         </View>
 
@@ -97,8 +99,7 @@ export const OnboardingCompleteScreen = () => {
           lineHeight="normal"
           style={styles.infoText}
         >
-          You can now start managing your pantry, create shopping lists, and
-          collaborate with family members!
+          {t('onBoarding.completeInfo')}
         </Text>
 
         {!!error && (
@@ -111,7 +112,7 @@ export const OnboardingCompleteScreen = () => {
       </View>
 
       <Button
-        title="Get Started"
+        title={t('onBoarding.getStarted')}
         onPress={handleComplete}
         variant="primary"
         loading={isCompleting}

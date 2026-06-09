@@ -145,7 +145,6 @@
     "shoppingList": "Lista della spesa",
     "openSettings": "Apri impostazioni",
     "retake": "Riprova foto",
-    "tryAgain": "Riprova",
     "select": "Seleziona",
     "update": "Aggiorna",
     "create": "Crea",
@@ -207,7 +206,42 @@
     "passwordTooShort": "La password deve essere di almeno 8 caratteri",
     "passwordComplexity": "La password deve contenere almeno una lettera maiuscola, una minuscola e un numero",
     "passwordConfirmRequired": "Conferma la password",
-    "passwordsMustMatch": "Le password devono corrispondere"
+    "passwordsMustMatch": "Le password devono corrispondere",
+    "signupTitle": "Crea account",
+    "signupSubtitle": "Unisciti a Sous Chef oggi",
+    "name": "Nome",
+    "namePlaceholder": "Inserisci il tuo nome",
+    "creatingAccount": "Creazione account…",
+    "haveAccount": "Hai già un account?",
+    "signIn": "Accedi",
+    "forgotPasswordTitle": "Password dimenticata",
+    "forgotPasswordSubtitle": "Inserisci la tua email per reimpostare",
+    "sendResetLink": "Invia link di reimpostazione",
+    "rememberedIt": "Te la sei ricordata?",
+    "enterCode": "Inserisci il codice",
+    "enterCodeSubtitlePrefix": "Abbiamo inviato un codice di verifica a",
+    "enterCodeSubtitleSuffix": ". Inseriscilo qui sotto per verificare la tua email.",
+    "yourEmail": "la tua email",
+    "didntGetEmail": "Non hai ricevuto l'email?",
+    "resendCode": "Invia di nuovo il codice",
+    "tryAgain": "Riprova",
+    "verifyingEmail": "Verifica della tua email in corso...",
+    "verifyingEmailSubtitle": "Attendi mentre confermiamo il tuo indirizzo email.",
+    "emailVerifiedTitle": "Email verificata!",
+    "emailVerifiedDescription": "La tua email è stata verificata correttamente. ",
+    "emailVerifiedCanAccess": "Ora puoi accedere a tutte le funzionalità.",
+    "emailVerifiedCompleteSetup": "Completiamo la configurazione del tuo account.",
+    "verificationFailedTitle": "Verifica non riuscita",
+    "emailVerifiedToast": "Email verificata con successo!",
+    "verificationFailedExpired": "Verifica non riuscita. Il link potrebbe essere scaduto o non valido.",
+    "invalidVerificationToken": "Token di verifica non valido",
+    "resendVerificationFailed": "Impossibile inviare nuovamente l'email di verifica. Riprova.",
+    "landingTitle": "Riduci gli sprechi, risparmia tempo e denaro",
+    "landingSubtitle": "Sai cosa hai, pianifica il prossimo passo e fai acquisti più intelligenti.",
+    "legalNotice": "Continuando, accetti i nostri",
+    "termsLink": "Termini e condizioni",
+    "legalAnd": "e",
+    "privacyLink": "Informativa sulla privacy"
   },
   "recipes": {
     "name": "Nome della ricetta",
@@ -426,7 +460,60 @@
     "noIngredientsToAdd": "Nessun ingrediente disponibile da aggiungere.",
     "listNameEmpty": "Il nome della lista non può essere vuoto",
     "createShoppingListFailed": "Impossibile creare la lista della spesa",
-    "cannotAddExternalIngredients": "Non è ancora possibile aggiungere ingredienti da ricette esterne. Salva prima la ricetta."
+    "cannotAddExternalIngredients": "Non è ancora possibile aggiungere ingredienti da ricette esterne. Salva prima la ricetta.",
+    "ingredientsCount": "Ingredienti ({{count}})",
+    "unnamedIngredient": "Ingrediente senza nome",
+    "optionalSuffix": " (facoltativo)",
+    "instructionsCount": "Istruzioni ({{count}})",
+    "tapToAddInstruction": "Tocca per aggiungere istruzione...",
+    "unknownIngredient": "Sconosciuto",
+    "difficultyLabel": {
+      "VERY_EASY": "Molto facile",
+      "EASY": "Facile",
+      "MEDIUM": "Media",
+      "HARD": "Difficile",
+      "EXPERT": "Esperto"
+    },
+    "recipeStatus": {
+      "DRAFT": "Bozza",
+      "PUBLISHED": "Pubblicato"
+    },
+    "diet": {
+      "GLUTEN_FREE": "Senza glutine",
+      "KETO": "Keto",
+      "LACTO_VEGETARIAN": "Latto-vegetariano",
+      "LOW_FODMAP": "Basso FODMAP",
+      "OVO_VEGETARIAN": "Ovo-vegetariano",
+      "PALEO": "Paleo",
+      "PESCETARIAN": "Pescetariano",
+      "PRIMAL": "Primal",
+      "VEGAN": "Vegano",
+      "VEGETARIAN": "Vegetariano",
+      "WHOLE30": "Whole30"
+    },
+    "healthGoal": {
+      "DIABETIC_FRIENDLY": "Adatto ai diabetici",
+      "HEART_HEALTHY": "Salutare per il cuore",
+      "HIGH_PROTEIN": "Ricco di proteine",
+      "LOW_CARB": "Pochi carboidrati",
+      "LOW_SODIUM": "Povero di sodio",
+      "SUGAR_FREE": "Senza zucchero"
+    },
+    "intolerance": {
+      "DAIRY": "Latticini",
+      "EGG": "Uovo",
+      "FISH": "Pesce",
+      "GLUTEN": "Glutine",
+      "GRAIN": "Cereali",
+      "PEANUT": "Arachidi",
+      "SEAFOOD": "Frutti di mare",
+      "SESAME": "Sesamo",
+      "SHELLFISH": "Crostacei",
+      "SOY": "Soia",
+      "SULFITE": "Solfito",
+      "TREE_NUT": "Frutta a guscio",
+      "WHEAT": "Grano"
+    }
   },
   "recipeFilters": {
     "title": "Filtri",
@@ -486,7 +573,11 @@
     "noExpiry": "Nessuna scadenza",
     "amount": "Quantità",
     "nutrition": "Nutrizione",
-    "recipesToTry": "Ricette da provare"
+    "recipesToTry": "Ricette da provare",
+    "noShoppingListSelectedTitle": "Nessuna lista della spesa selezionata",
+    "noShoppingListSelectedMessage": "Seleziona prima una lista della spesa.",
+    "goToShoppingLists": "Vai alle liste della spesa",
+    "noRecipeSuggestions": "Nessun suggerimento di ricetta disponibile"
   },
   "shoppingListScreens": {
     "joinTitle": "Unisciti alla lista",
@@ -952,7 +1043,15 @@
     "resetSuccess": "Le impostazioni sono state ripristinate.",
     "resetFailed": "Impossibile ripristinare le impostazioni. Riprova.",
     "resetConfirm": "Sei sicuro di voler ripristinare tutte le impostazioni di notifica ai valori predefiniti?",
-    "resetToDefaultsDesc": "Ripristina tutte le impostazioni di notifica ai valori predefiniti"
+    "resetToDefaultsDesc": "Ripristina tutte le impostazioni di notifica ai valori predefiniti",
+    "notFound": "Notifica non trovata",
+    "titleFallback": "Notifica",
+    "noMessageAvailable": "Nessun messaggio disponibile",
+    "detailsSection": "Dettagli",
+    "acceptHomeInvitation": "Accetta invito alla casa",
+    "takeAction": "Agisci",
+    "acceptInvitation": "Accetta invito",
+    "listTitle": "Notifiche"
   },
   "settings": {
     "appSettings": "Impostazioni app",
@@ -1068,11 +1167,50 @@
     "addItemsZero": "Aggiungi articoli",
     "addItemSingular": "Aggiungi {{count}} articolo",
     "addItemPlural": "Aggiungi {{count}} articoli",
-    "saveChanges": "Salva modifiche"
+    "saveChanges": "Salva modifiche",
+    "profilePictureTitle": "Foto del profilo",
+    "profilePictureSubtitle": "Aggiungi una foto per personalizzare il tuo profilo",
+    "chooseFromGallery": "Scegli dalla galleria",
+    "chooseFromGalleryDescription": "Seleziona una foto esistente",
+    "takeAPhoto": "Scatta una foto",
+    "takeAPhotoDescription": "Usa la tua fotocamera",
+    "cropAndCenter": "Ritaglia e centra",
+    "cropHint": "Regola la tua foto prima di caricarla",
+    "termsOfService": "Termini di servizio",
+    "legalNotice": "Continuando accetti i nostri",
+    "uploadAndContinue": "Carica e continua",
+    "updateProfilePhotoFailed": "Impossibile aggiornare la foto del profilo. Riprova.",
+    "uploadFailedTitle": "Caricamento non riuscito",
+    "invalidImageTitle": "Immagine non valida",
+    "cameraPermissionTitle": "Autorizzazione fotocamera",
+    "cameraPermissionTakePhotoMessage": "L'accesso alla fotocamera è necessario per scattare una foto. Abilitalo nelle impostazioni.",
+    "completeTitle": "Tutto pronto!",
+    "completeSubtitle": "La tua casa è pronta all'uso",
+    "congratulations": "Congratulazioni! Hai configurato correttamente:",
+    "summaryHomeAndPantry": "La tua casa e dispensa",
+    "summaryShoppingList": "La tua lista della spesa",
+    "summaryInitialPantryItems": "Articoli iniziali della dispensa",
+    "summaryInvitedFamily": "Membri della famiglia invitati",
+    "completeInfo": "Puoi gestire tutto dalle impostazioni dell'app in qualsiasi momento.",
+    "getStarted": "Inizia",
+    "completeOnboardingError": "Impossibile completare l'introduzione. Riprova.",
+    "userNotFoundError": "Utente non trovato. Prova ad accedere di nuovo.",
+    "settingUpSecurity": "Configurazione della sicurezza...",
+    "checkingBiometricAvailability": "Verifica della disponibilità biometrica...",
+    "secureYourAccount": "Proteggi il tuo account",
+    "homeNameLabel": "Nome della casa",
+    "homeNamePlaceholder": "es. La mia casa",
+    "defaultPantryNameLabel": "Nome predefinito della dispensa",
+    "pantryNameLabel": "Nome della dispensa",
+    "pantryNamePlaceholder": "es. Dispensa della cucina",
+    "checkingExistingSetup": "Verifica della configurazione esistente...",
+    "creatingHomeAndPantry": "Creazione di casa e dispensa...",
+    "creatingPantry": "Creazione della dispensa..."
   },
   "loader": {
     "pleaseWait": "Attendere prego",
-    "brandTagline": "Il tuo assistente in cucina"
+    "brandTagline": "Il tuo assistente in cucina",
+    "loading": "Caricamento"
   },
   "formSelect": {
     "placeholder": "Seleziona un'opzione"
@@ -1853,7 +1991,32 @@
       "debugInfo": "Informazioni di debug",
       "performanceDashboard": "Pannello prestazioni",
       "logout": "Esci"
-    }
+    },
+    "uploadYourPhoto": "Carica la tua foto",
+    "photoReadyToUpload": "Foto ritagliata e pronta per il caricamento!",
+    "tapCropToAdjust": "Tocca l'icona di ritaglio qui sotto per regolare la tua foto.",
+    "choosePicturePersonalize": "Scegli un'immagine del profilo per personalizzare il tuo account.",
+    "uploadPhoto": "Carica foto",
+    "chooseDifferentPhoto": "Scegli un'altra foto",
+    "takePhoto": "Scatta foto",
+    "selectPhoto": "Seleziona foto",
+    "invalidImage": "Immagine non valida",
+    "cameraPermissionDeniedTitle": "Autorizzazione fotocamera negata",
+    "cameraPermissionDeniedMessage": "È necessaria l'autorizzazione della fotocamera per scattare foto. Abilitala nelle impostazioni del dispositivo.",
+    "cameraPermissionBlockedTitle": "Autorizzazione fotocamera bloccata",
+    "cameraPermissionBlockedMessage": "L'accesso alla fotocamera è bloccato. Vai su Impostazioni > App > Sous Chef > Autorizzazioni per abilitare l'accesso alla fotocamera.",
+    "cameraPermissionTitle": "Autorizzazione fotocamera",
+    "cameraPermissionMessage": "È necessaria l'autorizzazione della fotocamera per scattare foto. Abilitala nelle impostazioni del dispositivo.",
+    "permissionErrorTitle": "Errore di autorizzazione",
+    "permissionErrorMessage": "Impossibile richiedere l'autorizzazione della fotocamera. Riprova o controlla le impostazioni del dispositivo.",
+    "uploadFailedTitle": "Caricamento non riuscito",
+    "updatePhotoFailed": "Impossibile aggiornare la foto del profilo",
+    "cropPhoto": "Ritaglia foto",
+    "cropping": "Ritaglio in corso...",
+    "loadingImage": "Caricamento immagine...",
+    "cropInstructions": "Pizzica per ingrandire, trascina per spostare. L'area circolare sarà la tua foto del profilo.",
+    "imageNotLoaded": "Immagine non caricata correttamente",
+    "cropImageFailed": "Impossibile ritagliare l'immagine. Riprova."
   },
   "personalInformation": {
     "screenTitle": "Informazioni Personali",
@@ -1910,7 +2073,13 @@
     "searchNoResultsAction": "Aggiungi Articolo",
     "tabEmptyTitle": "Nessun articolo in {{tabName}}",
     "tabEmptyDescription": "Gli articoli conservati qui appariranno in questa scheda",
-    "tabEmptyFallbackName": "questa posizione"
+    "tabEmptyFallbackName": "questa posizione",
+    "tutorialManageHomesTitle": "Tocca per gestire le case",
+    "tutorialManageHomesSubtitle": "Passa da una casa all'altra o gestisci le impostazioni della casa",
+    "tutorialPantrySettingsTitle": "Impostazioni della dispensa",
+    "tutorialPantrySettingsSubtitle": "Passa tra gli elenchi delle dispense e crea nuove dispense",
+    "tutorialAddItemsTitle": "Aggiungi articoli rapidamente",
+    "tutorialAddItemsSubtitle": "Tocca + per aggiungere articoli alla tua dispensa"
   },
   "homeManagement": {
     "title": "Le Mie Case",
@@ -2049,6 +2218,16 @@
     "noListsAction": "Crea Lista",
     "emptyTitle": "Nessun articolo in questa lista",
     "emptyDescription": "Aggiungi alcuni articoli per iniziare",
-    "emptyAction": "Aggiungi Articolo"
+    "emptyAction": "Aggiungi Articolo",
+    "noAddPermission": "Non hai il permesso di aggiungere articoli a questa lista"
+  },
+  "notFound": {
+    "message": "Questa schermata non esiste. Controlla l'URL o torna a una schermata valida.",
+    "goToHome": "Vai alla home"
+  },
+  "searchResults": {
+    "title": "Risultati della ricerca",
+    "searching": "Ricerca dell'articolo...",
+    "errorTitle": "Errore di ricerca"
   }
 }

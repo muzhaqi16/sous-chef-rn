@@ -54,6 +54,7 @@ import {
   saveTempRegistrationPassword,
   clearTempRegistrationPassword,
 } from '#/storage/keychain';
+import { storage } from '#/storage/mmkv';
 import {
   collectDeviceInformation,
   validateDeviceInformation,
@@ -309,6 +310,14 @@ function bootstrapUserStore(user: LoginUserFragment): void {
   }
   if (user.defaultShoppingListId) {
     storeState.setSelectedShoppingListId(user.defaultShoppingListId);
+  }
+
+  // Seed the tutorials master switch from the account's server setting before
+  // any screen (and its tutorial hooks) mounts, so a returning user who already
+  // finished the tutorials doesn't see the coach marks flash on a new device.
+  // useShowTutorials reads this MMKV key; useAppSettings keeps it in sync later.
+  if (user.settings) {
+    storage.set('user_show_tutorials', user.settings.showTutorials);
   }
 }
 

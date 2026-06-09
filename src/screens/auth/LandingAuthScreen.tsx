@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { View, Image, Linking } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
@@ -11,6 +12,7 @@ import { appConfig } from '#/config/appConfig';
 import { Text } from '#components/atoms/Text';
 
 export function LandingAuthScreen() {
+  const { t } = useTranslation();
   const { toLogin, toSignUp } = useAppNavigation();
 
   return (
@@ -27,7 +29,7 @@ export function LandingAuthScreen() {
       {/* 2. Content flex-zone */}
       <View style={styles.content}>
         <Text size="lg" weight="bold" align="left">
-          End Waste, Save Time & Money
+          {t('auth.landingTitle')}
         </Text>
 
         <View style={styles.divider} />
@@ -39,13 +41,13 @@ export function LandingAuthScreen() {
           align="left"
           style={styles.subtitle}
         >
-          Know what you have, plan what's next, and shop smarter every time.
+          {t('auth.landingSubtitle')}
         </Text>
 
         <View style={styles.buttons}>
           <Button
             testID="landing-login-button"
-            title="Log In"
+            title={t('auth.logIn')}
             onPress={toLogin}
             variant="secondary"
             fullWidth
@@ -53,7 +55,7 @@ export function LandingAuthScreen() {
           />
           <Button
             testID="landing-signup-button"
-            title="Sign Up"
+            title={t('auth.signUp')}
             onPress={toSignUp}
             fullWidth
             txtStyle={styles.txt}
@@ -74,9 +76,11 @@ export function LandingAuthScreen() {
             align="center"
             style={styles.footerText}
           >
-            By continuing, you agree to our{'\n'}
-            <Link variant="subtle">Terms & Conditions</Link> and{' '}
-            <Link variant="subtle">Privacy Policy</Link>.
+            {t('auth.legalNotice')}
+            {'\n'}
+            <Link variant="subtle">{t('auth.termsLink')}</Link>{' '}
+            {t('auth.legalAnd')}{' '}
+            <Link variant="subtle">{t('auth.privacyLink')}</Link>.
           </Text>
         </Pressable>
       </View>

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View, Image, Dimensions } from 'react-native';
 import { alertService } from '#/services/alertService';
 import { ThemedSafeAreaView } from '#components/atoms/themedComponents';
@@ -29,6 +30,7 @@ const CROP_SIZE = Math.min(screenWidth * 0.8, 300);
 export const ImageCropScreen: React.FC<
   StaticScreenProps<{ imageFile: ImageFile }>
 > = ({ route }) => {
+  const { t } = useTranslation();
   const { goBack } = useAppNavigation();
   const { imageFile } = route.params;
 
@@ -141,7 +143,7 @@ export const ImageCropScreen: React.FC<
       !originalSize.width ||
       !originalSize.height
     ) {
-      alertService.alert('Error', 'Image not loaded properly');
+      alertService.alert(t('labels.error'), t('profile.imageNotLoaded'));
       return;
     }
 
@@ -305,7 +307,7 @@ export const ImageCropScreen: React.FC<
           originalSize,
           displaySize: imageSize,
         });
-        alertService.alert('Error', 'Failed to crop image. Please try again.');
+        alertService.alert(t('labels.error'), t('profile.cropImageFailed'));
       },
     );
   };
@@ -320,7 +322,7 @@ export const ImageCropScreen: React.FC<
   return (
     <ThemedSafeAreaView style={styles.container} edges={['left', 'right']}>
       <Header
-        title="Crop Photo"
+        title={t('profile.cropPhoto')}
         onBack={goBack}
         centerTitle
         rightActions={[
@@ -340,8 +342,8 @@ export const ImageCropScreen: React.FC<
           style={styles.instructions}
         >
           {!imageLoaded
-            ? 'Loading image...'
-            : 'Pinch to zoom, drag to move. The circular view area will be your profile photo.'}
+            ? t('profile.loadingImage')
+            : t('profile.cropInstructions')}
         </Text>
 
         <View style={styles.cropContainer}>
@@ -392,7 +394,7 @@ export const ImageCropScreen: React.FC<
             disabled={isCropping || !imageLoaded}
           >
             <Text size="md" weight="semibold" style={styles.cropButtonText}>
-              {isCropping ? 'Cropping...' : 'Crop Photo'}
+              {isCropping ? t('profile.cropping') : t('profile.cropPhoto')}
             </Text>
           </AppPressable>
         </View>

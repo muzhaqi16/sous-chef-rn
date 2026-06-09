@@ -122,8 +122,15 @@ export const useAppSettings = () => {
   // - useShowTutorials reads 'user_show_tutorials' from MMKV
   // - offlineModeEnabled is mirrored to MMKV by networkSlice.setOfflineModeEnabled
   useEffect(() => {
-    if (settings?.showTutorials !== undefined) {
+    if (
+      settings?.showTutorials !== undefined &&
+      storage.getBoolean('user_show_tutorials') !== settings.showTutorials
+    ) {
       storage.set('user_show_tutorials', settings.showTutorials);
+      // Already-mounted tutorial hooks snapshot this MMKV value at mount and
+      // only re-read on the reset signal — bump it so a server-driven change
+      // (e.g. the account turned tutorials off on another device) reaches them.
+      useStore.getState().bumpTutorialResetGeneration();
     }
     if (settings?.offlineMode !== undefined) {
       useStore.getState().setOfflineModeEnabled(settings.offlineMode);

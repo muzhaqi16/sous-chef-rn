@@ -824,6 +824,38 @@ describe('QueueManager', () => {
       );
     });
 
+    // Granular deltas (adjust/restock/consume/open/waste) wrap the original
+    // input verbatim under `input.input` and add the client-minted operationId
+    // (carried on context) so the server dedups the replay.
+    it('converts AdjustPantryItemQuantity → SyncAdjustPantryItemQuantity (wraps input + operationId from context)', () => {
+      const mutation = makeMutation({
+        operationName: 'AdjustPantryItemQuantity',
+        variables: {
+          input: { id: 'item-1', newQuantity: 3, reason: 'recount' },
+        },
+        context: { localFirst: true, operationId: 'op-cuid-1' },
+      });
+      const { syncVariables } = convertToSyncMutation(mutation);
+      const input = wrapper(syncVariables);
+      expect(input.operationId).toBe('op-cuid-1');
+      expect(input.input).toEqual({
+        id: 'item-1',
+        newQuantity: 3,
+        reason: 'recount',
+      });
+    });
+
+    it('throws when a granular delta is queued without an operationId', () => {
+      const mutation = makeMutation({
+        operationName: 'RestockPantryItem',
+        variables: { input: { id: 'item-1', quantity: 5 } },
+        context: { localFirst: true },
+      });
+      expect(() => convertToSyncMutation(mutation)).toThrow(
+        'Cannot sync RestockPantryItem: missing operationId',
+      );
+    });
+
     // UpdatePantryItemQuantityInput carries the item id as `pantryItemId`, the
     // quantity as a raw string, and the unit as a flat `unitId` — none of which
     // align with SyncPantryItemInput. The dedicated builder maps each field.

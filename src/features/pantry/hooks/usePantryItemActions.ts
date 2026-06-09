@@ -23,6 +23,7 @@ import {
 } from '#/utils/errors/notFound';
 import { Telemetry } from '#services/telemetry';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
+import { generateEntityId } from '#/utils/generateEntityId';
 import {
   _UsePantryItemActionsTrackingUnitFragmentDoc,
   _UsePantryItemActionsQuantityFragmentDoc,
@@ -241,6 +242,9 @@ export function usePantryItemActions({
               usageUnitId,
             },
           },
+          // Local-first: queue offline and replay idempotently via
+          // syncConsumePantryItem (operationId dedups the usage ledger row).
+          context: { localFirst: true, operationId: generateEntityId() },
         }),
       (error: unknown) => {
         revertOptimistic?.();
@@ -317,6 +321,9 @@ export function usePantryItemActions({
               isRecycled,
             },
           },
+          // Local-first: queue offline and replay idempotently via
+          // syncConsumePantryItem (operationId dedups the usage ledger row).
+          context: { localFirst: true, operationId: generateEntityId() },
         }),
       (error: unknown) => {
         revertOptimistic?.();
@@ -419,6 +426,9 @@ export function usePantryItemActions({
               expiresAt: expiresAtValue,
             },
           },
+          // Local-first: queue offline and replay idempotently via
+          // syncRestockPantryItem (operationId dedups the restock ledger row).
+          context: { localFirst: true, operationId: generateEntityId() },
         }),
       (error: unknown) => {
         revertOptimistic();

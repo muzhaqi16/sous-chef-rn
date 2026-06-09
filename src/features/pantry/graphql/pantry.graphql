@@ -963,6 +963,77 @@ mutation SyncDeletePantryItem($input: SyncDeletePantryItemInput!) {
   }
 }
 
+# Offline-replay (sync) mutations for granular pantry deltas. Each wraps the
+# original delta input + a client-minted operationId; the server dedups by
+# operationId so a queued replay applies the delta exactly once (no
+# double-count). Replayed by the offline queue via convertToSyncMutation.
+mutation SyncAdjustPantryItemQuantity(
+  $input: SyncAdjustPantryItemQuantityInput!
+) {
+  syncAdjustPantryItemQuantity(input: $input) {
+    operationId
+    wasApplied
+    pantryItem {
+      ...queueManager_syncPantryItem
+    }
+    pantry {
+      id
+    }
+  }
+}
+
+mutation SyncRestockPantryItem($input: SyncRestockPantryItemInput!) {
+  syncRestockPantryItem(input: $input) {
+    operationId
+    wasApplied
+    pantryItem {
+      ...queueManager_syncPantryItem
+    }
+    pantry {
+      id
+    }
+  }
+}
+
+mutation SyncConsumePantryItem($input: SyncConsumePantryItemInput!) {
+  syncConsumePantryItem(input: $input) {
+    operationId
+    wasApplied
+    pantryItem {
+      ...queueManager_syncPantryItem
+    }
+    pantry {
+      id
+    }
+  }
+}
+
+mutation SyncOpenPantryItemBatch($input: SyncOpenPantryItemBatchInput!) {
+  syncOpenPantryItemBatch(input: $input) {
+    operationId
+    wasApplied
+    pantryItem {
+      ...queueManager_syncPantryItem
+    }
+    pantry {
+      id
+    }
+  }
+}
+
+mutation SyncWastePantryItemBatch($input: SyncWastePantryItemBatchInput!) {
+  syncWastePantryItemBatch(input: $input) {
+    operationId
+    wasApplied
+    pantryItem {
+      ...queueManager_syncPantryItem
+    }
+    pantry {
+      id
+    }
+  }
+}
+
 # ============================================
 # SUBSCRIPTIONS
 # ============================================

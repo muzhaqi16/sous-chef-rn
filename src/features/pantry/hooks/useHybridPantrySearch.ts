@@ -62,7 +62,9 @@ export function useHybridPantrySearch({
     totalCount,
     hasMore,
     loading,
-    pageSize: PAGE_SIZE.EXTENDED,
+    // Server sort/search only kicks in past the full load window — below it the
+    // client already holds every item, so sort/filter/search stay local.
+    pageSize: PAGE_SIZE.MAX,
     isOnline,
     searchDocument: GetPantryDocument,
     buildSearchVariables: search => {

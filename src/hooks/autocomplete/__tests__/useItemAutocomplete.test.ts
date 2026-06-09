@@ -14,9 +14,14 @@ jest.mock('../../../apollo/links/tokenScheduler');
 jest.mock('../../../apollo/links/refreshToken');
 
 let mockIsOnline = true;
+const mockAddCachedItemSuggestions = jest.fn();
 jest.mock('#store/useAppStore', () => {
   const getState = () =>
-    ({ isOnline: mockIsOnline } as Partial<RootState> as RootState);
+    ({
+      isOnline: mockIsOnline,
+      cachedItemSuggestions: [],
+      addCachedItemSuggestions: mockAddCachedItemSuggestions,
+    } as Partial<RootState> as RootState);
   return {
     useAppStore: <T>(selector: (state: RootState) => T): T =>
       selector(getState()),

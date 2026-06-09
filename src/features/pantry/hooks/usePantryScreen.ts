@@ -12,7 +12,9 @@ import {
   type LocationFilter,
   locationFilterToQueryFilter,
   sortOptionToOrderBy,
+  filterByLocation,
 } from '#features/pantry/utils/pantryFilters';
+import { PAGE_SIZE } from '#/constants/pagination';
 import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
 import { StorageLocationIcon } from '#components/atoms/StorageLocationIcon';
 import { PREFERENCE_DEFAULTS } from '#store/slices/preferenceTypes';
@@ -96,6 +98,19 @@ export function usePantryScreen() {
   const queryFilter = locationQueryFilter;
   const orderBy = sortOptionToOrderBy(pantrySortOption, pantrySortDirection);
 
+  // Server vs client mode. In CLIENT mode (the common case — pantries that fit
+  // in one load window), the main query uses a STABLE cache key (no per-sort /
+  // per-filter variables), so changing the sort or location tab does not refetch
+  // or re-key the connection — sort, location-filter, and search all run on the
+  // already-loaded items and update instantly (and the stable key means cold
+  // start always hits cache, no blank flash). Large pantries (> PAGE_SIZE.MAX
+  // total) fall back to SERVER mode so filter/sort/search stay correct beyond
+  // the loaded window. The decision reads the argument-free `stats.totalItems`
+  // (the true full count, unaffected by the active filter) to avoid oscillation.
+  const [serverMode, setServerMode] = useState(false);
+  const mainFilter = serverMode ? queryFilter : null;
+  const mainOrderBy = serverMode ? orderBy : null;
+
   const {
     state: {
       items: rawPantryItems,
@@ -110,7 +125,19 @@ export function usePantryScreen() {
       locationCounts,
     },
     actions: { removeItem, refetch, loadMore },
-  } = usePantryManagement(pantry?.id, queryFilter, orderBy);
+  } = usePantryManagement(pantry?.id, mainFilter, mainOrderBy);
+
+  // Adjusting state during render: flip mode once the true total is known.
+  const nextServerMode = isOnline && (stats?.totalItems ?? 0) > PAGE_SIZE.MAX;
+  if (nextServerMode !== serverMode) {
+    setServerMode(nextServerMode);
+  }
+
+  // In client mode the main query is unfiltered, so apply the location filter
+  // locally; in server mode the query already returned the filtered page.
+  const locationFilteredItems = serverMode
+    ? rawPantryItems
+    : filterByLocation(rawPantryItems, locationFilter);
 
   const {
     searchQuery,
@@ -123,7 +150,7 @@ export function usePantryScreen() {
     pantryId: pantry?.id,
     locationQueryFilter,
     orderBy,
-    items: rawPantryItems,
+    items: locationFilteredItems,
     totalCount,
     hasMore,
     loading,

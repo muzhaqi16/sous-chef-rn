@@ -1,6 +1,7 @@
 import { useLazyQuery } from '@apollo/client/react';
 import { SearchBrandsDocument } from '#operations/item/item.generated';
 import { useAutocompleteSearch } from '#hooks/ui/useAutocompleteSearch';
+import { useAppStore } from '#store/useAppStore';
 
 interface SuggestedBrand {
   id: string;
@@ -24,14 +25,20 @@ export function useBrandAutocomplete(
   const [searchBrands, { data: brandsData, loading }] =
     useLazyQuery(SearchBrandsDocument);
 
+  // Caller-supplied suggestions plus the warmed reference cache
+  // (useDataPreloading), deduped by id, give offline-capable local fallback.
+  const cachedBrands = useAppStore(state => state.cachedBrands);
+  const fallbackItems: BrandItem[] = [];
+  const seenBrandIds = new Set<string>();
+  for (const brand of [...suggestedBrands, ...cachedBrands]) {
+    if (seenBrandIds.has(brand.id)) continue;
+    seenBrandIds.add(brand.id);
+    fallbackItems.push({ id: brand.id, name: brand.name, isSuggested: true });
+  }
+
   const search = (term: string) => {
     searchBrands({ variables: { search: term, limit: 20 } });
   };
-
-  const fallbackItems: BrandItem[] = suggestedBrands.map(b => ({
-    ...b,
-    isSuggested: true,
-  }));
 
   const filterFallback = (term: string, items: BrandItem[]): BrandItem[] => {
     const lower = term.toLowerCase();
@@ -47,9 +54,9 @@ export function useBrandAutocomplete(
     }));
   };
 
-  // localFirst: true means useAutocompleteSearch filters cached suggestedBrands
-  // before firing the network query. If a user types a brand that's already in
-  // suggestedBrands, no API request is made — instant local results.
+  // localFirst: filter the local fallback (suggested + warmed cache) before
+  // firing the network query. If a user types a brand already cached, no API
+  // request is made — instant local results that also work offline.
   return useAutocompleteSearch<BrandItem>({
     search,
     getResults,

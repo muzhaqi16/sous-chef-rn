@@ -1,19 +1,36 @@
 /**
  * useAdjustPantryItemQuantity - Mutation hook for adjusting pantry item quantity
+ * (local-first).
  *
- * Adjusts pantry item quantity to match a physical count.
- * Creates an ADJUSTMENT usage record with mandatory reason for audit trail.
+ * Adjusts pantry item quantity to match a physical count and creates an
+ * ADJUSTMENT usage record with a mandatory reason for the audit trail.
+ *
+ * The corrected count is written to the cache PERMANENTLY before firing (an
+ * `optimisticResponse` would roll back the moment the offline queue completes
+ * the request with a null result), so it shows instantly and survives an
+ * offline/API-down adjust. Because the server writes a ledger row per adjust,
+ * the original mutation isn't replay-safe — the queue replays it through the
+ * idempotent `syncAdjustPantryItemQuantity` keyed by a client-minted
+ * `operationId` (carried on `context`), so a replay applies the delta exactly
+ * once. A real rejection restores the pre-adjust snapshot.
  */
 
-import { useMutation } from '@apollo/client/react';
+import { useApolloClient, useMutation } from '@apollo/client/react';
 import { AdjustPantryItemQuantityDocument } from '#features/pantry/graphql/pantry.generated';
+import {
+  UseAdjustPantryItemQuantity_PantryItemFragmentDoc,
+  type UseAdjustPantryItemQuantity_PantryItemFragment,
+} from './useAdjustPantryItemQuantity.generated';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import {
   handleMutationError,
   versionConflictCheck,
   invalidUnitCheck,
 } from '#/utils/errorHandlers';
-import { isSuccessPayload } from '#/utils/compilerSafeWrappers';
+import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
+import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
+import { generateEntityId } from '#/utils/generateEntityId';
 
 interface UseAdjustPantryItemQuantityOptions {
   onSuccess?: () => void;
@@ -22,8 +39,18 @@ interface UseAdjustPantryItemQuantityOptions {
 export function useAdjustPantryItemQuantity({
   onSuccess,
 }: UseAdjustPantryItemQuantityOptions = {}) {
+  const client = useApolloClient();
+
   const [adjustMutation, { loading }] = useMutation(
     AdjustPantryItemQuantityDocument,
+    {
+      onError: error => {
+        handleMutationError(error, {
+          operation: 'Adjust Quantity',
+          checks: [versionConflictCheck(), invalidUnitCheck()],
+        });
+      },
+    },
   );
 
   const adjustQuantity = async (
@@ -33,6 +60,49 @@ export function useAdjustPantryItemQuantity({
     version?: number,
     remainingNetWeight?: number,
   ): Promise<boolean> => {
+    const cacheId = client.cache.identify({
+      __typename: 'PantryItem',
+      id: pantryItemId,
+    });
+    const currentItem =
+      client.cache.readFragment<UseAdjustPantryItemQuantity_PantryItemFragment>(
+        {
+          id: cacheId,
+          fragment: UseAdjustPantryItemQuantity_PantryItemFragmentDoc,
+          fragmentName: 'useAdjustPantryItemQuantity_pantryItem',
+        },
+      );
+
+    const writeItem = (data: UseAdjustPantryItemQuantity_PantryItemFragment) =>
+      client.cache.writeFragment({
+        id: cacheId,
+        fragment: UseAdjustPantryItemQuantity_PantryItemFragmentDoc,
+        fragmentName: 'useAdjustPantryItemQuantity_pantryItem',
+        data,
+      });
+
+    // Permanent optimistic write before firing — newQuantity is absolute (a
+    // physical recount), so set it directly. Persist it too so the exact value
+    // survives an app-kill before the queue replays.
+    if (currentItem) {
+      const optimistic = enhanceWithVersion(currentItem, {
+        quantity: newQuantity,
+        ...(remainingNetWeight != null ? { remainingNetWeight } : {}),
+      });
+      executeCacheUpdate(
+        () => writeItem(optimistic),
+        'Adjust Pantry Item Quantity (optimistic)',
+      );
+      optimisticDataPersistence.save(
+        'PantryItem',
+        pantryItemId,
+        'quantity',
+        newQuantity,
+      );
+    }
+
+    // operationId dedups the ADJUSTMENT ledger entry on replay.
+    const operationId = generateEntityId();
     const result = await adjustMutation({
       variables: {
         input: {
@@ -43,38 +113,35 @@ export function useAdjustPantryItemQuantity({
           ...(remainingNetWeight != null ? { remainingNetWeight } : {}),
         },
       },
-      update: (_cache, { data: mutationData }) => {
-        const payload = mutationData?.adjustPantryItemQuantity;
-        if (payload?.__typename !== 'AdjustPantryItemQuantityPayload') return;
-
-        optimisticDataPersistence.save(
-          'PantryItem',
-          pantryItemId,
-          'quantity',
-          newQuantity,
-        );
-      },
+      context: { localFirst: true, operationId },
     });
 
-    if (
-      isSuccessPayload(
-        result.data?.adjustPantryItemQuantity,
-        'AdjustPantryItemQuantityPayload',
-      )
-    ) {
+    const outcome = classifyCreateResult(
+      result,
+      'adjustPantryItemQuantity',
+      'AdjustPantryItemQuantityPayload',
+    );
+
+    if (outcome === 'rejected') {
+      // Server refused the adjust — restore the pre-adjust snapshot; the
+      // user-facing alert comes from the mutation's onError.
+      if (currentItem) {
+        executeCacheUpdate(
+          () => writeItem(currentItem),
+          'Revert rejected pantry quantity adjust',
+        );
+      }
       optimisticDataPersistence.clear('PantryItem', pantryItemId, 'quantity');
-      onSuccess?.();
-      return true;
+      return false;
     }
 
-    if (result.error) {
-      handleMutationError(result.error, {
-        operation: 'Adjust Quantity',
-        checks: [versionConflictCheck(), invalidUnitCheck()],
-      });
+    // created (server confirmed, response normalized the authoritative value)
+    // or queued (offline / API down — replays via syncAdjustPantryItemQuantity).
+    if (outcome === 'created') {
+      optimisticDataPersistence.clear('PantryItem', pantryItemId, 'quantity');
     }
-
-    return false;
+    onSuccess?.();
+    return true;
   };
 
   return { adjustQuantity, loading };

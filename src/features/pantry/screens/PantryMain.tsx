@@ -46,27 +46,31 @@ import { FilterTabs } from '#components/molecules/FilterTabs/FilterTabs';
 import { TabMainScreen } from '#components/templates/TabMainScreen';
 import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
 
+type TFn = ReturnType<typeof useTranslation>['t'];
+
 // ── Pantry tutorial steps (data-driven, add entries to extend) ──
-const PANTRY_TUTORIAL_STEPS: TutorialStep[] = [
-  {
-    featureId: 'pantry_tutorial_home',
-    title: 'Tap to manage homes',
-    subtitle: 'Switch between homes or manage home settings',
-    rectKey: 'homeBadge',
-  },
-  {
-    featureId: 'pantry_tutorial_settings',
-    title: 'Pantry settings',
-    subtitle: 'Switch between pantry lists and create new pantries',
-    rectKey: 'settingsIcon',
-  },
-  {
-    featureId: 'pantry_tutorial_add',
-    title: 'Add items quickly',
-    subtitle: 'Tap + to add items to your pantry',
-    rectKey: 'addButton',
-  },
-];
+function buildPantryTutorialSteps(t: TFn): TutorialStep[] {
+  return [
+    {
+      featureId: 'pantry_tutorial_home',
+      title: t('pantryScreen.tutorialManageHomesTitle'),
+      subtitle: t('pantryScreen.tutorialManageHomesSubtitle'),
+      rectKey: 'homeBadge',
+    },
+    {
+      featureId: 'pantry_tutorial_settings',
+      title: t('pantryScreen.tutorialPantrySettingsTitle'),
+      subtitle: t('pantryScreen.tutorialPantrySettingsSubtitle'),
+      rectKey: 'settingsIcon',
+    },
+    {
+      featureId: 'pantry_tutorial_add',
+      title: t('pantryScreen.tutorialAddItemsTitle'),
+      subtitle: t('pantryScreen.tutorialAddItemsSubtitle'),
+      rectKey: 'addButton',
+    },
+  ];
+}
 
 /**
  * Inner component that runs all heavy hooks.
@@ -289,6 +293,7 @@ function PantryMainContent({
   scrollEndDragHandler,
   momentumEndHandler,
 }: PantryMainContentProps) {
+  const { t } = useTranslation();
   const {
     handleConsumeItem,
     handleWasteItem,
@@ -318,7 +323,7 @@ function PantryMainContent({
 
   // ── Tutorial orchestration ──
   const tutorial = useTutorialSequence({
-    steps: PANTRY_TUTORIAL_STEPS,
+    steps: buildPantryTutorialSteps(t),
     targetRects: {
       homeBadge: homeBadgeRect,
       settingsIcon: settingsIconRect,

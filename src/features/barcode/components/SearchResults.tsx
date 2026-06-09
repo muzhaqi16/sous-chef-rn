@@ -208,6 +208,12 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                             quantity,
                           },
                         },
+                        // Local-first: replay-safe via syncRestockPantryItem
+                        // (operationId dedups the restock ledger row if queued).
+                        context: {
+                          localFirst: true,
+                          operationId: generateEntityId(),
+                        },
                       });
                       setIsAdded(true);
                       setPendingPantryScrollToTop(true);

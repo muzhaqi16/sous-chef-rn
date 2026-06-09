@@ -7,6 +7,7 @@ import {
 } from '#operations/item/item.generated';
 import { ItemSuggestion } from '#/graphql/generated/schemaTypes';
 import { useAutocompleteSearch } from '#hooks/ui/useAutocompleteSearch';
+import { useAppStore, useIsOnline } from '#store/useAppStore';
 
 type SemanticItem = NonNullable<
   SearchItemsSemanticQuery['searchItemsSemantic']['edges'][number]
@@ -93,6 +94,31 @@ export function useItemAutocomplete(options?: { debounceMs?: number }) {
 
   const getResults = (): ItemSuggestion[] => deferredItems;
 
+  // The catalog is far too large to cache, so we keep the items the user has
+  // actually seen via search in a bounded LRU. Online we still hit the API for
+  // fresh, full-catalog results; offline we serve those cached items.
+  const isOnline = useIsOnline();
+  const cachedItemSuggestions = useAppStore(
+    state => state.cachedItemSuggestions,
+  );
+  const addCachedItemSuggestions = useAppStore(
+    state => state.addCachedItemSuggestions,
+  );
+
+  useEffect(() => {
+    if (deferredItems.length > 0) {
+      addCachedItemSuggestions(deferredItems);
+    }
+  }, [deferredItems, addCachedItemSuggestions]);
+
+  const filterFallback = (
+    term: string,
+    suggestions: ItemSuggestion[],
+  ): ItemSuggestion[] => {
+    const lower = term.toLowerCase();
+    return suggestions.filter(item => item.name.toLowerCase().includes(lower));
+  };
+
   const autocomplete = useAutocompleteSearch<ItemSuggestion>({
     search,
     getResults,
@@ -101,6 +127,11 @@ export function useItemAutocomplete(options?: { debounceMs?: number }) {
     minChars: 2,
     debounceMs: options?.debounceMs ?? 250,
     requiresNetwork: true,
+    fallbackItems: cachedItemSuggestions,
+    filterFallback,
+    // Only serve from the seen-items cache when offline — online keeps hitting
+    // the full-catalog API so search isn't limited to the cached subset.
+    localFirst: !isOnline,
     maxResults: 10,
   });
 

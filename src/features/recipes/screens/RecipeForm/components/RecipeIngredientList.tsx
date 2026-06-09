@@ -1,5 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
@@ -20,10 +21,11 @@ export const RecipeIngredientList: React.FC<RecipeIngredientListProps> = ({
   onRemoveIngredient,
   onAddIngredient,
 }) => {
+  const { t } = useTranslation();
   return (
     <View style={styles.container}>
       <Text size="lg" weight="semibold" style={styles.sectionTitle}>
-        Ingredients ({ingredients.length})
+        {t('recipes.ingredientsCount', { count: ingredients.length })}
       </Text>
       {ingredients.map(ingredient => (
         <AppPressable
@@ -33,14 +35,14 @@ export const RecipeIngredientList: React.FC<RecipeIngredientListProps> = ({
         >
           <View style={styles.ingredientInfo}>
             <Text size="md" weight="medium">
-              {ingredient.name || 'Unnamed ingredient'}
+              {ingredient.name || t('recipes.unnamedIngredient')}
             </Text>
             <Text size="sm" tone="secondary" style={styles.ingredientMeta}>
               {ingredient.quantity}
               {ingredient.preparation
                 ? ` \u00B7 ${ingredient.preparation}`
                 : ''}
-              {ingredient.isOptional ? ' (optional)' : ''}
+              {ingredient.isOptional ? t('recipes.optionalSuffix') : ''}
             </Text>
           </View>
           <Pressable
@@ -55,7 +57,7 @@ export const RecipeIngredientList: React.FC<RecipeIngredientListProps> = ({
       <AppPressable onPress={onAddIngredient} style={styles.addButton}>
         <Icon name="add-circle-outline" size={20} tone="primary" />
         <Text size="md" weight="medium" tone="accent" style={styles.addText}>
-          Add Ingredient
+          {t('recipes.addIngredient')}
         </Text>
       </AppPressable>
     </View>

@@ -12,8 +12,12 @@ jest.mock('../../../apollo/links/tokenScheduler');
 jest.mock('../../../apollo/links/refreshToken');
 
 let mockIsOnline = true;
+let mockCachedCategories: RootState['cachedCategories'] = [];
 jest.mock('#store/useAppStore', () => {
-  const getState = (): Partial<RootState> => ({ isOnline: mockIsOnline });
+  const getState = (): Partial<RootState> => ({
+    isOnline: mockIsOnline,
+    cachedCategories: mockCachedCategories,
+  });
   return {
     useAppStore: (selector: (state: RootState) => unknown) =>
       selector(getState() as RootState),
@@ -45,6 +49,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   jest.useFakeTimers();
   mockIsOnline = true;
+  mockCachedCategories = [];
 });
 
 afterEach(() => {
@@ -149,6 +154,44 @@ describe('useCategoryAutocomplete', () => {
     });
 
     expect(result.current.shouldSearch).toBe(false);
+  });
+
+  it('serves matches from the warmed cache offline without firing the API', () => {
+    mockIsOnline = false;
+    mockCachedCategories = [
+      {
+        __typename: 'CategorySuggestion',
+        id: 'c1',
+        name: 'Dairy',
+        type: CategoryType.General,
+        icon: null,
+        color: null,
+        slug: 'dairy',
+      },
+      {
+        __typename: 'CategorySuggestion',
+        id: 'c2',
+        name: 'Produce',
+        type: CategoryType.General,
+        icon: null,
+        color: null,
+        slug: 'produce',
+      },
+    ];
+    const recorded: Array<Record<string, unknown>> = [];
+    const { result } = renderHookWithApollo(() => useCategoryAutocomplete(), {
+      operationMocks: [createMock(recorded)],
+    });
+
+    act(() => {
+      result.current.handleSearchTermChange('dair');
+    });
+    act(() => {
+      jest.advanceTimersByTime(300);
+    });
+
+    expect(result.current.displayItems.map(c => c.name)).toEqual(['Dairy']);
+    expect(recorded).toEqual([]);
   });
 
   it('resets state when reset is called', () => {

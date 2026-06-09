@@ -1,11 +1,15 @@
+import { isCuid } from '@paralleldrive/cuid2';
 import { generateEntityId } from '../generateEntityId';
 
+// Server id validator (sous-chef-api/src/utils/common/validateId.ts): accepts
+// cuid2 and legacy cuid v1 / 24-char hex. New ids must satisfy this.
+const SERVER_ID_REGEX = /^(?:[a-z][0-9a-z]{23,31}|[0-9a-fA-F]{24})$/;
+
 describe('generateEntityId', () => {
-  it('emits a classic cuid v1 matching the server PK format', () => {
+  it('emits a cuid2 accepted by the server PK validator', () => {
     const id = generateEntityId();
-    // Must match Prisma @default(cuid()) — /^c[a-z0-9]{24}$/, 25 chars.
-    expect(id).toMatch(/^c[a-z0-9]{24}$/);
-    expect(id).toHaveLength(25);
+    expect(isCuid(id)).toBe(true);
+    expect(id).toMatch(SERVER_ID_REGEX);
   });
 
   it('emits unique ids across many calls', () => {

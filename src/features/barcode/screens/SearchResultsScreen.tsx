@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
@@ -52,6 +53,7 @@ export const SearchResultsScreen: React.FC<
 > = ({ route }) => {
   const { barcode, format, source, pantryId, shoppingListId } = route.params;
 
+  const { t } = useTranslation();
   const { goBack, navigation } = useAppNavigation();
 
   const [sheetMode, setSheetMode] = useState<AddItemFormMode>('create');
@@ -143,13 +145,18 @@ export const SearchResultsScreen: React.FC<
 
   const renderContent = () => {
     if (isSearching || loading) {
-      return <LoadingState message="Searching for item..." barcode={barcode} />;
+      return (
+        <LoadingState
+          message={t('searchResults.searching')}
+          barcode={barcode}
+        />
+      );
     }
 
     if (searchError && !searchResults.length) {
       return (
         <ErrorState
-          title="Search Error"
+          title={t('searchResults.errorTitle')}
           message={searchError}
           onRetry={handleRetry}
         />
@@ -177,7 +184,7 @@ export const SearchResultsScreen: React.FC<
   return (
     <View style={styles.container}>
       <Header
-        title="Search Results"
+        title={t('searchResults.title')}
         onBack={handleBackPress}
         rightActions={[
           {

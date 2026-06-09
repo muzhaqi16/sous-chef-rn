@@ -5,9 +5,15 @@
  * Each action performs an optimistic local update via Zustand, then fires the
  * corresponding GraphQL mutation to persist on the server.
  *
+ * Each mutation is fired with `context: { localFirst: true }` so that while
+ * offline it is queued and replayed on reconnect instead of being lost — these
+ * operations are idempotent server-side (marking an already-read notification
+ * is a no-op), so replay is safe. The notification entities live in Zustand, so
+ * the optimistic UI is already applied locally before the mutation fires.
+ *
  * On mutation failure:
  * - All errors are reported to errorService for production telemetry.
- * - Network errors keep the optimistic UI (transient, subscription will reconcile).
+ * - Network errors keep the optimistic UI (the change is queued and replays).
  * - Server errors roll back the optimistic local state to prevent permanent desync.
  *
  * Uses executeMutation from compilerSafeWrappers to avoid try-catch in the hook body.
@@ -42,7 +48,11 @@ export function useNotificationSync() {
     useStore.getState().markAsRead(id);
 
     executeMutation(
-      () => markReadMutation({ variables: { input: { id } } }),
+      () =>
+        markReadMutation({
+          variables: { input: { id } },
+          context: { localFirst: true },
+        }),
       (error: unknown) => {
         errorService.reportError(error, {
           operation: 'syncMarkAsRead',
@@ -57,7 +67,11 @@ export function useNotificationSync() {
 
   const syncMarkUnread = (id: string) => {
     executeMutation(
-      () => markUnreadMutation({ variables: { input: { id } } }),
+      () =>
+        markUnreadMutation({
+          variables: { input: { id } },
+          context: { localFirst: true },
+        }),
       (error: unknown) => {
         errorService.reportError(error, {
           operation: 'syncMarkUnread',
@@ -75,7 +89,11 @@ export function useNotificationSync() {
     useStore.getState().removeNotification(id);
 
     executeMutation(
-      () => deleteMutation({ variables: { input: { id } } }),
+      () =>
+        deleteMutation({
+          variables: { input: { id } },
+          context: { localFirst: true },
+        }),
       (error: unknown) => {
         errorService.reportError(error, {
           operation: 'syncDeleteNotification',
@@ -98,7 +116,7 @@ export function useNotificationSync() {
 
     // Single bulk mutation instead of N individual calls
     executeMutation(
-      () => markAllReadMutation(),
+      () => markAllReadMutation({ context: { localFirst: true } }),
       (error: unknown) => {
         errorService.reportError(error, {
           operation: 'syncMarkAllAsRead',

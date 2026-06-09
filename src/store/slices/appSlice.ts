@@ -1,5 +1,9 @@
 import { StateCreator } from 'zustand';
 import { RootState } from '../index';
+import type {
+  CategorySuggestion,
+  ItemSuggestion,
+} from '#/graphql/generated/schemaTypes';
 
 interface Unit {
   id: string;
@@ -7,6 +11,26 @@ interface Unit {
   symbol: string;
   abbreviation?: string;
 }
+
+// Reference data cached while online (see useDataPreloading) so the
+// autocomplete hooks can serve suggestions locally when offline.
+export interface CachedBrand {
+  id: string;
+  name: string;
+}
+
+export interface CachedStore {
+  id: string;
+  name: string;
+  address?: string | null;
+}
+
+/**
+ * Max catalog item suggestions kept in the local-first LRU. The catalog itself
+ * is far too large to cache, so we keep only items the user has actually seen
+ * (most-recently-seen first), bounded so persisted state stays small.
+ */
+const MAX_CACHED_ITEM_SUGGESTIONS = 150;
 
 // Navigation state machine for explicit flow control
 export type NavigationState =
@@ -35,6 +59,17 @@ export interface AppState {
   cachedUnits: Unit[];
   lastUnitsFetchedAt: number | null;
 
+  // Reference data warmed while online for offline-first autocomplete.
+  cachedCategories: CategorySuggestion[];
+  lastCategoriesFetchedAt: number | null;
+  cachedBrands: CachedBrand[];
+  lastBrandsFetchedAt: number | null;
+  cachedStores: CachedStore[];
+  lastStoresFetchedAt: number | null;
+  // Catalog items the user has seen, kept as a bounded LRU (no TTL — it grows
+  // and self-evicts as the user browses).
+  cachedItemSuggestions: ItemSuggestion[];
+
   setHydrated: (flag: boolean) => void;
   setLoggingOut: (flag: boolean) => void;
 
@@ -51,6 +86,15 @@ export interface AppState {
 
   setCachedUnits: (units: Unit[]) => void;
   setLastUnitsFetchedAt: (timestamp: number) => void;
+
+  setCachedCategories: (categories: CategorySuggestion[]) => void;
+  setLastCategoriesFetchedAt: (timestamp: number) => void;
+  setCachedBrands: (brands: CachedBrand[]) => void;
+  setLastBrandsFetchedAt: (timestamp: number) => void;
+  setCachedStores: (stores: CachedStore[]) => void;
+  setLastStoresFetchedAt: (timestamp: number) => void;
+  /** Merge newly-seen catalog items into the LRU (most-recent first, capped). */
+  addCachedItemSuggestions: (items: ItemSuggestion[]) => void;
 }
 
 export const initialAppState = {
@@ -65,6 +109,14 @@ export const initialAppState = {
 
   cachedUnits: [],
   lastUnitsFetchedAt: null,
+
+  cachedCategories: [],
+  lastCategoriesFetchedAt: null,
+  cachedBrands: [],
+  lastBrandsFetchedAt: null,
+  cachedStores: [],
+  lastStoresFetchedAt: null,
+  cachedItemSuggestions: [],
 };
 
 export const createAppSlice: StateCreator<
@@ -99,4 +151,27 @@ export const createAppSlice: StateCreator<
 
   setCachedUnits: units => set({ cachedUnits: units }),
   setLastUnitsFetchedAt: timestamp => set({ lastUnitsFetchedAt: timestamp }),
+
+  setCachedCategories: categories => set({ cachedCategories: categories }),
+  setLastCategoriesFetchedAt: timestamp =>
+    set({ lastCategoriesFetchedAt: timestamp }),
+  setCachedBrands: brands => set({ cachedBrands: brands }),
+  setLastBrandsFetchedAt: timestamp => set({ lastBrandsFetchedAt: timestamp }),
+  setCachedStores: stores => set({ cachedStores: stores }),
+  setLastStoresFetchedAt: timestamp => set({ lastStoresFetchedAt: timestamp }),
+
+  addCachedItemSuggestions: items =>
+    set(state => {
+      // Prepend the newly-seen items, dedupe by id keeping the first (most
+      // recent) occurrence, and cap the list so persisted state stays small.
+      const seen = new Set<string>();
+      const merged: ItemSuggestion[] = [];
+      for (const item of [...items, ...state.cachedItemSuggestions]) {
+        if (seen.has(item.id)) continue;
+        seen.add(item.id);
+        merged.push(item);
+        if (merged.length >= MAX_CACHED_ITEM_SUGGESTIONS) break;
+      }
+      state.cachedItemSuggestions = merged;
+    }),
 });

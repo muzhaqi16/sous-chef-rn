@@ -206,7 +206,42 @@
     "passwordTooShort": "Fjalëkalimi duhet të ketë të paktën 8 karaktere",
     "passwordComplexity": "Fjalëkalimi duhet të përmbajë të paktën një shkronjë të madhe, një të vogël dhe një numër",
     "passwordConfirmRequired": "Të lutemi konfirmo fjalëkalimin",
-    "passwordsMustMatch": "Fjalëkalimet duhet të përputhen"
+    "passwordsMustMatch": "Fjalëkalimet duhet të përputhen",
+    "signupTitle": "Krijo llogari",
+    "signupSubtitle": "Bashkohu me Sous Chef sot",
+    "name": "Emri",
+    "namePlaceholder": "Shkruani emrin tuaj",
+    "creatingAccount": "Po krijohet llogaria…",
+    "haveAccount": "Keni tashmë një llogari?",
+    "signIn": "Hyr",
+    "forgotPasswordTitle": "Keni harruar fjalëkalimin",
+    "forgotPasswordSubtitle": "Shkruani emailin tuaj për ta rivendosur",
+    "sendResetLink": "Dërgo lidhjen e rivendosjes",
+    "rememberedIt": "E kujtuat?",
+    "enterCode": "Shkruani kodin",
+    "enterCodeSubtitlePrefix": "Kemi dërguar një kod verifikimi te",
+    "enterCodeSubtitleSuffix": ". Shkruajeni më poshtë për të verifikuar emailin tuaj.",
+    "yourEmail": "emailin tuaj",
+    "didntGetEmail": "Nuk e morët emailin?",
+    "resendCode": "Ridërgo kodin",
+    "tryAgain": "Provo përsëri",
+    "verifyingEmail": "Po verifikohet emaili juaj...",
+    "verifyingEmailSubtitle": "Ju lutemi prisni ndërsa konfirmojmë adresën tuaj të emailit.",
+    "emailVerifiedTitle": "Emaili u verifikua!",
+    "emailVerifiedDescription": "Emaili juaj u verifikua me sukses. ",
+    "emailVerifiedCanAccess": "Tani mund të përdorni të gjitha veçoritë.",
+    "emailVerifiedCompleteSetup": "Le ta përfundojmë konfigurimin e llogarisë suaj.",
+    "verificationFailedTitle": "Verifikimi dështoi",
+    "emailVerifiedToast": "Emaili u verifikua me sukses!",
+    "verificationFailedExpired": "Verifikimi dështoi. Lidhja mund të ketë skaduar ose të jetë e pavlefshme.",
+    "invalidVerificationToken": "Token verifikimi i pavlefshëm",
+    "resendVerificationFailed": "Dërgimi i emailit të verifikimit dështoi. Provoni përsëri.",
+    "landingTitle": "Ndalo shpërdorimin, kurse kohë e para",
+    "landingSubtitle": "Dije çfarë ke, planifiko hapin tjetër dhe blej më me mençuri.",
+    "legalNotice": "Duke vazhduar, ju pranoni",
+    "termsLink": "Kushtet & rregullat",
+    "legalAnd": "dhe",
+    "privacyLink": "Politika e privatësisë"
   },
   "recipes": {
     "name": "Emri i recetës",
@@ -425,7 +460,60 @@
     "noIngredientsToAdd": "Asnjë përbërës i disponueshëm për shtim.",
     "listNameEmpty": "Emri i listës nuk mund të jetë bosh",
     "createShoppingListFailed": "Krijimi i listës së blerjeve dështoi",
-    "cannotAddExternalIngredients": "Përbërësit nga recetat e jashtme nuk mund të shtohen ende. Ruaj recetën fillimisht."
+    "cannotAddExternalIngredients": "Përbërësit nga recetat e jashtme nuk mund të shtohen ende. Ruaj recetën fillimisht.",
+    "ingredientsCount": "Përbërësit ({{count}})",
+    "unnamedIngredient": "Përbërës pa emër",
+    "optionalSuffix": " (opsional)",
+    "instructionsCount": "Udhëzimet ({{count}})",
+    "tapToAddInstruction": "Trokit për të shtuar udhëzim...",
+    "unknownIngredient": "I panjohur",
+    "difficultyLabel": {
+      "VERY_EASY": "Shumë e lehtë",
+      "EASY": "E lehtë",
+      "MEDIUM": "Mesatare",
+      "HARD": "E vështirë",
+      "EXPERT": "Ekspert"
+    },
+    "recipeStatus": {
+      "DRAFT": "Draft",
+      "PUBLISHED": "Publikuar"
+    },
+    "diet": {
+      "GLUTEN_FREE": "Pa gluten",
+      "KETO": "Keto",
+      "LACTO_VEGETARIAN": "Lakto-vegjetarian",
+      "LOW_FODMAP": "FODMAP i ulët",
+      "OVO_VEGETARIAN": "Ovo-vegjetarian",
+      "PALEO": "Paleo",
+      "PESCETARIAN": "Peshkatar",
+      "PRIMAL": "Primal",
+      "VEGAN": "Vegan",
+      "VEGETARIAN": "Vegjetarian",
+      "WHOLE30": "Whole30"
+    },
+    "healthGoal": {
+      "DIABETIC_FRIENDLY": "I përshtatshëm për diabetikët",
+      "HEART_HEALTHY": "I shëndetshëm për zemrën",
+      "HIGH_PROTEIN": "I lartë në proteina",
+      "LOW_CARB": "I ulët në karbohidrate",
+      "LOW_SODIUM": "I ulët në natrium",
+      "SUGAR_FREE": "Pa sheqer"
+    },
+    "intolerance": {
+      "DAIRY": "Bulmet",
+      "EGG": "Vezë",
+      "FISH": "Peshk",
+      "GLUTEN": "Gluten",
+      "GRAIN": "Drithëra",
+      "PEANUT": "Kikirikë",
+      "SEAFOOD": "Ushqim deti",
+      "SESAME": "Susam",
+      "SHELLFISH": "Guaskorë",
+      "SOY": "Soja",
+      "SULFITE": "Sulfit",
+      "TREE_NUT": "Arra",
+      "WHEAT": "Grurë"
+    }
   },
   "recipeFilters": {
     "title": "Filtrat",
@@ -485,7 +573,11 @@
     "noExpiry": "Pa skadim",
     "amount": "Sasia",
     "nutrition": "Ushqyerja",
-    "recipesToTry": "Recetat për të provuar"
+    "recipesToTry": "Recetat për të provuar",
+    "noShoppingListSelectedTitle": "Asnjë listë blerjesh e zgjedhur",
+    "noShoppingListSelectedMessage": "Ju lutemi zgjidhni fillimisht një listë blerjesh.",
+    "goToShoppingLists": "Shko te listat e blerjeve",
+    "noRecipeSuggestions": "Nuk ka sugjerime recetash në dispozicion"
   },
   "shoppingListScreens": {
     "joinTitle": "Bashkohu me listën",
@@ -951,7 +1043,15 @@
     "resetSuccess": "Cilësimet u rivendosën.",
     "resetFailed": "Nuk u rivendosën dot cilësimet. Provoje sërish.",
     "resetConfirm": "Je i sigurt që do t'i rivendosësh të gjitha cilësimet e njoftimeve te parazgjedhjet?",
-    "resetToDefaultsDesc": "Rivendos të gjitha cilësimet e njoftimeve te parazgjedhjet"
+    "resetToDefaultsDesc": "Rivendos të gjitha cilësimet e njoftimeve te parazgjedhjet",
+    "notFound": "Njoftimi nuk u gjet",
+    "titleFallback": "Njoftim",
+    "noMessageAvailable": "Asnjë mesazh i disponueshëm",
+    "detailsSection": "Detaje",
+    "acceptHomeInvitation": "Prano ftesën e shtëpisë",
+    "takeAction": "Vepro",
+    "acceptInvitation": "Prano ftesën",
+    "listTitle": "Njoftimet"
   },
   "settings": {
     "appSettings": "Cilësimet e aplikacionit",
@@ -1067,11 +1167,50 @@
     "addItemsZero": "Shto artikuj",
     "addItemSingular": "Shto {{count}} artikull",
     "addItemPlural": "Shto {{count}} artikuj",
-    "saveChanges": "Ruaj ndryshimet"
+    "saveChanges": "Ruaj ndryshimet",
+    "profilePictureTitle": "Fotoja e profilit",
+    "profilePictureSubtitle": "Shto një foto për të personalizuar profilin tënd",
+    "chooseFromGallery": "Zgjidh nga galeria",
+    "chooseFromGalleryDescription": "Zgjidh një foto ekzistuese",
+    "takeAPhoto": "Bëj një foto",
+    "takeAPhotoDescription": "Përdor kamerën tënde",
+    "cropAndCenter": "Prit dhe qendro",
+    "cropHint": "Rregullo foton para ngarkimit",
+    "termsOfService": "Kushtet e shërbimit",
+    "legalNotice": "Duke vazhduar ju pranoni",
+    "uploadAndContinue": "Ngarko dhe vazhdo",
+    "updateProfilePhotoFailed": "Përditësimi i fotos së profilit dështoi. Provo sërish.",
+    "uploadFailedTitle": "Ngarkimi dështoi",
+    "invalidImageTitle": "Imazh i pavlefshëm",
+    "cameraPermissionTitle": "Leja e kamerës",
+    "cameraPermissionTakePhotoMessage": "Qasja në kamerë kërkohet për të bërë një foto. Aktivizoje te cilësimet.",
+    "completeTitle": "Gjithçka gati!",
+    "completeSubtitle": "Shtëpia jote është gati për përdorim",
+    "congratulations": "Urime! Ke konfiguruar me sukses:",
+    "summaryHomeAndPantry": "Shtëpia dhe qilari yt",
+    "summaryShoppingList": "Lista jote e blerjeve",
+    "summaryInitialPantryItems": "Artikujt fillestarë të qilarit",
+    "summaryInvitedFamily": "Anëtarët e familjes të ftuar",
+    "completeInfo": "Mund të menaxhosh gjithçka nga cilësimet e aplikacionit në çdo kohë.",
+    "getStarted": "Fillo",
+    "completeOnboardingError": "Përfundimi i konfigurimit dështoi. Provo sërish.",
+    "userNotFoundError": "Përdoruesi nuk u gjet. Provo të hysh përsëri.",
+    "settingUpSecurity": "Po konfigurohet siguria...",
+    "checkingBiometricAvailability": "Po kontrollohet disponueshmëria biometrike...",
+    "secureYourAccount": "Siguro llogarinë tënde",
+    "homeNameLabel": "Emri i shtëpisë",
+    "homeNamePlaceholder": "p.sh. Shtëpia ime",
+    "defaultPantryNameLabel": "Emri i parazgjedhur i qilarit",
+    "pantryNameLabel": "Emri i qilarit",
+    "pantryNamePlaceholder": "p.sh. Qilari i kuzhinës",
+    "checkingExistingSetup": "Po kontrollohet konfigurimi yt ekzistues...",
+    "creatingHomeAndPantry": "Po krijohet shtëpia dhe qilari...",
+    "creatingPantry": "Po krijohet qilari..."
   },
   "loader": {
     "pleaseWait": "Ju lutemi prisni",
-    "brandTagline": "Asistenti yt i kuzhinës"
+    "brandTagline": "Asistenti yt i kuzhinës",
+    "loading": "Po ngarkohet"
   },
   "formSelect": {
     "placeholder": "Zgjidh një opsion"
@@ -1852,7 +1991,32 @@
       "debugInfo": "Informacione debug-u",
       "performanceDashboard": "Paneli i performancës",
       "logout": "Dilni"
-    }
+    },
+    "uploadYourPhoto": "Ngarko foton tënde",
+    "photoReadyToUpload": "Fotoja u prit dhe është gati për ngarkim!",
+    "tapCropToAdjust": "Prek ikonën e prerjes më poshtë për të rregulluar foton tënde.",
+    "choosePicturePersonalize": "Zgjidh një foto profili për të personalizuar llogarinë tënde.",
+    "uploadPhoto": "Ngarko foton",
+    "chooseDifferentPhoto": "Zgjidh foto tjetër",
+    "takePhoto": "Bëj foto",
+    "selectPhoto": "Zgjidh foto",
+    "invalidImage": "Imazh i pavlefshëm",
+    "cameraPermissionDeniedTitle": "Leja e kamerës u refuzua",
+    "cameraPermissionDeniedMessage": "Kërkohet leja e kamerës për të bërë foto. Aktivizoje në cilësimet e pajisjes.",
+    "cameraPermissionBlockedTitle": "Leja e kamerës u bllokua",
+    "cameraPermissionBlockedMessage": "Qasja në kamerë është e bllokuar. Shko te Cilësimet > Aplikacionet > Sous Chef > Lejet për të aktivizuar qasjen në kamerë.",
+    "cameraPermissionTitle": "Leja e kamerës",
+    "cameraPermissionMessage": "Kërkohet leja e kamerës për të bërë foto. Aktivizoje në cilësimet e pajisjes.",
+    "permissionErrorTitle": "Gabim leje",
+    "permissionErrorMessage": "Dështoi kërkesa për lejen e kamerës. Provo përsëri ose kontrollo cilësimet e pajisjes.",
+    "uploadFailedTitle": "Ngarkimi dështoi",
+    "updatePhotoFailed": "Dështoi përditësimi i fotos së profilit",
+    "cropPhoto": "Pri foton",
+    "cropping": "Duke prerë...",
+    "loadingImage": "Duke ngarkuar imazhin...",
+    "cropInstructions": "Mbledh gishtat për zmadhim, tërhiq për të lëvizur. Zona rrethore do të jetë fotoja jote e profilit.",
+    "imageNotLoaded": "Imazhi nuk u ngarkua si duhet",
+    "cropImageFailed": "Dështoi prerja e imazhit. Provo përsëri."
   },
   "personalInformation": {
     "screenTitle": "Informacioni Personal",
@@ -1909,7 +2073,13 @@
     "searchNoResultsAction": "Shto Artikull",
     "tabEmptyTitle": "Asnjë artikull në {{tabName}}",
     "tabEmptyDescription": "Artikujt e ruajtur këtu do të shfaqen në këtë skedë",
-    "tabEmptyFallbackName": "këtë vendndodhje"
+    "tabEmptyFallbackName": "këtë vendndodhje",
+    "tutorialManageHomesTitle": "Trokit për të menaxhuar shtëpitë",
+    "tutorialManageHomesSubtitle": "Kalo mes shtëpive ose menaxho cilësimet e shtëpisë",
+    "tutorialPantrySettingsTitle": "Cilësimet e qilarit",
+    "tutorialPantrySettingsSubtitle": "Kalo mes listave të qilarit dhe krijo qilarë të rinj",
+    "tutorialAddItemsTitle": "Shto artikuj shpejt",
+    "tutorialAddItemsSubtitle": "Trokit + për të shtuar artikuj në qilarin tënd"
   },
   "homeManagement": {
     "title": "Shtëpitë e Mia",
@@ -2048,6 +2218,16 @@
     "noListsAction": "Krijo Listë",
     "emptyTitle": "Asnjë artikull në këtë listë",
     "emptyDescription": "Shto disa artikuj për të nisur",
-    "emptyAction": "Shto Artikull"
+    "emptyAction": "Shto Artikull",
+    "noAddPermission": "Nuk keni leje për të shtuar artikuj në këtë listë"
+  },
+  "notFound": {
+    "message": "Kjo pamje nuk ekziston. Kontrollo URL-në ose kthehu te një pamje e vlefshme.",
+    "goToHome": "Shko te Kreu"
+  },
+  "searchResults": {
+    "title": "Rezultatet e kërkimit",
+    "searching": "Duke kërkuar artikullin...",
+    "errorTitle": "Gabim në kërkim"
   }
 }

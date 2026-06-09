@@ -28,6 +28,8 @@ import {
   type UseMealPlanActions_CreatorFragment,
   UseMealPlanActions_HomeFragmentDoc,
   type UseMealPlanActions_HomeFragment,
+  UseMealPlanActions_DetailStubFragmentDoc,
+  type UseMealPlanActions_DetailStubFragment,
 } from './useMealPlanActions.generated';
 import {
   type CreateMealPlanInput,
@@ -124,6 +126,40 @@ function buildOptimisticMealPlan(
   };
 }
 
+/**
+ * A meal plan created offline must render on its complete-gated detail screen —
+ * `useMealPlan` reads `MealPlanMain_mealPlan` and returns null unless the whole
+ * fragment is `complete`. Materialize the detail-only fields (zeroed nutrition,
+ * no goal progress, empty items) alongside the `MealPlanDisplay` write so the
+ * fragment is complete until the server response / queued replay fills real
+ * values. Reuses the resolved `home` / `createdBy` from the display entity.
+ */
+function buildMealPlanDetailStub(
+  planId: string,
+): UseMealPlanActions_DetailStubFragment {
+  return {
+    __typename: 'MealPlan',
+    id: planId,
+    mealPlanItems: [],
+    nutritionSummary: {
+      __typename: 'MealPlanNutritionSummary',
+      totalCalories: 0,
+      totalProtein: 0,
+      totalCarbs: 0,
+      totalFat: 0,
+      avgDailyCalories: 0,
+      avgDailyProtein: 0,
+      avgDailyCarbs: 0,
+      avgDailyFat: 0,
+      totalMeals: 0,
+      mealsWithNutrition: 0,
+      coveragePercentage: 0,
+      mealTypeBreakdown: [],
+    },
+    nutritionGoalProgress: null,
+  };
+}
+
 /** Fields an update can change that live on the cached `MealPlanDisplay`. */
 function mergeUpdateIntoSnapshot(
   snapshot: MealPlanDisplayFragment,
@@ -181,6 +217,14 @@ export function useMealPlanActions() {
       data,
     });
 
+  const writePlanDetailStub = (planId: string) =>
+    client.cache.writeFragment({
+      id: client.cache.identify({ __typename: 'MealPlan', id: planId }),
+      fragment: UseMealPlanActions_DetailStubFragmentDoc,
+      fragmentName: 'useMealPlanActions_detailStub',
+      data: buildMealPlanDetailStub(planId),
+    });
+
   const readPlanSnapshot = (id: string) => {
     const cacheId = client.cache.identify({ __typename: 'MealPlan', id });
     return cacheId
@@ -202,6 +246,8 @@ export function useMealPlanActions() {
     if (optimisticPlan) {
       executeCacheUpdate(() => {
         writePlan(optimisticPlan);
+        // Make the complete-gated detail screen render offline too.
+        writePlanDetailStub(id);
         addToMealPlans(client.cache, optimisticPlan, { position: 'start' });
       }, 'Create Meal Plan (optimistic)');
     }

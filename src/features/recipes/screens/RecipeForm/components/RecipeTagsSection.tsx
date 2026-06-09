@@ -40,6 +40,15 @@ export const RecipeTagsSection: React.FC<RecipeTagsSectionProps> = ({
   const [showHealthGoals, setShowHealthGoals] = useState(false);
   const [showIntolerances, setShowIntolerances] = useState(false);
 
+  // Translate enum values via per-value keys, falling back to the formatted
+  // raw value (e.g. "Tree Nut") when no translation is registered.
+  const formatDiet = (value: string) =>
+    t(`recipes.diet.${value}`, formatEnumLabel(value));
+  const formatHealthGoal = (value: string) =>
+    t(`recipes.healthGoal.${value}`, formatEnumLabel(value));
+  const formatIntolerance = (value: string) =>
+    t(`recipes.intolerance.${value}`, formatEnumLabel(value));
+
   return (
     <View style={styles.container}>
       <Text size="lg" weight="semibold" style={styles.sectionTitle}>
@@ -50,7 +59,7 @@ export const RecipeTagsSection: React.FC<RecipeTagsSectionProps> = ({
       <ChipGroup
         label={t('recipes.diets')}
         items={diets}
-        formatLabel={formatEnumLabel}
+        formatLabel={formatDiet}
         onPress={() => setShowDiets(true)}
       />
 
@@ -58,7 +67,7 @@ export const RecipeTagsSection: React.FC<RecipeTagsSectionProps> = ({
       <ChipGroup
         label={t('recipes.healthGoals')}
         items={healthGoals}
-        formatLabel={formatEnumLabel}
+        formatLabel={formatHealthGoal}
         onPress={() => setShowHealthGoals(true)}
       />
 
@@ -66,14 +75,14 @@ export const RecipeTagsSection: React.FC<RecipeTagsSectionProps> = ({
       <ChipGroup
         label={t('recipes.intolerances')}
         items={intolerances}
-        formatLabel={formatEnumLabel}
+        formatLabel={formatIntolerance}
         onPress={() => setShowIntolerances(true)}
       />
 
       <MultiSelectChipSheet<Diet>
         visible={showDiets}
         title={t('recipes.diets')}
-        items={ALL_DIETS.map(d => ({ id: d, label: formatEnumLabel(d) }))}
+        items={ALL_DIETS.map(d => ({ id: d, label: formatDiet(d) }))}
         selectedItems={diets}
         onSelect={onDietsChange}
         onClose={() => setShowDiets(false)}
@@ -85,7 +94,7 @@ export const RecipeTagsSection: React.FC<RecipeTagsSectionProps> = ({
         title={t('recipes.healthGoals')}
         items={ALL_HEALTH_GOALS.map(g => ({
           id: g,
-          label: formatEnumLabel(g),
+          label: formatHealthGoal(g),
         }))}
         selectedItems={healthGoals}
         onSelect={onHealthGoalsChange}
@@ -98,7 +107,7 @@ export const RecipeTagsSection: React.FC<RecipeTagsSectionProps> = ({
         title={t('recipes.intolerances')}
         items={ALL_INTOLERANCES.map(i => ({
           id: i,
-          label: formatEnumLabel(i),
+          label: formatIntolerance(i),
         }))}
         selectedItems={intolerances}
         onSelect={onIntolerancesChange}

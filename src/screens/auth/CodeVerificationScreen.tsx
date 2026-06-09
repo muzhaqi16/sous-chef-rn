@@ -1,7 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import { Linking, View } from 'react-native';
 import { Text } from '#components/atoms/Text';
+import { t as tGlobal } from '#/i18n/t';
 import { GraphQLError } from 'graphql';
 import { AuthWrapper } from '#components/templates/AuthWrapper';
 import { AuthFormTemplate } from '#components/templates/AuthFormTemplate';
@@ -60,17 +62,17 @@ async function performAutoVerify(
     const payload = result.data?.verifyEmail;
     if (payload?.__typename === 'VerifyEmailPayload') {
       updateUser({ emailVerified: true });
-      toast({ message: 'Email verified successfully!', type: 'success' });
+      toast({ message: tGlobal('auth.emailVerifiedToast'), type: 'success' });
     } else {
       const message =
         payload && 'message' in payload ? payload.message : undefined;
-      throw new Error(message || 'Verification failed');
+      throw new Error(message || tGlobal('errors.verificationFailed'));
     }
   } catch (error: unknown) {
     logger.error('Auto-verify failed', { error });
     const errorMsg =
       (error instanceof Error ? error.message : undefined) ||
-      'Verification failed. The link may be expired or invalid.';
+      tGlobal('auth.verificationFailedExpired');
     toast({ message: errorMsg, type: 'error' });
     setIsAutoVerifying(false);
     autoVerifyProcessedRef.current = false;
@@ -90,6 +92,7 @@ type CodeVerificationValues = {
 };
 
 export function CodeVerificationScreen(): React.JSX.Element | null {
+  const { t } = useTranslation();
   const user = useUser();
   const updateUser = useUpdateUser();
   const toast = useToast();
@@ -214,7 +217,9 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
           });
         } else if (payload) {
           const message =
-            'message' in payload ? payload.message : 'Verification failed';
+            'message' in payload
+              ? payload.message
+              : t('errors.verificationFailed');
           toast({ message, type: 'error' });
         }
       },
@@ -223,7 +228,7 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
           operation: 'CodeVerification.verifyEmail',
         });
         toast({
-          message: 'Something went wrong. Please try again.',
+          message: t('errors.somethingWentWrong'),
           type: 'error',
         });
       },
@@ -265,7 +270,7 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
             operation: 'CodeVerification.resendEmail.graphqlError',
           });
           toast({
-            message: 'Failed to resend verification email.',
+            message: t('auth.resendVerificationFailed'),
             type: 'error',
           });
           return;
@@ -278,7 +283,7 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
           operation: 'CodeVerification.resendEmail',
         });
         toast({
-          message: 'Something went wrong. Please try again.',
+          message: t('errors.somethingWentWrong'),
           type: 'error',
         });
       },
@@ -299,7 +304,7 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
           <SousChefLoader
             size="small"
             showBrand={false}
-            message="Verifying your email..."
+            message={t('auth.verifyingEmail')}
           />
         </View>
       </AuthWrapper>
@@ -309,21 +314,21 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
   return (
     <AuthWrapper>
       <AuthFormTemplate
-        title="Enter Code"
+        title={t('auth.enterCode')}
         subtitle={
           <>
-            We emailed a code to{' '}
-            <Text weight="bold">{user.email || 'your email'}</Text>. Please
-            enter the code to continue.
+            {t('auth.enterCodeSubtitlePrefix')}{' '}
+            <Text weight="bold">{user.email || t('auth.yourEmail')}</Text>
+            {t('auth.enterCodeSubtitleSuffix')}
           </>
         }
         fields={[{ name: 'code', label: '', component: CodeInputAdapter }]}
         control={control}
         errors={errors}
-        submitText="Submit"
+        submitText={t('labels.submit')}
         onSubmit={handleSubmit(onVerifyCode, logValidationErrors)}
-        footerText="Didn't get the email?"
-        footerLinkText="Resend code"
+        footerText={t('auth.didntGetEmail')}
+        footerLinkText={t('auth.resendCode')}
         onFooterLinkPress={onResend}
         footerLinkDisabled={countdown > 0}
         footerLinkCountdown={countdown}

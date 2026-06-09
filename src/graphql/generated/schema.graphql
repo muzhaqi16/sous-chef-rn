@@ -683,7 +683,7 @@ input BatchAddShoppingListItemInput {
   """Client-provided ID for matching results (optional)"""
   clientId: String
   """
-  Optional client-generated permanent ID (CUID v1) for this item. Persisted as
+  Optional client-generated permanent ID (CUID2) for this item. Persisted as
   the row primary key so a re-synced batch resolves to the same rows (idempotent).
   Distinct from clientId below, which is only a response-matching token.
   """
@@ -1657,7 +1657,7 @@ input CreateHomeInput {
   defaultPantryName: String
   description: String
   """
-  Optional client-generated permanent ID (CUID v1) for offline-first idempotency.
+  Optional client-generated permanent ID (CUID2) for offline-first idempotency.
   """
   id: ID
   isPublic: Boolean
@@ -1739,7 +1739,7 @@ input CreateMealPlanInput {
   """
   homeId: ID
   """
-  Optional client-generated permanent ID (CUID v1) for offline-first idempotency.
+  Optional client-generated permanent ID (CUID2) for offline-first idempotency.
   """
   id: ID
   name: String!
@@ -1759,7 +1759,7 @@ input CreateMealPlanItemInput {
   estimatedCost: Float
   fat: Float
   """
-  Optional client-generated permanent ID (CUID v1) for offline-first idempotency.
+  Optional client-generated permanent ID (CUID2) for offline-first idempotency.
   On a retry that collides with the (mealPlanId, date, mealType, recipeId) unique
   key, the existing row is returned (its original id wins).
   """
@@ -1797,7 +1797,7 @@ input CreateMealTemplateInput {
   """
   homeId: ID
   """
-  Optional client-generated permanent ID (CUID v1) for offline-first idempotency.
+  Optional client-generated permanent ID (CUID2) for offline-first idempotency.
   """
   id: ID
   """Initial items to add to the template"""
@@ -1878,10 +1878,10 @@ input CreatePantryInput {
   description: String
   homeId: ID!
   """
-  Optional client-generated permanent ID (CUID v1, e.g. "c…", 25 chars).
+  Optional client-generated permanent ID (CUID2).
   Offline-first clients mint this as the row's permanent primary key so a
   re-synced create resolves to the same row (idempotent) instead of duplicating.
-  When omitted, the server generates one via @default(cuid()).
+  When omitted, the server generates one via @default(cuid(2)).
   """
   id: ID
   isDefault: Boolean
@@ -1896,11 +1896,11 @@ input CreatePantryItemInput {
   expiresAt: String
   forceAdd: Boolean
   """
-  Optional client-generated permanent ID (CUID v1, e.g. "c…", 25 chars).
+  Optional client-generated permanent ID (CUID2).
   Offline-first clients mint this as the row's permanent primary key so a
   re-synced create resolves to the same row (idempotent) instead of duplicating.
-  When omitted, the server generates one via @default(cuid()). Must match the
-  CUID v1 format; invalid formats are rejected by ID validation.
+  When omitted, the server generates one via @default(cuid(2)). Must match the
+  CUID2 format; invalid formats are rejected by ID validation.
   """
   id: ID
   item: InlineItemInput
@@ -1984,7 +1984,7 @@ input CreateRecipeInput {
   externalSourceUrl: String
   healthGoals: [HealthGoal!]
   """
-  Optional client-generated permanent ID (CUID v1) for offline-first idempotency.
+  Optional client-generated permanent ID (CUID2) for offline-first idempotency.
   """
   id: ID
   imageUrl: String
@@ -2030,10 +2030,10 @@ input CreateShoppingListInput {
   description: String
   homeId: ID
   """
-  Optional client-generated permanent ID (CUID v1, e.g. "c…", 25 chars).
+  Optional client-generated permanent ID (CUID2).
   Offline-first clients mint this as the row's permanent primary key so a
   re-synced create resolves to the same row (idempotent) instead of duplicating.
-  When omitted, the server generates one via @default(cuid()).
+  When omitted, the server generates one via @default(cuid(2)).
   """
   id: ID
   isDefault: Boolean
@@ -2043,7 +2043,7 @@ input CreateShoppingListInput {
 
 input CreateShoppingListItemFromRecipeIngredientInput {
   """
-  Optional client-generated permanent ID (CUID v1) for the created item;
+  Optional client-generated permanent ID (CUID2) for the created item;
   persisted as the row primary key for offline-first idempotency.
   """
   id: ID
@@ -2062,11 +2062,11 @@ input CreateShoppingListItemInput {
   brand: BrandReferenceInput
   category: String
   """
-  Optional client-generated permanent ID (CUID v1, e.g. "c…", 25 chars).
+  Optional client-generated permanent ID (CUID2).
   Offline-first clients mint this as the row's permanent primary key so a
   re-synced create resolves to the same row (idempotent) instead of duplicating.
-  When omitted, the server generates one via @default(cuid()). Must match the
-  CUID v1 format; invalid formats are rejected by ID validation.
+  When omitted, the server generates one via @default(cuid(2)). Must match the
+  CUID2 format; invalid formats are rejected by ID validation.
   """
   id: ID
   itemId: ID
@@ -2111,7 +2111,7 @@ input CreateStorageLocationInput {
   """Optional icon identifier"""
   icon: String
   """
-  Optional client-generated permanent ID (CUID v1) for offline-first idempotency.
+  Optional client-generated permanent ID (CUID2) for offline-first idempotency.
   """
   id: ID
   """Whether the location has climate control (default: false)"""
@@ -2213,7 +2213,7 @@ input CreateUserProfileInput {
   firstName: String
   gender: String
   """
-  Optional client-generated permanent ID (CUID v1). Note: a profile is 1:1 with
+  Optional client-generated permanent ID (CUID2). Note: a profile is 1:1 with
   the user (userId is unique), so creation is already idempotent per user; this
   is accepted for consistency with other offline-first creates.
   """
@@ -5986,18 +5986,42 @@ type Mutation {
   setupUnitConversion(input: SetupUnitConversionInput!): SetupUnitConversionResult!
   """Share a shopping list publicly with an optional share code."""
   shareShoppingList(input: ShareShoppingListInput!): ShareShoppingListResult!
+  """
+  Idempotent offline-sync quantity adjustment to a physical count. Replaying
+  the same operationId does not re-scale batches or pollute the ledger.
+  """
+  syncAdjustPantryItemQuantity(input: SyncAdjustPantryItemQuantityInput!): SyncPantryDeltaResult!
+  """
+  Idempotent offline-sync consumption/usage (incl. waste-via-usage).
+  Replaying the same operationId does not decrement quantity twice.
+  """
+  syncConsumePantryItem(input: SyncConsumePantryItemInput!): SyncPantryDeltaResult!
   """Sync a pantry item deletion from an offline client."""
   syncDeletePantryItem(input: SyncDeletePantryItemInput!): SyncPantryItemResult!
   """Sync a shopping list item deletion from an offline client."""
   syncDeleteShoppingListItem(input: SyncDeleteShoppingListItemInput!): SyncShoppingListItemResult!
-  """Sync a pantry item reorder from an offline client."""
-  syncMovePantryItem(input: SyncMovePantryItemInput!): SyncPantryItemResult!
   """Sync a shopping list item reorder from an offline client."""
   syncMoveShoppingListItem(input: SyncMoveShoppingListItemInput!): SyncShoppingListItemResult!
+  """
+  Idempotent offline-sync open-batch. Naturally idempotent — replaying (or
+  opening an already-open batch) returns current state as a no-op.
+  """
+  syncOpenPantryItemBatch(input: SyncOpenPantryItemBatchInput!): SyncPantryDeltaResult!
   """Sync a pantry item from an offline client."""
   syncPantryItem(input: SyncPantryItemInput!): SyncPantryItemResult!
+  """
+  Idempotent offline-sync restock. Replaying the same operationId returns
+  current state without adding inventory again (no double-count).
+  Authorization is enforced at the service layer.
+  """
+  syncRestockPantryItem(input: SyncRestockPantryItemInput!): SyncPantryDeltaResult!
   """Sync a shopping list item from an offline client."""
   syncShoppingListItem(input: SyncShoppingListItemFullInput!): SyncShoppingListItemResult!
+  """
+  Idempotent offline-sync whole-batch waste. Replaying the same operationId
+  returns current state without writing a phantom waste ledger entry.
+  """
+  syncWastePantryItemBatch(input: SyncWastePantryItemBatchInput!): SyncPantryDeltaResult!
   """Toggle a helpful vote on a recipe review."""
   toggleReviewHelpful(input: ToggleReviewHelpfulInput!): ToggleReviewHelpfulResult!
   """Toggle the purchased state of a shopping list item."""
@@ -9681,6 +9705,14 @@ type SuspiciousInviteActivity {
   summary: SuspiciousActivitySummary!
 }
 
+input SyncAdjustPantryItemQuantityInput {
+  input: AdjustPantryItemQuantityInput!
+  """
+  Client-minted permanent CUID2 identifying this adjustment; replay-safe.
+  """
+  operationId: ID!
+}
+
 """Information about a sync conflict"""
 type SyncConflictInfo {
   """The version the client had"""
@@ -9693,19 +9725,18 @@ type SyncConflictInfo {
   serverVersion: Int!
 }
 
+input SyncConsumePantryItemInput {
+  input: RecordPantryItemUsageInput!
+  """Client-minted permanent CUID2 identifying this usage; replay-safe."""
+  operationId: ID!
+}
+
 input SyncDeletePantryItemInput {
   clientId: ID!
   version: Int
 }
 
 input SyncDeleteShoppingListItemInput {
-  clientId: ID!
-  version: Int
-}
-
-input SyncMovePantryItemInput {
-  afterId: ID
-  beforeId: ID
   clientId: ID!
   version: Int
 }
@@ -9717,11 +9748,34 @@ input SyncMoveShoppingListItemInput {
   version: Int
 }
 
+input SyncOpenPantryItemBatchInput {
+  input: OpenBatchInput!
+  """
+  Client-minted permanent CUID2 for client-queue uniformity. openBatch writes
+  no ledger row and is naturally idempotent (re-opening is a no-op), so dedup
+  is by batch state rather than operationId.
+  """
+  operationId: ID!
+}
+
 enum SyncOperation {
   CREATE
   DELETE
   MOVE
   UPDATE
+}
+
+"""
+Result of an idempotent offline-sync pantry delta (restock / consume / waste /
+adjust / open-batch). wasApplied is false when the operationId was already
+processed (replay) — the delta is applied at most once regardless of retries,
+and pantryItem reflects the current server state either way.
+"""
+type SyncPantryDeltaResult {
+  operationId: ID!
+  pantry: Pantry
+  pantryItem: PantryItem
+  wasApplied: Boolean!
 }
 
 input SyncPantryItemInput {
@@ -9755,6 +9809,12 @@ type SyncPantryItemResult {
   operation: SyncOperation!
   serverId: ID
   wasCreated: Boolean!
+}
+
+input SyncRestockPantryItemInput {
+  input: RestockPantryItemInput!
+  """Client-minted permanent CUID2 identifying this restock; replay-safe."""
+  operationId: ID!
 }
 
 """Sub-input for sync settings"""
@@ -9813,6 +9873,14 @@ type SyncShoppingListItemResult {
   serverId: ID
   """Whether this was a create (true) or update (false) operation"""
   wasCreated: Boolean!
+}
+
+input SyncWastePantryItemBatchInput {
+  input: WasteBatchInput!
+  """
+  Client-minted permanent CUID2 identifying this batch waste; replay-safe.
+  """
+  operationId: ID!
 }
 
 """Sub-input for tag-based filters"""

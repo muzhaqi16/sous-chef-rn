@@ -4,6 +4,7 @@ import { useShowTutorials } from '#hooks/settings/useSettings';
 import { useUserId } from '#store/useAppStore';
 import type { TargetRect } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 import { useTutorialResetSignal } from '#hooks/ui/useTutorialResetSignal';
+import { markTutorialsSeen } from '#hooks/ui/markTutorialsSeen';
 
 // Same prefix used by useFeatureHint — keeps storage compatible with
 // resetAllFeatureHints() and hasFeatureHintBeenShown(). Per-account scoping
@@ -128,10 +129,19 @@ export const useTutorialSequence = ({
     userIdRef.current = userId;
   }, [userId]);
 
+  // True once every step in the sequence has been marked shown in MMKV. When the
+  // user reaches this point, the whole guided sequence is finished — record it at
+  // the account level so it doesn't replay on the user's other devices.
+  const areAllStepsShown = () =>
+    stepsRef.current.every(s =>
+      storage.getBoolean(buildStorageKey(userIdRef.current, s.featureId)),
+    );
+
   const advance = () => {
     if (activeStepIndex === -1) return;
     const step = stepsRef.current[activeStepIndex];
     storage.set(buildStorageKey(userIdRef.current, step.featureId), true);
+    if (areAllStepsShown()) markTutorialsSeen();
     setGeneration(g => g + 1);
     setIsTransitioning(true);
     if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current);
@@ -145,6 +155,7 @@ export const useTutorialSequence = ({
     if (activeStepIndex === -1) return;
     const step = stepsRef.current[activeStepIndex];
     storage.set(buildStorageKey(userIdRef.current, step.featureId), true);
+    if (areAllStepsShown()) markTutorialsSeen();
     setGeneration(g => g + 1);
   };
 
@@ -152,6 +163,7 @@ export const useTutorialSequence = ({
     for (const step of stepsRef.current) {
       storage.set(buildStorageKey(userIdRef.current, step.featureId), true);
     }
+    markTutorialsSeen();
     setGeneration(g => g + 1);
   };
 

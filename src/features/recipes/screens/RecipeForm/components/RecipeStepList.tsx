@@ -1,5 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
@@ -20,10 +21,11 @@ export const RecipeStepList: React.FC<RecipeStepListProps> = ({
   onRemoveStep,
   onAddStep,
 }) => {
+  const { t } = useTranslation();
   return (
     <View style={styles.container}>
       <Text size="lg" weight="semibold" style={styles.sectionTitle}>
-        Instructions ({steps.length})
+        {t('recipes.instructionsCount', { count: steps.length })}
       </Text>
       {steps.map((step, index) => (
         <AppPressable
@@ -37,7 +39,7 @@ export const RecipeStepList: React.FC<RecipeStepListProps> = ({
             </Text>
           </View>
           <Text size="md" style={styles.stepText} numberOfLines={2}>
-            {step.instruction || 'Tap to add instruction...'}
+            {step.instruction || t('recipes.tapToAddInstruction')}
           </Text>
           <Pressable
             onPress={() => onRemoveStep(step.id)}
@@ -51,7 +53,7 @@ export const RecipeStepList: React.FC<RecipeStepListProps> = ({
       <AppPressable onPress={onAddStep} style={styles.addButton}>
         <Icon name="add-circle-outline" size={20} tone="primary" />
         <Text size="md" weight="medium" tone="accent" style={styles.addText}>
-          Add Step
+          {t('recipes.addStep')}
         </Text>
       </AppPressable>
     </View>

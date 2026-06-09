@@ -46,6 +46,8 @@ const selectSetIsHomeSelectionReady = (state: RootState) =>
   state.setIsHomeSelectionReady;
 const selectSetIsPantryQueryComplete = (state: RootState) =>
   state.setIsPantryQueryComplete;
+const selectIsPantryQueryComplete = (state: RootState) =>
+  state.isPantryQueryComplete;
 
 // Atomic action selectors
 const selectSetHomeAndPantry = (state: RootState) => state.setHomeAndPantry;
@@ -180,6 +182,8 @@ export const useSetIsHomeSelectionReady = () =>
   useAppStore(selectSetIsHomeSelectionReady);
 export const useSetIsPantryQueryComplete = () =>
   useAppStore(selectSetIsPantryQueryComplete);
+export const useIsPantryQueryComplete = () =>
+  useAppStore(selectIsPantryQueryComplete);
 export const useSetHomeAndPantry = () => useAppStore(selectSetHomeAndPantry);
 export const useNavigationState = () => useAppStore(selectNavigationState);
 export const useTheme = () => useAppStore(selectTheme);

@@ -25,6 +25,7 @@ export function usePantryManagement(
   pantryId: string | undefined,
   itemsFilter?: PantryItemFilters | null,
   itemsOrderBy?: PantryItemOrderBy | null,
+  itemsFirst?: number,
 ) {
   // Query hook - fetches pantry data
   const {
@@ -40,7 +41,7 @@ export function usePantryManagement(
       isLoadingMore,
     },
     actions: { refetch, loadMore },
-  } = usePantryQuery(pantryId, itemsFilter, itemsOrderBy);
+  } = usePantryQuery(pantryId, itemsFilter, itemsOrderBy, itemsFirst);
 
   // Stats hook - computes location counts
   // Use stats.totalItems for the "all" tab (always full count, not filtered)

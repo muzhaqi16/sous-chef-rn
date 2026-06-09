@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View, SectionList } from 'react-native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { StyleSheet } from 'react-native-unistyles';
@@ -20,6 +21,7 @@ import {
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 
 export const NotificationListScreen: React.FC = () => {
+  const { t } = useTranslation();
   useScreenTransition('NotificationListScreen');
   const {
     toPantryMain,
@@ -113,7 +115,7 @@ export const NotificationListScreen: React.FC = () => {
 
   const renderHeader = () => (
     <Header
-      title="Notifications"
+      title={t('notifications.listTitle')}
       centerTitle={true}
       onBack={goBack}
       rightActions={[

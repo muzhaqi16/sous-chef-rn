@@ -228,6 +228,9 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
                   quantity: 1,
                 },
               },
+              // Local-first: replay-safe via syncRestockPantryItem (operationId
+              // dedups the restock ledger row if the request is queued).
+              context: { localFirst: true, operationId: generateEntityId() },
             })
               .then(() => onItemAdded?.())
               .catch(() => toastService.error(t('addToPantry.restockFailed')))
@@ -313,6 +316,9 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
                   quantity: 1,
                 },
               },
+              // Local-first: replay-safe via syncRestockPantryItem (operationId
+              // dedups the restock ledger row if the request is queued).
+              context: { localFirst: true, operationId: generateEntityId() },
             })
               .then(() => onItemAdded?.())
               .catch(() => toastService.error(t('addToPantry.restockFailed')))

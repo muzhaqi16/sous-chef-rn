@@ -130,17 +130,21 @@ function mergeArrayByIdIntelligent<T extends { id: string; __ref?: string }>(
     },
   );
 
-  // Add any optimistic items not yet confirmed by server
+  // Preserve locally-created items the server hasn't confirmed yet. An offline
+  // create writes the item (with its client-minted cuid) before the mutation
+  // replays, so a background refetch that lands first must not drop it. Keep
+  // existing items whose id still has a PENDING mutation in the offline queue;
+  // once the queue drains, the authoritative server page wins. A genuinely
+  // server-deleted item (no pending op) is correctly dropped. Mirrors the
+  // pending-id guard in itemsConnectionFieldPolicy.
+  const pendingIds = queueStore.getPendingClientIds();
   existingMap.forEach(({ item }, id) => {
     if (incomingMap.has(id)) {
       return; // Already processed above
     }
-
-    // If item has temporary ID (optimistic), keep it until server confirms
-    if (id.startsWith('temp-')) {
+    if (pendingIds.has(id)) {
       merged.push(item);
     }
-    // Otherwise, it was removed from server, don't include it
   });
 
   return merged;
@@ -298,8 +302,9 @@ function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
     // Reference inside `edge.node` because connections are `{ edges: [{ node }] }`
     // — its default broken-ref filter only handles plain lists of refs, not
     // nested `edge.node` shape. The unresolved ref still reads as a truthy
-    // Reference object, so `extractNodes` doesn't drop it and `useFragment`
-    // Pattern A consumers render null → phantom rows + stale totalCount.
+    // Reference object, so `extractNodes` doesn't drop it and strict
+    // (null-on-incomplete) useFragment consumers render null → phantom rows +
+    // stale totalCount.
     // Filtering via `canRead` here drops those edges at the source and
     // decrements `totalCount` by however many were dropped.
     read(
@@ -679,6 +684,19 @@ export function makeCache(): InMemoryCache {
               if (existing !== undefined) return existing;
               const ref = toReference({
                 __typename: 'Pantry',
+                id: args?.id as string,
+              });
+              return canRead(ref) ? ref : existing;
+            },
+          },
+          recipe: {
+            read(
+              existing: unknown,
+              { args, toReference, canRead }: FieldFunctionOptions,
+            ) {
+              if (existing !== undefined) return existing;
+              const ref = toReference({
+                __typename: 'Recipe',
                 id: args?.id as string,
               });
               return canRead(ref) ? ref : existing;

@@ -1,6 +1,6 @@
 {
   "name": "sous-chef-app",
-  "version": "3.6.5",
+  "version": "3.6.6",
   "private": true,
   "scripts": {
     "android": "react-native run-android",
@@ -83,11 +83,11 @@
   },
   "dependencies": {
     "@apollo/client": "~4.1.7",
-    "@bugsnag/cuid": "^3.2.2",
     "@callstack/liquid-glass": "^0.7.0",
     "@gorhom/bottom-sheet": "5.2.8",
     "@hookform/resolvers": "^5.2.2",
     "@notifee/react-native": "^9.1.8",
+    "@paralleldrive/cuid2": "^3.3.0",
     "@react-native-clipboard/clipboard": "^1.16.3",
     "@react-native-community/datetimepicker": "^8.6.0",
     "@react-native-community/image-editor": "^4.3.0",

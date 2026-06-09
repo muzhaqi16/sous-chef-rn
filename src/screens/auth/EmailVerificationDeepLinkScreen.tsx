@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
+import { t as tGlobal } from '#/i18n/t';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
@@ -40,7 +42,7 @@ async function performVerificationImpl(
 ): Promise<void> {
   if (!token) {
     setVerificationResult('error');
-    setErrorMessage('Invalid verification token');
+    setErrorMessage(tGlobal('auth.invalidVerificationToken'));
     setIsVerifying(false);
     return;
   }
@@ -71,7 +73,7 @@ async function performVerificationImpl(
         setVerificationResult('success');
 
         toast({
-          message: 'Email verified successfully!',
+          message: tGlobal('auth.emailVerifiedToast'),
           type: 'success',
         });
       } else {
@@ -88,7 +90,7 @@ async function performVerificationImpl(
         }
         const message =
           payload && 'message' in payload ? payload.message : null;
-        throw new Error(message ?? 'Verification failed');
+        throw new Error(message ?? tGlobal('errors.verificationFailed'));
       }
       return result;
     },
@@ -96,9 +98,7 @@ async function performVerificationImpl(
       const err = error as Error;
       logger.error('Email verification failed', { error });
 
-      const errorMsg =
-        err.message ||
-        'Verification failed. The link may be expired or invalid.';
+      const errorMsg = err.message || tGlobal('auth.verificationFailedExpired');
       setErrorMessage(errorMsg);
       setVerificationResult('error');
 
@@ -113,6 +113,7 @@ async function performVerificationImpl(
 }
 
 export const EmailVerificationDeepLinkScreen: React.FC = () => {
+  const { t } = useTranslation();
   const route = useRoute();
   const { goBack } = useNavigation();
   const user = useUser();
@@ -168,7 +169,7 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
             <SousChefLoader
               size="small"
               showBrand={false}
-              message="Verifying your email..."
+              message={t('auth.verifyingEmail')}
             />
             <Text
               size="md"
@@ -177,7 +178,7 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
               lineHeight="relaxed"
               style={styles.subtitle}
             >
-              Please wait while we verify your email address.
+              {t('auth.verifyingEmailSubtitle')}
             </Text>
           </>
         )}
@@ -193,7 +194,7 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
               align="center"
               style={styles.title}
             >
-              Email Verified!
+              {t('auth.emailVerifiedTitle')}
             </Text>
             <Text
               size="md"
@@ -202,10 +203,10 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
               lineHeight="relaxed"
               style={styles.subtitle}
             >
-              Your email address has been successfully verified.
+              {t('auth.emailVerifiedDescription')}
               {user?.onBoarded
-                ? ' You can now access your account.'
-                : ' Please complete your account setup.'}
+                ? t('auth.emailVerifiedCanAccess')
+                : t('auth.emailVerifiedCompleteSetup')}
             </Text>
           </>
         )}
@@ -221,7 +222,7 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
               align="center"
               style={styles.title}
             >
-              Verification Failed
+              {t('auth.verificationFailedTitle')}
             </Text>
             <Text
               size="md"
@@ -243,7 +244,7 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
                   weight="semibold"
                   style={styles.retryButtonText}
                 >
-                  Try Again
+                  {t('auth.tryAgain')}
                 </Text>
               </AppPressable>
             </View>
