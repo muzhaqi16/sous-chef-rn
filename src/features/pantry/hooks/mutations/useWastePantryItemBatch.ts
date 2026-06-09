@@ -18,6 +18,7 @@ import { BatchStatus, type WasteReason } from '#/graphql/generated/schemaTypes';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
 import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
 import { generateEntityId } from '#/utils/generateEntityId';
 
@@ -106,6 +107,8 @@ export function useWastePantryItemBatch({
         'Revert rejected batch waste',
       );
       clearPersistence();
+      // onError covers transport errors; a non-success union payload has none.
+      alertRejectedMutation(result, 'Could not mark this as wasted.');
       return false;
     }
 

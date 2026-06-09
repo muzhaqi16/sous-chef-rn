@@ -5,7 +5,8 @@ import {
   CategoryType,
 } from '#/graphql/generated/schemaTypes';
 import { useAutocompleteSearch } from '#hooks/ui/useAutocompleteSearch';
-import { useAppStore } from '#store/useAppStore';
+import { useAppStore, useIsOnline } from '#store/useAppStore';
+import { filterByName } from '#/utils/arrayUtils';
 
 interface UseCategoryAutocompleteOptions {
   categoryType?: CategoryType;
@@ -23,6 +24,7 @@ export function useCategoryAutocomplete(
   // requested category type so offline matches stay type-correct.
   const cachedCategories = useAppStore(state => state.cachedCategories);
   const fallbackItems = cachedCategories.filter(c => c.type === categoryType);
+  const isOnline = useIsOnline();
 
   const search = (term: string) => {
     searchCategories({
@@ -41,16 +43,9 @@ export function useCategoryAutocomplete(
       []) as CategorySuggestion[];
   };
 
-  const filterFallback = (
-    term: string,
-    items: CategorySuggestion[],
-  ): CategorySuggestion[] => {
-    const lower = term.toLowerCase();
-    return items.filter(c => c.name.toLowerCase().includes(lower));
-  };
-
-  // localFirst: filter the warmed cache before firing the network query, so a
-  // category the user has cached resolves instantly and works offline.
+  // Only serve from the warmed cache when offline. The cache is the first ~100
+  // categories (GetCategories), so online we must still hit the server search
+  // rather than cap results to the cached slice.
   const autocomplete = useAutocompleteSearch<CategorySuggestion>({
     search,
     getResults,
@@ -60,9 +55,9 @@ export function useCategoryAutocomplete(
     debounceMs: 300,
     requiresNetwork: true,
     fallbackItems,
-    filterFallback,
+    filterFallback: filterByName,
     maxResults: 5,
-    localFirst: true,
+    localFirst: !isOnline,
   });
 
   return autocomplete;

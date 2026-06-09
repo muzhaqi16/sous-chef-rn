@@ -5,7 +5,14 @@ import {
   seedCache,
 } from '#/test-utils/apolloMockProvider';
 import { OpenPantryItemBatchDocument } from '#features/pantry/graphql/pantry.generated';
+import { alertService } from '#/services/alertService';
 import { useOpenPantryItemBatch } from '../useOpenPantryItemBatch';
+
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
+
+beforeEach(() => jest.clearAllMocks());
 
 const READ_BATCH = gql`
   fragment _readOpenState on PantryItemBatch {
@@ -91,5 +98,11 @@ describe('useOpenPantryItemBatch (local-first)', () => {
 
     expect(resolved).toBe(false);
     expect(readIsOpened(cache)).toBe(false);
+    // A union-error payload carries no transport error, so onError never fires —
+    // the hook must surface its own alert rather than reverting silently.
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Error',
+      'Could not open this batch.',
+    );
   });
 });

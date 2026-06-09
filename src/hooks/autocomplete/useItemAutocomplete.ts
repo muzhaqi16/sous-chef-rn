@@ -8,6 +8,7 @@ import {
 import { ItemSuggestion } from '#/graphql/generated/schemaTypes';
 import { useAutocompleteSearch } from '#hooks/ui/useAutocompleteSearch';
 import { useAppStore, useIsOnline } from '#store/useAppStore';
+import { filterByName } from '#/utils/arrayUtils';
 
 type SemanticItem = NonNullable<
   SearchItemsSemanticQuery['searchItemsSemantic']['edges'][number]
@@ -111,14 +112,6 @@ export function useItemAutocomplete(options?: { debounceMs?: number }) {
     }
   }, [deferredItems, addCachedItemSuggestions]);
 
-  const filterFallback = (
-    term: string,
-    suggestions: ItemSuggestion[],
-  ): ItemSuggestion[] => {
-    const lower = term.toLowerCase();
-    return suggestions.filter(item => item.name.toLowerCase().includes(lower));
-  };
-
   const autocomplete = useAutocompleteSearch<ItemSuggestion>({
     search,
     getResults,
@@ -128,7 +121,7 @@ export function useItemAutocomplete(options?: { debounceMs?: number }) {
     debounceMs: options?.debounceMs ?? 250,
     requiresNetwork: true,
     fallbackItems: cachedItemSuggestions,
-    filterFallback,
+    filterFallback: filterByName,
     // Only serve from the seen-items cache when offline — online keeps hitting
     // the full-catalog API so search isn't limited to the cached subset.
     localFirst: !isOnline,

@@ -364,10 +364,11 @@ const defaultProps = {
   items: [] as PantryItem[],
   locationFilter: 'all',
   onLocationFilterChange: jest.fn(),
-  // Default to an empty pantry (all counts 0). The skeleton-gate now keeps
-  // skeletons up whenever stats-backed `locationCounts[filter]` says items exist
-  // but `items` is empty, so tests asserting the *empty state* must use counts
-  // that agree there are no items. Tests that expect items pass them explicitly.
+  // Default to an empty pantry (all counts 0). While `loading`, the skeleton
+  // gate holds skeletons whenever stats-backed `locationCounts[filter]` says
+  // items exist but `items` is empty, so tests asserting the *empty state* must
+  // use counts that agree there are no items. Tests that expect items pass them
+  // explicitly.
   locationCounts: { all: 0, fridge: 0, freezer: 0, pantry: 0 },
   searchQuery: '',
   onSearchChange: jest.fn(),
@@ -463,12 +464,29 @@ describe('PantryContent', () => {
   });
 
   describe('skeleton hold (offline-first cache gap)', () => {
-    it('keeps skeletons up when stats say items exist but the list is momentarily empty, even with loading=false', () => {
-      // Cold-start failure mode: `pantry.stats` (argument-free) resolves from
-      // cache so locationCounts is populated, but `itemsConnection` reads empty
-      // (dangling edges after MMKV restore / offline first paint) and `loading`
-      // has already settled false. The list must show skeletons, NOT a blank /
-      // "empty pantry" state.
+    it('holds skeletons while loading when stats say items exist but the list is momentarily empty', () => {
+      // Cold-start cache gap: `pantry.stats` resolves so locationCounts is
+      // populated, but `itemsConnection` reads empty while the query is still
+      // settling (`loading` is true — `isLoadingInitial` stays true until items
+      // arrive). The list must show skeletons, NOT a blank / "empty" state.
+      render(
+        <PantryContent
+          {...defaultProps}
+          items={[]}
+          loading={true}
+          locationCounts={{ all: 18, fridge: 3, freezer: 0, pantry: 15 }}
+        />,
+      );
+      expect(screen.getByTestId('pantry-skeleton')).toBeTruthy();
+      expect(screen.queryByText('Your pantry is empty')).toBeNull();
+    });
+
+    it('shows the empty state (not skeletons) once settled, even if stats are stale', () => {
+      // The query has settled (`loading=false`) with an empty list while stats
+      // still report items — e.g. the last item in a tab was removed offline,
+      // where `pantry.stats` can't re-sync. The list is now authoritative, so
+      // the real empty state must win rather than skeletons that would otherwise
+      // never clear.
       render(
         <PantryContent
           {...defaultProps}
@@ -477,8 +495,8 @@ describe('PantryContent', () => {
           locationCounts={{ all: 18, fridge: 3, freezer: 0, pantry: 15 }}
         />,
       );
-      expect(screen.getByTestId('pantry-skeleton')).toBeTruthy();
-      expect(screen.queryByText('Your pantry is empty')).toBeNull();
+      expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
+      expect(screen.getByText('Your pantry is empty')).toBeTruthy();
     });
 
     it('shows the empty state (not skeletons) when counts agree the pantry is empty', () => {

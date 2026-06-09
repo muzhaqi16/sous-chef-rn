@@ -6,6 +6,7 @@ import {
 } from '#operations/item/item.generated';
 import { GetStoresDocument } from '#operations/store/store.generated';
 import { GetCommonUnitsDocument } from '#operations/item/unit.generated';
+import type { CategorySuggestion } from '#/graphql/generated/schemaTypes';
 import { useStore } from '#store';
 import {
   useAppStore,
@@ -35,6 +36,23 @@ const REFERENCE_DATA_TTL = 24 * 60 * 60 * 1000; // 24h
 
 function isStale(lastFetchedAt: number | null, now: number): boolean {
   return lastFetchedAt === null || now - lastFetchedAt >= REFERENCE_DATA_TTL;
+}
+
+/**
+ * Commit a warmed reference dataset to the Zustand cache. A failed fetch
+ * (`rows === undefined`) leaves the timestamp null so the next online tick
+ * retries; otherwise the cache is replaced (only when non-empty) and the TTL is
+ * stamped. `setCached` drives the element type (`NoInfer` on `rows`) so an
+ * inline `__typename` literal narrows against the setter's parameter type.
+ */
+function commitWarm<T>(
+  rows: NoInfer<T>[] | undefined,
+  setCached: (rows: T[]) => void,
+  setFetchedAt: (timestamp: number) => void,
+): void {
+  if (rows === undefined) return;
+  if (rows.length > 0) setCached(rows);
+  setFetchedAt(Date.now());
 }
 
 export function useDataPreloading() {
@@ -92,16 +110,18 @@ export function useDataPreloading() {
       });
     };
 
-    // On a resolved fetch (data present, even empty) we stamp the timestamp so
-    // it isn't re-fetched until the TTL; only a genuinely failed fetch (data
-    // undefined) leaves the timestamp null to retry on the next online tick.
+    // `commitWarm` stamps the timestamp on any resolved fetch (so it isn't
+    // re-fetched until the TTL) and skips a genuinely failed fetch (`map` over
+    // `undefined` edges yields `undefined`), leaving the timestamp null to retry
+    // on the next online tick.
     warm('units', lastUnitsFetchedAt, async () => {
       const result = await executeQuery(() => fetchUnits(), 'preload units');
-      const units = result?.data?.units;
-      if (units === undefined) return;
       const store = useStore.getState();
-      if (units.length > 0) store.setCachedUnits(units);
-      store.setLastUnitsFetchedAt(Date.now());
+      commitWarm(
+        result?.data?.units,
+        store.setCachedUnits,
+        store.setLastUnitsFetchedAt,
+      );
     });
 
     warm('categories', lastCategoriesFetchedAt, async () => {
@@ -109,12 +129,10 @@ export function useDataPreloading() {
         () => fetchCategories(),
         'preload categories',
       );
-      const edges = result?.data?.categories.edges;
-      if (edges === undefined) return;
       const store = useStore.getState();
-      if (edges.length > 0) {
-        store.setCachedCategories(
-          edges.map(edge => ({
+      commitWarm(
+        result?.data?.categories.edges?.map(
+          (edge): CategorySuggestion => ({
             __typename: 'CategorySuggestion',
             id: edge.node.id,
             name: edge.node.name,
@@ -122,40 +140,38 @@ export function useDataPreloading() {
             icon: edge.node.icon,
             color: edge.node.color,
             slug: edge.node.slug,
-          })),
-        );
-      }
-      store.setLastCategoriesFetchedAt(Date.now());
+          }),
+        ),
+        store.setCachedCategories,
+        store.setLastCategoriesFetchedAt,
+      );
     });
 
     warm('brands', lastBrandsFetchedAt, async () => {
       const result = await executeQuery(() => fetchBrands(), 'preload brands');
-      const edges = result?.data?.brands.edges;
-      if (edges === undefined) return;
       const store = useStore.getState();
-      if (edges.length > 0) {
-        store.setCachedBrands(
-          edges.map(edge => ({ id: edge.node.id, name: edge.node.name })),
-        );
-      }
-      store.setLastBrandsFetchedAt(Date.now());
+      commitWarm(
+        result?.data?.brands.edges?.map(edge => ({
+          id: edge.node.id,
+          name: edge.node.name,
+        })),
+        store.setCachedBrands,
+        store.setLastBrandsFetchedAt,
+      );
     });
 
     warm('stores', lastStoresFetchedAt, async () => {
       const result = await executeQuery(() => fetchStores(), 'preload stores');
-      const edges = result?.data?.stores.edges;
-      if (edges === undefined) return;
       const store = useStore.getState();
-      if (edges.length > 0) {
-        store.setCachedStores(
-          edges.map(edge => ({
-            id: edge.node.id,
-            name: edge.node.name,
-            address: edge.node.address,
-          })),
-        );
-      }
-      store.setLastStoresFetchedAt(Date.now());
+      commitWarm(
+        result?.data?.stores.edges?.map(edge => ({
+          id: edge.node.id,
+          name: edge.node.name,
+          address: edge.node.address,
+        })),
+        store.setCachedStores,
+        store.setLastStoresFetchedAt,
+      );
     });
   }, [
     isReady,

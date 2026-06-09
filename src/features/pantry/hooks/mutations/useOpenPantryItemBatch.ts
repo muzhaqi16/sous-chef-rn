@@ -15,6 +15,7 @@ import { OpenPantryItemBatchDocument } from '#features/pantry/graphql/pantry.gen
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
 import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
 import { generateEntityId } from '#/utils/generateEntityId';
 
@@ -95,6 +96,8 @@ export function useOpenPantryItemBatch({
         'Revert rejected batch open',
       );
       clearPersistence();
+      // onError covers transport errors; a non-success union payload has none.
+      alertRejectedMutation(result, 'Could not open this batch.');
       return false;
     }
 

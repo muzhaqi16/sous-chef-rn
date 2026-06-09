@@ -171,21 +171,23 @@ export const PantryContent = React.forwardRef<
     }, [hasShownContent]);
 
     // Expected item count for the ACTIVE tab, read from the stats-backed
-    // `locationCounts` (argument-free, so it survives a cold start where the
-    // `itemsConnection` reads empty — dangling edge refs after an MMKV restore,
-    // or an offline first paint — while `pantry.stats` still resolves). The
-    // connection's own `totalCount` is 0 in exactly that case, so it can't be
-    // the signal that decides whether to keep waiting.
+    // `locationCounts`. `pantry.stats` is a separate field that survives when
+    // `itemsConnection` reads empty (the connection's own `totalCount` is 0 in
+    // that case — e.g. dangling edge refs filtered by the cache read policy, or
+    // an offline cold-start — so it can't be the wait signal).
     const expectedCount = locationCounts?.[locationFilter] ?? totalCount ?? 0;
 
-    // "Items are expected here but the list is momentarily empty." Hold the
-    // skeleton in this state regardless of `loading`, and even after content has
-    // shown once (a pantry switch / cache blip), so the user never sees a blank
-    // list where items should be. A legitimately empty tab has expectedCount 0
-    // and falls through to the real empty state. Excluded: an active search
-    // (empty here means "no results", not "loading") and the no-home/no-pantry
-    // states (those own empty states must win even if stale stats linger).
+    // "Items are expected here but haven't arrived yet" — show skeletons while
+    // the query is still settling (`loading` is `isLoadingInitial`: true only
+    // while items are empty AND the query is in-flight/not-ready). Gating on
+    // `loading` is what keeps this from sticking: once the query settles the
+    // list is authoritative, so an emptied tab (e.g. last item removed offline,
+    // where stale stats still report a count) falls through to the real empty
+    // state instead of skeletons forever. Excluded: an active search (empty =
+    // "no results") and the no-home/no-pantry states (their own empty states
+    // must win even if stale stats linger).
     const awaitingItems =
+      loading &&
       items.length === 0 &&
       expectedCount > 0 &&
       !searchQuery &&

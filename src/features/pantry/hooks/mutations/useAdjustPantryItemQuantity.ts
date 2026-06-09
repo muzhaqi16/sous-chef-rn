@@ -28,6 +28,7 @@ import {
   invalidUnitCheck,
 } from '#/utils/errorHandlers';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
 import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
 import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
 import { generateEntityId } from '#/utils/generateEntityId';
@@ -123,8 +124,9 @@ export function useAdjustPantryItemQuantity({
     );
 
     if (outcome === 'rejected') {
-      // Server refused the adjust — restore the pre-adjust snapshot; the
-      // user-facing alert comes from the mutation's onError.
+      // Server refused the adjust — restore the pre-adjust snapshot. A transport
+      // error already alerted via onError; a non-success union payload
+      // (Validation/Forbidden/NotFound/Conflict) has no error, so alert here.
       if (currentItem) {
         executeCacheUpdate(
           () => writeItem(currentItem),
@@ -132,6 +134,7 @@ export function useAdjustPantryItemQuantity({
         );
       }
       optimisticDataPersistence.clear('PantryItem', pantryItemId, 'quantity');
+      alertRejectedMutation(result, 'Could not adjust the quantity.');
       return false;
     }
 

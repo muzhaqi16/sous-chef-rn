@@ -6,7 +6,14 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { WastePantryItemBatchDocument } from '#features/pantry/graphql/pantry.generated';
 import { BatchStatus } from '#/graphql/generated/schemaTypes';
+import { alertService } from '#/services/alertService';
 import { useWastePantryItemBatch } from '../useWastePantryItemBatch';
+
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
+
+beforeEach(() => jest.clearAllMocks());
 
 const READ_BATCH = gql`
   fragment _readWasteState on PantryItemBatch {
@@ -90,5 +97,11 @@ describe('useWastePantryItemBatch (local-first)', () => {
 
     expect(resolved).toBe(false);
     expect(readStatus(cache)).toBe(BatchStatus.Active);
+    // A union-error payload carries no transport error, so onError never fires —
+    // the hook must surface its own alert rather than reverting silently.
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Error',
+      'Could not mark this as wasted.',
+    );
   });
 });

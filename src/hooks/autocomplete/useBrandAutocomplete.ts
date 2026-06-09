@@ -1,7 +1,8 @@
 import { useLazyQuery } from '@apollo/client/react';
 import { SearchBrandsDocument } from '#operations/item/item.generated';
 import { useAutocompleteSearch } from '#hooks/ui/useAutocompleteSearch';
-import { useAppStore } from '#store/useAppStore';
+import { useAppStore, useIsOnline } from '#store/useAppStore';
+import { dedupeById, filterByName } from '#/utils/arrayUtils';
 
 interface SuggestedBrand {
   id: string;
@@ -28,21 +29,15 @@ export function useBrandAutocomplete(
   // Caller-supplied suggestions plus the warmed reference cache
   // (useDataPreloading), deduped by id, give offline-capable local fallback.
   const cachedBrands = useAppStore(state => state.cachedBrands);
-  const fallbackItems: BrandItem[] = [];
-  const seenBrandIds = new Set<string>();
-  for (const brand of [...suggestedBrands, ...cachedBrands]) {
-    if (seenBrandIds.has(brand.id)) continue;
-    seenBrandIds.add(brand.id);
-    fallbackItems.push({ id: brand.id, name: brand.name, isSuggested: true });
-  }
+  const fallbackItems: BrandItem[] = dedupeById([
+    ...suggestedBrands,
+    ...cachedBrands,
+  ]).map(brand => ({ id: brand.id, name: brand.name, isSuggested: true }));
+
+  const isOnline = useIsOnline();
 
   const search = (term: string) => {
     searchBrands({ variables: { search: term, limit: 20 } });
-  };
-
-  const filterFallback = (term: string, items: BrandItem[]): BrandItem[] => {
-    const lower = term.toLowerCase();
-    return items.filter(b => b.name.toLowerCase().includes(lower));
   };
 
   const getResults = (): BrandItem[] => {
@@ -54,9 +49,11 @@ export function useBrandAutocomplete(
     }));
   };
 
-  // localFirst: filter the local fallback (suggested + warmed cache) before
-  // firing the network query. If a user types a brand already cached, no API
-  // request is made — instant local results that also work offline.
+  // Only serve from the local fallback (suggested + warmed first ~100 brands)
+  // when offline. Online we must still hit the full-catalog search so a brand
+  // outside the cached slice isn't suppressed by a cached name collision. The
+  // curated suggestions still appear as the pre-search fallback (before the
+  // 2-char minimum) regardless of this flag.
   return useAutocompleteSearch<BrandItem>({
     search,
     getResults,
@@ -66,8 +63,8 @@ export function useBrandAutocomplete(
     debounceMs: 300,
     requiresNetwork: true,
     fallbackItems,
-    filterFallback,
+    filterFallback: filterByName,
     maxResults: 10,
-    localFirst: true,
+    localFirst: !isOnline,
   });
 }

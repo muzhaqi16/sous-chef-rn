@@ -4,6 +4,7 @@ import type {
   CategorySuggestion,
   ItemSuggestion,
 } from '#/graphql/generated/schemaTypes';
+import { dedupeById } from '#/utils/arrayUtils';
 
 interface Unit {
   id: string;
@@ -164,14 +165,9 @@ export const createAppSlice: StateCreator<
     set(state => {
       // Prepend the newly-seen items, dedupe by id keeping the first (most
       // recent) occurrence, and cap the list so persisted state stays small.
-      const seen = new Set<string>();
-      const merged: ItemSuggestion[] = [];
-      for (const item of [...items, ...state.cachedItemSuggestions]) {
-        if (seen.has(item.id)) continue;
-        seen.add(item.id);
-        merged.push(item);
-        if (merged.length >= MAX_CACHED_ITEM_SUGGESTIONS) break;
-      }
-      state.cachedItemSuggestions = merged;
+      state.cachedItemSuggestions = dedupeById(
+        [...items, ...state.cachedItemSuggestions],
+        MAX_CACHED_ITEM_SUGGESTIONS,
+      );
     }),
 });

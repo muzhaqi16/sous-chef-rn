@@ -1,7 +1,8 @@
 import { useLazyQuery } from '@apollo/client/react';
 import { SearchStoresDocument } from '#operations/store/store.generated';
 import { useAutocompleteSearch } from '#hooks/ui/useAutocompleteSearch';
-import { useAppStore } from '#store/useAppStore';
+import { useAppStore, useIsOnline } from '#store/useAppStore';
+import { filterByName } from '#/utils/arrayUtils';
 
 export type StoreItem = {
   id: string;
@@ -21,6 +22,8 @@ export function useStoreAutocomplete() {
     address: store.address ?? null,
   }));
 
+  const isOnline = useIsOnline();
+
   const search = (term: string) => {
     searchStores({ variables: { search: term, limit: 20 } });
   };
@@ -35,13 +38,10 @@ export function useStoreAutocomplete() {
     }));
   };
 
-  const filterFallback = (term: string, items: StoreItem[]): StoreItem[] => {
-    const lower = term.toLowerCase();
-    return items.filter(store => store.name.toLowerCase().includes(lower));
-  };
-
-  // localFirst: filter the warmed cache before firing the network query, so a
-  // store the user has cached resolves instantly and works offline.
+  // Only serve from the warmed cache when offline. The cache is the first ~100
+  // stores (GetStores), so online we must still hit the full-catalog search —
+  // otherwise a store outside that slice that collides with a cached name would
+  // be unreachable.
   return useAutocompleteSearch<StoreItem>({
     search,
     getResults,
@@ -51,8 +51,8 @@ export function useStoreAutocomplete() {
     debounceMs: 300,
     requiresNetwork: true,
     fallbackItems,
-    filterFallback,
+    filterFallback: filterByName,
     maxResults: 10,
-    localFirst: true,
+    localFirst: !isOnline,
   });
 }

@@ -248,5 +248,11 @@ describe('useAdjustPantryItemQuantity', () => {
     });
 
     expect(success).toBe(false);
+    // A union-error payload carries no transport error, so onError never fires —
+    // the hook must surface its own alert rather than reverting silently.
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Error',
+      'Could not adjust the quantity.',
+    );
   });
 });
