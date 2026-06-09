@@ -72,6 +72,11 @@ import {
   NavigationErrorBoundary,
   AuthErrorBoundary,
 } from '#components/providers/ErrorBoundary';
+import {
+  topInsetScreenLayout,
+  topInsetWith,
+  noInsetScreenLayout,
+} from '#navigation/layouts/TopInsetLayout';
 import { PostLoginBiometricScreen } from '#screens/auth/PostLoginBiometricScreen';
 import { useDeepLinkRouter } from '#hooks/deepLink/useDeepLinkRouter';
 import {
@@ -118,9 +123,10 @@ const RootStack = createNativeStackNavigator({
     },
     Verification: {
       if: useIsVerification,
-      screenLayout: ({ children }) => (
-        <AuthErrorBoundary>{children}</AuthErrorBoundary>
-      ),
+      // Top inset folded into the boundary: a per-screen/group layout REPLACES
+      // (not nests) a parent layout in react-navigation v8, so the inset and
+      // the error boundary must be one function.
+      screenLayout: topInsetWith(AuthErrorBoundary),
       screens: {
         Verification: createNativeStackScreen({
           screen: CodeVerificationScreen,
@@ -153,8 +159,16 @@ const RootStack = createNativeStackNavigator({
     },
     MainApp: {
       if: useIsMainApp,
+      // Top safe-area inset for every screen in the group (it's no longer
+      // global — see TopInsetLayout). The three nested navigators below opt out
+      // with `noInsetScreenLayout` because they inset their own screens; Home's
+      // tabs and the Barcode/Notification stacks would otherwise double-inset.
+      screenLayout: topInsetScreenLayout,
       screens: {
-        Home: createNativeStackScreen({ screen: HomeTabs }),
+        Home: createNativeStackScreen({
+          screen: HomeTabs,
+          layout: noInsetScreenLayout,
+        }),
         Profile: createNativeStackScreen({
           screen: ProfileScreen,
           options: { animation: 'slide_from_right', animationDuration: 200 },
@@ -174,8 +188,14 @@ const RootStack = createNativeStackNavigator({
           screen: StorageLocationsScreen,
           options: { presentation: 'card', animation: 'slide_from_right' },
         }),
-        Barcode: createNativeStackScreen({ screen: BarcodeStack }),
-        Notifications: createNativeStackScreen({ screen: NotificationStack }),
+        Barcode: createNativeStackScreen({
+          screen: BarcodeStack,
+          layout: noInsetScreenLayout,
+        }),
+        Notifications: createNativeStackScreen({
+          screen: NotificationStack,
+          layout: noInsetScreenLayout,
+        }),
         ProfilePhotoUpload: createNativeStackScreen({
           screen: ProfilePhotoUploadScreen,
           options: {
@@ -233,6 +253,9 @@ const RootStack = createNativeStackNavigator({
     // Always-available deep link screens — placed last so the active
     // conditional group's first screen is the initial route.
     DeepLinks: {
+      // Top safe-area inset for every deep-link screen (no longer global — see
+      // TopInsetLayout). All are plain screens, so inset every one.
+      screenLayout: topInsetScreenLayout,
       screens: {
         // Core deep-link screens (auth lifecycle)
         EmailVerification: createNativeStackScreen({

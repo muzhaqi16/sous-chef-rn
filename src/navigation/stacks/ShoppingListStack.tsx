@@ -9,8 +9,12 @@ import { ShareList } from '#features/shoppingList/screens/ShareList';
 import { AddEditItem } from '#features/shoppingList/screens/AddEditItem';
 import { ShoppingListItemDetail } from '#features/shoppingList/screens/ItemDetail';
 import { PurchaseHistoryScreen } from '#features/shoppingList/screens/PurchaseHistoryScreen';
+import { topInsetScreenLayout } from '#navigation/layouts/TopInsetLayout';
 
 export const ShoppingListStack = createNativeStackNavigator({
+  // Top safe-area inset, applied per screen (it's no longer global — see
+  // TopInsetLayout). No immersive screen here, so inset every screen.
+  screenLayout: topInsetScreenLayout,
   screenOptions: ({ theme }) => ({
     headerShown: false,
     animation: 'slide_from_right',

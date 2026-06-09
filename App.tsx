@@ -1,8 +1,8 @@
 import React from 'react';
+import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import {
   SafeAreaProvider,
-  SafeAreaView,
   initialWindowMetrics,
 } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -93,11 +93,15 @@ const App = () => {
                   <OverlayBackdropProvider>
                     <BottomSheetModalProvider>
                       {/* Render order matters for stacking (no zIndex used):
-                        1. SafeAreaView with content (background extends under status bar via padding mode)
+                        1. App content. The top safe-area inset is NOT applied
+                           here — it's applied per screen via `TopInsetLayout`
+                           (so screens like Recipe Detail can draw their hero
+                           edge-to-edge behind the status bar). The OfflineBanner
+                           carries its own top inset.
                         2. GlobalBackdrop - covers everything including status bar
                         3. BottomSheetModal portals (including ActionTray) render on top via @gorhom/bottom-sheet */}
                       <ThemedStatusBar />
-                      <SafeAreaView mode="padding" style={styles.container} edges={['top']}>
+                      <View style={styles.container}>
                         <OfflineBanner />
                         <ToastProvider>
                           <AlertProvider>
@@ -106,7 +110,7 @@ const App = () => {
                             </NotificationProvider>
                           </AlertProvider>
                         </ToastProvider>
-                      </SafeAreaView>
+                      </View>
                       <GlobalBackdrop />
                     </BottomSheetModalProvider>
                   </OverlayBackdropProvider>

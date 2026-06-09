@@ -11,8 +11,12 @@ import { InviteMemberScreen } from '#screens/onBoarding/InviteMemberScreen';
 import { OnboardingCompleteScreen } from '#screens/onBoarding/OnboardingCompleteScreen';
 import { BiometricSetupScreen } from '#screens/onBoarding/BiometricSetupScreen';
 import { ImageCropScreen } from '#features/profile/screens/ImageCropScreen';
+import { topInsetScreenLayout } from '#navigation/layouts/TopInsetLayout';
 
 export const OnboardingStack = createNativeStackNavigator({
+  // Top safe-area inset, applied per screen (it's no longer global — see
+  // TopInsetLayout). No immersive screen here, so inset every screen.
+  screenLayout: topInsetScreenLayout,
   screenOptions: ({ theme }) => ({
     headerShown: false,
     animation: 'slide_from_right',

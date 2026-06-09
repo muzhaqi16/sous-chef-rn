@@ -5,6 +5,7 @@ import {
   createNativeStackScreen,
 } from '@react-navigation/native-stack';
 import { SearchResultsScreen } from '#features/barcode/screens/SearchResultsScreen';
+import { topInsetScreenLayout } from '#navigation/layouts/TopInsetLayout';
 
 // Lazy-load camera-heavy screens to defer vision-camera JS loading
 const BarcodeScannerScreen = React.lazy(() =>
@@ -27,6 +28,8 @@ export const BarcodeStack = createNativeStackNavigator({
   // Camera lifecycle is instead managed inside the screens via
   // useFocusEffect → camera.unmountOnBlur.
   screens: {
+    // No top inset — the scanner is a full-bleed camera that hides the status
+    // bar (useHiddenStatusBar) while focused.
     BarcodeScanner: createNativeStackScreen({
       screen: BarcodeScannerScreen,
       linking: 'scan',
@@ -34,6 +37,7 @@ export const BarcodeStack = createNativeStackNavigator({
     SearchResults: createNativeStackScreen({
       screen: SearchResultsScreen,
       linking: 'scan/result',
+      layout: topInsetScreenLayout,
     }),
   },
 });
