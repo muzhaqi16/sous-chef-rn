@@ -43,6 +43,7 @@ const isAuthRejectionError = (error: unknown): boolean => {
     return error.errors.some(
       e =>
         e.extensions?.code === 'UNAUTHENTICATED' ||
+        e.extensions?.code === 'AUTH_TOKEN_EXPIRED' ||
         (e.message ?? '').toLowerCase().includes('expired'),
     );
   }
@@ -52,6 +53,7 @@ const isAuthRejectionError = (error: unknown): boolean => {
     (legacy.graphQLErrors?.some(
       e =>
         e.extensions?.code === 'UNAUTHENTICATED' ||
+        e.extensions?.code === 'AUTH_TOKEN_EXPIRED' ||
         (e.message ?? '').toLowerCase().includes('expired'),
     ) ??
       false)

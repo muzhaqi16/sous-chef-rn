@@ -38,6 +38,7 @@ import { isNetworkError } from '#/utils/isNetworkError';
 describe('errorLink helpers', () => {
   const isAuthError = (code: string, msg: string) =>
     code === 'UNAUTHENTICATED' ||
+    code === 'AUTH_TOKEN_EXPIRED' ||
     ['expired', 'unauthorized', 'invalid token', 'jwt'].some(term =>
       msg.toLowerCase().includes(term),
     );
@@ -63,6 +64,16 @@ describe('errorLink helpers', () => {
 
     it('returns true for UNAUTHENTICATED code regardless of message', () => {
       expect(isAuthError('UNAUTHENTICATED', 'some random message')).toBe(true);
+    });
+
+    it('returns true for AUTH_TOKEN_EXPIRED code', () => {
+      expect(isAuthError('AUTH_TOKEN_EXPIRED', '')).toBe(true);
+    });
+
+    it('returns true for AUTH_TOKEN_EXPIRED code regardless of message', () => {
+      expect(isAuthError('AUTH_TOKEN_EXPIRED', 'some random message')).toBe(
+        true,
+      );
     });
 
     it('returns true when message contains "expired"', () => {
