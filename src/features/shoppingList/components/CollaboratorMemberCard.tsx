@@ -9,7 +9,7 @@ import { Icon } from '#/utils/iconUtils';
 import { getCollaboratorDisplayName } from '#/utils/formatters/memberFormatters';
 import { type ShoppingListCollaboratorFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 
-type StatusVariant = 'active' | 'pending' | 'declined' | 'expired';
+type StatusVariant = 'active' | 'pending' | 'declined' | 'expired' | 'owner';
 
 const getStatusVariant = (status: string): StatusVariant => {
   switch (status?.toUpperCase()) {
@@ -111,11 +111,10 @@ export const CollaboratorMemberCard: React.FC<CollaboratorMemberCardProps> = ({
           <View style={styles.statusContainer}>
             <StatusBadge variant={statusVariant} text={statusText} />
             {!!isOwner && (
-              <View style={styles.ownerTag}>
-                <Text style={styles.ownerTagText}>
-                  {t('shoppingListScreens.owner')}
-                </Text>
-              </View>
+              <StatusBadge
+                variant="owner"
+                text={t('shoppingListScreens.owner')}
+              />
             )}
             {!!member.invitedAt && (
               <Text style={styles.invitedText}>
@@ -212,6 +211,10 @@ const styles = StyleSheet.create(theme => ({
           backgroundColor: theme.colors.textTertiary + '20',
           borderColor: theme.colors.textTertiary,
         },
+        owner: {
+          backgroundColor: theme.colors.primary + '20',
+          borderColor: theme.colors.primary,
+        },
       },
     },
   },
@@ -224,6 +227,7 @@ const styles = StyleSheet.create(theme => ({
         pending: { color: theme.colors.warning },
         declined: { color: theme.colors.error },
         expired: { color: theme.colors.textTertiary },
+        owner: { color: theme.colors.primary },
       },
     },
   },
@@ -231,19 +235,6 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.xs,
     color: theme.colors.textSecondary,
     fontStyle: 'italic',
-  },
-  ownerTag: {
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs,
-    borderRadius: theme.radii.pill,
-    borderWidth: 1,
-    backgroundColor: theme.colors.primary + '20',
-    borderColor: theme.colors.primary,
-  },
-  ownerTagText: {
-    fontSize: theme.typography.fontSize.xs,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.primary,
   },
   pressed: {
     opacity: theme.opacity.pressed,

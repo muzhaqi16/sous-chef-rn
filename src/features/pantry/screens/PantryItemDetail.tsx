@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, ScrollView } from 'react-native';
 import { DetailSection } from '#components/molecules/DetailSection';
+import { DetailTitleRow } from '#components/molecules/DetailTitleRow';
 import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
@@ -39,9 +40,9 @@ import { PantryDetailInfo } from '#features/pantry/components/PantryDetailInfo';
 import { PantryUsageHistory } from '#features/pantry/components/PantryUsageHistory';
 import { parseNutritions, hasNutritionData } from '#utils/nutritionUtils';
 import { NutritionSummary } from '#components/molecules/NutritionSummary';
-import { ImageGalleryTabs } from '#components/molecules/ImageGalleryTabs';
+import { GalleryHero } from '#components/templates/GalleryHero';
 import { CollapsingHeroDetail } from '#components/templates/CollapsingHeroDetail';
-import { type HeaderAction } from '#components/molecules/Header';
+import type { HeaderAction } from '#components/atoms/HeaderActionIcon';
 import { Icon } from '#/utils/iconUtils';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { BatchSection } from '#features/pantry/components/BatchSection';
@@ -281,31 +282,31 @@ export const PantryItemDetail: React.FC<
         testID="pantry-item-detail"
         onBack={goBack}
         actions={headerActions}
+        title={item.itemName}
         refreshing={refreshing}
         onRefresh={handleRefresh}
         parallax
         renderHero={
           showImages
             ? heroHeight => (
-                <ImageGalleryTabs
+                <GalleryHero
                   images={itemImages}
                   fallbackImageUrl={imageUrl}
-                  imageHeight={heroHeight}
-                  resizeMode="cover"
-                  style={styles.heroInner}
+                  height={heroHeight}
                 />
               )
             : undefined
         }
       >
-        <View style={styles.titleRow}>
-          <Text style={styles.itemTitle} numberOfLines={2}>
-            {item.itemName}
-          </Text>
-          <Text style={styles.quantityBadge}>
-            {item.quantity} {getUnitDisplayText(item.unit)}
-          </Text>
-        </View>
+        <DetailTitleRow
+          title={item.itemName}
+          numberOfLines={2}
+          trailing={
+            <Text style={styles.quantityBadge}>
+              {item.quantity} {getUnitDisplayText(item.unit)}
+            </Text>
+          }
+        />
 
         {!!(categoryName || storageStateDisplay) && (
           <View style={styles.categoryBadge}>
@@ -321,7 +322,7 @@ export const PantryItemDetail: React.FC<
           </View>
         )}
 
-        <DetailSection style={styles.sectionSpacing}>
+        <DetailSection>
           <View style={styles.infoColumns}>
             <View style={styles.infoColumn}>
               <Text style={styles.infoColumnLabel}>
@@ -353,10 +354,7 @@ export const PantryItemDetail: React.FC<
         </DetailSection>
 
         {!!showNutrition && (
-          <DetailSection
-            style={styles.sectionSpacing}
-            title={t('pantryItemDetail.nutrition')}
-          >
+          <DetailSection title={t('pantryItemDetail.nutrition')}>
             <NutritionSummary
               nutritions={itemNutritions}
               showHighlights
@@ -371,7 +369,7 @@ export const PantryItemDetail: React.FC<
           </DetailSection>
         )}
 
-        <DetailSection style={styles.sectionSpacing}>
+        <DetailSection>
           <PantryDetailInfo
             itemRef={item}
             brandName={brandName}
@@ -386,7 +384,7 @@ export const PantryItemDetail: React.FC<
         </DetailSection>
 
         {!!item.batches && item.batches.length > 1 && (
-          <DetailSection flush style={styles.sectionSpacing}>
+          <DetailSection flush>
             <BatchSection
               batches={item.batches}
               pantryItemId={item.id}
@@ -396,7 +394,7 @@ export const PantryItemDetail: React.FC<
         )}
 
         {!!item.usageRecords && item.usageRecords.edges.length > 0 && (
-          <DetailSection flush style={styles.sectionSpacing}>
+          <DetailSection flush>
             <PantryUsageHistory
               usageRecords={item.usageRecords.edges}
               expanded={purchaseHistoryExpanded}
@@ -407,10 +405,7 @@ export const PantryItemDetail: React.FC<
           </DetailSection>
         )}
 
-        <DetailSection
-          style={styles.sectionSpacing}
-          title={t('pantryItemDetail.recipesToTry')}
-        >
+        <DetailSection title={t('pantryItemDetail.recipesToTry')}>
           {loadingRecipes ? (
             <ThemedActivityIndicator
               size="small"
@@ -474,26 +469,6 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  heroInner: {
-    borderRadius: 0,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.sm,
-  },
-  itemTitle: {
-    flex: 1,
-    fontSize: theme.fonts.size['2xl'],
-    // Explicit line height so bold descenders (g, p, y) aren't clipped on
-    // Android, where an unset lineHeight on a large bold Text crops the glyph box.
-    lineHeight: theme.typography.lineHeight.loose,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-    marginRight: theme.spacing.md,
-  },
   quantityBadge: {
     fontSize: theme.fonts.size.lg,
     fontWeight: theme.fonts.weight.medium,
@@ -510,9 +485,6 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.sm,
     color: theme.colors.primary,
     fontWeight: theme.fonts.weight.medium,
-  },
-  sectionSpacing: {
-    marginBottom: theme.spacing.md,
   },
   infoColumns: {
     flexDirection: 'row',

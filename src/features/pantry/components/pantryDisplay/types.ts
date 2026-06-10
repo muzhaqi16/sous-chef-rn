@@ -103,6 +103,13 @@ export interface PantryContentProps {
    * instantly.
    */
   fetching?: boolean;
+  /**
+   * True when items are paged/filtered by the server (large pantry, online).
+   * Gates the switch-skeleton latch: client-mode switches are instant and
+   * never fetch, so the latch must not arm (it could only clear via a
+   * fetching transition that never comes).
+   */
+  serverMode?: boolean;
 
   /** Callback with screen-coordinate rect when the home badge lays out */
   onHomeBadgeLayout?: (rect: {

@@ -336,6 +336,7 @@ export function usePantryScreen() {
     loading,
     isLoadingInitial,
     itemsFetching,
+    serverMode,
     isRefreshing,
 
     // Search

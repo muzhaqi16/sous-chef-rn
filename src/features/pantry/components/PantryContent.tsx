@@ -123,6 +123,7 @@ export const PantryContent = React.forwardRef<
       refreshing = false,
       loading = false,
       fetching = false,
+      serverMode = false,
       noHomeSelected,
       noHomes,
       noPantries,
@@ -257,6 +258,32 @@ export const PantryContent = React.forwardRef<
       setPrevFetching(fetching);
       if (switching && prevFetching && !fetching) setSwitching(false);
     }
+    // Client mode never fetches on switch, so an armed latch could only clear
+    // via a fetching transition that never comes — and would then blank a
+    // valid list when server mode kicks in later. Drop it outside server mode.
+    if (switching && !serverMode) {
+      setSwitching(false);
+    }
+
+    // Server-mode sort changes refetch the page in the new order — arm the
+    // same switch skeleton so the stale ordering doesn't linger un-covered.
+    const sortSignature = `${sortOption}|${sortDirection}`;
+    const [prevSortSignature, setPrevSortSignature] = useState(sortSignature);
+    if (prevSortSignature !== sortSignature) {
+      setPrevSortSignature(sortSignature);
+      if (serverMode) setSwitching(true);
+    }
+
+    // A sort change rebuilds the row order and collapses the client render
+    // window, so a kept scroll offset would land on an arbitrary slice —
+    // restart from the top. Tab switches intentionally keep their position
+    // (rows swap in place under the sticky tabs). The mount run is a no-op
+    // (offset is already 0).
+    useEffect(() => {
+      requestAnimationFrame(() => {
+        flashListRef.current?.scrollToOffset({ offset: 0, animated: false });
+      });
+    }, [sortOption, sortDirection]);
 
     // Items exist but the deferred/windowed slice hasn't caught up yet — a
     // one-render `useDeferredValue` lag on the empty→populated transition.
@@ -329,10 +356,10 @@ export const PantryContent = React.forwardRef<
     }, [sortedItems, clientWindow, client]);
 
     // Tab switch maintains the scroll position and swaps the rows below the
-    // sticky tabs in place. `setSwitching` only matters for the server-mode
-    // fetch skeleton; client-mode switches are instant.
+    // sticky tabs in place. The switch skeleton only applies to server-mode
+    // fetches; client-mode switches are instant and never arm the latch.
     const handleLocationFilterChange = (id: LocationFilter) => {
-      if (id !== locationFilter) setSwitching(true);
+      if (id !== locationFilter && serverMode) setSwitching(true);
       onLocationFilterChange(id);
     };
 

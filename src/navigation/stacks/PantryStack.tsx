@@ -11,7 +11,10 @@ import { FilteredPantryItems } from '#features/pantry/screens/FilteredPantryItem
 import { PantrySettings } from '#features/pantry/screens/PantrySettings';
 import { NutritionScreen } from '#features/pantry/screens/NutritionScreen';
 import { RecipeDetail } from '#features/recipes/screens/RecipeDetail';
-import { topInsetScreenLayout } from '#navigation/layouts/TopInsetLayout';
+import {
+  topInsetScreenLayout,
+  noInsetScreenLayout,
+} from '#navigation/layouts/TopInsetLayout';
 
 // Lazy-load PantryAnalytics to defer Skia + victory-native JS loading
 const PantryAnalytics = React.lazy(() =>
@@ -29,45 +32,40 @@ export const PantryStack = createNativeStackNavigator({
     contentStyle: { backgroundColor: theme.colors.background },
     inactiveBehavior: 'none',
   }),
-  // Top safe-area inset is applied per screen (no longer global — see
-  // TopInsetLayout). Every screen gets it EXCEPT RecipeDetail, which draws its
-  // hero image edge-to-edge behind the status bar.
+  // Top safe-area inset is the stack-wide default; immersive hero screens
+  // (PantryItemDetail, RecipeDetail) opt out to draw edge-to-edge behind the
+  // status bar and inset themselves.
+  screenLayout: topInsetScreenLayout,
   screens: {
     PantryMain: createNativeStackScreen({
       screen: PantryMain,
       linking: 'pantry',
-      layout: topInsetScreenLayout,
     }),
     PantryItem: createNativeStackScreen({
       screen: PantryItemScreen,
       linking: 'pantry/item/:itemId?',
-      layout: topInsetScreenLayout,
     }),
-    // No top-inset layout: like RecipeDetail, this screen draws its hero image
-    // edge-to-edge behind the status bar and applies insets itself.
     PantryItemDetail: createNativeStackScreen({
       screen: PantryItemDetail,
       linking: 'pantry/detail/:itemId',
+      layout: noInsetScreenLayout,
     }),
     FilteredPantryItems: createNativeStackScreen({
       screen: FilteredPantryItems,
-      layout: topInsetScreenLayout,
     }),
     PantrySettings: createNativeStackScreen({
       screen: PantrySettings,
       linking: 'pantry/settings',
-      layout: topInsetScreenLayout,
     }),
     PantryAnalytics: createNativeStackScreen({
       screen: PantryAnalytics,
-      layout: topInsetScreenLayout,
     }),
     NutritionScreen: createNativeStackScreen({
       screen: NutritionScreen,
-      layout: topInsetScreenLayout,
     }),
     RecipeDetail: createNativeStackScreen({
       screen: RecipeDetail,
+      layout: noInsetScreenLayout,
     }),
   },
 });

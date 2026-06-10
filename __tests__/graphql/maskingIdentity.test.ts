@@ -66,10 +66,6 @@ for (const file of files) {
   }
 }
 
-const directlySelectsId = (sel: SelectionSetNode | undefined): boolean =>
-  !!sel &&
-  sel.selections.some(s => s.kind === Kind.FIELD && s.name.value === 'id');
-
 // A fragment "identifies its type" when it selects `id` at its top level —
 // directly, via a nested spread, or via an inline fragment. Memoized; cycle-safe.
 const idCache = new Map<string, boolean>();
@@ -85,7 +81,7 @@ function fragmentSelectsId(name: string, seen = new Set<string>()): boolean {
     if (s.kind === Kind.FIELD && s.name.value === 'id') result = true;
     else if (s.kind === Kind.FRAGMENT_SPREAD && fragmentSelectsId(s.name.value, seen))
       result = true;
-    else if (s.kind === Kind.INLINE_FRAGMENT && directlySelectsId(s.selectionSet))
+    else if (s.kind === Kind.INLINE_FRAGMENT && exposesId(s.selectionSet))
       result = true;
   }
   idCache.set(name, result);

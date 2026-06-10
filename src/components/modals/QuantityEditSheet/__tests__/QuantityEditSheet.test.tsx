@@ -2,7 +2,7 @@
 import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
 import { QuantityEditSheet } from '../QuantityEditSheet';
-import type { HeaderAction } from '#/components/molecules/Header';
+import type { HeaderAction } from '#/components/atoms/HeaderActionIcon';
 
 type QuantityEditSheetProps = React.ComponentProps<typeof QuantityEditSheet>;
 type QuantityEditSheetItem = NonNullable<QuantityEditSheetProps['item']>;

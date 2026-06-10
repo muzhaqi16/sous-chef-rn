@@ -898,6 +898,7 @@ describe('PantryContent', () => {
           {...defaultProps}
           items={items}
           fetching={false}
+          serverMode
           locationCounts={counts}
         />,
       );
@@ -917,6 +918,7 @@ describe('PantryContent', () => {
           {...defaultProps}
           items={items}
           fetching={true}
+          serverMode
           locationCounts={counts}
         />,
       );
@@ -928,6 +930,7 @@ describe('PantryContent', () => {
           {...defaultProps}
           items={items}
           fetching={false}
+          serverMode
           locationCounts={counts}
         />,
       );
@@ -951,6 +954,96 @@ describe('PantryContent', () => {
         fireEvent.press(screen.getByTestId('pantry-location-tab-fridge'));
       });
       expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
+    });
+
+    it('arms the skeleton for a server-mode sort change and lifts it when the re-sorted page lands', () => {
+      const sortingMock = (
+        jest.requireMock('../hooks/usePantrySorting') as {
+          usePantrySorting: jest.Mock;
+        }
+      ).usePantrySorting;
+      const sortingValue = (sortOption: string) => ({
+        sortOption,
+        sortDirection: 'desc',
+        sortModalVisible: false,
+        openSortModal: jest.fn(),
+        closeSortModal: jest.fn(),
+        handleSortSelect: jest.fn(),
+        sortItems: jest.fn(<T,>(rows: T[]): T[] => rows),
+      });
+      sortingMock.mockImplementation(() => sortingValue('recent'));
+
+      const view = render(
+        <PantryContent
+          {...defaultProps}
+          items={items}
+          fetching={false}
+          serverMode
+          locationCounts={counts}
+        />,
+      );
+      expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
+
+      // Sort changes and the refetch for the new order starts.
+      sortingMock.mockImplementation(() => sortingValue('expiry'));
+      view.rerender(
+        <PantryContent
+          {...defaultProps}
+          items={items}
+          fetching={true}
+          serverMode
+          locationCounts={counts}
+        />,
+      );
+      expect(screen.getByTestId('pantry-skeleton')).toBeTruthy();
+
+      // The re-sorted page lands → skeleton lifts.
+      view.rerender(
+        <PantryContent
+          {...defaultProps}
+          items={items}
+          fetching={false}
+          serverMode
+          locationCounts={counts}
+        />,
+      );
+      expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
+      expect(screen.getByText('Milk')).toBeTruthy();
+
+      sortingMock.mockImplementation(() => sortingValue('recent'));
+    });
+
+    it('does not blank the list when a client-mode tab switch is followed by a server-mode fetch', () => {
+      // Client mode: tab tap must not arm the switch latch (nothing will
+      // fetch, so nothing could ever clear it).
+      const view = render(
+        <PantryContent
+          {...defaultProps}
+          items={items}
+          fetching={false}
+          serverMode={false}
+          locationCounts={counts}
+        />,
+      );
+      act(() => {
+        fireEvent.press(screen.getByTestId('pantry-location-tab-fridge'));
+      });
+      expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
+
+      // The pantry later qualifies for server mode and a background fetch
+      // starts — the populated rows must stay visible (a stale latch would
+      // swap them for skeletons here).
+      view.rerender(
+        <PantryContent
+          {...defaultProps}
+          items={items}
+          fetching={true}
+          serverMode
+          locationCounts={counts}
+        />,
+      );
+      expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
+      expect(screen.getByText('Milk')).toBeTruthy();
     });
   });
 

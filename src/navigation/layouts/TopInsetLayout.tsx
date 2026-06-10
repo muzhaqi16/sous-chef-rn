@@ -2,33 +2,26 @@ import React from 'react';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native-unistyles';
-import { useIsOfflineBannerVisible } from '#hooks/app/useIsOfflineBannerVisible';
 
 /**
  * Applies the top safe-area inset to a single navigation screen.
  *
- * The app used to inset the top once, globally, in `App.tsx`. That made every
- * screen sit below the status bar — including the Recipe Detail hero image,
- * which we want to draw edge-to-edge behind the status bar. So the global inset
- * was removed and re-applied per screen via this layout (wired through
- * react-navigation's `layout` / `screenLayout`). Screens that should stay
- * immersive (Recipe Detail) simply omit it.
+ * The top inset is applied per screen (wired through react-navigation's
+ * `layout` / `screenLayout`) rather than once globally, so screens that
+ * should stay immersive (Recipe Detail's edge-to-edge hero) simply omit it.
  *
  * Uses a `View` + `paddingTop` (not `SafeAreaView`) so the Unistyles babel
  * plugin keeps it bound to the native ShadowTree and theme changes apply
  * without a React re-render.
  *
- * While the offline banner is visible it occupies the status-bar inset itself,
- * so this layout drops its own inset to avoid stacking two insets below the
- * banner.
+ * Banner awareness lives one level up: `OfflineBannerInsetProvider` (App.tsx)
+ * re-publishes the insets with `top: 0` while the offline banner is visible,
+ * so `insets.top` here is already banner-adjusted.
  */
 export function TopInsetLayout({ children }: { children: React.ReactNode }) {
   const insets = useSafeAreaInsets();
-  const bannerVisible = useIsOfflineBannerVisible();
   return (
-    <View style={[styles.fill, { paddingTop: bannerVisible ? 0 : insets.top }]}>
-      {children}
-    </View>
+    <View style={[styles.fill, { paddingTop: insets.top }]}>{children}</View>
   );
 }
 

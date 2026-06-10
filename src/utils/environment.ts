@@ -132,7 +132,10 @@ export class Environment {
     const config = Environment.getConfig();
 
     if (config.isDevelopment) {
-      return getConfigValue('ENABLE_DEBUG_LOGS', false) ? 'debug' : 'none';
+      // warn/error always reach the Metro console so failure paths (error
+      // boundaries, storage/keychain fallbacks) stay visible while developing;
+      // ENABLE_DEBUG_LOGS opts into the chattier debug/info levels.
+      return getConfigValue('ENABLE_DEBUG_LOGS', false) ? 'debug' : 'warn';
     }
 
     if (config.isStaging) {

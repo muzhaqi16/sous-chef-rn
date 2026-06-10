@@ -1,5 +1,6 @@
 import React, { Component, ReactNode } from 'react';
 import { View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Telemetry } from '#/services/telemetry';
@@ -19,14 +20,17 @@ interface ErrorBoundaryProps {
   context?: string; // For debugging/analytics
 }
 
-// Error fallback component with retry functionality
+// Error fallback component with retry functionality. Self-insets: boundaries
+// wrap OUTSIDE the per-screen TopInsetLayout, so the fallback replaces the
+// inset wrapper along with the crashed children.
 const DefaultErrorFallback: React.FC<{
   error: Error;
   retry: () => void;
   context?: string;
 }> = ({ error, retry, context }) => {
+  const insets = useSafeAreaInsets();
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.content}>
         <Text
           size="xl"

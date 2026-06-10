@@ -22,32 +22,6 @@ jest.mock('#utils/nutritionUtils', () => ({
   hasNutritionData: jest.fn(() => false),
 }));
 jest.mock('#hooks/performance/useScreenTransition');
-jest.mock('#/styles/commonStyles', () => ({
-  commonStyles: { title: {}, body: {}, caption: {} },
-}));
-
-jest.mock('#components/templates/DetailTemplate', () => ({
-  DetailTemplate: ({
-    title,
-    sections,
-  }: {
-    title?: string;
-    sections: Array<{ title?: string; content: React.ReactNode }>;
-  }) => {
-    const { View, Text } = require('react-native');
-    return (
-      <View testID="detail-template">
-        <Text>{title}</Text>
-        {sections.map((section, i) => (
-          <View key={i}>
-            {section.title ? <Text>{section.title}</Text> : null}
-            {section.content}
-          </View>
-        ))}
-      </View>
-    );
-  },
-}));
 jest.mock('#components/molecules/ClickableInfoPanel', () => ({
   ClickableInfoPanel: ({
     title,

@@ -15,23 +15,6 @@ import { proactiveTokenRefresh } from '../../apollo/links/refreshToken';
 import { saveSessionTokens, clearSessionTokens } from '#storage/keychain';
 import { logger } from '#/utils/environment';
 
-/**
- * Write-through token persistence: session tokens live in the keychain (not
- * MMKV — see partialize in store/index.ts). Fire-and-forget: a failed write
- * only costs auto-login on the next cold start; the in-memory session keeps
- * working.
- */
-const persistSessionTokens = (
-  accessToken: string | null,
-  refreshToken: string | null,
-): void => {
-  if (accessToken && refreshToken) {
-    saveSessionTokens({ accessToken, refreshToken }).catch(error => {
-      logger.warn('Failed to persist session tokens to keychain:', error);
-    });
-  }
-};
-
 // ============================================
 // AppState Token Refresh
 // Handles token refresh when app resumes from background
@@ -126,6 +109,11 @@ export interface AuthState {
   authIsLoading: boolean;
   authIsLoadingCredentials: boolean;
 
+  // True once the keychain is confirmed to hold the current token pair.
+  // While false, partialize (store/index.ts) keeps the pair in the MMKV blob
+  // as a fallback so a failed keychain write/read can't lose the session.
+  sessionTokensInKeychain: boolean;
+
   // Computed property
   getIsAuthenticated: () => boolean;
 
@@ -144,6 +132,7 @@ export interface AuthState {
   setIsAutoLoggingIn: (loading: boolean) => void;
   setAuthIsLoading: (v: boolean) => void;
   setAuthIsLoadingCredentials: (v: boolean) => void;
+  setSessionTokensInKeychain: (inKeychain: boolean) => void;
 }
 
 const initialAuthState = {
@@ -154,6 +143,7 @@ const initialAuthState = {
   isAutoLoggingIn: false,
   authIsLoading: false,
   authIsLoadingCredentials: false,
+  sessionTokensInKeychain: false,
 };
 
 export const createAuthSlice: StateCreator<
@@ -161,143 +151,170 @@ export const createAuthSlice: StateCreator<
   [['zustand/immer', never]],
   [],
   AuthState
-> = (set, get) => ({
-  ...initialAuthState,
-
-  getIsAuthenticated: () => {
-    const state = get();
-    return !!(state.user && state.accessToken);
-  },
-
-  setAuth: (user, accessToken, refreshToken) => {
-    set(state => {
-      // Clear stale navigation state if the user changed (or no previous user).
-      // This prevents a new user from inheriting another user's selectedHomeId,
-      // which would cause "Not authorized to access pantries in this home" errors.
-      const previousUserId = state.user?.id;
-      if (!previousUserId || previousUserId !== user.id) {
-        state.selectedHomeId = null;
-        state.selectedPantryId = null;
-        state.selectedShoppingListId = null;
-        state.hasInitializedHomeData = false;
-        state.isHomeSelectionReady = false;
-      }
-
-      // Flatten profile fields from the login/register GraphQL response so the
-      // greeting can render the user's name immediately without a separate query.
-      const profile = user.profile;
-
-      // Normalize email to prevent validation issues (trim whitespace, lowercase)
-      state.user = {
-        ...user,
-        email: user.email?.trim().toLowerCase() ?? user.email,
-        firstName: profile?.firstName ?? user.firstName,
-        lastName: profile?.lastName ?? user.lastName,
-        name: profile?.displayName ?? user.name,
-        profilePicture: profile?.avatar ?? user.profilePicture,
-      };
-      state.accessToken = accessToken;
-      state.refreshToken = refreshToken;
-      state.isAutoLoggingIn = false; // Clear auto-login state on success
+> = (set, get) => {
+  /**
+   * Write-through token persistence: session tokens live in the keychain
+   * (saveSessionTokens skips identical pairs). The result drives
+   * `sessionTokensInKeychain` — while false, partialize keeps the pair in
+   * the MMKV blob as a fallback so a failed write can't lose the session.
+   */
+  const persistSessionTokens = (
+    accessToken: string | null,
+    refreshToken: string | null,
+  ): void => {
+    if (!(accessToken && refreshToken)) return;
+    void saveSessionTokens({ accessToken, refreshToken }).then(saved => {
+      set(state => {
+        state.sessionTokensInKeychain = saved;
+      });
     });
+  };
 
-    persistSessionTokens(accessToken, refreshToken);
+  return {
+    ...initialAuthState,
 
-    // Schedule proactive token refresh (best practice)
-    // This will automatically refresh the token 5 minutes before it expires
-    // to prevent user-facing 401 errors and provide seamless UX
-    scheduleTokenRefresh(accessToken, async () => {
-      await proactiveTokenRefresh();
-    });
-  },
+    getIsAuthenticated: () => {
+      const state = get();
+      return !!(state.user && state.accessToken);
+    },
 
-  updateUser: updates => {
-    set(state => {
-      if (state.user) {
-        // Normalize email if present in updates
-        const normalizedUpdates = updates.email
-          ? { ...updates, email: updates.email.trim().toLowerCase() }
-          : updates;
-        Object.assign(state.user, normalizedUpdates);
-      }
-    });
-  },
+    setAuth: (user, accessToken, refreshToken) => {
+      set(state => {
+        // Clear stale navigation state if the user changed (or no previous user).
+        // This prevents a new user from inheriting another user's selectedHomeId,
+        // which would cause "Not authorized to access pantries in this home" errors.
+        const previousUserId = state.user?.id;
+        if (!previousUserId || previousUserId !== user.id) {
+          state.selectedHomeId = null;
+          state.selectedPantryId = null;
+          state.selectedShoppingListId = null;
+          state.hasInitializedHomeData = false;
+          state.isHomeSelectionReady = false;
+        }
 
-  setTokens: ({ accessToken, refreshToken }) => {
-    set(state => {
-      if (accessToken !== undefined) state.accessToken = accessToken;
-      if (refreshToken !== undefined) state.refreshToken = refreshToken;
-    });
+        // Flatten profile fields from the login/register GraphQL response so the
+        // greeting can render the user's name immediately without a separate query.
+        const profile = user.profile;
 
-    // Read back from the store so partial updates persist the full pair
-    const updated = get();
-    persistSessionTokens(updated.accessToken, updated.refreshToken);
+        // Normalize email to prevent validation issues (trim whitespace, lowercase)
+        state.user = {
+          ...user,
+          email: user.email?.trim().toLowerCase() ?? user.email,
+          firstName: profile?.firstName ?? user.firstName,
+          lastName: profile?.lastName ?? user.lastName,
+          name: profile?.displayName ?? user.name,
+          profilePicture: profile?.avatar ?? user.profilePicture,
+        };
+        state.accessToken = accessToken;
+        state.refreshToken = refreshToken;
+        state.isAutoLoggingIn = false; // Clear auto-login state on success
+      });
 
-    // Schedule proactive token refresh whenever tokens are updated
-    // The tokenScheduler has built-in offline protection, so we always schedule
-    // This ensures refresh is scheduled even after offline->online transitions
-    if (accessToken) {
+      persistSessionTokens(accessToken, refreshToken);
+
+      // Schedule proactive token refresh (best practice)
+      // This will automatically refresh the token 5 minutes before it expires
+      // to prevent user-facing 401 errors and provide seamless UX
       scheduleTokenRefresh(accessToken, async () => {
         await proactiveTokenRefresh();
       });
-    }
-  },
+    },
 
-  setEmailVerified: verified => {
-    set(state => {
-      if (state.user) {
-        state.user.emailVerified = verified;
+    updateUser: updates => {
+      set(state => {
+        if (state.user) {
+          // Normalize email if present in updates
+          const normalizedUpdates = updates.email
+            ? { ...updates, email: updates.email.trim().toLowerCase() }
+            : updates;
+          Object.assign(state.user, normalizedUpdates);
+        }
+      });
+    },
+
+    setTokens: ({ accessToken, refreshToken }) => {
+      set(state => {
+        if (accessToken !== undefined) state.accessToken = accessToken;
+        if (refreshToken !== undefined) state.refreshToken = refreshToken;
+      });
+
+      // Read back from the store so partial updates persist the full pair
+      const updated = get();
+      persistSessionTokens(updated.accessToken, updated.refreshToken);
+
+      // Schedule proactive token refresh whenever tokens are updated
+      // The tokenScheduler has built-in offline protection, so we always schedule
+      // This ensures refresh is scheduled even after offline->online transitions
+      if (accessToken) {
+        scheduleTokenRefresh(accessToken, async () => {
+          await proactiveTokenRefresh();
+        });
       }
-    });
-  },
+    },
 
-  setOnboarded: onboarded => {
-    set(state => {
-      if (state.user) {
-        state.user.onBoarded = onboarded;
-      }
-    });
-  },
+    setEmailVerified: verified => {
+      set(state => {
+        if (state.user) {
+          state.user.emailVerified = verified;
+        }
+      });
+    },
 
-  clearAuth: () => {
-    // Cancel any scheduled token refresh before clearing auth
-    // This prevents refresh attempts with invalid/cleared tokens
-    cancelTokenRefresh();
+    setOnboarded: onboarded => {
+      set(state => {
+        if (state.user) {
+          state.user.onBoarded = onboarded;
+        }
+      });
+    },
 
-    set(state => {
-      state.user = null;
-      state.accessToken = null;
-      state.refreshToken = null;
-      state.isAutoLoggingIn = false;
-      // Keep rememberMe preference
-    });
+    clearAuth: () => {
+      // Cancel any scheduled token refresh before clearing auth
+      // This prevents refresh attempts with invalid/cleared tokens
+      cancelTokenRefresh();
 
-    clearSessionTokens().catch(error => {
-      logger.warn('Failed to clear session tokens from keychain:', error);
-    });
-  },
+      set(state => {
+        state.user = null;
+        state.accessToken = null;
+        state.refreshToken = null;
+        state.isAutoLoggingIn = false;
+        state.sessionTokensInKeychain = false;
+        // Keep rememberMe preference
+      });
 
-  setHasStoredCredentials: has => {
-    set(state => {
-      state.hasStoredCredentials = has;
-    });
-  },
+      // clearSessionTokens reports failure via its own logging; a false result
+      // means the pair may still be readable on the next launch.
+      void clearSessionTokens();
+    },
 
-  setIsAutoLoggingIn: loading => {
-    set(state => {
-      state.isAutoLoggingIn = loading;
-    });
-  },
+    setHasStoredCredentials: has => {
+      set(state => {
+        state.hasStoredCredentials = has;
+      });
+    },
 
-  setAuthIsLoading: v => {
-    set(state => {
-      state.authIsLoading = v;
-    });
-  },
+    setIsAutoLoggingIn: loading => {
+      set(state => {
+        state.isAutoLoggingIn = loading;
+      });
+    },
 
-  setAuthIsLoadingCredentials: v => {
-    set(state => {
-      state.authIsLoadingCredentials = v;
-    });
-  },
-});
+    setAuthIsLoading: v => {
+      set(state => {
+        state.authIsLoading = v;
+      });
+    },
+
+    setAuthIsLoadingCredentials: v => {
+      set(state => {
+        state.authIsLoadingCredentials = v;
+      });
+    },
+
+    setSessionTokensInKeychain: inKeychain => {
+      set(state => {
+        state.sessionTokensInKeychain = inKeychain;
+      });
+    },
+  };
+};

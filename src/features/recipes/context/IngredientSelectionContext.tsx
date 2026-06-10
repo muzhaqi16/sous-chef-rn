@@ -1,10 +1,4 @@
-import React, {
-  createContext,
-  useContext,
-  useEffect,
-  useRef,
-  type ReactNode,
-} from 'react';
+import React, { createContext, useContext, type ReactNode } from 'react';
 
 /**
  * Shared selection context for the recipes feature's ingredient-picker
@@ -12,8 +6,10 @@ import React, {
  * picker). The selection key is an opaque string — RecipeSearch keys by
  * ingredient name, RecipeDetail by ingredient id.
  *
- * `toggleIngredient` is ref-stabilized so FlashList rows re-render off
- * `extraData` (selection size) rather than a new callback identity.
+ * The props pass straight through: the context value changes whenever the
+ * selection changes anyway (the Set is part of it), and the React Compiler
+ * keeps the value object stable across unrelated renders — no manual
+ * callback stabilization needed.
  */
 interface IngredientSelectionContextValue {
   selectedIngredients: Set<string>;
@@ -27,25 +23,13 @@ export const IngredientSelectionProvider: React.FC<{
   children: ReactNode;
   selectedIngredients: Set<string>;
   toggleIngredient: (key: string) => void;
-}> = ({ children, selectedIngredients, toggleIngredient }) => {
-  const toggleRef = useRef(toggleIngredient);
-  useEffect(() => {
-    toggleRef.current = toggleIngredient;
-  });
-
-  const stableToggle = (key: string) => toggleRef.current(key);
-
-  const value: IngredientSelectionContextValue = {
-    selectedIngredients, // pass through directly — extraData handles re-renders
-    toggleIngredient: stableToggle,
-  };
-
-  return (
-    <IngredientSelectionContext.Provider value={value}>
-      {children}
-    </IngredientSelectionContext.Provider>
-  );
-};
+}> = ({ children, selectedIngredients, toggleIngredient }) => (
+  <IngredientSelectionContext.Provider
+    value={{ selectedIngredients, toggleIngredient }}
+  >
+    {children}
+  </IngredientSelectionContext.Provider>
+);
 
 export const useIngredientSelection = (): IngredientSelectionContextValue => {
   const ctx = useContext(IngredientSelectionContext);

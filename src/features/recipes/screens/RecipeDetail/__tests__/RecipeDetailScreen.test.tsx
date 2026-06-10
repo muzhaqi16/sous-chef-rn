@@ -317,7 +317,7 @@ describe('RecipeDetail', () => {
     });
 
     const tree = render(<RecipeDetail />);
-    expect(tree.getByText('Spaghetti Carbonara')).toBeTruthy();
+    expect(tree.getAllByText('Spaghetti Carbonara')[0]).toBeTruthy();
     expect(tree.getByText('A classic Italian dish')).toBeTruthy();
   });
 
@@ -1223,7 +1223,7 @@ describe('RecipeDetail', () => {
     });
 
     const tree = render(<RecipeDetail />);
-    expect(tree.getByText('Saving Recipe')).toBeTruthy();
+    expect(tree.getAllByText('Saving Recipe')[0]).toBeTruthy();
   });
 
   it('renders with preloading state', () => {

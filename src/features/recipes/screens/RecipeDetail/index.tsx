@@ -3,6 +3,7 @@ import { View, ActivityIndicator, Linking, ScrollView } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
+import { DetailTitleRow } from '#components/molecules/DetailTitleRow';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 
@@ -29,7 +30,7 @@ import { useRecipeDetail } from '../../hooks/useRecipeDetail';
 import { IngredientCard } from './components/IngredientCard';
 import { RecipeHeroImage } from './components/RecipeHeroImage';
 import { CollapsingHeroDetail } from '#components/templates/CollapsingHeroDetail';
-import type { HeaderAction } from '#components/molecules/Header';
+import type { HeaderAction } from '#components/atoms/HeaderActionIcon';
 import { SavedRecipeMetadataPanel } from './components/SavedRecipeMetadataPanel';
 import { RecipeInstructions } from './components/RecipeInstructions';
 import { IngredientSelectorSheet } from './components/IngredientSelectorSheet';
@@ -262,14 +263,18 @@ const RecipeDetailScreen: React.FC = () => {
   // materialized from cache — showing the loader there wipes the rendered
   // recipe and pops it back, which is the most-felt skeleton↔content flicker.
   if (loading && !displayData) {
+    // Cold load renders inside the template shell so the pinned back chip
+    // stays available during a slow fetch, matching the loaded state.
     return (
-      <View style={styles.centerContainer}>
-        <SousChefLoader
-          size="small"
-          showBrand={false}
-          message={t('recipes.loadingRecipe')}
-        />
-      </View>
+      <CollapsingHeroDetail testID="recipe-detail" onBack={goBack}>
+        <View style={styles.centerContainer}>
+          <SousChefLoader
+            size="small"
+            showBrand={false}
+            message={t('recipes.loadingRecipe')}
+          />
+        </View>
+      </CollapsingHeroDetail>
     );
   }
 
@@ -315,7 +320,11 @@ const RecipeDetailScreen: React.FC = () => {
             : undefined
         }
       >
-        <Text style={styles.title}>{displayData.title}</Text>
+        <DetailTitleRow
+          flush
+          title={displayData.title ?? ''}
+          style={styles.titleSpacing}
+        />
 
         {/* Recipe Metadata */}
         <View style={styles.metadata}>
@@ -636,10 +645,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.lg,
     paddingTop: theme.spacing.md,
   },
-  title: {
-    fontSize: theme.fonts.size['2xl'],
-    fontWeight: theme.fonts.weight.bold,
-    color: theme.colors.textPrimary,
+  titleSpacing: {
     marginBottom: theme.spacing.md,
   },
   metadata: {

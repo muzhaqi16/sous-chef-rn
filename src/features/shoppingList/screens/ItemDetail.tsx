@@ -11,7 +11,7 @@ import { Icon } from '#utils/iconUtils';
 import { CollapsingHeroDetail } from '#components/templates/CollapsingHeroDetail';
 import { ClickableInfoPanel } from '#components/molecules/ClickableInfoPanel';
 import { NutritionSummary } from '#components/molecules/NutritionSummary';
-import { ImageGalleryTabs } from '#components/molecules/ImageGalleryTabs';
+import { GalleryHero } from '#components/templates/GalleryHero';
 import { FormattedItemSubtitle } from '#components/atoms/FormattedItemSubtitle';
 import { resolveImageUrl, parseImages, hasImages } from '#utils/imageUtils';
 import { parseNutritions, hasNutritionData } from '#utils/nutritionUtils';
@@ -19,23 +19,30 @@ import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { Text } from '#components/atoms/Text';
 import { DetailSection } from '#components/molecules/DetailSection';
+import { InfoRow } from '#components/molecules/InfoRow';
+import { DetailTitleRow } from '#components/molecules/DetailTitleRow';
 
 type RouteParams = {
   listId: string;
   itemId: string;
 };
 
-/** Label/value row used inside the detail cards. */
+/** InfoRow preset for the detail cards — the same treatment PantryDetailInfo
+ *  uses (secondary label, md vertical padding, divider, no colon), so the
+ *  two item-detail screens render label/value rows identically. */
 const DetailRow: React.FC<{ label: string; children: React.ReactNode }> = ({
   label,
   children,
 }) => (
-  <View style={styles.detailRow}>
-    <Text size="sm" tone="secondary" style={styles.detailLabel}>
-      {label}
-    </Text>
+  <InfoRow
+    label={label}
+    value={null}
+    showColon={false}
+    labelStyle={styles.detailLabel}
+    containerStyle={styles.detailRow}
+  >
     {children}
-  </View>
+  </InfoRow>
 );
 
 export const ShoppingListItemDetail: React.FC<
@@ -160,12 +167,10 @@ export const ShoppingListItemDetail: React.FC<
         hasHero
           ? heroHeight =>
               showImages ? (
-                <ImageGalleryTabs
+                <GalleryHero
                   images={itemImages}
                   fallbackImageUrl={imageUrl}
-                  imageHeight={heroHeight}
-                  resizeMode="cover"
-                  style={styles.heroInner}
+                  height={heroHeight}
                 />
               ) : (
                 <CachedImage
@@ -178,19 +183,20 @@ export const ShoppingListItemDetail: React.FC<
           : undefined
       }
     >
-      <View style={styles.titleRow}>
-        <Text style={styles.itemName} numberOfLines={2}>
-          {item.itemName}
-        </Text>
-        {item.quantity != null && (
-          <FormattedItemSubtitle
-            quantity={item.quantity}
-            quantityInput={item.quantityInput}
-            displayFormat={item.displayFormat}
-            unitSymbol={unitSymbol}
-          />
-        )}
-      </View>
+      <DetailTitleRow
+        title={item.itemName ?? ''}
+        numberOfLines={2}
+        trailing={
+          item.quantity != null ? (
+            <FormattedItemSubtitle
+              quantity={item.quantity}
+              quantityInput={item.quantityInput}
+              displayFormat={item.displayFormat}
+              unitSymbol={unitSymbol}
+            />
+          ) : undefined
+        }
+      />
 
       {!!item.purchaseInfo?.isPurchased && (
         <View style={styles.statusBadge}>
@@ -206,10 +212,7 @@ export const ShoppingListItemDetail: React.FC<
         </View>
       )}
 
-      <DetailSection
-        style={styles.sectionSpacing}
-        title={t('shoppingListScreens.information')}
-      >
+      <DetailSection title={t('shoppingListScreens.information')}>
         <DetailRow label={t('shoppingListScreens.quantity')}>
           <FormattedItemSubtitle
             quantity={item.quantity}
@@ -245,10 +248,7 @@ export const ShoppingListItemDetail: React.FC<
       </DetailSection>
 
       {!!showNutrition && (
-        <DetailSection
-          style={styles.sectionSpacing}
-          title={t('dietary.nutritionGoals')}
-        >
+        <DetailSection title={t('dietary.nutritionGoals')}>
           <NutritionSummary
             nutritions={itemNutritions}
             showHighlights
@@ -257,7 +257,7 @@ export const ShoppingListItemDetail: React.FC<
         </DetailSection>
       )}
 
-      <DetailSection style={styles.sectionSpacing}>
+      <DetailSection>
         <ClickableInfoPanel
           title={t('shoppingListScreens.purchaseHistoryTitle')}
           items={purchaseHistoryItems}
@@ -266,10 +266,7 @@ export const ShoppingListItemDetail: React.FC<
         />
       </DetailSection>
 
-      <DetailSection
-        style={styles.sectionSpacing}
-        title={t('shoppingListScreens.additionalDetails')}
-      >
+      <DetailSection title={t('shoppingListScreens.additionalDetails')}>
         {!!item.addedBy && (
           <DetailRow label={t('shoppingListScreens.addedBy')}>
             <Text size="sm" weight="medium">
@@ -309,9 +306,6 @@ export const ShoppingListItemDetail: React.FC<
 };
 
 const styles = StyleSheet.create(theme => ({
-  heroInner: {
-    borderRadius: 0,
-  },
   heroFull: {
     width: '100%',
   },
@@ -324,23 +318,6 @@ const styles = StyleSheet.create(theme => ({
   centerMessageText: {
     textAlign: 'center',
     color: theme.colors.textSecondary,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: theme.spacing.md,
-    paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.sm,
-  },
-  itemName: {
-    flex: 1,
-    fontSize: theme.fonts.size['2xl'],
-    // Explicit line height so bold descenders (g, p, y) aren't clipped on
-    // Android, where an unset lineHeight on a large bold Text crops the glyph box.
-    lineHeight: theme.typography.lineHeight.loose,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
   },
   statusBadge: {
     flexDirection: 'row',
@@ -357,19 +334,12 @@ const styles = StyleSheet.create(theme => ({
   statusBadgeText: {
     marginLeft: theme.spacing.xs,
   },
-  sectionSpacing: {
-    marginTop: theme.spacing.md,
-  },
+  // Overrides on top of InfoRow's defaults (border/structure come from there).
   detailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     paddingVertical: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.divider,
   },
   detailLabel: {
-    flex: 1,
+    color: theme.colors.textSecondary,
   },
   notesRow: {
     flexDirection: 'column',

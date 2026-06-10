@@ -12,7 +12,8 @@ import { differenceInCalendarDays } from 'date-fns';
 
 import { Icon } from '#utils/iconUtils';
 import { SwipeableItem } from '#components/molecules/SwipeableItem/SwipeableItem';
-import { Header, type HeaderAction } from '#components/molecules/Header';
+import { Header } from '#components/molecules/Header';
+import type { HeaderAction } from '#components/atoms/HeaderActionIcon';
 import { PantryItemSkeleton } from '#components/base/Skeleton/PantryItemSkeleton';
 import { SpotlightCoachMark } from '#/components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 import { usePantryManagement } from '#hooks/home/pantry/usePantryManagement';

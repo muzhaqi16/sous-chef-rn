@@ -1,99 +1,25 @@
 import React, { useRef } from 'react';
-import { View, ActivityIndicator } from 'react-native';
-import { ThemedIcon } from '#components/atoms/themedComponents';
+import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
-import { Icon, IconName, IconLibrary, type IconTone } from '#utils/iconUtils';
+import { StyleSheet } from 'react-native-unistyles';
+import { Icon } from '#utils/iconUtils';
 import { commonStyles } from '#/styles/commonStyles';
 import { Text } from '#components/atoms/Text';
-
-const ThemedActivityIndicator = withUnistyles(ActivityIndicator);
+import { HeaderActionIcon } from '#components/atoms/HeaderActionIcon';
+import type { HeaderAction } from '#components/atoms/HeaderActionIcon';
 
 // ============================================
 // Types
 // ============================================
 
-/**
- * Semantic color variants for header actions
- * Maps to theme colors for consistent styling
- */
-export type ActionVariant =
-  | 'default'
-  | 'primary'
-  | 'secondary'
-  | 'success'
-  | 'error'
-  | 'warning';
+// The per-action contract (HeaderAction) and its icon/spinner renderer live
+// in #components/atoms/HeaderActionIcon, shared with CollapsingHeroDetail's
+// chips — import them from there.
 
 /**
  * Header preset variants for common screen patterns
  */
 export type HeaderVariant = 'default' | 'detail' | 'form' | 'modal';
-
-type HeaderTheme = {
-  colors: {
-    textPrimary: string;
-    textSecondary: string;
-    primary: string;
-    success: string;
-    error: string;
-    warning: string;
-  };
-};
-
-function resolveVariantColor(
-  variant: ActionVariant = 'default',
-  t: HeaderTheme,
-): string {
-  switch (variant) {
-    case 'primary':
-      return t.colors.primary;
-    case 'secondary':
-      return t.colors.textSecondary;
-    case 'success':
-      return t.colors.success;
-    case 'error':
-      return t.colors.error;
-    case 'warning':
-      return t.colors.warning;
-    case 'default':
-    default:
-      return t.colors.textPrimary;
-  }
-}
-
-export interface HeaderAction {
-  icon: IconName;
-  onPress: () => void;
-  /** Semantic color variant (maps to theme colors) */
-  variant?: ActionVariant;
-  /** Direct color override (takes precedence over variant) */
-  color?: string;
-  /** Theme tone for the icon — used by chip-style renderers like
-   *  `CollapsingHeroDetail` (takes precedence over `variant`). */
-  tone?: IconTone;
-  /** Disable the action */
-  disabled?: boolean;
-  /** Show loading spinner instead of icon */
-  loading?: boolean;
-  /** Accessibility label for screen readers (chip-style renderers). */
-  accessibilityLabel?: string;
-  /** Badge count to display */
-  badge?: number;
-  /** Icon size (default: 24) */
-  size?: number;
-  /** Icon library */
-  library?: IconLibrary;
-  /** Test ID for automation */
-  testID?: string;
-  /** Layout measurement callback for positioning spotlight tutorials */
-  onMeasure?: (rect: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  }) => void;
-}
 
 interface HeaderProps {
   /** Screen title (optional for detail variant) */
@@ -184,26 +110,7 @@ export const Header: React.FC<HeaderProps> = ({
         testID={action.testID}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
-        {action.loading ? (
-          <ThemedActivityIndicator
-            size="small"
-            uniProps={t => ({
-              color: action.color ?? resolveVariantColor(action.variant, t),
-            })}
-          />
-        ) : (
-          <ThemedIcon
-            name={action.icon}
-            size={action.size || 24}
-            library={action.library}
-            tone={action.disabled ? 'textTertiary' : undefined}
-            uniProps={t => ({
-              color: action.disabled
-                ? undefined
-                : action.color ?? resolveVariantColor(action.variant, t),
-            })}
-          />
-        )}
+        <HeaderActionIcon action={action} />
         {action.badge !== undefined && action.badge > 0 && (
           <View style={[commonStyles.badge, styles.badge]}>
             <Text style={commonStyles.badgeText}>{action.badge}</Text>

@@ -3,12 +3,12 @@ import { View, RefreshControl, ScrollView } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '#utils/iconUtils';
-import { Header, HeaderAction, HeaderVariant } from '../molecules/Header';
+import { Header, HeaderVariant } from '../molecules/Header';
+import type { HeaderAction } from '#components/atoms/HeaderActionIcon';
 import { Button } from '../base/Button';
-import { commonStyles } from '#/styles/commonStyles';
-import { Text } from '#components/atoms/Text';
+import { DetailSection } from '../molecules/DetailSection';
 
-interface DetailSection {
+interface TemplateSection {
   title?: string;
   content: React.ReactNode;
   transparent?: boolean;
@@ -22,7 +22,7 @@ interface DetailTemplateProps {
   headerActions?: HeaderAction[];
   /** Header variant preset */
   headerVariant?: HeaderVariant;
-  sections: DetailSection[];
+  sections: TemplateSection[];
   primaryAction?: {
     label: string;
     icon?: React.ComponentProps<typeof Icon>['name'];
@@ -67,27 +67,19 @@ export const DetailTemplate: React.FC<DetailTemplateProps> = ({
           ) : undefined
         }
       >
+        {/* Sections render through the shared DetailSection card primitive;
+            the scroll view already pads horizontally, so the card's own
+            horizontal margin is canceled. */}
         {sections.map((section, index) => (
-          <View
+          <DetailSection
             key={index}
-            style={[
-              !section.transparent && commonStyles.shadow,
-              section.transparent ? styles.transparentSection : styles.section,
-              section.fill && { flex: 1 },
-            ]}
+            title={section.title}
+            transparent={section.transparent}
+            fill={section.fill}
+            style={styles.templateSection}
           >
-            {!!section.title && (
-              <Text
-                size="md"
-                weight="semibold"
-                tone="primary"
-                style={styles.sectionTitle}
-              >
-                {section.title}
-              </Text>
-            )}
             {section.content}
-          </View>
+          </DetailSection>
         ))}
         {!!primaryAction && (
           <Button onPress={primaryAction.onPress} icon={primaryAction.icon}>
@@ -115,16 +107,7 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.sm,
     paddingBottom: theme.spacing.sm,
   },
-  section: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.sm,
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.md,
-  },
-  transparentSection: {
-    marginBottom: theme.spacing.md,
-  },
-  sectionTitle: {
-    marginBottom: theme.spacing['3'],
+  templateSection: {
+    marginHorizontal: 0,
   },
 }));

@@ -3,7 +3,7 @@
 import React from 'react';
 import { screen } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
-import type { HeaderAction } from '#components/molecules/Header';
+import type { HeaderAction } from '#components/atoms/HeaderActionIcon';
 import { FilteredPantryItems } from '../FilteredPantryItems';
 
 // Structural shape consumed by the screen via the mocked `usePantryManagement`.

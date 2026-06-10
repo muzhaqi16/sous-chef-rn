@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { screen } from '@testing-library/react-native';
-import type { HeaderAction } from '#components/molecules/Header';
+import type { HeaderAction } from '#components/atoms/HeaderActionIcon';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { GetPantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import {
@@ -122,7 +122,7 @@ describe('PantryItemDetail (integration)', () => {
     renderWithApollo(<PantryItemDetail route={route} />, {
       operationMocks: [itemMock(fullItem)],
     });
-    await screen.findByText('Milk');
+    await screen.findAllByText('Milk');
   });
 
   it('shows the category and storage state', async () => {
@@ -166,7 +166,7 @@ describe('PantryItemDetail (integration)', () => {
     renderWithApollo(<PantryItemDetail route={route} />, {
       operationMocks: [itemMock(fullItem)],
     });
-    await screen.findByText('Milk');
+    await screen.findAllByText('Milk');
     expect(screen.getByTestId('pantry-item-add-to-list-button')).toBeTruthy();
     expect(screen.getByTestId('pantry-item-edit-button')).toBeTruthy();
     expect(screen.getByTestId('pantry-item-delete-button')).toBeTruthy();
@@ -190,7 +190,7 @@ describe('PantryItemDetail (integration)', () => {
     renderWithApollo(<PantryItemDetail route={route} />, {
       operationMocks: [itemMock(fullItem)],
     });
-    await screen.findByText('Milk');
+    await screen.findAllByText('Milk');
     expect(screen.queryByText('Nutrition')).toBeNull();
   });
 
@@ -203,6 +203,6 @@ describe('PantryItemDetail (integration)', () => {
         }),
       ],
     });
-    await screen.findByText('Milk');
+    await screen.findAllByText('Milk');
   });
 });

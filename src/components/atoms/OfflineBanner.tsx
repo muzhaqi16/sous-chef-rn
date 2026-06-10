@@ -25,8 +25,8 @@ const BannerIcon = withUnistyles(Ionicons, theme => ({
  * Rendered as the first child of the app root (above the navigation tree). It
  * carries its own top safe-area inset — an app-background strip above the
  * warning bar — so the status-bar area stays app-colored while the banner sits
- * just below it. `TopInsetLayout` drops its per-screen inset while this banner
- * is visible, so the screen below it isn't double-inset.
+ * just below it. `OfflineBannerInsetProvider` re-publishes the insets with
+ * `top: 0` for the subtree below, so nothing under the banner double-insets.
  */
 export const OfflineBanner: React.FC = () => {
   const insets = useSafeAreaInsets();

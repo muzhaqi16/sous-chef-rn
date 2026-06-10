@@ -5,6 +5,18 @@ import { DeviceKeyManager } from '#/utils/security/deviceKey';
 
 export const STORAGE_KEY = 'sous-chef-storage';
 
+// Separate instance id used when the device encryption key is unavailable.
+// The primary encrypted file must never be opened without its key (MMKV
+// discards the file contents on a decrypt/CRC mismatch), so a keychain outage
+// quarantines the session here and leaves the encrypted file intact for the
+// next launch.
+export const RECOVERY_STORAGE_KEY = `${STORAGE_KEY}-recovery`;
+
+// DeviceKeyManager already retries keychain reads internally; run that whole
+// cycle a second time after a pause before quarantining the session.
+const KEY_FETCH_CYCLES = 2;
+const KEY_FETCH_CYCLE_DELAY_MS = 1000;
+
 // In test environments, createMMKV is synchronous (mocked) and there is no
 // secure keychain to await. Eagerly create the instance so sync `storage.X`
 // access works at module-load time without any async dance in test setup.
@@ -16,6 +28,28 @@ let secureStorageInstance: MMKV | null = IS_TEST
 let initPromise: Promise<MMKV> | null = null;
 
 /**
+ * Run DeviceKeyManager's full fetch (which retries keychain access
+ * internally) up to KEY_FETCH_CYCLES times before giving up, so a brief
+ * early-boot keychain outage doesn't quarantine the session.
+ */
+const getEncryptionKeyWithRetry = async (): Promise<string> => {
+  let lastError: unknown;
+  for (let cycle = 1; cycle <= KEY_FETCH_CYCLES; cycle++) {
+    try {
+      return await DeviceKeyManager.getDeviceEncryptionKey();
+    } catch (error) {
+      lastError = error;
+      if (cycle < KEY_FETCH_CYCLES) {
+        await new Promise(resolve =>
+          setTimeout(resolve, KEY_FETCH_CYCLE_DELAY_MS),
+        );
+      }
+    }
+  }
+  throw lastError;
+};
+
+/**
  * Initialize the encrypted MMKV instance. Idempotent — subsequent calls
  * return the same instance.
  *
@@ -24,10 +58,12 @@ let initPromise: Promise<MMKV> | null = null;
  * via `zustandStorage`), so by the time any component reads `storage.X` the
  * encrypted instance is ready.
  *
- * Encryption is best-effort: session tokens live in the keychain (see
- * src/storage/keychain.ts), so MMKV holds no credentials. If the device key
- * is unavailable (after the retries inside DeviceKeyManager), fall back to
- * an unencrypted instance rather than blocking startup.
+ * Fail-closed contract (mirrors DeviceKeyManager): the primary encrypted
+ * file is only ever opened with its key. If the key is unavailable after
+ * retries, this session runs on a separate unencrypted RECOVERY instance —
+ * the app stays usable with fresh defaults, the encrypted data survives for
+ * the next launch, and session tokens are unaffected (they live in the
+ * keychain, see src/storage/keychain.ts).
  */
 export const initializeSecureStorage = async (): Promise<MMKV> => {
   if (secureStorageInstance) return secureStorageInstance;
@@ -36,14 +72,19 @@ export const initializeSecureStorage = async (): Promise<MMKV> => {
   initPromise = (async () => {
     let instance: MMKV;
     try {
-      const encryptionKey = await DeviceKeyManager.getDeviceEncryptionKey();
+      const encryptionKey = await getEncryptionKeyWithRetry();
       instance = createMMKV({ id: STORAGE_KEY, encryptionKey });
     } catch (error) {
       logger.error(
-        'Encrypted storage init failed; falling back to unencrypted:',
+        'Device key unavailable; quarantining session in recovery storage:',
         error,
       );
-      instance = createMMKV({ id: STORAGE_KEY });
+      import('#services/telemetry')
+        .then(({ Telemetry }) =>
+          Telemetry.increment('storage_recovery_instance_used'),
+        )
+        .catch(() => {});
+      instance = createMMKV({ id: RECOVERY_STORAGE_KEY });
     }
 
     secureStorageInstance = instance;

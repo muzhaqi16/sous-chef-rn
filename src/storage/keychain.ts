@@ -332,6 +332,11 @@ export async function clearTempRegistrationPassword(): Promise<void> {
 // ============================================================================
 // Session tokens (access + refresh JWT)
 //
+// This module owns the keychain tier of the session-token lifecycle: save
+// (skipping unchanged pairs), load (with transient-failure retries), clear
+// (reporting failure). The store layer decides when the MMKV fallback copy
+// may be dropped (see `sessionTokensInKeychain` in authSlice / partialize).
+//
 // Tokens are persisted here — NOT in MMKV — so the persisted Zustand state
 // holds nothing sensitive and MMKV encryption can stay best-effort. No
 // biometric gate: tokens must be readable on every cold start without a
@@ -345,51 +350,118 @@ export interface SessionTokens {
   refreshToken: string;
 }
 
-export async function saveSessionTokens(tokens: SessionTokens): Promise<void> {
+export type SessionTokenLoadResult =
+  | { status: 'ok'; tokens: SessionTokens }
+  | { status: 'absent' }
+  | { status: 'error' };
+
+// Serialized pair confirmed to be in the keychain. Lets saveSessionTokens
+// skip re-writing identical data — setGenericPassword is the slowest
+// keychain op, and the hydration path re-saves the pair it just loaded.
+let confirmedSessionPair: string | null = null;
+
+// Keychain reads can fail transiently at early boot (device restore,
+// keystore races — the same class DeviceKeyManager retries for). Retry
+// before reporting an error so a hiccup doesn't bounce the user to login.
+const SESSION_LOAD_ATTEMPTS = 3;
+const SESSION_LOAD_RETRY_BASE_MS = 200;
+
+/**
+ * Persist the token pair. Returns true when the keychain holds the pair
+ * (written now or already identical), false on failure — callers keep the
+ * MMKV fallback copy alive while this is false.
+ */
+export async function saveSessionTokens(
+  tokens: SessionTokens,
+): Promise<boolean> {
   return queueOperation(async () => {
-    const success = await setGenericPassword(
-      'session',
-      JSON.stringify(tokens),
-      {
+    const serialized = JSON.stringify(tokens);
+    if (serialized === confirmedSessionPair) return true;
+    try {
+      const success = await setGenericPassword('session', serialized, {
         service: SESSION_TOKENS_SERVICE,
         accessible: ACCESSIBLE.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY,
-      },
-    );
-    if (!success) {
-      throw new Error("Keychain couldn't save session tokens");
+      });
+      if (!success) {
+        logger.warn('Keychain rejected the session token write');
+        return false;
+      }
+      confirmedSessionPair = serialized;
+      return true;
+    } catch (error) {
+      logger.warn('Failed to persist session tokens to keychain:', error);
+      return false;
     }
   });
 }
 
 /**
- * Load the session tokens. Returns null on absence, parse failure, or
- * keychain error — callers treat null as "no session" and fall back to login.
+ * Load the session tokens, distinguishing a confirmed absence ('absent' —
+ * the user must log in) from a keychain read failure ('error' — retried
+ * with backoff first; callers should fall back to any MMKV copy rather
+ * than treating the session as gone).
  */
-export async function loadSessionTokens(): Promise<SessionTokens | null> {
-  return queueOperation(async () => {
-    try {
-      const creds = await getGenericPassword({
-        service: SESSION_TOKENS_SERVICE,
-      });
-      if (!creds) return null;
-      const parsed = JSON.parse(creds.password) as Partial<SessionTokens>;
-      if (!parsed.accessToken || !parsed.refreshToken) return null;
-      return {
-        accessToken: parsed.accessToken,
-        refreshToken: parsed.refreshToken,
-      };
-    } catch {
-      return null;
-    }
-  });
+export async function loadSessionTokens(): Promise<SessionTokenLoadResult> {
+  return queueOperation<SessionTokenLoadResult>(
+    async (): Promise<SessionTokenLoadResult> => {
+      let lastError: unknown;
+      for (let attempt = 1; attempt <= SESSION_LOAD_ATTEMPTS; attempt++) {
+        try {
+          const creds = await getGenericPassword({
+            service: SESSION_TOKENS_SERVICE,
+          });
+          if (!creds) return { status: 'absent' };
+          let parsed: Partial<SessionTokens>;
+          try {
+            parsed = JSON.parse(creds.password) as Partial<SessionTokens>;
+          } catch {
+            // Corrupted entry — retrying can't fix it; treat as no session.
+            logger.error(
+              'Stored session tokens are unparseable; ignoring them',
+            );
+            return { status: 'absent' };
+          }
+          if (!parsed.accessToken || !parsed.refreshToken) {
+            return { status: 'absent' };
+          }
+          const tokens = {
+            accessToken: parsed.accessToken,
+            refreshToken: parsed.refreshToken,
+          };
+          confirmedSessionPair = JSON.stringify(tokens);
+          return { status: 'ok', tokens };
+        } catch (error) {
+          lastError = error;
+          if (attempt < SESSION_LOAD_ATTEMPTS) {
+            await new Promise(resolve =>
+              setTimeout(resolve, SESSION_LOAD_RETRY_BASE_MS * attempt),
+            );
+          }
+        }
+      }
+      logger.error('Session token read failed after retries:', lastError);
+      return { status: 'error' };
+    },
+  );
 }
 
-export async function clearSessionTokens(): Promise<void> {
+/**
+ * Delete the token pair. Returns false when the delete may not have taken
+ * effect — the tokens could still be readable on the next launch, so logout
+ * flows should surface the failure rather than assume a clean device.
+ */
+export async function clearSessionTokens(): Promise<boolean> {
   return queueOperation(async () => {
+    confirmedSessionPair = null;
     try {
       await resetGenericPassword({ service: SESSION_TOKENS_SERVICE });
-    } catch {
-      // Non-fatal — entry may not exist
+      return true;
+    } catch (error) {
+      logger.error(
+        'Failed to clear session tokens — they may remain in the keychain:',
+        error,
+      );
+      return false;
     }
   });
 }

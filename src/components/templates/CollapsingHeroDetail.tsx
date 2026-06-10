@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   RefreshControl,
@@ -13,13 +13,13 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
 } from 'react-native-reanimated';
-import { scheduleOnRN } from 'react-native-worklets';
 import { StyleSheet } from 'react-native-unistyles';
 import { AppPressable } from '#components/atoms/AppPressable';
-import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
-import { Icon, type IconName, type IconTone } from '#utils/iconUtils';
-import type { ActionVariant, HeaderAction } from '#components/molecules/Header';
+import {
+  HeaderActionIcon,
+  type HeaderAction,
+} from '#components/atoms/HeaderActionIcon';
 
 // Visible hero height below the status bar. The rendered hero is grown by the
 // top inset (see `heroHeight`) so it fills edge-to-edge behind the status bar.
@@ -37,26 +37,14 @@ const COLLAPSE_DISTANCE = HERO_IMAGE_HEIGHT - HEADER_BAND_HEIGHT;
 // un-dimmed until then; the solid bar + inline title fade in over a short window
 // just before it, so the bar is opaque exactly as content arrives to scroll
 // beneath it (no overlap), tinting only a small top strip briefly.
-const CONTENT_OVERLAP = 20;
+// Exported so hero renderers (GalleryHero) can keep interactive elements
+// above the covered band.
+export const CONTENT_OVERLAP = 20;
 const COLLAPSE_POINT = COLLAPSE_DISTANCE - CONTENT_OVERLAP;
 const BAR_FADE_END = COLLAPSE_POINT;
 const BAR_FADE_START = COLLAPSE_POINT - 24;
 const TITLE_FADE_START = BAR_FADE_START;
 const TITLE_FADE_END = BAR_FADE_END;
-// Hysteresis bounds for mounting the inline title (mount on the way in, unmount
-// a bit earlier on the way out) so it's never in the tree alongside the
-// content's own title while the hero is expanded.
-const TITLE_MOUNT_AT = BAR_FADE_START;
-const TITLE_UNMOUNT_AT = BAR_FADE_START - 20;
-
-const TONE_BY_VARIANT: Record<ActionVariant, IconTone> = {
-  default: 'textPrimary',
-  primary: 'primary',
-  secondary: 'textSecondary',
-  success: 'success',
-  error: 'error',
-  warning: 'warning',
-};
 
 const CIRCLE_SHADOW = [
   {
@@ -68,42 +56,20 @@ const CIRCLE_SHADOW = [
   },
 ];
 
-interface HeroChipProps {
-  icon: IconName;
-  onPress: () => void;
-  tone?: IconTone;
-  color?: string;
-  loading?: boolean;
-  disabled?: boolean;
-  testID?: string;
-  accessibilityLabel?: string;
-}
-
-/** Circular icon button that stays legible floating over a photo. */
-const HeroChip: React.FC<HeroChipProps> = ({
-  icon,
-  onPress,
-  tone,
-  color,
-  loading,
-  disabled,
-  testID,
-  accessibilityLabel,
-}) => (
+/** Circular icon button that stays legible floating over a photo. The icon
+ *  and its color/loading/disabled rules come from the shared HeaderActionIcon
+ *  renderer, so chips and Header bars treat a HeaderAction identically. */
+const HeroChip: React.FC<{ action: HeaderAction }> = ({ action }) => (
   <AppPressable
-    onPress={onPress}
-    disabled={disabled || loading}
+    onPress={action.onPress}
+    disabled={action.disabled || action.loading}
     style={styles.chip}
     hitSlop={8}
-    testID={testID}
+    testID={action.testID}
     accessibilityRole="button"
-    accessibilityLabel={accessibilityLabel}
+    accessibilityLabel={action.accessibilityLabel}
   >
-    {loading ? (
-      <ThemedActivityIndicator size="small" />
-    ) : (
-      <Icon name={icon} size={22} color={color} tone={tone} />
-    )}
+    <HeaderActionIcon action={action} defaultSize={22} />
   </AppPressable>
 );
 
@@ -164,23 +130,8 @@ export const CollapsingHeroDetail: React.FC<CollapsingHeroDetailProps> = ({
   const heroHeight = HERO_IMAGE_HEIGHT + insets.top;
 
   const scrollY = useSharedValue(0);
-  // The inline bar title is mounted only once the hero has mostly collapsed, so
-  // it's never duplicated with the content's own title while expanded.
-  const titleFlag = useSharedValue(false);
-  const [titleMounted, setTitleMounted] = useState(false);
-  const showTitle = () => setTitleMounted(true);
-  const hideTitle = () => setTitleMounted(false);
   const scrollHandler = useAnimatedScrollHandler(event => {
-    const y = event.contentOffset.y;
-    scrollY.set(y);
-    if (!hasHero) return;
-    if (y > TITLE_MOUNT_AT && !titleFlag.get()) {
-      titleFlag.set(true);
-      scheduleOnRN(showTitle);
-    } else if (y < TITLE_UNMOUNT_AT && titleFlag.get()) {
-      titleFlag.set(false);
-      scheduleOnRN(hideTitle);
-    }
+    scrollY.set(event.contentOffset.y);
   });
 
   const heroParallaxStyle = useAnimatedStyle(() => {
@@ -269,12 +220,21 @@ export const CollapsingHeroDetail: React.FC<CollapsingHeroDetailProps> = ({
           style={[styles.barSolid, barBgStyle]}
         />
         <View style={[styles.barRow, { top: insets.top + HEADER_TOP_GAP }]}>
-          <HeroChip icon="arrow-back" onPress={onBack} tone="textPrimary" />
+          <HeroChip
+            action={{
+              icon: 'arrow-back',
+              onPress: onBack,
+              tone: 'textPrimary',
+            }}
+          />
+          {/* Always mounted; the interpolated opacity (and pointerEvents
+              "none") keeps it invisible and inert while the hero is
+              expanded, with no UI↔JS mount round-trips during scroll. */}
           <Animated.View
             pointerEvents="none"
             style={[styles.titleWrap, titleStyle]}
           >
-            {(!hasHero || titleMounted) && title ? (
+            {title ? (
               <Text size="md" weight="semibold" numberOfLines={1}>
                 {title}
               </Text>
@@ -284,16 +244,7 @@ export const CollapsingHeroDetail: React.FC<CollapsingHeroDetailProps> = ({
             {actions.map((action, index) => (
               <HeroChip
                 key={action.testID ?? `${action.icon}-${index}`}
-                icon={action.icon}
-                onPress={action.onPress}
-                color={action.color}
-                tone={
-                  action.tone ?? TONE_BY_VARIANT[action.variant ?? 'default']
-                }
-                loading={action.loading}
-                disabled={action.disabled}
-                testID={action.testID}
-                accessibilityLabel={action.accessibilityLabel}
+                action={action}
               />
             ))}
           </View>
@@ -369,8 +320,5 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.full,
     backgroundColor: theme.colors.background,
     boxShadow: CIRCLE_SHADOW,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));
