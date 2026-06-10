@@ -22,6 +22,7 @@ import { queueManager } from '#/apollo/offlineQueue/queueManager';
 import type { FailedMutationInfo } from '#/apollo/offlineQueue/types';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { toastService } from '#/services/toastService';
+import { t } from '#/i18n/t';
 import { queueStore } from '#/apollo/offlineQueue/queueStore';
 import { NotificationProvider } from '#features/notifications/components/NotificationProvider';
 import { AlertProvider } from '#/components/providers/AlertProvider';
@@ -58,7 +59,7 @@ function handleFailedMutation(info: FailedMutationInfo): void {
     }
 
     // 3. Notify user via toast
-    toastService.error("Couldn't sync changes. Pull to refresh.");
+    toastService.error(t('errors.queuedChangeSyncFailed'));
 
     // 4. Remove permanently failed mutation from queue
     queueStore.removeMutation(mutationId);

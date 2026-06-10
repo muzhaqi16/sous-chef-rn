@@ -53,7 +53,8 @@
       "User": "Përdoruesi",
       "Item": "Artikulli",
       "Notification": "Njoftimi"
-    }
+    },
+    "queuedChangeSyncFailed": "Ndryshimet nuk u sinkronizuan. Tërhiq poshtë për të rifreskuar."
   },
   "success": {
     "itemAdded": "Artikulli u shtua",

@@ -53,7 +53,8 @@
       "User": "el usuario",
       "Item": "el artículo",
       "Notification": "la notificación"
-    }
+    },
+    "queuedChangeSyncFailed": "No se pudieron sincronizar los cambios. Desliza para actualizar."
   },
   "success": {
     "itemAdded": "Artículo añadido",
