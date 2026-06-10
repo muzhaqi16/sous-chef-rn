@@ -248,12 +248,15 @@ export const PantryContent = React.forwardRef<
     const clientHasMore = clientWindow < deferredSortedItems.length;
 
     // A tab switch whose new page is still fetching (server mode only): armed on
-    // press, cleared once `fetching` settles. Client mode filters locally so it
-    // never fetches on switch — `fetching` stays false and this is a no-op.
+    // press, cleared once `fetching` transitions true→false. Cleared only on
+    // that transition (not when fetching was already false at press time) to
+    // avoid a race where the Apollo refetch is one render behind setSwitching.
     const [switching, setSwitching] = useState(false);
-    useEffect(() => {
-      if (switching && !fetching) setSwitching(false);
-    }, [switching, fetching]);
+    const [prevFetching, setPrevFetching] = useState(fetching);
+    if (prevFetching !== fetching) {
+      setPrevFetching(fetching);
+      if (switching && prevFetching && !fetching) setSwitching(false);
+    }
 
     // Items exist but the deferred/windowed slice hasn't caught up yet — a
     // one-render `useDeferredValue` lag on the empty→populated transition.

@@ -17,6 +17,7 @@ import {
 import { useStore } from '#store';
 import { usePreservedNodes } from '#/hooks/apollo/usePreservedConnection';
 import { extractNodes } from '#/utils/connectionUtils';
+import { logger } from '#/utils/environment';
 
 /**
  * Manages home selection, default home resolution, and pantry ID tracking.
@@ -50,7 +51,7 @@ export const useDefaultHome = () => {
       // Logout just started - reset refs so next login gets fresh data
       hasInitializedRef.current = false;
       hasAutoSelectedRef.current = false;
-      console.log('🔄 Reset useDefaultHome refs on logout');
+      logger.debug('🔄 Reset useDefaultHome refs on logout');
     }
     wasLoggingOutRef.current = isLoggingOut;
   }, [isLoggingOut]);
@@ -84,7 +85,7 @@ export const useDefaultHome = () => {
       selectedPantryId &&
       !isHomeSelectionReady
     ) {
-      console.log('⚡ Early ready: using persisted home/pantry IDs');
+      logger.debug('⚡ Early ready: using persisted home/pantry IDs');
       setIsHomeSelectionReady(true);
     }
   }, [
@@ -186,7 +187,7 @@ export const useDefaultHome = () => {
   // Also reset ready state to force re-initialization
   useEffect(() => {
     if (needsClearing) {
-      console.warn(
+      logger.warn(
         '[HomeSelector] Selected home no longer exists, clearing selection',
       );
 
@@ -233,18 +234,18 @@ export const useDefaultHome = () => {
     if (!selectedHomeId || selectedHomeId !== remoteDefaultHomeId) {
       setSelectedHomeId(remoteDefaultHomeId);
       didUpdate = true;
-      console.log('🏠 Auto-selected default home:', remoteDefaultHomeId);
+      logger.debug('🏠 Auto-selected default home:', remoteDefaultHomeId);
     }
 
     // When home changed, always sync pantry (old pantry belongs to old home).
     // When home already correct, fill in pantry only if missing.
     if (didUpdate && defaultPantryId) {
       setSelectedPantryId(defaultPantryId);
-      console.log('🏠 Auto-selected default pantry:', defaultPantryId);
+      logger.debug('🏠 Auto-selected default pantry:', defaultPantryId);
     } else if (!selectedPantryId && defaultPantryId) {
       setSelectedPantryId(defaultPantryId);
       didUpdate = true;
-      console.log('🏠 Auto-selected default pantry:', defaultPantryId);
+      logger.debug('🏠 Auto-selected default pantry:', defaultPantryId);
     }
 
     // Mark as initialized once we've processed
@@ -278,7 +279,7 @@ export const useDefaultHome = () => {
 
     // Auto-select first home
     const firstHome = homesList[0] as HomeNode;
-    console.log(
+    logger.debug(
       '🏠 No default home on server, auto-selecting first home:',
       firstHome.id,
     );
@@ -307,7 +308,7 @@ export const useDefaultHome = () => {
             : null;
         if (returnedPantry?.id && !selectedPantryId) {
           setSelectedPantryId(returnedPantry.id);
-          console.log(
+          logger.debug(
             '🏠 Set pantry from SetDefaultHome response:',
             returnedPantry.id,
           );
@@ -316,7 +317,7 @@ export const useDefaultHome = () => {
             firstHomePantries.find(p => p.isDefault) ?? firstHomePantries[0];
           if (firstHomePantry?.id) {
             setSelectedPantryId(firstHomePantry.id);
-            console.log(
+            logger.debug(
               '🏠 Auto-selected first home pantry (fallback):',
               firstHomePantry.id,
             );
@@ -324,13 +325,13 @@ export const useDefaultHome = () => {
         }
       })
       .catch(err => {
-        console.warn('Failed to set first home as default on server:', err);
+        logger.warn('Failed to set first home as default on server:', err);
         if (!selectedPantryId) {
           const firstHomePantry =
             firstHomePantries.find(p => p.isDefault) ?? firstHomePantries[0];
           if (firstHomePantry?.id) {
             setSelectedPantryId(firstHomePantry.id);
-            console.log(
+            logger.debug(
               '🏠 Auto-selected first home pantry (error fallback):',
               firstHomePantry.id,
             );
@@ -359,7 +360,7 @@ export const useDefaultHome = () => {
     if (remoteDefaultHomeId) return;
     if (loading || !called) return;
 
-    console.log(
+    logger.debug(
       '🏠 First home via invitation, syncing as server default:',
       selectedHomeId,
     );
@@ -374,14 +375,14 @@ export const useDefaultHome = () => {
             : null;
         if (returnedPantry?.id && !selectedPantryId) {
           setSelectedPantryId(returnedPantry.id);
-          console.log(
+          logger.debug(
             '🏠 Set pantry from SetDefaultHome response:',
             returnedPantry.id,
           );
         }
       })
       .catch(err => {
-        console.warn('Failed to set first invitation home as default:', err);
+        logger.warn('Failed to set first invitation home as default:', err);
       });
   }, [
     homesList,

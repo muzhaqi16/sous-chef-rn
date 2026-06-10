@@ -18,22 +18,12 @@ import { parseNutritions, hasNutritionData } from '#utils/nutritionUtils';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { Text } from '#components/atoms/Text';
+import { DetailSection } from '#components/molecules/DetailSection';
 
 type RouteParams = {
   listId: string;
   itemId: string;
 };
-
-/** Elevated card grouping a block of detail content. */
-const Section: React.FC<{ title?: string; children: React.ReactNode }> = ({
-  title,
-  children,
-}) => (
-  <View style={styles.section}>
-    {!!title && <Text style={styles.sectionHeading}>{title}</Text>}
-    {children}
-  </View>
-);
 
 /** Label/value row used inside the detail cards. */
 const DetailRow: React.FC<{ label: string; children: React.ReactNode }> = ({
@@ -118,11 +108,12 @@ export const ShoppingListItemDetail: React.FC<
     );
   }
 
-  // Prefer the large variant for the hero, but fall back to the default
-  // resolution the list card uses — some catalog items only have a THUMBNAIL
-  // variant, for which the 'large' (SIZE_512) lookup returns null.
-  const imageUrl = resolveImageUrl(item, 'large') ?? resolveImageUrl(item);
-  const hasHero = showImages || !!imageUrl;
+  // SIZE_512 is the minimum acceptable resolution for a full-height hero.
+  // Thumbnails are excluded from hasHero to avoid stretching a ~100px image
+  // to 280px; the fallback is kept only as a CachedImage uri guard.
+  const largeImageUrl = resolveImageUrl(item, 'large');
+  const imageUrl = largeImageUrl ?? resolveImageUrl(item);
+  const hasHero = showImages || !!largeImageUrl;
 
   // Purchase History - extract purchases from paginated connection
   const purchases =
@@ -187,21 +178,19 @@ export const ShoppingListItemDetail: React.FC<
           : undefined
       }
     >
-      {!!hasHero && (
-        <View style={styles.titleRow}>
-          <Text style={styles.itemName} numberOfLines={2}>
-            {item.itemName}
-          </Text>
-          {item.quantity != null && (
-            <FormattedItemSubtitle
-              quantity={item.quantity}
-              quantityInput={item.quantityInput}
-              displayFormat={item.displayFormat}
-              unitSymbol={unitSymbol}
-            />
-          )}
-        </View>
-      )}
+      <View style={styles.titleRow}>
+        <Text style={styles.itemName} numberOfLines={2}>
+          {item.itemName}
+        </Text>
+        {item.quantity != null && (
+          <FormattedItemSubtitle
+            quantity={item.quantity}
+            quantityInput={item.quantityInput}
+            displayFormat={item.displayFormat}
+            unitSymbol={unitSymbol}
+          />
+        )}
+      </View>
 
       {!!item.purchaseInfo?.isPurchased && (
         <View style={styles.statusBadge}>
@@ -217,7 +206,10 @@ export const ShoppingListItemDetail: React.FC<
         </View>
       )}
 
-      <Section title={t('shoppingListScreens.information')}>
+      <DetailSection
+        style={styles.sectionSpacing}
+        title={t('shoppingListScreens.information')}
+      >
         <DetailRow label={t('shoppingListScreens.quantity')}>
           <FormattedItemSubtitle
             quantity={item.quantity}
@@ -250,28 +242,34 @@ export const ShoppingListItemDetail: React.FC<
             </Text>
           </View>
         )}
-      </Section>
+      </DetailSection>
 
       {!!showNutrition && (
-        <Section title={t('dietary.nutritionGoals')}>
+        <DetailSection
+          style={styles.sectionSpacing}
+          title={t('dietary.nutritionGoals')}
+        >
           <NutritionSummary
             nutritions={itemNutritions}
             showHighlights
             compact
           />
-        </Section>
+        </DetailSection>
       )}
 
-      <Section>
+      <DetailSection style={styles.sectionSpacing}>
         <ClickableInfoPanel
           title={t('shoppingListScreens.purchaseHistoryTitle')}
           items={purchaseHistoryItems}
           onPress={handleViewHistory}
           emptyMessage={t('shoppingListScreens.noPurchaseHistory')}
         />
-      </Section>
+      </DetailSection>
 
-      <Section title={t('shoppingListScreens.additionalDetails')}>
+      <DetailSection
+        style={styles.sectionSpacing}
+        title={t('shoppingListScreens.additionalDetails')}
+      >
         {!!item.addedBy && (
           <DetailRow label={t('shoppingListScreens.addedBy')}>
             <Text size="sm" weight="medium">
@@ -305,7 +303,7 @@ export const ShoppingListItemDetail: React.FC<
             </Text>
           </DetailRow>
         )}
-      </Section>
+      </DetailSection>
     </CollapsingHeroDetail>
   );
 };
@@ -359,20 +357,8 @@ const styles = StyleSheet.create(theme => ({
   statusBadgeText: {
     marginLeft: theme.spacing.xs,
   },
-  section: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.xl,
-    marginHorizontal: theme.spacing.sm,
+  sectionSpacing: {
     marginTop: theme.spacing.md,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.md,
-    ...theme.shadows.card,
-  },
-  sectionHeading: {
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.sm,
   },
   detailRow: {
     flexDirection: 'row',

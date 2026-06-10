@@ -891,7 +891,28 @@ describe('PantryContent', () => {
     const counts = { all: 1, fridge: 0, freezer: 0, pantry: 0 };
 
     it('covers the stale rows with a skeleton while the new tab is fetching, then lifts when it settles', () => {
+      // Start with fetching=false (settled state) to exercise the real race:
+      // setSwitching(true) fires before the Apollo refetch sets fetching=true.
       const view = render(
+        <PantryContent
+          {...defaultProps}
+          items={items}
+          fetching={false}
+          locationCounts={counts}
+        />,
+      );
+      // Items present, no fetch in flight → real rows, no skeleton.
+      expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
+
+      // Switch tabs: setSwitching(true) commits before fetching becomes true.
+      act(() => {
+        fireEvent.press(screen.getByTestId('pantry-location-tab-fridge'));
+      });
+      // No skeleton yet — fetching hasn't started (switching=true, fetching=false).
+      expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
+
+      // Apollo refetch starts (fetching → true) → skeleton covers stale rows.
+      view.rerender(
         <PantryContent
           {...defaultProps}
           items={items}
@@ -899,16 +920,9 @@ describe('PantryContent', () => {
           locationCounts={counts}
         />,
       );
-      // Items are present and not switching yet → real rows, no skeleton.
-      expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
-
-      // Switch tabs while a fetch is in flight → skeleton covers the old rows.
-      act(() => {
-        fireEvent.press(screen.getByTestId('pantry-location-tab-fridge'));
-      });
       expect(screen.getByTestId('pantry-skeleton')).toBeTruthy();
 
-      // The fetch settles (fetching → false) → the skeleton lifts.
+      // The fetch settles (fetching → false) → skeleton lifts.
       view.rerender(
         <PantryContent
           {...defaultProps}

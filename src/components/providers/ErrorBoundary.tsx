@@ -4,6 +4,7 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Telemetry } from '#/services/telemetry';
 import { Text } from '#components/atoms/Text';
+import { logger } from '#/utils/environment';
 
 interface ErrorBoundaryState {
   hasError: boolean;
@@ -84,8 +85,8 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     });
 
     // Log error for debugging
-    console.error('ErrorBoundary caught an error:', error);
-    console.error('Error details:', errorInfo);
+    logger.error('ErrorBoundary caught an error:', error);
+    logger.error('Error details:', errorInfo);
 
     // Call custom error handler if provided
     if (this.props.onError) {
@@ -106,7 +107,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
       error_source: 'react_error_boundary',
     });
 
-    console.log('Error reported to telemetry:', {
+    logger.debug('Error reported to telemetry:', {
       error: error.message,
       stack: error.stack,
       context: this.props.context,
@@ -149,7 +150,7 @@ export const NavigationErrorBoundary: React.FC<{ children: ReactNode }> = ({
   <ErrorBoundary
     context="Navigation"
     onError={error => {
-      console.error('Navigation error:', error);
+      logger.error('Navigation error:', error);
       Telemetry.increment('navigation_errors_total', 1);
     }}
     fallback={(error, retry) => (
@@ -170,7 +171,7 @@ export const AuthErrorBoundary: React.FC<{ children: ReactNode }> = ({
   <ErrorBoundary
     context="Authentication"
     onError={error => {
-      console.error('Auth error:', error);
+      logger.error('Auth error:', error);
       Telemetry.increment('auth_errors_total', 1);
     }}
     fallback={(error, retry) => (
@@ -191,7 +192,7 @@ export const AppErrorBoundary: React.FC<{ children: ReactNode }> = ({
   <ErrorBoundary
     context="Application"
     onError={error => {
-      console.error('App-level error:', error);
+      logger.error('App-level error:', error);
       Telemetry.increment('app_level_errors_total', 1);
     }}
   >
@@ -202,7 +203,7 @@ export const AppErrorBoundary: React.FC<{ children: ReactNode }> = ({
 // Hook for programmatic error handling
 export const useErrorHandler = () => {
   return (error: Error, context?: string) => {
-    console.error(`Error in ${context || 'unknown context'}:`, error);
+    logger.error(`Error in ${context || 'unknown context'}:`, error);
 
     Telemetry.trackError(error, {
       error_handler_context: context,

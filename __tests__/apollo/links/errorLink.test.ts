@@ -1,6 +1,7 @@
 'use no memo';
 
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
+import { logger } from '#/utils/environment';
 
 // --- Mocks must be defined before imports ---
 
@@ -98,7 +99,7 @@ describe('errorLink.ts', () => {
         errors: [{ message: 'API key required', extensions: { code: 'API_KEY_REQUIRED' } }],
       });
       errorHandler({ error, operation: mockOperation, forward: mockForward });
-      expect(console.error).toHaveBeenCalledWith('API Key error:', expect.any(String));
+      expect(logger.error).toHaveBeenCalledWith('API Key error:', expect.any(String));
     });
 
     it('handles INVALID_API_KEY code', () => {
@@ -106,7 +107,7 @@ describe('errorLink.ts', () => {
         errors: [{ message: 'Invalid key', extensions: { code: 'INVALID_API_KEY' } }],
       });
       errorHandler({ error, operation: mockOperation, forward: mockForward });
-      expect(console.error).toHaveBeenCalledWith('API Key error:', expect.any(String));
+      expect(logger.error).toHaveBeenCalledWith('API Key error:', expect.any(String));
     });
 
     it('handles API_KEY_EXPIRED code', () => {
@@ -114,7 +115,7 @@ describe('errorLink.ts', () => {
         errors: [{ message: 'Expired key', extensions: { code: 'API_KEY_EXPIRED' } }],
       });
       errorHandler({ error, operation: mockOperation, forward: mockForward });
-      expect(console.error).toHaveBeenCalledWith('API Key error:', expect.any(String));
+      expect(logger.error).toHaveBeenCalledWith('API Key error:', expect.any(String));
     });
 
     it('detects api key error from message (lowercase check)', () => {
@@ -122,7 +123,7 @@ describe('errorLink.ts', () => {
         errors: [{ message: 'Please provide an API key for authentication', extensions: { code: 'SOME_CODE' } }],
       });
       errorHandler({ error, operation: mockOperation, forward: mockForward });
-      expect(console.error).toHaveBeenCalledWith('API Key error:', expect.any(String));
+      expect(logger.error).toHaveBeenCalledWith('API Key error:', expect.any(String));
     });
 
     it('handles FORBIDDEN as resource access error (not auth error)', () => {
@@ -130,7 +131,7 @@ describe('errorLink.ts', () => {
         errors: [{ message: 'Access denied', extensions: { code: 'FORBIDDEN' } }],
       });
       const result = errorHandler({ error, operation: mockOperation, forward: mockForward });
-      expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('Access denied'));
+      expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('Access denied'));
       expect(mockAttemptTokenRefresh).not.toHaveBeenCalled();
       expect(result).toBeUndefined();
     });
@@ -143,7 +144,7 @@ describe('errorLink.ts', () => {
       const result = errorHandler({ error, operation: mockOperation, forward: mockForward });
       expect(mockAttemptTokenRefresh).toHaveBeenCalledWith(mockOperation, mockForward);
       expect(result).toBe('observable');
-      expect(console.warn).toHaveBeenCalledWith(
+      expect(logger.warn).toHaveBeenCalledWith(
         expect.stringContaining('Auth error detected for'),
       );
     });
@@ -155,7 +156,7 @@ describe('errorLink.ts', () => {
       });
       errorHandler({ error, operation: mockOperation, forward: mockForward });
       expect(mockAttemptTokenRefresh).toHaveBeenCalled();
-      expect(console.warn).toHaveBeenCalledWith(
+      expect(logger.warn).toHaveBeenCalledWith(
         expect.stringContaining('Auth error detected for'),
       );
     });
@@ -167,7 +168,7 @@ describe('errorLink.ts', () => {
       });
       errorHandler({ error, operation: mockOperation, forward: mockForward });
       expect(mockAttemptTokenRefresh).toHaveBeenCalled();
-      expect(console.warn).toHaveBeenCalledWith(
+      expect(logger.warn).toHaveBeenCalledWith(
         expect.stringContaining('Auth error detected for'),
       );
     });
@@ -179,7 +180,7 @@ describe('errorLink.ts', () => {
       });
       errorHandler({ error, operation: mockOperation, forward: mockForward });
       expect(mockAttemptTokenRefresh).toHaveBeenCalled();
-      expect(console.warn).toHaveBeenCalledWith(
+      expect(logger.warn).toHaveBeenCalledWith(
         expect.stringContaining('Auth error detected for'),
       );
     });
@@ -191,7 +192,7 @@ describe('errorLink.ts', () => {
       });
       errorHandler({ error, operation: mockOperation, forward: mockForward });
       expect(mockAttemptTokenRefresh).toHaveBeenCalled();
-      expect(console.warn).toHaveBeenCalledWith(
+      expect(logger.warn).toHaveBeenCalledWith(
         expect.stringContaining('Auth error detected for'),
       );
     });
@@ -213,7 +214,7 @@ describe('errorLink.ts', () => {
       });
       errorHandler({ error, operation: mockOperation, forward: mockForward });
       // Should NOT have the "Auth error detected" warning
-      const authWarning = jest.mocked(console.warn).mock.calls.find(
+      const authWarning = jest.mocked(logger.warn).mock.calls.find(
         (call) => typeof call[0] === 'string' && call[0].includes('Auth error detected'),
       );
       expect(authWarning).toBeUndefined();
@@ -226,7 +227,7 @@ describe('errorLink.ts', () => {
       // Not a CombinedGraphQLErrors or CombinedProtocolErrors
       const error = { message: 'Known server error' };
       errorHandler({ error, operation: mockOperation, forward: mockForward });
-      expect(console.warn).toHaveBeenCalledWith(
+      expect(logger.warn).toHaveBeenCalledWith(
         expect.stringContaining('Known server error'),
         expect.any(String),
       );
@@ -243,7 +244,7 @@ describe('errorLink.ts', () => {
       // would double query retries and re-send mutations.
       expect(result).toBeUndefined();
       expect(mockForward).not.toHaveBeenCalled();
-      expect(console.warn).toHaveBeenCalledWith(
+      expect(logger.warn).toHaveBeenCalledWith(
         expect.stringContaining('Network error'),
         expect.any(String),
       );
@@ -252,7 +253,7 @@ describe('errorLink.ts', () => {
     it('logs unexpected non-network, non-GraphQL errors', () => {
       const error = { message: 'Something completely unexpected' };
       errorHandler({ error, operation: mockOperation, forward: mockForward });
-      expect(console.error).toHaveBeenCalledWith(
+      expect(logger.error).toHaveBeenCalledWith(
         expect.stringContaining('Unexpected error'),
         expect.any(String),
       );

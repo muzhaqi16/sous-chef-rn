@@ -183,10 +183,10 @@ jest.mock('#components/atoms/CachedImage', () => ({
 jest.mock('#components/templates/BottomSheetAction', () => ({
   BottomSheetAction: () => null,
 }));
-jest.mock('../RecipeSearch/IngredientSelectorContext', () => ({
-  IngredientSelectorProvider: ({ children }: { children: React.ReactNode }) =>
+jest.mock('../../context/IngredientSelectionContext', () => ({
+  IngredientSelectionProvider: ({ children }: { children: React.ReactNode }) =>
     children,
-  useIngredientSelector: jest.fn(() => ({
+  useIngredientSelection: jest.fn(() => ({
     selectedIngredients: new Set(),
     toggleIngredient: jest.fn(),
   })),

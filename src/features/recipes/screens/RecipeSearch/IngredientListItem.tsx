@@ -4,7 +4,7 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 
-import { useIngredientSelector } from './IngredientSelectorContext';
+import { useIngredientSelection } from '../../context/IngredientSelectionContext';
 import { Text } from '#components/atoms/Text';
 
 // ── Ingredient list item components (FlashList compatible) ──
@@ -40,7 +40,7 @@ interface IngredientListItemData {
 export const ingredientKeyExtractor = (item: IngredientListItemData) => item.id;
 
 const IngredientRenderItem = ({ item }: { item: IngredientListItemData }) => {
-  const { selectedIngredients, toggleIngredient } = useIngredientSelector();
+  const { selectedIngredients, toggleIngredient } = useIngredientSelection();
   const itemName = item.itemName || '';
   return (
     <IngredientItem

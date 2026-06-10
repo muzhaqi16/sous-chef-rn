@@ -1,6 +1,7 @@
 import type { DocumentNode } from 'graphql';
 import { storage } from '#storage/mmkv';
 import { QueuedMutation, QueueStats, QueueStatus } from './types';
+import { logger } from '#/utils/environment';
 
 const QUEUE_STORAGE_KEY = 'apollo-mutation-queue';
 const CURRENT_USER_KEY = 'apollo-queue-current-user';
@@ -53,7 +54,7 @@ export class QueueStore {
 
       return queue;
     } catch (error) {
-      console.error('Failed to load queue from storage:', error);
+      logger.error('Failed to load queue from storage:', error);
       return [];
     }
   }
@@ -79,7 +80,7 @@ export class QueueStore {
       // Write-through: update cache immediately
       this.cache = mutations;
     } catch (error) {
-      console.error('Failed to save queue to storage:', error);
+      logger.error('Failed to save queue to storage:', error);
     }
   }
 
@@ -129,7 +130,7 @@ export class QueueStore {
 
         if (existingIndex !== -1) {
           // Replace existing mutation with new one (final position)
-          console.log(
+          logger.debug(
             `🔄 Queue: Coalescing move mutations for item ${itemId} - keeping final position`,
           );
           queue[existingIndex] = mutation;
@@ -142,14 +143,14 @@ export class QueueStore {
     // Regular add logic for non-move mutations or first move
     // Check queue size limit
     if (queue.length >= 100) {
-      console.warn('Queue size limit reached, removing oldest mutation');
+      logger.warn('Queue size limit reached, removing oldest mutation');
       queue.shift(); // Remove oldest
     }
 
     queue.push(mutation);
     this.saveQueue(queue);
 
-    console.log(
+    logger.debug(
       `📥 Queue: Added mutation ${mutation.operationName} (${mutation.id}) for user ${mutation.userId}`,
     );
   }
@@ -164,7 +165,7 @@ export class QueueStore {
 
     if (filtered.length < initialLength) {
       this.saveQueue(filtered);
-      console.log(`📤 Queue: Removed mutation ${mutationId}`);
+      logger.debug(`📤 Queue: Removed mutation ${mutationId}`);
       return true;
     }
 
@@ -261,7 +262,7 @@ export class QueueStore {
 
     const removedCount = initialLength - filtered.length;
     if (removedCount > 0) {
-      console.log(
+      logger.debug(
         `🧹 Queue: Cleared ${removedCount} mutations for user ${userId}`,
       );
     }
@@ -275,7 +276,7 @@ export class QueueStore {
   clearAllQueues(): void {
     storage.remove(QUEUE_STORAGE_KEY);
     this.cache = null; // Invalidate cache
-    console.log('🧹 Queue: Cleared all mutations');
+    logger.debug('🧹 Queue: Cleared all mutations');
   }
 
   /**
@@ -347,7 +348,7 @@ export class QueueStore {
 
     if (filtered.length < initialLength) {
       this.saveQueue(filtered);
-      console.log(
+      logger.debug(
         `🧹 Queue: Cleaned up ${
           initialLength - filtered.length
         } old successful mutations`,
@@ -363,7 +364,7 @@ export class QueueStore {
   invalidateCache(): void {
     this.cache = null;
     if (__DEV__) {
-      console.log('🔄 Queue: Cache invalidated');
+      logger.debug('🔄 Queue: Cache invalidated');
     }
   }
 }

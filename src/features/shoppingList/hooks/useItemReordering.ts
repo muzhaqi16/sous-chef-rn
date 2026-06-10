@@ -15,6 +15,7 @@ import {
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { isUnpurchasedVariant } from '#/apollo/utils/shoppingListCacheUpdaters';
+import { logger } from '#/utils/environment';
 
 interface ShoppingListItem {
   id: string;
@@ -98,7 +99,7 @@ export function useItemReordering<T extends ShoppingListItem>(
     // Find the current item from cache to preserve all fields
     const currentItem = items.find(item => item.id === itemId);
     if (!currentItem) {
-      console.error('Item not found in cache:', itemId);
+      logger.error('Item not found in cache:', itemId);
       return;
     }
 
@@ -117,15 +118,12 @@ export function useItemReordering<T extends ShoppingListItem>(
     if (afterItem?.sortOrder && beforeItem?.sortOrder) {
       if (afterItem.sortOrder > beforeItem.sortOrder) {
         // Cache is out of sync - visual order doesn't match sortOrder order
-        console.warn(
-          'Invalid sortOrder state (after > before), refetching...',
-          {
-            afterId: afterItemId,
-            afterSortOrder: afterItem.sortOrder,
-            beforeId: beforeItemId,
-            beforeSortOrder: beforeItem.sortOrder,
-          },
-        );
+        logger.warn('Invalid sortOrder state (after > before), refetching...', {
+          afterId: afterItemId,
+          afterSortOrder: afterItem.sortOrder,
+          beforeId: beforeItemId,
+          beforeSortOrder: beforeItem.sortOrder,
+        });
         refetch?.();
         return;
       }
@@ -133,7 +131,7 @@ export function useItemReordering<T extends ShoppingListItem>(
       if (afterItem.sortOrder === beforeItem.sortOrder) {
         // Collision: two items have the same sortOrder (can't insert between identical values)
         // Fallback: insert after the duplicate block by finding next different sortOrder
-        console.warn(
+        logger.warn(
           'Duplicate sortOrder in cache, using fallback positioning',
           {
             afterId: afterItemId,
@@ -294,7 +292,7 @@ export function useItemReordering<T extends ShoppingListItem>(
 
     if (serverVersion === originalVersion) {
       // No-op move - item was already in correct position
-      console.log('⊘ Move was no-op (item already in position):', {
+      logger.debug('⊘ Move was no-op (item already in position):', {
         itemId,
         version: serverVersion,
       });
@@ -302,7 +300,7 @@ export function useItemReordering<T extends ShoppingListItem>(
     }
 
     // Real move happened
-    console.log('✓ Sort order updated on server:', {
+    logger.debug('✓ Sort order updated on server:', {
       itemId,
       serverSortOrder,
       oldVersion: originalVersion,
@@ -312,7 +310,7 @@ export function useItemReordering<T extends ShoppingListItem>(
     // Ensure server's sortOrder is in cache (may differ from optimistic value)
     // This prevents cache desync when server calculates a different sortOrder
     if (serverSortOrder && serverSortOrder !== newSortOrder) {
-      console.log('Server returned different sortOrder, updating cache:', {
+      logger.debug('Server returned different sortOrder, updating cache:', {
         optimistic: newSortOrder,
         server: serverSortOrder,
       });

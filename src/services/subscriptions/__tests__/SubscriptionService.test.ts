@@ -7,6 +7,7 @@ jest.mock('#/utils/errorSerialization', () => ({
 import type { StoreObject } from '@apollo/client';
 import { SubscriptionService } from '../SubscriptionService';
 import { CacheStrategy, LogLevel, type SubscriptionConfig } from '../types';
+import { logger } from '#/utils/environment';
 
 // Production `SubscriptionHandlers` types `onData` as Apollo's `OnDataOptions`
 // and `onError` as `ErrorLike`. These tests exercise the handlers directly with
@@ -309,7 +310,7 @@ describe('SubscriptionService', () => {
         message: 'GraphQL validation error',
       });
       expect(service.getStats().totalErrors).toBe(1);
-      expect(console.error).toHaveBeenCalledWith(
+      expect(logger.error).toHaveBeenCalledWith(
         expect.stringContaining('❌'),
         expect.anything(),
         expect.anything(),

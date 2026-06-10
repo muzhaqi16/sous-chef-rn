@@ -3,6 +3,7 @@ import type { FieldFunctionOptions, Reference } from '@apollo/client';
 // Import generated fragment matcher for proper interface/union type handling
 import fragmentMatcherData from '#/graphql/generated/fragmentMatcher.json';
 import { queueStore } from './offlineQueue/queueStore';
+import { logger } from '#/utils/environment';
 
 // Apollo's `readField` accessor, extracted from the field-policy options bag.
 type ReadField = FieldFunctionOptions['readField'];
@@ -246,7 +247,7 @@ function mergeConnectionByNodeId() {
       const preservePageInfo = shouldPreservePageInfo(existing, incoming, args);
 
       if (__DEV__ && preservePageInfo) {
-        console.log(
+        logger.debug(
           `📊 [Cache] preserved existing pageInfo (existing=${
             existingEdges.length
           } incoming=${(incoming.edges || []).length})`,
@@ -318,7 +319,7 @@ function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
       if (validEdges.length === existing.edges.length) return existing;
       const dropped = existing.edges.length - validEdges.length;
       if (__DEV__) {
-        console.log(
+        logger.debug(
           `📊 [Cache] itemsConnection read: dropped ${dropped} dangling edge(s)`,
         );
       }
@@ -353,7 +354,7 @@ function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
         const authoritativeEmpty = incoming.totalCount === 0;
         if (!incomingHasEdges && existingHasEdges && !authoritativeEmpty) {
           if (__DEV__) {
-            console.log(
+            logger.debug(
               `🛡️ [Cache] itemsConnection: preserved ${
                 existing.edges?.length ?? 0
               } cached edge(s) — ignored empty/partial incoming (totalCount=${
@@ -385,7 +386,7 @@ function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
         });
         if (preservedEdges.length === 0) return incoming;
         if (__DEV__) {
-          console.log(
+          logger.debug(
             `🛡️ [Cache] itemsConnection: preserved ${preservedEdges.length} un-replayed local edge(s) over the authoritative page`,
           );
         }
@@ -420,7 +421,7 @@ function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
         : incoming.pageInfo;
 
       if (__DEV__ && keepExistingPageInfo) {
-        console.log(
+        logger.debug(
           `📊 [Cache] preserved existing pageInfo (existing=${
             (existing.edges || []).length
           } incoming=${(incoming.edges || []).length})`,
@@ -448,7 +449,7 @@ function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
           const existingCount = existing?.edges?.length ?? 0;
           const incomingCount = incoming?.edges?.length ?? 0;
           const hasCursor = !!args?.after;
-          console.log(
+          logger.debug(
             `📊 [Cache] itemsConnection merge (stable): existing=${existingCount} incoming=${incomingCount} merged=${existingCount} cursor=${hasCursor}`,
           );
         }
@@ -463,7 +464,7 @@ function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
         mergedEdges = mergedEdges.slice(evictCount);
 
         if (__DEV__) {
-          console.log(
+          logger.debug(
             `📊 [Cache] itemsConnection evicted ${evictCount} oldest edges, remaining=${mergedEdges.length}`,
           );
         }
@@ -473,7 +474,7 @@ function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
         const existingCount = existing?.edges?.length ?? 0;
         const incomingCount = incoming?.edges?.length ?? 0;
         const hasCursor = !!args?.after;
-        console.log(
+        logger.debug(
           `📊 [Cache] itemsConnection merge: existing=${existingCount} incoming=${incomingCount} merged=${mergedEdges.length} cursor=${hasCursor}`,
         );
         import('#services/telemetry')

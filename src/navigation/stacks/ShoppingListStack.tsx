@@ -9,16 +9,9 @@ import { ShareList } from '#features/shoppingList/screens/ShareList';
 import { AddEditItem } from '#features/shoppingList/screens/AddEditItem';
 import { ShoppingListItemDetail } from '#features/shoppingList/screens/ItemDetail';
 import { PurchaseHistoryScreen } from '#features/shoppingList/screens/PurchaseHistoryScreen';
-import {
-  topInsetScreenLayout,
-  noInsetScreenLayout,
-} from '#navigation/layouts/TopInsetLayout';
+import { topInsetScreenLayout } from '#navigation/layouts/TopInsetLayout';
 
 export const ShoppingListStack = createNativeStackNavigator({
-  // Top safe-area inset, applied per screen (it's no longer global — see
-  // TopInsetLayout). Every screen gets it EXCEPT ItemDetail, which draws its
-  // hero image edge-to-edge behind the status bar.
-  screenLayout: topInsetScreenLayout,
   screenOptions: ({ theme }) => ({
     headerShown: false,
     animation: 'slide_from_right',
@@ -27,32 +20,44 @@ export const ShoppingListStack = createNativeStackNavigator({
     contentStyle: { backgroundColor: theme.colors.background },
     inactiveBehavior: 'none',
   }),
+  // Top safe-area inset applied per screen (opt-in, matching PantryStack).
+  // ItemDetail draws its hero edge-to-edge and applies insets itself — it has
+  // no layout entry, same as PantryItemDetail and RecipeDetail.
   screens: {
     ShoppingListMain: createNativeStackScreen({
       screen: ShoppingListMain,
       // `:listId?` selects a specific list on open (souschef://shopping/{listId});
       // bare `shopping` opens the last-selected list.
       linking: 'shopping/:listId?',
+      layout: topInsetScreenLayout,
     }),
     // Wrapped without a `linking` key — intentionally not deep-linkable;
     // reachable only from within the shopping list flow.
-    ListSettings: createNativeStackScreen({ screen: ListSettings }),
-    ShareList: createNativeStackScreen({ screen: ShareList }),
+    ListSettings: createNativeStackScreen({
+      screen: ListSettings,
+      layout: topInsetScreenLayout,
+    }),
+    ShareList: createNativeStackScreen({
+      screen: ShareList,
+      layout: topInsetScreenLayout,
+    }),
     AddItem: createNativeStackScreen({
       screen: AddEditItem,
       linking: 'shopping/add',
+      layout: topInsetScreenLayout,
     }),
     EditItem: createNativeStackScreen({
       screen: AddEditItem,
       linking: 'shopping/edit/:itemId',
+      layout: topInsetScreenLayout,
     }),
-    // Wrapped without a `linking` key — intentionally not deep-linkable
-    // (see note above).
     ItemDetail: createNativeStackScreen({
       screen: ShoppingListItemDetail,
-      layout: noInsetScreenLayout,
     }),
-    PurchaseHistory: createNativeStackScreen({ screen: PurchaseHistoryScreen }),
+    PurchaseHistory: createNativeStackScreen({
+      screen: PurchaseHistoryScreen,
+      layout: topInsetScreenLayout,
+    }),
   },
 });
 

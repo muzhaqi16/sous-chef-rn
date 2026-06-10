@@ -21,13 +21,13 @@ const ThemedIcon = withUnistyles(Icon, theme => ({
   size: theme.fonts.size.xl,
 }));
 
-interface AnimatedActionButtonProps extends ActionButtonProps {
+interface SwipeActionButtonProps extends ActionButtonProps {
   progress?: SharedValue<number>;
   /** The index of this button (0, 1, 2...) for stagger calculation */
   index?: number;
 }
 
-const AnimatedActionButtonComponent: React.FC<AnimatedActionButtonProps> = ({
+const SwipeActionButtonComponent: React.FC<SwipeActionButtonProps> = ({
   onPress,
   icon,
   label,
@@ -97,4 +97,4 @@ const AnimatedActionButtonComponent: React.FC<AnimatedActionButtonProps> = ({
   );
 };
 
-export const AnimatedActionButton = AnimatedActionButtonComponent;
+export const SwipeActionButton = SwipeActionButtonComponent;

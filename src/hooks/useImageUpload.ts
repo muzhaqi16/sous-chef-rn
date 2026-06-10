@@ -13,6 +13,7 @@ import { ImageUploadPurpose } from '#/graphql/generated/schemaTypes';
 import { MAX_PROFILE_SIZE } from '#utils/imageValidation';
 import { useStore } from '#store';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
+import { logger } from '#/utils/environment';
 
 export interface ImageFile {
   uri: string;
@@ -73,7 +74,7 @@ export const useImageUpload = () => {
         if (xhr.status >= 200 && xhr.status < 300) {
           resolve();
         } else {
-          console.error(
+          logger.error(
             `MinIO upload failed: status=${xhr.status}, url=${uploadData.url}, response=${xhr.responseText}`,
           );
           const statusText = xhr.statusText ? ` ${xhr.statusText}` : '';
@@ -151,8 +152,8 @@ export const useImageUpload = () => {
         // For profile images, handle missing file size gracefully
         let fileToUpload = { ...file };
         if (isProfileImage && !fileToUpload.fileSize) {
-          console.warn('File size missing, attempting to determine it...');
-          console.warn('Proceeding without file size - server will validate');
+          logger.warn('File size missing, attempting to determine it...');
+          logger.warn('Proceeding without file size - server will validate');
         }
 
         // Validate the image file
@@ -235,7 +236,7 @@ export const useImageUpload = () => {
           options,
         ),
       error => {
-        console.error('Profile image upload failed:', error);
+        logger.error('Profile image upload failed:', error);
         const errorMessage =
           error instanceof Error ? error.message : 'Upload failed';
 
@@ -283,7 +284,7 @@ export const useImageUpload = () => {
           options,
         ),
       error => {
-        console.error('Item image upload failed:', error);
+        logger.error('Item image upload failed:', error);
         const errorMessage =
           error instanceof Error ? error.message : 'Upload failed';
         options.onError?.(new Error(errorMessage));
@@ -319,7 +320,7 @@ export const useImageUpload = () => {
           variables: { input: { avatar: avatarUrl } },
         }),
       error => {
-        console.error('Update profile avatar failed:', error);
+        logger.error('Update profile avatar failed:', error);
         alertService.alert('Update Failed', 'Failed to update profile avatar');
       },
     );
@@ -339,7 +340,7 @@ export const useImageUpload = () => {
           variables: { input: { coverImage: coverImageUrl } },
         }),
       error => {
-        console.error('Update profile cover failed:', error);
+        logger.error('Update profile cover failed:', error);
         alertService.alert('Update Failed', 'Failed to update profile cover');
       },
     );
@@ -356,7 +357,7 @@ export const useImageUpload = () => {
           variables: { id, imageUrl },
         }),
       error => {
-        console.error('Update item image failed:', error);
+        logger.error('Update item image failed:', error);
         alertService.alert('Update Failed', 'Failed to update item image');
       },
     );

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, ScrollView } from 'react-native';
+import { DetailSection } from '#components/molecules/DetailSection';
 import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
@@ -66,22 +67,6 @@ const ExpiryColumnText: React.FC<{
   styles.useVariants({ expiryStatus: status });
   return <Text style={styles.infoColumnValue}>{text}</Text>;
 };
-
-/**
- * Groups a block of detail content on its own elevated card. `flush` drops the
- * card's horizontal padding for children (batches, usage history) that already
- * inset their content and render their own header.
- */
-const Section: React.FC<{
-  title?: string;
-  flush?: boolean;
-  children: React.ReactNode;
-}> = ({ title, flush, children }) => (
-  <View style={flush ? styles.sectionFlush : styles.section}>
-    {!!title && <Text style={styles.sectionHeading}>{title}</Text>}
-    {children}
-  </View>
-);
 
 export const PantryItemDetail: React.FC<
   StaticScreenProps<{
@@ -336,7 +321,7 @@ export const PantryItemDetail: React.FC<
           </View>
         )}
 
-        <Section>
+        <DetailSection style={styles.sectionSpacing}>
           <View style={styles.infoColumns}>
             <View style={styles.infoColumn}>
               <Text style={styles.infoColumnLabel}>
@@ -365,10 +350,13 @@ export const PantryItemDetail: React.FC<
               </Text>
             </View>
           </View>
-        </Section>
+        </DetailSection>
 
         {!!showNutrition && (
-          <Section title={t('pantryItemDetail.nutrition')}>
+          <DetailSection
+            style={styles.sectionSpacing}
+            title={t('pantryItemDetail.nutrition')}
+          >
             <NutritionSummary
               nutritions={itemNutritions}
               showHighlights
@@ -380,10 +368,10 @@ export const PantryItemDetail: React.FC<
                 })
               }
             />
-          </Section>
+          </DetailSection>
         )}
 
-        <Section>
+        <DetailSection style={styles.sectionSpacing}>
           <PantryDetailInfo
             itemRef={item}
             brandName={brandName}
@@ -395,20 +383,20 @@ export const PantryItemDetail: React.FC<
             shelfLifeOpenedDays={item.item?.shelfLifeOpenedDays}
             onCorrectWeight={() => actions.setCorrectWeightVisible(true)}
           />
-        </Section>
+        </DetailSection>
 
         {!!item.batches && item.batches.length > 1 && (
-          <Section flush>
+          <DetailSection flush style={styles.sectionSpacing}>
             <BatchSection
               batches={item.batches}
               pantryItemId={item.id}
               unitSymbol={item.unit?.symbol ?? undefined}
             />
-          </Section>
+          </DetailSection>
         )}
 
         {!!item.usageRecords && item.usageRecords.edges.length > 0 && (
-          <Section flush>
+          <DetailSection flush style={styles.sectionSpacing}>
             <PantryUsageHistory
               usageRecords={item.usageRecords.edges}
               expanded={purchaseHistoryExpanded}
@@ -416,10 +404,13 @@ export const PantryItemDetail: React.FC<
                 setPurchaseHistoryExpanded(!purchaseHistoryExpanded)
               }
             />
-          </Section>
+          </DetailSection>
         )}
 
-        <Section title={t('pantryItemDetail.recipesToTry')}>
+        <DetailSection
+          style={styles.sectionSpacing}
+          title={t('pantryItemDetail.recipesToTry')}
+        >
           {loadingRecipes ? (
             <ThemedActivityIndicator
               size="small"
@@ -454,7 +445,7 @@ export const PantryItemDetail: React.FC<
               {t('pantryItemDetail.noRecipeSuggestions')}
             </Text>
           )}
-        </Section>
+        </DetailSection>
       </CollapsingHeroDetail>
 
       {!!actions.adjustModalVisible && (
@@ -520,28 +511,8 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.primary,
     fontWeight: theme.fonts.weight.medium,
   },
-  section: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.xl,
-    marginHorizontal: theme.spacing.sm,
+  sectionSpacing: {
     marginBottom: theme.spacing.md,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.md,
-    ...theme.shadows.card,
-  },
-  sectionFlush: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.xl,
-    marginHorizontal: theme.spacing.sm,
-    marginBottom: theme.spacing.md,
-    paddingVertical: theme.spacing.xs,
-    ...theme.shadows.card,
-  },
-  sectionHeading: {
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.sm,
   },
   infoColumns: {
     flexDirection: 'row',

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
-import { ItemCard } from './ItemCard';
+import { ProductResultCard } from './ProductResultCard';
 import { ActionButtons } from './ActionButtons';
 import { StyleSheet } from 'react-native-unistyles';
 import {
@@ -388,7 +388,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
       style={styles.scrollView}
       contentContainerStyle={styles.scrollContent}
     >
-      <ItemCard
+      <ProductResultCard
         item={item}
         format={format}
         onEditItem={onEditItem}

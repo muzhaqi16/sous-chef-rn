@@ -14,9 +14,9 @@ import type { BottomSheetModalRef } from '#hooks/useStandardBottomSheet';
 import { BottomSheetAction } from '#components/templates/BottomSheetAction';
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 import {
-  SelectableIngredientProvider,
-  useSelectableIngredients,
-} from '../SelectableIngredientContext';
+  IngredientSelectionProvider,
+  useIngredientSelection,
+} from '../../../context/IngredientSelectionContext';
 
 interface SelectableIngredient {
   id: string;
@@ -30,7 +30,7 @@ const ingredientKeyExtractor = (item: { id: string }) => item.id;
 const SelectableIngredientItem: React.FC<
   ListRenderItemInfo<SelectableIngredient>
 > = ({ item }) => {
-  const { selectedIngredients, toggleIngredient } = useSelectableIngredients();
+  const { selectedIngredients, toggleIngredient } = useIngredientSelection();
   const isSelected = selectedIngredients.has(item.id);
 
   return (
@@ -93,7 +93,7 @@ export const IngredientSelectorSheet: React.FC<
       snapPoints={['50%', '75%', '90%']}
       onDismiss={onDismiss}
     >
-      <SelectableIngredientProvider
+      <IngredientSelectionProvider
         selectedIngredients={selectedIngredients}
         toggleIngredient={toggleIngredient}
       >
@@ -111,7 +111,7 @@ export const IngredientSelectorSheet: React.FC<
             </Text>
           }
         />
-      </SelectableIngredientProvider>
+      </IngredientSelectionProvider>
       <Pressable
         style={({ pressed }) => [
           styles.addSelectedButton,

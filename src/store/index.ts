@@ -69,6 +69,36 @@ import {
   NetworkState,
 } from './slices/networkSlice';
 import { zustandStorage, STORAGE_KEY } from '#/storage/mmkv';
+import { loadSessionTokens, saveSessionTokens } from '#/storage/keychain';
+import { logger } from '#/utils/environment';
+
+/**
+ * Final step of persist hydration: pull session tokens out of the keychain
+ * (their persistence tier — see partialize) and only then flip `isHydrated`,
+ * so the first authenticated paint sees the session.
+ *
+ * Migration: installs that predate keychain token storage still carry tokens
+ * inside the persisted MMKV state; when the keychain has none, adopt the
+ * MMKV pair and write it through. The `setHydrated` set() below triggers a
+ * persist write whose partialize strips the tokens out of MMKV.
+ */
+const hydrateSessionTokensThenFinish = async (
+  state: RootState | undefined,
+): Promise<void> => {
+  const tokens = await loadSessionTokens();
+  if (tokens) {
+    // setTokens also schedules the proactive refresh for the restored session
+    state?.setTokens(tokens);
+  } else if (state?.accessToken && state?.refreshToken) {
+    saveSessionTokens({
+      accessToken: state.accessToken,
+      refreshToken: state.refreshToken,
+    }).catch(error => {
+      logger.warn('Failed to migrate session tokens to keychain:', error);
+    });
+  }
+  state?.setHydrated(true);
+};
 
 // Add reset manager interface to root state
 interface ResetManagerState {
@@ -207,7 +237,7 @@ export const useStore = create<RootState>()(
         onRehydrateStorage: () => {
           return (state, error) => {
             if (error) {
-              console.log('An error happened during hydration', error);
+              console.error('An error happened during hydration', error);
             } else {
               // Sync the rehydrated theme preference to UnistylesRuntime
               // BEFORE flipping `isHydrated`. This makes the persist layer
@@ -228,8 +258,11 @@ export const useStore = create<RootState>()(
                 });
               }
 
-              // Mark store as hydrated
-              state?.setHydrated(true);
+              // Load session tokens from the keychain BEFORE flipping
+              // `isHydrated`, so auth-dependent navigation sees the session on
+              // first paint. Tokens are excluded from partialize — the
+              // keychain (not MMKV) is their persistence tier.
+              void hydrateSessionTokensThenFinish(state);
 
               // Cold-start telemetry: time from JS bundle entry to Zustand
               // hydration callback firing. Captures MMKV decrypt + JSON parse +
@@ -315,6 +348,12 @@ export const useStore = create<RootState>()(
 
             // Logout state (session-only flag)
             isLoggingOut,
+
+            // Session tokens (keychain-persisted — never written to MMKV;
+            // loaded in hydrateSessionTokensThenFinish, written through in
+            // the authSlice setters)
+            accessToken,
+            refreshToken,
 
             // Seen-items LRU: a within-session warmth cache for catalog item
             // autocomplete. Kept transient so it isn't serialized into MMKV on

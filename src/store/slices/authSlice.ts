@@ -12,6 +12,25 @@ import {
   cancelTokenRefresh,
 } from '../../apollo/links/tokenScheduler';
 import { proactiveTokenRefresh } from '../../apollo/links/refreshToken';
+import { saveSessionTokens, clearSessionTokens } from '#storage/keychain';
+import { logger } from '#/utils/environment';
+
+/**
+ * Write-through token persistence: session tokens live in the keychain (not
+ * MMKV — see partialize in store/index.ts). Fire-and-forget: a failed write
+ * only costs auto-login on the next cold start; the in-memory session keeps
+ * working.
+ */
+const persistSessionTokens = (
+  accessToken: string | null,
+  refreshToken: string | null,
+): void => {
+  if (accessToken && refreshToken) {
+    saveSessionTokens({ accessToken, refreshToken }).catch(error => {
+      logger.warn('Failed to persist session tokens to keychain:', error);
+    });
+  }
+};
 
 // ============================================
 // AppState Token Refresh
@@ -47,13 +66,13 @@ export const handleTokenRefreshOnResume = async (
   const accessToken = getAccessToken();
   if (!accessToken || !isTokenExpiredOrExpiring(accessToken)) return;
 
-  console.log(
+  logger.debug(
     '[AuthSlice] Token expired/expiring on app resume, refreshing...',
   );
   try {
     await proactiveTokenRefresh();
   } catch {
-    console.warn(
+    logger.warn(
       '[AuthSlice] Token refresh on resume failed, reactive refresh will handle',
     );
   }
@@ -182,6 +201,8 @@ export const createAuthSlice: StateCreator<
       state.isAutoLoggingIn = false; // Clear auto-login state on success
     });
 
+    persistSessionTokens(accessToken, refreshToken);
+
     // Schedule proactive token refresh (best practice)
     // This will automatically refresh the token 5 minutes before it expires
     // to prevent user-facing 401 errors and provide seamless UX
@@ -207,6 +228,10 @@ export const createAuthSlice: StateCreator<
       if (accessToken !== undefined) state.accessToken = accessToken;
       if (refreshToken !== undefined) state.refreshToken = refreshToken;
     });
+
+    // Read back from the store so partial updates persist the full pair
+    const updated = get();
+    persistSessionTokens(updated.accessToken, updated.refreshToken);
 
     // Schedule proactive token refresh whenever tokens are updated
     // The tokenScheduler has built-in offline protection, so we always schedule
@@ -245,6 +270,10 @@ export const createAuthSlice: StateCreator<
       state.refreshToken = null;
       state.isAutoLoggingIn = false;
       // Keep rememberMe preference
+    });
+
+    clearSessionTokens().catch(error => {
+      logger.warn('Failed to clear session tokens from keychain:', error);
     });
   },
 

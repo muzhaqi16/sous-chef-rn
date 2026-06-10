@@ -28,6 +28,7 @@ import {
   safeEvict,
   safeEvictMany,
 } from './cacheUpdaters';
+import { logger } from '#/utils/environment';
 
 export interface OptimisticShoppingListItemFields {
   itemName: string;
@@ -297,7 +298,7 @@ function updateItemsConnectionForPurchaseStatusChange(
       },
     });
   } catch (error) {
-    console.warn(
+    logger.warn(
       'Failed to update itemsConnection for purchase status change:',
       error,
     );
@@ -399,7 +400,7 @@ export function addNewItemToShoppingListCache(
       },
     });
   } catch (error) {
-    console.warn('Failed to update cache for new shopping list item:', error);
+    logger.warn('Failed to update cache for new shopping list item:', error);
   }
 }
 
@@ -627,7 +628,7 @@ export function removeItemFromShoppingListForMoveToPantry(
     // Evict the item entity from cache
     safeEvict(cache, 'ShoppingListItem', itemId);
   } catch (error) {
-    console.warn(
+    logger.warn(
       'Failed to remove item from ShoppingList for move to pantry:',
       error,
     );

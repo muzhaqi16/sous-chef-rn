@@ -315,9 +315,7 @@ const RecipeDetailScreen: React.FC = () => {
             : undefined
         }
       >
-        {!!displayData.image && (
-          <Text style={styles.title}>{displayData.title}</Text>
-        )}
+        <Text style={styles.title}>{displayData.title}</Text>
 
         {/* Recipe Metadata */}
         <View style={styles.metadata}>

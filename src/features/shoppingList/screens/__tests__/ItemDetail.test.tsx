@@ -140,7 +140,7 @@ describe('ShoppingListItemDetail', () => {
     renderWithApollo(<ShoppingListItemDetail route={route} />, {
       operationMocks: [buildItemMock('si1', buildShoppingListItem())],
     });
-    await waitFor(() => expect(screen.getByText('Bread')).toBeTruthy());
+    await waitFor(() => expect(screen.getAllByText('Bread')[0]).toBeTruthy());
   });
 
   it('renders the detail template title', async () => {

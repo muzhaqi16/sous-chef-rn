@@ -19,6 +19,7 @@ import {
 } from '../tokenScheduler';
 import { useStore } from '#store';
 import type { RootState } from '#store/index';
+import { logger } from '#/utils/environment';
 
 const mockedJwtDecode = jwtDecode as jest.MockedFunction<typeof jwtDecode>;
 const mockedGetState = useStore.getState as jest.MockedFunction<
@@ -69,7 +70,7 @@ describe('tokenScheduler', () => {
 
       expect(getScheduleState().isScheduled).toBe(true);
       expect(callback).not.toHaveBeenCalled();
-      expect(console.log).toHaveBeenCalledWith(
+      expect(logger.debug).toHaveBeenCalledWith(
         expect.stringContaining(
           '[TokenScheduler] Scheduling proactive refresh',
         ),
@@ -86,7 +87,7 @@ describe('tokenScheduler', () => {
 
       expect(getScheduleState().isScheduled).toBe(false);
       expect(callback).not.toHaveBeenCalled();
-      expect(console.warn).toHaveBeenCalledWith(
+      expect(logger.warn).toHaveBeenCalledWith(
         expect.stringContaining('[TokenScheduler] Token expires too soon'),
       );
     });
@@ -103,7 +104,7 @@ describe('tokenScheduler', () => {
       jest.advanceTimersByTime(700 * 1000);
 
       expect(callback).toHaveBeenCalledTimes(1);
-      expect(console.log).toHaveBeenCalledWith(
+      expect(logger.debug).toHaveBeenCalledWith(
         expect.stringContaining('Proactive token refresh triggered'),
       );
     });
@@ -120,7 +121,7 @@ describe('tokenScheduler', () => {
       jest.advanceTimersByTime(700 * 1000);
 
       expect(callback).not.toHaveBeenCalled();
-      expect(console.log).toHaveBeenCalledWith(
+      expect(logger.debug).toHaveBeenCalledWith(
         expect.stringContaining(
           'Skipping proactive refresh - device is offline',
         ),
@@ -147,7 +148,7 @@ describe('tokenScheduler', () => {
       // Only the second callback should be scheduled, not the first
       expect(callback1).not.toHaveBeenCalled();
       // Both schedule calls should log
-      expect(console.log).toHaveBeenCalledWith(
+      expect(logger.debug).toHaveBeenCalledWith(
         expect.stringContaining(
           '[TokenScheduler] Scheduling proactive refresh',
         ),
@@ -164,7 +165,7 @@ describe('tokenScheduler', () => {
       }).not.toThrow();
 
       expect(getScheduleState().isScheduled).toBe(false);
-      expect(console.error).toHaveBeenCalledWith(
+      expect(logger.error).toHaveBeenCalledWith(
         expect.stringContaining('Failed to decode token for scheduling:'),
         expect.any(Error),
       );
@@ -181,7 +182,7 @@ describe('tokenScheduler', () => {
       jest.advanceTimersByTime(700 * 1000);
       await Promise.resolve(); // flush the rejected promise
       expect(callback).toHaveBeenCalledTimes(1);
-      expect(console.error).toHaveBeenCalledWith(
+      expect(logger.error).toHaveBeenCalledWith(
         expect.stringContaining('Proactive refresh failed:'),
         expect.any(Error),
       );
@@ -199,7 +200,7 @@ describe('tokenScheduler', () => {
 
       cancelTokenRefresh();
       expect(getScheduleState().isScheduled).toBe(false);
-      expect(console.log).toHaveBeenCalledWith(
+      expect(logger.debug).toHaveBeenCalledWith(
         expect.stringContaining('Scheduled refresh cancelled'),
       );
     });

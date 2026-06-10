@@ -1,5 +1,6 @@
 import { createMMKV, type MMKV } from 'react-native-mmkv';
 import { StateStorage } from 'zustand/middleware';
+import { logger } from '#/utils/environment';
 import { DeviceKeyManager } from '#/utils/security/deviceKey';
 
 export const STORAGE_KEY = 'sous-chef-storage';
@@ -22,6 +23,11 @@ let initPromise: Promise<MMKV> | null = null;
  * code is gated by `useIsHydrated()` (Zustand persist awaits this internally
  * via `zustandStorage`), so by the time any component reads `storage.X` the
  * encrypted instance is ready.
+ *
+ * Encryption is best-effort: session tokens live in the keychain (see
+ * src/storage/keychain.ts), so MMKV holds no credentials. If the device key
+ * is unavailable (after the retries inside DeviceKeyManager), fall back to
+ * an unencrypted instance rather than blocking startup.
  */
 export const initializeSecureStorage = async (): Promise<MMKV> => {
   if (secureStorageInstance) return secureStorageInstance;
@@ -33,8 +39,8 @@ export const initializeSecureStorage = async (): Promise<MMKV> => {
       const encryptionKey = await DeviceKeyManager.getDeviceEncryptionKey();
       instance = createMMKV({ id: STORAGE_KEY, encryptionKey });
     } catch (error) {
-      console.error(
-        'CRITICAL: Encrypted storage init failed; falling back to unencrypted',
+      logger.error(
+        'Encrypted storage init failed; falling back to unencrypted:',
         error,
       );
       instance = createMMKV({ id: STORAGE_KEY });

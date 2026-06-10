@@ -10,10 +10,12 @@ import {
   getInternetCredentials,
   type AuthenticationPrompt,
 } from 'react-native-keychain';
+import { logger } from '#/utils/environment';
 
 const DEFAULT_SERVICE = 'dev.souschef.app.credentials';
 const CREDENTIALS_INDICATOR_SERVICE = 'dev.souschef.app.credentials.indicator';
 const TEMP_REGISTRATION_SERVICE = 'dev.souschef.app.temp.registration';
+const SESSION_TOKENS_SERVICE = 'dev.souschef.app.session.tokens';
 
 export interface SaveOptions {
   /** namespace of this item */
@@ -227,7 +229,7 @@ export async function clearCredentials(
     // PERFORMANCE: Invalidate cache after clearing credentials
     credentialsExistCache = false;
   } catch (err) {
-    console.error('Failed to clear credentials:', err);
+    logger.error('Failed to clear credentials:', err);
     // PERFORMANCE: Invalidate cache even on error to be safe
     credentialsExistCache = null;
     throw err;
@@ -248,7 +250,7 @@ export async function getBiometricCapability(): Promise<{
       biometryType: biometryType,
     };
   } catch (error) {
-    console.error('Failed to get biometric capability:', error);
+    logger.error('Failed to get biometric capability:', error);
     return { isAvailable: false, biometryType: null };
   }
 }
@@ -259,7 +261,7 @@ export async function saveEmailOnly(email: string): Promise<void> {
       accessible: ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
     });
   } catch (error) {
-    console.error('Failed to save email:', error);
+    logger.error('Failed to save email:', error);
   }
 }
 
@@ -268,7 +270,7 @@ export async function getEmailOnly(): Promise<string | null> {
     const result = await getInternetCredentials('souschefrn-email');
     return result ? result.username : null;
   } catch (error) {
-    console.error('Failed to get email:', error);
+    logger.error('Failed to get email:', error);
     return null;
   }
 }
@@ -325,6 +327,71 @@ export async function clearTempRegistrationPassword(): Promise<void> {
   } catch {
     // Non-fatal — entry may not exist
   }
+}
+
+// ============================================================================
+// Session tokens (access + refresh JWT)
+//
+// Tokens are persisted here — NOT in MMKV — so the persisted Zustand state
+// holds nothing sensitive and MMKV encryption can stay best-effort. No
+// biometric gate: tokens must be readable on every cold start without a
+// prompt. AFTER_FIRST_UNLOCK (vs WHEN_UNLOCKED) lets background work
+// (WebSocket reconnects, notification handlers) read them while the device
+// is locked, as long as it has been unlocked once since boot.
+// ============================================================================
+
+export interface SessionTokens {
+  accessToken: string;
+  refreshToken: string;
+}
+
+export async function saveSessionTokens(tokens: SessionTokens): Promise<void> {
+  return queueOperation(async () => {
+    const success = await setGenericPassword(
+      'session',
+      JSON.stringify(tokens),
+      {
+        service: SESSION_TOKENS_SERVICE,
+        accessible: ACCESSIBLE.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY,
+      },
+    );
+    if (!success) {
+      throw new Error("Keychain couldn't save session tokens");
+    }
+  });
+}
+
+/**
+ * Load the session tokens. Returns null on absence, parse failure, or
+ * keychain error — callers treat null as "no session" and fall back to login.
+ */
+export async function loadSessionTokens(): Promise<SessionTokens | null> {
+  return queueOperation(async () => {
+    try {
+      const creds = await getGenericPassword({
+        service: SESSION_TOKENS_SERVICE,
+      });
+      if (!creds) return null;
+      const parsed = JSON.parse(creds.password) as Partial<SessionTokens>;
+      if (!parsed.accessToken || !parsed.refreshToken) return null;
+      return {
+        accessToken: parsed.accessToken,
+        refreshToken: parsed.refreshToken,
+      };
+    } catch {
+      return null;
+    }
+  });
+}
+
+export async function clearSessionTokens(): Promise<void> {
+  return queueOperation(async () => {
+    try {
+      await resetGenericPassword({ service: SESSION_TOKENS_SERVICE });
+    } catch {
+      // Non-fatal — entry may not exist
+    }
+  });
 }
 
 // Legacy support functions for the existing codebase

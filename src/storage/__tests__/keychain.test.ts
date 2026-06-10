@@ -17,10 +17,14 @@ import {
   saveTempRegistrationPassword,
   loadTempRegistrationPassword,
   clearTempRegistrationPassword,
+  saveSessionTokens,
+  loadSessionTokens,
+  clearSessionTokens,
   hasCredentialsForAccount,
   loadCredentialsForAccount,
   getStoredAccounts,
 } from '../keychain';
+import { logger } from '#/utils/environment';
 
 // Cast to jest.Mock for type safety
 const mockSetGenericPassword = setGenericPassword as jest.Mock;
@@ -178,7 +182,7 @@ describe('keychain storage', () => {
       mockResetGenericPassword.mockRejectedValue(new Error('Clear failed'));
 
       await expect(clearCredentials()).rejects.toThrow('Clear failed');
-      expect(console.error).toHaveBeenCalledWith(
+      expect(logger.error).toHaveBeenCalledWith(
         expect.stringContaining('Failed to clear credentials:'),
         expect.any(Error),
       );
@@ -214,7 +218,7 @@ describe('keychain storage', () => {
         isAvailable: false,
         biometryType: null,
       });
-      expect(console.error).toHaveBeenCalledWith(
+      expect(logger.error).toHaveBeenCalledWith(
         expect.stringContaining('Failed to get biometric capability:'),
         expect.any(Error),
       );
@@ -239,7 +243,7 @@ describe('keychain storage', () => {
 
       // Should not throw
       await expect(saveEmailOnly('user@test.com')).resolves.toBeUndefined();
-      expect(console.error).toHaveBeenCalledWith(
+      expect(logger.error).toHaveBeenCalledWith(
         expect.stringContaining('Failed to save email:'),
         expect.any(Error),
       );
@@ -269,7 +273,7 @@ describe('keychain storage', () => {
 
       const result = await getEmailOnly();
       expect(result).toBeNull();
-      expect(console.error).toHaveBeenCalledWith(
+      expect(logger.error).toHaveBeenCalledWith(
         expect.stringContaining('Failed to get email:'),
         expect.any(Error),
       );
@@ -344,6 +348,83 @@ describe('keychain storage', () => {
       mockResetGenericPassword.mockRejectedValue(new Error('Error'));
 
       await expect(clearTempRegistrationPassword()).resolves.toBeUndefined();
+    });
+  });
+
+  describe('session tokens', () => {
+    const tokens = { accessToken: 'access-jwt', refreshToken: 'refresh-jwt' };
+
+    it('saveSessionTokens stores both tokens under the session service', async () => {
+      mockSetGenericPassword.mockResolvedValue(true);
+
+      await saveSessionTokens(tokens);
+
+      expect(mockSetGenericPassword).toHaveBeenCalledWith(
+        'session',
+        JSON.stringify(tokens),
+        expect.objectContaining({
+          service: 'dev.souschef.app.session.tokens',
+        }),
+      );
+    });
+
+    it('saveSessionTokens throws when the keychain write fails', async () => {
+      mockSetGenericPassword.mockResolvedValue(false);
+
+      await expect(saveSessionTokens(tokens)).rejects.toThrow(
+        "Keychain couldn't save session tokens",
+      );
+    });
+
+    it('loadSessionTokens returns the stored pair', async () => {
+      mockGetGenericPassword.mockResolvedValue({
+        username: 'session',
+        password: JSON.stringify(tokens),
+      });
+
+      await expect(loadSessionTokens()).resolves.toEqual(tokens);
+      expect(mockGetGenericPassword).toHaveBeenCalledWith(
+        expect.objectContaining({
+          service: 'dev.souschef.app.session.tokens',
+        }),
+      );
+    });
+
+    it('loadSessionTokens returns null on absence', async () => {
+      mockGetGenericPassword.mockResolvedValue(false);
+      await expect(loadSessionTokens()).resolves.toBeNull();
+    });
+
+    it('loadSessionTokens returns null on keychain error', async () => {
+      mockGetGenericPassword.mockRejectedValue(new Error('keychain dead'));
+      await expect(loadSessionTokens()).resolves.toBeNull();
+    });
+
+    it('loadSessionTokens returns null on unparseable or partial payloads', async () => {
+      mockGetGenericPassword.mockResolvedValue({
+        username: 'session',
+        password: 'not-json',
+      });
+      await expect(loadSessionTokens()).resolves.toBeNull();
+
+      mockGetGenericPassword.mockResolvedValue({
+        username: 'session',
+        password: JSON.stringify({ accessToken: 'only-access' }),
+      });
+      await expect(loadSessionTokens()).resolves.toBeNull();
+    });
+
+    it('clearSessionTokens resets the session service and tolerates errors', async () => {
+      mockResetGenericPassword.mockResolvedValue(true);
+      await clearSessionTokens();
+      expect(mockResetGenericPassword).toHaveBeenCalledWith(
+        expect.objectContaining({
+          service: 'dev.souschef.app.session.tokens',
+        }),
+      );
+
+      mockResetGenericPassword.mockRejectedValue(new Error('Error'));
+      await expect(clearSessionTokens()).resolves.toBeUndefined();
     });
   });
 

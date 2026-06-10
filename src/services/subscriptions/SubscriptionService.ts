@@ -50,6 +50,7 @@ import {
   isTimerCircularStructureError,
 } from '#/utils/errorSerialization';
 import { safeEvict, type ConnectionData } from '#/apollo/utils/cacheUpdaters';
+import { logger } from '#/utils/environment';
 
 /**
  * Entity shape extracted from a subscription payload's `item`/`node`.
@@ -746,7 +747,7 @@ export class SubscriptionService {
       }
     } catch (error) {
       if (__DEV__) {
-        console.error('❌ [CACHE UPDATE] Cache update failed:', {
+        logger.error('❌ [CACHE UPDATE] Cache update failed:', {
           subscriptionName: config.subscriptionName,
           mutation,
           itemId,
@@ -853,15 +854,15 @@ export class SubscriptionService {
 
     switch (actualLevel) {
       case LogLevel.ERROR:
-        console.error(prefix, actualMessage, actualData);
+        logger.error(prefix, actualMessage, actualData);
         break;
       case LogLevel.WARN:
-        console.warn(prefix, actualMessage, actualData);
+        logger.warn(prefix, actualMessage, actualData);
         break;
       case LogLevel.DEBUG:
       case LogLevel.INFO:
       default:
-        console.log(prefix, actualMessage, actualData);
+        logger.debug(prefix, actualMessage, actualData);
     }
   }
 

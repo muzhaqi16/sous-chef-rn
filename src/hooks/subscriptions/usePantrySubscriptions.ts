@@ -40,6 +40,7 @@ import {
   createAddToParentConnectionUpdater,
   createRemoveFromParentConnectionUpdater,
 } from '#/apollo/utils/cacheUpdaters';
+import { logger } from '#/utils/environment';
 
 type PantryEventsPayload = PantryEventsSubscription['pantryEvents'];
 type ExpirationCreatedPayload =
@@ -80,7 +81,7 @@ function handleItemChanged(
 
   if (subscriptionService.isPendingDelete(item.id)) {
     if (__DEV__) {
-      console.log(
+      logger.debug(
         '⏭️ [Subscription] Skipping pantry echo for pending-delete',
         item.id,
       );
@@ -150,7 +151,7 @@ export function usePantrySubscriptions(userId?: string) {
 
       if (payload.actorUserId && userId && payload.actorUserId === userId) {
         if (__DEV__) {
-          console.log('⏭️ [Subscription] Skipping pantry self-echo');
+          logger.debug('⏭️ [Subscription] Skipping pantry self-echo');
         }
         return;
       }
@@ -165,7 +166,7 @@ export function usePantrySubscriptions(userId?: string) {
         case PantryEventSubtype.LowStockAlert:
         case PantryEventSubtype.ExpirationAlert:
           if (__DEV__) {
-            console.log(
+            logger.debug(
               `📡 [Subscription] Pantry event: ${payload.subtype}`,
               payload.node.__typename,
             );

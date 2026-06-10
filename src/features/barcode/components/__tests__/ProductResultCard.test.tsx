@@ -1,7 +1,7 @@
 'use no memo';
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
-import { ItemCard } from '../ItemCard';
+import { ProductResultCard } from '../ProductResultCard';
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
@@ -12,7 +12,7 @@ jest.mock('#components/atoms/CachedImage', () => ({
   },
 }));
 
-describe('ItemCard', () => {
+describe('ProductResultCard', () => {
   const baseItem = {
     id: '1',
     name: 'Organic Milk',
@@ -20,23 +20,23 @@ describe('ItemCard', () => {
   };
 
   it('renders item name and barcode', () => {
-    render(<ItemCard item={baseItem} />);
+    render(<ProductResultCard item={baseItem} />);
     expect(screen.getByText('Organic Milk')).toBeTruthy();
     expect(screen.getByText('Barcode: 123456789')).toBeTruthy();
   });
 
   it('renders brand name when provided', () => {
-    render(<ItemCard item={{ ...baseItem, brandName: 'Horizon' }} />);
+    render(<ProductResultCard item={{ ...baseItem, brandName: 'Horizon' }} />);
     expect(screen.getByText('Horizon')).toBeTruthy();
   });
 
   it('renders price when provided', () => {
-    render(<ItemCard item={{ ...baseItem, price: 4.99 }} />);
+    render(<ProductResultCard item={{ ...baseItem, price: 4.99 }} />);
     expect(screen.getByText('$4.99')).toBeTruthy();
   });
 
   it('renders format when provided', () => {
-    render(<ItemCard item={baseItem} format="UPC-A" />);
+    render(<ProductResultCard item={baseItem} format="UPC-A" />);
     expect(screen.getByText('Format: UPC-A')).toBeTruthy();
   });
 });

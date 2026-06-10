@@ -12,11 +12,9 @@
 # React Native NetInfo - Network detection native module
 -keep class com.reactnativecommunity.netinfo.** { *; }
 
-# React Native Config - Environment variables native module
--keep class com.lugg.ReactNativeConfig.** { *; }
-
-# React Native Config - BuildConfig class (contains all .env variables)
-# CRITICAL: Without this, ProGuard renames BuildConfig and env vars are inaccessible
+# BuildConfig class
+# CRITICAL: Without this, ProGuard renames BuildConfig and fields read via
+# reflection become inaccessible
 -keep class dev.souschef.app.BuildConfig { *; }
 
 # React native skia

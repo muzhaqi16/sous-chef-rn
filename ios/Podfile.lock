@@ -3203,7 +3203,7 @@ PODS:
     - RNNotifee/NotifeeCore (= 9.1.8)
   - RNNotifee/NotifeeCore (9.1.8):
     - React-Core
-  - RNPermissions (5.5.2):
+  - RNPermissions (5.5.3):
     - boost
     - DoubleConversion
     - fast_float
@@ -4074,7 +4074,7 @@ SPEC CHECKSUMS:
   RNGestureHandler: cd4be101cfa17ea6bbd438710caa02e286a84381
   RNKeychain: a2c134ab796272c3d605e035ab727591000b30f3
   RNNotifee: 5e3b271e8ea7456a36eec994085543c9adca9168
-  RNPermissions: 3654751993ed3c1229fa5ce90a03d774bd01dfc1
+  RNPermissions: 0d3196b3cd5492dc2dec58a9f8df2d455b978e92
   RNReactNativeHapticFeedback: b309b317c95fc3b9bc8276da1a78dae34b6ed46e
   RNReanimated: ce6c58c02bd76d8d1017bf07d04ed4a7c387801e
   RNScreens: 7f643ee0fd1407dc5085c7795460bd93da113b8f
