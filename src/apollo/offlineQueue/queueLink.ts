@@ -1,4 +1,4 @@
-import { ApolloLink, Observable } from '@apollo/client';
+import { ApolloLink, Observable, type DefaultContext } from '@apollo/client';
 import { getMainDefinition } from '@apollo/client/utilities';
 import { Kind, type DocumentNode } from 'graphql';
 import { generateId } from '#/utils/generateId';
@@ -180,7 +180,7 @@ function enqueueAndComplete(
       mutation: operation.query,
       variables: operation.variables,
       optimisticResponse: optimisticResponse || null,
-      context: operationContext,
+      context: pickPersistedContext(operationContext),
       status: QueueStatus.PENDING,
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -214,6 +214,26 @@ function enqueueAndComplete(
   } catch (error) {
     observer.error(error);
   }
+}
+
+/**
+ * The only context keys a replay reads: `operationId` (idempotency key for
+ * granular pantry-delta syncs, read by `convertToSyncMutation`) and
+ * `localFirst` (marks the entry as an opt-in). The full Apollo operation
+ * context also carries client internals that don't survive persistence —
+ * functions are silently dropped by JSON serialization, and a circular value
+ * would make the MMKV write throw inside `saveQueue`, silently losing the
+ * enqueue. Persist only the fixed, serializable subset.
+ */
+function pickPersistedContext(context: DefaultContext): DefaultContext {
+  const persisted: DefaultContext = {};
+  if (context.localFirst !== undefined) {
+    persisted.localFirst = context.localFirst;
+  }
+  if (context.operationId !== undefined) {
+    persisted.operationId = context.operationId;
+  }
+  return persisted;
 }
 
 /**

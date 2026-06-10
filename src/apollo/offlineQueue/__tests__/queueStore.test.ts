@@ -38,6 +38,54 @@ describe('QueueStore', () => {
   });
 
   // -------------------------------------------------------------------------
+  // subscribe / getPendingCount
+  // -------------------------------------------------------------------------
+  describe('subscribe / getPendingCount', () => {
+    it('notifies listeners on queue changes and reports the live pending count', () => {
+      const listener = jest.fn();
+      store.subscribe(listener);
+      store.setCurrentUserId('user-1');
+      listener.mockClear();
+
+      store.addMutation(makeMutation({ id: 'p-1' }));
+      expect(listener).toHaveBeenCalledTimes(1);
+      expect(store.getPendingCount()).toBe(1);
+
+      store.removeMutation('p-1');
+      expect(store.getPendingCount()).toBe(0);
+    });
+
+    it('counts only PENDING mutations belonging to the current user', () => {
+      store.setCurrentUserId('user-1');
+      store.addMutation(makeMutation({ id: 'a', userId: 'user-1' }));
+      store.addMutation(makeMutation({ id: 'b', userId: 'user-2' }));
+      store.addMutation(
+        makeMutation({
+          id: 'c',
+          userId: 'user-1',
+          status: QueueStatus.FAILED,
+        }),
+      );
+
+      expect(store.getPendingCount()).toBe(1);
+    });
+
+    it('returns 0 when no current user is set', () => {
+      store.addMutation(makeMutation());
+      expect(store.getPendingCount()).toBe(0);
+    });
+
+    it('stops notifying after unsubscribe', () => {
+      const listener = jest.fn();
+      const unsubscribe = store.subscribe(listener);
+      unsubscribe();
+
+      store.addMutation(makeMutation());
+      expect(listener).not.toHaveBeenCalled();
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // addMutation
   // -------------------------------------------------------------------------
   describe('addMutation', () => {

@@ -13,8 +13,14 @@ import {
   type FailureHandler,
 } from './types';
 import { convertToSyncMutation } from './convertToSyncMutation';
-import { classifyError, calculateRetryDelay } from './queueErrorPolicy';
+import {
+  classifyError,
+  calculateRetryDelay,
+  classifyReplayResult,
+  ReplayRejectedError,
+} from './queueErrorPolicy';
 import { logger } from '#/utils/environment';
+import { Telemetry } from '#/services/telemetry';
 
 /** Module-level fragment for reading ShoppingListItem data from cache during queue processing */
 const QUEUE_ITEM_DATA_FRAGMENT = gql`
@@ -167,15 +173,6 @@ export class QueueManager {
           // No itemId found, keep mutation as-is
           otherMutations.push(mutation);
         }
-      } else if (mutation.operationName === 'ReorderShoppingListItems') {
-        // Legacy mutation - keep for backward compatibility during migration
-        const listId = mutation.variables?.input?.shoppingListId;
-        if (listId) {
-          logger.info(
-            `⚠️ Queue: Found legacy ReorderShoppingListItems mutation ${mutation.id} - consider migrating to MoveShoppingListItem`,
-          );
-        }
-        otherMutations.push(mutation);
       } else {
         otherMutations.push(mutation);
       }
@@ -200,6 +197,16 @@ export class QueueManager {
 
     // Get pending mutations for user
     const mutations = queueStore.getPendingMutationsForUser(userId);
+
+    // Queue health at drain time: depth, and how long the oldest entry has
+    // been waiting. A growing age across drains means changes aren't syncing.
+    Telemetry.gauge('offline_queue_depth', mutations.length);
+    if (mutations.length > 0) {
+      Telemetry.gauge(
+        'offline_queue_oldest_age_ms',
+        Date.now() - Math.min(...mutations.map(m => m.createdAt)),
+      );
+    }
 
     if (mutations.length === 0) {
       logger.info('✅ Queue: No pending mutations');
@@ -367,17 +374,45 @@ export class QueueManager {
 
     // Dynamic payload extraction — the mutation field name varies per queued
     // operation, so the value shape is only known structurally here.
-    const syncResult = Object.values(result.data || {})[0] as
-      | { conflict?: { message?: string } }
+    const payload = Object.values(result.data || {})[0] as
+      | {
+          __typename?: string;
+          message?: string;
+          conflict?: { message?: string };
+        }
       | undefined;
+
+    // Under errorPolicy 'all' a server refusal RESOLVES as an error union
+    // member instead of throwing — same trap the foreground path closes with
+    // classifyCreateResult. Without this, a rejected replay would be marked
+    // SUCCESS and dequeued while the optimistic cache write lingers.
+    const outcome = classifyReplayResult(mutation.operationName, result.data);
+    if (outcome === 'converged') {
+      // Duplicate-id conflict on a create: an earlier attempt already
+      // committed this row — the change is on the server. Dequeue as success.
+      logger.info(
+        `✅ Queue: ${mutation.operationName} already committed by an earlier attempt — dropping replay`,
+      );
+      return result.data;
+    }
+    if (outcome === 'rejected') {
+      throw new ReplayRejectedError(
+        payload?.__typename ?? 'Error',
+        payload?.message ??
+          `${mutation.operationName} was rejected by the server on replay`,
+      );
+    }
 
     // Server wins on conflict — the server's version already rides back in the
     // response; just surface it for diagnostics.
-    if (syncResult?.conflict) {
+    if (payload?.conflict) {
       logger.warn(
         `⚠️ Queue: Conflict detected for ${mutation.operationName}:`,
-        syncResult.conflict.message,
+        payload.conflict.message,
       );
+      Telemetry.increment('offline_queue_conflicts_total', 1, {
+        operation: mutation.operationName,
+      });
     }
 
     return result.data;
@@ -492,6 +527,10 @@ export class QueueManager {
     // failure: mark failed and notify so the optimistic change can be reverted.
     queueStore.markMutationFailed(mutation.id, queueError);
     this.invokeFailureHandler(mutation, queueError);
+    Telemetry.increment('offline_queue_permanent_failures_total', 1, {
+      operation: mutation.operationName,
+      error_type: queueError.type,
+    });
 
     return {
       success: false,

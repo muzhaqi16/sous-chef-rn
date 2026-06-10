@@ -10,6 +10,10 @@ import { useAppStore, useIsOnline } from '#store/useAppStore';
  */
 export const useIsOfflineBannerVisible = (): boolean => {
   const isOnline = useIsOnline();
+  const apiReachable = useAppStore(state => state.apiReachable);
   const offlineModeEnabled = useAppStore(state => state.offlineModeEnabled);
-  return !isOnline || offlineModeEnabled;
+  // Covers both "can't reach the server" cases — device offline AND API down
+  // while the device is online (reachability breaker open) — plus the
+  // user-toggled offline mode.
+  return !isOnline || apiReachable === false || offlineModeEnabled;
 };

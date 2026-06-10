@@ -65,6 +65,15 @@ jest.mock('#/utils/generateId', () => ({
   generateId: jest.fn(() => 'gen-id'),
 }));
 
+// Mock telemetry — queueManager emits queue-health metrics during drains
+jest.mock('#/services/telemetry', () => ({
+  Telemetry: {
+    gauge: jest.fn(),
+    increment: jest.fn(),
+    trackEvent: jest.fn(),
+  },
+}));
+
 // Mock the logger
 const mockedGetState = useStore.getState as jest.Mock;
 
@@ -638,6 +647,104 @@ describe('QueueManager', () => {
       jest.useFakeTimers();
 
       expect(result.success).toBe(false);
+    });
+
+    // Under errorPolicy 'all' a server refusal resolves as an error union
+    // member instead of throwing — the replay path must classify resolved
+    // payloads the same way the foreground path does (classifyCreateResult).
+    describe('resolved error payloads on replay', () => {
+      it('treats a ConflictError on a replayed create as converged (success)', async () => {
+        const mutation = makeMutation({
+          id: 'proc-converged',
+          operationName: 'CreateShoppingList',
+          variables: { input: { id: 'list-1' } },
+        });
+        client.mutate.mockResolvedValue({
+          data: {
+            createShoppingList: {
+              __typename: 'ConflictError',
+              message: 'A shopping list with this id already exists',
+            },
+          },
+        });
+
+        jest.useRealTimers();
+        const result = await processMutation(mutation);
+        jest.useFakeTimers();
+
+        expect(result.success).toBe(true);
+        expect(queueStore.markMutationFailed).not.toHaveBeenCalled();
+        expect(queueStore.updateMutation).toHaveBeenCalledWith(
+          'proc-converged',
+          { status: QueueStatus.SUCCESS, processedAt: expect.any(Number) },
+        );
+      });
+
+      it('routes a ValidationError payload to the permanent-failure pipeline', async () => {
+        const failureHandler = jest.fn();
+        manager.setFailureHandler(failureHandler);
+        const mutation = makeMutation({
+          id: 'proc-rejected',
+          operationName: 'UpdateShoppingList',
+          variables: { input: { id: 'list-1' } },
+        });
+        client.mutate.mockResolvedValue({
+          data: {
+            updateShoppingList: {
+              __typename: 'ValidationError',
+              message: 'name must not be empty',
+            },
+          },
+        });
+
+        jest.useRealTimers();
+        const result = await processMutation(mutation);
+        jest.useFakeTimers();
+
+        expect(result.success).toBe(false);
+        expect(queueStore.markMutationFailed).toHaveBeenCalledWith(
+          'proc-rejected',
+          expect.objectContaining({
+            type: 'unknown',
+            retryable: false,
+            code: 'ValidationError',
+            message: 'name must not be empty',
+          }),
+        );
+        expect(failureHandler).toHaveBeenCalledWith(
+          expect.objectContaining({
+            mutationId: 'proc-rejected',
+            operationName: 'UpdateShoppingList',
+            entityId: 'list-1',
+          }),
+        );
+      });
+
+      it('treats a ConflictError on a replayed UPDATE as a rejection, not convergence', async () => {
+        const mutation = makeMutation({
+          id: 'proc-conflict-update',
+          operationName: 'UpdateShoppingList',
+          variables: { input: { id: 'list-1' } },
+        });
+        client.mutate.mockResolvedValue({
+          data: {
+            updateShoppingList: {
+              __typename: 'ConflictError',
+              message: 'version conflict',
+            },
+          },
+        });
+
+        jest.useRealTimers();
+        const result = await processMutation(mutation);
+        jest.useFakeTimers();
+
+        expect(result.success).toBe(false);
+        expect(queueStore.markMutationFailed).toHaveBeenCalledWith(
+          'proc-conflict-update',
+          expect.objectContaining({ code: 'ConflictError', retryable: false }),
+        );
+      });
     });
   });
 

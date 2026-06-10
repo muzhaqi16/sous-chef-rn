@@ -167,6 +167,15 @@
     "processing": "Elaborazione…",
     "syncing": "Sincronizzazione…"
   },
+  "offlineBanner": {
+    "offlineMode": "Modalità offline attiva — solo dati memorizzati",
+    "deviceOffline": "Sei offline — le modifiche si sincronizzeranno alla riconnessione",
+    "deviceOfflinePending_one": "Sei offline — {{count}} modifica si sincronizzerà alla riconnessione",
+    "deviceOfflinePending_other": "Sei offline — {{count}} modifiche si sincronizzeranno alla riconnessione",
+    "apiDown": "Impossibile raggiungere il server — le modifiche si sincronizzeranno al ripristino",
+    "apiDownPending_one": "Impossibile raggiungere il server — {{count}} modifica si sincronizzerà al ripristino",
+    "apiDownPending_other": "Impossibile raggiungere il server — {{count}} modifiche si sincronizzeranno al ripristino"
+  },
   "empty": {
     "noItems": "Ancora nessun articolo",
     "noNotifications": "Ancora nessuna notifica",

@@ -23,6 +23,32 @@ export class QueueStore {
   // Write-through pattern: cache is updated on every write and invalidated on user change
   private cache: QueuedMutation[] | null = null;
 
+  // Subscribers notified on every queue change (add/remove/update/clear and
+  // user switches). Lets UI read live queue state — e.g. the offline banner's
+  // pending-changes count — via useSyncExternalStore without polling MMKV.
+  private listeners = new Set<() => void>();
+
+  /**
+   * Subscribe to queue changes. Returns an unsubscribe function.
+   * `useSyncExternalStore`-compatible.
+   */
+  subscribe(listener: () => void): () => void {
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
+  private notifyListeners(): void {
+    this.listeners.forEach(listener => {
+      try {
+        listener();
+      } catch (error) {
+        logger.error('Queue: change listener threw:', error);
+      }
+    });
+  }
+
   /**
    * Load all mutations from storage
    * Uses in-memory cache with write-through pattern
@@ -82,6 +108,7 @@ export class QueueStore {
     } catch (error) {
       logger.error('Failed to save queue to storage:', error);
     }
+    this.notifyListeners();
   }
 
   /**
@@ -96,6 +123,9 @@ export class QueueStore {
    */
   setCurrentUserId(userId: string): void {
     storage.set(CURRENT_USER_KEY, userId);
+    // The pending count is user-scoped, so a user switch changes it even
+    // though the queue contents didn't.
+    this.notifyListeners();
   }
 
   /**
@@ -103,6 +133,7 @@ export class QueueStore {
    */
   clearCurrentUserId(): void {
     storage.remove(CURRENT_USER_KEY);
+    this.notifyListeners();
   }
 
   /**
@@ -277,6 +308,18 @@ export class QueueStore {
     storage.remove(QUEUE_STORAGE_KEY);
     this.cache = null; // Invalidate cache
     logger.debug('🧹 Queue: Cleared all mutations');
+    this.notifyListeners();
+  }
+
+  /**
+   * Number of PENDING mutations for the current user — the "changes waiting
+   * to sync" count surfaced in the offline banner. Returns 0 when no user is
+   * set (logged out).
+   */
+  getPendingCount(): number {
+    const userId = this.getCurrentUserId();
+    if (!userId) return 0;
+    return this.getMutationsForUser(userId, QueueStatus.PENDING).length;
   }
 
   /**

@@ -167,6 +167,15 @@
     "processing": "Procesando…",
     "syncing": "Sincronizando…"
   },
+  "offlineBanner": {
+    "offlineMode": "Modo sin conexión activado — usando solo datos en caché",
+    "deviceOffline": "Sin conexión — los cambios se sincronizarán al reconectar",
+    "deviceOfflinePending_one": "Sin conexión — {{count}} cambio se sincronizará al reconectar",
+    "deviceOfflinePending_other": "Sin conexión — {{count}} cambios se sincronizarán al reconectar",
+    "apiDown": "No se puede conectar con el servidor — los cambios se sincronizarán cuando vuelva",
+    "apiDownPending_one": "No se puede conectar con el servidor — {{count}} cambio se sincronizará cuando vuelva",
+    "apiDownPending_other": "No se puede conectar con el servidor — {{count}} cambios se sincronizarán cuando vuelva"
+  },
   "empty": {
     "noItems": "Aún no hay artículos",
     "noNotifications": "Aún no hay notificaciones",

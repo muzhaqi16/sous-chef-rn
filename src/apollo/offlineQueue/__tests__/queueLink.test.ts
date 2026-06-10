@@ -204,6 +204,41 @@ describe('createQueueLink', () => {
       });
     });
 
+    it('persists only the allowlisted context keys (localFirst, operationId)', done => {
+      mockedGetState.mockReturnValue({
+        isOnline: true,
+        user: { id: 'user-1' },
+      });
+      // The live Apollo operation context carries client internals that must
+      // not be persisted: functions vanish under JSON serialization and a
+      // circular value would make the MMKV write throw, losing the enqueue.
+      const circular: Record<string, unknown> = {};
+      circular.self = circular;
+      const operation = makeOperation({
+        query: MOCK_MUTATION,
+        operationName: 'AdjustItem',
+        variables: { input: { itemId: 'item-1' } },
+        context: {
+          localFirst: true,
+          operationId: 'op-1',
+          cache: circular,
+          fetchOptions: () => undefined,
+        },
+      });
+      const forward = failingForward(new Error('Network request failed'));
+
+      link.request(operation, forward)!.subscribe({
+        complete() {
+          const queued = (queueStore.addMutation as jest.Mock).mock.calls[0][0];
+          expect(queued.context).toEqual({
+            localFirst: true,
+            operationId: 'op-1',
+          });
+          done();
+        },
+      });
+    });
+
     it('propagates the error (current behavior) when localFirst is NOT set', done => {
       mockedGetState.mockReturnValue({
         isOnline: true,

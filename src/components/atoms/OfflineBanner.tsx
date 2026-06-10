@@ -1,10 +1,12 @@
 import React from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
-import { useIsOnline } from '#store/useAppStore';
+import { useAppStore, useIsOnline } from '#store/useAppStore';
 import { useIsOfflineBannerVisible } from '#hooks/app/useIsOfflineBannerVisible';
+import { usePendingMutationCount } from '#/hooks/offline/usePendingMutationCount';
 import { Text } from '#components/atoms/Text';
 
 // The banner icon matches the warning text color, which differs between light
@@ -29,19 +31,31 @@ const BannerIcon = withUnistyles(Ionicons, theme => ({
  * `top: 0` for the subtree below, so nothing under the banner double-insets.
  */
 export const OfflineBanner: React.FC = () => {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const isOnline = useIsOnline();
+  const apiReachable = useAppStore(state => state.apiReachable);
+  const pendingCount = usePendingMutationCount();
   const visible = useIsOfflineBannerVisible();
 
   if (!visible) return null;
 
+  // Priority: device offline > API unreachable while online (reachability
+  // breaker open) > user-toggled offline mode.
   const isDeviceOffline = !isOnline;
-  const iconName = isDeviceOffline
-    ? 'cloud-offline-outline'
-    : 'airplane-outline';
+  const isApiDown = isOnline && apiReachable === false;
+  const iconName =
+    isDeviceOffline || isApiDown ? 'cloud-offline-outline' : 'airplane-outline';
+
   const message = isDeviceOffline
-    ? "You're offline — changes will sync when reconnected"
-    : 'Offline mode enabled — using cached data only';
+    ? pendingCount > 0
+      ? t('offlineBanner.deviceOfflinePending', { count: pendingCount })
+      : t('offlineBanner.deviceOffline')
+    : isApiDown
+    ? pendingCount > 0
+      ? t('offlineBanner.apiDownPending', { count: pendingCount })
+      : t('offlineBanner.apiDown')
+    : t('offlineBanner.offlineMode');
 
   return (
     <View style={[styles.insetWrap, { paddingTop: insets.top }]}>
