@@ -143,11 +143,22 @@ payload** (e.g. `ConflictError` / `ValidationError`) is a rejection: revert the 
   serialization (functions silently drop; a circular value would make the MMKV write throw and lose the
   enqueue). The store also exposes `subscribe()` + `getPendingCount()` (`useSyncExternalStore`-compatible)
   so UI — the offline banner's pending-changes count — reads live queue state without polling.
-- **`queueManager`** replays with batching, exponential backoff + jitter, token-refresh-before-replay,
-  per-entity sequential ordering, and move-coalescing. Triggers: `useOnlineQueueSync` (offline→online),
-  `useAppStateLifecycle` (background→active), `onUserChange`, and the drain-on-recovery above. A
-  network/server error that exhausts in-run retries stays **PENDING** (never silently FAILED); only a real
-  (validation) error → FAILED.
+- **`queueManager`** replays **strictly in insertion order** — the queue is append-only from one
+  user's actions, so insertion order IS causal order: a parent create (offline-created
+  list/pantry/plan) always lands before any dependent referencing its client-minted id, with no
+  grouping or dependency analysis. Move-coalescing happens at **enqueue time** in
+  `queueStore.addMutation` (latest move per item wins). Retries use exponential backoff + jitter;
+  an auth error forces ONE token refresh and then retries through the same bounded counter (a
+  failed refresh → AUTH_ERROR + failure handler — never an unbounded auth-retry loop). Triggers:
+  `useOnlineQueueSync` (offline→online), `useAppStateLifecycle` (background→active), `onUserChange`,
+  and the drain-on-recovery above. A network/server error that exhausts in-run retries stays
+  **PENDING** (never silently FAILED); only a real (validation) error → FAILED.
+- **Failed-mutation entity identity is derived from the cache, not maintained.** The failure
+  handler needs the entity's `__typename` to evict it; `extractEntityInfo` reads it off the
+  normalized cache key (`TypeName:<clientId>`) at failure time — the hook already wrote the
+  optimistic entity there before firing, and client ids are globally-unique cuids, so the cache is
+  the source of truth. No per-operation map exists; an entity that isn't cached (already evicted,
+  or no single entity) yields null and the handler skips the evict — the next refetch heals.
 - **Replayed results are payload-classified** (`classifyReplayResult`, `queueErrorPolicy.ts`) — the
   replay-side counterpart of the foreground `classifyCreateResult` rule. Under `errorPolicy: 'all'` a
   server refusal RESOLVES as an error union member (`ValidationError` / `ConflictError` / …) rather than
@@ -288,7 +299,7 @@ query-blocking, orthogonal to connectivity.
   `storageLocationsConnection(first: PAGE_SIZE.COMPACT)` variants, plus the home's `pantries` /
   `pantriesConnection` membership, and the `Query.pantry` cache redirect serves by-id reads — so a
   pantry created offline is immediately usable and items added to it queue behind its create
-  (`CreatePantry` is in `PARENT_CREATE_OPERATIONS`).
+  (strict FIFO replay orders the pantry create before its items).
 - **Shopping list update / delete / clear** (`useUpdateShoppingList`, `useDeleteShoppingList`,
   `useClearShoppingListItems`) — update merges over a snapshot; delete removes edge + entity up front
   and restores the snapshot on rejection; clear keeps its eager cache eviction and refetches on a
@@ -325,11 +336,10 @@ This is **enforced in code**, not just convention: `queueLink` only queues allow
 (`localFirst` opt-ins + `Sync*`-mapped ops) when the device is offline; everything else fails fast with
 a network error so the hook's normal error path shows a truthful failure and nothing ghost-replays.
 
-**Out of current scope (own server work pending):** profile, notifications. `PARENT_CREATE_OPERATIONS`
-in `queueManager.ts` (`CreateShoppingList`, `CreateMealPlan`, `CreateRecipe`, `CreatePantry`) forces
-strict FIFO replay for any batch containing a parent-entity create, so dependents queued behind it
-(items in a new list, meals in a new plan, meals referencing a new recipe, items in a new pantry)
-always replay after their parent exists.
+**Out of current scope (own server work pending):** profile, notifications. Replay is strictly FIFO
+for the whole queue, so dependents queued behind a parent-entity create (items in a new list, meals
+in a new plan, meals referencing a new recipe, items in a new pantry) always replay after their
+parent exists — ordering is correct by construction, no special-casing.
 
 ## 11. Server contract (verified)
 

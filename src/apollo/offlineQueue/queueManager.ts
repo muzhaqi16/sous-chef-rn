@@ -13,6 +13,7 @@ import {
   type FailureHandler,
 } from './types';
 import { convertToSyncMutation } from './convertToSyncMutation';
+import { proactiveTokenRefresh } from '../links/refreshToken';
 import {
   classifyError,
   calculateRetryDelay,
@@ -46,31 +47,11 @@ const QUEUE_PANTRY_ITEM_FRAGMENT = gql`
 `;
 
 /**
- * Operations that create a PARENT entity other queued mutations may depend on.
- * A shopping list created offline can have items added to it (still offline)
- * whose variables reference its client-minted id. Entity grouping can't see
- * that dependency — the list create keys on the list id while each item add
- * keys on its own item id — so a batch containing one of these is processed
- * strictly in FIFO order instead of concurrently (insertion order is causal
- * order: the user can't act on an entity before creating it).
- */
-const PARENT_CREATE_OPERATIONS = [
-  'CreateShoppingList',
-  'CreateMealPlan',
-  'CreateRecipe',
-  'CreatePantry',
-];
-
-/**
  * Default configuration for the queue manager
  */
 const DEFAULT_CONFIG: QueueConfig = {
-  maxQueueSize: 100,
-  maxRetries: 3,
   retryDelayMs: 1000,
   processingTimeoutMs: 30000,
-  batchSize: 5,
-  enablePersistence: true,
 };
 
 /**
@@ -79,8 +60,8 @@ const DEFAULT_CONFIG: QueueConfig = {
  * Features:
  * - User-scoped queue processing
  * - Token validation and refresh before replay
+ * - Strict FIFO replay (insertion order is causal order)
  * - Retry logic with exponential backoff
- * - Auth error handling
  * - Network-aware processing
  */
 export class QueueManager {
@@ -142,50 +123,13 @@ export class QueueManager {
   }
 
   /**
-   * Merge multiple move mutations for the same item
-   * Keeps only the latest move per item to prevent conflicts
-   */
-  private mergeMoveItemMutations(mutations: QueuedMutation[]): {
-    merged: QueuedMutation[];
-    removed: string[];
-  } {
-    const moveMutations = new Map<string, QueuedMutation>();
-    const otherMutations: QueuedMutation[] = [];
-    const removedIds: string[] = [];
-
-    mutations.forEach(mutation => {
-      if (mutation.operationName === 'MoveShoppingListItem') {
-        const itemId = mutation.variables?.input?.itemId;
-
-        if (itemId) {
-          // If we already have a move for this item, mark the old one for removal
-          const existing = moveMutations.get(itemId);
-          if (existing) {
-            removedIds.push(existing.id);
-            logger.info(
-              `🔄 Queue: Merging move mutation ${existing.id} into ${mutation.id} for item ${itemId}`,
-            );
-          }
-
-          // Keep only the latest move for each item
-          moveMutations.set(itemId, mutation);
-        } else {
-          // No itemId found, keep mutation as-is
-          otherMutations.push(mutation);
-        }
-      } else {
-        otherMutations.push(mutation);
-      }
-    });
-
-    return {
-      merged: [...otherMutations, ...Array.from(moveMutations.values())],
-      removed: removedIds,
-    };
-  }
-
-  /**
-   * Internal queue processing logic
+   * Replay all pending mutations strictly in insertion order.
+   *
+   * The queue is append-only from a single user's actions, so insertion order
+   * IS causal order: a parent create (offline-created list/pantry/plan) always
+   * precedes any dependent referencing its client-minted id, and same-entity
+   * ops replay in the order the user made them. No grouping, batching, or
+   * dependency analysis needed — FIFO is correct by construction.
    */
   private async _processQueueInternal(userId: string): Promise<void> {
     // Validate token before processing
@@ -195,104 +139,48 @@ export class QueueManager {
       return;
     }
 
-    // Get pending mutations for user
     const mutations = queueStore.getPendingMutationsForUser(userId);
 
     // Queue health at drain time: depth, and how long the oldest entry has
     // been waiting. A growing age across drains means changes aren't syncing.
     Telemetry.gauge('offline_queue_depth', mutations.length);
-    if (mutations.length > 0) {
-      Telemetry.gauge(
-        'offline_queue_oldest_age_ms',
-        Date.now() - Math.min(...mutations.map(m => m.createdAt)),
-      );
-    }
-
     if (mutations.length === 0) {
       logger.info('✅ Queue: No pending mutations');
       return;
     }
+    Telemetry.gauge(
+      'offline_queue_oldest_age_ms',
+      Date.now() - Math.min(...mutations.map(m => m.createdAt)),
+    );
 
     logger.info(`📊 Queue: Found ${mutations.length} pending mutations`);
 
-    // Merge multiple move mutations for the same item
-    const { merged: mergedMutations, removed: removedIds } =
-      this.mergeMoveItemMutations(mutations);
-
-    // Remove merged mutations from queue
-    removedIds.forEach(id => {
-      queueStore.removeMutation(id);
-    });
-
-    if (removedIds.length > 0) {
-      logger.info(
-        `🔄 Queue: Merged ${removedIds.length} duplicate move mutations, processing ${mergedMutations.length} mutations`,
-      );
-    }
-
-    // Process mutations in batches (use merged mutations)
-    const batches = this.createBatches(mergedMutations, this.config.batchSize);
-
-    for (const batch of batches) {
-      // Check the server is still reachable before each batch
-      const state = useStore.getState();
-      if (isApiUnavailable(state)) {
+    let succeeded = 0;
+    let failed = 0;
+    for (const mutation of mutations) {
+      // Stop replaying the moment the server becomes unreachable — the rest
+      // of the queue stays PENDING for the next drain.
+      if (isApiUnavailable(useStore.getState())) {
         logger.info('📴 Queue: Server became unreachable, pausing');
         break;
       }
 
-      // A parent-entity create (an offline-created shopping list) may have
-      // dependents queued behind it (items added to it while offline) that
-      // entity grouping can't chain — replay the whole batch in FIFO order so
-      // the create lands before anything referencing its id.
-      const hasParentCreate = batch.some(mutation =>
-        PARENT_CREATE_OPERATIONS.includes(mutation.operationName),
-      );
-
-      // Group mutations by entity ID to process same-entity operations sequentially
-      // This prevents race conditions like create-then-update on the same entity
-      const { independent, entityGroups } = hasParentCreate
-        ? { independent: [], entityGroups: [batch] }
-        : this.groupByEntity(batch);
-
-      // Process independent mutations (different entities) concurrently
-      const independentResults = await Promise.allSettled(
-        independent.map(mutation => this.processMutation(mutation)),
-      );
-
-      // Process same-entity groups sequentially
-      const sequentialResults: PromiseSettledResult<ProcessingResult>[] = [];
-      for (const group of entityGroups) {
-        for (const mutation of group) {
-          try {
-            const result = await this.processMutation(mutation);
-            sequentialResults.push({ status: 'fulfilled', value: result });
-          } catch (error) {
-            sequentialResults.push({ status: 'rejected', reason: error });
-          }
-        }
+      try {
+        const result = await this.processMutation(mutation);
+        if (result.success) succeeded++;
+        else failed++;
+      } catch (error) {
+        failed++;
+        logger.error('Queue: Unexpected error processing mutation:', error);
       }
-
-      const results = [...independentResults, ...sequentialResults];
-
-      // Log batch results - check actual mutation success, not promise resolution
-      const succeeded = results.filter(
-        r => r.status === 'fulfilled' && r.value.success,
-      ).length;
-      const failed = results.filter(
-        r =>
-          r.status === 'rejected' ||
-          (r.status === 'fulfilled' && !r.value.success),
-      ).length;
-      logger.info(
-        `📦 Queue: Batch complete - ${succeeded} succeeded, ${failed} failed`,
-      );
     }
+
+    logger.info(
+      `📦 Queue: Drain complete — ${succeeded} succeeded, ${failed} failed`,
+    );
 
     // Cleanup old successful mutations
     queueStore.cleanupSuccessful();
-
-    logger.info('✅ Queue: Processing complete');
   }
 
   /**
@@ -314,10 +202,7 @@ export class QueueManager {
       );
 
       // Execute mutation with timeout
-      const result = await Promise.race([
-        this.executeMutation(mutation),
-        this.timeout(this.config.processingTimeoutMs),
-      ]);
+      const result = await this.executeWithTimeout(mutation);
 
       // Success - remove from queue
       queueStore.updateMutation(mutationId, {
@@ -386,7 +271,7 @@ export class QueueManager {
     // member instead of throwing — same trap the foreground path closes with
     // classifyCreateResult. Without this, a rejected replay would be marked
     // SUCCESS and dequeued while the optimistic cache write lingers.
-    const outcome = classifyReplayResult(mutation.operationName, result.data);
+    const outcome = classifyReplayResult(mutation.operationName, payload);
     if (outcome === 'converged') {
       // Duplicate-id conflict on a create: an earlier attempt already
       // committed this row — the change is on the server. Dequeue as success.
@@ -466,12 +351,24 @@ export class QueueManager {
   ): Promise<ProcessingResult> {
     const queueError = classifyError(error);
 
-    // Handle auth errors specially
+    // Auth errors: force ONE token refresh, then retry through the same
+    // bounded counter as every other retryable error. (A dedicated auth path
+    // that only re-validated the existing token would loop forever on a
+    // persistent 401 — revoked session — because "token exists" read as
+    // "refreshed".)
     if (queueError.type === 'auth') {
-      return await this.handleAuthError(mutation, queueError);
+      const newToken = await proactiveTokenRefresh();
+      if (!newToken) {
+        logger.error(`❌ Queue: Token refresh failed for ${mutation.id}`);
+        queueStore.markMutationFailed(mutation.id, queueError);
+        this.invokeFailureHandler(mutation, queueError);
+        return { success: false, mutationId: mutation.id, error: queueError };
+      }
+      useStore.getState().setNeedsTokenRefresh(false);
+      logger.info(`🔐 Queue: Token refreshed for ${mutation.id}, retrying`);
     }
 
-    // Handle retryable errors
+    // Retryable errors (refreshed-auth, network, 5xx): bounded in-run retries
     if (queueError.retryable && mutation.retryCount < mutation.maxRetries) {
       logger.info(
         `🔄 Queue: Scheduling retry for ${mutation.id} (attempt ${
@@ -523,8 +420,10 @@ export class QueueManager {
       };
     }
 
-    // Non-retryable (validation / client / 4xx / GraphQL) error → permanent
-    // failure: mark failed and notify so the optimistic change can be reverted.
+    // Non-retryable (validation / client / 4xx / GraphQL) error — or an auth
+    // error that exhausted its retries (markMutationFailed maps it to
+    // AUTH_ERROR) → permanent failure: mark failed and notify so the
+    // optimistic change can be reverted.
     queueStore.markMutationFailed(mutation.id, queueError);
     this.invokeFailureHandler(mutation, queueError);
     Telemetry.increment('offline_queue_permanent_failures_total', 1, {
@@ -536,39 +435,6 @@ export class QueueManager {
       success: false,
       mutationId: mutation.id,
       error: queueError,
-    };
-  }
-
-  /**
-   * Handle authentication errors
-   */
-  private async handleAuthError(
-    mutation: QueuedMutation,
-    error: QueueError,
-  ): Promise<ProcessingResult> {
-    logger.info(
-      `🔐 Queue: Auth error for ${mutation.id}, attempting token refresh`,
-    );
-
-    // Try token refresh one more time
-    const refreshed = await this.validateTokenBeforeReplay();
-
-    if (refreshed) {
-      logger.info(`✅ Queue: Token refreshed, retrying ${mutation.id}`);
-      // Retry mutation with fresh token
-      return await this.processMutation(mutation);
-    }
-
-    // Token refresh failed - mark as auth error
-    logger.error(`❌ Queue: Token refresh failed for ${mutation.id}`);
-    const authError: QueueError = { ...error, type: 'auth' };
-    queueStore.markMutationFailed(mutation.id, authError);
-    this.invokeFailureHandler(mutation, authError);
-
-    return {
-      success: false,
-      mutationId: mutation.id,
-      error,
     };
   }
 
@@ -589,7 +455,6 @@ export class QueueManager {
       logger.info(
         '🔄 Queue: Deferred token refresh pending, attempting refresh before replay',
       );
-      const { proactiveTokenRefresh } = await import('../links/refreshToken');
       const newToken = await proactiveTokenRefresh();
       if (newToken) {
         useStore.getState().setNeedsTokenRefresh(false);
@@ -610,9 +475,8 @@ export class QueueManager {
   /**
    * The client entity id a queued mutation targets, across every variable shape
    * the app enqueues: create `input.id`, qty/move `input.itemId` or top-level
-   * `itemId`, recipe/meal/batch inputs, or a sync `clientId`. One source of truth
-   * so replay ordering (`groupByEntity`) and failure reporting
-   * (`extractEntityInfo`) always agree on which entity a mutation belongs to.
+   * `itemId`, recipe/meal/batch inputs, or a sync `clientId`. Feeds the failure
+   * handler's evict target.
    */
   private getEntityId(mutation: QueuedMutation): string | null {
     const vars = mutation.variables ?? {};
@@ -631,33 +495,31 @@ export class QueueManager {
   }
 
   /**
-   * Extract entity type and ID from a mutation's variables.
-   * Inspects common variable patterns used across the app.
+   * The entity a failed mutation targets, for the failure handler's cache
+   * evict. The typename is read off the normalized cache rather than
+   * maintained per operation: every queued mutation's hook already wrote its
+   * entity to the cache under `TypeName:<clientId>` before firing, and client
+   * ids are globally-unique cuids, so the cache key identifies the type. An
+   * entity that isn't cached (already evicted, or an op with no single
+   * entity) yields null and the handler skips the evict — the next refetch
+   * heals.
    */
   private extractEntityInfo(mutation: QueuedMutation): {
     entityType: string | null;
     entityId: string | null;
   } {
-    const opName = mutation.operationName;
-
     const entityId = this.getEntityId(mutation);
+    return { entityType: this.findCachedTypename(entityId), entityId };
+  }
 
-    // Infer entity type from operation name
-    let entityType: string | null = null;
-    if (opName.includes('PantryItemBatch')) entityType = 'PantryItemBatch';
-    else if (opName.includes('PantryItem') || opName.includes('Pantry'))
-      entityType = 'PantryItem';
-    else if (
-      opName.includes('ShoppingListItem') ||
-      opName.includes('ShoppingList')
-    )
-      entityType = 'ShoppingListItem';
-    else if (opName.includes('MealPlanItem')) entityType = 'MealPlanItem';
-    else if (opName.includes('MealPlan')) entityType = 'MealPlan';
-    else if (opName.includes('Recipe') || opName.includes('Favorite'))
-      entityType = 'SavedRecipe';
-
-    return { entityType, entityId };
+  private findCachedTypename(entityId: string | null): string | null {
+    if (!entityId) return null;
+    const suffix = `:${entityId}`;
+    // InMemoryCache.extract() returns the normalized entity map keyed by
+    // `TypeName:id`; the generic ApolloCache type erases that to `unknown`.
+    const snapshot = client.cache.extract() as Record<string, unknown>;
+    const key = Object.keys(snapshot).find(k => k.endsWith(suffix));
+    return key ? key.slice(0, key.length - suffix.length) : null;
   }
 
   /**
@@ -693,63 +555,25 @@ export class QueueManager {
   }
 
   /**
-   * Group mutations by entity ID for safe ordering.
-   * Same-entity mutations must be processed sequentially to prevent race conditions
-   * (e.g., create followed by update on the same entity id).
-   * Mutations targeting different entities can run concurrently.
+   * Race the replay against the processing timeout, clearing the timer once
+   * either settles — an unclamped timer per mutation would otherwise keep the
+   * JS engine busy for 30s after every replay in a drain.
    */
-  private groupByEntity(mutations: QueuedMutation[]): {
-    independent: QueuedMutation[];
-    entityGroups: QueuedMutation[][];
-  } {
-    const entityMap = new Map<string, QueuedMutation[]>();
-
-    for (const mutation of mutations) {
-      const entityId = this.getEntityId(mutation);
-
-      if (entityId) {
-        const group = entityMap.get(entityId) || [];
-        group.push(mutation);
-        entityMap.set(entityId, group);
-      } else {
-        // No entity ID identifiable — treat as independent
-        const key = `__no_entity_${mutation.id}`;
-        entityMap.set(key, [mutation]);
-      }
+  private async executeWithTimeout(
+    mutation: QueuedMutation,
+  ): Promise<Record<string, unknown> | undefined> {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(
+        () => reject(new Error('Operation timed out')),
+        this.config.processingTimeoutMs,
+      );
+    });
+    try {
+      return await Promise.race([this.executeMutation(mutation), timeout]);
+    } finally {
+      clearTimeout(timer);
     }
-
-    const independent: QueuedMutation[] = [];
-    const entityGroups: QueuedMutation[][] = [];
-
-    for (const group of entityMap.values()) {
-      if (group.length === 1) {
-        independent.push(group[0]);
-      } else {
-        entityGroups.push(group);
-      }
-    }
-
-    return { independent, entityGroups };
-  }
-
-  /**
-   * Create batches from mutations
-   */
-  private createBatches<T>(items: T[], batchSize: number): T[][] {
-    const batches: T[][] = [];
-    for (let i = 0; i < items.length; i += batchSize) {
-      batches.push(items.slice(i, i + batchSize));
-    }
-    return batches;
-  }
-
-  /**
-   * Timeout promise helper
-   */
-  private timeout(ms: number): Promise<never> {
-    return new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Operation timed out')), ms),
-    );
   }
 
   /**

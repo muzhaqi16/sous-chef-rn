@@ -343,6 +343,18 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
 
     if (!result) return { success: false };
 
+    // Under errorPolicy 'all' a refusal RESOLVES as an error union member
+    // (ConflictError / ValidationError / …) instead of throwing — without this
+    // check a refused favorite would toast success. Nothing to clear: the
+    // mutation's update callback only persists on the success payload.
+    if (
+      result.error ||
+      result.data?.favoriteRecipe?.__typename !== 'FavoriteRecipePayload'
+    ) {
+      toastService.error(t('recipes.saveRecipeFailed'));
+      return { success: false };
+    }
+
     // Clear persisted optimistic favorite state on server confirmation
     optimisticDataPersistence.clear('SavedRecipe', recipeId, 'isFavorited');
 

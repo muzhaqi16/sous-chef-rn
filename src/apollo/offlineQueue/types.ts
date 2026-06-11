@@ -35,8 +35,7 @@ export interface QueuedMutation {
   // Mutation details
   mutation: DocumentNode; // GraphQL mutation document
   variables: OperationVariables; // Mutation variables
-  optimisticResponse?: Record<string, unknown> | null; // Optimistic response for cache updates
-  context?: DefaultContext; // Additional context (e.g., headers)
+  context?: DefaultContext; // Allowlisted replay context (localFirst, operationId)
 
   // Status tracking
   status: QueueStatus;
@@ -66,15 +65,12 @@ export interface QueueStats {
 }
 
 /**
- * Configuration for the queue manager
+ * Configuration for the queue manager. (Queue size is bounded in queueStore;
+ * per-mutation max retries ride on each QueuedMutation.)
  */
 export interface QueueConfig {
-  maxQueueSize: number; // Maximum mutations to queue (prevent unbounded growth)
-  maxRetries: number; // Default max retries per mutation
   retryDelayMs: number; // Delay between retries (with exponential backoff)
   processingTimeoutMs: number; // Timeout for individual mutation processing
-  batchSize: number; // Number of mutations to process concurrently
-  enablePersistence: boolean; // Whether to persist queue to storage
 }
 
 /**

@@ -8,10 +8,8 @@ describe('classifyReplayResult', () => {
   it('returns applied for a success payload', () => {
     expect(
       classifyReplayResult('CreateShoppingList', {
-        createShoppingList: {
-          __typename: 'CreateShoppingListPayload',
-          shoppingList: { id: 'list-1' },
-        },
+        __typename: 'CreateShoppingListPayload',
+        shoppingList: { id: 'list-1' },
       }),
     ).toBe('applied');
   });
@@ -19,22 +17,16 @@ describe('classifyReplayResult', () => {
   it('returns applied for sync result payloads', () => {
     expect(
       classifyReplayResult('SyncPantryItem', {
-        syncPantryItem: {
-          __typename: 'SyncPantryItemResult',
-          clientId: 'c1',
-          wasCreated: true,
-        },
+        __typename: 'SyncPantryItemResult',
+        clientId: 'c1',
+        wasCreated: true,
       }),
     ).toBe('applied');
   });
 
   it('returns applied for scalar, null, and absent payloads', () => {
-    expect(classifyReplayResult('DeleteThing', { deleteThing: true })).toBe(
-      'applied',
-    );
-    expect(classifyReplayResult('DeleteThing', { deleteThing: null })).toBe(
-      'applied',
-    );
+    expect(classifyReplayResult('DeleteThing', true)).toBe('applied');
+    expect(classifyReplayResult('DeleteThing', null)).toBe('applied');
     expect(classifyReplayResult('DeleteThing', undefined)).toBe('applied');
     expect(classifyReplayResult('DeleteThing', {})).toBe('applied');
   });
@@ -42,10 +34,8 @@ describe('classifyReplayResult', () => {
   it('returns converged for a ConflictError on a Create* replay', () => {
     expect(
       classifyReplayResult('CreateMealPlan', {
-        createMealPlan: {
-          __typename: 'ConflictError',
-          message: 'already exists',
-        },
+        __typename: 'ConflictError',
+        message: 'already exists',
       }),
     ).toBe('converged');
   });
@@ -53,10 +43,8 @@ describe('classifyReplayResult', () => {
   it('returns rejected for a ConflictError on a non-create replay', () => {
     expect(
       classifyReplayResult('UpdateShoppingList', {
-        updateShoppingList: {
-          __typename: 'ConflictError',
-          message: 'version conflict',
-        },
+        __typename: 'ConflictError',
+        message: 'version conflict',
       }),
     ).toBe('rejected');
   });
@@ -69,7 +57,8 @@ describe('classifyReplayResult', () => {
     ]) {
       expect(
         classifyReplayResult('CreateRecipe', {
-          createRecipe: { __typename: typename, message: 'refused' },
+          __typename: typename,
+          message: 'refused',
         }),
       ).toBe('rejected');
     }

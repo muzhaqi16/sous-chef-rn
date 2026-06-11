@@ -29,6 +29,9 @@ export class ReplayRejectedError extends Error {
  * foreground path. This is the replay-side counterpart; the two must agree
  * that a resolved error payload is a refusal, never a success.
  *
+ * Takes the already-extracted payload (the mutation's single top-level field
+ * value).
+ *
  *  - `'applied'`   — success payload (or a scalar/absent field that carries no
  *                    error signal). Dequeue.
  *  - `'converged'` — `ConflictError` on a replayed create: every queued create
@@ -42,9 +45,8 @@ export type ReplayOutcome = 'applied' | 'converged' | 'rejected';
 
 export function classifyReplayResult(
   operationName: string,
-  data: Record<string, unknown> | null | undefined,
+  payload: unknown,
 ): ReplayOutcome {
-  const payload = Object.values(data ?? {})[0];
   if (!payload || typeof payload !== 'object') return 'applied';
 
   const typename = (payload as { __typename?: string }).__typename;

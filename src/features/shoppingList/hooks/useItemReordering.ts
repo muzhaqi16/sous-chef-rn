@@ -256,7 +256,13 @@ export function useItemReordering<T extends ShoppingListItem>(
         });
       },
     );
-    if (!result) return;
+    if (!result) {
+      // The mutation threw (handled by the onError above). Drop the persisted
+      // optimistic sortOrder — it carries no version, so the restoration hook
+      // would otherwise re-apply the failed move on every cold start.
+      optimisticDataPersistence.clear('ShoppingListItem', itemId, 'sortOrder');
+      return;
+    }
 
     // Check for GraphQL errors (with errorPolicy: 'all', errors don't throw)
     if (result.error) {
@@ -264,6 +270,7 @@ export function useItemReordering<T extends ShoppingListItem>(
         operation: 'Move Item',
         checks: [versionConflictCheck({ onRefresh: () => refetch?.() })],
       });
+      optimisticDataPersistence.clear('ShoppingListItem', itemId, 'sortOrder');
       refetch?.(); // Refetch to restore correct order
       return;
     }

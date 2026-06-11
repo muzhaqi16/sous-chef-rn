@@ -23,6 +23,13 @@ export class QueueStore {
   // Write-through pattern: cache is updated on every write and invalidated on user change
   private cache: QueuedMutation[] | null = null;
 
+  // In-memory mirror of CURRENT_USER_KEY (undefined = not yet read from
+  // storage) and the memoized pending-ids set. getPendingClientIds() runs on
+  // EVERY itemsConnection merge (cache.ts), so without these each connection
+  // write costs a sync MMKV read plus a Set rebuild.
+  private currentUserId: string | null | undefined = undefined;
+  private pendingClientIds: Set<string> | null = null;
+
   // Subscribers notified on every queue change (add/remove/update/clear and
   // user switches). Lets UI read live queue state — e.g. the offline banner's
   // pending-changes count — via useSyncExternalStore without polling MMKV.
@@ -108,6 +115,7 @@ export class QueueStore {
     } catch (error) {
       logger.error('Failed to save queue to storage:', error);
     }
+    this.pendingClientIds = null;
     this.notifyListeners();
   }
 
@@ -115,7 +123,10 @@ export class QueueStore {
    * Get the current user ID
    */
   getCurrentUserId(): string | null {
-    return storage.getString(CURRENT_USER_KEY) || null;
+    if (this.currentUserId === undefined) {
+      this.currentUserId = storage.getString(CURRENT_USER_KEY) || null;
+    }
+    return this.currentUserId;
   }
 
   /**
@@ -123,6 +134,8 @@ export class QueueStore {
    */
   setCurrentUserId(userId: string): void {
     storage.set(CURRENT_USER_KEY, userId);
+    this.currentUserId = userId;
+    this.pendingClientIds = null;
     // The pending count is user-scoped, so a user switch changes it even
     // though the queue contents didn't.
     this.notifyListeners();
@@ -133,6 +146,8 @@ export class QueueStore {
    */
   clearCurrentUserId(): void {
     storage.remove(CURRENT_USER_KEY);
+    this.currentUserId = null;
+    this.pendingClientIds = null;
     this.notifyListeners();
   }
 
@@ -258,18 +273,21 @@ export class QueueStore {
    * when no user is set or the queue is empty.
    */
   getPendingClientIds(): Set<string> {
-    const userId = this.getCurrentUserId();
-    if (!userId) return new Set();
+    if (this.pendingClientIds) return this.pendingClientIds;
 
     const ids = new Set<string>();
-    for (const mutation of this.getPendingMutationsForUser(userId)) {
-      const variables = mutation.variables as
-        | { id?: unknown; input?: { id?: unknown; itemId?: unknown } }
-        | undefined;
-      const candidate =
-        variables?.input?.id ?? variables?.input?.itemId ?? variables?.id;
-      if (typeof candidate === 'string' && candidate) ids.add(candidate);
+    const userId = this.getCurrentUserId();
+    if (userId) {
+      for (const mutation of this.getPendingMutationsForUser(userId)) {
+        const variables = mutation.variables as
+          | { id?: unknown; input?: { id?: unknown; itemId?: unknown } }
+          | undefined;
+        const candidate =
+          variables?.input?.id ?? variables?.input?.itemId ?? variables?.id;
+        if (typeof candidate === 'string' && candidate) ids.add(candidate);
+      }
     }
+    this.pendingClientIds = ids;
     return ids;
   }
 
@@ -307,6 +325,7 @@ export class QueueStore {
   clearAllQueues(): void {
     storage.remove(QUEUE_STORAGE_KEY);
     this.cache = null; // Invalidate cache
+    this.pendingClientIds = null;
     logger.debug('🧹 Queue: Cleared all mutations');
     this.notifyListeners();
   }
@@ -406,6 +425,8 @@ export class QueueStore {
    */
   invalidateCache(): void {
     this.cache = null;
+    this.pendingClientIds = null;
+    this.currentUserId = undefined;
     if (__DEV__) {
       logger.debug('🔄 Queue: Cache invalidated');
     }

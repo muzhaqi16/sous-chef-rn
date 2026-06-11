@@ -149,8 +149,10 @@ export const createQueueLink = () => {
 };
 
 /**
- * Enqueue a mutation and complete the observable with its optimistic response
- * (marked `queued`) so cache updaters apply and the UI shows immediate feedback.
+ * Enqueue a mutation and complete the observable with a null-field result
+ * (marked `queued`) — the UI change comes from the hook's own permanent cache
+ * write, made before firing (the house local-first pattern; Apollo's
+ * `optimisticResponse` is never used here and never reaches link context).
  * Shared by the offline and online-network-error paths.
  */
 function enqueueAndComplete(
@@ -170,7 +172,6 @@ function enqueueAndComplete(
     }
 
     const operationContext = operation.getContext();
-    const optimisticResponse = operationContext.optimisticResponse;
     const operationName = operation.operationName || 'UnknownMutation';
 
     const queuedMutation: QueuedMutation = {
@@ -179,7 +180,6 @@ function enqueueAndComplete(
       operationName,
       mutation: operation.query,
       variables: operation.variables,
-      optimisticResponse: optimisticResponse || null,
       context: pickPersistedContext(operationContext),
       status: QueueStatus.PENDING,
       createdAt: Date.now(),
@@ -198,19 +198,13 @@ function enqueueAndComplete(
     // into the unselected subfields). The actual UI change comes from each hook's
     // own optimistic cache write; the `queued` extension marks this as deferred.
     observer.next({
-      data: optimisticResponse ?? buildQueuedResultData(operation.query),
+      data: buildQueuedResultData(operation.query),
       errors: undefined,
       extensions: { queued: true },
     });
     observer.complete();
 
-    logger.info(
-      `Queue Link: Queued ${operationName} (${reason}), ${
-        optimisticResponse
-          ? 'with optimistic response'
-          : 'without optimistic response'
-      }`,
-    );
+    logger.info(`Queue Link: Queued ${operationName} (${reason})`);
   } catch (error) {
     observer.error(error);
   }
