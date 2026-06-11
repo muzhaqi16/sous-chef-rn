@@ -104,15 +104,17 @@ describe('DeviceKeyManager', () => {
       expect(mockedSetGenericPassword).toHaveBeenCalled();
     });
 
-    it('returns fallback key when keychain write fails', async () => {
+    it('throws (fail closed) after retries when keychain write fails', async () => {
       mockedGetGenericPassword.mockResolvedValue(false);
       mockedSetGenericPassword.mockRejectedValue(
         new Error('Keychain write failed'),
       );
 
-      const key = await DeviceKeyManager.getDeviceEncryptionKey();
-      expect(key).toBeTruthy();
-      expect(typeof key).toBe('string');
+      await expect(DeviceKeyManager.getDeviceEncryptionKey()).rejects.toThrow(
+        'Failed to persist device key to keychain',
+      );
+      // 3 attempts × (hardware + software write) = 6 keychain writes
+      expect(mockedSetGenericPassword).toHaveBeenCalledTimes(6);
     });
 
     it('skips loading existing key when forceRegenerate is true', async () => {
@@ -172,21 +174,40 @@ describe('DeviceKeyManager', () => {
   });
 
   // ==========================================================================
-  // Fallback key behavior
+  // Fail-closed behavior (no fallback key — a predictable key would be
+  // encryption theater; the caller in mmkv.ts handles the throw)
   // ==========================================================================
-  describe('fallback key', () => {
-    it('returns a fallback key on iOS when keychain fails', async () => {
+  describe('fail-closed behavior', () => {
+    it('throws when keychain reads keep failing (no fallback key)', async () => {
       mockedGetGenericPassword.mockRejectedValue(new Error('keychain dead'));
       mockedSetGenericPassword.mockRejectedValue(
         new Error('keychain write dead'),
       );
 
-      const key = await DeviceKeyManager.getDeviceEncryptionKey();
-      expect(key).toBeTruthy();
-      expect(key.length).toBeGreaterThanOrEqual(16);
+      await expect(DeviceKeyManager.getDeviceEncryptionKey()).rejects.toThrow(
+        'keychain dead',
+      );
+      expect(mockedGetGenericPassword).toHaveBeenCalledTimes(3);
     });
 
-    it('returns a fallback key on Android when keychain fails', async () => {
+    it('recovers the existing key when a transient read error clears on retry', async () => {
+      mockedGetGenericPassword
+        .mockRejectedValueOnce(new Error('transient keychain error'))
+        .mockResolvedValueOnce({
+          service: 'dev.souschef.app.devicekey',
+          username: 'device_key',
+          password: 'existing-key-from-keychain',
+          storage: 'keychain' as STORAGE_TYPE,
+        });
+
+      const key = await DeviceKeyManager.getDeviceEncryptionKey();
+      expect(key).toBe('existing-key-from-keychain');
+      // A transient read error must NOT trigger key generation — that would
+      // overwrite the real key and make the existing MMKV file undecryptable.
+      expect(mockedSetGenericPassword).not.toHaveBeenCalled();
+    });
+
+    it('throws on Android too when the keychain keeps failing', async () => {
       Object.defineProperty(Platform, 'OS', {
         value: 'android',
         configurable: true,
@@ -196,9 +217,9 @@ describe('DeviceKeyManager', () => {
         new Error('keychain write dead'),
       );
 
-      const key = await DeviceKeyManager.getDeviceEncryptionKey();
-      expect(key).toBeTruthy();
-      expect(key.length).toBeGreaterThanOrEqual(16);
+      await expect(DeviceKeyManager.getDeviceEncryptionKey()).rejects.toThrow(
+        'keychain dead',
+      );
     });
   });
 });

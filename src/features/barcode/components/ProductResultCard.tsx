@@ -27,7 +27,7 @@ interface ItemCardProps {
   onCreateVariant?: () => void;
 }
 
-export const ItemCard: React.FC<ItemCardProps> = ({
+export const ProductResultCard: React.FC<ItemCardProps> = ({
   item,
   format,
   onEditItem,

@@ -5,6 +5,7 @@ import { env } from '#/config/env';
 import { LogoutCleanup } from '../logoutCleanup';
 import { getDeviceIdSync } from '#/utils/deviceId';
 import { proactiveTokenRefresh } from './refreshToken';
+import { logger } from '#/utils/environment';
 
 // Pre-request token validation buffer (5 minutes before expiry)
 const REFRESH_BUFFER_MS = 5 * 60 * 1000;
@@ -81,7 +82,7 @@ export const authLink = new SetContextLink(async ({ headers }, operation) => {
   }
 
   if (!token) {
-    console.log(
+    logger.debug(
       '[AuthLink] No access token available for operation:',
       operation.operationName,
       'isPublic:',

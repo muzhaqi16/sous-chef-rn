@@ -65,8 +65,8 @@ jest.mock('#store/useAppStore', () => ({
 
 jest.mock('#/utils/compilerSafeWrappers');
 
-jest.mock('../ItemCard', () => ({
-  ItemCard: ({ item }: { item: { name: string } }) => {
+jest.mock('../ProductResultCard', () => ({
+  ProductResultCard: ({ item }: { item: { name: string } }) => {
     const { Text } = require('react-native');
     return require('react').createElement(Text, null, item.name);
   },

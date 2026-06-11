@@ -1,7 +1,7 @@
 import React from 'react';
 import Animated from 'react-native-reanimated';
 import { HapticService } from '#/services/haptic/HapticService';
-import { AnimatedActionButton } from './AnimatedActionButton';
+import { SwipeActionButton } from './SwipeActionButton';
 import { styles } from './styles';
 import { SwipeActionsProps } from './types';
 
@@ -38,7 +38,7 @@ const LeftActionsComponent: React.FC<SwipeActionsProps> = ({
         style={[styles.leftActionsContainer, { width: getContainerWidth(1) }]}
         pointerEvents="box-none"
       >
-        <AnimatedActionButton
+        <SwipeActionButton
           onPress={handleEditPress}
           icon="create-outline"
           circular={true}
@@ -70,21 +70,21 @@ const LeftActionsComponent: React.FC<SwipeActionsProps> = ({
         style={[styles.leftActionsContainer, { width: getContainerWidth(3) }]}
         pointerEvents="box-none"
       >
-        <AnimatedActionButton
+        <SwipeActionButton
           onPress={handleConsumePress}
           icon="restaurant-outline"
           circular={true}
           progress={progress}
           index={0}
         />
-        <AnimatedActionButton
+        <SwipeActionButton
           onPress={handleWastePress}
           icon="warning-outline"
           circular={true}
           progress={progress}
           index={1}
         />
-        <AnimatedActionButton
+        <SwipeActionButton
           onPress={handleRestockPress}
           icon="add-circle-outline"
           circular={true}
@@ -112,14 +112,14 @@ const LeftActionsComponent: React.FC<SwipeActionsProps> = ({
         style={[styles.leftActionsContainer, { width: getContainerWidth(2) }]}
         pointerEvents="box-none"
       >
-        <AnimatedActionButton
+        <SwipeActionButton
           onPress={handleConsumePress}
           icon="restaurant-outline"
           circular={true}
           progress={progress}
           index={0}
         />
-        <AnimatedActionButton
+        <SwipeActionButton
           onPress={handleWastePress}
           icon="warning-outline"
           circular={true}
@@ -144,7 +144,7 @@ const LeftActionsComponent: React.FC<SwipeActionsProps> = ({
         style={[styles.leftActionsContainer, { width: getContainerWidth(1) }]}
         pointerEvents="box-none"
       >
-        <AnimatedActionButton
+        <SwipeActionButton
           onPress={handleConsumePress}
           icon="restaurant-outline"
           circular={true}
@@ -167,7 +167,7 @@ const LeftActionsComponent: React.FC<SwipeActionsProps> = ({
         style={[styles.leftActionsContainer, { width: getContainerWidth(1) }]}
         pointerEvents="box-none"
       >
-        <AnimatedActionButton
+        <SwipeActionButton
           onPress={handleWastePress}
           icon="warning-outline"
           circular={true}
@@ -201,7 +201,7 @@ const LeftActionsComponent: React.FC<SwipeActionsProps> = ({
       style={[styles.leftActionsContainer, { width: getContainerWidth(1) }]}
       pointerEvents="box-none"
     >
-      <AnimatedActionButton
+      <SwipeActionButton
         onPress={handlePress}
         icon={iconName}
         circular={true}

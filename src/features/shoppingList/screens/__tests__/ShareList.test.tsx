@@ -89,6 +89,15 @@ const mockCollaborators = [
   },
 ];
 
+// Ownership is a separate ShoppingListOwnership record (not the collaborator
+// `role`). Mutable so individual tests can flip between owner / non-owner.
+let mockOwnerships: Array<{
+  __typename: 'ShoppingListOwnership';
+  id: string;
+  userId: string;
+  user: null;
+}> = [];
+
 jest.mock('#features/shoppingList/hooks/useShoppingListDetails', () => ({
   useShoppingListDetails: () => ({
     shoppingList: {
@@ -100,6 +109,7 @@ jest.mock('#features/shoppingList/hooks/useShoppingListDetails', () => ({
     loading: false,
     isRefetching: false,
     collaborators: mockCollaborators,
+    ownerships: mockOwnerships,
     name: 'Test List',
     refetch: jest.fn(),
   }),
@@ -162,7 +172,18 @@ jest.mock('#/components/organisms/CollaboratorPermissionsBottomSheet', () => {
 describe('ShareList', () => {
   const route = { params: { listId: 'sl1' } };
 
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    // Default: the current user (u1) owns the list via an ownership record.
+    mockOwnerships = [
+      {
+        __typename: 'ShoppingListOwnership',
+        id: 'o1',
+        userId: 'u1',
+        user: null,
+      },
+    ];
+  });
 
   it('renders the title', () => {
     render(<ShareList route={route} />);
@@ -197,5 +218,36 @@ describe('ShareList', () => {
   it('shows email input placeholder', () => {
     render(<ShareList route={route} />);
     expect(screen.getByPlaceholderText('Enter email address')).toBeTruthy();
+  });
+
+  it('hides the Leave List action for the list owner', () => {
+    // u1 is in `ownerships`, so even though the leave flow exists, the owner
+    // must not be offered "Leave" (there is no transfer-ownership mutation —
+    // the owner deletes the list instead).
+    render(<ShareList route={route} />);
+    expect(screen.queryByText('Leave List')).toBeNull();
+    expect(screen.queryByText('Danger Zone')).toBeNull();
+  });
+
+  it('tags the owning member and hides their remove button', () => {
+    render(<ShareList route={route} />);
+    expect(screen.getAllByText('Owner').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('shows the Leave List action when the current user is not the owner', () => {
+    // Ownership lives in `ownerships`, decoupled from collaborator role:
+    // someone else (u2) owns the list, so u1 is a leaving-eligible collaborator
+    // regardless of what role their collaborator row carries.
+    mockOwnerships = [
+      {
+        __typename: 'ShoppingListOwnership',
+        id: 'o2',
+        userId: 'u2',
+        user: null,
+      },
+    ];
+    render(<ShareList route={route} />);
+    expect(screen.getByText('Leave List')).toBeTruthy();
+    expect(screen.getByText('Danger Zone')).toBeTruthy();
   });
 });

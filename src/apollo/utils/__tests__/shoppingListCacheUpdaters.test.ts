@@ -14,6 +14,7 @@ import {
 // Also test the unexported clearAllUnpurchasedItemsFromCache indirectly
 // by importing it directly
 import { clearAllUnpurchasedItemsFromCache } from '../shoppingListCacheUpdaters';
+import { logger } from '#/utils/environment';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -814,7 +815,7 @@ describe('addNewItemToShoppingListCache', () => {
       addNewItemToShoppingListCache(cache, 'sl-1', { id: 'sli-1' }),
     ).not.toThrow();
 
-    expect(console.warn).toHaveBeenCalledWith(
+    expect(logger.warn).toHaveBeenCalledWith(
       expect.stringContaining(
         'Failed to update cache for new shopping list item',
       ),
@@ -1016,7 +1017,7 @@ describe('removeItemFromShoppingListForMoveToPantry', () => {
       removeItemFromShoppingListForMoveToPantry(cache, 'sl-1', 'sli-1', true),
     ).not.toThrow();
 
-    expect(console.warn).toHaveBeenCalledWith(
+    expect(logger.warn).toHaveBeenCalledWith(
       expect.stringContaining(
         'Failed to remove item from ShoppingList for move to pantry',
       ),

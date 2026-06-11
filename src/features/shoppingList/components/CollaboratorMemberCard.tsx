@@ -9,7 +9,7 @@ import { Icon } from '#/utils/iconUtils';
 import { getCollaboratorDisplayName } from '#/utils/formatters/memberFormatters';
 import { type ShoppingListCollaboratorFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 
-type StatusVariant = 'active' | 'pending' | 'declined' | 'expired';
+type StatusVariant = 'active' | 'pending' | 'declined' | 'expired' | 'owner';
 
 const getStatusVariant = (status: string): StatusVariant => {
   switch (status?.toUpperCase()) {
@@ -64,6 +64,8 @@ interface CollaboratorMemberCardProps {
   currentUserId: string | undefined;
   /** When true (home-linked list), the remove button is hidden. */
   isHomeLinked: boolean;
+  /** When true, this member owns the list — shows an Owner tag, hides remove. */
+  isOwner?: boolean;
   /** Open the permissions sheet for this member. */
   onPress: () => void;
   /** Remove this member from the list. */
@@ -74,6 +76,7 @@ export const CollaboratorMemberCard: React.FC<CollaboratorMemberCardProps> = ({
   member,
   currentUserId,
   isHomeLinked,
+  isOwner = false,
   onPress,
   onRemove,
 }) => {
@@ -85,6 +88,12 @@ export const CollaboratorMemberCard: React.FC<CollaboratorMemberCardProps> = ({
   const displayName = getCollaboratorDisplayName(member, currentUserId);
   const memberEmail = member.collaborator?.email ?? member.email ?? '';
   const showEmailRow = !!memberEmail && memberEmail !== displayName;
+
+  // The owner can't be removed, and you leave the list via the dedicated Leave
+  // button rather than removing your own row here.
+  const isCurrentUser =
+    !!currentUserId && member.collaboratorId === currentUserId;
+  const canRemove = !isHomeLinked && !isOwner && !isCurrentUser;
 
   return (
     <AppPressable style={styles.memberCard} onPress={onPress}>
@@ -101,6 +110,12 @@ export const CollaboratorMemberCard: React.FC<CollaboratorMemberCardProps> = ({
           ) : null}
           <View style={styles.statusContainer}>
             <StatusBadge variant={statusVariant} text={statusText} />
+            {!!isOwner && (
+              <StatusBadge
+                variant="owner"
+                text={t('shoppingListScreens.owner')}
+              />
+            )}
             {!!member.invitedAt && (
               <Text style={styles.invitedText}>
                 {t('shoppingListScreens.invitedOn', {
@@ -111,7 +126,7 @@ export const CollaboratorMemberCard: React.FC<CollaboratorMemberCardProps> = ({
           </View>
         </View>
       </View>
-      {!isHomeLinked && (
+      {!!canRemove && (
         <Pressable
           onPress={onRemove}
           style={({ pressed }) => pressed && styles.pressed}
@@ -196,6 +211,10 @@ const styles = StyleSheet.create(theme => ({
           backgroundColor: theme.colors.textTertiary + '20',
           borderColor: theme.colors.textTertiary,
         },
+        owner: {
+          backgroundColor: theme.colors.primary + '20',
+          borderColor: theme.colors.primary,
+        },
       },
     },
   },
@@ -208,6 +227,7 @@ const styles = StyleSheet.create(theme => ({
         pending: { color: theme.colors.warning },
         declined: { color: theme.colors.error },
         expired: { color: theme.colors.textTertiary },
+        owner: { color: theme.colors.primary },
       },
     },
   },

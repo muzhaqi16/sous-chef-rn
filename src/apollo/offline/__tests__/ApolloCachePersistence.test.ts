@@ -7,6 +7,7 @@ import type {
 } from '@apollo/client';
 import { storage } from '#storage/mmkv';
 import { apolloCachePersistence } from '../ApolloCachePersistence';
+import { logger } from '#/utils/environment';
 
 /**
  * `restoreDeferred` accepts a full `ApolloCache` but only calls
@@ -201,7 +202,7 @@ describe('ApolloCachePersistence', () => {
 
       // Should not throw
       apolloCachePersistence.saveImmediate({ 'Circular:1': circular });
-      expect(console.error).toHaveBeenCalled();
+      expect(logger.error).toHaveBeenCalled();
     });
   });
 

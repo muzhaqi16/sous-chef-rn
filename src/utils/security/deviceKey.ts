@@ -7,9 +7,18 @@ import {
   getGenericPassword,
   resetGenericPassword,
 } from 'react-native-keychain';
+import { logger } from '#/utils/environment';
 import { generateId } from '../generateId';
 const DEVICE_KEY_SERVICE = 'dev.souschef.app.devicekey';
 const DEVICE_KEY_USERNAME = 'device_key';
+
+// Keychain access can fail transiently (e.g. right after device restore or
+// during early-boot races). Retry before giving up so a hiccup doesn't take
+// down encrypted storage.
+const KEY_FETCH_ATTEMPTS = 3;
+const RETRY_DELAY_BASE_MS = 200;
+
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 interface DeviceKeyOptions {
   forceRegenerate?: boolean;
@@ -26,7 +35,12 @@ export class DeviceKeyManager {
   private static cachedKey: string | null = null;
 
   /**
-   * Get or generate a device-specific encryption key
+   * Get or generate a device-specific encryption key.
+   *
+   * Fail-closed: retries keychain access with backoff, then THROWS if the
+   * keychain is genuinely unavailable. Callers must not fall back to a
+   * predictable key or unencrypted storage — a keychain outage should block
+   * encrypted-storage init, not silently downgrade it.
    */
   static async getDeviceEncryptionKey(
     options: DeviceKeyOptions = {},
@@ -37,25 +51,39 @@ export class DeviceKeyManager {
       return DeviceKeyManager.cachedKey;
     }
 
-    try {
-      if (!forceRegenerate) {
-        const existingKey = await readKeyFromKeychain();
-        if (existingKey) {
-          DeviceKeyManager.cachedKey = existingKey;
-          return existingKey;
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= KEY_FETCH_ATTEMPTS; attempt++) {
+      try {
+        if (!forceRegenerate) {
+          // A read ERROR throws (and is retried) rather than being treated as
+          // "no key" — generating a fresh key over an existing one would make
+          // the current MMKV file undecryptable.
+          const existingKey = await readKeyFromKeychain();
+          if (existingKey) {
+            DeviceKeyManager.cachedKey = existingKey;
+            return existingKey;
+          }
+        }
+
+        const newKey = await DeviceKeyManager.generateNewKey();
+        DeviceKeyManager.cachedKey = newKey;
+        return newKey;
+      } catch (error) {
+        lastError = error;
+        logger.warn(
+          `Device key fetch failed (attempt ${attempt}/${KEY_FETCH_ATTEMPTS}):`,
+          error,
+        );
+        if (attempt < KEY_FETCH_ATTEMPTS) {
+          await delay(RETRY_DELAY_BASE_MS * attempt);
         }
       }
-
-      const newKey = await DeviceKeyManager.generateNewKey();
-      DeviceKeyManager.cachedKey = newKey;
-      return newKey;
-    } catch (error) {
-      console.warn(
-        'Failed to get device encryption key, using fallback:',
-        error,
-      );
-      return DeviceKeyManager.getFallbackKey();
     }
+
+    logger.error('Device key unavailable after retries, failing closed');
+    throw lastError instanceof Error
+      ? lastError
+      : new Error('Failed to obtain device encryption key');
   }
 
   /**
@@ -67,29 +95,12 @@ export class DeviceKeyManager {
 
     const stored = await writeKeyToKeychain(key);
     if (!stored) {
-      // If keychain write fails entirely, surface the error so the
-      // caller falls back to getFallbackKey().
+      // Surface the failure so the retry loop in getDeviceEncryptionKey can
+      // try again (and ultimately fail closed).
       throw new Error('Failed to persist device key to keychain');
     }
 
     return key;
-  }
-
-  /**
-   * Get fallback encryption key when secure storage fails.
-   * Last-resort: a deterministic platform-derived key. Better than no
-   * encryption, but a real keychain-stored key should always be preferred.
-   */
-  private static getFallbackKey(): string {
-    try {
-      const seed = `${Platform.OS}-${Platform.Version}-sous-chef-fallback`;
-      return seed.padEnd(32, '0').substring(0, 32);
-    } catch {
-      console.warn('Using static fallback key - security reduced');
-      return ('sous-chef-emergency-fallback-key-' + Platform.OS)
-        .padEnd(32, '0')
-        .substring(0, 32);
-    }
   }
 
   /**
@@ -118,7 +129,7 @@ export class DeviceKeyManager {
     try {
       await resetGenericPassword({ service: DEVICE_KEY_SERVICE });
     } catch (error) {
-      console.warn('Error clearing old key from keychain:', error);
+      logger.warn('Error clearing old key from keychain:', error);
     }
     DeviceKeyManager.clearCachedKey();
     return DeviceKeyManager.getDeviceEncryptionKey({ forceRegenerate: true });
@@ -126,19 +137,16 @@ export class DeviceKeyManager {
 }
 
 /**
- * Read the device key from the keychain. Returns null on failure or absence.
+ * Read the device key from the keychain. Returns null only on confirmed
+ * absence; a read ERROR propagates so the caller retries instead of
+ * generating a fresh key over an existing (temporarily unreadable) one.
  */
 async function readKeyFromKeychain(): Promise<string | null> {
-  try {
-    const result = await getGenericPassword({ service: DEVICE_KEY_SERVICE });
-    if (result && result.password) {
-      return result.password;
-    }
-    return null;
-  } catch (error) {
-    console.warn('Failed to read device key from keychain:', error);
-    return null;
+  const result = await getGenericPassword({ service: DEVICE_KEY_SERVICE });
+  if (result && result.password) {
+    return result.password;
   }
+  return null;
 }
 
 /**
@@ -163,7 +171,7 @@ async function writeKeyToKeychain(key: string): Promise<boolean> {
     );
     if (result) return true;
   } catch (error) {
-    console.warn(
+    logger.warn(
       'Hardware-backed keychain write failed, trying software:',
       error,
     );
@@ -184,7 +192,7 @@ async function writeKeyToKeychain(key: string): Promise<boolean> {
     );
     return !!result;
   } catch (error) {
-    console.error('Failed to write device key to keychain:', error);
+    logger.error('Failed to write device key to keychain:', error);
     return false;
   }
 }

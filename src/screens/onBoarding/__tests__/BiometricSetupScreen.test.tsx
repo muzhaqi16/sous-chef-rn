@@ -71,6 +71,9 @@ jest.mock('#components/organisms/modal/useTextInputModal', () => ({
 jest.mock('#hooks/performance/useScreenTransition');
 
 jest.mock('#/storage/keychain', () => ({
+  loadSessionTokens: jest.fn(() => Promise.resolve(null)),
+  saveSessionTokens: jest.fn(() => Promise.resolve()),
+  clearSessionTokens: jest.fn(() => Promise.resolve()),
   loadTempRegistrationPassword: jest.fn(() => Promise.resolve(null)),
   clearTempRegistrationPassword: jest.fn(),
 }));

@@ -16,6 +16,7 @@ query GetMealTemplates(
   ) {
     edges {
       node {
+        id
         ...MealTemplateDisplay      }
       cursor
     }
@@ -29,6 +30,7 @@ query GetMealTemplates(
 
 query GetMealTemplate($id: ID!) {
   mealTemplate(id: $id) {
+    id
     ...MealTemplateDisplay    items {
       id
       ...MealTemplateItemFragment    }
@@ -64,8 +66,10 @@ mutation DuplicateTemplate($input: DuplicateTemplateInput!) {
     __typename
     ... on DuplicateTemplatePayload {
       mealTemplate {
+        id
         ...MealTemplateDisplay
         items {
+          id
           ...MealTemplateItemFragment
         }
       }
@@ -89,6 +93,7 @@ mutation CreateMealPlanFromTemplate($input: CreateMealPlanFromTemplateInput!) {
     __typename
     ... on CreateMealPlanPayload {
       mealPlan {
+        id
         ...MealPlanMain_mealPlan
         ...MealPlanSettingsSheet_mealPlan
       }
@@ -112,8 +117,10 @@ mutation CreateTemplateFromMealPlan($input: CreateTemplateFromMealPlanInput!) {
     __typename
     ... on CreateTemplateFromMealPlanPayload {
       mealTemplate {
+        id
         ...MealTemplateDisplay
         items {
+          id
           ...MealTemplateItemFragment
         }
       }

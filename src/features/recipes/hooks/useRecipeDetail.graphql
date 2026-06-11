@@ -116,6 +116,7 @@ mutation CreateShoppingList($input: CreateShoppingListInput!) {
           name
         }
         ownerships {
+          id
           ...ShoppingListOwnershipFragment
         }
       }

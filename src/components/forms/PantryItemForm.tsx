@@ -515,7 +515,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
           style={commonStyles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          <View style={commonStyles.padding}>
+          <View style={styles.pageContent}>
             {currentPage === 0 &&
               (mode === 'add' ? (
                 <ItemInformationSection
@@ -621,6 +621,14 @@ const styles = StyleSheet.create(theme => ({
   errorText: {
     fontSize: theme.fonts.size.lg,
     color: theme.colors.error,
+  },
+  // Even page rhythm: matched side padding, a little room under the page
+  // indicator, and generous space below the last field so it clears the
+  // keyboard without feeling cramped.
+  pageContent: {
+    paddingHorizontal: theme.spacing.md,
+    paddingTop: theme.spacing.md,
+    paddingBottom: theme.spacing.xl,
   },
   advancedContent: {
     paddingTop: theme.spacing.md,

@@ -67,7 +67,10 @@ module.exports = api => {
         },
       ],
 
-      process.env.NODE_ENV === 'production' && [
+      // api.env() reads BABEL_ENV, which Metro sets to 'production' during
+      // release bundling (a NODE_ENV check never fires there — NODE_ENV is
+      // only written to the .env file for generate-env.js, not the process).
+      api.env('production') && [
         'transform-remove-console',
         { exclude: ['error', 'warn'] },
       ],

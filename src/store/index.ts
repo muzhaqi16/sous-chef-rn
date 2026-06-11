@@ -69,6 +69,53 @@ import {
   NetworkState,
 } from './slices/networkSlice';
 import { zustandStorage, STORAGE_KEY } from '#/storage/mmkv';
+import {
+  loadSessionTokens,
+  type SessionTokenLoadResult,
+} from '#/storage/keychain';
+import { logger } from '#/utils/environment';
+
+/**
+ * Final step of persist hydration: pull session tokens out of the keychain
+ * (their persistence tier — see partialize) and only then flip `isHydrated`,
+ * so the first authenticated paint sees the session.
+ *
+ * The MMKV blob keeps a fallback copy of the pair until the keychain copy is
+ * confirmed (`sessionTokensInKeychain`, checked in partialize):
+ * - 'ok'     → keychain holds the pair; the MMKV copy can be dropped.
+ * - 'absent' → installs that predate keychain token storage migrate their
+ *              MMKV pair here; it is dropped only once the write confirms.
+ * - 'error'  → keychain unreadable after retries; any MMKV-restored session
+ *              stays in place and nothing is dropped this launch.
+ */
+const hydrateSessionTokensThenFinish = async (
+  state: RootState | undefined,
+): Promise<void> => {
+  // `?? { status: 'absent' }` tolerates legacy test mocks resolving null.
+  const result: SessionTokenLoadResult = (await loadSessionTokens()) ?? {
+    status: 'absent',
+  };
+  if (result.status === 'ok') {
+    // setTokens also schedules the proactive refresh for the restored
+    // session; its keychain write-through is skipped as an unchanged pair.
+    state?.setTokens(result.tokens);
+    state?.setSessionTokensInKeychain(true);
+  } else if (state?.accessToken && state?.refreshToken) {
+    // MMKV fallback copy ('absent': install predates keychain storage;
+    // 'error': keychain unreadable after retries). Running the pair through
+    // setTokens schedules the proactive refresh and write-through persists
+    // to the keychain — `sessionTokensInKeychain` flips only when that
+    // write confirms, so partialize keeps the MMKV copy until then.
+    if (result.status === 'error') {
+      logger.warn('Session token load failed; using the MMKV fallback session');
+    }
+    state.setTokens({
+      accessToken: state.accessToken,
+      refreshToken: state.refreshToken,
+    });
+  }
+  state?.setHydrated(true);
+};
 
 // Add reset manager interface to root state
 interface ResetManagerState {
@@ -207,7 +254,7 @@ export const useStore = create<RootState>()(
         onRehydrateStorage: () => {
           return (state, error) => {
             if (error) {
-              console.log('An error happened during hydration', error);
+              console.error('An error happened during hydration', error);
             } else {
               // Sync the rehydrated theme preference to UnistylesRuntime
               // BEFORE flipping `isHydrated`. This makes the persist layer
@@ -228,8 +275,11 @@ export const useStore = create<RootState>()(
                 });
               }
 
-              // Mark store as hydrated
-              state?.setHydrated(true);
+              // Load session tokens from the keychain BEFORE flipping
+              // `isHydrated`, so auth-dependent navigation sees the session on
+              // first paint. Tokens are excluded from partialize — the
+              // keychain (not MMKV) is their persistence tier.
+              void hydrateSessionTokensThenFinish(state);
 
               // Cold-start telemetry: time from JS bundle entry to Zustand
               // hydration callback firing. Captures MMKV decrypt + JSON parse +
@@ -316,6 +366,14 @@ export const useStore = create<RootState>()(
             // Logout state (session-only flag)
             isLoggingOut,
 
+            // Session tokens (keychain-persisted; loaded in
+            // hydrateSessionTokensThenFinish, written through in the
+            // authSlice setters). Conditionally re-added below: the MMKV
+            // blob keeps a fallback copy until the keychain copy confirms.
+            accessToken,
+            refreshToken,
+            sessionTokensInKeychain,
+
             // Seen-items LRU: a within-session warmth cache for catalog item
             // autocomplete. Kept transient so it isn't serialized into MMKV on
             // every search result (each ItemSuggestion is large). The persisted
@@ -338,6 +396,12 @@ export const useStore = create<RootState>()(
           } = state;
           // ========== PERSISTENT STATE (everything else) ==========
 
+          // Losing both token tiers logs the user out, so the pair stays in
+          // the MMKV blob while the keychain copy is unconfirmed (migration
+          // writes, transient keychain failures).
+          if (!sessionTokensInKeychain && accessToken && refreshToken) {
+            return { ...persistedState, accessToken, refreshToken };
+          }
           return persistedState;
         },
       },

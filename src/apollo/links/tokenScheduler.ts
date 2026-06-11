@@ -1,5 +1,6 @@
 import { jwtDecode } from 'jwt-decode';
 import { useStore } from '#store';
+import { logger } from '#/utils/environment';
 
 interface TokenPayload {
   exp: number;
@@ -63,7 +64,7 @@ export function scheduleTokenRefresh(
 
     // Only schedule if token has more than the buffer time left
     if (delay > 0) {
-      console.log(
+      logger.debug(
         `[TokenScheduler] Scheduling proactive refresh in ${Math.round(
           delay / 1000,
         )}s ` + `(token expires in ${Math.round((expiresAt - now) / 1000)}s)`,
@@ -79,27 +80,27 @@ export function scheduleTokenRefresh(
         // is specifically designed for accessing state from non-React code.
         const state = useStore.getState();
         if (!state.isOnline) {
-          console.log(
+          logger.debug(
             '[TokenScheduler] Skipping proactive refresh - device is offline. ' +
               'Reactive refresh will handle token expiration when back online.',
           );
           return;
         }
 
-        console.log('[TokenScheduler] Proactive token refresh triggered');
+        logger.debug('[TokenScheduler] Proactive token refresh triggered');
         try {
           await refreshCallback();
-          console.log(
+          logger.debug(
             '[TokenScheduler] Proactive token refresh completed successfully',
           );
         } catch (error) {
-          console.error('[TokenScheduler] Proactive refresh failed:', error);
+          logger.error('[TokenScheduler] Proactive refresh failed:', error);
           // Reactive refresh (errorLink) will handle it if this fails
           // This is our fallback - user may experience a brief 401 error
         }
       }, delay);
     } else {
-      console.warn(
+      logger.warn(
         `[TokenScheduler] Token expires too soon (in ${Math.round(
           (expiresAt - now) / 1000,
         )}s), ` +
@@ -107,7 +108,7 @@ export function scheduleTokenRefresh(
       );
     }
   } catch (error) {
-    console.error(
+    logger.error(
       '[TokenScheduler] Failed to decode token for scheduling:',
       error,
     );
@@ -124,7 +125,7 @@ export function cancelTokenRefresh() {
   if (refreshTimer) {
     clearTimeout(refreshTimer);
     refreshTimer = null;
-    console.log('[TokenScheduler] Scheduled refresh cancelled');
+    logger.debug('[TokenScheduler] Scheduled refresh cancelled');
   }
 }
 

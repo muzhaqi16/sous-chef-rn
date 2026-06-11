@@ -11,6 +11,10 @@ import { FilteredPantryItems } from '#features/pantry/screens/FilteredPantryItem
 import { PantrySettings } from '#features/pantry/screens/PantrySettings';
 import { NutritionScreen } from '#features/pantry/screens/NutritionScreen';
 import { RecipeDetail } from '#features/recipes/screens/RecipeDetail';
+import {
+  topInsetScreenLayout,
+  noInsetScreenLayout,
+} from '#navigation/layouts/TopInsetLayout';
 
 // Lazy-load PantryAnalytics to defer Skia + victory-native JS loading
 const PantryAnalytics = React.lazy(() =>
@@ -28,6 +32,10 @@ export const PantryStack = createNativeStackNavigator({
     contentStyle: { backgroundColor: theme.colors.background },
     inactiveBehavior: 'none',
   }),
+  // Top safe-area inset is the stack-wide default; immersive hero screens
+  // (PantryItemDetail, RecipeDetail) opt out to draw edge-to-edge behind the
+  // status bar and inset themselves.
+  screenLayout: topInsetScreenLayout,
   screens: {
     PantryMain: createNativeStackScreen({
       screen: PantryMain,
@@ -40,6 +48,7 @@ export const PantryStack = createNativeStackNavigator({
     PantryItemDetail: createNativeStackScreen({
       screen: PantryItemDetail,
       linking: 'pantry/detail/:itemId',
+      layout: noInsetScreenLayout,
     }),
     FilteredPantryItems: createNativeStackScreen({
       screen: FilteredPantryItems,
@@ -56,6 +65,7 @@ export const PantryStack = createNativeStackNavigator({
     }),
     RecipeDetail: createNativeStackScreen({
       screen: RecipeDetail,
+      layout: noInsetScreenLayout,
     }),
   },
 });

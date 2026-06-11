@@ -8,6 +8,10 @@ import { RecipeDetail } from '#features/recipes/screens/RecipeDetail';
 import { RecipeFormScreen } from '#features/recipes/screens/RecipeForm';
 import { SavedRecipes } from '#features/recipes/screens/SavedRecipes';
 import { MyRecipes } from '#features/recipes/screens/MyRecipes';
+import {
+  topInsetScreenLayout,
+  noInsetScreenLayout,
+} from '#navigation/layouts/TopInsetLayout';
 
 export const RecipeStack = createNativeStackNavigator({
   screenOptions: ({ theme }) => ({
@@ -18,6 +22,9 @@ export const RecipeStack = createNativeStackNavigator({
     contentStyle: { backgroundColor: theme.colors.background },
     inactiveBehavior: 'none',
   }),
+  // Top safe-area inset is the stack-wide default; RecipeDetail opts out to
+  // draw its hero image edge-to-edge behind the status bar.
+  screenLayout: topInsetScreenLayout,
   screens: {
     RecipeMain: createNativeStackScreen({
       screen: RecipeMain,
@@ -25,6 +32,7 @@ export const RecipeStack = createNativeStackNavigator({
     }),
     RecipeDetail: createNativeStackScreen({
       screen: RecipeDetail,
+      layout: noInsetScreenLayout,
     }),
     RecipeCreate: createNativeStackScreen({
       screen: RecipeFormScreen,

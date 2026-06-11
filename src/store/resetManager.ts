@@ -1,7 +1,11 @@
 import { RootState } from './index';
 import { zustandStorage, STORAGE_KEY } from '#/storage/mmkv';
 import { storage } from '#/storage/mmkv';
-import { clearTempRegistrationPassword } from '#/storage/keychain';
+import {
+  clearTempRegistrationPassword,
+  clearSessionTokens,
+} from '#/storage/keychain';
+import { logger } from '#/utils/environment';
 
 // Simplified reset options
 export interface ResetOptions {
@@ -121,7 +125,7 @@ export const createResetManager = (
         );
         apolloCachePersistence.clear();
       } catch (error) {
-        console.error('Error clearing Apollo cache:', error);
+        logger.error('Error clearing Apollo cache:', error);
       }
     }
 
@@ -190,6 +194,9 @@ const clearAuthFromStorage = async () => {
     // Clear temp registration password from keychain (if any)
     await clearTempRegistrationPassword();
 
+    // Clear the session tokens from their keychain tier
+    await clearSessionTokens();
+
     // Clear individual auth-related keys
     storage.remove('accessToken');
     storage.remove('refreshToken');
@@ -220,6 +227,6 @@ const clearAuthFromStorage = async () => {
       }
     }
   } catch (error) {
-    console.error('Error clearing auth from storage:', error);
+    logger.error('Error clearing auth from storage:', error);
   }
 };

@@ -15,6 +15,9 @@ const mockHasCredentialsForAccount = jest.fn();
 const mockGetBiometricCapability = jest.fn();
 
 jest.mock('#/storage/keychain', () => ({
+  loadSessionTokens: jest.fn(() => Promise.resolve(null)),
+  saveSessionTokens: jest.fn(() => Promise.resolve()),
+  clearSessionTokens: jest.fn(() => Promise.resolve()),
   hasCredentialsForAccount: (
     ...args: Parameters<typeof hasCredentialsForAccount>
   ) => mockHasCredentialsForAccount(...args),

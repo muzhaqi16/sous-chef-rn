@@ -317,7 +317,7 @@ describe('RecipeDetail', () => {
     });
 
     const tree = render(<RecipeDetail />);
-    expect(tree.getByText('Spaghetti Carbonara')).toBeTruthy();
+    expect(tree.getAllByText('Spaghetti Carbonara')[0]).toBeTruthy();
     expect(tree.getByText('A classic Italian dish')).toBeTruthy();
   });
 
@@ -1000,7 +1000,7 @@ describe('RecipeDetail', () => {
 
     const tree = render(<RecipeDetail />);
     // Title is rendered but there's no BackButton in image container
-    expect(tree.getByText('No Image Recipe')).toBeTruthy();
+    expect(tree.getAllByText('No Image Recipe')[0]).toBeTruthy();
   });
 
   it('renders "Adding..." when addingToList is true', () => {
@@ -1223,7 +1223,7 @@ describe('RecipeDetail', () => {
     });
 
     const tree = render(<RecipeDetail />);
-    expect(tree.getByText('Saving Recipe')).toBeTruthy();
+    expect(tree.getAllByText('Saving Recipe')[0]).toBeTruthy();
   });
 
   it('renders with preloading state', () => {
@@ -1369,7 +1369,7 @@ describe('RecipeDetail', () => {
     });
 
     const tree = render(<RecipeDetail />);
-    expect(tree.getByText('With Instructions')).toBeTruthy();
+    expect(tree.getAllByText('With Instructions')[0]).toBeTruthy();
     expect(tree.toJSON()).toBeTruthy();
   });
 
@@ -1447,7 +1447,7 @@ describe('RecipeDetail', () => {
     });
 
     const tree = render(<RecipeDetail />);
-    expect(tree.getByText('Recipe With Ingredients')).toBeTruthy();
+    expect(tree.getAllByText('Recipe With Ingredients')[0]).toBeTruthy();
   });
 
   it('renders marking as cooked state', () => {
@@ -1521,7 +1521,7 @@ describe('RecipeDetail', () => {
     });
 
     const tree = render(<RecipeDetail />);
-    expect(tree.getByText('Cooking Recipe')).toBeTruthy();
+    expect(tree.getAllByText('Cooking Recipe')[0]).toBeTruthy();
   });
 
   it('renders backend instructions with step/text format correctly', () => {
@@ -1674,7 +1674,7 @@ describe('RecipeDetail', () => {
     });
 
     const tree = render(<RecipeDetail />);
-    expect(tree.getByText('No Image Recipe')).toBeTruthy();
+    expect(tree.getAllByText('No Image Recipe')[0]).toBeTruthy();
     // No-image header renders with accessible meal plan button
     expect(tree.getByLabelText('Add to meal plan')).toBeTruthy();
   });
@@ -1751,7 +1751,7 @@ describe('RecipeDetail', () => {
     });
 
     const tree = render(<RecipeDetail />);
-    expect(tree.getByText('Zero Time Recipe')).toBeTruthy();
+    expect(tree.getAllByText('Zero Time Recipe')[0]).toBeTruthy();
     expect(tree.queryByText(/0 min/)).toBeNull();
   });
 });

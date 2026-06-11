@@ -29,6 +29,7 @@ import {
   executeWithLoadingState,
 } from '#/utils/compilerSafeWrappers';
 import { generateEntityId } from '#/utils/generateEntityId';
+import { logger } from '#/utils/environment';
 
 interface UseRecipeShoppingListOptions {
   recipeId: string | undefined;
@@ -154,7 +155,7 @@ export function useRecipeShoppingList({
         }, 'Cache update failed for addRecipeToShoppingList:');
       },
       onError: err => {
-        console.error('Add recipe to shopping list error:', err);
+        logger.error('Add recipe to shopping list error:', err);
         const errorMessage =
           err.message || t('recipes.addIngredientsToListFailed');
         toastService.error(
@@ -226,7 +227,7 @@ export function useRecipeShoppingList({
         }, 'Cache update failed for addItemsToShoppingList:');
       },
       onError: err => {
-        console.error('Batch add items to shopping list error:', err);
+        logger.error('Batch add items to shopping list error:', err);
         const errorMessage =
           err.message || t('recipes.addIngredientsToListFailed');
         toastService.error(
@@ -291,7 +292,7 @@ export function useRecipeShoppingList({
         );
       },
       err => {
-        console.error('Failed to add ingredient:', err);
+        logger.error('Failed to add ingredient:', err);
         toastService.error(t('recipes.addIngredientToListFailed'));
       },
     );
@@ -421,7 +422,7 @@ export function useRecipeShoppingList({
       },
       setAddingToList,
       err => {
-        console.error('Failed to add ingredients:', err);
+        logger.error('Failed to add ingredients:', err);
         toastService.error(t('recipes.addIngredientsToListFailed'));
       },
     );
@@ -484,7 +485,7 @@ export function useRecipeShoppingList({
       },
       setAddingToList,
       err => {
-        console.error('Failed to add selected ingredients:', err);
+        logger.error('Failed to add selected ingredients:', err);
         toastService.error(t('recipes.addIngredientsToListFailed'));
       },
     );
@@ -548,7 +549,7 @@ export function useRecipeShoppingList({
       },
       setCreatingList,
       err => {
-        console.error('Failed to create list and add ingredients:', err);
+        logger.error('Failed to create list and add ingredients:', err);
         toastService.error(t('recipes.createShoppingListFailed'));
       },
     );

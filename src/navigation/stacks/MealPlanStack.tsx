@@ -6,6 +6,10 @@ import {
 import { MealPlanMain } from '#features/mealPlan/screens/MealPlanMain';
 import { CreateMealPlanScreen } from '#features/mealPlan/screens/CreateMealPlanScreen';
 import { RecipeDetail } from '#features/recipes/screens/RecipeDetail';
+import {
+  topInsetScreenLayout,
+  noInsetScreenLayout,
+} from '#navigation/layouts/TopInsetLayout';
 
 export const MealPlanStack = createNativeStackNavigator({
   screenOptions: ({ theme }) => ({
@@ -16,6 +20,9 @@ export const MealPlanStack = createNativeStackNavigator({
     contentStyle: { backgroundColor: theme.colors.background },
     inactiveBehavior: 'none',
   }),
+  // Top safe-area inset is the stack-wide default; RecipeDetail opts out to
+  // draw its hero image edge-to-edge behind the status bar.
+  screenLayout: topInsetScreenLayout,
   screens: {
     MealPlanMain: createNativeStackScreen({
       screen: MealPlanMain,
@@ -26,6 +33,7 @@ export const MealPlanStack = createNativeStackNavigator({
     }),
     RecipeDetail: createNativeStackScreen({
       screen: RecipeDetail,
+      layout: noInsetScreenLayout,
     }),
   },
 });

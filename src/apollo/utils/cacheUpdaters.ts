@@ -1,6 +1,7 @@
 import type { ApolloCache, Reference } from '@apollo/client';
 import { InMemoryCache } from '@apollo/client';
 import { serializeError } from '#/utils/errorSerialization';
+import { logger } from '#/utils/environment';
 
 /**
  * Apollo Cache Update Utilities
@@ -173,7 +174,7 @@ export function createAddToQueryConnectionUpdater<T extends { id: string }>(
         },
       });
     } catch (error) {
-      console.warn(
+      logger.warn(
         `Cache update failed for adding to ${fieldName}:`,
         serializeError(error),
       );
@@ -248,7 +249,7 @@ export function createRemoveFromQueryConnectionUpdater(
         },
       });
     } catch (error) {
-      console.warn(
+      logger.warn(
         `Cache update failed for removing from ${fieldName}:`,
         serializeError(error),
       );
@@ -316,7 +317,7 @@ export function createAddToParentConnectionUpdater<T extends { id: string }>(
       });
 
       if (!parentCacheId) {
-        console.warn(
+        logger.warn(
           `Parent entity not found in cache: ${parentTypename}:${parentId}`,
         );
         return false;
@@ -373,7 +374,7 @@ export function createAddToParentConnectionUpdater<T extends { id: string }>(
         },
       });
     } catch (error) {
-      console.warn(
+      logger.warn(
         `Cache update failed for adding to ${parentTypename}.${connectionField}:`,
         serializeError(error),
       );
@@ -419,7 +420,7 @@ export function createAddToParentArrayUpdater<T extends { id: string }>(
       });
 
       if (!parentCacheId) {
-        console.warn(
+        logger.warn(
           `Parent entity not found in cache: ${parentTypename}:${parentId}`,
         );
         return false;
@@ -453,7 +454,7 @@ export function createAddToParentArrayUpdater<T extends { id: string }>(
         },
       });
     } catch (error) {
-      console.warn(
+      logger.warn(
         `Cache update failed for adding to ${parentTypename}.${arrayField}:`,
         serializeError(error),
       );
@@ -528,7 +529,7 @@ export function createRemoveFromParentConnectionUpdater(
       });
 
       if (!parentCacheId) {
-        console.warn(
+        logger.warn(
           `Parent entity not found in cache: ${parentTypename}:${parentId}`,
         );
         return;
@@ -558,7 +559,7 @@ export function createRemoveFromParentConnectionUpdater(
         },
       });
     } catch (error) {
-      console.warn(
+      logger.warn(
         `Cache update failed for removing from ${parentTypename}.${connectionField}:`,
         serializeError(error),
       );
@@ -602,7 +603,7 @@ export function createRemoveFromParentArrayUpdater(
       });
 
       if (!parentCacheId) {
-        console.warn(
+        logger.warn(
           `Parent entity not found in cache: ${parentTypename}:${parentId}`,
         );
         return;
@@ -636,7 +637,7 @@ export function createRemoveFromParentArrayUpdater(
         }
       }
     } catch (error) {
-      console.warn(
+      logger.warn(
         `Cache update failed for removing from ${parentTypename}.${arrayField}:`,
         serializeError(error),
       );
@@ -682,7 +683,7 @@ export function setCachedFields(
 
     cache.modify({ id: cacheId, fields });
   } catch (error) {
-    console.warn(
+    logger.warn(
       `Cache update failed for ${typename}:${entityId}:`,
       serializeError(error),
     );
@@ -713,7 +714,7 @@ export function safeEvict(
     cache.evict({ id: cacheId });
     gcResetResultCache(cache);
   } catch (error) {
-    console.warn(
+    logger.warn(
       `Cache eviction failed for ${typename}:${itemId}:`,
       serializeError(error),
     );
@@ -744,6 +745,6 @@ export function safeEvictMany(
     }
     gcResetResultCache(cache);
   } catch (error) {
-    console.warn('Batch cache eviction failed:', serializeError(error));
+    logger.warn('Batch cache eviction failed:', serializeError(error));
   }
 }

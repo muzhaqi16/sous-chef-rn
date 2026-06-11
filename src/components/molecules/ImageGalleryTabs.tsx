@@ -25,6 +25,17 @@ interface ImageGalleryTabsProps {
   style?: ViewStyle;
   /** Image height (default: 200) */
   imageHeight?: number;
+  /** How the image fills its band (default: 'contain') */
+  resizeMode?: 'cover' | 'contain';
+  /**
+   * Float the perspective dots over the photo instead of rendering them
+   * in-flow below it. Keeps the component's total height equal to
+   * `imageHeight` — required when a parent (e.g. CollapsingHeroDetail's
+   * content card) overlaps the bottom edge of the hero.
+   */
+  overlayDots?: boolean;
+  /** Bottom offset of the floated dots (overlayDots only, default 8). */
+  dotsBottomOffset?: number;
 }
 
 export const ImageGalleryTabs: React.FC<ImageGalleryTabsProps> = ({
@@ -32,6 +43,9 @@ export const ImageGalleryTabs: React.FC<ImageGalleryTabsProps> = ({
   fallbackImageUrl,
   style,
   imageHeight = 200,
+  resizeMode = 'contain',
+  overlayDots = false,
+  dotsBottomOffset = 8,
 }) => {
   const parsedImages = Array.isArray(imagesRaw)
     ? (imagesRaw as ItemImage[])
@@ -106,7 +120,7 @@ export const ImageGalleryTabs: React.FC<ImageGalleryTabsProps> = ({
             uri={currentImageUrl}
             style={styles.image}
             displaySize={imageHeight}
-            resizeMode="contain"
+            resizeMode={resizeMode}
             onStart={() => {
               setImageLoading(true);
               setImageError(false);
@@ -120,21 +134,35 @@ export const ImageGalleryTabs: React.FC<ImageGalleryTabsProps> = ({
         )}
       </View>
 
-      {/* Dot indicators at bottom */}
-      {!!showTabs && (
-        <View style={styles.dotsContainer}>
-          {tabOptions.map(key => {
-            const isActive = selectedTab === key;
-            return (
+      {/* Dot indicators: in-flow strip below the photo, or floated over its
+          bottom edge (overlayDots) so the component stays imageHeight tall. */}
+      {!!showTabs &&
+        (overlayDots ? (
+          <View
+            style={[styles.dotsOverlay, { bottom: dotsBottomOffset }]}
+            pointerEvents="box-none"
+          >
+            <View style={styles.dotsPill}>
+              {tabOptions.map(key => (
+                <DotItem
+                  key={key}
+                  isActive={selectedTab === key}
+                  onPress={() => setSelectedTab(key)}
+                />
+              ))}
+            </View>
+          </View>
+        ) : (
+          <View style={styles.dotsContainer}>
+            {tabOptions.map(key => (
               <DotItem
                 key={key}
-                isActive={isActive}
+                isActive={selectedTab === key}
                 onPress={() => setSelectedTab(key)}
               />
-            );
-          })}
-        </View>
-      )}
+            ))}
+          </View>
+        ))}
     </View>
   );
 };
@@ -198,6 +226,21 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     paddingVertical: theme.spacing.sm,
     gap: theme.spacing.xs,
+  },
+  dotsOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  // Translucent backdrop keeps the dots legible over arbitrary photos.
+  dotsPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.sm,
+    borderRadius: theme.radii.full,
+    backgroundColor: 'rgba(0, 0, 0, 0.35)',
   },
   dotTouchable: {
     padding: theme.spacing.xs,

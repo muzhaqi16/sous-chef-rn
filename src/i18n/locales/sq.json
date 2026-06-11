@@ -53,7 +53,8 @@
       "User": "Përdoruesi",
       "Item": "Artikulli",
       "Notification": "Njoftimi"
-    }
+    },
+    "queuedChangeSyncFailed": "Ndryshimet nuk u sinkronizuan. Tërhiq poshtë për të rifreskuar."
   },
   "success": {
     "itemAdded": "Artikulli u shtua",
@@ -166,6 +167,15 @@
     "uploading": "Po ngarkohet…",
     "processing": "Po përpunohet…",
     "syncing": "Po sinkronizohet…"
+  },
+  "offlineBanner": {
+    "offlineMode": "Modaliteti offline i aktivizuar — vetëm të dhëna të ruajtura",
+    "deviceOffline": "Je offline — ndryshimet do të sinkronizohen kur të rilidhesh",
+    "deviceOfflinePending_one": "Je offline — {{count}} ndryshim do të sinkronizohet kur të rilidhesh",
+    "deviceOfflinePending_other": "Je offline — {{count}} ndryshime do të sinkronizohen kur të rilidhesh",
+    "apiDown": "Serveri nuk arrihet — ndryshimet do të sinkronizohen kur të rikthehet",
+    "apiDownPending_one": "Serveri nuk arrihet — {{count}} ndryshim do të sinkronizohet kur të rikthehet",
+    "apiDownPending_other": "Serveri nuk arrihet — {{count}} ndryshime do të sinkronizohen kur të rikthehet"
   },
   "empty": {
     "noItems": "Ende pa artikuj",

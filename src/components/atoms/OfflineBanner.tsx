@@ -1,8 +1,12 @@
 import React from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { useAppStore, useIsOnline } from '#store/useAppStore';
+import { useIsOfflineBannerVisible } from '#hooks/app/useIsOfflineBannerVisible';
+import { usePendingMutationCount } from '#/hooks/offline/usePendingMutationCount';
 import { Text } from '#components/atoms/Text';
 
 // The banner icon matches the warning text color, which differs between light
@@ -20,42 +24,64 @@ const BannerIcon = withUnistyles(Ionicons, theme => ({
  * Renders a slim warning bar at the top of the screen so users
  * know their actions are being queued locally rather than synced.
  *
- * Place inside the SafeAreaView, above the navigation tree.
+ * Rendered as the first child of the app root (above the navigation tree). It
+ * carries its own top safe-area inset — an app-background strip above the
+ * warning bar — so the status-bar area stays app-colored while the banner sits
+ * just below it. `OfflineBannerInsetProvider` re-publishes the insets with
+ * `top: 0` for the subtree below, so nothing under the banner double-insets.
  */
 export const OfflineBanner: React.FC = () => {
+  const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   const isOnline = useIsOnline();
-  const offlineModeEnabled = useAppStore(state => state.offlineModeEnabled);
+  const apiReachable = useAppStore(state => state.apiReachable);
+  const pendingCount = usePendingMutationCount();
+  const visible = useIsOfflineBannerVisible();
 
-  if (isOnline && !offlineModeEnabled) return null;
+  if (!visible) return null;
 
+  // Priority: device offline > API unreachable while online (reachability
+  // breaker open) > user-toggled offline mode.
   const isDeviceOffline = !isOnline;
-  const iconName = isDeviceOffline
-    ? 'cloud-offline-outline'
-    : 'airplane-outline';
+  const isApiDown = isOnline && apiReachable === false;
+  const iconName =
+    isDeviceOffline || isApiDown ? 'cloud-offline-outline' : 'airplane-outline';
+
   const message = isDeviceOffline
-    ? "You're offline — changes will sync when reconnected"
-    : 'Offline mode enabled — using cached data only';
+    ? pendingCount > 0
+      ? t('offlineBanner.deviceOfflinePending', { count: pendingCount })
+      : t('offlineBanner.deviceOffline')
+    : isApiDown
+    ? pendingCount > 0
+      ? t('offlineBanner.apiDownPending', { count: pendingCount })
+      : t('offlineBanner.apiDown')
+    : t('offlineBanner.offlineMode');
 
   return (
-    <View
-      style={styles.container}
-      accessibilityRole="alert"
-      accessibilityLiveRegion="polite"
-    >
-      <BannerIcon name={iconName} size={16} />
-      <Text
-        size="xs"
-        weight="medium"
-        maxFontSizeMultiplier={1.5}
-        style={styles.text}
+    <View style={[styles.insetWrap, { paddingTop: insets.top }]}>
+      <View
+        style={styles.container}
+        accessibilityRole="alert"
+        accessibilityLiveRegion="polite"
       >
-        {message}
-      </Text>
+        <BannerIcon name={iconName} size={16} />
+        <Text
+          size="xs"
+          weight="medium"
+          maxFontSizeMultiplier={1.5}
+          style={styles.text}
+        >
+          {message}
+        </Text>
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
+  insetWrap: {
+    backgroundColor: theme.colors.background,
+  },
   container: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -1,4 +1,4 @@
-import { ApolloLink, Observable } from '@apollo/client';
+import { ApolloLink, Observable, type DefaultContext } from '@apollo/client';
 import { getMainDefinition } from '@apollo/client/utilities';
 import { Kind, type DocumentNode } from 'graphql';
 import { generateId } from '#/utils/generateId';
@@ -149,8 +149,10 @@ export const createQueueLink = () => {
 };
 
 /**
- * Enqueue a mutation and complete the observable with its optimistic response
- * (marked `queued`) so cache updaters apply and the UI shows immediate feedback.
+ * Enqueue a mutation and complete the observable with a null-field result
+ * (marked `queued`) — the UI change comes from the hook's own permanent cache
+ * write, made before firing (the house local-first pattern; Apollo's
+ * `optimisticResponse` is never used here and never reaches link context).
  * Shared by the offline and online-network-error paths.
  */
 function enqueueAndComplete(
@@ -170,7 +172,6 @@ function enqueueAndComplete(
     }
 
     const operationContext = operation.getContext();
-    const optimisticResponse = operationContext.optimisticResponse;
     const operationName = operation.operationName || 'UnknownMutation';
 
     const queuedMutation: QueuedMutation = {
@@ -179,8 +180,7 @@ function enqueueAndComplete(
       operationName,
       mutation: operation.query,
       variables: operation.variables,
-      optimisticResponse: optimisticResponse || null,
-      context: operationContext,
+      context: pickPersistedContext(operationContext),
       status: QueueStatus.PENDING,
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -198,22 +198,36 @@ function enqueueAndComplete(
     // into the unselected subfields). The actual UI change comes from each hook's
     // own optimistic cache write; the `queued` extension marks this as deferred.
     observer.next({
-      data: optimisticResponse ?? buildQueuedResultData(operation.query),
+      data: buildQueuedResultData(operation.query),
       errors: undefined,
       extensions: { queued: true },
     });
     observer.complete();
 
-    logger.info(
-      `Queue Link: Queued ${operationName} (${reason}), ${
-        optimisticResponse
-          ? 'with optimistic response'
-          : 'without optimistic response'
-      }`,
-    );
+    logger.info(`Queue Link: Queued ${operationName} (${reason})`);
   } catch (error) {
     observer.error(error);
   }
+}
+
+/**
+ * The only context keys a replay reads: `operationId` (idempotency key for
+ * granular pantry-delta syncs, read by `convertToSyncMutation`) and
+ * `localFirst` (marks the entry as an opt-in). The full Apollo operation
+ * context also carries client internals that don't survive persistence —
+ * functions are silently dropped by JSON serialization, and a circular value
+ * would make the MMKV write throw inside `saveQueue`, silently losing the
+ * enqueue. Persist only the fixed, serializable subset.
+ */
+function pickPersistedContext(context: DefaultContext): DefaultContext {
+  const persisted: DefaultContext = {};
+  if (context.localFirst !== undefined) {
+    persisted.localFirst = context.localFirst;
+  }
+  if (context.operationId !== undefined) {
+    persisted.operationId = context.operationId;
+  }
+  return persisted;
 }
 
 /**

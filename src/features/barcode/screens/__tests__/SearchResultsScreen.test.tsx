@@ -65,7 +65,7 @@ jest.mock('../../components/LoadingState', () => ({
   },
 }));
 
-jest.mock('../../components/ErrorState', () => ({
+jest.mock('#components/base/ErrorState', () => ({
   ErrorState: ({ message }: { message: string }) => {
     const { Text } = require('react-native');
     return <Text>{message}</Text>;

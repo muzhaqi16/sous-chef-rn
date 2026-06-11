@@ -237,6 +237,13 @@ export function usePantryScreen() {
   const isLoadingInitial =
     (!isReady || loading) && !pantryError && pantryItems.length === 0;
 
+  // True while a SERVER-mode tab/sort switch is re-fetching the filtered page —
+  // the previous tab's items linger until it lands, so the UI can show a
+  // skeleton over them instead of the stale list. Client mode filters the
+  // already-loaded set locally, so it never refetches on switch and this stays
+  // false (the switch is instant).
+  const itemsFetching = serverMode && loading;
+
   const userName =
     authUser?.name || authUser?.firstName || authUser?.lastName || 'there';
 
@@ -328,6 +335,8 @@ export function usePantryScreen() {
     // Loading states
     loading,
     isLoadingInitial,
+    itemsFetching,
+    serverMode,
     isRefreshing,
 
     // Search

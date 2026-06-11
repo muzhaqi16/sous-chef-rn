@@ -416,6 +416,8 @@ function PantryMainContent({
         hasMore={screen.searchActive ? false : screen.hasMore}
         refreshing={screen.isRefreshing}
         loading={screen.isLoadingInitial}
+        fetching={screen.itemsFetching}
+        serverMode={screen.serverMode}
         onHomeBadgeLayout={setHomeBadgeRect}
         onSettingsIconLayout={setSettingsIconRect}
         scrollHandler={scrollHandler}

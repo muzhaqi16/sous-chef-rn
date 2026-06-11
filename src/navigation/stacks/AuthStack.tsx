@@ -8,8 +8,12 @@ import { LoginScreen } from '#screens/auth/LoginScreen';
 import { SignUpScreen } from '#screens/auth/SignUpScreen';
 import { ForgotPasswordScreen } from '#screens/auth/ForgotPasswordScreen';
 import { CodeVerificationScreen } from '#screens/auth/CodeVerificationScreen';
+import { topInsetScreenLayout } from '#navigation/layouts/TopInsetLayout';
 
 export const AuthStack = createNativeStackNavigator({
+  // Top safe-area inset, applied per screen (it's no longer global — see
+  // TopInsetLayout). No immersive screen here, so inset every screen.
+  screenLayout: topInsetScreenLayout,
   screenOptions: ({ theme }) => ({
     headerShown: false,
     animation: 'slide_from_right',

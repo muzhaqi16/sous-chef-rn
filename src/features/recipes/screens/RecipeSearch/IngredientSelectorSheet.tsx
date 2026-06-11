@@ -14,7 +14,7 @@ import {
   BottomSheetSearchBar,
   type BottomSheetSearchBarRef,
 } from '#components/molecules/BottomSheetSearchBar';
-import { IngredientSelectorProvider } from './IngredientSelectorContext';
+import { IngredientSelectionProvider } from '../../context/IngredientSelectionContext';
 import {
   renderIngredientItem,
   ingredientKeyExtractor,
@@ -125,7 +125,7 @@ export const IngredientSelectorSheet = forwardRef<
         )}
       </View>
       {/* Scrollable list — direct child of BottomSheetModal */}
-      <IngredientSelectorProvider
+      <IngredientSelectionProvider
         selectedIngredients={screen.selectedIngredients}
         toggleIngredient={screen.toggleIngredient}
       >
@@ -167,7 +167,7 @@ export const IngredientSelectorSheet = forwardRef<
             )
           }
         />
-      </IngredientSelectorProvider>
+      </IngredientSelectionProvider>
     </BottomSheetModal>
   );
 });

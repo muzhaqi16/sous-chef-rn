@@ -1,6 +1,7 @@
 import type { DocumentNode } from 'graphql';
 import { storage } from '#storage/mmkv';
 import { QueuedMutation, QueueStats, QueueStatus } from './types';
+import { logger } from '#/utils/environment';
 
 const QUEUE_STORAGE_KEY = 'apollo-mutation-queue';
 const CURRENT_USER_KEY = 'apollo-queue-current-user';
@@ -21,6 +22,39 @@ export class QueueStore {
   // PERFORMANCE: In-memory cache to avoid repeated MMKV reads and JSON parsing
   // Write-through pattern: cache is updated on every write and invalidated on user change
   private cache: QueuedMutation[] | null = null;
+
+  // In-memory mirror of CURRENT_USER_KEY (undefined = not yet read from
+  // storage) and the memoized pending-ids set. getPendingClientIds() runs on
+  // EVERY itemsConnection merge (cache.ts), so without these each connection
+  // write costs a sync MMKV read plus a Set rebuild.
+  private currentUserId: string | null | undefined = undefined;
+  private pendingClientIds: Set<string> | null = null;
+
+  // Subscribers notified on every queue change (add/remove/update/clear and
+  // user switches). Lets UI read live queue state — e.g. the offline banner's
+  // pending-changes count — via useSyncExternalStore without polling MMKV.
+  private listeners = new Set<() => void>();
+
+  /**
+   * Subscribe to queue changes. Returns an unsubscribe function.
+   * `useSyncExternalStore`-compatible.
+   */
+  subscribe(listener: () => void): () => void {
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
+  private notifyListeners(): void {
+    this.listeners.forEach(listener => {
+      try {
+        listener();
+      } catch (error) {
+        logger.error('Queue: change listener threw:', error);
+      }
+    });
+  }
 
   /**
    * Load all mutations from storage
@@ -53,7 +87,7 @@ export class QueueStore {
 
       return queue;
     } catch (error) {
-      console.error('Failed to load queue from storage:', error);
+      logger.error('Failed to load queue from storage:', error);
       return [];
     }
   }
@@ -79,15 +113,20 @@ export class QueueStore {
       // Write-through: update cache immediately
       this.cache = mutations;
     } catch (error) {
-      console.error('Failed to save queue to storage:', error);
+      logger.error('Failed to save queue to storage:', error);
     }
+    this.pendingClientIds = null;
+    this.notifyListeners();
   }
 
   /**
    * Get the current user ID
    */
   getCurrentUserId(): string | null {
-    return storage.getString(CURRENT_USER_KEY) || null;
+    if (this.currentUserId === undefined) {
+      this.currentUserId = storage.getString(CURRENT_USER_KEY) || null;
+    }
+    return this.currentUserId;
   }
 
   /**
@@ -95,6 +134,11 @@ export class QueueStore {
    */
   setCurrentUserId(userId: string): void {
     storage.set(CURRENT_USER_KEY, userId);
+    this.currentUserId = userId;
+    this.pendingClientIds = null;
+    // The pending count is user-scoped, so a user switch changes it even
+    // though the queue contents didn't.
+    this.notifyListeners();
   }
 
   /**
@@ -102,6 +146,9 @@ export class QueueStore {
    */
   clearCurrentUserId(): void {
     storage.remove(CURRENT_USER_KEY);
+    this.currentUserId = null;
+    this.pendingClientIds = null;
+    this.notifyListeners();
   }
 
   /**
@@ -129,7 +176,7 @@ export class QueueStore {
 
         if (existingIndex !== -1) {
           // Replace existing mutation with new one (final position)
-          console.log(
+          logger.debug(
             `🔄 Queue: Coalescing move mutations for item ${itemId} - keeping final position`,
           );
           queue[existingIndex] = mutation;
@@ -142,14 +189,14 @@ export class QueueStore {
     // Regular add logic for non-move mutations or first move
     // Check queue size limit
     if (queue.length >= 100) {
-      console.warn('Queue size limit reached, removing oldest mutation');
+      logger.warn('Queue size limit reached, removing oldest mutation');
       queue.shift(); // Remove oldest
     }
 
     queue.push(mutation);
     this.saveQueue(queue);
 
-    console.log(
+    logger.debug(
       `📥 Queue: Added mutation ${mutation.operationName} (${mutation.id}) for user ${mutation.userId}`,
     );
   }
@@ -164,7 +211,7 @@ export class QueueStore {
 
     if (filtered.length < initialLength) {
       this.saveQueue(filtered);
-      console.log(`📤 Queue: Removed mutation ${mutationId}`);
+      logger.debug(`📤 Queue: Removed mutation ${mutationId}`);
       return true;
     }
 
@@ -226,18 +273,21 @@ export class QueueStore {
    * when no user is set or the queue is empty.
    */
   getPendingClientIds(): Set<string> {
-    const userId = this.getCurrentUserId();
-    if (!userId) return new Set();
+    if (this.pendingClientIds) return this.pendingClientIds;
 
     const ids = new Set<string>();
-    for (const mutation of this.getPendingMutationsForUser(userId)) {
-      const variables = mutation.variables as
-        | { id?: unknown; input?: { id?: unknown; itemId?: unknown } }
-        | undefined;
-      const candidate =
-        variables?.input?.id ?? variables?.input?.itemId ?? variables?.id;
-      if (typeof candidate === 'string' && candidate) ids.add(candidate);
+    const userId = this.getCurrentUserId();
+    if (userId) {
+      for (const mutation of this.getPendingMutationsForUser(userId)) {
+        const variables = mutation.variables as
+          | { id?: unknown; input?: { id?: unknown; itemId?: unknown } }
+          | undefined;
+        const candidate =
+          variables?.input?.id ?? variables?.input?.itemId ?? variables?.id;
+        if (typeof candidate === 'string' && candidate) ids.add(candidate);
+      }
     }
+    this.pendingClientIds = ids;
     return ids;
   }
 
@@ -261,7 +311,7 @@ export class QueueStore {
 
     const removedCount = initialLength - filtered.length;
     if (removedCount > 0) {
-      console.log(
+      logger.debug(
         `🧹 Queue: Cleared ${removedCount} mutations for user ${userId}`,
       );
     }
@@ -275,7 +325,20 @@ export class QueueStore {
   clearAllQueues(): void {
     storage.remove(QUEUE_STORAGE_KEY);
     this.cache = null; // Invalidate cache
-    console.log('🧹 Queue: Cleared all mutations');
+    this.pendingClientIds = null;
+    logger.debug('🧹 Queue: Cleared all mutations');
+    this.notifyListeners();
+  }
+
+  /**
+   * Number of PENDING mutations for the current user — the "changes waiting
+   * to sync" count surfaced in the offline banner. Returns 0 when no user is
+   * set (logged out).
+   */
+  getPendingCount(): number {
+    const userId = this.getCurrentUserId();
+    if (!userId) return 0;
+    return this.getMutationsForUser(userId, QueueStatus.PENDING).length;
   }
 
   /**
@@ -347,7 +410,7 @@ export class QueueStore {
 
     if (filtered.length < initialLength) {
       this.saveQueue(filtered);
-      console.log(
+      logger.debug(
         `🧹 Queue: Cleaned up ${
           initialLength - filtered.length
         } old successful mutations`,
@@ -362,8 +425,10 @@ export class QueueStore {
    */
   invalidateCache(): void {
     this.cache = null;
+    this.pendingClientIds = null;
+    this.currentUserId = undefined;
     if (__DEV__) {
-      console.log('🔄 Queue: Cache invalidated');
+      logger.debug('🔄 Queue: Cache invalidated');
     }
   }
 }

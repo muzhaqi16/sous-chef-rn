@@ -7,6 +7,7 @@ import {
   createRemoveFromParentConnectionUpdater,
   createRemoveFromParentArrayUpdater,
 } from '../cacheUpdaters';
+import { logger } from '#/utils/environment';
 
 /** Mock Apollo cache exposing the methods the updaters touch as jest mocks. */
 type MockedCache = ApolloCache & {
@@ -519,7 +520,7 @@ describe('createAddToParentConnectionUpdater', () => {
     add(cache, 'p-missing', { id: 'pi-1', __typename: 'PantryItem' });
 
     expect(cache.modify).not.toHaveBeenCalled();
-    expect(console.warn).toHaveBeenCalledWith(
+    expect(logger.warn).toHaveBeenCalledWith(
       expect.stringContaining('Parent entity not found'),
     );
   });
@@ -658,7 +659,7 @@ describe('createAddToParentArrayUpdater', () => {
     });
 
     expect(cache.modify).not.toHaveBeenCalled();
-    expect(console.warn).toHaveBeenCalledWith(
+    expect(logger.warn).toHaveBeenCalledWith(
       expect.stringContaining('Parent entity not found'),
     );
   });
@@ -818,7 +819,7 @@ describe('createRemoveFromParentConnectionUpdater', () => {
     remove(cache, 'p-missing', 'pi-1');
 
     expect(cache.modify).not.toHaveBeenCalled();
-    expect(console.warn).toHaveBeenCalledWith(
+    expect(logger.warn).toHaveBeenCalledWith(
       expect.stringContaining('Parent entity not found'),
     );
   });
@@ -956,7 +957,7 @@ describe('createRemoveFromParentArrayUpdater', () => {
     remove(cache, 'p-missing', 'pi-1');
 
     expect(cache.modify).not.toHaveBeenCalled();
-    expect(console.warn).toHaveBeenCalledWith(
+    expect(logger.warn).toHaveBeenCalledWith(
       expect.stringContaining('Parent entity not found'),
     );
   });

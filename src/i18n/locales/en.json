@@ -53,7 +53,8 @@
       "User": "user",
       "Item": "item",
       "Notification": "notification"
-    }
+    },
+    "queuedChangeSyncFailed": "Couldn't sync changes. Pull to refresh."
   },
   "success": {
     "itemAdded": "Item added successfully",
@@ -166,6 +167,15 @@
     "uploading": "Uploading…",
     "processing": "Processing…",
     "syncing": "Syncing…"
+  },
+  "offlineBanner": {
+    "offlineMode": "Offline mode enabled — using cached data only",
+    "deviceOffline": "You're offline — changes will sync when reconnected",
+    "deviceOfflinePending_one": "You're offline — {{count}} change will sync when reconnected",
+    "deviceOfflinePending_other": "You're offline — {{count}} changes will sync when reconnected",
+    "apiDown": "Can't reach the server — changes will sync when it's back",
+    "apiDownPending_one": "Can't reach the server — {{count}} change will sync when it's back",
+    "apiDownPending_other": "Can't reach the server — {{count}} changes will sync when it's back"
   },
   "empty": {
     "noItems": "No items yet",

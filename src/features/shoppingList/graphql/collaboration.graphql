@@ -49,6 +49,7 @@ mutation AcceptShoppingListInvite($input: AcceptShoppingListInviteInput!) {
     __typename
     ... on AcceptShoppingListInvitePayload {
       collaborator {
+        id
         ...ShoppingListCollaboratorFragment
         canEdit
         canInviteOthers
@@ -104,6 +105,7 @@ subscription CollaborationChanges($listId: ID!) {
   collaborationChanged(listId: $listId) {
     mutation
     collaborator {
+      id
       ...useShoppingListSubscriptions_collaborator
       canEdit
       invitedAt

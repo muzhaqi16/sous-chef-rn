@@ -419,6 +419,20 @@ type's key fields) so the masked ref shape
 `{ __typename, id, $fragmentRefs }` and a bare `{ __typename, id }`
 produce the same cache lookup — no manual extraction needed.
 
+**That masked ref only carries `id` if the operation selects `id` directly.**
+Under `dataMasking`, a named fragment spread (`...Frag`) is hidden from its
+parent — the parent sees only the fields it selects itself plus `__typename`.
+So a field written as `shoppingListItem(id: $id) { ...ItemDetail_shoppingListItem }`
+masks to just `{ __typename }`: the `id` is inside the (masked) fragment. The
+moment that object reaches `useFragment` / `cache.readFragment` /
+`cache.identify` — or any code reads `.id` off it — key-field extraction throws
+`Missing field 'id' while extracting keyFields…`. **Rule: any selection set that
+spreads a fragment identifying its type must also select `id` directly**
+(e.g. `shoppingListItem(id: $id) { id ...ItemDetail_shoppingListItem }`). It's
+free — `id` is already fetched inside the fragment; selecting it at the parent
+level just keeps the key field visible after masking. Enforced for every
+operation and fragment by `__tests__/graphql/maskingIdentity.test.ts`.
+
 Pattern B template (preferred for new sheets/detail components):
 
 ```tsx

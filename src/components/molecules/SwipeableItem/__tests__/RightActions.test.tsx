@@ -14,11 +14,11 @@ jest.mock('#/services/haptic/HapticService', () => ({
   },
 }));
 
-jest.mock('../AnimatedActionButton', () => {
+jest.mock('../SwipeActionButton', () => {
   const RN = require('react-native');
   const R = require('react');
   return {
-    AnimatedActionButton: ({ onPress, icon, testID }: ActionButtonProps) =>
+    SwipeActionButton: ({ onPress, icon, testID }: ActionButtonProps) =>
       R.createElement(
         RN.Pressable,
         { onPress, testID: testID || `action-btn-${icon}` },

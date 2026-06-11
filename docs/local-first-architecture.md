@@ -1,6 +1,6 @@
 # Local-First Architecture
 
-**Status:** Implemented (item creates/removes across pantry & shopping). Last validated 2026-06-04
+**Status:** Implemented (item creates/removes across pantry & shopping). Last validated 2026-06-10
 against the codebase.
 
 **Goal.** A user can add, remove, and adjust items on their own data **instantly, with no network
@@ -138,12 +138,39 @@ payload** (e.g. `ConflictError` / `ValidationError`) is a rejection: revert the 
   `queueManager.requestDrain()` (covers API-recovery where `isOnline` never flipped). GraphQL/validation
   errors pass through to the hook. `NEVER_QUEUE_OPERATIONS` (auth) forward straight to transport.
 - **`queueStore`** persists the queue — including each mutation `DocumentNode` and variables — to MMKV,
-  user-scoped. Survives restart.
-- **`queueManager`** replays with batching, exponential backoff + jitter, token-refresh-before-replay,
-  per-entity sequential ordering, and move-coalescing. Triggers: `useOnlineQueueSync` (offline→online),
-  `useAppStateLifecycle` (background→active), `onUserChange`, and the drain-on-recovery above. A
-  network/server error that exhausts in-run retries stays **PENDING** (never silently FAILED); only a real
-  (validation) error → FAILED.
+  user-scoped. Survives restart. The persisted `context` is an **allowlisted subset** (`localFirst`,
+  `operationId`) — the live Apollo operation context carries client internals that don't survive JSON
+  serialization (functions silently drop; a circular value would make the MMKV write throw and lose the
+  enqueue). The store also exposes `subscribe()` + `getPendingCount()` (`useSyncExternalStore`-compatible)
+  so UI — the offline banner's pending-changes count — reads live queue state without polling.
+- **`queueManager`** replays **strictly in insertion order** — the queue is append-only from one
+  user's actions, so insertion order IS causal order: a parent create (offline-created
+  list/pantry/plan) always lands before any dependent referencing its client-minted id, with no
+  grouping or dependency analysis. Move-coalescing happens at **enqueue time** in
+  `queueStore.addMutation` (latest move per item wins). Retries use exponential backoff + jitter;
+  an auth error forces ONE token refresh and then retries through the same bounded counter (a
+  failed refresh → AUTH_ERROR + failure handler — never an unbounded auth-retry loop). Triggers:
+  `useOnlineQueueSync` (offline→online), `useAppStateLifecycle` (background→active), `onUserChange`,
+  and the drain-on-recovery above. A network/server error that exhausts in-run retries stays
+  **PENDING** (never silently FAILED); only a real (validation) error → FAILED.
+- **Failed-mutation entity identity is derived from the cache, not maintained.** The failure
+  handler needs the entity's `__typename` to evict it; `extractEntityInfo` reads it off the
+  normalized cache key (`TypeName:<clientId>`) at failure time — the hook already wrote the
+  optimistic entity there before firing, and client ids are globally-unique cuids, so the cache is
+  the source of truth. No per-operation map exists; an entity that isn't cached (already evicted,
+  or no single entity) yields null and the handler skips the evict — the next refetch heals.
+- **Replayed results are payload-classified** (`classifyReplayResult`, `queueErrorPolicy.ts`) — the
+  replay-side counterpart of the foreground `classifyCreateResult` rule. Under `errorPolicy: 'all'` a
+  server refusal RESOLVES as an error union member (`ValidationError` / `ConflictError` / …) rather than
+  throwing; without classification a rejected replay would be marked SUCCESS and dequeued while the
+  optimistic cache write lingers. A rejected payload routes through the permanent-failure pipeline
+  (revert + toast + dequeue, via `ReplayRejectedError` → the registered failure handler). A
+  `ConflictError` on a replayed **create** is **converged** — every queued create carries its
+  client-minted id, so a duplicate-id conflict proves an earlier attempt already committed; dequeue as
+  success.
+- **Queue-health telemetry** at each drain: `offline_queue_depth` + `offline_queue_oldest_age_ms`
+  gauges, `offline_queue_conflicts_total` (server-wins version conflicts) and
+  `offline_queue_permanent_failures_total` counters.
 
 ### Two-tier replay (`convertToSyncMutation`)
 
@@ -152,7 +179,8 @@ for qty/move). Replay is single-arg with `clientId` **inside** `input` (the 1-ar
 
 | Tier | Ops | Replay |
 |---|---|---|
-| **Sync-mapped (fast path)** | `CreatePantryItem`, `UpdatePantryItem`, `DeletePantryItem`, `AddItemToShoppingList`, `UpdateShoppingListItem`, `UpdateShoppingListItemQuantity`, `ToggleShoppingListItemPurchased`, `RemoveItemFromShoppingList`, `MoveShoppingListItem`, `ReorderShoppingListItems` — **plus the specialized single-item creates** `BarcodeCreatePantryItem` (→ `SyncPantryItem`) and `BarcodeAddItemToShoppingList` / `AddItemToShoppingListFromFilteredPantry` / `AddItemToShoppingListFromPantryItem` (→ `SyncShoppingListItem`) | dedicated `Sync*` mutation, idempotent by `clientId` |
+| **Sync-mapped (fast path)** | `CreatePantryItem`, `UpdatePantryItem`, `DeletePantryItem`, `AddItemToShoppingList`, `UpdateShoppingListItem`, `UpdateShoppingListItemQuantity`, `ToggleShoppingListItemPurchased`, `RemoveItemFromShoppingList`, `MoveShoppingListItem` — **plus the specialized single-item creates** `BarcodeCreatePantryItem` (→ `SyncPantryItem`) and `BarcodeAddItemToShoppingList` / `AddItemToShoppingListFromFilteredPantry` / `AddItemToShoppingListFromPantryItem` (→ `SyncShoppingListItem`) | dedicated `Sync*` mutation, idempotent by `clientId` |
+| **Sync-mapped pantry deltas** | `AdjustPantryItemQuantity`, `RestockPantryItem`, `CreatePantryItemUsage` (consume), `OpenPantryItemBatch`, `WastePantryItemBatch` | dedicated `Sync*` delta mutation, idempotent by per-operation `operationId` (from `context.operationId`, persisted with the queue entry) — NOT by entity id, since deltas are relative |
 | **Fallback (replay original)** | `AddItemToShoppingListFromRecipe`, `CreateShoppingListItemFromRecipeIngredient`, `AddItemsToShoppingList` (batch) | re-sends the **original** mutation; relies on the server's direct-create idempotency (find-by-id → update, by the client-supplied `id` / per-item `id`) |
 
 Both tiers are duplicate-safe because the row's PK is the client cuid. The specialized single-item
@@ -230,10 +258,12 @@ query-blocking, orthogonal to connectivity.
 ## 9. Failure handling & UX
 
 - **Offline banner.** `OfflineBanner` (`components/atoms/OfflineBanner.tsx`) is mounted in `App.tsx`
-  (inside the SafeAreaView, above `<Navigation />`). It shows "You're offline — changes will sync when
-  reconnected" when the device is offline (or "offline mode" when toggled on). It keys on `isOnline`
-  (device internet), so it does **not** cover the API-down-while-online case, and shows no
-  pending-change count — those are the natural next iteration.
+  (inside the SafeAreaView, above `<Navigation />`). It covers **both** unreachable cases — device
+  offline AND API-down-while-online (`apiReachable === false`, the reachability breaker) — plus the
+  user-toggled offline mode, with distinct i18n'd messages (`offlineBanner.*` keys, pluralized). When
+  the queue has PENDING entries it shows the **pending-changes count** ("You're offline — 3 changes
+  will sync when reconnected"), read live via `usePendingMutationCount()`
+  (`useSyncExternalStore` over `queueStore.subscribe`).
 - **Permanent failure.** `setFailureHandler` is registered exactly once, at module scope in `App.tsx`
   (`handleFailedMutation`): it evicts the stale optimistic entity, clears persisted optimistic fields,
   toasts the user, and **removes the entry from the queue**. `useOnlineQueueSync` intentionally does
@@ -241,8 +271,7 @@ query-blocking, orthogonal to connectivity.
   one would shadow the full handler). So a permanently-failed (validation/4xx) mutation is fully
   reverted and dequeued.
 - **Network errors** no longer raise a blocking alert for opted-in mutations — they queue silently.
-- **Not yet shipped:** an API-reachability-aware indicator and a pending-changes count; a uniform
-  offline-degraded affordance for online-only features.
+- **Not yet shipped:** a uniform offline-degraded affordance for online-only features.
 
 ## 10. Scope
 
@@ -270,7 +299,7 @@ query-blocking, orthogonal to connectivity.
   `storageLocationsConnection(first: PAGE_SIZE.COMPACT)` variants, plus the home's `pantries` /
   `pantriesConnection` membership, and the `Query.pantry` cache redirect serves by-id reads — so a
   pantry created offline is immediately usable and items added to it queue behind its create
-  (`CreatePantry` is in `PARENT_CREATE_OPERATIONS`).
+  (strict FIFO replay orders the pantry create before its items).
 - **Shopping list update / delete / clear** (`useUpdateShoppingList`, `useDeleteShoppingList`,
   `useClearShoppingListItems`) — update merges over a snapshot; delete removes edge + entity up front
   and restores the snapshot on rejection; clear keeps its eager cache eviction and refetches on a
@@ -285,11 +314,13 @@ query-blocking, orthogonal to connectivity.
   rejection), update + ingredients (`RecipeForm` edit; queue-only — both ops queue atomically and
   replay FIFO against the same recipe id, but the local display catches up only when the replay syncs).
 
-**In scope but not yet opted in:**
-- **Storage location create** (`useCreateStorageLocation`) — server accepts `id`; hook still online-only.
-- Pantry **granular ops** (adjust-qty, open/waste batch, consume/waste/restock) — these are deltas, not
-  absolute values, and have **no `Sync*` mapping**; the fallback would replay the original delta, which is
-  not idempotent. Need server-side Sync mappings or absolute-value reframing first. **Do not opt in yet.**
+- **Storage location create** (`useCreateStorageLocation`) — permanent write before firing +
+  `context.localFirst`; plain-create tier keyed by the client-minted id.
+- **Pantry granular deltas** (`AdjustPantryItemQuantity`, `RestockPantryItem`, `CreatePantryItemUsage`,
+  `OpenPantryItemBatch`, `WastePantryItemBatch`) — now **sync-mapped** via dedicated `Sync*` delta
+  mutations, idempotent by a per-operation `operationId` carried in `context.operationId` (deltas are
+  relative, so entity-id idempotency can't dedupe them; the operation id can). The `operationId` is on
+  the persisted-context allowlist, so it survives an app kill between enqueue and replay.
 
 **Online-only (degrade, not queued):** auth, invites/share-codes/collaboration/membership, image upload,
 barcode/smart-search lookup, recipe discovery/AI, recipe reviews, recipe favorite/saved-metadata/folders,
@@ -305,10 +336,10 @@ This is **enforced in code**, not just convention: `queueLink` only queues allow
 (`localFirst` opt-ins + `Sync*`-mapped ops) when the device is offline; everything else fails fast with
 a network error so the hook's normal error path shows a truthful failure and nothing ghost-replays.
 
-**Out of current scope (own server work pending):** profile, notifications. `PARENT_CREATE_OPERATIONS`
-in `queueManager.ts` (`CreateShoppingList`, `CreateMealPlan`, `CreateRecipe`) forces strict FIFO replay
-for any batch containing a parent-entity create, so dependents queued behind it (items in a new list,
-meals in a new plan, meals referencing a new recipe) always replay after their parent exists.
+**Out of current scope (own server work pending):** profile, notifications. Replay is strictly FIFO
+for the whole queue, so dependents queued behind a parent-entity create (items in a new list, meals
+in a new plan, meals referencing a new recipe, items in a new pantry) always replay after their
+parent exists — ordering is correct by construction, no special-casing.
 
 ## 11. Server contract (verified)
 
@@ -360,9 +391,10 @@ meals in a new plan, meals referencing a new recipe) always replay after their p
 - **Identity is client-generated cuid2** (planned §8), not temp-id + reconciliation. This removed the
   largest planned subsystem — the `idMapping` / `resolveIds` / temp-id machinery has been fully deleted
   (no references remain in the codebase).
-- **Offline-UX partially shipped** (planned Phase 4): the device-offline `OfflineBanner` is mounted (§9);
-  the API-reachability-aware indicator and pending-changes count are not.
-- **Granular pantry deltas deliberately deferred** — no idempotent Sync mapping yet.
+- **Offline-UX shipped** (planned Phase 4): the `OfflineBanner` covers device-offline, API-down, and
+  offline mode, with a live pending-changes count (§9).
+- **Granular pantry deltas** were initially deferred (no idempotent Sync mapping); since shipped via
+  `operationId`-keyed `Sync*` delta mutations (§5, §10).
 
 ## 14. Key files
 
@@ -372,6 +404,8 @@ meals in a new plan, meals referencing a new recipe) always replay after their p
 | Queue intercept | `src/apollo/offlineQueue/queueLink.ts` |
 | Queue store (MMKV) | `src/apollo/offlineQueue/queueStore.ts` |
 | Replay + `convertToSyncMutation` | `src/apollo/offlineQueue/queueManager.ts` |
+| Replay payload classification + retry error policy | `src/apollo/offlineQueue/queueErrorPolicy.ts` |
+| Pending-changes count (banner) | `src/hooks/offline/usePendingMutationCount.ts` |
 | Queue triggers / failure toast | `src/hooks/app/useOnlineQueueSync.ts` |
 | Field-level persistence | `src/apollo/offline/OptimisticDataPersistence.ts`, `src/hooks/offline/useOptimisticDataRestoration.ts` |
 | Cache persistence (debounce + `flushPending`) | `src/apollo/offline/ApolloCachePersistence.ts`, `src/apollo/client.ts` (`flushCachePersistence`) |

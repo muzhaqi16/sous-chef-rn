@@ -1,7 +1,7 @@
 'use no memo';
 import React from 'react';
 import { InMemoryCache } from '@apollo/client';
-import { screen, act } from '@testing-library/react-native';
+import { screen, act, fireEvent } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { PantryContent } from '../PantryContent';
 import { PantryItem, StorageState } from '#/graphql/generated/schemaTypes';
@@ -15,6 +15,15 @@ import {
   PantryItemCard_PantryItemFragmentDoc,
   type PantryItemCard_PantryItemFragment,
 } from '../PantryItemCard.generated';
+
+// useDeferredValue defaults to passthrough (identical to real behavior in the
+// sync test renderer) so existing tests are unaffected; a single test overrides
+// it to simulate the one-render lag where items have arrived but the deferred
+// value hasn't caught up.
+jest.mock('react', () => {
+  const actual = jest.requireActual('react');
+  return { ...actual, useDeferredValue: jest.fn((value: unknown) => value) };
+});
 
 // PantryContent now reads `useApolloClient` for the image-preload effect and
 // each `PantryItemCard` cell subscribes to its own entity via `useFragment`.
@@ -552,7 +561,7 @@ describe('PantryContent', () => {
         />,
       );
       // data = sticky-header sentinel + first 24 items (INITIAL_RENDER_WINDOW)
-      expect(screen.getByTestId('pantry-list').props.data).toHaveLength(1 + 24);
+      expect(screen.getByTestId('pantry-list').props.data).toHaveLength(25);
     });
 
     it('grows the window on end-reached until the loaded set is exhausted', () => {
@@ -567,7 +576,30 @@ describe('PantryContent', () => {
         screen.getByTestId('pantry-list').props.onEndReached?.();
       });
       // window grows by RENDER_WINDOW_STEP (24), capped at the 30 loaded items
-      expect(screen.getByTestId('pantry-list').props.data).toHaveLength(1 + 30);
+      // (+1 for the sticky-header sentinel at index 0)
+      expect(screen.getByTestId('pantry-list').props.data).toHaveLength(31);
+    });
+
+    it('bridges the useDeferredValue render lag with skeletons (items present, deferred slice still empty)', () => {
+      // Simulate the empty→populated lag: items have arrived (sortedItems > 0)
+      // but useDeferredValue still returns the previous (empty) value, so the
+      // windowed slice is empty for this render. The list must hold a skeleton,
+      // not flash the empty body the user reported.
+      const deferred = React.useDeferredValue as jest.Mock;
+      deferred.mockReturnValue([]);
+      try {
+        render(
+          <PantryContent
+            {...defaultProps}
+            items={manyItems}
+            locationCounts={{ all: 30, fridge: 0, freezer: 0, pantry: 0 }}
+          />,
+        );
+        expect(screen.getByTestId('pantry-skeleton')).toBeTruthy();
+        expect(screen.queryByText('Your pantry is empty')).toBeNull();
+      } finally {
+        deferred.mockImplementation((value: unknown) => value);
+      }
     });
 
     it('prefers server pagination over growing the local window', () => {
@@ -585,8 +617,9 @@ describe('PantryContent', () => {
         screen.getByTestId('pantry-list').props.onEndReached?.();
       });
       // server fetch fired; local window stays at the initial size
+      // (sentinel + 24 items)
       expect(onEndReached).toHaveBeenCalledTimes(1);
-      expect(screen.getByTestId('pantry-list').props.data).toHaveLength(1 + 24);
+      expect(screen.getByTestId('pantry-list').props.data).toHaveLength(25);
     });
   });
 
@@ -806,6 +839,212 @@ describe('PantryContent', () => {
   it('renders with notification count', () => {
     render(<PantryContent {...defaultProps} notificationCount={5} />);
     expect(screen.getByText('John')).toBeTruthy();
+  });
+
+  describe('loading skeleton (chrome stays, skeleton rows below)', () => {
+    it('shows skeleton rows below the visible chrome while the first load is in flight', () => {
+      render(
+        <PantryContent
+          {...defaultProps}
+          items={[]}
+          loading={true}
+          locationCounts={{ all: 2, fridge: 0, freezer: 0, pantry: 0 }}
+        />,
+      );
+      // The chrome (header/search/tabs) renders as the list header and stays
+      // visible; the skeleton fills the body below the sticky tabs.
+      expect(screen.getByTestId('pantry-skeleton')).toBeTruthy();
+      expect(screen.getByTestId('pantry-search-input')).toBeTruthy();
+    });
+
+    it('shows rows with no skeleton once items are present', () => {
+      const items = [
+        createMockPantryItem({ id: '1', itemName: 'Milk' }),
+        createMockPantryItem({ id: '2', itemName: 'Eggs' }),
+      ];
+      render(
+        <PantryContent
+          {...defaultProps}
+          items={items}
+          locationCounts={{ all: 2, fridge: 0, freezer: 0, pantry: 0 }}
+        />,
+      );
+      expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
+      expect(screen.getByText('Milk')).toBeTruthy();
+    });
+
+    it('shows no skeleton for a genuinely empty pantry', () => {
+      render(
+        <PantryContent
+          {...defaultProps}
+          items={[]}
+          locationCounts={{ all: 0, fridge: 0, freezer: 0, pantry: 0 }}
+        />,
+      );
+      expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
+      expect(screen.getByText('Your pantry is empty')).toBeTruthy();
+    });
+  });
+
+  describe('switch skeleton (server-mode tab fetch)', () => {
+    const items = [createMockPantryItem({ id: '1', itemName: 'Milk' })];
+    const counts = { all: 1, fridge: 0, freezer: 0, pantry: 0 };
+
+    it('covers the stale rows with a skeleton while the new tab is fetching, then lifts when it settles', () => {
+      // Start with fetching=false (settled state) to exercise the real race:
+      // setSwitching(true) fires before the Apollo refetch sets fetching=true.
+      const view = render(
+        <PantryContent
+          {...defaultProps}
+          items={items}
+          fetching={false}
+          serverMode
+          locationCounts={counts}
+        />,
+      );
+      // Items present, no fetch in flight → real rows, no skeleton.
+      expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
+
+      // Switch tabs: setSwitching(true) commits before fetching becomes true.
+      act(() => {
+        fireEvent.press(screen.getByTestId('pantry-location-tab-fridge'));
+      });
+      // No skeleton yet — fetching hasn't started (switching=true, fetching=false).
+      expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
+
+      // Apollo refetch starts (fetching → true) → skeleton covers stale rows.
+      view.rerender(
+        <PantryContent
+          {...defaultProps}
+          items={items}
+          fetching={true}
+          serverMode
+          locationCounts={counts}
+        />,
+      );
+      expect(screen.getByTestId('pantry-skeleton')).toBeTruthy();
+
+      // The fetch settles (fetching → false) → skeleton lifts.
+      view.rerender(
+        <PantryContent
+          {...defaultProps}
+          items={items}
+          fetching={false}
+          serverMode
+          locationCounts={counts}
+        />,
+      );
+      expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
+      expect(screen.getByText('Milk')).toBeTruthy();
+    });
+
+    it('does not flash a skeleton when switching in client mode (no fetch)', () => {
+      render(
+        <PantryContent
+          {...defaultProps}
+          items={items}
+          fetching={false}
+          locationCounts={counts}
+        />,
+      );
+      expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
+
+      // Instant client-side switch — no fetch, so no skeleton.
+      act(() => {
+        fireEvent.press(screen.getByTestId('pantry-location-tab-fridge'));
+      });
+      expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
+    });
+
+    it('arms the skeleton for a server-mode sort change and lifts it when the re-sorted page lands', () => {
+      const sortingMock = (
+        jest.requireMock('../hooks/usePantrySorting') as {
+          usePantrySorting: jest.Mock;
+        }
+      ).usePantrySorting;
+      const sortingValue = (sortOption: string) => ({
+        sortOption,
+        sortDirection: 'desc',
+        sortModalVisible: false,
+        openSortModal: jest.fn(),
+        closeSortModal: jest.fn(),
+        handleSortSelect: jest.fn(),
+        sortItems: jest.fn(<T,>(rows: T[]): T[] => rows),
+      });
+      sortingMock.mockImplementation(() => sortingValue('recent'));
+
+      const view = render(
+        <PantryContent
+          {...defaultProps}
+          items={items}
+          fetching={false}
+          serverMode
+          locationCounts={counts}
+        />,
+      );
+      expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
+
+      // Sort changes and the refetch for the new order starts.
+      sortingMock.mockImplementation(() => sortingValue('expiry'));
+      view.rerender(
+        <PantryContent
+          {...defaultProps}
+          items={items}
+          fetching={true}
+          serverMode
+          locationCounts={counts}
+        />,
+      );
+      expect(screen.getByTestId('pantry-skeleton')).toBeTruthy();
+
+      // The re-sorted page lands → skeleton lifts.
+      view.rerender(
+        <PantryContent
+          {...defaultProps}
+          items={items}
+          fetching={false}
+          serverMode
+          locationCounts={counts}
+        />,
+      );
+      expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
+      expect(screen.getByText('Milk')).toBeTruthy();
+
+      sortingMock.mockImplementation(() => sortingValue('recent'));
+    });
+
+    it('does not blank the list when a client-mode tab switch is followed by a server-mode fetch', () => {
+      // Client mode: tab tap must not arm the switch latch (nothing will
+      // fetch, so nothing could ever clear it).
+      const view = render(
+        <PantryContent
+          {...defaultProps}
+          items={items}
+          fetching={false}
+          serverMode={false}
+          locationCounts={counts}
+        />,
+      );
+      act(() => {
+        fireEvent.press(screen.getByTestId('pantry-location-tab-fridge'));
+      });
+      expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
+
+      // The pantry later qualifies for server mode and a background fetch
+      // starts — the populated rows must stay visible (a stale latch would
+      // swap them for skeletons here).
+      view.rerender(
+        <PantryContent
+          {...defaultProps}
+          items={items}
+          fetching={true}
+          serverMode
+          locationCounts={counts}
+        />,
+      );
+      expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
+      expect(screen.getByText('Milk')).toBeTruthy();
+    });
   });
 
   describe('no-home empty states', () => {

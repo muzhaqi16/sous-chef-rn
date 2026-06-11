@@ -7,6 +7,9 @@ jest.mock('../../apollo/links/refreshToken');
 // Mock keychain
 jest.mock('#/storage/keychain', () => ({
   clearTempRegistrationPassword: jest.fn(() => Promise.resolve()),
+  clearSessionTokens: jest.fn(() => Promise.resolve()),
+  loadSessionTokens: jest.fn(() => Promise.resolve(null)),
+  saveSessionTokens: jest.fn(() => Promise.resolve()),
 }));
 
 // Mock apollo client module
@@ -20,6 +23,7 @@ import { RESET_SCENARIOS, createResetManager } from '../resetManager';
 import type { RootState } from '#store/index';
 import { storage } from '#/storage/mmkv';
 import { clearTempRegistrationPassword } from '#/storage/keychain';
+import { logger } from '#/utils/environment';
 
 type SetCall = [Partial<RootState>];
 
@@ -78,7 +82,7 @@ describe('resetManager', () => {
       it('accepts a string scenario name', async () => {
         await resetManager.resetStore('LOGOUT');
         expect(mockSet).toHaveBeenCalled();
-        expect(console.error).toHaveBeenCalledWith(
+        expect(logger.error).toHaveBeenCalledWith(
           expect.stringContaining('Error clearing Apollo cache:'),
           expect.anything(),
         );
@@ -151,7 +155,7 @@ describe('resetManager', () => {
         });
         // Verify set was still called (reset continues despite cache clear error)
         expect(mockSet).toHaveBeenCalled();
-        expect(console.error).toHaveBeenCalledWith(
+        expect(logger.error).toHaveBeenCalledWith(
           expect.stringContaining('Error clearing Apollo cache:'),
           expect.anything(),
         );
@@ -207,7 +211,7 @@ describe('resetManager', () => {
         });
         // Should not throw, and set should still be called
         expect(mockSet).toHaveBeenCalled();
-        expect(console.error).toHaveBeenCalledWith(
+        expect(logger.error).toHaveBeenCalledWith(
           expect.stringContaining('Error clearing Apollo cache:'),
           expect.anything(),
         );
@@ -233,7 +237,7 @@ describe('resetManager', () => {
         // Should have called set with auth reset and then navigationState: 'auth'
         const lastCall = mockSet.mock.calls[mockSet.mock.calls.length - 1][0];
         expect(lastCall.navigationState).toBe('auth');
-        expect(console.error).toHaveBeenCalledWith(
+        expect(logger.error).toHaveBeenCalledWith(
           expect.stringContaining('Error clearing Apollo cache:'),
           expect.anything(),
         );
@@ -247,7 +251,7 @@ describe('resetManager', () => {
       it('fullReset resets with FULL_RESET scenario', async () => {
         await resetManager.fullReset();
         expect(mockSet).toHaveBeenCalled();
-        expect(console.error).toHaveBeenCalledWith(
+        expect(logger.error).toHaveBeenCalledWith(
           expect.stringContaining('Error clearing Apollo cache:'),
           expect.anything(),
         );
@@ -266,7 +270,7 @@ describe('resetManager', () => {
             call[0]?.user === null && call[0]?.accessToken === null,
         );
         expect(authCall).toBeDefined();
-        expect(console.error).toHaveBeenCalledWith(
+        expect(logger.error).toHaveBeenCalledWith(
           expect.stringContaining('Error clearing Apollo cache:'),
           expect.anything(),
         );

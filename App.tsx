@@ -1,8 +1,8 @@
 import React from 'react';
+import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import {
   SafeAreaProvider,
-  SafeAreaView,
   initialWindowMetrics,
 } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -14,6 +14,7 @@ import { Navigation } from '#navigation/RootNavigator';
 import { SplashScreen } from '#screens/SplashScreen';
 import { ToastProvider } from '#components/atoms/Toast';
 import { OfflineBanner } from '#components/atoms/OfflineBanner';
+import { OfflineBannerInsetProvider } from '#components/providers/OfflineBannerInsetProvider';
 import { ThemedStatusBar } from '#components/atoms/ThemedStatusBar';
 import { AppErrorBoundary } from '#components/providers/ErrorBoundary';
 import { useAppLifecycle } from '#hooks/app/useAppLifecycle';
@@ -21,6 +22,7 @@ import { queueManager } from '#/apollo/offlineQueue/queueManager';
 import type { FailedMutationInfo } from '#/apollo/offlineQueue/types';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { toastService } from '#/services/toastService';
+import { t } from '#/i18n/t';
 import { queueStore } from '#/apollo/offlineQueue/queueStore';
 import { NotificationProvider } from '#features/notifications/components/NotificationProvider';
 import { AlertProvider } from '#/components/providers/AlertProvider';
@@ -57,7 +59,7 @@ function handleFailedMutation(info: FailedMutationInfo): void {
     }
 
     // 3. Notify user via toast
-    toastService.error("Couldn't sync changes. Pull to refresh.");
+    toastService.error(t('errors.queuedChangeSyncFailed'));
 
     // 4. Remove permanently failed mutation from queue
     queueStore.removeMutation(mutationId);
@@ -93,20 +95,28 @@ const App = () => {
                   <OverlayBackdropProvider>
                     <BottomSheetModalProvider>
                       {/* Render order matters for stacking (no zIndex used):
-                        1. SafeAreaView with content (background extends under status bar via padding mode)
+                        1. App content. The top safe-area inset is NOT applied
+                           here — it's applied per screen via `TopInsetLayout`
+                           (so screens like Recipe Detail can draw their hero
+                           edge-to-edge behind the status bar). The OfflineBanner
+                           carries its own top inset; OfflineBannerInsetProvider
+                           re-publishes the insets with top: 0 below it so the
+                           subtree never double-insets while the banner is up.
                         2. GlobalBackdrop - covers everything including status bar
                         3. BottomSheetModal portals (including ActionTray) render on top via @gorhom/bottom-sheet */}
                       <ThemedStatusBar />
-                      <SafeAreaView mode="padding" style={styles.container} edges={['top']}>
+                      <View style={styles.container}>
                         <OfflineBanner />
-                        <ToastProvider>
-                          <AlertProvider>
-                            <NotificationProvider>
-                              <Navigation />
-                            </NotificationProvider>
-                          </AlertProvider>
-                        </ToastProvider>
-                      </SafeAreaView>
+                        <OfflineBannerInsetProvider>
+                          <ToastProvider>
+                            <AlertProvider>
+                              <NotificationProvider>
+                                <Navigation />
+                              </NotificationProvider>
+                            </AlertProvider>
+                          </ToastProvider>
+                        </OfflineBannerInsetProvider>
+                      </View>
                       <GlobalBackdrop />
                     </BottomSheetModalProvider>
                   </OverlayBackdropProvider>

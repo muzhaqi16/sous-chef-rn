@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { View, RefreshControl, ScrollView } from 'react-native';
+import { View, ScrollView } from 'react-native';
+import { DetailSection } from '#components/molecules/DetailSection';
+import { DetailTitleRow } from '#components/molecules/DetailTitleRow';
 import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
@@ -38,9 +40,9 @@ import { PantryDetailInfo } from '#features/pantry/components/PantryDetailInfo';
 import { PantryUsageHistory } from '#features/pantry/components/PantryUsageHistory';
 import { parseNutritions, hasNutritionData } from '#utils/nutritionUtils';
 import { NutritionSummary } from '#components/molecules/NutritionSummary';
-import { ImageGalleryTabs } from '#components/molecules/ImageGalleryTabs';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Header, type HeaderAction } from '#components/molecules/Header';
+import { GalleryHero } from '#components/templates/GalleryHero';
+import { CollapsingHeroDetail } from '#components/templates/CollapsingHeroDetail';
+import type { HeaderAction } from '#components/atoms/HeaderActionIcon';
 import { Icon } from '#/utils/iconUtils';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { BatchSection } from '#features/pantry/components/BatchSection';
@@ -82,7 +84,6 @@ export const PantryItemDetail: React.FC<
     toPantryRecipeDetail,
     toNutritionScreen,
   } = useAppNavigation();
-  const insets = useSafeAreaInsets();
   const selectedShoppingListId = useSelectedShoppingListId();
   const selectedPantryId = useSelectedPantryId();
 
@@ -197,8 +198,7 @@ export const PantryItemDetail: React.FC<
 
   if (!item) {
     return (
-      <View style={styles.container}>
-        <Header variant="detail" onBack={goBack} borderless />
+      <CollapsingHeroDetail onBack={goBack} testID="pantry-item-detail">
         <View style={styles.loadingContainer}>
           <SousChefLoader
             size="small"
@@ -206,7 +206,7 @@ export const PantryItemDetail: React.FC<
             message={t('pantryItemDetail.loading')}
           />
         </View>
-      </View>
+      </CollapsingHeroDetail>
     );
   }
 
@@ -277,36 +277,36 @@ export const PantryItemDetail: React.FC<
   ];
 
   return (
-    <View style={styles.container}>
-      <Header
-        variant="detail"
+    <>
+      <CollapsingHeroDetail
+        testID="pantry-item-detail"
         onBack={goBack}
-        borderless
-        rightActions={headerActions}
-      />
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+        actions={headerActions}
+        title={item.itemName}
+        refreshing={refreshing}
+        onRefresh={handleRefresh}
+        parallax
+        renderHero={
+          showImages
+            ? heroHeight => (
+                <GalleryHero
+                  images={itemImages}
+                  fallbackImageUrl={imageUrl}
+                  height={heroHeight}
+                />
+              )
+            : undefined
         }
       >
-        {!!showImages && (
-          <View style={styles.imageSection}>
-            <ImageGalleryTabs
-              images={itemImages}
-              fallbackImageUrl={imageUrl}
-              imageHeight={200}
-            />
-          </View>
-        )}
-
-        <View style={styles.titleRow}>
-          <Text style={styles.itemTitle} numberOfLines={2}>
-            {item.itemName}
-          </Text>
-        </View>
+        <DetailTitleRow
+          title={item.itemName}
+          numberOfLines={2}
+          trailing={
+            <Text style={styles.quantityBadge}>
+              {item.quantity} {getUnitDisplayText(item.unit)}
+            </Text>
+          }
+        />
 
         {!!(categoryName || storageStateDisplay) && (
           <View style={styles.categoryBadge}>
@@ -322,40 +322,39 @@ export const PantryItemDetail: React.FC<
           </View>
         )}
 
-        <View style={styles.infoColumns}>
-          <View style={styles.infoColumn}>
-            <Text style={styles.infoColumnLabel}>
-              {t('pantryItemDetail.inThePantry')}
-            </Text>
-            <Text style={styles.infoColumnValue}>
-              {formatDaysInPantry(daysInPantry)}
-            </Text>
+        <DetailSection>
+          <View style={styles.infoColumns}>
+            <View style={styles.infoColumn}>
+              <Text style={styles.infoColumnLabel}>
+                {t('pantryItemDetail.inThePantry')}
+              </Text>
+              <Text style={styles.infoColumnValue}>
+                {formatDaysInPantry(daysInPantry)}
+              </Text>
+            </View>
+            <View style={styles.infoColumn}>
+              <Text style={styles.infoColumnLabel}>
+                {t('pantryItemDetail.expiring')}
+              </Text>
+              <ExpiryColumnText
+                text={expiryInfo?.text || t('pantryItemDetail.noExpiry')}
+                isUrgent={!!expiryInfo?.isUrgent}
+                isExpired={!!expiryInfo?.isExpired}
+              />
+            </View>
+            <View style={styles.infoColumn}>
+              <Text style={styles.infoColumnLabel}>
+                {t('pantryItemDetail.amount')}
+              </Text>
+              <Text style={styles.infoColumnValue}>
+                {item.quantity} {getUnitDisplayText(item.unit)}
+              </Text>
+            </View>
           </View>
-          <View style={styles.infoColumn}>
-            <Text style={styles.infoColumnLabel}>
-              {t('pantryItemDetail.expiring')}
-            </Text>
-            <ExpiryColumnText
-              text={expiryInfo?.text || t('pantryItemDetail.noExpiry')}
-              isUrgent={!!expiryInfo?.isUrgent}
-              isExpired={!!expiryInfo?.isExpired}
-            />
-          </View>
-          <View style={styles.infoColumn}>
-            <Text style={styles.infoColumnLabel}>
-              {t('pantryItemDetail.amount')}
-            </Text>
-            <Text style={styles.infoColumnValue}>
-              {item.quantity} {getUnitDisplayText(item.unit)}
-            </Text>
-          </View>
-        </View>
+        </DetailSection>
 
         {!!showNutrition && (
-          <View style={styles.nutritionSection}>
-            <Text style={styles.nutritionTitle}>
-              {t('pantryItemDetail.nutrition')}
-            </Text>
+          <DetailSection title={t('pantryItemDetail.nutrition')}>
             <NutritionSummary
               nutritions={itemNutritions}
               showHighlights
@@ -367,43 +366,46 @@ export const PantryItemDetail: React.FC<
                 })
               }
             />
-          </View>
+          </DetailSection>
         )}
 
-        <PantryDetailInfo
-          itemRef={item}
-          brandName={brandName}
-          netWeightText={netWeightText}
-          remainingNetWeightText={remainingNetWeightText}
-          quantityBreakdownText={quantityBreakdownText}
-          packageBreakdownText={packageBreakdownText}
-          shelfLifeDays={item.item?.shelfLifeDays}
-          shelfLifeOpenedDays={item.item?.shelfLifeOpenedDays}
-          onCorrectWeight={() => actions.setCorrectWeightVisible(true)}
-        />
+        <DetailSection>
+          <PantryDetailInfo
+            itemRef={item}
+            brandName={brandName}
+            netWeightText={netWeightText}
+            remainingNetWeightText={remainingNetWeightText}
+            quantityBreakdownText={quantityBreakdownText}
+            packageBreakdownText={packageBreakdownText}
+            shelfLifeDays={item.item?.shelfLifeDays}
+            shelfLifeOpenedDays={item.item?.shelfLifeOpenedDays}
+            onCorrectWeight={() => actions.setCorrectWeightVisible(true)}
+          />
+        </DetailSection>
 
         {!!item.batches && item.batches.length > 1 && (
-          <BatchSection
-            batches={item.batches}
-            pantryItemId={item.id}
-            unitSymbol={item.unit?.symbol ?? undefined}
-          />
+          <DetailSection flush>
+            <BatchSection
+              batches={item.batches}
+              pantryItemId={item.id}
+              unitSymbol={item.unit?.symbol ?? undefined}
+            />
+          </DetailSection>
         )}
 
         {!!item.usageRecords && item.usageRecords.edges.length > 0 && (
-          <PantryUsageHistory
-            usageRecords={item.usageRecords.edges}
-            expanded={purchaseHistoryExpanded}
-            onToggle={() =>
-              setPurchaseHistoryExpanded(!purchaseHistoryExpanded)
-            }
-          />
+          <DetailSection flush>
+            <PantryUsageHistory
+              usageRecords={item.usageRecords.edges}
+              expanded={purchaseHistoryExpanded}
+              onToggle={() =>
+                setPurchaseHistoryExpanded(!purchaseHistoryExpanded)
+              }
+            />
+          </DetailSection>
         )}
 
-        <View style={styles.recipesSection}>
-          <Text style={styles.sectionTitle}>
-            {t('pantryItemDetail.recipesToTry')}
-          </Text>
+        <DetailSection title={t('pantryItemDetail.recipesToTry')}>
           {loadingRecipes ? (
             <ThemedActivityIndicator
               size="small"
@@ -438,10 +440,9 @@ export const PantryItemDetail: React.FC<
               {t('pantryItemDetail.noRecipeSuggestions')}
             </Text>
           )}
-        </View>
+        </DetailSection>
+      </CollapsingHeroDetail>
 
-        <View style={{ height: insets.bottom + 20 }} />
-      </ScrollView>
       {!!actions.adjustModalVisible && (
         <AdjustQuantityModal
           visible={actions.adjustModalVisible}
@@ -458,42 +459,15 @@ export const PantryItemDetail: React.FC<
           onConfirm={actions.handleCorrectWeight}
         />
       )}
-    </View>
+    </>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-  },
-  imageSection: {
-    marginBottom: theme.spacing.md,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.sm,
-  },
-  itemTitle: {
-    flex: 1,
-    fontSize: theme.fonts.size['2xl'],
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-    marginRight: theme.spacing.md,
   },
   quantityBadge: {
     fontSize: theme.fonts.size.lg,
@@ -515,11 +489,6 @@ const styles = StyleSheet.create(theme => ({
   infoColumns: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    marginTop: theme.spacing.sm,
   },
   infoColumn: {
     alignItems: 'center',
@@ -545,31 +514,11 @@ const styles = StyleSheet.create(theme => ({
       },
     },
   },
-  nutritionSection: {
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-  },
-  nutritionTitle: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.sm,
-  },
-  sectionTitle: {
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-  },
-  recipesSection: {
-    marginTop: theme.spacing.lg,
-    paddingHorizontal: theme.spacing.lg,
-  },
   recipesLoading: {
-    marginTop: theme.spacing.md,
+    marginTop: theme.spacing.sm,
   },
   recipesList: {
-    paddingTop: theme.spacing.md,
-    paddingRight: theme.spacing.lg,
+    paddingTop: theme.spacing.xs,
   },
   recipeCard: {
     width: 140,

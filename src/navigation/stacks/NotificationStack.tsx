@@ -6,8 +6,12 @@ import {
 import { NotificationListScreen } from '#features/notifications/screens/NotificationListScreen';
 import { NotificationDetailScreen } from '#features/notifications/screens/NotificationDetailScreen';
 import { NotificationSettingsScreen } from '#features/notifications/screens/NotificationSettingsScreen';
+import { topInsetScreenLayout } from '#navigation/layouts/TopInsetLayout';
 
 export const NotificationStack = createNativeStackNavigator({
+  // Top safe-area inset, applied per screen (it's no longer global — see
+  // TopInsetLayout). No immersive screen here, so inset every screen.
+  screenLayout: topInsetScreenLayout,
   screenOptions: ({ theme }) => ({
     headerShown: false,
     animation: 'fade_from_bottom',

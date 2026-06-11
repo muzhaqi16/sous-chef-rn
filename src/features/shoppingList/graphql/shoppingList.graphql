@@ -162,6 +162,11 @@ query GetShoppingListItemsFiltered(
 
 query GetShoppingListItem($id: ID!) {
   shoppingListItem(id: $id) {
+    # Select id at the top level (outside the fragments) so that under
+    # dataMasking the returned shoppingListItem ref still carries its key field.
+    # useFragment / cache.identify needs it to locate the entity; without it the
+    # masked ref is just { __typename } and identification throws.
+    id
     ...ItemDetail_shoppingListItem
     ...useShoppingListItemForm_item
   }
@@ -220,6 +225,7 @@ mutation CreateShoppingList($input: CreateShoppingListInput!) {
           name
         }
         ownerships {
+          id
           ...ShoppingListOwnershipFragment
         }
       }
@@ -247,6 +253,7 @@ mutation UpdateShoppingList($input: UpdateShoppingListInput!) {
         createdAt
         updatedAt
         ownerships {
+          id
           ...ShoppingListOwnershipFragment
         }
       }
@@ -290,6 +297,7 @@ mutation AddCollaborator($input: InviteToShoppingListInput!) {
     __typename
     ... on InviteToShoppingListPayload {
       collaborator {
+        id
         ...ShoppingListCollaboratorFragment
         canEdit
         invitedAt

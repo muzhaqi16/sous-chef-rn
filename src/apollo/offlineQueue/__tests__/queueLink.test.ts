@@ -204,6 +204,41 @@ describe('createQueueLink', () => {
       });
     });
 
+    it('persists only the allowlisted context keys (localFirst, operationId)', done => {
+      mockedGetState.mockReturnValue({
+        isOnline: true,
+        user: { id: 'user-1' },
+      });
+      // The live Apollo operation context carries client internals that must
+      // not be persisted: functions vanish under JSON serialization and a
+      // circular value would make the MMKV write throw, losing the enqueue.
+      const circular: Record<string, unknown> = {};
+      circular.self = circular;
+      const operation = makeOperation({
+        query: MOCK_MUTATION,
+        operationName: 'AdjustItem',
+        variables: { input: { itemId: 'item-1' } },
+        context: {
+          localFirst: true,
+          operationId: 'op-1',
+          cache: circular,
+          fetchOptions: () => undefined,
+        },
+      });
+      const forward = failingForward(new Error('Network request failed'));
+
+      link.request(operation, forward)!.subscribe({
+        complete() {
+          const queued = (queueStore.addMutation as jest.Mock).mock.calls[0][0];
+          expect(queued.context).toEqual({
+            localFirst: true,
+            operationId: 'op-1',
+          });
+          done();
+        },
+      });
+    });
+
     it('propagates the error (current behavior) when localFirst is NOT set', done => {
       mockedGetState.mockReturnValue({
         isOnline: true,
@@ -279,24 +314,26 @@ describe('createQueueLink', () => {
   // Offline interception
   // -------------------------------------------------------------------------
   describe('offline interception', () => {
-    it('queues a localFirst mutation when offline and returns optimistic response', done => {
+    it('queues a localFirst mutation when offline without hitting the network', done => {
       mockedGetState.mockReturnValue({
         isOnline: false,
         user: { id: 'user-1' },
       });
-      const optimistic = { addItem: { id: 'temp-1', name: 'Apple' } };
       const operation = makeOperation({
         query: MOCK_MUTATION,
         operationName: 'AddItem',
         variables: { input: { name: 'Apple' } },
-        context: { localFirst: true, optimisticResponse: optimistic },
+        context: { localFirst: true },
       });
       const forward = makeForward();
 
       const observable = link.request(operation, forward);
       observable!.subscribe({
         next(result) {
-          expect(result.data).toEqual(optimistic);
+          // The hook's own pre-fired cache write provides the UI change; the
+          // queued result carries each top-level field as null plus the
+          // `queued` marker.
+          expect(result.data).toEqual({ addItem: null });
           expect(result.extensions).toEqual({ queued: true });
         },
         complete() {
@@ -307,13 +344,12 @@ describe('createQueueLink', () => {
           const queued = (queueStore.addMutation as jest.Mock).mock.calls[0][0];
           expect(queued.operationName).toBe('AddItem');
           expect(queued.userId).toBe('user-1');
-          expect(queued.optimisticResponse).toEqual(optimistic);
           done();
         },
       });
     });
 
-    it('queues a localFirst mutation without optimistic response, returns null-field data', done => {
+    it('queues a localFirst mutation, returns null-field data', done => {
       mockedGetState.mockReturnValue({
         isOnline: false,
         user: { id: 'user-1' },

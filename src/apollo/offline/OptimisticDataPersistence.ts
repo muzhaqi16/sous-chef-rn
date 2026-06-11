@@ -1,4 +1,5 @@
 import { storage } from '#storage/mmkv';
+import { logger } from '#/utils/environment';
 
 const OPTIMISTIC_DATA_KEY = 'apollo-optimistic-data-v1';
 
@@ -71,7 +72,7 @@ class OptimisticDataPersistence {
       };
 
       if (__DEV__) {
-        console.log(
+        logger.debug(
           `💾 Optimistic: Queued ${entityType}.${field} for ${entityId}`,
           { value },
         );
@@ -88,7 +89,7 @@ class OptimisticDataPersistence {
         });
       }
     } catch (error) {
-      console.error('Failed to save optimistic data:', error);
+      logger.error('Failed to save optimistic data:', error);
     }
   }
 
@@ -114,7 +115,7 @@ class OptimisticDataPersistence {
 
       storage.set(OPTIMISTIC_DATA_KEY, JSON.stringify(merged));
       if (__DEV__) {
-        console.log(
+        logger.debug(
           `💾 Optimistic: Flushed ${
             Object.keys(this.pendingUpdates).length
           } updates`,
@@ -126,7 +127,7 @@ class OptimisticDataPersistence {
 
       this.pendingUpdates = {};
     } catch (error) {
-      console.error('Failed to flush optimistic data:', error);
+      logger.error('Failed to flush optimistic data:', error);
     }
   }
 
@@ -229,19 +230,19 @@ class OptimisticDataPersistence {
         storage.remove(OPTIMISTIC_DATA_KEY);
         this.cache = {}; // Invalidate cache
         if (__DEV__) {
-          console.log('🧹 Optimistic: Cleared all data (storage empty)');
+          logger.debug('🧹 Optimistic: Cleared all data (storage empty)');
         }
       } else {
         storage.set(OPTIMISTIC_DATA_KEY, JSON.stringify(existing));
         this.cache = existing; // Update cache
         if (__DEV__ && hadData) {
-          console.log(
+          logger.debug(
             `🧹 Optimistic: Cleared ${entityType}.${field} for ${entityId}`,
           );
         }
       }
     } catch (error) {
-      console.error('Failed to clear optimistic data:', error);
+      logger.error('Failed to clear optimistic data:', error);
     }
   }
 
@@ -274,12 +275,12 @@ class OptimisticDataPersistence {
       }
 
       if (__DEV__ && clearedCount > 0) {
-        console.log(
+        logger.debug(
           `🧹 Optimistic: Cleared ${clearedCount} fields for ${entityType}:${entityId}`,
         );
       }
     } catch (error) {
-      console.error('Failed to clear entity optimistic data:', error);
+      logger.error('Failed to clear entity optimistic data:', error);
     }
   }
 
@@ -311,12 +312,12 @@ class OptimisticDataPersistence {
       }
 
       if (__DEV__ && clearedCount > 0) {
-        console.log(
+        logger.debug(
           `🧹 Optimistic: Cleared ${clearedCount} fields for ${entityType}`,
         );
       }
     } catch (error) {
-      console.error('Failed to clear type optimistic data:', error);
+      logger.error('Failed to clear type optimistic data:', error);
     }
   }
 
@@ -331,10 +332,10 @@ class OptimisticDataPersistence {
       storage.remove(OPTIMISTIC_DATA_KEY);
       this.cache = null; // Invalidate cache
       if (__DEV__) {
-        console.log('🧹 Optimistic: Cleared all persisted data');
+        logger.debug('🧹 Optimistic: Cleared all persisted data');
       }
     } catch (error) {
-      console.error('Failed to clear all optimistic data:', error);
+      logger.error('Failed to clear all optimistic data:', error);
     }
   }
 
@@ -384,7 +385,7 @@ class OptimisticDataPersistence {
 
       return parsed;
     } catch (error) {
-      console.error('Failed to load optimistic data:', error);
+      logger.error('Failed to load optimistic data:', error);
       return {};
     }
   }

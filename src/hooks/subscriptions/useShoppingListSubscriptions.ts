@@ -70,6 +70,7 @@ import {
   createAddToParentConnectionUpdater,
   createRemoveFromParentConnectionUpdater,
 } from '#/apollo/utils/cacheUpdaters';
+import { logger } from '#/utils/environment';
 
 /**
  * Cached `itemsConnection` shape as seen inside a `cache.modify` field
@@ -115,7 +116,7 @@ function resortEdges(
           // Skip sorting for non-matching variants when a target is specified
           if (targetVariant && !storeFieldName.includes(targetVariant)) {
             if (__DEV__) {
-              console.log(
+              logger.debug(
                 `📊 [resortEdges] skipped variant: ${storeFieldName}`,
               );
             }
@@ -127,11 +128,11 @@ function resortEdges(
               !storeFieldName.includes('isPurchased') &&
               !storeFieldName.includes('filters')
             ) {
-              console.warn(
+              logger.warn(
                 `⚠️ [resortEdges] unexpected storeFieldName format: ${storeFieldName}`,
               );
             }
-            console.log(
+            logger.debug(
               `📊 [resortEdges] sorting variant: ${storeFieldName} (${existing.edges.length} edges)`,
             );
           }
@@ -155,7 +156,7 @@ function resortEdges(
 
     if (__DEV__) {
       const duration = performance.now() - t0;
-      console.log(
+      logger.debug(
         `📊 [resortEdges] duration=${duration.toFixed(
           2,
         )}ms listId=${shoppingListId}`,
@@ -223,7 +224,7 @@ export function useShoppingListSubscriptions(
         client: SubscriptionApolloClient,
       ) => {
         if (__DEV__) {
-          console.log(
+          logger.debug(
             `📊 [Subscription] ShoppingListItemChanged: mutation=${payload?.mutation}`,
           );
         }
@@ -237,7 +238,7 @@ export function useShoppingListSubscriptions(
         const item = payload.item;
 
         if (!item?.id) {
-          console.warn(
+          logger.warn(
             '⚠️ [ShoppingListItemChanged] Received item with no id, skipping cache update',
             { mutation },
           );
@@ -246,7 +247,7 @@ export function useShoppingListSubscriptions(
 
         if (payloadUserId && userId && payloadUserId === userId) {
           if (__DEV__) {
-            console.log(
+            logger.debug(
               '⏭️ [Subscription] Skipping self-echo (same user)',
               item.id,
             );
@@ -328,7 +329,7 @@ export function useShoppingListSubscriptions(
             mutation === MutationType.ItemUncompleted;
 
           if (__DEV__) {
-            console.log('🔍 [Subscription Cache Debug]', {
+            logger.debug('🔍 [Subscription Cache Debug]', {
               mutation,
               itemId: item.id,
               isCompletedMutation,
@@ -493,7 +494,7 @@ export function useShoppingListSubscriptions(
 
         if (payload.userId && userId && payload.userId === userId) {
           if (__DEV__) {
-            console.log('⏭️ [Subscription] Skipping batch-clear self-echo');
+            logger.debug('⏭️ [Subscription] Skipping batch-clear self-echo');
           }
           return;
         }
@@ -607,7 +608,7 @@ export function useShoppingListSubscriptions(
         // Skip self-echo
         if (payload.userId && userId && payload.userId === userId) {
           if (__DEV__) {
-            console.log('⏭️ [CollaborationChanges] Skipping self-echo');
+            logger.debug('⏭️ [CollaborationChanges] Skipping self-echo');
           }
           return;
         }

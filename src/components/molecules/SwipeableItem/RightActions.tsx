@@ -1,6 +1,6 @@
 import React from 'react';
 import Animated from 'react-native-reanimated';
-import { AnimatedActionButton } from './AnimatedActionButton';
+import { SwipeActionButton } from './SwipeActionButton';
 import { HapticService } from '#/services/haptic/HapticService';
 import { styles } from './styles';
 import { SwipeActionsProps } from './types';
@@ -34,7 +34,7 @@ const RightActionsComponent: React.FC<SwipeActionsProps> = ({
         style={[styles.actionsContainer, { width: getContainerWidth(1) }]}
         pointerEvents="box-none"
       >
-        <AnimatedActionButton
+        <SwipeActionButton
           onPress={handleDeletePress}
           icon="trash-outline"
           circular={true}
@@ -72,7 +72,7 @@ const RightActionsComponent: React.FC<SwipeActionsProps> = ({
       pointerEvents="box-none"
     >
       {!!onEdit && (
-        <AnimatedActionButton
+        <SwipeActionButton
           onPress={handleEditPress}
           icon="create-outline"
           circular={true}
@@ -82,7 +82,7 @@ const RightActionsComponent: React.FC<SwipeActionsProps> = ({
         />
       )}
       {!!onDelete && (
-        <AnimatedActionButton
+        <SwipeActionButton
           onPress={handleDeletePress}
           icon="trash-outline"
           circular={true}

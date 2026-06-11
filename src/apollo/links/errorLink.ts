@@ -13,6 +13,7 @@ import {
 } from '#/utils/errors/rateLimit';
 import { LogoutCleanup } from '../logoutCleanup';
 import { attemptTokenRefresh, getRefreshState } from './refreshToken';
+import { logger } from '#/utils/environment';
 
 // Utility functions for error detection
 // Note: FORBIDDEN is intentionally NOT included here - it's a resource access error, not an auth error
@@ -49,7 +50,7 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
 
   if (CombinedGraphQLErrors.is(error)) {
     if (isRateLimitError(error)) {
-      console.warn(
+      logger.warn(
         `Rate limited [${operation.operationName}]: ${getRateLimitMessage(
           error,
         )}`,
@@ -62,14 +63,12 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
       const message = String(err.message || '');
 
       if (isApiKeyError(code, message)) {
-        console.error('API Key error:', message);
+        logger.error('API Key error:', message);
         continue;
       }
 
       if (isResourceAccessError(code)) {
-        console.warn(
-          `Access denied for ${operation.operationName}: ${message}`,
-        );
+        logger.warn(`Access denied for ${operation.operationName}: ${message}`);
         continue;
       }
 
@@ -79,7 +78,7 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
       ) {
         // Suppress logging if refresh already in progress to avoid cascade
         if (!isRefreshing) {
-          console.warn(
+          logger.warn(
             `Auth error detected for ${operation.operationName}, initiating token refresh`,
           );
         }
@@ -92,7 +91,7 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
       isSubscription(operation) &&
       isKnownServerError({ message: error.message })
     ) {
-      console.warn(
+      logger.warn(
         `Known server error for ${operation.operationName}:`,
         error.message,
       );
@@ -106,7 +105,7 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
     // makes Apollo emit the networkError to the observer, where errorPolicy plus
     // the cache-and-network fetch policy keep cached data visible.
     if (isNetworkError(error)) {
-      console.warn(
+      logger.warn(
         `Network error for ${operation.operationName}:`,
         error.message,
       );
@@ -114,7 +113,7 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
     }
 
     // Only log non-network errors as these are unexpected
-    console.error(
+    logger.error(
       `Unexpected error [${operation.operationName}]:`,
       error.message,
     );

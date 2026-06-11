@@ -8,7 +8,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 
 import { LoadingState } from '../components/LoadingState';
-import { ErrorState } from '../components/ErrorState';
+import { ErrorState } from '#components/base/ErrorState';
 import { ItemNotFound } from '../components/ItemNotFound';
 import { SearchResults } from '../components/SearchResults';
 import { Header } from '#components/molecules/Header';

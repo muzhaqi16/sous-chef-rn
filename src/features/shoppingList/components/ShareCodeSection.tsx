@@ -144,24 +144,22 @@ export const ShareCodeSection: React.FC<ShareCodeSectionProps> = ({
         </View>
       </AppPressable>
       {isPublic && shareCode ? (
-        <Animated.View {...getFormAnimationPreset()}>
+        <Animated.View
+          {...getFormAnimationPreset()}
+          style={styles.shareActionsRow}
+        >
           <AppPressable
             style={styles.shareCodeDisplay}
             onPress={handleCopyShareCode}
           >
-            <Text style={styles.shareCodeValue}>{shareCode}</Text>
-            <View style={styles.copyButton}>
-              <Icon
-                name={copied ? 'checkmark' : 'copy-outline'}
-                size={18}
-                tone={copied ? 'success' : 'primary'}
-              />
-              <Text style={[styles.copyText, copied && styles.copyTextCopied]}>
-                {copied
-                  ? t('shoppingListScreens.copied')
-                  : t('shoppingListScreens.copy')}
-              </Text>
-            </View>
+            <Text style={styles.shareCodeValue} numberOfLines={1}>
+              {shareCode}
+            </Text>
+            <Icon
+              name={copied ? 'checkmark' : 'copy-outline'}
+              size={18}
+              tone={copied ? 'success' : 'primary'}
+            />
           </AppPressable>
           <AppPressable
             style={styles.shareLinkButton}
@@ -240,11 +238,18 @@ const styles = StyleSheet.create(theme => ({
   toggleThumbActive: {
     alignSelf: 'flex-end',
   },
+  shareActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: theme.spacing.sm,
+    marginTop: theme.spacing.md,
+  },
   shareCodeDisplay: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: theme.spacing.md,
+    gap: theme.spacing.sm,
     padding: theme.spacing['3'],
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.sm,
@@ -253,31 +258,20 @@ const styles = StyleSheet.create(theme => ({
     borderStyle: 'dashed',
   },
   shareCodeValue: {
+    flexShrink: 1,
     fontSize: theme.typography.fontSize.lg,
     fontWeight: theme.fonts.weight.bold,
     color: theme.colors.textPrimary,
     letterSpacing: 2,
   },
-  copyButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.xs,
-  },
-  copyText: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.medium,
-  },
-  copyTextCopied: {
-    color: theme.colors.success,
-  },
   shareLinkButton: {
+    flexShrink: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: theme.spacing.xs,
-    marginTop: theme.spacing.sm,
     paddingVertical: theme.spacing['3'],
+    paddingHorizontal: theme.spacing.md,
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.sm,
   },

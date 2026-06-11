@@ -8,22 +8,42 @@ import { GetShoppingListItemDocument } from '#features/shoppingList/graphql/shop
 import { ItemDetail_ShoppingListItemFragmentDoc } from './ItemDetail.generated';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { Icon } from '#utils/iconUtils';
-import { DetailTemplate } from '#components/templates/DetailTemplate';
+import { CollapsingHeroDetail } from '#components/templates/CollapsingHeroDetail';
 import { ClickableInfoPanel } from '#components/molecules/ClickableInfoPanel';
 import { NutritionSummary } from '#components/molecules/NutritionSummary';
-import { ImageGalleryTabs } from '#components/molecules/ImageGalleryTabs';
+import { GalleryHero } from '#components/templates/GalleryHero';
 import { FormattedItemSubtitle } from '#components/atoms/FormattedItemSubtitle';
-import { commonStyles } from '#/styles/commonStyles';
 import { resolveImageUrl, parseImages, hasImages } from '#utils/imageUtils';
 import { parseNutritions, hasNutritionData } from '#utils/nutritionUtils';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { Text } from '#components/atoms/Text';
+import { DetailSection } from '#components/molecules/DetailSection';
+import { InfoRow } from '#components/molecules/InfoRow';
+import { DetailTitleRow } from '#components/molecules/DetailTitleRow';
 
 type RouteParams = {
   listId: string;
   itemId: string;
 };
+
+/** InfoRow preset for the detail cards — the same treatment PantryDetailInfo
+ *  uses (secondary label, md vertical padding, divider, no colon), so the
+ *  two item-detail screens render label/value rows identically. */
+const DetailRow: React.FC<{ label: string; children: React.ReactNode }> = ({
+  label,
+  children,
+}) => (
+  <InfoRow
+    label={label}
+    value={null}
+    showColon={false}
+    labelStyle={styles.detailLabel}
+    containerStyle={styles.detailRow}
+  >
+    {children}
+  </InfoRow>
+);
 
 export const ShoppingListItemDetail: React.FC<
   StaticScreenProps<RouteParams>
@@ -33,10 +53,15 @@ export const ShoppingListItemDetail: React.FC<
   const { toEditItem, toPurchaseHistory, goBack } = useAppNavigation();
   const { listId, itemId } = route.params;
 
-  // Use cache-first policy - offlineQueryLink will handle offline behavior automatically
+  // cache-and-network: the detail selects fields the list never caches
+  // (createdAt, priority, source, addedBy, purchase history, nutrition,
+  // displayUnit), so it must hit the network to fill them. cache-first would
+  // skip the fetch whenever a partial entity already looks "complete" and leave
+  // the screen blank. When the API is unavailable, offlineModeLink still serves
+  // this from cache automatically.
   const { data } = useQuery(GetShoppingListItemDocument, {
     variables: { id: itemId },
-    fetchPolicy: 'cache-first',
+    fetchPolicy: 'cache-and-network',
   });
 
   // The detail screen owns its own narrow fragment. useFragment subscribes
@@ -74,147 +99,30 @@ export const ShoppingListItemDetail: React.FC<
 
   if (!item) {
     return (
-      <DetailTemplate
-        title={t('shoppingListScreens.itemDetailsTitle')}
+      <CollapsingHeroDetail
+        testID="shopping-item-detail"
         onBack={() => goBack()}
-        headerActions={[]}
-        sections={[
-          {
-            content: (
-              <Text style={[commonStyles.body, { textAlign: 'center' }]}>
-                {data === undefined
-                  ? t('shoppingListScreens.loading')
-                  : t('shoppingListScreens.itemNotFound')}
-              </Text>
-            ),
-          },
-        ]}
-      />
+        title={t('shoppingListScreens.itemDetailsTitle')}
+      >
+        <View style={styles.centerMessage}>
+          <Text style={styles.centerMessageText}>
+            {data === undefined
+              ? t('shoppingListScreens.loading')
+              : t('shoppingListScreens.itemNotFound')}
+          </Text>
+        </View>
+      </CollapsingHeroDetail>
     );
   }
 
-  const imageUrl = resolveImageUrl(item, 'large');
+  // SIZE_512 is the minimum acceptable resolution for a full-height hero.
+  // Thumbnails are excluded from hasHero to avoid stretching a ~100px image
+  // to 280px; the fallback is kept only as a CachedImage uri guard.
+  const largeImageUrl = resolveImageUrl(item, 'large');
+  const imageUrl = largeImageUrl ?? resolveImageUrl(item);
+  const hasHero = showImages || !!largeImageUrl;
 
-  const sections = [
-    {
-      content: (
-        <View>
-          <View style={styles.headerSection}>
-            {showImages ? (
-              <ImageGalleryTabs
-                images={itemImages}
-                fallbackImageUrl={imageUrl}
-                imageHeight={160}
-              />
-            ) : imageUrl ? (
-              <CachedImage
-                uri={imageUrl}
-                style={styles.itemImage}
-                displaySize={120}
-              />
-            ) : (
-              <View style={styles.imagePlaceholder}>
-                <Icon name="basket-outline" size={48} tone="textSecondary" />
-              </View>
-            )}
-          </View>
-          <Text style={[commonStyles.title, styles.itemName]}>
-            {item.itemName}
-          </Text>
-          {item.quantity != null ? (
-            <View style={styles.itemDescription}>
-              <FormattedItemSubtitle
-                quantity={item.quantity}
-                quantityInput={item.quantityInput}
-                displayFormat={item.displayFormat}
-                unitSymbol={item.unitName || item.item?.displayUnit?.symbol}
-              />
-            </View>
-          ) : null}
-          {/* Status Badge */}
-          {item.purchaseInfo?.isPurchased ? (
-            <View style={styles.statusBadge}>
-              <Icon name="checkmark-circle" size={20} tone="success" />
-              <Text
-                size="md"
-                weight="semibold"
-                tone="success"
-                style={styles.statusBadgeText}
-              >
-                {t('shoppingListScreens.purchased')}
-              </Text>
-            </View>
-          ) : null}
-        </View>
-      ),
-    },
-    {
-      title: t('shoppingListScreens.information'),
-      content: (
-        <View>
-          <View style={styles.detailRow}>
-            <Text style={[commonStyles.caption, styles.detailLabel]}>
-              {t('shoppingListScreens.quantity')}
-            </Text>
-            <View>
-              <FormattedItemSubtitle
-                quantity={item.quantity}
-                quantityInput={item.quantityInput}
-                displayFormat={item.displayFormat}
-                unitSymbol={item.unitName || item.item?.displayUnit?.symbol}
-              />
-            </View>
-          </View>
-
-          {item.category ? (
-            <View style={styles.detailRow}>
-              <Text style={[commonStyles.caption, styles.detailLabel]}>
-                {t('shoppingListScreens.category')}
-              </Text>
-              <Text size="sm" weight="medium">
-                {item.category}
-              </Text>
-            </View>
-          ) : null}
-
-          {item.priority ? (
-            <View style={styles.detailRow}>
-              <Text style={[commonStyles.caption, styles.detailLabel]}>
-                {t('shoppingListScreens.priority')}
-              </Text>
-              <Text size="sm" weight="medium">
-                {item.priority}
-              </Text>
-            </View>
-          ) : null}
-
-          {item.notes ? (
-            <View style={styles.notesRow}>
-              <Text style={commonStyles.caption}>
-                {t('shoppingListScreens.notes')}
-              </Text>
-              <Text size="sm" weight="medium">
-                {item.notes}
-              </Text>
-            </View>
-          ) : null}
-        </View>
-      ),
-    },
-  ];
-
-  // Nutrition section (inline display, no navigation for shopping list)
-  if (showNutrition) {
-    sections.push({
-      title: t('dietary.nutritionGoals'),
-      content: (
-        <NutritionSummary nutritions={itemNutritions} showHighlights compact />
-      ),
-    });
-  }
-
-  // Purchase History section - Clickable panel
-  // Extract purchases from paginated connection
+  // Purchase History - extract purchases from paginated connection
   const purchases =
     item.purchasesConnection?.edges?.map(edge => edge.node) || [];
   const purchaseCount = item.purchasesConnection?.totalCount || 0;
@@ -241,153 +149,201 @@ export const ShoppingListItemDetail: React.FC<
       ]
     : [];
 
-  sections.push({
-    content: (
-      <ClickableInfoPanel
-        title={t('shoppingListScreens.purchaseHistoryTitle')}
-        items={purchaseHistoryItems}
-        onPress={handleViewHistory}
-        emptyMessage={t('shoppingListScreens.noPurchaseHistory')}
-      />
-    ),
-  });
-
-  // Additional Details section
-  sections.push({
-    title: t('shoppingListScreens.additionalDetails'),
-    content: (
-      <View>
-        {item.addedBy ? (
-          <View style={styles.detailRow}>
-            <Text style={[commonStyles.caption, styles.detailLabel]}>
-              {t('shoppingListScreens.addedBy')}
-            </Text>
-            <Text size="sm" weight="medium">
-              {item.addedBy.profile?.displayName || item.addedBy.email}
-            </Text>
-          </View>
-        ) : null}
-
-        <View style={styles.detailRow}>
-          <Text style={[commonStyles.caption, styles.detailLabel]}>
-            {t('shoppingListScreens.addedOn')}
-          </Text>
-          <Text size="sm" weight="medium">
-            {formatDate(item.createdAt)}
-          </Text>
-        </View>
-
-        {item.updatedAt !== item.createdAt ? (
-          <View style={styles.detailRow}>
-            <Text style={[commonStyles.caption, styles.detailLabel]}>
-              {t('shoppingListScreens.lastUpdated')}
-            </Text>
-            <Text size="sm" weight="medium">
-              {formatDate(item.updatedAt)}
-            </Text>
-          </View>
-        ) : null}
-
-        {item.source?.isAutoAdded ? (
-          <View style={styles.detailRow}>
-            <Text style={[commonStyles.caption, styles.detailLabel]}>
-              {t('shoppingListScreens.autoAdded')}
-            </Text>
-            <Text size="sm" weight="medium">
-              {item.source?.autoAddReason || t('shoppingListScreens.yes')}
-            </Text>
-          </View>
-        ) : null}
-
-        {item.source?.isFromMealPlan ? (
-          <View style={styles.detailRow}>
-            <Text style={[commonStyles.caption, styles.detailLabel]}>
-              {t('shoppingListScreens.fromMealPlan')}
-            </Text>
-            <Text size="sm" weight="medium">
-              {t('shoppingListScreens.yes')}
-            </Text>
-          </View>
-        ) : null}
-      </View>
-    ),
-  });
+  const unitSymbol = item.unitName || item.item?.displayUnit?.symbol;
 
   return (
-    <DetailTemplate
-      title={t('shoppingListScreens.itemDetailsTitle')}
+    <CollapsingHeroDetail
+      testID="shopping-item-detail"
       onBack={() => goBack()}
-      headerActions={[
+      title={item.itemName ?? ''}
+      actions={[
         {
           icon: 'create-outline',
           onPress: handleEdit,
+          testID: 'shopping-item-edit-button',
         },
       ]}
-      sections={sections}
-    />
+      renderHero={
+        hasHero
+          ? heroHeight =>
+              showImages ? (
+                <GalleryHero
+                  images={itemImages}
+                  fallbackImageUrl={imageUrl}
+                  height={heroHeight}
+                />
+              ) : (
+                <CachedImage
+                  uri={imageUrl ?? ''}
+                  style={[styles.heroFull, { height: heroHeight }]}
+                  displaySize={heroHeight}
+                  resizeMode="cover"
+                />
+              )
+          : undefined
+      }
+    >
+      <DetailTitleRow
+        title={item.itemName ?? ''}
+        numberOfLines={2}
+        trailing={
+          item.quantity != null ? (
+            <FormattedItemSubtitle
+              quantity={item.quantity}
+              quantityInput={item.quantityInput}
+              displayFormat={item.displayFormat}
+              unitSymbol={unitSymbol}
+            />
+          ) : undefined
+        }
+      />
+
+      {!!item.purchaseInfo?.isPurchased && (
+        <View style={styles.statusBadge}>
+          <Icon name="checkmark-circle" size={18} tone="success" />
+          <Text
+            size="sm"
+            weight="semibold"
+            tone="success"
+            style={styles.statusBadgeText}
+          >
+            {t('shoppingListScreens.purchased')}
+          </Text>
+        </View>
+      )}
+
+      <DetailSection title={t('shoppingListScreens.information')}>
+        <DetailRow label={t('shoppingListScreens.quantity')}>
+          <FormattedItemSubtitle
+            quantity={item.quantity}
+            quantityInput={item.quantityInput}
+            displayFormat={item.displayFormat}
+            unitSymbol={unitSymbol}
+          />
+        </DetailRow>
+        {!!item.category && (
+          <DetailRow label={t('shoppingListScreens.category')}>
+            <Text size="sm" weight="medium">
+              {item.category}
+            </Text>
+          </DetailRow>
+        )}
+        {!!item.priority && (
+          <DetailRow label={t('shoppingListScreens.priority')}>
+            <Text size="sm" weight="medium">
+              {item.priority}
+            </Text>
+          </DetailRow>
+        )}
+        {!!item.notes && (
+          <View style={styles.notesRow}>
+            <Text size="sm" tone="secondary">
+              {t('shoppingListScreens.notes')}
+            </Text>
+            <Text size="sm" weight="medium">
+              {item.notes}
+            </Text>
+          </View>
+        )}
+      </DetailSection>
+
+      {!!showNutrition && (
+        <DetailSection title={t('dietary.nutritionGoals')}>
+          <NutritionSummary
+            nutritions={itemNutritions}
+            showHighlights
+            compact
+          />
+        </DetailSection>
+      )}
+
+      <DetailSection>
+        <ClickableInfoPanel
+          title={t('shoppingListScreens.purchaseHistoryTitle')}
+          items={purchaseHistoryItems}
+          onPress={handleViewHistory}
+          emptyMessage={t('shoppingListScreens.noPurchaseHistory')}
+        />
+      </DetailSection>
+
+      <DetailSection title={t('shoppingListScreens.additionalDetails')}>
+        {!!item.addedBy && (
+          <DetailRow label={t('shoppingListScreens.addedBy')}>
+            <Text size="sm" weight="medium">
+              {item.addedBy.profile?.displayName || item.addedBy.email}
+            </Text>
+          </DetailRow>
+        )}
+        <DetailRow label={t('shoppingListScreens.addedOn')}>
+          <Text size="sm" weight="medium">
+            {formatDate(item.createdAt)}
+          </Text>
+        </DetailRow>
+        {item.updatedAt !== item.createdAt && (
+          <DetailRow label={t('shoppingListScreens.lastUpdated')}>
+            <Text size="sm" weight="medium">
+              {formatDate(item.updatedAt)}
+            </Text>
+          </DetailRow>
+        )}
+        {!!item.source?.isAutoAdded && (
+          <DetailRow label={t('shoppingListScreens.autoAdded')}>
+            <Text size="sm" weight="medium">
+              {item.source?.autoAddReason || t('shoppingListScreens.yes')}
+            </Text>
+          </DetailRow>
+        )}
+        {!!item.source?.isFromMealPlan && (
+          <DetailRow label={t('shoppingListScreens.fromMealPlan')}>
+            <Text size="sm" weight="medium">
+              {t('shoppingListScreens.yes')}
+            </Text>
+          </DetailRow>
+        )}
+      </DetailSection>
+    </CollapsingHeroDetail>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  headerSection: {
-    alignItems: 'center',
-    marginBottom: theme.spacing.md,
+  heroFull: {
+    width: '100%',
   },
-  itemImage: {
-    width: 120,
-    height: 120,
-    borderRadius: theme.radii.md,
-    marginBottom: theme.spacing.md,
-  },
-  imagePlaceholder: {
-    width: 120,
-    height: 120,
-    borderRadius: theme.radii.md,
-    backgroundColor: theme.colors.background,
+  centerMessage: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: theme.spacing.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    padding: theme.spacing.lg,
   },
-  itemName: {
-    fontSize: theme.fonts.size['2xl'],
+  centerMessageText: {
     textAlign: 'center',
-  },
-  itemDescription: {
-    marginTop: theme.spacing.xs,
-    alignItems: 'center',
-    justifyContent: 'center',
+    color: theme.colors.textSecondary,
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
+    alignSelf: 'flex-start',
+    gap: theme.spacing.xs,
+    marginHorizontal: theme.spacing.lg,
+    marginTop: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.sm,
     backgroundColor: theme.colors.successLight,
-    marginTop: theme.spacing.md,
     borderRadius: theme.radii.md,
   },
   statusBadgeText: {
     marginLeft: theme.spacing.xs,
   },
+  // Overrides on top of InfoRow's defaults (border/structure come from there).
   detailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: theme.spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    paddingVertical: theme.spacing.md,
   },
   detailLabel: {
-    flex: 1,
+    color: theme.colors.textSecondary,
   },
   notesRow: {
     flexDirection: 'column',
-    paddingVertical: theme.spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    paddingVertical: theme.spacing.md,
     gap: theme.spacing.xs,
   },
 }));

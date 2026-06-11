@@ -80,6 +80,87 @@ describe('mmkv storage', () => {
     });
   });
 
+  // The fail-closed init path only runs outside the test fast-path (IS_TEST
+  // eagerly creates the instance), so these specs reload the module with
+  // NODE_ENV overridden and a rejecting DeviceKeyManager.
+  describe('initializeSecureStorage fail-closed behavior', () => {
+    const ORIGINAL_NODE_ENV = process.env.NODE_ENV;
+
+    afterEach(() => {
+      process.env.NODE_ENV = ORIGINAL_NODE_ENV;
+      jest.useRealTimers();
+      jest.resetModules();
+    });
+
+    const loadIsolated = (
+      keyImpl: () => Promise<string>,
+    ): {
+      mmkvModule: typeof import('../mmkv');
+      createMMKV: jest.Mock;
+      getKey: jest.Mock;
+    } => {
+      process.env.NODE_ENV = 'development';
+      jest.resetModules();
+      const { DeviceKeyManager } = jest.requireMock(
+        '#/utils/security/deviceKey',
+      ) as { DeviceKeyManager: { getDeviceEncryptionKey: jest.Mock } };
+      DeviceKeyManager.getDeviceEncryptionKey.mockReset();
+      DeviceKeyManager.getDeviceEncryptionKey.mockImplementation(keyImpl);
+      const { createMMKV } = jest.requireMock('react-native-mmkv') as {
+        createMMKV: jest.Mock;
+      };
+      createMMKV.mockClear();
+      const mmkvModule = require('../mmkv') as typeof import('../mmkv');
+      return {
+        mmkvModule,
+        createMMKV,
+        getKey: DeviceKeyManager.getDeviceEncryptionKey,
+      };
+    };
+
+    it('quarantines to the recovery instance when the key never resolves — primary id is not opened keyless', async () => {
+      jest.useFakeTimers();
+      const { mmkvModule, createMMKV, getKey } = loadIsolated(() =>
+        Promise.reject(new Error('keychain unavailable')),
+      );
+
+      const initPromise = mmkvModule.initializeSecureStorage();
+      await jest.runAllTimersAsync();
+      await initPromise;
+
+      expect(getKey).toHaveBeenCalledTimes(2);
+      expect(createMMKV).toHaveBeenCalledTimes(1);
+      expect(createMMKV).toHaveBeenCalledWith({
+        id: mmkvModule.RECOVERY_STORAGE_KEY,
+      });
+      expect(createMMKV).not.toHaveBeenCalledWith({
+        id: mmkvModule.STORAGE_KEY,
+      });
+    });
+
+    it('opens the encrypted primary instance when the key resolves on the retry cycle', async () => {
+      jest.useFakeTimers();
+      let calls = 0;
+      const { mmkvModule, createMMKV, getKey } = loadIsolated(() => {
+        calls += 1;
+        return calls === 1
+          ? Promise.reject(new Error('transient'))
+          : Promise.resolve('recovered-key');
+      });
+
+      const initPromise = mmkvModule.initializeSecureStorage();
+      await jest.runAllTimersAsync();
+      await initPromise;
+
+      expect(getKey).toHaveBeenCalledTimes(2);
+      expect(createMMKV).toHaveBeenCalledTimes(1);
+      expect(createMMKV).toHaveBeenCalledWith({
+        id: mmkvModule.STORAGE_KEY,
+        encryptionKey: 'recovered-key',
+      });
+    });
+  });
+
   describe('zustandStorage', () => {
     it('has setItem, getItem, removeItem methods', () => {
       expect(typeof zustandStorage.setItem).toBe('function');

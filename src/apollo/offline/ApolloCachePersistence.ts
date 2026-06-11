@@ -84,7 +84,7 @@ class ApolloCachePersistence {
       const storedVersion = storage.getString(CACHE_VERSION_KEY);
       if (storedVersion !== CURRENT_CACHE_VERSION) {
         if (__DEV__) {
-          console.log(
+          logger.debug(
             `📦 Cache: Version mismatch (stored: ${storedVersion}, current: ${CURRENT_CACHE_VERSION}), clearing cache`,
           );
         }
@@ -96,7 +96,7 @@ class ApolloCachePersistence {
       const cacheString = storage.getString(CACHE_STORAGE_KEY);
       if (!cacheString) {
         if (__DEV__) {
-          console.log('📦 Cache: No persisted cache found');
+          logger.debug('📦 Cache: No persisted cache found');
         }
         return null;
       }
@@ -105,11 +105,11 @@ class ApolloCachePersistence {
       const entityCount = Object.keys(cache).length;
 
       if (__DEV__) {
-        console.log(`📦 Cache: Loaded ${entityCount} entities from storage`);
+        logger.debug(`📦 Cache: Loaded ${entityCount} entities from storage`);
       }
       return cache;
     } catch (error) {
-      console.error('📦 Cache: Failed to load persisted cache:', error);
+      logger.error('📦 Cache: Failed to load persisted cache:', error);
       // Clear corrupted cache
       this.clear();
       return null;
@@ -134,7 +134,7 @@ class ApolloCachePersistence {
       const cache = JSON.parse(cacheString) as NormalizedCacheObject;
 
       if (__DEV__) {
-        console.log(
+        logger.debug(
           `📦 Cache: Loaded ${
             Object.keys(cache).length
           } critical entities from storage`,
@@ -142,7 +142,7 @@ class ApolloCachePersistence {
       }
       return cache;
     } catch (error) {
-      console.error('📦 Cache: Failed to load critical cache:', error);
+      logger.error('📦 Cache: Failed to load critical cache:', error);
       return null;
     }
   }
@@ -187,7 +187,7 @@ class ApolloCachePersistence {
       } catch (error) {
         // A corrupt deferred blob shouldn't crash the JS thread — drop it and
         // let the next save overwrite. Network refetch covers the data.
-        console.error('📦 Apollo: Deferred cache restore failed:', error);
+        logger.error('📦 Apollo: Deferred cache restore failed:', error);
         storage.remove(DEFERRED_CACHE_KEY);
       } finally {
         onComplete?.();
@@ -216,7 +216,7 @@ class ApolloCachePersistence {
       const elapsed = performance.now() - t0;
 
       if (__DEV__) {
-        console.log(
+        logger.debug(
           `📦 Cache: Deferred restore ${
             Object.keys(cache).length
           } entities in ${elapsed.toFixed(1)}ms`,
@@ -224,7 +224,7 @@ class ApolloCachePersistence {
       }
       return cache;
     } catch (error) {
-      console.error('📦 Cache: Failed to load deferred cache:', error);
+      logger.error('📦 Cache: Failed to load deferred cache:', error);
       return null;
     }
   }
@@ -295,7 +295,7 @@ class ApolloCachePersistence {
     this.paused = false;
     if (this.pendingWhilePaused && this.pausedExtractor) {
       if (__DEV__) {
-        console.log('💾 [CachePersist] Resuming with pending save');
+        logger.debug('💾 [CachePersist] Resuming with pending save');
       }
       this.pendingWhilePaused = false;
       const extractor = this.pausedExtractor;
@@ -369,7 +369,7 @@ class ApolloCachePersistence {
             if (!hasChanges) {
               this.dirtyKeys.clear();
               if (__DEV__) {
-                console.log(
+                logger.debug(
                   '💾 [CachePersist] skipped — no changes in dirty keys',
                 );
               }
@@ -397,7 +397,7 @@ class ApolloCachePersistence {
             const extractMs = (tExtract - t0).toFixed(2);
             const stringifyMs = (tStringify - tExtract).toFixed(2);
             const totalMs = (tStringify - t0).toFixed(2);
-            console.log(
+            logger.debug(
               `💾 [CachePersist] extract=${extractMs}ms stringify=${stringifyMs}ms total=${totalMs}ms size=${sizeKB}KB critical=${
                 Object.keys(critical).length
               } deferred=${Object.keys(deferred).length}`,
@@ -410,7 +410,7 @@ class ApolloCachePersistence {
             Telemetry.gauge('cache_persist_size_kb', sizeKB);
           }
         } catch (error) {
-          console.error('💾 Cache: Failed to persist cache:', error);
+          logger.error('💾 Cache: Failed to persist cache:', error);
         }
       };
 
@@ -490,10 +490,10 @@ class ApolloCachePersistence {
       this.dirtyKeys.clear();
 
       if (__DEV__) {
-        console.log(`💾 Cache: Persisted cache immediately (${sizeKB} KB)`);
+        logger.debug(`💾 Cache: Persisted cache immediately (${sizeKB} KB)`);
       }
     } catch (error) {
-      console.error('💾 Cache: Failed to persist cache immediately:', error);
+      logger.error('💾 Cache: Failed to persist cache immediately:', error);
     }
   }
 
@@ -515,10 +515,10 @@ class ApolloCachePersistence {
       this.lastPersistedSnapshot = null;
       this.dirtyKeys.clear();
       if (__DEV__) {
-        console.log('🧹 Cache: Cleared persisted cache');
+        logger.debug('🧹 Cache: Cleared persisted cache');
       }
     } catch (error) {
-      console.error('🧹 Cache: Failed to clear persisted cache:', error);
+      logger.error('🧹 Cache: Failed to clear persisted cache:', error);
     }
   }
 
@@ -576,7 +576,7 @@ class ApolloCachePersistence {
         entityCount: Object.keys(cache).length,
       };
     } catch (error) {
-      console.error('📊 Cache: Failed to get stats:', error);
+      logger.error('📊 Cache: Failed to get stats:', error);
       return {
         exists: false,
         version: null,
