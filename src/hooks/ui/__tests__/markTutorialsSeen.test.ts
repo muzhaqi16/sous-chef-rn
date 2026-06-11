@@ -2,24 +2,7 @@ import { markTutorialsSeen } from '../markTutorialsSeen';
 import { UpdateUserPreferencesDocument } from '#operations/auth/user.generated';
 import { storage } from '#/storage/mmkv';
 
-jest.mock('#/storage/mmkv', () => {
-  const store = new Map<string, boolean | string | number | ArrayBuffer>();
-  return {
-    __mockStore: store,
-    storage: {
-      getString: (key: string) => store.get(key),
-      getNumber: (key: string) => store.get(key),
-      getBoolean: (key: string) => store.get(key),
-      set: (key: string, value: boolean | string | number | ArrayBuffer) =>
-        store.set(key, value),
-      remove: (key: string) => store.delete(key),
-      delete: (key: string) => store.delete(key),
-      contains: (key: string) => store.has(key),
-      clearAll: () => store.clear(),
-      getAllKeys: () => [...store.keys()],
-    },
-  };
-});
+jest.mock('#/storage/mmkv');
 
 const { __mockStore: mockStore } = jest.requireMock<{
   __mockStore: Map<string, boolean | string | number | ArrayBuffer>;

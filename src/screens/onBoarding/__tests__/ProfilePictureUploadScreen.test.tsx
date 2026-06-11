@@ -39,13 +39,7 @@ jest.mock('#features/profile/hooks/useProfileData', () => ({
 
 jest.mock('#hooks/performance/useScreenTransition');
 
-jest.mock('#/storage/mmkv', () => ({
-  storage: {
-    getString: jest.fn(() => undefined),
-    remove: jest.fn(),
-  },
-  isStorageReady: () => true,
-}));
+jest.mock('#/storage/mmkv');
 jest.mock('#/utils/compilerSafeWrappers');
 jest.mock('#utils/imageValidation', () => ({
   validateImageFile: jest.fn(),

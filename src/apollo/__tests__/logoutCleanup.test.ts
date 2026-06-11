@@ -37,21 +37,7 @@ jest.mock('#store', () => ({
   },
 }));
 
-jest.mock('#/storage/mmkv', () => ({
-  storage: {
-    getString: jest.fn(),
-    set: jest.fn(),
-    delete: jest.fn(),
-    remove: jest.fn(),
-    getAllKeys: jest.fn(() => []),
-  },
-  getStorage: jest.fn(() =>
-    Promise.resolve({
-      remove: jest.fn(),
-    }),
-  ),
-  isStorageReady: () => true,
-}));
+jest.mock('#/storage/mmkv');
 
 // Mock wsLink dynamic import
 jest.mock('../links/wsLink', () => ({

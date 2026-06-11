@@ -45,23 +45,18 @@ jest.mock('#store/useAppStore', () => {
   };
 });
 
-let mockShowTutorialsMMKV: boolean | undefined = true;
+jest.mock('#/storage/mmkv');
 
-jest.mock('#/storage/mmkv', () => ({
-  storage: {
-    getBoolean: (key: string) => {
-      if (key === 'user_show_tutorials') return mockShowTutorialsMMKV;
-      return undefined;
-    },
-  },
-  isStorageReady: () => true,
-}));
+const { __mockStore: mockStore } = jest.requireMock<{
+  __mockStore: Map<string, boolean | string | number | ArrayBuffer>;
+}>('#/storage/mmkv');
 
 beforeEach(() => {
   jest.clearAllMocks();
   mockHapticFeedbackEnabled = true;
   mockShowNavigationLabelsValue = true;
-  mockShowTutorialsMMKV = true;
+  mockStore.clear();
+  mockStore.set('user_show_tutorials', true);
 });
 
 describe('useSettings', () => {
@@ -162,19 +157,19 @@ describe('useSettings', () => {
 
 describe('useShowTutorials', () => {
   it('returns true when MMKV value is true', () => {
-    mockShowTutorialsMMKV = true;
+    mockStore.set('user_show_tutorials', true);
     const { result } = renderHook(() => useShowTutorials());
     expect(result.current).toBe(true);
   });
 
   it('returns false when MMKV value is false', () => {
-    mockShowTutorialsMMKV = false;
+    mockStore.set('user_show_tutorials', false);
     const { result } = renderHook(() => useShowTutorials());
     expect(result.current).toBe(false);
   });
 
   it('defaults to true when MMKV value is undefined', () => {
-    mockShowTutorialsMMKV = undefined;
+    mockStore.delete('user_show_tutorials');
     const { result } = renderHook(() => useShowTutorials());
     expect(result.current).toBe(true);
   });

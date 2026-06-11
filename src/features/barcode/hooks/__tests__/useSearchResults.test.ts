@@ -65,14 +65,7 @@ jest.mock('#hooks/useImageUpload', () => ({
   })),
 }));
 
-jest.mock('#/storage/mmkv', () => ({
-  storage: {
-    getString: jest.fn(),
-    set: jest.fn(),
-    remove: jest.fn(),
-  },
-  isStorageReady: () => true,
-}));
+jest.mock('#/storage/mmkv');
 
 jest.mock('#/utils/compilerSafeWrappers', () => ({
   executeMutation: jest.fn(
