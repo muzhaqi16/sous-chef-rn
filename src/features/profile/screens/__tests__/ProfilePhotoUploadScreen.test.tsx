@@ -52,13 +52,7 @@ jest.mock('react-native-permissions', () => ({
   },
 }));
 
-jest.mock('#/storage/mmkv', () => ({
-  storage: {
-    getString: jest.fn(() => null),
-    remove: jest.fn(),
-  },
-  isStorageReady: () => true,
-}));
+jest.mock('#/storage/mmkv');
 
 jest.mock('#/services/errorService', () => ({
   errorService: { reportError: jest.fn() },

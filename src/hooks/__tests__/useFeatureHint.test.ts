@@ -1,35 +1,7 @@
 import { renderHook, act } from '@testing-library/react-native';
 import { useFeatureHint } from '../useFeatureHint';
 
-// Mock MMKV storage — the Map lives inside the factory so it is available
-// when module-level code (ApolloCachePersistence, zustand persist) runs,
-// since jest.mock factories are hoisted above variable declarations.
-jest.mock('#/storage/mmkv', () => {
-  const store = new Map<string, boolean | string | number | ArrayBuffer>();
-  return {
-    __mockStore: store,
-    storage: {
-      getString: (key: string) => store.get(key),
-      getNumber: (key: string) => store.get(key),
-      getBoolean: (key: string) => store.get(key),
-      set: (key: string, value: boolean | string | number | ArrayBuffer) =>
-        store.set(key, value),
-      remove: (key: string) => store.delete(key),
-      delete: (key: string) => store.delete(key),
-      contains: (key: string) => store.has(key),
-      clearAll: () => store.clear(),
-      getAllKeys: () => [...store.keys()],
-    },
-    zustandStorage: {
-      getItem: async (name: string) => store.get(name) ?? null,
-      setItem: async (name: string, value: string) => store.set(name, value),
-      removeItem: async (name: string) => store.delete(name),
-    },
-    getStorage: async () => ({}),
-    isStorageReady: () => true,
-    STORAGE_KEY: 'sous-chef-storage',
-  };
-});
+jest.mock('#/storage/mmkv');
 
 const { __mockStore: mockStore } = jest.requireMock<{
   __mockStore: Map<string, boolean | string | number | ArrayBuffer>;
