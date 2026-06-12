@@ -1,5 +1,10 @@
 import { HttpTransport } from '../HttpTransport';
-import { TelemetryConfig, LogEntry, MetricEntry } from '../../types';
+import {
+  TelemetryConfig,
+  LogEntry,
+  MetricEntry,
+  TransportSendError,
+} from '../../types';
 
 import { logger } from '#/utils/environment';
 
@@ -170,13 +175,40 @@ describe('HttpTransport', () => {
       );
     });
 
-    it('throws on a fetch rejection', async () => {
+    // The retryable verdict drives TelemetryService's policy: re-buffer +
+    // backoff (transient) vs drop the batch (permanent — the same payload can
+    // never succeed against a 404/401 endpoint).
+    it.each([
+      [408, true],
+      [429, true],
+      [500, true],
+      [503, true],
+      [400, false],
+      [401, false],
+      [404, false],
+      [413, false],
+    ])('classifies HTTP %i as retryable=%s', async (status, retryable) => {
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status,
+        statusText: 'nope',
+        text: jest.fn().mockResolvedValue('nope'),
+      });
+      const transport = new HttpTransport(makeConfig());
+
+      const error: unknown = await transport.sendLogs(makeLogs()).catch(e => e);
+      expect(error).toBeInstanceOf(TransportSendError);
+      expect((error as TransportSendError).retryable).toBe(retryable);
+    });
+
+    it('throws retryable on a fetch rejection (network-level failure)', async () => {
       mockFetch.mockRejectedValue(new Error('Network down'));
       const transport = new HttpTransport(makeConfig());
 
-      await expect(transport.sendLogs(makeLogs())).rejects.toThrow(
-        'Network down',
-      );
+      const error: unknown = await transport.sendLogs(makeLogs()).catch(e => e);
+      expect(error).toBeInstanceOf(TransportSendError);
+      expect((error as TransportSendError).retryable).toBe(true);
+      expect((error as TransportSendError).message).toContain('Network down');
     });
 
     it('includes Basic auth header when credentials present', async () => {
@@ -394,7 +426,9 @@ describe('HttpTransport', () => {
 
       const transport = new HttpTransport(makeConfig());
 
-      await transport.sendMetrics(makeMetrics('gauge'));
+      await expect(transport.sendMetrics(makeMetrics('gauge'))).rejects.toThrow(
+        /OTLP metrics HTTP 500/,
+      );
 
       // Failed send — accumulators retained
       mockFetch.mockClear();
@@ -410,19 +444,33 @@ describe('HttpTransport', () => {
       expect(gauge.gauge.dataPoints[0].asDouble).toBe(5);
     });
 
-    it('handles fetch errors gracefully', async () => {
+    it('throws retryable on a fetch rejection so the service backs off and retries', async () => {
       mockFetch.mockRejectedValue(new Error('Network failure'));
 
       const transport = new HttpTransport(makeConfig());
 
-      await expect(
-        transport.sendMetrics(makeMetrics()),
-      ).resolves.toBeUndefined();
+      const error: unknown = await transport
+        .sendMetrics(makeMetrics())
+        .catch(e => e);
+      expect(error).toBeInstanceOf(TransportSendError);
+      expect((error as TransportSendError).retryable).toBe(true);
+    });
 
-      expect(logger.error).toHaveBeenCalledWith(
-        expect.stringContaining('Failed to send metrics'),
-        expect.any(Error),
-      );
+    it('throws non-retryable on a 404 (misconfigured endpoint)', async () => {
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 404,
+        statusText: 'Not Found',
+        text: jest.fn().mockResolvedValue('404 page not found'),
+      });
+
+      const transport = new HttpTransport(makeConfig());
+
+      const error: unknown = await transport
+        .sendMetrics(makeMetrics())
+        .catch(e => e);
+      expect(error).toBeInstanceOf(TransportSendError);
+      expect((error as TransportSendError).retryable).toBe(false);
     });
 
     it('groups multiple label sets under the same metric name', async () => {

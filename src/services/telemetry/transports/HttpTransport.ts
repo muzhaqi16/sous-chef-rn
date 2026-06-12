@@ -3,10 +3,20 @@ import {
   LogEntry,
   MetricEntry,
   TelemetryConfig,
+  TransportSendError,
 } from '../types';
 import { logger } from '#/utils/environment';
 
 const HISTOGRAM_BOUNDS = [10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000];
+
+// Transient failures worth retrying: timeout, rate limiting, server errors.
+// Any other 4xx is a config/payload problem — the same batch can never
+// succeed, so the service drops it instead of retrying it forever.
+const isRetryableStatus = (status: number): boolean =>
+  status === 408 || status === 429 || status >= 500;
+
+const describeError = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error);
 
 // OTLP SeverityNumber values (logs data model) keyed by our log level.
 const LOG_SEVERITY_NUMBER: Record<LogEntry['level'], number> = {
@@ -149,16 +159,23 @@ export class HttpTransport implements TelemetryTransport {
         const responseText = await response
           .text()
           .catch(() => 'Unable to read response');
-        // Throw so TelemetryService re-buffers the batch for retry instead of
-        // dropping it (the caller's catch is the only retry path for logs).
-        throw new Error(
+        // Throw so TelemetryService owns the outcome: re-buffer + backoff for
+        // retryable statuses, drop the batch for permanent ones.
+        throw new TransportSendError(
           `OTLP logs HTTP ${response.status} ${response.statusText}: ${responseText} (${otlpUrl})`,
+          { retryable: isRetryableStatus(response.status) },
         );
       }
       logger.debug(`✅ Logs sent via OTLP (${logs.length} entries)`);
     } catch (error) {
-      logger.error('Failed to send logs via OTLP:', error);
-      throw error;
+      if (error instanceof TransportSendError) {
+        throw error;
+      }
+      // fetch itself rejected — a network-level failure, always retryable.
+      throw new TransportSendError(
+        `OTLP logs send failed: ${describeError(error)}`,
+        { retryable: true },
+      );
     }
   }
 
@@ -245,23 +262,28 @@ export class HttpTransport implements TelemetryTransport {
         body,
       });
 
+      // Cumulative totals are retained on failure either way (they live in
+      // the instance accumulators): the next allowed flush re-sends the
+      // running totals, so a failed send self-heals without losing data.
       if (!response.ok) {
         const responseText = await response
           .text()
           .catch(() => 'Unable to read response');
-        logger.error('❌ Failed to send metrics via OTLP:', {
-          status: response.status,
-          statusText: response.statusText,
-          response: responseText,
-          url: otlpUrl,
-        });
-      } else {
-        logger.debug(`✅ Metrics sent via OTLP (${totalMetrics} metrics)`);
+        throw new TransportSendError(
+          `OTLP metrics HTTP ${response.status} ${response.statusText}: ${responseText} (${otlpUrl})`,
+          { retryable: isRetryableStatus(response.status) },
+        );
       }
-      // Cumulative totals are retained either way: the next flush re-sends the
-      // running totals, so a failed send self-heals without losing data.
+      logger.debug(`✅ Metrics sent via OTLP (${totalMetrics} metrics)`);
     } catch (error) {
-      logger.error('❌ Failed to send metrics via OTLP:', error);
+      if (error instanceof TransportSendError) {
+        throw error;
+      }
+      // fetch itself rejected — a network-level failure, always retryable.
+      throw new TransportSendError(
+        `OTLP metrics send failed: ${describeError(error)}`,
+        { retryable: true },
+      );
     }
   }
 
