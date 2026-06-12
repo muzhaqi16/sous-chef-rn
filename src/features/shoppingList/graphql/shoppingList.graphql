@@ -733,101 +733,40 @@ mutation SyncMoveShoppingListItem($input: SyncMoveShoppingListItemInput!) {
 # SUBSCRIPTIONS
 # ============================================
 
-subscription ShoppingListItemChanged($listId: ID!) {
-  shoppingListItemChanged(listId: $listId) {
+# NOTE: The server caps concurrent subscriptions per client. All shopping-list
+# domain events arrive on this single user-scoped stream, discriminated by
+# `subtype` (mirrors pantryEvents): ITEMS_CHANGED, LIST_UPDATED,
+# STATUS_CHANGED, ITEMS_BATCH_CLEARED. The per-list shoppingListEvents(listId)
+# variant is intentionally NOT used — one stream covers every list the user
+# can access, and useShoppingListSubscriptions filters by the active list
+# where needed.
+subscription MyShoppingListsEvents {
+  myShoppingListsEvents {
+    subtype
     mutation
-    item {
-      id
-      sortOrder
-      purchaseInfo {
-        isPurchased
-      }
-      ...useShoppingListSubscriptions_item
-    }
-    updatedFields
     listId
+    actorUserId
     timestamp
-    userId
-    originatorClientId
-  }
-}
-
-subscription MyShoppingListsItemChanged {
-  myShoppingListsItemChanged {
-    mutation
-    item {
-      id
-      sortOrder
-      purchaseInfo {
-        isPurchased
-      }
-      ...useShoppingListSubscriptions_item
-    }
     updatedFields
-    listId
-    timestamp
-    userId
-  }
-}
-
-subscription ShoppingListUpdated($listId: ID!) {
-  shoppingListUpdated(listId: $listId) {
-    mutation
-    node {
-      id
-      name
-      isCompleted
-      totalItems
-      completedItems
-      remainingItems
-      completionRate
-    }
-    updatedFields
-    timestamp
-    userId
-    originatorClientId
-  }
-}
-
-subscription ShoppingListItemsBatchCleared($listId: ID!) {
-  shoppingListItemsBatchCleared(listId: $listId) {
-    listId
     clearedItemIds
-    clearedCount
-    mutation
-    timestamp
-    userId
-    originatorClientId
-  }
-}
-
-subscription MyShoppingListsUpdated {
-  myShoppingListsUpdated {
-    mutation
     node {
-      id
-      name
-      isCompleted
-      totalItems
-      completedItems
-      remainingItems
-      completionRate
+      ... on ShoppingListItem {
+        id
+        sortOrder
+        purchaseInfo {
+          isPurchased
+        }
+        ...useShoppingListSubscriptions_item
+      }
+      ... on ShoppingList {
+        id
+        name
+        isCompleted
+        totalItems
+        completedItems
+        remainingItems
+        completionRate
+      }
     }
-    updatedFields
-    timestamp
-    userId
-    originatorClientId
-  }
-}
-
-subscription MyShoppingListsStatusChanged {
-  myShoppingListsStatusChanged {
-    listId
-    newStatus
-    previousStatus
-    mutation
-    timestamp
-    userId
-    originatorClientId
   }
 }

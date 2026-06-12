@@ -1170,6 +1170,10 @@
       "ShareShoppingListPayload",
       "ValidationError"
     ],
+    "ShoppingListEventNode": [
+      "ShoppingList",
+      "ShoppingListItem"
+    ],
     "Timestamped": [
       "Notification"
     ],

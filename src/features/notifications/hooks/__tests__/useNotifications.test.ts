@@ -14,7 +14,7 @@ import {
   Priority,
   MutationType,
 } from '#/graphql/generated/schemaTypes';
-import { useNotifications } from '../useNotifications';
+import { useNotifications, useNotificationListener } from '../useNotifications';
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
@@ -189,26 +189,55 @@ describe('useNotifications', () => {
     expect(mockSyncMarkAllAsRead).toHaveBeenCalled();
   });
 
-  it('returns default config merged with user config', () => {
-    const { result } = renderHookWithApollo(() =>
-      useNotifications({ showInAppNotifications: false }),
-    );
+  it('clearAll is passed through from store', () => {
+    const { result } = renderHookWithApollo(() => useNotifications());
 
-    expect(result.current.config.showInAppNotifications).toBe(false);
-    expect(result.current.config.showPushNotifications).toBe(true);
+    expect(result.current.clearAll).toBe(mockClearAll);
   });
 
-  it('skips subscription when config.skip is true', () => {
-    // No subscription mock provided. If the subscription fired, MockedProvider
-    // would log a warning (suppressed in tests). The hook returns normally.
-    const { result } = renderHookWithApollo(() =>
-      useNotifications({ skip: true }),
+  it('getNotificationsByCategory is passed through from store', () => {
+    const { result } = renderHookWithApollo(() => useNotifications());
+
+    expect(result.current.getNotificationsByCategory).toBe(
+      mockGetNotificationsByCategory,
     );
-    expect(result.current.config).toBeDefined();
+  });
+
+  it('does not open subscriptions (listener is provider-only)', async () => {
+    // A created-event mock is available, but useNotifications must not
+    // subscribe — only useNotificationListener (mounted once in
+    // NotificationProvider) opens the server subscriptions.
+    renderHookWithApollo(() => useNotifications(), {
+      operationMocks: [
+        buildNotificationSubscriptionMock({
+          id: 'notif-1',
+          type: NotificationType.LowStock,
+          title: 'Low Stock Alert',
+          message: 'Milk is running low',
+        }),
+      ],
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(mockAddNotification).not.toHaveBeenCalled();
+  });
+});
+
+describe('useNotificationListener', () => {
+  it('skips subscription when config.skip is true', async () => {
+    // No subscription should fire; the hook mounts without error.
+    renderHookWithApollo(() => useNotificationListener({ skip: true }));
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(mockAddNotification).not.toHaveBeenCalled();
   });
 
   it('subscription processes incoming notification data', async () => {
-    renderHookWithApollo(() => useNotifications(), {
+    renderHookWithApollo(() => useNotificationListener(), {
       operationMocks: [
         buildNotificationSubscriptionMock({
           id: 'notif-1',
@@ -229,19 +258,5 @@ describe('useNotifications', () => {
         }),
       );
     });
-  });
-
-  it('clearAll is passed through from store', () => {
-    const { result } = renderHookWithApollo(() => useNotifications());
-
-    expect(result.current.clearAll).toBe(mockClearAll);
-  });
-
-  it('getNotificationsByCategory is passed through from store', () => {
-    const { result } = renderHookWithApollo(() => useNotifications());
-
-    expect(result.current.getNotificationsByCategory).toBe(
-      mockGetNotificationsByCategory,
-    );
   });
 });

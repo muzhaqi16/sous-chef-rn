@@ -386,10 +386,12 @@ export class SubscriptionService {
         errorMessage.includes('connection') ||
         errorMessage.includes('websocket');
 
-      // Socket closed errors are expected during network transitions
-      // Log at WARN level to make connection issues visible during development
+      // Socket closed errors are expected during network transitions — debug
+      // level: one WS drop interrupts EVERY active subscription at once, so a
+      // warn here multiplies into a wall of identical lines per disconnect
+      // (wsLink already warns once per socket event).
       if (isSocketClosed || isNetworkError) {
-        this.log(config, LogLevel.WARN, 'WebSocket connection interrupted', {
+        this.log(config, LogLevel.DEBUG, 'WebSocket connection interrupted', {
           error: errorMessage,
           hint: 'WebSocket will attempt auto-reconnect if enabled',
         });

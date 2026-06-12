@@ -34,16 +34,16 @@ import {
 import { useNotificationSettings } from './useNotificationSettings';
 import { useNotificationSync } from './useNotificationSync';
 
-// PERFORMANCE: Grouped selectors to reduce subscriptions from 7 to 2
-const selectNotificationState = (state: RootState) => ({
-  notifications: state.notifications,
+// PERFORMANCE: Grouped selectors with useShallow keep store subscriptions low
+const selectListenerState = (state: RootState) => ({
   user: state.user,
-});
-
-const selectNotificationActions = (state: RootState) => ({
   addNotification: state.addNotification,
   markAsRead: state.markAsRead,
   removeNotification: state.removeNotification,
+});
+
+const selectNotificationsState = (state: RootState) => ({
+  notifications: state.notifications,
   clearAll: state.clearAll,
   getNotificationsByCategory: state.getNotificationsByCategory,
 });
@@ -54,32 +54,30 @@ interface NotificationConfig {
   showPushNotifications?: boolean;
 }
 
-export const useNotifications = (config: NotificationConfig = {}) => {
+/**
+ * useNotificationListener — opens the NotificationCreated / NotificationUpdated
+ * subscriptions and processes incoming events into the notification store.
+ *
+ * Must be mounted exactly ONCE (by NotificationProvider). The server caps
+ * concurrent subscriptions per client and Apollo does not dedupe identical
+ * subscriptions, so a second mount opens two more server subscriptions and
+ * double-processes every event. Screens that need notification state should
+ * use `useNotifications` instead — it reads the store without subscribing.
+ */
+export const useNotificationListener = (config: NotificationConfig = {}) => {
   const client = useApolloClient();
 
   // PERFORMANCE: Use ref instead of state for AppState to avoid re-renders
   const appStateRef = useRef(AppState.currentState);
 
-  // PERFORMANCE: Use grouped selectors with useShallow to reduce subscriptions (7 → 2)
-  const { notifications, user } = useAppStore(
-    useShallow(selectNotificationState),
+  const { user, addNotification, markAsRead, removeNotification } = useAppStore(
+    useShallow(selectListenerState),
   );
-  const {
-    addNotification,
-    markAsRead,
-    removeNotification,
-    clearAll,
-    getNotificationsByCategory,
-  } = useAppStore(useShallow(selectNotificationActions));
 
   // Fetch user notification preferences (deferred when hook is skipped)
   const { settings: userPreferences, isQuietTime } = useNotificationSettings({
     skip: config.skip,
   });
-
-  // Server-synced notification actions
-  const { syncMarkAsRead, syncDelete, syncMarkAllAsRead } =
-    useNotificationSync();
 
   // Default configuration
   const finalConfig = {
@@ -296,9 +294,24 @@ export const useNotifications = (config: NotificationConfig = {}) => {
       clearAllRetryStates();
     }
   }, [user?.id]);
+};
+
+/**
+ * useNotifications — notification state + server-synced actions for screens.
+ *
+ * Reads the store only; does NOT open subscriptions. Real-time events are
+ * delivered by `useNotificationListener`, mounted once in NotificationProvider.
+ */
+export const useNotifications = () => {
+  const { notifications, clearAll, getNotificationsByCategory } = useAppStore(
+    useShallow(selectNotificationsState),
+  );
+
+  // Server-synced notification actions
+  const { syncMarkAsRead, syncDelete, syncMarkAllAsRead } =
+    useNotificationSync();
 
   return {
-    config: finalConfig,
     notifications,
     handleMarkAsRead: syncMarkAsRead,
     handleMarkAllAsRead: syncMarkAllAsRead,

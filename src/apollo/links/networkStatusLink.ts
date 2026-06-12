@@ -46,13 +46,14 @@ export const createNetworkStatusLink = () =>
       definition.operation === 'subscription'
     ) {
       // Still log subscription errors (without counting them) so a WS failure
-      // burst is visible in the logs next to the breaker's own entries — the
-      // evidence trail for "the circuit opened because of WS noise, not HTTP".
+      // burst is visible next to the breaker's own entries — the evidence
+      // trail for "the circuit opened because of WS noise, not HTTP". Debug
+      // level: one socket drop errors every active subscription at once.
       return new Observable(observer => {
         const subscription = forward(operation).subscribe({
           next: result => observer.next(result),
           error: error => {
-            logger.info(
+            logger.debug(
               `🔌 subscription error (not counted by reachability breaker) — ${operationName}: ${describeError(
                 error,
               )}`,

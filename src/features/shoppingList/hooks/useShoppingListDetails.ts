@@ -27,7 +27,7 @@ export function useShoppingListDetails(listId: string | undefined) {
   );
 
   // Real-time updates via subscription are now handled by SubscriptionProvider.
-  // The ShoppingListUpdated subscription automatically updates the cache via
+  // The MyShoppingListsEvents subscription automatically updates the cache via
   // Apollo's normalization, eliminating the need for manual client.writeQuery.
 
   // Preserve last successful data when errorPolicy: 'ignore' returns undefined on error
