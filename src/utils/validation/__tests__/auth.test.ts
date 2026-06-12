@@ -2,7 +2,7 @@ import {
   loginSchema,
   signUpSchema,
   forgotPasswordSchema,
-  emailVerificationSchema,
+  getEmailVerificationValidationSchema,
   resetPasswordSchema,
   changePasswordSchema,
 } from '../auth';
@@ -90,7 +90,12 @@ describe('forgotPasswordSchema', () => {
   });
 });
 
-describe('emailVerificationSchema', () => {
+describe('getEmailVerificationValidationSchema', () => {
+  // Identity translator — error messages surface as their i18n keys.
+  const emailVerificationSchema = getEmailVerificationValidationSchema(
+    key => key,
+  );
+
   it('validates 6-digit code', async () => {
     await expect(
       emailVerificationSchema.validate({ code: '123456' }),
@@ -100,19 +105,19 @@ describe('emailVerificationSchema', () => {
   it('rejects non-6-digit code', async () => {
     await expect(
       emailVerificationSchema.validate({ code: '12345' }),
-    ).rejects.toThrow('6 digits');
+    ).rejects.toThrow('auth.codeMustBeSixDigits');
   });
 
   it('rejects non-numeric code', async () => {
     await expect(
       emailVerificationSchema.validate({ code: 'abcdef' }),
-    ).rejects.toThrow('6 digits');
+    ).rejects.toThrow('auth.codeMustBeSixDigits');
   });
 
   it('rejects empty code', async () => {
     await expect(
       emailVerificationSchema.validate({ code: '' }),
-    ).rejects.toThrow();
+    ).rejects.toThrow('auth.codeRequired');
   });
 });
 

@@ -2,6 +2,7 @@ import { ApolloLink, Observable } from '@apollo/client';
 import { getMainDefinition } from '@apollo/client/utilities';
 import { useStore } from '#store';
 import { isApiUnavailable } from '#store/slices/networkSlice';
+import { logger } from '#/utils/environment';
 
 /**
  * Operations that must always reach the network, even in offline mode.
@@ -11,31 +12,38 @@ import { isApiUnavailable } from '#store/slices/networkSlice';
 const ALWAYS_ALLOW = ['RefreshToken', 'GetUserSettings'];
 
 /**
- * Apollo Link that blocks query network requests when the network leg can only
- * fail — i.e. the user enabled offline mode, OR the API is unavailable
- * (`isApiUnavailable`: the device is offline, or the reachability circuit breaker
- * has opened because the API is down while the device is online). In all cases
- * Apollo has already read from cache before the link chain fires, so
- * short-circuiting serves cached data without firing a doomed request (and
- * without the retryLink/errorLink retry+warn noise that doomed attempts produce).
+ * Apollo Link that short-circuits query network requests when the network leg
+ * is unwanted or doomed — the user enabled offline mode, the device is
+ * offline, or the API-reachability circuit breaker is open. Apollo has
+ * already read from cache before the link chain fires, so blocking serves
+ * cached data without firing a doomed request (and without the
+ * retryLink/errorLink retry+warn noise that doomed attempts produce).
  *
- * - Queries: Served from cache. The link reads the query back out of the cache
- *   and emits it as the result, then completes — no network request. Apollo
- *   Client 4.x requires a link to emit a value before completing (it errors
- *   with "link chain completed without emitting a value" otherwise), and
- *   re-emitting the cached data is an idempotent write that never clobbers the
- *   populated cache. The query settles with no loading spinner and no error.
- * - Mutations: Pass through to queueLink which handles offline queuing.
- * - Subscriptions: Pass through (WebSocket connection handles its own lifecycle).
+ * Decision matrix for queries:
+ * - Cache HIT: emit the cached data and complete — no network request.
+ *   Apollo Client 4.x requires a link to emit a value before completing, and
+ *   re-emitting cached data is an idempotent write that never clobbers the
+ *   populated cache. The query settles with no spinner and no error.
+ * - Cache MISS while the circuit breaker is open (device online, offline mode
+ *   off): FORWARD to the network. Blocking would render an empty screen
+ *   anyway, and emitting `{ data: null }` makes Apollo 4 write `{}` against
+ *   the selection set (`shouldWriteResult` passes an error-free result;
+ *   `writeToStore` coerces `result || {}`), spamming "Missing field X while
+ *   writing result {}". Forwarding doubles as an organic probe: a success
+ *   closes a spuriously-open circuit via recordSuccess; a failure feeds the
+ *   breaker the failure it already believes in.
+ * - Cache MISS with no network leg available (device offline / offline mode
+ *   on): emit an explicit error result. The error stops Apollo's cache write
+ *   (no "Missing field" spam) and errorPolicy 'all' surfaces an honest
+ *   "unavailable offline" to the hook instead of a silent null.
+ * - Mutations: pass through to queueLink which handles offline queuing.
+ * - Subscriptions: pass through (WebSocket owns its own lifecycle).
  *
- * `isOnline` errs toward "online" (only false when NetInfo is confident the device
- * is offline — `isConnected === false` or `isInternetReachable === false`), so a
- * transient unknown state doesn't wrongly block. The "API-down-while-online" case
- * (`isOnline === true`, API unreachable) is intentionally NOT covered here — those
- * requests still flow through retryLink/errorLink as before.
+ * `isOnline` errs toward "online" (only false when NetInfo is confident the
+ * device is offline), so a transient unknown state doesn't wrongly block.
  *
- * This approach avoids the query cascade issue caused by dynamic fetchPolicy changes
- * (see docs/apollo-client-patterns.md "Why NOT useOfflinePresetPolicy").
+ * This approach avoids the query cascade issue caused by dynamic fetchPolicy
+ * changes (see docs/apollo-client-patterns.md "Why NOT useOfflinePresetPolicy").
  */
 export const createOfflineModeLink = () => {
   return new ApolloLink((operation, forward) => {
@@ -60,23 +68,50 @@ export const createOfflineModeLink = () => {
       return forward(operation);
     }
 
-    // Serve the query from cache instead of forwarding to the network. Read the
-    // query back out of the cache and emit it as the result — Apollo Client 4.x
-    // throws "link chain completed without emitting a value" if a link completes
-    // without emitting, and re-emitting the cached data is an idempotent write
-    // (it never clobbers a populated cache, unlike emitting `{}`/`null`). On a
-    // cache miss readQuery returns null, which the consumer hooks already guard.
+    let cached: Record<string, unknown> | null = null;
+    try {
+      cached = operation.client.cache.readQuery<Record<string, unknown>>({
+        query: operation.query,
+        variables: operation.variables,
+      });
+    } catch {
+      cached = null;
+    }
+
+    // Cache hit — serve it (idempotent re-write, see matrix above).
+    if (cached !== null) {
+      const data = cached;
+      logger.debug(`Offline link: served ${operationName} from cache`);
+      return new Observable<ApolloLink.Result>(observer => {
+        observer.next({ data });
+        observer.complete();
+      });
+    }
+
+    // Cache miss, circuit-open-only — forward as an organic probe.
+    if (state.isOnline && !state.offlineModeEnabled) {
+      logger.info(
+        `🔌 Offline link: cache miss for ${operationName} while the circuit is open — forwarding as a probe`,
+      );
+      return forward(operation);
+    }
+
+    // Cache miss, no network leg — explicit error result (blocks the `{}`
+    // cache write; errorPolicy 'all' hands the hook a null-data error state).
+    logger.info(
+      `Offline link: cache miss for ${operationName} while offline — emitting error result`,
+    );
     return new Observable<ApolloLink.Result>(observer => {
-      let cached: Record<string, unknown> | null = null;
-      try {
-        cached = operation.client.cache.readQuery<Record<string, unknown>>({
-          query: operation.query,
-          variables: operation.variables,
-        });
-      } catch {
-        cached = null;
-      }
-      observer.next({ data: cached });
+      observer.next({
+        data: null,
+        errors: [
+          {
+            message: `Offline: no cached data available for ${
+              operationName || 'query'
+            }`,
+          },
+        ],
+      });
       observer.complete();
     });
   });

@@ -45,18 +45,39 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
       onPress: handleBackdropPress,
     });
 
+    // Closed-state cleanup, reachable from two gorhom signals that can each
+    // fire without the other:
+    // - `onChange(-1)` — settled-closed. Gorhom SKIPS this when a close
+    //   interrupts an open animation that never settled (its internal
+    //   `animatedCurrentIndex` is still -1, so `nextIndex !==
+    //   animatedCurrentIndex` is false and the callback is never scheduled —
+    //   BottomSheet.tsx `animateToPositionCompleted`). Relying on it alone
+    //   leaked the backdrop claim: `mounted` stayed true forever and the
+    //   global dim stuck at full opacity.
+    // - `onDismiss` — fired from gorhom's `unmount()` in every modal
+    //   dismissal path, but NOT on minimize (stackBehavior 'switch'), which
+    //   only emits `onChange(-1)`.
+    // The ref dedupes the pair on a normal close (where both arrive), so
+    // `onClose` is notified exactly once per presentation cycle.
+    const dismissHandledRef = useRef(false);
+    const handleClosed = () => {
+      if (dismissHandledRef.current) return;
+      dismissHandledRef.current = true;
+      setMounted(false);
+      onClose?.();
+    };
+
     // Present the sheet once mounted.
     useEffect(() => {
       if (mounted) {
+        dismissHandledRef.current = false;
         bottomSheetRef.current?.present();
       }
     }, [mounted]);
 
     const handleSheetChanges = (index: number) => {
       if (index < 0) {
-        // Sheet fully closed — unmount and notify
-        setMounted(false);
-        onClose?.();
+        handleClosed();
       }
     };
 
@@ -103,6 +124,7 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
         enablePanDownToClose={true}
         backdropComponent={NullBackdrop}
         onChange={handleSheetChanges}
+        onDismiss={handleClosed}
         style={[styles.modal, style]}
         backgroundStyle={styles.background}
         handleIndicatorStyle={styles.handle}

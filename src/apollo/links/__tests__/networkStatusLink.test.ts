@@ -23,11 +23,22 @@ const QUERY = gql`
   }
 `;
 
-function operation(): ApolloLink.Operation {
+const SUBSCRIPTION = gql`
+  subscription OnItemChanged {
+    itemChanged {
+      id
+    }
+  }
+`;
+
+function operation(
+  query: DocumentNode = QUERY,
+  operationType: OperationTypeNode = OperationTypeNode.QUERY,
+): ApolloLink.Operation {
   return {
-    query: QUERY as DocumentNode,
+    query,
     operationName: 'GetItems',
-    operationType: OperationTypeNode.QUERY,
+    operationType,
     variables: {},
     getContext: () => ({}),
     setContext: jest.fn(),
@@ -132,5 +143,38 @@ describe('createNetworkStatusLink', () => {
     );
     expect(recordFailure).not.toHaveBeenCalled();
     expect(recordSuccess).not.toHaveBeenCalled();
+  });
+
+  it('excludes subscriptions entirely — a WS error is not an API failure', () => {
+    // One socket drop errors every active subscription at once; counting them
+    // tripped the 3-failure threshold and opened the circuit while the HTTP
+    // API was healthy.
+    const forward = forwardEmitting(o => {
+      o.error({ network: true, message: 'WebSocket connection lost' });
+    });
+    link
+      .request(
+        operation(SUBSCRIPTION as DocumentNode, OperationTypeNode.SUBSCRIPTION),
+        forward,
+      )
+      ?.subscribe({ next: () => {}, error: () => {}, complete: () => {} });
+
+    expect(forward).toHaveBeenCalledTimes(1);
+    expect(recordFailure).not.toHaveBeenCalled();
+  });
+
+  it('excludes subscriptions from success recording too (WS push ≠ HTTP reachability)', () => {
+    link
+      .request(
+        operation(SUBSCRIPTION as DocumentNode, OperationTypeNode.SUBSCRIPTION),
+        forwardEmitting(o => {
+          o.next({ data: { itemChanged: { id: '1' } } });
+          o.complete();
+        }),
+      )
+      ?.subscribe({ next: () => {}, error: () => {}, complete: () => {} });
+
+    expect(recordSuccess).not.toHaveBeenCalled();
+    expect(recordFailure).not.toHaveBeenCalled();
   });
 });

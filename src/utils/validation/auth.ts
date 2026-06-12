@@ -57,20 +57,20 @@ export const getForgotPasswordValidationSchema = () => forgotPasswordSchema;
 // ----------------------------------------------------------------------------
 
 // 4) email-verification (6-digit code)
-export const emailVerificationSchema = object({
-  code: string()
-    .required('Verification code is required')
-    .matches(/^\d{6}$/, 'Code must be 6 digits'),
-});
+type TranslateFn = (key: string) => string;
 
-// usage in EmailVerificationScreen:
-// const { control, handleSubmit, formState } = useForm<{code:string}>({
-//   resolver: yupResolver(emailVerificationSchema),
+// usage in CodeVerificationScreen:
+// const { control, handleSubmit, formState } = useForm({
+//   resolver: yupResolver(getEmailVerificationValidationSchema(t)),
 //   defaultValues: { code: '' },
 // })
 
-export const getEmailVerificationValidationSchema = () =>
-  emailVerificationSchema;
+export const getEmailVerificationValidationSchema = (t: TranslateFn) =>
+  object({
+    code: string()
+      .required(t('auth.codeRequired'))
+      .matches(/^\d{6}$/, t('auth.codeMustBeSixDigits')),
+  });
 
 // ----------------------------------------------------------------------------
 

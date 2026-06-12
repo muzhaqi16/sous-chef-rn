@@ -58,11 +58,21 @@ class ApiReachabilityBreaker {
   private probeTimer: ReturnType<typeof setTimeout> | null = null;
   private probeInFlight = false;
   private probeAttempt = 0;
+  /**
+   * The failures since the last success, newest last (capped) — dumped when
+   * the circuit opens so the log names exactly which operations tripped it
+   * instead of leaving the cause to guesswork.
+   */
+  private recentFailures: string[] = [];
 
-  /** A real network response arrived — the API is reachable. */
-  recordSuccess(): void {
+  /**
+   * A real network response arrived — the API is reachable.
+   * @param source diagnostic label for the log (operation name / '/health probe')
+   */
+  recordSuccess(source?: string): void {
     this.consecutiveFailures = 0;
     this.probeAttempt = 0;
+    this.recentFailures = [];
     this.clearProbeTimer();
     const wasOpen = this.circuitState === 'open';
     this.circuitState = 'closed';
@@ -70,17 +80,36 @@ class ApiReachabilityBreaker {
     // no-ops when the value is unchanged, so this is free in steady state).
     useStore.getState().setApiReachable(true);
     if (wasOpen) {
-      logger.info('🔌 API reachable — circuit closed, draining queue');
+      logger.info(
+        `🔌 API reachable — circuit closed by ${
+          source ?? 'a network success'
+        }, draining queue`,
+      );
       queueManager.requestDrain();
     }
   }
 
-  /** A network request failed (or a mutation was queued on a network error). */
-  recordFailure(): void {
+  /**
+   * A network request failed (or a mutation was queued on a network error).
+   * @param source diagnostic label: which operation failed and why
+   */
+  recordFailure(source?: string): void {
     // Suspension noise: the OS aborts in-flight requests when the app leaves
     // the foreground. Those failures say nothing about the API.
-    if (AppState.currentState !== 'active') return;
+    if (AppState.currentState !== 'active') {
+      logger.debug(
+        `🔌 API failure ignored (app not active): ${source ?? 'unknown'}`,
+      );
+      return;
+    }
     this.consecutiveFailures += 1;
+    if (this.recentFailures.length >= 5) this.recentFailures.shift();
+    this.recentFailures.push(source ?? 'unknown');
+    logger.info(
+      `🔌 API failure ${this.consecutiveFailures}/${FAILURE_THRESHOLD} — ${
+        source ?? 'unknown'
+      }`,
+    );
     if (
       this.circuitState === 'closed' &&
       this.consecutiveFailures >= FAILURE_THRESHOLD
@@ -97,6 +126,7 @@ class ApiReachabilityBreaker {
   reset(): void {
     this.consecutiveFailures = 0;
     this.probeAttempt = 0;
+    this.recentFailures = [];
     this.clearProbeTimer();
     this.circuitState = 'closed';
     useStore.getState().setApiReachable(true);
@@ -113,6 +143,9 @@ class ApiReachabilityBreaker {
       this.circuitState === 'open' ||
       useStore.getState().apiReachable === false
     ) {
+      logger.info(
+        `🔌 app foregrounded while unreachable (circuit ${this.circuitState}) — probing /health now`,
+      );
       void this.probe();
     }
   }
@@ -126,7 +159,11 @@ class ApiReachabilityBreaker {
     this.circuitState = 'open';
     this.probeAttempt = 0;
     useStore.getState().setApiReachable(false);
-    logger.warn('🔌 API unreachable — circuit open (serving cache, queueing)');
+    logger.warn(
+      `🔌 API unreachable — circuit open (serving cache, queueing). Tripped by: ${this.recentFailures.join(
+        ' | ',
+      )}`,
+    );
     this.scheduleProbe();
   }
 
@@ -136,6 +173,7 @@ class ApiReachabilityBreaker {
       INITIAL_PROBE_DELAY_MS * 2 ** this.probeAttempt,
       MAX_PROBE_DELAY_MS,
     );
+    logger.info(`🔌 next /health probe in ${Math.round(delay / 1000)}s`);
     this.probeTimer = setTimeout(() => {
       this.probeTimer = null;
       void this.probe();
@@ -153,9 +191,10 @@ class ApiReachabilityBreaker {
       this.probeInFlight = false;
     }
     if (reachable) {
-      this.recordSuccess();
+      this.recordSuccess('/health probe');
       return;
     }
+    logger.warn(`🔌 /health probe failed (attempt ${this.probeAttempt + 1})`);
     if (this.circuitState === 'open') {
       this.probeAttempt += 1;
       this.scheduleProbe();

@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { object, string } from 'yup';
 import { useTranslation } from 'react-i18next';
 import { Linking, View } from 'react-native';
 import { Text } from '#components/atoms/Text';
@@ -22,6 +21,7 @@ import {
 import { errorService } from '#/services/errorService';
 import { logger } from '#/utils/environment';
 import { logValidationErrors } from '#/utils/validation/common';
+import { getEmailVerificationValidationSchema } from '#/utils/validation/auth';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { getTopLevelGraphQLError } from '#/utils/errors/graphqlErrors';
 import type { ToastFn } from '#/components/atoms/Toast';
@@ -93,13 +93,6 @@ type CodeVerificationValues = {
   code: string;
 };
 
-const getCodeVerificationSchema = (t: (key: string) => string) =>
-  object({
-    code: string()
-      .required(t('auth.codeRequired'))
-      .matches(/^\d{6}$/, t('auth.codeMustBeSixDigits')),
-  });
-
 export function CodeVerificationScreen(): React.JSX.Element | null {
   const { t } = useTranslation();
   const user = useUser();
@@ -124,7 +117,7 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
     handleSubmit,
     formState: { errors },
   } = useForm({
-    resolver: yupResolver(getCodeVerificationSchema(t)),
+    resolver: yupResolver(getEmailVerificationValidationSchema(t)),
     defaultValues: { code: '' },
   });
 
