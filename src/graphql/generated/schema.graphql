@@ -4120,7 +4120,6 @@ type Item {
   storeSkus(after: String, first: Int, orderBy: ItemStoreSkuOrderBy): ItemStoreSkuConnection!
   tags: [String!]!
   type: ItemType!
-  unitConversions: [ItemUnitConversion!]! @deprecated(reason: "Use unitConversionsConnection for cursor-based pagination")
   unitConversionsConnection(after: String, before: String, first: Int, last: Int, orderBy: ItemUnitConversionOrderBy): ItemUnitConversionConnection!
   units: [ItemUnit!]!
   updatedAt: DateTime!
@@ -7780,7 +7779,6 @@ type Recipe {
   externalUrl: String
   forkedFrom: Recipe
   forkedFromId: ID
-  forks: [Recipe!]! @deprecated(reason: "Use forksConnection for cursor-based pagination")
   forksConnection(after: String, before: String, first: Int, last: Int, orderBy: RecipeOrderBy): RecipeForkConnection!
   healthGoals: [HealthGoal!]!
   id: ID!
@@ -11061,7 +11059,6 @@ User account type
 Cache: 5 minutes - user data changes occasionally, always private
 """
 type User {
-  addresses: [UserAddress!]! @deprecated(reason: "Use addressesConnection for cursor-based pagination")
   addressesConnection(after: String, before: String, first: Int, last: Int, orderBy: UserAddressOrderBy): UserAddressConnection!
   """Whether this user can access developer tools and internal dashboards"""
   canAccessDevTools: Boolean!

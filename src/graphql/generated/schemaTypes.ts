@@ -4225,8 +4225,6 @@ export type Item = {
   storeSkus: ItemStoreSkuConnection;
   tags: Array<Scalars['String']['output']>;
   type: ItemType;
-  /** @deprecated Use unitConversionsConnection for cursor-based pagination */
-  unitConversions: Array<ItemUnitConversion>;
   unitConversionsConnection: ItemUnitConversionConnection;
   units: Array<ItemUnit>;
   updatedAt: Scalars['DateTime']['output'];
@@ -11823,8 +11821,6 @@ export type Recipe = {
   externalUrl: Maybe<Scalars['String']['output']>;
   forkedFrom: Maybe<Recipe>;
   forkedFromId: Maybe<Scalars['ID']['output']>;
-  /** @deprecated Use forksConnection for cursor-based pagination */
-  forks: Array<Recipe>;
   forksConnection: RecipeForkConnection;
   healthGoals: Array<HealthGoal>;
   id: Scalars['ID']['output'];
@@ -15502,8 +15498,6 @@ export enum UsageSource {
  */
 export type User = {
   __typename: 'User';
-  /** @deprecated Use addressesConnection for cursor-based pagination */
-  addresses: Array<UserAddress>;
   addressesConnection: UserAddressConnection;
   /** Whether this user can access developer tools and internal dashboards */
   canAccessDevTools: Scalars['Boolean']['output'];
