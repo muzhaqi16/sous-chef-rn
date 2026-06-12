@@ -189,7 +189,11 @@ describe('createQueueLink', () => {
       let sawQueued = false;
       link.request(operation, forward)!.subscribe({
         next(result) {
-          sawQueued = result.extensions?.queued === true;
+          // The 'network-error' reason is load-bearing: networkStatusLink only
+          // counts THIS flavor of queued result as a breaker failure.
+          sawQueued =
+            result.extensions?.queued === true &&
+            result.extensions?.queuedReason === 'network-error';
         },
         error(err) {
           done(new Error(`should not error — should queue instead: ${err}`));
@@ -334,7 +338,10 @@ describe('createQueueLink', () => {
           // queued result carries each top-level field as null plus the
           // `queued` marker.
           expect(result.data).toEqual({ addItem: null });
-          expect(result.extensions).toEqual({ queued: true });
+          expect(result.extensions).toEqual({
+            queued: true,
+            queuedReason: 'offline',
+          });
         },
         complete() {
           // Should NOT have forwarded to the network
@@ -368,7 +375,10 @@ describe('createQueueLink', () => {
           // write doesn't warn "Missing field"; the classifier reads a null
           // payload field as queued.
           expect(result.data).toEqual({ addItem: null });
-          expect(result.extensions).toEqual({ queued: true });
+          expect(result.extensions).toEqual({
+            queued: true,
+            queuedReason: 'offline',
+          });
         },
         complete() {
           expect(forward).not.toHaveBeenCalled();
@@ -393,7 +403,10 @@ describe('createQueueLink', () => {
 
       link.request(operation, forward)!.subscribe({
         next(result) {
-          expect(result.extensions).toEqual({ queued: true });
+          expect(result.extensions).toEqual({
+            queued: true,
+            queuedReason: 'offline',
+          });
         },
         complete() {
           expect(forward).not.toHaveBeenCalled();
@@ -479,7 +492,10 @@ describe('createQueueLink', () => {
 
       link.request(operation, forward)!.subscribe({
         next(result) {
-          expect(result.extensions).toEqual({ queued: true });
+          expect(result.extensions).toEqual({
+            queued: true,
+            queuedReason: 'api-unreachable',
+          });
         },
         complete() {
           expect(forward).not.toHaveBeenCalled();

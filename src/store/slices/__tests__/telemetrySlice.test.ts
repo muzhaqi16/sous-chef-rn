@@ -1,4 +1,5 @@
 import { createTestStore } from '#/test-utils/createTestStore';
+import { initialTelemetryState } from '../telemetrySlice';
 
 jest.mock('../../../apollo/links/tokenScheduler');
 jest.mock('../../../apollo/links/refreshToken');
@@ -9,16 +10,28 @@ describe('telemetrySlice', () => {
     const state = store.getState();
     expect(typeof state.isEnabled).toBe('boolean');
     expect(typeof state.enableMetrics).toBe('boolean');
-    expect(state.enableLogs).toBe(false);
+    // Derived from the build environment exactly like enableMetrics — a
+    // hardcoded false here is the bug that silently disabled log shipping.
+    expect(state.enableLogs).toBe(state.enableMetrics);
     expect(state.enableConsoleInDev).toBe(false);
     expect(state.userConsent).toBeNull();
   });
 
   describe('setTelemetryEnabled', () => {
-    it('enables telemetry', () => {
-      const store = createTestStore({ isEnabled: false });
+    it('enables telemetry and restores env-derived metric/log flags', () => {
+      const store = createTestStore({
+        isEnabled: false,
+        enableMetrics: false,
+        enableLogs: false,
+      });
       store.getState().setTelemetryEnabled(true);
       expect(store.getState().isEnabled).toBe(true);
+      expect(store.getState().enableMetrics).toBe(
+        initialTelemetryState.enableMetrics,
+      );
+      expect(store.getState().enableLogs).toBe(
+        initialTelemetryState.enableLogs,
+      );
     });
 
     it('disables telemetry and turns off metrics and logs', () => {
@@ -77,6 +90,17 @@ describe('telemetrySlice', () => {
       expect(store.getState().enableMetrics).toBe(false);
       expect(store.getState().enableLogs).toBe(false);
     });
+
+    it('re-granting consent restores the env-derived flags', () => {
+      const store = createTestStore();
+      store.getState().setUserConsent(false);
+      store.getState().setUserConsent(true);
+      const state = store.getState();
+      expect(state.userConsent).toBe(true);
+      expect(state.isEnabled).toBe(initialTelemetryState.isEnabled);
+      expect(state.enableMetrics).toBe(initialTelemetryState.enableMetrics);
+      expect(state.enableLogs).toBe(initialTelemetryState.enableLogs);
+    });
   });
 
   describe('getTelemetryConfig', () => {
@@ -123,15 +147,17 @@ describe('telemetrySlice', () => {
   describe('resetTelemetry', () => {
     it('resets to initial state', () => {
       const store = createTestStore({
-        isEnabled: false,
-        enableMetrics: false,
-        enableLogs: true,
+        isEnabled: !initialTelemetryState.isEnabled,
+        enableMetrics: !initialTelemetryState.enableMetrics,
+        enableLogs: !initialTelemetryState.enableLogs,
         enableConsoleInDev: true,
         userConsent: false,
       });
       store.getState().resetTelemetry();
       const state = store.getState();
-      expect(state.enableLogs).toBe(false);
+      expect(state.isEnabled).toBe(initialTelemetryState.isEnabled);
+      expect(state.enableMetrics).toBe(initialTelemetryState.enableMetrics);
+      expect(state.enableLogs).toBe(initialTelemetryState.enableLogs);
       expect(state.enableConsoleInDev).toBe(false);
       expect(state.userConsent).toBeNull();
     });

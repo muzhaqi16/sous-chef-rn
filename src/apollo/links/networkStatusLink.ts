@@ -13,8 +13,13 @@ import { apiReachabilityBreaker } from './apiReachabilityBreaker';
  *  - Below `offlineModeLink`: queries short-circuited while offline never reach
  *    here, so blocked traffic doesn't feed the breaker.
  *  - Above `queueLink`: a queued mutation bubbles up as `next` carrying
- *    `extensions.queued` (it was queued *because* of a network error) — counted
- *    as a failure, not a success.
+ *    `extensions.queued` + `extensions.queuedReason`. Only a mutation queued
+ *    after a REAL network failure (`queuedReason: 'network-error'`) counts as
+ *    a breaker failure. Mutations queued preemptively — device offline, or
+ *    queued *because* the breaker is already open (`'offline'` /
+ *    `'api-unreachable'`) — never touched the network: counting them would
+ *    feed the breaker its own output, which can keep a stale open/false state
+ *    alive with zero evidence the API is actually down.
  */
 export const createNetworkStatusLink = () =>
   new ApolloLink(
@@ -23,7 +28,9 @@ export const createNetworkStatusLink = () =>
         const subscription = forward(operation).subscribe({
           next: result => {
             if (result.extensions?.queued) {
-              apiReachabilityBreaker.recordFailure();
+              if (result.extensions.queuedReason === 'network-error') {
+                apiReachabilityBreaker.recordFailure();
+              }
             } else {
               apiReachabilityBreaker.recordSuccess();
             }

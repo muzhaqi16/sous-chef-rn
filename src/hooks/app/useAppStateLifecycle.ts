@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
 import { Telemetry } from '#services/telemetry';
+import { apiReachabilityBreaker } from '#/apollo/links/apiReachabilityBreaker';
 import { queueManager } from '#/apollo/offlineQueue/queueManager';
 import { flushCachePersistence } from '#/apollo/client';
 import { useStore } from '#store';
@@ -9,7 +10,8 @@ import { handleTokenRefreshOnResume } from '#store/slices/authSlice';
 
 /**
  * Single AppState listener for the app:
- *   - background → active: refresh token if expired, then replay offline queue
+ *   - background → active: re-probe API reachability if the circuit is open,
+ *     refresh token if expired, then replay offline queue
  *   - active → background: flush the pending cache write + telemetry
  * Tracks the previous state in a closure so the resume branch only fires
  * on a real background→active transition (not on launch, where currentState
@@ -36,6 +38,11 @@ export function useAppStateLifecycle(): void {
 
       if (nextAppState === 'active') {
         if (wasBackgrounded) {
+          // Probe, don't assume: if the reachability circuit is open (or the
+          // flag is somehow stuck false), hit /health now — the open-circuit
+          // backoff timer didn't run while the JS thread was suspended. A
+          // probe success closes the circuit and drains the queue itself.
+          apiReachabilityBreaker.onAppForeground();
           await handleTokenRefreshOnResume(
             () => useStore.getState().accessToken,
           );

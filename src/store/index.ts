@@ -211,7 +211,7 @@ export const useStore = create<RootState>()(
       ),
       {
         name: STORAGE_KEY,
-        version: 10,
+        version: 12,
         storage: createJSONStorage(() => zustandStorage),
         // Do store migrations here
         migrate: (persistedState: unknown, version: number) => {
@@ -246,6 +246,42 @@ export const useStore = create<RootState>()(
             } | null;
             if (state?.fontScalePreference === 'system') {
               state.fontScalePreference = FontScalePreference.MD;
+            }
+          }
+
+          // Migration v10 → v11: `apiReachable` (the API-reachability circuit
+          // breaker's output) used to leak into the persisted blob. A session
+          // that ended while the circuit was open rehydrated `false` over the
+          // fresh optimistic default — and because the breaker singleton
+          // restarts `closed`, nothing ever flipped it back: the app stayed
+          // "server unreachable" forever. It's now excluded from partialize;
+          // strip it from blobs written by older versions.
+          if (version < 11) {
+            const state = persistedState as { apiReachable?: boolean } | null;
+            if (state && 'apiReachable' in state) {
+              delete state.apiReachable;
+            }
+          }
+
+          // Migration v11 → v12: the telemetry feature flags (isEnabled /
+          // enableMetrics / enableLogs / enableConsoleInDev) used to be
+          // persisted, so blobs written while `enableLogs` defaulted to false
+          // rehydrated that value over the fresh env-derived default forever —
+          // the app never sent a single log batch while metrics kept flowing.
+          // They're now excluded from partialize (only `userConsent`
+          // persists); strip them from blobs written by older versions.
+          if (version < 12) {
+            const state = persistedState as {
+              isEnabled?: boolean;
+              enableMetrics?: boolean;
+              enableLogs?: boolean;
+              enableConsoleInDev?: boolean;
+            } | null;
+            if (state) {
+              delete state.isEnabled;
+              delete state.enableMetrics;
+              delete state.enableLogs;
+              delete state.enableConsoleInDev;
             }
           }
 
@@ -335,6 +371,7 @@ export const useStore = create<RootState>()(
             lastOfflineTime,
             needsTokenRefresh,
             offlineModeEnabled, // Hydrated from MMKV in onRehydrateStorage; setter writes through to MMKV
+            apiReachable, // Circuit-breaker output — persisting it once stranded the app in a permanent "server unreachable" state (see v11 migration)
 
             // UI state (temporary, session-only)
             bottomSheetVisible,
@@ -391,6 +428,18 @@ export const useStore = create<RootState>()(
 
             // Notification transient state (session-only buffer for race condition handling)
             pendingExpirationLinks,
+
+            // Telemetry feature flags — derived from the build environment in
+            // initialTelemetryState on every launch; only `userConsent` is a
+            // real user choice and stays persisted. Persisting these once
+            // baked a stale `enableLogs: false` into every device's blob,
+            // overriding the env-derived default on hydration and silently
+            // killing log shipping (metrics kept flowing — the asymmetry made
+            // it hard to spot).
+            isEnabled,
+            enableMetrics,
+            enableLogs,
+            enableConsoleInDev,
 
             ...persistedState
           } = state;

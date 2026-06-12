@@ -10,6 +10,7 @@ import { CompleteOnboardingDocument } from '#operations/auth/user.generated';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { Text } from '#components/atoms/Text';
+import { Icon } from '#utils/iconUtils';
 
 export const OnboardingCompleteScreen = () => {
   const { t } = useTranslation();
@@ -63,9 +64,7 @@ export const OnboardingCompleteScreen = () => {
     >
       <View style={styles.container}>
         <View style={styles.successIcon}>
-          <Text weight="bold" style={styles.checkmark}>
-            ✓
-          </Text>
+          <Icon name="checkmark" size={44} tone="white" />
         </View>
 
         <Text
@@ -135,10 +134,6 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: theme.spacing.xl,
-  },
-  checkmark: {
-    fontSize: theme.typography.fontSize['3xl'] + 16,
-    color: theme.colors.white,
   },
   congratsText: {
     marginBottom: theme.spacing.xl,

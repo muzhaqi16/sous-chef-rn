@@ -1,15 +1,43 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { TextInput, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet } from 'react-native-unistyles';
 import { Pressable } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 
+const CODE_LENGTH = 6;
+
 export const CodeInput: React.FC<{
   value: string;
   onChange: (v: string) => void;
+  /** Fires once when the final digit lands (typed or pasted). */
+  onComplete?: (code: string) => void;
+  onBlur?: () => void;
   error?: string;
-}> = ({ value, onChange }) => {
+}> = ({ value, onChange, onComplete, onBlur }) => {
+  const { t } = useTranslation();
   const inputRef = useRef<TextInput>(null);
+  const [isFocused, setIsFocused] = useState(false);
+
+  const handleChangeText = (raw: string) => {
+    // Strip non-digits so codes pasted with separators ("123-456", "123 456")
+    // survive intact. The cap lives here rather than in maxLength — maxLength
+    // truncates the raw paste before this handler runs, which would drop the
+    // last digit of a separator-formatted code.
+    const next = raw.replace(/\D/g, '').slice(0, CODE_LENGTH);
+    onChange(next);
+    if (next.length === CODE_LENGTH && next !== value) {
+      onComplete?.(next);
+    }
+  };
+
+  const handleFocus = () => setIsFocused(true);
+  const handleBlur = () => {
+    setIsFocused(false);
+    onBlur?.();
+  };
+
+  const activeIndex = Math.min(value.length, CODE_LENGTH - 1);
 
   return (
     <Pressable
@@ -24,26 +52,48 @@ export const CodeInput: React.FC<{
           autoFocus
           autoCapitalize="none"
           autoCorrect={false}
+          autoComplete="one-time-code"
+          textContentType="oneTimeCode"
           caretHidden
+          accessibilityLabel={t('auth.verificationCodeInputLabel')}
           value={value}
-          onChangeText={v => onChange(v.slice(0, 6))}
+          onChangeText={handleChangeText}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
           returnKeyType="done"
         />
-        <View style={styles.formInputOverflow}>
-          {Array.from({ length: 6 }).map((_, idx) => (
-            <Text
-              key={idx}
-              align="center"
-              weight="semibold"
-              style={styles.formInputChar}
-            >
-              {value[idx] ?? (
-                <Text tone="tertiary" weight="regular">
-                  -
+        {/* Decorative mirror of the hidden input — hide it from screen
+            readers so the code isn't announced twice. */}
+        <View
+          style={styles.formInputOverflow}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        >
+          {/* Single Text per cell — a nested Text span would carry the atom's
+              default body lineHeight, shrinking the line box and pinning the
+              placeholder to the top of the cell instead of centering it. */}
+          {Array.from({ length: CODE_LENGTH }).map((_, idx) => {
+            const char = value[idx];
+            const isActive = isFocused && idx === activeIndex;
+            return (
+              <View key={idx} style={styles.formInputCell}>
+                <Text
+                  align="center"
+                  weight={char ? 'semibold' : 'regular'}
+                  tone={char ? 'primary' : 'tertiary'}
+                  style={[
+                    styles.formInputChar,
+                    !char && styles.formInputPlaceholderChar,
+                  ]}
+                >
+                  {char ?? '-'}
                 </Text>
-              )}
-            </Text>
-          ))}
+                {isActive ? (
+                  <View style={styles.formInputCellIndicator} />
+                ) : null}
+              </View>
+            );
+          })}
         </View>
       </View>
     </Pressable>
@@ -75,10 +125,26 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'space-around',
     paddingHorizontal: theme.spacing.md,
   },
-  formInputChar: {
+  formInputCell: {
     flex: 1,
+  },
+  formInputChar: {
     lineHeight: theme.sizes.input.lg + theme.spacing.sm,
     fontSize: theme.typography.fontSize['4xl'] - 2,
+  },
+  // Placeholder dash keeps the cell's centering lineHeight but renders at
+  // body size, matching the look of the old nested-Text placeholder.
+  formInputPlaceholderChar: {
+    fontSize: theme.fonts.size.md,
+  },
+  formInputCellIndicator: {
+    position: 'absolute',
+    bottom: theme.spacing.sm,
+    left: '25%',
+    right: '25%',
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: theme.colors.primary,
   },
   pressed: {
     opacity: theme.opacity.pressed,
