@@ -517,12 +517,9 @@ export class SubscriptionService {
       }
     }
 
-    // Duplicate prevention keyed on the event's identity: mutation + subtype +
-    // affected node + tick. The server emits distinct events in one tick (e.g.
-    // LIST_UPDATED then STATUS_CHANGED, or two items at once); the subtype + node
-    // discriminators keep those distinct so neither is dropped, while a true
-    // duplicate still matches on every part. (userId was here before but is
-    // undefined on the consolidated streams, so it discriminated nothing.)
+    // Dedup key = mutation + subtype + node + tick. The server can emit distinct
+    // events in one tick (LIST_UPDATED then STATUS_CHANGED, or two items), so
+    // subtype + node keep them apart while true duplicates still collapse.
     if (payload.timestamp && payload.mutation) {
       const nodeId =
         (payload.node as { id?: string } | undefined)?.id ??

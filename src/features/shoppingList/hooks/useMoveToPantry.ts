@@ -51,10 +51,9 @@ export function useMoveToPantry({
   const [moveShoppingItemToPantry, { loading }] = useMutation(
     MoveShoppingItemToPantryDocument,
     {
-      // Read the move target off this mutation's own variables (never a shared
-      // ref) so overlapping moves can't write the wrong item into the wrong
-      // pantry. The item's purchase status is read from cache (it's still
-      // present at update time) to remove from the correct filtered variant.
+      // Read the move target off the mutation's variables (never a shared ref)
+      // so overlapping moves can't corrupt the wrong item; purchase status is
+      // read from cache to pick the right filtered variant to remove from.
       update: (cache, { data }, { variables }) => {
         const payload = data?.moveShoppingItemToPantry;
         const input = variables?.input;

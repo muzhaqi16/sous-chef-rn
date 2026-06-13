@@ -142,12 +142,8 @@ export function usePantryItemDetailActions({
           return;
         }
         const shoppingListItem = payload.shoppingListItem;
-
-        // Reconcile the server response with the optimistic write: adopt the
-        // server id (catalog-merge evicts the optimistic cuid) and re-wire the
-        // edge without re-counting — the optimistic add already bumped
-        // totalItems. Swallows its own errors internally, so no try/catch
-        // wrapper is needed (wrapping would bail the React Compiler out).
+        // Swallows its own errors internally, so no try/catch is needed here
+        // (wrapping would bail the React Compiler out of this hook).
         reconcileShoppingItemCreateUpdate(
           cache,
           selectedShoppingListId,

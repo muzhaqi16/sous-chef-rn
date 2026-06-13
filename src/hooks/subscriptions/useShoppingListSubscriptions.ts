@@ -372,10 +372,8 @@ export function useShoppingListSubscriptions(
             (isCompletedMutation || isUncompletedMutation)
           ) {
             // Animated path: batch the move + sort in the animation callback.
-            // The entity is already auto-normalized into the cache from the
-            // subscription payload, so no fragment re-write is needed here (a
-            // writeFragment of the just-read record is a no-op that only adds an
-            // extra cache notification).
+            // The payload entity is already auto-normalized into cache, so no
+            // fragment re-write is needed here.
             const direction: 1 | -1 = isCompletedMutation ? 1 : -1;
             const moveOp = isCompletedMutation
               ? moveShoppingListItemToPurchased

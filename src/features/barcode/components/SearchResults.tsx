@@ -129,8 +129,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
               from: { __typename: 'ShoppingListItem', id: maskedItem.id },
             });
           if (shoppingListItem) {
-            // bumpTotalItems:false — the optimistic add already counted the
-            // item; re-bumping here would double-count the list header.
+            // bumpTotalItems:false — the optimistic add already counted it.
             addNewItemToShoppingListCache(
               cache,
               shoppingListId,

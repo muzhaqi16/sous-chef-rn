@@ -311,9 +311,6 @@ export const FilteredPantryItems: React.FC<
           return;
         }
         const item = payload.shoppingListItem;
-        // Reconcile the server response with the optimistic write: adopt the
-        // server id (catalog-merge) and re-wire the edge without re-counting —
-        // the optimistic add already bumped totalItems.
         reconcileShoppingItemCreateUpdate(
           cache,
           variables.input.shoppingListId,

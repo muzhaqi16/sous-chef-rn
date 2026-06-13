@@ -275,9 +275,8 @@ const buildShoppingItemSync: SyncBuilder = (mutation, readers) => {
         }
       : undefined);
 
-  // `UpdateShoppingListItem` sends a `purchaseTracking` object; the dedicated
-  // toggle sends a flat `purchased` boolean. Normalize both so neither shape's
-  // purchase change is dropped on replay.
+  // UpdateShoppingListItem sends a `purchaseTracking` object; the toggle sends a
+  // flat `purchased` boolean — normalize both so neither is dropped on replay.
   const purchaseTracking =
     input.purchaseTracking ??
     (input.purchased != null ? { isPurchased: input.purchased } : undefined);
@@ -296,8 +295,7 @@ const buildShoppingItemSync: SyncBuilder = (mutation, readers) => {
       purchaseTracking:
         purchaseTracking as SyncShoppingListItemInput['purchaseTracking'],
     }),
-    // priority / sortOrder ride on UpdateShoppingListItem; preserve them so an
-    // offline priority change or reorder isn't silently dropped on replay.
+    // priority / sortOrder ride on UpdateShoppingListItem — preserve on replay.
     ...(input.priority != null && { priority: input.priority }),
     ...(input.sortOrder != null && { sortOrder: input.sortOrder }),
     // Carried by the barcode add (and accepted by SyncShoppingListItemInput) so

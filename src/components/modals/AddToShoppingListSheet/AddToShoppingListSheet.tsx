@@ -117,12 +117,6 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
           return;
         }
         const newItem = payload.shoppingListItem;
-
-        // Reconcile the server response with the optimistic write: adopt the
-        // server id (catalog-merge evicts the optimistic cuid) and re-wire the
-        // edge without re-counting — the optimistic add already bumped
-        // totalItems. Reads the id off this mutation's own variables (not a
-        // shared ref) so it stays correct when adds overlap.
         executeCacheUpdate(
           () =>
             reconcileShoppingItemCreateUpdate(

@@ -34,11 +34,8 @@ export function optimisticFieldUpdate(
   > = {};
   for (const [key, value] of Object.entries(input)) {
     applied[key] = () => value;
-    // When the field had a prior value, restore it. When it was ABSENT before
-    // the optimistic write, `snapshot[key]` is undefined and an Apollo field
-    // modifier that returns undefined is a no-op (the optimistic value would
-    // survive the revert) — return the DELETE sentinel so the field is actually
-    // removed on rejection.
+    // Restore the prior value, or DELETE for a field that was absent before the
+    // write — a modifier returning undefined is a no-op, leaving it un-reverted.
     previous[key] = Object.prototype.hasOwnProperty.call(snapshot, key)
       ? () => snapshot[key]
       : (_value, { DELETE }) => DELETE;

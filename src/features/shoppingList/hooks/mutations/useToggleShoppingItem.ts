@@ -125,10 +125,9 @@ export function useToggleShoppingItem({
           // of surfacing a blocking error. Offline already queues via queueLink.
           context: { localFirst: true },
           onCompleted: data => {
-            // Only drop the offline-survival marker once the server CONFIRMS
-            // the toggle. A queued (offline / API-down) completion resolves with
-            // a null payload — keep the marker so the optimistic isPurchased
-            // survives an app-kill before the queue replays.
+            // Drop the offline-survival marker only once the server confirms;
+            // a queued completion resolves with a null payload — keep it so the
+            // optimistic state survives an app-kill before replay.
             if (
               isSuccessPayload(
                 data?.toggleShoppingListItemPurchased,

@@ -1,17 +1,11 @@
 /**
- * useUpdateShoppingItem - Update item mutation for shopping list
+ * useUpdateShoppingItem - Update item mutation for shopping list.
  *
- * Pattern: write the optimistic field updates to the cache via
- * `cache.modify` BEFORE firing the mutation, then rely on Apollo's
- * auto-normalization to apply the server-confirmed values. On rejection,
- * revert the optimistic changes from a snapshot captured up front.
- *
- * Under the global `mutate.errorPolicy: 'all'`, a server refusal RESOLVES
- * (never throws) — either as a GraphQL error in `result.error` or as a
- * non-success union payload. So the revert is driven off the *resolved* result
- * via `classifyCreateResult` (mirroring `useUpdatePantryItemQuantity`); a
- * thrown-error fallback exists only for non-Apollo throws. Transport/GraphQL
- * errors are surfaced through the mutation's `onError` option.
+ * Optimistically writes the changed fields to the cache before firing, then
+ * relies on Apollo's auto-normalization for the confirmed values. Under
+ * `errorPolicy: 'all'` a refusal RESOLVES rather than throws, so the revert is
+ * driven off the classified resolved result (mirroring useUpdatePantryItemQuantity);
+ * transport/GraphQL errors surface via the mutation's `onError`.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
@@ -116,18 +110,13 @@ export function useUpdateShoppingItem({
           // field update by real id → replays via SyncShoppingListItem).
           context: { localFirst: true },
         }),
-      // Fallback for a non-Apollo throw — Apollo errors resolve under
-      // errorPolicy:'all' and are classified below. The user-facing alert comes
-      // from the mutation's onError option.
+      // Fallback for a non-Apollo throw; Apollo errors resolve and are classified below.
       () => revertSnapshot(),
     );
     if (!result) return false;
 
-    // A server refusal (GraphQL error, or a non-success union payload such as
-    // ConflictError / ValidationError) resolves without throwing, so onError /
-    // the catch above never fires for it. Classify the resolved result and
-    // revert the optimistic write on a real rejection. 'queued' (offline / API
-    // down) keeps the write — it replays via SyncShoppingListItem.
+    // Classify the resolved result and revert on a real rejection. 'queued'
+    // (offline / API down) keeps the write — it replays via SyncShoppingListItem.
     const outcome = classifyCreateResult(
       result,
       'updateShoppingListItem',
@@ -135,8 +124,7 @@ export function useUpdateShoppingItem({
     );
     if (outcome === 'rejected') {
       revertSnapshot();
-      // A union-payload rejection has no `error`, so onError didn't alert —
-      // surface it here. (No-op when there is an error: onError handled it.)
+      // Alerts only for a union-payload rejection; onError handles error cases.
       alertRejectedMutation(result, 'Could not update the item.');
       return false;
     }

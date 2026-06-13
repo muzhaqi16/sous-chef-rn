@@ -104,11 +104,8 @@ export function classifyError(error: unknown): QueueError {
     };
   }
 
-  // Network errors. Match both "timeout" and "timed out" — the queue's own
-  // processing-timeout rejects with `Error('Operation timed out')`, which does
-  // NOT contain the substring "timeout"; without "timed out" a slow replay is
-  // misclassified as a non-retryable unknown error and the offline edit is
-  // permanently reverted instead of deferred to the next drain.
+  // Network errors. Match "timed out" too — the processing-timeout rejects with
+  // 'Operation timed out', which doesn't contain the substring "timeout".
   if (
     message.toLowerCase().includes('network') ||
     message.toLowerCase().includes('timeout') ||
