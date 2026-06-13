@@ -227,12 +227,10 @@ export function useShoppingListSubscriptions(
 
         // LIST_UPDATED / STATUS_CHANGED apply to any list. No self-echo skip:
         // the deletion re-eviction must run for the deleting user's own events.
-        // NOTE: the server publishes a status change as TWO events —
-        // LIST_UPDATED (with "status" in updatedFields) followed by
-        // STATUS_CHANGED. Handling both in this one idempotent branch is
-        // intentional: Apollo's normalization of the node and the
-        // isParentDeleting evict are both safe to run twice, so no dedupe by
-        // mutation is needed.
+        // A status change arrives as a single STATUS_CHANGED event (changed
+        // fields in updatedFields, full node attached); Apollo normalizes the
+        // node and the isParentDeleting evict is idempotent, so this one branch
+        // handles both subtypes safely.
         if (
           payload.subtype === ShoppingListEventSubtype.ListUpdated ||
           payload.subtype === ShoppingListEventSubtype.StatusChanged

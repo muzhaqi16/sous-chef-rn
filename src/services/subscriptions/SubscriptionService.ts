@@ -518,8 +518,8 @@ export class SubscriptionService {
     }
 
     // Dedup key = mutation + subtype + node + tick. The server can emit distinct
-    // events in one tick (LIST_UPDATED then STATUS_CHANGED, or two items), so
-    // subtype + node keep them apart while true duplicates still collapse.
+    // events in one tick (e.g. two items changed together), so subtype + node
+    // keep them apart while true duplicates still collapse.
     if (payload.timestamp && payload.mutation) {
       const nodeId =
         (payload.node as { id?: string } | undefined)?.id ??
