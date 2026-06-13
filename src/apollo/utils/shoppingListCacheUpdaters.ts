@@ -237,6 +237,13 @@ function updateItemsConnectionForPurchaseStatusChange(
 
     if (!parentCacheId) return;
 
+    // New completedItems after the toggle, derived from the pre-modify snapshot.
+    // cache.modify exposes pre-modify field values to readField, so all three
+    // stat modifiers below compute from the same baseline regardless of the
+    // order Apollo runs them in.
+    const nextCompleted = (current: number) =>
+      movingToPurchased ? current + 1 : Math.max(0, current - 1);
+
     cache.modify({
       id: parentCacheId,
       fields: {
@@ -293,7 +300,19 @@ function updateItemsConnectionForPurchaseStatusChange(
           return existing;
         },
         completedItems(existing: number = 0) {
-          return movingToPurchased ? existing + 1 : Math.max(0, existing - 1);
+          return nextCompleted(existing);
+        },
+        // Keep the derived stats in sync with the new completedItems so the
+        // progress header doesn't go stale until the next refetch.
+        remainingItems(_existing: number, { readField }) {
+          const total = readField<number>('totalItems') ?? 0;
+          const completed = readField<number>('completedItems') ?? 0;
+          return Math.max(0, total - nextCompleted(completed));
+        },
+        completionRate(_existing: number, { readField }) {
+          const total = readField<number>('totalItems') ?? 0;
+          const completed = readField<number>('completedItems') ?? 0;
+          return total > 0 ? nextCompleted(completed) / total : 0;
         },
       },
     });
@@ -335,11 +354,21 @@ export function moveShoppingListItemToUnpurchased(
  * Uses storeFieldName detection to correctly update filtered itemsConnection variants:
  * - isPurchased:true variant → REMOVE the item (handles re-add of previously purchased item)
  * - All other variants (unfiltered, isPurchased:false) → ADD the item
+ *
+ * `bumpTotalItems` defaults to true (a fresh add — optimistic create, a
+ * collaborator's subscription push, a recipe add). Pass **false** from a create
+ * mutation's `update` callback that runs AFTER a local-first
+ * {@link addOptimisticShoppingListItem}: the optimistic write already bumped
+ * `ShoppingList.totalItems`, so re-bumping here double-counts the list header
+ * (the edge add is already idempotent via the `alreadyExists` guard, but the
+ * `totalItems` scalar modifier is not). Prefer {@link reconcileShoppingItemCreateUpdate}
+ * which sets this correctly for that path.
  */
 export function addNewItemToShoppingListCache(
   cache: ApolloCache,
   listId: string,
   item: { id: string },
+  bumpTotalItems = true,
 ): void {
   try {
     const parentCacheId = cache.identify({
@@ -394,14 +423,45 @@ export function addNewItemToShoppingListCache(
             totalCount: (existing.totalCount || 0) + 1,
           };
         },
-        totalItems(existing: number = 0) {
-          return existing + 1;
-        },
+        // Only count the item when it's a genuinely fresh add. After a
+        // local-first optimistic add the caller passes bumpTotalItems:false so
+        // the header count isn't incremented twice for one item.
+        ...(bumpTotalItems && {
+          totalItems(existing: number = 0) {
+            return existing + 1;
+          },
+        }),
       },
     });
   } catch (error) {
     logger.warn('Failed to update cache for new shopping list item:', error);
   }
+}
+
+/**
+ * Reconcile a local-first shopping-item create's server response into the cache,
+ * from the create mutation's `update` callback.
+ *
+ * Every add surface writes the item optimistically (full entity + connection
+ * edge + bumped `totalItems`) before firing via {@link addOptimisticShoppingListItem}.
+ * This runs on the server response and MUST NOT re-bump `totalItems` (the
+ * optimistic write already counted the row). It:
+ *  - adopts the server id, evicting the optimistic cuid on a catalog-merge
+ *    ({@link adoptServerShoppingListItemId}), and
+ *  - (re)wires the connection edge for the server item idempotently, without
+ *    re-counting.
+ *
+ * Pass `clientId` read off the mutation's own `variables` at the call site
+ * (never a shared ref) so it stays correct when adds overlap.
+ */
+export function reconcileShoppingItemCreateUpdate(
+  cache: ApolloCache,
+  listId: string,
+  serverItem: { id: string },
+  clientId: string | null | undefined,
+): void {
+  adoptServerShoppingListItemId(cache, serverItem.id, clientId);
+  addNewItemToShoppingListCache(cache, listId, serverItem, false);
 }
 
 /**

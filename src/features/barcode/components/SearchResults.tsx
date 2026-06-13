@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
+import { t } from '#/i18n/t';
 import { ProductResultCard } from './ProductResultCard';
 import { ActionButtons } from './ActionButtons';
 import { StyleSheet } from 'react-native-unistyles';
@@ -128,10 +129,13 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
               from: { __typename: 'ShoppingListItem', id: maskedItem.id },
             });
           if (shoppingListItem) {
+            // bumpTotalItems:false — the optimistic add already counted the
+            // item; re-bumping here would double-count the list header.
             addNewItemToShoppingListCache(
               cache,
               shoppingListId,
               shoppingListItem,
+              false,
             );
           }
         }
@@ -356,13 +360,16 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
           setIsAdded(true);
           onScanAnother();
         } else {
-          alertService.alert('Error', 'Missing required information');
+          alertService.alert(
+            t('labels.error'),
+            t('errors.missingRequiredInfo'),
+          );
         }
       },
       setIsLoading,
       error => {
         console.error('Error adding item:', error);
-        alertService.alert('Error', 'Failed to add item. Please try again.');
+        alertService.alert(t('labels.error'), t('errors.addItemFailed'));
       },
     );
   };

@@ -20,11 +20,10 @@ import {
   executeMutation,
 } from '#/utils/compilerSafeWrappers';
 import {
-  addNewItemToShoppingListCache,
   addOptimisticShoppingListItem,
-  adoptServerShoppingListItemId,
   createOptimisticShoppingListItem,
   reconcileShoppingCreate,
+  reconcileShoppingItemCreateUpdate,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { isNetworkError } from '#/utils/isNetworkError';
@@ -54,13 +53,19 @@ export function useAddShoppingItem({
       }
       const item = payload.shoppingListItem;
 
-      // Catalog-merge: adopt the server id, evicting the optimistic cuid if the
-      // server merged into an existing row. Reads the id off this mutation's own
-      // variables (not a shared ref) so it stays correct when adds overlap.
-      adoptServerShoppingListItemId(cache, item.id, variables.input.id);
-
+      // Reconcile the server response with the optimistic write: adopt the
+      // server id (catalog-merge evicts the optimistic cuid) and re-wire the
+      // edge without re-counting — the optimistic add already bumped totalItems.
+      // Reads the id off this mutation's own variables (not a shared ref) so it
+      // stays correct when adds overlap.
       executeCacheUpdate(
-        () => addNewItemToShoppingListCache(cache, listId, item),
+        () =>
+          reconcileShoppingItemCreateUpdate(
+            cache,
+            listId,
+            item,
+            variables.input.id,
+          ),
         'Cache update failed for addItem, will refetch:',
         refetch,
       );

@@ -16,6 +16,7 @@ import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { alertService } from '#/services/alertService';
+import { t } from '#/i18n/t';
 
 /** The StorageLocation node shape returned by (and written for) the create. */
 type StorageLocationNode = Extract<
@@ -184,7 +185,7 @@ export function useCreateStorageLocation(
 
   const createLocation = async (input: CreateLocationInput) => {
     if (!homeId) {
-      alertService.alert('Error', 'Parent context is required');
+      alertService.alert(t('labels.error'), t('errors.parentContextRequired'));
       return false;
     }
 
@@ -219,7 +220,10 @@ export function useCreateStorageLocation(
           operation: 'Create Storage Location',
         });
       } else {
-        alertService.alert('Error', 'Failed to create storage location');
+        alertService.alert(
+          t('labels.error'),
+          t('errors.createStorageLocationFailed'),
+        );
       }
       return false;
     }

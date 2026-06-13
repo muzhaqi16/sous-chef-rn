@@ -24,11 +24,10 @@ import { FieldRow } from '#components/molecules/FieldRow';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import type { StaticScreenProps } from '@react-navigation/native';
 import {
-  addNewItemToShoppingListCache,
   addOptimisticShoppingListItem,
-  adoptServerShoppingListItemId,
   createOptimisticShoppingListItem,
   reconcileShoppingCreate,
+  reconcileShoppingItemCreateUpdate,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { useShoppingListItemForm } from '#features/shoppingList/hooks/useShoppingListItemForm';
 import {
@@ -115,12 +114,17 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
       }
       const newItem = payload.shoppingListItem;
 
-      // Catalog-merge: adopt the server id, evicting the optimistic cuid if the
-      // server merged into an existing row. Reads the id off this mutation's own
-      // variables (not a shared ref) so it stays correct when adds overlap.
-      adoptServerShoppingListItemId(cache, newItem.id, variables.input.id);
-
-      addNewItemToShoppingListCache(cache, listId, newItem);
+      // Reconcile the server response with the optimistic write: adopt the
+      // server id (catalog-merge evicts the optimistic cuid) and re-wire the
+      // edge without re-counting — the optimistic add already bumped totalItems.
+      // Reads the id off this mutation's own variables (not a shared ref) so it
+      // stays correct when adds overlap.
+      reconcileShoppingItemCreateUpdate(
+        cache,
+        listId,
+        newItem,
+        variables.input.id,
+      );
     },
     onError: error => {
       errorService.reportError(error, {

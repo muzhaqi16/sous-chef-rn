@@ -371,20 +371,11 @@ export function useShoppingListSubscriptions(
             scheduleAnimation &&
             (isCompletedMutation || isUncompletedMutation)
           ) {
-            // Animated path: write fragment immediately for visual feedback,
-            // then batch the move + sort in the animation callback
-            if (itemData) {
-              client.cache.writeFragment({
-                id: client.cache.identify({
-                  __typename: 'ShoppingListItem',
-                  id: item.id,
-                }),
-                fragment: UseShoppingListSubscriptions_ItemFragmentDoc,
-                fragmentName: 'useShoppingListSubscriptions_item',
-                data: itemData,
-              });
-            }
-
+            // Animated path: batch the move + sort in the animation callback.
+            // The entity is already auto-normalized into the cache from the
+            // subscription payload, so no fragment re-write is needed here (a
+            // writeFragment of the just-read record is a no-op that only adds an
+            // extra cache notification).
             const direction: 1 | -1 = isCompletedMutation ? 1 : -1;
             const moveOp = isCompletedMutation
               ? moveShoppingListItemToPurchased

@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { gql } from '@apollo/client';
 import { useMutation } from '@apollo/client/react';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { MoveShoppingItemToPantryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
@@ -28,6 +28,17 @@ interface UseMoveToPantryOptions {
   onSuccess?: () => void;
 }
 
+/** Minimal read of the moved item's purchase status, to pick the right
+ *  filtered connection variant to remove it from. */
+const MoveToPantryItemPurchaseFragment = gql`
+  fragment _MoveToPantryItemPurchase on ShoppingListItem {
+    id
+    purchaseInfo {
+      isPurchased
+    }
+  }
+`;
+
 /**
  * Hook for moving shopping list items to pantry
  * Handles mutation, cache updates, and optimistic UI updates
@@ -36,23 +47,24 @@ export function useMoveToPantry({
   currentListId,
   onSuccess,
 }: UseMoveToPantryOptions) {
-  // Refs to track mutation input for cache update
-  const moveToPantryIdRef = useRef<string | null>(null);
-  const removeFromListRef = useRef<boolean>(true);
-  const selectedItemRef = useRef<ShoppingListItemDisplayFragment | null>(null);
-
   // Move to pantry mutation with smart cache updates
   const [moveShoppingItemToPantry, { loading }] = useMutation(
     MoveShoppingItemToPantryDocument,
     {
-      update: (cache, { data }) => {
+      // Read the move target off this mutation's own variables (never a shared
+      // ref) so overlapping moves can't write the wrong item into the wrong
+      // pantry. The item's purchase status is read from cache (it's still
+      // present at update time) to remove from the correct filtered variant.
+      update: (cache, { data }, { variables }) => {
         const payload = data?.moveShoppingItemToPantry;
+        const input = variables?.input;
         if (
           payload?.__typename !== 'MoveShoppingItemToPantryPayload' ||
-          !moveToPantryIdRef.current
+          !input
         ) {
           return;
         }
+        const { pantryId, shoppingListItemId, removeFromList } = input;
 
         executeCacheUpdate(() => {
           // Add to pantry items cache
@@ -61,30 +73,34 @@ export function useMoveToPantry({
             'itemsConnection',
             'PantryItem',
           );
-          addToPantryCache(
-            cache,
-            moveToPantryIdRef.current!,
-            payload.pantryItem,
-          );
+          addToPantryCache(cache, pantryId, payload.pantryItem);
 
-          const selectedItem = selectedItemRef.current;
-          if (!selectedItem || !currentListId) return;
+          if (!currentListId) return;
 
-          if (removeFromListRef.current) {
-            // Remove from shopping list cache if removeFromList was true
-            const wasPurchased =
-              selectedItem.purchaseInfo?.isPurchased ?? false;
+          if (removeFromList) {
+            const itemCacheId = cache.identify({
+              __typename: 'ShoppingListItem',
+              id: shoppingListItemId,
+            });
+            const wasPurchased = itemCacheId
+              ? cache.readFragment<{
+                  purchaseInfo?: { isPurchased?: boolean } | null;
+                }>({
+                  id: itemCacheId,
+                  fragment: MoveToPantryItemPurchaseFragment,
+                })?.purchaseInfo?.isPurchased ?? false
+              : false;
             removeItemFromShoppingListForMoveToPantry(
               cache,
               currentListId,
-              selectedItem.id,
+              shoppingListItemId,
               wasPurchased,
             );
           } else {
             // If keeping in list, mark as unpurchased in cache (server does this automatically)
             const cacheId = cache.identify({
               __typename: 'ShoppingListItem',
-              id: selectedItem.id,
+              id: shoppingListItemId,
             });
             if (cacheId) {
               cache.modify<ShoppingListItemDisplayFragment>({
@@ -121,11 +137,6 @@ export function useMoveToPantry({
     item: ShoppingListItemDisplayFragment,
     input: MoveToPantryInput,
   ) => {
-    // Store refs for cache update
-    selectedItemRef.current = item;
-    moveToPantryIdRef.current = input.pantryId;
-    removeFromListRef.current = input.removeFromList;
-
     const result = await executeMutation(
       () =>
         moveShoppingItemToPantry({

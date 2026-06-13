@@ -1,0 +1,6 @@
+# Normalize line endings to LF for all text files. Git auto-detects text vs
+# binary, normalizes to LF on commit, and checks out LF in the working tree.
+# This locks in the repo-wide LF convention and prevents one-off CRLF churn
+# (e.g. the incidental src/utils/inputMapping.ts renormalization) from
+# recurring and destroying git blame.
+* text=auto eol=lf

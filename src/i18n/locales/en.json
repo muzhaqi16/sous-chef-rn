@@ -54,7 +54,13 @@
       "Item": "item",
       "Notification": "notification"
     },
-    "queuedChangeSyncFailed": "Couldn't sync changes. Pull to refresh."
+    "queuedChangeSyncFailed": "Couldn't sync changes. Pull to refresh.",
+    "itemNameRequired": "Please enter an item name",
+    "invalidQuantity": "Please enter a valid quantity",
+    "itemNotFound": "Item not found",
+    "parentContextRequired": "Parent context is required",
+    "createStorageLocationFailed": "Failed to create storage location",
+    "missingRequiredInfo": "Missing required information"
   },
   "success": {
     "itemAdded": "Item added successfully",
@@ -80,7 +86,8 @@
     "emailVerified": "Email verified successfully",
     "profileUpdated": "Profile updated successfully",
     "photoUpdated": "Photo updated successfully",
-    "settingsSaved": "Settings saved successfully"
+    "settingsSaved": "Settings saved successfully",
+    "expiredBatchesDiscarded": "Expired batches have been discarded."
   },
   "loading": {
     "authenticating": "Authenticating...",

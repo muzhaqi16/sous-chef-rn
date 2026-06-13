@@ -1,4 +1,5 @@
 import type { ApolloCache } from '@apollo/client';
+import type { ModifierDetails } from '@apollo/client/cache';
 import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
 
 /**
@@ -27,10 +28,20 @@ export function optimisticFieldUpdate(
 
   const snapshot = Object.fromEntries(Object.entries(entity));
   const applied: Record<string, () => unknown> = {};
-  const previous: Record<string, () => unknown> = {};
+  const previous: Record<
+    string,
+    (value: unknown, details: ModifierDetails) => unknown
+  > = {};
   for (const [key, value] of Object.entries(input)) {
     applied[key] = () => value;
-    previous[key] = () => snapshot[key];
+    // When the field had a prior value, restore it. When it was ABSENT before
+    // the optimistic write, `snapshot[key]` is undefined and an Apollo field
+    // modifier that returns undefined is a no-op (the optimistic value would
+    // survive the revert) — return the DELETE sentinel so the field is actually
+    // removed on rejection.
+    previous[key] = Object.prototype.hasOwnProperty.call(snapshot, key)
+      ? () => snapshot[key]
+      : (_value, { DELETE }) => DELETE;
   }
 
   executeCacheUpdate(

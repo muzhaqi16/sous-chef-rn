@@ -65,6 +65,13 @@ export interface SubscriptionPayload<T = unknown> {
   node?: T;
   previousValues?: Partial<T>;
   updatedFields?: string[];
+  /**
+   * Subtype on consolidated multi-subtype event streams (PantryEvents,
+   * MyShoppingListsEvents). Part of the dedup key so distinct events emitted in
+   * the same server tick (e.g. LIST_UPDATED then STATUS_CHANGED) aren't
+   * collapsed into one and dropped.
+   */
+  subtype?: string;
 }
 
 /**
