@@ -13017,28 +13017,22 @@ export type ShoppingListEvent = {
   clearedCount: Maybe<Scalars['Int']['output']>;
   /** IDs of items that were cleared (ITEMS_BATCH_CLEARED only). */
   clearedItemIds: Maybe<Array<Scalars['ID']['output']>>;
-  /** User who completed the list (STATUS_CHANGED only). */
-  completedBy: Maybe<User>;
   listId: Scalars['ID']['output'];
   mutation: MutationType;
-  /** New list status (STATUS_CHANGED only). */
-  newStatus: Maybe<ListStatus>;
   /**
    * The affected resource: ShoppingList for LIST_UPDATED / STATUS_CHANGED,
    * ShoppingListItem for ITEMS_CHANGED. Null for ITEMS_BATCH_CLEARED
-   * (use clearedItemIds) and for STATUS_CHANGED events published without
-   * a full list payload.
+   * (use clearedItemIds). For STATUS_CHANGED, read the new status from
+   * node.status.
    */
   node: Maybe<ShoppingListEventNode>;
   /** Device/client that triggered the change (for echo suppression). */
   originatorClientId: Maybe<Scalars['ID']['output']>;
-  /** Previous list status (STATUS_CHANGED only). */
-  previousStatus: Maybe<ListStatus>;
   subtype: ShoppingListEventSubtype;
   timestamp: Scalars['DateTime']['output'];
   /**
-   * Names of the fields that changed (LIST_UPDATED / ITEMS_CHANGED).
-   * Empty when not applicable.
+   * Names of the fields that changed (LIST_UPDATED / STATUS_CHANGED /
+   * ITEMS_CHANGED). Empty when not applicable.
    */
   updatedFields: Array<Scalars['String']['output']>;
 };

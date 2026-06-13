@@ -8826,28 +8826,22 @@ type ShoppingListEvent {
   clearedCount: Int
   """IDs of items that were cleared (ITEMS_BATCH_CLEARED only)."""
   clearedItemIds: [ID!]
-  """User who completed the list (STATUS_CHANGED only)."""
-  completedBy: User
   listId: ID!
   mutation: MutationType!
-  """New list status (STATUS_CHANGED only)."""
-  newStatus: ListStatus
   """
   The affected resource: ShoppingList for LIST_UPDATED / STATUS_CHANGED,
   ShoppingListItem for ITEMS_CHANGED. Null for ITEMS_BATCH_CLEARED
-  (use clearedItemIds) and for STATUS_CHANGED events published without
-  a full list payload.
+  (use clearedItemIds). For STATUS_CHANGED, read the new status from
+  node.status.
   """
   node: ShoppingListEventNode
   """Device/client that triggered the change (for echo suppression)."""
   originatorClientId: ID
-  """Previous list status (STATUS_CHANGED only)."""
-  previousStatus: ListStatus
   subtype: ShoppingListEventSubtype!
   timestamp: DateTime!
   """
-  Names of the fields that changed (LIST_UPDATED / ITEMS_CHANGED).
-  Empty when not applicable.
+  Names of the fields that changed (LIST_UPDATED / STATUS_CHANGED /
+  ITEMS_CHANGED). Empty when not applicable.
   """
   updatedFields: [String!]!
 }
