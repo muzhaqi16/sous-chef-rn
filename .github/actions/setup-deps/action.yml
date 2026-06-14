@@ -28,6 +28,7 @@ runs:
       with:
         path: |
           src/**/*.generated.ts
+          !src/config/env.generated.ts
           src/graphql/generated/schemaTypes.ts
           src/graphql/generated/fragmentMatcher.json
         key: ${{ runner.os }}-codegen-${{ hashFiles('src/**/*.graphql', 'src/graphql/generated/schema.graphql', 'codegen.ts') }}
@@ -36,3 +37,14 @@ runs:
       if: steps.cache-codegen.outputs.cache-hit != 'true'
       shell: bash
       run: npm run codegen
+
+    # Always (re)generate src/config/env.generated.ts. It is gitignored and
+    # otherwise produced only by the `postinstall` hook, which runs solely when
+    # `npm ci` runs (node_modules cache miss). On a warm node_modules cache the
+    # file is never written, and it is excluded from the codegen cache above, so
+    # without this step `tsc` fails with "Cannot find module './env.generated'".
+    # Runs last so a stale codegen-cache restore can't clobber it. Reads
+    # .env/process.env, never fails.
+    - name: Generate env config
+      shell: bash
+      run: npm run genenv
