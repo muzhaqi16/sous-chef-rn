@@ -99,7 +99,7 @@ describe('createOfflineModeLink', () => {
     expect(forward).toHaveBeenCalled();
   });
 
-  it('blocks queries when offline mode is enabled (emits cache-miss null, then completes)', () => {
+  it('blocks cache-miss queries when offline mode is enabled (error result, no `{}` cache write)', () => {
     mockedGetState.mockReturnValue({
       offlineModeEnabled: true,
       isOnline: true,
@@ -111,10 +111,13 @@ describe('createOfflineModeLink', () => {
     expect(forward).not.toHaveBeenCalled();
     expect(emitted).toBe(true);
     expect(completed).toBe(true);
-    expect(value).toEqual({ data: null });
+    // The error is load-bearing: an error-free `{ data: null }` makes Apollo 4
+    // write `{}` against the selection set ("Missing field X" warning spam).
+    expect(value?.data).toBeNull();
+    expect(value?.errors?.[0]?.message).toContain('Offline');
   });
 
-  it('blocks queries when the device is offline (isOnline === false)', () => {
+  it('blocks cache-miss queries when the device is offline (error result)', () => {
     mockedGetState.mockReturnValue({
       offlineModeEnabled: false,
       isOnline: false,
@@ -126,23 +129,40 @@ describe('createOfflineModeLink', () => {
     expect(forward).not.toHaveBeenCalled();
     expect(emitted).toBe(true);
     expect(completed).toBe(true);
-    expect(value).toEqual({ data: null });
+    expect(value?.data).toBeNull();
+    expect(value?.errors?.[0]?.message).toContain('Offline');
   });
 
-  it('blocks queries when the API circuit breaker is open (apiReachable === false)', () => {
+  it('forwards cache-miss queries when only the circuit breaker is open (organic probe)', () => {
+    // Device online + offline mode off + apiReachable false: blocking would
+    // render an empty screen anyway, so the query fires as a probe — a
+    // success closes a spuriously-open circuit via networkStatusLink.
     mockedGetState.mockReturnValue({
       offlineModeEnabled: false,
       isOnline: true,
       apiReachable: false,
     });
     const forward = makeForward();
-    const { emitted, completed, value } = observe(
-      link.request(makeOperation(MOCK_QUERY, 'GetItems'), forward),
+    link.request(makeOperation(MOCK_QUERY, 'GetItems'), forward);
+    expect(forward).toHaveBeenCalledTimes(1);
+  });
+
+  it('serves cached data (no forward) when the circuit breaker is open and the cache has it', () => {
+    mockedGetState.mockReturnValue({
+      offlineModeEnabled: false,
+      isOnline: true,
+      apiReachable: false,
+    });
+    const cache = new InMemoryCache();
+    const cachedData = { items: [{ __typename: 'Item', id: '1' }] };
+    cache.writeQuery({ query: MOCK_QUERY, data: cachedData });
+
+    const forward = makeForward();
+    const { value } = observe(
+      link.request(makeOperation(MOCK_QUERY, 'GetItems', cache), forward),
     );
     expect(forward).not.toHaveBeenCalled();
-    expect(emitted).toBe(true);
-    expect(completed).toBe(true);
-    expect(value).toEqual({ data: null });
+    expect(value?.data).toEqual(cachedData);
   });
 
   it('serves cached data for blocked queries (idempotent re-emit, no clobber)', () => {

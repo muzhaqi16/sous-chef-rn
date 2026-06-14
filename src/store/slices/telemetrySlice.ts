@@ -19,11 +19,18 @@ export interface TelemetryState {
   resetTelemetry: () => void;
 }
 
+// isEnabled / enableMetrics / enableLogs / enableConsoleInDev are derived
+// from the build environment on every launch and are intentionally NOT
+// persisted (see partialize in store/index.ts). Only `userConsent` is a real
+// user choice worth persisting. Persisting the derived flags once baked a
+// stale `enableLogs: false` into every device's MMKV blob, which silently
+// killed log shipping even after the in-code default changed.
 export const initialTelemetryState = {
   isEnabled: Environment.shouldEnableAnalytics() || Environment.isDevelopment(),
   enableMetrics:
     Environment.shouldEnableAnalytics() || Environment.isDevelopment(),
-  enableLogs: false,
+  enableLogs:
+    Environment.shouldEnableAnalytics() || Environment.isDevelopment(),
   enableConsoleInDev: false,
   userConsent: null,
 };
@@ -39,7 +46,12 @@ export const createTelemetrySlice: StateCreator<
   setTelemetryEnabled: (enabled: boolean) =>
     set(state => {
       state.isEnabled = enabled;
-      if (!enabled) {
+      if (enabled) {
+        // Re-derive instead of leaving whatever a previous disable zeroed —
+        // otherwise a disable→enable round-trip leaves metrics/logs dead.
+        state.enableMetrics = initialTelemetryState.enableMetrics;
+        state.enableLogs = initialTelemetryState.enableLogs;
+      } else {
         state.enableMetrics = false;
         state.enableLogs = false;
       }
@@ -63,7 +75,14 @@ export const createTelemetrySlice: StateCreator<
   setUserConsent: (consent: boolean) =>
     set(state => {
       state.userConsent = consent;
-      if (!consent) {
+      if (consent) {
+        // Restore the env-derived defaults: denying consent zeroes the flags
+        // below, so re-consenting must re-derive them or telemetry stays
+        // permanently dead after one off→on round-trip in settings.
+        state.isEnabled = initialTelemetryState.isEnabled;
+        state.enableMetrics = initialTelemetryState.enableMetrics;
+        state.enableLogs = initialTelemetryState.enableLogs;
+      } else {
         state.isEnabled = false;
         state.enableMetrics = false;
         state.enableLogs = false;

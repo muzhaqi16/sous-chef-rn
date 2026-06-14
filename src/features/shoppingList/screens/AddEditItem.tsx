@@ -24,11 +24,10 @@ import { FieldRow } from '#components/molecules/FieldRow';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import type { StaticScreenProps } from '@react-navigation/native';
 import {
-  addNewItemToShoppingListCache,
   addOptimisticShoppingListItem,
-  adoptServerShoppingListItemId,
   createOptimisticShoppingListItem,
   reconcileShoppingCreate,
+  reconcileShoppingItemCreateUpdate,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { useShoppingListItemForm } from '#features/shoppingList/hooks/useShoppingListItemForm';
 import {
@@ -114,13 +113,12 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
         return;
       }
       const newItem = payload.shoppingListItem;
-
-      // Catalog-merge: adopt the server id, evicting the optimistic cuid if the
-      // server merged into an existing row. Reads the id off this mutation's own
-      // variables (not a shared ref) so it stays correct when adds overlap.
-      adoptServerShoppingListItemId(cache, newItem.id, variables.input.id);
-
-      addNewItemToShoppingListCache(cache, listId, newItem);
+      reconcileShoppingItemCreateUpdate(
+        cache,
+        listId,
+        newItem,
+        variables.input.id,
+      );
     },
     onError: error => {
       errorService.reportError(error, {

@@ -3,25 +3,20 @@
  *
  * Persistence Strategy:
  * ====================
- * The store is split into PERSISTENT and TRANSIENT state:
+ * Persistence is an explicit ALLOWLIST: only fields named in PERSISTED_KEYS
+ * (below RootState) enter the MMKV blob. Every other field is transient by
+ * default — a new store field simply doesn't persist until it's added to the
+ * list.
  *
- * PERSISTENT (saved to MMKV):
- * - Auth tokens, user data (authSlice)
- * - User preferences, theme, language (preferencesSlice)
- * - Selected IDs (home, pantry, shopping list)
- * - User navigation history and progress
- * - Telemetry settings
- * - Notification preferences
- *
- * TRANSIENT (session-only, not persisted):
- * - Network state (isOnline, networkType) - always detect fresh
- * - UI state (modals, forms, toasts, loading flags)
- * - Current onboarding step - restart flow on app restart
- * - Pending deep link actions - temporary
- * - isLoggingOut flag - session-only
- *
- * This split prevents unnecessary disk writes and ensures fresh
- * state for ephemeral UI concerns while preserving user data.
+ * Why an allowlist: the previous partialize persisted everything that wasn't
+ * explicitly destructured out, so derived/session state kept leaking into the
+ * blob and overriding fresh defaults on hydration — `apiReachable` froze the
+ * app in a permanent "server unreachable" state (v11), the env-derived
+ * telemetry flags silently killed log shipping (v12), and `isHydrated` +
+ * auth/scanner lifecycle flags rode along undetected (v13). Default-transient
+ * fails SAFE: forgetting to classify a field means a setting doesn't survive
+ * restart (visible, one-line fix, no migration) instead of a stale persisted
+ * value silently overriding code defaults forever.
  */
 
 import { create } from 'zustand';
@@ -164,6 +159,120 @@ export type RootState = AuthState &
   ResetManagerState &
   NavigationStateManagerState;
 
+/** Non-function fields of the store — the keys persistence has to classify. */
+type StateDataKey = {
+  [K in keyof RootState]-?: RootState[K] extends (...args: never[]) => unknown
+    ? never
+    : K;
+}[keyof RootState];
+
+/**
+ * Literal-preserving list builder: the `K extends StateDataKey` constraint is
+ * a union of string literals, so TypeScript infers the arguments as literal
+ * types (no `as const` needed) and rejects any key that isn't a store data
+ * field.
+ */
+const classifyKeys = <K extends StateDataKey>(
+  ...keys: readonly K[]
+): readonly K[] => keys;
+
+/**
+ * The persistence allowlist — the ONLY fields written to the MMKV blob.
+ * Everything else in RootState is transient by default and re-derived fresh
+ * each launch. Add a field here only when it's genuine user data or a user
+ * choice; never add derived/session/lifecycle state (see the v13 migration
+ * note for the three bugs that pattern caused). The exact blob shape is
+ * locked by src/store/__tests__/persistOptions.test.ts.
+ */
+const PERSISTED_KEYS = classifyKeys(
+  // Auth — the user object and login preferences. The session token pair
+  // lives in the keychain; partialize conditionally re-adds it below while
+  // the keychain copy is unconfirmed.
+  'user',
+  'rememberMe',
+  'hasStoredCredentials',
+  'showBiometricSetup',
+
+  // User preferences
+  'theme',
+  'language',
+  'primaryColorOverride',
+  'densityPreference',
+  'fontScalePreference',
+  'highContrast',
+  'hapticFeedbackEnabled',
+  'showNavigationLabels',
+  'pantrySortOption',
+  'pantrySortDirection',
+  'emailNotifications',
+  'pushNotifications',
+  'userPreferences',
+
+  // Entity selections + navigation memory
+  'selectedHomeId',
+  'selectedPantryId',
+  'selectedShoppingListId',
+  'selectedMealPlanId',
+  'navigationState',
+  'userNavigationStates',
+
+  // Notification inbox
+  'notifications',
+  'unreadCount',
+  'urgentCount',
+
+  // Scanner history (the live scan/search state is transient)
+  'recentlyScanned',
+
+  // Offline reference caches + freshness stamps (autocomplete warmth)
+  'cachedUnits',
+  'cachedCategories',
+  'cachedBrands',
+  'cachedStores',
+  'lastFetchedAt',
+  'lastUnitsFetchedAt',
+  'lastCategoriesFetchedAt',
+  'lastBrandsFetchedAt',
+  'lastStoresFetchedAt',
+
+  // Telemetry: the one real user choice (the feature flags are env-derived)
+  'userConsent',
+);
+
+type PersistedKey = (typeof PERSISTED_KEYS)[number];
+
+/**
+ * The persisted-key allowlist as a queryable set — used by the v13 migration
+ * sweep and exported (via PERSISTED_KEYS) to the persistence tests.
+ */
+const PERSISTED_KEY_SET: ReadonlySet<string> = new Set(PERSISTED_KEYS);
+
+/** Keys allowed in the blob beyond the allowlist: the keychain-fallback pair. */
+const BLOB_ONLY_KEYS: ReadonlySet<string> = new Set([
+  'accessToken',
+  'refreshToken',
+]);
+
+export { PERSISTED_KEYS };
+
+const pickPersisted = (state: RootState): Pick<RootState, PersistedKey> => {
+  const persisted = {} as Pick<RootState, PersistedKey>;
+  for (const key of PERSISTED_KEYS) {
+    assignKey(persisted, state, key);
+  }
+  return persisted;
+};
+
+// Separate generic so each assignment is typed per-key instead of as the
+// intersection of all persisted value types.
+const assignKey = <K extends PersistedKey>(
+  target: Pick<RootState, PersistedKey>,
+  source: RootState,
+  key: K,
+): void => {
+  target[key] = source[key];
+};
+
 export const useStore = create<RootState>()(
   subscribeWithSelector(
     persist(
@@ -211,16 +320,10 @@ export const useStore = create<RootState>()(
       ),
       {
         name: STORAGE_KEY,
-        version: 10,
+        version: 13,
         storage: createJSONStorage(() => zustandStorage),
         // Do store migrations here
         migrate: (persistedState: unknown, version: number) => {
-          // Migration from version 6 to 7: Clear home initialization flags
-          // These are now transient and should not be persisted
-          if (version < 7) {
-            // Do something for v7 if needed
-          }
-
           // Migration v8 → v9: Extract nested profile fields into top-level user fields.
           // Existing users have user.profile.firstName etc. from the old schema, but
           // the greeting reads user.firstName / user.name directly.
@@ -246,6 +349,28 @@ export const useStore = create<RootState>()(
             } | null;
             if (state?.fontScalePreference === 'system') {
               state.fontScalePreference = FontScalePreference.MD;
+            }
+          }
+
+          // Migration → v13: partialize was inverted from a blocklist to the
+          // PERSISTED_KEYS allowlist after derived/session state kept leaking
+          // into the blob and overriding fresh defaults on hydration — the
+          // bug struck three times: `apiReachable` froze the app in a
+          // permanent "server unreachable" state (v11), the env-derived
+          // telemetry flags baked in a stale `enableLogs: false` that
+          // silently killed log shipping (v12), and `isHydrated` plus
+          // auth/scanner lifecycle flags rode along undetected (v13). One
+          // sweep enforces the allowlist on every older blob, subsuming the
+          // per-key v11/v12 deletes. The keychain-fallback token pair is the
+          // only sanctioned passenger outside the allowlist.
+          if (version < 13) {
+            const state = persistedState as Record<string, unknown> | null;
+            if (state) {
+              for (const key of Object.keys(state)) {
+                if (!PERSISTED_KEY_SET.has(key) && !BLOB_ONLY_KEYS.has(key)) {
+                  delete state[key];
+                }
+              }
             }
           }
 
@@ -321,88 +446,27 @@ export const useStore = create<RootState>()(
         },
         skipHydration: false,
         partialize: state => {
-          // Filter out non-persisted state slices here
-          // Split state into persistent and transient parts
-
-          const {
-            // ========== TRANSIENT STATE (do not persist) ==========
-
-            // Network state (always detect fresh on app start)
-            isOnline,
-            isInternetReachable,
-            networkType,
-            lastOnlineTime,
-            lastOfflineTime,
-            needsTokenRefresh,
-            offlineModeEnabled, // Hydrated from MMKV in onRehydrateStorage; setter writes through to MMKV
-
-            // UI state (temporary, session-only)
-            bottomSheetVisible,
-            bottomSheetIndex,
-            scannerSheetVisible,
-            scannerSheetIndex,
-            globalLoading,
-            isLoading,
-            isError,
-            isFetching,
-            activeFormId,
-            formData,
-            globalSearchQuery,
-            activeFilters,
-            toastMessage,
-            toastType,
-            pendingPantryScrollToTop,
-            tutorialResetGeneration,
-
-            // Navigation transient state
-            onBoardingStep, // Restart onboarding flow on app restart
-            pendingDeepLinkAction, // Deep link actions should not persist
-
-            // Home initialization flags (session-only - must re-fetch on app restart)
-            // These ensure GetHomes query runs fresh to populate Apollo cache
-            hasInitializedHomeData,
-            isHomeSelectionReady,
-
-            // Logout state (session-only flag)
-            isLoggingOut,
-
-            // Session tokens (keychain-persisted; loaded in
-            // hydrateSessionTokensThenFinish, written through in the
-            // authSlice setters). Conditionally re-added below: the MMKV
-            // blob keeps a fallback copy until the keychain copy confirms.
-            accessToken,
-            refreshToken,
-            sessionTokensInKeychain,
-
-            // Seen-items LRU: a within-session warmth cache for catalog item
-            // autocomplete. Kept transient so it isn't serialized into MMKV on
-            // every search result (each ItemSuggestion is large). The persisted
-            // reference caches (cachedCategories/Brands/Stores, units) cover
-            // offline autocomplete across cold starts.
-            cachedItemSuggestions,
-
-            // Passwords (must not persist to MMKV — keychain only)
-            registrationPassword,
-            postLoginCredentials,
-
-            // Auth service transient loading state
-            authIsLoading,
-            authIsLoadingCredentials,
-
-            // Notification transient state (session-only buffer for race condition handling)
-            pendingExpirationLinks,
-
-            ...persistedState
-          } = state;
-          // ========== PERSISTENT STATE (everything else) ==========
+          // Explicit allowlist — see PERSISTED_KEYS / TRANSIENT_KEYS above.
+          // Only listed data fields enter the blob; actions and unclassified
+          // keys can't leak in (the old spread serialized ~125 functions per
+          // write just for JSON.stringify to drop them).
+          const persisted = pickPersisted(state);
 
           // Losing both token tiers logs the user out, so the pair stays in
           // the MMKV blob while the keychain copy is unconfirmed (migration
           // writes, transient keychain failures).
-          if (!sessionTokensInKeychain && accessToken && refreshToken) {
-            return { ...persistedState, accessToken, refreshToken };
+          if (
+            !state.sessionTokensInKeychain &&
+            state.accessToken &&
+            state.refreshToken
+          ) {
+            return {
+              ...persisted,
+              accessToken: state.accessToken,
+              refreshToken: state.refreshToken,
+            };
           }
-          return persistedState;
+          return persisted;
         },
       },
     ),

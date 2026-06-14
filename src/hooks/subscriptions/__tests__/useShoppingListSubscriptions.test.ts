@@ -73,9 +73,9 @@ beforeEach(() => {
 });
 
 // Captures the customOnData for a specific subscription so tests can drive it
-// directly with simulated payloads. The hook now registers multiple separate
-// subscriptions (ShoppingListItemChanged, ShoppingListUpdated,
-// ShoppingListItemsBatchCleared, etc.); pass the desired subscriptionName.
+// directly with simulated payloads. The hook registers two subscriptions
+// (MyShoppingListsEvents, CollaborationChanges); pass the desired
+// subscriptionName.
 function captureCustomOnData(subscriptionName: string) {
   let customOnData: CapturedOnData | undefined;
   mockRegister.mockImplementation((config: SubscriptionConfig) => {
@@ -90,16 +90,15 @@ function captureCustomOnData(subscriptionName: string) {
 }
 
 describe('useShoppingListSubscriptions', () => {
-  it('registers ShoppingListItemChanged subscription with correct config', () => {
+  it('registers MyShoppingListsEvents subscription with correct config', () => {
     renderHookWithApollo(() => useShoppingListSubscriptions('user-1'));
 
     expect(mockRegister).toHaveBeenCalledWith(
       expect.objectContaining({
-        subscriptionName: 'ShoppingListItemChanged',
-        entityType: 'ShoppingListItem',
+        subscriptionName: 'MyShoppingListsEvents',
+        entityType: 'ShoppingList',
         enableDeduplication: true,
         userId: 'user-1',
-        entityId: 'list-1',
       }),
     );
   });
@@ -121,8 +120,7 @@ describe('useShoppingListSubscriptions', () => {
 
     expect(mockRegister).toHaveBeenCalledWith(
       expect.objectContaining({
-        subscriptionName: 'ShoppingListItemChanged',
-        entityId: undefined,
+        subscriptionName: 'MyShoppingListsEvents',
       }),
     );
   });
@@ -132,7 +130,7 @@ describe('useShoppingListSubscriptions', () => {
       addNewItemToShoppingListCache,
     } = require('#/apollo/utils/shoppingListCacheUpdaters');
 
-    const getOnData = captureCustomOnData('ShoppingListItemChanged');
+    const getOnData = captureCustomOnData('MyShoppingListsEvents');
     renderHookWithApollo(() => useShoppingListSubscriptions('user-1'));
 
     const mockCache: MockBatchCache = {
@@ -145,9 +143,11 @@ describe('useShoppingListSubscriptions', () => {
 
     getOnData()(
       {
+        subtype: 'ITEMS_CHANGED',
         mutation: 'CREATED',
-        item: { id: 'i1' },
-        userId: 'other-user',
+        node: { __typename: 'ShoppingListItem', id: 'i1' },
+        listId: 'list-1',
+        actorUserId: 'other-user',
       },
       mockClient,
     );
@@ -155,20 +155,45 @@ describe('useShoppingListSubscriptions', () => {
     expect(addNewItemToShoppingListCache).toHaveBeenCalled();
   });
 
-  it('skips self-echo for ShoppingListItemChanged', () => {
+  it('skips self-echo for MyShoppingListsEvents item changes', () => {
     const {
       addNewItemToShoppingListCache,
     } = require('#/apollo/utils/shoppingListCacheUpdaters');
 
-    const getOnData = captureCustomOnData('ShoppingListItemChanged');
+    const getOnData = captureCustomOnData('MyShoppingListsEvents');
     renderHookWithApollo(() => useShoppingListSubscriptions('user-1'));
 
     const mockClient = { cache: { batch: jest.fn() } };
     getOnData()(
       {
+        subtype: 'ITEMS_CHANGED',
         mutation: 'CREATED',
-        item: { id: 'i1' },
-        userId: 'user-1',
+        node: { __typename: 'ShoppingListItem', id: 'i1' },
+        listId: 'list-1',
+        actorUserId: 'user-1',
+      },
+      mockClient,
+    );
+
+    expect(addNewItemToShoppingListCache).not.toHaveBeenCalled();
+  });
+
+  it('ignores item events for lists other than the selected one', () => {
+    const {
+      addNewItemToShoppingListCache,
+    } = require('#/apollo/utils/shoppingListCacheUpdaters');
+
+    const getOnData = captureCustomOnData('MyShoppingListsEvents');
+    renderHookWithApollo(() => useShoppingListSubscriptions('user-1'));
+
+    const mockClient = { cache: { batch: jest.fn() } };
+    getOnData()(
+      {
+        subtype: 'ITEMS_CHANGED',
+        mutation: 'CREATED',
+        node: { __typename: 'ShoppingListItem', id: 'i1' },
+        listId: 'list-other',
+        actorUserId: 'other-user',
       },
       mockClient,
     );
@@ -181,7 +206,7 @@ describe('useShoppingListSubscriptions', () => {
       removeFromShoppingListItemsConnection,
     } = require('#/apollo/utils/shoppingListCacheUpdaters');
 
-    const getOnData = captureCustomOnData('ShoppingListItemChanged');
+    const getOnData = captureCustomOnData('MyShoppingListsEvents');
     renderHookWithApollo(() => useShoppingListSubscriptions('user-1'));
 
     const mockCache: MockBatchCache = {
@@ -194,9 +219,11 @@ describe('useShoppingListSubscriptions', () => {
 
     getOnData()(
       {
+        subtype: 'ITEMS_CHANGED',
         mutation: 'DELETED',
-        item: { id: 'i1' },
-        userId: 'other-user',
+        node: { __typename: 'ShoppingListItem', id: 'i1' },
+        listId: 'list-1',
+        actorUserId: 'other-user',
       },
       mockClient,
     );
@@ -204,19 +231,21 @@ describe('useShoppingListSubscriptions', () => {
     expect(removeFromShoppingListItemsConnection).toHaveBeenCalled();
   });
 
-  it('handles ShoppingListItemsBatchCleared payload', () => {
+  it('handles ITEMS_BATCH_CLEARED payload', () => {
     const {
       clearAllPurchasedItemsFromCache,
     } = require('#/apollo/utils/shoppingListCacheUpdaters');
 
-    const getOnData = captureCustomOnData('ShoppingListItemsBatchCleared');
+    const getOnData = captureCustomOnData('MyShoppingListsEvents');
     renderHookWithApollo(() => useShoppingListSubscriptions('user-1'));
 
     const mockClient = { cache: {} };
     getOnData()(
       {
+        subtype: 'ITEMS_BATCH_CLEARED',
         clearedItemIds: ['i1', 'i2'],
-        userId: 'other-user',
+        listId: 'list-1',
+        actorUserId: 'other-user',
       },
       mockClient,
     );
@@ -228,21 +257,41 @@ describe('useShoppingListSubscriptions', () => {
     );
   });
 
-  it('does nothing for null payload (ShoppingListItemChanged)', () => {
-    const getOnData = captureCustomOnData('ShoppingListItemChanged');
+  it('ignores ITEMS_BATCH_CLEARED for lists other than the selected one', () => {
+    const {
+      clearAllPurchasedItemsFromCache,
+    } = require('#/apollo/utils/shoppingListCacheUpdaters');
+
+    const getOnData = captureCustomOnData('MyShoppingListsEvents');
+    renderHookWithApollo(() => useShoppingListSubscriptions('user-1'));
+
+    const mockClient = { cache: {} };
+    getOnData()(
+      {
+        subtype: 'ITEMS_BATCH_CLEARED',
+        clearedItemIds: ['i1', 'i2'],
+        listId: 'list-other',
+        actorUserId: 'other-user',
+      },
+      mockClient,
+    );
+
+    expect(clearAllPurchasedItemsFromCache).not.toHaveBeenCalled();
+  });
+
+  it('does nothing for null payload (MyShoppingListsEvents)', () => {
+    const getOnData = captureCustomOnData('MyShoppingListsEvents');
     renderHookWithApollo(() => useShoppingListSubscriptions('user-1'));
 
     expect(() => getOnData()(null, {})).not.toThrow();
   });
 
-  it('evicts list entity when parent is deleting (ShoppingListUpdated)', () => {
-    // First call is the top-level guard inside ShoppingListItemChanged's
-    // customOnData (selectedShoppingListId). The handler under test
-    // (ShoppingListUpdated.customOnData) calls isParentDeleting(node.id) which
-    // returns true → safeEvict is invoked.
+  it('evicts list entity when parent is deleting (LIST_UPDATED)', () => {
+    // The LIST_UPDATED branch calls isParentDeleting(node.id) which returns
+    // true → safeEvict is invoked.
     mockIsParentDeleting.mockReturnValue(true);
 
-    const getOnData = captureCustomOnData('ShoppingListUpdated');
+    const getOnData = captureCustomOnData('MyShoppingListsEvents');
     renderHookWithApollo(() => useShoppingListSubscriptions('user-1'));
 
     const mockCache = {
@@ -254,7 +303,10 @@ describe('useShoppingListSubscriptions', () => {
 
     getOnData()(
       {
-        node: { id: 'list-1' },
+        subtype: 'LIST_UPDATED',
+        node: { __typename: 'ShoppingList', id: 'list-1' },
+        listId: 'list-1',
+        actorUserId: 'user-1',
       },
       mockClient,
     );
@@ -268,7 +320,7 @@ describe('useShoppingListSubscriptions', () => {
       removeFromShoppingListItemsConnection,
     } = require('#/apollo/utils/shoppingListCacheUpdaters');
 
-    const getOnData = captureCustomOnData('ShoppingListItemChanged');
+    const getOnData = captureCustomOnData('MyShoppingListsEvents');
     const scheduleAnimation = jest.fn((id, dir, onComplete) => onComplete());
     renderHookWithApollo(() =>
       useShoppingListSubscriptions('user-1', scheduleAnimation),
@@ -284,9 +336,11 @@ describe('useShoppingListSubscriptions', () => {
 
     getOnData()(
       {
+        subtype: 'ITEMS_CHANGED',
         mutation: 'DELETED',
-        item: { id: 'i1' },
-        userId: 'other-user',
+        node: { __typename: 'ShoppingListItem', id: 'i1' },
+        listId: 'list-1',
+        actorUserId: 'other-user',
       },
       mockClient,
     );

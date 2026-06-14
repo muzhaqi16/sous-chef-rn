@@ -14,11 +14,10 @@ import {
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { ItemSuggestion } from '#/graphql/generated/schemaTypes';
 import {
-  addNewItemToShoppingListCache,
   addOptimisticShoppingListItem,
-  adoptServerShoppingListItemId,
   createOptimisticShoppingListItem,
   reconcileShoppingCreate,
+  reconcileShoppingItemCreateUpdate,
   revertOptimisticShoppingListItem,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
@@ -118,14 +117,14 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
           return;
         }
         const newItem = payload.shoppingListItem;
-
-        // Catalog-merge: adopt the server id, evicting the optimistic cuid if the
-        // server merged into an existing row. Reads the id off this mutation's
-        // own variables (not a shared ref) so it stays correct when adds overlap.
-        adoptServerShoppingListItemId(cache, newItem.id, variables.input.id);
-
         executeCacheUpdate(
-          () => addNewItemToShoppingListCache(cache, shoppingListId, newItem),
+          () =>
+            reconcileShoppingItemCreateUpdate(
+              cache,
+              shoppingListId,
+              newItem,
+              variables.input.id,
+            ),
           'Cache update failed for addItem:',
         );
       },

@@ -1,0 +1,3 @@
+# Normalize all text files to LF (commit + checkout) to lock the repo-wide
+# convention and prevent one-off CRLF churn.
+* text=auto eol=lf

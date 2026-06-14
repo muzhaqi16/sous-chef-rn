@@ -74,6 +74,9 @@ interface QueuedInput {
   unitId?: string;
   unitName?: string;
   purchased?: boolean;
+  purchaseTracking?: Record<string, unknown>;
+  priority?: number;
+  sortOrder?: string;
   afterItemId?: string;
   beforeItemId?: string;
   item?: Record<string, unknown>;
@@ -272,6 +275,12 @@ const buildShoppingItemSync: SyncBuilder = (mutation, readers) => {
         }
       : undefined);
 
+  // UpdateShoppingListItem sends a `purchaseTracking` object; the toggle sends a
+  // flat `purchased` boolean — normalize both so neither is dropped on replay.
+  const purchaseTracking =
+    input.purchaseTracking ??
+    (input.purchased != null ? { isPurchased: input.purchased } : undefined);
+
   const item: SyncShoppingListItemInput = {
     shoppingListId,
     ...(input.itemName != null && { itemName: input.itemName }),
@@ -282,9 +291,13 @@ const buildShoppingItemSync: SyncBuilder = (mutation, readers) => {
     // `quantity` is the FlexibleQuantity scalar (string | number, e.g. "1/3" or
     // 2) — pass it through directly; no unitId needed.
     ...(input.quantity != null && { quantity: input.quantity }),
-    ...(input.purchased != null && {
-      purchaseTracking: { isPurchased: input.purchased },
+    ...(purchaseTracking != null && {
+      purchaseTracking:
+        purchaseTracking as SyncShoppingListItemInput['purchaseTracking'],
     }),
+    // priority / sortOrder ride on UpdateShoppingListItem — preserve on replay.
+    ...(input.priority != null && { priority: input.priority }),
+    ...(input.sortOrder != null && { sortOrder: input.sortOrder }),
     // Carried by the barcode add (and accepted by SyncShoppingListItemInput) so
     // replaying through sync doesn't drop them vs. the original mutation.
     ...(input.brand != null && {

@@ -4120,7 +4120,6 @@ type Item {
   storeSkus(after: String, first: Int, orderBy: ItemStoreSkuOrderBy): ItemStoreSkuConnection!
   tags: [String!]!
   type: ItemType!
-  unitConversions: [ItemUnitConversion!]! @deprecated(reason: "Use unitConversionsConnection for cursor-based pagination")
   unitConversionsConnection(after: String, before: String, first: Int, last: Int, orderBy: ItemUnitConversionOrderBy): ItemUnitConversionConnection!
   units: [ItemUnit!]!
   updatedAt: DateTime!
@@ -6753,15 +6752,6 @@ enum PantryEventSubtype {
   WASTE_ALERT
 }
 
-type PantryExpiringItemsAlertPayload {
-  daysUntilExpiration: Int!
-  expiresAt: DateTime!
-  item: PantryItem!
-  pantryId: ID!
-  timestamp: DateTime!
-  userId: ID!
-}
-
 """
 Filters for querying pantries.
 userId and homeId filters have different behavior for admins vs regular users.
@@ -6892,15 +6882,6 @@ type PantryItemChangeEdge implements Edge {
   node: PantryItemChange!
 }
 
-type PantryItemChangedPayload {
-  item: PantryItem!
-  mutation: MutationType!
-  pantryId: ID!
-  timestamp: DateTime!
-  updatedFields: [String!]!
-  userId: ID!
-}
-
 type PantryItemConnection implements Connection {
   edges: [PantryItemEdge!]!
   pageInfo: PageInfo!
@@ -7024,14 +7005,6 @@ type PantryItemUsage {
   wasteReason: WasteReason
 }
 
-type PantryItemUsageChangedPayload {
-  mutation: MutationType!
-  pantryId: ID!
-  timestamp: DateTime!
-  usage: PantryItemUsage!
-  userId: ID!
-}
-
 type PantryItemUsageConnection implements Connection {
   edges: [PantryItemUsageEdge!]!
   pageInfo: PageInfo!
@@ -7047,15 +7020,6 @@ type PantryItemUsageEdge implements Edge {
 input PantryItemUsageOrderBy {
   createdAt: SortOrder
   usedAt: SortOrder
-}
-
-type PantryLowStockAlertPayload {
-  currentQuantity: Float!
-  item: PantryItem!
-  minimumQuantity: Float!
-  pantryId: ID!
-  timestamp: DateTime!
-  userId: ID!
 }
 
 """Order by options for pantries"""
@@ -7088,14 +7052,6 @@ enum PantrySuggestionSource {
   RECENTLY_DELETED
 }
 
-type PantryUpdatedPayload {
-  mutation: MutationType!
-  node: Pantry!
-  timestamp: DateTime!
-  updatedFields: [String!]!
-  userId: ID!
-}
-
 """
 Usage statistics for a Pantry.
 Included when admin requests resources with stats.
@@ -7111,16 +7067,6 @@ type PantryUsageStats {
   lastActivityAt: DateTime
   """Number of low stock items"""
   lowStockItemCount: Int!
-}
-
-type PantryWasteAlertPayload {
-  item: PantryItem!
-  pantryId: ID!
-  timestamp: DateTime!
-  userId: ID!
-  wasteAmount: Float!
-  wasteReason: String!
-  wasteValue: Float
 }
 
 type ParentCategorySuggestion {
@@ -7833,7 +7779,6 @@ type Recipe {
   externalUrl: String
   forkedFrom: Recipe
   forkedFromId: ID
-  forks: [Recipe!]! @deprecated(reason: "Use forksConnection for cursor-based pagination")
   forksConnection(after: String, before: String, first: Int, last: Int, orderBy: RecipeOrderBy): RecipeForkConnection!
   healthGoals: [HealthGoal!]!
   id: ID!
@@ -8869,6 +8814,55 @@ type ShoppingListEdge implements Edge {
   node: ShoppingList!
 }
 
+"""
+Real-time notification for shopping list domain mutations.
+Clients subscribe once per list (or once for all their lists via
+myShoppingListsEvents); the subtype field routes payload interpretation.
+"""
+type ShoppingListEvent {
+  """User who made the change."""
+  actorUserId: ID!
+  """Count of items cleared (ITEMS_BATCH_CLEARED only)."""
+  clearedCount: Int
+  """IDs of items that were cleared (ITEMS_BATCH_CLEARED only)."""
+  clearedItemIds: [ID!]
+  listId: ID!
+  mutation: MutationType!
+  """
+  The affected resource: ShoppingList for LIST_UPDATED / STATUS_CHANGED,
+  ShoppingListItem for ITEMS_CHANGED. Null for ITEMS_BATCH_CLEARED
+  (use clearedItemIds). For STATUS_CHANGED, read the new status from
+  node.status.
+  """
+  node: ShoppingListEventNode
+  """Device/client that triggered the change (for echo suppression)."""
+  originatorClientId: ID
+  subtype: ShoppingListEventSubtype!
+  timestamp: DateTime!
+  """
+  Names of the fields that changed (LIST_UPDATED / STATUS_CHANGED /
+  ITEMS_CHANGED). Empty when not applicable.
+  """
+  updatedFields: [String!]!
+}
+
+union ShoppingListEventNode = ShoppingList | ShoppingListItem
+
+"""
+Subtype discriminator for shopping list domain events.
+Values match the client-side changeType contract.
+"""
+enum ShoppingListEventSubtype {
+  """Multiple items cleared from the list in one operation"""
+  ITEMS_BATCH_CLEARED
+  """Shopping list item created, updated, or deleted"""
+  ITEMS_CHANGED
+  """Shopping list metadata changed (name, settings, etc.)"""
+  LIST_UPDATED
+  """Shopping list status changed (ACTIVE / COMPLETED / etc.)"""
+  STATUS_CHANGED
+}
+
 input ShoppingListFilters {
   homeId: ID
   isArchived: Boolean
@@ -8923,16 +8917,6 @@ type ShoppingListItem {
   unitName: String
   updatedAt: DateTime!
   version: Int!
-}
-
-type ShoppingListItemChangedPayload {
-  item: ShoppingListItem!
-  listId: ID!
-  mutation: MutationType!
-  originatorClientId: ID
-  timestamp: DateTime!
-  updatedFields: [String!]!
-  userId: ID!
 }
 
 type ShoppingListItemConnection implements Connection {
@@ -9013,18 +8997,6 @@ type ShoppingListItemStoreInfo {
   storeSection: String
 }
 
-type ShoppingListItemsBatchClearedPayload {
-  """Count of items cleared"""
-  clearedCount: Int!
-  """IDs of items that were cleared"""
-  clearedItemIds: [ID!]!
-  listId: ID!
-  mutation: MutationType!
-  originatorClientId: ID
-  timestamp: DateTime!
-  userId: ID!
-}
-
 """Order by options for shopping lists"""
 input ShoppingListOrderBy {
   createdAt: SortOrder
@@ -9060,17 +9032,6 @@ input ShoppingListSettingsInput {
   priceTracking: Boolean
   priority: Int
   smartSorting: Boolean
-}
-
-type ShoppingListStatusChangedPayload {
-  completedBy: User
-  listId: ID!
-  mutation: MutationType!
-  newStatus: ListStatus!
-  originatorClientId: ID
-  previousStatus: ListStatus
-  timestamp: DateTime!
-  userId: ID!
 }
 
 """
@@ -9110,15 +9071,6 @@ type ShoppingListSuggestion {
   shoppingListItemId: ID
   """Source of this suggestion"""
   source: SuggestionSource!
-}
-
-type ShoppingListUpdatedPayload {
-  mutation: MutationType!
-  node: ShoppingList!
-  originatorClientId: ID
-  timestamp: DateTime!
-  updatedFields: [String!]!
-  userId: ID!
 }
 
 """
@@ -9553,21 +9505,11 @@ type Subscription {
   """Subscribe to all membership changes for a home"""
   membershipChanged(homeId: ID!): MembershipChangeEvent!
   """
-  Subscribe to item changes across all of the current user's shopping lists.
+  Subscribe to all shopping list domain events across all of the current
+  user's shopping lists. One subscription covers every list the user can
+  access.
   """
-  myShoppingListsItemChanged: ShoppingListItemChangedPayload!
-  """
-  Subscribe to batch-clear events across all of the current user's shopping lists.
-  """
-  myShoppingListsItemsBatchCleared: ShoppingListItemsBatchClearedPayload!
-  """
-  Subscribe to status changes across all of the current user's shopping lists.
-  """
-  myShoppingListsStatusChanged: ShoppingListStatusChangedPayload!
-  """
-  Subscribe to metadata updates across all of the current user's shopping lists.
-  """
-  myShoppingListsUpdated: ShoppingListUpdatedPayload!
+  myShoppingListsEvents: ShoppingListEvent!
   """Subscribe to new notifications created for the current user."""
   notificationCreated: NotificationCreatedPayload!
   """Subscribe to dismissal events (lightweight payload — id only)."""
@@ -9578,22 +9520,10 @@ type Subscription {
   notificationUpdated: NotificationUpdatedPayload!
   """
   Subscribe to all pantry domain events for a single pantry.
-  Replaces: pantryUpdated, pantryItemChanged, pantryItemUsageChanged,
-  pantryLowStockAlert, pantryExpirationAlert, pantryWasteAlert.
+  Discriminate by subtype: PANTRY_UPDATED, ITEM_CHANGED, USAGE_CHANGED,
+  LOW_STOCK_ALERT, EXPIRATION_ALERT, WASTE_ALERT.
   """
   pantryEvents(pantryId: ID!): PantryEvent!
-  """Subscribe to expiring-items alerts for a pantry."""
-  pantryExpirationAlert(pantryId: ID!): PantryExpiringItemsAlertPayload! @deprecated(reason: "Use pantryEvents(pantryId) and discriminate by subtype")
-  """Subscribe to pantry item create/update/delete events."""
-  pantryItemChanged(pantryId: ID!): PantryItemChangedPayload! @deprecated(reason: "Use pantryEvents(pantryId) and discriminate by subtype")
-  """Subscribe to pantry item usage events (consume, restock, adjust)."""
-  pantryItemUsageChanged(pantryId: ID!): PantryItemUsageChangedPayload! @deprecated(reason: "Use pantryEvents(pantryId) and discriminate by subtype")
-  """Subscribe to low-stock alerts for items in a pantry."""
-  pantryLowStockAlert(pantryId: ID!): PantryLowStockAlertPayload! @deprecated(reason: "Use pantryEvents(pantryId) and discriminate by subtype")
-  """Subscribe to pantry metadata updates (name, settings, etc.)."""
-  pantryUpdated(pantryId: ID!): PantryUpdatedPayload! @deprecated(reason: "Use pantryEvents(pantryId) and discriminate by subtype")
-  """Subscribe to waste alerts for items in a pantry."""
-  pantryWasteAlert(pantryId: ID!): PantryWasteAlertPayload! @deprecated(reason: "Use pantryEvents(pantryId) and discriminate by subtype")
   """
   Subscribe to individual logins flagged as high-risk for a user.
   Re-emitted by the background risk-assessment job with the authoritative
@@ -9601,19 +9531,11 @@ type Subscription {
   """
   riskyLoginDetected(userId: ID!): RiskyLoginDetectedPayload!
   """
-  Subscribe to item create/update/delete events on a specific shopping list.
+  Subscribe to all shopping list domain events for a single list.
+  Discriminate by subtype: LIST_UPDATED, STATUS_CHANGED, ITEMS_CHANGED,
+  ITEMS_BATCH_CLEARED.
   """
-  shoppingListItemChanged(listId: ID!): ShoppingListItemChangedPayload!
-  """Subscribe to batch-clear events on a specific shopping list."""
-  shoppingListItemsBatchCleared(listId: ID!): ShoppingListItemsBatchClearedPayload!
-  """
-  Subscribe to status changes on a specific shopping list (ACTIVE / COMPLETED / etc.).
-  """
-  shoppingListStatusChanged(listId: ID!): ShoppingListStatusChangedPayload!
-  """
-  Subscribe to metadata updates on a specific shopping list (name, settings, etc.).
-  """
-  shoppingListUpdated(listId: ID!): ShoppingListUpdatedPayload!
+  shoppingListEvents(listId: ID!): ShoppingListEvent!
   """Subscribe to store changes"""
   storeChanged(storeId: ID): StoreChangeEvent!
   """
@@ -11131,7 +11053,6 @@ User account type
 Cache: 5 minutes - user data changes occasionally, always private
 """
 type User {
-  addresses: [UserAddress!]! @deprecated(reason: "Use addressesConnection for cursor-based pagination")
   addressesConnection(after: String, before: String, first: Int, last: Int, orderBy: UserAddressOrderBy): UserAddressConnection!
   """Whether this user can access developer tools and internal dashboards"""
   canAccessDevTools: Boolean!

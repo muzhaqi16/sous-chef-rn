@@ -386,10 +386,12 @@ export class SubscriptionService {
         errorMessage.includes('connection') ||
         errorMessage.includes('websocket');
 
-      // Socket closed errors are expected during network transitions
-      // Log at WARN level to make connection issues visible during development
+      // Socket closed errors are expected during network transitions — debug
+      // level: one WS drop interrupts EVERY active subscription at once, so a
+      // warn here multiplies into a wall of identical lines per disconnect
+      // (wsLink already warns once per socket event).
       if (isSocketClosed || isNetworkError) {
-        this.log(config, LogLevel.WARN, 'WebSocket connection interrupted', {
+        this.log(config, LogLevel.DEBUG, 'WebSocket connection interrupted', {
           error: errorMessage,
           hint: 'WebSocket will attempt auto-reconnect if enabled',
         });
@@ -515,10 +517,17 @@ export class SubscriptionService {
       }
     }
 
-    // Duplicate prevention using timestamp + mutation type as deduplication key
-    // This prevents the same subscription event from being processed multiple times
+    // Dedup key = mutation + subtype + node + tick. The server can emit distinct
+    // events in one tick (e.g. two items changed together), so subtype + node
+    // keep them apart while true duplicates still collapse.
     if (payload.timestamp && payload.mutation) {
-      const mutationKey = `${payload.mutation}-${payload.timestamp}-${payload.userId}`;
+      const nodeId =
+        (payload.node as { id?: string } | undefined)?.id ??
+        (payload.item as { id?: string } | undefined)?.id ??
+        '';
+      const mutationKey = `${payload.mutation}-${
+        payload.subtype ?? ''
+      }-${nodeId}-${payload.timestamp}`;
 
       if (this.processedMutations.has(mutationKey)) {
         return false;

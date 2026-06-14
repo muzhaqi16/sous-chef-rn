@@ -124,8 +124,18 @@ export function useToggleShoppingItem({
           // queues this for replay (toggle is idempotent on a real id) instead
           // of surfacing a blocking error. Offline already queues via queueLink.
           context: { localFirst: true },
-          onCompleted: () => {
-            clearPersistence();
+          onCompleted: data => {
+            // Drop the offline-survival marker only once the server confirms;
+            // a queued completion resolves with a null payload — keep it so the
+            // optimistic state survives an app-kill before replay.
+            if (
+              isSuccessPayload(
+                data?.toggleShoppingListItemPurchased,
+                'ToggleShoppingListItemPurchasedPayload',
+              )
+            ) {
+              clearPersistence();
+            }
 
             // Depletion recovery: if the source connection (the tab we toggled
             // FROM) is now empty but totalCount > 0, server has unfetched

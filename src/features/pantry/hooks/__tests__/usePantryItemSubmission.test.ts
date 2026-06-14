@@ -289,7 +289,7 @@ describe('usePantryItemSubmission', () => {
 
     expect(alertService.alert).toHaveBeenCalledWith(
       'Error',
-      'Failed to add item. Please try again.',
+      'Failed to add item',
     );
   });
 
@@ -471,7 +471,7 @@ describe('usePantryItemSubmission', () => {
 
     expect(alertService.alert).toHaveBeenCalledWith(
       'Error',
-      'Failed to add item. Please try again.',
+      'Failed to add item',
     );
   });
 

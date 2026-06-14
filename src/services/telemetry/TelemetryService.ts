@@ -5,6 +5,7 @@ import {
   MetricEntry,
   ErrorDetails,
   TelemetryTransport,
+  TransportSendError,
   DEFAULT_CONFIG,
 } from './types';
 import { ConsoleTransport } from './transports/ConsoleTransport';
@@ -23,6 +24,29 @@ const LOG_LEVEL_PRIORITY: Record<LogEntry['level'], number> = {
 // Cap the in-memory log retry buffer so a downed OTLP gateway cannot grow
 // memory without bound on a phone. Oldest entries are dropped first.
 const MAX_LOG_BUFFER = 1000;
+// Same guard for metrics: entries pile up while flushes are skipped (device
+// offline, backoff window). Dropping the oldest increments slightly
+// undercounts totals during a very long outage — bounded memory wins.
+const MAX_METRIC_BUFFER = 2000;
+
+// Exponential backoff between failed flush attempts. Without it a dead
+// endpoint is retried on every interval tick (2s in dev) PLUS on every
+// error-level log's immediate flush. 5s → 10s → … capped at 5 minutes.
+// Recovery is lazy (the next allowed flush) — telemetry is fire-and-forget,
+// so it doesn't need the active /health probing the GraphQL breaker has.
+const INITIAL_FLUSH_BACKOFF_MS = 5_000;
+const MAX_FLUSH_BACKOFF_MS = 300_000;
+
+interface FlushBackoff {
+  consecutiveFailures: number;
+  /** Epoch ms before which flushes are skipped; 0 = no backoff active. */
+  nextAttemptAt: number;
+}
+
+// Errors a transport hasn't classified (e.g. from a test double) default to
+// retryable — dropping data needs an explicit permanent verdict.
+const isRetryableReason = (reason: unknown): boolean =>
+  reason instanceof TransportSendError ? reason.retryable : true;
 
 export class TelemetryService {
   private config: TelemetryConfig;
@@ -35,6 +59,19 @@ export class TelemetryService {
   // can race the interval timer); without it, concurrent flushes fire
   // duplicate failing requests and invert the re-buffer order.
   private logFlushInFlight = false;
+  private metricFlushInFlight = false;
+  private logsBackoff: FlushBackoff = {
+    consecutiveFailures: 0,
+    nextAttemptAt: 0,
+  };
+  private metricsBackoff: FlushBackoff = {
+    consecutiveFailures: 0,
+    nextAttemptAt: 0,
+  };
+  // A metrics send failed: the entries are already folded into HttpTransport's
+  // cumulative accumulators, so the retry must flush even with an empty buffer
+  // (re-buffering the entries instead would double-count them).
+  private metricsRetryPending = false;
 
   constructor(config: Partial<TelemetryConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
@@ -107,6 +144,11 @@ export class TelemetryService {
     };
 
     this.logBuffer.push(logEntry);
+    // Cap at insert time too — the buffer also grows while flushes are
+    // skipped (device offline, backoff window), not just on re-buffer.
+    if (this.logBuffer.length > MAX_LOG_BUFFER) {
+      this.logBuffer.shift();
+    }
 
     if (level === 'error') {
       this.flushLogs();
@@ -301,10 +343,69 @@ export class TelemetryService {
 
   private addMetric(metric: MetricEntry): void {
     this.metricBuffer.push(metric);
+    if (this.metricBuffer.length > MAX_METRIC_BUFFER) {
+      this.metricBuffer.shift();
+    }
+  }
+
+  /**
+   * Skip flushes while the device has no internet (NetInfo-driven store
+   * flag). Deliberately NOT gated on `apiReachable` — that flag tracks the
+   * GraphQL API host, while telemetry ships to separate hosts (Loki/Mimir)
+   * whose health is handled by the flush backoff instead.
+   */
+  private isDeviceOffline(): boolean {
+    return useStore.getState().isOnline === false;
+  }
+
+  private inBackoff(backoff: FlushBackoff): boolean {
+    return Date.now() < backoff.nextAttemptAt;
+  }
+
+  private noteFlushSuccess(backoff: FlushBackoff, pipeline: string): void {
+    if (backoff.consecutiveFailures > 0) {
+      logger.info(
+        `Telemetry ${pipeline} pipeline recovered after ${backoff.consecutiveFailures} failed flush(es)`,
+      );
+    }
+    backoff.consecutiveFailures = 0;
+    backoff.nextAttemptAt = 0;
+  }
+
+  private noteFlushFailure(
+    backoff: FlushBackoff,
+    pipeline: string,
+    transports: string,
+    reason: unknown,
+    detail?: string,
+  ): void {
+    backoff.consecutiveFailures += 1;
+    const delay = Math.min(
+      INITIAL_FLUSH_BACKOFF_MS * 2 ** (backoff.consecutiveFailures - 1),
+      MAX_FLUSH_BACKOFF_MS,
+    );
+    backoff.nextAttemptAt = Date.now() + delay;
+    const summary = `Failed to send ${pipeline} via ${transports} (attempt ${
+      backoff.consecutiveFailures
+    }, next flush in ${Math.round(delay / 1000)}s${
+      detail ? `; ${detail}` : ''
+    })`;
+    // One loud line per outage; repeats go to debug so a dead endpoint does
+    // not produce an error wall on every flush attempt.
+    if (backoff.consecutiveFailures === 1) {
+      logger.error(summary, reason);
+    } else {
+      logger.debug(summary, reason);
+    }
   }
 
   private async flushLogs(): Promise<void> {
     if (this.logBuffer.length === 0 || this.logFlushInFlight) {
+      return;
+    }
+    // Keep buffering (capped) instead of firing requests that cannot succeed.
+    // Gates both the interval timer and the error-triggered immediate flush.
+    if (this.isDeviceOffline() || this.inBackoff(this.logsBackoff)) {
       return;
     }
 
@@ -319,48 +420,101 @@ export class TelemetryService {
         availableTransports.map(transport => transport.sendLogs(logs)),
       );
 
-      results.forEach((result, index) => {
-        if (result.status === 'rejected') {
-          logger.error(
-            `Failed to send logs via ${availableTransports[index].getName()}:`,
-            result.reason,
-          );
-        }
-      });
+      const failures = results
+        .map((result, index) => ({
+          result,
+          name: availableTransports[index].getName(),
+        }))
+        .filter(
+          (entry): entry is { result: PromiseRejectedResult; name: string } =>
+            entry.result.status === 'rejected',
+        );
 
-      // Re-buffer the batch for retry on the next flush if any transport
-      // failed. Newer entries that arrived during the await are kept ahead of
-      // the retried batch, and the buffer is capped (oldest dropped) to bound
-      // memory during a sustained outage.
-      if (results.some(result => result.status === 'rejected')) {
+      if (failures.length === 0) {
+        this.noteFlushSuccess(this.logsBackoff, 'logs');
+        return;
+      }
+
+      // Re-buffer only when retrying can ever succeed. A permanent failure
+      // (non-retryable 4xx: wrong endpoint, bad auth) means the same batch
+      // fails forever — re-buffering it would pin the pipeline on a poisoned
+      // batch. Newer entries that arrived during the await stay ahead of the
+      // retried batch; the cap (oldest dropped) bounds a sustained outage.
+      const retryable = failures.some(f => isRetryableReason(f.result.reason));
+      if (retryable) {
         this.logBuffer = [...logs, ...this.logBuffer].slice(-MAX_LOG_BUFFER);
       }
+      this.noteFlushFailure(
+        this.logsBackoff,
+        'logs',
+        failures.map(f => f.name).join(', '),
+        failures[0].result.reason,
+        retryable
+          ? undefined
+          : `dropped ${logs.length} entries (non-retryable)`,
+      );
     } finally {
       this.logFlushInFlight = false;
     }
   }
 
   private async flushMetrics(): Promise<void> {
-    if (this.metricBuffer.length === 0) {
+    if (this.metricFlushInFlight) {
+      return;
+    }
+    // `metricsRetryPending` forces a flush even with an empty buffer: after a
+    // failed send the retry payload lives in HttpTransport's cumulative
+    // accumulators, not in this buffer.
+    if (this.metricBuffer.length === 0 && !this.metricsRetryPending) {
+      return;
+    }
+    if (this.isDeviceOffline() || this.inBackoff(this.metricsBackoff)) {
       return;
     }
 
     const metrics = [...this.metricBuffer];
     this.metricBuffer = [];
+    this.metricFlushInFlight = true;
 
     const availableTransports = this.transports.filter(t => t.isAvailable());
 
-    await Promise.allSettled(
-      availableTransports.map(transport =>
-        transport.sendMetrics(metrics).catch(error => {
-          logger.error(
-            `Failed to send metrics via ${transport.getName()}:`,
-            error,
-          );
-          this.metricBuffer.unshift(...metrics);
-        }),
-      ),
-    );
+    try {
+      const results = await Promise.allSettled(
+        availableTransports.map(transport => transport.sendMetrics(metrics)),
+      );
+
+      const failures = results
+        .map((result, index) => ({
+          result,
+          name: availableTransports[index].getName(),
+        }))
+        .filter(
+          (entry): entry is { result: PromiseRejectedResult; name: string } =>
+            entry.result.status === 'rejected',
+        );
+
+      if (failures.length === 0) {
+        this.metricsRetryPending = false;
+        this.noteFlushSuccess(this.metricsBackoff, 'metrics');
+        return;
+      }
+
+      // No re-buffering: HttpTransport has already folded these entries into
+      // its cumulative accumulators — pushing them back would double-count
+      // counters on the next flush. Mark a resend instead so the next allowed
+      // flush re-ships the running totals even if no new metrics arrive.
+      this.metricsRetryPending = failures.some(f =>
+        isRetryableReason(f.result.reason),
+      );
+      this.noteFlushFailure(
+        this.metricsBackoff,
+        'metrics',
+        failures.map(f => f.name).join(', '),
+        failures[0].result.reason,
+      );
+    } finally {
+      this.metricFlushInFlight = false;
+    }
   }
 
   private setupErrorHandlers(): void {

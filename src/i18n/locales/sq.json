@@ -54,7 +54,13 @@
       "Item": "Artikulli",
       "Notification": "Njoftimi"
     },
-    "queuedChangeSyncFailed": "Ndryshimet nuk u sinkronizuan. Tërhiq poshtë për të rifreskuar."
+    "queuedChangeSyncFailed": "Ndryshimet nuk u sinkronizuan. Tërhiq poshtë për të rifreskuar.",
+    "itemNameRequired": "Ju lutemi shkruani emrin e artikullit",
+    "invalidQuantity": "Ju lutemi shkruani një sasi të vlefshme",
+    "itemNotFound": "Artikulli nuk u gjet",
+    "parentContextRequired": "Kërkohet konteksti prind",
+    "createStorageLocationFailed": "Krijimi i vendndodhjes së ruajtjes dështoi",
+    "missingRequiredInfo": "Mungojnë informacionet e kërkuara"
   },
   "success": {
     "itemAdded": "Artikulli u shtua",
@@ -80,7 +86,8 @@
     "emailVerified": "Email-i u verifikua",
     "profileUpdated": "Profili u përditësua",
     "photoUpdated": "Fotoja u përditësua",
-    "settingsSaved": "Cilësimet u ruajtën"
+    "settingsSaved": "Cilësimet u ruajtën",
+    "expiredBatchesDiscarded": "Grupet e skaduara janë hedhur."
   },
   "loading": {
     "authenticating": "Po vërtetohet...",
@@ -231,6 +238,9 @@
     "enterCode": "Shkruani kodin",
     "enterCodeSubtitlePrefix": "Kemi dërguar një kod verifikimi te",
     "enterCodeSubtitleSuffix": ". Shkruajeni më poshtë për të verifikuar emailin tuaj.",
+    "verificationCodeInputLabel": "Kodi i verifikimit",
+    "codeRequired": "Kodi i verifikimit është i detyrueshëm",
+    "codeMustBeSixDigits": "Kodi duhet të ketë 6 shifra",
     "yourEmail": "emailin tuaj",
     "didntGetEmail": "Nuk e morët emailin?",
     "resendCode": "Ridërgo kodin",

@@ -4225,8 +4225,6 @@ export type Item = {
   storeSkus: ItemStoreSkuConnection;
   tags: Array<Scalars['String']['output']>;
   type: ItemType;
-  /** @deprecated Use unitConversionsConnection for cursor-based pagination */
-  unitConversions: Array<ItemUnitConversion>;
   unitConversionsConnection: ItemUnitConversionConnection;
   units: Array<ItemUnit>;
   updatedAt: Scalars['DateTime']['output'];
@@ -10087,16 +10085,6 @@ export enum PantryEventSubtype {
   WasteAlert = 'WASTE_ALERT'
 }
 
-export type PantryExpiringItemsAlertPayload = {
-  __typename: 'PantryExpiringItemsAlertPayload';
-  daysUntilExpiration: Scalars['Int']['output'];
-  expiresAt: Scalars['DateTime']['output'];
-  item: PantryItem;
-  pantryId: Scalars['ID']['output'];
-  timestamp: Scalars['DateTime']['output'];
-  userId: Scalars['ID']['output'];
-};
-
 /**
  * Filters for querying pantries.
  * userId and homeId filters have different behavior for admins vs regular users.
@@ -10255,16 +10243,6 @@ export type PantryItemChangeEdge = Edge & {
   node: PantryItemChange;
 };
 
-export type PantryItemChangedPayload = {
-  __typename: 'PantryItemChangedPayload';
-  item: PantryItem;
-  mutation: MutationType;
-  pantryId: Scalars['ID']['output'];
-  timestamp: Scalars['DateTime']['output'];
-  updatedFields: Array<Scalars['String']['output']>;
-  userId: Scalars['ID']['output'];
-};
-
 export type PantryItemConnection = Connection & {
   __typename: 'PantryItemConnection';
   edges: Array<PantryItemEdge>;
@@ -10389,15 +10367,6 @@ export type PantryItemUsage = {
   wasteReason: Maybe<WasteReason>;
 };
 
-export type PantryItemUsageChangedPayload = {
-  __typename: 'PantryItemUsageChangedPayload';
-  mutation: MutationType;
-  pantryId: Scalars['ID']['output'];
-  timestamp: Scalars['DateTime']['output'];
-  usage: PantryItemUsage;
-  userId: Scalars['ID']['output'];
-};
-
 export type PantryItemUsageConnection = Connection & {
   __typename: 'PantryItemUsageConnection';
   edges: Array<PantryItemUsageEdge>;
@@ -10415,16 +10384,6 @@ export type PantryItemUsageEdge = Edge & {
 export type PantryItemUsageOrderBy = {
   createdAt?: InputMaybe<SortOrder>;
   usedAt?: InputMaybe<SortOrder>;
-};
-
-export type PantryLowStockAlertPayload = {
-  __typename: 'PantryLowStockAlertPayload';
-  currentQuantity: Scalars['Float']['output'];
-  item: PantryItem;
-  minimumQuantity: Scalars['Float']['output'];
-  pantryId: Scalars['ID']['output'];
-  timestamp: Scalars['DateTime']['output'];
-  userId: Scalars['ID']['output'];
 };
 
 /** Order by options for pantries */
@@ -10458,15 +10417,6 @@ export enum PantrySuggestionSource {
   RecentlyDeleted = 'RECENTLY_DELETED'
 }
 
-export type PantryUpdatedPayload = {
-  __typename: 'PantryUpdatedPayload';
-  mutation: MutationType;
-  node: Pantry;
-  timestamp: Scalars['DateTime']['output'];
-  updatedFields: Array<Scalars['String']['output']>;
-  userId: Scalars['ID']['output'];
-};
-
 /**
  * Usage statistics for a Pantry.
  * Included when admin requests resources with stats.
@@ -10483,17 +10433,6 @@ export type PantryUsageStats = {
   lastActivityAt: Maybe<Scalars['DateTime']['output']>;
   /** Number of low stock items */
   lowStockItemCount: Scalars['Int']['output'];
-};
-
-export type PantryWasteAlertPayload = {
-  __typename: 'PantryWasteAlertPayload';
-  item: PantryItem;
-  pantryId: Scalars['ID']['output'];
-  timestamp: Scalars['DateTime']['output'];
-  userId: Scalars['ID']['output'];
-  wasteAmount: Scalars['Float']['output'];
-  wasteReason: Scalars['String']['output'];
-  wasteValue: Maybe<Scalars['Float']['output']>;
 };
 
 export type ParentCategorySuggestion = {
@@ -11882,8 +11821,6 @@ export type Recipe = {
   externalUrl: Maybe<Scalars['String']['output']>;
   forkedFrom: Maybe<Recipe>;
   forkedFromId: Maybe<Scalars['ID']['output']>;
-  /** @deprecated Use forksConnection for cursor-based pagination */
-  forks: Array<Recipe>;
   forksConnection: RecipeForkConnection;
   healthGoals: Array<HealthGoal>;
   id: Scalars['ID']['output'];
@@ -13067,6 +13004,56 @@ export type ShoppingListEdge = Edge & {
   node: ShoppingList;
 };
 
+/**
+ * Real-time notification for shopping list domain mutations.
+ * Clients subscribe once per list (or once for all their lists via
+ * myShoppingListsEvents); the subtype field routes payload interpretation.
+ */
+export type ShoppingListEvent = {
+  __typename: 'ShoppingListEvent';
+  /** User who made the change. */
+  actorUserId: Scalars['ID']['output'];
+  /** Count of items cleared (ITEMS_BATCH_CLEARED only). */
+  clearedCount: Maybe<Scalars['Int']['output']>;
+  /** IDs of items that were cleared (ITEMS_BATCH_CLEARED only). */
+  clearedItemIds: Maybe<Array<Scalars['ID']['output']>>;
+  listId: Scalars['ID']['output'];
+  mutation: MutationType;
+  /**
+   * The affected resource: ShoppingList for LIST_UPDATED / STATUS_CHANGED,
+   * ShoppingListItem for ITEMS_CHANGED. Null for ITEMS_BATCH_CLEARED
+   * (use clearedItemIds). For STATUS_CHANGED, read the new status from
+   * node.status.
+   */
+  node: Maybe<ShoppingListEventNode>;
+  /** Device/client that triggered the change (for echo suppression). */
+  originatorClientId: Maybe<Scalars['ID']['output']>;
+  subtype: ShoppingListEventSubtype;
+  timestamp: Scalars['DateTime']['output'];
+  /**
+   * Names of the fields that changed (LIST_UPDATED / STATUS_CHANGED /
+   * ITEMS_CHANGED). Empty when not applicable.
+   */
+  updatedFields: Array<Scalars['String']['output']>;
+};
+
+export type ShoppingListEventNode = ShoppingList | ShoppingListItem;
+
+/**
+ * Subtype discriminator for shopping list domain events.
+ * Values match the client-side changeType contract.
+ */
+export enum ShoppingListEventSubtype {
+  /** Multiple items cleared from the list in one operation */
+  ItemsBatchCleared = 'ITEMS_BATCH_CLEARED',
+  /** Shopping list item created, updated, or deleted */
+  ItemsChanged = 'ITEMS_CHANGED',
+  /** Shopping list metadata changed (name, settings, etc.) */
+  ListUpdated = 'LIST_UPDATED',
+  /** Shopping list status changed (ACTIVE / COMPLETED / etc.) */
+  StatusChanged = 'STATUS_CHANGED'
+}
+
 export type ShoppingListFilters = {
   homeId?: InputMaybe<Scalars['ID']['input']>;
   isArchived?: InputMaybe<Scalars['Boolean']['input']>;
@@ -13135,17 +13122,6 @@ export type ShoppingListItemPurchasesConnectionArgs = {
   first?: InputMaybe<Scalars['Int']['input']>;
   last?: InputMaybe<Scalars['Int']['input']>;
   orderBy?: InputMaybe<PurchaseOrderBy>;
-};
-
-export type ShoppingListItemChangedPayload = {
-  __typename: 'ShoppingListItemChangedPayload';
-  item: ShoppingListItem;
-  listId: Scalars['ID']['output'];
-  mutation: MutationType;
-  originatorClientId: Maybe<Scalars['ID']['output']>;
-  timestamp: Scalars['DateTime']['output'];
-  updatedFields: Array<Scalars['String']['output']>;
-  userId: Scalars['ID']['output'];
 };
 
 export type ShoppingListItemConnection = Connection & {
@@ -13231,19 +13207,6 @@ export type ShoppingListItemStoreInfo = {
   storeSection: Maybe<Scalars['String']['output']>;
 };
 
-export type ShoppingListItemsBatchClearedPayload = {
-  __typename: 'ShoppingListItemsBatchClearedPayload';
-  /** Count of items cleared */
-  clearedCount: Scalars['Int']['output'];
-  /** IDs of items that were cleared */
-  clearedItemIds: Array<Scalars['ID']['output']>;
-  listId: Scalars['ID']['output'];
-  mutation: MutationType;
-  originatorClientId: Maybe<Scalars['ID']['output']>;
-  timestamp: Scalars['DateTime']['output'];
-  userId: Scalars['ID']['output'];
-};
-
 /** Order by options for shopping lists */
 export type ShoppingListOrderBy = {
   createdAt?: InputMaybe<SortOrder>;
@@ -13282,18 +13245,6 @@ export type ShoppingListSettingsInput = {
   smartSorting?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
-export type ShoppingListStatusChangedPayload = {
-  __typename: 'ShoppingListStatusChangedPayload';
-  completedBy: Maybe<User>;
-  listId: Scalars['ID']['output'];
-  mutation: MutationType;
-  newStatus: ListStatus;
-  originatorClientId: Maybe<Scalars['ID']['output']>;
-  previousStatus: Maybe<ListStatus>;
-  timestamp: Scalars['DateTime']['output'];
-  userId: Scalars['ID']['output'];
-};
-
 /**
  * A suggestion for adding an item to a shopping list.
  * Combines multiple sources: recently deleted, frequently added, and popular items.
@@ -13328,16 +13279,6 @@ export type ShoppingListSuggestion = {
   shoppingListItemId: Maybe<Scalars['ID']['output']>;
   /** Source of this suggestion */
   source: SuggestionSource;
-};
-
-export type ShoppingListUpdatedPayload = {
-  __typename: 'ShoppingListUpdatedPayload';
-  mutation: MutationType;
-  node: ShoppingList;
-  originatorClientId: Maybe<Scalars['ID']['output']>;
-  timestamp: Scalars['DateTime']['output'];
-  updatedFields: Array<Scalars['String']['output']>;
-  userId: Scalars['ID']['output'];
 };
 
 /**
@@ -13827,14 +13768,12 @@ export type Subscription = {
   loginFailed: LoginFailedPayload;
   /** Subscribe to all membership changes for a home */
   membershipChanged: MembershipChangeEvent;
-  /** Subscribe to item changes across all of the current user's shopping lists. */
-  myShoppingListsItemChanged: ShoppingListItemChangedPayload;
-  /** Subscribe to batch-clear events across all of the current user's shopping lists. */
-  myShoppingListsItemsBatchCleared: ShoppingListItemsBatchClearedPayload;
-  /** Subscribe to status changes across all of the current user's shopping lists. */
-  myShoppingListsStatusChanged: ShoppingListStatusChangedPayload;
-  /** Subscribe to metadata updates across all of the current user's shopping lists. */
-  myShoppingListsUpdated: ShoppingListUpdatedPayload;
+  /**
+   * Subscribe to all shopping list domain events across all of the current
+   * user's shopping lists. One subscription covers every list the user can
+   * access.
+   */
+  myShoppingListsEvents: ShoppingListEvent;
   /** Subscribe to new notifications created for the current user. */
   notificationCreated: NotificationCreatedPayload;
   /** Subscribe to dismissal events (lightweight payload — id only). */
@@ -13845,54 +13784,22 @@ export type Subscription = {
   notificationUpdated: NotificationUpdatedPayload;
   /**
    * Subscribe to all pantry domain events for a single pantry.
-   * Replaces: pantryUpdated, pantryItemChanged, pantryItemUsageChanged,
-   * pantryLowStockAlert, pantryExpirationAlert, pantryWasteAlert.
+   * Discriminate by subtype: PANTRY_UPDATED, ITEM_CHANGED, USAGE_CHANGED,
+   * LOW_STOCK_ALERT, EXPIRATION_ALERT, WASTE_ALERT.
    */
   pantryEvents: PantryEvent;
-  /**
-   * Subscribe to expiring-items alerts for a pantry.
-   * @deprecated Use pantryEvents(pantryId) and discriminate by subtype
-   */
-  pantryExpirationAlert: PantryExpiringItemsAlertPayload;
-  /**
-   * Subscribe to pantry item create/update/delete events.
-   * @deprecated Use pantryEvents(pantryId) and discriminate by subtype
-   */
-  pantryItemChanged: PantryItemChangedPayload;
-  /**
-   * Subscribe to pantry item usage events (consume, restock, adjust).
-   * @deprecated Use pantryEvents(pantryId) and discriminate by subtype
-   */
-  pantryItemUsageChanged: PantryItemUsageChangedPayload;
-  /**
-   * Subscribe to low-stock alerts for items in a pantry.
-   * @deprecated Use pantryEvents(pantryId) and discriminate by subtype
-   */
-  pantryLowStockAlert: PantryLowStockAlertPayload;
-  /**
-   * Subscribe to pantry metadata updates (name, settings, etc.).
-   * @deprecated Use pantryEvents(pantryId) and discriminate by subtype
-   */
-  pantryUpdated: PantryUpdatedPayload;
-  /**
-   * Subscribe to waste alerts for items in a pantry.
-   * @deprecated Use pantryEvents(pantryId) and discriminate by subtype
-   */
-  pantryWasteAlert: PantryWasteAlertPayload;
   /**
    * Subscribe to individual logins flagged as high-risk for a user.
    * Re-emitted by the background risk-assessment job with the authoritative
    * score after the fast-path heuristic fires.
    */
   riskyLoginDetected: RiskyLoginDetectedPayload;
-  /** Subscribe to item create/update/delete events on a specific shopping list. */
-  shoppingListItemChanged: ShoppingListItemChangedPayload;
-  /** Subscribe to batch-clear events on a specific shopping list. */
-  shoppingListItemsBatchCleared: ShoppingListItemsBatchClearedPayload;
-  /** Subscribe to status changes on a specific shopping list (ACTIVE / COMPLETED / etc.). */
-  shoppingListStatusChanged: ShoppingListStatusChangedPayload;
-  /** Subscribe to metadata updates on a specific shopping list (name, settings, etc.). */
-  shoppingListUpdated: ShoppingListUpdatedPayload;
+  /**
+   * Subscribe to all shopping list domain events for a single list.
+   * Discriminate by subtype: LIST_UPDATED, STATUS_CHANGED, ITEMS_CHANGED,
+   * ITEMS_BATCH_CLEARED.
+   */
+  shoppingListEvents: ShoppingListEvent;
   /** Subscribe to store changes */
   storeChanged: StoreChangeEvent;
   /**
@@ -13999,57 +13906,12 @@ export type SubscriptionPantryEventsArgs = {
 };
 
 
-export type SubscriptionPantryExpirationAlertArgs = {
-  pantryId: Scalars['ID']['input'];
-};
-
-
-export type SubscriptionPantryItemChangedArgs = {
-  pantryId: Scalars['ID']['input'];
-};
-
-
-export type SubscriptionPantryItemUsageChangedArgs = {
-  pantryId: Scalars['ID']['input'];
-};
-
-
-export type SubscriptionPantryLowStockAlertArgs = {
-  pantryId: Scalars['ID']['input'];
-};
-
-
-export type SubscriptionPantryUpdatedArgs = {
-  pantryId: Scalars['ID']['input'];
-};
-
-
-export type SubscriptionPantryWasteAlertArgs = {
-  pantryId: Scalars['ID']['input'];
-};
-
-
 export type SubscriptionRiskyLoginDetectedArgs = {
   userId: Scalars['ID']['input'];
 };
 
 
-export type SubscriptionShoppingListItemChangedArgs = {
-  listId: Scalars['ID']['input'];
-};
-
-
-export type SubscriptionShoppingListItemsBatchClearedArgs = {
-  listId: Scalars['ID']['input'];
-};
-
-
-export type SubscriptionShoppingListStatusChangedArgs = {
-  listId: Scalars['ID']['input'];
-};
-
-
-export type SubscriptionShoppingListUpdatedArgs = {
+export type SubscriptionShoppingListEventsArgs = {
   listId: Scalars['ID']['input'];
 };
 
@@ -15630,8 +15492,6 @@ export enum UsageSource {
  */
 export type User = {
   __typename: 'User';
-  /** @deprecated Use addressesConnection for cursor-based pagination */
-  addresses: Array<UserAddress>;
   addressesConnection: UserAddressConnection;
   /** Whether this user can access developer tools and internal dashboards */
   canAccessDevTools: Scalars['Boolean']['output'];

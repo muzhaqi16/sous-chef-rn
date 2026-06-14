@@ -11,6 +11,7 @@
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
+import { t } from '#/i18n/t';
 import {
   CreatePantryItemDocument,
   RestockPantryItemDocument,
@@ -86,7 +87,7 @@ export function useCreatePantryItem({
     selectedCategoryId,
   }: CreatePantryItemParams): Promise<boolean> => {
     if (!input.itemName?.trim()) {
-      alertService.alert('Error', 'Please enter an item name');
+      alertService.alert(t('labels.error'), t('errors.itemNameRequired'));
       return false;
     }
 

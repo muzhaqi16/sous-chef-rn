@@ -2,8 +2,13 @@
  * Shopping List Subscriptions
  *
  * Centralizes all shopping list-related subscriptions using the unified
- * SubscriptionService. Handles real-time updates for:
- * - Shopping list changes (items, metadata, collaborators, batch clears, status)
+ * SubscriptionService. The server caps concurrent subscriptions per client,
+ * so this hook opens exactly two streams:
+ * - MyShoppingListsEvents (user-scoped): every shopping-list domain event for
+ *   all of the user's lists, discriminated by `subtype` — ITEMS_CHANGED,
+ *   LIST_UPDATED, STATUS_CHANGED, ITEMS_BATCH_CLEARED (mirrors pantryEvents);
+ *   connection membership is maintained for the active list only
+ * - CollaborationChanges (active list): collaborator lifecycle
  *
  * These subscriptions automatically update the Apollo cache and provide
  * deduplication to prevent self-echo and duplicate updates.
@@ -15,16 +20,8 @@ import type { ConnectionData } from '#/apollo/utils/cacheUpdaters';
 import { useSelectedShoppingListId } from '#store/useAppStore';
 import { useSubscription } from '@apollo/client/react';
 import {
-  ShoppingListItemChangedDocument,
-  ShoppingListUpdatedDocument,
-  ShoppingListItemsBatchClearedDocument,
-  MyShoppingListsItemChangedDocument,
-  MyShoppingListsUpdatedDocument,
-  MyShoppingListsStatusChangedDocument,
-  type ShoppingListItemChangedSubscription,
-  type ShoppingListUpdatedSubscription,
-  type ShoppingListItemsBatchClearedSubscription,
-  type MyShoppingListsItemChangedSubscription,
+  MyShoppingListsEventsDocument,
+  type MyShoppingListsEventsSubscription,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
   CollaborationChangesDocument,
@@ -33,6 +30,7 @@ import {
 import {
   CollaboratorStatus,
   MutationType,
+  ShoppingListEventSubtype,
 } from '#/graphql/generated/schemaTypes';
 import {
   UseShoppingListSubscriptions_ItemFragmentDoc,
@@ -46,14 +44,8 @@ import {
   type SubscriptionApolloClient,
 } from '#/services/subscriptions/types';
 
-type ShoppingListItemChangedPayload =
-  ShoppingListItemChangedSubscription['shoppingListItemChanged'];
-type ShoppingListUpdatedPayload =
-  ShoppingListUpdatedSubscription['shoppingListUpdated'];
-type ShoppingListItemsBatchClearedPayload =
-  ShoppingListItemsBatchClearedSubscription['shoppingListItemsBatchCleared'];
-type MyShoppingListsItemChangedPayload =
-  MyShoppingListsItemChangedSubscription['myShoppingListsItemChanged'];
+type MyShoppingListsEventsPayload =
+  MyShoppingListsEventsSubscription['myShoppingListsEvents'];
 type CollaborationChangesPayload =
   CollaborationChangesSubscription['collaborationChanged'];
 import {
@@ -202,56 +194,91 @@ export function useShoppingListSubscriptions(
   const selectedShoppingListId = useSelectedShoppingListId() || undefined;
 
   //
-  // Shopping List Changes Subscription (consolidated)
-  // Handles all shopping list events based on changeType:
-  // - ITEMS_CHANGED: item add/update/delete
-  // - LIST_UPDATED: metadata changes
-  // - ITEMS_BATCH_CLEARED: batch clear of purchased items
-  // - STATUS_CHANGED: status transitions (no-op currently)
-  // Note: Collaborator events use the separate collaborationChanged subscription
+  // My Shopping Lists Events Subscription (consolidated)
+  // One user-scoped stream carries every shopping-list domain event for ALL
+  // of the user's lists, discriminated by `subtype` (mirrors pantryEvents):
+  // - ITEMS_CHANGED: item add/update/delete + purchased moves — connection
+  //   membership is maintained only for the active list; other lists'
+  //   connections self-correct via cache-and-network on next visit
+  // - LIST_UPDATED / STATUS_CHANGED: Apollo auto-normalizes the ShoppingList
+  //   node; re-evicts while a local delete is in flight
+  // - ITEMS_BATCH_CLEARED: removes the cleared item entities from the active
+  //   list's cache so they disappear from every variant
   //
-  const changesHandlers =
-    subscriptionService.register<ShoppingListItemChangedPayload>({
-      subscriptionName: 'ShoppingListItemChanged',
-      entityType: 'ShoppingListItem',
+  const myListsEventsHandlers =
+    subscriptionService.register<MyShoppingListsEventsPayload>({
+      subscriptionName: 'MyShoppingListsEvents',
+      entityType: 'ShoppingList',
       enableDeduplication: true,
       userId,
       cacheUpdateStrategy: CacheStrategy.NONE,
       enableLogging: true,
-      entityId: selectedShoppingListId,
       customOnData: (
-        payload: ShoppingListItemChangedPayload,
+        payload: MyShoppingListsEventsPayload,
         client: SubscriptionApolloClient,
       ) => {
+        if (!payload) return;
+
         if (__DEV__) {
           logger.debug(
-            `📊 [Subscription] ShoppingListItemChanged: mutation=${payload?.mutation}`,
+            `📊 [Subscription] MyShoppingListsEvents: subtype=${payload.subtype} mutation=${payload.mutation} listId=${payload.listId}`,
           );
         }
 
-        if (!payload || !selectedShoppingListId) return;
+        // LIST_UPDATED / STATUS_CHANGED apply to any list. No self-echo skip:
+        // the deletion re-eviction must run for the deleting user's own events.
+        // A status change arrives as a single STATUS_CHANGED event (changed
+        // fields in updatedFields, full node attached); Apollo normalizes the
+        // node and the isParentDeleting evict is idempotent, so this one branch
+        // handles both subtypes safely.
+        if (
+          payload.subtype === ShoppingListEventSubtype.ListUpdated ||
+          payload.subtype === ShoppingListEventSubtype.StatusChanged
+        ) {
+          if (
+            payload.node?.__typename === 'ShoppingList' &&
+            subscriptionService.isParentDeleting(payload.node.id)
+          ) {
+            safeEvict(client.cache, 'ShoppingList', payload.node.id);
+          }
+          return;
+        }
+
+        // Everything below maintains connections for the active list only.
+        if (!selectedShoppingListId) return;
+        if (payload.listId !== selectedShoppingListId) return;
         if (subscriptionService.isParentDeleting(selectedShoppingListId))
           return;
 
-        const payloadUserId = payload.userId;
-        const mutation = payload.mutation;
-        const item = payload.item;
+        // Self-echo skip — local mutations already updated the cache
+        // optimistically.
+        if (payload.actorUserId && userId && payload.actorUserId === userId) {
+          if (__DEV__) {
+            logger.debug('⏭️ [Subscription] Skipping self-echo (same user)');
+          }
+          return;
+        }
 
-        if (!item?.id) {
-          logger.warn(
-            '⚠️ [ShoppingListItemChanged] Received item with no id, skipping cache update',
-            { mutation },
+        if (payload.subtype === ShoppingListEventSubtype.ItemsBatchCleared) {
+          clearAllPurchasedItemsFromCache(
+            client.cache,
+            selectedShoppingListId,
+            payload.clearedItemIds || [],
           );
           return;
         }
 
-        if (payloadUserId && userId && payloadUserId === userId) {
-          if (__DEV__) {
-            logger.debug(
-              '⏭️ [Subscription] Skipping self-echo (same user)',
-              item.id,
-            );
-          }
+        if (payload.subtype !== ShoppingListEventSubtype.ItemsChanged) return;
+
+        const mutation = payload.mutation;
+        const item =
+          payload.node?.__typename === 'ShoppingListItem' ? payload.node : null;
+
+        if (!item?.id) {
+          logger.warn(
+            '⚠️ [MyShoppingListsEvents] ITEMS_CHANGED event without a ShoppingListItem node, skipping cache update',
+            { mutation },
+          );
           return;
         }
 
@@ -342,20 +369,9 @@ export function useShoppingListSubscriptions(
             scheduleAnimation &&
             (isCompletedMutation || isUncompletedMutation)
           ) {
-            // Animated path: write fragment immediately for visual feedback,
-            // then batch the move + sort in the animation callback
-            if (itemData) {
-              client.cache.writeFragment({
-                id: client.cache.identify({
-                  __typename: 'ShoppingListItem',
-                  id: item.id,
-                }),
-                fragment: UseShoppingListSubscriptions_ItemFragmentDoc,
-                fragmentName: 'useShoppingListSubscriptions_item',
-                data: itemData,
-              });
-            }
-
+            // Animated path: batch the move + sort in the animation callback.
+            // The payload entity is already auto-normalized into cache, so no
+            // fragment re-write is needed here.
             const direction: 1 | -1 = isCompletedMutation ? 1 : -1;
             const moveOp = isCompletedMutation
               ? moveShoppingListItemToPurchased
@@ -432,143 +448,9 @@ export function useShoppingListSubscriptions(
       },
     });
 
-  useSubscription(ShoppingListItemChangedDocument, {
-    variables: { listId: selectedShoppingListId! },
-    skip: !selectedShoppingListId,
-    ...changesHandlers,
-  });
-
-  //
-  // Shopping List Updated Subscription
-  // Metadata-level changes on the active list (name, settings, etc.).
-  // Apollo auto-normalizes the returned `node: ShoppingList`, so no
-  // custom cache work is needed. The customOnData re-evicts the list
-  // entity when our own `subscriptionService.isParentDeleting` flag is set,
-  // matching the prior LIST_UPDATED handler's deletion re-eviction path.
-  //
-  const updatedHandlers =
-    subscriptionService.register<ShoppingListUpdatedPayload>({
-      subscriptionName: 'ShoppingListUpdated',
-      entityType: 'ShoppingList',
-      enableDeduplication: true,
-      userId,
-      cacheUpdateStrategy: CacheStrategy.NONE,
-      enableLogging: true,
-      entityId: selectedShoppingListId,
-      customOnData: (
-        payload: ShoppingListUpdatedPayload,
-        client: SubscriptionApolloClient,
-      ) => {
-        if (!payload?.node?.id) return;
-        if (subscriptionService.isParentDeleting(payload.node.id)) {
-          safeEvict(client.cache, 'ShoppingList', payload.node.id);
-        }
-      },
-    });
-
-  useSubscription(ShoppingListUpdatedDocument, {
-    variables: { listId: selectedShoppingListId! },
-    skip: !selectedShoppingListId,
-    ...updatedHandlers,
-  });
-
-  //
-  // Shopping List Items Batch Cleared Subscription
-  // Fired when a user clears all purchased items from the list. Removes the
-  // cleared item entities from cache so they disappear from every variant.
-  //
-  const batchClearedHandlers =
-    subscriptionService.register<ShoppingListItemsBatchClearedPayload>({
-      subscriptionName: 'ShoppingListItemsBatchCleared',
-      entityType: 'ShoppingListItem',
-      enableDeduplication: true,
-      userId,
-      cacheUpdateStrategy: CacheStrategy.NONE,
-      enableLogging: true,
-      entityId: selectedShoppingListId,
-      customOnData: (
-        payload: ShoppingListItemsBatchClearedPayload,
-        client: SubscriptionApolloClient,
-      ) => {
-        if (!payload || !selectedShoppingListId) return;
-
-        if (payload.userId && userId && payload.userId === userId) {
-          if (__DEV__) {
-            logger.debug('⏭️ [Subscription] Skipping batch-clear self-echo');
-          }
-          return;
-        }
-
-        const clearedItemIds = payload.clearedItemIds || [];
-        clearAllPurchasedItemsFromCache(
-          client.cache,
-          selectedShoppingListId,
-          clearedItemIds,
-        );
-      },
-    });
-
-  useSubscription(ShoppingListItemsBatchClearedDocument, {
-    variables: { listId: selectedShoppingListId! },
-    skip: !selectedShoppingListId,
-    ...batchClearedHandlers,
-  });
-
-  //
-  // My Shopping Lists Item Changes Subscription
-  // Cross-list item events for the current user. Apollo auto-normalizes the
-  // ShoppingListItem entity returned in the payload, so no custom handler is
-  // needed — fields like quantity, purchaseInfo, sortOrder on the entity
-  // merge into all cached views automatically.
-  //
-  const myListsHandlers =
-    subscriptionService.register<MyShoppingListsItemChangedPayload>({
-      subscriptionName: 'MyShoppingListsItemChanged',
-      entityType: 'ShoppingListItem',
-      enableDeduplication: true,
-      userId,
-      cacheUpdateStrategy: CacheStrategy.NONE,
-      enableLogging: true,
-    });
-
-  useSubscription(MyShoppingListsItemChangedDocument, {
+  useSubscription(MyShoppingListsEventsDocument, {
     skip: !userId,
-    ...myListsHandlers,
-  });
-
-  //
-  // My Shopping Lists Updated + Status Changed
-  // Cross-list metadata + status events. Apollo auto-normalizes the
-  // ShoppingList entity returned in each payload, so no custom handler is
-  // needed — totalItems, completedItems, name, status etc. merge into all
-  // cached views automatically.
-  //
-  const myListsUpdatedHandlers = subscriptionService.register({
-    subscriptionName: 'MyShoppingListsUpdated',
-    entityType: 'ShoppingList',
-    enableDeduplication: true,
-    userId,
-    cacheUpdateStrategy: CacheStrategy.NONE,
-    enableLogging: true,
-  });
-
-  useSubscription(MyShoppingListsUpdatedDocument, {
-    skip: !userId,
-    ...myListsUpdatedHandlers,
-  });
-
-  const myListsStatusHandlers = subscriptionService.register({
-    subscriptionName: 'MyShoppingListsStatusChanged',
-    entityType: 'ShoppingList',
-    enableDeduplication: true,
-    userId,
-    cacheUpdateStrategy: CacheStrategy.NONE,
-    enableLogging: true,
-  });
-
-  useSubscription(MyShoppingListsStatusChangedDocument, {
-    skip: !userId,
-    ...myListsStatusHandlers,
+    ...myListsEventsHandlers,
   });
 
   //

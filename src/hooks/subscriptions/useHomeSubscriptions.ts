@@ -27,6 +27,7 @@ import {
   CacheStrategy,
   type SubscriptionApolloClient,
 } from '#/services/subscriptions/types';
+import { logger } from '#/utils/environment';
 
 type MembershipChangesPayload =
   MembershipChangesSubscription['membershipChanged'];
@@ -125,9 +126,7 @@ export function useHomeSubscriptions(userId?: string) {
 
         // Skip self-echo
         if (payload.userId && userId && payload.userId === userId) {
-          if (__DEV__) {
-            console.log('⏭️ [HomeInviteChanged] Skipping self-echo');
-          }
+          logger.debug('⏭️ [HomeInviteChanged] Skipping self-echo');
           return;
         }
 

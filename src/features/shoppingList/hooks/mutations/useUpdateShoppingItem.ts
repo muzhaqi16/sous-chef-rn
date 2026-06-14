@@ -1,10 +1,11 @@
 /**
- * useUpdateShoppingItem - Update item mutation for shopping list
+ * useUpdateShoppingItem - Update item mutation for shopping list.
  *
- * Pattern: write the optimistic field updates to the cache via
- * `cache.modify` BEFORE firing the mutation, then rely on Apollo's
- * auto-normalization to apply the server-confirmed values. On error,
- * revert the optimistic changes from a snapshot captured up front.
+ * Optimistically writes the changed fields to the cache before firing, then
+ * relies on Apollo's auto-normalization for the confirmed values. Under
+ * `errorPolicy: 'all'` a refusal RESOLVES rather than throws, so the revert is
+ * driven off the classified resolved result (mirroring useUpdatePantryItemQuantity);
+ * transport/GraphQL errors surface via the mutation's `onError`.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
@@ -17,6 +18,8 @@ import {
   handleMutationError,
   versionConflictCheck,
 } from '#/utils/errorHandlers';
+import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
 import type { ShoppingListItemUpdate } from './types';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 
@@ -38,7 +41,14 @@ export function useUpdateShoppingItem({
 }: UseUpdateShoppingItemOptions) {
   const client = useApolloClient();
 
-  const [updateItemMutation] = useMutation(UpdateShoppingListItemDocument);
+  const [updateItemMutation] = useMutation(UpdateShoppingListItemDocument, {
+    onError: error => {
+      handleMutationError(error, {
+        operation: 'Update Shopping List Item',
+        checks: [versionConflictCheck({ onRefresh: () => refetch() })],
+      });
+    },
+  });
 
   const updateItem = async (
     itemId: string,
@@ -100,20 +110,25 @@ export function useUpdateShoppingItem({
           // field update by real id → replays via SyncShoppingListItem).
           context: { localFirst: true },
         }),
-      error => {
-        revertSnapshot();
-        handleMutationError(error, {
-          operation: 'Update Shopping List Item',
-          checks: [versionConflictCheck({ onRefresh: () => refetch() })],
-        });
-      },
+      // Fallback for a non-Apollo throw; Apollo errors resolve and are classified below.
+      () => revertSnapshot(),
     );
     if (!result) return false;
 
-    return (
-      result.data?.updateShoppingListItem?.__typename ===
-      'UpdateShoppingListItemPayload'
+    // Classify the resolved result and revert on a real rejection. 'queued'
+    // (offline / API down) keeps the write — it replays via SyncShoppingListItem.
+    const outcome = classifyCreateResult(
+      result,
+      'updateShoppingListItem',
+      'UpdateShoppingListItemPayload',
     );
+    if (outcome === 'rejected') {
+      revertSnapshot();
+      // Alerts only for a union-payload rejection; onError handles error cases.
+      alertRejectedMutation(result, 'Could not update the item.');
+      return false;
+    }
+    return true;
   };
 
   return { updateItem };

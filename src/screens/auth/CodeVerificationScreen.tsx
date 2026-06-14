@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
 import { useTranslation } from 'react-i18next';
 import { Linking, View } from 'react-native';
 import { Text } from '#components/atoms/Text';
@@ -20,6 +21,7 @@ import {
 import { errorService } from '#/services/errorService';
 import { logger } from '#/utils/environment';
 import { logValidationErrors } from '#/utils/validation/common';
+import { getEmailVerificationValidationSchema } from '#/utils/validation/auth';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { getTopLevelGraphQLError } from '#/utils/errors/graphqlErrors';
 import type { ToastFn } from '#/components/atoms/Toast';
@@ -115,6 +117,7 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
     handleSubmit,
     formState: { errors },
   } = useForm({
+    resolver: yupResolver(getEmailVerificationValidationSchema(t)),
     defaultValues: { code: '' },
   });
 
@@ -322,7 +325,19 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
             {t('auth.enterCodeSubtitleSuffix')}
           </>
         }
-        fields={[{ name: 'code', label: '', component: CodeInputAdapter }]}
+        fields={[
+          {
+            name: 'code',
+            label: '',
+            component: CodeInputAdapter,
+            // Auto-submit as soon as the 6th digit lands. RHF applies the
+            // field's onChange synchronously before onComplete fires, so
+            // handleSubmit reads the full code.
+            props: {
+              onComplete: handleSubmit(onVerifyCode, logValidationErrors),
+            },
+          },
+        ]}
         control={control}
         errors={errors}
         submitText={t('labels.submit')}

@@ -11,6 +11,15 @@ import { hasSyncMapping } from './convertToSyncMutation';
 import { QueuedMutation, QueueStatus } from './types';
 
 /**
+ * Why a mutation was queued instead of fired. Carried on the queued result as
+ * `extensions.queuedReason` so `networkStatusLink` can tell a REAL network
+ * failure (`'network-error'` — evidence the API is unreachable) from a
+ * preemptive queue decision (`'offline'` / `'api-unreachable'` — the mutation
+ * never touched the network, so it proves nothing about the API).
+ */
+export type QueuedReason = 'offline' | 'api-unreachable' | 'network-error';
+
+/**
  * Operations that should never be queued (even when offline)
  */
 const NEVER_QUEUE_OPERATIONS = [
@@ -104,7 +113,7 @@ export const createQueueLink = () => {
         `Queue Link: API unreachable, queuing local-first mutation ${operation.operationName}`,
       );
       return new Observable(observer => {
-        enqueueAndComplete(operation, observer, 'online-network-error');
+        enqueueAndComplete(operation, observer, 'api-unreachable');
       });
     }
 
@@ -136,7 +145,7 @@ export const createQueueLink = () => {
             logger.info(
               `Queue Link: Network error while online — queuing local-first mutation ${operation.operationName}`,
             );
-            enqueueAndComplete(operation, observer, 'online-network-error');
+            enqueueAndComplete(operation, observer, 'network-error');
           } else {
             observer.error(error);
           }
@@ -162,7 +171,7 @@ function enqueueAndComplete(
     error: (error: unknown) => void;
     complete: () => void;
   },
-  reason: 'offline' | 'online-network-error',
+  reason: QueuedReason,
 ): void {
   try {
     const { user } = useStore.getState();
@@ -200,7 +209,7 @@ function enqueueAndComplete(
     observer.next({
       data: buildQueuedResultData(operation.query),
       errors: undefined,
-      extensions: { queued: true },
+      extensions: { queued: true, queuedReason: reason },
     });
     observer.complete();
 

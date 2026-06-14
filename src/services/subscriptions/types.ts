@@ -65,6 +65,9 @@ export interface SubscriptionPayload<T = unknown> {
   node?: T;
   previousValues?: Partial<T>;
   updatedFields?: string[];
+  /** Subtype on consolidated event streams (PantryEvents, MyShoppingListsEvents);
+   *  part of the dedup key so distinct same-tick events aren't collapsed. */
+  subtype?: string;
 }
 
 /**

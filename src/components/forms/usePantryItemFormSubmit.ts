@@ -1,4 +1,5 @@
 import { alertService } from '#/services/alertService';
+import { t } from '#/i18n/t';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { parseFractionalInput as parseQuantityInput } from '#/utils/fractionUtils';
 import { StorageState } from '#/graphql/generated/schemaTypes';
@@ -87,7 +88,7 @@ export function usePantryItemFormSubmit(params: UsePantryItemFormSubmitParams) {
   const handleSave = (data: PantryItemFormData) => {
     const quantityValue = parseQuantityInput(data.quantityInput || '');
     if (!quantityValue || quantityValue <= 0) {
-      alertService.alert('Error', 'Please enter a valid quantity');
+      alertService.alert(t('labels.error'), t('errors.invalidQuantity'));
       return;
     }
 
@@ -132,7 +133,7 @@ export function usePantryItemFormSubmit(params: UsePantryItemFormSubmitParams) {
 
         const currentItem = params.existingPantryItem;
         if (!currentItem || !params.itemId) {
-          alertService.alert('Error', 'Item not found');
+          alertService.alert(t('labels.error'), t('errors.itemNotFound'));
           return;
         }
 

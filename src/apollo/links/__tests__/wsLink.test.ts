@@ -37,6 +37,7 @@ import {
   enableAutoReconnect,
   disposeWebSocket,
   getWebSocketState,
+  resumeWebSocketAfterOnline,
 } from '../wsLink';
 
 describe('wsLink', () => {
@@ -78,6 +79,22 @@ describe('wsLink', () => {
       reconnectWebSocket(); // Should be debounced
       // Second call should be a no-op due to debounce
       expect(isWebSocketReconnecting()).toBe(false);
+    });
+  });
+
+  describe('resumeWebSocketAfterOnline', () => {
+    it('no-ops when no reconnect was deferred while offline', () => {
+      const before = getWebSocketState().lastReconnectTime;
+      resumeWebSocketAfterOnline();
+      // Without a deferred cycle there is nothing to resume — no reconnect fired.
+      expect(getWebSocketState().lastReconnectTime).toBe(before);
+    });
+
+    it('stays a no-op after auto-reconnect is disabled (logout)', () => {
+      disableAutoReconnect();
+      const before = getWebSocketState().lastReconnectTime;
+      resumeWebSocketAfterOnline();
+      expect(getWebSocketState().lastReconnectTime).toBe(before);
     });
   });
 

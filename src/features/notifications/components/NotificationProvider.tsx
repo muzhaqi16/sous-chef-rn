@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNotifications } from '#features/notifications/hooks/useNotifications';
+import { useNotificationListener } from '#features/notifications/hooks/useNotifications';
 import { useUser } from '#store/useAppStore';
 import { useAppStore } from '#store/useAppStore';
 
@@ -21,7 +21,10 @@ const NotificationListener: React.FC = () => {
     state => !!(state.user && state.accessToken),
   );
 
-  useNotifications({ skip: !isAuthenticated || !user });
+  // The ONLY mount point for the notification subscriptions — the server caps
+  // concurrent subscriptions per client, so screens must use useNotifications
+  // (store reads, no subscriptions) instead of mounting another listener.
+  useNotificationListener({ skip: !isAuthenticated || !user });
 
   return null;
 };

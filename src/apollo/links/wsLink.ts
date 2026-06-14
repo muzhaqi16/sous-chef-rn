@@ -30,6 +30,9 @@ const BASE_RECONNECT_DELAY_MS = 1000;
 const MAX_RECONNECT_DELAY_MS = 30000;
 let reconnectTimeoutId: ReturnType<typeof setTimeout> | null = null;
 let shouldAutoReconnect = true;
+// Set when a reconnect was requested while the device was offline — resumed
+// by useOnlineQueueSync on the next offline→online transition.
+let reconnectDeferredUntilOnline = false;
 
 /**
  * Calculate reconnection delay with exponential backoff and jitter
@@ -52,6 +55,20 @@ const scheduleReconnect = () => {
   if (reconnectTimeoutId !== null) {
     clearTimeout(reconnectTimeoutId);
     reconnectTimeoutId = null;
+  }
+
+  // Offline: dialing is pointless — every attempt re-errors all active
+  // subscriptions (log churn + radio wakeups). Defer the cycle; the
+  // offline→online transition resumes it via resumeWebSocketAfterOnline().
+  // Strict `=== false` mirrors isOnline's err-toward-online semantics.
+  if (useStore.getState().isOnline === false) {
+    if (!reconnectDeferredUntilOnline) {
+      reconnectDeferredUntilOnline = true;
+      logger.info(
+        '🔌 WebSocket reconnect deferred until the device is back online',
+      );
+    }
+    return;
   }
 
   // Check if we've exceeded max attempts
@@ -299,6 +316,20 @@ export const reconnectWebSocket = () => {
   }
 };
 
+/**
+ * Resume a reconnect cycle that was deferred while the device was offline.
+ * Called by useOnlineQueueSync on the offline→online transition. No-ops when
+ * nothing was deferred or auto-reconnect is disabled (logout).
+ */
+export const resumeWebSocketAfterOnline = () => {
+  if (!reconnectDeferredUntilOnline) return;
+  reconnectDeferredUntilOnline = false;
+  if (!shouldAutoReconnect) return;
+  reconnectAttempts = 0;
+  logger.info('🔌 Device back online — resuming deferred WebSocket reconnect');
+  reconnectWebSocket();
+};
+
 // Export state checkers for other modules
 export const isWebSocketReconnecting = () => isReconnecting;
 
@@ -308,6 +339,7 @@ export const isWebSocketReconnecting = () => isReconnecting;
  */
 export const disableAutoReconnect = () => {
   shouldAutoReconnect = false;
+  reconnectDeferredUntilOnline = false;
   if (reconnectTimeoutId !== null) {
     clearTimeout(reconnectTimeoutId);
     reconnectTimeoutId = null;

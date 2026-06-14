@@ -237,6 +237,11 @@ function updateItemsConnectionForPurchaseStatusChange(
 
     if (!parentCacheId) return;
 
+    // readField sees pre-modify values, so all three stat modifiers below derive
+    // the new completedItems from the same baseline regardless of run order.
+    const nextCompleted = (current: number) =>
+      movingToPurchased ? current + 1 : Math.max(0, current - 1);
+
     cache.modify({
       id: parentCacheId,
       fields: {
@@ -293,7 +298,19 @@ function updateItemsConnectionForPurchaseStatusChange(
           return existing;
         },
         completedItems(existing: number = 0) {
-          return movingToPurchased ? existing + 1 : Math.max(0, existing - 1);
+          return nextCompleted(existing);
+        },
+        // Keep the derived stats in sync with the new completedItems so the
+        // progress header doesn't go stale until the next refetch.
+        remainingItems(_existing: number, { readField }) {
+          const total = readField<number>('totalItems') ?? 0;
+          const completed = readField<number>('completedItems') ?? 0;
+          return Math.max(0, total - nextCompleted(completed));
+        },
+        completionRate(_existing: number, { readField }) {
+          const total = readField<number>('totalItems') ?? 0;
+          const completed = readField<number>('completedItems') ?? 0;
+          return total > 0 ? nextCompleted(completed) / total : 0;
         },
       },
     });
@@ -335,11 +352,16 @@ export function moveShoppingListItemToUnpurchased(
  * Uses storeFieldName detection to correctly update filtered itemsConnection variants:
  * - isPurchased:true variant → REMOVE the item (handles re-add of previously purchased item)
  * - All other variants (unfiltered, isPurchased:false) → ADD the item
+ *
+ * Pass `bumpTotalItems: false` when running after a local-first
+ * {@link addOptimisticShoppingListItem} already counted the item — see
+ * {@link reconcileShoppingItemCreateUpdate}.
  */
 export function addNewItemToShoppingListCache(
   cache: ApolloCache,
   listId: string,
   item: { id: string },
+  bumpTotalItems = true,
 ): void {
   try {
     const parentCacheId = cache.identify({
@@ -394,14 +416,33 @@ export function addNewItemToShoppingListCache(
             totalCount: (existing.totalCount || 0) + 1,
           };
         },
-        totalItems(existing: number = 0) {
-          return existing + 1;
-        },
+        ...(bumpTotalItems && {
+          totalItems(existing: number = 0) {
+            return existing + 1;
+          },
+        }),
       },
     });
   } catch (error) {
     logger.warn('Failed to update cache for new shopping list item:', error);
   }
+}
+
+/**
+ * Reconcile a local-first item create's server response from the mutation's
+ * `update` callback: adopt the server id (evicting the optimistic cuid on a
+ * catalog-merge) and re-wire the edge without re-counting — the optimistic add
+ * already bumped `totalItems`. Pass `clientId` from the mutation's own
+ * `variables` (never a shared ref) so it stays correct when adds overlap.
+ */
+export function reconcileShoppingItemCreateUpdate(
+  cache: ApolloCache,
+  listId: string,
+  serverItem: { id: string },
+  clientId: string | null | undefined,
+): void {
+  adoptServerShoppingListItemId(cache, serverItem.id, clientId);
+  addNewItemToShoppingListCache(cache, listId, serverItem, false);
 }
 
 /**

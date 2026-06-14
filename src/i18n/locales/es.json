@@ -54,7 +54,13 @@
       "Item": "el artículo",
       "Notification": "la notificación"
     },
-    "queuedChangeSyncFailed": "No se pudieron sincronizar los cambios. Desliza para actualizar."
+    "queuedChangeSyncFailed": "No se pudieron sincronizar los cambios. Desliza para actualizar.",
+    "itemNameRequired": "Introduce el nombre del artículo",
+    "invalidQuantity": "Introduce una cantidad válida",
+    "itemNotFound": "Artículo no encontrado",
+    "parentContextRequired": "Se requiere el contexto principal",
+    "createStorageLocationFailed": "No se pudo crear la ubicación de almacenamiento",
+    "missingRequiredInfo": "Falta información obligatoria"
   },
   "success": {
     "itemAdded": "Artículo añadido",
@@ -80,7 +86,8 @@
     "emailVerified": "Correo verificado",
     "profileUpdated": "Perfil actualizado",
     "photoUpdated": "Foto actualizada",
-    "settingsSaved": "Ajustes guardados"
+    "settingsSaved": "Ajustes guardados",
+    "expiredBatchesDiscarded": "Se han descartado los lotes caducados."
   },
   "loading": {
     "authenticating": "Autenticando...",
@@ -231,6 +238,9 @@
     "enterCode": "Introduce el código",
     "enterCodeSubtitlePrefix": "Hemos enviado un código de verificación a",
     "enterCodeSubtitleSuffix": ". Introdúcelo abajo para verificar tu correo.",
+    "verificationCodeInputLabel": "Código de verificación",
+    "codeRequired": "El código de verificación es obligatorio",
+    "codeMustBeSixDigits": "El código debe tener 6 dígitos",
     "yourEmail": "tu correo",
     "didntGetEmail": "¿No recibiste el correo?",
     "resendCode": "Reenviar código",

@@ -30,11 +30,10 @@ import {
   executeMutation,
 } from '#/utils/compilerSafeWrappers';
 import {
-  addNewItemToShoppingListCache,
   addOptimisticShoppingListItem,
-  adoptServerShoppingListItemId,
   createOptimisticShoppingListItem,
   reconcileShoppingCreate,
+  reconcileShoppingItemCreateUpdate,
   revertOptimisticShoppingListItem,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
 import {
@@ -312,12 +311,11 @@ export const FilteredPantryItems: React.FC<
           return;
         }
         const item = payload.shoppingListItem;
-        // Catalog-merge: adopt the server id if it differs from our cuid.
-        adoptServerShoppingListItemId(cache, item.id, variables.input.id);
-        addNewItemToShoppingListCache(
+        reconcileShoppingItemCreateUpdate(
           cache,
           variables.input.shoppingListId,
           item,
+          variables.input.id,
         );
       },
     },

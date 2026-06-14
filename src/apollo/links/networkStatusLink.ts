@@ -1,6 +1,14 @@
 import { ApolloLink, Observable } from '@apollo/client';
+import { getMainDefinition } from '@apollo/client/utilities';
 import { isNetworkError } from '#/utils/isNetworkError';
+import { logger } from '#/utils/environment';
 import { apiReachabilityBreaker } from './apiReachabilityBreaker';
+
+const describeError = (error: unknown): string => {
+  if (error instanceof Error) return error.message;
+  const message = (error as { message?: string } | null)?.message;
+  return message ?? String(error);
+};
 
 /**
  * Observes one network outcome per operation and feeds the API-reachability
@@ -13,30 +21,82 @@ import { apiReachabilityBreaker } from './apiReachabilityBreaker';
  *  - Below `offlineModeLink`: queries short-circuited while offline never reach
  *    here, so blocked traffic doesn't feed the breaker.
  *  - Above `queueLink`: a queued mutation bubbles up as `next` carrying
- *    `extensions.queued` (it was queued *because* of a network error) — counted
- *    as a failure, not a success.
+ *    `extensions.queued` + `extensions.queuedReason`. Only a mutation queued
+ *    after a REAL network failure (`queuedReason: 'network-error'`) counts as
+ *    a breaker failure. Mutations queued preemptively — device offline, or
+ *    queued *because* the breaker is already open (`'offline'` /
+ *    `'api-unreachable'`) — never touched the network: counting them would
+ *    feed the breaker its own output, which can keep a stale open/false state
+ *    alive with zero evidence the API is actually down.
+ *
+ * Subscriptions never feed the breaker (their errors are logged for
+ * diagnostics only). They ride the WebSocket transport, which owns its own
+ * health (keep-alive pings, backoff reconnects, and auth-close handling in
+ * `wsLink`) — a WS error says nothing about HTTP reachability. Worse, one
+ * socket drop errors EVERY active subscription at once, so counting them
+ * tripped the 3-failure threshold and opened the circuit while the HTTP API
+ * was healthy (login worked while the banner said "Can't reach the server").
  */
 export const createNetworkStatusLink = () =>
-  new ApolloLink(
-    (operation, forward) =>
-      new Observable(observer => {
+  new ApolloLink((operation, forward) => {
+    const operationName = operation.operationName || 'unnamed';
+    const definition = getMainDefinition(operation.query);
+    if (
+      definition.kind === 'OperationDefinition' &&
+      definition.operation === 'subscription'
+    ) {
+      // Still log subscription errors (without counting them) so a WS failure
+      // burst is visible next to the breaker's own entries — the evidence
+      // trail for "the circuit opened because of WS noise, not HTTP". Debug
+      // level: one socket drop errors every active subscription at once.
+      return new Observable(observer => {
         const subscription = forward(operation).subscribe({
-          next: result => {
-            if (result.extensions?.queued) {
-              apiReachabilityBreaker.recordFailure();
-            } else {
-              apiReachabilityBreaker.recordSuccess();
-            }
-            observer.next(result);
-          },
+          next: result => observer.next(result),
           error: error => {
-            if (isNetworkError(error)) {
-              apiReachabilityBreaker.recordFailure();
-            }
+            logger.debug(
+              `🔌 subscription error (not counted by reachability breaker) — ${operationName}: ${describeError(
+                error,
+              )}`,
+            );
             observer.error(error);
           },
           complete: () => observer.complete(),
         });
         return () => subscription.unsubscribe();
-      }),
-  );
+      });
+    }
+
+    const operationKind =
+      definition.kind === 'OperationDefinition'
+        ? definition.operation
+        : 'query';
+
+    return new Observable(observer => {
+      const subscription = forward(operation).subscribe({
+        next: result => {
+          if (result.extensions?.queued) {
+            if (result.extensions.queuedReason === 'network-error') {
+              apiReachabilityBreaker.recordFailure(
+                `${operationName} (${operationKind}): queued after a network error`,
+              );
+            }
+          } else {
+            apiReachabilityBreaker.recordSuccess(
+              `${operationName} (${operationKind})`,
+            );
+          }
+          observer.next(result);
+        },
+        error: error => {
+          if (isNetworkError(error)) {
+            apiReachabilityBreaker.recordFailure(
+              `${operationName} (${operationKind}): ${describeError(error)}`,
+            );
+          }
+          observer.error(error);
+        },
+        complete: () => observer.complete(),
+      });
+      return () => subscription.unsubscribe();
+    });
+  });

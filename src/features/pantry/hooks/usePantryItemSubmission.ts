@@ -1,5 +1,6 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
+import { t } from '#/i18n/t';
 import {
   CreatePantryItemDocument,
   RestockPantryItemDocument,
@@ -105,14 +106,14 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
     if (!pantryId) return;
 
     if (!itemName.trim()) {
-      alertService.alert('Error', 'Please enter an item name');
+      alertService.alert(t('labels.error'), t('errors.itemNameRequired'));
       handlePageChange(0);
       return;
     }
 
     const quantity = parseFractionalInput(quantityInput);
     if (quantity === null || isNaN(quantity) || quantity <= 0) {
-      alertService.alert('Error', 'Please enter a valid quantity');
+      alertService.alert(t('labels.error'), t('errors.invalidQuantity'));
       handlePageChange(1);
       return;
     }
@@ -189,7 +190,7 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
       tags: tags
         ? tags
             .split(',')
-            .map(t => t.trim())
+            .map(tag => tag.trim())
             .filter(Boolean)
         : undefined,
       thresholds:
@@ -254,7 +255,7 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
     if (!result) {
       // Hard failure (threw) → revert the optimistic item.
       safeEvict(client.cache, 'PantryItem', id);
-      alertService.alert('Error', 'Failed to add item. Please try again.');
+      alertService.alert(t('labels.error'), t('errors.addItemFailed'));
       return;
     }
 
@@ -336,7 +337,7 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
     if (outcome === 'rejected') {
       // The server refused the create — discard the item we showed.
       safeEvict(client.cache, 'PantryItem', id);
-      alertService.alert('Error', 'Failed to add item. Please try again.');
+      alertService.alert(t('labels.error'), t('errors.addItemFailed'));
     } else {
       // 'created' or 'queued' — the item stays (and replays if queued offline).
       onSuccess();

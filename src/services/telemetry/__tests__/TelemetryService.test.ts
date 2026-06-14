@@ -1,10 +1,15 @@
 import { TelemetryService } from '../TelemetryService';
+import { TransportSendError } from '../types';
 
-// Mutable so individual tests can simulate consent being granted/denied.
-// Name is `mock`-prefixed so it may be referenced inside the jest.mock factory.
+// Mutable so individual tests can simulate consent being granted/denied and
+// the device going offline. Names are `mock`-prefixed so they may be
+// referenced inside the jest.mock factory.
 let mockUserConsent: boolean | null = null;
+let mockIsOnline = true;
 jest.mock('#store', () => ({
-  useStore: { getState: () => ({ userConsent: mockUserConsent }) },
+  useStore: {
+    getState: () => ({ userConsent: mockUserConsent, isOnline: mockIsOnline }),
+  },
 }));
 
 const mockSendLogs = jest.fn().mockResolvedValue(undefined);
@@ -34,6 +39,7 @@ describe('TelemetryService', () => {
     jest.clearAllMocks();
     jest.useFakeTimers();
     mockUserConsent = null; // default: consent not denied
+    mockIsOnline = true; // default: device online
   });
 
   afterEach(() => {
@@ -606,6 +612,9 @@ describe('TelemetryService', () => {
       service.log('warn', 'keep me');
       await service.flush();
 
+      // The failure opens a backoff window — advance past it.
+      jest.advanceTimersByTime(5000);
+
       // Next successful flush ships the re-buffered batch.
       mockSendLogs.mockResolvedValue(undefined);
       await service.flush();
@@ -614,6 +623,185 @@ describe('TelemetryService', () => {
         expect.arrayContaining([
           expect.objectContaining({ level: 'warn', message: 'keep me' }),
         ]),
+      );
+    });
+  });
+
+  // ------------------------------------------------------------------ flush gating
+  describe('flush gating (offline + backoff)', () => {
+    it('skips log flushes while the device is offline and drains after reconnect', async () => {
+      mockIsOnline = false;
+      const service = new TelemetryService({
+        enabled: true,
+        enableLogs: true,
+      });
+
+      service.log('warn', 'buffered offline');
+      await service.flush();
+      expect(mockSendLogs).not.toHaveBeenCalled();
+
+      mockIsOnline = true;
+      await service.flush();
+      expect(mockSendLogs).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({ message: 'buffered offline' }),
+        ]),
+      );
+    });
+
+    it('skips the error-triggered immediate flush while offline', () => {
+      mockIsOnline = false;
+      const service = new TelemetryService({
+        enabled: true,
+        enableLogs: true,
+      });
+
+      service.log('error', 'offline error');
+      expect(mockSendLogs).not.toHaveBeenCalled();
+    });
+
+    it('skips metric flushes while offline without losing entries', async () => {
+      mockIsOnline = false;
+      const service = new TelemetryService({
+        enabled: true,
+        enableMetrics: true,
+      });
+
+      service.incrementCounter('offline_counter');
+      await service.flush();
+      expect(mockSendMetrics).not.toHaveBeenCalled();
+
+      mockIsOnline = true;
+      await service.flush();
+      expect(mockSendMetrics).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({ name: 'offline_counter' }),
+        ]),
+      );
+    });
+
+    it('backs off after a failed log flush instead of retrying on every tick', async () => {
+      const service = new TelemetryService({
+        enabled: true,
+        enableLogs: true,
+      });
+
+      mockSendLogs.mockRejectedValueOnce(new Error('endpoint down'));
+      service.log('warn', 'first');
+      await service.flush(); // fails → 5s backoff window opens
+      expect(mockSendLogs).toHaveBeenCalledTimes(1);
+
+      // Inside the window: neither a manual flush nor the error-triggered
+      // immediate flush fires a request.
+      jest.advanceTimersByTime(4000);
+      await service.flush();
+      service.log('error', 'during backoff');
+      expect(mockSendLogs).toHaveBeenCalledTimes(1);
+
+      // Past the window: the retry carries the re-buffered batch plus the
+      // entries that arrived during the backoff.
+      jest.advanceTimersByTime(1000);
+      await service.flush();
+      expect(mockSendLogs).toHaveBeenCalledTimes(2);
+      expect(mockSendLogs).toHaveBeenLastCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({ message: 'first' }),
+          expect.objectContaining({ message: 'during backoff' }),
+        ]),
+      );
+    });
+
+    it('doubles the backoff on consecutive failures', async () => {
+      const service = new TelemetryService({
+        enabled: true,
+        enableLogs: true,
+      });
+      mockSendLogs.mockRejectedValue(new Error('endpoint down'));
+
+      service.log('warn', 'x');
+      await service.flush(); // failure 1 → 5s window
+      jest.advanceTimersByTime(5000);
+      await service.flush(); // failure 2 → 10s window
+      expect(mockSendLogs).toHaveBeenCalledTimes(2);
+
+      jest.advanceTimersByTime(5000); // only halfway through the 10s window
+      await service.flush();
+      expect(mockSendLogs).toHaveBeenCalledTimes(2);
+
+      jest.advanceTimersByTime(5000);
+      await service.flush();
+      expect(mockSendLogs).toHaveBeenCalledTimes(3);
+
+      // clearAllMocks does not reset implementations — restore the default.
+      mockSendLogs.mockResolvedValue(undefined);
+    });
+
+    it('drops the batch on a non-retryable transport error instead of retrying it forever', async () => {
+      const service = new TelemetryService({
+        enabled: true,
+        enableLogs: true,
+      });
+
+      mockSendLogs.mockRejectedValueOnce(
+        new TransportSendError('OTLP logs HTTP 404', { retryable: false }),
+      );
+      service.log('warn', 'poisoned');
+      await service.flush();
+
+      jest.advanceTimersByTime(5000);
+      mockSendLogs.mockResolvedValue(undefined);
+      service.log('warn', 'fresh');
+      await service.flush();
+
+      // Only the new entry ships — the poisoned batch was dropped.
+      expect(mockSendLogs).toHaveBeenLastCalledWith([
+        expect.objectContaining({ message: 'fresh' }),
+      ]);
+    });
+
+    it('retries metrics after a failed send without re-buffering (no double count)', async () => {
+      const service = new TelemetryService({
+        enabled: true,
+        enableMetrics: true,
+      });
+
+      mockSendMetrics.mockRejectedValueOnce(
+        new TransportSendError('OTLP metrics HTTP 500', { retryable: true }),
+      );
+      service.incrementCounter('requests_total');
+      await service.flush();
+      expect(mockSendMetrics).toHaveBeenCalledTimes(1);
+
+      jest.advanceTimersByTime(5000);
+      await service.flush();
+      // The retry flush fires with an EMPTY buffer: the cumulative totals
+      // live in the transport's accumulators — re-buffering the entries
+      // would double-count them.
+      expect(mockSendMetrics).toHaveBeenCalledTimes(2);
+      expect(mockSendMetrics).toHaveBeenLastCalledWith([]);
+    });
+
+    it('logs the outage once and the recovery once (no per-attempt error wall)', async () => {
+      const { logger } = jest.requireMock('#/utils/environment');
+      const service = new TelemetryService({
+        enabled: true,
+        enableLogs: true,
+      });
+      mockSendLogs.mockRejectedValue(new Error('endpoint down'));
+
+      service.log('warn', 'x');
+      await service.flush(); // failure 1
+      jest.advanceTimersByTime(5000);
+      await service.flush(); // failure 2
+      jest.advanceTimersByTime(10000);
+      await service.flush(); // failure 3
+      expect(logger.error).toHaveBeenCalledTimes(1);
+
+      mockSendLogs.mockResolvedValue(undefined);
+      jest.advanceTimersByTime(20000);
+      await service.flush();
+      expect(logger.info).toHaveBeenCalledWith(
+        expect.stringContaining('recovered after 3'),
       );
     });
   });

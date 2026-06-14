@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
+import { t } from '#/i18n/t';
 import { errorService } from '#/services/errorService';
 import {
   executeCacheUpdate,
@@ -11,11 +12,10 @@ import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/sc
 import { DeletePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { removeFromPantryItemsCache } from '#hooks/home/pantry/utils';
 import {
-  addNewItemToShoppingListCache,
   addOptimisticShoppingListItem,
-  adoptServerShoppingListItemId,
   createOptimisticShoppingListItem,
   reconcileShoppingCreate,
+  reconcileShoppingItemCreateUpdate,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { useConvertExpiredToWaste } from '#features/pantry/hooks/mutations/useConvertExpiredToWaste';
 import { useConvertExpiredBatchesToWaste } from '#features/pantry/hooks/mutations/useConvertExpiredBatchesToWaste';
@@ -142,22 +142,13 @@ export function usePantryItemDetailActions({
           return;
         }
         const shoppingListItem = payload.shoppingListItem;
-
-        // Catalog-merge: adopt the server id, evicting the optimistic cuid if the
-        // server merged into an existing row.
-        adoptServerShoppingListItemId(
-          cache,
-          shoppingListItem.id,
-          variables.input.id,
-        );
-
-        // addNewItemToShoppingListCache swallows its own errors internally, so
-        // no try/catch wrapper is needed here — wrapping would bail the React
-        // Compiler out of this hook.
-        addNewItemToShoppingListCache(
+        // Swallows its own errors internally, so no try/catch is needed here
+        // (wrapping would bail the React Compiler out of this hook).
+        reconcileShoppingItemCreateUpdate(
           cache,
           selectedShoppingListId,
           shoppingListItem,
+          variables.input.id,
         );
       },
     },
@@ -167,7 +158,10 @@ export function usePantryItemDetailActions({
 
   const { convertExpiredBatches } = useConvertExpiredBatchesToWaste({
     onSuccess: () => {
-      alertService.alert('Done', 'Expired batches have been discarded.');
+      alertService.alert(
+        t('labels.done'),
+        t('success.expiredBatchesDiscarded'),
+      );
     },
   });
 
@@ -193,7 +187,10 @@ export function usePantryItemDetailActions({
                 errorService.reportError(error, {
                   operation: 'PantryItemDetail.deleteItem',
                 });
-                alertService.alert('Error', 'Failed to delete item');
+                alertService.alert(
+                  t('labels.error'),
+                  t('errors.deleteItemFailed'),
+                );
               },
             );
           },

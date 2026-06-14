@@ -104,10 +104,12 @@ export function classifyError(error: unknown): QueueError {
     };
   }
 
-  // Network errors
+  // Network errors. Match "timed out" too — the processing-timeout rejects with
+  // 'Operation timed out', which doesn't contain the substring "timeout".
   if (
     message.toLowerCase().includes('network') ||
     message.toLowerCase().includes('timeout') ||
+    message.toLowerCase().includes('timed out') ||
     message.toLowerCase().includes('econnrefused')
   ) {
     return {

@@ -3,6 +3,7 @@ import { useIsOnline } from '#store/useAppStore';
 import { useStore } from '#store';
 import { queueManager } from '#/apollo/offlineQueue/queueManager';
 import { apiReachabilityBreaker } from '#/apollo/links/apiReachabilityBreaker';
+import { resumeWebSocketAfterOnline } from '#/apollo/links/wsLink';
 import { proactiveTokenRefresh } from '#/apollo/links/refreshToken';
 
 /**
@@ -30,6 +31,10 @@ export function useOnlineQueueSync(): void {
       queueManager.onOffline();
       return;
     }
+
+    // Resume a WebSocket reconnect cycle deferred while offline (wsLink stops
+    // dialing when NetInfo says the device has no connectivity).
+    resumeWebSocketAfterOnline();
 
     const state = useStore.getState();
     if (state.needsTokenRefresh && state.refreshToken) {

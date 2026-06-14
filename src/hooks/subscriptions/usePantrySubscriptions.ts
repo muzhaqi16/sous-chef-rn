@@ -165,6 +165,7 @@ export function usePantrySubscriptions(userId?: string) {
         case PantryEventSubtype.UsageChanged:
         case PantryEventSubtype.LowStockAlert:
         case PantryEventSubtype.ExpirationAlert:
+        case PantryEventSubtype.WasteAlert:
           if (__DEV__) {
             logger.debug(
               `📡 [Subscription] Pantry event: ${payload.subtype}`,
