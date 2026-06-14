@@ -11631,8 +11631,13 @@ export type QuerySearchItemsSemanticArgs = {
 export type QuerySearchRecipesArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
   before?: InputMaybe<Scalars['String']['input']>;
+  category?: InputMaybe<RecipeCategory>;
+  cuisine?: InputMaybe<Array<Scalars['String']['input']>>;
+  diets?: InputMaybe<Array<Diet>>;
   first?: InputMaybe<Scalars['Int']['input']>;
+  intolerances?: InputMaybe<Array<Intolerance>>;
   last?: InputMaybe<Scalars['Int']['input']>;
+  maxReadyTime?: InputMaybe<Scalars['Int']['input']>;
   query: Scalars['String']['input'];
 };
 
@@ -11970,6 +11975,7 @@ export type RecipeForkEdge = Edge & {
 export type RecipeIngredient = {
   __typename: 'RecipeIngredient';
   availablePantryItemIds: Array<Scalars['ID']['output']>;
+  estimatedPrice: Maybe<Scalars['Float']['output']>;
   externalSources: Array<RecipeIngredientSourceMapping>;
   id: Scalars['ID']['output'];
   image: Maybe<Scalars['String']['output']>;
@@ -11988,6 +11994,7 @@ export type RecipeIngredient = {
 export type RecipeIngredientInput = {
   aisle?: InputMaybe<Scalars['String']['input']>;
   consistency?: InputMaybe<Scalars['String']['input']>;
+  estimatedPrice?: InputMaybe<Scalars['Float']['input']>;
   externalSources?: InputMaybe<Array<RecipeIngredientSourceInput>>;
   image?: InputMaybe<Scalars['String']['input']>;
   isOptional?: InputMaybe<Scalars['Boolean']['input']>;

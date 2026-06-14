@@ -7651,7 +7651,7 @@ type Query {
   ITEM_EMBEDDING job. Auth-gated to bound embedding-service spend.
   """
   searchItemsSemantic(after: String, before: String, filters: ItemFilters, first: Int, last: Int, maxDistance: Float, prompt: String!): ItemConnection!
-  searchRecipes(after: String, before: String, first: Int, last: Int, query: String!): RecipeConnection!
+  searchRecipes(after: String, before: String, category: RecipeCategory, cuisine: [String!], diets: [Diet!], first: Int, intolerances: [Intolerance!], last: Int, maxReadyTime: Int, query: String!): RecipeConnection!
   """
   Search units by name or symbol.
   Set prioritizeCommon to true for autocomplete behavior (common units first).
@@ -7887,6 +7887,7 @@ type RecipeForkEdge implements Edge {
 
 type RecipeIngredient {
   availablePantryItemIds: [ID!]!
+  estimatedPrice: Float
   externalSources: [RecipeIngredientSourceMapping!]!
   id: ID!
   image: String
@@ -7905,6 +7906,7 @@ type RecipeIngredient {
 input RecipeIngredientInput {
   aisle: String
   consistency: String
+  estimatedPrice: Float
   externalSources: [RecipeIngredientSourceInput!]
   image: String
   isOptional: Boolean

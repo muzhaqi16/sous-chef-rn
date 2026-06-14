@@ -2,8 +2,22 @@
 # QUERIES
 # ============================================
 
-query SearchRecipes($query: String!, $first: Int, $after: String) {
-  searchRecipes(query: $query, first: $first, after: $after) {
+query SearchRecipes(
+  $query: String!
+  $first: Int
+  $after: String
+  $diets: [Diet!]
+  $intolerances: [Intolerance!]
+  $maxReadyTime: Int
+) {
+  searchRecipes(
+    query: $query
+    first: $first
+    after: $after
+    diets: $diets
+    intolerances: $intolerances
+    maxReadyTime: $maxReadyTime
+  ) {
     edges {
       node {
         # Inline fields read imperatively by useRecipeScreen's combined
