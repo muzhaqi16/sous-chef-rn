@@ -90,6 +90,7 @@ describe('IngredientMatchingSheet', () => {
       id,
       name,
       quantity: 1,
+      estimatedPrice: null,
       image: null,
       isOptional: false,
       notes: null,

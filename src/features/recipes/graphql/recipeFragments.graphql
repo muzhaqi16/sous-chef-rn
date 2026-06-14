@@ -8,6 +8,7 @@ fragment RecipeIngredientFragment on RecipeIngredient {
   id
   name
   quantity
+  estimatedPrice
   item {
     id
     name
