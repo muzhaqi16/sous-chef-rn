@@ -1,6 +1,9 @@
 import { act } from '@testing-library/react-native';
 import type { MockedResponse } from '#/test-utils/apolloMockProvider';
-import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  renderHookWithApollo,
+  recordMock,
+} from '#/test-utils/apolloMockProvider';
 import { UpsertExternalRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import type { RecipeInformation } from '#/services/recipeApi/types';
 import { useRecipePreload, type PreloadedRecipe } from '../useRecipePreload';
@@ -146,6 +149,54 @@ describe('useRecipePreload', () => {
     );
     expect(onPreloadSuccess).toHaveBeenCalledWith(preloaded);
     expect(result.current.preloadedRecipe).toEqual(preloaded);
+  });
+
+  it('sanitizes a price baked into an ingredient name before sending to the API', async () => {
+    // The API stores names verbatim (it no longer strips prices), so the client
+    // must never send a price baked into a name — even one that round-tripped in
+    // from the backend. Regression guard for the "garlic $0.03" bug.
+    const { mock, fired } = recordMock(UpsertExternalRecipeDocument, {
+      data: {
+        upsertExternalRecipe: {
+          __typename: 'UpsertExternalRecipeResult',
+          created: true,
+          recipe: {
+            __typename: 'Recipe',
+            id: 'backend-1',
+            name: 'Test Recipe',
+            imageUrl: null,
+            externalSource: 'SPOONACULAR',
+            externalId: '123',
+            servings: 4,
+            prepTimeMinutes: 10,
+            cookTimeMinutes: 20,
+            totalTimeMinutes: 30,
+          },
+        },
+      },
+    });
+
+    const dirty = makeSpoonacularRecipe(777);
+    dirty.extendedIngredients = [
+      { ...dirty.extendedIngredients[0], name: 'pasta $1.50' },
+    ];
+
+    const { result } = renderHookWithApollo(() => useRecipePreload(), {
+      operationMocks: [mock],
+    });
+
+    await act(async () => {
+      await result.current.preloadRecipe(dirty);
+    });
+
+    expect(fired.length).toBeGreaterThan(0);
+    const sent = fired[0] as {
+      input: { ingredients: Array<{ name: string }> };
+    };
+    expect(sent.input.ingredients[0].name).toBe('pasta');
+    expect(sent.input.ingredients.every(i => !/\$\s*\d/.test(i.name))).toBe(
+      true,
+    );
   });
 
   it('preloadRecipe returns cached result on second call', async () => {

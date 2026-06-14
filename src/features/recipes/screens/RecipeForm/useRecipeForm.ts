@@ -12,6 +12,7 @@ import {
   type Intolerance,
 } from '#/graphql/generated/schemaTypes';
 import { type RecipeForm_RecipeFragment } from './RecipeForm.generated';
+import { stripPriceFromName } from '#/utils/stripPriceFromName';
 
 export interface IngredientFormState {
   id: string; // local temp id
@@ -208,10 +209,13 @@ export function useRecipeForm() {
     return null;
   };
 
-  // Build ingredient input array (shared by create and update-ingredients)
+  // Build ingredient input array (shared by create and update-ingredients).
+  // Names are sanitized at the API boundary: a backend ingredient name loaded
+  // into the form may carry a legacy " $X.XX" token, and the API stores names
+  // verbatim — strip it so we never re-persist a price baked into the name.
   const buildIngredientsInput = (): RecipeIngredientInput[] => {
     return state.ingredients.map((ing, index) => ({
-      name: ing.name.trim(),
+      name: stripPriceFromName(ing.name),
       quantity: ing.quantity,
       unitId: ing.unitId ?? undefined,
       itemId: ing.itemId ?? undefined,

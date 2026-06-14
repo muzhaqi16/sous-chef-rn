@@ -23,6 +23,7 @@ import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { toastService } from '#/services/toastService';
 import { useTranslation } from 'react-i18next';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
+import { stripPriceFromName } from '#/utils/stripPriceFromName';
 
 /**
  * Represents a recipe that has been preloaded to the backend
@@ -205,7 +206,9 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
       // Transform ingredients for backend
       ingredients:
         spoonacularRecipe.extendedIngredients?.map((ing, idx) => ({
-          name: ing.name,
+          // Sanitize at the API boundary — the API stores names verbatim, so a
+          // price must never ride in on the name (it belongs in estimatedPrice).
+          name: stripPriceFromName(ing.name),
           quantity: ing.amount || 0,
           originalString: ing.original,
           spoonacularIngredientId: ing.id,
