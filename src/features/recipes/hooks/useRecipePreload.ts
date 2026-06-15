@@ -18,12 +18,36 @@ import {
   type SavedRecipeFoldersQuery,
 } from '#features/recipes/graphql/recipe.generated';
 import { ExternalSource } from '#/graphql/generated/schemaTypes';
-import { RecipeInformation } from '#/services/recipeApi/types';
+import {
+  RecipeInformation,
+  type RecipePriceBreakdown,
+} from '#/services/recipeApi/types';
+import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { toastService } from '#/services/toastService';
 import { useTranslation } from 'react-i18next';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { stripPriceFromName } from '#/utils/stripPriceFromName';
+
+/** Normalize an ingredient name for the fuzzy priceBreakdown join. */
+const normalizeName = (name: string): string => name.trim().toLowerCase();
+
+/**
+ * Best-effort fetch of the recipe price breakdown. Module-scoped so the
+ * try-catch doesn't bail out the React Compiler in the hook body. A failure
+ * (network/quota) returns null so the save proceeds without cost rather than
+ * blocking on it.
+ */
+async function fetchPriceBreakdownSafe(
+  externalId: string,
+): Promise<RecipePriceBreakdown | null> {
+  try {
+    return await spoonacularService.getRecipePriceBreakdown(Number(externalId));
+  } catch (error) {
+    console.warn('[preloadRecipe] price breakdown fetch failed', error);
+    return null;
+  }
+}
 
 /**
  * Represents a recipe that has been preloaded to the backend
@@ -158,7 +182,10 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
   /**
    * Transform Spoonacular recipe data to CreateRecipeInput format
    */
-  const transformToRecipeInput = (spoonacularRecipe: RecipeInformation) => {
+  const transformToRecipeInput = (
+    spoonacularRecipe: RecipeInformation,
+    priceBreakdown?: RecipePriceBreakdown | null,
+  ) => {
     // Extract calories from nutrition data
     const caloriesPerServing = spoonacularRecipe.nutrition?.nutrients?.find(
       n => n.name === 'Calories',
@@ -182,6 +209,22 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
         (n): [number, typeof n] => [n.id, n],
       ),
     );
+
+    // Per-ingredient estimated cost (US cents) from the recipe-scoped
+    // priceBreakdown — only present on deliberate saves. priceBreakdown
+    // identifies ingredients by NAME (no id), so match on normalized name and
+    // fall back to position ONLY when the two arrays line up 1:1 (guards
+    // against assigning the wrong ingredient's price on a fuzzy mismatch).
+    const costByName = new Map(
+      (priceBreakdown?.ingredients ?? []).map((c): [string, number] => [
+        normalizeName(c.name),
+        c.price,
+      ]),
+    );
+    const costByOrderSafe =
+      !!priceBreakdown &&
+      priceBreakdown.ingredients.length ===
+        (spoonacularRecipe.extendedIngredients?.length ?? 0);
 
     return {
       // Basic recipe info
@@ -219,6 +262,11 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
       ingredients:
         spoonacularRecipe.extendedIngredients?.map((ing, idx) => {
           const ingredientNutrition = nutritionByIngredientId.get(ing.id);
+          const costCents =
+            costByName.get(normalizeName(ing.name)) ??
+            (costByOrderSafe && priceBreakdown
+              ? priceBreakdown.ingredients[idx]?.price
+              : undefined);
           return {
             // Sanitize at the API boundary — the API stores names verbatim, so a
             // price must never ride in on the name (it belongs in estimatedPrice).
@@ -280,6 +328,13 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
                         })),
                       }
                     : undefined,
+                  // Estimated cost (US cents) — the server stores it as the
+                  // estimate on the catalog item's price history. Absent unless
+                  // priceBreakdown was fetched (deliberate saves only).
+                  estimatedCost:
+                    costCents != null
+                      ? { value: costCents, unit: 'US Cents' }
+                      : undefined,
                 },
               },
             ],
@@ -298,12 +353,18 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
   const preloadRecipe = async (
     spoonacularRecipe: RecipeInformation,
     externalSource: ExternalSource = ExternalSource.Spoonacular,
-    preloadOptions: { throwOnError?: boolean } = {},
+    preloadOptions: { throwOnError?: boolean; withCost?: boolean } = {},
   ): Promise<PreloadedRecipe | null> => {
     const externalId = String(spoonacularRecipe.id);
 
-    // Only attempt once per recipe (fire-and-forget)
-    if (attemptedPreloadsRef.current.has(externalId)) {
+    // Fire-and-forget view preloads run once per recipe. A deliberate save
+    // (withCost) re-ingests to attach per-ingredient cost even if the view
+    // already preloaded without it — the server re-ingest is idempotent and
+    // TTL-gated, so this is safe to call again.
+    if (
+      attemptedPreloadsRef.current.has(externalId) &&
+      !preloadOptions.withCost
+    ) {
       const cached = preloadCacheRef.current.get(externalId);
       return cached || null;
     }
@@ -311,7 +372,14 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
 
     setPreloading(true);
 
-    const input = transformToRecipeInput(spoonacularRecipe);
+    // Per-ingredient cost comes from the recipe-scoped priceBreakdown (ONE
+    // call), fetched only on deliberate saves. Best-effort — a failure leaves
+    // estimatedCost empty rather than blocking the save.
+    const priceBreakdown = preloadOptions.withCost
+      ? await fetchPriceBreakdownSafe(externalId)
+      : null;
+
+    const input = transformToRecipeInput(spoonacularRecipe, priceBreakdown);
 
     const result = await executeMutation(
       () => upsertRecipe({ variables: { input } }),
@@ -350,10 +418,11 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
   };
 
   /**
-   * Save a preloaded recipe to user's favorites
+   * Save a recipe to the user's favorites.
    *
-   * If the recipe has been preloaded, this uses favoriteRecipe.
-   * If not preloaded yet, this preloads first then favorites it.
+   * Re-ingests the recipe with per-ingredient cost (withCost) before favoriting
+   * so the deliberate-save path enriches the mirror, then favorites the
+   * resulting backend recipe.
    */
   const saveRecipeToFavorites = async (
     spoonacularRecipe: RecipeInformation,
@@ -361,27 +430,21 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
   ): Promise<{ success: boolean; recipeId?: string }> => {
     setSavingToFavorites(true);
 
-    const externalId = String(spoonacularRecipe.id);
-    let cached = preloadCacheRef.current.get(externalId);
-
-    // If not preloaded yet, preload first
-    if (!cached || cached.id.startsWith('pending_')) {
-      attemptedPreloadsRef.current.delete(externalId);
-
-      const preloaded = await preloadRecipe(
-        spoonacularRecipe,
-        ExternalSource.Spoonacular,
-        { throwOnError: true },
-      );
-      if (!preloaded) {
-        setSavingToFavorites(false);
-        toastService.error(t('recipes.saveRecipeFailed'));
-        return { success: false };
-      }
-      cached = preloaded;
+    // Deliberate save → re-ingest with per-ingredient cost (withCost fetches
+    // the recipe-scoped priceBreakdown and forces a refresh even if the view
+    // already preloaded this recipe without cost).
+    const preloaded = await preloadRecipe(
+      spoonacularRecipe,
+      ExternalSource.Spoonacular,
+      { throwOnError: true, withCost: true },
+    );
+    if (!preloaded) {
+      setSavingToFavorites(false);
+      toastService.error(t('recipes.saveRecipeFailed'));
+      return { success: false };
     }
 
-    const recipeId = cached.id;
+    const recipeId = preloaded.id;
 
     const result = await executeMutation(
       () =>

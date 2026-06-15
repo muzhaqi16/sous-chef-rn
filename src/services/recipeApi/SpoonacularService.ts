@@ -12,6 +12,7 @@ import type {
   SearchRecipesResponseWithInfo,
   GetRandomRecipesParams,
   GetRandomRecipesResponse,
+  RecipePriceBreakdown,
   SpoonacularApiError,
 } from './types';
 
@@ -254,6 +255,24 @@ class SpoonacularService {
       {
         ids: idsString,
       },
+      signal,
+    );
+  }
+
+  /**
+   * Get a recipe's price breakdown (per-ingredient estimated cost + totals).
+   * https://spoonacular.com/food-api/docs#Price-Breakdown-by-ID
+   *
+   * Recipe-scoped — ONE call per recipe (quota-safe). The `.json` widget
+   * variant returns raw data instead of HTML. `price` fields are in US cents.
+   */
+  async getRecipePriceBreakdown(
+    id: number,
+    signal?: AbortSignal,
+  ): Promise<RecipePriceBreakdown> {
+    return this.fetch<RecipePriceBreakdown>(
+      `/recipes/${id}/priceBreakdownWidget.json`,
+      {},
       signal,
     );
   }

@@ -316,7 +316,11 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
           includeNutrition: true,
         });
 
-        const preloaded = await preloadRecipe(fullRecipe);
+        // Deliberate save (add to meal plan) → withCost re-ingests with the
+        // recipe-scoped priceBreakdown so per-ingredient cost lands in the mirror.
+        const preloaded = await preloadRecipe(fullRecipe, undefined, {
+          withCost: true,
+        });
         if (preloaded) {
           onAddRecipe(preloaded.id, selectedMealType);
           ref.current?.dismiss();
