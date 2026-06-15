@@ -1,10 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
 import { useApolloClient, useSubscription } from '@apollo/client/react';
-import {
-  NotificationCreatedDocument,
-  NotificationUpdatedDocument,
-} from '#features/notifications/graphql/notifications.generated';
+import { NotificationEventsDocument } from '#features/notifications/graphql/notifications.generated';
 import {
   UseNotifications_NotificationFragmentDoc,
   type UseNotifications_NotificationFragment,
@@ -12,6 +9,7 @@ import {
 import {
   NotificationType,
   NotificationCategory,
+  NotificationEventSubtype,
   Priority,
 } from '#/graphql/generated/schemaTypes';
 import { useAppStore } from '#store/useAppStore';
@@ -208,12 +206,14 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
     handleSubscriptionError(subscriptionName, error);
   };
 
-  // New notification created (RECEIVED equivalent)
-  useSubscription(NotificationCreatedDocument, {
+  // Consolidated notification stream — CREATED + UPDATED on one subscription,
+  // routed by `subtype` (replaces notificationCreated + notificationUpdated).
+  useSubscription(NotificationEventsDocument, {
     skip: config.skip || !user?.id,
     onData: ({ data }) => {
-      const maskedNotification = data.data?.notificationCreated?.notification;
-      if (!maskedNotification) return;
+      const event = data.data?.notificationEvents;
+      const maskedNotification = event?.node;
+      if (!event || !maskedNotification) return;
 
       const rawNotification =
         client.cache.readFragment<UseNotifications_NotificationFragment>({
@@ -223,60 +223,45 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
         });
       if (!rawNotification) return;
 
-      const sp = rawNotification.priority;
-      const mappedPriority =
-        sp === Priority.High
-          ? NotificationPriority.HIGH
-          : sp === Priority.Urgent
-          ? NotificationPriority.URGENT
-          : sp === Priority.Low
-          ? NotificationPriority.LOW
-          : NotificationPriority.MEDIUM;
+      if (event.subtype === NotificationEventSubtype.Created) {
+        // New notification (RECEIVED equivalent)
+        const sp = rawNotification.priority;
+        const mappedPriority =
+          sp === Priority.High
+            ? NotificationPriority.HIGH
+            : sp === Priority.Urgent
+            ? NotificationPriority.URGENT
+            : sp === Priority.Low
+            ? NotificationPriority.LOW
+            : NotificationPriority.MEDIUM;
 
-      processNotification(
-        {
-          id: rawNotification.id,
-          type: rawNotification.type,
-          title:
-            rawNotification.title ?? getNotificationTitle(rawNotification.type),
-          message: rawNotification.message ?? '',
-          priority: mappedPriority,
-          payload: rawNotification.payload,
-          sentAt: rawNotification.sentAt,
-          expiresAt: rawNotification.expiresAt,
-        },
-        rawNotification.category ?? NotificationCategory.System,
-      );
-    },
-    onError: (error: Error) => {
-      handleError('NotificationCreated', error);
-    },
-  });
-
-  // Notification updated (status changes — read, dismissed, expired)
-  useSubscription(NotificationUpdatedDocument, {
-    skip: config.skip || !user?.id,
-    onData: ({ data }) => {
-      const maskedNotification = data.data?.notificationUpdated?.notification;
-      if (!maskedNotification) return;
-
-      const rawNotification =
-        client.cache.readFragment<UseNotifications_NotificationFragment>({
-          fragment: UseNotifications_NotificationFragmentDoc,
-          fragmentName: 'useNotifications_notification',
-          from: { __typename: 'Notification', id: maskedNotification.id },
-        });
-      if (!rawNotification) return;
-
-      const status = rawNotification.status;
-      if (status === 'READ' || status === 'CLICKED') {
-        markAsRead(rawNotification.id);
-      } else if (status === 'DISMISSED' || status === 'EXPIRED') {
-        removeNotification(rawNotification.id);
+        processNotification(
+          {
+            id: rawNotification.id,
+            type: rawNotification.type,
+            title:
+              rawNotification.title ??
+              getNotificationTitle(rawNotification.type),
+            message: rawNotification.message ?? '',
+            priority: mappedPriority,
+            payload: rawNotification.payload,
+            sentAt: rawNotification.sentAt,
+            expiresAt: rawNotification.expiresAt,
+          },
+          rawNotification.category ?? NotificationCategory.System,
+        );
+      } else if (event.subtype === NotificationEventSubtype.Updated) {
+        // Status changes — read, dismissed, expired
+        const status = rawNotification.status;
+        if (status === 'READ' || status === 'CLICKED') {
+          markAsRead(rawNotification.id);
+        } else if (status === 'DISMISSED' || status === 'EXPIRED') {
+          removeNotification(rawNotification.id);
+        }
       }
     },
     onError: (error: Error) => {
-      handleError('NotificationUpdated', error);
+      handleError('NotificationEvents', error);
     },
   });
 

@@ -3720,6 +3720,43 @@ export type HomeEdge = Edge & {
 };
 
 /**
+ * Consolidated per-home event envelope. Replaces membershipChanged +
+ * homeInviteChanged — subscribe once per home and branch on subtype, then on
+ * node's __typename (Membership vs HomeInvite).
+ */
+export type HomeEvent = {
+  __typename: 'HomeEvent';
+  /** Originator of the change, for self-echo suppression. */
+  actorUserId: Maybe<Scalars['ID']['output']>;
+  homeId: Scalars['ID']['output'];
+  mutation: Maybe<MutationType>;
+  newRole: Maybe<MembershipRole>;
+  node: HomeEventNode;
+  previousRole: Maybe<MembershipRole>;
+  subtype: HomeEventSubtype;
+  timestamp: Scalars['DateTime']['output'];
+  updatedFields: Maybe<Array<Scalars['String']['output']>>;
+};
+
+/**
+ * The changed entity for a homeEvents payload: a Membership for the
+ * MEMBERSHIP_* subtypes, a HomeInvite for the INVITE_* subtypes.
+ */
+export type HomeEventNode = HomeInvite | Membership;
+
+/** Subtype discriminator for the consolidated homeEvents stream. */
+export enum HomeEventSubtype {
+  InviteAccepted = 'INVITE_ACCEPTED',
+  InviteCreated = 'INVITE_CREATED',
+  InviteDeclined = 'INVITE_DECLINED',
+  InviteRevoked = 'INVITE_REVOKED',
+  MembershipJoined = 'MEMBERSHIP_JOINED',
+  MembershipLeft = 'MEMBERSHIP_LEFT',
+  MembershipRoleChanged = 'MEMBERSHIP_ROLE_CHANGED',
+  MembershipUpdated = 'MEMBERSHIP_UPDATED'
+}
+
+/**
  * Filters for querying homes.
  * userId filter is admin-only - ignored for regular users.
  */
@@ -9584,6 +9621,27 @@ export type NotificationEdge = Edge & {
 };
 
 /**
+ * Consolidated notification event envelope. Replaces notificationCreated +
+ * notificationUpdated — subscribe once and branch on subtype. For UPDATED,
+ * branch on node.status (READ / CLICKED -> mark read; DISMISSED / EXPIRED ->
+ * remove).
+ */
+export type NotificationEvent = {
+  __typename: 'NotificationEvent';
+  /**
+   * Originator of the change (the source user), for self-echo suppression.
+   * Null for system-generated notifications.
+   */
+  actorUserId: Maybe<Scalars['ID']['output']>;
+  mutation: MutationType;
+  node: Notification;
+  subtype: NotificationEventSubtype;
+  timestamp: Scalars['DateTime']['output'];
+  updatedFields: Maybe<Array<Scalars['String']['output']>>;
+  userId: Scalars['ID']['output'];
+};
+
+/**
  * Legacy generic notification event payload. Retained for unknown external
  * consumers; new subscriptions use the typed payloads below.
  */
@@ -9594,6 +9652,12 @@ export type NotificationEventPayload = {
   timestamp: Maybe<Scalars['String']['output']>;
   userId: Maybe<Scalars['ID']['output']>;
 };
+
+/** Subtype discriminator for the consolidated notificationEvents stream. */
+export enum NotificationEventSubtype {
+  Created = 'CREATED',
+  Updated = 'UPDATED'
+}
 
 export type NotificationFilters = {
   batchId?: InputMaybe<Scalars['String']['input']>;
@@ -10061,7 +10125,7 @@ export type PantryEvent = {
   timestamp: Scalars['DateTime']['output'];
 };
 
-export type PantryEventNode = Pantry | PantryItem | PantryItemUsage;
+export type PantryEventNode = ExpirationNotification | Pantry | PantryItem | PantryItemUsage;
 
 /** Parent resource IDs for cache updates without refetch. */
 export type PantryEventParents = {
@@ -10071,8 +10135,18 @@ export type PantryEventParents = {
 
 /** Subtype discriminator for pantry domain events. */
 export enum PantryEventSubtype {
+  /**
+   * An action was taken on an expiration notification (waste, restock,
+   * mark-consumed, etc.). node is an ExpirationNotification.
+   */
+  ExpirationActionTaken = 'EXPIRATION_ACTION_TAKEN',
   /** Item expiration date approaching */
   ExpirationAlert = 'EXPIRATION_ALERT',
+  /**
+   * A new expiration notification was created by the background
+   * expiration-check job. node is an ExpirationNotification.
+   */
+  ExpirationNotificationCreated = 'EXPIRATION_NOTIFICATION_CREATED',
   /** Pantry item created, updated, or soft-deleted */
   ItemChanged = 'ITEM_CHANGED',
   /** Item quantity fell below minimum threshold */
@@ -13046,13 +13120,18 @@ export type ShoppingListEvent = {
   updatedFields: Array<Scalars['String']['output']>;
 };
 
-export type ShoppingListEventNode = ShoppingList | ShoppingListItem;
+export type ShoppingListEventNode = ShoppingList | ShoppingListCollaborator | ShoppingListItem;
 
 /**
  * Subtype discriminator for shopping list domain events.
  * Values match the client-side changeType contract.
  */
 export enum ShoppingListEventSubtype {
+  /**
+   * A collaborator on the list was added, updated, or removed.
+   * node is a ShoppingListCollaborator; branch on collaborator.status.
+   */
+  CollaborationChanged = 'COLLABORATION_CHANGED',
   /** Multiple items cleared from the list in one operation */
   ItemsBatchCleared = 'ITEMS_BATCH_CLEARED',
   /** Shopping list item created, updated, or deleted */
@@ -13838,6 +13917,13 @@ export type Subscription = {
   expirationNotificationDismissed: ExpirationNotificationDismissedPayload;
   /** Subscribe to read-state changes on expiration notifications. */
   expirationNotificationRead: ExpirationNotificationReadPayload;
+  /**
+   * Consolidated per-home event stream. Replaces membershipChanged +
+   * homeInviteChanged — subscribe once per home and branch on subtype. The
+   * fine-grained fields remain for backward compatibility during client
+   * migration.
+   */
+  homeEvents: HomeEvent;
   /** Subscribe to home invitation changes for a specific home */
   homeInviteChanged: HomeInviteChangeEvent;
   /** Subscribe to successful login attempts for a user. */
@@ -13856,6 +13942,13 @@ export type Subscription = {
   notificationCreated: NotificationCreatedPayload;
   /** Subscribe to dismissal events (lightweight payload — id only). */
   notificationDismissed: NotificationActionPayload;
+  /**
+   * Consolidated notification event stream for the current user. Replaces
+   * notificationCreated + notificationUpdated — subscribe once and branch on
+   * subtype. The fine-grained fields remain for backward compatibility during
+   * client migration. Always scoped to the authenticated user.
+   */
+  notificationEvents: NotificationEvent;
   /** Subscribe to read-state changes (lightweight payload — id only). */
   notificationRead: NotificationActionPayload;
   /** Subscribe to updates of existing notifications for the current user. */
@@ -13863,7 +13956,8 @@ export type Subscription = {
   /**
    * Subscribe to all pantry domain events for a single pantry.
    * Discriminate by subtype: PANTRY_UPDATED, ITEM_CHANGED, USAGE_CHANGED,
-   * LOW_STOCK_ALERT, EXPIRATION_ALERT, WASTE_ALERT.
+   * LOW_STOCK_ALERT, EXPIRATION_ALERT, WASTE_ALERT,
+   * EXPIRATION_NOTIFICATION_CREATED, EXPIRATION_ACTION_TAKEN.
    */
   pantryEvents: PantryEvent;
   /**
@@ -13875,7 +13969,7 @@ export type Subscription = {
   /**
    * Subscribe to all shopping list domain events for a single list.
    * Discriminate by subtype: LIST_UPDATED, STATUS_CHANGED, ITEMS_CHANGED,
-   * ITEMS_BATCH_CLEARED.
+   * ITEMS_BATCH_CLEARED, COLLABORATION_CHANGED.
    */
   shoppingListEvents: ShoppingListEvent;
   /** Subscribe to store changes */
@@ -13885,6 +13979,13 @@ export type Subscription = {
    * high-confidence risky logins or rapid repeated failures).
    */
   suspiciousActivityDetected: SuspiciousActivityDetectedPayload;
+  /**
+   * Consolidated per-user event stream. Replaces userUpdated +
+   * userProfileChanged + userLifecycleEvents — subscribe once and branch on
+   * subtype. The fine-grained fields remain for backward compatibility during
+   * client migration.
+   */
+  userEvents: UserEvent;
   /**
    * Subscribe to lifecycle events for a single user: home/shopping-list
    * membership changes + moderation state transitions.
@@ -13959,6 +14060,11 @@ export type SubscriptionExpirationNotificationReadArgs = {
 };
 
 
+export type SubscriptionHomeEventsArgs = {
+  homeId: Scalars['ID']['input'];
+};
+
+
 export type SubscriptionHomeInviteChangedArgs = {
   homeId: Scalars['ID']['input'];
 };
@@ -14000,6 +14106,11 @@ export type SubscriptionStoreChangedArgs = {
 
 
 export type SubscriptionSuspiciousActivityDetectedArgs = {
+  userId: Scalars['ID']['input'];
+};
+
+
+export type SubscriptionUserEventsArgs = {
   userId: Scalars['ID']['input'];
 };
 
@@ -15832,6 +15943,72 @@ export type UserEdge = Edge & {
   cursor: Scalars['String']['output'];
   node: User;
 };
+
+/**
+ * Consolidated per-user event envelope. Discriminate by subtype; branch on
+ * node's __typename for ACCOUNT_UPDATED / PROFILE_CHANGED and read
+ * parents / reason / warningCount for the lifecycle subtypes.
+ */
+export type UserEvent = {
+  __typename: 'UserEvent';
+  /**
+   * Originator of the change, for self-echo suppression. For account/profile
+   * updates this is the user themselves; for moderation it is the moderator
+   * (null for system actions).
+   */
+  actorUserId: Maybe<Scalars['ID']['output']>;
+  /**
+   * Mutation kind for ACCOUNT_UPDATED / PROFILE_CHANGED (always UPDATED).
+   * Null for lifecycle subtypes.
+   */
+  mutation: Maybe<MutationType>;
+  node: Maybe<UserEventNode>;
+  parents: Maybe<UserEventParents>;
+  reason: Maybe<Scalars['String']['output']>;
+  subtype: UserEventSubtype;
+  timestamp: Scalars['DateTime']['output'];
+  updatedFields: Maybe<Array<Scalars['String']['output']>>;
+  userId: Scalars['ID']['output'];
+  warningCount: Maybe<Scalars['Int']['output']>;
+};
+
+/**
+ * The changed entity for a userEvents payload. Present for ACCOUNT_UPDATED
+ * (User) and PROFILE_CHANGED (UserProfile); null for lifecycle subtypes,
+ * which carry their context on the envelope (parents / reason / warningCount).
+ */
+export type UserEventNode = User | UserProfile;
+
+/**
+ * Parent resource IDs for lifecycle subtypes, mirroring
+ * UserLifecycleEventParents. Null for ACCOUNT_UPDATED / PROFILE_CHANGED.
+ */
+export type UserEventParents = {
+  __typename: 'UserEventParents';
+  homeId: Maybe<Scalars['ID']['output']>;
+  shoppingListId: Maybe<Scalars['ID']['output']>;
+};
+
+/**
+ * Subtype discriminator for the consolidated userEvents stream.
+ * Carries the account/profile mutation subtypes plus every
+ * UserLifecycleEventSubtype value (membership + moderation transitions),
+ * so a single subscription replaces userUpdated + userProfileChanged +
+ * userLifecycleEvents.
+ */
+export enum UserEventSubtype {
+  AccountUpdated = 'ACCOUNT_UPDATED',
+  AddedToHome = 'ADDED_TO_HOME',
+  AddedToShoppingList = 'ADDED_TO_SHOPPING_LIST',
+  Banned = 'BANNED',
+  ProfileChanged = 'PROFILE_CHANGED',
+  RemovedFromHome = 'REMOVED_FROM_HOME',
+  RemovedFromShoppingList = 'REMOVED_FROM_SHOPPING_LIST',
+  Suspended = 'SUSPENDED',
+  Unbanned = 'UNBANNED',
+  Unsuspended = 'UNSUSPENDED',
+  Warned = 'WARNED'
+}
 
 /**
  * Discriminated event for important lifecycle changes affecting a single user.

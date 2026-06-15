@@ -395,16 +395,61 @@ mutation LeaveHome($input: LeaveHomeInput!) {
 # SUBSCRIPTIONS
 # ============================================
 
-subscription HomeInviteChanged($homeId: ID!) {
-  homeInviteChanged(homeId: $homeId) {
+# Consolidated home-domain stream. One subscription carries both membership
+# changes (MEMBERSHIP_*) and invite lifecycle (INVITE_*), discriminated by
+# `subtype`, replacing the former membershipChanged + homeInviteChanged
+# subscriptions. Keeps the per-user concurrent-subscription count low (the
+# server caps it cluster-wide).
+subscription HomeEvents($homeId: ID!) {
+  homeEvents(homeId: $homeId) {
+    subtype
     mutation
     homeId
-    homeInvite {
-      id
-      ...InviteCard_invite
-      ...HomeInviteCard_invite
-    }
-    userId
+    actorUserId
+    previousRole
+    newRole
+    updatedFields
     timestamp
+    node {
+      ... on Membership {
+        id
+        homeId
+        userId
+        role
+        # Aliased to avoid a same-response-shape clash with HomeInvite.status
+        # (MembershipStatus! vs InviteStatus!) under this one `node` selection.
+        # Apollo normalizes by the real field name, so Membership.status is
+        # still written to cache correctly; the client only auto-normalizes here.
+        membershipStatus: status
+        displayName
+        canViewPantry
+        canEditPantry
+        canAddItems
+        canRemoveItems
+        canInviteOthers
+        canManageHome
+        lastActiveAt
+        joinedAt
+        home {
+          id
+          name
+          type
+        }
+        user {
+          id
+          email
+          profile {
+            id
+            displayName
+            avatar
+          }
+        }
+      }
+      ... on HomeInvite {
+        id
+        ...InviteCard_invite
+        ...HomeInviteCard_invite
+      }
+    }
   }
 }

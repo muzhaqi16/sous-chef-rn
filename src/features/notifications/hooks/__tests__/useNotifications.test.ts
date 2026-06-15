@@ -3,14 +3,12 @@
 import { act, waitFor } from '@testing-library/react-native';
 import type { MockedResponse } from '#/test-utils/apolloMockProvider';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
-import {
-  NotificationCreatedDocument,
-  NotificationUpdatedDocument,
-} from '#features/notifications/graphql/notifications.generated';
+import { NotificationEventsDocument } from '#features/notifications/graphql/notifications.generated';
 import {
   NotificationType,
   NotificationCategory,
   NotificationStatus,
+  NotificationEventSubtype,
   Priority,
   MutationType,
 } from '#/graphql/generated/schemaTypes';
@@ -126,20 +124,19 @@ function buildNotificationSubscriptionMock(
   const isCreated = variant === 'created';
   return {
     request: {
-      query: isCreated
-        ? NotificationCreatedDocument
-        : NotificationUpdatedDocument,
+      query: NotificationEventsDocument,
     },
     result: {
       data: {
-        [isCreated ? 'notificationCreated' : 'notificationUpdated']: {
-          __typename: isCreated
-            ? 'NotificationCreatedPayload'
-            : 'NotificationUpdatedPayload',
+        notificationEvents: {
+          __typename: 'NotificationEvent',
+          subtype: isCreated
+            ? NotificationEventSubtype.Created
+            : NotificationEventSubtype.Updated,
           mutation: isCreated ? MutationType.Created : MutationType.Updated,
-          userId: 'user-1',
+          actorUserId: null,
           timestamp: '2024-01-01T00:00:00Z',
-          notification: {
+          node: {
             __typename: 'Notification',
             id: notification.id,
             type: notification.type,

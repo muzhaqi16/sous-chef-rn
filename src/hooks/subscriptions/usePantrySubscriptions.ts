@@ -15,11 +15,7 @@ import {
 } from '#store/useAppStore';
 import {
   PantryEventsDocument,
-  ExpirationNotificationCreatedDocument,
-  ExpirationNotificationActionTakenDocument,
   type PantryEventsSubscription,
-  type ExpirationNotificationCreatedSubscription,
-  type ExpirationNotificationActionTakenSubscription,
 } from '#features/pantry/graphql/pantry.generated';
 import {
   UsePantrySubscriptions_ExpirationNotificationFragmentDoc,
@@ -43,10 +39,6 @@ import {
 import { logger } from '#/utils/environment';
 
 type PantryEventsPayload = PantryEventsSubscription['pantryEvents'];
-type ExpirationCreatedPayload =
-  ExpirationNotificationCreatedSubscription['expirationNotificationCreated'];
-type ExpirationActionPayload =
-  ExpirationNotificationActionTakenSubscription['expirationNotificationActionTaken'];
 
 const addToPantryItemsConnection =
   createAddToParentConnectionUpdater<UsePantrySubscriptions_PantryItemFragment>(
@@ -122,11 +114,12 @@ function handleItemChanged(
 /**
  * Initialize pantry subscriptions for the current user.
  *
- * Subscribes to:
- * - pantryEvents: consolidated real-time events (item changes, pantry updates,
- *   usage records, low-stock/expiration alerts)
- * - expirationNotificationCreated / actionTaken: ties expiration metadata
- *   into the generic notification store entries
+ * Subscribes to a single consolidated `pantryEvents` stream carrying every
+ * pantry-domain event, discriminated by `subtype`: item changes, pantry/usage
+ * updates, low-stock/expiration alerts, and the expiration-notification events
+ * (EXPIRATION_NOTIFICATION_CREATED / EXPIRATION_ACTION_TAKEN) that were
+ * formerly their own subscriptions. One stream keeps the per-user concurrent-
+ * subscription count low (the server caps it cluster-wide).
  *
  * @param userId - Current user ID for deduplication
  */
@@ -134,6 +127,33 @@ export function usePantrySubscriptions(userId?: string) {
   const selectedPantryId = useSelectedPantryId() || undefined;
   const isHomeSelectionReady = useIsHomeSelectionReady();
   const linkExpirationData = useAppStore(state => state.linkExpirationData);
+
+  const expirationOnData = (
+    notificationRef: { id: string } | undefined,
+    client: SubscriptionApolloClient,
+  ) => {
+    if (!notificationRef) return;
+    const notification =
+      client.cache.readFragment<UsePantrySubscriptions_ExpirationNotificationFragment>(
+        {
+          fragment: UsePantrySubscriptions_ExpirationNotificationFragmentDoc,
+          fragmentName: 'usePantrySubscriptions_expirationNotification',
+          from: {
+            __typename: 'ExpirationNotification',
+            id: notificationRef.id,
+          },
+        },
+      );
+    if (!notification?.genericNotificationId) return;
+
+    linkExpirationData(notification.genericNotificationId, {
+      expirationNotificationId: notification.id,
+      expirationAction: notification.actionTaken ?? undefined,
+      daysUntilExpiry: notification.daysUntilExpiry,
+      pantryItemName: notification.pantryItem?.item?.name,
+      pantryItemImageUrl: notification.pantryItem?.item?.imageUrl,
+    });
+  };
 
   const eventHandlers = subscriptionService.register<PantryEventsPayload>({
     subscriptionName: 'PantryEvents',
@@ -148,6 +168,22 @@ export function usePantrySubscriptions(userId?: string) {
       client: SubscriptionApolloClient,
     ) => {
       if (!payload || !selectedPantryId) return;
+
+      // Expiration notifications (folded in from the former
+      // expirationNotificationCreated / expirationNotificationActionTaken
+      // subscriptions) feed the local notification store. They originate from
+      // the background expiration job or another device, so — unlike the other
+      // pantry subtypes — they are NOT self-echo filtered. Handle before the
+      // actor skip to preserve the legacy subscriptions' behavior.
+      if (
+        payload.subtype === PantryEventSubtype.ExpirationNotificationCreated ||
+        payload.subtype === PantryEventSubtype.ExpirationActionTaken
+      ) {
+        if (payload.node.__typename === 'ExpirationNotification') {
+          expirationOnData(payload.node, client);
+        }
+        return;
+      }
 
       if (payload.actorUserId && userId && payload.actorUserId === userId) {
         if (__DEV__) {
@@ -181,80 +217,5 @@ export function usePantrySubscriptions(userId?: string) {
     variables: { pantryId: selectedPantryId! },
     skip: !selectedPantryId || !isHomeSelectionReady,
     ...eventHandlers,
-  });
-
-  const expirationOnData = (
-    notificationRef: { id: string } | undefined,
-    client: SubscriptionApolloClient,
-  ) => {
-    if (!notificationRef) return;
-    const notification =
-      client.cache.readFragment<UsePantrySubscriptions_ExpirationNotificationFragment>(
-        {
-          fragment: UsePantrySubscriptions_ExpirationNotificationFragmentDoc,
-          fragmentName: 'usePantrySubscriptions_expirationNotification',
-          from: {
-            __typename: 'ExpirationNotification',
-            id: notificationRef.id,
-          },
-        },
-      );
-    if (!notification?.genericNotificationId) return;
-
-    linkExpirationData(notification.genericNotificationId, {
-      expirationNotificationId: notification.id,
-      expirationAction: notification.actionTaken ?? undefined,
-      daysUntilExpiry: notification.daysUntilExpiry,
-      pantryItemName: notification.pantryItem?.item?.name,
-      pantryItemImageUrl: notification.pantryItem?.item?.imageUrl,
-    });
-  };
-
-  const expirationCreatedHandlers =
-    subscriptionService.register<ExpirationCreatedPayload>({
-      subscriptionName: 'ExpirationNotificationCreated',
-      entityType: 'ExpirationNotification',
-      enableDeduplication: false,
-      userId,
-      cacheUpdateStrategy: CacheStrategy.NONE,
-      enableLogging: true,
-      entityId: selectedPantryId,
-      customOnData: (
-        payload: ExpirationCreatedPayload,
-        client: SubscriptionApolloClient,
-      ) => {
-        if (!payload) return;
-        expirationOnData(payload.notification, client);
-      },
-    });
-
-  useSubscription(ExpirationNotificationCreatedDocument, {
-    variables: { pantryId: selectedPantryId! },
-    skip: !selectedPantryId || !isHomeSelectionReady,
-    ...expirationCreatedHandlers,
-  });
-
-  const expirationActionHandlers =
-    subscriptionService.register<ExpirationActionPayload>({
-      subscriptionName: 'ExpirationNotificationActionTaken',
-      entityType: 'ExpirationNotification',
-      enableDeduplication: false,
-      userId,
-      cacheUpdateStrategy: CacheStrategy.NONE,
-      enableLogging: true,
-      entityId: selectedPantryId,
-      customOnData: (
-        payload: ExpirationActionPayload,
-        client: SubscriptionApolloClient,
-      ) => {
-        if (!payload) return;
-        expirationOnData(payload.notification, client);
-      },
-    });
-
-  useSubscription(ExpirationNotificationActionTakenDocument, {
-    variables: { pantryId: selectedPantryId! },
-    skip: !selectedPantryId || !isHomeSelectionReady,
-    ...expirationActionHandlers,
   });
 }

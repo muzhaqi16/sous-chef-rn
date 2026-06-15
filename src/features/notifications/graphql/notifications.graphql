@@ -2,25 +2,23 @@
 # SUBSCRIPTIONS
 # ============================================
 
-subscription NotificationCreated {
-  notificationCreated {
-    notification {
+# Consolidated notification stream. One subscription carries both created and
+# updated events, discriminated by `subtype` (CREATED / UPDATED), replacing the
+# former notificationCreated + notificationUpdated subscriptions. Keeps the
+# per-user concurrent-subscription count low (the server caps it cluster-wide).
+# NOTE: actorUserId is null server-side today (the Notification model carries no
+# originator), so self-echo suppression is not possible here — the client never
+# relied on it for notifications.
+subscription NotificationEvents {
+  notificationEvents {
+    subtype
+    mutation
+    actorUserId
+    timestamp
+    node {
       id
       ...useNotifications_notification
     }
-    mutation
-    timestamp
-  }
-}
-
-subscription NotificationUpdated {
-  notificationUpdated {
-    notification {
-      id
-      ...useNotifications_notification
-    }
-    mutation
-    timestamp
   }
 }
 

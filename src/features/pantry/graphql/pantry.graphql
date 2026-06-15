@@ -1085,34 +1085,24 @@ subscription PantryEvents($pantryId: ID!) {
         id
         quantityUsed
         purpose
-        pantryItem {
+        # Aliased to avoid a same-response-shape clash with
+        # ExpirationNotification.pantryItem (PantryItem vs PantryItem!) now that
+        # both union members live under this one `node` selection. Not read by
+        # the client (UsageChanged only logs).
+        usagePantryItem: pantryItem {
           id
           quantity
           isLowStock
         }
       }
+      # Expiration notifications now arrive on pantryEvents via the
+      # EXPIRATION_NOTIFICATION_CREATED / EXPIRATION_ACTION_TAKEN subtypes
+      # (folded in from the former expirationNotificationCreated /
+      # expirationNotificationActionTaken subscriptions).
+      ... on ExpirationNotification {
+        id
+        ...usePantrySubscriptions_expirationNotification
+      }
     }
-  }
-}
-
-subscription ExpirationNotificationCreated($pantryId: ID!) {
-  expirationNotificationCreated(pantryId: $pantryId) {
-    notification {
-      id
-      ...usePantrySubscriptions_expirationNotification
-    }
-    pantryId
-    timestamp
-  }
-}
-
-subscription ExpirationNotificationActionTaken($pantryId: ID!) {
-  expirationNotificationActionTaken(pantryId: $pantryId) {
-    notification {
-      id
-      ...usePantrySubscriptions_expirationNotification
-    }
-    pantryId
-    timestamp
   }
 }

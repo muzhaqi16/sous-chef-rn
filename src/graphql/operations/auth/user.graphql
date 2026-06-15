@@ -238,58 +238,50 @@ mutation CompleteOnboarding {
 # SUBSCRIPTIONS
 # ============================================
 
-subscription UserUpdated($userId: ID) {
-  userUpdated(userId: $userId) {
-    mutation
-    node {
-      id
-      email
-      emailVerified
-      role
-      onBoarded
-      timezone
-      preferredCurrency
-      language
-      lastActiveAt
-    }
-    updatedFields
-    timestamp
-    userId
-  }
-}
-
-subscription UserProfileChanged($userId: ID) {
-  userProfileChanged(userId: $userId) {
-    mutation
-    profile {
-      id
-      firstName
-      lastName
-      displayName
-      bio
-      avatar
-      coverImage
-      phone
-      website
-      profileVisibility
-    }
-    updatedFields
-    timestamp
-    userId
-  }
-}
-
-subscription UserLifecycleEvents($userId: ID!) {
-  userLifecycleEvents(userId: $userId) {
+# Consolidated user-domain stream. One subscription carries account updates
+# (ACCOUNT_UPDATED → User node), profile changes (PROFILE_CHANGED → UserProfile
+# node), and lifecycle events (membership/moderation subtypes, context on the
+# envelope), discriminated by `subtype` — replacing the former userUpdated +
+# userProfileChanged + userLifecycleEvents subscriptions. Keeps the per-user
+# concurrent-subscription count low (the server caps it cluster-wide).
+subscription UserEvents($userId: ID!) {
+  userEvents(userId: $userId) {
     subtype
-    userId
+    mutation
     actorUserId
+    updatedFields
+    timestamp
+    userId
+    reason
+    warningCount
     parents {
       homeId
       shoppingListId
     }
-    reason
-    warningCount
-    timestamp
+    node {
+      ... on User {
+        id
+        email
+        emailVerified
+        role
+        onBoarded
+        timezone
+        preferredCurrency
+        language
+        lastActiveAt
+      }
+      ... on UserProfile {
+        id
+        firstName
+        lastName
+        displayName
+        bio
+        avatar
+        coverImage
+        phone
+        website
+        profileVisibility
+      }
+    }
   }
 }
