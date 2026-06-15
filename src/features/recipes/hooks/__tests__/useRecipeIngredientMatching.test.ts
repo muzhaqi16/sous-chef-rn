@@ -5,6 +5,7 @@ import {
   seedCache,
 } from '#/test-utils/apolloMockProvider';
 import { MatchRecipeIngredientsToPantryDocument } from '#features/recipes/graphql/recipe.generated';
+import { logger } from '#/utils/environment';
 import type { RootState } from '#store';
 import {
   useRecipeIngredientMatching,
@@ -189,6 +190,50 @@ describe('useRecipeIngredientMatching', () => {
     await waitFor(() => expect(result.current.editableMatches).toHaveLength(1));
     expect(result.current.editableMatches[0].adjustedQuantity).toBe(2);
     expect(result.current.isSheetVisible).toBe(true);
+  });
+
+  it('logs and drops a match whose cached ingredient fragment is incomplete', async () => {
+    // No seedIngredientCache: the only RecipeIngredient write is the match
+    // mock's partial `ingredient` (missing most fragment fields), so
+    // cache.readFragment returns null. The ingredient must be dropped WITH a
+    // diagnostic, not silently vanish.
+    const matches = [
+      {
+        ingredient: {
+          __typename: 'RecipeIngredient',
+          id: 'ing-1',
+          isOptional: false,
+          unit: {
+            __typename: 'Unit',
+            id: 'u-ing-1',
+            name: 'cup',
+            symbol: 'cup',
+          },
+        },
+        isAvailable: true,
+        matchConfidence: 0.95,
+        matchedPantryItem: { __typename: 'PantryItem', id: 'pi-1' },
+        availableQuantity: 5,
+        suggestedQuantity: 2,
+        suggestedUnit: { __typename: 'Unit', id: 'su-1' },
+      },
+    ];
+    const m = matchesMock(matches);
+
+    const { result } = renderHookWithApollo(
+      () => useRecipeIngredientMatching('recipe-1'),
+      { operationMocks: [m.mock] },
+    );
+
+    await act(async () => {
+      await result.current.loadMatches(4);
+    });
+
+    expect(result.current.editableMatches).toHaveLength(0);
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining('incomplete RecipeIngredient'),
+      expect.objectContaining({ ingredientId: 'ing-1' }),
+    );
   });
 
   it('updateMatch updates a specific match entry', async () => {
