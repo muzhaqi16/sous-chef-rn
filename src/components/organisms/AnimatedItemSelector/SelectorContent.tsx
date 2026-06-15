@@ -17,10 +17,6 @@ interface SelectorContentProps<T extends SelectableItem> {
   config: SelectorConfig<T>;
 }
 
-// Half a row (height + margin) — nudges the centered row down slightly so it
-// reads as centered rather than its top edge landing on the midline.
-const ROW_HALF = 28;
-
 const LoadingState = () => {
   return (
     <Animated.View entering={FadeIn} style={styles.loadingContainer}>
@@ -64,27 +60,35 @@ export const SelectorContent = <T extends SelectableItem>({
   // known. Short lists clamp to 0 (no scroll); reset per open since the tray
   // unmounts its content on close.
   const scroll = useActionTrayScroll();
-  const [selectedY, setSelectedY] = useState<number | null>(null);
+  const [selectedLayout, setSelectedLayout] = useState<{
+    y: number;
+    height: number;
+  } | null>(null);
   const didCenterRef = useRef(false);
 
   const handleSelectedLayout = (event: LayoutChangeEvent) => {
-    setSelectedY(event.nativeEvent.layout.y);
+    const { y, height } = event.nativeEvent.layout;
+    setSelectedLayout({ y, height });
   };
 
   useEffect(() => {
-    if (didCenterRef.current || selectedY == null || !scroll) return;
+    if (didCenterRef.current || selectedLayout == null || !scroll) return;
     const { viewportHeight, scrollToContentOffset, isReady } = scroll;
     // Wait until the viewport is measured AND the sheet has settled open —
     // gorhom keeps the scrollable locked during the open animation, so an
     // earlier scroll would be dropped.
     if (!isReady || viewportHeight <= 0) return;
     didCenterRef.current = true;
-    // Animate so the list eases to the selected row instead of snapping.
+    // Center the selected row's midpoint in the viewport. Using the row's
+    // measured height keeps this correct if the row size changes — no magic
+    // constant coupled to SelectorItemContainer's layout. Animate so the list
+    // eases to the row instead of snapping.
+    const { y, height } = selectedLayout;
     scrollToContentOffset(
-      Math.max(0, selectedY - viewportHeight / 2 + ROW_HALF),
+      Math.max(0, y + height / 2 - viewportHeight / 2),
       true,
     );
-  }, [selectedY, scroll]);
+  }, [selectedLayout, scroll]);
 
   const renderItem = (item: T) => {
     const isSelected = item.id === selectedId;

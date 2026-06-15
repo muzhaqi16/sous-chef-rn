@@ -148,22 +148,26 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
     // stays fixed while the content scrolls. Its measured height feeds the
     // sheet's dynamic size (`contentHeight + handleHeight`), so the sheet still
     // hugs short content and caps long content at `maxDynamicContentSize`.
-    const renderHandle = () => (
-      <View style={styles.header}>
-        {title ? (
-          <Text size="lg" weight="semibold" tone="primary">
-            {title}
-          </Text>
-        ) : null}
-        <View style={styles.fill} />
-        {!!headerRight && headerRight}
-        {showCloseButton ? (
-          <AppPressable onPress={handleDismiss} style={styles.closeButton}>
-            <Icon name="close" size={16} tone="textSecondary" />
-          </AppPressable>
-        ) : null}
-      </View>
-    );
+    // Returning null when there's nothing to show suppresses gorhom's default
+    // grab handle and avoids drawing an empty padded band.
+    const hasHeader = !!title || !!headerRight || showCloseButton;
+    const renderHandle = () =>
+      hasHeader ? (
+        <View style={styles.header}>
+          {title ? (
+            <Text size="lg" weight="semibold" tone="primary">
+              {title}
+            </Text>
+          ) : null}
+          <View style={styles.fill} />
+          {!!headerRight && headerRight}
+          {showCloseButton ? (
+            <AppPressable onPress={handleDismiss} style={styles.closeButton}>
+              <Icon name="close" size={16} tone="textSecondary" />
+            </AppPressable>
+          ) : null}
+        </View>
+      ) : null;
 
     // Pinned footer (optional). Rendered through gorhom's `footerComponent` so
     // it floats above the scroll; `enableFooterMarginAdjustment` on the

@@ -104,7 +104,4 @@ const styles = StyleSheet.create(theme => ({
   optionText: {
     flex: 1,
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
 }));

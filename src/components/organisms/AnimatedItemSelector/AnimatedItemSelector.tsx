@@ -35,7 +35,14 @@ export const AnimatedItemSelector = <T extends SelectableItem>({
       onOpen={onOpen}
       showCloseButton={true}
       enableBackdrop={true}
-      footer={<ActionButtons actions={config.actions} />}
+      // Only mount the footer when there are actions: ActionButtons renders
+      // null for an empty list, but passing it anyway would still make
+      // ActionTray draw the bordered footer band and reserve its space.
+      footer={
+        config.actions.length ? (
+          <ActionButtons actions={config.actions} />
+        ) : undefined
+      }
     >
       <SelectorContent config={config} />
     </ActionTray>

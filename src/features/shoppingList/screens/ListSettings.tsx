@@ -287,7 +287,7 @@ export const ListSettings: React.FC<
             <Pressable
               onPress={handleSave}
               disabled={saving}
-              style={({ pressed }) => pressed && { opacity: 0.7 }}
+              style={({ pressed }) => pressed && styles.pressed}
             >
               <Text size="md" weight="semibold" tone="accent">
                 {saving
@@ -374,7 +374,7 @@ export const ListSettings: React.FC<
                     <Pressable
                       style={({ pressed }) => [
                         styles.actionRow,
-                        pressed && { opacity: 0.7 },
+                        pressed && styles.pressed,
                       ]}
                       onPress={() => toHomeDetail({ homeId: linkedHomeId })}
                     >
@@ -395,7 +395,7 @@ export const ListSettings: React.FC<
                   <Pressable
                     style={({ pressed }) => [
                       styles.deleteButton,
-                      pressed && { opacity: 0.7 },
+                      pressed && styles.pressed,
                     ]}
                     onPress={handleLeaveList}
                     disabled={leaving}
@@ -446,7 +446,7 @@ export const ListSettings: React.FC<
                 <Pressable
                   style={({ pressed }) => [
                     styles.pickerButton,
-                    pressed && { opacity: 0.7 },
+                    pressed && styles.pressed,
                   ]}
                   onPress={handleOpenHomePicker}
                 >
@@ -483,7 +483,7 @@ export const ListSettings: React.FC<
             <Pressable
               style={({ pressed }) => [
                 styles.actionRow,
-                pressed && { opacity: 0.7 },
+                pressed && styles.pressed,
               ]}
               onPress={() => toShareList({ listId: listId! })}
             >
@@ -514,7 +514,7 @@ export const ListSettings: React.FC<
             <Pressable
               style={({ pressed }) => [
                 styles.deleteButton,
-                pressed && { opacity: 0.7 },
+                pressed && styles.pressed,
               ]}
               onPress={handleDelete}
             >
@@ -561,6 +561,9 @@ const styles = StyleSheet.create(theme => ({
   },
   content: {
     flex: 1,
+  },
+  pressed: {
+    opacity: theme.opacity.pressed,
   },
   actionRow: {
     flexDirection: 'row',
