@@ -1248,14 +1248,6 @@ input ClearShoppingListItemsInput {
   shoppingListId: ID!
 }
 
-type CollaborationChangeEvent {
-  collaborator: ShoppingListCollaborator!
-  listId: ID!
-  mutation: MutationType!
-  timestamp: DateTime!
-  userId: ID!
-}
-
 """Order by options for collaborators"""
 input CollaboratorOrderBy {
   invitedAt: SortOrder
@@ -3218,33 +3210,10 @@ type ExpirationNotification {
   userId: ID!
 }
 
-"""
-Emitted when the user takes an action on an expiration notification
-(waste, restock, mark-as-consumed, etc.).
-"""
-type ExpirationNotificationActionTakenPayload {
-  action: ExpirationAction!
-  notification: ExpirationNotification!
-  pantryId: ID!
-  timestamp: DateTime!
-  userId: ID!
-}
-
 type ExpirationNotificationConnection implements Connection {
   edges: [ExpirationNotificationEdge!]!
   pageInfo: PageInfo!
   totalCount: Int
-}
-
-"""
-Emitted when the expiration-check background job creates a new
-expiration notification for an item the user owns.
-"""
-type ExpirationNotificationCreatedPayload {
-  notification: ExpirationNotification!
-  pantryId: ID!
-  timestamp: DateTime!
-  userId: ID!
 }
 
 """Emitted when the user dismisses an expiration notification."""
@@ -3709,14 +3678,6 @@ type HomeInvite {
   token: String!
   updatedAt: DateTime!
   version: Int!
-}
-
-type HomeInviteChangeEvent {
-  homeId: ID!
-  homeInvite: HomeInvite!
-  mutation: HomeInviteMutationType!
-  timestamp: DateTime!
-  userId: ID!
 }
 
 type HomeInviteConnection implements Connection {
@@ -5285,23 +5246,6 @@ type Membership {
   version: Int!
 }
 
-type MembershipChangeEvent {
-  changeType: MembershipChangeType!
-  homeId: ID!
-  membership: Membership!
-  newRole: MembershipRole
-  previousRole: MembershipRole
-  timestamp: DateTime!
-  userId: ID!
-}
-
-enum MembershipChangeType {
-  JOINED
-  LEFT
-  ROLE_CHANGED
-  UPDATED
-}
-
 type MembershipConnection implements Connection {
   edges: [MembershipEdge!]!
   pageInfo: PageInfo!
@@ -6370,14 +6314,6 @@ type NotificationConnection implements Connection {
   unreadCount: Int!
 }
 
-"""Emitted when a new notification is created for a user."""
-type NotificationCreatedPayload {
-  mutation: MutationType!
-  notification: Notification!
-  timestamp: DateTime!
-  userId: ID!
-}
-
 enum NotificationDeliveryStatus {
   CANCELLED
   DISMISSED
@@ -6399,11 +6335,6 @@ branch on node.status (READ / CLICKED -> mark read; DISMISSED / EXPIRED ->
 remove).
 """
 type NotificationEvent {
-  """
-  Originator of the change (the source user), for self-echo suppression.
-  Null for system-generated notifications.
-  """
-  actorUserId: ID
   mutation: MutationType!
   node: Notification!
   subtype: NotificationEventSubtype!
@@ -6564,14 +6495,6 @@ type NotificationTypeCount {
   count: Int!
   type: NotificationType!
   unreadCount: Int!
-}
-
-"""Emitted when an existing notification is updated."""
-type NotificationUpdatedPayload {
-  mutation: MutationType!
-  notification: Notification!
-  timestamp: DateTime!
-  userId: ID!
 }
 
 enum NutritionCategory {
@@ -9610,10 +9533,6 @@ input SubmitAppealInput {
 
 type Subscription {
   """
-  Subscribe to collaborator changes for a shopping list (invites, removals, role/permission updates)
-  """
-  collaborationChanged(listId: ID!): CollaborationChangeEvent!
-  """
   Subscribe to create / update / delete events for a single cooking log.
   Subscribers can only watch logs they own.
   """
@@ -9633,55 +9552,41 @@ type Subscription {
   """Subscribe to device verification events."""
   deviceVerified(userId: ID!): DeviceVerifiedPayload!
   """
-  Subscribe to action-taken events on expiration notifications
-  (waste, restock, mark-consumed, etc.).
+  Subscribe to user-initiated dismissal of expiration notifications.
+  
+  Note: creation and action-taken events are delivered via the consolidated
+  pantryEvents(pantryId) stream (subtypes EXPIRATION_NOTIFICATION_CREATED /
+  EXPIRATION_ACTION_TAKEN).
   """
-  expirationNotificationActionTaken(pantryId: ID!): ExpirationNotificationActionTakenPayload!
-  """
-  Subscribe to new expiration notifications created by the background
-  expiration-check job for a pantry.
-  """
-  expirationNotificationCreated(pantryId: ID!): ExpirationNotificationCreatedPayload!
-  """Subscribe to user-initiated dismissal of expiration notifications."""
   expirationNotificationDismissed(pantryId: ID!): ExpirationNotificationDismissedPayload!
   """Subscribe to read-state changes on expiration notifications."""
   expirationNotificationRead(pantryId: ID!): ExpirationNotificationReadPayload!
   """
-  Consolidated per-home event stream. Replaces membershipChanged +
-  homeInviteChanged — subscribe once per home and branch on subtype. The
-  fine-grained fields remain for backward compatibility during client
-  migration.
+  Consolidated per-home event stream (membership changes + home-invite
+  changes). Subscribe once per home and branch on subtype, then on node's
+  __typename (Membership vs HomeInvite).
   """
   homeEvents(homeId: ID!): HomeEvent!
-  """Subscribe to home invitation changes for a specific home"""
-  homeInviteChanged(homeId: ID!): HomeInviteChangeEvent!
   """Subscribe to successful login attempts for a user."""
   loginAttempted(userId: ID!): LoginAttemptedPayload!
   """Subscribe to failed login attempts for a user."""
   loginFailed(userId: ID!): LoginFailedPayload!
-  """Subscribe to all membership changes for a home"""
-  membershipChanged(homeId: ID!): MembershipChangeEvent!
   """
   Subscribe to all shopping list domain events across all of the current
   user's shopping lists. One subscription covers every list the user can
   access.
   """
   myShoppingListsEvents: ShoppingListEvent!
-  """Subscribe to new notifications created for the current user."""
-  notificationCreated: NotificationCreatedPayload!
   """Subscribe to dismissal events (lightweight payload — id only)."""
   notificationDismissed: NotificationActionPayload!
   """
-  Consolidated notification event stream for the current user. Replaces
-  notificationCreated + notificationUpdated — subscribe once and branch on
-  subtype. The fine-grained fields remain for backward compatibility during
-  client migration. Always scoped to the authenticated user.
+  Consolidated notification event stream for the current user (created +
+  updated). Subscribe once and branch on subtype; for UPDATED, branch on
+  node.status. Always scoped to the authenticated user.
   """
   notificationEvents: NotificationEvent!
   """Subscribe to read-state changes (lightweight payload — id only)."""
   notificationRead: NotificationActionPayload!
-  """Subscribe to updates of existing notifications for the current user."""
-  notificationUpdated: NotificationUpdatedPayload!
   """
   Subscribe to all pantry domain events for a single pantry.
   Discriminate by subtype: PANTRY_UPDATED, ITEM_CHANGED, USAGE_CHANGED,
@@ -9709,23 +9614,13 @@ type Subscription {
   """
   suspiciousActivityDetected(userId: ID!): SuspiciousActivityDetectedPayload!
   """
-  Consolidated per-user event stream. Replaces userUpdated +
-  userProfileChanged + userLifecycleEvents — subscribe once and branch on
-  subtype. The fine-grained fields remain for backward compatibility during
-  client migration.
+  Consolidated per-user event stream (account update, profile change, and
+  home/shopping-list membership + moderation lifecycle transitions).
+  Subscribe once and branch on subtype.
   """
   userEvents(userId: ID!): UserEvent!
-  """
-  Subscribe to lifecycle events for a single user: home/shopping-list
-  membership changes + moderation state transitions.
-  """
-  userLifecycleEvents(userId: ID!): UserLifecycleEvent!
   """Subscribe to user moderation changes (ban / suspend / warn)."""
   userModerationChanged(userId: ID): UserModerationChangedPayload!
-  """Subscribe to user profile changes."""
-  userProfileChanged(userId: ID): UserProfileChangedPayload!
-  """Subscribe to user record updates (account-level fields)."""
-  userUpdated(userId: ID): UserUpdatedPayload!
 }
 
 """
@@ -11391,36 +11286,6 @@ enum UserEventSubtype {
   WARNED
 }
 
-"""
-Discriminated event for important lifecycle changes affecting a single user.
-Fires when the user is added/removed from a home or shopping list, or when
-moderation state changes (ban/suspend/warn). Subscribe per-user with userId.
-"""
-type UserLifecycleEvent {
-  """
-  The user who triggered the event. Null only for system-initiated events.
-  Always present for moderation subtypes (BANNED, SUSPENDED, WARNED,
-  UNBANNED, UNSUSPENDED) — the moderator's ID.
-  """
-  actorUserId: ID
-  parents: UserLifecycleEventParents
-  reason: String
-  subtype: UserLifecycleEventSubtype!
-  timestamp: DateTime!
-  userId: ID!
-  warningCount: Int
-}
-
-"""
-Parent resource IDs for cache updates without refetch.
-Populated only for the subtypes where it applies (home / shopping list
-membership changes); moderation events leave both fields null.
-"""
-type UserLifecycleEventParents {
-  homeId: ID
-  shoppingListId: ID
-}
-
 """Subtype discriminator for important per-user lifecycle events."""
 enum UserLifecycleEventSubtype {
   ADDED_TO_HOME
@@ -11536,14 +11401,6 @@ type UserProfile {
   website: String
 }
 
-type UserProfileChangedPayload {
-  mutation: String!
-  profile: UserProfile!
-  timestamp: DateTime!
-  updatedFields: [String!]!
-  userId: ID!
-}
-
 enum UserRole {
   ADMIN
   MODERATOR
@@ -11608,14 +11465,6 @@ type UserStatistics {
   totalShoppingLists: Int!
   totalWasteReduced: Float!
   user: User!
-  userId: ID!
-}
-
-type UserUpdatedPayload {
-  mutation: MutationType!
-  node: User!
-  timestamp: DateTime!
-  updatedFields: [String!]!
   userId: ID!
 }
 

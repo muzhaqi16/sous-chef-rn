@@ -98,7 +98,7 @@ export const PantryAlertBar: React.FC<PantryAlertBarProps> = ({
             })}
           >
             <Icon name="trending-down-outline" size={14} tone="warning" />
-            <Text size="sm" weight="medium" style={styles.lowStockText}>
+            <Text size="sm" weight="medium" tone="warning">
               {stats.lowStockCount}
             </Text>
           </Pressable>
@@ -165,8 +165,5 @@ const styles = StyleSheet.create(theme => ({
   },
   expiredText: {
     color: theme.colors.expiration.expiredText,
-  },
-  lowStockText: {
-    color: theme.colors.warning,
   },
 }));

@@ -267,8 +267,10 @@ export function useShoppingListSubscriptions(
           return;
         }
 
-        // Collaborator lifecycle (folded in from the former collaborationChanged
-        // subscription). Active-list only — listId was gated above.
+        // Collaborator lifecycle (CREATED/UPDATED/DELETED) for the active list.
+        // Maintains collaboratorsConnection. Self-echo is already filtered by the
+        // shared actorUserId skip above, so the server must set actorUserId on the
+        // envelope for COLLABORATION_CHANGED events.
         if (payload.subtype === ShoppingListEventSubtype.CollaborationChanged) {
           if (payload.node?.__typename !== 'ShoppingListCollaborator') return;
 
