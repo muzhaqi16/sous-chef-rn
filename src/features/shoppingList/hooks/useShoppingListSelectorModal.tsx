@@ -301,11 +301,16 @@ export function useShoppingListSelectorModal({
           />
           <ShoppingListAvatar list={list} size={32} />
           <View style={styles.selectorItemInfo}>
-            <Text size="md" weight="semibold">
+            <Text
+              size="md"
+              weight="semibold"
+              lineHeight="tight"
+              numberOfLines={1}
+            >
               {list.name}
             </Text>
             {!canDelete && (
-              <Text size="xs" tone="secondary">
+              <Text size="xs" tone="secondary" numberOfLines={1}>
                 {t('shoppingListSelector.cannotDeleteShared')}
               </Text>
             )}
@@ -324,11 +329,16 @@ export function useShoppingListSelectorModal({
       >
         <ShoppingListAvatar list={list} size={32} />
         <View style={styles.selectorItemInfo}>
-          <Text size="md" weight="semibold">
+          <Text
+            size="md"
+            weight="semibold"
+            lineHeight="tight"
+            numberOfLines={1}
+          >
             {list.name}
           </Text>
           {!list._isOwner && (
-            <Text size="xs" tone="secondary">
+            <Text size="xs" tone="secondary" numberOfLines={1}>
               {t('shoppingListSelector.sharedBy', {
                 name:
                   list.ownerships?.[0]?.user?.profile?.displayName ||
@@ -435,7 +445,6 @@ export function useShoppingListSelectorModal({
 const styles = StyleSheet.create(theme => ({
   selectorItemInfo: {
     flex: 1,
-    gap: 2,
   },
   sectionHeader: {
     flexDirection: 'row',

@@ -733,13 +733,14 @@ mutation SyncMoveShoppingListItem($input: SyncMoveShoppingListItemInput!) {
 # SUBSCRIPTIONS
 # ============================================
 
-# NOTE: The server caps concurrent subscriptions per client. All shopping-list
-# domain events arrive on this single user-scoped stream, discriminated by
-# `subtype` (mirrors pantryEvents): ITEMS_CHANGED, LIST_UPDATED,
-# STATUS_CHANGED, ITEMS_BATCH_CLEARED. The per-list shoppingListEvents(listId)
-# variant is intentionally NOT used — one stream covers every list the user
-# can access, and useShoppingListSubscriptions filters by the active list
-# where needed.
+# NOTE: The server caps concurrent subscriptions per client (per-user,
+# cluster-wide). All shopping-list domain events arrive on this single
+# user-scoped stream, discriminated by `subtype` (mirrors pantryEvents):
+# ITEMS_CHANGED, LIST_UPDATED, STATUS_CHANGED, ITEMS_BATCH_CLEARED, and
+# COLLABORATION_CHANGED (folded in from the former per-list collaborationChanged
+# subscription). The per-list shoppingListEvents(listId) variant is
+# intentionally NOT used — one stream covers every list the user can access,
+# and useShoppingListSubscriptions filters by the active list where needed.
 subscription MyShoppingListsEvents {
   myShoppingListsEvents {
     subtype
@@ -766,6 +767,12 @@ subscription MyShoppingListsEvents {
         completedItems
         remainingItems
         completionRate
+      }
+      ... on ShoppingListCollaborator {
+        id
+        canEdit
+        lastViewedAt
+        ...useShoppingListSubscriptions_collaborator
       }
     }
   }

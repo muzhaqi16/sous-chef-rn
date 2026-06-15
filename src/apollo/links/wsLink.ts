@@ -34,6 +34,24 @@ let shouldAutoReconnect = true;
 // by useOnlineQueueSync on the next offline→online transition.
 let reconnectDeferredUntilOnline = false;
 
+// A connection is only treated as "healthy" — and the exponential-backoff
+// counter reset — once it has stayed open for this long. Critical: when the
+// server rejects subscriptions over its concurrent-subscription cap it closes
+// the whole socket (code 1000) right after the handshake. Resetting the
+// counter on the bare `connected` event lets that connect→close→reconnect
+// cycle repeat at the 1s base delay forever (a re-subscribe-everything loop).
+// Deferring the reset until the socket proves stable means such a cycle keeps
+// escalating the backoff and eventually stops, instead of hammering the server.
+const CONNECTION_STABLE_MS = 10_000;
+let connectionStableTimeoutId: ReturnType<typeof setTimeout> | null = null;
+
+const clearConnectionStableTimer = () => {
+  if (connectionStableTimeoutId !== null) {
+    clearTimeout(connectionStableTimeoutId);
+    connectionStableTimeoutId = null;
+  }
+};
+
 /**
  * Calculate reconnection delay with exponential backoff and jitter
  */
@@ -155,12 +173,21 @@ const createWsClient = () => {
         payload: Record<string, unknown> | undefined,
       ) => {
         isReconnecting = false;
-        // Reset reconnect attempts on successful connection
-        reconnectAttempts = 0;
         if (reconnectTimeoutId !== null) {
           clearTimeout(reconnectTimeoutId);
           reconnectTimeoutId = null;
         }
+
+        // Defer the backoff reset until the connection proves stable. If the
+        // server closes the socket before this fires (e.g. concurrent-
+        // subscription cap rejection → code 1000), the `closed` handler clears
+        // this timer so the counter survives and scheduleReconnect() escalates
+        // the backoff instead of looping at the 1s base delay.
+        clearConnectionStableTimer();
+        connectionStableTimeoutId = setTimeout(() => {
+          connectionStableTimeoutId = null;
+          reconnectAttempts = 0;
+        }, CONNECTION_STABLE_MS);
 
         // Server auto-refreshed our tokens during connection —
         // store the new pair via setTokens() (centralized token storage)
@@ -187,6 +214,10 @@ const createWsClient = () => {
       },
       closed: (event: unknown) => {
         isReconnecting = false;
+        // A close before the stability window must NOT reset the backoff
+        // counter — clear the pending reset so rapid connect→close cycles
+        // (e.g. subscription-cap rejections) escalate the backoff.
+        clearConnectionStableTimer();
         const closeEvent =
           event && typeof event === 'object'
             ? (event as { code?: number; reason?: string; wasClean?: boolean })
@@ -344,6 +375,7 @@ export const disableAutoReconnect = () => {
     clearTimeout(reconnectTimeoutId);
     reconnectTimeoutId = null;
   }
+  clearConnectionStableTimer();
   reconnectAttempts = 0;
 };
 
@@ -377,5 +409,6 @@ export const getWebSocketState = () => {
     isReconnecting,
     lastReconnectTime,
     hasClient: !!wsClient,
+    reconnectAttempts,
   };
 };

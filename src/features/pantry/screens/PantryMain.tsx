@@ -195,6 +195,8 @@ const PantryMainInner: React.FC = () => {
     toFilteredPantryItems({ mode: 'lowStock' });
   const handleExpiringNavigate = () =>
     toFilteredPantryItems({ mode: 'expiring' });
+  const handleExpiredNavigate = () =>
+    toFilteredPantryItems({ mode: 'expired' });
   const handleSelectHome = () => toHomeManagement();
   const handleCreatePantry = () => toPantrySettings();
   const stableNavigateTo = {
@@ -225,6 +227,7 @@ const PantryMainInner: React.FC = () => {
         onAnalyticsPress={handleAnalyticsPress}
         onLowStockNavigate={handleLowStockNavigate}
         onExpiringNavigate={handleExpiringNavigate}
+        onExpiredNavigate={handleExpiredNavigate}
         onSelectHome={handleSelectHome}
         onCreatePantry={handleCreatePantry}
         onOverlayOpen={handleOverlayOpen}
@@ -256,6 +259,7 @@ interface PantryMainContentProps {
   onAnalyticsPress: () => void;
   onLowStockNavigate: () => void;
   onExpiringNavigate: () => void;
+  onExpiredNavigate: () => void;
   onSelectHome: () => void;
   onCreatePantry: () => void;
   onOverlayOpen: () => void;
@@ -283,6 +287,7 @@ function PantryMainContent({
   onAnalyticsPress,
   onLowStockNavigate,
   onExpiringNavigate,
+  onExpiredNavigate,
   onSelectHome,
   onCreatePantry,
   onOverlayOpen,
@@ -399,6 +404,7 @@ function PantryMainContent({
         onAnalyticsPress={onAnalyticsPress}
         onLowStockNavigate={onLowStockNavigate}
         onExpiringNavigate={onExpiringNavigate}
+        onExpiredNavigate={onExpiredNavigate}
         totalCount={screen.totalCount}
         noHomeSelected={screen.noHomeSelected}
         noHomes={screen.noHomes}

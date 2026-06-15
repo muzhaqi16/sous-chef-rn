@@ -14,6 +14,8 @@ const mockNavigateTo = {
 const mockNavigation = {
   navigate: jest.fn(),
   goBack: jest.fn(),
+  toShareList: jest.fn(),
+  toHomeDetail: jest.fn(),
   navigation: {
     dispatch: jest.fn(),
     canGoBack: jest.fn(() => true),

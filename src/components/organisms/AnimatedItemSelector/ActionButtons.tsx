@@ -26,6 +26,7 @@ const ActionButton: React.FC<{
     <Animated.View
       entering={FadeInUp.delay(index * 15).duration(TIMING.FAST)}
       layout={LinearTransition}
+      style={styles.buttonWrapper}
     >
       <AppPressable
         style={[
@@ -44,8 +45,10 @@ const ActionButton: React.FC<{
           library={action.iconLibrary}
         />
         <Text
-          size="md"
+          size="sm"
           weight="semibold"
+          align="center"
+          numberOfLines={1}
           style={[
             styles.actionButtonText,
             variant === 'primary'
@@ -82,15 +85,28 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({ actions }) => {
 };
 
 const styles = StyleSheet.create(theme => ({
+  // Horizontal grid: each button flexes to share the row equally (3-up for the
+  // common case, 2-up for two actions, full width for one) and wraps if the
+  // labels can't fit, so longer translations stay readable.
   container: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: theme.spacing.sm,
-    marginTop: theme.spacing.md,
+  },
+  buttonWrapper: {
+    flexGrow: 1,
+    flexBasis: 0,
+    minWidth: 88,
   },
   actionButton: {
-    flexDirection: 'row',
+    // flex:1 so every chip fills its (row-stretched) wrapper height — keeps
+    // chips equal height when one label wraps to two lines.
+    flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing.xs,
     paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
+    paddingHorizontal: theme.spacing.xs,
     borderRadius: theme.radii.md,
     borderWidth: 1,
   },
@@ -106,7 +122,7 @@ const styles = StyleSheet.create(theme => ({
     opacity: theme.opacity.disabled,
   },
   actionButtonText: {
-    marginLeft: theme.spacing.md,
+    marginTop: 2,
   },
   primaryButtonText: {
     color: theme.colors.background,
@@ -116,8 +132,5 @@ const styles = StyleSheet.create(theme => ({
   },
   disabledButtonText: {
     color: theme.colors.textSecondary,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

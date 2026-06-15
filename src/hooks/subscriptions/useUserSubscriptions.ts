@@ -1,19 +1,24 @@
 /**
  * User Subscriptions
  *
- * Centralizes user-related subscriptions using the unified SubscriptionService.
- * Handles real-time updates for:
- * - Account updates (email, timezone, preferences) via userUpdated
- * - Profile changes (name, avatar, bio, etc.) via userProfileChanged
- * - Lifecycle events (membership, moderation) via userLifecycleEvents
+ * Centralizes user-related real-time updates using the unified
+ * SubscriptionService. Opens a single consolidated `userEvents(userId)` stream
+ * carrying account updates, profile changes, and lifecycle events
+ * (membership/moderation), discriminated by `subtype` — replacing the former
+ * userUpdated + userProfileChanged + userLifecycleEvents subscriptions. One
+ * stream keeps the per-user concurrent-subscription count low (the server caps
+ * it cluster-wide).
+ *
+ * - ACCOUNT_UPDATED (User node) / PROFILE_CHANGED (UserProfile node): Apollo
+ *   auto-normalizes the entity by id — no manual cache work.
+ * - Lifecycle subtypes: membership add/remove + moderation (ban/suspend/warn),
+ *   with context (parents / reason / warningCount) carried on the envelope.
  */
 
 import { useApolloClient, useSubscription } from '@apollo/client/react';
 import {
-  UserUpdatedDocument,
-  UserProfileChangedDocument,
-  UserLifecycleEventsDocument,
-  type UserLifecycleEventsSubscription,
+  UserEventsDocument,
+  type UserEventsSubscription,
 } from '#operations/auth/user.generated';
 import {
   GetHomesDocument,
@@ -25,17 +30,17 @@ import {
   CacheStrategy,
   type SubscriptionApolloClient,
 } from '#/services/subscriptions/types';
-import { UserLifecycleEventSubtype } from '#/graphql/generated/schemaTypes';
+import { UserEventSubtype } from '#/graphql/generated/schemaTypes';
 import { useSelectedHomeId } from '#store/useAppStore';
 import { useStore } from '#store/index';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { toastService } from '#/services/toastService';
 import { authService } from '#/services/authService';
 
-type LifecyclePayload = UserLifecycleEventsSubscription['userLifecycleEvents'];
+type UserEventPayload = UserEventsSubscription['userEvents'];
 
 function handleRemovedFromHome(
-  payload: LifecyclePayload,
+  payload: UserEventPayload,
   client: SubscriptionApolloClient,
   selectedHomeId: string | null,
 ) {
@@ -74,7 +79,7 @@ function handleAddedToHome(client: SubscriptionApolloClient) {
 }
 
 function handleRemovedFromShoppingList(
-  payload: LifecyclePayload,
+  payload: UserEventPayload,
   client: SubscriptionApolloClient,
 ) {
   const listId = payload.parents?.shoppingListId;
@@ -95,11 +100,10 @@ function handleAddedToShoppingList() {
 }
 
 function handleBannedOrSuspended(
-  payload: LifecyclePayload,
-  subtype: UserLifecycleEventSubtype,
+  payload: UserEventPayload,
+  subtype: UserEventSubtype,
 ) {
-  const label =
-    subtype === UserLifecycleEventSubtype.Banned ? 'banned' : 'suspended';
+  const label = subtype === UserEventSubtype.Banned ? 'banned' : 'suspended';
   const reason = payload.reason ? `: ${payload.reason}` : '';
   toastService.error(`Your account has been ${label}${reason}`);
   authService.logout();
@@ -115,84 +119,61 @@ export function useUserSubscriptions(userId?: string) {
   const client = useApolloClient();
   const selectedHomeId = useSelectedHomeId() || null;
 
-  const userHandlers = subscriptionService.register({
-    subscriptionName: 'UserUpdated',
-    entityType: 'User',
-    enableDeduplication: true,
-    userId,
-    cacheUpdateStrategy: CacheStrategy.NONE,
-    enableLogging: true,
-  });
-
-  useSubscription(UserUpdatedDocument, {
-    variables: { userId },
-    skip: !userId,
-    ...userHandlers,
-  });
-
-  const profileHandlers = subscriptionService.register({
-    subscriptionName: 'UserProfileChanged',
-    entityType: 'UserProfile',
-    enableDeduplication: true,
-    userId,
-    cacheUpdateStrategy: CacheStrategy.NONE,
-    enableLogging: true,
-  });
-
-  useSubscription(UserProfileChangedDocument, {
-    variables: { userId },
-    skip: !userId,
-    ...profileHandlers,
-  });
-
-  const lifecycleHandlers = subscriptionService.register<LifecyclePayload>({
-    subscriptionName: 'UserLifecycleEvents',
+  const userEventHandlers = subscriptionService.register<UserEventPayload>({
+    subscriptionName: 'UserEvents',
     entityType: 'User',
     enableDeduplication: false,
     userId,
     cacheUpdateStrategy: CacheStrategy.NONE,
     enableLogging: true,
-    customOnData: (payload: LifecyclePayload) => {
+    customOnData: (payload: UserEventPayload) => {
       if (!payload) return;
 
       switch (payload.subtype) {
-        case UserLifecycleEventSubtype.RemovedFromHome:
+        // Apollo auto-normalizes the User / UserProfile node by id; no manual
+        // cache work needed (mirrors the former userUpdated / userProfileChanged
+        // subscriptions, which had no handler).
+        case UserEventSubtype.AccountUpdated:
+        case UserEventSubtype.ProfileChanged:
+          break;
+
+        case UserEventSubtype.RemovedFromHome:
           handleRemovedFromHome(payload, client, selectedHomeId);
           break;
 
-        case UserLifecycleEventSubtype.AddedToHome:
+        case UserEventSubtype.AddedToHome:
           handleAddedToHome(client);
           break;
 
-        case UserLifecycleEventSubtype.RemovedFromShoppingList:
+        case UserEventSubtype.RemovedFromShoppingList:
           handleRemovedFromShoppingList(payload, client);
           break;
 
-        case UserLifecycleEventSubtype.AddedToShoppingList:
+        case UserEventSubtype.AddedToShoppingList:
           handleAddedToShoppingList();
           break;
 
-        case UserLifecycleEventSubtype.Banned:
-        case UserLifecycleEventSubtype.Suspended:
+        case UserEventSubtype.Banned:
+        case UserEventSubtype.Suspended:
           handleBannedOrSuspended(payload, payload.subtype);
           break;
 
-        case UserLifecycleEventSubtype.Warned:
+        case UserEventSubtype.Warned:
           toastService.error(
             payload.reason || 'You received a warning from a moderator',
           );
           break;
 
-        case UserLifecycleEventSubtype.Unbanned:
-        case UserLifecycleEventSubtype.Unsuspended:
+        case UserEventSubtype.Unbanned:
+        case UserEventSubtype.Unsuspended:
           break;
       }
     },
   });
 
-  useSubscription(UserLifecycleEventsDocument, {
+  useSubscription(UserEventsDocument, {
     variables: { userId: userId! },
     skip: !userId,
-    ...lifecycleHandlers,
+    ...userEventHandlers,
   });
 }

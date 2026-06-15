@@ -1430,6 +1430,8 @@
     "remaining": "{{quantity}} {{unit}} të mbetur",
     "expiringTitle": "Artikuj që po skadojnë",
     "expiringEmpty": "Asnjë artikull nuk po skadon së shpejti",
+    "expiredTitle": "Artikuj të skaduar",
+    "expiredEmpty": "Asnjë artikull i skaduar",
     "addToShoppingFailed": "Shtimi në listën e blerjeve dështoi",
     "noListSelected": "Zgjidh më parë një listë blerjesh"
   },
@@ -1685,15 +1687,15 @@
   "pantrySelector": {
     "title": "Zgjidh qilarin",
     "emptyMessage": "Asnjë qilar i disponueshëm",
-    "createNewPantry": "Krijo qilar të ri",
-    "editSelectedPantry": "Modifiko qilarin e zgjedhur",
-    "viewAnalytics": "Shiko analitikën"
+    "createNewPantry": "Krijo",
+    "editSelectedPantry": "Modifiko",
+    "viewAnalytics": "Analitika"
   },
   "mealPlanSelector": {
     "title": "Zgjidh planin e vakteve",
     "emptyMessage": "Asnjë plan vaktesh i disponueshëm",
-    "createNewPlan": "Krijo plan të ri",
-    "createFromTemplate": "Krijo nga modeli",
+    "createNewPlan": "Krijo",
+    "createFromTemplate": "Modeli",
     "personalSubtitle": "Personal"
   },
   "pantryHeader": {
@@ -2074,6 +2076,7 @@
     "tabFreezer": "Ngrirës",
     "tabPantry": "Qilar",
     "expiringCount": "{{count}} po skadojnë",
+    "expiredCount": "{{count}} të skaduar",
     "lowStockCount": "{{count}} pak gjendje",
     "analyticsAccessibility": "Shiko analitikën",
     "emptyTitle": "Qilari yt është bosh",
@@ -2209,9 +2212,9 @@
     "emptyMessage": "Asnjë listë blerjeje në dispozicion",
     "personalLists": "Listat Personale",
     "unknownHome": "Shtëpi e Panjohur",
-    "createNewList": "Krijo Listë të Re",
-    "shareCurrentList": "Ndaj Listën Aktuale",
-    "listSettings": "Cilësimet e Listës",
+    "createNewList": "Krijo",
+    "shareCurrentList": "Ndaj",
+    "listSettings": "Cilësimet",
     "cancel": "Anulo",
     "cannotDeleteShared": "Nuk mund të fshihet (e ndarë)",
     "sharedBy": "Ndarë nga {{name}}",

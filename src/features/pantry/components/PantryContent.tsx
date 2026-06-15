@@ -115,6 +115,7 @@ export const PantryContent = React.forwardRef<
       onAnalyticsPress,
       onLowStockNavigate,
       onExpiringNavigate,
+      onExpiredNavigate,
       totalCount,
       onAddItem,
       hasMore = false,
@@ -518,6 +519,7 @@ export const PantryContent = React.forwardRef<
                       onAnalyticsPress={onAnalyticsPress}
                       onLowStockNavigate={onLowStockNavigate}
                       onExpiringNavigate={onExpiringNavigate}
+                      onExpiredNavigate={onExpiredNavigate}
                       sortLabel={`${t('pantryScreen.sort')} ${
                         sortDirection === PantrySortDirection.ASC ? '↑' : '↓'
                       }`}

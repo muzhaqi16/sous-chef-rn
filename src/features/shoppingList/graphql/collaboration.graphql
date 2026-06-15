@@ -97,22 +97,8 @@ mutation DeclineShoppingListInvite($input: DeclineShoppingListInviteInput!) {
   }
 }
 
-# ============================================
-# SUBSCRIPTIONS
-# ============================================
-
-subscription CollaborationChanges($listId: ID!) {
-  collaborationChanged(listId: $listId) {
-    mutation
-    collaborator {
-      id
-      ...useShoppingListSubscriptions_collaborator
-      canEdit
-      invitedAt
-      lastViewedAt
-    }
-    listId
-    timestamp
-    userId
-  }
-}
+# NOTE: The former `CollaborationChanges($listId)` subscription has been folded
+# into `myShoppingListsEvents` (see shoppingList.graphql) as the
+# COLLABORATION_CHANGED subtype — one user-scoped stream now carries collaborator
+# lifecycle alongside item/list/status events, keeping the per-user concurrent-
+# subscription count low (the server caps it cluster-wide).

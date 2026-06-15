@@ -12,10 +12,23 @@ jest.mock('#store', () => ({
 // Environment is auto-mocked via jest.setup.js. Override `getApiConfig` so
 // the WS link picks up the local test URL.
 import { Environment } from '#/utils/environment';
+
+// graphql-ws's lifecycle handlers are passed as the `on` config to
+// createClient at module-import time. Capture that object reference in
+// beforeAll — the per-test `clearAllMocks()` wipes `createClient.mock.calls`,
+// but the captured object itself survives.
+type WsLifecycleHandlers = {
+  connected: (socket: unknown, payload?: Record<string, unknown>) => void;
+  closed: (event: unknown) => void;
+};
+let onHandlers: WsLifecycleHandlers;
+
 beforeAll(() => {
   (Environment.getApiConfig as jest.Mock).mockReturnValue({
     wsUrl: 'ws://localhost:4000/graphql',
   });
+  const { createClient } = require('graphql-ws');
+  onHandlers = createClient.mock.calls[0][0].on as WsLifecycleHandlers;
 });
 
 // Mock errorSerialization
@@ -181,6 +194,50 @@ describe('wsLink', () => {
       enableAutoReconnect();
       const state = getWebSocketState();
       expect(state.hasClient).toBe(true);
+    });
+  });
+
+  // Regression: a server that closes the socket immediately after the
+  // handshake (concurrent-subscription cap exceeded → code 1000) must keep
+  // escalating the backoff, not loop at the 1s base delay forever.
+  describe('reconnect backoff stability window', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+      // Reset the module-level backoff counter + any pending timers.
+      disableAutoReconnect();
+      enableAutoReconnect();
+    });
+
+    afterEach(() => {
+      jest.clearAllTimers();
+      jest.useRealTimers();
+      // Leave the module singleton in a clean state for later suites.
+      disableAutoReconnect();
+      enableAutoReconnect();
+    });
+
+    it('does NOT reset the backoff counter when the socket closes before the stability window', () => {
+      // Successful handshake immediately followed by a server-initiated close.
+      onHandlers.connected({}, undefined);
+      onHandlers.closed({ code: 1000, reason: '', wasClean: true });
+
+      // The close scheduled a reconnect; fire it to advance the attempt counter.
+      jest.advanceTimersByTime(31000);
+
+      expect(getWebSocketState().reconnectAttempts).toBeGreaterThan(0);
+    });
+
+    it('resets the backoff counter once a connection survives the stability window', () => {
+      // First push the counter above zero via a connect→close cycle.
+      onHandlers.connected({}, undefined);
+      onHandlers.closed({ code: 1000, reason: '', wasClean: true });
+      jest.advanceTimersByTime(31000);
+      expect(getWebSocketState().reconnectAttempts).toBeGreaterThan(0);
+
+      // A connection that stays open past CONNECTION_STABLE_MS clears it.
+      onHandlers.connected({}, undefined);
+      jest.advanceTimersByTime(11000);
+      expect(getWebSocketState().reconnectAttempts).toBe(0);
     });
   });
 });

@@ -1430,6 +1430,8 @@
     "remaining": "{{quantity}} {{unit}} restantes",
     "expiringTitle": "Artículos por caducar",
     "expiringEmpty": "No hay artículos por caducar pronto",
+    "expiredTitle": "Artículos caducados",
+    "expiredEmpty": "No hay artículos caducados",
     "addToShoppingFailed": "No se pudo añadir a la lista de la compra",
     "noListSelected": "Selecciona primero una lista de la compra"
   },
@@ -1685,15 +1687,15 @@
   "pantrySelector": {
     "title": "Seleccionar despensa",
     "emptyMessage": "No hay despensas disponibles",
-    "createNewPantry": "Crear nueva despensa",
-    "editSelectedPantry": "Editar despensa seleccionada",
-    "viewAnalytics": "Ver análisis"
+    "createNewPantry": "Crear",
+    "editSelectedPantry": "Editar",
+    "viewAnalytics": "Análisis"
   },
   "mealPlanSelector": {
     "title": "Seleccionar plan de comidas",
     "emptyMessage": "No hay planes de comidas disponibles",
-    "createNewPlan": "Crear nuevo plan",
-    "createFromTemplate": "Crear desde plantilla",
+    "createNewPlan": "Crear",
+    "createFromTemplate": "Plantilla",
     "personalSubtitle": "Personal"
   },
   "pantryHeader": {
@@ -2074,6 +2076,7 @@
     "tabFreezer": "Congelador",
     "tabPantry": "Despensa",
     "expiringCount": "{{count}} por vencer",
+    "expiredCount": "{{count}} caducados",
     "lowStockCount": "{{count}} poca existencia",
     "analyticsAccessibility": "Ver analíticas",
     "emptyTitle": "Tu despensa está vacía",
@@ -2209,9 +2212,9 @@
     "emptyMessage": "No hay listas de compras disponibles",
     "personalLists": "Listas Personales",
     "unknownHome": "Hogar Desconocido",
-    "createNewList": "Crear Nueva Lista",
-    "shareCurrentList": "Compartir Lista Actual",
-    "listSettings": "Ajustes de la Lista",
+    "createNewList": "Crear",
+    "shareCurrentList": "Compartir",
+    "listSettings": "Ajustes",
     "cancel": "Cancelar",
     "cannotDeleteShared": "No se puede eliminar (compartida)",
     "sharedBy": "Compartida por {{name}}",

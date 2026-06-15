@@ -38,6 +38,12 @@ export interface CachedImageProps
    * dramatically reducing decoded bitmap memory for large source images.
    */
   displaySize?: number;
+  /**
+   * Called when the image fails to load (broken/unreachable URI). Runs
+   * alongside the internal error overlay so a parent can react — e.g. collapse
+   * a hero rather than show the broken-image placeholder.
+   */
+  onError?: () => void;
 }
 
 type LoadState = 'idle' | 'loading' | 'success' | 'error';
@@ -62,6 +68,7 @@ export const CachedImage = ({
   resizeMode = 'cover',
   containerStyle,
   displaySize,
+  onError,
   ...rest
 }: CachedImageProps) => {
   // useRecyclingState resets synchronously when `uri` changes (cell recycle).
@@ -91,6 +98,7 @@ export const CachedImage = ({
   };
 
   const handleFailure = () => {
+    onError?.();
     setLoadState('error', true);
   };
 

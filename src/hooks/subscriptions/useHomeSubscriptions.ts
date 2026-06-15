@@ -1,169 +1,123 @@
 /**
  * Home/Membership Subscriptions
  *
- * Centralizes all home and membership-related subscriptions using the unified
- * SubscriptionService. Handles real-time updates for:
- * - Membership changes (role updates, permissions)
- * - Member join/leave events
- * - Home metadata updates
+ * Centralizes home + membership real-time updates using the unified
+ * SubscriptionService. Opens a single consolidated `homeEvents(homeId)` stream
+ * carrying both membership changes (MEMBERSHIP_*) and invite lifecycle
+ * (INVITE_*), discriminated by `subtype` — replacing the former
+ * membershipChanged + homeInviteChanged subscriptions. One stream keeps the
+ * per-user concurrent-subscription count low (the server caps it cluster-wide).
  *
- * These subscriptions automatically update the Apollo cache and provide
- * deduplication to prevent self-echo and duplicate updates.
+ * Handles:
+ * - Membership changes (join/leave, role/permission updates) — Apollo
+ *   auto-normalizes the Membership entity by id.
+ * - Invite lifecycle (created/accepted/declined/revoked) — maintains
+ *   me.pendingHomeInvites.
  */
 
 import { useIsHomeSelectionReady, useSelectedHomeId } from '#store/useAppStore';
 import { useSubscription } from '@apollo/client/react';
 import {
-  MembershipChangesDocument,
-  type MembershipChangesSubscription,
-} from '#operations/home/membership.generated';
-import {
-  HomeInviteChangedDocument,
-  type HomeInviteChangedSubscription,
+  HomeEventsDocument,
+  type HomeEventsSubscription,
 } from '#operations/home/home.generated';
-import { HomeInviteMutationType } from '#/graphql/generated/schemaTypes';
+import { HomeEventSubtype } from '#/graphql/generated/schemaTypes';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import {
   CacheStrategy,
   type SubscriptionApolloClient,
 } from '#/services/subscriptions/types';
 import { logger } from '#/utils/environment';
-
-type MembershipChangesPayload =
-  MembershipChangesSubscription['membershipChanged'];
-type HomeInviteChangedPayload =
-  HomeInviteChangedSubscription['homeInviteChanged'];
 import {
   createAddToParentArrayUpdater,
   createRemoveFromParentArrayUpdater,
 } from '#/apollo/utils/cacheUpdaters';
 
+type HomeEventsPayload = HomeEventsSubscription['homeEvents'];
+
+// Invite array updaters — module scope (constant config, no closure deps).
+const addInviteToCache = createAddToParentArrayUpdater<{ id: string }>(
+  'User',
+  'pendingHomeInvites',
+);
+const removeInviteFromCache = createRemoveFromParentArrayUpdater(
+  'User',
+  'pendingHomeInvites',
+  'HomeInvite',
+);
+
 /**
- * Initialize home/membership subscriptions for the current user
+ * Initialize home/membership subscriptions for the current user.
  *
- * This hook should be called once at the app level (in SubscriptionProvider)
- * It automatically subscribes to relevant membership changes for the
- * user's selected home.
+ * Subscribes to `homeEvents` for the user's selected home. Mounted once at the
+ * app level (in AuthenticatedSubscriptions).
  *
- * @param userId - Current user ID for deduplication
+ * @param userId - Current user ID for deduplication / self-echo suppression
  */
 export function useHomeSubscriptions(userId?: string) {
-  // Get selected home from global store
   const selectedHomeId = useSelectedHomeId() || undefined;
   const isHomeSelectionReady = useIsHomeSelectionReady();
 
-  //
-  // Membership Changes Subscription (consolidated)
-  // Handles all membership events: JOINED, LEFT, UPDATED, ROLE_CHANGED
-  // Uses customOnData to branch on changeType for cache strategy
-  //
-  const membershipHandlers =
-    subscriptionService.register<MembershipChangesPayload>({
-      subscriptionName: 'MembershipChanges',
-      entityType: 'Membership',
-      enableDeduplication: true,
-      userId,
-      cacheUpdateStrategy: CacheStrategy.NONE,
-      enableLogging: true,
-      entityId: selectedHomeId,
-      customOnData: (payload: MembershipChangesPayload) => {
-        if (!payload) return;
+  const homeEventHandlers = subscriptionService.register<HomeEventsPayload>({
+    subscriptionName: 'HomeEvents',
+    entityType: 'Home',
+    enableDeduplication: true,
+    userId,
+    cacheUpdateStrategy: CacheStrategy.NONE,
+    enableLogging: true,
+    entityId: selectedHomeId,
+    customOnData: (
+      payload: HomeEventsPayload,
+      client: SubscriptionApolloClient,
+    ) => {
+      if (!payload) return;
 
-        const changeType = payload.changeType;
-
-        switch (changeType) {
-          case 'JOINED':
-          case 'LEFT':
-            // Manual cache updates for join/leave events
-            // These require adding/removing from the memberships connection
-            break;
-          case 'UPDATED':
-          case 'ROLE_CHANGED':
-            // Automatic cache updates for role/permission changes
-            // Apollo auto-normalizes these since the entity already exists
-            break;
-          default:
-            break;
+      // Skip self-echo — local mutations already updated the cache.
+      if (payload.actorUserId && userId && payload.actorUserId === userId) {
+        if (__DEV__) {
+          logger.debug('⏭️ [HomeEvents] Skipping self-echo');
         }
-      },
-    });
+        return;
+      }
 
-  useSubscription(MembershipChangesDocument, {
-    variables: { homeId: selectedHomeId! },
-    skip: !selectedHomeId || !isHomeSelectionReady,
-    ...membershipHandlers,
+      switch (payload.subtype) {
+        // Membership changes: Apollo auto-normalizes the Membership entity by
+        // id (role/permission/status merge automatically). Join/leave
+        // connection membership self-corrects via cache-and-network on next read.
+        case HomeEventSubtype.MembershipJoined:
+        case HomeEventSubtype.MembershipLeft:
+        case HomeEventSubtype.MembershipUpdated:
+        case HomeEventSubtype.MembershipRoleChanged:
+          break;
+
+        // New invite sent → add to me.pendingHomeInvites.
+        case HomeEventSubtype.InviteCreated:
+          if (userId && payload.node.__typename === 'HomeInvite') {
+            addInviteToCache(client.cache, userId, payload.node);
+          }
+          break;
+
+        // Invite accepted/declined/revoked → remove from me.pendingHomeInvites
+        // and evict the entity.
+        case HomeEventSubtype.InviteAccepted:
+        case HomeEventSubtype.InviteDeclined:
+        case HomeEventSubtype.InviteRevoked:
+          if (userId && payload.node.__typename === 'HomeInvite') {
+            removeInviteFromCache(client.cache, userId, payload.node.id, {
+              evictItem: true,
+            });
+          }
+          break;
+
+        default:
+          break;
+      }
+    },
   });
 
-  //
-  // Home Invite Changed Subscription
-  // Handles invite lifecycle: CREATED, ACCEPTED, DECLINED, REVOKED
-  // Updates the me.pendingHomeInvites array in cache
-  //
-  const addInviteToCache = createAddToParentArrayUpdater<{ id: string }>(
-    'User',
-    'pendingHomeInvites',
-  );
-  const removeInviteFromCache = createRemoveFromParentArrayUpdater(
-    'User',
-    'pendingHomeInvites',
-    'HomeInvite',
-  );
-
-  const inviteHandlers = subscriptionService.register<HomeInviteChangedPayload>(
-    {
-      subscriptionName: 'HomeInviteChanged',
-      entityType: 'HomeInvite',
-      enableDeduplication: true,
-      userId,
-      cacheUpdateStrategy: CacheStrategy.NONE,
-      enableLogging: true,
-      entityId: selectedHomeId,
-      customOnData: (
-        payload: HomeInviteChangedPayload,
-        client: SubscriptionApolloClient,
-      ) => {
-        if (!payload) return;
-
-        // Skip self-echo
-        if (payload.userId && userId && payload.userId === userId) {
-          logger.debug('⏭️ [HomeInviteChanged] Skipping self-echo');
-          return;
-        }
-
-        const mutation = payload.mutation;
-        const invite = payload.homeInvite;
-
-        if (!invite?.id) return;
-
-        switch (mutation) {
-          case HomeInviteMutationType.Created: {
-            // Add new invite to me.pendingHomeInvites
-            if (userId) {
-              addInviteToCache(client.cache, userId, invite);
-            }
-            break;
-          }
-          case HomeInviteMutationType.Accepted:
-          case HomeInviteMutationType.Declined:
-          case HomeInviteMutationType.Revoked: {
-            // Remove from me.pendingHomeInvites and evict entity
-            if (userId) {
-              removeInviteFromCache(client.cache, userId, invite.id, {
-                evictItem: true,
-              });
-            }
-            break;
-          }
-          default:
-            break;
-        }
-      },
-    },
-  );
-
-  useSubscription(HomeInviteChangedDocument, {
+  useSubscription(HomeEventsDocument, {
     variables: { homeId: selectedHomeId! },
     skip: !selectedHomeId || !isHomeSelectionReady,
-    ...inviteHandlers,
+    ...homeEventHandlers,
   });
 }

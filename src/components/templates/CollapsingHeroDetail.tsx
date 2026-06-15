@@ -46,6 +46,14 @@ const BAR_FADE_START = COLLAPSE_POINT - 24;
 const TITLE_FADE_START = BAR_FADE_START;
 const TITLE_FADE_END = BAR_FADE_END;
 
+// No-hero screens keep their own large title at the top of the content and
+// leave the inline bar title hidden until that large title scrolls up under the
+// (already-solid) bar — the same scroll-reveal as the hero variant, just over a
+// short fixed band. The large title is occluded by the opaque bar as it passes,
+// so the band only needs to roughly track it; the two titles never coexist.
+const NO_HERO_TITLE_FADE_START = 8;
+const NO_HERO_TITLE_FADE_END = HEADER_BAND_HEIGHT;
+
 const CIRCLE_SHADOW = [
   {
     offsetX: 0,
@@ -78,8 +86,9 @@ interface CollapsingHeroDetailProps {
   onBack: () => void;
   /** Trailing action chips. */
   actions?: HeaderAction[];
-  /** Inline bar title. Fades in as the hero collapses (or shows immediately
-   *  when there's no hero). */
+  /** Inline bar title. Hidden at rest; fades in on scroll — as the hero
+   *  collapses, or (with no hero) as the screen's large title scrolls up under
+   *  the bar. */
   title?: string;
   /**
    * Renders the hero image at the given height (already grown by the top inset
@@ -160,7 +169,17 @@ export const CollapsingHeroDetail: React.FC<CollapsingHeroDetailProps> = ({
   });
 
   const titleStyle = useAnimatedStyle(() => {
-    if (!hasHero) return { opacity: title ? 1 : 0 };
+    if (!title) return { opacity: 0 };
+    if (!hasHero) {
+      return {
+        opacity: interpolate(
+          scrollY.get(),
+          [NO_HERO_TITLE_FADE_START, NO_HERO_TITLE_FADE_END],
+          [0, 1],
+          Extrapolation.CLAMP,
+        ),
+      };
+    }
     return {
       opacity: interpolate(
         scrollY.get(),

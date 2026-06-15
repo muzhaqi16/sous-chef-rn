@@ -27,7 +27,7 @@ export interface PantryContentProps {
   // Stats
   stats?: Pick<
     PantryStats,
-    'totalItems' | 'expiringCount' | 'lowStockCount'
+    'totalItems' | 'expiringCount' | 'expiredCount' | 'lowStockCount'
   > | null;
 
   // Items — opaque fragment refs; the leaf `PantryItemCard` unmasks each via
@@ -72,6 +72,7 @@ export interface PantryContentProps {
   onAnalyticsPress?: () => void;
   onLowStockNavigate?: () => void;
   onExpiringNavigate?: () => void;
+  onExpiredNavigate?: () => void;
 
   // List actions
   onRefresh?: () => void;

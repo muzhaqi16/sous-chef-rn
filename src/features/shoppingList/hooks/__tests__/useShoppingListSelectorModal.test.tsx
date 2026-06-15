@@ -226,9 +226,9 @@ describe('useShoppingListSelectorModal', () => {
     const { actions } = result.current.listConfig;
     expect(actions).toBeDefined();
     expect(actions!.length).toBe(3);
-    expect(actions![0].label).toBe('Create New List');
-    expect(actions![1].label).toBe('Share Current List');
-    expect(actions![2].label).toBe('List Settings');
+    expect(actions![0].label).toBe('Create');
+    expect(actions![1].label).toBe('Share');
+    expect(actions![2].label).toBe('Settings');
   });
 
   it('has only create action when no currentListId', () => {
@@ -242,7 +242,7 @@ describe('useShoppingListSelectorModal', () => {
 
     const { actions } = result.current.listConfig;
     expect(actions!.length).toBe(1);
-    expect(actions![0].label).toBe('Create New List');
+    expect(actions![0].label).toBe('Create');
   });
 
   it('sets title to "Select Shopping List" when not in delete mode', () => {
@@ -487,7 +487,7 @@ describe('useShoppingListSelectorModal', () => {
     expect(result.current.listConfig.headerRight).toBeUndefined();
   });
 
-  it('action navigates to ListSettings when Create New List pressed', () => {
+  it('action navigates to ListSettings when Create pressed', () => {
     const { result } = renderHook(() =>
       useShoppingListSelectorModal({
         listDataWithOwnership: makeLists(),
@@ -504,7 +504,7 @@ describe('useShoppingListSelectorModal', () => {
     expect(mockNav.toListSettings).toHaveBeenCalledWith();
   });
 
-  it('action navigates to ShareList when Share Current List pressed', () => {
+  it('action navigates to ShareList when Share pressed', () => {
     const { result } = renderHook(() =>
       useShoppingListSelectorModal({
         listDataWithOwnership: makeLists(),
@@ -522,7 +522,7 @@ describe('useShoppingListSelectorModal', () => {
     });
   });
 
-  it('action navigates to ListSettings with listId when List Settings pressed', () => {
+  it('action navigates to ListSettings with listId when Settings pressed', () => {
     const { result } = renderHook(() =>
       useShoppingListSelectorModal({
         listDataWithOwnership: makeLists(),

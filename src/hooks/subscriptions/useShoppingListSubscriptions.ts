@@ -2,15 +2,16 @@
  * Shopping List Subscriptions
  *
  * Centralizes all shopping list-related subscriptions using the unified
- * SubscriptionService. The server caps concurrent subscriptions per client,
- * so this hook opens exactly two streams:
+ * SubscriptionService. The server caps concurrent subscriptions per client
+ * (per-user, cluster-wide), so this hook opens exactly ONE stream:
  * - MyShoppingListsEvents (user-scoped): every shopping-list domain event for
  *   all of the user's lists, discriminated by `subtype` — ITEMS_CHANGED,
- *   LIST_UPDATED, STATUS_CHANGED, ITEMS_BATCH_CLEARED (mirrors pantryEvents);
- *   connection membership is maintained for the active list only
- * - CollaborationChanges (active list): collaborator lifecycle
+ *   LIST_UPDATED, STATUS_CHANGED, ITEMS_BATCH_CLEARED, and COLLABORATION_CHANGED
+ *   (collaborator lifecycle, folded in from the former per-list
+ *   collaborationChanged subscription; mirrors pantryEvents). Connection
+ *   membership is maintained for the active list only.
  *
- * These subscriptions automatically update the Apollo cache and provide
+ * This subscription automatically updates the Apollo cache and provides
  * deduplication to prevent self-echo and duplicate updates.
  */
 
@@ -23,10 +24,6 @@ import {
   MyShoppingListsEventsDocument,
   type MyShoppingListsEventsSubscription,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import {
-  CollaborationChangesDocument,
-  type CollaborationChangesSubscription,
-} from '#features/shoppingList/graphql/collaboration.generated';
 import {
   CollaboratorStatus,
   MutationType,
@@ -46,8 +43,6 @@ import {
 
 type MyShoppingListsEventsPayload =
   MyShoppingListsEventsSubscription['myShoppingListsEvents'];
-type CollaborationChangesPayload =
-  CollaborationChangesSubscription['collaborationChanged'];
 import {
   removeFromShoppingListItemsConnection,
   moveShoppingListItemToPurchased,
@@ -173,6 +168,19 @@ type ScheduleAnimationFn = (
  */
 type ScheduleEntryAnimationFn = (itemId: string, direction: 1 | -1) => void;
 
+// Collaborator connection updaters — module scope (constant config, no closure
+// deps) so the MyShoppingListsEvents handler can reference them directly.
+const addCollaborator = createAddToParentConnectionUpdater<{ id: string }>(
+  'ShoppingList',
+  'collaboratorsConnection',
+  'ShoppingListCollaborator',
+);
+const removeCollaborator = createRemoveFromParentConnectionUpdater(
+  'ShoppingList',
+  'collaboratorsConnection',
+  'ShoppingListCollaborator',
+);
+
 /**
  * Initialize shopping list subscriptions for the current user
  *
@@ -255,6 +263,56 @@ export function useShoppingListSubscriptions(
         if (payload.actorUserId && userId && payload.actorUserId === userId) {
           if (__DEV__) {
             logger.debug('⏭️ [Subscription] Skipping self-echo (same user)');
+          }
+          return;
+        }
+
+        // Collaborator lifecycle (CREATED/UPDATED/DELETED) for the active list.
+        // Maintains collaboratorsConnection. Self-echo is already filtered by the
+        // shared actorUserId skip above, so the server must set actorUserId on the
+        // envelope for COLLABORATION_CHANGED events.
+        if (payload.subtype === ShoppingListEventSubtype.CollaborationChanged) {
+          if (payload.node?.__typename !== 'ShoppingListCollaborator') return;
+
+          const collaborator =
+            client.cache.readFragment<UseShoppingListSubscriptions_CollaboratorFragment>(
+              {
+                fragment: UseShoppingListSubscriptions_CollaboratorFragmentDoc,
+                fragmentName: 'useShoppingListSubscriptions_collaborator',
+                from: payload.node,
+              },
+            );
+          if (!collaborator?.id) return;
+
+          switch (payload.mutation) {
+            case MutationType.Created:
+              addCollaborator(
+                client.cache,
+                selectedShoppingListId,
+                collaborator,
+              );
+              break;
+            case MutationType.Updated:
+              // Apollo auto-normalizes role/permission changes by id; ensure the
+              // collaborator is in the connection once they become ACTIVE.
+              if (collaborator.status === CollaboratorStatus.Active) {
+                addCollaborator(
+                  client.cache,
+                  selectedShoppingListId,
+                  collaborator,
+                );
+              }
+              break;
+            case MutationType.Deleted:
+              removeCollaborator(
+                client.cache,
+                selectedShoppingListId,
+                collaborator.id,
+                { evictItem: true },
+              );
+              break;
+            default:
+              break;
           }
           return;
         }
@@ -451,99 +509,5 @@ export function useShoppingListSubscriptions(
   useSubscription(MyShoppingListsEventsDocument, {
     skip: !userId,
     ...myListsEventsHandlers,
-  });
-
-  //
-  // Collaboration Changes Subscription
-  // Handles collaborator lifecycle for the currently selected shopping list:
-  // - CREATED: new invite sent → add to collaboratorsConnection
-  // - UPDATED: invite accepted, role changed, or permissions updated →
-  //   Apollo auto-normalizes; add to connection if newly active
-  // - DELETED: invite declined or collaborator removed → remove from connection
-  //
-  const addCollaborator = createAddToParentConnectionUpdater<{ id: string }>(
-    'ShoppingList',
-    'collaboratorsConnection',
-    'ShoppingListCollaborator',
-  );
-  const removeCollaborator = createRemoveFromParentConnectionUpdater(
-    'ShoppingList',
-    'collaboratorsConnection',
-    'ShoppingListCollaborator',
-  );
-
-  const collaborationHandlers =
-    subscriptionService.register<CollaborationChangesPayload>({
-      subscriptionName: 'CollaborationChanges',
-      entityType: 'ShoppingListCollaborator',
-      enableDeduplication: true,
-      userId,
-      cacheUpdateStrategy: CacheStrategy.NONE,
-      enableLogging: true,
-      entityId: selectedShoppingListId,
-      customOnData: (
-        payload: CollaborationChangesPayload,
-        client: SubscriptionApolloClient,
-      ) => {
-        if (!payload) return;
-
-        // Skip self-echo
-        if (payload.userId && userId && payload.userId === userId) {
-          if (__DEV__) {
-            logger.debug('⏭️ [CollaborationChanges] Skipping self-echo');
-          }
-          return;
-        }
-
-        const mutation = payload.mutation;
-        const collaboratorRef = payload.collaborator;
-        const listId = payload.listId;
-
-        if (!collaboratorRef || !listId) return;
-
-        // Materialize the masked ShoppingListCollaborator fragment so we can
-        // read `id` (cache lookup) and `status` (for the Active branch).
-        const collaborator =
-          client.cache.readFragment<UseShoppingListSubscriptions_CollaboratorFragment>(
-            {
-              fragment: UseShoppingListSubscriptions_CollaboratorFragmentDoc,
-              fragmentName: 'useShoppingListSubscriptions_collaborator',
-              from: collaboratorRef,
-            },
-          );
-
-        if (!collaborator?.id) return;
-
-        switch (mutation) {
-          case MutationType.Created:
-            // New invite sent or collaborator added
-            addCollaborator(client.cache, listId, collaborator);
-            break;
-          case MutationType.Updated:
-            // Invite accepted, role changed, or permissions updated.
-            // Apollo auto-normalizes the collaborator entity by id,
-            // so role/permission changes merge automatically.
-            // If the collaborator just became ACTIVE (invite accepted),
-            // ensure they're in the connection.
-            if (collaborator.status === CollaboratorStatus.Active) {
-              addCollaborator(client.cache, listId, collaborator);
-            }
-            break;
-          case MutationType.Deleted:
-            // Invite declined or collaborator removed
-            removeCollaborator(client.cache, listId, collaborator.id, {
-              evictItem: true,
-            });
-            break;
-          default:
-            break;
-        }
-      },
-    });
-
-  useSubscription(CollaborationChangesDocument, {
-    variables: { listId: selectedShoppingListId! },
-    skip: !selectedShoppingListId,
-    ...collaborationHandlers,
   });
 }

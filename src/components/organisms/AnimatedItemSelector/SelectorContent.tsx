@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, type LayoutChangeEvent } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import Animated, {
   FadeIn,
@@ -6,8 +7,8 @@ import Animated, {
   LinearTransition,
 } from 'react-native-reanimated';
 import { Icon } from '#utils/iconUtils';
+import { useActionTrayScroll } from '#components/templates/ActionTray/ActionTrayScrollContext';
 import { SelectorItemContainer } from './SelectorItemContainer';
-import { ActionButtons } from './ActionButtons';
 import type { SelectorConfig, SelectableItem } from './types';
 import { Text } from '#components/atoms/Text';
 import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
@@ -47,14 +48,47 @@ export const SelectorContent = <T extends SelectableItem>({
     emptyMessage = 'No items available',
     keyExtractor,
     renderCustomItem,
-    actions,
   } = config;
 
-  // Scrolling is owned by the `ActionTray`'s `BottomSheetScrollView` (it renders
-  // this content with `scrollable`). We must NOT add another scrollable here —
-  // nesting one inside the tray's scroll view would give gorhom two competing
-  // content-height sources and break dynamic sizing. So the list + actions just
-  // lay out naturally and the sheet grows (then scrolls) within its 70% cap.
+  // This component renders only the scrollable list — the action buttons are
+  // pinned by `ActionTray` via its `footer` prop. Scrolling is owned by the
+  // tray's `BottomSheetScrollView`; never add another scrollable here (two
+  // content-height sources break gorhom's dynamic sizing).
+
+  // On open, scroll the selected row into the centre of the viewport. We
+  // capture its Y via onLayout, then scroll once the tray's viewport height is
+  // known. Short lists clamp to 0 (no scroll); reset per open since the tray
+  // unmounts its content on close.
+  const scroll = useActionTrayScroll();
+  const [selectedLayout, setSelectedLayout] = useState<{
+    y: number;
+    height: number;
+  } | null>(null);
+  const didCenterRef = useRef(false);
+
+  const handleSelectedLayout = (event: LayoutChangeEvent) => {
+    const { y, height } = event.nativeEvent.layout;
+    setSelectedLayout({ y, height });
+  };
+
+  useEffect(() => {
+    if (didCenterRef.current || selectedLayout == null || !scroll) return;
+    const { viewportHeight, scrollToContentOffset, isReady } = scroll;
+    // Wait until the viewport is measured AND the sheet has settled open —
+    // gorhom keeps the scrollable locked during the open animation, so an
+    // earlier scroll would be dropped.
+    if (!isReady || viewportHeight <= 0) return;
+    didCenterRef.current = true;
+    // Center the selected row's midpoint in the viewport. Using the row's
+    // measured height keeps this correct if the row size changes — no magic
+    // constant coupled to SelectorItemContainer's layout. Animate so the list
+    // eases to the row instead of snapping.
+    const { y, height } = selectedLayout;
+    scrollToContentOffset(
+      Math.max(0, y + height / 2 - viewportHeight / 2),
+      true,
+    );
+  }, [selectedLayout, scroll]);
 
   const renderItem = (item: T) => {
     const isSelected = item.id === selectedId;
@@ -94,21 +128,24 @@ export const SelectorContent = <T extends SelectableItem>({
     return (
       <Animated.View layout={LinearTransition} style={styles.container}>
         <EmptyState message={emptyMessage} />
-        <ActionButtons actions={actions} />
       </Animated.View>
     );
   }
 
   return (
-    <Animated.View layout={LinearTransition} style={styles.container}>
-      <Animated.View entering={FadeIn} layout={LinearTransition}>
-        {data.map(item => (
-          <React.Fragment key={keyExtractor ? keyExtractor(item) : item.id}>
-            {renderItem(item)}
-          </React.Fragment>
-        ))}
-      </Animated.View>
-      <ActionButtons actions={actions} />
+    <Animated.View
+      entering={FadeIn}
+      layout={LinearTransition}
+      style={styles.container}
+    >
+      {data.map(item => (
+        <View
+          key={keyExtractor ? keyExtractor(item) : item.id}
+          onLayout={item.id === selectedId ? handleSelectedLayout : undefined}
+        >
+          {renderItem(item)}
+        </View>
+      ))}
     </Animated.View>
   );
 };

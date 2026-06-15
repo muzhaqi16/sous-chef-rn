@@ -59,6 +59,10 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.sm,
   },
   compact: {
+    // Fixed row height so single-line and two-line (e.g. "Shared by …") rows
+    // stay visually consistent instead of growing with their content. The
+    // avatar (32) + tightened text both fit centered within this height.
+    minHeight: 48,
     paddingVertical: theme.spacing.xs,
   },
   selected: {

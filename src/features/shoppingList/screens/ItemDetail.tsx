@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View } from 'react-native';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
@@ -16,6 +16,7 @@ import { FormattedItemSubtitle } from '#components/atoms/FormattedItemSubtitle';
 import { resolveImageUrl, parseImages, hasImages } from '#utils/imageUtils';
 import { parseNutritions, hasNutritionData } from '#utils/nutritionUtils';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
+import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { Text } from '#components/atoms/Text';
 import { DetailSection } from '#components/molecules/DetailSection';
@@ -52,6 +53,15 @@ export const ShoppingListItemDetail: React.FC<
   useScreenTransition('ShoppingListItemDetail');
   const { toEditItem, toPurchaseHistory, goBack } = useAppNavigation();
   const { listId, itemId } = route.params;
+
+  // Honor the user's "show shopping list images" setting. When off, the hero is
+  // dropped everywhere images are optional — see AppSettingsScreen.
+  const showShoppingListImages = useShowShoppingListImages();
+
+  // Collapse the hero if its image fails to load (broken/unreachable URL) so the
+  // screen falls back to a clean no-hero header instead of a broken-image
+  // placeholder. Keyed by URI so it resets automatically for a different image.
+  const [failedHeroUri, setFailedHeroUri] = useState<string | null>(null);
 
   // cache-and-network: the detail selects fields the list never caches
   // (createdAt, priority, source, addedBy, purchase history, nutrition,
@@ -120,7 +130,12 @@ export const ShoppingListItemDetail: React.FC<
   // to 280px; the fallback is kept only as a CachedImage uri guard.
   const largeImageUrl = resolveImageUrl(item, 'large');
   const imageUrl = largeImageUrl ?? resolveImageUrl(item);
-  const hasHero = showImages || !!largeImageUrl;
+  // Images are optional for shopping items: only show the hero when the user
+  // hasn't disabled images, a usable image actually resolves, and it didn't
+  // fail to load. Otherwise CollapsingHeroDetail renders a plain solid header.
+  const heroFailed = !!imageUrl && failedHeroUri === imageUrl;
+  const hasHero =
+    showShoppingListImages && (showImages || !!largeImageUrl) && !heroFailed;
 
   // Purchase History - extract purchases from paginated connection
   const purchases =
@@ -174,10 +189,12 @@ export const ShoppingListItemDetail: React.FC<
                 />
               ) : (
                 <CachedImage
+                  testID="shopping-item-hero-image"
                   uri={imageUrl ?? ''}
                   style={[styles.heroFull, { height: heroHeight }]}
                   displaySize={heroHeight}
                   resizeMode="cover"
+                  onError={() => setFailedHeroUri(imageUrl)}
                 />
               )
           : undefined
