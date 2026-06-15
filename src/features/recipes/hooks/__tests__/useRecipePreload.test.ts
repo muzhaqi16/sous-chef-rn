@@ -127,6 +127,34 @@ function buildUpsertMock(
   };
 }
 
+/**
+ * recordMock for a successful UpsertExternalRecipe — returns `{ mock, fired }`
+ * where `fired` captures the input variables Apollo observed. Use when a test
+ * needs to assert on what the ingest sent.
+ */
+function recordUpsertMock() {
+  return recordMock(UpsertExternalRecipeDocument, {
+    data: {
+      upsertExternalRecipe: {
+        __typename: 'UpsertExternalRecipeResult',
+        created: true,
+        recipe: {
+          __typename: 'Recipe',
+          id: 'backend-1',
+          name: 'Test Recipe',
+          imageUrl: null,
+          externalSource: 'SPOONACULAR',
+          externalId: '123',
+          servings: 4,
+          prepTimeMinutes: 10,
+          cookTimeMinutes: 20,
+          totalTimeMinutes: 30,
+        },
+      },
+    },
+  });
+}
+
 beforeEach(() => {
   jest.clearAllMocks();
 });
@@ -180,26 +208,7 @@ describe('useRecipePreload', () => {
     // The API stores names verbatim (it no longer strips prices), so the client
     // must never send a price baked into a name — even one that round-tripped in
     // from the backend. Regression guard for the "garlic $0.03" bug.
-    const { mock, fired } = recordMock(UpsertExternalRecipeDocument, {
-      data: {
-        upsertExternalRecipe: {
-          __typename: 'UpsertExternalRecipeResult',
-          created: true,
-          recipe: {
-            __typename: 'Recipe',
-            id: 'backend-1',
-            name: 'Test Recipe',
-            imageUrl: null,
-            externalSource: 'SPOONACULAR',
-            externalId: '123',
-            servings: 4,
-            prepTimeMinutes: 10,
-            cookTimeMinutes: 20,
-            totalTimeMinutes: 30,
-          },
-        },
-      },
-    });
+    const { mock, fired } = recordUpsertMock();
 
     const dirty = makeSpoonacularRecipe(777);
     dirty.extendedIngredients = [
@@ -228,26 +237,7 @@ describe('useRecipePreload', () => {
     // Single-call ingest: the client forwards the typed `externalSources`
     // payload so the API can mirror Spoonacular data and link the Item
     // asynchronously — no follow-up updateRecipeIngredients call.
-    const { mock, fired } = recordMock(UpsertExternalRecipeDocument, {
-      data: {
-        upsertExternalRecipe: {
-          __typename: 'UpsertExternalRecipeResult',
-          created: true,
-          recipe: {
-            __typename: 'Recipe',
-            id: 'backend-1',
-            name: 'Test Recipe',
-            imageUrl: null,
-            externalSource: 'SPOONACULAR',
-            externalId: '123',
-            servings: 4,
-            prepTimeMinutes: 10,
-            cookTimeMinutes: 20,
-            totalTimeMinutes: 30,
-          },
-        },
-      },
-    });
+    const { mock, fired } = recordUpsertMock();
 
     const { result } = renderHookWithApollo(() => useRecipePreload(), {
       operationMocks: [mock],
@@ -306,26 +296,7 @@ describe('useRecipePreload', () => {
   });
 
   it('omits nutrition for an ingredient with no recipe-level match', async () => {
-    const { mock, fired } = recordMock(UpsertExternalRecipeDocument, {
-      data: {
-        upsertExternalRecipe: {
-          __typename: 'UpsertExternalRecipeResult',
-          created: true,
-          recipe: {
-            __typename: 'Recipe',
-            id: 'backend-1',
-            name: 'Test Recipe',
-            imageUrl: null,
-            externalSource: 'SPOONACULAR',
-            externalId: '123',
-            servings: 4,
-            prepTimeMinutes: 10,
-            cookTimeMinutes: 20,
-            totalTimeMinutes: 30,
-          },
-        },
-      },
-    });
+    const { mock, fired } = recordUpsertMock();
 
     // Ingredient id 999 has no entry in nutrition.ingredients (only id 1).
     const recipe = makeSpoonacularRecipe();
@@ -374,26 +345,7 @@ describe('useRecipePreload', () => {
       totalCostPerServing: 46.875,
     });
 
-    const { mock, fired } = recordMock(UpsertExternalRecipeDocument, {
-      data: {
-        upsertExternalRecipe: {
-          __typename: 'UpsertExternalRecipeResult',
-          created: true,
-          recipe: {
-            __typename: 'Recipe',
-            id: 'backend-1',
-            name: 'Test Recipe',
-            imageUrl: null,
-            externalSource: 'SPOONACULAR',
-            externalId: '123',
-            servings: 4,
-            prepTimeMinutes: 10,
-            cookTimeMinutes: 20,
-            totalTimeMinutes: 30,
-          },
-        },
-      },
-    });
+    const { mock, fired } = recordUpsertMock();
 
     const { result } = renderHookWithApollo(() => useRecipePreload(), {
       operationMocks: [mock],
@@ -423,26 +375,7 @@ describe('useRecipePreload', () => {
   });
 
   it('does not fetch priceBreakdown for a plain (view) preload', async () => {
-    const { mock } = recordMock(UpsertExternalRecipeDocument, {
-      data: {
-        upsertExternalRecipe: {
-          __typename: 'UpsertExternalRecipeResult',
-          created: true,
-          recipe: {
-            __typename: 'Recipe',
-            id: 'backend-1',
-            name: 'Test Recipe',
-            imageUrl: null,
-            externalSource: 'SPOONACULAR',
-            externalId: '123',
-            servings: 4,
-            prepTimeMinutes: 10,
-            cookTimeMinutes: 20,
-            totalTimeMinutes: 30,
-          },
-        },
-      },
-    });
+    const { mock } = recordUpsertMock();
 
     const { result } = renderHookWithApollo(() => useRecipePreload(), {
       operationMocks: [mock],
@@ -494,12 +427,6 @@ describe('useRecipePreload', () => {
     });
 
     expect(preloaded).toBeNull();
-  });
-
-  it('isPreloaded returns false for unknown externalId', () => {
-    const { result } = renderHookWithApollo(() => useRecipePreload());
-
-    expect(result.current.isPreloaded('999')).toBe(false);
   });
 
   it('clearCache resets all state', async () => {

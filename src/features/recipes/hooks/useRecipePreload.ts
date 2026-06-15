@@ -23,7 +23,7 @@ import {
   type RecipePriceBreakdown,
 } from '#/services/recipeApi/types';
 import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
+import { executeMutation, executeQuery } from '#/utils/compilerSafeWrappers';
 import { toastService } from '#/services/toastService';
 import { useTranslation } from 'react-i18next';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
@@ -31,23 +31,6 @@ import { stripPriceFromName } from '#/utils/stripPriceFromName';
 
 /** Normalize an ingredient name for the fuzzy priceBreakdown join. */
 const normalizeName = (name: string): string => name.trim().toLowerCase();
-
-/**
- * Best-effort fetch of the recipe price breakdown. Module-scoped so the
- * try-catch doesn't bail out the React Compiler in the hook body. A failure
- * (network/quota) returns null so the save proceeds without cost rather than
- * blocking on it.
- */
-async function fetchPriceBreakdownSafe(
-  externalId: string,
-): Promise<RecipePriceBreakdown | null> {
-  try {
-    return await spoonacularService.getRecipePriceBreakdown(Number(externalId));
-  } catch (error) {
-    console.warn('[preloadRecipe] price breakdown fetch failed', error);
-    return null;
-  }
-}
 
 /**
  * Represents a recipe that has been preloaded to the backend
@@ -212,19 +195,15 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
 
     // Per-ingredient estimated cost (US cents) from the recipe-scoped
     // priceBreakdown — only present on deliberate saves. priceBreakdown
-    // identifies ingredients by NAME (no id), so match on normalized name and
-    // fall back to position ONLY when the two arrays line up 1:1 (guards
-    // against assigning the wrong ingredient's price on a fuzzy mismatch).
+    // identifies ingredients by NAME (no id), so match on normalized name only.
+    // An unmatched ingredient simply gets no cost — never a guessed/positional
+    // one, which could assign the wrong ingredient's price.
     const costByName = new Map(
       (priceBreakdown?.ingredients ?? []).map((c): [string, number] => [
         normalizeName(c.name),
         c.price,
       ]),
     );
-    const costByOrderSafe =
-      !!priceBreakdown &&
-      priceBreakdown.ingredients.length ===
-        (spoonacularRecipe.extendedIngredients?.length ?? 0);
 
     return {
       // Basic recipe info
@@ -262,11 +241,7 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
       ingredients:
         spoonacularRecipe.extendedIngredients?.map((ing, idx) => {
           const ingredientNutrition = nutritionByIngredientId.get(ing.id);
-          const costCents =
-            costByName.get(normalizeName(ing.name)) ??
-            (costByOrderSafe && priceBreakdown
-              ? priceBreakdown.ingredients[idx]?.price
-              : undefined);
+          const costCents = costByName.get(normalizeName(ing.name));
           return {
             // Sanitize at the API boundary — the API stores names verbatim, so a
             // price must never ride in on the name (it belongs in estimatedPrice).
@@ -375,8 +350,13 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
     // Per-ingredient cost comes from the recipe-scoped priceBreakdown (ONE
     // call), fetched only on deliberate saves. Best-effort — a failure leaves
     // estimatedCost empty rather than blocking the save.
+    // Best-effort: a failure (network/quota) returns null so the save proceeds
+    // without cost rather than blocking on it.
     const priceBreakdown = preloadOptions.withCost
-      ? await fetchPriceBreakdownSafe(externalId)
+      ? await executeQuery(
+          () => spoonacularService.getRecipePriceBreakdown(Number(externalId)),
+          'preloadRecipe: fetch price breakdown',
+        )
       : null;
 
     const input = transformToRecipeInput(spoonacularRecipe, priceBreakdown);
@@ -496,31 +476,6 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
   };
 
   /**
-   * Check if a recipe is preloaded
-   */
-  const isPreloaded = (externalId: string): boolean => {
-    const cached = preloadCacheRef.current.get(externalId);
-    return !!cached && !cached.id.startsWith('pending_');
-  };
-
-  /**
-   * Get preloaded recipe by external ID
-   */
-  const getPreloadedRecipe = (
-    externalId: string,
-  ): PreloadedRecipe | undefined => {
-    return preloadCacheRef.current.get(externalId);
-  };
-
-  /**
-   * Check if a recipe is fully saved (not just pending)
-   */
-  const isFullySaved = (externalId: string): boolean => {
-    const cached = preloadCacheRef.current.get(externalId);
-    return !!cached && !cached.id.startsWith('pending_');
-  };
-
-  /**
    * Clear the preload cache
    */
   const clearCache = () => {
@@ -541,9 +496,6 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
     saveRecipeToFavorites,
 
     // Helpers
-    isPreloaded,
-    getPreloadedRecipe,
-    isFullySaved,
     clearCache,
   };
 }
