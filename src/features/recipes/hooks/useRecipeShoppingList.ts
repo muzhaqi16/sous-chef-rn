@@ -30,6 +30,7 @@ import {
 } from '#/utils/compilerSafeWrappers';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { logger } from '#/utils/environment';
+import { stripPriceFromName } from '#/utils/stripPriceFromName';
 
 interface UseRecipeShoppingListOptions {
   recipeId: string | undefined;
@@ -265,10 +266,11 @@ export function useRecipeShoppingList({
             variables: {
               input: {
                 id: generateEntityId(),
-                itemName:
+                itemName: stripPriceFromName(
                   ingredient.name ||
-                  ingredient.original ||
-                  'Unknown ingredient',
+                    ingredient.original ||
+                    'Unknown ingredient',
+                ),
                 quantity: ingredient.amount || 0,
                 unit: {
                   unitName:
@@ -352,8 +354,9 @@ export function useRecipeShoppingList({
               // to match each result back to its ingredient.
               id: generateEntityId(),
               clientId: String(ingredient.id || index),
-              itemName:
+              itemName: stripPriceFromName(
                 ingredient.name || ingredient.original || 'Unknown ingredient',
+              ),
               quantity: ingredient.amount || 0,
               unit: {
                 unitName:

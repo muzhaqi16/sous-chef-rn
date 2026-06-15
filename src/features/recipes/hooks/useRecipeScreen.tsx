@@ -32,8 +32,8 @@ import { useUserId } from '#store/useAppStore';
 import type { IconName } from '#/utils/iconUtils';
 import {
   ExternalSource,
-  type Diet,
-  type Intolerance,
+  Diet,
+  Intolerance,
 } from '#/graphql/generated/schemaTypes';
 
 // ── Filter types ──
@@ -51,6 +51,66 @@ const DEFAULT_FILTERS: RecipeFilters = {
   mealType: null,
   maxReadyTime: null,
 };
+
+// ── Diet / Intolerance ↔ Spoonacular-string maps ──
+// Single source of truth for both directions. `activeFilters.diet` /
+// `.intolerances` hold Spoonacular-format strings (the `value` fields in
+// recipeFilterOptions' DIET_OPTIONS / INTOLERANCE_OPTIONS); the dietary profile
+// is normalized into that form through the forward maps below. Spoonacular's
+// complexSearch consumes those strings directly, while the local `searchRecipes`
+// GraphQL API takes Diet/Intolerance enums — so the reverse lookups are derived
+// from the same maps and can't drift. The forward maps are exhaustive over the
+// enums: TS requires every member as a key, so a new schema enum fails to
+// compile until it's mapped here.
+const DIET_ENUM_TO_SPOONACULAR: Record<Diet, string> = {
+  [Diet.Vegetarian]: 'vegetarian',
+  [Diet.Vegan]: 'vegan',
+  [Diet.GlutenFree]: 'gluten free',
+  [Diet.Keto]: 'ketogenic',
+  [Diet.Paleo]: 'paleo',
+  [Diet.Pescetarian]: 'pescetarian',
+  [Diet.LactoVegetarian]: 'lacto-vegetarian',
+  [Diet.OvoVegetarian]: 'ovo-vegetarian',
+  [Diet.Primal]: 'primal',
+  [Diet.LowFodmap]: 'low fodmap',
+  [Diet.Whole30]: 'whole30',
+};
+
+const INTOLERANCE_ENUM_TO_SPOONACULAR: Record<Intolerance, string> = {
+  [Intolerance.Dairy]: 'dairy',
+  [Intolerance.Egg]: 'egg',
+  [Intolerance.Gluten]: 'gluten',
+  [Intolerance.Grain]: 'grain',
+  [Intolerance.Peanut]: 'peanut',
+  [Intolerance.Seafood]: 'seafood',
+  [Intolerance.Sesame]: 'sesame',
+  [Intolerance.Shellfish]: 'shellfish',
+  [Intolerance.Soy]: 'soy',
+  [Intolerance.Sulfite]: 'sulfite',
+  [Intolerance.TreeNut]: 'tree nut',
+  [Intolerance.Wheat]: 'wheat',
+  [Intolerance.Fish]: 'fish',
+};
+
+// Reverse lookups (Spoonacular string → enum), derived from the forward maps so
+// the two directions stay in sync. `Object.keys` widens to `string[]`; narrowing
+// each key back to its enum member is sound because the source map is keyed
+// exactly by that enum.
+function invertEnumMap<E extends string>(
+  map: Record<E, string>,
+): Record<string, E> {
+  const reversed: Record<string, E> = {};
+  for (const key of Object.keys(map)) {
+    const member = key as E;
+    reversed[map[member]] = member;
+  }
+  return reversed;
+}
+
+const SPOONACULAR_TO_DIET_ENUM = invertEnumMap(DIET_ENUM_TO_SPOONACULAR);
+const SPOONACULAR_TO_INTOLERANCE_ENUM = invertEnumMap(
+  INTOLERANCE_ENUM_TO_SPOONACULAR,
+);
 
 // ── Module-level search helpers (React Compiler safe) ──
 
@@ -177,15 +237,31 @@ async function executeRecipeTextSearch(
   setLoading(true);
   setSearchPerformed(true);
 
-  // Local API search — the user's own recipes. `searchRecipes` takes only a
-  // text query (no diet/intolerance params), so local results are shown
-  // regardless of active filters. Failures (offline, API unreachable) resolve
+  // Local API search — the user's own recipes. `searchRecipes` now accepts the
+  // same diet/intolerance/maxReadyTime filters as Spoonacular, so both sources
+  // stay consistent under active filters. `activeFilters` stores Spoonacular
+  // strings; map them back to Diet/Intolerance enums for the GraphQL API
+  // (unmapped values are dropped). Failures (offline, API unreachable) resolve
   // to null and degrade silently — Spoonacular results still display.
+  const localDiets = filters.diet
+    .map(d => SPOONACULAR_TO_DIET_ENUM[d])
+    .filter((d): d is Diet => Boolean(d));
+  const localIntolerances = filters.intolerances
+    .map(i => SPOONACULAR_TO_INTOLERANCE_ENUM[i])
+    .filter((i): i is Intolerance => Boolean(i));
   const localPromise = executeSearchQuery<SearchRecipesQuery>(
     () =>
       client.query<SearchRecipesQuery>({
         query: SearchRecipesDocument,
-        variables: { query, first: SEARCH_FETCH_SIZE },
+        variables: {
+          query,
+          first: SEARCH_FETCH_SIZE,
+          ...(localDiets.length > 0 && { diets: localDiets }),
+          ...(localIntolerances.length > 0 && {
+            intolerances: localIntolerances,
+          }),
+          ...(filters.maxReadyTime && { maxReadyTime: filters.maxReadyTime }),
+        },
         fetchPolicy: 'network-only',
       }),
     () => false,
@@ -210,7 +286,7 @@ async function executeRecipeTextSearch(
             const data = await spoonacularService.searchRecipesWithInfo({
               query,
               number: SEARCH_FETCH_SIZE,
-              ...(filters.diet.length > 0 && { diet: filters.diet.join('|') }),
+              ...(filters.diet.length > 0 && { diet: filters.diet.join(',') }),
               ...(filters.intolerances.length > 0 && {
                 intolerances: filters.intolerances.join(','),
               }),
@@ -401,48 +477,23 @@ export function useRecipeScreen() {
   };
 
   // ── Filter state (initialized from dietary profile) ──
-  // Map GraphQL enum values to Spoonacular API values
-  const dietMap: Record<string, string> = {
-    VEGETARIAN: 'vegetarian',
-    VEGAN: 'vegan',
-    GLUTEN_FREE: 'gluten free',
-    KETO: 'ketogenic',
-    PALEO: 'paleo',
-    PESCETARIAN: 'pescetarian',
-    LACTO_VEGETARIAN: 'lacto-vegetarian',
-    OVO_VEGETARIAN: 'ovo-vegetarian',
-    PRIMAL: 'primal',
-    LOW_FODMAP: 'low fodmap',
-    WHOLE30: 'whole30',
-  };
-
+  // Profile restrictions carry Diet/Intolerance enums; normalize them to the
+  // Spoonacular-format strings `activeFilters` stores via the shared forward
+  // maps (module-level single source of truth).
   const profileDiets = (dietaryProfile?.restrictions ?? [])
     .filter((r): r is typeof r & { diet: Diet } => Boolean(r.diet))
-    .map(r => dietMap[r.diet] ?? r.diet.toLowerCase())
+    .map(r => DIET_ENUM_TO_SPOONACULAR[r.diet] ?? r.diet.toLowerCase())
     .filter(Boolean);
 
   const profileIntolerances = (dietaryProfile?.restrictions ?? [])
     .filter((r): r is typeof r & { intolerance: Intolerance } =>
       Boolean(r.intolerance),
     )
-    .map(r => {
-      const intoleranceMap: Record<string, string> = {
-        DAIRY: 'dairy',
-        EGG: 'egg',
-        GLUTEN: 'gluten',
-        GRAIN: 'grain',
-        PEANUT: 'peanut',
-        SEAFOOD: 'seafood',
-        SESAME: 'sesame',
-        SHELLFISH: 'shellfish',
-        SOY: 'soy',
-        SULFITE: 'sulfite',
-        TREE_NUT: 'tree nut',
-        WHEAT: 'wheat',
-        FISH: 'fish',
-      };
-      return intoleranceMap[r.intolerance] ?? r.intolerance.toLowerCase();
-    });
+    .map(
+      r =>
+        INTOLERANCE_ENUM_TO_SPOONACULAR[r.intolerance] ??
+        r.intolerance.toLowerCase(),
+    );
 
   const profileMaxTime = dietaryProfile?.maxCookTimeMinutes ?? null;
 

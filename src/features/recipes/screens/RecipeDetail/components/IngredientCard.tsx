@@ -36,6 +36,9 @@ export const IngredientCard: React.FC<IngredientCardProps> = ({
   const unit = isBackend
     ? ingredient.unit?.symbol || ''
     : ingredient.measures?.us?.unitShort || '';
+  // Backend-only: the estimated ingredient price (US dollars), surfaced on its
+  // own line. Never derived from the name — only the dedicated field is shown.
+  const estimatedPrice = isBackend ? ingredient.estimatedPrice : null;
   const imageUrl = ingredient.image
     ? ingredient.image.startsWith('http')
       ? ingredient.image // Already full URL from backend
@@ -64,6 +67,18 @@ export const IngredientCard: React.FC<IngredientCardProps> = ({
       <Text size="sm" weight="medium" align="center" numberOfLines={2}>
         {ingredientName}
       </Text>
+      {estimatedPrice != null && estimatedPrice > 0 ? (
+        <Text
+          size="xs"
+          weight="medium"
+          tone="accent"
+          align="center"
+          style={styles.price}
+          numberOfLines={1}
+        >
+          ${estimatedPrice.toFixed(2)}
+        </Text>
+      ) : null}
       {isAdded ? (
         <View style={styles.addedBadge}>
           <Icon name="checkmark" size={12} tone="onPrimary" />
@@ -112,6 +127,9 @@ const styles = StyleSheet.create(theme => ({
   },
   quantity: {
     marginBottom: 2,
+  },
+  price: {
+    marginTop: 2,
   },
   addedBadge: {
     position: 'absolute',

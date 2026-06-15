@@ -20,6 +20,7 @@ import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { handleMutationError } from '#/utils/errorHandlers';
+import { logger } from '#/utils/environment';
 
 type IngredientMatch =
   MatchRecipeIngredientsToPantryQuery['matchRecipeIngredientsToPantry'][number];
@@ -104,12 +105,23 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
 
     const editable: EditableMatch[] = matches
       .map(match => {
+        // The match query spreads RecipeIngredientFragment on `ingredient`, so
+        // the cache is normally complete here (and Apollo merges writes — it
+        // never shrinks an entity). A null therefore means the server returned
+        // an ingredient missing a fragment field; surface it rather than
+        // silently dropping the ingredient from the matching sheet.
         const ingredient = client.cache.readFragment<RecipeIngredientFragment>({
           fragment: RecipeIngredientFragmentDoc,
           fragmentName: 'RecipeIngredientFragment',
-          from: { __typename: 'RecipeIngredient', id: match.ingredient.id },
+          from: match.ingredient,
         });
-        if (!ingredient) return null;
+        if (!ingredient) {
+          logger.warn(
+            '[useRecipeIngredientMatching] incomplete RecipeIngredient in cache; dropping from matches',
+            { recipeId, ingredientId: match.ingredient.id },
+          );
+          return null;
+        }
         return {
           match,
           ingredient,

@@ -36,6 +36,7 @@ fragment useRecipeData_recipe on Recipe {
     id
     name
     quantity
+    estimatedPrice
     item {
       id
       name

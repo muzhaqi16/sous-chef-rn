@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, ScrollView } from 'react-native';
+import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#/utils/iconUtils';
 import { Button } from '#components/base/Button';
@@ -53,7 +53,7 @@ export const ModalPicker: React.FC<ModalPickerProps> = ({
 
   return (
     <ActionTray ref={trayRef} title={label} onClose={onCancel}>
-      <ScrollView>
+      <View>
         {options.map(opt => (
           <AppPressable
             key={opt.value}
@@ -74,7 +74,7 @@ export const ModalPicker: React.FC<ModalPickerProps> = ({
             )}
           </AppPressable>
         ))}
-      </ScrollView>
+      </View>
       {confirmLabel ? (
         <View style={styles.footer}>
           <Button

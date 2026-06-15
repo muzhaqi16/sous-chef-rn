@@ -43,6 +43,7 @@ describe('IngredientMatchRow', () => {
       id: 'i1',
       name,
       quantity: 0,
+      estimatedPrice: null,
       image: null,
       isOptional: false,
       notes: null,

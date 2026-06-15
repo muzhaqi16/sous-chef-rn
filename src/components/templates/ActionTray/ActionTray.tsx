@@ -6,7 +6,7 @@ import React, {
   useState,
 } from 'react';
 import { useWindowDimensions } from 'react-native';
-import { BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
+import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { StyleSheet as UnistylesStyleSheet } from 'react-native-unistyles';
 import { ActionTrayContent } from './ActionTrayContent';
 import { useBackdropClaim } from '#components/providers/OverlayBackdropProvider';
@@ -129,7 +129,16 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
         backgroundStyle={styles.background}
         handleIndicatorStyle={styles.handle}
       >
-        <BottomSheetView style={styles.content}>
+        {/* `BottomSheetScrollView` is the single content-height source for
+            dynamic sizing: short content hugs its height (no scroll), long
+            content scrolls within `maxDynamicContentSize`. Never nest another
+            scrollable in `children` — two content-height sources break dynamic
+            sizing (the nested scroll view reports its full, unbounded content
+            height and the sheet overflows). */}
+        <BottomSheetScrollView
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        >
           <ActionTrayContent
             title={title}
             headerRight={headerRight}
@@ -138,7 +147,7 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
           >
             {children}
           </ActionTrayContent>
-        </BottomSheetView>
+        </BottomSheetScrollView>
       </BottomSheetModal>
     );
   },

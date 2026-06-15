@@ -1,6 +1,5 @@
 import {
   transformSpoonacularToRecipeInput,
-  transformSpoonacularIngredient,
   getSpoonacularIngredientImageUrl,
   getSpoonacularRecipeImageUrl,
   matchPantryItemsToIngredients,
@@ -50,21 +49,6 @@ const mockRecipe = {
     ],
   },
 } as Partial<RecipeInformation> as RecipeInformation;
-
-const mockIngredient = {
-  id: 1,
-  name: 'Pasta',
-  amount: 200,
-  original: '200g pasta',
-  aisle: 'Pasta & Grains',
-  consistency: 'SOLID',
-  measures: {
-    metric: { amount: 200, unitShort: 'g' },
-    us: { amount: 7, unitShort: 'oz' },
-  },
-  meta: ['al dente'],
-  image: 'pasta.png',
-} as Partial<RecipeIngredient> as RecipeIngredient;
 
 describe('recipeApi utils', () => {
   describe('transformSpoonacularToRecipeInput', () => {
@@ -126,34 +110,6 @@ describe('recipeApi utils', () => {
       } as Partial<RecipeInformation> as RecipeInformation;
       const result = transformSpoonacularToRecipeInput(noSource);
       expect(result.source).toBe('Spoonacular');
-    });
-  });
-
-  describe('transformSpoonacularIngredient', () => {
-    it('transforms ingredient fields', () => {
-      const result = transformSpoonacularIngredient(mockIngredient, 0);
-      expect(result.name).toBe('Pasta');
-      expect(result.quantity).toBe(200);
-      expect(result.sortOrder).toBe(0);
-      expect(result.originalString).toBe('200g pasta');
-    });
-
-    it('includes metric measurements', () => {
-      const result = transformSpoonacularIngredient(mockIngredient, 0);
-      expect(result.metricAmount).toBe(200);
-      expect(result.metricUnit).toBe('g');
-    });
-
-    it('includes US measurements', () => {
-      const result = transformSpoonacularIngredient(mockIngredient, 0);
-      expect(result.usAmount).toBe(7);
-      expect(result.usUnit).toBe('oz');
-    });
-
-    it('uses index as sortOrder', () => {
-      expect(transformSpoonacularIngredient(mockIngredient, 5).sortOrder).toBe(
-        5,
-      );
     });
   });
 

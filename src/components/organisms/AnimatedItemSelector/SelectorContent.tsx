@@ -1,5 +1,4 @@
 import React from 'react';
-import { ScrollView } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import Animated, {
   FadeIn,
@@ -49,8 +48,13 @@ export const SelectorContent = <T extends SelectableItem>({
     keyExtractor,
     renderCustomItem,
     actions,
-    maxVisibleItems,
   } = config;
+
+  // Scrolling is owned by the `ActionTray`'s `BottomSheetScrollView` (it renders
+  // this content with `scrollable`). We must NOT add another scrollable here —
+  // nesting one inside the tray's scroll view would give gorhom two competing
+  // content-height sources and break dynamic sizing. So the list + actions just
+  // lay out naturally and the sheet grows (then scrolls) within its 70% cap.
 
   const renderItem = (item: T) => {
     const isSelected = item.id === selectedId;
@@ -97,49 +101,24 @@ export const SelectorContent = <T extends SelectableItem>({
 
   return (
     <Animated.View layout={LinearTransition} style={styles.container}>
-      <Animated.View
-        entering={FadeIn}
-        layout={LinearTransition}
-        style={styles.listContainer}
-      >
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          bounces={true}
-          contentContainerStyle={styles.listContent}
-          style={
-            maxVisibleItems ? { maxHeight: maxVisibleItems * 56 } : undefined
-          }
-        >
-          {data.map(item => (
-            <React.Fragment key={keyExtractor ? keyExtractor(item) : item.id}>
-              {renderItem(item)}
-            </React.Fragment>
-          ))}
-        </ScrollView>
+      <Animated.View entering={FadeIn} layout={LinearTransition}>
+        {data.map(item => (
+          <React.Fragment key={keyExtractor ? keyExtractor(item) : item.id}>
+            {renderItem(item)}
+          </React.Fragment>
+        ))}
       </Animated.View>
-      <Animated.View style={styles.actionsWrapper}>
-        <ActionButtons actions={actions} />
-      </Animated.View>
+      <ActionButtons actions={actions} />
     </Animated.View>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
   container: {
-    flex: 1,
-  },
-  listContainer: {
-    flex: 1,
-    minHeight: 100,
-  },
-  actionsWrapper: {
-    flexShrink: 0,
-  },
-  listContent: {
     paddingTop: theme.spacing.sm,
   },
   loadingContainer: {
-    flex: 1,
+    minHeight: 120,
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: theme.spacing.xl,
@@ -148,7 +127,7 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.md,
   },
   emptyContainer: {
-    flex: 1,
+    minHeight: 120,
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: theme.spacing.xl,

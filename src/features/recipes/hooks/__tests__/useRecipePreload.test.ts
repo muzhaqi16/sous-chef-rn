@@ -1,9 +1,17 @@
 import { act } from '@testing-library/react-native';
 import type { MockedResponse } from '#/test-utils/apolloMockProvider';
-import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  renderHookWithApollo,
+  recordMock,
+} from '#/test-utils/apolloMockProvider';
 import { UpsertExternalRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import type { RecipeInformation } from '#/services/recipeApi/types';
+import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
 import { useRecipePreload, type PreloadedRecipe } from '../useRecipePreload';
+
+jest.mock('#/services/recipeApi/SpoonacularService', () => ({
+  spoonacularService: { getRecipePriceBreakdown: jest.fn() },
+}));
 
 const mockToastSuccess = jest.fn();
 const mockToastError = jest.fn();
@@ -42,7 +50,27 @@ const makeSpoonacularRecipe = (id = 123) =>
     sourceUrl: 'https://example.com/recipe',
     cuisines: ['Italian'],
     analyzedInstructions: [{ steps: [{ number: 1, step: 'Boil water' }] }],
-    nutrition: { nutrients: [{ name: 'Calories', amount: 350 }] },
+    nutrition: {
+      nutrients: [{ name: 'Calories', amount: 350 }],
+      // Per-ingredient nutrition is included when the recipe is fetched with
+      // includeNutrition: true — keyed by ingredient id (matches id 1 below).
+      ingredients: [
+        {
+          id: 1,
+          name: 'pasta',
+          amount: 200,
+          unit: 'g',
+          nutrients: [
+            {
+              name: 'Calories',
+              amount: 320,
+              unit: 'kcal',
+              percentOfDailyNeeds: 16,
+            },
+          ],
+        },
+      ],
+    },
     extendedIngredients: [
       {
         name: 'pasta',
@@ -99,6 +127,34 @@ function buildUpsertMock(
   };
 }
 
+/**
+ * recordMock for a successful UpsertExternalRecipe — returns `{ mock, fired }`
+ * where `fired` captures the input variables Apollo observed. Use when a test
+ * needs to assert on what the ingest sent.
+ */
+function recordUpsertMock() {
+  return recordMock(UpsertExternalRecipeDocument, {
+    data: {
+      upsertExternalRecipe: {
+        __typename: 'UpsertExternalRecipeResult',
+        created: true,
+        recipe: {
+          __typename: 'Recipe',
+          id: 'backend-1',
+          name: 'Test Recipe',
+          imageUrl: null,
+          externalSource: 'SPOONACULAR',
+          externalId: '123',
+          servings: 4,
+          prepTimeMinutes: 10,
+          cookTimeMinutes: 20,
+          totalTimeMinutes: 30,
+        },
+      },
+    },
+  });
+}
+
 beforeEach(() => {
   jest.clearAllMocks();
 });
@@ -148,6 +204,190 @@ describe('useRecipePreload', () => {
     expect(result.current.preloadedRecipe).toEqual(preloaded);
   });
 
+  it('sanitizes a price baked into an ingredient name before sending to the API', async () => {
+    // The API stores names verbatim (it no longer strips prices), so the client
+    // must never send a price baked into a name — even one that round-tripped in
+    // from the backend. Regression guard for the "garlic $0.03" bug.
+    const { mock, fired } = recordUpsertMock();
+
+    const dirty = makeSpoonacularRecipe(777);
+    dirty.extendedIngredients = [
+      { ...dirty.extendedIngredients[0], name: 'pasta $1.50' },
+    ];
+
+    const { result } = renderHookWithApollo(() => useRecipePreload(), {
+      operationMocks: [mock],
+    });
+
+    await act(async () => {
+      await result.current.preloadRecipe(dirty);
+    });
+
+    expect(fired.length).toBeGreaterThan(0);
+    const sent = fired[0] as {
+      input: { ingredients: Array<{ name: string }> };
+    };
+    expect(sent.input.ingredients[0].name).toBe('pasta');
+    expect(sent.input.ingredients.every(i => !/\$\s*\d/.test(i.name))).toBe(
+      true,
+    );
+  });
+
+  it('attaches a typed Spoonacular mirror payload per ingredient', async () => {
+    // Single-call ingest: the client forwards the typed `externalSources`
+    // payload so the API can mirror Spoonacular data and link the Item
+    // asynchronously — no follow-up updateRecipeIngredients call.
+    const { mock, fired } = recordUpsertMock();
+
+    const { result } = renderHookWithApollo(() => useRecipePreload(), {
+      operationMocks: [mock],
+    });
+
+    await act(async () => {
+      await result.current.preloadRecipe(makeSpoonacularRecipe());
+    });
+
+    const sent = fired[0] as {
+      input: {
+        ingredients: Array<{
+          name: string;
+          externalSources: Array<{
+            source: string;
+            externalId: string;
+            isPrimary: boolean;
+            spoonacular: {
+              id: number;
+              name: string;
+              image: string;
+              aisle: string;
+              measures: { us: { unitShort: string } };
+              nutrition?: {
+                nutrients: Array<{
+                  name: string;
+                  amount: number;
+                  unit: string;
+                  percentOfDailyNeeds: number;
+                }>;
+              };
+            };
+          }>;
+        }>;
+      };
+    };
+    const source = sent.input.ingredients[0].externalSources[0];
+    expect(source).toEqual(
+      expect.objectContaining({
+        source: 'SPOONACULAR',
+        externalId: '1',
+        isPrimary: true,
+      }),
+    );
+    // Mirror carries the verbatim upstream name and the image FILENAME (no URL).
+    expect(source.spoonacular).toEqual(
+      expect.objectContaining({ id: 1, name: 'pasta', image: 'pasta.jpg' }),
+    );
+    expect(source.spoonacular.image).not.toMatch(/^https?:\/\//);
+    expect(source.spoonacular.measures.us.unitShort).toBe('oz');
+    // Per-ingredient nutrition joined from the recipe response (id 1) — no
+    // extra Spoonacular call.
+    expect(source.spoonacular.nutrition?.nutrients).toEqual([
+      { name: 'Calories', amount: 320, unit: 'kcal', percentOfDailyNeeds: 16 },
+    ]);
+  });
+
+  it('omits nutrition for an ingredient with no recipe-level match', async () => {
+    const { mock, fired } = recordUpsertMock();
+
+    // Ingredient id 999 has no entry in nutrition.ingredients (only id 1).
+    const recipe = makeSpoonacularRecipe();
+    recipe.extendedIngredients = [
+      { ...recipe.extendedIngredients[0], id: 999 },
+    ];
+
+    const { result } = renderHookWithApollo(() => useRecipePreload(), {
+      operationMocks: [mock],
+    });
+
+    await act(async () => {
+      await result.current.preloadRecipe(recipe);
+    });
+
+    const sent = fired[0] as {
+      input: {
+        ingredients: Array<{
+          externalSources: Array<{ spoonacular: { nutrition?: unknown } }>;
+        }>;
+      };
+    };
+    expect(
+      sent.input.ingredients[0].externalSources[0].spoonacular.nutrition,
+    ).toBeUndefined();
+  });
+
+  it('attaches estimatedCost from priceBreakdown when ingesting withCost', async () => {
+    // Deliberate-save path: the recipe-scoped priceBreakdown (one call) is
+    // fetched and its per-ingredient price (US cents) lands on the typed mirror.
+    (
+      spoonacularService.getRecipePriceBreakdown as jest.Mock
+    ).mockResolvedValueOnce({
+      ingredients: [
+        {
+          name: 'pasta',
+          image: 'pasta.jpg',
+          price: 187.5,
+          amount: {
+            metric: { value: 200, unit: 'g' },
+            us: { value: 7, unit: 'oz' },
+          },
+        },
+      ],
+      totalCost: 187.5,
+      totalCostPerServing: 46.875,
+    });
+
+    const { mock, fired } = recordUpsertMock();
+
+    const { result } = renderHookWithApollo(() => useRecipePreload(), {
+      operationMocks: [mock],
+    });
+
+    await act(async () => {
+      await result.current.preloadRecipe(makeSpoonacularRecipe(), undefined, {
+        withCost: true,
+      });
+    });
+
+    expect(spoonacularService.getRecipePriceBreakdown).toHaveBeenCalledWith(
+      123,
+    );
+    const sent = fired[0] as {
+      input: {
+        ingredients: Array<{
+          externalSources: Array<{
+            spoonacular: { estimatedCost?: { value: number; unit: string } };
+          }>;
+        }>;
+      };
+    };
+    expect(
+      sent.input.ingredients[0].externalSources[0].spoonacular.estimatedCost,
+    ).toEqual({ value: 187.5, unit: 'US Cents' });
+  });
+
+  it('does not fetch priceBreakdown for a plain (view) preload', async () => {
+    const { mock } = recordUpsertMock();
+
+    const { result } = renderHookWithApollo(() => useRecipePreload(), {
+      operationMocks: [mock],
+    });
+
+    await act(async () => {
+      await result.current.preloadRecipe(makeSpoonacularRecipe());
+    });
+
+    expect(spoonacularService.getRecipePriceBreakdown).not.toHaveBeenCalled();
+  });
+
   it('preloadRecipe returns cached result on second call', async () => {
     // Only one mock — if the second call hit the network MockedProvider would error
     const { result } = renderHookWithApollo(() => useRecipePreload(), {
@@ -187,12 +427,6 @@ describe('useRecipePreload', () => {
     });
 
     expect(preloaded).toBeNull();
-  });
-
-  it('isPreloaded returns false for unknown externalId', () => {
-    const { result } = renderHookWithApollo(() => useRecipePreload());
-
-    expect(result.current.isPreloaded('999')).toBe(false);
   });
 
   it('clearCache resets all state', async () => {

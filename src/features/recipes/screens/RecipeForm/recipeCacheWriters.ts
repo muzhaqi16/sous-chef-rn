@@ -124,6 +124,7 @@ function buildOptimisticRecipeEntity(
       id: generateEntityId(),
       name: ing.name,
       quantity: ing.quantity,
+      estimatedPrice: ing.estimatedPrice ?? null,
       item: null,
       unit: null,
       image: null,

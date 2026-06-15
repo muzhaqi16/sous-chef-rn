@@ -179,6 +179,31 @@ export interface RecipeInformation {
   nutrition?: RecipeNutrition;
 }
 
+/**
+ * Recipe price breakdown — GET /recipes/{id}/priceBreakdownWidget.json.
+ * Recipe-scoped (ONE call per recipe), so it's quota-safe vs the per-ingredient
+ * /food/ingredients/{id}/information endpoint. `price` values are in US cents.
+ * Ingredients are identified by name only (no id) — the join is fuzzy.
+ */
+export interface RecipePriceBreakdownIngredient {
+  name: string;
+  image: string;
+  /** US cents for this ingredient's amount in the recipe. */
+  price: number;
+  amount: {
+    metric: { value: number; unit: string };
+    us: { value: number; unit: string };
+  };
+}
+
+export interface RecipePriceBreakdown {
+  ingredients: RecipePriceBreakdownIngredient[];
+  /** US cents. */
+  totalCost: number;
+  /** US cents. */
+  totalCostPerServing: number;
+}
+
 // ============================================
 // Search Recipes (Complex Search)
 // ============================================

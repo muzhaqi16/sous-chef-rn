@@ -18,11 +18,19 @@ import {
   type SavedRecipeFoldersQuery,
 } from '#features/recipes/graphql/recipe.generated';
 import { ExternalSource } from '#/graphql/generated/schemaTypes';
-import { RecipeInformation } from '#/services/recipeApi/types';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
+import {
+  RecipeInformation,
+  type RecipePriceBreakdown,
+} from '#/services/recipeApi/types';
+import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
+import { executeMutation, executeQuery } from '#/utils/compilerSafeWrappers';
 import { toastService } from '#/services/toastService';
 import { useTranslation } from 'react-i18next';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
+import { stripPriceFromName } from '#/utils/stripPriceFromName';
+
+/** Normalize an ingredient name for the fuzzy priceBreakdown join. */
+const normalizeName = (name: string): string => name.trim().toLowerCase();
 
 /**
  * Represents a recipe that has been preloaded to the backend
@@ -157,7 +165,10 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
   /**
    * Transform Spoonacular recipe data to CreateRecipeInput format
    */
-  const transformToRecipeInput = (spoonacularRecipe: RecipeInformation) => {
+  const transformToRecipeInput = (
+    spoonacularRecipe: RecipeInformation,
+    priceBreakdown?: RecipePriceBreakdown | null,
+  ) => {
     // Extract calories from nutrition data
     const caloriesPerServing = spoonacularRecipe.nutrition?.nutrients?.find(
       n => n.name === 'Calories',
@@ -169,6 +180,30 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
         step: step.number,
         text: step.step,
       })) || [];
+
+    // Per-ingredient nutrition is already present in the recipe response when
+    // it's fetched with `includeNutrition: true` (see useRecipeData) — index it
+    // by Spoonacular ingredient id so the mirror can carry it with ZERO extra
+    // Spoonacular calls. The rich /food/ingredients/{id}/information endpoint
+    // (cost/possibleUnits/categoryPath) is intentionally not called — N calls
+    // per recipe would blow the API quota; the server owns those fields.
+    const nutritionByIngredientId = new Map(
+      (spoonacularRecipe.nutrition?.ingredients ?? []).map(
+        (n): [number, typeof n] => [n.id, n],
+      ),
+    );
+
+    // Per-ingredient estimated cost (US cents) from the recipe-scoped
+    // priceBreakdown — only present on deliberate saves. priceBreakdown
+    // identifies ingredients by NAME (no id), so match on normalized name only.
+    // An unmatched ingredient simply gets no cost — never a guessed/positional
+    // one, which could assign the wrong ingredient's price.
+    const costByName = new Map(
+      (priceBreakdown?.ingredients ?? []).map((c): [string, number] => [
+        normalizeName(c.name),
+        c.price,
+      ]),
+    );
 
     return {
       // Basic recipe info
@@ -204,19 +239,82 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
 
       // Transform ingredients for backend
       ingredients:
-        spoonacularRecipe.extendedIngredients?.map((ing, idx) => ({
-          name: ing.name,
-          quantity: ing.amount || 0,
-          originalString: ing.original,
-          spoonacularIngredientId: ing.id,
-          aisle: ing.aisle,
-          image: ing.image,
-          metricAmount: ing.measures?.metric?.amount,
-          metricUnit: ing.measures?.metric?.unitShort,
-          usAmount: ing.measures?.us?.amount,
-          usUnit: ing.measures?.us?.unitShort,
-          sortOrder: idx,
-        })) || [],
+        spoonacularRecipe.extendedIngredients?.map((ing, idx) => {
+          const ingredientNutrition = nutritionByIngredientId.get(ing.id);
+          const costCents = costByName.get(normalizeName(ing.name));
+          return {
+            // Sanitize at the API boundary — the API stores names verbatim, so a
+            // price must never ride in on the name (it belongs in estimatedPrice).
+            name: stripPriceFromName(ing.name),
+            quantity: ing.amount || 0,
+            originalString: ing.original,
+            sortOrder: idx,
+            // Typed, loss-free Spoonacular mirror — replaces the deprecated flat
+            // spoonacular* fields. The server caches this payload verbatim,
+            // extracts nutrition/cost/units/image/aisle into the catalog, and
+            // links the ingredient to an Item asynchronously (fill-if-null).
+            // See sous-chef-api docs/architecture/external-ingredient-mirror.md.
+            externalSources: [
+              {
+                source: ExternalSource.Spoonacular,
+                externalId: String(ing.id),
+                isPrimary: true,
+                spoonacular: {
+                  id: ing.id,
+                  // Verbatim upstream name — the mirror is loss-free; only the
+                  // top-level canonical `name` above is price-stripped.
+                  name: ing.name,
+                  nameClean: ing.nameClean,
+                  original: ing.original,
+                  originalName: ing.originalName,
+                  amount: ing.amount,
+                  unit: ing.unit,
+                  unitShort: ing.measures?.us?.unitShort,
+                  unitLong: ing.measures?.us?.unitLong,
+                  consistency: ing.consistency,
+                  aisle: ing.aisle,
+                  // Filename only — the server builds the CDN URL and
+                  // internalizes the image to our storage so it renders offline.
+                  image: ing.image,
+                  meta: ing.meta,
+                  measures: {
+                    us: {
+                      amount: ing.measures?.us?.amount,
+                      unitShort: ing.measures?.us?.unitShort,
+                      unitLong: ing.measures?.us?.unitLong,
+                    },
+                    metric: {
+                      amount: ing.measures?.metric?.amount,
+                      unitShort: ing.measures?.metric?.unitShort,
+                      unitLong: ing.measures?.metric?.unitLong,
+                    },
+                  },
+                  // Only `nutrients` is per-ingredient; properties/flavonoids/
+                  // caloricBreakdown/weightPerServing are recipe-level and stay
+                  // omitted. Absent when the recipe wasn't fetched with
+                  // nutrition or the ingredient has no match.
+                  nutrition: ingredientNutrition
+                    ? {
+                        nutrients: ingredientNutrition.nutrients.map(n => ({
+                          name: n.name,
+                          amount: n.amount,
+                          unit: n.unit,
+                          percentOfDailyNeeds: n.percentOfDailyNeeds,
+                        })),
+                      }
+                    : undefined,
+                  // Estimated cost (US cents) — the server stores it as the
+                  // estimate on the catalog item's price history. Absent unless
+                  // priceBreakdown was fetched (deliberate saves only).
+                  estimatedCost:
+                    costCents != null
+                      ? { value: costCents, unit: 'US Cents' }
+                      : undefined,
+                },
+              },
+            ],
+          };
+        }) || [],
     };
   };
 
@@ -230,12 +328,18 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
   const preloadRecipe = async (
     spoonacularRecipe: RecipeInformation,
     externalSource: ExternalSource = ExternalSource.Spoonacular,
-    preloadOptions: { throwOnError?: boolean } = {},
+    preloadOptions: { throwOnError?: boolean; withCost?: boolean } = {},
   ): Promise<PreloadedRecipe | null> => {
     const externalId = String(spoonacularRecipe.id);
 
-    // Only attempt once per recipe (fire-and-forget)
-    if (attemptedPreloadsRef.current.has(externalId)) {
+    // Fire-and-forget view preloads run once per recipe. A deliberate save
+    // (withCost) re-ingests to attach per-ingredient cost even if the view
+    // already preloaded without it — the server re-ingest is idempotent and
+    // TTL-gated, so this is safe to call again.
+    if (
+      attemptedPreloadsRef.current.has(externalId) &&
+      !preloadOptions.withCost
+    ) {
       const cached = preloadCacheRef.current.get(externalId);
       return cached || null;
     }
@@ -243,7 +347,19 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
 
     setPreloading(true);
 
-    const input = transformToRecipeInput(spoonacularRecipe);
+    // Per-ingredient cost comes from the recipe-scoped priceBreakdown (ONE
+    // call), fetched only on deliberate saves. Best-effort — a failure leaves
+    // estimatedCost empty rather than blocking the save.
+    // Best-effort: a failure (network/quota) returns null so the save proceeds
+    // without cost rather than blocking on it.
+    const priceBreakdown = preloadOptions.withCost
+      ? await executeQuery(
+          () => spoonacularService.getRecipePriceBreakdown(Number(externalId)),
+          'preloadRecipe: fetch price breakdown',
+        )
+      : null;
+
+    const input = transformToRecipeInput(spoonacularRecipe, priceBreakdown);
 
     const result = await executeMutation(
       () => upsertRecipe({ variables: { input } }),
@@ -282,10 +398,11 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
   };
 
   /**
-   * Save a preloaded recipe to user's favorites
+   * Save a recipe to the user's favorites.
    *
-   * If the recipe has been preloaded, this uses favoriteRecipe.
-   * If not preloaded yet, this preloads first then favorites it.
+   * Re-ingests the recipe with per-ingredient cost (withCost) before favoriting
+   * so the deliberate-save path enriches the mirror, then favorites the
+   * resulting backend recipe.
    */
   const saveRecipeToFavorites = async (
     spoonacularRecipe: RecipeInformation,
@@ -293,27 +410,21 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
   ): Promise<{ success: boolean; recipeId?: string }> => {
     setSavingToFavorites(true);
 
-    const externalId = String(spoonacularRecipe.id);
-    let cached = preloadCacheRef.current.get(externalId);
-
-    // If not preloaded yet, preload first
-    if (!cached || cached.id.startsWith('pending_')) {
-      attemptedPreloadsRef.current.delete(externalId);
-
-      const preloaded = await preloadRecipe(
-        spoonacularRecipe,
-        ExternalSource.Spoonacular,
-        { throwOnError: true },
-      );
-      if (!preloaded) {
-        setSavingToFavorites(false);
-        toastService.error(t('recipes.saveRecipeFailed'));
-        return { success: false };
-      }
-      cached = preloaded;
+    // Deliberate save → re-ingest with per-ingredient cost (withCost fetches
+    // the recipe-scoped priceBreakdown and forces a refresh even if the view
+    // already preloaded this recipe without cost).
+    const preloaded = await preloadRecipe(
+      spoonacularRecipe,
+      ExternalSource.Spoonacular,
+      { throwOnError: true, withCost: true },
+    );
+    if (!preloaded) {
+      setSavingToFavorites(false);
+      toastService.error(t('recipes.saveRecipeFailed'));
+      return { success: false };
     }
 
-    const recipeId = cached.id;
+    const recipeId = preloaded.id;
 
     const result = await executeMutation(
       () =>
@@ -365,31 +476,6 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
   };
 
   /**
-   * Check if a recipe is preloaded
-   */
-  const isPreloaded = (externalId: string): boolean => {
-    const cached = preloadCacheRef.current.get(externalId);
-    return !!cached && !cached.id.startsWith('pending_');
-  };
-
-  /**
-   * Get preloaded recipe by external ID
-   */
-  const getPreloadedRecipe = (
-    externalId: string,
-  ): PreloadedRecipe | undefined => {
-    return preloadCacheRef.current.get(externalId);
-  };
-
-  /**
-   * Check if a recipe is fully saved (not just pending)
-   */
-  const isFullySaved = (externalId: string): boolean => {
-    const cached = preloadCacheRef.current.get(externalId);
-    return !!cached && !cached.id.startsWith('pending_');
-  };
-
-  /**
    * Clear the preload cache
    */
   const clearCache = () => {
@@ -410,9 +496,6 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
     saveRecipeToFavorites,
 
     // Helpers
-    isPreloaded,
-    getPreloadedRecipe,
-    isFullySaved,
     clearCache,
   };
 }
