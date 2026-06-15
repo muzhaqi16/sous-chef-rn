@@ -420,7 +420,6 @@ export function useShoppingListSelectorModal({
     actions: listActions,
     headerRight: deleteHeaderRight,
     extraData: selectorExtraData,
-    maxVisibleItems: 5,
   };
 
   return {

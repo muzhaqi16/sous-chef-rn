@@ -20,6 +20,10 @@ function seedIngredientCache(ids: string[]) {
       id,
       name: `Ingredient ${id}`,
       quantity: 1,
+      // RecipeIngredientFragment selects estimatedPrice — without it the
+      // cache.readFragment in loadMatches is incomplete and returns null,
+      // filtering every match out (empty editableMatches).
+      estimatedPrice: null,
       image: null,
       isOptional: id === 'ing-3',
       notes: null,

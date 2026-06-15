@@ -12041,6 +12041,7 @@ export type RecipeIngredientSourceInput = {
   originalName?: InputMaybe<Scalars['String']['input']>;
   originalString?: InputMaybe<Scalars['String']['input']>;
   source: ExternalSource;
+  spoonacular?: InputMaybe<SpoonacularIngredientInput>;
 };
 
 export type RecipeIngredientSourceMapping = {
@@ -13336,12 +13337,81 @@ export enum SortOrder {
   Desc = 'DESC'
 }
 
+export type SpoonacularCaloricBreakdownInput = {
+  percentCarbs?: InputMaybe<Scalars['Float']['input']>;
+  percentFat?: InputMaybe<Scalars['Float']['input']>;
+  percentProtein?: InputMaybe<Scalars['Float']['input']>;
+};
+
 /** Sub-input for spoonacular-specific data */
 export type SpoonacularDataInput = {
   aisle?: InputMaybe<Scalars['String']['input']>;
   consistency?: InputMaybe<Scalars['String']['input']>;
   originalString?: InputMaybe<Scalars['String']['input']>;
   spoonacularIngredientId?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type SpoonacularEstimatedCostInput = {
+  unit?: InputMaybe<Scalars['String']['input']>;
+  value?: InputMaybe<Scalars['Float']['input']>;
+};
+
+/**
+ * Typed Spoonacular ingredient payload. Mirrors Spoonacular
+ * GET /food/ingredients/{id}/information (+ recipe extendedIngredient fields)
+ * so the catalog mirror is loss-free. See docs/architecture/external-ingredient-mirror.md.
+ */
+export type SpoonacularIngredientInput = {
+  aisle?: InputMaybe<Scalars['String']['input']>;
+  amount?: InputMaybe<Scalars['Float']['input']>;
+  categoryPath?: InputMaybe<Array<Scalars['String']['input']>>;
+  consistency?: InputMaybe<Scalars['String']['input']>;
+  estimatedCost?: InputMaybe<SpoonacularEstimatedCostInput>;
+  id: Scalars['Int']['input'];
+  image?: InputMaybe<Scalars['String']['input']>;
+  measures?: InputMaybe<SpoonacularMeasuresInput>;
+  meta?: InputMaybe<Array<Scalars['String']['input']>>;
+  name: Scalars['String']['input'];
+  nameClean?: InputMaybe<Scalars['String']['input']>;
+  nutrition?: InputMaybe<SpoonacularNutritionInput>;
+  original?: InputMaybe<Scalars['String']['input']>;
+  originalName?: InputMaybe<Scalars['String']['input']>;
+  possibleUnits?: InputMaybe<Array<Scalars['String']['input']>>;
+  shoppingListUnits?: InputMaybe<Array<Scalars['String']['input']>>;
+  unit?: InputMaybe<Scalars['String']['input']>;
+  unitLong?: InputMaybe<Scalars['String']['input']>;
+  unitShort?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type SpoonacularMeasureInput = {
+  amount?: InputMaybe<Scalars['Float']['input']>;
+  unitLong?: InputMaybe<Scalars['String']['input']>;
+  unitShort?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type SpoonacularMeasuresInput = {
+  metric?: InputMaybe<SpoonacularMeasureInput>;
+  us?: InputMaybe<SpoonacularMeasureInput>;
+};
+
+export type SpoonacularNutrientInput = {
+  amount: Scalars['Float']['input'];
+  name: Scalars['String']['input'];
+  percentOfDailyNeeds?: InputMaybe<Scalars['Float']['input']>;
+  unit?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type SpoonacularNutritionInput = {
+  caloricBreakdown?: InputMaybe<SpoonacularCaloricBreakdownInput>;
+  flavonoids?: InputMaybe<Array<SpoonacularNutrientInput>>;
+  nutrients?: InputMaybe<Array<SpoonacularNutrientInput>>;
+  properties?: InputMaybe<Array<SpoonacularNutrientInput>>;
+  weightPerServing?: InputMaybe<SpoonacularWeightPerServingInput>;
+};
+
+export type SpoonacularWeightPerServingInput = {
+  amount?: InputMaybe<Scalars['Float']['input']>;
+  unit?: InputMaybe<Scalars['String']['input']>;
 };
 
 /** Input for stale device cleanup */

@@ -45,7 +45,27 @@ const makeSpoonacularRecipe = (id = 123) =>
     sourceUrl: 'https://example.com/recipe',
     cuisines: ['Italian'],
     analyzedInstructions: [{ steps: [{ number: 1, step: 'Boil water' }] }],
-    nutrition: { nutrients: [{ name: 'Calories', amount: 350 }] },
+    nutrition: {
+      nutrients: [{ name: 'Calories', amount: 350 }],
+      // Per-ingredient nutrition is included when the recipe is fetched with
+      // includeNutrition: true — keyed by ingredient id (matches id 1 below).
+      ingredients: [
+        {
+          id: 1,
+          name: 'pasta',
+          amount: 200,
+          unit: 'g',
+          nutrients: [
+            {
+              name: 'Calories',
+              amount: 320,
+              unit: 'kcal',
+              percentOfDailyNeeds: 16,
+            },
+          ],
+        },
+      ],
+    },
     extendedIngredients: [
       {
         name: 'pasta',
@@ -197,6 +217,135 @@ describe('useRecipePreload', () => {
     expect(sent.input.ingredients.every(i => !/\$\s*\d/.test(i.name))).toBe(
       true,
     );
+  });
+
+  it('attaches a typed Spoonacular mirror payload per ingredient', async () => {
+    // Single-call ingest: the client forwards the typed `externalSources`
+    // payload so the API can mirror Spoonacular data and link the Item
+    // asynchronously — no follow-up updateRecipeIngredients call.
+    const { mock, fired } = recordMock(UpsertExternalRecipeDocument, {
+      data: {
+        upsertExternalRecipe: {
+          __typename: 'UpsertExternalRecipeResult',
+          created: true,
+          recipe: {
+            __typename: 'Recipe',
+            id: 'backend-1',
+            name: 'Test Recipe',
+            imageUrl: null,
+            externalSource: 'SPOONACULAR',
+            externalId: '123',
+            servings: 4,
+            prepTimeMinutes: 10,
+            cookTimeMinutes: 20,
+            totalTimeMinutes: 30,
+          },
+        },
+      },
+    });
+
+    const { result } = renderHookWithApollo(() => useRecipePreload(), {
+      operationMocks: [mock],
+    });
+
+    await act(async () => {
+      await result.current.preloadRecipe(makeSpoonacularRecipe());
+    });
+
+    const sent = fired[0] as {
+      input: {
+        ingredients: Array<{
+          name: string;
+          externalSources: Array<{
+            source: string;
+            externalId: string;
+            isPrimary: boolean;
+            spoonacular: {
+              id: number;
+              name: string;
+              image: string;
+              aisle: string;
+              measures: { us: { unitShort: string } };
+              nutrition?: {
+                nutrients: Array<{
+                  name: string;
+                  amount: number;
+                  unit: string;
+                  percentOfDailyNeeds: number;
+                }>;
+              };
+            };
+          }>;
+        }>;
+      };
+    };
+    const source = sent.input.ingredients[0].externalSources[0];
+    expect(source).toEqual(
+      expect.objectContaining({
+        source: 'SPOONACULAR',
+        externalId: '1',
+        isPrimary: true,
+      }),
+    );
+    // Mirror carries the verbatim upstream name and the image FILENAME (no URL).
+    expect(source.spoonacular).toEqual(
+      expect.objectContaining({ id: 1, name: 'pasta', image: 'pasta.jpg' }),
+    );
+    expect(source.spoonacular.image).not.toMatch(/^https?:\/\//);
+    expect(source.spoonacular.measures.us.unitShort).toBe('oz');
+    // Per-ingredient nutrition joined from the recipe response (id 1) — no
+    // extra Spoonacular call.
+    expect(source.spoonacular.nutrition?.nutrients).toEqual([
+      { name: 'Calories', amount: 320, unit: 'kcal', percentOfDailyNeeds: 16 },
+    ]);
+  });
+
+  it('omits nutrition for an ingredient with no recipe-level match', async () => {
+    const { mock, fired } = recordMock(UpsertExternalRecipeDocument, {
+      data: {
+        upsertExternalRecipe: {
+          __typename: 'UpsertExternalRecipeResult',
+          created: true,
+          recipe: {
+            __typename: 'Recipe',
+            id: 'backend-1',
+            name: 'Test Recipe',
+            imageUrl: null,
+            externalSource: 'SPOONACULAR',
+            externalId: '123',
+            servings: 4,
+            prepTimeMinutes: 10,
+            cookTimeMinutes: 20,
+            totalTimeMinutes: 30,
+          },
+        },
+      },
+    });
+
+    // Ingredient id 999 has no entry in nutrition.ingredients (only id 1).
+    const recipe = makeSpoonacularRecipe();
+    recipe.extendedIngredients = [
+      { ...recipe.extendedIngredients[0], id: 999 },
+    ];
+
+    const { result } = renderHookWithApollo(() => useRecipePreload(), {
+      operationMocks: [mock],
+    });
+
+    await act(async () => {
+      await result.current.preloadRecipe(recipe);
+    });
+
+    const sent = fired[0] as {
+      input: {
+        ingredients: Array<{
+          externalSources: Array<{ spoonacular: { nutrition?: unknown } }>;
+        }>;
+      };
+    };
+    expect(
+      sent.input.ingredients[0].externalSources[0].spoonacular.nutrition,
+    ).toBeUndefined();
   });
 
   it('preloadRecipe returns cached result on second call', async () => {

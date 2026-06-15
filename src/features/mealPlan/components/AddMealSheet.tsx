@@ -310,6 +310,10 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
       async () => {
         const fullRecipe = await spoonacularService.getRecipeInformation({
           id: item.spoonacularId,
+          // Carry per-ingredient nutrition so the ingest below populates the
+          // external-ingredient mirror (spoonacular.nutrition) — one call with
+          // a flag, no extra requests. Matches useRecipeData's detail fetch.
+          includeNutrition: true,
         });
 
         const preloaded = await preloadRecipe(fullRecipe);

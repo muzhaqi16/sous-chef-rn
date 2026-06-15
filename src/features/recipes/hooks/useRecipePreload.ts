@@ -171,6 +171,18 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
         text: step.step,
       })) || [];
 
+    // Per-ingredient nutrition is already present in the recipe response when
+    // it's fetched with `includeNutrition: true` (see useRecipeData) — index it
+    // by Spoonacular ingredient id so the mirror can carry it with ZERO extra
+    // Spoonacular calls. The rich /food/ingredients/{id}/information endpoint
+    // (cost/possibleUnits/categoryPath) is intentionally not called — N calls
+    // per recipe would blow the API quota; the server owns those fields.
+    const nutritionByIngredientId = new Map(
+      (spoonacularRecipe.nutrition?.ingredients ?? []).map(
+        (n): [number, typeof n] => [n.id, n],
+      ),
+    );
+
     return {
       // Basic recipe info
       name: spoonacularRecipe.title,
@@ -205,21 +217,74 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
 
       // Transform ingredients for backend
       ingredients:
-        spoonacularRecipe.extendedIngredients?.map((ing, idx) => ({
-          // Sanitize at the API boundary — the API stores names verbatim, so a
-          // price must never ride in on the name (it belongs in estimatedPrice).
-          name: stripPriceFromName(ing.name),
-          quantity: ing.amount || 0,
-          originalString: ing.original,
-          spoonacularIngredientId: ing.id,
-          aisle: ing.aisle,
-          image: ing.image,
-          metricAmount: ing.measures?.metric?.amount,
-          metricUnit: ing.measures?.metric?.unitShort,
-          usAmount: ing.measures?.us?.amount,
-          usUnit: ing.measures?.us?.unitShort,
-          sortOrder: idx,
-        })) || [],
+        spoonacularRecipe.extendedIngredients?.map((ing, idx) => {
+          const ingredientNutrition = nutritionByIngredientId.get(ing.id);
+          return {
+            // Sanitize at the API boundary — the API stores names verbatim, so a
+            // price must never ride in on the name (it belongs in estimatedPrice).
+            name: stripPriceFromName(ing.name),
+            quantity: ing.amount || 0,
+            originalString: ing.original,
+            sortOrder: idx,
+            // Typed, loss-free Spoonacular mirror — replaces the deprecated flat
+            // spoonacular* fields. The server caches this payload verbatim,
+            // extracts nutrition/cost/units/image/aisle into the catalog, and
+            // links the ingredient to an Item asynchronously (fill-if-null).
+            // See sous-chef-api docs/architecture/external-ingredient-mirror.md.
+            externalSources: [
+              {
+                source: ExternalSource.Spoonacular,
+                externalId: String(ing.id),
+                isPrimary: true,
+                spoonacular: {
+                  id: ing.id,
+                  // Verbatim upstream name — the mirror is loss-free; only the
+                  // top-level canonical `name` above is price-stripped.
+                  name: ing.name,
+                  nameClean: ing.nameClean,
+                  original: ing.original,
+                  originalName: ing.originalName,
+                  amount: ing.amount,
+                  unit: ing.unit,
+                  unitShort: ing.measures?.us?.unitShort,
+                  unitLong: ing.measures?.us?.unitLong,
+                  consistency: ing.consistency,
+                  aisle: ing.aisle,
+                  // Filename only — the server builds the CDN URL and
+                  // internalizes the image to our storage so it renders offline.
+                  image: ing.image,
+                  meta: ing.meta,
+                  measures: {
+                    us: {
+                      amount: ing.measures?.us?.amount,
+                      unitShort: ing.measures?.us?.unitShort,
+                      unitLong: ing.measures?.us?.unitLong,
+                    },
+                    metric: {
+                      amount: ing.measures?.metric?.amount,
+                      unitShort: ing.measures?.metric?.unitShort,
+                      unitLong: ing.measures?.metric?.unitLong,
+                    },
+                  },
+                  // Only `nutrients` is per-ingredient; properties/flavonoids/
+                  // caloricBreakdown/weightPerServing are recipe-level and stay
+                  // omitted. Absent when the recipe wasn't fetched with
+                  // nutrition or the ingredient has no match.
+                  nutrition: ingredientNutrition
+                    ? {
+                        nutrients: ingredientNutrition.nutrients.map(n => ({
+                          name: n.name,
+                          amount: n.amount,
+                          unit: n.unit,
+                          percentOfDailyNeeds: n.percentOfDailyNeeds,
+                        })),
+                      }
+                    : undefined,
+                },
+              },
+            ],
+          };
+        }) || [],
     };
   };
 

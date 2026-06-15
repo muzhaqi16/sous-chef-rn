@@ -69,34 +69,6 @@ export const transformSpoonacularToRecipeInput = (
 };
 
 /**
- * Transform Spoonacular ingredient to RecipeIngredientInput format
- */
-export const transformSpoonacularIngredient = (
-  ingredient: RecipeIngredient,
-  index: number,
-) => {
-  return {
-    name: ingredient.name,
-    quantity: ingredient.amount,
-    unitId: null, // Will need to map Spoonacular units to your Unit model
-
-    // Spoonacular metadata
-    originalString: ingredient.original,
-    aisle: ingredient.aisle,
-    consistency: ingredient.consistency,
-    metricAmount: ingredient.measures?.metric?.amount,
-    metricUnit: ingredient.measures?.metric?.unitShort,
-    usAmount: ingredient.measures?.us?.amount,
-    usUnit: ingredient.measures?.us?.unitShort,
-    meta: ingredient.meta || [],
-    image: ingredient.image,
-
-    sortOrder: index,
-    isOptional: false,
-  };
-};
-
-/**
  * Get image URL for Spoonacular ingredient
  */
 export const getSpoonacularIngredientImageUrl = (imageName: string): string => {

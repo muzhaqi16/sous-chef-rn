@@ -31,8 +31,6 @@ export interface SelectorConfig<T extends SelectableItem> {
     onPress: () => void,
   ) => React.ReactElement;
   extraData?: unknown;
-  /** Cap the visible list area to this many items, then scroll */
-  maxVisibleItems?: number;
 }
 
 export interface AnimatedItemSelectorProps<T extends SelectableItem> {

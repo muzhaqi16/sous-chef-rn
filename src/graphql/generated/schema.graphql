@@ -7952,6 +7952,7 @@ input RecipeIngredientSourceInput {
   originalName: String
   originalString: String
   source: ExternalSource!
+  spoonacular: SpoonacularIngredientInput
 }
 
 type RecipeIngredientSourceMapping {
@@ -9119,12 +9120,81 @@ enum SortOrder {
   DESC
 }
 
+input SpoonacularCaloricBreakdownInput {
+  percentCarbs: Float
+  percentFat: Float
+  percentProtein: Float
+}
+
 """Sub-input for spoonacular-specific data"""
 input SpoonacularDataInput {
   aisle: String
   consistency: String
   originalString: String
   spoonacularIngredientId: Int
+}
+
+input SpoonacularEstimatedCostInput {
+  unit: String
+  value: Float
+}
+
+"""
+Typed Spoonacular ingredient payload. Mirrors Spoonacular
+GET /food/ingredients/{id}/information (+ recipe extendedIngredient fields)
+so the catalog mirror is loss-free. See docs/architecture/external-ingredient-mirror.md.
+"""
+input SpoonacularIngredientInput {
+  aisle: String
+  amount: Float
+  categoryPath: [String!]
+  consistency: String
+  estimatedCost: SpoonacularEstimatedCostInput
+  id: Int!
+  image: String
+  measures: SpoonacularMeasuresInput
+  meta: [String!]
+  name: String!
+  nameClean: String
+  nutrition: SpoonacularNutritionInput
+  original: String
+  originalName: String
+  possibleUnits: [String!]
+  shoppingListUnits: [String!]
+  unit: String
+  unitLong: String
+  unitShort: String
+}
+
+input SpoonacularMeasureInput {
+  amount: Float
+  unitLong: String
+  unitShort: String
+}
+
+input SpoonacularMeasuresInput {
+  metric: SpoonacularMeasureInput
+  us: SpoonacularMeasureInput
+}
+
+input SpoonacularNutrientInput {
+  amount: Float!
+  name: String!
+  percentOfDailyNeeds: Float
+  unit: String
+}
+
+input SpoonacularNutritionInput {
+  caloricBreakdown: SpoonacularCaloricBreakdownInput
+  flavonoids: [SpoonacularNutrientInput!]
+  nutrients: [SpoonacularNutrientInput!]
+  properties: [SpoonacularNutrientInput!]
+  weightPerServing: SpoonacularWeightPerServingInput
+}
+
+input SpoonacularWeightPerServingInput {
+  amount: Float
+  unit: String
 }
 
 """Input for stale device cleanup"""

@@ -19,11 +19,13 @@ export const ActionTrayContent: React.FC<ActionTrayContentProps> = ({
   onClose,
 }) => {
   return (
+    // No `flex: 1` on these wrappers: the content must size to its natural
+    // height so the sheet's dynamic sizing can measure it (`flex: 1` collapses
+    // to 0 inside the tray's `BottomSheetScrollView` content container).
     <Animated.View
       layout={LinearTransition}
       entering={FadeIn.delay(100)}
       exiting={FadeOut}
-      style={styles.content}
     >
       {!!(title || showCloseButton) && (
         <View style={styles.header}>
@@ -41,17 +43,12 @@ export const ActionTrayContent: React.FC<ActionTrayContentProps> = ({
           )}
         </View>
       )}
-      <Animated.View layout={LinearTransition} style={styles.childrenContainer}>
-        {children}
-      </Animated.View>
+      <Animated.View layout={LinearTransition}>{children}</Animated.View>
     </Animated.View>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  content: {
-    flex: 1,
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -67,9 +64,6 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  childrenContainer: {
-    flex: 1,
   },
   pressed: {
     opacity: theme.opacity.pressed,
