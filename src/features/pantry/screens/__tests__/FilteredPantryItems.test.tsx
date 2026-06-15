@@ -80,6 +80,9 @@ tomorrow.setDate(tomorrow.getDate() + 1);
 const in3Days = new Date(now);
 in3Days.setDate(in3Days.getDate() + 3);
 
+const sixDaysAgo = new Date(now);
+sixDaysAgo.setDate(sixDaysAgo.getDate() - 6);
+
 const mockExpiringItems = [
   {
     id: 'ex1',
@@ -96,6 +99,17 @@ const mockExpiringItems = [
     unit: { symbol: 'cups' },
     isLowStock: false,
     expiresAt: in3Days.toISOString(),
+  },
+];
+
+const mockExpiredItems = [
+  {
+    id: 'exp1',
+    itemName: 'Salmon',
+    quantity: 1,
+    unit: { symbol: 'steak' },
+    isLowStock: false,
+    expiresAt: sixDaysAgo.toISOString(),
   },
 ];
 
@@ -163,7 +177,7 @@ jest.mock('#/styles/commonStyles', () => ({
 }));
 
 const makeRoute = (
-  mode?: 'lowStock' | 'expiring',
+  mode?: 'lowStock' | 'expiring' | 'expired',
 ): React.ComponentProps<typeof FilteredPantryItems>['route'] => ({
   params: mode ? { mode } : undefined,
 });
@@ -249,6 +263,47 @@ describe('FilteredPantryItems', () => {
       mockAllItems = [];
       renderWithApollo(<FilteredPantryItems route={makeRoute('expiring')} />);
       expect(screen.getByText('No items are expiring soon')).toBeTruthy();
+    });
+
+    it('excludes already-expired items', () => {
+      mockAllItems = mockExpiredItems;
+      renderWithApollo(<FilteredPantryItems route={makeRoute('expiring')} />);
+      expect(screen.queryByText('Salmon')).toBeNull();
+      expect(screen.getByText('No items are expiring soon')).toBeTruthy();
+    });
+  });
+
+  describe('expired mode', () => {
+    beforeEach(() => {
+      mockAllItems = mockExpiredItems;
+    });
+
+    it('renders the title', () => {
+      renderWithApollo(<FilteredPantryItems route={makeRoute('expired')} />);
+      expect(screen.getByText('Expired Items')).toBeTruthy();
+    });
+
+    it('renders expired item names', () => {
+      renderWithApollo(<FilteredPantryItems route={makeRoute('expired')} />);
+      expect(screen.getByText('Salmon')).toBeTruthy();
+    });
+
+    it('shows expired subtitle', () => {
+      renderWithApollo(<FilteredPantryItems route={makeRoute('expired')} />);
+      expect(screen.getByText('Expired')).toBeTruthy();
+    });
+
+    it('excludes items that are only expiring soon', () => {
+      mockAllItems = mockExpiringItems;
+      renderWithApollo(<FilteredPantryItems route={makeRoute('expired')} />);
+      expect(screen.queryByText('Milk')).toBeNull();
+      expect(screen.getByText('No expired items')).toBeTruthy();
+    });
+
+    it('shows empty state when nothing is expired', () => {
+      mockAllItems = [];
+      renderWithApollo(<FilteredPantryItems route={makeRoute('expired')} />);
+      expect(screen.getByText('No expired items')).toBeTruthy();
     });
   });
 });

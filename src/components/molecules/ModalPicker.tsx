@@ -52,7 +52,21 @@ export const ModalPicker: React.FC<ModalPickerProps> = ({
   const activeValue = confirmLabel ? pendingValue : selected;
 
   return (
-    <ActionTray ref={trayRef} title={label} onClose={onCancel}>
+    <ActionTray
+      ref={trayRef}
+      title={label}
+      onClose={onCancel}
+      footer={
+        confirmLabel ? (
+          <Button
+            title={confirmLabel}
+            onPress={() => onSelect(pendingValue)}
+            disabled={pendingValue === selected}
+            fullWidth
+          />
+        ) : undefined
+      }
+    >
       <View>
         {options.map(opt => (
           <AppPressable
@@ -75,16 +89,6 @@ export const ModalPicker: React.FC<ModalPickerProps> = ({
           </AppPressable>
         ))}
       </View>
-      {confirmLabel ? (
-        <View style={styles.footer}>
-          <Button
-            title={confirmLabel}
-            onPress={() => onSelect(pendingValue)}
-            disabled={pendingValue === selected}
-            fullWidth
-          />
-        </View>
-      ) : null}
     </ActionTray>
   );
 };
@@ -102,8 +106,5 @@ const styles = StyleSheet.create(theme => ({
   },
   pressed: {
     opacity: theme.opacity.pressed,
-  },
-  footer: {
-    paddingTop: theme.spacing['3'],
   },
 }));

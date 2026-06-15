@@ -41,6 +41,7 @@ const OptimisticPantryFragment = gql`
       totalItems
       activeItems
       expiringCount
+      expiredCount
       lowStockCount
       totalValue
       storageStateCounts {
@@ -144,6 +145,7 @@ export function writeOptimisticPantry(
         totalItems: 0,
         activeItems: 0,
         expiringCount: 0,
+        expiredCount: 0,
         lowStockCount: 0,
         totalValue: 0,
         storageStateCounts: {

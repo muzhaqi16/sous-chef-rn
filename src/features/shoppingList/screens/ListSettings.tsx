@@ -35,6 +35,7 @@ import {
 } from '#utils/ownershipHelpers';
 
 import type { StaticScreenProps } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import { Text } from '#components/atoms/Text';
 
 /** Module-level helper to sync shopping list form state from loaded data */
@@ -63,7 +64,7 @@ export const ListSettings: React.FC<
 > = ({ route }) => {
   const { t } = useTranslation();
   const listId = route.params?.listId;
-  const { toShareList, goBack } = useAppNavigation();
+  const { toShareList, toHomeDetail, goBack } = useAppNavigation();
   const setSelectedShoppingListId = useAppStore(
     state => state.setSelectedShoppingListId,
   );
@@ -119,6 +120,7 @@ export const ListSettings: React.FC<
   // row and must be able to leave the list directly. Gating on homeId alone
   // dead-ends those users: they can't leave a home they were never in.
   const isHomeMember = !!shoppingList?.home?.myMembership;
+  const linkedHomeId = shoppingList?.homeId ?? null;
 
   const { leaveList, leaving } = useLeaveShoppingList(listId || '');
   const { updateShoppingList } = useUpdateShoppingList(
@@ -132,6 +134,29 @@ export const ListSettings: React.FC<
   useEffect(() => {
     syncListFormState(shoppingList, listId, setName, setIsDefault);
   }, [shoppingList, listId]);
+
+  // Safe return after leaving the linked home. A non-owner's access to a
+  // home-linked list is derived from their home membership — there's no direct
+  // collaborator row. Leaving the home from the "Manage Home" screen evicts the
+  // Home from cache (see useHomeDetailManagement) but leaves the ShoppingList
+  // entity in place, so without this guard the user would land back on a list
+  // they can no longer open. When this screen regains focus with the list still
+  // loaded but every access path gone (not the owner, no collaborator row, no
+  // home membership), pop back to the list index and clear the now-inaccessible
+  // selection so ShoppingListMain auto-selects another list.
+  const hasLostListAccess =
+    !!listId &&
+    !!shoppingList &&
+    !isOwner &&
+    !currentUserCollaborator &&
+    !isHomeMember;
+
+  useFocusEffect(() => {
+    if (hasLostListAccess) {
+      setSelectedShoppingListId(null);
+      goBack();
+    }
+  });
 
   const handleSave = () => {
     if (!name.trim()) {
@@ -345,6 +370,25 @@ export const ListSettings: React.FC<
                       name: shoppingList?.home?.name ?? '',
                     })}
                   </Text>
+                  {!!linkedHomeId && (
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.actionRow,
+                        pressed && { opacity: 0.7 },
+                      ]}
+                      onPress={() => toHomeDetail({ homeId: linkedHomeId })}
+                    >
+                      <Icon name="people-outline" size={20} tone="primary" />
+                      <Text size="md" tone="accent" style={styles.actionText}>
+                        {t('shoppingListScreens.manageHome')}
+                      </Text>
+                      <Icon
+                        name="chevron-forward"
+                        size={20}
+                        tone="textSecondary"
+                      />
+                    </Pressable>
+                  )}
                 </>
               ) : (
                 <>

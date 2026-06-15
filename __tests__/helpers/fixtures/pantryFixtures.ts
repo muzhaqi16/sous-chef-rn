@@ -135,6 +135,7 @@ export function pantryData(pantry: PantryFixture): Unmasked<GetPantryQuery> {
         __typename: 'PantryStats',
         totalItems: pantry.totalItems ?? items.length,
         expiringCount: 0,
+        expiredCount: 0,
         lowStockCount: 0,
         storageStateCounts: {
           __typename: 'StorageStateCounts',

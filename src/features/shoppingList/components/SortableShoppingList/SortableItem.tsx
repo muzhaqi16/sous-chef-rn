@@ -50,12 +50,21 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   item: rowItem,
   index,
 }) => {
+  // FlashList v2 can transiently call renderItem with an `undefined` item while
+  // recycling cells during a layout-animation render: toggling purchase or
+  // deleting an item calls prepareForLayoutAnimationRender() and shrinks the
+  // data array, so a recycled cell may briefly map to an out-of-range index.
+  // Read everything off the row defensively (hooks stay unconditional) and
+  // render the stable empty cell below when it's missing — the next commit
+  // supplies the correct item.
+  const itemRef = rowItem?.itemRef;
+
   // Per-entity cache subscription: this row re-renders only when its own
   // ShoppingListItem cache record changes (quantity, unit, image, etc.).
   const { data, complete } = useFragment({
     fragment: SortableItem_ItemFragmentDoc,
     fragmentName: 'SortableItem_item',
-    from: rowItem.itemRef,
+    from: itemRef ?? null,
   });
 
   // PERFORMANCE: Get theme colors from context (single useUnistyles at list level)
@@ -76,7 +85,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
 
   // Slide animation for purchase toggle
   const { animatedSlideStyle, triggerSlide } = useSlideAnimation({
-    itemId: rowItem.id,
+    itemId: rowItem?.id ?? '',
     slideDistance: screenWidth,
     duration: TIMING.MODERATE,
   });
@@ -110,8 +119,8 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   // `rowItem.isPurchased` is forced to match the active tab — use it for
   // visual state so a freshly toggled item paints the new state immediately
   // before the cache propagates.
-  const isPurchased = rowItem.isPurchased;
-  const itemId = rowItem.id;
+  const isPurchased = rowItem?.isPurchased ?? false;
+  const itemId = rowItem?.id ?? '';
 
   // Derive display data from the fragment. On cache miss before first paint
   // we fall back to safe defaults instead of returning null so the cell still
@@ -308,9 +317,10 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
     return checkbox;
   })();
 
-  // While the fragment is hydrating from cache, render an empty cell rather
-  // than blanking — keeps the FlashList slot stable.
-  if (!complete && !data) {
+  // While the fragment is hydrating from cache — or when FlashList hands us a
+  // recycled cell with no backing row (see note at the top) — render an empty
+  // cell rather than blanking, keeping the FlashList slot stable.
+  if (!rowItem || (!complete && !data)) {
     return <View style={styles.container} />;
   }
 

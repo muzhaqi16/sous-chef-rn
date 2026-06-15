@@ -54,9 +54,9 @@ describe('usePantrySelectorConfig', () => {
       usePantrySelectorConfig(defaultOptions),
     );
     expect(result.current.actions).toHaveLength(3);
-    expect(result.current.actions[0].label).toBe('Create New Pantry');
-    expect(result.current.actions[1].label).toBe('Edit Selected Pantry');
-    expect(result.current.actions[2].label).toBe('View Analytics');
+    expect(result.current.actions[0].label).toBe('Create');
+    expect(result.current.actions[1].label).toBe('Edit');
+    expect(result.current.actions[2].label).toBe('Analytics');
   });
 
   it('disables edit/analytics when no pantry selected', () => {

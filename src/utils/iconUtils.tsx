@@ -28,6 +28,7 @@ const TONE_TO_COLOR: Record<string, (t: Theme) => string> = {
   textOnSurfaceVariant: t => t.colors.textOnSurfaceVariant,
   error: t => t.colors.error,
   warning: t => t.colors.warning,
+  expired: t => t.colors.expiration.expiredText,
   success: t => t.colors.success,
   info: t => t.colors.info,
   danger: t => t.colors.danger,

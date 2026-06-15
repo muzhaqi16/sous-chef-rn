@@ -290,4 +290,17 @@ describe('SwipeableListItem (SortableItem)', () => {
     expect(screen.getByTestId('quantity-badge')).toBeTruthy();
     expect(screen.getByText('3 pcs')).toBeTruthy();
   });
+
+  it('renders a stable empty cell without crashing when FlashList recycles an undefined item', () => {
+    // FlashList v2 can transiently call renderItem with item === undefined while
+    // recycling cells during a layout-animation render (toggle/delete shrinks
+    // the data array). The row must degrade to an empty cell, not throw.
+    renderWithApollo(
+      // @ts-expect-error — intentionally simulating FlashList's recycled
+      // undefined item, which violates the ListRenderItemInfo type at runtime.
+      <SwipeableListItem item={undefined} index={0} target="Cell" />,
+    );
+    expect(screen.queryByTestId('list-item')).toBeNull();
+    expect(screen.queryByTestId('swipeable-item')).toBeNull();
+  });
 });

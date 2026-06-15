@@ -1430,6 +1430,8 @@
     "remaining": "{{quantity}} {{unit}} rimanenti",
     "expiringTitle": "Articoli in scadenza",
     "expiringEmpty": "Nessun articolo in scadenza a breve",
+    "expiredTitle": "Articoli scaduti",
+    "expiredEmpty": "Nessun articolo scaduto",
     "addToShoppingFailed": "Impossibile aggiungere alla lista della spesa",
     "noListSelected": "Seleziona prima una lista della spesa"
   },
@@ -1685,15 +1687,15 @@
   "pantrySelector": {
     "title": "Seleziona dispensa",
     "emptyMessage": "Nessuna dispensa disponibile",
-    "createNewPantry": "Crea nuova dispensa",
-    "editSelectedPantry": "Modifica dispensa selezionata",
-    "viewAnalytics": "Visualizza statistiche"
+    "createNewPantry": "Crea",
+    "editSelectedPantry": "Modifica",
+    "viewAnalytics": "Statistiche"
   },
   "mealPlanSelector": {
     "title": "Seleziona piano pasti",
     "emptyMessage": "Nessun piano pasti disponibile",
-    "createNewPlan": "Crea nuovo piano",
-    "createFromTemplate": "Crea da modello",
+    "createNewPlan": "Crea",
+    "createFromTemplate": "Modello",
     "personalSubtitle": "Personale"
   },
   "pantryHeader": {
@@ -2074,6 +2076,7 @@
     "tabFreezer": "Congelatore",
     "tabPantry": "Dispensa",
     "expiringCount": "{{count}} in scadenza",
+    "expiredCount": "{{count}} scaduti",
     "lowStockCount": "{{count}} scorta bassa",
     "analyticsAccessibility": "Visualizza analisi",
     "emptyTitle": "La tua dispensa è vuota",
@@ -2209,9 +2212,9 @@
     "emptyMessage": "Nessuna lista della spesa disponibile",
     "personalLists": "Liste Personali",
     "unknownHome": "Casa Sconosciuta",
-    "createNewList": "Crea Nuova Lista",
-    "shareCurrentList": "Condividi Lista Attuale",
-    "listSettings": "Impostazioni Lista",
+    "createNewList": "Crea",
+    "shareCurrentList": "Condividi",
+    "listSettings": "Impostazioni",
     "cancel": "Annulla",
     "cannotDeleteShared": "Impossibile eliminare (condivisa)",
     "sharedBy": "Condivisa da {{name}}",

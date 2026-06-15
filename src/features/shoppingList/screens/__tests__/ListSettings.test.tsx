@@ -2,7 +2,7 @@
 
 import React from 'react';
 import type { TextInputProps } from 'react-native';
-import { screen } from '@testing-library/react-native';
+import { screen, fireEvent } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import type { InfoRowProps } from '#components/molecules/InfoRow';
 import { ListSettings } from '../ListSettings';
@@ -289,6 +289,65 @@ describe('ListSettings', () => {
 
     render(<ListSettings route={editRoute} />);
     expect(screen.getByText(/This list is linked to the home/)).toBeTruthy();
+  });
+
+  it('navigates to the linked home when a non-owner taps Manage Home', () => {
+    const ownerHelpers = require('#utils/ownershipHelpers');
+    ownerHelpers.isShoppingListOwner.mockReturnValue(false);
+
+    const useShoppingListDetailsModule = require('#features/shoppingList/hooks/useShoppingListDetails');
+    useShoppingListDetailsModule.useShoppingListDetails = jest.fn(() => ({
+      shoppingList: {
+        id: 'sl1',
+        name: 'Weekly Groceries',
+        isDefault: true,
+        homeId: 'h1',
+        home: {
+          name: 'Family Home',
+          myMembership: { id: 'm1', role: 'MEMBER' },
+        },
+        createdBy: { id: 'u2' },
+        collaboratorsConnection: { edges: [], totalCount: 0 },
+      },
+      isShared: true,
+      collaborators: [],
+    }));
+
+    const { useAppNavigation } = require('#hooks/navigation/useAppNavigation');
+    const { toHomeDetail } = useAppNavigation();
+
+    render(<ListSettings route={editRoute} />);
+    fireEvent.press(screen.getByText('Manage Home'));
+    expect(toHomeDetail).toHaveBeenCalledWith({ homeId: 'h1' });
+  });
+
+  it('pops back when a non-owner has lost access to the list', () => {
+    // No ownership, no collaborator row, and no home membership — the only way
+    // this state arises is the user having just left the linked home, so the
+    // screen should self-unwind instead of stranding them on a ghost list.
+    const ownerHelpers = require('#utils/ownershipHelpers');
+    ownerHelpers.isShoppingListOwner.mockReturnValue(false);
+
+    const useShoppingListDetailsModule = require('#features/shoppingList/hooks/useShoppingListDetails');
+    useShoppingListDetailsModule.useShoppingListDetails = jest.fn(() => ({
+      shoppingList: {
+        id: 'sl1',
+        name: 'Weekly Groceries',
+        isDefault: true,
+        homeId: 'h1',
+        home: null,
+        createdBy: { id: 'u2' },
+        collaboratorsConnection: { edges: [], totalCount: 0 },
+      },
+      isShared: false,
+      collaborators: [],
+    }));
+
+    const { useAppNavigation } = require('#hooks/navigation/useAppNavigation');
+    const { goBack } = useAppNavigation();
+
+    render(<ListSettings route={editRoute} />);
+    expect(goBack).toHaveBeenCalled();
   });
 
   it('shows shared info when list is shared and user is owner', () => {

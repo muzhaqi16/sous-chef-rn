@@ -6,6 +6,16 @@ import type { MockLink } from '@apollo/client/testing';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { ShoppingListItemDetail } from '../ItemDetail';
 import { GetShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
+import { resolveImageUrl } from '#utils/imageUtils';
+
+const mockUseShowShoppingListImages =
+  useShowShoppingListImages as jest.MockedFunction<
+    typeof useShowShoppingListImages
+  >;
+const mockResolveImageUrl = resolveImageUrl as jest.MockedFunction<
+  typeof resolveImageUrl
+>;
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
@@ -52,7 +62,28 @@ jest.mock('#components/atoms/FormattedItemSubtitle', () => ({
   },
 }));
 jest.mock('#components/atoms/CachedImage', () => ({
-  CachedImage: () => null,
+  CachedImage: ({
+    testID,
+    uri,
+    onError,
+  }: {
+    testID?: string;
+    uri?: string | null;
+    onError?: () => void;
+  }) => {
+    const { View } = require('react-native');
+    const ReactLocal = require('react');
+    // Simulate a broken/unreachable image so the failure-collapse path is
+    // exercised without a real network load.
+    ReactLocal.useEffect(() => {
+      if (uri === 'BROKEN') onError?.();
+    }, [uri, onError]);
+    return <View testID={testID} />;
+  },
+}));
+
+jest.mock('#hooks/settings/useUserPreferences', () => ({
+  useShowShoppingListImages: jest.fn(() => true),
 }));
 
 function buildShoppingListItem(overrides: Record<string, unknown> = {}) {
@@ -109,6 +140,11 @@ function buildItemMock(
 
 describe('ShoppingListItemDetail', () => {
   const route = { params: { listId: 'sl1', itemId: 'si1' } };
+
+  beforeEach(() => {
+    mockUseShowShoppingListImages.mockReturnValue(true);
+    mockResolveImageUrl.mockReturnValue(null);
+  });
 
   it('renders the item name', async () => {
     renderWithApollo(<ShoppingListItemDetail route={route} />, {
@@ -169,5 +205,47 @@ describe('ShoppingListItemDetail', () => {
     });
     await waitFor(() => expect(screen.getByText('Added By')).toBeTruthy());
     expect(screen.getByText('Test User')).toBeTruthy();
+  });
+
+  it('renders the hero image when one resolves and images are enabled', async () => {
+    mockResolveImageUrl.mockReturnValue('https://cdn.example.com/bread.jpg');
+    renderWithApollo(<ShoppingListItemDetail route={route} />, {
+      operationMocks: [buildItemMock('si1', buildShoppingListItem())],
+    });
+    await waitFor(() =>
+      expect(screen.getByTestId('shopping-item-hero-image')).toBeTruthy(),
+    );
+  });
+
+  it('omits the hero when the user has disabled images', async () => {
+    mockUseShowShoppingListImages.mockReturnValue(false);
+    mockResolveImageUrl.mockReturnValue('https://cdn.example.com/bread.jpg');
+    renderWithApollo(<ShoppingListItemDetail route={route} />, {
+      operationMocks: [buildItemMock('si1', buildShoppingListItem())],
+    });
+    await waitFor(() => expect(screen.getAllByText('Bread')[0]).toBeTruthy());
+    expect(screen.queryByTestId('shopping-item-hero-image')).toBeNull();
+  });
+
+  it('omits the hero when no image is available', async () => {
+    mockResolveImageUrl.mockReturnValue(null);
+    renderWithApollo(<ShoppingListItemDetail route={route} />, {
+      operationMocks: [buildItemMock('si1', buildShoppingListItem())],
+    });
+    await waitFor(() => expect(screen.getAllByText('Bread')[0]).toBeTruthy());
+    expect(screen.queryByTestId('shopping-item-hero-image')).toBeNull();
+  });
+
+  it('collapses the hero when its image fails to load', async () => {
+    mockResolveImageUrl.mockReturnValue('BROKEN');
+    renderWithApollo(<ShoppingListItemDetail route={route} />, {
+      operationMocks: [buildItemMock('si1', buildShoppingListItem())],
+    });
+    await waitFor(() => expect(screen.getAllByText('Bread')[0]).toBeTruthy());
+    // The mocked CachedImage fires onError for the 'BROKEN' uri, which should
+    // drop the hero rather than leaving a broken-image placeholder.
+    await waitFor(() =>
+      expect(screen.queryByTestId('shopping-item-hero-image')).toBeNull(),
+    );
   });
 });

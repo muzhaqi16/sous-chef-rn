@@ -1430,6 +1430,8 @@
     "remaining": "{{quantity}} {{unit}} remaining",
     "expiringTitle": "Expiring Items",
     "expiringEmpty": "No items are expiring soon",
+    "expiredTitle": "Expired Items",
+    "expiredEmpty": "No expired items",
     "addToShoppingFailed": "Failed to add to shopping list",
     "noListSelected": "Select a shopping list first"
   },
@@ -1685,15 +1687,15 @@
   "pantrySelector": {
     "title": "Select Pantry",
     "emptyMessage": "No pantries available",
-    "createNewPantry": "Create New Pantry",
-    "editSelectedPantry": "Edit Selected Pantry",
-    "viewAnalytics": "View Analytics"
+    "createNewPantry": "Create",
+    "editSelectedPantry": "Edit",
+    "viewAnalytics": "Analytics"
   },
   "mealPlanSelector": {
     "title": "Select Meal Plan",
     "emptyMessage": "No meal plans available",
-    "createNewPlan": "Create New Plan",
-    "createFromTemplate": "Create from Template",
+    "createNewPlan": "Create",
+    "createFromTemplate": "Template",
     "personalSubtitle": "Personal"
   },
   "pantryHeader": {
@@ -2074,6 +2076,7 @@
     "tabFreezer": "Freezer",
     "tabPantry": "Pantry",
     "expiringCount": "{{count}} expiring",
+    "expiredCount": "{{count}} expired",
     "lowStockCount": "{{count}} low stock",
     "analyticsAccessibility": "View analytics",
     "emptyTitle": "Your pantry is empty",
@@ -2209,9 +2212,9 @@
     "emptyMessage": "No shopping lists available",
     "personalLists": "Personal Lists",
     "unknownHome": "Unknown Home",
-    "createNewList": "Create New List",
-    "shareCurrentList": "Share Current List",
-    "listSettings": "List Settings",
+    "createNewList": "Create",
+    "shareCurrentList": "Share",
+    "listSettings": "Settings",
     "cancel": "Cancel",
     "cannotDeleteShared": "Cannot delete (shared)",
     "sharedBy": "Shared by {{name}}",

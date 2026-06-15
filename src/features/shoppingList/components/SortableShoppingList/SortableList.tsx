@@ -38,9 +38,13 @@ const MVCP_DISABLED = { disabled: true };
 
 // Module-scope functions — zero runtime overhead (no compiler tracking/comparison)
 const keyExtractor = (item: ShoppingListRowItem) => item.id;
-const renderItem = (info: ListRenderItemInfo<ShoppingListRowItem>) => (
-  <SwipeableListItem {...info} />
-);
+const renderItem = (info: ListRenderItemInfo<ShoppingListRowItem>) => {
+  // FlashList v2 can transiently invoke renderItem with an undefined item while
+  // recycling cells during a data swap (e.g. switching the active list). Guard
+  // here so the row never dereferences an undefined item (`item.itemRef`).
+  if (!info.item) return null;
+  return <SwipeableListItem {...info} />;
+};
 const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
   items,
   onItemPress,

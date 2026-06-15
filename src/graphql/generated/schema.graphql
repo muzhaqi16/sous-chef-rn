@@ -7030,6 +7030,7 @@ input PantryOrderBy {
 
 type PantryStats {
   activeItems: Int!
+  expiredCount: Int!
   expiringCount: Int!
   lowStockCount: Int!
   storageLocationCounts: [StorageLocationCount!]!

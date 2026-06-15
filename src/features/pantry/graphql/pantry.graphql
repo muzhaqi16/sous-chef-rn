@@ -35,6 +35,7 @@ query GetPantry(
     stats {
       totalItems
       expiringCount
+      expiredCount
       lowStockCount
       storageStateCounts {
         refrigerated
@@ -1076,6 +1077,7 @@ subscription PantryEvents($pantryId: ID!) {
         stats {
           totalItems
           expiringCount
+          expiredCount
           lowStockCount
         }
       }

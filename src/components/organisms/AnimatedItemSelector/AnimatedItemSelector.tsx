@@ -2,6 +2,7 @@ import { useImperativeHandle, useRef } from 'react';
 import { ActionTray } from '#components/templates/ActionTray/ActionTray';
 import type { ActionTrayRef } from '#components/templates/ActionTray/types';
 import { SelectorContent } from './SelectorContent';
+import { ActionButtons } from './ActionButtons';
 import type { AnimatedItemSelectorProps, SelectableItem } from './types';
 
 // React 19 ref-as-prop keeps the component generic over the item type `T`
@@ -34,6 +35,7 @@ export const AnimatedItemSelector = <T extends SelectableItem>({
       onOpen={onOpen}
       showCloseButton={true}
       enableBackdrop={true}
+      footer={<ActionButtons actions={config.actions} />}
     >
       <SelectorContent config={config} />
     </ActionTray>

@@ -10395,6 +10395,7 @@ export type PantryOrderBy = {
 export type PantryStats = {
   __typename: 'PantryStats';
   activeItems: Scalars['Int']['output'];
+  expiredCount: Scalars['Int']['output'];
   expiringCount: Scalars['Int']['output'];
   lowStockCount: Scalars['Int']['output'];
   storageLocationCounts: Array<StorageLocationCount>;

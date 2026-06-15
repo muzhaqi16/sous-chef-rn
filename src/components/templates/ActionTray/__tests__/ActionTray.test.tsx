@@ -4,23 +4,10 @@ import { render, screen, act } from '@testing-library/react-native';
 import { Text } from '#components/atoms/Text';
 import { useBackdropClaim } from '#components/providers/OverlayBackdropProvider';
 import { ActionTray } from '../ActionTray';
-import type { ActionTrayContentProps, ActionTrayRef } from '../types';
+import type { ActionTrayRef } from '../types';
 
 jest.mock('#components/providers/OverlayBackdropProvider', () => ({
   useBackdropClaim: jest.fn(),
-}));
-
-jest.mock('../ActionTrayContent', () => ({
-  ActionTrayContent: ({ children, title }: ActionTrayContentProps) => {
-    const RN = require('react-native');
-    const R = require('react');
-    return R.createElement(
-      RN.View,
-      { testID: 'action-tray-content' },
-      title ? R.createElement(RN.Text, null, title) : null,
-      children,
-    );
-  },
 }));
 
 describe('ActionTray', () => {

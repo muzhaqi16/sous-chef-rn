@@ -52,7 +52,7 @@ import { Text } from '#components/atoms/Text';
 
 // ── Types ──
 
-export type FilteredPantryItemsMode = 'lowStock' | 'expiring';
+export type FilteredPantryItemsMode = 'lowStock' | 'expiring' | 'expired';
 
 type FilteredPantryItemsParams = {
   mode?: FilteredPantryItemsMode;
@@ -129,15 +129,42 @@ function buildModeConfig(t: TFn): Record<FilteredPantryItemsMode, ModeConfig> {
       title: t('filteredPantry.expiringTitle'),
       emptyMessage: t('filteredPantry.expiringEmpty'),
       emptyIcon: 'time-outline',
+      // Mirrors server `PantryStats.expiringCount`: expiring within 7 days but
+      // NOT yet expired (now ≤ expiresAt ≤ now + 7d, quantity > 0). Already-
+      // expired items live in the `expired` mode below — the two are mutually
+      // exclusive so badge counts and lists stay aligned.
       filter: item => {
-        if (!item.expiresAt) return false;
+        if (!item.expiresAt || item.quantity <= 0) return false;
         const days = differenceInCalendarDays(
           new Date(item.expiresAt),
           new Date(),
         );
-        return days <= 7;
+        return days >= 0 && days <= 7;
       },
       sort: (a, b) => {
+        const aDate = a.expiresAt ? new Date(a.expiresAt).getTime() : Infinity;
+        const bDate = b.expiresAt ? new Date(b.expiresAt).getTime() : Infinity;
+        return aDate - bDate;
+      },
+      subtitle: item => formatExpirySubtitle(item.expiresAt, t),
+      tutorialSteps: [],
+      showCartAction: false,
+    },
+    expired: {
+      title: t('filteredPantry.expiredTitle'),
+      emptyMessage: t('filteredPantry.expiredEmpty'),
+      emptyIcon: 'alert-circle-outline',
+      // Mirrors server `PantryStats.expiredCount`: past expiresAt, quantity > 0.
+      filter: item => {
+        if (!item.expiresAt || item.quantity <= 0) return false;
+        const days = differenceInCalendarDays(
+          new Date(item.expiresAt),
+          new Date(),
+        );
+        return days < 0;
+      },
+      sort: (a, b) => {
+        // Oldest-expired first.
         const aDate = a.expiresAt ? new Date(a.expiresAt).getTime() : Infinity;
         const bDate = b.expiresAt ? new Date(b.expiresAt).getTime() : Infinity;
         return aDate - bDate;

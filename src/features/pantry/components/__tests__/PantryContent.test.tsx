@@ -624,7 +624,12 @@ describe('PantryContent', () => {
   });
 
   it('renders alert bar when stats are provided', () => {
-    const stats = { totalItems: 10, expiringCount: 3, lowStockCount: 2 };
+    const stats = {
+      totalItems: 10,
+      expiringCount: 3,
+      expiredCount: 0,
+      lowStockCount: 2,
+    };
     render(<PantryContent {...defaultProps} stats={stats} />);
     expect(screen.getByTestId('pantry-alert-bar')).toBeTruthy();
     expect(screen.getByText('Alert: 3 expiring')).toBeTruthy();
@@ -656,7 +661,12 @@ describe('PantryContent', () => {
 
   it('renders sort direction indicator as descending arrow', () => {
     const items = [createMockPantryItem({ id: '1' })];
-    const stats = { totalItems: 1, expiringCount: 0, lowStockCount: 0 };
+    const stats = {
+      totalItems: 1,
+      expiringCount: 0,
+      expiredCount: 0,
+      lowStockCount: 0,
+    };
     render(<PantryContent {...defaultProps} items={items} stats={stats} />);
     expect(screen.getByText(/Sort/)).toBeTruthy();
   });
@@ -674,7 +684,12 @@ describe('PantryContent', () => {
     });
 
     const sortItems = [createMockPantryItem({ id: '1' })];
-    const stats = { totalItems: 1, expiringCount: 0, lowStockCount: 0 };
+    const stats = {
+      totalItems: 1,
+      expiringCount: 0,
+      expiredCount: 0,
+      lowStockCount: 0,
+    };
     render(<PantryContent {...defaultProps} items={sortItems} stats={stats} />);
     expect(screen.getByText(/Sort/)).toBeTruthy();
 

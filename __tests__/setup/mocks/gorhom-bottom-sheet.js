@@ -26,7 +26,27 @@ jest.mock('@gorhom/bottom-sheet', () => {
         close: jest.fn(),
         forceClose: jest.fn(),
       }));
-      return React.createElement(View, props);
+      // Render the handle/footer render-props so consumers that pin their
+      // header/footer through them (e.g. ActionTray) still show that content
+      // in tests. Remaining props (detached, onChange, onDismiss, …) stay on
+      // the View so tests can read them.
+      const {
+        handleComponent: Handle,
+        footerComponent: Footer,
+        children,
+        ...rest
+      } = props;
+      return React.createElement(
+        View,
+        rest,
+        Handle ? React.createElement(Handle) : null,
+        children,
+        Footer
+          ? React.createElement(Footer, {
+              animatedFooterPosition: { value: 0 },
+            })
+          : null,
+      );
     }),
     BottomSheetModalProvider: ({ children }) => children,
     BottomSheetBackdrop: props => React.createElement(View, props),
