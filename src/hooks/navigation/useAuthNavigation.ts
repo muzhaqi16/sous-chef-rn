@@ -1,5 +1,6 @@
 import { useAppStore } from '#store/useAppStore';
 import { useStore } from '#store';
+import { logger } from '#/utils/environment';
 import { useAppNavigation } from './useAppNavigation';
 import type { AuthUserInput } from '#store/slices/authSlice';
 
@@ -71,7 +72,7 @@ export function useAuthNavigation() {
   const navigateToVerification = () => {
     // This is actually handled by conditional navigation now
     // When user.emailVerified is false, it automatically shows verification
-    console.log('Verification navigation handled by conditional groups');
+    logger.debug('Verification navigation handled by conditional groups');
   };
 
   const navigateToForgotPassword = toForgotPassword;

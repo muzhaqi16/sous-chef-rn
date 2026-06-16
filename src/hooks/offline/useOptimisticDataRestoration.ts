@@ -1,6 +1,7 @@
 import { useEffect, startTransition } from 'react';
 import { gql } from '@apollo/client';
 import { client } from '#/apollo/client';
+import { logger } from '#/utils/environment';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { useUser } from '#store/useAppStore';
 
@@ -79,7 +80,7 @@ export function useOptimisticDataRestorationMultiple(
                   // Cache has newer or equal version - skip restoration
                   // This means API data is more recent than our optimistic update
                   if (__DEV__) {
-                    console.log(
+                    logger.debug(
                       `Skipping optimistic restoration for ${entityType}:${entityId} - cache version (${currentVersion}) >= persisted version (${fields.version})`,
                     );
                   }
