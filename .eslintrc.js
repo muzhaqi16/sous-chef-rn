@@ -86,6 +86,24 @@ module.exports = {
       globals: { __DEV__: 'readonly', globalThis: 'readonly' },
     },
     {
+      // Feature hooks are the data/business-logic layer; caught errors here
+      // must be observable in production. `console.error` only writes to the
+      // device console (never the telemetry pipeline), and `console.log` is
+      // stripped from release builds entirely — so neither belongs in this
+      // layer. Route caught errors through `errorService.reportError(error,
+      // { operation })` so they reach Loki/Grafana. `console.warn` stays
+      // available for local dev diagnostics (e.g. cache-miss guards); use
+      // `logger.debug` for verbose dev tracing.
+      files: [
+        'src/features/**/hooks/**/*.ts',
+        'src/features/**/hooks/**/*.tsx',
+      ],
+      excludedFiles: ['**/__tests__/**', '**/*.test.ts', '**/*.test.tsx'],
+      rules: {
+        'no-console': ['error', { allow: ['warn', 'info', 'debug'] }],
+      },
+    },
+    {
       // Justified exceptions to the BottomSheetModal-import restriction:
       // - useStandardBottomSheet.tsx is the canonical re-export site
       //   (aliases gorhom's component as GorhomBottomSheetModal and wraps

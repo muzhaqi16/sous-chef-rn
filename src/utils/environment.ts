@@ -204,7 +204,18 @@ export class Environment {
 }
 
 /**
- * Conditional logging helper
+ * Log-level-gated console wrapper for local/device diagnostics only.
+ *
+ * This writes to the device console and nothing else — it does NOT reach the
+ * telemetry pipeline (Loki/Grafana). It intentionally cannot: the telemetry
+ * service imports this module, so routing `logger` through `Telemetry` would
+ * create a circular dependency.
+ *
+ * For anything that must be observable in production (caught errors in
+ * mutations, data fetches, action handlers), use
+ * `errorService.reportError(error, { operation })` instead — it logs in dev
+ * AND forwards to telemetry. Reserve `logger` for developer-facing trace/debug
+ * output.
  */
 export const logger = {
   debug: (...args: unknown[]) => {

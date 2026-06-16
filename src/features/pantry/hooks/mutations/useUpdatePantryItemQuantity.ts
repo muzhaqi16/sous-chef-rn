@@ -13,6 +13,7 @@
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
+import { errorService } from '#/services/errorService';
 import { UpdatePantryItemQuantityDocument } from '#features/pantry/graphql/pantry.generated';
 import {
   UseUpdatePantryItemQuantity_PantryItemFragmentDoc,
@@ -144,7 +145,9 @@ export function useUpdatePantryItemQuantity({
           () => writeItem(currentItem),
           'Revert failed Pantry Item quantity update',
         );
-        console.error('Quantity update failed:', error);
+        errorService.reportError(error, {
+          operation: 'updatePantryItemQuantity',
+        });
         // Error already handled by mutation's onError
       });
 

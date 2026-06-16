@@ -12,6 +12,7 @@ import {
 } from '#features/pantry/graphql/pantry.generated';
 import { UsagePurpose, WasteReason } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
+import { errorService } from '#/services/errorService';
 import { usePantryItemActions } from '../usePantryItemActions';
 
 jest.mock('#/utils/isNetworkError', () => ({
@@ -28,6 +29,10 @@ jest.mock('#/utils/compilerSafeWrappers');
 
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
+}));
+
+jest.mock('#/services/errorService', () => ({
+  errorService: { reportError: jest.fn() },
 }));
 
 const seedPantryItems = (ids: string[] = ['item-1', 'item-2'], quantity = 5) =>
@@ -331,10 +336,9 @@ describe('usePantryItemActions', () => {
         'Error',
         expect.any(String),
       );
-      expect(console.error).toHaveBeenCalledWith(
-        expect.stringContaining('Error consuming pantry item:'),
-        expect.any(Error),
-      );
+      expect(errorService.reportError).toHaveBeenCalledWith(expect.any(Error), {
+        operation: 'consumePantryItem',
+      });
     });
   });
 

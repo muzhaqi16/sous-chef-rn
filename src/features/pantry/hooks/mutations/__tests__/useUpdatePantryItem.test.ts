@@ -13,6 +13,9 @@ jest.mock('#/services/errorService', () => ({
   useErrorService: () => ({
     handleApolloError: jest.fn(() => ({ message: 'Update error' })),
   }),
+  errorService: {
+    reportError: jest.fn(),
+  },
 }));
 
 jest.mock('#/utils/errors/versionConflict', () => ({

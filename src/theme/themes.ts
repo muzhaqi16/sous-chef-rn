@@ -1,4 +1,5 @@
 import { colors, darkExpiration, darkFilterTab } from './foundations/colors';
+import { brand } from './foundations/brand';
 import { spacing } from './foundations/spacing';
 import { typography, fonts } from './foundations/typography';
 import { radii } from './foundations/radii';
@@ -25,11 +26,12 @@ export const lightTheme = {
   ...commonTheme,
   colors: {
     ...colors,
-    // Primary — jaffa[500] (#f97416) is the brand orange shown in the app
-    // icon and in the AppearanceScreen "Default" swatch. Keep all three in sync.
-    primary: colors.jaffa[500],
-    primaryLight: colors.jaffa[100],
-    primaryDark: colors.jaffa[700],
+    // Primary — sourced from the brand palette (`appConfig.branding.primaryColor`,
+    // jaffa by default). The AppearanceScreen "Default" swatch reads the same
+    // config value, so the two stay in sync from a single source.
+    primary: brand[500],
+    primaryLight: brand[100],
+    primaryDark: brand[700],
     onPrimary: colors.neutral[0],
 
     // Secondary
@@ -78,11 +80,11 @@ export const lightTheme = {
     transparent: colors.transparent,
     chipBackground: colors.neutral[200],
     chipText: colors.neutral[700],
-    chipSelectedBackground: colors.jaffa[300],
+    chipSelectedBackground: brand[300],
     chipSelectedText: colors.neutral[0],
 
     // Icon colors - semantic tokens for consistent icon styling
-    iconPrimary: colors.jaffa[500],
+    iconPrimary: brand[500],
     iconSecondary: colors.neutral[600],
     iconTertiary: colors.neutral[500],
     iconDisabled: colors.neutral[400],
@@ -134,12 +136,12 @@ export const darkTheme = {
   ...commonTheme,
   colors: {
     ...colors,
-    // Primary — jaffa[500] (#f97416) for brand consistency with light mode.
-    // primaryLight uses jaffa[400] @ 20% for a slightly brighter accent surface
+    // Primary — brand[500] for consistency with light mode.
+    // primaryLight uses brand[400] @ 20% for a slightly brighter accent surface
     // since the deeper hue can swallow itself on dark backgrounds.
-    primary: colors.jaffa[500],
-    primaryLight: colors.jaffa[400] + '20',
-    primaryDark: colors.jaffa[600],
+    primary: brand[500],
+    primaryLight: brand[400] + '20',
+    primaryDark: brand[600],
     onPrimary: colors.neutral[900],
 
     // Secondary
@@ -188,11 +190,11 @@ export const darkTheme = {
     transparent: colors.transparent,
     chipBackground: colors.neutral[700],
     chipText: colors.neutral[200],
-    chipSelectedBackground: colors.jaffa[400],
+    chipSelectedBackground: brand[400],
     chipSelectedText: colors.neutral[900],
 
     // Icon colors - semantic tokens for consistent icon styling
-    iconPrimary: colors.jaffa[400],
+    iconPrimary: brand[400],
     iconSecondary: colors.neutral[300],
     iconTertiary: colors.neutral[400],
     iconDisabled: colors.neutral[500],

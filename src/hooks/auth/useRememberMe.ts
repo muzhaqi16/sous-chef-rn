@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { errorService } from '#/services/errorService';
 import { useToast } from '#/hooks/useToast';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { useAuthPreferences } from '#/hooks/navigation/useAuthPreferences';
@@ -36,7 +37,9 @@ export const useRememberMe = ({ onAccept, onDecline }: RememberMeEvents) => {
           console.log('Credentials accepted by user');
         },
         error => {
-          console.error('Failed to process credential acceptance:', error);
+          errorService.reportError(error, {
+            operation: 'processCredentialAcceptance',
+          });
           toast({
             message: 'Failed to save login information',
             type: 'error',

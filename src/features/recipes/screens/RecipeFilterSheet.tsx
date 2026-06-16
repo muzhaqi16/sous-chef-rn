@@ -7,7 +7,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from 'react-i18next';
 import { BottomSheetAction } from '#components/templates/BottomSheetAction';
 import { Icon } from '#/utils/iconUtils';
-import type { RecipeFilters } from '#features/recipes/hooks/useRecipeScreen';
+import type { RecipeFilters } from '#features/recipes/utils/recipeFilterMaps';
 import { Text } from '#components/atoms/Text';
 import {
   DIET_OPTIONS,

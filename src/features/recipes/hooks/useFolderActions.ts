@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { errorService } from '#/services/errorService';
 import { useTranslation } from 'react-i18next';
 import { useMutation } from '@apollo/client/react';
 import {
@@ -21,7 +22,7 @@ export function useFolderActions() {
 
   const [deleteRecipeFolderMutation] = useMutation(DeleteRecipeFolderDocument, {
     onError: err => {
-      console.error('Folder action error:', err);
+      errorService.reportError(err, { operation: 'folderAction' });
     },
   });
 
@@ -60,7 +61,7 @@ export function useFolderActions() {
           },
         }),
       error => {
-        console.error('Failed to rename folder:', error);
+        errorService.reportError(error, { operation: 'renameFolder' });
         toastService.error(t('recipes.renameFolderFailedRetry'));
       },
     );
@@ -110,7 +111,7 @@ export function useFolderActions() {
           },
         }),
       error => {
-        console.error('Failed to delete folder:', error);
+        errorService.reportError(error, { operation: 'deleteFolder' });
         toastService.error(t('recipes.deleteFolderFailedRetry'));
       },
     );

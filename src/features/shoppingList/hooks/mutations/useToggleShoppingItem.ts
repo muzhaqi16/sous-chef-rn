@@ -26,6 +26,7 @@ import {
 } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { isNetworkError } from '#/utils/isNetworkError';
+import { logger } from '#/utils/environment';
 import {
   executeMutation,
   isSuccessPayload,
@@ -160,7 +161,7 @@ export function useToggleShoppingItem({
             // For network errors, the queue handles retry — keep optimistic
             // UI intact while offline.
             if (isNetworkError(error)) {
-              console.log('Toggle purchase queued for retry (network error)');
+              logger.debug('Toggle purchase queued for retry (network error)');
               return;
             }
 

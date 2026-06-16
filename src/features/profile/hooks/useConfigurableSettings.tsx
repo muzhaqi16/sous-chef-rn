@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { alertService } from '#/services/alertService';
+import { logger } from '#/utils/environment';
 import { handleMutationError } from '#/utils/errorHandlers';
 import {
   useAppStore,
@@ -444,7 +445,7 @@ export const useConfigurableSettings = (profile: UserProfile | null) => {
           ...baseItem,
           onPress: () => {
             logout();
-            console.log('User logged out');
+            logger.debug('User logged out');
           },
         };
 

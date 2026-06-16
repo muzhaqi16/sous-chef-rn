@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { errorService } from '#/services/errorService';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { FlashList } from '@shopify/flash-list';
@@ -168,7 +169,7 @@ export const SavedRecipes: React.FC = () => {
     await executeMutation(
       () => unfavoriteRecipeMutation({ variables: { input: { recipeId } } }),
       (error: unknown) => {
-        console.error('Failed to remove recipe:', error);
+        errorService.reportError(error, { operation: 'removeSavedRecipe' });
         alertService.alert(t('labels.error'), t('recipes.removeRecipeFailed'));
       },
     );

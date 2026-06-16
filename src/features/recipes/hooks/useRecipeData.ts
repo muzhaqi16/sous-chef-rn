@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { errorService } from '#/services/errorService';
 import { useApolloClient, useQuery } from '@apollo/client/react';
 import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
 import type {
@@ -136,7 +137,7 @@ async function fetchRecipeData(
     }
   } catch (err) {
     if (err instanceof Error && err.name === 'AbortError') return;
-    console.error('Failed to fetch recipe:', err);
+    errorService.reportError(err, { operation: 'fetchRecipe' });
     setError('Failed to load recipe. Please try again.');
   } finally {
     setLoading(false);
