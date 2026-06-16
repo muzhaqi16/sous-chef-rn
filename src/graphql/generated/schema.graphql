@@ -487,6 +487,26 @@ type AdminItemUnitConversionsResult {
   totalCount: Int!
 }
 
+"""
+Admin input to purge pantry items by id, bypassing ownership. Intended for
+cleaning up junk/test rows (e.g. E2E fixtures) that pollute the
+RECENTLY_DELETED suggestion source.
+"""
+input AdminPurgePantryItemsInput {
+  """Pantry item row ids to delete."""
+  ids: [ID!]!
+  """
+  When true, hard-delete the rows (cascades photos/changes/batches, nulls usages). When false/omitted, soft-delete (sets deletedAt).
+  """
+  permanent: Boolean
+}
+
+type AdminPurgePantryItemsPayload {
+  result: BulkOperationSummary!
+}
+
+union AdminPurgePantryItemsResult = AdminPurgePantryItemsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
+
 type AdminUpdateItemPayload {
   item: Item!
 }
@@ -5590,6 +5610,13 @@ type Mutation {
   adminDeleteRecipeReview(input: AdminDeleteRecipeReviewInput!): AdminDeleteRecipeReviewResult!
   """Delete a user's account as an administrator."""
   adminDeleteUser(input: AdminDeleteUserInput!): AdminDeleteUserResult!
+  """
+  Admin: purge pantry items by id, bypassing ownership. Hard-deletes when
+  permanent is true (removing them from the RECENTLY_DELETED suggestion
+  source), otherwise soft-deletes. Intended for cleaning up junk/test rows
+  such as E2E fixtures. Returns a summary of how many were deleted.
+  """
+  adminPurgePantryItems(input: AdminPurgePantryItemsInput!): AdminPurgePantryItemsResult!
   """Admin: Update any item (bypasses ownership restrictions)"""
   adminUpdateItem(input: UpdateItemInput!): AdminUpdateItemResult!
   """Admin: Update any recipe (bypasses ownership restrictions)"""

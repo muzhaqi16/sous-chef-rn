@@ -355,6 +355,25 @@ export type AdminItemUnitConversionsResult = {
   totalCount: Scalars['Int']['output'];
 };
 
+/**
+ * Admin input to purge pantry items by id, bypassing ownership. Intended for
+ * cleaning up junk/test rows (e.g. E2E fixtures) that pollute the
+ * RECENTLY_DELETED suggestion source.
+ */
+export type AdminPurgePantryItemsInput = {
+  /** Pantry item row ids to delete. */
+  ids: Array<Scalars['ID']['input']>;
+  /** When true, hard-delete the rows (cascades photos/changes/batches, nulls usages). When false/omitted, soft-delete (sets deletedAt). */
+  permanent?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
+export type AdminPurgePantryItemsPayload = {
+  __typename: 'AdminPurgePantryItemsPayload';
+  result: BulkOperationSummary;
+};
+
+export type AdminPurgePantryItemsResult = AdminPurgePantryItemsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
+
 export type AdminUpdateItemPayload = {
   __typename: 'AdminUpdateItemPayload';
   item: Item;
@@ -5798,6 +5817,13 @@ export type Mutation = {
   adminDeleteRecipeReview: AdminDeleteRecipeReviewResult;
   /** Delete a user's account as an administrator. */
   adminDeleteUser: AdminDeleteUserResult;
+  /**
+   * Admin: purge pantry items by id, bypassing ownership. Hard-deletes when
+   * permanent is true (removing them from the RECENTLY_DELETED suggestion
+   * source), otherwise soft-deletes. Intended for cleaning up junk/test rows
+   * such as E2E fixtures. Returns a summary of how many were deleted.
+   */
+  adminPurgePantryItems: AdminPurgePantryItemsResult;
   /** Admin: Update any item (bypasses ownership restrictions) */
   adminUpdateItem: AdminUpdateItemResult;
   /** Admin: Update any recipe (bypasses ownership restrictions) */
@@ -6624,6 +6650,19 @@ export type MutationAdminDeleteRecipeReviewArgs = {
  */
 export type MutationAdminDeleteUserArgs = {
   input: AdminDeleteUserInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
+export type MutationAdminPurgePantryItemsArgs = {
+  input: AdminPurgePantryItemsInput;
 };
 
 
