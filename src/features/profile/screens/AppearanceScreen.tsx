@@ -18,6 +18,7 @@ import {
   FontScalePreference,
 } from '#store/slices/preferenceTypes';
 import { DENSITY_META, FONT_SCALE_META } from '#/theme/appearanceConfig';
+import { appConfig } from '#/config/appConfig';
 import { Text } from '#components/atoms/Text';
 
 const APP_COLORS: {
@@ -25,7 +26,11 @@ const APP_COLORS: {
   value: string | null;
   hex: string;
 }[] = [
-  { labelKey: 'appearance.colorDefault', value: null, hex: '#f97416' },
+  {
+    labelKey: 'appearance.colorDefault',
+    value: null,
+    hex: appConfig.branding.primaryColor,
+  },
   { labelKey: 'appearance.colorBlue', value: '#2563EB', hex: '#2563EB' },
   { labelKey: 'appearance.colorGreen', value: '#16A34A', hex: '#16A34A' },
   { labelKey: 'appearance.colorPurple', value: '#7C3AED', hex: '#7C3AED' },

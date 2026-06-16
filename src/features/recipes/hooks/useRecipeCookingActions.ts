@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { errorService } from '#/services/errorService';
 import { useTranslation } from 'react-i18next';
 import { useMutation } from '@apollo/client/react';
 import { MarkRecipeAsCookedDocument } from '#features/recipes/graphql/recipe.generated';
@@ -28,7 +29,7 @@ export function useRecipeCookingActions({
 
   const [markRecipeAsCookedMutation] = useMutation(MarkRecipeAsCookedDocument, {
     onError: err => {
-      console.error('Mark recipe as cooked error:', err);
+      errorService.reportError(err, { operation: 'markRecipeAsCooked' });
       toastService.error(err.message || t('recipes.markCookedFailed'));
     },
   });

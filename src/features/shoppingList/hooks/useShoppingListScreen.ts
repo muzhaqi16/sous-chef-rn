@@ -31,9 +31,9 @@ export function useShoppingListScreen() {
   // 1. Query: Fetch all user's shopping lists (independent of home)
   const { lists, loading: listsLoading } = useShoppingListsQuery();
 
-  // Lists whose read came back AUTHZ_FORBIDDEN/RESOURCE_NOT_FOUND this session.
-  // Excluded from selection so auto-select can't re-pick a list the user lost
-  // access to while its (cache-only) entry lingers before the lite query drops it.
+  // Lists whose read came back AUTHZ_FORBIDDEN, or null (deleted/unshared), this
+  // session. Excluded from selection so auto-select can't re-pick a list the user
+  // lost access to while its (cache-only) entry lingers before the lite query drops it.
   const [deniedListIds, setDeniedListIds] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
@@ -58,6 +58,7 @@ export function useShoppingListScreen() {
     rawUnpurchasedItems,
     rawPurchasedItems,
     shoppingList: currentListDetails,
+    listNotFound,
     loading: itemsLoading,
     error,
     isTransitioning,
@@ -78,17 +79,18 @@ export function useShoppingListScreen() {
     refetch,
   } = useShoppingListManagement(optimisticListId);
 
-  // 3b. Access-loss detection. When the selected list's read is rejected because
-  // the user can no longer access it (a collaborator on a list that became
-  // home-linked — collaborators are ignored on home-linked lists) or it was
-  // deleted/unshared, record its id. useShoppingListSelection then excludes it
-  // and auto-selects the next valid list, instead of the cache-and-network +
-  // previousData fallback keeping the stale, now-inaccessible list on screen.
+  // 3b. Access-loss detection. When the selected list's read no longer reaches a
+  // visible list, record its id. Two causes: (a) access revoked — a collaborator
+  // on a list that became home-linked, surfaced as an AUTHZ_FORBIDDEN `error`; or
+  // (b) deleted/unshared — the by-id read resolves to null data (`listNotFound`),
+  // not an error. useShoppingListSelection then excludes the id and auto-selects
+  // the next valid list, instead of the cache-and-network + previousData fallback
+  // keeping the stale, now-inaccessible list on screen.
   // "Adjusting state during render" (not an effect) per project conventions.
   if (
     optimisticListId &&
     !deniedListIds.has(optimisticListId) &&
-    isResourceAccessLostError(error)
+    (listNotFound || isResourceAccessLostError(error))
   ) {
     const deniedId = optimisticListId;
     setDeniedListIds(prev => new Set(prev).add(deniedId));

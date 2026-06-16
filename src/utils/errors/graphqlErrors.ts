@@ -56,22 +56,19 @@ export function getTopLevelGraphQLError(
   };
 }
 
-// Codes the API returns when a read can no longer reach the resource:
-// AUTHZ_FORBIDDEN — access revoked (e.g. a collaborator on a list that became
-// home-linked; collaborators are ignored on home-linked lists). FORBIDDEN —
-// legacy alias still emitted by some resolvers. RESOURCE_NOT_FOUND — the entity
-// was deleted/unshared. In all three cases the client should stop showing the
-// (now stale, cache-only) entity rather than preserve it.
-const RESOURCE_ACCESS_LOST_CODES = new Set([
-  'AUTHZ_FORBIDDEN',
-  'FORBIDDEN',
-  'RESOURCE_NOT_FOUND',
-]);
+// Codes the API returns when a read is rejected because access was revoked:
+// AUTHZ_FORBIDDEN — the API's current code (e.g. a collaborator on a list that
+// became home-linked; collaborators are ignored on home-linked lists).
+// FORBIDDEN — legacy alias still emitted by some resolvers. A deleted/unshared
+// record is NOT here: by-id queries now resolve to null data (not a NOT_FOUND
+// error), so callers detect that case via a null field, not this helper.
+const RESOURCE_ACCESS_LOST_CODES = new Set(['AUTHZ_FORBIDDEN', 'FORBIDDEN']);
 
-/** True when a query error means the requesting user can no longer read the
- *  resource — access was revoked, or it was deleted/unshared. Network and other
- *  errors return false, so callers won't evict cached data merely because the
- *  device went offline. */
+/** True when a query error means the requesting user has lost access to a
+ *  resource (access revoked). A deleted/missing record surfaces as null data,
+ *  not an error, so check the field for null rather than calling this. Network
+ *  and other errors return false, so callers won't evict cached data merely
+ *  because the device went offline. */
 export function isResourceAccessLostError(error: unknown): boolean {
   const top = getTopLevelGraphQLError(error);
   return top !== null && RESOURCE_ACCESS_LOST_CODES.has(top.code);

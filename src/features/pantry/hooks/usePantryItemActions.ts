@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
+import { errorService } from '#/services/errorService';
 import {
   CreatePantryItemUsageDocument,
   RestockPantryItemDocument,
@@ -263,7 +264,7 @@ export function usePantryItemActions({
           const errorMessage =
             (error instanceof Error && error.message) ||
             'Failed to record item usage. Please try again.';
-          console.error('Error consuming pantry item:', error);
+          errorService.reportError(error, { operation: 'consumePantryItem' });
           alertService.alert('Error', errorMessage);
         }
       },
@@ -342,7 +343,9 @@ export function usePantryItemActions({
           const errorMessage =
             (error instanceof Error && error.message) ||
             'Failed to record item waste. Please try again.';
-          console.error('Error recording pantry item waste:', error);
+          errorService.reportError(error, {
+            operation: 'recordPantryItemWaste',
+          });
           alertService.alert('Error', errorMessage);
         }
       },
@@ -447,7 +450,7 @@ export function usePantryItemActions({
           const errorMessage =
             (error instanceof Error && error.message) ||
             'Failed to restock item. Please try again.';
-          console.error('Error restocking pantry item:', error);
+          errorService.reportError(error, { operation: 'restockPantryItem' });
           alertService.alert('Error', errorMessage);
         }
       },

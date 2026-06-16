@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { errorService } from '#/services/errorService';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { useForm } from 'react-hook-form';
@@ -56,7 +57,7 @@ async function loadAuthInfoAsync(
     const shouldShow = biometric.isAvailable && hasCredentials;
     setShouldShowBiometricButton(shouldShow);
   } catch (error) {
-    console.error('Error loading auth info:', error);
+    errorService.reportError(error, { operation: 'loadAuthInfo' });
     Telemetry.trackError(
       error instanceof Error ? error : 'Failed to load auth info',
       { component: 'LoginScreen', operation: 'loadAuthInfo' },

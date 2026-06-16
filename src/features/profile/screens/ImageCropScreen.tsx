@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { logger } from '#/utils/environment';
 import { useTranslation } from 'react-i18next';
 import { View, Image, Dimensions } from 'react-native';
 import { alertService } from '#/services/alertService';
@@ -51,7 +52,7 @@ export const ImageCropScreen: React.FC<
 
     Image.getSize(imageFile.uri, (width, height) => {
       if (__DEV__) {
-        console.log('[ImageCrop] Image.getSize raw:', {
+        logger.debug('[ImageCrop] Image.getSize raw:', {
           width,
           height,
           uri: imageFile.uri,
@@ -74,7 +75,7 @@ export const ImageCropScreen: React.FC<
       }
 
       if (__DEV__) {
-        console.log('[ImageCrop] Computed display size:', {
+        logger.debug('[ImageCrop] Computed display size:', {
           displayWidth,
           displayHeight,
           aspectRatio,
@@ -148,7 +149,7 @@ export const ImageCropScreen: React.FC<
     }
 
     if (__DEV__) {
-      console.log('[ImageCrop] handleCrop called:', {
+      logger.debug('[ImageCrop] handleCrop called:', {
         imageFileUri: imageFile.uri,
         imageFileType: imageFile.type,
         imageFileSize: imageFile.fileSize,
@@ -166,7 +167,7 @@ export const ImageCropScreen: React.FC<
         const originalImageSize = originalSize;
 
         if (__DEV__) {
-          console.log('[ImageCrop] Original image size:', originalImageSize);
+          logger.debug('[ImageCrop] Original image size:', originalImageSize);
         }
 
         // Calculate the center position of the crop area relative to the image
@@ -250,7 +251,7 @@ export const ImageCropScreen: React.FC<
         const displaySize = { width: CROP_SIZE, height: CROP_SIZE };
 
         if (__DEV__) {
-          console.log('[ImageCrop] Crop params:', {
+          logger.debug('[ImageCrop] Crop params:', {
             uri: imageFile.uri,
             cropOffset,
             cropSize,
@@ -287,7 +288,7 @@ export const ImageCropScreen: React.FC<
 
         // Store to MMKV
         storage.set('temp_cropped_image', JSON.stringify(croppedImage));
-        console.log('Stored cropped image in MMKV:', {
+        logger.debug('Stored cropped image in MMKV:', {
           uri: croppedUri,
           fileName: croppedImage.fileName,
           fileSize: estimatedFileSize,
@@ -298,9 +299,6 @@ export const ImageCropScreen: React.FC<
       },
       setIsCropping,
       error => {
-        if (__DEV__) {
-          console.error('[ImageCrop] cropImage failed:', error);
-        }
         errorService.reportError(error, {
           operation: 'ImageCrop.cropImage',
           imageUri: imageFile.uri,

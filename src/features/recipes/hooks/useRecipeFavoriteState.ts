@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { errorService } from '#/services/errorService';
 import { useApolloClient, useQuery } from '@apollo/client/react';
 import type { RecipeInformation } from '#/services/recipeApi/types';
 import { MyRecipesDocument } from '#features/recipes/graphql/recipe.generated';
@@ -135,7 +136,7 @@ export function useRecipeFavoriteState({
         }
       },
       setSaving,
-      err => console.error('Failed to save recipe:', err),
+      err => errorService.reportError(err, { operation: 'saveRecipe' }),
     );
   };
 

@@ -69,7 +69,10 @@ export function applyAppearanceToRuntime(prefs: AppearancePreferences): void {
       const isDark = themeName === 'dark';
       next.colors = {
         ...next.colors,
-        primary: palette['400'],
+        // [500] is the palette anchor (≈ the color the user picked) and matches
+        // the base theme's `primary` in both light and dark modes — the rest of
+        // these overrides mirror the base theme's per-mode shade mapping.
+        primary: palette['500'],
         primaryLight: isDark ? palette['400'] + '20' : palette['100'],
         primaryDark: isDark ? palette['600'] : palette['700'],
         iconPrimary: isDark ? palette['400'] : palette['500'],

@@ -14,6 +14,7 @@
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
+import { errorService } from '#/services/errorService';
 import { UpdatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import {
   UseUpdatePantryItem_PantryItemFragmentDoc,
@@ -201,7 +202,7 @@ export function useUpdatePantryItem({
           () => writeItem(currentItem),
           'Revert failed Pantry Item update',
         );
-        console.error('Pantry item update failed:', error);
+        errorService.reportError(error, { operation: 'updatePantryItem' });
         // Error already handled by mutation's onError
       });
 

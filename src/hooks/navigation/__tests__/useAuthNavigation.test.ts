@@ -1,5 +1,6 @@
 import { renderHook, act } from '@testing-library/react-native';
 import { useAuthNavigation } from '../useAuthNavigation';
+import { logger } from '#/utils/environment';
 import type { AuthUserInput } from '#store/slices/authSlice';
 
 function makeUser(overrides?: Partial<AuthUserInput>): AuthUserInput {
@@ -252,7 +253,7 @@ describe('useAuthNavigation', () => {
         result.current.navigateToVerification();
       });
 
-      expect(console.log).toHaveBeenCalledWith(
+      expect(logger.debug).toHaveBeenCalledWith(
         'Verification navigation handled by conditional groups',
       );
     });

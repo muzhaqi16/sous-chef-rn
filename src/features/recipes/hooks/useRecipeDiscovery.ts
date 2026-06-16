@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { errorService } from '#/services/errorService';
 
 import { useDefaultHome } from '#hooks/home/useDefaultHome';
 import { usePantryManagement } from '#hooks/home/pantry/usePantryManagement';
@@ -198,7 +199,9 @@ async function fetchPantryDiscovery(
     guardedSetLoading,
     (error: unknown) => {
       if (error instanceof Error && error.name === 'AbortError') return;
-      console.error('Failed to fetch pantry-based recipes:', error);
+      errorService.reportError(error, {
+        operation: 'fetchPantryBasedRecipes',
+      });
     },
   );
 }
@@ -241,7 +244,7 @@ async function fetchRandomDiscovery(
     guardedSetLoading,
     (error: unknown) => {
       if (error instanceof Error && error.name === 'AbortError') return;
-      console.error('Failed to fetch random recipes:', error);
+      errorService.reportError(error, { operation: 'fetchRandomRecipes' });
     },
   );
 }

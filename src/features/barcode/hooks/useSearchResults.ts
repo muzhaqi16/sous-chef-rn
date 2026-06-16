@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useMutation, useQuery } from '@apollo/client/react';
+import { logger } from '#/utils/environment';
 
 import {
   ItemByUpcFilterDocument,
@@ -334,7 +335,7 @@ export const useSearchResults = (barcode: string, format?: string) => {
     // Only process after loading completes to avoid acting on stale data
     // Apollo's data field retains previous values during loading
     if (!skuLoading && skuData) {
-      console.log('SKU search completed:', {
+      logger.debug('SKU search completed:', {
         barcode,
         foundItem: !!skuItem,
         itemData: skuItem,

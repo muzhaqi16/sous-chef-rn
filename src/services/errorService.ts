@@ -71,7 +71,7 @@ export interface ErrorConfig {
   logError?: boolean;
 }
 
-class ErrorService {
+export class ErrorService {
   private static readonly ERROR_MESSAGES: Record<string, string> = {
     // Authentication Errors
     AUTH_TOKEN_MISSING: 'Please sign in to continue',

@@ -169,7 +169,7 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
     // If user is already verified, the conditional navigation
     // will automatically move them to the next appropriate screen
     if (user?.emailVerified) {
-      console.log('User email verified, navigation will update automatically');
+      logger.debug('User email verified, navigation will update automatically');
     }
   }, [user?.emailVerified]);
 
@@ -279,7 +279,7 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
           return;
         }
 
-        console.log('Verification email resent');
+        logger.debug('Verification email resent');
       },
       error => {
         errorService.reportError(error, {

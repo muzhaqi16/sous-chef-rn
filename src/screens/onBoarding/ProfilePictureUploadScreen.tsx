@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { logger } from '#/utils/environment';
+import { errorService } from '#/services/errorService';
 import { useTranslation } from 'react-i18next';
 import {
   View,
@@ -66,7 +68,7 @@ function readPendingCroppedImage(): ImageFile | null {
     storage.remove('temp_cropped_image');
     return croppedImageFile;
   } catch (error) {
-    console.error('Error reading cropped image from MMKV:', error);
+    errorService.reportError(error, { operation: 'readCroppedImage' });
     try {
       storage.remove('temp_cropped_image');
     } catch {
@@ -221,7 +223,7 @@ export const ProfilePictureUploadScreen = () => {
       },
       setIsUploading,
       error => {
-        console.error('Avatar upload error:', error);
+        errorService.reportError(error, { operation: 'uploadAvatar' });
         alertService.alert(
           t('onBoarding.uploadFailedTitle'),
           t('onBoarding.updateProfilePhotoFailed'),
@@ -364,7 +366,7 @@ export const ProfilePictureUploadScreen = () => {
               variant="subtle"
               onPress={() =>
                 Linking.openURL(getWebAppUrl('/terms-of-service')).catch(err =>
-                  console.error('Failed to open URL:', err),
+                  logger.warn('Failed to open URL:', err),
                 )
               }
               style={styles.formFooterLinkText}
@@ -382,7 +384,7 @@ export const ProfilePictureUploadScreen = () => {
               variant="subtle"
               onPress={() =>
                 Linking.openURL(getWebAppUrl('/privacy-policy')).catch(err =>
-                  console.error('Failed to open URL:', err),
+                  logger.warn('Failed to open URL:', err),
                 )
               }
               style={styles.formFooterLinkText}

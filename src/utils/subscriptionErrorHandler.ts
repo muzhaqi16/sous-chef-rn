@@ -1,3 +1,4 @@
+import { errorService } from '#/services/errorService';
 import { serializeError } from './errorSerialization';
 
 // Define a simple error interface instead of importing ApolloError
@@ -42,10 +43,16 @@ export const handleSubscriptionError = (
   );
 
   if (!isServerResolverError) {
-    // For non-resolver errors, don't retry
-    console.error(
-      `Subscription ${operationName} failed with non-resolver error:`,
-      serializeError(error),
+    // For non-resolver errors, don't retry. Socket/network errors already
+    // returned above, so anything reaching here is an unexpected failure worth
+    // reporting to telemetry.
+    errorService.reportError(
+      new Error(`Subscription ${operationName} failed with non-resolver error`),
+      {
+        operation: 'subscriptionError',
+        subscription: operationName,
+        error: serializeError(error),
+      },
     );
     return false;
   }

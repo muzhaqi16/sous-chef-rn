@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@apollo/client/react';
+import { logger } from '#/utils/environment';
 import { GetShoppingListsLiteDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { GetHomesDocument } from '#operations/home/home.generated';
 import { GetPantriesDocument } from '#features/pantry/graphql/pantry.generated';
@@ -137,7 +138,7 @@ export const useItemSelector = ({
 
   const handleSelect = (id: string, item: SelectableItem) => {
     if (__DEV__) {
-      console.log(
+      logger.debug(
         `[useItemSelector:${type}] User selected: ${id}`,
         item?.name || item?.title || item,
       );

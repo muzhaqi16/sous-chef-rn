@@ -11,6 +11,7 @@
 import { useEffect, useState } from 'react';
 import { NetworkStatus } from '@apollo/client';
 import { useQuery } from '@apollo/client/react';
+import { logger } from '#/utils/environment';
 import {
   GetPantryDocument,
   type GetPantryQuery,
@@ -189,7 +190,7 @@ export function usePantryQuery(
   // DEV: log when pagination state changes for diagnosing blank frames / footer reappearance
   useEffect(() => {
     if (__DEV__) {
-      console.log(
+      logger.debug(
         `📊 [Pantry] hasMore=${hasMore} totalCount=${totalCount} items=${pantryItems.length}`,
       );
     }

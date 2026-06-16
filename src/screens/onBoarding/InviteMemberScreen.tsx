@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { errorService } from '#/services/errorService';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
@@ -150,7 +151,7 @@ export const InviteMemberScreen = () => {
         },
         setIsInviting,
         error => {
-          console.error('Error sending invites:', error);
+          errorService.reportError(error, { operation: 'sendInvites' });
           alertService.alert(
             t('inviteMembers.partialSuccessTitle'),
             t('inviteMembers.partialSuccessMessage'),

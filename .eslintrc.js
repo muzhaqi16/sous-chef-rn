@@ -86,6 +86,43 @@ module.exports = {
       globals: { __DEV__: 'readonly', globalThis: 'readonly' },
     },
     {
+      // App code — business-logic hooks (feature + shared) and the UI layer
+      // (screens, shared + feature components). Caught errors here must be
+      // observable in production: `console.error` only writes to the device
+      // console (never the telemetry pipeline), and `console.log` is stripped
+      // from release builds entirely — so neither belongs in this layer. Route
+      // actionable errors through `errorService.reportError(error, { operation })`
+      // so they reach Loki/Grafana; use `logger.warn` / `logger.debug` for benign
+      // or dev-only diagnostics. `console.warn` stays allowed for the few existing
+      // cache-miss guards. Infra (telemetry transports, perf monitors, the
+      // Apollo console link, `src/hooks/performance/**`) is intentionally NOT
+      // covered — console output is its purpose there.
+      files: [
+        'src/features/**/hooks/**/*.ts',
+        'src/features/**/hooks/**/*.tsx',
+        'src/features/**/screens/**/*.ts',
+        'src/features/**/screens/**/*.tsx',
+        'src/features/**/components/**/*.ts',
+        'src/features/**/components/**/*.tsx',
+        'src/components/**/*.ts',
+        'src/components/**/*.tsx',
+        'src/screens/**/*.ts',
+        'src/screens/**/*.tsx',
+        'src/hooks/**/*.ts',
+        'src/hooks/**/*.tsx',
+      ],
+      excludedFiles: [
+        '**/__tests__/**',
+        '**/*.test.ts',
+        '**/*.test.tsx',
+        // Perf monitors — console output is their purpose (see comment above).
+        'src/hooks/performance/**',
+      ],
+      rules: {
+        'no-console': ['error', { allow: ['warn', 'info', 'debug'] }],
+      },
+    },
+    {
       // Justified exceptions to the BottomSheetModal-import restriction:
       // - useStandardBottomSheet.tsx is the canonical re-export site
       //   (aliases gorhom's component as GorhomBottomSheetModal and wraps

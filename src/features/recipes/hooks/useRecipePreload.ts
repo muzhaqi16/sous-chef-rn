@@ -8,6 +8,7 @@
  */
 
 import { useState, useRef } from 'react';
+import { errorService } from '#/services/errorService';
 import { useMutation } from '@apollo/client/react';
 import {
   FavoriteRecipeDocument,
@@ -364,7 +365,7 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
     const result = await executeMutation(
       () => upsertRecipe({ variables: { input } }),
       error => {
-        console.error('[preloadRecipe] Error:', error);
+        errorService.reportError(error, { operation: 'preloadRecipe' });
         if (preloadOptions.throwOnError) {
           setPreloading(false);
           throw error; // Propagate error for explicit saves
@@ -439,9 +440,9 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
           },
         }),
       (error: unknown) => {
-        const errorMessage =
-          error instanceof Error ? error.message : 'Unknown error';
-        console.error('Failed to save recipe to favorites:', errorMessage);
+        errorService.reportError(error, {
+          operation: 'saveRecipeToFavorites',
+        });
         toastService.error(t('recipes.saveRecipeFailed'));
 
         if (error instanceof Error) {

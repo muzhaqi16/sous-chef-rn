@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { errorService } from '#/services/errorService';
 import { useTranslation } from 'react-i18next';
 import { alertService } from '#/services/alertService';
 import { authService } from '#/services/authService';
@@ -62,7 +63,7 @@ async function loadBiometricSnapshot(
     ]);
     return { info, hasCredentials };
   } catch (error) {
-    console.error('Error loading biometric info:', error);
+    errorService.reportError(error, { operation: 'loadBiometricInfo' });
     return {
       info: { isAvailable: false, biometryType: null },
       hasCredentials: false,
@@ -187,7 +188,7 @@ export const useBiometricSetup = ({
       },
       setIsEnabling,
       error => {
-        console.error('Error enabling biometric authentication:', error);
+        errorService.reportError(error, { operation: 'enableBiometricAuth' });
         alertService.alert(
           t('biometricSetup.setupFailedTitle'),
           t('biometricSetup.setupFailedGenericMessage'),

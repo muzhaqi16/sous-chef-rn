@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { errorService } from '#/services/errorService';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { FlashList } from '@shopify/flash-list';
@@ -131,7 +132,7 @@ export const MyRecipes: React.FC = () => {
           context: { localFirst: true },
         }),
       (error: unknown) => {
-        console.error('Failed to delete recipe:', error);
+        errorService.reportError(error, { operation: 'deleteRecipe' });
         alertService.alert(t('labels.error'), t('recipes.deleteRecipeFailed'));
       },
     );

@@ -32,9 +32,11 @@ export interface AppConfig {
   };
   branding: {
     /**
-     * Brand primary color in hex. Reference only — the theme still derives
-     * colors from `src/theme/foundations/colors.ts`. Wire these together
-     * later if runtime brand switching is needed.
+     * Brand primary color in hex. Single source of truth for the theme's
+     * `primary*` / brand-accent roles: `src/theme/foundations/brand.ts` derives
+     * the full 11-stop palette from this hex (and uses the hand-tuned `jaffa`
+     * palette verbatim when it matches the shipping default), so rebranding is
+     * a one-line change here.
      */
     primaryColor: string;
   };

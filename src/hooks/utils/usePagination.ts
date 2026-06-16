@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState } from 'react';
 import type { OperationVariables } from '@apollo/client';
 import { errorService } from '#/services/errorService';
+import { logger } from '#/utils/environment';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import type { PaginationState } from '#hooks/types';
 
@@ -122,7 +123,7 @@ export function usePagination(config: PaginationConfig): UsePaginationReturn {
     // - Already fetching more (ref checked synchronously)
     if (!hasMore || loading || !endCursor || isFetchingMoreRef.current) {
       if (__DEV__) {
-        console.log(
+        logger.debug(
           `📊 [Pagination] loadMore guarded: hasMore=${hasMore} loading=${loading} cursor=${!!endCursor} fetching=${
             isFetchingMoreRef.current
           }`,

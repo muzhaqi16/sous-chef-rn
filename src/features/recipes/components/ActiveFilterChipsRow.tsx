@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Pressable } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 import { Icon } from '#/utils/iconUtils';
-import type { RecipeFilters } from '#features/recipes/hooks/useRecipeScreen';
+import type { RecipeFilters } from '#features/recipes/utils/recipeFilterMaps';
 import {
   DIET_OPTIONS,
   INTOLERANCE_OPTIONS,

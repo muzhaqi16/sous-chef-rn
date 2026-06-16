@@ -1,4 +1,5 @@
 import { alertService } from '#/services/alertService';
+import { errorService } from '#/services/errorService';
 import type { useMutation } from '@apollo/client/react';
 import type {
   CreatePantryMutation,
@@ -75,7 +76,7 @@ export const createPantryForHome = async (
     }
     return false;
   } catch (error) {
-    console.error('Failed to create pantry:', error);
+    errorService.reportError(error, { operation: 'createPantry' });
     return false;
   }
 };

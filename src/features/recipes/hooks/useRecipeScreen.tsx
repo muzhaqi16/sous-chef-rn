@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { errorService } from '#/services/errorService';
 
 import { useTranslation } from 'react-i18next';
 import { useApolloClient } from '@apollo/client/react';
@@ -14,7 +15,7 @@ import type {
 } from '#/services/recipeApi/types';
 import { useRecipeDiscovery } from '#features/recipes/hooks/useRecipeDiscovery';
 import { useDietaryProfile } from '#features/profile/hooks/useDietaryProfile';
-import { transformRecipeForDisplay } from '#/utils/recipeTransform';
+import { useRecipeFilters } from '#features/recipes/hooks/useRecipeFilters';
 import {
   executeMutation,
   executeSearchQuery,
@@ -35,82 +36,20 @@ import {
   Diet,
   Intolerance,
 } from '#/graphql/generated/schemaTypes';
-
-// ── Filter types ──
-
-export interface RecipeFilters {
-  diet: string[];
-  intolerances: string[];
-  mealType: string | null;
-  maxReadyTime: number | null;
-}
-
-const DEFAULT_FILTERS: RecipeFilters = {
-  diet: [],
-  intolerances: [],
-  mealType: null,
-  maxReadyTime: null,
-};
-
-// ── Diet / Intolerance ↔ Spoonacular-string maps ──
-// Single source of truth for both directions. `activeFilters.diet` /
-// `.intolerances` hold Spoonacular-format strings (the `value` fields in
-// recipeFilterOptions' DIET_OPTIONS / INTOLERANCE_OPTIONS); the dietary profile
-// is normalized into that form through the forward maps below. Spoonacular's
-// complexSearch consumes those strings directly, while the local `searchRecipes`
-// GraphQL API takes Diet/Intolerance enums — so the reverse lookups are derived
-// from the same maps and can't drift. The forward maps are exhaustive over the
-// enums: TS requires every member as a key, so a new schema enum fails to
-// compile until it's mapped here.
-const DIET_ENUM_TO_SPOONACULAR: Record<Diet, string> = {
-  [Diet.Vegetarian]: 'vegetarian',
-  [Diet.Vegan]: 'vegan',
-  [Diet.GlutenFree]: 'gluten free',
-  [Diet.Keto]: 'ketogenic',
-  [Diet.Paleo]: 'paleo',
-  [Diet.Pescetarian]: 'pescetarian',
-  [Diet.LactoVegetarian]: 'lacto-vegetarian',
-  [Diet.OvoVegetarian]: 'ovo-vegetarian',
-  [Diet.Primal]: 'primal',
-  [Diet.LowFodmap]: 'low fodmap',
-  [Diet.Whole30]: 'whole30',
-};
-
-const INTOLERANCE_ENUM_TO_SPOONACULAR: Record<Intolerance, string> = {
-  [Intolerance.Dairy]: 'dairy',
-  [Intolerance.Egg]: 'egg',
-  [Intolerance.Gluten]: 'gluten',
-  [Intolerance.Grain]: 'grain',
-  [Intolerance.Peanut]: 'peanut',
-  [Intolerance.Seafood]: 'seafood',
-  [Intolerance.Sesame]: 'sesame',
-  [Intolerance.Shellfish]: 'shellfish',
-  [Intolerance.Soy]: 'soy',
-  [Intolerance.Sulfite]: 'sulfite',
-  [Intolerance.TreeNut]: 'tree nut',
-  [Intolerance.Wheat]: 'wheat',
-  [Intolerance.Fish]: 'fish',
-};
-
-// Reverse lookups (Spoonacular string → enum), derived from the forward maps so
-// the two directions stay in sync. `Object.keys` widens to `string[]`; narrowing
-// each key back to its enum member is sound because the source map is keyed
-// exactly by that enum.
-function invertEnumMap<E extends string>(
-  map: Record<E, string>,
-): Record<string, E> {
-  const reversed: Record<string, E> = {};
-  for (const key of Object.keys(map)) {
-    const member = key as E;
-    reversed[map[member]] = member;
-  }
-  return reversed;
-}
-
-const SPOONACULAR_TO_DIET_ENUM = invertEnumMap(DIET_ENUM_TO_SPOONACULAR);
-const SPOONACULAR_TO_INTOLERANCE_ENUM = invertEnumMap(
+import {
+  type RecipeFilters,
+  DIET_ENUM_TO_SPOONACULAR,
   INTOLERANCE_ENUM_TO_SPOONACULAR,
-);
+  SPOONACULAR_TO_DIET_ENUM,
+  SPOONACULAR_TO_INTOLERANCE_ENUM,
+} from '#features/recipes/utils/recipeFilterMaps';
+import {
+  type DisplayItem,
+  type LocalRecipeNode,
+  type SpoonacularRecipe,
+  toSpoonacularDisplayItems,
+  toLocalDisplayItems,
+} from '#features/recipes/utils/recipeDisplayTransforms';
 
 // ── Module-level search helpers (React Compiler safe) ──
 
@@ -119,7 +58,7 @@ function handleSearchError(error: unknown, label: string): void {
     isQuotaExceeded?: boolean;
     isRateLimitError?: boolean;
   };
-  console.error(`${label}:`, error);
+  errorService.reportError(error, { operation: label });
   if (err.isQuotaExceeded) {
     alertService.alert(
       tGlobal('recipes.apiLimitTitle'),
@@ -140,91 +79,6 @@ function handleSearchError(error: unknown, label: string): void {
 
 const SEARCH_FETCH_SIZE = 25;
 const SEARCH_PAGE_SIZE = 15;
-
-type LocalRecipeNode =
-  SearchRecipesQuery['searchRecipes']['edges'][number]['node'];
-
-/** Transform Spoonacular search results into display items */
-function toSpoonacularDisplayItems(
-  results: (SearchRecipesResult | RecipeSearchResult)[],
-): DisplayItem[] {
-  return results.map(recipe => {
-    const t = transformRecipeForDisplay(recipe);
-    return {
-      id: t.id,
-      title: t.title,
-      subtitle: t.subtitle,
-      badge: t.badge
-        ? ({
-            text: t.badge.text,
-            variant: 'primary',
-          } satisfies DisplayItem['badge'])
-        : undefined,
-      imageUrl: t.imageUrl,
-    };
-  });
-}
-
-type SpoonacularRecipe = SearchRecipesResult | RecipeSearchResult;
-
-/** Spoonacular's popularity count — `likes` on ingredient-search results,
- * `aggregateLikes` on text-search results. `usedIngredientCount` is the
- * required field that distinguishes the two shapes (same discriminant as
- * recipeTransform). */
-function spoonacularLikes(recipe: SpoonacularRecipe): number | undefined {
-  return 'usedIngredientCount' in recipe ? recipe.likes : recipe.aggregateLikes;
-}
-
-/** Transform local API recipe nodes into display items, mirroring the
- * Spoonacular subtitle format. The `local-` id prefix keeps these
- * collision-free against `spoonacular-<n>` ids and lets the press handler
- * route to the backend recipe detail view.
- *
- * Backend (imported) recipes are missing time/likes — the import only stores
- * Spoonacular's prep/cook breakdown (usually empty) and keeps the like count
- * inside an opaque JSON blob. `enrichmentFor` supplies the matching live
- * Spoonacular result so the row can borrow its `readyInMinutes` + like count
- * and look identical to a native Spoonacular row. */
-function toLocalDisplayItems(
-  nodes: LocalRecipeNode[],
-  enrichmentFor: (node: LocalRecipeNode) => SpoonacularRecipe | undefined,
-): DisplayItem[] {
-  return nodes.map(node => {
-    const match = enrichmentFor(node);
-    const matchTime =
-      match && 'readyInMinutes' in match ? match.readyInMinutes : undefined;
-    const matchLikes = match ? spoonacularLikes(match) : undefined;
-
-    const totalTime = node.totalTimeMinutes ?? matchTime;
-    const subtitleParts: string[] = [];
-    if (totalTime) {
-      subtitleParts.push(`⏱ ${totalTime} ${tGlobal('recipes.minutes')}`);
-    }
-    if (node.servings) {
-      subtitleParts.push(
-        `${node.servings} ${tGlobal('recipes.servingsSuffix')}`,
-      );
-    }
-
-    // Saved recipes keep the green "Saved" badge; otherwise borrow the live
-    // Spoonacular like count so the row carries the same ❤️ as its twin.
-    // Backend search results are the app's recipe corpus, not the user's own,
-    // so an unconditional "My recipe" badge would mislabel them.
-    const badge: DisplayItem['badge'] = node.isSaved
-      ? { text: tGlobal('recipes.savedBadge'), variant: 'success' }
-      : matchLikes && matchLikes > 0
-      ? { text: `❤️ ${matchLikes}`, variant: 'primary' }
-      : undefined;
-
-    return {
-      id: `local-${node.id}`,
-      title: node.name,
-      subtitle: subtitleParts.join(' • '),
-      badge,
-      imageUrl: node.imageUrl ?? undefined,
-    };
-  });
-}
 
 async function executeRecipeTextSearch(
   query: string,
@@ -370,7 +224,9 @@ async function executeRecipeTextSearch(
       handleSearchError(spoonacularError, 'Search error');
     } else {
       // Local results are on screen — degrade silently.
-      console.error('Search error (Spoonacular degraded):', spoonacularError);
+      errorService.reportError(spoonacularError, {
+        operation: 'searchRecipesSpoonacularDegraded',
+      });
     }
   }
 
@@ -414,19 +270,6 @@ async function executeRecipeIngredientSearch(
   );
 
   setLoading(false);
-}
-
-// ── Display item type ──
-
-interface DisplayItem {
-  id: string;
-  title: string;
-  subtitle: string;
-  badge?: {
-    text: string;
-    variant?: 'default' | 'primary' | 'success' | 'warning' | 'danger';
-  };
-  imageUrl?: string;
 }
 
 // ── Facade hook ──
@@ -476,57 +319,63 @@ export function useRecipeScreen() {
     setIngredientSearchQuery('');
   };
 
-  // ── Filter state (initialized from dietary profile) ──
-  // Profile restrictions carry Diet/Intolerance enums; normalize them to the
-  // Spoonacular-format strings `activeFilters` stores via the shared forward
-  // maps (module-level single source of truth).
-  const profileDiets = (dietaryProfile?.restrictions ?? [])
-    .filter((r): r is typeof r & { diet: Diet } => Boolean(r.diet))
-    .map(r => DIET_ENUM_TO_SPOONACULAR[r.diet] ?? r.diet.toLowerCase())
-    .filter(Boolean);
-
-  const profileIntolerances = (dietaryProfile?.restrictions ?? [])
-    .filter((r): r is typeof r & { intolerance: Intolerance } =>
-      Boolean(r.intolerance),
-    )
-    .map(
-      r =>
-        INTOLERANCE_ENUM_TO_SPOONACULAR[r.intolerance] ??
-        r.intolerance.toLowerCase(),
-    );
-
-  const profileMaxTime = dietaryProfile?.maxCookTimeMinutes ?? null;
-
-  const [activeFilters, setActiveFilters] =
-    useState<RecipeFilters>(DEFAULT_FILTERS);
-  const [profileSynced, setProfileSynced] = useState(false);
-
-  // Sync filters from dietary profile once loaded (adjusting state during render)
-  if (!profileSynced && dietaryProfile) {
-    const hasProfileData =
-      profileDiets.length > 0 ||
-      profileIntolerances.length > 0 ||
-      profileMaxTime;
-    if (hasProfileData) {
-      setActiveFilters({
-        diet: profileDiets,
-        intolerances: profileIntolerances,
-        mealType: null,
-        maxReadyTime: profileMaxTime,
-      });
-    }
-    setProfileSynced(true);
-  }
-
-  const activeFilterCount =
-    activeFilters.diet.length +
-    activeFilters.intolerances.length +
-    (activeFilters.mealType ? 1 : 0) +
-    (activeFilters.maxReadyTime ? 1 : 0);
-
-  const clearFilters = () => {
-    setActiveFilters(DEFAULT_FILTERS);
+  // Results arrive pre-transformed into DisplayItems (see the recipeDisplay
+  // transforms) — store them and reset the client-side pagination window.
+  const setDisplayResultsAndResetPage = (displayItems: DisplayItem[]) => {
+    setSearchResults(displayItems);
+    setVisibleSearchCount(SEARCH_PAGE_SIZE);
   };
+
+  // Re-run the current search with an explicit filter set (state updates are
+  // async, so the caller passes the next filters rather than reading state).
+  const rerunSearchWithFilters = async (nextFilters: RecipeFilters) => {
+    if (!searchPerformed || !searchQuery.trim()) return;
+    await executeRecipeTextSearch(
+      searchQuery,
+      nextFilters,
+      client,
+      setSearchLoading,
+      setSearchPerformed,
+      setDisplayResultsAndResetPage,
+    );
+  };
+
+  // ── Filters ──
+  // Normalize the dietary profile's Diet/Intolerance enums into the
+  // Spoonacular-format strings RecipeFilters stores, via the shared forward
+  // maps (single source of truth). useRecipeFilters owns the state + mutators
+  // and seeds itself from this the first time it arrives carrying data.
+  const profileFilters: RecipeFilters | null = dietaryProfile
+    ? {
+        diet: (dietaryProfile.restrictions ?? [])
+          .filter((r): r is typeof r & { diet: Diet } => Boolean(r.diet))
+          .map(r => DIET_ENUM_TO_SPOONACULAR[r.diet] ?? r.diet.toLowerCase())
+          .filter(Boolean),
+        intolerances: (dietaryProfile.restrictions ?? [])
+          .filter((r): r is typeof r & { intolerance: Intolerance } =>
+            Boolean(r.intolerance),
+          )
+          .map(
+            r =>
+              INTOLERANCE_ENUM_TO_SPOONACULAR[r.intolerance] ??
+              r.intolerance.toLowerCase(),
+          ),
+        mealType: null,
+        maxReadyTime: dietaryProfile.maxCookTimeMinutes ?? null,
+      }
+    : null;
+
+  const {
+    activeFilters,
+    setActiveFilters,
+    activeFilterCount,
+    clearFilters,
+    removeFilter,
+    clearFiltersAndSearchAgain,
+  } = useRecipeFilters({
+    profileFilters,
+    onApplyFilters: rerunSearchWithFilters,
+  });
 
   // ── Derived display state ──
   const showSearchResults = searchPerformed && searchResults.length > 0;
@@ -588,45 +437,6 @@ export function useRecipeScreen() {
     );
   };
 
-  // Re-run the current search with an explicit filter set (state updates are
-  // async, so the caller passes the next filters rather than reading state).
-  const rerunSearchWithFilters = async (nextFilters: RecipeFilters) => {
-    if (!searchPerformed || !searchQuery.trim()) return;
-    await executeRecipeTextSearch(
-      searchQuery,
-      nextFilters,
-      client,
-      setSearchLoading,
-      setSearchPerformed,
-      setDisplayResultsAndResetPage,
-    );
-  };
-
-  const removeFilter = (
-    kind: 'diet' | 'intolerance' | 'mealType' | 'maxReadyTime',
-    value?: string,
-  ) => {
-    const next: RecipeFilters = {
-      diet:
-        kind === 'diet'
-          ? activeFilters.diet.filter(d => d !== value)
-          : activeFilters.diet,
-      intolerances:
-        kind === 'intolerance'
-          ? activeFilters.intolerances.filter(i => i !== value)
-          : activeFilters.intolerances,
-      mealType: kind === 'mealType' ? null : activeFilters.mealType,
-      maxReadyTime: kind === 'maxReadyTime' ? null : activeFilters.maxReadyTime,
-    };
-    setActiveFilters(next);
-    rerunSearchWithFilters(next);
-  };
-
-  const clearFiltersAndSearchAgain = () => {
-    setActiveFilters(DEFAULT_FILTERS);
-    rerunSearchWithFilters(DEFAULT_FILTERS);
-  };
-
   const handleIngredientSearch = async () => {
     if (selectedIngredients.size === 0) {
       alertService.alert(
@@ -666,13 +476,6 @@ export function useRecipeScreen() {
     } else {
       discovery.refresh();
     }
-  };
-
-  // Results arrive pre-transformed into DisplayItems (see the module-level
-  // transforms) — store them and reset the client-side pagination window.
-  const setDisplayResultsAndResetPage = (displayItems: DisplayItem[]) => {
-    setSearchResults(displayItems);
-    setVisibleSearchCount(SEARCH_PAGE_SIZE);
   };
 
   const clearSearch = () => {

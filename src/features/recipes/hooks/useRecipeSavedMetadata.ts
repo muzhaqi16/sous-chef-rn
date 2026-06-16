@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { errorService } from '#/services/errorService';
 import { useTranslation } from 'react-i18next';
 import { useMutation } from '@apollo/client/react';
 import {
@@ -83,7 +84,7 @@ export function useRecipeSavedMetadata({
         );
       },
       onError: err => {
-        console.error('Update favorite recipe error:', err);
+        errorService.reportError(err, { operation: 'updateFavoriteRecipe' });
         toastService.error(err.message || t('recipes.updateRecipeMetaFailed'));
       },
     },
@@ -132,7 +133,7 @@ export function useRecipeSavedMetadata({
       });
     },
     onError: err => {
-      console.error('Unfavorite recipe error:', err);
+      errorService.reportError(err, { operation: 'unfavoriteRecipe' });
       toastService.error(err.message || t('recipes.removeFromSavedFailed'));
     },
   });

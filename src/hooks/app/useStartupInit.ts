@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { UnistylesRuntime } from 'react-native-unistyles';
 import { LaunchArguments } from 'react-native-launch-arguments';
+import { logger } from '#/utils/environment';
 import { useAppStore, useIsHydrated } from '#store/useAppStore';
 import { useStore } from '#store';
 import { Telemetry } from '#services/telemetry';
@@ -30,11 +31,11 @@ function injectDetoxLaunchArgs(
       useStore
         .getState()
         .setAuth(user, args.detoxUserToken, args.detoxRefreshToken);
-      console.log('[Detox] Auth injected via launchArgs');
+      logger.debug('[Detox] Auth injected via launchArgs');
     }
     if (args.detoxDisableBackgroundServices) {
       detoxBackgroundServicesDisabledRef.current = true;
-      console.log('[Detox] Background services disabled for E2E tests');
+      logger.debug('[Detox] Background services disabled for E2E tests');
     }
   } catch {
     // No launch args or parse error — normal app startup
