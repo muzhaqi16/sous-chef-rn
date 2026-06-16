@@ -17,11 +17,18 @@ import {
   type BottomSheetFooterProps,
   type BottomSheetScrollViewMethods,
 } from '@gorhom/bottom-sheet';
+import {
+  Extrapolation,
+  interpolate,
+  useDerivedValue,
+  useSharedValue,
+} from 'react-native-reanimated';
 import { StyleSheet as UnistylesStyleSheet } from 'react-native-unistyles';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
 import { Icon } from '#utils/iconUtils';
-import { useBottomSheetBackdropClaim } from '#hooks/useBottomSheetBackdropClaim';
+import { useBackdropClaim } from '#components/providers/OverlayBackdropProvider';
+import { SHEET } from '#constants/animations';
 import { ActionTrayScrollContext } from './ActionTrayScrollContext';
 import type { ActionTrayProps, ActionTrayRef } from './types';
 
@@ -56,21 +63,33 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
     const [isSettledOpen, setIsSettledOpen] = useState(false);
     const { height } = useWindowDimensions();
 
-    // Backdrop driven by the sheet's `animatedIndex` so the dim ramps in and
-    // out in lockstep with the sheet on the UI thread: on close it fades AS
-    // the sheet slides down, rather than holding full opacity until the close
-    // animation settles and only then fading. The claim happens at the start
-    // of the open animation (via `onAnimate`) and is released on the
-    // settled-closed `onChange(-1)`. Tap-to-dismiss is wired inside the hook
-    // (it dismisses via `bottomSheetRef`).
-    const {
-      animatedIndex,
-      onChange: handleBackdrop,
-      onAnimate: handleBackdropAnimate,
-    } = useBottomSheetBackdropClaim(bottomSheetRef);
+    // Backdrop driven by the sheet's own `animatedIndex` so the dim ramps in
+    // and out in lockstep with the sheet on the UI thread (on close it fades AS
+    // the sheet slides down). Crucially, the claim's LIFECYCLE is tied to
+    // `mounted` — a React state transition — so `useBackdropClaim` releases the
+    // slot deterministically via effect cleanup when the tray closes
+    // (mounted → false) or the screen unmounts. Releasing off gorhom's close
+    // events instead is racy: navigation can interrupt the close so those
+    // events never fire, leaking the dim (and the tab bar that reads it).
+    const animatedIndex = useSharedValue(-1);
+    const backdropOpacity = useDerivedValue(() =>
+      interpolate(
+        animatedIndex.value,
+        [-1, 0],
+        [0, SHEET.BACKDROP_OPACITY],
+        Extrapolation.CLAMP,
+      ),
+    );
+    const handleBackdropPress = () => {
+      bottomSheetRef.current?.dismiss();
+    };
+    useBackdropClaim(mounted && enableBackdrop, {
+      opacity: backdropOpacity,
+      onPress: handleBackdropPress,
+    });
 
-    // Settled-closed cleanup (unmount + backdrop release + `onClose`),
-    // reachable from two gorhom signals that can each fire without the other:
+    // Settled-closed cleanup (`onClose` + unmount), reachable from two gorhom
+    // signals that can each fire without the other:
     // - `onChange(-1)` — settled-closed. Gorhom SKIPS this when a close
     //   interrupts an open animation that never settled (its internal
     //   `animatedCurrentIndex` is still -1, so `nextIndex !==
@@ -84,10 +103,6 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
     const handleClosed = () => {
       if (dismissHandledRef.current) return;
       dismissHandledRef.current = true;
-      // Idempotent backdrop release. Covers the path where gorhom's
-      // `onDismiss` wins the race against `onChange(-1)` (which also releases
-      // via `handleSheetChanges`); `releaseBackdrop` no-ops on a stale id.
-      if (enableBackdrop) handleBackdrop(-1);
       setMounted(false);
       onClose?.();
     };
@@ -101,22 +116,12 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
     }, [mounted]);
 
     const handleSheetChanges = (index: number) => {
-      // Drive the backdrop slot off gorhom's authoritative index: claim on
-      // open (index ≥ 0, idempotent backstop to `onAnimate`), release on -1.
-      if (enableBackdrop) handleBackdrop(index);
       if (index < 0) {
         handleClosed();
       } else {
         // Settled at an open detent — the scrollable is now unlocked.
         setIsSettledOpen(true);
       }
-    };
-
-    // Claim the backdrop at the START of the open animation so the dim ramps in
-    // frame-synced with the sheet (gorhom fires `onAnimate` before it begins
-    // driving `animatedPosition`).
-    const handleSheetAnimate = (fromIndex: number, toIndex: number) => {
-      if (enableBackdrop) handleBackdropAnimate(fromIndex, toIndex);
     };
 
     useImperativeHandle(
@@ -220,7 +225,6 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
         handleComponent={renderHandle}
         footerComponent={renderFooter}
         animatedIndex={animatedIndex}
-        onAnimate={handleSheetAnimate}
         onChange={handleSheetChanges}
         onDismiss={handleClosed}
         style={[styles.modal, style]}

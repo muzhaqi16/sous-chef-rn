@@ -2,30 +2,22 @@
 import React from 'react';
 import { render, screen, act } from '@testing-library/react-native';
 import { Text } from '#components/atoms/Text';
+import { useBackdropClaim } from '#components/providers/OverlayBackdropProvider';
 import { ActionTray } from '../ActionTray';
 import type { ActionTrayRef } from '../types';
 
-// The backdrop is driven by the sheet's `animatedIndex` (lockstep dim), so the
-// hook returns the `animatedIndex` SV plus `onChange`/`onAnimate` handlers that
-// ActionTray composes into gorhom. Stable module-level mocks let tests assert
-// the claim (open) and release (close) paths. `mock`-prefixed names are allowed
-// inside the hoisted jest.mock factory.
-const mockBackdropAnimatedIndex = { value: -1 };
-const mockBackdropOnChange = jest.fn();
-const mockBackdropOnAnimate = jest.fn();
-
-jest.mock('#hooks/useBottomSheetBackdropClaim', () => ({
-  useBottomSheetBackdropClaim: jest.fn(() => ({
-    animatedIndex: mockBackdropAnimatedIndex,
-    onChange: mockBackdropOnChange,
-    onAnimate: mockBackdropOnAnimate,
-  })),
+// The backdrop is claimed declaratively: `useBackdropClaim(mounted &&
+// enableBackdrop, { opacity })` ties the slot's lifecycle to React state, so
+// it's released on close/unmount regardless of gorhom's event ordering. The
+// `opacity` is an animatedIndex-driven SharedValue (lockstep dim). Mocking the
+// hook lets tests assert the active flag toggling with open/close.
+jest.mock('#components/providers/OverlayBackdropProvider', () => ({
+  useBackdropClaim: jest.fn(),
 }));
 
 describe('ActionTray', () => {
   beforeEach(() => {
-    mockBackdropOnChange.mockClear();
-    mockBackdropOnAnimate.mockClear();
+    (useBackdropClaim as jest.Mock).mockClear();
   });
 
   // Render an opened tray and capture gorhom's prop handlers. The mock renders
@@ -144,9 +136,13 @@ describe('ActionTray', () => {
       const onClose = jest.fn();
       const { ref, onDismiss, animatedIndex } = openTray({ onClose });
 
-      // Lockstep backdrop wired: the sheet's animatedIndex SV is handed to
-      // gorhom so the dim ramps with the sheet's motion.
-      expect(animatedIndex).toBe(mockBackdropAnimatedIndex);
+      // Lockstep backdrop wired: the sheet's animatedIndex SV drives the dim.
+      expect(animatedIndex).toBeDefined();
+      // Slot claimed (active) while open.
+      expect(useBackdropClaim).toHaveBeenLastCalledWith(
+        true,
+        expect.objectContaining({ opacity: expect.anything() }),
+      );
 
       act(() => {
         onDismiss();
@@ -154,8 +150,11 @@ describe('ActionTray', () => {
 
       expect(ref.current!.isActive()).toBe(false);
       expect(onClose).toHaveBeenCalledTimes(1);
-      // Backdrop slot released on the onDismiss close path.
-      expect(mockBackdropOnChange).toHaveBeenCalledWith(-1);
+      // Slot released (active false) — tied to React state, not gorhom events.
+      expect(useBackdropClaim).toHaveBeenLastCalledWith(
+        false,
+        expect.objectContaining({ opacity: expect.anything() }),
+      );
     });
 
     it('notifies onClose exactly once when onChange(-1) and onDismiss both fire (normal close)', () => {
@@ -173,8 +172,11 @@ describe('ActionTray', () => {
 
       expect(ref.current!.isActive()).toBe(false);
       expect(onClose).toHaveBeenCalledTimes(1);
-      // Backdrop slot released on the settled-closed onChange(-1) path.
-      expect(mockBackdropOnChange).toHaveBeenCalledWith(-1);
+      // Slot released (active false) once cleanup runs.
+      expect(useBackdropClaim).toHaveBeenLastCalledWith(
+        false,
+        expect.objectContaining({ opacity: expect.anything() }),
+      );
     });
 
     it('re-arms the dedupe on reopen so the next close notifies again', () => {
