@@ -1,4 +1,5 @@
 import { alertService } from '#/services/alertService';
+import { errorService } from '#/services/errorService';
 import { t } from '#/i18n/t';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { parseFractionalInput as parseQuantityInput } from '#/utils/fractionUtils';
@@ -189,10 +190,10 @@ export function usePantryItemFormSubmit(params: UsePantryItemFormSubmitParams) {
         }
       },
       error => {
-        console.error(
-          `${params.mode === 'add' ? 'Add' : 'Update'} pantry item error:`,
-          error,
-        );
+        errorService.reportError(error, {
+          operation:
+            params.mode === 'add' ? 'addPantryItem' : 'updatePantryItem',
+        });
         alertService.alert(
           'Error',
           `Failed to ${

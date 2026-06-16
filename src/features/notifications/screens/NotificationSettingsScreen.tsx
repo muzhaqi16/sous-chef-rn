@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { errorService } from '#/services/errorService';
 import { View, Platform, Linking, AppState } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
@@ -286,7 +287,9 @@ export const NotificationSettingsScreen: React.FC = () => {
         },
         isLoading => setUpdating(isLoading ? key : null),
         error => {
-          console.error('Error requesting notification permission:', error);
+          errorService.reportError(error, {
+            operation: 'requestNotificationPermission',
+          });
           alertService.alert(
             t('notifications.permissionErrorTitle'),
             t('notifications.permissionErrorMessage'),

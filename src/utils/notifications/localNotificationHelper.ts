@@ -4,6 +4,7 @@ import notifee, {
   EventType,
 } from '@notifee/react-native';
 import { Platform } from 'react-native';
+import { errorService } from '#/services/errorService';
 
 interface LocalNotificationParams {
   id: string;
@@ -66,7 +67,7 @@ export const showLocalNotification = async ({
       },
     });
   } catch (error) {
-    console.error('Failed to show local notification:', error);
+    errorService.reportError(error, { operation: 'showLocalNotification' });
 
     // If notification fails on Android, try a basic fallback without styling
     if (Platform.OS === 'android') {
@@ -82,7 +83,9 @@ export const showLocalNotification = async ({
           },
         });
       } catch (fallbackError) {
-        console.error('Fallback notification also failed:', fallbackError);
+        errorService.reportError(fallbackError, {
+          operation: 'showFallbackNotification',
+        });
       }
     }
   }

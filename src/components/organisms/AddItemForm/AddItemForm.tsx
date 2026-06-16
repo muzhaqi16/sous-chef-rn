@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { errorService } from '#/services/errorService';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Button } from '#/components/base/Button';
@@ -351,7 +352,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
               images={selectedImages}
               onImagesChanged={setSelectedImages}
               onError={error => {
-                console.error('Image selection error:', error);
+                errorService.reportError(error, { operation: 'selectImage' });
               }}
               disabled={loading}
             />

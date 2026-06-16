@@ -86,17 +86,28 @@ module.exports = {
       globals: { __DEV__: 'readonly', globalThis: 'readonly' },
     },
     {
-      // Feature hooks are the data/business-logic layer; caught errors here
-      // must be observable in production. `console.error` only writes to the
-      // device console (never the telemetry pipeline), and `console.log` is
-      // stripped from release builds entirely — so neither belongs in this
-      // layer. Route caught errors through `errorService.reportError(error,
-      // { operation })` so they reach Loki/Grafana. `console.warn` stays
-      // available for local dev diagnostics (e.g. cache-miss guards); use
-      // `logger.debug` for verbose dev tracing.
+      // App code — feature hooks (business logic) and the UI layer (screens,
+      // shared + feature components). Caught errors here must be observable in
+      // production: `console.error` only writes to the device console (never
+      // the telemetry pipeline), and `console.log` is stripped from release
+      // builds entirely — so neither belongs in this layer. Route actionable
+      // errors through `errorService.reportError(error, { operation })` so they
+      // reach Loki/Grafana; use `logger.warn` / `logger.debug` for benign or
+      // dev-only diagnostics. `console.warn` stays allowed for the few existing
+      // cache-miss guards. Infra (telemetry transports, perf monitors, the
+      // Apollo console link, `src/hooks/performance/**`) is intentionally NOT
+      // covered — console output is its purpose there.
       files: [
         'src/features/**/hooks/**/*.ts',
         'src/features/**/hooks/**/*.tsx',
+        'src/features/**/screens/**/*.ts',
+        'src/features/**/screens/**/*.tsx',
+        'src/features/**/components/**/*.ts',
+        'src/features/**/components/**/*.tsx',
+        'src/components/**/*.ts',
+        'src/components/**/*.tsx',
+        'src/screens/**/*.ts',
+        'src/screens/**/*.tsx',
       ],
       excludedFiles: ['**/__tests__/**', '**/*.test.ts', '**/*.test.tsx'],
       rules: {

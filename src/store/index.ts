@@ -69,6 +69,9 @@ import {
   type SessionTokenLoadResult,
 } from '#/storage/keychain';
 import { logger } from '#/utils/environment';
+// Type-only — erased at runtime, so it does NOT pull the telemetry→useStore
+// cycle into the module graph. The value is loaded via deferred `require` below.
+import type { ErrorService } from '#/services/errorService';
 
 /**
  * Final step of persist hydration: pull session tokens out of the keychain
@@ -110,6 +113,95 @@ const hydrateSessionTokensThenFinish = async (
     });
   }
   state?.setHydrated(true);
+};
+
+/**
+ * Persist rehydration listener, extracted so it can be unit-tested directly —
+ * the inline persist closure can't be exercised in isolation.
+ *
+ * Success: sync theme / language / session / home-selection / offline mode from
+ * the restored blob; `hydrateSessionTokensThenFinish` then flips `isHydrated`.
+ *
+ * Error: the persisted blob couldn't be restored. Report it to telemetry and
+ * still flip `isHydrated` so the app boots on defaults instead of hanging on
+ * the loading screen forever (RootNavigator gates first paint on `isHydrated`).
+ * `errorService` is lazy-imported to avoid the telemetry→`useStore` import
+ * cycle at module load — the same reason the cold-start metric below is lazy.
+ */
+export const handleStoreRehydration = (
+  state: RootState | undefined,
+  error: unknown,
+): void => {
+  if (error) {
+    // Recover first so the app always boots on defaults, even if reporting
+    // throws — otherwise RootNavigator hangs on the loading screen forever.
+    useStore.getState().setHydrated(true);
+    // Deferred `require` (not a static import) keeps telemetry — which imports
+    // `useStore` — out of the module-load cycle, while staying synchronous.
+    const { errorService } = require('#/services/errorService') as {
+      errorService: ErrorService;
+    };
+    errorService.reportError(error, { operation: 'storeHydration' });
+    return;
+  }
+
+  // Sync the rehydrated theme preference to UnistylesRuntime
+  // BEFORE flipping `isHydrated`. This makes the persist layer
+  // the single source of truth for cold-boot theme application,
+  // so React hooks never need a side-effect to "catch up".
+  if (state?.theme) {
+    applyThemePreferenceToRuntime(state.theme);
+  }
+
+  // Sync the rehydrated UI language to i18next BEFORE flipping
+  // `isHydrated`, so the first paint already shows the user's
+  // preferred language instead of the bundled default ('en').
+  // Lazy-imported because i18n/config side-effects on load — we
+  // want to avoid pulling it into the persist closure.
+  if (state?.language && state.language !== 'en') {
+    import('#/i18n/config').then(({ getI18n }) => {
+      void getI18n().changeLanguage(state.language);
+    });
+  }
+
+  // Load session tokens from the keychain BEFORE flipping
+  // `isHydrated`, so auth-dependent navigation sees the session on
+  // first paint. Tokens are excluded from partialize — the
+  // keychain (not MMKV) is their persistence tier.
+  void hydrateSessionTokensThenFinish(state);
+
+  // Cold-start telemetry: time from JS bundle entry to Zustand
+  // hydration callback firing. Captures MMKV decrypt + JSON parse +
+  // store rehydrate cost. Imported lazily to avoid pulling
+  // telemetry into the persist closure during module load.
+  const startTs = (globalThis as { __APP_START_TIMESTAMP?: number })
+    .__APP_START_TIMESTAMP;
+  if (startTs) {
+    import('#services/telemetry').then(({ Telemetry }) => {
+      Telemetry.histogram('app_zustand_hydration_ms', Date.now() - startTs);
+    });
+  }
+
+  // Clean up orphaned notifications on app startup
+  // This ensures persisted notifications are filtered correctly
+  // after app updates or context changes
+  state?.cleanupOrphanedSubscriptions();
+
+  // PERF: If persisted home+pantry IDs exist, mark ready immediately
+  // so usePantryQuery fires on the FIRST render instead of waiting
+  // for useDefaultHome's effect (which runs after render).
+  // Safe because both cache partitions are now restored synchronously
+  // in initializeClient() before React mounts.
+  if (state?.selectedHomeId && state?.selectedPantryId) {
+    state?.setIsHomeSelectionReady(true);
+  }
+
+  // Hydrate offlineModeEnabled from MMKV. Kept outside Zustand
+  // persist (see partialize) so we can read the user's last
+  // setting before the GetUserSettings query resolves.
+  if (state?.setOfflineModeEnabled) {
+    hydrateOfflineModeFromStorage(state.setOfflineModeEnabled);
+  }
 };
 
 // Add reset manager interface to root state
@@ -376,74 +468,7 @@ export const useStore = create<RootState>()(
 
           return persistedState;
         },
-        onRehydrateStorage: () => {
-          return (state, error) => {
-            if (error) {
-              console.error('An error happened during hydration', error);
-            } else {
-              // Sync the rehydrated theme preference to UnistylesRuntime
-              // BEFORE flipping `isHydrated`. This makes the persist layer
-              // the single source of truth for cold-boot theme application,
-              // so React hooks never need a side-effect to "catch up".
-              if (state?.theme) {
-                applyThemePreferenceToRuntime(state.theme);
-              }
-
-              // Sync the rehydrated UI language to i18next BEFORE flipping
-              // `isHydrated`, so the first paint already shows the user's
-              // preferred language instead of the bundled default ('en').
-              // Lazy-imported because i18n/config side-effects on load — we
-              // want to avoid pulling it into the persist closure.
-              if (state?.language && state.language !== 'en') {
-                import('#/i18n/config').then(({ getI18n }) => {
-                  void getI18n().changeLanguage(state.language);
-                });
-              }
-
-              // Load session tokens from the keychain BEFORE flipping
-              // `isHydrated`, so auth-dependent navigation sees the session on
-              // first paint. Tokens are excluded from partialize — the
-              // keychain (not MMKV) is their persistence tier.
-              void hydrateSessionTokensThenFinish(state);
-
-              // Cold-start telemetry: time from JS bundle entry to Zustand
-              // hydration callback firing. Captures MMKV decrypt + JSON parse +
-              // store rehydrate cost. Imported lazily to avoid pulling
-              // telemetry into the persist closure during module load.
-              const startTs = (globalThis as { __APP_START_TIMESTAMP?: number })
-                .__APP_START_TIMESTAMP;
-              if (startTs) {
-                import('#services/telemetry').then(({ Telemetry }) => {
-                  Telemetry.histogram(
-                    'app_zustand_hydration_ms',
-                    Date.now() - startTs,
-                  );
-                });
-              }
-
-              // Clean up orphaned notifications on app startup
-              // This ensures persisted notifications are filtered correctly
-              // after app updates or context changes
-              state?.cleanupOrphanedSubscriptions();
-
-              // PERF: If persisted home+pantry IDs exist, mark ready immediately
-              // so usePantryQuery fires on the FIRST render instead of waiting
-              // for useDefaultHome's effect (which runs after render).
-              // Safe because both cache partitions are now restored synchronously
-              // in initializeClient() before React mounts.
-              if (state?.selectedHomeId && state?.selectedPantryId) {
-                state?.setIsHomeSelectionReady(true);
-              }
-
-              // Hydrate offlineModeEnabled from MMKV. Kept outside Zustand
-              // persist (see partialize) so we can read the user's last
-              // setting before the GetUserSettings query resolves.
-              if (state?.setOfflineModeEnabled) {
-                hydrateOfflineModeFromStorage(state.setOfflineModeEnabled);
-              }
-            }
-          };
-        },
+        onRehydrateStorage: () => handleStoreRehydration,
         skipHydration: false,
         partialize: state => {
           // Explicit allowlist — see PERSISTED_KEYS / TRANSIENT_KEYS above.

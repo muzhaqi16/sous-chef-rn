@@ -280,7 +280,8 @@ describe('usePaginatedShoppingItems', () => {
       },
     );
 
-    await waitFor(() => expect(result.current.state.error).toBeTruthy());
-    expect(result.current.state.error?.message).toContain('Network error');
+    await waitFor(() =>
+      expect(result.current.state.error?.message).toContain('Network error'),
+    );
   });
 });

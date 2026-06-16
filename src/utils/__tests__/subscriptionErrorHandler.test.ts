@@ -4,9 +4,15 @@ import {
   clearAllRetryStates,
   isKnownServerError,
 } from '../subscriptionErrorHandler';
+import { errorService } from '#/services/errorService';
+
+jest.mock('#/services/errorService', () => ({
+  errorService: { reportError: jest.fn() },
+}));
 
 beforeEach(() => {
   clearAllRetryStates();
+  jest.clearAllMocks();
   jest.useFakeTimers();
 });
 
@@ -41,11 +47,24 @@ describe('subscriptionErrorHandler', () => {
       ).toBe(false);
     });
 
-    it('returns false for non-resolver errors', () => {
+    it('returns false for non-resolver errors and reports them to telemetry', () => {
       const result = handleSubscriptionError('TestSub', {
         message: 'Unknown server error',
       });
       expect(result).toBe(false);
+      expect(errorService.reportError).toHaveBeenCalledWith(
+        expect.any(Error),
+        expect.objectContaining({
+          operation: 'subscriptionError',
+          subscription: 'TestSub',
+        }),
+      );
+    });
+
+    it('does NOT report suppressed network errors to telemetry', () => {
+      handleSubscriptionError('TestSub', { message: 'socket closed' });
+      handleSubscriptionError('TestSub', { message: 'network error' });
+      expect(errorService.reportError).not.toHaveBeenCalled();
     });
 
     it('retries server resolver errors', () => {

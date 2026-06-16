@@ -27,8 +27,11 @@ import { useShoppingListItemMutations } from './mutations/useShoppingListItemMut
  */
 export function useShoppingListManagement(currentListId: string | undefined) {
   // 1. Query shopping list details (for permissions, collaborators)
-  const { shoppingList, error: listError } =
-    useShoppingListItemsQuery(currentListId);
+  const {
+    shoppingList,
+    notFound: listNotFound,
+    error: listError,
+  } = useShoppingListItemsQuery(currentListId);
 
   // 2. Single query fetches BOTH unpurchased and purchased items (no cache collision)
   const {
@@ -94,6 +97,7 @@ export function useShoppingListManagement(currentListId: string | undefined) {
     rawUnpurchasedItems: unpurchasedItems,
     rawPurchasedItems: purchasedItems,
     shoppingList, // Full shopping list details for permissions, collaborators
+    listNotFound, // Server returned null for the list (deleted/unshared)
     loading,
     error,
     isTransitioning,

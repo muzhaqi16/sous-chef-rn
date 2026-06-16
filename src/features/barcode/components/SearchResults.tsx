@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { errorService } from '#/services/errorService';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
 import { t } from '#/i18n/t';
@@ -367,7 +368,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
       },
       setIsLoading,
       error => {
-        console.error('Error adding item:', error);
+        errorService.reportError(error, { operation: 'addItemFromSearch' });
         alertService.alert(t('labels.error'), t('errors.addItemFailed'));
       },
     );

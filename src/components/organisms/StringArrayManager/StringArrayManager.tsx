@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { errorService } from '#/services/errorService';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { BottomSheetTextInput, BottomSheetView } from '@gorhom/bottom-sheet';
@@ -218,7 +219,7 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
     executeMutation(
       () => onRemove(item),
       err => {
-        console.error('Failed to remove item:', err);
+        errorService.reportError(err, { operation: 'removeStringArrayItem' });
       },
     );
   };

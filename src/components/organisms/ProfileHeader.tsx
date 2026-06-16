@@ -1,4 +1,5 @@
 import React from 'react';
+import { logger } from '#/utils/environment';
 import { View } from 'react-native';
 import {
   ThemedBackButton,
@@ -118,7 +119,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                   style={styles.avatarImage}
                   displaySize={AVATAR_SIZE}
                   onFailure={() =>
-                    console.log('Avatar image failed to load:', avatarUrl)
+                    logger.warn('Avatar image failed to load:', avatarUrl)
                   }
                 />
               </View>

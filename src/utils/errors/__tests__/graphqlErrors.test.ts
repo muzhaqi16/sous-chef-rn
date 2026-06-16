@@ -83,18 +83,21 @@ describe('isResourceAccessLostError', () => {
       errors: [{ message: 'denied', extensions: { code } }],
     } satisfies FormattedExecutionResult);
 
-  it.each(['AUTHZ_FORBIDDEN', 'FORBIDDEN', 'RESOURCE_NOT_FOUND'])(
-    'is true for %s',
-    code => {
-      expect(isResourceAccessLostError(errorWithCode(code))).toBe(true);
-    },
-  );
+  it.each(['AUTHZ_FORBIDDEN', 'FORBIDDEN'])('is true for %s', code => {
+    expect(isResourceAccessLostError(errorWithCode(code))).toBe(true);
+  });
 
   it('is false for unrelated GraphQL error codes', () => {
     expect(isResourceAccessLostError(errorWithCode('VALIDATION_FAILED'))).toBe(
       false,
     );
     expect(isResourceAccessLostError(errorWithCode('UNAUTHENTICATED'))).toBe(
+      false,
+    );
+  });
+
+  it('is false for RESOURCE_NOT_FOUND — by-id misses are now null data, not an error', () => {
+    expect(isResourceAccessLostError(errorWithCode('RESOURCE_NOT_FOUND'))).toBe(
       false,
     );
   });

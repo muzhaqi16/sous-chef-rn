@@ -1,4 +1,5 @@
 import React from 'react';
+import { logger } from '#/utils/environment';
 import { useTranslation } from 'react-i18next';
 import { View, Image, Linking } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
@@ -66,7 +67,7 @@ export function LandingAuthScreen() {
           style={({ pressed }) => pressed && styles.pressed}
           onPress={() => {
             Linking.openURL(getWebAppUrl('/privacy-policy')).catch(err =>
-              console.error('Failed to open URL:', err),
+              logger.warn('Failed to open URL:', err),
             );
           }}
         >

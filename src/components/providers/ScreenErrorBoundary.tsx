@@ -1,4 +1,5 @@
 import React, { ReactNode } from 'react';
+import { logger } from '#/utils/environment';
 import ErrorBoundary from './ErrorBoundary';
 import { Telemetry } from '#/services/telemetry';
 
@@ -13,7 +14,7 @@ export const RecipeDetailErrorBoundary: React.FC<{ children: ReactNode }> = ({
   <ErrorBoundary
     context="RecipeDetail"
     onError={error => {
-      console.error('RecipeDetail error:', error);
+      logger.error('RecipeDetail error:', error);
       Telemetry.increment('recipe_detail_errors_total', 1);
       Telemetry.trackError(error, {
         screen: 'RecipeDetail',
@@ -31,7 +32,7 @@ export const ShoppingListErrorBoundary: React.FC<{ children: ReactNode }> = ({
   <ErrorBoundary
     context="ShoppingList"
     onError={error => {
-      console.error('ShoppingList error:', error);
+      logger.error('ShoppingList error:', error);
       Telemetry.increment('shopping_list_errors_total', 1);
       Telemetry.trackError(error, {
         screen: 'ShoppingList',
@@ -49,7 +50,7 @@ export const PantryErrorBoundary: React.FC<{ children: ReactNode }> = ({
   <ErrorBoundary
     context="Pantry"
     onError={error => {
-      console.error('Pantry error:', error);
+      logger.error('Pantry error:', error);
       Telemetry.increment('pantry_errors_total', 1);
       Telemetry.trackError(error, {
         screen: 'Pantry',
@@ -67,7 +68,7 @@ export const OnboardingErrorBoundary: React.FC<{ children: ReactNode }> = ({
   <ErrorBoundary
     context="Onboarding"
     onError={error => {
-      console.error('Onboarding error:', error);
+      logger.error('Onboarding error:', error);
       Telemetry.increment('onboarding_errors_total', 1);
       Telemetry.trackError(error, {
         screen: 'Onboarding',
