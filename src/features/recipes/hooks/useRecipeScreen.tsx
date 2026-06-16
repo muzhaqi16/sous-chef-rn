@@ -43,6 +43,7 @@ import {
   SPOONACULAR_TO_DIET_ENUM,
   SPOONACULAR_TO_INTOLERANCE_ENUM,
 } from '#features/recipes/utils/recipeFilterMaps';
+import { isLifestyleDiet } from '#/constants/dietary';
 import {
   type DisplayItem,
   type LocalRecipeNode,
@@ -286,11 +287,26 @@ export function useRecipeScreen() {
   // ── Dietary profile (for filter defaults + discovery tags) ──
   const { profile: dietaryProfile } = useDietaryProfile();
 
-  // Compute dietary tags once for discovery (random recipe API)
-  const dietRestriction = dietaryProfile?.restrictions?.find(r => r.diet);
-  const dietaryTags = dietRestriction?.diet
-    ? dietRestriction.diet.toLowerCase()
-    : undefined;
+  // Reconcile the profile's diet restrictions into the single-lifestyle +
+  // stackable-constraints model: keep at most one lifestyle diet (the first,
+  // deterministic) plus every constraint diet, as Spoonacular-format strings.
+  // Shared by discovery tags and the search filter seeding so the two agree.
+  const profileDietRestrictions = (dietaryProfile?.restrictions ?? []).filter(
+    (r): r is typeof r & { diet: Diet } => Boolean(r.diet),
+  );
+  const firstLifestyleDiet = profileDietRestrictions.find(r =>
+    isLifestyleDiet(r.diet),
+  );
+  const reconciledDietValues = [
+    ...(firstLifestyleDiet ? [firstLifestyleDiet] : []),
+    ...profileDietRestrictions.filter(r => !isLifestyleDiet(r.diet)),
+  ].map(r => DIET_ENUM_TO_SPOONACULAR[r.diet] ?? r.diet.toLowerCase());
+
+  // Discovery (random recipe API) takes a comma-separated tag string (AND).
+  const dietaryTags =
+    reconciledDietValues.length > 0
+      ? reconciledDietValues.join(',')
+      : undefined;
 
   // ── Discovery (includes pantry data) ──
   const discovery = useRecipeDiscovery(dietaryTags);
@@ -347,10 +363,7 @@ export function useRecipeScreen() {
   // and seeds itself from this the first time it arrives carrying data.
   const profileFilters: RecipeFilters | null = dietaryProfile
     ? {
-        diet: (dietaryProfile.restrictions ?? [])
-          .filter((r): r is typeof r & { diet: Diet } => Boolean(r.diet))
-          .map(r => DIET_ENUM_TO_SPOONACULAR[r.diet] ?? r.diet.toLowerCase())
-          .filter(Boolean),
+        diet: reconciledDietValues,
         intolerances: (dietaryProfile.restrictions ?? [])
           .filter((r): r is typeof r & { intolerance: Intolerance } =>
             Boolean(r.intolerance),

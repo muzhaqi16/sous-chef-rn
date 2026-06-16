@@ -203,16 +203,7 @@ export const ShoppingListItemDetail: React.FC<
       <DetailTitleRow
         title={item.itemName ?? ''}
         numberOfLines={2}
-        trailing={
-          item.quantity != null ? (
-            <FormattedItemSubtitle
-              quantity={item.quantity}
-              quantityInput={item.quantityInput}
-              displayFormat={item.displayFormat}
-              unitSymbol={unitSymbol}
-            />
-          ) : undefined
-        }
+        style={styles.titleRow}
       />
 
       {!!item.purchaseInfo?.isPurchased && (
@@ -325,6 +316,11 @@ export const ShoppingListItemDetail: React.FC<
 const styles = StyleSheet.create(theme => ({
   heroFull: {
     width: '100%',
+  },
+  // Breathing room between the item name and the first detail card; without it
+  // the title sits flush against the "Information" section.
+  titleRow: {
+    marginBottom: theme.spacing.md,
   },
   centerMessage: {
     flex: 1,

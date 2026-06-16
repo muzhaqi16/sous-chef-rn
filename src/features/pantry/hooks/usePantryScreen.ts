@@ -202,6 +202,9 @@ export function usePantryScreen() {
       (location: (typeof pantryStorageLocations)[number]) => ({
         id: location.id,
         label: location.name,
+        ...(location.parentLocation?.name
+          ? { subLabel: location.parentLocation.name }
+          : undefined),
         ...(location.color ? { activeColor: location.color } : undefined),
         ...(location.icon
           ? { icon: location.icon }

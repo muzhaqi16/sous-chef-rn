@@ -542,6 +542,8 @@
     "applyA11y": "Apply filters",
     "infoBanner": "Filters only apply to text search",
     "dietTitle": "Diet",
+    "dietLifestyleLabel": "Choose your diet",
+    "dietConstraintsLabel": "Dietary constraints",
     "selectAllThatApply": "Select all that apply",
     "selectOne": "Select one",
     "intolerancesTitle": "Allergies & Intolerances",
@@ -1936,7 +1938,9 @@
   },
   "addItemSheet": {
     "scanBarcode": "Scan Barcode",
-    "addManually": "Add Manually"
+    "addManually": "Add Manually",
+    "more": "More",
+    "allAdded": "All added"
   },
   "addToShoppingListSheet": {
     "addFailedRetry": "Failed to add item. Please try again.",

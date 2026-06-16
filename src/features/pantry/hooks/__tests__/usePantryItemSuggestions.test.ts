@@ -56,9 +56,12 @@ function buildMock(
   suggestions: ReturnType<typeof makeSuggestion>[],
   variables: { pantryId: string; limit: number } = {
     pantryId: 'pantry-1',
-    limit: 10,
+    limit: 20,
   },
 ): MockedResponse {
+  // Each source is fetched via its own aliased field; bucket the flat input.
+  const bySource = (source: PantrySuggestionSource) =>
+    suggestions.filter(s => s.source === source);
   return {
     request: { query: GetPantryItemSuggestionsDocument, variables },
     result: {
@@ -66,7 +69,11 @@ function buildMock(
         pantry: {
           __typename: 'Pantry',
           id: variables.pantryId,
-          suggestions,
+          lowStock: bySource(PantrySuggestionSource.LowStock),
+          expiringSoon: bySource(PantrySuggestionSource.ExpiringSoon),
+          recentlyDeleted: bySource(PantrySuggestionSource.RecentlyDeleted),
+          frequentlyAdded: bySource(PantrySuggestionSource.FrequentlyAdded),
+          popular: bySource(PantrySuggestionSource.Popular),
         },
       },
     },
@@ -240,9 +247,9 @@ describe('usePantryItemSuggestions', () => {
   });
 
   describe('limit variable', () => {
-    it('uses default limit of 10 (mock matches limit=10)', async () => {
+    it('uses default limit of 20 (mock matches limit=20)', async () => {
       const { result } = renderWith(
-        [buildMock([makeSuggestion()], { pantryId: 'pantry-1', limit: 10 })],
+        [buildMock([makeSuggestion()], { pantryId: 'pantry-1', limit: 20 })],
         { pantryId: 'pantry-1' },
       );
 
@@ -276,7 +283,7 @@ describe('usePantryItemSuggestions', () => {
           {
             request: {
               query: GetPantryItemSuggestionsDocument,
-              variables: { pantryId: 'pantry-1', limit: 10 },
+              variables: { pantryId: 'pantry-1', limit: 20 },
             },
             error: new Error('Failed'),
           },

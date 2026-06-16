@@ -4,6 +4,7 @@ import { useApolloClient, useMutation } from '@apollo/client/react';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import {
   usePantryItemSuggestions,
+  PANTRY_SUGGESTIONS_LIMIT,
   type PantryItemSuggestion,
 } from '#features/pantry/hooks/usePantryItemSuggestions';
 import { toastService } from '#/services/toastService';
@@ -68,7 +69,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   // Fetch pantry item suggestions
   const suggestionsResult = usePantryItemSuggestions({
     pantryId,
-    limit: 15,
+    limit: PANTRY_SUGGESTIONS_LIMIT,
     skip: !visible || !state.shouldFetch,
   });
 
@@ -126,17 +127,24 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     client.cache.updateQuery<GetPantryItemSuggestionsQuery>(
       {
         query: GetPantryItemSuggestionsDocument,
-        variables: { pantryId, limit: 15 },
+        variables: { pantryId, limit: PANTRY_SUGGESTIONS_LIMIT },
       },
       data => {
-        if (!data?.pantry?.suggestions) return data;
+        if (!data?.pantry) return data;
+        const pantry = data.pantry;
         return {
           ...data,
           pantry: {
-            ...data.pantry,
-            suggestions: data.pantry.suggestions.filter(
+            ...pantry,
+            lowStock: pantry.lowStock.filter(s => s.itemId !== itemId),
+            expiringSoon: pantry.expiringSoon.filter(s => s.itemId !== itemId),
+            recentlyDeleted: pantry.recentlyDeleted.filter(
               s => s.itemId !== itemId,
             ),
+            frequentlyAdded: pantry.frequentlyAdded.filter(
+              s => s.itemId !== itemId,
+            ),
+            popular: pantry.popular.filter(s => s.itemId !== itemId),
           },
         };
       },

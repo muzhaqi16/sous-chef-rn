@@ -4,6 +4,7 @@ import { useApolloClient, useMutation } from '@apollo/client/react';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import {
   useShoppingListSuggestions,
+  SHOPPING_SUGGESTIONS_LIMIT,
   ShoppingListSuggestionItem,
 } from '#features/shoppingList/hooks/useShoppingListSuggestions';
 import { toastService } from '#/services/toastService';
@@ -66,7 +67,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
   // Fetch shopping list suggestions (deferred until sheet animation completes)
   const suggestionsResult = useShoppingListSuggestions({
     shoppingListId,
-    limit: 15,
+    limit: SHOPPING_SUGGESTIONS_LIMIT,
     skip: !visible || !state.shouldFetch,
   });
 
@@ -82,17 +83,22 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
     client.cache.updateQuery<GetShoppingListSuggestionsQuery>(
       {
         query: GetShoppingListSuggestionsDocument,
-        variables: { id: shoppingListId!, limit: 15 },
+        variables: { id: shoppingListId!, limit: SHOPPING_SUGGESTIONS_LIMIT },
       },
       data => {
         if (!data?.shoppingList) return data;
+        const list = data.shoppingList;
         return {
           ...data,
           shoppingList: {
-            ...data.shoppingList,
-            suggestions: data.shoppingList.suggestions.filter(
+            ...list,
+            recentlyDeleted: list.recentlyDeleted.filter(
               s => s.itemId !== itemId,
             ),
+            frequentlyAdded: list.frequentlyAdded.filter(
+              s => s.itemId !== itemId,
+            ),
+            popular: list.popular.filter(s => s.itemId !== itemId),
           },
         };
       },

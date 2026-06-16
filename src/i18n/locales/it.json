@@ -542,6 +542,8 @@
     "applyA11y": "Applica filtri",
     "infoBanner": "I filtri si applicano solo alla ricerca testuale",
     "dietTitle": "Dieta",
+    "dietLifestyleLabel": "Scegli la tua dieta",
+    "dietConstraintsLabel": "Vincoli dietetici",
     "selectAllThatApply": "Seleziona tutti quelli applicabili",
     "selectOne": "Seleziona uno",
     "intolerancesTitle": "Allergie e intolleranze",

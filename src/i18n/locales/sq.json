@@ -542,6 +542,8 @@
     "applyA11y": "Apliko filtrat",
     "infoBanner": "Filtrat aplikohen vetëm për kërkimin me tekst",
     "dietTitle": "Dieta",
+    "dietLifestyleLabel": "Zgjidh dietën tënde",
+    "dietConstraintsLabel": "Kufizime dietike",
     "selectAllThatApply": "Zgjidh të gjitha që zbatohen",
     "selectOne": "Zgjidh një",
     "intolerancesTitle": "Alergjitë & Intolerancat",

@@ -92,6 +92,24 @@ export const DietaryProfileScreen: React.FC = () => {
     return allSucceeded === true;
   };
 
+  // Set the single lifestyle diet: add the new diet first, then clear the
+  // prior lifestyle row(s) only once the add succeeds (so a failure leaves the
+  // existing diet intact). Constraints/intolerances/goals still add via
+  // handleAddRestrictions.
+  const handleSelectLifestyleDiet = async (
+    diet: Diet,
+    replaceIds: string[],
+  ) => {
+    const added = await addDietaryRestriction(
+      { diet },
+      RestrictionSeverity.Preference,
+    );
+    if (added) {
+      await Promise.all(replaceIds.map(id => removeDietaryRestriction(id)));
+    }
+    return added;
+  };
+
   // Cooking preferences state
   const [editingCookingPrefs, setEditingCookingPrefs] = useState(false);
 
@@ -229,6 +247,7 @@ export const DietaryProfileScreen: React.FC = () => {
             existingRestrictions={profile.restrictions}
             onAdd={handleAddRestrictions}
             onRemove={handleRemoveRestriction}
+            onSelectLifestyleDiet={handleSelectLifestyleDiet}
           />
         </View>
       </Animated.View>

@@ -10,6 +10,7 @@ jest.mock('#/apollo/links/refreshToken');
 jest.mock('#hooks/navigation/useAppNavigation');
 
 jest.mock('#features/pantry/hooks/usePantryItemSuggestions', () => ({
+  PANTRY_SUGGESTIONS_LIMIT: 20,
   usePantryItemSuggestions: jest.fn(() => ({
     grouped: [],
     loading: false,

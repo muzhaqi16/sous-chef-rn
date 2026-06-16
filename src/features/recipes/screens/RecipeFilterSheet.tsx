@@ -10,9 +10,11 @@ import { Icon } from '#/utils/iconUtils';
 import type { RecipeFilters } from '#features/recipes/utils/recipeFilterMaps';
 import { Text } from '#components/atoms/Text';
 import {
-  DIET_OPTIONS,
+  LIFESTYLE_DIET_OPTIONS,
+  CONSTRAINT_DIET_OPTIONS,
   INTOLERANCE_OPTIONS,
   MEAL_TYPES,
+  isLifestyleDietValue,
 } from '#features/recipes/utils/recipeFilterOptions';
 
 const COOK_TIMES = [15, 30, 45, 60];
@@ -73,6 +75,28 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
     onSheetChange(index);
   };
 
+  // Lifestyle diets are mutually exclusive: selecting one replaces any prior
+  // lifestyle pick while preserving the stackable constraint selections.
+  const toggleLifestyleDiet = (value: string) => {
+    setDraftFilters(prev => {
+      const constraints = prev.diet.filter(d => !isLifestyleDietValue(d));
+      return {
+        ...prev,
+        diet: prev.diet.includes(value) ? constraints : [...constraints, value],
+      };
+    });
+  };
+
+  // Constraint diets stack freely (gluten-free + low-FODMAP, on any lifestyle).
+  const toggleConstraintDiet = (value: string) => {
+    setDraftFilters(prev => ({
+      ...prev,
+      diet: prev.diet.includes(value)
+        ? prev.diet.filter(d => d !== value)
+        : [...prev.diet, value],
+    }));
+  };
+
   return (
     <BottomSheetAction
       sheetRef={sheetRef}
@@ -128,15 +152,17 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
               <Text size="lg" weight="bold" style={styles.filterSectionTitle}>
                 {t('recipeFilters.dietTitle')}
               </Text>
+
+              {/* Lifestyle diet — single select (mutually exclusive) */}
               <Text
                 size="sm"
                 tone="secondary"
                 style={styles.filterSectionSubtitle}
               >
-                {t('recipeFilters.selectAllThatApply')}
+                {t('recipeFilters.dietLifestyleLabel')}
               </Text>
               <View style={styles.chipRow}>
-                {DIET_OPTIONS.map(diet => {
+                {LIFESTYLE_DIET_OPTIONS.map(diet => {
                   const isSelected = draftFilters.diet.includes(diet.value);
                   return (
                     <AppPressable
@@ -145,14 +171,41 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
                         styles.filterChip,
                         isSelected && styles.filterChipActive,
                       ]}
-                      onPress={() =>
-                        setDraftFilters(prev => ({
-                          ...prev,
-                          diet: isSelected
-                            ? prev.diet.filter(d => d !== diet.value)
-                            : [...prev.diet, diet.value],
-                        }))
-                      }
+                      onPress={() => toggleLifestyleDiet(diet.value)}
+                    >
+                      <Text
+                        size="sm"
+                        weight="semibold"
+                        style={
+                          isSelected ? styles.filterChipTextActive : undefined
+                        }
+                      >
+                        {t(diet.labelKey)}
+                      </Text>
+                    </AppPressable>
+                  );
+                })}
+              </View>
+
+              {/* Dietary constraints — multi select (stack on any lifestyle) */}
+              <Text
+                size="sm"
+                tone="secondary"
+                style={styles.filterSubGroupLabel}
+              >
+                {t('recipeFilters.dietConstraintsLabel')}
+              </Text>
+              <View style={styles.chipRow}>
+                {CONSTRAINT_DIET_OPTIONS.map(diet => {
+                  const isSelected = draftFilters.diet.includes(diet.value);
+                  return (
+                    <AppPressable
+                      key={diet.value}
+                      style={[
+                        styles.filterChip,
+                        isSelected && styles.filterChipActive,
+                      ]}
+                      onPress={() => toggleConstraintDiet(diet.value)}
                     >
                       <Text
                         size="sm"
@@ -317,6 +370,10 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.xs,
   },
   filterSectionSubtitle: {
+    marginBottom: theme.spacing.md,
+  },
+  filterSubGroupLabel: {
+    marginTop: theme.spacing.md,
     marginBottom: theme.spacing.md,
   },
   chipRow: {

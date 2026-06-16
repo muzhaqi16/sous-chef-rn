@@ -10,6 +10,7 @@ import {
   HealthGoal,
   RestrictionSeverity,
 } from '#/graphql/generated/schemaTypes';
+import { isLifestyleDiet } from '#/constants/dietary';
 import { executeRefreshWithFinally } from '#/utils/compilerSafeWrappers';
 
 // Lifestyle dietary choices
@@ -26,6 +27,11 @@ const DIETS: { label: string; value: Diet }[] = [
   { label: 'Low FODMAP', value: Diet.LowFodmap },
   { label: 'Whole30', value: Diet.Whole30 },
 ];
+
+// Mutually-exclusive lifestyle diets (single-select) vs stackable constraints
+// (multi-select), derived from the shared classification.
+const LIFESTYLE_DIETS = DIETS.filter(d => isLifestyleDiet(d.value));
+const CONSTRAINT_DIETS = DIETS.filter(d => !isLifestyleDiet(d.value));
 
 // Allergies and intolerances
 const INTOLERANCES: { label: string; value: Intolerance }[] = [
@@ -72,19 +78,27 @@ type DietaryRestrictionSelectorProps = {
     severity: RestrictionSeverity,
   ) => Promise<boolean>;
   onRemove: (id: string) => void;
+  /** Set the single lifestyle diet, removing any prior lifestyle row(s). The
+   *  `replaceIds` are the existing lifestyle restriction ids to clear once the
+   *  new diet is added. */
+  onSelectLifestyleDiet: (diet: Diet, replaceIds: string[]) => Promise<boolean>;
 };
 
 export const DietaryRestrictionSelector: React.FC<
   DietaryRestrictionSelectorProps
-> = ({ existingRestrictions, onAdd, onRemove }) => {
+> = ({ existingRestrictions, onAdd, onRemove, onSelectLifestyleDiet }) => {
   // Sheet visibility states
   const [isDietSheetVisible, setDietSheetVisible] = useState(false);
+  const [isConstraintSheetVisible, setConstraintSheetVisible] = useState(false);
   const [isIntoleranceSheetVisible, setIntoleranceSheetVisible] =
     useState(false);
   const [isGoalSheetVisible, setGoalSheetVisible] = useState(false);
 
   // Local selection states for each sheet
   const [selectedDietIds, setSelectedDietIds] = useState<Diet[]>([]);
+  const [selectedConstraintIds, setSelectedConstraintIds] = useState<Diet[]>(
+    [],
+  );
   const [selectedIntoleranceIds, setSelectedIntoleranceIds] = useState<
     Intolerance[]
   >([]);
@@ -92,13 +106,18 @@ export const DietaryRestrictionSelector: React.FC<
 
   // Saving states
   const [isSavingDiets, setIsSavingDiets] = useState(false);
+  const [isSavingConstraints, setIsSavingConstraints] = useState(false);
   const [isSavingIntolerances, setIsSavingIntolerances] = useState(false);
   const [isSavingGoals, setIsSavingGoals] = useState(false);
 
-  // Derive existing restrictions
-  const existingDiets = existingRestrictions
-    .map(r => r.diet)
-    .filter(Boolean) as Diet[];
+  // Derive existing restrictions, split into lifestyle vs constraint diets
+  const existingLifestyleRows = existingRestrictions.filter(
+    r => r.diet && isLifestyleDiet(r.diet),
+  );
+  const currentLifestyleDiet = existingLifestyleRows[0]?.diet ?? null;
+  const existingConstraintRows = existingRestrictions.filter(
+    r => r.diet && !isLifestyleDiet(r.diet),
+  );
   const existingIntolerances = existingRestrictions
     .map(r => r.intolerance)
     .filter(Boolean) as Intolerance[];
@@ -107,12 +126,15 @@ export const DietaryRestrictionSelector: React.FC<
     .filter(Boolean) as HealthGoal[];
 
   // Map existing restrictions to display items
-  const existingDietItems = existingRestrictions
-    .filter(r => r.diet)
-    .map(r => ({
-      id: r.id,
-      label: DIETS.find(d => d.value === r.diet)?.label || r.diet!,
-    }));
+  const existingLifestyleItems = existingLifestyleRows.map(r => ({
+    id: r.id,
+    label: DIETS.find(d => d.value === r.diet)?.label || r.diet!,
+  }));
+
+  const existingConstraintItems = existingConstraintRows.map(r => ({
+    id: r.id,
+    label: DIETS.find(d => d.value === r.diet)?.label || r.diet!,
+  }));
 
   const existingIntoleranceItems = existingRestrictions
     .filter(r => r.intolerance)
@@ -132,13 +154,20 @@ export const DietaryRestrictionSelector: React.FC<
         r.healthGoal!,
     }));
 
-  // Prepare available items for sheets (exclude already added)
-  const availableDiets = DIETS.filter(
-    d => !existingDiets.includes(d.value),
-  ).map(d => ({
+  // Prepare available items for sheets. Lifestyle shows all options (including
+  // the current pick) so the user can switch; constraints/intolerances/goals
+  // exclude what's already added.
+  const availableLifestyle = LIFESTYLE_DIETS.map(d => ({
     id: d.value,
     label: d.label,
   }));
+
+  const existingConstraintValues = existingConstraintRows
+    .map(r => r.diet)
+    .filter(Boolean) as Diet[];
+  const availableConstraints = CONSTRAINT_DIETS.filter(
+    d => !existingConstraintValues.includes(d.value),
+  ).map(d => ({ id: d.value, label: d.label }));
 
   const availableIntolerances = INTOLERANCES.filter(
     i => !existingIntolerances.includes(i.value),
@@ -156,8 +185,13 @@ export const DietaryRestrictionSelector: React.FC<
 
   // Handle opening sheets
   const handleOpenDietSheet = () => {
-    setSelectedDietIds([]);
+    setSelectedDietIds(currentLifestyleDiet ? [currentLifestyleDiet] : []);
     setDietSheetVisible(true);
+  };
+
+  const handleOpenConstraintSheet = () => {
+    setSelectedConstraintIds([]);
+    setConstraintSheetVisible(true);
   };
 
   const handleOpenIntoleranceSheet = () => {
@@ -171,26 +205,47 @@ export const DietaryRestrictionSelector: React.FC<
   };
 
   // Save handlers
-  const handleSaveDiets = () => {
-    if (selectedDietIds.length === 0) {
+  const handleSaveDiet = () => {
+    const selected = selectedDietIds[0];
+    // No change (nothing picked, or re-picked the current diet) — just close.
+    if (!selected || selected === currentLifestyleDiet) {
       setDietSheetVisible(false);
       return;
     }
 
     executeRefreshWithFinally(async () => {
-      const restrictions: RestrictionType[] = selectedDietIds.map(diet => ({
-        diet,
-      }));
-
-      const success = await onAdd(restrictions, RestrictionSeverity.Preference);
+      const replaceIds = existingLifestyleRows.map(r => r.id);
+      const success = await onSelectLifestyleDiet(selected, replaceIds);
 
       if (success) {
         setSelectedDietIds([]);
         setDietSheetVisible(false);
       } else {
-        alertService.alert('Error', 'Failed to add diets');
+        alertService.alert('Error', 'Failed to update diet');
       }
     }, setIsSavingDiets);
+  };
+
+  const handleSaveConstraints = () => {
+    if (selectedConstraintIds.length === 0) {
+      setConstraintSheetVisible(false);
+      return;
+    }
+
+    executeRefreshWithFinally(async () => {
+      const restrictions: RestrictionType[] = selectedConstraintIds.map(
+        diet => ({ diet }),
+      );
+
+      const success = await onAdd(restrictions, RestrictionSeverity.Preference);
+
+      if (success) {
+        setSelectedConstraintIds([]);
+        setConstraintSheetVisible(false);
+      } else {
+        alertService.alert('Error', 'Failed to add dietary constraints');
+      }
+    }, setIsSavingConstraints);
   };
 
   const handleSaveIntolerances = () => {
@@ -246,13 +301,22 @@ export const DietaryRestrictionSelector: React.FC<
 
   return (
     <View style={styles.container}>
-      {/* Diets Section */}
+      {/* Diet Section (single lifestyle diet) */}
       <RestrictionSection
-        title="Diets"
-        existingItems={existingDietItems}
+        title="Diet"
+        existingItems={existingLifestyleItems}
         onRemove={onRemove}
         onAddPress={handleOpenDietSheet}
-        emptyMessage="No diets added yet"
+        emptyMessage="No diet selected yet"
+      />
+
+      {/* Dietary Constraints Section (stackable) */}
+      <RestrictionSection
+        title="Dietary Constraints"
+        existingItems={existingConstraintItems}
+        onRemove={onRemove}
+        onAddPress={handleOpenConstraintSheet}
+        emptyMessage="No constraints added yet"
       />
 
       {/* Intolerances Section */}
@@ -273,16 +337,29 @@ export const DietaryRestrictionSelector: React.FC<
         emptyMessage="No health goals added yet"
       />
 
-      {/* Diet Selection Sheet */}
+      {/* Diet Selection Sheet (single-select) */}
       <MultiSelectChipSheet
         visible={isDietSheetVisible}
-        title="Select Diets"
-        items={availableDiets}
+        title="Select Diet"
+        items={availableLifestyle}
         selectedItems={selectedDietIds}
         onSelect={setSelectedDietIds}
         onClose={() => setDietSheetVisible(false)}
-        onDone={handleSaveDiets}
+        onDone={handleSaveDiet}
         loading={isSavingDiets}
+        singleSelect
+      />
+
+      {/* Dietary Constraints Selection Sheet */}
+      <MultiSelectChipSheet
+        visible={isConstraintSheetVisible}
+        title="Select Dietary Constraints"
+        items={availableConstraints}
+        selectedItems={selectedConstraintIds}
+        onSelect={setSelectedConstraintIds}
+        onClose={() => setConstraintSheetVisible(false)}
+        onDone={handleSaveConstraints}
+        loading={isSavingConstraints}
       />
 
       {/* Intolerance Selection Sheet */}

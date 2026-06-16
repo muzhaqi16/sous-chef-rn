@@ -4,16 +4,22 @@ import {
   GetShoppingListSuggestionsDocument,
   type GetShoppingListSuggestionsQuery,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import { SuggestionSource } from '#/graphql/generated/schemaTypes';
 import { useIsEffectivelyOffline } from '#hooks/settings/useOfflineMode';
 import { resolveImageUrl } from '#utils/imageUtils';
 import { preloadImages } from '#components/atoms/CachedImage';
 import type { ErrorLike } from '@apollo/client';
 
+/**
+ * Per-source fetch limit. Each section is fetched with its own quota, and the
+ * sheet shows a small preview that drills into the full per-source list, so this
+ * is generous enough to back the drill-down without a second round-trip.
+ */
+export const SHOPPING_SUGGESTIONS_LIMIT = 20;
+
 /** Type for a single suggestion from the query result */
 export type ShoppingListSuggestionItem = NonNullable<
   GetShoppingListSuggestionsQuery['shoppingList']
->['suggestions'][number];
+>['popular'][number];
 
 export interface GroupedSuggestions {
   [key: string]: ShoppingListSuggestionItem[];
@@ -39,12 +45,13 @@ interface UseShoppingListSuggestionsOptions {
 }
 
 /**
- * Hook to fetch and group shopping list suggestions by source.
- * Combines RECENTLY_DELETED, FREQUENTLY_ADDED, and POPULAR items.
+ * Hook to fetch shopping list suggestions grouped by source.
+ * Each of RECENTLY_DELETED, FREQUENTLY_ADDED, and POPULAR is fetched with its
+ * own quota (aliased query fields), so no source can crowd out the others.
  */
 export function useShoppingListSuggestions({
   shoppingListId,
-  limit = 15,
+  limit = SHOPPING_SUGGESTIONS_LIMIT,
   skip = false,
 }: UseShoppingListSuggestionsOptions): UseShoppingListSuggestionsReturn {
   const isOffline = useIsEffectivelyOffline();
@@ -60,37 +67,23 @@ export function useShoppingListSuggestions({
     },
   );
 
-  const suggestions = data?.shoppingList?.suggestions;
-
-  const recentlyDeleted: ShoppingListSuggestionItem[] = [];
-  const frequentlyAdded: ShoppingListSuggestionItem[] = [];
-  const popular: ShoppingListSuggestionItem[] = [];
-
-  if (suggestions) {
-    for (const suggestion of suggestions) {
-      switch (suggestion.source) {
-        case SuggestionSource.RecentlyDeleted:
-          recentlyDeleted.push(suggestion);
-          break;
-        case SuggestionSource.FrequentlyAdded:
-          frequentlyAdded.push(suggestion);
-          break;
-        case SuggestionSource.Popular:
-          popular.push(suggestion);
-          break;
-      }
-    }
-  }
+  const list = data?.shoppingList;
 
   const grouped: GroupedSuggestions = {
-    recentlyDeleted,
-    frequentlyAdded,
-    popular,
+    recentlyDeleted: list?.recentlyDeleted ?? [],
+    frequentlyAdded: list?.frequentlyAdded ?? [],
+    popular: list?.popular ?? [],
   };
+
+  const suggestions: ShoppingListSuggestionItem[] = [
+    ...grouped.recentlyDeleted,
+    ...grouped.frequentlyAdded,
+    ...grouped.popular,
+  ];
 
   // Preload suggestion images into disk cache for instant display
   useEffect(() => {
-    if (suggestions && suggestions.length > 0) {
+    if (suggestions.length > 0) {
       const urls = suggestions
         .map(s => resolveImageUrl(s))
         .filter((url): url is string => !!url);
@@ -106,7 +99,7 @@ export function useShoppingListSuggestions({
     grouped.popular.length > 0;
 
   return {
-    suggestions: isOffline ? [] : suggestions ?? [],
+    suggestions: isOffline ? [] : suggestions,
     grouped,
     hasSuggestions: isOffline ? false : hasSuggestions,
     loading,

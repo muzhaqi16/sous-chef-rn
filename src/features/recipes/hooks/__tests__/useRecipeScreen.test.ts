@@ -289,6 +289,25 @@ describe('useRecipeScreen', () => {
     expect(result.current.activeFilterCount).toBe(3);
   });
 
+  it('reconciles multiple diet restrictions to one lifestyle + constraints', () => {
+    mockUseDietaryProfile.mockReturnValue({
+      profile: {
+        restrictions: [
+          { id: 'r1', diet: 'VEGAN' }, // first lifestyle — kept
+          { id: 'r2', diet: 'PESCETARIAN' }, // second lifestyle — dropped
+          { id: 'r3', diet: 'GLUTEN_FREE' }, // constraint — kept
+        ],
+        maxCookTimeMinutes: null,
+      },
+      loading: false,
+    });
+
+    const { result } = renderRecipeScreen();
+
+    // Contradictory second lifestyle diet dropped; constraint stacked on.
+    expect(result.current.activeFilters.diet).toEqual(['vegan', 'gluten free']);
+  });
+
   it('clearFilters resets active filters to defaults', () => {
     mockUseDietaryProfile.mockReturnValue({
       profile: {
