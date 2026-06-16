@@ -7,8 +7,6 @@ import {
 import type { DefinitionNode } from 'graphql';
 import { isKnownServerError } from '#utils/subscriptionErrorHandler';
 import { isNetworkError } from '#/utils/isNetworkError';
-import { useStore } from '#store';
-import { isApiUnavailable } from '#store/slices/networkSlice';
 import {
   isRateLimitError,
   getRateLimitMessage,
@@ -107,25 +105,14 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
     // makes Apollo emit the networkError to the observer, where errorPolicy plus
     // the cache-and-network fetch policy keep cached data visible.
     if (isNetworkError(error)) {
-      // Expected-noise suppression. This link sits BELOW retryLink, so it sees
-      // every retry attempt, and one WS drop errors every active subscription
-      // at once — an offline cold start used to produce a wall of identical
-      // warnings. Log only the surprising case: a network error while the
-      // store still believes the API is reachable. Once offline / circuit
-      // open, the breaker's one-line verdict and networkStatusLink's
-      // per-operation failure counter are the signal. Subscription transport
-      // errors are SubscriptionService's to report.
-      const state = useStore.getState();
-      if (
-        !isSubscription(operation) &&
-        !state.offlineModeEnabled &&
-        !isApiUnavailable(state)
-      ) {
-        logger.warn(
-          `Network error for ${operation.operationName}:`,
-          error.message,
-        );
-      }
+      // Network-error logging lives in networkStatusLink, which sits ABOVE
+      // retryLink and so emits one warning per operation — this link sits
+      // BELOW retryLink and would log every retry attempt (a wall of identical
+      // warnings on an offline cold start). Just let the error propagate:
+      // retryLink owns query-retry policy (backoff/jitter, skips mutations),
+      // and errorPolicy + the cache-and-network fetch policy keep cached data
+      // visible. Re-forwarding here would double query retries AND re-send
+      // mutations (a duplicate-write risk for non-idempotent ones).
       return;
     }
 

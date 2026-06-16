@@ -69,22 +69,8 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
       onAnimate: handleBackdropAnimate,
     } = useBottomSheetBackdropClaim(bottomSheetRef);
 
-    // `onClose` is the parent's "tray is closing — restore your UI" signal
-    // (the floating tab bar un-hides off it). It's fired at the START of the
-    // close animation (see `handleSheetAnimate`) so that UI animates back in
-    // parallel with the slide-down instead of waiting for settled-closed.
-    // `closeNotifiedRef` dedupes it to once per presentation cycle; the
-    // settled-closed path calls it too as a fallback for closes that skip
-    // `onAnimate(-1)`.
-    const closeNotifiedRef = useRef(false);
-    const notifyClose = () => {
-      if (closeNotifiedRef.current) return;
-      closeNotifiedRef.current = true;
-      onClose?.();
-    };
-
-    // Settled-closed cleanup (unmount + backdrop release), reachable from two
-    // gorhom signals that can each fire without the other:
+    // Settled-closed cleanup (unmount + backdrop release + `onClose`),
+    // reachable from two gorhom signals that can each fire without the other:
     // - `onChange(-1)` — settled-closed. Gorhom SKIPS this when a close
     //   interrupts an open animation that never settled (its internal
     //   `animatedCurrentIndex` is still -1, so `nextIndex !==
@@ -93,7 +79,7 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
     // - `onDismiss` — fired from gorhom's `unmount()` in every modal
     //   dismissal path, but NOT on minimize (stackBehavior 'switch'), which
     //   only emits `onChange(-1)`.
-    // `dismissHandledRef` dedupes the pair so the unmount + release runs once.
+    // `dismissHandledRef` dedupes the pair so cleanup runs exactly once.
     const dismissHandledRef = useRef(false);
     const handleClosed = () => {
       if (dismissHandledRef.current) return;
@@ -102,15 +88,14 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
       // `onDismiss` wins the race against `onChange(-1)` (which also releases
       // via `handleSheetChanges`); `releaseBackdrop` no-ops on a stale id.
       if (enableBackdrop) handleBackdrop(-1);
-      notifyClose();
       setMounted(false);
+      onClose?.();
     };
 
     // Present the sheet once mounted.
     useEffect(() => {
       if (mounted) {
         dismissHandledRef.current = false;
-        closeNotifiedRef.current = false;
         bottomSheetRef.current?.present();
       }
     }, [mounted]);
@@ -127,22 +112,11 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
       }
     };
 
-    // gorhom fires `onAnimate` at the START of every position animation, before
-    // it begins driving `animatedPosition`.
+    // Claim the backdrop at the START of the open animation so the dim ramps in
+    // frame-synced with the sheet (gorhom fires `onAnimate` before it begins
+    // driving `animatedPosition`).
     const handleSheetAnimate = (fromIndex: number, toIndex: number) => {
-      // Claim the backdrop at the start of the open animation so the dim ramps
-      // in frame-synced with the sheet.
       if (enableBackdrop) handleBackdropAnimate(fromIndex, toIndex);
-      if (toIndex < 0) {
-        // Closing: restore the parent UI now so it animates back alongside the
-        // slide-down rather than after the settled-closed signal.
-        notifyClose();
-      } else if (closeNotifiedRef.current) {
-        // A started close reversed (pan-down snap-back / intermediate snap):
-        // re-hide via `onOpen` and re-arm so the next real close notifies again.
-        closeNotifiedRef.current = false;
-        onOpen?.();
-      }
     };
 
     useImperativeHandle(

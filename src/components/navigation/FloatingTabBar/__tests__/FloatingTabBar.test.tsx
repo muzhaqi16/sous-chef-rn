@@ -83,7 +83,7 @@ jest.mock('#hooks/settings/useSettings', () => ({
 // Mock animations constants
 jest.mock('#/constants/animations', () => ({
   SPRING: { HEAVY: { damping: 20, stiffness: 300 } },
-  TIMING: { FAST: 150 },
+  SHEET: { BACKDROP_OPACITY: 0.5 },
 }));
 
 // Mock iconUtils

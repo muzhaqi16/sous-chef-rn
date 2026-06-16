@@ -32,17 +32,10 @@ describe('ActionTray', () => {
   // BottomSheetModal as a View carrying all props; `detached` uniquely
   // identifies it. Capture the handlers up front — gorhom holds the functions,
   // and the element unmounts as soon as the first close signal lands.
-  const openTray = (handlers?: {
-    onClose?: () => void;
-    onOpen?: () => void;
-  }) => {
+  const openTray = (handlers?: { onClose?: () => void }) => {
     const ref = React.createRef<ActionTrayRef>();
     render(
-      <ActionTray
-        ref={ref}
-        onClose={handlers?.onClose}
-        onOpen={handlers?.onOpen}
-      >
+      <ActionTray ref={ref} onClose={handlers?.onClose}>
         <Text>Content</Text>
       </ActionTray>,
     );
@@ -50,13 +43,12 @@ describe('ActionTray', () => {
       ref.current!.open();
     });
     const modal = screen.UNSAFE_getByProps({ detached: true });
-    const { onChange, onDismiss, onAnimate, animatedIndex } = modal.props as {
+    const { onChange, onDismiss, animatedIndex } = modal.props as {
       onChange: (index: number) => void;
       onDismiss: () => void;
-      onAnimate: (fromIndex: number, toIndex: number) => void;
       animatedIndex: { value: number };
     };
-    return { ref, onChange, onDismiss, onAnimate, animatedIndex };
+    return { ref, onChange, onDismiss, animatedIndex };
   };
 
   it('renders nothing when not opened', () => {
@@ -208,52 +200,6 @@ describe('ActionTray', () => {
       });
       expect(onClose).toHaveBeenCalledTimes(2);
       expect(ref.current!.isActive()).toBe(false);
-    });
-  });
-
-  // The floating tab bar un-hides off `onClose`. Firing it at the start of the
-  // close (gorhom's `onAnimate` toward -1) lets the bar animate back in
-  // parallel with the slide-down instead of after the settled-closed signal.
-  describe('early close notification', () => {
-    it('notifies onClose at the start of the close animation (onAnimate → -1)', () => {
-      const onClose = jest.fn();
-      const { onAnimate } = openTray({ onClose });
-
-      act(() => {
-        onAnimate(0, -1);
-      });
-
-      expect(onClose).toHaveBeenCalledTimes(1);
-    });
-
-    it('does not notify onClose again when the early close later settles', () => {
-      const onClose = jest.fn();
-      const { onAnimate, onChange } = openTray({ onClose });
-
-      act(() => {
-        onAnimate(0, -1);
-      });
-      act(() => {
-        onChange(-1);
-      });
-
-      expect(onClose).toHaveBeenCalledTimes(1);
-    });
-
-    it('re-fires onOpen when a started close reverses before settling', () => {
-      const onOpen = jest.fn();
-      const { onAnimate } = openTray({ onOpen });
-      // open() fired onOpen once already.
-      expect(onOpen).toHaveBeenCalledTimes(1);
-
-      act(() => {
-        onAnimate(0, -1);
-      });
-      act(() => {
-        onAnimate(-1, 0);
-      });
-
-      expect(onOpen).toHaveBeenCalledTimes(2);
     });
   });
 });

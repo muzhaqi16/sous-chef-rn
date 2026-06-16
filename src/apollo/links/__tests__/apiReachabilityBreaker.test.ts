@@ -65,7 +65,32 @@ describe('apiReachabilityBreaker', () => {
     jest.restoreAllMocks();
   });
 
-  it('stays closed until 3 consecutive failures, then opens', () => {
+  it('opens after the first failure once the /health probe confirms the API is down', async () => {
+    mockedProbe.mockResolvedValue(false);
+    apiReachabilityBreaker.recordFailure();
+    // The probe is the arbiter — not opened synchronously on one failure.
+    expect(apiReachabilityBreaker._getState()).toBe('closed');
+
+    await flushProbe();
+    expect(mockedProbe).toHaveBeenCalledTimes(1);
+    expect(apiReachabilityBreaker._getState()).toBe('open');
+    expect(setApiReachable).toHaveBeenCalledWith(false);
+  });
+
+  it('forgives a lone failure when the /health probe succeeds (transient blip)', async () => {
+    mockedProbe.mockResolvedValue(true);
+    apiReachabilityBreaker.recordFailure();
+    await flushProbe();
+
+    expect(mockedProbe).toHaveBeenCalledTimes(1);
+    expect(apiReachabilityBreaker._getState()).toBe('closed');
+    expect(setApiReachable).not.toHaveBeenCalledWith(false);
+  });
+
+  it('still opens at the threshold when the arbiter probe cannot resolve', () => {
+    // Probe hangs (e.g. /health missing) — the FAILURE_THRESHOLD fallback must
+    // still open so a dead API doesn't stay marked reachable.
+    mockedProbe.mockImplementation(() => new Promise<boolean>(() => {}));
     apiReachabilityBreaker.recordFailure();
     apiReachabilityBreaker.recordFailure();
     expect(apiReachabilityBreaker._getState()).toBe('closed');
@@ -124,17 +149,20 @@ describe('apiReachabilityBreaker', () => {
     expect(mockedProbe).toHaveBeenCalledTimes(2);
   });
 
-  it('closes + drains on a real traffic success while open (beats the probe)', () => {
+  it('closes + drains on a real traffic success while open (beats the scheduled probe)', () => {
     trip();
+    // The first-failure arbiter probe fired during the burst; capture that
+    // baseline so we can assert the SCHEDULED backoff probe adds nothing.
+    const probeCalls = mockedProbe.mock.calls.length;
     apiReachabilityBreaker.recordSuccess();
 
     expect(apiReachabilityBreaker._getState()).toBe('closed');
     expect(setApiReachable).toHaveBeenLastCalledWith(true);
     expect(queueManager.requestDrain).toHaveBeenCalledTimes(1);
 
-    // The pending probe was cancelled with the circuit.
+    // The pending scheduled probe was cancelled with the circuit.
     jest.advanceTimersByTime(INITIAL_PROBE_MS);
-    expect(mockedProbe).not.toHaveBeenCalled();
+    expect(mockedProbe).toHaveBeenCalledTimes(probeCalls);
   });
 
   it('a success while already closed still repairs the store flag, without draining', () => {
@@ -190,14 +218,18 @@ describe('apiReachabilityBreaker', () => {
   it('reset() returns to closed + reachable and cancels the pending probe', async () => {
     trip();
     expect(apiReachabilityBreaker._getState()).toBe('open');
+    const probeCalls = mockedProbe.mock.calls.length;
 
     apiReachabilityBreaker.reset();
     expect(apiReachabilityBreaker._getState()).toBe('closed');
     expect(setApiReachable).toHaveBeenLastCalledWith(true);
 
+    // The scheduled probe was cancelled; the in-flight arbiter probe resolving
+    // post-reset doesn't re-open (counter zeroed, flag reachable) or re-probe.
     jest.advanceTimersByTime(INITIAL_PROBE_MS);
     await flushProbe();
-    expect(mockedProbe).not.toHaveBeenCalled();
+    expect(mockedProbe).toHaveBeenCalledTimes(probeCalls);
+    expect(apiReachabilityBreaker._getState()).toBe('closed');
   });
 
   it('a stale probe failure resolving after reset() does not re-open', async () => {
