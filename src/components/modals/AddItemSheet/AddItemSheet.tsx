@@ -56,6 +56,7 @@ export function AddItemSheet<
   suggestions,
   onQuickAddSearchSuggestion,
   onQuickAddSuggestion,
+  onDismissSuggestion,
   isMutating,
   onAddManually,
   onScanPress,
@@ -168,8 +169,9 @@ export function AddItemSheet<
     resetAutocomplete();
   };
 
-  // Render a suggestion item with exit animation support
-  const renderSuggestionItem = (item: T) => {
+  // Render a suggestion item with exit animation support. `dismissible` adds
+  // the ✕ control for sources the API can suppress.
+  const renderSuggestionItem = (item: T, dismissible = false) => {
     const itemId = item.itemId;
     const isExiting = exitingItems.has(itemId);
 
@@ -181,6 +183,11 @@ export function AddItemSheet<
         subtitle={item.category}
         placeholderIcon={config.placeholderIcon}
         onQuickAdd={() => onQuickAddSuggestion(item)}
+        onDismiss={
+          dismissible && onDismissSuggestion
+            ? () => onDismissSuggestion(item)
+            : undefined
+        }
         quickAddDisabled={isExiting}
         isExiting={isExiting}
         onExitComplete={
@@ -229,7 +236,9 @@ export function AddItemSheet<
           )}
         </View>
         <View style={styles.suggestionList}>
-          {preview.map(renderSuggestionItem)}
+          {preview.map(item =>
+            renderSuggestionItem(item, !!groupConfig.dismissible),
+          )}
         </View>
       </View>
     );
@@ -248,7 +257,9 @@ export function AddItemSheet<
             <SuggestionDrilldown
               title={activeGroup.title}
               items={activeItems}
-              renderItem={renderSuggestionItem}
+              renderItem={item =>
+                renderSuggestionItem(item, !!activeGroup.dismissible)
+              }
               onBack={() => setActiveSourceKey(null)}
               backLabel={t('labels.back')}
               emptyLabel={t('addItemSheet.allAdded')}

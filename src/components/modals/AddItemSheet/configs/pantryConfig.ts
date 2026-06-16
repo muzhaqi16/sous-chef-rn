@@ -33,18 +33,21 @@ export const pantrySheetConfig: AddItemSheetConfig<PantryItemSuggestion> = {
       title: 'ADD AGAIN',
       priority: 3,
       accessor: g => g.recentlyDeleted ?? [],
+      dismissible: true,
     },
     {
       key: 'frequentlyAdded',
       title: 'YOUR FAVORITES',
       priority: 4,
       accessor: g => g.frequentlyAdded ?? [],
+      dismissible: true,
     },
     {
       key: 'popular',
       title: 'POPULAR',
       priority: 5,
       accessor: g => g.popular ?? [],
+      dismissible: true,
     },
   ],
   quickAdd: {

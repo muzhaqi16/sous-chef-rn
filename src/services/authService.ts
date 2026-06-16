@@ -44,13 +44,12 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import {
   loadCredentials,
-  loadCredentialsForAccount,
   saveCredentials,
   hasCredentials,
-  hasCredentialsForAccount,
   clearCredentials,
   getStoredAccounts,
   getBiometricCapability,
+  getLastBiometricEmail,
   saveTempRegistrationPassword,
   clearTempRegistrationPassword,
 } from '#/storage/keychain';
@@ -69,11 +68,9 @@ export interface LoginCredentials {
 // --- Credential management (pure async, no React) ---
 
 async function checkStoredCredentials(email?: string): Promise<boolean> {
+  if (!email) return false;
   try {
-    if (email) {
-      return await hasCredentialsForAccount();
-    }
-    return await hasCredentials();
+    return await hasCredentials(email);
   } catch (error) {
     logger.error('Error checking credentials:', error);
     return false;
@@ -115,6 +112,7 @@ async function storeCredentials(
 }
 
 async function removeCredentials(email?: string): Promise<boolean> {
+  if (!email) return false;
   try {
     await clearCredentials(email);
     return true;
@@ -127,13 +125,12 @@ async function removeCredentials(email?: string): Promise<boolean> {
 async function loadStoredCredentials(
   email?: string,
 ): Promise<LoginCredentials | null> {
+  if (!email) return null;
   const store = useStore.getState();
   store.setAuthIsLoadingCredentials(true);
 
   try {
-    const credentials = email
-      ? await loadCredentialsForAccount()
-      : await loadCredentials();
+    const credentials = await loadCredentials(email);
 
     store.setAuthIsLoadingCredentials(false);
 
@@ -573,7 +570,7 @@ async function shouldShowPostLoginBiometricPrompt(targetUser: {
       return { shouldShow: false, reason: 'Biometric not available' };
     }
 
-    const hasCreds = await hasCredentialsForAccount();
+    const hasCreds = await hasCredentials(targetUser.email);
     if (hasCreds) {
       return { shouldShow: false, reason: 'Already has biometric setup' };
     }
@@ -700,7 +697,7 @@ async function register(
   }
 }
 
-async function logout(clearAllCredentials = false): Promise<void> {
+async function logout(): Promise<void> {
   const store = useStore.getState();
   const user = store.user;
 
@@ -723,9 +720,9 @@ async function logout(clearAllCredentials = false): Promise<void> {
       prefs?.trackLogout();
     }
 
-    if (clearAllCredentials) {
-      await removeCredentials();
-    } else if (currentUserEmail) {
+    // Clear only this account's biometric credentials. Credentials are scoped
+    // per account, so logging one user out never touches another's slot.
+    if (currentUserEmail) {
       await removeCredentials(currentUserEmail);
     }
   } catch (error) {
@@ -735,13 +732,20 @@ async function logout(clearAllCredentials = false): Promise<void> {
 
 async function autoLogin(): Promise<boolean> {
   try {
-    const hasStoredCreds = await checkStoredCredentials();
+    // No logged-in user yet — fall back to the most-recently-enrolled account.
+    const email = await getLastBiometricEmail();
+    if (!email) {
+      logger.info('No stored credentials found for auto-login');
+      return false;
+    }
+
+    const hasStoredCreds = await checkStoredCredentials(email);
     if (!hasStoredCreds) {
       logger.info('No stored credentials found for auto-login');
       return false;
     }
 
-    const credentials = await loadStoredCredentials();
+    const credentials = await loadStoredCredentials(email);
     if (!credentials) {
       logger.info('Failed to load stored credentials');
       return false;
@@ -749,7 +753,7 @@ async function autoLogin(): Promise<boolean> {
 
     if (!credentials.email || !credentials.password) {
       logger.warn('Invalid credentials found, clearing them');
-      await removeCredentials();
+      await removeCredentials(email);
       return false;
     }
 
@@ -772,7 +776,7 @@ async function autoLogin(): Promise<boolean> {
 
     if (result.error) {
       logger.warn('Auto-login failed, clearing stored credentials');
-      await removeCredentials();
+      await removeCredentials(email);
       handleAuthError(result.error, 'Auto-login');
     }
 
@@ -780,7 +784,8 @@ async function autoLogin(): Promise<boolean> {
   } catch (error) {
     logger.error('Auto-login error:', error);
     try {
-      await removeCredentials();
+      const email = await getLastBiometricEmail();
+      if (email) await removeCredentials(email);
     } catch {
       logger.error('Failed to cleanup credentials after auto-login error');
     }
@@ -807,6 +812,7 @@ export const authService = {
   removeCredentials,
   getAvailableAccounts,
   getBiometricInfo,
+  getLastBiometricEmail,
 
   // Device registration
   registerDeviceInBackground,

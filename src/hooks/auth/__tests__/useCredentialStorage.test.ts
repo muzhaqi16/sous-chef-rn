@@ -83,18 +83,17 @@ describe('useCredentialStorage', () => {
     expect(typeof result.current.removeCredentials).toBe('function');
   });
 
-  it('checkStoredCredentials calls hasCredentials when no email provided', async () => {
-    mockHasCredentials.mockResolvedValue(true);
+  it('checkStoredCredentials returns false without a keychain call when no email provided', async () => {
     const { result } = renderHook(() => useCredentialStorage());
 
     const hasCreds = await result.current.checkStoredCredentials();
 
-    expect(hasCreds).toBe(true);
-    expect(mockHasCredentials).toHaveBeenCalledTimes(1);
+    expect(hasCreds).toBe(false);
+    expect(mockHasCredentials).not.toHaveBeenCalled();
   });
 
-  it('checkStoredCredentials calls hasCredentialsForAccount when email provided', async () => {
-    mockHasCredentialsForAccount.mockResolvedValue(true);
+  it('checkStoredCredentials checks the given account when email provided', async () => {
+    mockHasCredentials.mockResolvedValue(true);
     const { result } = renderHook(() => useCredentialStorage());
 
     const hasCreds = await result.current.checkStoredCredentials(
@@ -102,14 +101,16 @@ describe('useCredentialStorage', () => {
     );
 
     expect(hasCreds).toBe(true);
-    expect(mockHasCredentialsForAccount).toHaveBeenCalledWith();
+    expect(mockHasCredentials).toHaveBeenCalledWith('test@test.com');
   });
 
   it('checkStoredCredentials returns false on error', async () => {
     mockHasCredentials.mockRejectedValue(new Error('Keychain error'));
     const { result } = renderHook(() => useCredentialStorage());
 
-    const hasCreds = await result.current.checkStoredCredentials();
+    const hasCreds = await result.current.checkStoredCredentials(
+      'test@test.com',
+    );
 
     expect(hasCreds).toBe(false);
   });
@@ -123,7 +124,7 @@ describe('useCredentialStorage', () => {
 
     let credentials: Credentials | null = null;
     await act(async () => {
-      credentials = await result.current.loadStoredCredentials();
+      credentials = await result.current.loadStoredCredentials('user@test.com');
     });
 
     expect(credentials).toEqual({
@@ -132,8 +133,7 @@ describe('useCredentialStorage', () => {
     });
   });
 
-  it('loadStoredCredentials returns null when no credentials found', async () => {
-    mockLoadCredentials.mockResolvedValue(null);
+  it('loadStoredCredentials returns null without a keychain call when no email provided', async () => {
     const { result } = renderHook(() => useCredentialStorage());
 
     let credentials: Credentials | null = null;
@@ -142,10 +142,11 @@ describe('useCredentialStorage', () => {
     });
 
     expect(credentials).toBeNull();
+    expect(mockLoadCredentials).not.toHaveBeenCalled();
   });
 
-  it('loadStoredCredentials calls loadCredentialsForAccount when email is provided', async () => {
-    mockLoadCredentialsForAccount.mockResolvedValue({
+  it('loadStoredCredentials loads the given account when email is provided', async () => {
+    mockLoadCredentials.mockResolvedValue({
       username: 'specific@test.com',
       password: 'pw',
     });
@@ -159,7 +160,7 @@ describe('useCredentialStorage', () => {
     });
 
     expect(credentials).toEqual({ email: 'specific@test.com', password: 'pw' });
-    expect(mockLoadCredentialsForAccount).toHaveBeenCalledWith();
+    expect(mockLoadCredentials).toHaveBeenCalledWith('specific@test.com');
   });
 
   it('storeCredentials calls saveCredentials and returns true on success', async () => {
@@ -204,9 +205,18 @@ describe('useCredentialStorage', () => {
     mockClearCredentials.mockRejectedValue(new Error('Clear failed'));
     const { result } = renderHook(() => useCredentialStorage());
 
+    const success = await result.current.removeCredentials('user@test.com');
+
+    expect(success).toBe(false);
+  });
+
+  it('removeCredentials returns false without a keychain call when no email provided', async () => {
+    const { result } = renderHook(() => useCredentialStorage());
+
     const success = await result.current.removeCredentials();
 
     expect(success).toBe(false);
+    expect(mockClearCredentials).not.toHaveBeenCalled();
   });
 
   it('getBiometricInfo returns biometric capability info', async () => {

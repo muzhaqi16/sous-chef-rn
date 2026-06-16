@@ -16,10 +16,12 @@ import {
   GetPantryItemSuggestionsDocument,
   type GetPantryItemSuggestionsQuery,
 } from '#features/pantry/graphql/pantry.generated';
-import type {
-  ItemSuggestion,
-  StorageLocation,
+import {
+  SuggestionSurface,
+  type ItemSuggestion,
+  type StorageLocation,
 } from '#/graphql/generated/schemaTypes';
+import { useSuggestionDismissal } from '#hooks/items/useSuggestionDismissal';
 import { extractNodes } from '#/utils/connectionUtils';
 import {
   isPantryItemDuplicateError,
@@ -80,6 +82,12 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     hasSuggestions: suggestionsResult.hasSuggestions,
     refetch: suggestionsResult.refetch,
   };
+
+  // Dismiss a junk/unwanted suggestion from the PANTRY surface.
+  const { dismissSuggestion } = useSuggestionDismissal(
+    SuggestionSurface.Pantry,
+    suggestionsResult.refetch,
+  );
 
   // Storage locations read on-demand from cache (no active watcher)
   const [storageLocations, setStorageLocations] = useState<StorageLocation[]>(
@@ -358,6 +366,14 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     state.completeExitAnimation(itemId);
   };
 
+  // Dismiss a suggestion: animate it out (cache removal happens on exit
+  // complete, shared with quick-add) and persist the dismissal server-side.
+  const handleDismissSuggestion = (item: PantryItemSuggestion) => {
+    if (state.exitingItems.has(item.itemId)) return;
+    state.startExitAnimation(item.itemId);
+    dismissSuggestion({ itemId: item.itemId, name: item.name });
+  };
+
   // Handle successful add from details sheet
   const handleAddSuccess = () => {
     setShowAddDetails(false);
@@ -382,6 +398,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
       suggestions={suggestions}
       onQuickAddSearchSuggestion={handleQuickAddSearchSuggestion}
       onQuickAddSuggestion={handleQuickAddSuggestion}
+      onDismissSuggestion={handleDismissSuggestion}
       isMutating={false}
       onAddManually={handleAddManually}
       onScanPress={handleScanPress}

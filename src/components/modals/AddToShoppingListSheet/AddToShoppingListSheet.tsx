@@ -13,7 +13,11 @@ import {
   GetShoppingListSuggestionsDocument,
   type GetShoppingListSuggestionsQuery,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import { ItemSuggestion } from '#/graphql/generated/schemaTypes';
+import {
+  ItemSuggestion,
+  SuggestionSurface,
+} from '#/graphql/generated/schemaTypes';
+import { useSuggestionDismissal } from '#hooks/items/useSuggestionDismissal';
 import {
   addOptimisticShoppingListItem,
   createOptimisticShoppingListItem,
@@ -78,6 +82,12 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
     hasSuggestions: suggestionsResult.hasSuggestions,
     refetch: suggestionsResult.refetch,
   };
+
+  // Dismiss a junk/unwanted suggestion from the SHOPPING surface.
+  const { dismissSuggestion } = useSuggestionDismissal(
+    SuggestionSurface.Shopping,
+    suggestionsResult.refetch,
+  );
 
   const removeFromSuggestionsCache = (itemId: string) => {
     client.cache.updateQuery<GetShoppingListSuggestionsQuery>(
@@ -312,6 +322,14 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
     state.completeExitAnimation(itemId);
   };
 
+  // Dismiss a suggestion: animate it out (cache removal happens on exit
+  // complete, shared with quick-add) and persist the dismissal server-side.
+  const handleDismissSuggestion = (item: ShoppingListSuggestionItem) => {
+    if (state.exitingItems.has(item.itemId)) return;
+    state.startExitAnimation(item.itemId);
+    dismissSuggestion({ itemId: item.itemId, name: item.name });
+  };
+
   // Build tutorial hint for the add item sheet (steps 2 and 3)
   const tutorialHintElement = (() => {
     if (!tutorial?.isActive) return undefined;
@@ -352,6 +370,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
       suggestions={suggestions}
       onQuickAddSearchSuggestion={handleQuickAddSearchSuggestion}
       onQuickAddSuggestion={handleQuickAddSuggestion}
+      onDismissSuggestion={handleDismissSuggestion}
       isMutating={adding}
       onAddManually={handleAddManually}
       onScanPress={handleScanPress}

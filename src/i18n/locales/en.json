@@ -1940,7 +1940,12 @@
     "scanBarcode": "Scan Barcode",
     "addManually": "Add Manually",
     "more": "More",
-    "allAdded": "All added"
+    "allAdded": "All added",
+    "dismiss": "Dismiss suggestion",
+    "dismissed": "Removed {{name}}",
+    "undo": "Undo",
+    "dismissFailed": "Couldn't remove suggestion",
+    "undoFailed": "Couldn't undo"
   },
   "addToShoppingListSheet": {
     "addFailedRetry": "Failed to add item. Please try again.",

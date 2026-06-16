@@ -31,6 +31,12 @@ export interface SuggestionGroupConfig<
   accessor: (grouped: Record<string, T[]>) => T[];
   /** Priority order for display (lower = higher priority) */
   priority: number;
+  /**
+   * When true, rows in this section show a ✕ to dismiss the suggestion. Only
+   * valid for sources the API can suppress (Add Again / Favorites / Popular) —
+   * not Low Stock / Expiring Soon, which are alerts about items you own.
+   */
+  dismissible?: boolean;
 }
 
 /**
@@ -125,6 +131,8 @@ export interface AddItemSheetProps<
   onQuickAddSearchSuggestion: (item: ItemSuggestion) => void;
   /** Handler for quick adding from suggestion list */
   onQuickAddSuggestion: (item: T) => void;
+  /** Optional: Handler for dismissing a suggestion (hides it from this surface) */
+  onDismissSuggestion?: (item: T) => void;
   /** Whether a mutation is currently in progress */
   isMutating: boolean;
   /** Handler for "Add manually" button */

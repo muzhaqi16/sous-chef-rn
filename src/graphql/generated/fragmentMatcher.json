@@ -716,6 +716,13 @@
       "NotFoundError",
       "ValidationError"
     ],
+    "DismissSuggestionResult": [
+      "ConflictError",
+      "DismissSuggestionPayload",
+      "ForbiddenError",
+      "NotFoundError",
+      "ValidationError"
+    ],
     "DuplicateMealPlanResult": [
       "ConflictError",
       "DuplicateMealPlanPayload",
@@ -1216,6 +1223,13 @@
       "ForbiddenError",
       "NotFoundError",
       "UncompleteShoppingListPayload",
+      "ValidationError"
+    ],
+    "UndismissSuggestionResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "UndismissSuggestionPayload",
       "ValidationError"
     ],
     "UnfavoriteRecipeResult": [

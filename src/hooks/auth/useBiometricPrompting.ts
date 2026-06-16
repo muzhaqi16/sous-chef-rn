@@ -43,8 +43,8 @@ export const useBiometricPrompting = () => {
         return { shouldShow: false, reason: 'Biometric not available' };
       }
 
-      // Check if user already has credentials saved
-      const hasCreds = await hasCredentialsForAccount();
+      // Check if THIS user already has credentials saved
+      const hasCreds = await hasCredentialsForAccount(checkUser.email);
       if (hasCreds) {
         return { shouldShow: false, reason: 'Already has biometric setup' };
       }

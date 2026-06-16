@@ -8,7 +8,7 @@ import { Telemetry } from '#services/telemetry';
 import { HapticService } from '#services/haptic/HapticService';
 import { NativePerformanceService } from '#/services/performance/NativePerformanceService';
 import { MemoryMonitor } from '#/services/performance/MemoryMonitor';
-import { hasCredentials } from '#storage/keychain';
+import { hasCredentials, getLastBiometricEmail } from '#storage/keychain';
 import { initializeDeviceId } from '#/utils/deviceId';
 
 /**
@@ -76,8 +76,14 @@ export function useStartupInit(): void {
       // Initialize device ID early — needed for WebSocket subscription self-echo filtering
       initializeDeviceId();
 
-      hasCredentials().then(result => {
-        setHasStoredCredentials(result);
+      // Credentials are scoped per account; the most-recently-enrolled account
+      // is the one the login screen offers, so report on that account.
+      getLastBiometricEmail().then(email => {
+        if (!email) {
+          setHasStoredCredentials(false);
+          return;
+        }
+        hasCredentials(email).then(setHasStoredCredentials);
       });
 
       // offlineModeEnabled is hydrated from MMKV in the persist

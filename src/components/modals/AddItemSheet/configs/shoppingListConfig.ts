@@ -22,18 +22,21 @@ export const shoppingListSheetConfig: AddItemSheetConfig<ShoppingListSuggestionI
         title: 'ADD AGAIN',
         priority: 1,
         accessor: g => g.recentlyDeleted ?? [],
+        dismissible: true,
       },
       {
         key: 'frequentlyAdded',
         title: 'YOUR FAVORITES',
         priority: 2,
         accessor: g => g.frequentlyAdded ?? [],
+        dismissible: true,
       },
       {
         key: 'popular',
         title: 'POPULAR',
         priority: 3,
         accessor: g => g.popular ?? [],
+        dismissible: true,
       },
     ],
     quickAdd: {
