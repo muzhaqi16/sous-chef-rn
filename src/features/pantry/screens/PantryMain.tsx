@@ -141,6 +141,10 @@ const PantryMainInner: React.FC = () => {
   const [isPantryFocused, setIsPantryFocused] = useState(true);
   const [onPantryFocus] = useState(() => () => {
     setIsPantryFocused(true);
+    // Return to a clean, visible tab bar on focus so a stale scroll-hidden
+    // state from a previous visit can never leave the bar hidden.
+    isScrolledDown.set(false);
+    scrollTabBarHidden.set(false);
     // Scroll-to-top from barcode scanner returning
     const store = useStore.getState();
     if (store.pendingPantryScrollToTop) {

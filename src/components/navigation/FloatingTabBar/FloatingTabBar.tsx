@@ -24,21 +24,9 @@ import { AddButton } from './AddButton';
 import { TabItem } from './TabItem';
 import { useShowNavigationLabels } from '#store/useAppStore';
 import { HapticService } from '#services/haptic/HapticService';
-import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { SPRING, TIMING } from '#/constants/animations';
 
 export const TAB_BAR_HEIGHT = 65;
-
-/**
- * Tab bar is only visible on these main screens.
- * Single source of truth — no per-screen tabBarStyle needed in HomeTabs.
- */
-const MAIN_SCREENS = new Set([
-  'PantryMain',
-  'ShoppingListMain',
-  'RecipeMain',
-  'MealPlanMain',
-]);
 
 export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
   state,
@@ -91,9 +79,12 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
   const translateY = useSharedValue(0);
   const opacity = useSharedValue(1);
 
-  // True while navigation or an overlay is hiding the tab bar. Combined with
-  // the scroll state below so navigation hiding always wins over scroll.
-  const navHidden = useSharedValue(false);
+  // True while an overlay (sheet/selector/modal) is open over a main screen.
+  // Combined with the scroll state below to drive visibility. Detail screens no
+  // longer factor in here: they're siblings of the tab navigator (see
+  // RootNavigator), so the bar is structurally absent on them and can't be
+  // latched hidden by a navigation race.
+  const overlayHidden = useSharedValue(false);
 
   // Track active tab for scanner visibility
   useEffect(() => {
@@ -101,35 +92,20 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
     setActiveTab(activeRoute.name);
   }, [state.index, state.routes, setActiveTab]);
 
-  // Hide tab bar on any screen that is not a main tab screen.
-  // getFocusedRouteNameFromRoute returns the nested stack's focused route name;
-  // null/undefined means no nested state yet → initial main screen is focused.
-  const focusedRoute = state.routes[state.index];
-  const nestedRouteName = getFocusedRouteNameFromRoute(
-    focusedRoute as Parameters<typeof getFocusedRouteNameFromRoute>[0],
-  );
-  const shouldHideFromNavigation =
-    nestedRouteName != null && !MAIN_SCREENS.has(nestedRouteName);
-
-  // Mirror navigation/overlay hide intent into navHidden. The animation itself
-  // runs in the reaction below, which combines this with the scroll state.
+  // Mirror the overlay state into a shared value the reaction can read. Clear
+  // any scroll-hidden state when an overlay opens so the bar returns to a
+  // known (visible) state once the overlay closes.
   useLayoutEffect(() => {
-    const shouldHide = isOverlayOpen || shouldHideFromNavigation;
-
-    navHidden.set(!!shouldHide);
-
-    // Clear any scroll-hidden state so the bar reappears when the user returns
-    // to a main screen instead of staying hidden from an earlier scroll.
-    if (shouldHide) {
+    overlayHidden.set(isOverlayOpen);
+    if (isOverlayOpen) {
       scrollTabBarHidden.set(false);
     }
-  }, [isOverlayOpen, shouldHideFromNavigation, scrollTabBarHidden, navHidden]);
+  }, [isOverlayOpen, scrollTabBarHidden, overlayHidden]);
 
-  // Drive the bar from both inputs: hidden when navigation/overlay OR scroll
-  // asks to hide, visible only when both allow it. Updating navHidden above
-  // re-runs this reaction, so navigation hiding can never be undone by scroll.
+  // Hidden when an overlay OR a scroll-down asks to hide; visible only when
+  // both allow it.
   useAnimatedReaction(
-    () => navHidden.get() || scrollTabBarHidden.get(),
+    () => overlayHidden.get() || scrollTabBarHidden.get(),
     (hide, prevHide) => {
       if (hide === prevHide) return;
       translateY.set(withSpring(hide ? 150 : 0, SPRING.HEAVY));

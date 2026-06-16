@@ -13,8 +13,7 @@ import { client } from '#/apollo/client';
 import { Navigation } from '#navigation/RootNavigator';
 import { SplashScreen } from '#screens/SplashScreen';
 import { ToastProvider } from '#components/atoms/Toast';
-import { OfflineBanner } from '#components/atoms/OfflineBanner';
-import { OfflineBannerInsetProvider } from '#components/providers/OfflineBannerInsetProvider';
+import { OfflineTransitionToaster } from '#components/atoms/OfflineTransitionToaster';
 import { ThemedStatusBar } from '#components/atoms/ThemedStatusBar';
 import { AppErrorBoundary } from '#components/providers/ErrorBoundary';
 import { useAppLifecycle } from '#hooks/app/useAppLifecycle';
@@ -98,24 +97,24 @@ const App = () => {
                         1. App content. The top safe-area inset is NOT applied
                            here — it's applied per screen via `TopInsetLayout`
                            (so screens like Recipe Detail can draw their hero
-                           edge-to-edge behind the status bar). The OfflineBanner
-                           carries its own top inset; OfflineBannerInsetProvider
-                           re-publishes the insets with top: 0 below it so the
-                           subtree never double-insets while the banner is up.
-                        2. GlobalBackdrop - covers everything including status bar
-                        3. BottomSheetModal portals (including ActionTray) render on top via @gorhom/bottom-sheet */}
+                           edge-to-edge behind the status bar). The offline
+                           indicator is `OfflineStatusPill`, rendered inline in
+                           each screen's header — nothing global occupies the
+                           top inset.
+                        2. OfflineTransitionToaster - renders null; fires the
+                           offline/online announcement toast once at the root.
+                        3. GlobalBackdrop - covers everything including status bar
+                        4. BottomSheetModal portals (including ActionTray) render on top via @gorhom/bottom-sheet */}
                       <ThemedStatusBar />
                       <View style={styles.container}>
-                        <OfflineBanner />
-                        <OfflineBannerInsetProvider>
-                          <ToastProvider>
-                            <AlertProvider>
-                              <NotificationProvider>
-                                <Navigation />
-                              </NotificationProvider>
-                            </AlertProvider>
-                          </ToastProvider>
-                        </OfflineBannerInsetProvider>
+                        <ToastProvider>
+                          <AlertProvider>
+                            <NotificationProvider>
+                              <Navigation />
+                            </NotificationProvider>
+                          </AlertProvider>
+                        </ToastProvider>
+                        <OfflineTransitionToaster />
                       </View>
                       <GlobalBackdrop />
                     </BottomSheetModalProvider>

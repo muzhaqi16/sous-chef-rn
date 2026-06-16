@@ -33,6 +33,27 @@ import { JoinByShareCodeScreen } from '#features/shoppingList/screens/JoinByShar
 import { JoinHomeByCodeScreen } from '#screens/home/JoinHomeByCodeScreen';
 import { JoinByLinkScreen } from '#screens/home/JoinByLinkScreen';
 
+// Feature detail/sub screens. These live at the root level — as siblings of
+// `Home` (the tab navigator) — rather than nested inside each tab's stack, so
+// the floating tab bar is structurally absent on them. Nesting them under the
+// tabs made tab-bar visibility depend on a render-time route check that could
+// latch hidden on a fast push→pop (see FloatingTabBar).
+import { PantryItemScreen } from '#features/pantry/screens/PantryItemScreen';
+import { PantryItemDetail } from '#features/pantry/screens/PantryItemDetail';
+import { FilteredPantryItems } from '#features/pantry/screens/FilteredPantryItems';
+import { PantrySettings } from '#features/pantry/screens/PantrySettings';
+import { NutritionScreen } from '#features/pantry/screens/NutritionScreen';
+import { RecipeDetail } from '#features/recipes/screens/RecipeDetail';
+import { RecipeFormScreen } from '#features/recipes/screens/RecipeForm';
+import { SavedRecipes } from '#features/recipes/screens/SavedRecipes';
+import { MyRecipes } from '#features/recipes/screens/MyRecipes';
+import { ListSettings } from '#features/shoppingList/screens/ListSettings';
+import { ShareList } from '#features/shoppingList/screens/ShareList';
+import { AddEditItem } from '#features/shoppingList/screens/AddEditItem';
+import { ShoppingListItemDetail } from '#features/shoppingList/screens/ItemDetail';
+import { PurchaseHistoryScreen } from '#features/shoppingList/screens/PurchaseHistoryScreen';
+import { CreateMealPlanScreen } from '#features/mealPlan/screens/CreateMealPlanScreen';
+
 // Lazy-loaded screens (infrequently visited, reduces cold start JS parsing)
 const ProfilePhotoUploadScreen = React.lazy(
   () => import('#features/profile/screens/ProfilePhotoUploadScreen'),
@@ -67,6 +88,12 @@ const NotificationSettingsScreen = React.lazy(
 const AppearanceScreen = React.lazy(
   () => import('#features/profile/screens/AppearanceScreen'),
 );
+// Deferred (Skia + victory-native) — kept lazy as it was inside PantryStack.
+const PantryAnalytics = React.lazy(() =>
+  import('#features/pantry/screens/PantryAnalytics').then(m => ({
+    default: m.PantryAnalytics,
+  })),
+);
 
 import {
   NavigationErrorBoundary,
@@ -100,6 +127,14 @@ function RootLayout({ children }: { children: React.ReactNode }) {
   useDeepLinkRouter();
   return <>{children}</>;
 }
+
+// Shared options for the feature detail/sub screens lifted out of the tab
+// stacks — mirrors the per-feature stack `screenOptions` they previously
+// inherited (full-screen swipe-back + 250ms slide) so their UX is unchanged.
+const featureDetailOptions = {
+  fullScreenGestureEnabled: true,
+  animationDuration: 250,
+};
 
 const RootStack = createNativeStackNavigator({
   layout: RootLayout,
@@ -247,6 +282,88 @@ const RootStack = createNativeStackNavigator({
         Appearance: createNativeStackScreen({
           screen: AppearanceScreen,
           options: { animation: 'fade', animationDuration: 150 },
+        }),
+
+        // ── Feature detail/sub screens (lifted out of the tab stacks) ──
+        // Siblings of `Home`, so the floating tab bar is never in their tree.
+        // Not deep-linkable: the app's deep links are auth/invite/join entry
+        // points only (see useDeepLinkRouter), never in-app detail screens.
+        // Hero screens opt out of the top inset to draw edge-to-edge.
+        PantryItem: createNativeStackScreen({
+          screen: PantryItemScreen,
+          options: featureDetailOptions,
+        }),
+        PantryItemDetail: createNativeStackScreen({
+          screen: PantryItemDetail,
+          layout: noInsetScreenLayout,
+          options: featureDetailOptions,
+        }),
+        FilteredPantryItems: createNativeStackScreen({
+          screen: FilteredPantryItems,
+          options: featureDetailOptions,
+        }),
+        PantrySettings: createNativeStackScreen({
+          screen: PantrySettings,
+          options: featureDetailOptions,
+        }),
+        PantryAnalytics: createNativeStackScreen({
+          screen: PantryAnalytics,
+          options: featureDetailOptions,
+        }),
+        NutritionScreen: createNativeStackScreen({
+          screen: NutritionScreen,
+          options: featureDetailOptions,
+        }),
+        // Single shared RecipeDetail — reached from Pantry, Recipe and MealPlan.
+        RecipeDetail: createNativeStackScreen({
+          screen: RecipeDetail,
+          layout: noInsetScreenLayout,
+          options: featureDetailOptions,
+        }),
+        ListSettings: createNativeStackScreen({
+          screen: ListSettings,
+          options: featureDetailOptions,
+        }),
+        ShareList: createNativeStackScreen({
+          screen: ShareList,
+          options: featureDetailOptions,
+        }),
+        AddItem: createNativeStackScreen({
+          screen: AddEditItem,
+          options: featureDetailOptions,
+        }),
+        EditItem: createNativeStackScreen({
+          screen: AddEditItem,
+          options: featureDetailOptions,
+        }),
+        ItemDetail: createNativeStackScreen({
+          screen: ShoppingListItemDetail,
+          layout: noInsetScreenLayout,
+          options: featureDetailOptions,
+        }),
+        PurchaseHistory: createNativeStackScreen({
+          screen: PurchaseHistoryScreen,
+          options: featureDetailOptions,
+        }),
+        RecipeCreate: createNativeStackScreen({
+          screen: RecipeFormScreen,
+          options: featureDetailOptions,
+        }),
+        RecipeEdit: createNativeStackScreen({
+          screen: RecipeFormScreen,
+          options: featureDetailOptions,
+        }),
+        SavedRecipes: createNativeStackScreen({
+          screen: SavedRecipes,
+          options: featureDetailOptions,
+        }),
+        MyRecipes: createNativeStackScreen({
+          screen: MyRecipes,
+          options: featureDetailOptions,
+        }),
+        CreateMealPlan: createNativeStackScreen({
+          screen: CreateMealPlanScreen,
+          options: featureDetailOptions,
         }),
       },
     },

@@ -170,6 +170,10 @@ const RecipeMainInner: React.FC = () => {
   const [isRecipeFocused, setIsRecipeFocused] = useState(true);
   const [onRecipeFocus] = useState(() => () => {
     setIsRecipeFocused(true);
+    // Return to a clean, visible tab bar on focus so a stale scroll-hidden
+    // state from a previous visit can never leave the bar hidden.
+    isScrolledDown.set(false);
+    scrollTabBarHidden.set(false);
     return () => {
       setIsRecipeFocused(false);
       // Reset scroll-driven tab bar hide so tab bar reappears on other tabs

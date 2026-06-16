@@ -29,10 +29,6 @@ interface SettingDef {
   key: keyof NotificationSettings;
   titleKey: string;
   descriptionKey: string;
-  getValue?: (
-    settings: NotificationSettings,
-    hasPermission: boolean | null,
-  ) => boolean;
 }
 
 const CHANNEL_SETTINGS: SettingDef[] = [
@@ -40,8 +36,6 @@ const CHANNEL_SETTINGS: SettingDef[] = [
     key: 'pushEnabled',
     titleKey: 'notifications.pushNotifications',
     descriptionKey: 'notifications.pushNotificationsDesc',
-    getValue: (settings, hasPermission) =>
-      !!settings.pushEnabled && hasPermission === true,
   },
   {
     key: 'emailEnabled',
@@ -180,7 +174,6 @@ const getThresholdOptions = (t: T) => [
 const renderSettings = (
   defs: SettingDef[],
   settings: NotificationSettings,
-  hasPermission: boolean | null,
   updating: string | null,
   handleSettingChange: (
     key: keyof NotificationSettings,
@@ -188,12 +181,12 @@ const renderSettings = (
   ) => void,
   t: T,
 ) =>
-  defs.map(({ key, titleKey, descriptionKey, getValue }) => (
+  defs.map(({ key, titleKey, descriptionKey }) => (
     <SettingSwitch
       key={key}
       title={t(titleKey)}
       description={t(descriptionKey)}
-      value={getValue ? getValue(settings, hasPermission) : !!settings[key]}
+      value={!!settings[key]}
       onValueChange={v => handleSettingChange(key, v)}
       loading={updating === key}
     />
@@ -403,7 +396,6 @@ export const NotificationSettingsScreen: React.FC = () => {
         {renderSettings(
           CHANNEL_SETTINGS,
           settings,
-          hasPermission,
           updating,
           handleSettingChange,
           t,
@@ -480,7 +472,6 @@ export const NotificationSettingsScreen: React.FC = () => {
         {renderSettings(
           PANTRY_SETTINGS,
           settings,
-          hasPermission,
           updating,
           handleSettingChange,
           t,
@@ -491,7 +482,6 @@ export const NotificationSettingsScreen: React.FC = () => {
         {renderSettings(
           SHOPPING_SETTINGS,
           settings,
-          hasPermission,
           updating,
           handleSettingChange,
           t,
@@ -502,7 +492,6 @@ export const NotificationSettingsScreen: React.FC = () => {
         {renderSettings(
           SOCIAL_SETTINGS,
           settings,
-          hasPermission,
           updating,
           handleSettingChange,
           t,
@@ -513,7 +502,6 @@ export const NotificationSettingsScreen: React.FC = () => {
         {renderSettings(
           RECIPE_SETTINGS,
           settings,
-          hasPermission,
           updating,
           handleSettingChange,
           t,
@@ -524,7 +512,6 @@ export const NotificationSettingsScreen: React.FC = () => {
         {renderSettings(
           DIGEST_SETTINGS,
           settings,
-          hasPermission,
           updating,
           handleSettingChange,
           t,
@@ -535,7 +522,6 @@ export const NotificationSettingsScreen: React.FC = () => {
         {renderSettings(
           QUIET_HOURS_SETTINGS,
           settings,
-          hasPermission,
           updating,
           handleSettingChange,
           t,

@@ -182,7 +182,8 @@
     "deviceOfflinePending_other": "You're offline — {{count}} changes will sync when reconnected",
     "apiDown": "Can't reach the server — changes will sync when it's back",
     "apiDownPending_one": "Can't reach the server — {{count}} change will sync when it's back",
-    "apiDownPending_other": "Can't reach the server — {{count}} changes will sync when it's back"
+    "apiDownPending_other": "Can't reach the server — {{count}} changes will sync when it's back",
+    "backOnline": "Back online — syncing your changes"
   },
   "empty": {
     "noItems": "No items yet",

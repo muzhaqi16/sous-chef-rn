@@ -21,7 +21,7 @@ import { StyleSheet as UnistylesStyleSheet } from 'react-native-unistyles';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
 import { Icon } from '#utils/iconUtils';
-import { useBackdropClaim } from '#components/providers/OverlayBackdropProvider';
+import { useBottomSheetBackdropClaim } from '#hooks/useBottomSheetBackdropClaim';
 import { ActionTrayScrollContext } from './ActionTrayScrollContext';
 import type { ActionTrayProps, ActionTrayRef } from './types';
 
@@ -56,54 +56,92 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
     const [isSettledOpen, setIsSettledOpen] = useState(false);
     const { height } = useWindowDimensions();
 
-    // Backdrop lifetime tied directly to `mounted && enableBackdrop`.
-    // useBackdropClaim handles cleanup automatically — the previous
-    // imperative show/hide pair (which had to coordinate with both the
-    // useEffect cleanup AND the dismiss path) is gone.
-    const handleBackdropPress = () => {
-      bottomSheetRef.current?.dismiss();
-    };
-    useBackdropClaim(mounted && enableBackdrop, {
-      opacity: 0.5,
-      onPress: handleBackdropPress,
-    });
+    // Backdrop driven by the sheet's `animatedIndex` so the dim ramps in and
+    // out in lockstep with the sheet on the UI thread: on close it fades AS
+    // the sheet slides down, rather than holding full opacity until the close
+    // animation settles and only then fading. The claim happens at the start
+    // of the open animation (via `onAnimate`) and is released on the
+    // settled-closed `onChange(-1)`. Tap-to-dismiss is wired inside the hook
+    // (it dismisses via `bottomSheetRef`).
+    const {
+      animatedIndex,
+      onChange: handleBackdrop,
+      onAnimate: handleBackdropAnimate,
+    } = useBottomSheetBackdropClaim(bottomSheetRef);
 
-    // Closed-state cleanup, reachable from two gorhom signals that can each
-    // fire without the other:
+    // `onClose` is the parent's "tray is closing — restore your UI" signal
+    // (the floating tab bar un-hides off it). It's fired at the START of the
+    // close animation (see `handleSheetAnimate`) so that UI animates back in
+    // parallel with the slide-down instead of waiting for settled-closed.
+    // `closeNotifiedRef` dedupes it to once per presentation cycle; the
+    // settled-closed path calls it too as a fallback for closes that skip
+    // `onAnimate(-1)`.
+    const closeNotifiedRef = useRef(false);
+    const notifyClose = () => {
+      if (closeNotifiedRef.current) return;
+      closeNotifiedRef.current = true;
+      onClose?.();
+    };
+
+    // Settled-closed cleanup (unmount + backdrop release), reachable from two
+    // gorhom signals that can each fire without the other:
     // - `onChange(-1)` — settled-closed. Gorhom SKIPS this when a close
     //   interrupts an open animation that never settled (its internal
     //   `animatedCurrentIndex` is still -1, so `nextIndex !==
     //   animatedCurrentIndex` is false and the callback is never scheduled —
-    //   BottomSheet.tsx `animateToPositionCompleted`). Relying on it alone
-    //   leaked the backdrop claim: `mounted` stayed true forever and the
-    //   global dim stuck at full opacity.
+    //   BottomSheet.tsx `animateToPositionCompleted`).
     // - `onDismiss` — fired from gorhom's `unmount()` in every modal
     //   dismissal path, but NOT on minimize (stackBehavior 'switch'), which
     //   only emits `onChange(-1)`.
-    // The ref dedupes the pair on a normal close (where both arrive), so
-    // `onClose` is notified exactly once per presentation cycle.
+    // `dismissHandledRef` dedupes the pair so the unmount + release runs once.
     const dismissHandledRef = useRef(false);
     const handleClosed = () => {
       if (dismissHandledRef.current) return;
       dismissHandledRef.current = true;
+      // Idempotent backdrop release. Covers the path where gorhom's
+      // `onDismiss` wins the race against `onChange(-1)` (which also releases
+      // via `handleSheetChanges`); `releaseBackdrop` no-ops on a stale id.
+      if (enableBackdrop) handleBackdrop(-1);
+      notifyClose();
       setMounted(false);
-      onClose?.();
     };
 
     // Present the sheet once mounted.
     useEffect(() => {
       if (mounted) {
         dismissHandledRef.current = false;
+        closeNotifiedRef.current = false;
         bottomSheetRef.current?.present();
       }
     }, [mounted]);
 
     const handleSheetChanges = (index: number) => {
+      // Drive the backdrop slot off gorhom's authoritative index: claim on
+      // open (index ≥ 0, idempotent backstop to `onAnimate`), release on -1.
+      if (enableBackdrop) handleBackdrop(index);
       if (index < 0) {
         handleClosed();
       } else {
         // Settled at an open detent — the scrollable is now unlocked.
         setIsSettledOpen(true);
+      }
+    };
+
+    // gorhom fires `onAnimate` at the START of every position animation, before
+    // it begins driving `animatedPosition`.
+    const handleSheetAnimate = (fromIndex: number, toIndex: number) => {
+      // Claim the backdrop at the start of the open animation so the dim ramps
+      // in frame-synced with the sheet.
+      if (enableBackdrop) handleBackdropAnimate(fromIndex, toIndex);
+      if (toIndex < 0) {
+        // Closing: restore the parent UI now so it animates back alongside the
+        // slide-down rather than after the settled-closed signal.
+        notifyClose();
+      } else if (closeNotifiedRef.current) {
+        // A started close reversed (pan-down snap-back / intermediate snap):
+        // re-hide via `onOpen` and re-arm so the next real close notifies again.
+        closeNotifiedRef.current = false;
+        onOpen?.();
       }
     };
 
@@ -207,6 +245,8 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
         backdropComponent={NullBackdrop}
         handleComponent={renderHandle}
         footerComponent={renderFooter}
+        animatedIndex={animatedIndex}
+        onAnimate={handleSheetAnimate}
         onChange={handleSheetChanges}
         onDismiss={handleClosed}
         style={[styles.modal, style]}

@@ -8,6 +8,7 @@ import { format, parseISO } from 'date-fns';
 import { Icon } from '#utils/iconUtils';
 import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
 import { TabMainScreen } from '#components/templates/TabMainScreen';
+import { OfflineStatusPill } from '#components/atoms/OfflineStatusPill';
 import { WeekStrip } from '#components/molecules/WeekStrip';
 import { MonthCalendar } from '#features/mealPlan/components/MonthCalendar';
 import { DayMealList } from '#features/mealPlan/components/DayMealList';
@@ -471,40 +472,50 @@ const MealPlanMainInner: React.FC = () => {
             titleAccessory={
               <Icon name="chevron-down" size={20} tone="textPrimary" />
             }
+            offlinePill={false}
           />
         </View>
-        {!!activePlanId && (
-          <View style={styles.headerActions}>
-            {permissions.canGenerateShoppingList ? (
+        {/* Pill lives in the real action cluster so it aligns with the
+            cart/bookmark/settings icons (TabScreenHeader's built-in pill is
+            disabled above). Cluster always renders so the pill shows even
+            before a plan is selected. */}
+        <View style={styles.headerActions}>
+          <OfflineStatusPill size={22} />
+          {!!activePlanId && (
+            <>
+              {permissions.canGenerateShoppingList ? (
+                <Pressable
+                  onPress={() => setShoppingListSheetVisible(true)}
+                  hitSlop={8}
+                  style={styles.headerActionButton}
+                  accessibilityLabel={t(
+                    'mealPlanMain.generateShoppingListLabel',
+                  )}
+                >
+                  <Icon name="cart-outline" size={22} tone="primary" />
+                </Pressable>
+              ) : null}
+              {permissions.canSaveAsTemplate ? (
+                <Pressable
+                  onPress={handleSaveAsTemplate}
+                  hitSlop={8}
+                  style={styles.headerActionButton}
+                  accessibilityLabel={t('mealPlanMain.saveAsTemplateLabel')}
+                >
+                  <Icon name="bookmark-outline" size={22} tone="primary" />
+                </Pressable>
+              ) : null}
               <Pressable
-                onPress={() => setShoppingListSheetVisible(true)}
+                onPress={() => setSettingsVisible(true)}
                 hitSlop={8}
                 style={styles.headerActionButton}
-                accessibilityLabel={t('mealPlanMain.generateShoppingListLabel')}
+                accessibilityLabel={t('mealPlanMain.planSettingsLabel')}
               >
-                <Icon name="cart-outline" size={22} tone="primary" />
+                <Icon name="ellipsis-vertical" size={22} tone="textSecondary" />
               </Pressable>
-            ) : null}
-            {permissions.canSaveAsTemplate ? (
-              <Pressable
-                onPress={handleSaveAsTemplate}
-                hitSlop={8}
-                style={styles.headerActionButton}
-                accessibilityLabel={t('mealPlanMain.saveAsTemplateLabel')}
-              >
-                <Icon name="bookmark-outline" size={22} tone="primary" />
-              </Pressable>
-            ) : null}
-            <Pressable
-              onPress={() => setSettingsVisible(true)}
-              hitSlop={8}
-              style={styles.headerActionButton}
-              accessibilityLabel={t('mealPlanMain.planSettingsLabel')}
-            >
-              <Icon name="ellipsis-vertical" size={22} tone="textSecondary" />
-            </Pressable>
-          </View>
-        )}
+            </>
+          )}
+        </View>
       </View>
 
       {/* Calendar view */}

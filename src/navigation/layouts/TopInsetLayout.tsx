@@ -14,9 +14,8 @@ import { StyleSheet } from 'react-native-unistyles';
  * plugin keeps it bound to the native ShadowTree and theme changes apply
  * without a React re-render.
  *
- * Banner awareness lives one level up: `OfflineBannerInsetProvider` (App.tsx)
- * re-publishes the insets with `top: 0` while the offline banner is visible,
- * so `insets.top` here is already banner-adjusted.
+ * The offline indicator floats as an absolute overlay and does not consume the
+ * top inset, so `insets.top` here is the true safe-area inset.
  */
 export function TopInsetLayout({ children }: { children: React.ReactNode }) {
   const insets = useSafeAreaInsets();

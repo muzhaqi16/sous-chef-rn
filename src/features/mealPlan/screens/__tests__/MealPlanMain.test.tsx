@@ -142,6 +142,9 @@ jest.mock('#store/useAppStore', () => ({
   // useMealPlanActions reads the auth identity to materialize local-first
   // optimistic plans; null keeps the legacy online-only path in these tests.
   useUser: jest.fn(() => null),
+  // The header's OfflineStatusPill reads online status; keep it online so the
+  // pill stays hidden in these tests.
+  useIsOnline: jest.fn(() => true),
 }));
 
 jest.mock('#/services/toastService', () => ({

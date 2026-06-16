@@ -5,6 +5,7 @@ import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';
+import { OfflineStatusPill } from '#components/atoms/OfflineStatusPill';
 import { Text } from '#components/atoms/Text';
 
 // Matches theme.typography.fontSize.lg (18). Inlined so the component does not
@@ -130,6 +131,9 @@ export const PantryHeader: React.FC<PantryHeaderProps> = ({
         </Pressable>
       </View>
 
+      {/* Offline indicator — sits next to the notification bell */}
+      <OfflineStatusPill style={styles.offlinePill} />
+
       {/* Notification bell */}
       {!!onNotificationPress && (
         <Pressable
@@ -198,6 +202,9 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     alignSelf: 'flex-start',
     gap: theme.spacing.xs + 2,
+  },
+  offlinePill: {
+    marginRight: theme.spacing.sm,
   },
   notificationButton: {
     position: 'relative',

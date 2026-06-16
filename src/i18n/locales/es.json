@@ -182,7 +182,8 @@
     "deviceOfflinePending_other": "Sin conexión — {{count}} cambios se sincronizarán al reconectar",
     "apiDown": "No se puede conectar con el servidor — los cambios se sincronizarán cuando vuelva",
     "apiDownPending_one": "No se puede conectar con el servidor — {{count}} cambio se sincronizará cuando vuelva",
-    "apiDownPending_other": "No se puede conectar con el servidor — {{count}} cambios se sincronizarán cuando vuelva"
+    "apiDownPending_other": "No se puede conectar con el servidor — {{count}} cambios se sincronizarán cuando vuelva",
+    "backOnline": "De nuevo en línea — sincronizando tus cambios"
   },
   "empty": {
     "noItems": "Aún no hay artículos",
@@ -1938,7 +1939,14 @@
   },
   "addItemSheet": {
     "scanBarcode": "Escanear código de barras",
-    "addManually": "Añadir manualmente"
+    "addManually": "Añadir manualmente",
+    "more": "Más",
+    "allAdded": "Todo añadido",
+    "dismiss": "Descartar sugerencia",
+    "dismissed": "Se eliminó {{name}}",
+    "undo": "Deshacer",
+    "dismissFailed": "No se pudo quitar la sugerencia",
+    "undoFailed": "No se pudo deshacer"
   },
   "addToShoppingListSheet": {
     "addFailedRetry": "No se pudo añadir el artículo. Inténtalo de nuevo.",

@@ -182,7 +182,8 @@
     "deviceOfflinePending_other": "Je offline — {{count}} ndryshime do të sinkronizohen kur të rilidhesh",
     "apiDown": "Serveri nuk arrihet — ndryshimet do të sinkronizohen kur të rikthehet",
     "apiDownPending_one": "Serveri nuk arrihet — {{count}} ndryshim do të sinkronizohet kur të rikthehet",
-    "apiDownPending_other": "Serveri nuk arrihet — {{count}} ndryshime do të sinkronizohen kur të rikthehet"
+    "apiDownPending_other": "Serveri nuk arrihet — {{count}} ndryshime do të sinkronizohen kur të rikthehet",
+    "backOnline": "Sërish online — po sinkronizohen ndryshimet"
   },
   "empty": {
     "noItems": "Ende pa artikuj",
@@ -1938,7 +1939,14 @@
   },
   "addItemSheet": {
     "scanBarcode": "Skano barkodin",
-    "addManually": "Shto manualisht"
+    "addManually": "Shto manualisht",
+    "more": "Më shumë",
+    "allAdded": "Të gjitha u shtuan",
+    "dismiss": "Hiq sugjerimin",
+    "dismissed": "U hoq {{name}}",
+    "undo": "Zhbëj",
+    "dismissFailed": "S'u hoq dot sugjerimi",
+    "undoFailed": "S'u zhbë dot"
   },
   "addToShoppingListSheet": {
     "addFailedRetry": "Nuk u shtua dot artikulli. Provoje sërish.",

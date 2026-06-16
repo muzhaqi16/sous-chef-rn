@@ -138,6 +138,10 @@ export const ShoppingListMainContent: React.FC<
   const [isScreenFocused, setIsScreenFocused] = useState(true);
   const [onScreenFocus] = useState(() => () => {
     setIsScreenFocused(true);
+    // Return to a clean, visible tab bar on focus so a stale scroll-hidden
+    // state from a previous visit can never leave the bar hidden.
+    isScrolledDown.set(false);
+    scrollTabBarHidden.set(false);
     return () => {
       setIsScreenFocused(false);
       scrollTabBarHidden.set(false);
