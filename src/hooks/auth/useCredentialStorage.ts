@@ -28,7 +28,6 @@ const checkStoredCredentials = async (email?: string): Promise<boolean> => {
     return await hasCredentials();
   } catch (error) {
     errorService.reportError(error, { operation: 'checkCredentials' });
-    logger.error('Error checking credentials:', error);
     return false;
   }
 };
@@ -60,7 +59,6 @@ const storeCredentials = async (
     return true;
   } catch (error) {
     errorService.reportError(error, { operation: 'storeCredentials' });
-    logger.error('Error storing credentials:', error);
     return false;
   }
 };

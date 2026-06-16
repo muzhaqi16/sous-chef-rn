@@ -440,9 +440,7 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
           },
         }),
       (error: unknown) => {
-        const errorMessage =
-          error instanceof Error ? error.message : 'Unknown error';
-        errorService.reportError(errorMessage, {
+        errorService.reportError(error, {
           operation: 'saveRecipeToFavorites',
         });
         toastService.error(t('recipes.saveRecipeFailed'));

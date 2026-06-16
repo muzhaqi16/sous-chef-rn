@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { errorService } from '#/services/errorService';
+import { logger } from '#/utils/environment';
 import { useToast } from '#/hooks/useToast';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { useAuthPreferences } from '#/hooks/navigation/useAuthPreferences';
@@ -34,7 +35,7 @@ export const useRememberMe = ({ onAccept, onDecline }: RememberMeEvents) => {
       await executeMutation(
         async () => {
           await onAccept(pendingCredentials);
-          console.log('Credentials accepted by user');
+          logger.debug('Credentials accepted by user');
         },
         error => {
           errorService.reportError(error, {
