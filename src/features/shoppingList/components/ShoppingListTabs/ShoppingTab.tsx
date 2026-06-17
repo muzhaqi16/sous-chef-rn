@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet } from 'react-native-unistyles';
 import Animated, { FadeOut } from 'react-native-reanimated';
 import { TIMING } from '#constants/animations';
@@ -63,6 +64,7 @@ const ShoppingTabComponent: React.FC = () => {
     !hasShoppingTabShownContent && (!isReady || isTransitioning || !!loading);
   const showSkeletons = useMinimumVisible(rawShowSkeletons);
 
+  const { t } = useTranslation();
   const searchQuery = useShoppingListSearchQuery();
   const { addItemSheet } = useShoppingListModals();
 
@@ -72,15 +74,20 @@ const ShoppingTabComponent: React.FC = () => {
   const emptyComponent = searchQuery.trim() ? (
     <EmptyState
       icon="search-outline"
-      title={`No results for "${displayQuery}"`}
-      description="Would you like to add it to your list?"
-      action={{ label: 'Add Item', onPress: addItemSheet.open }}
+      title={t('shoppingListScreens.searchNoResultsTitle', {
+        query: displayQuery,
+      })}
+      description={t('shoppingListScreens.searchAddPrompt')}
+      action={{
+        label: t('shoppingListScreens.addItem'),
+        onPress: addItemSheet.open,
+      }}
     />
   ) : (
     <EmptyState
       icon={<ShoppingEmptyIllustration size="medium" />}
-      title="Your list is empty"
-      description="Add items to start your shopping list"
+      title={t('shoppingListScreens.emptyTitle')}
+      description={t('shoppingListScreens.emptyDescription')}
     />
   );
 

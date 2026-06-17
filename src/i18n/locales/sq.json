@@ -188,6 +188,7 @@
   "empty": {
     "noItems": "Ende pa artikuj",
     "noNotifications": "Ende pa njoftime",
+    "noNotificationsHint": "Do të të njoftojmë kur të ndodhë diçka e rëndësishme",
     "noResults": "Nuk u gjet asnjë rezultat",
     "noMembers": "Ende pa anëtarë",
     "noPantryItems": "Qilari yt është bosh",
@@ -603,6 +604,13 @@
     "noRecipeSuggestions": "Nuk ka sugjerime recetash në dispozicion"
   },
   "shoppingListScreens": {
+    "emptyTitle": "Lista jote është bosh",
+    "emptyDescription": "Shto artikuj për të nisur listën tënde të blerjeve",
+    "searchNoResultsTitle": "Asnjë rezultat për \"{{query}}\"",
+    "searchAddPrompt": "Dëshiron ta shtosh në listën tënde?",
+    "purchasedEmptyTitle": "Ende asnjë artikull i blerë",
+    "purchasedEmptyDescription": "Shëno artikujt ndërsa blen për t'i parë këtu",
+    "purchasedSearchNoMatch": "Asnjë artikull i blerë nuk përputhet me kërkimin tënd",
     "joinTitle": "Bashkohu me listën",
     "joinEnterCodeTitle": "Fut kodin",
     "joinEnterCodeDescription": "Fut kodin që more për t'u bashkuar me një listë blerjesh.",

@@ -188,6 +188,7 @@
   "empty": {
     "noItems": "No items yet",
     "noNotifications": "No notifications yet",
+    "noNotificationsHint": "We'll notify you when something important happens",
     "noResults": "No results found",
     "noMembers": "No members yet",
     "noPantryItems": "Your pantry is empty",
@@ -603,6 +604,13 @@
     "noRecipeSuggestions": "No recipe suggestions available"
   },
   "shoppingListScreens": {
+    "emptyTitle": "Your list is empty",
+    "emptyDescription": "Add items to start your shopping list",
+    "searchNoResultsTitle": "No results for \"{{query}}\"",
+    "searchAddPrompt": "Would you like to add it to your list?",
+    "purchasedEmptyTitle": "No purchased items yet",
+    "purchasedEmptyDescription": "Check off items as you shop to see them here",
+    "purchasedSearchNoMatch": "No purchased items match your search",
     "joinTitle": "Join Shopping List",
     "joinEnterCodeTitle": "Enter Share Code",
     "joinEnterCodeDescription": "Enter the share code you received to join a shopping list.",

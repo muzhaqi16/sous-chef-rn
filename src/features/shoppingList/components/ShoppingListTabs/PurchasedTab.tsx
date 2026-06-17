@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet } from 'react-native-unistyles';
 import Animated, { FadeOut } from 'react-native-reanimated';
 import { TIMING } from '#constants/animations';
@@ -60,6 +61,7 @@ const PurchasedTabComponent: React.FC = () => {
     !hasPurchasedTabShownContent && (!isReady || isTransitioning || !!loading);
   const showSkeletons = useMinimumVisible(rawShowSkeletons);
 
+  const { t } = useTranslation();
   const searchQuery = useShoppingListSearchQuery();
 
   const displayQuery =
@@ -68,14 +70,16 @@ const PurchasedTabComponent: React.FC = () => {
   const emptyComponent = searchQuery.trim() ? (
     <EmptyState
       icon="search-outline"
-      title={`No results for "${displayQuery}"`}
-      description="No purchased items match your search"
+      title={t('shoppingListScreens.searchNoResultsTitle', {
+        query: displayQuery,
+      })}
+      description={t('shoppingListScreens.purchasedSearchNoMatch')}
     />
   ) : (
     <EmptyState
       icon="cart-outline"
-      title="No purchased items yet"
-      description="Check off items as you shop to see them here"
+      title={t('shoppingListScreens.purchasedEmptyTitle')}
+      description={t('shoppingListScreens.purchasedEmptyDescription')}
     />
   );
 
