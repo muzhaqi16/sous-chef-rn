@@ -4,15 +4,21 @@ import {
   GetPantryItemSuggestionsDocument,
   type GetPantryItemSuggestionsQuery,
 } from '#features/pantry/graphql/pantry.generated';
-import { PantrySuggestionSource } from '#/graphql/generated/schemaTypes';
 import { useIsEffectivelyOffline } from '#hooks/settings/useOfflineMode';
 import { resolveImageUrl } from '#utils/imageUtils';
 import { preloadImages } from '#components/atoms/CachedImage';
 import type { ErrorLike } from '@apollo/client';
 
+/**
+ * Per-source fetch limit. Each section is fetched with its own quota, and the
+ * sheet shows a small preview that drills into the full per-source list, so this
+ * is generous enough to back the drill-down without a second round-trip.
+ */
+export const PANTRY_SUGGESTIONS_LIMIT = 20;
+
 type PantryItemSuggestion = NonNullable<
   GetPantryItemSuggestionsQuery['pantry']
->['suggestions'][number];
+>['popular'][number];
 
 interface UsePantryItemSuggestionsOptions {
   pantryId: string | undefined;
@@ -41,7 +47,7 @@ export interface UsePantryItemSuggestionsReturn {
 
 export function usePantryItemSuggestions({
   pantryId,
-  limit = 10,
+  limit = PANTRY_SUGGESTIONS_LIMIT,
   skip = false,
 }: UsePantryItemSuggestionsOptions): UsePantryItemSuggestionsReturn {
   const isOffline = useIsEffectivelyOffline();
@@ -54,40 +60,29 @@ export function usePantryItemSuggestions({
     },
   );
 
-  const suggestions = (data?.pantry?.suggestions ?? []).map(
-    (s: PantryItemSuggestion) => ({
-      ...s,
-      imageUrl: resolveImageUrl(s),
-    }),
-  );
+  // Each source arrives in its own aliased array (own quota); attach the
+  // resolved image URL the rows render.
+  const withImage = (s: PantryItemSuggestion) => ({
+    ...s,
+    imageUrl: resolveImageUrl(s),
+  });
 
+  const pantry = data?.pantry;
   const grouped: GroupedSuggestions = {
-    lowStock: [],
-    expiringSoon: [],
-    recentlyDeleted: [],
-    frequentlyAdded: [],
-    popular: [],
+    lowStock: (pantry?.lowStock ?? []).map(withImage),
+    expiringSoon: (pantry?.expiringSoon ?? []).map(withImage),
+    recentlyDeleted: (pantry?.recentlyDeleted ?? []).map(withImage),
+    frequentlyAdded: (pantry?.frequentlyAdded ?? []).map(withImage),
+    popular: (pantry?.popular ?? []).map(withImage),
   };
 
-  for (const suggestion of suggestions) {
-    switch (suggestion.source) {
-      case PantrySuggestionSource.LowStock:
-        grouped.lowStock.push(suggestion);
-        break;
-      case PantrySuggestionSource.ExpiringSoon:
-        grouped.expiringSoon.push(suggestion);
-        break;
-      case PantrySuggestionSource.RecentlyDeleted:
-        grouped.recentlyDeleted.push(suggestion);
-        break;
-      case PantrySuggestionSource.FrequentlyAdded:
-        grouped.frequentlyAdded.push(suggestion);
-        break;
-      case PantrySuggestionSource.Popular:
-        grouped.popular.push(suggestion);
-        break;
-    }
-  }
+  const suggestions = [
+    ...grouped.lowStock,
+    ...grouped.expiringSoon,
+    ...grouped.recentlyDeleted,
+    ...grouped.frequentlyAdded,
+    ...grouped.popular,
+  ];
 
   // Preload suggestion images into disk cache for instant display
   useEffect(() => {

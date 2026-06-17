@@ -140,14 +140,14 @@ const createConfig = (
   suggestionGroups: [
     {
       key: 'low_stock',
-      title: 'LOW STOCK',
+      titleKey: 'addItemSheet.sections.lowStock',
       accessor: (grouped: Record<string, BaseSuggestionItem[]>) =>
         grouped.lowStock ?? [],
       priority: 1,
     },
     {
       key: 'add_again',
-      title: 'ADD AGAIN',
+      titleKey: 'addItemSheet.sections.addAgain',
       accessor: (grouped: Record<string, BaseSuggestionItem[]>) =>
         grouped.addAgain ?? [],
       priority: 2,
@@ -258,7 +258,7 @@ describe('AddItemSheet', () => {
       />,
     );
 
-    expect(screen.getByText('LOW STOCK')).toBeTruthy();
+    expect(screen.getByText('Low Stock')).toBeTruthy();
     expect(screen.getByText('Milk')).toBeTruthy();
     expect(screen.getByText('Eggs')).toBeTruthy();
   });
@@ -275,8 +275,8 @@ describe('AddItemSheet', () => {
     );
 
     // Section titles should not render if groups are empty
-    expect(screen.queryByText('LOW STOCK')).toBeNull();
-    expect(screen.queryByText('ADD AGAIN')).toBeNull();
+    expect(screen.queryByText('Low Stock')).toBeNull();
+    expect(screen.queryByText('Add Again')).toBeNull();
   });
 
   it('calls onAddManually with search value', async () => {
@@ -357,13 +357,13 @@ describe('AddItemSheet', () => {
       suggestionGroups: [
         {
           key: 'add_again',
-          title: 'ADD AGAIN',
+          titleKey: 'addItemSheet.sections.addAgain',
           accessor: grouped => grouped.addAgain ?? [],
           priority: 2,
         },
         {
           key: 'low_stock',
-          title: 'LOW STOCK',
+          titleKey: 'addItemSheet.sections.lowStock',
           accessor: grouped => grouped.lowStock ?? [],
           priority: 1,
         },
@@ -389,8 +389,8 @@ describe('AddItemSheet', () => {
     );
     expect(toJSON()).toBeTruthy();
     // Both sections should be present
-    expect(screen.getByText('LOW STOCK')).toBeTruthy();
-    expect(screen.getByText('ADD AGAIN')).toBeTruthy();
+    expect(screen.getByText('Low Stock')).toBeTruthy();
+    expect(screen.getByText('Add Again')).toBeTruthy();
   });
 
   it('shows search results when autocomplete has data', () => {

@@ -43,16 +43,25 @@ export const CONTENT_OVERLAP = 20;
 const COLLAPSE_POINT = COLLAPSE_DISTANCE - CONTENT_OVERLAP;
 const BAR_FADE_END = COLLAPSE_POINT;
 const BAR_FADE_START = COLLAPSE_POINT - 24;
-const TITLE_FADE_START = BAR_FADE_START;
-const TITLE_FADE_END = BAR_FADE_END;
+
+// The inline bar title must not appear until the screen's own large title
+// (the in-content DetailTitleRow) has scrolled fully under the opaque bar —
+// otherwise both are visible at once ("double title"). The scroll distance at
+// which a single 2xl title line clears the bar is inset-independent: it's the
+// title's line box (~32) plus the card/row top paddings, measured from where
+// each variant places that title. Hero variant: heroHeight + title box -
+// content overlap - bar band ≈ 252px. Begin the fade just after the bar turns
+// solid (BAR_FADE_END) and finish it as the title clears.
+const TITLE_FADE_START = COLLAPSE_POINT + 12;
+const TITLE_FADE_END = COLLAPSE_POINT + 48;
 
 // No-hero screens keep their own large title at the top of the content and
 // leave the inline bar title hidden until that large title scrolls up under the
-// (already-solid) bar — the same scroll-reveal as the hero variant, just over a
-// short fixed band. The large title is occluded by the opaque bar as it passes,
-// so the band only needs to roughly track it; the two titles never coexist.
-const NO_HERO_TITLE_FADE_START = 8;
-const NO_HERO_TITLE_FADE_END = HEADER_BAND_HEIGHT;
+// (already-solid) bar. The large title clears the bar after ≈ its line box plus
+// the card/row top paddings (~48px); start the fade only then so the two titles
+// never coexist.
+const NO_HERO_TITLE_FADE_START = 48;
+const NO_HERO_TITLE_FADE_END = 72;
 
 const CIRCLE_SHADOW = [
   {

@@ -182,7 +182,8 @@
     "deviceOfflinePending_other": "Je offline — {{count}} ndryshime do të sinkronizohen kur të rilidhesh",
     "apiDown": "Serveri nuk arrihet — ndryshimet do të sinkronizohen kur të rikthehet",
     "apiDownPending_one": "Serveri nuk arrihet — {{count}} ndryshim do të sinkronizohet kur të rikthehet",
-    "apiDownPending_other": "Serveri nuk arrihet — {{count}} ndryshime do të sinkronizohen kur të rikthehet"
+    "apiDownPending_other": "Serveri nuk arrihet — {{count}} ndryshime do të sinkronizohen kur të rikthehet",
+    "backOnline": "Sërish online — po sinkronizohen ndryshimet"
   },
   "empty": {
     "noItems": "Ende pa artikuj",
@@ -542,6 +543,8 @@
     "applyA11y": "Apliko filtrat",
     "infoBanner": "Filtrat aplikohen vetëm për kërkimin me tekst",
     "dietTitle": "Dieta",
+    "dietLifestyleLabel": "Zgjidh dietën tënde",
+    "dietConstraintsLabel": "Kufizime dietike",
     "selectAllThatApply": "Zgjidh të gjitha që zbatohen",
     "selectOne": "Zgjidh një",
     "intolerancesTitle": "Alergjitë & Intolerancat",
@@ -1936,7 +1939,76 @@
   },
   "addItemSheet": {
     "scanBarcode": "Skano barkodin",
-    "addManually": "Shto manualisht"
+    "addManually": "Shto manualisht",
+    "more": "Më shumë",
+    "allAdded": "Të gjitha u shtuan",
+    "dismiss": "Hiq sugjerimin",
+    "dismissed": "U hoq {{name}}",
+    "undo": "Zhbëj",
+    "dismissFailed": "S'u hoq dot sugjerimi",
+    "undoFailed": "S'u zhbë dot",
+    "sections": {
+      "lowStock": "Stok i ulët",
+      "expiringSoon": "Skadon së shpejti",
+      "addAgain": "Shto sërish",
+      "favorites": "Të preferuarat e tua",
+      "popular": "Popullore"
+    }
+  },
+  "dietaryProfile": {
+    "errorTitle": "Gabim",
+    "dietTitle": "Dieta",
+    "dietEmpty": "Ende s'ke zgjedhur një dietë",
+    "dietSheetTitle": "Zgjidh një dietë",
+    "updateDietFailed": "S'u përditësua dot dieta",
+    "constraintsTitle": "Kufizime dietike",
+    "constraintsEmpty": "Ende pa kufizime",
+    "constraintsSheetTitle": "Zgjidh kufizimet dietike",
+    "addConstraintsFailed": "S'u shtuan dot kufizimet dietike",
+    "intolerancesTitle": "Alergjitë & Intolerancat",
+    "intolerancesEmpty": "Ende pa alergji",
+    "intolerancesSheetTitle": "Zgjidh alergjitë & intolerancat",
+    "addIntolerancesFailed": "S'u shtuan dot intolerancat",
+    "goalsTitle": "Synime shëndetësore",
+    "goalsEmpty": "Ende pa synime shëndetësore",
+    "goalsSheetTitle": "Zgjidh synimet shëndetësore",
+    "addGoalsFailed": "S'u shtuan dot synimet shëndetësore",
+    "diets": {
+      "vegetarian": "Vegjetariane",
+      "vegan": "Vegane",
+      "glutenFree": "Pa gluten",
+      "keto": "Keto",
+      "paleo": "Paleo",
+      "pescetarian": "Peshkatariane",
+      "lactoVegetarian": "Lakto-vegjetariane",
+      "ovoVegetarian": "Ovo-vegjetariane",
+      "primal": "Primale",
+      "lowFodmap": "FODMAP i ulët",
+      "whole30": "Whole30"
+    },
+    "intolerances": {
+      "dairy": "Bulmet",
+      "egg": "Vezë",
+      "gluten": "Gluten",
+      "grain": "Drithëra",
+      "peanut": "Kikirikë",
+      "seafood": "Fruta deti",
+      "sesame": "Susam",
+      "shellfish": "Guaskorë",
+      "soy": "Soja",
+      "sulfite": "Sulfite",
+      "treeNut": "Arra",
+      "wheat": "Grurë",
+      "fish": "Peshk"
+    },
+    "goals": {
+      "lowCarb": "Pak karbohidrate",
+      "highProtein": "I pasur me proteina",
+      "lowSodium": "Pak natrium",
+      "sugarFree": "Pa sheqer",
+      "diabeticFriendly": "I përshtatshëm për diabetikët",
+      "heartHealthy": "I shëndetshëm për zemrën"
+    }
   },
   "addToShoppingListSheet": {
     "addFailedRetry": "Nuk u shtua dot artikulli. Provoje sërish.",

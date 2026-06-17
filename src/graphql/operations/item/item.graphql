@@ -345,6 +345,40 @@ mutation CreateItem($input: CreateItemInput!) {
   }
 }
 
+# Hide a catalog item from a surface's suggestions (Add Again / Favorites /
+# Popular). Per-user and per-surface; reversible via UndismissSuggestion. Lives
+# here (shared item operations) so both the pantry and shopping sheets can use it
+# without reaching across feature boundaries.
+mutation DismissSuggestion($input: DismissSuggestionInput!) {
+  dismissSuggestion(input: $input) {
+    __typename
+    ... on DismissSuggestionPayload {
+      itemId
+      surface
+      dismissed
+    }
+    ... on Error {
+      code
+      message
+    }
+  }
+}
+
+mutation UndismissSuggestion($input: UndismissSuggestionInput!) {
+  undismissSuggestion(input: $input) {
+    __typename
+    ... on UndismissSuggestionPayload {
+      itemId
+      surface
+      dismissed
+    }
+    ... on Error {
+      code
+      message
+    }
+  }
+}
+
 mutation FlagItemForReview($input: FlagItemForReviewInput!) {
   flagItemForReview(input: $input) {
     __typename

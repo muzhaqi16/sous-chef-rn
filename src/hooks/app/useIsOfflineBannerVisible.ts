@@ -1,12 +1,13 @@
 import { useAppStore, useIsOnline } from '#store/useAppStore';
 
 /**
- * Whether the persistent offline banner is currently shown.
+ * Whether the server can't currently be reached — drives the persistent
+ * offline indicator (`OfflineStatusPill`) and transition toaster
+ * (`OfflineTransitionToaster`) via `useOfflineStatus`.
  *
- * Shared by `OfflineBanner` (which renders the bar) and
- * `OfflineBannerInsetProvider` (which re-publishes the safe-area insets with
- * `top: 0` below the banner, since the banner then supplies the status-bar
- * inset). Keeping both readers on one hook stops the inset math from drifting.
+ * Covers all three "offline" cases so callers don't have to reassemble them:
+ * device offline, API breaker open while the device is online, and
+ * user-toggled offline mode.
  */
 export const useIsOfflineBannerVisible = (): boolean => {
   const isOnline = useIsOnline();

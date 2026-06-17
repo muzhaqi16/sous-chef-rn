@@ -487,6 +487,46 @@ type AdminItemUnitConversionsResult {
   totalCount: Int!
 }
 
+"""
+Admin input to purge pantry items by id, bypassing ownership. Intended for
+cleaning up junk/test rows (e.g. E2E fixtures) that pollute the
+RECENTLY_DELETED suggestion source.
+"""
+input AdminPurgePantryItemsInput {
+  """Pantry item row ids to delete."""
+  ids: [ID!]!
+  """
+  When true, hard-delete the rows (cascades photos/changes/batches, nulls usages). When false/omitted, soft-delete (sets deletedAt).
+  """
+  permanent: Boolean
+}
+
+type AdminPurgePantryItemsPayload {
+  result: BulkOperationSummary!
+}
+
+union AdminPurgePantryItemsResult = AdminPurgePantryItemsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
+
+"""
+Admin input to purge shopping list items by id, bypassing ownership. Intended
+for cleaning up junk/test rows (e.g. E2E fixtures) that pollute the
+RECENTLY_DELETED suggestion source.
+"""
+input AdminPurgeShoppingListItemsInput {
+  """Shopping list item row ids to delete."""
+  ids: [ID!]!
+  """
+  When true, hard-delete the rows. When false/omitted, soft-delete (sets deletedAt).
+  """
+  permanent: Boolean
+}
+
+type AdminPurgeShoppingListItemsPayload {
+  result: BulkOperationSummary!
+}
+
+union AdminPurgeShoppingListItemsResult = AdminPurgeShoppingListItemsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
+
 type AdminUpdateItemPayload {
   item: Item!
 }
@@ -3067,6 +3107,27 @@ input DismissNotificationInput {
   notificationId: ID!
 }
 
+"""
+Input to hide a catalog item from a user's suggestions on a given surface.
+"""
+input DismissSuggestionInput {
+  """Catalog item to stop suggesting."""
+  itemId: ID!
+  """Which surface to hide it from (pantry vs shopping)."""
+  surface: SuggestionSurface!
+}
+
+type DismissSuggestionPayload {
+  """Always true — the item is now dismissed on this surface."""
+  dismissed: Boolean!
+  """The item the dismissal applies to."""
+  itemId: ID!
+  """Surface the dismissal applies to."""
+  surface: SuggestionSurface!
+}
+
+union DismissSuggestionResult = ConflictError | DismissSuggestionPayload | ForbiddenError | NotFoundError | ValidationError
+
 """Display format for quantities"""
 enum DisplayFormat {
   AUTO
@@ -5569,6 +5630,20 @@ type Mutation {
   adminDeleteRecipeReview(input: AdminDeleteRecipeReviewInput!): AdminDeleteRecipeReviewResult!
   """Delete a user's account as an administrator."""
   adminDeleteUser(input: AdminDeleteUserInput!): AdminDeleteUserResult!
+  """
+  Admin: purge pantry items by id, bypassing ownership. Hard-deletes when
+  permanent is true (removing them from the RECENTLY_DELETED suggestion
+  source), otherwise soft-deletes. Intended for cleaning up junk/test rows
+  such as E2E fixtures. Returns a summary of how many were deleted.
+  """
+  adminPurgePantryItems(input: AdminPurgePantryItemsInput!): AdminPurgePantryItemsResult!
+  """
+  Admin: purge shopping list items by id, bypassing ownership. Hard-deletes
+  when permanent is true (removing them from the RECENTLY_DELETED suggestion
+  source), otherwise soft-deletes. Intended for cleaning up junk/test rows
+  such as E2E fixtures. Returns a summary of how many were deleted.
+  """
+  adminPurgeShoppingListItems(input: AdminPurgeShoppingListItemsInput!): AdminPurgeShoppingListItemsResult!
   """Admin: Update any item (bypasses ownership restrictions)"""
   adminUpdateItem(input: UpdateItemInput!): AdminUpdateItemResult!
   """Admin: Update any recipe (bypasses ownership restrictions)"""
@@ -5791,6 +5866,16 @@ type Mutation {
   deleteUserAddress(input: DeleteUserAddressInput!): DeleteUserAddressResult!
   """Dismiss an expiration notification so it no longer appears."""
   dismissExpirationNotification(input: DismissNotificationInput!): DismissExpirationNotificationResult!
+  """
+  Hide a catalog item from your pantry or shopping suggestions
+  ("stop suggesting this"). Non-destructive and reversible via
+  undismissSuggestion — the item's history and frequency data are preserved.
+  Affects the RECENTLY_DELETED, FREQUENTLY_ADDED, and POPULAR sources on the
+  chosen surface; low-stock and expiring-soon alerts are never suppressed.
+  Dismissals are per-user, so on shared lists/homes only your own
+  suggestions are affected.
+  """
+  dismissSuggestion(input: DismissSuggestionInput!): DismissSuggestionResult!
   """Duplicate a meal plan with all its items, shifted to new dates."""
   duplicateMealPlan(input: DuplicateMealPlanInput!): DuplicateMealPlanResult!
   """Duplicate a template with a new name"""
@@ -6011,6 +6096,11 @@ type Mutation {
   uncategorizeItem(input: UncategorizeItemInput!): UncategorizeItemResult!
   """Revert a completed shopping list back to active."""
   uncompleteShoppingList(input: UncompleteShoppingListInput!): UncompleteShoppingListResult!
+  """
+  Restore a previously-dismissed item so it can appear in your suggestions
+  again on the given surface.
+  """
+  undismissSuggestion(input: UndismissSuggestionInput!): UndismissSuggestionResult!
   """Remove a recipe from favorites."""
   unfavoriteRecipe(input: UnfavoriteRecipeInput!): UnfavoriteRecipeResult!
   """Update an existing brand."""
@@ -9644,6 +9734,18 @@ enum SuggestionSource {
 }
 
 """
+Which suggestion surface a dismissal applies to. Dismissals are scoped per
+surface, so a user can hide an item from pantry suggestions while keeping it
+in shopping suggestions (and vice-versa).
+"""
+enum SuggestionSurface {
+  """Pantry item suggestions (Pantry.suggestions)"""
+  PANTRY
+  """Shopping list item suggestions (ShoppingList.suggestions)"""
+  SHOPPING
+}
+
+"""
 Lightweight unit type for suggestion displays.
 Contains only the fields needed for one-tap add UI.
 """
@@ -9990,6 +10092,27 @@ type UncompleteShoppingListPayload {
 }
 
 union UncompleteShoppingListResult = ConflictError | ForbiddenError | NotFoundError | UncompleteShoppingListPayload | ValidationError
+
+"""
+Input to restore a previously-dismissed item so it can be suggested again.
+"""
+input UndismissSuggestionInput {
+  """Catalog item to start suggesting again."""
+  itemId: ID!
+  """Which surface to restore it on (pantry vs shopping)."""
+  surface: SuggestionSurface!
+}
+
+type UndismissSuggestionPayload {
+  """Always false — the item can be suggested again on this surface."""
+  dismissed: Boolean!
+  """The item the dismissal was removed for."""
+  itemId: ID!
+  """Surface the item was restored on."""
+  surface: SuggestionSurface!
+}
+
+union UndismissSuggestionResult = ConflictError | ForbiddenError | NotFoundError | UndismissSuggestionPayload | ValidationError
 
 input UnfavoriteRecipeInput {
   recipeId: ID!

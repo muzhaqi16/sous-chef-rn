@@ -2,6 +2,8 @@ import { ApolloLink, Observable } from '@apollo/client';
 import { getMainDefinition } from '@apollo/client/utilities';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { logger } from '#/utils/environment';
+import { useStore } from '#store';
+import { isApiUnavailable } from '#store/slices/networkSlice';
 import { apiReachabilityBreaker } from './apiReachabilityBreaker';
 
 const describeError = (error: unknown): string => {
@@ -92,6 +94,18 @@ export const createNetworkStatusLink = () =>
             apiReachabilityBreaker.recordFailure(
               `${operationName} (${operationKind}): ${describeError(error)}`,
             );
+            // One warning per operation. This link is above retryLink, so
+            // retries are absorbed — errorLink (below retryLink) used to log
+            // every attempt, producing a wall of identical warnings. Suppressed
+            // once offline / circuit open: then the breaker's one-line verdict
+            // is the signal. Reading state after recordFailure naturally
+            // silences the operation that trips the circuit.
+            const state = useStore.getState();
+            if (!state.offlineModeEnabled && !isApiUnavailable(state)) {
+              logger.warn(
+                `Network error for ${operationName}: ${describeError(error)}`,
+              );
+            }
           }
           observer.error(error);
         },

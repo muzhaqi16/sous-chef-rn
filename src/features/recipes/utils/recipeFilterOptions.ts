@@ -3,6 +3,9 @@
 // to the translated chip label via i18n. Shared by RecipeFilterSheet (selection
 // UI) and ActiveFilterChipsRow (active-filter display).
 
+import { isLifestyleDiet } from '#/constants/dietary';
+import { SPOONACULAR_TO_DIET_ENUM } from './recipeFilterMaps';
+
 export interface RecipeFilterOption {
   labelKey: string;
   value: string;
@@ -40,6 +43,25 @@ export const INTOLERANCE_OPTIONS: RecipeFilterOption[] = [
   { labelKey: 'recipeFilters.intolerances.wheat', value: 'wheat' },
   { labelKey: 'recipeFilters.intolerances.fish', value: 'fish' },
 ];
+
+// ── Lifestyle vs constraint split (derived from the shared classification) ──
+// Lifestyle diets are mutually exclusive (single-select); constraint diets
+// stack on top (multi-select). Derived from `isLifestyleDiet` so a schema enum
+// change flows through one place. `SPOONACULAR_TO_DIET_ENUM` maps the option's
+// Spoonacular string back to the enum the classification is keyed on.
+export const LIFESTYLE_DIET_OPTIONS: RecipeFilterOption[] = DIET_OPTIONS.filter(
+  option => isLifestyleDietValue(option.value),
+);
+
+export const CONSTRAINT_DIET_OPTIONS: RecipeFilterOption[] =
+  DIET_OPTIONS.filter(option => !isLifestyleDietValue(option.value));
+
+/** True when a Spoonacular-format diet string is a lifestyle (exclusive) diet.
+ *  Unknown strings default to lifestyle (treated as the exclusive primary). */
+export function isLifestyleDietValue(value: string): boolean {
+  const dietEnum = SPOONACULAR_TO_DIET_ENUM[value];
+  return dietEnum ? isLifestyleDiet(dietEnum) : true;
+}
 
 export const MEAL_TYPES: RecipeFilterOption[] = [
   { labelKey: 'recipeFilters.mealTypes.breakfast', value: 'breakfast' },

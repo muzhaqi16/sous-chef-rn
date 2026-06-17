@@ -3,6 +3,9 @@ import type { ApolloClient } from '@apollo/client';
 import { OperationTypeNode, type DocumentNode } from 'graphql';
 import { createNetworkStatusLink } from '../networkStatusLink';
 import { apiReachabilityBreaker } from '../apiReachabilityBreaker';
+import { useStore } from '#store';
+import { isApiUnavailable } from '#store/slices/networkSlice';
+import { logger } from '#/utils/environment';
 
 jest.mock('../apiReachabilityBreaker', () => ({
   apiReachabilityBreaker: {
@@ -13,6 +16,15 @@ jest.mock('../apiReachabilityBreaker', () => ({
 
 jest.mock('#/utils/isNetworkError', () => ({
   isNetworkError: jest.fn((e: { network?: boolean }) => e?.network === true),
+}));
+
+// Network-error logging now lives here (above retryLink). Default to
+// "reachable" so the surprising-case path that warns stays exercised.
+jest.mock('#store', () => ({
+  useStore: { getState: jest.fn(() => ({ offlineModeEnabled: false })) },
+}));
+jest.mock('#store/slices/networkSlice', () => ({
+  isApiUnavailable: jest.fn(() => false),
 }));
 
 const QUERY = gql`
@@ -62,8 +74,15 @@ describe('createNetworkStatusLink', () => {
   const link = createNetworkStatusLink();
   const recordSuccess = apiReachabilityBreaker.recordSuccess as jest.Mock;
   const recordFailure = apiReachabilityBreaker.recordFailure as jest.Mock;
+  const getState = useStore.getState as jest.Mock;
+  const mockedIsApiUnavailable = isApiUnavailable as jest.Mock;
+  const warn = logger.warn as jest.Mock;
 
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    getState.mockReturnValue({ offlineModeEnabled: false });
+    mockedIsApiUnavailable.mockReturnValue(false);
+  });
 
   function run(forward: ApolloLink.ForwardFunction) {
     link
@@ -133,6 +152,40 @@ describe('createNetworkStatusLink', () => {
       }),
     );
     expect(recordFailure).toHaveBeenCalledTimes(1);
+  });
+
+  it('warns once per operation on a network error while the API is reachable', () => {
+    run(
+      forwardEmitting(o => {
+        o.error({ network: true, message: 'Network request failed' });
+      }),
+    );
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('Network error for GetItems'),
+    );
+  });
+
+  it('suppresses the network-error warning while offline mode is enabled', () => {
+    getState.mockReturnValue({ offlineModeEnabled: true });
+    run(
+      forwardEmitting(o => {
+        o.error({ network: true, message: 'Network request failed' });
+      }),
+    );
+    expect(recordFailure).toHaveBeenCalledTimes(1);
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('suppresses the network-error warning once the API is known-unavailable', () => {
+    mockedIsApiUnavailable.mockReturnValue(true);
+    run(
+      forwardEmitting(o => {
+        o.error({ network: true, message: 'Network request failed' });
+      }),
+    );
+    expect(recordFailure).toHaveBeenCalledTimes(1);
+    expect(warn).not.toHaveBeenCalled();
   });
 
   it('ignores a non-network error (does not touch the breaker)', () => {

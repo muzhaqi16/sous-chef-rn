@@ -12,8 +12,8 @@ import {
   hasCredentials,
   clearCredentials,
   getBiometricCapability,
-  saveEmailOnly,
-  getEmailOnly,
+  saveLastBiometricEmail,
+  getLastBiometricEmail,
   saveTempRegistrationPassword,
   loadTempRegistrationPassword,
   clearTempRegistrationPassword,
@@ -54,12 +54,12 @@ describe('keychain storage', () => {
       // Should save main credentials + indicator (2 calls)
       expect(mockSetGenericPassword).toHaveBeenCalledTimes(2);
 
-      // First call should save actual credentials
+      // First call should save actual credentials under the per-account service
       expect(mockSetGenericPassword).toHaveBeenCalledWith(
         'user@test.com',
         'password123',
         expect.objectContaining({
-          service: 'dev.souschef.app.credentials',
+          service: 'dev.souschef.app.credentials.user@test.com',
         }),
       );
     });
@@ -96,7 +96,7 @@ describe('keychain storage', () => {
         password: 'password123',
       });
 
-      const result = await loadCredentials();
+      const result = await loadCredentials('user@test.com');
       expect(result).toEqual({
         username: 'user@test.com',
         password: 'password123',
@@ -106,24 +106,24 @@ describe('keychain storage', () => {
     it('returns null when no credentials exist', async () => {
       mockGetGenericPassword.mockResolvedValue(false);
 
-      const result = await loadCredentials();
+      const result = await loadCredentials('user@test.com');
       expect(result).toBeNull();
     });
 
     it('returns null on error', async () => {
       mockGetGenericPassword.mockRejectedValue(new Error('Keychain error'));
 
-      const result = await loadCredentials();
+      const result = await loadCredentials('user@test.com');
       expect(result).toBeNull();
     });
 
-    it('uses default service when none provided', async () => {
+    it('reads the per-account service for the given email', async () => {
       mockGetGenericPassword.mockResolvedValue(false);
 
-      await loadCredentials();
+      await loadCredentials('user@test.com');
       expect(mockGetGenericPassword).toHaveBeenCalledWith(
         expect.objectContaining({
-          service: 'dev.souschef.app.credentials',
+          service: 'dev.souschef.app.credentials.user@test.com',
         }),
       );
     });
@@ -131,7 +131,7 @@ describe('keychain storage', () => {
     it('passes authentication prompt', async () => {
       mockGetGenericPassword.mockResolvedValue(false);
 
-      await loadCredentials();
+      await loadCredentials('user@test.com');
       expect(mockGetGenericPassword).toHaveBeenCalledWith(
         expect.objectContaining({
           authenticationPrompt: {
@@ -144,29 +144,35 @@ describe('keychain storage', () => {
   });
 
   describe('hasCredentials', () => {
+    // Distinct emails per spec so the module-level per-account cache (which
+    // persists across tests in this suite) can't answer for a prior spec.
     it('returns true when indicator exists', async () => {
       mockGetGenericPassword.mockResolvedValue({
         username: 'credentials_exist',
         password: '12345',
       });
 
-      const result = await hasCredentials();
+      const result = await hasCredentials('has-true@test.com');
       expect(result).toBe(true);
+      expect(mockGetGenericPassword).toHaveBeenCalledWith(
+        expect.objectContaining({
+          service: 'dev.souschef.app.credentials.indicator.has-true@test.com',
+        }),
+      );
     });
 
     it('returns false when indicator does not exist', async () => {
       mockGetGenericPassword.mockResolvedValue(false);
 
-      const result = await hasCredentials();
-      // Note: result depends on cache state from previous tests
-      expect(typeof result).toBe('boolean');
+      const result = await hasCredentials('has-false@test.com');
+      expect(result).toBe(false);
     });
 
     it('returns false on error', async () => {
       mockGetGenericPassword.mockRejectedValue(new Error('Keychain error'));
 
-      const result = await hasCredentials();
-      expect(typeof result).toBe('boolean');
+      const result = await hasCredentials('has-error@test.com');
+      expect(result).toBe(false);
     });
   });
 
@@ -174,14 +180,16 @@ describe('keychain storage', () => {
     it('clears both credentials and indicator', async () => {
       mockResetGenericPassword.mockResolvedValue(true);
 
-      await clearCredentials();
+      await clearCredentials('user@test.com');
       expect(mockResetGenericPassword).toHaveBeenCalledTimes(2);
     });
 
     it('throws on error but still invalidates cache', async () => {
       mockResetGenericPassword.mockRejectedValue(new Error('Clear failed'));
 
-      await expect(clearCredentials()).rejects.toThrow('Clear failed');
+      await expect(clearCredentials('user@test.com')).rejects.toThrow(
+        'Clear failed',
+      );
       expect(logger.error).toHaveBeenCalledWith(
         expect.stringContaining('Failed to clear credentials:'),
         expect.any(Error),
@@ -225,11 +233,11 @@ describe('keychain storage', () => {
     });
   });
 
-  describe('saveEmailOnly', () => {
+  describe('saveLastBiometricEmail', () => {
     it('saves email using internet credentials', async () => {
       mockSetInternetCredentials.mockResolvedValue(true);
 
-      await saveEmailOnly('user@test.com');
+      await saveLastBiometricEmail('user@test.com');
       expect(mockSetInternetCredentials).toHaveBeenCalledWith(
         'souschefrn-email',
         'user@test.com',
@@ -242,7 +250,9 @@ describe('keychain storage', () => {
       mockSetInternetCredentials.mockRejectedValue(new Error('Save error'));
 
       // Should not throw
-      await expect(saveEmailOnly('user@test.com')).resolves.toBeUndefined();
+      await expect(
+        saveLastBiometricEmail('user@test.com'),
+      ).resolves.toBeUndefined();
       expect(logger.error).toHaveBeenCalledWith(
         expect.stringContaining('Failed to save email:'),
         expect.any(Error),
@@ -250,28 +260,28 @@ describe('keychain storage', () => {
     });
   });
 
-  describe('getEmailOnly', () => {
+  describe('getLastBiometricEmail', () => {
     it('returns email when stored', async () => {
       mockGetInternetCredentials.mockResolvedValue({
         username: 'user@test.com',
         password: 'user@test.com',
       });
 
-      const result = await getEmailOnly();
+      const result = await getLastBiometricEmail();
       expect(result).toBe('user@test.com');
     });
 
     it('returns null when no email stored', async () => {
       mockGetInternetCredentials.mockResolvedValue(false);
 
-      const result = await getEmailOnly();
+      const result = await getLastBiometricEmail();
       expect(result).toBeNull();
     });
 
     it('returns null on error', async () => {
       mockGetInternetCredentials.mockRejectedValue(new Error('Error'));
 
-      const result = await getEmailOnly();
+      const result = await getLastBiometricEmail();
       expect(result).toBeNull();
       expect(logger.error).toHaveBeenCalledWith(
         expect.stringContaining('Failed to get email:'),
@@ -490,15 +500,15 @@ describe('keychain storage', () => {
     });
   });
 
-  describe('legacy support functions', () => {
+  describe('account-scoped aliases', () => {
     it('hasCredentialsForAccount delegates to hasCredentials', async () => {
-      const result = await hasCredentialsForAccount();
+      const result = await hasCredentialsForAccount('alias-has@test.com');
       expect(typeof result).toBe('boolean');
     });
 
     it('loadCredentialsForAccount delegates to loadCredentials', async () => {
       mockGetGenericPassword.mockResolvedValue(false);
-      const result = await loadCredentialsForAccount();
+      const result = await loadCredentialsForAccount('alias-load@test.com');
       expect(result).toBeNull();
     });
 

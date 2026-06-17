@@ -8,7 +8,6 @@ import {
   getSupportedBiometryType,
   setInternetCredentials,
   getInternetCredentials,
-  type AuthenticationPrompt,
 } from 'react-native-keychain';
 import { logger } from '#/utils/environment';
 
@@ -16,22 +15,30 @@ const DEFAULT_SERVICE = 'dev.souschef.app.credentials';
 const CREDENTIALS_INDICATOR_SERVICE = 'dev.souschef.app.credentials.indicator';
 const TEMP_REGISTRATION_SERVICE = 'dev.souschef.app.temp.registration';
 const SESSION_TOKENS_SERVICE = 'dev.souschef.app.session.tokens';
-
-export interface SaveOptions {
-  /** namespace of this item */
-  service?: string;
-  /** require current biometrics (or device passcode) to read */
-  accessControl?: ACCESS_CONTROL;
-  /** on Android, force hardware-backed keystore */
-  securityLevel?: SECURITY_LEVEL;
-}
+const LAST_BIOMETRIC_EMAIL_KEY = 'souschefrn-email';
 
 // Simple queue to prevent concurrent keychain access on Android
 let isOperationInProgress = false;
 const operationQueue: Array<() => Promise<void>> = [];
 
-// PERFORMANCE: Cache for hasCredentials() to avoid repeated native calls
-let credentialsExistCache: boolean | null = null;
+// PERFORMANCE: Per-account cache for hasCredentials() to avoid repeated native
+// calls. Keyed by the normalized account so one user's lookup never answers
+// for another.
+const credentialsExistCache = new Map<string, boolean>();
+
+/**
+ * Normalize an account identifier so the same email always maps to the same
+ * keychain slot regardless of how it was cased/spaced at the call site.
+ */
+const normalizeAccount = (email: string): string => email.trim().toLowerCase();
+
+/** Per-account credential service — each user's credentials live in their own slot. */
+const credentialsServiceFor = (email: string): string =>
+  `${DEFAULT_SERVICE}.${normalizeAccount(email)}`;
+
+/** Per-account indicator service — readable without a biometric prompt. */
+const indicatorServiceFor = (email: string): string =>
+  `${CREDENTIALS_INDICATOR_SERVICE}.${normalizeAccount(email)}`;
 
 const queueOperation = async <T>(operation: () => Promise<T>): Promise<T> => {
   return new Promise<T>((resolve, reject) => {
@@ -74,23 +81,24 @@ const processQueue = async () => {
 };
 
 /**
- * Store username & password in the native keystore/keychain
- * under a policy that requires biometry to retrieve.
+ * Store an account's email & password in the native keystore/keychain under a
+ * per-account policy that requires biometry to retrieve. Each account gets its
+ * own slot, so enabling biometrics for one user never overwrites or exposes
+ * another user's credentials.
  */
 export async function saveCredentials(
-  username: string,
+  email: string,
   password: string,
-  service: string = DEFAULT_SERVICE,
 ): Promise<void> {
+  const service = credentialsServiceFor(email);
+  const indicatorService = indicatorServiceFor(email);
   return queueOperation(async () => {
-    // First, clear any old, unprotected creds:
+    // First, clear any old creds for THIS account:
     await resetGenericPassword({ service });
-    await resetGenericPassword({
-      service: CREDENTIALS_INDICATOR_SERVICE,
-    });
+    await resetGenericPassword({ service: indicatorService });
 
     // Now save with a policy that forces a prompt on load
-    const success = await setGenericPassword(username, password, {
+    const success = await setGenericPassword(email, password, {
       service,
       // Allow either FaceID/TouchID (iOS) or any enrolled biometric (Android)
       accessControl: ACCESS_CONTROL.BIOMETRY_ANY,
@@ -104,13 +112,13 @@ export async function saveCredentials(
       throw new Error("Keychain couldn't save credentials");
     }
 
-    // Save an unprotected indicator that credentials exist
-    // This allows us to check if credentials exist without triggering biometric authentication
+    // Save an unprotected per-account indicator that credentials exist so we
+    // can check without triggering biometric authentication.
     const indicatorSuccess = await setGenericPassword(
       'credentials_exist',
       Date.now().toString(),
       {
-        service: CREDENTIALS_INDICATOR_SERVICE,
+        service: indicatorService,
         accessible: ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
         // No access control - this can be read without biometric authentication
       },
@@ -123,27 +131,25 @@ export async function saveCredentials(
     }
 
     // PERFORMANCE: Invalidate cache after saving credentials
-    credentialsExistCache = true;
+    credentialsExistCache.set(normalizeAccount(email), true);
+
+    // Record the most-recently-enrolled account so the login screen (which has
+    // no logged-in user yet) knows which account to offer biometric login for.
+    await saveLastBiometricEmail(email);
   });
 }
 
-export interface LoadOptions {
-  service?: string;
-  /** custom title & cancel button for the biometric prompt */
-  authenticationPrompt?: AuthenticationPrompt;
-}
-
 /**
- * Retrieve stored credentials, prompting the user
+ * Retrieve a specific account's stored credentials, prompting the user
  * to authenticate with biometrics / passcode.
  */
 export async function loadCredentials(
-  service: string = DEFAULT_SERVICE,
+  email: string,
 ): Promise<{ username: string; password: string } | null> {
   try {
     // This call will now *always* trigger FaceID/TouchID (or device passcode)
     const creds = await getGenericPassword({
-      service,
+      service: credentialsServiceFor(email),
       authenticationPrompt: {
         title: 'Unlock saved credentials',
         cancel: 'Use manual login',
@@ -163,28 +169,32 @@ export async function loadCredentials(
 }
 
 /**
- * Check if credentials exist without triggering biometric authentication.
- * This checks the unprotected indicator, not the actual credentials.
+ * Check if a specific account has credentials without triggering biometric
+ * authentication. This checks that account's unprotected indicator, not the
+ * protected credentials.
  *
- * PERFORMANCE: Results are cached to avoid repeated native Keychain calls.
- * Cache is invalidated when credentials are saved or cleared.
+ * PERFORMANCE: Results are cached per account to avoid repeated native Keychain
+ * calls. The cache is invalidated when that account's credentials are saved or
+ * cleared.
  */
-export async function hasCredentials(): Promise<boolean> {
+export async function hasCredentials(email: string): Promise<boolean> {
+  const account = normalizeAccount(email);
+
   // PERFORMANCE: Return cached result if available
-  if (credentialsExistCache !== null) {
-    return credentialsExistCache;
+  const cached = credentialsExistCache.get(account);
+  if (cached !== undefined) {
+    return cached;
   }
 
+  const indicatorService = indicatorServiceFor(email);
   return queueOperation(async () => {
     try {
       // Check the unprotected indicator instead of the protected credentials
-      const indicator = await getGenericPassword({
-        service: CREDENTIALS_INDICATOR_SERVICE,
-      });
+      const indicator = await getGenericPassword({ service: indicatorService });
       const result = !!indicator;
 
       // PERFORMANCE: Cache the result
-      credentialsExistCache = result;
+      credentialsExistCache.set(account, result);
 
       return result;
     } catch (err) {
@@ -195,12 +205,12 @@ export async function hasCredentials(): Promise<boolean> {
         await new Promise(resolve => setTimeout(resolve, 100));
         try {
           const indicator = await getGenericPassword({
-            service: CREDENTIALS_INDICATOR_SERVICE,
+            service: indicatorService,
           });
           const result = !!indicator;
 
           // PERFORMANCE: Cache the result
-          credentialsExistCache = result;
+          credentialsExistCache.set(account, result);
 
           return result;
         } catch {
@@ -215,23 +225,20 @@ export async function hasCredentials(): Promise<boolean> {
 }
 
 /**
- * Clear both the protected credentials and the unprotected indicator.
+ * Clear a specific account's protected credentials and unprotected indicator.
  */
-export async function clearCredentials(
-  service: string = DEFAULT_SERVICE,
-): Promise<void> {
+export async function clearCredentials(email: string): Promise<void> {
+  const account = normalizeAccount(email);
   try {
-    await resetGenericPassword({ service });
-    await resetGenericPassword({
-      service: CREDENTIALS_INDICATOR_SERVICE,
-    });
+    await resetGenericPassword({ service: credentialsServiceFor(email) });
+    await resetGenericPassword({ service: indicatorServiceFor(email) });
 
     // PERFORMANCE: Invalidate cache after clearing credentials
-    credentialsExistCache = false;
+    credentialsExistCache.set(account, false);
   } catch (err) {
     logger.error('Failed to clear credentials:', err);
     // PERFORMANCE: Invalidate cache even on error to be safe
-    credentialsExistCache = null;
+    credentialsExistCache.delete(account);
     throw err;
   }
 }
@@ -255,9 +262,14 @@ export async function getBiometricCapability(): Promise<{
   }
 }
 
-export async function saveEmailOnly(email: string): Promise<void> {
+/**
+ * Remember which account most recently enrolled biometric login. The login
+ * screen has no logged-in user, so it reads this to decide which account's
+ * credentials the biometric button should unlock.
+ */
+export async function saveLastBiometricEmail(email: string): Promise<void> {
   try {
-    await setInternetCredentials('souschefrn-email', email, email, {
+    await setInternetCredentials(LAST_BIOMETRIC_EMAIL_KEY, email, email, {
       accessible: ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
     });
   } catch (error) {
@@ -265,9 +277,9 @@ export async function saveEmailOnly(email: string): Promise<void> {
   }
 }
 
-export async function getEmailOnly(): Promise<string | null> {
+export async function getLastBiometricEmail(): Promise<string | null> {
   try {
-    const result = await getInternetCredentials('souschefrn-email');
+    const result = await getInternetCredentials(LAST_BIOMETRIC_EMAIL_KEY);
     return result ? result.username : null;
   } catch (error) {
     logger.error('Failed to get email:', error);
@@ -466,18 +478,18 @@ export async function clearSessionTokens(): Promise<boolean> {
   });
 }
 
-// Legacy support functions for the existing codebase
-export async function hasCredentialsForAccount(): Promise<boolean> {
-  // For the new simplified implementation, we just check if any credentials exist
-  return hasCredentials();
+// Account-scoped aliases kept for the existing call sites.
+export async function hasCredentialsForAccount(
+  email: string,
+): Promise<boolean> {
+  return hasCredentials(email);
 }
 
-export async function loadCredentialsForAccount(): Promise<{
+export async function loadCredentialsForAccount(email: string): Promise<{
   username: string;
   password: string;
 } | null> {
-  // For the new simplified implementation, we just load the default credentials
-  return loadCredentials();
+  return loadCredentials(email);
 }
 
 export async function getStoredAccounts(): Promise<

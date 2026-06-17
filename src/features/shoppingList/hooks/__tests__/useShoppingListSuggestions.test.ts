@@ -55,8 +55,11 @@ function buildSuggestion(input: SuggestionInput) {
 function buildSuggestionsMock(
   listId: string,
   suggestions: ReturnType<typeof buildSuggestion>[],
-  limit = 15,
+  limit = 20,
 ): MockedResponse {
+  // Each source is fetched via its own aliased field; bucket the flat input.
+  const bySource = (source: SuggestionSource) =>
+    suggestions.filter(s => s.source === source);
   return {
     request: {
       query: GetShoppingListSuggestionsDocument,
@@ -67,7 +70,9 @@ function buildSuggestionsMock(
         shoppingList: {
           __typename: 'ShoppingList',
           id: listId,
-          suggestions,
+          recentlyDeleted: bySource(SuggestionSource.RecentlyDeleted),
+          frequentlyAdded: bySource(SuggestionSource.FrequentlyAdded),
+          popular: bySource(SuggestionSource.Popular),
         },
       },
     },
@@ -78,7 +83,7 @@ function buildSuggestionsMock(
 function buildSuggestionsErrorMock(
   listId: string,
   error: Error,
-  limit = 15,
+  limit = 20,
 ): MockedResponse {
   return {
     request: {

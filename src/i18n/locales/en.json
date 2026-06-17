@@ -182,7 +182,8 @@
     "deviceOfflinePending_other": "You're offline — {{count}} changes will sync when reconnected",
     "apiDown": "Can't reach the server — changes will sync when it's back",
     "apiDownPending_one": "Can't reach the server — {{count}} change will sync when it's back",
-    "apiDownPending_other": "Can't reach the server — {{count}} changes will sync when it's back"
+    "apiDownPending_other": "Can't reach the server — {{count}} changes will sync when it's back",
+    "backOnline": "Back online — syncing your changes"
   },
   "empty": {
     "noItems": "No items yet",
@@ -542,6 +543,8 @@
     "applyA11y": "Apply filters",
     "infoBanner": "Filters only apply to text search",
     "dietTitle": "Diet",
+    "dietLifestyleLabel": "Choose your diet",
+    "dietConstraintsLabel": "Dietary constraints",
     "selectAllThatApply": "Select all that apply",
     "selectOne": "Select one",
     "intolerancesTitle": "Allergies & Intolerances",
@@ -1936,7 +1939,76 @@
   },
   "addItemSheet": {
     "scanBarcode": "Scan Barcode",
-    "addManually": "Add Manually"
+    "addManually": "Add Manually",
+    "more": "More",
+    "allAdded": "All added",
+    "dismiss": "Dismiss suggestion",
+    "dismissed": "Removed {{name}}",
+    "undo": "Undo",
+    "dismissFailed": "Couldn't remove suggestion",
+    "undoFailed": "Couldn't undo",
+    "sections": {
+      "lowStock": "Low Stock",
+      "expiringSoon": "Expiring Soon",
+      "addAgain": "Add Again",
+      "favorites": "Your Favorites",
+      "popular": "Popular"
+    }
+  },
+  "dietaryProfile": {
+    "errorTitle": "Error",
+    "dietTitle": "Diet",
+    "dietEmpty": "No diet selected yet",
+    "dietSheetTitle": "Select Diet",
+    "updateDietFailed": "Failed to update diet",
+    "constraintsTitle": "Dietary Constraints",
+    "constraintsEmpty": "No constraints added yet",
+    "constraintsSheetTitle": "Select Dietary Constraints",
+    "addConstraintsFailed": "Failed to add dietary constraints",
+    "intolerancesTitle": "Allergies & Intolerances",
+    "intolerancesEmpty": "No allergies added yet",
+    "intolerancesSheetTitle": "Select Allergies & Intolerances",
+    "addIntolerancesFailed": "Failed to add intolerances",
+    "goalsTitle": "Health Goals",
+    "goalsEmpty": "No health goals added yet",
+    "goalsSheetTitle": "Select Health Goals",
+    "addGoalsFailed": "Failed to add health goals",
+    "diets": {
+      "vegetarian": "Vegetarian",
+      "vegan": "Vegan",
+      "glutenFree": "Gluten Free",
+      "keto": "Keto",
+      "paleo": "Paleo",
+      "pescetarian": "Pescetarian",
+      "lactoVegetarian": "Lacto Vegetarian",
+      "ovoVegetarian": "Ovo Vegetarian",
+      "primal": "Primal",
+      "lowFodmap": "Low FODMAP",
+      "whole30": "Whole30"
+    },
+    "intolerances": {
+      "dairy": "Dairy",
+      "egg": "Egg",
+      "gluten": "Gluten",
+      "grain": "Grain",
+      "peanut": "Peanut",
+      "seafood": "Seafood",
+      "sesame": "Sesame",
+      "shellfish": "Shellfish",
+      "soy": "Soy",
+      "sulfite": "Sulfite",
+      "treeNut": "Tree Nut",
+      "wheat": "Wheat",
+      "fish": "Fish"
+    },
+    "goals": {
+      "lowCarb": "Low Carb",
+      "highProtein": "High Protein",
+      "lowSodium": "Low Sodium",
+      "sugarFree": "Sugar Free",
+      "diabeticFriendly": "Diabetic Friendly",
+      "heartHealthy": "Heart Healthy"
+    }
   },
   "addToShoppingListSheet": {
     "addFailedRetry": "Failed to add item. Please try again.",

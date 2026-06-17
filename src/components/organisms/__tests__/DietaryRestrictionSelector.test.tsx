@@ -72,6 +72,7 @@ const defaultProps = {
   existingRestrictions: [],
   onAdd: jest.fn().mockResolvedValue(true),
   onRemove: jest.fn(),
+  onSelectLifestyleDiet: jest.fn().mockResolvedValue(true),
 };
 
 describe('DietaryRestrictionSelector', () => {
@@ -79,29 +80,36 @@ describe('DietaryRestrictionSelector', () => {
     jest.clearAllMocks();
   });
 
-  it('renders all three restriction sections', () => {
+  it('renders all restriction sections', () => {
     render(<DietaryRestrictionSelector {...defaultProps} />);
-    expect(screen.getByText('Diets')).toBeTruthy();
+    expect(screen.getByText('Diet')).toBeTruthy();
+    expect(screen.getByText('Dietary Constraints')).toBeTruthy();
     expect(screen.getByText('Allergies & Intolerances')).toBeTruthy();
     expect(screen.getByText('Health Goals')).toBeTruthy();
   });
 
   it('shows empty messages when no restrictions exist', () => {
     render(<DietaryRestrictionSelector {...defaultProps} />);
-    expect(screen.getByText('No diets added yet')).toBeTruthy();
+    expect(screen.getByText('No diet selected yet')).toBeTruthy();
+    expect(screen.getByText('No constraints added yet')).toBeTruthy();
     expect(screen.getByText('No allergies added yet')).toBeTruthy();
     expect(screen.getByText('No health goals added yet')).toBeTruthy();
   });
 
-  it('renders existing diet restrictions', () => {
+  it('renders the lifestyle diet in the Diet section and constraints separately', () => {
     const restrictions = [
       {
         id: 'r1',
-        diet: Diet.Vegetarian,
+        diet: Diet.Vegan,
         intolerance: null,
         healthGoal: null,
       },
-      { id: 'r2', diet: Diet.Vegan, intolerance: null, healthGoal: null },
+      {
+        id: 'r2',
+        diet: Diet.GlutenFree,
+        intolerance: null,
+        healthGoal: null,
+      },
     ];
     render(
       <DietaryRestrictionSelector
@@ -109,8 +117,9 @@ describe('DietaryRestrictionSelector', () => {
         existingRestrictions={restrictions}
       />,
     );
-    expect(screen.getByText('Vegetarian')).toBeTruthy();
+    // Lifestyle diet shows (Diet section); constraint shows (Constraints section)
     expect(screen.getByText('Vegan')).toBeTruthy();
+    expect(screen.getByText('Gluten Free')).toBeTruthy();
   });
 
   it('renders existing intolerance restrictions', () => {
@@ -151,7 +160,8 @@ describe('DietaryRestrictionSelector', () => {
 
   it('renders add buttons for each section', () => {
     render(<DietaryRestrictionSelector {...defaultProps} />);
-    expect(screen.getByTestId('add-Diets')).toBeTruthy();
+    expect(screen.getByTestId('add-Diet')).toBeTruthy();
+    expect(screen.getByTestId('add-Dietary Constraints')).toBeTruthy();
     expect(screen.getByTestId('add-Allergies & Intolerances')).toBeTruthy();
     expect(screen.getByTestId('add-Health Goals')).toBeTruthy();
   });

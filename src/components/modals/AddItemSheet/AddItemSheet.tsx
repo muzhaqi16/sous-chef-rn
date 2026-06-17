@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
@@ -15,6 +15,8 @@ import {
 } from '#components/molecules/BottomSheetSearchBar';
 import { ActionCard } from '#components/molecules/ActionCard';
 import { SuggestionListItem } from '#components/molecules/SuggestionListItem';
+import { AppPressable } from '#components/atoms/AppPressable';
+import { Icon } from '#utils/iconUtils';
 import { useItemAutocomplete } from '#hooks/autocomplete/useItemAutocomplete';
 import type {
   AddItemSheetProps,
@@ -22,7 +24,15 @@ import type {
   SuggestionGroupConfig,
 } from './types';
 import { useAddItemSheetState } from './useAddItemSheetState';
+import { SuggestionDrilldown } from './SuggestionDrilldown';
 import { Text } from '#components/atoms/Text';
+
+/**
+ * How many rows each section shows in the overview before a "More" affordance
+ * drills into that source's full list. Keeps any single source (e.g. a polluted
+ * recently-deleted list) from taking over the sheet.
+ */
+const PREVIEW_COUNT = 5;
 
 /**
  * Generic AddItemSheet component.
@@ -46,6 +56,7 @@ export function AddItemSheet<
   suggestions,
   onQuickAddSearchSuggestion,
   onQuickAddSuggestion,
+  onDismissSuggestion,
   isMutating,
   onAddManually,
   onScanPress,
@@ -87,6 +98,10 @@ export function AddItemSheet<
   const autocomplete = useItemAutocomplete({ debounceMs: 0 });
   const { handleSearchTermChange, reset: resetAutocomplete } = autocomplete;
 
+  // Drill-down view state: when set, the sheet shows one source's full list
+  // instead of the multi-section overview.
+  const [activeSourceKey, setActiveSourceKey] = useState<string | null>(null);
+
   // Determine when to show search results vs suggestions
   const hasSearchQuery = autocomplete.searchTerm.length >= 2;
   const hasSearchData =
@@ -95,16 +110,42 @@ export function AddItemSheet<
   const showSearchResults = hasSearchQuery && hasSearchData;
   const showSuggestions = !showSearchResults;
 
+  // Resolve the drilled-into section (if any) and its full item list. The
+  // drill-down is shown only while its source still has items, so emptying the
+  // list (adding everything) falls back to the overview without extra state.
+  const activeGroup = activeSourceKey
+    ? config.suggestionGroups.find(g => g.key === activeSourceKey)
+    : undefined;
+  const activeItems = activeGroup
+    ? activeGroup.accessor(suggestions.grouped)
+    : [];
+  const inDrilldown =
+    !!activeGroup && activeItems.length > 0 && showSuggestions;
+
   // Search handler - called after BottomSheetSearchBar debounce
   const handleSearchChange = (text: string) => {
     setSearchQuery(text);
     handleSearchTermChange(text);
+    // Searching always returns to the overview/results, never the drill-down.
+    if (text.length >= 2) {
+      setActiveSourceKey(null);
+    }
   };
 
   // useStandardBottomSheet handles present/dismiss. Effect-driven side
   // tasks: clear the search bar when the sheet opens, reset autocomplete on
   // close. Effect runs after commit so ref access is safe.
   const isOpen = visible && !!contextId;
+
+  // Reset the drill-down whenever the sheet's open state changes so it always
+  // opens on the overview and never reopens into a stale drilled-in source.
+  // Adjusting state during render (not an effect) per the React Compiler rules.
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+  if (prevIsOpen !== isOpen) {
+    setPrevIsOpen(isOpen);
+    setActiveSourceKey(null);
+  }
+
   useEffect(() => {
     if (isOpen) {
       searchBarRef.current?.clear();
@@ -128,8 +169,9 @@ export function AddItemSheet<
     resetAutocomplete();
   };
 
-  // Render a suggestion item with exit animation support
-  const renderSuggestionItem = (item: T) => {
+  // Render a suggestion item with exit animation support. `dismissible` adds
+  // the ✕ control for sources the API can suppress.
+  const renderSuggestionItem = (item: T, dismissible = false) => {
     const itemId = item.itemId;
     const isExiting = exitingItems.has(itemId);
 
@@ -141,6 +183,11 @@ export function AddItemSheet<
         subtitle={item.category}
         placeholderIcon={config.placeholderIcon}
         onQuickAdd={() => onQuickAddSuggestion(item)}
+        onDismiss={
+          dismissible && onDismissSuggestion
+            ? () => onDismissSuggestion(item)
+            : undefined
+        }
         quickAddDisabled={isExiting}
         isExiting={isExiting}
         onExitComplete={
@@ -151,23 +198,46 @@ export function AddItemSheet<
     );
   };
 
-  // Render a section of suggestions
+  // Render a section of suggestions — capped to a preview, with a "More"
+  // affordance that drills into the source's full list.
   const renderSuggestionSection = (groupConfig: SuggestionGroupConfig<T>) => {
     const items = groupConfig.accessor(suggestions.grouped);
     if (items.length === 0) return null;
 
+    const preview = items.slice(0, PREVIEW_COUNT);
+    const hasMore = items.length > PREVIEW_COUNT;
+    const sectionTitle = t(groupConfig.titleKey);
+
     return (
       <View key={groupConfig.key} style={styles.suggestionSection}>
-        <Text
-          size="sm"
-          weight="semibold"
-          tone="secondary"
-          style={styles.sectionTitle}
-        >
-          {groupConfig.title}
-        </Text>
+        <View style={styles.sectionHeader}>
+          <Text
+            size="sm"
+            weight="semibold"
+            tone="secondary"
+            style={styles.sectionTitle}
+          >
+            {sectionTitle}
+          </Text>
+          {!!hasMore && (
+            <AppPressable
+              onPress={() => setActiveSourceKey(groupConfig.key)}
+              style={styles.moreButton}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={`${t('addItemSheet.more')} ${sectionTitle}`}
+            >
+              <Text size="sm" weight="semibold" tone="accent">
+                {t('addItemSheet.more')}
+              </Text>
+              <Icon name="chevron-forward" size={16} tone="primary" />
+            </AppPressable>
+          )}
+        </View>
         <View style={styles.suggestionList}>
-          {items.map(renderSuggestionItem)}
+          {preview.map(item =>
+            renderSuggestionItem(item, !!groupConfig.dismissible),
+          )}
         </View>
       </View>
     );
@@ -182,104 +252,117 @@ export function AddItemSheet<
         testID={`${config.testIDPrefix}-modal`}
       >
         <View style={{ flex: 1 }} testID={`${config.testIDPrefix}-modal`}>
-          <BottomSheetScrollView
-            style={styles.scrollView}
-            contentContainerStyle={[
-              styles.contentContainer,
-              { paddingBottom: insets.bottom + 16 },
-            ]}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          >
-            {/* Header */}
-            <Text size="xl" weight="bold" style={styles.title}>
-              {config.title}
-            </Text>
-
-            {/* Search Input */}
-            <BottomSheetSearchBar
-              ref={searchBarRef}
-              placeholder={config.searchPlaceholder}
-              onChangeText={handleSearchChange}
-              onClear={() => setSearchQuery('')}
-              initialValue={initialSearchQuery}
-              isLoading={!!autocomplete.isLoading && hasSearchQuery}
-              rightActions={[
-                {
-                  icon: 'barcode-outline',
-                  onPress: onScanPress,
-                },
-              ]}
+          {inDrilldown && activeGroup ? (
+            <SuggestionDrilldown
+              title={t(activeGroup.titleKey)}
+              items={activeItems}
+              renderItem={item =>
+                renderSuggestionItem(item, !!activeGroup.dismissible)
+              }
+              onBack={() => setActiveSourceKey(null)}
+              backLabel={t('labels.back')}
+              emptyLabel={t('addItemSheet.allAdded')}
             />
+          ) : (
+            <BottomSheetScrollView
+              style={styles.scrollView}
+              contentContainerStyle={[
+                styles.contentContainer,
+                { paddingBottom: insets.bottom + 16 },
+              ]}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
+              {/* Header */}
+              <Text size="xl" weight="bold" style={styles.title}>
+                {config.title}
+              </Text>
 
-            {/* Search Results */}
-            {!!showSearchResults && (
-              <ItemSuggestionsList
-                searchQuery={state.searchQuery}
-                suggestions={autocomplete.displayItems}
-                loading={autocomplete.isLoading}
-                addManuallyPosition={config.addManuallyPosition}
-                onAddManually={handleAddManually}
-                onSelectSuggestion={handleSelectSearchSuggestion}
-                quickAddDisabled={isMutating}
-                placeholderIcon={config.placeholderIcon}
-                showBrands={false}
-                showImages={showImages}
+              {/* Search Input */}
+              <BottomSheetSearchBar
+                ref={searchBarRef}
+                placeholder={config.searchPlaceholder}
+                onChangeText={handleSearchChange}
+                onClear={() => setSearchQuery('')}
+                initialValue={initialSearchQuery}
+                isLoading={!!autocomplete.isLoading && hasSearchQuery}
+                rightActions={[
+                  {
+                    icon: 'barcode-outline',
+                    onPress: onScanPress,
+                  },
+                ]}
               />
-            )}
 
-            {/* Action Buttons - hidden when showing search results */}
-            {!showSearchResults && (
-              <View style={styles.actionButtons}>
-                <ActionCard
-                  icon="barcode-outline"
-                  label={t('addItemSheet.scanBarcode')}
-                  onPress={onScanPress}
+              {/* Search Results */}
+              {!!showSearchResults && (
+                <ItemSuggestionsList
+                  searchQuery={state.searchQuery}
+                  suggestions={autocomplete.displayItems}
+                  loading={autocomplete.isLoading}
+                  addManuallyPosition={config.addManuallyPosition}
+                  onAddManually={handleAddManually}
+                  onSelectSuggestion={handleSelectSearchSuggestion}
+                  quickAddDisabled={isMutating}
+                  placeholderIcon={config.placeholderIcon}
+                  showBrands={false}
+                  showImages={showImages}
                 />
-                <ActionCard
-                  icon="add"
-                  label={t('addItemSheet.addManually')}
-                  onPress={handleAddManually}
-                  testID={`${config.testIDPrefix}-add-manually-button`}
-                />
-              </View>
-            )}
+              )}
 
-            {/* Tutorial hint (e.g. "Tap + next to an item to add it") */}
-            {!!tutorialHint && !showSearchResults && tutorialHint}
+              {/* Action Buttons - hidden when showing search results */}
+              {!showSearchResults && (
+                <View style={styles.actionButtons}>
+                  <ActionCard
+                    icon="barcode-outline"
+                    label={t('addItemSheet.scanBarcode')}
+                    onPress={onScanPress}
+                  />
+                  <ActionCard
+                    icon="add"
+                    label={t('addItemSheet.addManually')}
+                    onPress={handleAddManually}
+                    testID={`${config.testIDPrefix}-add-manually-button`}
+                  />
+                </View>
+              )}
 
-            {/* Suggestions Sections - shown when search is empty, deferred until after animation */}
-            {!!showSuggestions && !!state.shouldRenderSuggestions && (
-              <>
-                {suggestions.loading && !suggestions.hasSuggestions ? (
-                  <View style={styles.loadingContainer}>
-                    <PrimaryActivityIndicator size="small" />
-                  </View>
-                ) : !suggestions.hasSuggestions ? (
-                  <View style={styles.emptyContainer}>
-                    <Text
-                      size="base"
-                      weight="medium"
-                      tone="secondary"
-                      style={styles.emptyText}
-                    >
-                      {config.emptyStateMessage}
-                    </Text>
-                    <Text size="sm" tone="tertiary" align="center">
-                      {config.emptyStateSubtext}
-                    </Text>
-                  </View>
-                ) : (
-                  <>
-                    {/* Render suggestion sections in priority order */}
-                    {config.suggestionGroups
-                      .sort((a, b) => a.priority - b.priority)
-                      .map(renderSuggestionSection)}
-                  </>
-                )}
-              </>
-            )}
-          </BottomSheetScrollView>
+              {/* Tutorial hint (e.g. "Tap + next to an item to add it") */}
+              {!!tutorialHint && !showSearchResults && tutorialHint}
+
+              {/* Suggestions Sections - shown when search is empty, deferred until after animation */}
+              {!!showSuggestions && !!state.shouldRenderSuggestions && (
+                <>
+                  {suggestions.loading && !suggestions.hasSuggestions ? (
+                    <View style={styles.loadingContainer}>
+                      <PrimaryActivityIndicator size="small" />
+                    </View>
+                  ) : !suggestions.hasSuggestions ? (
+                    <View style={styles.emptyContainer}>
+                      <Text
+                        size="base"
+                        weight="medium"
+                        tone="secondary"
+                        style={styles.emptyText}
+                      >
+                        {config.emptyStateMessage}
+                      </Text>
+                      <Text size="sm" tone="tertiary" align="center">
+                        {config.emptyStateSubtext}
+                      </Text>
+                    </View>
+                  ) : (
+                    <>
+                      {/* Render suggestion sections in priority order */}
+                      {config.suggestionGroups
+                        .sort((a, b) => a.priority - b.priority)
+                        .map(renderSuggestionSection)}
+                    </>
+                  )}
+                </>
+              )}
+            </BottomSheetScrollView>
+          )}
         </View>
       </BottomSheetModal>
 
@@ -319,9 +402,22 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.md,
     marginBottom: theme.spacing.xl,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: theme.spacing.md,
+  },
   sectionTitle: {
     letterSpacing: 1,
-    marginBottom: theme.spacing.md,
+    // Titles are stored title-case for the drill-down header; the compact
+    // overview header keeps its uppercase treatment via text-transform.
+    textTransform: 'uppercase',
+  },
+  moreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs / 2,
   },
   loadingContainer: {
     padding: theme.spacing.xl,

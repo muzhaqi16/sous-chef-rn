@@ -88,6 +88,7 @@ function FilterTabsItemComponent<T extends string>({
   styles.useVariants({
     state: isActive ? 'active' : isFiltered ? 'filtered' : 'inactive',
     compact: isCompact,
+    stacked: !!tab.subLabel,
   });
 
   const handlePress = () => {
@@ -134,9 +135,17 @@ function FilterTabsItemComponent<T extends string>({
           />
         ))
       )}
-      {!(tab.isAction && !tab.label) && (
-        <Text style={styles.tabLabel}>{tab.label}</Text>
-      )}
+      {!(tab.isAction && !tab.label) &&
+        (tab.subLabel ? (
+          <View style={styles.labelColumn}>
+            <Text style={styles.tabLabel}>{tab.label}</Text>
+            <Text style={styles.tabSubLabel} numberOfLines={1}>
+              {tab.subLabel}
+            </Text>
+          </View>
+        ) : (
+          <Text style={styles.tabLabel}>{tab.label}</Text>
+        ))}
       {!!hasCount && (
         <View style={styles.countBadge}>
           <Text style={styles.countText}>{count}</Text>
@@ -179,7 +188,16 @@ const styles = StyleSheet.create(theme => ({
           gap: theme.spacing.xs,
         },
       },
+      // Two-line pills (label + parent) trim the vertical padding so they sit
+      // at roughly the same height as single-line pills in the same row.
+      stacked: {
+        true: { paddingVertical: theme.spacing.xs + 2 },
+      },
     },
+  },
+  labelColumn: {
+    alignItems: 'flex-start',
+    justifyContent: 'center',
   },
   tabLabel: {
     fontSize: theme.typography.fontSize.sm - 1,
@@ -193,6 +211,30 @@ const styles = StyleSheet.create(theme => ({
       },
       compact: {
         true: { fontSize: theme.typography.fontSize.xs },
+      },
+      // Tight leading when stacked above a sub-label, so the two lines don't
+      // inherit the body line-height and balloon the pill height.
+      stacked: {
+        true: { lineHeight: theme.typography.fontSize.base },
+      },
+    },
+  },
+  // Parent location shown under the label — smaller and slightly muted so the
+  // main label stays dominant while still disambiguating same-named children.
+  tabSubLabel: {
+    fontSize: theme.typography.fontSize.xs - 2,
+    lineHeight: theme.typography.fontSize.xs + 1,
+    fontWeight: theme.fonts.weight.medium,
+    opacity: 0.7,
+    color: theme.colors.filterTab.inactiveText,
+    variants: {
+      state: {
+        active: { color: theme.colors.filterTab.activeText },
+        filtered: { color: theme.colors.filterTab.filteredText },
+        inactive: { color: theme.colors.filterTab.inactiveText },
+      },
+      compact: {
+        true: { fontSize: theme.typography.fontSize.xs - 2 },
       },
     },
   },

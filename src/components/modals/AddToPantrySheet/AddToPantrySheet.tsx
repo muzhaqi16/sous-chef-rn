@@ -4,6 +4,7 @@ import { useApolloClient, useMutation } from '@apollo/client/react';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import {
   usePantryItemSuggestions,
+  PANTRY_SUGGESTIONS_LIMIT,
   type PantryItemSuggestion,
 } from '#features/pantry/hooks/usePantryItemSuggestions';
 import { toastService } from '#/services/toastService';
@@ -15,10 +16,12 @@ import {
   GetPantryItemSuggestionsDocument,
   type GetPantryItemSuggestionsQuery,
 } from '#features/pantry/graphql/pantry.generated';
-import type {
-  ItemSuggestion,
-  StorageLocation,
+import {
+  SuggestionSurface,
+  type ItemSuggestion,
+  type StorageLocation,
 } from '#/graphql/generated/schemaTypes';
+import { useSuggestionDismissal } from '#hooks/items/useSuggestionDismissal';
 import { extractNodes } from '#/utils/connectionUtils';
 import {
   isPantryItemDuplicateError,
@@ -68,7 +71,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   // Fetch pantry item suggestions
   const suggestionsResult = usePantryItemSuggestions({
     pantryId,
-    limit: 15,
+    limit: PANTRY_SUGGESTIONS_LIMIT,
     skip: !visible || !state.shouldFetch,
   });
 
@@ -79,6 +82,12 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     hasSuggestions: suggestionsResult.hasSuggestions,
     refetch: suggestionsResult.refetch,
   };
+
+  // Dismiss a junk/unwanted suggestion from the PANTRY surface.
+  const { dismissSuggestion } = useSuggestionDismissal(
+    SuggestionSurface.Pantry,
+    suggestionsResult.refetch,
+  );
 
   // Storage locations read on-demand from cache (no active watcher)
   const [storageLocations, setStorageLocations] = useState<StorageLocation[]>(
@@ -126,17 +135,24 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     client.cache.updateQuery<GetPantryItemSuggestionsQuery>(
       {
         query: GetPantryItemSuggestionsDocument,
-        variables: { pantryId, limit: 15 },
+        variables: { pantryId, limit: PANTRY_SUGGESTIONS_LIMIT },
       },
       data => {
-        if (!data?.pantry?.suggestions) return data;
+        if (!data?.pantry) return data;
+        const pantry = data.pantry;
         return {
           ...data,
           pantry: {
-            ...data.pantry,
-            suggestions: data.pantry.suggestions.filter(
+            ...pantry,
+            lowStock: pantry.lowStock.filter(s => s.itemId !== itemId),
+            expiringSoon: pantry.expiringSoon.filter(s => s.itemId !== itemId),
+            recentlyDeleted: pantry.recentlyDeleted.filter(
               s => s.itemId !== itemId,
             ),
+            frequentlyAdded: pantry.frequentlyAdded.filter(
+              s => s.itemId !== itemId,
+            ),
+            popular: pantry.popular.filter(s => s.itemId !== itemId),
           },
         };
       },
@@ -350,6 +366,14 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     state.completeExitAnimation(itemId);
   };
 
+  // Dismiss a suggestion: animate it out (cache removal happens on exit
+  // complete, shared with quick-add) and persist the dismissal server-side.
+  const handleDismissSuggestion = (item: PantryItemSuggestion) => {
+    if (state.exitingItems.has(item.itemId)) return;
+    state.startExitAnimation(item.itemId);
+    dismissSuggestion({ itemId: item.itemId, name: item.name });
+  };
+
   // Handle successful add from details sheet
   const handleAddSuccess = () => {
     setShowAddDetails(false);
@@ -374,6 +398,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
       suggestions={suggestions}
       onQuickAddSearchSuggestion={handleQuickAddSearchSuggestion}
       onQuickAddSuggestion={handleQuickAddSuggestion}
+      onDismissSuggestion={handleDismissSuggestion}
       isMutating={false}
       onAddManually={handleAddManually}
       onScanPress={handleScanPress}

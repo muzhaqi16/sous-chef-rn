@@ -110,12 +110,21 @@ class ApiReachabilityBreaker {
         source ?? 'unknown'
       }`,
     );
-    if (
-      this.circuitState === 'closed' &&
-      this.consecutiveFailures >= FAILURE_THRESHOLD
-    ) {
+    if (this.circuitState !== 'closed') return;
+    if (this.consecutiveFailures >= FAILURE_THRESHOLD) {
+      // Fallback: enough operations have failed that the API is clearly down,
+      // even when the /health probe can't be trusted to arbitrate (e.g. the
+      // endpoint is missing in this environment, so the probe never succeeds).
       this.open();
+      return;
     }
+    // Don't wait for FAILURE_THRESHOLD operations to each burn through
+    // retryLink's attempts before opening: confirm with one direct /health
+    // probe now. A probe success forgives a transient blip (recordSuccess
+    // resets the counter); a probe failure opens the circuit immediately.
+    // Guarded by `probeInFlight`, so a burst of concurrent failures collapses
+    // to a single probe.
+    void this.probe();
   }
 
   /**
@@ -128,6 +137,10 @@ class ApiReachabilityBreaker {
     this.probeAttempt = 0;
     this.recentFailures = [];
     this.clearProbeTimer();
+    // Release any in-flight probe slot so a failure right after the transition
+    // can fire a fresh arbiter probe immediately. A stale fetch resolving later
+    // is dropped by the flag/counter guards in `probe()`.
+    this.probeInFlight = false;
     this.circuitState = 'closed';
     useStore.getState().setApiReachable(true);
   }
@@ -198,10 +211,16 @@ class ApiReachabilityBreaker {
     if (this.circuitState === 'open') {
       this.probeAttempt += 1;
       this.scheduleProbe();
-    } else if (useStore.getState().apiReachable === false) {
-      // A foreground probe missed while the breaker thought it was closed (a
-      // stale stuck flag): open properly so the probe loop owns recovery. The
-      // flag guard drops stale probe results that resolve after a reset().
+    } else if (
+      useStore.getState().apiReachable === false ||
+      this.consecutiveFailures > 0
+    ) {
+      // The probe confirmed a failure we already saw while the circuit was
+      // still closed — open so the probe loop owns recovery. Two entry points:
+      // a stale stuck flag (apiReachable false while closed, e.g. a foreground
+      // probe), or the first-failure arbiter probe in recordFailure. The
+      // guards also drop stale probe results that resolve after a reset()
+      // (which clears the flag and zeroes consecutiveFailures).
       this.open();
     }
   }

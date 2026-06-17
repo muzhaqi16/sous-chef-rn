@@ -112,6 +112,20 @@
       "NotFoundError",
       "ValidationError"
     ],
+    "AdminPurgePantryItemsResult": [
+      "AdminPurgePantryItemsPayload",
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "ValidationError"
+    ],
+    "AdminPurgeShoppingListItemsResult": [
+      "AdminPurgeShoppingListItemsPayload",
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "ValidationError"
+    ],
     "AdminUpdateItemResult": [
       "AdminUpdateItemPayload",
       "ConflictError",
@@ -716,6 +730,13 @@
       "NotFoundError",
       "ValidationError"
     ],
+    "DismissSuggestionResult": [
+      "ConflictError",
+      "DismissSuggestionPayload",
+      "ForbiddenError",
+      "NotFoundError",
+      "ValidationError"
+    ],
     "DuplicateMealPlanResult": [
       "ConflictError",
       "DuplicateMealPlanPayload",
@@ -1216,6 +1237,13 @@
       "ForbiddenError",
       "NotFoundError",
       "UncompleteShoppingListPayload",
+      "ValidationError"
+    ],
+    "UndismissSuggestionResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "UndismissSuggestionPayload",
       "ValidationError"
     ],
     "UnfavoriteRecipeResult": [

@@ -2,6 +2,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
+import { OfflineStatusPill } from '#components/atoms/OfflineStatusPill';
 import { Text } from '#components/atoms/Text';
 
 interface TabScreenHeaderProps {
@@ -10,6 +11,13 @@ interface TabScreenHeaderProps {
   headerRight?: React.ReactNode;
   onTitlePress?: () => void;
   titleAccessory?: React.ReactNode;
+  /**
+   * Render the built-in offline pill in the action group. Default `true`.
+   * Set `false` when the screen renders its own action cluster outside this
+   * header and places `<OfflineStatusPill />` there itself (e.g. MealPlanMain),
+   * so the pill aligns with the real actions instead of being orphaned.
+   */
+  offlinePill?: boolean;
 }
 
 export const TabScreenHeader: React.FC<TabScreenHeaderProps> = ({
@@ -18,6 +26,7 @@ export const TabScreenHeader: React.FC<TabScreenHeaderProps> = ({
   headerRight,
   onTitlePress,
   titleAccessory,
+  offlinePill = true,
 }) => {
   const titleContent = (
     <View style={styles.titleRow}>
@@ -55,7 +64,15 @@ export const TabScreenHeader: React.FC<TabScreenHeaderProps> = ({
         )}
       </View>
 
-      {!!headerRight && <View style={styles.headerActions}>{headerRight}</View>}
+      {/* Render the action group whenever it has content. The built-in offline
+          pill (suppressed via `offlinePill={false}`) renders null while online,
+          so when it's the only child the group is simply empty. */}
+      {offlinePill || !!headerRight ? (
+        <View style={styles.headerActions}>
+          {offlinePill ? <OfflineStatusPill size={20} /> : null}
+          {headerRight}
+        </View>
+      ) : null}
     </View>
   );
 };

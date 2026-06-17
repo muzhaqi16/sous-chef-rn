@@ -21,18 +21,6 @@ jest.mock('../refreshToken', () => ({
   attemptTokenRefresh: jest.fn(),
   getRefreshState: jest.fn(() => ({ isRefreshing: false })),
 }));
-// errorLink reads online/breaker state to suppress expected network-error
-// logging — default to "online and reachable" so the surprising-case path
-// (which logs) stays exercised.
-jest.mock('#store', () => ({
-  useStore: {
-    getState: jest.fn(() => ({
-      isOnline: true,
-      apiReachable: true,
-      offlineModeEnabled: false,
-    })),
-  },
-}));
 
 import {
   CombinedGraphQLErrors,

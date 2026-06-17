@@ -11,34 +11,25 @@ import Animated, {
   useAnimatedStyle,
   useAnimatedReaction,
   withSpring,
-  withTiming,
 } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import {
   useTabBarState,
   useTabBarSetters,
 } from '#context/TabBarActionsContext';
+import { useOverlayBackdropOpacity } from '#components/providers/OverlayBackdropProvider';
 import { toastService } from '#/services/toastService';
 import type { FloatingTabBarProps } from './types';
 import { AddButton } from './AddButton';
 import { TabItem } from './TabItem';
 import { useShowNavigationLabels } from '#store/useAppStore';
 import { HapticService } from '#services/haptic/HapticService';
-import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
-import { SPRING, TIMING } from '#/constants/animations';
+import { SPRING, SHEET } from '#/constants/animations';
+
+// Distance the bar slides below its resting position when fully hidden.
+const HIDDEN_TRANSLATE_Y = 150;
 
 export const TAB_BAR_HEIGHT = 65;
-
-/**
- * Tab bar is only visible on these main screens.
- * Single source of truth — no per-screen tabBarStyle needed in HomeTabs.
- */
-const MAIN_SCREENS = new Set([
-  'PantryMain',
-  'ShoppingListMain',
-  'RecipeMain',
-  'MealPlanMain',
-]);
 
 export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
   state,
@@ -87,13 +78,16 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
     activeTabIndex.set(state.index);
   }, [state.index, activeTabIndex]);
 
-  // Animated values for smooth hide/show
-  const translateY = useSharedValue(0);
-  const opacity = useSharedValue(1);
-
-  // True while navigation or an overlay is hiding the tab bar. Combined with
-  // the scroll state below so navigation hiding always wins over scroll.
-  const navHidden = useSharedValue(false);
+  // Bar visibility is the max of two independent hide sources, both 0…1:
+  // - Overlay coverage: the global dim opacity (driven on the UI thread by the
+  //   open sheet's `animatedIndex`), normalized back to 0…1. Reading the same
+  //   SharedValue as the backdrop keeps the bar in lockstep with the sheet —
+  //   it slides back AS the sheet slides down, with no settled-closed callback.
+  // - Scroll hide: a spring toggled by scroll direction.
+  // Detail screens don't factor in here: they're siblings of the tab navigator
+  // (see RootNavigator), so the bar is structurally absent on them.
+  const overlayOpacity = useOverlayBackdropOpacity();
+  const scrollHide = useSharedValue(0);
 
   // Track active tab for scanner visibility
   useEffect(() => {
@@ -101,47 +95,36 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
     setActiveTab(activeRoute.name);
   }, [state.index, state.routes, setActiveTab]);
 
-  // Hide tab bar on any screen that is not a main tab screen.
-  // getFocusedRouteNameFromRoute returns the nested stack's focused route name;
-  // null/undefined means no nested state yet → initial main screen is focused.
-  const focusedRoute = state.routes[state.index];
-  const nestedRouteName = getFocusedRouteNameFromRoute(
-    focusedRoute as Parameters<typeof getFocusedRouteNameFromRoute>[0],
-  );
-  const shouldHideFromNavigation =
-    nestedRouteName != null && !MAIN_SCREENS.has(nestedRouteName);
-
-  // Mirror navigation/overlay hide intent into navHidden. The animation itself
-  // runs in the reaction below, which combines this with the scroll state.
+  // Clear any scroll-hidden state when an overlay opens so the bar returns to a
+  // known (visible) state once the overlay closes.
   useLayoutEffect(() => {
-    const shouldHide = isOverlayOpen || shouldHideFromNavigation;
-
-    navHidden.set(!!shouldHide);
-
-    // Clear any scroll-hidden state so the bar reappears when the user returns
-    // to a main screen instead of staying hidden from an earlier scroll.
-    if (shouldHide) {
+    if (isOverlayOpen) {
       scrollTabBarHidden.set(false);
     }
-  }, [isOverlayOpen, shouldHideFromNavigation, scrollTabBarHidden, navHidden]);
+  }, [isOverlayOpen, scrollTabBarHidden]);
 
-  // Drive the bar from both inputs: hidden when navigation/overlay OR scroll
-  // asks to hide, visible only when both allow it. Updating navHidden above
-  // re-runs this reaction, so navigation hiding can never be undone by scroll.
+  // Scroll hide animates with a spring (toggled by scroll direction).
   useAnimatedReaction(
-    () => navHidden.get() || scrollTabBarHidden.get(),
-    (hide, prevHide) => {
-      if (hide === prevHide) return;
-      translateY.set(withSpring(hide ? 150 : 0, SPRING.HEAVY));
-      opacity.set(withTiming(hide ? 0 : 1, { duration: TIMING.FAST }));
+    () => scrollTabBarHidden.get(),
+    (hidden, prevHidden) => {
+      if (hidden === prevHidden) return;
+      scrollHide.set(withSpring(hidden ? 1 : 0, SPRING.HEAVY));
     },
   );
 
-  // Animated style for smooth transitions
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.get() }],
-    opacity: opacity.get(),
-  }));
+  const animatedStyle = useAnimatedStyle(() => {
+    // Sheets contribute dim opacity as `interpolate(animatedIndex, [-1,0], [0,
+    // BACKDROP_OPACITY])`; dividing by `BACKDROP_OPACITY` inverts that back to
+    // overlay coverage, 0 (closed) → 1 (fully open).
+    const overlayHide = overlayOpacity
+      ? Math.min(1, overlayOpacity.get() / SHEET.BACKDROP_OPACITY)
+      : 0;
+    const hide = Math.max(overlayHide, scrollHide.get());
+    return {
+      transform: [{ translateY: hide * HIDDEN_TRANSLATE_Y }],
+      opacity: 1 - hide,
+    };
+  });
 
   // Memoize container style
   const containerStyle = {

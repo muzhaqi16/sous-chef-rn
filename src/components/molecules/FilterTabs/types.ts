@@ -12,6 +12,9 @@ export interface FilterTabConfig<T extends string = string> {
   id: T;
   /** Display label */
   label: string;
+  /** Optional secondary label rendered under the main label in smaller text
+   * (e.g. a storage location's parent, to disambiguate same-named children). */
+  subLabel?: string;
   /** Optional emoji or icon name */
   icon?: string;
   /** Custom React element to render as icon (takes precedence over string icon) */

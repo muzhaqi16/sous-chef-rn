@@ -130,9 +130,10 @@ module.exports = {
       // - useBottomSheetBackHandler.ts is imported BY the hook, so it
       //   can't import from the hook (circular). Type-only usage.
       // - ActionTray.tsx is intentionally a different-shape sheet that
-      //   manages its own backdrop via `useBackdropClaim` and doesn't
-      //   use useStandardBottomSheet. Renders gorhom's BottomSheetModal
-      //   directly.
+      //   doesn't use useStandardBottomSheet. It renders gorhom's
+      //   BottomSheetModal directly and claims the global backdrop declaratively
+      //   via `useBackdropClaim` with an animatedIndex-driven opacity SV (the
+      //   slot lifecycle is tied to React state so it can't leak on navigation).
       files: [
         'src/hooks/useStandardBottomSheet.tsx',
         'src/hooks/useBottomSheetBackHandler.ts',

@@ -18,33 +18,36 @@ export const pantrySheetConfig: AddItemSheetConfig<PantryItemSuggestion> = {
   suggestionGroups: [
     {
       key: 'lowStock',
-      title: 'LOW STOCK',
+      titleKey: 'addItemSheet.sections.lowStock',
       priority: 1,
       accessor: g => g.lowStock ?? [],
     },
     {
       key: 'expiringSoon',
-      title: 'EXPIRING SOON',
+      titleKey: 'addItemSheet.sections.expiringSoon',
       priority: 2,
       accessor: g => g.expiringSoon ?? [],
     },
     {
       key: 'recentlyDeleted',
-      title: 'ADD AGAIN',
+      titleKey: 'addItemSheet.sections.addAgain',
       priority: 3,
       accessor: g => g.recentlyDeleted ?? [],
+      dismissible: true,
     },
     {
       key: 'frequentlyAdded',
-      title: 'YOUR FAVORITES',
+      titleKey: 'addItemSheet.sections.favorites',
       priority: 4,
       accessor: g => g.frequentlyAdded ?? [],
+      dismissible: true,
     },
     {
       key: 'popular',
-      title: 'POPULAR',
+      titleKey: 'addItemSheet.sections.popular',
       priority: 5,
       accessor: g => g.popular ?? [],
+      dismissible: true,
     },
   ],
   quickAdd: {

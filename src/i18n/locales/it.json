@@ -182,7 +182,8 @@
     "deviceOfflinePending_other": "Sei offline — {{count}} modifiche si sincronizzeranno alla riconnessione",
     "apiDown": "Impossibile raggiungere il server — le modifiche si sincronizzeranno al ripristino",
     "apiDownPending_one": "Impossibile raggiungere il server — {{count}} modifica si sincronizzerà al ripristino",
-    "apiDownPending_other": "Impossibile raggiungere il server — {{count}} modifiche si sincronizzeranno al ripristino"
+    "apiDownPending_other": "Impossibile raggiungere il server — {{count}} modifiche si sincronizzeranno al ripristino",
+    "backOnline": "Di nuovo online — sincronizzazione delle modifiche"
   },
   "empty": {
     "noItems": "Ancora nessun articolo",
@@ -542,6 +543,8 @@
     "applyA11y": "Applica filtri",
     "infoBanner": "I filtri si applicano solo alla ricerca testuale",
     "dietTitle": "Dieta",
+    "dietLifestyleLabel": "Scegli la tua dieta",
+    "dietConstraintsLabel": "Vincoli dietetici",
     "selectAllThatApply": "Seleziona tutti quelli applicabili",
     "selectOne": "Seleziona uno",
     "intolerancesTitle": "Allergie e intolleranze",
@@ -1936,7 +1939,76 @@
   },
   "addItemSheet": {
     "scanBarcode": "Scansiona codice a barre",
-    "addManually": "Aggiungi manualmente"
+    "addManually": "Aggiungi manualmente",
+    "more": "Altro",
+    "allAdded": "Tutto aggiunto",
+    "dismiss": "Ignora suggerimento",
+    "dismissed": "{{name}} rimosso",
+    "undo": "Annulla",
+    "dismissFailed": "Impossibile rimuovere il suggerimento",
+    "undoFailed": "Impossibile annullare",
+    "sections": {
+      "lowStock": "Scorte basse",
+      "expiringSoon": "In scadenza",
+      "addAgain": "Aggiungi di nuovo",
+      "favorites": "I tuoi preferiti",
+      "popular": "Popolari"
+    }
+  },
+  "dietaryProfile": {
+    "errorTitle": "Errore",
+    "dietTitle": "Dieta",
+    "dietEmpty": "Nessuna dieta ancora selezionata",
+    "dietSheetTitle": "Seleziona una dieta",
+    "updateDietFailed": "Impossibile aggiornare la dieta",
+    "constraintsTitle": "Vincoli dietetici",
+    "constraintsEmpty": "Nessun vincolo ancora aggiunto",
+    "constraintsSheetTitle": "Seleziona i vincoli dietetici",
+    "addConstraintsFailed": "Impossibile aggiungere i vincoli dietetici",
+    "intolerancesTitle": "Allergie e intolleranze",
+    "intolerancesEmpty": "Nessuna allergia ancora aggiunta",
+    "intolerancesSheetTitle": "Seleziona allergie e intolleranze",
+    "addIntolerancesFailed": "Impossibile aggiungere le intolleranze",
+    "goalsTitle": "Obiettivi di salute",
+    "goalsEmpty": "Nessun obiettivo di salute ancora aggiunto",
+    "goalsSheetTitle": "Seleziona obiettivi di salute",
+    "addGoalsFailed": "Impossibile aggiungere gli obiettivi di salute",
+    "diets": {
+      "vegetarian": "Vegetariana",
+      "vegan": "Vegana",
+      "glutenFree": "Senza glutine",
+      "keto": "Keto",
+      "paleo": "Paleo",
+      "pescetarian": "Pescetariana",
+      "lactoVegetarian": "Latto-vegetariana",
+      "ovoVegetarian": "Ovo-vegetariana",
+      "primal": "Primal",
+      "lowFodmap": "Basso FODMAP",
+      "whole30": "Whole30"
+    },
+    "intolerances": {
+      "dairy": "Latticini",
+      "egg": "Uova",
+      "gluten": "Glutine",
+      "grain": "Cereali",
+      "peanut": "Arachidi",
+      "seafood": "Frutti di mare",
+      "sesame": "Sesamo",
+      "shellfish": "Crostacei",
+      "soy": "Soia",
+      "sulfite": "Solfiti",
+      "treeNut": "Frutta a guscio",
+      "wheat": "Grano",
+      "fish": "Pesce"
+    },
+    "goals": {
+      "lowCarb": "Pochi carboidrati",
+      "highProtein": "Ricco di proteine",
+      "lowSodium": "Basso contenuto di sodio",
+      "sugarFree": "Senza zucchero",
+      "diabeticFriendly": "Adatto ai diabetici",
+      "heartHealthy": "Salutare per il cuore"
+    }
   },
   "addToShoppingListSheet": {
     "addFailedRetry": "Impossibile aggiungere l'articolo. Riprova.",

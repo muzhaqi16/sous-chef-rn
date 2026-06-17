@@ -21,6 +21,8 @@ export interface SuggestionListItemProps {
   placeholderIconLibrary?: IconLibrary;
   onPress?: () => void;
   onQuickAdd?: () => void;
+  /** When provided, shows a muted ✕ control that dismisses this suggestion */
+  onDismiss?: () => void;
   quickAddDisabled?: boolean;
   testID?: string;
   /** When true, play exit animation (slide right + fade out) */
@@ -47,6 +49,7 @@ export const SuggestionListItem = ({
   placeholderIconLibrary = 'Ionicons',
   onPress,
   onQuickAdd,
+  onDismiss,
   quickAddDisabled = false,
   testID,
   isExiting = false,
@@ -150,6 +153,22 @@ export const SuggestionListItem = ({
             </Text>
           )}
         </View>
+        {!!onDismiss && (
+          <AppPressable
+            style={styles.dismissButton}
+            onPress={onDismiss}
+            disabled={isExiting}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityRole="button"
+            testID={testID ? `${testID}-dismiss` : undefined}
+          >
+            <Icon
+              name="close"
+              size={18}
+              tone={isExiting ? 'iconDisabled' : 'iconTertiary'}
+            />
+          </AppPressable>
+        )}
         {!!onQuickAdd && (
           <AppPressable
             style={styles.quickAddButton}
@@ -201,6 +220,13 @@ const styles = StyleSheet.create(theme => ({
   },
   subtitle: {
     marginTop: 2,
+  },
+  dismissButton: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: theme.spacing.xs,
   },
   quickAddButton: {
     width: 36,

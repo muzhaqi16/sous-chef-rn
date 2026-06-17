@@ -355,6 +355,44 @@ export type AdminItemUnitConversionsResult = {
   totalCount: Scalars['Int']['output'];
 };
 
+/**
+ * Admin input to purge pantry items by id, bypassing ownership. Intended for
+ * cleaning up junk/test rows (e.g. E2E fixtures) that pollute the
+ * RECENTLY_DELETED suggestion source.
+ */
+export type AdminPurgePantryItemsInput = {
+  /** Pantry item row ids to delete. */
+  ids: Array<Scalars['ID']['input']>;
+  /** When true, hard-delete the rows (cascades photos/changes/batches, nulls usages). When false/omitted, soft-delete (sets deletedAt). */
+  permanent?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
+export type AdminPurgePantryItemsPayload = {
+  __typename: 'AdminPurgePantryItemsPayload';
+  result: BulkOperationSummary;
+};
+
+export type AdminPurgePantryItemsResult = AdminPurgePantryItemsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
+
+/**
+ * Admin input to purge shopping list items by id, bypassing ownership. Intended
+ * for cleaning up junk/test rows (e.g. E2E fixtures) that pollute the
+ * RECENTLY_DELETED suggestion source.
+ */
+export type AdminPurgeShoppingListItemsInput = {
+  /** Shopping list item row ids to delete. */
+  ids: Array<Scalars['ID']['input']>;
+  /** When true, hard-delete the rows. When false/omitted, soft-delete (sets deletedAt). */
+  permanent?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
+export type AdminPurgeShoppingListItemsPayload = {
+  __typename: 'AdminPurgeShoppingListItemsPayload';
+  result: BulkOperationSummary;
+};
+
+export type AdminPurgeShoppingListItemsResult = AdminPurgeShoppingListItemsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
+
 export type AdminUpdateItemPayload = {
   __typename: 'AdminUpdateItemPayload';
   item: Item;
@@ -3041,6 +3079,26 @@ export type DismissExpirationNotificationResult = ConflictError | DismissExpirat
 export type DismissNotificationInput = {
   notificationId: Scalars['ID']['input'];
 };
+
+/** Input to hide a catalog item from a user's suggestions on a given surface. */
+export type DismissSuggestionInput = {
+  /** Catalog item to stop suggesting. */
+  itemId: Scalars['ID']['input'];
+  /** Which surface to hide it from (pantry vs shopping). */
+  surface: SuggestionSurface;
+};
+
+export type DismissSuggestionPayload = {
+  __typename: 'DismissSuggestionPayload';
+  /** Always true — the item is now dismissed on this surface. */
+  dismissed: Scalars['Boolean']['output'];
+  /** The item the dismissal applies to. */
+  itemId: Scalars['ID']['output'];
+  /** Surface the dismissal applies to. */
+  surface: SuggestionSurface;
+};
+
+export type DismissSuggestionResult = ConflictError | DismissSuggestionPayload | ForbiddenError | NotFoundError | ValidationError;
 
 /** Display format for quantities */
 export enum DisplayFormat {
@@ -5778,6 +5836,20 @@ export type Mutation = {
   adminDeleteRecipeReview: AdminDeleteRecipeReviewResult;
   /** Delete a user's account as an administrator. */
   adminDeleteUser: AdminDeleteUserResult;
+  /**
+   * Admin: purge pantry items by id, bypassing ownership. Hard-deletes when
+   * permanent is true (removing them from the RECENTLY_DELETED suggestion
+   * source), otherwise soft-deletes. Intended for cleaning up junk/test rows
+   * such as E2E fixtures. Returns a summary of how many were deleted.
+   */
+  adminPurgePantryItems: AdminPurgePantryItemsResult;
+  /**
+   * Admin: purge shopping list items by id, bypassing ownership. Hard-deletes
+   * when permanent is true (removing them from the RECENTLY_DELETED suggestion
+   * source), otherwise soft-deletes. Intended for cleaning up junk/test rows
+   * such as E2E fixtures. Returns a summary of how many were deleted.
+   */
+  adminPurgeShoppingListItems: AdminPurgeShoppingListItemsResult;
   /** Admin: Update any item (bypasses ownership restrictions) */
   adminUpdateItem: AdminUpdateItemResult;
   /** Admin: Update any recipe (bypasses ownership restrictions) */
@@ -5998,6 +6070,16 @@ export type Mutation = {
   deleteUserAddress: DeleteUserAddressResult;
   /** Dismiss an expiration notification so it no longer appears. */
   dismissExpirationNotification: DismissExpirationNotificationResult;
+  /**
+   * Hide a catalog item from your pantry or shopping suggestions
+   * ("stop suggesting this"). Non-destructive and reversible via
+   * undismissSuggestion — the item's history and frequency data are preserved.
+   * Affects the RECENTLY_DELETED, FREQUENTLY_ADDED, and POPULAR sources on the
+   * chosen surface; low-stock and expiring-soon alerts are never suppressed.
+   * Dismissals are per-user, so on shared lists/homes only your own
+   * suggestions are affected.
+   */
+  dismissSuggestion: DismissSuggestionResult;
   /** Duplicate a meal plan with all its items, shifted to new dates. */
   duplicateMealPlan: DuplicateMealPlanResult;
   /** Duplicate a template with a new name */
@@ -6216,6 +6298,11 @@ export type Mutation = {
   uncategorizeItem: UncategorizeItemResult;
   /** Revert a completed shopping list back to active. */
   uncompleteShoppingList: UncompleteShoppingListResult;
+  /**
+   * Restore a previously-dismissed item so it can appear in your suggestions
+   * again on the given surface.
+   */
+  undismissSuggestion: UndismissSuggestionResult;
   /** Remove a recipe from favorites. */
   unfavoriteRecipe: UnfavoriteRecipeResult;
   /** Update an existing brand. */
@@ -6589,6 +6676,32 @@ export type MutationAdminDeleteRecipeReviewArgs = {
  */
 export type MutationAdminDeleteUserArgs = {
   input: AdminDeleteUserInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
+export type MutationAdminPurgePantryItemsArgs = {
+  input: AdminPurgePantryItemsInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
+export type MutationAdminPurgeShoppingListItemsArgs = {
+  input: AdminPurgeShoppingListItemsInput;
 };
 
 
@@ -7705,6 +7818,19 @@ export type MutationDismissExpirationNotificationArgs = {
  * win, so payload types that genuinely benefit from caching (e.g. read-
  * through reservation tokens) can opt back in.
  */
+export type MutationDismissSuggestionArgs = {
+  input: DismissSuggestionInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
 export type MutationDuplicateMealPlanArgs = {
   input: DuplicateMealPlanInput;
 };
@@ -8721,6 +8847,19 @@ export type MutationUncategorizeItemArgs = {
  */
 export type MutationUncompleteShoppingListArgs = {
   input: UncompleteShoppingListInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
+export type MutationUndismissSuggestionArgs = {
+  input: UndismissSuggestionInput;
 };
 
 
@@ -14006,6 +14145,18 @@ export enum SuggestionSource {
 }
 
 /**
+ * Which suggestion surface a dismissal applies to. Dismissals are scoped per
+ * surface, so a user can hide an item from pantry suggestions while keeping it
+ * in shopping suggestions (and vice-versa).
+ */
+export enum SuggestionSurface {
+  /** Pantry item suggestions (Pantry.suggestions) */
+  Pantry = 'PANTRY',
+  /** Shopping list item suggestions (ShoppingList.suggestions) */
+  Shopping = 'SHOPPING'
+}
+
+/**
  * Lightweight unit type for suggestion displays.
  * Contains only the fields needed for one-tap add UI.
  */
@@ -14361,6 +14512,26 @@ export type UncompleteShoppingListPayload = {
 };
 
 export type UncompleteShoppingListResult = ConflictError | ForbiddenError | NotFoundError | UncompleteShoppingListPayload | ValidationError;
+
+/** Input to restore a previously-dismissed item so it can be suggested again. */
+export type UndismissSuggestionInput = {
+  /** Catalog item to start suggesting again. */
+  itemId: Scalars['ID']['input'];
+  /** Which surface to restore it on (pantry vs shopping). */
+  surface: SuggestionSurface;
+};
+
+export type UndismissSuggestionPayload = {
+  __typename: 'UndismissSuggestionPayload';
+  /** Always false — the item can be suggested again on this surface. */
+  dismissed: Scalars['Boolean']['output'];
+  /** The item the dismissal was removed for. */
+  itemId: Scalars['ID']['output'];
+  /** Surface the item was restored on. */
+  surface: SuggestionSurface;
+};
+
+export type UndismissSuggestionResult = ConflictError | ForbiddenError | NotFoundError | UndismissSuggestionPayload | ValidationError;
 
 export type UnfavoriteRecipeInput = {
   recipeId: Scalars['ID']['input'];

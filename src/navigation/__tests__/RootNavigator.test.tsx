@@ -193,6 +193,58 @@ jest.mock('#features/shoppingList/screens/AcceptInvite', () => ({
   AcceptInvite: () => null,
 }));
 
+// Feature detail/sub screens — now registered at the root level (siblings of
+// Home), so RootNavigator imports them directly. Mock them so the test doesn't
+// load their heavy real modules (e.g. bottom-sheet scrollables).
+jest.mock('#features/pantry/screens/PantryItemScreen', () => ({
+  PantryItemScreen: () => null,
+}));
+jest.mock('#features/pantry/screens/PantryItemDetail', () => ({
+  PantryItemDetail: () => null,
+}));
+jest.mock('#features/pantry/screens/FilteredPantryItems', () => ({
+  FilteredPantryItems: () => null,
+}));
+jest.mock('#features/pantry/screens/PantrySettings', () => ({
+  PantrySettings: () => null,
+}));
+jest.mock('#features/pantry/screens/NutritionScreen', () => ({
+  NutritionScreen: () => null,
+}));
+jest.mock('#features/pantry/screens/PantryAnalytics', () => ({
+  PantryAnalytics: () => null,
+}));
+jest.mock('#features/recipes/screens/RecipeDetail', () => ({
+  RecipeDetail: () => null,
+}));
+jest.mock('#features/recipes/screens/RecipeForm', () => ({
+  RecipeFormScreen: () => null,
+}));
+jest.mock('#features/recipes/screens/SavedRecipes', () => ({
+  SavedRecipes: () => null,
+}));
+jest.mock('#features/recipes/screens/MyRecipes', () => ({
+  MyRecipes: () => null,
+}));
+jest.mock('#features/shoppingList/screens/ListSettings', () => ({
+  ListSettings: () => null,
+}));
+jest.mock('#features/shoppingList/screens/ShareList', () => ({
+  ShareList: () => null,
+}));
+jest.mock('#features/shoppingList/screens/AddEditItem', () => ({
+  AddEditItem: () => null,
+}));
+jest.mock('#features/shoppingList/screens/ItemDetail', () => ({
+  ShoppingListItemDetail: () => null,
+}));
+jest.mock('#features/shoppingList/screens/PurchaseHistoryScreen', () => ({
+  PurchaseHistoryScreen: () => null,
+}));
+jest.mock('#features/mealPlan/screens/CreateMealPlanScreen', () => ({
+  CreateMealPlanScreen: () => null,
+}));
+
 // Mock the feature registry so stacks don't load real screen modules
 jest.mock('#features/registry', () => ({
   TAB_FEATURES: [],

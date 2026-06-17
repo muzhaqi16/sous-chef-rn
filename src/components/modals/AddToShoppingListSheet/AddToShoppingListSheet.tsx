@@ -4,6 +4,7 @@ import { useApolloClient, useMutation } from '@apollo/client/react';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import {
   useShoppingListSuggestions,
+  SHOPPING_SUGGESTIONS_LIMIT,
   ShoppingListSuggestionItem,
 } from '#features/shoppingList/hooks/useShoppingListSuggestions';
 import { toastService } from '#/services/toastService';
@@ -12,7 +13,11 @@ import {
   GetShoppingListSuggestionsDocument,
   type GetShoppingListSuggestionsQuery,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import { ItemSuggestion } from '#/graphql/generated/schemaTypes';
+import {
+  ItemSuggestion,
+  SuggestionSurface,
+} from '#/graphql/generated/schemaTypes';
+import { useSuggestionDismissal } from '#hooks/items/useSuggestionDismissal';
 import {
   addOptimisticShoppingListItem,
   createOptimisticShoppingListItem,
@@ -66,7 +71,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
   // Fetch shopping list suggestions (deferred until sheet animation completes)
   const suggestionsResult = useShoppingListSuggestions({
     shoppingListId,
-    limit: 15,
+    limit: SHOPPING_SUGGESTIONS_LIMIT,
     skip: !visible || !state.shouldFetch,
   });
 
@@ -78,21 +83,32 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
     refetch: suggestionsResult.refetch,
   };
 
+  // Dismiss a junk/unwanted suggestion from the SHOPPING surface.
+  const { dismissSuggestion } = useSuggestionDismissal(
+    SuggestionSurface.Shopping,
+    suggestionsResult.refetch,
+  );
+
   const removeFromSuggestionsCache = (itemId: string) => {
     client.cache.updateQuery<GetShoppingListSuggestionsQuery>(
       {
         query: GetShoppingListSuggestionsDocument,
-        variables: { id: shoppingListId!, limit: 15 },
+        variables: { id: shoppingListId!, limit: SHOPPING_SUGGESTIONS_LIMIT },
       },
       data => {
         if (!data?.shoppingList) return data;
+        const list = data.shoppingList;
         return {
           ...data,
           shoppingList: {
-            ...data.shoppingList,
-            suggestions: data.shoppingList.suggestions.filter(
+            ...list,
+            recentlyDeleted: list.recentlyDeleted.filter(
               s => s.itemId !== itemId,
             ),
+            frequentlyAdded: list.frequentlyAdded.filter(
+              s => s.itemId !== itemId,
+            ),
+            popular: list.popular.filter(s => s.itemId !== itemId),
           },
         };
       },
@@ -306,6 +322,14 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
     state.completeExitAnimation(itemId);
   };
 
+  // Dismiss a suggestion: animate it out (cache removal happens on exit
+  // complete, shared with quick-add) and persist the dismissal server-side.
+  const handleDismissSuggestion = (item: ShoppingListSuggestionItem) => {
+    if (state.exitingItems.has(item.itemId)) return;
+    state.startExitAnimation(item.itemId);
+    dismissSuggestion({ itemId: item.itemId, name: item.name });
+  };
+
   // Build tutorial hint for the add item sheet (steps 2 and 3)
   const tutorialHintElement = (() => {
     if (!tutorial?.isActive) return undefined;
@@ -346,6 +370,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
       suggestions={suggestions}
       onQuickAddSearchSuggestion={handleQuickAddSearchSuggestion}
       onQuickAddSuggestion={handleQuickAddSuggestion}
+      onDismissSuggestion={handleDismissSuggestion}
       isMutating={adding}
       onAddManually={handleAddManually}
       onScanPress={handleScanPress}

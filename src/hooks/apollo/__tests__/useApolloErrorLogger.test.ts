@@ -7,13 +7,33 @@ jest.mock('#/services/telemetry', () => ({
   },
 }));
 
+// The dev console-warn branch suppresses the per-component network-error wall
+// once the API is known-unavailable — default to "available".
+jest.mock('#store', () => ({
+  storeApi: { getState: jest.fn(() => ({})) },
+}));
+jest.mock('#store/slices/networkSlice', () => ({
+  isApiUnavailable: jest.fn(() => false),
+}));
+
 import { renderHook } from '@testing-library/react-native';
 import { useApolloErrorLogger } from '../useApolloErrorLogger';
 import { Telemetry } from '#/services/telemetry';
+import { isApiUnavailable } from '#store/slices/networkSlice';
+
+const mockedIsApiUnavailable = isApiUnavailable as jest.Mock;
 
 describe('useApolloErrorLogger', () => {
+  let warnSpy: jest.SpyInstance;
+
   beforeEach(() => {
     jest.clearAllMocks();
+    mockedIsApiUnavailable.mockReturnValue(false);
+    warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    warnSpy.mockRestore();
   });
 
   it('does nothing when error is undefined', () => {
@@ -87,6 +107,33 @@ describe('useApolloErrorLogger', () => {
         error_type: 'cache_normalization',
       }),
     );
+  });
+
+  it('suppresses the dev query-error log once the API is unavailable, but still reports telemetry', () => {
+    mockedIsApiUnavailable.mockReturnValue(true);
+    const error = { message: 'Network request failed' };
+    renderHook(() => useApolloErrorLogger('GetItems', error));
+
+    const queryWarn = warnSpy.mock.calls.find(
+      call => typeof call[0] === 'string' && call[0].includes('Query error'),
+    );
+    expect(queryWarn).toBeUndefined();
+    // Telemetry still fires regardless of reachability.
+    expect(Telemetry.error).toHaveBeenCalledWith(
+      'Apollo query error: GetItems',
+      expect.objectContaining({ error_type: 'graphql' }),
+    );
+  });
+
+  it('still logs cache errors in dev even when the API is unavailable', () => {
+    mockedIsApiUnavailable.mockReturnValue(true);
+    const error = { message: 'Missing field "name" while computing result' };
+    renderHook(() => useApolloErrorLogger('GetPantry', error));
+
+    const cacheWarn = warnSpy.mock.calls.find(
+      call => typeof call[0] === 'string' && call[0].includes('Cache error'),
+    );
+    expect(cacheWarn).toBeDefined();
   });
 
   it('does not re-report when error stays the same on rerender', () => {

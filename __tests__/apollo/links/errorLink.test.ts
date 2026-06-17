@@ -233,7 +233,7 @@ describe('errorLink.ts', () => {
       );
     });
 
-    it('does not re-forward network errors (retryLink owns retries; lets the error propagate)', () => {
+    it('does not re-forward or log network errors (networkStatusLink logs; retryLink owns retries)', () => {
       const error = { message: 'Network request failed' };
       const result = errorHandler({
         error,
@@ -244,10 +244,14 @@ describe('errorLink.ts', () => {
       // would double query retries and re-send mutations.
       expect(result).toBeUndefined();
       expect(mockForward).not.toHaveBeenCalled();
-      expect(logger.warn).toHaveBeenCalledWith(
-        expect.stringContaining('Network error'),
-        expect.any(String),
-      );
+      // Network-error logging moved to networkStatusLink (one warning per
+      // operation, above retryLink). errorLink stays silent on network errors.
+      const networkWarn = jest
+        .mocked(logger.warn)
+        .mock.calls.find(
+          call => typeof call[0] === 'string' && call[0].includes('Network error'),
+        );
+      expect(networkWarn).toBeUndefined();
     });
 
     it('logs unexpected non-network, non-GraphQL errors', () => {

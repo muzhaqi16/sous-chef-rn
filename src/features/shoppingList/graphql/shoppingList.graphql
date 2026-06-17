@@ -172,11 +172,67 @@ query GetShoppingListItem($id: ID!) {
   }
 }
 
-# Suggestions are now a field on ShoppingList type
-query GetShoppingListSuggestions($id: ID!, $limit: Int = 15) {
+# Suggestions are a field on ShoppingList type. Each source is fetched via its
+# own aliased call with a dedicated `limit` so one source (e.g. a recently-deleted
+# list polluted with stale items) can't starve the others — POPULAR always gets
+# its own quota. The UI shows a small preview of each and drills into the full
+# per-source list on demand, so a generous per-source limit is fetched up front.
+#
+# Fields are inlined per alias rather than shared via a named fragment: data
+# masking is enabled globally, so a `...Fragment` spread would hide these fields
+# from the hook's direct reads (the rows render plain props, not useFragment).
+query GetShoppingListSuggestions($id: ID!, $limit: Int = 20) {
   shoppingList(id: $id) {
     id
-    suggestions(limit: $limit) {
+    recentlyDeleted: suggestions(limit: $limit, sources: [RECENTLY_DELETED]) {
+      id
+      itemId
+      name
+      source
+      imageUrl
+      category
+      defaultUnitId
+      defaultUnit {
+        id
+        name
+        symbol
+      }
+      item {
+        id
+        name
+        imageUrl
+      }
+      lastQuantity
+      lastUnitId
+      frequencyCount
+      popularityRank
+      shoppingListItemId
+    }
+    frequentlyAdded: suggestions(limit: $limit, sources: [FREQUENTLY_ADDED]) {
+      id
+      itemId
+      name
+      source
+      imageUrl
+      category
+      defaultUnitId
+      defaultUnit {
+        id
+        name
+        symbol
+      }
+      item {
+        id
+        name
+        imageUrl
+      }
+      lastQuantity
+      lastUnitId
+      frequencyCount
+      popularityRank
+      shoppingListItemId
+    }
+    popular: suggestions(limit: $limit, sources: [POPULAR]) {
       id
       itemId
       name

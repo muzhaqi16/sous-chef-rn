@@ -2,10 +2,8 @@ import { useState } from 'react';
 import { errorService } from '#/services/errorService';
 import {
   loadCredentials,
-  loadCredentialsForAccount,
   saveCredentials,
   hasCredentials,
-  hasCredentialsForAccount,
   clearCredentials,
   getStoredAccounts,
   getBiometricCapability,
@@ -21,11 +19,10 @@ export interface Credentials {
 // Module-level functions — stable references, no hook state needed
 
 const checkStoredCredentials = async (email?: string): Promise<boolean> => {
+  // No account → no per-account credentials to check.
+  if (!email) return false;
   try {
-    if (email) {
-      return await hasCredentialsForAccount();
-    }
-    return await hasCredentials();
+    return await hasCredentials(email);
   } catch (error) {
     errorService.reportError(error, { operation: 'checkCredentials' });
     return false;
@@ -64,6 +61,7 @@ const storeCredentials = async (
 };
 
 const removeCredentials = async (email?: string): Promise<boolean> => {
+  if (!email) return false;
   try {
     await clearCredentials(email);
     return true;
@@ -85,12 +83,12 @@ export const useCredentialStorage = () => {
   ): Promise<Credentials | null> => {
     setIsLoadingCredentials(true);
 
-    const credentials = await executeQuery(async () => {
-      if (email) {
-        return loadCredentialsForAccount();
-      }
-      return loadCredentials();
-    }, 'Error loading credentials');
+    const credentials = email
+      ? await executeQuery(
+          async () => loadCredentials(email),
+          'Error loading credentials',
+        )
+      : null;
 
     setIsLoadingCredentials(false);
 

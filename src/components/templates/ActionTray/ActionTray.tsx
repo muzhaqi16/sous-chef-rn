@@ -1,5 +1,6 @@
 import React, {
   forwardRef,
+  useContext,
   useImperativeHandle,
   useEffect,
   useRef,
@@ -10,6 +11,7 @@ import {
   View,
   type LayoutChangeEvent,
 } from 'react-native';
+import { NavigationContext } from '@react-navigation/native';
 import {
   BottomSheetModal,
   BottomSheetScrollView,
@@ -17,11 +19,19 @@ import {
   type BottomSheetFooterProps,
   type BottomSheetScrollViewMethods,
 } from '@gorhom/bottom-sheet';
+import {
+  Extrapolation,
+  interpolate,
+  useDerivedValue,
+  useSharedValue,
+} from 'react-native-reanimated';
 import { StyleSheet as UnistylesStyleSheet } from 'react-native-unistyles';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
 import { Icon } from '#utils/iconUtils';
 import { useBackdropClaim } from '#components/providers/OverlayBackdropProvider';
+import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
+import { SHEET } from '#constants/animations';
 import { ActionTrayScrollContext } from './ActionTrayScrollContext';
 import type { ActionTrayProps, ActionTrayRef } from './types';
 
@@ -56,32 +66,49 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
     const [isSettledOpen, setIsSettledOpen] = useState(false);
     const { height } = useWindowDimensions();
 
-    // Backdrop lifetime tied directly to `mounted && enableBackdrop`.
-    // useBackdropClaim handles cleanup automatically — the previous
-    // imperative show/hide pair (which had to coordinate with both the
-    // useEffect cleanup AND the dismiss path) is gone.
-    const handleBackdropPress = () => {
+    // Backdrop driven by the sheet's own `animatedIndex` so the dim ramps in
+    // and out in lockstep with the sheet on the UI thread (on close it fades AS
+    // the sheet slides down). Crucially, the claim's LIFECYCLE is tied to
+    // `mounted` — a React state transition — so `useBackdropClaim` releases the
+    // slot deterministically via effect cleanup when the tray closes
+    // (mounted → false) or the screen unmounts. Releasing off gorhom's close
+    // events instead is racy: navigation can interrupt the close so those
+    // events never fire, leaking the dim (and the tab bar that reads it).
+    const animatedIndex = useSharedValue(-1);
+    const backdropOpacity = useDerivedValue(() =>
+      interpolate(
+        animatedIndex.value,
+        [-1, 0],
+        [0, SHEET.BACKDROP_OPACITY],
+        Extrapolation.CLAMP,
+      ),
+    );
+    // Shared dismiss for the backdrop tap and the header close button.
+    const handleDismiss = () => {
       bottomSheetRef.current?.dismiss();
     };
     useBackdropClaim(mounted && enableBackdrop, {
-      opacity: 0.5,
-      onPress: handleBackdropPress,
+      opacity: backdropOpacity,
+      onPress: handleDismiss,
     });
 
-    // Closed-state cleanup, reachable from two gorhom signals that can each
-    // fire without the other:
+    // Android hardware back dismisses the open tray instead of navigating away
+    // with it still mounted (which would strand its backdrop + the tab bar that
+    // reads it). gorhom has no built-in back handling, so wire it explicitly —
+    // only while the tray is open.
+    useBottomSheetBackHandler(bottomSheetRef, mounted);
+
+    // Settled-closed cleanup (`onClose` + unmount), reachable from two gorhom
+    // signals that can each fire without the other:
     // - `onChange(-1)` — settled-closed. Gorhom SKIPS this when a close
     //   interrupts an open animation that never settled (its internal
     //   `animatedCurrentIndex` is still -1, so `nextIndex !==
     //   animatedCurrentIndex` is false and the callback is never scheduled —
-    //   BottomSheet.tsx `animateToPositionCompleted`). Relying on it alone
-    //   leaked the backdrop claim: `mounted` stayed true forever and the
-    //   global dim stuck at full opacity.
+    //   BottomSheet.tsx `animateToPositionCompleted`).
     // - `onDismiss` — fired from gorhom's `unmount()` in every modal
     //   dismissal path, but NOT on minimize (stackBehavior 'switch'), which
     //   only emits `onChange(-1)`.
-    // The ref dedupes the pair on a normal close (where both arrive), so
-    // `onClose` is notified exactly once per presentation cycle.
+    // `dismissHandledRef` dedupes the pair so cleanup runs exactly once.
     const dismissHandledRef = useRef(false);
     const handleClosed = () => {
       if (dismissHandledRef.current) return;
@@ -97,6 +124,26 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
         bottomSheetRef.current?.present();
       }
     }, [mounted]);
+
+    // Tear the tray down when its screen loses focus, so a programmatic
+    // navigation while it's open can't strand the sheet (and its backdrop +
+    // the tab bar that reads it). Hardware back is covered by the back handler
+    // above; this covers navigation that doesn't go through a close.
+    // `NavigationContext` is read directly (not `useNavigation`) so ActionTray
+    // stays usable outside a navigator — the listener simply isn't wired then.
+    // Subscribe only while open; the latest `handleClosed` is read via a ref so
+    // the subscription doesn't churn every render.
+    const navigation = useContext(NavigationContext);
+    const handleClosedRef = useRef(handleClosed);
+    useEffect(() => {
+      handleClosedRef.current = handleClosed;
+    });
+    useEffect(() => {
+      if (!navigation || !mounted) return;
+      return navigation.addListener('blur', () => {
+        handleClosedRef.current();
+      });
+    }, [navigation, mounted]);
 
     const handleSheetChanges = (index: number) => {
       if (index < 0) {
@@ -139,10 +186,6 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
       },
       [mounted, onOpen],
     );
-
-    const handleDismiss = () => {
-      bottomSheetRef.current?.dismiss();
-    };
 
     // Pinned header. Rendered through gorhom's `handleComponent` slot so it
     // stays fixed while the content scrolls. Its measured height feeds the
@@ -207,6 +250,7 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
         backdropComponent={NullBackdrop}
         handleComponent={renderHandle}
         footerComponent={renderFooter}
+        animatedIndex={animatedIndex}
         onChange={handleSheetChanges}
         onDismiss={handleClosed}
         style={[styles.modal, style]}

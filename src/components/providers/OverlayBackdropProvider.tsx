@@ -122,6 +122,23 @@ export const useOverlayBackdropOptional = (): OverlayBackdropContextType => {
 };
 
 /**
+ * Read the global overlay dim opacity as a SharedValue (the max across all
+ * active claims, driven on the UI thread). Returns null when no provider is
+ * mounted (e.g. unit-test trees).
+ *
+ * This is the single source of truth for "an overlay is covering the screen,
+ * and how far along its open/close animation is." Chrome other than the dim
+ * layer — e.g. the floating tab bar — reads it to react in lockstep with the
+ * sheet on the UI thread, instead of maintaining a second registry. Normalize
+ * by the claim's target opacity (`SHEET.BACKDROP_OPACITY`) to recover a 0…1
+ * coverage value.
+ */
+export const useOverlayBackdropOpacity = (): SharedValue<number> | null => {
+  const internal = useContext(OverlayBackdropInternalContext);
+  return internal?.opacity ?? null;
+};
+
+/**
  * Declarative backdrop claim. While `active` is true, the overlay is painted;
  * unmounting the consumer (for any reason — conditional render, screen
  * unmount, parent re-render) releases the claim via useEffect cleanup. There

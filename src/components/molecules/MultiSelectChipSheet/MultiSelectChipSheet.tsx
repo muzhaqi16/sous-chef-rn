@@ -25,6 +25,10 @@ export interface MultiSelectChipSheetProps<T extends string = string> {
   onClose: () => void;
   onDone: () => void;
   loading?: boolean;
+  /** When true, only one chip can be selected — tapping a chip replaces the
+   *  current selection instead of appending. Used for mutually-exclusive sets
+   *  (e.g. a single lifestyle diet). */
+  singleSelect?: boolean;
 }
 
 export function MultiSelectChipSheet<T extends string = string>({
@@ -36,6 +40,7 @@ export function MultiSelectChipSheet<T extends string = string>({
   onClose,
   onDone,
   loading = false,
+  singleSelect = false,
 }: MultiSelectChipSheetProps<T>) {
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible,
@@ -60,6 +65,11 @@ export function MultiSelectChipSheet<T extends string = string>({
   })();
 
   const handleToggleItem = (id: T) => {
+    if (singleSelect) {
+      // Replace the selection (or clear it when re-tapping the active chip).
+      onSelect(selectedItems.includes(id) ? [] : [id]);
+      return;
+    }
     const newSelection = selectedItems.includes(id)
       ? selectedItems.filter(i => i !== id)
       : [...selectedItems, id];

@@ -30,7 +30,8 @@ import { Text } from '#components/atoms/Text';
 /** Module-level function to load auth info.
  *  Extracted from useEffect to avoid try-catch bailout. */
 async function loadAuthInfoAsync(
-  checkStoredCredentials: () => Promise<boolean>,
+  getLastBiometricEmail: () => Promise<string | null>,
+  checkStoredCredentials: (email?: string) => Promise<boolean>,
   getBiometricInfo: () => Promise<{
     isAvailable: boolean;
     biometryType: string | null;
@@ -39,14 +40,20 @@ async function loadAuthInfoAsync(
     isAvailable: boolean;
     biometryType: string | null;
   }) => void,
+  setBiometricEmail: (email: string | null) => void,
   setShouldShowBiometricButton: (v: boolean) => void,
 ): Promise<void> {
   try {
+    // No logged-in user on the login screen — biometric login targets the
+    // most-recently-enrolled account. Credentials are scoped per account, so
+    // we check that specific account rather than "anyone on this device".
+    const email = await getLastBiometricEmail();
     const [hasCredentials, biometric] = await Promise.all([
-      checkStoredCredentials(),
+      checkStoredCredentials(email ?? undefined),
       getBiometricInfo(),
     ]);
 
+    setBiometricEmail(email);
     setBiometricInfo(biometric);
     Telemetry.trackScreen('LoginScreen', {
       has_stored_credentials: hasCredentials,
@@ -54,7 +61,7 @@ async function loadAuthInfoAsync(
       biometric_type: biometric.biometryType,
     });
 
-    const shouldShow = biometric.isAvailable && hasCredentials;
+    const shouldShow = biometric.isAvailable && hasCredentials && !!email;
     setShouldShowBiometricButton(shouldShow);
   } catch (error) {
     errorService.reportError(error, { operation: 'loadAuthInfo' });
@@ -108,6 +115,7 @@ export function LoginScreen(): React.JSX.Element {
   const [shouldShowBiometricButton, setShouldShowBiometricButton] =
     useState(false);
   const [isBiometricLoading, setIsBiometricLoading] = useState(false);
+  const [biometricEmail, setBiometricEmail] = useState<string | null>(null);
   const [biometricInfo, setBiometricInfo] = useState<{
     isAvailable: boolean;
     biometryType: string | null;
@@ -121,9 +129,11 @@ export function LoginScreen(): React.JSX.Element {
   // Track screen view and load stored credentials and biometric info on mount
   useEffect(() => {
     loadAuthInfoAsync(
+      authService.getLastBiometricEmail,
       authService.checkStoredCredentials,
       authService.getBiometricInfo,
       setBiometricInfo,
+      setBiometricEmail,
       setShouldShowBiometricButton,
     );
   }, []);
@@ -158,7 +168,9 @@ export function LoginScreen(): React.JSX.Element {
 
     executeWithLoadingState(
       async () => {
-        const credentials = await authService.loadStoredCredentials();
+        const credentials = await authService.loadStoredCredentials(
+          biometricEmail ?? undefined,
+        );
 
         if (credentials) {
           await authService.login(

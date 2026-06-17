@@ -1,11 +1,7 @@
 import { useNavigation } from '@react-navigation/native';
 import type { RootStackParamList } from '#navigation/RootNavigator';
-import type { PantryStackParams } from '#navigation/stacks/PantryStack';
-import type { ShoppingListStackParams } from '#navigation/stacks/ShoppingListStack';
-import type { RecipeStackParams } from '#navigation/stacks/RecipeStack';
 import type { BarcodeStackParams } from '#navigation/stacks/BarcodeStack';
 import type { NotificationStackParams } from '#navigation/stacks/NotificationStack';
-import type { MealPlanStackParams } from '#navigation/stacks/MealPlanStack';
 
 /**
  * Centralized navigation facade — the single place that knows screen names.
@@ -22,11 +18,15 @@ import type { MealPlanStackParams } from '#navigation/stacks/MealPlanStack';
  *   `RootNavigator.tsx`. Feature-contributed deep-link screens
  *   (`AcceptInvitation`, `JoinByShareCode`) are declared statically in the
  *   root navigator so v8's `StaticParamList` inference covers them.
- * - For nested stacks (Auth, Onboarding, HomeTabs → Pantry/ShoppingList/
- *   Recipe/MealPlan, Barcode), use the nested form:
- *   `navigate(Parent, { screen, params })`. This is the v8-idiomatic
+ * - For nested navigators (Auth, Onboarding, the HomeTabs tab *main* screens
+ *   — Pantry/ShoppingList/Recipe/MealPlan — and Barcode), use the nested
+ *   form: `navigate(Parent, { screen, params })`. This is the v8-idiomatic
  *   alternative to `CommonActions.navigate(name)`, which is untyped and
  *   intentionally avoided here.
+ * - Feature detail/sub screens (item details, settings, RecipeDetail, …) are
+ *   registered at the root level — siblings of the tab navigator (see
+ *   RootNavigator) — so the floating tab bar is never mounted on them. They're
+ *   reached with the flat form: `navigate('ScreenName', params)`.
  *
  * Screen names appear as string literals in this file only — extracting
  * them into a `ROUTES` constants object would lose v8 type safety, because
@@ -112,118 +112,62 @@ export function useAppNavigation() {
         params: { screen: 'ShoppingListMain' },
       }),
 
-    // ─── Pantry stack screens (nested under Home → Pantry) ────────────────
-    toPantryItem: (params?: PantryStackParams['PantryItem']) =>
-      navigation.navigate('Home', {
-        screen: 'Pantry',
-        params: { screen: 'PantryItem', params },
-      }),
-    toPantryItemDetail: (params: PantryStackParams['PantryItemDetail']) =>
-      navigation.navigate('Home', {
-        screen: 'Pantry',
-        params: { screen: 'PantryItemDetail', params },
-      }),
-    toNutritionScreen: (params: PantryStackParams['NutritionScreen']) =>
-      navigation.navigate('Home', {
-        screen: 'Pantry',
-        params: { screen: 'NutritionScreen', params },
-      }),
-    toPantryAnalytics: (params: PantryStackParams['PantryAnalytics']) =>
-      navigation.navigate('Home', {
-        screen: 'Pantry',
-        params: { screen: 'PantryAnalytics', params },
-      }),
-    toPantrySettings: (params?: PantryStackParams['PantrySettings']) =>
-      navigation.navigate('Home', {
-        screen: 'Pantry',
-        params: { screen: 'PantrySettings', params },
-      }),
-    toFilteredPantryItems: (params: PantryStackParams['FilteredPantryItems']) =>
-      navigation.navigate('Home', {
-        screen: 'Pantry',
-        params: { screen: 'FilteredPantryItems', params },
-      }),
-    toPantryRecipeDetail: (params: PantryStackParams['RecipeDetail']) =>
-      navigation.navigate('Home', {
-        screen: 'Pantry',
-        params: { screen: 'RecipeDetail', params },
-      }),
+    // ─── Pantry detail/sub screens (root-level, siblings of Home) ─────────
+    // `PantryItem` params are an all-optional object (not `undefined`), so
+    // `navigate` requires the argument present — default to `{}` when the
+    // caller omits it. Type-checked: a required-param route would reject `{}`.
+    toPantryItem: (params: RootStackParamList['PantryItem'] = {}) =>
+      navigation.navigate('PantryItem', params),
+    toPantryItemDetail: (params: RootStackParamList['PantryItemDetail']) =>
+      navigation.navigate('PantryItemDetail', params),
+    toNutritionScreen: (params: RootStackParamList['NutritionScreen']) =>
+      navigation.navigate('NutritionScreen', params),
+    toPantryAnalytics: (params: RootStackParamList['PantryAnalytics']) =>
+      navigation.navigate('PantryAnalytics', params),
+    toPantrySettings: (params?: RootStackParamList['PantrySettings']) =>
+      navigation.navigate('PantrySettings', params),
+    toFilteredPantryItems: (
+      params: RootStackParamList['FilteredPantryItems'],
+    ) => navigation.navigate('FilteredPantryItems', params),
+    toPantryRecipeDetail: (params: RootStackParamList['RecipeDetail']) =>
+      navigation.navigate('RecipeDetail', params),
 
-    // ─── Shopping-list stack screens (nested under Home → ShoppingList) ───
-    toAddItem: (params?: ShoppingListStackParams['AddItem']) =>
-      navigation.navigate('Home', {
-        screen: 'ShoppingList',
-        params: { screen: 'AddItem', params },
-      }),
-    toEditItem: (params: ShoppingListStackParams['EditItem']) =>
-      navigation.navigate('Home', {
-        screen: 'ShoppingList',
-        params: { screen: 'EditItem', params },
-      }),
-    toShoppingListItemDetail: (params: ShoppingListStackParams['ItemDetail']) =>
-      navigation.navigate('Home', {
-        screen: 'ShoppingList',
-        params: { screen: 'ItemDetail', params },
-      }),
-    toListSettings: (params?: ShoppingListStackParams['ListSettings']) =>
-      navigation.navigate('Home', {
-        screen: 'ShoppingList',
-        params: { screen: 'ListSettings', params },
-      }),
-    toShareList: (params: ShoppingListStackParams['ShareList']) =>
-      navigation.navigate('Home', {
-        screen: 'ShoppingList',
-        params: { screen: 'ShareList', params },
-      }),
-    toPurchaseHistory: (params: ShoppingListStackParams['PurchaseHistory']) =>
-      navigation.navigate('Home', {
-        screen: 'ShoppingList',
-        params: { screen: 'PurchaseHistory', params },
-      }),
+    // ─── Shopping-list detail/sub screens (root-level, siblings of Home) ──
+    toAddItem: (params: RootStackParamList['AddItem']) =>
+      navigation.navigate('AddItem', params),
+    toEditItem: (params: RootStackParamList['EditItem']) =>
+      navigation.navigate('EditItem', params),
+    toShoppingListItemDetail: (params: RootStackParamList['ItemDetail']) =>
+      navigation.navigate('ItemDetail', params),
+    toListSettings: (params?: RootStackParamList['ListSettings']) =>
+      navigation.navigate('ListSettings', params),
+    toShareList: (params: RootStackParamList['ShareList']) =>
+      navigation.navigate('ShareList', params),
+    toPurchaseHistory: (params: RootStackParamList['PurchaseHistory']) =>
+      navigation.navigate('PurchaseHistory', params),
 
-    // ─── Recipe stack screens (nested under Home → Recipe) ────────────────
-    toRecipeDetail: (params: RecipeStackParams['RecipeDetail']) =>
-      navigation.navigate('Home', {
-        screen: 'Recipe',
-        params: { screen: 'RecipeDetail', params },
-      }),
-    toRecipeCreate: () =>
-      navigation.navigate('Home', {
-        screen: 'Recipe',
-        params: { screen: 'RecipeCreate' },
-      }),
-    toRecipeEdit: (params: RecipeStackParams['RecipeEdit']) =>
-      navigation.navigate('Home', {
-        screen: 'Recipe',
-        params: { screen: 'RecipeEdit', params },
-      }),
-    toSavedRecipes: () =>
-      navigation.navigate('Home', {
-        screen: 'Recipe',
-        params: { screen: 'SavedRecipes' },
-      }),
-    toMyRecipes: () =>
-      navigation.navigate('Home', {
-        screen: 'Recipe',
-        params: { screen: 'MyRecipes' },
-      }),
+    // ─── Recipe detail/sub screens (root-level, siblings of Home) ─────────
+    // RecipeDetail is a single root screen reached from Pantry, Recipe and
+    // MealPlan; the three `to*RecipeDetail` aliases all target it.
+    toRecipeDetail: (params: RootStackParamList['RecipeDetail']) =>
+      navigation.navigate('RecipeDetail', params),
+    toRecipeCreate: () => navigation.navigate('RecipeCreate'),
+    toRecipeEdit: (params: RootStackParamList['RecipeEdit']) =>
+      navigation.navigate('RecipeEdit', params),
+    toSavedRecipes: () => navigation.navigate('SavedRecipes'),
+    toMyRecipes: () => navigation.navigate('MyRecipes'),
 
-    // ─── Meal-plan stack screens (nested under Home → MealPlan) ───────────
+    // ─── Meal-plan screens ────────────────────────────────────────────────
+    // MealPlanMain stays nested under Home (it's the tab's main screen);
+    // CreateMealPlan + RecipeDetail are root-level.
     toMealPlanMain: () =>
       navigation.navigate('Home', {
         screen: 'MealPlan',
         params: { screen: 'MealPlanMain' },
       }),
-    toCreateMealPlan: () =>
-      navigation.navigate('Home', {
-        screen: 'MealPlan',
-        params: { screen: 'CreateMealPlan' },
-      }),
-    toMealPlanRecipeDetail: (params: MealPlanStackParams['RecipeDetail']) =>
-      navigation.navigate('Home', {
-        screen: 'MealPlan',
-        params: { screen: 'RecipeDetail', params },
-      }),
+    toCreateMealPlan: () => navigation.navigate('CreateMealPlan'),
+    toMealPlanRecipeDetail: (params: RootStackParamList['RecipeDetail']) =>
+      navigation.navigate('RecipeDetail', params),
 
     // ─── Notification stack screens (nested under Notifications) ──────────
     toNotificationDetail: (
