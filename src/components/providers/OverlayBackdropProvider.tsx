@@ -296,27 +296,31 @@ export const OverlayBackdropProvider: React.FC<
 
     const release = (id: string): void => {
       const entry = slotsRef.current.find(e => e.id === id);
-      if (!entry) return;
-
-      if (!entry.ownedByProvider) {
-        // External SV: contributor (the sheet) has already animated the
-        // value to 0 — `release` is called from `onChange(-1)` which
-        // gorhom fires AFTER animatedIndex hits the closed position, so
-        // the interpolated opacity is at 0. Remove immediately.
-        removeSlot(id);
-        return;
-      }
 
       // Provider-owned: animate to 0, then drop the slot when the timing
       // finishes. If interrupted (e.g. a new claim arrives mid-fade),
       // the callback still fires; the `.some` guard in removeSlot makes
       // that a no-op.
-      entry.sv.set(
-        withTiming(0, { duration: SHEET.BACKDROP_FADE_OUT }, () => {
-          'worklet';
-          scheduleOnRN(removeSlot, id);
-        }),
-      );
+      if (entry?.ownedByProvider) {
+        entry.sv.set(
+          withTiming(0, { duration: SHEET.BACKDROP_FADE_OUT }, () => {
+            'worklet';
+            scheduleOnRN(removeSlot, id);
+          }),
+        );
+        return;
+      }
+
+      // External SV (or a slot not yet visible in `slotsRef` because a fast
+      // claim→release — "navigate away before it settles" — outran the
+      // post-commit effect that syncs `slotsRef`): remove immediately. We
+      // intentionally do NOT early-return on a missing `entry`: `removeSlot`'s
+      // `setSlots` updater reads the authoritative current state, so it removes
+      // the slot even when `slotsRef` is stale. The old `if (!entry) return`
+      // turned that race into a permanent leak — the slot stayed claimed with
+      // its (now-frozen, non-zero) external SV, stranding the dim and the tab
+      // bar that reads the same opacity.
+      removeSlot(id);
     };
 
     return { publicValue: { claim, release } };
