@@ -1,13 +1,7 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
-import {
-  Extrapolation,
-  interpolate,
-  useDerivedValue,
-  useSharedValue,
-  type SharedValue,
-} from 'react-native-reanimated';
-import { SHEET } from '#constants/animations';
+import { type SharedValue } from 'react-native-reanimated';
 import { useOverlayBackdropOptional } from '#components/providers/OverlayBackdropProvider';
+import { useSheetBackdropOpacity } from '#hooks/useSheetBackdropOpacity';
 
 interface DismissableRef {
   dismiss: () => void;
@@ -51,15 +45,8 @@ export function useBottomSheetBackdropClaim(
   onChange: (index: number) => void;
   onAnimate: (fromIndex: number, toIndex: number) => void;
 } {
-  const animatedIndex = useSharedValue(-1);
-  const opacitySV = useDerivedValue(() =>
-    interpolate(
-      animatedIndex.value,
-      [-1, 0],
-      [0, SHEET.BACKDROP_OPACITY],
-      Extrapolation.CLAMP,
-    ),
-  );
+  const { animatedIndex, backdropOpacity: opacitySV } =
+    useSheetBackdropOpacity();
 
   const { claim, release } = useOverlayBackdropOptional();
   const claimIdRef = useRef<string | null>(null);
