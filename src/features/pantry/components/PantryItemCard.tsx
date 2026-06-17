@@ -249,10 +249,11 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
   // Map ItemVariant to CardVariant
   const cardVariant: CardVariant = variant;
 
-  // Only show image if available, no placeholder
-  const leftElement = imageUrl ? (
+  // Always render the image slot — it shows a consistent placeholder tile when
+  // no image is available, so rows stay aligned and none collapse to a gap.
+  const leftElement = (
     <CardLeftSlot type="image" imageUrl={imageUrl} variant={cardVariant} />
-  ) : undefined;
+  );
 
   const expirationBold = !!expirationVariant && expirationVariant !== 'normal';
 

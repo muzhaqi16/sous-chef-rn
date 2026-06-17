@@ -192,36 +192,36 @@ describe('theme foundations', () => {
         {
           offsetX: 0,
           offsetY: 1,
-          blurRadius: 2,
+          blurRadius: 3,
           spreadDistance: 0,
-          color: 'rgba(0, 0, 0, 0.05)',
+          color: 'rgba(0, 0, 0, 0.04)',
         },
       ]);
       expect(shadows.md.boxShadow).toEqual([
         {
           offsetX: 0,
           offsetY: 2,
-          blurRadius: 4,
+          blurRadius: 8,
           spreadDistance: 0,
-          color: 'rgba(0, 0, 0, 0.1)',
+          color: 'rgba(0, 0, 0, 0.06)',
         },
       ]);
       expect(shadows.lg.boxShadow).toEqual([
         {
           offsetX: 0,
-          offsetY: 4,
-          blurRadius: 8,
+          offsetY: 6,
+          blurRadius: 16,
           spreadDistance: 0,
-          color: 'rgba(0, 0, 0, 0.15)',
+          color: 'rgba(0, 0, 0, 0.1)',
         },
       ]);
       expect(shadows.xl.boxShadow).toEqual([
         {
           offsetX: 0,
-          offsetY: 8,
-          blurRadius: 12,
+          offsetY: 12,
+          blurRadius: 28,
           spreadDistance: 0,
-          color: 'rgba(0, 0, 0, 0.2)',
+          color: 'rgba(0, 0, 0, 0.14)',
         },
       ]);
     });

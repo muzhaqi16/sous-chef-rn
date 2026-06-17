@@ -8,6 +8,7 @@ import { ShoppingListItemSkeleton } from '#components/base/Skeleton/ShoppingList
 import { EmptyState } from '#components/base/EmptyState';
 import { ShoppingEmptyIllustration } from '#components/base/ShoppingEmptyIllustration';
 import { useDeferredRender } from '#hooks/performance/useDeferredRender';
+import { useMinimumVisible } from '#hooks/ui/useMinimumVisible';
 import { StaggeredTabContent } from './StaggeredTabContent';
 import { useShoppingListTabsActions } from './ShoppingListTabsActionsContext';
 import {
@@ -32,6 +33,7 @@ const ShoppingTabComponent: React.FC = () => {
     disabled,
     onEndReached,
     hasMore,
+    isLoadingMore,
     canRemoveItems,
     canEditItems,
     canMarkPurchased,
@@ -55,8 +57,11 @@ const ShoppingTabComponent: React.FC = () => {
   }, [isReady, loading, isTransitioning]);
 
   // Show skeletons only on the very first data load, before content is ready.
-  const showSkeletons =
+  // The minimum-visible latch keeps a fast cache-warm load from flashing them
+  // for a sub-perceptible frame; when content is ready immediately it never arms.
+  const rawShowSkeletons =
     !hasShoppingTabShownContent && (!isReady || isTransitioning || !!loading);
+  const showSkeletons = useMinimumVisible(rawShowSkeletons);
 
   const searchQuery = useShoppingListSearchQuery();
   const { addItemSheet } = useShoppingListModals();
@@ -102,6 +107,7 @@ const ShoppingTabComponent: React.FC = () => {
           onSwipeableClose={actions.onSwipeableClose}
           onEndReached={onEndReached}
           hasMore={hasMore}
+          isLoadingMore={isLoadingMore}
           canRemoveItems={canRemoveItems}
           canEditItems={canEditItems}
           canMarkPurchased={canMarkPurchased}

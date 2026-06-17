@@ -359,9 +359,13 @@ export const commonStyles = StyleSheet.create(theme => ({
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
+    // Hairline neutral border (was a hard orange outline, which read heavy and
+    // dated on every thumbnail) + a tinted fill so empty placeholder tiles read
+    // as a deliberate thumbnail rather than a gap.
     borderWidth: 1,
-    borderColor: theme.colors.primary,
-    ...theme.shadows.card,
+    borderColor: theme.colors.borderLight,
+    backgroundColor: theme.colors.surfaceVariant,
+    ...theme.shadows.sm,
   },
   listItemImageCompact: {
     width: theme.sizes.itemCard.compact.image,

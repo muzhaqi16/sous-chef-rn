@@ -4,8 +4,17 @@ import { StyleSheet } from 'react-native-unistyles';
 import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
 
 export interface PaginationFooterProps {
-  /** Whether there are more items to load */
+  /** Whether there are more pages to load. Used as the fallback indicator
+   *  trigger when `isFetchingMore` is not supplied (legacy behavior). */
   hasMore: boolean;
+  /**
+   * Whether a next-page fetch is currently in flight. When provided, the
+   * footer shows its loading indicator ONLY while this is true. A list that
+   * merely *has* more pages — or grows a local render window synchronously —
+   * therefore never flashes persistent skeleton rows at the bottom, which is
+   * the common cause of "the list flickers while paginating."
+   */
+  isFetchingMore?: boolean;
   /** Current number of items */
   itemCount: number;
   /** Number of skeleton placeholders to show (default: 3) */
@@ -20,14 +29,21 @@ export interface PaginationFooterProps {
  * When a SkeletonComponent is provided, renders skeleton placeholders that
  * blend seamlessly with the list — the standard pattern for production
  * infinite scroll UX. Falls back to a compact spinner otherwise.
+ *
+ * Pass `isFetchingMore` so the indicator appears only while a page is actually
+ * loading; otherwise it falls back to `hasMore` for backward compatibility.
  */
 export const PaginationFooter: React.FC<PaginationFooterProps> = ({
   hasMore,
+  isFetchingMore,
   itemCount,
   skeletonCount = 3,
   SkeletonComponent,
 }) => {
-  if (!hasMore || itemCount <= 0) {
+  // Show the indicator only while a fetch is in flight. When the caller doesn't
+  // supply `isFetchingMore`, fall back to `hasMore` (legacy callers).
+  const showIndicator = (isFetchingMore ?? hasMore) && itemCount > 0;
+  if (!showIndicator) {
     return null;
   }
 

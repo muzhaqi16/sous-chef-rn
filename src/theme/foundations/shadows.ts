@@ -1,3 +1,7 @@
+// Soft, diffuse elevation ramp: each step is a single shadow with a wide blur
+// and low opacity (vs. tight, dark drop shadows, which read dated). Blur grows
+// and offset lifts as elevation increases; opacity stays low so surfaces feel
+// like they float on warm light rather than sit on a hard line.
 export const shadows = {
   none: {},
   sm: {
@@ -5,9 +9,9 @@ export const shadows = {
       {
         offsetX: 0,
         offsetY: 1,
-        blurRadius: 2,
+        blurRadius: 3,
         spreadDistance: 0,
-        color: 'rgba(0, 0, 0, 0.05)',
+        color: 'rgba(0, 0, 0, 0.04)',
       },
     ],
   },
@@ -16,9 +20,9 @@ export const shadows = {
       {
         offsetX: 0,
         offsetY: 2,
-        blurRadius: 4,
+        blurRadius: 8,
         spreadDistance: 0,
-        color: 'rgba(0, 0, 0, 0.1)',
+        color: 'rgba(0, 0, 0, 0.06)',
       },
     ],
   },
@@ -26,10 +30,10 @@ export const shadows = {
     boxShadow: [
       {
         offsetX: 0,
-        offsetY: 4,
-        blurRadius: 8,
+        offsetY: 6,
+        blurRadius: 16,
         spreadDistance: 0,
-        color: 'rgba(0, 0, 0, 0.15)',
+        color: 'rgba(0, 0, 0, 0.1)',
       },
     ],
   },
@@ -37,10 +41,10 @@ export const shadows = {
     boxShadow: [
       {
         offsetX: 0,
-        offsetY: 8,
-        blurRadius: 12,
+        offsetY: 12,
+        blurRadius: 28,
         spreadDistance: 0,
-        color: 'rgba(0, 0, 0, 0.2)',
+        color: 'rgba(0, 0, 0, 0.14)',
       },
     ],
   },
@@ -48,15 +52,17 @@ export const shadows = {
    * Floating-card elevation. Soft, wide, low-opacity — the geometry the
    * primary cards (HomeCard, ItemCard, list thumbnails) were each inlining
    * with inconsistent color encoding. Use this for any resting surface card.
+   * Spread 0 so the blur fades cleanly to transparent (no hard edge); the
+   * containers it renders inside must not clip (overflow: visible).
    */
   card: {
     boxShadow: [
       {
         offsetX: 0,
-        offsetY: 4,
-        blurRadius: 15,
-        spreadDistance: 1,
-        color: 'rgba(0, 0, 0, 0.1)',
+        offsetY: 3,
+        blurRadius: 16,
+        spreadDistance: 0,
+        color: 'rgba(0, 0, 0, 0.08)',
       },
     ],
   },

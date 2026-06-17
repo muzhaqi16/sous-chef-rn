@@ -1,8 +1,15 @@
 import { useRef, useEffect, useState } from 'react';
-import { View, type LayoutChangeEvent, ScrollView } from 'react-native';
+import {
+  View,
+  type LayoutChangeEvent,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  ScrollView,
+} from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
+import { EdgeFade } from '#components/atoms/EdgeFade';
 import { FilterTabsItem } from './FilterTabsItem';
 import type { FilterTabConfig, FilterTabsProps } from './types';
 import { Text } from '#components/atoms/Text';
@@ -67,21 +74,73 @@ function FilterTabsComponent<T extends string = string>({
     y: 0,
   }));
 
-  // Scroll to active tab on mount and when activeTabId changes
+  // ── Scroll-edge fades ──
+  // Show a soft fade on whichever side has more content scrolled off, so chips
+  // read as scrollable instead of hard-clipped at the viewport edge. Widths are
+  // tracked in refs (written only in handlers); `edges` only re-renders when a
+  // fade actually toggles on/off.
+  const [edges, setEdges] = useState({ left: false, right: false });
+  const layoutWRef = useRef(0);
+  const contentWRef = useRef(0);
+  const scrollXRef = useRef(0);
+  const recomputeEdges = () => {
+    // Small dead-zone so a near-edge resting position doesn't fade a pill that
+    // is essentially fully visible.
+    const left = scrollXRef.current > 12;
+    const right =
+      scrollXRef.current + layoutWRef.current < contentWRef.current - 12;
+    setEdges(prev =>
+      prev.left === left && prev.right === right ? prev : { left, right },
+    );
+  };
+  const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    scrollXRef.current = e.nativeEvent.contentOffset.x;
+    recomputeEdges();
+  };
+  const handleContentSizeChange = (w: number) => {
+    contentWRef.current = w;
+    recomputeEdges();
+  };
+
+  // Center the active tab on mount and whenever it changes. Retries across a
+  // few frames so a cache that hasn't measured yet (fresh mount, or the sticky
+  // copy remounting on a filter change) still lands centered instead of giving
+  // up and jumping to the start. Clamps to the real scroll range so end tabs
+  // settle flush against the edge rather than over-scrolling.
   useEffect(() => {
-    const id = requestAnimationFrame(() => {
-      const offset = computeScrollOffset(activeTabId, cacheKey);
-      scrollViewRef.current?.scrollTo({
-        x: offset,
-        animated: hasAutoCenteredRef.current,
-      });
-      hasAutoCenteredRef.current = true;
-    });
-    return () => cancelAnimationFrame(id);
+    let cancelled = false;
+    const tryCenter = (attempt: number) => {
+      if (cancelled) return;
+      const pos = tabLayoutCache.get(cacheKey)?.get(activeTabId);
+      const vp = layoutWRef.current || viewportWidthCache.get(cacheKey) || 0;
+      if (pos && vp > 0) {
+        const centered = Math.max(0, pos.x - vp / 2 + pos.width / 2);
+        const maxScroll =
+          contentWRef.current > 0
+            ? Math.max(0, contentWRef.current - vp)
+            : centered;
+        scrollViewRef.current?.scrollTo({
+          x: Math.min(centered, maxScroll),
+          animated: hasAutoCenteredRef.current,
+        });
+        hasAutoCenteredRef.current = true;
+        return;
+      }
+      if (attempt < 5) {
+        requestAnimationFrame(() => tryCenter(attempt + 1));
+      }
+    };
+    requestAnimationFrame(() => tryCenter(0));
+    return () => {
+      cancelled = true;
+    };
   }, [activeTabId, cacheKey]);
 
   const handleScrollViewLayout = (e: LayoutChangeEvent) => {
-    viewportWidthCache.set(cacheKey, e.nativeEvent.layout.width);
+    const w = e.nativeEvent.layout.width;
+    viewportWidthCache.set(cacheKey, w);
+    layoutWRef.current = w;
+    recomputeEdges();
   };
 
   const handleTabLayout = (tabId: T, e: LayoutChangeEvent) => {
@@ -126,6 +185,9 @@ function FilterTabsComponent<T extends string = string>({
         contentContainerStyle={styles.scrollContent}
         style={styles.scrollView}
         onLayout={handleScrollViewLayout}
+        onScroll={handleScroll}
+        onContentSizeChange={handleContentSizeChange}
+        scrollEventThrottle={16}
         contentOffset={initialContentOffset}
       >
         {tabs.map((tab: FilterTabConfig<T>) => (
@@ -165,6 +227,8 @@ function FilterTabsComponent<T extends string = string>({
           </Pressable>
         )}
       </ScrollView>
+      {!!edges.left && <EdgeFade side="left" />}
+      {!!edges.right && <EdgeFade side="right" />}
     </View>
   );
 }

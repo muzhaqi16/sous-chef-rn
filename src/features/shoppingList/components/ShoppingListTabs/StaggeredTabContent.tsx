@@ -28,6 +28,8 @@ interface StaggeredTabContentProps {
   onSwipeableClose?: () => void;
   onEndReached?: () => void;
   hasMore?: boolean;
+  /** True while a next-page fetch is in flight — gates the footer skeleton. */
+  isLoadingMore?: boolean;
   canRemoveItems: boolean;
   canEditItems: boolean;
   canMarkPurchased: boolean;
@@ -64,6 +66,7 @@ export const StaggeredTabContent: React.FC<StaggeredTabContentProps> = ({
   onSwipeableClose,
   onEndReached,
   hasMore,
+  isLoadingMore,
   canRemoveItems,
   canEditItems,
   canMarkPurchased,
@@ -80,6 +83,7 @@ export const StaggeredTabContent: React.FC<StaggeredTabContentProps> = ({
   const footerComponent = (
     <PaginationFooter
       hasMore={!!hasMore}
+      isFetchingMore={!!isLoadingMore}
       itemCount={items.length}
       SkeletonComponent={ShoppingListItemSkeleton}
       skeletonCount={3}
