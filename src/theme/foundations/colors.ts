@@ -225,11 +225,14 @@ export const darkExpiration: typeof colors.expiration = {
 export const darkFilterTab: typeof colors.filterTab = {
   activeBg: colors.filterTab.activeBg,
   activeText: colors.filterTab.activeText,
-  inactiveBg: '#3F4553',
-  inactiveText: '#D1D5DB',
+  // Warm neutral chips, matching the rest of the dark theme's surfaces. The
+  // previous slate-blue values (#3F4553 / #4B5563 / #D1D5DB) read cool against
+  // the warm near-black background and broke the "refined warm" direction.
+  inactiveBg: colors.neutral[700],
+  inactiveText: colors.neutral[200],
   filteredBg: 'rgba(249, 115, 22, 0.15)',
   filteredText: '#FB923C',
-  countBg: '#4B5563',
-  countText: '#D1D5DB',
+  countBg: colors.neutral[600],
+  countText: colors.neutral[100],
   activeCountBg: colors.filterTab.activeCountBg,
 };
