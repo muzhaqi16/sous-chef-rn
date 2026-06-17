@@ -91,4 +91,41 @@ describe('PaginationFooter', () => {
       expect(UNSAFE_queryByType(ActivityIndicator)).toBeNull();
     });
   });
+
+  describe('isFetchingMore gating', () => {
+    it('renders nothing when more pages exist but no fetch is in flight', () => {
+      const { toJSON } = render(
+        <PaginationFooter
+          hasMore={true}
+          isFetchingMore={false}
+          itemCount={10}
+          SkeletonComponent={MockSkeleton}
+        />,
+      );
+      expect(toJSON()).toBeNull();
+    });
+
+    it('renders skeletons only while a fetch is in flight', () => {
+      const { getAllByTestId } = render(
+        <PaginationFooter
+          hasMore={true}
+          isFetchingMore={true}
+          itemCount={10}
+          SkeletonComponent={MockSkeleton}
+        />,
+      );
+      expect(getAllByTestId('skeleton-item')).toHaveLength(3);
+    });
+
+    it('isFetchingMore overrides hasMore=false for the indicator', () => {
+      const { UNSAFE_getByType } = render(
+        <PaginationFooter
+          hasMore={false}
+          isFetchingMore={true}
+          itemCount={10}
+        />,
+      );
+      expect(UNSAFE_getByType(ActivityIndicator)).toBeTruthy();
+    });
+  });
 });

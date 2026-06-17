@@ -28,11 +28,14 @@ export const styles = StyleSheet.create(theme => {
       // the card's rounded border. The action containers have their own dark bg.
     },
 
-    // Children container style for Swipeable component
+    // Children container style for Swipeable component.
     // No borderRadius here — the card inside handles its own rounding.
-    // Adding borderRadius + overflow:hidden here double-clips the card's border corners.
+    // overflow must stay `visible` (like gestureContainer/swipeableContainer) so
+    // the card child's soft drop shadow fades to transparent instead of being
+    // clipped to a hard rectangular edge at the card bounds. The card sets its
+    // own borderRadius, so nothing here needs clipping.
     childrenContainer: {
-      overflow: 'hidden',
+      overflow: 'visible',
     },
 
     actionsContainer: {

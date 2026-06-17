@@ -44,9 +44,9 @@ describe('themes', () => {
         {
           offsetX: 0,
           offsetY: 2,
-          blurRadius: 4,
+          blurRadius: 8,
           spreadDistance: 0,
-          color: 'rgba(0, 0, 0, 0.1)',
+          color: 'rgba(0, 0, 0, 0.06)',
         },
       ]);
     });
@@ -76,10 +76,10 @@ describe('themes', () => {
       // Primary colors
       expect(lightTheme.colors.primary).toBeDefined();
       expect(lightTheme.colors.onPrimary).toBeDefined();
-      // Background should be white in light mode
-      expect(lightTheme.colors.background).toBe('#FFFFFF');
-      // Text should be dark in light mode
-      expect(lightTheme.colors.textPrimary).toBe('#212121');
+      // Background is a warm off-white in light mode (cards layer white above it)
+      expect(lightTheme.colors.background).toBe('#F6F4F0');
+      // Text should be dark in light mode (warm near-black)
+      expect(lightTheme.colors.textPrimary).toBe('#211E18');
     });
 
     it('has semantic colors', () => {
@@ -138,13 +138,13 @@ describe('themes', () => {
     });
 
     it('has dark mode background color', () => {
-      // Dark background should be dark
-      expect(darkTheme.colors.background).toBe('#212121');
+      // Dark background should be dark (warm charcoal)
+      expect(darkTheme.colors.background).toBe('#211E18');
     });
 
     it('has dark mode text colors', () => {
-      // Text should be light in dark mode
-      expect(darkTheme.colors.textPrimary).toBe('#FAFAFA');
+      // Text should be light in dark mode (warm white)
+      expect(darkTheme.colors.textPrimary).toBe('#FAF9F7');
     });
 
     it('has colors that differ from light theme', () => {

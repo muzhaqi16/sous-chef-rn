@@ -54,19 +54,25 @@ export const colors = {
     '950': '#61005e',
   },
 
-  // Neutral colors
+  // Neutral colors — warm-tuned ramp (subtle taupe undertone, very low chroma)
+  // so neutrals harmonize with the warm orange brand instead of fighting it.
+  // Lightness ordering is preserved 1:1 with the previous cool ramp, so every
+  // existing semantic mapping keeps its relative contrast. Text tones picked
+  // for WCAG AA on the warm-white app background:
+  //   900 = textPrimary (~14:1), 700 = textSecondary (~7.5:1),
+  //   600 = textTertiary (~5.4:1), 500 = placeholder (~3.6:1).
   neutral: {
     0: '#FFFFFF',
-    50: '#FAFAFA',
-    100: '#F5F5F5',
-    200: '#EEEEEE',
-    300: '#E0E0E0',
-    400: '#BDBDBD',
-    500: '#9E9E9E',
-    600: '#757575',
-    700: '#616161',
-    800: '#424242',
-    900: '#212121',
+    50: '#FAF9F7', // warm off-white — app background
+    100: '#F3F1ED', // surfaceVariant / pressed
+    200: '#E9E6E0', // borderLight / divider
+    300: '#DAD6CD', // border
+    400: '#BBB6AC', // disabled
+    500: '#847F76', // placeholder
+    600: '#696459', // textTertiary
+    700: '#514D45', // textSecondary
+    800: '#36332C', // elevated dark surface
+    900: '#211E18', // textPrimary / warm near-black
     1000: '#000000',
   },
 
@@ -219,11 +225,14 @@ export const darkExpiration: typeof colors.expiration = {
 export const darkFilterTab: typeof colors.filterTab = {
   activeBg: colors.filterTab.activeBg,
   activeText: colors.filterTab.activeText,
-  inactiveBg: '#3F4553',
-  inactiveText: '#D1D5DB',
+  // Warm neutral chips, matching the rest of the dark theme's surfaces. The
+  // previous slate-blue values (#3F4553 / #4B5563 / #D1D5DB) read cool against
+  // the warm near-black background and broke the "refined warm" direction.
+  inactiveBg: colors.neutral[700],
+  inactiveText: colors.neutral[200],
   filteredBg: 'rgba(249, 115, 22, 0.15)',
   filteredText: '#FB923C',
-  countBg: '#4B5563',
-  countText: '#D1D5DB',
+  countBg: colors.neutral[600],
+  countText: colors.neutral[100],
   activeCountBg: colors.filterTab.activeCountBg,
 };

@@ -9,6 +9,13 @@ describe('NotificationFilters', () => {
     onCategoryChange: jest.fn(),
   };
 
+  // Mirrors the component's label formatting: 'HOME' → 'Home'.
+  const displayLabel = (value: string): string =>
+    value
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -23,9 +30,7 @@ describe('NotificationFilters', () => {
     // Check a few known categories
     const categoryValues = Object.values(NotificationCategory);
     for (const cat of categoryValues) {
-      // Categories have underscores replaced with spaces
-      const displayName = cat.replace('_', ' ');
-      expect(screen.getByText(displayName)).toBeTruthy();
+      expect(screen.getByText(displayLabel(cat))).toBeTruthy();
     }
   });
 
@@ -40,8 +45,7 @@ describe('NotificationFilters', () => {
     const user = userEvent.setup();
     render(<NotificationFilters {...defaultProps} />);
     const firstCategory = Object.values(NotificationCategory)[0];
-    const displayName = firstCategory.replace('_', ' ');
-    await user.press(screen.getByText(displayName));
+    await user.press(screen.getByText(displayLabel(firstCategory)));
     expect(defaultProps.onCategoryChange).toHaveBeenCalledWith(firstCategory);
   });
 

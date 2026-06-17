@@ -45,6 +45,7 @@ import { resolveImageUrl } from '#utils/imageUtils';
 import { useRenderTime } from '#hooks/performance/useRenderTime';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
 import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
+import { useMinimumVisible } from '#hooks/ui/useMinimumVisible';
 import {
   FLASHLIST_DEFAULTS,
   STICKY_HEADER_SENTINEL,
@@ -119,6 +120,7 @@ export const PantryContent = React.forwardRef<
       totalCount,
       onAddItem,
       hasMore = false,
+      isLoadingMore = false,
       onRefresh,
       onEndReached,
       refreshing = false,
@@ -247,7 +249,6 @@ export const PantryContent = React.forwardRef<
     }
 
     const windowedItems = deferredSortedItems.slice(0, clientWindow);
-    const clientHasMore = clientWindow < deferredSortedItems.length;
 
     // A tab switch whose new page is still fetching (server mode only): armed on
     // press, cleared once `fetching` transitions true→false. Cleared only on
@@ -291,11 +292,17 @@ export const PantryContent = React.forwardRef<
     // Skeletons bridge it until the rows are in the window. Transient by
     // construction (the deferred value always catches up next render).
     const renderLag = sortedItems.length > 0 && windowedItems.length === 0;
+    // The anti-flash minimum applies only to the *initial* (no-content-yet)
+    // skeletons: a fast cache-warm load could otherwise flash them for a
+    // sub-perceptible frame and then swap straight to content — the "switches
+    // between states very quickly" glitch. When content is ready on the first
+    // render the latch never arms, so nothing is delayed. The switch overlay
+    // (`switching && fetching`) keeps its own arm/lift timing so a freshly
+    // fetched tab/sort isn't held back by the minimum.
+    const initialSkeletons =
+      awaitingItems || renderLag || (!hasShownContent && loading);
     const showSkeletons =
-      awaitingItems ||
-      renderLag ||
-      (!hasShownContent && loading) ||
-      (switching && fetching);
+      useMinimumVisible(initialSkeletons) || (switching && fetching);
 
     // While skeletons show, hand the list only the sticky tabs so the chrome +
     // tabs stay visible with skeleton rows below (PantryEmptyState) — and any
@@ -318,8 +325,6 @@ export const PantryContent = React.forwardRef<
         );
       }
     };
-
-    const hasMoreToRender = hasMore || clientHasMore;
 
     useDataReferenceTracker(
       sortedItems,
@@ -547,7 +552,8 @@ export const PantryContent = React.forwardRef<
                 />
               ) : (
                 <PaginationFooter
-                  hasMore={hasMoreToRender}
+                  hasMore={hasMore}
+                  isFetchingMore={isLoadingMore}
                   itemCount={bodyItems.length}
                   SkeletonComponent={PantryItemSkeleton}
                   skeletonCount={3}

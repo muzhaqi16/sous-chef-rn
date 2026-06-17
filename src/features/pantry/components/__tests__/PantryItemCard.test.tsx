@@ -320,9 +320,11 @@ describe('PantryItemCard', () => {
     expect(screen.getByTestId('card-left-image')).toBeTruthy();
   });
 
-  it('does not render image left slot when no imageUrl', () => {
+  it('renders placeholder image slot when no imageUrl', () => {
     renderCard();
-    expect(screen.queryByTestId('card-left-image')).toBeNull();
+    // The image slot is always rendered; it shows a consistent placeholder
+    // tile when no image is available, so rows stay aligned.
+    expect(screen.getByTestId('card-left-image')).toBeTruthy();
   });
 
   it('renders quantity breakdown text when quantityBreakdown is set', () => {

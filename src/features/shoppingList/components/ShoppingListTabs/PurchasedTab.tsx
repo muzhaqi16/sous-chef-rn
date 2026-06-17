@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet } from 'react-native-unistyles';
 import Animated, { FadeOut } from 'react-native-reanimated';
 import { TIMING } from '#constants/animations';
@@ -7,6 +8,7 @@ import { SkeletonList } from '#components/base/Skeleton/SkeletonList';
 import { ShoppingListItemSkeleton } from '#components/base/Skeleton/ShoppingListItemSkeleton';
 import { EmptyState } from '#components/base/EmptyState';
 import { useDeferredRender } from '#hooks/performance/useDeferredRender';
+import { useMinimumVisible } from '#hooks/ui/useMinimumVisible';
 import { StaggeredTabContent } from './StaggeredTabContent';
 import { useShoppingListTabsActions } from './ShoppingListTabsActionsContext';
 import {
@@ -30,6 +32,7 @@ const PurchasedTabComponent: React.FC = () => {
     disabled,
     onEndReached,
     hasMore,
+    isLoadingMore,
     canRemoveItems,
     canEditItems,
     canMarkPurchased,
@@ -52,9 +55,13 @@ const PurchasedTabComponent: React.FC = () => {
   }, [isReady, loading, isTransitioning]);
 
   // Show skeletons only on the very first data load, before content is ready.
-  const showSkeletons =
+  // The minimum-visible latch keeps a fast cache-warm load from flashing them
+  // for a sub-perceptible frame; when content is ready immediately it never arms.
+  const rawShowSkeletons =
     !hasPurchasedTabShownContent && (!isReady || isTransitioning || !!loading);
+  const showSkeletons = useMinimumVisible(rawShowSkeletons);
 
+  const { t } = useTranslation();
   const searchQuery = useShoppingListSearchQuery();
 
   const displayQuery =
@@ -63,14 +70,16 @@ const PurchasedTabComponent: React.FC = () => {
   const emptyComponent = searchQuery.trim() ? (
     <EmptyState
       icon="search-outline"
-      title={`No results for "${displayQuery}"`}
-      description="No purchased items match your search"
+      title={t('shoppingListScreens.searchNoResultsTitle', {
+        query: displayQuery,
+      })}
+      description={t('shoppingListScreens.purchasedSearchNoMatch')}
     />
   ) : (
     <EmptyState
       icon="cart-outline"
-      title="No purchased items yet"
-      description="Check off items as you shop to see them here"
+      title={t('shoppingListScreens.purchasedEmptyTitle')}
+      description={t('shoppingListScreens.purchasedEmptyDescription')}
     />
   );
 
@@ -97,6 +106,7 @@ const PurchasedTabComponent: React.FC = () => {
           onSwipeableClose={actions.onSwipeableClose}
           onEndReached={onEndReached}
           hasMore={hasMore}
+          isLoadingMore={isLoadingMore}
           canRemoveItems={canRemoveItems}
           canEditItems={canEditItems}
           canMarkPurchased={canMarkPurchased}

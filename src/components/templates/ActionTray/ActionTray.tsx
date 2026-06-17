@@ -19,19 +19,13 @@ import {
   type BottomSheetFooterProps,
   type BottomSheetScrollViewMethods,
 } from '@gorhom/bottom-sheet';
-import {
-  Extrapolation,
-  interpolate,
-  useDerivedValue,
-  useSharedValue,
-} from 'react-native-reanimated';
 import { StyleSheet as UnistylesStyleSheet } from 'react-native-unistyles';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
 import { Icon } from '#utils/iconUtils';
 import { useBackdropClaim } from '#components/providers/OverlayBackdropProvider';
 import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
-import { SHEET } from '#constants/animations';
+import { useSheetBackdropOpacity } from '#hooks/useSheetBackdropOpacity';
 import { ActionTrayScrollContext } from './ActionTrayScrollContext';
 import type { ActionTrayProps, ActionTrayRef } from './types';
 
@@ -74,15 +68,7 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
     // (mounted → false) or the screen unmounts. Releasing off gorhom's close
     // events instead is racy: navigation can interrupt the close so those
     // events never fire, leaking the dim (and the tab bar that reads it).
-    const animatedIndex = useSharedValue(-1);
-    const backdropOpacity = useDerivedValue(() =>
-      interpolate(
-        animatedIndex.value,
-        [-1, 0],
-        [0, SHEET.BACKDROP_OPACITY],
-        Extrapolation.CLAMP,
-      ),
-    );
+    const { animatedIndex, backdropOpacity } = useSheetBackdropOpacity();
     // Shared dismiss for the backdrop tap and the header close button.
     const handleDismiss = () => {
       bottomSheetRef.current?.dismiss();

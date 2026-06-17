@@ -1,5 +1,10 @@
 import React from 'react';
-import { View, StyleProp, ViewStyle } from 'react-native';
+import { StyleProp, ViewStyle } from 'react-native';
+import Animated, {
+  FadeIn,
+  ZoomIn,
+  useReducedMotion,
+} from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import { Button } from './Button';
 import { IconName, Icon } from '#/utils/iconUtils';
@@ -23,6 +28,8 @@ export interface EmptyStateProps {
     label: string;
     onPress: () => void;
     variant?: 'primary' | 'secondary' | 'outline';
+    /** Optional leading icon on the action button (e.g. "add" for a CTA) */
+    icon?: IconName;
   };
 
   /** Secondary action button */
@@ -64,10 +71,19 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   style,
   testID,
 }) => {
+  // Gentle one-shot entrance so empty states ease in rather than snap. Disabled
+  // under the OS "reduce motion" setting. Safe here because empty states mount
+  // once when a screen has no content (not recycled list cells), so there's no
+  // re-fire-on-scroll risk.
+  const reducedMotion = useReducedMotion();
+  const containerEntering = reducedMotion ? undefined : FadeIn.duration(280);
+  const badgeEntering = reducedMotion ? undefined : ZoomIn.duration(320);
+
   const renderIcon = () => {
     if (!icon) return null;
 
-    // Check if icon is a React node (custom component)
+    // Custom React node (e.g. a full illustration) renders as-is — it owns its
+    // own visual treatment and shouldn't get the badge.
     if (React.isValidElement(icon)) {
       return icon;
     }
@@ -76,23 +92,28 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
     const isEmoji =
       typeof icon === 'string' && icon.length <= 4 && !/^[a-z-]+$/.test(icon);
 
-    if (isEmoji) {
-      return <Text style={[styles.emoji, { fontSize: iconSize }]}>{icon}</Text>;
-    }
-
+    // Name/emoji icons sit inside a soft tinted circular badge so the empty
+    // state reads as a designed element rather than a lone floating glyph.
     return (
-      <Icon
-        name={icon as IconName}
-        size={iconSize}
-        color={iconColor}
-        tone="textSecondary"
-        library={iconLibrary}
-      />
+      <Animated.View entering={badgeEntering} style={styles.iconBadge}>
+        {isEmoji ? (
+          <Text style={[styles.emoji, { fontSize: iconSize }]}>{icon}</Text>
+        ) : (
+          <Icon
+            name={icon as IconName}
+            size={iconSize}
+            color={iconColor}
+            tone="textSecondary"
+            library={iconLibrary}
+          />
+        )}
+      </Animated.View>
     );
   };
 
   return (
-    <View
+    <Animated.View
+      entering={containerEntering}
       testID={testID}
       accessibilityRole="summary"
       style={[styles.container, { justifyContent: alignment }, style]}
@@ -127,6 +148,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
           onPress={action.onPress}
           variant={action.variant || 'primary'}
           size="medium"
+          icon={action.icon}
           style={styles.actionButton}
         >
           {action.label}
@@ -141,7 +163,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
           {secondaryAction.label}
         </Button>
       )}
-    </View>
+    </Animated.View>
   );
 };
 
@@ -152,8 +174,18 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing['2xl'],
   },
 
+  // Soft circular badge behind name/emoji icons — a subtle neutral tint so it
+  // reads as a deliberate graphic without competing with the title or actions.
+  iconBadge: {
+    padding: theme.spacing.md,
+    borderRadius: theme.radii.full,
+    backgroundColor: theme.colors.surfaceVariant,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
   emoji: {
-    marginBottom: theme.spacing.md,
+    textAlign: 'center',
   },
 
   title: {

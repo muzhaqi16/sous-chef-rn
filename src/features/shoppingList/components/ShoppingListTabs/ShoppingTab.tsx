@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet } from 'react-native-unistyles';
 import Animated, { FadeOut } from 'react-native-reanimated';
 import { TIMING } from '#constants/animations';
@@ -8,6 +9,7 @@ import { ShoppingListItemSkeleton } from '#components/base/Skeleton/ShoppingList
 import { EmptyState } from '#components/base/EmptyState';
 import { ShoppingEmptyIllustration } from '#components/base/ShoppingEmptyIllustration';
 import { useDeferredRender } from '#hooks/performance/useDeferredRender';
+import { useMinimumVisible } from '#hooks/ui/useMinimumVisible';
 import { StaggeredTabContent } from './StaggeredTabContent';
 import { useShoppingListTabsActions } from './ShoppingListTabsActionsContext';
 import {
@@ -32,6 +34,7 @@ const ShoppingTabComponent: React.FC = () => {
     disabled,
     onEndReached,
     hasMore,
+    isLoadingMore,
     canRemoveItems,
     canEditItems,
     canMarkPurchased,
@@ -55,9 +58,13 @@ const ShoppingTabComponent: React.FC = () => {
   }, [isReady, loading, isTransitioning]);
 
   // Show skeletons only on the very first data load, before content is ready.
-  const showSkeletons =
+  // The minimum-visible latch keeps a fast cache-warm load from flashing them
+  // for a sub-perceptible frame; when content is ready immediately it never arms.
+  const rawShowSkeletons =
     !hasShoppingTabShownContent && (!isReady || isTransitioning || !!loading);
+  const showSkeletons = useMinimumVisible(rawShowSkeletons);
 
+  const { t } = useTranslation();
   const searchQuery = useShoppingListSearchQuery();
   const { addItemSheet } = useShoppingListModals();
 
@@ -67,15 +74,20 @@ const ShoppingTabComponent: React.FC = () => {
   const emptyComponent = searchQuery.trim() ? (
     <EmptyState
       icon="search-outline"
-      title={`No results for "${displayQuery}"`}
-      description="Would you like to add it to your list?"
-      action={{ label: 'Add Item', onPress: addItemSheet.open }}
+      title={t('shoppingListScreens.searchNoResultsTitle', {
+        query: displayQuery,
+      })}
+      description={t('shoppingListScreens.searchAddPrompt')}
+      action={{
+        label: t('shoppingListScreens.addItem'),
+        onPress: addItemSheet.open,
+      }}
     />
   ) : (
     <EmptyState
       icon={<ShoppingEmptyIllustration size="medium" />}
-      title="Your list is empty"
-      description="Add items to start your shopping list"
+      title={t('shoppingListScreens.emptyTitle')}
+      description={t('shoppingListScreens.emptyDescription')}
     />
   );
 
@@ -102,6 +114,7 @@ const ShoppingTabComponent: React.FC = () => {
           onSwipeableClose={actions.onSwipeableClose}
           onEndReached={onEndReached}
           hasMore={hasMore}
+          isLoadingMore={isLoadingMore}
           canRemoveItems={canRemoveItems}
           canEditItems={canEditItems}
           canMarkPurchased={canMarkPurchased}

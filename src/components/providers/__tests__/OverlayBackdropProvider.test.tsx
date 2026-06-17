@@ -313,6 +313,51 @@ describe('OverlayBackdropProvider', () => {
     expect(dynamicOnPressFired).toBe(false);
   });
 
+  it('removes an external-SV slot when released before slotsRef syncs (fast claim→release race)', () => {
+    // Repro for the "navigate away before it settles" leak: a sheet/tray
+    // claims the backdrop, then is torn down so fast that `release` runs in
+    // the SAME synchronous tick as `claim` — before the provider's
+    // post-commit effect has synced `slotsRef`. The old `release` looked the
+    // slot up in the stale `slotsRef`, found nothing, and silently returned,
+    // stranding the slot (with its frozen non-zero external SV) → permanent
+    // dim + hidden tab bar. `removeSlot`'s `setSlots` updater reads
+    // authoritative state, so the removal must still go through.
+    let claimFn: ((opts?: { opacity: unknown }) => string) | null = null;
+    let releaseFn: ((id: string) => void) | null = null;
+    const Capture: React.FC = () => {
+      const ctx = useOverlayBackdrop();
+      useEffect(() => {
+        claimFn = ctx.claim as typeof claimFn;
+        releaseFn = ctx.release;
+      }, [ctx]);
+      return null;
+    };
+
+    const { makeMutable } = require('react-native-reanimated');
+    // A non-zero external SV models a sheet that unmounted mid-open, leaving
+    // its animatedIndex-derived opacity frozen above 0.
+    const frozenSV = makeMutable(0.5);
+
+    render(
+      <OverlayBackdropProvider>
+        <Capture />
+        <GlobalBackdrop />
+      </OverlayBackdropProvider>,
+    );
+
+    const reanimated = require('react-native-reanimated').default;
+
+    // Claim then release in one synchronous act() — slotsRef is still stale
+    // (pre-claim) when release runs.
+    act(() => {
+      const id = claimFn!({ opacity: frozenSV });
+      releaseFn!(id);
+    });
+
+    const backdrop = screen.UNSAFE_getByType(reanimated.View);
+    expect(backdrop.props.pointerEvents).toBe('none');
+  });
+
   it('release is a no-op for unknown ids', () => {
     let releaseFn: ((id: string) => void) | null = null;
     const Capture: React.FC = () => {

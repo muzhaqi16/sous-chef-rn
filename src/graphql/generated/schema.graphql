@@ -488,6 +488,25 @@ type AdminItemUnitConversionsResult {
 }
 
 """
+Admin input to purge homes by id, bypassing ownership. Intended for data
+consistency / cleanup of junk or test homes.
+"""
+input AdminPurgeHomesInput {
+  """Home ids to purge."""
+  ids: [ID!]!
+  """
+  When true, permanently hard-delete each home and ALL associated data (pantries, pantry items, shopping lists + items, meal plans, meal templates, memberships, invites, storage). When false/omitted, soft-delete the home subtree.
+  """
+  permanent: Boolean
+}
+
+type AdminPurgeHomesPayload {
+  result: BulkOperationSummary!
+}
+
+union AdminPurgeHomesResult = AdminPurgeHomesPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
+
+"""
 Admin input to purge pantry items by id, bypassing ownership. Intended for
 cleaning up junk/test rows (e.g. E2E fixtures) that pollute the
 RECENTLY_DELETED suggestion source.
@@ -5598,71 +5617,14 @@ type Mutation {
   addTemplateItem(input: AddTemplateItemInput!): AddTemplateItemResult!
   """Add a new address to the current user's account."""
   addUserAddress(input: CreateUserAddressInput!): AddUserAddressResult!
-  """Add a warning to a user's moderation record"""
-  addWarning(input: AddWarningInput!): AddWarningResult!
   """
   Adjust pantry item quantity to match a physical count.
   Creates an ADJUSTMENT usage record with mandatory reason for audit trail.
   The delta (positive or negative) is calculated automatically.
   """
   adjustPantryItemQuantity(input: AdjustPantryItemQuantityInput!): AdjustPantryItemQuantityResult!
-  """
-  Admin: Delete multiple items (soft delete by default, permanent if specified)
-  """
-  adminBulkDeleteItems(input: AdminBulkDeleteItemsInput!): AdminBulkDeleteItemsResult!
-  """
-  Delete images from S3/MinIO storage and update related Item records.
-  
-  For batches >50 images (or when useQueue=true), the operation runs
-  in the background. Use adminGetImageDeletionJobStatus to check progress.
-  
-  This endpoint is designed for admin panel use after duplicate detection.
-  It removes the specified images from storage and deletes the corresponding ItemImage records.
-  """
-  adminDeleteImages(input: AdminDeleteImagesInput!): ImageDeletionResult!
-  """Admin: Delete an item (soft delete by default, permanent if specified)"""
-  adminDeleteItem(input: AdminDeleteItemInput!): AdminDeleteItemResult!
-  """
-  Admin: Delete any recipe (soft delete by default, permanent if specified)
-  """
-  adminDeleteRecipe(input: AdminDeleteRecipeInput!): AdminDeleteRecipeResult!
-  """Admin: Delete any recipe review (bypasses ownership restrictions)"""
-  adminDeleteRecipeReview(input: AdminDeleteRecipeReviewInput!): AdminDeleteRecipeReviewResult!
-  """Delete a user's account as an administrator."""
-  adminDeleteUser(input: AdminDeleteUserInput!): AdminDeleteUserResult!
-  """
-  Admin: purge pantry items by id, bypassing ownership. Hard-deletes when
-  permanent is true (removing them from the RECENTLY_DELETED suggestion
-  source), otherwise soft-deletes. Intended for cleaning up junk/test rows
-  such as E2E fixtures. Returns a summary of how many were deleted.
-  """
-  adminPurgePantryItems(input: AdminPurgePantryItemsInput!): AdminPurgePantryItemsResult!
-  """
-  Admin: purge shopping list items by id, bypassing ownership. Hard-deletes
-  when permanent is true (removing them from the RECENTLY_DELETED suggestion
-  source), otherwise soft-deletes. Intended for cleaning up junk/test rows
-  such as E2E fixtures. Returns a summary of how many were deleted.
-  """
-  adminPurgeShoppingListItems(input: AdminPurgeShoppingListItemsInput!): AdminPurgeShoppingListItemsResult!
-  """Admin: Update any item (bypasses ownership restrictions)"""
-  adminUpdateItem(input: UpdateItemInput!): AdminUpdateItemResult!
-  """Admin: Update any recipe (bypasses ownership restrictions)"""
-  adminUpdateRecipe(input: UpdateRecipeInput!): AdminUpdateRecipeResult!
-  """
-  Approve a primary item for public visibility and merge the given secondary
-  duplicates into it, atomically.
-  """
-  approveAndMerge(input: ApproveAndMergeInput!): ApproveAndMergeResult!
-  """Approve a user-created item for public visibility"""
-  approveItem(input: ApproveItemInput!): ApproveItemResult!
   """Archive a shopping list."""
   archiveShoppingList(input: ArchiveShoppingListInput!): ArchiveShoppingListResult!
-  """
-  Admin: enqueue embedding computation for items that don't yet have one.
-  Returns the number of jobs queued. Use dryRun to estimate backlog without
-  enqueueing. Throttled server-side to protect the embedding provider.
-  """
-  backfillItemEmbeddings(input: BackfillItemEmbeddingsInput!): BackfillEmbeddingsResult!
   """Create multiple items at once"""
   bulkCreateItems(input: BulkCreateItemInput!): BulkCreateItemsResult!
   """Create multiple purchase records at once."""
@@ -5672,8 +5634,6 @@ type Mutation {
   bulkDeleteItems(input: BulkDeleteItemsInput!): BulkDeleteItemsResult!
   """Delete multiple purchase records at once."""
   bulkDeletePurchases(input: BulkDeletePurchasesInput!): BulkDeletePurchasesResult!
-  """Send notifications to multiple users at once (admin only)."""
-  bulkSendNotifications(input: BulkNotificationInput!): BulkNotificationResult!
   """
   Bulk update multiple devices at once.
   Replaces: trustMultipleDevices, untrustMultipleDevices, deactivateMultipleDevices, deleteMultipleDevices
@@ -5684,12 +5644,6 @@ type Mutation {
   Note: the `id` field on `update` is ignored — ids are taken from the `ids` field.
   """
   bulkUpdateItems(input: BulkUpdateItemsInput!): BulkUpdateItemsResult!
-  """
-  Bulk update multiple login history records with the same changes.
-  Replaces markMultipleLoginsAsReviewed and flagMultipleLoginsAsRisky.
-  Note: the `id` field on the nested `update` is ignored — ids are taken from the `ids` field.
-  """
-  bulkUpdateLoginHistories(input: BulkUpdateLoginHistoriesInput!): BulkUpdateLoginHistoriesResult!
   """Bulk create or update items by external source (max 50 per batch)."""
   bulkUpsertItemsByExternalSource(input: BulkUpsertItemsByExternalSourceInput!): BatchUpsertItemsResponse!
   """Cancel recurring generation for a shopping list."""
@@ -5700,11 +5654,6 @@ type Mutation {
   Change password for authenticated user (requires current password verification)
   """
   changePassword(input: ChangePasswordInput!): ChangePasswordResponse!
-  """
-  Cleanup stale or deleted devices.
-  Admin operation for maintenance.
-  """
-  cleanupDevices(input: DeviceCleanupInput!): CleanupDevicesResult!
   """Clear the reminder from a shopping list."""
   clearReminder(input: ClearReminderInput!): ClearReminderResult!
   """
@@ -5769,8 +5718,6 @@ type Mutation {
   createMealTemplate(input: CreateMealTemplateInput!): CreateMealTemplateResult!
   """Create a new membership directly (owner/admin only)."""
   createMembership(input: CreateMembershipInput!): CreateMembershipResult!
-  """Create a moderation record for a user"""
-  createModerationRecord(input: CreateUserModerationInput!): CreateModerationRecordResult!
   """Create a new notification."""
   createNotification(input: CreateNotificationInput!): CreateNotificationResult!
   """Create a new pantry for a home."""
@@ -5820,16 +5767,12 @@ type Mutation {
   deleteCookingLog(input: DeleteCookingLogInput!): DeleteCookingLogResult!
   """Delete a currency."""
   deleteCurrency(input: DeleteCurrencyInput!): DeleteCurrencyResult!
-  """Delete all expired notifications (admin only)."""
-  deleteExpiredNotifications: DeleteExpiredNotificationsResult!
   """Delete an external source mapping."""
   deleteExternalSource(input: DeleteExternalSourceInput!): DeleteExternalSourceResult!
   """Delete a home (owner only)."""
   deleteHome(input: DeleteHomeInput!): DeleteHomeResult!
   """Delete an item (soft delete by default, permanent if specified)"""
   deleteItem(input: DeleteItemInput!): DeleteItemResult!
-  """Delete an item unit conversion and its reverse conversion (admin only)"""
-  deleteItemUnitConversion(input: DeleteItemUnitConversionInput!): DeleteItemUnitConversionResult!
   """Delete a meal plan."""
   deleteMealPlan(input: DeleteMealPlanInput!): DeleteMealPlanResult!
   """Remove an item from a meal plan."""
@@ -5897,8 +5840,6 @@ type Mutation {
   generateNextRecurringList(input: GenerateNextRecurringListInput!): GenerateNextRecurringListResult!
   """Generate a shopping list from all recipe-based items in a meal plan."""
   generateShoppingListFromMealPlan(input: GenerateShoppingListFromMealPlanInput!): GenerateShoppingListFromMealPlanResult!
-  """Hard delete a device permanently (admin only)"""
-  hardDeleteDevice(input: HardDeleteDeviceInput!): HardDeleteDeviceResult!
   """Increment an item's popularity counter"""
   incrementItemPopularity(input: IncrementItemPopularityInput!): IncrementItemPopularityResult!
   """Increment the cooked count for a saved recipe."""
@@ -5922,11 +5863,6 @@ type Mutation {
   Consolidates: submitAppeal, reviewAppeal.
   """
   manageAppeal(input: ManageAppealInput!): ManageAppealResult!
-  """
-  Manage user restrictions (add and/or remove in one call).
-  Consolidates: addRestrictions, removeRestrictions.
-  """
-  manageRestrictions(input: ManageRestrictionsInput!): ManageRestrictionsResult!
   """Mark all notifications as read for the current user."""
   markAllNotificationsAsRead: MarkAllNotificationsAsReadResult!
   """Mark a shopping list as a reusable template."""
@@ -5943,13 +5879,6 @@ type Mutation {
   markPantryItemExpired(input: MarkPantryItemExpiredInput!): MarkPantryItemExpiredResult!
   """Mark recipe as cooked and optionally deduct from pantry"""
   markRecipeAsCooked(input: MarkRecipeAsCookedInput!): MarkRecipeAsCookedResult!
-  """
-  Merge one or more secondary items into a primary item. All references
-  (pantry, purchases, shopping lists, recipes, frequencies, etc.) are
-  retargeted onto the primary, missing fields are absorbed, and the
-  secondaries are hard-deleted.
-  """
-  mergeItems(input: MergeItemsInput!): MergeItemsResult!
   """
   Move all purchased items from a shopping list to the home's default pantry.
   Only available for shopping lists linked to a home.
@@ -5993,8 +5922,6 @@ type Mutation {
   This is the primary way to add a device from mobile apps.
   """
   registerDevice(input: DeviceRegistrationInput!): RegisterDeviceResult!
-  """Reject a user-created item"""
-  rejectItem(input: RejectItemInput!): RejectItemResult!
   """Remove an item from a shopping list."""
   removeItemFromShoppingList(input: RemoveItemFromShoppingListInput!): RemoveItemFromShoppingListResult!
   """Remove the primary image from an item (deletes from S3)"""
@@ -6161,12 +6088,6 @@ type Mutation {
   updateMealTemplate(input: UpdateMealTemplateInput!): UpdateMealTemplateResult!
   """Update membership details and permissions (owner/admin only)."""
   updateMembership(input: UpdateMembershipInput!): UpdateMembershipResult!
-  """
-  Update moderation state for a user.
-  Consolidates: updateModerationStatus, updateTrustLevel, updateRiskScore,
-  banUser, unbanUser, suspendUser, unsuspendUser, putUnderReview, completeReview.
-  """
-  updateModeration(input: UpdateModerationInput!): UpdateModerationResult!
   """Update an existing notification."""
   updateNotification(input: UpdateNotificationInput!): UpdateNotificationResult!
   """Update notification preferences for the current user."""
@@ -6228,11 +6149,6 @@ type Mutation {
   validatePasswordResetToken(input: ValidatePasswordResetTokenInput!): ValidateTokenResponse!
   """Verify a user's email address using a verification code."""
   verifyEmail(input: VerifyEmailInput!): VerifyEmailResult!
-  """
-  Verify an item unit conversion as accurate (admin only)
-  Sets isVerified to true and records the verifying admin
-  """
-  verifyItemUnitConversion(input: VerifyItemUnitConversionInput!): VerifyItemUnitConversionResult!
   """Manually verify a user's email address (admin use)."""
   verifyUserEmail(input: VerifyUserEmailInput!): VerifyUserEmailResult!
   """
@@ -7462,74 +7378,6 @@ input QuantityInput {
 }
 
 type Query {
-  activeModerations(after: String, before: String, first: Int, last: Int): UserModerationConnection!
-  """
-  Check whether a specific user's account can be safely deleted (admin only).
-  """
-  adminCanDeleteUser(userId: ID!): CanDeleteAccountResult!
-  """Get summary statistics for item unit conversions (admin)"""
-  adminConversionStats: ConversionStats!
-  """
-  Get the status of a background image deletion job.
-  
-  Use this to track progress of large batch deletions that were queued
-  instead of processed synchronously.
-  """
-  adminGetImageDeletionJobStatus(jobId: String!): ImageDeletionJobStatus
-  """
-  Admin: List all homes with optional filters.
-  Returns homes across all users. Use filters.userId to scope to a specific user.
-  """
-  adminHomes(after: String, before: String, filters: HomeFilters, first: Int, last: Int, orderBy: HomeOrderBy): HomeConnection!
-  """
-  List item unit conversions with optional filters (admin)
-  Supports filtering by item, source, verification status, and units.
-  By default only returns cross-type conversions (e.g., VOLUME→WEIGHT).
-  Same-type conversions are calculated from standard unit factors.
-  """
-  adminItemUnitConversions(
-    """
-    When true (default), only returns cross-type conversions. Set to false to include same-type conversions.
-    """
-    crossTypeOnly: Boolean
-    fromUnitId: ID
-    isVerified: Boolean
-    itemId: ID
-    limit: Int
-    offset: Int
-    source: ConversionSource
-    toUnitId: ID
-  ): AdminItemUnitConversionsResult!
-  """
-  Admin: List all login histories with comprehensive filtering.
-  Supports filtering by userId, ipAddress, date range, device, success/failure, and search.
-  """
-  adminLoginHistories(after: String, before: String, filters: LoginHistoryQueryFilters, first: Int, last: Int, orderBy: LoginHistoryOrderBy, orderDirection: SortOrder): LoginHistoryConnection!
-  """
-  Admin: List all meal plans with optional filters.
-  Returns meal plans across all users.
-  """
-  adminMealPlans(after: String, before: String, filters: MealPlanFilters, first: Int, last: Int, orderBy: MealPlanOrderBy): MealPlanConnection!
-  """
-  Admin: List all meal templates with optional filters.
-  Returns meal templates across all users.
-  """
-  adminMealTemplates(after: String, before: String, filters: MealTemplateFilters, first: Int, last: Int, orderBy: MealTemplateOrderBy): MealTemplateConnection!
-  """
-  Admin: List all pantries with optional filters.
-  Returns pantries across all homes. homeId is optional.
-  """
-  adminPantries(after: String, before: String, filters: PantryFilters, first: Int, homeId: ID, last: Int, orderBy: PantryOrderBy): PantryConnection!
-  """
-  Admin: List all recipes with optional filters.
-  Returns recipes across all users.
-  """
-  adminRecipes(after: String, before: String, category: RecipeCategory, difficulty: Difficulty, first: Int, includeDeleted: Boolean, last: Int): RecipeConnection!
-  """
-  Admin: List all shopping lists with optional filters.
-  Returns lists across all users. Use filters.userId to scope to a specific user.
-  """
-  adminShoppingLists(after: String, before: String, filters: ShoppingListFilters, first: Int, last: Int, orderBy: ShoppingListOrderBy): ShoppingListConnection!
   """
   Aggregate multiple quantities of the same item
   Useful for calculating total needed across multiple recipes
@@ -7629,8 +7477,6 @@ type Query {
   homeInviteByToken(token: String!): HomeInvite
   """Get homes where the current user is a member."""
   homes(after: String, before: String, filters: HomeFilters, first: Int, last: Int, orderBy: HomeOrderBy): HomeConnection!
-  """Fetch invite usage statistics for a specific invite (admin only)."""
-  inviteStats(inviteId: ID!): InviteStats!
   """Fetch a single item by its ID."""
   item(id: ID!): Item
   """
@@ -7638,17 +7484,6 @@ type Query {
   Returns both stored conversions and calculable standard conversions
   """
   itemConversions(includeStandard: Boolean, itemId: ID!): [ItemUnitConversion!]!
-  """
-  List clusters of items that share a UPC, for duplicate review. Set
-  pendingOnly to restrict to clusters that contain an unapproved item.
-  Moderator only.
-  """
-  itemDuplicateClusters(pendingOnly: Boolean, skip: Int, take: Int): ItemDuplicateClusterPage!
-  """
-  Find non-deleted items that share a UPC (primary or alternate) with the
-  given item. Used to surface duplicates during approval. Moderator only.
-  """
-  itemUpcDuplicates(itemId: ID!): [DuplicateItem!]!
   """
   List items with filtering and cursor-based pagination (Relay spec).
   Use filters for UPC, SKU, or external ID lookups:
@@ -7796,8 +7631,6 @@ type Query {
   Based on unit rules, user preferences, and quantity value
   """
   suggestDisplayFormat(quantity: Float!, unitId: ID!, userId: ID): QuantityDisplay!
-  """List suspicious invite activity within a time window (admin only)."""
-  suspiciousInviteActivity(after: String, before: String, first: Int, last: Int, timeWindowHours: Int): InviteLogConnection!
   """Fetch a single unit by its ID."""
   unit(id: ID!): Unit
   """Fetch a single unit by its symbol."""
@@ -7809,9 +7642,6 @@ type Query {
   units(isCommon: Boolean, limit: Int = 50, type: UnitType): [Unit!]!
   """Fetch a single user by their ID."""
   user(id: ID!): User
-  userModeration(userId: ID!): UserModeration
-  """List users with search and cursor-based pagination (admin only)."""
-  users(after: String, before: String, first: Int, last: Int, orderBy: UserOrderBy, search: String): UserConnection!
   """Validate item data integrity (read-only check)"""
   validateItem(deep: Boolean, id: ID!): ValidationResult!
   """Validate a UPC barcode string."""

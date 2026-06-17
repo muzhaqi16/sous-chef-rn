@@ -170,7 +170,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: theme.spacing['3'] + 2,
-    paddingVertical: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs + 1,
     borderRadius: theme.radii.xl,
     gap: theme.spacing.xs + 2,
     backgroundColor: theme.colors.filterTab.inactiveBg,
@@ -240,7 +240,7 @@ const styles = StyleSheet.create(theme => ({
   },
   countBadge: {
     paddingHorizontal: theme.spacing.xs + 3,
-    paddingVertical: theme.spacing.xs,
+    paddingVertical: 2,
     borderRadius: theme.radii.md,
     backgroundColor: theme.colors.filterTab.countBg,
     variants: {

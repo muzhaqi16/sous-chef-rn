@@ -188,6 +188,7 @@
   "empty": {
     "noItems": "Ancora nessun articolo",
     "noNotifications": "Ancora nessuna notifica",
+    "noNotificationsHint": "Ti avviseremo quando succede qualcosa di importante",
     "noResults": "Nessun risultato trovato",
     "noMembers": "Ancora nessun membro",
     "noPantryItems": "La tua dispensa è vuota",
@@ -603,6 +604,13 @@
     "noRecipeSuggestions": "Nessun suggerimento di ricetta disponibile"
   },
   "shoppingListScreens": {
+    "emptyTitle": "La tua lista è vuota",
+    "emptyDescription": "Aggiungi articoli per iniziare la tua lista della spesa",
+    "searchNoResultsTitle": "Nessun risultato per \"{{query}}\"",
+    "searchAddPrompt": "Vuoi aggiungerlo alla tua lista?",
+    "purchasedEmptyTitle": "Ancora nessun articolo acquistato",
+    "purchasedEmptyDescription": "Spunta gli articoli mentre fai la spesa per vederli qui",
+    "purchasedSearchNoMatch": "Nessun articolo acquistato corrisponde alla tua ricerca",
     "joinTitle": "Unisciti alla lista",
     "joinEnterCodeTitle": "Inserisci il codice",
     "joinEnterCodeDescription": "Inserisci il codice che hai ricevuto per unirti a una lista della spesa.",

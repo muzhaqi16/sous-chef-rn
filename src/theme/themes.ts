@@ -40,16 +40,19 @@ export const lightTheme = {
     secondaryDark: colors.charade[950],
     onSecondary: colors.neutral[900],
 
-    // Background
-    background: colors.neutral[0],
-    backgroundSecondary: colors.charade[100],
+    // Background — warm off-white app surface with white cards layered above it,
+    // so cards read as elevated from the background tone itself, not shadow
+    // alone. Sits a half-step below neutral[50] (#F6F4F0) so white cards
+    // separate clearly without the bg reading as gray.
+    background: '#F6F4F0',
+    backgroundSecondary: colors.neutral[100],
     surface: colors.neutral[0],
     surfaceVariant: colors.neutral[100],
 
-    // Text
-    textPrimary: colors.neutral[900],
-    textSecondary: colors.neutral[600],
-    textTertiary: colors.neutral[600], // WCAG AA: ~4.6:1 contrast on white
+    // Text — three distinct, all WCAG-AA tones on the warm-white background.
+    textPrimary: colors.neutral[900], // ~14:1
+    textSecondary: colors.neutral[700], // ~7.5:1
+    textTertiary: colors.neutral[600], // ~5.4:1 — distinct from secondary
     textInverse: colors.neutral[0],
     textOnSurfaceVariant: colors.neutral[700],
 
@@ -150,16 +153,17 @@ export const darkTheme = {
     secondaryDark: colors.charade[950],
     onSecondary: colors.neutral[0],
 
-    // Background
+    // Background — warm charcoal app surface; surface/surfaceVariant step up
+    // in lightness so layered cards read as elevated in dark mode too.
     background: colors.neutral[900],
-    backgroundSecondary: colors.charade[800],
+    backgroundSecondary: colors.neutral[800],
     surface: colors.neutral[800],
     surfaceVariant: colors.neutral[700],
 
-    // Text
+    // Text — three distinct tones on the warm-charcoal background.
     textPrimary: colors.neutral[50],
     textSecondary: colors.neutral[300],
-    textTertiary: colors.neutral[300], // Better contrast on dark surfaces
+    textTertiary: colors.neutral[400], // distinct, still high-contrast on dark
     textInverse: colors.neutral[900],
     textOnSurfaceVariant: colors.neutral[200],
 

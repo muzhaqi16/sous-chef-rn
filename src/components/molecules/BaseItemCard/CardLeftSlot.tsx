@@ -8,9 +8,12 @@ import type { CardLeftSlotProps } from './types';
 import { Text } from '#components/atoms/Text';
 
 /**
- * Lightweight image slot — no useUnistyles, all styles from stylesheet
+ * Lightweight image slot — no useUnistyles, all styles from stylesheet.
+ * When no image URL is available it renders a consistent placeholder tile
+ * (same size/shape as a real thumbnail) with a fallback icon, so rows never
+ * collapse to a bare gap and every row stays vertically aligned.
  */
-const ImageSlot: React.FC<{ imageUrl: string; dimmed: boolean }> = ({
+const ImageSlot: React.FC<{ imageUrl?: string | null; dimmed: boolean }> = ({
   imageUrl,
   dimmed,
 }) => {
@@ -22,11 +25,15 @@ const ImageSlot: React.FC<{ imageUrl: string; dimmed: boolean }> = ({
         styles.imageContainer,
       ]}
     >
-      <CachedImage
-        uri={imageUrl}
-        style={commonStyles.listItemImageCompact}
-        displaySize={48}
-      />
+      {imageUrl ? (
+        <CachedImage
+          uri={imageUrl}
+          style={commonStyles.listItemImageCompact}
+          displaySize={48}
+        />
+      ) : (
+        <Icon name="image-outline" size={20} tone="textTertiary" />
+      )}
     </View>
   );
 };
@@ -81,8 +88,9 @@ const ThemedSlot: React.FC<CardLeftSlotProps> = ({
  * Renders emoji, image, icon, or custom content
  */
 export const CardLeftSlot: React.FC<CardLeftSlotProps> = props => {
-  // Image path is lightweight — no useUnistyles needed
-  if (props.type === 'image' && props.imageUrl) {
+  // Image path is lightweight — no useUnistyles needed. Render the image slot
+  // for `type="image"` even without a URL so a consistent placeholder shows.
+  if (props.type === 'image') {
     return (
       <ImageSlot imageUrl={props.imageUrl} dimmed={props.dimmed ?? false} />
     );

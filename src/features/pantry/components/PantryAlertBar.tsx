@@ -1,7 +1,7 @@
 import React from 'react';
 import { ScrollView, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import GroceryBasket from '#assets/icons/svg/grocery-basket.svg';
@@ -56,7 +56,7 @@ export const PantryAlertBar: React.FC<PantryAlertBarProps> = ({
         </View>
 
         {stats.expiredCount > 0 && (
-          <Pressable
+          <AppPressable
             onPress={onExpiredNavigate}
             disabled={!onExpiredNavigate}
             style={styles.statLink}
@@ -69,10 +69,10 @@ export const PantryAlertBar: React.FC<PantryAlertBarProps> = ({
             <Text size="sm" weight="medium" style={styles.expiredText}>
               {stats.expiredCount}
             </Text>
-          </Pressable>
+          </AppPressable>
         )}
         {stats.expiringCount > 0 && (
-          <Pressable
+          <AppPressable
             onPress={onExpiringNavigate}
             disabled={!onExpiringNavigate}
             style={styles.statLink}
@@ -85,10 +85,10 @@ export const PantryAlertBar: React.FC<PantryAlertBarProps> = ({
             <Text size="sm" weight="medium" tone="warning">
               {stats.expiringCount}
             </Text>
-          </Pressable>
+          </AppPressable>
         )}
         {stats.lowStockCount > 0 && (
-          <Pressable
+          <AppPressable
             onPress={onLowStockNavigate}
             disabled={!onLowStockNavigate}
             style={styles.statLink}
@@ -101,24 +101,24 @@ export const PantryAlertBar: React.FC<PantryAlertBarProps> = ({
             <Text size="sm" weight="medium" tone="warning">
               {stats.lowStockCount}
             </Text>
-          </Pressable>
+          </AppPressable>
         )}
       </ScrollView>
 
       {/* Controls: analytics + sort — fixed, pinned to the right */}
       <View style={styles.rightGroup}>
         {!!onAnalyticsPress && (
-          <Pressable
+          <AppPressable
             onPress={onAnalyticsPress}
             hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel={t('pantryScreen.analyticsAccessibility')}
           >
             <Icon name="bar-chart-outline" size={18} tone="textTertiary" />
-          </Pressable>
+          </AppPressable>
         )}
         {!!sortLabel && !!onSortPress && (
-          <Pressable
+          <AppPressable
             onPress={onSortPress}
             hitSlop={8}
             testID="pantry-sort-button"
@@ -126,7 +126,7 @@ export const PantryAlertBar: React.FC<PantryAlertBarProps> = ({
             <Text size="sm" weight="medium" style={styles.sortLabel}>
               {sortLabel}
             </Text>
-          </Pressable>
+          </AppPressable>
         )}
       </View>
     </View>

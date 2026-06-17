@@ -62,9 +62,11 @@ describe('CardLeftSlot', () => {
     expect(toJSON()).toBeTruthy();
   });
 
-  it('falls back to themed slot when image URL is null', () => {
+  it('renders a placeholder icon when type is image with no URL', () => {
     render(<CardLeftSlot type="image" imageUrl={null} />);
-    // Falls through to ThemedSlot which renders default emoji
-    expect(screen.getByText('📦')).toBeTruthy();
+    // type="image" always uses the image slot; with no URL it shows a
+    // consistent fallback icon rather than collapsing to the emoji slot.
+    expect(screen.getByText('icon-image-outline')).toBeTruthy();
+    expect(screen.queryByText('📦')).toBeNull();
   });
 });
