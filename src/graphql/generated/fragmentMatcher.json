@@ -119,6 +119,13 @@
       "NotFoundError",
       "ValidationError"
     ],
+    "AdminPurgeShoppingListItemsResult": [
+      "AdminPurgeShoppingListItemsPayload",
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "ValidationError"
+    ],
     "AdminUpdateItemResult": [
       "AdminUpdateItemPayload",
       "ConflictError",
