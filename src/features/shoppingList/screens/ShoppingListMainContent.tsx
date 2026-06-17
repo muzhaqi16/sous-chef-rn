@@ -300,7 +300,11 @@ export const ShoppingListMainContent: React.FC<
     onSwipeableWillOpen: handleSwipeableWillOpen,
     onSwipeableClose: handleSwipeableClose,
     onCloseAllSwipeables: closeAll,
-    onBatchMoveToPantry: batchMoveToPantry,
+    // Only offer "Move All to Pantry" when the list is linked to a home — the
+    // server rejects the batch move otherwise (no home means no target pantry).
+    onBatchMoveToPantry: currentListDetails?.canMoveToPantry
+      ? batchMoveToPantry
+      : undefined,
     // State
     loading: isLoadingInitial,
     refreshing,

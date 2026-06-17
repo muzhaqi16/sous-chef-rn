@@ -13,6 +13,7 @@ query GetShoppingListDetails($id: ID!) {
     totalItems
     completedItems
     homeId
+    canMoveToPantry
     shareCode
     isPublic
     # Server-built anyone-with-link share URL. Non-null only when isPublic and a
