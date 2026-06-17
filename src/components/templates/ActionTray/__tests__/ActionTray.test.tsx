@@ -1,8 +1,14 @@
 'use no memo';
 import React from 'react';
 import { render, screen, act } from '@testing-library/react-native';
+import {
+  NavigationContext,
+  type NavigationProp,
+  type ParamListBase,
+} from '@react-navigation/native';
 import { Text } from '#components/atoms/Text';
 import { useBackdropClaim } from '#components/providers/OverlayBackdropProvider';
+import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
 import { ActionTray } from '../ActionTray';
 import type { ActionTrayRef } from '../types';
 
@@ -15,9 +21,14 @@ jest.mock('#components/providers/OverlayBackdropProvider', () => ({
   useBackdropClaim: jest.fn(),
 }));
 
+jest.mock('#hooks/useBottomSheetBackHandler', () => ({
+  useBottomSheetBackHandler: jest.fn(),
+}));
+
 describe('ActionTray', () => {
   beforeEach(() => {
     (useBackdropClaim as jest.Mock).mockClear();
+    (useBottomSheetBackHandler as jest.Mock).mockClear();
   });
 
   // Render an opened tray and capture gorhom's prop handlers. The mock renders
@@ -100,6 +111,72 @@ describe('ActionTray', () => {
       </ActionTray>,
     );
     expect(ref.current!.isActive()).toBe(false);
+  });
+
+  it('enables the Android back handler only while the tray is open', () => {
+    const ref = React.createRef<ActionTrayRef>();
+    render(
+      <ActionTray ref={ref}>
+        <Text>Content</Text>
+      </ActionTray>,
+    );
+    // Closed: back handler disabled so hardware back navigates normally.
+    expect(useBottomSheetBackHandler).toHaveBeenLastCalledWith(
+      expect.anything(),
+      false,
+    );
+
+    act(() => {
+      ref.current!.open();
+    });
+    // Open: back handler enabled so hardware back dismisses the tray.
+    expect(useBottomSheetBackHandler).toHaveBeenLastCalledWith(
+      expect.anything(),
+      true,
+    );
+  });
+
+  it('tears down on screen blur while open (dismiss-on-blur)', () => {
+    // ActionTray reads useContext(NavigationContext) + addListener('blur'), so
+    // provide a mock navigation via context. The component only uses
+    // `addListener`, so the mock implements exactly that subset.
+    type Listener = () => void;
+    type MockNavigation = Pick<NavigationProp<ParamListBase>, 'addListener'>;
+    const listeners: Record<string, Listener[]> = {};
+    const navigation: MockNavigation = {
+      addListener: jest.fn((event: string, cb: Listener) => {
+        if (!listeners[event]) listeners[event] = [];
+        listeners[event].push(cb);
+        return () => {
+          listeners[event] = listeners[event].filter(l => l !== cb);
+        };
+      }),
+    } as MockNavigation;
+    const emit = (event: string) => listeners[event]?.forEach(cb => cb());
+
+    const onClose = jest.fn();
+    const ref = React.createRef<ActionTrayRef>();
+    render(
+      <NavigationContext.Provider
+        value={navigation as NavigationProp<ParamListBase>}
+      >
+        <ActionTray ref={ref} onClose={onClose}>
+          <Text>Content</Text>
+        </ActionTray>
+      </NavigationContext.Provider>,
+    );
+
+    act(() => {
+      ref.current!.open();
+    });
+    expect(ref.current!.isActive()).toBe(true);
+
+    // Navigating away (e.g. programmatic nav) fires 'blur' → tray tears down.
+    act(() => {
+      emit('blur');
+    });
+    expect(ref.current!.isActive()).toBe(false);
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it('isActive returns true after open', () => {

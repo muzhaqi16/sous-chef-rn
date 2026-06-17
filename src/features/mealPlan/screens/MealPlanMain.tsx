@@ -9,6 +9,7 @@ import { Icon } from '#utils/iconUtils';
 import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
 import { TabMainScreen } from '#components/templates/TabMainScreen';
 import { OfflineStatusPill } from '#components/atoms/OfflineStatusPill';
+import { useIsOfflineBannerVisible } from '#hooks/app/useIsOfflineBannerVisible';
 import { WeekStrip } from '#components/molecules/WeekStrip';
 import { MonthCalendar } from '#features/mealPlan/components/MonthCalendar';
 import { DayMealList } from '#features/mealPlan/components/DayMealList';
@@ -156,6 +157,11 @@ const MealPlanMainInner: React.FC = () => {
   } = useMealPlans();
   const activePlanId =
     selectedMealPlanId ?? currentPlan?.id ?? mealPlans[0]?.id ?? null;
+
+  // The action cluster carries the offline pill (visible only while offline)
+  // plus the per-plan actions; render it only when one of those would show,
+  // so an online, plan-less header doesn't emit an empty action row.
+  const isOfflineVisible = useIsOfflineBannerVisible();
 
   // Fetch the active plan with items
   const {
@@ -477,45 +483,52 @@ const MealPlanMainInner: React.FC = () => {
         </View>
         {/* Pill lives in the real action cluster so it aligns with the
             cart/bookmark/settings icons (TabScreenHeader's built-in pill is
-            disabled above). Cluster always renders so the pill shows even
-            before a plan is selected. */}
-        <View style={styles.headerActions}>
-          <OfflineStatusPill size={22} />
-          {!!activePlanId && (
-            <>
-              {permissions.canGenerateShoppingList ? (
+            disabled above). Rendered whenever the pill (offline) or a per-plan
+            action would show, so the pill still appears before a plan is
+            selected without leaving an empty row when online + plan-less. */}
+        {isOfflineVisible || !!activePlanId ? (
+          <View style={styles.headerActions}>
+            <OfflineStatusPill size={22} />
+            {!!activePlanId && (
+              <>
+                {permissions.canGenerateShoppingList ? (
+                  <Pressable
+                    onPress={() => setShoppingListSheetVisible(true)}
+                    hitSlop={8}
+                    style={styles.headerActionButton}
+                    accessibilityLabel={t(
+                      'mealPlanMain.generateShoppingListLabel',
+                    )}
+                  >
+                    <Icon name="cart-outline" size={22} tone="primary" />
+                  </Pressable>
+                ) : null}
+                {permissions.canSaveAsTemplate ? (
+                  <Pressable
+                    onPress={handleSaveAsTemplate}
+                    hitSlop={8}
+                    style={styles.headerActionButton}
+                    accessibilityLabel={t('mealPlanMain.saveAsTemplateLabel')}
+                  >
+                    <Icon name="bookmark-outline" size={22} tone="primary" />
+                  </Pressable>
+                ) : null}
                 <Pressable
-                  onPress={() => setShoppingListSheetVisible(true)}
+                  onPress={() => setSettingsVisible(true)}
                   hitSlop={8}
                   style={styles.headerActionButton}
-                  accessibilityLabel={t(
-                    'mealPlanMain.generateShoppingListLabel',
-                  )}
+                  accessibilityLabel={t('mealPlanMain.planSettingsLabel')}
                 >
-                  <Icon name="cart-outline" size={22} tone="primary" />
+                  <Icon
+                    name="ellipsis-vertical"
+                    size={22}
+                    tone="textSecondary"
+                  />
                 </Pressable>
-              ) : null}
-              {permissions.canSaveAsTemplate ? (
-                <Pressable
-                  onPress={handleSaveAsTemplate}
-                  hitSlop={8}
-                  style={styles.headerActionButton}
-                  accessibilityLabel={t('mealPlanMain.saveAsTemplateLabel')}
-                >
-                  <Icon name="bookmark-outline" size={22} tone="primary" />
-                </Pressable>
-              ) : null}
-              <Pressable
-                onPress={() => setSettingsVisible(true)}
-                hitSlop={8}
-                style={styles.headerActionButton}
-                accessibilityLabel={t('mealPlanMain.planSettingsLabel')}
-              >
-                <Icon name="ellipsis-vertical" size={22} tone="textSecondary" />
-              </Pressable>
-            </>
-          )}
-        </View>
+              </>
+            )}
+          </View>
+        ) : null}
       </View>
 
       {/* Calendar view */}

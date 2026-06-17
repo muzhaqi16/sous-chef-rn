@@ -1,5 +1,6 @@
 import React, {
   forwardRef,
+  useContext,
   useImperativeHandle,
   useEffect,
   useRef,
@@ -10,6 +11,7 @@ import {
   View,
   type LayoutChangeEvent,
 } from 'react-native';
+import { NavigationContext } from '@react-navigation/native';
 import {
   BottomSheetModal,
   BottomSheetScrollView,
@@ -28,6 +30,7 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
 import { Icon } from '#utils/iconUtils';
 import { useBackdropClaim } from '#components/providers/OverlayBackdropProvider';
+import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
 import { SHEET } from '#constants/animations';
 import { ActionTrayScrollContext } from './ActionTrayScrollContext';
 import type { ActionTrayProps, ActionTrayRef } from './types';
@@ -80,13 +83,20 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
         Extrapolation.CLAMP,
       ),
     );
-    const handleBackdropPress = () => {
+    // Shared dismiss for the backdrop tap and the header close button.
+    const handleDismiss = () => {
       bottomSheetRef.current?.dismiss();
     };
     useBackdropClaim(mounted && enableBackdrop, {
       opacity: backdropOpacity,
-      onPress: handleBackdropPress,
+      onPress: handleDismiss,
     });
+
+    // Android hardware back dismisses the open tray instead of navigating away
+    // with it still mounted (which would strand its backdrop + the tab bar that
+    // reads it). gorhom has no built-in back handling, so wire it explicitly —
+    // only while the tray is open.
+    useBottomSheetBackHandler(bottomSheetRef, mounted);
 
     // Settled-closed cleanup (`onClose` + unmount), reachable from two gorhom
     // signals that can each fire without the other:
@@ -114,6 +124,26 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
         bottomSheetRef.current?.present();
       }
     }, [mounted]);
+
+    // Tear the tray down when its screen loses focus, so a programmatic
+    // navigation while it's open can't strand the sheet (and its backdrop +
+    // the tab bar that reads it). Hardware back is covered by the back handler
+    // above; this covers navigation that doesn't go through a close.
+    // `NavigationContext` is read directly (not `useNavigation`) so ActionTray
+    // stays usable outside a navigator — the listener simply isn't wired then.
+    // Subscribe only while open; the latest `handleClosed` is read via a ref so
+    // the subscription doesn't churn every render.
+    const navigation = useContext(NavigationContext);
+    const handleClosedRef = useRef(handleClosed);
+    useEffect(() => {
+      handleClosedRef.current = handleClosed;
+    });
+    useEffect(() => {
+      if (!navigation || !mounted) return;
+      return navigation.addListener('blur', () => {
+        handleClosedRef.current();
+      });
+    }, [navigation, mounted]);
 
     const handleSheetChanges = (index: number) => {
       if (index < 0) {
@@ -156,10 +186,6 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
       },
       [mounted, onOpen],
     );
-
-    const handleDismiss = () => {
-      bottomSheetRef.current?.dismiss();
-    };
 
     // Pinned header. Rendered through gorhom's `handleComponent` slot so it
     // stays fixed while the content scrolls. Its measured height feeds the

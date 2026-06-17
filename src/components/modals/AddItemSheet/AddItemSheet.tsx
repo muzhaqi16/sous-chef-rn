@@ -206,6 +206,7 @@ export function AddItemSheet<
 
     const preview = items.slice(0, PREVIEW_COUNT);
     const hasMore = items.length > PREVIEW_COUNT;
+    const sectionTitle = t(groupConfig.titleKey);
 
     return (
       <View key={groupConfig.key} style={styles.suggestionSection}>
@@ -216,7 +217,7 @@ export function AddItemSheet<
             tone="secondary"
             style={styles.sectionTitle}
           >
-            {groupConfig.title}
+            {sectionTitle}
           </Text>
           {!!hasMore && (
             <AppPressable
@@ -224,9 +225,7 @@ export function AddItemSheet<
               style={styles.moreButton}
               hitSlop={8}
               accessibilityRole="button"
-              accessibilityLabel={`${t('addItemSheet.more')} ${
-                groupConfig.title
-              }`}
+              accessibilityLabel={`${t('addItemSheet.more')} ${sectionTitle}`}
             >
               <Text size="sm" weight="semibold" tone="accent">
                 {t('addItemSheet.more')}
@@ -255,7 +254,7 @@ export function AddItemSheet<
         <View style={{ flex: 1 }} testID={`${config.testIDPrefix}-modal`}>
           {inDrilldown && activeGroup ? (
             <SuggestionDrilldown
-              title={activeGroup.title}
+              title={t(activeGroup.titleKey)}
               items={activeItems}
               renderItem={item =>
                 renderSuggestionItem(item, !!activeGroup.dismissible)
@@ -411,6 +410,9 @@ const styles = StyleSheet.create(theme => ({
   },
   sectionTitle: {
     letterSpacing: 1,
+    // Titles are stored title-case for the drill-down header; the compact
+    // overview header keeps its uppercase treatment via text-transform.
+    textTransform: 'uppercase',
   },
   moreButton: {
     flexDirection: 'row',

@@ -25,8 +25,10 @@ export interface SuggestionGroupConfig<
 > {
   /** Unique key for this group */
   key: string;
-  /** Display title (e.g., "LOW STOCK", "ADD AGAIN") */
-  title: string;
+  /** i18n key for the section title (e.g. `addItemSheet.sections.lowStock`).
+   *  Resolved via `t()` at render so the overview header, the "More" affordance,
+   *  and the drill-down header all show one translated, localizable label. */
+  titleKey: string;
   /** Function to extract items from grouped data */
   accessor: (grouped: Record<string, T[]>) => T[];
   /** Priority order for display (lower = higher priority) */

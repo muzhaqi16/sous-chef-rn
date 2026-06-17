@@ -113,8 +113,9 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
   );
 
   const animatedStyle = useAnimatedStyle(() => {
-    // Normalizing by `BACKDROP_OPACITY` inverts the interpolation in
-    // useBottomSheetBackdropClaim, recovering 0 (closed) → 1 (fully open).
+    // Sheets contribute dim opacity as `interpolate(animatedIndex, [-1,0], [0,
+    // BACKDROP_OPACITY])`; dividing by `BACKDROP_OPACITY` inverts that back to
+    // overlay coverage, 0 (closed) → 1 (fully open).
     const overlayHide = overlayOpacity
       ? Math.min(1, overlayOpacity.get() / SHEET.BACKDROP_OPACITY)
       : 0;

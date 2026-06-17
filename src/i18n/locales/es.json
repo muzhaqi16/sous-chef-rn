@@ -1946,7 +1946,69 @@
     "dismissed": "Se eliminó {{name}}",
     "undo": "Deshacer",
     "dismissFailed": "No se pudo quitar la sugerencia",
-    "undoFailed": "No se pudo deshacer"
+    "undoFailed": "No se pudo deshacer",
+    "sections": {
+      "lowStock": "Pocas existencias",
+      "expiringSoon": "Por caducar",
+      "addAgain": "Añadir de nuevo",
+      "favorites": "Tus favoritos",
+      "popular": "Popular"
+    }
+  },
+  "dietaryProfile": {
+    "errorTitle": "Error",
+    "dietTitle": "Dieta",
+    "dietEmpty": "Aún no has seleccionado una dieta",
+    "dietSheetTitle": "Selecciona una dieta",
+    "updateDietFailed": "No se pudo actualizar la dieta",
+    "constraintsTitle": "Restricciones dietéticas",
+    "constraintsEmpty": "Aún no hay restricciones",
+    "constraintsSheetTitle": "Selecciona restricciones dietéticas",
+    "addConstraintsFailed": "No se pudieron añadir las restricciones dietéticas",
+    "intolerancesTitle": "Alergias e intolerancias",
+    "intolerancesEmpty": "Aún no hay alergias",
+    "intolerancesSheetTitle": "Selecciona alergias e intolerancias",
+    "addIntolerancesFailed": "No se pudieron añadir las intolerancias",
+    "goalsTitle": "Objetivos de salud",
+    "goalsEmpty": "Aún no hay objetivos de salud",
+    "goalsSheetTitle": "Selecciona objetivos de salud",
+    "addGoalsFailed": "No se pudieron añadir los objetivos de salud",
+    "diets": {
+      "vegetarian": "Vegetariana",
+      "vegan": "Vegana",
+      "glutenFree": "Sin gluten",
+      "keto": "Keto",
+      "paleo": "Paleo",
+      "pescetarian": "Pescetariana",
+      "lactoVegetarian": "Lacto-vegetariana",
+      "ovoVegetarian": "Ovo-vegetariana",
+      "primal": "Primal",
+      "lowFodmap": "Bajo en FODMAP",
+      "whole30": "Whole30"
+    },
+    "intolerances": {
+      "dairy": "Lácteos",
+      "egg": "Huevo",
+      "gluten": "Gluten",
+      "grain": "Cereales",
+      "peanut": "Cacahuete",
+      "seafood": "Mariscos",
+      "sesame": "Sésamo",
+      "shellfish": "Crustáceos",
+      "soy": "Soja",
+      "sulfite": "Sulfitos",
+      "treeNut": "Frutos secos",
+      "wheat": "Trigo",
+      "fish": "Pescado"
+    },
+    "goals": {
+      "lowCarb": "Bajo en carbohidratos",
+      "highProtein": "Alto en proteínas",
+      "lowSodium": "Bajo en sodio",
+      "sugarFree": "Sin azúcar",
+      "diabeticFriendly": "Apto para diabéticos",
+      "heartHealthy": "Saludable para el corazón"
+    }
   },
   "addToShoppingListSheet": {
     "addFailedRetry": "No se pudo añadir el artículo. Inténtalo de nuevo.",

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet } from 'react-native-unistyles';
 import { alertService } from '#/services/alertService';
 import { RestrictionSection } from '#/components/molecules/RestrictionSection/RestrictionSection';
@@ -13,19 +14,23 @@ import {
 import { isLifestyleDiet } from '#/constants/dietary';
 import { executeRefreshWithFinally } from '#/utils/compilerSafeWrappers';
 
-// Lifestyle dietary choices
-const DIETS: { label: string; value: Diet }[] = [
-  { label: 'Vegetarian', value: Diet.Vegetarian },
-  { label: 'Vegan', value: Diet.Vegan },
-  { label: 'Gluten Free', value: Diet.GlutenFree },
-  { label: 'Keto', value: Diet.Keto },
-  { label: 'Paleo', value: Diet.Paleo },
-  { label: 'Pescetarian', value: Diet.Pescetarian },
-  { label: 'Lacto Vegetarian', value: Diet.LactoVegetarian },
-  { label: 'Ovo Vegetarian', value: Diet.OvoVegetarian },
-  { label: 'Primal', value: Diet.Primal },
-  { label: 'Low FODMAP', value: Diet.LowFodmap },
-  { label: 'Whole30', value: Diet.Whole30 },
+// Lifestyle dietary choices. Labels are i18n keys resolved via `t()` at render —
+// the enum value stays the stable identity used for selection and persistence.
+const DIETS: { labelKey: string; value: Diet }[] = [
+  { labelKey: 'dietaryProfile.diets.vegetarian', value: Diet.Vegetarian },
+  { labelKey: 'dietaryProfile.diets.vegan', value: Diet.Vegan },
+  { labelKey: 'dietaryProfile.diets.glutenFree', value: Diet.GlutenFree },
+  { labelKey: 'dietaryProfile.diets.keto', value: Diet.Keto },
+  { labelKey: 'dietaryProfile.diets.paleo', value: Diet.Paleo },
+  { labelKey: 'dietaryProfile.diets.pescetarian', value: Diet.Pescetarian },
+  {
+    labelKey: 'dietaryProfile.diets.lactoVegetarian',
+    value: Diet.LactoVegetarian,
+  },
+  { labelKey: 'dietaryProfile.diets.ovoVegetarian', value: Diet.OvoVegetarian },
+  { labelKey: 'dietaryProfile.diets.primal', value: Diet.Primal },
+  { labelKey: 'dietaryProfile.diets.lowFodmap', value: Diet.LowFodmap },
+  { labelKey: 'dietaryProfile.diets.whole30', value: Diet.Whole30 },
 ];
 
 // Mutually-exclusive lifestyle diets (single-select) vs stackable constraints
@@ -34,30 +39,51 @@ const LIFESTYLE_DIETS = DIETS.filter(d => isLifestyleDiet(d.value));
 const CONSTRAINT_DIETS = DIETS.filter(d => !isLifestyleDiet(d.value));
 
 // Allergies and intolerances
-const INTOLERANCES: { label: string; value: Intolerance }[] = [
-  { label: 'Dairy', value: Intolerance.Dairy },
-  { label: 'Egg', value: Intolerance.Egg },
-  { label: 'Gluten', value: Intolerance.Gluten },
-  { label: 'Grain', value: Intolerance.Grain },
-  { label: 'Peanut', value: Intolerance.Peanut },
-  { label: 'Seafood', value: Intolerance.Seafood },
-  { label: 'Sesame', value: Intolerance.Sesame },
-  { label: 'Shellfish', value: Intolerance.Shellfish },
-  { label: 'Soy', value: Intolerance.Soy },
-  { label: 'Sulfite', value: Intolerance.Sulfite },
-  { label: 'Tree Nut', value: Intolerance.TreeNut },
-  { label: 'Wheat', value: Intolerance.Wheat },
-  { label: 'Fish', value: Intolerance.Fish },
+const INTOLERANCES: { labelKey: string; value: Intolerance }[] = [
+  { labelKey: 'dietaryProfile.intolerances.dairy', value: Intolerance.Dairy },
+  { labelKey: 'dietaryProfile.intolerances.egg', value: Intolerance.Egg },
+  { labelKey: 'dietaryProfile.intolerances.gluten', value: Intolerance.Gluten },
+  { labelKey: 'dietaryProfile.intolerances.grain', value: Intolerance.Grain },
+  { labelKey: 'dietaryProfile.intolerances.peanut', value: Intolerance.Peanut },
+  {
+    labelKey: 'dietaryProfile.intolerances.seafood',
+    value: Intolerance.Seafood,
+  },
+  { labelKey: 'dietaryProfile.intolerances.sesame', value: Intolerance.Sesame },
+  {
+    labelKey: 'dietaryProfile.intolerances.shellfish',
+    value: Intolerance.Shellfish,
+  },
+  { labelKey: 'dietaryProfile.intolerances.soy', value: Intolerance.Soy },
+  {
+    labelKey: 'dietaryProfile.intolerances.sulfite',
+    value: Intolerance.Sulfite,
+  },
+  {
+    labelKey: 'dietaryProfile.intolerances.treeNut',
+    value: Intolerance.TreeNut,
+  },
+  { labelKey: 'dietaryProfile.intolerances.wheat', value: Intolerance.Wheat },
+  { labelKey: 'dietaryProfile.intolerances.fish', value: Intolerance.Fish },
 ];
 
 // Nutritional objectives
-const HEALTH_GOALS: { label: string; value: HealthGoal }[] = [
-  { label: 'Low Carb', value: HealthGoal.LowCarb },
-  { label: 'High Protein', value: HealthGoal.HighProtein },
-  { label: 'Low Sodium', value: HealthGoal.LowSodium },
-  { label: 'Sugar Free', value: HealthGoal.SugarFree },
-  { label: 'Diabetic Friendly', value: HealthGoal.DiabeticFriendly },
-  { label: 'Heart Healthy', value: HealthGoal.HeartHealthy },
+const HEALTH_GOALS: { labelKey: string; value: HealthGoal }[] = [
+  { labelKey: 'dietaryProfile.goals.lowCarb', value: HealthGoal.LowCarb },
+  {
+    labelKey: 'dietaryProfile.goals.highProtein',
+    value: HealthGoal.HighProtein,
+  },
+  { labelKey: 'dietaryProfile.goals.lowSodium', value: HealthGoal.LowSodium },
+  { labelKey: 'dietaryProfile.goals.sugarFree', value: HealthGoal.SugarFree },
+  {
+    labelKey: 'dietaryProfile.goals.diabeticFriendly',
+    value: HealthGoal.DiabeticFriendly,
+  },
+  {
+    labelKey: 'dietaryProfile.goals.heartHealthy',
+    value: HealthGoal.HeartHealthy,
+  },
 ];
 
 type RestrictionType = {
@@ -87,6 +113,8 @@ type DietaryRestrictionSelectorProps = {
 export const DietaryRestrictionSelector: React.FC<
   DietaryRestrictionSelectorProps
 > = ({ existingRestrictions, onAdd, onRemove, onSelectLifestyleDiet }) => {
+  const { t } = useTranslation();
+
   // Sheet visibility states
   const [isDietSheetVisible, setDietSheetVisible] = useState(false);
   const [isConstraintSheetVisible, setConstraintSheetVisible] = useState(false);
@@ -125,33 +153,39 @@ export const DietaryRestrictionSelector: React.FC<
     .map(r => r.healthGoal)
     .filter(Boolean) as HealthGoal[];
 
+  // Resolve an option's localized label, falling back to the raw enum value so
+  // an unrecognized restriction still renders something readable.
+  const labelFor = <T extends string>(
+    options: { labelKey: string; value: T }[],
+    value: T,
+  ): string => {
+    const match = options.find(o => o.value === value);
+    return match ? t(match.labelKey) : value;
+  };
+
   // Map existing restrictions to display items
   const existingLifestyleItems = existingLifestyleRows.map(r => ({
     id: r.id,
-    label: DIETS.find(d => d.value === r.diet)?.label || r.diet!,
+    label: labelFor(DIETS, r.diet!),
   }));
 
   const existingConstraintItems = existingConstraintRows.map(r => ({
     id: r.id,
-    label: DIETS.find(d => d.value === r.diet)?.label || r.diet!,
+    label: labelFor(DIETS, r.diet!),
   }));
 
   const existingIntoleranceItems = existingRestrictions
     .filter(r => r.intolerance)
     .map(r => ({
       id: r.id,
-      label:
-        INTOLERANCES.find(i => i.value === r.intolerance)?.label ||
-        r.intolerance!,
+      label: labelFor(INTOLERANCES, r.intolerance!),
     }));
 
   const existingGoalItems = existingRestrictions
     .filter(r => r.healthGoal)
     .map(r => ({
       id: r.id,
-      label:
-        HEALTH_GOALS.find(h => h.value === r.healthGoal)?.label ||
-        r.healthGoal!,
+      label: labelFor(HEALTH_GOALS, r.healthGoal!),
     }));
 
   // Prepare available items for sheets. Lifestyle shows all options (including
@@ -159,7 +193,7 @@ export const DietaryRestrictionSelector: React.FC<
   // exclude what's already added.
   const availableLifestyle = LIFESTYLE_DIETS.map(d => ({
     id: d.value,
-    label: d.label,
+    label: t(d.labelKey),
   }));
 
   const existingConstraintValues = existingConstraintRows
@@ -167,20 +201,20 @@ export const DietaryRestrictionSelector: React.FC<
     .filter(Boolean) as Diet[];
   const availableConstraints = CONSTRAINT_DIETS.filter(
     d => !existingConstraintValues.includes(d.value),
-  ).map(d => ({ id: d.value, label: d.label }));
+  ).map(d => ({ id: d.value, label: t(d.labelKey) }));
 
   const availableIntolerances = INTOLERANCES.filter(
     i => !existingIntolerances.includes(i.value),
   ).map(i => ({
     id: i.value,
-    label: i.label,
+    label: t(i.labelKey),
   }));
 
   const availableGoals = HEALTH_GOALS.filter(
     h => !existingHealthGoals.includes(h.value),
   ).map(h => ({
     id: h.value,
-    label: h.label,
+    label: t(h.labelKey),
   }));
 
   // Handle opening sheets
@@ -221,7 +255,10 @@ export const DietaryRestrictionSelector: React.FC<
         setSelectedDietIds([]);
         setDietSheetVisible(false);
       } else {
-        alertService.alert('Error', 'Failed to update diet');
+        alertService.alert(
+          t('dietaryProfile.errorTitle'),
+          t('dietaryProfile.updateDietFailed'),
+        );
       }
     }, setIsSavingDiets);
   };
@@ -243,7 +280,10 @@ export const DietaryRestrictionSelector: React.FC<
         setSelectedConstraintIds([]);
         setConstraintSheetVisible(false);
       } else {
-        alertService.alert('Error', 'Failed to add dietary constraints');
+        alertService.alert(
+          t('dietaryProfile.errorTitle'),
+          t('dietaryProfile.addConstraintsFailed'),
+        );
       }
     }, setIsSavingConstraints);
   };
@@ -270,7 +310,10 @@ export const DietaryRestrictionSelector: React.FC<
         setSelectedIntoleranceIds([]);
         setIntoleranceSheetVisible(false);
       } else {
-        alertService.alert('Error', 'Failed to add intolerances');
+        alertService.alert(
+          t('dietaryProfile.errorTitle'),
+          t('dietaryProfile.addIntolerancesFailed'),
+        );
       }
     }, setIsSavingIntolerances);
   };
@@ -294,7 +337,10 @@ export const DietaryRestrictionSelector: React.FC<
         setSelectedGoalIds([]);
         setGoalSheetVisible(false);
       } else {
-        alertService.alert('Error', 'Failed to add health goals');
+        alertService.alert(
+          t('dietaryProfile.errorTitle'),
+          t('dietaryProfile.addGoalsFailed'),
+        );
       }
     }, setIsSavingGoals);
   };
@@ -303,44 +349,44 @@ export const DietaryRestrictionSelector: React.FC<
     <View style={styles.container}>
       {/* Diet Section (single lifestyle diet) */}
       <RestrictionSection
-        title="Diet"
+        title={t('dietaryProfile.dietTitle')}
         existingItems={existingLifestyleItems}
         onRemove={onRemove}
         onAddPress={handleOpenDietSheet}
-        emptyMessage="No diet selected yet"
+        emptyMessage={t('dietaryProfile.dietEmpty')}
       />
 
       {/* Dietary Constraints Section (stackable) */}
       <RestrictionSection
-        title="Dietary Constraints"
+        title={t('dietaryProfile.constraintsTitle')}
         existingItems={existingConstraintItems}
         onRemove={onRemove}
         onAddPress={handleOpenConstraintSheet}
-        emptyMessage="No constraints added yet"
+        emptyMessage={t('dietaryProfile.constraintsEmpty')}
       />
 
       {/* Intolerances Section */}
       <RestrictionSection
-        title="Allergies & Intolerances"
+        title={t('dietaryProfile.intolerancesTitle')}
         existingItems={existingIntoleranceItems}
         onRemove={onRemove}
         onAddPress={handleOpenIntoleranceSheet}
-        emptyMessage="No allergies added yet"
+        emptyMessage={t('dietaryProfile.intolerancesEmpty')}
       />
 
       {/* Health Goals Section */}
       <RestrictionSection
-        title="Health Goals"
+        title={t('dietaryProfile.goalsTitle')}
         existingItems={existingGoalItems}
         onRemove={onRemove}
         onAddPress={handleOpenGoalSheet}
-        emptyMessage="No health goals added yet"
+        emptyMessage={t('dietaryProfile.goalsEmpty')}
       />
 
       {/* Diet Selection Sheet (single-select) */}
       <MultiSelectChipSheet
         visible={isDietSheetVisible}
-        title="Select Diet"
+        title={t('dietaryProfile.dietSheetTitle')}
         items={availableLifestyle}
         selectedItems={selectedDietIds}
         onSelect={setSelectedDietIds}
@@ -353,7 +399,7 @@ export const DietaryRestrictionSelector: React.FC<
       {/* Dietary Constraints Selection Sheet */}
       <MultiSelectChipSheet
         visible={isConstraintSheetVisible}
-        title="Select Dietary Constraints"
+        title={t('dietaryProfile.constraintsSheetTitle')}
         items={availableConstraints}
         selectedItems={selectedConstraintIds}
         onSelect={setSelectedConstraintIds}
@@ -365,7 +411,7 @@ export const DietaryRestrictionSelector: React.FC<
       {/* Intolerance Selection Sheet */}
       <MultiSelectChipSheet
         visible={isIntoleranceSheetVisible}
-        title="Select Allergies & Intolerances"
+        title={t('dietaryProfile.intolerancesSheetTitle')}
         items={availableIntolerances}
         selectedItems={selectedIntoleranceIds}
         onSelect={setSelectedIntoleranceIds}
@@ -377,7 +423,7 @@ export const DietaryRestrictionSelector: React.FC<
       {/* Health Goal Selection Sheet */}
       <MultiSelectChipSheet
         visible={isGoalSheetVisible}
-        title="Select Health Goals"
+        title={t('dietaryProfile.goalsSheetTitle')}
         items={availableGoals}
         selectedItems={selectedGoalIds}
         onSelect={setSelectedGoalIds}
