@@ -28,6 +28,8 @@ export interface EmptyStateProps {
     label: string;
     onPress: () => void;
     variant?: 'primary' | 'secondary' | 'outline';
+    /** Optional leading icon on the action button (e.g. "add" for a CTA) */
+    icon?: IconName;
   };
 
   /** Secondary action button */
@@ -146,6 +148,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
           onPress={action.onPress}
           variant={action.variant || 'primary'}
           size="medium"
+          icon={action.icon}
           style={styles.actionButton}
         >
           {action.label}
