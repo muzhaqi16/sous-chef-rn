@@ -57,11 +57,22 @@ export const shadows = {
    */
   card: {
     boxShadow: [
+      // Contact shadow — tight and faint, grounds the card to the surface.
       {
         offsetX: 0,
-        offsetY: 3,
-        blurRadius: 16,
+        offsetY: 1,
+        blurRadius: 2,
         spreadDistance: 0,
+        color: 'rgba(0, 0, 0, 0.04)',
+      },
+      // Ambient shadow — wide and soft with negative spread so it fades
+      // cleanly to transparent (no hard edge). Two layers read as real
+      // depth rather than a flat drop shadow.
+      {
+        offsetX: 0,
+        offsetY: 6,
+        blurRadius: 20,
+        spreadDistance: -2,
         color: 'rgba(0, 0, 0, 0.08)',
       },
     ],

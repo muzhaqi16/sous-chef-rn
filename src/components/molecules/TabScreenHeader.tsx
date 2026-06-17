@@ -31,8 +31,7 @@ export const TabScreenHeader: React.FC<TabScreenHeaderProps> = ({
   const titleContent = (
     <View style={styles.titleRow}>
       <Text
-        size="2xl"
-        weight="bold"
+        variant="title"
         maxFontSizeMultiplier={1.5}
         style={styles.title}
         numberOfLines={1}

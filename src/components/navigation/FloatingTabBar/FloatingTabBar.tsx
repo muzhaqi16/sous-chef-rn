@@ -25,11 +25,20 @@ import { TabItem } from './TabItem';
 import { useShowNavigationLabels } from '#store/useAppStore';
 import { HapticService } from '#services/haptic/HapticService';
 import { SPRING, SHEET } from '#/constants/animations';
+import {
+  LiquidGlassView,
+  isLiquidGlassSupported,
+} from '@callstack/liquid-glass';
 
 // Distance the bar slides below its resting position when fully hidden.
 const HIDDEN_TRANSLATE_Y = 150;
 
 export const TAB_BAR_HEIGHT = 65;
+
+// Dark translucent tint layered over the liquid-glass material so the bar keeps
+// its dark identity and white icons/labels stay legible while list content
+// refracts softly through it. Static — the bar is dark in both themes.
+const GLASS_TINT = 'rgba(28, 27, 32, 0.4)';
 
 export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
   state,
@@ -187,9 +196,23 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
 
   return (
     <Animated.View
-      style={[containerStyle, styles.container, animatedStyle]}
+      style={[
+        containerStyle,
+        styles.container,
+        isLiquidGlassSupported && styles.containerGlass,
+        animatedStyle,
+      ]}
       testID="tab-bar"
     >
+      {isLiquidGlassSupported ? (
+        <LiquidGlassView
+          effect="regular"
+          colorScheme="dark"
+          tintColor={GLASS_TINT}
+          style={styles.glassFill}
+          pointerEvents="none"
+        />
+      ) : null}
       <View style={styles.tabsRow}>
         {/* First half of tabs (Pantry, ShoppingList) */}
         {state.routes.slice(0, middleIndex).map((route, index) => {
@@ -282,6 +305,21 @@ const styles = StyleSheet.create(theme => ({
       },
     ],
     zIndex: theme.zIndex.overlay,
+  },
+  // iOS 26 Liquid Glass: drop the solid fill so the glass material shows
+  // through. (Android / iOS < 26 keep the solid `secondaryDark` above.)
+  containerGlass: {
+    backgroundColor: 'transparent',
+  },
+  // Glass material layer behind the tabs; self-clips to the bar radius and
+  // ignores touches so taps reach the tab buttons.
+  glassFill: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: theme.radii['2xl'],
   },
   tabsRow: {
     flex: 1,

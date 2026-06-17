@@ -149,7 +149,12 @@ export const PantryHeader: React.FC<PantryHeaderProps> = ({
       )}
 
       {/* Avatar */}
-      <Pressable onPress={onAvatarPress} style={styles.avatarContainer}>
+      <Pressable
+        onPress={onAvatarPress}
+        style={styles.avatarContainer}
+        testID="tab-profile"
+        accessibilityRole="button"
+      >
         {avatarUrl ? (
           // Border lives on this wrapper View (auto-patched by the Unistyles
           // babel plugin) instead of on the inner CachedImage — TurboImage is

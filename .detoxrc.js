@@ -243,7 +243,9 @@ module.exports = {
       },
     },
     'android.emu.debug': {
-      device: 'emulator',
+      // Use whatever emulator/device is attached (adbName '.*') rather than a
+      // hardcoded AVD — works with any running device.
+      device: 'attached',
       app: 'android.debug',
       behavior: {
         init: {
@@ -277,7 +279,8 @@ module.exports = {
       },
     },
     'android.emu.release': {
-      device: 'emulator',
+      // Any attached device/emulator (see android.emu.debug).
+      device: 'attached',
       app: 'android.release',
       behavior: {
         init: {
