@@ -67,7 +67,8 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   const renderIcon = () => {
     if (!icon) return null;
 
-    // Check if icon is a React node (custom component)
+    // Custom React node (e.g. a full illustration) renders as-is — it owns its
+    // own visual treatment and shouldn't get the badge.
     if (React.isValidElement(icon)) {
       return icon;
     }
@@ -76,18 +77,22 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
     const isEmoji =
       typeof icon === 'string' && icon.length <= 4 && !/^[a-z-]+$/.test(icon);
 
-    if (isEmoji) {
-      return <Text style={[styles.emoji, { fontSize: iconSize }]}>{icon}</Text>;
-    }
-
+    // Name/emoji icons sit inside a soft tinted circular badge so the empty
+    // state reads as a designed element rather than a lone floating glyph.
     return (
-      <Icon
-        name={icon as IconName}
-        size={iconSize}
-        color={iconColor}
-        tone="textSecondary"
-        library={iconLibrary}
-      />
+      <View style={styles.iconBadge}>
+        {isEmoji ? (
+          <Text style={[styles.emoji, { fontSize: iconSize }]}>{icon}</Text>
+        ) : (
+          <Icon
+            name={icon as IconName}
+            size={iconSize}
+            color={iconColor}
+            tone="textSecondary"
+            library={iconLibrary}
+          />
+        )}
+      </View>
     );
   };
 
@@ -152,8 +157,18 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing['2xl'],
   },
 
+  // Soft circular badge behind name/emoji icons — a subtle neutral tint so it
+  // reads as a deliberate graphic without competing with the title or actions.
+  iconBadge: {
+    padding: theme.spacing.md,
+    borderRadius: theme.radii.full,
+    backgroundColor: theme.colors.surfaceVariant,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
   emoji: {
-    marginBottom: theme.spacing.md,
+    textAlign: 'center',
   },
 
   title: {

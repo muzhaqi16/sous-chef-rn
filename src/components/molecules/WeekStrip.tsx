@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import {
   format,
@@ -47,7 +47,7 @@ export const WeekStrip: React.FC<WeekStripProps> = ({
 
   return (
     <View style={styles.container}>
-      <Pressable
+      <AppPressable
         onPress={canGoPrev ? onPrevWeek : undefined}
         style={[styles.arrowButton, !canGoPrev && styles.arrowButtonDisabled]}
         hitSlop={8}
@@ -59,7 +59,7 @@ export const WeekStrip: React.FC<WeekStripProps> = ({
             canGoPrev ? styles.arrowIcon.color : styles.arrowIconDisabled.color
           }
         />
-      </Pressable>
+      </AppPressable>
 
       <View style={styles.daysRow}>
         {weekDays.map(day => {
@@ -70,7 +70,7 @@ export const WeekStrip: React.FC<WeekStripProps> = ({
           const disabled = isDayDisabled(day);
 
           return (
-            <Pressable
+            <AppPressable
               key={dateKey}
               onPress={disabled ? undefined : () => onSelectDate(day)}
               style={[
@@ -108,12 +108,12 @@ export const WeekStrip: React.FC<WeekStripProps> = ({
                   style={[styles.mealDot, isSelected && styles.mealDotSelected]}
                 />
               )}
-            </Pressable>
+            </AppPressable>
           );
         })}
       </View>
 
-      <Pressable
+      <AppPressable
         onPress={canGoNext ? onNextWeek : undefined}
         style={[styles.arrowButton, !canGoNext && styles.arrowButtonDisabled]}
         hitSlop={8}
@@ -125,7 +125,7 @@ export const WeekStrip: React.FC<WeekStripProps> = ({
             canGoNext ? styles.arrowIcon.color : styles.arrowIconDisabled.color
           }
         />
-      </Pressable>
+      </AppPressable>
     </View>
   );
 };

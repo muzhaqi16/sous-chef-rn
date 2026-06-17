@@ -1,12 +1,15 @@
 import React from 'react';
-import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { AppPressable } from '#components/atoms/AppPressable';
-import { StyleSheet } from 'react-native-unistyles';
-import { Text } from '#components/atoms/Text';
+import { SegmentedControl } from '#components/molecules/SegmentedControl';
 import { StorageState } from '#/graphql/generated/schemaTypes';
 
-const STORAGE_STATES = Object.values(StorageState);
+// Selectable storage states. Excludes `StorageState.None`, which has no
+// meaningful UI (it previously rendered as a blank fourth segment).
+const STORAGE_STATE_OPTIONS: readonly StorageState[] = [
+  StorageState.Ambient,
+  StorageState.Frozen,
+  StorageState.Refrigerated,
+];
 
 interface StorageStateControlProps {
   value: StorageState;
@@ -15,7 +18,9 @@ interface StorageStateControlProps {
 
 /**
  * Segmented control for picking a {@link StorageState} in
- * {@link MoveToPantryModal}.
+ * {@link MoveToPantryModal}. Delegates to the shared {@link SegmentedControl}
+ * so it matches every other segmented control in the app (animated sliding
+ * pill, consistent sizing/theming) instead of re-implementing one.
  */
 export const StorageStateControl: React.FC<StorageStateControlProps> = ({
   value,
@@ -31,67 +36,12 @@ export const StorageStateControl: React.FC<StorageStateControlProps> = ({
   };
 
   return (
-    <View style={styles.section}>
-      <Text size="md" weight="medium" style={styles.sectionLabel}>
-        {t('moveToPantry.storageType')}
-      </Text>
-      <View style={styles.segmentedControl}>
-        {STORAGE_STATES.map(state => (
-          <AppPressable
-            key={state}
-            style={[styles.segment, value === state && styles.segmentActive]}
-            onPress={() => onChange(state)}
-          >
-            <Text
-              style={[
-                styles.segmentText,
-                value === state && styles.segmentTextActive,
-              ]}
-              numberOfLines={1}
-            >
-              {storageStateLabel[state]}
-            </Text>
-          </AppPressable>
-        ))}
-      </View>
-    </View>
+    <SegmentedControl
+      label={t('moveToPantry.storageType')}
+      options={STORAGE_STATE_OPTIONS}
+      value={value}
+      onChange={onChange}
+      formatLabel={state => storageStateLabel[state]}
+    />
   );
 };
-
-const styles = StyleSheet.create(theme => ({
-  section: {
-    marginBottom: theme.spacing.lg,
-  },
-  sectionLabel: {
-    marginBottom: theme.spacing.sm,
-  },
-  segmentedControl: {
-    flexDirection: 'row',
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radii.md,
-    overflow: 'hidden',
-  },
-  segment: {
-    flex: 1,
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.xs,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: theme.colors.surface,
-  },
-  segmentActive: {
-    backgroundColor: theme.colors.primary,
-  },
-  segmentText: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
-  },
-  segmentTextActive: {
-    color: theme.colors.white,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));

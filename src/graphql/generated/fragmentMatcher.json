@@ -112,6 +112,13 @@
       "NotFoundError",
       "ValidationError"
     ],
+    "AdminPurgeHomesResult": [
+      "AdminPurgeHomesPayload",
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "ValidationError"
+    ],
     "AdminPurgePantryItemsResult": [
       "AdminPurgePantryItemsPayload",
       "ConflictError",
