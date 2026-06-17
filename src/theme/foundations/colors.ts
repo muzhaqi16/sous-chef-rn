@@ -76,43 +76,46 @@ export const colors = {
     1000: '#000000',
   },
 
-  // Semantic colors
-  success: '#4CAF50',
-  warning: '#FF9800',
-  error: '#F44336',
-  info: '#2196F3',
-  danger: '#F44336',
+  // Semantic colors — 2026 harmonized set, aligned with the modern hues already
+  // used by expiration/alertBanner/validation below (green-600 / amber-600 /
+  // red-600 / blue-600). Brand orange (jaffa) + warm neutrals are unchanged.
+  // warning is amber, deliberately distinct from the brand orange.
+  success: '#16A34A',
+  warning: '#D97706',
+  error: '#DC2626',
+  info: '#2563EB',
+  danger: '#DC2626',
 
   // Status colors - for invite states, task states, etc.
   status: {
-    pending: '#FFA500',
-    accepted: '#4CAF50',
-    declined: '#F44336',
+    pending: '#D97706',
+    accepted: '#16A34A',
+    declined: '#DC2626',
     expired: '#9E9E9E',
-    active: '#2196F3',
+    active: '#2563EB',
     inactive: '#BDBDBD',
   },
 
   // Role-based colors - for user roles, permissions
   roles: {
-    owner: '#FF6B35',
-    admin: '#4CAF50',
-    member: '#2196F3',
+    owner: '#EA580C',
+    admin: '#16A34A',
+    member: '#2563EB',
     guest: '#9E9E9E',
   },
 
   // Validation colors - for form inputs, error states
   validation: {
-    error: '#F44336',
-    errorText: '#D32F2F',
-    errorBg: '#FFEBEE',
-    errorBorder: '#EF5350',
-    success: '#4CAF50',
-    successBg: '#E8F5E9',
-    warning: '#FF9800',
-    warningBg: '#FFF3E0',
-    info: '#2196F3',
-    infoBg: '#E3F2FD',
+    error: '#DC2626',
+    errorText: '#B91C1C',
+    errorBg: '#FEF2F2',
+    errorBorder: '#EF4444',
+    success: '#16A34A',
+    successBg: '#F0FDF4',
+    warning: '#D97706',
+    warningBg: '#FFFBEB',
+    info: '#2563EB',
+    infoBg: '#EFF6FF',
   },
 
   // Pantry expiration colors (light mode canonical shape — dark-mode values
@@ -193,13 +196,13 @@ export const colors = {
 
   // Action colors - for swipe actions and semantic interactions
   actions: {
-    consume: { light: '#9C27B0', dark: '#BA68C8' },
-    waste: { light: '#FF9800', dark: '#FFB74D' },
-    restock: { light: '#4CAF50', dark: '#81C784' },
-    purchase: { light: '#4CAF50', dark: '#81C784' },
-    unpurchase: { light: '#FF9800', dark: '#FFB74D' },
-    favorite: { light: '#E91E63', dark: '#F48FB1' },
-    rating: { light: '#FFB800', dark: '#FFD54F' },
+    consume: { light: '#9333EA', dark: '#C084FC' },
+    waste: { light: '#D97706', dark: '#FBBF24' },
+    restock: { light: '#16A34A', dark: '#4ADE80' },
+    purchase: { light: '#16A34A', dark: '#4ADE80' },
+    unpurchase: { light: '#D97706', dark: '#FBBF24' },
+    favorite: { light: '#E11D48', dark: '#FB7185' },
+    rating: { light: '#F59E0B', dark: '#FCD34D' },
   },
 
   // Special colors

@@ -86,11 +86,14 @@ describe('useDailyMeals', () => {
 
     const { result } = renderHook(() => useDailyMeals(items, today));
 
-    // Order should be: Breakfast, Lunch, Dinner
-    expect(result.current.dailyMeals).toHaveLength(3);
-    expect(result.current.dailyMeals[0].mealType).toBe('BREAKFAST');
-    expect(result.current.dailyMeals[1].mealType).toBe('LUNCH');
-    expect(result.current.dailyMeals[2].mealType).toBe('DINNER');
+    // Core slots are always shown once a day has any meal — the empty Snack
+    // slot appears between Lunch and Dinner per MEAL_TYPE_ORDER.
+    expect(result.current.dailyMeals.map(g => g.mealType)).toEqual([
+      'BREAKFAST',
+      'LUNCH',
+      'SNACK',
+      'DINNER',
+    ]);
   });
 
   it('provides correct labels for meal types', () => {
@@ -105,8 +108,9 @@ describe('useDailyMeals', () => {
 
     const { result } = renderHook(() => useDailyMeals(items, today));
 
+    // [1] is now the empty Lunch core slot; Snack moves to [2].
     expect(result.current.dailyMeals[0].label).toBe('Breakfast');
-    expect(result.current.dailyMeals[1].label).toBe('Snack');
+    expect(result.current.dailyMeals[2].label).toBe('Snack');
   });
 
   it('sorts items within a group by recipe name', () => {
@@ -153,7 +157,7 @@ describe('useDailyMeals', () => {
     expect(result.current.isEmpty).toBe(false);
   });
 
-  it('excludes meal type groups with zero items', () => {
+  it('shows core meal slots (even empty) once a day has any meal', () => {
     const items = [
       makeItem({
         id: 'i1',
@@ -164,9 +168,21 @@ describe('useDailyMeals', () => {
 
     const { result } = renderHook(() => useDailyMeals(items, today));
 
-    // Only DINNER should appear, not all 6 meal types
-    expect(result.current.dailyMeals).toHaveLength(1);
-    expect(result.current.dailyMeals[0].mealType).toBe('DINNER');
+    // Core slots Breakfast/Lunch/Snack/Dinner all render (Dinner holds the meal,
+    // the rest are empty add-affordances); non-core empties (Brunch/Dessert) stay
+    // hidden.
+    expect(result.current.dailyMeals.map(g => g.mealType)).toEqual([
+      'BREAKFAST',
+      'LUNCH',
+      'SNACK',
+      'DINNER',
+    ]);
+    expect(
+      result.current.dailyMeals.find(g => g.mealType === 'DINNER')?.items,
+    ).toHaveLength(1);
+    expect(
+      result.current.dailyMeals.find(g => g.mealType === 'BREAKFAST')?.items,
+    ).toHaveLength(0);
   });
 
   it('handles customMealName when recipe is null', () => {
@@ -181,7 +197,9 @@ describe('useDailyMeals', () => {
 
     const { result } = renderHook(() => useDailyMeals(items, today));
 
-    expect(result.current.dailyMeals).toHaveLength(1);
     expect(result.current.totalMeals).toBe(1);
+    expect(
+      result.current.dailyMeals.find(g => g.mealType === 'LUNCH')?.items,
+    ).toHaveLength(1);
   });
 });

@@ -28,10 +28,10 @@ describe('theme foundations', () => {
     });
 
     it('exports semantic colors', () => {
-      expect(colors.success).toBe('#4CAF50');
-      expect(colors.warning).toBe('#FF9800');
-      expect(colors.error).toBe('#F44336');
-      expect(colors.info).toBe('#2196F3');
+      expect(colors.success).toBe('#16A34A');
+      expect(colors.warning).toBe('#D97706');
+      expect(colors.error).toBe('#DC2626');
+      expect(colors.info).toBe('#2563EB');
     });
 
     it('exports status colors', () => {
