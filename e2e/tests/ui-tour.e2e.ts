@@ -1,15 +1,22 @@
 /**
- * UI Modernization Tour — read-only screenshot capture.
+ * UI Tour — visual smoke test + screenshot capture.
  *
- * Drives the authenticated app through every primary surface and captures a
- * screenshot of each, so the UI can be reviewed from real on-device renders.
- * Every step runs inside `safe()` so a single navigation failure never aborts
- * the rest of the tour — partial coverage is better than none.
+ * Logs in, asserts the authenticated tab bar and the four primary tabs are
+ * reachable, and screenshots every primary surface (Pantry / Shopping /
+ * Recipes / Meal Plan / Profile / add sheet) into the Detox artifacts dir for
+ * visual review and regression.
  *
- * Run:  npx detox test -c ios.sim.debug e2e/tests/ui-tour.e2e.ts
- * Out:  e2e/artifacts/ios-simulator/<run>/.../*.png
+ * Main-tab navigation is ASSERTED (the test fails if a primary surface is
+ * unreachable); the secondary captures (Profile, add sheet, Purchased sub-tab)
+ * and all screenshots are best-effort. The LogBox dev-warning toast is
+ * auto-silenced under Detox (see `useStartupInit`) so it can't occlude the
+ * floating tab bar — no manual setup needed.
+ *
+ * Run:  npx detox test -c ios.sim.debug    e2e/tests/ui-tour.e2e.ts
+ *       npx detox test -c android.emu.debug e2e/tests/ui-tour.e2e.ts
+ * Out:  e2e/artifacts/<platform>/<run>/✓ UI Tour …/<name>.png
  */
-import { device, element, by, waitFor } from 'detox';
+import { device, element, by, waitFor, expect } from 'detox';
 import {
   bootstrapAuthenticatedSession,
   dismissBiometricPromptIfPresent,
@@ -20,7 +27,6 @@ const settle = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 const shoot = async (name: string) => {
   try {
     await device.takeScreenshot(name);
-    console.log(`📸 ${name}`);
   } catch (e) {
     console.warn(`screenshot ${name} failed: ${e}`);
   }
@@ -28,96 +34,76 @@ const shoot = async (name: string) => {
 
 const safe = async (label: string, fn: () => Promise<void>) => {
   try {
-    console.log(`▶︎ ${label}`);
     await fn();
   } catch (e) {
     console.warn(`✗ ${label} skipped: ${e}`);
   }
 };
 
-const tapTab = async (tabId: string, screenId?: string) => {
-  await waitFor(element(by.id(tabId))).toBeVisible().withTimeout(8000);
-  await element(by.id(tabId)).tap();
-  // The tap itself navigates reliably; the screen-container testID match is
-  // flaky under sync-disabled launches, so wait for it only best-effort.
-  if (screenId) {
-    try {
-      await waitFor(element(by.id(screenId))).toBeVisible().withTimeout(4000);
-    } catch {
-      /* fall through — settle + screenshot whatever rendered */
-    }
-  }
-  await settle(1400); // slide transition + first paint
-};
-
-// Best-effort dismissal of post-login prompts/overlays by visible button text.
-// bootstrapAuthenticatedSession only knows the biometric prompt, not the
-// "Remember login info?" credential-save prompt that blocks the tabs.
+// Dismiss post-login prompts bootstrap doesn't itself clear — notably the
+// credential-save "Remember login info?" modal, which otherwise blocks the tabs.
 const dismissByText = async (labels: string[]) => {
   for (const label of labels) {
     try {
       await element(by.text(label)).tap();
-      await settle(600);
+      await settle(500);
     } catch {
       /* label not present — keep going */
     }
   }
 };
 
+// Navigate to a primary tab. The tab-visibility wait ASSERTS reachability (the
+// test fails if a tab can't be reached); the screen-container wait is
+// best-effort (its testID match is flaky under sync-disabled launches).
+const goTab = async (tabId: string, screenId: string) => {
+  await waitFor(element(by.id(tabId))).toBeVisible().withTimeout(10000);
+  await element(by.id(tabId)).tap();
+  try {
+    await waitFor(element(by.id(screenId))).toBeVisible().withTimeout(4000);
+  } catch {
+    /* container testID flaky — settle + capture whatever rendered */
+  }
+  await settle(1200);
+};
+
 describe('UI Tour', () => {
   beforeAll(async () => {
-    try {
-      await bootstrapAuthenticatedSession();
-    } catch (e) {
-      console.warn(`bootstrap failed, recovering: ${e}`);
-    }
-    // Clear post-login prompts bootstrap doesn't handle (credential-save modal,
-    // biometric, feature-hint) so we reach the authenticated tabs.
-    await dismissByText(['Not Now', 'Remember', 'Maybe Later', 'Skip']);
+    await bootstrapAuthenticatedSession();
+    await dismissByText(['Not Now', 'Maybe Later', 'Skip']);
     await dismissBiometricPromptIfPresent();
     await dismissByText(['Not Now', 'Skip', 'Got it', 'Dismiss']);
-    try {
-      await waitFor(element(by.id('tab-bar')))
-        .toBeVisible()
-        .withTimeout(12000);
-    } catch {
-      console.warn('tab-bar not visible after login recovery');
-    }
-    await settle(1200);
+    await waitFor(element(by.id('tab-bar')))
+      .toBeVisible()
+      .withTimeout(15000);
+    await settle(1000);
   });
 
-  it('captures every primary surface', async () => {
+  it('reaches and captures every primary surface', async () => {
+    await expect(element(by.id('tab-bar'))).toBeVisible();
     await shoot('00-launch');
 
-    await safe('Pantry', async () => {
-      await tapTab('tab-pantry', 'pantry-screen');
-      await shoot('01-pantry-main');
+    await goTab('tab-pantry', 'pantry-screen');
+    await shoot('01-pantry');
+
+    await goTab('tab-shoppinglist', 'shopping-list-screen');
+    await shoot('02-shopping');
+    await safe('Shopping Purchased sub-tab', async () => {
+      await element(by.text('Purchased')).atIndex(0).tap();
+      await settle(700);
+      await shoot('03-shopping-purchased');
     });
 
-    await safe('Shopping', async () => {
-      await tapTab('tab-shoppinglist', 'shopping-list-screen');
-      await shoot('02-shopping-toBuy');
-      try {
-        await element(by.text('Purchased')).atIndex(0).tap();
-        await settle(800);
-        await shoot('03-shopping-purchased');
-      } catch {
-        /* purchased tab label not found — skip */
-      }
-    });
+    await goTab('tab-recipe', 'recipes-screen');
+    await shoot('04-recipes');
 
-    await safe('Recipes', async () => {
-      await tapTab('tab-recipe', 'recipes-screen');
-      await shoot('04-recipes-main');
-    });
+    await goTab('tab-mealplan', 'meal-plan-screen');
+    await shoot('05-mealplan');
 
-    await safe('MealPlan', async () => {
-      await tapTab('tab-mealplan', 'meal-plan-screen');
-      await shoot('05-mealplan-main');
-    });
-
-    await safe('Profile', async () => {
-      await tapTab('tab-pantry', 'pantry-screen');
+    // ── Secondary surfaces (best-effort so a hiccup never fails the smoke
+    //    assertions above) ──
+    await safe('Profile (header avatar)', async () => {
+      await goTab('tab-pantry', 'pantry-screen');
       await element(by.id('tab-profile')).tap();
       try {
         await waitFor(element(by.id('profile-screen')))
@@ -126,34 +112,16 @@ describe('UI Tour', () => {
       } catch {
         /* best-effort */
       }
-      await settle(900);
-      await shoot('06-profile-main');
-    });
-
-    // ── Data-dependent / modal interactions LAST, so the captures above are
-    //    already safely on disk if any of these get stuck. ──
-    await safe('Recipe detail', async () => {
-      await tapTab('tab-recipe', 'recipes-screen');
-      await settle(2800); // let cards finish loading (skeletons → content)
-      // Recipe cards have id-based testIDs — tap the first card by point.
-      await element(by.id('recipes-list')).tap({ x: 160, y: 120 });
-      try {
-        await waitFor(element(by.id('recipe-detail-screen')))
-          .toBeVisible()
-          .withTimeout(6000);
-      } catch {
-        /* best-effort */
-      }
-      await settle(1100);
-      await shoot('07-recipe-detail');
+      await settle(800);
+      await shoot('06-profile');
     });
 
     await safe('Pantry add sheet', async () => {
-      await tapTab('tab-pantry', 'pantry-screen');
+      await goTab('tab-pantry', 'pantry-screen');
       await dismissBiometricPromptIfPresent();
       await element(by.id('tab-bar-add-button')).tap();
       await settle(900);
-      await shoot('08-pantry-add-sheet');
+      await shoot('07-pantry-add-sheet');
     });
   });
 });

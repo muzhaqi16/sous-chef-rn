@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { LogBox } from 'react-native';
 import { UnistylesRuntime } from 'react-native-unistyles';
 import { LaunchArguments } from 'react-native-launch-arguments';
 import { logger } from '#/utils/environment';
@@ -21,11 +22,17 @@ function injectDetoxLaunchArgs(
 ): void {
   try {
     const args = LaunchArguments.value<{
+      detoxServer?: string;
       detoxUserToken?: string;
       detoxRefreshToken?: string;
       detoxUser?: string;
       detoxDisableBackgroundServices?: string;
     }>();
+    // Under Detox the LogBox dev-warning toast overlays the floating tab bar and
+    // breaks screenshot/visibility checks — silence it for E2E runs only.
+    if (args.detoxServer) {
+      LogBox.ignoreAllLogs();
+    }
     if (args.detoxUserToken && args.detoxRefreshToken && args.detoxUser) {
       const user = JSON.parse(args.detoxUser);
       useStore
