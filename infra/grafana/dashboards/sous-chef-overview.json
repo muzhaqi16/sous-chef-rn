@@ -110,7 +110,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "sum(app_starts_total{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"})",
+          "expr": "sum(app_starts_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"})",
           "refId": "A",
           "legendFormat": "Total Launches"
         }
@@ -147,7 +147,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "sum(rate(graphql_requests_total{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) * 60",
+          "expr": "sum(rate(graphql_requests_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) * 60",
           "refId": "A",
           "legendFormat": "Requests/min"
         }
@@ -200,7 +200,7 @@
       },
       "targets": [
         {
-          "expr": "(sum(rate(graphql_errors_total{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) / clamp_min(sum(rate(graphql_requests_total{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])), 1e-10)) * 100 or vector(0)",
+          "expr": "(sum(rate(graphql_errors_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) / clamp_min(sum(rate(graphql_requests_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])), 1e-10)) * 100 or vector(0)",
           "refId": "A",
           "legendFormat": "Error Rate"
         }
@@ -250,7 +250,7 @@
       },
       "targets": [
         {
-          "expr": "sum(increase(app_errors_total{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",is_fatal=\"true\"}[1h])) or vector(0)",
+          "expr": "sum(increase(app_errors_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",is_fatal=\"true\"}[1h])) or vector(0)",
           "refId": "A",
           "legendFormat": "Fatal Crashes"
         }
@@ -302,12 +302,12 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "(sum(rate(app_events_total{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",event_name=\"login_success\",method=\"email_password\"}[5m])) / sum(rate(app_events_total{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",event_name=\"login_attempt\",method=\"email_password\"}[5m]))) * 100",
+          "expr": "(sum(rate(app_events_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",event_name=\"login_success\",method=\"email_password\"}[5m])) / sum(rate(app_events_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",event_name=\"login_attempt\",method=\"email_password\"}[5m]))) * 100",
           "refId": "A",
           "legendFormat": "Email/Password Success Rate"
         },
         {
-          "expr": "(sum(rate(app_events_total{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",event_name=\"login_success\",method=\"biometric\"}[5m])) / sum(rate(app_events_total{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",event_name=\"login_attempt\",method=\"biometric\"}[5m]))) * 100",
+          "expr": "(sum(rate(app_events_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",event_name=\"login_success\",method=\"biometric\"}[5m])) / sum(rate(app_events_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",event_name=\"login_attempt\",method=\"biometric\"}[5m]))) * 100",
           "refId": "B",
           "legendFormat": "Biometric Success Rate"
         }
@@ -361,7 +361,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "avg(app_memory_usage_percent{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"})",
+          "expr": "avg(app_memory_usage_percent{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"})",
           "refId": "A",
           "legendFormat": "Memory Usage %"
         }
@@ -415,7 +415,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "sum(increase(unhandled_promise_rejections_total{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[1h])) or vector(0)",
+          "expr": "sum(increase(unhandled_promise_rejections_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[1h])) or vector(0)",
           "refId": "A",
           "legendFormat": "Unhandled Rejections"
         }
@@ -464,7 +464,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "count(count by(instance)({service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}))",
+          "expr": "count(count by(instance)({job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}))",
           "refId": "A",
           "legendFormat": "Active Instances"
         }
@@ -518,7 +518,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "histogram_quantile(0.5, sum(rate(app_startup_duration_ms_bucket{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.5, sum(rate(app_startup_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le))",
           "refId": "A",
           "legendFormat": "Median Startup"
         }
@@ -655,7 +655,7 @@
           "type": "prometheus",
           "uid": "${DS_PROMETHEUS}"
         },
-        "definition": "label_values({service_name=\"sous-chef-app\"}, env)",
+        "definition": "label_values({job=\"sous-chef-app\"}, env)",
         "allValue": ".*",
         "hide": 0,
         "includeAll": true,
@@ -664,7 +664,7 @@
         "name": "environment",
         "options": [],
         "query": {
-          "query": "label_values({service_name=\"sous-chef-app\"}, env)",
+          "query": "label_values({job=\"sous-chef-app\"}, env)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,
@@ -683,7 +683,7 @@
           "type": "prometheus",
           "uid": "${DS_PROMETHEUS}"
         },
-        "definition": "label_values({service_name=\"sous-chef-app\",env=~\"$environment\"}, platform)",
+        "definition": "label_values({job=\"sous-chef-app\",env=~\"$environment\"}, platform)",
         "allValue": ".*",
         "hide": 0,
         "includeAll": true,
@@ -692,7 +692,7 @@
         "name": "platform",
         "options": [],
         "query": {
-          "query": "label_values({service_name=\"sous-chef-app\",env=~\"$environment\"}, platform)",
+          "query": "label_values({job=\"sous-chef-app\",env=~\"$environment\"}, platform)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,

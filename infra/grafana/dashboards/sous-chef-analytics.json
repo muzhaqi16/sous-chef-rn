@@ -134,7 +134,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "sum by (platform) (app_starts_total{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"})",
+          "expr": "sum by (platform) (app_starts_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"})",
           "refId": "A",
           "legendFormat": "{{platform}}"
         }
@@ -189,7 +189,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "sum by (env) (graphql_requests_total{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"})",
+          "expr": "sum by (env) (graphql_requests_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"})",
           "refId": "A",
           "legendFormat": "{{env}}"
         }
@@ -256,7 +256,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "sum(rate(screen_views_total{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (screen_name)",
+          "expr": "sum(rate(screen_views_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (screen_name)",
           "refId": "A",
           "legendFormat": "{{screen_name}}"
         }
@@ -323,7 +323,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "sum(rate(app_events_total{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (event_name)",
+          "expr": "sum(rate(app_events_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (event_name)",
           "refId": "A",
           "legendFormat": "{{event_name}}"
         }
@@ -390,12 +390,12 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "sum(rate(app_events_total{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",event_name=\"login_attempt\"}[5m])) by (method)",
+          "expr": "sum(rate(app_events_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",event_name=\"login_attempt\"}[5m])) by (method)",
           "refId": "A",
           "legendFormat": "Login Attempts ({{method}})"
         },
         {
-          "expr": "sum(rate(app_events_total{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",event_name=\"login_success\"}[5m])) by (method)",
+          "expr": "sum(rate(app_events_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",event_name=\"login_success\"}[5m])) by (method)",
           "refId": "B",
           "legendFormat": "Login Success ({{method}})"
         }
@@ -462,17 +462,17 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "sum(rate(app_events_total{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",event_name=\"add_item_success\"}[5m]))",
+          "expr": "sum(rate(app_events_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",event_name=\"add_item_success\"}[5m]))",
           "refId": "A",
           "legendFormat": "Items Added"
         },
         {
-          "expr": "sum(rate(app_events_total{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",event_name=\"delete_item_success\"}[5m]))",
+          "expr": "sum(rate(app_events_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",event_name=\"delete_item_success\"}[5m]))",
           "refId": "B",
           "legendFormat": "Items Deleted"
         },
         {
-          "expr": "sum(rate(app_events_total{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",event_name=\"toggle_item_purchase_success\"}[5m]))",
+          "expr": "sum(rate(app_events_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",event_name=\"toggle_item_purchase_success\"}[5m]))",
           "refId": "C",
           "legendFormat": "Items Toggled"
         }
@@ -539,12 +539,12 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "sum(rate(app_events_total{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",event_name=\"add_pantry_item_clicked\"}[5m]))",
+          "expr": "sum(rate(app_events_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",event_name=\"add_pantry_item_clicked\"}[5m]))",
           "refId": "A",
           "legendFormat": "Pantry Items Added"
         },
         {
-          "expr": "sum(rate(app_events_total{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",event_name=\"delete_pantry_item_success\"}[5m]))",
+          "expr": "sum(rate(app_events_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",event_name=\"delete_pantry_item_success\"}[5m]))",
           "refId": "B",
           "legendFormat": "Pantry Items Deleted"
         }
@@ -611,17 +611,17 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "sum(rate(app_events_total{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",event_name=\"barcode_scanner_opened\"}[5m]))",
+          "expr": "sum(rate(app_events_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",event_name=\"barcode_scanner_opened\"}[5m]))",
           "refId": "A",
           "legendFormat": "Barcode Scanner Opens"
         },
         {
-          "expr": "sum(rate(app_events_total{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",event_name=\"avatar_upload_clicked\"}[5m]))",
+          "expr": "sum(rate(app_events_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",event_name=\"avatar_upload_clicked\"}[5m]))",
           "refId": "B",
           "legendFormat": "Avatar Uploads"
         },
         {
-          "expr": "sum(rate(app_events_total{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",event_name=\"logout_clicked\"}[5m]))",
+          "expr": "sum(rate(app_events_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",event_name=\"logout_clicked\"}[5m]))",
           "refId": "C",
           "legendFormat": "Logouts"
         }
@@ -670,7 +670,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "topk(15, sum by (event_name) (increase(app_events_total{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[1h])))",
+          "expr": "topk(15, sum by (event_name) (increase(app_events_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[1h])))",
           "format": "table",
           "instant": true,
           "refId": "A"
@@ -724,7 +724,7 @@
           "type": "prometheus",
           "uid": "${DS_PROMETHEUS}"
         },
-        "definition": "label_values({service_name=\"sous-chef-app\"}, env)",
+        "definition": "label_values({job=\"sous-chef-app\"}, env)",
         "hide": 0,
         "includeAll": true,
         "label": "Environment",
@@ -732,7 +732,7 @@
         "name": "environment",
         "options": [],
         "query": {
-          "query": "label_values({service_name=\"sous-chef-app\"}, env)",
+          "query": "label_values({job=\"sous-chef-app\"}, env)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,
@@ -751,7 +751,7 @@
           "type": "prometheus",
           "uid": "${DS_PROMETHEUS}"
         },
-        "definition": "label_values({service_name=\"sous-chef-app\",env=~\"$environment\"}, platform)",
+        "definition": "label_values({job=\"sous-chef-app\",env=~\"$environment\"}, platform)",
         "hide": 0,
         "includeAll": true,
         "label": "Platform",
@@ -759,7 +759,7 @@
         "name": "platform",
         "options": [],
         "query": {
-          "query": "label_values({service_name=\"sous-chef-app\",env=~\"$environment\"}, platform)",
+          "query": "label_values({job=\"sous-chef-app\",env=~\"$environment\"}, platform)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,
