@@ -7,7 +7,6 @@ import Animated, {
   LinearTransition,
 } from 'react-native-reanimated';
 import { Icon } from '#utils/iconUtils';
-import { animateScrollOffset } from '#utils/animateScrollOffset';
 import { useActionTrayScroll } from '#components/templates/ActionTray/ActionTrayScrollContext';
 import { SelectorItemContainer } from './SelectorItemContainer';
 import type { SelectorConfig, SelectableItem } from './types';
@@ -82,15 +81,13 @@ export const SelectorContent = <T extends SelectableItem>({
     didCenterRef.current = true;
     // Center the selected row's midpoint in the viewport. Using the row's
     // measured height keeps this correct if the row size changes — no magic
-    // constant coupled to SelectorItemContainer's layout. Eased slide (from the
-    // top, where the list opens) instead of the native snap, matching the
-    // horizontal pill centering.
+    // constant coupled to SelectorItemContainer's layout. Scroll via gorhom's
+    // documented `scrollTo` with animation so the glide runs natively on the UI
+    // thread — gorhom exposes no Reanimated-driven scroll for its scrollable, so
+    // a hand-rolled JS-thread slide would be the wrong layer to animate at.
     const { y, height } = selectedLayout;
     const target = Math.max(0, y + height / 2 - viewportHeight / 2);
-    const cancelSlide = animateScrollOffset(0, target, offsetY =>
-      scrollToContentOffset(offsetY, false),
-    );
-    return cancelSlide;
+    scrollToContentOffset(target, true);
   }, [selectedLayout, scroll]);
 
   const renderItem = (item: T) => {

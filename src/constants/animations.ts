@@ -73,8 +73,7 @@ export const TAB_BAR = {
 };
 
 /**
- * Distance-scaled scroll-slide tuning, shared by the JS-thread
- * `animateScrollOffset` util and the Reanimated-driven centering in
+ * Distance-scaled scroll-slide tuning for the Reanimated-driven centering in
  * `useCenterActiveItem`: the glide duration grows with distance but is clamped,
  * so a near jump is snappy and a far one eases in.
  */
