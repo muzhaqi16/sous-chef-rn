@@ -573,7 +573,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "sum(count_over_time({service_name=\"sous-chef-app\"} | json | level=\"error\" [5m]))",
+          "expr": "sum(count_over_time({service_name=\"sous-chef-app\"} | json | level=\"error\" | env=~\"$environment\" | platform=~\"$platform\" [5m]))",
           "refId": "A",
           "legendFormat": "Errors"
         }
@@ -603,7 +603,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "{service_name=\"sous-chef-app\"} | json | level=\"error\"",
+          "expr": "{service_name=\"sous-chef-app\"} | json | level=\"error\" | env=~\"$environment\" | platform=~\"$platform\"",
           "refId": "A"
         }
       ],
@@ -656,6 +656,7 @@
           "uid": "${DS_PROMETHEUS}"
         },
         "definition": "label_values({service_name=\"sous-chef-app\"}, env)",
+        "allValue": ".*",
         "hide": 0,
         "includeAll": true,
         "label": "Environment",
@@ -683,6 +684,7 @@
           "uid": "${DS_PROMETHEUS}"
         },
         "definition": "label_values({service_name=\"sous-chef-app\",env=~\"$environment\"}, platform)",
+        "allValue": ".*",
         "hide": 0,
         "includeAll": true,
         "label": "Platform",
