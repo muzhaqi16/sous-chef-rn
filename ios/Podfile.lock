@@ -71,7 +71,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
-  - NitroMmkv (4.3.1):
+  - NitroMmkv (4.3.2):
     - boost
     - DoubleConversion
     - fast_float
@@ -3203,7 +3203,7 @@ PODS:
     - RNNotifee/NotifeeCore (= 9.1.8)
   - RNNotifee/NotifeeCore (9.1.8):
     - React-Core
-  - RNPermissions (5.5.3):
+  - RNPermissions (5.6.0):
     - boost
     - DoubleConversion
     - fast_float
@@ -3981,7 +3981,7 @@ SPEC CHECKSUMS:
   LiquidGlass: a2ea1e5036efd0964d666b4b63b5bcb3509e1651
   MMKVCore: 3d16ce9f7d411e135020915fde98a056859a1efa
   NitroImage: 4ffcf183d975de179ae1662b7c3b4b3b37747c7e
-  NitroMmkv: c68bb2c29c154913707bc6e66791b2b30dd723c1
+  NitroMmkv: 975be1948fd74280e6febcda06671d7bf604a4cd
   NitroModules: 9ec4a2e0b9af22ba1f1f550e1dd9be94143afd18
   RCT-Folly: b29feb752b08042c62badaef7d453f3bb5e6ae23
   RCTDeprecation: c7d33f6bc08dbb8be7dfa70d219bfb034480a406
@@ -4074,7 +4074,7 @@ SPEC CHECKSUMS:
   RNGestureHandler: cd4be101cfa17ea6bbd438710caa02e286a84381
   RNKeychain: a2c134ab796272c3d605e035ab727591000b30f3
   RNNotifee: 5e3b271e8ea7456a36eec994085543c9adca9168
-  RNPermissions: 0d3196b3cd5492dc2dec58a9f8df2d455b978e92
+  RNPermissions: 1d7289d3c1233da7cc9edeef580d6bb7f91e3ef7
   RNReactNativeHapticFeedback: b309b317c95fc3b9bc8276da1a78dae34b6ed46e
   RNReanimated: ce6c58c02bd76d8d1017bf07d04ed4a7c387801e
   RNScreens: 7f643ee0fd1407dc5085c7795460bd93da113b8f
