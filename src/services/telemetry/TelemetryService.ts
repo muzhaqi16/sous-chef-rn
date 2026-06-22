@@ -12,6 +12,7 @@ import { ConsoleTransport } from './transports/ConsoleTransport';
 import { HttpTransport } from './transports/HttpTransport';
 import { scrubLogExtra, scrubString } from './scrub';
 import { logger } from '#/utils/environment';
+import { serializeError } from '#/utils/errorSerialization';
 import { useStore } from '#store';
 
 const LOG_LEVEL_PRIORITY: Record<LogEntry['level'], number> = {
@@ -534,11 +535,17 @@ export class TelemetryService {
         onUnhandled: (id: unknown, reason: unknown) => {
           // Track dedicated counter for dashboard compatibility
           this.incrementCounter('unhandled_promise_rejections_total');
+          // Structurally serialize the reason instead of String(reason): a
+          // rejected non-Error object stringifies to "[object Object]", losing
+          // the message/stack/GraphQL fields. serializeError narrows Errors,
+          // plain objects, and Apollo error shapes into a JSON-friendly object.
+          const serialized = serializeError(reason);
           this.trackError({
-            message: 'Unhandled Promise Rejection',
+            message: `Unhandled Promise Rejection: ${serialized.message}`,
+            stack: serialized.stack,
             context: {
               rejection_id: id,
-              reason: String(reason),
+              reason: serialized,
             },
           });
         },
