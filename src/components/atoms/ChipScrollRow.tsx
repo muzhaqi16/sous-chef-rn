@@ -1,4 +1,3 @@
-import React, { useRef } from 'react';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
 // RNGH's ScrollView (not RN's) so the row scrolls when nested inside a
 // @gorhom/bottom-sheet — RN's ScrollView doesn't coordinate with the sheet's
@@ -11,6 +10,13 @@ import { Icon, type IconName } from '#utils/iconUtils';
 import { EdgeFade } from '#components/atoms/EdgeFade';
 import { useScrollEdgeFades } from '#hooks/ui/useScrollEdgeFades';
 import { useCenterActiveItem } from '#hooks/ui/useCenterActiveItem';
+import Animated from 'react-native-reanimated';
+
+// Animated wrapper so Reanimated can drive the centering scroll on the UI
+// thread via the `animatedRef` from `useCenterActiveItem`. Built once at module
+// scope — `createAnimatedComponent` must never run per render. Wraps RNGH's
+// ScrollView (kept for horizontal scrolling inside a bottom sheet).
+const AnimatedChipScrollView = Animated.createAnimatedComponent(ScrollView);
 
 export interface ChipOption<T> {
   key: T;
@@ -47,15 +53,13 @@ export function ChipScrollRow<T>({
 }: ChipScrollRowProps<T>) {
   styles.useVariants({ size });
 
-  const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
   const { edges, metrics, onScroll, onContentSizeChange, onLayout } =
     useScrollEdgeFades(!!edgeFadeColor);
 
   // Keep the selected chip centered, like the pantry location filter strip.
-  const { onItemLayout } = useCenterActiveItem({
+  const { onItemLayout, animatedRef } = useCenterActiveItem({
     activeKey: selected,
     metrics,
-    scrollTo: (x, animated) => scrollRef.current?.scrollTo({ x, animated }),
   });
 
   const chips = options.map(opt => {
@@ -87,8 +91,8 @@ export function ChipScrollRow<T>({
   // updating `metrics` but only flips the fade `edges` when fades are enabled,
   // so a fade-less row tracks scroll for centering without extra re-renders.
   const scroller = (
-    <ScrollView
-      ref={scrollRef}
+    <AnimatedChipScrollView
+      ref={animatedRef}
       horizontal
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={[styles.chipRow, contentContainerStyle]}
@@ -99,7 +103,7 @@ export function ChipScrollRow<T>({
       scrollEventThrottle={16}
     >
       {chips}
-    </ScrollView>
+    </AnimatedChipScrollView>
   );
 
   // Without fades, return the bare scroller (unchanged behavior). With them,

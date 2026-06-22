@@ -1,5 +1,5 @@
-import { useRef } from 'react';
-import { View, type LayoutChangeEvent, ScrollView } from 'react-native';
+import { View, type LayoutChangeEvent } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
@@ -36,9 +36,6 @@ function FilterTabsComponent<T extends string = string>({
   actionButton,
   filteredTabIds,
 }: FilterTabsProps<T>): React.ReactElement {
-  // ── Auto-scroll to keep active tab visible ──
-  const scrollViewRef = useRef<ScrollView>(null);
-
   // ── Scroll-edge fades ──
   // Show a soft fade on whichever side has more content scrolled off, so chips
   // read as scrollable instead of hard-clipped at the viewport edge. The hook
@@ -51,14 +48,16 @@ function FilterTabsComponent<T extends string = string>({
   // `cacheKey` (the testID prefix) lets a sticky-header copy of this strip
   // start at the right offset without flicker by sharing the first instance's
   // measurements.
-  const { onItemLayout, onScrollViewLayout, initialContentOffset } =
-    useCenterActiveItem({
-      activeKey: activeTabId,
-      metrics,
-      scrollTo: (x, animated) =>
-        scrollViewRef.current?.scrollTo({ x, animated }),
-      cacheKey: testIDPrefix,
-    });
+  const {
+    onItemLayout,
+    onScrollViewLayout,
+    initialContentOffset,
+    animatedRef,
+  } = useCenterActiveItem({
+    activeKey: activeTabId,
+    metrics,
+    cacheKey: testIDPrefix,
+  });
 
   const handleScrollViewLayout = (e: LayoutChangeEvent) => {
     onLayout(e); // fade metrics
@@ -83,8 +82,8 @@ function FilterTabsComponent<T extends string = string>({
 
   return (
     <View style={styles.container}>
-      <ScrollView
-        ref={scrollViewRef}
+      <Animated.ScrollView
+        ref={animatedRef}
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
@@ -131,7 +130,7 @@ function FilterTabsComponent<T extends string = string>({
             )}
           </Pressable>
         )}
-      </ScrollView>
+      </Animated.ScrollView>
       {!!edges.left && <EdgeFade side="left" />}
       {!!edges.right && <EdgeFade side="right" />}
     </View>

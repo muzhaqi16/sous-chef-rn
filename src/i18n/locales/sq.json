@@ -1088,6 +1088,7 @@
     "takeAction": "Vepro",
     "acceptInvitation": "Prano ftesën",
     "listTitle": "Njoftimet",
+    "recently": "Kohët e fundit",
     "expiry": {
       "expiresToday": "{{name}} skadon sot",
       "expiresTomorrow": "{{name}} skadon nesër",

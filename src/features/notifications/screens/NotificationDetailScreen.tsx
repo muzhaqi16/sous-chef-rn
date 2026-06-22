@@ -7,6 +7,7 @@ import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 import { NotificationActionHandler } from '#features/notifications/components/NotificationActionHandler';
 import { getNotificationDisplayMessage } from '#utils/notifications/notificationHelpers';
+import { getDateFnsLocale } from '#utils/dateLocale';
 
 import { format } from 'date-fns/format';
 import type { StaticScreenProps } from '@react-navigation/native';
@@ -51,7 +52,9 @@ export const NotificationDetailScreen: React.FC<
               {notification.title || t('notifications.titleFallback')}
             </Text>
             <Text variant="caption">
-              {format(new Date(notification.sentAt), 'PPpp')}
+              {format(new Date(notification.sentAt), 'PPpp', {
+                locale: getDateFnsLocale(),
+              })}
             </Text>
           </View>
 

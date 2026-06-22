@@ -1088,6 +1088,7 @@
     "takeAction": "Agisci",
     "acceptInvitation": "Accetta invito",
     "listTitle": "Notifiche",
+    "recently": "Di recente",
     "expiry": {
       "expiresToday": "{{name}} scade oggi",
       "expiresTomorrow": "{{name}} scade domani",

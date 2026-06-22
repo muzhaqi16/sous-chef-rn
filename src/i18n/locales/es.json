@@ -1088,6 +1088,7 @@
     "takeAction": "Tomar acción",
     "acceptInvitation": "Aceptar invitación",
     "listTitle": "Notificaciones",
+    "recently": "Recientemente",
     "expiry": {
       "expiresToday": "{{name}} vence hoy",
       "expiresTomorrow": "{{name}} vence mañana",

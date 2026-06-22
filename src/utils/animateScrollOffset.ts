@@ -1,9 +1,8 @@
-// Slide tuning defaults: duration scales with distance (a near jump is snappy,
-// a far one glides) but stays within these bounds. `ease-out cubic` decelerates
-// into the resting position.
-const DEFAULT_MS_PER_PX = 1.5;
-const DEFAULT_MIN_MS = 250;
-const DEFAULT_MAX_MS = 500;
+import { SCROLL_SLIDE } from '#constants/animations';
+
+// Distance→duration tuning lives in `SCROLL_SLIDE` (shared with the
+// Reanimated-driven centering in `useCenterActiveItem`). `ease-out cubic`
+// decelerates into the resting position.
 const easeOutCubic = (t: number): number => 1 - Math.pow(1 - t, 3);
 
 export interface ScrollSlideOptions {
@@ -37,9 +36,9 @@ export function animateScrollOffset(
   options: ScrollSlideOptions = {},
 ): () => void {
   const {
-    msPerPx = DEFAULT_MS_PER_PX,
-    minMs = DEFAULT_MIN_MS,
-    maxMs = DEFAULT_MAX_MS,
+    msPerPx = SCROLL_SLIDE.MS_PER_PX,
+    minMs = SCROLL_SLIDE.MIN_MS,
+    maxMs = SCROLL_SLIDE.MAX_MS,
     easing = easeOutCubic,
   } = options;
 

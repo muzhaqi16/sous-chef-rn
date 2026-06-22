@@ -10,6 +10,7 @@ import {
   getNotificationIcon,
 } from '#utils/notifications/notificationHelpers';
 import { safeParseDate } from '#utils/dateUtils';
+import { getDateFnsLocale } from '#utils/dateLocale';
 
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
@@ -37,7 +38,12 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
 
   const formattedTimestamp = (() => {
     const date = safeParseDate(notification.sentAt);
-    return date ? formatDistanceToNow(date, { addSuffix: true }) : 'Recently';
+    return date
+      ? formatDistanceToNow(date, {
+          addSuffix: true,
+          locale: getDateFnsLocale(),
+        })
+      : t('notifications.recently');
   })();
 
   const displayMessage = getNotificationDisplayMessage(notification, t);

@@ -290,18 +290,21 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.xs,
     borderRadius: theme.radii.lg,
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
+  // Selected = primary outline + primary label, matching the shared
+  // ChipScrollRow active style the other meal-type pickers use — not a filled
+  // pill — so the two selectors read the same.
   mealTypeChipSelected: {
-    backgroundColor: theme.colors.primary,
     borderColor: theme.colors.primary,
   },
   mealTypeText: {
     color: theme.colors.textSecondary,
   },
   mealTypeTextSelected: {
-    color: theme.colors.white,
+    color: theme.colors.primary,
     fontWeight: theme.fonts.weight.medium,
   },
 }));

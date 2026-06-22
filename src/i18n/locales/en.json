@@ -1088,6 +1088,7 @@
     "takeAction": "Take Action",
     "acceptInvitation": "Accept Invitation",
     "listTitle": "Notifications",
+    "recently": "Recently",
     "expiry": {
       "expiresToday": "{{name}} expires today",
       "expiresTomorrow": "{{name}} expires tomorrow",

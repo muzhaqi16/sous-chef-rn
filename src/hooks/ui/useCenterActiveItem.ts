@@ -1,7 +1,16 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type Component } from 'react';
 import type { LayoutChangeEvent } from 'react-native';
+import Animated, {
+  Easing,
+  cancelAnimation,
+  scrollTo,
+  useAnimatedReaction,
+  useAnimatedRef,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import type { ScrollMetrics } from '#hooks/ui/useScrollEdgeFades';
-import { animateScrollOffset } from '#utils/animateScrollOffset';
+import { SCROLL_SLIDE } from '#constants/animations';
 
 interface ItemLayout {
   x: number;
@@ -37,11 +46,6 @@ interface UseCenterActiveItemParams<K> {
    */
   metrics: React.RefObject<ScrollMetrics>;
   /**
-   * Imperative scroll, owned by the caller because RN's and RNGH's ScrollView
-   * refs differ. `(x, animated) => ref.current?.scrollTo({ x, animated })`.
-   */
-  scrollTo: (x: number, animated: boolean) => void;
-  /**
    * When set, item layouts + viewport width persist in a module cache under
    * this key so a second instance (sticky-header copy) starts centered without
    * a flicker. Omit for a single-instance scroller.
@@ -51,31 +55,41 @@ interface UseCenterActiveItemParams<K> {
 
 /**
  * Keeps the active item of a horizontal scroller centered: instantly on first
- * paint, then animated on later selection changes. Wire `onItemLayout` onto
- * each item, `onScrollViewLayout` onto the ScrollView, and pass
+ * paint, then glided on later selection changes. Attach the returned
+ * `animatedRef` to the scroller (an `Animated.ScrollView` or any
+ * `Animated.createAnimatedComponent(ScrollView)`), wire `onItemLayout` onto
+ * each item, `onScrollViewLayout` onto the scroller, and pass
  * `initialContentOffset` as its `contentOffset`.
+ *
+ * The glide runs on the UI thread via Reanimated's `scrollTo` (no per-frame JS
+ * round-trip): `target` holds the destination offset and the reaction below
+ * pushes it to the native scroller. `driving` gates that push so a manual user
+ * scroll — which never writes `target` — is never fought, and the first paint
+ * isn't yanked to 0 before the row is measured.
  *
  * The centering effect retries across a few frames because layout can land
  * after mount (or after a sticky copy remounts), and clamps to the real scroll
  * range so end items settle flush against the edge instead of over-scrolling.
  */
-export function useCenterActiveItem<K>({
-  activeKey,
-  metrics,
-  scrollTo,
-  cacheKey,
-}: UseCenterActiveItemParams<K>) {
-  // Gates the animation: the first positioning is instant so the strip doesn't
-  // visibly scroll on appear; later activeKey changes slide smoothly.
+export function useCenterActiveItem<
+  K,
+  TScroll extends Component = Animated.ScrollView,
+>({ activeKey, metrics, cacheKey }: UseCenterActiveItemParams<K>) {
+  // Gates the glide: the first positioning is instant so the strip doesn't
+  // visibly scroll on appear; later activeKey changes glide smoothly.
   const hasAutoCenteredRef = useRef(false);
   // Per-instance layouts when there's no shared cache.
   const instanceLayouts = useRef<Map<unknown, ItemLayout>>(new Map());
-  // Hold the latest scrollTo so the centering effect can call it without taking
-  // it as a dependency (which would re-center on every render).
-  const scrollToRef = useRef(scrollTo);
-  useEffect(() => {
-    scrollToRef.current = scrollTo;
-  });
+
+  const animatedRef = useAnimatedRef<TScroll>();
+  const target = useSharedValue(0);
+  const driving = useSharedValue(false);
+  useAnimatedReaction(
+    () => (driving.value ? target.value : null),
+    x => {
+      if (x !== null) scrollTo(animatedRef, x, 0, false);
+    },
+  );
 
   const layouts = (): Map<unknown, ItemLayout> => {
     if (!cacheKey) return instanceLayouts.current;
@@ -106,7 +120,6 @@ export function useCenterActiveItem<K>({
   useEffect(() => {
     let cancelled = false;
     let rafId: number | null = null;
-    let cancelSlide: (() => void) | null = null;
 
     const tryCenter = (attempt: number) => {
       if (cancelled) return;
@@ -122,14 +135,26 @@ export function useCenterActiveItem<K>({
         const contentW = metrics.current.contentW;
         const maxScroll = contentW > 0 ? Math.max(0, contentW - vp) : centered;
         const dest = Math.min(centered, maxScroll);
+        const from = metrics.current.scrollX;
+        cancelAnimation(target);
+        driving.set(true);
         // First positioning is instant (no visible scroll on appear); later
-        // selection changes glide from the current scroll position.
-        if (hasAutoCenteredRef.current) {
-          cancelSlide = animateScrollOffset(metrics.current.scrollX, dest, x =>
-            scrollToRef.current(x, false),
+        // selection changes glide from the current scroll position, with the
+        // duration scaled to distance so a far jump eases in rather than snaps.
+        if (hasAutoCenteredRef.current && Math.abs(dest - from) >= 1) {
+          const duration = Math.min(
+            SCROLL_SLIDE.MAX_MS,
+            Math.max(
+              SCROLL_SLIDE.MIN_MS,
+              Math.abs(dest - from) * SCROLL_SLIDE.MS_PER_PX,
+            ),
+          );
+          target.set(from);
+          target.set(
+            withTiming(dest, { duration, easing: Easing.out(Easing.cubic) }),
           );
         } else {
-          scrollToRef.current(dest, false);
+          target.set(dest);
           hasAutoCenteredRef.current = true;
         }
         return;
@@ -142,12 +167,12 @@ export function useCenterActiveItem<K>({
     rafId = requestAnimationFrame(() => tryCenter(0));
     return () => {
       cancelled = true;
-      // Cancel the retry loop and any in-flight slide so a new selection (or
+      // Cancel the retry loop and any in-flight glide so a new selection (or
       // unmount) doesn't fight the previous animation.
       if (rafId != null) cancelAnimationFrame(rafId);
-      cancelSlide?.();
+      cancelAnimation(target);
     };
-  }, [activeKey, cacheKey, metrics]);
+  }, [activeKey, cacheKey, metrics, target, driving]);
 
   const onItemLayout = (key: K, e: LayoutChangeEvent) => {
     const { x, width } = e.nativeEvent.layout;
@@ -156,7 +181,11 @@ export function useCenterActiveItem<K>({
     // known — ahead of the effect's rAF, so there's no visible jump.
     if (key === activeKey) {
       const offset = centerOffset(activeKey);
-      if (offset > 0) scrollToRef.current(offset, false);
+      if (offset > 0) {
+        cancelAnimation(target);
+        driving.set(true);
+        target.set(offset);
+      }
     }
   };
 
@@ -166,5 +195,10 @@ export function useCenterActiveItem<K>({
     }
   };
 
-  return { onItemLayout, onScrollViewLayout, initialContentOffset };
+  return {
+    animatedRef,
+    onItemLayout,
+    onScrollViewLayout,
+    initialContentOffset,
+  };
 }
