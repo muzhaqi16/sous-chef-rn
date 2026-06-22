@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useApolloClient, useSubscription } from '@apollo/client/react';
 import { NotificationEventsDocument } from '#features/notifications/graphql/notifications.generated';
 import {
@@ -18,6 +19,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { showLocalNotification } from '#utils/notifications/localNotificationHelper';
 import {
   getNotificationAction,
+  getNotificationDisplayMessage,
   getNotificationTitle,
 } from '#utils/notifications/notificationHelpers';
 import {
@@ -64,6 +66,7 @@ interface NotificationConfig {
  */
 export const useNotificationListener = (config: NotificationConfig = {}) => {
   const client = useApolloClient();
+  const { t } = useTranslation();
 
   // PERFORMANCE: Use ref instead of state for AppState to avoid re-renders
   const appStateRef = useRef(AppState.currentState);
@@ -183,7 +186,7 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
       showLocalNotification({
         id: processedNotification.id,
         title: processedNotification.title,
-        body: processedNotification.message,
+        body: getNotificationDisplayMessage(processedNotification, t),
       });
     }
   };

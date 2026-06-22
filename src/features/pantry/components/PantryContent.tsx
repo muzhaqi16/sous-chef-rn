@@ -135,6 +135,7 @@ export const PantryContent = React.forwardRef<
       onHomeBadgeLayout,
       onSettingsIconLayout,
       scrollHandler,
+      onScrollBeginDrag,
       onScrollEndDrag,
       onMomentumScrollEnd,
     },
@@ -443,6 +444,7 @@ export const PantryContent = React.forwardRef<
             contentContainerStyle={listContentStyle}
             showsVerticalScrollIndicator={false}
             onScroll={scrollHandler}
+            onScrollBeginDrag={onScrollBeginDrag}
             onScrollEndDrag={onScrollEndDrag}
             onMomentumScrollEnd={onMomentumScrollEnd}
             scrollEventThrottle={16}

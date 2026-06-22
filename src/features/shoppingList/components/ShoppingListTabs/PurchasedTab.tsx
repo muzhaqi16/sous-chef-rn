@@ -38,6 +38,7 @@ const PurchasedTabComponent: React.FC = () => {
     canMarkPurchased,
     isTransitioning,
     onScroll,
+    onScrollBeginDrag,
     onScrollEndDrag,
     onMomentumScrollEnd,
     scrollEventThrottle,
@@ -112,6 +113,7 @@ const PurchasedTabComponent: React.FC = () => {
           canMarkPurchased={canMarkPurchased}
           listEmptyComponent={emptyComponent}
           onScroll={onScroll}
+          onScrollBeginDrag={onScrollBeginDrag}
           onScrollEndDrag={onScrollEndDrag}
           onMomentumScrollEnd={onMomentumScrollEnd}
           scrollEventThrottle={scrollEventThrottle}

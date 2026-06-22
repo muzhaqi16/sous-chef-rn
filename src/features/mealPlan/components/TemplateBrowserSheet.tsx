@@ -129,6 +129,7 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
           onSelect={setSelectedCategory}
           style={styles.chipScroll}
           contentContainerStyle={styles.chipRowContent}
+          edgeFadeColor="surface"
         />
 
         {/* Template list */}

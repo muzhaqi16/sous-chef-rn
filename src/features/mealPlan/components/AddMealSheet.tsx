@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
-  ScrollView,
   type NativeSyntheticEvent,
   type NativeScrollEvent,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import {
-  Pressable,
-  PrimaryActivityIndicator,
-} from '#components/atoms/themedComponents';
+import { PrimaryActivityIndicator } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
+import {
+  ChipScrollRow,
+  type ChipOption,
+} from '#components/atoms/ChipScrollRow';
 import { Text } from '#components/atoms/Text';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
@@ -352,6 +352,10 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
 
   const hasQuery = searchQuery.trim().length > 0;
 
+  const mealTypeOptions: ChipOption<MealType>[] = MEAL_TYPES.map(
+    ({ type, labelKey }) => ({ key: type, label: t(labelKey) }),
+  );
+
   return (
     <BottomSheetModal
       ref={ref}
@@ -364,32 +368,14 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
         </View>
 
         {/* Meal type selector */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.mealTypeRow}
+        <ChipScrollRow
+          options={mealTypeOptions}
+          selected={selectedMealType}
+          onSelect={setSelectedMealType}
           style={styles.mealTypeScroll}
-        >
-          {MEAL_TYPES.map(({ type, labelKey }) => (
-            <Pressable
-              key={type}
-              onPress={() => setSelectedMealType(type)}
-              style={[
-                styles.mealTypeChip,
-                selectedMealType === type && styles.mealTypeChipSelected,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.mealTypeText,
-                  selectedMealType === type && styles.mealTypeTextSelected,
-                ]}
-              >
-                {t(labelKey)}
-              </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
+          contentContainerStyle={styles.mealTypeContent}
+          edgeFadeColor="surface"
+        />
 
         {/* Search input */}
         <View style={styles.searchBarWrapper}>
@@ -536,30 +522,9 @@ const styles = StyleSheet.create(theme => ({
     flexShrink: 0,
     marginBottom: theme.spacing.md,
   },
-  mealTypeRow: {
-    flexDirection: 'row',
+  mealTypeContent: {
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.xs,
-    gap: theme.spacing.sm,
-  },
-  mealTypeChip: {
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.radii.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  mealTypeChipSelected: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
-  mealTypeText: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-  },
-  mealTypeTextSelected: {
-    color: theme.colors.white,
-    fontWeight: theme.fonts.weight.medium,
   },
   searchBarWrapper: {
     paddingHorizontal: theme.spacing.lg,

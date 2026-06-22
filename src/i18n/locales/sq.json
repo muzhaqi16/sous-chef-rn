@@ -33,6 +33,11 @@
     "networkError": "Gabim rrjeti. Kontrollo lidhjen tënde.",
     "somethingWentWrong": "Diçka shkoi keq. Provoje sërish.",
     "unknownError": "Ndodhi një gabim i panjohur",
+    "boundary": {
+      "title": "Diçka shkoi keq",
+      "message": "Ndodhi një gabim i papritur",
+      "retry": "Provo përsëri"
+    },
     "rateLimitGeneric": "Shumë kërkesa. Provoje sërish më vonë.",
     "rateLimitMinutes": "Shumë kërkesa. Provoje sërish pas {{count}} minute(sh).",
     "rateLimitSeconds": "Shumë kërkesa. Provoje sërish pas {{count}} sekonde(sh).",
@@ -1082,7 +1087,14 @@
     "acceptHomeInvitation": "Prano ftesën e shtëpisë",
     "takeAction": "Vepro",
     "acceptInvitation": "Prano ftesën",
-    "listTitle": "Njoftimet"
+    "listTitle": "Njoftimet",
+    "expiry": {
+      "expiresToday": "{{name}} skadon sot",
+      "expiresTomorrow": "{{name}} skadon nesër",
+      "expiresInDays": "{{name}} skadon për {{days}} ditë",
+      "qualifierOpened": "{{name}} (hapur më {{date}})",
+      "qualifierAdded": "{{name}} (shtuar më {{date}})"
+    }
   },
   "settings": {
     "appSettings": "Cilësimet e aplikacionit",

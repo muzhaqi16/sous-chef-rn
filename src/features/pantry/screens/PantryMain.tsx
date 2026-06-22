@@ -104,10 +104,12 @@ const PantryMainInner: React.FC = () => {
 
   // ── Scroll direction tracking (tab bar hide on scroll down) ──
   const {
+    scrollBeginDragHandler,
     scrollHandler,
     scrollEndDragHandler,
     momentumEndHandler,
     isScrolledDown,
+    isUserDragging,
   } = useCollapsibleScroll();
 
   // Sync scroll direction → tab bar visibility (UI thread only)
@@ -144,6 +146,7 @@ const PantryMainInner: React.FC = () => {
     // Return to a clean, visible tab bar on focus so a stale scroll-hidden
     // state from a previous visit can never leave the bar hidden.
     isScrolledDown.set(false);
+    isUserDragging.set(false);
     scrollTabBarHidden.set(false);
     // Scroll-to-top from barcode scanner returning
     const store = useStore.getState();
@@ -154,6 +157,7 @@ const PantryMainInner: React.FC = () => {
     return () => {
       setIsPantryFocused(false);
       // Reset scroll-driven tab bar hide so tab bar reappears on other tabs
+      isUserDragging.set(false);
       scrollTabBarHidden.set(false);
     };
   });
@@ -238,6 +242,7 @@ const PantryMainInner: React.FC = () => {
         onOverlayClose={handleOverlayClose}
         canStartTutorial={canStartTutorial}
         isPantryFocused={isPantryFocused}
+        scrollBeginDragHandler={scrollBeginDragHandler}
         scrollHandler={scrollHandler}
         scrollEndDragHandler={scrollEndDragHandler}
         momentumEndHandler={momentumEndHandler}
@@ -271,6 +276,7 @@ interface PantryMainContentProps {
   canStartTutorial: boolean;
   isPantryFocused: boolean;
   // Scroll handlers for tab bar direction tracking
+  scrollBeginDragHandler: () => void;
   scrollHandler: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
   scrollEndDragHandler: (
     event: NativeSyntheticEvent<NativeScrollEvent>,
@@ -298,6 +304,7 @@ function PantryMainContent({
   onOverlayClose,
   canStartTutorial,
   isPantryFocused,
+  scrollBeginDragHandler,
   scrollHandler,
   scrollEndDragHandler,
   momentumEndHandler,
@@ -431,6 +438,7 @@ function PantryMainContent({
         onHomeBadgeLayout={setHomeBadgeRect}
         onSettingsIconLayout={setSettingsIconRect}
         scrollHandler={scrollHandler}
+        onScrollBeginDrag={scrollBeginDragHandler}
         onScrollEndDrag={scrollEndDragHandler}
         onMomentumScrollEnd={momentumEndHandler}
       />

@@ -1,9 +1,16 @@
-import React from 'react';
-import { View, ScrollView, type StyleProp, type ViewStyle } from 'react-native';
+import React, { useRef } from 'react';
+import { View, type StyleProp, type ViewStyle } from 'react-native';
+// RNGH's ScrollView (not RN's) so the row scrolls when nested inside a
+// @gorhom/bottom-sheet — RN's ScrollView doesn't coordinate with the sheet's
+// gesture-handler pan and won't scroll horizontally there.
+import { ScrollView } from 'react-native-gesture-handler';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
 import { Icon, type IconName } from '#utils/iconUtils';
+import { EdgeFade } from '#components/atoms/EdgeFade';
+import { useScrollEdgeFades } from '#hooks/ui/useScrollEdgeFades';
+import { useCenterActiveItem } from '#hooks/ui/useCenterActiveItem';
 
 export interface ChipOption<T> {
   key: T;
@@ -20,6 +27,12 @@ interface ChipScrollRowProps<T> {
   contentContainerStyle?: StyleProp<ViewStyle>;
   /** Per-chip style override — e.g. a fixed height to match form inputs. */
   chipStyle?: StyleProp<ViewStyle>;
+  /**
+   * Enables soft edge fades that signal more chips can be scrolled into view.
+   * The value names the surface the row sits on so the fade blends into it:
+   * `background` for a screen, `surface` for a bottom sheet. Omit to disable.
+   */
+  edgeFadeColor?: 'background' | 'surface';
 }
 
 export function ChipScrollRow<T>({
@@ -30,39 +43,75 @@ export function ChipScrollRow<T>({
   style,
   contentContainerStyle,
   chipStyle,
+  edgeFadeColor,
 }: ChipScrollRowProps<T>) {
   styles.useVariants({ size });
-  return (
+
+  const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
+  const { edges, metrics, onScroll, onContentSizeChange, onLayout } =
+    useScrollEdgeFades(!!edgeFadeColor);
+
+  // Keep the selected chip centered, like the pantry location filter strip.
+  const { onItemLayout } = useCenterActiveItem({
+    activeKey: selected,
+    metrics,
+    scrollTo: (x, animated) => scrollRef.current?.scrollTo({ x, animated }),
+  });
+
+  const chips = options.map(opt => {
+    const isActive = selected === opt.key;
+    return (
+      <Pressable
+        key={opt.label}
+        onPress={() => onSelect(opt.key)}
+        onLayout={e => onItemLayout(opt.key, e)}
+      >
+        <View style={[styles.chip, isActive && styles.chipActive, chipStyle]}>
+          {opt.icon ? (
+            <Icon
+              name={opt.icon}
+              size={size === 'md' ? 18 : 16}
+              tone={isActive ? 'primary' : 'textSecondary'}
+            />
+          ) : null}
+          <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
+            {opt.label}
+          </Text>
+        </View>
+      </Pressable>
+    );
+  });
+
+  // Centering needs the live viewport/content widths and scroll position, so
+  // all three handlers run always. `useScrollEdgeFades(!!edgeFadeColor)` keeps
+  // updating `metrics` but only flips the fade `edges` when fades are enabled,
+  // so a fade-less row tracks scroll for centering without extra re-renders.
+  const scroller = (
     <ScrollView
+      ref={scrollRef}
       horizontal
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={[styles.chipRow, contentContainerStyle]}
-      style={style}
+      style={edgeFadeColor ? undefined : style}
+      onLayout={onLayout}
+      onContentSizeChange={onContentSizeChange}
+      onScroll={onScroll}
+      scrollEventThrottle={16}
     >
-      {options.map(opt => {
-        const isActive = selected === opt.key;
-        return (
-          <Pressable key={opt.label} onPress={() => onSelect(opt.key)}>
-            <View
-              style={[styles.chip, isActive && styles.chipActive, chipStyle]}
-            >
-              {opt.icon ? (
-                <Icon
-                  name={opt.icon}
-                  size={size === 'md' ? 18 : 16}
-                  tone={isActive ? 'primary' : 'textSecondary'}
-                />
-              ) : null}
-              <Text
-                style={[styles.chipText, isActive && styles.chipTextActive]}
-              >
-                {opt.label}
-              </Text>
-            </View>
-          </Pressable>
-        );
-      })}
+      {chips}
     </ScrollView>
+  );
+
+  // Without fades, return the bare scroller (unchanged behavior). With them,
+  // wrap so the absolutely-positioned fades anchor to the row's bounds.
+  if (!edgeFadeColor) return scroller;
+
+  return (
+    <View style={style}>
+      {scroller}
+      {!!edges.left && <EdgeFade side="left" colorKey={edgeFadeColor} />}
+      {!!edges.right && <EdgeFade side="right" colorKey={edgeFadeColor} />}
+    </View>
   );
 }
 

@@ -65,9 +65,19 @@ export const TOAST = {
 };
 
 /**
+ * Floating tab bar animation constants.
+ */
+export const TAB_BAR = {
+  // Distance (px) the bar slides below its resting position when fully hidden.
+  HIDDEN_TRANSLATE_Y: 150,
+};
+
+/**
  * Named timing duration presets (in ms).
  */
 export const TIMING = {
+  // Sub-perceptible bounce for press feedback (squeeze in / out).
+  MICRO: 75,
   INSTANT: 100,
   FAST: 150,
   STANDARD: 200,

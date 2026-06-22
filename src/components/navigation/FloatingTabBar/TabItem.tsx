@@ -73,8 +73,14 @@ export const TabItem: React.FC<TabItemProps> = ({
     // Animate icon scale on press (squeeze then expand to active size)
     iconScale.set(
       withSequence(
-        withTiming(0.85, { duration: 75, easing: Easing.inOut(Easing.ease) }),
-        withTiming(1.2, { duration: 75, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0.85, {
+          duration: TIMING.MICRO,
+          easing: Easing.inOut(Easing.ease),
+        }),
+        withTiming(1.2, {
+          duration: TIMING.MICRO,
+          easing: Easing.inOut(Easing.ease),
+        }),
       ),
     );
     onPress();
@@ -138,6 +144,15 @@ const styles = StyleSheet.create(theme => ({
   tabLabel: {
     color: theme.colors.white,
     marginTop: theme.spacing.xs,
+    // The shared Text's `body` variant carries a 24px line height (md * 1.5);
+    // at the 12px tab-label font that makes the text box twice the glyph
+    // height, padding empty space below the label and pushing the icon+label
+    // group upward so the bar reads top-heavy. Pin a snug line height (and drop
+    // Android's extra font padding) so the box hugs the glyph and the group
+    // centers evenly. The 1.3 ratio leaves room for descenders (y/p) and scales
+    // with the font-size preference.
+    lineHeight: theme.fonts.size.xs * 1.3,
+    includeFontPadding: false,
   },
   tabLabelFocused: {
     color: theme.colors.primary,

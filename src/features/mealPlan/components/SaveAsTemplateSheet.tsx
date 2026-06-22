@@ -158,6 +158,7 @@ export const SaveAsTemplateSheet: React.FC<SaveAsTemplateSheetProps> = ({
             options={categoryOptions}
             selected={category}
             onSelect={setCategory}
+            edgeFadeColor="surface"
           />
         </View>
 

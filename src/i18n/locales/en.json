@@ -33,6 +33,11 @@
     "networkError": "Network error. Please check your connection.",
     "somethingWentWrong": "Something went wrong. Please try again.",
     "unknownError": "An unknown error occurred",
+    "boundary": {
+      "title": "Something went wrong",
+      "message": "An unexpected error occurred",
+      "retry": "Try Again"
+    },
     "rateLimitGeneric": "Too many requests. Please try again later.",
     "rateLimitMinutes": "Too many requests. Please try again in {{count}} minute(s).",
     "rateLimitSeconds": "Too many requests. Please try again in {{count}} second(s).",
@@ -1082,7 +1087,14 @@
     "acceptHomeInvitation": "Accept Home Invitation",
     "takeAction": "Take Action",
     "acceptInvitation": "Accept Invitation",
-    "listTitle": "Notifications"
+    "listTitle": "Notifications",
+    "expiry": {
+      "expiresToday": "{{name}} expires today",
+      "expiresTomorrow": "{{name}} expires tomorrow",
+      "expiresInDays": "{{name}} expires in {{days}} days",
+      "qualifierOpened": "{{name}} (opened {{date}})",
+      "qualifierAdded": "{{name}} (added {{date}})"
+    }
   },
   "settings": {
     "appSettings": "App Settings",

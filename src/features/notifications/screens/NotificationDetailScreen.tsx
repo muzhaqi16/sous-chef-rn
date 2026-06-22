@@ -6,6 +6,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 import { NotificationActionHandler } from '#features/notifications/components/NotificationActionHandler';
+import { getNotificationDisplayMessage } from '#utils/notifications/notificationHelpers';
 
 import { format } from 'date-fns/format';
 import type { StaticScreenProps } from '@react-navigation/native';
@@ -57,7 +58,7 @@ export const NotificationDetailScreen: React.FC<
           <View style={styles.content}>
             <Text variant="body" lineHeight="relaxed" style={styles.message}>
               {payload.message ||
-                notification.message ||
+                getNotificationDisplayMessage(notification, t) ||
                 t('notifications.noMessageAvailable')}
             </Text>
 

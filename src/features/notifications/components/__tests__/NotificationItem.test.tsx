@@ -21,6 +21,9 @@ jest.mock('#utils/iconUtils', () => {
 
 jest.mock('#utils/notifications/notificationHelpers', () => ({
   getNotificationIcon: jest.fn(() => 'notifications'),
+  getNotificationDisplayMessage: jest.fn(
+    (notification: { message: string }) => notification.message,
+  ),
 }));
 
 jest.mock('#utils/dateUtils', () => ({

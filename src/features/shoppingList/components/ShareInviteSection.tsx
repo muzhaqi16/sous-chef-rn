@@ -151,6 +151,7 @@ export const ShareInviteSection: React.FC<ShareInviteSectionProps> = ({
         size="md"
         style={styles.chipScroll}
         contentContainerStyle={styles.chipRowContent}
+        edgeFadeColor="background"
       />
     </View>
   );

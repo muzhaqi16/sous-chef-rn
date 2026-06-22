@@ -5,7 +5,10 @@ import { Icon } from '#utils/iconUtils';
 import { StyleSheet } from 'react-native-unistyles';
 import { formatDistanceToNow } from 'date-fns/formatDistanceToNow';
 import { NotificationItem as NotificationType } from '#store/slices/notificationSlice';
-import { getNotificationIcon } from '#utils/notifications/notificationHelpers';
+import {
+  getNotificationDisplayMessage,
+  getNotificationIcon,
+} from '#utils/notifications/notificationHelpers';
 import { safeParseDate } from '#utils/dateUtils';
 
 import { AppPressable } from '#components/atoms/AppPressable';
@@ -37,6 +40,8 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
     return date ? formatDistanceToNow(date, { addSuffix: true }) : 'Recently';
   })();
 
+  const displayMessage = getNotificationDisplayMessage(notification, t);
+
   return (
     <AppPressable
       style={[styles.container, !notification.isRead && styles.unreadContainer]}
@@ -62,7 +67,7 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
         >
           {notification.title}
         </Text>
-        {!!notification.message && (
+        {!!displayMessage && (
           <Text
             size="sm"
             tone="secondary"
@@ -70,7 +75,7 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
             style={styles.message}
             numberOfLines={2}
           >
-            {notification.message}
+            {displayMessage}
           </Text>
         )}
         <Text size="xs" tone="tertiary">

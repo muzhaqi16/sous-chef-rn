@@ -154,10 +154,12 @@ const RecipeMainInner: React.FC = () => {
   // ── Scroll direction tracking (tab bar hide on scroll down) ──
   const { scrollTabBarHidden } = useTabBarSetters();
   const {
+    scrollBeginDragHandler,
     scrollHandler,
     scrollEndDragHandler,
     momentumEndHandler,
     isScrolledDown,
+    isUserDragging,
   } = useCollapsibleScroll();
 
   useAnimatedReaction(
@@ -173,10 +175,12 @@ const RecipeMainInner: React.FC = () => {
     // Return to a clean, visible tab bar on focus so a stale scroll-hidden
     // state from a previous visit can never leave the bar hidden.
     isScrolledDown.set(false);
+    isUserDragging.set(false);
     scrollTabBarHidden.set(false);
     return () => {
       setIsRecipeFocused(false);
       // Reset scroll-driven tab bar hide so tab bar reappears on other tabs
+      isUserDragging.set(false);
       scrollTabBarHidden.set(false);
     };
   });
@@ -516,6 +520,7 @@ const RecipeMainInner: React.FC = () => {
           emptyState={screen.emptyStateConfig}
           dataMode={screen.showSearchResults ? 'search' : 'discovery'}
           onScroll={scrollHandler}
+          onScrollBeginDrag={scrollBeginDragHandler}
           onScrollEndDrag={scrollEndDragHandler}
           onMomentumScrollEnd={momentumEndHandler}
           scrollEventThrottle={16}
