@@ -33,6 +33,11 @@
     "networkError": "Errore di rete. Controlla la tua connessione.",
     "somethingWentWrong": "Qualcosa è andato storto. Riprova.",
     "unknownError": "Si è verificato un errore sconosciuto",
+    "boundary": {
+      "title": "Qualcosa è andato storto",
+      "message": "Si è verificato un errore imprevisto",
+      "retry": "Riprova"
+    },
     "rateLimitGeneric": "Troppe richieste. Riprova più tardi.",
     "rateLimitMinutes": "Troppe richieste. Riprova tra {{count}} minuto/i.",
     "rateLimitSeconds": "Troppe richieste. Riprova tra {{count}} secondo/i.",
@@ -1082,7 +1087,15 @@
     "acceptHomeInvitation": "Accetta invito alla casa",
     "takeAction": "Agisci",
     "acceptInvitation": "Accetta invito",
-    "listTitle": "Notifiche"
+    "listTitle": "Notifiche",
+    "recently": "Di recente",
+    "expiry": {
+      "expiresToday": "{{name}} scade oggi",
+      "expiresTomorrow": "{{name}} scade domani",
+      "expiresInDays": "{{name}} scade tra {{days}} giorni",
+      "qualifierOpened": "{{name}} (aperto il {{date}})",
+      "qualifierAdded": "{{name}} (aggiunto il {{date}})"
+    }
   },
   "settings": {
     "appSettings": "Impostazioni app",

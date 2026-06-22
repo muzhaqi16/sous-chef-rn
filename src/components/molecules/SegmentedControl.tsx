@@ -129,12 +129,21 @@ export const SegmentedControl = <T extends string>({
     }
   }
 
+  const animatedTheme = useAnimatedTheme();
+
   const indicatorAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: indicatorX.get() }],
     width: tabWidth,
     // Width is 0 until measured; gate opacity too so the always-mounted pill
     // never paints at the left edge before the first measurement.
     opacity: tabWidth > 0 ? 1 : 0,
+    // Read the brand color inside the worklet (the same channel the tab text
+    // already uses) so Reanimated is the sole writer of this node. When the
+    // color lived on the static stylesheet, Reanimated and Unistyles both
+    // committed to this one native node, and a Reanimated commit could land
+    // over a freshly-applied theme color — pinning the pill to the previous
+    // brand color until the screen remounted.
+    backgroundColor: animatedTheme.get().colors.primary,
   }));
 
   const handleLayout = (event: LayoutChangeEvent) => {
@@ -190,8 +199,10 @@ const styles = StyleSheet.create(theme => ({
     top: 0,
     left: 0,
     bottom: 0,
-    backgroundColor: theme.colors.primary,
     borderRadius: theme.radii.md,
+    // backgroundColor is driven by the worklet in `indicatorAnimatedStyle`, not
+    // here — see the comment there for why the brand color must not live on the
+    // static stylesheet of a node Reanimated also commits to.
   },
   segment: {
     flex: 1,

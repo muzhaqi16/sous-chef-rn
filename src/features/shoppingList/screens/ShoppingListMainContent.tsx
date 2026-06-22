@@ -111,10 +111,12 @@ export const ShoppingListMainContent: React.FC<
 
   // ── Scroll direction tracking (tab bar hide on scroll down) ──
   const {
+    scrollBeginDragHandler,
     scrollHandler,
     scrollEndDragHandler,
     momentumEndHandler,
     isScrolledDown,
+    isUserDragging,
   } = useCollapsibleScroll();
 
   useAnimatedReaction(
@@ -141,9 +143,11 @@ export const ShoppingListMainContent: React.FC<
     // Return to a clean, visible tab bar on focus so a stale scroll-hidden
     // state from a previous visit can never leave the bar hidden.
     isScrolledDown.set(false);
+    isUserDragging.set(false);
     scrollTabBarHidden.set(false);
     return () => {
       setIsScreenFocused(false);
+      isUserDragging.set(false);
       scrollTabBarHidden.set(false);
     };
   });
@@ -334,6 +338,7 @@ export const ShoppingListMainContent: React.FC<
     searchQuery,
     // Scroll direction tracking — threaded to FlashList via data context
     onScroll: scrollHandler,
+    onScrollBeginDrag: scrollBeginDragHandler,
     onScrollEndDrag: scrollEndDragHandler,
     onMomentumScrollEnd: momentumEndHandler,
     scrollEventThrottle: 16,

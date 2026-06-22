@@ -24,14 +24,11 @@ import { AddButton } from './AddButton';
 import { TabItem } from './TabItem';
 import { useShowNavigationLabels } from '#store/useAppStore';
 import { HapticService } from '#services/haptic/HapticService';
-import { SPRING, SHEET } from '#/constants/animations';
+import { SPRING, SHEET, TAB_BAR } from '#/constants/animations';
 import {
   LiquidGlassView,
   isLiquidGlassSupported,
 } from '@callstack/liquid-glass';
-
-// Distance the bar slides below its resting position when fully hidden.
-const HIDDEN_TRANSLATE_Y = 150;
 
 export const TAB_BAR_HEIGHT = 65;
 
@@ -130,7 +127,7 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
       : 0;
     const hide = Math.max(overlayHide, scrollHide.get());
     return {
-      transform: [{ translateY: hide * HIDDEN_TRANSLATE_Y }],
+      transform: [{ translateY: hide * TAB_BAR.HIDDEN_TRANSLATE_Y }],
       opacity: 1 - hide,
     };
   });

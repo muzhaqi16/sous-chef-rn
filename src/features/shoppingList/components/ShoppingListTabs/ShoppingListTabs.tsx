@@ -93,8 +93,11 @@ interface ShoppingListTabsProps {
   listHeaderComponent?: React.ReactElement | null;
   // Current search query for search-aware empty states in tabs
   searchQuery?: string;
-  // Collapsible scroll handler — threaded to FlashList via data context
+  // Collapsible scroll handlers — threaded to FlashList via data context
   onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  onScrollBeginDrag?: () => void;
+  onScrollEndDrag?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  onMomentumScrollEnd?: () => void;
   scrollEventThrottle?: number;
 }
 
@@ -158,6 +161,9 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   searchQuery,
   // Scroll direction tracking
   onScroll,
+  onScrollBeginDrag,
+  onScrollEndDrag,
+  onMomentumScrollEnd,
   scrollEventThrottle,
   // Scrollable header content
   listHeaderComponent,
@@ -378,6 +384,9 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     canReorderItems,
     isTransitioning,
     onScroll,
+    onScrollBeginDrag,
+    onScrollEndDrag,
+    onMomentumScrollEnd,
     scrollEventThrottle,
     listHeaderComponent,
   };
@@ -398,6 +407,9 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     canReorderItems: false,
     isTransitioning,
     onScroll,
+    onScrollBeginDrag,
+    onScrollEndDrag,
+    onMomentumScrollEnd,
     scrollEventThrottle,
     listHeaderComponent,
   };

@@ -41,6 +41,7 @@ const ShoppingTabComponent: React.FC = () => {
     canReorderItems,
     isTransitioning,
     onScroll,
+    onScrollBeginDrag,
     onScrollEndDrag,
     onMomentumScrollEnd,
     scrollEventThrottle,
@@ -121,6 +122,7 @@ const ShoppingTabComponent: React.FC = () => {
           canReorderItems={canReorderItems}
           listEmptyComponent={emptyComponent}
           onScroll={onScroll}
+          onScrollBeginDrag={onScrollBeginDrag}
           onScrollEndDrag={onScrollEndDrag}
           onMomentumScrollEnd={onMomentumScrollEnd}
           scrollEventThrottle={scrollEventThrottle}

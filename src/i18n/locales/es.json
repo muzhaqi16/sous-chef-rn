@@ -33,6 +33,11 @@
     "networkError": "Error de red. Revisa tu conexión.",
     "somethingWentWrong": "Algo salió mal. Inténtalo de nuevo.",
     "unknownError": "Ocurrió un error desconocido",
+    "boundary": {
+      "title": "Algo salió mal",
+      "message": "Ocurrió un error inesperado",
+      "retry": "Reintentar"
+    },
     "rateLimitGeneric": "Demasiadas solicitudes. Inténtalo de nuevo más tarde.",
     "rateLimitMinutes": "Demasiadas solicitudes. Inténtalo de nuevo en {{count}} minuto(s).",
     "rateLimitSeconds": "Demasiadas solicitudes. Inténtalo de nuevo en {{count}} segundo(s).",
@@ -1082,7 +1087,15 @@
     "acceptHomeInvitation": "Aceptar invitación al hogar",
     "takeAction": "Tomar acción",
     "acceptInvitation": "Aceptar invitación",
-    "listTitle": "Notificaciones"
+    "listTitle": "Notificaciones",
+    "recently": "Recientemente",
+    "expiry": {
+      "expiresToday": "{{name}} vence hoy",
+      "expiresTomorrow": "{{name}} vence mañana",
+      "expiresInDays": "{{name}} vence en {{days}} días",
+      "qualifierOpened": "{{name}} (abierto el {{date}})",
+      "qualifierAdded": "{{name}} (añadido el {{date}})"
+    }
   },
   "settings": {
     "appSettings": "Ajustes de la app",

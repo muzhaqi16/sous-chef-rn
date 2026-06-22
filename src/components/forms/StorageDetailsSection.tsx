@@ -87,6 +87,7 @@ export const StorageDetailsSection: React.FC<StorageDetailsSectionProps> = ({
           options={STORAGE_STATE_OPTIONS}
           selected={storageState}
           onSelect={onStorageStateChange}
+          edgeFadeColor="background"
         />
       </View>
 

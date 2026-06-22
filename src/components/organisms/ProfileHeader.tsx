@@ -13,6 +13,7 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
+import { useAnimatedTheme } from 'react-native-unistyles/reanimated';
 import { Icon } from '#/utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { Text } from '#components/atoms/Text';
@@ -41,6 +42,8 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   onAvatarPress,
   progress,
 }) => {
+  const animatedTheme = useAnimatedTheme();
+
   // Avatar: scale from 1 → 0.55 (GPU composited, no layout recalc)
   const avatarScaleStyle = useAnimatedStyle(() => {
     if (!progress) return {};
@@ -53,9 +56,15 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
     return { transform: [{ scale }] };
   });
 
-  // Edit badge: fade + shrink away (in first half of progress)
+  // Edit badge: fade + shrink away (in first half of progress).
+  // The brand color is read inside the worklet so Reanimated is the sole writer
+  // of the badge node; if it lived on the static stylesheet, a Reanimated commit
+  // could land over a freshly-applied theme color and pin the badge to the
+  // previous brand color until remount. Returned in both branches so the color
+  // is present even when there is no collapse progress to animate.
   const badgeStyle = useAnimatedStyle(() => {
-    if (!progress) return {};
+    const backgroundColor = animatedTheme.get().colors.primary;
+    if (!progress) return { backgroundColor };
     const opacity = interpolate(
       progress.get(),
       [0, 0.5],
@@ -68,7 +77,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
       [1, 0],
       Extrapolation.CLAMP,
     );
-    return { opacity, transform: [{ scale }] };
+    return { backgroundColor, opacity, transform: [{ scale }] };
   });
 
   // User info: collapse height + scaleY + opacity in a single worklet so the
@@ -211,7 +220,9 @@ const styles = StyleSheet.create(theme => ({
     width: 28,
     height: 28,
     borderRadius: theme.radii.full,
-    backgroundColor: theme.colors.primary,
+    // backgroundColor is driven by the worklet in `badgeStyle` — see the note
+    // there; the brand color must not live on the static stylesheet of a node
+    // Reanimated also commits to.
   },
   userInfo: {
     alignItems: 'center',

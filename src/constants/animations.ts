@@ -65,9 +65,32 @@ export const TOAST = {
 };
 
 /**
+ * Floating tab bar animation constants.
+ */
+export const TAB_BAR = {
+  // Distance (px) the bar slides below its resting position when fully hidden.
+  HIDDEN_TRANSLATE_Y: 150,
+};
+
+/**
+ * Distance-scaled scroll-slide tuning for the Reanimated-driven centering in
+ * `useCenterActiveItem`: the glide duration grows with distance but is clamped,
+ * so a near jump is snappy and a far one eases in.
+ */
+export const SCROLL_SLIDE = {
+  // Milliseconds of animation per px of distance, before clamping.
+  MS_PER_PX: 1.5,
+  // Lower / upper clamp on the computed duration, in ms.
+  MIN_MS: 250,
+  MAX_MS: 500,
+};
+
+/**
  * Named timing duration presets (in ms).
  */
 export const TIMING = {
+  // Sub-perceptible bounce for press feedback (squeeze in / out).
+  MICRO: 75,
   INSTANT: 100,
   FAST: 150,
   STANDARD: 200,

@@ -1,6 +1,6 @@
 {
   "name": "sous-chef-app",
-  "version": "4.0.0",
+  "version": "4.0.1",
   "private": true,
   "scripts": {
     "android": "react-native run-android",
@@ -84,7 +84,7 @@
   "dependencies": {
     "@apollo/client": "~4.1.7",
     "@callstack/liquid-glass": "^0.7.0",
-    "@gorhom/bottom-sheet": "5.2.8",
+    "@gorhom/bottom-sheet": "^5.2.14",
     "@hookform/resolvers": "^5.2.2",
     "@notifee/react-native": "^9.1.8",
     "@paralleldrive/cuid2": "^3.3.0",
@@ -127,12 +127,12 @@
     "react-native-keyboard-controller": "^1.20.7",
     "react-native-keychain": "^10.0.0",
     "react-native-launch-arguments": "^4.1.1",
-    "react-native-mmkv": "^4.3.1",
+    "react-native-mmkv": "^4.3.2",
     "react-native-nitro-image": "^0.14.0",
     "react-native-nitro-modules": "^0.35.7",
     "react-native-pager-view": "^7.0.2",
     "react-native-performance": "^6.0.0",
-    "react-native-permissions": "^5.5.3",
+    "react-native-permissions": "^5.6.0",
     "react-native-reanimated": "~4.3.1",
     "react-native-safe-area-context": "^5.7.0",
     "react-native-screens": "^4.24.0",

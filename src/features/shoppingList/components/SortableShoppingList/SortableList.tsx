@@ -70,6 +70,7 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
   ListEmptyComponent,
   showImages = true,
   onScroll,
+  onScrollBeginDrag,
   onScrollEndDrag,
   onMomentumScrollEnd,
   scrollEventThrottle,
@@ -177,6 +178,7 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
               onViewableItemsChanged={perfCallbacks.onViewableItemsChanged}
               drawDistance={DRAW_DISTANCE}
               onScroll={onScroll}
+              onScrollBeginDrag={onScrollBeginDrag}
               onScrollEndDrag={onScrollEndDrag}
               onMomentumScrollEnd={onMomentumScrollEnd}
               scrollEventThrottle={scrollEventThrottle}

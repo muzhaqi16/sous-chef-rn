@@ -1,11 +1,15 @@
-import React, { Component, ReactNode } from 'react';
+import React, { Component, ReactNode, useContext } from 'react';
 import { View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  SafeAreaInsetsContext,
+  initialWindowMetrics,
+} from 'react-native-safe-area-context';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Telemetry } from '#/services/telemetry';
 import { Text } from '#components/atoms/Text';
 import { logger } from '#/utils/environment';
+import { t } from '#/i18n/t';
 
 interface ErrorBoundaryState {
   hasError: boolean;
@@ -20,15 +24,18 @@ interface ErrorBoundaryProps {
   context?: string; // For debugging/analytics
 }
 
-// Error fallback component with retry functionality. Self-insets: boundaries
-// wrap OUTSIDE the per-screen TopInsetLayout, so the fallback replaces the
-// inset wrapper along with the crashed children.
+// Top-level crash fallback — it can render with no providers above it, since
+// the boundary may have replaced SafeAreaProvider (and i18n may be the failure).
+// So read insets via SafeAreaInsetsContext (null-safe; useSafeAreaInsets() throws
+// without a provider) and use t() with literal fallbacks (never throws/suspends).
 const DefaultErrorFallback: React.FC<{
   error: Error;
   retry: () => void;
   context?: string;
 }> = ({ error, retry, context }) => {
-  const insets = useSafeAreaInsets();
+  const contextInsets = useContext(SafeAreaInsetsContext);
+  const insets = contextInsets ??
+    initialWindowMetrics?.insets ?? { top: 0, right: 0, bottom: 0, left: 0 };
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.content}>
@@ -39,7 +46,7 @@ const DefaultErrorFallback: React.FC<{
           tone="error"
           style={styles.title}
         >
-          Something went wrong
+          {t('errors.boundary.title', 'Something went wrong')}
         </Text>
         <Text
           size="md"
@@ -48,7 +55,9 @@ const DefaultErrorFallback: React.FC<{
           tone="secondary"
           style={styles.message}
         >
-          {__DEV__ ? error.message : 'An unexpected error occurred'}
+          {__DEV__
+            ? error.message
+            : t('errors.boundary.message', 'An unexpected error occurred')}
         </Text>
         {!!context && !!__DEV__ && (
           <Text size="xs" align="center" tone="tertiary" style={styles.context}>
@@ -57,7 +66,7 @@ const DefaultErrorFallback: React.FC<{
         )}
         <AppPressable style={styles.retryButton} onPress={retry}>
           <Text size="md" weight="semibold" style={styles.retryButtonText}>
-            Try Again
+            {t('errors.boundary.retry', 'Try Again')}
           </Text>
         </AppPressable>
       </View>

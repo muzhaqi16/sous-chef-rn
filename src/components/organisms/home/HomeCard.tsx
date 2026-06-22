@@ -8,6 +8,7 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
+import { useAnimatedTheme } from 'react-native-unistyles/reanimated';
 import { useFragment } from '@apollo/client/react';
 import { type FragmentType } from '@apollo/client/masking';
 import { TIMING } from '#constants/animations';
@@ -63,9 +64,16 @@ export const HomeCard: React.FC<HomeCardProps> = ({
     );
   }, [isHighlighted, highlightOpacity]);
 
-  // Animated highlight overlay - only opacity animates
+  const animatedTheme = useAnimatedTheme();
+
+  // Animated highlight overlay - opacity animates; the brand color is read in
+  // the worklet (not interpolated) so Reanimated is the sole writer of this
+  // node. If the color lived on the static stylesheet, a Reanimated commit
+  // could land over a freshly-applied theme color and pin the overlay to the
+  // previous brand color until remount.
   const animatedHighlightStyle = useAnimatedStyle(() => ({
     opacity: highlightOpacity.get(),
+    backgroundColor: animatedTheme.get().colors.primary + '15',
   }));
 
   if (!complete) return null;
@@ -84,7 +92,7 @@ export const HomeCard: React.FC<HomeCardProps> = ({
   return (
     <View style={styles.homeCardWrapper}>
       <View style={styles.card}>
-        {/* Highlight overlay - only opacity animates, no color interpolation */}
+        {/* Highlight overlay - opacity animates; brand color is set in the worklet */}
         <Animated.View
           style={[styles.highlightOverlay, animatedHighlightStyle]}
         />
@@ -165,7 +173,9 @@ const styles = StyleSheet.create(theme => ({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: theme.colors.primary + '15',
+    // backgroundColor is driven by the worklet in `animatedHighlightStyle` — see
+    // the note there; the brand color must not live on the static stylesheet of
+    // a node Reanimated also commits to.
     pointerEvents: 'none',
   },
   homeHeader: {

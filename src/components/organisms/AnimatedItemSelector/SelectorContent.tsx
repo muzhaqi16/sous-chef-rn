@@ -81,13 +81,13 @@ export const SelectorContent = <T extends SelectableItem>({
     didCenterRef.current = true;
     // Center the selected row's midpoint in the viewport. Using the row's
     // measured height keeps this correct if the row size changes — no magic
-    // constant coupled to SelectorItemContainer's layout. Animate so the list
-    // eases to the row instead of snapping.
+    // constant coupled to SelectorItemContainer's layout. Scroll via gorhom's
+    // documented `scrollTo` with animation so the glide runs natively on the UI
+    // thread — gorhom exposes no Reanimated-driven scroll for its scrollable, so
+    // a hand-rolled JS-thread slide would be the wrong layer to animate at.
     const { y, height } = selectedLayout;
-    scrollToContentOffset(
-      Math.max(0, y + height / 2 - viewportHeight / 2),
-      true,
-    );
+    const target = Math.max(0, y + height / 2 - viewportHeight / 2);
+    scrollToContentOffset(target, true);
   }, [selectedLayout, scroll]);
 
   const renderItem = (item: T) => {

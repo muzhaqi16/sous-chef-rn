@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '#components/atoms/Text';
 import ErrorBoundary, {
   NavigationErrorBoundary,
@@ -167,6 +168,24 @@ describe('AppErrorBoundary', () => {
       </AppErrorBoundary>,
     );
     expect(screen.getByText('Something went wrong')).toBeTruthy();
+  });
+
+  // Regression: AppErrorBoundary wraps OUTSIDE SafeAreaProvider, so when it
+  // renders the fallback there is no provider above it. Calling
+  // useSafeAreaInsets() there throws "No safe area value available", crashing
+  // the fallback itself and masking the real error. The fallback must read
+  // SafeAreaInsetsContext (null without a provider) instead — so it must never
+  // call useSafeAreaInsets.
+  it('renders the fallback without calling useSafeAreaInsets', () => {
+    (useSafeAreaInsets as jest.Mock).mockClear();
+
+    render(
+      <AppErrorBoundary>
+        <ThrowingComponent />
+      </AppErrorBoundary>,
+    );
+    expect(screen.getByText('Something went wrong')).toBeTruthy();
+    expect(useSafeAreaInsets).not.toHaveBeenCalled();
   });
 });
 

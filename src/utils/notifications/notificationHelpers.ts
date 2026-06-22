@@ -1,7 +1,16 @@
 import { NotificationType } from '#/graphql/generated/schemaTypes';
 import { Icon } from '#utils/iconUtils';
+import { format } from 'date-fns/format';
+import { safeParseDate } from '#utils/dateUtils';
+import { getDateFnsLocale } from '#utils/dateLocale';
+import type { NotificationPayload } from '#store/slices/notificationSlice';
 
 type IconProps = React.ComponentProps<typeof Icon>;
+
+// Minimal structural type for the translation function so this util doesn't
+// depend on i18next's generic `TFunction` namespace typing. `useTranslation().t`
+// is assignable to it.
+type Translate = (key: string, options?: Record<string, unknown>) => string;
 
 export const getNotificationAction = (
   type: NotificationType,
@@ -92,4 +101,102 @@ export const getNotificationIcon = (
     default:
       return 'notifications';
   }
+};
+
+/**
+ * Structured fields the server attaches to EXPIRY_REMINDER notification
+ * payloads. The payload arrives as an untyped JSON scalar, so each field is
+ * read defensively — a legacy payload missing them yields `null`.
+ */
+interface ExpiryReminderFields {
+  itemName: string;
+  daysUntilExpiry: number;
+  isMultiBatch: boolean;
+  batchOpenedAt: string | null;
+  batchAddedAt: string | null;
+}
+
+const readExpiryReminderFields = (
+  payload: NotificationPayload,
+): ExpiryReminderFields | null => {
+  const { itemName, daysUntilExpiry } = payload;
+  if (typeof itemName !== 'string' || typeof daysUntilExpiry !== 'number') {
+    return null;
+  }
+  return {
+    itemName,
+    daysUntilExpiry,
+    isMultiBatch: payload.isMultiBatch === true,
+    batchOpenedAt:
+      typeof payload.batchOpenedAt === 'string' ? payload.batchOpenedAt : null,
+    batchAddedAt:
+      typeof payload.batchAddedAt === 'string' ? payload.batchAddedAt : null,
+  };
+};
+
+// Only qualify the item name when more than one active batch exists — otherwise
+// the name alone is unambiguous. The qualifier uses the batch's opened date (or
+// added date as a fallback), parsed and formatted in the device's local time so
+// it isn't off by a day like the server's UTC-formatted plain-text message.
+const buildExpiryName = (
+  fields: ExpiryReminderFields,
+  t: Translate,
+): string => {
+  if (!fields.isMultiBatch) {
+    return fields.itemName;
+  }
+  const openedAt = fields.batchOpenedAt;
+  const parsed = safeParseDate(openedAt ?? fields.batchAddedAt);
+  if (!parsed) {
+    return fields.itemName;
+  }
+  const date = format(parsed, 'MMM d', { locale: getDateFnsLocale() });
+  return openedAt
+    ? t('notifications.expiry.qualifierOpened', { name: fields.itemName, date })
+    : t('notifications.expiry.qualifierAdded', { name: fields.itemName, date });
+};
+
+const buildExpiryReminderMessage = (
+  payload: NotificationPayload,
+  t: Translate,
+): string | null => {
+  const fields = readExpiryReminderFields(payload);
+  if (!fields) {
+    return null;
+  }
+  const name = buildExpiryName(fields, t);
+  if (fields.daysUntilExpiry <= 0) {
+    return t('notifications.expiry.expiresToday', { name });
+  }
+  if (fields.daysUntilExpiry === 1) {
+    return t('notifications.expiry.expiresTomorrow', { name });
+  }
+  return t('notifications.expiry.expiresInDays', {
+    name,
+    days: fields.daysUntilExpiry,
+  });
+};
+
+/**
+ * Resolves the message text shown for a notification. EXPIRY_REMINDER
+ * notifications are rebuilt from their structured payload so the batch
+ * qualifier date renders in the user's locale and timezone; for every other
+ * type — and for legacy expiry payloads missing the structured fields — the
+ * server-provided `message` is used as-is.
+ */
+export const getNotificationDisplayMessage = (
+  notification: {
+    type: NotificationType;
+    message: string;
+    payload: NotificationPayload;
+  },
+  t: Translate,
+): string => {
+  if (notification.type === NotificationType.ExpiryReminder) {
+    const built = buildExpiryReminderMessage(notification.payload, t);
+    if (built) {
+      return built;
+    }
+  }
+  return notification.message;
 };

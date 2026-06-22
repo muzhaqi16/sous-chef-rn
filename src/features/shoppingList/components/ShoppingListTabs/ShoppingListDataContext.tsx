@@ -26,6 +26,7 @@ export interface ShoppingListTabData {
   isTransitioning: boolean;
   // Scroll direction tracking — threaded from screen to FlashList
   onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  onScrollBeginDrag?: () => void;
   onScrollEndDrag?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
   onMomentumScrollEnd?: () => void;
   scrollEventThrottle?: number;

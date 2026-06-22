@@ -130,6 +130,8 @@ export interface PantryContentProps {
 
   /** Scroll handler for tab bar direction tracking */
   scrollHandler?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  /** Marks the scroll as finger-driven so only user scrolls hide the tab bar */
+  onScrollBeginDrag?: () => void;
   /** Shows tab bar when drag ends without momentum */
   onScrollEndDrag?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
   /** Shows tab bar when momentum scrolling ends */

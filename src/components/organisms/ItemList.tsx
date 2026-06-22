@@ -131,6 +131,7 @@ interface ItemListProps {
     | null;
   testIDPrefix?: string;
   onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  onScrollBeginDrag?: () => void;
   onScrollEndDrag?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
   onMomentumScrollEnd?: () => void;
   scrollEventThrottle?: number;
@@ -163,6 +164,7 @@ export const ItemList: React.FC<ItemListProps> = ({
   ListFooterComponent,
   testIDPrefix,
   onScroll,
+  onScrollBeginDrag,
   onScrollEndDrag,
   onMomentumScrollEnd,
   scrollEventThrottle,
@@ -245,6 +247,7 @@ export const ItemList: React.FC<ItemListProps> = ({
           paddingBottom: contentStyle.paddingBottom,
         }}
         onScroll={onScroll}
+        onScrollBeginDrag={onScrollBeginDrag}
         onScrollEndDrag={onScrollEndDrag}
         onMomentumScrollEnd={onMomentumScrollEnd}
         scrollEventThrottle={scrollEventThrottle}
@@ -284,6 +287,7 @@ export const ItemList: React.FC<ItemListProps> = ({
         contentContainerStyle={contentStyle}
         showsVerticalScrollIndicator={false}
         onScroll={onScroll}
+        onScrollBeginDrag={onScrollBeginDrag}
         onScrollEndDrag={onScrollEndDrag}
         onMomentumScrollEnd={onMomentumScrollEnd}
         scrollEventThrottle={scrollEventThrottle}
