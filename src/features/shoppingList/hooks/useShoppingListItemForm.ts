@@ -15,6 +15,11 @@ type FormState = {
   notes: string;
   category: string;
   estimatedPrice: string;
+  /** Priority Int (0 = none, 1 low, 2 medium, 3 high). */
+  priority: number;
+  /** Preferred store (storePrefs.preferredStoreId). */
+  storeId: string | null;
+  storeName: string;
 };
 
 type DirtyFields = {
@@ -25,6 +30,8 @@ type DirtyFields = {
   notes: boolean;
   category: boolean;
   estimatedPrice: boolean;
+  priority: boolean;
+  storeId: boolean;
 };
 
 const DEFAULT_FORM_STATE: FormState = {
@@ -35,6 +42,9 @@ const DEFAULT_FORM_STATE: FormState = {
   notes: '',
   category: '',
   estimatedPrice: '',
+  priority: 0,
+  storeId: null,
+  storeName: '',
 };
 
 const DEFAULT_DIRTY_FIELDS: DirtyFields = {
@@ -45,6 +55,8 @@ const DEFAULT_DIRTY_FIELDS: DirtyFields = {
   notes: false,
   category: false,
   estimatedPrice: false,
+  priority: false,
+  storeId: false,
 };
 
 export function useShoppingListItemForm(initialState?: Partial<FormState>) {
@@ -72,6 +84,8 @@ export function useShoppingListItemForm(initialState?: Partial<FormState>) {
       category: formState.category !== savedInitialState.category,
       estimatedPrice:
         formState.estimatedPrice !== savedInitialState.estimatedPrice,
+      priority: formState.priority !== savedInitialState.priority,
+      storeId: formState.storeId !== savedInitialState.storeId,
     };
   })();
 
@@ -93,6 +107,9 @@ export function useShoppingListItemForm(initialState?: Partial<FormState>) {
       category: item.category || '',
       selectedUnitId: item.unit?.id || null,
       estimatedPrice: item.priceEstimate?.estimated?.toString() || '',
+      priority: item.priority ?? 0,
+      storeId: item.storeInfo?.preferredStore?.id || null,
+      storeName: item.storeInfo?.preferredStore?.name || '',
     };
     setFormState(state);
     setSavedInitialState(state); // Save initial state for dirty comparison
@@ -141,6 +158,15 @@ export function useShoppingListItemForm(initialState?: Partial<FormState>) {
     // Pricing — nest into PricingEstimatesInput
     if (dirtyFields.estimatedPrice && formState.estimatedPrice) {
       input.pricing = { estimatedPrice: parseFloat(formState.estimatedPrice) };
+    }
+
+    if (dirtyFields.priority) {
+      input.priority = formState.priority;
+    }
+
+    // Store — nest preferred store into StorePreferencesInput.
+    if (dirtyFields.storeId) {
+      input.storePrefs = { preferredStoreId: formState.storeId };
     }
 
     return input;

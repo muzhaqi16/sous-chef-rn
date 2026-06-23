@@ -215,7 +215,7 @@ describe('useRecipeForm', () => {
     const input = result.current.buildCreateInput();
 
     expect(input.name).toBe('Test Recipe');
-    expect(input.servings).toBe(6);
+    expect(input.metadata?.servings).toBe(6);
     expect(input.ingredients).toHaveLength(1);
     expect(input.instructions).toHaveLength(1);
     // instructions is a JSON scalar (JsonInput union); narrow via Array.isArray.

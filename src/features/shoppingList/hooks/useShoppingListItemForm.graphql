@@ -8,11 +8,18 @@ fragment useShoppingListItemForm_item on ShoppingListItem {
   unitName
   notes
   category
+  priority
   version
   unit {
     id
   }
   priceEstimate {
     estimated
+  }
+  storeInfo {
+    preferredStore {
+      id
+      name
+    }
   }
 }

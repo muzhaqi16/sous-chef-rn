@@ -5,7 +5,18 @@ import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
 import { FormInput } from '#components/molecules/FormInput';
 import { StorageLocationAutocompleteField } from '#components/molecules/AutocompleteField/StorageLocationAutocompleteField';
-import { type StorageLocation } from '#/graphql/generated/schemaTypes';
+import { SegmentedControl } from '#components/molecules/SegmentedControl';
+import {
+  ItemCondition,
+  type StorageLocation,
+} from '#/graphql/generated/schemaTypes';
+
+const CONDITIONS = [
+  ItemCondition.Good,
+  ItemCondition.Fair,
+  ItemCondition.Spoiled,
+  ItemCondition.Expired,
+];
 
 export interface StoragePageProps {
   storageLocation: string;
@@ -16,6 +27,8 @@ export interface StoragePageProps {
     location: StorageLocation | null,
   ) => void;
   handleAddNewLocation: (name: string) => void;
+  condition: ItemCondition;
+  setCondition: (value: ItemCondition) => void;
   tags: string;
   setTags: (value: string) => void;
   storageNotes: string;
@@ -29,6 +42,8 @@ export const StoragePage: React.FC<StoragePageProps> = ({
   storageLocations,
   handleStorageLocationSelected,
   handleAddNewLocation,
+  condition,
+  setCondition,
   tags,
   setTags,
   storageNotes,
@@ -36,6 +51,20 @@ export const StoragePage: React.FC<StoragePageProps> = ({
   insets,
 }) => {
   const { t } = useTranslation();
+  const formatConditionLabel = (value: ItemCondition) => {
+    switch (value) {
+      case ItemCondition.Good:
+        return t('addToPantry.conditionGood');
+      case ItemCondition.Fair:
+        return t('addToPantry.conditionFair');
+      case ItemCondition.Spoiled:
+        return t('addToPantry.conditionSpoiled');
+      case ItemCondition.Expired:
+        return t('addToPantry.conditionExpired');
+      default:
+        return value;
+    }
+  };
   return (
     <BottomSheetKeyboardAwareScrollView
       key="storage"
@@ -61,6 +90,15 @@ export const StoragePage: React.FC<StoragePageProps> = ({
           onAddNewLocation={handleAddNewLocation}
         />
       </View>
+
+      {/* Condition */}
+      <SegmentedControl
+        label={t('addToPantry.condition')}
+        options={CONDITIONS}
+        value={condition}
+        onChange={setCondition}
+        formatLabel={formatConditionLabel}
+      />
 
       {/* Tags */}
       <FormInput

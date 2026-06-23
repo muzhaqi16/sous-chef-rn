@@ -11,6 +11,7 @@ fragment useUpdatePantryItem_pantryItem on PantryItem {
   version
   updatedAt
   storageState
+  condition
   expiresAt
   lowStockAlert
   isLowStock

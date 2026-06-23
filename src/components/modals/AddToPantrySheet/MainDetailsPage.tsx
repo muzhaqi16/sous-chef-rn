@@ -5,6 +5,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
 import { FormInput } from '#components/molecules/FormInput';
 import { BrandAutocompleteField } from '#components/molecules/AutocompleteField/BrandAutocompleteField';
+import { CategoryAutocompleteField } from '#components/molecules/AutocompleteField/CategoryAutocompleteField';
 import { DatePickerField } from '#components/molecules/DatePickerField';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
 import { StorageState } from '#/graphql/generated/schemaTypes';
@@ -21,6 +22,8 @@ export interface MainDetailsPageProps {
     brandId: string | null,
     brandName: string | null,
   ) => void;
+  category: string;
+  setCategory: (value: string) => void;
   expirationDate: Date | null;
   setExpirationDate: (value: Date | null) => void;
   storageState: StorageState;
@@ -35,6 +38,8 @@ export const MainDetailsPage: React.FC<MainDetailsPageProps> = ({
   setBrand,
   suggestedBrands,
   handleBrandSelected,
+  category,
+  setCategory,
   expirationDate,
   setExpirationDate,
   storageState,
@@ -88,6 +93,17 @@ export const MainDetailsPage: React.FC<MainDetailsPageProps> = ({
           placeholder={t('addToPantry.brandPlaceholder')}
           suggestedBrands={suggestedBrands}
           onBrandSelected={handleBrandSelected}
+        />
+      </View>
+
+      {/* Category */}
+      <View style={[styles.section, { zIndex: 9 }]}>
+        <CategoryAutocompleteField
+          variant="inline"
+          label={t('addToPantry.category')}
+          value={category}
+          onChangeText={setCategory}
+          placeholder={t('addToPantry.categoryPlaceholder')}
         />
       </View>
 

@@ -366,21 +366,28 @@ export const StorageLocationForm = forwardRef<
                   -
                 </Text>
               </AppPressable>
-              {COLOR_PRESETS.map(preset => (
-                <AppPressable
-                  key={preset.value}
-                  style={[
-                    formData.color === preset.value
-                      ? styles.colorSwatchSelected
-                      : styles.colorSwatch,
-                    { backgroundColor: preset.value },
-                  ]}
-                  onPress={() =>
-                    setFormData({ ...formData, color: preset.value })
-                  }
-                  accessibilityLabel={t(`storageLocationForm.${preset.key}`)}
-                />
-              ))}
+              {COLOR_PRESETS.map(preset => {
+                // Hoist the hex out of the inline style object so the literal
+                // doesn't contain a `.value` member access — Reanimated's babel
+                // plugin syntactically wraps any `{ x: foo.value }` inside a
+                // `style={...}` in a (false-positive) shared-value warning.
+                const swatchColor = preset.value;
+                return (
+                  <AppPressable
+                    key={preset.value}
+                    style={[
+                      formData.color === preset.value
+                        ? styles.colorSwatchSelected
+                        : styles.colorSwatch,
+                      { backgroundColor: swatchColor },
+                    ]}
+                    onPress={() =>
+                      setFormData({ ...formData, color: preset.value })
+                    }
+                    accessibilityLabel={t(`storageLocationForm.${preset.key}`)}
+                  />
+                );
+              })}
             </ScrollView>
           </View>
         </View>

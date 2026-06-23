@@ -1,5 +1,5 @@
 import { object, string } from 'yup';
-import { StorageState } from '#/graphql/generated/schemaTypes';
+import { StorageState, ItemCondition } from '#/graphql/generated/schemaTypes';
 
 export type PageName = 'Basics' | 'Product' | 'Storage' | 'Inventory';
 
@@ -16,7 +16,7 @@ export const PAGES: readonly PageName[] = [
 export const TAB_FIELDS: Record<PageName, readonly string[]> = {
   Basics: ['itemName', 'brand', 'category'],
   Product: ['netWeight', 'netWeightUnit'],
-  Storage: ['storageState', 'location', 'expirationDate', 'notes'],
+  Storage: ['storageState', 'condition', 'location', 'expirationDate', 'notes'],
   Inventory: ['quantityInput', 'unit', 'minQuantity', 'restockQuantity'],
 };
 
@@ -33,6 +33,7 @@ export const addItemSchema = object({
   netWeightUnit: string(),
   netWeightUnitId: string(),
   storageState: string().oneOf(Object.values(StorageState)),
+  condition: string().oneOf(Object.values(ItemCondition)),
   location: string(),
   notes: string(),
   category: string(),
@@ -50,6 +51,7 @@ export const editItemSchema = object({
   netWeightUnit: string(),
   netWeightUnitId: string(),
   storageState: string().oneOf(Object.values(StorageState)),
+  condition: string().oneOf(Object.values(ItemCondition)),
   location: string(),
   notes: string(),
   category: string(),

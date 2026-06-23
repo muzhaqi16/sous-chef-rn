@@ -23,6 +23,7 @@ import {
 } from './PantryItemForm.generated';
 import {
   StorageState,
+  ItemCondition,
   type ItemSuggestion,
   type StorageLocation,
 } from '#/graphql/generated/schemaTypes';
@@ -81,6 +82,7 @@ export interface PantryItemFormData {
 
   // Storage fields (both modes)
   storageState: StorageState;
+  condition: ItemCondition;
   location: string;
   expirationDate?: Date;
   notes: string;
@@ -222,6 +224,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
           item.netWeightUnit?.symbol || item.netWeightUnit?.name || '',
         netWeightUnitId: item.netWeightUnit?.id || '',
         storageState: item.storageState || StorageState.Ambient,
+        condition: item.condition || ItemCondition.Good,
         location:
           typeof item.storageLocation === 'string'
             ? item.storageLocation
@@ -245,6 +248,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
       netWeightUnit: '',
       netWeightUnitId: '',
       storageState: StorageState.Ambient,
+      condition: ItemCondition.Good,
       location: '',
       notes: '',
       category: '',
@@ -290,6 +294,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
         item.netWeightUnit?.symbol || item.netWeightUnit?.name || '',
       netWeightUnitId: item.netWeightUnit?.id || '',
       storageState: item.storageState || StorageState.Ambient,
+      condition: item.condition || ItemCondition.Good,
       location:
         typeof item.storageLocation === 'string'
           ? item.storageLocation
@@ -371,10 +376,15 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     }
   };
 
-  // Handler for adding a new storage location (user typed a custom name)
+  // Handler for adding a new storage location (user typed a custom name).
+  // createPantryItem and updatePantryItem both find-or-create the location by
+  // name on save (case-insensitive within the home, else a new CUSTOM location)
+  // and return its id — so just record the typed name and clear any selected
+  // id. Creating it server-side on save (vs eagerly) avoids orphaning a location
+  // if the user cancels the edit.
   const handleAddNewLocation = (name: string) => {
     setValue('location', name, { shouldDirty: true });
-    setSelectedLocationId(null); // Clear ID - will use name for server to find or create
+    setSelectedLocationId(null);
   };
 
   const handleUnitSelected = (
@@ -554,9 +564,13 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
                 storageState={
                   watchedValues.storageState ?? StorageState.Ambient
                 }
+                condition={watchedValues.condition ?? ItemCondition.Good}
                 expirationDate={watchedValues.expirationDate}
                 onStorageStateChange={state =>
                   setValue('storageState', state, { shouldDirty: true })
+                }
+                onConditionChange={c =>
+                  setValue('condition', c, { shouldDirty: true })
                 }
                 onDateChange={date => {
                   setValue('expirationDate', date ?? undefined, {

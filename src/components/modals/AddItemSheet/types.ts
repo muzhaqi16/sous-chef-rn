@@ -156,8 +156,14 @@ export interface AddItemSheetProps<
   showImages?: boolean;
   /** Optional: Tutorial hint element rendered above action buttons */
   tutorialHint?: React.ReactNode;
-  /** Optional: Child component (e.g., AddDetailsSheet) */
-  children?: React.ReactNode;
+  /**
+   * Optional: renders the "details" step IN PLACE inside this same sheet
+   * (morphing flow). When provided, "Add manually" switches the sheet to the
+   * details step instead of opening a second modal — one BottomSheetModal, one
+   * backdrop, no stacking. `goBack` returns to the search step. The consumer
+   * still gets `onAddManually(searchValue)` first to prep the form's inputs.
+   */
+  renderDetails?: (controls: { goBack: () => void }) => React.ReactNode;
 }
 
 /**

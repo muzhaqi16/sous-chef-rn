@@ -203,14 +203,16 @@ describe('pantry mutations utils', () => {
       expect(result).toEqual({ storage: { storageLocationId: 'loc-1' } });
     });
 
-    it('does not include location when dirty but no locationId', () => {
+    it('sends storageLocationName when location is dirty with a typed name but no id (server find-or-creates by name)', () => {
       const result = buildDirtyUpdateInput(
         baseFormData,
         { location: true },
         null,
         null,
       );
-      expect(result).toEqual({});
+      expect(result).toEqual({
+        storage: { storageLocationName: 'Fridge' },
+      });
     });
 
     it('includes expiresAt as ISO string when dirty', () => {

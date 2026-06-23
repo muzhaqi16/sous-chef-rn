@@ -2,7 +2,7 @@
  * Shared types for pantry item mutations
  */
 
-import { StorageState } from '#/graphql/generated/schemaTypes';
+import { StorageState, ItemCondition } from '#/graphql/generated/schemaTypes';
 
 export interface UnitSelection {
   id: string | null;
@@ -31,6 +31,7 @@ export interface FormDataInput {
   minQuantity?: string;
   restockQuantity?: string;
   storageState: StorageState;
+  condition?: ItemCondition;
   location: string;
   expirationDate?: Date;
   notes: string;

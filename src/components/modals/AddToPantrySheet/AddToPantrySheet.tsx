@@ -57,8 +57,8 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   const { toBarcode } = useAppNavigation();
   const client = useApolloClient();
 
-  // Add details sheet state
-  const [showAddDetails, setShowAddDetails] = useState(false);
+  // Details step state. The shared AddItemSheet owns which step is visible
+  // (search vs details); here we only prep the inputs the details form reads.
   const [prefilledItemName, setPrefilledItemName] = useState('');
 
   // Shared state management
@@ -171,7 +171,9 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     });
   };
 
-  // Handle add manually press
+  // Prep the details form's inputs when "Add manually" is pressed. The shared
+  // AddItemSheet morphs to the in-place details step itself (see renderDetails);
+  // here we only seed the prefilled name and the storage locations it reads.
   const handleAddManually = (searchValue: string) => {
     // Read storage locations from Apollo cache (one-shot, no watcher)
     const cached = client.readQuery<GetPantryQuery>({
@@ -184,7 +186,6 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
       ) as StorageLocation[],
     );
     setPrefilledItemName(searchValue);
-    setShowAddDetails(true);
   };
 
   // Handle quick add from autocomplete suggestion (fire-and-forget)
@@ -374,19 +375,13 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     dismissSuggestion({ itemId: item.itemId, name: item.name });
   };
 
-  // Handle successful add from details sheet
+  // Item created from the details form — refresh suggestions and close the
+  // whole sheet.
   const handleAddSuccess = () => {
-    setShowAddDetails(false);
     suggestionsResult.refetch();
     toastService.success(t('addToPantry.itemAdded'));
     onItemAdded?.();
     onClose();
-  };
-
-  // Handle close details sheet
-  const handleCloseDetails = () => {
-    setShowAddDetails(false);
-    setPrefilledItemName('');
   };
 
   return (
@@ -406,16 +401,15 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
       onExitComplete={handleExitComplete}
       shouldFetch={state.shouldFetch}
       initialSearchQuery={initialSearchQuery}
-    >
-      {/* Nested Add Details Sheet */}
-      <AddDetailsSheet
-        visible={showAddDetails}
-        pantryId={pantryId}
-        prefilledItemName={prefilledItemName}
-        storageLocations={storageLocations}
-        onClose={handleCloseDetails}
-        onSuccess={handleAddSuccess}
-      />
-    </AddItemSheet>
+      renderDetails={({ goBack }) => (
+        <AddDetailsSheet
+          pantryId={pantryId}
+          prefilledItemName={prefilledItemName}
+          storageLocations={storageLocations}
+          onClose={goBack}
+          onSuccess={handleAddSuccess}
+        />
+      )}
+    />
   );
 };

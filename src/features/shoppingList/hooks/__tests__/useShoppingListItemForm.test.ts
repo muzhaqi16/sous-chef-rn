@@ -27,6 +27,9 @@ describe('useShoppingListItemForm', () => {
         notes: '',
         category: '',
         estimatedPrice: '',
+        priority: 0,
+        storeId: null,
+        storeName: '',
       });
     });
 
@@ -86,6 +89,11 @@ describe('useShoppingListItemForm', () => {
         category: 'Dairy',
         unit: { __typename: 'Unit', id: 'unit-1' },
         priceEstimate: { __typename: 'PriceEstimate', estimated: 5.99 },
+        priority: 0,
+        storeInfo: {
+          __typename: 'ShoppingListItemStoreInfo',
+          preferredStore: null,
+        },
         ...overrides,
       };
     }
@@ -177,6 +185,11 @@ describe('useShoppingListItemForm', () => {
           category: '',
           unit: null,
           priceEstimate: { __typename: 'PriceEstimate', estimated: null },
+          priority: 0,
+          storeInfo: {
+            __typename: 'ShoppingListItemStoreInfo',
+            preferredStore: null,
+          },
         });
       });
 
@@ -243,6 +256,11 @@ describe('useShoppingListItemForm', () => {
           category: '',
           unit: null,
           priceEstimate: { __typename: 'PriceEstimate', estimated: null },
+          priority: 0,
+          storeInfo: {
+            __typename: 'ShoppingListItemStoreInfo',
+            preferredStore: null,
+          },
         });
       });
 
@@ -265,6 +283,11 @@ describe('useShoppingListItemForm', () => {
           category: 'Dairy',
           unit: null,
           priceEstimate: { __typename: 'PriceEstimate', estimated: null },
+          priority: 0,
+          storeInfo: {
+            __typename: 'ShoppingListItemStoreInfo',
+            preferredStore: null,
+          },
         });
       });
 
@@ -295,6 +318,11 @@ describe('useShoppingListItemForm', () => {
           category: '',
           unit: null,
           priceEstimate: { __typename: 'PriceEstimate', estimated: null },
+          priority: 0,
+          storeInfo: {
+            __typename: 'ShoppingListItemStoreInfo',
+            preferredStore: null,
+          },
         });
       });
 
@@ -322,6 +350,11 @@ describe('useShoppingListItemForm', () => {
           category: '',
           unit: null,
           priceEstimate: { __typename: 'PriceEstimate', estimated: null },
+          priority: 0,
+          storeInfo: {
+            __typename: 'ShoppingListItemStoreInfo',
+            preferredStore: null,
+          },
         });
       });
 

@@ -6,7 +6,11 @@ import {
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
 import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
-import { StorageState } from '#/graphql/generated/schemaTypes';
+import {
+  StorageState,
+  ItemCondition,
+  AcquisitionMethod,
+} from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
 import { usePantryItemSubmission } from '../usePantryItemSubmission';
 
@@ -63,10 +67,15 @@ const defaultParams = {
   selectedStorageLocationId: null,
   storageLocation: '',
   storageNotes: '',
+  condition: ItemCondition.Good,
   tags: '',
   brand: '',
+  category: '',
   minQuantity: '',
   restockQuantity: '',
+  storeId: null,
+  costPerUnit: '',
+  acquisitionMethod: AcquisitionMethod.Purchased,
   onSuccess: mockOnSuccess,
   handlePageChange: mockHandlePageChange,
 };

@@ -2022,34 +2022,22 @@ union CreatePurchaseResult = ConflictError | CreatePurchasePayload | ForbiddenEr
 
 input CreateRecipeInput {
   attribution: RecipeAttributionInput
-  caloriesPerServing: Float
-  category: RecipeCategory
-  cookTimeMinutes: Int
-  cuisine: String
   description: String
   dietary: DietaryTagsInput
-  diets: [Diet!]
-  difficulty: Difficulty
   externalSourceData: JSON
   externalSourceId: String
   externalSourceUrl: String
-  healthGoals: [HealthGoal!]
   """
   Optional client-generated permanent ID (CUID2) for offline-first idempotency.
   """
   id: ID
-  imageUrl: String
   ingredients: [RecipeIngredientInput!]!
   instructions: JSON!
-  intolerances: [Intolerance!]
   media: MediaAssetsInput
   metadata: RecipeMetadataInput
   name: String!
   notes: String
   nutrition: NutritionInfoInput
-  nutritionData: JSON
-  prepTimeMinutes: Int
-  servings: Int
   source: String
   status: RecipeStatus
   tags: [String!]
@@ -7180,7 +7168,6 @@ input ProductDetailsInput {
   primaryUpc: String
   shelfLifeDays: Int
   shelfLifeOpenedDays: Int
-  vendor: String
 }
 
 """
@@ -9401,7 +9388,6 @@ input StorePreferencesInput {
 }
 
 type StorePriceComparison {
-  inventoryStatus: String
   lastUpdated: DateTime
   offers: [OfferSummary!]!
   price: Float
@@ -9411,9 +9397,6 @@ type StorePriceComparison {
 }
 
 input StoreSkuInput {
-  displayItemSize: String
-  fulfillmentMethods: [String!]
-  inventoryStatus: String
   price: Float
   sku: String!
   storeId: ID!
@@ -10640,23 +10623,16 @@ union UpdateRecipeIngredientsResult = ConflictError | ForbiddenError | NotFoundE
 input UpdateRecipeInput {
   addTags: [String!]
   attribution: RecipeAttributionInput
-  category: RecipeCategory
-  cookTimeMinutes: Int
-  cuisine: String
   description: String
   dietary: DietaryTagsInput
-  difficulty: Difficulty
   id: ID!
-  imageUrl: String
   instructions: JSON
   media: MediaAssetsInput
   metadata: RecipeMetadataInput
   name: String
   notes: String
   nutrition: NutritionInfoInput
-  prepTimeMinutes: Int
   removeTags: [String!]
-  servings: Int
   status: RecipeStatus
   tags: [String!]
   timing: TimeEstimatesInput

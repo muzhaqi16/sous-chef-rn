@@ -68,6 +68,7 @@ const buildPantryItem = (overrides: Record<string, unknown> = {}) => ({
   version: 1,
   updatedAt: '2025-01-01T00:00:00Z',
   storageState: 'PANTRY',
+  condition: 'GOOD',
   expiresAt: null,
   lowStockAlert: false,
   isLowStock: false,

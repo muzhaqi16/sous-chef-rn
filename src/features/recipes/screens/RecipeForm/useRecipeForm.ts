@@ -239,22 +239,33 @@ export function useRecipeForm() {
     return {
       name: state.name.trim(),
       description: state.description.trim() || undefined,
-      imageUrl: state.imageUrl.trim() || undefined,
-      servings: parseInt(state.servings) || 4,
-      prepTimeMinutes: parseInt(state.prepTimeMinutes) || undefined,
-      cookTimeMinutes: parseInt(state.cookTimeMinutes) || undefined,
-      caloriesPerServing: parseFloat(state.caloriesPerServing) || undefined,
-      difficulty: state.difficulty ?? undefined,
-      category: state.category ?? undefined,
-      cuisine: state.cuisine.trim() || undefined,
       status: state.status,
-      diets: state.diets.length > 0 ? state.diets : undefined,
-      healthGoals: state.healthGoals.length > 0 ? state.healthGoals : undefined,
-      intolerances:
-        state.intolerances.length > 0 ? state.intolerances : undefined,
       notes: state.notes.trim() || undefined,
       ingredients,
       instructions,
+      media: {
+        imageUrl: state.imageUrl.trim() || undefined,
+      },
+      metadata: {
+        servings: parseInt(state.servings) || 4,
+        difficulty: state.difficulty ?? undefined,
+        category: state.category ?? undefined,
+        cuisine: state.cuisine.trim() || undefined,
+      },
+      timing: {
+        prepTimeMinutes: parseInt(state.prepTimeMinutes) || undefined,
+        cookTimeMinutes: parseInt(state.cookTimeMinutes) || undefined,
+      },
+      nutrition: {
+        caloriesPerServing: parseFloat(state.caloriesPerServing) || undefined,
+      },
+      dietary: {
+        diets: state.diets.length > 0 ? state.diets : undefined,
+        healthGoals:
+          state.healthGoals.length > 0 ? state.healthGoals : undefined,
+        intolerances:
+          state.intolerances.length > 0 ? state.intolerances : undefined,
+      },
     };
   };
 
@@ -263,19 +274,25 @@ export function useRecipeForm() {
     return {
       name: state.name.trim() || undefined,
       description: state.description.trim() || undefined,
-      imageUrl: state.imageUrl.trim() || undefined,
-      servings: parseInt(state.servings) || undefined,
-      prepTimeMinutes: parseInt(state.prepTimeMinutes) || undefined,
-      cookTimeMinutes: parseInt(state.cookTimeMinutes) || undefined,
-      difficulty: state.difficulty ?? undefined,
-      category: state.category ?? undefined,
-      cuisine: state.cuisine.trim() || undefined,
       status: state.status,
+      notes: state.notes.trim() || undefined,
       instructions: state.steps.map((step, index) => ({
         step: index + 1,
         text: step.instruction.trim(),
       })),
-      notes: state.notes.trim() || undefined,
+      media: {
+        imageUrl: state.imageUrl.trim() || undefined,
+      },
+      metadata: {
+        servings: parseInt(state.servings) || undefined,
+        difficulty: state.difficulty ?? undefined,
+        category: state.category ?? undefined,
+        cuisine: state.cuisine.trim() || undefined,
+      },
+      timing: {
+        prepTimeMinutes: parseInt(state.prepTimeMinutes) || undefined,
+        cookTimeMinutes: parseInt(state.cookTimeMinutes) || undefined,
+      },
     };
   };
 
