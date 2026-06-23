@@ -22,6 +22,10 @@ import { Text } from '#components/atoms/Text';
 import { DetailSection } from '#components/molecules/DetailSection';
 import { InfoRow } from '#components/molecules/InfoRow';
 import { DetailTitleRow } from '#components/molecules/DetailTitleRow';
+import {
+  PRIORITY_KEYS,
+  priorityLabelKey,
+} from '#features/shoppingList/utils/priority';
 
 type RouteParams = {
   listId: string;
@@ -166,6 +170,15 @@ export const ShoppingListItemDetail: React.FC<
 
   const unitSymbol = item.unitName || item.item?.displayUnit?.symbol;
 
+  // Priority is stored as an Int (0 low, 1 medium, 2 high); map it back to the
+  // localized label so the detail matches the form's segmented control instead
+  // of showing the raw number.
+  const priorityKey = PRIORITY_KEYS[item.priority];
+  const priorityLabel = priorityKey ? t(priorityLabelKey(priorityKey)) : null;
+
+  const estimatedPrice = item.priceEstimate?.estimated;
+  const preferredStoreName = item.storeInfo?.preferredStore?.name;
+
   return (
     <CollapsingHeroDetail
       testID="shopping-item-detail"
@@ -236,10 +249,24 @@ export const ShoppingListItemDetail: React.FC<
             </Text>
           </DetailRow>
         )}
-        {!!item.priority && (
+        {estimatedPrice != null && (
+          <DetailRow label={t('shoppingListScreens.estimatedPrice')}>
+            <Text size="sm" weight="medium">
+              {`$${estimatedPrice.toFixed(2)}`}
+            </Text>
+          </DetailRow>
+        )}
+        {!!priorityLabel && (
           <DetailRow label={t('shoppingListScreens.priority')}>
             <Text size="sm" weight="medium">
-              {item.priority}
+              {priorityLabel}
+            </Text>
+          </DetailRow>
+        )}
+        {!!preferredStoreName && (
+          <DetailRow label={t('shoppingListScreens.store')}>
+            <Text size="sm" weight="medium">
+              {preferredStoreName}
             </Text>
           </DetailRow>
         )}
@@ -339,6 +366,9 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.xs,
     marginHorizontal: theme.spacing.lg,
     marginTop: theme.spacing.sm,
+    // Separate the badge from the Information card below it; the card has no
+    // top margin of its own, so without this the badge sits flush against it.
+    marginBottom: theme.spacing.md,
     paddingVertical: theme.spacing.xs,
     paddingHorizontal: theme.spacing.sm,
     backgroundColor: theme.colors.successLight,

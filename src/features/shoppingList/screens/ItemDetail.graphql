@@ -1,5 +1,6 @@
 # Screen-level fragment for the ShoppingListItemDetail screen. Selects the
 # fields the screen reads directly — purchase history, display metadata,
+# the estimated price / preferred store the user enters in the form,
 # nutrition/image data from the catalog item, audit fields (addedBy,
 # createdAt, updatedAt), and the auto-add/meal-plan source flags.
 fragment ItemDetail_shoppingListItem on ShoppingListItem {
@@ -14,6 +15,15 @@ fragment ItemDetail_shoppingListItem on ShoppingListItem {
   priority
   createdAt
   updatedAt
+  priceEstimate {
+    estimated
+  }
+  storeInfo {
+    preferredStore {
+      id
+      name
+    }
+  }
   purchaseInfo {
     isPurchased
   }
