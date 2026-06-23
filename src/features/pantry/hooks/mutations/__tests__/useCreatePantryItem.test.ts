@@ -17,12 +17,30 @@ jest.mock('#/utils/errorHandlers', () => ({
   handleMutationError: jest.fn(),
 }));
 
-jest.mock('#/utils/errors/pantryItemDuplicate', () => ({
-  isPantryItemDuplicateError: jest.fn(() => false),
-  getPantryItemDuplicateInfo: jest.fn(() => null),
-  getPantryItemDuplicateInfoFromPayload: jest.fn(() => null),
-  promptPantryDuplicate: jest.fn(),
-}));
+jest.mock('#/utils/errors/pantryItemDuplicate', () => {
+  const isDup = jest.fn().mockReturnValue(false);
+  const getInfo = jest.fn().mockReturnValue(null);
+  const getInfoFromPayload = jest.fn().mockReturnValue(null);
+  return {
+    isPantryItemDuplicateError: isDup,
+    getPantryItemDuplicateInfo: getInfo,
+    getPantryItemDuplicateInfoFromPayload: getInfoFromPayload,
+    promptPantryDuplicate: jest.fn(),
+    // Delegates to the stubbed detectors (mirrors the real impl) so per-test
+    // overrides of getPantryItemDuplicateInfoFromPayload / the error detectors
+    // still drive duplicate handling.
+    getPantryItemDuplicateFromResult: jest.fn(
+      (payload: { __typename?: string } | null | undefined, error: unknown) => {
+        if (payload?.__typename === 'DuplicatePantryItemError') {
+          const info = getInfoFromPayload(payload);
+          if (info) return info;
+        }
+        if (error != null && isDup(error)) return getInfo(error);
+        return null;
+      },
+    ),
+  };
+});
 
 jest.mock('../utils', () => ({
   addToPantryItemsCache: jest.fn(),

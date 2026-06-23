@@ -22,6 +22,7 @@ import {
   stashPendingFormImages,
   uploadPendingImages as sharedUploadPendingImages,
   cleanupPendingImageStorage as sharedCleanupPendingImageStorage,
+  type AddItemFormData,
 } from '#/utils/items/createItemMapping';
 
 // Map Vision Camera barcode format to GraphQL UpcFormat enum.
@@ -160,14 +161,14 @@ const uploadPendingImages = sharedUploadPendingImages;
 const cleanupPendingImageStorage = sharedCleanupPendingImageStorage;
 
 /** Build a human-readable reason string from form corrections */
-function buildSuggestEditReason(formData: Record<string, unknown>): string {
+function buildSuggestEditReason(formData: AddItemFormData): string {
   const parts: string[] = [];
   if (formData.editReason) {
     parts.push(String(formData.editReason));
   }
   const fields: Array<[string, string]> = [
     ['name', 'Name'],
-    ['vendor', 'Brand'],
+    ['brandName', 'Brand'],
     ['primaryUpc', 'UPC'],
   ];
   for (const [key, label] of fields) {
@@ -194,25 +195,22 @@ function buildSuggestEditReason(formData: Record<string, unknown>): string {
 /** Build a corrected ScannedItem from form data */
 function buildCorrectedScannedItem(
   original: ScannedItem,
-  formData: Record<string, unknown>,
+  formData: AddItemFormData,
 ): ScannedItem {
   return {
     ...original,
-    name: (formData.name as string) || original.name,
-    description: (formData.description as string) || original.description,
-    brandName:
-      (formData.vendor as string) ||
-      (formData.brandName as string) ||
-      original.brandName,
-    brandId: (formData.brandId as string) || original.brandId,
-    imageUrl: (formData.imageUrl as string) || original.imageUrl,
-    upc: (formData.primaryUpc as string) || original.upc,
-    type: (formData.type as string) || original.type,
-    storageState: (formData.storageState as string) || original.storageState,
-    shelfLifeDays: (formData.shelfLifeDays as number) ?? original.shelfLifeDays,
+    name: formData.name || original.name,
+    description: formData.description || original.description,
+    brandName: formData.brandName || original.brandName,
+    brandId: formData.brandId || original.brandId,
+    imageUrl: formData.imageUrl || original.imageUrl,
+    upc: formData.primaryUpc || original.upc,
+    type: formData.type || original.type,
+    storageState: formData.storageState || original.storageState,
+    shelfLifeDays: formData.shelfLifeDays ?? original.shelfLifeDays,
     shelfLifeOpenedDays:
-      (formData.shelfLifeOpenedDays as number) ?? original.shelfLifeOpenedDays,
-    tags: (formData.tags as string[]) || original.tags,
+      formData.shelfLifeOpenedDays ?? original.shelfLifeOpenedDays,
+    tags: formData.tags || original.tags,
   };
 }
 
@@ -415,9 +413,9 @@ export const useSearchResults = (barcode: string, format?: string) => {
     }
   }, [upcLoading, skuLoading, setSearching]);
 
-  const handleAddItem = async (formData: Record<string, unknown>) => {
+  const handleAddItem = async (formData: AddItemFormData) => {
     // Store brand name for use in mutation callback
-    pendingBrandNameRef.current = formData.brandName as string | undefined;
+    pendingBrandNameRef.current = formData.brandName;
 
     stashPendingFormImages(formData);
 
@@ -436,7 +434,7 @@ export const useSearchResults = (barcode: string, format?: string) => {
 
   const handleSuggestEdit = async (
     itemId: string,
-    formData: Record<string, unknown>,
+    formData: AddItemFormData,
   ) => {
     const reason = buildSuggestEditReason(formData);
     const selectedImages = Array.isArray(formData.selectedImages)

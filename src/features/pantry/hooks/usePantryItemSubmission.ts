@@ -17,8 +17,7 @@ import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import {
-  isPantryItemDuplicateError,
-  getPantryItemDuplicateInfo,
+  getPantryItemDuplicateFromResult,
   promptPantryDuplicate,
 } from '#/utils/errors/pantryItemDuplicate';
 import {
@@ -310,74 +309,77 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
       return;
     }
 
-    // Check for duplicate pantry item error (outside try for React Compiler)
-    if (result.error && isPantryItemDuplicateError(result.error)) {
-      const duplicateInfo = getPantryItemDuplicateInfo(result.error);
-      if (duplicateInfo) {
-        // Already in the pantry → the server keeps the existing row, not our
-        // optimistic cuid. Evict the phantom optimistic item.
-        safeEvict(client.cache, 'PantryItem', id);
-        promptPantryDuplicate({
-          onRestock: async () => {
-            const restockResult = await executeMutation(
-              () =>
-                restockPantryItem({
-                  variables: {
-                    input: {
-                      id: duplicateInfo.existingPantryItemId,
-                      quantity,
-                    },
+    // Check for a duplicate (typed DuplicatePantryItemError member in `data` or
+    // the legacy PANTRY_ITEM_ALREADY_EXISTS GraphQL error). Outside try for the
+    // React Compiler.
+    const duplicateInfo = getPantryItemDuplicateFromResult(
+      result.data?.createPantryItem,
+      result.error,
+    );
+    if (duplicateInfo) {
+      // Already in the pantry → the server keeps the existing row, not our
+      // optimistic cuid. Evict the phantom optimistic item.
+      safeEvict(client.cache, 'PantryItem', id);
+      promptPantryDuplicate({
+        onRestock: async () => {
+          const restockResult = await executeMutation(
+            () =>
+              restockPantryItem({
+                variables: {
+                  input: {
+                    id: duplicateInfo.existingPantryItemId,
+                    quantity,
                   },
-                  // Local-first: replay-safe via syncRestockPantryItem (operationId
-                  // dedups the restock ledger row if the request is queued).
-                  context: {
-                    localFirst: true,
-                    operationId: generateEntityId(),
-                  },
-                }),
-              'Restock pantry item error:',
+                },
+                // Local-first: replay-safe via syncRestockPantryItem (operationId
+                // dedups the restock ledger row if the request is queued).
+                context: {
+                  localFirst: true,
+                  operationId: generateEntityId(),
+                },
+              }),
+            'Restock pantry item error:',
+          );
+          if (!restockResult) {
+            alertService.alert(
+              'Error',
+              'Failed to restock item. Please try again.',
             );
-            if (!restockResult) {
-              alertService.alert(
-                'Error',
-                'Failed to restock item. Please try again.',
-              );
-              return;
-            }
+            return;
+          }
+          onSuccess();
+        },
+        onAddAnyway: async () => {
+          const retryResult = await executeMutation(
+            () =>
+              createPantryItem({
+                variables: {
+                  input: { ...mutationInput, forceAdd: true },
+                },
+              }),
+            'Force add pantry item error:',
+          );
+          if (!retryResult) {
+            alertService.alert(
+              'Error',
+              'Failed to add item. Please try again.',
+            );
+            return;
+          }
+          if (
+            retryResult.data?.createPantryItem?.__typename ===
+            'CreatePantryItemPayload'
+          ) {
             onSuccess();
-          },
-          onAddAnyway: async () => {
-            const retryResult = await executeMutation(
-              () =>
-                createPantryItem({
-                  variables: {
-                    input: { ...mutationInput, forceAdd: true },
-                  },
-                }),
-              'Force add pantry item error:',
+          } else {
+            alertService.alert(
+              'Error',
+              'Failed to add item. Please try again.',
             );
-            if (!retryResult) {
-              alertService.alert(
-                'Error',
-                'Failed to add item. Please try again.',
-              );
-              return;
-            }
-            if (
-              retryResult.data?.createPantryItem?.__typename ===
-              'CreatePantryItemPayload'
-            ) {
-              onSuccess();
-            } else {
-              alertService.alert(
-                'Error',
-                'Failed to add item. Please try again.',
-              );
-            }
-          },
-        });
-        return;
-      }
+          }
+        },
+      });
+      return;
     }
 
     const outcome = classifyCreateResult(

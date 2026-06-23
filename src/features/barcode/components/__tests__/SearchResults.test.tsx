@@ -1,8 +1,10 @@
 'use no memo';
 import React from 'react';
-import { screen } from '@testing-library/react-native';
+import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { SearchResults, type SearchResultsProps } from '../SearchResults';
 import { renderWithProviders } from '#/test-utils/renderWithProviders';
+import { recordMock } from '#/test-utils/apolloMockProvider';
+import { BarcodeCreatePantryItemDocument } from '../SearchResults.generated';
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
@@ -47,10 +49,27 @@ jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => {
   };
 });
 
-jest.mock('#/utils/errors/pantryItemDuplicate', () => ({
-  isPantryItemDuplicateError: jest.fn(() => false),
-  getPantryItemDuplicateInfo: jest.fn(() => null),
-}));
+jest.mock('#/utils/errors/pantryItemDuplicate', () => {
+  const isDup = jest.fn().mockReturnValue(false);
+  const getInfo = jest.fn().mockReturnValue(null);
+  const getInfoFromPayload = jest.fn().mockReturnValue(null);
+  return {
+    isPantryItemDuplicateError: isDup,
+    getPantryItemDuplicateInfo: getInfo,
+    getPantryItemDuplicateInfoFromPayload: getInfoFromPayload,
+    promptPantryDuplicate: jest.fn(),
+    getPantryItemDuplicateFromResult: jest.fn(
+      (payload: { __typename?: string } | null | undefined, error: unknown) => {
+        if (payload?.__typename === 'DuplicatePantryItemError') {
+          const info = getInfoFromPayload(payload);
+          if (info) return info;
+        }
+        if (error != null && isDup(error)) return getInfo(error);
+        return null;
+      },
+    ),
+  };
+});
 
 jest.mock('#store/useAppStore', () => ({
   useAppStore: jest.fn(
@@ -63,7 +82,11 @@ jest.mock('#store/useAppStore', () => ({
   ),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers');
+// Use the real wrappers so pressing the add button actually runs the async
+// handler (the auto-mock would no-op the callbacks and never fire the mutation).
+jest.mock('#/utils/compilerSafeWrappers', () =>
+  jest.requireActual('#/utils/compilerSafeWrappers'),
+);
 
 jest.mock('../ProductResultCard', () => ({
   ProductResultCard: ({ item }: { item: { name: string } }) => {
@@ -148,5 +171,48 @@ describe('SearchResults', () => {
   it('renders Add Item when no source', () => {
     renderWithProviders(<SearchResults {...defaultProps} source={undefined} />);
     expect(screen.getByText('Add Item')).toBeTruthy();
+  });
+
+  it('sends quantity 1 (not the net weight) when adding a scanned item to the pantry', async () => {
+    // A 1.89 L carton: quantity is the CONTAINER COUNT (1), the per-container
+    // weight goes in the separate netWeight input. Sending quantity = netWeight
+    // would make the server compute remainingNetWeight = netWeight² (regression).
+    const rec = recordMock(BarcodeCreatePantryItemDocument, {
+      data: {
+        createPantryItem: {
+          __typename: 'CreatePantryItemPayload',
+          pantryItem: { __typename: 'PantryItem', id: 'pantry-item-new' },
+        },
+      },
+    });
+
+    renderWithProviders(
+      <SearchResults
+        {...defaultProps}
+        item={{
+          ...mockItem,
+          netWeight: 1.89,
+          displayUnit: { id: 'unit-litre', name: 'litre', symbol: 'L' },
+        }}
+      />,
+      { apolloProps: { mocks: [rec.mock] } },
+    );
+
+    fireEvent.press(screen.getByTestId('primary-btn'));
+
+    await waitFor(() => expect(rec.fired.length).toBeGreaterThan(0));
+    const firedInput = (
+      rec.fired[0] as {
+        input: {
+          quantity: number;
+          netWeight: { netWeight: number; netWeightUnitId: string } | null;
+        };
+      }
+    ).input;
+    expect(firedInput.quantity).toBe(1);
+    expect(firedInput.netWeight).toEqual({
+      netWeight: 1.89,
+      netWeightUnitId: 'unit-litre',
+    });
   });
 });

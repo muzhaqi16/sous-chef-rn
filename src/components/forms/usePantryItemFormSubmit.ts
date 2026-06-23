@@ -122,6 +122,17 @@ export function usePantryItemFormSubmit(params: UsePantryItemFormSubmitParams) {
         }
 
         if (params.mode === 'add') {
+          // Net weight is all-or-nothing on create: a value with no resolvable
+          // unit is rejected by the API, so prompt for a unit instead of
+          // silently dropping it. (On edit the unit is inherited from the
+          // existing item, so this gate is add-only.)
+          if ((data.netWeight || '').trim() && !data.netWeightUnitId) {
+            alertService.alert(
+              t('labels.error'),
+              t('addToPantry.netWeightUnitRequired'),
+            );
+            return;
+          }
           await params.createPantryItem({
             input: data,
             pantryId: currentPantryId,
