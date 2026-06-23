@@ -118,6 +118,7 @@
     "discardChanges": "Are you sure you want to discard your changes?"
   },
   "labels": {
+    "storeSelectHint": "Pick a store from the list to save it.",
     "add": "Add",
     "edit": "Edit",
     "delete": "Delete",

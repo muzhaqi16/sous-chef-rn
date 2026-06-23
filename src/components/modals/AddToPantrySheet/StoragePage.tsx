@@ -10,13 +10,10 @@ import {
   ItemCondition,
   type StorageLocation,
 } from '#/graphql/generated/schemaTypes';
-
-const CONDITIONS = [
-  ItemCondition.Good,
-  ItemCondition.Fair,
-  ItemCondition.Spoiled,
-  ItemCondition.Expired,
-];
+import {
+  ITEM_CONDITION_OPTIONS,
+  conditionLabelKey,
+} from '#/utils/items/itemEnumLabels';
 
 export interface StoragePageProps {
   storageLocation: string;
@@ -51,20 +48,8 @@ export const StoragePage: React.FC<StoragePageProps> = ({
   insets,
 }) => {
   const { t } = useTranslation();
-  const formatConditionLabel = (value: ItemCondition) => {
-    switch (value) {
-      case ItemCondition.Good:
-        return t('addToPantry.conditionGood');
-      case ItemCondition.Fair:
-        return t('addToPantry.conditionFair');
-      case ItemCondition.Spoiled:
-        return t('addToPantry.conditionSpoiled');
-      case ItemCondition.Expired:
-        return t('addToPantry.conditionExpired');
-      default:
-        return value;
-    }
-  };
+  const formatConditionLabel = (value: ItemCondition) =>
+    t(conditionLabelKey(value));
   return (
     <BottomSheetKeyboardAwareScrollView
       key="storage"
@@ -94,7 +79,7 @@ export const StoragePage: React.FC<StoragePageProps> = ({
       {/* Condition */}
       <SegmentedControl
         label={t('addToPantry.condition')}
-        options={CONDITIONS}
+        options={ITEM_CONDITION_OPTIONS}
         value={condition}
         onChange={setCondition}
         formatLabel={formatConditionLabel}

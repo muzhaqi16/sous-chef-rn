@@ -18,6 +18,7 @@ import { DetailsPage } from './DetailsPage';
 import { StoragePage } from './StoragePage';
 import { StockSettingsPage } from './StockSettingsPage';
 import { Text } from '#components/atoms/Text';
+import { SheetFormHeader } from '#components/molecules/SheetFormHeader';
 
 interface AddDetailsSheetProps {
   pantryId: string | undefined;
@@ -289,27 +290,15 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
 
   return (
     <View style={styles.container} testID="add-pantry-item-details-modal">
-      {/* Header */}
-      <View style={styles.header}>
-        <AppPressable onPress={onClose} style={styles.cancelButton}>
-          <Text size="md" weight="medium" tone="secondary">
-            {t('addToPantry.cancel')}
-          </Text>
-        </AppPressable>
-        <Text size="lg" weight="bold" align="center" style={styles.title}>
-          {t('addToPantry.addItemDetails')}
-        </Text>
-        <AppPressable
-          style={[styles.saveButton, loading && styles.saveButtonDisabled]}
-          onPress={handleConfirm}
-          disabled={loading}
-          testID="add-pantry-item-submit-button"
-        >
-          <Text size="md" weight="semibold" style={styles.saveButtonText}>
-            {loading ? t('addToPantry.adding') : t('addToPantry.add')}
-          </Text>
-        </AppPressable>
-      </View>
+      <SheetFormHeader
+        title={t('addToPantry.addItemDetails')}
+        cancelLabel={t('addToPantry.cancel')}
+        saveLabel={loading ? t('addToPantry.adding') : t('addToPantry.add')}
+        onCancel={onClose}
+        onSave={handleConfirm}
+        saving={loading}
+        submitTestID="add-pantry-item-submit-button"
+      />
 
       {/* Page Indicators */}
       <PageIndicator
@@ -409,31 +398,6 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.md,
-  },
-  cancelButton: {
-    minWidth: 60,
-  },
-  title: {
-    flex: 1,
-  },
-  saveButton: {
-    backgroundColor: theme.colors.primary,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.radii.md,
-  },
-  saveButtonDisabled: {
-    opacity: theme.opacity.disabled,
-  },
-  saveButtonText: {
-    color: theme.colors.white,
   },
   pager: {
     flex: 1,

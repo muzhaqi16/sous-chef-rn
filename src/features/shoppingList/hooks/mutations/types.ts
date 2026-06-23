@@ -23,7 +23,7 @@ export interface ShoppingListItemInput {
   /** Net weight is all-or-nothing — both value and unit, or neither. */
   netWeight?: number;
   netWeightUnitId?: string;
-  /** Priority as an Int (1 low, 2 medium, 3 high); omit for none. */
+  /** Priority as an Int (0 low, 1 medium, 2 high); see shoppingList/utils/priority. */
   priority?: number;
   /** Preferred store id (StorePreferencesInput.preferredStoreId). */
   preferredStoreId?: string;

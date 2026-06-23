@@ -59,11 +59,6 @@ export const shelfLifeOpenedDaysRule = number()
   .max(3650, 'Opened shelf life cannot exceed 10 years')
   .optional();
 
-// Display item size validation
-export const displayItemSizeRule = string()
-  .max(50, 'Display size cannot exceed 50 characters')
-  .optional();
-
 // Display price per unit validation
 export const displayPricePerUnitRule = string()
   .max(50, 'Display price per unit cannot exceed 50 characters')

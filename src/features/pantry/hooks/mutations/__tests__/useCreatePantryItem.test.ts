@@ -4,7 +4,12 @@ import {
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
 import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
+import { ItemCondition } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
+import {
+  getPantryItemDuplicateInfoFromPayload,
+  promptPantryDuplicate,
+} from '#/utils/errors/pantryItemDuplicate';
 import type { FormDataInput } from '../types';
 import { useCreatePantryItem } from '../useCreatePantryItem';
 
@@ -15,6 +20,8 @@ jest.mock('#/utils/errorHandlers', () => ({
 jest.mock('#/utils/errors/pantryItemDuplicate', () => ({
   isPantryItemDuplicateError: jest.fn(() => false),
   getPantryItemDuplicateInfo: jest.fn(() => null),
+  getPantryItemDuplicateInfoFromPayload: jest.fn(() => null),
+  promptPantryDuplicate: jest.fn(),
 }));
 
 jest.mock('../utils', () => ({
@@ -59,6 +66,7 @@ type FiredCreateVars = {
     item?: { name?: string; brand?: string; category?: string };
     storage?: {
       storageState?: string;
+      condition?: string;
       storageLocationId?: string;
       storageLocationName?: string;
     };
@@ -406,6 +414,73 @@ describe('useCreatePantryItem', () => {
       });
     });
 
+    expect(success!).toBe(false);
+  });
+
+  it('sends storage.condition on create (full-screen add path)', async () => {
+    const m = createMock();
+    const { result } = renderHookWithApollo(
+      () => useCreatePantryItem({ pantryId: 'pantry-1' }),
+      { operationMocks: [m.mock] },
+    );
+
+    await act(async () => {
+      await result.current.createPantryItem({
+        input: createFormInput({ condition: ItemCondition.Spoiled }),
+        pantryId: 'pantry-1',
+        quantityValue: 1,
+        unitId: null,
+        selectedLocationId: null,
+        selectedCategoryId: null,
+      });
+    });
+
+    const storage = (m.fired[0] as FiredCreateVars).input.storage;
+    expect(storage?.condition).toBe('SPOILED');
+  });
+
+  it('prompts restock when the server returns a DuplicatePantryItemError union payload', async () => {
+    (getPantryItemDuplicateInfoFromPayload as jest.Mock).mockReturnValueOnce({
+      existingPantryItemId: 'existing-1',
+      existingPantryItemIds: ['existing-1'],
+    });
+    // Resolve the recovery prompt immediately so the awaited call settles.
+    (promptPantryDuplicate as jest.Mock).mockImplementationOnce(
+      ({ onCancel }: { onCancel?: () => void }) => onCancel?.(),
+    );
+
+    const m = recordMock(CreatePantryItemDocument, {
+      data: {
+        createPantryItem: {
+          __typename: 'DuplicatePantryItemError',
+          code: 'PANTRY_ITEM_ALREADY_EXISTS',
+          message: 'Already in your pantry',
+          existingPantryItemIds: ['existing-1'],
+          suggestion: 'RESTOCK_EXISTING',
+        },
+      },
+    });
+
+    const { result } = renderHookWithApollo(
+      () => useCreatePantryItem({ pantryId: 'pantry-1' }),
+      { operationMocks: [m.mock] },
+    );
+
+    let success: boolean;
+    await act(async () => {
+      success = await result.current.createPantryItem({
+        input: createFormInput(),
+        pantryId: 'pantry-1',
+        quantityValue: 1,
+        unitId: null,
+        selectedLocationId: null,
+        selectedCategoryId: null,
+      });
+    });
+
+    expect(getPantryItemDuplicateInfoFromPayload).toHaveBeenCalled();
+    expect(promptPantryDuplicate).toHaveBeenCalled();
+    // onCancel resolves the recovery promise to false.
     expect(success!).toBe(false);
   });
 });

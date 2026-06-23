@@ -118,6 +118,7 @@
     "discardChanges": "Sei sicuro di voler annullare le modifiche?"
   },
   "labels": {
+    "storeSelectHint": "Scegli un negozio dall'elenco per salvarlo.",
     "add": "Aggiungi",
     "edit": "Modifica",
     "delete": "Elimina",

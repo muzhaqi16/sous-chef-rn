@@ -118,6 +118,7 @@
     "discardChanges": "Je i sigurt që do t'i shpërfillësh ndryshimet?"
   },
   "labels": {
+    "storeSelectHint": "Zgjidh një dyqan nga lista për ta ruajtur.",
     "add": "Shto",
     "edit": "Modifiko",
     "delete": "Fshi",

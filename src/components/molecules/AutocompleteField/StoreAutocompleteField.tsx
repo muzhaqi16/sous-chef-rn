@@ -1,8 +1,10 @@
 import React from 'react';
+import { StyleSheet } from 'react-native-unistyles';
 import {
   useStoreAutocomplete,
   type StoreItem,
 } from '#hooks/autocomplete/useStoreAutocomplete';
+import { Text } from '#components/atoms/Text';
 import { GenericAutocompleteField } from './GenericAutocompleteField';
 import { AutocompleteRow } from './AutocompleteRow';
 
@@ -16,6 +18,12 @@ interface StoreAutocompleteFieldProps {
   error?: string;
   testID?: string;
   onStoreSelected?: (storeId: string | null, storeName: string | null) => void;
+  /**
+   * Optional hint shown under the field. The store is saved by id only — a typed
+   * name that isn't picked from the suggestions is dropped — so callers pass this
+   * to tell the user to choose from the list.
+   */
+  helperText?: string;
 }
 
 export const StoreAutocompleteField: React.FC<StoreAutocompleteFieldProps> = ({
@@ -28,50 +36,64 @@ export const StoreAutocompleteField: React.FC<StoreAutocompleteFieldProps> = ({
   error,
   testID,
   onStoreSelected,
+  helperText,
 }) => {
   const store = useStoreAutocomplete();
 
   return (
-    <GenericAutocompleteField<StoreItem>
-      variant={variant}
-      label={label}
-      value={value}
-      placeholder={placeholder}
-      required={required}
-      error={error}
-      testID={testID}
-      onChangeText={text => {
-        onChangeText(text);
-        store.handleSearchTermChange(text);
-        onStoreSelected?.(null, null);
-      }}
-      items={store.displayItems}
-      loading={store.isLoading}
-      renderItem={item => (
-        <AutocompleteRow
-          title={item.name}
-          subtitle={item.address || undefined}
-        />
-      )}
-      keyExtractor={item => item.id}
-      onSelect={item => {
-        onChangeText(item.name);
-        onStoreSelected?.(item.id, item.name);
-        store.setSearchTerm('');
-      }}
-      autoCapitalize="words"
-      inlineMinSearchLength={2}
-      maxResults={6}
-      modalTitle="Select a store"
-      modalSearchPlaceholder="Type to search stores..."
-      modalEmptyText="No stores found"
-      modalEmptySubtext={
-        store.shouldSearch
-          ? `Continue typing to add "${store.searchTerm}" as a custom store`
-          : 'Type at least 2 characters to search'
-      }
-      modalMinSearchLength={2}
-      onSearchChange={store.handleSearchTermChange}
-    />
+    <>
+      <GenericAutocompleteField<StoreItem>
+        variant={variant}
+        label={label}
+        value={value}
+        placeholder={placeholder}
+        required={required}
+        error={error}
+        testID={testID}
+        onChangeText={text => {
+          onChangeText(text);
+          store.handleSearchTermChange(text);
+          onStoreSelected?.(null, null);
+        }}
+        items={store.displayItems}
+        loading={store.isLoading}
+        renderItem={item => (
+          <AutocompleteRow
+            title={item.name}
+            subtitle={item.address || undefined}
+          />
+        )}
+        keyExtractor={item => item.id}
+        onSelect={item => {
+          onChangeText(item.name);
+          onStoreSelected?.(item.id, item.name);
+          store.setSearchTerm('');
+        }}
+        autoCapitalize="words"
+        inlineMinSearchLength={2}
+        maxResults={6}
+        modalTitle="Select a store"
+        modalSearchPlaceholder="Type to search stores..."
+        modalEmptyText="No stores found"
+        modalEmptySubtext={
+          store.shouldSearch
+            ? `Continue typing to add "${store.searchTerm}" as a custom store`
+            : 'Type at least 2 characters to search'
+        }
+        modalMinSearchLength={2}
+        onSearchChange={store.handleSearchTermChange}
+      />
+      {helperText ? (
+        <Text size="sm" tone="tertiary" style={styles.helper}>
+          {helperText}
+        </Text>
+      ) : null}
+    </>
   );
 };
+
+const styles = StyleSheet.create(theme => ({
+  helper: {
+    marginTop: theme.spacing.xs,
+  },
+}));

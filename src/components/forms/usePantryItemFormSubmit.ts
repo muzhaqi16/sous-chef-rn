@@ -3,7 +3,7 @@ import { errorService } from '#/services/errorService';
 import { t } from '#/i18n/t';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { parseFractionalInput as parseQuantityInput } from '#/utils/fractionUtils';
-import { StorageState } from '#/graphql/generated/schemaTypes';
+import { StorageState, ItemCondition } from '#/graphql/generated/schemaTypes';
 import type { UnitSelection } from '#features/pantry/hooks/mutations/types';
 import type { PantryItemForm_PantryItemFragment } from './PantryItemForm.generated';
 
@@ -21,6 +21,7 @@ export interface PantryItemFormData {
   netWeightUnit?: string;
   netWeightUnitId?: string;
   storageState: StorageState;
+  condition?: ItemCondition;
   location: string;
   expirationDate?: Date;
   notes: string;

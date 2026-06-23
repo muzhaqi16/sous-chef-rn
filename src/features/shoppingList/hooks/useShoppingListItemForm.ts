@@ -15,7 +15,7 @@ type FormState = {
   notes: string;
   category: string;
   estimatedPrice: string;
-  /** Priority Int (0 = none, 1 low, 2 medium, 3 high). */
+  /** Priority Int (0 low, 1 medium, 2 high); see shoppingList/utils/priority. */
   priority: number;
   /** Preferred store (storePrefs.preferredStoreId). */
   storeId: string | null;

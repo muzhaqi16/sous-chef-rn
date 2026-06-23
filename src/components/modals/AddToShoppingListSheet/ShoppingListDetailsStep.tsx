@@ -4,9 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { StyleSheet } from 'react-native-unistyles';
-import { AppPressable } from '#components/atoms/AppPressable';
-import { Text } from '#components/atoms/Text';
 import { FormInput } from '#components/molecules/FormInput';
+import { SheetFormHeader } from '#components/molecules/SheetFormHeader';
 import { ItemAutocompleteField } from '#components/molecules/AutocompleteField/ItemAutocompleteField';
 import { UnitAutocompleteField } from '#components/molecules/AutocompleteField/UnitAutocompleteField';
 import { CategoryAutocompleteField } from '#components/molecules/AutocompleteField/CategoryAutocompleteField';
@@ -16,15 +15,12 @@ import { EditableCounter } from '#components/molecules/EditableCounter';
 import { FieldRow } from '#components/molecules/FieldRow';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
 import { ItemSuggestion, CategoryType } from '#/graphql/generated/schemaTypes';
-
-// The server accepts priority 0 (low), 1 (medium), or 2 (high) — see the API's
-// ShoppingListValidators.validatePriority. Map the labels to those exact values.
-const PRIORITY_OPTIONS = ['low', 'medium', 'high'];
-const PRIORITY_VALUES: Record<string, number> = {
-  low: 0,
-  medium: 1,
-  high: 2,
-};
+import {
+  PRIORITY_OPTIONS,
+  PRIORITY_VALUES,
+  PRIORITY_KEYS,
+  priorityLabelKey,
+} from '#features/shoppingList/utils/priority';
 import { useShoppingListItemForm } from '#features/shoppingList/hooks/useShoppingListItemForm';
 import { useAddShoppingItem } from '#features/shoppingList/hooks/mutations/useAddShoppingItem';
 import { alertService } from '#/services/alertService';
@@ -87,7 +83,7 @@ export const ShoppingListDetailsStep: React.FC<
   const [netWeight, setNetWeight] = useState('');
   const [netWeightUnit, setNetWeightUnit] = useState('');
   const [netWeightUnitId, setNetWeightUnitId] = useState<string | null>(null);
-  const [priority, setPriority] = useState('low');
+  const [priority, setPriority] = useState(0);
   const [storeName, setStoreName] = useState('');
   const [storeId, setStoreId] = useState<string | null>(null);
 
@@ -122,8 +118,7 @@ export const ShoppingListDetailsStep: React.FC<
     if (name) setStoreName(name);
   };
 
-  const formatPriorityLabel = (value: string) =>
-    t(`shoppingListScreens.priority${value[0].toUpperCase()}${value.slice(1)}`);
+  const formatPriorityLabel = (key: string) => t(priorityLabelKey(key));
 
   const handleSave = () => {
     if (!itemName.trim()) {
@@ -175,7 +170,7 @@ export const ShoppingListDetailsStep: React.FC<
             netWeightValue !== undefined && !isNaN(netWeightValue)
               ? netWeightUnitId ?? undefined
               : undefined,
-          priority: PRIORITY_VALUES[priority],
+          priority,
           preferredStoreId: storeId ?? undefined,
         });
         onSuccess();
@@ -188,27 +183,15 @@ export const ShoppingListDetailsStep: React.FC<
 
   return (
     <View style={styles.container} testID="add-shopping-item-details">
-      {/* Header */}
-      <View style={styles.header}>
-        <AppPressable onPress={onClose} style={styles.cancelButton}>
-          <Text size="md" weight="medium" tone="secondary">
-            {t('labels.cancel')}
-          </Text>
-        </AppPressable>
-        <Text size="lg" weight="bold" align="center" style={styles.title}>
-          {t('shoppingListScreens.addItem')}
-        </Text>
-        <AppPressable
-          style={[styles.saveButton, saving && styles.saveButtonDisabled]}
-          onPress={handleSave}
-          disabled={saving}
-          testID="add-shopping-item-submit-button"
-        >
-          <Text size="md" weight="semibold" style={styles.saveButtonText}>
-            {t('labels.add')}
-          </Text>
-        </AppPressable>
-      </View>
+      <SheetFormHeader
+        title={t('shoppingListScreens.addItem')}
+        cancelLabel={t('labels.cancel')}
+        saveLabel={t('labels.add')}
+        onCancel={onClose}
+        onSave={handleSave}
+        saving={saving}
+        submitTestID="add-shopping-item-submit-button"
+      />
 
       <BottomSheetScrollView
         style={styles.body}
@@ -299,8 +282,8 @@ export const ShoppingListDetailsStep: React.FC<
         <SegmentedControl
           label={t('shoppingListScreens.priority')}
           options={PRIORITY_OPTIONS}
-          value={priority}
-          onChange={setPriority}
+          value={PRIORITY_KEYS[priority] ?? 'low'}
+          onChange={key => setPriority(PRIORITY_VALUES[key] ?? 0)}
           formatLabel={formatPriorityLabel}
         />
 
@@ -311,6 +294,7 @@ export const ShoppingListDetailsStep: React.FC<
           onChangeText={setStoreName}
           onStoreSelected={handleStoreSelected}
           placeholder={t('shoppingListScreens.storePlaceholder')}
+          helperText={t('labels.storeSelectHint')}
         />
 
         <FormInput
@@ -330,31 +314,6 @@ export const ShoppingListDetailsStep: React.FC<
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.md,
-  },
-  cancelButton: {
-    minWidth: 60,
-  },
-  title: {
-    flex: 1,
-  },
-  saveButton: {
-    backgroundColor: theme.colors.primary,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.radii.md,
-  },
-  saveButtonDisabled: {
-    opacity: theme.opacity.disabled,
-  },
-  saveButtonText: {
-    color: theme.colors.white,
   },
   body: {
     flex: 1,

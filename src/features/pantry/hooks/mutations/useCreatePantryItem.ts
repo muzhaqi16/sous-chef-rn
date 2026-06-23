@@ -20,6 +20,7 @@ import type { CreatePantryItemInput } from '#/graphql/generated/schemaTypes';
 import {
   isPantryItemDuplicateError,
   getPantryItemDuplicateInfo,
+  getPantryItemDuplicateInfoFromPayload,
   promptPantryDuplicate,
 } from '#/utils/errors/pantryItemDuplicate';
 import { addToPantryItemsCache } from './utils';
@@ -111,6 +112,10 @@ export function useCreatePantryItem({
       quantity: quantityValue,
       storage: {
         storageState: input.storageState,
+        // Mirror the quick-add (usePantryItemSubmission) and edit
+        // (buildDirtyUpdateInput) paths, which both send condition — otherwise a
+        // condition picked on the full add screen is silently dropped on create.
+        ...(input.condition && { condition: input.condition }),
         storageNotes: input.notes.trim() || null,
         ...storageLocationInput,
       },
@@ -207,8 +212,20 @@ export function useCreatePantryItem({
     }
 
     // Duplicate is a rejection with a recoverable path (restock / add-anyway).
-    if (result.error && isPantryItemDuplicateError(result.error)) {
-      const duplicateInfo = getPantryItemDuplicateInfo(result.error);
+    // The server may surface it as a typed `DuplicatePantryItemError` member of
+    // the result union (in `data`) or as a GraphQL error carrying the
+    // PANTRY_ITEM_ALREADY_EXISTS code (in `errors`). Handle both.
+    const duplicatePayload =
+      result.data?.createPantryItem?.__typename === 'DuplicatePantryItemError'
+        ? result.data.createPantryItem
+        : null;
+    if (
+      duplicatePayload ||
+      (result.error && isPantryItemDuplicateError(result.error))
+    ) {
+      const duplicateInfo = duplicatePayload
+        ? getPantryItemDuplicateInfoFromPayload(duplicatePayload)
+        : getPantryItemDuplicateInfo(result.error);
       if (duplicateInfo) {
         // Already in the pantry → the server keeps the existing row, not our
         // optimistic cuid. Evict the phantom optimistic item.

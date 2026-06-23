@@ -1,5 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Control, FieldErrors } from 'react-hook-form';
 import { StyleSheet } from 'react-native-unistyles';
 import {
@@ -20,17 +21,14 @@ import {
 import { Text } from '#components/atoms/Text';
 import { Label } from '#components/atoms/Label';
 import type { PantryItemFormData } from './PantryItemForm';
+import {
+  ITEM_CONDITION_OPTIONS,
+  conditionLabelKey,
+} from '#/utils/items/itemEnumLabels';
 
 const STORAGE_STATE_OPTIONS: ChipOption<StorageState>[] = Object.values(
   StorageState,
 ).map(state => ({ key: state, label: state }));
-
-const CONDITION_OPTIONS: ChipOption<ItemCondition>[] = [
-  ItemCondition.Good,
-  ItemCondition.Fair,
-  ItemCondition.Spoiled,
-  ItemCondition.Expired,
-].map(c => ({ key: c, label: c }));
 
 interface StorageDetailsSectionProps {
   control: Control<PantryItemFormData>;
@@ -64,6 +62,12 @@ export const StorageDetailsSection: React.FC<StorageDetailsSectionProps> = ({
   onStorageLocationSelected,
   onAddNewLocation,
 }) => {
+  const { t } = useTranslation();
+  const conditionOptions: ChipOption<ItemCondition>[] =
+    ITEM_CONDITION_OPTIONS.map(c => ({
+      key: c,
+      label: t(conditionLabelKey(c)),
+    }));
   const locationFields: FieldDef<PantryItemFormData>[] = [
     {
       name: 'location',
@@ -108,10 +112,10 @@ export const StorageDetailsSection: React.FC<StorageDetailsSectionProps> = ({
 
       {/* Condition */}
       <View style={styles.field}>
-        <Label>Condition</Label>
+        <Label>{t('addToPantry.condition')}</Label>
         <ChipScrollRow
           chipStyle={styles.statePill}
-          options={CONDITION_OPTIONS}
+          options={conditionOptions}
           selected={condition}
           onSelect={onConditionChange}
           edgeFadeColor="background"

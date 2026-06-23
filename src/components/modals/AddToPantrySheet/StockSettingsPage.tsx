@@ -9,15 +9,10 @@ import { StoreAutocompleteField } from '#components/molecules/AutocompleteField/
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
 import { Text } from '#components/atoms/Text';
 import { AcquisitionMethod } from '#/graphql/generated/schemaTypes';
-
-// The methods a user picks when manually adding (BARCODE_SCAN / SHOPPING_LIST
-// are set automatically by those flows, not chosen here).
-const ACQUISITION_METHODS = [
-  AcquisitionMethod.Purchased,
-  AcquisitionMethod.Homegrown,
-  AcquisitionMethod.Gifted,
-  AcquisitionMethod.Other,
-];
+import {
+  ACQUISITION_METHOD_OPTIONS,
+  acquisitionMethodLabelKey,
+} from '#/utils/items/itemEnumLabels';
 
 export interface StockSettingsPageProps {
   minQuantity: string;
@@ -52,20 +47,8 @@ export const StockSettingsPage: React.FC<StockSettingsPageProps> = ({
   insets,
 }) => {
   const { t } = useTranslation();
-  const formatMethodLabel = (value: AcquisitionMethod) => {
-    switch (value) {
-      case AcquisitionMethod.Purchased:
-        return t('addToPantry.methodPurchased');
-      case AcquisitionMethod.Homegrown:
-        return t('addToPantry.methodHomegrown');
-      case AcquisitionMethod.Gifted:
-        return t('addToPantry.methodGifted');
-      case AcquisitionMethod.Other:
-        return t('addToPantry.methodOther');
-      default:
-        return value;
-    }
-  };
+  const formatMethodLabel = (value: AcquisitionMethod) =>
+    t(acquisitionMethodLabelKey(value));
   return (
     <BottomSheetKeyboardAwareScrollView
       key="stock"
@@ -120,6 +103,7 @@ export const StockSettingsPage: React.FC<StockSettingsPageProps> = ({
           onChangeText={setStoreName}
           placeholder={t('addToPantry.storePlaceholder')}
           onStoreSelected={handleStoreSelected}
+          helperText={t('labels.storeSelectHint')}
         />
       </View>
 
@@ -134,7 +118,7 @@ export const StockSettingsPage: React.FC<StockSettingsPageProps> = ({
 
       <SegmentedControl
         label={t('addToPantry.acquisitionMethod')}
-        options={ACQUISITION_METHODS}
+        options={ACQUISITION_METHOD_OPTIONS}
         value={acquisitionMethod}
         onChange={setAcquisitionMethod}
         formatLabel={formatMethodLabel}

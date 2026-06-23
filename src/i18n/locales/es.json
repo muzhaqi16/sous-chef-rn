@@ -118,6 +118,7 @@
     "discardChanges": "¿Seguro que quieres descartar los cambios?"
   },
   "labels": {
+    "storeSelectHint": "Elige una tienda de la lista para guardarla.",
     "add": "Añadir",
     "edit": "Editar",
     "delete": "Eliminar",

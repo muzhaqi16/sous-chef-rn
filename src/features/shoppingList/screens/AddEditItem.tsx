@@ -24,20 +24,12 @@ import { EditableCounter } from '#components/molecules/EditableCounter';
 import { FieldRow } from '#components/molecules/FieldRow';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-
-// The server accepts priority 0 (low), 1 (medium), or 2 (high) — see the API's
-// ShoppingListValidators.validatePriority. Map the labels to those exact values.
-const PRIORITY_OPTIONS = ['low', 'medium', 'high'];
-const PRIORITY_VALUES: Record<string, number> = {
-  low: 0,
-  medium: 1,
-  high: 2,
-};
-const PRIORITY_KEYS: Record<number, string> = {
-  0: 'low',
-  1: 'medium',
-  2: 'high',
-};
+import {
+  PRIORITY_OPTIONS,
+  PRIORITY_VALUES,
+  PRIORITY_KEYS,
+  priorityLabelKey,
+} from '#features/shoppingList/utils/priority';
 import type { StaticScreenProps } from '@react-navigation/native';
 import {
   addOptimisticShoppingListItem,
@@ -189,8 +181,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
     updateField('selectedUnitId', unitId);
   };
 
-  const formatPriorityLabel = (key: string) =>
-    t(`shoppingListScreens.priority${key[0].toUpperCase()}${key.slice(1)}`);
+  const formatPriorityLabel = (key: string) => t(priorityLabelKey(key));
 
   // Handle form submission
   const handleSave = () => {
@@ -292,7 +283,9 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
               ...(estimatedPrice && {
                 pricing: { estimatedPrice: parseFloat(estimatedPrice) },
               }),
-              ...(priority && { priority }),
+              // Always send priority (0/1/2) so "low" (0) persists — matches the
+              // in-sheet add path and lets an edit lower priority back to low.
+              priority,
               ...(storeId && { storePrefs: { preferredStoreId: storeId } }),
             },
           },
@@ -440,6 +433,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
           if (name) updateField('storeName', name);
         }}
         placeholder={t('shoppingListScreens.storePlaceholder')}
+        helperText={t('labels.storeSelectHint')}
       />
 
       {/* Notes Field */}

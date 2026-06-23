@@ -26,7 +26,6 @@ export interface AddItemFormData {
   tags?: string[];
   categoryIds?: string[];
   primaryUpc?: string;
-  vendor?: string;
   shelfLifeDays?: number;
   shelfLifeOpenedDays?: number;
   baseDimension?: BaseDimension;
