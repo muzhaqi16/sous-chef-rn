@@ -9,6 +9,7 @@ import { createItemSchema, CreateItemFormData } from '#utils/validation/item';
 import {
   StorageState,
   ItemType,
+  type BaseDimension,
   type ItemUnitInput,
 } from '#/graphql/generated/schemaTypes';
 import {
@@ -24,6 +25,7 @@ import {
   type NetWeightEntry,
 } from '#/components/organisms/NetWeightEntryList/NetWeightEntryList';
 import { DynamicFormFields } from '#/components/molecules/DynamicFormFields';
+import { type AddItemFormData } from '#/utils/items/createItemMapping';
 import { PageIndicator } from '#/components/molecules/PageIndicator/PageIndicator';
 import { CollapsibleSection } from '#/components/molecules/CollapsibleSection';
 import { Text } from '#components/atoms/Text';
@@ -57,12 +59,14 @@ export interface AddItemFormInitialData {
 }
 
 /**
- * The assembled item payload AddItemForm emits on submit: a loose record (the
- * consumer builds the CreateItem mutation input from it) plus the picked
- * images. Kept structurally loose intentionally — typing it to the exact
- * mutation input is a separate form-layer refactor.
+ * The assembled item payload AddItemForm emits on submit: the flat
+ * `AddItemFormData` fields the consumers read (typed with codegen types, e.g.
+ * `ItemType` / `StorageState` / `ItemNetWeightInput`) plus the picked images.
+ * `mapFormToCreateItemInput` turns this flat shape into the nested
+ * `CreateItemInput`. `AddItemFormData` keeps a `[key: string]: unknown` index
+ * signature, so extra fields (e.g. `editReason`) still pass through.
  */
-export type AddItemSubmitPayload = Record<string, unknown> & {
+export type AddItemSubmitPayload = AddItemFormData & {
   selectedImages: SelectedImage[];
 };
 
@@ -241,6 +245,9 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
       .map(entry => ({
         value: parseFloat(entry.value!),
         unitName: entry.unitName!,
+        // Pass the resolved unit id when the user picked a known unit, so the
+        // server links it directly instead of re-resolving by name.
+        ...(entry.unitId ? { unitId: entry.unitId } : {}),
       }));
 
     const units: ItemUnitInput[] = unitEntries
@@ -274,7 +281,6 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
           : undefined,
       tags: allTags,
       primaryUpc: data.upc || undefined,
-      vendor: brandName || undefined,
       shelfLifeDays: data.shelfLifeDays || undefined,
       shelfLifeOpenedDays: data.shelfLifeOpenedDays || undefined,
       imageUrl: data.imageUrl || undefined,
@@ -282,7 +288,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
       units: units.length > 0 ? units : undefined,
       sku: data.sku || undefined,
       storeId: selectedStoreId || undefined,
-      baseDimension: data.baseDimension || undefined,
+      baseDimension: (data.baseDimension as BaseDimension) || undefined,
       defaultConsumeIncrement: data.defaultConsumeIncrement || undefined,
       defaultConsumeUnitId: data.defaultConsumeUnitId || undefined,
       editReason: data.editReason || undefined,
