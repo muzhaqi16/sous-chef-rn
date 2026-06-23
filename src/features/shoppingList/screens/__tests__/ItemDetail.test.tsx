@@ -97,13 +97,25 @@ function buildShoppingListItem(overrides: Record<string, unknown> = {}) {
     unitName: 'loaves',
     unit: null,
     category: 'Bakery',
-    priority: 'HIGH',
+    priority: 2,
     notes: 'Get whole wheat',
     version: 1,
     createdAt: '2024-06-01T00:00:00Z',
     updatedAt: '2024-06-02T00:00:00Z',
     sortOrder: 0,
     item: null,
+    priceEstimate: {
+      __typename: 'PriceEstimate',
+      estimated: 4.59,
+    },
+    storeInfo: {
+      __typename: 'ShoppingListItemStoreInfo',
+      preferredStore: {
+        __typename: 'Store',
+        id: 'store-1',
+        name: 'Costco',
+      },
+    },
     purchaseInfo: { __typename: 'PurchaseInfo', isPurchased: false },
     purchasesConnection: {
       __typename: 'PurchaseConnection',
@@ -122,7 +134,6 @@ function buildShoppingListItem(overrides: Record<string, unknown> = {}) {
       },
     },
     source: null,
-    priceEstimate: null,
     ...overrides,
   };
 }
@@ -167,11 +178,26 @@ describe('ShoppingListItemDetail', () => {
     await waitFor(() => expect(screen.getByText('Bakery')).toBeTruthy());
   });
 
-  it('shows priority', async () => {
+  it('shows priority as a label, not the raw integer', async () => {
     renderWithApollo(<ShoppingListItemDetail route={route} />, {
       operationMocks: [buildItemMock('si1', buildShoppingListItem())],
     });
-    await waitFor(() => expect(screen.getByText('HIGH')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('High')).toBeTruthy());
+    expect(screen.queryByText('2')).toBeNull();
+  });
+
+  it('shows the estimated price', async () => {
+    renderWithApollo(<ShoppingListItemDetail route={route} />, {
+      operationMocks: [buildItemMock('si1', buildShoppingListItem())],
+    });
+    await waitFor(() => expect(screen.getByText('$4.59')).toBeTruthy());
+  });
+
+  it('shows the preferred store', async () => {
+    renderWithApollo(<ShoppingListItemDetail route={route} />, {
+      operationMocks: [buildItemMock('si1', buildShoppingListItem())],
+    });
+    await waitFor(() => expect(screen.getByText('Costco')).toBeTruthy());
   });
 
   it('shows notes', async () => {

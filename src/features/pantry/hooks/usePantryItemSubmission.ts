@@ -5,7 +5,11 @@ import {
   CreatePantryItemDocument,
   RestockPantryItemDocument,
 } from '#features/pantry/graphql/pantry.generated';
-import { StorageState } from '#/graphql/generated/schemaTypes';
+import {
+  StorageState,
+  ItemCondition,
+  AcquisitionMethod,
+} from '#/graphql/generated/schemaTypes';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { addToPantryItemsCache } from '#hooks/home/pantry/utils';
 import { buildOptimisticPantryItem } from '#hooks/home/pantry/buildOptimisticPantryItem';
@@ -41,10 +45,15 @@ export interface PantryItemSubmissionParams {
   selectedStorageLocationId: string | null;
   storageLocation: string;
   storageNotes: string;
+  condition: ItemCondition;
   tags: string;
   brand: string;
+  category: string;
   minQuantity: string;
   restockQuantity: string;
+  storeId: string | null;
+  costPerUnit: string;
+  acquisitionMethod: AcquisitionMethod;
   onSuccess: () => void;
   handlePageChange: (index: number) => void;
 }
@@ -69,10 +78,15 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
     selectedStorageLocationId,
     storageLocation,
     storageNotes,
+    condition,
     tags,
     brand,
+    category,
     minQuantity,
     restockQuantity,
+    storeId,
+    costPerUnit,
+    acquisitionMethod,
     onSuccess,
     handlePageChange,
   } = params;
@@ -114,6 +128,17 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
     const quantity = parseFractionalInput(quantityInput);
     if (quantity === null || isNaN(quantity) || quantity <= 0) {
       alertService.alert(t('labels.error'), t('errors.invalidQuantity'));
+      handlePageChange(1);
+      return;
+    }
+
+    // Net weight is all-or-nothing — a value without a unit would be rejected by
+    // the API, so prompt the user to pick a unit instead of silently dropping it.
+    if (pantryNetWeight.trim() && !pantryNetWeightUnitId) {
+      alertService.alert(
+        t('labels.error'),
+        t('addToPantry.netWeightUnitRequired'),
+      );
       handlePageChange(1);
       return;
     }
@@ -163,6 +188,26 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
       pantryNetWeightUnitId ||
       (totalPackageNetWeight ? displayUnitId : undefined);
 
+    // Purchase info — send only when the user provided something. `storeId`
+    // comes from picking an existing store (PurchaseInfoInput has no free-text
+    // store name). acquisitionMethod is always meaningful, so include it
+    // whenever any purchase field is set (or the method isn't the default).
+    const parsedCost = costPerUnit.trim() ? parseFloat(costPerUnit) : undefined;
+    const costValue =
+      parsedCost !== undefined && !isNaN(parsedCost) && parsedCost > 0
+        ? parsedCost
+        : undefined;
+    const purchase =
+      storeId ||
+      costValue !== undefined ||
+      acquisitionMethod !== AcquisitionMethod.Purchased
+        ? {
+            storeId: storeId || undefined,
+            costPerUnit: costValue,
+            acquisitionMethod,
+          }
+        : undefined;
+
     const id = generateEntityId();
     const mutationInput = {
       id,
@@ -177,6 +222,7 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
           : undefined,
       storage: {
         storageState,
+        condition,
         storageLocationId: selectedStorageLocationId || undefined,
         storageLocationName:
           !selectedStorageLocationId && storageLocation.trim()
@@ -184,6 +230,7 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
             : undefined,
         storageNotes: storageNotes.trim() || undefined,
       },
+      purchase,
       expiresAt: expirationDate
         ? expirationDate.toISOString().split('T')[0]
         : undefined,
@@ -202,8 +249,11 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
                 : undefined,
             }
           : undefined,
+      // NetWeightInput is all-or-nothing: the API rejects a partial input
+      // (value without unit, or unit without value) with a
+      // ValidationError(field: "netWeight"). Only send it when BOTH are present.
       netWeight:
-        effectivePantryNetWeight || effectiveNetWeightUnitId
+        effectivePantryNetWeight && effectiveNetWeightUnitId
           ? {
               netWeight: effectivePantryNetWeight,
               netWeightUnitId: effectiveNetWeightUnitId,
@@ -212,6 +262,7 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
       item: {
         name: itemName.trim(),
         brand: brand.trim() || undefined,
+        category: category.trim() || undefined,
         units: itemUnits,
         netWeight: netWeight,
         displayUnitId: displayUnitId,

@@ -26,7 +26,6 @@ export interface AddItemFormData {
   tags?: string[];
   categoryIds?: string[];
   primaryUpc?: string;
-  vendor?: string;
   shelfLifeDays?: number;
   shelfLifeOpenedDays?: number;
   baseDimension?: BaseDimension;
@@ -67,13 +66,9 @@ export function mapFormToCreateItemInput(
           }
         : undefined,
     productDetails:
-      data.primaryUpc ||
-      data.vendor ||
-      data.shelfLifeDays ||
-      data.shelfLifeOpenedDays
+      data.primaryUpc || data.shelfLifeDays || data.shelfLifeOpenedDays
         ? {
             primaryUpc: data.primaryUpc || undefined,
-            vendor: data.vendor || undefined,
             shelfLifeDays: data.shelfLifeDays || undefined,
             shelfLifeOpenedDays: data.shelfLifeOpenedDays || undefined,
           }

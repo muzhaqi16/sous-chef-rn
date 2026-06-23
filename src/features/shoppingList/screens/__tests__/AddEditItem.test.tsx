@@ -236,7 +236,11 @@ function buildShoppingListItem(id: string) {
       autoAddReason: null,
       isFromMealPlan: false,
     },
-    priority: null,
+    priority: 0,
+    storeInfo: {
+      __typename: 'ShoppingListItemStoreInfo',
+      preferredStore: null,
+    },
     createdAt: '2025-01-01T00:00:00.000Z',
     addedBy: null,
     purchasesConnection: {

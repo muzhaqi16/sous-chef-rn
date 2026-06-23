@@ -66,7 +66,15 @@ export function useMoveToPantry({
         const { pantryId, shoppingListItemId, removeFromList } = input;
 
         executeCacheUpdate(() => {
-          // Add to pantry items cache
+          // Add the returned PantryItem to the pantry's items connection. When
+          // the item already existed in the pantry, the server returns that
+          // existing entry restocked (combined quantity, extra batch) rather
+          // than a new row — so the returned id may already be in the
+          // connection. The updater's default checkDuplicates guard skips
+          // re-inserting that edge, and Apollo normalizes the restock-mutated
+          // fields (quantity, activeBatchCount, …) onto the existing entity by
+          // id. Keep checkDuplicates on — without it a restock would duplicate
+          // the edge.
           const addToPantryCache = createAddToParentConnectionUpdater(
             'Pantry',
             'itemsConnection',

@@ -1903,7 +1903,7 @@ export type CreatePantryItemPayload = {
   pantryItem: PantryItem;
 };
 
-export type CreatePantryItemResult = ConflictError | CreatePantryItemPayload | ForbiddenError | NotFoundError | ValidationError;
+export type CreatePantryItemResult = ConflictError | CreatePantryItemPayload | DuplicatePantryItemError | ForbiddenError | NotFoundError | ValidationError;
 
 export type CreatePantryItemUsagePayload = {
   __typename: 'CreatePantryItemUsagePayload';
@@ -1957,32 +1957,20 @@ export type CreatePurchaseResult = ConflictError | CreatePurchasePayload | Forbi
 
 export type CreateRecipeInput = {
   attribution?: InputMaybe<RecipeAttributionInput>;
-  caloriesPerServing?: InputMaybe<Scalars['Float']['input']>;
-  category?: InputMaybe<RecipeCategory>;
-  cookTimeMinutes?: InputMaybe<Scalars['Int']['input']>;
-  cuisine?: InputMaybe<Scalars['String']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
   dietary?: InputMaybe<DietaryTagsInput>;
-  diets?: InputMaybe<Array<Diet>>;
-  difficulty?: InputMaybe<Difficulty>;
   externalSourceData?: InputMaybe<Scalars['JSON']['input']>;
   externalSourceId?: InputMaybe<Scalars['String']['input']>;
   externalSourceUrl?: InputMaybe<Scalars['String']['input']>;
-  healthGoals?: InputMaybe<Array<HealthGoal>>;
   /** Optional client-generated permanent ID (CUID2) for offline-first idempotency. */
   id?: InputMaybe<Scalars['ID']['input']>;
-  imageUrl?: InputMaybe<Scalars['String']['input']>;
   ingredients: Array<RecipeIngredientInput>;
   instructions: Scalars['JSON']['input'];
-  intolerances?: InputMaybe<Array<Intolerance>>;
   media?: InputMaybe<MediaAssetsInput>;
   metadata?: InputMaybe<RecipeMetadataInput>;
   name: Scalars['String']['input'];
   notes?: InputMaybe<Scalars['String']['input']>;
   nutrition?: InputMaybe<NutritionInfoInput>;
-  nutritionData?: InputMaybe<Scalars['JSON']['input']>;
-  prepTimeMinutes?: InputMaybe<Scalars['Int']['input']>;
-  servings?: InputMaybe<Scalars['Int']['input']>;
   source?: InputMaybe<Scalars['String']['input']>;
   status?: InputMaybe<RecipeStatus>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
@@ -3073,9 +3061,9 @@ export type DietaryRestriction = {
 
 /** Reusable sub-input for dietary tags */
 export type DietaryTagsInput = {
-  diets?: InputMaybe<Array<Scalars['String']['input']>>;
-  healthGoals?: InputMaybe<Array<Scalars['String']['input']>>;
-  intolerances?: InputMaybe<Array<Scalars['String']['input']>>;
+  diets?: InputMaybe<Array<Diet>>;
+  healthGoals?: InputMaybe<Array<HealthGoal>>;
+  intolerances?: InputMaybe<Array<Intolerance>>;
 };
 
 export enum Difficulty {
@@ -3148,6 +3136,22 @@ export type DuplicateMealPlanPayload = {
 
 export type DuplicateMealPlanResult = ConflictError | DuplicateMealPlanPayload | ForbiddenError | NotFoundError | ValidationError;
 
+/**
+ * The pantry already has an active stack of this catalog item. Returned by
+ * `createPantryItem` (unless `forceAdd` is set) so the client can route the
+ * user to restock the existing item instead of creating a duplicate. The
+ * `code` is `PANTRY_ITEM_ALREADY_EXISTS`.
+ */
+export type DuplicatePantryItemError = Error & {
+  __typename: 'DuplicatePantryItemError';
+  code: ErrorCode;
+  /** Active pantry items already stocking this catalog item — offer a one-tap restock. */
+  existingPantryItemIds: Array<Scalars['ID']['output']>;
+  message: Scalars['String']['output'];
+  /** Suggested client action, e.g. `RESTOCK_EXISTING`. */
+  suggestion: Maybe<Scalars['String']['output']>;
+};
+
 export type DuplicateTemplateInput = {
   id: Scalars['ID']['input'];
   newName: Scalars['String']['input'];
@@ -3211,6 +3215,7 @@ export enum ErrorCode {
   HomeAccessDenied = 'HOME_ACCESS_DENIED',
   InternalError = 'INTERNAL_ERROR',
   NotFound = 'NOT_FOUND',
+  PantryItemAlreadyExists = 'PANTRY_ITEM_ALREADY_EXISTS',
   RateLimited = 'RATE_LIMITED',
   ResourceAlreadyExists = 'RESOURCE_ALREADY_EXISTS',
   UnitInvalid = 'UNIT_INVALID',
@@ -10270,7 +10275,6 @@ export type ProductDetailsInput = {
   primaryUpc?: InputMaybe<Scalars['String']['input']>;
   shelfLifeDays?: InputMaybe<Scalars['Int']['input']>;
   shelfLifeOpenedDays?: InputMaybe<Scalars['Int']['input']>;
-  vendor?: InputMaybe<Scalars['String']['input']>;
 };
 
 /**
@@ -13263,7 +13267,6 @@ export type StorePreferencesInput = {
 
 export type StorePriceComparison = {
   __typename: 'StorePriceComparison';
-  inventoryStatus: Maybe<Scalars['String']['output']>;
   lastUpdated: Maybe<Scalars['DateTime']['output']>;
   offers: Array<OfferSummary>;
   price: Maybe<Scalars['Float']['output']>;
@@ -13273,9 +13276,6 @@ export type StorePriceComparison = {
 };
 
 export type StoreSkuInput = {
-  displayItemSize?: InputMaybe<Scalars['String']['input']>;
-  fulfillmentMethods?: InputMaybe<Array<Scalars['String']['input']>>;
-  inventoryStatus?: InputMaybe<Scalars['String']['input']>;
   price?: InputMaybe<Scalars['Float']['input']>;
   sku: Scalars['String']['input'];
   storeId: Scalars['ID']['input'];
@@ -14628,23 +14628,16 @@ export type UpdateRecipeIngredientsResult = ConflictError | ForbiddenError | Not
 export type UpdateRecipeInput = {
   addTags?: InputMaybe<Array<Scalars['String']['input']>>;
   attribution?: InputMaybe<RecipeAttributionInput>;
-  category?: InputMaybe<RecipeCategory>;
-  cookTimeMinutes?: InputMaybe<Scalars['Int']['input']>;
-  cuisine?: InputMaybe<Scalars['String']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
   dietary?: InputMaybe<DietaryTagsInput>;
-  difficulty?: InputMaybe<Difficulty>;
   id: Scalars['ID']['input'];
-  imageUrl?: InputMaybe<Scalars['String']['input']>;
   instructions?: InputMaybe<Scalars['JSON']['input']>;
   media?: InputMaybe<MediaAssetsInput>;
   metadata?: InputMaybe<RecipeMetadataInput>;
   name?: InputMaybe<Scalars['String']['input']>;
   notes?: InputMaybe<Scalars['String']['input']>;
   nutrition?: InputMaybe<NutritionInfoInput>;
-  prepTimeMinutes?: InputMaybe<Scalars['Int']['input']>;
   removeTags?: InputMaybe<Array<Scalars['String']['input']>>;
-  servings?: InputMaybe<Scalars['Int']['input']>;
   status?: InputMaybe<RecipeStatus>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
   timing?: InputMaybe<TimeEstimatesInput>;

@@ -118,6 +118,7 @@
     "discardChanges": "¿Seguro que quieres descartar los cambios?"
   },
   "labels": {
+    "storeSelectHint": "Elige una tienda de la lista para guardarla.",
     "add": "Añadir",
     "edit": "Editar",
     "delete": "Eliminar",
@@ -739,7 +740,19 @@
     "autoAdded": "Añadido automáticamente",
     "fromMealPlan": "Desde el plan de comidas",
     "yes": "Sí",
-    "never": "Nunca"
+    "never": "Nunca",
+    "brand": "Marca",
+    "brandPlaceholder": "ej., Oatly, Chobani",
+    "netWeight": "Peso neto",
+    "netWeightPlaceholder": "ej., 500",
+    "netWeightUnit": "Unidad de peso",
+    "priorityNone": "Ninguna",
+    "priorityLow": "Baja",
+    "priorityMedium": "Media",
+    "priorityHigh": "Alta",
+    "store": "Tienda preferida",
+    "storePlaceholder": "ej., Costco",
+    "netWeightUnitRequired": "Selecciona una unidad para el peso neto."
   },
   "mealPlan": {
     "createTitle": "Crear plan de comidas",
@@ -1487,10 +1500,13 @@
   "purchaseHistory": {
     "title": "Historial de compras",
     "quantityLabel": "Cantidad:",
+    "priceLabel": "Precio:",
     "purchasedBy": "Comprado por:",
     "totalPurchases": "Total de compras:",
     "emptyTitle": "Sin historial de compras",
-    "emptySubtitle": "Marca este artículo como comprado para empezar a registrar el historial"
+    "emptySubtitle": "Marca este artículo como comprado para empezar a registrar el historial",
+    "totalSpent": "Total gastado:",
+    "averagePrice": "Prom. / compra:"
   },
   "numberInputModal": {
     "required": "Este campo es obligatorio",
@@ -1956,7 +1972,25 @@
     "tags": "Etiquetas",
     "tagsPlaceholder": "p. ej., orgánico, sin gluten (separadas por comas)",
     "notes": "Notas",
-    "notesPlaceholder": "p. ej., Conservar en lugar fresco y seco"
+    "notesPlaceholder": "p. ej., Conservar en lugar fresco y seco",
+    "category": "Categoría",
+    "categoryPlaceholder": "ej., Lácteos, Frutas",
+    "condition": "Condición",
+    "conditionGood": "Buena",
+    "conditionFair": "Regular",
+    "conditionSpoiled": "Estropeada",
+    "conditionExpired": "Caducada",
+    "purchaseInfo": "Información de compra",
+    "store": "Tienda",
+    "storePlaceholder": "ej., Costco, Mercadona",
+    "cost": "Costo por unidad",
+    "costPlaceholder": "ej., 4,99",
+    "acquisitionMethod": "Cómo se adquirió",
+    "methodPurchased": "Comprado",
+    "methodHomegrown": "De cosecha propia",
+    "methodGifted": "Regalado",
+    "methodOther": "Otro",
+    "netWeightUnitRequired": "Selecciona una unidad para el peso neto."
   },
   "addItemSheet": {
     "scanBarcode": "Escanear código de barras",

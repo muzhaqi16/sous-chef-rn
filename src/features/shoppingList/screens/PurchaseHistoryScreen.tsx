@@ -25,6 +25,9 @@ type RouteParams = {
     id: string;
     purchaseDate: string;
     quantity: number;
+    unitPrice: number;
+    totalPrice: number;
+    currencySymbol: string;
     unitSymbol: string;
     user?: {
       id: string;
@@ -50,6 +53,18 @@ const formatDate = (dateString: string) => {
   });
 };
 
+// Format a money amount with the purchase's own currency symbol. Returns null
+// for missing/zero amounts so the price row is omitted rather than showing a
+// meaningless "$0.00" — purchases auto-recorded when an item is checked off
+// may carry no price.
+const formatPrice = (
+  amount: number | null | undefined,
+  symbol: string,
+): string | null => {
+  if (amount == null || amount <= 0) return null;
+  return `${symbol}${amount.toFixed(2)}`;
+};
+
 // --- Module-scope FlashList components ---
 
 type PurchaseHistoryItemProps = ListRenderItemInfo<PurchaseItem>;
@@ -60,6 +75,7 @@ const PurchaseHistoryItemComponent: React.FC<PurchaseHistoryItemProps> = ({
 }) => {
   const { t } = useTranslation();
   const { totalCount } = usePurchaseHistoryContext();
+  const priceText = formatPrice(purchase.totalPrice, purchase.currencySymbol);
 
   return (
     <View style={[styles.purchaseCard, commonStyles.shadow]}>
@@ -75,14 +91,32 @@ const PurchaseHistoryItemComponent: React.FC<PurchaseHistoryItemProps> = ({
       </View>
 
       <View style={styles.purchaseDetails}>
-        <View style={styles.purchaseDetailRow}>
-          <Icon name="cube-outline" size={18} tone="iconSecondary" />
-          <Text size="sm" tone="secondary" style={styles.purchaseDetailLabel}>
-            {t('purchaseHistory.quantityLabel')}
-          </Text>
-          <Text size="sm" weight="medium" style={styles.purchaseDetailValue}>
-            {purchase.quantity} {purchase.unitSymbol}
-          </Text>
+        <View style={styles.purchaseSummaryRow}>
+          <View style={styles.purchaseInlineGroup}>
+            <Icon name="cube-outline" size={18} tone="iconSecondary" />
+            <Text size="sm" tone="secondary" style={styles.purchaseDetailLabel}>
+              {t('purchaseHistory.quantityLabel')}
+            </Text>
+            <Text size="sm" weight="medium">
+              {purchase.quantity} {purchase.unitSymbol}
+            </Text>
+          </View>
+
+          {!!priceText && (
+            <View style={styles.purchaseInlineGroup}>
+              <Icon name="pricetag-outline" size={18} tone="iconSecondary" />
+              <Text
+                size="sm"
+                tone="secondary"
+                style={styles.purchaseDetailLabel}
+              >
+                {t('purchaseHistory.priceLabel')}
+              </Text>
+              <Text size="sm" weight="medium">
+                {priceText}
+              </Text>
+            </View>
+          )}
         </View>
 
         {!!purchase.user && (
@@ -105,9 +139,11 @@ const PurchaseHistoryItem = PurchaseHistoryItemComponent;
 
 const getPurchaseItemType = () => 'item';
 
-const PurchaseHistoryHeader: React.FC<{ totalCount: number }> = ({
-  totalCount,
-}) => {
+const PurchaseHistoryHeader: React.FC<{
+  totalCount: number;
+  totalSpent: string | null;
+  averageSpent: string | null;
+}> = ({ totalCount, totalSpent, averageSpent }) => {
   const { t } = useTranslation();
   return (
     <View style={styles.statsContainer}>
@@ -117,6 +153,22 @@ const PurchaseHistoryHeader: React.FC<{ totalCount: number }> = ({
           {totalCount}
         </Text>
       </Text>
+      {!!totalSpent && (
+        <Text size="md" style={styles.statsRow}>
+          {t('purchaseHistory.totalSpent')}{' '}
+          <Text weight="bold" style={styles.statsValue}>
+            {totalSpent}
+          </Text>
+        </Text>
+      )}
+      {!!averageSpent && (
+        <Text size="md" style={styles.statsRow}>
+          {t('purchaseHistory.averagePrice')}{' '}
+          <Text weight="bold" style={styles.statsValue}>
+            {averageSpent}
+          </Text>
+        </Text>
+      )}
     </View>
   );
 };
@@ -150,6 +202,16 @@ export const PurchaseHistoryScreen: React.FC<
   const { goBack } = useAppNavigation();
   const { itemName, purchases } = route.params;
 
+  // Summary stats over purchases that actually carry a price. Auto-recorded
+  // purchases with no price are excluded so the average isn't dragged toward 0.
+  const pricedPurchases = purchases.filter(p => p.totalPrice > 0);
+  const currencySymbol = pricedPurchases[0]?.currencySymbol ?? '$';
+  const spent = pricedPurchases.reduce((sum, p) => sum + p.totalPrice, 0);
+  const totalSpent = formatPrice(spent, currencySymbol);
+  const averageSpent = pricedPurchases.length
+    ? formatPrice(spent / pricedPurchases.length, currencySymbol)
+    : null;
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -178,7 +240,11 @@ export const PurchaseHistoryScreen: React.FC<
           {...FLASHLIST_DEFAULTS.fullScreen}
           ListHeaderComponent={
             purchases.length > 0 ? (
-              <PurchaseHistoryHeader totalCount={purchases.length} />
+              <PurchaseHistoryHeader
+                totalCount={purchases.length}
+                totalSpent={totalSpent}
+                averageSpent={averageSpent}
+              />
             ) : null
           }
           ListEmptyComponent={PurchaseHistoryEmpty}
@@ -235,6 +301,9 @@ const styles = StyleSheet.create(theme => ({
   statsValue: {
     color: theme.colors.info,
   },
+  statsRow: {
+    marginTop: theme.spacing.xs,
+  },
   purchaseCard: {
     borderRadius: theme.radii.md,
     padding: theme.spacing.md,
@@ -265,6 +334,21 @@ const styles = StyleSheet.create(theme => ({
   },
   purchaseDetails: {
     gap: theme.spacing.xs,
+  },
+  // Quantity (left) and price (right) share a single line; wraps if the card is
+  // too narrow to fit both groups.
+  purchaseSummaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    rowGap: theme.spacing.xs,
+    columnGap: theme.spacing.md,
+    paddingVertical: theme.spacing.xs,
+  },
+  purchaseInlineGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   purchaseDetailRow: {
     flexDirection: 'row',

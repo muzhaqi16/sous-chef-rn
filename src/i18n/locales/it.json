@@ -118,6 +118,7 @@
     "discardChanges": "Sei sicuro di voler annullare le modifiche?"
   },
   "labels": {
+    "storeSelectHint": "Scegli un negozio dall'elenco per salvarlo.",
     "add": "Aggiungi",
     "edit": "Modifica",
     "delete": "Elimina",
@@ -739,7 +740,19 @@
     "autoAdded": "Aggiunto automaticamente",
     "fromMealPlan": "Dal piano dei pasti",
     "yes": "Sì",
-    "never": "Mai"
+    "never": "Mai",
+    "brand": "Marca",
+    "brandPlaceholder": "es., Oatly, Chobani",
+    "netWeight": "Peso netto",
+    "netWeightPlaceholder": "es., 500",
+    "netWeightUnit": "Unità di peso",
+    "priorityNone": "Nessuna",
+    "priorityLow": "Bassa",
+    "priorityMedium": "Media",
+    "priorityHigh": "Alta",
+    "store": "Negozio preferito",
+    "storePlaceholder": "es., Costco",
+    "netWeightUnitRequired": "Seleziona un’unità per il peso netto."
   },
   "mealPlan": {
     "createTitle": "Crea piano dei pasti",
@@ -1487,10 +1500,13 @@
   "purchaseHistory": {
     "title": "Cronologia acquisti",
     "quantityLabel": "Quantità:",
+    "priceLabel": "Prezzo:",
     "purchasedBy": "Acquistato da:",
     "totalPurchases": "Acquisti totali:",
     "emptyTitle": "Nessuna cronologia acquisti",
-    "emptySubtitle": "Segna questo articolo come acquistato per iniziare a tracciare la cronologia"
+    "emptySubtitle": "Segna questo articolo come acquistato per iniziare a tracciare la cronologia",
+    "totalSpent": "Totale speso:",
+    "averagePrice": "Media / acquisto:"
   },
   "numberInputModal": {
     "required": "Questo campo è obbligatorio",
@@ -1956,7 +1972,25 @@
     "tags": "Tag",
     "tagsPlaceholder": "es., biologico, senza glutine (separati da virgola)",
     "notes": "Note",
-    "notesPlaceholder": "es., Conservare in luogo fresco e asciutto"
+    "notesPlaceholder": "es., Conservare in luogo fresco e asciutto",
+    "category": "Categoria",
+    "categoryPlaceholder": "es., Latticini, Frutta",
+    "condition": "Condizione",
+    "conditionGood": "Buona",
+    "conditionFair": "Discreta",
+    "conditionSpoiled": "Andata a male",
+    "conditionExpired": "Scaduta",
+    "purchaseInfo": "Informazioni d'acquisto",
+    "store": "Negozio",
+    "storePlaceholder": "es., Costco, Esselunga",
+    "cost": "Costo per unità",
+    "costPlaceholder": "es., 4,99",
+    "acquisitionMethod": "Come acquisito",
+    "methodPurchased": "Acquistato",
+    "methodHomegrown": "Coltivato in casa",
+    "methodGifted": "Regalato",
+    "methodOther": "Altro",
+    "netWeightUnitRequired": "Seleziona un'unità per il peso netto."
   },
   "addItemSheet": {
     "scanBarcode": "Scansiona codice a barre",

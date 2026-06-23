@@ -322,13 +322,26 @@ describe('AddItemSheet', () => {
     expect(defaultProps.onQuickAddSuggestion).toHaveBeenCalledWith(item);
   });
 
-  it('renders with children', () => {
+  it('morphs to the in-place details step when Add Manually is pressed', async () => {
+    const user = userEvent.setup();
     render(
-      <AddItemSheet {...defaultProps}>
-        {React.createElement('View', { testID: 'nested-sheet' })}
-      </AddItemSheet>,
+      <AddItemSheet
+        {...defaultProps}
+        renderDetails={() =>
+          React.createElement('View', { testID: 'details-step' })
+        }
+      />,
     );
-    expect(screen.getByTestId('nested-sheet')).toBeTruthy();
+
+    // Search step initially — the details content is not rendered yet.
+    expect(screen.queryByTestId('details-step')).toBeNull();
+
+    // Pressing Add Manually preps the consumer and morphs this same sheet to
+    // the details step (no second modal).
+    await user.press(screen.getByTestId('add-pantry-add-manually-button'));
+
+    expect(defaultProps.onAddManually).toHaveBeenCalled();
+    expect(screen.getByTestId('details-step')).toBeTruthy();
   });
 
   it('uses external exitingItems when provided', () => {

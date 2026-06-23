@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -37,6 +37,7 @@ import { AddItemSheet } from '../AddItemSheet/AddItemSheet';
 import { useAddItemSheetState } from '../AddItemSheet/useAddItemSheetState';
 import type { SuggestionsHookResult } from '../AddItemSheet/types';
 import { shoppingListSheetConfig } from '../AddItemSheet/configs/shoppingListConfig';
+import { ShoppingListDetailsStep } from './ShoppingListDetailsStep';
 
 interface AddToShoppingListSheetProps {
   visible: boolean;
@@ -56,7 +57,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
   onItemAdded,
 }) => {
   const { t } = useTranslation();
-  const { toBarcode, toAddItem } = useAppNavigation();
+  const { toBarcode } = useAppNavigation();
   const client = useApolloClient();
   const showImages = useShowShoppingListImages();
   const tutorial = useShoppingListTutorial();
@@ -160,15 +161,18 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
     });
   };
 
-  // Handle add manually press - navigates to AddItem screen
+  // Prefilled name for the in-place details step. The shared AddItemSheet morphs
+  // to the details form itself (see renderDetails); here we just seed the name.
+  const [prefilledItemName, setPrefilledItemName] = useState('');
   const handleAddManually = (searchValue: string) => {
+    setPrefilledItemName(searchValue);
+  };
+
+  // Item created from the details form — refresh suggestions and close the sheet.
+  const handleAddDetailsSuccess = () => {
+    suggestionsResult.refetch();
+    onItemAdded?.();
     onClose();
-    if (shoppingListId) {
-      toAddItem({
-        listId: shoppingListId,
-        initialItemName: searchValue || undefined,
-      });
-    }
   };
 
   // Handle quick add from search autocomplete (fire-and-forget)
@@ -380,6 +384,15 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
       initialSearchQuery={initialSearchQuery}
       showImages={showImages}
       tutorialHint={tutorialHintElement}
+      renderDetails={({ goBack }) => (
+        <ShoppingListDetailsStep
+          shoppingListId={shoppingListId}
+          prefilledItemName={prefilledItemName}
+          refetch={suggestionsResult.refetch}
+          onClose={goBack}
+          onSuccess={handleAddDetailsSuccess}
+        />
+      )}
     />
   );
 };

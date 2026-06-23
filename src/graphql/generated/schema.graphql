@@ -1972,7 +1972,7 @@ type CreatePantryItemPayload {
   pantryItem: PantryItem!
 }
 
-union CreatePantryItemResult = ConflictError | CreatePantryItemPayload | ForbiddenError | NotFoundError | ValidationError
+union CreatePantryItemResult = ConflictError | CreatePantryItemPayload | DuplicatePantryItemError | ForbiddenError | NotFoundError | ValidationError
 
 type CreatePantryItemUsagePayload {
   pantry: Pantry
@@ -2022,34 +2022,22 @@ union CreatePurchaseResult = ConflictError | CreatePurchasePayload | ForbiddenEr
 
 input CreateRecipeInput {
   attribution: RecipeAttributionInput
-  caloriesPerServing: Float
-  category: RecipeCategory
-  cookTimeMinutes: Int
-  cuisine: String
   description: String
   dietary: DietaryTagsInput
-  diets: [Diet!]
-  difficulty: Difficulty
   externalSourceData: JSON
   externalSourceId: String
   externalSourceUrl: String
-  healthGoals: [HealthGoal!]
   """
   Optional client-generated permanent ID (CUID2) for offline-first idempotency.
   """
   id: ID
-  imageUrl: String
   ingredients: [RecipeIngredientInput!]!
   instructions: JSON!
-  intolerances: [Intolerance!]
   media: MediaAssetsInput
   metadata: RecipeMetadataInput
   name: String!
   notes: String
   nutrition: NutritionInfoInput
-  nutritionData: JSON
-  prepTimeMinutes: Int
-  servings: Int
   source: String
   status: RecipeStatus
   tags: [String!]
@@ -3102,9 +3090,9 @@ type DietaryRestriction {
 
 """Reusable sub-input for dietary tags"""
 input DietaryTagsInput {
-  diets: [String!]
-  healthGoals: [String!]
-  intolerances: [String!]
+  diets: [Diet!]
+  healthGoals: [HealthGoal!]
+  intolerances: [Intolerance!]
 }
 
 enum Difficulty {
@@ -3175,6 +3163,23 @@ type DuplicateMealPlanPayload {
 
 union DuplicateMealPlanResult = ConflictError | DuplicateMealPlanPayload | ForbiddenError | NotFoundError | ValidationError
 
+"""
+The pantry already has an active stack of this catalog item. Returned by
+`createPantryItem` (unless `forceAdd` is set) so the client can route the
+user to restock the existing item instead of creating a duplicate. The
+`code` is `PANTRY_ITEM_ALREADY_EXISTS`.
+"""
+type DuplicatePantryItemError implements Error {
+  code: ErrorCode!
+  """
+  Active pantry items already stocking this catalog item — offer a one-tap restock.
+  """
+  existingPantryItemIds: [ID!]!
+  message: String!
+  """Suggested client action, e.g. `RESTOCK_EXISTING`."""
+  suggestion: String
+}
+
 input DuplicateTemplateInput {
   id: ID!
   newName: String!
@@ -3236,6 +3241,7 @@ enum ErrorCode {
   HOME_ACCESS_DENIED
   INTERNAL_ERROR
   NOT_FOUND
+  PANTRY_ITEM_ALREADY_EXISTS
   RATE_LIMITED
   RESOURCE_ALREADY_EXISTS
   UNIT_INVALID
@@ -7180,7 +7186,6 @@ input ProductDetailsInput {
   primaryUpc: String
   shelfLifeDays: Int
   shelfLifeOpenedDays: Int
-  vendor: String
 }
 
 """
@@ -9401,7 +9406,6 @@ input StorePreferencesInput {
 }
 
 type StorePriceComparison {
-  inventoryStatus: String
   lastUpdated: DateTime
   offers: [OfferSummary!]!
   price: Float
@@ -9411,9 +9415,6 @@ type StorePriceComparison {
 }
 
 input StoreSkuInput {
-  displayItemSize: String
-  fulfillmentMethods: [String!]
-  inventoryStatus: String
   price: Float
   sku: String!
   storeId: ID!
@@ -10640,23 +10641,16 @@ union UpdateRecipeIngredientsResult = ConflictError | ForbiddenError | NotFoundE
 input UpdateRecipeInput {
   addTags: [String!]
   attribution: RecipeAttributionInput
-  category: RecipeCategory
-  cookTimeMinutes: Int
-  cuisine: String
   description: String
   dietary: DietaryTagsInput
-  difficulty: Difficulty
   id: ID!
-  imageUrl: String
   instructions: JSON
   media: MediaAssetsInput
   metadata: RecipeMetadataInput
   name: String
   notes: String
   nutrition: NutritionInfoInput
-  prepTimeMinutes: Int
   removeTags: [String!]
-  servings: Int
   status: RecipeStatus
   tags: [String!]
   timing: TimeEstimatesInput

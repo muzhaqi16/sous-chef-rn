@@ -118,6 +118,7 @@
     "discardChanges": "Je i sigurt që do t'i shpërfillësh ndryshimet?"
   },
   "labels": {
+    "storeSelectHint": "Zgjidh një dyqan nga lista për ta ruajtur.",
     "add": "Shto",
     "edit": "Modifiko",
     "delete": "Fshi",
@@ -739,7 +740,19 @@
     "autoAdded": "I shtuar automatikisht",
     "fromMealPlan": "Nga plani i vakteve",
     "yes": "Po",
-    "never": "Asnjëherë"
+    "never": "Asnjëherë",
+    "brand": "Marka",
+    "brandPlaceholder": "p.sh., Oatly, Chobani",
+    "netWeight": "Pesha neto",
+    "netWeightPlaceholder": "p.sh., 500",
+    "netWeightUnit": "Njësia e peshës",
+    "priorityNone": "Asnjë",
+    "priorityLow": "E ulët",
+    "priorityMedium": "Mesatare",
+    "priorityHigh": "E lartë",
+    "store": "Dyqani i preferuar",
+    "storePlaceholder": "p.sh., Costco",
+    "netWeightUnitRequired": "Zgjidh një njësi për peshën neto."
   },
   "mealPlan": {
     "createTitle": "Krijo plan vakti",
@@ -1487,10 +1500,13 @@
   "purchaseHistory": {
     "title": "Historiku i blerjeve",
     "quantityLabel": "Sasia:",
+    "priceLabel": "Çmimi:",
     "purchasedBy": "Blerë nga:",
     "totalPurchases": "Blerje gjithsej:",
     "emptyTitle": "Pa historik blerjeje",
-    "emptySubtitle": "Shëno këtë artikull si të blerë për të nisur ndjekjen e historikut"
+    "emptySubtitle": "Shëno këtë artikull si të blerë për të nisur ndjekjen e historikut",
+    "totalSpent": "Shpenzuar gjithsej:",
+    "averagePrice": "Mesatare / blerje:"
   },
   "numberInputModal": {
     "required": "Kjo fushë është e detyrueshme",
@@ -1956,7 +1972,25 @@
     "tags": "Etiketat",
     "tagsPlaceholder": "p.sh. organike, pa gluten (të ndara me presje)",
     "notes": "Shënime",
-    "notesPlaceholder": "p.sh. Ruaje në vend të freskët dhe të thatë"
+    "notesPlaceholder": "p.sh. Ruaje në vend të freskët dhe të thatë",
+    "category": "Kategoria",
+    "categoryPlaceholder": "p.sh., Bulmet, Fruta",
+    "condition": "Gjendja",
+    "conditionGood": "Mirë",
+    "conditionFair": "Mesatare",
+    "conditionSpoiled": "Prishur",
+    "conditionExpired": "Skaduar",
+    "purchaseInfo": "Informacioni i blerjes",
+    "store": "Dyqani",
+    "storePlaceholder": "p.sh., Costco, Conad",
+    "cost": "Kostoja për njësi",
+    "costPlaceholder": "p.sh., 4.99",
+    "acquisitionMethod": "Si u sigurua",
+    "methodPurchased": "Blerë",
+    "methodHomegrown": "Rritur në shtëpi",
+    "methodGifted": "Dhuratë",
+    "methodOther": "Tjetër",
+    "netWeightUnitRequired": "Zgjidh një njësi për peshën neto."
   },
   "addItemSheet": {
     "scanBarcode": "Skano barkodin",

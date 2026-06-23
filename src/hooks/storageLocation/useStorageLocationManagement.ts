@@ -1,17 +1,14 @@
-import { useEffect, useRef } from 'react';
 import { toastService } from '#/services/toastService';
-import { useLazyQuery, useMutation, useQuery } from '@apollo/client/react';
+import { useMutation, useQuery } from '@apollo/client/react';
 import { handleMutationError } from '#/utils/errorHandlers';
 import {
   GetStorageLocationsDocument,
-  GetStorageLocationTreeDocument,
   UpdateStorageLocationDocument,
   DeleteStorageLocationDocument,
   SetDefaultStorageLocationDocument,
   type GetStorageLocationsQuery,
 } from '#operations/storageLocation/storageLocation.generated';
 import { type UpdateStorageLocationInput } from '#/graphql/generated/schemaTypes';
-import { usePreservedArrayData } from '#/hooks/apollo/usePreservedQueryData';
 import { usePreservedNodes } from '#/hooks/apollo/usePreservedConnection';
 import {
   createRemoveFromQueryConnectionUpdater,
@@ -93,8 +90,6 @@ export function useStorageLocationManagement(
   pantryId?: string,
 ) {
   const shouldSkip = !homeId;
-  // Track if tree query has been fetched
-  const hasTreeFetchedRef = useRef(false);
 
   // PERFORMANCE OPTIMIZATION:
   // Use cache-first to show cached data instantly, then background refresh with nextFetchPolicy.
@@ -109,41 +104,6 @@ export function useStorageLocationManagement(
       errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
     },
   );
-
-  // PERFORMANCE: Tree query is lazy - only needed for management screens, not filter tabs.
-  // The flat list query above is sufficient for most UI needs.
-  // We can build a tree from the flat list as a fallback.
-  const [fetchTree, { data: treeData }] = useLazyQuery(
-    GetStorageLocationTreeDocument,
-    {
-      fetchPolicy: 'cache-first',
-      errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
-    },
-  );
-
-  // Fetch tree data after initial locations load (deferred, non-blocking)
-  useEffect(() => {
-    if (
-      !shouldSkip &&
-      homeId &&
-      data?.storageLocations?.edges &&
-      !hasTreeFetchedRef.current
-    ) {
-      hasTreeFetchedRef.current = true;
-      // Defer tree fetch to avoid competing with screen-critical queries
-      const idleId = requestIdleCallback(() => {
-        fetchTree({ variables: { homeId } });
-      });
-      return () => cancelIdleCallback(idleId);
-    }
-  }, [shouldSkip, homeId, data?.storageLocations?.edges, fetchTree]);
-
-  // Reset fetch flag when homeId changes
-  useEffect(() => {
-    if (!homeId) {
-      hasTreeFetchedRef.current = false;
-    }
-  }, [homeId]);
 
   // Reuse the lightweight create hook — it handles both ROOT_QUERY and
   // Pantry.storageLocationsConnection cache updates so PantryMain tabs sync instantly.
@@ -259,11 +219,14 @@ export function useStorageLocationManagement(
 
   // Preserve data even when query fails to prevent cascade failures
   const locations = usePreservedNodes(data?.storageLocations);
-  const treeFromQuery = usePreservedArrayData(treeData?.storageLocationTree);
 
-  // Build tree from flat list if tree query returns empty
-  const tree =
-    treeFromQuery.length > 0 ? treeFromQuery : buildTreeFromFlatList(locations);
+  // Always derive the tree from the flat list. The flat `GetStorageLocations`
+  // query is kept fresh by the create/update/delete cache updaters; the separate
+  // `storageLocationTree` query was NOT (mutations don't touch it), so after
+  // creating a nested location the tree view went stale — missing the new child
+  // and collapsing same-name siblings. buildTreeFromFlatList keys on ids, so two
+  // locations with the same name under different parents stay distinct.
+  const tree = buildTreeFromFlatList(locations);
 
   return {
     // Data

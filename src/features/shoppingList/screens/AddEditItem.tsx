@@ -15,13 +15,21 @@ import {
 import { ItemSuggestion, CategoryType } from '#/graphql/generated/schemaTypes';
 import { UseShoppingListItemForm_ItemFragmentDoc } from '#features/shoppingList/hooks/useShoppingListItemForm.generated';
 import { FormModal } from '#components/organisms/FormModal';
-import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
+import { FormInput } from '#components/molecules/FormInput';
 import { ItemAutocompleteField } from '#components/molecules/AutocompleteField/ItemAutocompleteField';
 import { UnitAutocompleteField } from '#components/molecules/AutocompleteField/UnitAutocompleteField';
 import { CategoryAutocompleteField } from '#components/molecules/AutocompleteField/CategoryAutocompleteField';
+import { StoreAutocompleteField } from '#components/molecules/AutocompleteField/StoreAutocompleteField';
 import { EditableCounter } from '#components/molecules/EditableCounter';
 import { FieldRow } from '#components/molecules/FieldRow';
+import { SegmentedControl } from '#components/molecules/SegmentedControl';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import {
+  PRIORITY_OPTIONS,
+  PRIORITY_VALUES,
+  PRIORITY_KEYS,
+  priorityLabelKey,
+} from '#features/shoppingList/utils/priority';
 import type { StaticScreenProps } from '@react-navigation/native';
 import {
   addOptimisticShoppingListItem,
@@ -69,6 +77,9 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
       notes,
       category,
       estimatedPrice,
+      priority,
+      storeId,
+      storeName,
     },
     updateField,
     setFromItem,
@@ -170,6 +181,8 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
     updateField('selectedUnitId', unitId);
   };
 
+  const formatPriorityLabel = (key: string) => t(priorityLabelKey(key));
+
   // Handle form submission
   const handleSave = () => {
     if (!itemName.trim()) {
@@ -270,6 +283,10 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
               ...(estimatedPrice && {
                 pricing: { estimatedPrice: parseFloat(estimatedPrice) },
               }),
+              // Always send priority (0/1/2) so "low" (0) persists — matches the
+              // in-sheet add path and lets an edit lower priority back to low.
+              priority,
+              ...(storeId && { storePrefs: { preferredStoreId: storeId } }),
             },
           },
           context: { localFirst: true },
@@ -331,8 +348,9 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
     >
       {/* Item Name Field - Use autocomplete for new items only */}
       {isEdit ? (
-        <BaseInput
-          label={t('shoppingListScreens.itemNameRequired')}
+        <FormInput
+          label={t('shoppingListScreens.itemName')}
+          required
           value={itemName}
           onChangeText={text => updateField('itemName', text)}
           placeholder={t('shoppingListScreens.itemNamePlaceholder')}
@@ -387,7 +405,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
       </FieldRow>
 
       {/* Estimated Price Field */}
-      <BaseInput
+      <FormInput
         label={t('shoppingListScreens.estimatedPrice')}
         value={estimatedPrice}
         onChangeText={text => updateField('estimatedPrice', text)}
@@ -395,8 +413,31 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
         keyboardType="numeric"
       />
 
+      {/* Priority */}
+      <SegmentedControl
+        label={t('shoppingListScreens.priority')}
+        options={PRIORITY_OPTIONS}
+        value={PRIORITY_KEYS[priority] ?? 'low'}
+        onChange={key => updateField('priority', PRIORITY_VALUES[key] ?? 0)}
+        formatLabel={formatPriorityLabel}
+      />
+
+      {/* Preferred Store */}
+      <StoreAutocompleteField
+        variant="modal"
+        label={t('shoppingListScreens.store')}
+        value={storeName}
+        onChangeText={text => updateField('storeName', text)}
+        onStoreSelected={(id, name) => {
+          updateField('storeId', id);
+          if (name) updateField('storeName', name);
+        }}
+        placeholder={t('shoppingListScreens.storePlaceholder')}
+        helperText={t('labels.storeSelectHint')}
+      />
+
       {/* Notes Field */}
-      <BaseInput
+      <FormInput
         label={t('shoppingListScreens.notes')}
         value={notes}
         onChangeText={text => updateField('notes', text)}

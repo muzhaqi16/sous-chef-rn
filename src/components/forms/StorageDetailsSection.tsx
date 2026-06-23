@@ -1,5 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Control, FieldErrors } from 'react-hook-form';
 import { StyleSheet } from 'react-native-unistyles';
 import {
@@ -12,10 +13,18 @@ import {
   type ChipOption,
 } from '#components/atoms/ChipScrollRow';
 import { DatePickerField } from '#components/molecules/DatePickerField';
-import { StorageState, StorageLocation } from '#/graphql/generated/schemaTypes';
+import {
+  StorageState,
+  ItemCondition,
+  StorageLocation,
+} from '#/graphql/generated/schemaTypes';
 import { Text } from '#components/atoms/Text';
 import { Label } from '#components/atoms/Label';
 import type { PantryItemFormData } from './PantryItemForm';
+import {
+  ITEM_CONDITION_OPTIONS,
+  conditionLabelKey,
+} from '#/utils/items/itemEnumLabels';
 
 const STORAGE_STATE_OPTIONS: ChipOption<StorageState>[] = Object.values(
   StorageState,
@@ -26,8 +35,10 @@ interface StorageDetailsSectionProps {
   errors: FieldErrors<PantryItemFormData>;
   mode: 'add' | 'edit';
   storageState: StorageState;
+  condition: ItemCondition;
   expirationDate?: Date;
   onStorageStateChange: (state: StorageState) => void;
+  onConditionChange: (condition: ItemCondition) => void;
   onDateChange: (date: Date | null) => void;
   storageLocations?: StorageLocation[];
   onStorageLocationSelected?: (
@@ -42,13 +53,21 @@ export const StorageDetailsSection: React.FC<StorageDetailsSectionProps> = ({
   errors,
   mode,
   storageState,
+  condition,
   expirationDate,
   onStorageStateChange,
+  onConditionChange,
   onDateChange,
   storageLocations = [],
   onStorageLocationSelected,
   onAddNewLocation,
 }) => {
+  const { t } = useTranslation();
+  const conditionOptions: ChipOption<ItemCondition>[] =
+    ITEM_CONDITION_OPTIONS.map(c => ({
+      key: c,
+      label: t(conditionLabelKey(c)),
+    }));
   const locationFields: FieldDef<PantryItemFormData>[] = [
     {
       name: 'location',
@@ -87,6 +106,18 @@ export const StorageDetailsSection: React.FC<StorageDetailsSectionProps> = ({
           options={STORAGE_STATE_OPTIONS}
           selected={storageState}
           onSelect={onStorageStateChange}
+          edgeFadeColor="background"
+        />
+      </View>
+
+      {/* Condition */}
+      <View style={styles.field}>
+        <Label>{t('addToPantry.condition')}</Label>
+        <ChipScrollRow
+          chipStyle={styles.statePill}
+          options={conditionOptions}
+          selected={condition}
+          onSelect={onConditionChange}
           edgeFadeColor="background"
         />
       </View>

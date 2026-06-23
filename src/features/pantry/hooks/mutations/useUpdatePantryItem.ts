@@ -109,6 +109,8 @@ export function useUpdatePantryItem({
     if (dirtyFields.itemName) optimisticUpdate.itemName = input.itemName;
     if (dirtyFields.storageState)
       optimisticUpdate.storageState = input.storageState;
+    if (dirtyFields.condition && input.condition)
+      optimisticUpdate.condition = input.condition;
     if (dirtyFields.expirationDate) {
       optimisticUpdate.expiresAt = input.expirationDate?.toISOString() ?? null;
     }

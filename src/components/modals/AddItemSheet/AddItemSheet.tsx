@@ -65,7 +65,7 @@ export function AddItemSheet<
   initialSearchQuery = '',
   showImages = true,
   tutorialHint,
-  children,
+  renderDetails,
 }: AddItemSheetProps<T>) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -80,6 +80,17 @@ export function AddItemSheet<
     snapPoints: ['70%', '95%'],
     keyboardBehavior: 'extend',
   });
+
+  // Morphing step: the SAME sheet shows either the search/suggestions view or,
+  // when a consumer supplies `renderDetails`, an in-place details form. This
+  // replaces the old "stack a second BottomSheetModal" approach (which raced the
+  // global backdrop and tore the first sheet down). The sheet keeps its current
+  // height across the morph — it opens at the first (search) snap point and the
+  // user can drag it up to the 95% max; we never force-expand it.
+  const [step, setStep] = useState<'search' | 'details'>('search');
+  const goBackToSearch = () => {
+    setStep('search');
+  };
 
   // Shared state management
   const state = useAddItemSheetState({
@@ -144,6 +155,9 @@ export function AddItemSheet<
   if (prevIsOpen !== isOpen) {
     setPrevIsOpen(isOpen);
     setActiveSourceKey(null);
+    // Always reopen on the search step so a stale details step can never
+    // persist from a previous visit.
+    setStep('search');
   }
 
   useEffect(() => {
@@ -154,10 +168,16 @@ export function AddItemSheet<
     }
   }, [isOpen, resetAutocomplete]);
 
-  // Wrap onAddManually to provide search value
+  // Wrap onAddManually to provide search value. When the consumer renders an
+  // in-place details step, morph this same sheet to it instead of opening a
+  // second modal. The sheet keeps its current height (the search snap point) —
+  // the user can still drag it up to the 95% max.
   const handleAddManually = () => {
     const searchValue = searchBarRef.current?.getValue() || '';
     onAddManually(searchValue);
+    if (renderDetails) {
+      setStep('details');
+    }
   };
 
   // Handle selecting a search suggestion
@@ -244,131 +264,128 @@ export function AddItemSheet<
   };
 
   return (
-    <>
-      <BottomSheetModal
-        ref={bottomSheetRef}
-        {...modalProps}
-        // @ts-expect-error - BottomSheetModal doesn't officially support testID but it works
-        testID={`${config.testIDPrefix}-modal`}
-      >
-        <View style={{ flex: 1 }} testID={`${config.testIDPrefix}-modal`}>
-          {inDrilldown && activeGroup ? (
-            <SuggestionDrilldown
-              title={t(activeGroup.titleKey)}
-              items={activeItems}
-              renderItem={item =>
-                renderSuggestionItem(item, !!activeGroup.dismissible)
-              }
-              onBack={() => setActiveSourceKey(null)}
-              backLabel={t('labels.back')}
-              emptyLabel={t('addItemSheet.allAdded')}
-            />
-          ) : (
-            <BottomSheetScrollView
-              style={styles.scrollView}
-              contentContainerStyle={[
-                styles.contentContainer,
-                { paddingBottom: insets.bottom + 16 },
+    <BottomSheetModal
+      ref={bottomSheetRef}
+      {...modalProps}
+      // @ts-expect-error - BottomSheetModal doesn't officially support testID but it works
+      testID={`${config.testIDPrefix}-modal`}
+    >
+      <View style={{ flex: 1 }} testID={`${config.testIDPrefix}-modal`}>
+        {step === 'details' && renderDetails ? (
+          renderDetails({ goBack: goBackToSearch })
+        ) : inDrilldown && activeGroup ? (
+          <SuggestionDrilldown
+            title={t(activeGroup.titleKey)}
+            items={activeItems}
+            renderItem={item =>
+              renderSuggestionItem(item, !!activeGroup.dismissible)
+            }
+            onBack={() => setActiveSourceKey(null)}
+            backLabel={t('labels.back')}
+            emptyLabel={t('addItemSheet.allAdded')}
+          />
+        ) : (
+          <BottomSheetScrollView
+            style={styles.scrollView}
+            contentContainerStyle={[
+              styles.contentContainer,
+              { paddingBottom: insets.bottom + 16 },
+            ]}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Header */}
+            <Text size="xl" weight="bold" style={styles.title}>
+              {config.title}
+            </Text>
+
+            {/* Search Input */}
+            <BottomSheetSearchBar
+              ref={searchBarRef}
+              placeholder={config.searchPlaceholder}
+              onChangeText={handleSearchChange}
+              onClear={() => setSearchQuery('')}
+              initialValue={initialSearchQuery}
+              isLoading={!!autocomplete.isLoading && hasSearchQuery}
+              rightActions={[
+                {
+                  icon: 'barcode-outline',
+                  onPress: onScanPress,
+                },
               ]}
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-            >
-              {/* Header */}
-              <Text size="xl" weight="bold" style={styles.title}>
-                {config.title}
-              </Text>
+            />
 
-              {/* Search Input */}
-              <BottomSheetSearchBar
-                ref={searchBarRef}
-                placeholder={config.searchPlaceholder}
-                onChangeText={handleSearchChange}
-                onClear={() => setSearchQuery('')}
-                initialValue={initialSearchQuery}
-                isLoading={!!autocomplete.isLoading && hasSearchQuery}
-                rightActions={[
-                  {
-                    icon: 'barcode-outline',
-                    onPress: onScanPress,
-                  },
-                ]}
+            {/* Search Results */}
+            {!!showSearchResults && (
+              <ItemSuggestionsList
+                searchQuery={state.searchQuery}
+                suggestions={autocomplete.displayItems}
+                loading={autocomplete.isLoading}
+                addManuallyPosition={config.addManuallyPosition}
+                onAddManually={handleAddManually}
+                onSelectSuggestion={handleSelectSearchSuggestion}
+                quickAddDisabled={isMutating}
+                placeholderIcon={config.placeholderIcon}
+                showBrands={false}
+                showImages={showImages}
               />
+            )}
 
-              {/* Search Results */}
-              {!!showSearchResults && (
-                <ItemSuggestionsList
-                  searchQuery={state.searchQuery}
-                  suggestions={autocomplete.displayItems}
-                  loading={autocomplete.isLoading}
-                  addManuallyPosition={config.addManuallyPosition}
-                  onAddManually={handleAddManually}
-                  onSelectSuggestion={handleSelectSearchSuggestion}
-                  quickAddDisabled={isMutating}
-                  placeholderIcon={config.placeholderIcon}
-                  showBrands={false}
-                  showImages={showImages}
+            {/* Action Buttons - hidden when showing search results */}
+            {!showSearchResults && (
+              <View style={styles.actionButtons}>
+                <ActionCard
+                  icon="barcode-outline"
+                  label={t('addItemSheet.scanBarcode')}
+                  onPress={onScanPress}
                 />
-              )}
+                <ActionCard
+                  icon="add"
+                  label={t('addItemSheet.addManually')}
+                  onPress={handleAddManually}
+                  testID={`${config.testIDPrefix}-add-manually-button`}
+                />
+              </View>
+            )}
 
-              {/* Action Buttons - hidden when showing search results */}
-              {!showSearchResults && (
-                <View style={styles.actionButtons}>
-                  <ActionCard
-                    icon="barcode-outline"
-                    label={t('addItemSheet.scanBarcode')}
-                    onPress={onScanPress}
-                  />
-                  <ActionCard
-                    icon="add"
-                    label={t('addItemSheet.addManually')}
-                    onPress={handleAddManually}
-                    testID={`${config.testIDPrefix}-add-manually-button`}
-                  />
-                </View>
-              )}
+            {/* Tutorial hint (e.g. "Tap + next to an item to add it") */}
+            {!!tutorialHint && !showSearchResults && tutorialHint}
 
-              {/* Tutorial hint (e.g. "Tap + next to an item to add it") */}
-              {!!tutorialHint && !showSearchResults && tutorialHint}
-
-              {/* Suggestions Sections - shown when search is empty, deferred until after animation */}
-              {!!showSuggestions && !!state.shouldRenderSuggestions && (
-                <>
-                  {suggestions.loading && !suggestions.hasSuggestions ? (
-                    <View style={styles.loadingContainer}>
-                      <PrimaryActivityIndicator size="small" />
-                    </View>
-                  ) : !suggestions.hasSuggestions ? (
-                    <View style={styles.emptyContainer}>
-                      <Text
-                        size="base"
-                        weight="medium"
-                        tone="secondary"
-                        style={styles.emptyText}
-                      >
-                        {config.emptyStateMessage}
-                      </Text>
-                      <Text size="sm" tone="tertiary" align="center">
-                        {config.emptyStateSubtext}
-                      </Text>
-                    </View>
-                  ) : (
-                    <>
-                      {/* Render suggestion sections in priority order */}
-                      {config.suggestionGroups
-                        .sort((a, b) => a.priority - b.priority)
-                        .map(renderSuggestionSection)}
-                    </>
-                  )}
-                </>
-              )}
-            </BottomSheetScrollView>
-          )}
-        </View>
-      </BottomSheetModal>
-
-      {/* Nested sheets (e.g., AddDetailsSheet for Pantry) */}
-      {children}
-    </>
+            {/* Suggestions Sections - shown when search is empty, deferred until after animation */}
+            {!!showSuggestions && !!state.shouldRenderSuggestions && (
+              <>
+                {suggestions.loading && !suggestions.hasSuggestions ? (
+                  <View style={styles.loadingContainer}>
+                    <PrimaryActivityIndicator size="small" />
+                  </View>
+                ) : !suggestions.hasSuggestions ? (
+                  <View style={styles.emptyContainer}>
+                    <Text
+                      size="base"
+                      weight="medium"
+                      tone="secondary"
+                      style={styles.emptyText}
+                    >
+                      {config.emptyStateMessage}
+                    </Text>
+                    <Text size="sm" tone="tertiary" align="center">
+                      {config.emptyStateSubtext}
+                    </Text>
+                  </View>
+                ) : (
+                  <>
+                    {/* Render suggestion sections in priority order */}
+                    {config.suggestionGroups
+                      .sort((a, b) => a.priority - b.priority)
+                      .map(renderSuggestionSection)}
+                  </>
+                )}
+              </>
+            )}
+          </BottomSheetScrollView>
+        )}
+      </View>
+    </BottomSheetModal>
   );
 }
 

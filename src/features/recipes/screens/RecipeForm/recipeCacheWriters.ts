@@ -63,22 +63,22 @@ function buildOptimisticRecipeNode(
   id: string,
   input: CreateRecipeInput,
 ): MyRecipesEdgeNode {
-  const prep = input.prepTimeMinutes ?? null;
-  const cook = input.cookTimeMinutes ?? null;
+  const prep = input.timing?.prepTimeMinutes ?? null;
+  const cook = input.timing?.cookTimeMinutes ?? null;
   return {
     __typename: 'Recipe',
     id,
     name: input.name,
     description: input.description ?? null,
-    imageUrl: input.imageUrl ?? null,
-    servings: input.servings ?? 4,
+    imageUrl: input.media?.imageUrl ?? null,
+    servings: input.metadata?.servings ?? 4,
     prepTimeMinutes: prep,
     cookTimeMinutes: cook,
     totalTimeMinutes: totalTime(prep, cook),
     // The list node selects these non-null; mirror the server-side defaults
     // when the form leaves them unset.
-    category: input.category ?? RecipeCategory.MainCourse,
-    difficulty: input.difficulty ?? Difficulty.Easy,
+    category: input.metadata?.category ?? RecipeCategory.MainCourse,
+    difficulty: input.metadata?.difficulty ?? Difficulty.Easy,
     savedDetails: null,
   };
 }
@@ -95,15 +95,15 @@ function buildOptimisticRecipeEntity(
   input: CreateRecipeInput,
   createdBy: RecipeCreatedBy,
 ): UseRecipeData_RecipeFragment {
-  const prep = input.prepTimeMinutes ?? null;
-  const cook = input.cookTimeMinutes ?? null;
+  const prep = input.timing?.prepTimeMinutes ?? null;
+  const cook = input.timing?.cookTimeMinutes ?? null;
   return {
     __typename: 'Recipe',
     id,
     name: input.name,
     description: input.description ?? null,
-    imageUrl: input.imageUrl ?? null,
-    servings: input.servings ?? 4,
+    imageUrl: input.media?.imageUrl ?? null,
+    servings: input.metadata?.servings ?? 4,
     totalTimeMinutes: totalTime(prep, cook),
     source: null,
     sourceUrl: null,

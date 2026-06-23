@@ -29,6 +29,9 @@ describe('PurchaseHistoryScreen', () => {
       id: 'p1',
       purchaseDate: '2026-01-15T10:00:00Z',
       quantity: 2,
+      unitPrice: 2.5,
+      totalPrice: 5,
+      currencySymbol: '$',
       unitSymbol: 'kg',
       user: {
         id: 'u1',
@@ -56,6 +59,39 @@ describe('PurchaseHistoryScreen', () => {
     );
     expect(screen.getByText('2 kg')).toBeTruthy();
     expect(screen.getByText('Alice')).toBeTruthy();
+  });
+
+  it('renders the per-purchase price and spending summary', () => {
+    render(
+      <PurchaseHistoryScreen
+        route={{ params: { itemId: '1', itemName: 'Milk', purchases } }}
+      />,
+    );
+    // Per-row total price and the header total/average (one priced purchase, so
+    // total and average are both $5.00).
+    expect(screen.getAllByText('$5.00').length).toBeGreaterThan(0);
+  });
+
+  it('omits price when a purchase has no recorded amount', () => {
+    const unpriced = [
+      {
+        id: 'p2',
+        purchaseDate: '2026-02-01T10:00:00Z',
+        quantity: 1,
+        unitPrice: 0,
+        totalPrice: 0,
+        currencySymbol: '$',
+        unitSymbol: 'kg',
+      },
+    ];
+    render(
+      <PurchaseHistoryScreen
+        route={{
+          params: { itemId: '1', itemName: 'Milk', purchases: unpriced },
+        }}
+      />,
+    );
+    expect(screen.queryByText('Price:')).toBeNull();
   });
 
   it('renders empty state when no purchases', () => {

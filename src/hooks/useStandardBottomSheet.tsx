@@ -160,12 +160,22 @@ export function useStandardBottomSheet({
     visibleRef.current = visible;
   });
 
-  // Auto present/dismiss when visible is provided
+  // Auto present/dismiss when visible is provided.
+  //
+  // `hasPresentedRef` guards against dismissing a sheet that was never
+  // presented. In @gorhom/bottom-sheet 5.2.14, calling `dismiss()` on a modal
+  // still in its INITIAL status flips it to DISMISSING — and `handlePortalRender`
+  // then skips rendering any DISMISSING modal, so every later `present()`
+  // silently no-ops. Always-mounted sheets (rendered with `visible={false}` at
+  // start) would otherwise be permanently stuck closed. Mount-on-open sheets
+  // dodged it only because they never hit the initial dismiss.
+  const hasPresentedRef = useRef(false);
   useEffect(() => {
     if (visible === undefined) return;
     if (visible) {
+      hasPresentedRef.current = true;
       ref.current?.present();
-    } else {
+    } else if (hasPresentedRef.current) {
       ref.current?.dismiss();
     }
   }, [visible]);

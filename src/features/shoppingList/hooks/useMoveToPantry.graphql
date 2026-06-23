@@ -1,7 +1,12 @@
 # Narrow fragment for MoveShoppingItemToPantry's response payload.
-# Creates a new PantryItem in the destination pantry's connection;
-# the new entity needs full display-cell hydration so subsequent reads
-# (PantryItemCard, PantryItemDetail) find the fields they expect.
+# The returned PantryItem is either a freshly created entry OR — when the
+# item already exists in the destination pantry — the existing entry,
+# restocked (quantity combined, an extra batch added; item-level costPerUnit
+# unchanged), matching the canonical restockPantryItem. Either way the entity
+# needs full display-cell hydration so subsequent reads (PantryItemCard,
+# PantryItemDetail) find the fields they expect, and the restock-mutated
+# fields (quantity, activeBatchCount, earliestBatchExpiration, version) must be
+# selected so Apollo normalizes them onto the existing cached entity.
 fragment useMoveToPantry_pantryItem on PantryItem {
   id
   pantryId

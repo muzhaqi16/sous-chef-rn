@@ -25,6 +25,7 @@ fragment PantryItemForm_pantryItem on PantryItem {
   minQuantity
   restockQuantity
   storageState
+  condition
   storageNotes
   expiresAt
   netWeight

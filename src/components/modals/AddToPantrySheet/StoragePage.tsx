@@ -5,7 +5,15 @@ import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
 import { FormInput } from '#components/molecules/FormInput';
 import { StorageLocationAutocompleteField } from '#components/molecules/AutocompleteField/StorageLocationAutocompleteField';
-import { type StorageLocation } from '#/graphql/generated/schemaTypes';
+import { SegmentedControl } from '#components/molecules/SegmentedControl';
+import {
+  ItemCondition,
+  type StorageLocation,
+} from '#/graphql/generated/schemaTypes';
+import {
+  ITEM_CONDITION_OPTIONS,
+  conditionLabelKey,
+} from '#/utils/items/itemEnumLabels';
 
 export interface StoragePageProps {
   storageLocation: string;
@@ -16,6 +24,8 @@ export interface StoragePageProps {
     location: StorageLocation | null,
   ) => void;
   handleAddNewLocation: (name: string) => void;
+  condition: ItemCondition;
+  setCondition: (value: ItemCondition) => void;
   tags: string;
   setTags: (value: string) => void;
   storageNotes: string;
@@ -29,6 +39,8 @@ export const StoragePage: React.FC<StoragePageProps> = ({
   storageLocations,
   handleStorageLocationSelected,
   handleAddNewLocation,
+  condition,
+  setCondition,
   tags,
   setTags,
   storageNotes,
@@ -36,6 +48,8 @@ export const StoragePage: React.FC<StoragePageProps> = ({
   insets,
 }) => {
   const { t } = useTranslation();
+  const formatConditionLabel = (value: ItemCondition) =>
+    t(conditionLabelKey(value));
   return (
     <BottomSheetKeyboardAwareScrollView
       key="storage"
@@ -61,6 +75,15 @@ export const StoragePage: React.FC<StoragePageProps> = ({
           onAddNewLocation={handleAddNewLocation}
         />
       </View>
+
+      {/* Condition */}
+      <SegmentedControl
+        label={t('addToPantry.condition')}
+        options={ITEM_CONDITION_OPTIONS}
+        value={condition}
+        onChange={setCondition}
+        formatLabel={formatConditionLabel}
+      />
 
       {/* Tags */}
       <FormInput

@@ -78,11 +78,19 @@ export function useAddShoppingItem({
     // Local-first: mint the permanent cuid id (the row's real PK).
     const id = generateEntityId();
 
+    // The manual-add form sends a raw FlexibleQuantity string; quick-add sends a
+    // number. Prefer the string when present (the server parses it). The
+    // optimistic entity still needs a numeric quantity — parseFloat takes the
+    // leading number ("1/3" → 1), matching the screen form's optimistic value.
+    const optimisticQuantity = input.quantityInput
+      ? parseFloat(input.quantityInput) || 1
+      : input.quantity ?? 1;
+
     const createInput = {
       id,
       shoppingListId: listId,
       itemName: input.itemName,
-      quantity: input.quantity ?? 1,
+      quantity: input.quantityInput ?? input.quantity ?? 1,
       ...((input.unitName || input.unitId) && {
         unit: {
           ...(input.unitId && { unitId: input.unitId }),
@@ -91,12 +99,33 @@ export function useAddShoppingItem({
       }),
       ...(input.notes && { notes: input.notes }),
       ...(input.category && { category: input.category }),
+      ...(input.estimatedPrice && {
+        pricing: { estimatedPrice: parseFloat(input.estimatedPrice) },
+      }),
+      ...((input.brandName || input.brandId) && {
+        brand: {
+          ...(input.brandId && { brandId: input.brandId }),
+          ...(input.brandName && { brandName: input.brandName }),
+        },
+      }),
+      // Net weight is all-or-nothing — only send when both value and unit are set.
+      ...(input.netWeight !== undefined &&
+        input.netWeightUnitId && {
+          netWeight: {
+            netWeight: input.netWeight,
+            netWeightUnitId: input.netWeightUnitId,
+          },
+        }),
+      ...(input.priority !== undefined && { priority: input.priority }),
+      ...(input.preferredStoreId && {
+        storePrefs: { preferredStoreId: input.preferredStoreId },
+      }),
     };
 
     const optimisticItem = createOptimisticShoppingListItem(id, {
       itemName: input.itemName ?? '',
-      quantity: input.quantity ?? 1,
-      quantityInput: null,
+      quantity: optimisticQuantity,
+      quantityInput: input.quantityInput ?? null,
       unitName: input.unitName ?? null,
       category: input.category ?? null,
       itemId: undefined,
