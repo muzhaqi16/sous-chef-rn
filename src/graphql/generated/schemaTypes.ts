@@ -1903,7 +1903,7 @@ export type CreatePantryItemPayload = {
   pantryItem: PantryItem;
 };
 
-export type CreatePantryItemResult = ConflictError | CreatePantryItemPayload | ForbiddenError | NotFoundError | ValidationError;
+export type CreatePantryItemResult = ConflictError | CreatePantryItemPayload | DuplicatePantryItemError | ForbiddenError | NotFoundError | ValidationError;
 
 export type CreatePantryItemUsagePayload = {
   __typename: 'CreatePantryItemUsagePayload';
@@ -3061,9 +3061,9 @@ export type DietaryRestriction = {
 
 /** Reusable sub-input for dietary tags */
 export type DietaryTagsInput = {
-  diets?: InputMaybe<Array<Scalars['String']['input']>>;
-  healthGoals?: InputMaybe<Array<Scalars['String']['input']>>;
-  intolerances?: InputMaybe<Array<Scalars['String']['input']>>;
+  diets?: InputMaybe<Array<Diet>>;
+  healthGoals?: InputMaybe<Array<HealthGoal>>;
+  intolerances?: InputMaybe<Array<Intolerance>>;
 };
 
 export enum Difficulty {
@@ -3136,6 +3136,22 @@ export type DuplicateMealPlanPayload = {
 
 export type DuplicateMealPlanResult = ConflictError | DuplicateMealPlanPayload | ForbiddenError | NotFoundError | ValidationError;
 
+/**
+ * The pantry already has an active stack of this catalog item. Returned by
+ * `createPantryItem` (unless `forceAdd` is set) so the client can route the
+ * user to restock the existing item instead of creating a duplicate. The
+ * `code` is `PANTRY_ITEM_ALREADY_EXISTS`.
+ */
+export type DuplicatePantryItemError = Error & {
+  __typename: 'DuplicatePantryItemError';
+  code: ErrorCode;
+  /** Active pantry items already stocking this catalog item — offer a one-tap restock. */
+  existingPantryItemIds: Array<Scalars['ID']['output']>;
+  message: Scalars['String']['output'];
+  /** Suggested client action, e.g. `RESTOCK_EXISTING`. */
+  suggestion: Maybe<Scalars['String']['output']>;
+};
+
 export type DuplicateTemplateInput = {
   id: Scalars['ID']['input'];
   newName: Scalars['String']['input'];
@@ -3199,6 +3215,7 @@ export enum ErrorCode {
   HomeAccessDenied = 'HOME_ACCESS_DENIED',
   InternalError = 'INTERNAL_ERROR',
   NotFound = 'NOT_FOUND',
+  PantryItemAlreadyExists = 'PANTRY_ITEM_ALREADY_EXISTS',
   RateLimited = 'RATE_LIMITED',
   ResourceAlreadyExists = 'RESOURCE_ALREADY_EXISTS',
   UnitInvalid = 'UNIT_INVALID',

@@ -439,6 +439,7 @@
     "CreatePantryItemResult": [
       "ConflictError",
       "CreatePantryItemPayload",
+      "DuplicatePantryItemError",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
@@ -797,6 +798,7 @@
     ],
     "Error": [
       "ConflictError",
+      "DuplicatePantryItemError",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
