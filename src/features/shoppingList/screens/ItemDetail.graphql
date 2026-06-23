@@ -59,6 +59,8 @@ fragment ItemDetail_shoppingListItem on ShoppingListItem {
         purchaseDate
         quantity
         unitPrice
+        totalPrice
+        currencySymbol
         unitSymbol
       }
     }

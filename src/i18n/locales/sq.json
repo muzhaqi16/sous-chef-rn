@@ -1500,10 +1500,13 @@
   "purchaseHistory": {
     "title": "Historiku i blerjeve",
     "quantityLabel": "Sasia:",
+    "priceLabel": "Çmimi:",
     "purchasedBy": "Blerë nga:",
     "totalPurchases": "Blerje gjithsej:",
     "emptyTitle": "Pa historik blerjeje",
-    "emptySubtitle": "Shëno këtë artikull si të blerë për të nisur ndjekjen e historikut"
+    "emptySubtitle": "Shëno këtë artikull si të blerë për të nisur ndjekjen e historikut",
+    "totalSpent": "Shpenzuar gjithsej:",
+    "averagePrice": "Mesatare / blerje:"
   },
   "numberInputModal": {
     "required": "Kjo fushë është e detyrueshme",

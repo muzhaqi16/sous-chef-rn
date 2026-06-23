@@ -1500,10 +1500,13 @@
   "purchaseHistory": {
     "title": "Purchase History",
     "quantityLabel": "Quantity:",
+    "priceLabel": "Price:",
     "purchasedBy": "Purchased by:",
     "totalPurchases": "Total Purchases:",
     "emptyTitle": "No purchase history",
-    "emptySubtitle": "Mark this item as purchased to start tracking history"
+    "emptySubtitle": "Mark this item as purchased to start tracking history",
+    "totalSpent": "Total Spent:",
+    "averagePrice": "Avg / Purchase:"
   },
   "numberInputModal": {
     "required": "This field is required",

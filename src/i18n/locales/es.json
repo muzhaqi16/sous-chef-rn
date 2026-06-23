@@ -1500,10 +1500,13 @@
   "purchaseHistory": {
     "title": "Historial de compras",
     "quantityLabel": "Cantidad:",
+    "priceLabel": "Precio:",
     "purchasedBy": "Comprado por:",
     "totalPurchases": "Total de compras:",
     "emptyTitle": "Sin historial de compras",
-    "emptySubtitle": "Marca este artículo como comprado para empezar a registrar el historial"
+    "emptySubtitle": "Marca este artículo como comprado para empezar a registrar el historial",
+    "totalSpent": "Total gastado:",
+    "averagePrice": "Prom. / compra:"
   },
   "numberInputModal": {
     "required": "Este campo es obligatorio",

@@ -1500,10 +1500,13 @@
   "purchaseHistory": {
     "title": "Cronologia acquisti",
     "quantityLabel": "Quantità:",
+    "priceLabel": "Prezzo:",
     "purchasedBy": "Acquistato da:",
     "totalPurchases": "Acquisti totali:",
     "emptyTitle": "Nessuna cronologia acquisti",
-    "emptySubtitle": "Segna questo articolo come acquistato per iniziare a tracciare la cronologia"
+    "emptySubtitle": "Segna questo articolo come acquistato per iniziare a tracciare la cronologia",
+    "totalSpent": "Totale speso:",
+    "averagePrice": "Media / acquisto:"
   },
   "numberInputModal": {
     "required": "Questo campo è obbligatorio",
