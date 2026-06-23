@@ -23,10 +23,7 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import { useSuggestionDismissal } from '#hooks/items/useSuggestionDismissal';
 import { extractNodes } from '#/utils/connectionUtils';
-import {
-  isPantryItemDuplicateError,
-  getPantryItemDuplicateInfo,
-} from '#/utils/errors/pantryItemDuplicate';
+import { getPantryItemDuplicateFromResult } from '#/utils/errors/pantryItemDuplicate';
 import { addToPantryItemsCache } from '#hooks/home/pantry/utils';
 import { buildOptimisticPantryItem } from '#hooks/home/pantry/buildOptimisticPantryItem';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
@@ -231,29 +228,34 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     // 4. Fire mutation without await (cache update handled by mutation's update callback)
     createPantryItem({ variables, context: { localFirst: true } })
       .then(result => {
-        if (result.error && isPantryItemDuplicateError(result.error)) {
-          const duplicateInfo = getPantryItemDuplicateInfo(result.error);
-          if (duplicateInfo) {
-            // Already in the pantry → the server restocks the existing row, not
-            // our optimistic cuid. Evict the phantom optimistic item.
-            safeEvict(client.cache, 'PantryItem', id);
-            // Auto-restock by 1 for quick-add
-            restockPantryItem({
-              variables: {
-                input: {
-                  id: duplicateInfo.existingPantryItemId,
-                  quantity: 1,
-                },
+        // The duplicate arrives as a typed DuplicatePantryItemError member in
+        // `data` (or the legacy PANTRY_ITEM_ALREADY_EXISTS error); check both,
+        // else a duplicate would fall through and leave the phantom optimistic
+        // item while reporting a false success.
+        const duplicateInfo = getPantryItemDuplicateFromResult(
+          result.data?.createPantryItem,
+          result.error,
+        );
+        if (duplicateInfo) {
+          // Already in the pantry → the server restocks the existing row, not
+          // our optimistic cuid. Evict the phantom optimistic item.
+          safeEvict(client.cache, 'PantryItem', id);
+          // Auto-restock by 1 for quick-add
+          restockPantryItem({
+            variables: {
+              input: {
+                id: duplicateInfo.existingPantryItemId,
+                quantity: 1,
               },
-              // Local-first: replay-safe via syncRestockPantryItem (operationId
-              // dedups the restock ledger row if the request is queued).
-              context: { localFirst: true, operationId: generateEntityId() },
-            })
-              .then(() => onItemAdded?.())
-              .catch(() => toastService.error(t('addToPantry.restockFailed')))
-              .finally(() => pendingItemIds.current.delete(item.id));
-            return;
-          }
+            },
+            // Local-first: replay-safe via syncRestockPantryItem (operationId
+            // dedups the restock ledger row if the request is queued).
+            context: { localFirst: true, operationId: generateEntityId() },
+          })
+            .then(() => onItemAdded?.())
+            .catch(() => toastService.error(t('addToPantry.restockFailed')))
+            .finally(() => pendingItemIds.current.delete(item.id));
+          return;
         }
         pendingItemIds.current.delete(item.id);
         if (result.error) {
@@ -319,29 +321,34 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     // 4. Fire mutation without await (cache update handled by mutation's update callback)
     createPantryItem({ variables, context: { localFirst: true } })
       .then(result => {
-        if (result.error && isPantryItemDuplicateError(result.error)) {
-          const duplicateInfo = getPantryItemDuplicateInfo(result.error);
-          if (duplicateInfo) {
-            // Already in the pantry → the server restocks the existing row, not
-            // our optimistic cuid. Evict the phantom optimistic item.
-            safeEvict(client.cache, 'PantryItem', id);
-            // Auto-restock by 1 for quick-add
-            restockPantryItem({
-              variables: {
-                input: {
-                  id: duplicateInfo.existingPantryItemId,
-                  quantity: 1,
-                },
+        // The duplicate arrives as a typed DuplicatePantryItemError member in
+        // `data` (or the legacy PANTRY_ITEM_ALREADY_EXISTS error); check both,
+        // else a duplicate would fall through and leave the phantom optimistic
+        // item while reporting a false success.
+        const duplicateInfo = getPantryItemDuplicateFromResult(
+          result.data?.createPantryItem,
+          result.error,
+        );
+        if (duplicateInfo) {
+          // Already in the pantry → the server restocks the existing row, not
+          // our optimistic cuid. Evict the phantom optimistic item.
+          safeEvict(client.cache, 'PantryItem', id);
+          // Auto-restock by 1 for quick-add
+          restockPantryItem({
+            variables: {
+              input: {
+                id: duplicateInfo.existingPantryItemId,
+                quantity: 1,
               },
-              // Local-first: replay-safe via syncRestockPantryItem (operationId
-              // dedups the restock ledger row if the request is queued).
-              context: { localFirst: true, operationId: generateEntityId() },
-            })
-              .then(() => onItemAdded?.())
-              .catch(() => toastService.error(t('addToPantry.restockFailed')))
-              .finally(() => pendingItemIds.current.delete(pantryItem.itemId));
-            return;
-          }
+            },
+            // Local-first: replay-safe via syncRestockPantryItem (operationId
+            // dedups the restock ledger row if the request is queued).
+            context: { localFirst: true, operationId: generateEntityId() },
+          })
+            .then(() => onItemAdded?.())
+            .catch(() => toastService.error(t('addToPantry.restockFailed')))
+            .finally(() => pendingItemIds.current.delete(pantryItem.itemId));
+          return;
         }
         pendingItemIds.current.delete(pantryItem.itemId);
         if (result.error) {

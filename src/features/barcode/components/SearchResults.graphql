@@ -62,6 +62,13 @@ mutation BarcodeCreatePantryItem($input: CreatePantryItemInput!) {
     ... on ValidationError {
       field
     }
+    # The server reports a re-add of an item already stocked as this typed
+    # union member (not a top-level error); selecting the ids lets the barcode
+    # add route the user to a one-tap restock.
+    ... on DuplicatePantryItemError {
+      existingPantryItemIds
+      suggestion
+    }
   }
 }
 

@@ -30,14 +30,31 @@ jest.mock('#/utils/fractionUtils', () => ({
   }),
 }));
 
-jest.mock('#/utils/errors/pantryItemDuplicate', () => ({
-  // Keep the real `promptPantryDuplicate` so it calls the (mocked) alertService
-  // with the standard duplicate copy the tests assert on; only the detection
-  // helpers are stubbed per-test.
-  ...jest.requireActual('#/utils/errors/pantryItemDuplicate'),
-  isPantryItemDuplicateError: jest.fn().mockReturnValue(false),
-  getPantryItemDuplicateInfo: jest.fn().mockReturnValue(null),
-}));
+jest.mock('#/utils/errors/pantryItemDuplicate', () => {
+  const actual = jest.requireActual('#/utils/errors/pantryItemDuplicate');
+  const isDup = jest.fn().mockReturnValue(false);
+  const getInfo = jest.fn().mockReturnValue(null);
+  return {
+    // Keep the real `promptPantryDuplicate` so it calls the (mocked)
+    // alertService with the standard duplicate copy the tests assert on; only
+    // the detection helpers are stubbed per-test.
+    ...actual,
+    isPantryItemDuplicateError: isDup,
+    getPantryItemDuplicateInfo: getInfo,
+    // Delegates to the stubbed detectors (mirrors the real impl) so the
+    // per-test override of isPantryItemDuplicateError still drives handling.
+    getPantryItemDuplicateFromResult: jest.fn(
+      (payload: { __typename?: string } | null | undefined, error: unknown) => {
+        if (payload?.__typename === 'DuplicatePantryItemError') {
+          const info = actual.getPantryItemDuplicateInfoFromPayload(payload);
+          if (info) return info;
+        }
+        if (error != null && isDup(error)) return getInfo(error);
+        return null;
+      },
+    ),
+  };
+});
 
 jest.mock('#/utils/compilerSafeWrappers');
 

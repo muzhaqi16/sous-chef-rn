@@ -1,6 +1,7 @@
 import {
   isPantryItemDuplicateError,
   getPantryItemDuplicateInfo,
+  getPantryItemDuplicateFromResult,
 } from '../pantryItemDuplicate';
 
 const CODE = 'PANTRY_ITEM_ALREADY_EXISTS';
@@ -114,6 +115,51 @@ describe('pantryItemDuplicate', () => {
 
     it('returns null for undefined input', () => {
       expect(getPantryItemDuplicateInfo(undefined)).toBeNull();
+    });
+  });
+
+  describe('getPantryItemDuplicateFromResult', () => {
+    it('reads the typed DuplicatePantryItemError union member from data', () => {
+      const info = getPantryItemDuplicateFromResult(
+        {
+          __typename: 'DuplicatePantryItemError',
+          existingPantryItemIds: ['existing-1', 'existing-2'],
+        },
+        undefined,
+      );
+      expect(info).toEqual({
+        existingPantryItemId: 'existing-1',
+        existingPantryItemIds: ['existing-1', 'existing-2'],
+      });
+    });
+
+    it('falls back to the legacy PANTRY_ITEM_ALREADY_EXISTS GraphQL error', () => {
+      const info = getPantryItemDuplicateFromResult(
+        { __typename: 'CreatePantryItemPayload' },
+        makeCombinedError(CODE, { existingPantryItemId: 'item-1' }),
+      );
+      expect(info).toEqual({
+        existingPantryItemId: 'item-1',
+        existingPantryItemIds: ['item-1'],
+      });
+    });
+
+    it('returns null for a successful payload with no error', () => {
+      expect(
+        getPantryItemDuplicateFromResult(
+          { __typename: 'CreatePantryItemPayload' },
+          undefined,
+        ),
+      ).toBeNull();
+    });
+
+    it('returns null when the duplicate member carries no ids', () => {
+      expect(
+        getPantryItemDuplicateFromResult(
+          { __typename: 'DuplicatePantryItemError', existingPantryItemIds: [] },
+          undefined,
+        ),
+      ).toBeNull();
     });
   });
 });

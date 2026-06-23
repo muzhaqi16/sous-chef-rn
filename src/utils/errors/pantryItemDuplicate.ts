@@ -122,6 +122,40 @@ export function getPantryItemDuplicateInfoFromPayload(
 }
 
 /**
+ * Resolve duplicate info from a `createPantryItem` mutation result, checking
+ * BOTH ways the server can report a duplicate:
+ *
+ * 1. As a typed `DuplicatePantryItemError` member of the result union (in
+ *    `data.createPantryItem`) — the current contract.
+ * 2. As a GraphQL error carrying the `PANTRY_ITEM_ALREADY_EXISTS` code (in
+ *    `result.error`) — the legacy shape.
+ *
+ * Every add surface should call this so a duplicate routes to the restock /
+ * add-anyway prompt regardless of which shape the server uses. Returns null
+ * when the result isn't a duplicate.
+ *
+ * The `payload` param is typed loosely (`{ __typename?, existingPantryItemIds? }`)
+ * so every operation's generated `createPantryItem` union — even ones whose
+ * `DuplicatePantryItemError` selection is minimal — is structurally assignable.
+ */
+export function getPantryItemDuplicateFromResult(
+  payload:
+    | { __typename?: string; existingPantryItemIds?: readonly string[] | null }
+    | null
+    | undefined,
+  error: unknown,
+): PantryItemDuplicateInfo | null {
+  if (payload?.__typename === 'DuplicatePantryItemError') {
+    const info = getPantryItemDuplicateInfoFromPayload(payload);
+    if (info) return info;
+  }
+  if (error != null && isPantryItemDuplicateError(error)) {
+    return getPantryItemDuplicateInfo(error);
+  }
+  return null;
+}
+
+/**
  * Standard "Item Already in Pantry" recovery prompt shown when a create is
  * refused as a duplicate. The title, message, and Cancel / Restock / Add Anyway
  * buttons are identical across every add surface (create form, multi-page
