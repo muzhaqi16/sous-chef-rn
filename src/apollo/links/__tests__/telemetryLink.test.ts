@@ -430,6 +430,48 @@ describe('createTelemetryLink', () => {
         },
       });
     });
+
+    it('downgrades expected subscription socket drops to warn', done => {
+      mockedEnvironment.shouldEnableAnalytics.mockReturnValue(false);
+      mockedEnvironment.isDevelopment.mockReturnValue(true);
+
+      const link = createTelemetryLink();
+      const operation = createMockOperation(
+        'NotificationEvents',
+        'subscription',
+      );
+      const socketError = new Error('Socket closed');
+
+      const forward: MockForward = jest.fn(
+        (): Observable<ApolloLink.Result> =>
+          new Observable(observer => {
+            observer.error(socketError);
+          }),
+      );
+
+      const result = runRequest(link, operation, forward);
+      result.subscribe({
+        error: () => {
+          expect(Telemetry.warn).toHaveBeenCalledWith(
+            expect.stringContaining(
+              'Subscription NotificationEvents disconnected',
+            ),
+            expect.objectContaining({
+              operation_name: 'NotificationEvents',
+              operation_type: 'subscription',
+              network_error: true,
+            }),
+          );
+          expect(Telemetry.error).not.toHaveBeenCalled();
+          expect(Telemetry.increment).not.toHaveBeenCalledWith(
+            'graphql_network_errors_total',
+            expect.anything(),
+            expect.anything(),
+          );
+          done();
+        },
+      });
+    });
   });
 
   describe('operation types', () => {

@@ -2,6 +2,7 @@ jest.mock('#/services/telemetry', () => ({
   Telemetry: {
     trackError: jest.fn(),
     increment: jest.fn(),
+    warn: jest.fn(),
   },
 }));
 
@@ -462,6 +463,37 @@ describe('errorService', () => {
           operation: 'TelemetryOp',
         }),
       );
+    });
+
+    it('reports expected user errors to Telemetry.warn, not trackError', () => {
+      const error = {
+        errors: [
+          {
+            message: 'User already exists with this email',
+            extensions: { code: 'EMAIL_ALREADY_EXISTS' },
+          },
+        ],
+      };
+      (isQueryComplexityError as jest.Mock).mockReturnValue(false);
+      (isVersionConflictError as jest.Mock).mockReturnValue(false);
+      mockCombinedGraphQLErrorsIs.mockReturnValue(true);
+
+      errorService.parseApolloError(error, { operation: 'Register' });
+
+      expect(Telemetry.warn).toHaveBeenCalledWith(
+        'Validation: EMAIL_ALREADY_EXISTS in Register',
+        expect.objectContaining({
+          component: 'Email',
+          code: 'EMAIL_ALREADY_EXISTS',
+          operation: 'Register',
+        }),
+      );
+      expect(Telemetry.trackError).not.toHaveBeenCalled();
+      expect(logger.warn).toHaveBeenCalledWith(
+        'Validation error in Register:',
+        expect.objectContaining({ code: 'EMAIL_ALREADY_EXISTS' }),
+      );
+      expect(logger.error).not.toHaveBeenCalled();
     });
 
     it('returns ERROR_HANDLER_FAILED when internal parsing throws', () => {

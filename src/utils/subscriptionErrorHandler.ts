@@ -18,6 +18,21 @@ const MAX_RETRIES = 3;
 const INITIAL_BACKOFF_MS = 1000;
 const MAX_BACKOFF_MS = 30000;
 
+/**
+ * True for socket-closed / network-transition errors that auto-recover (app
+ * backgrounding, network change, WebSocket churn). These are expected churn,
+ * not failures — callers downgrade them to warn/debug rather than error.
+ */
+export const isExpectedNetworkTransitionError = (message?: string): boolean => {
+  const m = (message || '').toLowerCase();
+  return (
+    m.includes('socket closed') ||
+    m.includes('network') ||
+    m.includes('connection') ||
+    m.includes('websocket')
+  );
+};
+
 export const handleSubscriptionError = (
   operationName: string,
   error: SubscriptionError,
@@ -25,15 +40,8 @@ export const handleSubscriptionError = (
 ): boolean => {
   const errorMessage = (error.message || '').toLowerCase();
 
-  // Check if this is a network-related error that will auto-recover
-  const isSocketClosed = errorMessage.includes('socket closed');
-  const isNetworkError =
-    errorMessage.includes('network') ||
-    errorMessage.includes('connection') ||
-    errorMessage.includes('websocket');
-
   // Socket closed and network errors are expected during transitions - suppress them
-  if (isSocketClosed || isNetworkError) {
+  if (isExpectedNetworkTransitionError(error.message)) {
     return false;
   }
 
