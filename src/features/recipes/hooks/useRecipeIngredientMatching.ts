@@ -202,7 +202,11 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
     );
     if (!result) return;
 
-    const data = result.data?.confirmRecipeConsumption;
+    const payload = result.data?.confirmRecipeConsumption;
+    const data =
+      payload?.__typename === 'ConfirmRecipeConsumptionPayload'
+        ? payload.result
+        : null;
     if (data?.success) {
       toastService.success(
         data.totalFailed > 0

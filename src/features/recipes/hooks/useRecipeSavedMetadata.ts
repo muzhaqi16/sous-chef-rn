@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useMutation } from '@apollo/client/react';
 import {
   UpdateFavoriteRecipeDocument,
-  UnfavoriteRecipeDocument,
+  RemoveRecipeFromFavoritesDocument,
   MySavedRecipesDocument,
   SavedRecipeFoldersDocument,
   type MySavedRecipesQuery,
@@ -90,53 +90,57 @@ export function useRecipeSavedMetadata({
     },
   );
 
-  const [unfavoriteRecipeMutation] = useMutation(UnfavoriteRecipeDocument, {
-    update: (cache, { data }, { variables }) => {
-      if (
-        data?.unfavoriteRecipe?.__typename !== 'UnfavoriteRecipePayload' ||
-        !variables?.input?.recipeId
-      ) {
-        return;
-      }
+  const [unfavoriteRecipeMutation] = useMutation(
+    RemoveRecipeFromFavoritesDocument,
+    {
+      update: (cache, { data }, { variables }) => {
+        if (
+          data?.removeRecipeFromFavorites?.__typename !==
+            'UnfavoriteRecipePayload' ||
+          !variables?.input?.recipeId
+        ) {
+          return;
+        }
 
-      cache.updateQuery<MySavedRecipesQuery>(
-        { query: MySavedRecipesDocument },
-        existing => {
-          if (!existing?.me) return existing;
-          return {
-            ...existing,
-            me: {
-              ...existing.me,
-              savedRecipesConnection: {
-                ...existing.me.savedRecipesConnection,
-                edges: existing.me.savedRecipesConnection.edges.filter(
-                  edge => edge.node.recipe.id !== variables.input.recipeId,
-                ),
-                totalCount:
-                  (existing.me.savedRecipesConnection.totalCount ?? 0) - 1,
+        cache.updateQuery<MySavedRecipesQuery>(
+          { query: MySavedRecipesDocument },
+          existing => {
+            if (!existing?.me) return existing;
+            return {
+              ...existing,
+              me: {
+                ...existing.me,
+                savedRecipesConnection: {
+                  ...existing.me.savedRecipesConnection,
+                  edges: existing.me.savedRecipesConnection.edges.filter(
+                    edge => edge.node.recipe.id !== variables.input.recipeId,
+                  ),
+                  totalCount:
+                    (existing.me.savedRecipesConnection.totalCount ?? 0) - 1,
+                },
               },
-            },
-          };
-        },
-      );
-
-      cache.modify({
-        id: cache.identify({
-          __typename: 'Recipe',
-          id: variables.input.recipeId,
-        }),
-        fields: {
-          savedDetails() {
-            return null;
+            };
           },
-        },
-      });
+        );
+
+        cache.modify({
+          id: cache.identify({
+            __typename: 'Recipe',
+            id: variables.input.recipeId,
+          }),
+          fields: {
+            savedDetails() {
+              return null;
+            },
+          },
+        });
+      },
+      onError: err => {
+        errorService.reportError(err, { operation: 'unfavoriteRecipe' });
+        toastService.error(err.message || t('recipes.removeFromSavedFailed'));
+      },
     },
-    onError: err => {
-      errorService.reportError(err, { operation: 'unfavoriteRecipe' });
-      toastService.error(err.message || t('recipes.removeFromSavedFailed'));
-    },
-  });
+  );
 
   const handleUpdateFolder = (folder: string | null): Promise<void> => {
     if (!recipeId) return Promise.resolve();

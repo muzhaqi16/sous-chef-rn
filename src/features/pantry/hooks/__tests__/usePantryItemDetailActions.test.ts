@@ -79,8 +79,8 @@ jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => {
         if (
           classifyCreateResult(
             result,
-            'addItemToShoppingList',
-            'AddItemToShoppingListPayload',
+            'addItemsToShoppingList',
+            'AddItemsToShoppingListPayload',
           ) === 'rejected'
         ) {
           revertOptimisticShoppingListItem(cache, listId, id);
@@ -238,12 +238,22 @@ describe('usePantryItemDetailActions', () => {
     it('fires AddItemToShoppingList with correct variables', async () => {
       const addMock = recordMock(AddItemToShoppingListFromPantryItemDocument, {
         data: {
-          addItemToShoppingList: {
-            __typename: 'ShoppingListItemPayload',
-            success: true,
-            message: '',
-            code: 'SUCCESS',
-            shoppingListItem: { __typename: 'ShoppingListItem', id: 'sli-1' },
+          addItemsToShoppingList: {
+            __typename: 'AddItemsToShoppingListPayload',
+            result: {
+              __typename: 'BatchAddShoppingListItemsResponse',
+              results: [
+                {
+                  __typename: 'BatchAddShoppingListItemResult',
+                  index: 0,
+                  clientId: null,
+                  success: true,
+                  quantityIncremented: false,
+                  error: null,
+                  item: { __typename: 'ShoppingListItem', id: 'sli-1' },
+                },
+              ],
+            },
           },
         },
       });
@@ -256,15 +266,19 @@ describe('usePantryItemDetailActions', () => {
 
       expect(addMock.fired).toContainEqual({
         input: {
-          // Client-generated cuid2 so a queued create replays idempotently.
-          id: expect.stringMatching(
-            /^(?:[a-z][0-9a-z]{23,31}|[0-9a-fA-F]{24})$/,
-          ),
           shoppingListId: 'list-1',
-          itemId: 'catalog-1',
-          quantity: 3,
-          unit: { unitId: 'unit-1' },
-          itemName: 'Milk',
+          items: [
+            {
+              // Client-generated cuid2 so a queued create replays idempotently.
+              id: expect.stringMatching(
+                /^(?:[a-z][0-9a-z]{23,31}|[0-9a-fA-F]{24})$/,
+              ),
+              itemId: 'catalog-1',
+              quantity: 3,
+              unit: { unitId: 'unit-1' },
+              itemName: 'Milk',
+            },
+          ],
         },
       });
     });
@@ -272,12 +286,22 @@ describe('usePantryItemDetailActions', () => {
     it('falls back to quantity 1 when item has no quantity', async () => {
       const addMock = recordMock(AddItemToShoppingListFromPantryItemDocument, {
         data: {
-          addItemToShoppingList: {
-            __typename: 'ShoppingListItemPayload',
-            success: true,
-            message: '',
-            code: 'SUCCESS',
-            shoppingListItem: { __typename: 'ShoppingListItem', id: 'sli-1' },
+          addItemsToShoppingList: {
+            __typename: 'AddItemsToShoppingListPayload',
+            result: {
+              __typename: 'BatchAddShoppingListItemsResponse',
+              results: [
+                {
+                  __typename: 'BatchAddShoppingListItemResult',
+                  index: 0,
+                  clientId: null,
+                  success: true,
+                  quantityIncremented: false,
+                  error: null,
+                  item: { __typename: 'ShoppingListItem', id: 'sli-1' },
+                },
+              ],
+            },
           },
         },
       });
@@ -293,7 +317,9 @@ describe('usePantryItemDetailActions', () => {
 
       expect(addMock.fired).toContainEqual(
         expect.objectContaining({
-          input: expect.objectContaining({ quantity: 1 }),
+          input: expect.objectContaining({
+            items: [expect.objectContaining({ quantity: 1 })],
+          }),
         }),
       );
     });
@@ -301,12 +327,22 @@ describe('usePantryItemDetailActions', () => {
     it('omits unit when item.unit is null', async () => {
       const addMock = recordMock(AddItemToShoppingListFromPantryItemDocument, {
         data: {
-          addItemToShoppingList: {
-            __typename: 'ShoppingListItemPayload',
-            success: true,
-            message: '',
-            code: 'SUCCESS',
-            shoppingListItem: { __typename: 'ShoppingListItem', id: 'sli-1' },
+          addItemsToShoppingList: {
+            __typename: 'AddItemsToShoppingListPayload',
+            result: {
+              __typename: 'BatchAddShoppingListItemsResponse',
+              results: [
+                {
+                  __typename: 'BatchAddShoppingListItemResult',
+                  index: 0,
+                  clientId: null,
+                  success: true,
+                  quantityIncremented: false,
+                  error: null,
+                  item: { __typename: 'ShoppingListItem', id: 'sli-1' },
+                },
+              ],
+            },
           },
         },
       });
@@ -322,7 +358,9 @@ describe('usePantryItemDetailActions', () => {
 
       expect(addMock.fired).toContainEqual(
         expect.objectContaining({
-          input: expect.objectContaining({ unit: undefined }),
+          input: expect.objectContaining({
+            items: [expect.objectContaining({ unit: undefined })],
+          }),
         }),
       );
     });

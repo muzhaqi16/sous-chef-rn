@@ -13,6 +13,7 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import { type RecipeForm_RecipeFragment } from './RecipeForm.generated';
 import { stripPriceFromName } from '#/utils/stripPriceFromName';
+import { extractNodes } from '#/utils/connectionUtils';
 
 export interface IngredientFormState {
   id: string; // local temp id
@@ -319,7 +320,7 @@ export function useRecipeForm() {
       diets: recipe.diets ?? [],
       healthGoals: recipe.healthGoals ?? [],
       intolerances: recipe.intolerances ?? [],
-      ingredients: (recipe.ingredients ?? []).map(ing => ({
+      ingredients: extractNodes(recipe.ingredientsConnection).map(ing => ({
         id: generateTempId(),
         name: ing.name,
         quantity: ing.quantity ?? 1,

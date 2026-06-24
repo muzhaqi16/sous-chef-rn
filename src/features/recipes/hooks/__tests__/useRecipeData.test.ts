@@ -70,7 +70,10 @@ function backendRecipeMock(
         rating4Count: 0,
         rating5Count: 0,
         createdBy: null,
-        ingredients: [],
+        ingredientsConnection: {
+          __typename: 'RecipeIngredientConnection',
+          edges: [],
+        },
       },
     },
   });

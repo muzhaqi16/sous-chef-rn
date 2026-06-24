@@ -394,41 +394,50 @@ mutation RemoveCollaborator($input: RemoveShoppingListCollaboratorInput!) {
   }
 }
 
-mutation AddItemToShoppingList($input: CreateShoppingListItemInput!) {
-  addItemToShoppingList(input: $input) {
+mutation AddItemToShoppingList($input: AddItemsToShoppingListInput!) {
+  addItemsToShoppingList(input: $input) {
     __typename
-    ... on AddItemToShoppingListPayload {
-      shoppingListItem {
-        id
-        itemName
-        quantity
-        quantityInput
-        displayFormat
-        purchaseInfo {
-          isPurchased
-        }
-        version
-        updatedAt
-        category
-        notes
-        unitName
-        unit {
-          id
-          name
-          symbol
-        }
-        sortOrder
-        item {
-          id
-          imageUrl
-          images { url kind }
-        }
-        shoppingList {
-          id
-          totalItems
-          completedItems
-          remainingItems
-          completionRate
+    ... on AddItemsToShoppingListPayload {
+      result {
+        results {
+          index
+          clientId
+          success
+          quantityIncremented
+          error
+          item {
+            id
+            itemName
+            quantity
+            quantityInput
+            displayFormat
+            purchaseInfo {
+              isPurchased
+            }
+            version
+            updatedAt
+            category
+            notes
+            unitName
+            unit {
+              id
+              name
+              symbol
+            }
+            sortOrder
+            item {
+              id
+              imageUrl
+              images { url kind }
+            }
+            shoppingList {
+              id
+              totalItems
+              completedItems
+              remainingItems
+              completionRate
+            }
+          }
         }
       }
     }
@@ -635,35 +644,53 @@ mutation MoveShoppingItemToPantry($input: MoveShoppingItemToPantryInput!) {
   }
 }
 
-mutation ClearShoppingListItems($input: ClearShoppingListItemsInput!) {
-  clearShoppingListItems(input: $input) {
-    summary {
-      total
-      successful
-      failed
-      skipped
-      executionTime
+mutation DeleteShoppingListItems($input: ClearShoppingListItemsInput!) {
+  deleteShoppingListItems(input: $input) {
+    __typename
+    ... on ClearShoppingListItemsPayload {
+      result {
+        summary {
+          total
+          successful
+          failed
+          skipped
+          executionTime
+        }
+        clearedItemIds
+      }
     }
-    clearedItemIds
+    ... on Error {
+      code
+      message
+    }
   }
 }
 
 mutation AddItemsToShoppingList($input: AddItemsToShoppingListInput!) {
   addItemsToShoppingList(input: $input) {
-    results {
-      index
-      clientId
-      success
-      item {
-        id
-        ...useRecipeShoppingList_addedItem
+    __typename
+    ... on AddItemsToShoppingListPayload {
+      result {
+        results {
+          index
+          clientId
+          success
+          item {
+            id
+            ...useRecipeShoppingList_addedItem
+          }
+          quantityIncremented
+          error
+        }
+        successCount
+        failedCount
+        incrementedCount
       }
-      quantityIncremented
-      error
     }
-    successCount
-    failedCount
-    incrementedCount
+    ... on Error {
+      code
+      message
+    }
   }
 }
 

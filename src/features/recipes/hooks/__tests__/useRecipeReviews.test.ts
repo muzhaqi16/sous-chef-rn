@@ -177,7 +177,10 @@ const makeBackendRecipe = (
   sourceUrl: null,
   instructions: null,
   savedDetails: null,
-  ingredients: [],
+  ingredientsConnection: {
+    __typename: 'RecipeIngredientConnection',
+    edges: [],
+  },
   totalReviews: 3,
   averageRating: 4.2,
   rating1Count: 0,

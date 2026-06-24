@@ -15,8 +15,8 @@ import { useRef } from 'react';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import type { ApolloClient } from '@apollo/client';
 import {
-  ClearShoppingListItemsDocument,
-  type ClearShoppingListItemsMutationVariables,
+  DeleteShoppingListItemsDocument,
+  type DeleteShoppingListItemsMutationVariables,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
@@ -30,7 +30,7 @@ import {
 // `update`, and the local-first context, so this captures just that subset of
 // the Apollo mutate options.
 type ClearMutationFn = (options: {
-  variables: ClearShoppingListItemsMutationVariables;
+  variables: DeleteShoppingListItemsMutationVariables;
   update?: () => void;
   context?: { localFirst: boolean };
 }) => Promise<unknown>;
@@ -94,8 +94,8 @@ async function executeClearItems(
   // still exist server-side, so refetch to restore them.
   const outcome = classifyCreateResult(
     result as { data?: unknown; error?: unknown },
-    'clearShoppingListItems',
-    'ClearItemsResponse',
+    'deleteShoppingListItems',
+    'ClearShoppingListItemsPayload',
   );
   if (outcome === 'rejected') {
     await refetch();
@@ -128,7 +128,7 @@ export function useClearShoppingListItems({
   const client = useApolloClient();
   const isClearingRef = useRef(false);
 
-  const [clearMutation] = useMutation(ClearShoppingListItemsDocument, {});
+  const [clearMutation] = useMutation(DeleteShoppingListItemsDocument, {});
 
   const clearItems = async (purchased: boolean) => {
     if (!listId || isClearingRef.current) return;

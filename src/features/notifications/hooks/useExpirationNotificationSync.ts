@@ -17,7 +17,7 @@
 import { useMutation } from '@apollo/client/react';
 import {
   MarkExpirationActionDocument,
-  DismissExpirationNotificationDocument,
+  MarkExpirationNotificationDismissedDocument,
   MarkExpirationNotificationAsReadDocument,
 } from '#features/notifications/graphql/expirationNotificationMutations.generated';
 import { ExpirationAction } from '#/graphql/generated/schemaTypes';
@@ -38,7 +38,9 @@ const ACTION_LABELS: Record<ExpirationAction, string> = {
 
 export function useExpirationNotificationSync() {
   const [markActionMutation] = useMutation(MarkExpirationActionDocument);
-  const [dismissMutation] = useMutation(DismissExpirationNotificationDocument);
+  const [dismissMutation] = useMutation(
+    MarkExpirationNotificationDismissedDocument,
+  );
   const [markReadMutation] = useMutation(
     MarkExpirationNotificationAsReadDocument,
   );

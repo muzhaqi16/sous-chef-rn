@@ -1,33 +1,42 @@
 # Local copies of shoppingList operations per the Feature API Boundary Convention.
 # The shoppingList feature's graphql/ folder is internal.
-mutation AddItemToShoppingListFromRecipe($input: CreateShoppingListItemInput!) {
-  addItemToShoppingList(input: $input) {
+mutation AddItemToShoppingListFromRecipe($input: AddItemsToShoppingListInput!) {
+  addItemsToShoppingList(input: $input) {
     __typename
-    ... on AddItemToShoppingListPayload {
-      shoppingListItem {
-        id
-        itemName
-        quantity
-        quantityInput
-        displayFormat
-        purchaseInfo {
-          isPurchased
-        }
-        version
-        updatedAt
-        category
-        notes
-        unitName
-        unit {
-          id
-          name
-          symbol
-        }
-        sortOrder
-        item {
-          id
-          imageUrl
-          images { url kind }
+    ... on AddItemsToShoppingListPayload {
+      result {
+        results {
+          index
+          clientId
+          success
+          quantityIncremented
+          error
+          item {
+            id
+            itemName
+            quantity
+            quantityInput
+            displayFormat
+            purchaseInfo {
+              isPurchased
+            }
+            version
+            updatedAt
+            category
+            notes
+            unitName
+            unit {
+              id
+              name
+              symbol
+            }
+            sortOrder
+            item {
+              id
+              imageUrl
+              images { url kind }
+            }
+          }
         }
       }
     }
@@ -47,20 +56,29 @@ mutation AddItemToShoppingListFromRecipe($input: CreateShoppingListItemInput!) {
 
 mutation AddItemsToShoppingList($input: AddItemsToShoppingListInput!) {
   addItemsToShoppingList(input: $input) {
-    results {
-      index
-      clientId
-      success
-      item {
-        id
-        ...useRecipeShoppingList_addedItem
+    __typename
+    ... on AddItemsToShoppingListPayload {
+      result {
+        results {
+          index
+          clientId
+          success
+          item {
+            id
+            ...useRecipeShoppingList_addedItem
+          }
+          quantityIncremented
+          error
+        }
+        successCount
+        failedCount
+        incrementedCount
       }
-      quantityIncremented
-      error
     }
-    successCount
-    failedCount
-    incrementedCount
+    ... on Error {
+      code
+      message
+    }
   }
 }
 

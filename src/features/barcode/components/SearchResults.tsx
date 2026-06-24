@@ -108,19 +108,22 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
     BarcodeAddItemToShoppingListDocument,
     {
       update: (cache, { data }, { variables }) => {
-        const payload = data?.addItemToShoppingList;
+        const payload = data?.addItemsToShoppingList;
         if (
-          payload?.__typename === 'AddItemToShoppingListPayload' &&
+          payload?.__typename === 'AddItemsToShoppingListPayload' &&
           shoppingListId &&
           variables
         ) {
-          const maskedItem = payload.shoppingListItem;
+          // Single add via the batch mutation — the created/merged row is the
+          // one entry in `results`. Null when that item failed.
+          const maskedItem = payload.result.results[0]?.item;
+          if (!maskedItem) return;
           // Catalog-merge: adopt the server id, evicting the optimistic cuid if
           // the server merged into an existing row.
           adoptServerShoppingListItemId(
             cache,
             maskedItem.id,
-            variables.input.id,
+            variables.input.items[0]?.id,
           );
           const shoppingListItem =
             cache.readFragment<SearchResults_ShoppingListItemFragment>({
@@ -321,25 +324,29 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
           const result = await addToShoppingList({
             variables: {
               input: {
-                id,
                 shoppingListId,
-                itemId: item.id,
-                quantity: 1,
-                itemName: item.name,
-                unit: {
-                  unitId: item.displayUnit?.id ?? item.unitId,
-                  unitName: item.displayUnit?.name,
-                },
-                brand:
-                  item.brandId || item.brandName
-                    ? { brandId: item.brandId, brandName: item.brandName }
-                    : undefined,
-                netWeight: item.netWeight
-                  ? {
-                      netWeight: item.netWeight,
-                      netWeightUnitId: item.displayUnit?.id,
-                    }
-                  : undefined,
+                items: [
+                  {
+                    id,
+                    itemId: item.id,
+                    quantity: 1,
+                    itemName: item.name,
+                    unit: {
+                      unitId: item.displayUnit?.id ?? item.unitId,
+                      unitName: item.displayUnit?.name,
+                    },
+                    brand:
+                      item.brandId || item.brandName
+                        ? { brandId: item.brandId, brandName: item.brandName }
+                        : undefined,
+                    netWeight: item.netWeight
+                      ? {
+                          netWeight: item.netWeight,
+                          netWeightUnitId: item.displayUnit?.id,
+                        }
+                      : undefined,
+                  },
+                ],
               },
             },
             context: { localFirst: true },

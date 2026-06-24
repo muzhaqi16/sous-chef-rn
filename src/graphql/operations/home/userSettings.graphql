@@ -1,5 +1,5 @@
-mutation SetDefaultHome($input: SetDefaultHomeInput!) {
-  setDefaultHome(input: $input) {
+mutation MarkHomeAsDefault($input: SetDefaultHomeInput!) {
+  markHomeAsDefault(input: $input) {
     __typename
     ... on SetDefaultHomePayload {
       settings {

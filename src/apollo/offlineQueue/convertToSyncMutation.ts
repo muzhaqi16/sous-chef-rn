@@ -80,6 +80,10 @@ interface QueuedInput {
   afterItemId?: string;
   beforeItemId?: string;
   item?: Record<string, unknown>;
+  // The single-add ops send the batch AddItemsToShoppingListInput shape
+  // ({ shoppingListId, items: [<one item>] }); buildShoppingItemSync flattens
+  // items[0] so its per-field reads work for both batch-add and flat inputs.
+  items?: QueuedInput[];
   [key: string]: unknown;
 }
 
@@ -252,7 +256,15 @@ const buildDeletePantryItemSync: SyncBuilder = mutation => {
  * produce a ShoppingListItem from the same fields, so they sync through here too.
  */
 const buildShoppingItemSync: SyncBuilder = (mutation, readers) => {
-  const input = getQueuedInput(mutation);
+  const queued = getQueuedInput(mutation);
+  // The single-add ops now send the batch AddItemsToShoppingListInput
+  // ({ shoppingListId, items: [item] }); flatten the one item so the per-field
+  // reads below resolve for both the batch-add ops and the flat
+  // update/quantity/toggle inputs (which have no `items`).
+  const input: QueuedInput =
+    Array.isArray(queued.items) && queued.items.length > 0
+      ? { ...queued.items[0], shoppingListId: queued.shoppingListId }
+      : queued;
   const clientId = getClientId(mutation, input);
 
   const shoppingListId =

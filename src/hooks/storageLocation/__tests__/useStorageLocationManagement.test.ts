@@ -26,7 +26,7 @@ import {
   GetStorageLocationsDocument,
   UpdateStorageLocationDocument,
   DeleteStorageLocationDocument,
-  SetDefaultStorageLocationDocument,
+  MarkStorageLocationAsDefaultDocument,
 } from '#operations/storageLocation/storageLocation.generated';
 import { StorageType } from '#/graphql/generated/schemaTypes';
 import { useStorageLocationManagement } from '../useStorageLocationManagement';
@@ -209,12 +209,12 @@ function buildDeleteLocationMock(
 function buildSetDefaultMock(): MockedResponse {
   return {
     request: {
-      query: SetDefaultStorageLocationDocument,
+      query: MarkStorageLocationAsDefaultDocument,
       variables: () => true,
     },
     result: {
       data: {
-        setDefaultStorageLocation: {
+        markStorageLocationAsDefault: {
           __typename: 'SetDefaultStorageLocationPayload',
           home: null,
           storageLocation: {

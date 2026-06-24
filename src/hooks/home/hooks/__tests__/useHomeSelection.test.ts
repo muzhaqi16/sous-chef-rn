@@ -4,7 +4,7 @@ import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
-import { SetDefaultHomeDocument } from '#operations/home/userSettings.generated';
+import { MarkHomeAsDefaultDocument } from '#operations/home/userSettings.generated';
 import { alertService } from '#/services/alertService';
 import { createMockHomeNode } from '#/test-utils/mockFactories';
 import { useHomeSelection } from '../useHomeSelection';
@@ -69,9 +69,9 @@ beforeEach(() => {
 });
 
 function setDefaultMock(defaultPantryId: string | null = null) {
-  return recordMock(SetDefaultHomeDocument, {
+  return recordMock(MarkHomeAsDefaultDocument, {
     data: {
-      setDefaultHome: {
+      markHomeAsDefault: {
         __typename: 'SetDefaultHomePayload',
         settings: {
           __typename: 'UserSettings',
@@ -86,9 +86,9 @@ function setDefaultMock(defaultPantryId: string | null = null) {
 }
 
 function setDefaultFailureMock() {
-  return recordMock(SetDefaultHomeDocument, {
+  return recordMock(MarkHomeAsDefaultDocument, {
     data: {
-      setDefaultHome: {
+      markHomeAsDefault: {
         __typename: 'NotFoundError',
         message: 'Home not found',
       },
@@ -97,7 +97,7 @@ function setDefaultFailureMock() {
 }
 
 function setDefaultErrorMock() {
-  return recordMock(SetDefaultHomeDocument, {
+  return recordMock(MarkHomeAsDefaultDocument, {
     error: new Error('Network error'),
   });
 }

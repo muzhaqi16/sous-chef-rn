@@ -16,13 +16,16 @@ import {
   UseRecipeData_RecipeFragmentDoc,
   type UseRecipeData_RecipeFragment,
 } from './useRecipeData.generated';
+import { extractNodes } from '#/utils/connectionUtils';
 
 export type MaterializedRecipe = NonNullable<
   ReturnType<typeof readRecipeFragment>
 >;
 
 /** Backend recipe ingredient (from the GraphQL RecipeFragment). */
-type BackendRecipeIngredient = MaterializedRecipe['ingredients'][number];
+type BackendRecipeIngredient = NonNullable<
+  MaterializedRecipe['ingredientsConnection']['edges'][number]['node']
+>;
 
 /**
  * Normalized display ingredient: either a backend `RecipeIngredient` or an
@@ -153,7 +156,7 @@ function buildBackendDisplayData(
     servings: recipe.servings,
     readyInMinutes: recipe.totalTimeMinutes ?? undefined,
     summary: recipe.description ?? undefined,
-    ingredients: recipe.ingredients || [],
+    ingredients: extractNodes(recipe.ingredientsConnection),
     instructions: recipe.instructions,
     sourceName: recipe.source ?? undefined,
     sourceUrl: recipe.sourceUrl ?? undefined,

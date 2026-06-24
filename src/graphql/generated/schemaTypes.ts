@@ -88,18 +88,17 @@ export type AddIngredientResult = {
   wasUpdated: Scalars['Boolean']['output'];
 };
 
-export type AddItemToShoppingListPayload = {
-  __typename: 'AddItemToShoppingListPayload';
-  shoppingList: Maybe<ShoppingList>;
-  shoppingListItem: ShoppingListItem;
-};
-
-export type AddItemToShoppingListResult = AddItemToShoppingListPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
-
 export type AddItemsToShoppingListInput = {
   items: Array<BatchAddShoppingListItemInput>;
   shoppingListId: Scalars['ID']['input'];
 };
+
+export type AddItemsToShoppingListPayload = {
+  __typename: 'AddItemsToShoppingListPayload';
+  result: BatchAddShoppingListItemsResponse;
+};
+
+export type AddItemsToShoppingListResult = AddItemsToShoppingListPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 export type AddLowStockItemsToShoppingListInput = {
   homeId: Scalars['ID']['input'];
@@ -299,6 +298,13 @@ export type AdminDeleteImagesInput = {
    */
   useQueue?: InputMaybe<Scalars['Boolean']['input']>;
 };
+
+export type AdminDeleteImagesPayload = {
+  __typename: 'AdminDeleteImagesPayload';
+  result: ImageDeletionResult;
+};
+
+export type AdminDeleteImagesResult = AdminDeleteImagesPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 export type AdminDeleteItemInput = {
   id: Scalars['ID']['input'];
@@ -516,17 +522,6 @@ export type ApproveItemPayload = {
 };
 
 export type ApproveItemResult = ApproveItemPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
-
-export type ArchiveShoppingListInput = {
-  id: Scalars['ID']['input'];
-};
-
-export type ArchiveShoppingListPayload = {
-  __typename: 'ArchiveShoppingListPayload';
-  shoppingList: ShoppingList;
-};
-
-export type ArchiveShoppingListResult = ArchiveShoppingListPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 /** Sub-input for attribution data */
 export type AttributionInput = {
@@ -945,6 +940,13 @@ export type BulkOperationSummary = {
   total: Scalars['Int']['output'];
 };
 
+export type BulkSendNotificationsPayload = {
+  __typename: 'BulkSendNotificationsPayload';
+  result: BulkNotificationResult;
+};
+
+export type BulkSendNotificationsResult = BulkSendNotificationsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
+
 export type BulkUpdateDevicesInput = {
   ids: Array<Scalars['ID']['input']>;
   update: BulkDeviceUpdateInput;
@@ -1015,6 +1017,13 @@ export type BulkUpdateLoginHistoriesResult = BulkUpdateLoginHistoriesPayload | C
 export type BulkUpsertItemsByExternalSourceInput = {
   items: Array<BatchUpsertItemInput>;
 };
+
+export type BulkUpsertItemsByExternalSourcePayload = {
+  __typename: 'BulkUpsertItemsByExternalSourcePayload';
+  result: BatchUpsertItemsResponse;
+};
+
+export type BulkUpsertItemsByExternalSourceResult = BulkUpsertItemsByExternalSourcePayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 /**
  * Scope for cache control (PUBLIC or PRIVATE)
@@ -1150,8 +1159,15 @@ export type ChangePasswordInput = {
   newPassword: Scalars['String']['input'];
 };
 
-export type ChangePasswordResponse = {
-  __typename: 'ChangePasswordResponse';
+export type ChangePasswordPayload = {
+  __typename: 'ChangePasswordPayload';
+  status: ChangePasswordStatus;
+};
+
+export type ChangePasswordResult = ChangePasswordPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
+
+export type ChangePasswordStatus = {
+  __typename: 'ChangePasswordStatus';
   code: Scalars['String']['output'];
   message: Scalars['String']['output'];
   success: Scalars['Boolean']['output'];
@@ -1212,6 +1228,13 @@ export type ClearShoppingListItemsInput = {
   purchased: Scalars['Boolean']['input'];
   shoppingListId: Scalars['ID']['input'];
 };
+
+export type ClearShoppingListItemsPayload = {
+  __typename: 'ClearShoppingListItemsPayload';
+  result: ClearItemsResponse;
+};
+
+export type ClearShoppingListItemsResult = ClearShoppingListItemsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 /** Order by options for collaborators */
 export type CollaboratorOrderBy = {
@@ -1302,6 +1325,13 @@ export type ConfirmRecipeConsumptionInput = {
   pantryId: Scalars['ID']['input'];
   recipeId: Scalars['ID']['input'];
 };
+
+export type ConfirmRecipeConsumptionPayload = {
+  __typename: 'ConfirmRecipeConsumptionPayload';
+  result: RecipeConsumptionResult;
+};
+
+export type ConfirmRecipeConsumptionResult = ConfirmRecipeConsumptionPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 export type ConfirmedIngredientConsumptionInput = {
   pantryItemId: Scalars['ID']['input'];
@@ -2065,6 +2095,13 @@ export type CreateShoppingListItemsFromRecipeInput = {
   shoppingListId: Scalars['ID']['input'];
 };
 
+export type CreateShoppingListItemsFromRecipePayload = {
+  __typename: 'CreateShoppingListItemsFromRecipePayload';
+  result: AddRecipeToShoppingListResult;
+};
+
+export type CreateShoppingListItemsFromRecipeResult = ConflictError | CreateShoppingListItemsFromRecipePayload | ForbiddenError | NotFoundError | ValidationError;
+
 export type CreateShoppingListPayload = {
   __typename: 'CreateShoppingListPayload';
   shoppingList: ShoppingList;
@@ -2382,6 +2419,19 @@ export type DeleteCurrencyPayload = {
 };
 
 export type DeleteCurrencyResult = ConflictError | DeleteCurrencyPayload | ForbiddenError | NotFoundError | ValidationError;
+
+export type DeleteDeviceInput = {
+  id: Scalars['ID']['input'];
+  /** Hard-delete (admin only). Defaults to a reversible soft delete. */
+  permanent?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
+export type DeleteDevicePayload = {
+  __typename: 'DeleteDevicePayload';
+  device: Device;
+};
+
+export type DeleteDeviceResult = ConflictError | DeleteDevicePayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteExpiredNotificationsPayload = {
   __typename: 'DeleteExpiredNotificationsPayload';
@@ -3558,17 +3608,6 @@ export enum GoalStatus {
   OverTarget = 'OVER_TARGET',
   UnderTarget = 'UNDER_TARGET'
 }
-
-export type HardDeleteDeviceInput = {
-  id: Scalars['ID']['input'];
-};
-
-export type HardDeleteDevicePayload = {
-  __typename: 'HardDeleteDevicePayload';
-  success: Scalars['Boolean']['output'];
-};
-
-export type HardDeleteDeviceResult = ConflictError | ForbiddenError | HardDeleteDevicePayload | NotFoundError | ValidationError;
 
 /** Typed health benefit information (replaces JSON healthBenefits field) */
 export type HealthBenefit = {
@@ -5718,6 +5757,13 @@ export type MovePurchasedItemsToPantryInput = {
   shoppingListId: Scalars['ID']['input'];
 };
 
+export type MovePurchasedItemsToPantryPayload = {
+  __typename: 'MovePurchasedItemsToPantryPayload';
+  result: MovePurchasedItemsResult;
+};
+
+export type MovePurchasedItemsToPantryResult = ConflictError | ForbiddenError | MovePurchasedItemsToPantryPayload | NotFoundError | ValidationError;
+
 /**
  * Input for moving a shopping list item to the pantry.
  * Creates a PantryItem from a ShoppingListItem after purchase.
@@ -5802,14 +5848,14 @@ export type Mutation = {
   acceptHomeInvite: AcceptHomeInviteResult;
   /** Accept an invitation to collaborate on a shopping list. */
   acceptShoppingListInvite: AcceptShoppingListInviteResult;
-  /** Add a single item to a shopping list. */
-  addItemToShoppingList: AddItemToShoppingListResult;
+  /** Add an item to a category. */
+  addItemToCategory: CategorizeItemResult;
   /**
    * Batch add multiple items to a shopping list.
    * More efficient than calling addItemToShoppingList multiple times.
    * Max 50 items per batch.
    */
-  addItemsToShoppingList: BatchAddShoppingListItemsResponse;
+  addItemsToShoppingList: AddItemsToShoppingListResult;
   /**
    * Add all low stock items from a home's pantries to a shopping list.
    * If no shoppingListId is provided, uses the home's default shopping list.
@@ -5820,6 +5866,11 @@ export type Mutation = {
    * Useful for manually adding items when running low.
    */
   addPantryItemToShoppingList: AddPantryItemToShoppingListResultUnion;
+  /**
+   * Add a recipe to the user's favorites (creates a saved recipe with optional
+   * folder/tags/notes).
+   */
+  addRecipeToFavorites: FavoriteRecipeResult;
   /**
    * Add recipe ingredients to shopping list with smart unit handling
    * Checks pantry for available items and only adds deficit
@@ -5837,8 +5888,12 @@ export type Mutation = {
    * The delta (positive or negative) is calculated automatically.
    */
   adjustPantryItemQuantity: AdjustPantryItemQuantityResult;
-  /** Archive a shopping list. */
-  archiveShoppingList: ArchiveShoppingListResult;
+  /**
+   * Adjust the net weight for a dual-tracked pantry item.
+   * Recalculates remainingNetWeight proportionally and derives new quantity.
+   * Use this when the original net weight was entered incorrectly.
+   */
+  adjustPantryItemWeight: CorrectPantryItemWeightResult;
   /** Create multiple items at once */
   bulkCreateItems: BulkCreateItemsResult;
   /** Create multiple purchase records at once. */
@@ -5859,22 +5914,11 @@ export type Mutation = {
    */
   bulkUpdateItems: BulkUpdateItemsResult;
   /** Bulk create or update items by external source (max 50 per batch). */
-  bulkUpsertItemsByExternalSource: BatchUpsertItemsResponse;
+  bulkUpsertItemsByExternalSource: BulkUpsertItemsByExternalSourceResult;
   /** Cancel recurring generation for a shopping list. */
   cancelRecurring: CancelRecurringResult;
-  /** Assign an item to a category. */
-  categorizeItem: CategorizeItemResult;
   /** Change password for authenticated user (requires current password verification) */
-  changePassword: ChangePasswordResponse;
-  /** Clear the reminder from a shopping list. */
-  clearReminder: ClearReminderResult;
-  /**
-   * Clear items from a shopping list based on purchased status.
-   * Soft-deletes all items matching the purchased filter and where deletedAt is not set.
-   * Use purchased=true to clear purchased items, purchased=false to clear unpurchased items.
-   * Returns summary with count of cleared items.
-   */
-  clearShoppingListItems: ClearItemsResponse;
+  changePassword: ChangePasswordResult;
   /** Mark user onboarding as complete and send welcome email */
   completeOnboarding: CompleteOnboardingResult;
   /** Mark a shopping list as completed. */
@@ -5883,7 +5927,7 @@ export type Mutation = {
   confirmItemImageUpload: ConfirmItemImageUploadResult;
   /** Confirm a profile image upload and associate it with the user. */
   confirmProfileImageUpload: ConfirmProfileImageUploadResult;
-  confirmRecipeConsumption: RecipeConsumptionResult;
+  confirmRecipeConsumption: ConfirmRecipeConsumptionResult;
   /**
    * Convert only expired batches to waste within a pantry item.
    * Non-expired batches remain active. Aggregate is recalculated.
@@ -5895,12 +5939,6 @@ export type Mutation = {
    * and sets quantity to 0. Use after expiration job marks item as EXPIRED.
    */
   convertExpiredToWaste: ConvertExpiredToWasteResult;
-  /**
-   * Correct the net weight for a dual-tracked pantry item.
-   * Recalculates remainingNetWeight proportionally and derives new quantity.
-   * Use this when the original net weight was entered incorrectly.
-   */
-  correctPantryItemWeight: CorrectPantryItemWeightResult;
   /** Create a new brand. */
   createBrand: CreateBrandResult;
   /** Create a new category. */
@@ -5945,10 +5983,12 @@ export type Mutation = {
   createRecipe: CreateRecipeResult;
   /** Create a review for a published recipe. */
   createRecipeReview: CreateRecipeReviewResult;
+  /** Create recurring generation for a shopping list. */
+  createRecurringShoppingList: SetupRecurringResult;
   /** Create a new shopping list. */
   createShoppingList: CreateShoppingListResult;
   createShoppingListItemFromRecipeIngredient: CreateShoppingListItemFromRecipeIngredientResult;
-  createShoppingListItemsFromRecipe: AddRecipeToShoppingListResult;
+  createShoppingListItemsFromRecipe: CreateShoppingListItemsFromRecipeResult;
   /**
    * Create a new storage location
    * Validates parent-child relationships and prevents circular references
@@ -5963,6 +6003,8 @@ export type Mutation = {
   createTemplateFromMealPlan: CreateTemplateFromMealPlanResult;
   /** Create a new unit of measurement. */
   createUnit: CreateUnitResult;
+  /** Create a conversion factor between a unit and its base unit. */
+  createUnitConversion: SetupUnitConversionResult;
   /** Decline a home invitation using its token. */
   declineHomeInvite: DeclineHomeInviteResult;
   /** Decline an invitation to collaborate on a shopping list. */
@@ -5979,10 +6021,17 @@ export type Mutation = {
   deleteCookingLog: DeleteCookingLogResult;
   /** Delete a currency. */
   deleteCurrency: DeleteCurrencyResult;
+  /**
+   * Delete a device. Soft-deletes (reversible) by default; pass
+   * permanent: true for a hard delete (admin only).
+   */
+  deleteDevice: DeleteDeviceResult;
   /** Delete an external source mapping. */
   deleteExternalSource: DeleteExternalSourceResult;
   /** Delete a home (owner only). */
   deleteHome: DeleteHomeResult;
+  /** Delete a pending home invitation. */
+  deleteHomeInvite: RevokeHomeInviteResult;
   /** Delete an item (soft delete by default, permanent if specified) */
   deleteItem: DeleteItemResult;
   /** Delete a meal plan. */
@@ -6009,6 +6058,15 @@ export type Mutation = {
   /** Delete a shopping list (owner only). */
   deleteShoppingList: DeleteShoppingListResult;
   /**
+   * Delete items from a shopping list based on purchased status.
+   * Soft-deletes all items matching the purchased filter and where deletedAt is not set.
+   * Use purchased=true to delete purchased items, purchased=false to delete unpurchased items.
+   * Returns summary with count of deleted items.
+   */
+  deleteShoppingListItems: ClearShoppingListItemsResult;
+  /** Delete the reminder from a shopping list. */
+  deleteShoppingListReminder: ClearReminderResult;
+  /**
    * Delete a storage location (soft delete)
    * Fails if location has child locations or items
    * Requires user to have edit permissions in the home
@@ -6019,18 +6077,6 @@ export type Mutation = {
   deleteUnit: DeleteUnitResult;
   /** Delete a user address. */
   deleteUserAddress: DeleteUserAddressResult;
-  /** Dismiss an expiration notification so it no longer appears. */
-  dismissExpirationNotification: DismissExpirationNotificationResult;
-  /**
-   * Hide a catalog item from your pantry or shopping suggestions
-   * ("stop suggesting this"). Non-destructive and reversible via
-   * undismissSuggestion — the item's history and frequency data are preserved.
-   * Affects the RECENTLY_DELETED, FREQUENTLY_ADDED, and POPULAR sources on the
-   * chosen surface; low-stock and expiring-soon alerts are never suppressed.
-   * Dismissals are per-user, so on shared lists/homes only your own
-   * suggestions are affected.
-   */
-  dismissSuggestion: DismissSuggestionResult;
   /** Duplicate a meal plan with all its items, shifted to new dates. */
   duplicateMealPlan: DuplicateMealPlanResult;
   /** Duplicate a template with a new name */
@@ -6041,10 +6087,6 @@ export type Mutation = {
    * already shared keep working. Read the resulting link via home.joinLink.
    */
   enableHomeJoinLink: UpdateHomeResult;
-  /** Save a recipe as a favorite. */
-  favoriteRecipe: FavoriteRecipeResult;
-  /** Flag an item for review */
-  flagItemForReview: FlagItemForReviewResult;
   /** Request a password reset email */
   forgotPassword: ForgotPasswordResult;
   forkRecipe: ForkRecipeResult;
@@ -6052,10 +6094,6 @@ export type Mutation = {
   generateNextRecurringList: GenerateNextRecurringListResult;
   /** Generate a shopping list from all recipe-based items in a meal plan. */
   generateShoppingListFromMealPlan: GenerateShoppingListFromMealPlanResult;
-  /** Increment an item's popularity counter */
-  incrementItemPopularity: IncrementItemPopularityResult;
-  /** Increment the cooked count for a saved recipe. */
-  incrementRecipeCookedCount: IncrementRecipeCookedCountResult;
   /** Send an invitation for a user to join a home. */
   inviteToHome: InviteToHomeResult;
   /** Invite a user to collaborate on a shopping list. */
@@ -6070,11 +6108,6 @@ export type Mutation = {
   linkItemToExternalSource: LinkItemToExternalSourceResult;
   /** Authenticate a user with credentials and return tokens. */
   login: AuthPayload;
-  /**
-   * Manage appeals (submit or review).
-   * Consolidates: submitAppeal, reviewAppeal.
-   */
-  manageAppeal: ManageAppealResult;
   /** Mark all notifications as read for the current user. */
   markAllNotificationsAsRead: MarkAllNotificationsAsReadResult;
   /** Mark a shopping list as a reusable template. */
@@ -6083,20 +6116,53 @@ export type Mutation = {
   markExpirationAction: MarkExpirationActionResult;
   /** Mark an expiration notification as read. */
   markExpirationNotificationAsRead: MarkExpirationNotificationAsReadResult;
+  /** Mark an expiration notification dismissed so it no longer appears. */
+  markExpirationNotificationDismissed: DismissExpirationNotificationResult;
+  /** Mark a home as the default for the current user. */
+  markHomeAsDefault: SetDefaultHomeResult;
+  /** Mark an item for review */
+  markItemForReview: FlagItemForReviewResult;
   /** Mark a notification as read. */
   markNotificationAsRead: MarkNotificationAsReadResult;
   /** Mark a notification as unread. */
   markNotificationUnread: MarkNotificationUnreadResult;
+  /** Mark a pantry as the default for its home. */
+  markPantryAsDefault: SetDefaultPantryResult;
   /** Mark a pantry item as expired. */
   markPantryItemExpired: MarkPantryItemExpiredResult;
   /** Mark recipe as cooked and optionally deduct from pantry */
   markRecipeAsCooked: MarkRecipeAsCookedResult;
+  /** Mark a completed shopping list active again. */
+  markShoppingListActive: UncompleteShoppingListResult;
+  /** Mark a shopping list as the default. */
+  markShoppingListAsDefault: SetDefaultShoppingListResult;
+  /**
+   * Mark a storage location as the default for its home.
+   * Automatically unsets the previous default location.
+   * Requires user to have edit permissions in the home.
+   */
+  markStorageLocationAsDefault: SetDefaultStorageLocationResult;
+  /**
+   * Mark a previously-dismissed item active again so it can appear in your
+   * suggestions on the given surface.
+   */
+  markSuggestionActive: UndismissSuggestionResult;
+  /**
+   * Mark a catalog item dismissed from your pantry or shopping suggestions
+   * ("stop suggesting this"). Non-destructive and reversible via
+   * markSuggestionActive — the item's history and frequency data are preserved.
+   * Affects the RECENTLY_DELETED, FREQUENTLY_ADDED, and POPULAR sources on the
+   * chosen surface; low-stock and expiring-soon alerts are never suppressed.
+   * Dismissals are per-user, so on shared lists/homes only your own
+   * suggestions are affected.
+   */
+  markSuggestionDismissed: DismissSuggestionResult;
   /**
    * Move all purchased items from a shopping list to the home's default pantry.
    * Only available for shopping lists linked to a home.
    * Items without an itemId (custom items not in catalog) will be skipped.
    */
-  movePurchasedItemsToPantry: MovePurchasedItemsResult;
+  movePurchasedItemsToPantry: MovePurchasedItemsToPantryResult;
   /**
    * Move a shopping list item to the pantry after purchase.
    * Creates a PantryItem with full traceability back to the shopping list item.
@@ -6112,6 +6178,8 @@ export type Mutation = {
    * Sets isOpened=true and openedAt to current time on the targeted batch.
    */
   openPantryItemBatch: OpenPantryItemBatchResult;
+  /** Record an increment to an item's popularity counter. */
+  recordItemPopularity: IncrementItemPopularityResult;
   /**
    * Record a login event. Consolidates recordLoginAttempt and createLoginHistory.
    * Use for all login recording — both high-level attempts and direct history creation.
@@ -6121,10 +6189,10 @@ export type Mutation = {
   recordPantryUsage: RecordPantryUsageResult;
   /** Record a price observation for historical tracking */
   recordPriceObservation: RecordPriceObservationResult;
+  /** Record that a saved recipe was cooked (increments the cooked count). */
+  recordRecipeCooked: IncrementRecipeCookedCountResult;
   /** Refresh an expired access token using a refresh token. */
   refresh: RefreshTokenPayload;
-  /** Rotate a home's join code, invalidating any previously shared join link. */
-  regenerateHomeJoinCode: UpdateHomeResult;
   /** Register a new user account and return tokens. */
   register: AuthPayload;
   /**
@@ -6132,12 +6200,16 @@ export type Mutation = {
    * This is the primary way to add a device from mobile apps.
    */
   registerDevice: RegisterDeviceResult;
+  /** Remove an item from a category. */
+  removeItemFromCategory: UncategorizeItemResult;
   /** Remove an item from a shopping list. */
   removeItemFromShoppingList: RemoveItemFromShoppingListResult;
   /** Remove the primary image from an item (deletes from S3) */
   removeItemImage: RemoveItemImageResult;
   /** Remove a member from a home (owner/admin only). */
   removeMember: RemoveMemberResult;
+  /** Remove a recipe from the user's favorites. */
+  removeRecipeFromFavorites: UnfavoriteRecipeResult;
   /** Remove a dietary restriction from the user's profile. */
   removeRestriction: RemoveRestrictionResult;
   /** Remove a collaborator from a shopping list. */
@@ -6146,16 +6218,10 @@ export type Mutation = {
   removeTemplateItem: RemoveTemplateItemResult;
   /** Remove the conversion factor from a unit. */
   removeUnitConversion: RemoveUnitConversionResult;
-  /**
-   * Reorder multiple storage locations
-   * All locations must belong to the same home
-   * Requires user to have edit permissions in the home
-   */
-  reorderStorageLocations: ReorderStorageLocationsResult;
   /** Resend the email verification message to a user. */
   resendVerificationEmail: ResendVerificationEmailResult;
   /** Reset password using token from email */
-  resetPassword: ResetPasswordResponse;
+  resetPassword: ResetPasswordResult;
   /**
    * Restock a pantry item - adds quantity and creates a ledger record.
    * Use this when replenishing an existing pantry item.
@@ -6163,64 +6229,55 @@ export type Mutation = {
   restockPantryItem: RestockPantryItemResult;
   /** Restore a soft-deleted item */
   restoreItem: RestoreItemResult;
-  /** Revoke a pending home invitation. */
-  revokeHomeInvite: RevokeHomeInviteResult;
   /** Send a test notification of a specific type to the current user. */
   sendTestNotification: SendTestNotificationResult;
-  /** Set the default home for the current user. */
-  setDefaultHome: SetDefaultHomeResult;
-  /** Set a pantry as the default for its home. */
-  setDefaultPantry: SetDefaultPantryResult;
-  /** Set a shopping list as the default. */
-  setDefaultShoppingList: SetDefaultShoppingListResult;
-  /**
-   * Set a storage location as the default for its home
-   * Automatically unsets the previous default location
-   * Requires user to have edit permissions in the home
-   */
-  setDefaultStorageLocation: SetDefaultStorageLocationResult;
-  /** Set a reminder for a shopping list. */
-  setReminder: SetReminderResult;
-  /** Set up recurring generation for a shopping list. */
-  setupRecurring: SetupRecurringResult;
-  /** Set up a conversion factor between a unit and its base unit. */
-  setupUnitConversion: SetupUnitConversionResult;
   /** Share a shopping list publicly with an optional share code. */
   shareShoppingList: ShareShoppingListResult;
   /**
-   * Idempotent offline-sync quantity adjustment to a physical count. Replaying
-   * the same operationId does not re-scale batches or pollute the ledger.
+   * Offline-sync twin of adjustPantryItemQuantity — idempotent by operationId:
+   * replaying does not re-scale batches or pollute the ledger.
    */
   syncAdjustPantryItemQuantity: SyncPantryDeltaResult;
   /**
-   * Idempotent offline-sync consumption/usage (incl. waste-via-usage).
-   * Replaying the same operationId does not decrement quantity twice.
+   * Offline-sync twin of the canonical pantry-consumption mutation — idempotent
+   * by operationId (incl. waste-via-usage): replaying does not decrement
+   * quantity twice.
    */
   syncConsumePantryItem: SyncPantryDeltaResult;
-  /** Sync a pantry item deletion from an offline client. */
+  /** Offline-sync twin of deletePantryItem — idempotent by operationId. */
   syncDeletePantryItem: SyncPantryItemResult;
-  /** Sync a shopping list item deletion from an offline client. */
+  /** Offline-sync twin of removeItemFromShoppingList — idempotent by operationId. */
   syncDeleteShoppingListItem: SyncShoppingListItemResult;
-  /** Sync a shopping list item reorder from an offline client. */
+  /** Offline-sync twin of moveShoppingListItem (reorder) — idempotent by operationId. */
   syncMoveShoppingListItem: SyncShoppingListItemResult;
   /**
-   * Idempotent offline-sync open-batch. Naturally idempotent — replaying (or
-   * opening an already-open batch) returns current state as a no-op.
+   * Offline-sync twin of openPantryItemBatch — idempotent by operationId.
+   * Naturally idempotent: replaying (or opening an already-open batch) returns
+   * current state as a no-op.
    */
   syncOpenPantryItemBatch: SyncPantryDeltaResult;
-  /** Sync a pantry item from an offline client. */
+  /**
+   * Offline-sync twin of createPantryItem/updatePantryItem — idempotent by
+   * operationId. Use the online mutations directly when not syncing offline
+   * edits. See docs/api/graphql-operation-conventions.md (§5 variants).
+   */
   syncPantryItem: SyncPantryItemResult;
   /**
-   * Idempotent offline-sync restock. Replaying the same operationId returns
-   * current state without adding inventory again (no double-count).
-   * Authorization is enforced at the service layer.
+   * Offline-sync twin of restockPantryItem — idempotent by operationId:
+   * replaying the same operationId returns current state without adding
+   * inventory again (no double-count). Authorization is enforced at the
+   * service layer.
    */
   syncRestockPantryItem: SyncPantryDeltaResult;
-  /** Sync a shopping list item from an offline client. */
+  /**
+   * Offline-sync twin of addItemsToShoppingList/updateShoppingListItem —
+   * idempotent by operationId. Use the online mutations directly when not
+   * syncing offline edits. See docs/api/graphql-operation-conventions.md (§5).
+   */
   syncShoppingListItem: SyncShoppingListItemResult;
   /**
-   * Idempotent offline-sync whole-batch waste. Replaying the same operationId
-   * returns current state without writing a phantom waste ledger entry.
+   * Offline-sync twin of wastePantryItemBatch — idempotent by operationId:
+   * replaying returns current state without writing a phantom waste ledger entry.
    */
   syncWastePantryItemBatch: SyncPantryDeltaResult;
   /** Toggle a helpful vote on a recipe review. */
@@ -6229,17 +6286,6 @@ export type Mutation = {
   toggleShoppingListItemPurchased: ToggleShoppingListItemPurchasedResult;
   /** Transfer ownership of a home to another member. */
   transferHomeOwnership: TransferHomeOwnershipResult;
-  /** Remove an item from a category. */
-  uncategorizeItem: UncategorizeItemResult;
-  /** Revert a completed shopping list back to active. */
-  uncompleteShoppingList: UncompleteShoppingListResult;
-  /**
-   * Restore a previously-dismissed item so it can appear in your suggestions
-   * again on the given surface.
-   */
-  undismissSuggestion: UndismissSuggestionResult;
-  /** Remove a recipe from favorites. */
-  unfavoriteRecipe: UnfavoriteRecipeResult;
   /** Update an existing brand. */
   updateBrand: UpdateBrandResult;
   /** Update an existing category. */
@@ -6271,6 +6317,8 @@ export type Mutation = {
   updateFavoriteRecipe: UpdateFavoriteRecipeResult;
   /** Update an existing home's details. */
   updateHome: UpdateHomeResult;
+  /** Rotate (update) a home's join code, invalidating any previously shared join link. */
+  updateHomeJoinCode: UpdateHomeResult;
   /**
    * Update an item. Consolidated mutation that handles:
    * - Basic fields (name, description, type, etc.)
@@ -6331,12 +6379,20 @@ export type Mutation = {
   updateShoppingListItem: UpdateShoppingListItemResult;
   /** Update shopping list item quantity (supports fractions) */
   updateShoppingListItemQuantity: UpdateShoppingListItemQuantityResult;
+  /** Update the reminder for a shopping list. */
+  updateShoppingListReminder: SetReminderResult;
   /**
    * Update an existing storage location
    * Validates parent-child relationships and prevents circular references
    * Requires user to have edit permissions in the home
    */
   updateStorageLocation: UpdateStorageLocationResult;
+  /**
+   * Update the order of multiple storage locations
+   * All locations must belong to the same home
+   * Requires user to have edit permissions in the home
+   */
+  updateStorageLocationOrder: ReorderStorageLocationsResult;
   updateStore: UpdateStoreResult;
   updateStoreInfo: UpdateStoreInfoResult;
   /** Update a template item */
@@ -6347,16 +6403,21 @@ export type Mutation = {
   updateUser: UpdateUserResult;
   /** Update an existing user address. */
   updateUserAddress: UpdateUserAddressResult;
+  /**
+   * Update appeals (submit or review).
+   * Consolidates: submitAppeal, reviewAppeal.
+   */
+  updateUserAppeal: ManageAppealResult;
   upsertExternalRecipe: UpsertExternalRecipeResult;
   /** Create or update an item based on its external source ID. */
-  upsertItemByExternalSource: UpsertItemResult;
+  upsertItemByExternalSource: UpsertItemByExternalSourceResult;
   /**
    * Add or update item-specific unit conversion
    * Admins can set source, confidence, and isVerified; non-admins get defaults
    */
   upsertItemUnitConversion: UpsertItemUnitConversionResult;
   /** Validate if a password reset token is still valid */
-  validatePasswordResetToken: ValidateTokenResponse;
+  validatePasswordResetToken: ValidatePasswordResetTokenResult;
   /** Verify a user's email address using a verification code. */
   verifyEmail: VerifyEmailResult;
   /** Manually verify a user's email address (admin use). */
@@ -6403,8 +6464,8 @@ export type MutationAcceptShoppingListInviteArgs = {
  * win, so payload types that genuinely benefit from caching (e.g. read-
  * through reservation tokens) can opt back in.
  */
-export type MutationAddItemToShoppingListArgs = {
-  input: CreateShoppingListItemInput;
+export type MutationAddItemToCategoryArgs = {
+  input: CategorizeItemInput;
 };
 
 
@@ -6444,6 +6505,19 @@ export type MutationAddLowStockItemsToShoppingListArgs = {
  */
 export type MutationAddPantryItemToShoppingListArgs = {
   input: AddPantryItemToShoppingListInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
+export type MutationAddRecipeToFavoritesArgs = {
+  input: FavoriteRecipeInput;
 };
 
 
@@ -6520,8 +6594,8 @@ export type MutationAdjustPantryItemQuantityArgs = {
  * win, so payload types that genuinely benefit from caching (e.g. read-
  * through reservation tokens) can opt back in.
  */
-export type MutationArchiveShoppingListArgs = {
-  input: ArchiveShoppingListInput;
+export type MutationAdjustPantryItemWeightArgs = {
+  input: CorrectPantryItemWeightInput;
 };
 
 
@@ -6650,47 +6724,8 @@ export type MutationCancelRecurringArgs = {
  * win, so payload types that genuinely benefit from caching (e.g. read-
  * through reservation tokens) can opt back in.
  */
-export type MutationCategorizeItemArgs = {
-  input: CategorizeItemInput;
-};
-
-
-/**
- * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
- * on the root Mutation type prevents any mutation response from being
- * served from a CDN if HTTP batching is ever re-enabled (currently off,
- * see src/index.ts) or if a caller proxies responses. Per-field overrides
- * win, so payload types that genuinely benefit from caching (e.g. read-
- * through reservation tokens) can opt back in.
- */
 export type MutationChangePasswordArgs = {
   input: ChangePasswordInput;
-};
-
-
-/**
- * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
- * on the root Mutation type prevents any mutation response from being
- * served from a CDN if HTTP batching is ever re-enabled (currently off,
- * see src/index.ts) or if a caller proxies responses. Per-field overrides
- * win, so payload types that genuinely benefit from caching (e.g. read-
- * through reservation tokens) can opt back in.
- */
-export type MutationClearReminderArgs = {
-  input: ClearReminderInput;
-};
-
-
-/**
- * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
- * on the root Mutation type prevents any mutation response from being
- * served from a CDN if HTTP batching is ever re-enabled (currently off,
- * see src/index.ts) or if a caller proxies responses. Per-field overrides
- * win, so payload types that genuinely benefit from caching (e.g. read-
- * through reservation tokens) can opt back in.
- */
-export type MutationClearShoppingListItemsArgs = {
-  input: ClearShoppingListItemsInput;
 };
 
 
@@ -6769,19 +6804,6 @@ export type MutationConvertExpiredBatchesToWasteArgs = {
  */
 export type MutationConvertExpiredToWasteArgs = {
   input: ConvertExpiredToWasteInput;
-};
-
-
-/**
- * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
- * on the root Mutation type prevents any mutation response from being
- * served from a CDN if HTTP batching is ever re-enabled (currently off,
- * see src/index.ts) or if a caller proxies responses. Per-field overrides
- * win, so payload types that genuinely benefit from caching (e.g. read-
- * through reservation tokens) can opt back in.
- */
-export type MutationCorrectPantryItemWeightArgs = {
-  input: CorrectPantryItemWeightInput;
 };
 
 
@@ -7066,6 +7088,19 @@ export type MutationCreateRecipeReviewArgs = {
  * win, so payload types that genuinely benefit from caching (e.g. read-
  * through reservation tokens) can opt back in.
  */
+export type MutationCreateRecurringShoppingListArgs = {
+  input: SetupRecurringInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
 export type MutationCreateShoppingListArgs = {
   input: CreateShoppingListInput;
 };
@@ -7157,6 +7192,19 @@ export type MutationCreateUnitArgs = {
  * win, so payload types that genuinely benefit from caching (e.g. read-
  * through reservation tokens) can opt back in.
  */
+export type MutationCreateUnitConversionArgs = {
+  input: SetupUnitConversionInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
 export type MutationDeclineHomeInviteArgs = {
   input: DeclineHomeInviteInput;
 };
@@ -7235,6 +7283,19 @@ export type MutationDeleteCurrencyArgs = {
  * win, so payload types that genuinely benefit from caching (e.g. read-
  * through reservation tokens) can opt back in.
  */
+export type MutationDeleteDeviceArgs = {
+  input: DeleteDeviceInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
 export type MutationDeleteExternalSourceArgs = {
   input: DeleteExternalSourceInput;
 };
@@ -7250,6 +7311,19 @@ export type MutationDeleteExternalSourceArgs = {
  */
 export type MutationDeleteHomeArgs = {
   input: DeleteHomeInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
+export type MutationDeleteHomeInviteArgs = {
+  input: RevokeHomeInviteInput;
 };
 
 
@@ -7430,6 +7504,32 @@ export type MutationDeleteShoppingListArgs = {
  * win, so payload types that genuinely benefit from caching (e.g. read-
  * through reservation tokens) can opt back in.
  */
+export type MutationDeleteShoppingListItemsArgs = {
+  input: ClearShoppingListItemsInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
+export type MutationDeleteShoppingListReminderArgs = {
+  input: ClearReminderInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
 export type MutationDeleteStorageLocationArgs = {
   input: DeleteStorageLocationInput;
 };
@@ -7482,32 +7582,6 @@ export type MutationDeleteUserAddressArgs = {
  * win, so payload types that genuinely benefit from caching (e.g. read-
  * through reservation tokens) can opt back in.
  */
-export type MutationDismissExpirationNotificationArgs = {
-  input: DismissNotificationInput;
-};
-
-
-/**
- * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
- * on the root Mutation type prevents any mutation response from being
- * served from a CDN if HTTP batching is ever re-enabled (currently off,
- * see src/index.ts) or if a caller proxies responses. Per-field overrides
- * win, so payload types that genuinely benefit from caching (e.g. read-
- * through reservation tokens) can opt back in.
- */
-export type MutationDismissSuggestionArgs = {
-  input: DismissSuggestionInput;
-};
-
-
-/**
- * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
- * on the root Mutation type prevents any mutation response from being
- * served from a CDN if HTTP batching is ever re-enabled (currently off,
- * see src/index.ts) or if a caller proxies responses. Per-field overrides
- * win, so payload types that genuinely benefit from caching (e.g. read-
- * through reservation tokens) can opt back in.
- */
 export type MutationDuplicateMealPlanArgs = {
   input: DuplicateMealPlanInput;
 };
@@ -7536,32 +7610,6 @@ export type MutationDuplicateTemplateArgs = {
  */
 export type MutationEnableHomeJoinLinkArgs = {
   input: EnableHomeJoinLinkInput;
-};
-
-
-/**
- * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
- * on the root Mutation type prevents any mutation response from being
- * served from a CDN if HTTP batching is ever re-enabled (currently off,
- * see src/index.ts) or if a caller proxies responses. Per-field overrides
- * win, so payload types that genuinely benefit from caching (e.g. read-
- * through reservation tokens) can opt back in.
- */
-export type MutationFavoriteRecipeArgs = {
-  input: FavoriteRecipeInput;
-};
-
-
-/**
- * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
- * on the root Mutation type prevents any mutation response from being
- * served from a CDN if HTTP batching is ever re-enabled (currently off,
- * see src/index.ts) or if a caller proxies responses. Per-field overrides
- * win, so payload types that genuinely benefit from caching (e.g. read-
- * through reservation tokens) can opt back in.
- */
-export type MutationFlagItemForReviewArgs = {
-  input: FlagItemForReviewInput;
 };
 
 
@@ -7614,32 +7662,6 @@ export type MutationGenerateNextRecurringListArgs = {
  */
 export type MutationGenerateShoppingListFromMealPlanArgs = {
   input: GenerateShoppingListFromMealPlanInput;
-};
-
-
-/**
- * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
- * on the root Mutation type prevents any mutation response from being
- * served from a CDN if HTTP batching is ever re-enabled (currently off,
- * see src/index.ts) or if a caller proxies responses. Per-field overrides
- * win, so payload types that genuinely benefit from caching (e.g. read-
- * through reservation tokens) can opt back in.
- */
-export type MutationIncrementItemPopularityArgs = {
-  input: IncrementItemPopularityInput;
-};
-
-
-/**
- * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
- * on the root Mutation type prevents any mutation response from being
- * served from a CDN if HTTP batching is ever re-enabled (currently off,
- * see src/index.ts) or if a caller proxies responses. Per-field overrides
- * win, so payload types that genuinely benefit from caching (e.g. read-
- * through reservation tokens) can opt back in.
- */
-export type MutationIncrementRecipeCookedCountArgs = {
-  input: IncrementRecipeCookedCountInput;
 };
 
 
@@ -7742,19 +7764,6 @@ export type MutationLoginArgs = {
  * win, so payload types that genuinely benefit from caching (e.g. read-
  * through reservation tokens) can opt back in.
  */
-export type MutationManageAppealArgs = {
-  input: ManageAppealInput;
-};
-
-
-/**
- * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
- * on the root Mutation type prevents any mutation response from being
- * served from a CDN if HTTP batching is ever re-enabled (currently off,
- * see src/index.ts) or if a caller proxies responses. Per-field overrides
- * win, so payload types that genuinely benefit from caching (e.g. read-
- * through reservation tokens) can opt back in.
- */
 export type MutationMarkAsTemplateArgs = {
   input: MarkAsTemplateInput;
 };
@@ -7794,6 +7803,45 @@ export type MutationMarkExpirationNotificationAsReadArgs = {
  * win, so payload types that genuinely benefit from caching (e.g. read-
  * through reservation tokens) can opt back in.
  */
+export type MutationMarkExpirationNotificationDismissedArgs = {
+  input: DismissNotificationInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
+export type MutationMarkHomeAsDefaultArgs = {
+  input: SetDefaultHomeInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
+export type MutationMarkItemForReviewArgs = {
+  input: FlagItemForReviewInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
 export type MutationMarkNotificationAsReadArgs = {
   input: MarkNotificationAsReadInput;
 };
@@ -7820,6 +7868,19 @@ export type MutationMarkNotificationUnreadArgs = {
  * win, so payload types that genuinely benefit from caching (e.g. read-
  * through reservation tokens) can opt back in.
  */
+export type MutationMarkPantryAsDefaultArgs = {
+  input: SetDefaultPantryInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
 export type MutationMarkPantryItemExpiredArgs = {
   input: MarkPantryItemExpiredInput;
 };
@@ -7835,6 +7896,71 @@ export type MutationMarkPantryItemExpiredArgs = {
  */
 export type MutationMarkRecipeAsCookedArgs = {
   input: MarkRecipeAsCookedInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
+export type MutationMarkShoppingListActiveArgs = {
+  input: UncompleteShoppingListInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
+export type MutationMarkShoppingListAsDefaultArgs = {
+  input: SetDefaultShoppingListInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
+export type MutationMarkStorageLocationAsDefaultArgs = {
+  input: SetDefaultStorageLocationInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
+export type MutationMarkSuggestionActiveArgs = {
+  input: UndismissSuggestionInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
+export type MutationMarkSuggestionDismissedArgs = {
+  input: DismissSuggestionInput;
 };
 
 
@@ -7911,6 +8037,19 @@ export type MutationOpenPantryItemBatchArgs = {
  * win, so payload types that genuinely benefit from caching (e.g. read-
  * through reservation tokens) can opt back in.
  */
+export type MutationRecordItemPopularityArgs = {
+  input: IncrementItemPopularityInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
 export type MutationRecordLoginArgs = {
   input: RecordLoginInput;
 };
@@ -7950,8 +8089,8 @@ export type MutationRecordPriceObservationArgs = {
  * win, so payload types that genuinely benefit from caching (e.g. read-
  * through reservation tokens) can opt back in.
  */
-export type MutationRefreshArgs = {
-  input: RefreshTokenInput;
+export type MutationRecordRecipeCookedArgs = {
+  input: IncrementRecipeCookedCountInput;
 };
 
 
@@ -7963,8 +8102,8 @@ export type MutationRefreshArgs = {
  * win, so payload types that genuinely benefit from caching (e.g. read-
  * through reservation tokens) can opt back in.
  */
-export type MutationRegenerateHomeJoinCodeArgs = {
-  input: RegenerateHomeJoinCodeInput;
+export type MutationRefreshArgs = {
+  input: RefreshTokenInput;
 };
 
 
@@ -7991,6 +8130,19 @@ export type MutationRegisterArgs = {
  */
 export type MutationRegisterDeviceArgs = {
   input: DeviceRegistrationInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
+export type MutationRemoveItemFromCategoryArgs = {
+  input: UncategorizeItemInput;
 };
 
 
@@ -8030,6 +8182,19 @@ export type MutationRemoveItemImageArgs = {
  */
 export type MutationRemoveMemberArgs = {
   input: RemoveMemberInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
+export type MutationRemoveRecipeFromFavoritesArgs = {
+  input: UnfavoriteRecipeInput;
 };
 
 
@@ -8093,19 +8258,6 @@ export type MutationRemoveUnitConversionArgs = {
  * win, so payload types that genuinely benefit from caching (e.g. read-
  * through reservation tokens) can opt back in.
  */
-export type MutationReorderStorageLocationsArgs = {
-  input: ReorderStorageLocationsInput;
-};
-
-
-/**
- * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
- * on the root Mutation type prevents any mutation response from being
- * served from a CDN if HTTP batching is ever re-enabled (currently off,
- * see src/index.ts) or if a caller proxies responses. Per-field overrides
- * win, so payload types that genuinely benefit from caching (e.g. read-
- * through reservation tokens) can opt back in.
- */
 export type MutationResendVerificationEmailArgs = {
   input: ResendVerificationEmailInput;
 };
@@ -8158,112 +8310,8 @@ export type MutationRestoreItemArgs = {
  * win, so payload types that genuinely benefit from caching (e.g. read-
  * through reservation tokens) can opt back in.
  */
-export type MutationRevokeHomeInviteArgs = {
-  input: RevokeHomeInviteInput;
-};
-
-
-/**
- * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
- * on the root Mutation type prevents any mutation response from being
- * served from a CDN if HTTP batching is ever re-enabled (currently off,
- * see src/index.ts) or if a caller proxies responses. Per-field overrides
- * win, so payload types that genuinely benefit from caching (e.g. read-
- * through reservation tokens) can opt back in.
- */
 export type MutationSendTestNotificationArgs = {
   input: SendTestNotificationInput;
-};
-
-
-/**
- * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
- * on the root Mutation type prevents any mutation response from being
- * served from a CDN if HTTP batching is ever re-enabled (currently off,
- * see src/index.ts) or if a caller proxies responses. Per-field overrides
- * win, so payload types that genuinely benefit from caching (e.g. read-
- * through reservation tokens) can opt back in.
- */
-export type MutationSetDefaultHomeArgs = {
-  input: SetDefaultHomeInput;
-};
-
-
-/**
- * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
- * on the root Mutation type prevents any mutation response from being
- * served from a CDN if HTTP batching is ever re-enabled (currently off,
- * see src/index.ts) or if a caller proxies responses. Per-field overrides
- * win, so payload types that genuinely benefit from caching (e.g. read-
- * through reservation tokens) can opt back in.
- */
-export type MutationSetDefaultPantryArgs = {
-  input: SetDefaultPantryInput;
-};
-
-
-/**
- * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
- * on the root Mutation type prevents any mutation response from being
- * served from a CDN if HTTP batching is ever re-enabled (currently off,
- * see src/index.ts) or if a caller proxies responses. Per-field overrides
- * win, so payload types that genuinely benefit from caching (e.g. read-
- * through reservation tokens) can opt back in.
- */
-export type MutationSetDefaultShoppingListArgs = {
-  input: SetDefaultShoppingListInput;
-};
-
-
-/**
- * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
- * on the root Mutation type prevents any mutation response from being
- * served from a CDN if HTTP batching is ever re-enabled (currently off,
- * see src/index.ts) or if a caller proxies responses. Per-field overrides
- * win, so payload types that genuinely benefit from caching (e.g. read-
- * through reservation tokens) can opt back in.
- */
-export type MutationSetDefaultStorageLocationArgs = {
-  input: SetDefaultStorageLocationInput;
-};
-
-
-/**
- * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
- * on the root Mutation type prevents any mutation response from being
- * served from a CDN if HTTP batching is ever re-enabled (currently off,
- * see src/index.ts) or if a caller proxies responses. Per-field overrides
- * win, so payload types that genuinely benefit from caching (e.g. read-
- * through reservation tokens) can opt back in.
- */
-export type MutationSetReminderArgs = {
-  input: SetReminderInput;
-};
-
-
-/**
- * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
- * on the root Mutation type prevents any mutation response from being
- * served from a CDN if HTTP batching is ever re-enabled (currently off,
- * see src/index.ts) or if a caller proxies responses. Per-field overrides
- * win, so payload types that genuinely benefit from caching (e.g. read-
- * through reservation tokens) can opt back in.
- */
-export type MutationSetupRecurringArgs = {
-  input: SetupRecurringInput;
-};
-
-
-/**
- * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
- * on the root Mutation type prevents any mutation response from being
- * served from a CDN if HTTP batching is ever re-enabled (currently off,
- * see src/index.ts) or if a caller proxies responses. Per-field overrides
- * win, so payload types that genuinely benefit from caching (e.g. read-
- * through reservation tokens) can opt back in.
- */
-export type MutationSetupUnitConversionArgs = {
-  input: SetupUnitConversionInput;
 };
 
 
@@ -8457,58 +8505,6 @@ export type MutationTransferHomeOwnershipArgs = {
  * win, so payload types that genuinely benefit from caching (e.g. read-
  * through reservation tokens) can opt back in.
  */
-export type MutationUncategorizeItemArgs = {
-  input: UncategorizeItemInput;
-};
-
-
-/**
- * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
- * on the root Mutation type prevents any mutation response from being
- * served from a CDN if HTTP batching is ever re-enabled (currently off,
- * see src/index.ts) or if a caller proxies responses. Per-field overrides
- * win, so payload types that genuinely benefit from caching (e.g. read-
- * through reservation tokens) can opt back in.
- */
-export type MutationUncompleteShoppingListArgs = {
-  input: UncompleteShoppingListInput;
-};
-
-
-/**
- * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
- * on the root Mutation type prevents any mutation response from being
- * served from a CDN if HTTP batching is ever re-enabled (currently off,
- * see src/index.ts) or if a caller proxies responses. Per-field overrides
- * win, so payload types that genuinely benefit from caching (e.g. read-
- * through reservation tokens) can opt back in.
- */
-export type MutationUndismissSuggestionArgs = {
-  input: UndismissSuggestionInput;
-};
-
-
-/**
- * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
- * on the root Mutation type prevents any mutation response from being
- * served from a CDN if HTTP batching is ever re-enabled (currently off,
- * see src/index.ts) or if a caller proxies responses. Per-field overrides
- * win, so payload types that genuinely benefit from caching (e.g. read-
- * through reservation tokens) can opt back in.
- */
-export type MutationUnfavoriteRecipeArgs = {
-  input: UnfavoriteRecipeInput;
-};
-
-
-/**
- * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
- * on the root Mutation type prevents any mutation response from being
- * served from a CDN if HTTP batching is ever re-enabled (currently off,
- * see src/index.ts) or if a caller proxies responses. Per-field overrides
- * win, so payload types that genuinely benefit from caching (e.g. read-
- * through reservation tokens) can opt back in.
- */
 export type MutationUpdateBrandArgs = {
   input: UpdateBrandInput;
 };
@@ -8641,6 +8637,19 @@ export type MutationUpdateFavoriteRecipeArgs = {
  */
 export type MutationUpdateHomeArgs = {
   input: UpdateHomeInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
+export type MutationUpdateHomeJoinCodeArgs = {
+  input: RegenerateHomeJoinCodeInput;
 };
 
 
@@ -8938,8 +8947,34 @@ export type MutationUpdateShoppingListItemQuantityArgs = {
  * win, so payload types that genuinely benefit from caching (e.g. read-
  * through reservation tokens) can opt back in.
  */
+export type MutationUpdateShoppingListReminderArgs = {
+  input: SetReminderInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
 export type MutationUpdateStorageLocationArgs = {
   input: UpdateStorageLocationInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
+export type MutationUpdateStorageLocationOrderArgs = {
+  input: ReorderStorageLocationsInput;
 };
 
 
@@ -9018,6 +9053,19 @@ export type MutationUpdateUserArgs = {
  */
 export type MutationUpdateUserAddressArgs = {
   input: UpdateUserAddressInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
+export type MutationUpdateUserAppealArgs = {
+  input: ManageAppealInput;
 };
 
 
@@ -11342,7 +11390,7 @@ export type Recipe = {
   healthGoals: Array<HealthGoal>;
   id: Scalars['ID']['output'];
   imageUrl: Maybe<Scalars['String']['output']>;
-  ingredients: Array<RecipeIngredient>;
+  ingredientsConnection: RecipeIngredientConnection;
   instructions: Scalars['JSON']['output'];
   intolerances: Array<Intolerance>;
   /** Whether this recipe has been soft-deleted (admin visibility) */
@@ -11404,6 +11452,18 @@ export type RecipeForksConnectionArgs = {
   first?: InputMaybe<Scalars['Int']['input']>;
   last?: InputMaybe<Scalars['Int']['input']>;
   orderBy?: InputMaybe<RecipeOrderBy>;
+};
+
+
+/**
+ * Recipe type for meal instructions and ingredients
+ * Cache: 30 minutes - published recipes are static content
+ */
+export type RecipeIngredientsConnectionArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
 };
 
 
@@ -11501,6 +11561,20 @@ export type RecipeIngredient = {
   section: Maybe<Scalars['String']['output']>;
   sortOrder: Scalars['Int']['output'];
   unit: Maybe<Unit>;
+};
+
+export type RecipeIngredientConnection = Connection & {
+  __typename: 'RecipeIngredientConnection';
+  edges: Array<RecipeIngredientEdge>;
+  pageInfo: PageInfo;
+  totalCount: Maybe<Scalars['Int']['output']>;
+};
+
+/** Recipe ingredient connection for pagination */
+export type RecipeIngredientEdge = Edge & {
+  __typename: 'RecipeIngredientEdge';
+  cursor: Scalars['String']['output'];
+  node: RecipeIngredient;
 };
 
 export type RecipeIngredientInput = {
@@ -11923,8 +11997,15 @@ export type ResetPasswordInput = {
   token: Scalars['String']['input'];
 };
 
-export type ResetPasswordResponse = {
-  __typename: 'ResetPasswordResponse';
+export type ResetPasswordPayload = {
+  __typename: 'ResetPasswordPayload';
+  status: ResetPasswordStatus;
+};
+
+export type ResetPasswordResult = ConflictError | ForbiddenError | NotFoundError | ResetPasswordPayload | ValidationError;
+
+export type ResetPasswordStatus = {
+  __typename: 'ResetPasswordStatus';
   code: Scalars['String']['output'];
   message: Scalars['String']['output'];
   success: Scalars['Boolean']['output'];
@@ -12749,6 +12830,20 @@ export type ShoppingListOwnership = {
   transferredFrom: Maybe<Scalars['String']['output']>;
   user: User;
   userId: Scalars['ID']['output'];
+};
+
+export type ShoppingListOwnershipConnection = Connection & {
+  __typename: 'ShoppingListOwnershipConnection';
+  edges: Array<ShoppingListOwnershipEdge>;
+  pageInfo: PageInfo;
+  totalCount: Maybe<Scalars['Int']['output']>;
+};
+
+/** Shopping list ownership connection for pagination */
+export type ShoppingListOwnershipEdge = Edge & {
+  __typename: 'ShoppingListOwnershipEdge';
+  cursor: Scalars['String']['output'];
+  node: ShoppingListOwnership;
 };
 
 /** Sub-input for shopping list planning details */
@@ -14937,11 +15032,18 @@ export type UpdateUserSettingsInput = {
   ui?: InputMaybe<UiPreferencesInput>;
 };
 
-export type UpsertExternalRecipeResult = {
-  __typename: 'UpsertExternalRecipeResult';
+export type UpsertExternalRecipeData = {
+  __typename: 'UpsertExternalRecipeData';
   created: Scalars['Boolean']['output'];
   recipe: Recipe;
 };
+
+export type UpsertExternalRecipePayload = {
+  __typename: 'UpsertExternalRecipePayload';
+  result: UpsertExternalRecipeData;
+};
+
+export type UpsertExternalRecipeResult = ConflictError | ForbiddenError | NotFoundError | UpsertExternalRecipePayload | ValidationError;
 
 export type UpsertItemByExternalSourceInput = {
   externalId: Scalars['String']['input'];
@@ -14950,6 +15052,13 @@ export type UpsertItemByExternalSourceInput = {
   source: ExternalSource;
   sourceData?: InputMaybe<Scalars['JSON']['input']>;
 };
+
+export type UpsertItemByExternalSourcePayload = {
+  __typename: 'UpsertItemByExternalSourcePayload';
+  result: UpsertItemResult;
+};
+
+export type UpsertItemByExternalSourceResult = ConflictError | ForbiddenError | NotFoundError | UpsertItemByExternalSourcePayload | ValidationError;
 
 export type UpsertItemResult = {
   __typename: 'UpsertItemResult';
@@ -15076,7 +15185,7 @@ export type User = {
   addressesConnection: UserAddressConnection;
   /** Whether this user can access developer tools and internal dashboards */
   canAccessDevTools: Scalars['Boolean']['output'];
-  collaboratedShoppingLists: Array<ShoppingList>;
+  collaboratedShoppingListsConnection: ShoppingListConnection;
   cookingLogsConnection: CookingLogConnection;
   cookingStats: Maybe<CookingStats>;
   createdAt: Scalars['DateTime']['output'];
@@ -15114,7 +15223,7 @@ export type User = {
   sentHomeInvites: Array<HomeInvite>;
   settings: Maybe<UserSettings>;
   shoppingListInvites: Array<ShoppingListCollaborator>;
-  shoppingListOwnerships: Array<ShoppingListOwnership>;
+  shoppingListOwnershipsConnection: ShoppingListOwnershipConnection;
   statistics: Maybe<UserStatistics>;
   suspiciousLoginActivity: SuspiciousActivity;
   timezone: Maybe<Scalars['String']['output']>;
@@ -15133,6 +15242,18 @@ export type UserAddressesConnectionArgs = {
   first?: InputMaybe<Scalars['Int']['input']>;
   last?: InputMaybe<Scalars['Int']['input']>;
   orderBy?: InputMaybe<UserAddressOrderBy>;
+};
+
+
+/**
+ * User account type
+ * Cache: 5 minutes - user data changes occasionally, always private
+ */
+export type UserCollaboratedShoppingListsConnectionArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
 };
 
 
@@ -15266,6 +15387,18 @@ export type UserSavedRecipesConnectionArgs = {
   folder?: InputMaybe<Scalars['String']['input']>;
   last?: InputMaybe<Scalars['Int']['input']>;
   orderBy?: InputMaybe<SavedRecipeOrderBy>;
+};
+
+
+/**
+ * User account type
+ * Cache: 5 minutes - user data changes occasionally, always private
+ */
+export type UserShoppingListOwnershipsConnectionArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
 };
 
 
@@ -15596,8 +15729,15 @@ export type ValidatePasswordResetTokenInput = {
   token: Scalars['String']['input'];
 };
 
-export type ValidateTokenResponse = {
-  __typename: 'ValidateTokenResponse';
+export type ValidatePasswordResetTokenPayload = {
+  __typename: 'ValidatePasswordResetTokenPayload';
+  status: ValidatePasswordResetTokenStatus;
+};
+
+export type ValidatePasswordResetTokenResult = ConflictError | ForbiddenError | NotFoundError | ValidatePasswordResetTokenPayload | ValidationError;
+
+export type ValidatePasswordResetTokenStatus = {
+  __typename: 'ValidatePasswordResetTokenStatus';
   code: Scalars['String']['output'];
   message: Scalars['String']['output'];
   success: Scalars['Boolean']['output'];

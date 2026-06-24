@@ -116,19 +116,22 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
     // Reconcile the server response with the item written into the cache before
     // the create fired.
     update: (cache, { data: mutationData }, { variables }) => {
-      const payload = mutationData?.addItemToShoppingList;
+      const payload = mutationData?.addItemsToShoppingList;
       if (
-        payload?.__typename !== 'AddItemToShoppingListPayload' ||
+        payload?.__typename !== 'AddItemsToShoppingListPayload' ||
         !variables
       ) {
         return;
       }
-      const newItem = payload.shoppingListItem;
+      // Single add via the batch mutation — the created/merged row is the one
+      // entry in `results`. Null when that item failed.
+      const newItem = payload.result.results[0]?.item;
+      if (!newItem) return;
       reconcileShoppingItemCreateUpdate(
         cache,
         listId,
         newItem,
-        variables.input.id,
+        variables.input.items[0]?.id,
       );
     },
     onError: error => {
@@ -272,21 +275,28 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
         const result = await addItem({
           variables: {
             input: {
-              id,
               shoppingListId: listId,
-              itemName,
-              // Send raw string - server accepts FlexibleQuantity ("1/3", "1 1/4", "0.5", etc.)
-              quantity: quantityInput,
-              ...unitData,
-              notes,
-              category,
-              ...(estimatedPrice && {
-                pricing: { estimatedPrice: parseFloat(estimatedPrice) },
-              }),
-              // Always send priority (0/1/2) so "low" (0) persists — matches the
-              // in-sheet add path and lets an edit lower priority back to low.
-              priority,
-              ...(storeId && { storePrefs: { preferredStoreId: storeId } }),
+              items: [
+                {
+                  id,
+                  itemName,
+                  // Send raw string - server accepts FlexibleQuantity ("1/3", "1 1/4", "0.5", etc.)
+                  quantity: quantityInput,
+                  ...unitData,
+                  notes,
+                  category,
+                  ...(estimatedPrice && {
+                    pricing: { estimatedPrice: parseFloat(estimatedPrice) },
+                  }),
+                  // Always send priority (0/1/2) so "low" (0) persists — matches
+                  // the in-sheet add path and lets an edit lower priority back to
+                  // low.
+                  priority,
+                  ...(storeId && {
+                    storePrefs: { preferredStoreId: storeId },
+                  }),
+                },
+              ],
             },
           },
           context: { localFirst: true },

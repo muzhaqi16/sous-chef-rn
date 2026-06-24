@@ -259,22 +259,28 @@ describe('useRecipeForm', () => {
       diets: [Diet.Keto],
       healthGoals: [HealthGoal.HighProtein],
       intolerances: [Intolerance.Dairy],
-      ingredients: [
-        {
-          __typename: 'RecipeIngredient',
-          id: 'ing-1',
-          name: 'Salt',
-          quantity: 1,
-          image: null,
-          unit: null,
-          item: null,
-          preparation: null,
-          section: null,
-          notes: null,
-          isOptional: false,
-          sortOrder: 0,
-        },
-      ],
+      ingredientsConnection: {
+        __typename: 'RecipeIngredientConnection',
+        edges: [
+          {
+            __typename: 'RecipeIngredientEdge',
+            node: {
+              __typename: 'RecipeIngredient',
+              id: 'ing-1',
+              name: 'Salt',
+              quantity: 1,
+              image: null,
+              unit: null,
+              item: null,
+              preparation: null,
+              section: null,
+              notes: null,
+              isOptional: false,
+              sortOrder: 0,
+            },
+          },
+        ],
+      },
       instructions: [{ text: 'Add salt' }],
       notes: 'A note',
     };
@@ -315,7 +321,10 @@ describe('useRecipeForm', () => {
       diets: [],
       healthGoals: [],
       intolerances: [],
-      ingredients: [],
+      ingredientsConnection: {
+        __typename: 'RecipeIngredientConnection',
+        edges: [],
+      },
       instructions: [
         { number: 1, step: 'Boil the water' },
         { number: 2, step: 'Cook the pasta' },

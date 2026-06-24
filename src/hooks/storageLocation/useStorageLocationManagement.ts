@@ -4,7 +4,7 @@ import {
   GetStorageLocationsDocument,
   UpdateStorageLocationDocument,
   DeleteStorageLocationDocument,
-  SetDefaultStorageLocationDocument,
+  MarkStorageLocationAsDefaultDocument,
   type GetStorageLocationsQuery,
 } from '#operations/storageLocation/storageLocation.generated';
 import { type UpdateStorageLocationInput } from '#/graphql/generated/schemaTypes';
@@ -176,7 +176,9 @@ export function useStorageLocationManagement(
 
   // SetDefault returns the updated location; Apollo auto-normalizes by id. Errors
   // surfaced via toast in setDefaultLocation below — no onError.
-  const [setDefaultMutation] = useMutation(SetDefaultStorageLocationDocument);
+  const [setDefaultMutation] = useMutation(
+    MarkStorageLocationAsDefaultDocument,
+  );
 
   const updateLocation = async (
     id: string,
@@ -216,7 +218,7 @@ export function useStorageLocationManagement(
       () => toastService.error(t('errors.somethingWentWrong')),
     );
     if (!result) return false;
-    const payload = result.data?.setDefaultStorageLocation;
+    const payload = result.data?.markStorageLocationAsDefault;
     if (payload?.__typename === 'SetDefaultStorageLocationPayload') {
       return payload.storageLocation;
     }

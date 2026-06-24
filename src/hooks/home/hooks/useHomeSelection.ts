@@ -11,8 +11,8 @@ import { useEffect, useRef } from 'react';
 import { alertService } from '#/services/alertService';
 import { useMutation } from '@apollo/client/react';
 import {
-  SetDefaultHomeDocument,
-  type SetDefaultHomeMutation,
+  MarkHomeAsDefaultDocument,
+  type MarkHomeAsDefaultMutation,
 } from '#operations/home/userSettings.generated';
 import type { GetHomesQuery } from '#operations/home/home.generated';
 import type { Reference } from '@apollo/client';
@@ -80,11 +80,11 @@ export function useHomeSelection({
   // Ref to track if initial home auto-selection has been attempted
   const hasInitializedDefaultHome = useRef(false);
 
-  const [setDefaultHomeMutation] = useMutation(SetDefaultHomeDocument, {
+  const [setDefaultHomeMutation] = useMutation(MarkHomeAsDefaultDocument, {
     // Optimistic response for instant UI updates (especially offline)
-    optimisticResponse: (variables): SetDefaultHomeMutation => ({
+    optimisticResponse: (variables): MarkHomeAsDefaultMutation => ({
       __typename: 'Mutation',
-      setDefaultHome: {
+      markHomeAsDefault: {
         __typename: 'SetDefaultHomePayload',
         settings: {
           __typename: 'UserSettings',
@@ -221,9 +221,11 @@ export function useHomeSelection({
     );
     if (!result) return false;
 
-    if (result.data?.setDefaultHome?.__typename === 'SetDefaultHomePayload') {
+    if (
+      result.data?.markHomeAsDefault?.__typename === 'SetDefaultHomePayload'
+    ) {
       // Update pantry from server response (server is source of truth)
-      const serverPantry = result.data.setDefaultHome.defaultPantry;
+      const serverPantry = result.data.markHomeAsDefault.defaultPantry;
       if (serverPantry?.id) {
         setSelectedPantryId(serverPantry.id);
       }

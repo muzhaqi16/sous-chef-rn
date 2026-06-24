@@ -19,13 +19,22 @@ fragment SearchResults_pantryItem on PantryItem {
   id
 }
 
-mutation BarcodeAddItemToShoppingList($input: CreateShoppingListItemInput!) {
-  addItemToShoppingList(input: $input) {
+mutation BarcodeAddItemToShoppingList($input: AddItemsToShoppingListInput!) {
+  addItemsToShoppingList(input: $input) {
     __typename
-    ... on AddItemToShoppingListPayload {
-      shoppingListItem {
-        id
-        ...SearchResults_shoppingListItem
+    ... on AddItemsToShoppingListPayload {
+      result {
+        results {
+          index
+          clientId
+          success
+          quantityIncremented
+          error
+          item {
+            id
+            ...SearchResults_shoppingListItem
+          }
+        }
       }
     }
     ... on Error {

@@ -119,21 +119,27 @@ function buildOptimisticRecipeEntity(
     rating4Count: 0,
     rating5Count: 0,
     createdBy,
-    ingredients: (input.ingredients ?? []).map((ing, index) => ({
-      __typename: 'RecipeIngredient',
-      id: generateEntityId(),
-      name: ing.name,
-      quantity: ing.quantity,
-      estimatedPrice: ing.estimatedPrice ?? null,
-      item: null,
-      unit: null,
-      image: null,
-      isOptional: ing.isOptional ?? false,
-      notes: ing.notes ?? null,
-      preparation: ing.preparation ?? null,
-      sortOrder: ing.sortOrder ?? index,
-      section: ing.section ?? null,
-    })),
+    ingredientsConnection: {
+      __typename: 'RecipeIngredientConnection',
+      edges: (input.ingredients ?? []).map((ing, index) => ({
+        __typename: 'RecipeIngredientEdge',
+        node: {
+          __typename: 'RecipeIngredient',
+          id: generateEntityId(),
+          name: ing.name,
+          quantity: ing.quantity,
+          estimatedPrice: ing.estimatedPrice ?? null,
+          item: null,
+          unit: null,
+          image: null,
+          isOptional: ing.isOptional ?? false,
+          notes: ing.notes ?? null,
+          preparation: ing.preparation ?? null,
+          sortOrder: ing.sortOrder ?? index,
+          section: ing.section ?? null,
+        },
+      })),
+    },
   };
 }
 

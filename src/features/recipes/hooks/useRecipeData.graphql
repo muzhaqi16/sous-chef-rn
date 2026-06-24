@@ -32,26 +32,30 @@ fragment useRecipeData_recipe on Recipe {
     id
     email
   }
-  ingredients {
-    id
-    name
-    quantity
-    estimatedPrice
-    item {
-      id
-      name
-      imageUrl
+  ingredientsConnection {
+    edges {
+      node {
+        id
+        name
+        quantity
+        estimatedPrice
+        item {
+          id
+          name
+          imageUrl
+        }
+        unit {
+          id
+          name
+          symbol
+        }
+        image
+        isOptional
+        notes
+        preparation
+        sortOrder
+        section
+      }
     }
-    unit {
-      id
-      name
-      symbol
-    }
-    image
-    isOptional
-    notes
-    preparation
-    sortOrder
-    section
   }
 }

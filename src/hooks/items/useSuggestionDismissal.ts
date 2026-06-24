@@ -1,8 +1,8 @@
 import { useMutation } from '@apollo/client/react';
 import { useTranslation } from 'react-i18next';
 import {
-  DismissSuggestionDocument,
-  UndismissSuggestionDocument,
+  MarkSuggestionDismissedDocument,
+  MarkSuggestionActiveDocument,
 } from '#operations/item/item.generated';
 import type { SuggestionSurface } from '#/graphql/generated/schemaTypes';
 import { toastService } from '#/services/toastService';
@@ -25,8 +25,8 @@ export function useSuggestionDismissal(
   refetch: () => void,
 ) {
   const { t } = useTranslation();
-  const [dismiss] = useMutation(DismissSuggestionDocument);
-  const [undismiss] = useMutation(UndismissSuggestionDocument);
+  const [dismiss] = useMutation(MarkSuggestionDismissedDocument);
+  const [undismiss] = useMutation(MarkSuggestionActiveDocument);
 
   const undo = (itemId: string) => {
     undismiss({ variables: { input: { itemId, surface } } })
@@ -43,7 +43,7 @@ export function useSuggestionDismissal(
 
     dismiss({ variables: { input: { itemId, surface } } })
       .then(result => {
-        const payload = result.data?.dismissSuggestion;
+        const payload = result.data?.markSuggestionDismissed;
         // Union error variants resolve in `.then` (not `.catch`) — restore on
         // anything that isn't the success payload. Success needs no refetch: the
         // caller's optimistic removal already hid it, and the server-side

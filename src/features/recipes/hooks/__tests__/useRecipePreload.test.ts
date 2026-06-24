@@ -107,19 +107,22 @@ function buildUpsertMock(
     result: {
       data: {
         upsertExternalRecipe: {
-          __typename: 'UpsertExternalRecipeResult',
-          created,
-          recipe: {
-            __typename: 'Recipe',
-            id: recipe.id,
-            name: recipe.name,
-            imageUrl: recipe.imageUrl ?? null,
-            externalSource: 'SPOONACULAR',
-            externalId: '123',
-            servings: 4,
-            prepTimeMinutes: 10,
-            cookTimeMinutes: 20,
-            totalTimeMinutes: 30,
+          __typename: 'UpsertExternalRecipePayload',
+          result: {
+            __typename: 'UpsertExternalRecipeData',
+            created,
+            recipe: {
+              __typename: 'Recipe',
+              id: recipe.id,
+              name: recipe.name,
+              imageUrl: recipe.imageUrl ?? null,
+              externalSource: 'SPOONACULAR',
+              externalId: '123',
+              servings: 4,
+              prepTimeMinutes: 10,
+              cookTimeMinutes: 20,
+              totalTimeMinutes: 30,
+            },
           },
         },
       },
@@ -136,19 +139,22 @@ function recordUpsertMock() {
   return recordMock(UpsertExternalRecipeDocument, {
     data: {
       upsertExternalRecipe: {
-        __typename: 'UpsertExternalRecipeResult',
-        created: true,
-        recipe: {
-          __typename: 'Recipe',
-          id: 'backend-1',
-          name: 'Test Recipe',
-          imageUrl: null,
-          externalSource: 'SPOONACULAR',
-          externalId: '123',
-          servings: 4,
-          prepTimeMinutes: 10,
-          cookTimeMinutes: 20,
-          totalTimeMinutes: 30,
+        __typename: 'UpsertExternalRecipePayload',
+        result: {
+          __typename: 'UpsertExternalRecipeData',
+          created: true,
+          recipe: {
+            __typename: 'Recipe',
+            id: 'backend-1',
+            name: 'Test Recipe',
+            imageUrl: null,
+            externalSource: 'SPOONACULAR',
+            externalId: '123',
+            servings: 4,
+            prepTimeMinutes: 10,
+            cookTimeMinutes: 20,
+            totalTimeMinutes: 30,
+          },
         },
       },
     },

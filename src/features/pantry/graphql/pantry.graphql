@@ -557,8 +557,8 @@ mutation DeletePantry($input: DeletePantryInput!) {
   }
 }
 
-mutation SetDefaultPantry($input: SetDefaultPantryInput!) {
-  setDefaultPantry(input: $input) {
+mutation MarkPantryAsDefault($input: SetDefaultPantryInput!) {
+  markPantryAsDefault(input: $input) {
     __typename
     ... on SetDefaultPantryPayload {
       pantry {
@@ -866,8 +866,8 @@ mutation AdjustPantryItemQuantity($input: AdjustPantryItemQuantityInput!) {
   }
 }
 
-mutation CorrectPantryItemWeight($input: CorrectPantryItemWeightInput!) {
-  correctPantryItemWeight(input: $input) {
+mutation AdjustPantryItemWeight($input: CorrectPantryItemWeightInput!) {
+  adjustPantryItemWeight(input: $input) {
     __typename
     ... on CorrectPantryItemWeightPayload {
       pantryItem {
@@ -925,21 +925,30 @@ mutation AddLowStockItemsToShoppingList($input: AddLowStockItemsToShoppingListIn
 
 mutation MovePurchasedItemsToPantry($input: MovePurchasedItemsToPantryInput!) {
   movePurchasedItemsToPantry(input: $input) {
-    movedCount
-    movedItems {
-      shoppingListItemId
-      pantryItemId
-      itemName
-      quantity
+    __typename
+    ... on MovePurchasedItemsToPantryPayload {
+      result {
+        movedCount
+        movedItems {
+          shoppingListItemId
+          pantryItemId
+          itemName
+          quantity
+        }
+        skippedCount
+        skippedItems {
+          shoppingListItemId
+          itemName
+          reason
+        }
+        targetPantryId
+        targetPantryName
+      }
     }
-    skippedCount
-    skippedItems {
-      shoppingListItemId
-      itemName
-      reason
+    ... on Error {
+      code
+      message
     }
-    targetPantryId
-    targetPantryName
   }
 }
 

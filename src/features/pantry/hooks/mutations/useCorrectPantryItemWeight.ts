@@ -6,7 +6,7 @@
  */
 
 import { useMutation } from '@apollo/client/react';
-import { CorrectPantryItemWeightDocument } from '#features/pantry/graphql/pantry.generated';
+import { AdjustPantryItemWeightDocument } from '#features/pantry/graphql/pantry.generated';
 import {
   handleMutationError,
   versionConflictCheck,
@@ -22,7 +22,7 @@ export function useCorrectPantryItemWeight({
   onSuccess,
 }: UseCorrectPantryItemWeightOptions = {}) {
   const [correctMutation, { loading }] = useMutation(
-    CorrectPantryItemWeightDocument,
+    AdjustPantryItemWeightDocument,
   );
 
   const correctWeight = async (
@@ -46,7 +46,7 @@ export function useCorrectPantryItemWeight({
 
     if (
       isSuccessPayload(
-        result.data?.correctPantryItemWeight,
+        result.data?.adjustPantryItemWeight,
         'CorrectPantryItemWeightPayload',
       )
     ) {

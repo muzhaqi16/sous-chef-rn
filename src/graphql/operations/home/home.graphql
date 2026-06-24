@@ -329,8 +329,8 @@ mutation RemoveMember($input: RemoveMemberInput!) {
   }
 }
 
-mutation RevokeHomeInvite($input: RevokeHomeInviteInput!) {
-  revokeHomeInvite(input: $input) {
+mutation DeleteHomeInvite($input: RevokeHomeInviteInput!) {
+  deleteHomeInvite(input: $input) {
     __typename
     ... on RevokeHomeInvitePayload {
       homeInvite {

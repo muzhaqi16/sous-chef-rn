@@ -349,8 +349,8 @@ mutation CreateItem($input: CreateItemInput!) {
 # Popular). Per-user and per-surface; reversible via UndismissSuggestion. Lives
 # here (shared item operations) so both the pantry and shopping sheets can use it
 # without reaching across feature boundaries.
-mutation DismissSuggestion($input: DismissSuggestionInput!) {
-  dismissSuggestion(input: $input) {
+mutation MarkSuggestionDismissed($input: DismissSuggestionInput!) {
+  markSuggestionDismissed(input: $input) {
     __typename
     ... on DismissSuggestionPayload {
       itemId
@@ -364,8 +364,8 @@ mutation DismissSuggestion($input: DismissSuggestionInput!) {
   }
 }
 
-mutation UndismissSuggestion($input: UndismissSuggestionInput!) {
-  undismissSuggestion(input: $input) {
+mutation MarkSuggestionActive($input: UndismissSuggestionInput!) {
+  markSuggestionActive(input: $input) {
     __typename
     ... on UndismissSuggestionPayload {
       itemId
@@ -379,8 +379,8 @@ mutation UndismissSuggestion($input: UndismissSuggestionInput!) {
   }
 }
 
-mutation FlagItemForReview($input: FlagItemForReviewInput!) {
-  flagItemForReview(input: $input) {
+mutation MarkItemForReview($input: FlagItemForReviewInput!) {
+  markItemForReview(input: $input) {
     __typename
     ... on FlagItemForReviewPayload {
       item {

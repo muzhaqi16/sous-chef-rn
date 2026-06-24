@@ -133,22 +133,25 @@ export function usePantryItemDetailActions({
     AddItemToShoppingListFromPantryItemDocument,
     {
       update: (cache, { data: mutationData }, { variables }) => {
-        const payload = mutationData?.addItemToShoppingList;
+        const payload = mutationData?.addItemsToShoppingList;
         if (
-          payload?.__typename !== 'AddItemToShoppingListPayload' ||
+          payload?.__typename !== 'AddItemsToShoppingListPayload' ||
           !selectedShoppingListId ||
           !variables
         ) {
           return;
         }
-        const shoppingListItem = payload.shoppingListItem;
+        // Single add via the batch mutation — the created/merged row is the one
+        // entry in `results`. Null when that item failed.
+        const shoppingListItem = payload.result.results[0]?.item;
+        if (!shoppingListItem) return;
         // Swallows its own errors internally, so no try/catch is needed here
         // (wrapping would bail the React Compiler out of this hook).
         reconcileShoppingItemCreateUpdate(
           cache,
           selectedShoppingListId,
           shoppingListItem,
-          variables.input.id,
+          variables.input.items[0]?.id,
         );
       },
     },
@@ -243,12 +246,16 @@ export function usePantryItemDetailActions({
         const result = await addToShoppingList({
           variables: {
             input: {
-              id,
               shoppingListId: selectedShoppingListId,
-              itemId: catalogItemId,
-              quantity,
-              unit: unitInput,
-              itemName,
+              items: [
+                {
+                  id,
+                  itemId: catalogItemId,
+                  quantity,
+                  unit: unitInput,
+                  itemName,
+                },
+              ],
             },
           },
           context: { localFirst: true },

@@ -26,8 +26,8 @@ mutation MarkExpirationAction($input: MarkActionInput!) {
   }
 }
 
-mutation DismissExpirationNotification($input: DismissNotificationInput!) {
-  dismissExpirationNotification(input: $input) {
+mutation MarkExpirationNotificationDismissed($input: DismissNotificationInput!) {
+  markExpirationNotificationDismissed(input: $input) {
     __typename
     ... on DismissExpirationNotificationPayload {
       expirationNotification {

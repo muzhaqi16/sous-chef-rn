@@ -236,7 +236,9 @@ describe('QueueManager', () => {
       const addA = makeMutation({
         id: 'mut-add-a',
         operationName: 'AddItemToShoppingList',
-        variables: { input: { id: 'item-a', shoppingListId: 'list-1' } },
+        variables: {
+          input: { shoppingListId: 'list-1', items: [{ id: 'item-a' }] },
+        },
       });
       const unrelatedPantryAdd = makeMutation({
         id: 'mut-pantry',
@@ -883,15 +885,21 @@ describe('QueueManager', () => {
       expect(input.version).toBe(2);
     });
 
-    it('converts AddItemToShoppingList → SyncShoppingListItem ({ clientId, item })', () => {
+    it('converts AddItemToShoppingList (batch-of-1 input) → SyncShoppingListItem ({ clientId, item })', () => {
+      // The single-add op now sends the batch AddItemsToShoppingListInput shape;
+      // the sync builder flattens items[0] (+ shoppingListId) back to one item.
       const mutation = makeMutation({
         operationName: 'AddItemToShoppingList',
         variables: {
           input: {
-            id: 'sl-1',
             shoppingListId: 'list-1',
-            itemName: 'Bread',
-            quantity: 2,
+            items: [
+              {
+                id: 'sl-1',
+                itemName: 'Bread',
+                quantity: 2,
+              },
+            ],
           },
         },
       });
@@ -1053,13 +1061,17 @@ describe('QueueManager', () => {
         operationName: 'BarcodeAddItemToShoppingList',
         variables: {
           input: {
-            id: 'sl-9',
             shoppingListId: 'list-1',
-            itemId: 'cat-1',
-            itemName: 'Cereal',
-            quantity: 1,
-            brand: { brandId: 'b1' },
-            netWeight: { netWeight: 500 },
+            items: [
+              {
+                id: 'sl-9',
+                itemId: 'cat-1',
+                itemName: 'Cereal',
+                quantity: 1,
+                brand: { brandId: 'b1' },
+                netWeight: { netWeight: 500 },
+              },
+            ],
           },
         },
       });
@@ -1077,7 +1089,10 @@ describe('QueueManager', () => {
       const mutation = makeMutation({
         operationName: 'AddItemToShoppingListFromFilteredPantry',
         variables: {
-          input: { id: 'sl-10', shoppingListId: 'list-1', itemId: 'cat-2' },
+          input: {
+            shoppingListId: 'list-1',
+            items: [{ id: 'sl-10', itemId: 'cat-2' }],
+          },
         },
       });
       const input = wrapper(convertToSyncMutation(mutation).syncVariables);
@@ -1092,11 +1107,10 @@ describe('QueueManager', () => {
         operationName: 'AddItemToShoppingListFromPantryItem',
         variables: {
           input: {
-            id: 'sl-11',
             shoppingListId: 'list-1',
-            itemId: 'cat-3',
-            itemName: 'Rice',
-            quantity: 3,
+            items: [
+              { id: 'sl-11', itemId: 'cat-3', itemName: 'Rice', quantity: 3 },
+            ],
           },
         },
       });

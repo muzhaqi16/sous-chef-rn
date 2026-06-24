@@ -4,8 +4,8 @@ import {
   recordMock,
 } from '#/test-utils/apolloMockProvider';
 import {
-  DismissSuggestionDocument,
-  UndismissSuggestionDocument,
+  MarkSuggestionDismissedDocument,
+  MarkSuggestionActiveDocument,
 } from '#operations/item/item.generated';
 import { SuggestionSurface } from '#/graphql/generated/schemaTypes';
 import { useSuggestionDismissal } from '../useSuggestionDismissal';
@@ -26,9 +26,9 @@ beforeEach(() => {
 describe('useSuggestionDismissal', () => {
   it('dismisses an item and shows a toast with Undo, without refetching on success', async () => {
     const refetch = jest.fn();
-    const { fired, mock } = recordMock(DismissSuggestionDocument, {
+    const { fired, mock } = recordMock(MarkSuggestionDismissedDocument, {
       data: {
-        dismissSuggestion: {
+        markSuggestionDismissed: {
           __typename: 'DismissSuggestionPayload',
           itemId: 'item-1',
           surface: SuggestionSurface.Shopping,
@@ -61,9 +61,9 @@ describe('useSuggestionDismissal', () => {
 
   it('restores via refetch and shows an error toast when the server rejects', async () => {
     const refetch = jest.fn();
-    const { mock } = recordMock(DismissSuggestionDocument, {
+    const { mock } = recordMock(MarkSuggestionDismissedDocument, {
       data: {
-        dismissSuggestion: {
+        markSuggestionDismissed: {
           __typename: 'NotFoundError',
           code: 'NOT_FOUND',
           message: 'unknown item',
@@ -86,9 +86,9 @@ describe('useSuggestionDismissal', () => {
 
   it('Undo fires undismiss and refetches to bring the item back', async () => {
     const refetch = jest.fn();
-    const dismiss = recordMock(DismissSuggestionDocument, {
+    const dismiss = recordMock(MarkSuggestionDismissedDocument, {
       data: {
-        dismissSuggestion: {
+        markSuggestionDismissed: {
           __typename: 'DismissSuggestionPayload',
           itemId: 'item-1',
           surface: SuggestionSurface.Pantry,
@@ -96,9 +96,9 @@ describe('useSuggestionDismissal', () => {
         },
       },
     });
-    const undismiss = recordMock(UndismissSuggestionDocument, {
+    const undismiss = recordMock(MarkSuggestionActiveDocument, {
       data: {
-        undismissSuggestion: {
+        markSuggestionActive: {
           __typename: 'UndismissSuggestionPayload',
           itemId: 'item-1',
           surface: SuggestionSurface.Pantry,

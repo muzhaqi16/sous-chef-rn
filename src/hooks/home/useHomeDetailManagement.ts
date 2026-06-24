@@ -8,11 +8,11 @@ import {
   UpdateHomeDocument,
   UpdateMembershipDocument,
   RemoveMemberDocument,
-  RevokeHomeInviteDocument,
+  DeleteHomeInviteDocument,
   LeaveHomeDocument,
   GetHomesDocument,
 } from '#operations/home/home.generated';
-import { SetDefaultHomeDocument } from '#operations/home/userSettings.generated';
+import { MarkHomeAsDefaultDocument } from '#operations/home/userSettings.generated';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import { t } from '#/i18n/t';
 import {
@@ -150,10 +150,10 @@ export function useHomeDetailManagement(homeId: string) {
     },
   });
 
-  const [revokeInviteMutation] = useMutation(RevokeHomeInviteDocument, {
+  const [revokeInviteMutation] = useMutation(DeleteHomeInviteDocument, {
     update(cache, { data }, { variables }) {
       if (
-        data?.revokeHomeInvite?.__typename !== 'RevokeHomeInvitePayload' ||
+        data?.deleteHomeInvite?.__typename !== 'RevokeHomeInvitePayload' ||
         !variables
       ) {
         return;
@@ -183,7 +183,7 @@ export function useHomeDetailManagement(homeId: string) {
     },
   });
 
-  const [setDefaultHomeMutation] = useMutation(SetDefaultHomeDocument);
+  const [setDefaultHomeMutation] = useMutation(MarkHomeAsDefaultDocument);
 
   const [leaveHomeMutation, { loading: leaving, client: leaveClient }] =
     useMutation(LeaveHomeDocument, {

@@ -11,7 +11,7 @@ import { useState, useRef } from 'react';
 import { errorService } from '#/services/errorService';
 import { useMutation } from '@apollo/client/react';
 import {
-  FavoriteRecipeDocument,
+  AddRecipeToFavoritesDocument,
   UpsertExternalRecipeDocument,
   MySavedRecipesDocument,
   SavedRecipeFoldersDocument,
@@ -89,12 +89,13 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
   const attemptedPreloadsRef = useRef<Set<string>>(new Set());
 
   // Mutations
-  const [favoriteRecipe] = useMutation(FavoriteRecipeDocument, {
+  const [favoriteRecipe] = useMutation(AddRecipeToFavoritesDocument, {
     // Use cache.updateQuery instead of refetchQueries for better performance and offline support
     update: (cache, { data }) => {
-      if (data?.favoriteRecipe?.__typename !== 'FavoriteRecipePayload') return;
+      if (data?.addRecipeToFavorites?.__typename !== 'FavoriteRecipePayload')
+        return;
 
-      const savedRecipe = data.favoriteRecipe.savedRecipe;
+      const savedRecipe = data.addRecipeToFavorites.savedRecipe;
 
       // Add to MySavedRecipes cache
       cache.updateQuery<MySavedRecipesQuery>(
@@ -377,8 +378,9 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
 
     if (!result) return null;
 
-    const data = result.data?.upsertExternalRecipe;
-    if (data?.recipe) {
+    const payload = result.data?.upsertExternalRecipe;
+    if (payload?.__typename === 'UpsertExternalRecipePayload') {
+      const data = payload.result;
       const preloaded: PreloadedRecipe = {
         id: data.recipe.id,
         name: data.recipe.name,
@@ -461,7 +463,7 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
     // mutation's update callback only persists on the success payload.
     if (
       result.error ||
-      result.data?.favoriteRecipe?.__typename !== 'FavoriteRecipePayload'
+      result.data?.addRecipeToFavorites?.__typename !== 'FavoriteRecipePayload'
     ) {
       toastService.error(t('recipes.saveRecipeFailed'));
       return { success: false };

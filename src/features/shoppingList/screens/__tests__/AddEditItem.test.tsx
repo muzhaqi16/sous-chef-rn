@@ -66,8 +66,8 @@ jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => {
         if (
           classifyCreateResult(
             result,
-            'addItemToShoppingList',
-            'AddItemToShoppingListPayload',
+            'addItemsToShoppingList',
+            'AddItemsToShoppingListPayload',
           ) === 'rejected'
         ) {
           revertOptimisticShoppingListItem(cache, listId, id);
@@ -256,9 +256,22 @@ function buildAddItemMock(): MockedResponse {
     request: { query: AddItemToShoppingListDocument, variables: () => true },
     result: {
       data: {
-        addItemToShoppingList: {
-          __typename: 'AddItemToShoppingListPayload',
-          shoppingListItem: buildShoppingListItem('new-item'),
+        addItemsToShoppingList: {
+          __typename: 'AddItemsToShoppingListPayload',
+          result: {
+            __typename: 'BatchAddShoppingListItemsResponse',
+            results: [
+              {
+                __typename: 'BatchAddShoppingListItemResult',
+                index: 0,
+                clientId: null,
+                success: true,
+                quantityIncremented: false,
+                error: null,
+                item: buildShoppingListItem('new-item'),
+              },
+            ],
+          },
         },
       },
     },
@@ -271,7 +284,7 @@ function buildAddItemNullMock(): MockedResponse {
     request: { query: AddItemToShoppingListDocument, variables: () => true },
     result: {
       data: {
-        addItemToShoppingList: {
+        addItemsToShoppingList: {
           __typename: 'ConflictError',
           code: 'CONFLICT',
           message: 'No item',

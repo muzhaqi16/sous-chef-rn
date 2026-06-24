@@ -125,22 +125,25 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
     AddItemToShoppingListDocument,
     {
       update(cache, { data }, { variables }) {
-        const payload = data?.addItemToShoppingList;
+        const payload = data?.addItemsToShoppingList;
         if (
-          payload?.__typename !== 'AddItemToShoppingListPayload' ||
+          payload?.__typename !== 'AddItemsToShoppingListPayload' ||
           !shoppingListId ||
           !variables
         ) {
           return;
         }
-        const newItem = payload.shoppingListItem;
+        // Single add via the batch mutation — the created/merged row is the one
+        // entry in `results`. Null when that item failed.
+        const newItem = payload.result.results[0]?.item;
+        if (!newItem) return;
         executeCacheUpdate(
           () =>
             reconcileShoppingItemCreateUpdate(
               cache,
               shoppingListId,
               newItem,
-              variables.input.id,
+              variables.input.items[0]?.id,
             ),
           'Cache update failed for addItem:',
         );
@@ -207,14 +210,18 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
     addItemMutation({
       variables: {
         input: {
-          id,
           shoppingListId,
-          itemId: item.id,
-          itemName: item.name,
-          quantity: null,
-          unit: item.defaultUnit?.id
-            ? { unitId: item.defaultUnit.id }
-            : undefined,
+          items: [
+            {
+              id,
+              itemId: item.id,
+              itemName: item.name,
+              quantity: null,
+              unit: item.defaultUnit?.id
+                ? { unitId: item.defaultUnit.id }
+                : undefined,
+            },
+          ],
         },
       },
       context: { localFirst: true },
@@ -287,12 +294,16 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
     addItemMutation({
       variables: {
         input: {
-          id,
           shoppingListId,
-          itemId: shoppingItem.itemId,
-          itemName: shoppingItem.name,
-          quantity: null,
-          unit: unitId ? { unitId } : undefined,
+          items: [
+            {
+              id,
+              itemId: shoppingItem.itemId,
+              itemName: shoppingItem.name,
+              quantity: null,
+              unit: unitId ? { unitId } : undefined,
+            },
+          ],
         },
       },
       context: { localFirst: true },

@@ -73,9 +73,21 @@ mutation ForgotPassword($input: ForgotPasswordInput!) {
 
 mutation ResetPassword($input: ResetPasswordWithTokenInput!) {
   resetPassword(input: $input) {
-    success
-    message
-    code
+    __typename
+    ... on ResetPasswordPayload {
+      status {
+        success
+        message
+        code
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
+    }
   }
 }
 
@@ -99,8 +111,20 @@ mutation ResendVerificationEmail($input: ResendVerificationEmailInput!) {
 
 mutation ChangePassword($input: ChangePasswordInput!) {
   changePassword(input: $input) {
-    success
-    message
-    code
+    __typename
+    ... on ChangePasswordPayload {
+      status {
+        success
+        message
+        code
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
+    }
   }
 }

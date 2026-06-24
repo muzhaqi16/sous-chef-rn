@@ -40,13 +40,16 @@ function moveMock(payload: {
     data: {
       movePurchasedItemsToPantry: {
         __typename: 'MovePurchasedItemsToPantryPayload',
-        movedCount: payload.movedCount,
-        skippedCount: payload.skippedCount,
-        targetPantryName: payload.targetPantryName,
-        movedItems: payload.movedItemIds.map(id => ({
-          __typename: 'MovedShoppingItem',
-          shoppingListItemId: id,
-        })),
+        result: {
+          __typename: 'MovePurchasedItemsResult',
+          movedCount: payload.movedCount,
+          skippedCount: payload.skippedCount,
+          targetPantryName: payload.targetPantryName,
+          movedItems: payload.movedItemIds.map(id => ({
+            __typename: 'MovedItemInfo',
+            shoppingListItemId: id,
+          })),
+        },
       },
     },
   });

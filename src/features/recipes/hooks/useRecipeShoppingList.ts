@@ -146,9 +146,14 @@ export function useRecipeShoppingList({
     CreateShoppingListItemsFromRecipeDocument,
     {
       update: (cache, { data }, { variables }) => {
-        if (!data?.createShoppingListItemsFromRecipe || !variables) return;
+        const payload = data?.createShoppingListItemsFromRecipe;
+        if (
+          payload?.__typename !== 'CreateShoppingListItemsFromRecipePayload' ||
+          !variables
+        )
+          return;
         executeCacheUpdate(() => {
-          const result = data.createShoppingListItemsFromRecipe;
+          const result = payload.result;
           const shoppingListId = variables.input.shoppingListId;
           result.addedItems.forEach(item => {
             addNewItemToShoppingListCache(cache, shoppingListId, item);
@@ -196,15 +201,18 @@ export function useRecipeShoppingList({
     AddItemToShoppingListFromRecipeDocument,
     {
       update: (cache, { data }, { variables }) => {
-        const payload = data?.addItemToShoppingList;
+        const payload = data?.addItemsToShoppingList;
         if (
-          payload?.__typename !== 'AddItemToShoppingListPayload' ||
+          payload?.__typename !== 'AddItemsToShoppingListPayload' ||
           !variables
         ) {
           return;
         }
         executeCacheUpdate(() => {
-          const item = payload.shoppingListItem;
+          // Single add via the batch mutation — the created/merged row is the
+          // one entry in `results`. Null when that item failed.
+          const item = payload.result.results[0]?.item;
+          if (!item) return;
           const shoppingListId = variables.input.shoppingListId;
           addNewItemToShoppingListCache(cache, shoppingListId, item);
         }, 'Cache update failed for addItemToShoppingList:');
@@ -216,9 +224,14 @@ export function useRecipeShoppingList({
     AddItemsToShoppingListDocument,
     {
       update: (cache, { data }, { variables }) => {
-        if (!data?.addItemsToShoppingList || !variables) return;
+        const payload = data?.addItemsToShoppingList;
+        if (
+          payload?.__typename !== 'AddItemsToShoppingListPayload' ||
+          !variables
+        )
+          return;
         executeCacheUpdate(() => {
-          const { results } = data.addItemsToShoppingList!;
+          const { results } = payload.result;
           const shoppingListId = variables.input.shoppingListId;
           results.forEach(result => {
             if (result.success && result.item) {
@@ -265,23 +278,27 @@ export function useRecipeShoppingList({
           await addItemToShoppingListMutation({
             variables: {
               input: {
-                id: generateEntityId(),
-                itemName: stripPriceFromName(
-                  ingredient.name ||
-                    ingredient.original ||
-                    'Unknown ingredient',
-                ),
-                quantity: ingredient.amount || 0,
-                unit: {
-                  unitName:
-                    ingredient.measures?.us?.unitShort ||
-                    ingredient.measures?.metric?.unitShort ||
-                    undefined,
-                },
                 shoppingListId: targetList.id,
-                storePrefs: ingredient.aisle
-                  ? { aisle: ingredient.aisle }
-                  : undefined,
+                items: [
+                  {
+                    id: generateEntityId(),
+                    itemName: stripPriceFromName(
+                      ingredient.name ||
+                        ingredient.original ||
+                        'Unknown ingredient',
+                    ),
+                    quantity: ingredient.amount || 0,
+                    unit: {
+                      unitName:
+                        ingredient.measures?.us?.unitShort ||
+                        ingredient.measures?.metric?.unitShort ||
+                        undefined,
+                    },
+                    storePrefs: ingredient.aisle
+                      ? { aisle: ingredient.aisle }
+                      : undefined,
+                  },
+                ],
               },
             },
             context: { localFirst: true },
@@ -323,11 +340,14 @@ export function useRecipeShoppingList({
             },
           });
 
-          const data = result.data?.createShoppingListItemsFromRecipe;
-          if (data) {
-            const allIngredientIds = backendRecipe.ingredients.map(
-              ing => ing.id,
-            );
+          const payload = result.data?.createShoppingListItemsFromRecipe;
+          if (
+            payload?.__typename === 'CreateShoppingListItemsFromRecipePayload'
+          ) {
+            const data = payload.result;
+            const allIngredientIds = extractNodes(
+              backendRecipe.ingredientsConnection,
+            ).map(ing => ing.id);
             setAddedIngredients(prev => {
               const next = new Set(prev);
               allIngredientIds.forEach(id => next.add(id));
@@ -379,8 +399,9 @@ export function useRecipeShoppingList({
             context: { localFirst: true },
           });
 
-          const data = result.data?.addItemsToShoppingList;
-          if (data) {
+          const payload = result.data?.addItemsToShoppingList;
+          if (payload?.__typename === 'AddItemsToShoppingListPayload') {
+            const data = payload.result;
             const successfullyAddedIds = data.results
               .filter(r => r.success)
               .map(r => Number(r.clientId));

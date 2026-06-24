@@ -31,8 +31,13 @@ export function useBatchMoveToPantry({
     MovePurchasedItemsToPantryDocument,
     {
       update: (cache, { data }) => {
-        const result = data?.movePurchasedItemsToPantry;
-        if (!result || !currentListId) return;
+        const payload = data?.movePurchasedItemsToPantry;
+        if (
+          payload?.__typename !== 'MovePurchasedItemsToPantryPayload' ||
+          !currentListId
+        )
+          return;
+        const result = payload.result;
 
         executeCacheUpdate(() => {
           const movedCount = result.movedItems.length;
@@ -110,10 +115,10 @@ export function useBatchMoveToPantry({
     );
     if (!result) return;
 
-    const data = result.data?.movePurchasedItemsToPantry;
-    if (!data) return;
+    const payload = result.data?.movePurchasedItemsToPantry;
+    if (payload?.__typename !== 'MovePurchasedItemsToPantryPayload') return;
 
-    const { movedCount, skippedCount, targetPantryName } = data;
+    const { movedCount, skippedCount, targetPantryName } = payload.result;
 
     if (movedCount > 0) {
       const skippedText = skippedCount > 0 ? ` (${skippedCount} skipped)` : '';

@@ -14,8 +14,8 @@
       "NotFoundError",
       "ValidationError"
     ],
-    "AddItemToShoppingListResult": [
-      "AddItemToShoppingListPayload",
+    "AddItemsToShoppingListResult": [
+      "AddItemsToShoppingListPayload",
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
@@ -79,6 +79,13 @@
     ],
     "AdminBulkDeleteItemsResult": [
       "AdminBulkDeleteItemsPayload",
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "ValidationError"
+    ],
+    "AdminDeleteImagesResult": [
+      "AdminDeleteImagesPayload",
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
@@ -161,13 +168,6 @@
       "NotFoundError",
       "ValidationError"
     ],
-    "ArchiveShoppingListResult": [
-      "ArchiveShoppingListPayload",
-      "ConflictError",
-      "ForbiddenError",
-      "NotFoundError",
-      "ValidationError"
-    ],
     "BulkCreateItemsResult": [
       "BulkCreateItemsPayload",
       "ConflictError",
@@ -203,6 +203,13 @@
       "NotFoundError",
       "ValidationError"
     ],
+    "BulkSendNotificationsResult": [
+      "BulkSendNotificationsPayload",
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "ValidationError"
+    ],
     "BulkUpdateDevicesResult": [
       "BulkUpdateDevicesPayload",
       "ConflictError",
@@ -224,6 +231,13 @@
       "NotFoundError",
       "ValidationError"
     ],
+    "BulkUpsertItemsByExternalSourceResult": [
+      "BulkUpsertItemsByExternalSourcePayload",
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "ValidationError"
+    ],
     "CancelRecurringResult": [
       "CancelRecurringPayload",
       "ConflictError",
@@ -238,6 +252,13 @@
       "NotFoundError",
       "ValidationError"
     ],
+    "ChangePasswordResult": [
+      "ChangePasswordPayload",
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "ValidationError"
+    ],
     "CleanupDevicesResult": [
       "CleanupDevicesPayload",
       "ConflictError",
@@ -247,6 +268,13 @@
     ],
     "ClearReminderResult": [
       "ClearReminderPayload",
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "ValidationError"
+    ],
+    "ClearShoppingListItemsResult": [
+      "ClearShoppingListItemsPayload",
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
@@ -280,6 +308,13 @@
       "NotFoundError",
       "ValidationError"
     ],
+    "ConfirmRecipeConsumptionResult": [
+      "ConfirmRecipeConsumptionPayload",
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "ValidationError"
+    ],
     "Connection": [
       "BrandConnection",
       "CategoryConnection",
@@ -305,12 +340,14 @@
       "PurchaseConnection",
       "RecipeConnection",
       "RecipeForkConnection",
+      "RecipeIngredientConnection",
       "RecipeReviewConnection",
       "SavedRecipeConnection",
       "ShoppingListActivityConnection",
       "ShoppingListCollaboratorConnection",
       "ShoppingListConnection",
       "ShoppingListItemConnection",
+      "ShoppingListOwnershipConnection",
       "StorageLocationConnection",
       "StoreConnection",
       "UserAddressConnection",
@@ -493,6 +530,13 @@
       "NotFoundError",
       "ValidationError"
     ],
+    "CreateShoppingListItemsFromRecipeResult": [
+      "ConflictError",
+      "CreateShoppingListItemsFromRecipePayload",
+      "ForbiddenError",
+      "NotFoundError",
+      "ValidationError"
+    ],
     "CreateShoppingListResult": [
       "ConflictError",
       "CreateShoppingListPayload",
@@ -580,6 +624,13 @@
     "DeleteCurrencyResult": [
       "ConflictError",
       "DeleteCurrencyPayload",
+      "ForbiddenError",
+      "NotFoundError",
+      "ValidationError"
+    ],
+    "DeleteDeviceResult": [
+      "ConflictError",
+      "DeleteDevicePayload",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
@@ -784,12 +835,14 @@
       "PurchaseEdge",
       "RecipeEdge",
       "RecipeForkEdge",
+      "RecipeIngredientEdge",
       "RecipeReviewEdge",
       "SavedRecipeEdge",
       "ShoppingListActivityEdge",
       "ShoppingListCollaboratorEdge",
       "ShoppingListEdge",
       "ShoppingListItemEdge",
+      "ShoppingListOwnershipEdge",
       "StorageLocationEdge",
       "StoreEdge",
       "UserAddressEdge",
@@ -842,13 +895,6 @@
       "ConflictError",
       "ForbiddenError",
       "GenerateShoppingListFromMealPlanPayload",
-      "NotFoundError",
-      "ValidationError"
-    ],
-    "HardDeleteDeviceResult": [
-      "ConflictError",
-      "ForbiddenError",
-      "HardDeleteDevicePayload",
       "NotFoundError",
       "ValidationError"
     ],
@@ -989,6 +1035,13 @@
       "NotFoundError",
       "ValidationError"
     ],
+    "MovePurchasedItemsToPantryResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "MovePurchasedItemsToPantryPayload",
+      "NotFoundError",
+      "ValidationError"
+    ],
     "MoveShoppingItemToPantryResult": [
       "ConflictError",
       "ForbiddenError",
@@ -1119,6 +1172,13 @@
       "ForbiddenError",
       "NotFoundError",
       "ResendVerificationEmailPayload",
+      "ValidationError"
+    ],
+    "ResetPasswordResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "ResetPasswordPayload",
       "ValidationError"
     ],
     "RestockPantryItemResult": [
@@ -1549,6 +1609,20 @@
       "UpdateUserPayload",
       "ValidationError"
     ],
+    "UpsertExternalRecipeResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "UpsertExternalRecipePayload",
+      "ValidationError"
+    ],
+    "UpsertItemByExternalSourceResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "UpsertItemByExternalSourcePayload",
+      "ValidationError"
+    ],
     "UpsertItemUnitConversionResult": [
       "ConflictError",
       "ForbiddenError",
@@ -1559,6 +1633,13 @@
     "UserEventNode": [
       "User",
       "UserProfile"
+    ],
+    "ValidatePasswordResetTokenResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "ValidatePasswordResetTokenPayload",
+      "ValidationError"
     ],
     "VerifyEmailResult": [
       "ConflictError",

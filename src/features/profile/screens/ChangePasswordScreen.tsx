@@ -51,7 +51,12 @@ async function performChangePassword(
     },
   });
 
-  if (result.data?.changePassword?.success) {
+  const payload = result.data?.changePassword;
+
+  if (
+    payload?.__typename === 'ChangePasswordPayload' &&
+    payload.status.success
+  ) {
     toast({
       message: successMessage,
       type: 'success',
@@ -60,8 +65,10 @@ async function performChangePassword(
     setTimeout(() => {
       goBack();
     }, 1500);
+  } else if (payload?.__typename === 'ChangePasswordPayload') {
+    throw new Error(payload.status.message || failedFallback);
   } else {
-    throw new Error(result.data?.changePassword?.message || failedFallback);
+    throw new Error(payload?.message || failedFallback);
   }
 }
 
