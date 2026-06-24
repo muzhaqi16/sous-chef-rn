@@ -21,7 +21,7 @@ import {
   type UpdateUserProfileInput,
   type UpdateUserSettingsInput,
 } from '#/graphql/generated/schemaTypes';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
 import { optimisticFieldUpdate } from '#/apollo/utils/optimisticFieldUpdate';
 import type {
   SettingItem,
@@ -92,21 +92,14 @@ export const useConfigurableSettings = (profile: UserProfile | null) => {
   // moment the offline queue completes the request with a null result). The
   // update is idempotent server-side (keyed by the authenticated userId), so a
   // queued replay is safe; a real rejection restores the pre-edit values.
-  const [updateProfileMutation] = useMutation(UpdateUserProfileDocument, {
-    onError: error => {
-      handleMutationError(error, { operation: 'Update Profile' });
-    },
-  });
+  // Error/rejection handling lives in updateProfile/updateUserPreferences below
+  // (via alertIfRejected) so there is exactly one alerter — no mutation onError.
+  const [updateProfileMutation] = useMutation(UpdateUserProfileDocument);
 
   // ===== MUTATION 2: Update User Preferences =====
-  const [updateSettingsMutation] = useMutation(UpdateUserPreferencesDocument, {
-    // Note: No optimistic response - UserSettings has many required fields that are difficult to predict
-    // Automatic normalization handles UI updates when server responds (~100-200ms)
-    // No manual cache update — automatic normalization writes the response by id
-    onError: error => {
-      handleMutationError(error, { operation: 'Update Preferences' });
-    },
-  });
+  // No optimistic response — UserSettings has many required fields that are hard
+  // to predict; automatic normalization writes the response by id (~100-200ms).
+  const [updateSettingsMutation] = useMutation(UpdateUserPreferencesDocument);
 
   // Biometric state
   const [biometricAvailable, setBiometricAvailable] = useState(false);
@@ -179,31 +172,49 @@ export const useConfigurableSettings = (profile: UserProfile | null) => {
           variables: { input },
           context: { localFirst: true },
         }),
-      'Failed to update profile',
+      // Throw path (rare under errorPolicy:'all'): revert + surface. The common
+      // resolved-error path is handled by alertIfRejected below.
+      error => {
+        revert();
+        handleMutationError(error, { operation: 'Update Profile' });
+      },
     );
 
-    // Rejection (real error / non-success payload) → restore the snapshot.
+    // Rejection (resolved non-success payload) → surface + restore the snapshot.
     // Queued (null payload, no error) keeps the write; the replay is idempotent.
     if (
-      classifyCreateResult(
-        result || null,
+      alertIfRejected(
+        result,
         'updateProfile',
         'UpdateProfilePayload',
-      ) === 'rejected'
+        t('errors.somethingWentWrong'),
+      )
     ) {
       revert();
     }
   };
 
-  const updateUserPreferences = (input: UpdateUserSettingsInput) => {
+  const updateUserPreferences = async (input: UpdateUserSettingsInput) => {
     // No optimisticResponse here (UserSettings input is nested and doesn't map
     // 1:1 onto the flat cached entity), so there's nothing to tear down —
     // queueing it offline is safe and the change applies on replay (idempotent,
     // keyed by userId). The individual preference setters drive the local UI.
-    updateSettingsMutation({
-      variables: { input },
-      context: { localFirst: true },
-    });
+    // A resolved error member (online) is surfaced; the offline-queued null
+    // result is not (alertIfRejected returns false for it).
+    const result = await executeMutation(
+      () =>
+        updateSettingsMutation({
+          variables: { input },
+          context: { localFirst: true },
+        }),
+      error => handleMutationError(error, { operation: 'Update Preferences' }),
+    );
+    alertIfRejected(
+      result,
+      'updateSettings',
+      'UpdateSettingsPayload',
+      t('errors.somethingWentWrong'),
+    );
   };
 
   const createSettingItem = (config: SettingConfig): SettingItem => {

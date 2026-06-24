@@ -256,6 +256,9 @@ describe('useRecipeForm', () => {
       category: RecipeCategory.MainCourse,
       cuisine: 'Italian',
       status: RecipeStatus.Published,
+      diets: [Diet.Keto],
+      healthGoals: [HealthGoal.HighProtein],
+      intolerances: [Intolerance.Dairy],
       ingredients: [
         {
           __typename: 'RecipeIngredient',
@@ -285,6 +288,11 @@ describe('useRecipeForm', () => {
     expect(result.current.state.ingredients).toHaveLength(1);
     expect(result.current.state.steps).toHaveLength(1);
     expect(result.current.state.steps[0].instruction).toBe('Add salt');
+    // Regression: editing a recipe must preserve its dietary classification
+    // (previously hardcoded to [] on populate, wiping tags on the next save).
+    expect(result.current.state.diets).toEqual([Diet.Keto]);
+    expect(result.current.state.healthGoals).toEqual([HealthGoal.HighProtein]);
+    expect(result.current.state.intolerances).toEqual([Intolerance.Dairy]);
   });
 
   it('populateFromRecipe handles { number, step } instruction format', () => {
@@ -304,6 +312,9 @@ describe('useRecipeForm', () => {
       category: RecipeCategory.MainCourse,
       cuisine: null,
       status: RecipeStatus.Published,
+      diets: [],
+      healthGoals: [],
+      intolerances: [],
       ingredients: [],
       instructions: [
         { number: 1, step: 'Boil the water' },

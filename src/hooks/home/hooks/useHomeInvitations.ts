@@ -21,7 +21,9 @@ import {
   executeMutation,
 } from '#/utils/compilerSafeWrappers';
 import { handleMutationError } from '#/utils/errorHandlers';
+import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
+import { t } from '#/i18n/t';
 
 const addInviteToHomeCache = createAddToParentConnectionUpdater(
   'Home',
@@ -73,9 +75,8 @@ export function useHomeInvitations({
         }, 'Cache update failed for inviteUser:');
       },
 
-      onError: error => {
-        handleMutationError(error, { operation: 'Invite User' });
-      },
+      // Error/rejection handling lives in inviteUserToHome below; the update
+      // callback (above) runs only on the success payload.
     },
   );
 
@@ -130,16 +131,26 @@ export function useHomeInvitations({
     email: string,
     role: MembershipRole = MembershipRole.Member,
   ) => {
-    const result = await inviteUserMutation({
-      variables: {
-        input: {
-          homeId,
-          email: email.trim(),
-          role,
-        },
-      },
-    });
-
+    const result = await executeMutation(
+      () =>
+        inviteUserMutation({
+          variables: {
+            input: {
+              homeId,
+              email: email.trim(),
+              role,
+            },
+          },
+        }),
+      error => handleMutationError(error, { operation: 'Invite User' }),
+    );
+    if (!result) return null; // transport error — already surfaced above
+    alertIfRejected(
+      result,
+      'inviteToHome',
+      'InviteToHomePayload',
+      t('errors.sendInviteFailed'),
+    );
     return result.data;
   };
 

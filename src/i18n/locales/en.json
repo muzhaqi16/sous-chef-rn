@@ -76,6 +76,7 @@
     "homeUpdated": "Home updated successfully",
     "homeNameUpdated": "Home name updated successfully",
     "homeDeleted": "Home deleted successfully",
+    "storageLocationDeleted": "Storage location deleted successfully",
     "memberAdded": "Member added successfully",
     "memberRemoved": "Member removed successfully",
     "memberRoleUpdated": "Member role updated successfully",

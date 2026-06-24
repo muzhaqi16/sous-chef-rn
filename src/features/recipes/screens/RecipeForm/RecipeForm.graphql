@@ -13,6 +13,9 @@ fragment RecipeForm_recipe on Recipe {
   category
   cuisine
   status
+  diets
+  healthGoals
+  intolerances
   notes
   instructions
   ingredients {

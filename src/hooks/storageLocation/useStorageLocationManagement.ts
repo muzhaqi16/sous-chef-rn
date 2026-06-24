@@ -1,6 +1,5 @@
 import { toastService } from '#/services/toastService';
 import { useMutation, useQuery } from '@apollo/client/react';
-import { handleMutationError } from '#/utils/errorHandlers';
 import {
   GetStorageLocationsDocument,
   UpdateStorageLocationDocument,
@@ -19,6 +18,22 @@ import {
   executeCacheUpdate,
 } from '#/utils/compilerSafeWrappers';
 import { useCreateStorageLocation } from './useCreateStorageLocation';
+import { t } from '#/i18n/t';
+
+/**
+ * Toast the message from a resolved errors-as-data member. A non-success union
+ * payload (`ForbiddenError`/`ValidationError`/…) resolves without throwing under
+ * `errorPolicy:'all'`, so call this on the non-success branch to surface it.
+ */
+function toastResolvedError(
+  payload: { __typename?: string; message?: string } | null | undefined,
+): void {
+  const message =
+    payload && typeof payload.message === 'string' && payload.message
+      ? payload.message
+      : t('errors.somethingWentWrong');
+  toastService.error(message);
+}
 
 /** Flat storage-location node as returned by `GetStorageLocations`. */
 type FlatStorageLocation =
@@ -112,15 +127,11 @@ export function useStorageLocationManagement(
     pantryId,
   );
 
+  // Errors surfaced via toast in updateLocation below (toastResolvedError for a
+  // resolved error member/transport error; the executeMutation handler for a
+  // rare throw) — no mutation onError, so there is a single toast.
   const [updateMutation, { loading: updating }] = useMutation(
     UpdateStorageLocationDocument,
-    {
-      // Update mutation automatically updates the cache for modified fields
-      // No manual cache update needed - Apollo handles it automatically
-      onError: error => {
-        handleMutationError(error, { operation: 'Update Storage Location' });
-      },
-    },
   );
 
   const [deleteMutation] = useMutation(DeleteStorageLocationDocument, {
@@ -160,19 +171,12 @@ export function useStorageLocationManagement(
         refetch,
       );
     },
-    onError: error => {
-      handleMutationError(error, { operation: 'Delete Storage Location' });
-    },
+    // Errors surfaced via toast in deleteLocation below — no onError.
   });
 
-  const [setDefaultMutation] = useMutation(SetDefaultStorageLocationDocument, {
-    // SetDefault mutation returns the updated location with isDefault field
-    // Apollo automatically updates the cache for this location
-    // No manual cache update needed
-    onError: error => {
-      handleMutationError(error, { operation: 'Set Default Storage Location' });
-    },
-  });
+  // SetDefault returns the updated location; Apollo auto-normalizes by id. Errors
+  // surfaced via toast in setDefaultLocation below — no onError.
+  const [setDefaultMutation] = useMutation(SetDefaultStorageLocationDocument);
 
   const updateLocation = async (
     id: string,
@@ -180,41 +184,44 @@ export function useStorageLocationManagement(
   ) => {
     const result = await executeMutation(
       () => updateMutation({ variables: { input: { ...input, id } } }),
-      'Update storage location error:',
+      () => toastService.error(t('errors.somethingWentWrong')),
     );
     if (!result) return false;
-    return result.data?.updateStorageLocation?.__typename ===
-      'UpdateStorageLocationPayload'
-      ? result.data.updateStorageLocation.storageLocation
-      : false;
+    const payload = result.data?.updateStorageLocation;
+    if (payload?.__typename === 'UpdateStorageLocationPayload') {
+      return payload.storageLocation;
+    }
+    toastResolvedError(payload);
+    return false;
   };
 
   const deleteLocation = async (id: string) => {
     const result = await executeMutation(
       () => deleteMutation({ variables: { input: { id } } }),
-      'Delete storage location error:',
+      () => toastService.error(t('errors.somethingWentWrong')),
     );
     if (!result) return false;
     const payload = result.data?.deleteStorageLocation;
     if (payload?.__typename === 'DeleteStorageLocationPayload') {
-      toastService.success('Storage location deleted');
+      toastService.success(t('success.storageLocationDeleted'));
       return true;
     }
-    const message = payload && 'message' in payload ? payload.message : null;
-    toastService.error(message ?? 'Failed to delete storage location');
+    toastResolvedError(payload);
     return false;
   };
 
   const setDefaultLocation = async (id: string) => {
     const result = await executeMutation(
       () => setDefaultMutation({ variables: { input: { id } } }),
-      'Set default storage location error:',
+      () => toastService.error(t('errors.somethingWentWrong')),
     );
     if (!result) return false;
-    return result.data?.setDefaultStorageLocation?.__typename ===
-      'SetDefaultStorageLocationPayload'
-      ? result.data.setDefaultStorageLocation.storageLocation
-      : false;
+    const payload = result.data?.setDefaultStorageLocation;
+    if (payload?.__typename === 'SetDefaultStorageLocationPayload') {
+      return payload.storageLocation;
+    }
+    toastResolvedError(payload);
+    return false;
   };
 
   // Preserve data even when query fails to prevent cascade failures

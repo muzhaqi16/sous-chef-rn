@@ -249,6 +249,12 @@ input AddItemsToShoppingListInput {
   shoppingListId: ID!
 }
 
+type AddItemsToShoppingListPayload {
+  result: BatchAddShoppingListItemsResponse!
+}
+
+union AddItemsToShoppingListResult = AddItemsToShoppingListPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
+
 input AddLowStockItemsToShoppingListInput {
   homeId: ID!
   shoppingListId: ID
@@ -1121,6 +1127,12 @@ input BulkUpsertItemsByExternalSourceInput {
   items: [BatchUpsertItemInput!]!
 }
 
+type BulkUpsertItemsByExternalSourcePayload {
+  result: BatchUpsertItemsResponse!
+}
+
+union BulkUpsertItemsByExternalSourceResult = BulkUpsertItemsByExternalSourcePayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
+
 """
 Scope for cache control (PUBLIC or PRIVATE)
 PUBLIC: Can be cached by CDN and shared caches
@@ -1248,7 +1260,13 @@ input ChangePasswordInput {
   newPassword: String!
 }
 
-type ChangePasswordResponse {
+type ChangePasswordPayload {
+  status: ChangePasswordStatus!
+}
+
+union ChangePasswordResult = ChangePasswordPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
+
+type ChangePasswordStatus {
   code: String!
   message: String!
   success: Boolean!
@@ -1306,6 +1324,12 @@ input ClearShoppingListItemsInput {
   purchased: Boolean!
   shoppingListId: ID!
 }
+
+type ClearShoppingListItemsPayload {
+  result: ClearItemsResponse!
+}
+
+union ClearShoppingListItemsResult = ClearShoppingListItemsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
 
 """Order by options for collaborators"""
 input CollaboratorOrderBy {
@@ -5594,14 +5618,20 @@ type Mutation {
   acceptHomeInvite(input: AcceptHomeInviteInput!): AcceptHomeInviteResult!
   """Accept an invitation to collaborate on a shopping list."""
   acceptShoppingListInvite(input: AcceptShoppingListInviteInput!): AcceptShoppingListInviteResult!
-  """Add a single item to a shopping list."""
-  addItemToShoppingList(input: CreateShoppingListItemInput!): AddItemToShoppingListResult!
+  """Add an item to a category."""
+  addItemToCategory(input: CategorizeItemInput!): CategorizeItemResult!
+  """
+  Add a single item to a shopping list.
+  
+  Deprecated: use addItemsToShoppingList with a single-element items list.
+  """
+  addItemToShoppingList(input: CreateShoppingListItemInput!): AddItemToShoppingListResult! @deprecated(reason: "Use addItemsToShoppingList instead.")
   """
   Batch add multiple items to a shopping list.
   More efficient than calling addItemToShoppingList multiple times.
   Max 50 items per batch.
   """
-  addItemsToShoppingList(input: AddItemsToShoppingListInput!): BatchAddShoppingListItemsResponse!
+  addItemsToShoppingList(input: AddItemsToShoppingListInput!): AddItemsToShoppingListResult!
   """
   Add all low stock items from a home's pantries to a shopping list.
   If no shoppingListId is provided, uses the home's default shopping list.
@@ -5629,6 +5659,12 @@ type Mutation {
   The delta (positive or negative) is calculated automatically.
   """
   adjustPantryItemQuantity(input: AdjustPantryItemQuantityInput!): AdjustPantryItemQuantityResult!
+  """
+  Adjust the net weight for a dual-tracked pantry item.
+  Recalculates remainingNetWeight proportionally and derives new quantity.
+  Use this when the original net weight was entered incorrectly.
+  """
+  adjustPantryItemWeight(input: CorrectPantryItemWeightInput!): CorrectPantryItemWeightResult!
   """Archive a shopping list."""
   archiveShoppingList(input: ArchiveShoppingListInput!): ArchiveShoppingListResult!
   """Create multiple items at once"""
@@ -5651,24 +5687,24 @@ type Mutation {
   """
   bulkUpdateItems(input: BulkUpdateItemsInput!): BulkUpdateItemsResult!
   """Bulk create or update items by external source (max 50 per batch)."""
-  bulkUpsertItemsByExternalSource(input: BulkUpsertItemsByExternalSourceInput!): BatchUpsertItemsResponse!
+  bulkUpsertItemsByExternalSource(input: BulkUpsertItemsByExternalSourceInput!): BulkUpsertItemsByExternalSourceResult!
   """Cancel recurring generation for a shopping list."""
   cancelRecurring(input: CancelRecurringInput!): CancelRecurringResult!
   """Assign an item to a category."""
-  categorizeItem(input: CategorizeItemInput!): CategorizeItemResult!
+  categorizeItem(input: CategorizeItemInput!): CategorizeItemResult! @deprecated(reason: "Use addItemToCategory instead.")
   """
   Change password for authenticated user (requires current password verification)
   """
-  changePassword(input: ChangePasswordInput!): ChangePasswordResponse!
+  changePassword(input: ChangePasswordInput!): ChangePasswordResult!
   """Clear the reminder from a shopping list."""
-  clearReminder(input: ClearReminderInput!): ClearReminderResult!
+  clearReminder(input: ClearReminderInput!): ClearReminderResult! @deprecated(reason: "Use deleteShoppingListReminder instead.")
   """
   Clear items from a shopping list based on purchased status.
   Soft-deletes all items matching the purchased filter and where deletedAt is not set.
   Use purchased=true to clear purchased items, purchased=false to clear unpurchased items.
   Returns summary with count of cleared items.
   """
-  clearShoppingListItems(input: ClearShoppingListItemsInput!): ClearItemsResponse!
+  clearShoppingListItems(input: ClearShoppingListItemsInput!): ClearShoppingListItemsResult!
   """Mark user onboarding as complete and send welcome email"""
   completeOnboarding: CompleteOnboardingResult!
   """Mark a shopping list as completed."""
@@ -5694,7 +5730,7 @@ type Mutation {
   Recalculates remainingNetWeight proportionally and derives new quantity.
   Use this when the original net weight was entered incorrectly.
   """
-  correctPantryItemWeight(input: CorrectPantryItemWeightInput!): CorrectPantryItemWeightResult!
+  correctPantryItemWeight(input: CorrectPantryItemWeightInput!): CorrectPantryItemWeightResult! @deprecated(reason: "Use adjustPantryItemWeight instead.")
   """Create a new brand."""
   createBrand(input: CreateBrandInput!): CreateBrandResult!
   """Create a new category."""
@@ -5739,6 +5775,8 @@ type Mutation {
   createRecipe(input: CreateRecipeInput!): CreateRecipeResult!
   """Create a review for a published recipe."""
   createRecipeReview(input: CreateRecipeReviewInput!): CreateRecipeReviewResult!
+  """Create recurring generation for a shopping list."""
+  createRecurringShoppingList(input: SetupRecurringInput!): SetupRecurringResult!
   """Create a new shopping list."""
   createShoppingList(input: CreateShoppingListInput!): CreateShoppingListResult!
   createShoppingListItemFromRecipeIngredient(input: CreateShoppingListItemFromRecipeIngredientInput!): CreateShoppingListItemFromRecipeIngredientResult!
@@ -5757,6 +5795,8 @@ type Mutation {
   createTemplateFromMealPlan(input: CreateTemplateFromMealPlanInput!): CreateTemplateFromMealPlanResult!
   """Create a new unit of measurement."""
   createUnit(input: CreateUnitInput!): CreateUnitResult!
+  """Create a conversion factor between a unit and its base unit."""
+  createUnitConversion(input: SetupUnitConversionInput!): SetupUnitConversionResult!
   """Decline a home invitation using its token."""
   declineHomeInvite(input: DeclineHomeInviteInput!): DeclineHomeInviteResult!
   """Decline an invitation to collaborate on a shopping list."""
@@ -5777,6 +5817,8 @@ type Mutation {
   deleteExternalSource(input: DeleteExternalSourceInput!): DeleteExternalSourceResult!
   """Delete a home (owner only)."""
   deleteHome(input: DeleteHomeInput!): DeleteHomeResult!
+  """Delete a pending home invitation."""
+  deleteHomeInvite(input: RevokeHomeInviteInput!): RevokeHomeInviteResult!
   """Delete an item (soft delete by default, permanent if specified)"""
   deleteItem(input: DeleteItemInput!): DeleteItemResult!
   """Delete a meal plan."""
@@ -5802,6 +5844,8 @@ type Mutation {
   deleteRecipeReview(input: DeleteRecipeReviewInput!): DeleteRecipeReviewResult!
   """Delete a shopping list (owner only)."""
   deleteShoppingList(input: DeleteShoppingListInput!): DeleteShoppingListResult!
+  """Delete the reminder from a shopping list."""
+  deleteShoppingListReminder(input: ClearReminderInput!): ClearReminderResult!
   """
   Delete a storage location (soft delete)
   Fails if location has child locations or items
@@ -5817,14 +5861,9 @@ type Mutation {
   dismissExpirationNotification(input: DismissNotificationInput!): DismissExpirationNotificationResult!
   """
   Hide a catalog item from your pantry or shopping suggestions
-  ("stop suggesting this"). Non-destructive and reversible via
-  undismissSuggestion — the item's history and frequency data are preserved.
-  Affects the RECENTLY_DELETED, FREQUENTLY_ADDED, and POPULAR sources on the
-  chosen surface; low-stock and expiring-soon alerts are never suppressed.
-  Dismissals are per-user, so on shared lists/homes only your own
-  suggestions are affected.
+  ("stop suggesting this").
   """
-  dismissSuggestion(input: DismissSuggestionInput!): DismissSuggestionResult!
+  dismissSuggestion(input: DismissSuggestionInput!): DismissSuggestionResult! @deprecated(reason: "Use markSuggestionDismissed instead.")
   """Duplicate a meal plan with all its items, shifted to new dates."""
   duplicateMealPlan(input: DuplicateMealPlanInput!): DuplicateMealPlanResult!
   """Duplicate a template with a new name"""
@@ -5836,9 +5875,9 @@ type Mutation {
   """
   enableHomeJoinLink(input: EnableHomeJoinLinkInput!): UpdateHomeResult!
   """Save a recipe as a favorite."""
-  favoriteRecipe(input: FavoriteRecipeInput!): FavoriteRecipeResult!
+  favoriteRecipe(input: FavoriteRecipeInput!): FavoriteRecipeResult! @deprecated(reason: "Use markRecipeFavorited instead.")
   """Flag an item for review"""
-  flagItemForReview(input: FlagItemForReviewInput!): FlagItemForReviewResult!
+  flagItemForReview(input: FlagItemForReviewInput!): FlagItemForReviewResult! @deprecated(reason: "Use markItemForReview instead.")
   """Request a password reset email"""
   forgotPassword(input: ForgotPasswordInput!): ForgotPasswordResult!
   forkRecipe(input: ForkRecipeInput!): ForkRecipeResult!
@@ -5868,7 +5907,7 @@ type Mutation {
   Manage appeals (submit or review).
   Consolidates: submitAppeal, reviewAppeal.
   """
-  manageAppeal(input: ManageAppealInput!): ManageAppealResult!
+  manageAppeal(input: ManageAppealInput!): ManageAppealResult! @deprecated(reason: "Use updateUserAppeal instead.")
   """Mark all notifications as read for the current user."""
   markAllNotificationsAsRead: MarkAllNotificationsAsReadResult!
   """Mark a shopping list as a reusable template."""
@@ -5877,14 +5916,49 @@ type Mutation {
   markExpirationAction(input: MarkActionInput!): MarkExpirationActionResult!
   """Mark an expiration notification as read."""
   markExpirationNotificationAsRead(input: MarkExpirationNotificationAsReadInput!): MarkExpirationNotificationAsReadResult!
+  """Mark a home as the default for the current user."""
+  markHomeAsDefault(input: SetDefaultHomeInput!): SetDefaultHomeResult!
+  """Mark an item for review"""
+  markItemForReview(input: FlagItemForReviewInput!): FlagItemForReviewResult!
   """Mark a notification as read."""
   markNotificationAsRead(input: MarkNotificationAsReadInput!): MarkNotificationAsReadResult!
   """Mark a notification as unread."""
   markNotificationUnread(input: MarkNotificationUnreadInput!): MarkNotificationUnreadResult!
+  """Mark a pantry as the default for its home."""
+  markPantryAsDefault(input: SetDefaultPantryInput!): SetDefaultPantryResult!
   """Mark a pantry item as expired."""
   markPantryItemExpired(input: MarkPantryItemExpiredInput!): MarkPantryItemExpiredResult!
   """Mark recipe as cooked and optionally deduct from pantry"""
   markRecipeAsCooked(input: MarkRecipeAsCookedInput!): MarkRecipeAsCookedResult!
+  """Mark a recipe as favorited."""
+  markRecipeFavorited(input: FavoriteRecipeInput!): FavoriteRecipeResult!
+  """Mark a recipe as no longer favorited."""
+  markRecipeUnfavorited(input: UnfavoriteRecipeInput!): UnfavoriteRecipeResult!
+  """Mark a completed shopping list active again."""
+  markShoppingListActive(input: UncompleteShoppingListInput!): UncompleteShoppingListResult!
+  """Mark a shopping list as the default."""
+  markShoppingListAsDefault(input: SetDefaultShoppingListInput!): SetDefaultShoppingListResult!
+  """
+  Mark a storage location as the default for its home.
+  Automatically unsets the previous default location.
+  Requires user to have edit permissions in the home.
+  """
+  markStorageLocationAsDefault(input: SetDefaultStorageLocationInput!): SetDefaultStorageLocationResult!
+  """
+  Mark a previously-dismissed item active again so it can appear in your
+  suggestions on the given surface.
+  """
+  markSuggestionActive(input: UndismissSuggestionInput!): UndismissSuggestionResult!
+  """
+  Mark a catalog item dismissed from your pantry or shopping suggestions
+  ("stop suggesting this"). Non-destructive and reversible via
+  markSuggestionActive — the item's history and frequency data are preserved.
+  Affects the RECENTLY_DELETED, FREQUENTLY_ADDED, and POPULAR sources on the
+  chosen surface; low-stock and expiring-soon alerts are never suppressed.
+  Dismissals are per-user, so on shared lists/homes only your own
+  suggestions are affected.
+  """
+  markSuggestionDismissed(input: DismissSuggestionInput!): DismissSuggestionResult!
   """
   Move all purchased items from a shopping list to the home's default pantry.
   Only available for shopping lists linked to a home.
@@ -5920,7 +5994,7 @@ type Mutation {
   """
   Rotate a home's join code, invalidating any previously shared join link.
   """
-  regenerateHomeJoinCode(input: RegenerateHomeJoinCodeInput!): UpdateHomeResult!
+  regenerateHomeJoinCode(input: RegenerateHomeJoinCodeInput!): UpdateHomeResult! @deprecated(reason: "Use updateHomeJoinCode instead.")
   """Register a new user account and return tokens."""
   register(input: RegisterInput!): AuthPayload!
   """
@@ -5928,6 +6002,8 @@ type Mutation {
   This is the primary way to add a device from mobile apps.
   """
   registerDevice(input: DeviceRegistrationInput!): RegisterDeviceResult!
+  """Remove an item from a category."""
+  removeItemFromCategory(input: UncategorizeItemInput!): UncategorizeItemResult!
   """Remove an item from a shopping list."""
   removeItemFromShoppingList(input: RemoveItemFromShoppingListInput!): RemoveItemFromShoppingListResult!
   """Remove the primary image from an item (deletes from S3)"""
@@ -5947,11 +6023,11 @@ type Mutation {
   All locations must belong to the same home
   Requires user to have edit permissions in the home
   """
-  reorderStorageLocations(input: ReorderStorageLocationsInput!): ReorderStorageLocationsResult!
+  reorderStorageLocations(input: ReorderStorageLocationsInput!): ReorderStorageLocationsResult! @deprecated(reason: "Use updateStorageLocationOrder instead.")
   """Resend the email verification message to a user."""
   resendVerificationEmail(input: ResendVerificationEmailInput!): ResendVerificationEmailResult!
   """Reset password using token from email"""
-  resetPassword(input: ResetPasswordWithTokenInput!): ResetPasswordResponse!
+  resetPassword(input: ResetPasswordWithTokenInput!): ResetPasswordResult!
   """
   Restock a pantry item - adds quantity and creates a ledger record.
   Use this when replenishing an existing pantry item.
@@ -5960,63 +6036,78 @@ type Mutation {
   """Restore a soft-deleted item"""
   restoreItem(input: RestoreItemInput!): RestoreItemResult!
   """Revoke a pending home invitation."""
-  revokeHomeInvite(input: RevokeHomeInviteInput!): RevokeHomeInviteResult!
+  revokeHomeInvite(input: RevokeHomeInviteInput!): RevokeHomeInviteResult! @deprecated(reason: "Use deleteHomeInvite instead.")
   """Send a test notification of a specific type to the current user."""
   sendTestNotification(input: SendTestNotificationInput!): SendTestNotificationResult!
   """Set the default home for the current user."""
-  setDefaultHome(input: SetDefaultHomeInput!): SetDefaultHomeResult!
+  setDefaultHome(input: SetDefaultHomeInput!): SetDefaultHomeResult! @deprecated(reason: "Use markHomeAsDefault instead.")
   """Set a pantry as the default for its home."""
-  setDefaultPantry(input: SetDefaultPantryInput!): SetDefaultPantryResult!
+  setDefaultPantry(input: SetDefaultPantryInput!): SetDefaultPantryResult! @deprecated(reason: "Use markPantryAsDefault instead.")
   """Set a shopping list as the default."""
-  setDefaultShoppingList(input: SetDefaultShoppingListInput!): SetDefaultShoppingListResult!
+  setDefaultShoppingList(input: SetDefaultShoppingListInput!): SetDefaultShoppingListResult! @deprecated(reason: "Use markShoppingListAsDefault instead.")
   """
   Set a storage location as the default for its home
   Automatically unsets the previous default location
   Requires user to have edit permissions in the home
   """
-  setDefaultStorageLocation(input: SetDefaultStorageLocationInput!): SetDefaultStorageLocationResult!
+  setDefaultStorageLocation(input: SetDefaultStorageLocationInput!): SetDefaultStorageLocationResult! @deprecated(reason: "Use markStorageLocationAsDefault instead.")
   """Set a reminder for a shopping list."""
-  setReminder(input: SetReminderInput!): SetReminderResult!
+  setReminder(input: SetReminderInput!): SetReminderResult! @deprecated(reason: "Use updateShoppingListReminder instead.")
   """Set up recurring generation for a shopping list."""
-  setupRecurring(input: SetupRecurringInput!): SetupRecurringResult!
+  setupRecurring(input: SetupRecurringInput!): SetupRecurringResult! @deprecated(reason: "Use createRecurringShoppingList instead.")
   """Set up a conversion factor between a unit and its base unit."""
-  setupUnitConversion(input: SetupUnitConversionInput!): SetupUnitConversionResult!
+  setupUnitConversion(input: SetupUnitConversionInput!): SetupUnitConversionResult! @deprecated(reason: "Use createUnitConversion instead.")
   """Share a shopping list publicly with an optional share code."""
   shareShoppingList(input: ShareShoppingListInput!): ShareShoppingListResult!
   """
-  Idempotent offline-sync quantity adjustment to a physical count. Replaying
-  the same operationId does not re-scale batches or pollute the ledger.
+  Offline-sync twin of adjustPantryItemQuantity — idempotent by operationId:
+  replaying does not re-scale batches or pollute the ledger.
   """
   syncAdjustPantryItemQuantity(input: SyncAdjustPantryItemQuantityInput!): SyncPantryDeltaResult!
   """
-  Idempotent offline-sync consumption/usage (incl. waste-via-usage).
-  Replaying the same operationId does not decrement quantity twice.
+  Offline-sync twin of the canonical pantry-consumption mutation — idempotent
+  by operationId (incl. waste-via-usage): replaying does not decrement
+  quantity twice.
   """
   syncConsumePantryItem(input: SyncConsumePantryItemInput!): SyncPantryDeltaResult!
-  """Sync a pantry item deletion from an offline client."""
+  """Offline-sync twin of deletePantryItem — idempotent by operationId."""
   syncDeletePantryItem(input: SyncDeletePantryItemInput!): SyncPantryItemResult!
-  """Sync a shopping list item deletion from an offline client."""
+  """
+  Offline-sync twin of removeItemFromShoppingList — idempotent by operationId.
+  """
   syncDeleteShoppingListItem(input: SyncDeleteShoppingListItemInput!): SyncShoppingListItemResult!
-  """Sync a shopping list item reorder from an offline client."""
+  """
+  Offline-sync twin of moveShoppingListItem (reorder) — idempotent by operationId.
+  """
   syncMoveShoppingListItem(input: SyncMoveShoppingListItemInput!): SyncShoppingListItemResult!
   """
-  Idempotent offline-sync open-batch. Naturally idempotent — replaying (or
-  opening an already-open batch) returns current state as a no-op.
+  Offline-sync twin of openPantryItemBatch — idempotent by operationId.
+  Naturally idempotent: replaying (or opening an already-open batch) returns
+  current state as a no-op.
   """
   syncOpenPantryItemBatch(input: SyncOpenPantryItemBatchInput!): SyncPantryDeltaResult!
-  """Sync a pantry item from an offline client."""
+  """
+  Offline-sync twin of createPantryItem/updatePantryItem — idempotent by
+  operationId. Use the online mutations directly when not syncing offline
+  edits. See docs/api/graphql-operation-conventions.md (§5 variants).
+  """
   syncPantryItem(input: SyncPantryItemInput!): SyncPantryItemResult!
   """
-  Idempotent offline-sync restock. Replaying the same operationId returns
-  current state without adding inventory again (no double-count).
-  Authorization is enforced at the service layer.
+  Offline-sync twin of restockPantryItem — idempotent by operationId:
+  replaying the same operationId returns current state without adding
+  inventory again (no double-count). Authorization is enforced at the
+  service layer.
   """
   syncRestockPantryItem(input: SyncRestockPantryItemInput!): SyncPantryDeltaResult!
-  """Sync a shopping list item from an offline client."""
+  """
+  Offline-sync twin of addItemsToShoppingList/updateShoppingListItem —
+  idempotent by operationId. Use the online mutations directly when not
+  syncing offline edits. See docs/api/graphql-operation-conventions.md (§5).
+  """
   syncShoppingListItem(input: SyncShoppingListItemFullInput!): SyncShoppingListItemResult!
   """
-  Idempotent offline-sync whole-batch waste. Replaying the same operationId
-  returns current state without writing a phantom waste ledger entry.
+  Offline-sync twin of wastePantryItemBatch — idempotent by operationId:
+  replaying returns current state without writing a phantom waste ledger entry.
   """
   syncWastePantryItemBatch(input: SyncWastePantryItemBatchInput!): SyncPantryDeltaResult!
   """Toggle a helpful vote on a recipe review."""
@@ -6026,16 +6117,16 @@ type Mutation {
   """Transfer ownership of a home to another member."""
   transferHomeOwnership(input: TransferHomeOwnershipInput!): TransferHomeOwnershipResult!
   """Remove an item from a category."""
-  uncategorizeItem(input: UncategorizeItemInput!): UncategorizeItemResult!
+  uncategorizeItem(input: UncategorizeItemInput!): UncategorizeItemResult! @deprecated(reason: "Use removeItemFromCategory instead.")
   """Revert a completed shopping list back to active."""
-  uncompleteShoppingList(input: UncompleteShoppingListInput!): UncompleteShoppingListResult!
+  uncompleteShoppingList(input: UncompleteShoppingListInput!): UncompleteShoppingListResult! @deprecated(reason: "Use markShoppingListActive instead.")
   """
   Restore a previously-dismissed item so it can appear in your suggestions
   again on the given surface.
   """
-  undismissSuggestion(input: UndismissSuggestionInput!): UndismissSuggestionResult!
+  undismissSuggestion(input: UndismissSuggestionInput!): UndismissSuggestionResult! @deprecated(reason: "Use markSuggestionActive instead.")
   """Remove a recipe from favorites."""
-  unfavoriteRecipe(input: UnfavoriteRecipeInput!): UnfavoriteRecipeResult!
+  unfavoriteRecipe(input: UnfavoriteRecipeInput!): UnfavoriteRecipeResult! @deprecated(reason: "Use markRecipeUnfavorited instead.")
   """Update an existing brand."""
   updateBrand(input: UpdateBrandInput!): UpdateBrandResult!
   """Update an existing category."""
@@ -6067,6 +6158,10 @@ type Mutation {
   updateFavoriteRecipe(input: UpdateFavoriteRecipeInput!): UpdateFavoriteRecipeResult!
   """Update an existing home's details."""
   updateHome(input: UpdateHomeInput!): UpdateHomeResult!
+  """
+  Rotate (update) a home's join code, invalidating any previously shared join link.
+  """
+  updateHomeJoinCode(input: RegenerateHomeJoinCodeInput!): UpdateHomeResult!
   """
   Update an item. Consolidated mutation that handles:
   - Basic fields (name, description, type, etc.)
@@ -6127,12 +6222,20 @@ type Mutation {
   updateShoppingListItem(input: UpdateShoppingListItemInput!): UpdateShoppingListItemResult!
   """Update shopping list item quantity (supports fractions)"""
   updateShoppingListItemQuantity(input: UpdateShoppingListItemQuantityInput!): UpdateShoppingListItemQuantityResult!
+  """Update the reminder for a shopping list."""
+  updateShoppingListReminder(input: SetReminderInput!): SetReminderResult!
   """
   Update an existing storage location
   Validates parent-child relationships and prevents circular references
   Requires user to have edit permissions in the home
   """
   updateStorageLocation(input: UpdateStorageLocationInput!): UpdateStorageLocationResult!
+  """
+  Update the order of multiple storage locations
+  All locations must belong to the same home
+  Requires user to have edit permissions in the home
+  """
+  updateStorageLocationOrder(input: ReorderStorageLocationsInput!): ReorderStorageLocationsResult!
   updateStore(input: UpdateStoreInput!): UpdateStoreResult!
   updateStoreInfo(input: UpdateStoreInfoInput!): UpdateStoreInfoResult!
   """Update a template item"""
@@ -6143,6 +6246,11 @@ type Mutation {
   updateUser(input: UpdateUserInput!): UpdateUserResult!
   """Update an existing user address."""
   updateUserAddress(input: UpdateUserAddressInput!): UpdateUserAddressResult!
+  """
+  Update appeals (submit or review).
+  Consolidates: submitAppeal, reviewAppeal.
+  """
+  updateUserAppeal(input: ManageAppealInput!): ManageAppealResult!
   upsertExternalRecipe(input: CreateRecipeInput!): UpsertExternalRecipeResult!
   """Create or update an item based on its external source ID."""
   upsertItemByExternalSource(input: UpsertItemByExternalSourceInput!): UpsertItemResult!
@@ -6152,7 +6260,7 @@ type Mutation {
   """
   upsertItemUnitConversion(input: UpsertItemUnitConversionInput!): UpsertItemUnitConversionResult!
   """Validate if a password reset token is still valid"""
-  validatePasswordResetToken(input: ValidatePasswordResetTokenInput!): ValidateTokenResponse!
+  validatePasswordResetToken(input: ValidatePasswordResetTokenInput!): ValidatePasswordResetTokenResult!
   """Verify a user's email address using a verification code."""
   verifyEmail(input: VerifyEmailInput!): VerifyEmailResult!
   """Manually verify a user's email address (admin use)."""
@@ -7704,7 +7812,8 @@ type Recipe {
   healthGoals: [HealthGoal!]!
   id: ID!
   imageUrl: String
-  ingredients: [RecipeIngredient!]!
+  ingredients: [RecipeIngredient!]! @deprecated(reason: "Use ingredientsConnection instead.")
+  ingredientsConnection(after: String, before: String, first: Int, last: Int): RecipeIngredientConnection!
   instructions: JSON!
   intolerances: [Intolerance!]!
   """Whether this recipe has been soft-deleted (admin visibility)"""
@@ -7822,6 +7931,18 @@ type RecipeIngredient {
   section: String
   sortOrder: Int!
   unit: Unit
+}
+
+type RecipeIngredientConnection implements Connection {
+  edges: [RecipeIngredientEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int
+}
+
+"""Recipe ingredient connection for pagination"""
+type RecipeIngredientEdge implements Edge {
+  cursor: String!
+  node: RecipeIngredient!
 }
 
 input RecipeIngredientInput {
@@ -8222,7 +8343,13 @@ input ResetPasswordInput {
   token: String!
 }
 
-type ResetPasswordResponse {
+type ResetPasswordPayload {
+  status: ResetPasswordStatus!
+}
+
+union ResetPasswordResult = ConflictError | ForbiddenError | NotFoundError | ResetPasswordPayload | ValidationError
+
+type ResetPasswordStatus {
   code: String!
   message: String!
   success: Boolean!
@@ -8942,6 +9069,18 @@ type ShoppingListOwnership {
   transferredFrom: String
   user: User!
   userId: ID!
+}
+
+type ShoppingListOwnershipConnection implements Connection {
+  edges: [ShoppingListOwnershipEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int
+}
+
+"""Shopping list ownership connection for pagination"""
+type ShoppingListOwnershipEdge implements Edge {
+  cursor: String!
+  node: ShoppingListOwnership!
 }
 
 """Sub-input for shopping list planning details"""
@@ -11070,7 +11209,8 @@ type User {
   addressesConnection(after: String, before: String, first: Int, last: Int, orderBy: UserAddressOrderBy): UserAddressConnection!
   """Whether this user can access developer tools and internal dashboards"""
   canAccessDevTools: Boolean!
-  collaboratedShoppingLists: [ShoppingList!]!
+  collaboratedShoppingLists: [ShoppingList!]! @deprecated(reason: "Use collaboratedShoppingListsConnection instead.")
+  collaboratedShoppingListsConnection(after: String, before: String, first: Int, last: Int): ShoppingListConnection!
   cookingLogsConnection(after: String, before: String, first: Int, last: Int, orderBy: CookingLogOrderBy): CookingLogConnection!
   cookingStats: CookingStats
   createdAt: DateTime!
@@ -11108,7 +11248,8 @@ type User {
   sentHomeInvites: [HomeInvite!]!
   settings: UserSettings
   shoppingListInvites: [ShoppingListCollaborator!]!
-  shoppingListOwnerships: [ShoppingListOwnership!]!
+  shoppingListOwnerships: [ShoppingListOwnership!]! @deprecated(reason: "Use shoppingListOwnershipsConnection instead.")
+  shoppingListOwnershipsConnection(after: String, before: String, first: Int, last: Int): ShoppingListOwnershipConnection!
   statistics: UserStatistics
   suspiciousLoginActivity(hours: Int = 24): SuspiciousActivity!
   timezone: String
@@ -11419,7 +11560,13 @@ input ValidatePasswordResetTokenInput {
   token: String!
 }
 
-type ValidateTokenResponse {
+type ValidatePasswordResetTokenPayload {
+  status: ValidatePasswordResetTokenStatus!
+}
+
+union ValidatePasswordResetTokenResult = ConflictError | ForbiddenError | NotFoundError | ValidatePasswordResetTokenPayload | ValidationError
+
+type ValidatePasswordResetTokenStatus {
   code: String!
   message: String!
   success: Boolean!

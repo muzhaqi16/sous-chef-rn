@@ -30,6 +30,7 @@ import {
   handleMutationError,
   versionConflictCheck,
 } from '#/utils/errorHandlers';
+import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
 import {
   useAppStore,
   useHomeState,
@@ -112,12 +113,8 @@ export function useHomeDetailManagement(homeId: string) {
         updatedAt: new Date().toISOString(),
       });
     },
-    onError: error => {
-      alertService.alert(
-        'Error',
-        error.message || t('errors.updateMemberRoleFailed'),
-      );
-    },
+    // Error/rejection handling lives in handleRoleSelect so a resolved
+    // ForbiddenError member is surfaced (it doesn't throw under errorPolicy:'all').
   });
 
   const [removeMemberMutation] = useMutation(RemoveMemberDocument, {
@@ -225,9 +222,8 @@ export function useHomeDetailManagement(homeId: string) {
           setSelectedShoppingListId(null);
         }
       },
-      onError: error => {
-        alertService.alert('Error', error.message || 'Failed to leave home');
-      },
+      // Error/rejection handling lives in the leaveHome action below; onCompleted
+      // (above) runs only on the success payload.
     });
 
   // Preserve last successful data when errorPolicy: 'ignore' returns undefined on error.
@@ -287,11 +283,22 @@ export function useHomeDetailManagement(homeId: string) {
     closeRolePicker();
     if (value === currentRole) return;
 
-    await updateMembershipMutation({
-      variables: {
-        input: { id: membershipId, role: value as MembershipRole },
-      },
-    });
+    const result = await executeMutation(
+      () =>
+        updateMembershipMutation({
+          variables: {
+            input: { id: membershipId, role: value as MembershipRole },
+          },
+        }),
+      error => handleMutationError(error, { operation: 'Update Member Role' }),
+    );
+    if (!result) return;
+    alertIfRejected(
+      result,
+      'updateMembership',
+      'UpdateMembershipPayload',
+      t('errors.updateMemberRoleFailed'),
+    );
   };
 
   const removeMember = (membershipId: string, memberName: string) => {
@@ -329,13 +336,25 @@ export function useHomeDetailManagement(homeId: string) {
             onPress: async () => {
               const result = await executeMutation(
                 () => leaveHomeMutation({ variables: { input: { homeId } } }),
-                'Failed to leave home',
+                error =>
+                  handleMutationError(error, { operation: 'Leave Home' }),
               );
-              resolve(
-                result
-                  ? result.data?.leaveHome?.__typename === 'LeaveHomePayload'
-                  : false,
-              );
+              if (!result) {
+                resolve(false);
+                return;
+              }
+              if (
+                alertIfRejected(
+                  result,
+                  'leaveHome',
+                  'LeaveHomePayload',
+                  t('errors.somethingWentWrong'),
+                )
+              ) {
+                resolve(false);
+                return;
+              }
+              resolve(true);
             },
           },
         ],

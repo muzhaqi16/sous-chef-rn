@@ -316,9 +316,9 @@ export function useRecipeForm() {
       category: recipe.category ?? null,
       cuisine: recipe.cuisine ?? '',
       status: recipe.status ?? RecipeStatus.Draft,
-      diets: [],
-      healthGoals: [],
-      intolerances: [],
+      diets: recipe.diets ?? [],
+      healthGoals: recipe.healthGoals ?? [],
+      intolerances: recipe.intolerances ?? [],
       ingredients: (recipe.ingredients ?? []).map(ing => ({
         id: generateTempId(),
         name: ing.name,

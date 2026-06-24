@@ -352,7 +352,9 @@ describe('useStorageLocationManagement', () => {
       await result.current.deleteLocation('loc-1');
     });
 
-    expect(mockToastSuccess).toHaveBeenCalledWith('Storage location deleted');
+    expect(mockToastSuccess).toHaveBeenCalledWith(
+      'Storage location deleted successfully',
+    );
   });
 
   it('shows error toast when delete returns success: false', async () => {

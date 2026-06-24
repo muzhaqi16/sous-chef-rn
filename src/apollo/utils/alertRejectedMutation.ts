@@ -1,4 +1,6 @@
 import { alertService } from '#/services/alertService';
+import { classifyCreateResult } from './classifyCreateResult';
+import { t } from '#/i18n/t';
 
 /**
  * Surface a user-facing alert when a local-first mutation is classified as
@@ -21,4 +23,44 @@ export function alertRejectedMutation(
   if (!result?.error) {
     alertService.alert('Error', message);
   }
+}
+
+/**
+ * Classify a resolved mutation result and, if it's a rejection, alert `message`
+ * and return `true`. Returns `false` for the success and offline-queued cases.
+ *
+ * "Rejection" covers BOTH a resolved `*Error` union member AND a resolved
+ * transport/GraphQL error (`{ data: undefined, error }` — under `errorPolicy:
+ * 'all'` mutations resolve with the error rather than throwing). It alerts
+ * **unconditionally** (unlike {@link alertRejectedMutation}, which suppresses the
+ * `result.error` case for callers that keep a mutation `onError`). Use this at
+ * sites WITHOUT a mutation `onError` so there is exactly one alerter — the
+ * `executeMutation` callback only fires on a real throw, which `errorPolicy:'all'`
+ * makes rare, and is mutually exclusive with this (an early `if (!result) return`
+ * runs first on a throw).
+ *
+ * Packages the `classifyCreateResult(...) === 'rejected'` check + the alert so the
+ * rejected branch is a single call:
+ *
+ * ```ts
+ * if (alertIfRejected(result, 'updateMembership', 'UpdateMembershipPayload', t('errors.updateMemberRoleFailed'))) {
+ *   revertSnapshot();   // site-specific cleanup
+ *   return false;
+ * }
+ * ```
+ */
+export function alertIfRejected(
+  result: { data?: unknown; error?: unknown } | null | undefined | false,
+  payloadKey: string,
+  successTypename: string,
+  message: string,
+): boolean {
+  if (!result) return false;
+  if (
+    classifyCreateResult(result, payloadKey, successTypename) !== 'rejected'
+  ) {
+    return false;
+  }
+  alertService.alert(t('labels.error'), message);
+  return true;
 }

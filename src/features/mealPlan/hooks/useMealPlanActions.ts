@@ -115,6 +115,11 @@ function buildOptimisticMealPlan(
     budgetAmount: input.budgetAmount ?? null,
     homeId: input.homeId ?? null,
     home,
+    // The creator of a new plan is also its owner — used for permission gating.
+    user: {
+      __typename: 'User',
+      id: creatorId,
+    },
     createdBy: cachedCreator ?? {
       __typename: 'User',
       id: creatorId,

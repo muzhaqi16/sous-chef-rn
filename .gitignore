@@ -101,3 +101,5 @@ src/graphql/generated/fragmentMatcher.json
 
 # Generated build-time config (see scripts/generate-env.js)
 src/config/env.generated.ts
+
+docs/audits/*

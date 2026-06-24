@@ -13,6 +13,8 @@ import { CollaboratorRole } from '#/graphql/generated/schemaTypes';
 import { type ShoppingListCollaboratorFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { UpdateCollaboratorRoleDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
+import { t } from '#/i18n/t';
 import { ROLE_PERMISSIONS } from '#/constants/collaboratorRoles';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { getCollaboratorDisplayName } from '#/utils/formatters/memberFormatters';
@@ -99,7 +101,7 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
 
   const handleSubmit = () => {
     if (!collaborator || !selectedRole || !collaborator.collaboratorId) {
-      alertService.alert('Error', 'Missing required information');
+      alertService.alert(t('labels.error'), t('errors.missingRequiredInfo'));
       return;
     }
 
@@ -115,7 +117,7 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
 
     executeWithLoadingState(
       async () => {
-        await updateRole({
+        const result = await updateRole({
           variables: {
             input: {
               shoppingListId,
@@ -125,14 +127,27 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
           },
         });
 
+        // A resolved error member doesn't throw under errorPolicy:'all' — keep
+        // the sheet open and surface it instead of reporting success.
+        if (
+          alertIfRejected(
+            result,
+            'updateCollaboratorRole',
+            'UpdateCollaboratorRolePayload',
+            t('errors.somethingWentWrong'),
+          )
+        ) {
+          return;
+        }
+
         setIsVisible(false);
         onSuccess?.();
       },
       setIsSubmitting,
       (error: unknown) => {
         alertService.alert(
-          'Error',
-          errorMessageOr(error, 'Failed to update collaborator role'),
+          t('labels.error'),
+          errorMessageOr(error, t('errors.somethingWentWrong')),
         );
       },
     );

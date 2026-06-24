@@ -28,6 +28,40 @@ import {
   handleVersionConflictAlert,
   handleMutationErrorAlert,
 } from '#/utils/errorHandlers';
+import { t } from '#/i18n/t';
+
+/**
+ * Surface a resolved errors-as-data member from a mutation `data` payload.
+ *
+ * These CRUD helpers are type-erased (they don't know the success typename), so
+ * unlike call sites they can't use `classifyCreateResult`. Detect the `*Error`
+ * union member by its typename suffix — under `errorPolicy:'all'` it resolves as
+ * truthy `data` and would otherwise be treated as success. Returns true (and
+ * alerts + reports) when an error was surfaced.
+ */
+function surfaceCrudDataError(data: unknown, operationName: string): boolean {
+  if (!data || typeof data !== 'object') return false;
+  for (const value of Object.values(data as Record<string, unknown>)) {
+    if (
+      value &&
+      typeof value === 'object' &&
+      typeof (value as { __typename?: unknown }).__typename === 'string' &&
+      (value as { __typename: string }).__typename.endsWith('Error')
+    ) {
+      const raw = (value as { message?: unknown }).message;
+      const message =
+        typeof raw === 'string' && raw.length > 0
+          ? raw
+          : t('errors.somethingWentWrong');
+      alertService.alert(t('labels.error'), message);
+      errorService.reportError(new Error(`${operationName}: ${message}`), {
+        operation: operationName,
+      });
+      return true;
+    }
+  }
+  return false;
+}
 
 /**
  * Resolved value these CRUD helpers read off an Apollo mutate call — `data`
@@ -161,6 +195,11 @@ function createAddOperationImpl<TInput, TResult>(
       return false;
     }
 
+    if (surfaceCrudDataError(result.data, operationName)) {
+      onError?.(new Error(operationName));
+      return false;
+    }
+
     if (result.data) {
       onSuccess?.(result.data);
       return result.data;
@@ -257,6 +296,11 @@ function createUpdateOperationImpl<TInput, TResult>(
 
     if (!result) return false;
 
+    if (surfaceCrudDataError(result.data, operationName)) {
+      onError?.(new Error(operationName));
+      return false;
+    }
+
     if (result.data) {
       onSuccess?.(result.data);
       return result.data;
@@ -284,6 +328,11 @@ async function executeRemoveImpl<TResult>(
   );
 
   if (!result) return false;
+
+  if (surfaceCrudDataError(result.data, operationName)) {
+    onError?.(new Error(operationName));
+    return false;
+  }
 
   if (result.data) {
     onSuccess?.(result.data);
@@ -402,6 +451,11 @@ function createSimpleOperationImpl<TArgs extends unknown[], TResult>(config: {
     );
 
     if (!result) return false;
+
+    if (surfaceCrudDataError(result.data, operationName)) {
+      onError?.(new Error(operationName));
+      return false;
+    }
 
     if (result.data) {
       onSuccess?.(result.data);

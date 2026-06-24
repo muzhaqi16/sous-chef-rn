@@ -470,6 +470,83 @@ const [deleteItemMutation] = useDeleteItemMutation({
 
 ## Error Handling
 
+### Result-union mutations (errors-as-data) ⭐ PRIMARY PATTERN
+
+Every domain mutation returns a **result union** — one success `*Payload` member
+plus typed error members (`ValidationError | ForbiddenError | NotFoundError |
+ConflictError`, all named `*Error`). Under the global `errorPolicy: 'all'`
+(`src/apollo/client.ts`) these error members **resolve as data — they do not
+throw.** A hook that reads only `result.data` therefore sees a truthy payload and
+silently treats a server refusal as success.
+
+**Handle them by inspecting `__typename`, never by throwing.** (Apollo treats
+errors-as-data as a *schema* technique with no prescribed client handler; the
+community consensus — and this codebase — inspect the union.) Two helpers, with a
+combiner so the rejected branch is a single call:
+
+| Helper | File | Role |
+|---|---|---|
+| `classifyCreateResult(result, field, 'XPayload')` | `src/apollo/utils/classifyCreateResult.ts` | `'created' \| 'queued' \| 'rejected'` — inspects `__typename`; `result.error` (transport) ⇒ rejected; offline-queued `null` ⇒ success |
+| `alertIfRejected(result, field, 'XPayload', message)` | `src/apollo/utils/alertRejectedMutation.ts` | **the combiner** ⭐ — classify + alert in one call; returns `true` if rejected. Alerts **unconditionally**, so it covers BOTH a resolved error member AND a resolved transport error. Use at sites with **no** mutation `onError`. |
+| `alertRejectedMutation(result, message)` | `src/apollo/utils/alertRejectedMutation.ts` | lower-level — alerts only when `!result.error` (the resolved-error-member case). Use **only** alongside a mutation `onError` that handles the transport case, to avoid double-alerting. The pantry/shopping reference hooks use this form. |
+
+> ⚠️ **The transport-error trap.** Under `errorPolicy:'all'`, a network/GraphQL
+> error **resolves** the mutation with `{ data: undefined, error }` — it does NOT
+> throw, so `executeMutation`'s error callback (which only catches throws) never
+> fires for it. If you drop the mutation `onError`, that error is yours to
+> surface. `alertIfRejected` does (it alerts on `result.error` too);
+> `alertRejectedMutation` does NOT (it suppresses `result.error` for callers that
+> kept `onError`). **Pick one channel per site — never both, or you double-alert.**
+
+**Canonical shape** (identical for online-only and local-first mutations —
+`'queued'` keeps the optimistic write, `'rejected'` surfaces + reverts). Use
+`alertIfRejected` and drop the mutation `onError`:
+
+```ts
+const result = await executeMutation(
+  () => someMutation({ variables, context: { localFirst: true } }),
+  error => handleMutationError(error, { operation: 'Update Member' }), // rare genuine throw
+);
+if (!result) return; // threw — handled above (uncommon under errorPolicy:'all')
+if (
+  alertIfRejected(
+    result,
+    'updateMembership',
+    'UpdateMembershipPayload',
+    t('errors.updateMemberRoleFailed'),
+  )
+) {
+  revertSnapshot(); // site-specific cleanup
+  return;
+}
+// success
+```
+
+**Rules:**
+- **Don't throw to handle a data-error.** `unwrapPayload` (throw-based, in
+  `compilerSafeWrappers.ts`) exists for a few callers that deliberately let the
+  throw propagate to a screen-level catch — but the default is the data-inspection
+  pair above. It reads linearly and handles the offline-queued `null`, which
+  `unwrapPayload` would wrongly throw on (`GraphQLNetworkError`).
+- **Guard every `update()` / `onCompleted` side-effect on the success
+  `__typename`.** Cache eviction, `logout()`, navigation, marking a user
+  onboarded — a resolved `*Error` member reaches these callbacks (it didn't
+  throw), so an unguarded callback fires on a *refusal*. Move success side-effects
+  into the imperative flow (after the `alertIfRejected` check) or guard the
+  callback with `if (data?.field?.__typename !== 'XPayload') return;`.
+- **i18n:** the user-facing `message` is a `t('...')` key (the server's
+  `payload.message` is shown first; the key is the fallback when it's empty). The
+  `operation` label is a **telemetry tag — a plain inline string, never
+  translated** (matches the codebase-wide `trackEvent`/`operation:` convention;
+  these flow to Loki/Telemetry, never to the user).
+- **`useCrudOperations`** is type-erased (it doesn't know the success typename),
+  so it can't call `classifyCreateResult`. It uses a local `*Error`-suffix
+  detector (`surfaceCrudDataError`) — the one place a generic scan is justified.
+
+**Reference implementations:** `useUpdateShoppingItem.ts`,
+`useAdjustPantryItemQuantity.ts`, `useWastePantryItemBatch.ts`,
+`useOpenPantryItemBatch.ts`, `DeleteAccountScreen.tsx`.
+
 ### Standard Error Pattern
 
 ```typescript

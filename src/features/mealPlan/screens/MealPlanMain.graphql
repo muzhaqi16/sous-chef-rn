@@ -27,6 +27,11 @@ fragment MealPlanMain_mealPlan on MealPlan {
       role
     }
   }
+  # Direct owner — drives OWNER permission gating (see mealPlanPermissions).
+  user {
+    id
+  }
+  # Original creator — display-only (avatar/name), not used for gating.
   createdBy {
     id
     profile {

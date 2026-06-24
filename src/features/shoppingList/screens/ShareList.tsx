@@ -26,6 +26,8 @@ import { OfflineGate } from '#components/atoms/OfflineGate';
 import { AlertBanner } from '#components/molecules/AlertBanner';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
+import { handleMutationError } from '#/utils/errorHandlers';
+import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
 import { CollaboratorMemberCard } from '#features/shoppingList/components/CollaboratorMemberCard';
 import { ShareCodeSection } from '#features/shoppingList/components/ShareCodeSection';
 import { ShareInviteSection } from '#features/shoppingList/components/ShareInviteSection';
@@ -93,12 +95,20 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
           style: 'destructive',
           // No refetch needed: the update() callback removes the collaborator
           // from the cached connection in place.
-          onPress: () =>
-            executeMutation(
+          onPress: async () => {
+            const result = await executeMutation(
               () =>
                 removeMember({
                   variables: { input: { id: memberId } },
-                  update(cache) {
+                  update(cache, { data }) {
+                    // Only evict on success — a resolved error must not remove
+                    // the collaborator from the cache.
+                    if (
+                      data?.removeShoppingListCollaborator?.__typename !==
+                      'RemoveShoppingListCollaboratorPayload'
+                    ) {
+                      return;
+                    }
                     removeCollaboratorFromShoppingListCache(
                       cache,
                       listId,
@@ -107,12 +117,18 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
                     );
                   },
                 }),
-              () =>
-                alertService.alert(
-                  t('labels.error'),
-                  t('shoppingListScreens.failedToRemoveMember'),
-                ),
-            ),
+              error =>
+                handleMutationError(error, {
+                  operation: 'Remove Collaborator',
+                }),
+            );
+            alertIfRejected(
+              result,
+              'removeShoppingListCollaborator',
+              'RemoveShoppingListCollaboratorPayload',
+              t('shoppingListScreens.failedToRemoveMember'),
+            );
+          },
         },
       ],
     );
