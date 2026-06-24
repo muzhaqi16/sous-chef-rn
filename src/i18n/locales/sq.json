@@ -742,6 +742,7 @@
     "mostRecentPurchase": "Blerja më e fundit",
     "noPurchaseHistory": "Pa histori blerjesh",
     "addedBy": "Shtuar nga",
+    "lastEditedBy": "Ndryshuar nga",
     "addedOn": "Shtuar më",
     "lastUpdated": "Përditësuar së fundi",
     "autoAdded": "I shtuar automatikisht",
@@ -1912,6 +1913,13 @@
     "unit": "Njësia",
     "orTypeToSearch": "Ose shkruaj për të kërkuar...",
     "typeToSearchUnits": "Shkruaj për të kërkuar njësitë..."
+  },
+  "purchaseAmountSheet": {
+    "title": "Shëno si të blerë",
+    "quantity": "Sasia",
+    "price": "Çmimi",
+    "currencySymbol": "$",
+    "pricePlaceholder": "0.00"
   },
   "addStorageLocation": {
     "createFailed": "Nuk u krijua dot vendndodhja",

@@ -742,6 +742,7 @@
     "mostRecentPurchase": "Most Recent Purchase",
     "noPurchaseHistory": "No purchase history available",
     "addedBy": "Added By",
+    "lastEditedBy": "Last Edited By",
     "addedOn": "Added On",
     "lastUpdated": "Last Updated",
     "autoAdded": "Auto-Added",
@@ -1912,6 +1913,13 @@
     "unit": "Unit",
     "orTypeToSearch": "Or type to search...",
     "typeToSearchUnits": "Type to search units..."
+  },
+  "purchaseAmountSheet": {
+    "title": "Mark Purchased",
+    "quantity": "Quantity",
+    "price": "Price",
+    "currencySymbol": "$",
+    "pricePlaceholder": "0.00"
   },
   "addStorageLocation": {
     "createFailed": "Failed to create location",

@@ -3,6 +3,7 @@ import { type ShoppingListItemDisplayFragment } from '#features/shoppingList/gra
 import { MoveToPantryModal } from '#/components/modals/MoveToPantryModal';
 import { AddToShoppingListSheet } from '#/components/modals/AddToShoppingListSheet/AddToShoppingListSheet';
 import { QuantityEditSheet } from '#/components/modals/QuantityEditSheet/QuantityEditSheet';
+import { PurchaseAmountSheet } from '#/components/modals/PurchaseAmountSheet/PurchaseAmountSheet';
 import {
   useAddItemSheet,
   type UseAddItemSheetResult,
@@ -11,6 +12,11 @@ import {
   useQuantityEditModal,
   type UseQuantityEditModalResult,
 } from '#features/shoppingList/hooks/useQuantityEditModal';
+import {
+  usePurchaseAmountModal,
+  type UsePurchaseAmountModalResult,
+  type RecordPurchaseAmounts,
+} from '#features/shoppingList/hooks/usePurchaseAmountModal';
 import {
   useMoveToPantryModal,
   type UseMoveToPantryModalResult,
@@ -26,6 +32,8 @@ interface ShoppingListModalsContextValue {
   addItemSheet: UseAddItemSheetResult;
   /** Quantity edit modal state and actions */
   quantityEdit: UseQuantityEditModalResult;
+  /** Purchase amount modal state and actions */
+  purchaseAmount: UsePurchaseAmountModalResult;
   /** Move to pantry modal state and actions */
   moveToPantry: UseMoveToPantryModalResult;
 }
@@ -67,6 +75,14 @@ interface ShoppingListModalsProviderProps {
   currentListId: string | undefined;
   /** Items array for modal item lookup */
   items: ShoppingListItemDisplayFragment[];
+  /**
+   * Records actual purchase amounts. Owned by `useToggleShoppingItem`, threaded
+   * down via the screen facade — the PurchaseAmountSheet calls this on confirm.
+   */
+  recordPurchase: (
+    itemId: string,
+    amounts: RecordPurchaseAmounts,
+  ) => Promise<boolean>;
   /** Current search query (for AddToShoppingListSheet) */
   searchQuery: string;
   /** Callback when search query should be cleared */
@@ -115,6 +131,7 @@ export function ShoppingListModalsProvider({
   children,
   currentListId,
   items,
+  recordPurchase,
   searchQuery,
   onSearchQueryClear,
   onNavigateToListSettings,
@@ -131,6 +148,11 @@ export function ShoppingListModalsProvider({
     items,
   });
 
+  const purchaseAmount = usePurchaseAmountModal({
+    items,
+    recordPurchase,
+  });
+
   const moveToPantry = useMoveToPantryModal({
     currentListId,
     items,
@@ -139,6 +161,7 @@ export function ShoppingListModalsProvider({
   const value: ShoppingListModalsContextValue = {
     addItemSheet,
     quantityEdit,
+    purchaseAmount,
     moveToPantry,
   };
 
@@ -175,6 +198,15 @@ export function ShoppingListModalsProvider({
         onClose={quantityEdit.close}
         onSave={quantityEdit.save}
         loading={quantityEdit.isLoading}
+      />
+
+      {/* Purchase Amount Sheet */}
+      <PurchaseAmountSheet
+        visible={purchaseAmount.visible}
+        item={purchaseAmount.selectedItem}
+        onClose={purchaseAmount.close}
+        onConfirm={purchaseAmount.confirm}
+        loading={purchaseAmount.isLoading}
       />
     </ShoppingListModalsContext.Provider>
   );

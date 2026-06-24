@@ -329,6 +329,14 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
                   input: {
                     id: duplicateInfo.existingPantryItemId,
                     quantity,
+                    // Forward the purchase details the user just entered so the
+                    // restock records an ItemPriceHistory observation instead of
+                    // discarding cost/store/expiry on the duplicate path.
+                    ...(costValue !== undefined && { costPerUnit: costValue }),
+                    ...(storeId && { storeId }),
+                    ...(expirationDate && {
+                      expiresAt: expirationDate.toISOString(),
+                    }),
                   },
                 },
                 // Local-first: replay-safe via syncRestockPantryItem (operationId

@@ -742,6 +742,7 @@
     "mostRecentPurchase": "Acquisto più recente",
     "noPurchaseHistory": "Nessuna cronologia acquisti",
     "addedBy": "Aggiunto da",
+    "lastEditedBy": "Ultima modifica di",
     "addedOn": "Aggiunto il",
     "lastUpdated": "Ultimo aggiornamento",
     "autoAdded": "Aggiunto automaticamente",
@@ -1912,6 +1913,13 @@
     "unit": "Unità",
     "orTypeToSearch": "Oppure digita per cercare...",
     "typeToSearchUnits": "Digita per cercare unità..."
+  },
+  "purchaseAmountSheet": {
+    "title": "Segna come acquistato",
+    "quantity": "Quantità",
+    "price": "Prezzo",
+    "currencySymbol": "$",
+    "pricePlaceholder": "0.00"
   },
   "addStorageLocation": {
     "createFailed": "Impossibile creare la posizione",

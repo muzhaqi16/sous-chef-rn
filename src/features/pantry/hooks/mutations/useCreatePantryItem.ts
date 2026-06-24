@@ -234,6 +234,11 @@ export function useCreatePantryItem({
                     input: {
                       id: duplicateInfo.existingPantryItemId,
                       quantity: restockQuantity,
+                      // Carry the expiry the user entered into the restock batch
+                      // (the full-add form doesn't collect cost/store).
+                      ...(input.expirationDate && {
+                        expiresAt: input.expirationDate.toISOString(),
+                      }),
                     },
                   },
                   // Local-first: replay-safe via syncRestockPantryItem

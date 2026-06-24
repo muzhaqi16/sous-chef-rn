@@ -116,7 +116,14 @@ function buildShoppingListItem(overrides: Record<string, unknown> = {}) {
         name: 'Costco',
       },
     },
-    purchaseInfo: { __typename: 'PurchaseInfo', isPurchased: false },
+    purchaseInfo: {
+      __typename: 'ShoppingListItemPurchaseInfo',
+      isPurchased: false,
+      purchasedQuantity: null,
+      purchasedPrice: null,
+      purchaseDate: null,
+      purchasedBy: null,
+    },
     purchasesConnection: {
       __typename: 'PurchaseConnection',
       edges: [],
@@ -133,6 +140,7 @@ function buildShoppingListItem(overrides: Record<string, unknown> = {}) {
         avatar: null,
       },
     },
+    lastEditedBy: null,
     source: null,
     ...overrides,
   };

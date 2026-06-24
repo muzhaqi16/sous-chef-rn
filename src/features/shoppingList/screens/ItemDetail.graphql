@@ -26,6 +26,17 @@ fragment ItemDetail_shoppingListItem on ShoppingListItem {
   }
   purchaseInfo {
     isPurchased
+    purchasedQuantity
+    purchasedPrice
+    purchaseDate
+    purchasedBy {
+      id
+      profile {
+        id
+        displayName
+        avatar
+      }
+    }
   }
   source {
     isAutoAdded
@@ -35,6 +46,14 @@ fragment ItemDetail_shoppingListItem on ShoppingListItem {
   addedBy {
     id
     email
+    profile {
+      id
+      displayName
+      avatar
+    }
+  }
+  lastEditedBy {
+    id
     profile {
       id
       displayName

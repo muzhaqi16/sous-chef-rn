@@ -256,6 +256,18 @@ export const ShoppingListItemDetail: React.FC<
             </Text>
           </DetailRow>
         )}
+        {!!item.purchaseInfo?.isPurchased &&
+          item.purchaseInfo.purchasedQuantity != null && (
+            <DetailRow label={t('shoppingListScreens.purchased')}>
+              <Text size="sm" weight="medium">
+                {item.purchaseInfo.purchasedPrice != null
+                  ? `${
+                      item.purchaseInfo.purchasedQuantity
+                    } @ $${item.purchaseInfo.purchasedPrice.toFixed(2)}`
+                  : `${item.purchaseInfo.purchasedQuantity}`}
+              </Text>
+            </DetailRow>
+          )}
         {!!priorityLabel && (
           <DetailRow label={t('shoppingListScreens.priority')}>
             <Text size="sm" weight="medium">
@@ -309,6 +321,14 @@ export const ShoppingListItemDetail: React.FC<
             </Text>
           </DetailRow>
         )}
+        {!!item.lastEditedBy?.profile?.displayName &&
+          item.lastEditedBy.id !== item.addedBy?.id && (
+            <DetailRow label={t('shoppingListScreens.lastEditedBy')}>
+              <Text size="sm" weight="medium">
+                {item.lastEditedBy.profile.displayName}
+              </Text>
+            </DetailRow>
+          )}
         <DetailRow label={t('shoppingListScreens.addedOn')}>
           <Text size="sm" weight="medium">
             {formatDate(item.createdAt)}
