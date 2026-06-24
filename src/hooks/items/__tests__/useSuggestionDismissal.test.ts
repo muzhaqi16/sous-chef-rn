@@ -130,4 +130,51 @@ describe('useSuggestionDismissal', () => {
     );
     await waitFor(() => expect(refetch).toHaveBeenCalled());
   });
+
+  it('Undo surfaces an error and does not refetch when the server rejects', async () => {
+    const refetch = jest.fn();
+    const dismiss = recordMock(MarkSuggestionDismissedDocument, {
+      data: {
+        markSuggestionDismissed: {
+          __typename: 'DismissSuggestionPayload',
+          itemId: 'item-1',
+          surface: SuggestionSurface.Pantry,
+          dismissed: true,
+        },
+      },
+    });
+    const undismiss = recordMock(MarkSuggestionActiveDocument, {
+      data: {
+        markSuggestionActive: {
+          __typename: 'NotFoundError',
+          code: 'NOT_FOUND',
+          message: 'Suggestion not found',
+        },
+      },
+    });
+
+    const { result } = renderHookWithApollo(
+      () => useSuggestionDismissal(SuggestionSurface.Pantry, refetch),
+      { operationMocks: [dismiss.mock, undismiss.mock] },
+    );
+
+    act(() => {
+      result.current.dismissSuggestion({ itemId: 'item-1', name: 'Milk' });
+    });
+
+    await waitFor(() => expect(dismiss.fired.length).toBe(1));
+    refetch.mockClear(); // ignore the dismiss-path refetch behavior
+
+    act(() => {
+      mockSuccess.mock.calls[0][1].action.onPress();
+    });
+
+    await waitFor(() => expect(undismiss.fired.length).toBe(1));
+    // A resolved error member resolves in `.then` — it must surface, not be
+    // swallowed, and must NOT refetch (the item is still dismissed server-side).
+    await waitFor(() =>
+      expect(mockError).toHaveBeenCalledWith("Couldn't undo"),
+    );
+    expect(refetch).not.toHaveBeenCalled();
+  });
 });

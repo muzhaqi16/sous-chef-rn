@@ -24,6 +24,11 @@ jest.mock('#/services/telemetry', () => ({
   },
 }));
 
+const mockAlert = jest.fn();
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: (...args: unknown[]) => mockAlert(...args) },
+}));
+
 jest.mock('#/utils/compilerSafeWrappers');
 
 beforeEach(() => {
@@ -232,6 +237,35 @@ describe('useBatchMoveToPantry', () => {
         skipped_count: 1,
       }),
     );
+  });
+
+  it('surfaces an alert and skips onSuccess when the server resolves an error member', async () => {
+    const mockOnSuccess = jest.fn();
+    const move = recordMock(MovePurchasedItemsToPantryDocument, {
+      data: {
+        movePurchasedItemsToPantry: {
+          __typename: 'ForbiddenError',
+          code: 'FORBIDDEN',
+          message: 'Not allowed',
+        },
+      },
+    });
+
+    const { result } = renderHookWithApollo(
+      () =>
+        useBatchMoveToPantry({
+          currentListId: 'list-1',
+          onSuccess: mockOnSuccess,
+        }),
+      { operationMocks: [move.mock] },
+    );
+
+    await act(async () => {
+      await result.current.batchMoveToPantry();
+    });
+
+    expect(mockAlert).toHaveBeenCalled();
+    expect(mockOnSuccess).not.toHaveBeenCalled();
   });
 
   it('does not call onSuccess when mutation returns no data', async () => {

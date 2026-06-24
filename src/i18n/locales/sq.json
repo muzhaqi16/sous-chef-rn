@@ -65,7 +65,10 @@
     "itemNotFound": "Artikulli nuk u gjet",
     "parentContextRequired": "Kërkohet konteksti prind",
     "createStorageLocationFailed": "Krijimi i vendndodhjes së ruajtjes dështoi",
-    "missingRequiredInfo": "Mungojnë informacionet e kërkuara"
+    "missingRequiredInfo": "Mungojnë informacionet e kërkuara",
+    "invalidInput": "Hyrje e pavlefshme",
+    "invalidOperation": "Veprim i pavlefshëm",
+    "invalidUnitTitle": "Njësi e pavlefshme"
   },
   "success": {
     "itemAdded": "Artikulli u shtua",
@@ -165,7 +168,10 @@
     "create": "Krijo",
     "notNow": "Jo tani",
     "clear": "Pastro",
-    "enableNow": "Aktivizo tani"
+    "enableNow": "Aktivizo tani",
+    "refresh": "Rifresko",
+    "updated": "Përditësuar",
+    "validationError": "Gabim validimi"
   },
   "instructions": {
     "pointCamera": "Drejtoje kamerën nga një barkod",

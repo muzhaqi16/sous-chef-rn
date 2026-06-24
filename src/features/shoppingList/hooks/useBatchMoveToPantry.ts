@@ -3,6 +3,8 @@ import { MovePurchasedItemsToPantryDocument } from './useBatchMoveToPantry.gener
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
 import { handleMutationError } from '#/utils/errorHandlers';
+import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
+import { t } from '#/i18n/t';
 import {
   executeCacheUpdate,
   executeMutation,
@@ -116,7 +118,14 @@ export function useBatchMoveToPantry({
     if (!result) return;
 
     const payload = result.data?.movePurchasedItemsToPantry;
-    if (payload?.__typename !== 'MovePurchasedItemsToPantryPayload') return;
+    if (payload?.__typename !== 'MovePurchasedItemsToPantryPayload') {
+      // A resolved `*Error` union member doesn't throw under errorPolicy:'all',
+      // so the mutation `onError` never fired for it. Surface it here — guarded
+      // to skip the transport-error case (`result.error`), which onError already
+      // alerted, so the two never double-alert.
+      alertRejectedMutation(result, t('errors.somethingWentWrong'));
+      return;
+    }
 
     const { movedCount, skippedCount, targetPantryName } = payload.result;
 

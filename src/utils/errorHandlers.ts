@@ -19,6 +19,7 @@ import {
   getInvalidUnitMessage,
 } from './errors/invalidUnit';
 import { errorService, getErrorMessage } from '#/services/errorService';
+import { t } from '#/i18n/t';
 
 export interface VersionConflictConfig {
   /** Name of the item being updated (e.g., "Item", "Home", "Recipe"). */
@@ -65,9 +66,9 @@ export const handleVersionConflictAlert = (
   if (handleVersionConflict(error)) {
     const message = customMessage || getVersionConflictMessage(error);
 
-    alertService.alert(`${itemName} Updated`, message, [
-      { text: 'Refresh', onPress: () => onRefresh?.() },
-      { text: 'Cancel', style: 'cancel' },
+    alertService.alert(`${itemName} ${t('labels.updated')}`, message, [
+      { text: t('labels.refresh'), onPress: () => onRefresh?.() },
+      { text: t('labels.cancel'), style: 'cancel' },
     ]);
     return true;
   }
@@ -97,7 +98,7 @@ export const handleMutationErrorAlert = (
   const errorMessage = customMessage || getErrorMessage(error);
 
   if (showAlert) {
-    alertService.alert('Error', errorMessage);
+    alertService.alert(t('labels.error'), errorMessage);
   }
 
   errorService.reportError(error, { operation });
@@ -165,7 +166,10 @@ export function invalidUnitCheck(): MutationErrorCheck {
   return {
     detect: error => isInvalidUnitError(error),
     handle: error => {
-      alertService.alert('Invalid Unit', getInvalidUnitMessage(error));
+      alertService.alert(
+        t('errors.invalidUnitTitle'),
+        getInvalidUnitMessage(error),
+      );
     },
   };
 }

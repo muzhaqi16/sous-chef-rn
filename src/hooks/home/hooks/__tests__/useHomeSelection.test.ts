@@ -315,6 +315,12 @@ describe('useHomeSelection', () => {
       });
 
       expect(success!).toBe(false);
+      // A resolved error member doesn't throw, so it must be surfaced here
+      // rather than swallowed (the executeMutation onError only fires on a throw).
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Error',
+        'Failed to set default home',
+      );
     });
   });
 

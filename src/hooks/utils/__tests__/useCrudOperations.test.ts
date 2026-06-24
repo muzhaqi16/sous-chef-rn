@@ -203,7 +203,7 @@ describe('useCrudOperations', () => {
       expect(data).toBe(false);
       expect(alertService.alert).toHaveBeenCalledWith(
         'Error',
-        'Failed to create item',
+        'Something went wrong. Please try again.',
       );
     });
   });
@@ -434,7 +434,7 @@ describe('useCrudOperations', () => {
       expect(data).toBe(false);
       expect(alertService.alert).toHaveBeenCalledWith(
         'Error',
-        'Failed to my operation',
+        'Something went wrong. Please try again.',
       );
     });
   });

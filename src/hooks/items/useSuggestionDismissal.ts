@@ -30,9 +30,20 @@ export function useSuggestionDismissal(
 
   const undo = (itemId: string) => {
     undismiss({ variables: { input: { itemId, surface } } })
-      // No optimistic re-add — the item comes back via the resync refetch
-      // (and only if it still qualifies as a candidate).
-      .then(() => refetch())
+      .then(result => {
+        // Union error variants resolve in `.then` (not `.catch`) — mirror
+        // dismissSuggestion and only act on the success payload. On success the
+        // item comes back via the resync refetch (if it still qualifies). A
+        // rejected undo surfaces an error instead of silently doing nothing.
+        if (
+          result.data?.markSuggestionActive?.__typename ===
+          'UndismissSuggestionPayload'
+        ) {
+          refetch();
+        } else {
+          toastService.error(t('addItemSheet.undoFailed'));
+        }
+      })
       .catch(() => toastService.error(t('addItemSheet.undoFailed')));
   };
 

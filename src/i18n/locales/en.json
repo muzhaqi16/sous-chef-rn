@@ -65,7 +65,10 @@
     "itemNotFound": "Item not found",
     "parentContextRequired": "Parent context is required",
     "createStorageLocationFailed": "Failed to create storage location",
-    "missingRequiredInfo": "Missing required information"
+    "missingRequiredInfo": "Missing required information",
+    "invalidInput": "Invalid input",
+    "invalidOperation": "Invalid operation",
+    "invalidUnitTitle": "Invalid Unit"
   },
   "success": {
     "itemAdded": "Item added successfully",
@@ -165,7 +168,10 @@
     "create": "Create",
     "notNow": "Not now",
     "clear": "Clear",
-    "enableNow": "Enable Now"
+    "enableNow": "Enable Now",
+    "refresh": "Refresh",
+    "updated": "Updated",
+    "validationError": "Validation Error"
   },
   "instructions": {
     "pointCamera": "Point your camera at a barcode",

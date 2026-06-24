@@ -65,7 +65,10 @@
     "itemNotFound": "Artículo no encontrado",
     "parentContextRequired": "Se requiere el contexto principal",
     "createStorageLocationFailed": "No se pudo crear la ubicación de almacenamiento",
-    "missingRequiredInfo": "Falta información obligatoria"
+    "missingRequiredInfo": "Falta información obligatoria",
+    "invalidInput": "Entrada no válida",
+    "invalidOperation": "Operación no válida",
+    "invalidUnitTitle": "Unidad no válida"
   },
   "success": {
     "itemAdded": "Artículo añadido",
@@ -165,7 +168,10 @@
     "create": "Crear",
     "notNow": "Ahora no",
     "clear": "Borrar",
-    "enableNow": "Activar ahora"
+    "enableNow": "Activar ahora",
+    "refresh": "Actualizar",
+    "updated": "Actualizado",
+    "validationError": "Error de validación"
   },
   "instructions": {
     "pointCamera": "Apunta la cámara a un código de barras",

@@ -11,7 +11,6 @@ import {
   type DisplayIngredient,
 } from './useRecipeData';
 import {
-  AddItemToShoppingListFromRecipeDocument,
   AddItemsToShoppingListDocument,
   GetShoppingListsLiteDocument,
   CreateShoppingListDocument,
@@ -197,29 +196,6 @@ export function useRecipeShoppingList({
     },
   );
 
-  const [addItemToShoppingListMutation] = useMutation(
-    AddItemToShoppingListFromRecipeDocument,
-    {
-      update: (cache, { data }, { variables }) => {
-        const payload = data?.addItemsToShoppingList;
-        if (
-          payload?.__typename !== 'AddItemsToShoppingListPayload' ||
-          !variables
-        ) {
-          return;
-        }
-        executeCacheUpdate(() => {
-          // Single add via the batch mutation — the created/merged row is the
-          // one entry in `results`. Null when that item failed.
-          const item = payload.result.results[0]?.item;
-          if (!item) return;
-          const shoppingListId = variables.input.shoppingListId;
-          addNewItemToShoppingListCache(cache, shoppingListId, item);
-        }, 'Cache update failed for addItemToShoppingList:');
-      },
-    },
-  );
-
   const [addItemsToShoppingListMutation] = useMutation(
     AddItemsToShoppingListDocument,
     {
@@ -275,7 +251,9 @@ export function useRecipeShoppingList({
             context: { localFirst: true },
           });
         } else if ('amount' in ingredient) {
-          await addItemToShoppingListMutation({
+          // Single ingredient goes through the same batch mutation as a
+          // one-element `items` array — there is no separate single-add op.
+          const result = await addItemsToShoppingListMutation({
             variables: {
               input: {
                 shoppingListId: targetList.id,
@@ -303,6 +281,17 @@ export function useRecipeShoppingList({
             },
             context: { localFirst: true },
           });
+
+          // Mirror addAllIngredientsToList: a transport error is surfaced by the
+          // mutation onError, so skip the success toast for it. A success
+          // payload or an offline-queued result (no data, no error) confirm.
+          const payload = result.data?.addItemsToShoppingList;
+          if (
+            payload?.__typename !== 'AddItemsToShoppingListPayload' &&
+            result.error
+          ) {
+            return;
+          }
         }
 
         setAddedIngredients(prev => new Set(prev).add(ingredient.id));

@@ -153,7 +153,7 @@ function createAddOperationImpl<TInput, TResult>(
       parentId !== undefined &&
       (resolvedParentId == null || resolvedParentId === '')
     ) {
-      alertService.alert('Error', 'Parent context is required');
+      alertService.alert(t('labels.error'), t('errors.parentContextRequired'));
       return false;
     }
 
@@ -161,11 +161,14 @@ function createAddOperationImpl<TInput, TResult>(
     if (validateInput) {
       const validation = validateInput(input);
       if (typeof validation === 'string') {
-        alertService.alert('Validation Error', validation);
+        alertService.alert(t('labels.validationError'), validation);
         return false;
       }
       if (!validation) {
-        alertService.alert('Validation Error', 'Invalid input');
+        alertService.alert(
+          t('labels.validationError'),
+          t('errors.invalidInput'),
+        );
         return false;
       }
     }
@@ -190,8 +193,8 @@ function createAddOperationImpl<TInput, TResult>(
     // Check errors FIRST because result.data may be { mutationName: null } even on error
     if (result.errors && result.errors.length > 0) {
       const errorMessage =
-        result.errors[0].message || `Failed to ${operationName.toLowerCase()}`;
-      alertService.alert('Error', errorMessage);
+        result.errors[0].message || t('errors.somethingWentWrong');
+      alertService.alert(t('labels.error'), errorMessage);
       return false;
     }
 
@@ -205,7 +208,7 @@ function createAddOperationImpl<TInput, TResult>(
       return result.data;
     }
 
-    alertService.alert('Error', `Failed to ${operationName.toLowerCase()}`);
+    alertService.alert(t('labels.error'), t('errors.somethingWentWrong'));
     return false;
   };
 }
@@ -236,7 +239,7 @@ function createUpdateOperationImpl<TInput, TResult>(
       resolvedParentId !== undefined &&
       (resolvedParentId == null || resolvedParentId === '')
     ) {
-      alertService.alert('Error', 'Parent context is required');
+      alertService.alert(t('labels.error'), t('errors.parentContextRequired'));
       return false;
     }
 
@@ -244,11 +247,14 @@ function createUpdateOperationImpl<TInput, TResult>(
     if (validateInput) {
       const validation = validateInput(input);
       if (typeof validation === 'string') {
-        alertService.alert('Validation Error', validation);
+        alertService.alert(t('labels.validationError'), validation);
         return false;
       }
       if (!validation) {
-        alertService.alert('Validation Error', 'Invalid input');
+        alertService.alert(
+          t('labels.validationError'),
+          t('errors.invalidInput'),
+        );
         return false;
       }
     }
@@ -306,7 +312,7 @@ function createUpdateOperationImpl<TInput, TResult>(
       return result.data;
     }
 
-    alertService.alert('Error', `Failed to ${operationName.toLowerCase()}`);
+    alertService.alert(t('labels.error'), t('errors.somethingWentWrong'));
     return false;
   };
 }
@@ -365,7 +371,7 @@ function createRemoveOperationImpl<TResult>(
       resolvedParentId !== undefined &&
       (resolvedParentId == null || resolvedParentId === '')
     ) {
-      alertService.alert('Error', 'Parent context is required');
+      alertService.alert(t('labels.error'), t('errors.parentContextRequired'));
       return false;
     }
 
@@ -379,12 +385,12 @@ function createRemoveOperationImpl<TResult>(
             : confirmMessage,
           [
             {
-              text: 'Cancel',
+              text: t('labels.cancel'),
               style: 'cancel',
               onPress: () => resolve(false),
             },
             {
-              text: 'Delete',
+              text: t('labels.delete'),
               style: 'destructive',
               onPress: async () => {
                 const result = await executeRemoveImpl(
@@ -432,11 +438,14 @@ function createSimpleOperationImpl<TArgs extends unknown[], TResult>(config: {
     if (validate) {
       const validation = validate(...args);
       if (typeof validation === 'string') {
-        alertService.alert('Validation Error', validation);
+        alertService.alert(t('labels.validationError'), validation);
         return false;
       }
       if (!validation) {
-        alertService.alert('Validation Error', 'Invalid operation');
+        alertService.alert(
+          t('labels.validationError'),
+          t('errors.invalidOperation'),
+        );
         return false;
       }
     }
@@ -462,7 +471,7 @@ function createSimpleOperationImpl<TArgs extends unknown[], TResult>(config: {
       return result.data;
     }
 
-    alertService.alert('Error', `Failed to ${operationName.toLowerCase()}`);
+    alertService.alert(t('labels.error'), t('errors.somethingWentWrong'));
     return false;
   };
 }

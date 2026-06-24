@@ -19,9 +19,9 @@ import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import {
   executeCacheUpdate,
   executeMutation,
+  unwrapPayload,
 } from '#/utils/compilerSafeWrappers';
 import { handleMutationError } from '#/utils/errorHandlers';
-import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { t } from '#/i18n/t';
 
@@ -131,23 +131,22 @@ export function useHomeInvitations({
     email: string,
     role: MembershipRole = MembershipRole.Member,
   ) => {
-    const result = await executeMutation(
-      () =>
-        inviteUserMutation({
-          variables: {
-            input: {
-              homeId,
-              email: email.trim(),
-              role,
-            },
-          },
-        }),
-      error => handleMutationError(error, { operation: 'Invite User' }),
-    );
-    if (!result) return null; // transport error — already surfaced above
-    alertIfRejected(
-      result,
-      'inviteToHome',
+    const result = await inviteUserMutation({
+      variables: {
+        input: {
+          homeId,
+          email: email.trim(),
+          role,
+        },
+      },
+    });
+    // A resolved `*Error` union member and a transport error both resolve
+    // without throwing under errorPolicy:'all'. Throw here (via unwrapPayload)
+    // so the invite modal's screen-level catch surfaces the message inline and
+    // keeps itself open — instead of a native alert firing while the modal
+    // closes as though the invite succeeded.
+    unwrapPayload(
+      result.data?.inviteToHome,
       'InviteToHomePayload',
       t('errors.sendInviteFailed'),
     );

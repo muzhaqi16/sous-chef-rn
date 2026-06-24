@@ -234,9 +234,13 @@ export function useHomeSelection({
       return true;
     }
 
-    // Mutation returned no data - rollback and re-enable queries
+    // A resolved `*Error` union member (or no data) doesn't throw under
+    // errorPolicy:'all', so the executeMutation error callback above never
+    // fired. Roll back, re-enable queries, and surface it (mirrors the throw
+    // path; the early `if (!result) return false` keeps the two exclusive).
     setHomeAndPantry(previousHomeId, previousPantryId);
     setIsHomeSelectionReady(true);
+    alertService.alert('Error', 'Failed to set default home');
     return false;
   };
 
